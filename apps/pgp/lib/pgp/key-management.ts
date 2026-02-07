@@ -1,0 +1,53 @@
+import type { GeneratedKey, GenerateKeyOptions, KeyInfo } from "./types";
+import * as wasm from "./wasm";
+
+/** Generate a new PGP keypair. */
+export async function generateKey(
+  opts: GenerateKeyOptions,
+): Promise<GeneratedKey> {
+  return wasm.generateKey(opts);
+}
+
+/** Parse an armored key for public-key metadata (strips isPrivate flag). */
+export async function parsePublicKey(armored: string): Promise<KeyInfo> {
+  const info = await wasm.parseKey(armored);
+  return info.isPrivate ? { ...info, isPrivate: false } : info;
+}
+
+/** Parse an armored private key and extract metadata. */
+export async function parsePrivateKey(armored: string): Promise<KeyInfo> {
+  return wasm.parseKey(armored);
+}
+
+/** Extract the public key armor from a private key. */
+export async function extractPublicKey(
+  armoredPrivateKey: string,
+): Promise<string> {
+  return wasm.extractPublicKey(armoredPrivateKey);
+}
+
+/** Import an armored key (auto-detects public vs private). */
+export async function importKey(armored: string): Promise<
+  | { type: "public"; keyInfo: KeyInfo; armored: string }
+  | {
+      type: "private";
+      keyInfo: KeyInfo;
+      privateKeyArmored: string;
+      publicKeyArmored: string;
+    }
+> {
+  const trimmed = armored.trim();
+  const keyInfo = await wasm.parseKey(trimmed);
+
+  if (keyInfo.isPrivate) {
+    const publicKeyArmored = await wasm.extractPublicKey(trimmed);
+    return {
+      type: "private",
+      keyInfo,
+      privateKeyArmored: trimmed,
+      publicKeyArmored,
+    };
+  }
+
+  return { type: "public", keyInfo, armored: trimmed };
+}

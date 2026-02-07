@@ -1,0 +1,23 @@
+@import "tailwindcss";
+@import "@amibeingpwned/tailwind-config/theme";
+
+@source "../../src/*.{ts,tsx}";
+
+@font-face {
+  font-family: "Space Mono";
+  src: url("../font/SpaceMono-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
