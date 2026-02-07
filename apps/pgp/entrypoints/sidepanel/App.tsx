@@ -1,0 +1,291 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+
+import type {
+  AutoLockTimeout,
+  StorageLocation,
+} from "../../lib/storage/preferences";
+import { KeysView } from "../../components/keys/KeysView";
+import { OnboardingFlow } from "../../components/shared/OnboardingFlow";
+import { SettingsView } from "../../components/shared/SettingsView";
+import { WorkspaceView } from "../../components/workspace/WorkspaceView";
+import { useContacts } from "../../hooks/useContacts";
+import { useKeyring } from "../../hooks/useKeyring";
+import { useKeySession } from "../../hooks/useKeySession";
+import { usePendingOperation } from "../../hooks/usePendingOperation";
+import { getPreferences, savePreferences } from "../../lib/storage/preferences";
+
+type Tab = "workspace" | "keys" | "settings";
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState<Tab>("workspace");
+  const [advancedMode, setAdvancedMode] = useState(false);
+  const [storageLocation, setStorageLocation] =
+    useState<StorageLocation>("local");
+  const [autoLockMinutes, setAutoLockMinutes] = useState<AutoLockTimeout>(15);
+  const [lockOnClose, setLockOnClose] = useState(true);
+  const [neverCacheKeys, setNeverCacheKeys] = useState(false);
+  const [autoDecryptDownloads, setAutoDecryptDownloads] = useState(false);
+  const [autoDownloadFiles, setAutoDownloadFiles] = useState(false);
+  const [autoDownloadText, setAutoDownloadText] = useState(false);
+  const [onboardingComplete, setOnboardingComplete] = useState<boolean | null>(
+    null,
+  );
+  const [openGenerateOnMount, setOpenGenerateOnMount] = useState(false);
+  const [encryptToKeyId, setEncryptToKeyId] = useState<string | null>(null);
+
+  const keyring = useKeyring();
+  const contacts = useContacts();
+  const session = useKeySession({
+    autoLockMinutes,
+    lockOnClose,
+    neverCacheKeys,
+  });
+  const {
+    pending,
+    clearPending,
+    importKey: importKeyMsg,
+    clearImportKey,
+    autoDecrypt,
+    clearAutoDecrypt,
+  } = usePendingOperation();
+
+  useEffect(() => {
+    void getPreferences().then((prefs) => {
+      setAdvancedMode(prefs.advancedMode);
+      setStorageLocation(prefs.storageLocation);
+      setAutoLockMinutes(prefs.autoLockMinutes);
+      setLockOnClose(prefs.lockOnClose);
+      setOnboardingComplete(prefs.onboardingComplete);
+      setActiveTab(prefs.activeTab);
+      setNeverCacheKeys(prefs.neverCacheKeys);
+      setAutoDecryptDownloads(prefs.autoDecryptDownloads);
+      setAutoDownloadFiles(prefs.autoDownloadFiles);
+      setAutoDownloadText(prefs.autoDownloadText);
+    });
+    chrome.runtime.sendMessage({ type: "SIDEPANEL_READY" }).catch(() => {
+      /* noop */
+    });
+  }, []);
+
+  useEffect(() => {
+    if (pending) {
+      setActiveTab("workspace");
+      void savePreferences({ activeTab: "workspace" });
+    }
+  }, [pending]);
+
+  useEffect(() => {
+    if (autoDecrypt) {
+      setActiveTab("workspace");
+      void savePreferences({ activeTab: "workspace" });
+    }
+  }, [autoDecrypt]);
+
+  useEffect(() => {
+    if (importKeyMsg) {
+      setActiveTab("keys");
+      void savePreferences({ activeTab: "keys" });
+    }
+  }, [importKeyMsg]);
+
+  if (onboardingComplete === null) return null;
+
+  if (!onboardingComplete) {
+    return (
+      <OnboardingFlow
+        onComplete={(loc) => {
+          setStorageLocation(loc);
+          setOnboardingComplete(true);
+          void keyring.refresh();
+          void contacts.refresh();
+        }}
+        onGenerateKey={() => {
+          setActiveTab("keys");
+          setOpenGenerateOnMount(true);
+        }}
+      />
+    );
+  }
+
+  return (
+    <div className="flex h-screen flex-col">
+      <TabBar
+        activeTab={activeTab}
+        onTabChange={(tab) => {
+          setActiveTab(tab);
+          void savePreferences({ activeTab: tab });
+          toast.dismiss();
+        }}
+      />
+
+      <main
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4"
+        role="tabpanel"
+        id={`tabpanel-${activeTab}`}
+        aria-labelledby={`tab-${activeTab}`}
+      >
+        <div className={activeTab === "workspace" ? "h-full" : "hidden"}>
+          <WorkspaceView
+            myKeys={keyring.keys}
+            contacts={contacts.contacts}
+            getKeyHandle={session.getKeyHandle}
+            onUnlockWithPassword={session.unlockWithPassword}
+            onUnlockWithPasskey={session.unlockWithPasskey}
+            pendingAction={
+              pending ? { action: pending.action, text: pending.text } : null
+            }
+            onClearPending={clearPending}
+            autoDecrypt={autoDecrypt}
+            onClearAutoDecrypt={clearAutoDecrypt}
+            encryptToKeyId={encryptToKeyId}
+            onClearEncryptTo={() => setEncryptToKeyId(null)}
+            onNavigateToKeys={() => setActiveTab("keys")}
+            autoDownloadFiles={autoDownloadFiles}
+            autoDownloadText={autoDownloadText}
+            onOperationComplete={session.lockAllIfNoCache}
+          />
+        </div>
+        {activeTab === "keys" && (
+          <KeysView
+            myKeys={keyring.keys}
+            contacts={contacts.contacts}
+            isUnlocked={session.isUnlocked}
+            onUnlockWithPassword={session.unlockWithPassword}
+            onUnlockWithPasskey={session.unlockWithPasskey}
+            onLock={session.lock}
+            onDeleteKey={keyring.remove}
+            getKeyHandle={session.getKeyHandle}
+            onAddKey={keyring.add}
+            onAddContact={contacts.add}
+            onDeleteContact={contacts.remove}
+            advancedMode={advancedMode}
+            autoOpenGenerate={openGenerateOnMount}
+            onAutoOpenConsumed={() => setOpenGenerateOnMount(false)}
+            importKeyFromLink={importKeyMsg}
+            onImportKeyConsumed={clearImportKey}
+            onEncryptTo={(keyId) => {
+              setEncryptToKeyId(keyId);
+              setActiveTab("workspace");
+              void savePreferences({ activeTab: "workspace" });
+            }}
+            unlockRequestKeyId={null}
+            onUnlockRequestConsumed={() => {
+              /* noop */
+            }}
+          />
+        )}
+        {activeTab === "settings" && (
+          <SettingsView
+            advancedMode={advancedMode}
+            onAdvancedModeChange={setAdvancedMode}
+            storageLocation={storageLocation}
+            onStorageLocationChange={(loc) => {
+              setStorageLocation(loc);
+              void keyring.refresh();
+              void contacts.refresh();
+            }}
+            autoLockMinutes={autoLockMinutes}
+            onAutoLockChange={setAutoLockMinutes}
+            lockOnClose={lockOnClose}
+            onLockOnCloseChange={setLockOnClose}
+            neverCacheKeys={neverCacheKeys}
+            onNeverCacheKeysChange={setNeverCacheKeys}
+            autoDecryptDownloads={autoDecryptDownloads}
+            onAutoDecryptDownloadsChange={setAutoDecryptDownloads}
+            autoDownloadFiles={autoDownloadFiles}
+            onAutoDownloadFilesChange={setAutoDownloadFiles}
+            autoDownloadText={autoDownloadText}
+            onAutoDownloadTextChange={setAutoDownloadText}
+          />
+        )}
+      </main>
+
+      <footer className="border-border border-t px-4 py-2 text-center">
+        <a
+          href="https://amibeingpwned.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-muted-foreground hover:text-foreground text-xs transition-colors"
+        >
+          by Am I Being Pwned
+        </a>
+      </footer>
+    </div>
+  );
+}
+
+// ── Tab bar with WAI-ARIA keyboard navigation ────────────────────────
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: "workspace", label: "Main" },
+  { id: "keys", label: "Keys" },
+  { id: "settings", label: "Settings" },
+];
+
+function TabBar({
+  activeTab,
+  onTabChange,
+}: {
+  activeTab: Tab;
+  onTabChange: (tab: Tab) => void;
+}) {
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      const idx = TABS.findIndex((t) => t.id === activeTab);
+      let next = idx;
+
+      switch (e.key) {
+        case "ArrowRight":
+          next = (idx + 1) % TABS.length;
+          break;
+        case "ArrowLeft":
+          next = (idx - 1 + TABS.length) % TABS.length;
+          break;
+        case "Home":
+          next = 0;
+          break;
+        case "End":
+          next = TABS.length - 1;
+          break;
+        default:
+          return;
+      }
+
+      e.preventDefault();
+      onTabChange(TABS[next].id);
+      tabRefs.current[next]?.focus();
+    },
+    [activeTab, onTabChange],
+  );
+
+  return (
+    <nav className="border-border border-b" aria-label="Main navigation">
+      <div className="flex" role="tablist" onKeyDown={handleKeyDown}>
+        {TABS.map((tab, i) => (
+          <button
+            key={tab.id}
+            ref={(el) => {
+              tabRefs.current[i] = el;
+            }}
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            aria-controls={`tabpanel-${tab.id}`}
+            id={`tab-${tab.id}`}
+            tabIndex={activeTab === tab.id ? 0 : -1}
+            onClick={() => onTabChange(tab.id)}
+            className={`flex-1 px-3 py-2.5 text-sm font-medium transition-colors ${
+              activeTab === tab.id
+                ? "border-primary text-primary border-b-2"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+    </nav>
+  );
+}

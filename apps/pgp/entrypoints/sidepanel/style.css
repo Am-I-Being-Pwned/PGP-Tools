@@ -1,0 +1,16 @@
+@import "tailwindcss";
+@import "@amibeingpwned/tailwind-config/theme";
+@import "tw-animate-css";
+
+@source "../../../../packages/ui/src/*.{ts,tsx}";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
