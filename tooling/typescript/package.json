@@ -1,0 +1,7 @@
+{
+  "name": "@amibeingpwned/tsconfig",
+  "private": true,
+  "files": [
+    "*.json"
+  ]
+}

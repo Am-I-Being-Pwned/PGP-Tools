@@ -1,0 +1,815 @@
+//! # GPG Tools - Sequoia-PGP WASM Module
+//!
+//! All OpenPGP cryptographic operations run in this Rust/WASM module.
+//! Private keys are stored in WASM linear memory behind opaque integer
+//! handles - the JavaScript side never sees raw private key material
+//! during normal operations (encrypt, decrypt, sign).
+//!
+//! ## Security model
+//!
+//! - Key isolation: Private keys live in WASM's linear memory (StoredKey),
+//!   serialized bytes that are zeroized on drop. JS holds only integer handles.
+//! - Signature verification: check() returns Err on bad signatures,
+//!   aborting the entire operation. No plaintext is surfaced for forged messages.
+//! - Argon2id KDF: Password-derived keys use Argon2id (64MB, 3 iterations),
+//!   making GPU brute-force impractical for reasonable passwords.
+//! - Constant-time caveat: The RustCrypto backend requires
+//!   allow-variable-time-crypto for WASM. Browser sandboxing mitigates
+//!   timing side-channels in practice.
+//!
+//! ## JS boundary
+//!
+//! Data crosses the WASM/JS boundary via:
+//! - JSON strings for structured data (key info, options, verify results)
+//! - Raw `Vec<u8>` / `Uint8Array` for ciphertext and plaintext
+//! - Packed binary format for decrypt results (sig info header + plaintext)
+//!
+//! Private keys cross the boundary only during:
+//! - Initial key generation (returned as armored string, immediately encrypted by JS)
+//! - Key unlock (decrypted by JS protection layer, immediately passed to `storeKey`)
+//! - Explicit unprotected export (`getKeyArmored`, behind destructive UI button)
+
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::io::Write;
+use std::time::{Duration, SystemTime};
+
+use aes_gcm::aead::{Aead, Payload};
+use aes_gcm::{Aes256Gcm, KeyInit, Nonce};
+use argon2::{Algorithm, Argon2, Params, Version};
+use hkdf::Hkdf;
+use sha2::Sha256;
+use zeroize::Zeroize;
+
+use openpgp::cert::prelude::*;
+use openpgp::crypto::SessionKey;
+use openpgp::parse::stream::*;
+use openpgp::parse::Parse;
+use openpgp::policy::StandardPolicy;
+use openpgp::serialize::stream::*;
+use openpgp::serialize::Serialize as _;
+use openpgp::types::SymmetricAlgorithm;
+use sequoia_openpgp as openpgp;
+use serde::{Deserialize, Serialize};
+use wasm_bindgen::prelude::*;
+
+static POLICY: StandardPolicy<'static> = StandardPolicy::new();
+
+trait StrErr<T> {
+    fn str_err(self) -> Result<T, String>;
+}
+impl<T, E: std::fmt::Display> StrErr<T> for Result<T, E> {
+    fn str_err(self) -> Result<T, String> {
+        self.map_err(|e| e.to_string())
+    }
+}
+
+// =====================================================================
+// Types (serialized to/from JS via JSON)
+// =====================================================================
+
+#[derive(Serialize)]
+pub struct KeyInfo {
+    #[serde(rename = "keyId")]
+    pub key_id: String,
+    #[serde(rename = "userIds")]
+    pub user_ids: Vec<String>,
+    pub algorithm: String,
+    #[serde(rename = "createdAt")]
+    pub created_at: f64,
+    #[serde(rename = "expiresAt")]
+    pub expires_at: Option<f64>,
+    #[serde(rename = "isPrivate")]
+    pub is_private: bool,
+}
+
+#[derive(Serialize)]
+pub struct GeneratedKey {
+    #[serde(rename = "publicKeyArmored")]
+    pub public_key_armored: String,
+    #[serde(rename = "privateKeyArmored")]
+    pub private_key_armored: String,
+    #[serde(rename = "revocationCertificate")]
+    pub revocation_certificate: String,
+    #[serde(rename = "keyInfo")]
+    pub key_info: KeyInfo,
+}
+
+#[derive(Serialize)]
+pub struct VerifyResult {
+    pub text: String,
+    #[serde(rename = "signatureValid")]
+    pub signature_valid: bool,
+    #[serde(rename = "signerKeyId")]
+    pub signer_key_id: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct GenerateKeyOptions {
+    pub name: String,
+    pub email: String,
+    pub comment: Option<String>,
+    #[serde(rename = "type")]
+    pub key_type: Option<String>,
+    #[serde(rename = "expiresIn")]
+    pub expires_in: Option<u64>,
+}
+
+// =====================================================================
+// Internal helpers
+// =====================================================================
+
+fn system_time_to_millis(t: SystemTime) -> f64 {
+    t.duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as f64
+}
+
+fn extract_key_info(cert: &openpgp::Cert, is_private: bool) -> KeyInfo {
+    let key_id = cert.fingerprint().to_hex();
+    let user_ids: Vec<String> = cert
+        .userids()
+        .map(|uid| String::from_utf8_lossy(uid.userid().value()).to_string())
+        .collect();
+    let algorithm = cert.primary_key().key().pk_algo().to_string();
+    let created_at = system_time_to_millis(cert.primary_key().key().creation_time());
+    let expires_at = cert
+        .with_policy(&POLICY, None)
+        .ok()
+        .and_then(|vc| vc.primary_key().key_expiration_time())
+        .map(system_time_to_millis);
+
+    KeyInfo {
+        key_id,
+        user_ids,
+        algorithm,
+        created_at,
+        expires_at,
+        is_private,
+    }
+}
+
+fn armor_cert(cert: &openpgp::Cert, is_private: bool) -> Result<String, String> {
+    let mut buf = Vec::new();
+    let kind = if is_private {
+        openpgp::armor::Kind::SecretKey
+    } else {
+        openpgp::armor::Kind::PublicKey
+    };
+    let mut writer = openpgp::armor::Writer::new(&mut buf, kind).str_err()?;
+    if is_private {
+        cert.as_tsk().serialize(&mut writer).str_err()?;
+    } else {
+        cert.serialize(&mut writer).str_err()?;
+    }
+    writer.finalize().str_err()?;
+    String::from_utf8(buf).str_err()
+}
+
+/// Parse a JSON array of armored key strings into Certs,
+/// silently skipping any that fail to parse.
+fn parse_armored_certs(json: &str) -> Result<Vec<openpgp::Cert>, String> {
+    let armors: Vec<String> = serde_json::from_str(json).str_err()?;
+    Ok(armors
+        .iter()
+        .filter_map(|a| openpgp::Cert::from_bytes(a.as_bytes()).ok())
+        .collect())
+}
+
+/// AES-256-GCM decrypt with AAD. Zeroizes the key after use.
+fn aes_gcm_decrypt(
+    mut key: Vec<u8>,
+    iv: &[u8],
+    ciphertext: &[u8],
+    aad: &[u8],
+) -> Result<Vec<u8>, String> {
+    let cipher =
+        Aes256Gcm::new_from_slice(&key).map_err(|e| format!("AES key init failed: {}", e))?;
+    key.zeroize();
+
+    let plaintext = cipher
+        .decrypt(Nonce::from_slice(iv), Payload { msg: ciphertext, aad })
+        .map_err(|_| "Decryption failed - wrong credentials or corrupted data".to_string())?;
+    Ok(plaintext)
+}
+
+// =====================================================================
+// Shared crypto operations
+// =====================================================================
+
+/// Encrypt plaintext to recipients, optionally signing with `signer_cert`.
+///
+/// Pipeline: Armorer -> Encryptor -> [Signer] -> LiteralWriter -> plaintext
+fn encrypt_impl(
+    plaintext: &[u8],
+    recipient_keys_json: &str,
+    signer_cert: Option<&openpgp::Cert>,
+) -> Result<Vec<u8>, String> {
+    let recipient_armors: Vec<String> =
+        serde_json::from_str(recipient_keys_json).str_err()?;
+
+    let mut recipients = Vec::new();
+    for armor in &recipient_armors {
+        recipients.push(openpgp::Cert::from_bytes(armor.as_bytes()).str_err()?);
+    }
+
+    let mut recipient_keys = Vec::new();
+    for cert in &recipients {
+        let vc = cert.with_policy(&POLICY, None).str_err()?;
+        for key in vc
+            .keys()
+            .supported()
+            .alive()
+            .revoked(false)
+            .for_transport_encryption()
+            .chain(
+                vc.keys()
+                    .supported()
+                    .alive()
+                    .revoked(false)
+                    .for_storage_encryption(),
+            )
+        {
+            recipient_keys.push(key);
+        }
+    }
+
+    let mut sink = Vec::new();
+    let message = Armorer::new(Message::new(&mut sink)).build().str_err()?;
+    let encryptor = Encryptor::for_recipients(message, recipient_keys)
+        .build()
+        .str_err()?;
+
+    if let Some(cert) = signer_cert {
+        let vc = cert.with_policy(&POLICY, None).str_err()?;
+        let keypair = vc
+            .keys()
+            .secret()
+            .alive()
+            .revoked(false)
+            .for_signing()
+            .next()
+            .ok_or("No signing key found")?
+            .key()
+            .clone()
+            .into_keypair()
+            .str_err()?;
+
+        let signer = Signer::new(encryptor, keypair).str_err()?.build().str_err()?;
+        let mut literal = LiteralWriter::new(signer).build().str_err()?;
+        literal.write_all(plaintext).str_err()?;
+        literal.finalize().str_err()?;
+    } else {
+        let mut literal = LiteralWriter::new(encryptor).build().str_err()?;
+        literal.write_all(plaintext).str_err()?;
+        literal.finalize().str_err()?;
+    }
+
+    Ok(sink)
+}
+
+/// Create a cleartext-signed message from text + signing cert.
+fn cleartext_sign(text: &str, cert: &openpgp::Cert) -> Result<String, String> {
+    let vc = cert.with_policy(&POLICY, None).str_err()?;
+    let keypair = vc
+        .keys()
+        .secret()
+        .alive()
+        .revoked(false)
+        .for_signing()
+        .next()
+        .ok_or("No signing key found")?
+        .key()
+        .clone()
+        .into_keypair()
+        .str_err()?;
+
+    let mut sink = Vec::new();
+    let mut signer = Signer::new(Message::new(&mut sink), keypair)
+        .str_err()?
+        .cleartext()
+        .build()
+        .str_err()?;
+    signer.write_all(text.as_bytes()).str_err()?;
+    signer.finalize().str_err()?;
+
+    Ok(String::from_utf8_lossy(&sink).into_owned())
+}
+
+/// Verify signatures in a message structure. Returns Err on any bad signature.
+fn process_signatures(
+    structure: MessageStructure,
+) -> openpgp::Result<(Option<bool>, Option<String>)> {
+    let mut signature_valid = None;
+    let mut signer_key_id = None;
+    for layer in structure {
+        if let MessageLayer::SignatureGroup { results } = layer {
+            for result in results {
+                match result {
+                    Ok(GoodChecksum { ka, .. }) => {
+                        signature_valid = Some(true);
+                        signer_key_id = Some(ka.cert().fingerprint().to_hex());
+                    }
+                    Err(e) => {
+                        return Err(anyhow::anyhow!("Bad signature: {}", e));
+                    }
+                }
+            }
+        }
+    }
+    Ok((signature_valid, signer_key_id))
+}
+
+// =====================================================================
+// Private key store (keys live in WASM linear memory, never in JS)
+// =====================================================================
+
+/// Private key stored as serialized bytes. Zeroized when dropped.
+struct StoredKey {
+    bytes: Vec<u8>,
+}
+
+impl StoredKey {
+    fn from_cert(cert: &openpgp::Cert) -> Result<Self, String> {
+        let mut bytes = Vec::new();
+        cert.as_tsk().serialize(&mut bytes).str_err()?;
+        Ok(StoredKey { bytes })
+    }
+
+    fn to_cert(&self) -> Result<openpgp::Cert, String> {
+        openpgp::Cert::from_bytes(&self.bytes).str_err()
+    }
+}
+
+impl Drop for StoredKey {
+    fn drop(&mut self) {
+        self.bytes.zeroize();
+    }
+}
+
+thread_local! {
+    static KEY_STORE: RefCell<HashMap<u32, StoredKey>> = RefCell::new(HashMap::new());
+    static NEXT_HANDLE: RefCell<u32> = RefCell::new(1);
+}
+
+fn with_store<T>(f: impl FnOnce(&mut HashMap<u32, StoredKey>) -> T) -> T {
+    KEY_STORE.with(|store| f(&mut store.borrow_mut()))
+}
+
+fn next_handle() -> Result<u32, String> {
+    NEXT_HANDLE.with(|next| {
+        let mut n = next.borrow_mut();
+        let current = *n;
+        *n = current.checked_add(1).ok_or("Handle counter overflow")?;
+        Ok::<u32, &str>(current)
+    })
+    .str_err()
+}
+
+fn insert_key(cert: &openpgp::Cert) -> Result<u32, String> {
+    let stored = StoredKey::from_cert(cert)?;
+    let handle = next_handle()?;
+    with_store(|store| store.insert(handle, stored));
+    Ok(handle)
+}
+
+fn get_cert_from_handle(handle: u32) -> Result<openpgp::Cert, String> {
+    with_store(|store| store.get(&handle).map(|sk| sk.to_cert()))
+        .ok_or("Key handle not found - key may have been locked")?
+}
+
+// =====================================================================
+// Sequoia verification/decryption helpers
+// =====================================================================
+
+struct DecryptHelper {
+    decryption_cert: openpgp::Cert,
+    verification_certs: Vec<openpgp::Cert>,
+    signature_valid: Option<bool>,
+    signer_key_id: Option<String>,
+}
+
+impl VerificationHelper for DecryptHelper {
+    fn get_certs(&mut self, _ids: &[openpgp::KeyHandle]) -> openpgp::Result<Vec<openpgp::Cert>> {
+        Ok(self.verification_certs.clone())
+    }
+
+    fn check(&mut self, structure: MessageStructure) -> openpgp::Result<()> {
+        let (sig_valid, key_id) = process_signatures(structure)?;
+        self.signature_valid = sig_valid;
+        self.signer_key_id = key_id;
+        Ok(())
+    }
+}
+
+impl DecryptionHelper for DecryptHelper {
+    fn decrypt(
+        &mut self,
+        pkesks: &[openpgp::packet::PKESK],
+        _skesks: &[openpgp::packet::SKESK],
+        sym_algo: Option<SymmetricAlgorithm>,
+        decrypt: &mut dyn FnMut(Option<SymmetricAlgorithm>, &SessionKey) -> bool,
+    ) -> openpgp::Result<Option<openpgp::Cert>> {
+        let vc = self.decryption_cert.with_policy(&POLICY, None)?;
+        for pkesk in pkesks {
+            for key in vc
+                .keys()
+                .secret()
+                .alive()
+                .revoked(false)
+                .for_transport_encryption()
+                .chain(vc.keys().secret().alive().revoked(false).for_storage_encryption())
+            {
+                let mut pair = key.key().clone().into_keypair()?;
+                if pkesk
+                    .decrypt(&mut pair, sym_algo)
+                    .map(|(algo, ref session_key)| decrypt(algo, session_key))
+                    .unwrap_or(false)
+                {
+                    return Ok(Some(self.decryption_cert.clone()));
+                }
+            }
+        }
+        Err(anyhow::anyhow!("No suitable decryption key found"))
+    }
+}
+
+struct VerifyHelper {
+    certs: Vec<openpgp::Cert>,
+    signature_valid: bool,
+    signer_key_id: Option<String>,
+}
+
+impl VerificationHelper for VerifyHelper {
+    fn get_certs(&mut self, _ids: &[openpgp::KeyHandle]) -> openpgp::Result<Vec<openpgp::Cert>> {
+        Ok(self.certs.clone())
+    }
+
+    fn check(&mut self, structure: MessageStructure) -> openpgp::Result<()> {
+        let (sig_valid, key_id) = process_signatures(structure)?;
+        self.signature_valid = sig_valid.unwrap_or(false);
+        self.signer_key_id = key_id;
+        Ok(())
+    }
+}
+
+// =====================================================================
+// Public WASM API (called from JavaScript via wasm-bindgen)
+// =====================================================================
+
+#[wasm_bindgen(js_name = "ping")]
+pub fn ping() -> String {
+    "gpg-wasm ok".to_string()
+}
+
+/// Parse an armored public or private key. Returns JSON `KeyInfo`.
+#[wasm_bindgen(js_name = "parseKey")]
+pub fn parse_key(armored: &str) -> Result<String, String> {
+    let cert = openpgp::Cert::from_bytes(armored.as_bytes()).str_err()?;
+    let is_private = cert.keys().secret().next().is_some();
+    serde_json::to_string(&extract_key_info(&cert, is_private)).str_err()
+}
+
+/// Generate a new ECC or RSA key pair. Returns JSON `GeneratedKey`.
+#[wasm_bindgen(js_name = "generateKey")]
+pub fn generate_key(options_json: &str) -> Result<String, String> {
+    let opts: GenerateKeyOptions = serde_json::from_str(options_json).str_err()?;
+
+    let mut userid = opts.name.clone();
+    if let Some(ref comment) = opts.comment {
+        userid = format!("{} ({})", userid, comment);
+    }
+    userid = format!("{} <{}>", userid, opts.email);
+
+    let mut builder = CertBuilder::new()
+        .add_userid(userid)
+        .add_signing_subkey()
+        .add_transport_encryption_subkey()
+        .add_storage_encryption_subkey();
+
+    if opts.key_type.as_deref() == Some("rsa") {
+        builder = builder.set_cipher_suite(CipherSuite::RSA4k);
+    } else {
+        builder = builder.set_cipher_suite(CipherSuite::Cv25519);
+    }
+
+    if let Some(seconds) = opts.expires_in {
+        if seconds > 0 {
+            builder = builder.set_validity_period(Duration::from_secs(seconds));
+        }
+    }
+
+    let (cert, revocation) = builder.generate().str_err()?;
+
+    let mut rev_buf = Vec::new();
+    let rev_packet: openpgp::Packet = revocation.into();
+    let mut rev_writer =
+        openpgp::armor::Writer::new(&mut rev_buf, openpgp::armor::Kind::Signature).str_err()?;
+    rev_packet.serialize(&mut rev_writer).str_err()?;
+    rev_writer.finalize().str_err()?;
+
+    let result = GeneratedKey {
+        public_key_armored: armor_cert(&cert, false)?,
+        private_key_armored: armor_cert(&cert, true)?,
+        revocation_certificate: String::from_utf8(rev_buf).str_err()?,
+        key_info: extract_key_info(&cert, true),
+    };
+    serde_json::to_string(&result).str_err()
+}
+
+/// Extract the public key from an armored private key.
+#[wasm_bindgen(js_name = "extractPublicKey")]
+pub fn extract_public_key(armored_private_key: &str) -> Result<String, String> {
+    let cert = openpgp::Cert::from_bytes(armored_private_key.as_bytes()).str_err()?;
+    armor_cert(&cert, false)
+}
+
+/// Encrypt plaintext to recipients. Optional signing via armored private key.
+#[wasm_bindgen(js_name = "encrypt")]
+pub fn encrypt(
+    plaintext: &[u8],
+    recipient_keys_json: &str,
+    signing_key_armored: Option<String>,
+) -> Result<Vec<u8>, String> {
+    let signer_cert = signing_key_armored
+        .as_deref()
+        .map(|armor| openpgp::Cert::from_bytes(armor.as_bytes()).str_err())
+        .transpose()?;
+    encrypt_impl(plaintext, recipient_keys_json, signer_cert.as_ref())
+}
+
+/// Create a cleartext-signed message.
+#[wasm_bindgen(js_name = "sign")]
+pub fn sign_message(text: &str, signing_key_armored: &str) -> Result<String, String> {
+    let cert = openpgp::Cert::from_bytes(signing_key_armored.as_bytes()).str_err()?;
+    cleartext_sign(text, &cert)
+}
+
+/// Verify a cleartext-signed message. Returns JSON `VerifyResult`.
+#[wasm_bindgen(js_name = "verify")]
+pub fn verify_message(
+    signed_message: &str,
+    verification_keys_json: &str,
+) -> Result<String, String> {
+    let certs = parse_armored_certs(verification_keys_json)?;
+
+    let helper = VerifyHelper {
+        certs,
+        signature_valid: false,
+        signer_key_id: None,
+    };
+
+    let mut verifier = VerifierBuilder::from_bytes(signed_message.as_bytes())
+        .str_err()?
+        .with_policy(&POLICY, None, helper)
+        .str_err()?;
+
+    let mut content = Vec::new();
+    std::io::copy(&mut verifier, &mut content).str_err()?;
+    let helper = verifier.into_helper();
+
+    serde_json::to_string(&VerifyResult {
+        text: String::from_utf8(content).str_err()?,
+        signature_valid: helper.signature_valid,
+        signer_key_id: helper.signer_key_id,
+    })
+    .str_err()
+}
+
+// =====================================================================
+// Key handle API (private keys stay in WASM memory)
+// =====================================================================
+
+/// Store a private key in WASM memory. Returns an opaque integer handle.
+/// The armored key string is parsed and stored as serialized bytes that
+/// are zeroized when the handle is dropped.
+#[wasm_bindgen(js_name = "storeKey")]
+pub fn store_key(armored_private_key: &str) -> Result<u32, String> {
+    let cert = openpgp::Cert::from_bytes(armored_private_key.as_bytes()).str_err()?;
+    if cert.keys().secret().next().is_none() {
+        return Err("Not a private key".to_string());
+    }
+    insert_key(&cert)
+}
+
+/// Drop a key from WASM memory. The backing bytes are zeroized.
+#[wasm_bindgen(js_name = "dropKey")]
+pub fn drop_key(handle: u32) -> Result<(), String> {
+    with_store(|store| store.remove(&handle));
+    Ok(())
+}
+
+/// Encrypt + sign using a stored signing key handle.
+#[wasm_bindgen(js_name = "encryptWithSigningHandle")]
+pub fn encrypt_with_signing_handle(
+    plaintext: &[u8],
+    recipient_keys_json: &str,
+    signing_key_handle: u32,
+) -> Result<Vec<u8>, String> {
+    let signer_cert = get_cert_from_handle(signing_key_handle)?;
+    encrypt_impl(plaintext, recipient_keys_json, Some(&signer_cert))
+}
+
+/// Decrypt a message using a stored key handle.
+///
+/// Returns a packed binary: `[4-byte LE sig_json_len][sig_json][plaintext]`
+/// so signature info and plaintext are returned atomically (no TOCTOU).
+#[wasm_bindgen(js_name = "decryptWithHandle")]
+pub fn decrypt_with_handle(
+    ciphertext: &[u8],
+    key_handle: u32,
+    verification_keys_json: Option<String>,
+) -> Result<Vec<u8>, String> {
+    let decryption_cert = get_cert_from_handle(key_handle)?;
+
+    let verification_certs = match verification_keys_json {
+        Some(ref json) => parse_armored_certs(json)?,
+        None => Vec::new(),
+    };
+
+    let helper = DecryptHelper {
+        decryption_cert,
+        verification_certs,
+        signature_valid: None,
+        signer_key_id: None,
+    };
+
+    let mut decryptor = DecryptorBuilder::from_bytes(ciphertext)
+        .str_err()?
+        .with_policy(&POLICY, None, helper)
+        .str_err()?;
+
+    let mut plaintext = Vec::new();
+    std::io::copy(&mut decryptor, &mut plaintext).str_err()?;
+    let helper = decryptor.into_helper();
+
+    // Pack sig info + plaintext into one return to avoid TOCTOU
+    let sig_json = serde_json::json!({
+        "signatureValid": helper.signature_valid,
+        "signerKeyId": helper.signer_key_id,
+    })
+    .to_string();
+    let sig_bytes = sig_json.as_bytes();
+    let sig_len = (sig_bytes.len() as u32).to_le_bytes();
+
+    let mut result = Vec::with_capacity(4 + sig_bytes.len() + plaintext.len());
+    result.extend_from_slice(&sig_len);
+    result.extend_from_slice(sig_bytes);
+    result.extend_from_slice(&plaintext);
+    Ok(result)
+}
+
+/// Sign using a stored key handle.
+#[wasm_bindgen(js_name = "signWithHandle")]
+pub fn sign_with_handle(text: &str, key_handle: u32) -> Result<String, String> {
+    cleartext_sign(text, &get_cert_from_handle(key_handle)?)
+}
+
+/// Get the armored private key from a handle.
+///
+/// WARNING: This returns plaintext private key material to JS.
+/// Only used for explicit user-initiated "export without passphrase".
+#[wasm_bindgen(js_name = "getKeyArmored")]
+pub fn get_key_armored(key_handle: u32) -> Result<String, String> {
+    armor_cert(&get_cert_from_handle(key_handle)?, true)
+}
+
+/// Export a stored key encrypted with a passphrase (key never leaves WASM as plaintext).
+#[wasm_bindgen(js_name = "encryptKeyForExportWithHandle")]
+pub fn encrypt_key_for_export_with_handle(
+    key_handle: u32,
+    passphrase: &str,
+) -> Result<String, String> {
+    let cert = get_cert_from_handle(key_handle)?;
+    encrypt_cert_for_export(&cert, passphrase)
+}
+
+/// Encrypt a cert's secret keys with a passphrase for safe export.
+fn encrypt_cert_for_export(cert: &openpgp::Cert, passphrase: &str) -> Result<String, String> {
+    let password = openpgp::crypto::Password::from(passphrase);
+
+    let primary = cert
+        .primary_key()
+        .key()
+        .clone()
+        .parts_into_secret()
+        .map_err(|_| "Primary key has no secret material".to_string())?
+        .encrypt_secret(&password)
+        .str_err()?;
+
+    let mut packets: Vec<openpgp::Packet> = vec![primary.role_into_primary().into()];
+    for subkey in cert.keys().subkeys().secret() {
+        packets.push(
+            subkey
+                .key()
+                .clone()
+                .encrypt_secret(&password)
+                .str_err()?
+                .role_into_subordinate()
+                .into(),
+        );
+    }
+
+    let (encrypted_cert, _) = cert.clone().insert_packets(packets).str_err()?;
+    armor_cert(&encrypted_cert, true)
+}
+
+// =====================================================================
+// Argon2id key derivation (password -> AES key)
+// =====================================================================
+
+/// Derive a 32-byte AES key from a password using Argon2id.
+///
+/// Parameters are chosen for browser use: 64MB memory, 3 iterations,
+/// parallelism 1 (WASM is single-threaded). This makes GPU brute-force
+/// impractical for passwords with reasonable entropy.
+#[wasm_bindgen(js_name = "argon2Derive")]
+pub fn argon2_derive(
+    password: &[u8],
+    salt: &[u8],
+    memory_kib: u32,
+    iterations: u32,
+    parallelism: u32,
+) -> Result<Vec<u8>, String> {
+    if salt.len() < 16 {
+        return Err("Salt must be at least 16 bytes".to_string());
+    }
+
+    let params = Params::new(memory_kib, iterations, parallelism, Some(32)).str_err()?;
+    let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
+
+    let mut output = vec![0u8; 32];
+    argon2
+        .hash_password_into(password, salt, &mut output)
+        .str_err()?;
+
+    Ok(output)
+}
+
+// =====================================================================
+// Unlock-and-store: decrypt protection blob + store key in one call.
+// The decrypted private key never leaves WASM.
+// =====================================================================
+
+/// Unlock a password-protected key entirely in WASM. Returns a key handle.
+///
+/// Flow: Argon2id(password, salt) -> AES key -> AES-GCM decrypt -> parse Cert -> store
+/// The decrypted private key never enters the JS heap.
+#[wasm_bindgen(js_name = "unlockWithPassword")]
+pub fn unlock_with_password(
+    ciphertext: &[u8],
+    iv: &[u8],
+    salt: &[u8],
+    key_id: &str,
+    password: &[u8],
+    memory_kib: u32,
+    iterations: u32,
+    parallelism: u32,
+) -> Result<u32, String> {
+    let derived = argon2_derive(password, salt, memory_kib, iterations, parallelism)?;
+    let aad = format!("gpg-tools:password:{}", key_id);
+    let mut plaintext = aes_gcm_decrypt(derived, iv, ciphertext, aad.as_bytes())?;
+
+    let cert = openpgp::Cert::from_bytes(&plaintext).str_err()?;
+    plaintext.zeroize();
+
+    if cert.keys().secret().next().is_none() {
+        return Err("Decrypted data is not a private key".to_string());
+    }
+    insert_key(&cert)
+}
+
+/// Unlock a passkey-protected key entirely in WASM. Returns a key handle.
+///
+/// Flow: HKDF(prfOutput, storedSecret) -> AES key -> AES-GCM decrypt -> parse Cert -> store
+/// JS calls WebAuthn to get the PRF output, passes it here as raw bytes.
+/// The decrypted private key never enters the JS heap.
+#[wasm_bindgen(js_name = "unlockWithPrf")]
+pub fn unlock_with_prf(
+    ciphertext: &[u8],
+    iv: &[u8],
+    prf_output: &[u8],
+    stored_secret: &[u8],
+    key_id: &str,
+) -> Result<u32, String> {
+    let hk = Hkdf::<Sha256>::new(Some(stored_secret), prf_output);
+    let mut derived = vec![0u8; 32];
+    hk.expand(b"gpg-tools-prf-v1", &mut derived)
+        .map_err(|e| format!("HKDF failed: {}", e))?;
+
+    let aad = format!("gpg-tools:passkey:{}", key_id);
+    let mut plaintext = aes_gcm_decrypt(derived, iv, ciphertext, aad.as_bytes())?;
+
+    let cert = openpgp::Cert::from_bytes(&plaintext).str_err()?;
+    plaintext.zeroize();
+
+    if cert.keys().secret().next().is_none() {
+        return Err("Decrypted data is not a private key".to_string());
+    }
+    insert_key(&cert)
+}
+
+// =====================================================================
+
+#[cfg(test)]
+mod tests;

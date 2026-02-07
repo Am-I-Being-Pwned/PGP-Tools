@@ -1,0 +1,80 @@
+import { STORAGE_PREFERENCES } from "../constants";
+import { getItem, setItem } from "./engine";
+
+export type StorageLocation = "local" | "sync";
+
+export type AutoLockTimeout = 5 | 15 | 30 | 60; // minutes
+
+export interface PgpPreferences {
+  defaultSigningKeyId: string | null;
+  armoredOutput: boolean;
+  advancedMode: boolean;
+  storageLocation: StorageLocation;
+  onboardingComplete: boolean;
+  autoLockMinutes: AutoLockTimeout;
+  lockOnClose: boolean;
+  signWhenEncrypting: boolean;
+  activeTab: "workspace" | "keys" | "settings";
+  neverCacheKeys: boolean;
+  autoDecryptDownloads: boolean;
+  autoDownloadFiles: boolean;
+  autoDownloadText: boolean;
+}
+
+const DEFAULT_PREFERENCES: PgpPreferences = {
+  defaultSigningKeyId: null,
+  armoredOutput: true,
+  advancedMode: false,
+  storageLocation: "local",
+  onboardingComplete: false,
+  autoLockMinutes: 15,
+  lockOnClose: true,
+  signWhenEncrypting: false,
+  activeTab: "workspace",
+  neverCacheKeys: false,
+  autoDecryptDownloads: false,
+  autoDownloadFiles: false,
+  autoDownloadText: false,
+};
+
+/**
+ * storageLocation is always read from chrome.storage.sync so the engine
+ * can bootstrap. All other preferences are stored in the user's chosen area.
+ */
+async function getStorageLocation(): Promise<StorageLocation> {
+  const result = await chrome.storage.sync.get(STORAGE_PREFERENCES);
+  const stored = result[STORAGE_PREFERENCES] as
+    | { storageLocation?: StorageLocation }
+    | undefined;
+  return stored?.storageLocation ?? "local";
+}
+
+export async function getPreferences(): Promise<PgpPreferences> {
+  const storageLocation = await getStorageLocation();
+  const stored = await getItem<Partial<PgpPreferences>>(STORAGE_PREFERENCES);
+  return { ...DEFAULT_PREFERENCES, ...stored, storageLocation };
+}
+
+export async function savePreferences(
+  prefs: Partial<PgpPreferences>,
+): Promise<void> {
+  const current = await getPreferences();
+  const merged = { ...current, ...prefs };
+
+  // storageLocation is always persisted to sync so the engine can bootstrap
+  if (prefs.storageLocation) {
+    const syncResult = await chrome.storage.sync.get(STORAGE_PREFERENCES);
+    const syncStored = (syncResult[STORAGE_PREFERENCES] ?? {}) as Record<
+      string,
+      unknown
+    >;
+    await chrome.storage.sync.set({
+      [STORAGE_PREFERENCES]: {
+        ...syncStored,
+        storageLocation: prefs.storageLocation,
+      },
+    });
+  }
+
+  await setItem(STORAGE_PREFERENCES, merged);
+}
