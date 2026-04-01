@@ -271,6 +271,15 @@ export function SettingsView({
             >
               Am I Being Pwned
             </a>
+            .{" "}
+            <a
+              href="https://github.com/Am-I-Being-Pwned/PGP-Tools"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary underline"
+            >
+              Source on GitHub
+            </a>
             .
           </p>
           <p className="text-muted-foreground mt-2 text-xs">
