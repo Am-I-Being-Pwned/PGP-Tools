@@ -1,10 +1,20 @@
 import { useState } from "react";
+import { ChevronRightIcon, LoaderIcon } from "lucide-react";
 
 import { Button } from "@amibeingpwned/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@amibeingpwned/ui/select";
 
+import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { MasterProtection } from "../../lib/storage/master-protection";
 import type { StorageLocation } from "../../lib/storage/preferences";
 import { toBase64, unpackIvCiphertext } from "../../lib/encoding";
+import { generateKey } from "../../lib/pgp/key-management";
 import * as wasmApi from "../../lib/pgp/wasm";
 import {
   ARGON2_ITERATIONS,
@@ -12,6 +22,7 @@ import {
   ARGON2_PARALLELISM,
   generateSalt,
 } from "../../lib/protection/password-kdf";
+import { protectAndStoreKey } from "../../lib/protection/protect-key";
 import {
   authenticateAndGetPrf,
   generatePrfSalt,
@@ -20,6 +31,7 @@ import {
 } from "../../lib/protection/webauthn-prf";
 import { saveMasterProtection } from "../../lib/storage/master-protection";
 import { savePreferences } from "../../lib/storage/preferences";
+import { INPUT_CLASS } from "../../lib/utils/styles";
 import {
   getDefaultProtectionMethod,
   ProtectionMethodPicker,
@@ -27,25 +39,49 @@ import {
 } from "../keys/ProtectionMethodPicker";
 import { StorageLocationPicker } from "./StorageLocationPicker";
 
-type Step = "storage" | "protection" | "identity";
+type Step = "storage" | "protection" | "identity" | "generating";
+type KeyAlgorithm = "ecc" | "rsa";
+type ExpiryOption = "never" | "1y" | "2y" | "3y";
+
+const EXPIRY_SECONDS: Record<ExpiryOption, number> = {
+  never: 0,
+  "1y": 365 * 24 * 60 * 60,
+  "2y": 2 * 365 * 24 * 60 * 60,
+  "3y": 3 * 365 * 24 * 60 * 60,
+};
 
 interface OnboardingFlowProps {
   onComplete: (storageLocation: StorageLocation) => void;
-  onGenerateKey: () => void;
+  addKey: (blob: ProtectedKeyBlob) => Promise<void>;
+  /** Called when a newly generated key is cached in WASM. */
+  onKeyCached?: (keyId: string, keyHandle: number) => void;
+  /** Whether to cache decrypted keys in WASM after generation. */
+  cacheKey?: boolean;
 }
 
-export function OnboardingFlow({
-  onComplete,
-  onGenerateKey,
-}: OnboardingFlowProps) {
+export function OnboardingFlow({ onComplete, addKey, onKeyCached, cacheKey }: OnboardingFlowProps) {
   const [step, setStep] = useState<Step>("storage");
   const [location, setLocation] = useState<StorageLocation>("local");
 
+  // Master protection
   const [method, setMethod] = useState(getDefaultProtectionMethod);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Credential ID from the master passkey registration
+  const [masterCredentialId, setMasterCredentialId] = useState<
+    string | undefined
+  >();
+
+  // Identity fields
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [comment, setComment] = useState("");
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [keyAlgorithm, setKeyAlgorithm] = useState<KeyAlgorithm>("ecc");
+  const [expiryOption, setExpiryOption] = useState<ExpiryOption>("2y");
 
   const handleProtectionSubmit = async () => {
     setError(null);
@@ -98,11 +134,12 @@ export function OnboardingFlow({
           prfSalt: toBase64(prfSalt),
           storedSecret: toBase64(storedSecret),
         };
+
+        setMasterCredentialId(reg.credentialId);
       } else {
         const salt = generateSalt();
         const passwordBytes = new TextEncoder().encode(password);
         try {
-          // Single Argon2id pass: encrypts canary + inits contacts session.
           const packed = await wasmApi.encryptCanaryAndInitSession(
             passwordBytes,
             new Uint8Array(salt),
@@ -127,7 +164,6 @@ export function OnboardingFlow({
         }
       }
 
-      // Save storage location first (engine needs it for routing)
       await savePreferences({ storageLocation: location });
       await saveMasterProtection(mp);
 
@@ -139,13 +175,67 @@ export function OnboardingFlow({
     }
   };
 
-  const finish = async (generateKey: boolean) => {
+  const handleGenerateKey = async () => {
+    setError(null);
+
+    if (!name.trim()) {
+      setError("Name is required.");
+      return;
+    }
+    if (!email.trim()) {
+      setError("Email is required.");
+      return;
+    }
+
+    setStep("generating");
+
+    try {
+      const expiresIn = EXPIRY_SECONDS[expiryOption];
+      const {
+        publicKeyArmored,
+        privateKeyArmored,
+        revocationCertificate,
+        keyInfo,
+      } = await generateKey({
+        name: name.trim(),
+        email: email.trim(),
+        comment: comment.trim() || undefined,
+        type: keyAlgorithm,
+        expiresIn: expiresIn || undefined,
+      });
+
+      const { blob, keyHandle } = await protectAndStoreKey({
+        privateKeyArmored,
+        publicKeyArmored,
+        keyInfo,
+        method: masterCredentialId ? "passkey" : "password",
+        password: password || undefined,
+        revocationCertificate,
+        reusePasskeyCredentialId: masterCredentialId,
+        cacheKey,
+      });
+
+      await addKey(blob);
+      if (keyHandle !== undefined && onKeyCached) {
+        onKeyCached(blob.keyId, keyHandle);
+      }
+      await savePreferences({
+        storageLocation: location,
+        onboardingComplete: true,
+      });
+      onComplete(location);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Key generation failed");
+      setStep("identity");
+    }
+  };
+
+  const handleSkip = async () => {
     await savePreferences({
       storageLocation: location,
       onboardingComplete: true,
     });
     onComplete(location);
-    if (generateKey) setTimeout(onGenerateKey, 100);
   };
 
   return (
@@ -221,29 +311,155 @@ export function OnboardingFlow({
 
       {step === "identity" && (
         <>
-          <div className="space-y-5">
+          <div className="space-y-4">
             <div>
-              <h2 className="text-lg font-semibold">You are all set</h2>
+              <h2 className="text-lg font-semibold">Create your PGP key</h2>
               <p className="text-muted-foreground mt-1 text-sm">
-                Your data is now protected. Create a PGP keypair to start
-                encrypting and signing messages, or set up later.
+                Create a keypair for encrypting, decrypting, and signing
+                messages.
               </p>
             </div>
+
+            <div className="space-y-2">
+              <div>
+                <label className="text-muted-foreground mb-1 block text-xs">
+                  Name *
+                </label>
+                <input
+                  type="text"
+                  placeholder="Your full name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className={INPUT_CLASS}
+                />
+              </div>
+              <div>
+                <label className="text-muted-foreground mb-1 block text-xs">
+                  Email *
+                </label>
+                <input
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={INPUT_CLASS}
+                />
+              </div>
+              <div>
+                <label className="text-muted-foreground mb-1 block text-xs">
+                  Comment{" "}
+                  <span className="text-muted-foreground/60">optional</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. work, personal"
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  className={INPUT_CLASS}
+                />
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="text-muted-foreground hover:text-foreground flex w-full items-center gap-1.5 text-xs transition-colors"
+            >
+              <ChevronRightIcon
+                className={`h-3 w-3 transition-transform ${showAdvanced ? "rotate-90" : ""}`}
+              />
+              Advanced options
+            </button>
+
+            {showAdvanced && (
+              <div className="border-border space-y-3 rounded-md border p-3">
+                <div>
+                  <label className="text-muted-foreground mb-1.5 block text-xs">
+                    Algorithm
+                  </label>
+                  <Select
+                    value={keyAlgorithm}
+                    onValueChange={(v) =>
+                      setKeyAlgorithm(v as KeyAlgorithm)
+                    }
+                  >
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ecc">ECC (Ed25519)</SelectItem>
+                      <SelectItem value="rsa">RSA</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-muted-foreground/60 mt-1 text-[10px]">
+                    {keyAlgorithm === "ecc"
+                      ? "Modern, fast, small keys. Recommended for most uses."
+                      : "Widely compatible. Slower key generation."}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="text-muted-foreground mb-1.5 block text-xs">
+                    Key expiry
+                  </label>
+                  <Select
+                    value={expiryOption}
+                    onValueChange={(v) =>
+                      setExpiryOption(v as ExpiryOption)
+                    }
+                  >
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="never">Never</SelectItem>
+                      <SelectItem value="1y">1 year</SelectItem>
+                      <SelectItem value="2y">2 years</SelectItem>
+                      <SelectItem value="3y">3 years</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+
+            {error && (
+              <p className="text-destructive text-xs" role="alert">
+                {error}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2 pt-4">
-            <Button className="w-full" onClick={() => finish(true)}>
+            <Button className="w-full" onClick={handleGenerateKey}>
               Create my PGP key
             </Button>
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => finish(false)}
+              onClick={handleSkip}
             >
               I'll set up later
             </Button>
           </div>
         </>
+      )}
+
+      {step === "generating" && (
+        <div className="flex flex-1 flex-col items-center justify-center py-6">
+          <div className="bg-primary/10 mb-3 flex h-10 w-10 items-center justify-center rounded-full">
+            <LoaderIcon className="text-primary h-5 w-5 animate-spin" />
+          </div>
+          <p className="text-muted-foreground text-sm">
+            {masterCredentialId
+              ? "Follow your browser's passkey prompt..."
+              : "Generating key..."}
+          </p>
+          {keyAlgorithm === "rsa" && (
+            <p className="text-muted-foreground/60 mt-1 text-xs">
+              RSA keys take a moment to generate
+            </p>
+          )}
+        </div>
       )}
     </div>
   );
