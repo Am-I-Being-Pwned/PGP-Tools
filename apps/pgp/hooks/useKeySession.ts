@@ -25,7 +25,7 @@ interface KeySessionOptions {
 /**
  * Manages unlocked key sessions using WASM key handles.
  *
- * Unlock now happens entirely in WASM: the encrypted blob bytes are
+ * Unlock happens entirely in WASM: the encrypted blob bytes are
  * passed directly to WASM which does KDF + AES-GCM decrypt + store.
  * The decrypted private key never enters the JS heap.
  */
