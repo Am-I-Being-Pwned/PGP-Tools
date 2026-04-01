@@ -51,7 +51,7 @@ export default function App() {
     lockOnClose,
     neverCacheKeys,
   });
-  const contacts = useContacts(masterUnlocked, masterProtection);
+  const contacts = useContacts();
   const {
     pending,
     clearPending,
@@ -178,9 +178,10 @@ export default function App() {
           void keyring.refresh();
           void contacts.refresh();
         }}
-        onGenerateKey={() => {
-          setActiveTab("keys");
-          setOpenGenerateOnMount(true);
+        addKey={keyring.add}
+        cacheKey={!neverCacheKeys}
+        onKeyCached={(keyId, handle) => {
+          void session.cacheKeyHandle(keyId, handle);
         }}
       />
     );
@@ -245,7 +246,7 @@ export default function App() {
           <KeysView
             myKeys={keyring.keys}
             contacts={contacts.contacts}
-            contactsLocked={contacts.locked}
+            contactsLocked={false}
             isUnlocked={session.isUnlocked}
             onUnlockWithPassword={session.unlockWithPassword}
             onUnlockWithPasskey={session.unlockWithPasskey}
@@ -269,6 +270,10 @@ export default function App() {
             primaryPasskeyCredentialId={masterPasskeyCredentialId}
             onUnlockRequestConsumed={() => {
               /* noop */
+            }}
+            cacheKeys={!neverCacheKeys}
+            onKeyCached={(keyId, handle) => {
+              void session.cacheKeyHandle(keyId, handle);
             }}
           />
         )}

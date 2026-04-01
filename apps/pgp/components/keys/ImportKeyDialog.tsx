@@ -124,7 +124,7 @@ export function ImportKeyDialog({
         return;
       }
 
-      const blob = await protectAndStoreKey({
+      const { blob } = await protectAndStoreKey({
         privateKeyArmored: result.privateKeyArmored,
         publicKeyArmored: result.publicKeyArmored,
         keyInfo: result.keyInfo,

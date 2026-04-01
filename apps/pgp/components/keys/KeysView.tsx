@@ -51,6 +51,10 @@ interface KeysViewProps {
   unlockRequestKeyId?: string | null;
   onUnlockRequestConsumed?: () => void;
   primaryPasskeyCredentialId?: string;
+  /** Called when a newly generated key is cached in WASM. */
+  onKeyCached?: (keyId: string, keyHandle: number) => void;
+  /** Whether to cache decrypted keys in WASM after generation. */
+  cacheKeys?: boolean;
 }
 
 export function KeysView({
@@ -75,6 +79,8 @@ export function KeysView({
   unlockRequestKeyId,
   onUnlockRequestConsumed,
   primaryPasskeyCredentialId,
+  onKeyCached,
+  cacheKeys,
 }: KeysViewProps) {
   const [showGenerate, setShowGenerate] = useState(false);
   const [showImport, setShowImport] = useState(false);
@@ -318,11 +324,14 @@ export function KeysView({
       <GenerateKeyDialog
         open={showGenerate}
         onClose={() => setShowGenerate(false)}
-        onKeyGenerated={() => {
-          /* noop */
+        onKeyGenerated={(keyId, keyHandle) => {
+          if (keyHandle !== undefined && onKeyCached) {
+            onKeyCached(keyId, keyHandle);
+          }
         }}
         addKey={onAddKey}
         reusePasskeyCredentialId={primaryPasskeyCredentialId}
+        cacheKey={cacheKeys}
       />
 
       <ImportKeyDialog

@@ -48,10 +48,12 @@ function expiryToSeconds(
 interface GenerateKeyDialogProps {
   open: boolean;
   onClose: () => void;
-  onKeyGenerated: () => void;
+  onKeyGenerated: (keyId: string, keyHandle?: number) => void;
   addKey: (blob: ProtectedKeyBlob) => Promise<void>;
   /** Pass the primary key's passkey credential ID to allow reuse. */
   reusePasskeyCredentialId?: string;
+  /** If true, cache the decrypted key in WASM and return the handle via onKeyGenerated. */
+  cacheKey?: boolean;
 }
 
 export function GenerateKeyDialog({
@@ -60,6 +62,7 @@ export function GenerateKeyDialog({
   onKeyGenerated,
   addKey,
   reusePasskeyCredentialId,
+  cacheKey,
 }: GenerateKeyDialogProps) {
   const [step, setStep] = useState<Step>("identity");
   const [name, setName] = useState("");
@@ -165,7 +168,7 @@ export function GenerateKeyDialog({
         expiresIn: expiresIn || undefined,
       });
 
-      const blob = await protectAndStoreKey({
+      const { blob, keyHandle } = await protectAndStoreKey({
         privateKeyArmored,
         publicKeyArmored,
         keyInfo,
@@ -176,10 +179,11 @@ export function GenerateKeyDialog({
           method === "passkey" && reusePasskey
             ? reusePasskeyCredentialId
             : undefined,
+        cacheKey,
       });
 
       await addKey(blob);
-      onKeyGenerated();
+      onKeyGenerated(blob.keyId, keyHandle);
       resetAndClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Key generation failed");

@@ -1,4 +1,5 @@
 import type { KeyInfo } from "../pgp/types";
+import * as wasmApi from "../pgp/wasm";
 import type { ProtectedKeyBlob } from "../storage/keyring";
 import { blobFromEncrypted } from "../storage/keyring";
 import { encryptWithPasskey, encryptWithPassword } from "./encrypt-private-key";
@@ -10,9 +11,16 @@ import {
   registerPasskey,
 } from "./webauthn-prf";
 
+export interface ProtectAndStoreResult {
+  blob: ProtectedKeyBlob;
+  /** WASM key handle for the decrypted private key, if caching was requested. */
+  keyHandle?: number;
+}
+
 /**
  * Encrypt a private key and build a ProtectedKeyBlob.
  * Handles the full passkey registration + PRF flow or password encryption.
+ * Optionally caches the decrypted key in WASM and returns the handle.
  */
 export async function protectAndStoreKey(opts: {
   privateKeyArmored: string;
@@ -23,7 +31,9 @@ export async function protectAndStoreKey(opts: {
   revocationCertificate?: string;
   /** Reuse an existing passkey credential instead of registering a new one. */
   reusePasskeyCredentialId?: string;
-}): Promise<ProtectedKeyBlob> {
+  /** If true, also store the decrypted key in WASM and return the handle. */
+  cacheKey?: boolean;
+}): Promise<ProtectAndStoreResult> {
   const { privateKeyArmored, publicKeyArmored, keyInfo, method, password } =
     opts;
 
@@ -78,7 +88,13 @@ export async function protectAndStoreKey(opts: {
       encrypted,
     );
     blob.revocationCertificate = opts.revocationCertificate;
-    return blob;
+
+    let keyHandle: number | undefined;
+    if (opts.cacheKey) {
+      keyHandle = await wasmApi.storeKey(privateKeyArmored);
+    }
+
+    return { blob, keyHandle };
   }
 
   const encrypted = await encryptWithPassword(
@@ -95,5 +111,11 @@ export async function protectAndStoreKey(opts: {
     encrypted,
   );
   blob.revocationCertificate = opts.revocationCertificate;
-  return blob;
+
+  let keyHandle: number | undefined;
+  if (opts.cacheKey) {
+    keyHandle = await wasmApi.storeKey(privateKeyArmored);
+  }
+
+  return { blob, keyHandle };
 }

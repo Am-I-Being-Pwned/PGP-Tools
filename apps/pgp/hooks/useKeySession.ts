@@ -180,5 +180,6 @@ export function useKeySession(opts: KeySessionOptions) {
     getKeyHandle,
     isUnlocked,
     unlockedKeyIds,
+    cacheKeyHandle: markHandleUnlocked,
   };
 }
