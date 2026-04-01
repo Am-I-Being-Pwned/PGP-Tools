@@ -335,3 +335,318 @@ fn test_rsa_key_generation() {
     let (dec_bytes, _sig) = test_decrypt(&ct, priv_armor, None);
     assert_eq!(std::str::from_utf8(&dec_bytes).unwrap(), "RSA test");
 }
+
+// =====================================================================
+// Contacts session tests
+// =====================================================================
+
+/// Helper: drop the contacts session to ensure clean state between tests.
+/// (Tests may run in any order on the same thread.)
+fn reset_contacts_session() {
+    drop_contacts_session();
+    assert!(!has_contacts_session());
+}
+
+#[test]
+fn test_contacts_session_lifecycle_with_prf() {
+    reset_contacts_session();
+
+    let prf_output = b"32-byte-fake-prf-output-for-test";
+    let stored_secret = b"32-byte-fake-stored-secret-test!";
+
+    assert!(!has_contacts_session());
+
+    init_contacts_session_with_prf(prf_output, stored_secret).unwrap();
+    assert!(has_contacts_session());
+
+    drop_contacts_session();
+    assert!(!has_contacts_session());
+}
+
+#[test]
+fn test_contacts_encrypt_decrypt_round_trip_prf() {
+    reset_contacts_session();
+
+    let prf_output = b"32-byte-fake-prf-output-for-test";
+    let stored_secret = b"32-byte-fake-stored-secret-test!";
+    init_contacts_session_with_prf(prf_output, stored_secret).unwrap();
+
+    let plaintext = b"[{\"keyId\":\"abc123\",\"name\":\"Alice\"}]";
+    let packed = encrypt_contacts(plaintext).unwrap();
+
+    // Packed format: [12-byte IV][ciphertext]
+    assert!(packed.len() > 12);
+    let iv = &packed[..12];
+    let ciphertext = &packed[12..];
+
+    let decrypted = decrypt_contacts(ciphertext, iv).unwrap();
+    assert_eq!(decrypted, plaintext);
+
+    reset_contacts_session();
+}
+
+#[test]
+fn test_contacts_encrypt_without_session_fails() {
+    reset_contacts_session();
+
+    let result = encrypt_contacts(b"should fail");
+    assert!(result.is_err());
+    assert!(result
+        .unwrap_err()
+        .contains("Contacts session not active"));
+}
+
+#[test]
+fn test_contacts_decrypt_without_session_fails() {
+    reset_contacts_session();
+
+    let result = decrypt_contacts(b"fake-ciphertext", &[0u8; 12]);
+    assert!(result.is_err());
+    assert!(result
+        .unwrap_err()
+        .contains("Contacts session not active"));
+}
+
+#[test]
+fn test_contacts_decrypt_wrong_key_fails() {
+    reset_contacts_session();
+
+    // Encrypt with one key
+    let prf_output_a = b"aaaa-fake-prf-output-32-bytes!!!";
+    let stored_secret_a = b"aaaa-fake-stored-secret-32bytes!";
+    init_contacts_session_with_prf(prf_output_a, stored_secret_a).unwrap();
+
+    let packed = encrypt_contacts(b"secret contacts").unwrap();
+    let iv = &packed[..12];
+    let ciphertext = &packed[12..];
+
+    // Switch to a different key
+    let prf_output_b = b"bbbb-fake-prf-output-32-bytes!!!";
+    let stored_secret_b = b"bbbb-fake-stored-secret-32bytes!";
+    init_contacts_session_with_prf(prf_output_b, stored_secret_b).unwrap();
+
+    // Decryption should fail (wrong key)
+    let result = decrypt_contacts(ciphertext, iv);
+    assert!(result.is_err());
+
+    reset_contacts_session();
+}
+
+#[test]
+fn test_contacts_session_replaced_on_reinit() {
+    reset_contacts_session();
+
+    // Init with key A, encrypt
+    let prf_a = b"aaaa-fake-prf-output-32-bytes!!!";
+    let secret_a = b"aaaa-fake-stored-secret-32bytes!";
+    init_contacts_session_with_prf(prf_a, secret_a).unwrap();
+    let packed_a = encrypt_contacts(b"data-a").unwrap();
+
+    // Re-init with key B (should replace, not accumulate)
+    let prf_b = b"bbbb-fake-prf-output-32-bytes!!!";
+    let secret_b = b"bbbb-fake-stored-secret-32bytes!";
+    init_contacts_session_with_prf(prf_b, secret_b).unwrap();
+    let packed_b = encrypt_contacts(b"data-b").unwrap();
+
+    // Decrypt B should work
+    let iv_b = &packed_b[..12];
+    let ct_b = &packed_b[12..];
+    assert_eq!(decrypt_contacts(ct_b, iv_b).unwrap(), b"data-b");
+
+    // Decrypt A should fail (session now has key B)
+    let iv_a = &packed_a[..12];
+    let ct_a = &packed_a[12..];
+    assert!(decrypt_contacts(ct_a, iv_a).is_err());
+
+    reset_contacts_session();
+}
+
+#[test]
+fn test_encrypt_canary_and_init_session() {
+    reset_contacts_session();
+
+    let password = b"strong-password-123";
+    let salt = b"16-byte-salt!!!!";
+
+    let packed = encrypt_canary_and_init_session(password, salt, 4096, 3, 1).unwrap();
+    assert!(packed.len() > 12);
+
+    // Session should now be active
+    assert!(has_contacts_session());
+
+    // Should be able to encrypt/decrypt contacts
+    let ct = encrypt_contacts(b"test contacts").unwrap();
+    let iv = &ct[..12];
+    let ciphertext = &ct[12..];
+    assert_eq!(decrypt_contacts(ciphertext, iv).unwrap(), b"test contacts");
+
+    reset_contacts_session();
+}
+
+#[test]
+fn test_verify_canary_correct_password() {
+    reset_contacts_session();
+
+    let password = b"correct-password-123";
+    let salt = b"16-byte-salt!!!!";
+
+    // Setup: encrypt canary
+    let packed = encrypt_canary_and_init_session(password, salt, 4096, 3, 1).unwrap();
+    let canary_iv = &packed[..12];
+    let canary_ct = &packed[12..];
+
+    // Drop session to simulate app restart
+    drop_contacts_session();
+    assert!(!has_contacts_session());
+
+    // Verify with correct password should succeed and init session
+    let ok = verify_canary_and_init_session(canary_ct, canary_iv, password, salt, 4096, 3, 1).unwrap();
+    assert!(ok);
+    assert!(has_contacts_session());
+
+    reset_contacts_session();
+}
+
+#[test]
+fn test_verify_canary_wrong_password() {
+    reset_contacts_session();
+
+    let password = b"correct-password-123";
+    let wrong_password = b"wrong-password-456!!";
+    let salt = b"16-byte-salt!!!!";
+
+    // Setup: encrypt canary
+    let packed = encrypt_canary_and_init_session(password, salt, 4096, 3, 1).unwrap();
+    let canary_iv = &packed[..12];
+    let canary_ct = &packed[12..];
+
+    drop_contacts_session();
+
+    // Verify with wrong password should return false and NOT init session
+    let ok = verify_canary_and_init_session(canary_ct, canary_iv, wrong_password, salt, 4096, 3, 1).unwrap();
+    assert!(!ok);
+    assert!(!has_contacts_session());
+
+    reset_contacts_session();
+}
+
+#[test]
+fn test_verify_canary_then_encrypt_contacts() {
+    reset_contacts_session();
+
+    let password = b"my-master-password";
+    let salt = b"16-byte-salt!!!!";
+
+    // Setup
+    let packed = encrypt_canary_and_init_session(password, salt, 4096, 3, 1).unwrap();
+    let canary_iv = &packed[..12];
+    let canary_ct = &packed[12..];
+
+    // Encrypt some contacts while session is active
+    let contacts_packed = encrypt_contacts(b"[{\"keyId\":\"def456\"}]").unwrap();
+    let contacts_iv = &contacts_packed[..12];
+    let contacts_ct = &contacts_packed[12..];
+
+    // Simulate app restart
+    drop_contacts_session();
+
+    // Re-verify password → session should be restored
+    let ok = verify_canary_and_init_session(canary_ct, canary_iv, password, salt, 4096, 3, 1).unwrap();
+    assert!(ok);
+
+    // Decrypt contacts should work with the restored session
+    let decrypted = decrypt_contacts(contacts_ct, contacts_iv).unwrap();
+    assert_eq!(decrypted, b"[{\"keyId\":\"def456\"}]");
+
+    reset_contacts_session();
+}
+
+#[test]
+fn test_contacts_key_domain_separation_password_vs_prf() {
+    reset_contacts_session();
+
+    // Encrypt contacts with a password-derived session
+    let password = b"test-password-for-sep";
+    let salt = b"16-byte-salt!!!!";
+    encrypt_canary_and_init_session(password, salt, 4096, 3, 1).unwrap();
+    let packed = encrypt_contacts(b"password-contacts").unwrap();
+    let iv = &packed[..12];
+    let ct = &packed[12..];
+
+    // Switch to a PRF-derived session (different key derivation path)
+    let prf_output = b"32-byte-fake-prf-output-for-test";
+    let stored_secret = b"32-byte-fake-stored-secret-test!";
+    init_contacts_session_with_prf(prf_output, stored_secret).unwrap();
+
+    // Should NOT be able to decrypt password-encrypted contacts with PRF key
+    assert!(decrypt_contacts(ct, iv).is_err());
+
+    reset_contacts_session();
+}
+
+#[test]
+fn test_empty_contacts_encrypt_decrypt() {
+    reset_contacts_session();
+
+    let prf_output = b"32-byte-fake-prf-output-for-test";
+    let stored_secret = b"32-byte-fake-stored-secret-test!";
+    init_contacts_session_with_prf(prf_output, stored_secret).unwrap();
+
+    // Empty JSON array
+    let packed = encrypt_contacts(b"[]").unwrap();
+    let iv = &packed[..12];
+    let ct = &packed[12..];
+    assert_eq!(decrypt_contacts(ct, iv).unwrap(), b"[]");
+
+    // Empty bytes
+    let packed2 = encrypt_contacts(b"").unwrap();
+    let iv2 = &packed2[..12];
+    let ct2 = &packed2[12..];
+    assert_eq!(decrypt_contacts(ct2, iv2).unwrap(), b"");
+
+    reset_contacts_session();
+}
+
+#[test]
+fn test_large_contacts_encrypt_decrypt() {
+    reset_contacts_session();
+
+    let prf_output = b"32-byte-fake-prf-output-for-test";
+    let stored_secret = b"32-byte-fake-stored-secret-test!";
+    init_contacts_session_with_prf(prf_output, stored_secret).unwrap();
+
+    // Simulate ~100 contacts worth of data (~100KB)
+    let large_data: Vec<u8> = (0..100_000).map(|i| (i % 256) as u8).collect();
+    let packed = encrypt_contacts(&large_data).unwrap();
+    let iv = &packed[..12];
+    let ct = &packed[12..];
+    assert_eq!(decrypt_contacts(ct, iv).unwrap(), large_data);
+
+    reset_contacts_session();
+}
+
+#[test]
+fn test_canary_tampered_ciphertext_fails() {
+    reset_contacts_session();
+
+    let password = b"test-password-tamper";
+    let salt = b"16-byte-salt!!!!";
+
+    let packed = encrypt_canary_and_init_session(password, salt, 4096, 3, 1).unwrap();
+    let canary_iv = &packed[..12];
+    let mut canary_ct = packed[12..].to_vec();
+
+    drop_contacts_session();
+
+    // Tamper with the ciphertext
+    if let Some(byte) = canary_ct.last_mut() {
+        *byte ^= 0xFF;
+    }
+
+    // Should fail gracefully (return false, not panic/error)
+    let ok = verify_canary_and_init_session(&canary_ct, canary_iv, password, salt, 4096, 3, 1).unwrap();
+    assert!(!ok);
+    assert!(!has_contacts_session());
+
+    reset_contacts_session();
+}

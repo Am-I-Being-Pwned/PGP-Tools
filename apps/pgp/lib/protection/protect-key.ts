@@ -52,9 +52,14 @@ export async function protectAndStoreKey(opts: {
     // Fresh salts ensure a unique derived key even when reusing the credential.
     const prfSalt = generatePrfSalt();
     const storedSecret = generateStoredSecret();
-    const { prfOutput } = await authenticateAndGetPrf(credentialId, prfSalt);
-    const aesKey = await deriveKeyFromPrf(prfOutput, storedSecret);
-    prfOutput.fill(0);
+    let prfOutput: Uint8Array | undefined;
+    let aesKey: CryptoKey;
+    try {
+      ({ prfOutput } = await authenticateAndGetPrf(credentialId, prfSalt));
+      aesKey = await deriveKeyFromPrf(prfOutput, storedSecret);
+    } finally {
+      prfOutput?.fill(0);
+    }
 
     const encrypted = await encryptWithPasskey(
       privateKeyArmored,

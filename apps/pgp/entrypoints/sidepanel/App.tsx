@@ -84,15 +84,24 @@ export default function App() {
     };
   }, [masterUnlocked, resetMasterLockTimer]);
 
+  // Lock on visibility-hidden with a grace period so clicking the main page
+  // content (which hides the sidepanel briefly) does not trigger an immediate lock.
+  const visibilityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (!lockOnClose || !masterUnlocked) return;
     const handler = () => {
       if (document.visibilityState === "hidden") {
-        doMasterLock();
+        visibilityTimerRef.current = setTimeout(doMasterLock, 5000);
+      } else if (visibilityTimerRef.current) {
+        clearTimeout(visibilityTimerRef.current);
+        visibilityTimerRef.current = null;
       }
     };
     document.addEventListener("visibilitychange", handler);
-    return () => document.removeEventListener("visibilitychange", handler);
+    return () => {
+      document.removeEventListener("visibilitychange", handler);
+      if (visibilityTimerRef.current) clearTimeout(visibilityTimerRef.current);
+    };
   }, [lockOnClose, masterUnlocked, doMasterLock]);
 
   // ── Init ───────────────────────────────────────────────────────────

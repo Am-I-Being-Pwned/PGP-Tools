@@ -366,12 +366,17 @@ function ContactsList({
   return (
     <div>
       <h2 className="mb-2 text-sm font-semibold">
-        Contacts{contacts.length > 0 && ` (${contacts.length})`}
+        Contacts
+        {contactsLocked
+          ? " (encrypted)"
+          : contacts.length > 0
+            ? ` (${contacts.length})`
+            : ""}
       </h2>
       {contactsLocked ? (
         <div className="border-border bg-muted/30 rounded-lg border p-4 text-center">
           <p className="text-muted-foreground text-sm">
-            Unlock your primary key to view and manage contacts.
+            Contacts are encrypted. Unlock PGP Tools to view and manage them.
           </p>
         </div>
       ) : (
