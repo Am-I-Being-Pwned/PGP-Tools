@@ -1,7 +1,7 @@
 import { STORAGE_CONTACTS } from "../constants";
 import { fromBase64, toBase64, unpackIvCiphertext } from "../encoding";
 import * as wasmApi from "../pgp/wasm";
-import { getItem, removeItem, setItem, withLock } from "./engine";
+import { getItem, removeItem, setItem } from "./engine";
 
 // ── public contact type ─────────────────────────────────────────────
 
@@ -80,32 +80,6 @@ export async function encryptAndSaveContacts(
   await setItem(STORAGE_CONTACTS, blob);
 }
 
-export async function addContactEncrypted(
-  contact: PublicContactKey,
-): Promise<void> {
-  await withLock(STORAGE_CONTACTS, async () => {
-    const contacts = await loadAndDecryptContacts();
-    if (!contacts.some((c) => c.keyId === contact.keyId)) {
-      contacts.push(contact);
-    }
-    await encryptAndSaveContacts(contacts);
-  });
-}
-
-export async function removeContactEncrypted(
-  keyId: string,
-): Promise<void> {
-  await withLock(STORAGE_CONTACTS, async () => {
-    const contacts = await loadAndDecryptContacts();
-    const filtered = contacts.filter((c) => c.keyId !== keyId);
-    if (filtered.length === 0) {
-      await removeItem(STORAGE_CONTACTS);
-    } else {
-      await encryptAndSaveContacts(filtered);
-    }
-  });
-}
-
 // ── migration from legacy plaintext format ──────────────────────────
 
 /** Check whether the stored contacts are in the old plaintext format. */
@@ -129,18 +103,21 @@ async function readLegacyContacts(): Promise<PublicContactKey[]> {
 
 /** Migrate plaintext contacts to encrypted format and clean up old keys. */
 export async function migrateLegacyContacts(): Promise<void> {
-  await withLock(STORAGE_CONTACTS, async () => {
-    const raw = await getItem<unknown>(STORAGE_CONTACTS);
-    if (!Array.isArray(raw)) return; // already migrated or empty
+  const raw = await getItem<unknown>(STORAGE_CONTACTS);
+  if (!Array.isArray(raw)) return; // already migrated or empty
 
-    const contacts = await readLegacyContacts();
-    await encryptAndSaveContacts(contacts);
+  const contacts = await readLegacyContacts();
+  await encryptAndSaveContacts(contacts);
 
-    // Clean up old per-contact keys
-    for (const id of raw as string[]) {
-      await removeItem(legacyContactKey(id));
-    }
-  });
+  // Clean up old per-contact keys
+  for (const id of raw as string[]) {
+    await removeItem(legacyContactKey(id));
+  }
+}
+
+/** Delete the contacts blob from storage. */
+export async function deleteContactsBlob(): Promise<void> {
+  await removeItem(STORAGE_CONTACTS);
 }
 
 /** Check whether any encrypted contacts blob exists in storage. */
@@ -149,7 +126,3 @@ export async function hasEncryptedContacts(): Promise<boolean> {
   return isEncryptedBlob(raw);
 }
 
-/** Delete the contacts blob entirely. */
-export async function clearContacts(): Promise<void> {
-  await removeItem(STORAGE_CONTACTS);
-}

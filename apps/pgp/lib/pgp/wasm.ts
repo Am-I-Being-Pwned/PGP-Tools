@@ -195,7 +195,7 @@ export async function dropContactsSession(): Promise<void> {
   wasm.dropContactsSession();
 }
 
-/** Check whether a contacts session is currently active. */
+/** Check whether a contacts session is currently active in WASM. */
 export async function hasContactsSession(): Promise<boolean> {
   const wasm = await loadWasm();
   return wasm.hasContactsSession();
