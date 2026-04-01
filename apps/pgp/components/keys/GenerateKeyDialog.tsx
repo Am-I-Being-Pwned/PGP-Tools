@@ -98,6 +98,8 @@ export function GenerateKeyDialog({
     onClose();
   };
 
+  const canSkipProtection = !!reusePasskeyCredentialId && method === "passkey";
+
   const handleNext = () => {
     setError(null);
     if (!name.trim()) {
@@ -110,6 +112,8 @@ export function GenerateKeyDialog({
     }
     if (expiryOption === "custom") {
       setStep("expiry");
+    } else if (canSkipProtection) {
+      void handleGenerate();
     } else {
       setStep("protection");
     }
@@ -125,7 +129,11 @@ export function GenerateKeyDialog({
       setError("Expiry date must be in the future.");
       return;
     }
-    setStep("protection");
+    if (canSkipProtection) {
+      void handleGenerate();
+    } else {
+      setStep("protection");
+    }
   };
 
   const handleGenerate = async () => {

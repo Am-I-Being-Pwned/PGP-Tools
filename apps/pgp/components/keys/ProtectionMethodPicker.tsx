@@ -67,8 +67,8 @@ export function ProtectionMethodPicker({
           className="accent-primary mt-0.5"
         />
         <div>
-          <p className="text-sm font-medium">
-            Passkey{" "}
+          <p className="flex items-center justify-between text-sm font-medium">
+            Passkey
             <span className="text-primary text-xs font-normal">
               Recommended
             </span>
