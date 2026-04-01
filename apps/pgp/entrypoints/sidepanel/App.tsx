@@ -50,7 +50,7 @@ export default function App() {
     lockOnClose,
     neverCacheKeys,
   });
-  const contacts = useContacts(masterUnlocked);
+  const contacts = useContacts(masterUnlocked, masterProtection);
   const {
     pending,
     clearPending,
@@ -63,6 +63,9 @@ export default function App() {
   // ── Master auto-lock ───────────────────────────────────────────────
 
   const doMasterLock = useCallback(() => {
+    // Drop the WASM contacts session key. For passkey users this is
+    // already gone (dropped after decrypt), but for password users
+    // it persists and must be explicitly cleared.
     void wasmApi.dropContactsSession();
     setMasterUnlocked(false);
     session.lockAll();
