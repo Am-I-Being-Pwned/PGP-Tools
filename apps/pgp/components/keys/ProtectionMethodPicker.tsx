@@ -17,6 +17,10 @@ interface ProtectionMethodPickerProps {
   onBack: () => void;
   submitting: boolean;
   submitLabel?: string;
+  /** When set, offer to reuse the existing passkey instead of registering a new one. */
+  reusePasskeyCredentialId?: string;
+  reusePasskey?: boolean;
+  onReusePasskeyChange?: (reuse: boolean) => void;
 }
 
 export function ProtectionMethodPicker({
@@ -31,6 +35,9 @@ export function ProtectionMethodPicker({
   onBack,
   submitting,
   submitLabel,
+  reusePasskeyCredentialId,
+  reusePasskey,
+  onReusePasskeyChange,
 }: ProtectionMethodPickerProps) {
   const prfAvailable = checkPrfSupport();
 
@@ -63,14 +70,30 @@ export function ProtectionMethodPicker({
             </span>
           </p>
           <p className="text-muted-foreground text-xs">
-            Use your fingerprint, face, or security key. No password to
-            remember.
+            {reusePasskeyCredentialId
+              ? "Use the same passkey as your primary key, or register a new one."
+              : "Use your fingerprint, face, or security key. No password to remember."}
           </p>
           {!prfAvailable && (
             <p className="text-destructive mt-1 text-xs">
               Not available in this browser.
             </p>
           )}
+          {method === "passkey" &&
+            reusePasskeyCredentialId &&
+            onReusePasskeyChange && (
+              <label className="mt-2 flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={reusePasskey ?? true}
+                  onChange={(e) => onReusePasskeyChange(e.target.checked)}
+                  className="accent-primary"
+                />
+                <span className="text-muted-foreground text-xs">
+                  Reuse existing passkey
+                </span>
+              </label>
+            )}
         </div>
       </label>
 
