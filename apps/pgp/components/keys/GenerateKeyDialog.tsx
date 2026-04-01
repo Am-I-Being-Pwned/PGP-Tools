@@ -13,13 +13,12 @@ import {
 } from "@amibeingpwned/ui/select";
 
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
-import type { ProtectionMethod } from "./ProtectionMethodPicker";
 import { generateKey } from "../../lib/pgp/key-management";
 import { protectAndStoreKey } from "../../lib/protection/protect-key";
-import { checkPrfSupport } from "../../lib/protection/webauthn-prf";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 import { Dialog } from "../shared/Dialog";
 import {
+  getDefaultProtectionMethod,
   ProtectionMethodPicker,
   validatePassword,
 } from "./ProtectionMethodPicker";
@@ -66,9 +65,7 @@ export function GenerateKeyDialog({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [comment, setComment] = useState("");
-  const [method, setMethod] = useState<ProtectionMethod>(
-    checkPrfSupport() ? "passkey" : "password",
-  );
+  const [method, setMethod] = useState(getDefaultProtectionMethod);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [generating, setGenerating] = useState(false);
@@ -332,7 +329,11 @@ export function GenerateKeyDialog({
             </div>
           )}
 
-          {error && <p className="text-destructive text-xs">{error}</p>}
+          {error && (
+            <p className="text-destructive text-xs" role="alert">
+              {error}
+            </p>
+          )}
 
           <div className="flex gap-2">
             <Button
@@ -371,7 +372,11 @@ export function GenerateKeyDialog({
               Expires {format(customExpiry, "PPP")}
             </p>
           )}
-          {error && <p className="text-destructive text-xs">{error}</p>}
+          {error && (
+            <p className="text-destructive text-xs" role="alert">
+              {error}
+            </p>
+          )}
           <div className="flex gap-2">
             <Button
               variant="outline"

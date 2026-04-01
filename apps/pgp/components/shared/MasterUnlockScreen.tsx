@@ -32,33 +32,41 @@ export function MasterUnlockScreen({
     setError(null);
     setUnlocking(true);
 
+    let prfOutput: Uint8Array | undefined;
     try {
-      const { prfOutput } = await authenticateAndGetPrf(
+      ({ prfOutput } = await authenticateAndGetPrf(
         masterProtection.credentialId,
         fromBase64(masterProtection.prfSalt),
-      );
+      ));
 
       await wasmApi.initContactsSessionWithPrf(
         prfOutput,
         new Uint8Array(fromBase64(masterProtection.storedSecret)),
       );
-      prfOutput.fill(0);
       onUnlocked();
-    } catch {
-      setError("Passkey authentication failed. Try again.");
+    } catch (e) {
+      // Distinguish user cancellation from real errors.
+      if (e instanceof DOMException && e.name === "NotAllowedError") {
+        // User dismissed the dialog — not an error.
+      } else {
+        setError("Passkey authentication failed. Try again.");
+      }
     } finally {
+      prfOutput?.fill(0);
       setUnlocking(false);
     }
   };
 
   const handlePasswordUnlock = async () => {
     if (masterProtection.method !== "password") return;
+
     setError(null);
     setUnlocking(true);
 
     const passwordBytes = new TextEncoder().encode(password);
     try {
-      const ok = await wasmApi.verifyCanary(
+      // Single Argon2id pass: verifies canary + inits contacts session.
+      const ok = await wasmApi.verifyCanaryAndInitSession(
         new Uint8Array(fromBase64(masterProtection.encryptedCanary)),
         new Uint8Array(fromBase64(masterProtection.canaryIv)),
         passwordBytes,
@@ -72,14 +80,7 @@ export function MasterUnlockScreen({
         setError("Wrong password.");
         return;
       }
-
-      await wasmApi.initContactsSessionWithPassword(
-        passwordBytes,
-        new Uint8Array(fromBase64(masterProtection.kdfSalt)),
-        ARGON2_MEMORY_KIB,
-        ARGON2_ITERATIONS,
-        ARGON2_PARALLELISM,
-      );
+      setPassword("");
       onUnlocked();
     } catch {
       setError("Unlock failed. Try again.");
@@ -90,7 +91,11 @@ export function MasterUnlockScreen({
   };
 
   return (
-    <div className="flex h-full flex-col items-center justify-center p-6">
+    <div
+      className="flex h-full flex-col items-center justify-center p-6"
+      role="main"
+      aria-label="Unlock PGP Tools"
+    >
       <div className="w-full max-w-xs space-y-6 text-center">
         <div className="bg-primary/10 mx-auto flex h-14 w-14 items-center justify-center rounded-full">
           <LockIcon className="text-primary h-7 w-7" />
@@ -99,9 +104,7 @@ export function MasterUnlockScreen({
         <div>
           <h1 className="text-lg font-semibold">PGP Tools</h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            {masterProtection.method === "passkey"
-              ? "Tap your passkey to unlock."
-              : "Enter your password to unlock."}
+            Your keys and contacts are encrypted. Authenticate to continue.
           </p>
         </div>
 
@@ -129,6 +132,7 @@ export function MasterUnlockScreen({
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className={INPUT_CLASS}
+              aria-label="Master password"
               autoFocus
             />
             <Button
@@ -141,7 +145,16 @@ export function MasterUnlockScreen({
           </form>
         )}
 
-        {error && <p className="text-destructive text-xs">{error}</p>}
+        {error && (
+          <p className="text-destructive text-xs" role="alert">
+            {error}
+          </p>
+        )}
+
+        <p className="text-muted-foreground text-xs">
+          If you have lost your password, your encrypted contacts cannot be
+          recovered.
+        </p>
 
         <p className="text-muted-foreground text-center text-xs">
           A privacy tool by{" "}

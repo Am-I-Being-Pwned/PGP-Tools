@@ -180,24 +180,6 @@ export async function unlockWithPrf(
 
 // ── Contacts session (master protection, key material stays in WASM) ─
 
-/** Init the contacts session with a password. Argon2id + HKDF in WASM. */
-export async function initContactsSessionWithPassword(
-  password: Uint8Array,
-  salt: Uint8Array,
-  memoryKib: number,
-  iterations: number,
-  parallelism: number,
-): Promise<void> {
-  const wasm = await loadWasm();
-  wasm.initContactsSessionWithPassword(
-    password,
-    salt,
-    memoryKib,
-    iterations,
-    parallelism,
-  );
-}
-
 /** Init the contacts session with a passkey PRF output. HKDF in WASM. */
 export async function initContactsSessionWithPrf(
   prfOutput: Uint8Array,
@@ -236,8 +218,12 @@ export async function decryptContacts(
   return wasm.decryptContacts(ciphertext, iv);
 }
 
-/** Encrypt a canary for master password verification. Returns `[12-byte IV][ciphertext]`. */
-export async function encryptCanary(
+/**
+ * Encrypt a canary and init the contacts session in one Argon2id pass.
+ * Used during onboarding password setup.
+ * Returns `[12-byte IV][ciphertext]`.
+ */
+export async function encryptCanaryAndInitSession(
   password: Uint8Array,
   salt: Uint8Array,
   memoryKib: number,
@@ -245,13 +231,22 @@ export async function encryptCanary(
   parallelism: number,
 ): Promise<Uint8Array> {
   const wasm = await loadWasm();
-  return wasm.encryptCanary(password, salt, memoryKib, iterations, parallelism);
+  return wasm.encryptCanaryAndInitSession(
+    password,
+    salt,
+    memoryKib,
+    iterations,
+    parallelism,
+  );
 }
 
-/** Verify a master password by decrypting the stored canary. */
-export async function verifyCanary(
-  ciphertext: Uint8Array,
-  iv: Uint8Array,
+/**
+ * Verify a password and init the contacts session in one Argon2id pass.
+ * Returns true if correct (session is now active), false if wrong.
+ */
+export async function verifyCanaryAndInitSession(
+  canaryCiphertext: Uint8Array,
+  canaryIv: Uint8Array,
   password: Uint8Array,
   salt: Uint8Array,
   memoryKib: number,
@@ -259,9 +254,9 @@ export async function verifyCanary(
   parallelism: number,
 ): Promise<boolean> {
   const wasm = await loadWasm();
-  return wasm.verifyCanary(
-    ciphertext,
-    iv,
+  return wasm.verifyCanaryAndInitSession(
+    canaryCiphertext,
+    canaryIv,
     password,
     salt,
     memoryKib,

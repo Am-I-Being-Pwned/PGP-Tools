@@ -4,12 +4,11 @@ import { Button } from "@amibeingpwned/ui/button";
 
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
-import type { ProtectionMethod } from "./ProtectionMethodPicker";
 import { importKey } from "../../lib/pgp/key-management";
 import { protectAndStoreKey } from "../../lib/protection/protect-key";
-import { checkPrfSupport } from "../../lib/protection/webauthn-prf";
 import { Dialog } from "../shared/Dialog";
 import {
+  getDefaultProtectionMethod,
   ProtectionMethodPicker,
   validatePassword,
 } from "./ProtectionMethodPicker";
@@ -34,9 +33,7 @@ export function ImportKeyDialog({
 }: ImportKeyDialogProps) {
   const [step, setStep] = useState<Step>("paste");
   const [armored, setArmored] = useState("");
-  const [method, setMethod] = useState<ProtectionMethod>(
-    checkPrfSupport() ? "passkey" : "password",
-  );
+  const [method, setMethod] = useState(getDefaultProtectionMethod);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [importing, setImporting] = useState(false);
@@ -185,7 +182,11 @@ export function ImportKeyDialog({
             </p>
           )}
 
-          {error && <p className="text-destructive text-xs">{error}</p>}
+          {error && (
+            <p className="text-destructive text-xs" role="alert">
+              {error}
+            </p>
+          )}
 
           <div className="flex gap-2">
             <Button
