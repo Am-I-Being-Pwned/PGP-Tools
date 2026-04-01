@@ -81,25 +81,11 @@ export function useKeySession(opts: KeySessionOptions) {
     [resetLockTimer],
   );
 
-  const failureCount = useRef(0);
-  const lastFailureTime = useRef(0);
   const unlocking = useRef(false);
 
   const unlockWithPassword = useCallback(
     async (blob: ProtectedKeyBlob, password: string): Promise<boolean> => {
       if (unlocking.current) return false;
-
-      const now = Date.now();
-      const backoffMs = Math.min(
-        1000 * Math.pow(2, failureCount.current),
-        30000,
-      );
-      if (
-        failureCount.current > 0 &&
-        now - lastFailureTime.current < backoffMs
-      ) {
-        return false;
-      }
 
       const encrypted = encryptedBlobFromProtected(blob);
       if (encrypted.method !== "password") return false;
@@ -119,11 +105,8 @@ export function useKeySession(opts: KeySessionOptions) {
         );
 
         await markHandleUnlocked(blob.keyId, handle);
-        failureCount.current = 0;
         return true;
       } catch {
-        failureCount.current++;
-        lastFailureTime.current = Date.now();
         return false;
       } finally {
         passwordBytes.fill(0);
@@ -138,12 +121,13 @@ export function useKeySession(opts: KeySessionOptions) {
       const encrypted = encryptedBlobFromProtected(blob);
       if (encrypted.method !== "passkey") return false;
 
-      const { prfOutput } = await authenticateAndGetPrf(
-        encrypted.credentialId,
-        fromBase64(encrypted.prfSalt),
-      );
-
+      let prfOutput: Uint8Array | undefined;
       try {
+        ({ prfOutput } = await authenticateAndGetPrf(
+          encrypted.credentialId,
+          fromBase64(encrypted.prfSalt),
+        ));
+
         const handle = await wasmApi.unlockWithPrf(
           new Uint8Array(fromBase64(encrypted.ciphertext)),
           new Uint8Array(fromBase64(encrypted.iv)),
@@ -157,7 +141,7 @@ export function useKeySession(opts: KeySessionOptions) {
       } catch {
         return false;
       } finally {
-        prfOutput.fill(0);
+        prfOutput?.fill(0);
       }
     },
     [markHandleUnlocked],

@@ -5,6 +5,10 @@ import { INPUT_CLASS } from "../../lib/utils/styles";
 
 export type ProtectionMethod = "passkey" | "password";
 
+export function getDefaultProtectionMethod(): ProtectionMethod {
+  return checkPrfSupport() ? "passkey" : "password";
+}
+
 interface ProtectionMethodPickerProps {
   method: ProtectionMethod;
   onMethodChange: (method: ProtectionMethod) => void;
@@ -70,9 +74,8 @@ export function ProtectionMethodPicker({
             </span>
           </p>
           <p className="text-muted-foreground text-xs">
-            {reusePasskeyCredentialId
-              ? "Use the same passkey as your primary key, or register a new one."
-              : "Use your fingerprint, face, or security key. No password to remember."}
+            Use your fingerprint, face, or security key. No password to
+            remember.
           </p>
           {!prfAvailable && (
             <p className="text-destructive mt-1 text-xs">
@@ -90,7 +93,7 @@ export function ProtectionMethodPicker({
                   className="accent-primary"
                 />
                 <span className="text-muted-foreground text-xs">
-                  Reuse existing passkey
+                  Use the same passkey I already set up
                 </span>
               </label>
             )}
@@ -127,6 +130,7 @@ export function ProtectionMethodPicker({
             value={password}
             onChange={(e) => onPasswordChange(e.target.value)}
             className={INPUT_CLASS}
+            aria-label="Password"
           />
           <input
             type="password"
@@ -134,11 +138,16 @@ export function ProtectionMethodPicker({
             value={confirmPassword}
             onChange={(e) => onConfirmPasswordChange(e.target.value)}
             className={INPUT_CLASS}
+            aria-label="Confirm password"
           />
         </>
       )}
 
-      {error && <p className="text-destructive text-xs">{error}</p>}
+      {error && (
+        <p className="text-destructive text-xs" role="alert">
+          {error}
+        </p>
+      )}
 
       <div className="flex gap-2">
         <Button

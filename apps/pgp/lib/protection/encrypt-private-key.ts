@@ -1,4 +1,4 @@
-import { fromBase64, toBase64 } from "../encoding";
+import { toBase64 } from "../encoding";
 import { deriveKeyFromPassword, generateSalt } from "./password-kdf";
 
 const IV_LENGTH = 12;
@@ -27,20 +27,6 @@ async function aesEncrypt(
   return { ciphertext, iv };
 }
 
-async function aesDecrypt(
-  ciphertext: ArrayBuffer,
-  iv: ArrayBuffer,
-  key: CryptoKey,
-  aad: ArrayBuffer,
-): Promise<string> {
-  const decrypted = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv, additionalData: aad },
-    key,
-    ciphertext,
-  );
-  return new TextDecoder().decode(decrypted);
-}
-
 // ── password path (Argon2id) ────────────────────────────────────────
 
 export interface PasswordEncryptedBlob {
@@ -65,16 +51,6 @@ export async function encryptWithPassword(
     iv: toBase64(iv),
     salt: toBase64(salt),
   };
-}
-
-export async function decryptWithPassword(
-  blob: PasswordEncryptedBlob,
-  password: string,
-  keyId: string,
-): Promise<string> {
-  const key = await deriveKeyFromPassword(password, fromBase64(blob.salt));
-  const aad = buildAad(keyId, "password");
-  return aesDecrypt(fromBase64(blob.ciphertext), fromBase64(blob.iv), key, aad);
 }
 
 // ── passkey (WebAuthn PRF) path ──────────────────────────────────────
@@ -106,20 +82,6 @@ export async function encryptWithPasskey(
     prfSalt: toBase64(prfSalt),
     storedSecret: toBase64(storedSecret),
   };
-}
-
-export async function decryptWithPasskey(
-  blob: PasskeyEncryptedBlob,
-  aesKey: CryptoKey,
-  keyId: string,
-): Promise<string> {
-  const aad = buildAad(keyId, "passkey");
-  return aesDecrypt(
-    fromBase64(blob.ciphertext),
-    fromBase64(blob.iv),
-    aesKey,
-    aad,
-  );
 }
 
 // ── union type ───────────────────────────────────────────────────────

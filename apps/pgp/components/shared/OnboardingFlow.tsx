@@ -4,8 +4,7 @@ import { Button } from "@amibeingpwned/ui/button";
 
 import type { MasterProtection } from "../../lib/storage/master-protection";
 import type { StorageLocation } from "../../lib/storage/preferences";
-import type { ProtectionMethod } from "../keys/ProtectionMethodPicker";
-import { toBase64 } from "../../lib/encoding";
+import { toBase64, unpackIvCiphertext } from "../../lib/encoding";
 import * as wasmApi from "../../lib/pgp/wasm";
 import {
   ARGON2_ITERATIONS,
@@ -15,7 +14,6 @@ import {
 } from "../../lib/protection/password-kdf";
 import {
   authenticateAndGetPrf,
-  checkPrfSupport,
   generatePrfSalt,
   generateStoredSecret,
   registerPasskey,
@@ -23,6 +21,7 @@ import {
 import { saveMasterProtection } from "../../lib/storage/master-protection";
 import { savePreferences } from "../../lib/storage/preferences";
 import {
+  getDefaultProtectionMethod,
   ProtectionMethodPicker,
   validatePassword,
 } from "../keys/ProtectionMethodPicker";
@@ -42,9 +41,7 @@ export function OnboardingFlow({
   const [step, setStep] = useState<Step>("storage");
   const [location, setLocation] = useState<StorageLocation>("local");
 
-  const [method, setMethod] = useState<ProtectionMethod>(
-    checkPrfSupport() ? "passkey" : "password",
-  );
+  const [method, setMethod] = useState(getDefaultProtectionMethod);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -80,16 +77,20 @@ export function OnboardingFlow({
 
         const prfSalt = generatePrfSalt();
         const storedSecret = generateStoredSecret();
-        const { prfOutput } = await authenticateAndGetPrf(
-          reg.credentialId,
-          prfSalt,
-        );
+        let prfOutput: Uint8Array | undefined;
+        try {
+          ({ prfOutput } = await authenticateAndGetPrf(
+            reg.credentialId,
+            prfSalt,
+          ));
 
-        await wasmApi.initContactsSessionWithPrf(
-          prfOutput,
-          new Uint8Array(storedSecret),
-        );
-        prfOutput.fill(0);
+          await wasmApi.initContactsSessionWithPrf(
+            prfOutput,
+            new Uint8Array(storedSecret),
+          );
+        } finally {
+          prfOutput?.fill(0);
+        }
 
         mp = {
           method: "passkey",
@@ -100,32 +101,30 @@ export function OnboardingFlow({
       } else {
         const salt = generateSalt();
         const passwordBytes = new TextEncoder().encode(password);
+        try {
+          // Single Argon2id pass: encrypts canary + inits contacts session.
+          const packed = await wasmApi.encryptCanaryAndInitSession(
+            passwordBytes,
+            new Uint8Array(salt),
+            ARGON2_MEMORY_KIB,
+            ARGON2_ITERATIONS,
+            ARGON2_PARALLELISM,
+          );
+          setPassword("");
+          setConfirmPassword("");
 
-        const packed = await wasmApi.encryptCanary(
-          passwordBytes,
-          new Uint8Array(salt),
-          ARGON2_MEMORY_KIB,
-          ARGON2_ITERATIONS,
-          ARGON2_PARALLELISM,
-        );
-        const canaryIv = packed.slice(0, 12);
-        const canaryCtx = packed.slice(12);
+          const { iv: canaryIv, ciphertext: canaryCtx } =
+            unpackIvCiphertext(packed);
 
-        await wasmApi.initContactsSessionWithPassword(
-          passwordBytes,
-          new Uint8Array(salt),
-          ARGON2_MEMORY_KIB,
-          ARGON2_ITERATIONS,
-          ARGON2_PARALLELISM,
-        );
-        passwordBytes.fill(0);
-
-        mp = {
-          method: "password",
-          kdfSalt: toBase64(salt),
-          encryptedCanary: toBase64(canaryCtx.buffer),
-          canaryIv: toBase64(canaryIv.buffer),
-        };
+          mp = {
+            method: "password",
+            kdfSalt: toBase64(salt),
+            encryptedCanary: toBase64(canaryCtx.buffer as ArrayBuffer),
+            canaryIv: toBase64(canaryIv.buffer as ArrayBuffer),
+          };
+        } finally {
+          passwordBytes.fill(0);
+        }
       }
 
       // Save storage location first (engine needs it for routing)
@@ -234,7 +233,7 @@ export function OnboardingFlow({
 
           <div className="space-y-2 pt-4">
             <Button className="w-full" onClick={() => finish(true)}>
-              Create my identity
+              Create my PGP key
             </Button>
             <Button
               variant="outline"

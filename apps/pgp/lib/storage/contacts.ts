@@ -1,5 +1,5 @@
 import { STORAGE_CONTACTS } from "../constants";
-import { fromBase64, toBase64 } from "../encoding";
+import { fromBase64, toBase64, unpackIvCiphertext } from "../encoding";
 import * as wasmApi from "../pgp/wasm";
 import { getItem, removeItem, setItem, withLock } from "./engine";
 
@@ -70,15 +70,12 @@ export async function encryptAndSaveContacts(
 ): Promise<void> {
   const json = new TextEncoder().encode(JSON.stringify(contacts));
   const packed = await wasmApi.encryptContacts(json);
-
-  // Packed format: [12-byte IV][ciphertext]
-  const iv = packed.slice(0, 12);
-  const ciphertext = packed.slice(12);
+  const { iv, ciphertext } = unpackIvCiphertext(packed);
 
   const blob: EncryptedContactsBlob = {
     version: 1,
-    ciphertext: toBase64(ciphertext.buffer),
-    iv: toBase64(iv.buffer),
+    ciphertext: toBase64(ciphertext.buffer as ArrayBuffer),
+    iv: toBase64(iv.buffer as ArrayBuffer),
   };
   await setItem(STORAGE_CONTACTS, blob);
 }
