@@ -9,6 +9,8 @@
   Built with Rust/WebAssembly. Private keys never touch the JS heap during normal use.
 </p>
 
+[Get it here](https://chromewebstore.google.com/detail/pgp-tools-encrypt-decrypt/pgpcdgggohpbombhkffjoiiafdlfcpgp)
+
 ## Why PGP Tools?
 
 **Open source and transparent.** Most PGP browser extensions are closed source. You shouldn't trust a black box with your secrets.
