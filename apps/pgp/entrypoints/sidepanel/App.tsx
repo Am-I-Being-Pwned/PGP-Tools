@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { SettingsIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import type {
@@ -359,28 +360,45 @@ function TabBar({
 
   return (
     <nav className="border-border border-b" aria-label="Main navigation">
-      <div className="flex" role="tablist" onKeyDown={handleKeyDown}>
-        {TABS.map((tab, i) => (
-          <button
-            key={tab.id}
-            ref={(el) => {
-              tabRefs.current[i] = el;
-            }}
-            role="tab"
-            aria-selected={activeTab === tab.id}
-            aria-controls={`tabpanel-${tab.id}`}
-            id={`tab-${tab.id}`}
-            tabIndex={activeTab === tab.id ? 0 : -1}
-            onClick={() => onTabChange(tab.id)}
-            className={`flex-1 px-3 py-2.5 text-sm font-medium transition-colors ${
-              activeTab === tab.id
-                ? "border-primary text-primary border-b-2"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div className="flex items-center" role="tablist" onKeyDown={handleKeyDown}>
+        {TABS.map((tab, i) => {
+          const isSettings = tab.id === "settings";
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              ref={(el) => {
+                tabRefs.current[i] = el;
+              }}
+              role="tab"
+              aria-selected={isActive}
+              aria-controls={`tabpanel-${tab.id}`}
+              aria-label={isSettings ? "Settings" : undefined}
+              id={`tab-${tab.id}`}
+              tabIndex={isActive ? 0 : -1}
+              onClick={() => onTabChange(tab.id)}
+              className={
+                isSettings
+                  ? `ml-auto px-3 py-2.5 transition-colors ${
+                      isActive
+                        ? "text-primary border-primary border-b-2"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`
+                  : `flex-1 px-3 py-2.5 text-sm font-medium transition-colors ${
+                      isActive
+                        ? "border-primary text-primary border-b-2"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`
+              }
+            >
+              {isSettings ? (
+                <SettingsIcon className="h-4 w-4" />
+              ) : (
+                tab.label
+              )}
+            </button>
+          );
+        })}
       </div>
     </nav>
   );
