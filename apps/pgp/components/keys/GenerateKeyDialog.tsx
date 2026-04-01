@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { format } from "date-fns";
 import { ChevronRightIcon, KeyRoundIcon, LoaderIcon } from "lucide-react";
 
@@ -78,20 +78,6 @@ export function GenerateKeyDialog({
   const [rsaBits, setRsaBits] = useState<4096>(4096);
   const [expiryOption, setExpiryOption] = useState<ExpiryOption>("2y");
   const [customExpiry, setCustomExpiry] = useState<Date | undefined>();
-
-  useEffect(() => {
-    if (!open || email) return;
-    /* eslint-disable @typescript-eslint/no-unnecessary-condition -- chrome.identity may not be available */
-    chrome.identity
-      ?.getProfileUserInfo?.({ accountStatus: "ANY" })
-      ?.then((info) => {
-        if (info.email) setEmail(info.email);
-      })
-      ?.catch(() => {
-        /* noop */
-      });
-    /* eslint-enable @typescript-eslint/no-unnecessary-condition */
-  }, [open]);
 
   if (!open) return null;
 
