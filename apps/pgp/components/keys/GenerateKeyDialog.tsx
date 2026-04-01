@@ -51,6 +51,8 @@ interface GenerateKeyDialogProps {
   onClose: () => void;
   onKeyGenerated: () => void;
   addKey: (blob: ProtectedKeyBlob) => Promise<void>;
+  /** Pass the primary key's passkey credential ID to allow reuse. */
+  reusePasskeyCredentialId?: string;
 }
 
 export function GenerateKeyDialog({
@@ -58,6 +60,7 @@ export function GenerateKeyDialog({
   onClose,
   onKeyGenerated,
   addKey,
+  reusePasskeyCredentialId,
 }: GenerateKeyDialogProps) {
   const [step, setStep] = useState<Step>("identity");
   const [name, setName] = useState("");
@@ -70,6 +73,8 @@ export function GenerateKeyDialog({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [reusePasskey, setReusePasskey] = useState(true);
 
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [keyAlgorithm, setKeyAlgorithm] = useState<KeyAlgorithm>("ecc");
@@ -101,6 +106,7 @@ export function GenerateKeyDialog({
     setPassword("");
     setConfirmPassword("");
     setError(null);
+    setReusePasskey(true);
     setShowAdvanced(false);
     setKeyAlgorithm("ecc");
     setRsaBits(4096);
@@ -175,6 +181,10 @@ export function GenerateKeyDialog({
         method,
         password,
         revocationCertificate,
+        reusePasskeyCredentialId:
+          method === "passkey" && reusePasskey
+            ? reusePasskeyCredentialId
+            : undefined,
       });
 
       await addKey(blob);
@@ -396,7 +406,16 @@ export function GenerateKeyDialog({
             setError(null);
           }}
           submitting={generating}
-          submitLabel={method === "passkey" ? "Create passkey" : "Generate"}
+          submitLabel={
+            method === "passkey"
+              ? reusePasskeyCredentialId && reusePasskey
+                ? "Use passkey"
+                : "Create passkey"
+              : "Generate"
+          }
+          reusePasskeyCredentialId={reusePasskeyCredentialId}
+          reusePasskey={reusePasskey}
+          onReusePasskeyChange={setReusePasskey}
         />
       )}
 

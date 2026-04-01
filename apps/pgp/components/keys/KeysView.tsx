@@ -29,6 +29,7 @@ import { KeyCard } from "./KeyCard";
 interface KeysViewProps {
   myKeys: ProtectedKeyBlob[];
   contacts: PublicContactKey[];
+  contactsLocked: boolean;
   isUnlocked: (keyId: string) => boolean;
   onUnlockWithPassword: (
     blob: ProtectedKeyBlob,
@@ -49,11 +50,13 @@ interface KeysViewProps {
   onEncryptTo?: (keyId: string) => void;
   unlockRequestKeyId?: string | null;
   onUnlockRequestConsumed?: () => void;
+  primaryPasskeyCredentialId?: string;
 }
 
 export function KeysView({
   myKeys,
   contacts,
+  contactsLocked,
   isUnlocked,
   onUnlockWithPassword,
   onUnlockWithPasskey,
@@ -71,6 +74,7 @@ export function KeysView({
   onEncryptTo,
   unlockRequestKeyId,
   onUnlockRequestConsumed,
+  primaryPasskeyCredentialId,
 }: KeysViewProps) {
   const [showGenerate, setShowGenerate] = useState(false);
   const [showImport, setShowImport] = useState(false);
@@ -304,6 +308,7 @@ export function KeysView({
 
       <ContactsList
         contacts={contacts}
+        contactsLocked={contactsLocked}
         onDeleteContact={onDeleteContact}
         onAddContact={onAddContact}
         onEncryptTo={onEncryptTo}
@@ -317,6 +322,7 @@ export function KeysView({
           /* noop */
         }}
         addKey={onAddKey}
+        reusePasskeyCredentialId={primaryPasskeyCredentialId}
       />
 
       <ImportKeyDialog
@@ -324,6 +330,7 @@ export function KeysView({
         onClose={() => setShowImport(false)}
         onImportPrivate={onAddKey}
         onImportPublic={onAddContact}
+        reusePasskeyCredentialId={primaryPasskeyCredentialId}
       />
     </div>
   );
@@ -331,12 +338,14 @@ export function KeysView({
 
 function ContactsList({
   contacts,
+  contactsLocked,
   onDeleteContact,
   onAddContact,
   onEncryptTo,
   advancedMode,
 }: {
   contacts: PublicContactKey[];
+  contactsLocked: boolean;
   onDeleteContact: (keyId: string) => Promise<void>;
   onAddContact: (contact: PublicContactKey) => Promise<void>;
   onEncryptTo?: (keyId: string) => void;
@@ -359,37 +368,49 @@ function ContactsList({
       <h2 className="mb-2 text-sm font-semibold">
         Contacts{contacts.length > 0 && ` (${contacts.length})`}
       </h2>
-      <ContactDropZone onImport={onAddContact} />
-      {contacts.length > 5 && (
-        <input
-          type="text"
-          placeholder="Search contacts..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className={`${INPUT_CLASS} mt-2`}
-        />
-      )}
-      {filtered.length > 0 && (
-        <div className="mt-2 space-y-2">
-          {filtered.map((c) => (
-            <ContactCard
-              key={c.keyId}
-              contact={c}
-              onRemove={() => onDeleteContact(c.keyId)}
-              onEncryptTo={onEncryptTo ? () => onEncryptTo(c.keyId) : undefined}
-              onCopyPublicKey={() => {
-                void navigator.clipboard.writeText(c.armoredPublicKey);
-                toast.success("Public key copied");
-              }}
-              advancedMode={advancedMode}
-            />
-          ))}
+      {contactsLocked ? (
+        <div className="border-border bg-muted/30 rounded-lg border p-4 text-center">
+          <p className="text-muted-foreground text-sm">
+            Unlock your primary key to view and manage contacts.
+          </p>
         </div>
-      )}
-      {search && filtered.length === 0 && (
-        <p className="text-muted-foreground mt-2 text-center text-xs">
-          No contacts match "{search}"
-        </p>
+      ) : (
+        <>
+          <ContactDropZone onImport={onAddContact} />
+          {contacts.length > 5 && (
+            <input
+              type="text"
+              placeholder="Search contacts..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className={`${INPUT_CLASS} mt-2`}
+            />
+          )}
+          {filtered.length > 0 && (
+            <div className="mt-2 space-y-2">
+              {filtered.map((c) => (
+                <ContactCard
+                  key={c.keyId}
+                  contact={c}
+                  onRemove={() => onDeleteContact(c.keyId)}
+                  onEncryptTo={
+                    onEncryptTo ? () => onEncryptTo(c.keyId) : undefined
+                  }
+                  onCopyPublicKey={() => {
+                    void navigator.clipboard.writeText(c.armoredPublicKey);
+                    toast.success("Public key copied");
+                  }}
+                  advancedMode={advancedMode}
+                />
+              ))}
+            </div>
+          )}
+          {search && filtered.length === 0 && (
+            <p className="text-muted-foreground mt-2 text-center text-xs">
+              No contacts match "{search}"
+            </p>
+          )}
+        </>
       )}
     </div>
   );

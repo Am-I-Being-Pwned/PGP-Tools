@@ -21,6 +21,8 @@ export async function protectAndStoreKey(opts: {
   method: "passkey" | "password";
   password?: string;
   revocationCertificate?: string;
+  /** Reuse an existing passkey credential instead of registering a new one. */
+  reusePasskeyCredentialId?: string;
 }): Promise<ProtectedKeyBlob> {
   const { privateKeyArmored, publicKeyArmored, keyInfo, method, password } =
     opts;
@@ -30,28 +32,34 @@ export async function protectAndStoreKey(opts: {
   }
 
   if (method === "passkey") {
-    const userId = keyInfo.userIds[0] || keyInfo.keyId.slice(-16);
-    const reg = await registerPasskey(userId, userId);
+    let credentialId: string;
 
-    if (!reg.prfEnabled) {
-      throw new Error(
-        "Your authenticator doesn't support PRF. Try a different passkey or use a password instead.",
-      );
+    if (opts.reusePasskeyCredentialId) {
+      // Reuse existing passkey credential — no new registration.
+      credentialId = opts.reusePasskeyCredentialId;
+    } else {
+      const userId = keyInfo.userIds[0] || keyInfo.keyId.slice(-16);
+      const reg = await registerPasskey(userId, userId);
+
+      if (!reg.prfEnabled) {
+        throw new Error(
+          "Your authenticator doesn't support PRF. Try a different passkey or use a password instead.",
+        );
+      }
+      credentialId = reg.credentialId;
     }
 
+    // Fresh salts ensure a unique derived key even when reusing the credential.
     const prfSalt = generatePrfSalt();
     const storedSecret = generateStoredSecret();
-    const { prfOutput } = await authenticateAndGetPrf(
-      reg.credentialId,
-      prfSalt,
-    );
+    const { prfOutput } = await authenticateAndGetPrf(credentialId, prfSalt);
     const aesKey = await deriveKeyFromPrf(prfOutput, storedSecret);
     prfOutput.fill(0);
 
     const encrypted = await encryptWithPasskey(
       privateKeyArmored,
       aesKey,
-      reg.credentialId,
+      credentialId,
       prfSalt,
       storedSecret,
       keyInfo.keyId,

@@ -5,7 +5,9 @@ import type {
   AutoLockTimeout,
   StorageLocation,
 } from "../../lib/storage/preferences";
+import type { MasterProtection } from "../../lib/storage/master-protection";
 import { KeysView } from "../../components/keys/KeysView";
+import { MasterUnlockScreen } from "../../components/shared/MasterUnlockScreen";
 import { OnboardingFlow } from "../../components/shared/OnboardingFlow";
 import { SettingsView } from "../../components/shared/SettingsView";
 import { WorkspaceView } from "../../components/workspace/WorkspaceView";
@@ -13,6 +15,8 @@ import { useContacts } from "../../hooks/useContacts";
 import { useKeyring } from "../../hooks/useKeyring";
 import { useKeySession } from "../../hooks/useKeySession";
 import { usePendingOperation } from "../../hooks/usePendingOperation";
+import * as wasmApi from "../../lib/pgp/wasm";
+import { getMasterProtection } from "../../lib/storage/master-protection";
 import { getPreferences, savePreferences } from "../../lib/storage/preferences";
 
 type Tab = "workspace" | "keys" | "settings";
@@ -34,13 +38,19 @@ export default function App() {
   const [openGenerateOnMount, setOpenGenerateOnMount] = useState(false);
   const [encryptToKeyId, setEncryptToKeyId] = useState<string | null>(null);
 
+  // Master protection state
+  const [masterProtection, setMasterProtection] =
+    useState<MasterProtection | null>(null);
+  const [masterUnlocked, setMasterUnlocked] = useState(false);
+  const masterLockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const keyring = useKeyring();
-  const contacts = useContacts();
   const session = useKeySession({
     autoLockMinutes,
     lockOnClose,
     neverCacheKeys,
   });
+  const contacts = useContacts(masterUnlocked);
   const {
     pending,
     clearPending,
@@ -50,8 +60,46 @@ export default function App() {
     clearAutoDecrypt,
   } = usePendingOperation();
 
+  // ── Master auto-lock ───────────────────────────────────────────────
+
+  const doMasterLock = useCallback(() => {
+    void wasmApi.dropContactsSession();
+    setMasterUnlocked(false);
+    session.lockAll();
+  }, [session]);
+
+  const resetMasterLockTimer = useCallback(() => {
+    if (masterLockTimerRef.current) clearTimeout(masterLockTimerRef.current);
+    masterLockTimerRef.current = setTimeout(
+      doMasterLock,
+      autoLockMinutes * 60 * 1000,
+    );
+  }, [autoLockMinutes, doMasterLock]);
+
   useEffect(() => {
-    void getPreferences().then((prefs) => {
+    if (!masterUnlocked) return;
+    resetMasterLockTimer();
+    return () => {
+      if (masterLockTimerRef.current) clearTimeout(masterLockTimerRef.current);
+    };
+  }, [masterUnlocked, resetMasterLockTimer]);
+
+  useEffect(() => {
+    if (!lockOnClose || !masterUnlocked) return;
+    const handler = () => {
+      if (document.visibilityState === "hidden") {
+        doMasterLock();
+      }
+    };
+    document.addEventListener("visibilitychange", handler);
+    return () => document.removeEventListener("visibilitychange", handler);
+  }, [lockOnClose, masterUnlocked, doMasterLock]);
+
+  // ── Init ───────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    void (async () => {
+      const prefs = await getPreferences();
       setAdvancedMode(prefs.advancedMode);
       setStorageLocation(prefs.storageLocation);
       setAutoLockMinutes(prefs.autoLockMinutes);
@@ -62,7 +110,10 @@ export default function App() {
       setAutoDecryptDownloads(prefs.autoDecryptDownloads);
       setAutoDownloadFiles(prefs.autoDownloadFiles);
       setAutoDownloadText(prefs.autoDownloadText);
-    });
+
+      const mp = await getMasterProtection();
+      setMasterProtection(mp);
+    })();
     chrome.runtime.sendMessage({ type: "SIDEPANEL_READY" }).catch(() => {
       /* noop */
     });
@@ -89,14 +140,28 @@ export default function App() {
     }
   }, [importKeyMsg]);
 
+  // ── Delete key handler ─────────────────────────────────────────────
+
+  const handleDeleteKey = useCallback(
+    async (keyId: string) => {
+      await keyring.remove(keyId);
+      void contacts.refresh();
+    },
+    [keyring, contacts],
+  );
+
+  // ── Render gates ───────────────────────────────────────────────────
+
   if (onboardingComplete === null) return null;
 
   if (!onboardingComplete) {
     return (
       <OnboardingFlow
-        onComplete={(loc) => {
+        onComplete={async (loc) => {
           setStorageLocation(loc);
           setOnboardingComplete(true);
+          setMasterUnlocked(true);
+          setMasterProtection(await getMasterProtection());
           void keyring.refresh();
           void contacts.refresh();
         }}
@@ -107,6 +172,23 @@ export default function App() {
       />
     );
   }
+
+  if (masterProtection && !masterUnlocked) {
+    return (
+      <MasterUnlockScreen
+        masterProtection={masterProtection}
+        onUnlocked={() => {
+          setMasterUnlocked(true);
+          resetMasterLockTimer();
+        }}
+      />
+    );
+  }
+
+  const masterPasskeyCredentialId =
+    masterProtection?.method === "passkey"
+      ? masterProtection.credentialId
+      : undefined;
 
   return (
     <div className="flex h-screen flex-col">
@@ -150,11 +232,12 @@ export default function App() {
           <KeysView
             myKeys={keyring.keys}
             contacts={contacts.contacts}
+            contactsLocked={contacts.locked}
             isUnlocked={session.isUnlocked}
             onUnlockWithPassword={session.unlockWithPassword}
             onUnlockWithPasskey={session.unlockWithPasskey}
             onLock={session.lock}
-            onDeleteKey={keyring.remove}
+            onDeleteKey={handleDeleteKey}
             getKeyHandle={session.getKeyHandle}
             onAddKey={keyring.add}
             onAddContact={contacts.add}
@@ -170,6 +253,7 @@ export default function App() {
               void savePreferences({ activeTab: "workspace" });
             }}
             unlockRequestKeyId={null}
+            primaryPasskeyCredentialId={masterPasskeyCredentialId}
             onUnlockRequestConsumed={() => {
               /* noop */
             }}

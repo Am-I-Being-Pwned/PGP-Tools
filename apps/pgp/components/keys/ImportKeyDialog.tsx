@@ -21,6 +21,8 @@ interface ImportKeyDialogProps {
   onClose: () => void;
   onImportPrivate: (blob: ProtectedKeyBlob) => Promise<void>;
   onImportPublic: (contact: PublicContactKey) => Promise<void>;
+  /** Pass the primary key's passkey credential ID to allow reuse. */
+  reusePasskeyCredentialId?: string;
 }
 
 export function ImportKeyDialog({
@@ -28,6 +30,7 @@ export function ImportKeyDialog({
   onClose,
   onImportPrivate,
   onImportPublic,
+  reusePasskeyCredentialId,
 }: ImportKeyDialogProps) {
   const [step, setStep] = useState<Step>("paste");
   const [armored, setArmored] = useState("");
@@ -41,6 +44,7 @@ export function ImportKeyDialog({
   const [detectedType, setDetectedType] = useState<"public" | "private" | null>(
     null,
   );
+  const [reusePasskey, setReusePasskey] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!open) return null;
@@ -52,6 +56,7 @@ export function ImportKeyDialog({
     setConfirmPassword("");
     setDetectedType(null);
     setError(null);
+    setReusePasskey(true);
     onClose();
   };
 
@@ -128,6 +133,10 @@ export function ImportKeyDialog({
         keyInfo: result.keyInfo,
         method,
         password,
+        reusePasskeyCredentialId:
+          method === "passkey" && reusePasskey
+            ? reusePasskeyCredentialId
+            : undefined,
       });
 
       await onImportPrivate(blob);
@@ -216,6 +225,9 @@ export function ImportKeyDialog({
           }}
           submitting={importing}
           submitLabel="Import"
+          reusePasskeyCredentialId={reusePasskeyCredentialId}
+          reusePasskey={reusePasskey}
+          onReusePasskeyChange={setReusePasskey}
         />
       )}
     </Dialog>

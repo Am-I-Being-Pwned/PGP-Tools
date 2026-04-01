@@ -178,6 +178,98 @@ export async function unlockWithPrf(
   return wasm.unlockWithPrf(ciphertext, iv, prfOutput, storedSecret, keyId);
 }
 
+// ── Contacts session (master protection, key material stays in WASM) ─
+
+/** Init the contacts session with a password. Argon2id + HKDF in WASM. */
+export async function initContactsSessionWithPassword(
+  password: Uint8Array,
+  salt: Uint8Array,
+  memoryKib: number,
+  iterations: number,
+  parallelism: number,
+): Promise<void> {
+  const wasm = await loadWasm();
+  wasm.initContactsSessionWithPassword(
+    password,
+    salt,
+    memoryKib,
+    iterations,
+    parallelism,
+  );
+}
+
+/** Init the contacts session with a passkey PRF output. HKDF in WASM. */
+export async function initContactsSessionWithPrf(
+  prfOutput: Uint8Array,
+  storedSecret: Uint8Array,
+): Promise<void> {
+  const wasm = await loadWasm();
+  wasm.initContactsSessionWithPrf(prfOutput, storedSecret);
+}
+
+/** Drop the contacts session. Zeroizes the key in WASM. */
+export async function dropContactsSession(): Promise<void> {
+  const wasm = await loadWasm();
+  wasm.dropContactsSession();
+}
+
+/** Check whether a contacts session is currently active. */
+export async function hasContactsSession(): Promise<boolean> {
+  const wasm = await loadWasm();
+  return wasm.hasContactsSession();
+}
+
+/** Encrypt contacts JSON using the WASM session key. Returns `[12-byte IV][ciphertext]`. */
+export async function encryptContacts(
+  plaintext: Uint8Array,
+): Promise<Uint8Array> {
+  const wasm = await loadWasm();
+  return wasm.encryptContacts(plaintext);
+}
+
+/** Decrypt contacts JSON using the WASM session key. */
+export async function decryptContacts(
+  ciphertext: Uint8Array,
+  iv: Uint8Array,
+): Promise<Uint8Array> {
+  const wasm = await loadWasm();
+  return wasm.decryptContacts(ciphertext, iv);
+}
+
+/** Encrypt a canary for master password verification. Returns `[12-byte IV][ciphertext]`. */
+export async function encryptCanary(
+  password: Uint8Array,
+  salt: Uint8Array,
+  memoryKib: number,
+  iterations: number,
+  parallelism: number,
+): Promise<Uint8Array> {
+  const wasm = await loadWasm();
+  return wasm.encryptCanary(password, salt, memoryKib, iterations, parallelism);
+}
+
+/** Verify a master password by decrypting the stored canary. */
+export async function verifyCanary(
+  ciphertext: Uint8Array,
+  iv: Uint8Array,
+  password: Uint8Array,
+  salt: Uint8Array,
+  memoryKib: number,
+  iterations: number,
+  parallelism: number,
+): Promise<boolean> {
+  const wasm = await loadWasm();
+  return wasm.verifyCanary(
+    ciphertext,
+    iv,
+    password,
+    salt,
+    memoryKib,
+    iterations,
+    parallelism,
+  );
+}
+
 /** Extract the public key from a private key. */
 export async function extractPublicKey(
   armoredPrivateKey: string,
