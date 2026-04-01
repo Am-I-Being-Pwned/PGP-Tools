@@ -209,7 +209,7 @@ export function WorkspaceView({
           break;
       }
     } catch (e) {
-      s.setError(e instanceof Error ? e.message : "Operation failed");
+      s.setError(e instanceof Error ? e.message : String(e));
     } finally {
       s.setLoading(false);
       onOperationComplete?.();
@@ -430,12 +430,44 @@ export function WorkspaceView({
     const keyHandle = await ensureUnlocked(signKeyId);
     if (keyHandle === null) return;
 
-    const textToSign = s.files.length > 0 ? await s.files[0].text() : s.input;
-    const isFileInput = s.files.length > 0;
-    const signed = await pgpOps.signWithHandle(textToSign, keyHandle);
-    s.setOutput(signed);
-    s.setOperationDone(true);
-    maybeAutoDownload(isFileInput, { text: signed });
+    if (s.files.length > 1) {
+      const results: { name: string; data: Uint8Array }[] = [];
+      for (const file of s.files) {
+        const text = await file.text();
+        const signed = await pgpOps.signWithHandle(text, keyHandle);
+        results.push({
+          name: `${file.name}.asc`,
+          data: new TextEncoder().encode(signed),
+        });
+      }
+      s.setFileResults(results);
+      s.setStatusText(`${results.length} files signed`);
+      s.setOperationDone(true);
+      maybeAutoDownload(true, { results });
+    } else if (s.files.length === 1) {
+      const text = await s.files[0].text();
+      const signed = await pgpOps.signWithHandle(text, keyHandle);
+      s.setFileResults([
+        {
+          name: `${s.files[0].name}.asc`,
+          data: new TextEncoder().encode(signed),
+        },
+      ]);
+      s.setOperationDone(true);
+      maybeAutoDownload(true, {
+        results: [
+          {
+            name: `${s.files[0].name}.asc`,
+            data: new TextEncoder().encode(signed),
+          },
+        ],
+      });
+    } else {
+      const signed = await pgpOps.signWithHandle(s.input, keyHandle);
+      s.setOutput(signed);
+      s.setOperationDone(true);
+      maybeAutoDownload(false, { text: signed });
+    }
   }
 
   async function executeVerify() {
