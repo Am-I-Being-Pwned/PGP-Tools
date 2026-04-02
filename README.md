@@ -6,7 +6,7 @@
 
 <p align="center">
   Open-source browser extension for PGP encryption, decryption, and signing.<br/>
-  Built with Rust/WebAssembly. Private keys never touch the JS heap during normal use.
+  Built with Rust/WebAssembly. Private keys never touch the JS heap unless they have to.
 </p>
 
 [Get it here](https://chromewebstore.google.com/detail/pgp-tools-encrypt-decrypt/pgpcdgggohpbombhkffjoiiafdlfcpgp)
