@@ -2,12 +2,20 @@ import { STORAGE_MASTER_PROTECTION } from "../constants";
 import { getItem, setItem } from "./engine";
 
 // ── types ───────────────────────────────────────────────────────────
+//
+// Security note: For the passkey path, `storedSecret` and `prfSalt` are
+// stored in plaintext in Chrome storage. This is the standard WebAuthn PRF
+// pattern — the actual key is derived via HKDF(PRF_output, storedSecret).
+// An attacker who obtains Chrome storage still cannot derive the key
+// without the authenticator's PRF output (requires biometric/PIN).
+// The storedSecret provides defense against a compromised authenticator
+// (attacker needs both the authenticator AND Chrome storage).
 
 interface MasterPasskeyProtection {
   method: "passkey";
   credentialId: string; // base64url
   prfSalt: string; // base64
-  storedSecret: string; // base64
+  storedSecret: string; // base64 — see security note above
 }
 
 interface MasterPasswordProtection {
