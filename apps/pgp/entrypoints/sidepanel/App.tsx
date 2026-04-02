@@ -28,7 +28,6 @@ export default function App() {
   const [storageLocation, setStorageLocation] =
     useState<StorageLocation>("local");
   const [autoLockMinutes, setAutoLockMinutes] = useState<AutoLockTimeout>(15);
-  const [lockOnClose, setLockOnClose] = useState(true);
   const [neverCacheKeys, setNeverCacheKeys] = useState(false);
   const [autoDecryptDownloads, setAutoDecryptDownloads] = useState(false);
   const [autoDownloadFiles, setAutoDownloadFiles] = useState(false);
@@ -48,7 +47,6 @@ export default function App() {
   const keyring = useKeyring();
   const session = useKeySession({
     autoLockMinutes,
-    lockOnClose,
     neverCacheKeys,
   });
   const contacts = useContacts();
@@ -88,26 +86,6 @@ export default function App() {
     };
   }, [masterUnlocked, resetMasterLockTimer]);
 
-  // Lock on visibility-hidden with a grace period so clicking the main page
-  // content (which hides the sidepanel briefly) does not trigger an immediate lock.
-  const visibilityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    if (!lockOnClose || !masterUnlocked) return;
-    const handler = () => {
-      if (document.visibilityState === "hidden") {
-        visibilityTimerRef.current = setTimeout(doMasterLock, 5000);
-      } else if (visibilityTimerRef.current) {
-        clearTimeout(visibilityTimerRef.current);
-        visibilityTimerRef.current = null;
-      }
-    };
-    document.addEventListener("visibilitychange", handler);
-    return () => {
-      document.removeEventListener("visibilitychange", handler);
-      if (visibilityTimerRef.current) clearTimeout(visibilityTimerRef.current);
-    };
-  }, [lockOnClose, masterUnlocked, doMasterLock]);
-
   // ── Init ───────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -116,7 +94,6 @@ export default function App() {
       setAdvancedMode(prefs.advancedMode);
       setStorageLocation(prefs.storageLocation);
       setAutoLockMinutes(prefs.autoLockMinutes);
-      setLockOnClose(prefs.lockOnClose);
       setOnboardingComplete(prefs.onboardingComplete);
       setActiveTab(prefs.activeTab);
       setNeverCacheKeys(prefs.neverCacheKeys);
@@ -289,8 +266,6 @@ export default function App() {
             }}
             autoLockMinutes={autoLockMinutes}
             onAutoLockChange={setAutoLockMinutes}
-            lockOnClose={lockOnClose}
-            onLockOnCloseChange={setLockOnClose}
             neverCacheKeys={neverCacheKeys}
             onNeverCacheKeysChange={setNeverCacheKeys}
             autoDecryptDownloads={autoDecryptDownloads}
