@@ -176,21 +176,59 @@ fn parse_armored_certs(json: &str) -> Result<Vec<openpgp::Cert>, String> {
         .collect())
 }
 
-/// AES-256-GCM decrypt with AAD. Zeroizes the key after use.
+/// Zeroize an `Aes256Gcm` cipher's expanded key schedule on drop.
+/// The `aes-gcm` crate does not implement `Zeroize`/`ZeroizeOnDrop`,
+/// so we must manually clear the backing memory.
+fn zeroize_cipher(cipher: &mut Aes256Gcm) {
+    let ptr = cipher as *mut Aes256Gcm as *mut u8;
+    let len = std::mem::size_of::<Aes256Gcm>();
+    // SAFETY: Aes256Gcm is a repr(Rust) struct of fixed size that we own.
+    // We are about to drop it, so zeroing its memory is safe.
+    unsafe { std::ptr::write_bytes(ptr, 0, len) };
+}
+
+/// AES-256-GCM decrypt with AAD. Key material is borrowed, not consumed --
+/// the caller is responsible for zeroizing. The cipher's expanded key
+/// schedule is zeroized after use.
 fn aes_gcm_decrypt(
-    mut key: Vec<u8>,
+    key: &[u8],
     iv: &[u8],
     ciphertext: &[u8],
     aad: &[u8],
 ) -> Result<Vec<u8>, String> {
-    let cipher =
-        Aes256Gcm::new_from_slice(&key).map_err(|e| format!("AES key init failed: {}", e))?;
-    key.zeroize();
-
-    let plaintext = cipher
+    let mut cipher =
+        Aes256Gcm::new_from_slice(key).map_err(|e| format!("AES key init failed: {e}"))?;
+    let result = cipher
         .decrypt(Nonce::from_slice(iv), Payload { msg: ciphertext, aad })
-        .map_err(|_| "Decryption failed - wrong credentials or corrupted data".to_string())?;
-    Ok(plaintext)
+        .map_err(|_| "Decryption failed - wrong credentials or corrupted data".to_string());
+    zeroize_cipher(&mut cipher);
+    result
+}
+
+/// AES-256-GCM encrypt with AAD. Returns `[12-byte IV][ciphertext]`.
+/// Key material is borrowed, not consumed -- the caller is responsible for
+/// zeroizing. The cipher's expanded key schedule is zeroized after use.
+fn aes_gcm_encrypt(
+    key: &[u8],
+    plaintext: &[u8],
+    aad: &[u8],
+) -> Result<Vec<u8>, String> {
+    let mut cipher =
+        Aes256Gcm::new_from_slice(key).map_err(|e| format!("AES key init failed: {e}"))?;
+
+    let mut iv = [0u8; 12];
+    getrandom::fill(&mut iv).map_err(|e| format!("RNG failed: {e}"))?;
+
+    let ciphertext = cipher
+        .encrypt(Nonce::from_slice(&iv), Payload { msg: plaintext, aad })
+        .map_err(|_| "Encryption failed".to_string());
+    zeroize_cipher(&mut cipher);
+
+    let ct = ciphertext?;
+    let mut result = Vec::with_capacity(12 + ct.len());
+    result.extend_from_slice(&iv);
+    result.extend_from_slice(&ct);
+    Ok(result)
 }
 
 // =====================================================================
@@ -240,39 +278,23 @@ fn encrypt_impl(
         .build()
         .str_err()?;
 
-    if let Some(cert) = signer_cert {
-        let vc = cert.with_policy(&POLICY, None).str_err()?;
-        let keypair = vc
-            .keys()
-            .secret()
-            .alive()
-            .revoked(false)
-            .for_signing()
-            .next()
-            .ok_or("No signing key found")?
-            .key()
-            .clone()
-            .into_keypair()
-            .str_err()?;
-
-        let signer = Signer::new(encryptor, keypair).str_err()?.build().str_err()?;
-        let mut literal = LiteralWriter::new(signer).build().str_err()?;
-        literal.write_all(plaintext).str_err()?;
-        literal.finalize().str_err()?;
+    let inner: Message = if let Some(cert) = signer_cert {
+        let keypair = signing_keypair(cert)?;
+        Signer::new(encryptor, keypair).str_err()?.build().str_err()?
     } else {
-        let mut literal = LiteralWriter::new(encryptor).build().str_err()?;
-        literal.write_all(plaintext).str_err()?;
-        literal.finalize().str_err()?;
-    }
+        encryptor
+    };
+    let mut literal = LiteralWriter::new(inner).build().str_err()?;
+    literal.write_all(plaintext).str_err()?;
+    literal.finalize().str_err()?;
 
     Ok(sink)
 }
 
-/// Create a cleartext-signed message from text + signing cert.
-fn cleartext_sign(text: &str, cert: &openpgp::Cert) -> Result<String, String> {
+/// Extract the first valid signing keypair from a cert.
+fn signing_keypair(cert: &openpgp::Cert) -> Result<openpgp::crypto::KeyPair, String> {
     let vc = cert.with_policy(&POLICY, None).str_err()?;
-    let keypair = vc
-        .keys()
+    vc.keys()
         .secret()
         .alive()
         .revoked(false)
@@ -282,7 +304,12 @@ fn cleartext_sign(text: &str, cert: &openpgp::Cert) -> Result<String, String> {
         .key()
         .clone()
         .into_keypair()
-        .str_err()?;
+        .str_err()
+}
+
+/// Create a cleartext-signed message from text + signing cert.
+fn cleartext_sign(text: &str, cert: &openpgp::Cert) -> Result<String, String> {
+    let keypair = signing_keypair(cert)?;
 
     let mut sink = Vec::new();
     let mut signer = Signer::new(Message::new(&mut sink), keypair)
@@ -766,17 +793,11 @@ pub fn unlock_with_password(
     iterations: u32,
     parallelism: u32,
 ) -> Result<u32, String> {
-    let derived = argon2_derive(password, salt, memory_kib, iterations, parallelism)?;
-    let aad = format!("gpg-tools:password:{}", key_id);
-    let mut plaintext = aes_gcm_decrypt(derived, iv, ciphertext, aad.as_bytes())?;
-
-    let cert = openpgp::Cert::from_bytes(&plaintext).str_err()?;
-    plaintext.zeroize();
-
-    if cert.keys().secret().next().is_none() {
-        return Err("Decrypted data is not a private key".to_string());
-    }
-    insert_key(&cert)
+    let mut derived = argon2_derive(password, salt, memory_kib, iterations, parallelism)?;
+    let aad = format!("{PASSWORD_AAD_PREFIX}{key_id}");
+    let result = aes_gcm_decrypt(&derived, iv, ciphertext, aad.as_bytes());
+    derived.zeroize();
+    parse_and_store_private_key(result?)
 }
 
 /// Unlock a passkey-protected key entirely in WASM. Returns a key handle.
@@ -795,18 +816,187 @@ pub fn unlock_with_prf(
     let hk = Hkdf::<Sha256>::new(Some(stored_secret), prf_output);
     let mut derived = vec![0u8; 32];
     hk.expand(b"gpg-tools-prf-v1", &mut derived)
-        .map_err(|e| format!("HKDF failed: {}", e))?;
+        .map_err(|e| format!("HKDF failed: {e}"))?;
 
-    let aad = format!("gpg-tools:passkey:{}", key_id);
-    let mut plaintext = aes_gcm_decrypt(derived, iv, ciphertext, aad.as_bytes())?;
+    let aad = format!("{PASSKEY_AAD_PREFIX}{key_id}");
+    let result = aes_gcm_decrypt(&derived, iv, ciphertext, aad.as_bytes());
+    derived.zeroize();
+    parse_and_store_private_key(result?)
+}
 
-    let cert = openpgp::Cert::from_bytes(&plaintext).str_err()?;
+// =====================================================================
+// Shared helpers
+// =====================================================================
+
+/// AAD prefixes for per-key protection (also used by the JS side in
+/// `encrypt-private-key.ts` -- keep in sync).
+const PASSWORD_AAD_PREFIX: &str = "gpg-tools:password:";
+const PASSKEY_AAD_PREFIX: &str = "gpg-tools:passkey:";
+
+/// Parse a decrypted private key, zeroize the plaintext, and store it.
+fn parse_and_store_private_key(mut plaintext: Vec<u8>) -> Result<u32, String> {
+    let result = openpgp::Cert::from_bytes(&plaintext).str_err();
     plaintext.zeroize();
-
+    let cert = result?;
     if cert.keys().secret().next().is_none() {
         return Err("Decrypted data is not a private key".to_string());
     }
     insert_key(&cert)
+}
+
+// =====================================================================
+// Contacts session: derived key stored in WASM linear memory.
+// Managed independently from key handles -- initialised via the master
+// protection unlock, not tied to any individual keypair.
+// =====================================================================
+
+const CONTACTS_AAD: &[u8] = b"gpg-tools:contacts:master";
+const CONTACTS_HKDF_INFO: &[u8] = b"gpg-tools-contacts-v1";
+const CANARY_PLAINTEXT: &[u8] = b"pgp-tools-master-v1";
+
+thread_local! {
+    static CONTACTS_KEY: RefCell<Option<Vec<u8>>> = RefCell::new(None);
+}
+
+fn set_contacts_key(new_key: Option<Vec<u8>>) {
+    CONTACTS_KEY.with(|slot| {
+        let mut slot = slot.borrow_mut();
+        if let Some(ref mut old) = *slot {
+            old.zeroize();
+        }
+        *slot = new_key;
+    });
+}
+
+/// Borrow the contacts session key and run `f` with it. Avoids cloning
+/// the key onto the heap, reducing the number of copies to zeroize.
+fn with_contacts_key<T>(f: impl FnOnce(&[u8]) -> T) -> Result<T, String> {
+    CONTACTS_KEY.with(|slot| {
+        let guard = slot.borrow();
+        guard
+            .as_ref()
+            .map(|k| f(k.as_slice()))
+            .ok_or_else(|| "Contacts session not active - unlock required".to_string())
+    })
+}
+
+/// Derive a contacts key via HKDF. Used for both password (Argon2id output
+/// as IKM, salt as HKDF salt) and passkey (PRF output as IKM, storedSecret
+/// as HKDF salt) paths.
+fn derive_contacts_key(ikm: &[u8], hkdf_salt: &[u8]) -> Result<Vec<u8>, String> {
+    let hk = Hkdf::<Sha256>::new(Some(hkdf_salt), ikm);
+    let mut key = vec![0u8; 32];
+    if let Err(e) = hk.expand(CONTACTS_HKDF_INFO, &mut key) {
+        key.zeroize();
+        return Err(format!("HKDF failed: {e}"));
+    }
+    Ok(key)
+}
+
+/// Derive the contacts key from a password via Argon2id + HKDF.
+/// Returns the key. Zeroizes the Argon2id output.
+fn derive_contacts_key_from_password(
+    password: &[u8],
+    salt: &[u8],
+    memory_kib: u32,
+    iterations: u32,
+    parallelism: u32,
+) -> Result<Vec<u8>, String> {
+    let mut argon2_output = argon2_derive(password, salt, memory_kib, iterations, parallelism)?;
+    let result = derive_contacts_key(&argon2_output, salt);
+    argon2_output.zeroize();
+    result
+}
+
+// ── Session lifecycle ───────────────────────────────────────────────
+
+/// Init the contacts session with a passkey PRF output.
+/// HKDF(prfOutput, storedSecret, "gpg-tools-contacts-v1") -> session key.
+#[wasm_bindgen(js_name = "initContactsSessionWithPrf")]
+pub fn init_contacts_session_with_prf(
+    prf_output: &[u8],
+    stored_secret: &[u8],
+) -> Result<(), String> {
+    let key = derive_contacts_key(prf_output, stored_secret)?;
+    set_contacts_key(Some(key));
+    Ok(())
+}
+
+/// Drop the contacts session key. The backing bytes are zeroized.
+#[wasm_bindgen(js_name = "dropContactsSession")]
+pub fn drop_contacts_session() {
+    set_contacts_key(None);
+}
+
+/// Check whether a contacts session is currently active.
+#[wasm_bindgen(js_name = "hasContactsSession")]
+pub fn has_contacts_session() -> bool {
+    CONTACTS_KEY.with(|slot| slot.borrow().is_some())
+}
+
+// ── Contacts encrypt / decrypt ──────────────────────────────────────
+
+/// Encrypt contacts JSON using the session key.
+/// Returns `[12-byte IV][ciphertext]`.
+#[wasm_bindgen(js_name = "encryptContacts")]
+pub fn encrypt_contacts(plaintext: &[u8]) -> Result<Vec<u8>, String> {
+    with_contacts_key(|key| aes_gcm_encrypt(key, plaintext, CONTACTS_AAD))?
+}
+
+/// Decrypt contacts JSON using the session key.
+#[wasm_bindgen(js_name = "decryptContacts")]
+pub fn decrypt_contacts(ciphertext: &[u8], iv: &[u8]) -> Result<Vec<u8>, String> {
+    with_contacts_key(|key| aes_gcm_decrypt(key, iv, ciphertext, CONTACTS_AAD))?
+}
+
+// ── Master protection canary ────────────────────────────────────────
+
+/// Encrypt a canary and init the contacts session in one Argon2id pass.
+/// Used during onboarding password setup.
+/// Returns `[12-byte IV][ciphertext]`.
+#[wasm_bindgen(js_name = "encryptCanaryAndInitSession")]
+pub fn encrypt_canary_and_init_session(
+    password: &[u8],
+    salt: &[u8],
+    memory_kib: u32,
+    iterations: u32,
+    parallelism: u32,
+) -> Result<Vec<u8>, String> {
+    let mut key = derive_contacts_key_from_password(password, salt, memory_kib, iterations, parallelism)?;
+    let result = aes_gcm_encrypt(&key, CANARY_PLAINTEXT, CONTACTS_AAD);
+    if result.is_ok() {
+        set_contacts_key(Some(key));
+    } else {
+        key.zeroize();
+    }
+    result
+}
+
+/// Verify a password and init the contacts session in one Argon2id pass.
+/// Returns true if the password is correct and the session is now active.
+/// Returns false (without initialising the session) if the password is wrong.
+#[wasm_bindgen(js_name = "verifyCanaryAndInitSession")]
+pub fn verify_canary_and_init_session(
+    canary_ciphertext: &[u8],
+    canary_iv: &[u8],
+    password: &[u8],
+    salt: &[u8],
+    memory_kib: u32,
+    iterations: u32,
+    parallelism: u32,
+) -> Result<bool, String> {
+    let mut key = derive_contacts_key_from_password(password, salt, memory_kib, iterations, parallelism)?;
+    match aes_gcm_decrypt(&key, canary_iv, canary_ciphertext, CONTACTS_AAD) {
+        Ok(_) => {
+            // AES-GCM is AEAD: successful decryption guarantees correct key.
+            set_contacts_key(Some(key));
+            Ok(true)
+        }
+        Err(_) => {
+            key.zeroize();
+            Ok(false)
+        }
+    }
 }
 
 // =====================================================================

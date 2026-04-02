@@ -18,14 +18,13 @@ import {
 
 interface KeySessionOptions {
   autoLockMinutes: AutoLockTimeout;
-  lockOnClose: boolean;
   neverCacheKeys: boolean;
 }
 
 /**
  * Manages unlocked key sessions using WASM key handles.
  *
- * Unlock now happens entirely in WASM: the encrypted blob bytes are
+ * Unlock happens entirely in WASM: the encrypted blob bytes are
  * passed directly to WASM which does KDF + AES-GCM decrypt + store.
  * The decrypted private key never enters the JS heap.
  */
@@ -60,17 +59,6 @@ export function useKeySession(opts: KeySessionOptions) {
     };
   }, []);
 
-  useEffect(() => {
-    if (!opts.lockOnClose) return;
-    const handler = () => {
-      if (document.visibilityState === "hidden") {
-        doLockAll();
-      }
-    };
-    document.addEventListener("visibilitychange", handler);
-    return () => document.removeEventListener("visibilitychange", handler);
-  }, [opts.lockOnClose, doLockAll]);
-
   const markHandleUnlocked = useCallback(
     async (keyId: string, handle: number) => {
       handleRef.current.set(keyId, handle);
@@ -81,25 +69,11 @@ export function useKeySession(opts: KeySessionOptions) {
     [resetLockTimer],
   );
 
-  const failureCount = useRef(0);
-  const lastFailureTime = useRef(0);
   const unlocking = useRef(false);
 
   const unlockWithPassword = useCallback(
     async (blob: ProtectedKeyBlob, password: string): Promise<boolean> => {
       if (unlocking.current) return false;
-
-      const now = Date.now();
-      const backoffMs = Math.min(
-        1000 * Math.pow(2, failureCount.current),
-        30000,
-      );
-      if (
-        failureCount.current > 0 &&
-        now - lastFailureTime.current < backoffMs
-      ) {
-        return false;
-      }
 
       const encrypted = encryptedBlobFromProtected(blob);
       if (encrypted.method !== "password") return false;
@@ -119,11 +93,8 @@ export function useKeySession(opts: KeySessionOptions) {
         );
 
         await markHandleUnlocked(blob.keyId, handle);
-        failureCount.current = 0;
         return true;
       } catch {
-        failureCount.current++;
-        lastFailureTime.current = Date.now();
         return false;
       } finally {
         passwordBytes.fill(0);
@@ -138,12 +109,13 @@ export function useKeySession(opts: KeySessionOptions) {
       const encrypted = encryptedBlobFromProtected(blob);
       if (encrypted.method !== "passkey") return false;
 
-      const { prfOutput } = await authenticateAndGetPrf(
-        encrypted.credentialId,
-        fromBase64(encrypted.prfSalt),
-      );
-
+      let prfOutput: Uint8Array | undefined;
       try {
+        ({ prfOutput } = await authenticateAndGetPrf(
+          encrypted.credentialId,
+          fromBase64(encrypted.prfSalt),
+        ));
+
         const handle = await wasmApi.unlockWithPrf(
           new Uint8Array(fromBase64(encrypted.ciphertext)),
           new Uint8Array(fromBase64(encrypted.iv)),
@@ -157,7 +129,7 @@ export function useKeySession(opts: KeySessionOptions) {
       } catch {
         return false;
       } finally {
-        prfOutput.fill(0);
+        prfOutput?.fill(0);
       }
     },
     [markHandleUnlocked],
@@ -196,5 +168,6 @@ export function useKeySession(opts: KeySessionOptions) {
     getKeyHandle,
     isUnlocked,
     unlockedKeyIds,
+    cacheKeyHandle: markHandleUnlocked,
   };
 }

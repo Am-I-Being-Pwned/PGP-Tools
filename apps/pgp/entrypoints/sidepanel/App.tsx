@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { SettingsIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import type {
   AutoLockTimeout,
   StorageLocation,
 } from "../../lib/storage/preferences";
+import type { MasterProtection } from "../../lib/storage/master-protection";
 import { KeysView } from "../../components/keys/KeysView";
+import { MasterUnlockScreen } from "../../components/shared/MasterUnlockScreen";
 import { OnboardingFlow } from "../../components/shared/OnboardingFlow";
 import { SettingsView } from "../../components/shared/SettingsView";
 import { WorkspaceView } from "../../components/workspace/WorkspaceView";
@@ -13,6 +16,8 @@ import { useContacts } from "../../hooks/useContacts";
 import { useKeyring } from "../../hooks/useKeyring";
 import { useKeySession } from "../../hooks/useKeySession";
 import { usePendingOperation } from "../../hooks/usePendingOperation";
+import * as wasmApi from "../../lib/pgp/wasm";
+import { getMasterProtection } from "../../lib/storage/master-protection";
 import { getPreferences, savePreferences } from "../../lib/storage/preferences";
 
 type Tab = "workspace" | "keys" | "settings";
@@ -23,7 +28,6 @@ export default function App() {
   const [storageLocation, setStorageLocation] =
     useState<StorageLocation>("local");
   const [autoLockMinutes, setAutoLockMinutes] = useState<AutoLockTimeout>(15);
-  const [lockOnClose, setLockOnClose] = useState(true);
   const [neverCacheKeys, setNeverCacheKeys] = useState(false);
   const [autoDecryptDownloads, setAutoDecryptDownloads] = useState(false);
   const [autoDownloadFiles, setAutoDownloadFiles] = useState(false);
@@ -34,13 +38,18 @@ export default function App() {
   const [openGenerateOnMount, setOpenGenerateOnMount] = useState(false);
   const [encryptToKeyId, setEncryptToKeyId] = useState<string | null>(null);
 
+  // Master protection state
+  const [masterProtection, setMasterProtection] =
+    useState<MasterProtection | null>(null);
+  const [masterUnlocked, setMasterUnlocked] = useState(false);
+  const masterLockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const keyring = useKeyring();
-  const contacts = useContacts();
   const session = useKeySession({
     autoLockMinutes,
-    lockOnClose,
     neverCacheKeys,
   });
+  const contacts = useContacts();
   const {
     pending,
     clearPending,
@@ -50,19 +59,47 @@ export default function App() {
     clearAutoDecrypt,
   } = usePendingOperation();
 
+  const doMasterLock = useCallback(() => {
+    // Drop the WASM contacts session key. For passkey users this is
+    // already gone (dropped after decrypt), but for password users
+    // it persists and must be explicitly cleared.
+    void wasmApi.dropContactsSession();
+    setMasterUnlocked(false);
+    session.lockAll();
+  }, [session]);
+
+  const resetMasterLockTimer = useCallback(() => {
+    if (masterLockTimerRef.current) clearTimeout(masterLockTimerRef.current);
+    masterLockTimerRef.current = setTimeout(
+      doMasterLock,
+      autoLockMinutes * 60 * 1000,
+    );
+  }, [autoLockMinutes, doMasterLock]);
+
   useEffect(() => {
-    void getPreferences().then((prefs) => {
+    if (!masterUnlocked) return;
+    resetMasterLockTimer();
+    return () => {
+      if (masterLockTimerRef.current) clearTimeout(masterLockTimerRef.current);
+    };
+  }, [masterUnlocked, resetMasterLockTimer]);
+
+  useEffect(() => {
+    void (async () => {
+      const prefs = await getPreferences();
       setAdvancedMode(prefs.advancedMode);
       setStorageLocation(prefs.storageLocation);
       setAutoLockMinutes(prefs.autoLockMinutes);
-      setLockOnClose(prefs.lockOnClose);
       setOnboardingComplete(prefs.onboardingComplete);
       setActiveTab(prefs.activeTab);
       setNeverCacheKeys(prefs.neverCacheKeys);
       setAutoDecryptDownloads(prefs.autoDecryptDownloads);
       setAutoDownloadFiles(prefs.autoDownloadFiles);
       setAutoDownloadText(prefs.autoDownloadText);
-    });
+
+      const mp = await getMasterProtection();
+      setMasterProtection(mp);
+    })();
     chrome.runtime.sendMessage({ type: "SIDEPANEL_READY" }).catch(() => {
       /* noop */
     });
@@ -89,24 +126,52 @@ export default function App() {
     }
   }, [importKeyMsg]);
 
+  const handleDeleteKey = useCallback(
+    async (keyId: string) => {
+      await keyring.remove(keyId);
+      void contacts.refresh();
+    },
+    [keyring, contacts],
+  );
+
   if (onboardingComplete === null) return null;
 
   if (!onboardingComplete) {
     return (
       <OnboardingFlow
-        onComplete={(loc) => {
+        onComplete={async (loc) => {
           setStorageLocation(loc);
           setOnboardingComplete(true);
+          setMasterUnlocked(true);
+          setMasterProtection(await getMasterProtection());
           void keyring.refresh();
           void contacts.refresh();
         }}
-        onGenerateKey={() => {
-          setActiveTab("keys");
-          setOpenGenerateOnMount(true);
+        addKey={keyring.add}
+        cacheKey={!neverCacheKeys}
+        onKeyCached={(keyId, handle) => {
+          void session.cacheKeyHandle(keyId, handle);
         }}
       />
     );
   }
+
+  if (masterProtection && !masterUnlocked) {
+    return (
+      <MasterUnlockScreen
+        masterProtection={masterProtection}
+        onUnlocked={() => {
+          setMasterUnlocked(true);
+          resetMasterLockTimer();
+        }}
+      />
+    );
+  }
+
+  const masterPasskeyCredentialId =
+    masterProtection?.method === "passkey"
+      ? masterProtection.credentialId
+      : undefined;
 
   return (
     <div className="flex h-screen flex-col">
@@ -150,11 +215,12 @@ export default function App() {
           <KeysView
             myKeys={keyring.keys}
             contacts={contacts.contacts}
+            contactsLocked={false}
             isUnlocked={session.isUnlocked}
             onUnlockWithPassword={session.unlockWithPassword}
             onUnlockWithPasskey={session.unlockWithPasskey}
             onLock={session.lock}
-            onDeleteKey={keyring.remove}
+            onDeleteKey={handleDeleteKey}
             getKeyHandle={session.getKeyHandle}
             onAddKey={keyring.add}
             onAddContact={contacts.add}
@@ -170,8 +236,13 @@ export default function App() {
               void savePreferences({ activeTab: "workspace" });
             }}
             unlockRequestKeyId={null}
+            primaryPasskeyCredentialId={masterPasskeyCredentialId}
             onUnlockRequestConsumed={() => {
               /* noop */
+            }}
+            cacheKeys={!neverCacheKeys}
+            onKeyCached={(keyId, handle) => {
+              void session.cacheKeyHandle(keyId, handle);
             }}
           />
         )}
@@ -187,8 +258,6 @@ export default function App() {
             }}
             autoLockMinutes={autoLockMinutes}
             onAutoLockChange={setAutoLockMinutes}
-            lockOnClose={lockOnClose}
-            onLockOnCloseChange={setLockOnClose}
             neverCacheKeys={neverCacheKeys}
             onNeverCacheKeysChange={setNeverCacheKeys}
             autoDecryptDownloads={autoDecryptDownloads}
@@ -263,28 +332,45 @@ function TabBar({
 
   return (
     <nav className="border-border border-b" aria-label="Main navigation">
-      <div className="flex" role="tablist" onKeyDown={handleKeyDown}>
-        {TABS.map((tab, i) => (
-          <button
-            key={tab.id}
-            ref={(el) => {
-              tabRefs.current[i] = el;
-            }}
-            role="tab"
-            aria-selected={activeTab === tab.id}
-            aria-controls={`tabpanel-${tab.id}`}
-            id={`tab-${tab.id}`}
-            tabIndex={activeTab === tab.id ? 0 : -1}
-            onClick={() => onTabChange(tab.id)}
-            className={`flex-1 px-3 py-2.5 text-sm font-medium transition-colors ${
-              activeTab === tab.id
-                ? "border-primary text-primary border-b-2"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div className="flex items-center" role="tablist" onKeyDown={handleKeyDown}>
+        {TABS.map((tab, i) => {
+          const isSettings = tab.id === "settings";
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              ref={(el) => {
+                tabRefs.current[i] = el;
+              }}
+              role="tab"
+              aria-selected={isActive}
+              aria-controls={`tabpanel-${tab.id}`}
+              aria-label={isSettings ? "Settings" : undefined}
+              id={`tab-${tab.id}`}
+              tabIndex={isActive ? 0 : -1}
+              onClick={() => onTabChange(tab.id)}
+              className={
+                isSettings
+                  ? `ml-auto px-3 py-2.5 transition-colors ${
+                      isActive
+                        ? "text-primary border-primary border-b-2"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`
+                  : `flex-1 px-3 py-2.5 text-sm font-medium transition-colors ${
+                      isActive
+                        ? "border-primary text-primary border-b-2"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`
+              }
+            >
+              {isSettings ? (
+                <SettingsIcon className="h-4 w-4" />
+              ) : (
+                tab.label
+              )}
+            </button>
+          );
+        })}
       </div>
     </nav>
   );

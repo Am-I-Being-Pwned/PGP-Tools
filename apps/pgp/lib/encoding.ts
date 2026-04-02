@@ -25,6 +25,14 @@ export function toBase64url(buffer: ArrayBuffer): string {
     .replace(/=/g, "");
 }
 
+/** Unpack WASM `[12-byte IV][ciphertext]` format. */
+export function unpackIvCiphertext(packed: Uint8Array): {
+  iv: Uint8Array;
+  ciphertext: Uint8Array;
+} {
+  return { iv: packed.slice(0, 12), ciphertext: packed.slice(12) };
+}
+
 export function fromBase64url(b64url: string): ArrayBuffer {
   const b64 = b64url
     .replace(/-/g, "+")
