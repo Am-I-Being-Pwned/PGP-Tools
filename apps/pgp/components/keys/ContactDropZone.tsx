@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@amibeingpwned/ui/button";
 
@@ -7,47 +8,67 @@ import { parsePublicKey } from "../../lib/pgp/key-management";
 
 interface ContactDropZoneProps {
   onImport: (contact: PublicContactKey) => Promise<void>;
+  existingKeyIds?: string[];
 }
 
-export function ContactDropZone({ onImport }: ContactDropZoneProps) {
+export function ContactDropZone({ onImport, existingKeyIds }: ContactDropZoneProps) {
   const [dragOver, setDragOver] = useState(false);
-  const [status, setStatus] = useState<{
-    type: "success" | "error";
-    message: string;
-  } | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const tryImport = useCallback(
+  /** Split text that may contain multiple concatenated armored keys. */
+  const splitKeys = (text: string): string[] => {
+    const blocks: string[] = [];
+    const regex =
+      /-----BEGIN PGP PUBLIC KEY BLOCK-----[\s\S]*?-----END PGP PUBLIC KEY BLOCK-----/g;
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+      blocks.push(match[0]);
+    }
+    return blocks;
+  };
+
+  const tryImportMany = useCallback(
     async (text: string) => {
-      setStatus(null);
-      const trimmed = text.trim();
-      if (!trimmed.includes("PUBLIC KEY")) {
-        setStatus({ type: "error", message: "Not a public key" });
+      setError(null);
+      const blocks = splitKeys(text);
+      if (blocks.length === 0) {
+        setError("No public keys found");
         return;
       }
-      try {
-        const keyInfo = await parsePublicKey(trimmed);
-        await onImport({
-          keyId: keyInfo.keyId,
-          userIds: keyInfo.userIds,
-          algorithm: keyInfo.algorithm,
-          armoredPublicKey: trimmed,
-          addedAt: Date.now(),
-          lastUsedAt: Date.now(),
-        });
-        setStatus({
-          type: "success",
-          message: `Added ${keyInfo.userIds[0] ?? keyInfo.keyId.slice(-16)}`,
-        });
-        setTimeout(() => setStatus(null), 3000);
-      } catch (e) {
-        setStatus({
-          type: "error",
-          message: e instanceof Error ? e.message : "Invalid key",
-        });
+
+      let added = 0;
+      let skipped = 0;
+      let failed = 0;
+
+      for (const block of blocks) {
+        try {
+          const keyInfo = await parsePublicKey(block);
+
+          if (existingKeyIds?.includes(keyInfo.keyId)) {
+            skipped++;
+            continue;
+          }
+
+          await onImport({
+            keyId: keyInfo.keyId,
+            userIds: keyInfo.userIds,
+            algorithm: keyInfo.algorithm,
+            armoredPublicKey: block,
+            addedAt: Date.now(),
+            lastUsedAt: Date.now(),
+          });
+          added++;
+        } catch {
+          failed++;
+        }
       }
+
+      if (added > 0) toast.success(`Added ${added} contact${added > 1 ? "s" : ""}`);
+      if (skipped > 0) toast.info(`${skipped} already in contacts`);
+      if (failed > 0) setError(`${failed} key${failed > 1 ? "s" : ""} failed to import`);
     },
-    [onImport],
+    [onImport, existingKeyIds],
   );
 
   const handleDrop = useCallback(
@@ -55,16 +76,17 @@ export function ContactDropZone({ onImport }: ContactDropZoneProps) {
       e.preventDefault();
       setDragOver(false);
 
-      if (e.dataTransfer.files.length > 0) {
-        const text = await e.dataTransfer.files[0].text();
-        await tryImport(text);
+      const files = Array.from(e.dataTransfer.files);
+      if (files.length > 0) {
+        const texts = await Promise.all(files.map((f) => f.text()));
+        await tryImportMany(texts.join("\n"));
         return;
       }
 
       const text = e.dataTransfer.getData("text/plain");
-      if (text) await tryImport(text);
+      if (text) await tryImportMany(text);
     },
-    [tryImport],
+    [tryImportMany],
   );
 
   const handlePaste = useCallback(
@@ -72,22 +94,22 @@ export function ContactDropZone({ onImport }: ContactDropZoneProps) {
       const text = e.clipboardData.getData("text/plain");
       if (text.includes("PUBLIC KEY")) {
         e.preventDefault();
-        void tryImport(text);
+        void tryImportMany(text);
       }
     },
-    [tryImport],
+    [tryImportMany],
   );
 
   const handleFileSelect = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file) {
-        const text = await file.text();
-        await tryImport(text);
+      const files = Array.from(e.target.files ?? []);
+      if (files.length > 0) {
+        const texts = await Promise.all(files.map((f) => f.text()));
+        await tryImportMany(texts.join("\n"));
       }
       e.target.value = "";
     },
-    [tryImport],
+    [tryImportMany],
   );
 
   return (
@@ -106,36 +128,28 @@ export function ContactDropZone({ onImport }: ContactDropZoneProps) {
           : "border-border hover:border-muted-foreground/50"
       }`}
     >
-      {status ? (
-        <p
-          className={
-            status.type === "success" ? "text-green-400" : "text-destructive"
-          }
-        >
-          {status.message}
-        </p>
-      ) : (
-        <>
-          <p className="text-muted-foreground">
-            Drop, paste, or browse for a public key
-          </p>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".asc,.gpg,.pub,.key,.pgp,.txt"
-            className="hidden"
-            onChange={handleFileSelect}
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-2"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            Browse files
-          </Button>
-        </>
+      <p className="text-muted-foreground">
+        Drop, paste, or browse for public keys
+      </p>
+      {error && (
+        <p className="text-destructive mt-1">{error}</p>
       )}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".asc,.gpg,.pub,.key,.pgp,.txt"
+        multiple
+        className="hidden"
+        onChange={handleFileSelect}
+      />
+      <Button
+        variant="outline"
+        size="sm"
+        className="mt-2"
+        onClick={() => fileInputRef.current?.click()}
+      >
+        Browse files
+      </Button>
     </div>
   );
 }

@@ -18,7 +18,6 @@ import {
 
 interface KeySessionOptions {
   autoLockMinutes: AutoLockTimeout;
-  lockOnClose: boolean;
   neverCacheKeys: boolean;
 }
 
@@ -59,17 +58,6 @@ export function useKeySession(opts: KeySessionOptions) {
       if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
     };
   }, []);
-
-  useEffect(() => {
-    if (!opts.lockOnClose) return;
-    const handler = () => {
-      if (document.visibilityState === "hidden") {
-        doLockAll();
-      }
-    };
-    document.addEventListener("visibilitychange", handler);
-    return () => document.removeEventListener("visibilitychange", handler);
-  }, [opts.lockOnClose, doLockAll]);
 
   const markHandleUnlocked = useCallback(
     async (keyId: string, handle: number) => {

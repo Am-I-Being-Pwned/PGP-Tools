@@ -96,8 +96,8 @@ export function WorkspaceView({
       if (s.mode === "encrypt" || s.mode === "sign") return `${name}.gpg`;
       return name.replace(/\.(gpg|pgp|asc)$/i, "") || name;
     }
-    if (s.mode === "encrypt" || s.mode === "sign")
-      return "encrypted-files.zip.gpg";
+    if (s.mode === "encrypt") return "encrypted-files.zip.gpg";
+    if (s.mode === "sign") return "signed-files.zip.asc";
     return "decrypted-files.zip";
   }
 
@@ -430,7 +430,18 @@ export function WorkspaceView({
     const keyHandle = await ensureUnlocked(signKeyId);
     if (keyHandle === null) return;
 
-    if (s.files.length > 1) {
+    if (s.files.length > 1 && s.zipFiles) {
+      const zipped = await zipFilesToArchive(s.files);
+      const signed = await pgpOps.signWithHandle(
+        new TextDecoder().decode(zipped),
+        keyHandle,
+      );
+      const data = new TextEncoder().encode(signed);
+      s.setBinaryOutput(data);
+      s.setStatusText(`${s.files.length} files zipped and signed`);
+      s.setOperationDone(true);
+      maybeAutoDownload(true, { binary: data });
+    } else if (s.files.length > 1) {
       const results: { name: string; data: Uint8Array }[] = [];
       for (const file of s.files) {
         const text = await file.text();
@@ -487,7 +498,6 @@ export function WorkspaceView({
         signedMessage: messageText,
         verificationPublicKeys: allPubArmored,
       });
-      s.setOutput(result.text);
       if (result.signatureValid) {
         const isFileInput = s.files.length > 0;
         s.setOperationDone(true);
@@ -621,6 +631,19 @@ export function WorkspaceView({
           </div>
         )}
 
+        {s.mode === "sign" && s.files.length > 1 && (
+          <label className="flex items-center gap-2">
+            <Checkbox
+              checked={s.zipFiles}
+              onCheckedChange={(v) => {
+                s.setZipFiles(v === true);
+                s.resetOutput();
+              }}
+            />
+            <span className="text-sm">Zip files</span>
+          </label>
+        )}
+
         {s.needsPassword && (
           <div className="flex gap-2">
             <input
@@ -667,16 +690,26 @@ export function WorkspaceView({
         {!s.needsPassword && (
           <Button
             className="w-full capitalize"
-            onClick={s.operationDone ? () => triggerDownload() : execute}
+            onClick={
+              s.operationDone
+                ? s.mode === "verify"
+                  ? s.resetAll
+                  : () => triggerDownload()
+                : execute
+            }
             disabled={s.loading || !hasInput}
           >
             {s.loading ? (
               "Processing..."
             ) : s.operationDone ? (
-              <span className="flex items-center gap-2">
-                <DownloadIcon className="h-4 w-4" />
-                Download
-              </span>
+              s.mode === "verify" ? (
+                "Reset"
+              ) : (
+                <span className="flex items-center gap-2">
+                  <DownloadIcon className="h-4 w-4" />
+                  Download
+                </span>
+              )
             ) : (
               s.mode
             )}
