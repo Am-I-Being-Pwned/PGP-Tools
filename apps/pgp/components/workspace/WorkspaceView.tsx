@@ -93,11 +93,11 @@ export function WorkspaceView({
     if (s.files.length === 0) return "output.gpg";
     if (s.files.length === 1 || !s.zipFiles) {
       const name = s.files[0].name;
-      if (s.mode === "encrypt" || s.mode === "sign") return `${name}.gpg`;
+      if (s.mode === "encrypt") return `${name}.gpg`;
+      if (s.mode === "sign") return `${name}.asc`;
       return name.replace(/\.(gpg|pgp|asc)$/i, "") || name;
     }
-    if (s.mode === "encrypt" || s.mode === "sign")
-      return "encrypted-files.zip.gpg";
+    if (s.mode === "encrypt") return "encrypted-files.zip.gpg";
     return "decrypted-files.zip";
   }
 
@@ -487,7 +487,6 @@ export function WorkspaceView({
         signedMessage: messageText,
         verificationPublicKeys: allPubArmored,
       });
-      s.setOutput(result.text);
       if (result.signatureValid) {
         const isFileInput = s.files.length > 0;
         s.setOperationDone(true);
@@ -621,6 +620,7 @@ export function WorkspaceView({
           </div>
         )}
 
+
         {s.needsPassword && (
           <div className="flex gap-2">
             <input
@@ -667,16 +667,26 @@ export function WorkspaceView({
         {!s.needsPassword && (
           <Button
             className="w-full capitalize"
-            onClick={s.operationDone ? () => triggerDownload() : execute}
+            onClick={
+              s.operationDone
+                ? s.mode === "verify"
+                  ? s.resetAll
+                  : () => triggerDownload()
+                : execute
+            }
             disabled={s.loading || !hasInput}
           >
             {s.loading ? (
               "Processing..."
             ) : s.operationDone ? (
-              <span className="flex items-center gap-2">
-                <DownloadIcon className="h-4 w-4" />
-                Download
-              </span>
+              s.mode === "verify" ? (
+                "Reset"
+              ) : (
+                <span className="flex items-center gap-2">
+                  <DownloadIcon className="h-4 w-4" />
+                  Download
+                </span>
+              )
             ) : (
               s.mode
             )}

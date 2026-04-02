@@ -4,12 +4,11 @@ import { Button } from "@amibeingpwned/ui/button";
 
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
-import type { ProtectionMethod } from "./ProtectionMethodPicker";
 import { importKey } from "../../lib/pgp/key-management";
 import { protectAndStoreKey } from "../../lib/protection/protect-key";
-import { checkPrfSupport } from "../../lib/protection/webauthn-prf";
 import { Dialog } from "../shared/Dialog";
 import {
+  getDefaultProtectionMethod,
   ProtectionMethodPicker,
   validatePassword,
 } from "./ProtectionMethodPicker";
@@ -21,6 +20,8 @@ interface ImportKeyDialogProps {
   onClose: () => void;
   onImportPrivate: (blob: ProtectedKeyBlob) => Promise<void>;
   onImportPublic: (contact: PublicContactKey) => Promise<void>;
+  /** Pass the primary key's passkey credential ID to allow reuse. */
+  reusePasskeyCredentialId?: string;
 }
 
 export function ImportKeyDialog({
@@ -28,12 +29,11 @@ export function ImportKeyDialog({
   onClose,
   onImportPrivate,
   onImportPublic,
+  reusePasskeyCredentialId,
 }: ImportKeyDialogProps) {
   const [step, setStep] = useState<Step>("paste");
   const [armored, setArmored] = useState("");
-  const [method, setMethod] = useState<ProtectionMethod>(
-    checkPrfSupport() ? "passkey" : "password",
-  );
+  const [method, setMethod] = useState(getDefaultProtectionMethod);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [importing, setImporting] = useState(false);
@@ -41,6 +41,7 @@ export function ImportKeyDialog({
   const [detectedType, setDetectedType] = useState<"public" | "private" | null>(
     null,
   );
+  const [reusePasskey, setReusePasskey] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!open) return null;
@@ -52,6 +53,7 @@ export function ImportKeyDialog({
     setConfirmPassword("");
     setDetectedType(null);
     setError(null);
+    setReusePasskey(true);
     onClose();
   };
 
@@ -122,12 +124,16 @@ export function ImportKeyDialog({
         return;
       }
 
-      const blob = await protectAndStoreKey({
+      const { blob } = await protectAndStoreKey({
         privateKeyArmored: result.privateKeyArmored,
         publicKeyArmored: result.publicKeyArmored,
         keyInfo: result.keyInfo,
         method,
         password,
+        reusePasskeyCredentialId:
+          method === "passkey" && reusePasskey
+            ? reusePasskeyCredentialId
+            : undefined,
       });
 
       await onImportPrivate(blob);
@@ -176,7 +182,11 @@ export function ImportKeyDialog({
             </p>
           )}
 
-          {error && <p className="text-destructive text-xs">{error}</p>}
+          {error && (
+            <p className="text-destructive text-xs" role="alert">
+              {error}
+            </p>
+          )}
 
           <div className="flex gap-2">
             <Button
@@ -216,6 +226,9 @@ export function ImportKeyDialog({
           }}
           submitting={importing}
           submitLabel="Import"
+          reusePasskeyCredentialId={reusePasskeyCredentialId}
+          reusePasskey={reusePasskey}
+          onReusePasskeyChange={setReusePasskey}
         />
       )}
     </Dialog>
