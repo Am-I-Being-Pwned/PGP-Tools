@@ -12,7 +12,6 @@ export interface PgpPreferences {
   storageLocation: StorageLocation;
   onboardingComplete: boolean;
   autoLockMinutes: AutoLockTimeout;
-  lockOnClose: boolean;
   signWhenEncrypting: boolean;
   activeTab: "workspace" | "keys" | "settings";
   neverCacheKeys: boolean;
@@ -28,7 +27,6 @@ const DEFAULT_PREFERENCES: PgpPreferences = {
   storageLocation: "local",
   onboardingComplete: false,
   autoLockMinutes: 15,
-  lockOnClose: true,
   signWhenEncrypting: false,
   activeTab: "workspace",
   neverCacheKeys: false,

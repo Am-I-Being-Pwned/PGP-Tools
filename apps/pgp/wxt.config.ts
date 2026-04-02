@@ -9,7 +9,7 @@ export default defineConfig({
     short_name: "PGP Tools",
     description:
       "Encrypt, decrypt, sign, and verify messages with PGP. Drag-and-drop files and manage keys.",
-    permissions: ["sidePanel", "contextMenus", "storage", "identity.email"],
+    permissions: ["sidePanel", "contextMenus", "storage"],
     optional_permissions: ["downloads", "notifications"],
     optional_host_permissions: ["<all_urls>"],
     icons: {

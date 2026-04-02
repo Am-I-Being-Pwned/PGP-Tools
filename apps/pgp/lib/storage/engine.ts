@@ -12,8 +12,6 @@ import { STORAGE_PREFERENCES } from "../constants";
  * a cached location to avoid redundant storage reads.
  */
 
-// ── mutex ────────────────────────────────────────────────────────────
-
 const locks = new Map<string, Promise<void>>();
 
 export async function withLock<T>(
@@ -34,8 +32,6 @@ export async function withLock<T>(
     if (locks.get(key) === next) locks.delete(key);
   }
 }
-
-// ── cached storage location ──────────────────────────────────────────
 
 let cachedLocation: StorageLocation | null = null;
 
@@ -59,8 +55,6 @@ function area(
 ): chrome.storage.LocalStorageArea | chrome.storage.SyncStorageArea {
   return location === "sync" ? chrome.storage.sync : chrome.storage.local;
 }
-
-// ── CRUD ─────────────────────────────────────────────────────────────
 
 export async function getItem<T>(key: string): Promise<T | undefined> {
   const loc = await resolveLocation();

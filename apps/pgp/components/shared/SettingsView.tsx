@@ -27,8 +27,6 @@ interface SettingsViewProps {
   onStorageLocationChange: (loc: StorageLocation) => void;
   autoLockMinutes: AutoLockTimeout;
   onAutoLockChange: (v: AutoLockTimeout) => void;
-  lockOnClose: boolean;
-  onLockOnCloseChange: (v: boolean) => void;
   neverCacheKeys: boolean;
   onNeverCacheKeysChange: (v: boolean) => void;
   autoDecryptDownloads: boolean;
@@ -46,8 +44,6 @@ export function SettingsView({
   onStorageLocationChange,
   autoLockMinutes,
   onAutoLockChange,
-  lockOnClose,
-  onLockOnCloseChange,
   neverCacheKeys,
   onNeverCacheKeysChange,
   autoDecryptDownloads,
@@ -84,11 +80,6 @@ export function SettingsView({
   const handleAutoLockChange = (v: AutoLockTimeout) => {
     onAutoLockChange(v);
     void savePreferences({ autoLockMinutes: v });
-  };
-
-  const handleLockOnCloseChange = (v: boolean) => {
-    onLockOnCloseChange(v);
-    void savePreferences({ lockOnClose: v });
   };
 
   const [showPermExplainer, setShowPermExplainer] = useState(false);
@@ -165,19 +156,6 @@ export function SettingsView({
             inactivity.
           </p>
         </div>
-
-        <label className="border-border mt-2 flex items-center justify-between rounded-md border p-3">
-          <div>
-            <span className="text-sm">Lock when sidebar closes</span>
-            <p className="text-muted-foreground text-xs">
-              Immediately lock all keys when the side panel is hidden or closed.
-            </p>
-          </div>
-          <Switch
-            checked={lockOnClose}
-            onCheckedChange={handleLockOnCloseChange}
-          />
-        </label>
 
         <label className="border-border mt-2 flex items-center justify-between rounded-md border p-3">
           <div>

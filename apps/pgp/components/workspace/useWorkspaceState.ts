@@ -199,9 +199,13 @@ export function useWorkspaceState(opts: {
       return [...prev, ...deduped];
     });
     setInput("");
-    if (newFiles.some((f) => /\.(gpg|pgp|asc)$/i.test(f.name))) {
-      setMode("decrypt");
-    }
+    setMode((current) => {
+      if (current !== "encrypt" && current !== "decrypt") return current;
+      if (newFiles.some((f) => /\.(gpg|pgp|asc)$/i.test(f.name))) {
+        return "decrypt";
+      }
+      return current;
+    });
     setOutput("");
     setBinaryOutput(undefined);
     setError(null);

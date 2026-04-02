@@ -5,6 +5,10 @@ import { INPUT_CLASS } from "../../lib/utils/styles";
 
 export type ProtectionMethod = "passkey" | "password";
 
+export function getDefaultProtectionMethod(): ProtectionMethod {
+  return checkPrfSupport() ? "passkey" : "password";
+}
+
 interface ProtectionMethodPickerProps {
   method: ProtectionMethod;
   onMethodChange: (method: ProtectionMethod) => void;
@@ -17,6 +21,10 @@ interface ProtectionMethodPickerProps {
   onBack: () => void;
   submitting: boolean;
   submitLabel?: string;
+  /** When set, offer to reuse the existing passkey instead of registering a new one. */
+  reusePasskeyCredentialId?: string;
+  reusePasskey?: boolean;
+  onReusePasskeyChange?: (reuse: boolean) => void;
 }
 
 export function ProtectionMethodPicker({
@@ -31,6 +39,9 @@ export function ProtectionMethodPicker({
   onBack,
   submitting,
   submitLabel,
+  reusePasskeyCredentialId,
+  reusePasskey,
+  onReusePasskeyChange,
 }: ProtectionMethodPickerProps) {
   const prfAvailable = checkPrfSupport();
 
@@ -56,8 +67,8 @@ export function ProtectionMethodPicker({
           className="accent-primary mt-0.5"
         />
         <div>
-          <p className="text-sm font-medium">
-            Passkey{" "}
+          <p className="flex items-center justify-between text-sm font-medium">
+            Passkey
             <span className="text-primary text-xs font-normal">
               Recommended
             </span>
@@ -71,6 +82,21 @@ export function ProtectionMethodPicker({
               Not available in this browser.
             </p>
           )}
+          {method === "passkey" &&
+            reusePasskeyCredentialId &&
+            onReusePasskeyChange && (
+              <label className="mt-2 flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={reusePasskey ?? true}
+                  onChange={(e) => onReusePasskeyChange(e.target.checked)}
+                  className="accent-primary"
+                />
+                <span className="text-muted-foreground text-xs">
+                  Use the same passkey I already set up
+                </span>
+              </label>
+            )}
         </div>
       </label>
 
@@ -104,6 +130,7 @@ export function ProtectionMethodPicker({
             value={password}
             onChange={(e) => onPasswordChange(e.target.value)}
             className={INPUT_CLASS}
+            aria-label="Password"
           />
           <input
             type="password"
@@ -111,11 +138,16 @@ export function ProtectionMethodPicker({
             value={confirmPassword}
             onChange={(e) => onConfirmPasswordChange(e.target.value)}
             className={INPUT_CLASS}
+            aria-label="Confirm password"
           />
         </>
       )}
 
-      {error && <p className="text-destructive text-xs">{error}</p>}
+      {error && (
+        <p className="text-destructive text-xs" role="alert">
+          {error}
+        </p>
+      )}
 
       <div className="flex gap-2">
         <Button
@@ -143,7 +175,6 @@ export function ProtectionMethodPicker({
   );
 }
 
-/** Validate password fields. Returns error message or null. */
 export function validatePassword(
   password: string,
   confirmPassword: string,

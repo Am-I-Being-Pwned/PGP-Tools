@@ -1,5 +1,5 @@
 import { STORAGE_CONTACTS } from "../constants";
-import { getItem, removeItem, setItem, withLock } from "./engine";
+import { getItem, removeItem, setItem } from "./engine";
 
 export interface PublicContactKey {
   keyId: string;
@@ -21,42 +21,58 @@ function isValidContact(v: unknown): v is PublicContactKey {
   );
 }
 
-/** Per-contact storage key */
-function contactKey(keyId: string): string {
+function contactItemKey(keyId: string): string {
   return `${STORAGE_CONTACTS}:${keyId}`;
 }
 
-export async function getContacts(): Promise<PublicContactKey[]> {
+// Each contact stored under its own key to stay within chrome.storage.sync quota.
+
+export async function loadContacts(): Promise<PublicContactKey[]> {
   const ids = (await getItem<string[]>(STORAGE_CONTACTS)) ?? [];
   if (ids.length === 0) return [];
 
   const contacts: PublicContactKey[] = [];
   for (const id of ids) {
-    const c = await getItem<unknown>(contactKey(id));
+    const c = await getItem<unknown>(contactItemKey(id));
     if (isValidContact(c)) contacts.push(c);
   }
   return contacts;
 }
 
-export async function addContact(contact: PublicContactKey): Promise<void> {
-  await withLock(STORAGE_CONTACTS, async () => {
-    const contacts = await getContacts();
-    const ids = contacts.map((c) => c.keyId);
+export async function saveContacts(
+  contacts: PublicContactKey[],
+): Promise<void> {
+  for (const c of contacts) {
+    await setItem(contactItemKey(c.keyId), c);
+  }
+  const ids = contacts.map((c) => c.keyId);
+  await setItem(STORAGE_CONTACTS, ids);
+}
 
-    if (!ids.includes(contact.keyId)) {
-      ids.push(contact.keyId);
-    }
-
-    await setItem(contactKey(contact.keyId), contact);
+export async function saveContact(contact: PublicContactKey): Promise<void> {
+  await setItem(contactItemKey(contact.keyId), contact);
+  const ids = (await getItem<string[]>(STORAGE_CONTACTS)) ?? [];
+  if (!ids.includes(contact.keyId)) {
+    ids.push(contact.keyId);
     await setItem(STORAGE_CONTACTS, ids);
-  });
+  }
 }
 
 export async function removeContact(keyId: string): Promise<void> {
-  await withLock(STORAGE_CONTACTS, async () => {
-    const contacts = await getContacts();
-    const ids = contacts.filter((c) => c.keyId !== keyId).map((c) => c.keyId);
-    await removeItem(contactKey(keyId));
-    await setItem(STORAGE_CONTACTS, ids);
-  });
+  await removeItem(contactItemKey(keyId));
+  const ids = (await getItem<string[]>(STORAGE_CONTACTS)) ?? [];
+  const updated = ids.filter((id) => id !== keyId);
+  if (updated.length === 0) {
+    await removeItem(STORAGE_CONTACTS);
+  } else {
+    await setItem(STORAGE_CONTACTS, updated);
+  }
+}
+
+export async function deleteContactsBlob(): Promise<void> {
+  const ids = (await getItem<string[]>(STORAGE_CONTACTS)) ?? [];
+  for (const id of ids) {
+    await removeItem(contactItemKey(id));
+  }
+  await removeItem(STORAGE_CONTACTS);
 }

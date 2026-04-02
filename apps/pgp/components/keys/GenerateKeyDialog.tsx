@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { format } from "date-fns";
 import { ChevronRightIcon, KeyRoundIcon, LoaderIcon } from "lucide-react";
 
@@ -13,13 +13,12 @@ import {
 } from "@amibeingpwned/ui/select";
 
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
-import type { ProtectionMethod } from "./ProtectionMethodPicker";
 import { generateKey } from "../../lib/pgp/key-management";
 import { protectAndStoreKey } from "../../lib/protection/protect-key";
-import { checkPrfSupport } from "../../lib/protection/webauthn-prf";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 import { Dialog } from "../shared/Dialog";
 import {
+  getDefaultProtectionMethod,
   ProtectionMethodPicker,
   validatePassword,
 } from "./ProtectionMethodPicker";
@@ -49,8 +48,12 @@ function expiryToSeconds(
 interface GenerateKeyDialogProps {
   open: boolean;
   onClose: () => void;
-  onKeyGenerated: () => void;
+  onKeyGenerated: (keyId: string, keyHandle?: number) => void;
   addKey: (blob: ProtectedKeyBlob) => Promise<void>;
+  /** Pass the primary key's passkey credential ID to allow reuse. */
+  reusePasskeyCredentialId?: string;
+  /** If true, cache the decrypted key in WASM and return the handle via onKeyGenerated. */
+  cacheKey?: boolean;
 }
 
 export function GenerateKeyDialog({
@@ -58,38 +61,26 @@ export function GenerateKeyDialog({
   onClose,
   onKeyGenerated,
   addKey,
+  reusePasskeyCredentialId,
+  cacheKey,
 }: GenerateKeyDialogProps) {
   const [step, setStep] = useState<Step>("identity");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [comment, setComment] = useState("");
-  const [method, setMethod] = useState<ProtectionMethod>(
-    checkPrfSupport() ? "passkey" : "password",
-  );
+  const [method, setMethod] = useState(getDefaultProtectionMethod);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [reusePasskey, setReusePasskey] = useState(true);
 
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [keyAlgorithm, setKeyAlgorithm] = useState<KeyAlgorithm>("ecc");
   const [rsaBits, setRsaBits] = useState<4096>(4096);
   const [expiryOption, setExpiryOption] = useState<ExpiryOption>("2y");
   const [customExpiry, setCustomExpiry] = useState<Date | undefined>();
-
-  useEffect(() => {
-    if (!open || email) return;
-    /* eslint-disable @typescript-eslint/no-unnecessary-condition -- chrome.identity may not be available */
-    chrome.identity
-      ?.getProfileUserInfo?.({ accountStatus: "ANY" })
-      ?.then((info) => {
-        if (info.email) setEmail(info.email);
-      })
-      ?.catch(() => {
-        /* noop */
-      });
-    /* eslint-enable @typescript-eslint/no-unnecessary-condition */
-  }, [open]);
 
   if (!open) return null;
 
@@ -101,6 +92,7 @@ export function GenerateKeyDialog({
     setPassword("");
     setConfirmPassword("");
     setError(null);
+    setReusePasskey(true);
     setShowAdvanced(false);
     setKeyAlgorithm("ecc");
     setRsaBits(4096);
@@ -108,6 +100,8 @@ export function GenerateKeyDialog({
     setCustomExpiry(undefined);
     onClose();
   };
+
+  const canSkipProtection = !!reusePasskeyCredentialId && method === "passkey";
 
   const handleNext = () => {
     setError(null);
@@ -121,6 +115,8 @@ export function GenerateKeyDialog({
     }
     if (expiryOption === "custom") {
       setStep("expiry");
+    } else if (canSkipProtection) {
+      void handleGenerate();
     } else {
       setStep("protection");
     }
@@ -136,7 +132,11 @@ export function GenerateKeyDialog({
       setError("Expiry date must be in the future.");
       return;
     }
-    setStep("protection");
+    if (canSkipProtection) {
+      void handleGenerate();
+    } else {
+      setStep("protection");
+    }
   };
 
   const handleGenerate = async () => {
@@ -168,17 +168,22 @@ export function GenerateKeyDialog({
         expiresIn: expiresIn || undefined,
       });
 
-      const blob = await protectAndStoreKey({
+      const { blob, keyHandle } = await protectAndStoreKey({
         privateKeyArmored,
         publicKeyArmored,
         keyInfo,
         method,
         password,
         revocationCertificate,
+        reusePasskeyCredentialId:
+          method === "passkey" && reusePasskey
+            ? reusePasskeyCredentialId
+            : undefined,
+        cacheKey,
       });
 
       await addKey(blob);
-      onKeyGenerated();
+      onKeyGenerated(blob.keyId, keyHandle);
       resetAndClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Key generation failed");
@@ -322,7 +327,11 @@ export function GenerateKeyDialog({
             </div>
           )}
 
-          {error && <p className="text-destructive text-xs">{error}</p>}
+          {error && (
+            <p className="text-destructive text-xs" role="alert">
+              {error}
+            </p>
+          )}
 
           <div className="flex gap-2">
             <Button
@@ -361,7 +370,11 @@ export function GenerateKeyDialog({
               Expires {format(customExpiry, "PPP")}
             </p>
           )}
-          {error && <p className="text-destructive text-xs">{error}</p>}
+          {error && (
+            <p className="text-destructive text-xs" role="alert">
+              {error}
+            </p>
+          )}
           <div className="flex gap-2">
             <Button
               variant="outline"
@@ -396,7 +409,16 @@ export function GenerateKeyDialog({
             setError(null);
           }}
           submitting={generating}
-          submitLabel={method === "passkey" ? "Create passkey" : "Generate"}
+          submitLabel={
+            method === "passkey"
+              ? reusePasskeyCredentialId && reusePasskey
+                ? "Use passkey"
+                : "Create passkey"
+              : "Generate"
+          }
+          reusePasskeyCredentialId={reusePasskeyCredentialId}
+          reusePasskey={reusePasskey}
+          onReusePasskeyChange={setReusePasskey}
         />
       )}
 
