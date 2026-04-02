@@ -175,7 +175,6 @@ export function ProtectionMethodPicker({
   );
 }
 
-/** Validate password fields. Returns error message or null. */
 export function validatePassword(
   password: string,
   confirmPassword: string,
