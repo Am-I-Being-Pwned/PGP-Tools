@@ -59,8 +59,6 @@ export default function App() {
     clearAutoDecrypt,
   } = usePendingOperation();
 
-  // ── Master auto-lock ───────────────────────────────────────────────
-
   const doMasterLock = useCallback(() => {
     // Drop the WASM contacts session key. For passkey users this is
     // already gone (dropped after decrypt), but for password users
@@ -85,8 +83,6 @@ export default function App() {
       if (masterLockTimerRef.current) clearTimeout(masterLockTimerRef.current);
     };
   }, [masterUnlocked, resetMasterLockTimer]);
-
-  // ── Init ───────────────────────────────────────────────────────────
 
   useEffect(() => {
     void (async () => {
@@ -130,8 +126,6 @@ export default function App() {
     }
   }, [importKeyMsg]);
 
-  // ── Delete key handler ─────────────────────────────────────────────
-
   const handleDeleteKey = useCallback(
     async (keyId: string) => {
       await keyring.remove(keyId);
@@ -139,8 +133,6 @@ export default function App() {
     },
     [keyring, contacts],
   );
-
-  // ── Render gates ───────────────────────────────────────────────────
 
   if (onboardingComplete === null) return null;
 

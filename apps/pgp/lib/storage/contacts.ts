@@ -1,8 +1,6 @@
 import { STORAGE_CONTACTS } from "../constants";
 import { getItem, removeItem, setItem } from "./engine";
 
-// ── public contact type ─────────────────────────────────────────────
-
 export interface PublicContactKey {
   keyId: string;
   userIds: string[];
@@ -23,12 +21,11 @@ function isValidContact(v: unknown): v is PublicContactKey {
   );
 }
 
-/** Per-contact storage key. */
 function contactItemKey(keyId: string): string {
   return `${STORAGE_CONTACTS}:${keyId}`;
 }
 
-// ── CRUD (index + per-item keys to stay within sync quota) ──────────
+// Each contact stored under its own key to stay within chrome.storage.sync quota.
 
 export async function loadContacts(): Promise<PublicContactKey[]> {
   const ids = (await getItem<string[]>(STORAGE_CONTACTS)) ?? [];
@@ -45,11 +42,9 @@ export async function loadContacts(): Promise<PublicContactKey[]> {
 export async function saveContacts(
   contacts: PublicContactKey[],
 ): Promise<void> {
-  // Write each contact under its own key
   for (const c of contacts) {
     await setItem(contactItemKey(c.keyId), c);
   }
-  // Write the index
   const ids = contacts.map((c) => c.keyId);
   await setItem(STORAGE_CONTACTS, ids);
 }
@@ -74,7 +69,6 @@ export async function removeContact(keyId: string): Promise<void> {
   }
 }
 
-/** Delete all contact data from storage. */
 export async function deleteContactsBlob(): Promise<void> {
   const ids = (await getItem<string[]>(STORAGE_CONTACTS)) ?? [];
   for (const id of ids) {

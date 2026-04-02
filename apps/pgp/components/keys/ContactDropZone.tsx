@@ -16,7 +16,6 @@ export function ContactDropZone({ onImport, existingKeyIds }: ContactDropZonePro
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  /** Split text that may contain multiple concatenated armored keys. */
   const splitKeys = (text: string): string[] => {
     const blocks: string[] = [];
     const regex =

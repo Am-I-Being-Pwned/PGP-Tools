@@ -4,7 +4,6 @@ export const ARGON2_MEMORY_KIB = 65536; // 64 MB
 export const ARGON2_ITERATIONS = 3;
 export const ARGON2_PARALLELISM = 1; // WASM is single-threaded
 
-/** Derive an AES-256-GCM key from a password using Argon2id (WASM). */
 export async function deriveKeyFromPassword(
   password: string,
   salt: ArrayBuffer,
@@ -37,7 +36,6 @@ export async function deriveKeyFromPassword(
   return key;
 }
 
-/** Generate a random 16-byte salt. */
 export function generateSalt(): ArrayBuffer {
   return crypto.getRandomValues(new Uint8Array(16)).buffer;
 }
