@@ -2,9 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { PublicContactKey } from "../lib/storage/contacts";
 import {
-  deleteContactsBlob,
   loadContacts,
-  saveContacts,
+  removeContact,
+  saveContact,
 } from "../lib/storage/contacts";
 
 export function useContacts() {
@@ -26,16 +26,14 @@ export function useContacts() {
 
   const add = useCallback(async (contact: PublicContactKey) => {
     const op = mutexRef.current.then(async () => {
-      let updated: PublicContactKey[] = [];
       let existing: PublicContactKey | undefined;
       setContacts((prev) => {
         existing = prev.find((c) => c.keyId === contact.keyId);
-        updated = [...prev.filter((c) => c.keyId !== contact.keyId), contact];
-        return updated;
+        return [...prev.filter((c) => c.keyId !== contact.keyId), contact];
       });
 
       try {
-        await saveContacts(updated);
+        await saveContact(contact);
       } catch (e) {
         setContacts((prev) => {
           const without = prev.filter((c) => c.keyId !== contact.keyId);
@@ -52,19 +50,13 @@ export function useContacts() {
   const remove = useCallback(async (keyId: string) => {
     const op = mutexRef.current.then(async () => {
       let removed: PublicContactKey | undefined;
-      let updated: PublicContactKey[] = [];
       setContacts((prev) => {
         removed = prev.find((c) => c.keyId === keyId);
-        updated = prev.filter((c) => c.keyId !== keyId);
-        return updated;
+        return prev.filter((c) => c.keyId !== keyId);
       });
 
       try {
-        if (updated.length === 0) {
-          await deleteContactsBlob();
-        } else {
-          await saveContacts(updated);
-        }
+        await removeContact(keyId);
       } catch (e) {
         const rollback = removed;
         if (rollback) {
