@@ -1,7 +1,6 @@
 import { STORAGE_MASTER_PROTECTION } from "../constants";
 import { getItem, setItem } from "./engine";
 
-// ── types ───────────────────────────────────────────────────────────
 //
 // Security note: For the passkey path, `storedSecret` and `prfSalt` are
 // stored in plaintext in Chrome storage. This is the standard WebAuthn PRF
@@ -29,8 +28,6 @@ export type MasterProtection =
   | MasterPasskeyProtection
   | MasterPasswordProtection;
 
-// ── validation ──────────────────────────────────────────────────────
-
 function isValidMasterProtection(v: unknown): v is MasterProtection {
   if (typeof v !== "object" || v === null) return false;
   const o = v as Record<string, unknown>;
@@ -50,8 +47,6 @@ function isValidMasterProtection(v: unknown): v is MasterProtection {
   }
   return false;
 }
-
-// ── CRUD ────────────────────────────────────────────────────────────
 
 export async function getMasterProtection(): Promise<MasterProtection | null> {
   const raw = await getItem<unknown>(STORAGE_MASTER_PROTECTION);

@@ -3,8 +3,6 @@ import { deriveKeyFromPassword, generateSalt } from "./password-kdf";
 
 const IV_LENGTH = 12;
 
-// ── low-level AES-GCM encrypt/decrypt with a CryptoKey ──────────────
-
 /** Build AAD that binds ciphertext to a specific key + method.
  *  Prevents swapping encrypted blobs between key entries. */
 function buildAad(keyId: string, method: string): ArrayBuffer {
@@ -26,8 +24,6 @@ async function aesEncrypt(
   encoded.fill(0);
   return { ciphertext, iv };
 }
-
-// ── password path (Argon2id) ────────────────────────────────────────
 
 export interface PasswordEncryptedBlob {
   method: "password";
@@ -52,8 +48,6 @@ export async function encryptWithPassword(
     salt: toBase64(salt),
   };
 }
-
-// ── passkey (WebAuthn PRF) path ──────────────────────────────────────
 
 export interface PasskeyEncryptedBlob {
   method: "passkey";
@@ -83,7 +77,5 @@ export async function encryptWithPasskey(
     storedSecret: toBase64(storedSecret),
   };
 }
-
-// ── union type ───────────────────────────────────────────────────────
 
 export type EncryptedBlob = PasswordEncryptedBlob | PasskeyEncryptedBlob;

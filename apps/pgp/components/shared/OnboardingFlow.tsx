@@ -63,19 +63,16 @@ export function OnboardingFlow({ onComplete, addKey, onKeyCached, cacheKey }: On
   const [step, setStep] = useState<Step>("storage");
   const [location, setLocation] = useState<StorageLocation>("local");
 
-  // Master protection
   const [method, setMethod] = useState(getDefaultProtectionMethod);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Credential ID from the master passkey registration
   const [masterCredentialId, setMasterCredentialId] = useState<
     string | undefined
   >();
 
-  // Identity fields
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [comment, setComment] = useState("");

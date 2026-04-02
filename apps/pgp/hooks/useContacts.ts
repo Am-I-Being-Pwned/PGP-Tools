@@ -11,7 +11,6 @@ export function useContacts() {
   const [contacts, setContacts] = useState<PublicContactKey[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Mutex to serialize mutations.
   const mutexRef = useRef<Promise<void>>(Promise.resolve());
 
   const refresh = useCallback(async () => {

@@ -30,25 +30,21 @@ async function loadWasm(): Promise<WasmModule> {
   return initPromise;
 }
 
-/** Ensure WASM is loaded. Call once at startup. */
 export async function initPgpWasm(): Promise<void> {
   await loadWasm();
 }
 
-/** Smoke test - returns "gpg-wasm ok" if WASM is loaded. */
 export async function ping(): Promise<string> {
   const wasm = await loadWasm();
   return wasm.ping();
 }
 
-/** Parse an armored key and return metadata. */
 export async function parseKey(armored: string): Promise<KeyInfo> {
   const wasm = await loadWasm();
   const json = wasm.parseKey(armored);
   return JSON.parse(json) as KeyInfo;
 }
 
-/** Generate a new OpenPGP key pair. */
 export async function generateKey(
   opts: GenerateKeyOptions,
 ): Promise<GeneratedKey> {
@@ -57,7 +53,6 @@ export async function generateKey(
   return JSON.parse(json) as GeneratedKey;
 }
 
-/** Encrypt data to one or more recipients (no signing). */
 export async function encrypt(
   plaintext: Uint8Array,
   recipientPublicKeys: string[],
@@ -77,7 +72,6 @@ export interface VerifyResultWasm {
   signerKeyId: string | null;
 }
 
-/** Verify a cleartext-signed message. */
 export async function verify(
   signedMessage: string,
   verificationPublicKeys: string[],
@@ -90,13 +84,11 @@ export async function verify(
   return JSON.parse(json) as VerifyResultWasm;
 }
 
-/** Get the armored private key from a handle (for unprotected export). */
 export async function getKeyArmored(handle: number): Promise<string> {
   const wasm = await loadWasm();
   return wasm.getKeyArmored(handle);
 }
 
-/** Encrypt with signing via a stored key handle. */
 export async function encryptWithSigningHandle(
   plaintext: Uint8Array,
   recipientPublicKeys: string[],
@@ -110,7 +102,6 @@ export async function encryptWithSigningHandle(
   );
 }
 
-/** Encrypt key for export via handle (key never leaves WASM as plaintext). */
 export async function encryptKeyForExportWithHandle(
   keyHandle: number,
   passphrase: string,
@@ -119,9 +110,6 @@ export async function encryptKeyForExportWithHandle(
   return wasm.encryptKeyForExportWithHandle(keyHandle, passphrase);
 }
 
-// ── Argon2id KDF ────────────────────────────────────────────────────
-
-/** Derive a 32-byte key from a password using Argon2id (runs in WASM). */
 export async function argon2Derive(
   password: Uint8Array,
   salt: Uint8Array,
@@ -140,9 +128,6 @@ export async function argon2Derive(
   return new Uint8Array(result);
 }
 
-// ── Unlock-and-store (private key never enters JS) ──────────────────
-
-/** Unlock a password-protected key entirely in WASM. Returns a key handle. */
 export async function unlockWithPassword(
   ciphertext: Uint8Array,
   iv: Uint8Array,
@@ -166,7 +151,6 @@ export async function unlockWithPassword(
   );
 }
 
-/** Unlock a passkey-protected key entirely in WASM. Returns a key handle. */
 export async function unlockWithPrf(
   ciphertext: Uint8Array,
   iv: Uint8Array,
@@ -178,9 +162,6 @@ export async function unlockWithPrf(
   return wasm.unlockWithPrf(ciphertext, iv, prfOutput, storedSecret, keyId);
 }
 
-// ── Contacts session (master protection, key material stays in WASM) ─
-
-/** Init the contacts session with a passkey PRF output. HKDF in WASM. */
 export async function initContactsSessionWithPrf(
   prfOutput: Uint8Array,
   storedSecret: Uint8Array,
@@ -189,19 +170,16 @@ export async function initContactsSessionWithPrf(
   wasm.initContactsSessionWithPrf(prfOutput, storedSecret);
 }
 
-/** Drop the contacts session. Zeroizes the key in WASM. */
 export async function dropContactsSession(): Promise<void> {
   const wasm = await loadWasm();
   wasm.dropContactsSession();
 }
 
-/** Check whether a contacts session is currently active in WASM. */
 export async function hasContactsSession(): Promise<boolean> {
   const wasm = await loadWasm();
   return wasm.hasContactsSession();
 }
 
-/** Encrypt contacts JSON using the WASM session key. Returns `[12-byte IV][ciphertext]`. */
 export async function encryptContacts(
   plaintext: Uint8Array,
 ): Promise<Uint8Array> {
@@ -209,7 +187,6 @@ export async function encryptContacts(
   return wasm.encryptContacts(plaintext);
 }
 
-/** Decrypt contacts JSON using the WASM session key. */
 export async function decryptContacts(
   ciphertext: Uint8Array,
   iv: Uint8Array,
@@ -265,7 +242,6 @@ export async function verifyCanaryAndInitSession(
   );
 }
 
-/** Extract the public key from a private key. */
 export async function extractPublicKey(
   armoredPrivateKey: string,
 ): Promise<string> {
@@ -273,15 +249,11 @@ export async function extractPublicKey(
   return wasm.extractPublicKey(armoredPrivateKey);
 }
 
-// ── Key Handle API (private keys stay in WASM memory) ───────────────
-
-/** Store a private key in WASM memory. Returns an opaque handle. */
 export async function storeKey(armoredPrivateKey: string): Promise<number> {
   const wasm = await loadWasm();
   return wasm.storeKey(armoredPrivateKey);
 }
 
-/** Drop a key from WASM memory. */
 export async function dropKey(handle: number): Promise<void> {
   const wasm = await loadWasm();
   wasm.dropKey(handle);
@@ -292,7 +264,6 @@ export interface DecryptWithHandleResult {
   signatureInfo: SignatureInfo;
 }
 
-/** Decrypt using a stored key handle. Returns plaintext + signature info in one call. */
 export async function decryptWithHandle(
   ciphertext: Uint8Array,
   keyHandle: number,
@@ -319,7 +290,6 @@ export async function decryptWithHandle(
   return { plaintext, signatureInfo };
 }
 
-/** Sign using a stored key handle. */
 export async function signWithHandle(
   text: string,
   keyHandle: number,
