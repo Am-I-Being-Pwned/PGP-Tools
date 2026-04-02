@@ -147,7 +147,6 @@ export function OnboardingFlow({ onComplete, addKey, onKeyCached, cacheKey }: On
             ARGON2_ITERATIONS,
             ARGON2_PARALLELISM,
           );
-          setPassword("");
           setConfirmPassword("");
 
           const { iv: canaryIv, ciphertext: canaryCtx } =
@@ -219,6 +218,7 @@ export function OnboardingFlow({ onComplete, addKey, onKeyCached, cacheKey }: On
       if (keyHandle !== undefined && onKeyCached) {
         onKeyCached(blob.keyId, keyHandle);
       }
+      setPassword("");
       await savePreferences({
         storageLocation: location,
         onboardingComplete: true,

@@ -93,11 +93,11 @@ export function WorkspaceView({
     if (s.files.length === 0) return "output.gpg";
     if (s.files.length === 1 || !s.zipFiles) {
       const name = s.files[0].name;
-      if (s.mode === "encrypt" || s.mode === "sign") return `${name}.gpg`;
+      if (s.mode === "encrypt") return `${name}.gpg`;
+      if (s.mode === "sign") return `${name}.asc`;
       return name.replace(/\.(gpg|pgp|asc)$/i, "") || name;
     }
     if (s.mode === "encrypt") return "encrypted-files.zip.gpg";
-    if (s.mode === "sign") return "signed-files.zip.asc";
     return "decrypted-files.zip";
   }
 
@@ -430,18 +430,7 @@ export function WorkspaceView({
     const keyHandle = await ensureUnlocked(signKeyId);
     if (keyHandle === null) return;
 
-    if (s.files.length > 1 && s.zipFiles) {
-      const zipped = await zipFilesToArchive(s.files);
-      const signed = await pgpOps.signWithHandle(
-        new TextDecoder().decode(zipped),
-        keyHandle,
-      );
-      const data = new TextEncoder().encode(signed);
-      s.setBinaryOutput(data);
-      s.setStatusText(`${s.files.length} files zipped and signed`);
-      s.setOperationDone(true);
-      maybeAutoDownload(true, { binary: data });
-    } else if (s.files.length > 1) {
+    if (s.files.length > 1) {
       const results: { name: string; data: Uint8Array }[] = [];
       for (const file of s.files) {
         const text = await file.text();
@@ -631,18 +620,6 @@ export function WorkspaceView({
           </div>
         )}
 
-        {s.mode === "sign" && s.files.length > 1 && (
-          <label className="flex items-center gap-2">
-            <Checkbox
-              checked={s.zipFiles}
-              onCheckedChange={(v) => {
-                s.setZipFiles(v === true);
-                s.resetOutput();
-              }}
-            />
-            <span className="text-sm">Zip files</span>
-          </label>
-        )}
 
         {s.needsPassword && (
           <div className="flex gap-2">
