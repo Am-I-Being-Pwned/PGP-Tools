@@ -18,17 +18,21 @@ export async function deriveKeyFromPassword(
     ARGON2_PARALLELISM,
   );
 
+  // Copy into a standalone ArrayBuffer so we can zeroize both the WASM
+  // return value and the copy passed to importKey.
+  const keyBytes = new Uint8Array(derived);
+  derived.fill(0);
+  passwordBytes.fill(0);
+
   const key = await crypto.subtle.importKey(
     "raw",
-    derived.slice().buffer,
+    keyBytes.buffer,
     { name: "AES-GCM", length: 256 },
     false,
     ["encrypt", "decrypt"],
   );
 
-  // Zero sensitive material from JS heap
-  derived.fill(0);
-  passwordBytes.fill(0);
+  keyBytes.fill(0);
 
   return key;
 }

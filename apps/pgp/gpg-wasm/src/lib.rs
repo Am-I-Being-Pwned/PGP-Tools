@@ -176,29 +176,44 @@ fn parse_armored_certs(json: &str) -> Result<Vec<openpgp::Cert>, String> {
         .collect())
 }
 
+/// Zeroize an `Aes256Gcm` cipher's expanded key schedule on drop.
+/// The `aes-gcm` crate does not implement `Zeroize`/`ZeroizeOnDrop`,
+/// so we must manually clear the backing memory.
+fn zeroize_cipher(cipher: &mut Aes256Gcm) {
+    let ptr = cipher as *mut Aes256Gcm as *mut u8;
+    let len = std::mem::size_of::<Aes256Gcm>();
+    // SAFETY: Aes256Gcm is a repr(Rust) struct of fixed size that we own.
+    // We are about to drop it, so zeroing its memory is safe.
+    unsafe { std::ptr::write_bytes(ptr, 0, len) };
+}
+
 /// AES-256-GCM decrypt with AAD. Key material is borrowed, not consumed --
-/// the caller is responsible for zeroizing.
+/// the caller is responsible for zeroizing. The cipher's expanded key
+/// schedule is zeroized after use.
 fn aes_gcm_decrypt(
     key: &[u8],
     iv: &[u8],
     ciphertext: &[u8],
     aad: &[u8],
 ) -> Result<Vec<u8>, String> {
-    let cipher =
+    let mut cipher =
         Aes256Gcm::new_from_slice(key).map_err(|e| format!("AES key init failed: {e}"))?;
-    cipher
+    let result = cipher
         .decrypt(Nonce::from_slice(iv), Payload { msg: ciphertext, aad })
-        .map_err(|_| "Decryption failed - wrong credentials or corrupted data".to_string())
+        .map_err(|_| "Decryption failed - wrong credentials or corrupted data".to_string());
+    zeroize_cipher(&mut cipher);
+    result
 }
 
 /// AES-256-GCM encrypt with AAD. Returns `[12-byte IV][ciphertext]`.
-/// Key material is borrowed, not consumed -- the caller is responsible for zeroizing.
+/// Key material is borrowed, not consumed -- the caller is responsible for
+/// zeroizing. The cipher's expanded key schedule is zeroized after use.
 fn aes_gcm_encrypt(
     key: &[u8],
     plaintext: &[u8],
     aad: &[u8],
 ) -> Result<Vec<u8>, String> {
-    let cipher =
+    let mut cipher =
         Aes256Gcm::new_from_slice(key).map_err(|e| format!("AES key init failed: {e}"))?;
 
     let mut iv = [0u8; 12];
@@ -206,11 +221,13 @@ fn aes_gcm_encrypt(
 
     let ciphertext = cipher
         .encrypt(Nonce::from_slice(&iv), Payload { msg: plaintext, aad })
-        .map_err(|_| "Encryption failed".to_string())?;
+        .map_err(|_| "Encryption failed".to_string());
+    zeroize_cipher(&mut cipher);
 
-    let mut result = Vec::with_capacity(12 + ciphertext.len());
+    let ct = ciphertext?;
+    let mut result = Vec::with_capacity(12 + ct.len());
     result.extend_from_slice(&iv);
-    result.extend_from_slice(&ciphertext);
+    result.extend_from_slice(&ct);
     Ok(result)
 }
 
@@ -851,11 +868,14 @@ fn set_contacts_key(new_key: Option<Vec<u8>>) {
     });
 }
 
-fn get_contacts_key_clone() -> Result<Vec<u8>, String> {
+/// Borrow the contacts session key and run `f` with it. Avoids cloning
+/// the key onto the heap, reducing the number of copies to zeroize.
+fn with_contacts_key<T>(f: impl FnOnce(&[u8]) -> T) -> Result<T, String> {
     CONTACTS_KEY.with(|slot| {
-        slot.borrow()
+        let guard = slot.borrow();
+        guard
             .as_ref()
-            .cloned()
+            .map(|k| f(k.as_slice()))
             .ok_or_else(|| "Contacts session not active - unlock required".to_string())
     })
 }
@@ -920,19 +940,13 @@ pub fn has_contacts_session() -> bool {
 /// Returns `[12-byte IV][ciphertext]`.
 #[wasm_bindgen(js_name = "encryptContacts")]
 pub fn encrypt_contacts(plaintext: &[u8]) -> Result<Vec<u8>, String> {
-    let mut key = get_contacts_key_clone()?;
-    let result = aes_gcm_encrypt(&key, plaintext, CONTACTS_AAD);
-    key.zeroize();
-    result
+    with_contacts_key(|key| aes_gcm_encrypt(key, plaintext, CONTACTS_AAD))?
 }
 
 /// Decrypt contacts JSON using the session key.
 #[wasm_bindgen(js_name = "decryptContacts")]
 pub fn decrypt_contacts(ciphertext: &[u8], iv: &[u8]) -> Result<Vec<u8>, String> {
-    let mut key = get_contacts_key_clone()?;
-    let result = aes_gcm_decrypt(&key, iv, ciphertext, CONTACTS_AAD);
-    key.zeroize();
-    result
+    with_contacts_key(|key| aes_gcm_decrypt(key, iv, ciphertext, CONTACTS_AAD))?
 }
 
 // ── Master protection canary ────────────────────────────────────────
