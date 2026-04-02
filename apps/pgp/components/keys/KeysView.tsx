@@ -390,7 +390,7 @@ function ContactsList({
         </div>
       ) : (
         <>
-          <ContactDropZone onImport={onAddContact} />
+          <ContactDropZone onImport={onAddContact} existingKeyIds={contacts.map((c) => c.keyId)} />
           {contacts.length > 5 && (
             <input
               type="text"
