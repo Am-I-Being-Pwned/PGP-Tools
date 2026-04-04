@@ -84,6 +84,26 @@ export default function App() {
     };
   }, [masterUnlocked, resetMasterLockTimer]);
 
+  // Reset lock timers on user activity so the extension doesn't lock
+  // while the user is actively typing or interacting.
+  const lastActivityRef = useRef(0);
+  useEffect(() => {
+    const handleActivity = () => {
+      const now = Date.now();
+      if (now - lastActivityRef.current < 30_000) return;
+      lastActivityRef.current = now;
+      if (masterUnlocked) resetMasterLockTimer();
+      if (session.unlockedKeyIds.size > 0) session.resetLockTimer();
+    };
+
+    document.addEventListener("keydown", () => handleActivity());
+    document.addEventListener("pointerdown", () => handleActivity());
+    return () => {
+      document.removeEventListener("keydown", () => handleActivity());
+      document.removeEventListener("pointerdown", () => handleActivity());
+    };
+  }, [masterUnlocked, resetMasterLockTimer, session]);
+
   useEffect(() => {
     void (async () => {
       const prefs = await getPreferences();

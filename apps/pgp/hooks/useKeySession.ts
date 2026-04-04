@@ -165,6 +165,7 @@ export function useKeySession(opts: KeySessionOptions) {
     lock,
     lockAll: doLockAll,
     lockAllIfNoCache,
+    resetLockTimer,
     getKeyHandle,
     isUnlocked,
     unlockedKeyIds,
