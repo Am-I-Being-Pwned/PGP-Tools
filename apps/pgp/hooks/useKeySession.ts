@@ -104,16 +104,23 @@ export function useKeySession(opts: KeySessionOptions) {
     [markHandleUnlocked],
   );
 
+  const passkeyAbortRef = useRef<AbortController | null>(null);
+
   const unlockWithPasskey = useCallback(
-    async (blob: ProtectedKeyBlob): Promise<boolean> => {
+    async (blob: ProtectedKeyBlob): Promise<boolean | "cancelled"> => {
       const encrypted = encryptedBlobFromProtected(blob);
       if (encrypted.method !== "passkey") return false;
+
+      passkeyAbortRef.current?.abort();
+      const ac = new AbortController();
+      passkeyAbortRef.current = ac;
 
       let prfOutput: Uint8Array | undefined;
       try {
         ({ prfOutput } = await authenticateAndGetPrf(
           encrypted.credentialId,
           fromBase64(encrypted.prfSalt),
+          ac.signal,
         ));
 
         const handle = await wasmApi.unlockWithPrf(
@@ -126,7 +133,12 @@ export function useKeySession(opts: KeySessionOptions) {
 
         await markHandleUnlocked(blob.keyId, handle);
         return true;
-      } catch {
+      } catch (e) {
+        if (ac.signal.aborted) return "cancelled";
+        const name = e instanceof Error ? e.name : "";
+        if (name === "NotAllowedError" || name === "AbortError") {
+          return "cancelled";
+        }
         return false;
       } finally {
         prfOutput?.fill(0);

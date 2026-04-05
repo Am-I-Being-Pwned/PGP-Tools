@@ -23,7 +23,7 @@ interface KeyCardProps {
   keyBlob: ProtectedKeyBlob;
   isUnlocked: boolean;
   onUnlockWithPassword: (password: string) => Promise<boolean>;
-  onUnlockWithPasskey: () => Promise<boolean>;
+  onUnlockWithPasskey: () => Promise<boolean | "cancelled">;
   onLock: () => void;
   onDelete: () => void;
   onExportPublic: () => void;
@@ -94,12 +94,11 @@ export function KeyCard({
 
   const handlePasskeyUnlock = async () => {
     setError(null);
-    setUnlocking(true);
-    const success = await onUnlockWithPasskey();
-    if (!success) {
+    const result = await onUnlockWithPasskey();
+    if (result === "cancelled") return;
+    if (!result) {
       setError("Passkey authentication failed");
     }
-    setUnlocking(false);
   };
 
   const handleExportPrivate = async () => {
@@ -357,9 +356,8 @@ export function KeyCard({
               size="sm"
               variant="outline"
               onClick={() => void handlePasskeyUnlock()}
-              disabled={unlocking}
             >
-              {unlocking ? "Authenticating..." : "Unlock"}
+              Unlock
             </Button>
           ) : (
             <Button
