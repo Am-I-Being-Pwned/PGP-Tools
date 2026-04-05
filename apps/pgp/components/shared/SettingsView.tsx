@@ -238,7 +238,7 @@ export function SettingsView({
       <div>
         <h2 className="mb-2 text-sm font-semibold">About</h2>
         <div className="border-border rounded-md border p-3">
-          <p className="text-sm">PGP Tools v0.0.1</p>
+          <p className="text-sm">PGP Tools</p>
           <p className="text-muted-foreground mt-1 text-xs">
             A privacy tool by{" "}
             <a
@@ -250,6 +250,7 @@ export function SettingsView({
               Am I Being Pwned
             </a>
             .{" "}
+            <br />
             <a
               href="https://github.com/Am-I-Being-Pwned/PGP-Tools"
               target="_blank"

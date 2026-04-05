@@ -27,7 +27,7 @@ interface WorkspaceViewProps {
     blob: ProtectedKeyBlob,
     password: string,
   ) => Promise<boolean>;
-  onUnlockWithPasskey: (blob: ProtectedKeyBlob) => Promise<boolean>;
+  onUnlockWithPasskey: (blob: ProtectedKeyBlob) => Promise<boolean | "cancelled">;
   pendingAction?: { action: OperationAction; text: string } | null;
   onClearPending?: () => void;
   autoDecrypt?: AutoDecryptDownload | null;
@@ -109,8 +109,9 @@ export function WorkspaceView({
     if (!blob) return null;
 
     if (blob.protection.method === "passkey") {
-      const ok = await onUnlockWithPasskey(blob);
-      if (!ok) throw new Error("Passkey authentication failed.");
+      const result = await onUnlockWithPasskey(blob);
+      if (result === "cancelled") return null;
+      if (!result) throw new Error("Passkey authentication failed.");
       return getKeyHandle(keyId);
     }
 

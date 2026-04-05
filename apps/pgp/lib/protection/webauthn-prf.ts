@@ -99,6 +99,7 @@ export interface PasskeyAuthResult {
 export async function authenticateAndGetPrf(
   credentialId: string,
   prfSalt: ArrayBuffer,
+  signal?: AbortSignal,
 ): Promise<PasskeyAuthResult> {
   const credential = await navigator.credentials.get({
     publicKey: {
@@ -117,6 +118,7 @@ export async function authenticateAndGetPrf(
         prf: { eval: { first: prfSalt } },
       },
     },
+    signal,
   });
 
   if (!credential || !(credential instanceof PublicKeyCredential)) {
