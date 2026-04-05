@@ -183,6 +183,8 @@ export default function App() {
         onUnlocked={() => {
           setMasterUnlocked(true);
           resetMasterLockTimer();
+          void keyring.refresh();
+          void contacts.refresh();
         }}
       />
     );
