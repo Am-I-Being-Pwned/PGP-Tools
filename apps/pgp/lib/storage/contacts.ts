@@ -1,4 +1,9 @@
 import { STORAGE_CONTACTS } from "../constants";
+import {
+  encryptContacts,
+  decryptContacts,
+  hasContactsSession,
+} from "../pgp/wasm";
 import { getItem, removeItem, setItem } from "./engine";
 
 export interface PublicContactKey {
@@ -21,58 +26,129 @@ function isValidContact(v: unknown): v is PublicContactKey {
   );
 }
 
+// AES-256-GCM encrypted blob via WASM contacts session key.
+// AAD: "gpg-tools:contacts:master" — tamper = decryption failure.
+interface EncryptedContactsBlob {
+  iv: string;
+  ciphertext: string;
+}
+
+function isEncryptedBlob(v: unknown): v is EncryptedContactsBlob {
+  if (typeof v !== "object" || v === null) return false;
+  const o = v as Record<string, unknown>;
+  return typeof o.iv === "string" && typeof o.ciphertext === "string";
+}
+
+function toBase64(bytes: Uint8Array): string {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+function fromBase64(b64: string): Uint8Array {
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+// Migration: old format stored a string[] index + per-key plaintext entries.
 function contactItemKey(keyId: string): string {
   return `${STORAGE_CONTACTS}:${keyId}`;
 }
 
-// Each contact stored under its own key to stay within chrome.storage.sync quota.
+async function migratePlaintextContacts(ids: unknown[]): Promise<void> {
+  const contacts: PublicContactKey[] = [];
+  const keysToRemove: string[] = [];
+
+  for (const id of ids) {
+    if (typeof id !== "string") continue;
+    const key = contactItemKey(id);
+    const c = await getItem<unknown>(key);
+    if (isValidContact(c)) contacts.push(c);
+    keysToRemove.push(key);
+  }
+
+  if (contacts.length > 0) {
+    await saveAll(contacts);
+  } else {
+    await removeItem(STORAGE_CONTACTS);
+  }
+
+  for (const key of keysToRemove) {
+    await removeItem(key);
+  }
+}
 
 export async function loadContacts(): Promise<PublicContactKey[]> {
-  const ids = (await getItem<string[]>(STORAGE_CONTACTS)) ?? [];
-  if (ids.length === 0) return [];
+  if (!(await hasContactsSession())) return [];
 
-  const contacts: PublicContactKey[] = [];
-  for (const id of ids) {
-    const c = await getItem<unknown>(contactItemKey(id));
-    if (isValidContact(c)) contacts.push(c);
+  const blob = await getItem<unknown>(STORAGE_CONTACTS);
+  if (!blob) return [];
+
+  // Migrate old plaintext format if present
+  if (!isEncryptedBlob(blob)) {
+    if (Array.isArray(blob)) {
+      await migratePlaintextContacts(blob as unknown[]);
+      return loadContacts();
+    }
+    return [];
   }
-  return contacts;
+
+  const iv = fromBase64(blob.iv);
+  const ciphertext = fromBase64(blob.ciphertext);
+
+  const plaintext = await decryptContacts(ciphertext, iv);
+  const parsed: unknown = JSON.parse(new TextDecoder().decode(plaintext));
+
+  if (!Array.isArray(parsed)) return [];
+  return parsed.filter(isValidContact);
+}
+
+async function saveAll(contacts: PublicContactKey[]): Promise<void> {
+  if (!(await hasContactsSession())) {
+    throw new Error("Cannot save contacts: no active contacts session");
+  }
+
+  const plaintext = new TextEncoder().encode(JSON.stringify(contacts));
+  const packed = await encryptContacts(plaintext);
+
+  const iv = packed.slice(0, 12);
+  const ciphertext = packed.slice(12);
+
+  const blob: EncryptedContactsBlob = {
+    iv: toBase64(iv),
+    ciphertext: toBase64(ciphertext),
+  };
+
+  await setItem(STORAGE_CONTACTS, blob);
 }
 
 export async function saveContacts(
   contacts: PublicContactKey[],
 ): Promise<void> {
-  for (const c of contacts) {
-    await setItem(contactItemKey(c.keyId), c);
-  }
-  const ids = contacts.map((c) => c.keyId);
-  await setItem(STORAGE_CONTACTS, ids);
+  await saveAll(contacts);
 }
 
 export async function saveContact(contact: PublicContactKey): Promise<void> {
-  await setItem(contactItemKey(contact.keyId), contact);
-  const ids = (await getItem<string[]>(STORAGE_CONTACTS)) ?? [];
-  if (!ids.includes(contact.keyId)) {
-    ids.push(contact.keyId);
-    await setItem(STORAGE_CONTACTS, ids);
-  }
+  const existing = await loadContacts();
+  const updated = [
+    ...existing.filter((c) => c.keyId !== contact.keyId),
+    contact,
+  ];
+  await saveAll(updated);
 }
 
 export async function removeContact(keyId: string): Promise<void> {
-  await removeItem(contactItemKey(keyId));
-  const ids = (await getItem<string[]>(STORAGE_CONTACTS)) ?? [];
-  const updated = ids.filter((id) => id !== keyId);
+  const existing = await loadContacts();
+  const updated = existing.filter((c) => c.keyId !== keyId);
   if (updated.length === 0) {
     await removeItem(STORAGE_CONTACTS);
   } else {
-    await setItem(STORAGE_CONTACTS, updated);
+    await saveAll(updated);
   }
 }
 
 export async function deleteContactsBlob(): Promise<void> {
-  const ids = (await getItem<string[]>(STORAGE_CONTACTS)) ?? [];
-  for (const id of ids) {
-    await removeItem(contactItemKey(id));
-  }
   await removeItem(STORAGE_CONTACTS);
 }

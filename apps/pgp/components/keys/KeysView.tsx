@@ -35,7 +35,7 @@ interface KeysViewProps {
     blob: ProtectedKeyBlob,
     password: string,
   ) => Promise<boolean>;
-  onUnlockWithPasskey: (blob: ProtectedKeyBlob) => Promise<boolean>;
+  onUnlockWithPasskey: (blob: ProtectedKeyBlob) => Promise<boolean | "cancelled">;
   onLock: (keyId: string) => void;
   onDeleteKey: (keyId: string) => Promise<void>;
   onAddKey: (blob: ProtectedKeyBlob) => Promise<void>;
@@ -275,11 +275,11 @@ export function KeysView({
                   return ok;
                 }}
                 onUnlockWithPasskey={async () => {
-                  const ok = await onUnlockWithPasskey(blob);
-                  if (ok && blob.keyId === unlockRequestKeyId) {
+                  const result = await onUnlockWithPasskey(blob);
+                  if (result === true && blob.keyId === unlockRequestKeyId) {
                     onUnlockRequestConsumed?.();
                   }
-                  return ok;
+                  return result;
                 }}
                 onLock={() => onLock(blob.keyId)}
                 onDelete={() => onDeleteKey(blob.keyId)}
