@@ -1,3 +1,5 @@
+import "../lib/network-lockdown";
+
 import type {
   AutoDecryptDownload,
   ImportKeyFromLink,
