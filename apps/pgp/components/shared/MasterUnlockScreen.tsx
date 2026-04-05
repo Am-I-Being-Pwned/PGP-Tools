@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LockIcon } from "lucide-react";
 
 import { Button } from "@amibeingpwned/ui/button";
@@ -26,17 +26,31 @@ export function MasterUnlockScreen({
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [unlocking, setUnlocking] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    if (masterProtection.method === "passkey") {
+      void handlePasskeyUnlock();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handlePasskeyUnlock = async () => {
     if (masterProtection.method !== "passkey") return;
+
+    // Abort any in-flight ceremony so we don't get InvalidStateError
+    abortRef.current?.abort();
+    const ac = new AbortController();
+    abortRef.current = ac;
+
     setError(null);
-    setUnlocking(true);
 
     let prfOutput: Uint8Array | undefined;
     try {
       ({ prfOutput } = await authenticateAndGetPrf(
         masterProtection.credentialId,
         fromBase64(masterProtection.prfSalt),
+        ac.signal,
       ));
 
       await wasmApi.initContactsSessionWithPrf(
@@ -45,15 +59,15 @@ export function MasterUnlockScreen({
       );
       onUnlocked();
     } catch (e) {
-      // Distinguish user cancellation from real errors.
-      if (e instanceof DOMException && e.name === "NotAllowedError") {
-        // User dismissed the dialog — not an error.
+      if (ac.signal.aborted) return;
+      const name = e instanceof Error ? e.name : "";
+      if (name === "NotAllowedError" || name === "AbortError") {
+        // User dismissed the passkey dialog.
       } else {
         setError("Passkey authentication failed. Try again.");
       }
     } finally {
       prfOutput?.fill(0);
-      setUnlocking(false);
     }
   };
 
@@ -112,9 +126,9 @@ export function MasterUnlockScreen({
           <Button
             className="w-full"
             onClick={handlePasskeyUnlock}
-            disabled={unlocking}
+            autoFocus
           >
-            {unlocking ? "Authenticating..." : "Unlock with passkey"}
+            Unlock with passkey
           </Button>
         )}
 
@@ -152,7 +166,7 @@ export function MasterUnlockScreen({
         )}
 
         <p className="text-muted-foreground text-xs">
-          If you have lost your password, your encrypted contacts cannot be
+          If you have lost your password, your encrypted keys and contacts cannot be
           recovered.
         </p>
 

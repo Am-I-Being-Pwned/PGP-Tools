@@ -106,6 +106,12 @@ importers:
       '@amibeingpwned/tsconfig':
         specifier: workspace:*
         version: link:../../tooling/typescript
+      '@babel/parser':
+        specifier: ^7.29.2
+        version: 7.29.2
+      '@babel/traverse':
+        specifier: ^7.29.0
+        version: 7.29.0
       '@tailwindcss/vite':
         specifier: 'catalog:'
         version: 4.1.16(vite@8.0.3(@emnapi/core@1.9.1)(@emnapi/runtime@1.9.1)(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1))

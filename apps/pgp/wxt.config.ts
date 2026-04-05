@@ -40,8 +40,19 @@ export default defineConfig({
       default_path: "sidepanel/index.html",
     },
     content_security_policy: {
-      extension_pages:
-        "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';",
+      extension_pages: [
+        "default-src 'self'",
+        "script-src 'self' 'wasm-unsafe-eval'",
+        "connect-src 'self' https:",
+        "style-src 'self' 'unsafe-inline'",
+        "img-src 'self' data:",
+        "font-src 'self'",
+        "worker-src 'self'",
+        "frame-src 'none'",
+        "form-action 'none'",
+        "object-src 'self'",
+        "media-src 'self'",
+      ].join("; ") + ";",
     },
   }),
   vite: () => ({
