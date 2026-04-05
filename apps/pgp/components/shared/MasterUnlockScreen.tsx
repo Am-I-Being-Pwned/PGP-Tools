@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LockIcon } from "lucide-react";
 
 import { Button } from "@amibeingpwned/ui/button";
@@ -27,6 +27,14 @@ export function MasterUnlockScreen({
   const [error, setError] = useState<string | null>(null);
   const [unlocking, setUnlocking] = useState(false);
 
+  // Auto-trigger passkey dialog on mount
+  useEffect(() => {
+    if (masterProtection.method === "passkey") {
+      void handlePasskeyUnlock();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handlePasskeyUnlock = async () => {
     if (masterProtection.method !== "passkey") return;
     setError(null);
@@ -45,9 +53,9 @@ export function MasterUnlockScreen({
       );
       onUnlocked();
     } catch (e) {
-      // Distinguish user cancellation from real errors.
       if (e instanceof DOMException && e.name === "NotAllowedError") {
-        // User dismissed the dialog — not an error.
+        // User dismissed the dialog or no user gesture — not an error.
+        console.debug("[MasterUnlock] Passkey dismissed or no gesture");
       } else {
         setError("Passkey authentication failed. Try again.");
       }
@@ -113,6 +121,7 @@ export function MasterUnlockScreen({
             className="w-full"
             onClick={handlePasskeyUnlock}
             disabled={unlocking}
+            autoFocus
           >
             {unlocking ? "Authenticating..." : "Unlock with passkey"}
           </Button>
