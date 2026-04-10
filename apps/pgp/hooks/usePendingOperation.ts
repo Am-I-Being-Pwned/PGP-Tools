@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 
 import type {
-  AutoDecryptDownload,
   ImportKeyFromLink,
   OperationAction,
   PendingOperation,
@@ -33,22 +32,9 @@ function isImportKeyFromLink(msg: unknown): msg is ImportKeyFromLink {
   return obj.type === "IMPORT_KEY_FROM_LINK" && typeof obj.url === "string";
 }
 
-function isAutoDecryptDownload(msg: unknown): msg is AutoDecryptDownload {
-  if (typeof msg !== "object" || msg === null) return false;
-  const obj = msg as Record<string, unknown>;
-  return (
-    obj.type === "AUTO_DECRYPT_DOWNLOAD" &&
-    typeof obj.fileName === "string" &&
-    typeof obj.contentBase64 === "string"
-  );
-}
-
 export function usePendingOperation() {
   const [pending, setPending] = useState<PendingOperation | null>(null);
   const [importKey, setImportKey] = useState<ImportKeyFromLink | null>(null);
-  const [autoDecrypt, setAutoDecrypt] = useState<AutoDecryptDownload | null>(
-    null,
-  );
 
   useEffect(() => {
     const listener = (
@@ -63,9 +49,6 @@ export function usePendingOperation() {
       } else if (isImportKeyFromLink(message)) {
         setImportKey(message);
         sendResponse({ received: true });
-      } else if (isAutoDecryptDownload(message)) {
-        setAutoDecrypt(message);
-        sendResponse({ received: true });
       }
     };
 
@@ -78,7 +61,5 @@ export function usePendingOperation() {
     clearPending: () => setPending(null),
     importKey,
     clearImportKey: () => setImportKey(null),
-    autoDecrypt,
-    clearAutoDecrypt: () => setAutoDecrypt(null),
   };
 }
