@@ -10,8 +10,6 @@ export default defineConfig({
     description:
       "Encrypt, decrypt, sign, and verify messages with PGP. Drag-and-drop files and manage keys.",
     permissions: ["sidePanel", "contextMenus", "storage"],
-    optional_permissions: ["downloads", "notifications"],
-    optional_host_permissions: ["<all_urls>"],
     icons: {
       16: "icon-16.png",
       32: "icon-32.png",
@@ -41,17 +39,20 @@ export default defineConfig({
     },
     content_security_policy: {
       extension_pages: [
-        "default-src 'self'",
+        "default-src 'none'",
         "script-src 'self' 'wasm-unsafe-eval'",
-        "connect-src 'self' https:",
+        "connect-src 'self'",
         "style-src 'self' 'unsafe-inline'",
         "img-src 'self' data:",
         "font-src 'self'",
         "worker-src 'self'",
         "frame-src 'none'",
+        "child-src 'none'",
         "form-action 'none'",
-        "object-src 'self'",
-        "media-src 'self'",
+        "object-src 'none'",
+        "media-src 'none'",
+        "base-uri 'none'",
+        "manifest-src 'none'",
       ].join("; ") + ";",
     },
   }),
