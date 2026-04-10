@@ -88,12 +88,6 @@ const ALLOWLIST = [
     kind: "call",
     snippet: "fetch(n.linkUrl,{redirect:",
   },
-  // Re-fetch completed download for auto-decrypt
-  {
-    file: "background.js",
-    kind: "call",
-    snippet: "fetch(t,{redirect:",
-  },
 
   // ── sidepanel chunk ───────────────────────────────────────────
   // WXT modulepreload polyfill
@@ -356,21 +350,28 @@ function validateManifestCsp(outputDir) {
   const csp = manifest.content_security_policy?.extension_pages ?? "";
   const errors = [];
 
+  // Each directive must contain at least one of the acceptable tokens.
+  // 'none' is strictly stronger than 'self' and always acceptable.
   const required = [
-    ["default-src", "'self'"],
-    ["script-src", "'self'"],
-    ["img-src", "'self'"],
-    ["font-src", "'self'"],
-    ["worker-src", "'self'"],
-    ["frame-src", "'none'"],
-    ["form-action", "'none'"],
-    ["object-src", "'self'"],
+    ["default-src", ["'self'", "'none'"]],
+    ["script-src", ["'self'"]],
+    ["img-src", ["'self'", "'none'"]],
+    ["font-src", ["'self'", "'none'"]],
+    ["worker-src", ["'self'", "'none'"]],
+    ["frame-src", ["'none'"]],
+    ["form-action", ["'none'"]],
+    ["object-src", ["'self'", "'none'"]],
   ];
 
-  for (const [directive, value] of required) {
-    const re = new RegExp(`${directive}\\s+[^;]*${value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`);
-    if (!re.test(csp)) {
-      errors.push(`Missing or wrong: ${directive} must include ${value}`);
+  const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  for (const [directive, values] of required) {
+    const matched = values.some((v) =>
+      new RegExp(`${directive}\\s+[^;]*${escape(v)}`).test(csp),
+    );
+    if (!matched) {
+      errors.push(
+        `Missing or wrong: ${directive} must include one of ${values.join(", ")}`,
+      );
     }
   }
 
