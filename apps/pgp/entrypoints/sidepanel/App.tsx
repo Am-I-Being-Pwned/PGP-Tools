@@ -29,7 +29,6 @@ export default function App() {
     useState<StorageLocation>("local");
   const [autoLockMinutes, setAutoLockMinutes] = useState<AutoLockTimeout>(15);
   const [neverCacheKeys, setNeverCacheKeys] = useState(false);
-  const [autoDecryptDownloads, setAutoDecryptDownloads] = useState(false);
   const [autoDownloadFiles, setAutoDownloadFiles] = useState(false);
   const [autoDownloadText, setAutoDownloadText] = useState(false);
   const [onboardingComplete, setOnboardingComplete] = useState<boolean | null>(
@@ -55,8 +54,6 @@ export default function App() {
     clearPending,
     importKey: importKeyMsg,
     clearImportKey,
-    autoDecrypt,
-    clearAutoDecrypt,
   } = usePendingOperation();
 
   const doMasterLock = useCallback(() => {
@@ -113,7 +110,6 @@ export default function App() {
       setOnboardingComplete(prefs.onboardingComplete);
       setActiveTab(prefs.activeTab);
       setNeverCacheKeys(prefs.neverCacheKeys);
-      setAutoDecryptDownloads(prefs.autoDecryptDownloads);
       setAutoDownloadFiles(prefs.autoDownloadFiles);
       setAutoDownloadText(prefs.autoDownloadText);
 
@@ -131,13 +127,6 @@ export default function App() {
       void savePreferences({ activeTab: "workspace" });
     }
   }, [pending]);
-
-  useEffect(() => {
-    if (autoDecrypt) {
-      setActiveTab("workspace");
-      void savePreferences({ activeTab: "workspace" });
-    }
-  }, [autoDecrypt]);
 
   useEffect(() => {
     if (importKeyMsg) {
@@ -223,8 +212,6 @@ export default function App() {
               pending ? { action: pending.action, text: pending.text } : null
             }
             onClearPending={clearPending}
-            autoDecrypt={autoDecrypt}
-            onClearAutoDecrypt={clearAutoDecrypt}
             encryptToKeyId={encryptToKeyId}
             onClearEncryptTo={() => setEncryptToKeyId(null)}
             onNavigateToKeys={() => setActiveTab("keys")}
@@ -282,8 +269,6 @@ export default function App() {
             onAutoLockChange={setAutoLockMinutes}
             neverCacheKeys={neverCacheKeys}
             onNeverCacheKeysChange={setNeverCacheKeys}
-            autoDecryptDownloads={autoDecryptDownloads}
-            onAutoDecryptDownloadsChange={setAutoDecryptDownloads}
             autoDownloadFiles={autoDownloadFiles}
             onAutoDownloadFilesChange={setAutoDownloadFiles}
             autoDownloadText={autoDownloadText}

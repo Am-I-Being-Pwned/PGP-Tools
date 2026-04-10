@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 
-import type { AutoDecryptDownload, OperationAction } from "../../lib/messages";
+import type { OperationAction } from "../../lib/messages";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
-import { fromBase64 } from "../../lib/encoding";
 import { getPreferences } from "../../lib/storage/preferences";
 
 type Mode = "encrypt" | "decrypt" | "sign" | "verify";
@@ -59,8 +58,6 @@ export function useWorkspaceState(opts: {
   myKeys: ProtectedKeyBlob[];
   pendingAction?: { action: OperationAction; text: string } | null;
   onClearPending?: () => void;
-  autoDecrypt?: AutoDecryptDownload | null;
-  onClearAutoDecrypt?: () => void;
   allPublicKeys?: { keyId: string }[];
   encryptToKeyId?: string | null;
   onClearEncryptTo?: () => void;
@@ -151,25 +148,6 @@ export function useWorkspaceState(opts: {
     setSelectedRecipientId(opts.encryptToKeyId);
     opts.onClearEncryptTo?.();
   }, [opts.encryptToKeyId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (!opts.autoDecrypt) return;
-    const bytes = new Uint8Array(fromBase64(opts.autoDecrypt.contentBase64));
-    setMode("decrypt");
-    setInput("");
-    const blob = new Blob([bytes]);
-    const syntheticFile = new File([blob], opts.autoDecrypt.fileName, {
-      type: "application/octet-stream",
-    });
-    setFiles([syntheticFile]);
-    setOutput("");
-    setBinaryOutput(undefined);
-    setError(null);
-    setOperationDone(false);
-    setStatusText(null);
-    setNeedsPassword(false);
-    opts.onClearAutoDecrypt?.();
-  }, [opts.autoDecrypt]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleInputChange = useCallback((text: string) => {
     setInput(text);

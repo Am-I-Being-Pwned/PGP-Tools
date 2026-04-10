@@ -15,7 +15,6 @@ export interface PgpPreferences {
   signWhenEncrypting: boolean;
   activeTab: "workspace" | "keys" | "settings";
   neverCacheKeys: boolean;
-  autoDecryptDownloads: boolean;
   autoDownloadFiles: boolean;
   autoDownloadText: boolean;
 }
@@ -30,7 +29,6 @@ const DEFAULT_PREFERENCES: PgpPreferences = {
   signWhenEncrypting: false,
   activeTab: "workspace",
   neverCacheKeys: false,
-  autoDecryptDownloads: false,
   autoDownloadFiles: false,
   autoDownloadText: false,
 };

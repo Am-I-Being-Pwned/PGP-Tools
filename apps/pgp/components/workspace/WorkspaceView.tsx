@@ -3,7 +3,7 @@ import { DownloadIcon } from "lucide-react";
 import { Button } from "@amibeingpwned/ui/button";
 import { Checkbox } from "@amibeingpwned/ui/checkbox";
 
-import type { AutoDecryptDownload, OperationAction } from "../../lib/messages";
+import type { OperationAction } from "../../lib/messages";
 import type { EncryptInput } from "../../lib/pgp/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
@@ -30,8 +30,6 @@ interface WorkspaceViewProps {
   onUnlockWithPasskey: (blob: ProtectedKeyBlob) => Promise<boolean | "cancelled">;
   pendingAction?: { action: OperationAction; text: string } | null;
   onClearPending?: () => void;
-  autoDecrypt?: AutoDecryptDownload | null;
-  onClearAutoDecrypt?: () => void;
   encryptToKeyId?: string | null;
   onClearEncryptTo?: () => void;
   onNavigateToKeys?: () => void;
@@ -48,8 +46,6 @@ export function WorkspaceView({
   onUnlockWithPasskey,
   pendingAction,
   onClearPending,
-  autoDecrypt,
-  onClearAutoDecrypt,
   encryptToKeyId,
   onClearEncryptTo,
   onNavigateToKeys,
@@ -66,8 +62,6 @@ export function WorkspaceView({
     myKeys,
     pendingAction,
     onClearPending,
-    autoDecrypt,
-    onClearAutoDecrypt,
     allPublicKeys,
     encryptToKeyId,
     onClearEncryptTo,
