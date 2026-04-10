@@ -10,7 +10,6 @@ import type {
 import { STORAGE_CONTACTS, STORAGE_KEYRING } from "../../lib/constants";
 import { invalidateLocationCache, migrate } from "../../lib/storage/engine";
 import { savePreferences } from "../../lib/storage/preferences";
-import { Dialog } from "./Dialog";
 import { StorageLocationPicker } from "./StorageLocationPicker";
 
 const AUTO_LOCK_OPTIONS: { value: AutoLockTimeout; label: string }[] = [
@@ -29,8 +28,6 @@ interface SettingsViewProps {
   onAutoLockChange: (v: AutoLockTimeout) => void;
   neverCacheKeys: boolean;
   onNeverCacheKeysChange: (v: boolean) => void;
-  autoDecryptDownloads: boolean;
-  onAutoDecryptDownloadsChange: (v: boolean) => void;
   autoDownloadFiles: boolean;
   onAutoDownloadFilesChange: (v: boolean) => void;
   autoDownloadText: boolean;
@@ -46,8 +43,6 @@ export function SettingsView({
   onAutoLockChange,
   neverCacheKeys,
   onNeverCacheKeysChange,
-  autoDecryptDownloads,
-  onAutoDecryptDownloadsChange,
   autoDownloadFiles,
   onAutoDownloadFilesChange,
   autoDownloadText,
@@ -80,38 +75,6 @@ export function SettingsView({
   const handleAutoLockChange = (v: AutoLockTimeout) => {
     onAutoLockChange(v);
     void savePreferences({ autoLockMinutes: v });
-  };
-
-  const [showPermExplainer, setShowPermExplainer] = useState(false);
-
-  const handleAutoDecryptToggle = async () => {
-    if (autoDecryptDownloads) {
-      await chrome.permissions.remove({
-        permissions: ["downloads", "notifications"],
-        origins: ["<all_urls>"],
-      });
-      onAutoDecryptDownloadsChange(false);
-      void savePreferences({ autoDecryptDownloads: false });
-    } else {
-      setShowPermExplainer(true);
-    }
-  };
-
-  const handlePermConfirm = async () => {
-    setShowPermExplainer(false);
-    const granted = await chrome.permissions.request({
-      permissions: ["downloads", "notifications"],
-      origins: ["<all_urls>"],
-    });
-    if (granted) {
-      onAutoDecryptDownloadsChange(true);
-      void savePreferences({ autoDecryptDownloads: true });
-      chrome.runtime
-        .sendMessage({ type: "REGISTER_DOWNLOAD_LISTENERS" })
-        .catch(() => {
-          /* noop */
-        });
-    }
   };
 
   return (
@@ -178,20 +141,6 @@ export function SettingsView({
       <div>
         <h2 className="mb-2 text-sm font-semibold">Downloads</h2>
         <label className="border-border flex items-center justify-between rounded-md border p-3">
-          <div>
-            <span className="text-sm">Auto-handle PGP downloads</span>
-            <p className="text-muted-foreground text-xs">
-              Automatically decrypt downloaded .gpg/.pgp/.asc files, or offer to
-              import public keys.
-            </p>
-          </div>
-          <Switch
-            checked={autoDecryptDownloads}
-            onCheckedChange={() => void handleAutoDecryptToggle()}
-          />
-        </label>
-
-        <label className="border-border mt-2 flex items-center justify-between rounded-md border p-3">
           <div>
             <span className="text-sm">Auto-download file results</span>
             <p className="text-muted-foreground text-xs">
@@ -276,38 +225,6 @@ export function SettingsView({
           </a>
         </div>
       </div>
-      <Dialog
-        open={showPermExplainer}
-        onClose={() => setShowPermExplainer(false)}
-        title="Permission required"
-      >
-        <div className="space-y-3">
-          <p className="text-sm">
-            This feature needs the "Read and change all your data on all
-            websites" permission.
-          </p>
-          <p className="text-muted-foreground text-xs">
-            Chrome doesn't allow extensions to read downloaded files directly.
-            To process your PGP downloads, we need to re-fetch the download URL
-            to read its contents. This permission also bypasses CORS
-            restrictions that would otherwise block reading from most websites.
-            It is only used for this purpose.
-          </p>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1"
-              onClick={() => setShowPermExplainer(false)}
-            >
-              Cancel
-            </Button>
-            <Button size="sm" className="flex-1" onClick={handlePermConfirm}>
-              Continue
-            </Button>
-          </div>
-        </div>
-      </Dialog>
     </div>
   );
 }

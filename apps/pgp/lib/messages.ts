@@ -15,13 +15,6 @@ export interface ImportKeyFromLink {
   error?: string; // populated if fetch failed
 }
 
-export interface AutoDecryptDownload {
-  type: "AUTO_DECRYPT_DOWNLOAD";
-  fileName: string;
-  /** Base64-encoded file content */
-  contentBase64: string;
-}
-
 export interface SidePanelReady {
   type: "SIDEPANEL_READY";
 }
@@ -29,5 +22,4 @@ export interface SidePanelReady {
 export type RuntimeMessage =
   | PendingOperation
   | ImportKeyFromLink
-  | AutoDecryptDownload
   | SidePanelReady;
