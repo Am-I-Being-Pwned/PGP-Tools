@@ -137,36 +137,6 @@ export async function authenticateAndGetPrf(
   return { prfOutput: new Uint8Array(prfOutput as ArrayBuffer) };
 }
 
-/**
- * Derive an AES-256-GCM key from PRF output + stored secret via HKDF.
- * Used only at key creation time (when the private key is already in JS
- * from generation). For unlock, HKDF happens in WASM.
- */
-export async function deriveKeyFromPrf(
-  prfOutput: Uint8Array,
-  storedSecret: ArrayBuffer,
-): Promise<CryptoKey> {
-  const prfKeyMaterial = await crypto.subtle.importKey(
-    "raw",
-    prfOutput.slice().buffer,
-    "HKDF",
-    false,
-    ["deriveKey"],
-  );
-
-  return crypto.subtle.deriveKey(
-    {
-      name: "HKDF",
-      hash: "SHA-256",
-      salt: storedSecret,
-      info: new TextEncoder().encode("gpg-tools-prf-v1"),
-    },
-    prfKeyMaterial,
-    { name: "AES-GCM", length: 256 },
-    false,
-    ["encrypt", "decrypt"],
-  );
-}
 
 /** Thrown when the authenticator doesn't support PRF. */
 export class PrfNotSupportedError extends Error {

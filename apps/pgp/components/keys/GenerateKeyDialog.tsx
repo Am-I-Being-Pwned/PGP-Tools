@@ -13,8 +13,7 @@ import {
 } from "@amibeingpwned/ui/select";
 
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
-import { generateKey } from "../../lib/pgp/key-management";
-import { protectAndStoreKey } from "../../lib/protection/protect-key";
+import { generateAndProtect } from "../../lib/protection/protect-flow";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 import { Dialog } from "../shared/Dialog";
 import {
@@ -155,35 +154,27 @@ export function GenerateKeyDialog({
 
     try {
       const expiresIn = expiryToSeconds(expiryOption, customExpiry);
-      const {
-        publicKeyArmored,
-        privateKeyArmored,
-        revocationCertificate,
-        keyInfo,
-      } = await generateKey({
-        name: name.trim(),
-        email: email.trim(),
-        comment: comment.trim() || undefined,
-        type: keyAlgorithm,
-        expiresIn: expiresIn || undefined,
-      });
-
-      const { blob, keyHandle } = await protectAndStoreKey({
-        privateKeyArmored,
-        publicKeyArmored,
-        keyInfo,
-        method,
-        password,
-        revocationCertificate,
-        reusePasskeyCredentialId:
-          method === "passkey" && reusePasskey
-            ? reusePasskeyCredentialId
-            : undefined,
-        cacheKey,
-      });
+      const { blob, handle } = await generateAndProtect(
+        {
+          name: name.trim(),
+          email: email.trim(),
+          comment: comment.trim() || undefined,
+          type: keyAlgorithm,
+          expiresIn: expiresIn || undefined,
+        },
+        method === "password"
+          ? { method: "password", password, cache: cacheKey }
+          : {
+              method: "passkey",
+              reusePasskeyCredentialId: reusePasskey
+                ? reusePasskeyCredentialId
+                : undefined,
+              cache: cacheKey,
+            },
+      );
 
       await addKey(blob);
-      onKeyGenerated(blob.keyId, keyHandle);
+      onKeyGenerated(blob.keyId, handle);
       resetAndClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Key generation failed");

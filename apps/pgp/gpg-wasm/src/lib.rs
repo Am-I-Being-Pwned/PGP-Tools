@@ -24,10 +24,18 @@
 //! - Raw `Vec<u8>` / `Uint8Array` for ciphertext and plaintext
 //! - Packed binary format for decrypt results (sig info header + plaintext)
 //!
-//! Private keys cross the boundary only during:
-//! - Initial key generation (returned as armored string, immediately encrypted by JS)
-//! - Key unlock (decrypted by JS protection layer, immediately passed to `storeKey`)
-//! - Explicit unprotected export (`getKeyArmored`, behind destructive UI button)
+//! Plaintext-cert lifetime invariants:
+//! - The `KEY_STORE` (handle-backed cache) is populated **only** by the
+//!   explicit unlock paths (`unlockWithPassword`, `unlockWithPrf`). A
+//!   handle in the store always corresponds to a user-initiated unlock.
+//! - Generation and import (`generateProtectedWith*`, `protectImportedWith*`)
+//!   keep the plaintext cert in WASM only for the duration of a single
+//!   call -- they encrypt under the user's chosen protection and return
+//!   the blob; the cert never enters the long-lived store.
+//! - Sign/encrypt/decrypt operations rematerialize a transient `Cert`
+//!   from the store per-call and drop it at function exit.
+//! - Plaintext armored secret material crosses the JS boundary only via
+//!   `getKeyArmored`, which is gated behind a destructive export UI.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -48,6 +56,7 @@ use openpgp::parse::Parse;
 use openpgp::policy::StandardPolicy;
 use openpgp::serialize::stream::*;
 use openpgp::serialize::Serialize as _;
+use openpgp::serialize::SerializeInto as _;
 use openpgp::types::SymmetricAlgorithm;
 use sequoia_openpgp as openpgp;
 use serde::{Deserialize, Serialize};
@@ -83,16 +92,17 @@ pub struct KeyInfo {
     pub is_private: bool,
 }
 
+/// Metadata returned alongside an encrypted blob from the protect-flow
+/// functions. The encrypted blob itself is appended as a binary tail
+/// to keep the JS boundary tidy (`pack_protect_result`).
 #[derive(Serialize)]
-pub struct GeneratedKey {
+struct ProtectResultMeta {
     #[serde(rename = "publicKeyArmored")]
-    pub public_key_armored: String,
-    #[serde(rename = "privateKeyArmored")]
-    pub private_key_armored: String,
-    #[serde(rename = "revocationCertificate")]
-    pub revocation_certificate: String,
+    public_key_armored: String,
     #[serde(rename = "keyInfo")]
-    pub key_info: KeyInfo,
+    key_info: KeyInfo,
+    #[serde(rename = "revocationCertificate", skip_serializing_if = "Option::is_none")]
+    revocation_certificate: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -150,7 +160,15 @@ fn extract_key_info(cert: &openpgp::Cert, is_private: bool) -> KeyInfo {
 }
 
 fn armor_cert(cert: &openpgp::Cert, is_private: bool) -> Result<String, String> {
-    let mut buf = Vec::new();
+    // Pre-size the sink: armored = base64(payload) + framing, so payload * 1.4
+    // + a generous 256B for headers/CRC/footer comfortably fits any real cert
+    // and avoids realloc-trail-of-partial-secrets for the is_private branch.
+    let payload_len = if is_private {
+        cert.as_tsk().serialized_len()
+    } else {
+        cert.serialized_len()
+    };
+    let mut buf = Vec::with_capacity(payload_len + payload_len / 2 + 256);
     let kind = if is_private {
         openpgp::armor::Kind::SecretKey
     } else {
@@ -358,8 +376,10 @@ struct StoredKey {
 
 impl StoredKey {
     fn from_cert(cert: &openpgp::Cert) -> Result<Self, String> {
-        let mut bytes = Vec::new();
-        cert.as_tsk().serialize(&mut bytes).str_err()?;
+        // SerializeInto::to_vec() pre-allocates exactly serialized_len() bytes,
+        // so the backing buffer is never grown -- no realloc trail of unzeroed
+        // partial copies for the zeroize-on-drop to miss.
+        let bytes = cert.as_tsk().to_vec().str_err()?;
         Ok(StoredKey { bytes })
     }
 
@@ -497,9 +517,11 @@ pub fn parse_key(armored: &str) -> Result<String, String> {
     serde_json::to_string(&extract_key_info(&cert, is_private)).str_err()
 }
 
-/// Generate a new ECC or RSA key pair. Returns JSON `GeneratedKey`.
-#[wasm_bindgen(js_name = "generateKey")]
-pub fn generate_key(options_json: &str) -> Result<String, String> {
+/// Internal: build a new cert + its armored revocation cert from
+/// `GenerateKeyOptions` JSON.
+fn build_cert_from_options(
+    options_json: &str,
+) -> Result<(openpgp::Cert, String), String> {
     let opts: GenerateKeyOptions = serde_json::from_str(options_json).str_err()?;
 
     let mut userid = opts.name.clone();
@@ -528,20 +550,14 @@ pub fn generate_key(options_json: &str) -> Result<String, String> {
 
     let (cert, revocation) = builder.generate().str_err()?;
 
-    let mut rev_buf = Vec::new();
     let rev_packet: openpgp::Packet = revocation.into();
+    let mut rev_buf = Vec::with_capacity(rev_packet.serialized_len() + 256);
     let mut rev_writer =
         openpgp::armor::Writer::new(&mut rev_buf, openpgp::armor::Kind::Signature).str_err()?;
     rev_packet.serialize(&mut rev_writer).str_err()?;
     rev_writer.finalize().str_err()?;
 
-    let result = GeneratedKey {
-        public_key_armored: armor_cert(&cert, false)?,
-        private_key_armored: armor_cert(&cert, true)?,
-        revocation_certificate: String::from_utf8(rev_buf).str_err()?,
-        key_info: extract_key_info(&cert, true),
-    };
-    serde_json::to_string(&result).str_err()
+    Ok((cert, String::from_utf8(rev_buf).str_err()?))
 }
 
 /// Extract the public key from an armored private key.
@@ -607,17 +623,10 @@ pub fn verify_message(
 // Key handle API (private keys stay in WASM memory)
 // =====================================================================
 
-/// Store a private key in WASM memory. Returns an opaque integer handle.
-/// The armored key string is parsed and stored as serialized bytes that
-/// are zeroized when the handle is dropped.
-#[wasm_bindgen(js_name = "storeKey")]
-pub fn store_key(armored_private_key: &str) -> Result<u32, String> {
-    let cert = openpgp::Cert::from_bytes(armored_private_key.as_bytes()).str_err()?;
-    if cert.keys().secret().next().is_none() {
-        return Err("Not a private key".to_string());
-    }
-    insert_key(&cert)
-}
+// Note: there is intentionally no public `storeKey(armored)` wasm export.
+// `KEY_STORE` is populated only by the explicit unlock paths
+// (`unlockWithPassword`, `unlockWithPrf`), so a handle in the store
+// always corresponds to a user-initiated unlock action.
 
 /// Drop a key from WASM memory. The backing bytes are zeroized.
 #[wasm_bindgen(js_name = "dropKey")]
@@ -721,20 +730,90 @@ pub fn is_secret_encrypted(armored: &str) -> Result<bool, String> {
         .any(|ka| ka.key().secret().is_encrypted()))
 }
 
-/// Decrypt the passphrase protection on every secret key packet in an
-/// imported armored key and store the resulting cert in the WASM key
-/// store. Returns a handle. The decrypted secret material never crosses
-/// the JS boundary -- all subsequent re-protection (password / passkey)
-/// runs against the handle via `encryptHandleWithPassword` /
-/// `encryptHandleWithPrf`.
-#[wasm_bindgen(js_name = "decryptAndStoreImportedKey")]
-pub fn decrypt_and_store_imported_key(
-    armored: &str,
-    passphrase: Vec<u8>,
-) -> Result<u32, String> {
-    let passphrase = Zeroizing::new(passphrase);
-    let cert = openpgp::Cert::from_bytes(armored.as_bytes()).str_err()?;
-    let password = openpgp::crypto::Password::from(passphrase.as_slice());
+/// Serialize a cert (with secret material) into a Zeroizing buffer for
+/// in-WASM encryption. Binary OpenPGP -- the unlock side accepts both
+/// binary and armored via `Cert::from_bytes`.
+/// `to_vec()` pre-sizes the backing buffer so it never reallocs partway,
+/// keeping the zeroize-on-drop story honest.
+fn serialize_secret_cert(cert: &openpgp::Cert) -> Result<Zeroizing<Vec<u8>>, String> {
+    Ok(Zeroizing::new(cert.as_tsk().to_vec().str_err()?))
+}
+
+/// Pack `[u32_le json_len][json][blob]` so JS can split metadata from
+/// the protection blob in one wasm call.
+fn pack_protect_result(meta: &ProtectResultMeta, blob: &[u8]) -> Result<Vec<u8>, String> {
+    let json = serde_json::to_string(meta).str_err()?;
+    let json_bytes = json.as_bytes();
+    let mut out = Vec::with_capacity(4 + json_bytes.len() + blob.len());
+    out.extend_from_slice(&(json_bytes.len() as u32).to_le_bytes());
+    out.extend_from_slice(json_bytes);
+    out.extend_from_slice(blob);
+    Ok(out)
+}
+
+/// Encrypt a cert's secret material under an Argon2id-derived AES-GCM key.
+/// Returns `[16-byte salt][12-byte iv][ciphertext]`.
+/// AAD is bound to the cert's fingerprint so the blob can't be swapped
+/// between key entries.
+fn encrypt_cert_with_password(
+    cert: &openpgp::Cert,
+    password: &[u8],
+    memory_kib: u32,
+    iterations: u32,
+    parallelism: u32,
+) -> Result<Vec<u8>, String> {
+    let key_id = cert.fingerprint().to_hex();
+
+    let mut salt = [0u8; 16];
+    getrandom::fill(&mut salt).map_err(|e| format!("RNG failed: {e}"))?;
+
+    let mut derived = argon2_derive(password, &salt, memory_kib, iterations, parallelism)?;
+
+    let plaintext = serialize_secret_cert(cert)?;
+    let aad = format!("{PASSWORD_AAD_PREFIX}{key_id}");
+    let iv_and_ct = aes_gcm_encrypt(&derived, &plaintext, aad.as_bytes());
+    derived.zeroize();
+    let iv_and_ct = iv_and_ct?;
+
+    let mut out = Vec::with_capacity(16 + iv_and_ct.len());
+    out.extend_from_slice(&salt);
+    out.extend_from_slice(&iv_and_ct);
+    Ok(out)
+}
+
+/// Encrypt a cert's secret material under a HKDF(PRF, storedSecret)-derived
+/// AES-GCM key. Returns `[12-byte iv][ciphertext]`.
+fn encrypt_cert_with_prf(
+    cert: &openpgp::Cert,
+    prf_output: &[u8],
+    stored_secret: &[u8],
+) -> Result<Vec<u8>, String> {
+    let key_id = cert.fingerprint().to_hex();
+
+    let hk = Hkdf::<Sha256>::new(Some(stored_secret), prf_output);
+    let mut derived = vec![0u8; 32];
+    hk.expand(b"gpg-tools-prf-v1", &mut derived)
+        .map_err(|e| format!("HKDF failed: {e}"))?;
+
+    let plaintext = serialize_secret_cert(cert)?;
+    let aad = format!("{PASSKEY_AAD_PREFIX}{key_id}");
+    let iv_and_ct = aes_gcm_encrypt(&derived, &plaintext, aad.as_bytes());
+    derived.zeroize();
+    iv_and_ct
+}
+
+/// Strip OpenPGP S2K passphrase protection from any encrypted secret
+/// packets in `cert`. Returns a new cert with plaintext secret material.
+/// If `cert` already has no encrypted secrets, returns it unchanged.
+fn decrypt_cert_secrets(
+    cert: openpgp::Cert,
+    source_passphrase: &[u8],
+) -> Result<openpgp::Cert, String> {
+    if !cert.keys().secret().any(|ka| ka.key().secret().is_encrypted()) {
+        return Ok(cert);
+    }
+
+    let password = openpgp::crypto::Password::from(source_passphrase);
 
     let primary_key = cert
         .primary_key()
@@ -763,76 +842,110 @@ pub fn decrypt_and_store_imported_key(
     }
 
     let (decrypted_cert, _) = cert.insert_packets(packets).str_err()?;
-    insert_key(&decrypted_cert)
+    Ok(decrypted_cert)
 }
 
-/// Serialize a stored cert (with secret material) into a Zeroizing buffer
-/// for in-WASM encryption. Binary OpenPGP -- the unlock side accepts both
-/// binary and armored via `Cert::from_bytes`.
-fn serialize_secret_cert(cert: &openpgp::Cert) -> Result<Zeroizing<Vec<u8>>, String> {
-    let mut buf = Zeroizing::new(Vec::new());
-    cert.as_tsk().serialize(&mut *buf).str_err()?;
-    Ok(buf)
-}
+// ============================================================================
+// Atomic protect-flow API.
+//
+// These four functions cover every "produce a fresh encrypted-key blob"
+// case (generate or import; password or passkey). The plaintext cert
+// exists only for the duration of a single call -- it is NEVER inserted
+// into the long-lived `KEY_STORE`. The handle store is reserved
+// exclusively for the explicit `unlockWith*` paths, so cached unlocked
+// keys correspond 1:1 with user-initiated unlock actions.
+//
+// Each returns a packed `[u32_le json_len][json][blob_bytes]` Vec where
+// `json` is `ProtectResultMeta` and `blob_bytes` is the protection blob:
+//   - password variants:  `[16 salt][12 iv][ciphertext]`
+//   - prf variants:       `[12 iv][ciphertext]`
+// ============================================================================
 
-/// Encrypt a stored key handle's secret material with a password.
-/// Returns packed `[16-byte salt][12-byte iv][ciphertext]`.
-/// The plaintext serialized cert never leaves WASM.
-#[wasm_bindgen(js_name = "encryptHandleWithPassword")]
-pub fn encrypt_handle_with_password(
-    handle: u32,
+#[wasm_bindgen(js_name = "generateProtectedWithPassword")]
+pub fn generate_protected_with_password(
+    options_json: &str,
     password: Vec<u8>,
-    key_id: &str,
     memory_kib: u32,
     iterations: u32,
     parallelism: u32,
 ) -> Result<Vec<u8>, String> {
     let password = Zeroizing::new(password);
-    let cert = get_cert_from_handle(handle)?;
-
-    let mut salt = [0u8; 16];
-    getrandom::fill(&mut salt).map_err(|e| format!("RNG failed: {e}"))?;
-
-    let mut derived =
-        argon2_derive(&password, &salt, memory_kib, iterations, parallelism)?;
-
-    let plaintext = serialize_secret_cert(&cert)?;
-    let aad = format!("{PASSWORD_AAD_PREFIX}{key_id}");
-    let iv_and_ct = aes_gcm_encrypt(&derived, &plaintext, aad.as_bytes());
-    derived.zeroize();
-    let iv_and_ct = iv_and_ct?;
-
-    let mut out = Vec::with_capacity(16 + iv_and_ct.len());
-    out.extend_from_slice(&salt);
-    out.extend_from_slice(&iv_and_ct);
-    Ok(out)
+    let (cert, revocation_armored) = build_cert_from_options(options_json)?;
+    let blob = encrypt_cert_with_password(
+        &cert, &password, memory_kib, iterations, parallelism,
+    )?;
+    let meta = ProtectResultMeta {
+        public_key_armored: armor_cert(&cert, false)?,
+        key_info: extract_key_info(&cert, true),
+        revocation_certificate: Some(revocation_armored),
+    };
+    pack_protect_result(&meta, &blob)
 }
 
-/// Encrypt a stored key handle's secret material with a passkey-derived
-/// key (HKDF over PRF output + stored secret).
-/// Returns packed `[12-byte iv][ciphertext]`.
-/// The plaintext serialized cert never leaves WASM.
-#[wasm_bindgen(js_name = "encryptHandleWithPrf")]
-pub fn encrypt_handle_with_prf(
-    handle: u32,
+#[wasm_bindgen(js_name = "generateProtectedWithPrf")]
+pub fn generate_protected_with_prf(
+    options_json: &str,
     prf_output: Vec<u8>,
     stored_secret: Vec<u8>,
-    key_id: &str,
 ) -> Result<Vec<u8>, String> {
     let prf_output = Zeroizing::new(prf_output);
     let stored_secret = Zeroizing::new(stored_secret);
-    let cert = get_cert_from_handle(handle)?;
+    let (cert, revocation_armored) = build_cert_from_options(options_json)?;
+    let blob = encrypt_cert_with_prf(&cert, &prf_output, &stored_secret)?;
+    let meta = ProtectResultMeta {
+        public_key_armored: armor_cert(&cert, false)?,
+        key_info: extract_key_info(&cert, true),
+        revocation_certificate: Some(revocation_armored),
+    };
+    pack_protect_result(&meta, &blob)
+}
 
-    let hk = Hkdf::<Sha256>::new(Some(&stored_secret), &prf_output);
-    let mut derived = vec![0u8; 32];
-    hk.expand(b"gpg-tools-prf-v1", &mut derived)
-        .map_err(|e| format!("HKDF failed: {e}"))?;
+/// Import an armored private key, optionally strip its source-passphrase
+/// protection, and re-encrypt under a new password. Pass an empty
+/// `source_passphrase` for keys that aren't passphrase-protected.
+#[wasm_bindgen(js_name = "protectImportedWithPassword")]
+pub fn protect_imported_with_password(
+    armored: &str,
+    source_passphrase: Vec<u8>,
+    password: Vec<u8>,
+    memory_kib: u32,
+    iterations: u32,
+    parallelism: u32,
+) -> Result<Vec<u8>, String> {
+    let source_passphrase = Zeroizing::new(source_passphrase);
+    let password = Zeroizing::new(password);
+    let raw = openpgp::Cert::from_bytes(armored.as_bytes()).str_err()?;
+    let cert = decrypt_cert_secrets(raw, &source_passphrase)?;
+    let blob = encrypt_cert_with_password(
+        &cert, &password, memory_kib, iterations, parallelism,
+    )?;
+    let meta = ProtectResultMeta {
+        public_key_armored: armor_cert(&cert, false)?,
+        key_info: extract_key_info(&cert, true),
+        revocation_certificate: None,
+    };
+    pack_protect_result(&meta, &blob)
+}
 
-    let plaintext = serialize_secret_cert(&cert)?;
-    let aad = format!("{PASSKEY_AAD_PREFIX}{key_id}");
-    let iv_and_ct = aes_gcm_encrypt(&derived, &plaintext, aad.as_bytes());
-    derived.zeroize();
-    iv_and_ct
+#[wasm_bindgen(js_name = "protectImportedWithPrf")]
+pub fn protect_imported_with_prf(
+    armored: &str,
+    source_passphrase: Vec<u8>,
+    prf_output: Vec<u8>,
+    stored_secret: Vec<u8>,
+) -> Result<Vec<u8>, String> {
+    let source_passphrase = Zeroizing::new(source_passphrase);
+    let prf_output = Zeroizing::new(prf_output);
+    let stored_secret = Zeroizing::new(stored_secret);
+    let raw = openpgp::Cert::from_bytes(armored.as_bytes()).str_err()?;
+    let cert = decrypt_cert_secrets(raw, &source_passphrase)?;
+    let blob = encrypt_cert_with_prf(&cert, &prf_output, &stored_secret)?;
+    let meta = ProtectResultMeta {
+        public_key_armored: armor_cert(&cert, false)?,
+        key_info: extract_key_info(&cert, true),
+        revocation_certificate: None,
+    };
+    pack_protect_result(&meta, &blob)
 }
 
 /// Encrypt a cert's secret keys with a passphrase for safe export.
