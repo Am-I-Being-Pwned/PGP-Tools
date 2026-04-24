@@ -188,9 +188,10 @@ export async function encryptWithSigningHandle(
   );
 }
 
+/** Caller must zero `passphrase` after this returns. */
 export async function encryptKeyForExportWithHandle(
   keyHandle: number,
-  passphrase: string,
+  passphrase: Uint8Array,
 ): Promise<string> {
   const wasm = await loadWasm();
   return wasm.encryptKeyForExportWithHandle(keyHandle, passphrase);

@@ -126,6 +126,7 @@ export function ProtectionMethodPicker({
         <>
           <input
             type="password"
+            autoComplete="new-password"
             placeholder="Password (min 8 characters)"
             value={password}
             onChange={(e) => onPasswordChange(e.target.value)}
@@ -134,6 +135,7 @@ export function ProtectionMethodPicker({
           />
           <input
             type="password"
+            autoComplete="new-password"
             placeholder="Confirm password"
             value={confirmPassword}
             onChange={(e) => onConfirmPasswordChange(e.target.value)}
