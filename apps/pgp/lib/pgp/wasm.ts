@@ -5,7 +5,11 @@
  * can be stored via handles that never expose key material to JS.
  */
 
-import type { GeneratedKey, GenerateKeyOptions, KeyInfo } from "./types";
+import type {
+  GenerateKeyOptions,
+  KeyInfo,
+  ProtectResultMeta,
+} from "./types";
 
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- dynamic import
 type WasmModule = typeof import("../../gpg-wasm/pkg/gpg_wasm");
@@ -45,12 +49,94 @@ export async function parseKey(armored: string): Promise<KeyInfo> {
   return JSON.parse(json) as KeyInfo;
 }
 
-export async function generateKey(
+/** Atomic-blob protect-flow result: metadata + the raw protection blob.
+ *  Plaintext cert lives only inside the wasm call. */
+export interface ProtectFlowResult {
+  meta: ProtectResultMeta;
+  /** Packed binary protection blob -- shape depends on the variant:
+   *  password: [16 salt][12 iv][ciphertext]; prf: [12 iv][ciphertext]. */
+  blob: Uint8Array;
+}
+
+function unpackProtectResult(packed: Uint8Array): ProtectFlowResult {
+  const view = new DataView(
+    packed.buffer,
+    packed.byteOffset,
+    packed.byteLength,
+  );
+  const jsonLen = view.getUint32(0, true);
+  const json = new TextDecoder().decode(packed.slice(4, 4 + jsonLen));
+  const meta = JSON.parse(json) as ProtectResultMeta;
+  return { meta, blob: packed.slice(4 + jsonLen) };
+}
+
+export async function generateProtectedWithPassword(
   opts: GenerateKeyOptions,
-): Promise<GeneratedKey> {
+  password: Uint8Array,
+  memoryKib: number,
+  iterations: number,
+  parallelism: number,
+): Promise<ProtectFlowResult> {
   const wasm = await loadWasm();
-  const json = wasm.generateKey(JSON.stringify(opts));
-  return JSON.parse(json) as GeneratedKey;
+  return unpackProtectResult(
+    wasm.generateProtectedWithPassword(
+      JSON.stringify(opts),
+      password,
+      memoryKib,
+      iterations,
+      parallelism,
+    ),
+  );
+}
+
+export async function generateProtectedWithPrf(
+  opts: GenerateKeyOptions,
+  prfOutput: Uint8Array,
+  storedSecret: Uint8Array,
+): Promise<ProtectFlowResult> {
+  const wasm = await loadWasm();
+  return unpackProtectResult(
+    wasm.generateProtectedWithPrf(JSON.stringify(opts), prfOutput, storedSecret),
+  );
+}
+
+/** Pass an empty `sourcePassphrase` for keys that aren't passphrase-protected. */
+export async function protectImportedWithPassword(
+  armored: string,
+  sourcePassphrase: Uint8Array,
+  password: Uint8Array,
+  memoryKib: number,
+  iterations: number,
+  parallelism: number,
+): Promise<ProtectFlowResult> {
+  const wasm = await loadWasm();
+  return unpackProtectResult(
+    wasm.protectImportedWithPassword(
+      armored,
+      sourcePassphrase,
+      password,
+      memoryKib,
+      iterations,
+      parallelism,
+    ),
+  );
+}
+
+export async function protectImportedWithPrf(
+  armored: string,
+  sourcePassphrase: Uint8Array,
+  prfOutput: Uint8Array,
+  storedSecret: Uint8Array,
+): Promise<ProtectFlowResult> {
+  const wasm = await loadWasm();
+  return unpackProtectResult(
+    wasm.protectImportedWithPrf(
+      armored,
+      sourcePassphrase,
+      prfOutput,
+      storedSecret,
+    ),
+  );
 }
 
 export async function encrypt(
@@ -252,63 +338,6 @@ export async function extractPublicKey(
 export async function isSecretEncrypted(armored: string): Promise<boolean> {
   const wasm = await loadWasm();
   return wasm.isSecretEncrypted(armored);
-}
-
-/**
- * Decrypt an imported passphrase-protected key inside WASM and store it
- * behind a handle. Caller must zero `passphrase` after this returns.
- */
-export async function decryptAndStoreImportedKey(
-  armored: string,
-  passphrase: Uint8Array,
-): Promise<number> {
-  const wasm = await loadWasm();
-  return wasm.decryptAndStoreImportedKey(armored, passphrase);
-}
-
-/**
- * Re-encrypt a stored cert (by handle) under a password, entirely in WASM.
- * Returns packed `[16-byte salt][12-byte iv][ciphertext]`.
- * Caller must zero `password`.
- */
-export async function encryptHandleWithPassword(
-  handle: number,
-  password: Uint8Array,
-  keyId: string,
-  memoryKib: number,
-  iterations: number,
-  parallelism: number,
-): Promise<Uint8Array> {
-  const wasm = await loadWasm();
-  return wasm.encryptHandleWithPassword(
-    handle,
-    password,
-    keyId,
-    memoryKib,
-    iterations,
-    parallelism,
-  );
-}
-
-/**
- * Re-encrypt a stored cert (by handle) under a passkey-derived key
- * (HKDF over PRF output + stored secret), entirely in WASM.
- * Returns packed `[12-byte iv][ciphertext]`.
- * Caller must zero `prfOutput` and `storedSecret`.
- */
-export async function encryptHandleWithPrf(
-  handle: number,
-  prfOutput: Uint8Array,
-  storedSecret: Uint8Array,
-  keyId: string,
-): Promise<Uint8Array> {
-  const wasm = await loadWasm();
-  return wasm.encryptHandleWithPrf(handle, prfOutput, storedSecret, keyId);
-}
-
-export async function storeKey(armoredPrivateKey: string): Promise<number> {
-  const wasm = await loadWasm();
-  return wasm.storeKey(armoredPrivateKey);
 }
 
 export async function dropKey(handle: number): Promise<void> {

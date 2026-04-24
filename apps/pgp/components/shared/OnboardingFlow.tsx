@@ -14,7 +14,6 @@ import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { MasterProtection } from "../../lib/storage/master-protection";
 import type { StorageLocation } from "../../lib/storage/preferences";
 import { toBase64, unpackIvCiphertext } from "../../lib/encoding";
-import { generateKey } from "../../lib/pgp/key-management";
 import * as wasmApi from "../../lib/pgp/wasm";
 import {
   ARGON2_ITERATIONS,
@@ -22,7 +21,7 @@ import {
   ARGON2_PARALLELISM,
   generateSalt,
 } from "../../lib/protection/password-kdf";
-import { protectAndStoreKey } from "../../lib/protection/protect-key";
+import { generateAndProtect } from "../../lib/protection/protect-flow";
 import {
   authenticateAndGetPrf,
   generatePrfSalt,
@@ -187,33 +186,26 @@ export function OnboardingFlow({ onComplete, addKey, onKeyCached, cacheKey }: On
 
     try {
       const expiresIn = EXPIRY_SECONDS[expiryOption];
-      const {
-        publicKeyArmored,
-        privateKeyArmored,
-        revocationCertificate,
-        keyInfo,
-      } = await generateKey({
-        name: name.trim(),
-        email: email.trim(),
-        comment: comment.trim() || undefined,
-        type: keyAlgorithm,
-        expiresIn: expiresIn || undefined,
-      });
-
-      const { blob, keyHandle } = await protectAndStoreKey({
-        privateKeyArmored,
-        publicKeyArmored,
-        keyInfo,
-        method: masterCredentialId ? "passkey" : "password",
-        password: password || undefined,
-        revocationCertificate,
-        reusePasskeyCredentialId: masterCredentialId,
-        cacheKey,
-      });
+      const { blob, handle } = await generateAndProtect(
+        {
+          name: name.trim(),
+          email: email.trim(),
+          comment: comment.trim() || undefined,
+          type: keyAlgorithm,
+          expiresIn: expiresIn || undefined,
+        },
+        masterCredentialId
+          ? {
+              method: "passkey",
+              reusePasskeyCredentialId: masterCredentialId,
+              cache: cacheKey,
+            }
+          : { method: "password", password, cache: cacheKey },
+      );
 
       await addKey(blob);
-      if (keyHandle !== undefined && onKeyCached) {
-        onKeyCached(blob.keyId, keyHandle);
+      if (handle !== undefined && onKeyCached) {
+        onKeyCached(blob.keyId, handle);
       }
       setPassword("");
       await savePreferences({

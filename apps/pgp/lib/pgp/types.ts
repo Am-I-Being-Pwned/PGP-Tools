@@ -52,9 +52,11 @@ export interface GenerateKeyOptions {
   expiresIn?: number;
 }
 
-export interface GeneratedKey {
+/** Metadata returned from a protect-flow call (generate or import + protect).
+ *  The encrypted blob lives on the wasm-side packed binary and is unpacked
+ *  separately by the protect-flow wrapper. */
+export interface ProtectResultMeta {
   publicKeyArmored: string;
-  privateKeyArmored: string;
-  revocationCertificate: string;
   keyInfo: KeyInfo;
+  revocationCertificate?: string;
 }

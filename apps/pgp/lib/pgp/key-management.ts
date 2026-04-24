@@ -1,12 +1,5 @@
-import type { GeneratedKey, GenerateKeyOptions, KeyInfo } from "./types";
+import type { KeyInfo } from "./types";
 import * as wasm from "./wasm";
-
-/** Generate a new PGP keypair. */
-export async function generateKey(
-  opts: GenerateKeyOptions,
-): Promise<GeneratedKey> {
-  return wasm.generateKey(opts);
-}
 
 /** Parse an armored key for public-key metadata (strips isPrivate flag). */
 export async function parsePublicKey(armored: string): Promise<KeyInfo> {
