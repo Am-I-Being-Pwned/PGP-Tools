@@ -249,6 +249,63 @@ export async function extractPublicKey(
   return wasm.extractPublicKey(armoredPrivateKey);
 }
 
+export async function isSecretEncrypted(armored: string): Promise<boolean> {
+  const wasm = await loadWasm();
+  return wasm.isSecretEncrypted(armored);
+}
+
+/**
+ * Decrypt an imported passphrase-protected key inside WASM and store it
+ * behind a handle. Caller must zero `passphrase` after this returns.
+ */
+export async function decryptAndStoreImportedKey(
+  armored: string,
+  passphrase: Uint8Array,
+): Promise<number> {
+  const wasm = await loadWasm();
+  return wasm.decryptAndStoreImportedKey(armored, passphrase);
+}
+
+/**
+ * Re-encrypt a stored cert (by handle) under a password, entirely in WASM.
+ * Returns packed `[16-byte salt][12-byte iv][ciphertext]`.
+ * Caller must zero `password`.
+ */
+export async function encryptHandleWithPassword(
+  handle: number,
+  password: Uint8Array,
+  keyId: string,
+  memoryKib: number,
+  iterations: number,
+  parallelism: number,
+): Promise<Uint8Array> {
+  const wasm = await loadWasm();
+  return wasm.encryptHandleWithPassword(
+    handle,
+    password,
+    keyId,
+    memoryKib,
+    iterations,
+    parallelism,
+  );
+}
+
+/**
+ * Re-encrypt a stored cert (by handle) under a passkey-derived key
+ * (HKDF over PRF output + stored secret), entirely in WASM.
+ * Returns packed `[12-byte iv][ciphertext]`.
+ * Caller must zero `prfOutput` and `storedSecret`.
+ */
+export async function encryptHandleWithPrf(
+  handle: number,
+  prfOutput: Uint8Array,
+  storedSecret: Uint8Array,
+  keyId: string,
+): Promise<Uint8Array> {
+  const wasm = await loadWasm();
+  return wasm.encryptHandleWithPrf(handle, prfOutput, storedSecret, keyId);
+}
+
 export async function storeKey(armoredPrivateKey: string): Promise<number> {
   const wasm = await loadWasm();
   return wasm.storeKey(armoredPrivateKey);
