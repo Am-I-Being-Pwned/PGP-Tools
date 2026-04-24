@@ -39,7 +39,7 @@ use aes_gcm::{Aes256Gcm, KeyInit, Nonce};
 use argon2::{Algorithm, Argon2, Params, Version};
 use hkdf::Hkdf;
 use sha2::Sha256;
-use zeroize::Zeroize;
+use zeroize::{Zeroize, Zeroizing};
 
 use openpgp::cert::prelude::*;
 use openpgp::crypto::SessionKey;
@@ -709,6 +709,130 @@ pub fn encrypt_key_for_export_with_handle(
 ) -> Result<String, String> {
     let cert = get_cert_from_handle(key_handle)?;
     encrypt_cert_for_export(&cert, passphrase)
+}
+
+/// Returns true if the armored key contains any passphrase-protected secret material.
+#[wasm_bindgen(js_name = "isSecretEncrypted")]
+pub fn is_secret_encrypted(armored: &str) -> Result<bool, String> {
+    let cert = openpgp::Cert::from_bytes(armored.as_bytes()).str_err()?;
+    Ok(cert
+        .keys()
+        .secret()
+        .any(|ka| ka.key().secret().is_encrypted()))
+}
+
+/// Decrypt the passphrase protection on every secret key packet in an
+/// imported armored key and store the resulting cert in the WASM key
+/// store. Returns a handle. The decrypted secret material never crosses
+/// the JS boundary -- all subsequent re-protection (password / passkey)
+/// runs against the handle via `encryptHandleWithPassword` /
+/// `encryptHandleWithPrf`.
+#[wasm_bindgen(js_name = "decryptAndStoreImportedKey")]
+pub fn decrypt_and_store_imported_key(
+    armored: &str,
+    passphrase: Vec<u8>,
+) -> Result<u32, String> {
+    let passphrase = Zeroizing::new(passphrase);
+    let cert = openpgp::Cert::from_bytes(armored.as_bytes()).str_err()?;
+    let password = openpgp::crypto::Password::from(passphrase.as_slice());
+
+    let primary_key = cert
+        .primary_key()
+        .key()
+        .clone()
+        .parts_into_secret()
+        .map_err(|_| "Primary key has no secret material".to_string())?;
+    let primary = if primary_key.secret().is_encrypted() {
+        primary_key
+            .decrypt_secret(&password)
+            .map_err(|_| "Incorrect passphrase".to_string())?
+    } else {
+        primary_key
+    };
+
+    let mut packets: Vec<openpgp::Packet> = vec![primary.role_into_primary().into()];
+    for subkey in cert.keys().subkeys().secret() {
+        let key = subkey.key().clone();
+        let decrypted = if key.secret().is_encrypted() {
+            key.decrypt_secret(&password)
+                .map_err(|_| "Incorrect passphrase".to_string())?
+        } else {
+            key
+        };
+        packets.push(decrypted.role_into_subordinate().into());
+    }
+
+    let (decrypted_cert, _) = cert.insert_packets(packets).str_err()?;
+    insert_key(&decrypted_cert)
+}
+
+/// Serialize a stored cert (with secret material) into a Zeroizing buffer
+/// for in-WASM encryption. Binary OpenPGP -- the unlock side accepts both
+/// binary and armored via `Cert::from_bytes`.
+fn serialize_secret_cert(cert: &openpgp::Cert) -> Result<Zeroizing<Vec<u8>>, String> {
+    let mut buf = Zeroizing::new(Vec::new());
+    cert.as_tsk().serialize(&mut *buf).str_err()?;
+    Ok(buf)
+}
+
+/// Encrypt a stored key handle's secret material with a password.
+/// Returns packed `[16-byte salt][12-byte iv][ciphertext]`.
+/// The plaintext serialized cert never leaves WASM.
+#[wasm_bindgen(js_name = "encryptHandleWithPassword")]
+pub fn encrypt_handle_with_password(
+    handle: u32,
+    password: Vec<u8>,
+    key_id: &str,
+    memory_kib: u32,
+    iterations: u32,
+    parallelism: u32,
+) -> Result<Vec<u8>, String> {
+    let password = Zeroizing::new(password);
+    let cert = get_cert_from_handle(handle)?;
+
+    let mut salt = [0u8; 16];
+    getrandom::fill(&mut salt).map_err(|e| format!("RNG failed: {e}"))?;
+
+    let mut derived =
+        argon2_derive(&password, &salt, memory_kib, iterations, parallelism)?;
+
+    let plaintext = serialize_secret_cert(&cert)?;
+    let aad = format!("{PASSWORD_AAD_PREFIX}{key_id}");
+    let iv_and_ct = aes_gcm_encrypt(&derived, &plaintext, aad.as_bytes());
+    derived.zeroize();
+    let iv_and_ct = iv_and_ct?;
+
+    let mut out = Vec::with_capacity(16 + iv_and_ct.len());
+    out.extend_from_slice(&salt);
+    out.extend_from_slice(&iv_and_ct);
+    Ok(out)
+}
+
+/// Encrypt a stored key handle's secret material with a passkey-derived
+/// key (HKDF over PRF output + stored secret).
+/// Returns packed `[12-byte iv][ciphertext]`.
+/// The plaintext serialized cert never leaves WASM.
+#[wasm_bindgen(js_name = "encryptHandleWithPrf")]
+pub fn encrypt_handle_with_prf(
+    handle: u32,
+    prf_output: Vec<u8>,
+    stored_secret: Vec<u8>,
+    key_id: &str,
+) -> Result<Vec<u8>, String> {
+    let prf_output = Zeroizing::new(prf_output);
+    let stored_secret = Zeroizing::new(stored_secret);
+    let cert = get_cert_from_handle(handle)?;
+
+    let hk = Hkdf::<Sha256>::new(Some(&stored_secret), &prf_output);
+    let mut derived = vec![0u8; 32];
+    hk.expand(b"gpg-tools-prf-v1", &mut derived)
+        .map_err(|e| format!("HKDF failed: {e}"))?;
+
+    let plaintext = serialize_secret_cert(&cert)?;
+    let aad = format!("{PASSKEY_AAD_PREFIX}{key_id}");
+    let iv_and_ct = aes_gcm_encrypt(&derived, &plaintext, aad.as_bytes());
+    derived.zeroize();
+    iv_and_ct
 }
 
 /// Encrypt a cert's secret keys with a passphrase for safe export.

@@ -34,6 +34,7 @@ export async function importKey(armored: string): Promise<
       keyInfo: KeyInfo;
       privateKeyArmored: string;
       publicKeyArmored: string;
+      secretEncrypted: boolean;
     }
 > {
   const trimmed = armored.trim();
@@ -41,13 +42,16 @@ export async function importKey(armored: string): Promise<
 
   if (keyInfo.isPrivate) {
     const publicKeyArmored = await wasm.extractPublicKey(trimmed);
+    const secretEncrypted = await wasm.isSecretEncrypted(trimmed);
     return {
       type: "private",
       keyInfo,
       privateKeyArmored: trimmed,
       publicKeyArmored,
+      secretEncrypted,
     };
   }
 
   return { type: "public", keyInfo, armored: trimmed };
 }
+

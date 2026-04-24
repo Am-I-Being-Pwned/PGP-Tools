@@ -1,11 +1,16 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@amibeingpwned/ui/button";
 
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import { importKey } from "../../lib/pgp/key-management";
-import { protectAndStoreKey } from "../../lib/protection/protect-key";
+import {
+  decryptAndStoreImportedKey,
+  dropKey,
+  storeKey,
+} from "../../lib/pgp/wasm";
+import { protectHandleAndBuildBlob } from "../../lib/protection/protect-handle";
 import { Dialog } from "../shared/Dialog";
 import {
   getDefaultProtectionMethod,
@@ -13,7 +18,15 @@ import {
   validatePassword,
 } from "./ProtectionMethodPicker";
 
-type Step = "paste" | "protect";
+type Step = "paste" | "unlock" | "protect";
+
+interface UnlockedPrivate {
+  /** WASM key handle - decrypted secret material lives only in WASM.
+   *  null while the key is still S2K-encrypted (unlock step pending). */
+  handle: number | null;
+  publicKeyArmored: string;
+  keyInfo: import("../../lib/pgp/types").KeyInfo;
+}
 
 interface ImportKeyDialogProps {
   open: boolean;
@@ -42,11 +55,48 @@ export function ImportKeyDialog({
     null,
   );
   const [reusePasskey, setReusePasskey] = useState(true);
+  const [sourcePassphrase, setSourcePassphrase] = useState("");
+  const [unlocked, setUnlocked] = useState<UnlockedPrivate | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Authoritative handle for cleanup paths (effect, abandon, error).
+  // useState is mirrored on `unlocked.handle` for render purposes.
+  const liveHandleRef = useRef<number | null>(null);
+
+  // Drop any live WASM handle if the dialog unmounts mid-flow.
+  useEffect(() => {
+    return () => {
+      const h = liveHandleRef.current;
+      if (h != null) {
+        liveHandleRef.current = null;
+        void dropKey(h);
+      }
+    };
+  }, []);
+
+  // Drop the handle if the parent closes the dialog (open -> false)
+  // without going through resetAndClose (e.g. external state change).
+  useEffect(() => {
+    if (!open) {
+      const h = liveHandleRef.current;
+      if (h != null) {
+        liveHandleRef.current = null;
+        void dropKey(h);
+      }
+    }
+  }, [open]);
+
+  const releaseHandle = () => {
+    const h = liveHandleRef.current;
+    if (h != null) {
+      liveHandleRef.current = null;
+      void dropKey(h);
+    }
+  };
 
   if (!open) return null;
 
   const resetAndClose = () => {
+    releaseHandle();
     setStep("paste");
     setArmored("");
     setPassword("");
@@ -54,6 +104,8 @@ export function ImportKeyDialog({
     setDetectedType(null);
     setError(null);
     setReusePasskey(true);
+    setSourcePassphrase("");
+    setUnlocked(null);
     onClose();
   };
 
@@ -68,13 +120,77 @@ export function ImportKeyDialog({
     }
   };
 
-  const handlePasteNext = () => {
+  const handlePasteNext = async () => {
     setError(null);
     if (!armored.trim()) return;
     if (detectedType === "public" || !armored.includes("PRIVATE KEY")) {
       void handleImportPublic();
-    } else {
+      return;
+    }
+
+    // Re-Next from the paste step abandons any previously-loaded key.
+    releaseHandle();
+    setUnlocked(null);
+
+    setImporting(true);
+    try {
+      const result = await importKey(armored);
+      if (result.type !== "private") {
+        setError("Expected a private key.");
+        return;
+      }
+      if (result.secretEncrypted) {
+        // Defer storeKey() until we have the passphrase; storeKey rejects
+        // certs whose secret material is still S2K-encrypted.
+        setUnlocked({
+          handle: null,
+          publicKeyArmored: result.publicKeyArmored,
+          keyInfo: result.keyInfo,
+        });
+        setStep("unlock");
+      } else {
+        const handle = await storeKey(result.privateKeyArmored);
+        liveHandleRef.current = handle;
+        setUnlocked({
+          handle,
+          publicKeyArmored: result.publicKeyArmored,
+          keyInfo: result.keyInfo,
+        });
+        setStep("protect");
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Import failed");
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleUnlock = async () => {
+    if (!unlocked) return;
+    if (!sourcePassphrase) {
+      setError("Enter the key's passphrase.");
+      return;
+    }
+    setError(null);
+    setImporting(true);
+    const passphraseBytes = new TextEncoder().encode(sourcePassphrase);
+    try {
+      // Drop any prior handle (e.g. user typed the wrong passphrase, then
+      // tried again — the previous attempt may have left a handle).
+      releaseHandle();
+      const handle = await decryptAndStoreImportedKey(
+        armored.trim(),
+        passphraseBytes,
+      );
+      liveHandleRef.current = handle;
+      setUnlocked({ ...unlocked, handle });
+      setSourcePassphrase("");
       setStep("protect");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to unlock key");
+    } finally {
+      passphraseBytes.fill(0);
+      setImporting(false);
     }
   };
 
@@ -115,19 +231,18 @@ export function ImportKeyDialog({
       }
     }
 
-    setImporting(true);
-    try {
-      const result = await importKey(armored);
-      if (result.type !== "private") {
-        setError("Expected a private key.");
-        setImporting(false);
-        return;
-      }
+    if (!unlocked || unlocked.handle == null) {
+      setError("No key to import.");
+      return;
+    }
 
-      const { blob } = await protectAndStoreKey({
-        privateKeyArmored: result.privateKeyArmored,
-        publicKeyArmored: result.publicKeyArmored,
-        keyInfo: result.keyInfo,
+    setImporting(true);
+    let success = false;
+    try {
+      const blob = await protectHandleAndBuildBlob({
+        handle: unlocked.handle,
+        keyInfo: unlocked.keyInfo,
+        publicKeyArmored: unlocked.publicKeyArmored,
         method,
         password,
         reusePasskeyCredentialId:
@@ -137,11 +252,16 @@ export function ImportKeyDialog({
       });
 
       await onImportPrivate(blob);
-      resetAndClose();
+      success = true;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Import failed");
     } finally {
       setImporting(false);
+      // Drop the handle whether import succeeded or failed -- on failure
+      // the user must restart from paste, and we don't want to leak the
+      // decrypted cert in WASM.
+      releaseHandle();
+      if (success) resetAndClose();
     }
   };
 
@@ -201,10 +321,74 @@ export function ImportKeyDialog({
             <Button
               size="sm"
               className="flex-1"
-              onClick={handlePasteNext}
+              onClick={() => void handlePasteNext()}
               disabled={importing || !armored.trim()}
             >
               {importing ? "Importing..." : "Next"}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {step === "unlock" && (
+        <div className="space-y-3">
+          <p className="text-muted-foreground text-xs">
+            This key is protected with a passphrase. Enter it to decrypt the
+            key — it will then be re-protected with your chosen method on the
+            next step.
+          </p>
+          {unlocked && (
+            <div className="bg-muted/30 rounded border p-2 text-xs">
+              <div className="font-medium">
+                {unlocked.keyInfo.userIds[0] ?? "(no user ID)"}
+              </div>
+              <div className="text-muted-foreground font-mono">
+                {unlocked.keyInfo.keyId.slice(-16)}
+              </div>
+            </div>
+          )}
+          <input
+            type="password"
+            autoFocus
+            autoComplete="current-password"
+            value={sourcePassphrase}
+            onChange={(e) => setSourcePassphrase(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && sourcePassphrase && !importing) {
+                void handleUnlock();
+              }
+            }}
+            placeholder="Key passphrase"
+            className="border-border bg-background placeholder:text-muted-foreground focus:ring-ring w-full rounded-md border p-2 font-mono text-xs focus:ring-2 focus:outline-none"
+          />
+          {error && (
+            <p className="text-destructive text-xs" role="alert">
+              {error}
+            </p>
+          )}
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1"
+              onClick={() => {
+                releaseHandle();
+                setUnlocked(null);
+                setStep("paste");
+                setError(null);
+                setSourcePassphrase("");
+              }}
+              disabled={importing}
+            >
+              Back
+            </Button>
+            <Button
+              size="sm"
+              className="flex-1"
+              onClick={() => void handleUnlock()}
+              disabled={importing || !sourcePassphrase}
+            >
+              {importing ? "Unlocking..." : "Unlock"}
             </Button>
           </div>
         </div>
@@ -221,6 +405,8 @@ export function ImportKeyDialog({
           error={error}
           onSubmit={handleImportPrivate}
           onBack={() => {
+            releaseHandle();
+            setUnlocked(null);
             setStep("paste");
             setError(null);
           }}
