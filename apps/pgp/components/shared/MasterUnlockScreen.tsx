@@ -17,11 +17,19 @@ import { INPUT_CLASS } from "../../lib/utils/styles";
 interface MasterUnlockScreenProps {
   masterProtection: MasterProtection;
   onUnlocked: () => void;
+  /** True when the lock was system-initiated (idle timer / visibility /
+   *  OS idle). Suppresses the otherwise-automatic passkey prompt: a
+   *  re-lock should not pop a passkey dialog without explicit user
+   *  intent, both for UX (surprise dialogs) and security (an attacker
+   *  with momentary screen access shouldn't get a passkey ceremony
+   *  pre-launched for them). */
+  autoLocked?: boolean;
 }
 
 export function MasterUnlockScreen({
   masterProtection,
   onUnlocked,
+  autoLocked,
 }: MasterUnlockScreenProps) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -29,6 +37,7 @@ export function MasterUnlockScreen({
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
+    if (autoLocked) return;
     if (masterProtection.method === "passkey") {
       void handlePasskeyUnlock();
     }
@@ -92,12 +101,16 @@ export function MasterUnlockScreen({
 
       if (!ok) {
         setError("Wrong password.");
+        // Drop the JS reference to the wrong-password string. Retries
+        // build a new immutable string anyway; minimising heap lifetime.
+        setPassword("");
         return;
       }
       setPassword("");
       onUnlocked();
     } catch {
       setError("Unlock failed. Try again.");
+      setPassword("");
     } finally {
       passwordBytes.fill(0);
       setUnlocking(false);
@@ -142,6 +155,7 @@ export function MasterUnlockScreen({
           >
             <input
               type="password"
+              autoComplete="current-password"
               placeholder="Master password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

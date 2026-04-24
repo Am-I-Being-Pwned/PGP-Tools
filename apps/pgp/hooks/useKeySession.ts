@@ -160,9 +160,18 @@ export function useKeySession(opts: KeySessionOptions) {
     });
   }, []);
 
-  const getKeyHandle = useCallback((keyId: string): number | null => {
-    return handleRef.current.get(keyId) ?? null;
-  }, []);
+  const getKeyHandle = useCallback(
+    (keyId: string): number | null => {
+      const handle = handleRef.current.get(keyId);
+      if (handle === undefined) return null;
+      // "Idle" should mean idle since last cryptographic use, not idle
+      // since unlock. Every encrypt/decrypt/sign call goes through here,
+      // so reset the lock timer on every key access.
+      resetLockTimer();
+      return handle;
+    },
+    [resetLockTimer],
+  );
 
   const isUnlocked = useCallback(
     (keyId: string): boolean => {

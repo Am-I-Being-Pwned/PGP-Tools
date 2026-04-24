@@ -711,13 +711,15 @@ pub fn get_key_armored(key_handle: u32) -> Result<String, String> {
 }
 
 /// Export a stored key encrypted with a passphrase (key never leaves WASM as plaintext).
+/// Passphrase is taken as owned bytes so we can zeroize on the wasm side.
 #[wasm_bindgen(js_name = "encryptKeyForExportWithHandle")]
 pub fn encrypt_key_for_export_with_handle(
     key_handle: u32,
-    passphrase: &str,
+    passphrase: Vec<u8>,
 ) -> Result<String, String> {
+    let passphrase = Zeroizing::new(passphrase);
     let cert = get_cert_from_handle(key_handle)?;
-    encrypt_cert_for_export(&cert, passphrase)
+    encrypt_cert_for_export(&cert, &passphrase)
 }
 
 /// Returns true if the armored key contains any passphrase-protected secret material.
@@ -949,7 +951,7 @@ pub fn protect_imported_with_prf(
 }
 
 /// Encrypt a cert's secret keys with a passphrase for safe export.
-fn encrypt_cert_for_export(cert: &openpgp::Cert, passphrase: &str) -> Result<String, String> {
+fn encrypt_cert_for_export(cert: &openpgp::Cert, passphrase: &[u8]) -> Result<String, String> {
     let password = openpgp::crypto::Password::from(passphrase);
 
     let primary = cert

@@ -56,7 +56,30 @@ export function KeyCard({
   const [exportConfirmPassphrase, setExportConfirmPassphrase] = useState("");
   const [exportError, setExportError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [unsafeExportConfirm, setUnsafeExportConfirm] = useState("");
   const feedbackTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const clipboardClearTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  /** Schedule a best-effort clipboard wipe after `delayMs`.
+   *  We can't read the clipboard to know if the user has since copied
+   *  something else (no permission), so the wipe is unconditional --
+   *  acceptable trade-off for not leaving secret key material indefinitely. */
+  const scheduleClipboardClear = (delayMs = 60_000) => {
+    if (clipboardClearTimer.current) clearTimeout(clipboardClearTimer.current);
+    clipboardClearTimer.current = setTimeout(() => {
+      void navigator.clipboard.writeText("").catch(() => {
+        /* clipboard API may have been revoked; nothing to do */
+      });
+    }, delayMs);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (clipboardClearTimer.current) {
+        clearTimeout(clipboardClearTimer.current);
+      }
+    };
+  }, []);
 
   const displayName = keyBlob.userIds[0] ?? "Unknown";
   const shortId = keyBlob.keyId.slice(-16);
@@ -117,19 +140,25 @@ export function KeyCard({
       return;
     }
     setExporting(true);
+    const passphraseBytes = new TextEncoder().encode(exportPassphrase);
     try {
       const encryptedArmor = await encryptKeyForExportWithHandle(
         handle,
-        exportPassphrase,
+        passphraseBytes,
       );
       await navigator.clipboard.writeText(encryptedArmor);
-      showFeedback("Encrypted private key copied");
+      // Encrypted-armored is safer than plaintext but still gates secrecy
+      // on the export passphrase -- clear the clipboard after 60s so it
+      // doesn't sit indefinitely.
+      scheduleClipboardClear();
+      showFeedback("Encrypted key copied (clears in 60s)");
       setShowExportPrivateConfirm(false);
       setExportPassphrase("");
       setExportConfirmPassphrase("");
     } catch {
       setExportError("Failed to encrypt key.");
     } finally {
+      passphraseBytes.fill(0);
       setExporting(false);
     }
   };
@@ -209,6 +238,7 @@ export function KeyCard({
         <div className="mt-2 space-y-2">
           <input
             type="password"
+            autoComplete="current-password"
             placeholder="Enter password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -251,6 +281,7 @@ export function KeyCard({
           setShowExportPrivateConfirm(false);
           setExportPassphrase("");
           setExportConfirmPassphrase("");
+          setUnsafeExportConfirm("");
           setExportError(null);
         }}
         title="Export Private Key"
@@ -263,6 +294,7 @@ export function KeyCard({
           </p>
           <input
             type="password"
+            autoComplete="new-password"
             placeholder="Passphrase (min 8 characters)"
             value={exportPassphrase}
             onChange={(e) => setExportPassphrase(e.target.value)}
@@ -271,6 +303,7 @@ export function KeyCard({
           />
           <input
             type="password"
+            autoComplete="new-password"
             placeholder="Confirm passphrase"
             value={exportConfirmPassphrase}
             onChange={(e) => setExportConfirmPassphrase(e.target.value)}
@@ -289,12 +322,26 @@ export function KeyCard({
           >
             {exporting ? "Encrypting..." : "Export with passphrase"}
           </Button>
-          <div className="border-border border-t pt-3">
+          <div className="border-border border-t pt-3 space-y-2">
+            <p className="text-destructive text-[11px]">
+              Plaintext export. Anyone who reads your clipboard gets full
+              control of this key. Type <span className="font-mono font-bold">EXPORT</span>{" "}
+              to confirm:
+            </p>
+            <input
+              type="text"
+              autoComplete="off"
+              spellCheck={false}
+              value={unsafeExportConfirm}
+              onChange={(e) => setUnsafeExportConfirm(e.target.value)}
+              placeholder="EXPORT"
+              className={INPUT_CLASS}
+            />
             <Button
               variant="destructive"
               size="sm"
               className="w-full"
-              disabled={exporting}
+              disabled={exporting || unsafeExportConfirm !== "EXPORT"}
               onClick={async () => {
                 const handle = onExportPrivate();
                 if (handle === null) {
@@ -303,17 +350,17 @@ export function KeyCard({
                 }
                 const armored = await getKeyArmored(handle);
                 await navigator.clipboard.writeText(armored);
-                showFeedback("Unprotected private key copied");
+                // Plaintext key on clipboard is high-impact; clear faster.
+                scheduleClipboardClear(30_000);
+                showFeedback("Unprotected key copied (clears in 30s)");
                 setShowExportPrivateConfirm(false);
                 setExportPassphrase("");
                 setExportConfirmPassphrase("");
+                setUnsafeExportConfirm("");
               }}
             >
               Export without passphrase (unsafe)
             </Button>
-            <p className="text-destructive/60 mt-1 text-center text-[10px]">
-              The key will be copied in plaintext. Do not share it.
-            </p>
           </div>
         </div>
       </Dialog>

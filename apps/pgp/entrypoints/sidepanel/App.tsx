@@ -56,19 +56,29 @@ export default function App() {
     clearImportKey,
   } = usePendingOperation();
 
-  const doMasterLock = useCallback(() => {
-    // Drop the WASM contacts session key. For passkey users this is
-    // already gone (dropped after decrypt), but for password users
-    // it persists and must be explicitly cleared.
-    void wasmApi.dropContactsSession();
-    setMasterUnlocked(false);
-    session.lockAll();
-  }, [session]);
+  // True when the most recent master-lock was system-initiated (idle
+  // timer, visibility hidden, OS idle). Used to suppress the
+  // MasterUnlockScreen's auto-passkey-prompt -- a re-lock should not
+  // pop a system passkey dialog without an explicit user action.
+  const [masterAutoLocked, setMasterAutoLocked] = useState(false);
+
+  const doMasterLock = useCallback(
+    (auto = false) => {
+      // Drop the WASM contacts session key. For passkey users this is
+      // already gone (dropped after decrypt), but for password users
+      // it persists and must be explicitly cleared.
+      void wasmApi.dropContactsSession();
+      setMasterAutoLocked(auto);
+      setMasterUnlocked(false);
+      session.lockAll();
+    },
+    [session],
+  );
 
   const resetMasterLockTimer = useCallback(() => {
     if (masterLockTimerRef.current) clearTimeout(masterLockTimerRef.current);
     masterLockTimerRef.current = setTimeout(
-      doMasterLock,
+      () => doMasterLock(true),
       autoLockMinutes * 60 * 1000,
     );
   }, [autoLockMinutes, doMasterLock]);
@@ -85,6 +95,9 @@ export default function App() {
   // while the user is actively typing or interacting.
   const lastActivityRef = useRef(0);
   useEffect(() => {
+    // Stable handler reference so removeEventListener actually unbinds
+    // the same function we registered. Inline arrow lambdas would leave
+    // listeners behind on every effect re-run.
     const handleActivity = () => {
       const now = Date.now();
       if (now - lastActivityRef.current < 30_000) return;
@@ -93,13 +106,53 @@ export default function App() {
       if (session.unlockedKeyIds.size > 0) session.resetLockTimer();
     };
 
-    document.addEventListener("keydown", () => handleActivity());
-    document.addEventListener("pointerdown", () => handleActivity());
+    document.addEventListener("keydown", handleActivity);
+    document.addEventListener("pointerdown", handleActivity);
     return () => {
-      document.removeEventListener("keydown", () => handleActivity());
-      document.removeEventListener("pointerdown", () => handleActivity());
+      document.removeEventListener("keydown", handleActivity);
+      document.removeEventListener("pointerdown", handleActivity);
     };
   }, [masterUnlocked, resetMasterLockTimer, session]);
+
+  // Lock immediately when the side panel is hidden (user closed it,
+  // collapsed it, or switched to a window where it isn't visible).
+  // The side panel persists across tab switches in the same window,
+  // so visibilitychange reliably tracks "is the user actually looking
+  // at this surface."
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState !== "hidden") return;
+      if (session.unlockedKeyIds.size > 0) session.lockAll();
+      if (masterUnlocked) doMasterLock(true);
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () =>
+      document.removeEventListener("visibilitychange", onVisibility);
+  }, [masterUnlocked, doMasterLock, session]);
+
+  // OS-level idle / lock detection. When the OS reports the user is
+  // away from keyboard for more than the configured threshold, or that
+  // the screen is locked, drop everything. This catches the case where
+  // the user walks away without closing the side panel.
+  useEffect(() => {
+    if (!chrome.idle?.onStateChanged) return;
+    // setDetectionInterval clamps to >= 15s; use the same threshold the
+    // session timer is targeting (capped at 4 minutes -- chrome max for
+    // detection interval is 15min but we want responsive locking).
+    const intervalSeconds = Math.min(
+      Math.max(60, autoLockMinutes * 60),
+      4 * 60,
+    );
+    chrome.idle.setDetectionInterval(intervalSeconds);
+    const onState = (state: "idle" | "active" | "locked") => {
+      if (state === "locked" || state === "idle") {
+        if (session.unlockedKeyIds.size > 0) session.lockAll();
+        if (masterUnlocked) doMasterLock(true);
+      }
+    };
+    chrome.idle.onStateChanged.addListener(onState);
+    return () => chrome.idle.onStateChanged.removeListener(onState);
+  }, [autoLockMinutes, masterUnlocked, doMasterLock, session]);
 
   useEffect(() => {
     void (async () => {
@@ -169,8 +222,10 @@ export default function App() {
     return (
       <MasterUnlockScreen
         masterProtection={masterProtection}
+        autoLocked={masterAutoLocked}
         onUnlocked={() => {
           setMasterUnlocked(true);
+          setMasterAutoLocked(false);
           resetMasterLockTimer();
           void keyring.refresh();
           void contacts.refresh();
