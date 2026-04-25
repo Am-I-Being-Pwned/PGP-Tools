@@ -130,6 +130,9 @@ importers:
       eslint:
         specifier: 'catalog:'
         version: 9.39.4(jiti@2.6.1)
+      eslint-plugin-turbo:
+        specifier: ^2.9.2
+        version: 2.9.2(eslint@9.39.4(jiti@2.6.1))(turbo@2.9.2)
       prettier:
         specifier: 'catalog:'
         version: 3.8.1
