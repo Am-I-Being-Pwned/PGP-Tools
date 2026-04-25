@@ -7,6 +7,7 @@ import type { OperationAction } from "../../lib/messages";
 import type { EncryptInput } from "../../lib/pgp/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
+import type { WorkspaceDraft } from "../../lib/workspace-draft";
 import * as pgpOps from "../../lib/pgp/operations";
 import { savePreferences } from "../../lib/storage/preferences";
 import { INPUT_CLASS } from "../../lib/utils/styles";
@@ -36,6 +37,12 @@ interface WorkspaceViewProps {
   autoDownloadFiles?: boolean;
   autoDownloadText?: boolean;
   onOperationComplete?: () => void;
+  /** Encrypted workspace draft to rehydrate on mount (from a prior auto-lock). */
+  restoreDraft?: Uint8Array | null;
+  /** Fired once the draft has been decrypted + applied. */
+  onDraftRestored?: () => void;
+  /** Fired on every salient state change so the parent can stash a snapshot. */
+  onDraftChange?: (draft: WorkspaceDraft | null) => void;
 }
 
 export function WorkspaceView({
@@ -52,6 +59,9 @@ export function WorkspaceView({
   autoDownloadFiles,
   autoDownloadText,
   onOperationComplete,
+  restoreDraft,
+  onDraftRestored,
+  onDraftChange,
 }: WorkspaceViewProps) {
   const allPublicKeys: (ProtectedKeyBlob | PublicContactKey)[] = [
     ...myKeys,
@@ -65,6 +75,9 @@ export function WorkspaceView({
     allPublicKeys,
     encryptToKeyId,
     onClearEncryptTo,
+    restoreDraft,
+    onDraftRestored,
+    onDraftChange,
   });
 
   function findSigner(signerKeyId: string | null) {
