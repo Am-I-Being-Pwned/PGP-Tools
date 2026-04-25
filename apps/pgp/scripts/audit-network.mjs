@@ -67,11 +67,11 @@ const DANGEROUS_CONSTRUCTORS = new Set([
 // Because we match per-finding (not per-line), a malicious call next
 // to an allowed one will NOT be covered.
 const ALLOWLIST = [
-  // ── network-lockdown.ts (compiled into both entrypoints) ──────
+  // ── network-lockdown.ts (compiled into every entrypoint) ──────
   // The lockdown hooks globalThis.fetch/XMLHttpRequest/WebSocket/etc.
   // It references these globals to check existence and override them.
   // Pattern: one "ref" allowlist per global per entrypoint.
-  ...["background.js", "sidepanel"].flatMap((file) => [
+  ...["background.js", "sidepanel", "welcome"].flatMap((file) => [
     { file, kind: "ref", snippet: "globalThis.fetch" },
     { file, kind: "ref", snippet: "globalThis.XMLHttpRequest" },
     { file, kind: "ref", snippet: "globalThis.WebSocket" },
@@ -80,6 +80,10 @@ const ALLOWLIST = [
     // The lockdown's proxy function calls the saved original fetch
     { file, kind: "call", snippet: "credentials:`omit`" },
   ]),
+
+  // ── welcome chunk ─────────────────────────────────────────────
+  // WXT modulepreload polyfill (same as sidepanel chunk).
+  { file: "welcome", kind: "call", snippet: "fetch(e.href," },
 
   // ── background.js — legitimate fetch calls ────────────────────
   // Fetch PGP key from user-right-clicked link

@@ -80,6 +80,8 @@ Both are user-initiated destructive-export paths.
 | 6 | `apps/pgp/lib/protection/protect-flow.ts` | Generate/import/protect. Owns the `Uint8Array.fill(0)` calls. |
 | 7 | `apps/pgp/hooks/useKeySession.ts` | KEY_STORE lifetime in JS (handle map, idle-/visibility-/OS-idle locks). |
 | 8 | `apps/pgp/entrypoints/sidepanel/App.tsx` | Auto-lock wiring + workspace-draft persistence. |
+| 8a | `apps/pgp/entrypoints/welcome/Welcome.tsx` | First-install welcome page; only does `chrome.sidePanel.open` from a user-gesture click. No secret material. |
+| 8b | `apps/pgp/entrypoints/background.ts` | Service worker. Two responsibilities: register context-menu items + open the welcome tab on first install. Holds no secrets. |
 | 9 | `apps/pgp/lib/network-lockdown.ts` | Frozen `globalThis.fetch`; blocks XHR/WS/EventSource/RTC/sendBeacon. |
 | 10 | `apps/pgp/scripts/audit-network.mjs` | Build-time check that no unexpected network code is shipped. |
 
@@ -310,7 +312,7 @@ grep -rnE 'wasm\.(generateProtectedWith|protectImportedWith|unlockWith|encryptKe
 grep -nE 'fn (encrypt|protect|generate|unlock|verify_canary|encrypt_canary|init_contacts).*_with_(password|prf)' \
   apps/pgp/gpg-wasm/src/lib.rs
 
-# 5. No console.log of secret-bearing variables:
+# 5. No console.* anywhere except the network-lockdown blocked-URL
+#    logs. Anything else is a regression.
 grep -rn 'console\.' apps/pgp --include='*.ts' --include='*.tsx'
-# → only network-lockdown's blocked-URL logs.
 ```
