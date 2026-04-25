@@ -26,6 +26,7 @@ import {
   authenticateAndGetPrf,
   generatePrfSalt,
   generateStoredSecret,
+  isWebAuthnCancel,
   registerPasskey,
 } from "../../lib/protection/webauthn-prf";
 import { saveMasterProtection } from "../../lib/storage/master-protection";
@@ -89,6 +90,30 @@ export function OnboardingFlow({ onComplete, addKey, onKeyCached, cacheKey }: On
     };
   }, []);
 
+  // Aborts an in-flight WebAuthn ceremony so a re-click (or a
+  // method switch) doesn't hit "A request is already pending."
+  const passkeyAbortRef = useRef<AbortController | null>(null);
+
+  // Reset transient submit state whenever the protection method
+  // changes. Otherwise a cancelled / failed passkey ceremony can leave
+  // `submitting` true after the user switches to password mode (or
+  // vice versa), stranding the button in its "..." disabled state.
+  useEffect(() => {
+    passkeyAbortRef.current?.abort();
+    passkeyAbortRef.current = null;
+    setSubmitting(false);
+    setError(null);
+  }, [method]);
+
+  // Belt-and-braces: abort any in-flight WebAuthn ceremony on unmount.
+  useEffect(
+    () => () => {
+      passkeyAbortRef.current?.abort();
+      passkeyAbortRef.current = null;
+    },
+    [],
+  );
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [comment, setComment] = useState("");
@@ -108,6 +133,19 @@ export function OnboardingFlow({ onComplete, addKey, onKeyCached, cacheKey }: On
     }
 
     setSubmitting(true);
+    // Visual loading lock is bounded — the button re-enables after
+    // 2 s regardless of whether the WebAuthn ceremony has resolved.
+    // Avoids a stuck disabled button when the system passkey dialog
+    // is still up. If the user re-clicks, the abort below cancels
+    // the prior in-flight ceremony.
+    setTimeout(() => setSubmitting(false), 2000);
+
+    // Cancel any prior in-flight WebAuthn ceremony so a rapid
+    // re-click can't trip "A request is already pending."
+    passkeyAbortRef.current?.abort();
+    const abort = new AbortController();
+    passkeyAbortRef.current = abort;
+
     try {
       let mp: MasterProtection;
 
@@ -115,6 +153,7 @@ export function OnboardingFlow({ onComplete, addKey, onKeyCached, cacheKey }: On
         const reg = await registerPasskey(
           "PGP Tools Master",
           "PGP Tools Master",
+          abort.signal,
         );
         if (!reg.prfEnabled) {
           setError(
@@ -129,6 +168,7 @@ export function OnboardingFlow({ onComplete, addKey, onKeyCached, cacheKey }: On
         const { prfOutput } = await authenticateAndGetPrf(
           reg.credentialId,
           prfSalt,
+          abort.signal,
         );
         await wasmApi.initContactsSessionWithPrf(
           prfOutput,
@@ -181,9 +221,21 @@ export function OnboardingFlow({ onComplete, addKey, onKeyCached, cacheKey }: On
 
       setStep("identity");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Setup failed");
+      if (isWebAuthnCancel(e)) {
+        // User dismissed / cancelled the passkey dialog, or a
+        // re-click superseded an in-flight ceremony. Quietly
+        // return to the picker -- no error toast.
+        setError(null);
+      } else {
+        setError(e instanceof Error ? e.message : "Setup failed");
+      }
     } finally {
-      setSubmitting(false);
+      passkeyAbortRef.current = null;
+      // Note: not calling setSubmitting(false) here -- the 2 s
+      // timeout above owns the unlock. If the ceremony finishes
+      // faster than 2 s, the timeout's no-op setSubmitting(false)
+      // is harmless; if it's slower, the button has already
+      // re-enabled via the timeout.
     }
   };
 
@@ -249,7 +301,7 @@ export function OnboardingFlow({ onComplete, addKey, onKeyCached, cacheKey }: On
   };
 
   return (
-    <div className="flex h-full flex-col justify-between p-4">
+    <div className="flex flex-col p-4">
       {step === "storage" && (
         <>
           <div className="space-y-5">
@@ -269,21 +321,10 @@ export function OnboardingFlow({ onComplete, addKey, onKeyCached, cacheKey }: On
             </div>
           </div>
 
-          <div className="space-y-2 pt-4">
+          <div className="pt-4">
             <Button className="w-full" onClick={() => setStep("protection")}>
               Next
             </Button>
-            <p className="text-muted-foreground text-center text-xs">
-              A privacy tool by{" "}
-              <a
-                href="https://amibeingpwned.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary underline"
-              >
-                Am I Being Pwned
-              </a>
-            </p>
           </div>
         </>
       )}

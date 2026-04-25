@@ -248,7 +248,7 @@ export function KeyCard({
             className={INPUT_CLASS}
           />
           {error && <p className="text-destructive text-xs">{error}</p>}
-          <div className="flex gap-1">
+          <div className="flex justify-between gap-1">
             <Button
               size="sm"
               variant="outline"
