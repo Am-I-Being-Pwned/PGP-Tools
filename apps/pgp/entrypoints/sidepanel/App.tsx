@@ -16,6 +16,7 @@ import { useContacts } from "../../hooks/useContacts";
 import { useKeyring } from "../../hooks/useKeyring";
 import { useKeySession } from "../../hooks/useKeySession";
 import { usePendingOperation } from "../../hooks/usePendingOperation";
+import { lockLog } from "../../lib/lock-logger";
 import * as wasmApi from "../../lib/pgp/wasm";
 import { getMasterProtection } from "../../lib/storage/master-protection";
 import { getPreferences, savePreferences } from "../../lib/storage/preferences";
@@ -37,6 +38,7 @@ export default function App() {
   const [autoDownloadFiles, setAutoDownloadFiles] = useState(false);
   const [autoDownloadText, setAutoDownloadText] = useState(false);
   const [lockImmediatelyOnIdle, setLockImmediatelyOnIdle] = useState(false);
+  const [lockImmediatelyOnTabOut, setLockImmediatelyOnTabOut] = useState(false);
   const [onboardingComplete, setOnboardingComplete] = useState<boolean | null>(
     null,
   );
@@ -88,6 +90,7 @@ export default function App() {
 
   const doMasterLock = useCallback(
     async (auto = false) => {
+      lockLog("master.lock", { auto });
       // Best-effort: encrypt + stash the workspace draft BEFORE we
       // unmount the workspace by flipping `masterUnlocked`. If the
       // encrypt errors, fall through and lock anyway -- losing draft
@@ -117,10 +120,12 @@ export default function App() {
 
   const resetMasterLockTimer = useCallback(() => {
     if (masterLockTimerRef.current) clearTimeout(masterLockTimerRef.current);
-    masterLockTimerRef.current = setTimeout(
-      () => doMasterLock(true),
-      autoLockMinutes * 60 * 1000,
-    );
+    const ms = autoLockMinutes * 60 * 1000;
+    lockLog("master.timer-arm", { autoLockMinutes, ms });
+    masterLockTimerRef.current = setTimeout(() => {
+      lockLog("master.timer-fire", { autoLockMinutes });
+      void doMasterLock(true);
+    }, ms);
   }, [autoLockMinutes, doMasterLock]);
 
   useEffect(() => {
@@ -144,6 +149,8 @@ export default function App() {
   doMasterLockRef.current = doMasterLock;
   const resetMasterLockTimerRef = useRef(resetMasterLockTimer);
   resetMasterLockTimerRef.current = resetMasterLockTimer;
+  const lockImmediatelyOnTabOutRef = useRef(lockImmediatelyOnTabOut);
+  lockImmediatelyOnTabOutRef.current = lockImmediatelyOnTabOut;
 
   // Reset lock timers on user activity so the extension doesn't lock
   // while the user is actively typing or interacting.
@@ -153,6 +160,7 @@ export default function App() {
       const now = Date.now();
       if (now - lastActivityRef.current < 30_000) return;
       lastActivityRef.current = now;
+      lockLog("activity.reset");
       if (masterUnlockedRef.current) resetMasterLockTimerRef.current();
       const s = sessionRef.current;
       if (s.unlockedKeyIds.size > 0) s.resetLockTimer();
@@ -165,46 +173,112 @@ export default function App() {
     };
   }, []);
 
-  // Lock immediately when the side panel is hidden (user closed it,
-  // collapsed it, or switched to a window where it isn't visible).
+  // Visibility-based lock.
+  //   - If `lockImmediatelyOnTabOut` is on, lock the moment the panel
+  //     hides (no grace).
+  //   - Otherwise apply a 60s grace: schedule a lock when hidden,
+  //     cancel if the panel becomes visible again. Quick alt-tabs
+  //     don't lock; a sustained "I left this for a minute" does.
+  const VISIBILITY_GRACE_MS = 60_000;
+  const visibilityLockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   useEffect(() => {
-    const onVisibility = () => {
-      if (document.visibilityState !== "hidden") return;
+    const fireLock = () => {
+      lockLog("visibility.hidden-fire");
       const s = sessionRef.current;
       if (s.unlockedKeyIds.size > 0) s.lockAll();
-      if (masterUnlockedRef.current) doMasterLockRef.current(true);
+      if (masterUnlockedRef.current) void doMasterLockRef.current(true);
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        if (visibilityLockTimerRef.current) {
+          clearTimeout(visibilityLockTimerRef.current);
+          visibilityLockTimerRef.current = null;
+        }
+        const immediate = lockImmediatelyOnTabOutRef.current;
+        lockLog("visibility.hidden-arm", {
+          immediate,
+          ms: immediate ? 0 : VISIBILITY_GRACE_MS,
+          masterUnlocked: masterUnlockedRef.current,
+          unlockedKeys: sessionRef.current.unlockedKeyIds.size,
+        });
+        if (immediate) {
+          fireLock();
+        } else {
+          visibilityLockTimerRef.current = setTimeout(
+            fireLock,
+            VISIBILITY_GRACE_MS,
+          );
+        }
+      } else {
+        if (visibilityLockTimerRef.current) {
+          lockLog("visibility.cancel");
+          clearTimeout(visibilityLockTimerRef.current);
+          visibilityLockTimerRef.current = null;
+        }
+      }
     };
     document.addEventListener("visibilitychange", onVisibility);
-    return () =>
+    return () => {
       document.removeEventListener("visibilitychange", onVisibility);
+      if (visibilityLockTimerRef.current) {
+        clearTimeout(visibilityLockTimerRef.current);
+      }
+    };
   }, []);
 
   // OS-level idle / lock detection.
-  //   - "locked" (OS lockscreen) ALWAYS triggers an immediate lock --
-  //     the screen is gone, the user has clearly stepped away.
-  //   - "idle" fires after the OS hasn't seen input for the detection
-  //     interval below. Default aligns with `autoLockMinutes` so OS-idle
-  //     and the in-app timer fire at the same point. The
-  //     `lockImmediatelyOnIdle` setting drops the threshold to Chrome's
-  //     minimum (60s) for users who want fast OS-idle locking.
+  //   - `"locked"` (OS lockscreen) ALWAYS triggers an immediate lock,
+  //     regardless of any user setting -- the screen is gone, the
+  //     user has clearly stepped away.
+  //   - `"idle"` is acted on ONLY when `lockImmediatelyOnIdle` is true.
+  //     When the setting is off, the in-app `autoLockMinutes` timer
+  //     is the only idle-based lock; OS-idle does nothing.
   //
-  // This effect re-runs ONLY when those two prefs change (not on every
-  // render) so `setDetectionInterval` isn't called constantly.
+  // This effect re-runs only when the two relevant prefs change.
   useEffect(() => {
     if (!chrome.idle?.onStateChanged) return;
-    const intervalSeconds = lockImmediatelyOnIdle
-      ? 60
-      : Math.max(60, autoLockMinutes * 60);
-    chrome.idle.setDetectionInterval(intervalSeconds);
+    if (lockImmediatelyOnIdle) {
+      lockLog("chrome-idle.set-interval", { seconds: 60 });
+      chrome.idle.setDetectionInterval(60);
+    }
+    lockLog("chrome-idle.install", { lockImmediatelyOnIdle });
     const onState = (state: "idle" | "active" | "locked") => {
+      lockLog("chrome-idle.state", { state, lockImmediatelyOnIdle });
       if (state === "active") return;
+      if (state === "idle" && !lockImmediatelyOnIdle) {
+        lockLog("chrome-idle.skip-idle");
+        return;
+      }
       const s = sessionRef.current;
       if (s.unlockedKeyIds.size > 0) s.lockAll();
-      if (masterUnlockedRef.current) doMasterLockRef.current(true);
+      if (masterUnlockedRef.current) void doMasterLockRef.current(true);
     };
     chrome.idle.onStateChanged.addListener(onState);
-    return () => chrome.idle.onStateChanged.removeListener(onState);
-  }, [autoLockMinutes, lockImmediatelyOnIdle]);
+
+    // Periodic poll: ask Chrome what state it thinks we're in. Useful
+    // for debugging "I waited 90s and the idle event didn't fire" --
+    // if the poll shows "active" the OS is still seeing input from
+    // somewhere; if it shows "idle" but no event fired the listener
+    // didn't pick up the transition. Threshold matches the active
+    // detection interval.
+    const queryEverySec = lockImmediatelyOnIdle ? 30 : 60;
+    const queryThresholdSec = lockImmediatelyOnIdle ? 60 : 60;
+    const pollId = window.setInterval(() => {
+      chrome.idle.queryState(queryThresholdSec, (state) => {
+        lockLog("chrome-idle.poll", {
+          state,
+          queryThresholdSec,
+        });
+      });
+    }, queryEverySec * 1000);
+
+    return () => {
+      chrome.idle.onStateChanged.removeListener(onState);
+      window.clearInterval(pollId);
+    };
+  }, [lockImmediatelyOnIdle]);
 
   useEffect(() => {
     void (async () => {
@@ -218,6 +292,13 @@ export default function App() {
       setAutoDownloadFiles(prefs.autoDownloadFiles);
       setAutoDownloadText(prefs.autoDownloadText);
       setLockImmediatelyOnIdle(prefs.lockImmediatelyOnIdle);
+      setLockImmediatelyOnTabOut(prefs.lockImmediatelyOnTabOut);
+      lockLog("prefs", {
+        autoLockMinutes: prefs.autoLockMinutes,
+        lockImmediatelyOnIdle: prefs.lockImmediatelyOnIdle,
+        lockImmediatelyOnTabOut: prefs.lockImmediatelyOnTabOut,
+        neverCacheKeys: prefs.neverCacheKeys,
+      });
 
       const mp = await getMasterProtection();
       setMasterProtection(mp);
@@ -386,6 +467,8 @@ export default function App() {
             onAutoDownloadTextChange={setAutoDownloadText}
             lockImmediatelyOnIdle={lockImmediatelyOnIdle}
             onLockImmediatelyOnIdleChange={setLockImmediatelyOnIdle}
+            lockImmediatelyOnTabOut={lockImmediatelyOnTabOut}
+            onLockImmediatelyOnTabOutChange={setLockImmediatelyOnTabOut}
           />
         )}
       </main>
