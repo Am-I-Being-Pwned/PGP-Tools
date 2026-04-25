@@ -8,6 +8,7 @@ import type {
 } from "../../lib/storage/preferences";
 import type { MasterProtection } from "../../lib/storage/master-protection";
 import { KeysView } from "../../components/keys/KeysView";
+import { AppFooter } from "../../components/shared/AppFooter";
 import { MasterUnlockScreen } from "../../components/shared/MasterUnlockScreen";
 import { OnboardingFlow } from "../../components/shared/OnboardingFlow";
 import { SettingsView } from "../../components/shared/SettingsView";
@@ -251,37 +252,47 @@ export default function App() {
 
   if (!onboardingComplete) {
     return (
-      <OnboardingFlow
-        onComplete={async (loc) => {
-          setStorageLocation(loc);
-          setOnboardingComplete(true);
-          setMasterUnlocked(true);
-          setMasterProtection(await getMasterProtection());
-          void keyring.refresh();
-          void contacts.refresh();
-        }}
-        addKey={keyring.add}
-        cacheKey={!neverCacheKeys}
-        onKeyCached={(keyId, handle) => {
-          void session.cacheKeyHandle(keyId, handle);
-        }}
-      />
+      <div className="flex h-screen flex-col">
+        <main className="min-h-0 flex-1 overflow-y-auto">
+          <OnboardingFlow
+            onComplete={async (loc) => {
+              setStorageLocation(loc);
+              setOnboardingComplete(true);
+              setMasterUnlocked(true);
+              setMasterProtection(await getMasterProtection());
+              void keyring.refresh();
+              void contacts.refresh();
+            }}
+            addKey={keyring.add}
+            cacheKey={!neverCacheKeys}
+            onKeyCached={(keyId, handle) => {
+              void session.cacheKeyHandle(keyId, handle);
+            }}
+          />
+        </main>
+        <AppFooter />
+      </div>
     );
   }
 
   if (masterProtection && !masterUnlocked) {
     return (
-      <MasterUnlockScreen
-        masterProtection={masterProtection}
-        autoLocked={masterAutoLocked}
-        onUnlocked={() => {
-          setMasterUnlocked(true);
-          setMasterAutoLocked(false);
-          resetMasterLockTimer();
-          void keyring.refresh();
-          void contacts.refresh();
-        }}
-      />
+      <div className="flex h-screen flex-col">
+        <main className="min-h-0 flex-1 overflow-y-auto">
+          <MasterUnlockScreen
+            masterProtection={masterProtection}
+            autoLocked={masterAutoLocked}
+            onUnlocked={() => {
+              setMasterUnlocked(true);
+              setMasterAutoLocked(false);
+              resetMasterLockTimer();
+              void keyring.refresh();
+              void contacts.refresh();
+            }}
+          />
+        </main>
+        <AppFooter />
+      </div>
     );
   }
 
@@ -390,16 +401,7 @@ export default function App() {
         )}
       </main>
 
-      <footer className="border-border border-t px-4 py-2 text-center">
-        <a
-          href="https://amibeingpwned.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-muted-foreground hover:text-foreground text-xs transition-colors"
-        >
-          by Am I Being Pwned
-        </a>
-      </footer>
+      <AppFooter />
     </div>
   );
 }

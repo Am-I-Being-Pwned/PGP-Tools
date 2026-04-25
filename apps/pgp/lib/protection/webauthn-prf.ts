@@ -45,6 +45,7 @@ export interface PasskeyRegistrationResult {
 export async function registerPasskey(
   userName?: string,
   displayName?: string,
+  signal?: AbortSignal,
 ): Promise<PasskeyRegistrationResult> {
   const credential = await navigator.credentials.create({
     publicKey: {
@@ -71,6 +72,7 @@ export async function registerPasskey(
       timeout: 60_000,
       extensions: { prf: {} },
     },
+    signal,
   });
 
   if (!credential || !(credential instanceof PublicKeyCredential)) {
@@ -137,6 +139,21 @@ export async function authenticateAndGetPrf(
   return { prfOutput: new Uint8Array(prfOutput as ArrayBuffer) };
 }
 
+
+/**
+ * True if `e` looks like the user cancelling / aborting a WebAuthn
+ * ceremony, OR a "request already pending" race that's effectively
+ * a cancel-and-retry. Use to decide whether to show an error toast
+ * vs silently ignore.
+ */
+export function isWebAuthnCancel(e: unknown): boolean {
+  if (!(e instanceof Error)) return false;
+  return (
+    e.name === "NotAllowedError" ||
+    e.name === "AbortError" ||
+    e.name === "InvalidStateError"
+  );
+}
 
 /** Thrown when the authenticator doesn't support PRF. */
 export class PrfNotSupportedError extends Error {

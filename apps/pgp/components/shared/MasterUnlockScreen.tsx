@@ -183,18 +183,6 @@ export function MasterUnlockScreen({
           If you have lost your password, your encrypted keys and contacts cannot be
           recovered.
         </p>
-
-        <p className="text-muted-foreground text-center text-xs">
-          A privacy tool by{" "}
-          <a
-            href="https://amibeingpwned.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary underline"
-          >
-            Am I Being Pwned
-          </a>
-        </p>
       </div>
     </div>
   );
