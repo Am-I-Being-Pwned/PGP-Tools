@@ -165,16 +165,12 @@ re-unlock. See `lib/workspace-draft.ts`.
 
 ## 7. Network surface
 
-The extension makes two kinds of HTTP calls:
+The extension makes exactly one kind of HTTP call:
 
 1. **Wasm load**, once per side-panel session:
    `fetch(chrome.runtime.getURL("gpg_wasm_bg.wasm"))` — same-origin
    `chrome-extension://`, fetches the WASM blob from the extension's
    own bundle.
-2. **Import key from link**, on user click of the context menu:
-   `fetch(linkUrl, { redirect: "error" })` — goes through
-   `lockedFetch`, which strips `Authorization` / `Cookie` /
-   `X-Api-Key` and sets `credentials: "omit"`.
 
 The browser-level boundary is the manifest CSP: `connect-src 'self'`
 in `wxt.config.ts` blocks any non-extension fetch destination at the
