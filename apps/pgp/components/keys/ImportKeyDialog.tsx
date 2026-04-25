@@ -249,9 +249,9 @@ export function ImportKeyDialog({
       {step === "unlock" && (
         <div className="space-y-3">
           <p className="text-muted-foreground text-xs">
-            This key is protected with a passphrase. Enter it to decrypt the
-            key — it will then be re-protected with your chosen method on the
-            next step. Decryption happens entirely inside WASM.
+            This key is protected with a passphrase. Enter it to unlock the
+            key — you'll then re-protect it with your chosen method on the
+            next step.
           </p>
           {parsed && (
             <div className="bg-muted/30 rounded border p-2 text-xs">
