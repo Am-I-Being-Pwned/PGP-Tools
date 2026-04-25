@@ -82,7 +82,8 @@ export function OnboardingFlow({ onComplete, addKey, onKeyCached, cacheKey }: On
     prfSalt: ArrayBuffer;
   } | null>(null);
 
-  // Belt-and-braces: if the component unmounts mid-flow, zero the PRF.
+  // Zero the PRF if the component unmounts before generate-key
+  // consumes it.
   useEffect(() => {
     return () => {
       masterPrfRef.current?.prfOutput.fill(0);
@@ -90,14 +91,11 @@ export function OnboardingFlow({ onComplete, addKey, onKeyCached, cacheKey }: On
     };
   }, []);
 
-  // Aborts an in-flight WebAuthn ceremony so a re-click (or a
-  // method switch) doesn't hit "A request is already pending."
+  // Cancels an in-flight WebAuthn ceremony before issuing a new one
+  // (or on method-switch / unmount), so re-clicks can't trip
+  // `InvalidStateError: A request is already pending.`
   const passkeyAbortRef = useRef<AbortController | null>(null);
 
-  // Reset transient submit state whenever the protection method
-  // changes. Otherwise a cancelled / failed passkey ceremony can leave
-  // `submitting` true after the user switches to password mode (or
-  // vice versa), stranding the button in its "..." disabled state.
   useEffect(() => {
     passkeyAbortRef.current?.abort();
     passkeyAbortRef.current = null;
@@ -105,7 +103,6 @@ export function OnboardingFlow({ onComplete, addKey, onKeyCached, cacheKey }: On
     setError(null);
   }, [method]);
 
-  // Belt-and-braces: abort any in-flight WebAuthn ceremony on unmount.
   useEffect(
     () => () => {
       passkeyAbortRef.current?.abort();
@@ -133,15 +130,10 @@ export function OnboardingFlow({ onComplete, addKey, onKeyCached, cacheKey }: On
     }
 
     setSubmitting(true);
-    // Visual loading lock is bounded — the button re-enables after
-    // 2 s regardless of whether the WebAuthn ceremony has resolved.
-    // Avoids a stuck disabled button when the system passkey dialog
-    // is still up. If the user re-clicks, the abort below cancels
-    // the prior in-flight ceremony.
+    // The button re-enables after 2s independent of the WebAuthn
+    // promise so a still-open system dialog can't strand it.
     setTimeout(() => setSubmitting(false), 2000);
 
-    // Cancel any prior in-flight WebAuthn ceremony so a rapid
-    // re-click can't trip "A request is already pending."
     passkeyAbortRef.current?.abort();
     const abort = new AbortController();
     passkeyAbortRef.current = abort;
@@ -222,20 +214,13 @@ export function OnboardingFlow({ onComplete, addKey, onKeyCached, cacheKey }: On
       setStep("identity");
     } catch (e) {
       if (isWebAuthnCancel(e)) {
-        // User dismissed / cancelled the passkey dialog, or a
-        // re-click superseded an in-flight ceremony. Quietly
-        // return to the picker -- no error toast.
         setError(null);
       } else {
         setError(e instanceof Error ? e.message : "Setup failed");
       }
     } finally {
       passkeyAbortRef.current = null;
-      // Note: not calling setSubmitting(false) here -- the 2 s
-      // timeout above owns the unlock. If the ceremony finishes
-      // faster than 2 s, the timeout's no-op setSubmitting(false)
-      // is harmless; if it's slower, the button has already
-      // re-enabled via the timeout.
+      // setSubmitting(false) is owned by the 2s timeout above.
     }
   };
 
