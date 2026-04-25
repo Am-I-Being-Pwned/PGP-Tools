@@ -21,6 +21,10 @@ export interface PgpPreferences {
    *  of waiting for the configured autoLockMinutes. OS lockscreen always
    *  triggers an immediate lock regardless of this setting. */
   lockImmediatelyOnIdle: boolean;
+  /** When true, lock the moment the side panel becomes hidden (alt-tab
+   *  / closed). When false, a 60-second grace period applies so quick
+   *  tab-switches don't lock. */
+  lockImmediatelyOnTabOut: boolean;
 }
 
 const DEFAULT_PREFERENCES: PgpPreferences = {
@@ -36,6 +40,7 @@ const DEFAULT_PREFERENCES: PgpPreferences = {
   autoDownloadFiles: false,
   autoDownloadText: false,
   lockImmediatelyOnIdle: false,
+  lockImmediatelyOnTabOut: false,
 };
 
 /**

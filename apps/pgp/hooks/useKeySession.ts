@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ProtectedKeyBlob } from "../lib/storage/keyring";
 import type { AutoLockTimeout } from "../lib/storage/preferences";
 import { fromBase64 } from "../lib/encoding";
+import { lockLog } from "../lib/lock-logger";
 import * as wasmApi from "../lib/pgp/wasm";
 import { authenticateAndGetPrf } from "../lib/protection/webauthn-prf";
 import {
@@ -34,6 +35,8 @@ export function useKeySession(opts: KeySessionOptions) {
   const lockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const doLockAll = useCallback(() => {
+    const count = handleRef.current.size;
+    if (count > 0) lockLog("session.lock-all", { count });
     for (const handle of handleRef.current.values()) {
       void wasmApi.dropKey(handle);
     }
@@ -43,14 +46,19 @@ export function useKeySession(opts: KeySessionOptions) {
 
   const resetLockTimer = useCallback(() => {
     if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
-    lockTimerRef.current = setTimeout(
-      doLockAll,
-      opts.autoLockMinutes * 60 * 1000,
-    );
+    const ms = opts.autoLockMinutes * 60 * 1000;
+    lockLog("session.timer-arm", { autoLockMinutes: opts.autoLockMinutes, ms });
+    lockTimerRef.current = setTimeout(() => {
+      lockLog("session.timer-fire", { autoLockMinutes: opts.autoLockMinutes });
+      doLockAll();
+    }, ms);
   }, [opts.autoLockMinutes, doLockAll]);
 
   const lockAllIfNoCache = useCallback(() => {
-    if (opts.neverCacheKeys) doLockAll();
+    if (opts.neverCacheKeys) {
+      lockLog("session.lock-if-no-cache");
+      doLockAll();
+    }
   }, [opts.neverCacheKeys, doLockAll]);
 
   useEffect(() => {
@@ -71,6 +79,7 @@ export function useKeySession(opts: KeySessionOptions) {
 
   const markHandleUnlocked = useCallback(
     async (keyId: string, handle: number) => {
+      lockLog("session.handle-unlocked", { keyId: keyId.slice(-16) });
       handleRef.current.set(keyId, handle);
       setUnlockedKeyIds((prev) => new Set([...prev, keyId]));
       await updateLastUsed(keyId);
@@ -160,6 +169,7 @@ export function useKeySession(opts: KeySessionOptions) {
   const lock = useCallback((keyId: string) => {
     const handle = handleRef.current.get(keyId);
     if (handle !== undefined) {
+      lockLog("session.lock-key", { keyId: keyId.slice(-16) });
       void wasmApi.dropKey(handle);
     }
     handleRef.current.delete(keyId);
