@@ -171,22 +171,42 @@ export default function App() {
     };
   }, []);
 
-  // Tab-away lock. Binary: when `lockOnTabAway` is on, the moment the
-  // side panel isn't visible, lock everything. When off, tab-out is
-  // not a lock signal. (Quick alt-tab is the same event as "left for
-  // a long time" -- if you don't want to be locked on alt-tab, leave
-  // this off and rely on the inactivity timer.)
+  // Tab-away lock via `chrome.windows.onFocusChanged`. This fires
+  // ONLY on real window/app focus changes -- system overlays like the
+  // WebAuthn dialog don't trigger it -- so we avoid the
+  // visibilitychange flicker that was re-locking the user mid-unlock.
+  //
+  // Lock when:
+  //   - focus moves to no Chrome window (WINDOW_ID_NONE → another app)
+  //   - focus moves to a different Chrome window than the one
+  //     hosting our side panel.
+  // Don't lock when:
+  //   - focus stays in our window (e.g. switching tabs).
+  //   - a system dialog overlays the page (no focus change).
+  const ownWindowIdRef = useRef<number | null>(null);
   useEffect(() => {
-    const onVisibility = () => {
-      if (document.visibilityState !== "hidden") return;
+    if (!chrome.windows?.onFocusChanged) return;
+    let cancelled = false;
+    void chrome.windows.getCurrent().then((win) => {
+      if (cancelled) return;
+      ownWindowIdRef.current = win.id ?? null;
+    });
+
+    const onFocus = (windowId: number) => {
       if (!lockOnTabAwayRef.current) return;
+      if (ownWindowIdRef.current === null) return;
+      if (windowId === ownWindowIdRef.current) return;
+      // Either WINDOW_ID_NONE (focus left Chrome entirely) or a
+      // different Chrome window. Either way: tab-away → lock.
       const s = sessionRef.current;
       if (s.unlockedKeyIds.size > 0) s.lockAll();
       if (masterUnlockedRef.current) void doMasterLockRef.current(true);
     };
-    document.addEventListener("visibilitychange", onVisibility);
-    return () =>
-      document.removeEventListener("visibilitychange", onVisibility);
+    chrome.windows.onFocusChanged.addListener(onFocus);
+    return () => {
+      cancelled = true;
+      chrome.windows.onFocusChanged.removeListener(onFocus);
+    };
   }, []);
 
   // OS lockscreen → always lock immediately. We do NOT subscribe to
