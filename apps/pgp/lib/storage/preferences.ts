@@ -17,6 +17,10 @@ export interface PgpPreferences {
   neverCacheKeys: boolean;
   autoDownloadFiles: boolean;
   autoDownloadText: boolean;
+  /** When true, lock immediately the moment the OS reports idle, instead
+   *  of waiting for the configured autoLockMinutes. OS lockscreen always
+   *  triggers an immediate lock regardless of this setting. */
+  lockImmediatelyOnIdle: boolean;
 }
 
 const DEFAULT_PREFERENCES: PgpPreferences = {
@@ -31,6 +35,7 @@ const DEFAULT_PREFERENCES: PgpPreferences = {
   neverCacheKeys: false,
   autoDownloadFiles: false,
   autoDownloadText: false,
+  lockImmediatelyOnIdle: false,
 };
 
 /**
