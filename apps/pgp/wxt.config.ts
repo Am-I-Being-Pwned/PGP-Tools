@@ -2,6 +2,32 @@ import tailwindcss from "@tailwindcss/vite";
 import wasm from "vite-plugin-wasm";
 import { defineConfig } from "wxt";
 
+const isDev = process.env.NODE_ENV === "development";
+
+// Production CSP: locked-down. The audit story (see SECURITY.md §7)
+// depends on this exact policy.
+const PROD_CSP = [
+  "default-src 'none'",
+  "script-src 'self' 'wasm-unsafe-eval'",
+  "connect-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data:",
+  "font-src 'self'",
+  "worker-src 'self'",
+  "frame-src 'none'",
+  "child-src 'none'",
+  "form-action 'none'",
+  "object-src 'none'",
+  "media-src 'none'",
+  "base-uri 'none'",
+  "manifest-src 'none'",
+].join("; ") + ";";
+
+// In dev we omit `content_security_policy.extension_pages` entirely,
+// so MV3's default CSP applies (which is already strict and allows
+// HMR). Loosening our prod CSP for dev kept hitting MV3's "insecure
+// value" rejections; not worth the fight.
+
 export default defineConfig({
   modules: ["@wxt-dev/module-react"],
   manifest: () => ({
@@ -37,24 +63,13 @@ export default defineConfig({
     side_panel: {
       default_path: "sidepanel/index.html",
     },
-    content_security_policy: {
-      extension_pages: [
-        "default-src 'none'",
-        "script-src 'self' 'wasm-unsafe-eval'",
-        "connect-src 'self'",
-        "style-src 'self' 'unsafe-inline'",
-        "img-src 'self' data:",
-        "font-src 'self'",
-        "worker-src 'self'",
-        "frame-src 'none'",
-        "child-src 'none'",
-        "form-action 'none'",
-        "object-src 'none'",
-        "media-src 'none'",
-        "base-uri 'none'",
-        "manifest-src 'none'",
-      ].join("; ") + ";",
-    },
+    ...(isDev
+      ? {}
+      : {
+          content_security_policy: {
+            extension_pages: PROD_CSP,
+          },
+        }),
   }),
   vite: () => ({
     plugins: [tailwindcss(), wasm()],
