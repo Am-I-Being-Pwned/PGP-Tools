@@ -58,12 +58,7 @@ export default function App() {
     neverCacheKeys,
   });
   const contacts = useContacts();
-  const {
-    pending,
-    clearPending,
-    importKey: importKeyMsg,
-    clearImportKey,
-  } = usePendingOperation();
+  const { pending, clearPending } = usePendingOperation();
 
   // True when the most recent master-lock was system-initiated (idle
   // timer, visibility hidden, OS idle). Used to suppress the
@@ -239,13 +234,6 @@ export default function App() {
     }
   }, [pending]);
 
-  useEffect(() => {
-    if (importKeyMsg) {
-      setActiveTab("keys");
-      void savePreferences({ activeTab: "keys" });
-    }
-  }, [importKeyMsg]);
-
   const handleDeleteKey = useCallback(
     async (keyId: string) => {
       await keyring.remove(keyId);
@@ -363,8 +351,6 @@ export default function App() {
             advancedMode={advancedMode}
             autoOpenGenerate={openGenerateOnMount}
             onAutoOpenConsumed={() => setOpenGenerateOnMount(false)}
-            importKeyFromLink={importKeyMsg}
-            onImportKeyConsumed={clearImportKey}
             onEncryptTo={(keyId) => {
               setEncryptToKeyId(keyId);
               setActiveTab("workspace");

@@ -70,8 +70,10 @@ const ALLOWLIST = [
   // ── network-lockdown.ts (compiled into every entrypoint) ──────
   // The lockdown hooks globalThis.fetch/XMLHttpRequest/WebSocket/etc.
   // It references these globals to check existence and override them.
-  // Pattern: one "ref" allowlist per global per entrypoint.
-  ...["background.js", "sidepanel", "welcome"].flatMap((file) => [
+  // The lockdown can land either in the entrypoint bundle directly or
+  // in a shared `chunks/*` file (WXT/Vite splits aggressively when
+  // multiple entrypoints share imports).
+  ...["background.js", "sidepanel", "welcome", "chunks/"].flatMap((file) => [
     { file, kind: "ref", snippet: "globalThis.fetch" },
     { file, kind: "ref", snippet: "globalThis.XMLHttpRequest" },
     { file, kind: "ref", snippet: "globalThis.WebSocket" },
@@ -81,25 +83,7 @@ const ALLOWLIST = [
     { file, kind: "call", snippet: "credentials:`omit`" },
   ]),
 
-  // ── welcome chunk ─────────────────────────────────────────────
-  // WXT modulepreload polyfill (same as sidepanel chunk).
-  { file: "welcome", kind: "call", snippet: "fetch(e.href," },
-
-  // ── background.js — legitimate fetch calls ────────────────────
-  // Fetch PGP key from user-right-clicked link
-  {
-    file: "background.js",
-    kind: "call",
-    snippet: "fetch(n.linkUrl,{redirect:",
-  },
-
   // ── sidepanel chunk ───────────────────────────────────────────
-  // WXT modulepreload polyfill
-  {
-    file: "sidepanel",
-    kind: "call",
-    snippet: "fetch(e.href,",
-  },
   // Load WASM binary from extension bundle
   {
     file: "sidepanel",
