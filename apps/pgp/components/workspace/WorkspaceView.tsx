@@ -630,7 +630,7 @@ export function WorkspaceView({
 
 
         {s.needsPassword && (
-          <div className="flex gap-2">
+          <div className="flex items-stretch gap-2">
             <input
               type="password"
               placeholder="Enter key password"
@@ -639,11 +639,12 @@ export function WorkspaceView({
               onKeyDown={(e) => {
                 if (e.key === "Enter") void handlePasswordSubmit();
               }}
-              className={`${INPUT_CLASS} flex-1`}
+              className={`${INPUT_CLASS} h-9 flex-1 py-0`}
               autoFocus
             />
             <Button
               size="sm"
+              className="h-9 shrink-0"
               onClick={handlePasswordSubmit}
               disabled={s.loading}
             >

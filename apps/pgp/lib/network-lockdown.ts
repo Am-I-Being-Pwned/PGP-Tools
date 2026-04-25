@@ -3,7 +3,16 @@
  *
  * Hooks are frozen + non-configurable. CSP covers iframes (frame-src
  * 'none') and inline scripts (no 'unsafe-inline'), so no DOM hooks needed.
+ *
+ * In dev (Vite/WXT HMR), this whole module no-ops -- the dev server
+ * uses WebSocket and various transports the production lockdown
+ * blocks. Production builds (`wxt build`) always run the lockdown.
  */
+
+if (import.meta.env.DEV) {
+  // No-op in dev so HMR can use WebSocket etc. See SECURITY.md §7 --
+  // production CSP + this lockdown together pin outbound network.
+} else {
 
 const isExtensionUrl = (url: string) => url.startsWith("chrome-extension://");
 const BLOCKED_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -93,5 +102,7 @@ if (typeof globalThis.navigator.sendBeacon === "function") {
     configurable: false,
   });
 }
+
+} // end !import.meta.env.DEV
 
 export {};
