@@ -25,7 +25,6 @@ export async function importKey(armored: string): Promise<
   | {
       type: "private";
       keyInfo: KeyInfo;
-      privateKeyArmored: string;
       publicKeyArmored: string;
       secretEncrypted: boolean;
     }
@@ -39,7 +38,6 @@ export async function importKey(armored: string): Promise<
     return {
       type: "private",
       keyInfo,
-      privateKeyArmored: trimmed,
       publicKeyArmored,
       secretEncrypted,
     };
