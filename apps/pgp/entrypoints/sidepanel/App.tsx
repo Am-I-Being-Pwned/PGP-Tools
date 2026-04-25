@@ -20,10 +20,10 @@ import { usePendingOperation } from "../../hooks/usePendingOperation";
 import * as wasmApi from "../../lib/pgp/wasm";
 import { getMasterProtection } from "../../lib/storage/master-protection";
 import { getPreferences, savePreferences } from "../../lib/storage/preferences";
+import type { WorkspaceDraft } from "../../lib/workspace-draft";
 import {
   draftHasContent,
   encryptWorkspaceDraft,
-  type WorkspaceDraft,
 } from "../../lib/workspace-draft";
 
 type Tab = "workspace" | "keys" | "settings";
@@ -130,17 +130,21 @@ export default function App() {
 
   // Auto-lock effects read fresh state via these refs so they don't
   // re-register listeners on every App render (`useKeySession()`
-  // returns a new object identity per render).
+  // returns a new object identity per render). Updated in a layout
+  // effect so reads inside event-driven callbacks see the latest
+  // values without re-binding the listeners.
   const sessionRef = useRef(session);
-  sessionRef.current = session;
   const masterUnlockedRef = useRef(masterUnlocked);
-  masterUnlockedRef.current = masterUnlocked;
   const doMasterLockRef = useRef(doMasterLock);
-  doMasterLockRef.current = doMasterLock;
   const resetMasterLockTimerRef = useRef(resetMasterLockTimer);
-  resetMasterLockTimerRef.current = resetMasterLockTimer;
   const lockOnTabAwayRef = useRef(lockOnTabAway);
-  lockOnTabAwayRef.current = lockOnTabAway;
+  useEffect(() => {
+    sessionRef.current = session;
+    masterUnlockedRef.current = masterUnlocked;
+    doMasterLockRef.current = doMasterLock;
+    resetMasterLockTimerRef.current = resetMasterLockTimer;
+    lockOnTabAwayRef.current = lockOnTabAway;
+  });
 
   // Reset lock timers on user activity so the extension doesn't lock
   // while the user is actively typing or interacting.
@@ -169,7 +173,6 @@ export default function App() {
   // Chrome entirely OR moves to a different Chrome window.
   const ownWindowIdRef = useRef<number | null>(null);
   useEffect(() => {
-    if (!chrome.windows?.onFocusChanged) return;
     let cancelled = false;
     void chrome.windows.getCurrent().then((win) => {
       if (cancelled) return;
@@ -194,7 +197,6 @@ export default function App() {
   // OS lockscreen → always lock. We do not subscribe to
   // chrome.idle's `"idle"` state -- only `"locked"`.
   useEffect(() => {
-    if (!chrome.idle?.onStateChanged) return;
     const onState = (state: "idle" | "active" | "locked") => {
       if (state !== "locked") return;
       const s = sessionRef.current;

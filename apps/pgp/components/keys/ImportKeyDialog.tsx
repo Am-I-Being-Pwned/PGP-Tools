@@ -250,7 +250,7 @@ export function ImportKeyDialog({
         <div className="space-y-3">
           <p className="text-muted-foreground text-xs">
             This key is protected with a passphrase. Enter it to unlock the
-            key — you'll then re-protect it with your chosen method on the
+            key - you'll then re-protect it with your chosen method on the
             next step.
           </p>
           {parsed && (
