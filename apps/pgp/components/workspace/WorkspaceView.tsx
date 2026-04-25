@@ -1,4 +1,4 @@
-import { DownloadIcon } from "lucide-react";
+import { DownloadIcon, RotateCcwIcon } from "lucide-react";
 
 import { Button } from "@amibeingpwned/ui/button";
 import { Checkbox } from "@amibeingpwned/ui/checkbox";
@@ -673,32 +673,45 @@ export function WorkspaceView({
         />
 
         {!s.needsPassword && (
-          <Button
-            className="w-full capitalize"
-            onClick={
-              s.operationDone
-                ? s.mode === "verify"
-                  ? s.resetAll
-                  : () => triggerDownload()
-                : execute
-            }
-            disabled={s.loading || !hasInput}
-          >
-            {s.loading ? (
-              "Processing..."
-            ) : s.operationDone ? (
-              s.mode === "verify" ? (
-                "Reset"
+          <div className="flex gap-2">
+            <Button
+              className="flex-1 capitalize"
+              onClick={
+                s.operationDone
+                  ? s.mode === "verify"
+                    ? s.resetAll
+                    : () => triggerDownload()
+                  : execute
+              }
+              disabled={s.loading || !hasInput}
+            >
+              {s.loading ? (
+                "Processing..."
+              ) : s.operationDone ? (
+                s.mode === "verify" ? (
+                  "Reset"
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <DownloadIcon className="h-4 w-4" />
+                    Download
+                  </span>
+                )
               ) : (
-                <span className="flex items-center gap-2">
-                  <DownloadIcon className="h-4 w-4" />
-                  Download
-                </span>
-              )
-            ) : (
-              s.mode
+                s.mode
+              )}
+            </Button>
+            {s.operationDone && s.mode !== "verify" && (
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={s.resetAll}
+                title="Clear input and output"
+                aria-label="Clear input and output"
+              >
+                <RotateCcwIcon className="h-4 w-4" />
+              </Button>
             )}
-          </Button>
+          </div>
         )}
       </div>
     </div>

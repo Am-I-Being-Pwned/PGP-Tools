@@ -36,6 +36,7 @@ export default function App() {
   const [neverCacheKeys, setNeverCacheKeys] = useState(false);
   const [autoDownloadFiles, setAutoDownloadFiles] = useState(false);
   const [autoDownloadText, setAutoDownloadText] = useState(false);
+  const [lockImmediatelyOnIdle, setLockImmediatelyOnIdle] = useState(false);
   const [onboardingComplete, setOnboardingComplete] = useState<boolean | null>(
     null,
   );
@@ -169,29 +170,39 @@ export default function App() {
       document.removeEventListener("visibilitychange", onVisibility);
   }, [masterUnlocked, doMasterLock, session]);
 
-  // OS-level idle / lock detection. When the OS reports the user is
-  // away from keyboard for more than the configured threshold, or that
-  // the screen is locked, drop everything. This catches the case where
-  // the user walks away without closing the side panel.
+  // OS-level idle / lock detection.
+  //   - "locked" (OS lockscreen) ALWAYS triggers an immediate lock,
+  //     regardless of any user setting -- the screen is gone, the user
+  //     has clearly stepped away.
+  //   - "idle" triggers only after the configured idle threshold:
+  //       * default: align with `autoLockMinutes` so OS-idle and the
+  //         in-app timer fire at the same point. No surprise early lock.
+  //       * `lockImmediatelyOnIdle`: use Chrome's minimum (60s) so the
+  //         lock fires as soon as the OS reports any idle.
   useEffect(() => {
     if (!chrome.idle?.onStateChanged) return;
-    // setDetectionInterval clamps to >= 15s; use the same threshold the
-    // session timer is targeting (capped at 4 minutes -- chrome max for
-    // detection interval is 15min but we want responsive locking).
-    const intervalSeconds = Math.min(
-      Math.max(60, autoLockMinutes * 60),
-      4 * 60,
-    );
+    const intervalSeconds = lockImmediatelyOnIdle
+      ? 60
+      : Math.max(60, autoLockMinutes * 60);
     chrome.idle.setDetectionInterval(intervalSeconds);
     const onState = (state: "idle" | "active" | "locked") => {
-      if (state === "locked" || state === "idle") {
-        if (session.unlockedKeyIds.size > 0) session.lockAll();
-        if (masterUnlocked) doMasterLock(true);
+      if (state === "active") return;
+      if (state === "idle" && !lockImmediatelyOnIdle) {
+        // The detection interval already gates "idle" to autoLockMinutes;
+        // reaching here means the user has been idle that long.
       }
+      if (session.unlockedKeyIds.size > 0) session.lockAll();
+      if (masterUnlocked) doMasterLock(true);
     };
     chrome.idle.onStateChanged.addListener(onState);
     return () => chrome.idle.onStateChanged.removeListener(onState);
-  }, [autoLockMinutes, masterUnlocked, doMasterLock, session]);
+  }, [
+    autoLockMinutes,
+    lockImmediatelyOnIdle,
+    masterUnlocked,
+    doMasterLock,
+    session,
+  ]);
 
   useEffect(() => {
     void (async () => {
@@ -204,6 +215,7 @@ export default function App() {
       setNeverCacheKeys(prefs.neverCacheKeys);
       setAutoDownloadFiles(prefs.autoDownloadFiles);
       setAutoDownloadText(prefs.autoDownloadText);
+      setLockImmediatelyOnIdle(prefs.lockImmediatelyOnIdle);
 
       const mp = await getMasterProtection();
       setMasterProtection(mp);
@@ -370,6 +382,8 @@ export default function App() {
             onAutoDownloadFilesChange={setAutoDownloadFiles}
             autoDownloadText={autoDownloadText}
             onAutoDownloadTextChange={setAutoDownloadText}
+            lockImmediatelyOnIdle={lockImmediatelyOnIdle}
+            onLockImmediatelyOnIdleChange={setLockImmediatelyOnIdle}
           />
         )}
       </main>

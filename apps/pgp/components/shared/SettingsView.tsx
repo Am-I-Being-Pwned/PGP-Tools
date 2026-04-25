@@ -32,6 +32,8 @@ interface SettingsViewProps {
   onAutoDownloadFilesChange: (v: boolean) => void;
   autoDownloadText: boolean;
   onAutoDownloadTextChange: (v: boolean) => void;
+  lockImmediatelyOnIdle: boolean;
+  onLockImmediatelyOnIdleChange: (v: boolean) => void;
 }
 
 export function SettingsView({
@@ -47,6 +49,8 @@ export function SettingsView({
   onAutoDownloadFilesChange,
   autoDownloadText,
   onAutoDownloadTextChange,
+  lockImmediatelyOnIdle,
+  onLockImmediatelyOnIdleChange,
 }: SettingsViewProps) {
   const [migrating, setMigrating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -133,6 +137,24 @@ export function SettingsView({
             onCheckedChange={(v) => {
               onNeverCacheKeysChange(v);
               void savePreferences({ neverCacheKeys: v });
+            }}
+          />
+        </label>
+
+        <label className="border-border mt-2 flex items-center justify-between rounded-md border p-3">
+          <div>
+            <span className="text-sm">Lock immediately on OS idle</span>
+            <p className="text-muted-foreground text-xs">
+              Lock as soon as the OS reports the user is idle (~1&nbsp;min),
+              instead of waiting for the auto-lock timer above. The OS
+              lockscreen always triggers an immediate lock.
+            </p>
+          </div>
+          <Switch
+            checked={lockImmediatelyOnIdle}
+            onCheckedChange={(v) => {
+              onLockImmediatelyOnIdleChange(v);
+              void savePreferences({ lockImmediatelyOnIdle: v });
             }}
           />
         </label>
