@@ -4,10 +4,8 @@ import type { OperationAction } from "../../lib/messages";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import { getPreferences } from "../../lib/storage/preferences";
-import {
-  decryptWorkspaceDraft,
-  type WorkspaceDraft,
-} from "../../lib/workspace-draft";
+import type { WorkspaceDraft } from "../../lib/workspace-draft";
+import { decryptWorkspaceDraft } from "../../lib/workspace-draft";
 
 type Mode = "encrypt" | "decrypt" | "sign" | "verify";
 
@@ -182,10 +180,13 @@ export function useWorkspaceState(opts: {
     }
   }, [allRecipientKeys, selectedRecipientId]);
 
+  const { pendingAction, onClearPending, encryptToKeyId, onClearEncryptTo } =
+    opts;
+
   useEffect(() => {
-    if (opts.pendingAction) {
-      setMode(opts.pendingAction.action);
-      setInput(opts.pendingAction.text);
+    if (pendingAction) {
+      setMode(pendingAction.action);
+      setInput(pendingAction.text);
       setFiles([]);
       setOutput("");
       setBinaryOutput(undefined);
@@ -193,16 +194,16 @@ export function useWorkspaceState(opts: {
       setOperationDone(false);
       setStatusText(null);
       setVerifiedSigner(null);
-      opts.onClearPending?.();
+      onClearPending?.();
     }
-  }, [opts.pendingAction, opts.onClearPending]);
+  }, [pendingAction, onClearPending]);
 
   useEffect(() => {
-    if (!opts.encryptToKeyId) return;
+    if (!encryptToKeyId) return;
     setMode("encrypt");
-    setSelectedRecipientId(opts.encryptToKeyId);
-    opts.onClearEncryptTo?.();
-  }, [opts.encryptToKeyId]); // eslint-disable-line react-hooks/exhaustive-deps
+    setSelectedRecipientId(encryptToKeyId);
+    onClearEncryptTo?.();
+  }, [encryptToKeyId, onClearEncryptTo]);
 
   const handleInputChange = useCallback((text: string) => {
     setInput(text);
