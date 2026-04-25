@@ -19,6 +19,11 @@ import { usePendingOperation } from "../../hooks/usePendingOperation";
 import * as wasmApi from "../../lib/pgp/wasm";
 import { getMasterProtection } from "../../lib/storage/master-protection";
 import { getPreferences, savePreferences } from "../../lib/storage/preferences";
+import {
+  draftHasContent,
+  encryptWorkspaceDraft,
+  type WorkspaceDraft,
+} from "../../lib/workspace-draft";
 
 type Tab = "workspace" | "keys" | "settings";
 
@@ -62,8 +67,42 @@ export default function App() {
   // pop a system passkey dialog without an explicit user action.
   const [masterAutoLocked, setMasterAutoLocked] = useState(false);
 
+  // Workspace-draft persistence across lock cycles. WorkspaceView pushes
+  // its current state into `latestDraftRef` on every change; on master
+  // lock we encrypt that snapshot under the in-WASM draft key and stash
+  // the ciphertext here so the workspace can rehydrate after re-unlock.
+  // The plaintext draft never survives the lock event in the JS heap.
+  const latestDraftRef = useRef<WorkspaceDraft | null>(null);
+  const [draftCiphertext, setDraftCiphertext] = useState<Uint8Array | null>(
+    null,
+  );
+
+  // Stable callbacks so WorkspaceView's effect deps don't churn.
+  const handleDraftChange = useCallback((draft: WorkspaceDraft | null) => {
+    latestDraftRef.current = draft;
+  }, []);
+  const handleDraftRestored = useCallback(() => {
+    setDraftCiphertext(null);
+  }, []);
+
   const doMasterLock = useCallback(
-    (auto = false) => {
+    async (auto = false) => {
+      // Best-effort: encrypt + stash the workspace draft BEFORE we
+      // unmount the workspace by flipping `masterUnlocked`. If the
+      // encrypt errors, fall through and lock anyway -- losing draft
+      // content is better than failing to lock.
+      const draft = latestDraftRef.current;
+      if (draft && draftHasContent(draft)) {
+        try {
+          await wasmApi.initDraftSessionIfUnset();
+          const ct = await encryptWorkspaceDraft(draft);
+          setDraftCiphertext(ct);
+        } catch {
+          /* fall through */
+        }
+      }
+      latestDraftRef.current = null;
+
       // Drop the WASM contacts session key. For passkey users this is
       // already gone (dropped after decrypt), but for password users
       // it persists and must be explicitly cleared.
@@ -273,6 +312,9 @@ export default function App() {
             autoDownloadFiles={autoDownloadFiles}
             autoDownloadText={autoDownloadText}
             onOperationComplete={session.lockAllIfNoCache}
+            restoreDraft={draftCiphertext}
+            onDraftRestored={handleDraftRestored}
+            onDraftChange={handleDraftChange}
           />
         </div>
         {activeTab === "keys" && (
