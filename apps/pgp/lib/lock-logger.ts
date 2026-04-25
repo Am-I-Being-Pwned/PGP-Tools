@@ -22,14 +22,8 @@ type LockEvent =
   | "session.lock-if-no-cache"
   | "session.get-handle"
   | "activity.reset"
-  | "visibility.hidden-arm"
-  | "visibility.hidden-fire"
-  | "visibility.cancel"
-  | "chrome-idle.install"
-  | "chrome-idle.state"
-  | "chrome-idle.skip-idle"
-  | "chrome-idle.set-interval"
-  | "chrome-idle.poll";
+  | "tab-away.lock"
+  | "os-lockscreen.lock";
 
 declare global {
   // eslint-disable-next-line no-var

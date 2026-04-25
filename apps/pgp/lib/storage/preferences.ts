@@ -17,14 +17,14 @@ export interface PgpPreferences {
   neverCacheKeys: boolean;
   autoDownloadFiles: boolean;
   autoDownloadText: boolean;
-  /** When true, lock immediately the moment the OS reports idle, instead
-   *  of waiting for the configured autoLockMinutes. OS lockscreen always
-   *  triggers an immediate lock regardless of this setting. */
-  lockImmediatelyOnIdle: boolean;
-  /** When true, lock the moment the side panel becomes hidden (alt-tab
-   *  / closed). When false, a 60-second grace period applies so quick
-   *  tab-switches don't lock. */
-  lockImmediatelyOnTabOut: boolean;
+  /** Master enable for the inactivity timer. When false, unlocked keys
+   *  stay unlocked until the user manually locks, the app closes, or
+   *  the OS lockscreen fires. `autoLockMinutes` is only consulted when
+   *  this is true. */
+  autoLockEnabled: boolean;
+  /** When true, lock the moment the side panel isn't visible
+   *  (alt-tab / collapsed / window hidden). Instant; no grace. */
+  lockOnTabAway: boolean;
 }
 
 const DEFAULT_PREFERENCES: PgpPreferences = {
@@ -39,8 +39,8 @@ const DEFAULT_PREFERENCES: PgpPreferences = {
   neverCacheKeys: false,
   autoDownloadFiles: false,
   autoDownloadText: false,
-  lockImmediatelyOnIdle: false,
-  lockImmediatelyOnTabOut: false,
+  autoLockEnabled: true,
+  lockOnTabAway: false,
 };
 
 /**

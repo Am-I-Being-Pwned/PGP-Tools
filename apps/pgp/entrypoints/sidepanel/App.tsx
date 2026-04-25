@@ -33,12 +33,12 @@ export default function App() {
   const [advancedMode, setAdvancedMode] = useState(false);
   const [storageLocation, setStorageLocation] =
     useState<StorageLocation>("local");
+  const [autoLockEnabled, setAutoLockEnabled] = useState(true);
   const [autoLockMinutes, setAutoLockMinutes] = useState<AutoLockTimeout>(15);
   const [neverCacheKeys, setNeverCacheKeys] = useState(false);
   const [autoDownloadFiles, setAutoDownloadFiles] = useState(false);
   const [autoDownloadText, setAutoDownloadText] = useState(false);
-  const [lockImmediatelyOnIdle, setLockImmediatelyOnIdle] = useState(false);
-  const [lockImmediatelyOnTabOut, setLockImmediatelyOnTabOut] = useState(false);
+  const [lockOnTabAway, setLockOnTabAway] = useState(false);
   const [onboardingComplete, setOnboardingComplete] = useState<boolean | null>(
     null,
   );
@@ -53,6 +53,7 @@ export default function App() {
 
   const keyring = useKeyring();
   const session = useKeySession({
+    autoLockEnabled,
     autoLockMinutes,
     neverCacheKeys,
   });
@@ -120,13 +121,14 @@ export default function App() {
 
   const resetMasterLockTimer = useCallback(() => {
     if (masterLockTimerRef.current) clearTimeout(masterLockTimerRef.current);
+    if (!autoLockEnabled) return;
     const ms = autoLockMinutes * 60 * 1000;
     lockLog("master.timer-arm", { autoLockMinutes, ms });
     masterLockTimerRef.current = setTimeout(() => {
       lockLog("master.timer-fire", { autoLockMinutes });
       void doMasterLock(true);
     }, ms);
-  }, [autoLockMinutes, doMasterLock]);
+  }, [autoLockEnabled, autoLockMinutes, doMasterLock]);
 
   useEffect(() => {
     if (!masterUnlocked) return;
@@ -149,8 +151,8 @@ export default function App() {
   doMasterLockRef.current = doMasterLock;
   const resetMasterLockTimerRef = useRef(resetMasterLockTimer);
   resetMasterLockTimerRef.current = resetMasterLockTimer;
-  const lockImmediatelyOnTabOutRef = useRef(lockImmediatelyOnTabOut);
-  lockImmediatelyOnTabOutRef.current = lockImmediatelyOnTabOut;
+  const lockOnTabAwayRef = useRef(lockOnTabAway);
+  lockOnTabAwayRef.current = lockOnTabAway;
 
   // Reset lock timers on user activity so the extension doesn't lock
   // while the user is actively typing or interacting.
@@ -173,112 +175,43 @@ export default function App() {
     };
   }, []);
 
-  // Visibility-based lock.
-  //   - If `lockImmediatelyOnTabOut` is on, lock the moment the panel
-  //     hides (no grace).
-  //   - Otherwise apply a 60s grace: schedule a lock when hidden,
-  //     cancel if the panel becomes visible again. Quick alt-tabs
-  //     don't lock; a sustained "I left this for a minute" does.
-  const VISIBILITY_GRACE_MS = 60_000;
-  const visibilityLockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
+  // Tab-away lock. Binary: when `lockOnTabAway` is on, the moment the
+  // side panel isn't visible, lock everything. When off, tab-out is
+  // not a lock signal. (Quick alt-tab is the same event as "left for
+  // a long time" -- if you don't want to be locked on alt-tab, leave
+  // this off and rely on the inactivity timer.)
   useEffect(() => {
-    const fireLock = () => {
-      lockLog("visibility.hidden-fire");
+    const onVisibility = () => {
+      if (document.visibilityState !== "hidden") return;
+      if (!lockOnTabAwayRef.current) return;
+      lockLog("tab-away.lock", {
+        masterUnlocked: masterUnlockedRef.current,
+        unlockedKeys: sessionRef.current.unlockedKeyIds.size,
+      });
       const s = sessionRef.current;
       if (s.unlockedKeyIds.size > 0) s.lockAll();
       if (masterUnlockedRef.current) void doMasterLockRef.current(true);
     };
-    const onVisibility = () => {
-      if (document.visibilityState === "hidden") {
-        if (visibilityLockTimerRef.current) {
-          clearTimeout(visibilityLockTimerRef.current);
-          visibilityLockTimerRef.current = null;
-        }
-        const immediate = lockImmediatelyOnTabOutRef.current;
-        lockLog("visibility.hidden-arm", {
-          immediate,
-          ms: immediate ? 0 : VISIBILITY_GRACE_MS,
-          masterUnlocked: masterUnlockedRef.current,
-          unlockedKeys: sessionRef.current.unlockedKeyIds.size,
-        });
-        if (immediate) {
-          fireLock();
-        } else {
-          visibilityLockTimerRef.current = setTimeout(
-            fireLock,
-            VISIBILITY_GRACE_MS,
-          );
-        }
-      } else {
-        if (visibilityLockTimerRef.current) {
-          lockLog("visibility.cancel");
-          clearTimeout(visibilityLockTimerRef.current);
-          visibilityLockTimerRef.current = null;
-        }
-      }
-    };
     document.addEventListener("visibilitychange", onVisibility);
-    return () => {
+    return () =>
       document.removeEventListener("visibilitychange", onVisibility);
-      if (visibilityLockTimerRef.current) {
-        clearTimeout(visibilityLockTimerRef.current);
-      }
-    };
   }, []);
 
-  // OS-level idle / lock detection.
-  //   - `"locked"` (OS lockscreen) ALWAYS triggers an immediate lock,
-  //     regardless of any user setting -- the screen is gone, the
-  //     user has clearly stepped away.
-  //   - `"idle"` is acted on ONLY when `lockImmediatelyOnIdle` is true.
-  //     When the setting is off, the in-app `autoLockMinutes` timer
-  //     is the only idle-based lock; OS-idle does nothing.
-  //
-  // This effect re-runs only when the two relevant prefs change.
+  // OS lockscreen → always lock immediately. We do NOT subscribe to
+  // chrome.idle's `"idle"` state (overlapped confusingly with tab-away
+  // and added a setting that wasn't user-friendly). `"locked"` only.
   useEffect(() => {
     if (!chrome.idle?.onStateChanged) return;
-    if (lockImmediatelyOnIdle) {
-      lockLog("chrome-idle.set-interval", { seconds: 60 });
-      chrome.idle.setDetectionInterval(60);
-    }
-    lockLog("chrome-idle.install", { lockImmediatelyOnIdle });
     const onState = (state: "idle" | "active" | "locked") => {
-      lockLog("chrome-idle.state", { state, lockImmediatelyOnIdle });
-      if (state === "active") return;
-      if (state === "idle" && !lockImmediatelyOnIdle) {
-        lockLog("chrome-idle.skip-idle");
-        return;
-      }
+      if (state !== "locked") return;
+      lockLog("os-lockscreen.lock");
       const s = sessionRef.current;
       if (s.unlockedKeyIds.size > 0) s.lockAll();
       if (masterUnlockedRef.current) void doMasterLockRef.current(true);
     };
     chrome.idle.onStateChanged.addListener(onState);
-
-    // Periodic poll: ask Chrome what state it thinks we're in. Useful
-    // for debugging "I waited 90s and the idle event didn't fire" --
-    // if the poll shows "active" the OS is still seeing input from
-    // somewhere; if it shows "idle" but no event fired the listener
-    // didn't pick up the transition. Threshold matches the active
-    // detection interval.
-    const queryEverySec = lockImmediatelyOnIdle ? 30 : 60;
-    const queryThresholdSec = lockImmediatelyOnIdle ? 60 : 60;
-    const pollId = window.setInterval(() => {
-      chrome.idle.queryState(queryThresholdSec, (state) => {
-        lockLog("chrome-idle.poll", {
-          state,
-          queryThresholdSec,
-        });
-      });
-    }, queryEverySec * 1000);
-
-    return () => {
-      chrome.idle.onStateChanged.removeListener(onState);
-      window.clearInterval(pollId);
-    };
-  }, [lockImmediatelyOnIdle]);
+    return () => chrome.idle.onStateChanged.removeListener(onState);
+  }, []);
 
   useEffect(() => {
     void (async () => {
@@ -289,14 +222,14 @@ export default function App() {
       setOnboardingComplete(prefs.onboardingComplete);
       setActiveTab(prefs.activeTab);
       setNeverCacheKeys(prefs.neverCacheKeys);
+      setAutoLockEnabled(prefs.autoLockEnabled);
       setAutoDownloadFiles(prefs.autoDownloadFiles);
       setAutoDownloadText(prefs.autoDownloadText);
-      setLockImmediatelyOnIdle(prefs.lockImmediatelyOnIdle);
-      setLockImmediatelyOnTabOut(prefs.lockImmediatelyOnTabOut);
+      setLockOnTabAway(prefs.lockOnTabAway);
       lockLog("prefs", {
+        autoLockEnabled: prefs.autoLockEnabled,
         autoLockMinutes: prefs.autoLockMinutes,
-        lockImmediatelyOnIdle: prefs.lockImmediatelyOnIdle,
-        lockImmediatelyOnTabOut: prefs.lockImmediatelyOnTabOut,
+        lockOnTabAway: prefs.lockOnTabAway,
         neverCacheKeys: prefs.neverCacheKeys,
       });
 
@@ -457,6 +390,8 @@ export default function App() {
               void keyring.refresh();
               void contacts.refresh();
             }}
+            autoLockEnabled={autoLockEnabled}
+            onAutoLockEnabledChange={setAutoLockEnabled}
             autoLockMinutes={autoLockMinutes}
             onAutoLockChange={setAutoLockMinutes}
             neverCacheKeys={neverCacheKeys}
@@ -465,10 +400,8 @@ export default function App() {
             onAutoDownloadFilesChange={setAutoDownloadFiles}
             autoDownloadText={autoDownloadText}
             onAutoDownloadTextChange={setAutoDownloadText}
-            lockImmediatelyOnIdle={lockImmediatelyOnIdle}
-            onLockImmediatelyOnIdleChange={setLockImmediatelyOnIdle}
-            lockImmediatelyOnTabOut={lockImmediatelyOnTabOut}
-            onLockImmediatelyOnTabOutChange={setLockImmediatelyOnTabOut}
+            lockOnTabAway={lockOnTabAway}
+            onLockOnTabAwayChange={setLockOnTabAway}
           />
         )}
       </main>
