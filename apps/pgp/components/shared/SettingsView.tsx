@@ -34,6 +34,8 @@ interface SettingsViewProps {
   onAutoDownloadTextChange: (v: boolean) => void;
   lockImmediatelyOnIdle: boolean;
   onLockImmediatelyOnIdleChange: (v: boolean) => void;
+  lockImmediatelyOnTabOut: boolean;
+  onLockImmediatelyOnTabOutChange: (v: boolean) => void;
 }
 
 export function SettingsView({
@@ -51,6 +53,8 @@ export function SettingsView({
   onAutoDownloadTextChange,
   lockImmediatelyOnIdle,
   onLockImmediatelyOnIdleChange,
+  lockImmediatelyOnTabOut,
+  onLockImmediatelyOnTabOutChange,
 }: SettingsViewProps) {
   const [migrating, setMigrating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -143,11 +147,12 @@ export function SettingsView({
 
         <label className="border-border mt-2 flex items-center justify-between rounded-md border p-3">
           <div>
-            <span className="text-sm">Lock immediately on OS idle</span>
+            <span className="text-sm">Lock on OS idle</span>
             <p className="text-muted-foreground text-xs">
-              Lock as soon as the OS reports the user is idle (~1&nbsp;min),
-              instead of waiting for the auto-lock timer above. The OS
-              lockscreen always triggers an immediate lock.
+              Also lock as soon as the OS reports the user is idle
+              (~1&nbsp;min), in addition to the auto-lock timer above.
+              The OS lockscreen always triggers an immediate lock
+              regardless of this setting.
             </p>
           </div>
           <Switch
@@ -155,6 +160,24 @@ export function SettingsView({
             onCheckedChange={(v) => {
               onLockImmediatelyOnIdleChange(v);
               void savePreferences({ lockImmediatelyOnIdle: v });
+            }}
+          />
+        </label>
+
+        <label className="border-border mt-2 flex items-center justify-between rounded-md border p-3">
+          <div>
+            <span className="text-sm">Lock immediately on tab-out</span>
+            <p className="text-muted-foreground text-xs">
+              Lock the moment the side panel becomes hidden
+              (alt-tab&nbsp;/ closed). When off, a 60-second grace
+              period applies so quick tab-switches don't lock.
+            </p>
+          </div>
+          <Switch
+            checked={lockImmediatelyOnTabOut}
+            onCheckedChange={(v) => {
+              onLockImmediatelyOnTabOutChange(v);
+              void savePreferences({ lockImmediatelyOnTabOut: v });
             }}
           />
         </label>

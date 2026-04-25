@@ -142,9 +142,12 @@ KEY_STORE entries are dropped on any of:
 2. Idle timer — `autoLockMinutes` (5/15/30/60, configurable). The
    timer resets on every `getKeyHandle()` call, so "idle" means "idle
    since last cryptographic use," not "idle since unlock."
-3. `document.visibilityState === "hidden"` (panel closed, collapsed,
-   or window hidden).
-4. `chrome.idle.onStateChanged` fires `"idle"` or `"locked"`.
+3. `chrome.idle.onStateChanged` fires `"locked"` (OS lockscreen,
+   always) or `"idle"` (only when the `lockImmediatelyOnIdle`
+   preference is on).
+4. The side panel becomes hidden (alt-tab / closed) for >= 60 s
+   continuously. Quick tab-switches don't lock; sustained absence
+   does.
 5. The side-panel React tree unmounts (effect cleanup).
 
 System-initiated locks (2–4) set `masterAutoLocked`, which suppresses
