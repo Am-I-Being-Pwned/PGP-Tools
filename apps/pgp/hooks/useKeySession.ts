@@ -19,6 +19,10 @@ import {
 
 interface KeySessionOptions {
   autoLockMinutes: AutoLockTimeout;
+  /** When false, the inactivity timer never arms. Manual locks,
+   *  `neverCacheKeys`, OS-lockscreen and tab-away (App-side) still
+   *  drop handles. */
+  autoLockEnabled: boolean;
   neverCacheKeys: boolean;
 }
 
@@ -46,13 +50,14 @@ export function useKeySession(opts: KeySessionOptions) {
 
   const resetLockTimer = useCallback(() => {
     if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
+    if (!opts.autoLockEnabled) return;
     const ms = opts.autoLockMinutes * 60 * 1000;
     lockLog("session.timer-arm", { autoLockMinutes: opts.autoLockMinutes, ms });
     lockTimerRef.current = setTimeout(() => {
       lockLog("session.timer-fire", { autoLockMinutes: opts.autoLockMinutes });
       doLockAll();
     }, ms);
-  }, [opts.autoLockMinutes, doLockAll]);
+  }, [opts.autoLockEnabled, opts.autoLockMinutes, doLockAll]);
 
   const lockAllIfNoCache = useCallback(() => {
     if (opts.neverCacheKeys) {
@@ -67,15 +72,15 @@ export function useKeySession(opts: KeySessionOptions) {
     };
   }, []);
 
-  // If the user changes `autoLockMinutes` while keys are unlocked, the
-  // existing setTimeout is still scheduled at the OLD duration. Restart
-  // it under the new duration so the setting actually takes effect
-  // without waiting for the next user activity.
+  // If `autoLockMinutes` or `autoLockEnabled` changes while keys are
+  // unlocked, the existing setTimeout is still scheduled at the OLD
+  // duration (or running at all). Re-arm under the new settings so
+  // the change takes effect immediately.
   useEffect(() => {
     if (handleRef.current.size > 0) {
       resetLockTimer();
     }
-  }, [opts.autoLockMinutes, resetLockTimer]);
+  }, [opts.autoLockMinutes, opts.autoLockEnabled, resetLockTimer]);
 
   const markHandleUnlocked = useCallback(
     async (keyId: string, handle: number) => {
