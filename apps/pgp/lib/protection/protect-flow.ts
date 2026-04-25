@@ -146,6 +146,19 @@ export type ProtectionInput =
       /** See above. Reuses the just-obtained PRF output -- no second
        *  WebAuthn prompt. */
       cache?: boolean;
+      /** Skip the WebAuthn ceremony entirely by reusing a PRF output
+       *  already obtained for `reusePasskeyCredentialId` (e.g. during
+       *  onboarding where the master setup just authenticated). The
+       *  returned blob will carry `prfSalt` so later unlocks
+       *  re-authenticate with the same WebAuthn challenge and reproduce
+       *  the same PRF output. A fresh `storedSecret` is still generated
+       *  per blob to keep the derived AES key distinct from the master
+       *  / other blobs. Caller owns `prfOutput`'s lifetime; this fn
+       *  does NOT zero it. */
+      prfReuse?: {
+        prfOutput: Uint8Array;
+        prfSalt: ArrayBuffer;
+      };
     };
 
 interface CommonOpts {
@@ -208,14 +221,32 @@ export async function generateAndProtect(
 
   const userIdHint =
     common.userIdHint ?? `${keyOpts.name} <${keyOpts.email}>`;
-  const credentialId = await resolvePasskeyCredential(
-    protection.reusePasskeyCredentialId,
-    userIdHint,
-  );
-  const prfSalt = generatePrfSalt();
+  const credentialId =
+    protection.prfReuse !== undefined && protection.reusePasskeyCredentialId
+      ? protection.reusePasskeyCredentialId
+      : await resolvePasskeyCredential(
+          protection.reusePasskeyCredentialId,
+          userIdHint,
+        );
+
+  // PRF + prfSalt: either reuse from caller (no new WebAuthn dialog)
+  // or run our own ceremony. `storedSecret` is always fresh per blob
+  // so the derived AES key is unique even when prfOutput is shared.
+  let prfSalt: ArrayBuffer;
+  let prfOutput: Uint8Array;
+  let ownsPrfOutput: boolean;
+  if (protection.prfReuse) {
+    prfSalt = protection.prfReuse.prfSalt;
+    prfOutput = protection.prfReuse.prfOutput;
+    ownsPrfOutput = false; // caller zeros it
+  } else {
+    prfSalt = generatePrfSalt();
+    ({ prfOutput } = await authenticateAndGetPrf(credentialId, prfSalt));
+    ownsPrfOutput = true;
+  }
+
   const storedSecret = generateStoredSecret();
   const storedSecretBytes = new Uint8Array(storedSecret);
-  const { prfOutput } = await authenticateAndGetPrf(credentialId, prfSalt);
   try {
     const result = await generateProtectedWithPrf(
       keyOpts,
@@ -236,7 +267,7 @@ export async function generateAndProtect(
     }
     return { blob, handle };
   } finally {
-    prfOutput.fill(0);
+    if (ownsPrfOutput) prfOutput.fill(0);
   }
 }
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronRightIcon, LoaderIcon } from "lucide-react";
 
 import { Button } from "@amibeingpwned/ui/button";
@@ -72,6 +72,23 @@ export function OnboardingFlow({ onComplete, addKey, onKeyCached, cacheKey }: On
     string | undefined
   >();
 
+  // Captured during master setup (passkey path) so we can hand it to
+  // `generateAndProtect` and skip a second WebAuthn ceremony when the
+  // user creates their first key. Lifetime: from master-setup success
+  // until generate-key completes (success or fail). Always zeroed.
+  const masterPrfRef = useRef<{
+    prfOutput: Uint8Array;
+    prfSalt: ArrayBuffer;
+  } | null>(null);
+
+  // Belt-and-braces: if the component unmounts mid-flow, zero the PRF.
+  useEffect(() => {
+    return () => {
+      masterPrfRef.current?.prfOutput.fill(0);
+      masterPrfRef.current = null;
+    };
+  }, []);
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [comment, setComment] = useState("");
@@ -109,20 +126,20 @@ export function OnboardingFlow({ onComplete, addKey, onKeyCached, cacheKey }: On
 
         const prfSalt = generatePrfSalt();
         const storedSecret = generateStoredSecret();
-        let prfOutput: Uint8Array | undefined;
-        try {
-          ({ prfOutput } = await authenticateAndGetPrf(
-            reg.credentialId,
-            prfSalt,
-          ));
+        const { prfOutput } = await authenticateAndGetPrf(
+          reg.credentialId,
+          prfSalt,
+        );
+        await wasmApi.initContactsSessionWithPrf(
+          prfOutput,
+          new Uint8Array(storedSecret),
+        );
 
-          await wasmApi.initContactsSessionWithPrf(
-            prfOutput,
-            new Uint8Array(storedSecret),
-          );
-        } finally {
-          prfOutput?.fill(0);
-        }
+        // Keep the PRF output alive across the form-fill step so the
+        // "create your first key" call below can reuse it without a
+        // second WebAuthn dialog. Zeroed in handleGenerateKey's
+        // finally + the unmount cleanup.
+        masterPrfRef.current = { prfOutput, prfSalt };
 
         mp = {
           method: "passkey",
@@ -199,6 +216,7 @@ export function OnboardingFlow({ onComplete, addKey, onKeyCached, cacheKey }: On
               method: "passkey",
               reusePasskeyCredentialId: masterCredentialId,
               cache: cacheKey,
+              prfReuse: masterPrfRef.current ?? undefined,
             }
           : { method: "password", password, cache: cacheKey },
       );
@@ -216,6 +234,9 @@ export function OnboardingFlow({ onComplete, addKey, onKeyCached, cacheKey }: On
     } catch (e) {
       setError(e instanceof Error ? e.message : "Key generation failed");
       setStep("identity");
+    } finally {
+      masterPrfRef.current?.prfOutput.fill(0);
+      masterPrfRef.current = null;
     }
   };
 
