@@ -91,10 +91,9 @@ export default function App() {
 
   const doMasterLock = useCallback(
     async (auto = false) => {
-      // Best-effort: encrypt + stash the workspace draft BEFORE we
-      // unmount the workspace by flipping `masterUnlocked`. If the
-      // encrypt errors, fall through and lock anyway -- losing draft
-      // content is better than failing to lock.
+      // Encrypt + stash the workspace draft before flipping
+      // masterUnlocked (which unmounts the workspace). On error, lock
+      // anyway -- a lost draft is preferable to a failed lock.
       const draft = latestDraftRef.current;
       if (draft && draftHasContent(draft)) {
         try {
@@ -102,14 +101,13 @@ export default function App() {
           const ct = await encryptWorkspaceDraft(draft);
           setDraftCiphertext(ct);
         } catch {
-          /* fall through */
+          /* lock anyway */
         }
       }
       latestDraftRef.current = null;
 
-      // Drop the WASM contacts session key. For passkey users this is
-      // already gone (dropped after decrypt), but for password users
-      // it persists and must be explicitly cleared.
+      // Password-master path leaves the contacts session key in WASM
+      // (passkey path already drops it after each decrypt).
       void wasmApi.dropContactsSession();
       setMasterAutoLocked(auto);
       setMasterUnlocked(false);
@@ -135,11 +133,9 @@ export default function App() {
     };
   }, [masterUnlocked, resetMasterLockTimer]);
 
-  // Refs that mirror the latest unstable values. Auto-lock effects use
-  // these so they can read fresh state without re-registering listeners
-  // (and re-calling chrome.idle.setDetectionInterval) on every App
-  // render. `useKeySession()` returns a new object every render; without
-  // the ref indirection, the effects below would churn constantly.
+  // Auto-lock effects read fresh state via these refs so they don't
+  // re-register listeners on every App render (`useKeySession()`
+  // returns a new object identity per render).
   const sessionRef = useRef(session);
   sessionRef.current = session;
   const masterUnlockedRef = useRef(masterUnlocked);
@@ -171,18 +167,11 @@ export default function App() {
     };
   }, []);
 
-  // Tab-away lock via `chrome.windows.onFocusChanged`. This fires
-  // ONLY on real window/app focus changes -- system overlays like the
-  // WebAuthn dialog don't trigger it -- so we avoid the
-  // visibilitychange flicker that was re-locking the user mid-unlock.
-  //
-  // Lock when:
-  //   - focus moves to no Chrome window (WINDOW_ID_NONE → another app)
-  //   - focus moves to a different Chrome window than the one
-  //     hosting our side panel.
-  // Don't lock when:
-  //   - focus stays in our window (e.g. switching tabs).
-  //   - a system dialog overlays the page (no focus change).
+  // Tab-away lock via `chrome.windows.onFocusChanged`. Fires on real
+  // window/app focus changes only -- not on system overlays like the
+  // WebAuthn dialog -- so it avoids the visibilitychange flicker that
+  // was re-locking the user mid-unlock. Locks when focus leaves
+  // Chrome entirely OR moves to a different Chrome window.
   const ownWindowIdRef = useRef<number | null>(null);
   useEffect(() => {
     if (!chrome.windows?.onFocusChanged) return;
@@ -196,8 +185,6 @@ export default function App() {
       if (!lockOnTabAwayRef.current) return;
       if (ownWindowIdRef.current === null) return;
       if (windowId === ownWindowIdRef.current) return;
-      // Either WINDOW_ID_NONE (focus left Chrome entirely) or a
-      // different Chrome window. Either way: tab-away → lock.
       const s = sessionRef.current;
       if (s.unlockedKeyIds.size > 0) s.lockAll();
       if (masterUnlockedRef.current) void doMasterLockRef.current(true);
@@ -209,9 +196,8 @@ export default function App() {
     };
   }, []);
 
-  // OS lockscreen → always lock immediately. We do NOT subscribe to
-  // chrome.idle's `"idle"` state (overlapped confusingly with tab-away
-  // and added a setting that wasn't user-friendly). `"locked"` only.
+  // OS lockscreen → always lock. We do not subscribe to
+  // chrome.idle's `"idle"` state -- only `"locked"`.
   useEffect(() => {
     if (!chrome.idle?.onStateChanged) return;
     const onState = (state: "idle" | "active" | "locked") => {
