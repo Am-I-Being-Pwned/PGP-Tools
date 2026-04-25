@@ -12,7 +12,28 @@ import {
 export default defineBackground(() => {
   void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 
-  chrome.runtime.onInstalled.addListener(() => {
+  chrome.runtime.onInstalled.addListener((details) => {
+    console.info("[install] onInstalled fired", {
+      reason: details.reason,
+      previousVersion: details.previousVersion,
+    });
+
+    // First install: open the welcome page in a new tab. The page
+    // hosts a single "click here to get started" button -- that
+    // click is the user gesture that lets it call sidePanel.open()
+    // (which we cannot do directly from `onInstalled`). The side
+    // panel UI is never rendered in a tab.
+    if (details.reason === "install") {
+      const url = chrome.runtime.getURL("welcome.html");
+      console.info("[install] opening welcome tab", { url });
+      chrome.tabs
+        .create({ url })
+        .then((tab) =>
+          console.info("[install] welcome tab opened", { tabId: tab.id }),
+        )
+        .catch((e) => console.error("[install] tabs.create failed", e));
+    }
+
     chrome.contextMenus.create({
       id: MENU_ENCRYPT,
       title: "Encrypt selection with PGP",
