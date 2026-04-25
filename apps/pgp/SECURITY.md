@@ -139,16 +139,17 @@ KEY_STORE entry still comes from an unlock path.
 KEY_STORE entries are dropped on any of:
 
 1. Manual per-key lock (`KeyCard` Lock button).
-2. Idle timer — `autoLockMinutes` (5/15/30/60, configurable). The
-   timer resets on every `getKeyHandle()` call, so "idle" means "idle
-   since last cryptographic use," not "idle since unlock."
+2. Inactivity timer (only when `autoLockEnabled` is true) — fires
+   after `autoLockMinutes` of no activity (5/15/30/60, configurable).
+   The timer resets on every `getKeyHandle()` call, so "idle" means
+   "idle since last cryptographic use," not "idle since unlock."
 3. `chrome.idle.onStateChanged` fires `"locked"` (OS lockscreen,
-   always) or `"idle"` (only when the `lockImmediatelyOnIdle`
-   preference is on).
-4. The side panel becomes hidden (alt-tab / closed) for >= 60 s
-   continuously. Quick tab-switches don't lock; sustained absence
-   does.
-5. The side-panel React tree unmounts (effect cleanup).
+   always immediate, not user-configurable).
+4. The side panel becomes hidden (alt-tab / collapsed / window
+   minimised) — only when `lockOnTabAway` is on.
+5. `lockAllIfNoCache` after every encrypt/decrypt/sign when
+   `neverCacheKeys` is on.
+6. The side-panel React tree unmounts (effect cleanup).
 
 System-initiated locks (2–4) set `masterAutoLocked`, which suppresses
 the `MasterUnlockScreen` auto-passkey ceremony — the user must click
