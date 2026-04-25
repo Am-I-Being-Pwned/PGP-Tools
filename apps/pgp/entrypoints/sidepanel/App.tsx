@@ -16,7 +16,6 @@ import { useContacts } from "../../hooks/useContacts";
 import { useKeyring } from "../../hooks/useKeyring";
 import { useKeySession } from "../../hooks/useKeySession";
 import { usePendingOperation } from "../../hooks/usePendingOperation";
-import { lockLog } from "../../lib/lock-logger";
 import * as wasmApi from "../../lib/pgp/wasm";
 import { getMasterProtection } from "../../lib/storage/master-protection";
 import { getPreferences, savePreferences } from "../../lib/storage/preferences";
@@ -91,7 +90,6 @@ export default function App() {
 
   const doMasterLock = useCallback(
     async (auto = false) => {
-      lockLog("master.lock", { auto });
       // Best-effort: encrypt + stash the workspace draft BEFORE we
       // unmount the workspace by flipping `masterUnlocked`. If the
       // encrypt errors, fall through and lock anyway -- losing draft
@@ -122,12 +120,10 @@ export default function App() {
   const resetMasterLockTimer = useCallback(() => {
     if (masterLockTimerRef.current) clearTimeout(masterLockTimerRef.current);
     if (!autoLockEnabled) return;
-    const ms = autoLockMinutes * 60 * 1000;
-    lockLog("master.timer-arm", { autoLockMinutes, ms });
-    masterLockTimerRef.current = setTimeout(() => {
-      lockLog("master.timer-fire", { autoLockMinutes });
-      void doMasterLock(true);
-    }, ms);
+    masterLockTimerRef.current = setTimeout(
+      () => void doMasterLock(true),
+      autoLockMinutes * 60 * 1000,
+    );
   }, [autoLockEnabled, autoLockMinutes, doMasterLock]);
 
   useEffect(() => {
@@ -162,7 +158,6 @@ export default function App() {
       const now = Date.now();
       if (now - lastActivityRef.current < 30_000) return;
       lastActivityRef.current = now;
-      lockLog("activity.reset");
       if (masterUnlockedRef.current) resetMasterLockTimerRef.current();
       const s = sessionRef.current;
       if (s.unlockedKeyIds.size > 0) s.resetLockTimer();
@@ -184,10 +179,6 @@ export default function App() {
     const onVisibility = () => {
       if (document.visibilityState !== "hidden") return;
       if (!lockOnTabAwayRef.current) return;
-      lockLog("tab-away.lock", {
-        masterUnlocked: masterUnlockedRef.current,
-        unlockedKeys: sessionRef.current.unlockedKeyIds.size,
-      });
       const s = sessionRef.current;
       if (s.unlockedKeyIds.size > 0) s.lockAll();
       if (masterUnlockedRef.current) void doMasterLockRef.current(true);
@@ -204,7 +195,6 @@ export default function App() {
     if (!chrome.idle?.onStateChanged) return;
     const onState = (state: "idle" | "active" | "locked") => {
       if (state !== "locked") return;
-      lockLog("os-lockscreen.lock");
       const s = sessionRef.current;
       if (s.unlockedKeyIds.size > 0) s.lockAll();
       if (masterUnlockedRef.current) void doMasterLockRef.current(true);
@@ -226,12 +216,6 @@ export default function App() {
       setAutoDownloadFiles(prefs.autoDownloadFiles);
       setAutoDownloadText(prefs.autoDownloadText);
       setLockOnTabAway(prefs.lockOnTabAway);
-      lockLog("prefs", {
-        autoLockEnabled: prefs.autoLockEnabled,
-        autoLockMinutes: prefs.autoLockMinutes,
-        lockOnTabAway: prefs.lockOnTabAway,
-        neverCacheKeys: prefs.neverCacheKeys,
-      });
 
       const mp = await getMasterProtection();
       setMasterProtection(mp);
