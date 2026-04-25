@@ -74,6 +74,14 @@ export default defineConfig({
   vite: () => ({
     plugins: [tailwindcss(), wasm()],
     server: { port: 3004 },
+    build: {
+      // We ship to Chrome MV3 only; <link rel="modulepreload"> has
+      // been supported since Chrome 66, so the polyfill (which calls
+      // fetch on every preload tag) is dead weight. Dropping it
+      // removes the only non-essential `fetch` reference from the
+      // shipped bundles.
+      modulePreload: { polyfill: false },
+    },
   }),
   dev: {
     server: {

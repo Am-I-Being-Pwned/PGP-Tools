@@ -1,10 +1,6 @@
 import { useEffect, useState } from "react";
 
-import type {
-  ImportKeyFromLink,
-  OperationAction,
-  PendingOperation,
-} from "../lib/messages";
+import type { OperationAction, PendingOperation } from "../lib/messages";
 
 const VALID_ACTIONS = new Set<OperationAction>([
   "encrypt",
@@ -26,15 +22,8 @@ function isPendingOperation(msg: unknown): msg is PendingOperation {
   );
 }
 
-function isImportKeyFromLink(msg: unknown): msg is ImportKeyFromLink {
-  if (typeof msg !== "object" || msg === null) return false;
-  const obj = msg as Record<string, unknown>;
-  return obj.type === "IMPORT_KEY_FROM_LINK" && typeof obj.url === "string";
-}
-
 export function usePendingOperation() {
   const [pending, setPending] = useState<PendingOperation | null>(null);
-  const [importKey, setImportKey] = useState<ImportKeyFromLink | null>(null);
 
   useEffect(() => {
     const listener = (
@@ -46,9 +35,6 @@ export function usePendingOperation() {
       if (isPendingOperation(message)) {
         setPending(message);
         sendResponse({ received: true });
-      } else if (isImportKeyFromLink(message)) {
-        setImportKey(message);
-        sendResponse({ received: true });
       }
     };
 
@@ -59,7 +45,5 @@ export function usePendingOperation() {
   return {
     pending,
     clearPending: () => setPending(null),
-    importKey,
-    clearImportKey: () => setImportKey(null),
   };
 }

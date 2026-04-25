@@ -4,7 +4,6 @@ import type { OperationAction, PendingOperation } from "../lib/messages";
 import {
   MENU_DECRYPT,
   MENU_ENCRYPT,
-  MENU_IMPORT_KEY,
   MENU_SIGN,
   MENU_VERIFY,
 } from "../lib/constants";
@@ -44,20 +43,6 @@ export default defineBackground(() => {
       title: "Verify PGP signature",
       contexts: ["selection"],
     });
-
-    chrome.contextMenus.create({
-      id: MENU_IMPORT_KEY,
-      title: "Import PGP key from link",
-      contexts: ["link"],
-      targetUrlPatterns: [
-        "*://*/*.asc",
-        "*://*/*.asc?*",
-        "*://*/*.gpg",
-        "*://*/*.pub",
-        "*://*/*.key",
-        "*://*/*.pgp",
-      ],
-    });
   });
 
   const menuIdToAction: Partial<Record<string, OperationAction>> = {
@@ -90,48 +75,6 @@ export default defineBackground(() => {
     const tabId = tab.id;
 
     void (async () => {
-      if (info.menuItemId === MENU_IMPORT_KEY && info.linkUrl) {
-        await chrome.sidePanel.open({ tabId });
-
-        let armoredKey: string | undefined;
-        let error: string | undefined;
-        try {
-          const resp = await fetch(info.linkUrl, { redirect: "error" });
-          if (!resp.ok) {
-            error = `HTTP ${resp.status}`;
-          } else {
-            const text = await resp.text();
-            if (text.includes("PUBLIC KEY") || text.includes("PRIVATE KEY")) {
-              armoredKey = text;
-            } else {
-              error = "File doesn't contain a PGP key";
-            }
-          }
-        } catch {
-          error =
-            "Couldn't fetch - download the file and drop it on the Keys tab";
-        }
-
-        const msg = {
-          type: "IMPORT_KEY_FROM_LINK" as const,
-          url: info.linkUrl,
-          armoredKey,
-          error,
-        };
-
-        let delay = 100;
-        const trySend = (attemptsLeft: number) => {
-          chrome.runtime.sendMessage(msg).catch(() => {
-            if (attemptsLeft > 0) {
-              setTimeout(() => trySend(attemptsLeft - 1), delay);
-              delay = Math.min(delay * 1.5, 1000);
-            }
-          });
-        };
-        trySend(8);
-        return;
-      }
-
       if (!info.selectionText) return;
 
       const action = menuIdToAction[info.menuItemId as string];

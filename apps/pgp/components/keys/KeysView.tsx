@@ -12,11 +12,9 @@ import {
   CommandList,
 } from "@amibeingpwned/ui/command";
 
-import type { ImportKeyFromLink } from "../../lib/messages";
 import type { KeyInfo } from "../../lib/pgp/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
-import { parsePublicKey } from "../../lib/pgp/key-management";
 import { parseUserId } from "../../lib/utils/key-naming";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 import { Dialog } from "../shared/Dialog";
@@ -45,8 +43,6 @@ interface KeysViewProps {
   advancedMode?: boolean;
   autoOpenGenerate?: boolean;
   onAutoOpenConsumed?: () => void;
-  importKeyFromLink?: ImportKeyFromLink | null;
-  onImportKeyConsumed?: () => void;
   onEncryptTo?: (keyId: string) => void;
   unlockRequestKeyId?: string | null;
   onUnlockRequestConsumed?: () => void;
@@ -73,8 +69,6 @@ export function KeysView({
   advancedMode,
   autoOpenGenerate,
   onAutoOpenConsumed,
-  importKeyFromLink,
-  onImportKeyConsumed,
   onEncryptTo,
   unlockRequestKeyId,
   onUnlockRequestConsumed,
@@ -94,49 +88,6 @@ export function KeysView({
       onAutoOpenConsumed?.();
     }
   }, [autoOpenGenerate, onAutoOpenConsumed]);
-
-  useEffect(() => {
-    if (!importKeyFromLink) return;
-    onImportKeyConsumed?.();
-
-    if (importKeyFromLink.error) {
-      toast.error(importKeyFromLink.error);
-      return;
-    }
-
-    if (!importKeyFromLink.armoredKey) return;
-
-    const armored = importKeyFromLink.armoredKey;
-
-    if (armored.includes("PRIVATE KEY")) {
-      setShowImport(true);
-      toast.info(
-        "This is a private key - use the Import dialog to add it with protection.",
-      );
-      return;
-    }
-
-    void (async () => {
-      try {
-        const keyInfo = await parsePublicKey(armored);
-        const alreadyHave =
-          contacts.some((c) => c.keyId === keyInfo.keyId) ||
-          myKeys.some((k) => k.keyId === keyInfo.keyId);
-        if (alreadyHave) {
-          toast.info(
-            `${keyInfo.userIds[0] ?? "Key"} is already in your keyring`,
-          );
-          return;
-        }
-        setPendingImports((prev) => {
-          if (prev.some((p) => p.keyInfo.keyId === keyInfo.keyId)) return prev;
-          return [...prev, { keyInfo, armored, selected: true }];
-        });
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Failed to parse key");
-      }
-    })();
-  }, [importKeyFromLink, onImportKeyConsumed]);
 
   const handleExportPublic = async (blob: ProtectedKeyBlob) => {
     await navigator.clipboard.writeText(blob.publicKeyArmored);
