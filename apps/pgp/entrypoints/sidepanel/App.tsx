@@ -131,54 +131,65 @@ export default function App() {
     };
   }, [masterUnlocked, resetMasterLockTimer]);
 
+  // Refs that mirror the latest unstable values. Auto-lock effects use
+  // these so they can read fresh state without re-registering listeners
+  // (and re-calling chrome.idle.setDetectionInterval) on every App
+  // render. `useKeySession()` returns a new object every render; without
+  // the ref indirection, the effects below would churn constantly.
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
+  const masterUnlockedRef = useRef(masterUnlocked);
+  masterUnlockedRef.current = masterUnlocked;
+  const doMasterLockRef = useRef(doMasterLock);
+  doMasterLockRef.current = doMasterLock;
+  const resetMasterLockTimerRef = useRef(resetMasterLockTimer);
+  resetMasterLockTimerRef.current = resetMasterLockTimer;
+
   // Reset lock timers on user activity so the extension doesn't lock
   // while the user is actively typing or interacting.
   const lastActivityRef = useRef(0);
   useEffect(() => {
-    // Stable handler reference so removeEventListener actually unbinds
-    // the same function we registered. Inline arrow lambdas would leave
-    // listeners behind on every effect re-run.
     const handleActivity = () => {
       const now = Date.now();
       if (now - lastActivityRef.current < 30_000) return;
       lastActivityRef.current = now;
-      if (masterUnlocked) resetMasterLockTimer();
-      if (session.unlockedKeyIds.size > 0) session.resetLockTimer();
+      if (masterUnlockedRef.current) resetMasterLockTimerRef.current();
+      const s = sessionRef.current;
+      if (s.unlockedKeyIds.size > 0) s.resetLockTimer();
     };
-
     document.addEventListener("keydown", handleActivity);
     document.addEventListener("pointerdown", handleActivity);
     return () => {
       document.removeEventListener("keydown", handleActivity);
       document.removeEventListener("pointerdown", handleActivity);
     };
-  }, [masterUnlocked, resetMasterLockTimer, session]);
+  }, []);
 
   // Lock immediately when the side panel is hidden (user closed it,
   // collapsed it, or switched to a window where it isn't visible).
-  // The side panel persists across tab switches in the same window,
-  // so visibilitychange reliably tracks "is the user actually looking
-  // at this surface."
   useEffect(() => {
     const onVisibility = () => {
       if (document.visibilityState !== "hidden") return;
-      if (session.unlockedKeyIds.size > 0) session.lockAll();
-      if (masterUnlocked) doMasterLock(true);
+      const s = sessionRef.current;
+      if (s.unlockedKeyIds.size > 0) s.lockAll();
+      if (masterUnlockedRef.current) doMasterLockRef.current(true);
     };
     document.addEventListener("visibilitychange", onVisibility);
     return () =>
       document.removeEventListener("visibilitychange", onVisibility);
-  }, [masterUnlocked, doMasterLock, session]);
+  }, []);
 
   // OS-level idle / lock detection.
-  //   - "locked" (OS lockscreen) ALWAYS triggers an immediate lock,
-  //     regardless of any user setting -- the screen is gone, the user
-  //     has clearly stepped away.
-  //   - "idle" triggers only after the configured idle threshold:
-  //       * default: align with `autoLockMinutes` so OS-idle and the
-  //         in-app timer fire at the same point. No surprise early lock.
-  //       * `lockImmediatelyOnIdle`: use Chrome's minimum (60s) so the
-  //         lock fires as soon as the OS reports any idle.
+  //   - "locked" (OS lockscreen) ALWAYS triggers an immediate lock --
+  //     the screen is gone, the user has clearly stepped away.
+  //   - "idle" fires after the OS hasn't seen input for the detection
+  //     interval below. Default aligns with `autoLockMinutes` so OS-idle
+  //     and the in-app timer fire at the same point. The
+  //     `lockImmediatelyOnIdle` setting drops the threshold to Chrome's
+  //     minimum (60s) for users who want fast OS-idle locking.
+  //
+  // This effect re-runs ONLY when those two prefs change (not on every
+  // render) so `setDetectionInterval` isn't called constantly.
   useEffect(() => {
     if (!chrome.idle?.onStateChanged) return;
     const intervalSeconds = lockImmediatelyOnIdle
@@ -187,22 +198,13 @@ export default function App() {
     chrome.idle.setDetectionInterval(intervalSeconds);
     const onState = (state: "idle" | "active" | "locked") => {
       if (state === "active") return;
-      if (state === "idle" && !lockImmediatelyOnIdle) {
-        // The detection interval already gates "idle" to autoLockMinutes;
-        // reaching here means the user has been idle that long.
-      }
-      if (session.unlockedKeyIds.size > 0) session.lockAll();
-      if (masterUnlocked) doMasterLock(true);
+      const s = sessionRef.current;
+      if (s.unlockedKeyIds.size > 0) s.lockAll();
+      if (masterUnlockedRef.current) doMasterLockRef.current(true);
     };
     chrome.idle.onStateChanged.addListener(onState);
     return () => chrome.idle.onStateChanged.removeListener(onState);
-  }, [
-    autoLockMinutes,
-    lockImmediatelyOnIdle,
-    masterUnlocked,
-    doMasterLock,
-    session,
-  ]);
+  }, [autoLockMinutes, lockImmediatelyOnIdle]);
 
   useEffect(() => {
     void (async () => {

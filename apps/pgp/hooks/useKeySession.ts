@@ -59,6 +59,16 @@ export function useKeySession(opts: KeySessionOptions) {
     };
   }, []);
 
+  // If the user changes `autoLockMinutes` while keys are unlocked, the
+  // existing setTimeout is still scheduled at the OLD duration. Restart
+  // it under the new duration so the setting actually takes effect
+  // without waiting for the next user activity.
+  useEffect(() => {
+    if (handleRef.current.size > 0) {
+      resetLockTimer();
+    }
+  }, [opts.autoLockMinutes, resetLockTimer]);
+
   const markHandleUnlocked = useCallback(
     async (keyId: string, handle: number) => {
       handleRef.current.set(keyId, handle);
