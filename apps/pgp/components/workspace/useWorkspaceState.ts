@@ -1,9 +1,13 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { OperationAction } from "../../lib/messages";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import { getPreferences } from "../../lib/storage/preferences";
+import {
+  decryptWorkspaceDraft,
+  type WorkspaceDraft,
+} from "../../lib/workspace-draft";
 
 type Mode = "encrypt" | "decrypt" | "sign" | "verify";
 
@@ -61,6 +65,13 @@ export function useWorkspaceState(opts: {
   allPublicKeys?: { keyId: string }[];
   encryptToKeyId?: string | null;
   onClearEncryptTo?: () => void;
+  /** Encrypted draft to restore on mount (from a prior auto-lock).
+   *  Once consumed, `onDraftRestored` fires so the parent can clear it. */
+  restoreDraft?: Uint8Array | null;
+  onDraftRestored?: () => void;
+  /** Fires whenever the salient draft state changes. The parent stores
+   *  the snapshot in a ref so it can encrypt on auto-lock. */
+  onDraftChange?: (draft: WorkspaceDraft | null) => void;
 }): WorkspaceState {
   const [mode, setMode] = useState<Mode>("encrypt");
   const [input, setInput] = useState("");
@@ -109,6 +120,50 @@ export function useWorkspaceState(opts: {
   useEffect(() => {
     void getPreferences().then((p) => setAlsoSign(p.signWhenEncrypting));
   }, []);
+
+  // Restore an encrypted draft (if any) on mount. Single-shot: the
+  // parent clears the ciphertext via `onDraftRestored` so re-renders
+  // don't keep re-applying it and clobbering subsequent edits.
+  const restoreCt = opts.restoreDraft;
+  const onRestored = opts.onDraftRestored;
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (restoredRef.current || !restoreCt) return;
+    restoredRef.current = true;
+    void (async () => {
+      const draft = await decryptWorkspaceDraft(restoreCt);
+      if (draft) {
+        setMode(draft.mode);
+        setInput(draft.input);
+        setOutput(draft.output);
+        setSelectedRecipientId(draft.selectedRecipientId);
+        setSelectedKeyId(draft.selectedKeyId);
+      }
+      onRestored?.();
+    })();
+  }, [restoreCt, onRestored]);
+
+  // Mirror salient draft state to the parent on every change. The
+  // parent stores the latest snapshot in a ref and encrypts it
+  // synchronously when an auto-lock fires.
+  const onDraftChange = opts.onDraftChange;
+  useEffect(() => {
+    if (!onDraftChange) return;
+    onDraftChange({
+      mode,
+      input,
+      output,
+      selectedRecipientId,
+      selectedKeyId,
+    });
+  }, [
+    mode,
+    input,
+    output,
+    selectedRecipientId,
+    selectedKeyId,
+    onDraftChange,
+  ]);
 
   useEffect(() => {
     if (opts.myKeys.length > 0 && !selectedKeyId) {

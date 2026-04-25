@@ -1,5 +1,14 @@
 //! # GPG Tools - Sequoia-PGP WASM Module
 //!
+//! ## For auditors
+//!
+//! Start at `apps/pgp/SECURITY.md` for the threat model and file map.
+//! This file is the entire WASM/Rust trust boundary -- every
+//! cryptographic operation lives here. The JS side talks to this
+//! module only through `apps/pgp/lib/pgp/wasm-public.ts` (no secret
+//! material) and `apps/pgp/lib/pgp/wasm-secrets.ts` (secret material,
+//! with per-function zeroize contracts).
+//!
 //! All OpenPGP cryptographic operations run in this Rust/WASM module.
 //! Private keys are stored in WASM linear memory behind opaque integer
 //! handles - the JavaScript side never sees raw private key material
@@ -1171,6 +1180,86 @@ pub fn drop_contacts_session() {
 #[wasm_bindgen(js_name = "hasContactsSession")]
 pub fn has_contacts_session() -> bool {
     CONTACTS_KEY.with(|slot| slot.borrow().is_some())
+}
+
+// =====================================================================
+// Draft session: a separate AES key used solely for stashing the user's
+// in-progress workspace state across auto-lock cycles. The key lives in
+// WASM linear memory for the lifetime of the side-panel session and is
+// INDEPENDENT of the master/contacts session -- so an auto-lock can
+// drop KEY_STORE entries while still letting us decrypt the draft on
+// re-unlock. The key never crosses to JS.
+//
+// Plaintext drafts are sensitive (they're the user's text) but are not
+// key material; the encrypt/decrypt API just protects the JS-heap copy
+// during the locked window.
+// =====================================================================
+
+const DRAFT_AAD: &[u8] = b"gpg-tools:workspace-draft:v1";
+
+thread_local! {
+    static DRAFT_KEY: RefCell<Option<Vec<u8>>> = RefCell::new(None);
+}
+
+fn set_draft_key(new_key: Option<Vec<u8>>) {
+    DRAFT_KEY.with(|slot| {
+        let mut slot = slot.borrow_mut();
+        if let Some(ref mut old) = *slot {
+            old.zeroize();
+        }
+        *slot = new_key;
+    });
+}
+
+fn with_draft_key<T>(f: impl FnOnce(&[u8]) -> T) -> Result<T, String> {
+    DRAFT_KEY.with(|slot| {
+        let guard = slot.borrow();
+        guard
+            .as_ref()
+            .map(|k| f(k.as_slice()))
+            .ok_or_else(|| "Draft session not initialised".to_string())
+    })
+}
+
+/// Generate a fresh 32-byte random draft key if one isn't already set.
+/// No-op if a key already exists (preserves drafts across re-init).
+#[wasm_bindgen(js_name = "initDraftSessionIfUnset")]
+pub fn init_draft_session_if_unset() -> Result<(), String> {
+    let exists = DRAFT_KEY.with(|slot| slot.borrow().is_some());
+    if exists {
+        return Ok(());
+    }
+    let mut key = vec![0u8; 32];
+    getrandom::fill(&mut key).map_err(|e| format!("RNG failed: {e}"))?;
+    set_draft_key(Some(key));
+    Ok(())
+}
+
+/// Drop the draft session key. Use on side-panel close (or as a
+/// belt-and-braces measure when the user wipes drafts).
+#[wasm_bindgen(js_name = "dropDraftSession")]
+pub fn drop_draft_session() {
+    set_draft_key(None);
+}
+
+/// Encrypt a draft buffer under the in-WASM draft key. Returns
+/// `[12-byte IV][ciphertext]`. Plaintext is wrapped in `Zeroizing` and
+/// dropped at function exit.
+#[wasm_bindgen(js_name = "encryptDraft")]
+pub fn encrypt_draft(plaintext: Vec<u8>) -> Result<Vec<u8>, String> {
+    let plaintext = Zeroizing::new(plaintext);
+    with_draft_key(|key| aes_gcm_encrypt(key, &plaintext, DRAFT_AAD))?
+}
+
+/// Decrypt a packed `[12-byte IV][ciphertext]` produced by `encryptDraft`.
+/// The plaintext crosses back to JS so the workspace can rehydrate.
+#[wasm_bindgen(js_name = "decryptDraft")]
+pub fn decrypt_draft(packed: &[u8]) -> Result<Vec<u8>, String> {
+    if packed.len() < 12 + 16 {
+        return Err("Draft blob too short".to_string());
+    }
+    let (iv, ct) = packed.split_at(12);
+    with_draft_key(|key| aes_gcm_decrypt(key, iv, ct, DRAFT_AAD))?
 }
 
 // ── Contacts encrypt / decrypt ──────────────────────────────────────

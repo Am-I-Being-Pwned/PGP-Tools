@@ -1,3 +1,23 @@
+/**
+ * ============================================================================
+ * Generate / import + protect flows.
+ * ============================================================================
+ *
+ * This is the JS-side coordinator that drives every "produce a fresh
+ * encrypted-key blob" path. It owns:
+ *   - the password / passphrase / PRF input lifetime (encode → call →
+ *     `.fill(0)` in `finally`),
+ *   - the optional `cache: true` chained unlock (so KEY_STORE
+ *     insertion is always tied to the user-just-typed-credentials
+ *     unlock action, never to the protect call itself),
+ *   - the wire-format unpacking from the wasm packed-binary return.
+ *
+ * For the threat model and per-secret zeroization audit table, see
+ * `apps/pgp/SECURITY.md`. For the wasm-side guarantee that the cert
+ * never enters KEY_STORE during a protect call, see the doc-comment
+ * header in `apps/pgp/gpg-wasm/src/lib.rs`.
+ */
+
 import type { GenerateKeyOptions } from "../pgp/types";
 import type { ProtectFlowResult } from "../pgp/wasm";
 import {
