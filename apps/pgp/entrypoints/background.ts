@@ -1,113 +1,74 @@
 import "../lib/network-lockdown";
 
 import type { OperationAction, PendingOperation } from "../lib/messages";
-import {
-  MENU_DECRYPT,
-  MENU_ENCRYPT,
-  MENU_SIGN,
-  MENU_VERIFY,
-} from "../lib/constants";
+import { MENU_OPEN_IN_PGP, SESSION_PENDING_OP } from "../lib/constants";
+import { recoverArmorIfNeeded } from "../lib/armor-recovery";
+
+/** Classify the selected text by PGP armor header to decide which
+ *  action the side panel should take. Substring checks only -- no
+ *  parsing here, the side panel re-validates. */
+function classifyAction(text: string): OperationAction {
+  if (text.includes("-----BEGIN PGP PUBLIC KEY BLOCK-----")) {
+    return "import-public";
+  }
+  if (text.includes("-----BEGIN PGP PRIVATE KEY BLOCK-----")) {
+    return "import-private";
+  }
+  if (text.includes("-----BEGIN PGP MESSAGE-----")) return "decrypt";
+  if (text.includes("-----BEGIN PGP SIGNED MESSAGE-----")) return "verify";
+  return "encrypt";
+}
 
 export default defineBackground(() => {
   void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 
   chrome.runtime.onInstalled.addListener((details) => {
-    // First install: open the welcome page in a new tab. The page
-    // hosts a single "click here to get started" button -- that
-    // click is the user gesture that lets it call sidePanel.open()
-    // (which we cannot do directly from `onInstalled`). The side
-    // panel UI is never rendered in a tab.
     if (details.reason === "install") {
       void chrome.tabs.create({
         url: chrome.runtime.getURL("welcome.html"),
       });
     }
 
+    // Single top-level item. Action is decided at click time so Chrome
+    // never has more than one item to group into a submenu.
     chrome.contextMenus.create({
-      id: MENU_ENCRYPT,
-      title: "Encrypt selection with PGP",
-      contexts: ["selection"],
-    });
-    chrome.contextMenus.create({
-      id: MENU_DECRYPT,
-      title: "Decrypt selection with PGP",
-      contexts: ["selection"],
-    });
-    chrome.contextMenus.create({
-      id: MENU_SIGN,
-      title: "Sign selection with PGP",
-      contexts: ["selection"],
-    });
-    chrome.contextMenus.create({
-      id: MENU_VERIFY,
-      title: "Verify PGP signature",
+      id: MENU_OPEN_IN_PGP,
+      title: "Open in PGP Tools",
       contexts: ["selection"],
     });
   });
 
-  const menuIdToAction: Partial<Record<string, OperationAction>> = {
-    [MENU_ENCRYPT]: "encrypt",
-    [MENU_DECRYPT]: "decrypt",
-    [MENU_SIGN]: "sign",
-    [MENU_VERIFY]: "verify",
-  };
-
-  let pendingQueue: PendingOperation | null = null;
-
-  chrome.runtime.onMessage.addListener((message, sender) => {
-    if (sender.id !== chrome.runtime.id) return;
-    if (
-      typeof message === "object" &&
-      message !== null &&
-      (message as { type: string }).type === "SIDEPANEL_READY"
-    ) {
-      if (pendingQueue) {
-        chrome.runtime.sendMessage(pendingQueue).catch(() => {
-          /* noop */
-        });
-        pendingQueue = null;
-      }
-    }
-  });
-
-  chrome.contextMenus.onClicked.addListener((info, tab) => {
-    if (!tab?.id) return;
+  // Async listener: returning a Promise keeps the MV3 service worker
+  // alive until the storage write commits. Without this, the SW could
+  // be killed after the sync portion of the handler returns, leaving
+  // chrome.storage.session.set in-flight and the side panel mounting
+  // to an empty store.
+  chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+    if (!tab?.id || !info.selectionText) return;
+    if (info.menuItemId !== MENU_OPEN_IN_PGP) return;
     const tabId = tab.id;
 
-    void (async () => {
-      if (!info.selectionText) return;
+    // Chrome's info.selectionText collapses all whitespace into single
+    // spaces, which destroys armored PGP blocks. Reconstruct the line
+    // breaks before persisting so downstream consumers (parser, import
+    // dialog, decrypt) receive valid armor.
+    const text = recoverArmorIfNeeded(info.selectionText);
 
-      const action = menuIdToAction[info.menuItemId as string];
-      if (!action) return;
+    const operation: PendingOperation = {
+      type: "PENDING_OPERATION",
+      id: crypto.randomUUID(),
+      action: classifyAction(text),
+      text,
+      sourceTabId: tabId,
+      createdAt: Date.now(),
+    };
 
-      const operation: PendingOperation = {
-        type: "PENDING_OPERATION",
-        id: crypto.randomUUID(),
-        action,
-        text: info.selectionText,
-        sourceTabId: tabId,
-      };
-
-      await chrome.sidePanel.open({ tabId });
-
-      pendingQueue = operation;
-
-      let delay = 100;
-      const trySend = (attemptsLeft: number) => {
-        if (!pendingQueue) return;
-        chrome.runtime
-          .sendMessage(operation)
-          .then(() => {
-            pendingQueue = null;
-          })
-          .catch(() => {
-            if (attemptsLeft > 0) {
-              setTimeout(() => trySend(attemptsLeft - 1), delay);
-              delay = Math.min(delay * 1.5, 1000);
-            }
-          });
-      };
-      trySend(8);
-    })();
+    // sidePanel.open MUST be called synchronously inside the click
+    // handler -- Chrome rejects it as a non-gesture if anything
+    // awaits before it.
+    chrome.sidePanel.open({ tabId }).catch(() => {
+      /* sidepanel already open in this tab -- harmless */
+    });
+    await chrome.storage.session.set({ [SESSION_PENDING_OP]: operation });
   });
 });
