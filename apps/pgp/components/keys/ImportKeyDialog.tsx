@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@amibeingpwned/ui/button";
 
@@ -29,6 +29,9 @@ interface ImportKeyDialogProps {
   onImportPublic: (contact: PublicContactKey) => Promise<void>;
   /** Pass the primary key's passkey credential ID to allow reuse. */
   reusePasskeyCredentialId?: string;
+  /** When provided (and the dialog opens), prefill the paste step with this
+   *  armored key. Cleared on close by the parent. */
+  initialArmored?: string | null;
 }
 
 export function ImportKeyDialog({
@@ -37,6 +40,7 @@ export function ImportKeyDialog({
   onImportPrivate,
   onImportPublic,
   reusePasskeyCredentialId,
+  initialArmored,
 }: ImportKeyDialogProps) {
   const [step, setStep] = useState<Step>("paste");
   const [armored, setArmored] = useState("");
@@ -52,6 +56,18 @@ export function ImportKeyDialog({
   const [sourcePassphrase, setSourcePassphrase] = useState("");
   const [parsed, setParsed] = useState<ParsedPrivate | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Apply a prefill when the dialog opens with one. Runs only on the
+  // open-edge so user edits inside the dialog aren't clobbered.
+  useEffect(() => {
+    if (!open || !initialArmored) return;
+    setArmored(initialArmored);
+    if (initialArmored.includes("PRIVATE KEY")) setDetectedType("private");
+    else if (initialArmored.includes("PUBLIC KEY")) setDetectedType("public");
+    else setDetectedType(null);
+    setStep("paste");
+    setError(null);
+  }, [open, initialArmored]);
 
   if (!open) return null;
 

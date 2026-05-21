@@ -33,7 +33,7 @@ interface WorkspaceViewProps {
   onClearPending?: () => void;
   encryptToKeyId?: string | null;
   onClearEncryptTo?: () => void;
-  onNavigateToKeys?: () => void;
+  onNavigateToKeys?: (importPrefill?: string) => void;
   autoDownloadFiles?: boolean;
   autoDownloadText?: boolean;
   onOperationComplete?: () => void;
