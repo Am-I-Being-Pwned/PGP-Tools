@@ -555,6 +555,7 @@ export function WorkspaceView({
         onRemoveFile={s.removeFile}
         onClearFiles={s.clearFiles}
         publicKeyDetected={s.publicKeyDetected}
+        privateKeyDetected={s.privateKeyDetected}
         onNavigateToKeys={onNavigateToKeys}
         operationDone={s.operationDone}
         onReset={s.resetAll}
