@@ -39,6 +39,7 @@ export function ContactDropZone({ onImport, existingKeyIds }: ContactDropZonePro
       let added = 0;
       let skipped = 0;
       let failed = 0;
+      const rejectionReasons: string[] = [];
 
       for (const block of blocks) {
         try {
@@ -46,6 +47,15 @@ export function ContactDropZone({ onImport, existingKeyIds }: ContactDropZonePro
 
           if (existingKeyIds?.includes(keyInfo.keyId)) {
             skipped++;
+            continue;
+          }
+
+          if (!keyInfo.usableForEncryption) {
+            failed++;
+            rejectionReasons.push(
+              keyInfo.policyError ??
+                "no usable encryption subkey on this key",
+            );
             continue;
           }
 
@@ -65,7 +75,14 @@ export function ContactDropZone({ onImport, existingKeyIds }: ContactDropZonePro
 
       if (added > 0) toast.success(`Added ${added} contact${added > 1 ? "s" : ""}`);
       if (skipped > 0) toast.info(`${skipped} already in contacts`);
-      if (failed > 0) setError(`${failed} key${failed > 1 ? "s" : ""} failed to import`);
+      if (failed > 0) {
+        const detail = rejectionReasons[0];
+        setError(
+          detail
+            ? `${failed} key${failed > 1 ? "s" : ""} rejected: ${detail}`
+            : `${failed} key${failed > 1 ? "s" : ""} failed to import`,
+        );
+      }
     },
     [onImport, existingKeyIds],
   );

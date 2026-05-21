@@ -5,6 +5,12 @@ export interface KeyInfo {
   createdAt: number; // Unix timestamp
   expiresAt: number | null;
   isPrivate: boolean;
+  /** Sequoia StandardPolicy accepts ≥1 alive, non-revoked encryption key. */
+  usableForEncryption: boolean;
+  /** Sequoia StandardPolicy accepts ≥1 alive, non-revoked signing key. */
+  usableForSigning: boolean;
+  /** Human-readable rejection reason (e.g. SHA-1 self-sig, expired). */
+  policyError?: string;
 }
 
 // Discriminated union for encrypt input
