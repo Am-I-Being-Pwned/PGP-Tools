@@ -48,6 +48,8 @@ export interface WorkspaceState {
   setPasswordError: (s: string | null) => void;
   publicKeyDetected: boolean;
   setPublicKeyDetected: (b: boolean) => void;
+  privateKeyDetected: boolean;
+  setPrivateKeyDetected: (b: boolean) => void;
   handleInputChange: (text: string) => void;
   handleFileDrop: (newFiles: File[]) => void;
   removeFile: (index: number) => void;
@@ -96,6 +98,7 @@ export function useWorkspaceState(opts: {
   const [passwordInput, setPasswordInput] = useState("");
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [publicKeyDetected, setPublicKeyDetected] = useState(false);
+  const [privateKeyDetected, setPrivateKeyDetected] = useState(false);
 
   const resetOutput = useCallback(() => {
     setOutput("");
@@ -112,6 +115,7 @@ export function useWorkspaceState(opts: {
     setInput("");
     setFiles([]);
     setPublicKeyDetected(false);
+    setPrivateKeyDetected(false);
     resetOutput();
   }, [resetOutput]);
 
@@ -147,6 +151,16 @@ export function useWorkspaceState(opts: {
   const onDraftChange = opts.onDraftChange;
   useEffect(() => {
     if (!onDraftChange) return;
+    // Refuse to snapshot armored private-key material into the draft.
+    // The draft is encrypted at rest, but the plaintext armor still
+    // exists in JS heap while the draft serializer runs and during
+    // any future restore. Pasting a private key here is almost always
+    // a user error (they meant to use the Import flow), so dropping
+    // the snapshot is safer than persisting it.
+    if (privateKeyDetected) {
+      onDraftChange(null);
+      return;
+    }
     onDraftChange({
       mode,
       input,
@@ -160,6 +174,7 @@ export function useWorkspaceState(opts: {
     output,
     selectedRecipientId,
     selectedKeyId,
+    privateKeyDetected,
     onDraftChange,
   ]);
 
@@ -217,7 +232,12 @@ export function useWorkspaceState(opts: {
     setVerifiedSigner(null);
     setNeedsPassword(false);
     setPublicKeyDetected(false);
-    if (text.includes("-----BEGIN PGP MESSAGE-----")) {
+    setPrivateKeyDetected(false);
+    if (text.includes("-----BEGIN PGP PRIVATE KEY BLOCK-----")) {
+      // Flag first; the drafting effect skips snapshots while this is true
+      // so the armor doesn't end up in the encrypted draft blob.
+      setPrivateKeyDetected(true);
+    } else if (text.includes("-----BEGIN PGP MESSAGE-----")) {
       setMode("decrypt");
     } else if (text.includes("-----BEGIN PGP SIGNED MESSAGE-----")) {
       setMode("verify");
@@ -300,6 +320,8 @@ export function useWorkspaceState(opts: {
     setPasswordError,
     publicKeyDetected,
     setPublicKeyDetected,
+    privateKeyDetected,
+    setPrivateKeyDetected,
     handleInputChange,
     handleFileDrop,
     removeFile,
