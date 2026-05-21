@@ -43,6 +43,9 @@ interface KeysViewProps {
   advancedMode?: boolean;
   autoOpenGenerate?: boolean;
   onAutoOpenConsumed?: () => void;
+  /** When non-null, opens the Import dialog with this armored text prefilled. */
+  autoOpenImport?: string | null;
+  onAutoOpenImportConsumed?: () => void;
   onEncryptTo?: (keyId: string) => void;
   unlockRequestKeyId?: string | null;
   onUnlockRequestConsumed?: () => void;
@@ -69,6 +72,8 @@ export function KeysView({
   advancedMode,
   autoOpenGenerate,
   onAutoOpenConsumed,
+  autoOpenImport,
+  onAutoOpenImportConsumed,
   onEncryptTo,
   unlockRequestKeyId,
   onUnlockRequestConsumed,
@@ -78,6 +83,9 @@ export function KeysView({
 }: KeysViewProps) {
   const [showGenerate, setShowGenerate] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [importInitialArmored, setImportInitialArmored] = useState<string | null>(
+    null,
+  );
   const [pendingImports, setPendingImports] = useState<
     { keyInfo: KeyInfo; armored: string; selected: boolean }[]
   >([]);
@@ -88,6 +96,14 @@ export function KeysView({
       onAutoOpenConsumed?.();
     }
   }, [autoOpenGenerate, onAutoOpenConsumed]);
+
+  useEffect(() => {
+    if (autoOpenImport) {
+      setImportInitialArmored(autoOpenImport);
+      setShowImport(true);
+      onAutoOpenImportConsumed?.();
+    }
+  }, [autoOpenImport, onAutoOpenImportConsumed]);
 
   const handleExportPublic = async (blob: ProtectedKeyBlob) => {
     await navigator.clipboard.writeText(blob.publicKeyArmored);
@@ -287,10 +303,14 @@ export function KeysView({
 
       <ImportKeyDialog
         open={showImport}
-        onClose={() => setShowImport(false)}
+        onClose={() => {
+          setShowImport(false);
+          setImportInitialArmored(null);
+        }}
         onImportPrivate={onAddKey}
         onImportPublic={onAddContact}
         reusePasskeyCredentialId={primaryPasskeyCredentialId}
+        initialArmored={importInitialArmored}
       />
     </div>
   );

@@ -23,7 +23,7 @@ interface WorkspaceInputProps {
   onRemoveFile: (index: number) => void;
   onClearFiles: () => void;
   publicKeyDetected: boolean;
-  onNavigateToKeys?: () => void;
+  onNavigateToKeys?: (importPrefill?: string) => void;
   operationDone: boolean;
   onReset: () => void;
   onResetOutput: () => void;
@@ -120,8 +120,11 @@ export function WorkspaceInput({
       {publicKeyDetected && (
         <div className="rounded-md bg-blue-500/10 px-3 py-2 text-xs text-blue-400">
           This looks like someone's public key.{" "}
-          <button onClick={() => onNavigateToKeys?.()} className="underline">
-            Go to Keys to import it as a contact
+          <button
+            onClick={() => onNavigateToKeys?.(input)}
+            className="underline"
+          >
+            Import it as a contact
           </button>
         </div>
       )}

@@ -43,6 +43,7 @@ export default function App() {
     null,
   );
   const [openGenerateOnMount, setOpenGenerateOnMount] = useState(false);
+  const [importPrefill, setImportPrefill] = useState<string | null>(null);
   const [encryptToKeyId, setEncryptToKeyId] = useState<string | null>(null);
 
   // Master protection state
@@ -327,7 +328,11 @@ export default function App() {
             onClearPending={clearPending}
             encryptToKeyId={encryptToKeyId}
             onClearEncryptTo={() => setEncryptToKeyId(null)}
-            onNavigateToKeys={() => setActiveTab("keys")}
+            onNavigateToKeys={(prefill) => {
+              if (prefill) setImportPrefill(prefill);
+              setActiveTab("keys");
+              void savePreferences({ activeTab: "keys" });
+            }}
             autoDownloadFiles={autoDownloadFiles}
             autoDownloadText={autoDownloadText}
             onOperationComplete={session.lockAllIfNoCache}
@@ -353,6 +358,8 @@ export default function App() {
             advancedMode={advancedMode}
             autoOpenGenerate={openGenerateOnMount}
             onAutoOpenConsumed={() => setOpenGenerateOnMount(false)}
+            autoOpenImport={importPrefill}
+            onAutoOpenImportConsumed={() => setImportPrefill(null)}
             onEncryptTo={(keyId) => {
               setEncryptToKeyId(keyId);
               setActiveTab("workspace");
