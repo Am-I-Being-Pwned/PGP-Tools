@@ -94,6 +94,16 @@ export function ImportKeyDialog({
         setError("Expected a private key.");
         return;
       }
+      if (
+        !result.keyInfo.usableForEncryption &&
+        !result.keyInfo.usableForSigning
+      ) {
+        setError(
+          result.keyInfo.policyError ??
+            "This key cannot be used for encryption or signing.",
+        );
+        return;
+      }
       setParsed({
         publicKeyArmored: result.publicKeyArmored,
         keyInfo: result.keyInfo,
@@ -123,6 +133,13 @@ export function ImportKeyDialog({
       const result = await importKey(armored);
       if (result.type !== "public") {
         setError("Expected a public key.");
+        return;
+      }
+      if (!result.keyInfo.usableForEncryption) {
+        setError(
+          result.keyInfo.policyError ??
+            "This public key has no usable encryption subkey, so you wouldn't be able to encrypt to it.",
+        );
         return;
       }
       await onImportPublic({
