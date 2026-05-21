@@ -17,6 +17,7 @@ import { useContacts } from "../../hooks/useContacts";
 import { useKeyring } from "../../hooks/useKeyring";
 import { useKeySession } from "../../hooks/useKeySession";
 import { usePendingOperation } from "../../hooks/usePendingOperation";
+import { SESSION_PENDING_OP } from "../../lib/constants";
 import * as wasmApi from "../../lib/pgp/wasm";
 import { getMasterProtection } from "../../lib/storage/master-protection";
 import { getPreferences, savePreferences } from "../../lib/storage/preferences";
@@ -45,10 +46,22 @@ export default function App() {
   const [openGenerateOnMount, setOpenGenerateOnMount] = useState(false);
   const [importPrefill, setImportPrefill] = useState<string | null>(null);
   const [encryptToKeyId, setEncryptToKeyId] = useState<string | null>(null);
+  // True once a pending context-menu op has been routed to a tab.
+  // The preferences-loading effect (mount-only) consults this ref to
+  // avoid overriding our routed tab with the stale saved value when
+  // getPreferences resolves after our pending route.
+  const pendingRoutedRef = useRef(false);
 
   // Master protection state
   const [masterProtection, setMasterProtection] =
     useState<MasterProtection | null>(null);
+  // Separate from `masterProtection` (which is null in TWO cases: not
+  // loaded yet, and no protection set up). Without this flag the main
+  // tree mounts during the brief load window, then unmounts when the
+  // lock screen kicks in, blowing away any local component state
+  // that was building up in parallel (e.g. KeysView's open-dialog
+  // state set by the context-menu prefill flow).
+  const [masterProtectionLoaded, setMasterProtectionLoaded] = useState(false);
   const [masterUnlocked, setMasterUnlocked] = useState(false);
   const masterLockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -101,6 +114,11 @@ export default function App() {
         }
       }
       latestDraftRef.current = null;
+
+      // Wipe any unconsumed context-menu pending op. Without this a
+      // selection that landed during an unlocked session could sit
+      // in storage.session and surface on the next unlock.
+      void chrome.storage.session.remove(SESSION_PENDING_OP);
 
       // Password-master path leaves the contacts session key in WASM
       // (passkey path already drops it after each decrypt).
@@ -215,7 +233,15 @@ export default function App() {
       setStorageLocation(prefs.storageLocation);
       setAutoLockMinutes(prefs.autoLockMinutes);
       setOnboardingComplete(prefs.onboardingComplete);
-      setActiveTab(prefs.activeTab);
+      // If a pending context-menu op has already routed us to a tab,
+      // do NOT overwrite that with the (stale) saved value. Without
+      // this guard, opening the side panel via the context menu
+      // races: pending-routing fires fast, getPreferences resolves
+      // later and clobbers `activeTab`, which unmounts the target
+      // view (KeysView for imports) and visibly closes the dialog.
+      if (!pendingRoutedRef.current) {
+        setActiveTab(prefs.activeTab);
+      }
       setNeverCacheKeys(prefs.neverCacheKeys);
       setAutoLockEnabled(prefs.autoLockEnabled);
       setAutoDownloadFiles(prefs.autoDownloadFiles);
@@ -224,18 +250,28 @@ export default function App() {
 
       const mp = await getMasterProtection();
       setMasterProtection(mp);
+      setMasterProtectionLoaded(true);
     })();
-    chrome.runtime.sendMessage({ type: "SIDEPANEL_READY" }).catch(() => {
-      /* noop */
-    });
+    // Pending op delivery is now via chrome.storage.session
+    // (see usePendingOperation). No runtime handshake needed.
   }, []);
 
   useEffect(() => {
-    if (pending) {
-      setActiveTab("workspace");
-      void savePreferences({ activeTab: "workspace" });
+    if (!pending) return;
+    if (pending.action === "import-public" || pending.action === "import-private") {
+      pendingRoutedRef.current = true;
+      setImportPrefill(pending.text);
+      setActiveTab("keys");
+      void savePreferences({ activeTab: "keys" });
+      clearPending();
+      return;
     }
-  }, [pending]);
+    pendingRoutedRef.current = true;
+    setDraftCiphertext(null);
+    setActiveTab("workspace");
+    void savePreferences({ activeTab: "workspace" });
+  }, [pending, clearPending]);
+
 
   const handleDeleteKey = useCallback(
     async (keyId: string) => {
@@ -246,6 +282,12 @@ export default function App() {
   );
 
   if (onboardingComplete === null) return null;
+  // Wait for masterProtection's initial load before rendering any
+  // post-onboarding tree. Without this gate, the main UI mounts during
+  // the load window, then unmounts when the lock screen takes over --
+  // taking transient view state with it (e.g. an open import dialog
+  // populated by the context-menu prefill flow).
+  if (onboardingComplete && !masterProtectionLoaded) return null;
 
   if (!onboardingComplete) {
     return (
@@ -257,6 +299,7 @@ export default function App() {
               setOnboardingComplete(true);
               setMasterUnlocked(true);
               setMasterProtection(await getMasterProtection());
+              setMasterProtectionLoaded(true);
               void keyring.refresh();
               void contacts.refresh();
             }}
@@ -323,7 +366,13 @@ export default function App() {
             onUnlockWithPassword={session.unlockWithPassword}
             onUnlockWithPasskey={session.unlockWithPasskey}
             pendingAction={
-              pending ? { action: pending.action, text: pending.text } : null
+              pending &&
+              (pending.action === "encrypt" ||
+                pending.action === "decrypt" ||
+                pending.action === "sign" ||
+                pending.action === "verify")
+                ? { action: pending.action, text: pending.text }
+                : null
             }
             onClearPending={clearPending}
             encryptToKeyId={encryptToKeyId}

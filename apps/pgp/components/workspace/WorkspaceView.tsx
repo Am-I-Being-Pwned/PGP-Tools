@@ -3,7 +3,7 @@ import { DownloadIcon, RotateCcwIcon } from "lucide-react";
 import { Button } from "@amibeingpwned/ui/button";
 import { Checkbox } from "@amibeingpwned/ui/checkbox";
 
-import type { OperationAction } from "../../lib/messages";
+import type { WorkspaceAction } from "../../lib/messages";
 import type { EncryptInput } from "../../lib/pgp/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
@@ -29,7 +29,7 @@ interface WorkspaceViewProps {
     password: string,
   ) => Promise<boolean>;
   onUnlockWithPasskey: (blob: ProtectedKeyBlob) => Promise<boolean | "cancelled">;
-  pendingAction?: { action: OperationAction; text: string } | null;
+  pendingAction?: { action: WorkspaceAction; text: string } | null;
   onClearPending?: () => void;
   encryptToKeyId?: string | null;
   onClearEncryptTo?: () => void;

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { OperationAction } from "../../lib/messages";
+import type { WorkspaceAction } from "../../lib/messages";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import { getPreferences } from "../../lib/storage/preferences";
@@ -60,7 +60,7 @@ export interface WorkspaceState {
 
 export function useWorkspaceState(opts: {
   myKeys: ProtectedKeyBlob[];
-  pendingAction?: { action: OperationAction; text: string } | null;
+  pendingAction?: { action: WorkspaceAction; text: string } | null;
   onClearPending?: () => void;
   allPublicKeys?: { keyId: string }[];
   encryptToKeyId?: string | null;
