@@ -99,6 +99,20 @@ pub struct KeyInfo {
     pub expires_at: Option<f64>,
     #[serde(rename = "isPrivate")]
     pub is_private: bool,
+    /// True iff Sequoia's StandardPolicy accepts at least one
+    /// encryption-capable, alive, non-revoked key on this cert.
+    #[serde(rename = "usableForEncryption")]
+    pub usable_for_encryption: bool,
+    /// True iff Sequoia's StandardPolicy accepts at least one
+    /// signing-capable, alive, non-revoked key on this cert.
+    #[serde(rename = "usableForSigning")]
+    pub usable_for_signing: bool,
+    /// Human-readable reason the cert is unusable. Present only when
+    /// `usable_for_encryption` and `usable_for_signing` are both false
+    /// because of a policy rejection (e.g. SHA-1 binding signatures,
+    /// expiry, revocation).
+    #[serde(rename = "policyError", skip_serializing_if = "Option::is_none")]
+    pub policy_error: Option<String>,
 }
 
 /// Metadata returned alongside an encrypted blob from the protect-flow
@@ -152,11 +166,48 @@ fn extract_key_info(cert: &openpgp::Cert, is_private: bool) -> KeyInfo {
         .collect();
     let algorithm = cert.primary_key().key().pk_algo().to_string();
     let created_at = system_time_to_millis(cert.primary_key().key().creation_time());
-    let expires_at = cert
-        .with_policy(&POLICY, None)
-        .ok()
-        .and_then(|vc| vc.primary_key().key_expiration_time())
-        .map(system_time_to_millis);
+
+    let (expires_at, usable_for_encryption, usable_for_signing, policy_error) =
+        match cert.with_policy(&POLICY, None) {
+            Ok(vc) => {
+                let expires_at = vc.primary_key().key_expiration_time().map(system_time_to_millis);
+                let has_enc = vc
+                    .keys()
+                    .alive()
+                    .revoked(false)
+                    .for_transport_encryption()
+                    .next()
+                    .is_some()
+                    || vc
+                        .keys()
+                        .alive()
+                        .revoked(false)
+                        .for_storage_encryption()
+                        .next()
+                        .is_some();
+                let has_sig = vc
+                    .keys()
+                    .alive()
+                    .revoked(false)
+                    .for_signing()
+                    .next()
+                    .is_some();
+                let err = if !has_enc && !has_sig {
+                    Some(
+                        "Key has no usable encryption or signing subkey \
+                         (expired, revoked, or unsupported algorithm)."
+                            .to_string(),
+                    )
+                } else {
+                    None
+                };
+                (expires_at, has_enc, has_sig, err)
+            }
+            Err(e) => {
+                let raw = e.to_string();
+                (None, false, false, Some(humanize_policy_error(&raw)))
+            }
+        };
 
     KeyInfo {
         key_id,
@@ -165,7 +216,31 @@ fn extract_key_info(cert: &openpgp::Cert, is_private: bool) -> KeyInfo {
         created_at,
         expires_at,
         is_private,
+        usable_for_encryption,
+        usable_for_signing,
+        policy_error,
     }
+}
+
+/// Translate a raw Sequoia policy-rejection string into something a
+/// non-cryptographer can act on. The most common case in 2026 is keys
+/// self-signed with SHA-1, which Sequoia's StandardPolicy refuses.
+fn humanize_policy_error(raw: &str) -> String {
+    let lower = raw.to_ascii_lowercase();
+    if lower.contains("sha1") || lower.contains("sha-1") {
+        return format!(
+            "This key was self-signed with SHA-1, which is no longer considered \
+             secure and is rejected by default. Ask the key owner to reissue \
+             with SHA-256 or stronger. (details: {raw})"
+        );
+    }
+    if lower.contains("md5") {
+        return format!(
+            "This key uses MD5 signatures, which are broken. Ask the key owner \
+             to reissue with SHA-256 or stronger. (details: {raw})"
+        );
+    }
+    format!("Key rejected by security policy: {raw}")
 }
 
 fn armor_cert(cert: &openpgp::Cert, is_private: bool) -> Result<String, String> {
