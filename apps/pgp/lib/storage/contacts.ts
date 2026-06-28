@@ -14,6 +14,9 @@ export interface PublicContactKey {
   addedAt: number;
   lastUsedAt: number;
   expiresAt?: number | null;
+  /** Non-blocking flag from key parsing (e.g. relies on a SHA-1 binding
+   *  signature). Shown as a warning badge; the key is still usable. */
+  securityWarning?: string;
 }
 
 function isValidContact(v: unknown): v is PublicContactKey {

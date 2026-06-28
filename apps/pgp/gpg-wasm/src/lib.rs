@@ -62,16 +62,53 @@ use openpgp::cert::prelude::*;
 use openpgp::crypto::SessionKey;
 use openpgp::parse::stream::*;
 use openpgp::parse::Parse;
-use openpgp::policy::StandardPolicy;
+use openpgp::policy::{HashAlgoSecurity, StandardPolicy};
 use openpgp::serialize::stream::*;
 use openpgp::serialize::Serialize as _;
 use openpgp::serialize::SerializeInto as _;
-use openpgp::types::SymmetricAlgorithm;
+use openpgp::types::{HashAlgorithm, SymmetricAlgorithm};
 use sequoia_openpgp as openpgp;
 use serde::{Deserialize, Serialize};
+use std::sync::OnceLock;
 use wasm_bindgen::prelude::*;
 
-static POLICY: StandardPolicy<'static> = StandardPolicy::new();
+/// The policy that gates every key operation (parse, encrypt, sign,
+/// decrypt). It is Sequoia's `StandardPolicy` relaxed in exactly one
+/// way: SHA-1 is accepted in *binding-signature* contexts (primary-key
+/// self-signatures, User ID and subkey bindings), which only require
+/// second-preimage resistance.
+///
+/// Rationale: SHA-1's collision resistance is broken (Shambles), but
+/// its second-preimage resistance is still intact. Collision resistance
+/// is what matters for data signatures and third-party certifications --
+/// those keep using the hardened default and stay rejected. Binding
+/// signatures only need second-preimage resistance, so accepting SHA-1
+/// there is safe enough to keep legacy keys working. Without this, a key
+/// whose only live self-signature is SHA-1 (common for older RSA keys)
+/// hard-fails with "No binding signature at time ...". We instead import
+/// and use it, and surface a `securityWarning` on the key so the user
+/// knows it leans on weak crypto. See `strict_policy` for the flag.
+fn policy() -> &'static StandardPolicy<'static> {
+    static POLICY: OnceLock<StandardPolicy<'static>> = OnceLock::new();
+    POLICY.get_or_init(|| {
+        let mut p = StandardPolicy::new();
+        p.accept_hash_property(
+            HashAlgorithm::SHA1,
+            HashAlgoSecurity::SecondPreImageResistance,
+        );
+        p
+    })
+}
+
+/// Sequoia's hardened defaults, unrelaxed. Used only to *detect* whether
+/// a key leans on weak crypto so we can flag it -- never to gate an
+/// operation. A key usable under `policy()` but not under this one
+/// relies on something the hardened policy rejects (in practice, a SHA-1
+/// binding signature).
+fn strict_policy() -> &'static StandardPolicy<'static> {
+    static STRICT: OnceLock<StandardPolicy<'static>> = OnceLock::new();
+    STRICT.get_or_init(StandardPolicy::new)
+}
 
 trait StrErr<T> {
     fn str_err(self) -> Result<T, String>;
@@ -99,12 +136,12 @@ pub struct KeyInfo {
     pub expires_at: Option<f64>,
     #[serde(rename = "isPrivate")]
     pub is_private: bool,
-    /// True iff Sequoia's StandardPolicy accepts at least one
-    /// encryption-capable, alive, non-revoked key on this cert.
+    /// True iff our `policy()` accepts at least one encryption-capable,
+    /// alive, non-revoked key on this cert.
     #[serde(rename = "usableForEncryption")]
     pub usable_for_encryption: bool,
-    /// True iff Sequoia's StandardPolicy accepts at least one
-    /// signing-capable, alive, non-revoked key on this cert.
+    /// True iff our `policy()` accepts at least one signing-capable,
+    /// alive, non-revoked key on this cert.
     #[serde(rename = "usableForSigning")]
     pub usable_for_signing: bool,
     /// Human-readable reason the cert is unusable. Present only when
@@ -113,6 +150,13 @@ pub struct KeyInfo {
     /// expiry, revocation).
     #[serde(rename = "policyError", skip_serializing_if = "Option::is_none")]
     pub policy_error: Option<String>,
+    /// Non-blocking flag: the key is usable, but only because we relaxed
+    /// the hardened policy to accept it (e.g. it relies on a SHA-1
+    /// binding signature). Present so the UI can warn the user while
+    /// still allowing the import. Mutually exclusive with a fatal
+    /// `policy_error`.
+    #[serde(rename = "securityWarning", skip_serializing_if = "Option::is_none")]
+    pub security_warning: Option<String>,
 }
 
 /// Metadata returned alongside an encrypted blob from the protect-flow
@@ -167,32 +211,12 @@ fn extract_key_info(cert: &openpgp::Cert, is_private: bool) -> KeyInfo {
     let algorithm = cert.primary_key().key().pk_algo().to_string();
     let created_at = system_time_to_millis(cert.primary_key().key().creation_time());
 
-    let (expires_at, usable_for_encryption, usable_for_signing, policy_error) =
-        match cert.with_policy(&POLICY, None) {
+    let (expires_at, usable_for_encryption, usable_for_signing, policy_error, security_warning) =
+        match cert.with_policy(policy(), None) {
             Ok(vc) => {
                 let expires_at = vc.primary_key().key_expiration_time().map(system_time_to_millis);
-                let has_enc = vc
-                    .keys()
-                    .alive()
-                    .revoked(false)
-                    .for_transport_encryption()
-                    .next()
-                    .is_some()
-                    || vc
-                        .keys()
-                        .alive()
-                        .revoked(false)
-                        .for_storage_encryption()
-                        .next()
-                        .is_some();
-                let has_sig = vc
-                    .keys()
-                    .alive()
-                    .revoked(false)
-                    .for_signing()
-                    .next()
-                    .is_some();
-                let err = if !has_enc && !has_sig {
+                let (has_enc, has_sig) = usable_keys(&vc);
+                let policy_error = if !has_enc && !has_sig {
                     Some(
                         "Key has no usable encryption or signing subkey \
                          (expired, revoked, or unsupported algorithm)."
@@ -201,11 +225,25 @@ fn extract_key_info(cert: &openpgp::Cert, is_private: bool) -> KeyInfo {
                 } else {
                     None
                 };
-                (expires_at, has_enc, has_sig, err)
+                // Usable, but only thanks to our relaxed policy? Flag it.
+                // (In practice: a SHA-1 binding signature the hardened
+                // StandardPolicy would have rejected outright.)
+                let security_warning = if policy_error.is_none() && !strict_usable(cert) {
+                    Some(
+                        "This key relies on a legacy SHA-1 self-signature, which is \
+                         considered weak. It has been imported so you can keep using it, \
+                         but you should ask the key owner to reissue it with SHA-256 or \
+                         stronger."
+                            .to_string(),
+                    )
+                } else {
+                    None
+                };
+                (expires_at, has_enc, has_sig, policy_error, security_warning)
             }
             Err(e) => {
                 let raw = e.to_string();
-                (None, false, false, Some(humanize_policy_error(&raw)))
+                (None, false, false, Some(humanize_policy_error(&raw)), None)
             }
         };
 
@@ -219,6 +257,46 @@ fn extract_key_info(cert: &openpgp::Cert, is_private: bool) -> KeyInfo {
         usable_for_encryption,
         usable_for_signing,
         policy_error,
+        security_warning,
+    }
+}
+
+/// Whether a validated cert exposes an alive, non-revoked encryption
+/// key (`.0`) and/or signing key (`.1`).
+fn usable_keys(vc: &openpgp::cert::ValidCert) -> (bool, bool) {
+    let has_enc = vc
+        .keys()
+        .alive()
+        .revoked(false)
+        .for_transport_encryption()
+        .next()
+        .is_some()
+        || vc
+            .keys()
+            .alive()
+            .revoked(false)
+            .for_storage_encryption()
+            .next()
+            .is_some();
+    let has_sig = vc
+        .keys()
+        .alive()
+        .revoked(false)
+        .for_signing()
+        .next()
+        .is_some();
+    (has_enc, has_sig)
+}
+
+/// True iff the cert has any usable key under Sequoia's *hardened*
+/// policy. Used to decide whether a key needs a `security_warning`.
+fn strict_usable(cert: &openpgp::Cert) -> bool {
+    match cert.with_policy(strict_policy(), None) {
+        Ok(vc) => {
+            let (has_enc, has_sig) = usable_keys(&vc);
+            has_enc || has_sig
+        }
+        Err(_) => false,
     }
 }
 
@@ -355,7 +433,7 @@ fn encrypt_impl(
 
     let mut recipient_keys = Vec::new();
     for cert in &recipients {
-        let vc = cert.with_policy(&POLICY, None).str_err()?;
+        let vc = cert.with_policy(policy(), None).str_err()?;
         for key in vc
             .keys()
             .supported()
@@ -395,7 +473,7 @@ fn encrypt_impl(
 
 /// Extract the first valid signing keypair from a cert.
 fn signing_keypair(cert: &openpgp::Cert) -> Result<openpgp::crypto::KeyPair, String> {
-    let vc = cert.with_policy(&POLICY, None).str_err()?;
+    let vc = cert.with_policy(policy(), None).str_err()?;
     vc.keys()
         .secret()
         .alive()
@@ -541,7 +619,7 @@ impl DecryptionHelper for DecryptHelper {
         sym_algo: Option<SymmetricAlgorithm>,
         decrypt: &mut dyn FnMut(Option<SymmetricAlgorithm>, &SessionKey) -> bool,
     ) -> openpgp::Result<Option<openpgp::Cert>> {
-        let vc = self.decryption_cert.with_policy(&POLICY, None)?;
+        let vc = self.decryption_cert.with_policy(policy(), None)?;
         for pkesk in pkesks {
             for key in vc
                 .keys()
@@ -688,7 +766,7 @@ pub fn verify_message(
 
     let mut verifier = VerifierBuilder::from_bytes(signed_message.as_bytes())
         .str_err()?
-        .with_policy(&POLICY, None, helper)
+        .with_policy(policy(), None, helper)
         .str_err()?;
 
     let mut content = Vec::new();
@@ -756,7 +834,7 @@ pub fn decrypt_with_handle(
 
     let mut decryptor = DecryptorBuilder::from_bytes(ciphertext)
         .str_err()?
-        .with_policy(&POLICY, None, helper)
+        .with_policy(policy(), None, helper)
         .str_err()?;
 
     let mut plaintext = Vec::new();

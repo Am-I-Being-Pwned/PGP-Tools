@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { CheckCircleIcon, EllipsisVerticalIcon } from "lucide-react";
+import {
+  CheckCircleIcon,
+  EllipsisVerticalIcon,
+  TriangleAlertIcon,
+} from "lucide-react";
 
 import { Button } from "@amibeingpwned/ui/button";
 import {
@@ -90,6 +94,12 @@ export function ContactCard({
           {contact.expiresAt && (
             <p className="text-muted-foreground mt-0.5 text-xs">
               Expires {format(new Date(contact.expiresAt), "PPP")}
+            </p>
+          )}
+          {contact.securityWarning && (
+            <p className="mt-1 flex items-start gap-1 text-xs text-amber-700 dark:text-amber-400">
+              <TriangleAlertIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span>{contact.securityWarning}</span>
             </p>
           )}
         </div>
