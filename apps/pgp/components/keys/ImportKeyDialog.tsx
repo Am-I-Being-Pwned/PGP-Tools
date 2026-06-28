@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@amibeingpwned/ui/button";
 
@@ -125,6 +126,9 @@ export function ImportKeyDialog({
         keyInfo: result.keyInfo,
         secretEncrypted: result.secretEncrypted,
       });
+      if (result.keyInfo.securityWarning) {
+        toast.warning(result.keyInfo.securityWarning);
+      }
       setStep(result.secretEncrypted ? "unlock" : "protect");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Import failed");
@@ -165,7 +169,12 @@ export function ImportKeyDialog({
         armoredPublicKey: result.armored,
         addedAt: Date.now(),
         lastUsedAt: Date.now(),
+        // Allowed, but flagged (e.g. SHA-1 binding signature).
+        securityWarning: result.keyInfo.securityWarning,
       });
+      if (result.keyInfo.securityWarning) {
+        toast.warning(result.keyInfo.securityWarning);
+      }
       resetAndClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Import failed");
@@ -295,6 +304,11 @@ export function ImportKeyDialog({
                 {parsed.keyInfo.keyId.slice(-16)}
               </div>
             </div>
+          )}
+          {parsed?.keyInfo.securityWarning && (
+            <p className="rounded border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-400">
+              ⚠ {parsed.keyInfo.securityWarning}
+            </p>
           )}
           <input
             type="password"

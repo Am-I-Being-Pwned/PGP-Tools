@@ -39,6 +39,7 @@ export function ContactDropZone({ onImport, existingKeyIds }: ContactDropZonePro
       let added = 0;
       let skipped = 0;
       let failed = 0;
+      let flagged = 0;
       const rejectionReasons: string[] = [];
 
       for (const block of blocks) {
@@ -66,14 +67,24 @@ export function ContactDropZone({ onImport, existingKeyIds }: ContactDropZonePro
             armoredPublicKey: block,
             addedAt: Date.now(),
             lastUsedAt: Date.now(),
+            // Allowed, but flagged (e.g. SHA-1 binding signature).
+            securityWarning: keyInfo.securityWarning,
           });
           added++;
+          if (keyInfo.securityWarning) flagged++;
         } catch {
           failed++;
         }
       }
 
       if (added > 0) toast.success(`Added ${added} contact${added > 1 ? "s" : ""}`);
+      if (flagged > 0) {
+        toast.warning(
+          `${flagged} key${flagged > 1 ? "s use" : " uses"} weak crypto (SHA-1) and ${
+            flagged > 1 ? "were" : "was"
+          } flagged - see the warning on the contact.`,
+        );
+      }
       if (skipped > 0) toast.info(`${skipped} already in contacts`);
       if (failed > 0) {
         const detail = rejectionReasons[0];

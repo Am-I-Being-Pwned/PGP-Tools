@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { EllipsisVerticalIcon, LockIcon, LockOpenIcon } from "lucide-react";
+import {
+  EllipsisVerticalIcon,
+  LockIcon,
+  LockOpenIcon,
+  TriangleAlertIcon,
+} from "lucide-react";
 
 import { Button } from "@amibeingpwned/ui/button";
 import {
@@ -229,6 +234,13 @@ export function KeyCard({
       <p className="text-muted-foreground mt-0.5 ml-6 text-xs">
         {isPasskey ? "Passkey" : "Password"}
       </p>
+
+      {keyBlob.securityWarning && (
+        <p className="mt-1 ml-6 flex items-start gap-1 text-xs text-amber-700 dark:text-amber-400">
+          <TriangleAlertIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <span>{keyBlob.securityWarning}</span>
+        </p>
+      )}
 
       {feedback && (
         <p className="mt-1 ml-6 text-xs text-green-400">{feedback}</p>

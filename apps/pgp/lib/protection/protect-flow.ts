@@ -83,6 +83,9 @@ function buildPasswordBlob(result: ProtectFlowResult): ProtectedKeyBlob {
   if (result.meta.revocationCertificate) {
     blob.revocationCertificate = result.meta.revocationCertificate;
   }
+  if (result.meta.keyInfo.securityWarning) {
+    blob.securityWarning = result.meta.keyInfo.securityWarning;
+  }
   return blob;
 }
 
@@ -110,6 +113,9 @@ function buildPasskeyBlob(
   );
   if (result.meta.revocationCertificate) {
     blob.revocationCertificate = result.meta.revocationCertificate;
+  }
+  if (result.meta.keyInfo.securityWarning) {
+    blob.securityWarning = result.meta.keyInfo.securityWarning;
   }
   return blob;
 }

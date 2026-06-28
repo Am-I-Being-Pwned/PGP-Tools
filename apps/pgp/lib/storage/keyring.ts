@@ -36,6 +36,9 @@ export interface ProtectedKeyBlob {
   algorithm: string;
   publicKeyArmored: string;
   revocationCertificate?: string;
+  /** Non-blocking flag from key parsing (e.g. relies on a SHA-1 binding
+   *  signature). Shown as a warning badge; the key is still usable. */
+  securityWarning?: string;
   protection: Protection;
   encryptedPrivateKey: string; // base64 ciphertext
   iv: string; // base64
