@@ -37,6 +37,24 @@ export async function parseKey(armored: string): Promise<KeyInfo> {
   return JSON.parse(json) as KeyInfo;
 }
 
+/** A single cert split out of a (possibly multi-cert) armored blob,
+ *  paired with its own re-armored form. */
+export interface ParsedCert {
+  keyInfo: KeyInfo;
+  armored: string;
+}
+
+/** Parse every certificate in an armored blob. Some publishers bundle
+ *  several yearly-rotated certs in one `.asc`; `parseKey` would only see
+ *  the first (often expired) one. Each returned cert carries its own
+ *  re-armored public key so callers store/encrypt against that exact
+ *  cert, not the whole blob. */
+export async function parseKeys(armored: string): Promise<ParsedCert[]> {
+  const wasm = await loadWasm();
+  const json = wasm.parseKeys(armored);
+  return JSON.parse(json) as ParsedCert[];
+}
+
 /** Strip the secret half of a private key, returning the armored
  *  public-only cert. The secret material is parsed and dropped inside
  *  the wasm call. */

@@ -62,6 +62,7 @@ export function KeyCard({
   const [exportError, setExportError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [unsafeExportConfirm, setUnsafeExportConfirm] = useState("");
+  const [showWarning, setShowWarning] = useState(false);
   const feedbackTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const clipboardClearTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -236,10 +237,22 @@ export function KeyCard({
       </p>
 
       {keyBlob.securityWarning && (
-        <p className="mt-1 ml-6 flex items-start gap-1 text-xs text-amber-700 dark:text-amber-400">
-          <TriangleAlertIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          <span>{keyBlob.securityWarning}</span>
-        </p>
+        <div className="mt-1 ml-6">
+          <button
+            type="button"
+            onClick={() => setShowWarning((v) => !v)}
+            aria-expanded={showWarning}
+            className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-700 transition-colors hover:bg-amber-500/20 dark:text-amber-400"
+          >
+            <TriangleAlertIcon className="h-3 w-3" />
+            Weak (SHA-1)
+          </button>
+          {showWarning && (
+            <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
+              {keyBlob.securityWarning}
+            </p>
+          )}
+        </div>
       )}
 
       {feedback && (

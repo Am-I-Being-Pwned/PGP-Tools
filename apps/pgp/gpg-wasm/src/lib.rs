@@ -225,19 +225,13 @@ fn extract_key_info(cert: &openpgp::Cert, is_private: bool) -> KeyInfo {
                 } else {
                     None
                 };
-                // Usable, but only thanks to our relaxed policy? Flag it.
-                // (In practice: a SHA-1 binding signature the hardened
-                // StandardPolicy would have rejected outright.)
-                let security_warning = if policy_error.is_none() && !strict_usable(cert) {
-                    Some(
-                        "This key relies on a legacy SHA-1 self-signature, which is \
-                         considered weak. It has been imported so you can keep using it, \
-                         but you should ask the key owner to reissue it with SHA-256 or \
-                         stronger."
-                            .to_string(),
-                    )
-                } else {
+                // Usable, but only thanks to our relaxed policy? Flag it,
+                // naming the specific key (primary self-sig vs a subkey
+                // binding) that leans on weak crypto.
+                let security_warning = if policy_error.is_some() {
                     None
+                } else {
+                    security_warning(cert, has_enc, has_sig)
                 };
                 (expires_at, has_enc, has_sig, policy_error, security_warning)
             }
@@ -288,16 +282,49 @@ fn usable_keys(vc: &openpgp::cert::ValidCert) -> (bool, bool) {
     (has_enc, has_sig)
 }
 
-/// True iff the cert has any usable key under Sequoia's *hardened*
-/// policy. Used to decide whether a key needs a `security_warning`.
-fn strict_usable(cert: &openpgp::Cert) -> bool {
-    match cert.with_policy(strict_policy(), None) {
-        Ok(vc) => {
-            let (has_enc, has_sig) = usable_keys(&vc);
-            has_enc || has_sig
-        }
-        Err(_) => false,
+/// Build a non-blocking security warning for a cert that is already
+/// usable under our relaxed `policy()`. The *only* difference between
+/// `policy()` and `strict_policy()` is SHA-1 acceptance for binding
+/// signatures, so any capability we have that the hardened policy lacks
+/// is one that leans on a SHA-1 signature -- and we can name which.
+///
+/// `has_enc`/`has_sig` are the relaxed-policy capabilities the caller
+/// already computed. Returns `None` when the hardened policy would
+/// accept everything we use (no weak crypto in play).
+fn security_warning(cert: &openpgp::Cert, has_enc: bool, has_sig: bool) -> Option<String> {
+    // If the hardened policy rejects the cert outright, the weakness is
+    // in the primary binding itself (the direct-key / User ID
+    // self-signature), not a subkey.
+    let (strict_enc, strict_sig) = match cert.with_policy(strict_policy(), None) {
+        Ok(vc) => usable_keys(&vc),
+        Err(_) => return Some(sha1_warning("primary self-signature", false)),
+    };
+
+    // Primary is fine under the hardened policy; a subkey binding is the
+    // weak link. Flag exactly the capability/capabilities affected so we
+    // never silently encrypt to (or trust signatures from) a SHA-1-bound
+    // subkey.
+    match (has_enc && !strict_enc, has_sig && !strict_sig) {
+        (true, true) => Some(sha1_warning("encryption and signing subkeys", true)),
+        (true, false) => Some(sha1_warning("encryption subkey", false)),
+        (false, true) => Some(sha1_warning("signing subkey", false)),
+        (false, false) => None,
     }
+}
+
+/// The shared "weak SHA-1, allowed but flagged" message for `subject`
+/// (e.g. "encryption subkey", "primary key's self-signature").
+fn sha1_warning(subject: &str, plural: bool) -> String {
+    let (verb, obj, is_are) = if plural {
+        ("rely", "legacy SHA-1 signatures", "are")
+    } else {
+        ("relies", "a legacy SHA-1 signature", "is")
+    };
+    format!(
+        "This key's {subject} {verb} on {obj}, which {is_are} considered weak. It has \
+         been imported so you can keep using it, but you should ask the key owner to \
+         reissue it with SHA-256 or stronger."
+    )
 }
 
 /// Translate a raw Sequoia policy-rejection string into something a
@@ -672,11 +699,51 @@ pub fn ping() -> String {
 }
 
 /// Parse an armored public or private key. Returns JSON `KeyInfo`.
+///
+/// Parses only the *first* certificate in the input. For blobs that may
+/// bundle several certs (see `parse_keys`), prefer `parseKeys`.
 #[wasm_bindgen(js_name = "parseKey")]
 pub fn parse_key(armored: &str) -> Result<String, String> {
     let cert = openpgp::Cert::from_bytes(armored.as_bytes()).str_err()?;
     let is_private = cert.keys().secret().next().is_some();
     serde_json::to_string(&extract_key_info(&cert, is_private)).str_err()
+}
+
+/// A single cert extracted from a (possibly multi-cert) armored blob,
+/// paired with its own re-armored form so callers can store/encrypt
+/// against exactly that cert rather than the whole blob.
+#[derive(Serialize)]
+struct ParsedCert {
+    #[serde(rename = "keyInfo")]
+    key_info: KeyInfo,
+    armored: String,
+}
+
+/// Parse one *or more* concatenated certificates from an armored blob.
+///
+/// Some publishers ship a single `.asc` containing several
+/// yearly-rotated certificates (e.g. CTIR Gov). `Cert::from_bytes` only
+/// ever sees the first -- typically the oldest, long-expired -- cert, so
+/// the live key in the bundle is never imported and (worse) storing the
+/// whole blob would make us encrypt against the dead first cert. This
+/// splits the blob with `CertParser` and returns every cert with its own
+/// re-armored public key and `KeyInfo`, so the caller can keep the
+/// usable ones and drop the expired rotations.
+#[wasm_bindgen(js_name = "parseKeys")]
+pub fn parse_keys(armored: &str) -> Result<String, String> {
+    let parser = CertParser::from_bytes(armored.as_bytes()).str_err()?;
+    let mut out = Vec::new();
+    for cert in parser {
+        let cert = cert.str_err()?;
+        let is_private = cert.keys().secret().next().is_some();
+        let key_info = extract_key_info(&cert, is_private);
+        let armored = armor_cert(&cert, is_private)?;
+        out.push(ParsedCert { key_info, armored });
+    }
+    if out.is_empty() {
+        return Err("No OpenPGP certificate found".to_string());
+    }
+    serde_json::to_string(&out).str_err()
 }
 
 /// Internal: build a new cert + its armored revocation cert from
