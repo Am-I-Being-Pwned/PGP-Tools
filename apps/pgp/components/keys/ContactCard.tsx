@@ -39,6 +39,7 @@ export function ContactCard({
   verifiedLabel,
 }: ContactCardProps) {
   const [confirming, setConfirming] = useState(false);
+  const [showWarning, setShowWarning] = useState(false);
   const userId = contact.userIds[0] ?? "Unknown";
   const { name: rawName, email, comment } = parseUserId(userId);
   const name = comment ? `${rawName} (${comment})` : rawName;
@@ -97,10 +98,22 @@ export function ContactCard({
             </p>
           )}
           {contact.securityWarning && (
-            <p className="mt-1 flex items-start gap-1 text-xs text-amber-700 dark:text-amber-400">
-              <TriangleAlertIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              <span>{contact.securityWarning}</span>
-            </p>
+            <div className="mt-1">
+              <button
+                type="button"
+                onClick={() => setShowWarning((v) => !v)}
+                aria-expanded={showWarning}
+                className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-700 transition-colors hover:bg-amber-500/20 dark:text-amber-400"
+              >
+                <TriangleAlertIcon className="h-3 w-3" />
+                Weak (SHA-1)
+              </button>
+              {showWarning && (
+                <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
+                  {contact.securityWarning}
+                </p>
+              )}
+            </div>
           )}
         </div>
 

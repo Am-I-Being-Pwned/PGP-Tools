@@ -7,6 +7,7 @@ import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { KeyInfo } from "../../lib/pgp/types";
 import { importKey } from "../../lib/pgp/key-management";
+import { parseKeys } from "../../lib/pgp/wasm";
 import { importAndProtect } from "../../lib/protection/protect-flow";
 import { Dialog } from "../shared/Dialog";
 import {
@@ -150,31 +151,33 @@ export function ImportKeyDialog({
     setImporting(true);
     setError(null);
     try {
-      const result = await importKey(armored);
-      if (result.type !== "public") {
-        setError("Expected a public key.");
-        return;
-      }
-      if (!result.keyInfo.usableForEncryption) {
+      // A pasted blob may bundle several certs (e.g. yearly-rotated
+      // keys). Import every live one against its own armor; ignore the
+      // stale rotations.
+      const certs = await parseKeys(armored);
+      const usable = certs.filter((c) => c.keyInfo.usableForEncryption);
+      if (usable.length === 0) {
         setError(
-          result.keyInfo.policyError ??
+          certs[0]?.keyInfo.policyError ??
             "This public key has no usable encryption subkey, so you wouldn't be able to encrypt to it.",
         );
         return;
       }
-      await onImportPublic({
-        keyId: result.keyInfo.keyId,
-        userIds: result.keyInfo.userIds,
-        algorithm: result.keyInfo.algorithm,
-        armoredPublicKey: result.armored,
-        addedAt: Date.now(),
-        lastUsedAt: Date.now(),
-        // Allowed, but flagged (e.g. SHA-1 binding signature).
-        securityWarning: result.keyInfo.securityWarning,
-      });
-      if (result.keyInfo.securityWarning) {
-        toast.warning(result.keyInfo.securityWarning);
+      let warning: string | undefined;
+      for (const { keyInfo, armored: certArmored } of usable) {
+        await onImportPublic({
+          keyId: keyInfo.keyId,
+          userIds: keyInfo.userIds,
+          algorithm: keyInfo.algorithm,
+          armoredPublicKey: certArmored,
+          addedAt: Date.now(),
+          lastUsedAt: Date.now(),
+          // Allowed, but flagged (e.g. SHA-1 binding signature).
+          securityWarning: keyInfo.securityWarning,
+        });
+        warning ??= keyInfo.securityWarning;
       }
+      if (warning) toast.warning(warning);
       resetAndClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Import failed");
