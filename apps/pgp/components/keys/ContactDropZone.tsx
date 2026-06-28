@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@amibeingpwned/ui/button";
 
 import type { PublicContactKey } from "../../lib/storage/contacts";
-import { parsePublicKey } from "../../lib/pgp/key-management";
+import { parseKeys } from "../../lib/pgp/wasm";
 
 interface ContactDropZoneProps {
   onImport: (contact: PublicContactKey) => Promise<void>;
@@ -43,28 +43,42 @@ export function ContactDropZone({ onImport, existingKeyIds }: ContactDropZonePro
       const rejectionReasons: string[] = [];
 
       for (const block of blocks) {
+        // A single armored block may bundle several certs (e.g. a
+        // publisher's yearly-rotated keys). Split them so we import the
+        // live cert(s) and store each against its own armor -- not the
+        // whole blob, which would otherwise encrypt to the first
+        // (usually expired) cert.
+        let certs;
         try {
-          const keyInfo = await parsePublicKey(block);
+          certs = await parseKeys(block);
+        } catch {
+          failed++;
+          continue;
+        }
 
+        const usable = certs.filter((c) => c.keyInfo.usableForEncryption);
+        if (usable.length === 0) {
+          // Nothing live in this block: surface the first cert's reason.
+          failed++;
+          rejectionReasons.push(
+            certs[0]?.keyInfo.policyError ??
+              "no usable encryption subkey on this key",
+          );
+          continue;
+        }
+
+        // If a block has a usable cert, the unusable siblings are stale
+        // rotations -- drop them silently rather than reporting failures.
+        for (const { keyInfo, armored } of usable) {
           if (existingKeyIds?.includes(keyInfo.keyId)) {
             skipped++;
             continue;
           }
-
-          if (!keyInfo.usableForEncryption) {
-            failed++;
-            rejectionReasons.push(
-              keyInfo.policyError ??
-                "no usable encryption subkey on this key",
-            );
-            continue;
-          }
-
           await onImport({
             keyId: keyInfo.keyId,
             userIds: keyInfo.userIds,
             algorithm: keyInfo.algorithm,
-            armoredPublicKey: block,
+            armoredPublicKey: armored,
             addedAt: Date.now(),
             lastUsedAt: Date.now(),
             // Allowed, but flagged (e.g. SHA-1 binding signature).
@@ -72,8 +86,6 @@ export function ContactDropZone({ onImport, existingKeyIds }: ContactDropZonePro
           });
           added++;
           if (keyInfo.securityWarning) flagged++;
-        } catch {
-          failed++;
         }
       }
 
