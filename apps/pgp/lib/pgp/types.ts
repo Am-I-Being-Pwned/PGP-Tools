@@ -11,6 +11,10 @@ export interface KeyInfo {
   usableForSigning: boolean;
   /** Human-readable rejection reason (e.g. SHA-1 self-sig, expired). */
   policyError?: string;
+  /** Non-blocking flag: the key is usable, but only because the hardened
+   *  policy was relaxed to accept it (e.g. it relies on a SHA-1 binding
+   *  signature). Surface to the user; do not block the import. */
+  securityWarning?: string;
 }
 
 // Discriminated union for encrypt input
