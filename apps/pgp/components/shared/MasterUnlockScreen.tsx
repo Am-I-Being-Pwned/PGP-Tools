@@ -64,7 +64,7 @@ export function MasterUnlockScreen({
 
       await wasmApi.initContactsSessionWithPrf(
         prfOutput,
-        new Uint8Array(fromBase64(masterProtection.storedSecret)),
+        fromBase64(masterProtection.storedSecret),
       );
       onUnlocked();
     } catch (e) {
@@ -90,10 +90,10 @@ export function MasterUnlockScreen({
     try {
       // Single Argon2id pass: verifies canary + inits contacts session.
       const ok = await wasmApi.verifyCanaryAndInitSession(
-        new Uint8Array(fromBase64(masterProtection.encryptedCanary)),
-        new Uint8Array(fromBase64(masterProtection.canaryIv)),
+        fromBase64(masterProtection.encryptedCanary),
+        fromBase64(masterProtection.canaryIv),
         passwordBytes,
-        new Uint8Array(fromBase64(masterProtection.kdfSalt)),
+        fromBase64(masterProtection.kdfSalt),
         ARGON2_MEMORY_KIB,
         ARGON2_ITERATIONS,
         ARGON2_PARALLELISM,

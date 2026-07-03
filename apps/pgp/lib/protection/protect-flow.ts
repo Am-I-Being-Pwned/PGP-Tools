@@ -20,6 +20,7 @@
 
 import type { GenerateKeyOptions } from "../pgp/types";
 import type { ProtectFlowResult } from "../pgp/wasm";
+import { toBase64 } from "../encoding";
 import {
   generateProtectedWithPassword,
   generateProtectedWithPrf,
@@ -43,16 +44,6 @@ import {
 } from "./webauthn-prf";
 
 const EMPTY = new Uint8Array(0);
-
-function toBase64(bytes: ArrayBufferView | ArrayBuffer): string {
-  const view =
-    bytes instanceof ArrayBuffer
-      ? new Uint8Array(bytes)
-      : new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  let binary = "";
-  for (const byte of view) binary += String.fromCharCode(byte);
-  return btoa(binary);
-}
 
 function unpackPasswordBlob(packed: Uint8Array) {
   return {

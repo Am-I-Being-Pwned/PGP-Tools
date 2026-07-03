@@ -200,8 +200,8 @@ export function OnboardingFlow({ onComplete, addKey, onKeyCached, cacheKey }: On
           mp = {
             method: "password",
             kdfSalt: toBase64(salt),
-            encryptedCanary: toBase64(canaryCtx.buffer as ArrayBuffer),
-            canaryIv: toBase64(canaryIv.buffer as ArrayBuffer),
+            encryptedCanary: toBase64(canaryCtx),
+            canaryIv: toBase64(canaryIv),
           };
         } finally {
           passwordBytes.fill(0);
