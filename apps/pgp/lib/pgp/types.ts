@@ -42,15 +42,26 @@ export interface VerifyOptions {
   verificationPublicKeys: string[];
 }
 
+/**
+ * Signature outcome, decoupled from decryption success:
+ *   "valid"       - signature cryptographically verified
+ *   "invalid"     - had the signer key but verification failed (possible tamper)
+ *   "unknown_key" - signed, but we don't hold the signer's public key
+ *   "unsigned"    - no signature present
+ */
+export type SignatureStatus = "unsigned" | "valid" | "invalid" | "unknown_key";
+
 export interface DecryptResult {
   data: string | Uint8Array;
   signatureValid: boolean | null;
+  signatureStatus: SignatureStatus;
   signerKeyId: string | null;
 }
 
 export interface VerifyResult {
   text: string;
   signatureValid: boolean;
+  signatureStatus: SignatureStatus;
   signerKeyId: string | null;
 }
 

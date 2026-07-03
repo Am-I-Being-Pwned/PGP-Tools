@@ -127,6 +127,64 @@ fn test_encrypt_decrypt_with_signature() {
     assert!(sig["signerKeyId"].as_str().is_some());
 }
 
+/// Regression: a SIGNED message must still DECRYPT when we don't hold the
+/// signer's public key. Decryption and signature verification are separate
+/// concerns -- a missing signer key means "can't verify", not "fail".
+#[test]
+fn test_decrypt_signed_without_signer_key_succeeds() {
+    // Recipient/decryption key.
+    let recip = serde_json::from_str::<serde_json::Value>(&gen_test_key()).unwrap();
+    let recip_pub = recip["publicKeyArmored"].as_str().unwrap();
+    let recip_priv = recip["privateKeyArmored"].as_str().unwrap();
+
+    // A DIFFERENT key that signs the message; we deliberately never supply
+    // its public key to the decryptor.
+    let signer = serde_json::from_str::<serde_json::Value>(&gen_test_key()).unwrap();
+    let signer_priv = signer["privateKeyArmored"].as_str().unwrap();
+
+    let recipients = serde_json::to_string(&vec![recip_pub]).unwrap();
+    let ciphertext =
+        encrypt(b"Message from a stranger", &recipients, Some(signer_priv.to_string()))
+            .unwrap();
+
+    // Decrypt WITHOUT any verification keys -> must not error.
+    let (plaintext_bytes, sig) = test_decrypt(&ciphertext, recip_priv, None);
+    assert_eq!(
+        std::str::from_utf8(&plaintext_bytes).unwrap(),
+        "Message from a stranger"
+    );
+    // Signed, but unverifiable because we lack the signer's public key.
+    assert_eq!(sig["signatureValid"], false);
+    assert_eq!(sig["signatureStatus"], "unknown_key");
+}
+
+#[test]
+fn test_select_decryption_key_picks_the_recipient() {
+    // Two distinct keys; encrypt only to `b`.
+    let a = serde_json::from_str::<serde_json::Value>(&gen_test_key()).unwrap();
+    let b = serde_json::from_str::<serde_json::Value>(&gen_test_key()).unwrap();
+    let a_pub = a["publicKeyArmored"].as_str().unwrap();
+    let a_fpr = a["keyInfo"]["keyId"].as_str().unwrap();
+    let b_pub = b["publicKeyArmored"].as_str().unwrap();
+    let b_fpr = b["keyInfo"]["keyId"].as_str().unwrap();
+
+    let recipients = serde_json::to_string(&vec![b_pub]).unwrap();
+    let ciphertext = encrypt(b"pick me", &recipients, None).unwrap();
+
+    // Candidate set contains both keys (a first) -- must still choose b.
+    let candidates = serde_json::to_string(&vec![a_pub, b_pub]).unwrap();
+    let chosen = select_decryption_key(&ciphertext, &candidates).unwrap();
+    let chosen: Option<String> = serde_json::from_str(&chosen).unwrap();
+    assert_eq!(chosen.as_deref(), Some(b_fpr));
+    assert_ne!(chosen.as_deref(), Some(a_fpr));
+
+    // A candidate set without the recipient yields null.
+    let only_a = serde_json::to_string(&vec![a_pub]).unwrap();
+    let none = select_decryption_key(&ciphertext, &only_a).unwrap();
+    let none: Option<String> = serde_json::from_str(&none).unwrap();
+    assert_eq!(none, None);
+}
+
 #[test]
 fn test_sign_verify() {
     let gen_json = gen_test_key();

@@ -1,10 +1,11 @@
 import { DownloadIcon, RotateCcwIcon } from "lucide-react";
+import { useEffect } from "react";
 
 import { Button } from "@amibeingpwned/ui/button";
 import { Checkbox } from "@amibeingpwned/ui/checkbox";
 
 import type { WorkspaceAction } from "../../lib/messages";
-import type { EncryptInput } from "../../lib/pgp/types";
+import type { EncryptInput, SignatureStatus } from "../../lib/pgp/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { WorkspaceDraft } from "../../lib/workspace-draft";
@@ -79,6 +80,43 @@ export function WorkspaceView({
     onDraftRestored,
     onDraftChange,
   });
+
+  // Default-select the private key the message is actually encrypted to, so
+  // the user doesn't have to guess which of their keys decrypts it. Runs when
+  // the message or key set changes; a later manual pick is left untouched.
+  useEffect(() => {
+    if (s.mode !== "decrypt") return;
+    const hasContent = s.files.length > 0 || s.input.trim().length > 0;
+    if (!hasContent || myKeys.length === 0) return;
+
+    // Object guard (not a bare `let`) so a stale async run can't clobber a
+    // newer selection after the effect re-runs.
+    const run = { cancelled: false };
+    void (async () => {
+      try {
+        const input =
+          s.files.length > 0
+            ? {
+                kind: "binary" as const,
+                binaryMessage: new Uint8Array(await s.files[0].arrayBuffer()),
+              }
+            : { kind: "armored" as const, armoredMessage: s.input };
+        const match = await pgpOps.selectDecryptionKey(
+          input,
+          myKeys.map((k) => k.publicKeyArmored),
+        );
+        if (!run.cancelled && match && match !== s.selectedKeyId) {
+          s.setSelectedKeyId(match);
+        }
+      } catch {
+        // Not a parseable PGP message yet (still typing/pasting) -- ignore.
+      }
+    })();
+    return () => {
+      run.cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [s.mode, s.input, s.files, myKeys]);
 
   function findSigner(signerKeyId: string | null) {
     if (!signerKeyId) return null;
@@ -331,17 +369,33 @@ export function WorkspaceView({
     ];
 
     const handleSig = (result: {
-      signatureValid: boolean | null;
+      signatureStatus: SignatureStatus;
       signerKeyId: string | null;
     }) => {
-      if (result.signatureValid === true) {
-        s.setStatusText("Signature verified");
-        const signer = findSigner(result.signerKeyId);
-        if (signer) s.setVerifiedSigner(signer);
-      } else if (result.signatureValid === false) {
-        throw new Error(
-          "Signature verification FAILED - this message may have been tampered with",
-        );
+      switch (result.signatureStatus) {
+        case "valid": {
+          s.setStatusText("Signature verified");
+          const signer = findSigner(result.signerKeyId);
+          if (signer) s.setVerifiedSigner(signer);
+          break;
+        }
+        case "unknown_key": {
+          // Signed, but we don't hold the signer's public key. Decryption
+          // still succeeded -- surface a non-fatal notice, never fail.
+          const who = result.signerKeyId
+            ? ` (key ${result.signerKeyId.slice(-16).toUpperCase()})`
+            : "";
+          s.setStatusText(
+            `Decrypted. Message is signed${who}, but the signer's public key isn't in your keys or contacts, so the signature could not be verified.`,
+          );
+          break;
+        }
+        case "invalid":
+          throw new Error(
+            "Signature verification FAILED - this message may have been tampered with",
+          );
+        case "unsigned":
+          break;
       }
     };
 
@@ -421,9 +475,13 @@ export function WorkspaceView({
           binary: result.data instanceof Uint8Array ? result.data : undefined,
         });
       }
-    } catch {
+    } catch (err) {
+      // Surface the underlying reason (missing key, bad session key,
+      // unsupported compression, tampered signature, ...) instead of a
+      // one-size-fits-all message, so failures are actually diagnosable.
+      const detail = err instanceof Error ? err.message : String(err);
       s.setError(
-        "Decryption failed. The message may be corrupted or the wrong key was selected.",
+        `Decryption failed: ${detail}. The message may be corrupted, or it isn't encrypted to any of your keys.`,
       );
       return;
     }
