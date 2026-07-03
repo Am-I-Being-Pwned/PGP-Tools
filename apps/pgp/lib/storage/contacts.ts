@@ -1,11 +1,6 @@
 import { STORAGE_CONTACTS } from "../constants";
-import { fromBase64, toBase64 } from "../encoding";
-import {
-  encryptContacts,
-  decryptContacts,
-  hasContactsSession,
-} from "../pgp/wasm";
-import { getItem, removeItem, setItem } from "./engine";
+import { removeItem } from "./engine";
+import { loadEncryptedArray, saveEncryptedArray } from "./encrypted-store";
 
 export interface PublicContactKey {
   keyId: string;
@@ -31,94 +26,19 @@ function isValidContact(v: unknown): v is PublicContactKey {
 }
 
 // AES-256-GCM encrypted blob via WASM contacts session key.
-// AAD: "gpg-tools:contacts:master" — tamper = decryption failure.
-interface EncryptedContactsBlob {
-  iv: string;
-  ciphertext: string;
-}
-
-function isEncryptedBlob(v: unknown): v is EncryptedContactsBlob {
-  if (typeof v !== "object" || v === null) return false;
-  const o = v as Record<string, unknown>;
-  return typeof o.iv === "string" && typeof o.ciphertext === "string";
-}
-
-// Migration: old format stored a string[] index + per-key plaintext entries.
-function contactItemKey(keyId: string): string {
-  return `${STORAGE_CONTACTS}:${keyId}`;
-}
-
-async function migratePlaintextContacts(ids: unknown[]): Promise<void> {
-  const contacts: PublicContactKey[] = [];
-  const keysToRemove: string[] = [];
-
-  for (const id of ids) {
-    if (typeof id !== "string") continue;
-    const key = contactItemKey(id);
-    const c = await getItem<unknown>(key);
-    if (isValidContact(c)) contacts.push(c);
-    keysToRemove.push(key);
-  }
-
-  if (contacts.length > 0) {
-    await saveAll(contacts);
-  } else {
-    await removeItem(STORAGE_CONTACTS);
-  }
-
-  for (const key of keysToRemove) {
-    await removeItem(key);
-  }
-}
+// Same scheme as the keyring — see encrypted-store.ts.
+const CONTACTS_STORE = {
+  storageKey: STORAGE_CONTACTS,
+  isValid: isValidContact,
+  label: "contacts",
+};
 
 export async function loadContacts(): Promise<PublicContactKey[]> {
-  if (!(await hasContactsSession())) return [];
-
-  const blob = await getItem<unknown>(STORAGE_CONTACTS);
-  if (!blob) return [];
-
-  // Migrate old plaintext format if present
-  if (!isEncryptedBlob(blob)) {
-    if (Array.isArray(blob)) {
-      await migratePlaintextContacts(blob as unknown[]);
-      return loadContacts();
-    }
-    return [];
-  }
-
-  const iv = fromBase64(blob.iv);
-  const ciphertext = fromBase64(blob.ciphertext);
-
-  const plaintext = await decryptContacts(ciphertext, iv);
-  const parsed: unknown = JSON.parse(new TextDecoder().decode(plaintext));
-
-  if (!Array.isArray(parsed)) return [];
-  return parsed.filter(isValidContact);
+  return loadEncryptedArray(CONTACTS_STORE);
 }
 
-async function saveAll(contacts: PublicContactKey[]): Promise<void> {
-  if (!(await hasContactsSession())) {
-    throw new Error("Cannot save contacts: no active contacts session");
-  }
-
-  const plaintext = new TextEncoder().encode(JSON.stringify(contacts));
-  const packed = await encryptContacts(plaintext);
-
-  const iv = packed.slice(0, 12);
-  const ciphertext = packed.slice(12);
-
-  const blob: EncryptedContactsBlob = {
-    iv: toBase64(iv),
-    ciphertext: toBase64(ciphertext),
-  };
-
-  await setItem(STORAGE_CONTACTS, blob);
-}
-
-export async function saveContacts(
-  contacts: PublicContactKey[],
-): Promise<void> {
-  await saveAll(contacts);
+function saveAll(contacts: PublicContactKey[]): Promise<void> {
+  return saveEncryptedArray(CONTACTS_STORE, contacts);
 }
 
 export async function saveContact(contact: PublicContactKey): Promise<void> {
@@ -138,8 +58,4 @@ export async function removeContact(keyId: string): Promise<void> {
   } else {
     await saveAll(updated);
   }
-}
-
-export async function deleteContactsBlob(): Promise<void> {
-  await removeItem(STORAGE_CONTACTS);
 }
