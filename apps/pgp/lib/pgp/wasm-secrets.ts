@@ -130,7 +130,11 @@ export async function generateProtectedWithPrf(
 ): Promise<ProtectFlowResult> {
   const wasm = await loadWasm();
   return unpackProtectResult(
-    wasm.generateProtectedWithPrf(JSON.stringify(opts), prfOutput, storedSecret),
+    wasm.generateProtectedWithPrf(
+      JSON.stringify(opts),
+      prfOutput,
+      storedSecret,
+    ),
   );
 }
 

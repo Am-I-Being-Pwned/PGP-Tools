@@ -27,4 +27,3 @@ export async function importKey(armored: string): Promise<
 
   return { type: "public", keyInfo, armored: trimmed };
 }
-

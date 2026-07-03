@@ -150,7 +150,7 @@ export function WorkspaceInput({
             {!maskIgnored && (
               <button
                 onClick={() => setMaskIgnored(true)}
-                className="border-destructive/40 hover:bg-destructive/20 shrink-0 rounded border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide"
+                className="border-destructive/40 hover:bg-destructive/20 shrink-0 rounded border px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase"
                 title="Show the pasted text in cleartext"
               >
                 Ignore

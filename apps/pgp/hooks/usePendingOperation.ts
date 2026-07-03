@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { SESSION_PENDING_OP } from "../lib/constants";
 import type { OperationAction, PendingOperation } from "../lib/messages";
+import { SESSION_PENDING_OP } from "../lib/constants";
 
 const VALID_ACTIONS = new Set<OperationAction>([
   "encrypt",

@@ -4,17 +4,16 @@ import type { ProtectedKeyBlob } from "../lib/storage/keyring";
 import type { AutoLockTimeout } from "../lib/storage/preferences";
 import { fromBase64 } from "../lib/encoding";
 import * as wasmApi from "../lib/pgp/wasm";
+import {
+  ARGON2_ITERATIONS,
+  ARGON2_MEMORY_KIB,
+  ARGON2_PARALLELISM,
+} from "../lib/protection/password-kdf";
 import { authenticateAndGetPrf } from "../lib/protection/webauthn-prf";
 import {
   encryptedBlobFromProtected,
   updateLastUsed,
 } from "../lib/storage/keyring";
-
-import {
-  ARGON2_MEMORY_KIB,
-  ARGON2_ITERATIONS,
-  ARGON2_PARALLELISM,
-} from "../lib/protection/password-kdf";
 
 interface KeySessionOptions {
   autoLockMinutes: AutoLockTimeout;

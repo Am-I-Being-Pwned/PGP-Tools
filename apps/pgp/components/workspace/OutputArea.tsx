@@ -56,9 +56,7 @@ export function OutputArea({
   return (
     <div
       className={
-        fullHeight
-          ? "flex min-h-0 flex-1 flex-col gap-2"
-          : "space-y-2"
+        fullHeight ? "flex min-h-0 flex-1 flex-col gap-2" : "space-y-2"
       }
     >
       {statusText && <p className="text-xs text-green-400">{statusText}</p>}

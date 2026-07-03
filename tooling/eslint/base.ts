@@ -54,8 +54,13 @@ export const baseConfig = defineConfig(
     ],
     rules: {
       ...(Array.isArray(turboPlugin.configs?.recommended)
-        ? Object.assign({}, ...turboPlugin.configs.recommended.map((c: { rules?: Record<string, unknown> }) => c.rules))
-        : turboPlugin.configs?.recommended?.rules ?? {}),
+        ? Object.assign(
+            {},
+            ...turboPlugin.configs.recommended.map(
+              (c: { rules?: Record<string, unknown> }) => c.rules,
+            ),
+          )
+        : (turboPlugin.configs?.recommended?.rules ?? {})),
       "@typescript-eslint/no-unused-vars": [
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },

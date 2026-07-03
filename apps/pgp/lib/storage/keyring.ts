@@ -4,8 +4,8 @@ import type {
   PasswordEncryptedBlob,
 } from "../protection/encrypt-private-key";
 import { STORAGE_KEYRING } from "../constants";
-import { removeItem, withLock } from "./engine";
 import { loadEncryptedArray, saveEncryptedArray } from "./encrypted-store";
+import { removeItem, withLock } from "./engine";
 
 // ── protection discriminated union ───────────────────────────────────
 
@@ -141,10 +141,7 @@ export async function getKeyring(): Promise<ProtectedKeyBlob[]> {
 export async function addKey(blob: ProtectedKeyBlob): Promise<void> {
   await withLock(STORAGE_KEYRING, async () => {
     const keyring = await loadEncrypted();
-    const updated = [
-      ...keyring.filter((k) => k.keyId !== blob.keyId),
-      blob,
-    ];
+    const updated = [...keyring.filter((k) => k.keyId !== blob.keyId), blob];
     await saveAll(updated);
   });
 }

@@ -32,7 +32,7 @@ export function Welcome() {
     return (
       <div className="flex min-h-screen items-center justify-end p-12">
         <div className="flex max-w-md items-center gap-6 text-right">
-          <p className="text-2xl font-medium leading-snug">
+          <p className="text-2xl leading-snug font-medium">
             Follow the instructions in the side panel to get started
           </p>
           <ArrowRightIcon className="text-primary h-16 w-16 shrink-0" />
@@ -51,9 +51,9 @@ export function Welcome() {
         <div>
           <h1 className="text-xl font-semibold">PGP Tools is installed</h1>
           <p className="text-muted-foreground mt-2 text-sm">
-            Click below to open the side panel and finish setting up your
-            keys. After this, use the PGP Tools icon in the toolbar to
-            re-open it any time.
+            Click below to open the side panel and finish setting up your keys.
+            After this, use the PGP Tools icon in the toolbar to re-open it any
+            time.
           </p>
         </div>
 
