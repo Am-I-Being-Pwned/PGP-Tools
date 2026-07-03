@@ -25,11 +25,9 @@ interface AuthenticationExtensionsClientOutputsPRF {
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- augmenting global types requires empty interface extension
-  interface AuthenticationExtensionsClientInputs
-    extends AuthenticationExtensionsClientInputsPRF {}
+  interface AuthenticationExtensionsClientInputs extends AuthenticationExtensionsClientInputsPRF {}
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- augmenting global types requires empty interface extension
-  interface AuthenticationExtensionsClientOutputs
-    extends AuthenticationExtensionsClientOutputsPRF {}
+  interface AuthenticationExtensionsClientOutputs extends AuthenticationExtensionsClientOutputsPRF {}
 }
 
 export {};

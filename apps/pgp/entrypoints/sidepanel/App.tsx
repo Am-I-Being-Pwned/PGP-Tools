@@ -2,11 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { SettingsIcon } from "lucide-react";
 import { toast } from "sonner";
 
+import type { MasterProtection } from "../../lib/storage/master-protection";
 import type {
   AutoLockTimeout,
   StorageLocation,
 } from "../../lib/storage/preferences";
-import type { MasterProtection } from "../../lib/storage/master-protection";
+import type { WorkspaceDraft } from "../../lib/workspace-draft";
 import { KeysView } from "../../components/keys/KeysView";
 import { AppFooter } from "../../components/shared/AppFooter";
 import { MasterUnlockScreen } from "../../components/shared/MasterUnlockScreen";
@@ -21,7 +22,6 @@ import { SESSION_PENDING_OP } from "../../lib/constants";
 import * as wasmApi from "../../lib/pgp/wasm";
 import { getMasterProtection } from "../../lib/storage/master-protection";
 import { getPreferences, savePreferences } from "../../lib/storage/preferences";
-import type { WorkspaceDraft } from "../../lib/workspace-draft";
 import {
   draftHasContent,
   encryptWorkspaceDraft,
@@ -257,7 +257,10 @@ export default function App() {
 
   useEffect(() => {
     if (!pending) return;
-    if (pending.action === "import-public" || pending.action === "import-private") {
+    if (
+      pending.action === "import-public" ||
+      pending.action === "import-private"
+    ) {
       pendingRoutedRef.current = true;
       setImportPrefill(pending.text);
       setActiveTab("keys");
@@ -270,7 +273,6 @@ export default function App() {
     setActiveTab("workspace");
     void savePreferences({ activeTab: "workspace" });
   }, [pending, clearPending]);
-
 
   const handleDeleteKey = useCallback(
     async (keyId: string) => {
@@ -497,7 +499,11 @@ function TabBar({
 
   return (
     <nav className="border-border border-b" aria-label="Main navigation">
-      <div className="flex items-center" role="tablist" onKeyDown={handleKeyDown}>
+      <div
+        className="flex items-center"
+        role="tablist"
+        onKeyDown={handleKeyDown}
+      >
         {TABS.map((tab, i) => {
           const isSettings = tab.id === "settings";
           const isActive = activeTab === tab.id;
@@ -528,11 +534,7 @@ function TabBar({
                     }`
               }
             >
-              {isSettings ? (
-                <SettingsIcon className="h-4 w-4" />
-              ) : (
-                tab.label
-              )}
+              {isSettings ? <SettingsIcon className="h-4 w-4" /> : tab.label}
             </button>
           );
         })}

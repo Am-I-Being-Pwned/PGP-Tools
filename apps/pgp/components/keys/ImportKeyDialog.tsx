@@ -3,9 +3,9 @@ import { toast } from "sonner";
 
 import { Button } from "@amibeingpwned/ui/button";
 
+import type { KeyInfo } from "../../lib/pgp/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
-import type { KeyInfo } from "../../lib/pgp/types";
 import { importKey } from "../../lib/pgp/key-management";
 import { parseKeys } from "../../lib/pgp/wasm";
 import { importAndProtect } from "../../lib/protection/protect-flow";
@@ -294,9 +294,9 @@ export function ImportKeyDialog({
       {step === "unlock" && (
         <div className="space-y-3">
           <p className="text-muted-foreground text-xs">
-            This key is protected with a passphrase. Enter it to unlock the
-            key - you'll then re-protect it with your chosen method on the
-            next step.
+            This key is protected with a passphrase. Enter it to unlock the key
+            - you'll then re-protect it with your chosen method on the next
+            step.
           </p>
           {parsed && (
             <div className="bg-muted/30 rounded border p-2 text-xs">

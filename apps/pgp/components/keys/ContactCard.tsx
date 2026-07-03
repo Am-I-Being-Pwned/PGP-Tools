@@ -99,7 +99,9 @@ export function ContactCard({
           )}
           <p className="text-muted-foreground mt-0.5 font-mono text-xs">
             {contact.keyId.slice(-16)}
-            {contact.algorithm ? ` - ${formatAlgorithm(contact.algorithm)}` : ""}
+            {contact.algorithm
+              ? ` - ${formatAlgorithm(contact.algorithm)}`
+              : ""}
           </p>
           {note && <p className="text-muted-foreground mt-1 text-xs">{note}</p>}
           {advancedMode && (

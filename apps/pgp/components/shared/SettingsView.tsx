@@ -155,8 +155,8 @@ export function SettingsView({
           <div>
             <span className="text-sm">Lock when I tab away</span>
             <p className="text-muted-foreground text-xs">
-              Lock the moment the side panel isn't visible (alt-tab,
-              collapsed, or window minimised).
+              Lock the moment the side panel isn't visible (alt-tab, collapsed,
+              or window minimised).
             </p>
           </div>
           <Switch
@@ -246,8 +246,7 @@ export function SettingsView({
             >
               Am I Being Pwned
             </a>
-            .{" "}
-            <br />
+            . <br />
             <a
               href="https://github.com/Am-I-Being-Pwned/PGP-Tools"
               target="_blank"

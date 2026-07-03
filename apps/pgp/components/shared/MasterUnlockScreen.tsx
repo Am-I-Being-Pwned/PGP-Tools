@@ -136,11 +136,7 @@ export function MasterUnlockScreen({
         </div>
 
         {masterProtection.method === "passkey" && (
-          <Button
-            className="w-full"
-            onClick={handlePasskeyUnlock}
-            autoFocus
-          >
+          <Button className="w-full" onClick={handlePasskeyUnlock} autoFocus>
             Unlock with passkey
           </Button>
         )}
@@ -180,8 +176,8 @@ export function MasterUnlockScreen({
         )}
 
         <p className="text-muted-foreground text-xs">
-          If you have lost your password, your encrypted keys and contacts cannot be
-          recovered.
+          If you have lost your password, your encrypted keys and contacts
+          cannot be recovered.
         </p>
       </div>
     </div>

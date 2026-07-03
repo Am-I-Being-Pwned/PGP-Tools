@@ -21,7 +21,9 @@ interface KeysViewProps {
     blob: ProtectedKeyBlob,
     password: string,
   ) => Promise<boolean>;
-  onUnlockWithPasskey: (blob: ProtectedKeyBlob) => Promise<boolean | "cancelled">;
+  onUnlockWithPasskey: (
+    blob: ProtectedKeyBlob,
+  ) => Promise<boolean | "cancelled">;
   onLock: (keyId: string) => void;
   onDeleteKey: (keyId: string) => Promise<void>;
   onAddKey: (blob: ProtectedKeyBlob) => Promise<void>;
@@ -63,9 +65,9 @@ export function KeysView({
 }: KeysViewProps) {
   const [showGenerate, setShowGenerate] = useState(false);
   const [showImport, setShowImport] = useState(false);
-  const [importInitialArmored, setImportInitialArmored] = useState<string | null>(
-    null,
-  );
+  const [importInitialArmored, setImportInitialArmored] = useState<
+    string | null
+  >(null);
 
   useEffect(() => {
     if (autoOpenImport) {
@@ -208,7 +210,10 @@ function ContactsList({
         </div>
       ) : (
         <>
-          <ContactDropZone onImport={onAddContact} existingKeyIds={contacts.map((c) => c.keyId)} />
+          <ContactDropZone
+            onImport={onAddContact}
+            existingKeyIds={contacts.map((c) => c.keyId)}
+          />
           {contacts.length > 5 && (
             <input
               type="text"

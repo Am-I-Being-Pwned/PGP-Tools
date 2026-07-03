@@ -59,7 +59,12 @@ interface OnboardingFlowProps {
   cacheKey?: boolean;
 }
 
-export function OnboardingFlow({ onComplete, addKey, onKeyCached, cacheKey }: OnboardingFlowProps) {
+export function OnboardingFlow({
+  onComplete,
+  addKey,
+  onKeyCached,
+  cacheKey,
+}: OnboardingFlowProps) {
   const [step, setStep] = useState<Step>("storage");
   const [location, setLocation] = useState<StorageLocation>("local");
 
@@ -415,9 +420,7 @@ export function OnboardingFlow({ onComplete, addKey, onKeyCached, cacheKey }: On
                   </label>
                   <Select
                     value={keyAlgorithm}
-                    onValueChange={(v) =>
-                      setKeyAlgorithm(v as KeyAlgorithm)
-                    }
+                    onValueChange={(v) => setKeyAlgorithm(v as KeyAlgorithm)}
                   >
                     <SelectTrigger className="h-8 text-xs">
                       <SelectValue />
@@ -440,9 +443,7 @@ export function OnboardingFlow({ onComplete, addKey, onKeyCached, cacheKey }: On
                   </label>
                   <Select
                     value={expiryOption}
-                    onValueChange={(v) =>
-                      setExpiryOption(v as ExpiryOption)
-                    }
+                    onValueChange={(v) => setExpiryOption(v as ExpiryOption)}
                   >
                     <SelectTrigger className="h-8 text-xs">
                       <SelectValue />
@@ -469,11 +470,7 @@ export function OnboardingFlow({ onComplete, addKey, onKeyCached, cacheKey }: On
             <Button className="w-full" onClick={handleGenerateKey}>
               Create my PGP key
             </Button>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={handleSkip}
-            >
+            <Button variant="outline" className="w-full" onClick={handleSkip}>
               I'll set up later
             </Button>
           </div>
