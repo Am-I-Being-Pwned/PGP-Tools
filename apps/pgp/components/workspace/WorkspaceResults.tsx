@@ -16,6 +16,9 @@ interface WorkspaceResultsProps {
   operationDone: boolean;
   statusText: string | undefined;
   verifiedSigner: PublicContactKey | ProtectedKeyBlob | null;
+  /** Tone of the signer card: green when verified, orange when signed but
+   *  unverifiable (signer's key not held). */
+  signatureTone?: "success" | "warning";
   /** Fill the available height (used by the full-screen result view). */
   fullHeight?: boolean;
 }
@@ -29,8 +32,10 @@ export function WorkspaceResults({
   operationDone,
   statusText,
   verifiedSigner,
+  signatureTone = "success",
   fullHeight,
 }: WorkspaceResultsProps) {
+  const isUnverified = signatureTone === "warning";
   return (
     <div
       className={
@@ -47,7 +52,11 @@ export function WorkspaceResults({
       {verifiedSigner && (
         <ContactCard
           readOnly
-          verifiedLabel={statusText ?? "Signature verified"}
+          verifiedTone={signatureTone}
+          verifiedLabel={
+            isUnverified ? "Unverified" : (statusText ?? "Signature verified")
+          }
+          note={isUnverified ? statusText : undefined}
           contact={
             "armoredPublicKey" in verifiedSigner
               ? verifiedSigner
