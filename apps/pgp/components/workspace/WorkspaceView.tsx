@@ -385,6 +385,7 @@ export function WorkspaceView({
     }) => {
       switch (result.signatureStatus) {
         case "valid": {
+          s.setSignatureTone("success");
           s.setStatusText("Signature verified");
           const signer = findSigner(result.signerKeyId);
           if (signer) s.setVerifiedSigner(signer);
@@ -392,12 +393,19 @@ export function WorkspaceView({
         }
         case "unknown_key": {
           // Signed, but we don't hold the signer's public key. Decryption
-          // still succeeded -- surface a non-fatal notice, never fail.
-          const who = result.signerKeyId
-            ? ` (key ${result.signerKeyId.slice(-16).toUpperCase()})`
-            : "";
+          // still succeeded -- show the same signer card as a verified
+          // signature, but in an orange "can't verify" tone.
+          s.setSignatureTone("warning");
+          s.setVerifiedSigner({
+            keyId: result.signerKeyId ?? "",
+            userIds: ["Unknown signer"],
+            algorithm: "",
+            armoredPublicKey: "",
+            addedAt: 0,
+            lastUsedAt: 0,
+          });
           s.setStatusText(
-            `Decrypted. Message is signed${who}, but the signer's public key isn't in your keys or contacts, so the signature could not be verified.`,
+            "This message is signed, but the signer's public key isn't in your keys or contacts, so the signature could not be verified.",
           );
           break;
         }
@@ -640,6 +648,7 @@ export function WorkspaceView({
           operationDone={s.operationDone}
           statusText={s.statusText ?? undefined}
           verifiedSigner={s.verifiedSigner}
+          signatureTone={s.signatureTone}
           fullHeight
         />
         <div className="flex gap-2">
@@ -796,6 +805,7 @@ export function WorkspaceView({
           operationDone={s.operationDone}
           statusText={s.statusText ?? undefined}
           verifiedSigner={s.verifiedSigner}
+          signatureTone={s.signatureTone}
         />
 
         {!s.needsPassword && (
