@@ -81,6 +81,17 @@ export function WorkspaceView({
     onDraftChange,
   });
 
+  // Change the active private key. A pending password prompt belongs to the
+  // *previous* key, so drop it -- otherwise switching to a passkey-protected
+  // key leaves the password dialog stuck open and blocks the passkey flow.
+  function selectPrivateKey(keyId: string | null) {
+    if (keyId === s.selectedKeyId) return;
+    s.setSelectedKeyId(keyId);
+    s.setNeedsPassword(false);
+    s.setPasswordInput("");
+    s.setPasswordError(null);
+  }
+
   // Default-select the private key the message is actually encrypted to, so
   // the user doesn't have to guess which of their keys decrypts it. Runs when
   // the message or key set changes; a later manual pick is left untouched.
@@ -106,7 +117,7 @@ export function WorkspaceView({
           myKeys.map((k) => k.publicKeyArmored),
         );
         if (!run.cancelled && match && match !== s.selectedKeyId) {
-          s.setSelectedKeyId(match);
+          selectPrivateKey(match);
         }
       } catch {
         // Not a parseable PGP message yet (still typing/pasting) -- ignore.
@@ -639,7 +650,7 @@ export function WorkspaceView({
             label={s.mode === "sign" ? "Sign with" : "Decrypt with"}
             keys={myKeys}
             selectedKeyId={s.selectedKeyId}
-            onSelect={s.setSelectedKeyId}
+            onSelect={selectPrivateKey}
             emptyText="No keys yet."
             emptyAction={onNavigateToKeys}
             emptyActionLabel="Create one"
@@ -681,7 +692,7 @@ export function WorkspaceView({
                 label="Sign with"
                 keys={myKeys}
                 selectedKeyId={s.selectedKeyId}
-                onSelect={s.setSelectedKeyId}
+                onSelect={selectPrivateKey}
               />
             )}
           </div>
