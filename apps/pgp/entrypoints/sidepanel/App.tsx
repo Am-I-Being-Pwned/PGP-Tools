@@ -442,6 +442,13 @@ export default function App() {
             onAutoDownloadTextChange={setAutoDownloadText}
             lockOnTabAway={lockOnTabAway}
             onLockOnTabAwayChange={setLockOnTabAway}
+            myKeys={keyring.keys}
+            contacts={contacts.contacts}
+            isUnlocked={session.isUnlocked}
+            getKeyHandle={session.getKeyHandle}
+            onAddKey={keyring.add}
+            onAddContact={contacts.add}
+            primaryPasskeyCredentialId={masterPasskeyCredentialId}
           />
         )}
       </main>

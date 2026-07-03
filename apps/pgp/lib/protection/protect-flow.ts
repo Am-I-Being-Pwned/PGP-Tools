@@ -145,7 +145,8 @@ export type ProtectionInput =
       cache?: boolean;
       /** Skip the WebAuthn ceremony entirely by reusing a PRF output
        *  already obtained for `reusePasskeyCredentialId` (e.g. during
-       *  onboarding where the master setup just authenticated). The
+       *  onboarding where the master setup just authenticated, or a
+       *  bulk import protecting several keys off one ceremony). The
        *  returned blob will carry `prfSalt` so later unlocks
        *  re-authenticate with the same WebAuthn challenge and reproduce
        *  the same PRF output. A fresh `storedSecret` is still generated
@@ -321,14 +322,33 @@ export async function importAndProtect(
   }
 
   const userIdHint = common.userIdHint ?? "Imported PGP Key";
-  const credentialId = await resolvePasskeyCredential(
-    protection.reusePasskeyCredentialId,
-    userIdHint,
-  );
-  const prfSalt = generatePrfSalt();
+  const credentialId =
+    protection.prfReuse !== undefined && protection.reusePasskeyCredentialId
+      ? protection.reusePasskeyCredentialId
+      : await resolvePasskeyCredential(
+          protection.reusePasskeyCredentialId,
+          userIdHint,
+        );
+
+  // PRF + prfSalt: either reuse from caller (no new WebAuthn dialog --
+  // e.g. a bulk import protecting several keys off one ceremony) or run
+  // our own. `storedSecret` is always fresh per blob so the derived AES
+  // key is unique even when prfOutput is shared.
+  let prfSalt: ArrayBuffer;
+  let prfOutput: Uint8Array;
+  let ownsPrfOutput: boolean;
+  if (protection.prfReuse) {
+    prfSalt = protection.prfReuse.prfSalt;
+    prfOutput = protection.prfReuse.prfOutput;
+    ownsPrfOutput = false; // caller zeros it
+  } else {
+    prfSalt = generatePrfSalt();
+    ({ prfOutput } = await authenticateAndGetPrf(credentialId, prfSalt));
+    ownsPrfOutput = true;
+  }
+
   const storedSecret = generateStoredSecret();
   const storedSecretBytes = new Uint8Array(storedSecret);
-  const { prfOutput } = await authenticateAndGetPrf(credentialId, prfSalt);
   try {
     const result = await protectImportedWithPrf(
       armoredPrivateKey,
@@ -350,7 +370,7 @@ export async function importAndProtect(
     }
     return { blob, handle };
   } finally {
-    prfOutput.fill(0);
+    if (ownsPrfOutput) prfOutput.fill(0);
     if (sourcePassphraseBytes.length > 0) sourcePassphraseBytes.fill(0);
   }
 }
