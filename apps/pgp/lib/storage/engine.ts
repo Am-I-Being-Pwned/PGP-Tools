@@ -39,8 +39,7 @@ async function resolveLocation(): Promise<StorageLocation> {
   if (cachedLocation) return cachedLocation;
   const result = await chrome.storage.sync.get(STORAGE_PREFERENCES);
   const prefs = result[STORAGE_PREFERENCES] as
-    | { storageLocation?: StorageLocation }
-    | undefined;
+    { storageLocation?: StorageLocation } | undefined;
   cachedLocation = prefs?.storageLocation ?? "local";
   return cachedLocation;
 }
