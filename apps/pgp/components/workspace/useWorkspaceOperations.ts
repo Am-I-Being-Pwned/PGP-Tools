@@ -438,6 +438,16 @@ export function useWorkspaceOperations({
         });
       }
     } catch (err) {
+      // Never leave decrypted plaintext on screen when the operation
+      // errored. The single-input branches set the output *before*
+      // handleSig runs, so a bad-signature ("invalid" -> tamper) throw
+      // would otherwise render the tampered plaintext next to the error.
+      // Clear it so a tamper signal never shows the untrusted content.
+      s.setOutput("");
+      s.setBinaryOutput(undefined);
+      s.setFileResults([]);
+      s.setOperationDone(false);
+      s.setVerifiedSigner(null);
       // Surface the underlying reason (missing key, bad session key,
       // unsupported compression, tampered signature, ...) instead of a
       // one-size-fits-all message, so failures are actually diagnosable.
