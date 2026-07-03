@@ -15,6 +15,7 @@
     "format:fix": "turbo run format --continue -- --write --cache --cache-location .cache/.prettiercache",
     "lint": "turbo run lint --continue -- --cache --cache-location .cache/.eslintcache",
     "lint:fix": "turbo run lint --continue -- --fix --cache --cache-location .cache/.eslintcache",
+    "test": "turbo run test",
     "typecheck": "turbo run typecheck",
     "zip": "turbo -F @amibeingpwned/pgp zip",
     "ui-add": "turbo run ui-add"

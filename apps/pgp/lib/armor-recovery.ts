@@ -5,16 +5,20 @@
  * the line breaks PGP armor depends on) into single spaces. The armor
  * itself has enough structure that we can put the newlines back:
  *
- *   -----BEGIN PGP <TYPE> BLOCK-----
+ *   -----BEGIN PGP <TYPE>-----
  *   <armor headers like "Version: ...", may have multi-word values>
  *   <blank line>
  *   <base64 data, wrapped to 64 chars per line>
  *   =<4-char base64 CRC>
- *   -----END PGP <TYPE> BLOCK-----
+ *   -----END PGP <TYPE>-----
  *
  * Heuristics:
  *  - BEGIN/END markers survive collapse intact (they have no internal
  *    whitespace that would be ambiguous).
+ *  - BEGIN/END types must match. This also keeps cleartext-signed
+ *    messages (whose free-text body must NOT be rewrapped as base64)
+ *    out of reconstruction: their first BEGIN is `PGP SIGNED MESSAGE`
+ *    but the first END is `PGP SIGNATURE`.
  *  - Armor headers always start with a token ending in `:`. Header
  *    values can have multiple whitespace-separated tokens (e.g.
  *    `Version: Encryption Desktop 10.4.1`); we keep consuming value
@@ -25,8 +29,8 @@
  *  - Data is everything between the last header line and the CRC.
  */
 
-const BEGIN_MARKER = /-----BEGIN PGP ([A-Z ]+?) BLOCK-----/;
-const END_MARKER = /-----END PGP ([A-Z ]+?) BLOCK-----/;
+const BEGIN_MARKER = /-----BEGIN PGP ([A-Z ]+?)-----/;
+const END_MARKER = /-----END PGP ([A-Z ]+?)-----/;
 const BASE64_TOKEN = /^[A-Za-z0-9+/=]+$/;
 const CRC_TOKEN = /^=[A-Za-z0-9+/]{4}$/;
 const HEADER_KEY = /^[A-Za-z][A-Za-z0-9-]*:$/;
@@ -36,7 +40,7 @@ const MIN_DATA_TOKEN_LEN = 40;
  *  after it has been collapsed (i.e. no `\n` after the marker). */
 export function looksLikeCollapsedArmor(text: string): boolean {
   if (!BEGIN_MARKER.test(text)) return false;
-  return !/-----BEGIN PGP [A-Z ]+ BLOCK-----\n/.test(text);
+  return !/-----BEGIN PGP [A-Z ]+-----\n/.test(text);
 }
 
 /** Best-effort reconstruction. If anything looks off, returns the
@@ -77,9 +81,7 @@ export function reconstructArmor(text: string): string {
 
   const headerTokens = tokens.slice(0, dataStart);
   const dataTokens =
-    crcIdx === -1
-      ? tokens.slice(dataStart)
-      : tokens.slice(dataStart, crcIdx);
+    crcIdx === -1 ? tokens.slice(dataStart) : tokens.slice(dataStart, crcIdx);
   const crc = crcIdx === -1 ? "" : tokens[crcIdx];
 
   // Group header tokens into "Key: value..." lines.
@@ -103,18 +105,21 @@ export function reconstructArmor(text: string): string {
   }
 
   // Re-wrap base64 data to 64 chars per line.
-  const wrapped = dataTokens.join("").replace(/(.{64})/g, "$1\n").replace(/\n$/, "");
+  const wrapped = dataTokens
+    .join("")
+    .replace(/(.{64})/g, "$1\n")
+    .replace(/\n$/, "");
 
   const headerBlock =
     headerLines.length > 0 ? headerLines.join("\n") + "\n\n" : "\n";
   const crcBlock = crc ? `\n${crc}` : "";
 
   return (
-    `-----BEGIN PGP ${blockType} BLOCK-----\n` +
+    `-----BEGIN PGP ${blockType}-----\n` +
     headerBlock +
     wrapped +
     crcBlock +
-    `\n-----END PGP ${blockType} BLOCK-----`
+    `\n-----END PGP ${blockType}-----`
   );
 }
 
