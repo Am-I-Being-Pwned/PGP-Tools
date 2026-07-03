@@ -18,7 +18,7 @@
  * See `apps/pgp/SECURITY.md` §3 for the full file map.
  */
 
-import type { KeyInfo } from "./types";
+import type { KeyInfo, SignatureStatus } from "./types";
 import { loadWasm } from "./wasm-loader";
 
 // ── status / metadata ────────────────────────────────────────────────
@@ -84,12 +84,14 @@ export async function encrypt(
 
 export interface SignatureInfo {
   signatureValid: boolean | null;
+  signatureStatus: SignatureStatus;
   signerKeyId: string | null;
 }
 
 export interface VerifyResultWasm {
   text: string;
   signatureValid: boolean;
+  signatureStatus: SignatureStatus;
   signerKeyId: string | null;
 }
 
@@ -162,6 +164,24 @@ export async function signWithHandle(
 ): Promise<string> {
   const wasm = await loadWasm();
   return wasm.signWithHandle(text, keyHandle);
+}
+
+/**
+ * Given an encrypted message and a set of candidate public keys, return the
+ * fingerprint of the key that should decrypt it (matched against the message's
+ * recipients), or null if none match. Lets the UI default-select the right
+ * decryption key without unlocking every candidate.
+ */
+export async function selectDecryptionKey(
+  ciphertext: Uint8Array,
+  candidatePublicKeys: string[],
+): Promise<string | null> {
+  const wasm = await loadWasm();
+  const json = wasm.selectDecryptionKey(
+    ciphertext,
+    JSON.stringify(candidatePublicKeys),
+  );
+  return JSON.parse(json) as string | null;
 }
 
 /** Drop a KEY_STORE entry. Backing bytes are zeroized in Rust via the
