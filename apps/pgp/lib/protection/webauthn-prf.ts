@@ -100,7 +100,7 @@ export interface PasskeyAuthResult {
  */
 export async function authenticateAndGetPrf(
   credentialId: string,
-  prfSalt: ArrayBuffer,
+  prfSalt: BufferSource,
   signal?: AbortSignal,
 ): Promise<PasskeyAuthResult> {
   const credential = await navigator.credentials.get({

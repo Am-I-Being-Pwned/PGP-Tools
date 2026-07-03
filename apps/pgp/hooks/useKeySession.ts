@@ -97,9 +97,9 @@ export function useKeySession(opts: KeySessionOptions) {
       unlocking.current = true;
       try {
         const handle = await wasmApi.unlockWithPassword(
-          new Uint8Array(fromBase64(encrypted.ciphertext)),
-          new Uint8Array(fromBase64(encrypted.iv)),
-          new Uint8Array(fromBase64(encrypted.salt)),
+          fromBase64(encrypted.ciphertext),
+          fromBase64(encrypted.iv),
+          fromBase64(encrypted.salt),
           blob.keyId,
           passwordBytes,
           ARGON2_MEMORY_KIB,
@@ -139,10 +139,10 @@ export function useKeySession(opts: KeySessionOptions) {
         ));
 
         const handle = await wasmApi.unlockWithPrf(
-          new Uint8Array(fromBase64(encrypted.ciphertext)),
-          new Uint8Array(fromBase64(encrypted.iv)),
+          fromBase64(encrypted.ciphertext),
+          fromBase64(encrypted.iv),
           prfOutput,
-          new Uint8Array(fromBase64(encrypted.storedSecret)),
+          fromBase64(encrypted.storedSecret),
           blob.keyId,
         );
 
