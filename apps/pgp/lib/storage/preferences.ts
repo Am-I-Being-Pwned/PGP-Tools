@@ -50,8 +50,7 @@ const DEFAULT_PREFERENCES: PgpPreferences = {
 async function getStorageLocation(): Promise<StorageLocation> {
   const result = await chrome.storage.sync.get(STORAGE_PREFERENCES);
   const stored = result[STORAGE_PREFERENCES] as
-    | { storageLocation?: StorageLocation }
-    | undefined;
+    { storageLocation?: StorageLocation } | undefined;
   return stored?.storageLocation ?? "local";
 }
 

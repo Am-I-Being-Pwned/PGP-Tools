@@ -9,12 +9,7 @@ export interface FooterAction {
   onClick?: () => void;
   disabled?: boolean;
   variant?:
-    | "default"
-    | "destructive"
-    | "outline"
-    | "secondary"
-    | "ghost"
-    | "link";
+    "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
   size?: "default" | "sm" | "lg" | "icon";
   icon?: React.ComponentType<{ className?: string }>;
 }

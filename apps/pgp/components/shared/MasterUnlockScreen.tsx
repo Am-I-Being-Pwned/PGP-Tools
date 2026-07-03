@@ -44,7 +44,9 @@ export function MasterUnlockScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handlePasskeyUnlock = async () => {
+  // Function declaration (hoisted) so the auto-unlock effect above can
+  // reference it without a use-before-declaration error.
+  async function handlePasskeyUnlock() {
     if (masterProtection.method !== "passkey") return;
 
     // Abort any in-flight ceremony so we don't get InvalidStateError
@@ -78,7 +80,7 @@ export function MasterUnlockScreen({
     } finally {
       prfOutput?.fill(0);
     }
-  };
+  }
 
   const handlePasswordUnlock = async () => {
     if (masterProtection.method !== "password") return;

@@ -26,6 +26,8 @@ type Step = "identity" | "expiry" | "protection" | "generating";
 type KeyAlgorithm = "ecc" | "rsa";
 type ExpiryOption = "never" | "1y" | "2y" | "3y" | "custom";
 
+const DAY_MS = 86_400_000;
+
 const EXPIRY_SECONDS: Record<Exclude<ExpiryOption, "custom">, number> = {
   never: 0,
   "1y": 365 * 24 * 60 * 60,
@@ -80,6 +82,22 @@ export function GenerateKeyDialog({
   const [expiryOption, setExpiryOption] = useState<ExpiryOption>("2y");
   const [customExpiry, setCustomExpiry] = useState<Date | undefined>();
 
+  // Calendar bounds, captured when the expiry step opens. Reading the
+  // clock during render would break render purity (react-hooks/purity).
+  const [expiryBounds, setExpiryBounds] = useState<{
+    tomorrow: Date;
+    max: Date;
+  } | null>(null);
+
+  const openExpiryStep = () => {
+    const now = Date.now();
+    setExpiryBounds({
+      tomorrow: new Date(now + DAY_MS),
+      max: new Date(now + 10 * 365 * DAY_MS),
+    });
+    setStep("expiry");
+  };
+
   if (!open) return null;
 
   const resetAndClose = () => {
@@ -95,6 +113,7 @@ export function GenerateKeyDialog({
     setKeyAlgorithm("ecc");
     setExpiryOption("2y");
     setCustomExpiry(undefined);
+    setExpiryBounds(null);
     onClose();
   };
 
@@ -111,7 +130,7 @@ export function GenerateKeyDialog({
       return;
     }
     if (expiryOption === "custom") {
-      setStep("expiry");
+      openExpiryStep();
     } else if (canSkipProtection) {
       void handleGenerate();
     } else {
@@ -125,7 +144,9 @@ export function GenerateKeyDialog({
       setError("Select an expiry date.");
       return;
     }
-    if (customExpiry.getTime() <= Date.now()) {
+    // The calendar already disables anything before tomorrow; this is a
+    // belt-and-braces check against the bounds captured at step open.
+    if (expiryBounds && customExpiry < expiryBounds.tomorrow) {
       setError("Expiry date must be in the future.");
       return;
     }
@@ -181,8 +202,6 @@ export function GenerateKeyDialog({
       setGenerating(false);
     }
   };
-
-  const tomorrow = new Date(Date.now() + 86400000);
 
   return (
     <Dialog open={open} onClose={resetAndClose} title="Generate New Key">
@@ -336,7 +355,7 @@ export function GenerateKeyDialog({
         </div>
       )}
 
-      {step === "expiry" && (
+      {step === "expiry" && expiryBounds && (
         <div className="space-y-3">
           <p className="text-muted-foreground text-xs">
             When should this key expire?
@@ -346,10 +365,10 @@ export function GenerateKeyDialog({
             captionLayout="dropdown"
             selected={customExpiry}
             onSelect={setCustomExpiry}
-            disabled={{ before: tomorrow }}
-            defaultMonth={customExpiry ?? tomorrow}
-            startMonth={tomorrow}
-            endMonth={new Date(Date.now() + 10 * 365 * 86400000)}
+            disabled={{ before: expiryBounds.tomorrow }}
+            defaultMonth={customExpiry ?? expiryBounds.tomorrow}
+            startMonth={expiryBounds.tomorrow}
+            endMonth={expiryBounds.max}
             className="mx-auto"
           />
           {customExpiry && (
