@@ -4,6 +4,7 @@ import type { EncryptInput, SignatureStatus } from "../../lib/pgp/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { FileResult } from "../../lib/utils/download";
+import type { WorkspaceState } from "./useWorkspaceState";
 import * as pgpOps from "../../lib/pgp/operations";
 import {
   downloadBinary,
@@ -16,7 +17,6 @@ import {
   zipFiles as zipFilesToArchive,
 } from "../../lib/utils/zip";
 import { outputFileName } from "./output-name";
-import type { WorkspaceState } from "./useWorkspaceState";
 
 interface WorkspaceOperationsOptions {
   s: WorkspaceState;
@@ -28,7 +28,9 @@ interface WorkspaceOperationsOptions {
     blob: ProtectedKeyBlob,
     password: string,
   ) => Promise<boolean>;
-  onUnlockWithPasskey: (blob: ProtectedKeyBlob) => Promise<boolean | "cancelled">;
+  onUnlockWithPasskey: (
+    blob: ProtectedKeyBlob,
+  ) => Promise<boolean | "cancelled">;
   autoDownloadFiles?: boolean;
   autoDownloadText?: boolean;
   onOperationComplete?: () => void;
@@ -164,9 +166,7 @@ export function useWorkspaceOperations({
 
   function maybeAutoDownload(
     isFileInput: boolean,
-    data?:
-      | { text?: string; binary?: Uint8Array }
-      | { results: FileResult[] },
+    data?: { text?: string; binary?: Uint8Array } | { results: FileResult[] },
   ) {
     if (!(isFileInput ? autoDownloadFiles : autoDownloadText)) return;
     if (data && "results" in data) {

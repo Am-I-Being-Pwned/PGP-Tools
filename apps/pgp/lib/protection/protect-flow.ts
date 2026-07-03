@@ -20,6 +20,7 @@
 
 import type { GenerateKeyOptions } from "../pgp/types";
 import type { ProtectFlowResult } from "../pgp/wasm";
+import type { ProtectedKeyBlob } from "../storage/keyring";
 import { toBase64 } from "../encoding";
 import {
   generateProtectedWithPassword,
@@ -30,7 +31,6 @@ import {
   unlockWithPrf,
 } from "../pgp/wasm";
 import { blobFromEncrypted } from "../storage/keyring";
-import type { ProtectedKeyBlob } from "../storage/keyring";
 import {
   ARGON2_ITERATIONS,
   ARGON2_MEMORY_KIB,
@@ -216,8 +216,7 @@ export async function generateAndProtect(
     }
   }
 
-  const userIdHint =
-    common.userIdHint ?? `${keyOpts.name} <${keyOpts.email}>`;
+  const userIdHint = common.userIdHint ?? `${keyOpts.name} <${keyOpts.email}>`;
   const credentialId =
     protection.prfReuse !== undefined && protection.reusePasskeyCredentialId
       ? protection.reusePasskeyCredentialId

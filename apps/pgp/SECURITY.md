@@ -59,6 +59,7 @@ What we do **not** defend is in §8.
 ```
 
 Private-key material crosses from WASM into JS in only two places:
+
 - `getKeyArmored(handle)` — plaintext armored, gated by a
   type-to-confirm ("EXPORT") UI.
 - `encryptKeyForExportWithHandle(handle, passphrase)` — armored cert
@@ -70,20 +71,20 @@ Both are user-initiated destructive-export paths.
 
 ## 3. File map
 
-| # | File | What's in it |
-|---|------|--------------|
-| 1 | `apps/pgp/SECURITY.md` (this file) | The contract |
-| 2 | `apps/pgp/gpg-wasm/src/lib.rs` | The WASM crate. The actual sandbox. |
-| 3 | `apps/pgp/lib/pgp/wasm.ts` | JS-side barrel. |
-| 4 | `apps/pgp/lib/pgp/wasm-public.ts` | Wasm wrappers that don't carry secrets. |
-| 5 | `apps/pgp/lib/pgp/wasm-secrets.ts` | Wasm wrappers that do, each with a `@secret-handling` block. |
-| 6 | `apps/pgp/lib/protection/protect-flow.ts` | Generate/import/protect. Owns the `Uint8Array.fill(0)` calls. |
-| 7 | `apps/pgp/hooks/useKeySession.ts` | KEY_STORE lifetime in JS (handle map, idle-/visibility-/OS-idle locks). |
-| 8 | `apps/pgp/entrypoints/sidepanel/App.tsx` | Auto-lock wiring + workspace-draft persistence. |
-| 8a | `apps/pgp/entrypoints/welcome/Welcome.tsx` | First-install welcome page; only does `chrome.sidePanel.open` from a user-gesture click. No secret material. |
-| 8b | `apps/pgp/entrypoints/background.ts` | Service worker. Two responsibilities: register context-menu items + open the welcome tab on first install. Holds no secrets. |
-| 9 | `apps/pgp/lib/network-lockdown.ts` | Frozen `globalThis.fetch`; blocks XHR/WS/EventSource/RTC/sendBeacon. |
-| 10 | `apps/pgp/scripts/audit-network.mjs` | Build-time check that no unexpected network code is shipped. |
+| #   | File                                       | What's in it                                                                                                                 |
+| --- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `apps/pgp/SECURITY.md` (this file)         | The contract                                                                                                                 |
+| 2   | `apps/pgp/gpg-wasm/src/lib.rs`             | The WASM crate. The actual sandbox.                                                                                          |
+| 3   | `apps/pgp/lib/pgp/wasm.ts`                 | JS-side barrel.                                                                                                              |
+| 4   | `apps/pgp/lib/pgp/wasm-public.ts`          | Wasm wrappers that don't carry secrets.                                                                                      |
+| 5   | `apps/pgp/lib/pgp/wasm-secrets.ts`         | Wasm wrappers that do, each with a `@secret-handling` block.                                                                 |
+| 6   | `apps/pgp/lib/protection/protect-flow.ts`  | Generate/import/protect. Owns the `Uint8Array.fill(0)` calls.                                                                |
+| 7   | `apps/pgp/hooks/useKeySession.ts`          | KEY_STORE lifetime in JS (handle map, idle-/visibility-/OS-idle locks).                                                      |
+| 8   | `apps/pgp/entrypoints/sidepanel/App.tsx`   | Auto-lock wiring + workspace-draft persistence.                                                                              |
+| 8a  | `apps/pgp/entrypoints/welcome/Welcome.tsx` | First-install welcome page; only does `chrome.sidePanel.open` from a user-gesture click. No secret material.                 |
+| 8b  | `apps/pgp/entrypoints/background.ts`       | Service worker. Two responsibilities: register context-menu items + open the welcome tab on first install. Holds no secrets. |
+| 9   | `apps/pgp/lib/network-lockdown.ts`         | Frozen `globalThis.fetch`; blocks XHR/WS/EventSource/RTC/sendBeacon.                                                         |
+| 10  | `apps/pgp/scripts/audit-network.mjs`       | Build-time check that no unexpected network code is shipped.                                                                 |
 
 ---
 
@@ -115,24 +116,24 @@ KEY_STORE entry still comes from an unlock path.
 
 ## 5. Zeroization — per-secret lifetime
 
-| Secret | Created in | Zero / drop point | File |
-|--------|------------|-------------------|------|
-| Typed password (JS string) | React `<input>` state | `setX("")`; V8 GC eventually reclaims | dialog components |
-| Password bytes (`Uint8Array`) for wasm | `TextEncoder.encode(password)` | `.fill(0)` in `finally` | `protect-flow.ts`, `useKeySession.ts`, dialog components |
-| Argon2id-derived AES key (Rust) | `argon2_derive` | `derived.zeroize()` after AES-GCM | `lib.rs` `encrypt_cert_with_password`, `unlock_with_password` |
-| HKDF-derived AES key (Rust) | `Hkdf::expand` into `vec![0u8; 32]` | `derived.zeroize()` after AES-GCM | `lib.rs` `encrypt_cert_with_prf`, `unlock_with_prf` |
-| Sequoia `Password` | `Password::from(bytes)` | Drop (Sequoia uses `Protected<Vec<u8>>`) | `lib.rs` `decrypt_cert_secrets`, `encrypt_cert_for_export` |
-| Wasm-side passphrase `Vec<u8>` | wasm-bindgen marshals from JS `Uint8Array` | `Zeroizing::new(passphrase)` on entry | `lib.rs` every `_with_password`/`_with_prf` fn |
-| WebAuthn PRF output | `authenticateAndGetPrf` | `prfOutput.fill(0)` in `finally` | `protect-flow.ts`, `useKeySession.ts`, master/onboarding screens |
-| Plaintext serialized cert (Rust) | `cert.as_tsk().to_vec()` | `Zeroizing<Vec<u8>>`, pre-sized to avoid realloc trail | `lib.rs` `serialize_secret_cert`, `StoredKey::from_cert` |
-| `StoredKey.bytes` (KEY_STORE entry) | `StoredKey::from_cert` | `Drop for StoredKey`: `bytes.zeroize()` | `lib.rs` |
-| Cached handle in JS | `useKeySession.handleRef` | `dropKey(handle)` on lock / idle / unmount | `useKeySession.ts`, `App.tsx`, `ImportKeyDialog.tsx` |
-| Contacts session AES key | `init_contacts_session_with_prf` / `encrypt_canary_and_init_session` | `set_contacts_key(None)` zeroizes; `dropContactsSession()` on master lock | `lib.rs`, `App.tsx` `doMasterLock` |
-| AES cipher expanded key schedule | `Aes256Gcm::new_from_slice` | `zeroize_cipher` after every encrypt/decrypt | `lib.rs` `aes_gcm_encrypt`, `aes_gcm_decrypt` |
-| Workspace draft AES key | `init_draft_session_if_unset` | `set_draft_key(None)` on `dropDraftSession` (or panel close) | `lib.rs` |
-| Encrypted workspace draft | App-level `draftCiphertext` | Cleared once `WorkspaceView` rehydrates on unlock | `App.tsx`, `useWorkspaceState.ts` |
-| Decrypted message text (user data, not key) | `decryptWithHandle` | UI-controlled; cleared on view dismiss / panel close | `WorkspaceView.tsx` |
-| Clipboard contents after key export | `clipboard.writeText` | `setTimeout` overwrites with `""` (60s encrypted, 30s plaintext) | `KeyCard.tsx` `scheduleClipboardClear` |
+| Secret                                      | Created in                                                           | Zero / drop point                                                         | File                                                             |
+| ------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Typed password (JS string)                  | React `<input>` state                                                | `setX("")`; V8 GC eventually reclaims                                     | dialog components                                                |
+| Password bytes (`Uint8Array`) for wasm      | `TextEncoder.encode(password)`                                       | `.fill(0)` in `finally`                                                   | `protect-flow.ts`, `useKeySession.ts`, dialog components         |
+| Argon2id-derived AES key (Rust)             | `argon2_derive`                                                      | `derived.zeroize()` after AES-GCM                                         | `lib.rs` `encrypt_cert_with_password`, `unlock_with_password`    |
+| HKDF-derived AES key (Rust)                 | `Hkdf::expand` into `vec![0u8; 32]`                                  | `derived.zeroize()` after AES-GCM                                         | `lib.rs` `encrypt_cert_with_prf`, `unlock_with_prf`              |
+| Sequoia `Password`                          | `Password::from(bytes)`                                              | Drop (Sequoia uses `Protected<Vec<u8>>`)                                  | `lib.rs` `decrypt_cert_secrets`, `encrypt_cert_for_export`       |
+| Wasm-side passphrase `Vec<u8>`              | wasm-bindgen marshals from JS `Uint8Array`                           | `Zeroizing::new(passphrase)` on entry                                     | `lib.rs` every `_with_password`/`_with_prf` fn                   |
+| WebAuthn PRF output                         | `authenticateAndGetPrf`                                              | `prfOutput.fill(0)` in `finally`                                          | `protect-flow.ts`, `useKeySession.ts`, master/onboarding screens |
+| Plaintext serialized cert (Rust)            | `cert.as_tsk().to_vec()`                                             | `Zeroizing<Vec<u8>>`, pre-sized to avoid realloc trail                    | `lib.rs` `serialize_secret_cert`, `StoredKey::from_cert`         |
+| `StoredKey.bytes` (KEY_STORE entry)         | `StoredKey::from_cert`                                               | `Drop for StoredKey`: `bytes.zeroize()`                                   | `lib.rs`                                                         |
+| Cached handle in JS                         | `useKeySession.handleRef`                                            | `dropKey(handle)` on lock / idle / unmount                                | `useKeySession.ts`, `App.tsx`, `ImportKeyDialog.tsx`             |
+| Contacts session AES key                    | `init_contacts_session_with_prf` / `encrypt_canary_and_init_session` | `set_contacts_key(None)` zeroizes; `dropContactsSession()` on master lock | `lib.rs`, `App.tsx` `doMasterLock`                               |
+| AES cipher expanded key schedule            | `Aes256Gcm::new_from_slice`                                          | `zeroize_cipher` after every encrypt/decrypt                              | `lib.rs` `aes_gcm_encrypt`, `aes_gcm_decrypt`                    |
+| Workspace draft AES key                     | `init_draft_session_if_unset`                                        | `set_draft_key(None)` on `dropDraftSession` (or panel close)              | `lib.rs`                                                         |
+| Encrypted workspace draft                   | App-level `draftCiphertext`                                          | Cleared once `WorkspaceView` rehydrates on unlock                         | `App.tsx`, `useWorkspaceState.ts`                                |
+| Decrypted message text (user data, not key) | `decryptWithHandle`                                                  | UI-controlled; cleared on view dismiss / panel close                      | `WorkspaceView.tsx`                                              |
+| Clipboard contents after key export         | `clipboard.writeText`                                                | `setTimeout` overwrites with `""` (60s encrypted, 30s plaintext)          | `KeyCard.tsx` `scheduleClipboardClear`                           |
 
 ---
 
@@ -199,7 +200,7 @@ auth/cookie/api-key headers and reject POST/PUT/PATCH/DELETE; replaces
 - **Cold-boot attacks.** DIMMs retain bits for seconds after power-off.
 - **Crash dumps.** A browser crash may dump our memory. Chrome uploads
   crash reports to Google if the user opted in (`Send usage statistics
-  and crash reports`).
+and crash reports`).
 - **Hardware side channels.** Spectre-class transient execution,
   Rowhammer, EM emanations. Mitigated by Site Isolation; not airtight.
 - **Compromised firmware / SMM / TPM.**

@@ -1,6 +1,6 @@
 import { STORAGE_CONTACTS } from "../constants";
-import { removeItem } from "./engine";
 import { loadEncryptedArray, saveEncryptedArray } from "./encrypted-store";
+import { removeItem } from "./engine";
 
 export interface PublicContactKey {
   keyId: string;

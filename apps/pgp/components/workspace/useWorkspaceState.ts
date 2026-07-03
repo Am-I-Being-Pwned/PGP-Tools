@@ -4,8 +4,8 @@ import type { WorkspaceAction } from "../../lib/messages";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { FileResult } from "../../lib/utils/download";
-import { getPreferences } from "../../lib/storage/preferences";
 import type { WorkspaceDraft } from "../../lib/workspace-draft";
+import { getPreferences } from "../../lib/storage/preferences";
 import { decryptWorkspaceDraft } from "../../lib/workspace-draft";
 
 type Mode = WorkspaceAction;

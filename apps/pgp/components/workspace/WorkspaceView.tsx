@@ -23,7 +23,9 @@ interface WorkspaceViewProps {
     blob: ProtectedKeyBlob,
     password: string,
   ) => Promise<boolean>;
-  onUnlockWithPasskey: (blob: ProtectedKeyBlob) => Promise<boolean | "cancelled">;
+  onUnlockWithPasskey: (
+    blob: ProtectedKeyBlob,
+  ) => Promise<boolean | "cancelled">;
   pendingAction?: { action: WorkspaceAction; text: string } | null;
   onClearPending?: () => void;
   encryptToKeyId?: string | null;

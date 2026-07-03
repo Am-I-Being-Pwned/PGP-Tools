@@ -11,7 +11,10 @@ interface ContactDropZoneProps {
   existingKeyIds?: string[];
 }
 
-export function ContactDropZone({ onImport, existingKeyIds }: ContactDropZoneProps) {
+export function ContactDropZone({
+  onImport,
+  existingKeyIds,
+}: ContactDropZoneProps) {
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -89,7 +92,8 @@ export function ContactDropZone({ onImport, existingKeyIds }: ContactDropZonePro
         }
       }
 
-      if (added > 0) toast.success(`Added ${added} contact${added > 1 ? "s" : ""}`);
+      if (added > 0)
+        toast.success(`Added ${added} contact${added > 1 ? "s" : ""}`);
       if (flagged > 0) {
         toast.warning(
           `${flagged} key${flagged > 1 ? "s use" : " uses"} weak crypto (SHA-1) and ${
@@ -170,9 +174,7 @@ export function ContactDropZone({ onImport, existingKeyIds }: ContactDropZonePro
       <p className="text-muted-foreground">
         Drop, paste, or browse for public keys
       </p>
-      {error && (
-        <p className="text-destructive mt-1">{error}</p>
-      )}
+      {error && <p className="text-destructive mt-1">{error}</p>}
       <input
         ref={fileInputRef}
         type="file"

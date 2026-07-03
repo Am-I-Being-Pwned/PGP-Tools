@@ -6,22 +6,23 @@ const isDev = process.env.NODE_ENV === "development";
 
 // Production CSP: locked-down. The audit story (see SECURITY.md §7)
 // depends on this exact policy.
-const PROD_CSP = [
-  "default-src 'none'",
-  "script-src 'self' 'wasm-unsafe-eval'",
-  "connect-src 'self'",
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data:",
-  "font-src 'self'",
-  "worker-src 'self'",
-  "frame-src 'none'",
-  "child-src 'none'",
-  "form-action 'none'",
-  "object-src 'none'",
-  "media-src 'none'",
-  "base-uri 'none'",
-  "manifest-src 'none'",
-].join("; ") + ";";
+const PROD_CSP =
+  [
+    "default-src 'none'",
+    "script-src 'self' 'wasm-unsafe-eval'",
+    "connect-src 'self'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data:",
+    "font-src 'self'",
+    "worker-src 'self'",
+    "frame-src 'none'",
+    "child-src 'none'",
+    "form-action 'none'",
+    "object-src 'none'",
+    "media-src 'none'",
+    "base-uri 'none'",
+    "manifest-src 'none'",
+  ].join("; ") + ";";
 
 // In dev we omit `content_security_policy.extension_pages` entirely,
 // so MV3's default CSP applies (which is already strict and allows

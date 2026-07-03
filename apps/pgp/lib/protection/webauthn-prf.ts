@@ -139,7 +139,6 @@ export async function authenticateAndGetPrf(
   return { prfOutput: new Uint8Array(prfOutput as ArrayBuffer) };
 }
 
-
 /**
  * True if `e` looks like the user cancelling / aborting a WebAuthn
  * ceremony, OR a "request already pending" race that's effectively

@@ -334,11 +334,11 @@ export function KeyCard({
           >
             {exporting ? "Encrypting..." : "Export with passphrase"}
           </Button>
-          <div className="border-border border-t pt-3 space-y-2">
+          <div className="border-border space-y-2 border-t pt-3">
             <p className="text-destructive text-[11px]">
               Plaintext export. Anyone who reads your clipboard gets full
-              control of this key. Type <span className="font-mono font-bold">EXPORT</span>{" "}
-              to confirm:
+              control of this key. Type{" "}
+              <span className="font-mono font-bold">EXPORT</span> to confirm:
             </p>
             <input
               type="text"
