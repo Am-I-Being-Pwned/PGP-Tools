@@ -13,10 +13,11 @@
  * the password input (intentional — re-prompt on unlock).
  */
 
+import type { WorkspaceAction } from "./messages";
 import { decryptDraft, encryptDraft } from "./pgp/wasm";
 
 export interface WorkspaceDraft {
-  mode: "encrypt" | "decrypt" | "sign" | "verify";
+  mode: WorkspaceAction;
   input: string;
   output: string;
   selectedRecipientId: string | null;
