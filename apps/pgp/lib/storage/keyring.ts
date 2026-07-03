@@ -4,13 +4,8 @@ import type {
   PasswordEncryptedBlob,
 } from "../protection/encrypt-private-key";
 import { STORAGE_KEYRING } from "../constants";
-import { fromBase64, toBase64 } from "../encoding";
-import {
-  encryptContacts,
-  decryptContacts,
-  hasContactsSession,
-} from "../pgp/wasm";
-import { getItem, removeItem, setItem, withLock } from "./engine";
+import { removeItem, withLock } from "./engine";
+import { loadEncryptedArray, saveEncryptedArray } from "./encrypted-store";
 
 // ── protection discriminated union ───────────────────────────────────
 
@@ -107,18 +102,7 @@ export function encryptedBlobFromProtected(
 
 // ── encrypted storage ───────────────────────────────────────────────
 // AES-256-GCM encrypted blob via WASM contacts session key.
-// Same scheme as contacts — tamper = decryption failure.
-
-interface EncryptedKeyringBlob {
-  iv: string;
-  ciphertext: string;
-}
-
-function isEncryptedKeyringBlob(v: unknown): v is EncryptedKeyringBlob {
-  if (typeof v !== "object" || v === null) return false;
-  const o = v as Record<string, unknown>;
-  return typeof o.iv === "string" && typeof o.ciphertext === "string";
-}
+// Same scheme as contacts — see encrypted-store.ts.
 
 function isValidBlob(v: unknown): v is ProtectedKeyBlob {
   if (typeof v !== "object" || v === null) return false;
@@ -134,86 +118,24 @@ function isValidBlob(v: unknown): v is ProtectedKeyBlob {
   );
 }
 
-// Migration: old format stored a string[] index + per-key plaintext entries.
-function keyItemKey(keyId: string): string {
-  return `${STORAGE_KEYRING}:${keyId}`;
+const KEYRING_STORE = {
+  storageKey: STORAGE_KEYRING,
+  isValid: isValidBlob,
+  label: "keyring",
+};
+
+function loadEncrypted(): Promise<ProtectedKeyBlob[]> {
+  return loadEncryptedArray(KEYRING_STORE);
 }
 
-async function migratePlaintextKeyring(ids: unknown[]): Promise<void> {
-  const keys: ProtectedKeyBlob[] = [];
-  const keysToRemove: string[] = [];
-
-  for (const id of ids) {
-    if (typeof id !== "string") continue;
-    const key = keyItemKey(id);
-    const k = await getItem<unknown>(key);
-    if (isValidBlob(k)) keys.push(k);
-    keysToRemove.push(key);
-  }
-
-  if (keys.length > 0) {
-    await saveAll(keys);
-  } else {
-    await removeItem(STORAGE_KEYRING);
-  }
-
-  for (const key of keysToRemove) {
-    await removeItem(key);
-  }
-}
-
-async function loadEncrypted(): Promise<ProtectedKeyBlob[]> {
-  if (!(await hasContactsSession())) return [];
-
-  const blob = await getItem<unknown>(STORAGE_KEYRING);
-  if (!blob) return [];
-
-  // Migrate old plaintext format if present
-  if (!isEncryptedKeyringBlob(blob)) {
-    if (Array.isArray(blob)) {
-      await migratePlaintextKeyring(blob as unknown[]);
-      return loadEncrypted();
-    }
-    return [];
-  }
-
-  const iv = fromBase64(blob.iv);
-  const ciphertext = fromBase64(blob.ciphertext);
-
-  const plaintext = await decryptContacts(ciphertext, iv);
-  const parsed: unknown = JSON.parse(new TextDecoder().decode(plaintext));
-
-  if (!Array.isArray(parsed)) return [];
-  return parsed.filter(isValidBlob);
-}
-
-async function saveAll(keys: ProtectedKeyBlob[]): Promise<void> {
-  if (!(await hasContactsSession())) {
-    throw new Error("Cannot save keyring: no active contacts session");
-  }
-
-  const plaintext = new TextEncoder().encode(JSON.stringify(keys));
-  const packed = await encryptContacts(plaintext);
-
-  const iv = packed.slice(0, 12);
-  const ciphertext = packed.slice(12);
-
-  const blob: EncryptedKeyringBlob = {
-    iv: toBase64(iv),
-    ciphertext: toBase64(ciphertext),
-  };
-
-  await setItem(STORAGE_KEYRING, blob);
+function saveAll(keys: ProtectedKeyBlob[]): Promise<void> {
+  return saveEncryptedArray(KEYRING_STORE, keys);
 }
 
 // ── CRUD (all mutations serialized via withLock) ─────────────────────
 
 export async function getKeyring(): Promise<ProtectedKeyBlob[]> {
   return loadEncrypted();
-}
-
-export async function saveKeyring(keyring: ProtectedKeyBlob[]): Promise<void> {
-  await saveAll(keyring);
 }
 
 export async function addKey(blob: ProtectedKeyBlob): Promise<void> {
