@@ -1,4 +1,4 @@
-import { DownloadIcon, RotateCcwIcon } from "lucide-react";
+import { ArrowLeftIcon, DownloadIcon, RotateCcwIcon } from "lucide-react";
 import { useEffect } from "react";
 
 import { Button } from "@amibeingpwned/ui/button";
@@ -611,6 +611,61 @@ export function WorkspaceView({
   const needsRecipient = s.mode === "encrypt";
   const needsPrivateKey = s.mode === "decrypt" || s.mode === "sign";
   const hasInput = s.files.length > 0 || s.input.length > 0;
+
+  // After decrypting to readable text, give the plaintext the whole panel with
+  // a Back button, instead of cramming it into a small fixed-height preview.
+  const showFullOutput =
+    s.operationDone && s.mode === "decrypt" && s.output.length > 0;
+
+  if (showFullOutput) {
+    return (
+      <div className="flex h-full flex-col gap-3">
+        <div className="flex items-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-foreground -ml-2 h-8 gap-1 px-2"
+            onClick={s.resetOutput}
+          >
+            <ArrowLeftIcon className="h-4 w-4" />
+            Back
+          </Button>
+        </div>
+        <WorkspaceResults
+          error={s.error}
+          output={s.output}
+          binaryOutput={s.binaryOutput}
+          fileResults={s.fileResults}
+          fileName={outputFileName()}
+          operationDone={s.operationDone}
+          statusText={s.statusText ?? undefined}
+          verifiedSigner={s.verifiedSigner}
+          fullHeight
+        />
+        <div className="flex gap-2">
+          <Button
+            className="flex-1"
+            onClick={() => triggerDownload()}
+            disabled={s.loading}
+          >
+            <span className="flex items-center gap-2">
+              <DownloadIcon className="h-4 w-4" />
+              Download
+            </span>
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={s.resetAll}
+            title="Clear input and output"
+            aria-label="Clear input and output"
+          >
+            <RotateCcwIcon className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full flex-col gap-3">

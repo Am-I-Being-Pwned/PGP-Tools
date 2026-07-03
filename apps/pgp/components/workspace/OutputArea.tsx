@@ -8,6 +8,8 @@ interface OutputAreaProps {
   fileName?: string;
   success?: boolean;
   statusText?: string;
+  /** Fill the available height instead of the compact fixed-height preview. */
+  fullHeight?: boolean;
 }
 
 export function OutputArea({
@@ -17,6 +19,7 @@ export function OutputArea({
   fileName,
   success,
   statusText,
+  fullHeight,
 }: OutputAreaProps) {
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -57,10 +60,16 @@ export function OutputArea({
   const borderColor = success ? "border-green-500/50" : "border-border";
 
   return (
-    <div className="space-y-2">
+    <div
+      className={
+        fullHeight
+          ? "flex min-h-0 flex-1 flex-col gap-2"
+          : "space-y-2"
+      }
+    >
       {statusText && <p className="text-xs text-green-400">{statusText}</p>}
       {output && (
-        <div className="relative">
+        <div className={fullHeight ? "relative min-h-0 flex-1" : "relative"}>
           <div className="absolute top-2 right-4 flex gap-1">
             <button
               onClick={handleCopy}
@@ -94,7 +103,7 @@ export function OutputArea({
                 sel?.addRange(range);
               }
             }}
-            className={`bg-muted/50 max-h-48 overflow-auto rounded-md border p-3 pr-16 font-mono text-xs break-all whitespace-pre-wrap focus:outline-none ${borderColor}`}
+            className={`bg-muted/50 overflow-auto rounded-md border p-3 pr-16 font-mono text-xs break-all whitespace-pre-wrap focus:outline-none ${fullHeight ? "h-full" : "max-h-48"} ${borderColor}`}
           >
             {output}
           </pre>
