@@ -45,6 +45,13 @@ interface SettingsViewProps {
   contacts: PublicContactKey[];
   isUnlocked: (keyId: string) => boolean;
   getKeyHandle: (keyId: string) => number | null;
+  onUnlockWithPassword: (
+    blob: ProtectedKeyBlob,
+    password: string,
+  ) => Promise<boolean>;
+  onUnlockWithPasskey: (
+    blob: ProtectedKeyBlob,
+  ) => Promise<boolean | "cancelled">;
   onAddKey: (blob: ProtectedKeyBlob) => Promise<void>;
   onAddContact: (contact: PublicContactKey) => Promise<void>;
   primaryPasskeyCredentialId?: string;
@@ -71,6 +78,8 @@ export function SettingsView({
   contacts,
   isUnlocked,
   getKeyHandle,
+  onUnlockWithPassword,
+  onUnlockWithPasskey,
   onAddKey,
   onAddContact,
   primaryPasskeyCredentialId,
@@ -330,6 +339,8 @@ export function SettingsView({
         contacts={contacts}
         isUnlocked={isUnlocked}
         getKeyHandle={getKeyHandle}
+        onUnlockWithPassword={onUnlockWithPassword}
+        onUnlockWithPasskey={onUnlockWithPasskey}
       />
 
       <ImportAllKeysDialog
