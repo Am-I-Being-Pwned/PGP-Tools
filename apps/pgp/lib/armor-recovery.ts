@@ -43,11 +43,9 @@ export function looksLikeCollapsedArmor(text: string): boolean {
  *  original text unchanged so the caller's parser surfaces the real
  *  error rather than something we mangled. */
 export function reconstructArmor(text: string): string {
-  const bm = text.match(BEGIN_MARKER);
-  const em = text.match(END_MARKER);
-  if (!bm || !em || bm.index === undefined || em.index === undefined) {
-    return text;
-  }
+  const bm = BEGIN_MARKER.exec(text);
+  const em = END_MARKER.exec(text);
+  if (!bm || !em) return text;
   if (bm[1] !== em[1]) return text; // BEGIN/END types don't match -- bail
 
   const blockType = bm[1];
