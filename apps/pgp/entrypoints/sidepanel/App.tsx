@@ -446,6 +446,8 @@ export default function App() {
             contacts={contacts.contacts}
             isUnlocked={session.isUnlocked}
             getKeyHandle={session.getKeyHandle}
+            onUnlockWithPassword={session.unlockWithPassword}
+            onUnlockWithPasskey={session.unlockWithPasskey}
             onAddKey={keyring.add}
             onAddContact={contacts.add}
             primaryPasskeyCredentialId={masterPasskeyCredentialId}
