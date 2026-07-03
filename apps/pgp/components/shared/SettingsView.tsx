@@ -3,6 +3,8 @@ import { useState } from "react";
 import { Button } from "@amibeingpwned/ui/button";
 import { Switch } from "@amibeingpwned/ui/switch";
 
+import type { PublicContactKey } from "../../lib/storage/contacts";
+import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type {
   AutoLockTimeout,
   StorageLocation,
@@ -10,6 +12,8 @@ import type {
 import { STORAGE_CONTACTS, STORAGE_KEYRING } from "../../lib/constants";
 import { invalidateLocationCache, migrate } from "../../lib/storage/engine";
 import { savePreferences } from "../../lib/storage/preferences";
+import { ExportAllKeysDialog } from "../settings/ExportAllKeysDialog";
+import { ImportAllKeysDialog } from "../settings/ImportAllKeysDialog";
 import { StorageLocationPicker } from "./StorageLocationPicker";
 
 const AUTO_LOCK_OPTIONS: { value: AutoLockTimeout; label: string }[] = [
@@ -36,6 +40,14 @@ interface SettingsViewProps {
   onAutoDownloadTextChange: (v: boolean) => void;
   lockOnTabAway: boolean;
   onLockOnTabAwayChange: (v: boolean) => void;
+  // Backup (export/import all keys)
+  myKeys: ProtectedKeyBlob[];
+  contacts: PublicContactKey[];
+  isUnlocked: (keyId: string) => boolean;
+  getKeyHandle: (keyId: string) => number | null;
+  onAddKey: (blob: ProtectedKeyBlob) => Promise<void>;
+  onAddContact: (contact: PublicContactKey) => Promise<void>;
+  primaryPasskeyCredentialId?: string;
 }
 
 export function SettingsView({
@@ -55,9 +67,18 @@ export function SettingsView({
   onAutoDownloadTextChange,
   lockOnTabAway,
   onLockOnTabAwayChange,
+  myKeys,
+  contacts,
+  isUnlocked,
+  getKeyHandle,
+  onAddKey,
+  onAddContact,
+  primaryPasskeyCredentialId,
 }: SettingsViewProps) {
   const [migrating, setMigrating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showExportAll, setShowExportAll] = useState(false);
+  const [showImportAll, setShowImportAll] = useState(false);
 
   const toggleAdvanced = () => {
     const next = !advancedMode;
@@ -222,6 +243,35 @@ export function SettingsView({
       </div>
 
       <div>
+        <h2 className="mb-2 text-sm font-semibold">Backup</h2>
+        <div className="border-border rounded-md border p-3">
+          <p className="text-muted-foreground text-xs">
+            Export your keys and contacts as a single armored file, or restore
+            from one. Exported private keys are encrypted with a passphrase of
+            your choice.
+          </p>
+          <div className="mt-2 flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1"
+              onClick={() => setShowExportAll(true)}
+            >
+              Export all keys
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1"
+              onClick={() => setShowImportAll(true)}
+            >
+              Import keys
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div>
         <h2 className="mb-2 text-sm font-semibold">Display</h2>
         <label className="border-border flex items-center justify-between rounded-md border p-3">
           <span className="text-sm">Advanced mode</span>
@@ -272,6 +322,25 @@ export function SettingsView({
           </a>
         </div>
       </div>
+
+      <ExportAllKeysDialog
+        open={showExportAll}
+        onClose={() => setShowExportAll(false)}
+        myKeys={myKeys}
+        contacts={contacts}
+        isUnlocked={isUnlocked}
+        getKeyHandle={getKeyHandle}
+      />
+
+      <ImportAllKeysDialog
+        open={showImportAll}
+        onClose={() => setShowImportAll(false)}
+        myKeys={myKeys}
+        contacts={contacts}
+        onAddKey={onAddKey}
+        onAddContact={onAddContact}
+        reusePasskeyCredentialId={primaryPasskeyCredentialId}
+      />
     </div>
   );
 }

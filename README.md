@@ -34,6 +34,7 @@
 - Decrypt with automatic signature verification
 - Cleartext sign and verify
 - Import/export armored keys
+- One-file backup: export/import all keys and contacts (passphrase-encrypted by default)
 - Right-click context menu on selected text
 - Auto-detect and decrypt PGP-encrypted downloads
 - Auto-import `.asc` public keys from downloads

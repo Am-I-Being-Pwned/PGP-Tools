@@ -4,7 +4,8 @@ import { toast } from "sonner";
 import { Button } from "@amibeingpwned/ui/button";
 
 import type { PublicContactKey } from "../../lib/storage/contacts";
-import { parseKeys } from "../../lib/pgp/wasm";
+import { splitPublicKeyBlocks } from "../../lib/armor-blocks";
+import { importPublicKeyBlocks } from "../../lib/import-public-keys";
 
 interface ContactDropZoneProps {
   onImport: (contact: PublicContactKey) => Promise<void>;
@@ -19,78 +20,17 @@ export function ContactDropZone({
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const splitKeys = (text: string): string[] => {
-    const blocks: string[] = [];
-    const regex =
-      /-----BEGIN PGP PUBLIC KEY BLOCK-----[\s\S]*?-----END PGP PUBLIC KEY BLOCK-----/g;
-    let match;
-    while ((match = regex.exec(text)) !== null) {
-      blocks.push(match[0]);
-    }
-    return blocks;
-  };
-
   const tryImportMany = useCallback(
     async (text: string) => {
       setError(null);
-      const blocks = splitKeys(text);
+      const blocks = splitPublicKeyBlocks(text);
       if (blocks.length === 0) {
         setError("No public keys found");
         return;
       }
 
-      let added = 0;
-      let skipped = 0;
-      let failed = 0;
-      let flagged = 0;
-      const rejectionReasons: string[] = [];
-
-      for (const block of blocks) {
-        // A single armored block may bundle several certs (e.g. a
-        // publisher's yearly-rotated keys). Split them so we import the
-        // live cert(s) and store each against its own armor -- not the
-        // whole blob, which would otherwise encrypt to the first
-        // (usually expired) cert.
-        let certs;
-        try {
-          certs = await parseKeys(block);
-        } catch {
-          failed++;
-          continue;
-        }
-
-        const usable = certs.filter((c) => c.keyInfo.usableForEncryption);
-        if (usable.length === 0) {
-          // Nothing live in this block: surface the first cert's reason.
-          failed++;
-          rejectionReasons.push(
-            certs[0]?.keyInfo.policyError ??
-              "no usable encryption subkey on this key",
-          );
-          continue;
-        }
-
-        // If a block has a usable cert, the unusable siblings are stale
-        // rotations -- drop them silently rather than reporting failures.
-        for (const { keyInfo, armored } of usable) {
-          if (existingKeyIds?.includes(keyInfo.keyId)) {
-            skipped++;
-            continue;
-          }
-          await onImport({
-            keyId: keyInfo.keyId,
-            userIds: keyInfo.userIds,
-            algorithm: keyInfo.algorithm,
-            armoredPublicKey: armored,
-            addedAt: Date.now(),
-            lastUsedAt: Date.now(),
-            // Allowed, but flagged (e.g. SHA-1 binding signature).
-            securityWarning: keyInfo.securityWarning,
-          });
-          added++;
-          if (keyInfo.securityWarning) flagged++;
-        }
-      }
+      const { added, skipped, failed, flagged, rejectionReasons } =
+        await importPublicKeyBlocks(blocks, existingKeyIds ?? [], onImport);
 
       if (added > 0)
         toast.success(`Added ${added} contact${added > 1 ? "s" : ""}`);
