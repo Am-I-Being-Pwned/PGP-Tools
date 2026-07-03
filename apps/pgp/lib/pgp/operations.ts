@@ -71,8 +71,25 @@ export async function decryptWithHandle(
   return {
     data,
     signatureValid: signatureInfo.signatureValid,
+    signatureStatus: signatureInfo.signatureStatus,
     signerKeyId: signatureInfo.signerKeyId,
   };
+}
+
+/**
+ * Return the fingerprint of the key (from `candidatePublicKeys`) that the
+ * message is encrypted to, or null if none match. Accepts armored or binary
+ * ciphertext (Sequoia auto-detects armor).
+ */
+export async function selectDecryptionKey(
+  input: DecryptOptions["input"],
+  candidatePublicKeys: string[],
+): Promise<string | null> {
+  const ciphertext =
+    input.kind === "binary"
+      ? input.binaryMessage
+      : new TextEncoder().encode(input.armoredMessage);
+  return wasm.selectDecryptionKey(ciphertext, candidatePublicKeys);
 }
 
 /** Sign using a WASM key handle. */

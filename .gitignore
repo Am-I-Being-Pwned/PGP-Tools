@@ -39,3 +39,5 @@ storybook-static
 apps/pgp/gpg-wasm/target/
 apps/pgp/gpg-wasm/pkg/
 apps/pgp/public/gpg_wasm_bg.wasm
+
+messy

@@ -177,6 +177,9 @@ pub struct VerifyResult {
     pub text: String,
     #[serde(rename = "signatureValid")]
     pub signature_valid: bool,
+    /// Fine-grained status: "valid" | "invalid" | "unknown_key" | "unsigned".
+    #[serde(rename = "signatureStatus")]
+    pub signature_status: String,
     #[serde(rename = "signerKeyId")]
     pub signer_key_id: Option<String>,
 }
@@ -530,28 +533,71 @@ fn cleartext_sign(text: &str, cert: &openpgp::Cert) -> Result<String, String> {
     Ok(String::from_utf8_lossy(&sink).into_owned())
 }
 
-/// Verify signatures in a message structure. Returns Err on any bad signature.
-fn process_signatures(
-    structure: MessageStructure,
-) -> openpgp::Result<(Option<bool>, Option<String>)> {
-    let mut signature_valid = None;
-    let mut signer_key_id = None;
+/// Best-effort issuer key id (hex) advertised by a signature's subpackets.
+/// Used to name the signer even when we don't hold their public key.
+fn issuer_hex(sig: &openpgp::packet::Signature) -> Option<String> {
+    sig.get_issuers().into_iter().next().map(|kh| match kh {
+        openpgp::KeyHandle::Fingerprint(fp) => fp.to_hex(),
+        openpgp::KeyHandle::KeyID(kid) => kid.to_hex(),
+    })
+}
+
+/// Rank of a signature status, so that across multiple signature layers we
+/// report the strongest outcome ("valid" beats a tamper signal beats
+/// "can't verify" beats "unsigned").
+fn sig_rank(status: &str) -> u8 {
+    match status {
+        "valid" => 3,
+        "invalid" => 2,
+        "unknown_key" => 1,
+        _ => 0,
+    }
+}
+
+/// Classify the signatures in a message structure WITHOUT ever failing.
+///
+/// Decryption and signature verification are SEPARATE concerns: a message
+/// must still decrypt even when we cannot verify who signed it (e.g. we do
+/// not hold the signer's public key). This function therefore never returns
+/// an error for a signature outcome -- it only reports one:
+///
+///   "valid"       - a good signature we could cryptographically verify
+///   "invalid"     - a signature we had the key for but that failed to
+///                   verify (tamper / forgery signal -- callers should warn)
+///   "unknown_key" - signed, but we don't hold the signer's public key, so
+///                   the signature could not be checked either way
+///   "unsigned"    - no signatures present
+fn process_signatures(structure: MessageStructure) -> (&'static str, Option<String>) {
+    let mut status: &'static str = "unsigned";
+    let mut signer_key_id: Option<String> = None;
+
     for layer in structure {
         if let MessageLayer::SignatureGroup { results } = layer {
             for result in results {
-                match result {
+                let (new_status, key): (&'static str, Option<String>) = match result {
                     Ok(GoodChecksum { ka, .. }) => {
-                        signature_valid = Some(true);
-                        signer_key_id = Some(ka.cert().fingerprint().to_hex());
+                        ("valid", Some(ka.cert().fingerprint().to_hex()))
                     }
-                    Err(e) => {
-                        return Err(anyhow::anyhow!("Bad signature: {}", e));
+                    // Signer's public key was not supplied -> cannot verify.
+                    // This is NOT a failure; the message is still authentic
+                    // as far as we can tell, we just can't confirm the signer.
+                    Err(VerificationError::MissingKey { sig }) => {
+                        ("unknown_key", issuer_hex(sig))
                     }
+                    Err(VerificationError::UnboundKey { .. }) => ("unknown_key", None),
+                    // We had a key but verification failed: possible tamper.
+                    Err(_) => ("invalid", None),
+                };
+                if sig_rank(new_status) > sig_rank(status) {
+                    status = new_status;
+                    signer_key_id = key;
+                } else if signer_key_id.is_none() {
+                    signer_key_id = key;
                 }
             }
         }
     }
-    Ok((signature_valid, signer_key_id))
+    (status, signer_key_id)
 }
 
 // =====================================================================
@@ -614,6 +660,31 @@ fn get_cert_from_handle(handle: u32) -> Result<openpgp::Cert, String> {
         .ok_or("Key handle not found - key may have been locked")?
 }
 
+/// Test-only bridges to the internal cert/handle API.
+///
+/// The old public `generateKey` / `storeKey` wasm exports were removed (keys
+/// now only enter `KEY_STORE` via the unlock paths -- see the note above the
+/// public API). The unit tests predate that change, so these thin shims give
+/// them a way to mint a cert and a handle directly without a full
+/// password/PRF protect+unlock round trip.
+#[cfg(test)]
+fn generate_key(options_json: &str) -> Result<String, String> {
+    let (cert, revocation) = build_cert_from_options(options_json)?;
+    let json = serde_json::json!({
+        "publicKeyArmored": armor_cert(&cert, false)?,
+        "privateKeyArmored": armor_cert(&cert, true)?,
+        "revocationCertificate": revocation,
+        "keyInfo": extract_key_info(&cert, true),
+    });
+    Ok(json.to_string())
+}
+
+#[cfg(test)]
+fn store_key(armored: &str) -> Result<u32, String> {
+    let cert = openpgp::Cert::from_bytes(armored.as_bytes()).str_err()?;
+    insert_key(&cert)
+}
+
 // =====================================================================
 // Sequoia verification/decryption helpers
 // =====================================================================
@@ -621,7 +692,7 @@ fn get_cert_from_handle(handle: u32) -> Result<openpgp::Cert, String> {
 struct DecryptHelper {
     decryption_cert: openpgp::Cert,
     verification_certs: Vec<openpgp::Cert>,
-    signature_valid: Option<bool>,
+    signature_status: &'static str,
     signer_key_id: Option<String>,
 }
 
@@ -631,8 +702,11 @@ impl VerificationHelper for DecryptHelper {
     }
 
     fn check(&mut self, structure: MessageStructure) -> openpgp::Result<()> {
-        let (sig_valid, key_id) = process_signatures(structure)?;
-        self.signature_valid = sig_valid;
+        // NOTE: signature classification must never abort decryption. A
+        // missing signer key or a bad signature is reported as status, not
+        // returned as an error, so the plaintext is always delivered.
+        let (status, key_id) = process_signatures(structure);
+        self.signature_status = status;
         self.signer_key_id = key_id;
         Ok(())
     }
@@ -672,7 +746,7 @@ impl DecryptionHelper for DecryptHelper {
 
 struct VerifyHelper {
     certs: Vec<openpgp::Cert>,
-    signature_valid: bool,
+    signature_status: &'static str,
     signer_key_id: Option<String>,
 }
 
@@ -682,8 +756,8 @@ impl VerificationHelper for VerifyHelper {
     }
 
     fn check(&mut self, structure: MessageStructure) -> openpgp::Result<()> {
-        let (sig_valid, key_id) = process_signatures(structure)?;
-        self.signature_valid = sig_valid.unwrap_or(false);
+        let (status, key_id) = process_signatures(structure);
+        self.signature_status = status;
         self.signer_key_id = key_id;
         Ok(())
     }
@@ -827,7 +901,7 @@ pub fn verify_message(
 
     let helper = VerifyHelper {
         certs,
-        signature_valid: false,
+        signature_status: "unsigned",
         signer_key_id: None,
     };
 
@@ -842,7 +916,8 @@ pub fn verify_message(
 
     serde_json::to_string(&VerifyResult {
         text: String::from_utf8(content).str_err()?,
-        signature_valid: helper.signature_valid,
+        signature_valid: helper.signature_status == "valid",
+        signature_status: helper.signature_status.to_string(),
         signer_key_id: helper.signer_key_id,
     })
     .str_err()
@@ -895,7 +970,7 @@ pub fn decrypt_with_handle(
     let helper = DecryptHelper {
         decryption_cert,
         verification_certs,
-        signature_valid: None,
+        signature_status: "unsigned",
         signer_key_id: None,
     };
 
@@ -910,7 +985,8 @@ pub fn decrypt_with_handle(
 
     // Pack sig info + plaintext into one return to avoid TOCTOU
     let sig_json = serde_json::json!({
-        "signatureValid": helper.signature_valid,
+        "signatureValid": helper.signature_status == "valid",
+        "signatureStatus": helper.signature_status,
         "signerKeyId": helper.signer_key_id,
     })
     .to_string();
@@ -922,6 +998,65 @@ pub fn decrypt_with_handle(
     result.extend_from_slice(sig_bytes);
     result.extend_from_slice(&plaintext);
     Ok(result)
+}
+
+/// Collect the recipient key handles referenced by a message's public-key
+/// encrypted session-key (PKESK) packets. Anonymous/wildcard recipients carry
+/// no key handle and are skipped (they can't be matched to a specific key).
+fn recipient_handles(ciphertext: &[u8]) -> Result<Vec<openpgp::KeyHandle>, String> {
+    use openpgp::parse::{PacketParser, PacketParserResult};
+    let mut handles = Vec::new();
+    let mut ppr = PacketParser::from_bytes(ciphertext).str_err()?;
+    while let PacketParserResult::Some(pp) = ppr {
+        match &pp.packet {
+            openpgp::Packet::PKESK(pkesk) => {
+                if let Some(handle) = pkesk.recipient() {
+                    handles.push(handle);
+                }
+            }
+            // Session-key packets precede the encrypted container; once we
+            // reach it there are no further recipients to discover.
+            openpgp::Packet::SEIP(_) => break,
+            _ => {}
+        }
+        let (_packet, next) = pp.next().str_err()?;
+        ppr = next;
+    }
+    Ok(handles)
+}
+
+/// Pick which of the caller's public keys should decrypt `ciphertext`, by
+/// matching the message's recipient key IDs against each candidate cert's
+/// (sub)keys. Returns JSON: the matching primary fingerprint hex (same form
+/// as `KeyInfo.keyId`), or `null` when nothing matches.
+///
+/// This lets the UI default-select the correct decryption key up front,
+/// without unlocking every candidate and trial-decrypting.
+#[wasm_bindgen(js_name = "selectDecryptionKey")]
+pub fn select_decryption_key(
+    ciphertext: &[u8],
+    candidate_pubkeys_json: &str,
+) -> Result<String, String> {
+    let recipients = recipient_handles(ciphertext)?;
+    let candidates: Vec<String> =
+        serde_json::from_str(candidate_pubkeys_json).str_err()?;
+
+    let matched: Option<String> = if recipients.is_empty() {
+        None
+    } else {
+        candidates.iter().find_map(|armored| {
+            let cert = openpgp::Cert::from_bytes(armored.as_bytes()).ok()?;
+            // `aliases` matches regardless of whether the recipient was named
+            // by fingerprint or by (shorter) key id.
+            let owns = cert.keys().any(|ka| {
+                let kh = ka.key().key_handle();
+                recipients.iter().any(|r| r.aliases(&kh))
+            });
+            owns.then(|| cert.fingerprint().to_hex())
+        })
+    };
+
+    serde_json::to_string(&matched).str_err()
 }
 
 /// Sign using a stored key handle.
