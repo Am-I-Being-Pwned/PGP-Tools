@@ -22,6 +22,8 @@ export interface WorkspaceState {
   setStatusText: (s: string | null) => void;
   verifiedSigner: PublicContactKey | ProtectedKeyBlob | null;
   setVerifiedSigner: (s: PublicContactKey | ProtectedKeyBlob | null) => void;
+  signatureTone: "success" | "warning";
+  setSignatureTone: (t: "success" | "warning") => void;
   binaryOutput: Uint8Array | undefined;
   setBinaryOutput: (b: Uint8Array | undefined) => void;
   fileResults: { name: string; data: Uint8Array }[];
@@ -81,6 +83,9 @@ export function useWorkspaceState(opts: {
   const [verifiedSigner, setVerifiedSigner] = useState<
     PublicContactKey | ProtectedKeyBlob | null
   >(null);
+  const [signatureTone, setSignatureTone] = useState<"success" | "warning">(
+    "success",
+  );
   const [binaryOutput, setBinaryOutput] = useState<Uint8Array | undefined>();
   const [fileResults, setFileResults] = useState<
     { name: string; data: Uint8Array }[]
@@ -108,6 +113,7 @@ export function useWorkspaceState(opts: {
     setOperationDone(false);
     setStatusText(null);
     setVerifiedSigner(null);
+    setSignatureTone("success");
     setNeedsPassword(false);
   }, []);
 
@@ -294,6 +300,8 @@ export function useWorkspaceState(opts: {
     setStatusText,
     verifiedSigner,
     setVerifiedSigner,
+    signatureTone,
+    setSignatureTone,
     binaryOutput,
     setBinaryOutput,
     fileResults,
