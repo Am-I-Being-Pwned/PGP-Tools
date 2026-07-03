@@ -34,7 +34,6 @@ interface KeyCardProps {
   onExportPublic: () => void;
   onExportPrivate: () => number | null;
   advancedMode?: boolean;
-  autoExpand?: boolean;
 }
 
 export function KeyCard({
@@ -47,7 +46,6 @@ export function KeyCard({
   onExportPublic,
   onExportPrivate,
   advancedMode,
-  autoExpand,
 }: KeyCardProps) {
   const [showPasswordUnlock, setShowPasswordUnlock] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -90,17 +88,6 @@ export function KeyCard({
   const displayName = keyBlob.userIds[0] ?? "Unknown";
   const shortId = keyBlob.keyId.slice(-16);
   const isPasskey = keyBlob.protection.method === "passkey";
-
-  const didAutoExpand = useRef(false);
-  useEffect(() => {
-    if (!autoExpand || isUnlocked || didAutoExpand.current) return;
-    didAutoExpand.current = true;
-    if (isPasskey) {
-      void onUnlockWithPasskey();
-    } else {
-      setShowPasswordUnlock(true);
-    }
-  }, [autoExpand, isUnlocked, isPasskey, onUnlockWithPasskey]);
 
   const showFeedback = (msg: string) => {
     setFeedback(msg);

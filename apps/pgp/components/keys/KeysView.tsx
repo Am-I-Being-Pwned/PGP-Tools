@@ -1,23 +1,11 @@
 import { useEffect, useState } from "react";
-import { format } from "date-fns";
-import { SquareCheckBigIcon, SquareIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@amibeingpwned/ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@amibeingpwned/ui/command";
 
-import type { KeyInfo } from "../../lib/pgp/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
-import { parseUserId } from "../../lib/utils/key-naming";
 import { INPUT_CLASS } from "../../lib/utils/styles";
-import { Dialog } from "../shared/Dialog";
 import { ContactCard } from "./ContactCard";
 import { ContactDropZone } from "./ContactDropZone";
 import { GenerateKeyDialog } from "./GenerateKeyDialog";
@@ -41,14 +29,10 @@ interface KeysViewProps {
   onDeleteContact: (keyId: string) => Promise<void>;
   getKeyHandle: (keyId: string) => number | null;
   advancedMode?: boolean;
-  autoOpenGenerate?: boolean;
-  onAutoOpenConsumed?: () => void;
   /** When non-null, opens the Import dialog with this armored text prefilled. */
   autoOpenImport?: string | null;
   onAutoOpenImportConsumed?: () => void;
   onEncryptTo?: (keyId: string) => void;
-  unlockRequestKeyId?: string | null;
-  onUnlockRequestConsumed?: () => void;
   primaryPasskeyCredentialId?: string;
   /** Called when a newly generated key is cached in WASM. */
   onKeyCached?: (keyId: string, keyHandle: number) => void;
@@ -70,13 +54,9 @@ export function KeysView({
   onDeleteContact,
   getKeyHandle,
   advancedMode,
-  autoOpenGenerate,
-  onAutoOpenConsumed,
   autoOpenImport,
   onAutoOpenImportConsumed,
   onEncryptTo,
-  unlockRequestKeyId,
-  onUnlockRequestConsumed,
   primaryPasskeyCredentialId,
   onKeyCached,
   cacheKeys,
@@ -86,16 +66,6 @@ export function KeysView({
   const [importInitialArmored, setImportInitialArmored] = useState<string | null>(
     null,
   );
-  const [pendingImports, setPendingImports] = useState<
-    { keyInfo: KeyInfo; armored: string; selected: boolean }[]
-  >([]);
-
-  useEffect(() => {
-    if (autoOpenGenerate) {
-      setShowGenerate(true);
-      onAutoOpenConsumed?.();
-    }
-  }, [autoOpenGenerate, onAutoOpenConsumed]);
 
   useEffect(() => {
     if (autoOpenImport) {
@@ -111,116 +81,6 @@ export function KeysView({
 
   return (
     <div className="space-y-4">
-      <Dialog
-        open={pendingImports.length > 0}
-        onClose={() => setPendingImports([])}
-        title="Keys from Downloads"
-        className="mx-2"
-      >
-        <div className="space-y-3">
-          <p className="text-muted-foreground text-xs">
-            {pendingImports.length} key{pendingImports.length > 1 ? "s" : ""}{" "}
-            detected from downloaded files. Select which to import as contacts.
-          </p>
-          <Command className="border-border rounded-md border">
-            <CommandInput placeholder="Search keys..." />
-            <CommandList className="h-[300px]">
-              <CommandEmpty>No keys match.</CommandEmpty>
-              {pendingImports.map((entry, i) => {
-                const {
-                  name: rawName,
-                  email,
-                  comment,
-                } = parseUserId(entry.keyInfo.userIds[0]);
-                const name = comment ? `${rawName} (${comment})` : rawName;
-                const fp = entry.keyInfo.keyId.match(/.{1,4}/g)?.join(" ");
-                return (
-                  <CommandItem
-                    key={entry.keyInfo.keyId}
-                    value={entry.keyInfo.userIds.join(" ")}
-                    onSelect={() => {
-                      setPendingImports((prev) =>
-                        prev.map((p, j) =>
-                          j === i ? { ...p, selected: !p.selected } : p,
-                        ),
-                      );
-                    }}
-                    className="cursor-pointer gap-2 py-2 select-text"
-                  >
-                    {entry.selected ? (
-                      <SquareCheckBigIcon className="text-primary h-4 w-4 shrink-0" />
-                    ) : (
-                      <SquareIcon className="text-muted-foreground h-4 w-4 shrink-0" />
-                    )}
-                    <div className="min-w-0 flex-1 space-y-0.5">
-                      <p className="truncate text-sm font-medium">{name}</p>
-                      {email && (
-                        <p className="text-muted-foreground text-xs">{email}</p>
-                      )}
-                      <p className="text-muted-foreground font-mono text-xs">
-                        {entry.keyInfo.keyId.slice(-16)} -{" "}
-                        {entry.keyInfo.algorithm}
-                      </p>
-                      <p className="text-muted-foreground font-mono text-xs leading-relaxed">
-                        {fp}
-                      </p>
-                      {entry.keyInfo.expiresAt && (
-                        <p className="text-muted-foreground text-xs">
-                          Expires{" "}
-                          {format(new Date(entry.keyInfo.expiresAt), "PPP")}
-                        </p>
-                      )}
-                    </div>
-                  </CommandItem>
-                );
-              })}
-            </CommandList>
-          </Command>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1"
-              onClick={() => setPendingImports([])}
-            >
-              Deny All
-            </Button>
-            <Button
-              size="sm"
-              className="flex-1"
-              disabled={!pendingImports.some((p) => p.selected)}
-              onClick={async () => {
-                const selected = pendingImports.filter((p) => p.selected);
-                let imported = 0;
-                for (const entry of selected) {
-                  try {
-                    await onAddContact({
-                      keyId: entry.keyInfo.keyId,
-                      userIds: entry.keyInfo.userIds,
-                      algorithm: entry.keyInfo.algorithm,
-                      armoredPublicKey: entry.armored,
-                      addedAt: Date.now(),
-                      lastUsedAt: Date.now(),
-                    });
-                    imported++;
-                  } catch {
-                    // skip failed imports
-                  }
-                }
-                setPendingImports([]);
-                if (imported > 0) {
-                  toast.success(
-                    `Imported ${imported} key${imported > 1 ? "s" : ""}`,
-                  );
-                }
-              }}
-            >
-              Import Selected
-            </Button>
-          </div>
-        </div>
-      </Dialog>
-
       <div>
         <h2 className="mb-2 text-sm font-semibold">My Keys</h2>
         {myKeys.length === 0 ? (
@@ -234,26 +94,13 @@ export function KeysView({
                 key={blob.keyId}
                 keyBlob={blob}
                 isUnlocked={isUnlocked(blob.keyId)}
-                onUnlockWithPassword={async (pw) => {
-                  const ok = await onUnlockWithPassword(blob, pw);
-                  if (ok && blob.keyId === unlockRequestKeyId) {
-                    onUnlockRequestConsumed?.();
-                  }
-                  return ok;
-                }}
-                onUnlockWithPasskey={async () => {
-                  const result = await onUnlockWithPasskey(blob);
-                  if (result === true && blob.keyId === unlockRequestKeyId) {
-                    onUnlockRequestConsumed?.();
-                  }
-                  return result;
-                }}
+                onUnlockWithPassword={(pw) => onUnlockWithPassword(blob, pw)}
+                onUnlockWithPasskey={() => onUnlockWithPasskey(blob)}
                 onLock={() => onLock(blob.keyId)}
                 onDelete={() => onDeleteKey(blob.keyId)}
                 onExportPublic={() => handleExportPublic(blob)}
                 onExportPrivate={() => getKeyHandle(blob.keyId)}
                 advancedMode={advancedMode}
-                autoExpand={blob.keyId === unlockRequestKeyId}
               />
             ))}
           </div>
