@@ -4,6 +4,7 @@ import { Alert, AlertDescription } from "@amibeingpwned/ui/alert";
 
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
+import type { FileResult } from "../../lib/utils/download";
 import { ContactCard } from "../keys/ContactCard";
 import { OutputArea } from "./OutputArea";
 
@@ -11,7 +12,7 @@ interface WorkspaceResultsProps {
   error: string | null;
   output: string;
   binaryOutput: Uint8Array | undefined;
-  fileResults: { name: string; data: Uint8Array }[];
+  fileResults: FileResult[];
   fileName: string;
   operationDone: boolean;
   statusText: string | undefined;

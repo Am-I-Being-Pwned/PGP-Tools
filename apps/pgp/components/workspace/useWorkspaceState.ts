@@ -3,11 +3,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { WorkspaceAction } from "../../lib/messages";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
+import type { FileResult } from "../../lib/utils/download";
 import { getPreferences } from "../../lib/storage/preferences";
 import type { WorkspaceDraft } from "../../lib/workspace-draft";
 import { decryptWorkspaceDraft } from "../../lib/workspace-draft";
 
-type Mode = "encrypt" | "decrypt" | "sign" | "verify";
+type Mode = WorkspaceAction;
 
 export interface WorkspaceState {
   mode: Mode;
@@ -26,8 +27,8 @@ export interface WorkspaceState {
   setSignatureTone: (t: "success" | "warning") => void;
   binaryOutput: Uint8Array | undefined;
   setBinaryOutput: (b: Uint8Array | undefined) => void;
-  fileResults: { name: string; data: Uint8Array }[];
-  setFileResults: (r: { name: string; data: Uint8Array }[]) => void;
+  fileResults: FileResult[];
+  setFileResults: (r: FileResult[]) => void;
   selectedRecipientId: string | null;
   setSelectedRecipientId: (s: string | null) => void;
   selectedKeyId: string | null;
@@ -87,9 +88,7 @@ export function useWorkspaceState(opts: {
     "success",
   );
   const [binaryOutput, setBinaryOutput] = useState<Uint8Array | undefined>();
-  const [fileResults, setFileResults] = useState<
-    { name: string; data: Uint8Array }[]
-  >([]);
+  const [fileResults, setFileResults] = useState<FileResult[]>([]);
   const [selectedRecipientId, setSelectedRecipientId] = useState<string | null>(
     null,
   );
@@ -209,15 +208,10 @@ export function useWorkspaceState(opts: {
       setMode(pendingAction.action);
       setInput(pendingAction.text);
       setFiles([]);
-      setOutput("");
-      setBinaryOutput(undefined);
-      setError(null);
-      setOperationDone(false);
-      setStatusText(null);
-      setVerifiedSigner(null);
+      resetOutput();
       onClearPending?.();
     }
-  }, [pendingAction, onClearPending]);
+  }, [pendingAction, onClearPending, resetOutput]);
 
   useEffect(() => {
     if (!encryptToKeyId) return;
@@ -226,52 +220,47 @@ export function useWorkspaceState(opts: {
     onClearEncryptTo?.();
   }, [encryptToKeyId, onClearEncryptTo]);
 
-  const handleInputChange = useCallback((text: string) => {
-    setInput(text);
-    setFiles([]);
-    setOutput("");
-    setBinaryOutput(undefined);
-    setFileResults([]);
-    setError(null);
-    setOperationDone(false);
-    setStatusText(null);
-    setVerifiedSigner(null);
-    setNeedsPassword(false);
-    setPublicKeyDetected(false);
-    setPrivateKeyDetected(false);
-    if (text.includes("-----BEGIN PGP PRIVATE KEY BLOCK-----")) {
-      // Flag first; the drafting effect skips snapshots while this is true
-      // so the armor doesn't end up in the encrypted draft blob.
-      setPrivateKeyDetected(true);
-    } else if (text.includes("-----BEGIN PGP MESSAGE-----")) {
-      setMode("decrypt");
-    } else if (text.includes("-----BEGIN PGP SIGNED MESSAGE-----")) {
-      setMode("verify");
-    } else if (text.includes("-----BEGIN PGP PUBLIC KEY BLOCK-----")) {
-      setPublicKeyDetected(true);
-    }
-  }, []);
-
-  const handleFileDrop = useCallback((newFiles: File[]) => {
-    setFiles((prev) => {
-      const existing = new Set(prev.map((f) => f.name));
-      const deduped = newFiles.filter((f) => !existing.has(f.name));
-      return [...prev, ...deduped];
-    });
-    setInput("");
-    setMode((current) => {
-      if (current !== "encrypt" && current !== "decrypt") return current;
-      if (newFiles.some((f) => /\.(gpg|pgp|asc)$/i.test(f.name))) {
-        return "decrypt";
+  const handleInputChange = useCallback(
+    (text: string) => {
+      setInput(text);
+      setFiles([]);
+      resetOutput();
+      setPublicKeyDetected(false);
+      setPrivateKeyDetected(false);
+      if (text.includes("-----BEGIN PGP PRIVATE KEY BLOCK-----")) {
+        // Flag first; the drafting effect skips snapshots while this is true
+        // so the armor doesn't end up in the encrypted draft blob.
+        setPrivateKeyDetected(true);
+      } else if (text.includes("-----BEGIN PGP MESSAGE-----")) {
+        setMode("decrypt");
+      } else if (text.includes("-----BEGIN PGP SIGNED MESSAGE-----")) {
+        setMode("verify");
+      } else if (text.includes("-----BEGIN PGP PUBLIC KEY BLOCK-----")) {
+        setPublicKeyDetected(true);
       }
-      return current;
-    });
-    setOutput("");
-    setBinaryOutput(undefined);
-    setError(null);
-    setOperationDone(false);
-    setStatusText(null);
-  }, []);
+    },
+    [resetOutput],
+  );
+
+  const handleFileDrop = useCallback(
+    (newFiles: File[]) => {
+      setFiles((prev) => {
+        const existing = new Set(prev.map((f) => f.name));
+        const deduped = newFiles.filter((f) => !existing.has(f.name));
+        return [...prev, ...deduped];
+      });
+      setInput("");
+      setMode((current) => {
+        if (current !== "encrypt" && current !== "decrypt") return current;
+        if (newFiles.some((f) => /\.(gpg|pgp|asc)$/i.test(f.name))) {
+          return "decrypt";
+        }
+        return current;
+      });
+      resetOutput();
+    },
+    [resetOutput],
+  );
 
   const removeFile = useCallback((index: number) => {
     setFiles((prev) => prev.filter((_, i) => i !== index));
@@ -280,12 +269,8 @@ export function useWorkspaceState(opts: {
   const clearFiles = useCallback(() => {
     setFiles([]);
     setInput("");
-    setOutput("");
-    setBinaryOutput(undefined);
-    setError(null);
-    setOperationDone(false);
-    setStatusText(null);
-  }, []);
+    resetOutput();
+  }, [resetOutput]);
 
   return {
     mode,
