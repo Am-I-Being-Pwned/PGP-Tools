@@ -19,5 +19,3 @@ export interface PendingOperation {
    *  resurrecting stale selections that were never picked up. */
   createdAt: number;
 }
-
-export type RuntimeMessage = PendingOperation;

@@ -77,7 +77,6 @@ export function GenerateKeyDialog({
 
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [keyAlgorithm, setKeyAlgorithm] = useState<KeyAlgorithm>("ecc");
-  const [rsaBits, setRsaBits] = useState<4096>(4096);
   const [expiryOption, setExpiryOption] = useState<ExpiryOption>("2y");
   const [customExpiry, setCustomExpiry] = useState<Date | undefined>();
 
@@ -94,8 +93,7 @@ export function GenerateKeyDialog({
     setReusePasskey(true);
     setShowAdvanced(false);
     setKeyAlgorithm("ecc");
-    setRsaBits(4096);
-    setExpiryOption("never");
+    setExpiryOption("2y");
     setCustomExpiry(undefined);
     onClose();
   };
@@ -281,10 +279,8 @@ export function GenerateKeyDialog({
                   <label className="text-muted-foreground mb-1.5 block text-xs">
                     Key size
                   </label>
-                  <Select
-                    value={String(rsaBits)}
-                    onValueChange={(v) => setRsaBits(Number(v) as 4096)}
-                  >
+                  {/* RSA-4096 is the only size the WASM engine generates. */}
+                  <Select value="4096">
                     <SelectTrigger className="h-8 text-xs">
                       <SelectValue />
                     </SelectTrigger>
