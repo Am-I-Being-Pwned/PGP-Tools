@@ -7,3 +7,10 @@ export function formatAlgorithm(algo: string): string {
 export function formatFingerprint(fp: string): string {
   return fp.match(/.{1,4}/g)?.join(" ") ?? fp;
 }
+
+/** Format a byte count for display: "512 B", "1.2 KB", "3.4 MB". */
+export function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}

@@ -1,10 +1,14 @@
 import { useRef, useState } from "react";
 import { CheckIcon, ClipboardIcon, DownloadIcon } from "lucide-react";
 
+import type { FileResult } from "../../lib/utils/download";
+import { downloadBinary, downloadText } from "../../lib/utils/download";
+import { formatFileSize } from "../../lib/utils/formatting";
+
 interface OutputAreaProps {
   output: string;
   binaryOutput?: Uint8Array;
-  fileResults?: { name: string; data: Uint8Array }[];
+  fileResults?: FileResult[];
   fileName?: string;
   success?: boolean;
   statusText?: string;
@@ -40,21 +44,11 @@ export function OutputArea({
   };
 
   const handleDownload = () => {
-    const blob = binaryOutput
-      ? new Blob([binaryOutput.slice()], { type: "application/octet-stream" })
-      : new Blob([output], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = fileName ?? "output.gpg";
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const formatSize = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    if (binaryOutput) {
+      downloadBinary(binaryOutput, fileName ?? "output.gpg");
+    } else {
+      downloadText(output, fileName ?? "output.gpg");
+    }
   };
 
   const borderColor = success ? "border-green-500/50" : "border-border";
@@ -111,7 +105,7 @@ export function OutputArea({
       )}
       {binaryOutput && !output && !hasFileResults && !statusText && (
         <p className="text-muted-foreground text-sm">
-          {fileName ?? "output.gpg"} - {formatSize(binaryOutput.length)}
+          {fileName ?? "output.gpg"} - {formatFileSize(binaryOutput.length)}
         </p>
       )}
     </div>

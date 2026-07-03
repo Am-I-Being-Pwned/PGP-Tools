@@ -10,9 +10,10 @@ import {
   SelectValue,
 } from "@amibeingpwned/ui/select";
 
+import type { WorkspaceAction } from "../../lib/messages";
 import { DropZone } from "./DropZone";
 
-type Mode = "encrypt" | "decrypt" | "sign" | "verify";
+type Mode = WorkspaceAction;
 
 interface WorkspaceInputProps {
   mode: Mode;
