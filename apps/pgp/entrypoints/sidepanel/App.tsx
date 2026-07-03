@@ -43,7 +43,6 @@ export default function App() {
   const [onboardingComplete, setOnboardingComplete] = useState<boolean | null>(
     null,
   );
-  const [openGenerateOnMount, setOpenGenerateOnMount] = useState(false);
   const [importPrefill, setImportPrefill] = useState<string | null>(null);
   const [encryptToKeyId, setEncryptToKeyId] = useState<string | null>(null);
   // True once a pending context-menu op has been routed to a tab.
@@ -405,8 +404,6 @@ export default function App() {
             onAddContact={contacts.add}
             onDeleteContact={contacts.remove}
             advancedMode={advancedMode}
-            autoOpenGenerate={openGenerateOnMount}
-            onAutoOpenConsumed={() => setOpenGenerateOnMount(false)}
             autoOpenImport={importPrefill}
             onAutoOpenImportConsumed={() => setImportPrefill(null)}
             onEncryptTo={(keyId) => {
@@ -414,11 +411,7 @@ export default function App() {
               setActiveTab("workspace");
               void savePreferences({ activeTab: "workspace" });
             }}
-            unlockRequestKeyId={null}
             primaryPasskeyCredentialId={masterPasskeyCredentialId}
-            onUnlockRequestConsumed={() => {
-              /* noop */
-            }}
             cacheKeys={!neverCacheKeys}
             onKeyCached={(keyId, handle) => {
               void session.cacheKeyHandle(keyId, handle);
