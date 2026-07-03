@@ -1,23 +1,9 @@
 import "../lib/network-lockdown";
 
-import type { OperationAction, PendingOperation } from "../lib/messages";
-import { MENU_OPEN_IN_PGP, SESSION_PENDING_OP } from "../lib/constants";
+import type { PendingOperation } from "../lib/messages";
 import { recoverArmorIfNeeded } from "../lib/armor-recovery";
-
-/** Classify the selected text by PGP armor header to decide which
- *  action the side panel should take. Substring checks only -- no
- *  parsing here, the side panel re-validates. */
-function classifyAction(text: string): OperationAction {
-  if (text.includes("-----BEGIN PGP PUBLIC KEY BLOCK-----")) {
-    return "import-public";
-  }
-  if (text.includes("-----BEGIN PGP PRIVATE KEY BLOCK-----")) {
-    return "import-private";
-  }
-  if (text.includes("-----BEGIN PGP MESSAGE-----")) return "decrypt";
-  if (text.includes("-----BEGIN PGP SIGNED MESSAGE-----")) return "verify";
-  return "encrypt";
-}
+import { classifyAction } from "../lib/classify-action";
+import { MENU_OPEN_IN_PGP, SESSION_PENDING_OP } from "../lib/constants";
 
 export default defineBackground(() => {
   void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
@@ -38,12 +24,7 @@ export default defineBackground(() => {
     });
   });
 
-  // Async listener: returning a Promise keeps the MV3 service worker
-  // alive until the storage write commits. Without this, the SW could
-  // be killed after the sync portion of the handler returns, leaving
-  // chrome.storage.session.set in-flight and the side panel mounting
-  // to an empty store.
-  chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  chrome.contextMenus.onClicked.addListener((info, tab) => {
     if (!tab?.id || !info.selectionText) return;
     if (info.menuItemId !== MENU_OPEN_IN_PGP) return;
     const tabId = tab.id;
@@ -69,6 +50,8 @@ export default defineBackground(() => {
     chrome.sidePanel.open({ tabId }).catch(() => {
       /* sidepanel already open in this tab -- harmless */
     });
-    await chrome.storage.session.set({ [SESSION_PENDING_OP]: operation });
+    // The in-flight storage write keeps the MV3 service worker alive
+    // until it commits; the side panel reads the op on mount.
+    void chrome.storage.session.set({ [SESSION_PENDING_OP]: operation });
   });
 });

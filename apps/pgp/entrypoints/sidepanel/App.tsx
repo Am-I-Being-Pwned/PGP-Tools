@@ -148,9 +148,9 @@ export default function App() {
 
   // Auto-lock effects read fresh state via these refs so they don't
   // re-register listeners on every App render (`useKeySession()`
-  // returns a new object identity per render). Updated in a layout
-  // effect so reads inside event-driven callbacks see the latest
-  // values without re-binding the listeners.
+  // returns a new object identity per render). Updated after every
+  // render so event-driven callbacks see the latest values without
+  // re-binding the listeners.
   const sessionRef = useRef(session);
   const masterUnlockedRef = useRef(masterUnlocked);
   const doMasterLockRef = useRef(doMasterLock);
