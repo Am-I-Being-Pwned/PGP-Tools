@@ -16,6 +16,8 @@ interface WorkspaceResultsProps {
   operationDone: boolean;
   statusText: string | undefined;
   verifiedSigner: PublicContactKey | ProtectedKeyBlob | null;
+  /** Fill the available height (used by the full-screen result view). */
+  fullHeight?: boolean;
 }
 
 export function WorkspaceResults({
@@ -27,9 +29,14 @@ export function WorkspaceResults({
   operationDone,
   statusText,
   verifiedSigner,
+  fullHeight,
 }: WorkspaceResultsProps) {
   return (
-    <div className="min-h-5 space-y-3">
+    <div
+      className={
+        fullHeight ? "flex min-h-0 flex-1 flex-col gap-3" : "min-h-5 space-y-3"
+      }
+    >
       {error && (
         <Alert variant="destructive">
           <TriangleAlertIcon className="h-4 w-4" />
@@ -63,6 +70,7 @@ export function WorkspaceResults({
         fileName={fileName}
         success={operationDone}
         statusText={verifiedSigner ? undefined : statusText}
+        fullHeight={fullHeight}
       />
     </div>
   );
