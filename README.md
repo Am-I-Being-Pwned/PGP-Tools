@@ -73,6 +73,7 @@
 ```bash
 pnpm install
 pnpm dev        # dev server with hot reload
+pnpm test       # unit tests (vitest); Rust engine tests: cargo test in apps/pgp/gpg-wasm
 pnpm build      # production build (builds WASM automatically)
 pnpm zip        # package for Chrome Web Store / Firefox Add-ons
 ```
