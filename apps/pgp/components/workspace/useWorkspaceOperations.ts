@@ -8,6 +8,7 @@ import type { FileResult } from "../../lib/utils/download";
 import type { WorkspaceState } from "./useWorkspaceState";
 import { signZipWithCrxKey, verifyCrxFile } from "../../lib/crx/operations";
 import * as pgpOps from "../../lib/pgp/operations";
+import { isWebAuthnCancel } from "../../lib/protection/webauthn-prf";
 import {
   downloadBinary,
   downloadResults,
@@ -540,9 +541,11 @@ export function useWorkspaceOperations({
   }
 
   function pickCrxKey(): CrxSigningKeyBlob | null {
-    if (crxKeys.length === 0) return null;
+    // Exact match only. Falling back to crxKeys[0] here would silently sign
+    // under a different extension identity than the one shown in the Select
+    // (state keeps the selection valid, so a miss means something is off).
     return (
-      crxKeys.find((k) => k.extensionId === s.selectedCrxKeyId) ?? crxKeys[0]
+      crxKeys.find((k) => k.extensionId === s.selectedCrxKeyId) ?? null
     );
   }
 
@@ -556,7 +559,9 @@ export function useWorkspaceOperations({
     s.setBinaryOutput(undefined);
     s.setFileResults([]);
     try {
-      const zip = await resolveFileBytes();
+      // CRX signing is gated on a single manifest-bearing .zip input, so
+      // sign exactly that file — never the multi-file/zip-toggle path.
+      const zip = new Uint8Array(await s.files[0].arrayBuffer());
       const crx = await signZipWithCrxKey(
         crxKey,
         zip,
@@ -571,6 +576,8 @@ export function useWorkspaceOperations({
       // download and tries to install it. The Save button drives that.
       return true;
     } catch (e) {
+      // Backing out of the passkey prompt is a decision, not a failure.
+      if (isWebAuthnCancel(e)) return false;
       if (password) {
         s.setPasswordError("Wrong password or signing failed.");
       } else {
@@ -584,10 +591,10 @@ export function useWorkspaceOperations({
   }
 
   async function executeCrxSign() {
-    if (s.mode !== "sign" || s.files.length === 0) return;
+    if (s.mode !== "sign" || s.files.length !== 1) return;
     const crxKey = pickCrxKey();
     if (!crxKey) {
-      s.setError("No CRX signing key available.");
+      s.setError("Select a CRX signing key first.");
       return;
     }
     s.setError(null);
@@ -616,6 +623,10 @@ export function useWorkspaceOperations({
       } else {
         s.setError(r.error ?? "Invalid CRX signature");
       }
+    } catch (e) {
+      // verifyCrxFile reports malformed input via `valid:false`; anything
+      // thrown is unexpected (e.g. the file read failed) -- still surface it.
+      s.setError(e instanceof Error ? e.message : String(e));
     } finally {
       s.setLoading(false);
     }

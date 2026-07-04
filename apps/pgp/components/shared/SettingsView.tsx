@@ -392,6 +392,7 @@ export function SettingsView({
         onAddKey={onAddKey}
         onAddContact={onAddContact}
         onAddCrxKey={onAddCrxKey}
+        crxKeys={crxKeys}
         reusePasskeyCredentialId={primaryPasskeyCredentialId}
       />
 

@@ -2,12 +2,17 @@
  * Round-trips CRX signing keys through the "Export/Import All Keys" backup.
  *
  * A CRX key is a raw RSA-2048 key, not OpenPGP, so it can't be an armored
- * PGP block. Instead each key is written as its already-at-rest-encrypted
- * `CrxSigningKeyBlob` (the private key stays sealed under its own
- * password/passkey protection) inside a clearly-labelled block appended to
- * the same `.asc` file. Non-PGP tools (GnuPG, etc.) ignore the unknown
- * block; PGP Tools parses it back on import. No extra unlock step is
- * needed either way -- the blob is self-protected.
+ * PGP block. Instead each key is written as a self-protected
+ * `CrxSigningKeyBlob` (JSON) inside a clearly-labelled block appended to the
+ * same `.asc` file. Non-PGP tools (GnuPG, etc.) ignore the unknown block;
+ * PGP Tools parses it back on import.
+ *
+ * These functions are just the (de)serialization boundary — they neither
+ * unlock nor re-seal. The bulk "Export All Keys" flow unlocks each CRX key
+ * and re-seals it under the single export passphrase before calling
+ * `serializeCrxKeyBlocks`, so the exported blob restores on any device (a
+ * passkey seal is bound to one authenticator). On import the blob is stored
+ * as-is under whatever protection it already carries.
  */
 
 import { fromBase64, toBase64 } from "../encoding";

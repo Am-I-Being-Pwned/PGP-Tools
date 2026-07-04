@@ -8,6 +8,7 @@ import type { KeyInfo } from "../../lib/pgp/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import { parseCrxKeyBlocks } from "../../lib/crx/backup";
+import { crxBlobIdentityMatches } from "../../lib/crx/types";
 import { splitArmoredKeyBlocks } from "../../lib/armor-blocks";
 import { importPublicKeyBlocks } from "../../lib/import-public-keys";
 import { importKey } from "../../lib/pgp/key-management";
@@ -42,6 +43,9 @@ interface ImportAllKeysDialogProps {
   onAddContact: (contact: PublicContactKey) => Promise<void>;
   /** Restore CRX signing keys found in the backup (self-protected blobs). */
   onAddCrxKey?: (blob: CrxSigningKeyBlob) => Promise<void>;
+  /** Currently stored CRX keys, for skip-if-present dedupe (mirrors the
+   *  PGP path's keyId dedupe — an import must never overwrite a live key). */
+  crxKeys?: CrxSigningKeyBlob[];
   /** Pass the primary key's passkey credential ID to allow reuse. */
   reusePasskeyCredentialId?: string;
 }
@@ -62,6 +66,7 @@ export function ImportAllKeysDialog({
   onAddKey,
   onAddContact,
   onAddCrxKey,
+  crxKeys,
   reusePasskeyCredentialId,
 }: ImportAllKeysDialogProps) {
   const [step, setStep] = useState<Step>("paste");
@@ -70,6 +75,7 @@ export function ImportAllKeysDialog({
   const [importing, setImporting] = useState(false);
   const [parsedPrivates, setParsedPrivates] = useState<ParsedPrivate[]>([]);
   const [publicBlocks, setPublicBlocks] = useState<string[]>([]);
+  const [parsedCrx, setParsedCrx] = useState<CrxSigningKeyBlob[]>([]);
   const [skippedPrivates, setSkippedPrivates] = useState(0);
   const [sourcePassphrase, setSourcePassphrase] = useState("");
   const [method, setMethod] = useState(getDefaultProtectionMethod);
@@ -84,6 +90,7 @@ export function ImportAllKeysDialog({
     setError(null);
     setParsedPrivates([]);
     setPublicBlocks([]);
+    setParsedCrx([]);
     setSkippedPrivates(0);
     setSourcePassphrase("");
     setPassword("");
@@ -115,14 +122,34 @@ export function ImportAllKeysDialog({
       );
   };
 
+  /** Commit the parsed CRX blobs (already identity-checked and deduped at
+   *  the paste step). Runs at the same point PGP keys are written — never
+   *  before the user has passed the whole flow. */
+  const importCrxBlobs = async (blobs: CrxSigningKeyBlob[]) => {
+    if (blobs.length === 0 || !onAddCrxKey) return;
+    let added = 0;
+    for (const blob of blobs) {
+      try {
+        await onAddCrxKey(blob);
+        added++;
+      } catch {
+        toast.error(
+          `Failed to restore CRX key ${blob.label ?? blob.extensionId.slice(0, 8)}`,
+        );
+      }
+    }
+    if (added > 0)
+      toast.success(`Restored ${added} CRX signing key${added > 1 ? "s" : ""}`);
+  };
+
   const handlePasteNext = async () => {
     setError(null);
-    const crxBlobs = onAddCrxKey ? parseCrxKeyBlocks(text) : [];
+    const crxBlocks = onAddCrxKey ? parseCrxKeyBlocks(text) : [];
     const { publicKeys, privateKeys } = splitArmoredKeyBlocks(text);
     if (
       publicKeys.length === 0 &&
       privateKeys.length === 0 &&
-      crxBlobs.length === 0
+      crxBlocks.length === 0
     ) {
       setError("No keys found in the input.");
       return;
@@ -130,12 +157,33 @@ export function ImportAllKeysDialog({
 
     setImporting(true);
     try {
-      if (crxBlobs.length > 0 && onAddCrxKey) {
-        for (const blob of crxBlobs) await onAddCrxKey(blob);
-        toast.success(
-          `Imported ${crxBlobs.length} CRX signing key${crxBlobs.length > 1 ? "s" : ""}`,
-        );
+      // Vet CRX blocks now, write them only at the end of the flow:
+      // - a blob whose public key doesn't hash to its extension id is
+      //   forged/corrupt (the field isn't AEAD-covered) -> reject;
+      // - an extension id we already hold is skipped, never overwritten
+      //   (an old backup must not clobber the live signing key).
+      const existingCrx = new Set((crxKeys ?? []).map((k) => k.extensionId));
+      const crxBlobs: CrxSigningKeyBlob[] = [];
+      let skippedCrx = 0;
+      let invalidCrx = 0;
+      for (const blob of crxBlocks) {
+        if (!(await crxBlobIdentityMatches(blob))) {
+          invalidCrx++;
+        } else if (existingCrx.has(blob.extensionId)) {
+          skippedCrx++;
+        } else {
+          crxBlobs.push(blob);
+        }
       }
+      if (skippedCrx > 0)
+        toast.info(
+          `${skippedCrx} CRX signing key${skippedCrx > 1 ? "s" : ""} already imported`,
+        );
+      if (invalidCrx > 0)
+        toast.error(
+          `${invalidCrx} CRX signing key${invalidCrx > 1 ? "s" : ""} rejected: public key does not match its extension id`,
+        );
+
       const existing = new Set(myKeys.map((k) => k.keyId));
       const privates: ParsedPrivate[] = [];
       let skipped = 0;
@@ -168,7 +216,8 @@ export function ImportAllKeysDialog({
       }
 
       if (privates.length === 0) {
-        // Nothing to protect -- import the public keys and finish.
+        // Nothing to protect -- import the CRX/public keys and finish.
+        await importCrxBlobs(crxBlobs);
         await importPublics(publicKeys);
         if (skipped > 0)
           toast.info(
@@ -180,6 +229,7 @@ export function ImportAllKeysDialog({
 
       setParsedPrivates(privates);
       setPublicBlocks(publicKeys);
+      setParsedCrx(crxBlobs);
       setSkippedPrivates(skipped);
       setStep(privates.some((p) => p.secretEncrypted) ? "unlock" : "protect");
     } finally {
@@ -274,6 +324,7 @@ export function ImportAllKeysDialog({
         toast.info(
           `${skippedPrivates} private key${skippedPrivates > 1 ? "s" : ""} already imported`,
         );
+      await importCrxBlobs(parsedCrx);
       await importPublics(publicBlocks);
       resetAndClose();
     } catch (e) {

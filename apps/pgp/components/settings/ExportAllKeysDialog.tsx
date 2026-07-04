@@ -80,6 +80,11 @@ export function ExportAllKeysDialog({
   const [passwords, setPasswords] = useState<Record<string, string>>({});
   const [unlockErrors, setUnlockErrors] = useState<Record<string, string>>({});
   const [unlockingId, setUnlockingId] = useState<string | null>(null);
+  // Synchronous in-flight guard: `unlockingId` state lands a render late, so
+  // Enter-spam during a multi-second Argon2id derive could start a second
+  // unlock — for CRX keys that opens two WASM handles and leaks the first
+  // (only the last lands in `crxHandles`). Same fix as CrxExportPrivateDialog.
+  const unlockInFlight = useRef(false);
 
   // CRX keys unlock into WASM handles held here for the life of the dialog;
   // dropped on close. Keyed by extensionId.
@@ -158,6 +163,8 @@ export function ExportAllKeysDialog({
   };
 
   const handleUnlockPassword = async (blob: ProtectedKeyBlob) => {
+    if (unlockInFlight.current) return;
+    unlockInFlight.current = true;
     setUnlockingId(blob.keyId);
     setUnlockErrors((e) => ({ ...e, [blob.keyId]: "" }));
     try {
@@ -168,11 +175,14 @@ export function ExportAllKeysDialog({
         setPasswords((p) => ({ ...p, [blob.keyId]: "" }));
       }
     } finally {
+      unlockInFlight.current = false;
       setUnlockingId(null);
     }
   };
 
   const handleUnlockPasskey = async (blob: ProtectedKeyBlob) => {
+    if (unlockInFlight.current) return;
+    unlockInFlight.current = true;
     setUnlockingId(blob.keyId);
     setUnlockErrors((e) => ({ ...e, [blob.keyId]: "" }));
     try {
@@ -184,11 +194,15 @@ export function ExportAllKeysDialog({
         }));
       }
     } finally {
+      unlockInFlight.current = false;
       setUnlockingId(null);
     }
   };
 
   const handleUnlockCrxPassword = async (blob: CrxSigningKeyBlob) => {
+    if (unlockInFlight.current || blob.extensionId in crxHandlesRef.current)
+      return;
+    unlockInFlight.current = true;
     setUnlockingId(blob.extensionId);
     setCrxErrors((e) => ({ ...e, [blob.extensionId]: "" }));
     try {
@@ -201,11 +215,15 @@ export function ExportAllKeysDialog({
     } catch {
       setCrxErrors((e) => ({ ...e, [blob.extensionId]: "Wrong password." }));
     } finally {
+      unlockInFlight.current = false;
       setUnlockingId(null);
     }
   };
 
   const handleUnlockCrxPasskey = async (blob: CrxSigningKeyBlob) => {
+    if (unlockInFlight.current || blob.extensionId in crxHandlesRef.current)
+      return;
+    unlockInFlight.current = true;
     setUnlockingId(blob.extensionId);
     setCrxErrors((e) => ({ ...e, [blob.extensionId]: "" }));
     try {
@@ -219,6 +237,7 @@ export function ExportAllKeysDialog({
         }));
       }
     } finally {
+      unlockInFlight.current = false;
       setUnlockingId(null);
     }
   };
@@ -281,7 +300,8 @@ export function ExportAllKeysDialog({
       toast.success(`Exported ${count} key${count === 1 ? "" : "s"}`);
       resetAndClose();
     } catch (e) {
-      console.error("Export All Keys failed:", e);
+      // No console.* here (SECURITY.md §9): the message may carry unlock /
+      // WASM context, and the extension console outlives the session.
       setError(
         e instanceof Error ? `Export failed: ${e.message}` : "Export failed.",
       );
@@ -302,7 +322,6 @@ export function ExportAllKeysDialog({
       );
       resetAndClose();
     } catch (e) {
-      console.error("Export All Keys (plaintext) failed:", e);
       setError(
         e instanceof Error ? `Export failed: ${e.message}` : "Export failed.",
       );
