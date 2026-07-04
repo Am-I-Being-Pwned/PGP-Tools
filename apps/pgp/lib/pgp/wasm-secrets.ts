@@ -531,6 +531,19 @@ export async function reprotectCrxKeyWithPassword(
 
 /**
  * @secret-handling
+ *   in:  an already-unlocked CRX_KEY_STORE handle
+ *   out: the raw PKCS#8 PEM of the private key -- SECRET
+ *   contract: this is the deliberately-unsafe plaintext export. The returned
+ *             PEM is an immutable JS String (cannot be zeroized); callers MUST
+ *             gate it behind explicit user confirmation and drop it promptly.
+ */
+export async function exportCrxPrivateKeyPem(handle: number): Promise<string> {
+  const wasm = await loadWasm();
+  return wasm.exportCrxPrivateKeyPem(handle);
+}
+
+/**
+ * @secret-handling
  *   in:  password bytes; ciphertext/iv/salt/extensionId are not secret
  *   out: opaque u32 CRX_KEY_STORE handle (NOT secret)
  *   contract: caller MUST `.fill(0)` `password` in a `finally`.
