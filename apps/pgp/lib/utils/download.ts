@@ -37,11 +37,20 @@ const DOWNLOADS_PERMISSION: chrome.permissions.Permissions = {
   permissions: ["downloads"],
 };
 
-/** Prompt for the optional `downloads` permission (idempotent). Must be
- *  called from a user gesture. Returns whether it is now granted. */
+/** Prompt for the optional `downloads` permission (idempotent). Returns
+ *  whether it is now granted. Requesting a not-yet-granted permission needs
+ *  a user gesture; when called without one (e.g. the auto-save right after
+ *  an async sign) `chrome.permissions.request` throws -- treat that as "not
+ *  granted" so the caller falls back to the manual Save button rather than
+ *  surfacing an unhandled rejection. An already-granted permission needs no
+ *  gesture, so auto-save works on every sign after the first. */
 async function requestDownloadsPermission(): Promise<boolean> {
   if (await chrome.permissions.contains(DOWNLOADS_PERMISSION)) return true;
-  return chrome.permissions.request(DOWNLOADS_PERMISSION);
+  try {
+    return await chrome.permissions.request(DOWNLOADS_PERMISSION);
+  } catch {
+    return false;
+  }
 }
 
 export type SaveResult =
@@ -73,7 +82,6 @@ export type SaveResult =
  * NB: do NOT swap this for the File System Access picker
  * (`showSaveFilePicker`). It needs no permission and also dodges the
  * installer, but it reliably CRASHES the extension side panel (tested twice).
- * The other installer-free path is dragging the chip to Finder, in the UI.
  *
  * Returns "saved", "cancelled" (user dismissed the Save As dialog), "denied"
  * (permission refused), "blocked" (Chrome refused to write), or "unsupported".

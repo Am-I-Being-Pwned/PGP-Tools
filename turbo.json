@@ -37,6 +37,10 @@
       "dependsOn": ["^topo", "^build"],
       "outputs": [".cache/tsbuildinfo.json"]
     },
+    "zip": {
+      "dependsOn": ["build"],
+      "outputs": [".output/*.zip"]
+    },
     "clean": {
       "cache": false
     },
