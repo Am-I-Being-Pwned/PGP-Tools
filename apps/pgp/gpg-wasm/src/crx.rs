@@ -628,6 +628,25 @@ pub fn reprotect_crx_key_with_password(
     Ok(pack_meta_blob(&protect_meta_json(&private_key, &ext_id)?, &blob))
 }
 
+/// Export an already-unlocked CRX key (by handle) as an UNENCRYPTED PKCS#8
+/// PEM. This is the deliberately-unsafe "copy the raw private key" path
+/// (mirrors the PGP `get_key_armored` plaintext export) -- the plaintext key
+/// crosses to JS, so callers gate it behind an explicit confirmation and copy
+/// it to the clipboard only briefly.
+///
+/// The `Zeroizing<String>` intermediate (`pem`) is zeroized on drop, but the
+/// plain `String` this returns is what wasm-bindgen copies across the ABI and
+/// cannot be zeroized after the copy -- an inherent limitation of the
+/// `Result<String, String>` boundary, identical to `get_key_armored`.
+#[wasm_bindgen(js_name = "exportCrxPrivateKeyPem")]
+pub fn export_crx_private_key_pem(handle: u32) -> Result<String, String> {
+    let private_key = crx_store_get(handle)?;
+    let pem = private_key
+        .to_pkcs8_pem(rsa::pkcs8::LineEnding::LF)
+        .str_err()?;
+    Ok(pem.to_string())
+}
+
 /// Unlock a password-protected CRX key into `CRX_KEY_STORE`; returns a handle.
 #[wasm_bindgen(js_name = "unlockCrxWithPassword")]
 pub fn unlock_crx_with_password(
@@ -1119,5 +1138,32 @@ mod crx_tests {
         let spki_a = spki_der(&RsaPrivateKey::from_pkcs8_der(&der_a).unwrap()).unwrap();
         let spki_b = spki_der(&RsaPrivateKey::from_pkcs8_der(&der_b).unwrap()).unwrap();
         assert_eq!(spki_a, spki_b);
+    }
+
+    // ── plaintext PEM export (the deliberately-unsafe "copy raw key" path) ──
+
+    #[test]
+    fn export_pem_round_trips_to_the_same_key() {
+        let (handle, ext_id, spki) = insert_generated_key();
+
+        let pem = export_crx_private_key_pem(handle).unwrap();
+        drop_crx_key(handle).unwrap();
+
+        // It's a real PKCS#8 PEM that parses back to the identical key.
+        assert!(pem.starts_with("-----BEGIN PRIVATE KEY-----"));
+        let recovered = parse_rsa_private_pem(&pem).unwrap();
+        let recovered_spki = spki_der(&recovered).unwrap();
+        assert_eq!(recovered_spki, spki, "exported PEM must be the same key");
+        assert_eq!(
+            extension_id(&crx_id_from_spki(&recovered_spki)),
+            ext_id,
+            "extension identity must survive the export"
+        );
+    }
+
+    #[test]
+    fn export_pem_absent_handle_returns_err_not_panic() {
+        let result = export_crx_private_key_pem(0xDEAD_BEEF);
+        assert!(result.is_err(), "bogus handle must be an Err, not a panic");
     }
 }

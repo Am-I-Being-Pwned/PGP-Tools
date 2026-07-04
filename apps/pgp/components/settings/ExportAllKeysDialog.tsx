@@ -280,8 +280,11 @@ export function ExportAllKeysDialog({
       );
       toast.success(`Exported ${count} key${count === 1 ? "" : "s"}`);
       resetAndClose();
-    } catch {
-      setError("Export failed.");
+    } catch (e) {
+      console.error("Export All Keys failed:", e);
+      setError(
+        e instanceof Error ? `Export failed: ${e.message}` : "Export failed.",
+      );
     } finally {
       passphraseBytes.fill(0);
       setExporting(false);
@@ -298,8 +301,11 @@ export function ExportAllKeysDialog({
         `Exported ${count} key${count === 1 ? "" : "s"} (private keys UNENCRYPTED)`,
       );
       resetAndClose();
-    } catch {
-      setError("Export failed.");
+    } catch (e) {
+      console.error("Export All Keys (plaintext) failed:", e);
+      setError(
+        e instanceof Error ? `Export failed: ${e.message}` : "Export failed.",
+      );
     } finally {
       setExporting(false);
     }

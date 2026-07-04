@@ -13,6 +13,7 @@ import {
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
 import { publicKeyDerToPem } from "../../lib/crx/types";
 import { formatAlgorithm } from "../../lib/utils/formatting";
+import { CrxExportPrivateDialog } from "./CrxExportPrivateDialog";
 
 interface CrxKeyCardProps {
   keyBlob: CrxSigningKeyBlob;
@@ -30,6 +31,7 @@ interface CrxKeyCardProps {
  */
 export function CrxKeyCard({ keyBlob, onDelete }: CrxKeyCardProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showCopyPrivate, setShowCopyPrivate] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const feedbackTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -83,6 +85,12 @@ export function CrxKeyCard({ keyBlob, onDelete }: CrxKeyCardProps) {
             >
               Copy public key
             </DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={() => setShowCopyPrivate(true)}
+            >
+              Copy private key
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"
@@ -101,6 +109,12 @@ export function CrxKeyCard({ keyBlob, onDelete }: CrxKeyCardProps) {
       {feedback && (
         <p className="mt-1 ml-6 text-xs text-green-400">{feedback}</p>
       )}
+
+      <CrxExportPrivateDialog
+        open={showCopyPrivate}
+        onClose={() => setShowCopyPrivate(false)}
+        keyBlob={keyBlob}
+      />
 
       {showDeleteConfirm && (
         <div className="bg-destructive/5 border-destructive/30 mt-2 rounded-md border p-2">

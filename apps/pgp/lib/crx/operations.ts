@@ -240,6 +240,14 @@ export async function closeCrxKey(handle: number): Promise<void> {
 }
 
 /**
+ * Export an unlocked CRX key (by handle) as an UNENCRYPTED PKCS#8 PEM -- the
+ * raw private key. This is the deliberately-unsafe path (mirrors PGP's
+ * plaintext key export): the key crosses into JS, so callers MUST gate it
+ * behind explicit confirmation and drop the string promptly.
+ */
+export { exportCrxPrivateKeyPem } from "../pgp/wasm";
+
+/**
  * Re-seal an already-unlocked CRX key (by handle) under `password`, returning
  * a fresh portable `CrxSigningKeyBlob`. The plaintext key never leaves WASM.
  * Used by "Export All Keys" to re-wrap every CRX key under the single export
