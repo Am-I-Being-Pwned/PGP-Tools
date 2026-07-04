@@ -569,11 +569,11 @@ export function useWorkspaceOperations({
       );
       const name = crxOutputName();
       s.setFileResults([{ name, data: crx }]);
-      s.setStatusText(`Signed - hit Save to write ${name}, or drag it out.`);
+      s.setStatusText(`Signed ${name} - saving...`);
       s.setOperationDone(true);
-      // No auto-download: a signed CRX must be saved via the "Save As" path
-      // (see saveCrxViaPrompt) or dragged out, otherwise Chrome intercepts the
-      // download and tries to install it. The Save button drives that.
+      // WorkspaceView auto-fires the "Save As" prompt for this result (the one
+      // download path Chrome won't route to the extension installer -- see
+      // saveCrxViaPrompt); the Save button is a manual fallback.
       return true;
     } catch (e) {
       // Backing out of the passkey prompt is a decision, not a failure.

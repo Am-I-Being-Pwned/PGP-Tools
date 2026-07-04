@@ -226,9 +226,15 @@ export function useWorkspaceState(opts: {
   }, [crxKeys, selectedCrxKeyId]);
 
   // Detect whether the input is a single .zip that looks like a packed
-  // Chrome extension (has a manifest.json). Detection only — it never
-  // changes the user's chosen mode; WorkspaceView uses it to offer the
-  // CRX signing path when the user IS in sign mode.
+  // Chrome extension (has a manifest.json), and when it is, nudge the mode
+  // to sign so the "Sign for Web Store" action is right there.
+  //
+  // The nudge only fires from encrypt/decrypt — the same guard the .gpg/.asc
+  // auto-switch-to-decrypt uses in handleFileDrop — so it never clobbers an
+  // explicit sign/verify choice. The `cancelled` flag + functional setMode
+  // mean a stale detection (file already replaced) can't flip the mode late.
+  const crxSigningEnabled = opts.crxSigningEnabled;
+  const haveCrxKey = (crxKeys?.length ?? 0) > 0;
   useEffect(() => {
     if (files.length !== 1 || !/\.zip$/i.test(files[0].name)) {
       setIsExtensionZip(false);
@@ -236,12 +242,19 @@ export function useWorkspaceState(opts: {
     }
     const run = { cancelled: false };
     void files[0].arrayBuffer().then((buf) => {
-      if (!run.cancelled) setIsExtensionZip(zipHasManifest(new Uint8Array(buf)));
+      if (run.cancelled) return;
+      const isExtension = zipHasManifest(new Uint8Array(buf));
+      setIsExtensionZip(isExtension);
+      if (isExtension && crxSigningEnabled && haveCrxKey) {
+        setMode((current) =>
+          current === "encrypt" || current === "decrypt" ? "sign" : current,
+        );
+      }
     });
     return () => {
       run.cancelled = true;
     };
-  }, [files]);
+  }, [files, crxSigningEnabled, haveCrxKey]);
 
   // An extension zip defaults the sign flow to CRX (that's overwhelmingly
   // the intent); anything else resets to PGP. The user can still flip the
