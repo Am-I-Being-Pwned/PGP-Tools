@@ -522,12 +522,26 @@ fn crx_store_get(handle: u32) -> Result<RsaPrivateKey, String> {
     })
 }
 
-/// Validate a decrypted DER key, then move it into the store. On any failure
-/// the plaintext is zeroized before returning.
-fn store_decrypted_der(mut der: Vec<u8>) -> Result<u32, String> {
-    if RsaPrivateKey::from_pkcs8_der(&der).is_err() {
+/// Validate a decrypted DER key — it must parse AND its public half must
+/// hash to the extension id the ciphertext was AAD-bound to — then move it
+/// into the store. The identity check closes a forgery hole the AAD alone
+/// leaves open: AAD strings are public, so an attacker-crafted blob can carry
+/// a foreign private key sealed (by them) under a victim's extension id;
+/// without this check that key would unlock and sign under the wrong
+/// identity. On any failure the plaintext is zeroized before returning.
+fn store_decrypted_der(mut der: Vec<u8>, expected_ext_id: &str) -> Result<u32, String> {
+    let checked = (|| -> Result<(), String> {
+        let key = RsaPrivateKey::from_pkcs8_der(&der)
+            .map_err(|_| "Decrypted data is not a valid RSA private key".to_string())?;
+        let actual = extension_id(&crx_id_from_spki(&spki_der(&key)?));
+        if actual != expected_ext_id {
+            return Err("Decrypted key does not belong to this extension id".to_string());
+        }
+        Ok(())
+    })();
+    if let Err(e) = checked {
         der.zeroize();
-        return Err("Decrypted data is not a valid RSA private key".to_string());
+        return Err(e);
     }
     crx_store_insert(der)
 }
@@ -663,7 +677,7 @@ pub fn unlock_crx_with_password(
     let aad = format!("{CRX_PASSWORD_AAD_PREFIX}{ext_id}");
     let result = crate::aes_gcm_decrypt(&derived, iv, ciphertext, aad.as_bytes());
     derived.zeroize();
-    store_decrypted_der(result?)
+    store_decrypted_der(result?, ext_id)
 }
 
 /// Unlock a passkey-protected CRX key into `CRX_KEY_STORE`; returns a handle.
@@ -683,7 +697,7 @@ pub fn unlock_crx_with_prf(
     let aad = format!("{CRX_PASSKEY_AAD_PREFIX}{ext_id}");
     let result = crate::aes_gcm_decrypt(&derived, iv, ciphertext, aad.as_bytes());
     derived.zeroize();
-    store_decrypted_der(result?)
+    store_decrypted_der(result?, ext_id)
 }
 
 /// Sign a packed extension ZIP into a CRX3 `.crx` using an unlocked handle.
@@ -798,11 +812,27 @@ mod crx_tests {
     fn pkcs8_round_trips_through_der() {
         let key = generate_rsa2048().unwrap();
         let der = private_key_der(&key).unwrap();
-        let handle = store_decrypted_der(der.to_vec()).unwrap();
+        let ext_id = extension_id(&crx_id_from_spki(&spki_der(&key).unwrap()));
+        let handle = store_decrypted_der(der.to_vec(), &ext_id).unwrap();
         let reloaded = crx_store_get(handle).unwrap();
         drop_crx_key(handle).unwrap();
         // Same key -> same extension id.
         assert_eq!(spki_der(&key).unwrap(), spki_der(&reloaded).unwrap());
+    }
+
+    #[test]
+    fn unlock_rejects_key_that_does_not_match_extension_id() {
+        // AAD strings are public, so an attacker can seal THEIR key under a
+        // victim's extension id; the identity check at store time must
+        // refuse it (a valid decrypt is not enough).
+        let key_a = generate_rsa2048().unwrap();
+        let key_b = generate_rsa2048().unwrap();
+        let ext_id_a = extension_id(&crx_id_from_spki(&spki_der(&key_a).unwrap()));
+        let der_b = private_key_der(&key_b).unwrap();
+
+        let result = store_decrypted_der(der_b.to_vec(), &ext_id_a);
+        assert!(result.is_err(), "foreign key under ext id A must be refused");
+        assert!(result.unwrap_err().contains("does not belong"));
     }
 
     /// Assemble a raw CRX3 file from an already-encoded header and archive.

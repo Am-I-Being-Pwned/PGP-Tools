@@ -3,12 +3,16 @@ import { toast } from "sonner";
 
 import { Button } from "@amibeingpwned/ui/button";
 
+import type { CrxProtectionInput } from "../../lib/crx/operations";
+import type { CrxSigningKeyBlob } from "../../lib/crx/types";
 import type { KeyInfo } from "../../lib/pgp/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
+import { importCrxKey } from "../../lib/crx/operations";
 import { importKey } from "../../lib/pgp/key-management";
 import { parseKeys } from "../../lib/pgp/wasm";
 import { importAndProtect } from "../../lib/protection/protect-flow";
+import { INPUT_CLASS } from "../../lib/utils/styles";
 import { Dialog } from "../shared/Dialog";
 import {
   getDefaultProtectionMethod,
@@ -17,6 +21,13 @@ import {
 } from "./ProtectionMethodPicker";
 
 type Step = "paste" | "unlock" | "protect";
+
+/** A raw RSA private key PEM (PKCS#8 or PKCS#1) — a CRX signing key, not
+ *  OpenPGP. Matched only when it is NOT a PGP armored block. */
+const RSA_PEM_RE = /-----BEGIN (?:RSA )?PRIVATE KEY-----/;
+function isRsaPrivatePem(text: string): boolean {
+  return RSA_PEM_RE.test(text) && !text.includes("PGP");
+}
 
 interface ParsedPrivate {
   publicKeyArmored: string;
@@ -34,7 +45,13 @@ interface ImportKeyDialogProps {
   /** When provided (and the dialog opens), prefill the paste step with this
    *  armored key. Cleared on close by the parent. */
   initialArmored?: string | null;
+  /** When true, also accept a raw RSA private key PEM as a CRX signing key. */
+  crxSigningEnabled?: boolean;
+  /** Persist an imported CRX signing key. Required for the CRX path. */
+  onImportCrx?: (blob: CrxSigningKeyBlob) => Promise<void>;
 }
+
+type DetectedType = "public" | "private" | "crx" | null;
 
 export function ImportKeyDialog({
   open,
@@ -43,17 +60,18 @@ export function ImportKeyDialog({
   onImportPublic,
   reusePasskeyCredentialId,
   initialArmored,
+  crxSigningEnabled,
+  onImportCrx,
 }: ImportKeyDialogProps) {
   const [step, setStep] = useState<Step>("paste");
   const [armored, setArmored] = useState("");
+  const [label, setLabel] = useState("");
   const [method, setMethod] = useState(getDefaultProtectionMethod);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [detectedType, setDetectedType] = useState<"public" | "private" | null>(
-    null,
-  );
+  const [detectedType, setDetectedType] = useState<DetectedType>(null);
   const [reusePasskey, setReusePasskey] = useState(true);
   const [sourcePassphrase, setSourcePassphrase] = useState("");
   const [parsed, setParsed] = useState<ParsedPrivate | null>(null);
@@ -61,14 +79,20 @@ export function ImportKeyDialog({
 
   // Apply a prefill when the dialog opens with one. Runs only on the
   // open-edge so user edits inside the dialog aren't clobbered.
+  const detectType = (text: string): DetectedType => {
+    if (crxSigningEnabled && onImportCrx && isRsaPrivatePem(text)) return "crx";
+    if (text.includes("PRIVATE KEY")) return "private";
+    if (text.includes("PUBLIC KEY")) return "public";
+    return null;
+  };
+
   useEffect(() => {
     if (!open || !initialArmored) return;
     setArmored(initialArmored);
-    if (initialArmored.includes("PRIVATE KEY")) setDetectedType("private");
-    else if (initialArmored.includes("PUBLIC KEY")) setDetectedType("public");
-    else setDetectedType(null);
+    setDetectedType(detectType(initialArmored));
     setStep("paste");
     setError(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialArmored]);
 
   if (!open) return null;
@@ -76,6 +100,7 @@ export function ImportKeyDialog({
   const resetAndClose = () => {
     setStep("paste");
     setArmored("");
+    setLabel("");
     setPassword("");
     setConfirmPassword("");
     setDetectedType(null);
@@ -88,18 +113,18 @@ export function ImportKeyDialog({
 
   const handleArmoredChange = (text: string) => {
     setArmored(text);
-    if (text.includes("PRIVATE KEY")) {
-      setDetectedType("private");
-    } else if (text.includes("PUBLIC KEY")) {
-      setDetectedType("public");
-    } else {
-      setDetectedType(null);
-    }
+    setDetectedType(detectType(text));
   };
 
   const handlePasteNext = async () => {
     setError(null);
     if (!armored.trim()) return;
+    // A raw RSA PEM is a CRX signing key: no PGP parse, straight to the
+    // protection step (the label was entered alongside the paste box).
+    if (detectedType === "crx") {
+      setStep("protect");
+      return;
+    }
     if (detectedType === "public" || !armored.includes("PRIVATE KEY")) {
       void handleImportPublic();
       return;
@@ -226,6 +251,42 @@ export function ImportKeyDialog({
     }
   };
 
+  const handleImportCrx = async () => {
+    setError(null);
+    if (method === "password") {
+      const pwError = validatePassword(password, confirmPassword);
+      if (pwError) {
+        setError(pwError);
+        return;
+      }
+    }
+    if (!onImportCrx) return;
+
+    setImporting(true);
+    try {
+      const protection: CrxProtectionInput =
+        method === "password"
+          ? { method: "password", password }
+          : {
+              method: "passkey",
+              reusePasskeyCredentialId: reusePasskey
+                ? reusePasskeyCredentialId
+                : undefined,
+            };
+      const blob = await importCrxKey(
+        armored.trim(),
+        protection,
+        label.trim() || undefined,
+      );
+      await onImportCrx(blob);
+      resetAndClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Import failed");
+    } finally {
+      setImporting(false);
+    }
+  };
+
   return (
     <Dialog open={open} onClose={resetAndClose} title="Import Key">
       {step === "paste" && (
@@ -240,7 +301,7 @@ export function ImportKeyDialog({
           <input
             ref={fileInputRef}
             type="file"
-            accept=".asc,.gpg,.pub,.key,.pgp,.txt"
+            accept=".asc,.gpg,.pub,.key,.pgp,.txt,.pem"
             className="hidden"
             onChange={async (e) => {
               const file = e.target.files?.[0];
@@ -256,11 +317,34 @@ export function ImportKeyDialog({
             Browse for key file
           </Button>
 
-          {detectedType && (
-            <p className="text-muted-foreground text-xs">
-              Detected:{" "}
-              <span className="font-medium capitalize">{detectedType}</span> key
-            </p>
+          {detectedType === "crx" ? (
+            <>
+              <p className="text-muted-foreground text-xs">
+                Detected: <span className="font-medium">RSA signing key</span>{" "}
+                for a Chrome extension (.crx).
+              </p>
+              <div>
+                <label className="text-muted-foreground mb-1 block text-xs">
+                  Label{" "}
+                  <span className="text-muted-foreground/60">optional</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. My Extension"
+                  value={label}
+                  onChange={(e) => setLabel(e.target.value)}
+                  className={INPUT_CLASS}
+                />
+              </div>
+            </>
+          ) : (
+            detectedType && (
+              <p className="text-muted-foreground text-xs">
+                Detected:{" "}
+                <span className="font-medium capitalize">{detectedType}</span>{" "}
+                key
+              </p>
+            )
           )}
 
           {error && (
@@ -366,10 +450,19 @@ export function ImportKeyDialog({
           confirmPassword={confirmPassword}
           onConfirmPasswordChange={setConfirmPassword}
           error={error}
-          onSubmit={handleImportPrivate}
+          onSubmit={
+            detectedType === "crx" ? handleImportCrx : handleImportPrivate
+          }
           onBack={() => {
-            setStep(parsed?.secretEncrypted ? "unlock" : "paste");
-            if (!parsed?.secretEncrypted) setParsed(null);
+            // The CRX path has no unlock step; PGP returns to unlock only
+            // when the source key was passphrase-protected.
+            setStep(
+              detectedType !== "crx" && parsed?.secretEncrypted
+                ? "unlock"
+                : "paste",
+            );
+            if (detectedType !== "crx" && !parsed?.secretEncrypted)
+              setParsed(null);
             setError(null);
           }}
           submitting={importing}

@@ -111,6 +111,14 @@ export async function saveCrxViaPrompt(
   }
 }
 
+/** Map an interrupted download to a user-facing result: only a genuine
+ *  user cancel (USER_CANCELED / USER_SHUTDOWN) is "cancelled"; disk-full /
+ *  file-blocked / AV interruptions surface as "blocked" so the UI offers
+ *  the drag-out fallback instead of acting like the user changed their mind. */
+function interruptResult(reason: string | undefined): SaveResult {
+  return reason?.startsWith("USER_") ? "cancelled" : "blocked";
+}
+
 /** Resolve once the download reaches a terminal state. */
 function waitForDownload(
   downloads: typeof chrome.downloads,
@@ -124,7 +132,8 @@ function waitForDownload(
     const onChanged = (delta: chrome.downloads.DownloadDelta) => {
       if (delta.id !== id) return;
       if (delta.state?.current === "complete") settle("saved");
-      else if (delta.state?.current === "interrupted") settle("cancelled");
+      else if (delta.state?.current === "interrupted")
+        settle(interruptResult(delta.error?.current));
     };
     downloads.onChanged.addListener(onChanged);
     // If it already reached a decision before we attached the listener.
@@ -132,7 +141,8 @@ function waitForDownload(
       if (items.length === 0) return;
       const item = items[0];
       if (item.state === "complete") settle("saved");
-      else if (item.state === "interrupted") settle("cancelled");
+      else if (item.state === "interrupted")
+        settle(interruptResult(item.error));
     });
   });
 }

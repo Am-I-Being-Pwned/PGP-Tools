@@ -119,16 +119,17 @@ export function WorkspaceView({
   const canCrxSign = !!crxSigningEnabled && (crxKeys?.length ?? 0) > 0;
   const singleCrxFile =
     s.files.length === 1 && /\.crx$/i.test(s.files[0].name);
-  // CRX signs a packed extension: only offer it for a .zip (or multiple
-  // files we'll zip), never a random dropped file.
-  const zipLikeSignInput =
-    s.mode === "sign" &&
-    (s.files.length > 1 ||
-      (s.files.length === 1 && /\.zip$/i.test(s.files[0].name)));
-  const showCrxSign = canCrxSign && zipLikeSignInput && !s.operationDone;
-  // A dropped .crx: verifying its signature is the only sensible action, so
-  // it becomes the primary button (no confusing encrypt/sign button).
-  const showCrxVerify = !!crxSigningEnabled && singleCrxFile;
+  // CRX signs a packed extension: offer it only for a single .zip that
+  // actually contains a manifest.json (verified async in state), never for
+  // arbitrary files. PGP signing stays available via the "Sign as" toggle.
+  const crxSignAvailable =
+    canCrxSign && s.mode === "sign" && s.isExtensionZip && !s.operationDone;
+  const showCrxSign = crxSignAvailable && s.signKind === "crx";
+  // A dropped .crx in verify mode: CRX signature verification replaces the
+  // (useless there) PGP verify. Other modes keep their normal actions — a
+  // .crx can still be encrypted or PGP-signed like any other file.
+  const showCrxVerify =
+    !!crxSigningEnabled && s.mode === "verify" && singleCrxFile;
   // A completed CRX sign is the only op that yields a single `.crx` file
   // result; it gets the Save button + drag chip instead of the usual download.
   const crxResult =
@@ -248,6 +249,30 @@ export function WorkspaceView({
             emptyAction={onNavigateToKeys}
             emptyActionLabel="Add a contact"
           />
+        )}
+
+        {/* An extension zip can carry two signature kinds; let the user pick
+            (defaults to CRX, the overwhelmingly likely intent) instead of
+            hijacking the PGP sign flow. */}
+        {crxSignAvailable && (
+          <div className="flex gap-2">
+            <Button
+              variant={s.signKind === "crx" ? "default" : "outline"}
+              size="sm"
+              className="flex-1"
+              onClick={() => s.setSignKind("crx")}
+            >
+              Chrome extension (.crx)
+            </Button>
+            <Button
+              variant={s.signKind === "pgp" ? "default" : "outline"}
+              size="sm"
+              className="flex-1"
+              onClick={() => s.setSignKind("pgp")}
+            >
+              PGP signature
+            </Button>
+          </div>
         )}
 
         {needsPrivateKey && !showCrxSign && (

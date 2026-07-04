@@ -123,7 +123,13 @@ export function KeysView({
               <CrxKeyCard
                 key={blob.extensionId}
                 keyBlob={blob}
-                onDelete={() => void onDeleteCrxKey?.(blob.extensionId)}
+                onDelete={() =>
+                  void onDeleteCrxKey?.(blob.extensionId).catch((e: unknown) =>
+                    toast.error(
+                      e instanceof Error ? e.message : "Failed to delete key",
+                    ),
+                  )
+                }
               />
             ))}
           </div>
@@ -183,6 +189,8 @@ export function KeysView({
         onImportPublic={onAddContact}
         reusePasskeyCredentialId={primaryPasskeyCredentialId}
         initialArmored={importInitialArmored}
+        crxSigningEnabled={crxSigningEnabled}
+        onImportCrx={onAddCrxKey}
       />
     </div>
   );
