@@ -502,6 +502,35 @@ export async function importCrxKeyWithPrf(
 
 /**
  * @secret-handling
+ *   in:  an already-unlocked CRX_KEY_STORE handle; password bytes
+ *   out: encrypted blob bytes (NOT secret); public-only metadata
+ *   contract: caller MUST `.fill(0)` `password` in a `finally`.
+ *
+ * Re-seals the key behind `handle` under `password`, entirely in WASM (the
+ * plaintext RSA key never crosses into JS). Used by the bulk export to
+ * re-wrap keys under one portable export passphrase.
+ */
+export async function reprotectCrxKeyWithPassword(
+  handle: number,
+  password: Uint8Array,
+  memoryKib: number,
+  iterations: number,
+  parallelism: number,
+): Promise<CrxProtectFlowResult> {
+  const wasm = await loadWasm();
+  return unpackCrxProtectResult(
+    wasm.reprotectCrxKeyWithPassword(
+      handle,
+      password,
+      memoryKib,
+      iterations,
+      parallelism,
+    ),
+  );
+}
+
+/**
+ * @secret-handling
  *   in:  password bytes; ciphertext/iv/salt/extensionId are not secret
  *   out: opaque u32 CRX_KEY_STORE handle (NOT secret)
  *   contract: caller MUST `.fill(0)` `password` in a `finally`.
