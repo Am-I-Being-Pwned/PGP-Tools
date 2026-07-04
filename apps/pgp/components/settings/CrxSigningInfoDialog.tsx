@@ -72,10 +72,14 @@ export function CrxSigningInfoDialog({
             </li>
             <li>
               To cut a release, drop your packed extension{" "}
-              <span className="text-foreground">.zip</span> into the Workspace.
-              PGP Tools unlocks the key, signs it into a{" "}
-              <span className="text-foreground">.crx</span>, and hands it back to
-              download. Upload that .crx to the Web Store.
+              <span className="text-foreground">.zip</span> into the Workspace
+              and sign it. Use{" "}
+              <span className="text-foreground">Save</span> to write the{" "}
+              <span className="text-foreground">.crx</span> straight to disk
+              with the right name (or drag the chip to your desktop), then
+              upload it to the Web Store dashboard. Chrome intercepts plain{" "}
+              <span className="text-foreground">.crx</span> downloads and tries
+              to install them, which is why we save rather than download.
             </li>
             <li>
               To check any extension package, drop a{" "}
@@ -84,6 +88,13 @@ export function CrxSigningInfoDialog({
               claims to be.
             </li>
           </ol>
+          <p className="text-muted-foreground text-xs leading-relaxed">
+            This <span className="text-foreground">.crx</span> is an upload
+            artifact for the Web Store dashboard, not a directly-installable
+            package - Chrome only installs store-signed extensions. To run your
+            extension locally, use{" "}
+            <span className="text-foreground">Load unpacked</span> on the folder.
+          </p>
         </section>
 
         <section className="space-y-1.5">

@@ -535,9 +535,8 @@ export function useWorkspaceOperations({
   // ── CRX (Chrome extension) signing ────────────────────────────────
 
   function crxOutputName(): string {
-    const base = s.files[0]?.name;
-    if (!base) return "extension.crx";
-    return `${base.replace(/\.(zip|crx)$/i, "")}.crx`;
+    const base = s.files[0]?.name?.replace(/\.(zip|crx)$/i, "") ?? "extension";
+    return `${base}.crx`;
   }
 
   function pickCrxKey(): CrxSigningKeyBlob | null {
@@ -565,9 +564,11 @@ export function useWorkspaceOperations({
       );
       const name = crxOutputName();
       s.setFileResults([{ name, data: crx }]);
-      s.setStatusText(`Signed → ${name}`);
+      s.setStatusText(`Signed - hit Save to write ${name}, or drag it out.`);
       s.setOperationDone(true);
-      maybeAutoDownload(true, { results: [{ name, data: crx }] });
+      // No auto-download: a signed CRX must be saved via the "Save As" path
+      // (see saveCrxViaPrompt) or dragged out, otherwise Chrome intercepts the
+      // download and tries to install it. The Save button drives that.
       return true;
     } catch (e) {
       if (password) {

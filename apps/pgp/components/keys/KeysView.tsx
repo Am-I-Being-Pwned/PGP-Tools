@@ -1,17 +1,15 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { TrashIcon } from "lucide-react";
-
 import { Button } from "@amibeingpwned/ui/button";
 
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
-import { publicKeyDerToPem } from "../../lib/crx/types";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 import { ContactCard } from "./ContactCard";
 import { ContactDropZone } from "./ContactDropZone";
+import { CrxKeyCard } from "./CrxKeyCard";
 import { GenerateKeyDialog } from "./GenerateKeyDialog";
 import { ImportKeyDialog } from "./ImportKeyDialog";
 import { KeyCard } from "./KeyCard";
@@ -94,11 +92,14 @@ export function KeysView({
     await navigator.clipboard.writeText(blob.publicKeyArmored);
   };
 
+  // CRX keys join the same list, gated on the feature being enabled.
+  const shownCrxKeys = crxSigningEnabled && crxKeys ? crxKeys : [];
+
   return (
     <div className="space-y-4">
       <div>
         <h2 className="mb-2 text-sm font-semibold">My Keys</h2>
-        {myKeys.length === 0 ? (
+        {myKeys.length === 0 && shownCrxKeys.length === 0 ? (
           <p className="text-muted-foreground text-sm">
             No keys yet. Generate or import a key to get started.
           </p>
@@ -118,53 +119,16 @@ export function KeysView({
                 advancedMode={advancedMode}
               />
             ))}
+            {shownCrxKeys.map((blob) => (
+              <CrxKeyCard
+                key={blob.extensionId}
+                keyBlob={blob}
+                onDelete={() => void onDeleteCrxKey?.(blob.extensionId)}
+              />
+            ))}
           </div>
         )}
       </div>
-
-      {crxSigningEnabled && crxKeys && crxKeys.length > 0 && (
-        <div>
-          <h2 className="mb-2 text-sm font-semibold">CRX signing keys</h2>
-          <div className="space-y-2">
-            {crxKeys.map((blob) => (
-              <div
-                key={blob.extensionId}
-                className="border-border flex items-center gap-2 rounded-lg border p-3"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">
-                    {blob.label ?? blob.extensionId}
-                  </p>
-                  <p className="text-muted-foreground truncate font-mono text-xs">
-                    {blob.extensionId}
-                  </p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    void navigator.clipboard.writeText(
-                      publicKeyDerToPem(blob.publicKeyDerB64),
-                    );
-                    toast.success("Public key copied");
-                  }}
-                >
-                  Copy public key
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-muted-foreground hover:text-destructive"
-                  aria-label="Delete CRX signing key"
-                  onClick={() => void onDeleteCrxKey?.(blob.extensionId)}
-                >
-                  <TrashIcon className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       <div className="flex gap-2">
         <Button

@@ -18,6 +18,7 @@ import {
   generateCrxKeyWithPrf,
   importCrxKeyWithPassword,
   importCrxKeyWithPrf,
+  reprotectCrxKeyWithPassword,
   signCrxWithHandle,
   unlockCrxWithPassword,
   unlockCrxWithPrf,
@@ -218,6 +219,55 @@ export async function importCrxKey(
 }
 
 // ── public API: unlock + sign + verify ───────────────────────────────
+
+/**
+ * Unlock a CRX key into WASM and return its handle (password prompt or
+ * passkey ceremony). The caller OWNS the handle and MUST {@link closeCrxKey}
+ * it. Exposed for the bulk-export flow, which unlocks up-front to validate,
+ * then re-seals under the export passphrase. For a one-shot sign, prefer
+ * {@link signZipWithCrxKey}, which manages the handle itself.
+ */
+export async function openCrxKey(
+  blob: CrxSigningKeyBlob,
+  password?: string,
+): Promise<number> {
+  return unlockCrxKey(blob, password);
+}
+
+/** Drop (and zeroize) a handle returned by {@link openCrxKey}. */
+export async function closeCrxKey(handle: number): Promise<void> {
+  await dropCrxKey(handle);
+}
+
+/**
+ * Re-seal an already-unlocked CRX key (by handle) under `password`, returning
+ * a fresh portable `CrxSigningKeyBlob`. The plaintext key never leaves WASM.
+ * Used by "Export All Keys" to re-wrap every CRX key under the single export
+ * passphrase, so a passkey-protected key (bound to one authenticator) becomes
+ * a password-protected blob that restores on any device.
+ */
+export async function resealCrxKeyUnderPassword(
+  handle: number,
+  password: string,
+  label?: string,
+): Promise<CrxSigningKeyBlob> {
+  if (!password || password.length < 8) {
+    throw new Error("Password must be at least 8 characters");
+  }
+  const passwordBytes = new TextEncoder().encode(password);
+  try {
+    const result = await reprotectCrxKeyWithPassword(
+      handle,
+      passwordBytes,
+      ARGON2_MEMORY_KIB,
+      ARGON2_ITERATIONS,
+      ARGON2_PARALLELISM,
+    );
+    return buildPasswordCrxBlob(result, label);
+  } finally {
+    passwordBytes.fill(0);
+  }
+}
 
 async function unlockCrxKey(
   blob: CrxSigningKeyBlob,
