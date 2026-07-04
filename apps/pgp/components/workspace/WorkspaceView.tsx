@@ -1,10 +1,5 @@
-import { useRef } from "react";
-import {
-  ArrowLeftIcon,
-  DownloadIcon,
-  GripVerticalIcon,
-  RotateCcwIcon,
-} from "lucide-react";
+import { useEffect, useRef } from "react";
+import { ArrowLeftIcon, DownloadIcon, RotateCcwIcon } from "lucide-react";
 
 import { Button } from "@amibeingpwned/ui/button";
 import { Checkbox } from "@amibeingpwned/ui/checkbox";
@@ -131,7 +126,8 @@ export function WorkspaceView({
   const showCrxVerify =
     !!crxSigningEnabled && s.mode === "verify" && singleCrxFile;
   // A completed CRX sign is the only op that yields a single `.crx` file
-  // result; it gets the Save button + drag chip instead of the usual download.
+  // result; it auto-saves via the Save-As prompt (with a manual Save button
+  // as a fallback) instead of the usual anchor download.
   const crxResult =
     s.operationDone &&
     s.fileResults.length === 1 &&
@@ -153,14 +149,29 @@ export function WorkspaceView({
     } else if (result === "cancelled") {
       s.setStatusText(null);
     } else {
-      // Permission refused / unsupported / write blocked. The drag chip needs
-      // no permission and never touches the download pipeline, so point there
-      // rather than anchor-downloading a `.crx` (which Chrome would install).
-      s.setStatusText(
-        "Couldn't save automatically - drag the file below to Finder instead.",
-      );
+      // Permission refused / unsupported / write blocked. The Save button
+      // stays on screen so the user can retry from a fresh user gesture (the
+      // first-time `downloads` permission grant needs one).
+      s.setStatusText("Couldn't save automatically - hit Save to try again.");
     }
   };
+
+  // Auto-save the moment a signed CRX is ready, so the user doesn't have to
+  // hit Save. Keyed on the result's identity via a ref so it fires exactly
+  // once per sign (not on every re-render). If the first-ever save needs the
+  // `downloads` permission it may require a user gesture the async sign has
+  // already spent -- the Save button below covers that.
+  const autoSavedRef = useRef<Uint8Array | null>(null);
+  useEffect(() => {
+    if (!crxResult) {
+      autoSavedRef.current = null;
+      return;
+    }
+    if (autoSavedRef.current === crxResult.data) return;
+    autoSavedRef.current = crxResult.data;
+    void handleSaveCrx();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [crxResult]);
 
   // After decrypting to readable text, give the plaintext the whole panel with
   // a Back button, instead of cramming it into a small fixed-height preview.
@@ -402,29 +413,23 @@ export function WorkspaceView({
         {!s.needsPassword && (
           <div className="space-y-2">
             {crxResult ? (
-              <>
-                <div className="flex gap-2">
-                  <Button
-                    className="flex-1"
-                    onClick={() => void handleSaveCrx()}
-                  >
-                    <span className="flex items-center gap-2">
-                      <DownloadIcon className="h-4 w-4" />
-                      Save {crxFilename}
-                    </span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={s.resetAll}
-                    title="Clear input and output"
-                    aria-label="Clear input and output"
-                  >
-                    <RotateCcwIcon className="h-4 w-4" />
-                  </Button>
-                </div>
-                <CrxDragChip data={crxResult.data} filename={crxFilename} />
-              </>
+              <div className="flex gap-2">
+                <Button className="flex-1" onClick={() => void handleSaveCrx()}>
+                  <span className="flex items-center gap-2">
+                    <DownloadIcon className="h-4 w-4" />
+                    Save {crxFilename}
+                  </span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={s.resetAll}
+                  title="Clear input and output"
+                  aria-label="Clear input and output"
+                >
+                  <RotateCcwIcon className="h-4 w-4" />
+                </Button>
+              </div>
             ) : showCrxVerify ? (
               <Button
                 className="w-full"
@@ -490,62 +495,6 @@ export function WorkspaceView({
           </div>
         )}
       </div>
-    </div>
-  );
-}
-
-/**
- * A draggable chip carrying the signed CRX under its real `.crx` name.
- * `DownloadURL` makes this a drag-to-filesystem: dropping on Finder / the
- * desktop writes the file directly, so Chrome's `.crx` download interceptor
- * (which routes every `.crx` download, "Keep" included, to the extension
- * installer) never fires. This is the only in-browser way to land a
- * correctly-named `.crx` without a rename. Note a web page like the CWS
- * uploader cannot receive this drag - it must be dropped on the OS, then
- * picked with the uploader's file browser.
- */
-function CrxDragChip({
-  data,
-  filename,
-}: {
-  data: Uint8Array;
-  filename: string;
-}) {
-  const urlRef = useRef<string | null>(null);
-  return (
-    <div
-      draggable
-      onDragStart={(e) => {
-        const blob = new Blob([data.slice()], {
-          type: "application/octet-stream",
-        });
-        const url = URL.createObjectURL(blob);
-        urlRef.current = url;
-        // DownloadURL = drag-to-filesystem. We deliberately do NOT attach a
-        // synthetic File item: a web page (like the CWS uploader) can't
-        // receive a JS-made file on drop, so it would only highlight and
-        // then fail. This makes the chip an honest drag-to-desktop.
-        e.dataTransfer.effectAllowed = "copy";
-        e.dataTransfer.setData(
-          "DownloadURL",
-          `application/octet-stream:${filename}:${url}`,
-        );
-      }}
-      onDragEnd={() => {
-        const u = urlRef.current;
-        if (u) {
-          urlRef.current = null;
-          setTimeout(() => URL.revokeObjectURL(u), 2000);
-        }
-      }}
-      className="border-primary/50 bg-primary/5 hover:bg-primary/10 flex cursor-grab items-center gap-2 rounded-md border border-dashed p-3 text-sm transition-colors active:cursor-grabbing"
-    >
-      <GripVerticalIcon className="text-muted-foreground h-4 w-4 shrink-0" />
-      <span className="min-w-0 flex-1">
-        Drag <span className="font-medium">{filename}</span> to Finder or your
-        desktop - correct name, no rename. Then upload it with the Web Store&rsquo;s
-        file browser.
-      </span>
     </div>
   );
 }
