@@ -376,6 +376,203 @@ export async function decryptDraft(packed: Uint8Array): Promise<Uint8Array> {
   return wasm.decryptDraft(packed);
 }
 
+// ── CRX (Chrome extension) signing keys ──────────────────────────────
+// A raw RSA-2048 signing key lives in the WASM-side CRX_KEY_STORE (a
+// sibling of KEY_STORE), unlocked via the same Argon2id / PRF paths. The
+// private key crosses to JS only as its public half. See
+// `apps/pgp/gpg-wasm/src/crx.rs` and `apps/pgp/lib/crx/`.
+
+/** Public-only metadata describing a freshly-protected CRX signing key. */
+export interface CrxProtectMeta {
+  /** 32-char `a`..`p` extension id derived from the public key. */
+  extensionId: string;
+  /** SubjectPublicKeyInfo DER, base64 (for the CWS dashboard / PEM). */
+  publicKeyDerB64: string;
+  /** Signing algorithm, currently always `rsa2048`. */
+  algorithm: string;
+}
+
+/** Metadata + raw protection blob, matching {@link ProtectFlowResult}.
+ *  password blob: [16 salt][12 iv][ct]; prf blob: [12 iv][ct]. */
+export interface CrxProtectFlowResult {
+  meta: CrxProtectMeta;
+  blob: Uint8Array;
+}
+
+function unpackCrxProtectResult(packed: Uint8Array): CrxProtectFlowResult {
+  const view = new DataView(
+    packed.buffer,
+    packed.byteOffset,
+    packed.byteLength,
+  );
+  const jsonLen = view.getUint32(0, true);
+  const json = new TextDecoder().decode(packed.slice(4, 4 + jsonLen));
+  const meta = JSON.parse(json) as CrxProtectMeta;
+  return { meta, blob: packed.slice(4 + jsonLen) };
+}
+
+/**
+ * @secret-handling
+ *   in:  password bytes
+ *   out: encrypted blob bytes (NOT secret); public-only metadata
+ *   contract: caller MUST `.fill(0)` `password` in a `finally`.
+ *
+ * Wasm-side: generates a fresh RSA-2048 key, encrypts its PKCS#8 DER
+ * under Argon2id+AES-GCM, drops the key at function exit. CRX_KEY_STORE
+ * is NOT touched.
+ */
+export async function generateCrxKeyWithPassword(
+  password: Uint8Array,
+  memoryKib: number,
+  iterations: number,
+  parallelism: number,
+): Promise<CrxProtectFlowResult> {
+  const wasm = await loadWasm();
+  return unpackCrxProtectResult(
+    wasm.generateCrxKeyWithPassword(
+      password,
+      memoryKib,
+      iterations,
+      parallelism,
+    ),
+  );
+}
+
+/**
+ * @secret-handling
+ *   in:  prfOutput, storedSecret bytes
+ *   out: encrypted blob bytes (NOT secret); public-only metadata
+ *   contract: caller MUST `.fill(0)` `prfOutput`. `storedSecret` is
+ *             persisted as HKDF salt; not a secret in itself.
+ */
+export async function generateCrxKeyWithPrf(
+  prfOutput: Uint8Array,
+  storedSecret: Uint8Array,
+): Promise<CrxProtectFlowResult> {
+  const wasm = await loadWasm();
+  return unpackCrxProtectResult(
+    wasm.generateCrxKeyWithPrf(prfOutput, storedSecret),
+  );
+}
+
+/**
+ * @secret-handling
+ *   in:  pem (an existing RSA private key, PKCS#8 or PKCS#1 — SECRET),
+ *        password bytes
+ *   out: encrypted blob bytes (NOT secret); public-only metadata
+ *   contract: caller MUST `.fill(0)` `password`. The `pem` string is an
+ *             immutable JS String and cannot be zeroized — accept it only
+ *             from a user paste/file that is dropped immediately after.
+ */
+export async function importCrxKeyWithPassword(
+  pem: string,
+  password: Uint8Array,
+  memoryKib: number,
+  iterations: number,
+  parallelism: number,
+): Promise<CrxProtectFlowResult> {
+  const wasm = await loadWasm();
+  return unpackCrxProtectResult(
+    wasm.importCrxKeyWithPassword(
+      pem,
+      password,
+      memoryKib,
+      iterations,
+      parallelism,
+    ),
+  );
+}
+
+/**
+ * @secret-handling
+ *   in:  pem (SECRET, see above), prfOutput, storedSecret bytes
+ *   out: encrypted blob bytes (NOT secret); public-only metadata
+ *   contract: caller MUST `.fill(0)` `prfOutput`.
+ */
+export async function importCrxKeyWithPrf(
+  pem: string,
+  prfOutput: Uint8Array,
+  storedSecret: Uint8Array,
+): Promise<CrxProtectFlowResult> {
+  const wasm = await loadWasm();
+  return unpackCrxProtectResult(
+    wasm.importCrxKeyWithPrf(pem, prfOutput, storedSecret),
+  );
+}
+
+/**
+ * @secret-handling
+ *   in:  password bytes; ciphertext/iv/salt/extensionId are not secret
+ *   out: opaque u32 CRX_KEY_STORE handle (NOT secret)
+ *   contract: caller MUST `.fill(0)` `password` in a `finally`.
+ */
+export async function unlockCrxWithPassword(
+  ciphertext: Uint8Array,
+  iv: Uint8Array,
+  salt: Uint8Array,
+  extensionId: string,
+  password: Uint8Array,
+  memoryKib: number,
+  iterations: number,
+  parallelism: number,
+): Promise<number> {
+  const wasm = await loadWasm();
+  return wasm.unlockCrxWithPassword(
+    ciphertext,
+    iv,
+    salt,
+    extensionId,
+    password,
+    memoryKib,
+    iterations,
+    parallelism,
+  );
+}
+
+/**
+ * @secret-handling
+ *   in:  prfOutput bytes; storedSecret/ciphertext/iv/extensionId not secret
+ *   out: opaque u32 CRX_KEY_STORE handle (NOT secret)
+ *   contract: caller MUST `.fill(0)` `prfOutput`.
+ */
+export async function unlockCrxWithPrf(
+  ciphertext: Uint8Array,
+  iv: Uint8Array,
+  prfOutput: Uint8Array,
+  storedSecret: Uint8Array,
+  extensionId: string,
+): Promise<number> {
+  const wasm = await loadWasm();
+  return wasm.unlockCrxWithPrf(
+    ciphertext,
+    iv,
+    prfOutput,
+    storedSecret,
+    extensionId,
+  );
+}
+
+/**
+ * @secret-handling
+ *   in:  zip bytes (the packed extension — NOT secret); opaque handle
+ *   out: the signed `.crx` bytes (NOT secret)
+ *   contract: none for the buffers; the signing key stays in WASM behind
+ *             `handle`. Call {@link dropCrxKey} when done.
+ */
+export async function signCrxWithHandle(
+  zipBytes: Uint8Array,
+  keyHandle: number,
+): Promise<Uint8Array> {
+  const wasm = await loadWasm();
+  return new Uint8Array(wasm.signCrxWithHandle(zipBytes, keyHandle));
+}
+
+/** Drop (and zeroize) an unlocked CRX key handle from CRX_KEY_STORE. */
+export async function dropCrxKey(handle: number): Promise<void> {
+  const wasm = await loadWasm();
+  wasm.dropCrxKey(handle);
+}
+
 // ── destructive export (last resort) ─────────────────────────────────
 
 /**

@@ -3,6 +3,7 @@ import { ArrowLeftIcon, DownloadIcon, RotateCcwIcon } from "lucide-react";
 import { Button } from "@amibeingpwned/ui/button";
 import { Checkbox } from "@amibeingpwned/ui/checkbox";
 
+import type { CrxSigningKeyBlob } from "../../lib/crx/types";
 import type { WorkspaceAction } from "../../lib/messages";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
@@ -18,6 +19,8 @@ import { WorkspaceResults } from "./WorkspaceResults";
 interface WorkspaceViewProps {
   myKeys: ProtectedKeyBlob[];
   contacts: PublicContactKey[];
+  crxSigningEnabled?: boolean;
+  crxKeys?: CrxSigningKeyBlob[];
   getKeyHandle: (keyId: string) => number | null;
   onUnlockWithPassword: (
     blob: ProtectedKeyBlob,
@@ -45,6 +48,8 @@ interface WorkspaceViewProps {
 export function WorkspaceView({
   myKeys,
   contacts,
+  crxSigningEnabled,
+  crxKeys,
   getKeyHandle,
   onUnlockWithPassword,
   onUnlockWithPasskey,
@@ -67,6 +72,8 @@ export function WorkspaceView({
 
   const s = useWorkspaceState({
     myKeys,
+    crxKeys,
+    crxSigningEnabled,
     pendingAction,
     onClearPending,
     allPublicKeys,
@@ -81,6 +88,8 @@ export function WorkspaceView({
     s,
     myKeys,
     contacts,
+    crxKeys,
+    crxSigningEnabled,
     allPublicKeys,
     getKeyHandle,
     onUnlockWithPassword,
@@ -93,6 +102,19 @@ export function WorkspaceView({
   const needsRecipient = s.mode === "encrypt";
   const needsPrivateKey = s.mode === "decrypt" || s.mode === "sign";
   const hasInput = s.files.length > 0 || s.input.length > 0;
+  const canCrxSign = !!crxSigningEnabled && (crxKeys?.length ?? 0) > 0;
+  const singleCrxFile =
+    s.files.length === 1 && /\.crx$/i.test(s.files[0].name);
+  // CRX signs a packed extension: only offer it for a .zip (or multiple
+  // files we'll zip), never a random dropped file.
+  const zipLikeSignInput =
+    s.mode === "sign" &&
+    (s.files.length > 1 ||
+      (s.files.length === 1 && /\.zip$/i.test(s.files[0].name)));
+  const showCrxSign = canCrxSign && zipLikeSignInput && !s.operationDone;
+  // A dropped .crx: verifying its signature is the only sensible action, so
+  // it becomes the primary button (no confusing encrypt/sign button).
+  const showCrxVerify = !!crxSigningEnabled && singleCrxFile;
 
   // After decrypting to readable text, give the plaintext the whole panel with
   // a Back button, instead of cramming it into a small fixed-height preview.
@@ -257,11 +279,13 @@ export function WorkspaceView({
             >
               {s.loading
                 ? "..."
-                : s.mode === "decrypt"
-                  ? "Decrypt"
-                  : s.mode === "sign"
-                    ? "Sign"
-                    : "Go"}
+                : s.pendingCrxSign
+                  ? "Sign"
+                  : s.mode === "decrypt"
+                    ? "Decrypt"
+                    : s.mode === "sign"
+                      ? "Sign"
+                      : "Go"}
             </Button>
           </div>
         )}
@@ -282,43 +306,100 @@ export function WorkspaceView({
         />
 
         {!s.needsPassword && (
-          <div className="flex gap-2">
-            <Button
-              className="flex-1 capitalize"
-              onClick={
-                s.operationDone
-                  ? s.mode === "verify"
-                    ? s.resetAll
-                    : () => ops.triggerDownload()
-                  : ops.execute
-              }
-              disabled={s.loading || !hasInput}
-            >
-              {s.loading ? (
-                "Processing..."
-              ) : s.operationDone ? (
-                s.mode === "verify" ? (
-                  "Reset"
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <DownloadIcon className="h-4 w-4" />
-                    Download
-                  </span>
-                )
-              ) : (
-                s.mode
-              )}
-            </Button>
-            {s.operationDone && s.mode !== "verify" && (
+          <div className="space-y-2">
+            {showCrxSign && crxKeys && crxKeys.length > 1 && (
+              <div>
+                <label
+                  htmlFor="crx-signing-key"
+                  className="text-muted-foreground mb-1 block text-xs font-medium"
+                >
+                  CRX signing key
+                </label>
+                <select
+                  id="crx-signing-key"
+                  value={s.selectedCrxKeyId ?? ""}
+                  onChange={(e) => s.setSelectedCrxKeyId(e.target.value)}
+                  className="border-border bg-background focus:ring-ring w-full rounded-md border px-2 py-1.5 text-sm focus:ring-2 focus:outline-none"
+                >
+                  {crxKeys.map((k) => (
+                    <option key={k.extensionId} value={k.extensionId}>
+                      {k.label ?? k.extensionId}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {showCrxVerify ? (
               <Button
-                variant="outline"
-                size="icon"
-                onClick={s.resetAll}
-                title="Clear input and output"
-                aria-label="Clear input and output"
+                className="w-full"
+                variant={s.operationDone ? "outline" : "default"}
+                onClick={s.operationDone ? s.resetAll : ops.verifyCrxInput}
+                disabled={s.loading}
               >
-                <RotateCcwIcon className="h-4 w-4" />
+                {s.loading
+                  ? "Verifying..."
+                  : s.operationDone
+                    ? "Reset"
+                    : "Verify signature"}
               </Button>
+            ) : showCrxSign ? (
+              <div className="flex gap-2">
+                <Button
+                  className="flex-1"
+                  onClick={ops.execute}
+                  disabled={s.loading}
+                >
+                  {s.loading ? "Processing..." : "Sign (PGP)"}
+                </Button>
+                <Button
+                  className="flex-1"
+                  onClick={ops.executeCrxSign}
+                  disabled={s.loading}
+                >
+                  {s.loading ? "Processing..." : "Sign for Web Store"}
+                </Button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <Button
+                  className="flex-1 capitalize"
+                  onClick={
+                    s.operationDone
+                      ? s.mode === "verify"
+                        ? s.resetAll
+                        : () => ops.triggerDownload()
+                      : ops.execute
+                  }
+                  disabled={s.loading || !hasInput}
+                >
+                  {s.loading ? (
+                    "Processing..."
+                  ) : s.operationDone ? (
+                    s.mode === "verify" ? (
+                      "Reset"
+                    ) : (
+                      <span className="flex items-center gap-2">
+                        <DownloadIcon className="h-4 w-4" />
+                        Download
+                      </span>
+                    )
+                  ) : (
+                    s.mode
+                  )}
+                </Button>
+                {s.operationDone && s.mode !== "verify" && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={s.resetAll}
+                    title="Clear input and output"
+                    aria-label="Clear input and output"
+                  >
+                    <RotateCcwIcon className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             )}
           </div>
         )}

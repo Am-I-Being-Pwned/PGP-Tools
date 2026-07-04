@@ -4,8 +4,10 @@ import { toast } from "sonner";
 
 import { Button } from "@amibeingpwned/ui/button";
 
+import type { CrxSigningKeyBlob } from "../../lib/crx/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
+import { serializeCrxKeyBlocks } from "../../lib/crx/backup";
 import {
   encryptKeyForExportWithHandle,
   getKeyArmored,
@@ -21,6 +23,7 @@ interface ExportAllKeysDialogProps {
   onClose: () => void;
   myKeys: ProtectedKeyBlob[];
   contacts: PublicContactKey[];
+  crxKeys?: CrxSigningKeyBlob[];
   isUnlocked: (keyId: string) => boolean;
   getKeyHandle: (keyId: string) => number | null;
   onUnlockWithPassword: (
@@ -55,6 +58,7 @@ export function ExportAllKeysDialog({
   onClose,
   myKeys,
   contacts,
+  crxKeys,
   isUnlocked,
   getKeyHandle,
   onUnlockWithPassword,
@@ -74,6 +78,8 @@ export function ExportAllKeysDialog({
   const lockedKeys = myKeys.filter((k) => !isUnlocked(k.keyId));
   const unlockedKeys = myKeys.filter((k) => isUnlocked(k.keyId));
   const allUnlocked = lockedKeys.length === 0;
+  // CRX keys ride along already-encrypted -- no unlock/passphrase needed.
+  const crxCount = crxKeys?.length ?? 0;
   // Gate the passphrase UI on what will actually be written -- if the
   // user skips every locked key, this becomes a public-only export.
   const hasPrivate = unlockedKeys.length > 0;
@@ -147,6 +153,10 @@ export function ExportAllKeysDialog({
     }
     for (const contact of contacts) {
       parts.push(contact.armoredPublicKey.trim());
+    }
+    // CRX keys are self-protected blobs; include them verbatim (no unlock).
+    for (const crx of crxKeys ?? []) {
+      parts.push(serializeCrxKeyBlocks([crx]).trim());
     }
     downloadText(parts.join("\n\n") + "\n", backupFileName());
     return parts.length;
@@ -309,6 +319,13 @@ export function ExportAllKeysDialog({
             <span className="font-mono">PGP PUBLIC KEY BLOCK</span>s.
           </p>
 
+          {crxCount > 0 && (
+            <p className="text-muted-foreground text-xs">
+              Plus {crxCount} CRX signing key{crxCount === 1 ? "" : "s"}, kept
+              under their existing protection.
+            </p>
+          )}
+
           {lockedKeys.length > 0 && (
             <p className="rounded border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-400">
               {lockedKeys.length} key{lockedKeys.length === 1 ? "" : "s"} still
@@ -388,7 +405,7 @@ export function ExportAllKeysDialog({
                 </Button>
               </div>
             </>
-          ) : contacts.length > 0 ? (
+          ) : contacts.length > 0 || crxCount > 0 ? (
             <>
               {error && <p className="text-destructive text-xs">{error}</p>}
               <Button
@@ -396,7 +413,7 @@ export function ExportAllKeysDialog({
                 onClick={() => void handleEncryptedExport()}
                 disabled={exporting}
               >
-                {exporting ? "Exporting..." : "Export public keys"}
+                {exporting ? "Exporting..." : "Export"}
               </Button>
             </>
           ) : (

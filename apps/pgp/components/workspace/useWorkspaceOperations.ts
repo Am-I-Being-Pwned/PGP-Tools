@@ -1,10 +1,12 @@
 import { useEffect } from "react";
 
+import type { CrxSigningKeyBlob } from "../../lib/crx/types";
 import type { EncryptInput, SignatureStatus } from "../../lib/pgp/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { FileResult } from "../../lib/utils/download";
 import type { WorkspaceState } from "./useWorkspaceState";
+import { signZipWithCrxKey, verifyCrxFile } from "../../lib/crx/operations";
 import * as pgpOps from "../../lib/pgp/operations";
 import {
   downloadBinary,
@@ -22,6 +24,8 @@ interface WorkspaceOperationsOptions {
   s: WorkspaceState;
   myKeys: ProtectedKeyBlob[];
   contacts: PublicContactKey[];
+  crxKeys?: CrxSigningKeyBlob[];
+  crxSigningEnabled?: boolean;
   allPublicKeys: (ProtectedKeyBlob | PublicContactKey)[];
   getKeyHandle: (keyId: string) => number | null;
   onUnlockWithPassword: (
@@ -46,6 +50,7 @@ export function useWorkspaceOperations({
   s,
   myKeys,
   contacts,
+  crxKeys = [],
   allPublicKeys,
   getKeyHandle,
   onUnlockWithPassword,
@@ -527,7 +532,107 @@ export function useWorkspaceOperations({
     }
   }
 
+  // ── CRX (Chrome extension) signing ────────────────────────────────
+
+  function crxOutputName(): string {
+    const base = s.files[0]?.name;
+    if (!base) return "extension.crx";
+    return `${base.replace(/\.(zip|crx)$/i, "")}.crx`;
+  }
+
+  function pickCrxKey(): CrxSigningKeyBlob | null {
+    if (crxKeys.length === 0) return null;
+    return (
+      crxKeys.find((k) => k.extensionId === s.selectedCrxKeyId) ?? crxKeys[0]
+    );
+  }
+
+  async function doCrxSign(
+    crxKey: CrxSigningKeyBlob,
+    password?: string,
+  ): Promise<boolean> {
+    s.setLoading(true);
+    s.setError(null);
+    s.setOutput("");
+    s.setBinaryOutput(undefined);
+    s.setFileResults([]);
+    try {
+      const zip = await resolveFileBytes();
+      const crx = await signZipWithCrxKey(
+        crxKey,
+        zip,
+        password ? { password } : {},
+      );
+      const name = crxOutputName();
+      s.setFileResults([{ name, data: crx }]);
+      s.setStatusText(`Signed → ${name}`);
+      s.setOperationDone(true);
+      maybeAutoDownload(true, { results: [{ name, data: crx }] });
+      return true;
+    } catch (e) {
+      if (password) {
+        s.setPasswordError("Wrong password or signing failed.");
+      } else {
+        s.setError(e instanceof Error ? e.message : String(e));
+      }
+      return false;
+    } finally {
+      s.setLoading(false);
+      onOperationComplete?.();
+    }
+  }
+
+  async function executeCrxSign() {
+    if (s.mode !== "sign" || s.files.length === 0) return;
+    const crxKey = pickCrxKey();
+    if (!crxKey) {
+      s.setError("No CRX signing key available.");
+      return;
+    }
+    s.setError(null);
+    if (crxKey.protection.method === "password") {
+      s.setPendingCrxSign(true);
+      s.setNeedsPassword(true);
+      s.setPasswordInput("");
+      s.setPasswordError(null);
+      return;
+    }
+    await doCrxSign(crxKey);
+  }
+
+  async function verifyCrxInput() {
+    if (s.files.length === 0) return;
+    s.setError(null);
+    s.setOperationDone(false);
+    s.setLoading(true);
+    try {
+      const bytes = new Uint8Array(await s.files[0].arrayBuffer());
+      const r = await verifyCrxFile(bytes);
+      if (r.valid) {
+        s.setOperationDone(true);
+        s.setSignatureTone("success");
+        s.setStatusText(`Valid CRX - extension ${r.extensionId}`);
+      } else {
+        s.setError(r.error ?? "Invalid CRX signature");
+      }
+    } finally {
+      s.setLoading(false);
+    }
+  }
+
   const handlePasswordSubmit = async () => {
+    if (s.pendingCrxSign) {
+      const crxKey = pickCrxKey();
+      if (!crxKey) return;
+      const ok = await doCrxSign(crxKey, s.passwordInput);
+      if (ok) {
+        s.setPendingCrxSign(false);
+        s.setNeedsPassword(false);
+        s.setPasswordInput("");
+      }
+      return;
+    }
+
     const keyId = s.selectedKeyId ?? myKeys[0]?.keyId;
     if (!keyId) return;
     const blob = myKeys.find((k) => k.keyId === keyId);
@@ -554,6 +659,8 @@ export function useWorkspaceOperations({
 
   return {
     execute,
+    executeCrxSign,
+    verifyCrxInput,
     handlePasswordSubmit,
     triggerDownload,
     selectPrivateKey,

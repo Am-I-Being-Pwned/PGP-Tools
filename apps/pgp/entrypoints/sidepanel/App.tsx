@@ -15,6 +15,7 @@ import { OnboardingFlow } from "../../components/shared/OnboardingFlow";
 import { SettingsView } from "../../components/shared/SettingsView";
 import { WorkspaceView } from "../../components/workspace/WorkspaceView";
 import { useContacts } from "../../hooks/useContacts";
+import { useCrxKeys } from "../../hooks/useCrxKeys";
 import { useKeyring } from "../../hooks/useKeyring";
 import { useKeySession } from "../../hooks/useKeySession";
 import { usePendingOperation } from "../../hooks/usePendingOperation";
@@ -40,6 +41,7 @@ export default function App() {
   const [autoDownloadFiles, setAutoDownloadFiles] = useState(false);
   const [autoDownloadText, setAutoDownloadText] = useState(false);
   const [lockOnTabAway, setLockOnTabAway] = useState(false);
+  const [crxSigningEnabled, setCrxSigningEnabled] = useState(false);
   const [onboardingComplete, setOnboardingComplete] = useState<boolean | null>(
     null,
   );
@@ -71,6 +73,7 @@ export default function App() {
     neverCacheKeys,
   });
   const contacts = useContacts();
+  const crxKeys = useCrxKeys();
   const { pending, clearPending } = usePendingOperation();
 
   // True when the most recent master-lock was system-initiated (idle
@@ -246,6 +249,7 @@ export default function App() {
       setAutoDownloadFiles(prefs.autoDownloadFiles);
       setAutoDownloadText(prefs.autoDownloadText);
       setLockOnTabAway(prefs.lockOnTabAway);
+      setCrxSigningEnabled(prefs.crxSigningEnabled);
 
       const mp = await getMasterProtection();
       setMasterProtection(mp);
@@ -303,6 +307,7 @@ export default function App() {
               setMasterProtectionLoaded(true);
               void keyring.refresh();
               void contacts.refresh();
+              void crxKeys.refresh();
             }}
             addKey={keyring.add}
             cacheKey={!neverCacheKeys}
@@ -329,6 +334,7 @@ export default function App() {
               resetMasterLockTimer();
               void keyring.refresh();
               void contacts.refresh();
+              void crxKeys.refresh();
             }}
           />
         </main>
@@ -363,6 +369,8 @@ export default function App() {
           <WorkspaceView
             myKeys={keyring.keys}
             contacts={contacts.contacts}
+            crxSigningEnabled={crxSigningEnabled}
+            crxKeys={crxKeys.keys}
             getKeyHandle={session.getKeyHandle}
             onUnlockWithPassword={session.unlockWithPassword}
             onUnlockWithPasskey={session.unlockWithPasskey}
@@ -395,6 +403,10 @@ export default function App() {
           <KeysView
             myKeys={keyring.keys}
             contacts={contacts.contacts}
+            crxSigningEnabled={crxSigningEnabled}
+            crxKeys={crxKeys.keys}
+            onAddCrxKey={crxKeys.add}
+            onDeleteCrxKey={crxKeys.remove}
             contactsLocked={false}
             isUnlocked={session.isUnlocked}
             onUnlockWithPassword={session.unlockWithPassword}
@@ -429,6 +441,7 @@ export default function App() {
               setStorageLocation(loc);
               void keyring.refresh();
               void contacts.refresh();
+              void crxKeys.refresh();
             }}
             autoLockEnabled={autoLockEnabled}
             onAutoLockEnabledChange={setAutoLockEnabled}
@@ -442,6 +455,8 @@ export default function App() {
             onAutoDownloadTextChange={setAutoDownloadText}
             lockOnTabAway={lockOnTabAway}
             onLockOnTabAwayChange={setLockOnTabAway}
+            crxSigningEnabled={crxSigningEnabled}
+            onCrxSigningEnabledChange={setCrxSigningEnabled}
             myKeys={keyring.keys}
             contacts={contacts.contacts}
             isUnlocked={session.isUnlocked}
@@ -450,6 +465,8 @@ export default function App() {
             onUnlockWithPasskey={session.unlockWithPasskey}
             onAddKey={keyring.add}
             onAddContact={contacts.add}
+            crxKeys={crxKeys.keys}
+            onAddCrxKey={crxKeys.add}
             primaryPasskeyCredentialId={masterPasskeyCredentialId}
           />
         )}

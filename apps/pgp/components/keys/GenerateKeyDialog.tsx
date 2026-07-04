@@ -12,7 +12,10 @@ import {
   SelectValue,
 } from "@amibeingpwned/ui/select";
 
+import type { CrxProtectionInput } from "../../lib/crx/operations";
+import type { CrxSigningKeyBlob } from "../../lib/crx/types";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
+import { generateCrxKey } from "../../lib/crx/operations";
 import { generateAndProtect } from "../../lib/protection/protect-flow";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 import { Dialog } from "../shared/Dialog";
@@ -24,6 +27,7 @@ import {
 
 type Step = "identity" | "expiry" | "protection" | "generating";
 type KeyAlgorithm = "ecc" | "rsa";
+type KeyType = "pgp" | "crx";
 type ExpiryOption = "never" | "1y" | "2y" | "3y" | "custom";
 
 const DAY_MS = 86_400_000;
@@ -55,6 +59,10 @@ interface GenerateKeyDialogProps {
   reusePasskeyCredentialId?: string;
   /** If true, cache the decrypted key in WASM and return the handle via onKeyGenerated. */
   cacheKey?: boolean;
+  /** When true, offer generating a CRX (Chrome extension) signing key. */
+  crxSigningEnabled?: boolean;
+  /** Persist a newly generated CRX signing key. Required for the CRX path. */
+  addCrxKey?: (blob: CrxSigningKeyBlob) => Promise<void>;
 }
 
 export function GenerateKeyDialog({
@@ -64,8 +72,12 @@ export function GenerateKeyDialog({
   addKey,
   reusePasskeyCredentialId,
   cacheKey,
+  crxSigningEnabled,
+  addCrxKey,
 }: GenerateKeyDialogProps) {
   const [step, setStep] = useState<Step>("identity");
+  const [keyType, setKeyType] = useState<KeyType>("pgp");
+  const [label, setLabel] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [comment, setComment] = useState("");
@@ -102,6 +114,8 @@ export function GenerateKeyDialog({
 
   const resetAndClose = () => {
     setStep("identity");
+    setKeyType("pgp");
+    setLabel("");
     setName("");
     setEmail("");
     setComment("");
@@ -121,6 +135,14 @@ export function GenerateKeyDialog({
 
   const handleNext = () => {
     setError(null);
+    if (keyType === "crx") {
+      if (canSkipProtection) {
+        void handleGenerate();
+      } else {
+        setStep("protection");
+      }
+      return;
+    }
     if (!name.trim()) {
       setError("Name is required.");
       return;
@@ -172,6 +194,22 @@ export function GenerateKeyDialog({
     setStep("generating");
 
     try {
+      if (keyType === "crx") {
+        const protection: CrxProtectionInput =
+          method === "password"
+            ? { method: "password", password }
+            : {
+                method: "passkey",
+                reusePasskeyCredentialId: reusePasskey
+                  ? reusePasskeyCredentialId
+                  : undefined,
+              };
+        const blob = await generateCrxKey(protection, label.trim() || undefined);
+        await addCrxKey?.(blob);
+        resetAndClose();
+        return;
+      }
+
       const expiresIn = expiryToSeconds(expiryOption, customExpiry);
       const { blob, handle } = await generateAndProtect(
         {
@@ -204,7 +242,12 @@ export function GenerateKeyDialog({
   };
 
   return (
-    <Dialog open={open} onClose={resetAndClose} title="Generate New Key">
+    <Dialog
+      open={open}
+      onClose={resetAndClose}
+      title="Generate New Key"
+      className="mx-4 max-h-[85vh] max-w-sm overflow-y-auto"
+    >
       {step === "identity" && (
         <div className="space-y-3">
           <div className="flex items-start gap-3 pb-1">
@@ -212,11 +255,49 @@ export function GenerateKeyDialog({
               <KeyRoundIcon className="text-primary h-5 w-5" />
             </div>
             <p className="text-muted-foreground text-xs leading-relaxed">
-              Create a new OpenPGP keypair for encrypting, decrypting, and
-              signing messages.
+              {keyType === "crx"
+                ? "Create a new RSA-2048 signing key for packaging a Chrome extension (.crx)."
+                : "Create a new OpenPGP keypair for encrypting, decrypting, and signing messages."}
             </p>
           </div>
 
+          {crxSigningEnabled && (
+            <div className="flex gap-2">
+              <Button
+                variant={keyType === "pgp" ? "default" : "outline"}
+                size="sm"
+                className="flex-1"
+                onClick={() => setKeyType("pgp")}
+              >
+                Messaging key (PGP)
+              </Button>
+              <Button
+                variant={keyType === "crx" ? "default" : "outline"}
+                size="sm"
+                className="flex-1"
+                onClick={() => setKeyType("crx")}
+              >
+                Chrome extension (CRX)
+              </Button>
+            </div>
+          )}
+
+          {keyType === "crx" ? (
+            <div>
+              <label className="text-muted-foreground mb-1 block text-xs">
+                Label{" "}
+                <span className="text-muted-foreground/60">optional</span>
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. My Extension"
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+                className={INPUT_CLASS}
+              />
+            </div>
+          ) : (
+          <>
           <div className="space-y-2">
             <div>
               <label className="text-muted-foreground mb-1 block text-xs">
@@ -332,6 +413,8 @@ export function GenerateKeyDialog({
               </div>
             </div>
           )}
+          </>
+          )}
 
           {error && (
             <p className="text-destructive text-xs" role="alert">
@@ -438,7 +521,7 @@ export function GenerateKeyDialog({
               ? "Follow your browser's passkey prompt..."
               : "Generating key..."}
           </p>
-          {keyAlgorithm === "rsa" && (
+          {(keyAlgorithm === "rsa" || keyType === "crx") && (
             <p className="text-muted-foreground/60 mt-1 text-xs">
               RSA keys take a moment to generate
             </p>
