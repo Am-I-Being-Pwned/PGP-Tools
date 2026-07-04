@@ -28,6 +28,32 @@ export async function ping(): Promise<string> {
   return wasm.ping();
 }
 
+// ── CRX verification (no key material; pure public check) ────────────
+
+/** Result of verifying a CRX3 (`.crx`) file. */
+export interface CrxVerifyResult {
+  /** True iff a `sha256_with_rsa` proof verifies AND its key names the
+   *  extension (its SHA-256 matches the signed crx_id). */
+  valid: boolean;
+  /** 32-char `a`..`p` extension id the CRX claims to be, when parseable
+   *  (present even for a tampered-but-well-formed CRX). */
+  extensionId?: string;
+  /** Signature algorithm found, e.g. `sha256_with_rsa`. */
+  algorithm?: string;
+  /** Human-readable reason when `valid` is false. */
+  error?: string;
+}
+
+/**
+ * Verify a CRX3 (`.crx`) file. Carries no secret material: it only reads
+ * the file's own embedded public key + signature. Malformed input yields
+ * `{ valid: false, error }` rather than throwing.
+ */
+export async function verifyCrx(crx: Uint8Array): Promise<CrxVerifyResult> {
+  const wasm = await loadWasm();
+  return JSON.parse(wasm.verifyCrx(crx)) as CrxVerifyResult;
+}
+
 /** Parse an armored key for metadata only. Accepts public OR private
  *  armor; the secret material (if present) is parsed by Sequoia into
  *  its `Protected` containers and dropped at the end of the call. */

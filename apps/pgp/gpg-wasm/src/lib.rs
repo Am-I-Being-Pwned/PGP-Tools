@@ -1684,5 +1684,10 @@ pub fn verify_canary_and_init_session(
 
 // =====================================================================
 
+/// CRX (Chrome extension) signing & verification. Reuses this module's
+/// vault/unlock/zeroize machinery for an RSA-2048 signing key; see the
+/// module header for why CRX3 is not OpenPGP.
+mod crx;
+
 #[cfg(test)]
 mod tests;

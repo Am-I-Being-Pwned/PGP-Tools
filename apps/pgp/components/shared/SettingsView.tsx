@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Button } from "@amibeingpwned/ui/button";
 import { Switch } from "@amibeingpwned/ui/switch";
 
+import type { CrxSigningKeyBlob } from "../../lib/crx/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type {
@@ -12,6 +13,7 @@ import type {
 import { STORAGE_CONTACTS, STORAGE_KEYRING } from "../../lib/constants";
 import { invalidateLocationCache, migrate } from "../../lib/storage/engine";
 import { savePreferences } from "../../lib/storage/preferences";
+import { CrxSigningInfoDialog } from "../settings/CrxSigningInfoDialog";
 import { ExportAllKeysDialog } from "../settings/ExportAllKeysDialog";
 import { ImportAllKeysDialog } from "../settings/ImportAllKeysDialog";
 import { StorageLocationPicker } from "./StorageLocationPicker";
@@ -40,6 +42,8 @@ interface SettingsViewProps {
   onAutoDownloadTextChange: (v: boolean) => void;
   lockOnTabAway: boolean;
   onLockOnTabAwayChange: (v: boolean) => void;
+  crxSigningEnabled: boolean;
+  onCrxSigningEnabledChange: (v: boolean) => void;
   // Backup (export/import all keys)
   myKeys: ProtectedKeyBlob[];
   contacts: PublicContactKey[];
@@ -54,6 +58,8 @@ interface SettingsViewProps {
   ) => Promise<boolean | "cancelled">;
   onAddKey: (blob: ProtectedKeyBlob) => Promise<void>;
   onAddContact: (contact: PublicContactKey) => Promise<void>;
+  crxKeys?: CrxSigningKeyBlob[];
+  onAddCrxKey?: (blob: CrxSigningKeyBlob) => Promise<void>;
   primaryPasskeyCredentialId?: string;
 }
 
@@ -74,6 +80,8 @@ export function SettingsView({
   onAutoDownloadTextChange,
   lockOnTabAway,
   onLockOnTabAwayChange,
+  crxSigningEnabled,
+  onCrxSigningEnabledChange,
   myKeys,
   contacts,
   isUnlocked,
@@ -82,12 +90,15 @@ export function SettingsView({
   onUnlockWithPasskey,
   onAddKey,
   onAddContact,
+  crxKeys,
+  onAddCrxKey,
   primaryPasskeyCredentialId,
 }: SettingsViewProps) {
   const [migrating, setMigrating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showExportAll, setShowExportAll] = useState(false);
   const [showImportAll, setShowImportAll] = useState(false);
+  const [showCrxInfo, setShowCrxInfo] = useState(false);
 
   const toggleAdvanced = () => {
     const next = !advancedMode;
@@ -252,6 +263,35 @@ export function SettingsView({
       </div>
 
       <div>
+        <h2 className="mb-2 text-sm font-semibold">CRX signing</h2>
+        <label className="border-border flex items-center justify-between rounded-md border p-3">
+          <div>
+            <span className="text-sm">Enable CRX signing</span>
+            <p className="text-muted-foreground text-xs">
+              Sign Chrome extension packages (.crx) for the Web Store&rsquo;s
+              Verified CRX Uploads, using a key kept in your vault instead of
+              your build pipeline.
+            </p>
+          </div>
+          <Switch
+            checked={crxSigningEnabled}
+            onCheckedChange={(v) => {
+              onCrxSigningEnabledChange(v);
+              void savePreferences({ crxSigningEnabled: v });
+            }}
+          />
+        </label>
+        <Button
+          variant="outline"
+          size="sm"
+          className="mt-2 w-full"
+          onClick={() => setShowCrxInfo(true)}
+        >
+          How CRX signing works
+        </Button>
+      </div>
+
+      <div>
         <h2 className="mb-2 text-sm font-semibold">Backup</h2>
         <div className="border-border rounded-md border p-3">
           <p className="text-muted-foreground text-xs">
@@ -337,6 +377,7 @@ export function SettingsView({
         onClose={() => setShowExportAll(false)}
         myKeys={myKeys}
         contacts={contacts}
+        crxKeys={crxKeys}
         isUnlocked={isUnlocked}
         getKeyHandle={getKeyHandle}
         onUnlockWithPassword={onUnlockWithPassword}
@@ -350,7 +391,13 @@ export function SettingsView({
         contacts={contacts}
         onAddKey={onAddKey}
         onAddContact={onAddContact}
+        onAddCrxKey={onAddCrxKey}
         reusePasskeyCredentialId={primaryPasskeyCredentialId}
+      />
+
+      <CrxSigningInfoDialog
+        open={showCrxInfo}
+        onClose={() => setShowCrxInfo(false)}
       />
     </div>
   );

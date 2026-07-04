@@ -2,6 +2,9 @@ export const STORAGE_KEYRING = "pgp_keyring";
 export const STORAGE_CONTACTS = "pgp_public_contacts";
 export const STORAGE_PREFERENCES = "pgp_preferences";
 export const STORAGE_MASTER_PROTECTION = "pgp_master_protection";
+/** RSA-2048 CRX (Chrome extension) signing keys. Same double-envelope
+ *  encrypted store as the keyring — see `lib/crx/storage.ts`. */
+export const STORAGE_CRX_KEYS = "pgp_crx_keys";
 
 /** Single context-menu item. The action is decided at click time by
  *  inspecting the selection text. Keeping just one item avoids

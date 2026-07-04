@@ -3,9 +3,11 @@ import { toast } from "sonner";
 
 import { Button } from "@amibeingpwned/ui/button";
 
+import type { CrxSigningKeyBlob } from "../../lib/crx/types";
 import type { KeyInfo } from "../../lib/pgp/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
+import { parseCrxKeyBlocks } from "../../lib/crx/backup";
 import { splitArmoredKeyBlocks } from "../../lib/armor-blocks";
 import { importPublicKeyBlocks } from "../../lib/import-public-keys";
 import { importKey } from "../../lib/pgp/key-management";
@@ -38,6 +40,8 @@ interface ImportAllKeysDialogProps {
   contacts: PublicContactKey[];
   onAddKey: (blob: ProtectedKeyBlob) => Promise<void>;
   onAddContact: (contact: PublicContactKey) => Promise<void>;
+  /** Restore CRX signing keys found in the backup (self-protected blobs). */
+  onAddCrxKey?: (blob: CrxSigningKeyBlob) => Promise<void>;
   /** Pass the primary key's passkey credential ID to allow reuse. */
   reusePasskeyCredentialId?: string;
 }
@@ -57,6 +61,7 @@ export function ImportAllKeysDialog({
   contacts,
   onAddKey,
   onAddContact,
+  onAddCrxKey,
   reusePasskeyCredentialId,
 }: ImportAllKeysDialogProps) {
   const [step, setStep] = useState<Step>("paste");
@@ -112,14 +117,25 @@ export function ImportAllKeysDialog({
 
   const handlePasteNext = async () => {
     setError(null);
+    const crxBlobs = onAddCrxKey ? parseCrxKeyBlocks(text) : [];
     const { publicKeys, privateKeys } = splitArmoredKeyBlocks(text);
-    if (publicKeys.length === 0 && privateKeys.length === 0) {
-      setError("No PGP keys found in the input.");
+    if (
+      publicKeys.length === 0 &&
+      privateKeys.length === 0 &&
+      crxBlobs.length === 0
+    ) {
+      setError("No keys found in the input.");
       return;
     }
 
     setImporting(true);
     try {
+      if (crxBlobs.length > 0 && onAddCrxKey) {
+        for (const blob of crxBlobs) await onAddCrxKey(blob);
+        toast.success(
+          `Imported ${crxBlobs.length} CRX signing key${crxBlobs.length > 1 ? "s" : ""}`,
+        );
+      }
       const existing = new Set(myKeys.map((k) => k.keyId));
       const privates: ParsedPrivate[] = [];
       let skipped = 0;

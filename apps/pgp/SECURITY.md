@@ -75,6 +75,8 @@ Both are user-initiated destructive-export paths.
 | --- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
 | 1   | `apps/pgp/SECURITY.md` (this file)         | The contract                                                                                                                 |
 | 2   | `apps/pgp/gpg-wasm/src/lib.rs`             | The WASM crate. The actual sandbox.                                                                                          |
+| 2a  | `apps/pgp/gpg-wasm/src/crx.rs`             | RSA-2048 CRX (Chrome extension) signer/verifier. Separate `CRX_KEY_STORE`; see §10.                                          |
+| 5a  | `apps/pgp/lib/crx/`                        | JS-side CRX key storage, sign/verify coordinator, and backup (de)serialization.                                             |
 | 3   | `apps/pgp/lib/pgp/wasm.ts`                 | JS-side barrel.                                                                                                              |
 | 4   | `apps/pgp/lib/pgp/wasm-public.ts`          | Wasm wrappers that don't carry secrets.                                                                                      |
 | 5   | `apps/pgp/lib/pgp/wasm-secrets.ts`         | Wasm wrappers that do, each with a `@secret-handling` block.                                                                 |
@@ -111,6 +113,10 @@ it at function exit. They never insert into KEY_STORE.
 Cached generation (`cache: true`) chains an `unlockWith*` against the
 new blob using the credentials the user just provided, so the
 KEY_STORE entry still comes from an unlock path.
+
+CRX signing keys (§10) live in a **separate** `CRX_KEY_STORE` and never
+touch `KEY_STORE`, so this invariant is unaffected — `insert_key` still
+has exactly one call site.
 
 ---
 
@@ -313,3 +319,38 @@ grep -nE 'fn (encrypt|protect|generate|unlock|verify_canary|encrypt_canary|init_
 #    logs. Anything else is a regression.
 grep -rn 'console\.' apps/pgp --include='*.ts' --include='*.tsx'
 ```
+
+---
+
+## 10. CRX (Chrome extension) signing keys
+
+Optional, off by default (`crxSigningEnabled` preference). Lets a user
+sign a packed extension (`.zip`) into a CRX3 `.crx` for the Chrome Web
+Store's Verified CRX Uploads, using a key kept in the vault rather than
+in CI. All of it lives in `apps/pgp/gpg-wasm/src/crx.rs`.
+
+- **Not OpenPGP.** CRX3 is signed with a raw RSA-2048 (PKCS#1-v1.5-SHA256)
+  key, not an OpenPGP signature. Sequoia is not involved; the RustCrypto
+  `rsa` primitive is, plus a hand-rolled protobuf encoder for the tiny
+  CRX3 header.
+- **Key isolation.** The RSA private key (PKCS#8 DER) lives in a separate
+  `CRX_KEY_STORE` behind a `u32` handle — `Zeroizing<Vec<u8>>`, zeroized
+  on drop / `dropCrxKey`. It is populated only by `unlockCrxWith*`. This
+  keeps the `KEY_STORE`-only-via-unlock invariant (§4) intact. Only the
+  public half (SPKI DER) and the derived extension id ever cross to JS.
+- **At rest.** Identical scheme to PGP keys: Argon2id (64 MB) or
+  WebAuthn-PRF → AES-256-GCM, AAD-bound via
+  `gpg-tools:crx-{password,passkey}:{extensionId}` (distinct from the PGP
+  prefixes, so blobs can't be cross-substituted).
+- **Verify** (`verifyCrx`) carries no key material and requires a valid
+  signature **and** that the proving key's SHA-256 matches the signed
+  crx_id — a valid signature by an unrelated key cannot spoof an
+  extension id. The parser is panic-free on malformed input.
+- **Backup.** Export/Import All Keys round-trips CRX keys as their
+  already-encrypted blobs in a labelled `PGP TOOLS CRX SIGNING KEY`
+  block (`lib/crx/backup.ts`); the private key stays sealed under its own
+  protection, so no extra unlock or export passphrase is involved.
+- **Posture.** Stronger than a key in CI (which a poisoned dependency or
+  leaked token would expose); weaker than a hardware token, where the key
+  never leaves the chip — here it is briefly reconstructed in the WASM
+  sandbox during signing and zeroized after.

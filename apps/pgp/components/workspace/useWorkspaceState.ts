@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import type { CrxSigningKeyBlob } from "../../lib/crx/types";
 import type { WorkspaceAction } from "../../lib/messages";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { FileResult } from "../../lib/utils/download";
 import type { WorkspaceDraft } from "../../lib/workspace-draft";
 import { getPreferences } from "../../lib/storage/preferences";
+import { zipHasManifest } from "../../lib/utils/zip";
 import { decryptWorkspaceDraft } from "../../lib/workspace-draft";
 
 type Mode = WorkspaceAction;
@@ -33,6 +35,12 @@ export interface WorkspaceState {
   setSelectedRecipientId: (s: string | null) => void;
   selectedKeyId: string | null;
   setSelectedKeyId: (s: string | null) => void;
+  selectedCrxKeyId: string | null;
+  setSelectedCrxKeyId: (s: string | null) => void;
+  pendingCrxSign: boolean;
+  setPendingCrxSign: (b: boolean) => void;
+  crxKeys: CrxSigningKeyBlob[];
+  crxSigningEnabled: boolean;
   error: string | null;
   setError: (s: string | null) => void;
   loading: boolean;
@@ -63,6 +71,8 @@ export interface WorkspaceState {
 
 export function useWorkspaceState(opts: {
   myKeys: ProtectedKeyBlob[];
+  crxKeys?: CrxSigningKeyBlob[];
+  crxSigningEnabled?: boolean;
   pendingAction?: { action: WorkspaceAction; text: string } | null;
   onClearPending?: () => void;
   allPublicKeys?: { keyId: string }[];
@@ -93,6 +103,8 @@ export function useWorkspaceState(opts: {
     null,
   );
   const [selectedKeyId, setSelectedKeyId] = useState<string | null>(null);
+  const [selectedCrxKeyId, setSelectedCrxKeyId] = useState<string | null>(null);
+  const [pendingCrxSign, setPendingCrxSign] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
@@ -114,6 +126,7 @@ export function useWorkspaceState(opts: {
     setVerifiedSigner(null);
     setSignatureTone("success");
     setNeedsPassword(false);
+    setPendingCrxSign(false);
   }, []);
 
   const resetAll = useCallback(() => {
@@ -189,6 +202,13 @@ export function useWorkspaceState(opts: {
     }
   }, [opts.myKeys, selectedKeyId]);
 
+  const crxKeys = opts.crxKeys;
+  useEffect(() => {
+    if (crxKeys && crxKeys.length > 0 && !selectedCrxKeyId) {
+      setSelectedCrxKeyId(crxKeys[0].extensionId);
+    }
+  }, [crxKeys, selectedCrxKeyId]);
+
   const allRecipientKeys = opts.allPublicKeys;
   useEffect(() => {
     if (
@@ -258,8 +278,24 @@ export function useWorkspaceState(opts: {
         return current;
       });
       resetOutput();
+
+      // A dropped .zip that is a packed Chrome extension (has a
+      // manifest.json) auto-switches to sign mode so the "Sign for Web
+      // Store" action is right there -- but only when CRX signing is on
+      // AND the user actually has a CRX signing key.
+      if (
+        opts.crxSigningEnabled &&
+        (opts.crxKeys?.length ?? 0) > 0 &&
+        newFiles.length === 1 &&
+        /\.zip$/i.test(newFiles[0].name)
+      ) {
+        const zip = newFiles[0];
+        void zip.arrayBuffer().then((buf) => {
+          if (zipHasManifest(new Uint8Array(buf))) setMode("sign");
+        });
+      }
     },
-    [resetOutput],
+    [resetOutput, opts.crxSigningEnabled, opts.crxKeys],
   );
 
   const removeFile = useCallback((index: number) => {
@@ -295,6 +331,12 @@ export function useWorkspaceState(opts: {
     setSelectedRecipientId,
     selectedKeyId,
     setSelectedKeyId,
+    selectedCrxKeyId,
+    setSelectedCrxKeyId,
+    pendingCrxSign,
+    setPendingCrxSign,
+    crxKeys: opts.crxKeys ?? [],
+    crxSigningEnabled: opts.crxSigningEnabled ?? false,
     error,
     setError,
     loading,
