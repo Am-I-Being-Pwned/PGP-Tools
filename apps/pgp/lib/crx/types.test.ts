@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import type { CrxSigningKeyBlob } from "./types";
-import { isCrxSigningKeyBlob, publicKeyDerToPem } from "./types";
+import {
+  crxBlobIdentityMatches,
+  extensionIdFromPublicKeyDer,
+  isCrxSigningKeyBlob,
+  publicKeyDerToPem,
+} from "./types";
 
 function validBlob(): CrxSigningKeyBlob {
   return {
@@ -129,5 +134,41 @@ describe("publicKeyDerToPem", () => {
       .replace(`\n${END}\n`, "")
       .replace(/\n/g, "");
     expect(recovered).toBe(body);
+  });
+});
+
+describe("extensionIdFromPublicKeyDer", () => {
+  // Vector computed independently (node:crypto): SHA-256 over the raw DER
+  // bytes, first 16 bytes, nibbles mapped a..p.
+  const DER_B64 = "dGVzdC1zcGtpLWRlci1ieXRlcy1mb3ItdmVjdG9y";
+  const EXPECTED = "dkokjnapmngocbgnkkafenmclkmnihio";
+
+  it("derives Chrome's a..p extension id from the SPKI DER", async () => {
+    await expect(extensionIdFromPublicKeyDer(DER_B64)).resolves.toBe(EXPECTED);
+  });
+
+  it("always yields 32 chars in a..p", async () => {
+    const id = await extensionIdFromPublicKeyDer("TUlJQg==");
+    expect(id).toHaveLength(32);
+    expect([...id].every((c) => c >= "a" && c <= "p")).toBe(true);
+  });
+});
+
+describe("crxBlobIdentityMatches", () => {
+  const DER_B64 = "dGVzdC1zcGtpLWRlci1ieXRlcy1mb3ItdmVjdG9y";
+  const MATCHING_ID = "dkokjnapmngocbgnkkafenmclkmnihio";
+
+  it("accepts a blob whose public key hashes to its extension id", async () => {
+    const blob = {
+      ...validBlob(),
+      publicKeyDerB64: DER_B64,
+      extensionId: MATCHING_ID,
+    };
+    await expect(crxBlobIdentityMatches(blob)).resolves.toBe(true);
+  });
+
+  it("rejects a blob whose public key was swapped (id mismatch)", async () => {
+    const blob = { ...validBlob(), publicKeyDerB64: DER_B64 };
+    await expect(crxBlobIdentityMatches(blob)).resolves.toBe(false);
   });
 });

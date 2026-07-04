@@ -1,3 +1,5 @@
+import { fromBase64 } from "../encoding";
+
 /**
  * Wire-format for a stored CRX (Chrome extension) signing key.
  *
@@ -54,6 +56,46 @@ export function isCrxSigningKeyBlob(v: unknown): v is CrxSigningKeyBlob {
     o.protection !== null &&
     typeof (o.protection as Record<string, unknown>).method === "string"
   );
+}
+
+/**
+ * Compute the extension id implied by a SubjectPublicKeyInfo DER (base64):
+ * first 16 bytes of SHA-256 over the DER, each nibble mapped to `a`..`p` —
+ * exactly how Chrome derives an extension's identity and how the WASM side
+ * stamps `extensionId` at generate/import time.
+ *
+ * `publicKeyDerB64` is NOT covered by the blob's AEAD (only `extensionId`
+ * is AAD-bound), so anything accepting a blob from outside — backup import,
+ * storage writes — must check the two agree before trusting the public key.
+ */
+export async function extensionIdFromPublicKeyDer(
+  derB64: string,
+): Promise<string> {
+  const digest = new Uint8Array(
+    await crypto.subtle.digest("SHA-256", fromBase64(derB64)),
+  );
+  let id = "";
+  for (const byte of digest.subarray(0, 16)) {
+    id +=
+      String.fromCharCode(97 + (byte >> 4)) +
+      String.fromCharCode(97 + (byte & 0x0f));
+  }
+  return id;
+}
+
+/** True iff the blob's stored public key actually hashes to its claimed
+ *  extension id. Reject blobs that fail this before storing them. */
+export async function crxBlobIdentityMatches(
+  blob: CrxSigningKeyBlob,
+): Promise<boolean> {
+  try {
+    return (
+      (await extensionIdFromPublicKeyDer(blob.publicKeyDerB64)) ===
+      blob.extensionId
+    );
+  } catch {
+    return false; // unparseable base64 -> not a valid blob
+  }
 }
 
 /** Render a SubjectPublicKeyInfo DER (base64) as a PEM block for pasting

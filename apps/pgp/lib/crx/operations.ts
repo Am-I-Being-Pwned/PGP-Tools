@@ -35,7 +35,7 @@ import {
   generateStoredSecret,
   registerPasskey,
 } from "../protection/webauthn-prf";
-import { addCrxKey, updateCrxLastUsed } from "./storage";
+import { updateCrxLastUsed } from "./storage";
 import type { CrxSigningKeyBlob } from "./types";
 
 export type CrxProtectionInput =
@@ -158,64 +158,60 @@ async function protectWithPasskey(
 
 // ── public API: generate / import ────────────────────────────────────
 
-/** Generate a fresh RSA-2048 CRX signing key, protect it, and store it. */
+/** Generate a fresh RSA-2048 CRX signing key and protect it. Returns the
+ *  blob WITHOUT persisting it -- the caller stores it (e.g. `useCrxKeys.add`,
+ *  which also refreshes the UI). One persist path, no double writes. */
 export async function generateCrxKey(
   protection: CrxProtectionInput,
   label?: string,
 ): Promise<CrxSigningKeyBlob> {
-  const blob =
-    protection.method === "password"
-      ? await protectWithPassword(
-          protection.password,
-          (pw) =>
-            generateCrxKeyWithPassword(
-              pw,
-              ARGON2_MEMORY_KIB,
-              ARGON2_ITERATIONS,
-              ARGON2_PARALLELISM,
-            ),
-          label,
-        )
-      : await protectWithPasskey(
-          protection,
-          (prf, ss) => generateCrxKeyWithPrf(prf, ss),
-          label ?? "CRX signing key",
-          label,
-        );
-  await addCrxKey(blob);
-  return blob;
+  return protection.method === "password"
+    ? await protectWithPassword(
+        protection.password,
+        (pw) =>
+          generateCrxKeyWithPassword(
+            pw,
+            ARGON2_MEMORY_KIB,
+            ARGON2_ITERATIONS,
+            ARGON2_PARALLELISM,
+          ),
+        label,
+      )
+    : await protectWithPasskey(
+        protection,
+        (prf, ss) => generateCrxKeyWithPrf(prf, ss),
+        label ?? "CRX signing key",
+        label,
+      );
 }
 
-/** Import an existing RSA private key (PKCS#8 or PKCS#1 PEM), re-protect
- *  it, and store it. Use this to bring a key already registered with the
- *  Chrome Web Store. */
+/** Import an existing RSA private key (PKCS#8 or PKCS#1 PEM) and re-protect
+ *  it. Use this to bring a key already registered with the Chrome Web Store.
+ *  Returns the blob WITHOUT persisting it -- see {@link generateCrxKey}. */
 export async function importCrxKey(
   pem: string,
   protection: CrxProtectionInput,
   label?: string,
 ): Promise<CrxSigningKeyBlob> {
-  const blob =
-    protection.method === "password"
-      ? await protectWithPassword(
-          protection.password,
-          (pw) =>
-            importCrxKeyWithPassword(
-              pem,
-              pw,
-              ARGON2_MEMORY_KIB,
-              ARGON2_ITERATIONS,
-              ARGON2_PARALLELISM,
-            ),
-          label,
-        )
-      : await protectWithPasskey(
-          protection,
-          (prf, ss) => importCrxKeyWithPrf(pem, prf, ss),
-          label ?? "CRX signing key",
-          label,
-        );
-  await addCrxKey(blob);
-  return blob;
+  return protection.method === "password"
+    ? await protectWithPassword(
+        protection.password,
+        (pw) =>
+          importCrxKeyWithPassword(
+            pem,
+            pw,
+            ARGON2_MEMORY_KIB,
+            ARGON2_ITERATIONS,
+            ARGON2_PARALLELISM,
+          ),
+        label,
+      )
+    : await protectWithPasskey(
+        protection,
+        (prf, ss) => importCrxKeyWithPrf(pem, prf, ss),
+        label ?? "CRX signing key",
+        label,
+      );
 }
 
 // ── public API: unlock + sign + verify ───────────────────────────────

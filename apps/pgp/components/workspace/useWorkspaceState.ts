@@ -39,6 +39,13 @@ export interface WorkspaceState {
   setSelectedCrxKeyId: (s: string | null) => void;
   pendingCrxSign: boolean;
   setPendingCrxSign: (b: boolean) => void;
+  /** True when the input is a single .zip containing a manifest.json. */
+  isExtensionZip: boolean;
+  /** Which signature the sign flow produces: an OpenPGP signature or a
+   *  signed CRX package. Defaults to `crx` when an extension zip is the
+   *  input (and CRX signing is available), `pgp` otherwise. */
+  signKind: "pgp" | "crx";
+  setSignKind: (k: "pgp" | "crx") => void;
   crxKeys: CrxSigningKeyBlob[];
   crxSigningEnabled: boolean;
   error: string | null;
@@ -105,6 +112,8 @@ export function useWorkspaceState(opts: {
   const [selectedKeyId, setSelectedKeyId] = useState<string | null>(null);
   const [selectedCrxKeyId, setSelectedCrxKeyId] = useState<string | null>(null);
   const [pendingCrxSign, setPendingCrxSign] = useState(false);
+  const [isExtensionZip, setIsExtensionZip] = useState(false);
+  const [signKind, setSignKind] = useState<"pgp" | "crx">("pgp");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
@@ -202,12 +211,48 @@ export function useWorkspaceState(opts: {
     }
   }, [opts.myKeys, selectedKeyId]);
 
+  // Keep the CRX key selection pointing at a key that actually exists —
+  // when the selected key is deleted, fall to the first remaining one
+  // HERE (visibly, the Select updates) rather than silently at sign time.
   const crxKeys = opts.crxKeys;
   useEffect(() => {
-    if (crxKeys && crxKeys.length > 0 && !selectedCrxKeyId) {
+    if (!crxKeys || crxKeys.length === 0) {
+      if (selectedCrxKeyId) setSelectedCrxKeyId(null);
+      return;
+    }
+    if (!crxKeys.some((k) => k.extensionId === selectedCrxKeyId)) {
       setSelectedCrxKeyId(crxKeys[0].extensionId);
     }
   }, [crxKeys, selectedCrxKeyId]);
+
+  // Detect whether the input is a single .zip that looks like a packed
+  // Chrome extension (has a manifest.json). Detection only — it never
+  // changes the user's chosen mode; WorkspaceView uses it to offer the
+  // CRX signing path when the user IS in sign mode.
+  useEffect(() => {
+    if (files.length !== 1 || !/\.zip$/i.test(files[0].name)) {
+      setIsExtensionZip(false);
+      return;
+    }
+    const run = { cancelled: false };
+    void files[0].arrayBuffer().then((buf) => {
+      if (!run.cancelled) setIsExtensionZip(zipHasManifest(new Uint8Array(buf)));
+    });
+    return () => {
+      run.cancelled = true;
+    };
+  }, [files]);
+
+  // An extension zip defaults the sign flow to CRX (that's overwhelmingly
+  // the intent); anything else resets to PGP. The user can still flip the
+  // "Sign as" toggle in the view — this only sets the starting point.
+  useEffect(() => {
+    setSignKind(
+      isExtensionZip && opts.crxSigningEnabled && (crxKeys?.length ?? 0) > 0
+        ? "crx"
+        : "pgp",
+    );
+  }, [isExtensionZip, opts.crxSigningEnabled, crxKeys]);
 
   const allRecipientKeys = opts.allPublicKeys;
   useEffect(() => {
@@ -278,24 +323,8 @@ export function useWorkspaceState(opts: {
         return current;
       });
       resetOutput();
-
-      // A dropped .zip that is a packed Chrome extension (has a
-      // manifest.json) auto-switches to sign mode so the "Sign for Web
-      // Store" action is right there -- but only when CRX signing is on
-      // AND the user actually has a CRX signing key.
-      if (
-        opts.crxSigningEnabled &&
-        (opts.crxKeys?.length ?? 0) > 0 &&
-        newFiles.length === 1 &&
-        /\.zip$/i.test(newFiles[0].name)
-      ) {
-        const zip = newFiles[0];
-        void zip.arrayBuffer().then((buf) => {
-          if (zipHasManifest(new Uint8Array(buf))) setMode("sign");
-        });
-      }
     },
-    [resetOutput, opts.crxSigningEnabled, opts.crxKeys],
+    [resetOutput],
   );
 
   const removeFile = useCallback((index: number) => {
@@ -335,6 +364,9 @@ export function useWorkspaceState(opts: {
     setSelectedCrxKeyId,
     pendingCrxSign,
     setPendingCrxSign,
+    isExtensionZip,
+    signKind,
+    setSignKind,
     crxKeys: opts.crxKeys ?? [],
     crxSigningEnabled: opts.crxSigningEnabled ?? false,
     error,

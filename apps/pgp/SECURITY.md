@@ -342,14 +342,26 @@ in CI. All of it lives in `apps/pgp/gpg-wasm/src/crx.rs`.
   WebAuthn-PRF → AES-256-GCM, AAD-bound via
   `gpg-tools:crx-{password,passkey}:{extensionId}` (distinct from the PGP
   prefixes, so blobs can't be cross-substituted).
+- **Identity binding.** The AAD only covers the extension id *string*, not
+  the stored public key — and AAD strings are public. So both trust
+  boundaries re-derive the id from the key itself: on unlock, `store_
+  decrypted_der` (`crx.rs`) recomputes SHA-256(SPKI) → id and refuses a key
+  that doesn't match the id it was sealed under; on the JS side, `addCrxKey`
+  / backup import reject a blob whose `publicKeyDerB64` doesn't hash to its
+  `extensionId`. A forged blob carrying a foreign key (or a swapped public
+  half) is thrown out before it can sign or be shown as "your" key.
 - **Verify** (`verifyCrx`) carries no key material and requires a valid
   signature **and** that the proving key's SHA-256 matches the signed
   crx_id — a valid signature by an unrelated key cannot spoof an
   extension id. The parser is panic-free on malformed input.
-- **Backup.** Export/Import All Keys round-trips CRX keys as their
-  already-encrypted blobs in a labelled `PGP TOOLS CRX SIGNING KEY`
-  block (`lib/crx/backup.ts`); the private key stays sealed under its own
-  protection, so no extra unlock or export passphrase is involved.
+- **Backup.** Export/Import All Keys round-trips CRX keys in a labelled
+  `PGP TOOLS CRX SIGNING KEY` block (`lib/crx/backup.ts`). Bulk export
+  *unlocks* each key and *re-seals* it under the single export passphrase so
+  the backup restores on any device (a passkey seal is bound to one
+  authenticator); this needs each key unlocked first, exactly like the
+  per-key "Copy private key". Import stores the blob under whatever
+  protection it carries, and — mirroring the PGP path — skips any extension
+  id already held rather than overwriting a live signing key.
 - **Posture.** Stronger than a key in CI (which a poisoned dependency or
   leaked token would expose); weaker than a hardware token, where the key
   never leaves the chip — here it is briefly reconstructed in the WASM
