@@ -37,6 +37,12 @@ export default defineConfig({
     description:
       "Encrypt, decrypt, sign, and verify messages with PGP. Drag-and-drop files and manage keys.",
     permissions: ["sidePanel", "contextMenus", "storage", "idle"],
+    // Requested at runtime the first time a user saves a signed .crx. Saving
+    // goes through chrome.downloads with a "Save As" prompt, the one path that
+    // writes a .crx to disk without Chrome trying to install it. (The File
+    // System Access picker would avoid this permission but crashes the side
+    // panel -- see saveCrxViaPrompt.)
+    optional_permissions: ["downloads"],
     icons: {
       16: "icon-16.png",
       32: "icon-32.png",

@@ -606,6 +606,28 @@ pub fn import_crx_key_with_prf(
     Ok(pack_meta_blob(&protect_meta_json(&private_key, &ext_id)?, &blob))
 }
 
+/// Re-seal an already-unlocked CRX key (by handle) under a password, WITHOUT
+/// the plaintext key ever leaving WASM. Used by "Export All Keys" to re-wrap
+/// a key under the single export passphrase so the backup is portable across
+/// devices (unlike a passkey seal, which is bound to one authenticator).
+/// Same packed return as the generate/import variants.
+#[wasm_bindgen(js_name = "reprotectCrxKeyWithPassword")]
+pub fn reprotect_crx_key_with_password(
+    handle: u32,
+    password: Vec<u8>,
+    memory_kib: u32,
+    iterations: u32,
+    parallelism: u32,
+) -> Result<Vec<u8>, String> {
+    let password = Zeroizing::new(password);
+    let private_key = crx_store_get(handle)?;
+    let der = private_key_der(&private_key)?;
+    let ext_id = extension_id(&crx_id_from_spki(&spki_der(&private_key)?));
+    let blob =
+        encrypt_der_with_password(&der, &ext_id, &password, memory_kib, iterations, parallelism)?;
+    Ok(pack_meta_blob(&protect_meta_json(&private_key, &ext_id)?, &blob))
+}
+
 /// Unlock a password-protected CRX key into `CRX_KEY_STORE`; returns a handle.
 #[wasm_bindgen(js_name = "unlockCrxWithPassword")]
 pub fn unlock_crx_with_password(
@@ -680,6 +702,20 @@ pub fn verify_crx(crx: &[u8]) -> String {
 #[cfg(test)]
 mod crx_tests {
     use super::*;
+
+    #[test]
+    fn crx_embeds_the_input_archive_verbatim() {
+        // Guards against ever accidentally emitting the bare zip (or
+        // otherwise mangling the payload): the bytes after the 12-byte
+        // prefix + header must be the untouched input archive.
+        let key = generate_rsa2048().unwrap();
+        let zip = b"PK\x03\x04 example archive bytes standing in for a real zip";
+        let crx = assemble_crx(zip, &key).unwrap();
+        assert_eq!(&crx[0..4], CRX_MAGIC);
+        assert_eq!(read_u32_le(&crx, 4).unwrap(), CRX_VERSION);
+        let header_size = read_u32_le(&crx, 8).unwrap() as usize;
+        assert_eq!(&crx[12 + header_size..], &zip[..]);
+    }
 
     #[test]
     fn sign_verify_round_trip() {
@@ -886,5 +922,202 @@ mod crx_tests {
         let large: Vec<u8> = (0..100_000).map(|i| (i % 256) as u8).collect();
         let big = assemble_crx(&large, &key).unwrap();
         assert!(verify_crx_inner(&big).valid, "100 KB archive must verify");
+    }
+
+    // ── reprotect (re-seal an unlocked key under a new password) ──────────
+
+    /// Minimal Argon2 params: these tests exercise the AES-GCM/AAD round-trip
+    /// and identity plumbing, not the KDF's brute-force hardness, so keep the
+    /// KDF as cheap as the crate allows (m_cost >= 8*p_cost).
+    const TEST_ARGON2_MEM: u32 = 8;
+    const TEST_ARGON2_ITERS: u32 = 1;
+    const TEST_ARGON2_PAR: u32 = 1;
+
+    /// Split a packed `[u32_le json_len][json][blob]` into its meta JSON and
+    /// the raw protection blob (mirrors what the JS side unpacks).
+    fn unpack_meta_blob(packed: &[u8]) -> (serde_json::Value, Vec<u8>) {
+        let json_len = u32::from_le_bytes([packed[0], packed[1], packed[2], packed[3]]) as usize;
+        let json = &packed[4..4 + json_len];
+        let blob = packed[4 + json_len..].to_vec();
+        (serde_json::from_slice(json).unwrap(), blob)
+    }
+
+    /// Decrypt a password protection blob exactly as `unlock_crx_with_password`
+    /// does (`[16 salt][12 iv][ct]`, AAD bound to the extension id), returning
+    /// the recovered PKCS#8 DER on success.
+    fn decrypt_password_blob(
+        blob: &[u8],
+        ext_id: &str,
+        password: &[u8],
+    ) -> Result<Vec<u8>, String> {
+        let salt = &blob[0..16];
+        let iv = &blob[16..28];
+        let ct = &blob[28..];
+        let mut derived = crate::argon2_derive(
+            password,
+            salt,
+            TEST_ARGON2_MEM,
+            TEST_ARGON2_ITERS,
+            TEST_ARGON2_PAR,
+        )
+        .unwrap();
+        let aad = format!("{CRX_PASSWORD_AAD_PREFIX}{ext_id}");
+        let result = crate::aes_gcm_decrypt(&derived, iv, ct, aad.as_bytes());
+        derived.zeroize();
+        result
+    }
+
+    /// Generate an RSA key and insert its DER into `CRX_KEY_STORE`, returning
+    /// the handle plus the original extension id and SPKI for cross-checks.
+    /// Mirrors the generate path (`private_key_der` -> `crx_store_insert`).
+    fn insert_generated_key() -> (u32, String, Vec<u8>) {
+        let key = generate_rsa2048().unwrap();
+        let spki = spki_der(&key).unwrap();
+        let ext_id = extension_id(&crx_id_from_spki(&spki));
+        let der = private_key_der(&key).unwrap();
+        let handle = crx_store_insert(der.to_vec()).unwrap();
+        (handle, ext_id, spki)
+    }
+
+    #[test]
+    fn reprotect_round_trips_and_recovers_the_same_key() {
+        let (handle, ext_id, spki) = insert_generated_key();
+        let password = b"correct horse battery staple";
+
+        let packed = reprotect_crx_key_with_password(
+            handle,
+            password.to_vec(),
+            TEST_ARGON2_MEM,
+            TEST_ARGON2_ITERS,
+            TEST_ARGON2_PAR,
+        )
+        .unwrap();
+        drop_crx_key(handle).unwrap();
+
+        let (meta, blob) = unpack_meta_blob(&packed);
+
+        // Meta describes the original key.
+        assert_eq!(meta["extensionId"], ext_id);
+        assert_eq!(meta["publicKeyDerB64"], B64.encode(&spki));
+        assert_eq!(meta["algorithm"], "rsa2048");
+
+        // Blob is well-formed: 16-byte salt + 12-byte iv + non-empty ciphertext
+        // (AES-GCM appends a 16-byte tag, so ct is comfortably > 16).
+        assert!(blob.len() > 16 + 12, "blob too short to hold salt+iv+ct");
+
+        // Same password recovers a valid key whose identity matches the original.
+        let der = decrypt_password_blob(&blob, &ext_id, password).unwrap();
+        let recovered = RsaPrivateKey::from_pkcs8_der(&der).unwrap();
+        let recovered_spki = spki_der(&recovered).unwrap();
+        assert_eq!(recovered_spki, spki, "recovered public key must match");
+        assert_eq!(
+            extension_id(&crx_id_from_spki(&recovered_spki)),
+            ext_id,
+            "recovered extension id must match"
+        );
+    }
+
+    #[test]
+    fn reprotect_wrong_password_fails_to_decrypt() {
+        let (handle, ext_id, _spki) = insert_generated_key();
+
+        let packed = reprotect_crx_key_with_password(
+            handle,
+            b"the right password".to_vec(),
+            TEST_ARGON2_MEM,
+            TEST_ARGON2_ITERS,
+            TEST_ARGON2_PAR,
+        )
+        .unwrap();
+        drop_crx_key(handle).unwrap();
+
+        let (_meta, blob) = unpack_meta_blob(&packed);
+
+        // The AES-GCM tag must reject a wrong password (no plaintext leaks).
+        let result = decrypt_password_blob(&blob, &ext_id, b"the wrong password");
+        assert!(result.is_err(), "wrong password must fail the GCM tag check");
+    }
+
+    #[test]
+    fn reprotect_wrong_extension_id_aad_fails() {
+        // The AAD binds the ciphertext to the extension id: decrypting under a
+        // different id (even with the right password) must fail.
+        let (handle, _ext_id, _spki) = insert_generated_key();
+
+        let packed = reprotect_crx_key_with_password(
+            handle,
+            b"a decent password".to_vec(),
+            TEST_ARGON2_MEM,
+            TEST_ARGON2_ITERS,
+            TEST_ARGON2_PAR,
+        )
+        .unwrap();
+        drop_crx_key(handle).unwrap();
+
+        let (_meta, blob) = unpack_meta_blob(&packed);
+        let result = decrypt_password_blob(
+            &blob,
+            "abcdefghijklmnopabcdefghijklmnop",
+            b"a decent password",
+        );
+        assert!(result.is_err(), "mismatched AAD (ext id) must fail");
+    }
+
+    #[test]
+    fn reprotect_absent_handle_returns_err_not_panic() {
+        // A handle never inserted into this thread's store yields an Err.
+        let result = reprotect_crx_key_with_password(
+            0xDEAD_BEEF,
+            b"whatever password".to_vec(),
+            TEST_ARGON2_MEM,
+            TEST_ARGON2_ITERS,
+            TEST_ARGON2_PAR,
+        );
+        assert!(result.is_err(), "bogus handle must be an Err, not a panic");
+    }
+
+    #[test]
+    fn reprotect_identity_is_deterministic_but_randomness_is_fresh() {
+        let (handle, ext_id, _spki) = insert_generated_key();
+        let password = b"same password twice";
+
+        let packed_a = reprotect_crx_key_with_password(
+            handle,
+            password.to_vec(),
+            TEST_ARGON2_MEM,
+            TEST_ARGON2_ITERS,
+            TEST_ARGON2_PAR,
+        )
+        .unwrap();
+        let packed_b = reprotect_crx_key_with_password(
+            handle,
+            password.to_vec(),
+            TEST_ARGON2_MEM,
+            TEST_ARGON2_ITERS,
+            TEST_ARGON2_PAR,
+        )
+        .unwrap();
+        drop_crx_key(handle).unwrap();
+
+        let (meta_a, blob_a) = unpack_meta_blob(&packed_a);
+        let (meta_b, blob_b) = unpack_meta_blob(&packed_b);
+
+        // Identity is stable across re-seals of the same key.
+        assert_eq!(meta_a["extensionId"], ext_id);
+        assert_eq!(meta_a["extensionId"], meta_b["extensionId"]);
+        assert_eq!(meta_a["publicKeyDerB64"], meta_b["publicKeyDerB64"]);
+
+        // ...but the salt (first 16) and iv (next 12) are freshly random each
+        // time, so the two blobs must differ.
+        assert_ne!(&blob_a[0..16], &blob_b[0..16], "salt must be fresh");
+        assert_ne!(&blob_a[16..28], &blob_b[16..28], "iv must be fresh");
+        assert_ne!(blob_a, blob_b, "re-seal must not be byte-identical");
+
+        // Both still decrypt back to the same key under the shared password.
+        let der_a = decrypt_password_blob(&blob_a, &ext_id, password).unwrap();
+        let der_b = decrypt_password_blob(&blob_b, &ext_id, password).unwrap();
+        let spki_a = spki_der(&RsaPrivateKey::from_pkcs8_der(&der_a).unwrap()).unwrap();
+        let spki_b = spki_der(&RsaPrivateKey::from_pkcs8_der(&der_b).unwrap()).unwrap();
+        assert_eq!(spki_a, spki_b);
     }
 }

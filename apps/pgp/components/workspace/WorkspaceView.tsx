@@ -1,7 +1,20 @@
-import { ArrowLeftIcon, DownloadIcon, RotateCcwIcon } from "lucide-react";
+import { useRef } from "react";
+import {
+  ArrowLeftIcon,
+  DownloadIcon,
+  GripVerticalIcon,
+  RotateCcwIcon,
+} from "lucide-react";
 
 import { Button } from "@amibeingpwned/ui/button";
 import { Checkbox } from "@amibeingpwned/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@amibeingpwned/ui/select";
 
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
 import type { WorkspaceAction } from "../../lib/messages";
@@ -9,6 +22,7 @@ import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { WorkspaceDraft } from "../../lib/workspace-draft";
 import { savePreferences } from "../../lib/storage/preferences";
+import { saveCrxViaPrompt } from "../../lib/utils/download";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 import { KeySelector } from "./KeySelector";
 import { useWorkspaceOperations } from "./useWorkspaceOperations";
@@ -115,6 +129,37 @@ export function WorkspaceView({
   // A dropped .crx: verifying its signature is the only sensible action, so
   // it becomes the primary button (no confusing encrypt/sign button).
   const showCrxVerify = !!crxSigningEnabled && singleCrxFile;
+  // A completed CRX sign is the only op that yields a single `.crx` file
+  // result; it gets the Save button + drag chip instead of the usual download.
+  const crxResult =
+    s.operationDone &&
+    s.fileResults.length === 1 &&
+    /\.crx$/i.test(s.fileResults[0].name)
+      ? s.fileResults[0]
+      : null;
+  const crxFilename = crxResult?.name ?? "";
+
+  // Save the signed CRX under its real `.crx` name via a "Save As" download.
+  // A Save-As download sets Chrome's TARGET_DISPOSITION_PROMPT, the one case
+  // where Chrome does NOT route a CRX (identified by its Cr24 magic) to the
+  // extension installer -- so it lands on disk as a plain file, no rename, no
+  // install. See saveCrxViaPrompt for the source-level reasoning.
+  const handleSaveCrx = async () => {
+    if (!crxResult) return;
+    const result = await saveCrxViaPrompt(crxResult.data, crxFilename);
+    if (result === "saved") {
+      s.setStatusText(`Saved ${crxFilename}.`);
+    } else if (result === "cancelled") {
+      s.setStatusText(null);
+    } else {
+      // Permission refused / unsupported / write blocked. The drag chip needs
+      // no permission and never touches the download pipeline, so point there
+      // rather than anchor-downloading a `.crx` (which Chrome would install).
+      s.setStatusText(
+        "Couldn't save automatically - drag the file below to Finder instead.",
+      );
+    }
+  };
 
   // After decrypting to readable text, give the plaintext the whole panel with
   // a Back button, instead of cramming it into a small fixed-height preview.
@@ -205,7 +250,7 @@ export function WorkspaceView({
           />
         )}
 
-        {needsPrivateKey && (
+        {needsPrivateKey && !showCrxSign && (
           <KeySelector
             label={s.mode === "sign" ? "Sign with" : "Decrypt with"}
             keys={myKeys}
@@ -215,6 +260,30 @@ export function WorkspaceView({
             emptyAction={onNavigateToKeys}
             emptyActionLabel="Create one"
           />
+        )}
+
+        {/* Signing an extension package: pick a CRX key, not a PGP key. */}
+        {showCrxSign && crxKeys && crxKeys.length > 0 && (
+          <div>
+            <label className="text-muted-foreground mb-1 block text-xs font-medium">
+              Sign with
+            </label>
+            <Select
+              value={s.selectedCrxKeyId ?? ""}
+              onValueChange={(v) => s.setSelectedCrxKeyId(v)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select a signing key" />
+              </SelectTrigger>
+              <SelectContent>
+                {crxKeys.map((k) => (
+                  <SelectItem key={k.extensionId} value={k.extensionId}>
+                    {k.label ?? k.extensionId}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         )}
 
         {s.mode === "encrypt" && (
@@ -307,30 +376,31 @@ export function WorkspaceView({
 
         {!s.needsPassword && (
           <div className="space-y-2">
-            {showCrxSign && crxKeys && crxKeys.length > 1 && (
-              <div>
-                <label
-                  htmlFor="crx-signing-key"
-                  className="text-muted-foreground mb-1 block text-xs font-medium"
-                >
-                  CRX signing key
-                </label>
-                <select
-                  id="crx-signing-key"
-                  value={s.selectedCrxKeyId ?? ""}
-                  onChange={(e) => s.setSelectedCrxKeyId(e.target.value)}
-                  className="border-border bg-background focus:ring-ring w-full rounded-md border px-2 py-1.5 text-sm focus:ring-2 focus:outline-none"
-                >
-                  {crxKeys.map((k) => (
-                    <option key={k.extensionId} value={k.extensionId}>
-                      {k.label ?? k.extensionId}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {showCrxVerify ? (
+            {crxResult ? (
+              <>
+                <div className="flex gap-2">
+                  <Button
+                    className="flex-1"
+                    onClick={() => void handleSaveCrx()}
+                  >
+                    <span className="flex items-center gap-2">
+                      <DownloadIcon className="h-4 w-4" />
+                      Save {crxFilename}
+                    </span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={s.resetAll}
+                    title="Clear input and output"
+                    aria-label="Clear input and output"
+                  >
+                    <RotateCcwIcon className="h-4 w-4" />
+                  </Button>
+                </div>
+                <CrxDragChip data={crxResult.data} filename={crxFilename} />
+              </>
+            ) : showCrxVerify ? (
               <Button
                 className="w-full"
                 variant={s.operationDone ? "outline" : "default"}
@@ -344,22 +414,13 @@ export function WorkspaceView({
                     : "Verify signature"}
               </Button>
             ) : showCrxSign ? (
-              <div className="flex gap-2">
-                <Button
-                  className="flex-1"
-                  onClick={ops.execute}
-                  disabled={s.loading}
-                >
-                  {s.loading ? "Processing..." : "Sign (PGP)"}
-                </Button>
-                <Button
-                  className="flex-1"
-                  onClick={ops.executeCrxSign}
-                  disabled={s.loading}
-                >
-                  {s.loading ? "Processing..." : "Sign for Web Store"}
-                </Button>
-              </div>
+              <Button
+                className="w-full"
+                onClick={ops.executeCrxSign}
+                disabled={s.loading}
+              >
+                {s.loading ? "Processing..." : "Sign for Web Store"}
+              </Button>
             ) : (
               <div className="flex gap-2">
                 <Button
@@ -404,6 +465,62 @@ export function WorkspaceView({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * A draggable chip carrying the signed CRX under its real `.crx` name.
+ * `DownloadURL` makes this a drag-to-filesystem: dropping on Finder / the
+ * desktop writes the file directly, so Chrome's `.crx` download interceptor
+ * (which routes every `.crx` download, "Keep" included, to the extension
+ * installer) never fires. This is the only in-browser way to land a
+ * correctly-named `.crx` without a rename. Note a web page like the CWS
+ * uploader cannot receive this drag - it must be dropped on the OS, then
+ * picked with the uploader's file browser.
+ */
+function CrxDragChip({
+  data,
+  filename,
+}: {
+  data: Uint8Array;
+  filename: string;
+}) {
+  const urlRef = useRef<string | null>(null);
+  return (
+    <div
+      draggable
+      onDragStart={(e) => {
+        const blob = new Blob([data.slice()], {
+          type: "application/octet-stream",
+        });
+        const url = URL.createObjectURL(blob);
+        urlRef.current = url;
+        // DownloadURL = drag-to-filesystem. We deliberately do NOT attach a
+        // synthetic File item: a web page (like the CWS uploader) can't
+        // receive a JS-made file on drop, so it would only highlight and
+        // then fail. This makes the chip an honest drag-to-desktop.
+        e.dataTransfer.effectAllowed = "copy";
+        e.dataTransfer.setData(
+          "DownloadURL",
+          `application/octet-stream:${filename}:${url}`,
+        );
+      }}
+      onDragEnd={() => {
+        const u = urlRef.current;
+        if (u) {
+          urlRef.current = null;
+          setTimeout(() => URL.revokeObjectURL(u), 2000);
+        }
+      }}
+      className="border-primary/50 bg-primary/5 hover:bg-primary/10 flex cursor-grab items-center gap-2 rounded-md border border-dashed p-3 text-sm transition-colors active:cursor-grabbing"
+    >
+      <GripVerticalIcon className="text-muted-foreground h-4 w-4 shrink-0" />
+      <span className="min-w-0 flex-1">
+        Drag <span className="font-medium">{filename}</span> to Finder or your
+        desktop - correct name, no rename. Then upload it with the Web Store&rsquo;s
+        file browser.
+      </span>
     </div>
   );
 }
