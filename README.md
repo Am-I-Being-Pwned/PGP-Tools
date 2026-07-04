@@ -35,9 +35,8 @@
 - Cleartext sign and verify
 - Import/export armored keys
 - One-file backup: export/import all keys and contacts (passphrase-encrypted by default)
+- Sign & verify Chrome extension packages (`.crx`) for the Web Store's Verified CRX Uploads (optional; off by default)
 - Right-click context menu on selected text
-- Auto-detect and decrypt PGP-encrypted downloads
-- Auto-import `.asc` public keys from downloads
 - Auto-lock on inactivity, panel close, or per-operation (never-cache mode)
 - Exponential backoff on failed password attempts
 - Optional Chrome sync or local-only storage

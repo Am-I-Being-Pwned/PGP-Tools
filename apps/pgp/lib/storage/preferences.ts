@@ -25,6 +25,9 @@ export interface PgpPreferences {
   /** When true, lock the moment the side panel isn't visible
    *  (alt-tab / collapsed / window hidden). Instant; no grace. */
   lockOnTabAway: boolean;
+  /** Master enable for the CRX (Chrome extension) signing feature. Off by
+   *  default; when true the CRX signing UI surfaces in Keys/Settings. */
+  crxSigningEnabled: boolean;
 }
 
 const DEFAULT_PREFERENCES: PgpPreferences = {
@@ -41,6 +44,7 @@ const DEFAULT_PREFERENCES: PgpPreferences = {
   autoDownloadText: false,
   autoLockEnabled: true,
   lockOnTabAway: false,
+  crxSigningEnabled: false,
 };
 
 /**
