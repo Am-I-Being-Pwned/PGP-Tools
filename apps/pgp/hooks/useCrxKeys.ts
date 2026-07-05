@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { addCrxKey, getCrxKeys, removeCrxKey } from "../lib/crx/storage";
 import type { CrxSigningKeyBlob } from "../lib/crx/types";
+import {
+  addCrxKey,
+  getCrxKeys,
+  removeCrxKey,
+  updateCrxLabel,
+} from "../lib/crx/storage";
 
 export function useCrxKeys() {
   const [keys, setKeys] = useState<CrxSigningKeyBlob[]>([]);
@@ -33,5 +38,13 @@ export function useCrxKeys() {
     [refresh],
   );
 
-  return { keys, loading, refresh, add, remove };
+  const rename = useCallback(
+    async (extensionId: string, label: string) => {
+      await updateCrxLabel(extensionId, label);
+      await refresh();
+    },
+    [refresh],
+  );
+
+  return { keys, loading, refresh, add, remove, rename };
 }
