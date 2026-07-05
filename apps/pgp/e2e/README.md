@@ -43,11 +43,13 @@ classic one, loads extensions) — so no display or `xvfb` is needed. Set
 - `passkey.spec.ts` — onboard / lock / unlock with a **passkey**, driven by
   a virtual WebAuthn authenticator with PRF (`webauthn.ts`). WebAuthn needs
   the page focused, so the spec calls `bringToFront()`.
-- `heap.spec.ts` — the key one for a WASM-isolated design: imports a
-  private key (`private-key.ts`) and asserts a distinctive slice of its
-  SECRET material is **not retained in the V8 heap** (`heap.ts` takes a
-  CDP heap snapshot after a forced GC). Only the encrypted-at-rest blob
-  should survive; the plaintext must stay in WASM.
+- `heap.spec.ts` — the key one for a WASM-isolated design. Walks a private
+  key (`private-key.ts`) through its whole lifecycle — import, unlock,
+  sign, encrypt+decrypt, in-app lock, re-unlock — and after **each** stage
+  asserts a distinctive slice of its SECRET material is **not retained in
+  the V8 heap** (`heap.ts` takes a CDP heap snapshot after a forced GC).
+  Only the encrypted-at-rest blob survives; the plaintext stays in WASM. A
+  control string that IS present proves the scan works.
 - `memory.spec.ts` — complementary: reads the live WASM linear memory via
   CDP (`wasm-memory.ts`) and asserts a distinctive master password does
   not linger there after unlock — an in-browser check of the

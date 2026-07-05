@@ -83,6 +83,25 @@ export async function signInWorkspace(
   ).toBeVisible();
 }
 
+/** Encrypt `plaintext` to the single own key via the workspace and return
+ *  the armored ciphertext (produced by the app, so it round-trips). */
+export async function encryptToSelfInWorkspace(
+  panel: Page,
+  plaintext: string,
+): Promise<string> {
+  await panel.getByRole("tab", { name: "Main" }).click();
+  await panel.getByRole("combobox").first().click();
+  await panel.getByRole("option", { name: "Encrypt", exact: true }).click();
+  // Recipient: the single own (encryption-capable) key.
+  await panel.getByRole("combobox").nth(1).click();
+  await panel.getByRole("option").first().click();
+  await panel.locator("textarea").first().fill(plaintext);
+  await panel.getByRole("button", { name: /^encrypt$/i }).click();
+  const pre = panel.locator("pre").first();
+  await expect(pre).toContainText("BEGIN PGP MESSAGE");
+  return pre.innerText();
+}
+
 /** Decrypt an armored message in the workspace (auto-selects decrypt). */
 export async function decryptInWorkspace(
   panel: Page,

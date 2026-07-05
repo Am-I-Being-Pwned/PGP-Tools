@@ -1,15 +1,14 @@
-// Throwaway OpenPGP private key + a message encrypted to it, plus a
-// distinctive base64 slice of the SECRET material. Test-only, never real.
-// Regenerate: see e2e/README.md.
+// Throwaway OpenPGP private key + a distinctive base64 slice of its SECRET
+// material (the heap-scan needle). Test-only, never real. The decrypt path
+// encrypts to this key via the app at runtime, so no ciphertext fixture is
+// needed. Regenerate: see e2e/README.md.
 
 export const PRIVATE_KEY_FIXTURE = {
   name: "Heap Test",
   privateKey:
-    "-----BEGIN PGP PRIVATE KEY BLOCK-----\n\nlFgEakqSthYJKwYBBAHaRw8BAQdA228hopdMeBCGbKpqraP9LHRaWpCAldBHkvXY\nWsKVC4UAAQCdTxcz+DQHhp2Ttlv8bxGDgAqvxPoZYP3sHw/2zwMuDQ66tBtIZWFw\nIFRlc3QgPGhlYXBAdGVzdC5sb2NhbD6ImQQTFgoAQRYhBL/d7XolEhbRIdxIQZ3s\n0h/ZhwFeBQJqSpK2AhsDBQkB4TOABQsJCAcCAiICBhUKCQgLAgQWAgMBAh4HAheA\nAAoJEJ3s0h/ZhwFemE0BAL4a/aHGjafVT7UfgS0EvKVwbcpnmYtt7Qkks9XaegT8\nAP9QVtdqWOTyfLPVHCQCJFjGsT5tPu2uuN6MjcuH+JDfAZxdBGpKkrYSCisGAQQB\nl1UBBQEBB0By+YTBTNrIOQ0WO4NAIOQ6rD1Vd3s+VOWMewAkd0sCRAMBCAcAAP9H\nMtlSvyKIwJDFeCFxwTQWMjsIkxHHydklZdI0LN6FwA+XiHgEGBYKACAWIQS/3e16\nJRIW0SHcSEGd7NIf2YcBXgUCakqStgIbDAAKCRCd7NIf2YcBXnDlAP0SbS2728gd\nuyGYUiml0BA1xqituTrdMvb7FJRPdCF1rwD9Hxzz5xtEFB4PSnMYnWPv+kuQBDZL\nhii42RwELYg2Hwc=\n=ZbZ1\n-----END PGP PRIVATE KEY BLOCK-----\n",
+    "-----BEGIN PGP PRIVATE KEY BLOCK-----\n\nlFgEakqTdRYJKwYBBAHaRw8BAQdAzWF8DjkjzsaxfCCWDgLCq6AA/knN5L5X1oVD\nt8Jo7RsAAP91vIgxMaSLqpZnXfCY0/CxSWbIUK6v9mglCixGYmjF2xHWtBtIZWFw\nIFRlc3QgPGhlYXBAdGVzdC5sb2NhbD6ImQQTFgoAQRYhBF7cm1t/M4hlArW/7Im6\n5QvFtzCrBQJqSpN1AhsDBQkB4TOABQsJCAcCAiICBhUKCQgLAgQWAgMBAh4HAheA\nAAoJEIm65QvFtzCr2mEA/iVKS8ZE6uHVwn4fGKz8dWnDYvkLOG2w7CARJbFC0C4S\nAPsGM/TsJS5qNdspXx5EiCoEPqPL7/wX4Y81AefTeaZaApxdBGpKk3USCisGAQQB\nl1UBBQEBB0COQwNskK1O+myf/rjcR2iDpls96UYTfG+q13BhFNx9agMBCAcAAP9L\nsdVXTGz1djJbE6M3YsNx7gZZZWN5VNxelqH7VwKMyBBViHgEGBYKACAWIQRe3Jtb\nfzOIZQK1v+yJuuULxbcwqwUCakqTdQIbDAAKCRCJuuULxbcwq1zvAQCl1ir5B+8M\n9QeuF10CmZQDeGVMtwmwHhZ6iyi0n5E9WgEA57BcQxHohAWVIF4VJnNmDFi1hkbB\nWjbTRD4KKTy0nwc=\n=yN6i\n-----END PGP PRIVATE KEY BLOCK-----\n",
   /** A 44-char base64 slice of the SECRET key material (unique). */
-  secretNeedle: "AP9QVtdqWOTyfLPVHCQCJFjGsT5tPu2uuN6MjcuH+JDf",
-  /** A message encrypted to this key -- exercises the decrypt path. */
-  encryptedMessage:
-    "-----BEGIN PGP MESSAGE-----\n\nhF4DnDIELISr3AUSAQdAvT8ts7kTXmgvivPQRngGUECyEWTbf9Er6M6IUGQLWjww\nAWV/u+cVwLoMLi+3Z7NjGscvTEPbtK7ca1g0SBYWOQ4p+i44huNZn/3T9OKh1Jrx\n1GcBCQIQYXzNmy75kB9QLwSscTaCUR8rLHPNxyk4Rahhu6FH/1S70j7wg57gn0yC\nS1PP1koNcX4JWLuz7pwq/RudtH9OccgYxpJ6NkDjf1IphEsDBD8llW0W7ND2p90L\n13QgNEh9KFAy\n=ocyh\n-----END PGP MESSAGE-----\n",
+  secretNeedle: "APsGM/TsJS5qNdspXx5EiCoEPqPL7/wX4Y81AefTeaZa",
+  /** Plaintext round-tripped through encrypt+decrypt in the workspace. */
   decryptedPlaintext: "heap-decrypt-plaintext-sentinel-42",
 };
