@@ -58,7 +58,9 @@ export function CrxKeyCard({ keyBlob, onDelete }: CrxKeyCardProps) {
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">
             {displayName}
-            <span className="text-muted-foreground ml-1.5 text-[11px]">CRX</span>
+            <span className="text-muted-foreground ml-1.5 text-[11px]">
+              CRX
+            </span>
           </p>
           <p className="text-muted-foreground truncate font-mono text-xs">
             {shortId} · {formatAlgorithm(keyBlob.algorithm)}

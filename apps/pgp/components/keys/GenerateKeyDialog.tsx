@@ -204,7 +204,10 @@ export function GenerateKeyDialog({
                   ? reusePasskeyCredentialId
                   : undefined,
               };
-        const blob = await generateCrxKey(protection, label.trim() || undefined);
+        const blob = await generateCrxKey(
+          protection,
+          label.trim() || undefined,
+        );
         await addCrxKey?.(blob);
         resetAndClose();
         return;
@@ -285,8 +288,7 @@ export function GenerateKeyDialog({
           {keyType === "crx" ? (
             <div>
               <label className="text-muted-foreground mb-1 block text-xs">
-                Label{" "}
-                <span className="text-muted-foreground/60">optional</span>
+                Label <span className="text-muted-foreground/60">optional</span>
               </label>
               <input
                 type="text"
@@ -297,123 +299,123 @@ export function GenerateKeyDialog({
               />
             </div>
           ) : (
-          <>
-          <div className="space-y-2">
-            <div>
-              <label className="text-muted-foreground mb-1 block text-xs">
-                Name *
-              </label>
-              <input
-                type="text"
-                placeholder="Your full name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className={INPUT_CLASS}
-              />
-            </div>
-            <div>
-              <label className="text-muted-foreground mb-1 block text-xs">
-                Email *
-              </label>
-              <input
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className={INPUT_CLASS}
-              />
-            </div>
-            <div>
-              <label className="text-muted-foreground mb-1 block text-xs">
-                Comment{" "}
-                <span className="text-muted-foreground/60">optional</span>
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. work, personal"
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                className={INPUT_CLASS}
-              />
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setShowAdvanced(!showAdvanced)}
-            className="text-muted-foreground hover:text-foreground flex w-full items-center gap-1.5 text-xs transition-colors"
-          >
-            <ChevronRightIcon
-              className={`h-3 w-3 transition-transform ${showAdvanced ? "rotate-90" : ""}`}
-            />
-            Advanced options
-          </button>
-
-          {showAdvanced && (
-            <div className="border-border space-y-3 rounded-md border p-3">
-              <div>
-                <label className="text-muted-foreground mb-1.5 block text-xs">
-                  Algorithm
-                </label>
-                <Select
-                  value={keyAlgorithm}
-                  onValueChange={(v) => setKeyAlgorithm(v as KeyAlgorithm)}
-                >
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ecc">ECC (Ed25519)</SelectItem>
-                    <SelectItem value="rsa">RSA</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-muted-foreground/60 mt-1 text-[10px]">
-                  {keyAlgorithm === "ecc"
-                    ? "Modern, fast, small keys. Recommended for most uses."
-                    : "Widely compatible. Slower key generation."}
-                </p>
+            <>
+              <div className="space-y-2">
+                <div>
+                  <label className="text-muted-foreground mb-1 block text-xs">
+                    Name *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Your full name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className={INPUT_CLASS}
+                  />
+                </div>
+                <div>
+                  <label className="text-muted-foreground mb-1 block text-xs">
+                    Email *
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className={INPUT_CLASS}
+                  />
+                </div>
+                <div>
+                  <label className="text-muted-foreground mb-1 block text-xs">
+                    Comment{" "}
+                    <span className="text-muted-foreground/60">optional</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. work, personal"
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    className={INPUT_CLASS}
+                  />
+                </div>
               </div>
 
-              {keyAlgorithm === "rsa" && (
-                <div>
-                  <label className="text-muted-foreground mb-1.5 block text-xs">
-                    Key size
-                  </label>
-                  {/* RSA-4096 is the only size the WASM engine generates. */}
-                  <Select value="4096">
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="4096">4096 bit</SelectItem>
-                    </SelectContent>
-                  </Select>
+              <button
+                type="button"
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="text-muted-foreground hover:text-foreground flex w-full items-center gap-1.5 text-xs transition-colors"
+              >
+                <ChevronRightIcon
+                  className={`h-3 w-3 transition-transform ${showAdvanced ? "rotate-90" : ""}`}
+                />
+                Advanced options
+              </button>
+
+              {showAdvanced && (
+                <div className="border-border space-y-3 rounded-md border p-3">
+                  <div>
+                    <label className="text-muted-foreground mb-1.5 block text-xs">
+                      Algorithm
+                    </label>
+                    <Select
+                      value={keyAlgorithm}
+                      onValueChange={(v) => setKeyAlgorithm(v as KeyAlgorithm)}
+                    >
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ecc">ECC (Ed25519)</SelectItem>
+                        <SelectItem value="rsa">RSA</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-muted-foreground/60 mt-1 text-[10px]">
+                      {keyAlgorithm === "ecc"
+                        ? "Modern, fast, small keys. Recommended for most uses."
+                        : "Widely compatible. Slower key generation."}
+                    </p>
+                  </div>
+
+                  {keyAlgorithm === "rsa" && (
+                    <div>
+                      <label className="text-muted-foreground mb-1.5 block text-xs">
+                        Key size
+                      </label>
+                      {/* RSA-4096 is the only size the WASM engine generates. */}
+                      <Select value="4096">
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="4096">4096 bit</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="text-muted-foreground mb-1.5 block text-xs">
+                      Key expiry
+                    </label>
+                    <Select
+                      value={expiryOption}
+                      onValueChange={(v) => setExpiryOption(v as ExpiryOption)}
+                    >
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="never">Never</SelectItem>
+                        <SelectItem value="1y">1 year</SelectItem>
+                        <SelectItem value="2y">2 years</SelectItem>
+                        <SelectItem value="3y">3 years</SelectItem>
+                        <SelectItem value="custom">Custom date</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               )}
-
-              <div>
-                <label className="text-muted-foreground mb-1.5 block text-xs">
-                  Key expiry
-                </label>
-                <Select
-                  value={expiryOption}
-                  onValueChange={(v) => setExpiryOption(v as ExpiryOption)}
-                >
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="never">Never</SelectItem>
-                    <SelectItem value="1y">1 year</SelectItem>
-                    <SelectItem value="2y">2 years</SelectItem>
-                    <SelectItem value="3y">3 years</SelectItem>
-                    <SelectItem value="custom">Custom date</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
-          </>
+            </>
           )}
 
           {error && (

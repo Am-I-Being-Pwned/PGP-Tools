@@ -6,6 +6,7 @@ import { Button } from "@amibeingpwned/ui/button";
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
+import type { KeyDetailsTarget } from "./KeyDetailsPage";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 import { ContactCard } from "./ContactCard";
 import { ContactDropZone } from "./ContactDropZone";
@@ -13,6 +14,7 @@ import { CrxKeyCard } from "./CrxKeyCard";
 import { GenerateKeyDialog } from "./GenerateKeyDialog";
 import { ImportKeyDialog } from "./ImportKeyDialog";
 import { KeyCard } from "./KeyCard";
+import { KeyDetailsPage } from "./KeyDetailsPage";
 
 interface KeysViewProps {
   myKeys: ProtectedKeyBlob[];
@@ -79,6 +81,9 @@ export function KeysView({
   const [importInitialArmored, setImportInitialArmored] = useState<
     string | null
   >(null);
+  const [detailsTarget, setDetailsTarget] = useState<KeyDetailsTarget | null>(
+    null,
+  );
 
   useEffect(() => {
     if (autoOpenImport) {
@@ -116,6 +121,9 @@ export function KeysView({
                 onDelete={() => onDeleteKey(blob.keyId)}
                 onExportPublic={() => handleExportPublic(blob)}
                 onExportPrivate={() => getKeyHandle(blob.keyId)}
+                onShowDetails={() =>
+                  setDetailsTarget({ kind: "own", keyBlob: blob })
+                }
                 advancedMode={advancedMode}
               />
             ))}
@@ -161,8 +169,31 @@ export function KeysView({
         onDeleteContact={onDeleteContact}
         onAddContact={onAddContact}
         onEncryptTo={onEncryptTo}
+        onShowDetails={(contact) =>
+          setDetailsTarget({ kind: "contact", contact })
+        }
         advancedMode={advancedMode}
       />
+
+      {detailsTarget && (
+        <KeyDetailsPage
+          target={detailsTarget}
+          onBack={() => setDetailsTarget(null)}
+          onEncryptTo={
+            detailsTarget.kind === "contact" && onEncryptTo
+              ? () => {
+                  setDetailsTarget(null);
+                  onEncryptTo(detailsTarget.contact.keyId);
+                }
+              : undefined
+          }
+          onDelete={
+            detailsTarget.kind === "own"
+              ? () => onDeleteKey(detailsTarget.keyBlob.keyId)
+              : () => onDeleteContact(detailsTarget.contact.keyId)
+          }
+        />
+      )}
 
       <GenerateKeyDialog
         open={showGenerate}
@@ -202,6 +233,7 @@ function ContactsList({
   onDeleteContact,
   onAddContact,
   onEncryptTo,
+  onShowDetails,
   advancedMode,
 }: {
   contacts: PublicContactKey[];
@@ -209,6 +241,7 @@ function ContactsList({
   onDeleteContact: (keyId: string) => Promise<void>;
   onAddContact: (contact: PublicContactKey) => Promise<void>;
   onEncryptTo?: (keyId: string) => void;
+  onShowDetails: (contact: PublicContactKey) => void;
   advancedMode?: boolean;
 }) {
   const [search, setSearch] = useState("");
@@ -268,6 +301,7 @@ function ContactsList({
                     void navigator.clipboard.writeText(c.armoredPublicKey);
                     toast.success("Public key copied");
                   }}
+                  onShowDetails={() => onShowDetails(c)}
                   advancedMode={advancedMode}
                 />
               ))}
