@@ -7,6 +7,7 @@ import type { CrxSigningKeyBlob } from "../../lib/crx/types";
 import type { KeyInfo } from "../../lib/pgp/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
+import type { SubPageAction } from "../shared/SubPage";
 import { splitArmoredKeyBlocks } from "../../lib/armor-blocks";
 import { parseCrxKeyBlocks } from "../../lib/crx/backup";
 import { crxBlobIdentityMatches } from "../../lib/crx/types";
@@ -24,7 +25,7 @@ import {
   ProtectionMethodPicker,
   validatePassword,
 } from "../keys/ProtectionMethodPicker";
-import { Dialog } from "../shared/Dialog";
+import { SubPage } from "../shared/SubPage";
 
 type Step = "paste" | "unlock" | "protect";
 
@@ -34,8 +35,8 @@ interface ParsedPrivate {
   secretEncrypted: boolean;
 }
 
-interface ImportAllKeysDialogProps {
-  open: boolean;
+interface ImportAllKeysPageProps {
+  /** Called after the slide-out finishes (parent unmounts the page). */
   onClose: () => void;
   myKeys: ProtectedKeyBlob[];
   contacts: PublicContactKey[];
@@ -51,15 +52,14 @@ interface ImportAllKeysDialogProps {
 }
 
 /**
- * Bulk import: accepts a pasted/browsed dump with any mix of armored
- * private and public keys (e.g. a file from "Export All Keys"). Private
- * keys share one source passphrase (the export wrote them under a
- * single passphrase) and are re-protected under one chosen method --
+ * Bulk import subpage: accepts a pasted/browsed dump with any mix of
+ * armored private and public keys (e.g. a file from "Export all keys").
+ * Private keys share one source passphrase (the export wrote them under
+ * a single passphrase) and are re-protected under one chosen method --
  * for passkeys, a single WebAuthn ceremony covers every key via PRF
  * reuse. Public keys become contacts.
  */
-export function ImportAllKeysDialog({
-  open,
+export function ImportAllKeysPage({
   onClose,
   myKeys,
   contacts,
@@ -68,7 +68,7 @@ export function ImportAllKeysDialog({
   onAddCrxKey,
   crxKeys,
   reusePasskeyCredentialId,
-}: ImportAllKeysDialogProps) {
+}: ImportAllKeysPageProps) {
   const [step, setStep] = useState<Step>("paste");
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -83,21 +83,6 @@ export function ImportAllKeysDialog({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [reusePasskey, setReusePasskey] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const resetAndClose = () => {
-    setStep("paste");
-    setText("");
-    setError(null);
-    setParsedPrivates([]);
-    setPublicBlocks([]);
-    setParsedCrx([]);
-    setSkippedPrivates(0);
-    setSourcePassphrase("");
-    setPassword("");
-    setConfirmPassword("");
-    setReusePasskey(true);
-    onClose();
-  };
 
   const importPublics = async (blocks: string[]) => {
     if (blocks.length === 0) return;
@@ -142,7 +127,7 @@ export function ImportAllKeysDialog({
       toast.success(`Restored ${added} CRX signing key${added > 1 ? "s" : ""}`);
   };
 
-  const handlePasteNext = async () => {
+  const handlePasteNext = async (close: () => void) => {
     setError(null);
     const crxBlocks = onAddCrxKey ? parseCrxKeyBlocks(text) : [];
     const { publicKeys, privateKeys } = splitArmoredKeyBlocks(text);
@@ -223,7 +208,7 @@ export function ImportAllKeysDialog({
           toast.info(
             `${skipped} private key${skipped > 1 ? "s" : ""} already imported`,
           );
-        if (unparseable === 0) resetAndClose();
+        if (unparseable === 0) close();
         return;
       }
 
@@ -237,7 +222,7 @@ export function ImportAllKeysDialog({
     }
   };
 
-  const handleProtectSubmit = async () => {
+  const handleProtectSubmit = async (close: () => void) => {
     setError(null);
 
     if (method === "password") {
@@ -326,7 +311,7 @@ export function ImportAllKeysDialog({
         );
       await importCrxBlobs(parsedCrx);
       await importPublics(publicBlocks);
-      resetAndClose();
+      close();
     } catch (e) {
       if (!isWebAuthnCancel(e)) {
         setError(e instanceof Error ? e.message : "Import failed");
@@ -339,153 +324,143 @@ export function ImportAllKeysDialog({
 
   const encryptedCount = parsedPrivates.filter((p) => p.secretEncrypted).length;
 
-  return (
-    <Dialog open={open} onClose={resetAndClose} title="Import Keys">
-      {step === "paste" && (
-        <div className="space-y-3">
-          <p className="text-muted-foreground text-xs">
-            Paste or browse for a key file -- for example one from "Export All
-            Keys". Private keys are re-protected with your chosen method; public
-            keys become contacts.
-          </p>
-          <textarea
-            placeholder="Paste keys here, or browse for a file..."
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            className="border-border bg-background placeholder:text-muted-foreground focus:ring-ring w-full rounded-md border p-3 font-mono text-xs focus:ring-2 focus:outline-none"
-            rows={6}
-          />
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".asc,.gpg,.pub,.key,.pgp,.txt"
-            className="hidden"
-            onChange={async (e) => {
-              const file = e.target.files?.[0];
-              if (file) setText(await file.text());
-              e.target.value = "";
-            }}
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            Browse for key file
-          </Button>
-
-          {error && (
-            <p className="text-destructive text-xs" role="alert">
-              {error}
-            </p>
-          )}
-
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1"
-              onClick={resetAndClose}
-              disabled={importing}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              className="flex-1"
-              onClick={() => void handlePasteNext()}
-              disabled={importing || !text.trim()}
-            >
-              {importing ? "Importing..." : "Next"}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {step === "unlock" && (
-        <div className="space-y-3">
-          <p className="text-muted-foreground text-xs">
-            {encryptedCount} of the {parsedPrivates.length} private key
-            {parsedPrivates.length > 1 ? "s are" : " is"} protected with a
-            passphrase. Enter it to unlock them -- you'll then re-protect every
-            key with your chosen method on the next step.
-          </p>
-          <input
-            type="password"
-            autoFocus
-            autoComplete="current-password"
-            value={sourcePassphrase}
-            onChange={(e) => setSourcePassphrase(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && sourcePassphrase) {
+  // Footer per step; the protect step's buttons live inside
+  // ProtectionMethodPicker (it owns Back/submit).
+  const actions: SubPageAction[] | undefined =
+    step === "paste"
+      ? [
+          {
+            text: "Next",
+            busyText: "Importing...",
+            disabled: !text.trim(),
+            onClick: (api) => handlePasteNext(api.close),
+          },
+          { type: "outline", text: "Cancel" },
+        ]
+      : step === "unlock"
+        ? [
+            {
+              text: "Next",
+              disabled: !sourcePassphrase,
+              onClick: () => {
                 setError(null);
                 setStep("protect");
-              }
-            }}
-            placeholder="Key passphrase"
-            className="border-border bg-background placeholder:text-muted-foreground focus:ring-ring w-full rounded-md border p-2 font-mono text-xs focus:ring-2 focus:outline-none"
-          />
-          {error && (
-            <p className="text-destructive text-xs" role="alert">
-              {error}
-            </p>
-          )}
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1"
-              onClick={() => {
+              },
+            },
+            {
+              type: "outline",
+              text: "Back",
+              onClick: () => {
                 setStep("paste");
                 setError(null);
                 setSourcePassphrase("");
-              }}
-              disabled={importing}
-            >
-              Back
-            </Button>
-            <Button
-              size="sm"
-              className="flex-1"
-              onClick={() => {
-                setError(null);
-                setStep("protect");
-              }}
-              disabled={importing || !sourcePassphrase}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
-      )}
+              },
+            },
+          ]
+        : undefined;
 
-      {step === "protect" && (
-        <div className="space-y-3">
-          <p className="text-muted-foreground text-xs">
-            Choose how to protect the {parsedPrivates.length} imported private
-            key{parsedPrivates.length > 1 ? "s" : ""}.
-          </p>
-          <ProtectionMethodPicker
-            method={method}
-            onMethodChange={setMethod}
-            password={password}
-            onPasswordChange={setPassword}
-            confirmPassword={confirmPassword}
-            onConfirmPasswordChange={setConfirmPassword}
-            error={error}
-            onSubmit={() => void handleProtectSubmit()}
-            onBack={() => {
-              setStep(encryptedCount > 0 ? "unlock" : "paste");
-              setError(null);
-            }}
-            submitting={importing}
-            submitLabel={`Import ${parsedPrivates.length} key${parsedPrivates.length > 1 ? "s" : ""}`}
-            reusePasskeyCredentialId={reusePasskeyCredentialId}
-            reusePasskey={reusePasskey}
-            onReusePasskeyChange={setReusePasskey}
-          />
-        </div>
+  return (
+    <SubPage title="Import keys" onClose={onClose} actions={actions}>
+      {(api) => (
+        <>
+          {step === "paste" && (
+            <div className="space-y-3">
+              <p className="text-muted-foreground text-xs">
+                Paste or browse for a key file -- for example one from "Export
+                all keys". Private keys are re-protected with your chosen
+                method; public keys become contacts.
+              </p>
+              <textarea
+                placeholder="Paste keys here, or browse for a file..."
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                className="border-border bg-background placeholder:text-muted-foreground focus:ring-ring w-full rounded-md border p-3 font-mono text-xs focus:ring-2 focus:outline-none"
+                rows={6}
+              />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".asc,.gpg,.pub,.key,.pgp,.txt"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (file) setText(await file.text());
+                  e.target.value = "";
+                }}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                Browse for key file
+              </Button>
+
+              {error && (
+                <p className="text-destructive text-xs" role="alert">
+                  {error}
+                </p>
+              )}
+            </div>
+          )}
+
+          {step === "unlock" && (
+            <div className="space-y-3">
+              <p className="text-muted-foreground text-xs">
+                {encryptedCount} of the {parsedPrivates.length} private key
+                {parsedPrivates.length > 1 ? "s are" : " is"} protected with a
+                passphrase. Enter it to unlock them -- you'll then re-protect
+                every key with your chosen method on the next step.
+              </p>
+              <input
+                type="password"
+                autoFocus
+                autoComplete="current-password"
+                value={sourcePassphrase}
+                onChange={(e) => setSourcePassphrase(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") api.runAction(0);
+                }}
+                placeholder="Key passphrase"
+                className="border-border bg-background placeholder:text-muted-foreground focus:ring-ring w-full rounded-md border p-2 font-mono text-xs focus:ring-2 focus:outline-none"
+              />
+              {error && (
+                <p className="text-destructive text-xs" role="alert">
+                  {error}
+                </p>
+              )}
+            </div>
+          )}
+
+          {step === "protect" && (
+            <div className="space-y-3">
+              <p className="text-muted-foreground text-xs">
+                Choose how to protect the {parsedPrivates.length} imported
+                private key{parsedPrivates.length > 1 ? "s" : ""}.
+              </p>
+              <ProtectionMethodPicker
+                method={method}
+                onMethodChange={setMethod}
+                password={password}
+                onPasswordChange={setPassword}
+                confirmPassword={confirmPassword}
+                onConfirmPasswordChange={setConfirmPassword}
+                error={error}
+                onSubmit={() => void handleProtectSubmit(api.close)}
+                onBack={() => {
+                  setStep(encryptedCount > 0 ? "unlock" : "paste");
+                  setError(null);
+                }}
+                submitting={importing}
+                submitLabel={`Import ${parsedPrivates.length} key${parsedPrivates.length > 1 ? "s" : ""}`}
+                reusePasskeyCredentialId={reusePasskeyCredentialId}
+                reusePasskey={reusePasskey}
+                onReusePasskeyChange={setReusePasskey}
+              />
+            </div>
+          )}
+        </>
       )}
-    </Dialog>
+    </SubPage>
   );
 }

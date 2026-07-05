@@ -13,7 +13,7 @@ import { hasContactsSession, ping } from "../../lib/pgp/wasm";
 import { dumpWasmMemoryForDev } from "../../lib/pgp/wasm-loader";
 import { downloadBinary, downloadText } from "../../lib/utils/download";
 import { formatFileSize } from "../../lib/utils/formatting";
-import { Dialog } from "../shared/Dialog";
+import { SubPage } from "../shared/SubPage";
 
 interface WasmInfo {
   pong: string;
@@ -21,13 +21,7 @@ interface WasmInfo {
   memoryBytes: number | null;
 }
 
-export function DevToolsDialog({
-  open,
-  onClose,
-}: {
-  open: boolean;
-  onClose: () => void;
-}) {
+export function DevToolsPage({ onClose }: { onClose: () => void }) {
   const [storageJson, setStorageJson] = useState<string | null>(null);
   const [wasm, setWasm] = useState<WasmInfo | null>(null);
   const [loading, setLoading] = useState(false);
@@ -58,12 +52,8 @@ export function DevToolsDialog({
   };
 
   useEffect(() => {
-    if (open) void refresh();
-    else {
-      setStorageJson(null);
-      setWasm(null);
-    }
-  }, [open]);
+    void refresh();
+  }, []);
 
   const stamp = () =>
     new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
@@ -122,12 +112,7 @@ export function DevToolsDialog({
   };
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      title="Developer tools"
-      className="mx-4 max-h-[85vh] w-full max-w-md overflow-y-auto"
-    >
+    <SubPage title="Developer tools" onClose={onClose}>
       <div className="space-y-4">
         <p className="text-muted-foreground text-xs">
           Dev-only diagnostics. Not shipped in production builds.
@@ -233,7 +218,7 @@ export function DevToolsDialog({
           </Button>
         </div>
       </div>
-    </Dialog>
+    </SubPage>
   );
 }
 

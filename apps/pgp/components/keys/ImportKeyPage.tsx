@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@amibeingpwned/ui/button";
@@ -85,9 +85,8 @@ export function ImportKeyPage({
   onImportCrx,
 }: ImportKeyPageProps) {
   const crxEnabled = !!crxSigningEnabled && !!onImportCrx;
-  const { entered } = useSlideOver(onClose);
+  const { entered, close } = useSlideOver(onClose);
   const [step, setStep] = useState<Step>("paste");
-  const [armored, setArmored] = useState(initialArmored ?? "");
   const [label, setLabel] = useState("");
   const [method, setMethod] = useState(getDefaultProtectionMethod);
   const [password, setPassword] = useState("");
@@ -102,18 +101,52 @@ export function ImportKeyPage({
   const [parsed, setParsed] = useState<ParsedPrivate | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleArmoredChange = (text: string) => {
-    setArmored(text);
+  // The pasted key armor is the crown-jewel secret, so it lives in a ref
+  // rather than useState. A ref is a single mutable slot shared by both of a
+  // fiber's double-buffered copies, so clearing it on close drops the only
+  // reference -- whereas a useState value is snapshotted into the previous
+  // fiber, which React keeps alive for the whole slide-out animation, leaving
+  // the private key lingering in the GC heap. Keeping it out of state lets the
+  // panel animate out without retaining key material (see SECURITY.md's
+  // zeroization table; the same WASM-isolation philosophy as the heap test).
+  // `hasContent` mirrors only whether the box is non-empty, for the button.
+  const armoredRef = useRef(initialArmored ?? "");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [hasContent, setHasContent] = useState(!!initialArmored?.trim());
+
+  // Record a new armor value (from typing): stash it in the ref and refresh
+  // the derived, non-sensitive UI state.
+  const syncArmor = (text: string) => {
+    armoredRef.current = text;
+    setHasContent(!!text.trim());
     setDetectedType(detectType(text, crxEnabled));
   };
 
-  // Unmount the panel immediately rather than sliding it out. React
-  // double-buffers hook state one render back, so a lingering slide-out keeps
-  // the previous fiber -- whose submit handler closes over the pasted private
-  // key armor -- alive in the GC heap for the animation's duration. Dropping
-  // the panel now releases that material at once, matching the old modal's
-  // instant close (see SECURITY.md's zeroization table).
-  const resetAndClose = onClose;
+  // Set the armor programmatically (file browse): also write it into the
+  // uncontrolled textarea's DOM node so the paste box reflects it.
+  const setArmorValue = (text: string) => {
+    if (textareaRef.current) textareaRef.current.value = text;
+    syncArmor(text);
+  };
+
+  const resetAndClose = () => {
+    // Drop the pasted armor before the panel slides out. Because it's in a
+    // ref (not double-buffered state), this releases the only reference, so
+    // the animation can run without holding key material in the JS heap.
+    armoredRef.current = "";
+    if (textareaRef.current) textareaRef.current.value = "";
+    close();
+  };
+
+  // The paste box is uncontrolled (armor never enters render state), so seed
+  // its DOM value from the ref whenever the paste step (re)mounts -- the
+  // initial prefill from a global drop, and restoring the text after the Back
+  // button returns from the protect/unlock step.
+  useEffect(() => {
+    if (step === "paste" && textareaRef.current) {
+      textareaRef.current.value = armoredRef.current;
+    }
+  }, [step]);
 
   // Header back mirrors the step order; from the first step it slides out.
   const handleBack = () => {
@@ -139,6 +172,7 @@ export function ImportKeyPage({
 
   const handlePasteNext = async () => {
     setError(null);
+    const armored = armoredRef.current;
     if (!armored.trim()) return;
     // A raw RSA PEM is a CRX signing key: no PGP parse, straight to the
     // protection step (the label was entered alongside the paste box).
@@ -200,7 +234,7 @@ export function ImportKeyPage({
       // A pasted blob may bundle several certs (e.g. yearly-rotated
       // keys). Import every live one against its own armor; ignore the
       // stale rotations.
-      const certs = await parseKeys(armored);
+      const certs = await parseKeys(armoredRef.current);
       const usable = certs.filter((c) => isUsableContact(c.keyInfo));
       if (usable.length === 0) {
         setError(importRejectionMessage(certs[0]?.keyInfo));
@@ -250,7 +284,7 @@ export function ImportKeyPage({
     setImporting(true);
     try {
       const { blob } = await importAndProtect(
-        armored.trim(),
+        armoredRef.current.trim(),
         parsed.secretEncrypted ? sourcePassphrase : null,
         method === "password"
           ? { method: "password", password }
@@ -294,7 +328,7 @@ export function ImportKeyPage({
                 : undefined,
             };
       const blob = await importCrxKey(
-        armored.trim(),
+        armoredRef.current.trim(),
         protection,
         label.trim() || undefined,
       );
@@ -314,10 +348,14 @@ export function ImportKeyPage({
         {step === "paste" && (
           <div className="flex flex-1 flex-col overflow-hidden">
             <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-3">
+              {/* Uncontrolled: the armor is held in armoredRef, never in
+                  React state, so it can't linger in a double-buffered fiber
+                  during the slide-out. The mount effect above seeds/restores
+                  its value from the ref. */}
               <textarea
+                ref={textareaRef}
                 placeholder="Paste a key here, or browse for a file..."
-                value={armored}
-                onChange={(e) => handleArmoredChange(e.target.value)}
+                onChange={(e) => syncArmor(e.target.value)}
                 className="border-border bg-background placeholder:text-muted-foreground focus:ring-ring min-h-32 w-full flex-1 resize-none rounded-md border p-3 font-mono text-xs focus:ring-2 focus:outline-none"
               />
               <input
@@ -327,7 +365,7 @@ export function ImportKeyPage({
                 className="hidden"
                 onChange={async (e) => {
                   const file = e.target.files?.[0];
-                  if (file) handleArmoredChange(await file.text());
+                  if (file) setArmorValue(await file.text());
                   e.target.value = "";
                 }}
               />
@@ -383,7 +421,7 @@ export function ImportKeyPage({
               <Button
                 className="w-full"
                 onClick={() => void handlePasteNext()}
-                disabled={importing || !armored.trim()}
+                disabled={importing || !hasContent}
               >
                 {importing
                   ? "Importing..."

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ImportIcon, PlusIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@amibeingpwned/ui/button";
@@ -332,17 +333,19 @@ export function KeysView({
           <Button
             variant="outline"
             size="sm"
-            className="dark:bg-border/70 dark:hover:bg-border flex-1"
+            className="dark:bg-border/90 dark:hover:bg-border flex-1"
             onClick={() => nav.push({ page: "generate" })}
           >
+            <PlusIcon className="h-4 w-4" />
             Generate Key
           </Button>
           <Button
             variant="outline"
             size="sm"
-            className="dark:bg-border/70 dark:hover:bg-border flex-1"
+            className="dark:bg-border/90 dark:hover:bg-border flex-1"
             onClick={() => nav.push({ page: "import" })}
           >
+            <ImportIcon className="h-4 w-4" />
             Import Key
           </Button>
         </div>

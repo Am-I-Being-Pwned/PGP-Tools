@@ -4,18 +4,18 @@ import { Button } from "@amibeingpwned/ui/button";
 
 import { isWebAuthnCancel } from "../../lib/protection/webauthn-prf";
 import { INPUT_CLASS } from "../../lib/utils/styles";
-import { Dialog } from "../shared/Dialog";
+import { SubPage } from "../shared/SubPage";
 
 /**
- * Pluggable crypto for {@link ExportPrivateKeyDialog}. The dialog is pure UI +
+ * Pluggable crypto for {@link ExportPrivateKeyPage}. The page is pure UI +
  * clipboard lifecycle; the exporter supplies the WASM handlers so the same
- * dialog serves both PGP private keys (already unlocked in the session) and CRX
- * signing keys (sealed at rest, unlocked transiently inside the dialog).
+ * page serves both PGP private keys (already unlocked in the session) and CRX
+ * signing keys (sealed at rest, unlocked transiently inside the page).
  */
 export interface PrivateKeyExporter {
   title: string;
   isPasskey: boolean;
-  /** true ⇒ the dialog shows an unlock gate first and holds the handle it
+  /** true ⇒ the page shows an unlock gate first and holds the handle it
    *  opens (CRX). false ⇒ no gate; a live handle is acquired+released around
    *  each export (PGP session handle). */
   needsUnlock: boolean;
@@ -38,8 +38,8 @@ export interface PrivateKeyExporter {
   unlockBlurb?: string;
 }
 
-interface ExportPrivateKeyDialogProps {
-  open: boolean;
+interface ExportPrivateKeyPageProps {
+  /** Called after the slide-out finishes (parent unmounts the page). */
   onClose: () => void;
   exporter: PrivateKeyExporter;
 }
@@ -49,14 +49,13 @@ interface ExportPrivateKeyDialogProps {
  * (CRX), then a passphrase-encrypted copy or a type-`EXPORT` plaintext escape
  * hatch. Both paths write to the clipboard and schedule a best-effort wipe --
  * 60s for the encrypted blob, 30s for the higher-impact plaintext key. A CRX
- * handle opened by the gate is dropped on close and on unmount.
+ * handle opened by the gate is dropped on unmount.
  */
-export function ExportPrivateKeyDialog({
-  open,
+export function ExportPrivateKeyPage({
   onClose,
   exporter,
-}: ExportPrivateKeyDialogProps) {
-  // Handle held for the dialog's life in gated (CRX) mode. In un-gated (PGP)
+}: ExportPrivateKeyPageProps) {
+  // Handle held for the page's life in gated (CRX) mode. In un-gated (PGP)
   // mode this stays null and a fresh handle is acquired per export action.
   const [handle, setHandle] = useState<number | null>(null);
   const handleRef = useRef<number | null>(null);
@@ -103,57 +102,39 @@ export function ExportPrivateKeyDialog({
     feedbackTimer.current = setTimeout(() => setFeedback(null), 2000);
   };
 
-  // Drop a held handle if the dialog unmounts without a clean close, and cancel
-  // both timers so neither fires after we're gone (a stray clipboard wipe would
-  // clobber whatever the user copied next).
+  // True once the page has unmounted, so an unlock still in flight can detect
+  // it resolved into a dead page and drop its handle rather than leave it
+  // lingering in WASM untracked.
+  const unmounted = useRef(false);
+
+  // Drop a held handle on unmount and cancel the feedback timer. The
+  // clipboard-wipe timer deliberately survives unmount: the whole point of
+  // copying is to close this page and paste elsewhere, so the wipe must
+  // still fire at its scheduled deadline -- not be cancelled (key material
+  // would linger in the clipboard forever) and not fire early (the paste
+  // window would vanish). Its callback touches only the clipboard, never
+  // React state. If the side panel itself closes, the JS context -- and
+  // with it the clipboard copy's source -- dies anyway.
   useEffect(() => {
     return () => {
+      unmounted.current = true;
       if (handleRef.current !== null) exporter.release(handleRef.current);
       clearTimeout(feedbackTimer.current);
-      clearTimeout(clipboardClearTimer.current);
     };
-    // exporter is captured per-open; releasing the latest handle is all we need.
+    // exporter is captured per-mount; releasing the latest handle is all we need.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Bumped on every reset so an unlock still in flight when the dialog closes
-  // can detect it resolved into a closed dialog and drop its handle rather than
-  // leave it lingering in WASM untracked.
-  const openGen = useRef(0);
-
-  const reset = () => {
-    openGen.current++;
-    if (handleRef.current !== null) {
-      exporter.release(handleRef.current);
-      handleRef.current = null;
-    }
-    setHandle(null);
-    setPassword("");
-    setUnlocking(false);
-    setUnlockError(null);
-    setPassphrase("");
-    setConfirmPassphrase("");
-    setUnsafeConfirm("");
-    setExportError(null);
-    setExporting(false);
-  };
-
-  const handleClose = () => {
-    reset();
-    onClose();
-  };
 
   const handleUnlock = async () => {
     if (unlockInFlight.current || handleRef.current !== null) return;
     unlockInFlight.current = true;
-    const gen = openGen.current;
     setUnlockError(null);
     setUnlocking(true);
     try {
       const h = await exporter.acquire(isPasskey ? undefined : password);
-      // The dialog was closed/reset while this unlock was in flight: the handle
-      // now belongs to nobody, so drop it instead of storing it.
-      if (gen !== openGen.current) {
+      // The page unmounted while this unlock was in flight: the handle now
+      // belongs to nobody, so drop it instead of storing it.
+      if (unmounted.current) {
         exporter.release(h);
         return;
       }
@@ -245,7 +226,7 @@ export function ExportPrivateKeyDialog({
     );
 
   return (
-    <Dialog open={open} onClose={handleClose} title={exporter.title}>
+    <SubPage title={exporter.title} onClose={onClose}>
       {showGate ? (
         <div className="space-y-3">
           <p className="text-muted-foreground text-xs">
@@ -342,6 +323,6 @@ export function ExportPrivateKeyDialog({
           </div>
         </div>
       )}
-    </Dialog>
+    </SubPage>
   );
 }
