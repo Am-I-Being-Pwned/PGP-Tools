@@ -2,6 +2,7 @@ import { expect, test } from "./fixtures";
 import { scanJsHeap } from "./heap";
 import {
   decryptInWorkspace,
+  encryptToSelfInWorkspace,
   importPrivateKey,
   lockOnlyKey,
   onboardWithPasswordSkipKey,
@@ -18,7 +19,7 @@ import { PRIVATE_KEY_FIXTURE } from "./private-key";
 
 const MASTER = "correct horse battery staple";
 const IMPORT_PW = "import-protect-password-123";
-const { name, secretNeedle, privateKey, encryptedMessage, decryptedPlaintext } =
+const { name, secretNeedle, privateKey, decryptedPlaintext } =
   PRIVATE_KEY_FIXTURE;
 
 test("private key material stays out of the JS heap across the lifecycle", async ({
@@ -54,7 +55,12 @@ test("private key material stays out of the JS heap across the lifecycle", async
   });
 
   await test.step("after decrypt (WASM handle; plaintext crosses to JS)", async () => {
-    await decryptInWorkspace(panel, encryptedMessage, decryptedPlaintext);
+    // Encrypt to the key via the app (round-trips), then decrypt it.
+    const ciphertext = await encryptToSelfInWorkspace(
+      panel,
+      decryptedPlaintext,
+    );
+    await decryptInWorkspace(panel, ciphertext, decryptedPlaintext);
     // The decrypted plaintext IS in JS by design -- use it as the control.
     await assertClean("decrypt", decryptedPlaintext);
   });
@@ -68,4 +74,8 @@ test("private key material stays out of the JS heap across the lifecycle", async
     await unlockOnlyKey(panel, IMPORT_PW);
     await assertClean("re-unlock");
   });
+
+  // Verify isn't covered here: it only ever touches PUBLIC keys, so it
+  // can't expose private material. keys.spec.ts exercises it functionally
+  // across the fixture key set.
 });
