@@ -5,11 +5,13 @@ import {
   CheckCircleIcon,
   CopyIcon,
   EllipsisVerticalIcon,
+  ListChecksIcon,
   LockIcon,
   Trash2Icon,
   TriangleAlertIcon,
 } from "lucide-react";
 
+import { cn } from "@amibeingpwned/ui";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +23,7 @@ import {
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import { formatAlgorithm, formatFingerprint } from "../../lib/utils/formatting";
 import { parseUserId } from "../../lib/utils/key-naming";
+import { useLongPress } from "./useLongPress";
 
 interface ContactCardProps {
   contact: PublicContactKey;
@@ -37,6 +40,13 @@ interface ContactCardProps {
   verifiedTone?: "success" | "warning";
   /** Optional muted explanation shown under the key line. */
   note?: string;
+  /** Bulk-selection: when true, a tap toggles selection instead of navigating
+   *  and the card's own controls are dimmed/click-through. */
+  selectionMode?: boolean;
+  selected?: boolean;
+  onToggleSelect?: () => void;
+  /** Enter selection mode with this contact selected (long-press / menu). */
+  onStartSelect?: () => void;
 }
 
 export function ContactCard({
@@ -50,6 +60,10 @@ export function ContactCard({
   verifiedLabel,
   verifiedTone = "success",
   note,
+  selectionMode = false,
+  selected = false,
+  onToggleSelect,
+  onStartSelect,
 }: ContactCardProps) {
   const isWarning = verifiedTone === "warning";
   const toneBorder = isWarning ? "border-orange-500/50" : "border-green-500/50";
@@ -61,10 +75,40 @@ export function ContactCard({
   const { name: rawName, email, comment } = parseUserId(userId);
   const name = comment ? `${rawName} (${comment})` : rawName;
 
+  const longPress = useLongPress(
+    () => onStartSelect?.(),
+    !selectionMode && !!onStartSelect,
+  );
+
+  const handleClick = () => {
+    if (longPress.consumeClick()) return;
+    if (selectionMode) {
+      onToggleSelect?.();
+      return;
+    }
+    onShowDetails?.();
+  };
+
+  const clickable = selectionMode || !!onShowDetails;
+  // While selecting, the card itself is the target: its own controls are dimmed
+  // and click-through (`dimmed`), and drop their hover highlight -- `hover:` /
+  // `group-hover:` fire from hovering the CARD, so pointer-events-none alone
+  // wouldn't stop the highlight.
+  const dimmed = "pointer-events-none opacity-40";
+
   return (
     <div
-      onClick={onShowDetails}
-      className={`group relative rounded-md border p-3 ${verifiedLabel ? toneBorder : "border-border"} ${onShowDetails ? "hover:bg-muted/40 cursor-pointer transition-colors" : ""}`}
+      onClick={handleClick}
+      {...longPress.handlers}
+      className={cn(
+        "group relative rounded-md p-3",
+        selected
+          ? "border-2 border-green-500/80 ring-1 ring-green-500/30"
+          : verifiedLabel
+            ? `border ${toneBorder}`
+            : "border-border border",
+        clickable && "hover:bg-muted/40 cursor-pointer transition-colors",
+      )}
     >
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
@@ -128,7 +172,11 @@ export function ContactCard({
             <DropdownMenuTrigger asChild>
               <button
                 onClick={(e) => e.stopPropagation()}
-                className="text-muted-foreground hover:text-foreground rounded p-1 transition-colors"
+                onPointerDown={(e) => e.stopPropagation()}
+                className={cn(
+                  "text-muted-foreground rounded p-1 transition-colors",
+                  selectionMode ? dimmed : "hover:text-foreground",
+                )}
                 aria-label="Contact options"
               >
                 <EllipsisVerticalIcon className="h-4 w-4" />
@@ -154,6 +202,12 @@ export function ContactCard({
                   Copy public key
                 </DropdownMenuItem>
               )}
+              {onStartSelect && (
+                <DropdownMenuItem onClick={onStartSelect}>
+                  <ListChecksIcon />
+                  Select
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
@@ -175,7 +229,10 @@ export function ContactCard({
             onShowDetails();
           }}
           aria-label="Key details"
-          className="text-muted-foreground group-hover:text-foreground absolute right-3 bottom-2 rounded p-1 transition-colors"
+          className={cn(
+            "text-muted-foreground absolute right-3 bottom-2 rounded p-1 transition-colors",
+            selectionMode ? dimmed : "group-hover:text-foreground",
+          )}
         >
           <ArrowRightIcon className="h-4 w-4" />
         </button>

@@ -4,6 +4,7 @@ import {
   CopyIcon,
   EllipsisVerticalIcon,
   KeyIcon,
+  ListChecksIcon,
   LockIcon,
   LockOpenIcon,
   PencilIcon,
@@ -11,6 +12,7 @@ import {
   TriangleAlertIcon,
 } from "lucide-react";
 
+import { cn } from "@amibeingpwned/ui";
 import { Button } from "@amibeingpwned/ui/button";
 import {
   DropdownMenu,
@@ -20,83 +22,90 @@ import {
   DropdownMenuTrigger,
 } from "@amibeingpwned/ui/dropdown-menu";
 
-import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
-import {
-  encryptKeyForExportWithHandle,
-  getKeyArmored,
-} from "../../lib/pgp/wasm";
-import { formatAlgorithm, formatFingerprint } from "../../lib/utils/formatting";
+import type { PrivateKeyExporter } from "./ExportPrivateKeyDialog";
 import { INPUT_CLASS } from "../../lib/utils/styles";
-import { Dialog } from "../shared/Dialog";
+import { ExportPrivateKeyDialog } from "./ExportPrivateKeyDialog";
+import { useLongPress } from "./useLongPress";
+
+/** Lock/unlock lifecycle for a key that lives in the per-session vault (PGP).
+ *  Absent on a descriptor ⇒ the key is sealed at rest (CRX): no unlock UI. */
+export interface KeyCardSession {
+  isUnlocked: boolean;
+  unlockWithPassword: (password: string) => Promise<boolean>;
+  unlockWithPasskey: () => Promise<boolean | "cancelled">;
+  lock: () => void;
+}
+
+/**
+ * A unified, crypto-agnostic view of a manageable private key. Both PGP private
+ * keys and CRX signing keys map into this shape so one card renders both; the
+ * behavioural differences (session unlock vs sealed-at-rest, action set) are
+ * expressed as optional capabilities rather than separate components.
+ */
+export interface KeyCardModel {
+  kind: "pgp" | "crx";
+  /** Stable identity: keyId (PGP) or extensionId (CRX). */
+  id: string;
+  displayName: string;
+  /** Underlying identity (userId / extensionId) for the rename hint. */
+  realName: string;
+  shortId: string;
+  algorithm: string;
+  /** Advanced-mode fingerprint line (PGP only). */
+  fingerprint?: string;
+  /** Small tag after the name, e.g. "CRX". */
+  badge?: string;
+  protectionMethod: "password" | "passkey";
+  securityWarning?: string;
+  /** Present ⇒ show unlock/lock lifecycle (PGP). Absent ⇒ sealed at rest (CRX). */
+  session?: KeyCardSession;
+  /** Present ⇒ enable "Copy private key" (opens the unified export dialog). */
+  exporter: PrivateKeyExporter | null;
+  onCopyPublicKey: () => void;
+  onDelete: () => void;
+  onRename?: () => void;
+  /** Present ⇒ card is clickable into a details page (PGP). */
+  onShowDetails?: () => void;
+}
 
 interface KeyCardProps {
-  keyBlob: ProtectedKeyBlob;
-  isUnlocked: boolean;
-  onUnlockWithPassword: (password: string) => Promise<boolean>;
-  onUnlockWithPasskey: () => Promise<boolean | "cancelled">;
-  onLock: () => void;
-  onDelete: () => void;
-  onExportPublic: () => void;
-  onExportPrivate: () => number | null;
-  onShowDetails: () => void;
-  /** Open the rename page. Omitted when renaming isn't available. */
-  onRename?: () => void;
+  model: KeyCardModel;
   advancedMode?: boolean;
+  selectionMode: boolean;
+  selected: boolean;
+  /** Toggle this card's membership while already in selection mode. */
+  onToggleSelect: () => void;
+  /** Enter selection mode with this card selected (long-press / menu). */
+  onStartSelect: () => void;
 }
 
 export function KeyCard({
-  keyBlob,
-  isUnlocked,
-  onUnlockWithPassword,
-  onUnlockWithPasskey,
-  onLock,
-  onDelete,
-  onExportPublic,
-  onExportPrivate,
-  onShowDetails,
-  onRename,
+  model,
   advancedMode,
+  selectionMode,
+  selected,
+  onToggleSelect,
+  onStartSelect,
 }: KeyCardProps) {
   const [showPasswordUnlock, setShowPasswordUnlock] = useState(false);
-  const [showExportPrivateConfirm, setShowExportPrivateConfirm] =
-    useState(false);
+  const [showExportPrivate, setShowExportPrivate] = useState(false);
   const [password, setPassword] = useState("");
   const [unlocking, setUnlocking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
-  const [exportPassphrase, setExportPassphrase] = useState("");
-  const [exportConfirmPassphrase, setExportConfirmPassphrase] = useState("");
-  const [exportError, setExportError] = useState<string | null>(null);
-  const [exporting, setExporting] = useState(false);
-  const [unsafeExportConfirm, setUnsafeExportConfirm] = useState("");
   const feedbackTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const clipboardClearTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  /** Schedule a best-effort clipboard wipe after `delayMs`.
-   *  We can't read the clipboard to know if the user has since copied
-   *  something else (no permission), so the wipe is unconditional --
-   *  acceptable trade-off for not leaving secret key material indefinitely. */
-  const scheduleClipboardClear = (delayMs = 60_000) => {
-    if (clipboardClearTimer.current) clearTimeout(clipboardClearTimer.current);
-    clipboardClearTimer.current = setTimeout(() => {
-      void navigator.clipboard.writeText("").catch(() => {
-        /* clipboard API may have been revoked; nothing to do */
-      });
-    }, delayMs);
-  };
+  const longPress = useLongPress(onStartSelect, !selectionMode);
 
   useEffect(() => {
-    return () => {
-      if (clipboardClearTimer.current) {
-        clearTimeout(clipboardClearTimer.current);
-      }
-    };
+    return () => clearTimeout(feedbackTimer.current);
   }, []);
 
-  const realName = keyBlob.userIds[0] ?? "Unknown";
-  const displayName = keyBlob.alias ?? realName;
-  const shortId = keyBlob.keyId.slice(-16);
-  const isPasskey = keyBlob.protection.method === "passkey";
+  const { session, exporter } = model;
+  const isUnlocked = session?.isUnlocked ?? false;
+  const isPasskey = model.protectionMethod === "passkey";
+  // CRX exports unlock inside the dialog; PGP requires the session unlocked.
+  const canExportPrivate = exporter !== null && (!session || isUnlocked);
 
   const showFeedback = (msg: string) => {
     setFeedback(msg);
@@ -105,9 +114,10 @@ export function KeyCard({
   };
 
   const handlePasswordUnlock = async () => {
+    if (!session) return;
     setError(null);
     setUnlocking(true);
-    const success = await onUnlockWithPassword(password);
+    const success = await session.unlockWithPassword(password);
     if (success) {
       setShowPasswordUnlock(false);
       setPassword("");
@@ -118,62 +128,47 @@ export function KeyCard({
   };
 
   const handlePasskeyUnlock = async () => {
+    if (!session) return;
     setError(null);
-    const result = await onUnlockWithPasskey();
+    const result = await session.unlockWithPasskey();
     if (result === "cancelled") return;
-    if (!result) {
-      setError("Passkey authentication failed");
-    }
+    if (!result) setError("Passkey authentication failed");
   };
 
-  const handleExportPrivate = async () => {
-    setExportError(null);
-    if (exportPassphrase.length < 8) {
-      setExportError("Passphrase must be at least 8 characters.");
+  const handleCardClick = () => {
+    if (longPress.consumeClick()) return; // swallow the click ending a long-press
+    if (selectionMode) {
+      onToggleSelect();
       return;
     }
-    if (exportPassphrase !== exportConfirmPassphrase) {
-      setExportError("Passphrases do not match.");
-      return;
-    }
-    const handle = onExportPrivate();
-    if (handle === null) {
-      setExportError("Key is not unlocked.");
-      return;
-    }
-    setExporting(true);
-    const passphraseBytes = new TextEncoder().encode(exportPassphrase);
-    try {
-      const encryptedArmor = await encryptKeyForExportWithHandle(
-        handle,
-        passphraseBytes,
-      );
-      await navigator.clipboard.writeText(encryptedArmor);
-      // Encrypted-armored is safer than plaintext but still gates secrecy
-      // on the export passphrase -- clear the clipboard after 60s so it
-      // doesn't sit indefinitely.
-      scheduleClipboardClear();
-      showFeedback("Encrypted key copied (clears in 60s)");
-      setShowExportPrivateConfirm(false);
-      setExportPassphrase("");
-      setExportConfirmPassphrase("");
-    } catch {
-      setExportError("Failed to encrypt key.");
-    } finally {
-      passphraseBytes.fill(0);
-      setExporting(false);
-    }
+    model.onShowDetails?.();
   };
+
+  const clickable = selectionMode || !!model.onShowDetails;
+  // While selecting, the card itself is the target: its own controls are dimmed
+  // and click-through (`dimmed`), and drop their hover highlight -- `hover:` /
+  // `group-hover:` fire from hovering the CARD, so pointer-events-none alone
+  // wouldn't stop the highlight.
+  const dimmed = "pointer-events-none opacity-40";
 
   return (
     <div
-      onClick={onShowDetails}
-      className="group border-border hover:bg-muted/40 cursor-pointer rounded-md border p-3 transition-colors"
+      onClick={handleCardClick}
+      {...longPress.handlers}
+      className={cn(
+        "group relative rounded-md p-3 transition-colors",
+        selected
+          ? "border-2 border-green-500/80 ring-1 ring-green-500/30"
+          : "border-border border",
+        clickable && "hover:bg-muted/40 cursor-pointer",
+      )}
     >
       <div className="flex items-center gap-2">
         <span
           className={`shrink-0 text-sm ${isUnlocked ? "text-green-400" : "text-muted-foreground"}`}
-          title={isUnlocked ? "Unlocked" : "Locked"}
+          title={
+            session ? (isUnlocked ? "Unlocked" : "Locked") : "Sealed at rest"
+          }
         >
           {isUnlocked ? (
             <LockOpenIcon className="h-4 w-4" />
@@ -183,13 +178,20 @@ export function KeyCard({
         </span>
 
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">{displayName}</p>
-          <p className="text-muted-foreground font-mono text-xs">
-            {shortId} · {formatAlgorithm(keyBlob.algorithm)}
+          <p className="truncate text-sm font-medium">
+            {model.displayName}
+            {model.badge && (
+              <span className="text-muted-foreground ml-1.5 text-[11px]">
+                {model.badge}
+              </span>
+            )}
           </p>
-          {advancedMode && (
+          <p className="text-muted-foreground truncate font-mono text-xs">
+            {model.shortId} · {model.algorithm}
+          </p>
+          {advancedMode && model.fingerprint && (
             <p className="text-muted-foreground mt-0.5 font-mono text-[10px] leading-relaxed">
-              {formatFingerprint(keyBlob.keyId)}
+              {model.fingerprint}
             </p>
           )}
         </div>
@@ -198,44 +200,52 @@ export function KeyCard({
           <DropdownMenuTrigger asChild>
             <button
               onClick={(e) => e.stopPropagation()}
-              className="text-muted-foreground hover:text-foreground rounded p-1 transition-colors"
+              onPointerDown={(e) => e.stopPropagation()}
+              className={cn(
+                "text-muted-foreground rounded p-1 transition-colors",
+                selectionMode ? dimmed : "hover:text-foreground",
+              )}
               aria-label="Key options"
             >
               <EllipsisVerticalIcon className="h-4 w-4" />
             </button>
           </DropdownMenuTrigger>
-          {/* Radix portals this into <body>, but React synthetic events
-              still bubble through the COMPONENT tree -- without this stop,
-              a menu-item click also fires the card's onShowDetails. */}
+          {/* Radix portals this into <body>, but React synthetic events still
+                bubble through the COMPONENT tree -- without this stop, a
+                menu-item click also fires the card's onClick. */}
           <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-            {onRename && (
-              <DropdownMenuItem onClick={onRename}>
+            {model.onRename && (
+              <DropdownMenuItem onClick={model.onRename}>
                 <PencilIcon />
                 Rename
               </DropdownMenuItem>
             )}
             <DropdownMenuItem
               onClick={() => {
-                onExportPublic();
+                model.onCopyPublicKey();
                 showFeedback("Public key copied");
               }}
             >
               <CopyIcon />
               Copy public key
             </DropdownMenuItem>
-            {isUnlocked && (
+            {canExportPrivate && (
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
-                onClick={() => setShowExportPrivateConfirm(true)}
+                onClick={() => setShowExportPrivate(true)}
               >
                 <KeyIcon className="text-destructive" />
                 Copy private key
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={onStartSelect}>
+              <ListChecksIcon />
+              Select
+            </DropdownMenuItem>
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"
-              onClick={onDelete}
+              onClick={model.onDelete}
             >
               <Trash2Icon className="text-destructive" />
               Delete key
@@ -248,10 +258,10 @@ export function KeyCard({
         {isPasskey ? "Passkey" : "Password"}
       </p>
 
-      {keyBlob.securityWarning && (
+      {model.securityWarning && (
         <div className="mt-1 ml-6">
           <span
-            title={keyBlob.securityWarning}
+            title={model.securityWarning}
             className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400"
           >
             <TriangleAlertIcon className="h-3 w-3" />
@@ -264,184 +274,121 @@ export function KeyCard({
         <p className="mt-1 ml-6 text-xs text-green-400">{feedback}</p>
       )}
 
-      {showPasswordUnlock && !isUnlocked && !isPasskey && (
-        <div className="mt-2 space-y-2" onClick={(e) => e.stopPropagation()}>
-          <input
-            type="password"
-            autoComplete="current-password"
-            placeholder="Enter password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") void handlePasswordUnlock();
-            }}
-            className={INPUT_CLASS}
-          />
-          {error && <p className="text-destructive text-xs">{error}</p>}
-          <div className="flex justify-between gap-1">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                setShowPasswordUnlock(false);
-                setPassword("");
-                setError(null);
+      {/* Inline password unlock -- session keys only, and not while selecting. */}
+      {session &&
+        showPasswordUnlock &&
+        !isUnlocked &&
+        !isPasskey &&
+        !selectionMode && (
+          <div className="mt-2 space-y-2" onClick={(e) => e.stopPropagation()}>
+            <input
+              type="password"
+              autoComplete="current-password"
+              placeholder="Enter password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void handlePasswordUnlock();
               }}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => void handlePasswordUnlock()}
-              disabled={unlocking}
-            >
-              {unlocking ? "..." : "Unlock"}
-            </Button>
+              className={INPUT_CLASS}
+            />
+            {error && <p className="text-destructive text-xs">{error}</p>}
+            <div className="flex justify-between gap-1">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setShowPasswordUnlock(false);
+                  setPassword("");
+                  setError(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => void handlePasswordUnlock()}
+                disabled={unlocking}
+              >
+                {unlocking ? "..." : "Unlock"}
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {error && isPasskey && !isUnlocked && (
+      {session && error && isPasskey && !isUnlocked && (
         <p className="text-destructive mt-2 text-xs">{error}</p>
       )}
 
-      <Dialog
-        open={showExportPrivateConfirm}
-        onClose={() => {
-          setShowExportPrivateConfirm(false);
-          setExportPassphrase("");
-          setExportConfirmPassphrase("");
-          setUnsafeExportConfirm("");
-          setExportError(null);
-        }}
-        title="Export Private Key"
-      >
-        <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
-          <p className="text-muted-foreground text-xs">
-            Set a passphrase to encrypt the exported key. Anyone with this
-            passphrase and the exported key can decrypt your messages and sign
-            as you.
-          </p>
-          <input
-            type="password"
-            autoComplete="new-password"
-            placeholder="Passphrase (min 8 characters)"
-            value={exportPassphrase}
-            onChange={(e) => setExportPassphrase(e.target.value)}
-            className={INPUT_CLASS}
-            autoFocus
-          />
-          <input
-            type="password"
-            autoComplete="new-password"
-            placeholder="Confirm passphrase"
-            value={exportConfirmPassphrase}
-            onChange={(e) => setExportConfirmPassphrase(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") void handleExportPrivate();
-            }}
-            className={INPUT_CLASS}
-          />
-          {exportError && (
-            <p className="text-destructive text-xs">{exportError}</p>
-          )}
-          <Button
-            className="w-full"
-            onClick={() => void handleExportPrivate()}
-            disabled={exporting || !exportPassphrase}
-          >
-            {exporting ? "Encrypting..." : "Export with passphrase"}
-          </Button>
-          <div className="border-border space-y-2 border-t pt-3">
-            <p className="text-destructive text-[11px]">
-              Plaintext export. Anyone who reads your clipboard gets full
-              control of this key. Type{" "}
-              <span className="font-mono font-bold">EXPORT</span> to confirm:
-            </p>
-            <input
-              type="text"
-              autoComplete="off"
-              spellCheck={false}
-              value={unsafeExportConfirm}
-              onChange={(e) => setUnsafeExportConfirm(e.target.value)}
-              placeholder="EXPORT"
-              className={INPUT_CLASS}
-            />
-            <Button
-              variant="destructive"
-              size="sm"
-              className="w-full"
-              disabled={exporting || unsafeExportConfirm !== "EXPORT"}
-              onClick={async () => {
-                const handle = onExportPrivate();
-                if (handle === null) {
-                  setExportError("Key is not unlocked.");
-                  return;
-                }
-                const armored = await getKeyArmored(handle);
-                await navigator.clipboard.writeText(armored);
-                // Plaintext key on clipboard is high-impact; clear faster.
-                scheduleClipboardClear(30_000);
-                showFeedback("Unprotected key copied (clears in 30s)");
-                setShowExportPrivateConfirm(false);
-                setExportPassphrase("");
-                setExportConfirmPassphrase("");
-                setUnsafeExportConfirm("");
-              }}
-            >
-              Export without passphrase (unsafe)
-            </Button>
-          </div>
-        </div>
-      </Dialog>
+      {exporter && (
+        <ExportPrivateKeyDialog
+          open={showExportPrivate}
+          onClose={() => setShowExportPrivate(false)}
+          exporter={exporter}
+        />
+      )}
 
-      {!showPasswordUnlock && (
-        <div className="mt-2 flex items-center justify-end gap-1">
-          {isUnlocked ? (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={(e) => {
-                e.stopPropagation();
-                onLock();
-              }}
-            >
-              Lock
-            </Button>
-          ) : isPasskey ? (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={(e) => {
-                e.stopPropagation();
-                void handlePasskeyUnlock();
-              }}
-            >
-              Unlock
-            </Button>
-          ) : (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowPasswordUnlock(true);
-              }}
-            >
-              Unlock
-            </Button>
+      {/* Bottom action row: unlock/lock lifecycle + details arrow. Dimmed while
+          selecting, and absent entirely for sealed-at-rest keys with no
+          details page (CRX). */}
+      {!showPasswordUnlock && (!!session || !!model.onShowDetails) && (
+        <div
+          className={cn(
+            "mt-2 flex items-center justify-end gap-1",
+            selectionMode && dimmed,
           )}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onShowDetails();
-            }}
-            aria-label="Key details"
-            className="text-muted-foreground group-hover:text-foreground rounded p-1.5 transition-colors"
-          >
-            <ArrowRightIcon className="h-4 w-4" />
-          </button>
+        >
+          {session &&
+            (isUnlocked ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  session.lock();
+                }}
+              >
+                Lock
+              </Button>
+            ) : isPasskey ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void handlePasskeyUnlock();
+                }}
+              >
+                Unlock
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowPasswordUnlock(true);
+                }}
+              >
+                Unlock
+              </Button>
+            ))}
+          {model.onShowDetails && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                model.onShowDetails?.();
+              }}
+              aria-label="Key details"
+              className={cn(
+                "text-muted-foreground rounded p-1.5 transition-colors",
+                !selectionMode && "group-hover:text-foreground",
+              )}
+            >
+              <ArrowRightIcon className="h-4 w-4" />
+            </button>
+          )}
         </div>
       )}
     </div>
