@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { format, formatDistanceToNow } from "date-fns";
 import {
-  CheckCircleIcon,
   CheckIcon,
   ChevronDownIcon,
   ChevronRightIcon,
@@ -92,7 +91,7 @@ function capabilityText(row: SubkeyDetail): string {
 // use, and until when?" -- answer it up top, in words, before the data.
 
 interface Banner {
-  tone: "ok" | "warn" | "bad";
+  tone: "warn" | "bad";
   title: string;
   lines: string[];
 }
@@ -101,7 +100,7 @@ function deriveBanner(
   info: KeyInfo,
   primaryRow: SubkeyDetail | null,
   isOwn: boolean,
-): Banner {
+): Banner | null {
   const now = Date.now();
   const expiresAt = info.expiresAt;
 
@@ -141,53 +140,35 @@ function deriveBanner(
     };
   }
 
-  const lines: string[] = [];
-  if (info.usableForEncryption && info.usableForSigning) {
-    lines.push(
-      isOwn
-        ? "You can sign messages and receive encrypted ones."
-        : "You can encrypt to it and verify its signatures.",
-    );
-  } else if (info.usableForEncryption) {
-    lines.push(
-      isOwn
+  // A healthy key shows no banner at all -- silence means fine. Only
+  // limitations and problems earn screen space.
+  if (info.usableForEncryption && !info.usableForSigning) {
+    return {
+      tone: "warn",
+      title: isOwn
         ? "You can receive encrypted messages, but this key can't sign."
         : "You can encrypt to it, but it can't sign.",
-    );
-  } else {
-    lines.push(
-      isOwn
+      lines: [],
+    };
+  }
+  if (!info.usableForEncryption && info.usableForSigning) {
+    return {
+      tone: "warn",
+      title: isOwn
         ? "You can sign messages, but this key can't receive encrypted ones."
         : "You can verify its signatures, but can't encrypt to it.",
-    );
+      lines: [],
+    };
   }
 
-  const expiringSoon = expiresAt !== null && expiresAt - now < EXPIRING_SOON_MS;
-  if (expiresAt !== null) {
-    lines.push(
-      `Expires ${format(expiresAt, "PPP")} (${formatDistanceToNow(expiresAt, { addSuffix: true })}).`,
-    );
-  } else {
-    lines.push("Never expires.");
+  if (expiresAt !== null && expiresAt - now < EXPIRING_SOON_MS) {
+    return { tone: "warn", title: "This key expires soon", lines: [] };
   }
 
-  const partial = !(info.usableForEncryption && info.usableForSigning);
-  return {
-    tone: partial || expiringSoon ? "warn" : "ok",
-    title: expiringSoon
-      ? "Good to use, but expiring soon"
-      : isOwn
-        ? "This key is ready to use"
-        : "This key is good to use",
-    lines,
-  };
+  return null;
 }
 
 const BANNER_STYLES: Record<Banner["tone"], { box: string; title: string }> = {
-  ok: {
-    box: "border-green-500/40 bg-green-500/10",
-    title: "text-green-600 dark:text-green-400",
-  },
   warn: {
     box: "border-amber-500/40 bg-amber-500/10",
     title: "text-amber-700 dark:text-amber-400",
@@ -200,12 +181,7 @@ const BANNER_STYLES: Record<Banner["tone"], { box: string; title: string }> = {
 
 function StatusBanner({ banner }: { banner: Banner }) {
   const styles = BANNER_STYLES[banner.tone];
-  const Icon =
-    banner.tone === "ok"
-      ? CheckCircleIcon
-      : banner.tone === "warn"
-        ? TriangleAlertIcon
-        : XCircleIcon;
+  const Icon = banner.tone === "warn" ? TriangleAlertIcon : XCircleIcon;
   return (
     <div className={`rounded-md border p-2.5 ${styles.box}`}>
       <p
@@ -214,13 +190,15 @@ function StatusBanner({ banner }: { banner: Banner }) {
         <Icon className="h-3.5 w-3.5 shrink-0" />
         {banner.title}
       </p>
-      <div className="mt-1 space-y-0.5 pl-5">
-        {banner.lines.map((line) => (
-          <p key={line} className="text-muted-foreground text-xs">
-            {line}
-          </p>
-        ))}
-      </div>
+      {banner.lines.length > 0 && (
+        <div className="mt-1 space-y-0.5 pl-5">
+          {banner.lines.map((line) => (
+            <p key={line} className="text-muted-foreground text-xs">
+              {line}
+            </p>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -238,6 +216,7 @@ function fingerprintLines(fp: string): string[] {
   return lines;
 }
 
+/** One row of the bordered facts card; parent supplies divide-y. */
 function InfoRow({
   label,
   children,
@@ -246,10 +225,22 @@ function InfoRow({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex gap-3 text-xs">
+    <div className="flex gap-3 px-3 py-2 text-xs">
       <span className="text-muted-foreground w-20 shrink-0">{label}</span>
       <span className="min-w-0 flex-1">{children}</span>
     </div>
+  );
+}
+
+/** Small identity chip, e.g. "Contact" or "Passkey". */
+function Chip({ title, children }: { title?: string; children: string }) {
+  return (
+    <span
+      title={title}
+      className="border-border text-muted-foreground rounded-full border px-2 py-0.5 text-[10px] font-medium whitespace-nowrap"
+    >
+      {children}
+    </span>
   );
 }
 
@@ -374,6 +365,13 @@ export function KeyDetailsPage({
 
   const banner = info ? deriveBanner(info, primaryRow, isOwn) : null;
 
+  // Captured once at mount; the page is short-lived so drift is moot.
+  const [now] = useState(() => Date.now());
+  const expiresAt = info?.expiresAt ?? null;
+  const keyExpired = expiresAt !== null && expiresAt < now;
+  const keyExpiringSoon =
+    expiresAt !== null && !keyExpired && expiresAt - now < EXPIRING_SOON_MS;
+
   const handleCopyFingerprint = (fp: string) => {
     void navigator.clipboard.writeText(fingerprintLines(fp).join(" "));
     setCopiedFp(true);
@@ -409,13 +407,36 @@ export function KeyDetailsPage({
 
       <div className="flex-1 space-y-4 overflow-y-auto p-3">
         <div>
-          <p className="text-sm font-medium">{name}</p>
-          {email && <p className="text-muted-foreground text-xs">{email}</p>}
-          <p className="text-muted-foreground mt-0.5 text-xs">
-            {isOwn
-              ? `Your key · ${target.keyBlob.protection.method === "passkey" ? "Passkey" : "Password"} protected`
-              : "Contact · you hold their public key"}
-          </p>
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="truncate text-base leading-tight font-semibold">
+                {name}
+              </p>
+              {email && (
+                <p className="text-muted-foreground mt-0.5 truncate text-xs">
+                  {email}
+                </p>
+              )}
+            </div>
+            <div className="flex shrink-0 gap-1 pt-0.5">
+              <Chip
+                title={
+                  isOwn
+                    ? "You hold the private key"
+                    : "You hold their public key"
+                }
+              >
+                {isOwn ? "Your key" : "Contact"}
+              </Chip>
+              {isOwn && (
+                <Chip title="How the private key is protected at rest">
+                  {target.keyBlob.protection.method === "passkey"
+                    ? "Passkey"
+                    : "Password"}
+                </Chip>
+              )}
+            </div>
+          </div>
           {akaEmails.length > 0 && (
             <div className="mt-1.5">
               <p className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
@@ -438,16 +459,16 @@ export function KeyDetailsPage({
         {banner && <StatusBanner banner={banner} />}
 
         {securityWarning && (
-          <div className="flex items-start gap-1.5 rounded-md border border-amber-500/40 bg-amber-500/10 p-2">
+          <div className="flex items-start gap-1.5 border-l-2 border-amber-500/60 py-0.5 pl-2.5">
             <TriangleAlertIcon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-700 dark:text-amber-400" />
-            <p className="text-xs text-amber-700 dark:text-amber-400">
+            <p className="text-xs leading-relaxed text-amber-700 dark:text-amber-400">
               {securityWarning}
             </p>
           </div>
         )}
 
         {info && (
-          <div className="space-y-1.5">
+          <div className="border-border divide-border divide-y rounded-md border">
             <InfoRow label="Fingerprint">
               <span className="flex items-start gap-1.5">
                 <span className="font-mono text-[11px] leading-relaxed">
@@ -481,17 +502,46 @@ export function KeyDetailsPage({
             <InfoRow label="Created">
               {format(new Date(info.createdAt), "PPP")}
             </InfoRow>
-            <InfoRow label="Added">{format(new Date(addedAt), "PPP")}</InfoRow>
-            <InfoRow label="Last used">
-              {format(new Date(lastUsedAt), "PPP")}
+            <InfoRow label="Expires">
+              {expiresAt === null ? (
+                "Never"
+              ) : (
+                <span
+                  className={
+                    keyExpired
+                      ? "text-red-600 dark:text-red-400"
+                      : keyExpiringSoon
+                        ? "text-amber-700 dark:text-amber-400"
+                        : undefined
+                  }
+                >
+                  {format(new Date(expiresAt), "PPP")} (
+                  {formatDistanceToNow(new Date(expiresAt), {
+                    addSuffix: true,
+                  })}
+                  )
+                </span>
+              )}
             </InfoRow>
+            <InfoRow label="Added">{format(new Date(addedAt), "PPP")}</InfoRow>
+            {/* Only own keys track this (bumped on unlock); a contact's
+                lastUsedAt is frozen at import time, so showing it would
+                just repeat "Added". */}
+            {isOwn && (
+              <InfoRow label="Last used">
+                {format(new Date(lastUsedAt), "PPP")}
+              </InfoRow>
+            )}
           </div>
         )}
 
         {details && (
           <div>
             <h3 className="mb-2 text-xs font-semibold">
-              Subkeys ({subkeys.length})
+              Subkeys{" "}
+              <span className="text-muted-foreground font-normal">
+                ({subkeys.length})
+              </span>
             </h3>
             {details.truncated && (
               <p className="mb-2 text-xs text-amber-700 dark:text-amber-400">
