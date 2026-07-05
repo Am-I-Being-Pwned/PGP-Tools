@@ -1,5 +1,6 @@
 import type { StorageLocation } from "./preferences";
 import { STORAGE_PREFERENCES } from "../constants";
+import { getChunked, removeChunked, setChunked } from "./chunked";
 
 /**
  * Thin wrapper over chrome.storage that routes reads/writes to the
@@ -65,16 +66,17 @@ function area(
 
 export async function getItem<T>(key: string): Promise<T | undefined> {
   const loc = await resolveLocation();
-  const result = await area(loc).get(key);
-  return result[key] as T | undefined;
+  return (await getChunked(area(loc), key)) as T | undefined;
 }
 
 export async function setItem<T>(key: string, value: T): Promise<void> {
   const loc = await resolveLocation();
-  await area(loc).set({ [key]: value });
+  // Chunk on `sync` (8 KB/item cap); store verbatim on `local` (no cap,
+  // and its length-hiding padding must survive intact).
+  await setChunked(area(loc), key, value, loc === "sync");
 }
 
 export async function removeItem(key: string): Promise<void> {
   const loc = await resolveLocation();
-  await area(loc).remove(key);
+  await removeChunked(area(loc), key);
 }

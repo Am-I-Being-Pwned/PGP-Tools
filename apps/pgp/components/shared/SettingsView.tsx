@@ -12,9 +12,12 @@ import type {
 } from "../../lib/storage/preferences";
 import {
   STORAGE_CONTACTS,
+  STORAGE_CRX_KEYS,
   STORAGE_KEYRING,
+  STORAGE_MASTER_PROTECTION,
   STORAGE_SETTINGS,
 } from "../../lib/constants";
+import { isQuotaExceeded } from "../../lib/storage/chunked";
 import {
   copyEncryptedBlobRepacked,
   purgeEncryptedBlob,
@@ -103,7 +106,7 @@ export function SettingsView({
   onAddCrxKey,
   primaryPasskeyCredentialId,
 }: SettingsViewProps) {
-  const [migrating, setMigrating] = useState(false);
+  const [migratingTo, setMigratingTo] = useState<StorageLocation | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showExportAll, setShowExportAll] = useState(false);
   const [showImportAll, setShowImportAll] = useState(false);
@@ -118,15 +121,31 @@ export function SettingsView({
 
   const handleStorageChange = async (next: StorageLocation) => {
     if (next === storageLocation) return;
-    setMigrating(true);
+    setMigratingTo(next);
+    setError(null);
+    // Re-pack each blob for the destination rather than a raw byte-copy:
+    // padding differs by area (local pads to hide item counts; sync can't,
+    // due to its 8 KB/item cap), so moving a padded local blob to sync
+    // verbatim could blow the quota. Large blobs are chunked across items
+    // on sync (see storage/chunked.ts). The settings blob lives in the
+    // user area too, so it moves alongside the keyring/contacts.
+    //
+    // Every engine-routed blob must move, or it strands in the old area:
+    // the master protection especially -- leave it behind and the switched
+    // vault (here after reload, or on another synced device) has keys it
+    // can never unlock. CRX keys are the same encrypted store as the
+    // keyring. Non-{iv,ciphertext} blobs (master protection) copy verbatim.
+    const keys = [
+      STORAGE_KEYRING,
+      STORAGE_CONTACTS,
+      STORAGE_SETTINGS,
+      STORAGE_MASTER_PROTECTION,
+      STORAGE_CRX_KEYS,
+    ];
+    // Once the location is committed (step 2), the destination is the ONLY
+    // authoritative copy -- a later failure must never roll it back.
+    let committed = false;
     try {
-      // Re-pack each blob for the destination rather than a raw byte-copy:
-      // padding differs by area (local pads to hide item counts; sync
-      // can't, due to its 8 KB/item cap), so moving a padded local blob
-      // to sync verbatim could blow the quota. The settings blob lives in
-      // the user area too, so it moves alongside the keyring/contacts.
-      const keys = [STORAGE_KEYRING, STORAGE_CONTACTS, STORAGE_SETTINGS];
-
       // 1. Copy everything to the destination (originals untouched).
       for (const key of keys) {
         await copyEncryptedBlobRepacked(key, storageLocation, next);
@@ -135,16 +154,44 @@ export function SettingsView({
       //    destination, which holds every blob. A crash before here left
       //    the originals authoritative; after, only stale dups remain.
       await savePreferences({ storageLocation: next });
+      committed = true;
       invalidateLocationCache();
-      // 3. Drop the now-stale originals from the old area.
+      // 3. Drop the now-stale originals from the old area. Best-effort: the
+      //    move is already committed, so a purge failure (e.g. sync's write
+      //    rate limit mid-loop) only leaves harmless duplicates -- it must
+      //    NOT bubble to the rollback below and delete the live copy.
       for (const key of keys) {
-        await purgeEncryptedBlob(key, storageLocation);
+        try {
+          await purgeEncryptedBlob(key, storageLocation);
+        } catch {
+          /* stale originals are harmless; leave them */
+        }
       }
       onStorageLocationChange(next);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Migration failed");
+      // Pre-commit failure only (step 1 copy, or step 2 persist): the
+      // active location is still the origin, so the originals remain
+      // authoritative. Roll back any partial copies written to the
+      // destination -- e.g. sync's ~100 KB total quota exhausted mid-copy.
+      // Guarded by `committed` so a committed move is never unwound.
+      if (!committed) {
+        for (const key of keys) {
+          try {
+            await purgeEncryptedBlob(key, next);
+          } catch {
+            /* best-effort cleanup */
+          }
+        }
+      }
+      setError(
+        isQuotaExceeded(e)
+          ? "Not enough sync space. Chrome caps synced data at about 100 KB total, so this vault is too large to sync across devices. Keep it on this device, or remove some keys and try again."
+          : e instanceof Error
+            ? e.message
+            : "Migration failed",
+      );
     } finally {
-      setMigrating(false);
+      setMigratingTo(null);
     }
   };
 
@@ -160,21 +207,16 @@ export function SettingsView({
         <StorageLocationPicker
           value={storageLocation}
           onChange={handleStorageChange}
-          disabled={migrating}
+          disabled={migratingTo !== null}
         />
-        {migrating && (
-          <p className="text-muted-foreground mt-1 text-xs">
-            Migrating keys...
-          </p>
-        )}
         {error && <p className="text-destructive mt-1 text-xs">{error}</p>}
       </div>
 
       <div>
         <h2 className="mb-2 text-sm font-semibold">Key security</h2>
 
-        <div className="border-border rounded-md border p-3">
-          <label className="flex items-center justify-between gap-3">
+        <div className="border-border rounded-md border p-4">
+          <label className="flex items-center justify-between gap-4">
             <div>
               <span className="text-sm">Auto-lock after inactivity</span>
               <p className="text-muted-foreground text-xs">
@@ -219,7 +261,7 @@ export function SettingsView({
           )}
         </div>
 
-        <label className="border-border mt-2 flex items-center justify-between rounded-md border p-3">
+        <label className="border-border mt-2 flex items-center justify-between gap-4 rounded-md border p-4">
           <div>
             <span className="text-sm">Lock when I tab away</span>
             <p className="text-muted-foreground text-xs">
@@ -236,7 +278,7 @@ export function SettingsView({
           />
         </label>
 
-        <label className="border-border mt-2 flex items-center justify-between rounded-md border p-3">
+        <label className="border-border mt-2 flex items-center justify-between gap-4 rounded-md border p-4">
           <div>
             <span className="text-sm">Never auto-cache keys</span>
             <p className="text-muted-foreground text-xs">
@@ -256,7 +298,7 @@ export function SettingsView({
 
       <div>
         <h2 className="mb-2 text-sm font-semibold">Downloads</h2>
-        <label className="border-border flex items-center justify-between rounded-md border p-3">
+        <label className="border-border flex items-center justify-between gap-4 rounded-md border p-4">
           <div>
             <span className="text-sm">Auto-download file results</span>
             <p className="text-muted-foreground text-xs">
@@ -272,7 +314,7 @@ export function SettingsView({
           />
         </label>
 
-        <label className="border-border mt-2 flex items-center justify-between rounded-md border p-3">
+        <label className="border-border mt-2 flex items-center justify-between gap-4 rounded-md border p-4">
           <div>
             <span className="text-sm">Auto-download text results</span>
             <p className="text-muted-foreground text-xs">
@@ -291,7 +333,7 @@ export function SettingsView({
 
       <div>
         <h2 className="mb-2 text-sm font-semibold">CRX signing</h2>
-        <label className="border-border flex items-center justify-between rounded-md border p-3">
+        <label className="border-border flex items-center justify-between gap-4 rounded-md border p-4">
           <div>
             <span className="text-sm">Enable CRX signing</span>
             <p className="text-muted-foreground text-xs">
@@ -320,7 +362,7 @@ export function SettingsView({
 
       <div>
         <h2 className="mb-2 text-sm font-semibold">Backup</h2>
-        <div className="border-border rounded-md border p-3">
+        <div className="border-border rounded-md border p-4">
           <p className="text-muted-foreground text-xs">
             Export your keys and contacts as a single armored file, or restore
             from one. Exported private keys are encrypted with a passphrase of
@@ -349,7 +391,7 @@ export function SettingsView({
 
       <div>
         <h2 className="mb-2 text-sm font-semibold">Display</h2>
-        <label className="border-border flex items-center justify-between rounded-md border p-3">
+        <label className="border-border flex items-center justify-between gap-4 rounded-md border p-4">
           <span className="text-sm">Advanced mode</span>
           <Switch checked={advancedMode} onCheckedChange={toggleAdvanced} />
         </label>
@@ -361,7 +403,7 @@ export function SettingsView({
       {import.meta.env.DEV && (
         <div>
           <h2 className="mb-2 text-sm font-semibold">Developer</h2>
-          <div className="border-border rounded-md border p-3">
+          <div className="border-border rounded-md border p-4">
             <p className="text-muted-foreground text-xs">
               Inspect chrome.storage and dump WASM memory for testing. This
               section only appears in development builds.
@@ -380,7 +422,7 @@ export function SettingsView({
 
       <div>
         <h2 className="mb-2 text-sm font-semibold">About</h2>
-        <div className="border-border rounded-md border p-3">
+        <div className="border-border rounded-md border p-4">
           <p className="text-sm">PGP Tools</p>
           <p className="text-muted-foreground mt-1 text-xs">
             A privacy tool by{" "}

@@ -3,6 +3,9 @@ import type { StorageLocation } from "../../lib/storage/preferences";
 interface StorageLocationPickerProps {
   value: StorageLocation;
   onChange: (location: StorageLocation) => void;
+  /** Blocks interaction while a migration is in flight. Intentionally has
+   *  no visual treatment -- the move is near-instant and a flash of
+   *  dimming/spinner reads as jank. */
   disabled?: boolean;
 }
 
@@ -35,24 +38,24 @@ export function StorageLocationPicker({
       {OPTIONS.map((opt) => (
         <label
           key={opt.id}
-          className={`flex cursor-pointer items-start gap-3 rounded-md border p-3 transition-colors ${
+          className={`flex cursor-pointer items-center justify-between gap-4 rounded-md border p-3 transition-colors ${
             value === opt.id
               ? "border-primary bg-primary/5"
               : "border-border hover:border-muted-foreground/50"
-          } ${disabled ? "pointer-events-none opacity-60" : ""}`}
+          } ${disabled ? "pointer-events-none" : ""}`}
         >
+          <div>
+            <p className="text-sm font-medium">{opt.label}</p>
+            <p className="text-muted-foreground text-xs">{opt.description}</p>
+          </div>
           <input
             type="radio"
             name="storage-location"
             checked={value === opt.id}
             onChange={() => onChange(opt.id)}
             disabled={disabled}
-            className="accent-primary mt-0.5"
+            className="accent-primary shrink-0"
           />
-          <div>
-            <p className="text-sm font-medium">{opt.label}</p>
-            <p className="text-muted-foreground text-xs">{opt.description}</p>
-          </div>
         </label>
       ))}
     </div>

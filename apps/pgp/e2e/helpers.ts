@@ -140,6 +140,31 @@ export function isPaddedBucket(ciphertextBytes: number): boolean {
   return plaintext >= 2048 && (plaintext & (plaintext - 1)) === 0;
 }
 
+/** Open Settings and switch key storage between "this device only" and
+ *  "sync across devices", waiting for the migration to finish. Throws if
+ *  the migration surfaces an error (e.g. sync quota exhausted). */
+export async function switchStorageTo(
+  panel: Page,
+  target: "local" | "sync",
+): Promise<void> {
+  const label =
+    target === "sync" ? "Sync across devices" : "This device only";
+  await panel.getByRole("tab", { name: "Settings" }).click();
+  await expect(
+    panel.getByRole("heading", { name: "Key storage" }),
+  ).toBeVisible();
+  const radio = panel.getByRole("radio", { name: new RegExp(label) });
+  // click(), not check(): the radio is controlled and only reflects the
+  // new location once the async migration commits, so check()'s
+  // post-click state assertion would fail mid-migration.
+  await radio.click();
+  // Migration is done once the picker reflects the new location (an inline
+  // spinner shows on the target row meanwhile -- no "Migrating..." text).
+  await expect(radio).toBeChecked({ timeout: 30_000 });
+  // The migration error paragraph (destructive text) must not appear.
+  await expect(panel.locator("p.text-destructive")).toHaveCount(0);
+}
+
 /** Import an armored public key as a contact via the Keys-tab drop zone's
  *  file input. Returns after the "Added" toast confirms success. */
 export async function importContact(
@@ -185,6 +210,45 @@ export async function importPrivateKey(
     panel.getByPlaceholder("Paste a key here, or browse for a file..."),
   ).toBeHidden();
   await expect(panel.getByText(ownerName).last()).toBeVisible();
+}
+
+/** Import many contacts in a single file drop -- the drop zone splits a
+ *  file into individual public-key blocks -- returning after the batch
+ *  "Added N contacts" toast. Far faster than one import at a time; use it
+ *  to seed a vault with a lot of key material. */
+export async function importContactsBulk(
+  panel: Page,
+  armoredPublicKeys: string[],
+): Promise<void> {
+  await goToKeys(panel);
+  await panel
+    .locator('input[accept=".asc,.gpg,.pub,.key,.pgp,.txt"]')
+    .setInputFiles({
+      name: "contacts.asc",
+      mimeType: "application/pgp-keys",
+      buffer: Buffer.from(armoredPublicKeys.join("\n"), "utf8"),
+    });
+  await expect(
+    panel
+      .getByText(new RegExp(`Added ${armoredPublicKeys.length} contact`))
+      .first(),
+  ).toBeVisible();
+}
+
+/**
+ * One-call test setup: onboard with a password master (generating a first
+ * key), then bulk-import `contactKeys` as contacts. Leaves the panel
+ * unlocked on the Keys tab with a populated vault -- a ready starting
+ * point for storage / backup / recipient tests without repeating the
+ * onboarding + import boilerplate in every spec.
+ */
+export async function seedVault(
+  panel: Page,
+  password: string,
+  contactKeys: string[] = [],
+): Promise<void> {
+  await onboardWithPassword(panel, password);
+  if (contactKeys.length > 0) await importContactsBulk(panel, contactKeys);
 }
 
 /** Paste a cleartext-signed message into the workspace (auto-switches to
