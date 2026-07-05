@@ -3,7 +3,12 @@ import { toast } from "sonner";
 
 import { Button } from "@amibeingpwned/ui/button";
 
-import { dumpAllStorage } from "../../lib/dev/dump";
+import {
+  clearAllStorage,
+  dumpAllStorage,
+  isStorageDump,
+  restoreAllStorage,
+} from "../../lib/dev/dump";
 import { hasContactsSession, ping } from "../../lib/pgp/wasm";
 import { dumpWasmMemoryForDev } from "../../lib/pgp/wasm-loader";
 import { downloadBinary, downloadText } from "../../lib/utils/download";
@@ -26,6 +31,8 @@ export function DevToolsDialog({
   const [storageJson, setStorageJson] = useState<string | null>(null);
   const [wasm, setWasm] = useState<WasmInfo | null>(null);
   const [loading, setLoading] = useState(false);
+  const [restoreName, setRestoreName] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const refresh = async () => {
     setLoading(true);
@@ -79,6 +86,39 @@ export function DevToolsDialog({
       return;
     }
     downloadBinary(bytes, `pgp-wasm-memory-${stamp()}.bin`);
+  };
+
+  const handleRestoreFile = async (file: File | undefined) => {
+    if (!file) return;
+    setBusy(true);
+    setRestoreName(file.name);
+    try {
+      const parsed: unknown = JSON.parse(await file.text());
+      if (!isStorageDump(parsed)) {
+        toast.error("Not a storage dump ({ local, sync, session }).");
+        return;
+      }
+      await restoreAllStorage(parsed);
+      await refresh();
+      toast.success("Storage restored. Reload the panel to apply.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Restore failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleClearAll = async () => {
+    setBusy(true);
+    try {
+      await clearAllStorage();
+      await refresh();
+      toast.success("Storage cleared. Reload the panel to apply.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Clear failed");
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -155,6 +195,42 @@ export function DevToolsDialog({
               Download JSON
             </Button>
           </div>
+        </div>
+
+        <div>
+          <h3 className="mb-1.5 text-xs font-semibold">
+            Restore / reset (migration testing)
+          </h3>
+          <p className="text-muted-foreground mb-2 text-[11px]">
+            Overwrite chrome.storage from a dump (e.g. a pre-migration
+            snapshot), then reload and unlock to exercise the migration. Both
+            actions replace current storage.
+          </p>
+          <label className="border-border hover:bg-muted/40 flex cursor-pointer items-center justify-between gap-2 rounded-md border p-2 text-xs transition-colors">
+            <span className="text-muted-foreground truncate">
+              {restoreName ?? "Choose a dump .json to restore…"}
+            </span>
+            <span className="text-foreground shrink-0 font-medium">Browse</span>
+            <input
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              disabled={busy}
+              onChange={(e) => {
+                void handleRestoreFile(e.target.files?.[0]);
+                e.target.value = ""; // allow re-selecting the same file
+              }}
+            />
+          </label>
+          <Button
+            size="sm"
+            variant="destructive"
+            className="mt-2 w-full"
+            disabled={busy}
+            onClick={() => void handleClearAll()}
+          >
+            Clear all storage (fresh install)
+          </Button>
         </div>
       </div>
     </Dialog>

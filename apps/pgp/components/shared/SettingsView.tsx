@@ -10,8 +10,16 @@ import type {
   AutoLockTimeout,
   StorageLocation,
 } from "../../lib/storage/preferences";
-import { STORAGE_CONTACTS, STORAGE_KEYRING } from "../../lib/constants";
-import { invalidateLocationCache, migrate } from "../../lib/storage/engine";
+import {
+  STORAGE_CONTACTS,
+  STORAGE_KEYRING,
+  STORAGE_SETTINGS,
+} from "../../lib/constants";
+import {
+  copyEncryptedBlobRepacked,
+  purgeEncryptedBlob,
+} from "../../lib/storage/encrypted-store";
+import { invalidateLocationCache } from "../../lib/storage/engine";
 import { savePreferences } from "../../lib/storage/preferences";
 import { CrxSigningInfoDialog } from "../settings/CrxSigningInfoDialog";
 import { DevToolsDialog } from "../settings/DevToolsDialog";
@@ -112,9 +120,26 @@ export function SettingsView({
     if (next === storageLocation) return;
     setMigrating(true);
     try {
-      await migrate([STORAGE_KEYRING, STORAGE_CONTACTS], storageLocation, next);
+      // Re-pack each blob for the destination rather than a raw byte-copy:
+      // padding differs by area (local pads to hide item counts; sync
+      // can't, due to its 8 KB/item cap), so moving a padded local blob
+      // to sync verbatim could blow the quota. The settings blob lives in
+      // the user area too, so it moves alongside the keyring/contacts.
+      const keys = [STORAGE_KEYRING, STORAGE_CONTACTS, STORAGE_SETTINGS];
+
+      // 1. Copy everything to the destination (originals untouched).
+      for (const key of keys) {
+        await copyEncryptedBlobRepacked(key, storageLocation, next);
+      }
+      // 2. Commit: switch the active location. Reads now resolve to the
+      //    destination, which holds every blob. A crash before here left
+      //    the originals authoritative; after, only stale dups remain.
       await savePreferences({ storageLocation: next });
       invalidateLocationCache();
+      // 3. Drop the now-stale originals from the old area.
+      for (const key of keys) {
+        await purgeEncryptedBlob(key, storageLocation);
+      }
       onStorageLocationChange(next);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Migration failed");
