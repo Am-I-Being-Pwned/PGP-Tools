@@ -1,5 +1,25 @@
+import { format } from "date-fns";
+
+import type { KeyInfo } from "./pgp/types";
 import type { PublicContactKey } from "./storage/contacts";
 import { parseKeys } from "./pgp/wasm";
+
+/** Human-readable reason a cert can't be imported as a contact. Expiry
+ *  is by far the most common cause, so call it out with the date rather
+ *  than hiding it in the generic "expired, revoked, or unsupported"
+ *  catch-all. */
+export function importRejectionMessage(keyInfo: KeyInfo | undefined): string {
+  if (!keyInfo) {
+    return "This block contains no usable public key.";
+  }
+  if (keyInfo.expiresAt !== null && keyInfo.expiresAt < Date.now()) {
+    return `This key expired on ${format(keyInfo.expiresAt, "PPP")}. Ask the owner for their current key.`;
+  }
+  return (
+    keyInfo.policyError ??
+    "This public key has no usable encryption subkey, so you wouldn't be able to encrypt to it."
+  );
+}
 
 export interface PublicImportSummary {
   /** Contacts actually written. */
@@ -51,10 +71,7 @@ export async function importPublicKeyBlocks(
     if (usable.length === 0) {
       // Nothing live in this block: surface the first cert's reason.
       summary.failed++;
-      summary.rejectionReasons.push(
-        certs[0]?.keyInfo.policyError ??
-          "no usable encryption subkey on this key",
-      );
+      summary.rejectionReasons.push(importRejectionMessage(certs[0]?.keyInfo));
       continue;
     }
 
@@ -70,6 +87,7 @@ export async function importPublicKeyBlocks(
         armoredPublicKey: armored,
         addedAt: Date.now(),
         lastUsedAt: Date.now(),
+        expiresAt: keyInfo.expiresAt,
         // Allowed, but flagged (e.g. SHA-1 binding signature).
         securityWarning: keyInfo.securityWarning,
       });

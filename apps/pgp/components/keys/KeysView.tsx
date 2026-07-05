@@ -9,6 +9,7 @@ import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { KeyDetailsTarget } from "./KeyDetailsPage";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 import { ConfirmPage } from "../shared/ConfirmPage";
+import { useNavStack } from "../shared/useNavStack";
 import { ContactCard } from "./ContactCard";
 import { ContactDropZone } from "./ContactDropZone";
 import { CrxKeyCard } from "./CrxKeyCard";
@@ -58,6 +59,12 @@ type DeleteTarget =
   | { kind: "contact"; contact: PublicContactKey }
   | { kind: "crx"; keyBlob: CrxSigningKeyBlob };
 
+/** Slide-over subpages of the Keys tab, managed as a nav stack: push to
+ *  drill in, pop to go back. New subpages are one union member away. */
+type KeysRoute =
+  | { page: "details"; target: KeyDetailsTarget }
+  | { page: "confirm-delete"; target: DeleteTarget };
+
 export function KeysView({
   myKeys,
   contacts,
@@ -88,10 +95,7 @@ export function KeysView({
   const [importInitialArmored, setImportInitialArmored] = useState<
     string | null
   >(null);
-  const [detailsTarget, setDetailsTarget] = useState<KeyDetailsTarget | null>(
-    null,
-  );
-  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const nav = useNavStack<KeysRoute>();
 
   useEffect(() => {
     if (autoOpenImport) {
@@ -126,11 +130,19 @@ export function KeysView({
                 onUnlockWithPassword={(pw) => onUnlockWithPassword(blob, pw)}
                 onUnlockWithPasskey={() => onUnlockWithPasskey(blob)}
                 onLock={() => onLock(blob.keyId)}
-                onDelete={() => setDeleteTarget({ kind: "own", keyBlob: blob })}
+                onDelete={() =>
+                  nav.push({
+                    page: "confirm-delete",
+                    target: { kind: "own", keyBlob: blob },
+                  })
+                }
                 onExportPublic={() => handleExportPublic(blob)}
                 onExportPrivate={() => getKeyHandle(blob.keyId)}
                 onShowDetails={() =>
-                  setDetailsTarget({ kind: "own", keyBlob: blob })
+                  nav.push({
+                    page: "details",
+                    target: { kind: "own", keyBlob: blob },
+                  })
                 }
                 advancedMode={advancedMode}
               />
@@ -139,7 +151,12 @@ export function KeysView({
               <CrxKeyCard
                 key={blob.extensionId}
                 keyBlob={blob}
-                onDelete={() => setDeleteTarget({ kind: "crx", keyBlob: blob })}
+                onDelete={() =>
+                  nav.push({
+                    page: "confirm-delete",
+                    target: { kind: "crx", keyBlob: blob },
+                  })
+                }
               />
             ))}
           </div>
@@ -169,64 +186,72 @@ export function KeysView({
         contacts={contacts}
         contactsLocked={contactsLocked}
         onRequestRemove={(contact) =>
-          setDeleteTarget({ kind: "contact", contact })
+          nav.push({
+            page: "confirm-delete",
+            target: { kind: "contact", contact },
+          })
         }
         onAddContact={onAddContact}
         onEncryptTo={onEncryptTo}
         onShowDetails={(contact) =>
-          setDetailsTarget({ kind: "contact", contact })
+          nav.push({ page: "details", target: { kind: "contact", contact } })
         }
         advancedMode={advancedMode}
       />
 
-      {detailsTarget && (
-        <KeyDetailsPage
-          target={detailsTarget}
-          onBack={() => setDetailsTarget(null)}
-          onEncryptTo={
-            detailsTarget.kind === "contact" && onEncryptTo
-              ? () => {
-                  setDetailsTarget(null);
-                  onEncryptTo(detailsTarget.contact.keyId);
-                }
-              : undefined
-          }
-          onDelete={() => setDeleteTarget(detailsTarget)}
-        />
-      )}
-
-      {deleteTarget && (
-        <ConfirmPage
-          title={
-            deleteTarget.kind === "contact" ? "Remove contact?" : "Delete key?"
-          }
-          confirmLabel={
-            deleteTarget.kind === "contact"
-              ? "Remove contact"
-              : "Delete key permanently"
-          }
-          onCancel={() => setDeleteTarget(null)}
-          onConfirm={async () => {
-            try {
-              if (deleteTarget.kind === "own") {
-                await onDeleteKey(deleteTarget.keyBlob.keyId);
-              } else if (deleteTarget.kind === "contact") {
-                await onDeleteContact(deleteTarget.contact.keyId);
-              } else {
-                await onDeleteCrxKey?.(deleteTarget.keyBlob.extensionId);
+      {nav.stack.map((entry) => {
+        const { route } = entry;
+        if (route.page === "details") {
+          const target = route.target;
+          return (
+            <KeyDetailsPage
+              key={entry.id}
+              target={target}
+              onBack={nav.pop}
+              onEncryptTo={
+                target.kind === "contact" && onEncryptTo
+                  ? () => {
+                      nav.clear();
+                      onEncryptTo(target.contact.keyId);
+                    }
+                  : undefined
               }
-              setDeleteTarget(null);
-              setDetailsTarget(null);
-            } catch (e) {
-              toast.error(
-                e instanceof Error ? e.message : "Failed to delete key",
-              );
+              onDelete={() => nav.push({ page: "confirm-delete", target })}
+            />
+          );
+        }
+        const target = route.target;
+        return (
+          <ConfirmPage
+            key={entry.id}
+            title={
+              target.kind === "contact" ? "Remove contact?" : "Delete key?"
             }
-          }}
-        >
-          <DeleteSummary target={deleteTarget} />
-        </ConfirmPage>
-      )}
+            confirmLabel={
+              target.kind === "contact"
+                ? "Remove contact"
+                : "Delete key permanently"
+            }
+            onCancel={nav.pop}
+            onConfirm={async () => {
+              if (target.kind === "own") {
+                await onDeleteKey(target.keyBlob.keyId);
+              } else if (target.kind === "contact") {
+                await onDeleteContact(target.contact.keyId);
+              } else {
+                await onDeleteCrxKey?.(target.keyBlob.extensionId);
+              }
+              // Drop the pages underneath now, so this page's slide-out
+              // reveals the key list rather than a stale details view of
+              // the just-deleted key. The confirm page then slides out
+              // and pops itself via onCancel.
+              nav.collapseToTop();
+            }}
+          >
+            <DeleteSummary target={target} />
+          </ConfirmPage>
+        );
+      })}
 
       <GenerateKeyDialog
         open={showGenerate}
