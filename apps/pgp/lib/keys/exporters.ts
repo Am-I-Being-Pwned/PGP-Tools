@@ -1,4 +1,4 @@
-import type { PrivateKeyExporter } from "../../components/keys/ExportPrivateKeyDialog";
+import type { PrivateKeyExporter } from "../../components/keys/ExportPrivateKeyPage";
 import type { CrxSigningKeyBlob } from "../crx/types";
 import type { ProtectedKeyBlob } from "../storage/keyring";
 import { serializeCrxKeyBlocks } from "../crx/backup";

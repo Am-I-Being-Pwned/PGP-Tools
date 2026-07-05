@@ -22,9 +22,9 @@ import {
   DropdownMenuTrigger,
 } from "@amibeingpwned/ui/dropdown-menu";
 
-import type { PrivateKeyExporter } from "./ExportPrivateKeyDialog";
+import type { PrivateKeyExporter } from "./ExportPrivateKeyPage";
 import { INPUT_CLASS } from "../../lib/utils/styles";
-import { ExportPrivateKeyDialog } from "./ExportPrivateKeyDialog";
+import { ExportPrivateKeyPage } from "./ExportPrivateKeyPage";
 import { useLongPress } from "./useLongPress";
 
 /** Lock/unlock lifecycle for a key that lives in the per-session vault (PGP).
@@ -59,7 +59,7 @@ export interface KeyCardModel {
   securityWarning?: string;
   /** Present ⇒ show unlock/lock lifecycle (PGP). Absent ⇒ sealed at rest (CRX). */
   session?: KeyCardSession;
-  /** Present ⇒ enable "Copy private key" (opens the unified export dialog). */
+  /** Present ⇒ enable "Copy private key" (opens the unified export page). */
   exporter: PrivateKeyExporter | null;
   onCopyPublicKey: () => void;
   onDelete: () => void;
@@ -322,12 +322,19 @@ export function KeyCard({
         <p className="text-destructive mt-2 text-xs">{error}</p>
       )}
 
-      {exporter && (
-        <ExportPrivateKeyDialog
-          open={showExportPrivate}
-          onClose={() => setShowExportPrivate(false)}
-          exporter={exporter}
-        />
+      {exporter && showExportPrivate && (
+        // The page portals visually (fixed inset-0) but lives in the card's
+        // DOM subtree, so stop clicks/presses from bubbling into the card's
+        // own click + long-press handlers.
+        <div
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <ExportPrivateKeyPage
+            onClose={() => setShowExportPrivate(false)}
+            exporter={exporter}
+          />
+        </div>
       )}
 
       {/* Bottom action row: unlock/lock lifecycle + details arrow. Dimmed while

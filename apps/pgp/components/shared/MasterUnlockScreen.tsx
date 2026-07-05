@@ -13,7 +13,7 @@ import {
 } from "../../lib/protection/password-kdf";
 import { authenticateAndGetPrf } from "../../lib/protection/webauthn-prf";
 import { INPUT_CLASS } from "../../lib/utils/styles";
-import { DevToolsDialog } from "../settings/DevToolsDialog";
+import { DevToolsPage } from "../settings/DevToolsPage";
 
 interface MasterUnlockScreenProps {
   masterProtection: MasterProtection;
@@ -195,11 +195,8 @@ export function MasterUnlockScreen({
         )}
       </div>
 
-      {import.meta.env.DEV && (
-        <DevToolsDialog
-          open={showDevTools}
-          onClose={() => setShowDevTools(false)}
-        />
+      {import.meta.env.DEV && showDevTools && (
+        <DevToolsPage onClose={() => setShowDevTools(false)} />
       )}
     </div>
   );

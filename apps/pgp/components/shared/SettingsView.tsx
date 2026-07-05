@@ -24,10 +24,10 @@ import {
 } from "../../lib/storage/encrypted-store";
 import { invalidateLocationCache } from "../../lib/storage/engine";
 import { savePreferences } from "../../lib/storage/preferences";
+import { ExportKeysPage } from "../keys/ExportKeysPage";
 import { CrxSigningInfoPage } from "../settings/CrxSigningInfoPage";
-import { DevToolsDialog } from "../settings/DevToolsDialog";
-import { ExportAllKeysDialog } from "../settings/ExportAllKeysDialog";
-import { ImportAllKeysDialog } from "../settings/ImportAllKeysDialog";
+import { DevToolsPage } from "../settings/DevToolsPage";
+import { ImportAllKeysPage } from "../settings/ImportAllKeysPage";
 import { StorageLocationPicker } from "./StorageLocationPicker";
 
 const AUTO_LOCK_OPTIONS: { value: AutoLockTimeout; label: string }[] = [
@@ -461,39 +461,39 @@ export function SettingsView({
         </div>
       </div>
 
-      <ExportAllKeysDialog
-        open={showExportAll}
-        onClose={() => setShowExportAll(false)}
-        myKeys={myKeys}
-        contacts={contacts}
-        crxKeys={crxKeys}
-        isUnlocked={isUnlocked}
-        getKeyHandle={getKeyHandle}
-        onUnlockWithPassword={onUnlockWithPassword}
-        onUnlockWithPasskey={onUnlockWithPasskey}
-      />
+      {showExportAll && (
+        <ExportKeysPage
+          title="Export all keys"
+          onClose={() => setShowExportAll(false)}
+          myKeys={myKeys}
+          contacts={contacts}
+          crxKeys={crxKeys}
+          isUnlocked={isUnlocked}
+          getKeyHandle={getKeyHandle}
+          onUnlockWithPassword={onUnlockWithPassword}
+          onUnlockWithPasskey={onUnlockWithPasskey}
+        />
+      )}
 
-      <ImportAllKeysDialog
-        open={showImportAll}
-        onClose={() => setShowImportAll(false)}
-        myKeys={myKeys}
-        contacts={contacts}
-        onAddKey={onAddKey}
-        onAddContact={onAddContact}
-        onAddCrxKey={onAddCrxKey}
-        crxKeys={crxKeys}
-        reusePasskeyCredentialId={primaryPasskeyCredentialId}
-      />
+      {showImportAll && (
+        <ImportAllKeysPage
+          onClose={() => setShowImportAll(false)}
+          myKeys={myKeys}
+          contacts={contacts}
+          onAddKey={onAddKey}
+          onAddContact={onAddContact}
+          onAddCrxKey={onAddCrxKey}
+          crxKeys={crxKeys}
+          reusePasskeyCredentialId={primaryPasskeyCredentialId}
+        />
+      )}
 
       {showCrxInfo && (
         <CrxSigningInfoPage onClose={() => setShowCrxInfo(false)} />
       )}
 
-      {import.meta.env.DEV && (
-        <DevToolsDialog
-          open={showDevTools}
-          onClose={() => setShowDevTools(false)}
-        />
+      {import.meta.env.DEV && showDevTools && (
+        <DevToolsPage onClose={() => setShowDevTools(false)} />
       )}
     </div>
   );

@@ -1,9 +1,7 @@
 import { useState } from "react";
 
-import { Button } from "@amibeingpwned/ui/button";
-
 import { INPUT_CLASS } from "../../lib/utils/styles";
-import { SlideOverHeader, SlideOverPanel, useSlideOver } from "./SlideOver";
+import { SubPage } from "./SubPage";
 
 interface RenamePageProps {
   title: string;
@@ -21,9 +19,8 @@ interface RenamePageProps {
 }
 
 /**
- * Full-panel rename, using the shared slide-over pattern. Sets a local
- * display alias; submitting an empty value clears it (reverts to the
- * key's real identity).
+ * Full-panel rename subpage. Sets a local display alias; submitting an
+ * empty value clears it (reverts to the key's real identity).
  */
 export function RenamePage({
   title,
@@ -34,30 +31,26 @@ export function RenamePage({
   onSave,
   onCancel,
 }: RenamePageProps) {
-  const { entered, close } = useSlideOver(onCancel);
   const [value, setValue] = useState(initialValue);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const dirty = value.trim() !== initialValue.trim();
 
-  const handleSave = async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      await onSave(value.trim());
-      close();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't save the name.");
-    } finally {
-      setBusy(false);
-    }
-  };
-
   return (
-    <SlideOverPanel entered={entered} ariaLabel={title}>
-      <SlideOverHeader title={title} onBack={close} />
-      <div className="flex flex-1 flex-col overflow-y-auto p-4">
+    <SubPage
+      title={title}
+      onClose={onCancel}
+      actions={[
+        {
+          text: "Save",
+          busyText: "Saving...",
+          disabled: !dirty,
+          onClick: () => onSave(value.trim()),
+          closeOnSuccess: true,
+        },
+        { type: "outline", text: "Cancel" },
+      ]}
+    >
+      {(api) => (
         <div className="space-y-3">
           <div>
             <label className="text-muted-foreground mb-1 block text-xs">
@@ -71,9 +64,9 @@ export function RenamePage({
               placeholder={placeholder}
               onChange={(e) => setValue(e.target.value)}
               onKeyDown={(e) => {
-                // `!busy` mirrors the Save button's disabled state so a
-                // second Enter during the slide-out can't re-fire onSave.
-                if (e.key === "Enter" && dirty && !busy) void handleSave();
+                // runAction no-ops while busy, so a second Enter during
+                // the slide-out can't re-fire onSave.
+                if (e.key === "Enter") api.runAction(0);
               }}
               className={INPUT_CLASS}
             />
@@ -81,7 +74,6 @@ export function RenamePage({
               <p className="text-muted-foreground mt-1 text-[11px]">{hint}</p>
             )}
           </div>
-          {error && <p className="text-destructive text-xs">{error}</p>}
           {initialValue && (
             <button
               type="button"
@@ -92,24 +84,7 @@ export function RenamePage({
             </button>
           )}
         </div>
-        <div className="mt-auto space-y-2 pt-4">
-          <Button
-            className="w-full"
-            disabled={busy || !dirty}
-            onClick={() => void handleSave()}
-          >
-            {busy ? "Saving..." : "Save"}
-          </Button>
-          <Button
-            variant="outline"
-            className="w-full"
-            disabled={busy}
-            onClick={close}
-          >
-            Cancel
-          </Button>
-        </div>
-      </div>
-    </SlideOverPanel>
+      )}
+    </SubPage>
   );
 }
