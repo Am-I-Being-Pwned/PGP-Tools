@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { LockIcon } from "lucide-react";
 
 import { Button } from "@amibeingpwned/ui/button";
 
@@ -128,9 +127,12 @@ export function MasterUnlockScreen({
       aria-label="Unlock PGP Tools"
     >
       <div className="w-full max-w-xs space-y-6 text-center">
-        <div className="bg-primary/10 mx-auto flex h-14 w-14 items-center justify-center rounded-full">
-          <LockIcon className="text-primary h-7 w-7" />
-        </div>
+        <img
+          src="/icon-128.png"
+          alt=""
+          className="mx-auto h-14 w-14"
+          draggable={false}
+        />
 
         <div>
           <h1 className="text-lg font-semibold">PGP Tools</h1>
