@@ -10,6 +10,7 @@ import { STORAGE_CRX_KEYS } from "../constants";
 import { hasContactsSession } from "../pgp/wasm";
 import {
   loadEncryptedArray,
+  normalizePadding,
   saveEncryptedArray,
 } from "../storage/encrypted-store";
 import { removeItem, withLock } from "../storage/engine";
@@ -27,6 +28,11 @@ function loadEncrypted(): Promise<CrxSigningKeyBlob[]> {
 
 function saveAll(keys: CrxSigningKeyBlob[]): Promise<void> {
   return saveEncryptedArray(CRX_STORE, keys);
+}
+
+/** One-time upgrade of an unpadded CRX-keys blob to canonical padding. */
+export function normalizeCrxPadding(): Promise<void> {
+  return normalizePadding(CRX_STORE);
 }
 
 /** Mutations must not run without the vault session: `loadEncrypted`
