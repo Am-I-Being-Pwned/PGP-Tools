@@ -37,10 +37,23 @@ export function WorkspaceResults({
   fullHeight,
 }: WorkspaceResultsProps) {
   const isUnverified = signatureTone === "warning";
+
+  // Nothing to show yet — render nothing rather than reserving a fixed
+  // slab of height. That empty reservation is only ever filled in encrypt
+  // mode (recipient + sign/zip controls); in sign/verify/decrypt it just
+  // pushed the action button away from the controls above it.
+  const hasContent =
+    !!error ||
+    !!verifiedSigner ||
+    !!output ||
+    !!binaryOutput ||
+    fileResults.length > 0;
+  if (!fullHeight && !hasContent) return null;
+
   return (
     <div
       className={
-        fullHeight ? "flex min-h-0 flex-1 flex-col gap-3" : "min-h-5 space-y-3"
+        fullHeight ? "flex min-h-0 flex-1 flex-col gap-3" : "space-y-3"
       }
     >
       {error && (
