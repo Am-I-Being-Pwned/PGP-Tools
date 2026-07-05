@@ -17,6 +17,37 @@ export interface KeyInfo {
   securityWarning?: string;
 }
 
+/** One row in the per-key breakdown of a certificate: the primary key
+ *  or one subkey, with its capability flags and lifecycle status.
+ *  "invalid" means the binding signature fails policy (see policyError);
+ *  capability flags are then unknown and reported as all-false. */
+export interface SubkeyDetail {
+  fingerprint: string;
+  /** Short (64-bit) key ID, the form most other tools print. */
+  keyId: string;
+  algorithm: string;
+  /** Public-key size in bits, when the algorithm has a meaningful one. */
+  bits?: number;
+  createdAt: number;
+  expiresAt: number | null;
+  isPrimary: boolean;
+  canSign: boolean;
+  canEncrypt: boolean;
+  canCertify: boolean;
+  canAuthenticate: boolean;
+  status: "active" | "expired" | "revoked" | "invalid";
+  revocationReason?: string;
+  policyError?: string;
+}
+
+/** Result of `parseKeyDetails`: primary key first, in cert order.
+ *  `truncated` is set when the cert carried more component keys than
+ *  the wasm-side row cap (only plausible for crafted certs). */
+export interface KeyDetails {
+  keys: SubkeyDetail[];
+  truncated: boolean;
+}
+
 // Discriminated union for encrypt input
 export type EncryptInput =
   | { kind: "text"; text: string }

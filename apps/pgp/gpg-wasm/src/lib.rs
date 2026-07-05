@@ -66,7 +66,7 @@ use openpgp::policy::{HashAlgoSecurity, StandardPolicy};
 use openpgp::serialize::stream::*;
 use openpgp::serialize::Serialize as _;
 use openpgp::serialize::SerializeInto as _;
-use openpgp::types::{HashAlgorithm, SymmetricAlgorithm};
+use openpgp::types::{HashAlgorithm, KeyFlags, RevocationStatus, SymmetricAlgorithm};
 use sequoia_openpgp as openpgp;
 use serde::{Deserialize, Serialize};
 use std::sync::OnceLock;
@@ -157,6 +157,47 @@ pub struct KeyInfo {
     /// `policy_error`.
     #[serde(rename = "securityWarning", skip_serializing_if = "Option::is_none")]
     pub security_warning: Option<String>,
+}
+
+/// One row in the per-key breakdown of a certificate: the primary key
+/// or one subkey, with its capability flags and lifecycle status.
+/// Returned (as an array, primary first) by `parse_key_details`.
+/// Complements `KeyInfo`, which only answers "is this cert usable at
+/// all" -- this says *which* component key does what, and which are
+/// dead weight (expired / revoked / policy-rejected).
+#[derive(Serialize)]
+pub struct SubkeyDetail {
+    pub fingerprint: String,
+    /// Short (64-bit) key ID, the form most other tools print.
+    #[serde(rename = "keyId")]
+    pub key_id: String,
+    pub algorithm: String,
+    /// Public-key size in bits, when the algorithm has a meaningful one.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bits: Option<usize>,
+    #[serde(rename = "createdAt")]
+    pub created_at: f64,
+    #[serde(rename = "expiresAt")]
+    pub expires_at: Option<f64>,
+    #[serde(rename = "isPrimary")]
+    pub is_primary: bool,
+    #[serde(rename = "canSign")]
+    pub can_sign: bool,
+    #[serde(rename = "canEncrypt")]
+    pub can_encrypt: bool,
+    #[serde(rename = "canCertify")]
+    pub can_certify: bool,
+    #[serde(rename = "canAuthenticate")]
+    pub can_authenticate: bool,
+    /// "active" | "expired" | "revoked" | "invalid".
+    /// "invalid" means the binding signature fails our `policy()`
+    /// (see `policy_error` for why); capability flags are then unknown
+    /// and reported as all-false.
+    pub status: String,
+    #[serde(rename = "revocationReason", skip_serializing_if = "Option::is_none")]
+    pub revocation_reason: Option<String>,
+    #[serde(rename = "policyError", skip_serializing_if = "Option::is_none")]
+    pub policy_error: Option<String>,
 }
 
 /// Metadata returned alongside an encrypted blob from the protect-flow
@@ -781,6 +822,149 @@ pub fn parse_key(armored: &str) -> Result<String, String> {
     let cert = openpgp::Cert::from_bytes(armored.as_bytes()).str_err()?;
     let is_private = cert.keys().secret().next().is_some();
     serde_json::to_string(&extract_key_info(&cert, is_private)).str_err()
+}
+
+/// Hard cap on the rows `parse_key_details` returns. Real certs carry a
+/// handful of subkeys; a crafted cert can carry thousands, and each row
+/// costs a `with_policy` evaluation here plus a DOM node in the side
+/// panel. Excess rows are dropped and flagged via `truncated`.
+const MAX_DETAIL_ROWS: usize = 100;
+
+/// Cap and clean an attacker-controlled string before it crosses to the
+/// UI: drop control characters and Unicode bidi overrides (which could
+/// visually reorder surrounding UI text), then truncate to `max` chars.
+fn sanitize_untrusted(s: &str, max: usize) -> String {
+    let mut out = String::new();
+    let cleaned = s.chars().filter(|c| {
+        !c.is_control() && !matches!(*c, '\u{202a}'..='\u{202e}' | '\u{2066}'..='\u{2069}')
+    });
+    for (i, c) in cleaned.enumerate() {
+        if i == max {
+            out.push('…');
+            break;
+        }
+        out.push(c);
+    }
+    out
+}
+
+/// Human-readable reason from a *verified* revocation, or `None` when
+/// not revoked. `CouldBe` (unverifiable third-party sig) is deliberately
+/// not treated as revoked, matching sequoia/GnuPG semantics.
+fn verified_revocation_reason(status: &RevocationStatus) -> Option<String> {
+    let RevocationStatus::Revoked(sigs) = status else {
+        return None;
+    };
+    Some(
+        sigs.first()
+            .and_then(|s| s.reason_for_revocation())
+            .map(|(code, msg)| {
+                let msg = String::from_utf8_lossy(msg);
+                if msg.is_empty() {
+                    code.to_string()
+                } else {
+                    format!("{code}: {msg}")
+                }
+            })
+            .map(|reason| sanitize_untrusted(&reason, 300))
+            .unwrap_or_else(|| "No reason given".to_string()),
+    )
+}
+
+/// Per-component-key breakdown of a certificate: the primary key plus
+/// every subkey, each with capability flags and lifecycle status.
+/// Returns JSON `{ keys: SubkeyDetail[], truncated: bool }`, primary
+/// key first, in cert order. Accepts public or private armor (secret
+/// material is dropped at end of call, as in `parse_key`).
+///
+/// Unlike `ValidCert::keys()`, this walks `cert.keys()` so that keys
+/// whose binding signature fails our `policy()` still get a row
+/// (status "invalid") -- the whole point of the details view is to
+/// show the user the dead weight, not silently hide it.
+#[wasm_bindgen(js_name = "parseKeyDetails")]
+pub fn parse_key_details(armored: &str) -> Result<String, String> {
+    let cert = openpgp::Cert::from_bytes(armored.as_bytes()).str_err()?;
+    let primary_fp = cert.fingerprint();
+
+    // Cert-level lifecycle, computed once. A subkey cannot outlive its
+    // certificate: if the primary key is revoked or expired, every
+    // subkey is dead with it, even though the subkey's own binding
+    // signature and revocation status look clean. Without this, a
+    // fully revoked cert would show green "active" encryption subkeys.
+    let (cert_revoked_reason, cert_expiry_if_expired) = match cert.with_policy(policy(), None) {
+        Ok(vc) => {
+            let revoked = verified_revocation_reason(&vc.revocation_status());
+            let expired = if revoked.is_none() && vc.alive().is_err() {
+                Some(vc.primary_key().key_expiration_time().map(system_time_to_millis))
+            } else {
+                None
+            };
+            (revoked, expired)
+        }
+        Err(_) => (None, None),
+    };
+
+    let truncated = cert.keys().count() > MAX_DETAIL_ROWS;
+    let mut keys = Vec::new();
+    for ka in cert.keys().take(MAX_DETAIL_ROWS) {
+        let key = ka.key();
+        let fingerprint = key.fingerprint();
+        let is_primary = fingerprint == primary_fp;
+        let mut detail = SubkeyDetail {
+            fingerprint: fingerprint.to_hex(),
+            key_id: key.keyid().to_hex(),
+            algorithm: key.pk_algo().to_string(),
+            bits: key.mpis().bits(),
+            created_at: system_time_to_millis(key.creation_time()),
+            expires_at: None,
+            is_primary,
+            can_sign: false,
+            can_encrypt: false,
+            can_certify: false,
+            can_authenticate: false,
+            status: "invalid".to_string(),
+            revocation_reason: None,
+            policy_error: None,
+        };
+
+        match ka.with_policy(policy(), None) {
+            Ok(vka) => {
+                let flags = vka.key_flags().unwrap_or_else(KeyFlags::empty);
+                detail.can_sign = flags.for_signing();
+                detail.can_encrypt =
+                    flags.for_transport_encryption() || flags.for_storage_encryption();
+                detail.can_certify = flags.for_certification();
+                detail.can_authenticate = flags.for_authentication();
+                detail.expires_at = vka.key_expiration_time().map(system_time_to_millis);
+
+                if let Some(reason) = verified_revocation_reason(&vka.revocation_status()) {
+                    detail.status = "revoked".to_string();
+                    detail.revocation_reason = Some(reason);
+                } else if let Some(reason) = &cert_revoked_reason {
+                    // Own status clean, but the whole cert is revoked.
+                    detail.status = "revoked".to_string();
+                    if !is_primary {
+                        detail.revocation_reason =
+                            Some(format!("Certificate revoked: {reason}"));
+                    }
+                } else if vka.alive().is_err() || cert_expiry_if_expired.is_some() {
+                    detail.status = "expired".to_string();
+                    if detail.expires_at.is_none() {
+                        detail.expires_at = cert_expiry_if_expired.flatten();
+                    }
+                } else {
+                    detail.status = "active".to_string();
+                }
+            }
+            Err(e) => {
+                detail.policy_error =
+                    Some(sanitize_untrusted(&humanize_policy_error(&e.to_string()), 300));
+            }
+        }
+        keys.push(detail);
+    }
+    serde_json::to_string(&serde_json::json!({ "keys": keys, "truncated": truncated }))
+        .str_err()
 }
 
 /// A single cert extracted from a (possibly multi-cert) armored blob,

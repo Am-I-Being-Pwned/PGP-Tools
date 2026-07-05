@@ -1,8 +1,12 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import {
+  ArrowRightIcon,
   CheckCircleIcon,
+  CopyIcon,
   EllipsisVerticalIcon,
+  LockIcon,
+  Trash2Icon,
   TriangleAlertIcon,
 } from "lucide-react";
 
@@ -24,6 +28,8 @@ interface ContactCardProps {
   onRemove?: () => void;
   onEncryptTo?: () => void;
   onCopyPublicKey?: () => void;
+  /** When set, shows a bottom-right arrow opening the key-details page. */
+  onShowDetails?: () => void;
   advancedMode?: boolean;
   readOnly?: boolean;
   verifiedLabel?: string;
@@ -39,6 +45,7 @@ export function ContactCard({
   onRemove,
   onEncryptTo,
   onCopyPublicKey,
+  onShowDetails,
   advancedMode,
   readOnly,
   verifiedLabel,
@@ -50,7 +57,6 @@ export function ContactCard({
   const toneText = isWarning ? "text-orange-400" : "text-green-400";
   const ToneIcon = isWarning ? TriangleAlertIcon : CheckCircleIcon;
   const [confirming, setConfirming] = useState(false);
-  const [showWarning, setShowWarning] = useState(false);
   const userId = contact.userIds[0] ?? "Unknown";
   const { name: rawName, email, comment } = parseUserId(userId);
   const name = comment ? `${rawName} (${comment})` : rawName;
@@ -79,7 +85,8 @@ export function ContactCard({
 
   return (
     <div
-      className={`rounded-md border p-3 ${verifiedLabel ? toneBorder : "border-border"}`}
+      onClick={onShowDetails}
+      className={`group relative rounded-md border p-3 ${verifiedLabel ? toneBorder : "border-border"} ${onShowDetails ? "hover:bg-muted/40 cursor-pointer transition-colors" : ""}`}
     >
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
@@ -116,20 +123,13 @@ export function ContactCard({
           )}
           {contact.securityWarning && (
             <div className="mt-1">
-              <button
-                type="button"
-                onClick={() => setShowWarning((v) => !v)}
-                aria-expanded={showWarning}
-                className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-700 transition-colors hover:bg-amber-500/20 dark:text-amber-400"
+              <span
+                title={contact.securityWarning}
+                className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400"
               >
                 <TriangleAlertIcon className="h-3 w-3" />
                 Weak (SHA-1)
-              </button>
-              {showWarning && (
-                <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
-                  {contact.securityWarning}
-                </p>
-              )}
+              </span>
             </div>
           )}
         </div>
@@ -138,6 +138,7 @@ export function ContactCard({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
+                onClick={(e) => e.stopPropagation()}
                 className="text-muted-foreground hover:text-foreground rounded p-1 transition-colors"
                 aria-label="Contact options"
               >
@@ -147,11 +148,13 @@ export function ContactCard({
             <DropdownMenuContent align="end">
               {onEncryptTo && (
                 <DropdownMenuItem onClick={onEncryptTo}>
+                  <LockIcon />
                   Encrypt to
                 </DropdownMenuItem>
               )}
               {onCopyPublicKey && (
                 <DropdownMenuItem onClick={onCopyPublicKey}>
+                  <CopyIcon />
                   Copy public key
                 </DropdownMenuItem>
               )}
@@ -160,12 +163,27 @@ export function ContactCard({
                 className="text-destructive focus:text-destructive"
                 onClick={() => setConfirming(true)}
               >
+                <Trash2Icon className="text-destructive" />
                 Remove contact
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )}
       </div>
+
+      {onShowDetails && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onShowDetails();
+          }}
+          aria-label="Key details"
+          className="text-muted-foreground group-hover:text-foreground absolute right-3 bottom-2 rounded p-1 transition-colors"
+        >
+          <ArrowRightIcon className="h-4 w-4" />
+        </button>
+      )}
     </div>
   );
 }

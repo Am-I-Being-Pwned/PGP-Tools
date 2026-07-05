@@ -708,3 +708,109 @@ fn test_canary_tampered_ciphertext_fails() {
 
     reset_contacts_session();
 }
+
+// ── parse_key_details ────────────────────────────────────────────────
+
+#[test]
+fn test_parse_key_details_breakdown() {
+    let json = gen_test_key();
+    let result: serde_json::Value = serde_json::from_str(&json).unwrap();
+    let pub_armor = result["publicKeyArmored"].as_str().unwrap();
+
+    let details: serde_json::Value =
+        serde_json::from_str(&parse_key_details(pub_armor).unwrap()).unwrap();
+    assert_eq!(details["truncated"], false);
+    let rows = details["keys"].as_array().unwrap();
+
+    // CertBuilder adds signing + transport-enc + storage-enc subkeys.
+    assert_eq!(rows.len(), 4);
+
+    // Primary first: certification-capable, active, matches cert fingerprint.
+    assert_eq!(rows[0]["isPrimary"], true);
+    assert_eq!(rows[0]["canCertify"], true);
+    assert_eq!(rows[0]["status"], "active");
+    let key_info: serde_json::Value =
+        serde_json::from_str(&parse_key(pub_armor).unwrap()).unwrap();
+    assert_eq!(rows[0]["fingerprint"], key_info["keyId"]);
+
+    // Subkeys: exactly one signing, two encryption, all active, none primary.
+    let subkeys: Vec<_> = rows.iter().skip(1).collect();
+    assert!(subkeys.iter().all(|r| r["isPrimary"] == false));
+    assert!(subkeys.iter().all(|r| r["status"] == "active"));
+    assert_eq!(subkeys.iter().filter(|r| r["canSign"] == true).count(), 1);
+    assert_eq!(subkeys.iter().filter(|r| r["canEncrypt"] == true).count(), 2);
+
+    // Every row carries a distinct fingerprint and a creation time.
+    let mut fps: Vec<&str> = rows.iter().map(|r| r["fingerprint"].as_str().unwrap()).collect();
+    fps.sort_unstable();
+    fps.dedup();
+    assert_eq!(fps.len(), 4);
+    assert!(rows.iter().all(|r| r["createdAt"].as_f64().unwrap() > 0.0));
+}
+
+#[test]
+fn test_parse_key_details_accepts_private_armor() {
+    let json = gen_test_key();
+    let result: serde_json::Value = serde_json::from_str(&json).unwrap();
+    let priv_armor = result["privateKeyArmored"].as_str().unwrap();
+
+    let details: serde_json::Value =
+        serde_json::from_str(&parse_key_details(priv_armor).unwrap()).unwrap();
+    assert_eq!(details["keys"].as_array().unwrap().len(), 4);
+}
+
+#[test]
+fn test_parse_key_details_expired() {
+    let opts = r#"{"name":"Short Lived","email":"exp@test.com","type":"ecc","expiresIn":1}"#;
+    let json = generate_key(opts).unwrap();
+    let result: serde_json::Value = serde_json::from_str(&json).unwrap();
+    let pub_armor = result["publicKeyArmored"].as_str().unwrap();
+
+    std::thread::sleep(std::time::Duration::from_secs(2));
+
+    let details: serde_json::Value =
+        serde_json::from_str(&parse_key_details(pub_armor).unwrap()).unwrap();
+    let rows = details["keys"].as_array().unwrap();
+    assert_eq!(rows.len(), 4);
+    for row in rows {
+        assert_eq!(row["status"], "expired", "row: {row}");
+        assert!(row["expiresAt"].as_f64().is_some());
+    }
+}
+
+#[test]
+fn test_parse_key_details_cert_revocation_propagates_to_subkeys() {
+    let json = gen_test_key();
+    let result: serde_json::Value = serde_json::from_str(&json).unwrap();
+    let pub_armor = result["publicKeyArmored"].as_str().unwrap();
+    let rev_armor = result["revocationCertificate"].as_str().unwrap();
+
+    // Merge the revocation certificate into the public cert -- this is
+    // what "publishing a revocation" means. Only the *primary* key is
+    // revoked; the subkeys' own binding/revocation state stays clean.
+    let cert = openpgp::Cert::from_bytes(pub_armor.as_bytes()).unwrap();
+    let rev_packet = openpgp::Packet::from_bytes(rev_armor.as_bytes()).unwrap();
+    let revoked_cert = cert.insert_packets(rev_packet).unwrap().0;
+    let revoked_armor = String::from_utf8(revoked_cert.armored().to_vec().unwrap()).unwrap();
+
+    let details: serde_json::Value =
+        serde_json::from_str(&parse_key_details(&revoked_armor).unwrap()).unwrap();
+    let rows = details["keys"].as_array().unwrap();
+    assert_eq!(rows.len(), 4);
+
+    // Every row -- primary AND subkeys -- must read revoked; a subkey
+    // cannot outlive its certificate.
+    for row in rows {
+        assert_eq!(row["status"], "revoked", "row: {row}");
+    }
+    // Subkey rows carry the cert-level explanation.
+    assert!(rows[1]["revocationReason"]
+        .as_str()
+        .unwrap()
+        .starts_with("Certificate revoked:"));
+}
+
+#[test]
+fn test_parse_key_details_garbage_input() {
+    assert!(parse_key_details("not a key").is_err());
+}
