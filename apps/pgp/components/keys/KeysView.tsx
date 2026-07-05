@@ -7,6 +7,7 @@ import type { CrxSigningKeyBlob } from "../../lib/crx/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { KeyDetailsTarget } from "./KeyDetailsPage";
+import { parseUserId } from "../../lib/utils/key-naming";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 import { ConfirmPage } from "../shared/ConfirmPage";
 import { RenamePage } from "../shared/RenamePage";
@@ -253,12 +254,21 @@ export function KeysView({
         if (route.page === "rename") {
           const target = route.target;
           const isOwn = target.kind === "own";
-          const currentName = isOwn
-            ? (target.keyBlob.alias ?? "")
-            : (target.keyBlob.label ?? "");
+          // Clean display name from the first User ID ("Name <email>" ->
+          // "Name"), so the field starts from the current name to tweak
+          // rather than blank. CRX keys have no such identity; fall back
+          // to their label only.
           const realIdentity = isOwn
-            ? (target.keyBlob.userIds[0] ?? target.keyBlob.keyId)
+            ? (() => {
+                const { name, comment } = parseUserId(
+                  target.keyBlob.userIds[0] ?? target.keyBlob.keyId,
+                );
+                return comment ? `${name} (${comment})` : name;
+              })()
             : target.keyBlob.extensionId;
+          const currentName = isOwn
+            ? (target.keyBlob.alias ?? realIdentity)
+            : (target.keyBlob.label ?? "");
           return (
             <RenamePage
               key={entry.id}

@@ -67,10 +67,13 @@ export function RenamePage({
               type="text"
               value={value}
               autoFocus
+              maxLength={200}
               placeholder={placeholder}
               onChange={(e) => setValue(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && dirty) void handleSave();
+                // `!busy` mirrors the Save button's disabled state so a
+                // second Enter during the slide-out can't re-fire onSave.
+                if (e.key === "Enter" && dirty && !busy) void handleSave();
               }}
               className={INPUT_CLASS}
             />

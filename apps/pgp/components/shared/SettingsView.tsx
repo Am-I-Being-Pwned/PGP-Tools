@@ -14,6 +14,7 @@ import { STORAGE_CONTACTS, STORAGE_KEYRING } from "../../lib/constants";
 import { invalidateLocationCache, migrate } from "../../lib/storage/engine";
 import { savePreferences } from "../../lib/storage/preferences";
 import { CrxSigningInfoDialog } from "../settings/CrxSigningInfoDialog";
+import { DevToolsDialog } from "../settings/DevToolsDialog";
 import { ExportAllKeysDialog } from "../settings/ExportAllKeysDialog";
 import { ImportAllKeysDialog } from "../settings/ImportAllKeysDialog";
 import { StorageLocationPicker } from "./StorageLocationPicker";
@@ -99,6 +100,7 @@ export function SettingsView({
   const [showExportAll, setShowExportAll] = useState(false);
   const [showImportAll, setShowImportAll] = useState(false);
   const [showCrxInfo, setShowCrxInfo] = useState(false);
+  const [showDevTools, setShowDevTools] = useState(false);
 
   const toggleAdvanced = () => {
     const next = !advancedMode;
@@ -331,6 +333,26 @@ export function SettingsView({
         </p>
       </div>
 
+      {import.meta.env.DEV && (
+        <div>
+          <h2 className="mb-2 text-sm font-semibold">Developer</h2>
+          <div className="border-border rounded-md border p-3">
+            <p className="text-muted-foreground text-xs">
+              Inspect chrome.storage and dump WASM memory for testing. This
+              section only appears in development builds.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2 w-full"
+              onClick={() => setShowDevTools(true)}
+            >
+              Open dev tools
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div>
         <h2 className="mb-2 text-sm font-semibold">About</h2>
         <div className="border-border rounded-md border p-3">
@@ -400,6 +422,13 @@ export function SettingsView({
         open={showCrxInfo}
         onClose={() => setShowCrxInfo(false)}
       />
+
+      {import.meta.env.DEV && (
+        <DevToolsDialog
+          open={showDevTools}
+          onClose={() => setShowDevTools(false)}
+        />
+      )}
     </div>
   );
 }

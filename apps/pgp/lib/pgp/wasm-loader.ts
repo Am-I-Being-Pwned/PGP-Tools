@@ -12,6 +12,7 @@ export type WasmModule = typeof import("../../gpg-wasm/pkg/gpg_wasm");
 
 let wasmModule: WasmModule | null = null;
 let initPromise: Promise<WasmModule> | null = null;
+let wasmMemory: WebAssembly.Memory | null = null;
 
 export async function loadWasm(): Promise<WasmModule> {
   if (wasmModule) return wasmModule;
@@ -24,12 +25,30 @@ export async function loadWasm(): Promise<WasmModule> {
     // wasm subsystem ever makes.
     const wasmUrl = chrome.runtime.getURL("gpg_wasm_bg.wasm");
     const wasmBytes = await fetch(wasmUrl).then((r) => r.arrayBuffer());
-    mod.initSync({ module: wasmBytes });
+    const output = mod.initSync({ module: wasmBytes });
+    wasmMemory = output.memory;
     wasmModule = mod;
     return mod;
   })();
 
   return initPromise;
+}
+
+/**
+ * DEV-ONLY: snapshot the wasm linear memory as raw bytes.
+ *
+ * This deliberately breaches the "no secrets cross this file" rule: raw
+ * memory can contain decrypted private keys. It exists solely as a
+ * debugging aid (e.g. verifying zeroization) and is gated behind
+ * `import.meta.env.DEV` -- the runtime guard returns null in any
+ * production build, and the whole branch is tree-shaken out. Returns
+ * null if the module hasn't been initialised yet.
+ */
+export function dumpWasmMemoryForDev(): Uint8Array | null {
+  if (!import.meta.env.DEV) return null;
+  if (!wasmMemory) return null;
+  // .slice() copies out of live memory into a detached buffer.
+  return new Uint8Array(wasmMemory.buffer).slice();
 }
 
 export async function initPgpWasm(): Promise<void> {
