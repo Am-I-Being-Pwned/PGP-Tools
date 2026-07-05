@@ -14,6 +14,7 @@
 
 import type { StorageLocation } from "./preferences";
 import { fromBase64, toBase64, unpackIvCiphertext } from "../encoding";
+import { getChunked, removeChunked, setChunked } from "./chunked";
 import {
   decryptContacts,
   encryptContacts,
@@ -125,11 +126,13 @@ export async function copyEncryptedBlobRepacked(
   to: StorageLocation,
 ): Promise<void> {
   if (from === to) return;
-  const raw: unknown = (await area(from).get(storageKey))[storageKey];
+  // getChunked/setChunked so a blob that was split to fit sync's 8 KB/item
+  // cap is reassembled on read and re-split on write to the destination.
+  const raw: unknown = await getChunked(area(from), storageKey);
   if (raw === undefined) return;
 
   if (!isEncryptedStoreBlob(raw)) {
-    await area(to).set({ [storageKey]: raw });
+    await setChunked(area(to), storageKey, raw, to === "sync");
     return;
   }
 
@@ -141,18 +144,22 @@ export async function copyEncryptedBlobRepacked(
   const packed = await encryptContacts(padPlaintext(json, to === "local"));
   const { iv, ciphertext } = unpackIvCiphertext(packed);
 
-  await area(to).set({
-    [storageKey]: { iv: toBase64(iv), ciphertext: toBase64(ciphertext) },
-  });
+  await setChunked(
+    area(to),
+    storageKey,
+    { iv: toBase64(iv), ciphertext: toBase64(ciphertext) },
+    to === "sync",
+  );
 }
 
-/** Remove a blob from a specific area. Used after a location switch to
- *  drop the old-area copies left by `copyEncryptedBlobRepacked`. */
+/** Remove a blob (and any sync chunk items behind it) from a specific
+ *  area. Used after a location switch to drop the old-area copies left by
+ *  `copyEncryptedBlobRepacked`, and to roll back on a failed migration. */
 export async function purgeEncryptedBlob(
   storageKey: string,
   from: StorageLocation,
 ): Promise<void> {
-  await area(from).remove(storageKey);
+  await removeChunked(area(from), storageKey);
 }
 
 /**
