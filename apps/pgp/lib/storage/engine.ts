@@ -49,6 +49,14 @@ export function invalidateLocationCache(): void {
   cachedLocation = null;
 }
 
+/** The user's current storage area. Used by the encrypted stores to
+ *  decide padding: `local` has a generous quota so blobs are padded to
+ *  hide item counts; `sync` caps items at 8 KB, so padding is skipped
+ *  there to stay under the limit. */
+export function currentStorageLocation(): Promise<StorageLocation> {
+  return resolveLocation();
+}
+
 function area(
   location: StorageLocation,
 ): chrome.storage.LocalStorageArea | chrome.storage.SyncStorageArea {
@@ -69,35 +77,4 @@ export async function setItem<T>(key: string, value: T): Promise<void> {
 export async function removeItem(key: string): Promise<void> {
   const loc = await resolveLocation();
   await area(loc).remove(key);
-}
-
-export async function migrate(
-  keys: string[],
-  from: StorageLocation,
-  to: StorageLocation,
-): Promise<void> {
-  if (from === to) return;
-  const source = area(from);
-  const dest = area(to);
-
-  // Collect all keys including per-item sub-keys (e.g. pgp_keyring:abc123)
-  const allKeys = [...keys];
-  const indexData = await source.get(keys);
-  for (const key of keys) {
-    const index = indexData[key];
-    if (Array.isArray(index)) {
-      for (const id of index) {
-        if (typeof id === "string") {
-          allKeys.push(`${key}:${id}`);
-        }
-      }
-    }
-  }
-
-  const data = await source.get(allKeys);
-  if (Object.keys(data).length > 0) {
-    await dest.set(data);
-  }
-  await source.remove(allKeys);
-  invalidateLocationCache();
 }

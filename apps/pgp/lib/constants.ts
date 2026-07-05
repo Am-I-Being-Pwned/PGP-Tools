@@ -1,6 +1,14 @@
 export const STORAGE_KEYRING = "pgp_keyring";
 export const STORAGE_CONTACTS = "pgp_public_contacts";
+/** Plaintext bootstrap (sync): the only prefs readable before unlock --
+ *  `storageLocation` (routes all reads) and `onboardingComplete`. Also
+ *  the legacy full-preferences object (user area) that predates the
+ *  split, kept as a one-time migration source. */
 export const STORAGE_PREFERENCES = "pgp_preferences";
+/** Encrypted (AES-256-GCM, padded) blob holding every non-bootstrap
+ *  preference. Lives in the user's chosen area; only readable while the
+ *  vault session is active. */
+export const STORAGE_SETTINGS = "pgp_settings";
 export const STORAGE_MASTER_PROTECTION = "pgp_master_protection";
 /** RSA-2048 CRX (Chrome extension) signing keys. Same double-envelope
  *  encrypted store as the keyring — see `lib/crx/storage.ts`. */

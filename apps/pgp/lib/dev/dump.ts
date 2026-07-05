@@ -21,3 +21,47 @@ export async function dumpAllStorage(): Promise<StorageDump> {
   ]);
   return { local, sync, session };
 }
+
+/**
+ * Overwrite chrome.storage with a previously-dumped snapshot: each area
+ * is cleared then repopulated. Used to rewind to a known state (e.g. a
+ * pre-migration dump) before exercising a migration. The running panel
+ * still holds the old state in memory, so reload it afterwards.
+ */
+export async function restoreAllStorage(
+  dump: Partial<StorageDump>,
+): Promise<void> {
+  if (dump.local) {
+    await chrome.storage.local.clear();
+    await chrome.storage.local.set(dump.local);
+  }
+  if (dump.sync) {
+    await chrome.storage.sync.clear();
+    await chrome.storage.sync.set(dump.sync);
+  }
+  if (dump.session) {
+    await chrome.storage.session.clear();
+    await chrome.storage.session.set(dump.session);
+  }
+}
+
+/** Wipe all three storage areas -- simulate a fresh install. */
+export async function clearAllStorage(): Promise<void> {
+  await Promise.all([
+    chrome.storage.local.clear(),
+    chrome.storage.sync.clear(),
+    chrome.storage.session.clear(),
+  ]);
+}
+
+/** Validate a parsed object looks like a storage dump before restoring. */
+export function isStorageDump(v: unknown): v is Partial<StorageDump> {
+  if (typeof v !== "object" || v === null) return false;
+  const o = v as Record<string, unknown>;
+  const areas = ["local", "sync", "session"] as const;
+  // At least one known area, and every present area is a plain object.
+  return (
+    areas.some((a) => a in o) &&
+    areas.every((a) => !(a in o) || (typeof o[a] === "object" && o[a] !== null))
+  );
+}
