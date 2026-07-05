@@ -72,11 +72,11 @@ const EXPIRING_SOON_MS = 30 * 24 * 60 * 60 * 1000;
 
 const STATUS_STYLES: Record<SubkeyDetail["status"], string> = {
   active:
-    "border-green-500/40 bg-green-500/10 text-green-600 dark:text-green-400",
+    "border-green-500/40 bg-green-500/10 text-green-400",
   expired:
-    "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  revoked: "border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400",
-  invalid: "border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400",
+    "border-amber-500/40 bg-amber-500/10 text-amber-400",
+  revoked: "border-red-500/40 bg-red-500/10 text-red-400",
+  invalid: "border-red-500/40 bg-red-500/10 text-red-400",
 };
 
 /** What this component key is used for, in plain words. */
@@ -174,11 +174,11 @@ function deriveBanner(
 const BANNER_STYLES: Record<Banner["tone"], { box: string; title: string }> = {
   warn: {
     box: "border-amber-500/40 bg-amber-500/10",
-    title: "text-amber-700 dark:text-amber-400",
+    title: "text-amber-400",
   },
   bad: {
     box: "border-red-500/40 bg-red-500/10",
-    title: "text-red-600 dark:text-red-400",
+    title: "text-red-400",
   },
 };
 
@@ -278,12 +278,12 @@ function SubkeyRow({ row }: { row: SubkeyDetail }) {
           : " · never expires"}
       </p>
       {row.revocationReason && (
-        <p className="mt-1 text-[11px] text-red-600 dark:text-red-400">
+        <p className="mt-1 text-[11px] text-red-400">
           Revoked: {row.revocationReason}
         </p>
       )}
       {row.policyError && (
-        <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-400">
+        <p className="mt-1 text-[11px] text-amber-400">
           {row.policyError}
         </p>
       )}
@@ -478,8 +478,8 @@ export function KeyDetailsPage({
 
         {securityWarning && (
           <div className="flex items-start gap-1.5 border-l-2 border-amber-500/60 py-0.5 pl-2.5">
-            <TriangleAlertIcon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-700 dark:text-amber-400" />
-            <p className="text-xs leading-relaxed text-amber-700 dark:text-amber-400">
+            <TriangleAlertIcon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" />
+            <p className="text-xs leading-relaxed text-amber-400">
               {securityWarning}
             </p>
           </div>
@@ -527,9 +527,9 @@ export function KeyDetailsPage({
                 <span
                   className={
                     keyExpired
-                      ? "text-red-600 dark:text-red-400"
+                      ? "text-red-400"
                       : keyExpiringSoon
-                        ? "text-amber-700 dark:text-amber-400"
+                        ? "text-amber-400"
                         : undefined
                   }
                 >
@@ -562,7 +562,7 @@ export function KeyDetailsPage({
               </span>
             </h3>
             {details.truncated && (
-              <p className="mb-2 text-xs text-amber-700 dark:text-amber-400">
+              <p className="mb-2 text-xs text-amber-400">
                 This certificate has an unusually large number of subkeys; only
                 the first {details.keys.length} are shown.
               </p>

@@ -612,7 +612,7 @@ function ExportKeysBody({ f }: { f: ExportKeysFlow }) {
       )}
 
       {lockedKeys.length + lockedCrxKeys.length > 0 && (
-        <p className="rounded border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-400">
+        <p className="rounded border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-400">
           {lockedKeys.length + lockedCrxKeys.length} key
           {lockedKeys.length + lockedCrxKeys.length === 1 ? "" : "s"} still
           locked and will be left out.{" "}

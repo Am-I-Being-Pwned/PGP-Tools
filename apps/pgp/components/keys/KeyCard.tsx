@@ -264,7 +264,7 @@ export function KeyCard({
         <div className="mt-1 ml-6">
           <span
             title={model.securityWarning}
-            className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400"
+            className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-400"
           >
             <TriangleAlertIcon className="h-3 w-3" />
             Weak (SHA-1)

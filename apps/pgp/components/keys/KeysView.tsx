@@ -333,7 +333,7 @@ export function KeysView({
           <Button
             variant="outline"
             size="sm"
-            className="dark:bg-border/90 dark:hover:bg-border flex-1"
+            className="bg-border/90 hover:bg-border flex-1"
             onClick={() => nav.push({ page: "generate" })}
           >
             <PlusIcon className="h-4 w-4" />
@@ -342,7 +342,7 @@ export function KeysView({
           <Button
             variant="outline"
             size="sm"
-            className="dark:bg-border/90 dark:hover:bg-border flex-1"
+            className="bg-border/90 hover:bg-border flex-1"
             onClick={() => nav.push({ page: "import" })}
           >
             <ImportIcon className="h-4 w-4" />

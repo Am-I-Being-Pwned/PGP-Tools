@@ -145,7 +145,7 @@ export function ContactCard({
               <div className="mt-1">
                 <span
                   title={`This key expired on ${format(new Date(contact.expiresAt), "PPP")} and can no longer be encrypted to. Ask the owner for their current key.`}
-                  className="inline-flex items-center gap-1 rounded-full border border-red-500/40 bg-red-500/10 px-2 py-0.5 text-[10px] font-medium text-red-600 dark:text-red-400"
+                  className="inline-flex items-center gap-1 rounded-full border border-red-500/40 bg-red-500/10 px-2 py-0.5 text-[10px] font-medium text-red-400"
                 >
                   <TriangleAlertIcon className="h-3 w-3" />
                   Expired {format(new Date(contact.expiresAt), "PP")}
@@ -160,7 +160,7 @@ export function ContactCard({
             <div className="mt-1">
               <span
                 title={contact.securityWarning}
-                className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400"
+                className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-400"
               >
                 <TriangleAlertIcon className="h-3 w-3" />
                 Weak (SHA-1)
