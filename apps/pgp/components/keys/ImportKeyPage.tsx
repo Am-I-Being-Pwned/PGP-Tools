@@ -452,7 +452,7 @@ export function ImportKeyPage({
                 </div>
               )}
               {parsed?.keyInfo.securityWarning && (
-                <p className="rounded border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-400">
+                <p className="rounded border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-400">
                   ⚠ {parsed.keyInfo.securityWarning}
                 </p>
               )}
