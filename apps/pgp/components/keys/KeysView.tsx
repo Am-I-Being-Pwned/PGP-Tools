@@ -199,7 +199,7 @@ export function KeysView({
         <Button
           variant="outline"
           size="sm"
-          className="flex-1"
+          className="flex-1 dark:bg-border/70 dark:hover:bg-border"
           onClick={() => nav.push({ page: "generate" })}
         >
           Generate Key
@@ -207,7 +207,7 @@ export function KeysView({
         <Button
           variant="outline"
           size="sm"
-          className="flex-1"
+          className="flex-1 dark:bg-border/70 dark:hover:bg-border"
           onClick={() => setShowImport(true)}
         >
           Import Key

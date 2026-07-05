@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { SettingsIcon } from "lucide-react";
 import { toast } from "sonner";
 
+import type { WorkspaceIntake } from "../../components/workspace/useWorkspaceState";
+import type { DropRule } from "../../lib/drop-routing";
 import type { MasterProtection } from "../../lib/storage/master-protection";
 import type {
   AutoLockTimeout,
@@ -11,6 +13,7 @@ import type {
 import type { WorkspaceDraft } from "../../lib/workspace-draft";
 import { KeysView } from "../../components/keys/KeysView";
 import { AppFooter } from "../../components/shared/AppFooter";
+import { GlobalDropZone } from "../../components/shared/GlobalDropZone";
 import { MasterUnlockScreen } from "../../components/shared/MasterUnlockScreen";
 import { OnboardingFlow } from "../../components/shared/OnboardingFlow";
 import { SettingsView } from "../../components/shared/SettingsView";
@@ -22,6 +25,7 @@ import { useKeySession } from "../../hooks/useKeySession";
 import { usePendingOperation } from "../../hooks/usePendingOperation";
 import { SESSION_PENDING_OP } from "../../lib/constants";
 import { normalizeCrxPadding } from "../../lib/crx/storage";
+import { looksLikeKey, readAllFilesText } from "../../lib/drop-routing";
 import * as wasmApi from "../../lib/pgp/wasm";
 import { normalizeContactsPadding } from "../../lib/storage/contacts";
 import { normalizeKeyringPadding } from "../../lib/storage/keyring";
@@ -51,6 +55,11 @@ export default function App() {
   );
   const [importPrefill, setImportPrefill] = useState<string | null>(null);
   const [encryptToKeyId, setEncryptToKeyId] = useState<string | null>(null);
+  // A file/text drop routed to the workspace by the global dropzone. The
+  // nonce bumps on every drop so re-dropping the same files re-applies.
+  const [workspaceIntake, setWorkspaceIntake] =
+    useState<WorkspaceIntake | null>(null);
+  const workspaceIntakeNonce = useRef(0);
   // True once a pending context-menu op has been routed to a tab.
   // The preferences-loading effect (mount-only) consults this ref to
   // avoid overriding our routed tab with the stale saved value when
@@ -315,6 +324,44 @@ export default function App() {
     [keyring, contacts],
   );
 
+  const clearWorkspaceIntake = useCallback(() => setWorkspaceIntake(null), []);
+
+  // Routing table for the global dropzone. First match wins; the final
+  // rule is the catch-all. Extend by adding a rule (see lib/drop-routing).
+  const dropRules: DropRule[] = [
+    {
+      id: "keys",
+      match: (s) => looksLikeKey(s.sampleText),
+      run: async ({ files, text }) => {
+        // Use the dragged text only when it is itself a key; otherwise the
+        // key lives in a file (a benign text/plain riding along must not
+        // shadow it). Reading files is bounded — see readAllFilesText.
+        const armored = looksLikeKey(text)
+          ? text
+          : await readAllFilesText(files);
+        if (!armored.trim()) return;
+        setImportPrefill(armored);
+        setActiveTab("keys");
+        void savePreferences({ activeTab: "keys" });
+      },
+    },
+    {
+      id: "workspace",
+      match: () => true,
+      run: ({ files, text }) => {
+        workspaceIntakeNonce.current += 1;
+        setWorkspaceIntake({
+          files,
+          text,
+          nonce: workspaceIntakeNonce.current,
+        });
+        setDraftCiphertext(null);
+        setActiveTab("workspace");
+        void savePreferences({ activeTab: "workspace" });
+      },
+    },
+  ];
+
   if (onboardingComplete === null) return null;
   // Wait for masterProtection's initial load before rendering any
   // post-onboarding tree. Without this gate, the main UI mounts during
@@ -378,133 +425,137 @@ export default function App() {
       : undefined;
 
   return (
-    <div className="flex h-screen flex-col">
-      <TabBar
-        activeTab={activeTab}
-        onTabChange={(tab) => {
-          setActiveTab(tab);
-          void savePreferences({ activeTab: tab });
-          toast.dismiss();
-        }}
-      />
+    <GlobalDropZone rules={dropRules}>
+      <div className="flex h-screen flex-col">
+        <TabBar
+          activeTab={activeTab}
+          onTabChange={(tab) => {
+            setActiveTab(tab);
+            void savePreferences({ activeTab: tab });
+            toast.dismiss();
+          }}
+        />
 
-      <main
-        className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4"
-        role="tabpanel"
-        id={`tabpanel-${activeTab}`}
-        aria-labelledby={`tab-${activeTab}`}
-      >
-        <div className={activeTab === "workspace" ? "h-full" : "hidden"}>
-          <WorkspaceView
-            myKeys={keyring.keys}
-            contacts={contacts.contacts}
-            crxSigningEnabled={crxSigningEnabled}
-            crxKeys={crxKeys.keys}
-            getKeyHandle={session.getKeyHandle}
-            onUnlockWithPassword={session.unlockWithPassword}
-            onUnlockWithPasskey={session.unlockWithPasskey}
-            pendingAction={
-              pending &&
-              (pending.action === "encrypt" ||
-                pending.action === "decrypt" ||
-                pending.action === "sign" ||
-                pending.action === "verify")
-                ? { action: pending.action, text: pending.text }
-                : null
-            }
-            onClearPending={clearPending}
-            encryptToKeyId={encryptToKeyId}
-            onClearEncryptTo={() => setEncryptToKeyId(null)}
-            onNavigateToKeys={(prefill) => {
-              if (prefill) setImportPrefill(prefill);
-              setActiveTab("keys");
-              void savePreferences({ activeTab: "keys" });
-            }}
-            autoDownloadFiles={autoDownloadFiles}
-            autoDownloadText={autoDownloadText}
-            onOperationComplete={session.lockAllIfNoCache}
-            restoreDraft={draftCiphertext}
-            onDraftRestored={handleDraftRestored}
-            onDraftChange={handleDraftChange}
-          />
-        </div>
-        {activeTab === "keys" && (
-          <KeysView
-            myKeys={keyring.keys}
-            contacts={contacts.contacts}
-            crxSigningEnabled={crxSigningEnabled}
-            crxKeys={crxKeys.keys}
-            onAddCrxKey={crxKeys.add}
-            onDeleteCrxKey={crxKeys.remove}
-            onRenameKey={keyring.rename}
-            onRenameCrxKey={crxKeys.rename}
-            contactsLocked={false}
-            isUnlocked={session.isUnlocked}
-            onUnlockWithPassword={session.unlockWithPassword}
-            onUnlockWithPasskey={session.unlockWithPasskey}
-            onLock={session.lock}
-            onDeleteKey={handleDeleteKey}
-            getKeyHandle={session.getKeyHandle}
-            onAddKey={keyring.add}
-            onAddContact={contacts.add}
-            onDeleteContact={contacts.remove}
-            advancedMode={advancedMode}
-            autoOpenImport={importPrefill}
-            onAutoOpenImportConsumed={() => setImportPrefill(null)}
-            onEncryptTo={(keyId) => {
-              setEncryptToKeyId(keyId);
-              setActiveTab("workspace");
-              void savePreferences({ activeTab: "workspace" });
-            }}
-            primaryPasskeyCredentialId={masterPasskeyCredentialId}
-            cacheKeys={!neverCacheKeys}
-            onKeyCached={(keyId, handle) => {
-              void session.cacheKeyHandle(keyId, handle);
-            }}
-          />
-        )}
-        {activeTab === "settings" && (
-          <SettingsView
-            advancedMode={advancedMode}
-            onAdvancedModeChange={setAdvancedMode}
-            storageLocation={storageLocation}
-            onStorageLocationChange={(loc) => {
-              setStorageLocation(loc);
-              void keyring.refresh();
-              void contacts.refresh();
-              void crxKeys.refresh();
-            }}
-            autoLockEnabled={autoLockEnabled}
-            onAutoLockEnabledChange={setAutoLockEnabled}
-            autoLockMinutes={autoLockMinutes}
-            onAutoLockChange={setAutoLockMinutes}
-            neverCacheKeys={neverCacheKeys}
-            onNeverCacheKeysChange={setNeverCacheKeys}
-            autoDownloadFiles={autoDownloadFiles}
-            onAutoDownloadFilesChange={setAutoDownloadFiles}
-            autoDownloadText={autoDownloadText}
-            onAutoDownloadTextChange={setAutoDownloadText}
-            lockOnTabAway={lockOnTabAway}
-            onLockOnTabAwayChange={setLockOnTabAway}
-            crxSigningEnabled={crxSigningEnabled}
-            onCrxSigningEnabledChange={setCrxSigningEnabled}
-            myKeys={keyring.keys}
-            contacts={contacts.contacts}
-            isUnlocked={session.isUnlocked}
-            getKeyHandle={session.getKeyHandle}
-            onUnlockWithPassword={session.unlockWithPassword}
-            onUnlockWithPasskey={session.unlockWithPasskey}
-            onAddKey={keyring.add}
-            onAddContact={contacts.add}
-            crxKeys={crxKeys.keys}
-            onAddCrxKey={crxKeys.add}
-            primaryPasskeyCredentialId={masterPasskeyCredentialId}
-          />
-        )}
-      </main>
+        <main
+          className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4"
+          role="tabpanel"
+          id={`tabpanel-${activeTab}`}
+          aria-labelledby={`tab-${activeTab}`}
+        >
+          <div className={activeTab === "workspace" ? "h-full" : "hidden"}>
+            <WorkspaceView
+              myKeys={keyring.keys}
+              contacts={contacts.contacts}
+              crxSigningEnabled={crxSigningEnabled}
+              crxKeys={crxKeys.keys}
+              getKeyHandle={session.getKeyHandle}
+              onUnlockWithPassword={session.unlockWithPassword}
+              onUnlockWithPasskey={session.unlockWithPasskey}
+              pendingAction={
+                pending &&
+                (pending.action === "encrypt" ||
+                  pending.action === "decrypt" ||
+                  pending.action === "sign" ||
+                  pending.action === "verify")
+                  ? { action: pending.action, text: pending.text }
+                  : null
+              }
+              onClearPending={clearPending}
+              encryptToKeyId={encryptToKeyId}
+              onClearEncryptTo={() => setEncryptToKeyId(null)}
+              onNavigateToKeys={(prefill) => {
+                if (prefill) setImportPrefill(prefill);
+                setActiveTab("keys");
+                void savePreferences({ activeTab: "keys" });
+              }}
+              autoDownloadFiles={autoDownloadFiles}
+              autoDownloadText={autoDownloadText}
+              onOperationComplete={session.lockAllIfNoCache}
+              restoreDraft={draftCiphertext}
+              onDraftRestored={handleDraftRestored}
+              onDraftChange={handleDraftChange}
+              intake={workspaceIntake}
+              onIntakeConsumed={clearWorkspaceIntake}
+            />
+          </div>
+          {activeTab === "keys" && (
+            <KeysView
+              myKeys={keyring.keys}
+              contacts={contacts.contacts}
+              crxSigningEnabled={crxSigningEnabled}
+              crxKeys={crxKeys.keys}
+              onAddCrxKey={crxKeys.add}
+              onDeleteCrxKey={crxKeys.remove}
+              onRenameKey={keyring.rename}
+              onRenameCrxKey={crxKeys.rename}
+              contactsLocked={false}
+              isUnlocked={session.isUnlocked}
+              onUnlockWithPassword={session.unlockWithPassword}
+              onUnlockWithPasskey={session.unlockWithPasskey}
+              onLock={session.lock}
+              onDeleteKey={handleDeleteKey}
+              getKeyHandle={session.getKeyHandle}
+              onAddKey={keyring.add}
+              onAddContact={contacts.add}
+              onDeleteContact={contacts.remove}
+              advancedMode={advancedMode}
+              autoOpenImport={importPrefill}
+              onAutoOpenImportConsumed={() => setImportPrefill(null)}
+              onEncryptTo={(keyId) => {
+                setEncryptToKeyId(keyId);
+                setActiveTab("workspace");
+                void savePreferences({ activeTab: "workspace" });
+              }}
+              primaryPasskeyCredentialId={masterPasskeyCredentialId}
+              cacheKeys={!neverCacheKeys}
+              onKeyCached={(keyId, handle) => {
+                void session.cacheKeyHandle(keyId, handle);
+              }}
+            />
+          )}
+          {activeTab === "settings" && (
+            <SettingsView
+              advancedMode={advancedMode}
+              onAdvancedModeChange={setAdvancedMode}
+              storageLocation={storageLocation}
+              onStorageLocationChange={(loc) => {
+                setStorageLocation(loc);
+                void keyring.refresh();
+                void contacts.refresh();
+                void crxKeys.refresh();
+              }}
+              autoLockEnabled={autoLockEnabled}
+              onAutoLockEnabledChange={setAutoLockEnabled}
+              autoLockMinutes={autoLockMinutes}
+              onAutoLockChange={setAutoLockMinutes}
+              neverCacheKeys={neverCacheKeys}
+              onNeverCacheKeysChange={setNeverCacheKeys}
+              autoDownloadFiles={autoDownloadFiles}
+              onAutoDownloadFilesChange={setAutoDownloadFiles}
+              autoDownloadText={autoDownloadText}
+              onAutoDownloadTextChange={setAutoDownloadText}
+              lockOnTabAway={lockOnTabAway}
+              onLockOnTabAwayChange={setLockOnTabAway}
+              crxSigningEnabled={crxSigningEnabled}
+              onCrxSigningEnabledChange={setCrxSigningEnabled}
+              myKeys={keyring.keys}
+              contacts={contacts.contacts}
+              isUnlocked={session.isUnlocked}
+              getKeyHandle={session.getKeyHandle}
+              onUnlockWithPassword={session.unlockWithPassword}
+              onUnlockWithPasskey={session.unlockWithPasskey}
+              onAddKey={keyring.add}
+              onAddContact={contacts.add}
+              crxKeys={crxKeys.keys}
+              onAddCrxKey={crxKeys.add}
+              primaryPasskeyCredentialId={masterPasskeyCredentialId}
+            />
+          )}
+        </main>
 
-      <AppFooter />
-    </div>
+        <AppFooter />
+      </div>
+    </GlobalDropZone>
   );
 }
 
