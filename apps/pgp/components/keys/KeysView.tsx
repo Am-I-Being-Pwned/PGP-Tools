@@ -239,248 +239,252 @@ export function KeysView({
   const keyModels = [...pgpModels, ...crxModels];
 
   return (
-    <div className="space-y-4">
-      {selectionMode && (
-        <SelectionBar
-          count={selected.size}
-          onExport={() => setShowBulkExport(true)}
-          onDelete={() => nav.push({ page: "bulk-delete" })}
-          onExit={exitSelection}
-        />
-      )}
-
-      <div>
-        <h2 className="mb-2 text-sm font-semibold">My Keys</h2>
-        {keyModels.length === 0 ? (
-          <p className="text-muted-foreground text-sm">
-            No keys yet. Generate or import a key to get started.
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {keyModels.map((model) => {
-              const id = selId(model.kind, model.id);
-              return (
-                <KeyCard
-                  key={id}
-                  model={model}
-                  advancedMode={advancedMode}
-                  selectionMode={selectionMode}
-                  selected={selected.has(id)}
-                  onToggleSelect={() => toggleSelect(id)}
-                  onStartSelect={() => startSelect(id)}
-                />
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      <div className="flex gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          className="dark:bg-border/70 dark:hover:bg-border flex-1"
-          onClick={() => nav.push({ page: "generate" })}
-        >
-          Generate Key
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="dark:bg-border/70 dark:hover:bg-border flex-1"
-          onClick={() => setShowImport(true)}
-        >
-          Import Key
-        </Button>
-      </div>
-
-      <ContactsList
-        contacts={contacts}
-        contactsLocked={contactsLocked}
-        onRequestRemove={(contact) =>
-          nav.push({
-            page: "confirm-delete",
-            target: { kind: "contact", contact },
-          })
-        }
-        onAddContact={onAddContact}
-        onEncryptTo={onEncryptTo}
-        onShowDetails={(contact) =>
-          nav.push({ page: "details", target: { kind: "contact", contact } })
-        }
-        advancedMode={advancedMode}
-        selectionMode={selectionMode}
-        selected={selected}
-        onToggleSelect={toggleSelect}
-        onStartSelect={startSelect}
+    // Plain wrapper (no space-y) so mounting the sticky bar doesn't shift the
+    // first spaced child down by a gap; the vertical rhythm lives on the inner
+    // div, whose first child is always "My Keys".
+    <div>
+      <SelectionBar
+        open={selectionMode}
+        count={selected.size}
+        onExport={() => setShowBulkExport(true)}
+        onDelete={() => nav.push({ page: "bulk-delete" })}
+        onExit={exitSelection}
       />
 
-      {nav.stack.map((entry) => {
-        const { route } = entry;
-        if (route.page === "generate") {
-          return (
-            <GenerateKeyPage
-              key={entry.id}
-              onClose={nav.pop}
-              onKeyGenerated={(keyId, keyHandle) => {
-                if (keyHandle !== undefined && onKeyCached) {
-                  onKeyCached(keyId, keyHandle);
-                }
-              }}
-              addKey={onAddKey}
-              reusePasskeyCredentialId={primaryPasskeyCredentialId}
-              cacheKey={cacheKeys}
-              crxSigningEnabled={crxSigningEnabled}
-              addCrxKey={onAddCrxKey}
-            />
-          );
-        }
-        if (route.page === "rename") {
-          const target = route.target;
-          const isOwn = target.kind === "own";
-          // Clean display name from the first User ID ("Name <email>" ->
-          // "Name"), so the field starts from the current name to tweak
-          // rather than blank. CRX keys have no such identity; fall back
-          // to their label only.
-          const realIdentity = isOwn
-            ? (() => {
-                const { name, comment } = parseUserId(
-                  target.keyBlob.userIds[0] ?? target.keyBlob.keyId,
+      <div className="space-y-4">
+        <div>
+          <h2 className="mb-2 text-sm font-semibold">My Keys</h2>
+          {keyModels.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              No keys yet. Generate or import a key to get started.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {keyModels.map((model) => {
+                const id = selId(model.kind, model.id);
+                return (
+                  <KeyCard
+                    key={id}
+                    model={model}
+                    advancedMode={advancedMode}
+                    selectionMode={selectionMode}
+                    selected={selected.has(id)}
+                    onToggleSelect={() => toggleSelect(id)}
+                    onStartSelect={() => startSelect(id)}
+                  />
                 );
-                return comment ? `${name} (${comment})` : name;
-              })()
-            : target.keyBlob.extensionId;
-          const currentName = isOwn
-            ? (target.keyBlob.alias ?? realIdentity)
-            : (target.keyBlob.label ?? "");
-          return (
-            <RenamePage
-              key={entry.id}
-              title={isOwn ? "Rename key" : "Rename signing key"}
-              fieldLabel="Display name"
-              initialValue={currentName}
-              hint={`Shown in place of ${realIdentity}. This is a local label only.`}
-              placeholder={isOwn ? "e.g. Work laptop" : "e.g. My Extension"}
-              onCancel={nav.pop}
-              onSave={async (value) => {
-                if (isOwn) {
-                  await onRenameKey?.(target.keyBlob.keyId, value);
-                } else {
-                  await onRenameCrxKey?.(target.keyBlob.extensionId, value);
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="dark:bg-border/70 dark:hover:bg-border flex-1"
+            onClick={() => nav.push({ page: "generate" })}
+          >
+            Generate Key
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="dark:bg-border/70 dark:hover:bg-border flex-1"
+            onClick={() => setShowImport(true)}
+          >
+            Import Key
+          </Button>
+        </div>
+
+        <ContactsList
+          contacts={contacts}
+          contactsLocked={contactsLocked}
+          onRequestRemove={(contact) =>
+            nav.push({
+              page: "confirm-delete",
+              target: { kind: "contact", contact },
+            })
+          }
+          onAddContact={onAddContact}
+          onEncryptTo={onEncryptTo}
+          onShowDetails={(contact) =>
+            nav.push({ page: "details", target: { kind: "contact", contact } })
+          }
+          advancedMode={advancedMode}
+          selectionMode={selectionMode}
+          selected={selected}
+          onToggleSelect={toggleSelect}
+          onStartSelect={startSelect}
+        />
+
+        {nav.stack.map((entry) => {
+          const { route } = entry;
+          if (route.page === "generate") {
+            return (
+              <GenerateKeyPage
+                key={entry.id}
+                onClose={nav.pop}
+                onKeyGenerated={(keyId, keyHandle) => {
+                  if (keyHandle !== undefined && onKeyCached) {
+                    onKeyCached(keyId, keyHandle);
+                  }
+                }}
+                addKey={onAddKey}
+                reusePasskeyCredentialId={primaryPasskeyCredentialId}
+                cacheKey={cacheKeys}
+                crxSigningEnabled={crxSigningEnabled}
+                addCrxKey={onAddCrxKey}
+              />
+            );
+          }
+          if (route.page === "rename") {
+            const target = route.target;
+            const isOwn = target.kind === "own";
+            // Clean display name from the first User ID ("Name <email>" ->
+            // "Name"), so the field starts from the current name to tweak
+            // rather than blank. CRX keys have no such identity; fall back
+            // to their label only.
+            const realIdentity = isOwn
+              ? (() => {
+                  const { name, comment } = parseUserId(
+                    target.keyBlob.userIds[0] ?? target.keyBlob.keyId,
+                  );
+                  return comment ? `${name} (${comment})` : name;
+                })()
+              : target.keyBlob.extensionId;
+            const currentName = isOwn
+              ? (target.keyBlob.alias ?? realIdentity)
+              : (target.keyBlob.label ?? "");
+            return (
+              <RenamePage
+                key={entry.id}
+                title={isOwn ? "Rename key" : "Rename signing key"}
+                fieldLabel="Display name"
+                initialValue={currentName}
+                hint={`Shown in place of ${realIdentity}. This is a local label only.`}
+                placeholder={isOwn ? "e.g. Work laptop" : "e.g. My Extension"}
+                onCancel={nav.pop}
+                onSave={async (value) => {
+                  if (isOwn) {
+                    await onRenameKey?.(target.keyBlob.keyId, value);
+                  } else {
+                    await onRenameCrxKey?.(target.keyBlob.extensionId, value);
+                  }
+                  // Reveal the (refreshed) list beneath as this slides out.
+                  nav.collapseToTop();
+                }}
+              />
+            );
+          }
+          if (route.page === "details") {
+            const target = route.target;
+            return (
+              <KeyDetailsPage
+                key={entry.id}
+                target={target}
+                onBack={nav.pop}
+                onEncryptTo={
+                  target.kind === "contact" && onEncryptTo
+                    ? () => {
+                        nav.clear();
+                        onEncryptTo(target.contact.keyId);
+                      }
+                    : undefined
                 }
-                // Reveal the (refreshed) list beneath as this slides out.
-                nav.collapseToTop();
-              }}
-            />
-          );
-        }
-        if (route.page === "details") {
+                onRename={
+                  target.kind === "own" && onRenameKey
+                    ? () =>
+                        nav.push({
+                          page: "rename",
+                          target: { kind: "own", keyBlob: target.keyBlob },
+                        })
+                    : undefined
+                }
+                onDelete={() => nav.push({ page: "confirm-delete", target })}
+              />
+            );
+          }
+          if (route.page === "bulk-delete") {
+            return (
+              <ConfirmPage
+                key={entry.id}
+                title="Delete selected?"
+                confirmLabel={`Delete ${selected.size} item${selected.size === 1 ? "" : "s"} permanently`}
+                onCancel={nav.pop}
+                onConfirm={async () => {
+                  await bulkDelete();
+                  nav.collapseToTop();
+                  exitSelection();
+                }}
+              >
+                <BulkDeleteSummary
+                  privateKeys={selectedMyKeys.length}
+                  signingKeys={selectedCrxKeys.length}
+                  contacts={selectedContacts.length}
+                />
+              </ConfirmPage>
+            );
+          }
           const target = route.target;
-          return (
-            <KeyDetailsPage
-              key={entry.id}
-              target={target}
-              onBack={nav.pop}
-              onEncryptTo={
-                target.kind === "contact" && onEncryptTo
-                  ? () => {
-                      nav.clear();
-                      onEncryptTo(target.contact.keyId);
-                    }
-                  : undefined
-              }
-              onRename={
-                target.kind === "own" && onRenameKey
-                  ? () =>
-                      nav.push({
-                        page: "rename",
-                        target: { kind: "own", keyBlob: target.keyBlob },
-                      })
-                  : undefined
-              }
-              onDelete={() => nav.push({ page: "confirm-delete", target })}
-            />
-          );
-        }
-        if (route.page === "bulk-delete") {
           return (
             <ConfirmPage
               key={entry.id}
-              title="Delete selected?"
-              confirmLabel={`Delete ${selected.size} item${selected.size === 1 ? "" : "s"} permanently`}
+              title={
+                target.kind === "contact" ? "Remove contact?" : "Delete key?"
+              }
+              confirmLabel={
+                target.kind === "contact"
+                  ? "Remove contact"
+                  : "Delete key permanently"
+              }
               onCancel={nav.pop}
               onConfirm={async () => {
-                await bulkDelete();
+                if (target.kind === "own") {
+                  await onDeleteKey(target.keyBlob.keyId);
+                } else if (target.kind === "contact") {
+                  await onDeleteContact(target.contact.keyId);
+                } else {
+                  await onDeleteCrxKey?.(target.keyBlob.extensionId);
+                }
+                // Drop the pages underneath now, so this page's slide-out
+                // reveals the key list rather than a stale details view of
+                // the just-deleted key. The confirm page then slides out
+                // and pops itself via onCancel.
                 nav.collapseToTop();
-                exitSelection();
               }}
             >
-              <BulkDeleteSummary
-                privateKeys={selectedMyKeys.length}
-                signingKeys={selectedCrxKeys.length}
-                contacts={selectedContacts.length}
-              />
+              <DeleteSummary target={target} />
             </ConfirmPage>
           );
-        }
-        const target = route.target;
-        return (
-          <ConfirmPage
-            key={entry.id}
-            title={
-              target.kind === "contact" ? "Remove contact?" : "Delete key?"
-            }
-            confirmLabel={
-              target.kind === "contact"
-                ? "Remove contact"
-                : "Delete key permanently"
-            }
-            onCancel={nav.pop}
-            onConfirm={async () => {
-              if (target.kind === "own") {
-                await onDeleteKey(target.keyBlob.keyId);
-              } else if (target.kind === "contact") {
-                await onDeleteContact(target.contact.keyId);
-              } else {
-                await onDeleteCrxKey?.(target.keyBlob.extensionId);
-              }
-              // Drop the pages underneath now, so this page's slide-out
-              // reveals the key list rather than a stale details view of
-              // the just-deleted key. The confirm page then slides out
-              // and pops itself via onCancel.
-              nav.collapseToTop();
-            }}
-          >
-            <DeleteSummary target={target} />
-          </ConfirmPage>
-        );
-      })}
+        })}
 
-      <ExportAllKeysDialog
-        open={showBulkExport}
-        onClose={() => setShowBulkExport(false)}
-        myKeys={selectedMyKeys}
-        contacts={selectedContacts}
-        crxKeys={selectedCrxKeys}
-        isUnlocked={isUnlocked}
-        getKeyHandle={getKeyHandle}
-        onUnlockWithPassword={onUnlockWithPassword}
-        onUnlockWithPasskey={onUnlockWithPasskey}
-      />
+        <ExportAllKeysDialog
+          open={showBulkExport}
+          onClose={() => setShowBulkExport(false)}
+          myKeys={selectedMyKeys}
+          contacts={selectedContacts}
+          crxKeys={selectedCrxKeys}
+          isUnlocked={isUnlocked}
+          getKeyHandle={getKeyHandle}
+          onUnlockWithPassword={onUnlockWithPassword}
+          onUnlockWithPasskey={onUnlockWithPasskey}
+        />
 
-      <ImportKeyDialog
-        open={showImport}
-        onClose={() => {
-          setShowImport(false);
-          setImportInitialArmored(null);
-        }}
-        onImportPrivate={onAddKey}
-        onImportPublic={onAddContact}
-        reusePasskeyCredentialId={primaryPasskeyCredentialId}
-        initialArmored={importInitialArmored}
-        crxSigningEnabled={crxSigningEnabled}
-        onImportCrx={onAddCrxKey}
-      />
+        <ImportKeyDialog
+          open={showImport}
+          onClose={() => {
+            setShowImport(false);
+            setImportInitialArmored(null);
+          }}
+          onImportPrivate={onAddKey}
+          onImportPublic={onAddContact}
+          reusePasskeyCredentialId={primaryPasskeyCredentialId}
+          initialArmored={importInitialArmored}
+          crxSigningEnabled={crxSigningEnabled}
+          onImportCrx={onAddCrxKey}
+        />
+      </div>
     </div>
   );
 }

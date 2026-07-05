@@ -102,8 +102,10 @@ export function ContactCard({
       {...longPress.handlers}
       className={cn(
         "group relative rounded-md p-3",
+        // Keep the border width constant (1px) and add thickness with a ring
+        // (box-shadow, no layout impact) so selecting doesn't shift the card.
         selected
-          ? "border-2 border-green-500/80 ring-1 ring-green-500/30"
+          ? "border border-green-500/80 ring-2 ring-green-500/40"
           : verifiedLabel
             ? `border ${toneBorder}`
             : "border-border border",
