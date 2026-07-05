@@ -6,19 +6,24 @@ import { Button } from "@amibeingpwned/ui/button";
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
+import type { KeyCardModel } from "./KeyCard";
 import type { KeyDetailsTarget } from "./KeyDetailsPage";
+import { publicKeyDerToPem } from "../../lib/crx/types";
+import { crxKeyExporter, pgpKeyExporter } from "../../lib/keys/exporters";
+import { formatAlgorithm, formatFingerprint } from "../../lib/utils/formatting";
 import { parseUserId } from "../../lib/utils/key-naming";
 import { INPUT_CLASS } from "../../lib/utils/styles";
+import { ExportAllKeysDialog } from "../settings/ExportAllKeysDialog";
 import { ConfirmPage } from "../shared/ConfirmPage";
 import { RenamePage } from "../shared/RenamePage";
 import { useNavStack } from "../shared/useNavStack";
 import { ContactCard } from "./ContactCard";
 import { ContactDropZone } from "./ContactDropZone";
-import { CrxKeyCard } from "./CrxKeyCard";
 import { GenerateKeyPage } from "./GenerateKeyPage";
 import { ImportKeyDialog } from "./ImportKeyDialog";
 import { KeyCard } from "./KeyCard";
 import { KeyDetailsPage } from "./KeyDetailsPage";
+import { SelectionBar } from "./SelectionBar";
 
 interface KeysViewProps {
   myKeys: ProtectedKeyBlob[];
@@ -76,7 +81,12 @@ type KeysRoute =
   | { page: "generate" }
   | { page: "details"; target: KeyDetailsTarget }
   | { page: "confirm-delete"; target: DeleteTarget }
+  | { page: "bulk-delete" }
   | { page: "rename"; target: RenameTarget };
+
+/** Composite selection id, namespaced so PGP keys, CRX keys, and contacts can
+ *  coexist in one selection set. */
+const selId = (kind: "pgp" | "crx" | "contact", id: string) => `${kind}:${id}`;
 
 export function KeysView({
   myKeys,
@@ -109,6 +119,9 @@ export function KeysView({
   const [importInitialArmored, setImportInitialArmored] = useState<
     string | null
   >(null);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [showBulkExport, setShowBulkExport] = useState(false);
   const nav = useNavStack<KeysRoute>();
 
   useEffect(() => {
@@ -119,78 +132,145 @@ export function KeysView({
     }
   }, [autoOpenImport, onAutoOpenImportConsumed]);
 
-  const handleExportPublic = async (blob: ProtectedKeyBlob) => {
-    await navigator.clipboard.writeText(blob.publicKeyArmored);
-  };
+  // Leaving nothing selected exits selection mode.
+  useEffect(() => {
+    if (selectionMode && selected.size === 0) setSelectionMode(false);
+  }, [selectionMode, selected]);
 
   // CRX keys join the same list, gated on the feature being enabled.
   const shownCrxKeys = crxSigningEnabled && crxKeys ? crxKeys : [];
 
+  const toggleSelect = (id: string) =>
+    setSelected((s) => {
+      const next = new Set(s);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const startSelect = (id: string) => {
+    setSelectionMode(true);
+    setSelected((s) => new Set(s).add(id));
+  };
+  const exitSelection = () => {
+    setSelected(new Set());
+    setSelectionMode(false);
+  };
+
+  // Resolve the current selection back to concrete blobs for bulk actions.
+  const selectedMyKeys = myKeys.filter((k) =>
+    selected.has(selId("pgp", k.keyId)),
+  );
+  const selectedCrxKeys = shownCrxKeys.filter((k) =>
+    selected.has(selId("crx", k.extensionId)),
+  );
+  const selectedContacts = contacts.filter((c) =>
+    selected.has(selId("contact", c.keyId)),
+  );
+
+  const bulkDelete = async () => {
+    for (const k of selectedMyKeys) await onDeleteKey(k.keyId);
+    for (const k of selectedCrxKeys) await onDeleteCrxKey?.(k.extensionId);
+    for (const c of selectedContacts) await onDeleteContact(c.keyId);
+  };
+
+  // Build one unified descriptor per key so PGP + CRX render through KeyCard.
+  const pgpModels: KeyCardModel[] = myKeys.map((blob) => {
+    const realName = blob.userIds[0] ?? "Unknown";
+    return {
+      kind: "pgp",
+      id: blob.keyId,
+      displayName: blob.alias ?? realName,
+      realName,
+      shortId: blob.keyId.slice(-16),
+      algorithm: formatAlgorithm(blob.algorithm),
+      fingerprint: formatFingerprint(blob.keyId),
+      protectionMethod: blob.protection.method,
+      securityWarning: blob.securityWarning,
+      session: {
+        isUnlocked: isUnlocked(blob.keyId),
+        unlockWithPassword: (pw) => onUnlockWithPassword(blob, pw),
+        unlockWithPasskey: () => onUnlockWithPasskey(blob),
+        lock: () => onLock(blob.keyId),
+      },
+      exporter: pgpKeyExporter(blob, getKeyHandle),
+      onCopyPublicKey: () =>
+        void navigator.clipboard.writeText(blob.publicKeyArmored),
+      onDelete: () =>
+        nav.push({
+          page: "confirm-delete",
+          target: { kind: "own", keyBlob: blob },
+        }),
+      onRename: onRenameKey
+        ? () =>
+            nav.push({ page: "rename", target: { kind: "own", keyBlob: blob } })
+        : undefined,
+      onShowDetails: () =>
+        nav.push({ page: "details", target: { kind: "own", keyBlob: blob } }),
+    };
+  });
+
+  const crxModels: KeyCardModel[] = shownCrxKeys.map((blob) => ({
+    kind: "crx",
+    id: blob.extensionId,
+    displayName: blob.label ?? blob.extensionId,
+    realName: blob.extensionId,
+    shortId: blob.extensionId.slice(0, 16),
+    algorithm: formatAlgorithm(blob.algorithm),
+    badge: "CRX",
+    protectionMethod: blob.protection.method,
+    session: undefined,
+    exporter: crxKeyExporter(blob),
+    onCopyPublicKey: () =>
+      void navigator.clipboard.writeText(
+        publicKeyDerToPem(blob.publicKeyDerB64),
+      ),
+    onDelete: () =>
+      nav.push({
+        page: "confirm-delete",
+        target: { kind: "crx", keyBlob: blob },
+      }),
+    onRename: onRenameCrxKey
+      ? () =>
+          nav.push({ page: "rename", target: { kind: "crx", keyBlob: blob } })
+      : undefined,
+    onShowDetails: undefined,
+  }));
+
+  const keyModels = [...pgpModels, ...crxModels];
+
   return (
     <div className="space-y-4">
+      {selectionMode && (
+        <SelectionBar
+          count={selected.size}
+          onExport={() => setShowBulkExport(true)}
+          onDelete={() => nav.push({ page: "bulk-delete" })}
+          onExit={exitSelection}
+        />
+      )}
+
       <div>
         <h2 className="mb-2 text-sm font-semibold">My Keys</h2>
-        {myKeys.length === 0 && shownCrxKeys.length === 0 ? (
+        {keyModels.length === 0 ? (
           <p className="text-muted-foreground text-sm">
             No keys yet. Generate or import a key to get started.
           </p>
         ) : (
           <div className="space-y-2">
-            {myKeys.map((blob) => (
-              <KeyCard
-                key={blob.keyId}
-                keyBlob={blob}
-                isUnlocked={isUnlocked(blob.keyId)}
-                onUnlockWithPassword={(pw) => onUnlockWithPassword(blob, pw)}
-                onUnlockWithPasskey={() => onUnlockWithPasskey(blob)}
-                onLock={() => onLock(blob.keyId)}
-                onDelete={() =>
-                  nav.push({
-                    page: "confirm-delete",
-                    target: { kind: "own", keyBlob: blob },
-                  })
-                }
-                onExportPublic={() => handleExportPublic(blob)}
-                onExportPrivate={() => getKeyHandle(blob.keyId)}
-                onShowDetails={() =>
-                  nav.push({
-                    page: "details",
-                    target: { kind: "own", keyBlob: blob },
-                  })
-                }
-                onRename={
-                  onRenameKey
-                    ? () =>
-                        nav.push({
-                          page: "rename",
-                          target: { kind: "own", keyBlob: blob },
-                        })
-                    : undefined
-                }
-                advancedMode={advancedMode}
-              />
-            ))}
-            {shownCrxKeys.map((blob) => (
-              <CrxKeyCard
-                key={blob.extensionId}
-                keyBlob={blob}
-                onDelete={() =>
-                  nav.push({
-                    page: "confirm-delete",
-                    target: { kind: "crx", keyBlob: blob },
-                  })
-                }
-                onRename={
-                  onRenameCrxKey
-                    ? () =>
-                        nav.push({
-                          page: "rename",
-                          target: { kind: "crx", keyBlob: blob },
-                        })
-                    : undefined
-                }
-              />
-            ))}
+            {keyModels.map((model) => {
+              const id = selId(model.kind, model.id);
+              return (
+                <KeyCard
+                  key={id}
+                  model={model}
+                  advancedMode={advancedMode}
+                  selectionMode={selectionMode}
+                  selected={selected.has(id)}
+                  onToggleSelect={() => toggleSelect(id)}
+                  onStartSelect={() => startSelect(id)}
+                />
+              );
+            })}
           </div>
         )}
       </div>
@@ -199,7 +279,7 @@ export function KeysView({
         <Button
           variant="outline"
           size="sm"
-          className="flex-1 dark:bg-border/70 dark:hover:bg-border"
+          className="dark:bg-border/70 dark:hover:bg-border flex-1"
           onClick={() => nav.push({ page: "generate" })}
         >
           Generate Key
@@ -207,7 +287,7 @@ export function KeysView({
         <Button
           variant="outline"
           size="sm"
-          className="flex-1 dark:bg-border/70 dark:hover:bg-border"
+          className="dark:bg-border/70 dark:hover:bg-border flex-1"
           onClick={() => setShowImport(true)}
         >
           Import Key
@@ -229,6 +309,10 @@ export function KeysView({
           nav.push({ page: "details", target: { kind: "contact", contact } })
         }
         advancedMode={advancedMode}
+        selectionMode={selectionMode}
+        selected={selected}
+        onToggleSelect={toggleSelect}
+        onStartSelect={startSelect}
       />
 
       {nav.stack.map((entry) => {
@@ -318,6 +402,27 @@ export function KeysView({
             />
           );
         }
+        if (route.page === "bulk-delete") {
+          return (
+            <ConfirmPage
+              key={entry.id}
+              title="Delete selected?"
+              confirmLabel={`Delete ${selected.size} item${selected.size === 1 ? "" : "s"} permanently`}
+              onCancel={nav.pop}
+              onConfirm={async () => {
+                await bulkDelete();
+                nav.collapseToTop();
+                exitSelection();
+              }}
+            >
+              <BulkDeleteSummary
+                privateKeys={selectedMyKeys.length}
+                signingKeys={selectedCrxKeys.length}
+                contacts={selectedContacts.length}
+              />
+            </ConfirmPage>
+          );
+        }
         const target = route.target;
         return (
           <ConfirmPage
@@ -351,6 +456,18 @@ export function KeysView({
         );
       })}
 
+      <ExportAllKeysDialog
+        open={showBulkExport}
+        onClose={() => setShowBulkExport(false)}
+        myKeys={selectedMyKeys}
+        contacts={selectedContacts}
+        crxKeys={selectedCrxKeys}
+        isUnlocked={isUnlocked}
+        getKeyHandle={getKeyHandle}
+        onUnlockWithPassword={onUnlockWithPassword}
+        onUnlockWithPasskey={onUnlockWithPasskey}
+      />
+
       <ImportKeyDialog
         open={showImport}
         onClose={() => {
@@ -365,6 +482,35 @@ export function KeysView({
         onImportCrx={onAddCrxKey}
       />
     </div>
+  );
+}
+
+/** Short breakdown of a mixed bulk deletion, rendered inside ConfirmPage. */
+function BulkDeleteSummary({
+  privateKeys,
+  signingKeys,
+  contacts,
+}: {
+  privateKeys: number;
+  signingKeys: number;
+  contacts: number;
+}) {
+  const parts: string[] = [];
+  if (privateKeys)
+    parts.push(`${privateKeys} private key${privateKeys === 1 ? "" : "s"}`);
+  if (signingKeys)
+    parts.push(`${signingKeys} signing key${signingKeys === 1 ? "" : "s"}`);
+  if (contacts) parts.push(`${contacts} contact${contacts === 1 ? "" : "s"}`);
+  const hasPrivate = privateKeys > 0 || signingKeys > 0;
+  return (
+    <>
+      <p className="font-medium">{parts.join(", ")}</p>
+      <p className="mt-2">
+        {hasPrivate
+          ? "This permanently deletes the selected private keys from this device. Anything encrypted only to a deleted key becomes unrecoverable. Make sure you have a backup if you might ever need them."
+          : "You'll no longer be able to encrypt to these contacts or verify their signatures. You can re-import their public keys later."}
+      </p>
+    </>
   );
 }
 
@@ -413,6 +559,10 @@ function ContactsList({
   onEncryptTo,
   onShowDetails,
   advancedMode,
+  selectionMode,
+  selected,
+  onToggleSelect,
+  onStartSelect,
 }: {
   contacts: PublicContactKey[];
   contactsLocked: boolean;
@@ -421,6 +571,10 @@ function ContactsList({
   onEncryptTo?: (keyId: string) => void;
   onShowDetails: (contact: PublicContactKey) => void;
   advancedMode?: boolean;
+  selectionMode: boolean;
+  selected: Set<string>;
+  onToggleSelect: (id: string) => void;
+  onStartSelect: (id: string) => void;
 }) {
   const [search, setSearch] = useState("");
 
@@ -467,22 +621,29 @@ function ContactsList({
           )}
           {filtered.length > 0 && (
             <div className="mt-2 space-y-2">
-              {filtered.map((c) => (
-                <ContactCard
-                  key={c.keyId}
-                  contact={c}
-                  onRemove={() => onRequestRemove(c)}
-                  onEncryptTo={
-                    onEncryptTo ? () => onEncryptTo(c.keyId) : undefined
-                  }
-                  onCopyPublicKey={() => {
-                    void navigator.clipboard.writeText(c.armoredPublicKey);
-                    toast.success("Public key copied");
-                  }}
-                  onShowDetails={() => onShowDetails(c)}
-                  advancedMode={advancedMode}
-                />
-              ))}
+              {filtered.map((c) => {
+                const id = selId("contact", c.keyId);
+                return (
+                  <ContactCard
+                    key={c.keyId}
+                    contact={c}
+                    onRemove={() => onRequestRemove(c)}
+                    onEncryptTo={
+                      onEncryptTo ? () => onEncryptTo(c.keyId) : undefined
+                    }
+                    onCopyPublicKey={() => {
+                      void navigator.clipboard.writeText(c.armoredPublicKey);
+                      toast.success("Public key copied");
+                    }}
+                    onShowDetails={() => onShowDetails(c)}
+                    advancedMode={advancedMode}
+                    selectionMode={selectionMode}
+                    selected={selected.has(id)}
+                    onToggleSelect={() => onToggleSelect(id)}
+                    onStartSelect={() => onStartSelect(id)}
+                  />
+                );
+              })}
             </div>
           )}
           {search && filtered.length === 0 && (
