@@ -19,8 +19,14 @@ import {
   encryptContacts,
   hasContactsSession,
 } from "../pgp/wasm";
-import { currentStorageLocation, getItem, removeItem, setItem } from "./engine";
-import { padPlaintext, unpadPlaintext } from "./padding";
+import {
+  currentStorageLocation,
+  getItem,
+  removeItem,
+  setItem,
+  withLock,
+} from "./engine";
+import { isCanonicalPadding, padPlaintext, unpadPlaintext } from "./padding";
 
 interface EncryptedStoreBlob {
   iv: string;
@@ -147,6 +153,46 @@ export async function purgeEncryptedBlob(
   from: StorageLocation,
 ): Promise<void> {
   await area(from).remove(storageKey);
+}
+
+/**
+ * Rewrite a store's blob in canonical padded form if it isn't already
+ * (e.g. it was saved before padding existed, or on a different area).
+ * Best-effort, one-time upgrade so length-hiding takes effect without
+ * waiting for the next mutation.
+ *
+ * Safety: this NEVER changes the stored items -- it decrypts, keeps the
+ * exact same JSON bytes, and re-encrypts with canonical padding. It runs
+ * under the store's own `withLock` and re-reads inside the lock, so it
+ * serialises with `addKey`/`removeKey`/etc. and cannot clobber a
+ * concurrent write. It must NOT be called from inside another hold of the
+ * same lock (the mutation paths already re-pad on save, so they never
+ * need it). If it's already canonical it writes nothing (idempotent).
+ */
+export async function normalizePadding<T>(
+  store: EncryptedStore<T>,
+): Promise<void> {
+  if (!(await hasContactsSession())) return;
+  await withLock(store.storageKey, async () => {
+    const blob = await getItem<unknown>(store.storageKey);
+    if (!isEncryptedStoreBlob(blob)) return; // absent, or legacy plaintext
+
+    const plaintext = await decryptContacts(
+      fromBase64(blob.ciphertext),
+      fromBase64(blob.iv),
+    );
+    const pad = (await currentStorageLocation()) === "local";
+    if (isCanonicalPadding(plaintext, pad)) return; // nothing to do
+
+    // Same JSON bytes, canonical padding, fresh IV.
+    const json = unpadPlaintext(plaintext);
+    const packed = await encryptContacts(padPlaintext(json, pad));
+    const { iv, ciphertext } = unpackIvCiphertext(packed);
+    await setItem<EncryptedStoreBlob>(store.storageKey, {
+      iv: toBase64(iv),
+      ciphertext: toBase64(ciphertext),
+    });
+  });
 }
 
 async function migrateLegacyPlaintext<T>(

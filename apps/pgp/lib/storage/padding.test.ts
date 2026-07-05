@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { bucketFor, padPlaintext, unpadPlaintext } from "./padding";
+import {
+  bucketFor,
+  isCanonicalPadding,
+  padPlaintext,
+  unpadPlaintext,
+} from "./padding";
 
 const enc = (s: string) => new TextEncoder().encode(s);
 const dec = (b: Uint8Array) => new TextDecoder().decode(b);
@@ -59,5 +64,36 @@ describe("padPlaintext / unpadPlaintext round-trip", () => {
     expect(withNul.includes(0)).toBe(false);
     const padded = padPlaintext(withNul, true);
     expect(dec(unpadPlaintext(padded))).toBe(dec(withNul));
+  });
+});
+
+describe("isCanonicalPadding (one-time normalization gate)", () => {
+  const json = enc(JSON.stringify([{ keyId: "abc" }]));
+
+  it("reports a correctly-padded local blob as canonical (no re-pad)", () => {
+    const padded = padPlaintext(json, true);
+    expect(isCanonicalPadding(padded, true)).toBe(true);
+  });
+
+  it("reports an unpadded blob on local as non-canonical (needs re-pad)", () => {
+    expect(isCanonicalPadding(json, true)).toBe(false);
+  });
+
+  it("reports an unpadded blob on sync as canonical (sync never pads)", () => {
+    expect(isCanonicalPadding(json, false)).toBe(true);
+  });
+
+  it("re-padding a non-canonical blob preserves the exact JSON bytes", () => {
+    // The safety guarantee: normalization changes only the envelope.
+    const repadded = padPlaintext(unpadPlaintext(json), true);
+    expect(dec(unpadPlaintext(repadded))).toBe(dec(json));
+    expect(isCanonicalPadding(repadded, true)).toBe(true);
+  });
+
+  it("is idempotent: a normalized blob needs no further re-pad", () => {
+    const once = padPlaintext(unpadPlaintext(json), true);
+    const twice = padPlaintext(unpadPlaintext(once), true);
+    expect(twice.length).toBe(once.length);
+    expect(isCanonicalPadding(once, true)).toBe(true);
   });
 });

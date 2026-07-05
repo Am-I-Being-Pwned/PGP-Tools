@@ -47,3 +47,14 @@ export function unpadPlaintext(plaintext: Uint8Array): Uint8Array {
   const nul = plaintext.indexOf(0);
   return nul === -1 ? plaintext : plaintext.subarray(0, nul);
 }
+
+/**
+ * True iff `stored` (a decrypted blob's full plaintext) is already in the
+ * canonical padded form for `pad`. Used to decide whether an existing
+ * blob needs re-padding: re-encrypting its data would produce the same
+ * length, so there's nothing to gain and we skip the write. This is what
+ * makes the one-time normalization idempotent (no churn).
+ */
+export function isCanonicalPadding(stored: Uint8Array, pad: boolean): boolean {
+  return padPlaintext(unpadPlaintext(stored), pad).length === stored.length;
+}
