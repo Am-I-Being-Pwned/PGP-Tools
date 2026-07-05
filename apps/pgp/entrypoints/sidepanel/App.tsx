@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import type { MasterProtection } from "../../lib/storage/master-protection";
 import type {
   AutoLockTimeout,
+  PgpPreferences,
   StorageLocation,
 } from "../../lib/storage/preferences";
 import type { WorkspaceDraft } from "../../lib/workspace-draft";
@@ -228,28 +229,36 @@ export default function App() {
     return () => chrome.idle.onStateChanged.removeListener(onState);
   }, []);
 
+  // Apply the encrypted (non-bootstrap) settings to UI state. These
+  // decrypt only with an active vault session, so at first mount (locked)
+  // they arrive as defaults; the unlock effect below re-reads and
+  // re-applies them once the session exists.
+  const applyPrefs = useCallback((prefs: PgpPreferences) => {
+    setAdvancedMode(prefs.advancedMode);
+    setAutoLockMinutes(prefs.autoLockMinutes);
+    // If a pending context-menu op has already routed us to a tab, do
+    // NOT overwrite that with the saved value. Without this guard,
+    // opening the side panel via the context menu races: pending-routing
+    // fires fast, getPreferences resolves later and clobbers `activeTab`,
+    // which unmounts the target view (KeysView) and closes the dialog.
+    if (!pendingRoutedRef.current) {
+      setActiveTab(prefs.activeTab);
+    }
+    setNeverCacheKeys(prefs.neverCacheKeys);
+    setAutoLockEnabled(prefs.autoLockEnabled);
+    setAutoDownloadFiles(prefs.autoDownloadFiles);
+    setAutoDownloadText(prefs.autoDownloadText);
+    setLockOnTabAway(prefs.lockOnTabAway);
+    setCrxSigningEnabled(prefs.crxSigningEnabled);
+  }, []);
+
   useEffect(() => {
     void (async () => {
       const prefs = await getPreferences();
-      setAdvancedMode(prefs.advancedMode);
+      // Bootstrap fields are readable regardless of lock state.
       setStorageLocation(prefs.storageLocation);
-      setAutoLockMinutes(prefs.autoLockMinutes);
       setOnboardingComplete(prefs.onboardingComplete);
-      // If a pending context-menu op has already routed us to a tab,
-      // do NOT overwrite that with the (stale) saved value. Without
-      // this guard, opening the side panel via the context menu
-      // races: pending-routing fires fast, getPreferences resolves
-      // later and clobbers `activeTab`, which unmounts the target
-      // view (KeysView for imports) and visibly closes the dialog.
-      if (!pendingRoutedRef.current) {
-        setActiveTab(prefs.activeTab);
-      }
-      setNeverCacheKeys(prefs.neverCacheKeys);
-      setAutoLockEnabled(prefs.autoLockEnabled);
-      setAutoDownloadFiles(prefs.autoDownloadFiles);
-      setAutoDownloadText(prefs.autoDownloadText);
-      setLockOnTabAway(prefs.lockOnTabAway);
-      setCrxSigningEnabled(prefs.crxSigningEnabled);
+      applyPrefs(prefs);
 
       const mp = await getMasterProtection();
       setMasterProtection(mp);
@@ -257,7 +266,15 @@ export default function App() {
     })();
     // Pending op delivery is now via chrome.storage.session
     // (see usePendingOperation). No runtime handshake needed.
-  }, []);
+  }, [applyPrefs]);
+
+  // On unlock the settings blob becomes decryptable -- re-read and apply
+  // the real values (they were defaults while locked). Also runs the
+  // one-time legacy-prefs migration via getPreferences.
+  useEffect(() => {
+    if (!masterUnlocked) return;
+    void getPreferences().then(applyPrefs);
+  }, [masterUnlocked, applyPrefs]);
 
   useEffect(() => {
     if (!pending) return;

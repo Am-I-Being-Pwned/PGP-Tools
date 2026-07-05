@@ -12,13 +12,15 @@
  * plaintext entry per item at `${storageKey}:${id}`.
  */
 
+import type { StorageLocation } from "./preferences";
 import { fromBase64, toBase64, unpackIvCiphertext } from "../encoding";
 import {
   decryptContacts,
   encryptContacts,
   hasContactsSession,
 } from "../pgp/wasm";
-import { getItem, removeItem, setItem } from "./engine";
+import { currentStorageLocation, getItem, removeItem, setItem } from "./engine";
+import { padPlaintext, unpadPlaintext } from "./padding";
 
 interface EncryptedStoreBlob {
   iv: string;
@@ -61,7 +63,9 @@ export async function loadEncryptedArray<T>(
     fromBase64(blob.ciphertext),
     fromBase64(blob.iv),
   );
-  const parsed: unknown = JSON.parse(new TextDecoder().decode(plaintext));
+  // Strip length-hiding padding (no-op for legacy unpadded blobs).
+  const json = unpadPlaintext(plaintext);
+  const parsed: unknown = JSON.parse(new TextDecoder().decode(json));
 
   if (!Array.isArray(parsed)) return [];
   return parsed.filter(store.isValid);
@@ -75,7 +79,11 @@ export async function saveEncryptedArray<T>(
     throw new Error(`Cannot save ${store.label}: no active contacts session`);
   }
 
-  const plaintext = new TextEncoder().encode(JSON.stringify(items));
+  // Pad to a coarse size bucket so the stored blob length hides the item
+  // count. Skipped on `sync`, whose 8 KB/item cap can't absorb padding.
+  const json = new TextEncoder().encode(JSON.stringify(items));
+  const pad = (await currentStorageLocation()) === "local";
+  const plaintext = padPlaintext(json, pad);
   const packed = await encryptContacts(plaintext);
   const { iv, ciphertext } = unpackIvCiphertext(packed);
 
@@ -83,6 +91,62 @@ export async function saveEncryptedArray<T>(
     iv: toBase64(iv),
     ciphertext: toBase64(ciphertext),
   });
+}
+
+function area(loc: StorageLocation) {
+  return loc === "sync" ? chrome.storage.sync : chrome.storage.local;
+}
+
+/**
+ * Copy one encrypted blob to another storage area, re-packing it for the
+ * destination. A raw byte-copy would carry a `local` blob's length-hiding
+ * padding to `sync`, where the padded ciphertext can exceed the 8 KB/item
+ * quota. So we decrypt, strip
+ * padding, re-pad for the destination (`local` pads, `sync` doesn't),
+ * re-encrypt, and write.
+ *
+ * This does NOT remove the source -- the caller commits the move by
+ * switching the active location, then calls `purgeEncryptedBlob` on the
+ * old area. Sequencing it that way means a crash before the commit leaves
+ * the originals in place and reads still find them; a crash after leaves
+ * only harmless duplicates. Requires an active session. A value that
+ * isn't an encrypted blob (absent, or a not-yet-migrated legacy format)
+ * is copied verbatim so nothing is dropped.
+ */
+export async function copyEncryptedBlobRepacked(
+  storageKey: string,
+  from: StorageLocation,
+  to: StorageLocation,
+): Promise<void> {
+  if (from === to) return;
+  const raw: unknown = (await area(from).get(storageKey))[storageKey];
+  if (raw === undefined) return;
+
+  if (!isEncryptedStoreBlob(raw)) {
+    await area(to).set({ [storageKey]: raw });
+    return;
+  }
+
+  const plaintext = await decryptContacts(
+    fromBase64(raw.ciphertext),
+    fromBase64(raw.iv),
+  );
+  const json = unpadPlaintext(plaintext);
+  const packed = await encryptContacts(padPlaintext(json, to === "local"));
+  const { iv, ciphertext } = unpackIvCiphertext(packed);
+
+  await area(to).set({
+    [storageKey]: { iv: toBase64(iv), ciphertext: toBase64(ciphertext) },
+  });
+}
+
+/** Remove a blob from a specific area. Used after a location switch to
+ *  drop the old-area copies left by `copyEncryptedBlobRepacked`. */
+export async function purgeEncryptedBlob(
+  storageKey: string,
+  from: StorageLocation,
+): Promise<void> {
+  await area(from).remove(storageKey);
 }
 
 async function migrateLegacyPlaintext<T>(
