@@ -30,6 +30,10 @@ export interface ProtectedKeyBlob {
   keyId: string;
   userIds: string[];
   algorithm: string;
+  /** Local, user-set display name. Never touches the certificate: the
+   *  User IDs remain the cryptographic identity; this is just what the
+   *  UI shows. Cleared (undefined) reverts to the first User ID. */
+  alias?: string;
   publicKeyArmored: string;
   revocationCertificate?: string;
   /** Non-blocking flag from key parsing (e.g. relies on a SHA-1 binding
@@ -154,6 +158,20 @@ export async function removeKey(keyId: string): Promise<void> {
       await removeItem(STORAGE_KEYRING);
     } else {
       await saveAll(updated);
+    }
+  });
+}
+
+/** Set (or clear, with an empty/blank value) a key's local display
+ *  alias. Non-destructive: only the stored metadata changes. */
+export async function updateAlias(keyId: string, alias: string): Promise<void> {
+  const trimmed = alias.trim();
+  await withLock(STORAGE_KEYRING, async () => {
+    const keyring = await loadEncrypted();
+    const key = keyring.find((k) => k.keyId === keyId);
+    if (key) {
+      key.alias = trimmed || undefined;
+      await saveAll(keyring);
     }
   });
 }

@@ -407,6 +407,8 @@ export default function App() {
             crxKeys={crxKeys.keys}
             onAddCrxKey={crxKeys.add}
             onDeleteCrxKey={crxKeys.remove}
+            onRenameKey={keyring.rename}
+            onRenameCrxKey={crxKeys.rename}
             contactsLocked={false}
             isUnlocked={session.isUnlocked}
             onUnlockWithPassword={session.unlockWithPassword}

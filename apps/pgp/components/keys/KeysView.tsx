@@ -9,6 +9,7 @@ import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { KeyDetailsTarget } from "./KeyDetailsPage";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 import { ConfirmPage } from "../shared/ConfirmPage";
+import { RenamePage } from "../shared/RenamePage";
 import { useNavStack } from "../shared/useNavStack";
 import { ContactCard } from "./ContactCard";
 import { ContactDropZone } from "./ContactDropZone";
@@ -51,7 +52,16 @@ interface KeysViewProps {
   crxKeys?: CrxSigningKeyBlob[];
   onAddCrxKey?: (blob: CrxSigningKeyBlob) => Promise<void>;
   onDeleteCrxKey?: (extensionId: string) => Promise<void>;
+  /** Set a local display alias on a PGP key. */
+  onRenameKey?: (keyId: string, alias: string) => Promise<void>;
+  /** Set the user-facing label on a CRX signing key. */
+  onRenameCrxKey?: (extensionId: string, label: string) => Promise<void>;
 }
+
+/** A key whose local display name is being edited. */
+type RenameTarget =
+  | { kind: "own"; keyBlob: ProtectedKeyBlob }
+  | { kind: "crx"; keyBlob: CrxSigningKeyBlob };
 
 /** A pending deletion, confirmed on its own slide-over page. */
 type DeleteTarget =
@@ -64,7 +74,8 @@ type DeleteTarget =
 type KeysRoute =
   | { page: "generate" }
   | { page: "details"; target: KeyDetailsTarget }
-  | { page: "confirm-delete"; target: DeleteTarget };
+  | { page: "confirm-delete"; target: DeleteTarget }
+  | { page: "rename"; target: RenameTarget };
 
 export function KeysView({
   myKeys,
@@ -90,6 +101,8 @@ export function KeysView({
   crxKeys,
   onAddCrxKey,
   onDeleteCrxKey,
+  onRenameKey,
+  onRenameCrxKey,
 }: KeysViewProps) {
   const [showImport, setShowImport] = useState(false);
   const [importInitialArmored, setImportInitialArmored] = useState<
@@ -144,6 +157,15 @@ export function KeysView({
                     target: { kind: "own", keyBlob: blob },
                   })
                 }
+                onRename={
+                  onRenameKey
+                    ? () =>
+                        nav.push({
+                          page: "rename",
+                          target: { kind: "own", keyBlob: blob },
+                        })
+                    : undefined
+                }
                 advancedMode={advancedMode}
               />
             ))}
@@ -156,6 +178,15 @@ export function KeysView({
                     page: "confirm-delete",
                     target: { kind: "crx", keyBlob: blob },
                   })
+                }
+                onRename={
+                  onRenameCrxKey
+                    ? () =>
+                        nav.push({
+                          page: "rename",
+                          target: { kind: "crx", keyBlob: blob },
+                        })
+                    : undefined
                 }
               />
             ))}
@@ -219,6 +250,36 @@ export function KeysView({
             />
           );
         }
+        if (route.page === "rename") {
+          const target = route.target;
+          const isOwn = target.kind === "own";
+          const currentName = isOwn
+            ? (target.keyBlob.alias ?? "")
+            : (target.keyBlob.label ?? "");
+          const realIdentity = isOwn
+            ? (target.keyBlob.userIds[0] ?? target.keyBlob.keyId)
+            : target.keyBlob.extensionId;
+          return (
+            <RenamePage
+              key={entry.id}
+              title={isOwn ? "Rename key" : "Rename signing key"}
+              fieldLabel="Display name"
+              initialValue={currentName}
+              hint={`Shown in place of ${realIdentity}. This is a local label only.`}
+              placeholder={isOwn ? "e.g. Work laptop" : "e.g. My Extension"}
+              onCancel={nav.pop}
+              onSave={async (value) => {
+                if (isOwn) {
+                  await onRenameKey?.(target.keyBlob.keyId, value);
+                } else {
+                  await onRenameCrxKey?.(target.keyBlob.extensionId, value);
+                }
+                // Reveal the (refreshed) list beneath as this slides out.
+                nav.collapseToTop();
+              }}
+            />
+          );
+        }
         if (route.page === "details") {
           const target = route.target;
           return (
@@ -232,6 +293,15 @@ export function KeysView({
                       nav.clear();
                       onEncryptTo(target.contact.keyId);
                     }
+                  : undefined
+              }
+              onRename={
+                target.kind === "own" && onRenameKey
+                  ? () =>
+                      nav.push({
+                        page: "rename",
+                        target: { kind: "own", keyBlob: target.keyBlob },
+                      })
                   : undefined
               }
               onDelete={() => nav.push({ page: "confirm-delete", target })}

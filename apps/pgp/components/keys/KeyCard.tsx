@@ -6,6 +6,7 @@ import {
   KeyIcon,
   LockIcon,
   LockOpenIcon,
+  PencilIcon,
   Trash2Icon,
   TriangleAlertIcon,
 } from "lucide-react";
@@ -38,6 +39,8 @@ interface KeyCardProps {
   onExportPublic: () => void;
   onExportPrivate: () => number | null;
   onShowDetails: () => void;
+  /** Open the rename page. Omitted when renaming isn't available. */
+  onRename?: () => void;
   advancedMode?: boolean;
 }
 
@@ -51,6 +54,7 @@ export function KeyCard({
   onExportPublic,
   onExportPrivate,
   onShowDetails,
+  onRename,
   advancedMode,
 }: KeyCardProps) {
   const [showPasswordUnlock, setShowPasswordUnlock] = useState(false);
@@ -89,7 +93,8 @@ export function KeyCard({
     };
   }, []);
 
-  const displayName = keyBlob.userIds[0] ?? "Unknown";
+  const realName = keyBlob.userIds[0] ?? "Unknown";
+  const displayName = keyBlob.alias ?? realName;
   const shortId = keyBlob.keyId.slice(-16);
   const isPasskey = keyBlob.protection.method === "passkey";
 
@@ -203,6 +208,12 @@ export function KeyCard({
               still bubble through the COMPONENT tree -- without this stop,
               a menu-item click also fires the card's onShowDetails. */}
           <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+            {onRename && (
+              <DropdownMenuItem onClick={onRename}>
+                <PencilIcon />
+                Rename
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem
               onClick={() => {
                 onExportPublic();

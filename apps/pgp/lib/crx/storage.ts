@@ -5,6 +5,7 @@
  * before it reaches chrome.storage. See `storage/encrypted-store.ts`.
  */
 
+import type { CrxSigningKeyBlob } from "./types";
 import { STORAGE_CRX_KEYS } from "../constants";
 import { hasContactsSession } from "../pgp/wasm";
 import {
@@ -12,7 +13,6 @@ import {
   saveEncryptedArray,
 } from "../storage/encrypted-store";
 import { removeItem, withLock } from "../storage/engine";
-import type { CrxSigningKeyBlob } from "./types";
 import { extensionIdFromPublicKeyDer, isCrxSigningKeyBlob } from "./types";
 
 const CRX_STORE = {
@@ -46,7 +46,10 @@ export async function addCrxKey(blob: CrxSigningKeyBlob): Promise<void> {
   // The public half is not AEAD-covered, so never store a blob whose
   // publicKeyDerB64 doesn't hash to its claimed extensionId (a tampered
   // backup could otherwise plant a foreign public key under a real id).
-  if ((await extensionIdFromPublicKeyDer(blob.publicKeyDerB64)) !== blob.extensionId) {
+  if (
+    (await extensionIdFromPublicKeyDer(blob.publicKeyDerB64)) !==
+    blob.extensionId
+  ) {
     throw new Error(
       "Rejected CRX signing key: its public key does not match its extension id",
     );
@@ -71,6 +74,23 @@ export async function removeCrxKey(extensionId: string): Promise<void> {
       await removeItem(STORAGE_CRX_KEYS);
     } else {
       await saveAll(updated);
+    }
+  });
+}
+
+/** Set (or clear, with a blank value) a CRX key's user-facing label. */
+export async function updateCrxLabel(
+  extensionId: string,
+  label: string,
+): Promise<void> {
+  const trimmed = label.trim();
+  await withLock(STORAGE_CRX_KEYS, async () => {
+    await requireSession("rename CRX signing key");
+    const keys = await loadEncrypted();
+    const key = keys.find((k) => k.extensionId === extensionId);
+    if (key) {
+      key.label = trimmed || undefined;
+      await saveAll(keys);
     }
   });
 }
