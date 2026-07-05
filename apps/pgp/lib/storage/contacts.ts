@@ -1,5 +1,9 @@
 import { STORAGE_CONTACTS } from "../constants";
-import { loadEncryptedArray, saveEncryptedArray } from "./encrypted-store";
+import {
+  loadEncryptedArray,
+  normalizePadding,
+  saveEncryptedArray,
+} from "./encrypted-store";
 import { removeItem } from "./engine";
 
 export interface PublicContactKey {
@@ -39,6 +43,11 @@ export async function loadContacts(): Promise<PublicContactKey[]> {
 
 function saveAll(contacts: PublicContactKey[]): Promise<void> {
   return saveEncryptedArray(CONTACTS_STORE, contacts);
+}
+
+/** One-time upgrade of an unpadded contacts blob to canonical padding. */
+export function normalizeContactsPadding(): Promise<void> {
+  return normalizePadding(CONTACTS_STORE);
 }
 
 export async function saveContact(contact: PublicContactKey): Promise<void> {

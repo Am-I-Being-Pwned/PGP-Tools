@@ -4,7 +4,11 @@ import type {
   PasswordEncryptedBlob,
 } from "../protection/encrypt-private-key";
 import { STORAGE_KEYRING } from "../constants";
-import { loadEncryptedArray, saveEncryptedArray } from "./encrypted-store";
+import {
+  loadEncryptedArray,
+  normalizePadding,
+  saveEncryptedArray,
+} from "./encrypted-store";
 import { removeItem, withLock } from "./engine";
 
 // ── protection discriminated union ───────────────────────────────────
@@ -134,6 +138,11 @@ function loadEncrypted(): Promise<ProtectedKeyBlob[]> {
 
 function saveAll(keys: ProtectedKeyBlob[]): Promise<void> {
   return saveEncryptedArray(KEYRING_STORE, keys);
+}
+
+/** One-time upgrade of an unpadded keyring blob to canonical padding. */
+export function normalizeKeyringPadding(): Promise<void> {
+  return normalizePadding(KEYRING_STORE);
 }
 
 // ── CRUD (all mutations serialized via withLock) ─────────────────────

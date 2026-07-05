@@ -21,7 +21,10 @@ import { useKeyring } from "../../hooks/useKeyring";
 import { useKeySession } from "../../hooks/useKeySession";
 import { usePendingOperation } from "../../hooks/usePendingOperation";
 import { SESSION_PENDING_OP } from "../../lib/constants";
+import { normalizeCrxPadding } from "../../lib/crx/storage";
 import * as wasmApi from "../../lib/pgp/wasm";
+import { normalizeContactsPadding } from "../../lib/storage/contacts";
+import { normalizeKeyringPadding } from "../../lib/storage/keyring";
 import { getMasterProtection } from "../../lib/storage/master-protection";
 import { getPreferences, savePreferences } from "../../lib/storage/preferences";
 import {
@@ -274,6 +277,15 @@ export default function App() {
   useEffect(() => {
     if (!masterUnlocked) return;
     void getPreferences().then(applyPrefs);
+    // Best-effort: upgrade any pre-padding blobs to canonical padding now,
+    // rather than waiting for their next mutation. Each is a no-op if
+    // already canonical; failures are swallowed (the data is untouched).
+    const ignore = () => {
+      /* best-effort: leave the blob as-is on any failure */
+    };
+    void normalizeKeyringPadding().catch(ignore);
+    void normalizeContactsPadding().catch(ignore);
+    void normalizeCrxPadding().catch(ignore);
   }, [masterUnlocked, applyPrefs]);
 
   useEffect(() => {
