@@ -8,7 +8,7 @@ on:
 
 jobs:
   ci:
-    name: Lint, Typecheck & Build
+    name: Lint, Typecheck, Build & E2E
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -47,3 +47,21 @@ jobs:
         with:
           name: pgp-tools-chrome-mv3
           path: apps/pgp/.output/chrome-mv3
+
+      # E2E drives the built extension (.output/chrome-mv3, from `pnpm build`
+      # above) in real Chromium via Playwright's new headless mode, which
+      # loads extensions with no display/xvfb needed.
+      - name: Install Playwright Chromium
+        working-directory: apps/pgp
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run e2e tests
+        run: pnpm test:e2e
+
+      - name: Upload Playwright traces
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: apps/pgp/test-results
+          retention-days: 7
