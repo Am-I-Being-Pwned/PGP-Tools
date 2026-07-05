@@ -814,3 +814,35 @@ fn test_parse_key_details_cert_revocation_propagates_to_subkeys() {
 fn test_parse_key_details_garbage_input() {
     assert!(parse_key_details("not a key").is_err());
 }
+
+// ── zeroize-on-free global allocator ─────────────────────────────────
+
+#[test]
+fn test_allocator_zeroizes_freed_block() {
+    use std::alloc::{alloc, dealloc, Layout};
+
+    // A page-ish block, large enough that the allocator services it from
+    // a predictable free list rather than inline metadata games.
+    let layout = Layout::from_size_align(4096, 16).unwrap();
+    unsafe {
+        let p1 = alloc(layout);
+        assert!(!p1.is_null());
+        // Stamp a sentinel across the whole block.
+        std::ptr::write_bytes(p1, 0xAB, layout.size());
+        // Free it -- our GlobalAlloc::dealloc must wipe it first.
+        dealloc(p1, layout);
+
+        // Re-request the same layout. dlmalloc's LIFO free list hands the
+        // just-freed block straight back, so we can observe its bytes.
+        let p2 = alloc(layout);
+        assert!(!p2.is_null());
+        if p2 == p1 {
+            let block = std::slice::from_raw_parts(p2, layout.size());
+            assert!(
+                block.iter().all(|&b| b == 0),
+                "freed block was not zeroized before reuse",
+            );
+        }
+        dealloc(p2, layout);
+    }
+}

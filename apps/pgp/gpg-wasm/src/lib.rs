@@ -46,10 +46,53 @@
 //! - Plaintext armored secret material crosses the JS boundary only via
 //!   `getKeyArmored`, which is gated behind a destructive export UI.
 
+use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::io::Write;
 use std::time::{Duration, SystemTime};
+
+/// Zeroize-on-free global allocator.
+///
+/// WASM linear memory only ever grows; freed allocations are handed back
+/// to the allocator's free list *without* being cleared, so their bytes
+/// linger until some later allocation happens to reuse the region. That
+/// let decrypted material survive in memory long after it was logically
+/// dropped -- e.g. the contacts/keyring plaintext that wasm-bindgen
+/// copies to JS and then frees (its `Vec<u8>` return is deallocated by
+/// the JS-side `__wbindgen_free`, bypassing any Rust `Drop`), and the
+/// armored private-key strings from the export paths.
+///
+/// Wrapping the system allocator so every `dealloc` wipes the block
+/// first closes that gap comprehensively: it doesn't depend on any
+/// individual call remembering to zeroize, and it covers buffers freed
+/// across the wasm-bindgen ABI where `Drop`/`Zeroizing` can't reach.
+/// `realloc` is intentionally left to the trait default (alloc + copy +
+/// dealloc), so a moved reallocation also wipes the old block via our
+/// `dealloc`.
+///
+/// Cost: a `write_bytes` over each freed block. This module's workload is
+/// occasional, user-initiated crypto (not a hot allocation loop), so the
+/// overhead is not observable in practice and the hardening is worth it.
+struct ZeroizeOnFree;
+
+unsafe impl GlobalAlloc for ZeroizeOnFree {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        System.alloc(layout)
+    }
+
+    unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 {
+        System.alloc_zeroed(layout)
+    }
+
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        std::ptr::write_bytes(ptr, 0, layout.size());
+        System.dealloc(ptr, layout);
+    }
+}
+
+#[global_allocator]
+static GLOBAL: ZeroizeOnFree = ZeroizeOnFree;
 
 use aes_gcm::aead::{Aead, Payload};
 use aes_gcm::{Aes256Gcm, KeyInit, Nonce};
