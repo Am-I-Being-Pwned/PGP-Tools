@@ -6,6 +6,7 @@ import {
   ChevronRightIcon,
   CopyIcon,
   LockIcon,
+  PencilIcon,
   Trash2Icon,
   TriangleAlertIcon,
   XCircleIcon,
@@ -33,6 +34,8 @@ interface KeyDetailsPageProps {
   onBack: () => void;
   /** Contacts only: jump to the workspace with this key preselected. */
   onEncryptTo?: () => void;
+  /** Own keys only: open the rename page for this key. */
+  onRename?: () => void;
   /** Open the delete/remove confirmation page for this key. */
   onDelete?: () => void;
 }
@@ -294,6 +297,7 @@ export function KeyDetailsPage({
   target,
   onBack,
   onEncryptTo,
+  onRename,
   onDelete,
 }: KeyDetailsPageProps) {
   const { entered, close } = useSlideOver(onBack);
@@ -319,7 +323,11 @@ export function KeyDetailsPage({
 
   const primaryUserId = userIds[0] ?? "Unknown";
   const { name: rawName, email, comment } = parseUserId(primaryUserId);
-  const name = comment ? `${rawName} (${comment})` : rawName;
+  const realName = comment ? `${rawName} (${comment})` : rawName;
+  // Local alias wins as the headline; the real identity moves to a
+  // subtitle so it's never hidden.
+  const alias = isOwn ? target.keyBlob.alias : undefined;
+  const name = alias ?? realName;
 
   // Other identities on the cert, shown as deduped emails so we don't
   // repeat the display name three times.
@@ -392,6 +400,11 @@ export function KeyDetailsPage({
             <LockIcon className="h-4 w-4" />
           </IconAction>
         )}
+        {onRename && (
+          <IconAction label="Rename" onClick={onRename}>
+            <PencilIcon className="h-4 w-4" />
+          </IconAction>
+        )}
         <IconAction label="Copy public key" onClick={handleCopyPublicKey}>
           <CopyIcon className="h-4 w-4" />
         </IconAction>
@@ -412,6 +425,11 @@ export function KeyDetailsPage({
               <p className="truncate text-base leading-tight font-semibold">
                 {name}
               </p>
+              {alias && (
+                <p className="text-muted-foreground mt-0.5 truncate text-xs">
+                  {realName}
+                </p>
+              )}
               {email && (
                 <p className="text-muted-foreground mt-0.5 truncate text-xs">
                   {email}

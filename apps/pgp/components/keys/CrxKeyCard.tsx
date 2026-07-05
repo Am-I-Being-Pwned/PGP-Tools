@@ -4,6 +4,7 @@ import {
   EllipsisVerticalIcon,
   KeyIcon,
   LockIcon,
+  PencilIcon,
   Trash2Icon,
 } from "lucide-react";
 
@@ -23,6 +24,8 @@ import { CrxExportPrivateDialog } from "./CrxExportPrivateDialog";
 interface CrxKeyCardProps {
   keyBlob: CrxSigningKeyBlob;
   onDelete: () => void;
+  /** Open the rename page. Omitted when renaming isn't available. */
+  onRename?: () => void;
 }
 
 /**
@@ -34,7 +37,7 @@ interface CrxKeyCardProps {
  * only for the signing act), so the menu offers just "Copy public key" and
  * "Delete".
  */
-export function CrxKeyCard({ keyBlob, onDelete }: CrxKeyCardProps) {
+export function CrxKeyCard({ keyBlob, onDelete, onRename }: CrxKeyCardProps) {
   const [showCopyPrivate, setShowCopyPrivate] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const feedbackTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -81,6 +84,12 @@ export function CrxKeyCard({ keyBlob, onDelete }: CrxKeyCardProps) {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            {onRename && (
+              <DropdownMenuItem onClick={onRename}>
+                <PencilIcon />
+                Rename
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem
               onClick={() => {
                 void navigator.clipboard.writeText(

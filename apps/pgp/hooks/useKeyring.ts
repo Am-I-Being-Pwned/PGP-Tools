@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 
 import type { ProtectedKeyBlob } from "../lib/storage/keyring";
-import { addKey, getKeyring, removeKey } from "../lib/storage/keyring";
+import {
+  addKey,
+  getKeyring,
+  removeKey,
+  updateAlias,
+} from "../lib/storage/keyring";
 
 export function useKeyring() {
   const [keys, setKeys] = useState<ProtectedKeyBlob[]>([]);
@@ -33,5 +38,13 @@ export function useKeyring() {
     [refresh],
   );
 
-  return { keys, loading, refresh, add, remove };
+  const rename = useCallback(
+    async (keyId: string, alias: string) => {
+      await updateAlias(keyId, alias);
+      await refresh();
+    },
+    [refresh],
+  );
+
+  return { keys, loading, refresh, add, remove, rename };
 }
