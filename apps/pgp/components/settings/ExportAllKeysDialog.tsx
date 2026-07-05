@@ -105,7 +105,9 @@ export function ExportAllKeysDialog({
   const allCrxKeys = crxKeys ?? [];
   const lockedKeys = myKeys.filter((k) => !isUnlocked(k.keyId));
   const unlockedKeys = myKeys.filter((k) => isUnlocked(k.keyId));
-  const lockedCrxKeys = allCrxKeys.filter((k) => !(k.extensionId in crxHandles));
+  const lockedCrxKeys = allCrxKeys.filter(
+    (k) => !(k.extensionId in crxHandles),
+  );
   const unlockedCrxKeys = allCrxKeys.filter((k) => k.extensionId in crxHandles);
   const allUnlocked = lockedKeys.length === 0 && lockedCrxKeys.length === 0;
   // A passphrase is required whenever any private key material will be
@@ -249,8 +251,7 @@ export function ExportAllKeysDialog({
   const buildAndDownload = async (
     privateArmor: (handle: number) => Promise<string>,
     crxBlock:
-      | ((handle: number, blob: CrxSigningKeyBlob) => Promise<string>)
-      | null,
+      ((handle: number, blob: CrxSigningKeyBlob) => Promise<string>) | null,
   ) => {
     const parts: string[] = [];
     for (const key of myKeys) {
@@ -480,7 +481,9 @@ export function ExportAllKeysDialog({
                       <Button
                         size="sm"
                         className="h-9 shrink-0"
-                        disabled={busy || !(crxPasswords[blob.extensionId] ?? "")}
+                        disabled={
+                          busy || !(crxPasswords[blob.extensionId] ?? "")
+                        }
                         onClick={() => void handleUnlockCrxPassword(blob)}
                       >
                         {busy ? "..." : "Unlock"}
@@ -595,8 +598,7 @@ export function ExportAllKeysDialog({
                     {crxCount > 0
                       ? " CRX signing keys are left out of a plaintext export -- use a passphrase to include them."
                       : ""}{" "}
-                    Type{" "}
-                    <span className="font-mono font-bold">EXPORT</span> to
+                    Type <span className="font-mono font-bold">EXPORT</span> to
                     confirm:
                   </p>
                   <input

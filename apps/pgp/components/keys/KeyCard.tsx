@@ -54,7 +54,6 @@ export function KeyCard({
   advancedMode,
 }: KeyCardProps) {
   const [showPasswordUnlock, setShowPasswordUnlock] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showExportPrivateConfirm, setShowExportPrivateConfirm] =
     useState(false);
   const [password, setPassword] = useState("");
@@ -218,7 +217,7 @@ export function KeyCard({
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"
-              onClick={() => setShowDeleteConfirm(true)}
+              onClick={onDelete}
             >
               <Trash2Icon className="text-destructive" />
               Delete key
@@ -378,34 +377,7 @@ export function KeyCard({
         </div>
       </Dialog>
 
-      {showDeleteConfirm && (
-        <div className="bg-destructive/5 border-destructive/30 mt-2 rounded-md border p-2">
-          <p className="text-destructive text-xs font-medium">
-            Delete this key? Data encrypted with it will be unrecoverable.
-          </p>
-          <div className="mt-2 flex gap-1">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setShowDeleteConfirm(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={() => {
-                setShowDeleteConfirm(false);
-                onDelete();
-              }}
-            >
-              Yes, delete
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {!showDeleteConfirm && !showPasswordUnlock && (
+      {!showPasswordUnlock && (
         <div className="mt-2 flex items-center justify-end gap-1">
           {isUnlocked ? (
             <Button size="sm" variant="outline" onClick={onLock}>

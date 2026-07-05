@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { format } from "date-fns";
 import {
   ArrowRightIcon,
@@ -10,7 +9,6 @@ import {
   TriangleAlertIcon,
 } from "lucide-react";
 
-import { Button } from "@amibeingpwned/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,32 +54,9 @@ export function ContactCard({
   const toneBorder = isWarning ? "border-orange-500/50" : "border-green-500/50";
   const toneText = isWarning ? "text-orange-400" : "text-green-400";
   const ToneIcon = isWarning ? TriangleAlertIcon : CheckCircleIcon;
-  const [confirming, setConfirming] = useState(false);
   const userId = contact.userIds[0] ?? "Unknown";
   const { name: rawName, email, comment } = parseUserId(userId);
   const name = comment ? `${rawName} (${comment})` : rawName;
-
-  if (confirming) {
-    return (
-      <div className="border-destructive/30 bg-destructive/5 rounded-md border p-3">
-        <p className="text-xs">
-          Remove <span className="font-medium">{name}</span>?
-        </p>
-        <div className="mt-2 flex gap-1">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setConfirming(false)}
-          >
-            Cancel
-          </Button>
-          <Button size="sm" variant="destructive" onClick={onRemove}>
-            Remove
-          </Button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div
@@ -161,7 +136,7 @@ export function ContactCard({
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
-                onClick={() => setConfirming(true)}
+                onClick={onRemove}
               >
                 <Trash2Icon className="text-destructive" />
                 Remove contact
