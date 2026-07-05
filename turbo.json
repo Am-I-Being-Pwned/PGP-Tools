@@ -33,6 +33,11 @@
       "dependsOn": ["^topo", "^build"],
       "outputs": []
     },
+    "test:e2e": {
+      "dependsOn": ["build"],
+      "env": ["CI", "HEADED"],
+      "outputs": []
+    },
     "typecheck": {
       "dependsOn": ["^topo", "^build"],
       "outputs": [".cache/tsbuildinfo.json"]

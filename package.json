@@ -16,6 +16,7 @@
     "lint": "turbo run lint --continue -- --cache --cache-location .cache/.eslintcache",
     "lint:fix": "turbo run lint --continue -- --fix --cache --cache-location .cache/.eslintcache",
     "test": "turbo run test",
+    "test:e2e": "turbo run test:e2e",
     "typecheck": "turbo run typecheck",
     "zip": "turbo -F @amibeingpwned/pgp zip",
     "ui-add": "turbo run ui-add"
