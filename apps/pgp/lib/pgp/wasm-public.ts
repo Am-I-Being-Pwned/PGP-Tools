@@ -18,7 +18,7 @@
  * See `apps/pgp/SECURITY.md` §3 for the full file map.
  */
 
-import type { KeyInfo, SignatureStatus } from "./types";
+import type { KeyDetails, KeyInfo, SignatureStatus } from "./types";
 import { loadWasm } from "./wasm-loader";
 
 // ── status / metadata ────────────────────────────────────────────────
@@ -61,6 +61,17 @@ export async function parseKey(armored: string): Promise<KeyInfo> {
   const wasm = await loadWasm();
   const json = wasm.parseKey(armored);
   return JSON.parse(json) as KeyInfo;
+}
+
+/** Per-component-key breakdown of a certificate: primary key first,
+ *  then every subkey in cert order, each with capability flags and
+ *  lifecycle status (active / expired / revoked / invalid). Accepts
+ *  public or private armor; secret material (if present) is dropped
+ *  inside the wasm call, as in `parseKey`. */
+export async function parseKeyDetails(armored: string): Promise<KeyDetails> {
+  const wasm = await loadWasm();
+  const json = wasm.parseKeyDetails(armored);
+  return JSON.parse(json) as KeyDetails;
 }
 
 /** A single cert split out of a (possibly multi-cert) armored blob,

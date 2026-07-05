@@ -1,8 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  ArrowRightIcon,
+  CopyIcon,
   EllipsisVerticalIcon,
+  KeyIcon,
   LockIcon,
   LockOpenIcon,
+  Trash2Icon,
   TriangleAlertIcon,
 } from "lucide-react";
 
@@ -33,6 +37,7 @@ interface KeyCardProps {
   onDelete: () => void;
   onExportPublic: () => void;
   onExportPrivate: () => number | null;
+  onShowDetails: () => void;
   advancedMode?: boolean;
 }
 
@@ -45,6 +50,7 @@ export function KeyCard({
   onDelete,
   onExportPublic,
   onExportPrivate,
+  onShowDetails,
   advancedMode,
 }: KeyCardProps) {
   const [showPasswordUnlock, setShowPasswordUnlock] = useState(false);
@@ -60,7 +66,6 @@ export function KeyCard({
   const [exportError, setExportError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [unsafeExportConfirm, setUnsafeExportConfirm] = useState("");
-  const [showWarning, setShowWarning] = useState(false);
   const feedbackTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const clipboardClearTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -198,6 +203,7 @@ export function KeyCard({
                 showFeedback("Public key copied");
               }}
             >
+              <CopyIcon />
               Copy public key
             </DropdownMenuItem>
             {isUnlocked && (
@@ -205,6 +211,7 @@ export function KeyCard({
                 className="text-destructive focus:text-destructive"
                 onClick={() => setShowExportPrivateConfirm(true)}
               >
+                <KeyIcon className="text-destructive" />
                 Copy private key
               </DropdownMenuItem>
             )}
@@ -213,6 +220,7 @@ export function KeyCard({
               className="text-destructive focus:text-destructive"
               onClick={() => setShowDeleteConfirm(true)}
             >
+              <Trash2Icon className="text-destructive" />
               Delete key
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -225,20 +233,13 @@ export function KeyCard({
 
       {keyBlob.securityWarning && (
         <div className="mt-1 ml-6">
-          <button
-            type="button"
-            onClick={() => setShowWarning((v) => !v)}
-            aria-expanded={showWarning}
-            className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-700 transition-colors hover:bg-amber-500/20 dark:text-amber-400"
+          <span
+            title={keyBlob.securityWarning}
+            className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400"
           >
             <TriangleAlertIcon className="h-3 w-3" />
             Weak (SHA-1)
-          </button>
-          {showWarning && (
-            <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
-              {keyBlob.securityWarning}
-            </p>
-          )}
+          </span>
         </div>
       )}
 
@@ -405,7 +406,7 @@ export function KeyCard({
       )}
 
       {!showDeleteConfirm && !showPasswordUnlock && (
-        <div className="mt-2 flex justify-end">
+        <div className="mt-2 flex items-center justify-end gap-1">
           {isUnlocked ? (
             <Button size="sm" variant="outline" onClick={onLock}>
               Lock
@@ -427,6 +428,14 @@ export function KeyCard({
               Unlock
             </Button>
           )}
+          <button
+            type="button"
+            onClick={onShowDetails}
+            aria-label="Key details"
+            className="text-muted-foreground hover:text-foreground rounded p-1.5 transition-colors"
+          >
+            <ArrowRightIcon className="h-4 w-4" />
+          </button>
         </div>
       )}
     </div>
