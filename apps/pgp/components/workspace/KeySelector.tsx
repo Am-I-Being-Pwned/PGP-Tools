@@ -113,10 +113,19 @@ export function KeySelector({
             <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-(--radix-popover-trigger-width) p-0">
+        {/* Pin the list ABOVE the trigger and disable collision flipping so
+            it doesn't jump between top/bottom as the result count changes
+            while searching. */}
+        <PopoverContent
+          side="top"
+          avoidCollisions={false}
+          className="w-(--radix-popover-trigger-width) p-0"
+        >
           <Command>
             <CommandInput placeholder="Search..." />
-            <CommandList>
+            {/* Fixed height (not just max-h) so the list stays a constant
+                size and doesn't grow/shrink as search filters the results. */}
+            <CommandList className="h-[300px]">
               <CommandEmpty>No keys found.</CommandEmpty>
               {hasGroups ? (
                 <>
