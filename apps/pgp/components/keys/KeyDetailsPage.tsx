@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { format, formatDistanceToNow } from "date-fns";
 import {
-  ArrowLeftIcon,
   CheckCircleIcon,
   CheckIcon,
   ChevronDownIcon,
@@ -20,6 +19,11 @@ import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import { parseKey, parseKeyDetails } from "../../lib/pgp/wasm";
 import { formatAlgorithm } from "../../lib/utils/formatting";
 import { parseUserId } from "../../lib/utils/key-naming";
+import {
+  SlideOverHeader,
+  SlideOverPanel,
+  useSlideOver,
+} from "../shared/SlideOver";
 
 export type KeyDetailsTarget =
   | { kind: "own"; keyBlob: ProtectedKeyBlob }
@@ -30,8 +34,8 @@ interface KeyDetailsPageProps {
   onBack: () => void;
   /** Contacts only: jump to the workspace with this key preselected. */
   onEncryptTo?: () => void;
-  /** Delete the key / remove the contact. The page closes afterwards. */
-  onDelete?: () => void | Promise<void>;
+  /** Open the delete/remove confirmation page for this key. */
+  onDelete?: () => void;
 }
 
 /** Header icon button with a small hover label underneath (the UI kit
@@ -39,15 +43,10 @@ interface KeyDetailsPageProps {
 function IconAction({
   label,
   onClick,
-  destructive,
-  forceLabel,
   children,
 }: {
   label: string;
   onClick: () => void;
-  destructive?: boolean;
-  /** Keep the label visible without hover (e.g. armed delete). */
-  forceLabel?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -56,27 +55,16 @@ function IconAction({
         type="button"
         onClick={onClick}
         aria-label={label}
-        className={`peer rounded p-1 transition-colors ${
-          destructive
-            ? "text-destructive"
-            : "text-muted-foreground hover:text-foreground"
-        }`}
+        className="peer text-muted-foreground hover:text-foreground rounded p-1 transition-colors"
       >
         {children}
       </button>
-      <span
-        className={`border-border bg-background text-foreground pointer-events-none absolute top-full right-0 z-10 mt-1 rounded border px-1.5 py-0.5 text-[10px] whitespace-nowrap shadow-sm peer-hover:block ${
-          forceLabel ? "block" : "hidden"
-        }`}
-      >
+      <span className="border-border bg-background text-foreground pointer-events-none absolute top-full right-0 z-10 mt-1 hidden rounded border px-1.5 py-0.5 text-[10px] whitespace-nowrap shadow-sm peer-hover:block">
         {label}
       </span>
     </span>
   );
 }
-
-/** Must match the `duration-300` class on the panel. */
-const SLIDE_MS = 300;
 
 const EXPIRING_SOON_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -317,15 +305,13 @@ export function KeyDetailsPage({
   onEncryptTo,
   onDelete,
 }: KeyDetailsPageProps) {
-  const [entered, setEntered] = useState(false);
+  const { entered, close } = useSlideOver(onBack);
   const [info, setInfo] = useState<KeyInfo | null>(null);
   const [details, setDetails] = useState<KeyDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showInactive, setShowInactive] = useState(false);
   const [copiedFp, setCopiedFp] = useState(false);
-  const [deleteArmed, setDeleteArmed] = useState(false);
   const copyTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const deleteTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const isOwn = target.kind === "own";
   const armored = isOwn
@@ -355,31 +341,9 @@ export function KeyDetailsPage({
     ),
   );
 
-  // Slide in on mount; slide out, then unmount, on back.
   useEffect(() => {
-    const raf = requestAnimationFrame(() => setEntered(true));
-    return () => cancelAnimationFrame(raf);
+    return () => clearTimeout(copyTimer.current);
   }, []);
-
-  useEffect(() => {
-    return () => {
-      clearTimeout(copyTimer.current);
-      clearTimeout(deleteTimer.current);
-    };
-  }, []);
-
-  const handleBack = useCallback(() => {
-    setEntered(false);
-    setTimeout(onBack, SLIDE_MS);
-  }, [onBack]);
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") handleBack();
-    };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [handleBack]);
 
   useEffect(() => {
     let cancelled = false;
@@ -422,38 +386,9 @@ export function KeyDetailsPage({
     toast.success("Public key copied");
   };
 
-  // Two-stage delete: first click arms (label flips to confirm),
-  // second click within 3s executes and closes the page.
-  const handleDelete = () => {
-    if (!onDelete) return;
-    if (!deleteArmed) {
-      setDeleteArmed(true);
-      clearTimeout(deleteTimer.current);
-      deleteTimer.current = setTimeout(() => setDeleteArmed(false), 3000);
-      return;
-    }
-    clearTimeout(deleteTimer.current);
-    void onDelete();
-    handleBack();
-  };
-
   return (
-    <div
-      className={`bg-background fixed inset-0 z-50 flex flex-col transition-transform duration-300 ease-out ${entered ? "translate-x-0" : "translate-x-full"}`}
-      role="region"
-      aria-label={`Key details for ${name}`}
-    >
-      <div className="border-border flex items-center gap-2 border-b px-3 py-2.5">
-        <button
-          type="button"
-          onClick={handleBack}
-          aria-label="Back"
-          className="text-muted-foreground hover:text-foreground rounded p-1 transition-colors"
-        >
-          <ArrowLeftIcon className="h-4 w-4" />
-        </button>
-        <h2 className="truncate text-sm font-semibold">Key details</h2>
-        <span className="flex-1" />
+    <SlideOverPanel entered={entered} ariaLabel={`Key details for ${name}`}>
+      <SlideOverHeader title="Key details" onBack={close}>
         {onEncryptTo && (
           <IconAction label="Encrypt to" onClick={onEncryptTo}>
             <LockIcon className="h-4 w-4" />
@@ -464,21 +399,13 @@ export function KeyDetailsPage({
         </IconAction>
         {onDelete && (
           <IconAction
-            label={
-              deleteArmed
-                ? "Click again to confirm"
-                : isOwn
-                  ? "Delete key"
-                  : "Remove contact"
-            }
-            destructive={deleteArmed}
-            forceLabel={deleteArmed}
-            onClick={handleDelete}
+            label={isOwn ? "Delete key" : "Remove contact"}
+            onClick={onDelete}
           >
             <Trash2Icon className="h-4 w-4" />
           </IconAction>
         )}
-      </div>
+      </SlideOverHeader>
 
       <div className="flex-1 space-y-4 overflow-y-auto p-3">
         <div>
@@ -610,6 +537,6 @@ export function KeyDetailsPage({
           </div>
         )}
       </div>
-    </div>
+    </SlideOverPanel>
   );
 }

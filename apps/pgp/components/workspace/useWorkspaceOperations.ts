@@ -544,9 +544,7 @@ export function useWorkspaceOperations({
     // Exact match only. Falling back to crxKeys[0] here would silently sign
     // under a different extension identity than the one shown in the Select
     // (state keeps the selection valid, so a miss means something is off).
-    return (
-      crxKeys.find((k) => k.extensionId === s.selectedCrxKeyId) ?? null
-    );
+    return crxKeys.find((k) => k.extensionId === s.selectedCrxKeyId) ?? null;
   }
 
   async function doCrxSign(

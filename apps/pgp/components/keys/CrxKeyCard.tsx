@@ -1,7 +1,12 @@
 import { useRef, useState } from "react";
-import { EllipsisVerticalIcon, LockIcon } from "lucide-react";
+import {
+  CopyIcon,
+  EllipsisVerticalIcon,
+  KeyIcon,
+  LockIcon,
+  Trash2Icon,
+} from "lucide-react";
 
-import { Button } from "@amibeingpwned/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,7 +35,6 @@ interface CrxKeyCardProps {
  * "Delete".
  */
 export function CrxKeyCard({ keyBlob, onDelete }: CrxKeyCardProps) {
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showCopyPrivate, setShowCopyPrivate] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const feedbackTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -85,19 +89,22 @@ export function CrxKeyCard({ keyBlob, onDelete }: CrxKeyCardProps) {
                 showFeedback("Public key copied");
               }}
             >
+              <CopyIcon />
               Copy public key
             </DropdownMenuItem>
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"
               onClick={() => setShowCopyPrivate(true)}
             >
+              <KeyIcon className="text-destructive" />
               Copy private key
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"
-              onClick={() => setShowDeleteConfirm(true)}
+              onClick={onDelete}
             >
+              <Trash2Icon className="text-destructive" />
               Delete key
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -117,34 +124,6 @@ export function CrxKeyCard({ keyBlob, onDelete }: CrxKeyCardProps) {
         onClose={() => setShowCopyPrivate(false)}
         keyBlob={keyBlob}
       />
-
-      {showDeleteConfirm && (
-        <div className="bg-destructive/5 border-destructive/30 mt-2 rounded-md border p-2">
-          <p className="text-destructive text-xs font-medium">
-            Delete this signing key? You can no longer sign updates for this
-            extension, and it can't be recovered unless you have a backup.
-          </p>
-          <div className="mt-2 flex gap-1">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setShowDeleteConfirm(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={() => {
-                setShowDeleteConfirm(false);
-                onDelete();
-              }}
-            >
-              Yes, delete
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

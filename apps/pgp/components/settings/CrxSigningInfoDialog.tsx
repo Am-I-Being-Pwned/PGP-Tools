@@ -35,8 +35,8 @@ export function CrxSigningInfoDialog({
             The catch: that only works if the key lives somewhere an attacker
             can&rsquo;t reach. A key sitting in CI secrets defeats the purpose.
             PGP Tools keeps the key encrypted in your vault and unlocks it only
-            for the signing act - behind your password or passkey, never in
-            your pipeline.
+            for the signing act - behind your password or passkey, never in your
+            pipeline.
           </p>
         </section>
 
@@ -55,7 +55,9 @@ export function CrxSigningInfoDialog({
         </section>
 
         <section className="space-y-2">
-          <h3 className="text-foreground text-xs font-semibold">How to use it</h3>
+          <h3 className="text-foreground text-xs font-semibold">
+            How to use it
+          </h3>
           <ol className="text-muted-foreground list-decimal space-y-1.5 pl-4 text-xs leading-relaxed">
             <li>
               Turn on the toggle above, then create or import a CRX signing key
@@ -63,8 +65,9 @@ export function CrxSigningInfoDialog({
               a backup.
             </li>
             <li>
-              Copy the key&rsquo;s <span className="text-foreground">public</span>{" "}
-              half and register it in the Chrome Web Store dashboard under{" "}
+              Copy the key&rsquo;s{" "}
+              <span className="text-foreground">public</span> half and register
+              it in the Chrome Web Store dashboard under{" "}
               <span className="text-foreground">
                 Package → Verified CRX Uploads
               </span>
@@ -73,11 +76,10 @@ export function CrxSigningInfoDialog({
             <li>
               To cut a release, drop your packed extension{" "}
               <span className="text-foreground">.zip</span> into the Workspace
-              and sign it. Use{" "}
-              <span className="text-foreground">Save</span> to write the{" "}
-              <span className="text-foreground">.crx</span> straight to disk
-              with the right name (or drag the chip to your desktop), then
-              upload it to the Web Store dashboard. Chrome intercepts plain{" "}
+              and sign it. Use <span className="text-foreground">Save</span> to
+              write the <span className="text-foreground">.crx</span> straight
+              to disk with the right name (or drag the chip to your desktop),
+              then upload it to the Web Store dashboard. Chrome intercepts plain{" "}
               <span className="text-foreground">.crx</span> downloads and tries
               to install them, which is why we save rather than download.
             </li>
@@ -93,7 +95,8 @@ export function CrxSigningInfoDialog({
             artifact for the Web Store dashboard, not a directly-installable
             package - Chrome only installs store-signed extensions. To run your
             extension locally, use{" "}
-            <span className="text-foreground">Load unpacked</span> on the folder.
+            <span className="text-foreground">Load unpacked</span> on the
+            folder.
           </p>
         </section>
 

@@ -112,8 +112,7 @@ export function WorkspaceView({
   const needsPrivateKey = s.mode === "decrypt" || s.mode === "sign";
   const hasInput = s.files.length > 0 || s.input.length > 0;
   const canCrxSign = !!crxSigningEnabled && (crxKeys?.length ?? 0) > 0;
-  const singleCrxFile =
-    s.files.length === 1 && /\.crx$/i.test(s.files[0].name);
+  const singleCrxFile = s.files.length === 1 && /\.crx$/i.test(s.files[0].name);
   // CRX signs a packed extension: offer it only for a single .zip that
   // actually contains a manifest.json (verified async in state), never for
   // arbitrary files. PGP signing stays available via the "Sign as" toggle.
