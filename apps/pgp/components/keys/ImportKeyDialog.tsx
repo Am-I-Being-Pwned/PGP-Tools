@@ -9,7 +9,10 @@ import type { KeyInfo } from "../../lib/pgp/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import { importCrxKey } from "../../lib/crx/operations";
-import { importRejectionMessage } from "../../lib/import-public-keys";
+import {
+  importRejectionMessage,
+  isUsableContact,
+} from "../../lib/import-public-keys";
 import { importKey } from "../../lib/pgp/key-management";
 import { parseKeys } from "../../lib/pgp/wasm";
 import { importAndProtect } from "../../lib/protection/protect-flow";
@@ -181,7 +184,7 @@ export function ImportKeyDialog({
       // keys). Import every live one against its own armor; ignore the
       // stale rotations.
       const certs = await parseKeys(armored);
-      const usable = certs.filter((c) => c.keyInfo.usableForEncryption);
+      const usable = certs.filter((c) => isUsableContact(c.keyInfo));
       if (usable.length === 0) {
         setError(importRejectionMessage(certs[0]?.keyInfo));
         return;
@@ -196,6 +199,7 @@ export function ImportKeyDialog({
           addedAt: Date.now(),
           lastUsedAt: Date.now(),
           expiresAt: keyInfo.expiresAt,
+          usableForEncryption: keyInfo.usableForEncryption,
           // Allowed, but flagged (e.g. SHA-1 binding signature).
           securityWarning: keyInfo.securityWarning,
         });

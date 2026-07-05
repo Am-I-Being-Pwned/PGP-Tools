@@ -4,6 +4,13 @@ import type { KeyInfo } from "./pgp/types";
 import type { PublicContactKey } from "./storage/contacts";
 import { parseKeys } from "./pgp/wasm";
 
+/** A contact is worth keeping if you can either encrypt to it OR verify
+ *  its signatures. Sign-only keys (no encryption subkey) are perfectly
+ *  valid contacts -- you just can't encrypt to them. */
+export function isUsableContact(keyInfo: KeyInfo): boolean {
+  return keyInfo.usableForEncryption || keyInfo.usableForSigning;
+}
+
 /** Human-readable reason a cert can't be imported as a contact. Expiry
  *  is by far the most common cause, so call it out with the date rather
  *  than hiding it in the generic "expired, revoked, or unsupported"
@@ -17,7 +24,7 @@ export function importRejectionMessage(keyInfo: KeyInfo | undefined): string {
   }
   return (
     keyInfo.policyError ??
-    "This public key has no usable encryption subkey, so you wouldn't be able to encrypt to it."
+    "This public key has no usable encryption or signing key."
   );
 }
 
@@ -67,7 +74,7 @@ export async function importPublicKeyBlocks(
       continue;
     }
 
-    const usable = certs.filter((c) => c.keyInfo.usableForEncryption);
+    const usable = certs.filter((c) => isUsableContact(c.keyInfo));
     if (usable.length === 0) {
       // Nothing live in this block: surface the first cert's reason.
       summary.failed++;
@@ -88,6 +95,9 @@ export async function importPublicKeyBlocks(
         addedAt: Date.now(),
         lastUsedAt: Date.now(),
         expiresAt: keyInfo.expiresAt,
+        // Sign-only keys are valid contacts (for verification) but can't
+        // be offered as encryption recipients -- record which is which.
+        usableForEncryption: keyInfo.usableForEncryption,
         // Allowed, but flagged (e.g. SHA-1 binding signature).
         securityWarning: keyInfo.securityWarning,
       });
