@@ -70,10 +70,27 @@ export function WorkspaceInput({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="encrypt">Encrypt</SelectItem>
-          <SelectItem value="decrypt">Decrypt</SelectItem>
-          <SelectItem value="sign">Sign</SelectItem>
-          <SelectItem value="verify">Verify</SelectItem>
+          <SelectItem
+            className="cursor-pointer focus:bg-border/70"
+            value="encrypt"
+          >
+            Encrypt
+          </SelectItem>
+          <SelectItem
+            className="cursor-pointer focus:bg-border/70"
+            value="decrypt"
+          >
+            Decrypt
+          </SelectItem>
+          <SelectItem className="cursor-pointer focus:bg-border/70" value="sign">
+            Sign
+          </SelectItem>
+          <SelectItem
+            className="cursor-pointer focus:bg-border/70"
+            value="verify"
+          >
+            Verify
+          </SelectItem>
         </SelectContent>
       </Select>
 

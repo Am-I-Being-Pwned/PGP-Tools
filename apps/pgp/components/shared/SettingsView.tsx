@@ -24,7 +24,7 @@ import {
 } from "../../lib/storage/encrypted-store";
 import { invalidateLocationCache } from "../../lib/storage/engine";
 import { savePreferences } from "../../lib/storage/preferences";
-import { CrxSigningInfoDialog } from "../settings/CrxSigningInfoDialog";
+import { CrxSigningInfoPage } from "../settings/CrxSigningInfoPage";
 import { DevToolsDialog } from "../settings/DevToolsDialog";
 import { ExportAllKeysDialog } from "../settings/ExportAllKeysDialog";
 import { ImportAllKeysDialog } from "../settings/ImportAllKeysDialog";
@@ -485,10 +485,9 @@ export function SettingsView({
         reusePasskeyCredentialId={primaryPasskeyCredentialId}
       />
 
-      <CrxSigningInfoDialog
-        open={showCrxInfo}
-        onClose={() => setShowCrxInfo(false)}
-      />
+      {showCrxInfo && (
+        <CrxSigningInfoPage onClose={() => setShowCrxInfo(false)} />
+      )}
 
       {import.meta.env.DEV && (
         <DevToolsDialog
