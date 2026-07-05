@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { format } from "date-fns";
 import {
   ArrowRightIcon,
@@ -54,6 +55,8 @@ export function ContactCard({
   const toneBorder = isWarning ? "border-orange-500/50" : "border-green-500/50";
   const toneText = isWarning ? "text-orange-400" : "text-green-400";
   const ToneIcon = isWarning ? TriangleAlertIcon : CheckCircleIcon;
+  // Captured once at mount; cards are short-lived so drift is moot.
+  const [now] = useState(() => Date.now());
   const userId = contact.userIds[0] ?? "Unknown";
   const { name: rawName, email, comment } = parseUserId(userId);
   const name = comment ? `${rawName} (${comment})` : rawName;
@@ -91,11 +94,22 @@ export function ContactCard({
               {formatFingerprint(contact.keyId)}
             </p>
           )}
-          {contact.expiresAt && (
-            <p className="text-muted-foreground mt-0.5 text-xs">
-              Expires {format(new Date(contact.expiresAt), "PPP")}
-            </p>
-          )}
+          {contact.expiresAt &&
+            (contact.expiresAt < now ? (
+              <div className="mt-1">
+                <span
+                  title={`This key expired on ${format(new Date(contact.expiresAt), "PPP")} and can no longer be encrypted to. Ask the owner for their current key.`}
+                  className="inline-flex items-center gap-1 rounded-full border border-red-500/40 bg-red-500/10 px-2 py-0.5 text-[10px] font-medium text-red-600 dark:text-red-400"
+                >
+                  <TriangleAlertIcon className="h-3 w-3" />
+                  Expired {format(new Date(contact.expiresAt), "PP")}
+                </span>
+              </div>
+            ) : (
+              <p className="text-muted-foreground mt-0.5 text-xs">
+                Expires {format(new Date(contact.expiresAt), "PPP")}
+              </p>
+            ))}
           {contact.securityWarning && (
             <div className="mt-1">
               <span
@@ -120,7 +134,14 @@ export function ContactCard({
                 <EllipsisVerticalIcon className="h-4 w-4" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            {/* Radix portals this into <body>, but React synthetic
+                events still bubble through the COMPONENT tree -- without
+                this stop, a menu-item click also fires the card's
+                onShowDetails and stacks the details page underneath. */}
+            <DropdownMenuContent
+              align="end"
+              onClick={(e) => e.stopPropagation()}
+            >
               {onEncryptTo && (
                 <DropdownMenuItem onClick={onEncryptTo}>
                   <LockIcon />

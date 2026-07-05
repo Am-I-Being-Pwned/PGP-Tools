@@ -9,6 +9,7 @@ import type { KeyInfo } from "../../lib/pgp/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import { importCrxKey } from "../../lib/crx/operations";
+import { importRejectionMessage } from "../../lib/import-public-keys";
 import { importKey } from "../../lib/pgp/key-management";
 import { parseKeys } from "../../lib/pgp/wasm";
 import { importAndProtect } from "../../lib/protection/protect-flow";
@@ -182,10 +183,7 @@ export function ImportKeyDialog({
       const certs = await parseKeys(armored);
       const usable = certs.filter((c) => c.keyInfo.usableForEncryption);
       if (usable.length === 0) {
-        setError(
-          certs[0]?.keyInfo.policyError ??
-            "This public key has no usable encryption subkey, so you wouldn't be able to encrypt to it.",
-        );
+        setError(importRejectionMessage(certs[0]?.keyInfo));
         return;
       }
       let warning: string | undefined;
@@ -197,6 +195,7 @@ export function ImportKeyDialog({
           armoredPublicKey: certArmored,
           addedAt: Date.now(),
           lastUsedAt: Date.now(),
+          expiresAt: keyInfo.expiresAt,
           // Allowed, but flagged (e.g. SHA-1 binding signature).
           securityWarning: keyInfo.securityWarning,
         });
