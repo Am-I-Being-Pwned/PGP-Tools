@@ -9,18 +9,19 @@ import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { KeyCardModel } from "./KeyCard";
 import type { KeyDetailsTarget } from "./KeyDetailsPage";
 import { publicKeyDerToPem } from "../../lib/crx/types";
+import { downloadPublicKeysBundle } from "../../lib/keys/export-bundle";
 import { crxKeyExporter, pgpKeyExporter } from "../../lib/keys/exporters";
 import { formatAlgorithm, formatFingerprint } from "../../lib/utils/formatting";
 import { parseUserId } from "../../lib/utils/key-naming";
 import { INPUT_CLASS } from "../../lib/utils/styles";
-import { ExportAllKeysDialog } from "../settings/ExportAllKeysDialog";
 import { ConfirmPage } from "../shared/ConfirmPage";
 import { RenamePage } from "../shared/RenamePage";
 import { useNavStack } from "../shared/useNavStack";
 import { ContactCard } from "./ContactCard";
 import { ContactDropZone } from "./ContactDropZone";
+import { ExportKeysPage } from "./ExportKeysPage";
 import { GenerateKeyPage } from "./GenerateKeyPage";
-import { ImportKeyDialog } from "./ImportKeyDialog";
+import { ImportKeyPage } from "./ImportKeyPage";
 import { KeyCard } from "./KeyCard";
 import { KeyDetailsPage } from "./KeyDetailsPage";
 import { SelectionBar } from "./SelectionBar";
@@ -79,9 +80,11 @@ type DeleteTarget =
  *  drill in, pop to go back. New subpages are one union member away. */
 type KeysRoute =
   | { page: "generate" }
+  | { page: "import"; initialArmored?: string | null }
   | { page: "details"; target: KeyDetailsTarget }
   | { page: "confirm-delete"; target: DeleteTarget }
   | { page: "bulk-delete" }
+  | { page: "bulk-export" }
   | { page: "rename"; target: RenameTarget };
 
 /** Composite selection id, namespaced so PGP keys, CRX keys, and contacts can
@@ -115,22 +118,17 @@ export function KeysView({
   onRenameKey,
   onRenameCrxKey,
 }: KeysViewProps) {
-  const [showImport, setShowImport] = useState(false);
-  const [importInitialArmored, setImportInitialArmored] = useState<
-    string | null
-  >(null);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [showBulkExport, setShowBulkExport] = useState(false);
   const nav = useNavStack<KeysRoute>();
+  const navPush = nav.push;
 
   useEffect(() => {
     if (autoOpenImport) {
-      setImportInitialArmored(autoOpenImport);
-      setShowImport(true);
+      navPush({ page: "import", initialArmored: autoOpenImport });
       onAutoOpenImportConsumed?.();
     }
-  }, [autoOpenImport, onAutoOpenImportConsumed]);
+  }, [autoOpenImport, onAutoOpenImportConsumed, navPush]);
 
   // Leaving nothing selected exits selection mode.
   useEffect(() => {
@@ -166,6 +164,56 @@ export function KeysView({
   const selectedContacts = contacts.filter((c) =>
     selected.has(selId("contact", c.keyId)),
   );
+
+  // Every selectable card's id (contacts only when the vault is unlocked, so
+  // "select all" matches what's actually on screen).
+  const selectableIds = [
+    ...myKeys.map((k) => selId("pgp", k.keyId)),
+    ...shownCrxKeys.map((k) => selId("crx", k.extensionId)),
+    ...(contactsLocked ? [] : contacts.map((c) => selId("contact", c.keyId))),
+  ];
+  const allSelected =
+    selectableIds.length > 0 && selectableIds.every((id) => selected.has(id));
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      exitSelection();
+    } else {
+      setSelectionMode(true);
+      setSelected(new Set(selectableIds));
+    }
+  };
+
+  // After a bulk action we deselect, but the toast offers "Reselect" to bring
+  // the same set back (export is non-destructive, so every id is still valid).
+  const afterExport = (count: number, unsafe: boolean) => {
+    const prev = new Set(selected);
+    exitSelection();
+    toast.success(
+      `Exported ${count} key${count === 1 ? "" : "s"}${
+        unsafe ? " (private keys UNENCRYPTED)" : ""
+      }`,
+      {
+        action: {
+          label: "Reselect",
+          onClick: () => {
+            setSelected(prev);
+            setSelectionMode(true);
+          },
+        },
+      },
+    );
+  };
+
+  // Export the selection. A contacts-only selection has no private key to
+  // unlock, so skip the unlock/passphrase page and just download the public
+  // keys; anything with a private key (PGP or CRX) opens the page.
+  const bulkExport = () => {
+    if (selectedMyKeys.length === 0 && selectedCrxKeys.length === 0) {
+      afterExport(downloadPublicKeysBundle(selectedContacts), false);
+      return;
+    }
+    nav.push({ page: "bulk-export" });
+  };
 
   const bulkDelete = async () => {
     for (const k of selectedMyKeys) await onDeleteKey(k.keyId);
@@ -246,7 +294,9 @@ export function KeysView({
       <SelectionBar
         open={selectionMode}
         count={selected.size}
-        onExport={() => setShowBulkExport(true)}
+        allSelected={allSelected}
+        onToggleAll={toggleSelectAll}
+        onExport={bulkExport}
         onDelete={() => nav.push({ page: "bulk-delete" })}
         onExit={exitSelection}
       />
@@ -291,7 +341,7 @@ export function KeysView({
             variant="outline"
             size="sm"
             className="dark:bg-border/70 dark:hover:bg-border flex-1"
-            onClick={() => setShowImport(true)}
+            onClick={() => nav.push({ page: "import" })}
           >
             Import Key
           </Button>
@@ -335,6 +385,20 @@ export function KeysView({
                 cacheKey={cacheKeys}
                 crxSigningEnabled={crxSigningEnabled}
                 addCrxKey={onAddCrxKey}
+              />
+            );
+          }
+          if (route.page === "import") {
+            return (
+              <ImportKeyPage
+                key={entry.id}
+                onClose={nav.pop}
+                onImportPrivate={onAddKey}
+                onImportPublic={onAddContact}
+                reusePasskeyCredentialId={primaryPasskeyCredentialId}
+                initialArmored={route.initialArmored}
+                crxSigningEnabled={crxSigningEnabled}
+                onImportCrx={onAddCrxKey}
               />
             );
           }
@@ -426,6 +490,22 @@ export function KeysView({
               </ConfirmPage>
             );
           }
+          if (route.page === "bulk-export") {
+            return (
+              <ExportKeysPage
+                key={entry.id}
+                onClose={nav.pop}
+                myKeys={selectedMyKeys}
+                contacts={selectedContacts}
+                crxKeys={selectedCrxKeys}
+                isUnlocked={isUnlocked}
+                getKeyHandle={getKeyHandle}
+                onUnlockWithPassword={onUnlockWithPassword}
+                onUnlockWithPasskey={onUnlockWithPasskey}
+                onExported={afterExport}
+              />
+            );
+          }
           const target = route.target;
           return (
             <ConfirmPage
@@ -458,32 +538,6 @@ export function KeysView({
             </ConfirmPage>
           );
         })}
-
-        <ExportAllKeysDialog
-          open={showBulkExport}
-          onClose={() => setShowBulkExport(false)}
-          myKeys={selectedMyKeys}
-          contacts={selectedContacts}
-          crxKeys={selectedCrxKeys}
-          isUnlocked={isUnlocked}
-          getKeyHandle={getKeyHandle}
-          onUnlockWithPassword={onUnlockWithPassword}
-          onUnlockWithPasskey={onUnlockWithPasskey}
-        />
-
-        <ImportKeyDialog
-          open={showImport}
-          onClose={() => {
-            setShowImport(false);
-            setImportInitialArmored(null);
-          }}
-          onImportPrivate={onAddKey}
-          onImportPublic={onAddContact}
-          reusePasskeyCredentialId={primaryPasskeyCredentialId}
-          initialArmored={importInitialArmored}
-          crxSigningEnabled={crxSigningEnabled}
-          onImportCrx={onAddCrxKey}
-        />
       </div>
     </div>
   );

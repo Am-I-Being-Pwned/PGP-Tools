@@ -184,7 +184,7 @@ export async function importContact(
   await expect(panel.getByText(/Added \d+ contact/).first()).toBeVisible();
 }
 
-/** Import an armored, unprotected private key via the Import Key dialog,
+/** Import an armored, unprotected private key via the Import Key page,
  *  re-protecting it with `password`. Returns once the key card appears. */
 export async function importPrivateKey(
   panel: Page,
@@ -202,9 +202,9 @@ export async function importPrivateKey(
   await panel.locator('input[name="protection"]').nth(1).check();
   await panel.getByLabel("Password", { exact: true }).fill(password);
   await panel.getByLabel("Confirm password").fill(password);
-  // `exact` so it doesn't also match the "Import Key" button behind the modal.
+  // `exact` so it doesn't also match the "Import Key" button behind the page.
   await panel.getByRole("button", { name: "Import", exact: true }).click();
-  // Success closes the dialog (the paste textarea disappears); on error it
+  // Success closes the page (the paste textarea disappears); on error it
   // stays open. Then confirm the key landed on the Keys tab.
   await expect(
     panel.getByPlaceholder("Paste a key here, or browse for a file..."),

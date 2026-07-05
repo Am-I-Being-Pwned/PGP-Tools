@@ -100,27 +100,54 @@ test.describe("bulk selection of contacts", () => {
     await expect(bar).toBeHidden();
   });
 
-  test("bulk export of a contacts-only selection opens the Export All Keys dialog", async ({
+  test("bulk export of a contacts-only selection downloads immediately", async ({
     panel,
   }) => {
     await seedVault(panel, PASSWORD, [ALICE.publicKey, BOB.publicKey]);
 
-    // Select two contacts only (no private keys) -> export needs no unlock.
+    // Select two contacts only (no private keys) -> nothing to unlock.
     await startSelectViaMenu(panel, ALICE.name);
     await contactCard(panel, BOB.name).click();
     const bar = selectionBar(panel);
     await expect(bar.getByText("2 selected")).toBeVisible();
 
-    await bar.getByRole("button", { name: "Export" }).click();
-
-    // The existing bulk-export dialog opens, scoped to the selection. With
-    // contacts only, it lands straight on the export step: an "Export"
-    // button (no passphrase, no unlock) is present.
-    const dialog = panel.getByRole("dialog", { name: "Export All Keys" });
-    await expect(dialog).toBeVisible();
+    // Export downloads the .asc straight away -- no unlock/passphrase page.
+    const [download] = await Promise.all([
+      panel.waitForEvent("download"),
+      bar.getByRole("button", { name: "Export" }).click(),
+    ]);
+    expect(download.suggestedFilename()).toMatch(/^pgp-tools-keys-.*\.asc$/);
     await expect(
-      dialog.getByRole("button", { name: "Export", exact: true }),
-    ).toBeVisible();
+      panel.getByRole("region", { name: "Export keys" }),
+    ).toHaveCount(0);
+
+    // Exporting deselects; the toast's "Reselect" brings the same set back.
+    await expect(bar).toBeHidden();
+    await panel.getByRole("button", { name: "Reselect" }).click();
+    await expect(selectionBar(panel).getByText("2 selected")).toBeVisible();
+  });
+
+  test("select all selects every card, then toggles back off", async ({
+    panel,
+  }) => {
+    // Onboarding creates one private key; plus three contacts = four selectable.
+    await seedVault(panel, PASSWORD, [
+      ALICE.publicKey,
+      BOB.publicKey,
+      CAROL.publicKey,
+    ]);
+
+    await startSelectViaMenu(panel, ALICE.name);
+    const bar = selectionBar(panel);
+    await expect(bar.getByText("1 selected")).toBeVisible();
+
+    // "Select all" grabs the private key + every contact.
+    await bar.getByRole("button", { name: "Select all" }).click();
+    await expect(bar.getByText("4 selected")).toBeVisible();
+
+    // The control flips to "Deselect all"; clicking it clears + exits.
+    await bar.getByRole("button", { name: "Deselect all" }).click();
+    await expect(bar).toBeHidden();
   });
 
   test("enter selection via long-press on a card", async ({ panel }) => {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { DownloadIcon, Trash2Icon, XIcon } from "lucide-react";
+import { CheckCheckIcon, DownloadIcon, Trash2Icon, XIcon } from "lucide-react";
 
 import { cn } from "@amibeingpwned/ui";
 
@@ -10,6 +10,10 @@ interface SelectionBarProps {
   /** Drives the enter/exit animation; the bar stays mounted until exit ends. */
   open: boolean;
   count: number;
+  /** Whether every selectable card is currently selected. */
+  allSelected: boolean;
+  /** Select every card, or (when all are selected) clear the selection. */
+  onToggleAll: () => void;
   onExport: () => void;
   onDelete: () => void;
   onExit: () => void;
@@ -25,6 +29,8 @@ interface SelectionBarProps {
 export function SelectionBar({
   open,
   count,
+  allSelected,
+  onToggleAll,
   onExport,
   onDelete,
   onExit,
@@ -85,6 +91,20 @@ export function SelectionBar({
         <span className="px-1.5 text-sm font-medium whitespace-nowrap tabular-nums">
           {shownCount} selected
         </span>
+        <button
+          type="button"
+          onClick={onToggleAll}
+          aria-label={allSelected ? "Deselect all" : "Select all"}
+          title={allSelected ? "Deselect all" : "Select all"}
+          className={cn(
+            "rounded-full p-2 transition-colors",
+            allSelected
+              ? "text-green-500 hover:bg-green-500/10"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted/60",
+          )}
+        >
+          <CheckCheckIcon className="h-4 w-4" />
+        </button>
         <button
           type="button"
           onClick={onExport}

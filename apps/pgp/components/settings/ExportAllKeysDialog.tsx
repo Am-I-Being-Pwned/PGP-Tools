@@ -13,6 +13,7 @@ import {
   openCrxKey,
   resealCrxKeyUnderPassword,
 } from "../../lib/crx/operations";
+import { backupFileName } from "../../lib/keys/export-bundle";
 import {
   encryptKeyForExportWithHandle,
   getKeyArmored,
@@ -24,9 +25,8 @@ import { Dialog } from "../shared/Dialog";
 
 type Step = "unlock" | "export";
 
-interface ExportAllKeysDialogProps {
-  open: boolean;
-  onClose: () => void;
+/** The keys/contacts + vault callbacks the export flow operates on. */
+export interface ExportKeysProps {
   myKeys: ProtectedKeyBlob[];
   contacts: PublicContactKey[];
   crxKeys?: CrxSigningKeyBlob[];
@@ -39,33 +39,33 @@ interface ExportAllKeysDialogProps {
   onUnlockWithPasskey: (
     blob: ProtectedKeyBlob,
   ) => Promise<boolean | "cancelled">;
+  /** Called on a successful export in place of the default success toast, so a
+   *  caller can react (e.g. deselect and offer "Reselect"). Omitted ⇒ default
+   *  toast. `unsafe` is true for the plaintext (unencrypted) path. */
+  onExported?: (count: number, unsafe: boolean) => void;
 }
 
-function backupFileName(): string {
-  return `pgp-tools-keys-${new Date().toISOString().slice(0, 10)}.asc`;
+interface ExportAllKeysDialogProps extends ExportKeysProps {
+  open: boolean;
+  onClose: () => void;
 }
 
 /**
- * Bulk export of EVERYTHING: every private key, every CRX signing key, and
- * every contact's public key, in one armored `.asc` file.
+ * The whole bulk-export flow -- state, WASM-handle lifecycle, and export
+ * actions -- as a hook so it can be rendered inside either shell: a modal
+ * {@link Dialog} (Settings) or a slide-over page ({@link ExportKeysPage}, the
+ * selection island). The body markup lives in {@link ExportKeysBody}; both read
+ * from the object this returns.
  *
- * Exporting any private key needs its decrypted WASM handle, so every locked
- * key -- PGP or CRX -- must be unlocked first (password / passkey). This is
- * the same requirement as the per-key "Copy private key" flow, applied to
- * the whole set, and it is what makes the backup portable: keys are unlocked
- * and then re-sealed under the single export passphrase you choose, so a
- * passkey-bound key (which only works on its original authenticator) becomes
- * a password-protected blob that restores on any device.
- *
- * Output format: standard ASCII-armored OpenPGP. PGP private keys are
- * `PGP PRIVATE KEY BLOCK`s (OpenPGP S2K -- imports into GnuPG). Contacts are
- * `PGP PUBLIC KEY BLOCK`s. CRX keys are raw RSA, so they can't be OpenPGP
- * armor; they go in labelled `PGP TOOLS CRX SIGNING KEY` blocks that other
- * tools ignore. CRX keys are only included in the passphrase-encrypted export
- * (the plaintext escape hatch stays PGP-only -- a raw RSA key isn't GnuPG
- * interoperable, and shipping one unencrypted has no upside).
+ * Bulk export of EVERYTHING passed in: every private key, every CRX signing
+ * key, and every contact's public key, in one armored `.asc` file. Exporting a
+ * private key needs its decrypted WASM handle, so every locked key -- PGP or
+ * CRX -- must be unlocked first (password / passkey), then re-sealed under the
+ * single export passphrase, which is what makes the backup portable across
+ * devices. Output is standard ASCII-armored OpenPGP; CRX keys go in labelled
+ * `PGP TOOLS CRX SIGNING KEY` blocks and only in the passphrase-encrypted path.
  */
-export function ExportAllKeysDialog({
+export function useExportKeysFlow({
   open,
   onClose,
   myKeys,
@@ -75,6 +75,7 @@ export function ExportAllKeysDialog({
   getKeyHandle,
   onUnlockWithPassword,
   onUnlockWithPasskey,
+  onExported,
 }: ExportAllKeysDialogProps) {
   const [step, setStep] = useState<Step>("unlock");
   const [passwords, setPasswords] = useState<Record<string, string>>({});
@@ -83,15 +84,15 @@ export function ExportAllKeysDialog({
   // Synchronous in-flight guard: `unlockingId` state lands a render late, so
   // Enter-spam during a multi-second Argon2id derive could start a second
   // unlock — for CRX keys that opens two WASM handles and leaks the first
-  // (only the last lands in `crxHandles`). Same fix as CrxExportPrivateDialog.
+  // (only the last lands in `crxHandles`).
   const unlockInFlight = useRef(false);
 
-  // CRX keys unlock into WASM handles held here for the life of the dialog;
+  // CRX keys unlock into WASM handles held here for the life of the flow;
   // dropped on close. Keyed by extensionId.
   const [crxHandles, setCrxHandles] = useState<Record<string, number>>({});
   // Mirror of `crxHandles` for the unmount cleanup below: an effect with []
   // deps captures the initial (empty) state, so it must read from a ref to
-  // see the handles actually opened during the dialog's life.
+  // see the handles actually opened during the flow's life.
   const crxHandlesRef = useRef<Record<string, number>>({});
   const [crxPasswords, setCrxPasswords] = useState<Record<string, string>>({});
   const [crxErrors, setCrxErrors] = useState<Record<string, string>>({});
@@ -115,12 +116,13 @@ export function ExportAllKeysDialog({
   const needsPassphrase = unlockedKeys.length > 0 || unlockedCrxKeys.length > 0;
   // The plaintext escape hatch only makes sense for GnuPG-interop PGP keys.
   const hasPgpPrivate = unlockedKeys.length > 0;
+  const crxCount = allCrxKeys.length;
 
   // On open, land on the unlock step only if something is still locked.
   useEffect(() => {
     if (open) setStep(allUnlocked ? "export" : "unlock");
-    // Intentionally keyed on `open` only: once inside the dialog the user
-    // drives the step; unlocking the last key advances it (below).
+    // Intentionally keyed on `open` only: once inside the flow the user drives
+    // the step; unlocking the last key advances it (below).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -134,11 +136,11 @@ export function ExportAllKeysDialog({
     crxHandlesRef.current = crxHandles;
   }, [crxHandles]);
 
-  // Safety net: if the dialog unmounts without going through resetAndClose
-  // (e.g. a pending op switches tabs, or the vault locks and swaps out the
-  // whole tree), still drop any opened CRX handles so no signing key lingers
-  // decrypted in WASM past "Lock". dropCrxKey on an already-dropped handle is
-  // a harmless no-op, so this can't double-free.
+  // Safety net: if the flow unmounts without going through resetAndClose (e.g. a
+  // pending op switches tabs, or the vault locks and swaps out the whole tree),
+  // still drop any opened CRX handles so no signing key lingers decrypted in
+  // WASM past "Lock". dropCrxKey on an already-dropped handle is a harmless
+  // no-op, so this can't double-free.
   useEffect(() => {
     return () => {
       for (const handle of Object.values(crxHandlesRef.current)) {
@@ -298,7 +300,8 @@ export function ExportAllKeysDialog({
           return serializeCrxKeyBlocks([portable]);
         },
       );
-      toast.success(`Exported ${count} key${count === 1 ? "" : "s"}`);
+      if (onExported) onExported(count, false);
+      else toast.success(`Exported ${count} key${count === 1 ? "" : "s"}`);
       resetAndClose();
     } catch (e) {
       // No console.* here (SECURITY.md §9): the message may carry unlock /
@@ -318,9 +321,11 @@ export function ExportAllKeysDialog({
     try {
       // Plaintext path is PGP-only; CRX keys are not written unencrypted.
       const count = await buildAndDownload(getKeyArmored, null);
-      toast.success(
-        `Exported ${count} key${count === 1 ? "" : "s"} (private keys UNENCRYPTED)`,
-      );
+      if (onExported) onExported(count, true);
+      else
+        toast.success(
+          `Exported ${count} key${count === 1 ? "" : "s"} (private keys UNENCRYPTED)`,
+        );
       resetAndClose();
     } catch (e) {
       setError(
@@ -331,313 +336,399 @@ export function ExportAllKeysDialog({
     }
   };
 
-  const crxCount = allCrxKeys.length;
+  return {
+    step,
+    setStep,
+    myKeys,
+    contacts,
+    allCrxKeys,
+    isUnlocked,
+    unlockingId,
+    passwords,
+    setPasswords,
+    unlockErrors,
+    crxHandles,
+    crxPasswords,
+    setCrxPasswords,
+    crxErrors,
+    passphrase,
+    setPassphrase,
+    confirmPassphrase,
+    setConfirmPassphrase,
+    unsafeConfirm,
+    setUnsafeConfirm,
+    error,
+    exporting,
+    lockedKeys,
+    unlockedKeys,
+    lockedCrxKeys,
+    unlockedCrxKeys,
+    needsPassphrase,
+    hasPgpPrivate,
+    crxCount,
+    resetAndClose,
+    handleUnlockPassword,
+    handleUnlockPasskey,
+    handleUnlockCrxPassword,
+    handleUnlockCrxPasskey,
+    handleEncryptedExport,
+    handleUnsafeExport,
+  };
+}
 
-  return (
-    <Dialog open={open} onClose={resetAndClose} title="Export All Keys">
-      {step === "unlock" ? (
-        <div className="space-y-3">
-          <p className="text-muted-foreground text-xs">
-            Exporting a private key requires unlocking it first. Unlock the keys
-            below to include them in the backup.
-          </p>
+export type ExportKeysFlow = ReturnType<typeof useExportKeysFlow>;
 
-          <div className="space-y-2">
-            {myKeys.map((blob) => {
-              const unlocked = isUnlocked(blob.keyId);
-              const name = blob.userIds[0] ?? blob.keyId.slice(-16);
-              const isPasskey = blob.protection.method === "passkey";
-              const busy = unlockingId === blob.keyId;
-              return (
-                <div
-                  key={blob.keyId}
-                  className="border-border rounded-md border p-2"
+/** The two-step export body, shell-agnostic. Reads everything from `f`. */
+export function ExportKeysBody({ f }: { f: ExportKeysFlow }) {
+  const {
+    step,
+    setStep,
+    myKeys,
+    contacts,
+    allCrxKeys,
+    isUnlocked,
+    unlockingId,
+    passwords,
+    setPasswords,
+    unlockErrors,
+    crxHandles,
+    crxPasswords,
+    setCrxPasswords,
+    crxErrors,
+    passphrase,
+    setPassphrase,
+    confirmPassphrase,
+    setConfirmPassphrase,
+    unsafeConfirm,
+    setUnsafeConfirm,
+    error,
+    exporting,
+    lockedKeys,
+    unlockedKeys,
+    lockedCrxKeys,
+    unlockedCrxKeys,
+    needsPassphrase,
+    hasPgpPrivate,
+    crxCount,
+    handleUnlockPassword,
+    handleUnlockPasskey,
+    handleUnlockCrxPassword,
+    handleUnlockCrxPasskey,
+    handleEncryptedExport,
+    handleUnsafeExport,
+  } = f;
+
+  return step === "unlock" ? (
+    <div className="space-y-3">
+      <p className="text-muted-foreground text-xs">
+        Exporting a private key requires unlocking it first. Unlock the keys
+        below to include them in the backup.
+      </p>
+
+      <div className="space-y-2">
+        {myKeys.map((blob) => {
+          const unlocked = isUnlocked(blob.keyId);
+          const name = blob.userIds[0] ?? blob.keyId.slice(-16);
+          const isPasskey = blob.protection.method === "passkey";
+          const busy = unlockingId === blob.keyId;
+          return (
+            <div
+              key={blob.keyId}
+              className="border-border rounded-md border p-2"
+            >
+              <div className="flex items-center gap-2">
+                <span
+                  className={
+                    unlocked ? "text-green-400" : "text-muted-foreground"
+                  }
                 >
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={
-                        unlocked ? "text-green-400" : "text-muted-foreground"
-                      }
-                    >
-                      {unlocked ? (
-                        <CheckIcon className="h-4 w-4" />
-                      ) : (
-                        <LockIcon className="h-4 w-4" />
-                      )}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-sm">
-                      {name}
-                    </span>
-                    {!unlocked && isPasskey && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={busy}
-                        onClick={() => void handleUnlockPasskey(blob)}
-                      >
-                        {busy ? "..." : "Unlock"}
-                      </Button>
-                    )}
-                  </div>
-
-                  {!unlocked && !isPasskey && (
-                    <div className="mt-2 flex items-stretch gap-2">
-                      <input
-                        type="password"
-                        autoComplete="current-password"
-                        placeholder="Key password"
-                        value={passwords[blob.keyId] ?? ""}
-                        onChange={(e) =>
-                          setPasswords((p) => ({
-                            ...p,
-                            [blob.keyId]: e.target.value,
-                          }))
-                        }
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter")
-                            void handleUnlockPassword(blob);
-                        }}
-                        className={`${INPUT_CLASS} h-9 flex-1 py-0`}
-                      />
-                      <Button
-                        size="sm"
-                        className="h-9 shrink-0"
-                        disabled={busy || !(passwords[blob.keyId] ?? "")}
-                        onClick={() => void handleUnlockPassword(blob)}
-                      >
-                        {busy ? "..." : "Unlock"}
-                      </Button>
-                    </div>
+                  {unlocked ? (
+                    <CheckIcon className="h-4 w-4" />
+                  ) : (
+                    <LockIcon className="h-4 w-4" />
                   )}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-sm">{name}</span>
+                {!unlocked && isPasskey && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() => void handleUnlockPasskey(blob)}
+                  >
+                    {busy ? "..." : "Unlock"}
+                  </Button>
+                )}
+              </div>
 
-                  {unlockErrors[blob.keyId] && (
-                    <p className="text-destructive mt-1 text-xs">
-                      {unlockErrors[blob.keyId]}
-                    </p>
-                  )}
-                </div>
-              );
-            })}
-
-            {allCrxKeys.map((blob) => {
-              const unlocked = blob.extensionId in crxHandles;
-              const name = blob.label ?? blob.extensionId.slice(0, 16);
-              const isPasskey = blob.protection.method === "passkey";
-              const busy = unlockingId === blob.extensionId;
-              return (
-                <div
-                  key={blob.extensionId}
-                  className="border-border rounded-md border p-2"
-                >
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={
-                        unlocked ? "text-green-400" : "text-muted-foreground"
-                      }
-                    >
-                      {unlocked ? (
-                        <CheckIcon className="h-4 w-4" />
-                      ) : (
-                        <LockIcon className="h-4 w-4" />
-                      )}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-sm">
-                      {name}
-                      <span className="text-muted-foreground ml-1.5 text-[11px]">
-                        CRX
-                      </span>
-                    </span>
-                    {!unlocked && isPasskey && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={busy}
-                        onClick={() => void handleUnlockCrxPasskey(blob)}
-                      >
-                        {busy ? "..." : "Unlock"}
-                      </Button>
-                    )}
-                  </div>
-
-                  {!unlocked && !isPasskey && (
-                    <div className="mt-2 flex items-stretch gap-2">
-                      <input
-                        type="password"
-                        autoComplete="current-password"
-                        placeholder="Key password"
-                        value={crxPasswords[blob.extensionId] ?? ""}
-                        onChange={(e) =>
-                          setCrxPasswords((p) => ({
-                            ...p,
-                            [blob.extensionId]: e.target.value,
-                          }))
-                        }
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter")
-                            void handleUnlockCrxPassword(blob);
-                        }}
-                        className={`${INPUT_CLASS} h-9 flex-1 py-0`}
-                      />
-                      <Button
-                        size="sm"
-                        className="h-9 shrink-0"
-                        disabled={
-                          busy || !(crxPasswords[blob.extensionId] ?? "")
-                        }
-                        onClick={() => void handleUnlockCrxPassword(blob)}
-                      >
-                        {busy ? "..." : "Unlock"}
-                      </Button>
-                    </div>
-                  )}
-
-                  {crxErrors[blob.extensionId] && (
-                    <p className="text-destructive mt-1 text-xs">
-                      {crxErrors[blob.extensionId]}
-                    </p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {contacts.length > 0 && (
-            <p className="text-muted-foreground text-xs">
-              {contacts.length} contact{contacts.length === 1 ? "" : "s"} will
-              also be included (public keys, no unlock needed).
-            </p>
-          )}
-
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => setStep("export")}
-          >
-            {myKeys.length === 0 && crxCount === 0
-              ? "Continue"
-              : "Skip locked keys and continue"}
-          </Button>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          <p className="text-muted-foreground text-xs">
-            Downloads one <span className="font-mono">.asc</span> file (standard
-            ASCII-armored OpenPGP): your {unlockedKeys.length} unlocked private
-            key{unlockedKeys.length === 1 ? "" : "s"} as{" "}
-            <span className="font-mono">PGP PRIVATE KEY BLOCK</span>s and your{" "}
-            {contacts.length} contact{contacts.length === 1 ? "" : "s"} as{" "}
-            <span className="font-mono">PGP PUBLIC KEY BLOCK</span>s.
-          </p>
-
-          {unlockedCrxKeys.length > 0 && (
-            <p className="text-muted-foreground text-xs">
-              Plus {unlockedCrxKeys.length} CRX signing key
-              {unlockedCrxKeys.length === 1 ? "" : "s"}, re-encrypted under this
-              passphrase so they restore on any device.
-            </p>
-          )}
-
-          {lockedKeys.length + lockedCrxKeys.length > 0 && (
-            <p className="rounded border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-400">
-              {lockedKeys.length + lockedCrxKeys.length} key
-              {lockedKeys.length + lockedCrxKeys.length === 1 ? "" : "s"} still
-              locked and will be left out.{" "}
-              <button
-                type="button"
-                className="underline"
-                onClick={() => setStep("unlock")}
-              >
-                Go back to unlock
-              </button>
-              .
-            </p>
-          )}
-
-          {needsPassphrase ? (
-            <>
-              <p className="text-muted-foreground text-xs">
-                Set a passphrase to encrypt the exported private keys (OpenPGP
-                S2K -- imports into GnuPG and other tools). Anyone with this
-                passphrase and the file can decrypt your messages and sign as
-                you.
-              </p>
-              <input
-                type="password"
-                autoComplete="new-password"
-                placeholder="Passphrase (min 8 characters)"
-                value={passphrase}
-                onChange={(e) => setPassphrase(e.target.value)}
-                className={INPUT_CLASS}
-                autoFocus
-              />
-              <input
-                type="password"
-                autoComplete="new-password"
-                placeholder="Confirm passphrase"
-                value={confirmPassphrase}
-                onChange={(e) => setConfirmPassphrase(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") void handleEncryptedExport();
-                }}
-                className={INPUT_CLASS}
-              />
-              {error && <p className="text-destructive text-xs">{error}</p>}
-              <Button
-                className="w-full"
-                onClick={() => void handleEncryptedExport()}
-                disabled={exporting || !passphrase}
-              >
-                {exporting ? "Exporting..." : "Export with passphrase"}
-              </Button>
-
-              {hasPgpPrivate && (
-                <div className="border-border space-y-2 border-t pt-3">
-                  <p className="text-destructive text-[11px]">
-                    Plaintext export. Anyone who reads the downloaded file gets
-                    full control of every PGP key in it.
-                    {crxCount > 0
-                      ? " CRX signing keys are left out of a plaintext export -- use a passphrase to include them."
-                      : ""}{" "}
-                    Type <span className="font-mono font-bold">EXPORT</span> to
-                    confirm:
-                  </p>
+              {!unlocked && !isPasskey && (
+                <div className="mt-2 flex items-stretch gap-2">
                   <input
-                    type="text"
-                    autoComplete="off"
-                    spellCheck={false}
-                    value={unsafeConfirm}
-                    onChange={(e) => setUnsafeConfirm(e.target.value)}
-                    placeholder="EXPORT"
-                    className={INPUT_CLASS}
+                    type="password"
+                    autoComplete="current-password"
+                    placeholder="Key password"
+                    value={passwords[blob.keyId] ?? ""}
+                    onChange={(e) =>
+                      setPasswords((p) => ({
+                        ...p,
+                        [blob.keyId]: e.target.value,
+                      }))
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") void handleUnlockPassword(blob);
+                    }}
+                    className={`${INPUT_CLASS} h-9 flex-1 py-0`}
                   />
                   <Button
-                    variant="destructive"
                     size="sm"
-                    className="w-full"
-                    disabled={exporting || unsafeConfirm !== "EXPORT"}
-                    onClick={() => void handleUnsafeExport()}
+                    className="h-9 shrink-0"
+                    disabled={busy || !(passwords[blob.keyId] ?? "")}
+                    onClick={() => void handleUnlockPassword(blob)}
                   >
-                    Export without passphrase (unsafe)
+                    {busy ? "..." : "Unlock"}
                   </Button>
                 </div>
               )}
-            </>
-          ) : contacts.length > 0 ? (
-            <>
-              {error && <p className="text-destructive text-xs">{error}</p>}
-              <Button
-                className="w-full"
-                onClick={() => void handleEncryptedExport()}
-                disabled={exporting}
-              >
-                {exporting ? "Exporting..." : "Export"}
-              </Button>
-            </>
-          ) : (
-            <p className="text-muted-foreground text-xs">Nothing to export.</p>
-          )}
-        </div>
+
+              {unlockErrors[blob.keyId] && (
+                <p className="text-destructive mt-1 text-xs">
+                  {unlockErrors[blob.keyId]}
+                </p>
+              )}
+            </div>
+          );
+        })}
+
+        {allCrxKeys.map((blob) => {
+          const unlocked = blob.extensionId in crxHandles;
+          const name = blob.label ?? blob.extensionId.slice(0, 16);
+          const isPasskey = blob.protection.method === "passkey";
+          const busy = unlockingId === blob.extensionId;
+          return (
+            <div
+              key={blob.extensionId}
+              className="border-border rounded-md border p-2"
+            >
+              <div className="flex items-center gap-2">
+                <span
+                  className={
+                    unlocked ? "text-green-400" : "text-muted-foreground"
+                  }
+                >
+                  {unlocked ? (
+                    <CheckIcon className="h-4 w-4" />
+                  ) : (
+                    <LockIcon className="h-4 w-4" />
+                  )}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-sm">
+                  {name}
+                  <span className="text-muted-foreground ml-1.5 text-[11px]">
+                    CRX
+                  </span>
+                </span>
+                {!unlocked && isPasskey && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() => void handleUnlockCrxPasskey(blob)}
+                  >
+                    {busy ? "..." : "Unlock"}
+                  </Button>
+                )}
+              </div>
+
+              {!unlocked && !isPasskey && (
+                <div className="mt-2 flex items-stretch gap-2">
+                  <input
+                    type="password"
+                    autoComplete="current-password"
+                    placeholder="Key password"
+                    value={crxPasswords[blob.extensionId] ?? ""}
+                    onChange={(e) =>
+                      setCrxPasswords((p) => ({
+                        ...p,
+                        [blob.extensionId]: e.target.value,
+                      }))
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") void handleUnlockCrxPassword(blob);
+                    }}
+                    className={`${INPUT_CLASS} h-9 flex-1 py-0`}
+                  />
+                  <Button
+                    size="sm"
+                    className="h-9 shrink-0"
+                    disabled={busy || !(crxPasswords[blob.extensionId] ?? "")}
+                    onClick={() => void handleUnlockCrxPassword(blob)}
+                  >
+                    {busy ? "..." : "Unlock"}
+                  </Button>
+                </div>
+              )}
+
+              {crxErrors[blob.extensionId] && (
+                <p className="text-destructive mt-1 text-xs">
+                  {crxErrors[blob.extensionId]}
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {contacts.length > 0 && (
+        <p className="text-muted-foreground text-xs">
+          {contacts.length} contact{contacts.length === 1 ? "" : "s"} will also
+          be included (public keys, no unlock needed).
+        </p>
       )}
+
+      <Button
+        variant="outline"
+        className="w-full"
+        onClick={() => setStep("export")}
+      >
+        {myKeys.length === 0 && crxCount === 0
+          ? "Continue"
+          : "Skip locked keys and continue"}
+      </Button>
+    </div>
+  ) : (
+    <div className="space-y-3">
+      <p className="text-muted-foreground text-xs">
+        Downloads one <span className="font-mono">.asc</span> file (standard
+        ASCII-armored OpenPGP): your {unlockedKeys.length} unlocked private key
+        {unlockedKeys.length === 1 ? "" : "s"} as{" "}
+        <span className="font-mono">PGP PRIVATE KEY BLOCK</span>s and your{" "}
+        {contacts.length} contact{contacts.length === 1 ? "" : "s"} as{" "}
+        <span className="font-mono">PGP PUBLIC KEY BLOCK</span>s.
+      </p>
+
+      {unlockedCrxKeys.length > 0 && (
+        <p className="text-muted-foreground text-xs">
+          Plus {unlockedCrxKeys.length} CRX signing key
+          {unlockedCrxKeys.length === 1 ? "" : "s"}, re-encrypted under this
+          passphrase so they restore on any device.
+        </p>
+      )}
+
+      {lockedKeys.length + lockedCrxKeys.length > 0 && (
+        <p className="rounded border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-400">
+          {lockedKeys.length + lockedCrxKeys.length} key
+          {lockedKeys.length + lockedCrxKeys.length === 1 ? "" : "s"} still
+          locked and will be left out.{" "}
+          <button
+            type="button"
+            className="underline"
+            onClick={() => setStep("unlock")}
+          >
+            Go back to unlock
+          </button>
+          .
+        </p>
+      )}
+
+      {needsPassphrase ? (
+        <>
+          <p className="text-muted-foreground text-xs">
+            Set a passphrase to encrypt the exported private keys (OpenPGP S2K
+            -- imports into GnuPG and other tools). Anyone with this passphrase
+            and the file can decrypt your messages and sign as you.
+          </p>
+          <input
+            type="password"
+            autoComplete="new-password"
+            placeholder="Passphrase (min 8 characters)"
+            value={passphrase}
+            onChange={(e) => setPassphrase(e.target.value)}
+            className={INPUT_CLASS}
+            autoFocus
+          />
+          <input
+            type="password"
+            autoComplete="new-password"
+            placeholder="Confirm passphrase"
+            value={confirmPassphrase}
+            onChange={(e) => setConfirmPassphrase(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void handleEncryptedExport();
+            }}
+            className={INPUT_CLASS}
+          />
+          {error && <p className="text-destructive text-xs">{error}</p>}
+          <Button
+            className="w-full"
+            onClick={() => void handleEncryptedExport()}
+            disabled={exporting || !passphrase}
+          >
+            {exporting ? "Exporting..." : "Export with passphrase"}
+          </Button>
+
+          {hasPgpPrivate && (
+            <div className="border-border space-y-2 border-t pt-3">
+              <p className="text-destructive text-[11px]">
+                Plaintext export. Anyone who reads the downloaded file gets full
+                control of every PGP key in it.
+                {crxCount > 0
+                  ? " CRX signing keys are left out of a plaintext export -- use a passphrase to include them."
+                  : ""}{" "}
+                Type <span className="font-mono font-bold">EXPORT</span> to
+                confirm:
+              </p>
+              <input
+                type="text"
+                autoComplete="off"
+                spellCheck={false}
+                value={unsafeConfirm}
+                onChange={(e) => setUnsafeConfirm(e.target.value)}
+                placeholder="EXPORT"
+                className={INPUT_CLASS}
+              />
+              <Button
+                variant="destructive"
+                size="sm"
+                className="w-full"
+                disabled={exporting || unsafeConfirm !== "EXPORT"}
+                onClick={() => void handleUnsafeExport()}
+              >
+                Export without passphrase (unsafe)
+              </Button>
+            </div>
+          )}
+        </>
+      ) : contacts.length > 0 ? (
+        <>
+          {error && <p className="text-destructive text-xs">{error}</p>}
+          <Button
+            className="w-full"
+            onClick={() => void handleEncryptedExport()}
+            disabled={exporting}
+          >
+            {exporting ? "Exporting..." : "Export"}
+          </Button>
+        </>
+      ) : (
+        <p className="text-muted-foreground text-xs">Nothing to export.</p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Modal shell for the export flow (Settings). The selection island uses the
+ * slide-over {@link ExportKeysPage} instead.
+ */
+export function ExportAllKeysDialog({
+  open,
+  onClose,
+  ...props
+}: ExportAllKeysDialogProps) {
+  const flow = useExportKeysFlow({ open, onClose, ...props });
+  return (
+    <Dialog open={open} onClose={flow.resetAndClose} title="Export All Keys">
+      <ExportKeysBody f={flow} />
     </Dialog>
   );
 }
