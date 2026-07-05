@@ -161,7 +161,10 @@ export function KeyCard({
   };
 
   return (
-    <div className="border-border rounded-md border p-3">
+    <div
+      onClick={onShowDetails}
+      className="group border-border hover:bg-muted/40 cursor-pointer rounded-md border p-3 transition-colors"
+    >
       <div className="flex items-center gap-2">
         <span
           className={`shrink-0 text-sm ${isUnlocked ? "text-green-400" : "text-muted-foreground"}`}
@@ -189,13 +192,17 @@ export function KeyCard({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
+              onClick={(e) => e.stopPropagation()}
               className="text-muted-foreground hover:text-foreground rounded p-1 transition-colors"
               aria-label="Key options"
             >
               <EllipsisVerticalIcon className="h-4 w-4" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          {/* Radix portals this into <body>, but React synthetic events
+              still bubble through the COMPONENT tree -- without this stop,
+              a menu-item click also fires the card's onShowDetails. */}
+          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
             <DropdownMenuItem
               onClick={() => {
                 onExportPublic();
@@ -247,7 +254,7 @@ export function KeyCard({
       )}
 
       {showPasswordUnlock && !isUnlocked && !isPasskey && (
-        <div className="mt-2 space-y-2">
+        <div className="mt-2 space-y-2" onClick={(e) => e.stopPropagation()}>
           <input
             type="password"
             autoComplete="current-password"
@@ -298,7 +305,7 @@ export function KeyCard({
         }}
         title="Export Private Key"
       >
-        <div className="space-y-3">
+        <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
           <p className="text-muted-foreground text-xs">
             Set a passphrase to encrypt the exported key. Anyone with this
             passphrase and the exported key can decrypt your messages and sign
@@ -380,14 +387,24 @@ export function KeyCard({
       {!showPasswordUnlock && (
         <div className="mt-2 flex items-center justify-end gap-1">
           {isUnlocked ? (
-            <Button size="sm" variant="outline" onClick={onLock}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={(e) => {
+                e.stopPropagation();
+                onLock();
+              }}
+            >
               Lock
             </Button>
           ) : isPasskey ? (
             <Button
               size="sm"
               variant="outline"
-              onClick={() => void handlePasskeyUnlock()}
+              onClick={(e) => {
+                e.stopPropagation();
+                void handlePasskeyUnlock();
+              }}
             >
               Unlock
             </Button>
@@ -395,16 +412,22 @@ export function KeyCard({
             <Button
               size="sm"
               variant="outline"
-              onClick={() => setShowPasswordUnlock(true)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowPasswordUnlock(true);
+              }}
             >
               Unlock
             </Button>
           )}
           <button
             type="button"
-            onClick={onShowDetails}
+            onClick={(e) => {
+              e.stopPropagation();
+              onShowDetails();
+            }}
             aria-label="Key details"
-            className="text-muted-foreground hover:text-foreground rounded p-1.5 transition-colors"
+            className="text-muted-foreground group-hover:text-foreground rounded p-1.5 transition-colors"
           >
             <ArrowRightIcon className="h-4 w-4" />
           </button>
