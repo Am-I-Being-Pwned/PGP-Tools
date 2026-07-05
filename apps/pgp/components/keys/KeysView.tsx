@@ -13,7 +13,7 @@ import { useNavStack } from "../shared/useNavStack";
 import { ContactCard } from "./ContactCard";
 import { ContactDropZone } from "./ContactDropZone";
 import { CrxKeyCard } from "./CrxKeyCard";
-import { GenerateKeyDialog } from "./GenerateKeyDialog";
+import { GenerateKeyPage } from "./GenerateKeyPage";
 import { ImportKeyDialog } from "./ImportKeyDialog";
 import { KeyCard } from "./KeyCard";
 import { KeyDetailsPage } from "./KeyDetailsPage";
@@ -62,6 +62,7 @@ type DeleteTarget =
 /** Slide-over subpages of the Keys tab, managed as a nav stack: push to
  *  drill in, pop to go back. New subpages are one union member away. */
 type KeysRoute =
+  | { page: "generate" }
   | { page: "details"; target: KeyDetailsTarget }
   | { page: "confirm-delete"; target: DeleteTarget };
 
@@ -90,7 +91,6 @@ export function KeysView({
   onAddCrxKey,
   onDeleteCrxKey,
 }: KeysViewProps) {
-  const [showGenerate, setShowGenerate] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [importInitialArmored, setImportInitialArmored] = useState<
     string | null
@@ -168,7 +168,7 @@ export function KeysView({
           variant="outline"
           size="sm"
           className="flex-1"
-          onClick={() => setShowGenerate(true)}
+          onClick={() => nav.push({ page: "generate" })}
         >
           Generate Key
         </Button>
@@ -201,6 +201,24 @@ export function KeysView({
 
       {nav.stack.map((entry) => {
         const { route } = entry;
+        if (route.page === "generate") {
+          return (
+            <GenerateKeyPage
+              key={entry.id}
+              onClose={nav.pop}
+              onKeyGenerated={(keyId, keyHandle) => {
+                if (keyHandle !== undefined && onKeyCached) {
+                  onKeyCached(keyId, keyHandle);
+                }
+              }}
+              addKey={onAddKey}
+              reusePasskeyCredentialId={primaryPasskeyCredentialId}
+              cacheKey={cacheKeys}
+              crxSigningEnabled={crxSigningEnabled}
+              addCrxKey={onAddCrxKey}
+            />
+          );
+        }
         if (route.page === "details") {
           const target = route.target;
           return (
@@ -252,21 +270,6 @@ export function KeysView({
           </ConfirmPage>
         );
       })}
-
-      <GenerateKeyDialog
-        open={showGenerate}
-        onClose={() => setShowGenerate(false)}
-        onKeyGenerated={(keyId, keyHandle) => {
-          if (keyHandle !== undefined && onKeyCached) {
-            onKeyCached(keyId, keyHandle);
-          }
-        }}
-        addKey={onAddKey}
-        reusePasskeyCredentialId={primaryPasskeyCredentialId}
-        cacheKey={cacheKeys}
-        crxSigningEnabled={crxSigningEnabled}
-        addCrxKey={onAddCrxKey}
-      />
 
       <ImportKeyDialog
         open={showImport}
