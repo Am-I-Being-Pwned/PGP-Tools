@@ -26,6 +26,10 @@ test("private key material stays out of the JS heap across the lifecycle", async
   panel,
 }) => {
   const assertClean = async (stage: string, control: string = name) => {
+    // The snapshot's string table catches the secret held as a JS *string*
+    // -- which is how the armor crosses the WASM boundary (import input /
+    // export output). The base64→binary decode happens inside WASM, so JS
+    // never holds the raw byte form. The control proves the search works.
     const counts = await scanJsHeap(panel, [secretNeedle, control]);
     expect(
       counts[control],
@@ -33,7 +37,7 @@ test("private key material stays out of the JS heap across the lifecycle", async
     ).toBeGreaterThan(0);
     expect(
       counts[secretNeedle],
-      `${stage}: secret key material must not be in the JS heap`,
+      `${stage}: secret key material must not be retained in the JS heap`,
     ).toBe(0);
   };
 
