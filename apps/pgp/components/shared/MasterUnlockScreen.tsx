@@ -13,6 +13,7 @@ import {
 } from "../../lib/protection/password-kdf";
 import { authenticateAndGetPrf } from "../../lib/protection/webauthn-prf";
 import { INPUT_CLASS } from "../../lib/utils/styles";
+import { DevToolsDialog } from "../settings/DevToolsDialog";
 
 interface MasterUnlockScreenProps {
   masterProtection: MasterProtection;
@@ -34,6 +35,7 @@ export function MasterUnlockScreen({
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [unlocking, setUnlocking] = useState(false);
+  const [showDevTools, setShowDevTools] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -181,7 +183,24 @@ export function MasterUnlockScreen({
           If you have lost your password, your encrypted keys and contacts
           cannot be recovered.
         </p>
+
+        {import.meta.env.DEV && (
+          <button
+            type="button"
+            onClick={() => setShowDevTools(true)}
+            className="text-muted-foreground hover:text-foreground text-[10px] underline transition-colors"
+          >
+            Dev tools
+          </button>
+        )}
       </div>
+
+      {import.meta.env.DEV && (
+        <DevToolsDialog
+          open={showDevTools}
+          onClose={() => setShowDevTools(false)}
+        />
+      )}
     </div>
   );
 }
