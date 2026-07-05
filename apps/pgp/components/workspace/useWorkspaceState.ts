@@ -6,11 +6,20 @@ import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { FileResult } from "../../lib/utils/download";
 import type { WorkspaceDraft } from "../../lib/workspace-draft";
+import { looksLikePrivateKey } from "../../lib/drop-routing";
 import { getPreferences } from "../../lib/storage/preferences";
 import { zipHasManifest } from "../../lib/utils/zip";
 import { decryptWorkspaceDraft } from "../../lib/workspace-draft";
 
 type Mode = WorkspaceAction;
+
+/** A drop routed to the workspace from the global dropzone. `nonce`
+ *  changes on every drop so the same files/text re-trigger intake. */
+export interface WorkspaceIntake {
+  files: File[];
+  text: string;
+  nonce: number;
+}
 
 export interface WorkspaceState {
   mode: Mode;
@@ -92,6 +101,9 @@ export function useWorkspaceState(opts: {
   /** Fires whenever the salient draft state changes. The parent stores
    *  the snapshot in a ref so it can encrypt on auto-lock. */
   onDraftChange?: (draft: WorkspaceDraft | null) => void;
+  /** A drop routed here by the global dropzone. Applied once per nonce. */
+  intake?: WorkspaceIntake | null;
+  onIntakeConsumed?: () => void;
 }): WorkspaceState {
   const [mode, setMode] = useState<Mode>("encrypt");
   const [input, setInput] = useState("");
@@ -305,9 +317,11 @@ export function useWorkspaceState(opts: {
       resetOutput();
       setPublicKeyDetected(false);
       setPrivateKeyDetected(false);
-      if (text.includes("-----BEGIN PGP PRIVATE KEY BLOCK-----")) {
+      if (looksLikePrivateKey(text)) {
         // Flag first; the drafting effect skips snapshots while this is true
-        // so the armor doesn't end up in the encrypted draft blob.
+        // so the armor doesn't end up in the encrypted draft blob. Covers
+        // every armored private-key flavour (PGP + any raw PEM), not just
+        // PGP, so a pasted OpenSSH/EC/etc. key can't leak into the draft.
         setPrivateKeyDetected(true);
       } else if (text.includes("-----BEGIN PGP MESSAGE-----")) {
         setMode("decrypt");
@@ -349,6 +363,20 @@ export function useWorkspaceState(opts: {
     setInput("");
     resetOutput();
   }, [resetOutput]);
+
+  // Apply a drop routed here by the global dropzone. Reuses the same
+  // file/text handlers as an in-panel drop (so mode auto-detection still
+  // fires), then clears the intake so it isn't re-applied on re-render.
+  const { intake, onIntakeConsumed } = opts;
+  useEffect(() => {
+    if (!intake) return;
+    if (intake.files.length > 0) {
+      handleFileDrop(intake.files);
+    } else if (intake.text.trim()) {
+      handleInputChange(intake.text);
+    }
+    onIntakeConsumed?.();
+  }, [intake, onIntakeConsumed, handleFileDrop, handleInputChange]);
 
   return {
     mode,

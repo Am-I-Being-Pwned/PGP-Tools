@@ -16,6 +16,7 @@ import type { WorkspaceAction } from "../../lib/messages";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { WorkspaceDraft } from "../../lib/workspace-draft";
+import type { WorkspaceIntake } from "./useWorkspaceState";
 import { savePreferences } from "../../lib/storage/preferences";
 import { saveCrxViaPrompt } from "../../lib/utils/download";
 import { INPUT_CLASS } from "../../lib/utils/styles";
@@ -52,6 +53,9 @@ interface WorkspaceViewProps {
   onDraftRestored?: () => void;
   /** Fired on every salient state change so the parent can stash a snapshot. */
   onDraftChange?: (draft: WorkspaceDraft | null) => void;
+  /** A drop routed to the workspace by the global dropzone. */
+  intake?: WorkspaceIntake | null;
+  onIntakeConsumed?: () => void;
 }
 
 export function WorkspaceView({
@@ -73,6 +77,8 @@ export function WorkspaceView({
   restoreDraft,
   onDraftRestored,
   onDraftChange,
+  intake,
+  onIntakeConsumed,
 }: WorkspaceViewProps) {
   const allPublicKeys: (ProtectedKeyBlob | PublicContactKey)[] = [
     ...myKeys,
@@ -91,6 +97,8 @@ export function WorkspaceView({
     restoreDraft,
     onDraftRestored,
     onDraftChange,
+    intake,
+    onIntakeConsumed,
   });
 
   const ops = useWorkspaceOperations({
