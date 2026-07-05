@@ -41,3 +41,4 @@ apps/pgp/gpg-wasm/pkg/
 apps/pgp/public/gpg_wasm_bg.wasm
 
 messy
+apps/pgp/test-results/.playwright-artifacts-0/

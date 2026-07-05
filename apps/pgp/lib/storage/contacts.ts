@@ -14,6 +14,11 @@ export interface PublicContactKey {
   addedAt: number;
   lastUsedAt: number;
   expiresAt?: number | null;
+  /** Whether this contact can be encrypted to (has a usable encryption
+   *  key). False for sign-only keys, which are still valid contacts for
+   *  signature verification but must not appear as encryption recipients.
+   *  `undefined` on legacy records until backfilled -- treat as `true`. */
+  usableForEncryption?: boolean;
   /** Non-blocking flag from key parsing (e.g. relies on a SHA-1 binding
    *  signature). Shown as a warning badge; the key is still usable. */
   securityWarning?: string;

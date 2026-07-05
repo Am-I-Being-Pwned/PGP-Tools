@@ -16,6 +16,8 @@
     "lint": "eslint --flag unstable_native_nodejs_ts_config",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:build": "pnpm build && playwright test",
     "typecheck": "tsc --noEmit",
     "postinstall": "wxt prepare"
   },
@@ -35,6 +37,7 @@
     "@amibeingpwned/tsconfig": "workspace:*",
     "@babel/parser": "^7.29.7",
     "@babel/traverse": "^7.29.7",
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/vite": "catalog:",
     "@types/chrome": "^0.2.2",
     "@types/react": "catalog:react19",

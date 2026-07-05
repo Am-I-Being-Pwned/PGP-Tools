@@ -251,7 +251,11 @@ export function WorkspaceView({
         {needsRecipient && (
           <KeySelector
             label="Key for recipient"
-            contacts={contacts}
+            // Only offer contacts you can actually encrypt to. Sign-only
+            // keys are valid contacts (for verification) but have no
+            // encryption key. Legacy records (undefined) are assumed
+            // encryptable until the contacts backfill fills the flag in.
+            contacts={contacts.filter((c) => c.usableForEncryption !== false)}
             myKeys={myKeys}
             selectedKeyId={s.selectedRecipientId}
             onSelect={s.setSelectedRecipientId}

@@ -11,3 +11,8 @@ web-ext.config.ts
 
 .DS_Store
 *.sw?
+
+# Playwright e2e
+test-results/
+playwright-report/
+.last-run.json

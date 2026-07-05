@@ -25,6 +25,7 @@ async function backfillExpiry(
       const updated: PublicContactKey = {
         ...c,
         expiresAt: info.expiresAt,
+        usableForEncryption: info.usableForEncryption,
         securityWarning: c.securityWarning ?? info.securityWarning,
       };
       await saveContact(updated);
