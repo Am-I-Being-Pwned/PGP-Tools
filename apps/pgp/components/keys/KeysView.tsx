@@ -8,6 +8,7 @@ import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { KeyDetailsTarget } from "./KeyDetailsPage";
 import { INPUT_CLASS } from "../../lib/utils/styles";
+import { ConfirmPage } from "../shared/ConfirmPage";
 import { ContactCard } from "./ContactCard";
 import { ContactDropZone } from "./ContactDropZone";
 import { CrxKeyCard } from "./CrxKeyCard";
@@ -51,6 +52,12 @@ interface KeysViewProps {
   onDeleteCrxKey?: (extensionId: string) => Promise<void>;
 }
 
+/** A pending deletion, confirmed on its own slide-over page. */
+type DeleteTarget =
+  | { kind: "own"; keyBlob: ProtectedKeyBlob }
+  | { kind: "contact"; contact: PublicContactKey }
+  | { kind: "crx"; keyBlob: CrxSigningKeyBlob };
+
 export function KeysView({
   myKeys,
   contacts,
@@ -84,6 +91,7 @@ export function KeysView({
   const [detailsTarget, setDetailsTarget] = useState<KeyDetailsTarget | null>(
     null,
   );
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
   useEffect(() => {
     if (autoOpenImport) {
@@ -118,7 +126,7 @@ export function KeysView({
                 onUnlockWithPassword={(pw) => onUnlockWithPassword(blob, pw)}
                 onUnlockWithPasskey={() => onUnlockWithPasskey(blob)}
                 onLock={() => onLock(blob.keyId)}
-                onDelete={() => onDeleteKey(blob.keyId)}
+                onDelete={() => setDeleteTarget({ kind: "own", keyBlob: blob })}
                 onExportPublic={() => handleExportPublic(blob)}
                 onExportPrivate={() => getKeyHandle(blob.keyId)}
                 onShowDetails={() =>
@@ -131,13 +139,7 @@ export function KeysView({
               <CrxKeyCard
                 key={blob.extensionId}
                 keyBlob={blob}
-                onDelete={() =>
-                  void onDeleteCrxKey?.(blob.extensionId).catch((e: unknown) =>
-                    toast.error(
-                      e instanceof Error ? e.message : "Failed to delete key",
-                    ),
-                  )
-                }
+                onDelete={() => setDeleteTarget({ kind: "crx", keyBlob: blob })}
               />
             ))}
           </div>
@@ -166,7 +168,9 @@ export function KeysView({
       <ContactsList
         contacts={contacts}
         contactsLocked={contactsLocked}
-        onDeleteContact={onDeleteContact}
+        onRequestRemove={(contact) =>
+          setDeleteTarget({ kind: "contact", contact })
+        }
         onAddContact={onAddContact}
         onEncryptTo={onEncryptTo}
         onShowDetails={(contact) =>
@@ -187,12 +191,41 @@ export function KeysView({
                 }
               : undefined
           }
-          onDelete={
-            detailsTarget.kind === "own"
-              ? () => onDeleteKey(detailsTarget.keyBlob.keyId)
-              : () => onDeleteContact(detailsTarget.contact.keyId)
-          }
+          onDelete={() => setDeleteTarget(detailsTarget)}
         />
+      )}
+
+      {deleteTarget && (
+        <ConfirmPage
+          title={
+            deleteTarget.kind === "contact" ? "Remove contact?" : "Delete key?"
+          }
+          confirmLabel={
+            deleteTarget.kind === "contact"
+              ? "Remove contact"
+              : "Delete key permanently"
+          }
+          onCancel={() => setDeleteTarget(null)}
+          onConfirm={async () => {
+            try {
+              if (deleteTarget.kind === "own") {
+                await onDeleteKey(deleteTarget.keyBlob.keyId);
+              } else if (deleteTarget.kind === "contact") {
+                await onDeleteContact(deleteTarget.contact.keyId);
+              } else {
+                await onDeleteCrxKey?.(deleteTarget.keyBlob.extensionId);
+              }
+              setDeleteTarget(null);
+              setDetailsTarget(null);
+            } catch (e) {
+              toast.error(
+                e instanceof Error ? e.message : "Failed to delete key",
+              );
+            }
+          }}
+        >
+          <DeleteSummary target={deleteTarget} />
+        </ConfirmPage>
       )}
 
       <GenerateKeyDialog
@@ -227,10 +260,47 @@ export function KeysView({
   );
 }
 
+/** What's being deleted + what it costs, rendered inside ConfirmPage. */
+function DeleteSummary({ target }: { target: DeleteTarget }) {
+  if (target.kind === "crx") {
+    return (
+      <>
+        <p className="font-medium">
+          {target.keyBlob.label ?? target.keyBlob.extensionId}
+        </p>
+        <p className="text-muted-foreground mt-0.5 font-mono text-[10px]">
+          {target.keyBlob.extensionId}
+        </p>
+        <p className="mt-2">
+          You can no longer sign updates for this extension, and the key can't
+          be recovered unless you have a backup.
+        </p>
+      </>
+    );
+  }
+  const isOwn = target.kind === "own";
+  const userIds = isOwn ? target.keyBlob.userIds : target.contact.userIds;
+  const keyId = isOwn ? target.keyBlob.keyId : target.contact.keyId;
+  const name = userIds[0] ?? "Unknown";
+  return (
+    <>
+      <p className="font-medium">{name}</p>
+      <p className="text-muted-foreground mt-0.5 font-mono text-[10px]">
+        {keyId.slice(-16)}
+      </p>
+      <p className="mt-2">
+        {isOwn
+          ? "This permanently deletes the private key from this device. Anything encrypted only to this key becomes unrecoverable. Make sure you have a backup if you might ever need it."
+          : "You'll no longer be able to encrypt messages to this contact or verify their signatures. You can re-import their public key later."}
+      </p>
+    </>
+  );
+}
+
 function ContactsList({
   contacts,
   contactsLocked,
-  onDeleteContact,
+  onRequestRemove,
   onAddContact,
   onEncryptTo,
   onShowDetails,
@@ -238,7 +308,7 @@ function ContactsList({
 }: {
   contacts: PublicContactKey[];
   contactsLocked: boolean;
-  onDeleteContact: (keyId: string) => Promise<void>;
+  onRequestRemove: (contact: PublicContactKey) => void;
   onAddContact: (contact: PublicContactKey) => Promise<void>;
   onEncryptTo?: (keyId: string) => void;
   onShowDetails: (contact: PublicContactKey) => void;
@@ -293,7 +363,7 @@ function ContactsList({
                 <ContactCard
                   key={c.keyId}
                   contact={c}
-                  onRemove={() => onDeleteContact(c.keyId)}
+                  onRemove={() => onRequestRemove(c)}
                   onEncryptTo={
                     onEncryptTo ? () => onEncryptTo(c.keyId) : undefined
                   }
