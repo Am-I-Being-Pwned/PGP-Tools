@@ -210,6 +210,10 @@ export async function importPrivateKey(
     panel.getByPlaceholder("Paste a key here, or browse for a file..."),
   ).toBeHidden();
   await expect(panel.getByText(ownerName).last()).toBeVisible();
+  // Wait for the slide-over to finish its exit animation: its onClose
+  // fires a deferred nav.collapseToTop() that would dismiss any page the
+  // test opens in the meantime.
+  await expect(panel.getByRole("region", { name: "Import key" })).toBeHidden();
 }
 
 /** Import an armored public key via the Import Key page, expecting it to

@@ -12,6 +12,7 @@ import type { KeyDetailsTarget } from "./KeyDetailsPage";
 import { publicKeyDerToPem } from "../../lib/crx/types";
 import { downloadPublicKeysBundle } from "../../lib/keys/export-bundle";
 import { crxKeyExporter, pgpKeyExporter } from "../../lib/keys/exporters";
+import { revocationCertificateWithHandle } from "../../lib/pgp/wasm";
 import { formatAlgorithm, formatFingerprint } from "../../lib/utils/formatting";
 import { parseUserId } from "../../lib/utils/key-naming";
 import { INPUT_CLASS } from "../../lib/utils/styles";
@@ -45,6 +46,11 @@ interface KeysViewProps {
   onAddContact: (contact: PublicContactKey) => Promise<void>;
   onDeleteContact: (keyId: string) => Promise<void>;
   getKeyHandle: (keyId: string) => number | null;
+  /** Persist a revocation certificate minted for an imported key. */
+  onSaveRevocationCertificate?: (
+    keyId: string,
+    armored: string,
+  ) => Promise<void>;
   advancedMode?: boolean;
   /** When non-null, opens the Import dialog with this armored text prefilled. */
   autoOpenImport?: string | null;
@@ -105,6 +111,7 @@ export function KeysView({
   onAddContact,
   onDeleteContact,
   getKeyHandle,
+  onSaveRevocationCertificate,
   advancedMode,
   autoOpenImport,
   onAutoOpenImportConsumed,
@@ -469,6 +476,28 @@ export function KeysView({
                     : undefined
                 }
                 onDelete={() => nav.push({ page: "confirm-delete", target })}
+                onGenerateRevocation={
+                  // Only offer generation when we can also persist the
+                  // result -- minting a cert that silently vanishes on
+                  // the next open would be a false assurance.
+                  target.kind === "own" && onSaveRevocationCertificate
+                    ? async () => {
+                        const handle = getKeyHandle(target.keyBlob.keyId);
+                        if (handle === null) {
+                          throw new Error(
+                            "Unlock this key first, then try again.",
+                          );
+                        }
+                        const armored =
+                          await revocationCertificateWithHandle(handle);
+                        await onSaveRevocationCertificate(
+                          target.keyBlob.keyId,
+                          armored,
+                        );
+                        return armored;
+                      }
+                    : undefined
+                }
               />
             );
           }

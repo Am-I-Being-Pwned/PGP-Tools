@@ -63,6 +63,44 @@ test("imports a binary (non-armored) .gpg public key file", async ({
   await expect(panel.getByText("Bianca Binary").first()).toBeVisible();
 });
 
+test("global drop routes a binary key export to import, not the workspace", async ({
+  panel,
+}) => {
+  const key = edgeKey("binary");
+  await onboardWithPassword(panel, PASSWORD);
+
+  // Simulate dragging a raw `gpg --export` file (no extension, no armor)
+  // onto the app: dragenter mounts the global overlay, then the drop
+  // lands on it -- the exact shape that used to fall through to the
+  // workspace's encrypt catch-all.
+  await panel.evaluate(async (b64) => {
+    const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    const file = new File([bytes], "openpgp");
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    const opts = { bubbles: true, cancelable: true, dataTransfer: dt };
+    window.dispatchEvent(new DragEvent("dragenter", opts));
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const overlayLabel = [...document.querySelectorAll("p")].find(
+      (p) => p.textContent === "Drop to import",
+    );
+    if (!overlayLabel) throw new Error("global drop overlay did not mount");
+    overlayLabel.dispatchEvent(new DragEvent("drop", opts));
+  }, key.publicKeyBinaryB64 ?? "");
+
+  // The drop routes to the Keys tab and opens Import prefilled with the
+  // armored form of the binary key.
+  await expect(panel.getByRole("region", { name: "Import key" })).toBeVisible();
+  await expect(panel.getByText(/Detected:/)).toBeVisible();
+  // Rendered capitalized via CSS; the DOM text is lowercase.
+  await expect(panel.getByText("public", { exact: true })).toBeVisible();
+  await panel.getByRole("button", { name: "Import", exact: true }).click();
+  await expect(
+    panel.getByRole("region", { name: "Import key" }),
+  ).toBeHidden();
+  await expect(panel.getByText("Bianca Binary").first()).toBeVisible();
+});
+
 test("strips bidi override characters from displayed user IDs", async ({
   panel,
 }) => {

@@ -185,6 +185,29 @@ export async function updateAlias(keyId: string, alias: string): Promise<void> {
   });
 }
 
+/** Backfill the revocation certificate for an imported key (generated
+ *  keys store one at creation time). Overwriting is harmless: every
+ *  revocation certificate ever minted for a key stays valid. */
+export async function updateRevocationCertificate(
+  keyId: string,
+  armored: string,
+): Promise<void> {
+  await withLock(STORAGE_KEYRING, async () => {
+    const keyring = await loadEncrypted();
+    const key = keyring.find((k) => k.keyId === keyId);
+    // Unlike the metadata setters above, a miss here must NOT no-op:
+    // the caller reports "certificate created" on success, and a cert
+    // that was never persisted would make that a false assurance (e.g.
+    // the key was deleted, or the vault locked mid-flight and
+    // loadEncrypted returned nothing).
+    if (!key) {
+      throw new Error("Key not found - the certificate was not saved.");
+    }
+    key.revocationCertificate = armored;
+    await saveAll(keyring);
+  });
+}
+
 export async function updateLastUsed(keyId: string): Promise<void> {
   await withLock(STORAGE_KEYRING, async () => {
     const keyring = await loadEncrypted();

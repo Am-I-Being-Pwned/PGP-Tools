@@ -6,6 +6,7 @@ import {
   getKeyring,
   removeKey,
   updateAlias,
+  updateRevocationCertificate,
 } from "../lib/storage/keyring";
 
 export function useKeyring() {
@@ -46,5 +47,21 @@ export function useKeyring() {
     [refresh],
   );
 
-  return { keys, loading, refresh, add, remove, rename };
+  const setRevocationCertificate = useCallback(
+    async (keyId: string, armored: string) => {
+      await updateRevocationCertificate(keyId, armored);
+      await refresh();
+    },
+    [refresh],
+  );
+
+  return {
+    keys,
+    loading,
+    refresh,
+    add,
+    remove,
+    rename,
+    setRevocationCertificate,
+  };
 }

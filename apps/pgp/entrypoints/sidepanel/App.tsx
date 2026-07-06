@@ -331,7 +331,10 @@ export default function App() {
   const dropRules: DropRule[] = [
     {
       id: "keys",
-      match: (s) => looksLikeKey(s.sampleText),
+      // Armored keys announce themselves in the text sample; raw binary
+      // exports (`gpg --export` without --armor) are flagged from the
+      // byte sample and armored during readAllFilesText.
+      match: (s) => looksLikeKey(s.sampleText) || s.hasBinaryKeyFile,
       run: async ({ files, text }) => {
         // Use the dragged text only when it is itself a key; otherwise the
         // key lives in a file (a benign text/plain riding along must not
@@ -495,6 +498,7 @@ export default function App() {
               onLock={session.lock}
               onDeleteKey={handleDeleteKey}
               getKeyHandle={session.getKeyHandle}
+              onSaveRevocationCertificate={keyring.setRevocationCertificate}
               onAddKey={keyring.add}
               onAddContact={contacts.add}
               onDeleteContact={contacts.remove}

@@ -46,6 +46,15 @@ const ARMOR_LABEL: Record<number, string> = {
   6: "PGP PUBLIC KEY BLOCK",
 };
 
+/** True when the bytes start with a binary OpenPGP key packet -- the
+ *  `gpg --export` / `--export-secret-keys` default (non-armored) shapes.
+ *  Used by drop routing to send such files to import instead of the
+ *  workspace catch-all. */
+export function looksLikeBinaryKey(bytes: Uint8Array): boolean {
+  const tag = firstPacketTag(bytes);
+  return tag !== null && tag in ARMOR_LABEL;
+}
+
 /** Armor raw binary OpenPGP key bytes, or return null when the bytes
  *  don't look like a binary key export (caller falls back to text). */
 export function binaryKeyToArmored(bytes: Uint8Array): string | null {
