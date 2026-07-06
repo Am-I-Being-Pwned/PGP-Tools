@@ -86,7 +86,7 @@ export function ImportAllKeysPage({
 
   const importPublics = async (blocks: string[]) => {
     if (blocks.length === 0) return;
-    const { added, skipped, failed, flagged, rejectionReasons } =
+    const { added, updated, failed, flagged, rejectionReasons } =
       await importPublicKeyBlocks(
         blocks,
         contacts.map((c) => c.keyId),
@@ -98,7 +98,8 @@ export function ImportAllKeysPage({
       toast.warning(
         `${flagged} imported key${flagged > 1 ? "s" : ""} flagged for weak crypto (SHA-1)`,
       );
-    if (skipped > 0) toast.info(`${skipped} already in contacts`);
+    if (updated > 0)
+      toast.info(`${updated} contact${updated > 1 ? "s" : ""} updated`);
     if (failed > 0)
       toast.error(
         `${failed} public key${failed > 1 ? "s" : ""} rejected${

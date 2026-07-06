@@ -212,6 +212,34 @@ export async function importPrivateKey(
   await expect(panel.getByText(ownerName).last()).toBeVisible();
 }
 
+/** Import an armored public key via the Import Key page, expecting it to
+ *  be REJECTED with an error matching `reason` (the page stays open). */
+export async function importContactExpectRejected(
+  panel: Page,
+  armoredPublicKey: string,
+  reason: RegExp,
+): Promise<void> {
+  await goToKeys(panel);
+  await panel.getByRole("button", { name: "Import Key" }).click();
+  await panel
+    .getByPlaceholder("Paste a key here, or browse for a file...")
+    .fill(armoredPublicKey);
+  // Public armor is imported straight from the paste step.
+  await panel.getByRole("button", { name: "Import", exact: true }).click();
+  await expect(panel.getByRole("alert")).toContainText(reason);
+}
+
+/** Pick a workspace mode explicitly (auto-detect only fires for
+ *  recognizable PGP blocks, so plain-text tests set the mode by hand). */
+export async function setWorkspaceMode(
+  panel: Page,
+  mode: "Encrypt" | "Decrypt" | "Sign" | "Verify",
+): Promise<void> {
+  await panel.getByRole("tab", { name: "Main" }).click();
+  await panel.getByRole("combobox").first().click();
+  await panel.getByRole("option", { name: mode, exact: true }).click();
+}
+
 /** Import many contacts in a single file drop -- the drop zone splits a
  *  file into individual public-key blocks -- returning after the batch
  *  "Added N contacts" toast. Far faster than one import at a time; use it

@@ -31,8 +31,11 @@ export function importRejectionMessage(keyInfo: KeyInfo | undefined): string {
 export interface PublicImportSummary {
   /** Contacts actually written. */
   added: number;
-  /** Usable certs skipped because the keyId already exists. */
-  skipped: number;
+  /** Usable certs re-imported over an existing contact (same
+   *  fingerprint): the stored record is refreshed -- new expiry, UIDs,
+   *  subkeys -- rather than silently skipped, so a contact who extends
+   *  their key's validity doesn't stay stale until encryption breaks. */
+  updated: number;
   /** Blocks with no usable cert (or that failed to parse). */
   failed: number;
   /** Imported certs carrying a security warning (e.g. SHA-1). */
@@ -59,7 +62,7 @@ export async function importPublicKeyBlocks(
 ): Promise<PublicImportSummary> {
   const summary: PublicImportSummary = {
     added: 0,
-    skipped: 0,
+    updated: 0,
     failed: 0,
     flagged: 0,
     rejectionReasons: [],
@@ -83,10 +86,10 @@ export async function importPublicKeyBlocks(
     }
 
     for (const { keyInfo, armored } of usable) {
-      if (existingKeyIds.includes(keyInfo.keyId)) {
-        summary.skipped++;
-        continue;
-      }
+      // Same fingerprint as an existing contact: refresh it (the owner
+      // may have extended the expiry or added subkeys/UIDs) -- the
+      // contacts store upserts by keyId.
+      const isRefresh = existingKeyIds.includes(keyInfo.keyId);
       await onImport({
         keyId: keyInfo.keyId,
         userIds: keyInfo.userIds,
@@ -101,7 +104,8 @@ export async function importPublicKeyBlocks(
         // Allowed, but flagged (e.g. SHA-1 binding signature).
         securityWarning: keyInfo.securityWarning,
       });
-      summary.added++;
+      if (isRefresh) summary.updated++;
+      else summary.added++;
       if (keyInfo.securityWarning) summary.flagged++;
     }
   }

@@ -5,6 +5,7 @@ import { Button } from "@amibeingpwned/ui/button";
 
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import { splitPublicKeyBlocks } from "../../lib/armor-blocks";
+import { readKeyFile } from "../../lib/binary-armor";
 import { importPublicKeyBlocks } from "../../lib/import-public-keys";
 
 interface ContactDropZoneProps {
@@ -29,7 +30,7 @@ export function ContactDropZone({
         return;
       }
 
-      const { added, skipped, failed, flagged, rejectionReasons } =
+      const { added, updated, failed, flagged, rejectionReasons } =
         await importPublicKeyBlocks(blocks, existingKeyIds ?? [], onImport);
 
       if (added > 0)
@@ -41,7 +42,8 @@ export function ContactDropZone({
           } flagged - see the warning on the contact.`,
         );
       }
-      if (skipped > 0) toast.info(`${skipped} already in contacts`);
+      if (updated > 0)
+        toast.info(`${updated} contact${updated > 1 ? "s" : ""} updated`);
       if (failed > 0) {
         const detail = rejectionReasons[0];
         setError(
@@ -61,7 +63,7 @@ export function ContactDropZone({
 
       const files = Array.from(e.dataTransfer.files);
       if (files.length > 0) {
-        const texts = await Promise.all(files.map((f) => f.text()));
+        const texts = await Promise.all(files.map(readKeyFile));
         await tryImportMany(texts.join("\n"));
         return;
       }
@@ -87,7 +89,7 @@ export function ContactDropZone({
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(e.target.files ?? []);
       if (files.length > 0) {
-        const texts = await Promise.all(files.map((f) => f.text()));
+        const texts = await Promise.all(files.map(readKeyFile));
         await tryImportMany(texts.join("\n"));
       }
       e.target.value = "";

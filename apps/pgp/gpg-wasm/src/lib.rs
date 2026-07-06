@@ -291,9 +291,12 @@ fn system_time_to_millis(t: SystemTime) -> f64 {
 
 fn extract_key_info(cert: &openpgp::Cert, is_private: bool) -> KeyInfo {
     let key_id = cert.fingerprint().to_hex();
+    // User IDs are attacker-controlled and rendered by the UI: strip
+    // control/bidi characters (a U+202E override in a UID visually
+    // reverses the displayed email -- address spoofing) and cap length.
     let user_ids: Vec<String> = cert
         .userids()
-        .map(|uid| String::from_utf8_lossy(uid.userid().value()).to_string())
+        .map(|uid| sanitize_untrusted(&String::from_utf8_lossy(uid.userid().value()), 300))
         .collect();
     let algorithm = cert.primary_key().key().pk_algo().to_string();
     let created_at = system_time_to_millis(cert.primary_key().key().creation_time());
@@ -304,11 +307,18 @@ fn extract_key_info(cert: &openpgp::Cert, is_private: bool) -> KeyInfo {
                 let expires_at = vc.primary_key().key_expiration_time().map(system_time_to_millis);
                 let (has_enc, has_sig) = usable_keys(&vc);
                 let policy_error = if !has_enc && !has_sig {
-                    Some(
-                        "Key has no usable encryption or signing subkey \
-                         (expired, revoked, or unsupported algorithm)."
+                    // Name revocation explicitly -- it's the one cause the
+                    // user can't fix by waiting or asking for a re-export.
+                    Some(match verified_revocation_reason(&vc.revocation_status()) {
+                        Some(reason) => format!(
+                            "This key has been revoked by its owner ({reason}) \
+                             and can no longer be used. Ask the owner for \
+                             their current key."
+                        ),
+                        None => "Key has no usable encryption or signing subkey \
+                                 (expired, revoked, or unsupported algorithm)."
                             .to_string(),
-                    )
+                    })
                 } else {
                     None
                 };
@@ -345,6 +355,14 @@ fn extract_key_info(cert: &openpgp::Cert, is_private: bool) -> KeyInfo {
 /// Whether a validated cert exposes an alive, non-revoked encryption
 /// key (`.0`) and/or signing key (`.1`).
 fn usable_keys(vc: &openpgp::cert::ValidCert) -> (bool, bool) {
+    // A revocation of the whole certificate does NOT mark the component
+    // keys revoked in Sequoia's per-key status, so without this check a
+    // fully revoked cert would still report usable "active" subkeys and
+    // import as a normal contact (the same cascade parse_key_details
+    // applies to its per-subkey rows).
+    if verified_revocation_reason(&vc.revocation_status()).is_some() {
+        return (false, false);
+    }
     let has_enc = vc
         .keys()
         .alive()
@@ -1395,6 +1413,172 @@ fn encrypt_cert_with_prf(
     iv_and_ct
 }
 
+/// Decrypt one S2K-protected component key, falling back to a manual
+/// path that tolerates GnuPG's fixed-width ECC secret MPIs (see
+/// `decrypt_gpg_padded_secret`).
+fn decrypt_key_secret<R>(
+    key: openpgp::packet::Key<openpgp::packet::key::SecretParts, R>,
+    password: &openpgp::crypto::Password,
+) -> Result<openpgp::packet::Key<openpgp::packet::key::SecretParts, R>, String>
+where
+    R: openpgp::packet::key::KeyRole,
+{
+    match key.clone().decrypt_secret(password) {
+        Ok(k) => Ok(k),
+        Err(_) => decrypt_gpg_padded_secret(key, password),
+    }
+}
+
+/// GnuPG (libgcrypt) serializes protected ECC secret scalars as
+/// fixed-width MPIs padded to the field size: a 253-bit Ed25519 scalar
+/// is declared as 256 bits with leading zero bits. Sequoia's strict
+/// secret-MPI parser rejects the non-minimal encoding, which makes
+/// roughly half of all `gpg --export-secret-keys` ECC keys (top scalar
+/// bit clear) fail `decrypt_secret` with "Malformed MPI". Redo the
+/// decryption by hand -- S2K, CFB, checksum -- and re-encode the scalar
+/// minimally so Sequoia accepts it.
+fn decrypt_gpg_padded_secret<R>(
+    key: openpgp::packet::Key<openpgp::packet::key::SecretParts, R>,
+    password: &openpgp::crypto::Password,
+) -> Result<openpgp::packet::Key<openpgp::packet::key::SecretParts, R>, String>
+where
+    R: openpgp::packet::key::KeyRole,
+{
+    use openpgp::crypto::mpi;
+    use openpgp::crypto::S2K;
+    use openpgp::types::PublicKeyAlgorithm;
+
+    const WRONG: &str = "Incorrect passphrase";
+
+    // Only the single-scalar ECC algorithms need this: libgcrypt encodes
+    // RSA/DSA/ElGamal secrets minimally, so for those a Sequoia failure
+    // really does mean a wrong passphrase.
+    let pk_algo = key.pk_algo();
+    if !matches!(
+        pk_algo,
+        PublicKeyAlgorithm::EdDSA | PublicKeyAlgorithm::ECDSA | PublicKeyAlgorithm::ECDH
+    ) {
+        return Err(WRONG.into());
+    }
+
+    let openpgp::packet::key::SecretKeyMaterial::Encrypted(e) = key.secret() else {
+        return Err(WRONG.into());
+    };
+    // `gpg --export-secret-subkeys` stubs the primary with a GNU-dummy
+    // S2K (private type 101): there is no secret to decrypt at all.
+    if let S2K::Private { tag: 101, .. } = e.s2k() {
+        return Err(
+            "This key's primary secret is a stub (offline primary key). \
+             Import a full export (gpg --export-secret-keys) instead."
+                .into(),
+        );
+    }
+    if e.aead_algo().is_some() {
+        return Err(WRONG.into());
+    }
+
+    let sym = e.algo();
+    let key_size = sym.key_size().map_err(|_| WRONG.to_string())?;
+    let block_size = sym.block_size().map_err(|_| WRONG.to_string())?;
+    let derived = e
+        .s2k()
+        .derive_key(password, key_size)
+        .map_err(|_| WRONG.to_string())?;
+    // Sequoia stores the packet's IV prepended to the ciphertext.
+    let ct = e.ciphertext().map_err(|_| WRONG.to_string())?;
+    if ct.len() < block_size + 3 {
+        return Err(WRONG.into());
+    }
+    let (iv, data) = ct.split_at(block_size);
+    let plaintext = Zeroizing::new(cfb_decrypt(sym, &derived, iv, data)?);
+
+    // Split off and verify the trailing checksum; a mismatch means the
+    // passphrase really is wrong.
+    let body = match e.checksum().unwrap_or_default() {
+        mpi::SecretKeyChecksum::SHA1 => {
+            let split = plaintext.len().checked_sub(20).ok_or(WRONG)?;
+            let (body, want) = plaintext.split_at(split);
+            let mut ctx = HashAlgorithm::SHA1
+                .context()
+                .map_err(|_| WRONG.to_string())?
+                .for_digest();
+            ctx.update(body);
+            let got = ctx.into_digest().map_err(|_| WRONG.to_string())?;
+            if got.as_slice() != want {
+                return Err(WRONG.into());
+            }
+            body
+        }
+        mpi::SecretKeyChecksum::Sum16 => {
+            let split = plaintext.len().checked_sub(2).ok_or(WRONG)?;
+            let (body, want) = plaintext.split_at(split);
+            let got = body
+                .iter()
+                .fold(0u16, |acc, b| acc.wrapping_add(*b as u16));
+            if got.to_be_bytes() != want {
+                return Err(WRONG.into());
+            }
+            body
+        }
+    };
+
+    // One scalar MPI: 2-byte declared bit length + (possibly padded)
+    // value. `ProtectedMPI::from` re-encodes with leading zeros trimmed.
+    if body.len() < 2 {
+        return Err(WRONG.into());
+    }
+    let declared_bits = u16::from_be_bytes([body[0], body[1]]) as usize;
+    if body.len() != 2 + declared_bits.div_ceil(8) {
+        return Err(WRONG.into());
+    }
+    let scalar: mpi::ProtectedMPI = (&body[2..]).into();
+    let material = match pk_algo {
+        PublicKeyAlgorithm::EdDSA => mpi::SecretKeyMaterial::EdDSA { scalar },
+        PublicKeyAlgorithm::ECDSA => mpi::SecretKeyMaterial::ECDSA { scalar },
+        _ => mpi::SecretKeyMaterial::ECDH { scalar },
+    };
+    Ok(key.parts_into_public().add_secret(material.into()).0)
+}
+
+/// Minimal CFB decryption (OpenPGP secret-key protection mode) for the
+/// AES family. Used only by the gpg-padded fallback above; the checksum
+/// verified afterwards authenticates the result.
+fn cfb_decrypt(
+    sym: SymmetricAlgorithm,
+    key: &[u8],
+    iv: &[u8],
+    ciphertext: &[u8],
+) -> Result<Vec<u8>, String> {
+    use aes::cipher::{Block, BlockEncrypt, KeyInit as _};
+
+    fn run<C: BlockEncrypt + aes::cipher::KeyInit>(
+        key: &[u8],
+        iv: &[u8],
+        ciphertext: &[u8],
+    ) -> Result<Vec<u8>, String> {
+        let cipher = C::new_from_slice(key).map_err(|_| "bad key size".to_string())?;
+        let mut feedback = Zeroizing::new(iv.to_vec());
+        let mut out = Vec::with_capacity(ciphertext.len());
+        for chunk in ciphertext.chunks(feedback.len()) {
+            let mut keystream = Block::<C>::clone_from_slice(&feedback);
+            cipher.encrypt_block(&mut keystream);
+            out.extend(chunk.iter().zip(keystream.iter()).map(|(c, k)| c ^ k));
+            feedback[..chunk.len()].copy_from_slice(chunk);
+        }
+        Ok(out)
+    }
+
+    match sym {
+        SymmetricAlgorithm::AES128 => run::<aes::Aes128>(key, iv, ciphertext),
+        SymmetricAlgorithm::AES192 => run::<aes::Aes192>(key, iv, ciphertext),
+        SymmetricAlgorithm::AES256 => run::<aes::Aes256>(key, iv, ciphertext),
+        _ => Err(format!(
+            "This key is protected with an unsupported legacy cipher ({sym}). \
+             Re-export it with: gpg --export-secret-keys --s2k-cipher-algo AES256"
+        )),
+    }
+}
+
 /// Strip OpenPGP S2K passphrase protection from any encrypted secret
 /// packets in `cert`. Returns a new cert with plaintext secret material.
 /// If `cert` already has no encrypted secrets, returns it unchanged.
@@ -1415,9 +1599,7 @@ fn decrypt_cert_secrets(
         .parts_into_secret()
         .map_err(|_| "Primary key has no secret material".to_string())?;
     let primary = if primary_key.secret().is_encrypted() {
-        primary_key
-            .decrypt_secret(&password)
-            .map_err(|_| "Incorrect passphrase".to_string())?
+        decrypt_key_secret(primary_key, &password)?
     } else {
         primary_key
     };
@@ -1426,8 +1608,7 @@ fn decrypt_cert_secrets(
     for subkey in cert.keys().subkeys().secret() {
         let key = subkey.key().clone();
         let decrypted = if key.secret().is_encrypted() {
-            key.decrypt_secret(&password)
-                .map_err(|_| "Incorrect passphrase".to_string())?
+            decrypt_key_secret(key, &password)?
         } else {
             key
         };

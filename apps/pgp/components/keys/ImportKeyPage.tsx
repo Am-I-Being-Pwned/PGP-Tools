@@ -8,6 +8,7 @@ import type { CrxSigningKeyBlob } from "../../lib/crx/types";
 import type { KeyInfo } from "../../lib/pgp/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
+import { readKeyFile } from "../../lib/binary-armor";
 import { importCrxKey } from "../../lib/crx/operations";
 import {
   importRejectionMessage,
@@ -16,6 +17,7 @@ import {
 import { importKey } from "../../lib/pgp/key-management";
 import { parseKeys } from "../../lib/pgp/wasm";
 import { importAndProtect } from "../../lib/protection/protect-flow";
+import { errorMessage } from "../../lib/utils/errors";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 import {
   SlideOverHeader,
@@ -212,7 +214,7 @@ export function ImportKeyPage({
       }
       setStep(result.secretEncrypted ? "unlock" : "protect");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Import failed");
+      setError(errorMessage(e, "Import failed"));
     } finally {
       setImporting(false);
     }
@@ -259,7 +261,7 @@ export function ImportKeyPage({
       if (warning) toast.warning(warning);
       resetAndClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Import failed");
+      setError(errorMessage(e, "Import failed"));
     } finally {
       setImporting(false);
     }
@@ -299,7 +301,7 @@ export function ImportKeyPage({
       await onImportPrivate(blob);
       resetAndClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Import failed");
+      setError(errorMessage(e, "Import failed"));
     } finally {
       setImporting(false);
     }
@@ -335,7 +337,7 @@ export function ImportKeyPage({
       await onImportCrx(blob);
       resetAndClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Import failed");
+      setError(errorMessage(e, "Import failed"));
     } finally {
       setImporting(false);
     }
@@ -365,7 +367,7 @@ export function ImportKeyPage({
                 className="hidden"
                 onChange={async (e) => {
                   const file = e.target.files?.[0];
-                  if (file) setArmorValue(await file.text());
+                  if (file) setArmorValue(await readKeyFile(file));
                   e.target.value = "";
                 }}
               />
