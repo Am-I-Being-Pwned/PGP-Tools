@@ -1584,7 +1584,7 @@ fn cfb_decrypt(
     iv: &[u8],
     ciphertext: &[u8],
 ) -> Result<Vec<u8>, String> {
-    use aes::cipher::{Block, BlockEncrypt, KeyInit as _};
+    use aes::cipher::{Block, BlockEncrypt};
 
     fn run<C: BlockEncrypt + aes::cipher::KeyInit>(
         key: &[u8],
