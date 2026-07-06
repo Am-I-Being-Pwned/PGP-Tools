@@ -6,6 +6,8 @@
  *  (e.g. a detached-signature file, a vCard, a backup bundle) add a rule;
  *  nothing in the dropzone component itself needs to change. */
 
+import { looksLikeBinaryKey, readKeyFile } from "./binary-armor";
+
 /** A drag payload once dropped: the raw files and any dragged text/plain. */
 export interface DropPayload {
   files: File[];
@@ -14,11 +16,14 @@ export interface DropPayload {
 
 /** Lightweight signals a rule inspects to decide if it owns a drop.
  *  `sampleText` is the dragged text plus a bounded prefix of each file —
- *  enough to spot an armor header without reading whole files. */
+ *  enough to spot an armor header without reading whole files.
+ *  `hasBinaryKeyFile` flags a file whose bytes are a raw (non-armored)
+ *  OpenPGP key export, which carries no armor header to sample. */
 export interface DropSample {
   files: File[];
   text: string;
   sampleText: string;
+  hasBinaryKeyFile: boolean;
 }
 
 /** A drop rule. Rules are tried in order; the first match wins. */
@@ -61,33 +66,41 @@ const MAX_SAMPLE_FILES = 50;
 const MAX_KEY_FILE_BYTES = 1024 * 1024;
 
 /** Read a bounded prefix of each file and combine with the dragged text,
- *  for classification only. */
+ *  for classification only. Each prefix is read once as bytes: decoded
+ *  for the armor-header text sample, and sniffed raw for binary
+ *  (non-armored) key exports, which have no header to sample. */
 export async function buildDropSample(
   payload: DropPayload,
 ): Promise<DropSample> {
   const prefixes = await Promise.all(
-    payload.files.slice(0, MAX_SAMPLE_FILES).map((f) =>
-      f
-        .slice(0, SAMPLE_BYTES)
-        .text()
-        .catch(() => ""),
-    ),
+    payload.files.slice(0, MAX_SAMPLE_FILES).map(async (f) => {
+      try {
+        return new Uint8Array(await f.slice(0, SAMPLE_BYTES).arrayBuffer());
+      } catch {
+        return new Uint8Array(0);
+      }
+    }),
   );
+  const decoder = new TextDecoder();
   return {
     files: payload.files,
     text: payload.text,
-    sampleText: [payload.text, ...prefixes].join("\n"),
+    sampleText: [payload.text, ...prefixes.map((b) => decoder.decode(b))].join(
+      "\n",
+    ),
+    hasBinaryKeyFile: prefixes.some(looksLikeBinaryKey),
   };
 }
 
-/** Read every dropped file fully and join. Used by the key-import route,
- *  where files are small armored blobs. Oversized files are skipped so an
- *  accidental huge drop can't be loaded wholesale into memory. */
+/** Read every dropped file fully and join, armoring raw binary key
+ *  exports on the fly. Used by the key-import route, where files are
+ *  small key blobs. Oversized files are skipped so an accidental huge
+ *  drop can't be loaded wholesale into memory. */
 export async function readAllFilesText(files: File[]): Promise<string> {
   const texts = await Promise.all(
     files.map((f) =>
       f.size <= MAX_KEY_FILE_BYTES
-        ? f.text().catch(() => "")
+        ? readKeyFile(f).catch(() => "")
         : Promise.resolve(""),
     ),
   );

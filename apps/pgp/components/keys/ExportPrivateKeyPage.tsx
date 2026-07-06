@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@amibeingpwned/ui/button";
 
 import { isWebAuthnCancel } from "../../lib/protection/webauthn-prf";
+import { scheduleClipboardClear } from "../../lib/utils/clipboard";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 import { SubPage } from "../shared/SubPage";
 
@@ -78,23 +79,10 @@ export function ExportPrivateKeyPage({
   const [exporting, setExporting] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const feedbackTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const clipboardClearTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const { isPasskey, needsUnlock } = exporter;
   // The unlock gate only exists in gated mode and only until we hold a handle.
   const showGate = needsUnlock && handle === null;
-
-  /** Best-effort clipboard wipe after `delayMs`. We can't read the clipboard
-   *  to know if the user has since copied something else (no permission), so
-   *  the wipe is unconditional -- acceptable to avoid leaving key material. */
-  const scheduleClipboardClear = (delayMs = 60_000) => {
-    if (clipboardClearTimer.current) clearTimeout(clipboardClearTimer.current);
-    clipboardClearTimer.current = setTimeout(() => {
-      void navigator.clipboard.writeText("").catch(() => {
-        /* clipboard API may have been revoked; nothing to do */
-      });
-    }, delayMs);
-  };
 
   const showFeedback = (msg: string) => {
     setFeedback(msg);
@@ -108,13 +96,10 @@ export function ExportPrivateKeyPage({
   const unmounted = useRef(false);
 
   // Drop a held handle on unmount and cancel the feedback timer. The
-  // clipboard-wipe timer deliberately survives unmount: the whole point of
-  // copying is to close this page and paste elsewhere, so the wipe must
-  // still fire at its scheduled deadline -- not be cancelled (key material
-  // would linger in the clipboard forever) and not fire early (the paste
-  // window would vanish). Its callback touches only the clipboard, never
-  // React state. If the side panel itself closes, the JS context -- and
-  // with it the clipboard copy's source -- dies anyway.
+  // clipboard-wipe timer (module-level in lib/utils/clipboard.ts)
+  // deliberately survives unmount -- see that helper for why. If the
+  // side panel itself closes, the JS context -- and with it the
+  // clipboard copy's source -- dies anyway.
   useEffect(() => {
     return () => {
       unmounted.current = true;

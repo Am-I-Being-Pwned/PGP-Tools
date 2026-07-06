@@ -1319,6 +1319,41 @@ pub fn get_key_armored(key_handle: u32) -> Result<String, String> {
     armor_cert(&get_cert_from_handle(key_handle)?, true)
 }
 
+/// Mint an armored revocation certificate for a stored (unlocked) key.
+/// Backfills what generation already provides: imported keys arrive
+/// without one, but we hold the primary secret, so we can self-sign a
+/// revocation on demand. Returns only a public signature packet -- no
+/// secret material crosses the boundary.
+#[wasm_bindgen(js_name = "revocationCertificateWithHandle")]
+pub fn revocation_certificate_with_handle(key_handle: u32) -> Result<String, String> {
+    use openpgp::types::ReasonForRevocation;
+
+    let cert = get_cert_from_handle(key_handle)?;
+    let mut signer = cert
+        .primary_key()
+        .key()
+        .clone()
+        .parts_into_secret()
+        .map_err(|_| "Primary key has no secret material".to_string())?
+        .into_keypair()
+        .str_err()?;
+    // "Unspecified" matches gpg's own pre-generated certificates: the
+    // cert is minted long before the reason (loss, compromise) is known.
+    let sig = CertRevocationBuilder::new()
+        .set_reason_for_revocation(ReasonForRevocation::Unspecified, b"")
+        .str_err()?
+        .build(&mut signer, &cert, None)
+        .str_err()?;
+
+    let rev_packet: openpgp::Packet = sig.into();
+    let mut rev_buf = Vec::with_capacity(rev_packet.serialized_len() + 256);
+    let mut rev_writer =
+        openpgp::armor::Writer::new(&mut rev_buf, openpgp::armor::Kind::Signature).str_err()?;
+    rev_packet.serialize(&mut rev_writer).str_err()?;
+    rev_writer.finalize().str_err()?;
+    String::from_utf8(rev_buf).str_err()
+}
+
 /// Export a stored key encrypted with a passphrase (key never leaves WASM as plaintext).
 /// Passphrase is taken as owned bytes so we can zeroize on the wasm side.
 #[wasm_bindgen(js_name = "encryptKeyForExportWithHandle")]

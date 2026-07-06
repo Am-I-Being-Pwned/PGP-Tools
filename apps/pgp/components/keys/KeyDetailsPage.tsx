@@ -13,10 +13,15 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { Button } from "@amibeingpwned/ui/button";
+
 import type { KeyDetails, KeyInfo, SubkeyDetail } from "../../lib/pgp/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import { parseKey, parseKeyDetails } from "../../lib/pgp/wasm";
+import { scheduleClipboardClear } from "../../lib/utils/clipboard";
+import { downloadText } from "../../lib/utils/download";
+import { errorMessage } from "../../lib/utils/errors";
 import { formatAlgorithm } from "../../lib/utils/formatting";
 import { parseUserId } from "../../lib/utils/key-naming";
 import {
@@ -38,6 +43,10 @@ interface KeyDetailsPageProps {
   onRename?: () => void;
   /** Open the delete/remove confirmation page for this key. */
   onDelete?: () => void;
+  /** Own keys only: mint (and persist) a revocation certificate for a
+   *  key imported without one. Should throw with a user-readable message
+   *  when the key is locked. */
+  onGenerateRevocation?: () => Promise<string>;
 }
 
 /** Header icon button with a small hover label underneath (the UI kit
@@ -291,6 +300,99 @@ function SubkeyRow({ row }: { row: SubkeyDetail }) {
   );
 }
 
+// ── revocation certificate (own keys) ────────────────────────────────
+
+/** The stored revocation certificate for one of the user's own keys --
+ *  generated keys carry one from creation; imported keys can mint one
+ *  here on demand (requires the key to be unlocked). */
+function RevocationSection({
+  keyId,
+  initialCertificate,
+  onGenerate,
+}: {
+  keyId: string;
+  initialCertificate?: string;
+  onGenerate?: () => Promise<string>;
+}) {
+  const [certificate, setCertificate] = useState(initialCertificate ?? null);
+  const [generating, setGenerating] = useState(false);
+  const [genError, setGenError] = useState<string | null>(null);
+
+  const handleDownload = () => {
+    if (!certificate) return;
+    downloadText(certificate, `revocation-${keyId.slice(-16)}.asc`);
+  };
+
+  const handleCopy = () => {
+    if (!certificate) return;
+    void navigator.clipboard.writeText(certificate);
+    // A revocation cert is an irreversible instrument (anyone holding it
+    // can revoke the key), so it gets the same clipboard hygiene as an
+    // exported private key.
+    scheduleClipboardClear();
+    toast.success("Revocation certificate copied - clipboard clears in 60s");
+  };
+
+  const handleGenerate = async () => {
+    if (!onGenerate) return;
+    setGenerating(true);
+    setGenError(null);
+    try {
+      setCertificate(await onGenerate());
+      toast.success("Revocation certificate created");
+    } catch (e) {
+      setGenError(
+        errorMessage(e, "Could not create a revocation certificate."),
+      );
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  return (
+    <div>
+      <h3 className="mb-2 text-xs font-semibold">Revocation certificate</h3>
+      <div className="border-border space-y-2 rounded-md border p-2.5">
+        <p className="text-muted-foreground text-xs">
+          {certificate
+            ? "If this key is ever lost or compromised, publishing this " +
+              "certificate tells your contacts to stop using the key. Back " +
+              "it up somewhere safe - anyone who holds it can revoke your key."
+            : "This key was imported without a revocation certificate. " +
+              "Create one now and back it up, so you can revoke the key " +
+              "later even if you lose access to it."}
+        </p>
+        {certificate ? (
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={handleDownload}>
+              Download
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleCopy}>
+              Copy
+            </Button>
+          </div>
+        ) : (
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void handleGenerate()}
+              disabled={generating || !onGenerate}
+            >
+              {generating ? "Creating..." : "Create revocation certificate"}
+            </Button>
+            {genError && (
+              <p className="text-destructive text-xs" role="alert">
+                {genError}
+              </p>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── page ─────────────────────────────────────────────────────────────
 
 export function KeyDetailsPage({
@@ -299,6 +401,7 @@ export function KeyDetailsPage({
   onEncryptTo,
   onRename,
   onDelete,
+  onGenerateRevocation,
 }: KeyDetailsPageProps) {
   const { entered, close } = useSlideOver(onBack);
   const [info, setInfo] = useState<KeyInfo | null>(null);
@@ -603,6 +706,14 @@ export function KeyDetailsPage({
               </div>
             )}
           </div>
+        )}
+
+        {isOwn && (
+          <RevocationSection
+            keyId={target.keyBlob.keyId}
+            initialCertificate={target.keyBlob.revocationCertificate}
+            onGenerate={onGenerateRevocation}
+          />
         )}
       </div>
     </SlideOverPanel>

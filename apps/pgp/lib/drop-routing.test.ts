@@ -8,7 +8,7 @@ import {
 } from "./drop-routing";
 
 function sample(text: string): DropSample {
-  return { files: [], text, sampleText: text };
+  return { files: [], text, sampleText: text, hasBinaryKeyFile: false };
 }
 
 describe("looksLikeKey", () => {

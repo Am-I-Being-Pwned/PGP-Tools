@@ -221,6 +221,16 @@ export async function selectDecryptionKey(
   return JSON.parse(json) as string | null;
 }
 
+/** Mint an armored revocation certificate for an unlocked key --
+ *  backfills what generation provides, for imported keys. The result is
+ *  a public signature packet; no secret material crosses the boundary. */
+export async function revocationCertificateWithHandle(
+  keyHandle: number,
+): Promise<string> {
+  const wasm = await loadWasm();
+  return wasm.revocationCertificateWithHandle(keyHandle);
+}
+
 /** Drop a KEY_STORE entry. Backing bytes are zeroized in Rust via the
  *  `Drop for StoredKey` impl. */
 export async function dropKey(handle: number): Promise<void> {

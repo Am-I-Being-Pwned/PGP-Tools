@@ -881,3 +881,34 @@ OO5a/hK/DR12WoUg1lFspDebSz2rFz0A
     let err = crate::decrypt_cert_secrets(cert, b"wrong passphrase").unwrap_err();
     assert_eq!(err, "Incorrect passphrase");
 }
+
+/// A revocation certificate minted on demand for a stored key (the
+/// imported-key backfill path) must actually revoke the cert when
+/// applied, and must be recognized by our own import policy.
+#[test]
+fn minted_revocation_certificate_revokes_the_cert() {
+    let generated: serde_json::Value =
+        serde_json::from_str(&gen_test_key()).unwrap();
+    let private_armor = generated["privateKeyArmored"].as_str().unwrap();
+
+    let handle = store_key(private_armor).unwrap();
+    let revocation = revocation_certificate_with_handle(handle).unwrap();
+    drop_key(handle).unwrap();
+    assert!(revocation.contains("BEGIN PGP SIGNATURE"));
+
+    // Apply the revocation to the cert, as a recipient's tooling would.
+    let cert = openpgp::Cert::from_bytes(private_armor.as_bytes()).unwrap();
+    let sig = openpgp::Packet::from_bytes(revocation.as_bytes()).unwrap();
+    let (revoked, _) = cert.insert_packets(vec![sig]).unwrap();
+
+    let info = extract_key_info(&revoked, false);
+    assert!(!info.usable_for_encryption && !info.usable_for_signing);
+    assert!(
+        info.policy_error
+            .as_deref()
+            .unwrap_or_default()
+            .contains("revoked"),
+        "policy error should name the revocation: {:?}",
+        info.policy_error,
+    );
+}
