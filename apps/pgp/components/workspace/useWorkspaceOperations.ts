@@ -498,10 +498,6 @@ export function useWorkspaceOperations({
   }
 
   async function executeVerify() {
-    if (contacts.length === 0 && myKeys.length === 0) {
-      s.setError("No public keys available for verification.");
-      return;
-    }
     const allPubArmored = [
       ...myKeys.map((k) => k.publicKeyArmored),
       ...contacts.map((c) => c.armoredPublicKey),
@@ -514,21 +510,48 @@ export function useWorkspaceOperations({
         signedMessage: messageText,
         verificationPublicKeys: allPubArmored,
       });
-      if (result.signatureValid) {
-        const isFileInput = s.files.length > 0;
-        s.setOperationDone(true);
-        s.setStatusText("Signature verified");
-        const signer = findSigner(result.signerKeyId);
-        if (signer) s.setVerifiedSigner(signer);
-        maybeAutoDownload(isFileInput, { text: result.text });
-      } else {
-        s.setError(
-          "Verification failed. The signature may be invalid or the signer's key is not in your contacts.",
-        );
+      switch (result.signatureStatus) {
+        case "valid": {
+          const isFileInput = s.files.length > 0;
+          s.setOperationDone(true);
+          s.setSignatureTone("success");
+          s.setStatusText("Signature verified");
+          const signer = findSigner(result.signerKeyId);
+          if (signer) s.setVerifiedSigner(signer);
+          maybeAutoDownload(isFileInput, { text: result.text });
+          break;
+        }
+        case "unknown_key":
+          // Signed, but we don't hold the signer's public key. That is not
+          // a failed verification -- show the signer's key ID so the user
+          // can go fetch the right key (a rotation notice is often signed
+          // by a key you don't have yet).
+          s.setOperationDone(true);
+          s.setSignatureTone("warning");
+          s.setVerifiedSigner({
+            keyId: result.signerKeyId ?? "",
+            userIds: ["Unknown signer"],
+            algorithm: "",
+            armoredPublicKey: "",
+            addedAt: 0,
+            lastUsedAt: 0,
+          });
+          s.setStatusText(
+            "This message is signed, but the signer's public key isn't in your keys or contacts, so the signature could not be verified.",
+          );
+          break;
+        case "invalid":
+          s.setError(
+            "Signature verification FAILED - this message may have been tampered with",
+          );
+          break;
+        case "unsigned":
+          s.setError("This message is not signed.");
+          break;
       }
     } catch {
       s.setError(
-        "Verification failed. The signature may be invalid or the signer's key is not in your contacts.",
+        "Verification failed. The input doesn't look like a signed PGP message.",
       );
     }
   }

@@ -744,6 +744,7 @@ dependencies = [
 name = "gpg-wasm"
 version = "0.1.0"
 dependencies = [
+ "aes",
  "aes-gcm",
  "anyhow",
  "argon2",

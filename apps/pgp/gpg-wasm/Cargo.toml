@@ -23,6 +23,9 @@ getrandom_02 = { package = "getrandom", version = "0.2", features = ["js"] }
 getrandom = { version = "0.3", features = ["wasm_js"] }
 anyhow = "1"
 argon2 = "0.5"
+# `aes` also comes in via aes-gcm; declared direct for the CFB fallback
+# that decrypts GnuPG's zero-padded ECC secret keys (see cfb_decrypt).
+aes = "0.8"
 aes-gcm = "0.10"
 hkdf = "0.12"
 sha2 = { version = "0.10", features = ["oid"] }

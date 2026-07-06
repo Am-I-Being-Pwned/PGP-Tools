@@ -846,3 +846,38 @@ fn test_allocator_zeroizes_freed_block() {
         dealloc(p2, layout);
     }
 }
+
+/// Regression: GnuPG/libgcrypt pads ECC secret scalars to the field
+/// size when protecting them (this key's Ed25519 scalar starts 0x15, so
+/// its 253 actual bits are declared as 256). Sequoia's strict secret-MPI
+/// parser rejects that, which used to fail the import of ~half of all
+/// gpg-exported protected ECC keys; `decrypt_gpg_padded_secret` redoes
+/// the decryption manually. Throwaway test key, passphrase below.
+#[test]
+fn decrypts_gpg_padded_ecc_secret() {
+    let armored = r#"-----BEGIN PGP PRIVATE KEY BLOCK-----
+
+lIYEakrr7RYJKwYBBAHaRw8BAQdA0zkntIfC/CAmEj8YVi6qBxgQaearoPS+Qytk
+2w3UrC/+BwMCaAiwap3+RRX/QYwbCCBXEFCRTEFTGcFgFfPLtD/6iGSKXyh6ut7Y
+UIcmS724t4p5LX7cUL7RpKn6rvnDAe4pe/tQGO9uHj92u7Q7N5JnWbQTVCBFZCA8
+dDJAeC5leGFtcGxlPoiZBBMWCgBBFiEEAK6HPeVeFmRR4zOXo/26X5NJGfIFAmpK
+6+0CGwMFCQHhM4AFCwkIBwICIgIGFQoJCAsCBBYCAwECHgcCF4AACgkQo/26X5NJ
+GfKSvQD/Xdgv3wTcxuIR+Kc9jZllB4qtvFCJH3j5Mey4li11gsIBANxaXn0mQlPW
+OO5a/hK/DR12WoUg1lFspDebSz2rFz0A
+=fKk9
+-----END PGP PRIVATE KEY BLOCK-----"#;
+    let cert = openpgp::Cert::from_bytes(armored.as_bytes()).unwrap();
+
+    let decrypted =
+        crate::decrypt_cert_secrets(cert.clone(), b"super secret passphrase 42").unwrap();
+    assert!(
+        decrypted
+            .keys()
+            .secret()
+            .all(|ka| !ka.key().secret().is_encrypted()),
+        "all secrets should be decrypted",
+    );
+
+    let err = crate::decrypt_cert_secrets(cert, b"wrong passphrase").unwrap_err();
+    assert_eq!(err, "Incorrect passphrase");
+}

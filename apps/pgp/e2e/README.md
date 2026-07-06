@@ -30,6 +30,10 @@ classic one, loads extensions) — so no display or `xvfb` is needed. Set
   and the padded-bucket check.
 - `keys.ts` — auto-generated fixtures: real OpenPGP keys + signed messages
   across a spread of user-ID shapes and capabilities.
+- `edge-keys.ts` — auto-generated "wild and whacky" fixtures: expired,
+  revoked, multi-UID, RSA-4096, passphrase-protected, offline-primary
+  (stubbed secret), refreshed-expiry pair, binary export, bidi-override
+  user ID.
 - `smoke.spec.ts` — the extension boots into onboarding.
 - `storage.spec.ts` — onboarding encrypts + pads the keyring, encrypts
   settings, keeps sync as bootstrap-only, and leaks no plaintext.
@@ -40,6 +44,18 @@ classic one, loads extensions) — so no display or `xvfb` is needed. Set
   and verify a signature it made. Covers no-email and sign-only keys.
 - `recipients.spec.ts` — sign-only contacts are importable but excluded
   from the encryption-recipient picker.
+- `edge-import.spec.ts` — weird public keys: expired/revoked import
+  rejections with actionable messages, multi-UID and RSA-4096 imports,
+  and every verify outcome (valid / unknown signer / tampered / not a
+  PGP message). Includes a local-only regression against
+  `messy/sample-failed` (gitignored real key material; skipped in CI).
+- `edge-private.spec.ts` — private keys as GnuPG exports them:
+  passphrase-protected import (incl. gpg's zero-padded ECC secret MPIs,
+  see `decrypt_gpg_padded_secret` in gpg-wasm), wrong-passphrase error,
+  offline-primary (GNU-dummy stub) legible failure.
+- `edge-probes.spec.ts` — interop hazards: re-importing a refreshed key
+  updates the stored expiry, binary (non-armored) `.gpg` files import,
+  bidi override characters never reach the DOM.
 - `passkey.spec.ts` — onboard / lock / unlock with a **passkey**, driven by
   a virtual WebAuthn authenticator with PRF (`webauthn.ts`). WebAuthn needs
   the page focused, so the spec calls `bringToFront()`.
@@ -60,10 +76,13 @@ so the two runners never collide.
 
 ## Regenerating fixtures
 
-`e2e/keys.ts` is generated from a throwaway gpg keyring:
+`e2e/keys.ts` and `e2e/edge-keys.ts` are generated from throwaway gpg
+keyrings:
 
 ```bash
-./e2e/gen-keys.sh    # needs gpg 2.4+ and python3
+./e2e/gen-keys.sh         # happy-path fixtures; needs gpg 2.4+ and python3
+./e2e/gen-edge-keys.sh    # edge-case fixtures (expired via gpg's own
+                          # --faked-system-time; no faketime needed)
 ```
 
 Add a key by extending the `q ...` calls and the `meta` map in that
