@@ -78,6 +78,10 @@ export async function signInWorkspace(
   await panel.getByRole("option", { name: "Sign", exact: true }).click();
   await panel.locator("textarea").first().fill(message);
   await panel.getByRole("button", { name: /^sign$/i }).click();
+  // The armored output is collapsed behind a "Preview" disclosure; expand it
+  // to assert on the armor itself.
+  await expect(panel.getByText("Signed message").first()).toBeVisible();
+  await panel.getByRole("button", { name: /Preview/ }).click();
   await expect(
     panel.getByText("BEGIN PGP SIGNED MESSAGE").first(),
   ).toBeVisible();
@@ -97,6 +101,10 @@ export async function encryptToSelfInWorkspace(
   await panel.getByRole("option").first().click();
   await panel.locator("textarea").first().fill(plaintext);
   await panel.getByRole("button", { name: /^encrypt$/i }).click();
+  // The armored output is collapsed behind a "Preview" disclosure; expand it
+  // to read the ciphertext back out.
+  await expect(panel.getByText("Encrypted message").first()).toBeVisible();
+  await panel.getByRole("button", { name: /Preview/ }).click();
   const pre = panel.locator("pre").first();
   await expect(pre).toContainText("BEGIN PGP MESSAGE");
   return pre.innerText();
@@ -147,8 +155,7 @@ export async function switchStorageTo(
   panel: Page,
   target: "local" | "sync",
 ): Promise<void> {
-  const label =
-    target === "sync" ? "Sync across devices" : "This device only";
+  const label = target === "sync" ? "Sync across devices" : "This device only";
   await panel.getByRole("tab", { name: "Settings" }).click();
   await expect(
     panel.getByRole("heading", { name: "Key storage" }),

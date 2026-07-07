@@ -21,6 +21,7 @@ import {
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import { formatKeyDisplayName } from "../../lib/utils/key-naming";
+import { KeyDetailsButton } from "../keys/KeyDetailsButton";
 
 type AnyKey = ProtectedKeyBlob | PublicContactKey;
 
@@ -88,101 +89,104 @@ export function KeySelector({
       <label className="text-muted-foreground mb-1 block text-xs font-medium">
         {label}
       </label>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="h-auto w-full justify-between py-1.5 font-normal"
-          >
-            {selectedDisplay ? (
-              <div className="min-w-0 text-left">
-                <p className="truncate text-sm">{selectedDisplay.name}</p>
-                {selectedDisplay.detail && (
-                  <p className="text-muted-foreground truncate text-xs">
-                    {selectedDisplay.detail}
-                  </p>
-                )}
-              </div>
-            ) : (
-              <span className="text-muted-foreground text-sm">
-                Select a key...
-              </span>
-            )}
-            <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        {/* Pin the list ABOVE the trigger and disable collision flipping so
+      <div className="flex items-stretch gap-1.5">
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={open}
+              className="h-auto min-w-0 flex-1 justify-between py-1.5 font-normal"
+            >
+              {selectedDisplay ? (
+                <div className="min-w-0 text-left">
+                  <p className="truncate text-sm">{selectedDisplay.name}</p>
+                  {selectedDisplay.detail && (
+                    <p className="text-muted-foreground truncate text-xs">
+                      {selectedDisplay.detail}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <span className="text-muted-foreground text-sm">
+                  Select a key...
+                </span>
+              )}
+              <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          {/* Pin the list ABOVE the trigger and disable collision flipping so
             it doesn't jump between top/bottom as the result count changes
             while searching. */}
-        <PopoverContent
-          side="top"
-          avoidCollisions={false}
-          className="w-(--radix-popover-trigger-width) p-0"
-        >
-          <Command>
-            <CommandInput placeholder="Search..." />
-            {/* Fixed height (not just max-h) so the list stays a constant
+          <PopoverContent
+            side="top"
+            avoidCollisions={false}
+            className="w-(--radix-popover-trigger-width) p-0"
+          >
+            <Command>
+              <CommandInput placeholder="Search..." />
+              {/* Fixed height (not just max-h) so the list stays a constant
                 size and doesn't grow/shrink as search filters the results. */}
-            <CommandList className="h-[300px]">
-              <CommandEmpty>No keys found.</CommandEmpty>
-              {hasGroups ? (
-                <>
-                  {contacts && contacts.length > 0 && (
-                    <CommandGroup heading="Contacts">
-                      {contacts.map((key) => (
-                        <KeyOption
-                          key={key.keyId}
-                          keyData={key}
-                          selected={key.keyId === selectedKeyId}
-                          onSelect={() => {
-                            onSelect(key.keyId);
-                            setOpen(false);
-                          }}
-                        />
-                      ))}
-                    </CommandGroup>
-                  )}
-                  {contacts &&
-                    contacts.length > 0 &&
-                    myKeys &&
-                    myKeys.length > 0 && <CommandSeparator />}
-                  {myKeys && myKeys.length > 0 && (
-                    <CommandGroup heading="My Keys">
-                      {myKeys.map((key) => (
-                        <KeyOption
-                          key={key.keyId}
-                          keyData={key}
-                          selected={key.keyId === selectedKeyId}
-                          onSelect={() => {
-                            onSelect(key.keyId);
-                            setOpen(false);
-                          }}
-                        />
-                      ))}
-                    </CommandGroup>
-                  )}
-                </>
-              ) : (
-                <CommandGroup>
-                  {flatKeys.map((key) => (
-                    <KeyOption
-                      key={key.keyId}
-                      keyData={key}
-                      selected={key.keyId === selectedKeyId}
-                      onSelect={() => {
-                        onSelect(key.keyId);
-                        setOpen(false);
-                      }}
-                    />
-                  ))}
-                </CommandGroup>
-              )}
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+              <CommandList className="h-[300px]">
+                <CommandEmpty>No keys found.</CommandEmpty>
+                {hasGroups ? (
+                  <>
+                    {contacts && contacts.length > 0 && (
+                      <CommandGroup heading="Contacts">
+                        {contacts.map((key) => (
+                          <KeyOption
+                            key={key.keyId}
+                            keyData={key}
+                            selected={key.keyId === selectedKeyId}
+                            onSelect={() => {
+                              onSelect(key.keyId);
+                              setOpen(false);
+                            }}
+                          />
+                        ))}
+                      </CommandGroup>
+                    )}
+                    {contacts &&
+                      contacts.length > 0 &&
+                      myKeys &&
+                      myKeys.length > 0 && <CommandSeparator />}
+                    {myKeys && myKeys.length > 0 && (
+                      <CommandGroup heading="My Keys">
+                        {myKeys.map((key) => (
+                          <KeyOption
+                            key={key.keyId}
+                            keyData={key}
+                            selected={key.keyId === selectedKeyId}
+                            onSelect={() => {
+                              onSelect(key.keyId);
+                              setOpen(false);
+                            }}
+                          />
+                        ))}
+                      </CommandGroup>
+                    )}
+                  </>
+                ) : (
+                  <CommandGroup>
+                    {flatKeys.map((key) => (
+                      <KeyOption
+                        key={key.keyId}
+                        keyData={key}
+                        selected={key.keyId === selectedKeyId}
+                        onSelect={() => {
+                          onSelect(key.keyId);
+                          setOpen(false);
+                        }}
+                      />
+                    ))}
+                  </CommandGroup>
+                )}
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+        {selectedKey && <KeyDetailsButton keyData={selectedKey} />}
+      </div>
     </div>
   );
 }

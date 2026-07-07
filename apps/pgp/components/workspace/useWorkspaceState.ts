@@ -30,6 +30,11 @@ export interface WorkspaceState {
   setOutput: (s: string) => void;
   operationDone: boolean;
   setOperationDone: (b: boolean) => void;
+  /** True once any operation has produced output this session, and stays
+   *  true across a `resetOutput` (only `resetAll` clears it). Lets the view
+   *  reserve the output slot so a later clear -- e.g. changing the recipient
+   *  key -- doesn't collapse the layout and jump the controls around. */
+  hasProducedOutput: boolean;
   statusText: string | null;
   setStatusText: (s: string | null) => void;
   verifiedSigner: PublicContactKey | ProtectedKeyBlob | null;
@@ -136,6 +141,14 @@ export function useWorkspaceState(opts: {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [publicKeyDetected, setPublicKeyDetected] = useState(false);
   const [privateKeyDetected, setPrivateKeyDetected] = useState(false);
+  const [hasProducedOutput, setHasProducedOutput] = useState(false);
+
+  // Latch: once an operation completes, remember it so the view can keep the
+  // output slot reserved. `resetOutput` deliberately doesn't clear this (a
+  // recipient change shouldn't release the space); only `resetAll` does.
+  useEffect(() => {
+    if (operationDone) setHasProducedOutput(true);
+  }, [operationDone]);
 
   const resetOutput = useCallback(() => {
     setOutput("");
@@ -155,6 +168,7 @@ export function useWorkspaceState(opts: {
     setFiles([]);
     setPublicKeyDetected(false);
     setPrivateKeyDetected(false);
+    setHasProducedOutput(false);
     resetOutput();
   }, [resetOutput]);
 
@@ -387,6 +401,7 @@ export function useWorkspaceState(opts: {
     setOutput,
     operationDone,
     setOperationDone,
+    hasProducedOutput,
     statusText,
     setStatusText,
     verifiedSigner,

@@ -1,5 +1,11 @@
-import { useEffect, useRef } from "react";
-import { ArrowLeftIcon, DownloadIcon, RotateCcwIcon } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  ArrowLeftIcon,
+  CheckIcon,
+  ClipboardIcon,
+  DownloadIcon,
+  RotateCcwIcon,
+} from "lucide-react";
 
 import { Button } from "@amibeingpwned/ui/button";
 import { Checkbox } from "@amibeingpwned/ui/checkbox";
@@ -119,6 +125,22 @@ export function WorkspaceView({
   const needsRecipient = s.mode === "encrypt";
   const needsPrivateKey = s.mode === "decrypt" || s.mode === "sign";
   const hasInput = s.files.length > 0 || s.input.length > 0;
+
+  // Copy the armored output straight from the bottom action bar (the compact
+  // preview no longer carries its own copy button). Binary/file output has no
+  // text to copy, so the Copy half is only shown when `s.output` is present.
+  const [copied, setCopied] = useState(false);
+  const copyTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(s.output);
+      setCopied(true);
+      clearTimeout(copyTimer.current);
+      copyTimer.current = setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // clipboard may reject if the panel isn't focused
+    }
+  };
   const canCrxSign = !!crxSigningEnabled && (crxKeys?.length ?? 0) > 0;
   const singleCrxFile = s.files.length === 1 && /\.crx$/i.test(s.files[0].name);
   // CRX signs a packed extension: offer it only for a single .zip that
@@ -212,16 +234,33 @@ export function WorkspaceView({
           fullHeight
         />
         <div className="flex gap-2">
-          <Button
-            className="flex-1"
-            onClick={() => ops.triggerDownload()}
-            disabled={s.loading}
-          >
-            <span className="flex items-center gap-2">
-              <DownloadIcon className="h-4 w-4" />
-              Download
-            </span>
-          </Button>
+          <div className="flex flex-1 gap-2">
+            <Button
+              className="flex-1"
+              onClick={() => ops.triggerDownload()}
+              disabled={s.loading}
+            >
+              <span className="flex items-center gap-2">
+                <DownloadIcon className="h-4 w-4" />
+                Download
+              </span>
+            </Button>
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={handleCopy}
+              disabled={s.loading}
+            >
+              <span className="flex items-center gap-2">
+                {copied ? (
+                  <CheckIcon className="h-4 w-4 text-green-400" />
+                ) : (
+                  <ClipboardIcon className="h-4 w-4" />
+                )}
+                {copied ? "Copied" : "Copy"}
+              </span>
+            </Button>
+          </div>
           <Button
             variant="outline"
             size="icon"
@@ -266,7 +305,14 @@ export function WorkspaceView({
             contacts={contacts.filter((c) => c.usableForEncryption !== false)}
             myKeys={myKeys}
             selectedKeyId={s.selectedRecipientId}
-            onSelect={s.setSelectedRecipientId}
+            // Changing the recipient invalidates any completed ciphertext —
+            // clear it so the user can re-encrypt to the new key rather than
+            // being stuck downloading output encrypted to the wrong one.
+            onSelect={(id) => {
+              if (id === s.selectedRecipientId) return;
+              s.setSelectedRecipientId(id);
+              s.resetOutput();
+            }}
             emptyText="No contacts yet."
             emptyAction={onNavigateToKeys}
             emptyActionLabel="Add a contact"
@@ -419,6 +465,11 @@ export function WorkspaceView({
           statusText={s.statusText ?? undefined}
           verifiedSigner={s.verifiedSigner}
           signatureTone={s.signatureTone}
+          // Once an encrypt/sign has produced output, hold the slot open so
+          // clearing it (e.g. on a recipient change) doesn't jump the layout.
+          reserve={
+            s.hasProducedOutput && (s.mode === "encrypt" || s.mode === "sign")
+          }
         />
 
         {!s.needsPassword && (
@@ -464,32 +515,55 @@ export function WorkspaceView({
               </Button>
             ) : (
               <div className="flex gap-2">
-                <Button
-                  className="flex-1 capitalize"
-                  onClick={
-                    s.operationDone
-                      ? s.mode === "verify"
-                        ? s.resetAll
-                        : () => ops.triggerDownload()
-                      : ops.execute
-                  }
-                  disabled={s.loading || !hasInput}
-                >
-                  {s.loading ? (
-                    "Processing..."
-                  ) : s.operationDone ? (
-                    s.mode === "verify" ? (
-                      "Reset"
-                    ) : (
+                {s.operationDone && s.mode !== "verify" ? (
+                  // Completed encrypt/sign: the result is ready to take away.
+                  // Download is primary; Copy rides alongside for text output.
+                  <div className="flex flex-1 gap-2">
+                    <Button
+                      className="flex-1"
+                      onClick={() => ops.triggerDownload()}
+                      disabled={s.loading}
+                    >
                       <span className="flex items-center gap-2">
                         <DownloadIcon className="h-4 w-4" />
                         Download
                       </span>
-                    )
-                  ) : (
-                    s.mode
-                  )}
-                </Button>
+                    </Button>
+                    {s.output && (
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={handleCopy}
+                        disabled={s.loading}
+                      >
+                        <span className="flex items-center gap-2">
+                          {copied ? (
+                            <CheckIcon className="h-4 w-4 text-green-400" />
+                          ) : (
+                            <ClipboardIcon className="h-4 w-4" />
+                          )}
+                          {copied ? "Copied" : "Copy"}
+                        </span>
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <Button
+                    className="flex-1 capitalize"
+                    onClick={
+                      s.operationDone && s.mode === "verify"
+                        ? s.resetAll
+                        : ops.execute
+                    }
+                    disabled={s.loading || !hasInput}
+                  >
+                    {s.loading
+                      ? "Processing..."
+                      : s.operationDone && s.mode === "verify"
+                        ? "Reset"
+                        : s.mode}
+                  </Button>
+                )}
                 {s.operationDone && s.mode !== "verify" && (
                   <Button
                     variant="outline"

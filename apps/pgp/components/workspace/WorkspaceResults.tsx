@@ -22,6 +22,9 @@ interface WorkspaceResultsProps {
   signatureTone?: "success" | "warning";
   /** Fill the available height (used by the full-screen result view). */
   fullHeight?: boolean;
+  /** Hold the compact output slot open even when empty (after the first
+   *  operation) so clearing the output doesn't collapse the layout. */
+  reserve?: boolean;
 }
 
 export function WorkspaceResults({
@@ -35,6 +38,7 @@ export function WorkspaceResults({
   verifiedSigner,
   signatureTone = "success",
   fullHeight,
+  reserve,
 }: WorkspaceResultsProps) {
   const isUnverified = signatureTone === "warning";
 
@@ -48,7 +52,7 @@ export function WorkspaceResults({
     !!output ||
     !!binaryOutput ||
     fileResults.length > 0;
-  if (!fullHeight && !hasContent) return null;
+  if (!fullHeight && !hasContent && !reserve) return null;
 
   return (
     <div
@@ -94,6 +98,7 @@ export function WorkspaceResults({
         success={operationDone}
         statusText={verifiedSigner ? undefined : statusText}
         fullHeight={fullHeight}
+        reserve={reserve}
       />
     </div>
   );

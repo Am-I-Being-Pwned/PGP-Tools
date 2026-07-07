@@ -69,6 +69,9 @@ export function useWorkspaceOperations({
     s.setNeedsPassword(false);
     s.setPasswordInput("");
     s.setPasswordError(null);
+    // A completed sign/decrypt output belongs to the previous key; clear it
+    // so switching keys lets the user re-run rather than download stale output.
+    s.resetOutput();
   }
 
   // Default-select the private key the message is actually encrypted to, so
