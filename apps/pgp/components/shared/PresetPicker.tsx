@@ -11,15 +11,24 @@ const PARANOID_ENCRYPT_TO_SELF_NOTE =
 interface PresetPickerProps {
   /** Currently selected preset, or null when none is. */
   selected: PresetId | null;
+  /** Preset the user's settings currently match, marked with a
+   *  "Current" badge so pickers can distinguish "you are ON this" from
+   *  the tentative selection. Omit where there is no applied preset yet
+   *  (onboarding). */
+  activeId?: PresetId | null;
   onSelect: (id: PresetId) => void;
 }
 
 /**
  * Radio-style cards for the three security presets, each listing
  * exactly what its bundle sets (via describeBundle). Used by both the
- * onboarding preset step and the settings "Security preset" section.
+ * onboarding preset step and the settings security-preset subpage.
  */
-export function PresetPicker({ selected, onSelect }: PresetPickerProps) {
+export function PresetPicker({
+  selected,
+  activeId,
+  onSelect,
+}: PresetPickerProps) {
   return (
     <div className="space-y-2" role="radiogroup" aria-label="Security preset">
       {PRESET_IDS.map((id) => {
@@ -40,6 +49,11 @@ export function PresetPicker({ selected, onSelect }: PresetPickerProps) {
           >
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">{preset.title}</span>
+              {activeId === id && (
+                <span className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-[10px] font-medium">
+                  Current
+                </span>
+              )}
               {preset.recommended && (
                 <span className="bg-primary/10 text-primary rounded px-1.5 py-0.5 text-[10px] font-medium">
                   Recommended
