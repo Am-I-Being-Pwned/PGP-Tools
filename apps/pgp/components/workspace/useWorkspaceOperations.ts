@@ -263,8 +263,7 @@ export function useWorkspaceOperations({
     // key), flag it so a warning shows on the output.
     const { recipientPublicKeys, selfExcluded, selfKeyId } =
       buildEncryptRecipients({
-        recipientKeyId: recipient.keyId,
-        recipientArmored,
+        recipients: [{ keyId: recipient.keyId, armored: recipientArmored }],
         encryptToSelf: s.encryptToSelf,
         ownKeys: myKeys,
         signingKeyId: s.alsoSign ? s.selectedKeyId : null,
