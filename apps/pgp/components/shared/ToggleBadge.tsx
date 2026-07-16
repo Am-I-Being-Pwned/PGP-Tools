@@ -1,10 +1,10 @@
-import { CheckIcon } from "lucide-react";
-
 /**
- * A pill-style boolean toggle: on = green-tinted with a check, off = muted
- * outline. Replaces checkbox+label rows where the option reads as a mode
- * rather than a form field. The check icon keeps its footprint when off so
- * toggling never changes the pill's width.
+ * A Linear-style boolean toggle chip. State is signaled the way Linear's
+ * property chips do it: OFF is a borderless chip with muted text, ON is a
+ * filled chip with a constant neutral border and brighter text. No
+ * checkmarks and no colored chrome - fill + text weight carry the state.
+ * The border is transparent (not absent) when off, so toggling never
+ * shifts layout.
  */
 export function ToggleBadge({
   pressed,
@@ -21,16 +21,12 @@ export function ToggleBadge({
       role="switch"
       aria-checked={pressed}
       onClick={() => onPressedChange(!pressed)}
-      className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs transition-colors ${
+      className={`inline-flex h-6 items-center rounded-[5px] border px-2 text-xs font-medium transition-colors duration-150 ${
         pressed
-          ? "text-foreground border-green-500/40 bg-green-500/15"
-          : "border-input text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+          ? "border-border bg-secondary text-foreground hover:bg-secondary/70"
+          : "text-muted-foreground hover:bg-accent/50 hover:text-foreground border-transparent bg-transparent"
       }`}
     >
-      <CheckIcon
-        aria-hidden
-        className={`h-3 w-3 text-green-400 ${pressed ? "" : "invisible"}`}
-      />
       {children}
     </button>
   );
