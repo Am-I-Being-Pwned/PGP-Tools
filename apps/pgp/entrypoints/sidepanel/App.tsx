@@ -4,6 +4,7 @@ import { SettingsIcon } from "lucide-react";
 import type { WorkspaceIntake } from "../../components/workspace/useWorkspaceState";
 import type { WorkspaceOpsBridge } from "../../hooks/useActionContext";
 import type { DropRule } from "../../lib/drop-routing";
+import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { MasterProtection } from "../../lib/storage/master-protection";
 import type {
   AutoLockTimeout,
@@ -383,6 +384,19 @@ export default function App() {
     void savePreferences({ defaultKeyId: keyId });
   }, []);
 
+  // The user's first own key becomes the explicit default: with one key the
+  // resolver's first-key fallback behaves identically anyway, but making it
+  // explicit means adding a second key later never silently changes which
+  // key "encrypt to me" targets.
+  const handleAddKey = useCallback(
+    async (blob: ProtectedKeyBlob) => {
+      const isFirstKey = keyring.keys.length === 0;
+      await keyring.add(blob);
+      if (isFirstKey && defaultKeyId === null) handleSetDefaultKey(blob.keyId);
+    },
+    [keyring, defaultKeyId, handleSetDefaultKey],
+  );
+
   const handleDeleteKey = useCallback(
     async (keyId: string) => {
       await keyring.remove(keyId);
@@ -459,7 +473,7 @@ export default function App() {
               void contacts.refresh();
               void crxKeys.refresh();
             }}
-            addKey={keyring.add}
+            addKey={handleAddKey}
             cacheKey={!neverCacheKeys}
             onKeyCached={(keyId, handle) => {
               void session.cacheKeyHandle(keyId, handle);
@@ -576,7 +590,7 @@ export default function App() {
               onDeleteKey={handleDeleteKey}
               getKeyHandle={session.getKeyHandle}
               onSaveRevocationCertificate={keyring.setRevocationCertificate}
-              onAddKey={keyring.add}
+              onAddKey={handleAddKey}
               onAddContact={contacts.add}
               onDeleteContact={contacts.remove}
               advancedMode={advancedMode}
@@ -630,7 +644,7 @@ export default function App() {
               getKeyHandle={session.getKeyHandle}
               onUnlockWithPassword={session.unlockWithPassword}
               onUnlockWithPasskey={session.unlockWithPasskey}
-              onAddKey={keyring.add}
+              onAddKey={handleAddKey}
               onAddContact={contacts.add}
               crxKeys={crxKeys.keys}
               onAddCrxKey={crxKeys.add}
