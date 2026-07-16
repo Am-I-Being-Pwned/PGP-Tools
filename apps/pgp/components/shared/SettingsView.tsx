@@ -21,7 +21,12 @@ import {
   STORAGE_SETTINGS,
 } from "../../lib/constants";
 import { enterNeverCacheMode } from "../../lib/never-cache";
-import { activePreset, PRESETS, snapshotBundleFields } from "../../lib/presets";
+import {
+  activePreset,
+  bundledSettingsCustomized,
+  PRESETS,
+  snapshotBundleFields,
+} from "../../lib/presets";
 import { isQuotaExceeded } from "../../lib/storage/chunked";
 import {
   copyEncryptedBlobRepacked,
@@ -385,9 +390,11 @@ export function SettingsView({
         >
           <div className="min-w-0">
             <span className="text-sm">Security preset</span>
-            {currentPreset === "custom" && (
+            {prefs && currentPreset === "custom" && (
               <p className="text-muted-foreground text-xs">
-                A bundled setting was changed
+                {bundledSettingsCustomized(prefs)
+                  ? "A bundled setting was changed"
+                  : "No preset selected"}
               </p>
             )}
           </div>

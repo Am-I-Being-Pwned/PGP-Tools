@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { PgpPreferences } from "./storage/preferences";
 import {
   activePreset,
+  bundledSettingsCustomized,
   describeBundle,
   PRESET_IDS,
   PRESETS,
@@ -137,6 +138,41 @@ describe("activePreset", () => {
       defaultKeyId: "ABCD1234",
     });
     expect(activePreset(prefs)).toBe("careful");
+  });
+
+  it("reads all-default prefs (an upgrader who never chose) as custom", () => {
+    expect(activePreset(fullPrefs())).toBe("custom");
+  });
+});
+
+describe("bundledSettingsCustomized", () => {
+  it("is false on shipped defaults (upgrader who never chose a preset)", () => {
+    expect(bundledSettingsCustomized(fullPrefs())).toBe(false);
+  });
+
+  it("is true once any bundled setting deviates from the defaults", () => {
+    expect(
+      bundledSettingsCustomized(fullPrefs({ autoLockMinutes: 30 })),
+    ).toBe(true);
+    expect(
+      bundledSettingsCustomized(fullPrefs({ encryptToSelf: false })),
+    ).toBe(true);
+  });
+
+  it("ignores preferences outside every bundle", () => {
+    expect(
+      bundledSettingsCustomized(
+        fullPrefs({ advancedMode: true, defaultKeyId: "ABCD1234" }),
+      ),
+    ).toBe(false);
+  });
+
+  it("is true after applying any preset bundle (they all deviate)", () => {
+    for (const id of PRESET_IDS) {
+      expect(bundledSettingsCustomized(fullPrefs(PRESETS[id].bundle))).toBe(
+        true,
+      );
+    }
   });
 });
 
