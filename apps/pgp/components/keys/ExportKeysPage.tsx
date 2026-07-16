@@ -710,7 +710,7 @@ function ExportKeysBody({ f }: { f: ExportKeysFlow }) {
           </Button>
         </>
       ) : (
-        <p className="text-muted-foreground text-xs">Nothing to export.</p>
+        <p className="text-muted-foreground text-xs">Nothing to export</p>
       )}
     </div>
   );

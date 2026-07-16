@@ -413,7 +413,7 @@ export function WorkspaceView({
               s.setSelectedRecipientIds(ids);
               s.resetOutput();
             }}
-            emptyText="No contacts yet."
+            emptyText="No contacts yet"
             emptyAction={onNavigateToKeys}
             emptyActionLabel="Add a contact"
           />
@@ -449,7 +449,7 @@ export function WorkspaceView({
             keys={myKeys}
             selectedKeyId={s.selectedKeyId}
             onSelect={ops.selectPrivateKey}
-            emptyText="No keys yet."
+            emptyText="No keys yet"
             emptyAction={onNavigateToKeys}
             emptyActionLabel="Create one"
           />

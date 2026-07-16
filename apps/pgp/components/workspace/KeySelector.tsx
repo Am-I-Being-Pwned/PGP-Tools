@@ -128,7 +128,7 @@ export function KeySelector({
               {/* Fixed height (not just max-h) so the list stays a constant
                 size and doesn't grow/shrink as search filters the results. */}
               <CommandList className="h-[300px]">
-                <CommandEmpty>No keys found.</CommandEmpty>
+                <CommandEmpty>No keys found</CommandEmpty>
                 {hasGroups ? (
                   <>
                     {contacts && contacts.length > 0 && (
