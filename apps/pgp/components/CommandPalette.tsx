@@ -22,7 +22,7 @@ import {
 } from "../lib/actions/registry";
 import { isEditableTarget, matchesShortcut } from "../lib/shortcuts";
 import { toast } from "../lib/toast";
-import { hasOpenSlideOver } from "./shared/SlideOver";
+import { hasOpenSlideOver, holdFocusTraps } from "./shared/SlideOver";
 
 const PALETTE_SHORTCUT: ShortcutSpec = { mod: true, key: "k" };
 
@@ -82,9 +82,21 @@ export function CommandPalette({ ctx }: { ctx: ActionCtx }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
+  // While the palette is up, any slide-over focus trap must pause --
+  // and it must pause BEFORE the palette mounts, or the trap would
+  // yank focus straight back from the search input's autoFocus. Hence
+  // a synchronous hold in the open handler, not an effect.
+  const releaseTrapHold = useRef<(() => void) | null>(null);
+  const releaseHold = () => {
+    releaseTrapHold.current?.();
+    releaseTrapHold.current = null;
+  };
+  useEffect(() => releaseHold, []);
+
   useShortcut(
     PALETTE_SHORTCUT,
     () => {
+      releaseTrapHold.current ??= holdFocusTraps();
       setQuery("");
       setOpen(true);
     },
@@ -95,7 +107,10 @@ export function CommandPalette({ ctx }: { ctx: ActionCtx }) {
 
   if (!open) return null;
 
-  const close = () => setOpen(false);
+  const close = () => {
+    setOpen(false);
+    releaseHold();
+  };
   const resolved = visibleActions(ACTIONS, ctx);
   const showSearch = resolved.length >= MIN_ACTIONS_FOR_SEARCH;
   const matches = filterActions(resolved, showSearch ? query : "");

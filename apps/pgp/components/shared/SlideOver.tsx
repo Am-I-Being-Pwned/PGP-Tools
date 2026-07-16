@@ -1,5 +1,8 @@
+import type { FocusTrap } from "focus-trap";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createFocusTrap } from "focus-trap";
 import { ArrowLeftIcon } from "lucide-react";
+import { tabbable } from "tabbable";
 
 /** Must match the `duration-300` class on the panel. */
 export const SLIDE_MS = 300;
@@ -64,6 +67,82 @@ export function useSlideOver(onClosed: () => void) {
   return { entered, close, isTop };
 }
 
+// ── focus management ─────────────────────────────────────────────────
+//
+// Each open panel traps Tab focus within itself while it is the topmost
+// slide-over (focus-trap's shared trap stack auto-pauses a parent panel
+// when a child activates, and unpauses it when the child deactivates).
+// Two things outside the panel are allowed to own focus while a trap is
+// nominally active, and pause it:
+//
+// - Radix portalled content (Select/Popover/DropdownMenu render into a
+//   `[data-radix-popper-content-wrapper]` under <body>, outside every
+//   panel). A body MutationObserver pauses the top trap while any such
+//   wrapper exists, so Radix's own focus handling wins.
+// - The command palette, via {@link holdFocusTraps} -- it must pause the
+//   trap BEFORE its input mounts, or the trap would yank the autofocus.
+
+/** Radix popper-positioned portal content lives in these wrappers,
+ *  directly under <body>. */
+const RADIX_POPPER_SELECTOR = "[data-radix-popper-content-wrapper]";
+
+const activeTraps: FocusTrap[] = [];
+let trapHolds = 0;
+let popperObserver: MutationObserver | null = null;
+
+function shouldPauseTraps(): boolean {
+  return (
+    trapHolds > 0 || document.querySelector(RADIX_POPPER_SELECTOR) !== null
+  );
+}
+
+/** Pause or resume the topmost trap only: traps under it are already
+ *  paused by focus-trap's own stack and must stay that way. */
+function syncTopTrap(): void {
+  const top = activeTraps.at(-1);
+  if (!top) return;
+  if (shouldPauseTraps()) top.pause();
+  else top.unpause();
+}
+
+/**
+ * Suspend slide-over focus traps while an overlay outside the panel
+ * (the command palette) owns the keyboard. Call BEFORE mounting the
+ * overlay so its autofocus isn't yanked back into the trap; call the
+ * returned release exactly once when the overlay closes (extra calls
+ * are no-ops). Safe to call when no slide-over is open.
+ */
+export function holdFocusTraps(): () => void {
+  trapHolds++;
+  syncTopTrap();
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    trapHolds--;
+    syncTopTrap();
+  };
+}
+
+function registerTrap(trap: FocusTrap): void {
+  // Activation pushes onto the shared `activeTraps` stack (the trap's
+  // `trapStack` option) and auto-pauses the panel below, if any.
+  trap.activate();
+  if (shouldPauseTraps()) trap.pause();
+  // Popper wrappers are added/removed as direct children of <body>.
+  popperObserver ??= new MutationObserver(syncTopTrap);
+  if (activeTraps.length === 1) {
+    popperObserver.observe(document.body, { childList: true });
+  }
+}
+
+function unregisterTrap(trap: FocusTrap): void {
+  // Deactivation pops the shared stack, returns focus (per
+  // setReturnFocus), and unpauses the parent panel's trap if one exists.
+  trap.deactivate();
+  if (activeTraps.length === 0) popperObserver?.disconnect();
+}
+
 export function SlideOverPanel({
   entered,
   ariaLabel,
@@ -73,8 +152,40 @@ export function SlideOverPanel({
   ariaLabel: string;
   children: React.ReactNode;
 }) {
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const panel = panelRef.current;
+    if (!panel) return;
+    const trap = createFocusTrap(panel, {
+      // The openStack keydown handler in useSlideOver owns Escape.
+      escapeDeactivates: false,
+      // Clicks on portalled content (popovers, toasts) must keep working.
+      allowOutsideClick: true,
+      // Initial focus: the first autofocus element if the page marked
+      // one, else the first tabbable, else the panel itself.
+      initialFocus: () =>
+        panel.querySelector<HTMLElement>("[autofocus]") ??
+        tabbable(panel).at(0) ??
+        panel,
+      fallbackFocus: panel,
+      // Linear's return-focus guard: if the element focused before the
+      // panel opened is gone, or lives inside this (closing) panel,
+      // leave focus alone instead of throwing.
+      setReturnFocus: (previous) =>
+        previous.isConnected && !panel.contains(previous) ? previous : false,
+      // All panels share one stack so nested slide-overs pause their
+      // parent's trap while open (only the topmost trap is ever live).
+      trapStack: activeTraps,
+    });
+    registerTrap(trap);
+    return () => unregisterTrap(trap);
+  }, []);
+
   return (
     <div
+      ref={panelRef}
+      tabIndex={-1}
       className={`bg-background fixed inset-0 z-50 flex flex-col transition-transform duration-300 ease-out ${entered ? "translate-x-0" : "translate-x-full"}`}
       role="region"
       aria-label={ariaLabel}

@@ -25,10 +25,12 @@
     "@amibeingpwned/ui": "workspace:*",
     "date-fns": "^4.4.0",
     "fflate": "^0.8.3",
+    "focus-trap": "^8.2.2",
     "lucide-react": "^1.23.0",
     "react": "catalog:react19",
     "react-dom": "catalog:react19",
-    "sonner": "^2.0.7"
+    "sonner": "^2.0.7",
+    "tabbable": "^6.5.0"
   },
   "devDependencies": {
     "@amibeingpwned/eslint-config": "workspace:*",
