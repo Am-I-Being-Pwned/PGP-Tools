@@ -157,7 +157,7 @@ export function WorkspaceView({
 
   // Deferred loading labels: buttons disable immediately off s.loading,
   // but the label swap waits so sub-150ms crypto ops never flash
-  // "Processing..." (Linear's deferred-fallback rule).
+  // "Processing..." for operations that finish near-instantly.
   const showLoadingLabel = useDelayedFlag(s.loading);
 
   const needsRecipient = s.mode === "encrypt";

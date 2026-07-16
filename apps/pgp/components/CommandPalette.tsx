@@ -24,13 +24,13 @@ import { toast } from "../lib/toast";
 import { hasOpenSlideOver, holdFocusTraps } from "./shared/SlideOver";
 
 /** Below this many visible actions the search input is pointless noise
- *  (Linear's SmallCommandMenu rule) -- show a plain list instead. */
+ *  -- show a plain list instead. */
 const MIN_ACTIONS_FOR_SEARCH = 4;
 
 /**
  * Dispatch registry shortcuts globally: an enabled action executes; a
- * disabled one toasts its reason ("<name> is disabled: <reason>",
- * Linear's pattern) instead of going silently dead. Suspended while
+ * disabled one toasts its reason ("<name> is disabled: <reason>")
+ * instead of going silently dead. Suspended while
  * the palette is open (it owns the keyboard) or a slide-over is up.
  */
 function useRegistryShortcuts(ctx: ActionCtx, suspended: boolean) {
@@ -156,8 +156,8 @@ export function CommandPalette({
         onClick={(e) => e.stopPropagation()}
       >
         <Command shouldFilter={false} label="Command palette">
-          {/* With very few actions the search box is noise (Linear's
-              SmallCommandMenu rule) -- but cmdk's keyboard handling
+          {/* With very few actions the search box is noise -- but
+              cmdk's keyboard handling
               lives on the focused input, so hide it visually instead
               of unmounting it. Typed text is ignored while hidden. */}
           <div className={showSearch ? undefined : "sr-only"}>

@@ -60,7 +60,7 @@ function byId(ctx: ActionCtx, id: string) {
 
 describe("action ids", () => {
   // Ids are stable identities (see PgpAction.id): this test guards
-  // against accidental duplicates, mirroring Linear's rootActions test.
+  // against accidental duplicates.
   it("are unique", () => {
     const ids = ACTIONS.map((a) => a.id);
     expect(new Set(ids).size).toBe(ids.length);

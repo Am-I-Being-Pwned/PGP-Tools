@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 
 /** Default hold-off before a loading label may appear. Operations that
- *  finish faster than this never flash a loading state (Linear's
- *  deferred-fallback rule). */
+ *  finish faster than this never flash a loading state at all. */
 export const DEFAULT_DELAY_MS = 150;
 
 /** Framework-free core of {@link useDelayedFlag}: reports `true` via

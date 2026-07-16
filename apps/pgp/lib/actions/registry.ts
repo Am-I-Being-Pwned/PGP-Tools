@@ -40,8 +40,8 @@ export function visibleActions(
 /**
  * Match a keydown against the applicable actions' shortcuts. Returns
  * the resolved action even when disabled -- the caller decides whether
- * to execute or to toast the disabled reason (Linear's pattern: a
- * shortcut on a disabled action explains itself instead of going dead).
+ * to execute or to toast the disabled reason (a shortcut on a
+ * disabled action explains itself instead of going dead).
  */
 export function findByShortcut(
   actions: readonly PgpAction[],

@@ -190,7 +190,7 @@ export function RecipientPicker({
       setOpen(true);
       return;
     }
-    // Backspace in the empty input pops the last chip, like Linear.
+    // Backspace in the empty input pops the last chip.
     if (e.key === "Backspace" && search === "" && selectedKeyIds.length > 0) {
       e.preventDefault();
       onChange(selectedKeyIds.slice(0, -1));
@@ -283,7 +283,7 @@ export function RecipientPicker({
         >
           <PopoverAnchor asChild>
             {/* Chips live INSIDE the selection box ahead of a real text
-                input (Linear-style multiselect combobox): clicking
+                input (multiselect combobox): clicking
                 anywhere in the box focuses the input, and typing
                 filters the dropdown directly -- no second search field. */}
             <div

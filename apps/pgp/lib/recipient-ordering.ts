@@ -57,7 +57,7 @@ export function orderRecipients<T extends RecipientLike>(
  * Whether a picker option matches a search query. Every whitespace-
  * separated token of the query must appear (case-insensitive) somewhere
  * in the option's display name, detail (comment/email) or key id, so
- * "james rno" narrows the same way it would in Linear's comboboxes.
+ * "james rno" narrows across name and address together.
  * An empty/blank query matches everything.
  */
 export function matchesRecipientSearch(

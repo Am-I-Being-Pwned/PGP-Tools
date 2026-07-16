@@ -11,7 +11,7 @@ export {
 } from "@amibeingpwned/ui/kbd-helpers";
 
 /**
- * Keycap chips for a shortcut, Linear-style: one small rounded chip per
+ * Keycap chips for a shortcut: one small rounded chip per
  * key, platform-aware (⌘ on macOS, Ctrl elsewhere). Styled with
  * currentColor so the chips adapt to whatever button/surface they sit
  * in, and dim with it when disabled. Decorative only (aria-hidden) —

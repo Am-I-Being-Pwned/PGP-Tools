@@ -169,7 +169,7 @@ export function SlideOverPanel({
         tabbable(panel).at(0) ??
         panel,
       fallbackFocus: panel,
-      // Linear's return-focus guard: if the element focused before the
+      // Return-focus guard: if the element focused before the
       // panel opened is gone, or lives inside this (closing) panel,
       // leave focus alone instead of throwing.
       setReturnFocus: (previous) =>

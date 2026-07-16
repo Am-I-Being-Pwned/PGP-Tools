@@ -1,4 +1,4 @@
-// Framework-free action model, Linear-style: an action is data (id,
+// Framework-free action model: an action is data (id,
 // name, grouping, shortcut) plus pure predicates over an ActionCtx the
 // app assembles. Nothing in lib/actions imports React -- the UI layer
 // (CommandPalette) renders whatever the registry reports.
@@ -79,7 +79,7 @@ export interface ActionCtx {
  * A palette/shortcut action.
  *
  * `id` is a stable string identity: it must NEVER change once shipped
- * (Linear's StaticActionId rule) -- ids may end up in user keybinding
+ * -- ids may end up in user keybinding
  * or telemetry data, so renaming an action means changing `name`, not
  * `id`. Removing an action retires its id forever.
  */
