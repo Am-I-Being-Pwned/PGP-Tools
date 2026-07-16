@@ -243,6 +243,11 @@ export function HistoryPage({
               search && !expanded && entry.content !== undefined
                 ? buildSnippet(entry.content, search)
                 : undefined;
+            // decrypt/verify rows never store content (see history.ts);
+            // mark them at a glance so users don't expand expecting text.
+            const metadataOnly =
+              entry.content === undefined &&
+              (!entry.files || entry.files.length === 0);
             return (
               <div
                 key={entry.id}
@@ -257,9 +262,15 @@ export function HistoryPage({
                   <span className="flex w-full items-center gap-2">
                     <Icon className="text-muted-foreground h-4 w-4 shrink-0" />
                     <span className="min-w-0 flex-1 truncate text-sm">
-                      <Highlighted text={entryTitle(entry)} query={search} />
+                      {metadataOnly ? (
+                        <span className="text-muted-foreground italic">
+                          No content saved
+                        </span>
+                      ) : (
+                        <Highlighted text={entryTitle(entry)} query={search} />
+                      )}
                     </span>
-                    <span className="text-muted-foreground shrink-0 text-xs capitalize">
+                    <span className="text-muted-foreground shrink-0 text-xs whitespace-nowrap capitalize">
                       {entry.op}
                       {entry.signed && entry.op === "encrypt" ? " + sign" : ""}
                     </span>
