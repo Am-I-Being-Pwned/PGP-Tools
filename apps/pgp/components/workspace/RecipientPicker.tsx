@@ -160,18 +160,34 @@ export function RecipientPicker({
   };
 
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Escape closes the dropdown ONLY -- stop it here so the surrounding
-    // view/slide-over (document-level listener) doesn't also close.
+    // Escape peels one layer per press for keyboard users: #1 closes
+    // the list (query kept, so reopening resumes the filter), #2 clears
+    // the typed query, #3 falls through to the slide-over. stopPropagation
+    // so the slide-over's document-level listener doesn't also close.
     // While the dropdown is open Radix's document capture listener
     // usually swallows Escape first (see onEscapeKeyDown below); this
-    // branch is the fallback. With nothing open, Escape falls through
-    // to the slide-over as before.
+    // branch is the fallback.
     if (e.key === "Escape") {
-      if (open || search !== "") {
+      if (open) {
         e.preventDefault();
         e.stopPropagation();
-        closeDropdown();
+        setOpen(false);
+        setHighlighted("");
+        return;
       }
+      if (search !== "") {
+        e.preventDefault();
+        e.stopPropagation();
+        setSearch("");
+      }
+      return;
+    }
+    // Enter with the list closed opens it -- the box should always
+    // "show the thing" from the keyboard. When open, Enter bubbles to
+    // the Command root and picks the highlighted option.
+    if (e.key === "Enter" && !open) {
+      e.preventDefault();
+      setOpen(true);
       return;
     }
     // Backspace in the empty input pops the last chip, like Linear.

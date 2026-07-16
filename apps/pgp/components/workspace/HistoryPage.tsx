@@ -51,6 +51,10 @@ export function HistoryButton({ enabled }: { enabled: boolean }) {
         onClick={() => setOpen(true)}
         title="History"
         aria-label="History"
+        // Deliberately out of the Tab order: it sits between the toggle
+        // badges and the main action, and keyboard users reach history
+        // via the palette ("Open history") instead.
+        tabIndex={-1}
         className="text-muted-foreground hover:text-foreground ml-auto rounded p-1 transition-colors"
       >
         <HistoryIcon className="h-4 w-4" />
