@@ -3,7 +3,9 @@ import type * as React from "react";
 import { cva } from "class-variance-authority";
 import { Slot as SlotPrimitive } from "radix-ui";
 
+import type { ShortcutSpec } from "@amibeingpwned/ui/kbd";
 import { cn } from "@amibeingpwned/ui";
+import { ariaKeyShortcuts, isMacPlatform, Kbd } from "@amibeingpwned/ui/kbd";
 
 export const buttonVariants = cva(
   "focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-all outline-none focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
@@ -41,18 +43,38 @@ export function Button({
   variant,
   size,
   asChild = false,
+  shortcut,
+  children,
   ...props
 }: React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean;
+    /** Keyboard shortcut hint: renders trailing keycap chips inside the
+     *  button and sets `aria-keyshortcuts`. The chips are display only —
+     *  binding the keys is the caller's job (e.g. useShortcut). Ignored
+     *  with `asChild`, where the button has a single pass-through child. */
+    shortcut?: ShortcutSpec;
   }) {
   const Comp = asChild ? SlotPrimitive.Slot : "button";
+  const showShortcut = shortcut !== undefined && !asChild;
 
   return (
     <Comp
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
+      aria-keyshortcuts={
+        shortcut ? ariaKeyShortcuts(shortcut, isMacPlatform()) : undefined
+      }
       {...props}
-    />
+    >
+      {showShortcut ? (
+        <>
+          {children}
+          <Kbd shortcut={shortcut} />
+        </>
+      ) : (
+        children
+      )}
+    </Comp>
   );
 }

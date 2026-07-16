@@ -9,11 +9,19 @@ export const SLIDE_MS = 300;
 // panel registers here and checks it is on top before reacting.
 const openStack: symbol[] = [];
 
+/** True while any slide-over is open. Global shortcuts (useShortcut)
+ *  check this so workspace-level bindings don't fire underneath a
+ *  subpage. */
+export function hasOpenSlideOver(): boolean {
+  return openStack.length > 0;
+}
+
 /**
  * Mount/unmount choreography for a right-to-left slide-over subpage.
  * `entered` drives the transform class; `close` slides out, then calls
  * `onClosed` (where the parent unmounts the panel). Escape closes the
- * topmost open slide-over only.
+ * topmost open slide-over only; `isTop` lets the panel gate its own
+ * shortcuts the same way.
  */
 export function useSlideOver(onClosed: () => void) {
   const [entered, setEntered] = useState(false);
@@ -48,7 +56,12 @@ export function useSlideOver(onClosed: () => void) {
     return () => document.removeEventListener("keydown", handler);
   }, [close]);
 
-  return { entered, close };
+  const isTop = useCallback(
+    () => openStack[openStack.length - 1] === id.current,
+    [],
+  );
+
+  return { entered, close, isTop };
 }
 
 export function SlideOverPanel({

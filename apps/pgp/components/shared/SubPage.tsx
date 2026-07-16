@@ -1,8 +1,15 @@
 import { useState } from "react";
 
+import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
 import { Button } from "@amibeingpwned/ui/button";
 
+import { useShortcut } from "../../hooks/useShortcut";
 import { SlideOverHeader, SlideOverPanel, useSlideOver } from "./SlideOver";
+
+/** mod+Enter submits the primary footer action from anywhere on the
+ *  page, including focused inputs (plain Enter-to-submit stays opt-in
+ *  per field via `runAction`). */
+const SUBMIT_SHORTCUT: ShortcutSpec = { mod: true, key: "Enter" };
 
 /** A footer button. Order in the array is render order (top to bottom). */
 export interface SubPageAction {
@@ -72,7 +79,7 @@ export function SubPage({
   bodyClassName,
   children,
 }: SubPageProps) {
-  const { entered, close } = useSlideOver(onClose);
+  const { entered, close, isTop } = useSlideOver(onClose);
   const [busyIndex, setBusyIndex] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -93,9 +100,7 @@ export function SubPage({
         if (action.closeOnSuccess) close();
       } catch (e) {
         setError(
-          e instanceof Error && e.message
-            ? e.message
-            : "Something went wrong.",
+          e instanceof Error && e.message ? e.message : "Something went wrong.",
         );
       } finally {
         setBusyIndex(null);
@@ -104,6 +109,19 @@ export function SubPage({
   };
 
   const api: SubPageApi = { close, busy, runAction };
+
+  // mod+Enter drives the primary footer action -- but never a
+  // destructive one (ConfirmPage et al. must be clicked deliberately),
+  // and only on the topmost slide-over when panels stack.
+  const shortcutIndex =
+    actions?.findIndex((a) => (a.type ?? "primary") === "primary") ?? -1;
+  useShortcut(
+    SUBMIT_SHORTCUT,
+    () => {
+      if (isTop()) runAction(shortcutIndex);
+    },
+    { enabled: shortcutIndex !== -1, allowInSlideOver: true },
+  );
 
   return (
     <SlideOverPanel entered={entered} ariaLabel={title}>
@@ -129,6 +147,7 @@ export function SubPage({
               className="w-full"
               disabled={busy || action.disabled}
               onClick={() => runAction(i)}
+              shortcut={i === shortcutIndex ? SUBMIT_SHORTCUT : undefined}
             >
               {busyIndex === i ? (action.busyText ?? "...") : action.text}
             </Button>
