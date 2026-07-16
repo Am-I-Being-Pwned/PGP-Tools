@@ -70,6 +70,10 @@ interface KeysViewProps {
   crxKeys?: CrxSigningKeyBlob[];
   onAddCrxKey?: (blob: CrxSigningKeyBlob) => Promise<void>;
   onDeleteCrxKey?: (extensionId: string) => Promise<void>;
+  /** The user's configured default key, when set (own PGP keys only). */
+  defaultKeyId?: string | null;
+  /** Persist (keyId) or clear (null) the default-key choice. */
+  onSetDefaultKey?: (keyId: string | null) => void;
   /** Set a local display alias on a PGP key. */
   onRenameKey?: (keyId: string, alias: string) => Promise<void>;
   /** Set the user-facing label on a CRX signing key. */
@@ -129,6 +133,8 @@ export function KeysView({
   crxKeys,
   onAddCrxKey,
   onDeleteCrxKey,
+  defaultKeyId,
+  onSetDefaultKey,
   onRenameKey,
   onRenameCrxKey,
 }: KeysViewProps) {
@@ -255,6 +261,7 @@ export function KeysView({
       shortId: blob.keyId.slice(-16),
       algorithm: formatAlgorithm(blob.algorithm),
       fingerprint: formatFingerprint(blob.keyId),
+      isDefault: defaultKeyId != null && blob.keyId === defaultKeyId,
       protectionMethod: blob.protection.method,
       securityWarning: blob.securityWarning,
       session: {
@@ -488,6 +495,19 @@ export function KeysView({
                           page: "rename",
                           target: { kind: "own", keyBlob: target.keyBlob },
                         })
+                    : undefined
+                }
+                isDefault={
+                  target.kind === "own" &&
+                  defaultKeyId != null &&
+                  target.keyBlob.keyId === defaultKeyId
+                }
+                // Only the user's own PGP keys can be the default --
+                // never contacts (no private key) or CRX keys.
+                onSetDefault={
+                  target.kind === "own" && onSetDefaultKey
+                    ? (next) =>
+                        onSetDefaultKey(next ? target.keyBlob.keyId : null)
                     : undefined
                 }
                 onDelete={() => nav.push({ page: "confirm-delete", target })}

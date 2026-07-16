@@ -564,6 +564,8 @@ export default function App() {
               crxKeys={crxKeys.keys}
               onAddCrxKey={crxKeys.add}
               onDeleteCrxKey={crxKeys.remove}
+              defaultKeyId={defaultKeyId}
+              onSetDefaultKey={handleSetDefaultKey}
               onRenameKey={keyring.rename}
               onRenameCrxKey={crxKeys.rename}
               contactsLocked={false}

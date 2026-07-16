@@ -55,6 +55,9 @@ export interface KeyCardModel {
   fingerprint?: string;
   /** Small tag after the name, e.g. "CRX". */
   badge?: string;
+  /** True when this is the user's configured default key (PGP only):
+   *  shows a subtle "Default" pill after the name. */
+  isDefault?: boolean;
   protectionMethod: "password" | "passkey";
   securityWarning?: string;
   /** Present ⇒ show unlock/lock lifecycle (PGP). Absent ⇒ sealed at rest (CRX). */
@@ -185,6 +188,14 @@ export function KeyCard({
             {model.badge && (
               <span className="text-muted-foreground ml-1.5 text-[11px]">
                 {model.badge}
+              </span>
+            )}
+            {model.isDefault && (
+              <span
+                title="Used by default for signing, decrypting, and encrypt-to-self"
+                className="border-border text-muted-foreground ml-1.5 rounded-full border px-1.5 py-px text-[10px] font-medium whitespace-nowrap"
+              >
+                Default
               </span>
             )}
           </p>

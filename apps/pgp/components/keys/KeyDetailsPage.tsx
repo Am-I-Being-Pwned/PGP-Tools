@@ -7,6 +7,8 @@ import {
   CopyIcon,
   LockIcon,
   PencilIcon,
+  StarIcon,
+  StarOffIcon,
   Trash2Icon,
   TriangleAlertIcon,
   XCircleIcon,
@@ -41,6 +43,11 @@ interface KeyDetailsPageProps {
   onEncryptTo?: () => void;
   /** Own keys only: open the rename page for this key. */
   onRename?: () => void;
+  /** True when this is the user's configured default key. */
+  isDefault?: boolean;
+  /** Own keys only: set (true) or clear (false) this key as the
+   *  default used for signing, decrypting, and encrypt-to-self. */
+  onSetDefault?: (next: boolean) => void;
   /** Open the delete/remove confirmation page for this key. */
   onDelete?: () => void;
   /** Own keys only: mint (and persist) a revocation certificate for a
@@ -398,6 +405,8 @@ export function KeyDetailsPage({
   onBack,
   onEncryptTo,
   onRename,
+  isDefault,
+  onSetDefault,
   onDelete,
   onGenerateRevocation,
 }: KeyDetailsPageProps) {
@@ -509,6 +518,23 @@ export function KeyDetailsPage({
             <PencilIcon className="h-4 w-4" />
           </IconAction>
         )}
+        {onSetDefault && (
+          <IconAction
+            label={isDefault ? "Remove default" : "Set as default key"}
+            onClick={() => {
+              onSetDefault(!isDefault);
+              toast.success(
+                isDefault ? "Default key removed" : "Default key set",
+              );
+            }}
+          >
+            {isDefault ? (
+              <StarOffIcon className="h-4 w-4" />
+            ) : (
+              <StarIcon className="h-4 w-4" />
+            )}
+          </IconAction>
+        )}
         <IconAction label="Copy public key" onClick={handleCopyPublicKey}>
           <CopyIcon className="h-4 w-4" />
         </IconAction>
@@ -541,6 +567,11 @@ export function KeyDetailsPage({
               )}
             </div>
             <div className="flex shrink-0 gap-1 pt-0.5">
+              {isDefault && (
+                <Chip title="Used by default for signing, decrypting, and encrypt-to-self">
+                  Default
+                </Chip>
+              )}
               <Chip
                 title={
                   isOwn
