@@ -57,8 +57,11 @@ export const ACTIONS: readonly PgpAction[] = [
     group: "Workspace",
     keywords: ["go", "execute", "submit"],
     shortcut: { mod: true, key: "Enter" },
-    applicable: (ctx) => ctx.tab === "workspace",
+    // Workspace actions stay visible on other tabs with a reason (not
+    // hidden via `applicable`): a dimmed "Switch to Workspace first" is
+    // discoverable; a vanished action looks like it doesn't exist.
     disabledReason: (ctx) => {
+      if (ctx.tab !== "workspace") return "Switch to Workspace first";
       if (!ctx.hasInput) return NO_INPUT_REASON[ctx.mode];
       if (ctx.mode === "encrypt" && !ctx.hasRecipients)
         return "Select at least one recipient";
@@ -72,9 +75,10 @@ export const ACTIONS: readonly PgpAction[] = [
     group: "Workspace",
     keywords: ["clipboard", "result"],
     shortcut: { mod: true, shift: true, key: "c" },
-    applicable: (ctx) => ctx.tab === "workspace",
-    disabledReason: (ctx) =>
-      ctx.hasOutput ? undefined : "No output to copy yet",
+    disabledReason: (ctx) => {
+      if (ctx.tab !== "workspace") return "Switch to Workspace first";
+      return ctx.hasOutput ? undefined : "No output to copy yet";
+    },
     execute: (ctx) => ctx.ops.copyOutput(),
   },
   {
@@ -82,9 +86,10 @@ export const ACTIONS: readonly PgpAction[] = [
     name: "Clear input",
     group: "Workspace",
     keywords: ["reset", "empty"],
-    applicable: (ctx) => ctx.tab === "workspace",
-    disabledReason: (ctx) =>
-      ctx.hasInput || ctx.hasOutput ? undefined : "Nothing to clear",
+    disabledReason: (ctx) => {
+      if (ctx.tab !== "workspace") return "Switch to Workspace first";
+      return ctx.hasInput || ctx.hasOutput ? undefined : "Nothing to clear";
+    },
     execute: (ctx) => ctx.ops.clearInput(),
   },
   {

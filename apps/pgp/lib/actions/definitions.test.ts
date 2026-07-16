@@ -107,8 +107,10 @@ describe("workspace.run", () => {
     expect(execute).toHaveBeenCalledOnce();
   });
 
-  it("only applies on the workspace tab", () => {
-    expect(byId(fakeCtx({ tab: "keys" }), "workspace.run")).toBeUndefined();
+  it("stays visible on other tabs with a tab-switch reason", () => {
+    // hasInput is irrelevant off-tab: the tab reason wins.
+    const run = byId(fakeCtx({ tab: "keys", hasInput: true }), "workspace.run");
+    expect(run?.disabledReason).toBe("Switch to Workspace first");
   });
 });
 
@@ -121,6 +123,15 @@ describe("disabled reasons", () => {
       byId(fakeCtx({ hasOutput: true }), "workspace.copy-output")
         ?.disabledReason,
     ).toBeUndefined();
+  });
+
+  it("copy-output and clear explain the tab switch on other tabs", () => {
+    for (const id of ["workspace.copy-output", "workspace.clear"]) {
+      expect(
+        byId(fakeCtx({ tab: "settings", hasOutput: true }), id)
+          ?.disabledReason,
+      ).toBe("Switch to Workspace first");
+    }
   });
 
   it("clear requires something to clear", () => {
@@ -214,14 +225,15 @@ describe("shortcut dispatch through the registry", () => {
     );
   });
 
-  it("does not match workspace shortcuts on other tabs", () => {
+  it("matches workspace shortcuts on other tabs, disabled with the tab reason", () => {
     const hit = findByShortcut(
       ACTIONS,
       keydown({ key: "Enter", metaKey: true }),
-      fakeCtx({ tab: "settings" }),
+      fakeCtx({ tab: "settings", hasInput: true }),
       true,
     );
-    expect(hit).toBeNull();
+    expect(hit?.action.id).toBe("workspace.run");
+    expect(hit?.disabledReason).toBe("Switch to Workspace first");
   });
 
   it("no two applicable actions claim the same shortcut", () => {
