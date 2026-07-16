@@ -85,7 +85,7 @@ function matchesSearch(entry: HistoryEntry, q: string): boolean {
  * the plaintext leaves with the component -- nothing module-level holds
  * decrypted history (see lib/storage/history.ts).
  */
-function HistoryPage({
+export function HistoryPage({
   enabled,
   onClose,
 }: {

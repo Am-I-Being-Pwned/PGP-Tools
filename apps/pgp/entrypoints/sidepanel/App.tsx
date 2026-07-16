@@ -3,6 +3,7 @@ import { SettingsIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import type { WorkspaceIntake } from "../../components/workspace/useWorkspaceState";
+import type { WorkspaceOpsBridge } from "../../hooks/useActionContext";
 import type { DropRule } from "../../lib/drop-routing";
 import type { MasterProtection } from "../../lib/storage/master-protection";
 import type {
@@ -11,13 +12,16 @@ import type {
   StorageLocation,
 } from "../../lib/storage/preferences";
 import type { WorkspaceDraft } from "../../lib/workspace-draft";
+import { CommandPalette } from "../../components/CommandPalette";
 import { KeysView } from "../../components/keys/KeysView";
 import { AppFooter } from "../../components/shared/AppFooter";
 import { GlobalDropZone } from "../../components/shared/GlobalDropZone";
 import { MasterUnlockScreen } from "../../components/shared/MasterUnlockScreen";
 import { OnboardingFlow } from "../../components/shared/OnboardingFlow";
 import { SettingsView } from "../../components/shared/SettingsView";
+import { HistoryPage } from "../../components/workspace/HistoryPage";
 import { WorkspaceView } from "../../components/workspace/WorkspaceView";
+import { useActionContext } from "../../hooks/useActionContext";
 import { useContacts } from "../../hooks/useContacts";
 import { useCrxKeys } from "../../hooks/useCrxKeys";
 import { useKeyring } from "../../hooks/useKeyring";
@@ -316,6 +320,55 @@ export default function App() {
     void savePreferences({ activeTab: "workspace" });
   }, [pending, clearPending]);
 
+  // ── Command palette / action registry wiring ─────────────────────
+  // WorkspaceView pushes its palette-facing state/ops slice up here;
+  // useActionContext folds it with tab + navigation callbacks into the
+  // ActionCtx the registry evaluates against.
+  const [workspaceBridge, setWorkspaceBridge] =
+    useState<WorkspaceOpsBridge | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [keysRoute, setKeysRoute] = useState<"generate" | "import" | null>(
+    null,
+  );
+
+  const changeTab = useCallback((tab: Tab) => {
+    setActiveTab(tab);
+    void savePreferences({ activeTab: tab });
+    toast.dismiss();
+  }, []);
+
+  const openHistory = useCallback(() => setHistoryOpen(true), []);
+  const openKeysRoute = useCallback(
+    (route: "generate" | "import") => {
+      setKeysRoute(route);
+      changeTab("keys");
+    },
+    [changeTab],
+  );
+  const openGenerate = useCallback(
+    () => openKeysRoute("generate"),
+    [openKeysRoute],
+  );
+  const openImport = useCallback(
+    () => openKeysRoute("import"),
+    [openKeysRoute],
+  );
+  const lockNow = useCallback(() => void doMasterLock(), [doMasterLock]);
+
+  const actionCtx = useActionContext({
+    tab: activeTab,
+    setTab: changeTab,
+    workspace: workspaceBridge,
+    counts: {
+      ownKeys: keyring.keys.length,
+      contacts: contacts.contacts.length,
+    },
+    openHistory,
+    openGenerate,
+    openImport,
+    lockNow,
+  });
+
   const handleDeleteKey = useCallback(
     async (keyId: string) => {
       await keyring.remove(keyId);
@@ -430,14 +483,15 @@ export default function App() {
   return (
     <GlobalDropZone rules={dropRules}>
       <div className="flex h-screen flex-col">
-        <TabBar
-          activeTab={activeTab}
-          onTabChange={(tab) => {
-            setActiveTab(tab);
-            void savePreferences({ activeTab: tab });
-            toast.dismiss();
-          }}
-        />
+        <TabBar activeTab={activeTab} onTabChange={changeTab} />
+
+        <CommandPalette ctx={actionCtx} />
+        {historyOpen && (
+          <HistoryPage
+            enabled={workspaceBridge?.historyEnabled ?? false}
+            onClose={() => setHistoryOpen(false)}
+          />
+        )}
 
         <main
           className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4"
@@ -479,6 +533,7 @@ export default function App() {
               onDraftChange={handleDraftChange}
               intake={workspaceIntake}
               onIntakeConsumed={clearWorkspaceIntake}
+              onPaletteOps={setWorkspaceBridge}
             />
           </div>
           {activeTab === "keys" && (
@@ -505,6 +560,8 @@ export default function App() {
               advancedMode={advancedMode}
               autoOpenImport={importPrefill}
               onAutoOpenImportConsumed={() => setImportPrefill(null)}
+              autoOpenRoute={keysRoute}
+              onAutoOpenRouteConsumed={() => setKeysRoute(null)}
               onEncryptTo={(keyId) => {
                 setEncryptToKeyId(keyId);
                 setActiveTab("workspace");

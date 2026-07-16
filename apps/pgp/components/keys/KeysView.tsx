@@ -55,6 +55,9 @@ interface KeysViewProps {
   /** When non-null, opens the Import dialog with this armored text prefilled. */
   autoOpenImport?: string | null;
   onAutoOpenImportConsumed?: () => void;
+  /** A subpage requested from outside (command palette). */
+  autoOpenRoute?: "generate" | "import" | null;
+  onAutoOpenRouteConsumed?: () => void;
   onEncryptTo?: (keyId: string) => void;
   primaryPasskeyCredentialId?: string;
   /** Called when a newly generated key is cached in WASM. */
@@ -115,6 +118,8 @@ export function KeysView({
   advancedMode,
   autoOpenImport,
   onAutoOpenImportConsumed,
+  autoOpenRoute,
+  onAutoOpenRouteConsumed,
   onEncryptTo,
   primaryPasskeyCredentialId,
   onKeyCached,
@@ -137,6 +142,13 @@ export function KeysView({
       onAutoOpenImportConsumed?.();
     }
   }, [autoOpenImport, onAutoOpenImportConsumed, navPush]);
+
+  useEffect(() => {
+    if (autoOpenRoute) {
+      navPush({ page: autoOpenRoute });
+      onAutoOpenRouteConsumed?.();
+    }
+  }, [autoOpenRoute, onAutoOpenRouteConsumed, navPush]);
 
   // Leaving nothing selected exits selection mode.
   useEffect(() => {
