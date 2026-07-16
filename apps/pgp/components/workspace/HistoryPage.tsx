@@ -152,6 +152,8 @@ export function HistoryPage({
           <input
             type="text"
             placeholder="Search history..."
+            aria-label="Search history"
+            autoFocus
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className={`${INPUT_CLASS} mb-2`}
