@@ -157,6 +157,13 @@ export function SlideOverPanel({
   useEffect(() => {
     const panel = panelRef.current;
     if (!panel) return;
+    // The trap lives only while the panel is fully open: creating it on
+    // `entered` (rather than mount) and tearing it down the moment
+    // `entered` flips false means a CLOSING panel stops enforcing focus
+    // immediately -- previously the trap survived the 300ms slide-out
+    // and yanked focus away from anything the user clicked into right
+    // after closing (e.g. a password field on the page below).
+    if (!entered) return;
     const trap = createFocusTrap(panel, {
       // The openStack keydown handler in useSlideOver owns Escape.
       escapeDeactivates: false,
@@ -169,18 +176,31 @@ export function SlideOverPanel({
         tabbable(panel).at(0) ??
         panel,
       fallbackFocus: panel,
-      // Return-focus guard: if the element focused before the
-      // panel opened is gone, or lives inside this (closing) panel,
-      // leave focus alone instead of throwing.
-      setReturnFocus: (previous) =>
-        previous.isConnected && !panel.contains(previous) ? previous : false,
+      // Return-focus guards. Deactivation runs AFTER the slide-out
+      // animation, so the user may have already focused something else
+      // (e.g. closed an import page and clicked straight into a key's
+      // password field) -- yanking focus back to the trigger then would
+      // hijack their typing. Only return focus when it is still inside
+      // the closing panel or parked on <body>; and only to a previous
+      // element that still exists outside this panel.
+      setReturnFocus: (previous) => {
+        const active = document.activeElement;
+        const userMovedOn =
+          active !== null &&
+          active !== document.body &&
+          !panel.contains(active);
+        if (userMovedOn) return false;
+        return previous.isConnected && !panel.contains(previous)
+          ? previous
+          : false;
+      },
       // All panels share one stack so nested slide-overs pause their
       // parent's trap while open (only the topmost trap is ever live).
       trapStack: activeTraps,
     });
     registerTrap(trap);
     return () => unregisterTrap(trap);
-  }, []);
+  }, [entered]);
 
   return (
     <div
