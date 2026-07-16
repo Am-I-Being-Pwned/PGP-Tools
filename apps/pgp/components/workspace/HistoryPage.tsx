@@ -14,6 +14,7 @@ import {
 import { Button } from "@amibeingpwned/ui/button";
 
 import type { HistoryEntry, HistoryOp } from "../../lib/storage/history";
+import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import {
   clearHistory,
   hasUnlimitedStorage,
@@ -117,15 +118,14 @@ export function HistoryPage({
     ? entries.filter((e) => matchesSearch(e, search.toLowerCase()))
     : entries;
 
+  const { copy } = useCopyToClipboard();
   const handleCopy = async (entry: HistoryEntry) => {
     if (!entry.content) return;
-    try {
-      await navigator.clipboard.writeText(entry.content);
-      setCopiedId(entry.id);
-      setTimeout(() => setCopiedId(null), 2000);
-    } catch {
-      // clipboard may reject if the panel isn't focused
-    }
+    // No label: the row's own 2s check is the success feedback. A
+    // rejected write (panel not focused) surfaces as an error toast.
+    if (!(await copy(entry.content))) return;
+    setCopiedId(entry.id);
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
   return (
@@ -271,8 +271,8 @@ export function HistoryPage({
             {entries.length === 1 ? "entry" : "entries"}
           </p>
           <p className="mt-2">
-            This permanently deletes your encrypted operation history from
-            this device. It can't be recovered.
+            This permanently deletes your encrypted operation history from this
+            device. It can't be recovered.
           </p>
         </ConfirmPage>
       )}

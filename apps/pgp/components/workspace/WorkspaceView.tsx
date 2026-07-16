@@ -32,6 +32,7 @@ import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { WorkspaceDraft } from "../../lib/workspace-draft";
 import type { WorkspaceIntake } from "./useWorkspaceState";
+import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import { useDelayedFlag } from "../../hooks/useDelayedFlag";
 import { requestUnlimitedHistoryStorage } from "../../lib/storage/history";
 import { savePreferences } from "../../lib/storage/preferences";
@@ -162,15 +163,14 @@ export function WorkspaceView({
   // text to copy, so the Copy half is only shown when `s.output` is present.
   const [copied, setCopied] = useState(false);
   const copyTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const { copy } = useCopyToClipboard();
   const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(s.output);
-      setCopied(true);
-      clearTimeout(copyTimer.current);
-      copyTimer.current = setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // clipboard may reject if the panel isn't focused
-    }
+    // No label: the button's own 2s check is the success feedback. A
+    // rejected write (panel not focused) surfaces as an error toast.
+    if (!(await copy(s.output))) return;
+    setCopied(true);
+    clearTimeout(copyTimer.current);
+    copyTimer.current = setTimeout(() => setCopied(false), 2000);
   };
   const canCrxSign = !!crxSigningEnabled && (crxKeys?.length ?? 0) > 0;
   const singleCrxFile = s.files.length === 1 && /\.crx$/i.test(s.files[0].name);
