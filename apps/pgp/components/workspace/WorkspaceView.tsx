@@ -27,6 +27,7 @@ import {
 
 import type { WorkspaceOpsBridge } from "../../hooks/useActionContext";
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
+import type { RemedyAction } from "../../lib/errors/present";
 import type { WorkspaceAction } from "../../lib/messages";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
@@ -309,6 +310,35 @@ export function WorkspaceView({
   const copyTitle = `Copy (${formatShortcutTitle(COPY_SHORTCUT, isMacPlatform())})`;
   const copyAria = ariaKeyShortcuts(COPY_SHORTCUT, isMacPlatform());
 
+  // Remedy actions this view can actually perform, mapped to existing
+  // handlers. An action with no handler here (or whose handler isn't
+  // available right now) renders message-only in WorkspaceResults: no
+  // dead button. "check-recipient" stays message-only because the
+  // recipient picker has no cheap imperative open.
+  const passwordInputRef = useRef<HTMLInputElement>(null);
+  const remedyAction = s.error?.remedy?.action;
+  const remedyHandled =
+    remedyAction === "retry" ||
+    (remedyAction === "import-key" && !!onNavigateToKeys) ||
+    (remedyAction === "unlock" && s.needsPassword);
+  const handleRemedy = remedyHandled
+    ? (action: RemedyAction) => {
+        switch (action) {
+          case "import-key":
+            onNavigateToKeys?.();
+            break;
+          case "retry":
+            void ops.execute();
+            break;
+          case "unlock":
+            passwordInputRef.current?.focus();
+            break;
+          case "check-recipient":
+            break;
+        }
+      }
+    : undefined;
+
   if (showFullOutput) {
     return (
       <div className="flex h-full flex-col gap-3">
@@ -563,6 +593,7 @@ export function WorkspaceView({
         {s.needsPassword && (
           <div className="flex items-stretch gap-2">
             <input
+              ref={passwordInputRef}
               type="password"
               placeholder="Enter key password"
               value={s.passwordInput}
@@ -606,6 +637,7 @@ export function WorkspaceView({
 
         <WorkspaceResults
           error={s.error}
+          onRemedy={handleRemedy}
           output={s.output}
           binaryOutput={s.binaryOutput}
           fileResults={s.fileResults}
