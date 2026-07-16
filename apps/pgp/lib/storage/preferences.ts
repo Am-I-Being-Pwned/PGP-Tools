@@ -53,6 +53,10 @@ export interface PgpPreferences {
   /** Fingerprints of recently used encrypt recipients, most recent
    *  first (capped). Orders the recipient picker's suggestions. */
   recentRecipients: string[];
+  /** The user's preferred own key: preselected for sign/decrypt and
+   *  used as the encrypt-to-self key. Null means no explicit choice
+   *  (the first key acts as the implicit default). */
+  defaultKeyId: string | null;
 }
 
 const DEFAULT_PREFERENCES: PgpPreferences = {
@@ -74,6 +78,7 @@ const DEFAULT_PREFERENCES: PgpPreferences = {
   historyEnabled: false,
   clipboardWipeSeconds: 60,
   recentRecipients: [],
+  defaultKeyId: null,
 };
 
 // ── bootstrap vs settings split ──────────────────────────────────────

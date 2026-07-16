@@ -29,12 +29,34 @@ export interface EncryptRecipients {
 }
 
 /**
+ * Pick which of the user's own keys should represent them in an
+ * operation. Resolution order: the configured default key (when it
+ * still exists among `myKeys`), then the signing key (when the message
+ * is also signed), then the first key. A stale `defaultKeyId` pointing
+ * at a deleted key is ignored gracefully. Returns null when the user
+ * owns no keys.
+ */
+export function resolveSelfKey<K extends { keyId: string }>(
+  myKeys: readonly K[],
+  defaultKeyId: string | null,
+  signingKeyId?: string | null,
+): K | null {
+  if (myKeys.length === 0) return null;
+  return (
+    myKeys.find((k) => defaultKeyId !== null && k.keyId === defaultKeyId) ??
+    myKeys.find((k) => signingKeyId != null && k.keyId === signingKeyId) ??
+    myKeys[0]
+  );
+}
+
+/**
  * Assemble the recipient key set for an encrypt operation. Selected
  * recipients are deduped by fingerprint. With encrypt-to-self enabled,
  * the user's own public key rides along so they can decrypt their own
- * ciphertext later — preferring the key they're signing with (one
- * identity per message), else their first key. When a selected
- * recipient already IS one of their keys, nothing is added.
+ * ciphertext later — preferring their configured default key, else the
+ * key they're signing with (one identity per message), else their
+ * first key (see resolveSelfKey). When a selected recipient already IS
+ * one of their keys, nothing is added.
  */
 export function buildEncryptRecipients(options: {
   recipients: SelectedRecipient[];
@@ -42,6 +64,8 @@ export function buildEncryptRecipients(options: {
   ownKeys: OwnKey[];
   /** The key selected for signing, when the message is also signed. */
   signingKeyId?: string | null;
+  /** The user's configured default key, when set. */
+  defaultKeyId?: string | null;
 }): EncryptRecipients {
   const { recipients, encryptToSelf, ownKeys } = options;
 
@@ -62,12 +86,13 @@ export function buildEncryptRecipients(options: {
     return { recipientPublicKeys, selfExcluded: false, selfKeyId: null };
   }
 
-  if (!encryptToSelf || ownKeys.length === 0) {
+  const selfKey = encryptToSelf
+    ? resolveSelfKey(ownKeys, options.defaultKeyId ?? null, options.signingKeyId)
+    : null;
+  if (selfKey === null) {
     return { recipientPublicKeys, selfExcluded: true, selfKeyId: null };
   }
 
-  const selfKey =
-    ownKeys.find((k) => k.keyId === options.signingKeyId) ?? ownKeys[0];
   return {
     recipientPublicKeys: [...recipientPublicKeys, selfKey.publicKeyArmored],
     selfExcluded: false,

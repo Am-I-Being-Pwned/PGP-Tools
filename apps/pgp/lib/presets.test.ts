@@ -25,6 +25,7 @@ function fullPrefs(overrides: Partial<PgpPreferences> = {}): PgpPreferences {
     historyEnabled: false,
     clipboardWipeSeconds: 60,
     recentRecipients: [],
+    defaultKeyId: null,
     ...overrides,
   };
 }
@@ -120,6 +121,14 @@ describe("activePreset", () => {
       ...PRESETS.careful.bundle,
       advancedMode: true,
       armoredOutput: false,
+    });
+    expect(activePreset(prefs)).toBe("careful");
+  });
+
+  it("is unaffected by the default key preference", () => {
+    const prefs = fullPrefs({
+      ...PRESETS.careful.bundle,
+      defaultKeyId: "ABCD1234",
     });
     expect(activePreset(prefs)).toBe("careful");
   });
