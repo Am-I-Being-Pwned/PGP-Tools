@@ -47,6 +47,9 @@ export interface PgpPreferences {
   crxSigningEnabled: boolean;
   /** Opt-in encrypted history of workspace operations. Off by default. */
   historyEnabled: boolean;
+  /** Fingerprints of recently used encrypt recipients, most recent
+   *  first (capped). Orders the recipient picker's suggestions. */
+  recentRecipients: string[];
 }
 
 const DEFAULT_PREFERENCES: PgpPreferences = {
@@ -66,6 +69,7 @@ const DEFAULT_PREFERENCES: PgpPreferences = {
   lockOnTabAway: false,
   crxSigningEnabled: false,
   historyEnabled: false,
+  recentRecipients: [],
 };
 
 // ── bootstrap vs settings split ──────────────────────────────────────
