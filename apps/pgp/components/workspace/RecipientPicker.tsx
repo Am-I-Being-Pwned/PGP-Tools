@@ -169,6 +169,7 @@ export function RecipientPicker({
         }
         onSelect={() => addRecipient(key.keyId)}
         className="gap-2"
+        aria-keyshortcuts={digit !== null ? String(digit) : undefined}
       >
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-1.5 truncate text-sm">
@@ -277,6 +278,7 @@ export function RecipientPicker({
           <Command>
             <CommandInput
               placeholder="Search..."
+              title="Backspace removes the last recipient"
               value={search}
               onValueChange={setSearch}
               onKeyDown={handleInputKeyDown}
