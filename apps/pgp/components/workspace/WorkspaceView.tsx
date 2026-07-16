@@ -9,7 +9,6 @@ import {
 
 import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
 import { Button } from "@amibeingpwned/ui/button";
-import { Checkbox } from "@amibeingpwned/ui/checkbox";
 import {
   ariaKeyShortcuts,
   formatShortcutTitle,
@@ -37,6 +36,7 @@ import { requestUnlimitedHistoryStorage } from "../../lib/storage/history";
 import { savePreferences } from "../../lib/storage/preferences";
 import { saveCrxViaPrompt } from "../../lib/utils/download";
 import { INPUT_CLASS } from "../../lib/utils/styles";
+import { ToggleBadge } from "../shared/ToggleBadge";
 import { HistoryButton } from "./HistoryPage";
 import { KeySelector } from "./KeySelector";
 import { RecipientPicker } from "./RecipientPicker";
@@ -579,48 +579,44 @@ export function WorkspaceView({
 
         {s.mode === "encrypt" && (
           <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <div className="flex flex-wrap items-center gap-2">
               {myKeys.length > 0 && (
-                <label className="flex items-center gap-2">
-                  <Checkbox
-                    checked={s.encryptToSelf}
-                    onCheckedChange={(v) => setEncryptToSelfPref(v === true)}
-                  />
-                  <span className="text-sm">Also encrypt to me</span>
-                </label>
+                <ToggleBadge
+                  pressed={s.encryptToSelf}
+                  onPressedChange={setEncryptToSelfPref}
+                >
+                  Also encrypt to me
+                </ToggleBadge>
               )}
               {myKeys.length > 0 && (
-                <label className="flex items-center gap-2">
-                  <Checkbox
-                    checked={s.alsoSign}
-                    onCheckedChange={(v) => setAlsoSignPref(v === true)}
-                  />
-                  <span className="text-sm">Sign</span>
-                </label>
+                <ToggleBadge
+                  pressed={s.alsoSign}
+                  onPressedChange={setAlsoSignPref}
+                >
+                  Sign
+                </ToggleBadge>
               )}
               {s.files.length > 1 && (
-                <label className="flex items-center gap-2">
-                  <Checkbox
-                    checked={s.zipFiles}
-                    onCheckedChange={(v) => {
-                      s.setZipFiles(v === true);
-                      s.resetOutput();
-                    }}
-                  />
-                  <span className="text-sm">Zip files</span>
-                </label>
+                <ToggleBadge
+                  pressed={s.zipFiles}
+                  onPressedChange={(v) => {
+                    s.setZipFiles(v);
+                    s.resetOutput();
+                  }}
+                >
+                  Zip files
+                </ToggleBadge>
               )}
               {/* Never-cache means no history, ever: the toggle and the
                   viewer disappear rather than offering a dead switch. */}
               {!neverCacheKeys && (
                 <>
-                  <label className="flex items-center gap-2">
-                    <Checkbox
-                      checked={s.saveToHistory}
-                      onCheckedChange={(v) => setSaveToHistoryPref(v === true)}
-                    />
-                    <span className="text-sm">Save to history</span>
-                  </label>
+                  <ToggleBadge
+                    pressed={s.saveToHistory}
+                    onPressedChange={setSaveToHistoryPref}
+                  >
+                    Save to history
+                  </ToggleBadge>
                   <HistoryButton enabled={s.saveToHistory} />
                 </>
               )}
