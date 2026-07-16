@@ -2,16 +2,48 @@ import { describe, expect, it } from "vitest";
 
 import { outputFileName } from "./output-name";
 
+// Fixed clock: 16 Jul 2026, 14:32 local.
+const NOW = new Date(2026, 6, 16, 14, 32);
+const AT = { now: NOW };
+const TS = "2026-07-16-1432";
+
 describe("outputFileName", () => {
-  it("defaults for text input", () => {
-    expect(outputFileName("encrypt", [], true)).toBe("output.gpg");
+  it("names text-input encrypt output with recipient and timestamp", () => {
+    expect(outputFileName("encrypt", [], true, AT)).toBe(`message.${TS}.gpg`);
+    expect(
+      outputFileName("encrypt", [], true, { ...AT, recipients: ["Alice"] }),
+    ).toBe(`message.to-alice.${TS}.gpg`);
     expect(outputFileName("decrypt", [], true)).toBe("output.gpg");
   });
 
-  it("appends .gpg when encrypting a single file", () => {
-    expect(outputFileName("encrypt", ["report.pdf"], true)).toBe(
-      "report.pdf.gpg",
-    );
+  it("tags a single-file encrypt with recipient and timestamp", () => {
+    expect(
+      outputFileName("encrypt", ["report.pdf"], true, {
+        ...AT,
+        recipients: ["Alice"],
+      }),
+    ).toBe(`report.pdf.to-alice.${TS}.gpg`);
+  });
+
+  it("counts extra recipients instead of listing them", () => {
+    expect(
+      outputFileName("encrypt", [], true, {
+        ...AT,
+        recipients: ["Alice", "Bob", "Carol"],
+      }),
+    ).toBe(`message.to-alice+2.${TS}.gpg`);
+  });
+
+  it("slugifies hostile recipient names and caps their length", () => {
+    expect(
+      outputFileName("encrypt", [], true, {
+        ...AT,
+        recipients: ["CERT.br - Computer Emergency Response Team Brazil"],
+      }),
+    ).toBe(`message.to-cert-br-computer-emergen.${TS}.gpg`);
+    expect(
+      outputFileName("encrypt", [], true, { ...AT, recipients: ["!!!"] }),
+    ).toBe(`message.to-recipient.${TS}.gpg`);
   });
 
   it("appends .asc when signing a single file", () => {
@@ -36,15 +68,18 @@ describe("outputFileName", () => {
 
   it("names the combined archive for zipped multi-file input", () => {
     const files = ["a.txt", "b.txt"];
-    expect(outputFileName("encrypt", files, true)).toBe(
-      "encrypted-files.zip.gpg",
-    );
+    expect(
+      outputFileName("encrypt", files, true, { ...AT, recipients: ["Alice"] }),
+    ).toBe(`files.to-alice.${TS}.zip.gpg`);
     expect(outputFileName("decrypt", files, true)).toBe("decrypted-files.zip");
   });
 
   it("uses the first file's name for unzipped multi-file input", () => {
-    expect(outputFileName("encrypt", ["a.txt", "b.txt"], false)).toBe(
-      "a.txt.gpg",
-    );
+    expect(
+      outputFileName("encrypt", ["a.txt", "b.txt"], false, {
+        ...AT,
+        recipients: ["Alice"],
+      }),
+    ).toBe(`a.txt.to-alice.${TS}.gpg`);
   });
 });

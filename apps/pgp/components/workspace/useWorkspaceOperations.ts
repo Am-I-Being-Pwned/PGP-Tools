@@ -23,6 +23,7 @@ import {
   downloadText,
 } from "../../lib/utils/download";
 import { formatFileSize } from "../../lib/utils/formatting";
+import { formatKeyDisplayName } from "../../lib/utils/key-naming";
 import {
   isZipArchive,
   zipFiles as zipFilesToArchive,
@@ -133,11 +134,26 @@ export function useWorkspaceOperations({
     );
   }
 
+  /** Display names of the currently selected recipients, for encrypt
+   *  download names ("report.pdf.to-alice.2026-07-16-1432.gpg"). */
+  function selectedRecipientNames(): string[] {
+    return s.selectedRecipientIds
+      .map((id) => allPublicKeys.find((k) => k.keyId === id))
+      .filter((k) => k !== undefined)
+      .map((k) => {
+        const uid = k.userIds[0];
+        return uid ? formatKeyDisplayName(uid).name : k.keyId.slice(-8);
+      });
+  }
+
   function currentOutputName(): string {
+    // Encrypt downloads carry who-and-when in the name, so a Downloads
+    // folder of ciphertext stays identifiable weeks later.
     return outputFileName(
       s.mode,
       s.files.map((f) => f.name),
       s.zipFiles,
+      { recipients: selectedRecipientNames() },
     );
   }
 
@@ -318,7 +334,12 @@ export function useWorkspaceOperations({
           typeof result === "string"
             ? new TextEncoder().encode(result)
             : result;
-        results.push({ name: `${file.name}.gpg`, data });
+        results.push({
+          name: outputFileName("encrypt", [file.name], false, {
+            recipients: selectedRecipientNames(),
+          }),
+          data,
+        });
       }
       s.setFileResults(results);
       const totalSize = results.reduce((sum, r) => sum + r.data.length, 0);
