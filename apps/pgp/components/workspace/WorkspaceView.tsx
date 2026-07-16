@@ -300,7 +300,12 @@ export function WorkspaceView({
     !s.loading &&
     s.mode !== "verify" &&
     (s.fileResults.length > 0 || !!s.binaryOutput || s.output.length > 0);
-  const canRun = mainActionShown && !s.loading;
+  // Mirrors the main button's disabled logic, incl. the encrypt
+  // needs-a-recipient gate (the palette shows the reason as a toast).
+  const canRun =
+    mainActionShown &&
+    !s.loading &&
+    !(s.mode === "encrypt" && s.selectedRecipientIds.length === 0);
   const paletteRef = useRef({
     s,
     canRun,
@@ -781,7 +786,18 @@ export function WorkspaceView({
                         ? s.resetAll
                         : ops.execute
                     }
-                    disabled={s.loading || !hasInput}
+                    disabled={
+                      s.loading ||
+                      !hasInput ||
+                      (s.mode === "encrypt" &&
+                        s.selectedRecipientIds.length === 0)
+                    }
+                    title={
+                      s.mode === "encrypt" &&
+                      s.selectedRecipientIds.length === 0
+                        ? "Select at least one recipient"
+                        : undefined
+                    }
                     shortcut={RUN_SHORTCUT}
                   >
                     {showLoadingLabel
