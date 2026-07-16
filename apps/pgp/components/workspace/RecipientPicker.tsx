@@ -235,7 +235,11 @@ export function RecipientPicker({
                 </span>
               );
             })}
-            <span className="text-muted-foreground flex-1 truncate">
+            <span
+              className={`text-muted-foreground flex-1 truncate ${
+                selectedKeys.length > 0 ? "ml-2" : ""
+              }`}
+            >
               {selectedKeys.length > 0
                 ? "Add another..."
                 : "Select recipients..."}
