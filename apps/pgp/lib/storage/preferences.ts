@@ -16,7 +16,7 @@ import { padPlaintext, unpadPlaintext } from "./padding";
 
 export type StorageLocation = "local" | "sync";
 
-export type AutoLockTimeout = 5 | 15 | 30 | 60; // minutes
+export type AutoLockTimeout = 2 | 5 | 10 | 15 | 30 | 60; // minutes
 
 export interface PgpPreferences {
   defaultSigningKeyId: string | null;
