@@ -23,8 +23,14 @@ function ErrorAlert({
   const [showDetail, setShowDetail] = useState(false);
   const remedy = onRemedy ? error.remedy : undefined;
 
+  // Soft entry: a fast fade/slide keeps a fresh error from hard-jumping
+  // the layout. No reserved space (deliberately removed); reduced-motion
+  // users get an instant appearance instead.
   return (
-    <Alert variant="destructive">
+    <Alert
+      variant="destructive"
+      className="animate-in fade-in slide-in-from-top-1 duration-100 motion-reduce:animate-none"
+    >
       <TriangleAlertIcon className="h-4 w-4" />
       <AlertDescription className="text-xs">
         <p>{error.message}</p>
