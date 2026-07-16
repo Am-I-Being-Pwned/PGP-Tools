@@ -32,6 +32,7 @@ import { ExportKeysPage } from "../keys/ExportKeysPage";
 import { CrxSigningInfoPage } from "../settings/CrxSigningInfoPage";
 import { DevToolsPage } from "../settings/DevToolsPage";
 import { ImportAllKeysPage } from "../settings/ImportAllKeysPage";
+import { KeyboardShortcutsPage } from "../settings/KeyboardShortcutsPage";
 import { SecurityPresetPage } from "../settings/SecurityPresetPage";
 import { StorageLocationPicker } from "./StorageLocationPicker";
 
@@ -84,6 +85,10 @@ interface SettingsViewProps {
   crxKeys?: CrxSigningKeyBlob[];
   onAddCrxKey?: (blob: CrxSigningKeyBlob) => Promise<void>;
   primaryPasskeyCredentialId?: string;
+  /** One-shot request to open the security-presets subpage (palette's
+   *  "Open security presets"); consumed via the callback below. */
+  autoOpenPresets?: boolean;
+  onAutoOpenPresetsConsumed?: () => void;
 }
 
 export function SettingsView({
@@ -117,6 +122,8 @@ export function SettingsView({
   crxKeys,
   onAddCrxKey,
   primaryPasskeyCredentialId,
+  autoOpenPresets,
+  onAutoOpenPresetsConsumed,
 }: SettingsViewProps) {
   const [migratingTo, setMigratingTo] = useState<StorageLocation | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -125,6 +132,14 @@ export function SettingsView({
   const [showCrxInfo, setShowCrxInfo] = useState(false);
   const [showDevTools, setShowDevTools] = useState(false);
   const [showPresets, setShowPresets] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+
+  // Open the presets subpage when routed here by the palette action.
+  useEffect(() => {
+    if (!autoOpenPresets) return;
+    setShowPresets(true);
+    onAutoOpenPresetsConsumed?.();
+  }, [autoOpenPresets, onAutoOpenPresetsConsumed]);
 
   // Full preferences snapshot for computing the active preset: the
   // bundles cover fields this view has no props for (historyEnabled,
@@ -288,6 +303,17 @@ export function SettingsView({
             </span>
             <ChevronRightIcon className="text-muted-foreground h-4 w-4 shrink-0" />
           </span>
+        </button>
+      </div>
+
+      <div>
+        <button
+          type="button"
+          onClick={() => setShowShortcuts(true)}
+          className="border-border hover:border-muted-foreground/40 flex w-full items-center justify-between gap-4 rounded-md border p-4 text-left transition-colors"
+        >
+          <span className="text-sm">Keyboard shortcuts</span>
+          <ChevronRightIcon className="text-muted-foreground h-4 w-4 shrink-0" />
         </button>
       </div>
 
@@ -579,6 +605,10 @@ export function SettingsView({
 
       {showCrxInfo && (
         <CrxSigningInfoPage onClose={() => setShowCrxInfo(false)} />
+      )}
+
+      {showShortcuts && (
+        <KeyboardShortcutsPage onClose={() => setShowShortcuts(false)} />
       )}
 
       {showPresets && (

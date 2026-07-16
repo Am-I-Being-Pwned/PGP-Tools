@@ -15,10 +15,19 @@ export interface WorkspaceOpsBridge {
   hasRecipients: boolean;
   hasOutput: boolean;
   historyEnabled: boolean;
+  /** The "Also encrypt to me" preference is on. */
+  encryptToSelf: boolean;
+  /** The "Sign when encrypting" preference is on. */
+  alsoSign: boolean;
   setMode: (mode: PgpMode) => void;
   execute: () => void;
   clearInput: () => void;
   copyOutput: () => void;
+  /** The workspace checkboxes' exact toggle handlers (persistence and
+   *  stale-output reset included), exposed for the palette toggles. */
+  toggleEncryptToSelf: () => void;
+  toggleAlsoSign: () => void;
+  toggleSaveToHistory: () => void;
 }
 
 interface UseActionContextArgs {
@@ -26,9 +35,12 @@ interface UseActionContextArgs {
   setTab: (tab: AppTab) => void;
   workspace: WorkspaceOpsBridge | null;
   counts: { ownKeys: number; contacts: number };
+  /** The "Never auto-cache keys" setting (gates history availability). */
+  neverCacheKeys: boolean;
   openHistory: () => void;
   openGenerate: () => void;
   openImport: () => void;
+  openSecurityPresets: () => void;
   lockNow: () => void;
 }
 
@@ -47,12 +59,14 @@ export function useActionContext(args: UseActionContextArgs): ActionCtx {
     argsRef.current = args;
   });
 
-  const { tab, workspace, counts } = args;
+  const { tab, workspace, counts, neverCacheKeys } = args;
   const mode = workspace?.mode ?? "encrypt";
   const hasInput = workspace?.hasInput ?? false;
   const hasRecipients = workspace?.hasRecipients ?? false;
   const hasOutput = workspace?.hasOutput ?? false;
   const historyEnabled = workspace?.historyEnabled ?? false;
+  const encryptToSelf = workspace?.encryptToSelf ?? false;
+  const alsoSign = workspace?.alsoSign ?? false;
   const { ownKeys, contacts } = counts;
 
   return useMemo(
@@ -64,6 +78,9 @@ export function useActionContext(args: UseActionContextArgs): ActionCtx {
       hasOutput,
       masterUnlocked: true,
       historyEnabled,
+      encryptToSelf,
+      alsoSign,
+      neverCacheKeys,
       counts: { ownKeys, contacts },
       navigation: {
         setTab: (t) => argsRef.current.setTab(t),
@@ -71,12 +88,19 @@ export function useActionContext(args: UseActionContextArgs): ActionCtx {
         openGenerate: () => argsRef.current.openGenerate(),
         openImport: () => argsRef.current.openImport(),
         setMode: (m) => (argsRef.current.workspace?.setMode ?? noop)(m),
+        openSecurityPresets: () => argsRef.current.openSecurityPresets(),
       },
       ops: {
         execute: () => (argsRef.current.workspace?.execute ?? noop)(),
         clearInput: () => (argsRef.current.workspace?.clearInput ?? noop)(),
         copyOutput: () => (argsRef.current.workspace?.copyOutput ?? noop)(),
         lockNow: () => argsRef.current.lockNow(),
+        toggleEncryptToSelf: () =>
+          (argsRef.current.workspace?.toggleEncryptToSelf ?? noop)(),
+        toggleAlsoSign: () =>
+          (argsRef.current.workspace?.toggleAlsoSign ?? noop)(),
+        toggleSaveToHistory: () =>
+          (argsRef.current.workspace?.toggleSaveToHistory ?? noop)(),
       },
     }),
     [
@@ -86,6 +110,9 @@ export function useActionContext(args: UseActionContextArgs): ActionCtx {
       hasRecipients,
       hasOutput,
       historyEnabled,
+      encryptToSelf,
+      alsoSign,
+      neverCacheKeys,
       ownKeys,
       contacts,
     ],

@@ -255,15 +255,55 @@ export function WorkspaceView({
     !showCrxSign &&
     !(s.operationDone && s.mode !== "verify");
 
+  // The preference checkboxes' handlers, extracted so the palette
+  // toggles (via the ops bridge below) run the EXACT same code path:
+  // persistence, stale-output reset, and the history storage request.
+  const setEncryptToSelfPref = (checked: boolean) => {
+    s.setEncryptToSelf(checked);
+    s.resetOutput();
+    void savePreferences({ encryptToSelf: checked });
+  };
+  const setAlsoSignPref = (checked: boolean) => {
+    s.setAlsoSign(checked);
+    s.resetOutput();
+    void savePreferences({ signWhenEncrypting: checked });
+  };
+  const setSaveToHistoryPref = (checked: boolean) => {
+    s.setSaveToHistory(checked);
+    void savePreferences({ historyEnabled: checked });
+    // Enabling is a user gesture: ask for unlimitedStorage so history
+    // gets the generous budget. A denial is fine -- history still
+    // works within the default budget.
+    if (checked) void requestUnlimitedHistoryStorage();
+  };
+
   // mod+Enter (run) and mod+shift+C (copy) are dispatched through the
   // action registry (lib/actions), which reads the state slice pushed
   // up here. Ops close over fresh state via a ref; the snapshot effect
   // below re-pushes only when a palette-readable value changes.
   const hasOutput = s.operationDone && s.output.length > 0 && !s.loading;
   const canRun = mainActionShown && !s.loading;
-  const paletteRef = useRef({ s, canRun, hasOutput, handleCopy, ops });
+  const paletteRef = useRef({
+    s,
+    canRun,
+    hasOutput,
+    handleCopy,
+    ops,
+    setEncryptToSelfPref,
+    setAlsoSignPref,
+    setSaveToHistoryPref,
+  });
   useEffect(() => {
-    paletteRef.current = { s, canRun, hasOutput, handleCopy, ops };
+    paletteRef.current = {
+      s,
+      canRun,
+      hasOutput,
+      handleCopy,
+      ops,
+      setEncryptToSelfPref,
+      setAlsoSignPref,
+      setSaveToHistoryPref,
+    };
   });
   useEffect(() => {
     onPaletteOps?.({
@@ -272,6 +312,8 @@ export function WorkspaceView({
       hasRecipients: s.selectedRecipientIds.length > 0,
       hasOutput,
       historyEnabled: s.saveToHistory,
+      encryptToSelf: s.encryptToSelf,
+      alsoSign: s.alsoSign,
       // Mirrors the mode Select: a completed operation resets fully,
       // otherwise only the (now stale) output is cleared.
       setMode: (m) => {
@@ -291,6 +333,18 @@ export function WorkspaceView({
       copyOutput: () => {
         if (paletteRef.current.hasOutput) void paletteRef.current.handleCopy();
       },
+      toggleEncryptToSelf: () => {
+        const p = paletteRef.current;
+        p.setEncryptToSelfPref(!p.s.encryptToSelf);
+      },
+      toggleAlsoSign: () => {
+        const p = paletteRef.current;
+        p.setAlsoSignPref(!p.s.alsoSign);
+      },
+      toggleSaveToHistory: () => {
+        const p = paletteRef.current;
+        p.setSaveToHistoryPref(!p.s.saveToHistory);
+      },
     });
   }, [
     onPaletteOps,
@@ -299,6 +353,8 @@ export function WorkspaceView({
     s.selectedRecipientIds,
     hasOutput,
     s.saveToHistory,
+    s.encryptToSelf,
+    s.alsoSign,
   ]);
   useEffect(() => () => onPaletteOps?.(null), [onPaletteOps]);
 
@@ -486,12 +542,7 @@ export function WorkspaceView({
                 <label className="flex items-center gap-2">
                   <Checkbox
                     checked={s.encryptToSelf}
-                    onCheckedChange={(v) => {
-                      const checked = v === true;
-                      s.setEncryptToSelf(checked);
-                      s.resetOutput();
-                      void savePreferences({ encryptToSelf: checked });
-                    }}
+                    onCheckedChange={(v) => setEncryptToSelfPref(v === true)}
                   />
                   <span className="text-sm">Also encrypt to me</span>
                 </label>
@@ -500,12 +551,7 @@ export function WorkspaceView({
                 <label className="flex items-center gap-2">
                   <Checkbox
                     checked={s.alsoSign}
-                    onCheckedChange={(v) => {
-                      const checked = v === true;
-                      s.setAlsoSign(checked);
-                      s.resetOutput();
-                      void savePreferences({ signWhenEncrypting: checked });
-                    }}
+                    onCheckedChange={(v) => setAlsoSignPref(v === true)}
                   />
                   <span className="text-sm">Sign</span>
                 </label>
@@ -525,15 +571,7 @@ export function WorkspaceView({
               <label className="flex items-center gap-2">
                 <Checkbox
                   checked={s.saveToHistory}
-                  onCheckedChange={(v) => {
-                    const checked = v === true;
-                    s.setSaveToHistory(checked);
-                    void savePreferences({ historyEnabled: checked });
-                    // Enabling is a user gesture: ask for unlimitedStorage
-                    // so history gets the generous budget. A denial is fine
-                    // -- history still works within the default budget.
-                    if (checked) void requestUnlimitedHistoryStorage();
-                  }}
+                  onCheckedChange={(v) => setSaveToHistoryPref(v === true)}
                 />
                 <span className="text-sm">Save to history</span>
               </label>

@@ -15,6 +15,9 @@ function fakeCtx(overrides: Partial<ActionCtx> = {}): ActionCtx {
     hasOutput: false,
     masterUnlocked: true,
     historyEnabled: false,
+    encryptToSelf: false,
+    alsoSign: false,
+    neverCacheKeys: false,
     counts: { ownKeys: 0, contacts: 0 },
     navigation: {
       setTab: noop,
@@ -22,12 +25,16 @@ function fakeCtx(overrides: Partial<ActionCtx> = {}): ActionCtx {
       openGenerate: noop,
       openImport: noop,
       setMode: noop,
+      openSecurityPresets: noop,
     },
     ops: {
       execute: noop,
       clearInput: noop,
       copyOutput: noop,
       lockNow: noop,
+      toggleEncryptToSelf: noop,
+      toggleAlsoSign: noop,
+      toggleSaveToHistory: noop,
     },
     ...overrides,
   };
@@ -107,8 +114,10 @@ describe("workspace.run", () => {
     expect(execute).toHaveBeenCalledOnce();
   });
 
-  it("only applies on the workspace tab", () => {
-    expect(byId(fakeCtx({ tab: "keys" }), "workspace.run")).toBeUndefined();
+  it("stays visible on other tabs with a tab-switch reason", () => {
+    // hasInput is irrelevant off-tab: the tab reason wins.
+    const run = byId(fakeCtx({ tab: "keys", hasInput: true }), "workspace.run");
+    expect(run?.disabledReason).toBe("Switch to Workspace first");
   });
 });
 
@@ -121,6 +130,15 @@ describe("disabled reasons", () => {
       byId(fakeCtx({ hasOutput: true }), "workspace.copy-output")
         ?.disabledReason,
     ).toBeUndefined();
+  });
+
+  it("copy-output and clear explain the tab switch on other tabs", () => {
+    for (const id of ["workspace.copy-output", "workspace.clear"]) {
+      expect(
+        byId(fakeCtx({ tab: "settings", hasOutput: true }), id)
+          ?.disabledReason,
+      ).toBe("Switch to Workspace first");
+    }
   });
 
   it("clear requires something to clear", () => {
@@ -142,6 +160,81 @@ describe("disabled reasons", () => {
     expect(
       byId(fakeCtx({ historyEnabled: true }), "history.open")?.disabledReason,
     ).toBeUndefined();
+  });
+});
+
+describe("preference toggles", () => {
+  it("name the resulting state, not the current one", () => {
+    expect(
+      byId(fakeCtx({ encryptToSelf: true }), "workspace.toggle-encrypt-to-self")
+        ?.name,
+    ).toBe("Turn off: Also encrypt to me");
+    expect(
+      byId(fakeCtx(), "workspace.toggle-encrypt-to-self")?.name,
+    ).toBe("Turn on: Also encrypt to me");
+    expect(byId(fakeCtx({ alsoSign: true }), "workspace.toggle-sign")?.name).toBe(
+      "Turn off: Sign when encrypting",
+    );
+    expect(
+      byId(fakeCtx({ historyEnabled: true }), "workspace.toggle-history")?.name,
+    ).toBe("Turn off: Save to history");
+  });
+
+  it("encrypt toggles need an own key", () => {
+    for (const id of ["workspace.toggle-encrypt-to-self", "workspace.toggle-sign"]) {
+      expect(byId(fakeCtx(), id)?.disabledReason).toBe(
+        "Add one of your own keys first",
+      );
+      expect(
+        byId(fakeCtx({ counts: { ownKeys: 1, contacts: 0 } }), id)
+          ?.disabledReason,
+      ).toBeUndefined();
+    }
+  });
+
+  it("history toggle is unavailable under never-cache", () => {
+    expect(
+      byId(fakeCtx({ neverCacheKeys: true }), "workspace.toggle-history")
+        ?.disabledReason,
+    ).toBe("History is off while keys never cache");
+    expect(
+      byId(fakeCtx(), "workspace.toggle-history")?.disabledReason,
+    ).toBeUndefined();
+  });
+
+  it("run the ops bridge callbacks", () => {
+    const ctx = fakeCtx({ counts: { ownKeys: 1, contacts: 0 } });
+    const spies = {
+      toggleEncryptToSelf: vi.fn(),
+      toggleAlsoSign: vi.fn(),
+      toggleSaveToHistory: vi.fn(),
+    };
+    Object.assign(ctx.ops, spies);
+    void byId(ctx, "workspace.toggle-encrypt-to-self")?.action.execute(ctx);
+    void byId(ctx, "workspace.toggle-sign")?.action.execute(ctx);
+    void byId(ctx, "workspace.toggle-history")?.action.execute(ctx);
+    for (const spy of Object.values(spies)) expect(spy).toHaveBeenCalledOnce();
+  });
+});
+
+describe("history.open reasons", () => {
+  it("distinguishes never-cache from the plain off state", () => {
+    expect(
+      byId(fakeCtx({ neverCacheKeys: true }), "history.open")?.disabledReason,
+    ).toBe("History is off while keys never cache");
+    expect(byId(fakeCtx(), "history.open")?.disabledReason).toBe(
+      "History is off - enable it next to Sign",
+    );
+  });
+});
+
+describe("settings.security-presets", () => {
+  it("opens the presets subpage via navigation", () => {
+    const openSecurityPresets = vi.fn();
+    const ctx = fakeCtx();
+    ctx.navigation.openSecurityPresets = openSecurityPresets;
+    void byId(ctx, "settings.security-presets")?.action.execute(ctx);
+    expect(openSecurityPresets).toHaveBeenCalledOnce();
   });
 });
 
@@ -214,14 +307,15 @@ describe("shortcut dispatch through the registry", () => {
     );
   });
 
-  it("does not match workspace shortcuts on other tabs", () => {
+  it("matches workspace shortcuts on other tabs, disabled with the tab reason", () => {
     const hit = findByShortcut(
       ACTIONS,
       keydown({ key: "Enter", metaKey: true }),
-      fakeCtx({ tab: "settings" }),
+      fakeCtx({ tab: "settings", hasInput: true }),
       true,
     );
-    expect(hit).toBeNull();
+    expect(hit?.action.id).toBe("workspace.run");
+    expect(hit?.disabledReason).toBe("Switch to Workspace first");
   });
 
   it("no two applicable actions claim the same shortcut", () => {

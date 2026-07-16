@@ -30,6 +30,13 @@ export interface ActionCtx {
   masterUnlocked: boolean;
   /** The "Save to history" preference is on. */
   historyEnabled: boolean;
+  /** The "Also encrypt to me" preference is on. */
+  encryptToSelf: boolean;
+  /** The "Sign when encrypting" preference is on. */
+  alsoSign: boolean;
+  /** The "Never auto-cache keys" setting is on (history is unavailable
+   *  while it is: nothing may persist beyond an operation). */
+  neverCacheKeys: boolean;
   counts: {
     ownKeys: number;
     contacts: number;
@@ -40,6 +47,8 @@ export interface ActionCtx {
     openGenerate: () => void;
     openImport: () => void;
     setMode: (mode: PgpMode) => void;
+    /** Jump to Settings with the security-presets subpage open. */
+    openSecurityPresets: () => void;
   };
   ops: {
     /** Run the current workspace mode on the current input. */
@@ -50,6 +59,13 @@ export interface ActionCtx {
     copyOutput: () => void;
     /** Master-lock the extension immediately. */
     lockNow: () => void;
+    /** Flip "Also encrypt to me" (same handler as the checkbox:
+     *  persists the preference and resets stale output). */
+    toggleEncryptToSelf: () => void;
+    /** Flip "Sign when encrypting" (same handler as the checkbox). */
+    toggleAlsoSign: () => void;
+    /** Flip "Save to history" (same handler as the checkbox). */
+    toggleSaveToHistory: () => void;
   };
 }
 

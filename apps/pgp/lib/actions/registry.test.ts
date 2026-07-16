@@ -21,6 +21,9 @@ function fakeCtx(overrides: Partial<ActionCtx> = {}): ActionCtx {
     hasOutput: false,
     masterUnlocked: true,
     historyEnabled: false,
+    encryptToSelf: false,
+    alsoSign: false,
+    neverCacheKeys: false,
     counts: { ownKeys: 0, contacts: 0 },
     navigation: {
       setTab: noop,
@@ -28,12 +31,16 @@ function fakeCtx(overrides: Partial<ActionCtx> = {}): ActionCtx {
       openGenerate: noop,
       openImport: noop,
       setMode: noop,
+      openSecurityPresets: noop,
     },
     ops: {
       execute: noop,
       clearInput: noop,
       copyOutput: noop,
       lockNow: noop,
+      toggleEncryptToSelf: noop,
+      toggleAlsoSign: noop,
+      toggleSaveToHistory: noop,
     },
     ...overrides,
   };

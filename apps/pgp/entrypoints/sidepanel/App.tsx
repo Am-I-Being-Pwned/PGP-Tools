@@ -341,6 +341,9 @@ export default function App() {
   const [keysRoute, setKeysRoute] = useState<"generate" | "import" | null>(
     null,
   );
+  // One-shot request for Settings to open its security-presets subpage
+  // (the "Open security presets" palette action), keysRoute-style.
+  const [presetsRoute, setPresetsRoute] = useState(false);
 
   const changeTab = useCallback((tab: Tab) => {
     setActiveTab(tab);
@@ -364,7 +367,19 @@ export default function App() {
     () => openKeysRoute("import"),
     [openKeysRoute],
   );
+  const openSecurityPresets = useCallback(() => {
+    setPresetsRoute(true);
+    changeTab("settings");
+  }, [changeTab]);
   const lockNow = useCallback(() => void doMasterLock(), [doMasterLock]);
+
+  // The palette registers its imperative open() here so the footer's
+  // mod+K hint can pop it without owning the palette's state.
+  const openPaletteRef = useRef<(() => void) | null>(null);
+  const bindPaletteOpen = useCallback((fn: () => void) => {
+    openPaletteRef.current = fn;
+  }, []);
+  const openPalette = useCallback(() => openPaletteRef.current?.(), []);
 
   const actionCtx = useActionContext({
     tab: activeTab,
@@ -374,9 +389,11 @@ export default function App() {
       ownKeys: keyring.keys.length,
       contacts: contacts.contacts.length,
     },
+    neverCacheKeys,
     openHistory,
     openGenerate,
     openImport,
+    openSecurityPresets,
     lockNow,
   });
 
@@ -519,7 +536,7 @@ export default function App() {
       <div className="flex h-screen flex-col">
         <TabBar activeTab={activeTab} onTabChange={changeTab} />
 
-        <CommandPalette ctx={actionCtx} />
+        <CommandPalette ctx={actionCtx} bindOpen={bindPaletteOpen} />
         {historyOpen && (
           <HistoryPage
             enabled={workspaceBridge?.historyEnabled ?? false}
@@ -651,11 +668,13 @@ export default function App() {
               crxKeys={crxKeys.keys}
               onAddCrxKey={crxKeys.add}
               primaryPasskeyCredentialId={masterPasskeyCredentialId}
+              autoOpenPresets={presetsRoute}
+              onAutoOpenPresetsConsumed={() => setPresetsRoute(false)}
             />
           )}
         </main>
 
-        <AppFooter />
+        <AppFooter onOpenPalette={openPalette} />
       </div>
     </GlobalDropZone>
   );
