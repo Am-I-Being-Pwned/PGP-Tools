@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { ChevronsUpDownIcon, XIcon } from "lucide-react";
 
-import { Button } from "@amibeingpwned/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -174,45 +173,55 @@ export function RecipientPicker({
       <label className="text-muted-foreground mb-1 block text-xs font-medium">
         {label}
       </label>
-      {selectedKeys.length > 0 && (
-        <div className="mb-1.5 flex flex-wrap gap-1">
-          {selectedKeys.map((key) => {
-            const { name, detail } = getKeyDisplay(key);
-            return (
-              <span
-                key={key.keyId}
-                title={detail || undefined}
-                className="bg-secondary text-secondary-foreground inline-flex max-w-full items-center gap-1 rounded-md border px-2 py-0.5 text-xs"
-              >
-                <span className="truncate">{name}</span>
-                <button
-                  type="button"
-                  aria-label={`Remove ${name}`}
-                  className="text-muted-foreground hover:text-foreground -mr-0.5 shrink-0 rounded-sm"
-                  onClick={() => removeRecipient(key.keyId)}
-                >
-                  <XIcon className="h-3 w-3" />
-                </button>
-              </span>
-            );
-          })}
-        </div>
-      )}
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button
-            variant="outline"
+          {/* Chips live INSIDE the selection box (Linear-style multiselect
+              combobox). A div rather than Button: the chip remove controls
+              are buttons, and buttons can't nest. */}
+          <div
             role="combobox"
+            tabIndex={0}
             aria-expanded={open}
-            className="h-auto w-full min-w-0 justify-between py-1.5 font-normal"
+            aria-label={label}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " " || e.key === "ArrowDown") {
+                e.preventDefault();
+                setOpen(true);
+              }
+            }}
+            className="border-input hover:bg-accent/50 focus-visible:ring-ring flex min-h-9 w-full cursor-pointer flex-wrap items-center gap-1 rounded-md border bg-transparent px-2 py-1.5 text-sm focus-visible:ring-1 focus-visible:outline-none"
           >
-            <span className="text-muted-foreground text-sm">
+            {selectedKeys.map((key) => {
+              const { name, detail } = getKeyDisplay(key);
+              return (
+                <span
+                  key={key.keyId}
+                  title={detail || undefined}
+                  className="bg-secondary text-secondary-foreground inline-flex max-w-full items-center gap-1 rounded-md border px-2 py-0.5 text-xs"
+                >
+                  <span className="truncate">{name}</span>
+                  <button
+                    type="button"
+                    aria-label={`Remove ${name}`}
+                    className="text-muted-foreground hover:text-foreground -mr-0.5 shrink-0 rounded-sm"
+                    onClick={(e) => {
+                      // Removing a chip must not toggle the dropdown.
+                      e.stopPropagation();
+                      removeRecipient(key.keyId);
+                    }}
+                  >
+                    <XIcon className="h-3 w-3" />
+                  </button>
+                </span>
+              );
+            })}
+            <span className="text-muted-foreground flex-1 truncate">
               {selectedKeys.length > 0
-                ? "Add another recipient..."
+                ? "Add another..."
                 : "Select recipients..."}
             </span>
-            <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
+            <ChevronsUpDownIcon className="ml-1 h-4 w-4 shrink-0 opacity-50" />
+          </div>
         </PopoverTrigger>
         {/* Pin the list ABOVE the trigger and disable collision flipping so
             it doesn't jump between top/bottom as the result count changes

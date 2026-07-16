@@ -413,21 +413,6 @@ export function WorkspaceView({
           />
         )}
 
-        {needsRecipient && myKeys.length > 0 && (
-          <label className="flex items-center gap-2">
-            <Checkbox
-              checked={s.encryptToSelf}
-              onCheckedChange={(v) => {
-                const checked = v === true;
-                s.setEncryptToSelf(checked);
-                s.resetOutput();
-                void savePreferences({ encryptToSelf: checked });
-              }}
-            />
-            <span className="text-sm">Also encrypt to me</span>
-          </label>
-        )}
-
         {/* An extension zip can carry two signature kinds; let the user pick
             (defaults to CRX, the overwhelmingly likely intent) instead of
             hijacking the PGP sign flow. */}
@@ -490,7 +475,21 @@ export function WorkspaceView({
 
         {s.mode === "encrypt" && (
           <div className="space-y-2">
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              {myKeys.length > 0 && (
+                <label className="flex items-center gap-2">
+                  <Checkbox
+                    checked={s.encryptToSelf}
+                    onCheckedChange={(v) => {
+                      const checked = v === true;
+                      s.setEncryptToSelf(checked);
+                      s.resetOutput();
+                      void savePreferences({ encryptToSelf: checked });
+                    }}
+                  />
+                  <span className="text-sm">Also encrypt to me</span>
+                </label>
+              )}
               {myKeys.length > 0 && (
                 <label className="flex items-center gap-2">
                   <Checkbox
