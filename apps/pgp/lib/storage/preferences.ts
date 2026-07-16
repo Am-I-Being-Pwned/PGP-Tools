@@ -50,6 +50,9 @@ export interface PgpPreferences {
   /** Seconds a sensitive clipboard copy (exported private key, revocation
    *  certificate) survives before the best-effort wipe fires. */
   clipboardWipeSeconds: number;
+  /** Fingerprints of recently used encrypt recipients, most recent
+   *  first (capped). Orders the recipient picker's suggestions. */
+  recentRecipients: string[];
 }
 
 const DEFAULT_PREFERENCES: PgpPreferences = {
@@ -70,6 +73,7 @@ const DEFAULT_PREFERENCES: PgpPreferences = {
   crxSigningEnabled: false,
   historyEnabled: false,
   clipboardWipeSeconds: 60,
+  recentRecipients: [],
 };
 
 // ── bootstrap vs settings split ──────────────────────────────────────

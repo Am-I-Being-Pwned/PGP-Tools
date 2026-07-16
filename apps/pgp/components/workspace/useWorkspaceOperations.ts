@@ -12,12 +12,14 @@ import { AppError } from "../../lib/errors/app-error";
 import { presentError } from "../../lib/errors/present";
 import * as pgpOps from "../../lib/pgp/operations";
 import { isWebAuthnCancel } from "../../lib/protection/webauthn-prf";
+import { updateRecentRecipients } from "../../lib/recipient-ordering";
+import { recordHistory } from "../../lib/storage/history";
+import { savePreferences } from "../../lib/storage/preferences";
 import {
   downloadBinary,
   downloadResults,
   downloadText,
 } from "../../lib/utils/download";
-import { recordHistory } from "../../lib/storage/history";
 import { formatFileSize } from "../../lib/utils/formatting";
 import { parseUserId } from "../../lib/utils/key-naming";
 import {
@@ -239,17 +241,13 @@ export function useWorkspaceOperations({
   };
 
   async function executeEncrypt() {
-    const recipient = allPublicKeys.find(
-      (k) => k.keyId === s.selectedRecipientId,
-    );
-    if (!recipient) {
-      s.setError({ message: "Select a recipient key." });
+    const recipients = s.selectedRecipientIds
+      .map((id) => allPublicKeys.find((k) => k.keyId === id))
+      .filter((k) => k !== undefined);
+    if (recipients.length === 0) {
+      s.setError({ message: "Select at least one recipient key." });
       return;
     }
-    const recipientArmored =
-      "armoredPublicKey" in recipient
-        ? recipient.armoredPublicKey
-        : recipient.publicKeyArmored;
 
     let signingHandle: number | null = null;
     if (s.alsoSign && s.selectedKeyId) {
@@ -263,8 +261,11 @@ export function useWorkspaceOperations({
     // key), flag it so a warning shows on the output.
     const { recipientPublicKeys, selfExcluded, selfKeyId } =
       buildEncryptRecipients({
-        recipientKeyId: recipient.keyId,
-        recipientArmored,
+        recipients: recipients.map((k) => ({
+          keyId: k.keyId,
+          armored:
+            "armoredPublicKey" in k ? k.armoredPublicKey : k.publicKeyArmored,
+        })),
         encryptToSelf: s.encryptToSelf,
         ownKeys: myKeys,
         signingKeyId: s.alsoSign ? s.selectedKeyId : null,
@@ -343,16 +344,23 @@ export function useWorkspaceOperations({
     }
 
     if (selfExcluded) {
+      const firstName = parseUserId(recipients[0].userIds[0]).name;
+      const others = recipients.length - 1;
+      const label =
+        others === 0
+          ? firstName
+          : `${firstName} and ${others} other${others > 1 ? "s" : ""}`;
       s.setSelfDecryptWarning(
-        `Encrypted only to ${parseUserId(recipient.userIds[0]).name} - you will not be able to decrypt this.`,
+        `Encrypted only to ${label} - you will not be able to decrypt this.`,
       );
     }
 
     // Record the FINAL recipient set: when encrypt-to-self rode the
     // user's own key along, history shows it too.
-    const historyRecipients = [
-      { fingerprint: recipient.keyId, name: recipient.userIds[0] ?? "" },
-    ];
+    const historyRecipients = recipients.map((k) => ({
+      fingerprint: k.keyId,
+      name: k.userIds[0] ?? "",
+    }));
     const selfKey =
       selfKeyId === null ? null : myKeys.find((k) => k.keyId === selfKeyId);
     if (selfKey) {
@@ -368,6 +376,15 @@ export function useWorkspaceOperations({
       signed: signingHandle !== null,
       ...(isFileInput ? { files: historyFileMeta() } : { content: s.input }),
     });
+
+    // A successful encrypt promotes its recipients in the picker's
+    // recency ordering (selected ones only -- not the auto self key).
+    const updatedRecents = updateRecentRecipients(
+      s.recentRecipients,
+      recipients.map((k) => k.keyId),
+    );
+    s.setRecentRecipients(updatedRecents);
+    void savePreferences({ recentRecipients: updatedRecents });
   }
 
   async function executeDecrypt() {
@@ -781,9 +798,7 @@ export function useWorkspaceOperations({
     } catch (e) {
       // The prompt is a single password field, so surface just the
       // curated message inline (no room for the detail line here).
-      s.setPasswordError(
-        presentError(e, "Unlock failed. Try again.").message,
-      );
+      s.setPasswordError(presentError(e, "Unlock failed. Try again.").message);
       s.setLoading(false);
     }
   };
