@@ -7,8 +7,14 @@ import {
   RotateCcwIcon,
 } from "lucide-react";
 
+import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
 import { Button } from "@amibeingpwned/ui/button";
 import { Checkbox } from "@amibeingpwned/ui/checkbox";
+import {
+  ariaKeyShortcuts,
+  formatShortcutTitle,
+  isMacPlatform,
+} from "@amibeingpwned/ui/kbd-helpers";
 import {
   Select,
   SelectContent,
@@ -23,6 +29,7 @@ import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { WorkspaceDraft } from "../../lib/workspace-draft";
 import type { WorkspaceIntake } from "./useWorkspaceState";
+import { useShortcut } from "../../hooks/useShortcut";
 import { savePreferences } from "../../lib/storage/preferences";
 import { saveCrxViaPrompt } from "../../lib/utils/download";
 import { INPUT_CLASS } from "../../lib/utils/styles";
@@ -31,6 +38,11 @@ import { useWorkspaceOperations } from "./useWorkspaceOperations";
 import { useWorkspaceState } from "./useWorkspaceState";
 import { WorkspaceInput } from "./WorkspaceInput";
 import { WorkspaceResults } from "./WorkspaceResults";
+
+/** mod+Enter mirrors the main action button (Encrypt/Decrypt/Sign/...). */
+const RUN_SHORTCUT: ShortcutSpec = { mod: true, key: "Enter" };
+/** mod+shift+C copies completed text output. */
+const COPY_SHORTCUT: ShortcutSpec = { mod: true, shift: true, key: "c" };
 
 interface WorkspaceViewProps {
   myKeys: ProtectedKeyBlob[];
@@ -207,6 +219,33 @@ export function WorkspaceView({
   const showFullOutput =
     s.operationDone && s.mode === "decrypt" && s.output.length > 0;
 
+  // mod+Enter mirrors the main action button: bound only while that
+  // button is rendered (the trailing branch of the action bar) and
+  // would be enabled. In verify-done state it resets, like the button.
+  const mainActionShown =
+    !showFullOutput &&
+    !s.needsPassword &&
+    !crxResult &&
+    !showCrxVerify &&
+    !showCrxSign &&
+    !(s.operationDone && s.mode !== "verify");
+  useShortcut(
+    RUN_SHORTCUT,
+    () => {
+      if (s.operationDone && s.mode === "verify") s.resetAll();
+      else void ops.execute();
+    },
+    { enabled: mainActionShown && !s.loading && hasInput },
+  );
+
+  // mod+shift+C copies completed text output (both the inline Copy
+  // button and the full-output view route through handleCopy).
+  useShortcut(COPY_SHORTCUT, () => void handleCopy(), {
+    enabled: s.operationDone && s.output.length > 0 && !s.loading,
+  });
+  const copyTitle = `Copy (${formatShortcutTitle(COPY_SHORTCUT, isMacPlatform())})`;
+  const copyAria = ariaKeyShortcuts(COPY_SHORTCUT, isMacPlatform());
+
   if (showFullOutput) {
     return (
       <div className="flex h-full flex-col gap-3">
@@ -250,6 +289,8 @@ export function WorkspaceView({
               className="flex-1"
               onClick={handleCopy}
               disabled={s.loading}
+              title={copyTitle}
+              aria-keyshortcuts={copyAria}
             >
               <span className="flex items-center gap-2">
                 {copied ? (
@@ -535,6 +576,8 @@ export function WorkspaceView({
                         className="flex-1"
                         onClick={handleCopy}
                         disabled={s.loading}
+                        title={copyTitle}
+                        aria-keyshortcuts={copyAria}
                       >
                         <span className="flex items-center gap-2">
                           {copied ? (
@@ -556,6 +599,7 @@ export function WorkspaceView({
                         : ops.execute
                     }
                     disabled={s.loading || !hasInput}
+                    shortcut={RUN_SHORTCUT}
                   >
                     {s.loading
                       ? "Processing..."

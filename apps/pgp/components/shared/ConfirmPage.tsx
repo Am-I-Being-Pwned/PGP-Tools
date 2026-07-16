@@ -18,6 +18,10 @@ interface ConfirmPageProps {
  * Full-panel destructive-action confirmation, so "a decision that
  * deserves its own screen" looks the same everywhere. On success the
  * page slides back out; on failure it stays put and shows why.
+ *
+ * Deliberately keyboard-inert: the confirm button is destructive, so
+ * SubPage binds no submit shortcut to it and shows no key chip -- the
+ * only bound key is Escape, which cancels. Confirming takes a click.
  */
 export function ConfirmPage({
   title,

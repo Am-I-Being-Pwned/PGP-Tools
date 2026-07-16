@@ -10,6 +10,8 @@
     "./checkbox": "./src/checkbox.tsx",
     "./command": "./src/command.tsx",
     "./dropdown-menu": "./src/dropdown-menu.tsx",
+    "./kbd": "./src/kbd.tsx",
+    "./kbd-helpers": "./src/kbd-helpers.ts",
     "./popover": "./src/popover.tsx",
     "./select": "./src/select.tsx",
     "./switch": "./src/switch.tsx"
