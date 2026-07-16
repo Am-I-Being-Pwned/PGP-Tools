@@ -706,17 +706,21 @@ export function WorkspaceView({
                         : s.mode}
                   </Button>
                 )}
-                {s.operationDone && s.mode !== "verify" && (
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={s.resetAll}
-                    title="Clear input and output"
-                    aria-label="Clear input and output"
-                  >
-                    <RotateCcwIcon className="h-4 w-4" />
-                  </Button>
-                )}
+                {/* Anything clearable (pasted input lingering after a nav
+                    round-trip, or a completed op) gets the clear button;
+                    verify-done is excluded because its main button IS Reset. */}
+                {(hasInput || s.operationDone) &&
+                  !(s.operationDone && s.mode === "verify") && (
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={s.resetAll}
+                      title="Clear input and output"
+                      aria-label="Clear input and output"
+                    >
+                      <RotateCcwIcon className="h-4 w-4" />
+                    </Button>
+                  )}
               </div>
             )}
           </div>
