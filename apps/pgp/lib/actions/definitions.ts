@@ -30,6 +30,11 @@ const MODES: { mode: PgpMode; name: string }[] = [
   { mode: "verify", name: "Verify" },
 ];
 
+/** mod+K opens the command palette. Lives here (not in the palette
+ *  component) so the footer hint and the shortcuts reference can render
+ *  it without importing UI code; the palette itself binds it. */
+export const PALETTE_SHORTCUT: ShortcutSpec = { mod: true, key: "k" };
+
 /** The mod+digit shortcut for each workspace mode. Single source of
  *  truth shared by the registry's mode actions (below) and the mode
  *  dropdown's Kbd hints, so the two can never drift. */

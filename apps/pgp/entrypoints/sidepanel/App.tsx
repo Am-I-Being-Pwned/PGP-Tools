@@ -373,6 +373,14 @@ export default function App() {
   }, [changeTab]);
   const lockNow = useCallback(() => void doMasterLock(), [doMasterLock]);
 
+  // The palette registers its imperative open() here so the footer's
+  // mod+K hint can pop it without owning the palette's state.
+  const openPaletteRef = useRef<(() => void) | null>(null);
+  const bindPaletteOpen = useCallback((fn: () => void) => {
+    openPaletteRef.current = fn;
+  }, []);
+  const openPalette = useCallback(() => openPaletteRef.current?.(), []);
+
   const actionCtx = useActionContext({
     tab: activeTab,
     setTab: changeTab,
@@ -528,7 +536,7 @@ export default function App() {
       <div className="flex h-screen flex-col">
         <TabBar activeTab={activeTab} onTabChange={changeTab} />
 
-        <CommandPalette ctx={actionCtx} />
+        <CommandPalette ctx={actionCtx} bindOpen={bindPaletteOpen} />
         {historyOpen && (
           <HistoryPage
             enabled={workspaceBridge?.historyEnabled ?? false}
@@ -666,7 +674,7 @@ export default function App() {
           )}
         </main>
 
-        <AppFooter />
+        <AppFooter onOpenPalette={openPalette} />
       </div>
     </GlobalDropZone>
   );

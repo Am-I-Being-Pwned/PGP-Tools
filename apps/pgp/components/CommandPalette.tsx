@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 
-import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
 import {
   Command,
   CommandGroup,
@@ -13,7 +12,7 @@ import { isMacPlatform } from "@amibeingpwned/ui/kbd-helpers";
 
 import type { ActionCtx } from "../lib/actions/types";
 import { useShortcut } from "../hooks/useShortcut";
-import { ACTIONS } from "../lib/actions/definitions";
+import { ACTIONS, PALETTE_SHORTCUT } from "../lib/actions/definitions";
 import {
   filterActions,
   findByShortcut,
@@ -23,8 +22,6 @@ import {
 import { isEditableTarget, matchesShortcut } from "../lib/shortcuts";
 import { toast } from "../lib/toast";
 import { hasOpenSlideOver, holdFocusTraps } from "./shared/SlideOver";
-
-const PALETTE_SHORTCUT: ShortcutSpec = { mod: true, key: "k" };
 
 /** Below this many visible actions the search input is pointless noise
  *  (Linear's SmallCommandMenu rule) -- show a plain list instead. */
@@ -78,7 +75,15 @@ function useRegistryShortcuts(ctx: ActionCtx, suspended: boolean) {
  * gate (so it cannot open while locked); also owns global dispatch of
  * the actions' registered shortcuts.
  */
-export function CommandPalette({ ctx }: { ctx: ActionCtx }) {
+export function CommandPalette({
+  ctx,
+  bindOpen,
+}: {
+  ctx: ActionCtx;
+  /** Receives an imperative open() so other chrome (the footer's ⌘K
+   *  hint) can pop the palette without owning its state. */
+  bindOpen?: (open: () => void) => void;
+}) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
@@ -93,15 +98,22 @@ export function CommandPalette({ ctx }: { ctx: ActionCtx }) {
   };
   useEffect(() => releaseHold, []);
 
-  useShortcut(
-    PALETTE_SHORTCUT,
-    () => {
-      releaseTrapHold.current ??= holdFocusTraps();
-      setQuery("");
-      setOpen(true);
-    },
-    { allowInInput: true },
-  );
+  // Shared by the mod+K shortcut and the imperative `bindOpen` hook-up.
+  const openPalette = () => {
+    releaseTrapHold.current ??= holdFocusTraps();
+    setQuery("");
+    setOpen(true);
+  };
+
+  useShortcut(PALETTE_SHORTCUT, openPalette, { allowInInput: true });
+
+  const openPaletteRef = useRef(openPalette);
+  useEffect(() => {
+    openPaletteRef.current = openPalette;
+  });
+  useEffect(() => {
+    bindOpen?.(() => openPaletteRef.current());
+  }, [bindOpen]);
 
   useRegistryShortcuts(ctx, open);
 
