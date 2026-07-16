@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+
 import type { Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 
@@ -84,13 +86,12 @@ export async function signInWorkspace(
   await panel.getByRole("option", { name: "Sign", exact: true }).click();
   await panel.locator("textarea").first().fill(message);
   await panel.getByRole("button", { name: /^sign$/i }).click();
-  // The armored output is collapsed behind a "Preview" disclosure; expand it
-  // to assert on the armor itself.
-  await expect(panel.getByText("Signed message").first()).toBeVisible();
-  await panel.getByRole("button", { name: /Preview/ }).click();
-  await expect(
-    panel.getByText("BEGIN PGP SIGNED MESSAGE").first(),
-  ).toBeVisible();
+  // Armored output is never displayed anymore; completion swaps the
+  // action bar to Download + Copy. The Copy button renders ONLY when
+  // armored text output exists, so its presence proves the signature
+  // was produced.
+  await expect(panel.getByRole("button", { name: "Download" })).toBeVisible();
+  await expect(panel.getByRole("button", { name: "Copy" })).toBeVisible();
 }
 
 /** Encrypt `plaintext` to the single own key via the workspace and return
@@ -102,18 +103,23 @@ export async function encryptToSelfInWorkspace(
   await panel.getByRole("tab", { name: "Main" }).click();
   await panel.getByRole("combobox").first().click();
   await panel.getByRole("option", { name: "Encrypt", exact: true }).click();
-  // Recipient: the single own (encryption-capable) key.
-  await panel.getByRole("combobox").nth(1).click();
-  await panel.getByRole("option").first().click();
+  // Recipient: the single own (encryption-capable) key auto-selects as
+  // a chip -- assert it rather than picking (the dropdown filters out
+  // already-selected keys, so there is nothing left to pick).
+  await expect(
+    panel.getByRole("button", { name: /^Remove / }).first(),
+  ).toBeVisible();
   await panel.locator("textarea").first().fill(plaintext);
   await panel.getByRole("button", { name: /^encrypt$/i }).click();
-  // The armored output is collapsed behind a "Preview" disclosure; expand it
-  // to read the ciphertext back out.
-  await expect(panel.getByText("Encrypted message").first()).toBeVisible();
-  await panel.getByRole("button", { name: /Preview/ }).click();
-  const pre = panel.locator("pre").first();
-  await expect(pre).toContainText("BEGIN PGP MESSAGE");
-  return pre.innerText();
+  // Ciphertext is never displayed; Download is the interface. Capture
+  // the download and read the armor back out of the file.
+  const downloadEvent = panel.waitForEvent("download");
+  await panel.getByRole("button", { name: "Download" }).click();
+  const file = await downloadEvent;
+  const path = await file.path();
+  const armored = await readFile(path, "utf8");
+  expect(armored).toContain("BEGIN PGP MESSAGE");
+  return armored;
 }
 
 /** Decrypt an armored message in the workspace (auto-selects decrypt). */

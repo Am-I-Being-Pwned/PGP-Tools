@@ -138,9 +138,10 @@ test("verify of unsigned text says so plainly", async ({ panel }) => {
   await panel.locator("textarea").first().fill("just some plain text");
   await setWorkspaceMode(panel, "Verify");
   await panel.getByRole("button", { name: /^verify$/i }).click();
-  // Plain text isn't a PGP message at all, so verify says exactly that
-  // (the "not signed" classification is reserved for parseable PGP data).
+  // Plain text isn't a PGP message at all; the error classifier says so
+  // with paste-the-full-block guidance (the "not signed" classification
+  // is reserved for parseable PGP data).
   await expect(
-    panel.getByText("The input doesn't look like a signed PGP message."),
+    panel.getByText(/doesn't look like PGP data/),
   ).toBeVisible();
 });
