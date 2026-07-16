@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  matchesRecipientSearch,
   orderRecipients,
   RECENT_RECIPIENTS_CAP,
   updateRecentRecipients,
@@ -92,5 +93,40 @@ describe("updateRecentRecipients", () => {
 
   it("handles an empty current list", () => {
     expect(updateRecentRecipients([], ["A"])).toEqual(["A"]);
+  });
+});
+
+describe("matchesRecipientSearch", () => {
+  const alice = {
+    keyId: "0123ABCD",
+    userIds: ["Alice Smith (work) <alice@example.com>"],
+  };
+
+  it("matches everything on an empty or blank query", () => {
+    expect(matchesRecipientSearch(alice, "")).toBe(true);
+    expect(matchesRecipientSearch(alice, "   ")).toBe(true);
+  });
+
+  it("matches name, email, comment and key id, case-insensitively", () => {
+    expect(matchesRecipientSearch(alice, "alice")).toBe(true);
+    expect(matchesRecipientSearch(alice, "SMITH")).toBe(true);
+    expect(matchesRecipientSearch(alice, "example.com")).toBe(true);
+    expect(matchesRecipientSearch(alice, "work")).toBe(true);
+    expect(matchesRecipientSearch(alice, "0123abcd")).toBe(true);
+  });
+
+  it("requires every token to match", () => {
+    expect(matchesRecipientSearch(alice, "alice example")).toBe(true);
+    expect(matchesRecipientSearch(alice, "alice bob")).toBe(false);
+  });
+
+  it("rejects non-matching queries", () => {
+    expect(matchesRecipientSearch(alice, "carol")).toBe(false);
+  });
+
+  it("falls back to the key id for keys without user ids", () => {
+    const bare = { keyId: "DEADBEEF", userIds: [] };
+    expect(matchesRecipientSearch(bare, "beef")).toBe(true);
+    expect(matchesRecipientSearch(bare, "alice")).toBe(false);
   });
 });
