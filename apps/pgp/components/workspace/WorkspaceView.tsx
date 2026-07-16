@@ -514,16 +514,18 @@ export function WorkspaceView({
         />
         <div className="flex gap-2">
           <div className="flex flex-1 gap-2">
+            {/* Icon + keycaps only: the labels crowded the half-width
+                buttons, and the icons with shortcut chips say it all.
+                aria-label/title keep the names for AT and hover. */}
             <Button
               className="flex-1"
               onClick={() => ops.triggerDownload()}
               disabled={s.loading}
               shortcut={DOWNLOAD_SHORTCUT}
+              aria-label="Download"
+              title="Download"
             >
-              <span className="flex items-center gap-2">
-                <DownloadIcon className="h-4 w-4" />
-                Download
-              </span>
+              <DownloadIcon className="h-4 w-4" />
             </Button>
             <Button
               variant="outline"
@@ -531,15 +533,14 @@ export function WorkspaceView({
               onClick={handleCopy}
               disabled={s.loading}
               shortcut={COPY_SHORTCUT}
+              aria-label={copied ? "Copied" : "Copy"}
+              title="Copy"
             >
-              <span className="flex items-center gap-2">
-                {copied ? (
-                  <CheckIcon className="h-4 w-4 text-green-400" />
-                ) : (
-                  <ClipboardIcon className="h-4 w-4" />
-                )}
-                {copied ? "Copied" : "Copy"}
-              </span>
+              {copied ? (
+                <CheckIcon className="h-4 w-4 text-green-400" />
+              ) : (
+                <ClipboardIcon className="h-4 w-4" />
+              )}
             </Button>
           </div>
           <Button
@@ -816,16 +817,17 @@ export function WorkspaceView({
                   // Completed encrypt/sign: the result is ready to take away.
                   // Download is primary; Copy rides alongside for text output.
                   <div className="flex flex-1 gap-2">
+                    {/* Icon + keycaps only (labels crowded the buttons);
+                        aria-label/title keep the names for AT and hover. */}
                     <Button
                       className="flex-1"
                       onClick={() => ops.triggerDownload()}
                       disabled={s.loading}
                       shortcut={DOWNLOAD_SHORTCUT}
+                      aria-label="Download"
+                      title="Download"
                     >
-                      <span className="flex items-center gap-2">
-                        <DownloadIcon className="h-4 w-4" />
-                        Download
-                      </span>
+                      <DownloadIcon className="h-4 w-4" />
                     </Button>
                     {s.output && (
                       <Button
@@ -834,15 +836,14 @@ export function WorkspaceView({
                         onClick={handleCopy}
                         disabled={s.loading}
                         shortcut={COPY_SHORTCUT}
+                        aria-label={copied ? "Copied" : "Copy"}
+                        title="Copy"
                       >
-                        <span className="flex items-center gap-2">
-                          {copied ? (
-                            <CheckIcon className="h-4 w-4 text-green-400" />
-                          ) : (
-                            <ClipboardIcon className="h-4 w-4" />
-                          )}
-                          {copied ? "Copied" : "Copy"}
-                        </span>
+                        {copied ? (
+                          <CheckIcon className="h-4 w-4 text-green-400" />
+                        ) : (
+                          <ClipboardIcon className="h-4 w-4" />
+                        )}
                       </Button>
                     )}
                   </div>
