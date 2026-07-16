@@ -78,9 +78,7 @@ const FAKE_ACTIONS = [ALWAYS, WORKSPACE_ONLY, NEEDS_INPUT];
 
 describe("visibleActions", () => {
   it("includes actions without an applicable predicate", () => {
-    const ids = visibleActions(FAKE_ACTIONS, fakeCtx()).map(
-      (r) => r.action.id,
-    );
+    const ids = visibleActions(FAKE_ACTIONS, fakeCtx()).map((r) => r.action.id);
     expect(ids).toContain("test.always");
   });
 
