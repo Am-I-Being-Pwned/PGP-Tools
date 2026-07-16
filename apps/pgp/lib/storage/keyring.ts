@@ -4,6 +4,7 @@ import type {
   PasswordEncryptedBlob,
 } from "../protection/encrypt-private-key";
 import { STORAGE_KEYRING } from "../constants";
+import { AppError } from "../errors/app-error";
 import {
   loadEncryptedArray,
   normalizePadding,
@@ -201,7 +202,10 @@ export async function updateRevocationCertificate(
     // the key was deleted, or the vault locked mid-flight and
     // loadEncrypted returned nothing).
     if (!key) {
-      throw new Error("Key not found - the certificate was not saved.");
+      throw new AppError(
+        "key-not-found",
+        "Key not found - the certificate was not saved.",
+      );
     }
     key.revocationCertificate = armored;
     await saveAll(keyring);

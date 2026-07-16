@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
+import type { PresentedError } from "../../lib/errors/present";
 import type { WorkspaceAction } from "../../lib/messages";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
@@ -62,8 +63,8 @@ export interface WorkspaceState {
   setSignKind: (k: "pgp" | "crx") => void;
   crxKeys: CrxSigningKeyBlob[];
   crxSigningEnabled: boolean;
-  error: string | null;
-  setError: (s: string | null) => void;
+  error: PresentedError | null;
+  setError: (e: PresentedError | null) => void;
   loading: boolean;
   setLoading: (b: boolean) => void;
   files: File[];
@@ -131,7 +132,7 @@ export function useWorkspaceState(opts: {
   const [pendingCrxSign, setPendingCrxSign] = useState(false);
   const [isExtensionZip, setIsExtensionZip] = useState(false);
   const [signKind, setSignKind] = useState<"pgp" | "crx">("pgp");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<PresentedError | null>(null);
   const [loading, setLoading] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [alsoSign, setAlsoSign] = useState(false);

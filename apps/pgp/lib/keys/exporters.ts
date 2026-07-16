@@ -2,6 +2,7 @@ import type { PrivateKeyExporter } from "../../components/keys/ExportPrivateKeyP
 import type { CrxSigningKeyBlob } from "../crx/types";
 import type { ProtectedKeyBlob } from "../storage/keyring";
 import { serializeCrxKeyBlocks } from "../crx/backup";
+import { AppError } from "../errors/app-error";
 import {
   closeCrxKey,
   exportCrxPrivateKeyPem,
@@ -27,7 +28,7 @@ export function pgpKeyExporter(
     acquire: () => {
       const handle = getKeyHandle(blob.keyId);
       return handle === null
-        ? Promise.reject(new Error("Key is not unlocked."))
+        ? Promise.reject(new AppError("key-locked", "Key is not unlocked."))
         : Promise.resolve(handle);
     },
     release: () => {

@@ -11,6 +11,7 @@
  */
 
 import { fromBase64, toBase64 } from "../encoding";
+import { AppError } from "../errors/app-error";
 import type { CrxProtectFlowResult, CrxVerifyResult } from "../pgp/wasm";
 import {
   dropCrxKey,
@@ -108,7 +109,10 @@ async function protectWithPassword(
   label?: string,
 ): Promise<CrxSigningKeyBlob> {
   if (!password || password.length < 8) {
-    throw new Error("Password must be at least 8 characters");
+    throw new AppError(
+      "weak-password",
+      "Password must be at least 8 characters",
+    );
   }
   const passwordBytes = new TextEncoder().encode(password);
   try {
@@ -256,7 +260,10 @@ export async function resealCrxKeyUnderPassword(
   label?: string,
 ): Promise<CrxSigningKeyBlob> {
   if (!password || password.length < 8) {
-    throw new Error("Password must be at least 8 characters");
+    throw new AppError(
+      "weak-password",
+      "Password must be at least 8 characters",
+    );
   }
   const passwordBytes = new TextEncoder().encode(password);
   try {
@@ -282,7 +289,10 @@ async function unlockCrxKey(
 
   if (blob.protection.method === "password") {
     if (!password) {
-      throw new Error("Password required to unlock this CRX signing key");
+      throw new AppError(
+        "password-required",
+        "Password required to unlock this CRX signing key",
+      );
     }
     const passwordBytes = new TextEncoder().encode(password);
     try {

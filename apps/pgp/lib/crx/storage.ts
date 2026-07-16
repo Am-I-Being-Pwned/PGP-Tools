@@ -7,6 +7,7 @@
 
 import type { CrxSigningKeyBlob } from "./types";
 import { STORAGE_CRX_KEYS } from "../constants";
+import { AppError } from "../errors/app-error";
 import { hasContactsSession } from "../pgp/wasm";
 import {
   loadEncryptedArray,
@@ -40,7 +41,7 @@ export function normalizeCrxPadding(): Promise<void> {
  *  read-modify-write here would silently drop every stored key. */
 async function requireSession(action: string): Promise<void> {
   if (!(await hasContactsSession())) {
-    throw new Error(`Cannot ${action}: the vault is locked`);
+    throw new AppError("vault-locked", `Cannot ${action}: the vault is locked`);
   }
 }
 

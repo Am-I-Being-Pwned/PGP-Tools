@@ -7,6 +7,8 @@ import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { FileResult } from "../../lib/utils/download";
 import type { WorkspaceState } from "./useWorkspaceState";
 import { signZipWithCrxKey, verifyCrxFile } from "../../lib/crx/operations";
+import { AppError } from "../../lib/errors/app-error";
+import { presentError } from "../../lib/errors/present";
 import * as pgpOps from "../../lib/pgp/operations";
 import { isWebAuthnCancel } from "../../lib/protection/webauthn-prf";
 import {
@@ -144,7 +146,9 @@ export function useWorkspaceOperations({
     if (blob.protection.method === "passkey") {
       const result = await onUnlockWithPasskey(blob);
       if (result === "cancelled") return null;
-      if (!result) throw new Error("Passkey authentication failed.");
+      if (!result) {
+        throw new AppError("passkey-failed", "Passkey authentication failed.");
+      }
       return getKeyHandle(keyId);
     }
 
@@ -218,7 +222,7 @@ export function useWorkspaceOperations({
           break;
       }
     } catch (e) {
-      s.setError(e instanceof Error ? e.message : String(e));
+      s.setError(presentError(e, "The operation failed. Try again."));
     } finally {
       s.setLoading(false);
       onOperationComplete?.();
@@ -230,7 +234,7 @@ export function useWorkspaceOperations({
       (k) => k.keyId === s.selectedRecipientId,
     );
     if (!recipient) {
-      s.setError("Select a recipient key.");
+      s.setError({ message: "Select a recipient key." });
       return;
     }
     const recipientArmored =
@@ -320,7 +324,7 @@ export function useWorkspaceOperations({
 
   async function executeDecrypt() {
     if (!s.selectedKeyId) {
-      s.setError("Select a decryption key.");
+      s.setError({ message: "Select a decryption key." });
       return;
     }
     const keyHandle = await ensureUnlocked(s.selectedKeyId);
@@ -457,12 +461,15 @@ export function useWorkspaceOperations({
       s.setFileResults([]);
       s.setOperationDone(false);
       s.setVerifiedSigner(null);
-      // Surface the underlying reason (missing key, bad session key,
-      // unsupported compression, tampered signature, ...) instead of a
-      // one-size-fits-all message, so failures are actually diagnosable.
-      const detail = err instanceof Error ? err.message : String(err);
+      // Classify the underlying reason (missing key, wrong passphrase,
+      // corrupted data, tampered signature, ...) into curated copy instead
+      // of a one-size-fits-all message; the raw error rides along as the
+      // collapsed technical detail, so failures stay diagnosable.
       s.setError(
-        `Decryption failed: ${detail}. The message may be corrupted, or it isn't encrypted to any of your keys.`,
+        presentError(
+          err,
+          "Decryption failed. The message may be corrupted, or it isn't encrypted to any of your keys.",
+        ),
       );
     }
   }
@@ -470,7 +477,7 @@ export function useWorkspaceOperations({
   async function executeSign() {
     const signKeyId = s.selectedKeyId ?? myKeys[0]?.keyId;
     if (!signKeyId) {
-      s.setError("No signing key available.");
+      s.setError({ message: "No signing key available. Add a key first." });
       return;
     }
     const keyHandle = await ensureUnlocked(signKeyId);
@@ -544,17 +551,21 @@ export function useWorkspaceOperations({
           );
           break;
         case "invalid":
-          s.setError(
-            "Signature verification FAILED - this message may have been tampered with",
-          );
+          s.setError({
+            message:
+              "Signature verification FAILED - this message may have been tampered with",
+          });
           break;
         case "unsigned":
-          s.setError("This message is not signed.");
+          s.setError({ message: "This message is not signed." });
           break;
       }
-    } catch {
+    } catch (e) {
       s.setError(
-        "Verification failed. The input doesn't look like a signed PGP message.",
+        presentError(
+          e,
+          "Verification failed. The input doesn't look like a signed PGP message.",
+        ),
       );
     }
   }
@@ -605,7 +616,7 @@ export function useWorkspaceOperations({
       if (password) {
         s.setPasswordError("Wrong password or signing failed.");
       } else {
-        s.setError(e instanceof Error ? e.message : String(e));
+        s.setError(presentError(e, "CRX signing failed. Try again."));
       }
       return false;
     } finally {
@@ -618,7 +629,7 @@ export function useWorkspaceOperations({
     if (s.mode !== "sign" || s.files.length !== 1) return;
     const crxKey = pickCrxKey();
     if (!crxKey) {
-      s.setError("Select a CRX signing key first.");
+      s.setError({ message: "Select a CRX signing key first." });
       return;
     }
     s.setError(null);
@@ -645,12 +656,17 @@ export function useWorkspaceOperations({
         s.setSignatureTone("success");
         s.setStatusText(`Valid CRX - extension ${r.extensionId}`);
       } else {
-        s.setError(r.error ?? "Invalid CRX signature");
+        s.setError(
+          presentError(
+            r.error,
+            "This file's CRX signature could not be verified.",
+          ),
+        );
       }
     } catch (e) {
       // verifyCrxFile reports malformed input via `valid:false`; anything
       // thrown is unexpected (e.g. the file read failed) -- still surface it.
-      s.setError(e instanceof Error ? e.message : String(e));
+      s.setError(presentError(e, "Could not read this file. Try again."));
     } finally {
       s.setLoading(false);
     }
@@ -680,15 +696,19 @@ export function useWorkspaceOperations({
     try {
       const ok = await onUnlockWithPassword(blob, s.passwordInput);
       if (!ok) {
-        s.setPasswordError("Wrong password.");
+        s.setPasswordError("Wrong password. Check it and try again.");
         s.setLoading(false);
         return;
       }
       s.setNeedsPassword(false);
       s.setPasswordInput("");
       await execute();
-    } catch {
-      s.setPasswordError("Unlock failed.");
+    } catch (e) {
+      // The prompt is a single password field, so surface just the
+      // curated message inline (no room for the detail line here).
+      s.setPasswordError(
+        presentError(e, "Unlock failed. Try again.").message,
+      );
       s.setLoading(false);
     }
   };

@@ -1,5 +1,6 @@
 import type {} from "./prf-types";
 
+import { AppError } from "../errors/app-error";
 import { fromBase64url, toBase64url } from "../encoding.ts";
 
 // ── helpers ──────────────────────────────────────────────────────────
@@ -76,7 +77,7 @@ export async function registerPasskey(
   });
 
   if (!credential || !(credential instanceof PublicKeyCredential)) {
-    throw new Error("Passkey registration failed");
+    throw new AppError("passkey-failed", "Passkey registration failed");
   }
 
   const ext = credential.getClientExtensionResults();
@@ -124,7 +125,7 @@ export async function authenticateAndGetPrf(
   });
 
   if (!credential || !(credential instanceof PublicKeyCredential)) {
-    throw new Error("Passkey authentication failed");
+    throw new AppError("passkey-failed", "Passkey authentication failed");
   }
 
   const ext = credential.getClientExtensionResults();

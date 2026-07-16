@@ -22,6 +22,7 @@ import type { GenerateKeyOptions } from "../pgp/types";
 import type { ProtectFlowResult } from "../pgp/wasm";
 import type { ProtectedKeyBlob } from "../storage/keyring";
 import { toBase64 } from "../encoding";
+import { AppError } from "../errors/app-error";
 import {
   generateProtectedWithPassword,
   generateProtectedWithPrf,
@@ -185,7 +186,10 @@ export async function generateAndProtect(
 ): Promise<ProtectFlowOutput> {
   if (protection.method === "password") {
     if (!protection.password || protection.password.length < 8) {
-      throw new Error("Password must be at least 8 characters");
+      throw new AppError(
+        "weak-password",
+        "Password must be at least 8 characters",
+      );
     }
     const passwordBytes = new TextEncoder().encode(protection.password);
     try {
@@ -287,7 +291,10 @@ export async function importAndProtect(
 
   if (protection.method === "password") {
     if (!protection.password || protection.password.length < 8) {
-      throw new Error("Password must be at least 8 characters");
+      throw new AppError(
+        "weak-password",
+        "Password must be at least 8 characters",
+      );
     }
     const passwordBytes = new TextEncoder().encode(protection.password);
     try {

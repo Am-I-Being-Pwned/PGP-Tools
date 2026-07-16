@@ -2,6 +2,8 @@ import { useState } from "react";
 
 import { Button } from "@amibeingpwned/ui/button";
 
+import type { PresentedError } from "../../lib/errors/present";
+import { presentError } from "../../lib/errors/present";
 import { SlideOverHeader, SlideOverPanel, useSlideOver } from "./SlideOver";
 
 /** A footer button. Order in the array is render order (top to bottom). */
@@ -74,7 +76,8 @@ export function SubPage({
 }: SubPageProps) {
   const { entered, close } = useSlideOver(onClose);
   const [busyIndex, setBusyIndex] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<PresentedError | null>(null);
+  const [showDetail, setShowDetail] = useState(false);
 
   const busy = busyIndex !== null;
 
@@ -86,17 +89,14 @@ export function SubPage({
       return;
     }
     setError(null);
+    setShowDetail(false);
     setBusyIndex(index);
     void (async () => {
       try {
         await action.onClick?.(api);
         if (action.closeOnSuccess) close();
       } catch (e) {
-        setError(
-          e instanceof Error && e.message
-            ? e.message
-            : "Something went wrong.",
-        );
+        setError(presentError(e, "Something went wrong. Try again."));
       } finally {
         setBusyIndex(null);
       }
@@ -118,9 +118,25 @@ export function SubPage({
       {actions && actions.length > 0 && (
         <div className="border-border space-y-2 border-t p-4">
           {error && (
-            <p className="text-destructive text-xs" role="alert">
-              {error}
-            </p>
+            <div className="space-y-1" role="alert">
+              <p className="text-destructive text-xs">{error.message}</p>
+              {error.detail && (
+                <button
+                  type="button"
+                  className="text-muted-foreground text-xs underline underline-offset-2"
+                  onClick={() => setShowDetail((v) => !v)}
+                >
+                  {showDetail
+                    ? "Hide technical details"
+                    : "Show technical details"}
+                </button>
+              )}
+              {showDetail && error.detail && (
+                <p className="text-muted-foreground font-mono text-xs break-all">
+                  {error.detail}
+                </p>
+              )}
+            </div>
           )}
           {actions.map((action, i) => (
             <Button
