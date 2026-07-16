@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import {
   BadgeCheckIcon,
@@ -15,6 +15,11 @@ import { Button } from "@amibeingpwned/ui/button";
 
 import type { HistoryEntry, HistoryOp } from "../../lib/storage/history";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
+import {
+  buildSnippet,
+  entryMatchesQuery,
+  splitHighlight,
+} from "../../lib/history-search";
 import {
   clearHistory,
   hasUnlimitedStorage,
@@ -66,17 +71,56 @@ function entryTitle(entry: HistoryEntry): string {
   return entry.op.charAt(0).toUpperCase() + entry.op.slice(1);
 }
 
-function matchesSearch(entry: HistoryEntry, q: string): boolean {
-  return (
-    entry.op.includes(q) ||
-    entry.recipients.some(
-      (r) =>
-        r.name.toLowerCase().includes(q) ||
-        r.fingerprint.toLowerCase().includes(q),
-    ) ||
-    (entry.content?.toLowerCase().includes(q) ?? false) ||
-    (entry.files?.some((f) => f.name.toLowerCase().includes(q)) ?? false)
+/** Shared styling for highlighted match text; primary-tinted so it
+ *  reads on both the light and pure-black dark themes. */
+const MARK_CLASS = "bg-primary/25 text-foreground rounded-sm px-0.5";
+
+/** Text with every case-insensitive occurrence of `query` wrapped in a
+ *  styled <mark>. Falls back to plain text when the query is empty. */
+function Highlighted({ text, query }: { text: string; query: string }) {
+  return splitHighlight(text, query).map((seg, i) =>
+    seg.match ? (
+      <mark key={i} className={MARK_CLASS}>
+        {seg.text}
+      </mark>
+    ) : (
+      <Fragment key={i}>{seg.text}</Fragment>
+    ),
   );
+}
+
+/** The first highlight inside expanded content: scrolls itself into
+ *  view on mount so the evidence for the search hit is visible without
+ *  manual scrolling through a long armored block. Keyed on the query by
+ *  the caller so a query change re-scrolls. */
+function FirstMark({ children }: { children: React.ReactNode }) {
+  const ref = useRef<HTMLElement>(null);
+  useEffect(() => {
+    ref.current?.scrollIntoView({ block: "nearest" });
+  }, []);
+  return (
+    <mark ref={ref} className={MARK_CLASS}>
+      {children}
+    </mark>
+  );
+}
+
+/** Expanded-content body with all matches highlighted; the first match
+ *  auto-scrolls into view within the <pre>. */
+function HighlightedContent({ text, query }: { text: string; query: string }) {
+  let seenFirst = false;
+  return splitHighlight(text, query).map((seg, i) => {
+    if (!seg.match) return <Fragment key={i}>{seg.text}</Fragment>;
+    if (!seenFirst) {
+      seenFirst = true;
+      return <FirstMark key={`${query}-${i}`}>{seg.text}</FirstMark>;
+    }
+    return (
+      <mark key={i} className={MARK_CLASS}>
+        {seg.text}
+      </mark>
+    );
+  });
 }
 
 /**
@@ -115,7 +159,7 @@ export function HistoryPage({
   }, []);
 
   const filtered = search
-    ? entries.filter((e) => matchesSearch(e, search.toLowerCase()))
+    ? entries.filter((e) => entryMatchesQuery(e, search))
     : entries;
 
   const { copy } = useCopyToClipboard();
@@ -180,6 +224,14 @@ export function HistoryPage({
           {filtered.map((entry) => {
             const Icon = OP_ICON[entry.op];
             const expanded = expandedId === entry.id;
+            // Show WHY a row matched: a content hit renders a snippet
+            // under the header (hidden once expanded -- the full
+            // highlighted content supersedes it). Recipient/file-name
+            // hits are already visible, highlighted, in the title.
+            const snippet =
+              search && !expanded && entry.content !== undefined
+                ? buildSnippet(entry.content, search)
+                : undefined;
             return (
               <div
                 key={entry.id}
@@ -187,21 +239,39 @@ export function HistoryPage({
               >
                 <button
                   type="button"
-                  className="flex w-full items-center gap-2 text-left"
+                  className="w-full text-left"
                   onClick={() => setExpandedId(expanded ? null : entry.id)}
                   aria-expanded={expanded}
                 >
-                  <Icon className="text-muted-foreground h-4 w-4 shrink-0" />
-                  <span className="min-w-0 flex-1 truncate text-sm">
-                    {entryTitle(entry)}
+                  <span className="flex w-full items-center gap-2">
+                    <Icon className="text-muted-foreground h-4 w-4 shrink-0" />
+                    <span className="min-w-0 flex-1 truncate text-sm">
+                      <Highlighted text={entryTitle(entry)} query={search} />
+                    </span>
+                    <span className="text-muted-foreground shrink-0 text-xs capitalize">
+                      {entry.op}
+                      {entry.signed && entry.op === "encrypt" ? " + sign" : ""}
+                    </span>
+                    <span className="text-muted-foreground shrink-0 text-xs whitespace-nowrap">
+                      {formatDistanceToNow(entry.ts, { addSuffix: true })}
+                    </span>
                   </span>
-                  <span className="text-muted-foreground shrink-0 text-xs capitalize">
-                    {entry.op}
-                    {entry.signed && entry.op === "encrypt" ? " + sign" : ""}
-                  </span>
-                  <span className="text-muted-foreground shrink-0 text-xs">
-                    {formatDistanceToNow(entry.ts, { addSuffix: true })}
-                  </span>
+                  {snippet && (
+                    <span className="text-muted-foreground mt-1 line-clamp-2 block pl-6 text-xs">
+                      {snippet.truncatedStart && "…"}
+                      {snippet.before}
+                      <mark className={MARK_CLASS}>{snippet.match}</mark>
+                      {snippet.after}
+                      {snippet.truncatedEnd && "…"}
+                      {snippet.moreMatches > 0 && (
+                        <span className="text-muted-foreground/70">
+                          {" "}
+                          +{snippet.moreMatches} more{" "}
+                          {snippet.moreMatches === 1 ? "match" : "matches"}
+                        </span>
+                      )}
+                    </span>
+                  )}
                 </button>
                 {expanded && (
                   <div className="mt-2 space-y-2">
@@ -217,7 +287,14 @@ export function HistoryPage({
                     {entry.content !== undefined && (
                       <>
                         <pre className="bg-muted/30 max-h-48 overflow-auto rounded p-2 text-xs whitespace-pre-wrap">
-                          {entry.content}
+                          {search ? (
+                            <HighlightedContent
+                              text={entry.content}
+                              query={search}
+                            />
+                          ) : (
+                            entry.content
+                          )}
                           {entry.truncated ? "\n[truncated]" : ""}
                         </pre>
                         <Button
