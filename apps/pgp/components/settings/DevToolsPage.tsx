@@ -97,7 +97,9 @@ export function DevToolsPage({ onClose }: { onClose: () => void }) {
       }
       await restoreAllStorage(parsed);
       await refresh();
-      toast.success("Storage restored. Reload the panel to apply.");
+      toast.success("Storage restored. Reload the panel to apply", {
+        id: "dev-restored",
+      });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Restore failed", {
         id: "dev-restore-failed",
@@ -112,7 +114,9 @@ export function DevToolsPage({ onClose }: { onClose: () => void }) {
     try {
       await clearAllStorage();
       await refresh();
-      toast.success("Storage cleared. Reload the panel to apply.");
+      toast.success("Storage cleared. Reload the panel to apply", {
+        id: "dev-cleared",
+      });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Clear failed", {
         id: "dev-clear-failed",

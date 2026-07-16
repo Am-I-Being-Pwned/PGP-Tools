@@ -344,7 +344,9 @@ function RevocationSection({
     setGenError(null);
     try {
       setCertificate(await onGenerate());
-      toast.success("Revocation certificate created");
+      toast.success("Revocation certificate created", {
+        id: "revocation-created",
+      });
     } catch (e) {
       setGenError(
         errorMessage(e, "Could not create a revocation certificate."),
@@ -525,6 +527,7 @@ export function KeyDetailsPage({
               onSetDefault(!isDefault);
               toast.success(
                 isDefault ? "Default key removed" : "Default key set",
+                { id: "default-key-toggled" },
               );
             }}
           >
