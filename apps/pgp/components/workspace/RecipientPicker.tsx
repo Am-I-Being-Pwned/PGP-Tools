@@ -148,6 +148,9 @@ export function RecipientPicker({
   const renderOption = (key: AnyKey) => {
     const { name, detail } = getKeyDisplay(key);
     const digit = digitFor(key);
+    // Own keys carry a "You" badge so they read at a glance in mixed
+    // groups (Recent, search results) where the group heading can't help.
+    const isOwn = !contactIds.has(key.keyId);
     return (
       <CommandItem
         key={key.keyId}
@@ -158,7 +161,14 @@ export function RecipientPicker({
         className="gap-2"
       >
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm">{name}</p>
+          <p className="flex items-center gap-1.5 truncate text-sm">
+            <span className="truncate">{name}</span>
+            {isOwn && (
+              <span className="bg-secondary text-muted-foreground shrink-0 rounded border px-1 text-[10px] leading-4">
+                You
+              </span>
+            )}
+          </p>
           {detail && (
             <p className="text-muted-foreground truncate text-xs">{detail}</p>
           )}
