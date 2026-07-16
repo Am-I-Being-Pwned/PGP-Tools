@@ -7,6 +7,7 @@ import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { FileResult } from "../../lib/utils/download";
 import type { WorkspaceState } from "./useWorkspaceState";
 import { signZipWithCrxKey, verifyCrxFile } from "../../lib/crx/operations";
+import { buildEncryptRecipients } from "../../lib/encrypt-recipients";
 import { AppError } from "../../lib/errors/app-error";
 import { presentError } from "../../lib/errors/present";
 import * as pgpOps from "../../lib/pgp/operations";
@@ -17,6 +18,7 @@ import {
   downloadText,
 } from "../../lib/utils/download";
 import { formatFileSize } from "../../lib/utils/formatting";
+import { parseUserId } from "../../lib/utils/key-naming";
 import {
   isZipArchive,
   zipFiles as zipFilesToArchive,
@@ -203,6 +205,7 @@ export function useWorkspaceOperations({
     s.setOperationDone(false);
     s.setStatusText(null);
     s.setVerifiedSigner(null);
+    s.setSelfDecryptWarning(null);
     s.setNeedsPassword(false);
     s.setLoading(true);
 
@@ -249,17 +252,28 @@ export function useWorkspaceOperations({
       signingHandle = handle;
     }
 
+    // With encrypt-to-self on, the user's own key rides along so they can
+    // decrypt their own ciphertext later; when it's off (or they own no
+    // key), flag it so a warning shows on the output.
+    const { recipientPublicKeys, selfExcluded } = buildEncryptRecipients({
+      recipientKeyId: recipient.keyId,
+      recipientArmored,
+      encryptToSelf: s.encryptToSelf,
+      ownKeys: myKeys,
+      signingKeyId: s.alsoSign ? s.selectedKeyId : null,
+    });
+
     const doEncrypt = async (input: EncryptInput) => {
       if (signingHandle !== null) {
         return pgpOps.encryptWithSigningHandle({
           input,
-          recipientPublicKeys: [recipientArmored],
+          recipientPublicKeys,
           signingKeyHandle: signingHandle,
         });
       }
       return pgpOps.encrypt({
         input,
-        recipientPublicKeys: [recipientArmored],
+        recipientPublicKeys,
       });
     };
 
@@ -319,6 +333,12 @@ export function useWorkspaceOperations({
         text: typeof result === "string" ? result : undefined,
         binary: typeof result !== "string" ? result : undefined,
       });
+    }
+
+    if (selfExcluded) {
+      s.setSelfDecryptWarning(
+        `Encrypted only to ${parseUserId(recipient.userIds[0]).name} - you will not be able to decrypt this.`,
+      );
     }
   }
 
