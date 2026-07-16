@@ -196,8 +196,8 @@ export function RecipientPicker({
               return (
                 <span
                   key={key.keyId}
-                  title={detail || undefined}
-                  className="bg-secondary text-secondary-foreground inline-flex max-w-full items-center gap-1 rounded-md border px-2 py-0.5 text-xs"
+                  title={detail ? `${name} - ${detail}` : name}
+                  className="bg-secondary text-secondary-foreground inline-flex max-w-40 items-center gap-1 rounded-md border px-2 py-0.5 text-xs"
                 >
                   <span className="truncate">{name}</span>
                   <button
@@ -220,6 +220,21 @@ export function RecipientPicker({
                 ? "Add another..."
                 : "Select recipients..."}
             </span>
+            {selectedKeys.length > 1 && (
+              <button
+                type="button"
+                aria-label="Clear all recipients"
+                title="Clear all recipients"
+                className="text-muted-foreground hover:text-foreground shrink-0 rounded-sm"
+                onClick={(e) => {
+                  // Clearing must not toggle the dropdown.
+                  e.stopPropagation();
+                  onChange([]);
+                }}
+              >
+                <XIcon className="h-4 w-4" />
+              </button>
+            )}
             <ChevronsUpDownIcon className="ml-1 h-4 w-4 shrink-0 opacity-50" />
           </div>
         </PopoverTrigger>
