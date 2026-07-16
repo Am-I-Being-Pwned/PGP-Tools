@@ -235,19 +235,41 @@ export async function appendHistoryEntry(
     const manifest = await readManifest();
     const last = manifest.segs.at(-1);
     let head: SegmentRef;
+    let isNewSegment = false;
     if (last && last.bytes < SEGMENT_SEAL_BYTES) {
       head = last;
     } else {
       head = { n: last ? last.n + 1 : 0, bytes: 0 };
       manifest.segs.push(head);
+      isNewSegment = true;
     }
 
+    // Segment first, manifest second: if the segment write rejects
+    // (quota / device full) nothing has been persisted, so the stored
+    // manifest still describes exactly what exists.
     const entries = head.bytes > 0 ? await readSegment(head.n) : [];
     entries.push(finalizeEntry(entry));
     head.bytes = await writeSegment(head.n, entries);
 
     await pruneToBudget(manifest);
-    await writeManifest(manifest);
+    try {
+      await writeManifest(manifest);
+    } catch (err) {
+      // A freshly created segment whose manifest write failed would be
+      // an orphaned blob eating quota that the next append at the same
+      // number silently overwrites. Remove it (best-effort) so the
+      // store stays consistent with the manifest that is actually
+      // stored. An existing head needs no cleanup: the stale manifest
+      // still references it, only with an undercounted byte size.
+      if (isNewSegment) {
+        try {
+          await chrome.storage.local.remove(segKey(head.n));
+        } catch {
+          // best-effort; clearHistory's prefix scan sweeps leftovers
+        }
+      }
+      throw err;
+    }
     return true;
   });
 }
