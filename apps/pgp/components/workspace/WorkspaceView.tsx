@@ -86,6 +86,9 @@ interface WorkspaceViewProps {
   /** Bumped when preference-backed toggles change outside this view
    *  (e.g. a security preset applied in Settings); re-reads prefs. */
   prefsVersion?: number;
+  /** The user's configured default key: preferred when auto-selecting
+   *  a private key and as the encrypt-to-self key. */
+  defaultKeyId?: string | null;
 }
 
 export function WorkspaceView({
@@ -111,6 +114,7 @@ export function WorkspaceView({
   onIntakeConsumed,
   onPaletteOps,
   prefsVersion,
+  defaultKeyId,
 }: WorkspaceViewProps) {
   const allPublicKeys: (ProtectedKeyBlob | PublicContactKey)[] = [
     ...myKeys,
@@ -132,6 +136,7 @@ export function WorkspaceView({
     intake,
     onIntakeConsumed,
     prefsVersion,
+    defaultKeyId,
   });
 
   const ops = useWorkspaceOperations({
@@ -147,6 +152,7 @@ export function WorkspaceView({
     autoDownloadFiles,
     autoDownloadText,
     onOperationComplete,
+    defaultKeyId,
   });
 
   // Deferred loading labels: buttons disable immediately off s.loading,

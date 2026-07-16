@@ -8,6 +8,7 @@ import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { FileResult } from "../../lib/utils/download";
 import type { WorkspaceDraft } from "../../lib/workspace-draft";
 import { looksLikePrivateKey } from "../../lib/drop-routing";
+import { resolveSelfKey } from "../../lib/encrypt-recipients";
 import { getPreferences } from "../../lib/storage/preferences";
 import { zipHasManifest } from "../../lib/utils/zip";
 import { decryptWorkspaceDraft } from "../../lib/workspace-draft";
@@ -124,6 +125,9 @@ export function useWorkspaceState(opts: {
   /** A drop routed here by the global dropzone. Applied once per nonce. */
   intake?: WorkspaceIntake | null;
   onIntakeConsumed?: () => void;
+  /** The user's configured default key: preferred over the first key
+   *  when auto-selecting a private key for sign/decrypt. */
+  defaultKeyId?: string | null;
   /** Bumped when preference-backed fields (signWhenEncrypting,
    *  encryptToSelf, historyEnabled) change outside this view -- e.g. a
    *  security preset applied in Settings while the workspace stays
@@ -265,11 +269,25 @@ export function useWorkspaceState(opts: {
     onDraftChange,
   ]);
 
+  // Default-select a private key for sign/decrypt when the user hasn't
+  // picked one: the configured default key, else the first key.
+  // `autoPickedRef` remembers that the current selection came from THIS
+  // effect, so a default key arriving after the keys load (prefs decrypt
+  // asynchronously) can still upgrade the auto-pick -- while an explicit
+  // user pick, a restored draft, or the decrypt auto-selection (which all
+  // set a different key id) is never overridden.
+  const autoPickedRef = useRef<string | null>(null);
   useEffect(() => {
-    if (opts.myKeys.length > 0 && !selectedKeyId) {
-      setSelectedKeyId(opts.myKeys[0].keyId);
+    if (opts.myKeys.length === 0) return;
+    if (selectedKeyId !== null && selectedKeyId !== autoPickedRef.current) {
+      return;
     }
-  }, [opts.myKeys, selectedKeyId]);
+    const resolved = resolveSelfKey(opts.myKeys, opts.defaultKeyId ?? null);
+    if (resolved && resolved.keyId !== selectedKeyId) {
+      autoPickedRef.current = resolved.keyId;
+      setSelectedKeyId(resolved.keyId);
+    }
+  }, [opts.myKeys, opts.defaultKeyId, selectedKeyId]);
 
   // Keep the CRX key selection pointing at a key that actually exists —
   // when the selected key is deleted, fall to the first remaining one

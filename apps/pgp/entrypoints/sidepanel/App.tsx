@@ -54,6 +54,10 @@ export default function App() {
   const [autoDownloadText, setAutoDownloadText] = useState(false);
   const [lockOnTabAway, setLockOnTabAway] = useState(false);
   const [crxSigningEnabled, setCrxSigningEnabled] = useState(false);
+  // The user's preferred own key (null = implicit first-key default).
+  // Owned here so Keys (badge/action) and the workspace (self-key and
+  // sign/decrypt preselection) stay in sync without a prefs re-read.
+  const [defaultKeyId, setDefaultKeyId] = useState<string | null>(null);
   const [onboardingComplete, setOnboardingComplete] = useState<boolean | null>(
     null,
   );
@@ -266,6 +270,7 @@ export default function App() {
     setAutoDownloadText(prefs.autoDownloadText);
     setLockOnTabAway(prefs.lockOnTabAway);
     setCrxSigningEnabled(prefs.crxSigningEnabled);
+    setDefaultKeyId(prefs.defaultKeyId);
   }, []);
 
   useEffect(() => {
@@ -372,12 +377,22 @@ export default function App() {
     lockNow,
   });
 
+  // Persist (or clear, with null) the default-key choice.
+  const handleSetDefaultKey = useCallback((keyId: string | null) => {
+    setDefaultKeyId(keyId);
+    void savePreferences({ defaultKeyId: keyId });
+  }, []);
+
   const handleDeleteKey = useCallback(
     async (keyId: string) => {
       await keyring.remove(keyId);
       void contacts.refresh();
+      // Deleting the default key clears the preference with it, so the
+      // stored id never points at a key that no longer exists. (The
+      // resolver also skips stale ids, as a second line of defense.)
+      if (defaultKeyId === keyId) handleSetDefaultKey(null);
     },
-    [keyring, contacts],
+    [keyring, contacts, defaultKeyId, handleSetDefaultKey],
   );
 
   const clearWorkspaceIntake = useCallback(() => setWorkspaceIntake(null), []);
@@ -538,6 +553,7 @@ export default function App() {
               onIntakeConsumed={clearWorkspaceIntake}
               onPaletteOps={setWorkspaceBridge}
               prefsVersion={workspacePrefsVersion}
+              defaultKeyId={defaultKeyId}
             />
           </div>
           {activeTab === "keys" && (

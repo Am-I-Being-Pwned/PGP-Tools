@@ -46,6 +46,9 @@ interface WorkspaceOperationsOptions {
   autoDownloadFiles?: boolean;
   autoDownloadText?: boolean;
   onOperationComplete?: () => void;
+  /** The user's configured default key: preferred as the
+   *  encrypt-to-self key (see resolveSelfKey). */
+  defaultKeyId?: string | null;
 }
 
 /**
@@ -66,6 +69,7 @@ export function useWorkspaceOperations({
   autoDownloadFiles,
   autoDownloadText,
   onOperationComplete,
+  defaultKeyId,
 }: WorkspaceOperationsOptions) {
   // Change the active private key. A pending password prompt belongs to the
   // *previous* key, so drop it -- otherwise switching to a passkey-protected
@@ -269,6 +273,7 @@ export function useWorkspaceOperations({
         encryptToSelf: s.encryptToSelf,
         ownKeys: myKeys,
         signingKeyId: s.alsoSign ? s.selectedKeyId : null,
+        defaultKeyId,
       });
 
     const doEncrypt = async (input: EncryptInput) => {
