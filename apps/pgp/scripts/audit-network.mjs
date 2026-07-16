@@ -486,7 +486,7 @@ if (unexpected.length > 0 || cspErrors.length > 0) {
   }
   if (cspErrors.length > 0) {
     console.log(
-      "⚠️  Fix the CSP in wxt.config.ts — a build plugin may have weakened it.",
+      "⚠️  Fix the CSP in wxt.config.ts - a build plugin may have weakened it.",
     );
   }
   process.exit(1);
