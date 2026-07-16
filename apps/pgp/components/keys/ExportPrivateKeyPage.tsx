@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@amibeingpwned/ui/button";
 
+import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import { isWebAuthnCancel } from "../../lib/protection/webauthn-prf";
-import { scheduleClipboardClear } from "../../lib/utils/clipboard";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 import { SubPage } from "../shared/SubPage";
 
@@ -79,6 +79,7 @@ export function ExportPrivateKeyPage({
   const [exporting, setExporting] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const feedbackTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const { copy } = useCopyToClipboard();
 
   const { isPasskey, needsUnlock } = exporter;
   // The unlock gate only exists in gated mode and only until we hold a handle.
@@ -169,10 +170,14 @@ export function ExportPrivateKeyPage({
     }
     try {
       const text = await producer(h);
-      await navigator.clipboard.writeText(text);
-      scheduleClipboardClear(clearMs);
-      showFeedback(successMsg);
-      afterSuccess();
+      // Explicit wipe delays here (60s encrypted / 30s plaintext) match
+      // the inline feedback strings; no label -- the inline feedback is
+      // the success UI. A rejected write already toasted its own error.
+      const ok = await copy(text, { sensitive: true, wipeDelayMs: clearMs });
+      if (ok) {
+        showFeedback(successMsg);
+        afterSuccess();
+      }
     } catch {
       setExportError("Export failed.");
     } finally {

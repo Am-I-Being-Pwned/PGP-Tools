@@ -17,9 +17,9 @@ import { Button } from "@amibeingpwned/ui/button";
 import type { KeyDetails, KeyInfo, SubkeyDetail } from "../../lib/pgp/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
+import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import { parseKey, parseKeyDetails } from "../../lib/pgp/wasm";
 import { toast } from "../../lib/toast";
-import { scheduleClipboardClear } from "../../lib/utils/clipboard";
 import { downloadText } from "../../lib/utils/download";
 import { errorMessage } from "../../lib/utils/errors";
 import { formatAlgorithm } from "../../lib/utils/formatting";
@@ -319,14 +319,16 @@ function RevocationSection({
     downloadText(certificate, `revocation-${keyId.slice(-16)}.asc`);
   };
 
+  const { copy } = useCopyToClipboard();
   const handleCopy = () => {
     if (!certificate) return;
-    void navigator.clipboard.writeText(certificate);
     // A revocation cert is an irreversible instrument (anyone holding it
     // can revoke the key), so it gets the same clipboard hygiene as an
-    // exported private key.
-    scheduleClipboardClear();
-    toast.success("Revocation certificate copied - clipboard clears in 60s");
+    // exported private key (sensitive = pref-driven wipe).
+    void copy(certificate, {
+      sensitive: true,
+      label: "Revocation certificate",
+    });
   };
 
   const handleGenerate = async () => {
@@ -406,6 +408,7 @@ export function KeyDetailsPage({
   const [showInactive, setShowInactive] = useState(false);
   const [copiedFp, setCopiedFp] = useState(false);
   const copyTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const { copy } = useCopyToClipboard();
 
   const isOwn = target.kind === "own";
   const armored = isOwn
@@ -480,15 +483,17 @@ export function KeyDetailsPage({
     expiresAt !== null && !keyExpired && expiresAt - now < EXPIRING_SOON_MS;
 
   const handleCopyFingerprint = (fp: string) => {
-    void navigator.clipboard.writeText(fingerprintLines(fp).join(" "));
-    setCopiedFp(true);
-    clearTimeout(copyTimer.current);
-    copyTimer.current = setTimeout(() => setCopiedFp(false), 2000);
+    // No label: the inline 2s check is the success feedback.
+    void copy(fingerprintLines(fp).join(" ")).then((ok) => {
+      if (!ok) return;
+      setCopiedFp(true);
+      clearTimeout(copyTimer.current);
+      copyTimer.current = setTimeout(() => setCopiedFp(false), 2000);
+    });
   };
 
   const handleCopyPublicKey = () => {
-    void navigator.clipboard.writeText(armored);
-    toast.success("Public key copied");
+    void copy(armored, { label: "Public key" });
   };
 
   return (

@@ -8,6 +8,7 @@ import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { KeyCardModel } from "./KeyCard";
 import type { KeyDetailsTarget } from "./KeyDetailsPage";
+import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import { publicKeyDerToPem } from "../../lib/crx/types";
 import { downloadPublicKeysBundle } from "../../lib/keys/export-bundle";
 import { crxKeyExporter, pgpKeyExporter } from "../../lib/keys/exporters";
@@ -134,6 +135,7 @@ export function KeysView({
   const [selectionMode, setSelectionMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const nav = useNavStack<KeysRoute>();
+  const { copy } = useCopyToClipboard();
   const navPush = nav.push;
 
   useEffect(() => {
@@ -262,8 +264,9 @@ export function KeysView({
         lock: () => onLock(blob.keyId),
       },
       exporter: pgpKeyExporter(blob, getKeyHandle),
-      onCopyPublicKey: () =>
-        void navigator.clipboard.writeText(blob.publicKeyArmored),
+      // No label: KeyCard shows its own inline "Public key copied"
+      // feedback; the hook still surfaces a rejected write.
+      onCopyPublicKey: () => void copy(blob.publicKeyArmored),
       onDelete: () =>
         nav.push({
           page: "confirm-delete",
@@ -289,10 +292,7 @@ export function KeysView({
     protectionMethod: blob.protection.method,
     session: undefined,
     exporter: crxKeyExporter(blob),
-    onCopyPublicKey: () =>
-      void navigator.clipboard.writeText(
-        publicKeyDerToPem(blob.publicKeyDerB64),
-      ),
+    onCopyPublicKey: () => void copy(publicKeyDerToPem(blob.publicKeyDerB64)),
     onDelete: () =>
       nav.push({
         page: "confirm-delete",
@@ -702,6 +702,7 @@ function ContactsList({
   onStartSelect: (id: string) => void;
 }) {
   const [search, setSearch] = useState("");
+  const { copy } = useCopyToClipboard();
 
   const filtered = search
     ? contacts.filter((c) => {
@@ -756,10 +757,9 @@ function ContactsList({
                     onEncryptTo={
                       onEncryptTo ? () => onEncryptTo(c.keyId) : undefined
                     }
-                    onCopyPublicKey={() => {
-                      void navigator.clipboard.writeText(c.armoredPublicKey);
-                      toast.success("Public key copied");
-                    }}
+                    onCopyPublicKey={() =>
+                      void copy(c.armoredPublicKey, { label: "Public key" })
+                    }
                     onShowDetails={() => onShowDetails(c)}
                     advancedMode={advancedMode}
                     selectionMode={selectionMode}

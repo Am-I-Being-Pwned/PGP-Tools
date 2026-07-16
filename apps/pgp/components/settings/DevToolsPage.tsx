@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import { Button } from "@amibeingpwned/ui/button";
 
+import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import {
   clearAllStorage,
   dumpAllStorage,
@@ -27,6 +28,7 @@ export function DevToolsPage({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = useState(false);
   const [restoreName, setRestoreName] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const { copy } = useCopyToClipboard();
 
   const refresh = async () => {
     setLoading(true);
@@ -64,8 +66,7 @@ export function DevToolsPage({ onClose }: { onClose: () => void }) {
 
   const handleCopy = () => {
     if (!storageJson) return;
-    void navigator.clipboard.writeText(storageJson);
-    toast.success("Storage JSON copied");
+    void copy(storageJson, { label: "Storage JSON" });
   };
 
   const handleDownloadStorage = () => {

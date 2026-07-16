@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { copyToClipboard } from "./useCopyToClipboard";
+
 const toastMock = vi.hoisted(() => ({
   success: vi.fn(),
   info: vi.fn(),
@@ -13,8 +15,6 @@ const prefsMock = vi.hoisted(() => ({
 
 vi.mock("../lib/toast", () => ({ toast: toastMock }));
 vi.mock("../lib/storage/preferences", () => prefsMock);
-
-import { copyToClipboard } from "./useCopyToClipboard";
 
 const writeText = vi.fn<(text: string) => Promise<void>>();
 
