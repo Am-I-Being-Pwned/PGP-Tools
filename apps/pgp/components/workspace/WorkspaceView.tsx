@@ -10,11 +10,6 @@ import {
 import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
 import { Button } from "@amibeingpwned/ui/button";
 import {
-  ariaKeyShortcuts,
-  formatShortcutTitle,
-  isMacPlatform,
-} from "@amibeingpwned/ui/kbd-helpers";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -32,6 +27,10 @@ import type { WorkspaceDraft } from "../../lib/workspace-draft";
 import type { WorkspaceIntake } from "./useWorkspaceState";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import { useDelayedFlag } from "../../hooks/useDelayedFlag";
+import {
+  COPY_SHORTCUT,
+  DOWNLOAD_SHORTCUT,
+} from "../../lib/actions/definitions";
 import { requestUnlimitedHistoryStorage } from "../../lib/storage/history";
 import { savePreferences } from "../../lib/storage/preferences";
 import { saveCrxViaPrompt } from "../../lib/utils/download";
@@ -47,8 +46,6 @@ import { WorkspaceResults } from "./WorkspaceResults";
 
 /** mod+Enter mirrors the main action button (Encrypt/Decrypt/Sign/...). */
 const RUN_SHORTCUT: ShortcutSpec = { mod: true, key: "Enter" };
-/** mod+shift+C copies completed text output. */
-const COPY_SHORTCUT: ShortcutSpec = { mod: true, shift: true, key: "c" };
 
 interface WorkspaceViewProps {
   myKeys: ProtectedKeyBlob[];
@@ -295,11 +292,20 @@ export function WorkspaceView({
   // up here. Ops close over fresh state via a ref; the snapshot effect
   // below re-pushes only when a palette-readable value changes.
   const hasOutput = s.operationDone && s.output.length > 0 && !s.loading;
+  // Broader than hasOutput: file/binary results have no copyable text
+  // but do download. Verify is excluded -- its "result" is a verdict,
+  // not an artifact (the UI shows no Download button there either).
+  const hasDownload =
+    s.operationDone &&
+    !s.loading &&
+    s.mode !== "verify" &&
+    (s.fileResults.length > 0 || !!s.binaryOutput || s.output.length > 0);
   const canRun = mainActionShown && !s.loading;
   const paletteRef = useRef({
     s,
     canRun,
     hasOutput,
+    hasDownload,
     handleCopy,
     ops,
     setEncryptToSelfPref,
@@ -311,6 +317,7 @@ export function WorkspaceView({
       s,
       canRun,
       hasOutput,
+      hasDownload,
       handleCopy,
       ops,
       setEncryptToSelfPref,
@@ -324,6 +331,7 @@ export function WorkspaceView({
       hasInput,
       hasRecipients: s.selectedRecipientIds.length > 0,
       hasOutput,
+      hasDownload,
       historyEnabled: s.saveToHistory,
       encryptToSelf: s.encryptToSelf,
       alsoSign: s.alsoSign,
@@ -346,6 +354,10 @@ export function WorkspaceView({
       copyOutput: () => {
         if (paletteRef.current.hasOutput) void paletteRef.current.handleCopy();
       },
+      downloadOutput: () => {
+        const p = paletteRef.current;
+        if (p.hasDownload) p.ops.triggerDownload();
+      },
       toggleEncryptToSelf: () => {
         const p = paletteRef.current;
         p.setEncryptToSelfPref(!p.s.encryptToSelf);
@@ -365,14 +377,12 @@ export function WorkspaceView({
     hasInput,
     s.selectedRecipientIds,
     hasOutput,
+    hasDownload,
     s.saveToHistory,
     s.encryptToSelf,
     s.alsoSign,
   ]);
   useEffect(() => () => onPaletteOps?.(null), [onPaletteOps]);
-
-  const copyTitle = `Copy (${formatShortcutTitle(COPY_SHORTCUT, isMacPlatform())})`;
-  const copyAria = ariaKeyShortcuts(COPY_SHORTCUT, isMacPlatform());
 
   // Remedy actions this view can actually perform, mapped to existing
   // handlers. An action with no handler here (or whose handler isn't
@@ -435,6 +445,7 @@ export function WorkspaceView({
               className="flex-1"
               onClick={() => ops.triggerDownload()}
               disabled={s.loading}
+              shortcut={DOWNLOAD_SHORTCUT}
             >
               <span className="flex items-center gap-2">
                 <DownloadIcon className="h-4 w-4" />
@@ -446,8 +457,7 @@ export function WorkspaceView({
               className="flex-1"
               onClick={handleCopy}
               disabled={s.loading}
-              title={copyTitle}
-              aria-keyshortcuts={copyAria}
+              shortcut={COPY_SHORTCUT}
             >
               <span className="flex items-center gap-2">
                 {copied ? (
@@ -737,6 +747,7 @@ export function WorkspaceView({
                       className="flex-1"
                       onClick={() => ops.triggerDownload()}
                       disabled={s.loading}
+                      shortcut={DOWNLOAD_SHORTCUT}
                     >
                       <span className="flex items-center gap-2">
                         <DownloadIcon className="h-4 w-4" />
@@ -749,8 +760,7 @@ export function WorkspaceView({
                         className="flex-1"
                         onClick={handleCopy}
                         disabled={s.loading}
-                        title={copyTitle}
-                        aria-keyshortcuts={copyAria}
+                        shortcut={COPY_SHORTCUT}
                       >
                         <span className="flex items-center gap-2">
                           {copied ? (

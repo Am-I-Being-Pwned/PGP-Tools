@@ -1,13 +1,19 @@
 // The data behind Settings -> Keyboard shortcuts: every shortcut the
 // app answers to, in one greppable place. Anything with a live source
 // of truth is DERIVED from it (mod+K from PALETTE_SHORTCUT, the mode
-// switches from MODE_SHORTCUTS); the rest is static and drift-guarded
+// switches from MODE_SHORTCUTS, copy/download from COPY_SHORTCUT/
+// DOWNLOAD_SHORTCUT); the rest is static and drift-guarded
 // by shortcuts-reference.test.ts where a source exists to compare.
 
 import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
 
 import type { PgpMode } from "./actions/types";
-import { MODE_SHORTCUTS, PALETTE_SHORTCUT } from "./actions/definitions";
+import {
+  COPY_SHORTCUT,
+  DOWNLOAD_SHORTCUT,
+  MODE_SHORTCUTS,
+  PALETTE_SHORTCUT,
+} from "./actions/definitions";
 
 /** One row of the reference: a label plus how to render its keys. */
 export interface ShortcutRefEntry {
@@ -63,7 +69,11 @@ export const SHORTCUT_REFERENCE: readonly ShortcutRefSection[] = [
       },
       {
         label: "Copy the output",
-        shortcut: { mod: true, shift: true, key: "c" },
+        shortcut: COPY_SHORTCUT,
+      },
+      {
+        label: "Download the output",
+        shortcut: DOWNLOAD_SHORTCUT,
       },
       {
         label: "Pick the nth recipient",
@@ -81,12 +91,12 @@ export const SHORTCUT_REFERENCE: readonly ShortcutRefSection[] = [
     title: "Modes",
     // Derived, never hand-listed: MODE_SHORTCUTS is the single source
     // shared with the registry's mode actions and the mode dropdown.
-    entries: (
-      Object.entries(MODE_SHORTCUTS) as [PgpMode, ShortcutSpec][]
-    ).map(([mode, shortcut]) => ({
-      label: `Switch to ${MODE_NAMES[mode]}`,
-      shortcut,
-    })),
+    entries: (Object.entries(MODE_SHORTCUTS) as [PgpMode, ShortcutSpec][]).map(
+      ([mode, shortcut]) => ({
+        label: `Switch to ${MODE_NAMES[mode]}`,
+        shortcut,
+      }),
+    ),
   },
   {
     title: "Global browser shortcuts",

@@ -27,6 +27,10 @@ export interface ActionCtx {
   hasRecipients: boolean;
   /** A completed operation produced copyable text output. */
   hasOutput: boolean;
+  /** A completed operation produced something downloadable (text,
+   *  binary, or per-file results) -- broader than hasOutput, which is
+   *  text-only. */
+  hasDownload: boolean;
   masterUnlocked: boolean;
   /** The "Save to history" preference is on. */
   historyEnabled: boolean;
@@ -57,6 +61,8 @@ export interface ActionCtx {
     clearInput: () => void;
     /** Copy the completed text output to the clipboard. */
     copyOutput: () => void;
+    /** Download the completed output (file results, binary, or text). */
+    downloadOutput: () => void;
     /** Master-lock the extension immediately. */
     lockNow: () => void;
     /** Flip "Also encrypt to me" (same handler as the checkbox:

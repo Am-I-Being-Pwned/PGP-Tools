@@ -13,6 +13,7 @@ function fakeCtx(overrides: Partial<ActionCtx> = {}): ActionCtx {
     hasInput: false,
     hasRecipients: true,
     hasOutput: false,
+    hasDownload: false,
     masterUnlocked: true,
     historyEnabled: false,
     encryptToSelf: false,
@@ -31,6 +32,7 @@ function fakeCtx(overrides: Partial<ActionCtx> = {}): ActionCtx {
       execute: noop,
       clearInput: noop,
       copyOutput: noop,
+      downloadOutput: noop,
       lockNow: noop,
       toggleEncryptToSelf: noop,
       toggleAlsoSign: noop,
@@ -132,11 +134,28 @@ describe("disabled reasons", () => {
     ).toBeUndefined();
   });
 
-  it("copy-output and clear explain the tab switch on other tabs", () => {
-    for (const id of ["workspace.copy-output", "workspace.clear"]) {
+  it("download requires something downloadable", () => {
+    expect(byId(fakeCtx(), "workspace.download")?.disabledReason).toBe(
+      "Nothing to download yet",
+    );
+    expect(
+      byId(fakeCtx({ hasDownload: true }), "workspace.download")
+        ?.disabledReason,
+    ).toBeUndefined();
+  });
+
+  it("copy-output, download and clear explain the tab switch on other tabs", () => {
+    const ids = [
+      "workspace.copy-output",
+      "workspace.download",
+      "workspace.clear",
+    ];
+    for (const id of ids) {
       expect(
-        byId(fakeCtx({ tab: "settings", hasOutput: true }), id)
-          ?.disabledReason,
+        byId(
+          fakeCtx({ tab: "settings", hasOutput: true, hasDownload: true }),
+          id,
+        )?.disabledReason,
       ).toBe("Switch to Workspace first");
     }
   });
@@ -169,19 +188,22 @@ describe("preference toggles", () => {
       byId(fakeCtx({ encryptToSelf: true }), "workspace.toggle-encrypt-to-self")
         ?.name,
     ).toBe("Turn off: Also encrypt to me");
-    expect(
-      byId(fakeCtx(), "workspace.toggle-encrypt-to-self")?.name,
-    ).toBe("Turn on: Also encrypt to me");
-    expect(byId(fakeCtx({ alsoSign: true }), "workspace.toggle-sign")?.name).toBe(
-      "Turn off: Sign when encrypting",
+    expect(byId(fakeCtx(), "workspace.toggle-encrypt-to-self")?.name).toBe(
+      "Turn on: Also encrypt to me",
     );
+    expect(
+      byId(fakeCtx({ alsoSign: true }), "workspace.toggle-sign")?.name,
+    ).toBe("Turn off: Sign when encrypting");
     expect(
       byId(fakeCtx({ historyEnabled: true }), "workspace.toggle-history")?.name,
     ).toBe("Turn off: Save to history");
   });
 
   it("encrypt toggles need an own key", () => {
-    for (const id of ["workspace.toggle-encrypt-to-self", "workspace.toggle-sign"]) {
+    for (const id of [
+      "workspace.toggle-encrypt-to-self",
+      "workspace.toggle-sign",
+    ]) {
       expect(byId(fakeCtx(), id)?.disabledReason).toBe(
         "Add one of your own keys first",
       );

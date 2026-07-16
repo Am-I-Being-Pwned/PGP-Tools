@@ -14,6 +14,8 @@ export interface WorkspaceOpsBridge {
   /** Encrypt has at least one selected recipient. */
   hasRecipients: boolean;
   hasOutput: boolean;
+  /** A completed operation produced anything downloadable. */
+  hasDownload: boolean;
   historyEnabled: boolean;
   /** The "Also encrypt to me" preference is on. */
   encryptToSelf: boolean;
@@ -23,6 +25,7 @@ export interface WorkspaceOpsBridge {
   execute: () => void;
   clearInput: () => void;
   copyOutput: () => void;
+  downloadOutput: () => void;
   /** The workspace checkboxes' exact toggle handlers (persistence and
    *  stale-output reset included), exposed for the palette toggles. */
   toggleEncryptToSelf: () => void;
@@ -64,6 +67,7 @@ export function useActionContext(args: UseActionContextArgs): ActionCtx {
   const hasInput = workspace?.hasInput ?? false;
   const hasRecipients = workspace?.hasRecipients ?? false;
   const hasOutput = workspace?.hasOutput ?? false;
+  const hasDownload = workspace?.hasDownload ?? false;
   const historyEnabled = workspace?.historyEnabled ?? false;
   const encryptToSelf = workspace?.encryptToSelf ?? false;
   const alsoSign = workspace?.alsoSign ?? false;
@@ -76,6 +80,7 @@ export function useActionContext(args: UseActionContextArgs): ActionCtx {
       hasInput,
       hasRecipients,
       hasOutput,
+      hasDownload,
       masterUnlocked: true,
       historyEnabled,
       encryptToSelf,
@@ -94,6 +99,8 @@ export function useActionContext(args: UseActionContextArgs): ActionCtx {
         execute: () => (argsRef.current.workspace?.execute ?? noop)(),
         clearInput: () => (argsRef.current.workspace?.clearInput ?? noop)(),
         copyOutput: () => (argsRef.current.workspace?.copyOutput ?? noop)(),
+        downloadOutput: () =>
+          (argsRef.current.workspace?.downloadOutput ?? noop)(),
         lockNow: () => argsRef.current.lockNow(),
         toggleEncryptToSelf: () =>
           (argsRef.current.workspace?.toggleEncryptToSelf ?? noop)(),
@@ -109,6 +116,7 @@ export function useActionContext(args: UseActionContextArgs): ActionCtx {
       hasInput,
       hasRecipients,
       hasOutput,
+      hasDownload,
       historyEnabled,
       encryptToSelf,
       alsoSign,

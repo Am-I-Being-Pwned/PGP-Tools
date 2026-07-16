@@ -35,6 +35,21 @@ const MODES: { mode: PgpMode; name: string }[] = [
  *  it without importing UI code; the palette itself binds it. */
 export const PALETTE_SHORTCUT: ShortcutSpec = { mod: true, key: "k" };
 
+/** mod+shift+C copies completed text output. Exported so the copy
+ *  button's Kbd chip and the shortcuts reference share this exact
+ *  spec with the registry action below. */
+export const COPY_SHORTCUT: ShortcutSpec = { mod: true, shift: true, key: "c" };
+
+/** mod+shift+D downloads the completed output. In Chrome this combo is
+ *  "bookmark all tabs" -- acceptable to intercept: it only fires while
+ *  the extension panel itself has focus, where bookmarking is never
+ *  the intent. Exported for the same no-drift reason as COPY_SHORTCUT. */
+export const DOWNLOAD_SHORTCUT: ShortcutSpec = {
+  mod: true,
+  shift: true,
+  key: "d",
+};
+
 /** The mod+digit shortcut for each workspace mode. Single source of
  *  truth shared by the registry's mode actions (below) and the mode
  *  dropdown's Kbd hints, so the two can never drift. */
@@ -85,12 +100,24 @@ export const ACTIONS: readonly PgpAction[] = [
     name: "Copy output",
     group: "Workspace",
     keywords: ["clipboard", "result"],
-    shortcut: { mod: true, shift: true, key: "c" },
+    shortcut: COPY_SHORTCUT,
     disabledReason: (ctx) => {
       if (ctx.tab !== "workspace") return "Switch to Workspace first";
       return ctx.hasOutput ? undefined : "No output to copy yet";
     },
     execute: (ctx) => ctx.ops.copyOutput(),
+  },
+  {
+    id: "workspace.download",
+    name: "Download output",
+    group: "Workspace",
+    keywords: ["save", "file", "export"],
+    shortcut: DOWNLOAD_SHORTCUT,
+    disabledReason: (ctx) => {
+      if (ctx.tab !== "workspace") return "Switch to Workspace first";
+      return ctx.hasDownload ? undefined : "Nothing to download yet";
+    },
+    execute: (ctx) => ctx.ops.downloadOutput(),
   },
   {
     id: "workspace.clear",
@@ -151,9 +178,7 @@ export const ACTIONS: readonly PgpAction[] = [
     group: "Workspace",
     keywords: ["toggle", "log", "preference"],
     disabledReason: (ctx) =>
-      ctx.neverCacheKeys
-        ? "History is off while keys never cache"
-        : undefined,
+      ctx.neverCacheKeys ? "History is off while keys never cache" : undefined,
     execute: (ctx) => ctx.ops.toggleSaveToHistory(),
   },
 
