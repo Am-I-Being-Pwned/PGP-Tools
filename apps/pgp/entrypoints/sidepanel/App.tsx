@@ -27,7 +27,11 @@ import { useCrxKeys } from "../../hooks/useCrxKeys";
 import { useKeyring } from "../../hooks/useKeyring";
 import { useKeySession } from "../../hooks/useKeySession";
 import { usePendingOperation } from "../../hooks/usePendingOperation";
-import { SESSION_PENDING_OP } from "../../lib/constants";
+import {
+  SESSION_PENDING_OP,
+  STORAGE_PREFERENCES,
+  STORAGE_SETTINGS,
+} from "../../lib/constants";
 import { normalizeCrxPadding } from "../../lib/crx/storage";
 import { looksLikeKey, readAllFilesText } from "../../lib/drop-routing";
 import * as wasmApi from "../../lib/pgp/wasm";
@@ -337,6 +341,34 @@ export default function App() {
   // Bumped when Settings rewrites preference-backed workspace toggles
   // (preset apply); the always-mounted WorkspaceView re-reads prefs.
   const [workspacePrefsVersion, setWorkspacePrefsVersion] = useState(0);
+
+  // Cross-window preference sync (same storage.onChanged pattern as
+  // usePendingOperation): another window saving the encrypted settings
+  // blob or the plaintext bootstrap fires here; re-read and re-apply
+  // via the same applyPrefs path unlock uses, and bump prefsVersion so
+  // the workspace re-reads its preference-backed toggles. applyPrefs
+  // never writes, so this can't feed back into another change event.
+  // While locked, getPreferences returns defaults; skip and let the
+  // unlock effect re-read instead.
+  useEffect(() => {
+    const onPrefsStorageChanged = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      area: chrome.storage.AreaName,
+    ) => {
+      if (area !== "local" && area !== "sync") return;
+      if (!(STORAGE_SETTINGS in changes) && !(STORAGE_PREFERENCES in changes)) {
+        return;
+      }
+      if (!masterUnlockedRef.current) return;
+      void getPreferences().then((prefs) => {
+        applyPrefs(prefs);
+        setWorkspacePrefsVersion((v) => v + 1);
+      });
+    };
+    chrome.storage.onChanged.addListener(onPrefsStorageChanged);
+    return () => chrome.storage.onChanged.removeListener(onPrefsStorageChanged);
+  }, [applyPrefs]);
+
   const [historyOpen, setHistoryOpen] = useState(false);
   const [keysRoute, setKeysRoute] = useState<"generate" | "import" | null>(
     null,
@@ -587,6 +619,7 @@ export default function App() {
               onPaletteOps={setWorkspaceBridge}
               prefsVersion={workspacePrefsVersion}
               defaultKeyId={defaultKeyId}
+              neverCacheKeys={neverCacheKeys}
             />
           </div>
           {activeTab === "keys" && (

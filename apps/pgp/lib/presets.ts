@@ -86,6 +86,23 @@ export function activePreset(prefs: PgpPreferences): PresetId | "custom" {
   return "custom";
 }
 
+/**
+ * Snapshot the current values of exactly the fields a preset bundle
+ * would overwrite, so an Undo can restore them afterwards. Only keys
+ * present in the bundle are captured; restoring the snapshot can never
+ * touch an unrelated preference.
+ */
+export function snapshotBundleFields(
+  prefs: PgpPreferences,
+  bundle: Partial<PgpPreferences>,
+): Partial<PgpPreferences> {
+  const snapshot: Partial<PgpPreferences> = {};
+  for (const key of Object.keys(bundle) as (keyof PgpPreferences)[]) {
+    (snapshot as Record<string, unknown>)[key] = prefs[key];
+  }
+  return snapshot;
+}
+
 /** Canonical line order so cards read consistently across presets. */
 type BundleLine = (bundle: Partial<PgpPreferences>) => string | null;
 

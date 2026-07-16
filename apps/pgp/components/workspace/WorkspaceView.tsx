@@ -5,11 +5,9 @@ import {
   ClipboardIcon,
   DownloadIcon,
   RotateCcwIcon,
-  TriangleAlertIcon,
 } from "lucide-react";
 
 import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
-import { Alert, AlertDescription } from "@amibeingpwned/ui/alert";
 import { Button } from "@amibeingpwned/ui/button";
 import { Checkbox } from "@amibeingpwned/ui/checkbox";
 import {
@@ -27,6 +25,7 @@ import {
 
 import type { WorkspaceOpsBridge } from "../../hooks/useActionContext";
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
+import type { RemedyAction } from "../../lib/errors/present";
 import type { WorkspaceAction } from "../../lib/messages";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
@@ -89,6 +88,9 @@ interface WorkspaceViewProps {
   /** The user's configured default key: preferred when auto-selecting
    *  a private key and as the encrypt-to-self key. */
   defaultKeyId?: string | null;
+  /** When true (never-cache mode), history is disabled and wiped, so
+   *  the "Save to history" checkbox and History button are hidden. */
+  neverCacheKeys?: boolean;
 }
 
 export function WorkspaceView({
@@ -115,6 +117,7 @@ export function WorkspaceView({
   onPaletteOps,
   prefsVersion,
   defaultKeyId,
+  neverCacheKeys,
 }: WorkspaceViewProps) {
   const allPublicKeys: (ProtectedKeyBlob | PublicContactKey)[] = [
     ...myKeys,
@@ -163,6 +166,16 @@ export function WorkspaceView({
   const needsRecipient = s.mode === "encrypt";
   const needsPrivateKey = s.mode === "decrypt" || s.mode === "sign";
   const hasInput = s.files.length > 0 || s.input.length > 0;
+
+  // Warn BEFORE encrypting when the user won't be able to decrypt the
+  // result: encrypt-to-self is off and no selected recipient is one of
+  // their own keys (mirrors buildEncryptRecipients' selfExcluded).
+  const selfDecryptRisk =
+    s.mode === "encrypt" &&
+    myKeys.length > 0 &&
+    !s.encryptToSelf &&
+    s.selectedRecipientIds.length > 0 &&
+    !s.selectedRecipientIds.some((id) => myKeys.some((k) => k.keyId === id));
 
   // Copy the armored output straight from the bottom action bar (the compact
   // preview no longer carries its own copy button). Binary/file output has no
@@ -360,6 +373,35 @@ export function WorkspaceView({
 
   const copyTitle = `Copy (${formatShortcutTitle(COPY_SHORTCUT, isMacPlatform())})`;
   const copyAria = ariaKeyShortcuts(COPY_SHORTCUT, isMacPlatform());
+
+  // Remedy actions this view can actually perform, mapped to existing
+  // handlers. An action with no handler here (or whose handler isn't
+  // available right now) renders message-only in WorkspaceResults: no
+  // dead button. "check-recipient" stays message-only because the
+  // recipient picker has no cheap imperative open.
+  const passwordInputRef = useRef<HTMLInputElement>(null);
+  const remedyAction = s.error?.remedy?.action;
+  const remedyHandled =
+    remedyAction === "retry" ||
+    (remedyAction === "import-key" && !!onNavigateToKeys) ||
+    (remedyAction === "unlock" && s.needsPassword);
+  const handleRemedy = remedyHandled
+    ? (action: RemedyAction) => {
+        switch (action) {
+          case "import-key":
+            onNavigateToKeys?.();
+            break;
+          case "retry":
+            void ops.execute();
+            break;
+          case "unlock":
+            passwordInputRef.current?.focus();
+            break;
+          case "check-recipient":
+            break;
+        }
+      }
+    : undefined;
 
   if (showFullOutput) {
     return (
@@ -568,15 +610,26 @@ export function WorkspaceView({
                   <span className="text-sm">Zip files</span>
                 </label>
               )}
-              <label className="flex items-center gap-2">
-                <Checkbox
-                  checked={s.saveToHistory}
-                  onCheckedChange={(v) => setSaveToHistoryPref(v === true)}
-                />
-                <span className="text-sm">Save to history</span>
-              </label>
-              <HistoryButton enabled={s.saveToHistory} />
+              {/* Never-cache means no history, ever: the toggle and the
+                  viewer disappear rather than offering a dead switch. */}
+              {!neverCacheKeys && (
+                <>
+                  <label className="flex items-center gap-2">
+                    <Checkbox
+                      checked={s.saveToHistory}
+                      onCheckedChange={(v) => setSaveToHistoryPref(v === true)}
+                    />
+                    <span className="text-sm">Save to history</span>
+                  </label>
+                  <HistoryButton enabled={s.saveToHistory} />
+                </>
+              )}
             </div>
+            {selfDecryptRisk && (
+              <p className="text-muted-foreground text-xs">
+                You won't be able to decrypt the result
+              </p>
+            )}
             {s.alsoSign && myKeys.length > 1 && (
               <KeySelector
                 label="Sign with"
@@ -591,6 +644,7 @@ export function WorkspaceView({
         {s.needsPassword && (
           <div className="flex items-stretch gap-2">
             <input
+              ref={passwordInputRef}
               type="password"
               placeholder="Enter key password"
               value={s.passwordInput}
@@ -623,17 +677,9 @@ export function WorkspaceView({
           <p className="text-destructive text-xs">{s.passwordError}</p>
         )}
 
-        {s.selfDecryptWarning && (
-          <Alert className="border-amber-500/40 bg-amber-500/10 text-amber-400">
-            <TriangleAlertIcon className="h-4 w-4" />
-            <AlertDescription className="text-xs text-amber-400/90">
-              {s.selfDecryptWarning}
-            </AlertDescription>
-          </Alert>
-        )}
-
         <WorkspaceResults
           error={s.error}
+          onRemedy={handleRemedy}
           output={s.output}
           binaryOutput={s.binaryOutput}
           fileResults={s.fileResults}

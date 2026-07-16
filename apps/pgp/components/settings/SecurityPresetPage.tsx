@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import type { PresetId } from "../../lib/presets";
 import { PRESETS } from "../../lib/presets";
+import { historyByteSize } from "../../lib/storage/history";
+import { formatFileSize } from "../../lib/utils/formatting";
 import { PresetPicker } from "../shared/PresetPicker";
 import { SubPage } from "../shared/SubPage";
 
@@ -22,7 +24,8 @@ interface SecurityPresetPageProps {
  * PresetPicker cards (with their describeBundle transparency lines),
  * the currently applied preset badged, and an Apply footer action.
  * Overwriting a custom setup swaps the footer into an explicit confirm
- * step first.
+ * step first, as does applying a never-cache preset while stored
+ * history exists (applying it deletes that history).
  */
 export function SecurityPresetPage({
   currentPreset,
@@ -35,11 +38,25 @@ export function SecurityPresetPage({
   // Applying over a custom setup needs an explicit confirm; the footer
   // swaps into confirm mode instead of applying straight away.
   const [confirming, setConfirming] = useState(false);
+  // Stored-history size, so a preset that enters never-cache (which
+  // wipes history) can spell that cost out before applying.
+  const [historyBytes, setHistoryBytes] = useState(0);
+  useEffect(() => {
+    void historyByteSize().then(setHistoryBytes);
+  }, []);
 
   const isCustom = currentPreset === "custom";
   // Re-applying the preset you are already on is a no-op; keep the
   // button disabled until the choice would change something.
   const applyDisabled = selected === null || selected === activeId;
+  // Applying this preset would delete stored history: it turns
+  // never-cache on and history exists. That's destructive, so it goes
+  // through the confirm step even from a non-custom state.
+  const deletesHistory =
+    selected !== null &&
+    PRESETS[selected].bundle.neverCacheKeys === true &&
+    historyBytes > 0;
+  const needsConfirm = isCustom || deletesHistory;
 
   return (
     <SubPage
@@ -49,14 +66,16 @@ export function SecurityPresetPage({
         confirming && selected !== null
           ? [
               {
-                text: "Replace custom settings",
+                text: isCustom
+                  ? "Replace custom settings"
+                  : "Apply and delete history",
                 busyText: "Applying...",
                 onClick: () => onApply(selected),
                 closeOnSuccess: true,
               },
               {
                 type: "outline",
-                text: "Keep custom settings",
+                text: isCustom ? "Keep custom settings" : "Cancel",
                 onClick: () => setConfirming(false),
               },
             ]
@@ -67,13 +86,13 @@ export function SecurityPresetPage({
                 disabled: applyDisabled,
                 onClick: () => {
                   if (selected === null) return;
-                  if (isCustom) {
+                  if (needsConfirm) {
                     setConfirming(true);
                     return;
                   }
                   return onApply(selected);
                 },
-                closeOnSuccess: !isCustom,
+                closeOnSuccess: !needsConfirm,
               },
             ]
       }
@@ -100,12 +119,20 @@ export function SecurityPresetPage({
         />
         {confirming && selected !== null && (
           <div className="border-border bg-muted/40 rounded-md border p-3">
-            <p className="text-xs">
-              Replace your custom settings with the{" "}
-              <b>{PRESETS[selected].title}</b> preset? Only the settings listed
-              on its card change, and you can adjust any of them again
-              afterwards.
-            </p>
+            {isCustom && (
+              <p className="text-xs">
+                Replace your custom settings with the{" "}
+                <b>{PRESETS[selected].title}</b> preset? Only the settings
+                listed on its card change, and you can adjust any of them again
+                afterwards.
+              </p>
+            )}
+            {deletesHistory && (
+              <p className={isCustom ? "mt-2 text-xs" : "text-xs"}>
+                This preset turns on never-cache, which also deletes your saved
+                history ({formatFileSize(historyBytes)}). It can't be recovered.
+              </p>
+            )}
           </div>
         )}
       </div>

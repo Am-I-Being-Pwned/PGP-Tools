@@ -554,9 +554,33 @@ export function KeysView({
                 }
                 onCancel={nav.pop}
                 onConfirm={async () => {
+                  // Contacts-only bulk deletes are reversible: keep the
+                  // removed blobs in memory and offer Undo. Mixed
+                  // selections with private keys stay irreversible (the
+                  // type-to-confirm above is the safeguard there).
+                  const removedContacts = hasPrivate ? [] : selectedContacts;
                   await bulkDelete();
                   nav.collapseToTop();
                   exitSelection();
+                  if (removedContacts.length > 0) {
+                    toast.success(
+                      removedContacts.length === 1
+                        ? "Contact removed"
+                        : `${removedContacts.length} contacts removed`,
+                      {
+                        id: "contact-removed",
+                        action: {
+                          label: "Undo",
+                          onClick: () =>
+                            void (async () => {
+                              for (const c of removedContacts) {
+                                await onAddContact(c);
+                              }
+                            })(),
+                        },
+                      },
+                    );
+                  }
                 }}
               >
                 <BulkDeleteSummary
@@ -611,6 +635,17 @@ export function KeysView({
                   await onDeleteKey(target.keyBlob.keyId);
                 } else if (target.kind === "contact") {
                   await onDeleteContact(target.contact.keyId);
+                  // A contact is just a public key: deleting is cheap to
+                  // reverse, so offer Undo. The blob only lives in this
+                  // closure; once the toast expires it's gone for good.
+                  const removed = target.contact;
+                  toast.success("Contact removed", {
+                    id: "contact-removed",
+                    action: {
+                      label: "Undo",
+                      onClick: () => void onAddContact(removed),
+                    },
+                  });
                 } else {
                   await onDeleteCrxKey?.(target.keyBlob.extensionId);
                 }

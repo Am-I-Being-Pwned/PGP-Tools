@@ -75,10 +75,6 @@ export interface WorkspaceState {
   /** Also encrypt to one of the user's own keys (preference-backed). */
   encryptToSelf: boolean;
   setEncryptToSelf: (b: boolean) => void;
-  /** Set after an encrypt the user won't be able to decrypt (encrypt-to-
-   *  self off, or no own key); cleared with the rest of the output. */
-  selfDecryptWarning: string | null;
-  setSelfDecryptWarning: (s: string | null) => void;
   saveToHistory: boolean;
   setSaveToHistory: (b: boolean) => void;
   zipFiles: boolean;
@@ -156,9 +152,6 @@ export function useWorkspaceState(opts: {
   const [files, setFiles] = useState<File[]>([]);
   const [alsoSign, setAlsoSign] = useState(false);
   const [encryptToSelf, setEncryptToSelf] = useState(true);
-  const [selfDecryptWarning, setSelfDecryptWarning] = useState<string | null>(
-    null,
-  );
   const [saveToHistory, setSaveToHistory] = useState(false);
   const [zipFiles, setZipFiles] = useState(true);
   const [needsPassword, setNeedsPassword] = useState(false);
@@ -177,7 +170,6 @@ export function useWorkspaceState(opts: {
     setSignatureTone("success");
     setNeedsPassword(false);
     setPendingCrxSign(false);
-    setSelfDecryptWarning(null);
   }, []);
 
   const resetAll = useCallback(() => {
@@ -483,8 +475,6 @@ export function useWorkspaceState(opts: {
     setAlsoSign,
     encryptToSelf,
     setEncryptToSelf,
-    selfDecryptWarning,
-    setSelfDecryptWarning,
     saveToHistory,
     setSaveToHistory,
     zipFiles,
