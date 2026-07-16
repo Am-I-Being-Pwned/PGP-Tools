@@ -216,6 +216,46 @@ async function pruneToBudget(manifest: HistoryManifest): Promise<boolean> {
   return pruned;
 }
 
+/** Segment numbers present in storage under the segment prefix,
+ *  ascending. `withLock` only serializes within one JS context and
+ *  chrome.storage has no compare-and-swap, so two extension contexts
+ *  (e.g. side panels in two browser windows) appending concurrently do
+ *  racing read-modify-writes on the manifest: one context's manifest
+ *  write can drop a segment the other just published. Scanning by
+ *  prefix lets loadHistory union what actually exists instead of
+ *  trusting the manifest alone. Residual race, accepted honestly: two
+ *  contexts appending to the SAME head segment blob still last-write-
+ *  wins (one entry lost) -- that can't be fixed without a cross-context
+ *  CAS, which chrome.storage doesn't offer. */
+async function scanSegmentNumbers(): Promise<number[]> {
+  const all = await chrome.storage.local.get(null);
+  return Object.keys(all)
+    .filter((k) => k.startsWith(STORAGE_HISTORY_SEGMENT_PREFIX))
+    .map((k) => Number(k.slice(STORAGE_HISTORY_SEGMENT_PREFIX.length)))
+    .filter((n) => Number.isInteger(n) && n >= 0)
+    .sort((a, b) => a - b);
+}
+
+/** Fold segments that exist in storage but not in `manifest` back into
+ *  it (see {@link scanSegmentNumbers} for how they arise). Mutates
+ *  `manifest`; returns whether anything was adopted (i.e. the manifest
+ *  needs rewriting). Unreadable strays are left for clearHistory's
+ *  prefix sweep rather than adopted as empty. */
+async function adoptStraySegments(manifest: HistoryManifest): Promise<boolean> {
+  const known = new Set(manifest.segs.map((s) => s.n));
+  let adopted = false;
+  for (const n of await scanSegmentNumbers()) {
+    if (known.has(n)) continue;
+    const entries = await readSegment(n);
+    if (entries.length === 0) continue;
+    const bytes = new TextEncoder().encode(JSON.stringify(entries)).length;
+    manifest.segs.push({ n, bytes });
+    adopted = true;
+  }
+  if (adopted) manifest.segs.sort((a, b) => a.n - b.n);
+  return adopted;
+}
+
 // ── public API ───────────────────────────────────────────────────────
 
 /** Append one entry. No-op while locked (returns false). Content is
@@ -291,16 +331,19 @@ function finalizeEntry(entry: NewHistoryEntry): HistoryEntry {
   return { ...full, content, ...(truncated ? { truncated } : {}) };
 }
 
-/** All entries, newest first. Empty while locked. Also prunes down to
- *  the active budget, so a revoked `unlimitedStorage` permission takes
- *  effect on the next load. */
+/** All entries, newest first. Empty while locked. Also adopts segments
+ *  the manifest lost track of (cross-context manifest race) and prunes
+ *  down to the active budget, so a revoked `unlimitedStorage`
+ *  permission takes effect on the next load. */
 export async function loadHistory(): Promise<HistoryEntry[]> {
   if (!(await hasContactsSession())) return [];
   return withLock(STORAGE_HISTORY, async () => {
     if (!(await hasContactsSession())) return [];
 
     const manifest = await readManifest();
-    if (await pruneToBudget(manifest)) await writeManifest(manifest);
+    const adopted = await adoptStraySegments(manifest);
+    const pruned = await pruneToBudget(manifest);
+    if (adopted || pruned) await writeManifest(manifest);
 
     const all: HistoryEntry[] = [];
     for (const seg of manifest.segs) {
