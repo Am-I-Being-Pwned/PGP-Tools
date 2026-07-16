@@ -4,6 +4,12 @@
 // operations -- key deletion, contact deletion, history clearing -- are
 // deliberately NOT palette actions in v1: they keep their dedicated
 // confirmation pages, out of reach of a stray Enter in a fuzzy matcher.
+//
+// "Set default key" is also deliberately excluded: picking WHICH key
+// needs a second-step key list, and the palette has no submenu surface
+// (one flat list, one Enter). Executing it with an implicit "current"
+// key would silently retarget "encrypt to me". It stays on the key
+// cards in the Keys tab until the palette grows a picker step.
 
 import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
 
@@ -97,11 +103,53 @@ export const ACTIONS: readonly PgpAction[] = [
     name: "Open history",
     group: "Workspace",
     keywords: ["log", "past", "operations"],
-    disabledReason: (ctx) =>
-      ctx.historyEnabled
-        ? undefined
-        : "History is off - enable it next to Sign",
+    disabledReason: (ctx) => {
+      if (ctx.historyEnabled) return undefined;
+      // Under never-cache the checkbox itself is unavailable, so
+      // "enable it next to Sign" would point at nothing.
+      return ctx.neverCacheKeys
+        ? "History is off while keys never cache"
+        : "History is off - enable it next to Sign";
+    },
     execute: (ctx) => ctx.navigation.openHistory(),
+  },
+
+  // ── Preference toggles ─────────────────────────────────────────────
+  // Names show the RESULTING state ("Turn off: ..."), so the palette
+  // doubles as a readout of where the toggle currently sits. All three
+  // reuse the workspace checkboxes' exact handlers (persistence +
+  // stale-output reset included) via ctx.ops.
+  {
+    id: "workspace.toggle-encrypt-to-self",
+    name: (ctx) =>
+      `${ctx.encryptToSelf ? "Turn off" : "Turn on"}: Also encrypt to me`,
+    group: "Workspace",
+    keywords: ["toggle", "self", "own key", "preference"],
+    disabledReason: (ctx) =>
+      ctx.counts.ownKeys === 0 ? "Add one of your own keys first" : undefined,
+    execute: (ctx) => ctx.ops.toggleEncryptToSelf(),
+  },
+  {
+    id: "workspace.toggle-sign",
+    name: (ctx) =>
+      `${ctx.alsoSign ? "Turn off" : "Turn on"}: Sign when encrypting`,
+    group: "Workspace",
+    keywords: ["toggle", "signature", "preference"],
+    disabledReason: (ctx) =>
+      ctx.counts.ownKeys === 0 ? "Add one of your own keys first" : undefined,
+    execute: (ctx) => ctx.ops.toggleAlsoSign(),
+  },
+  {
+    id: "workspace.toggle-history",
+    name: (ctx) =>
+      `${ctx.historyEnabled ? "Turn off" : "Turn on"}: Save to history`,
+    group: "Workspace",
+    keywords: ["toggle", "log", "preference"],
+    disabledReason: (ctx) =>
+      ctx.neverCacheKeys
+        ? "History is off while keys never cache"
+        : undefined,
+    execute: (ctx) => ctx.ops.toggleSaveToHistory(),
   },
 
   {
@@ -142,6 +190,14 @@ export const ACTIONS: readonly PgpAction[] = [
     keywords: ["tab", "preferences"],
     applicable: (ctx) => ctx.tab !== "settings",
     execute: (ctx) => ctx.navigation.setTab("settings"),
+  },
+
+  {
+    id: "settings.security-presets",
+    name: "Open security presets",
+    group: "Settings",
+    keywords: ["preset", "paranoid", "convenient", "balanced", "security"],
+    execute: (ctx) => ctx.navigation.openSecurityPresets(),
   },
 
   {

@@ -15,6 +15,9 @@ function fakeCtx(overrides: Partial<ActionCtx> = {}): ActionCtx {
     hasOutput: false,
     masterUnlocked: true,
     historyEnabled: false,
+    encryptToSelf: false,
+    alsoSign: false,
+    neverCacheKeys: false,
     counts: { ownKeys: 0, contacts: 0 },
     navigation: {
       setTab: noop,
@@ -22,12 +25,16 @@ function fakeCtx(overrides: Partial<ActionCtx> = {}): ActionCtx {
       openGenerate: noop,
       openImport: noop,
       setMode: noop,
+      openSecurityPresets: noop,
     },
     ops: {
       execute: noop,
       clearInput: noop,
       copyOutput: noop,
       lockNow: noop,
+      toggleEncryptToSelf: noop,
+      toggleAlsoSign: noop,
+      toggleSaveToHistory: noop,
     },
     ...overrides,
   };
@@ -153,6 +160,81 @@ describe("disabled reasons", () => {
     expect(
       byId(fakeCtx({ historyEnabled: true }), "history.open")?.disabledReason,
     ).toBeUndefined();
+  });
+});
+
+describe("preference toggles", () => {
+  it("name the resulting state, not the current one", () => {
+    expect(
+      byId(fakeCtx({ encryptToSelf: true }), "workspace.toggle-encrypt-to-self")
+        ?.name,
+    ).toBe("Turn off: Also encrypt to me");
+    expect(
+      byId(fakeCtx(), "workspace.toggle-encrypt-to-self")?.name,
+    ).toBe("Turn on: Also encrypt to me");
+    expect(byId(fakeCtx({ alsoSign: true }), "workspace.toggle-sign")?.name).toBe(
+      "Turn off: Sign when encrypting",
+    );
+    expect(
+      byId(fakeCtx({ historyEnabled: true }), "workspace.toggle-history")?.name,
+    ).toBe("Turn off: Save to history");
+  });
+
+  it("encrypt toggles need an own key", () => {
+    for (const id of ["workspace.toggle-encrypt-to-self", "workspace.toggle-sign"]) {
+      expect(byId(fakeCtx(), id)?.disabledReason).toBe(
+        "Add one of your own keys first",
+      );
+      expect(
+        byId(fakeCtx({ counts: { ownKeys: 1, contacts: 0 } }), id)
+          ?.disabledReason,
+      ).toBeUndefined();
+    }
+  });
+
+  it("history toggle is unavailable under never-cache", () => {
+    expect(
+      byId(fakeCtx({ neverCacheKeys: true }), "workspace.toggle-history")
+        ?.disabledReason,
+    ).toBe("History is off while keys never cache");
+    expect(
+      byId(fakeCtx(), "workspace.toggle-history")?.disabledReason,
+    ).toBeUndefined();
+  });
+
+  it("run the ops bridge callbacks", () => {
+    const ctx = fakeCtx({ counts: { ownKeys: 1, contacts: 0 } });
+    const spies = {
+      toggleEncryptToSelf: vi.fn(),
+      toggleAlsoSign: vi.fn(),
+      toggleSaveToHistory: vi.fn(),
+    };
+    Object.assign(ctx.ops, spies);
+    void byId(ctx, "workspace.toggle-encrypt-to-self")?.action.execute(ctx);
+    void byId(ctx, "workspace.toggle-sign")?.action.execute(ctx);
+    void byId(ctx, "workspace.toggle-history")?.action.execute(ctx);
+    for (const spy of Object.values(spies)) expect(spy).toHaveBeenCalledOnce();
+  });
+});
+
+describe("history.open reasons", () => {
+  it("distinguishes never-cache from the plain off state", () => {
+    expect(
+      byId(fakeCtx({ neverCacheKeys: true }), "history.open")?.disabledReason,
+    ).toBe("History is off while keys never cache");
+    expect(byId(fakeCtx(), "history.open")?.disabledReason).toBe(
+      "History is off - enable it next to Sign",
+    );
+  });
+});
+
+describe("settings.security-presets", () => {
+  it("opens the presets subpage via navigation", () => {
+    const openSecurityPresets = vi.fn();
+    const ctx = fakeCtx();
+    ctx.navigation.openSecurityPresets = openSecurityPresets;
+    void byId(ctx, "settings.security-presets")?.action.execute(ctx);
+    expect(openSecurityPresets).toHaveBeenCalledOnce();
   });
 });
 

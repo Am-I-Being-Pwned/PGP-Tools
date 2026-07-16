@@ -341,6 +341,9 @@ export default function App() {
   const [keysRoute, setKeysRoute] = useState<"generate" | "import" | null>(
     null,
   );
+  // One-shot request for Settings to open its security-presets subpage
+  // (the "Open security presets" palette action), keysRoute-style.
+  const [presetsRoute, setPresetsRoute] = useState(false);
 
   const changeTab = useCallback((tab: Tab) => {
     setActiveTab(tab);
@@ -364,6 +367,10 @@ export default function App() {
     () => openKeysRoute("import"),
     [openKeysRoute],
   );
+  const openSecurityPresets = useCallback(() => {
+    setPresetsRoute(true);
+    changeTab("settings");
+  }, [changeTab]);
   const lockNow = useCallback(() => void doMasterLock(), [doMasterLock]);
 
   const actionCtx = useActionContext({
@@ -374,9 +381,11 @@ export default function App() {
       ownKeys: keyring.keys.length,
       contacts: contacts.contacts.length,
     },
+    neverCacheKeys,
     openHistory,
     openGenerate,
     openImport,
+    openSecurityPresets,
     lockNow,
   });
 
@@ -651,6 +660,8 @@ export default function App() {
               crxKeys={crxKeys.keys}
               onAddCrxKey={crxKeys.add}
               primaryPasskeyCredentialId={masterPasskeyCredentialId}
+              autoOpenPresets={presetsRoute}
+              onAutoOpenPresetsConsumed={() => setPresetsRoute(false)}
             />
           )}
         </main>

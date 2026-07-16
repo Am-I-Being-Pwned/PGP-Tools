@@ -84,6 +84,10 @@ interface SettingsViewProps {
   crxKeys?: CrxSigningKeyBlob[];
   onAddCrxKey?: (blob: CrxSigningKeyBlob) => Promise<void>;
   primaryPasskeyCredentialId?: string;
+  /** One-shot request to open the security-presets subpage (palette's
+   *  "Open security presets"); consumed via the callback below. */
+  autoOpenPresets?: boolean;
+  onAutoOpenPresetsConsumed?: () => void;
 }
 
 export function SettingsView({
@@ -117,6 +121,8 @@ export function SettingsView({
   crxKeys,
   onAddCrxKey,
   primaryPasskeyCredentialId,
+  autoOpenPresets,
+  onAutoOpenPresetsConsumed,
 }: SettingsViewProps) {
   const [migratingTo, setMigratingTo] = useState<StorageLocation | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -125,6 +131,13 @@ export function SettingsView({
   const [showCrxInfo, setShowCrxInfo] = useState(false);
   const [showDevTools, setShowDevTools] = useState(false);
   const [showPresets, setShowPresets] = useState(false);
+
+  // Open the presets subpage when routed here by the palette action.
+  useEffect(() => {
+    if (!autoOpenPresets) return;
+    setShowPresets(true);
+    onAutoOpenPresetsConsumed?.();
+  }, [autoOpenPresets, onAutoOpenPresetsConsumed]);
 
   // Full preferences snapshot for computing the active preset: the
   // bundles cover fields this view has no props for (historyEnabled,
