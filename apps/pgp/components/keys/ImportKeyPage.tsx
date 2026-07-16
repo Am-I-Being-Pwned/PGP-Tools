@@ -1,18 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
 import { TriangleAlertIcon } from "lucide-react";
-import { toast } from "sonner";
 
 import { Button } from "@amibeingpwned/ui/button";
 
 import type { CrxProtectionInput } from "../../lib/crx/operations";
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
+import type { ImportOverwrite } from "../../lib/import-overwrite";
 import type { KeyInfo } from "../../lib/pgp/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import { readKeyFile } from "../../lib/binary-armor";
 import { importCrxKey } from "../../lib/crx/operations";
-import type { ImportOverwrite } from "../../lib/import-overwrite";
 import { detectImportOverwrite } from "../../lib/import-overwrite";
 import {
   importRejectionMessage,
@@ -21,6 +20,7 @@ import {
 import { importKey } from "../../lib/pgp/key-management";
 import { parseKeys } from "../../lib/pgp/wasm";
 import { importAndProtect } from "../../lib/protection/protect-flow";
+import { toast } from "../../lib/toast";
 import { errorMessage } from "../../lib/utils/errors";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 import {
@@ -230,13 +230,20 @@ export function ImportKeyPage({
         secretEncrypted: result.secretEncrypted,
       });
       if (result.keyInfo.securityWarning) {
-        toast.warning(result.keyInfo.securityWarning);
+        // Stable id: re-pasting the same key must not stack duplicates.
+        toast.warning(result.keyInfo.securityWarning, {
+          id: "import-key-warning",
+        });
       }
       // Same fingerprint as a stored key: confirm the replacement before
       // continuing (the keyring upserts by keyId, silently otherwise).
-      const collision = detectImportOverwrite(result.keyInfo.keyId, existingKeys, {
-        userIds: result.keyInfo.userIds,
-      });
+      const collision = detectImportOverwrite(
+        result.keyInfo.keyId,
+        existingKeys,
+        {
+          userIds: result.keyInfo.userIds,
+        },
+      );
       if (collision) {
         setOverwrite(collision);
         setOverwriteKind("private");
@@ -306,7 +313,7 @@ export function ImportKeyPage({
         });
         warning ??= keyInfo.securityWarning;
       }
-      if (warning) toast.warning(warning);
+      if (warning) toast.warning(warning, { id: "import-key-warning" });
       resetAndClose();
     } catch (e) {
       setError(errorMessage(e, "Import failed"));
@@ -503,8 +510,8 @@ export function ImportKeyPage({
                     </p>
                   )}
                   <p className="mt-2">
-                    The stored key is overwritten; if this import is a
-                    mistake, you'd need to re-import the old key.
+                    The stored key is overwritten; if this import is a mistake,
+                    you'd need to re-import the old key.
                   </p>
                 </div>
               </div>

@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
 
 import { Button } from "@amibeingpwned/ui/button";
 
@@ -11,6 +10,7 @@ import {
 } from "../../lib/dev/dump";
 import { hasContactsSession, ping } from "../../lib/pgp/wasm";
 import { dumpWasmMemoryForDev } from "../../lib/pgp/wasm-loader";
+import { toast } from "../../lib/toast";
 import { downloadBinary, downloadText } from "../../lib/utils/download";
 import { formatFileSize } from "../../lib/utils/formatting";
 import { SubPage } from "../shared/SubPage";
@@ -45,7 +45,11 @@ export function DevToolsPage({ onClose }: { onClose: () => void }) {
         memoryBytes: dumpWasmMemoryForDev()?.byteLength ?? null,
       });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Dev dump failed");
+      // Stable ids on the dev-tool errors: retrying a failing action
+      // updates the toast instead of stacking duplicates.
+      toast.error(e instanceof Error ? e.message : "Dev dump failed", {
+        id: "dev-dump-failed",
+      });
     } finally {
       setLoading(false);
     }
@@ -72,7 +76,7 @@ export function DevToolsPage({ onClose }: { onClose: () => void }) {
   const handleDownloadMemory = () => {
     const bytes = dumpWasmMemoryForDev();
     if (!bytes) {
-      toast.error("WASM memory unavailable");
+      toast.error("WASM memory unavailable", { id: "dev-wasm-memory" });
       return;
     }
     downloadBinary(bytes, `pgp-wasm-memory-${stamp()}.bin`);
@@ -85,14 +89,18 @@ export function DevToolsPage({ onClose }: { onClose: () => void }) {
     try {
       const parsed: unknown = JSON.parse(await file.text());
       if (!isStorageDump(parsed)) {
-        toast.error("Not a storage dump ({ local, sync, session }).");
+        toast.error("Not a storage dump ({ local, sync, session }).", {
+          id: "dev-restore-failed",
+        });
         return;
       }
       await restoreAllStorage(parsed);
       await refresh();
       toast.success("Storage restored. Reload the panel to apply.");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Restore failed");
+      toast.error(e instanceof Error ? e.message : "Restore failed", {
+        id: "dev-restore-failed",
+      });
     } finally {
       setBusy(false);
     }
@@ -105,7 +113,9 @@ export function DevToolsPage({ onClose }: { onClose: () => void }) {
       await refresh();
       toast.success("Storage cleared. Reload the panel to apply.");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Clear failed");
+      toast.error(e instanceof Error ? e.message : "Clear failed", {
+        id: "dev-clear-failed",
+      });
     } finally {
       setBusy(false);
     }

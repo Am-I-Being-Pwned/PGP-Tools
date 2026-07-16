@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { CheckIcon, LockIcon } from "lucide-react";
-import { toast } from "sonner";
 
 import { Button } from "@amibeingpwned/ui/button";
 
@@ -19,6 +18,7 @@ import {
   getKeyArmored,
 } from "../../lib/pgp/wasm";
 import { isWebAuthnCancel } from "../../lib/protection/webauthn-prf";
+import { toast } from "../../lib/toast";
 import { downloadText } from "../../lib/utils/download";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 import { SubPage } from "../shared/SubPage";
@@ -250,8 +250,7 @@ function useExportKeysFlow({
   const buildAndDownload = async (
     privateArmor: (handle: number) => Promise<string>,
     crxBlock:
-      | ((handle: number, blob: CrxSigningKeyBlob) => Promise<string>)
-      | null,
+      ((handle: number, blob: CrxSigningKeyBlob) => Promise<string>) | null,
   ) => {
     const parts: string[] = [];
     for (const key of myKeys) {
@@ -299,7 +298,10 @@ function useExportKeysFlow({
         },
       );
       if (onExported) onExported(count, false);
-      else toast.success(`Exported ${count} key${count === 1 ? "" : "s"}`);
+      else
+        toast.success(`Exported ${count} key${count === 1 ? "" : "s"}`, {
+          id: "keys-exported",
+        });
       resetAndClose();
     } catch (e) {
       // No console.* here (SECURITY.md §9): the message may carry unlock /
@@ -323,6 +325,7 @@ function useExportKeysFlow({
       else
         toast.success(
           `Exported ${count} key${count === 1 ? "" : "s"} (private keys UNENCRYPTED)`,
+          { id: "keys-exported" },
         );
       resetAndClose();
     } catch (e) {

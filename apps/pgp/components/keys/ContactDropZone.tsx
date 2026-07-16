@@ -1,5 +1,4 @@
 import { useCallback, useRef, useState } from "react";
-import { toast } from "sonner";
 
 import { Button } from "@amibeingpwned/ui/button";
 
@@ -7,6 +6,7 @@ import type { PublicContactKey } from "../../lib/storage/contacts";
 import { splitPublicKeyBlocks } from "../../lib/armor-blocks";
 import { readKeyFile } from "../../lib/binary-armor";
 import { importPublicKeyBlocks } from "../../lib/import-public-keys";
+import { toast } from "../../lib/toast";
 
 interface ContactDropZoneProps {
   onImport: (contact: PublicContactKey) => Promise<void>;
@@ -33,17 +33,24 @@ export function ContactDropZone({
       const { added, updated, failed, flagged, rejectionReasons } =
         await importPublicKeyBlocks(blocks, existingKeyIds ?? [], onImport);
 
+      // Stable ids: re-dropping the same file must update the previous
+      // toasts, not stack duplicates.
       if (added > 0)
-        toast.success(`Added ${added} contact${added > 1 ? "s" : ""}`);
+        toast.success(`Added ${added} contact${added > 1 ? "s" : ""}`, {
+          id: "contacts-added",
+        });
       if (flagged > 0) {
         toast.warning(
           `${flagged} key${flagged > 1 ? "s use" : " uses"} weak crypto (SHA-1) and ${
             flagged > 1 ? "were" : "was"
           } flagged - see the warning on the contact.`,
+          { id: "contacts-flagged" },
         );
       }
       if (updated > 0)
-        toast.info(`${updated} contact${updated > 1 ? "s" : ""} updated`);
+        toast.info(`${updated} contact${updated > 1 ? "s" : ""} updated`, {
+          id: "contacts-updated",
+        });
       if (failed > 0) {
         const detail = rejectionReasons[0];
         setError(

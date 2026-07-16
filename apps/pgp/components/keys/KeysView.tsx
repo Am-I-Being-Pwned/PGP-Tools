@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { ImportIcon, PlusIcon } from "lucide-react";
-import { toast } from "sonner";
 
 import { Button } from "@amibeingpwned/ui/button";
 
@@ -13,6 +12,7 @@ import { publicKeyDerToPem } from "../../lib/crx/types";
 import { downloadPublicKeysBundle } from "../../lib/keys/export-bundle";
 import { crxKeyExporter, pgpKeyExporter } from "../../lib/keys/exporters";
 import { revocationCertificateWithHandle } from "../../lib/pgp/wasm";
+import { toast } from "../../lib/toast";
 import { formatAlgorithm, formatFingerprint } from "../../lib/utils/formatting";
 import { parseUserId } from "../../lib/utils/key-naming";
 import { INPUT_CLASS } from "../../lib/utils/styles";
@@ -213,6 +213,7 @@ export function KeysView({
         unsafe ? " (private keys UNENCRYPTED)" : ""
       }`,
       {
+        id: "keys-exported",
         action: {
           label: "Reselect",
           onClick: () => {

@@ -1,5 +1,4 @@
 import { useRef, useState } from "react";
-import { toast } from "sonner";
 
 import { Button } from "@amibeingpwned/ui/button";
 
@@ -20,6 +19,7 @@ import {
   isWebAuthnCancel,
   registerPasskey,
 } from "../../lib/protection/webauthn-prf";
+import { toast } from "../../lib/toast";
 import {
   getDefaultProtectionMethod,
   ProtectionMethodPicker,
@@ -92,19 +92,27 @@ export function ImportAllKeysPage({
         contacts.map((c) => c.keyId),
         onAddContact,
       );
+    // Stable ids: re-running the import with the same backup must update
+    // the previous toasts, not stack duplicates.
     if (added > 0)
-      toast.success(`Added ${added} contact${added > 1 ? "s" : ""}`);
+      toast.success(`Added ${added} contact${added > 1 ? "s" : ""}`, {
+        id: "contacts-added",
+      });
     if (flagged > 0)
       toast.warning(
         `${flagged} imported key${flagged > 1 ? "s" : ""} flagged for weak crypto (SHA-1)`,
+        { id: "contacts-flagged" },
       );
     if (updated > 0)
-      toast.info(`${updated} contact${updated > 1 ? "s" : ""} updated`);
+      toast.info(`${updated} contact${updated > 1 ? "s" : ""} updated`, {
+        id: "contacts-updated",
+      });
     if (failed > 0)
       toast.error(
         `${failed} public key${failed > 1 ? "s" : ""} rejected${
           rejectionReasons[0] ? `: ${rejectionReasons[0]}` : ""
         }`,
+        { id: "contacts-rejected" },
       );
   };
 
@@ -164,10 +172,12 @@ export function ImportAllKeysPage({
       if (skippedCrx > 0)
         toast.info(
           `${skippedCrx} CRX signing key${skippedCrx > 1 ? "s" : ""} already imported`,
+          { id: "crx-skipped" },
         );
       if (invalidCrx > 0)
         toast.error(
           `${invalidCrx} CRX signing key${invalidCrx > 1 ? "s" : ""} rejected: public key does not match its extension id`,
+          { id: "crx-rejected" },
         );
 
       const existing = new Set(myKeys.map((k) => k.keyId));
@@ -208,6 +218,7 @@ export function ImportAllKeysPage({
         if (skipped > 0)
           toast.info(
             `${skipped} private key${skipped > 1 ? "s" : ""} already imported`,
+            { id: "private-keys-skipped" },
           );
         if (unparseable === 0) close();
         return;
@@ -309,6 +320,7 @@ export function ImportAllKeysPage({
       if (skippedPrivates > 0)
         toast.info(
           `${skippedPrivates} private key${skippedPrivates > 1 ? "s" : ""} already imported`,
+          { id: "private-keys-skipped" },
         );
       await importCrxBlobs(parsedCrx);
       await importPublics(publicBlocks);

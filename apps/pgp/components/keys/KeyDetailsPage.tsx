@@ -11,7 +11,6 @@ import {
   TriangleAlertIcon,
   XCircleIcon,
 } from "lucide-react";
-import { toast } from "sonner";
 
 import { Button } from "@amibeingpwned/ui/button";
 
@@ -19,6 +18,7 @@ import type { KeyDetails, KeyInfo, SubkeyDetail } from "../../lib/pgp/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import { parseKey, parseKeyDetails } from "../../lib/pgp/wasm";
+import { toast } from "../../lib/toast";
 import { scheduleClipboardClear } from "../../lib/utils/clipboard";
 import { downloadText } from "../../lib/utils/download";
 import { errorMessage } from "../../lib/utils/errors";
@@ -80,10 +80,8 @@ function IconAction({
 const EXPIRING_SOON_MS = 30 * 24 * 60 * 60 * 1000;
 
 const STATUS_STYLES: Record<SubkeyDetail["status"], string> = {
-  active:
-    "border-green-500/40 bg-green-500/10 text-green-400",
-  expired:
-    "border-amber-500/40 bg-amber-500/10 text-amber-400",
+  active: "border-green-500/40 bg-green-500/10 text-green-400",
+  expired: "border-amber-500/40 bg-amber-500/10 text-amber-400",
   revoked: "border-red-500/40 bg-red-500/10 text-red-400",
   invalid: "border-red-500/40 bg-red-500/10 text-red-400",
 };
@@ -292,9 +290,7 @@ function SubkeyRow({ row }: { row: SubkeyDetail }) {
         </p>
       )}
       {row.policyError && (
-        <p className="mt-1 text-[11px] text-amber-400">
-          {row.policyError}
-        </p>
+        <p className="mt-1 text-[11px] text-amber-400">{row.policyError}</p>
       )}
     </div>
   );

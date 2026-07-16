@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SettingsIcon } from "lucide-react";
-import { toast } from "sonner";
 
 import type { WorkspaceIntake } from "../../components/workspace/useWorkspaceState";
 import type { WorkspaceOpsBridge } from "../../hooks/useActionContext";
@@ -35,6 +34,7 @@ import { normalizeContactsPadding } from "../../lib/storage/contacts";
 import { normalizeKeyringPadding } from "../../lib/storage/keyring";
 import { getMasterProtection } from "../../lib/storage/master-protection";
 import { getPreferences, savePreferences } from "../../lib/storage/preferences";
+import { toast } from "../../lib/toast";
 import {
   draftHasContent,
   encryptWorkspaceDraft,

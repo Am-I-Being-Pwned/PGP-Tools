@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
 
 import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
 import {
@@ -22,6 +21,7 @@ import {
   visibleActions,
 } from "../lib/actions/registry";
 import { isEditableTarget, matchesShortcut } from "../lib/shortcuts";
+import { toast } from "../lib/toast";
 import { hasOpenSlideOver } from "./shared/SlideOver";
 
 const PALETTE_SHORTCUT: ShortcutSpec = { mod: true, key: "k" };
@@ -59,7 +59,11 @@ function useRegistryShortcuts(ctx: ActionCtx, suspended: boolean) {
       if (!hit.action.shortcut?.mod && isEditableTarget(event.target)) return;
       event.preventDefault();
       if (hit.disabledReason) {
-        toast(`${hit.name} is disabled: ${hit.disabledReason}`);
+        // Stable id: holding the shortcut down must not stack a column
+        // of identical "disabled" toasts.
+        toast.message(`${hit.name} is disabled: ${hit.disabledReason}`, {
+          id: "action-disabled",
+        });
         return;
       }
       void hit.action.execute(ctxRef.current);

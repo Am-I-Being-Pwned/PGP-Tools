@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
 
 import { Button } from "@amibeingpwned/ui/button";
 import {
@@ -11,6 +10,7 @@ import {
 } from "@amibeingpwned/ui/select";
 
 import type { WorkspaceAction } from "../../lib/messages";
+import { toast } from "../../lib/toast";
 import { DropZone } from "./DropZone";
 
 type Mode = WorkspaceAction;
@@ -71,22 +71,25 @@ export function WorkspaceInput({
         </SelectTrigger>
         <SelectContent>
           <SelectItem
-            className="cursor-pointer focus:bg-border/70"
+            className="focus:bg-border/70 cursor-pointer"
             value="encrypt"
           >
             Encrypt
           </SelectItem>
           <SelectItem
-            className="cursor-pointer focus:bg-border/70"
+            className="focus:bg-border/70 cursor-pointer"
             value="decrypt"
           >
             Decrypt
           </SelectItem>
-          <SelectItem className="cursor-pointer focus:bg-border/70" value="sign">
+          <SelectItem
+            className="focus:bg-border/70 cursor-pointer"
+            value="sign"
+          >
             Sign
           </SelectItem>
           <SelectItem
-            className="cursor-pointer focus:bg-border/70"
+            className="focus:bg-border/70 cursor-pointer"
             value="verify"
           >
             Verify
@@ -106,7 +109,8 @@ export function WorkspaceInput({
               const prev = input;
               onInputChange("");
               if (!operationDone) {
-                toast("Text cleared", {
+                toast.message("Text cleared", {
+                  id: "workspace-text-cleared",
                   duration: 4000,
                   action: {
                     label: "Undo",

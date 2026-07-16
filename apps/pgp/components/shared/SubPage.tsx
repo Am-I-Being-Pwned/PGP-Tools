@@ -4,9 +4,9 @@ import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
 import { Button } from "@amibeingpwned/ui/button";
 
 import type { PresentedError } from "../../lib/errors/present";
-import { presentError } from "../../lib/errors/present";
 import { useDelayedFlag } from "../../hooks/useDelayedFlag";
 import { useShortcut } from "../../hooks/useShortcut";
+import { presentError } from "../../lib/errors/present";
 import { SlideOverHeader, SlideOverPanel, useSlideOver } from "./SlideOver";
 
 /** mod+Enter submits the primary footer action from anywhere on the
