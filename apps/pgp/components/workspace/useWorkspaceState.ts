@@ -352,9 +352,13 @@ export function useWorkspaceState(opts: {
   useEffect(() => {
     if (pendingAction) {
       setMode(pendingAction.action);
-      setInput(pendingAction.text);
-      setFiles([]);
-      resetOutput();
+      // Keyboard mode commands deliver an empty-text op: switch the
+      // mode but leave whatever the user already has in the workspace.
+      if (pendingAction.text) {
+        setInput(pendingAction.text);
+        setFiles([]);
+        resetOutput();
+      }
       onClearPending?.();
     }
   }, [pendingAction, onClearPending, resetOutput]);

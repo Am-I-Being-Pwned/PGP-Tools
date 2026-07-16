@@ -60,6 +60,11 @@ export default defineConfig({
         128: "icon-128.png",
       },
     },
+    // Chrome caps an extension at 4 commands WITH suggested keys.
+    // _execute_action + the three mode commands below consume all
+    // four, so open-verify ships without a default -- users can bind
+    // it at chrome://extensions/shortcuts. Command ids are dispatched
+    // in background.ts via lib/mode-commands.ts.
     commands: {
       _execute_action: {
         suggested_key: {
@@ -67,6 +72,30 @@ export default defineConfig({
           mac: "Alt+Shift+G",
         },
         description: "Open PGP Tools",
+      },
+      "open-encrypt": {
+        suggested_key: {
+          default: "Alt+Shift+E",
+          mac: "Alt+Shift+E",
+        },
+        description: "Open PGP Tools in Encrypt mode",
+      },
+      "open-decrypt": {
+        suggested_key: {
+          default: "Alt+Shift+D",
+          mac: "Alt+Shift+D",
+        },
+        description: "Open PGP Tools in Decrypt mode",
+      },
+      "open-sign": {
+        suggested_key: {
+          default: "Alt+Shift+S",
+          mac: "Alt+Shift+S",
+        },
+        description: "Open PGP Tools in Sign mode",
+      },
+      "open-verify": {
+        description: "Open PGP Tools in Verify mode",
       },
     },
     side_panel: {

@@ -1,9 +1,44 @@
 import "../lib/network-lockdown";
 
-import type { PendingOperation } from "../lib/messages";
+import type { OperationAction, PendingOperation } from "../lib/messages";
 import { recoverArmorIfNeeded } from "../lib/armor-recovery";
 import { classifyAction } from "../lib/classify-action";
 import { MENU_OPEN_IN_PGP, SESSION_PENDING_OP } from "../lib/constants";
+import { commandToMode } from "../lib/mode-commands";
+
+/**
+ * Open the side panel and hand it a pending operation. Shared by the
+ * context-menu and keyboard-command paths; both are user gestures, and
+ * both MUST call this synchronously inside their event handler --
+ * Chrome rejects sidePanel.open as a non-gesture if anything awaits
+ * first.
+ */
+function openPanelWithOperation(
+  action: OperationAction,
+  text: string,
+  tab: chrome.tabs.Tab | undefined,
+): void {
+  const operation: PendingOperation = {
+    type: "PENDING_OPERATION",
+    id: crypto.randomUUID(),
+    action,
+    text,
+    sourceTabId: tab?.id ?? chrome.tabs.TAB_ID_NONE,
+    createdAt: Date.now(),
+  };
+
+  const target =
+    tab?.id !== undefined
+      ? { tabId: tab.id }
+      : { windowId: tab?.windowId ?? chrome.windows.WINDOW_ID_CURRENT };
+  chrome.sidePanel.open(target).catch(() => {
+    /* sidepanel already open in this tab -- harmless */
+  });
+  // The in-flight storage write keeps the MV3 service worker alive
+  // until it commits; the side panel reads the op on mount (or via
+  // its storage.onChanged listener when already open).
+  void chrome.storage.session.set({ [SESSION_PENDING_OP]: operation });
+}
 
 export default defineBackground(() => {
   void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
@@ -27,7 +62,6 @@ export default defineBackground(() => {
   chrome.contextMenus.onClicked.addListener((info, tab) => {
     if (!tab?.id || !info.selectionText) return;
     if (info.menuItemId !== MENU_OPEN_IN_PGP) return;
-    const tabId = tab.id;
 
     // Chrome's info.selectionText collapses all whitespace into single
     // spaces, which destroys armored PGP blocks. Reconstruct the line
@@ -35,23 +69,16 @@ export default defineBackground(() => {
     // dialog, decrypt) receive valid armor.
     const text = recoverArmorIfNeeded(info.selectionText);
 
-    const operation: PendingOperation = {
-      type: "PENDING_OPERATION",
-      id: crypto.randomUUID(),
-      action: classifyAction(text),
-      text,
-      sourceTabId: tabId,
-      createdAt: Date.now(),
-    };
+    openPanelWithOperation(classifyAction(text), text, tab);
+  });
 
-    // sidePanel.open MUST be called synchronously inside the click
-    // handler -- Chrome rejects it as a non-gesture if anything
-    // awaits before it.
-    chrome.sidePanel.open({ tabId }).catch(() => {
-      /* sidepanel already open in this tab -- harmless */
-    });
-    // The in-flight storage write keeps the MV3 service worker alive
-    // until it commits; the side panel reads the op on mount.
-    void chrome.storage.session.set({ [SESSION_PENDING_OP]: operation });
+  // Browser-global mode shortcuts (Alt+Shift+E/D/S; Verify is bound by
+  // the user in chrome://extensions/shortcuts). Same pending-op channel
+  // as the context menu, but with empty text: the panel switches mode
+  // without touching the current input.
+  chrome.commands.onCommand.addListener((command, tab) => {
+    const mode = commandToMode(command);
+    if (!mode) return;
+    openPanelWithOperation(mode, "", tab);
   });
 });

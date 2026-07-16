@@ -321,7 +321,9 @@ export default function App() {
       return;
     }
     pendingRoutedRef.current = true;
-    setDraftCiphertext(null);
+    // A keyboard mode command carries no text: it must not discard a
+    // locked workspace draft the way a real selection does.
+    if (pending.text) setDraftCiphertext(null);
     setActiveTab("workspace");
     void savePreferences({ activeTab: "workspace" });
   }, [pending, clearPending]);
