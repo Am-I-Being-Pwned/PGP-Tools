@@ -32,9 +32,11 @@ import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { WorkspaceDraft } from "../../lib/workspace-draft";
 import type { WorkspaceIntake } from "./useWorkspaceState";
 import { useShortcut } from "../../hooks/useShortcut";
+import { requestUnlimitedHistoryStorage } from "../../lib/storage/history";
 import { savePreferences } from "../../lib/storage/preferences";
 import { saveCrxViaPrompt } from "../../lib/utils/download";
 import { INPUT_CLASS } from "../../lib/utils/styles";
+import { HistoryButton } from "./HistoryPage";
 import { KeySelector } from "./KeySelector";
 import { useWorkspaceOperations } from "./useWorkspaceOperations";
 import { useWorkspaceState } from "./useWorkspaceState";
@@ -466,6 +468,22 @@ export function WorkspaceView({
                   <span className="text-sm">Zip files</span>
                 </label>
               )}
+              <label className="flex items-center gap-2">
+                <Checkbox
+                  checked={s.saveToHistory}
+                  onCheckedChange={(v) => {
+                    const checked = v === true;
+                    s.setSaveToHistory(checked);
+                    void savePreferences({ historyEnabled: checked });
+                    // Enabling is a user gesture: ask for unlimitedStorage
+                    // so history gets the generous budget. A denial is fine
+                    // -- history still works within the default budget.
+                    if (checked) void requestUnlimitedHistoryStorage();
+                  }}
+                />
+                <span className="text-sm">Save to history</span>
+              </label>
+              <HistoryButton enabled={s.saveToHistory} />
             </div>
             {s.alsoSign && myKeys.length > 1 && (
               <KeySelector

@@ -14,6 +14,11 @@ export interface EncryptRecipients {
    *  encrypt-to-self is off (or they own no key) and the recipient
    *  isn't one of their own keys. */
   selfExcluded: boolean;
+  /** Key id of the user's own key that rode along via encrypt-to-self,
+   *  or null when none was added (excluded, or the recipient already is
+   *  one of the user's keys). Lets callers report the FINAL recipient
+   *  set (e.g. history capture) without re-deriving the selection. */
+  selfKeyId: string | null;
 }
 
 /**
@@ -36,11 +41,19 @@ export function buildEncryptRecipients(options: {
   // The recipient is one of the user's own keys: they can already
   // decrypt the result, so never double-add (or warn).
   if (ownKeys.some((k) => k.keyId === recipientKeyId)) {
-    return { recipientPublicKeys: [recipientArmored], selfExcluded: false };
+    return {
+      recipientPublicKeys: [recipientArmored],
+      selfExcluded: false,
+      selfKeyId: null,
+    };
   }
 
   if (!encryptToSelf || ownKeys.length === 0) {
-    return { recipientPublicKeys: [recipientArmored], selfExcluded: true };
+    return {
+      recipientPublicKeys: [recipientArmored],
+      selfExcluded: true,
+      selfKeyId: null,
+    };
   }
 
   const selfKey =
@@ -48,5 +61,6 @@ export function buildEncryptRecipients(options: {
   return {
     recipientPublicKeys: [recipientArmored, selfKey.publicKeyArmored],
     selfExcluded: false,
+    selfKeyId: selfKey.keyId,
   };
 }

@@ -78,6 +78,8 @@ export interface WorkspaceState {
    *  self off, or no own key); cleared with the rest of the output. */
   selfDecryptWarning: string | null;
   setSelfDecryptWarning: (s: string | null) => void;
+  saveToHistory: boolean;
+  setSaveToHistory: (b: boolean) => void;
   zipFiles: boolean;
   setZipFiles: (b: boolean) => void;
   needsPassword: boolean;
@@ -147,6 +149,7 @@ export function useWorkspaceState(opts: {
   const [selfDecryptWarning, setSelfDecryptWarning] = useState<string | null>(
     null,
   );
+  const [saveToHistory, setSaveToHistory] = useState(false);
   const [zipFiles, setZipFiles] = useState(true);
   const [needsPassword, setNeedsPassword] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
@@ -189,6 +192,7 @@ export function useWorkspaceState(opts: {
     void getPreferences().then((p) => {
       setAlsoSign(p.signWhenEncrypting);
       setEncryptToSelf(p.encryptToSelf);
+      setSaveToHistory(p.historyEnabled);
     });
   }, []);
 
@@ -453,6 +457,8 @@ export function useWorkspaceState(opts: {
     setEncryptToSelf,
     selfDecryptWarning,
     setSelfDecryptWarning,
+    saveToHistory,
+    setSaveToHistory,
     zipFiles,
     setZipFiles,
     needsPassword,

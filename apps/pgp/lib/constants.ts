@@ -10,6 +10,12 @@ export const STORAGE_PREFERENCES = "pgp_preferences";
  *  vault session is active. */
 export const STORAGE_SETTINGS = "pgp_settings";
 export const STORAGE_MASTER_PROTECTION = "pgp_master_protection";
+/** Plaintext manifest for the segmented encrypted history store: segment
+ *  numbers + byte sizes only, never entry data. Always chrome.storage.local
+ *  (sync's total quota is ~100 KB, and history shouldn't leave the device). */
+export const STORAGE_HISTORY = "pgp_history";
+/** Encrypted history segments live at `pgp_history_seg_<n>`. */
+export const STORAGE_HISTORY_SEGMENT_PREFIX = "pgp_history_seg_";
 /** RSA-2048 CRX (Chrome extension) signing keys. Same double-envelope
  *  encrypted store as the keyring — see `lib/crx/storage.ts`. */
 export const STORAGE_CRX_KEYS = "pgp_crx_keys";

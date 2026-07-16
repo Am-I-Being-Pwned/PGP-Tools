@@ -42,7 +42,9 @@ export default defineConfig({
     // writes a .crx to disk without Chrome trying to install it. (The File
     // System Access picker would avoid this permission but crashes the side
     // panel -- see saveCrxViaPrompt.)
-    optional_permissions: ["downloads"],
+    // `unlimitedStorage` is requested when the user enables the history
+    // feature; a denial just keeps history on its conservative byte budget.
+    optional_permissions: ["downloads", "unlimitedStorage"],
     icons: {
       16: "icon-16.png",
       32: "icon-32.png",
