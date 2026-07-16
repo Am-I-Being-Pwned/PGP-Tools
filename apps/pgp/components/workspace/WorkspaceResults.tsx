@@ -77,9 +77,6 @@ interface WorkspaceResultsProps {
   signatureTone?: "success" | "warning";
   /** Fill the available height (used by the full-screen result view). */
   fullHeight?: boolean;
-  /** Hold the compact output slot open even when empty (after the first
-   *  operation) so clearing the output doesn't collapse the layout. */
-  reserve?: boolean;
 }
 
 export function WorkspaceResults({
@@ -94,21 +91,16 @@ export function WorkspaceResults({
   verifiedSigner,
   signatureTone = "success",
   fullHeight,
-  reserve,
 }: WorkspaceResultsProps) {
   const isUnverified = signatureTone === "warning";
 
-  // Nothing to show yet — render nothing rather than reserving a fixed
-  // slab of height. That empty reservation is only ever filled in encrypt
-  // mode (recipient + sign/zip controls); in sign/verify/decrypt it just
-  // pushed the action button away from the controls above it.
   const hasContent =
     !!error ||
     !!verifiedSigner ||
     !!output ||
     !!binaryOutput ||
     fileResults.length > 0;
-  if (!fullHeight && !hasContent && !reserve) return null;
+  if (!fullHeight && !hasContent) return null;
 
   return (
     <div
@@ -152,7 +144,6 @@ export function WorkspaceResults({
         success={operationDone}
         statusText={verifiedSigner ? undefined : statusText}
         fullHeight={fullHeight}
-        reserve={reserve}
       />
     </div>
   );

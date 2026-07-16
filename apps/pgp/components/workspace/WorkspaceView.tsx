@@ -604,11 +604,6 @@ export function WorkspaceView({
           statusText={s.statusText ?? undefined}
           verifiedSigner={s.verifiedSigner}
           signatureTone={s.signatureTone}
-          // Once an encrypt/sign has produced output, hold the slot open so
-          // clearing it (e.g. on a recipient change) doesn't jump the layout.
-          reserve={
-            s.hasProducedOutput && (s.mode === "encrypt" || s.mode === "sign")
-          }
         />
 
         {!s.needsPassword && (
