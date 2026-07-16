@@ -244,6 +244,16 @@ export function HistoryPage({
   const [usage, setUsage] = useState<{ used: number; budget: number } | null>(
     null,
   );
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  // Closing the entry preview hands focus to the search input (a frame
+  // later, so it wins over the focus trap's return-focus to the clicked
+  // row). This chains the Escape layers: Esc closes the preview, Esc
+  // clears the query, Esc closes history.
+  const closeDetail = () => {
+    setDetailEntry(null);
+    setTimeout(() => searchRef.current?.focus(), 0);
+  };
 
   useEffect(() => {
     void (async () => {
@@ -287,6 +297,7 @@ export function HistoryPage({
             placeholder="Search history..."
             aria-label="Search history"
             autoFocus
+            ref={searchRef}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => {
@@ -403,7 +414,7 @@ export function HistoryPage({
         <HistoryEntryPage
           entry={detailEntry}
           search={search}
-          onClose={() => setDetailEntry(null)}
+          onClose={closeDetail}
         />
       )}
 
