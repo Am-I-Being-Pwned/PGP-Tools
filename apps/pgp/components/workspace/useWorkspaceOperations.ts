@@ -542,12 +542,10 @@ export function useWorkspaceOperations({
           binary: result.data instanceof Uint8Array ? result.data : undefined,
         });
       }
-      // Metadata only for decrypt -- never the plaintext.
-      captureHistory({
-        op: "decrypt",
-        recipients: [],
-        ...(isFileInput ? { files: historyFileMeta() } : {}),
-      });
+      // Decrypts are NOT captured: without content (never stored --
+      // it's someone else's message) a decrypt row is just "decrypt,
+      // <time>", which answers nothing. History records what YOU
+      // produced (encrypt/sign), not what you read.
     } catch (err) {
       // Never leave decrypted plaintext on screen when the operation
       // errored. The single-input branches set the output *before*
@@ -671,13 +669,8 @@ export function useWorkspaceOperations({
         result.signatureStatus === "valid" ||
         result.signatureStatus === "unknown_key"
       ) {
-        // Metadata only for verify -- never the message content.
-        captureHistory({
-          op: "verify",
-          recipients: [],
-          signed: true,
-          ...(s.files.length > 0 ? { files: historyFileMeta() } : {}),
-        });
+        // Verify results are not captured (see the decrypt note): a
+        // content-free "verify, <time>" row carries no recall value.
       }
     } catch (e) {
       s.setError(
