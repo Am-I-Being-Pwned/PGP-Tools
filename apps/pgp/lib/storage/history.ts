@@ -1,0 +1,315 @@
+/**
+ * Segmented encrypted store for the opt-in operation history.
+ *
+ * Entries are appended to a "head" segment that is sealed once it grows
+ * past ~64 KB, after which a fresh head starts; only the head segment is
+ * ever re-encrypted on append. Each segment is an AES-256-GCM blob under
+ * the in-WASM contacts session key (same scheme as the keyring/contacts
+ * stores). A small plaintext manifest at `STORAGE_HISTORY` tracks segment
+ * numbers and byte sizes -- never entry data -- so pruning and usage
+ * reporting work without decrypting anything.
+ *
+ * History always lives in chrome.storage.local, regardless of the user's
+ * storageLocation preference: sync's total quota (~100 KB) couldn't hold
+ * it, and history shouldn't leave the device anyway.
+ *
+ * No plaintext is ever cached at module level -- every read decrypts on
+ * demand and every local goes out of scope when the call returns, so
+ * dropping the contacts session (master lock) leaves nothing readable
+ * here. See history.test.ts for the behavioral proof.
+ */
+
+import { STORAGE_HISTORY, STORAGE_HISTORY_SEGMENT_PREFIX } from "../constants";
+import { fromBase64, toBase64, unpackIvCiphertext } from "../encoding";
+import {
+  decryptContacts,
+  encryptContacts,
+  hasContactsSession,
+} from "../pgp/wasm";
+import { withLock } from "./engine";
+import { getPreferences } from "./preferences";
+
+export type HistoryOp = "encrypt" | "sign" | "decrypt" | "verify";
+
+export interface HistoryEntry {
+  id: string;
+  ts: number;
+  op: HistoryOp;
+  recipients: { fingerprint: string; name: string }[];
+  signed?: boolean;
+  /** Captured only for encrypt/sign; capped at CONTENT_CAP. */
+  content?: string;
+  truncated?: boolean;
+  /** File ops store metadata only, never payloads. */
+  files?: { name: string; size: number }[];
+}
+
+/** What callers pass to append: id/ts are assigned here. */
+export type NewHistoryEntry = Omit<HistoryEntry, "id" | "ts">;
+
+/** Seal the head segment once its JSON grows past this. */
+const SEGMENT_SEAL_BYTES = 64 * 1024;
+/** Per-entry content cap (UTF-16 code units) -- applies in ALL cases,
+ *  independent of the total byte budget. */
+export const CONTENT_CAP = 32 * 1024;
+/** Total byte budget without the optional `unlimitedStorage` permission. */
+const DEFAULT_BUDGET_BYTES = 2 * 1024 * 1024;
+/** Generous budget once `unlimitedStorage` has been granted. */
+const UNLIMITED_BUDGET_BYTES = 50 * 1024 * 1024;
+
+interface SegmentRef {
+  n: number;
+  /** Plaintext JSON byte size of the segment (budget accounting). */
+  bytes: number;
+}
+
+/** Oldest → newest; the last element is the head segment. */
+interface HistoryManifest {
+  segs: SegmentRef[];
+}
+
+interface EncryptedBlob {
+  iv: string;
+  ciphertext: string;
+}
+
+function isEncryptedBlob(v: unknown): v is EncryptedBlob {
+  if (typeof v !== "object" || v === null) return false;
+  const o = v as Record<string, unknown>;
+  return typeof o.iv === "string" && typeof o.ciphertext === "string";
+}
+
+function isManifest(v: unknown): v is HistoryManifest {
+  if (typeof v !== "object" || v === null) return false;
+  const segs = (v as Record<string, unknown>).segs;
+  return (
+    Array.isArray(segs) &&
+    segs.every(
+      (s: unknown) =>
+        typeof s === "object" &&
+        s !== null &&
+        typeof (s as Record<string, unknown>).n === "number" &&
+        typeof (s as Record<string, unknown>).bytes === "number",
+    )
+  );
+}
+
+const HISTORY_OPS: HistoryOp[] = ["encrypt", "sign", "decrypt", "verify"];
+
+function isValidEntry(v: unknown): v is HistoryEntry {
+  if (typeof v !== "object" || v === null) return false;
+  const o = v as Record<string, unknown>;
+  return (
+    typeof o.id === "string" &&
+    typeof o.ts === "number" &&
+    HISTORY_OPS.some((op) => op === o.op) &&
+    Array.isArray(o.recipients)
+  );
+}
+
+function segKey(n: number): string {
+  return `${STORAGE_HISTORY_SEGMENT_PREFIX}${n}`;
+}
+
+// ── budget ───────────────────────────────────────────────────────────
+
+/** The active total byte budget for a given permission state. */
+export function resolveBudget(hasUnlimited: boolean): number {
+  return hasUnlimited ? UNLIMITED_BUDGET_BYTES : DEFAULT_BUDGET_BYTES;
+}
+
+/** The permission API, or undefined where it isn't exposed (Firefox
+ *  behaves differently here) -- the chrome types claim it always exists,
+ *  hence the widening. */
+function permissionsApi(): typeof chrome.permissions | undefined {
+  return (chrome as Partial<typeof chrome>).permissions;
+}
+
+/** Whether the optional `unlimitedStorage` permission is currently
+ *  granted. Never persisted -- checked live so a revocation from
+ *  chrome://extensions takes effect on the next append/load. Feature-
+ *  detected and throw-safe (Firefox permission APIs differ). */
+export async function hasUnlimitedStorage(): Promise<boolean> {
+  try {
+    const permissions = permissionsApi();
+    if (!permissions) return false;
+    return await permissions.contains({ permissions: ["unlimitedStorage"] });
+  } catch {
+    return false;
+  }
+}
+
+/** Prompt for the optional `unlimitedStorage` permission (idempotent).
+ *  Called from the history toggle's user gesture. Returns whether it is
+ *  now granted; a denial or a throwing/absent API just means the
+ *  conservative default budget stays active -- never block the toggle. */
+export async function requestUnlimitedHistoryStorage(): Promise<boolean> {
+  try {
+    const permissions = permissionsApi();
+    if (!permissions) return false;
+    if (await hasUnlimitedStorage()) return true;
+    return await permissions.request({ permissions: ["unlimitedStorage"] });
+  } catch {
+    return false;
+  }
+}
+
+// ── storage plumbing (always chrome.storage.local) ───────────────────
+
+async function readManifest(): Promise<HistoryManifest> {
+  const raw = (await chrome.storage.local.get(STORAGE_HISTORY))[
+    STORAGE_HISTORY
+  ];
+  return isManifest(raw) ? raw : { segs: [] };
+}
+
+async function writeManifest(manifest: HistoryManifest): Promise<void> {
+  await chrome.storage.local.set({ [STORAGE_HISTORY]: manifest });
+}
+
+/** Decrypt one segment. Throw-safe: a segment that is missing, garbled,
+ *  or undecryptable is skipped rather than failing the whole load. */
+async function readSegment(n: number): Promise<HistoryEntry[]> {
+  try {
+    const blob = (await chrome.storage.local.get(segKey(n)))[segKey(n)];
+    if (!isEncryptedBlob(blob)) return [];
+    const plaintext = await decryptContacts(
+      fromBase64(blob.ciphertext),
+      fromBase64(blob.iv),
+    );
+    const parsed: unknown = JSON.parse(new TextDecoder().decode(plaintext));
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(isValidEntry);
+  } catch {
+    return [];
+  }
+}
+
+/** Encrypt + write one segment; returns its plaintext JSON byte size. */
+async function writeSegment(
+  n: number,
+  entries: HistoryEntry[],
+): Promise<number> {
+  const json = new TextEncoder().encode(JSON.stringify(entries));
+  const packed = await encryptContacts(json);
+  const { iv, ciphertext } = unpackIvCiphertext(packed);
+  await chrome.storage.local.set({
+    [segKey(n)]: { iv: toBase64(iv), ciphertext: toBase64(ciphertext) },
+  });
+  return json.length;
+}
+
+/** Drop oldest segments until the total fits the active budget. The head
+ *  segment is never dropped. Mutates `manifest`; returns whether anything
+ *  was pruned (i.e. the manifest needs rewriting). */
+async function pruneToBudget(manifest: HistoryManifest): Promise<boolean> {
+  const budget = resolveBudget(await hasUnlimitedStorage());
+  let total = manifest.segs.reduce((sum, s) => sum + s.bytes, 0);
+  let pruned = false;
+  while (manifest.segs.length > 1 && total > budget) {
+    const oldest = manifest.segs.shift();
+    if (!oldest) break;
+    total -= oldest.bytes;
+    await chrome.storage.local.remove(segKey(oldest.n));
+    pruned = true;
+  }
+  return pruned;
+}
+
+// ── public API ───────────────────────────────────────────────────────
+
+/** Append one entry. No-op while locked. Content is capped at
+ *  CONTENT_CAP (with `truncated: true`); decrypt/verify entries have any
+ *  content stripped defensively -- those ops are metadata-only. */
+export async function appendHistoryEntry(entry: NewHistoryEntry): Promise<void> {
+  if (!(await hasContactsSession())) return;
+  await withLock(STORAGE_HISTORY, async () => {
+    // Re-check inside the lock: a queued append must not run after lock.
+    if (!(await hasContactsSession())) return;
+
+    const manifest = await readManifest();
+    const last = manifest.segs.at(-1);
+    let head: SegmentRef;
+    if (last && last.bytes < SEGMENT_SEAL_BYTES) {
+      head = last;
+    } else {
+      head = { n: last ? last.n + 1 : 0, bytes: 0 };
+      manifest.segs.push(head);
+    }
+
+    const entries = head.bytes > 0 ? await readSegment(head.n) : [];
+    entries.push(finalizeEntry(entry));
+    head.bytes = await writeSegment(head.n, entries);
+
+    await pruneToBudget(manifest);
+    await writeManifest(manifest);
+  });
+}
+
+function finalizeEntry(entry: NewHistoryEntry): HistoryEntry {
+  const { content, truncated, ...rest } = entry;
+  const full: HistoryEntry = {
+    ...rest,
+    id: crypto.randomUUID(),
+    ts: Date.now(),
+  };
+  // decrypt/verify are metadata-only; enforce here so no caller mistake
+  // can persist decrypted plaintext.
+  if (entry.op === "decrypt" || entry.op === "verify") return full;
+  if (content === undefined) return full;
+  if (content.length > CONTENT_CAP) {
+    return { ...full, content: content.slice(0, CONTENT_CAP), truncated: true };
+  }
+  return { ...full, content, ...(truncated ? { truncated } : {}) };
+}
+
+/** All entries, newest first. Empty while locked. Also prunes down to
+ *  the active budget, so a revoked `unlimitedStorage` permission takes
+ *  effect on the next load. */
+export async function loadHistory(): Promise<HistoryEntry[]> {
+  if (!(await hasContactsSession())) return [];
+  return withLock(STORAGE_HISTORY, async () => {
+    if (!(await hasContactsSession())) return [];
+
+    const manifest = await readManifest();
+    if (await pruneToBudget(manifest)) await writeManifest(manifest);
+
+    const all: HistoryEntry[] = [];
+    for (const seg of manifest.segs) {
+      all.push(...(await readSegment(seg.n)));
+    }
+    // Segments and entries within them are stored oldest-first.
+    all.reverse();
+    return all;
+  });
+}
+
+/** Remove every segment and the manifest. Works while locked (deleting
+ *  ciphertext needs no session). */
+export async function clearHistory(): Promise<void> {
+  await withLock(STORAGE_HISTORY, async () => {
+    const manifest = await readManifest();
+    const keys = manifest.segs.map((s) => segKey(s.n));
+    await chrome.storage.local.remove([...keys, STORAGE_HISTORY]);
+  });
+}
+
+/** Total plaintext byte size across all segments (manifest metadata
+ *  only -- no decryption, so it also works while locked). */
+export async function historyByteSize(): Promise<number> {
+  const manifest = await readManifest();
+  return manifest.segs.reduce((sum, s) => sum + s.bytes, 0);
+}
+
+/** Capture hook for the workspace operations: appends only when the user
+ *  has opted in (`historyEnabled`) and isn't in never-cache mode. Never
+ *  throws -- history capture must never break or delay an operation. */
+export async function recordHistory(entry: NewHistoryEntry): Promise<void> {
+  try {
+    const prefs = await getPreferences();
+    if (!prefs.historyEnabled || prefs.neverCacheKeys) return;
+    await appendHistoryEntry(entry);
+  } catch {
+    // best-effort: a failed capture is invisible to the operation
+  }
+}

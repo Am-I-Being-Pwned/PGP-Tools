@@ -41,6 +41,8 @@ export interface PgpPreferences {
   /** Master enable for the CRX (Chrome extension) signing feature. Off by
    *  default; when true the CRX signing UI surfaces in Keys/Settings. */
   crxSigningEnabled: boolean;
+  /** Opt-in encrypted history of workspace operations. Off by default. */
+  historyEnabled: boolean;
 }
 
 const DEFAULT_PREFERENCES: PgpPreferences = {
@@ -58,6 +60,7 @@ const DEFAULT_PREFERENCES: PgpPreferences = {
   autoLockEnabled: true,
   lockOnTabAway: false,
   crxSigningEnabled: false,
+  historyEnabled: false,
 };
 
 // ── bootstrap vs settings split ──────────────────────────────────────

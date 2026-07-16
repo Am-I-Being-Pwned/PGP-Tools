@@ -14,6 +14,7 @@ import {
   downloadResults,
   downloadText,
 } from "../../lib/utils/download";
+import { recordHistory } from "../../lib/storage/history";
 import { formatFileSize } from "../../lib/utils/formatting";
 import {
   isZipArchive,
@@ -191,6 +192,11 @@ export function useWorkspaceOperations({
     }
   }
 
+  /** File metadata for history capture -- names and sizes only. */
+  function historyFileMeta() {
+    return s.files.map((f) => ({ name: f.name, size: f.size }));
+  }
+
   const execute = async () => {
     s.setError(null);
     s.setOutput("");
@@ -316,6 +322,16 @@ export function useWorkspaceOperations({
         binary: typeof result !== "string" ? result : undefined,
       });
     }
+
+    // Fire-and-forget: capture must never delay showing the result.
+    void recordHistory({
+      op: "encrypt",
+      recipients: [
+        { fingerprint: recipient.keyId, name: recipient.userIds[0] ?? "" },
+      ],
+      signed: signingHandle !== null,
+      ...(isFileInput ? { files: historyFileMeta() } : { content: s.input }),
+    });
   }
 
   async function executeDecrypt() {
@@ -446,6 +462,12 @@ export function useWorkspaceOperations({
           binary: result.data instanceof Uint8Array ? result.data : undefined,
         });
       }
+      // Metadata only for decrypt -- never the plaintext.
+      void recordHistory({
+        op: "decrypt",
+        recipients: [],
+        ...(isFileInput ? { files: historyFileMeta() } : {}),
+      });
     } catch (err) {
       // Never leave decrypted plaintext on screen when the operation
       // errored. The single-input branches set the output *before*
@@ -498,6 +520,15 @@ export function useWorkspaceOperations({
       s.setOperationDone(true);
       maybeAutoDownload(false, { text: signed });
     }
+
+    void recordHistory({
+      op: "sign",
+      recipients: [],
+      signed: true,
+      ...(s.files.length > 0
+        ? { files: historyFileMeta() }
+        : { content: s.input }),
+    });
   }
 
   async function executeVerify() {
@@ -551,6 +582,18 @@ export function useWorkspaceOperations({
         case "unsigned":
           s.setError("This message is not signed.");
           break;
+      }
+      if (
+        result.signatureStatus === "valid" ||
+        result.signatureStatus === "unknown_key"
+      ) {
+        // Metadata only for verify -- never the message content.
+        void recordHistory({
+          op: "verify",
+          recipients: [],
+          signed: true,
+          ...(s.files.length > 0 ? { files: historyFileMeta() } : {}),
+        });
       }
     } catch {
       s.setError(

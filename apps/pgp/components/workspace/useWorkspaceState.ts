@@ -70,6 +70,8 @@ export interface WorkspaceState {
   setFiles: (f: File[]) => void;
   alsoSign: boolean;
   setAlsoSign: (b: boolean) => void;
+  saveToHistory: boolean;
+  setSaveToHistory: (b: boolean) => void;
   zipFiles: boolean;
   setZipFiles: (b: boolean) => void;
   needsPassword: boolean;
@@ -135,6 +137,7 @@ export function useWorkspaceState(opts: {
   const [loading, setLoading] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [alsoSign, setAlsoSign] = useState(false);
+  const [saveToHistory, setSaveToHistory] = useState(false);
   const [zipFiles, setZipFiles] = useState(true);
   const [needsPassword, setNeedsPassword] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
@@ -173,7 +176,10 @@ export function useWorkspaceState(opts: {
   }, [resetOutput]);
 
   useEffect(() => {
-    void getPreferences().then((p) => setAlsoSign(p.signWhenEncrypting));
+    void getPreferences().then((p) => {
+      setAlsoSign(p.signWhenEncrypting);
+      setSaveToHistory(p.historyEnabled);
+    });
   }, []);
 
   // Restore an encrypted draft (if any) on mount. Single-shot: the
@@ -433,6 +439,8 @@ export function useWorkspaceState(opts: {
     setFiles,
     alsoSign,
     setAlsoSign,
+    saveToHistory,
+    setSaveToHistory,
     zipFiles,
     setZipFiles,
     needsPassword,
