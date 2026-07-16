@@ -89,6 +89,9 @@ interface WorkspaceViewProps {
   /** The user's configured default key: preferred when auto-selecting
    *  a private key and as the encrypt-to-self key. */
   defaultKeyId?: string | null;
+  /** When true (never-cache mode), history is disabled and wiped, so
+   *  the "Save to history" checkbox and History button are hidden. */
+  neverCacheKeys?: boolean;
 }
 
 export function WorkspaceView({
@@ -115,6 +118,7 @@ export function WorkspaceView({
   onPaletteOps,
   prefsVersion,
   defaultKeyId,
+  neverCacheKeys,
 }: WorkspaceViewProps) {
   const allPublicKeys: (ProtectedKeyBlob | PublicContactKey)[] = [
     ...myKeys,
@@ -522,22 +526,28 @@ export function WorkspaceView({
                   <span className="text-sm">Zip files</span>
                 </label>
               )}
-              <label className="flex items-center gap-2">
-                <Checkbox
-                  checked={s.saveToHistory}
-                  onCheckedChange={(v) => {
-                    const checked = v === true;
-                    s.setSaveToHistory(checked);
-                    void savePreferences({ historyEnabled: checked });
-                    // Enabling is a user gesture: ask for unlimitedStorage
-                    // so history gets the generous budget. A denial is fine
-                    // -- history still works within the default budget.
-                    if (checked) void requestUnlimitedHistoryStorage();
-                  }}
-                />
-                <span className="text-sm">Save to history</span>
-              </label>
-              <HistoryButton enabled={s.saveToHistory} />
+              {/* Never-cache means no history, ever: the toggle and the
+                  viewer disappear rather than offering a dead switch. */}
+              {!neverCacheKeys && (
+                <>
+                  <label className="flex items-center gap-2">
+                    <Checkbox
+                      checked={s.saveToHistory}
+                      onCheckedChange={(v) => {
+                        const checked = v === true;
+                        s.setSaveToHistory(checked);
+                        void savePreferences({ historyEnabled: checked });
+                        // Enabling is a user gesture: ask for unlimitedStorage
+                        // so history gets the generous budget. A denial is fine
+                        // -- history still works within the default budget.
+                        if (checked) void requestUnlimitedHistoryStorage();
+                      }}
+                    />
+                    <span className="text-sm">Save to history</span>
+                  </label>
+                  <HistoryButton enabled={s.saveToHistory} />
+                </>
+              )}
             </div>
             {s.alsoSign && myKeys.length > 1 && (
               <KeySelector

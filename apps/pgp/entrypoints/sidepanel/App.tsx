@@ -570,6 +570,7 @@ export default function App() {
               onPaletteOps={setWorkspaceBridge}
               prefsVersion={workspacePrefsVersion}
               defaultKeyId={defaultKeyId}
+              neverCacheKeys={neverCacheKeys}
             />
           </div>
           {activeTab === "keys" && (

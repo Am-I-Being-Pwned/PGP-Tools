@@ -20,19 +20,23 @@ import {
   STORAGE_MASTER_PROTECTION,
   STORAGE_SETTINGS,
 } from "../../lib/constants";
+import { enterNeverCacheMode } from "../../lib/never-cache";
 import { activePreset, PRESETS } from "../../lib/presets";
 import { isQuotaExceeded } from "../../lib/storage/chunked";
+import { historyByteSize } from "../../lib/storage/history";
 import {
   copyEncryptedBlobRepacked,
   purgeEncryptedBlob,
 } from "../../lib/storage/encrypted-store";
 import { invalidateLocationCache } from "../../lib/storage/engine";
 import { getPreferences, savePreferences } from "../../lib/storage/preferences";
+import { formatFileSize } from "../../lib/utils/formatting";
 import { ExportKeysPage } from "../keys/ExportKeysPage";
 import { CrxSigningInfoPage } from "../settings/CrxSigningInfoPage";
 import { DevToolsPage } from "../settings/DevToolsPage";
 import { ImportAllKeysPage } from "../settings/ImportAllKeysPage";
 import { SecurityPresetPage } from "../settings/SecurityPresetPage";
+import { ConfirmPage } from "./ConfirmPage";
 import { StorageLocationPicker } from "./StorageLocationPicker";
 
 const AUTO_LOCK_OPTIONS: { value: AutoLockTimeout; label: string }[] = [
@@ -125,6 +129,11 @@ export function SettingsView({
   const [showCrxInfo, setShowCrxInfo] = useState(false);
   const [showDevTools, setShowDevTools] = useState(false);
   const [showPresets, setShowPresets] = useState(false);
+  // Stored-history byte size at the moment the user tried to turn
+  // never-cache on; non-null renders the delete-history confirm page.
+  const [neverCacheConfirmBytes, setNeverCacheConfirmBytes] = useState<
+    number | null
+  >(null);
 
   // Full preferences snapshot for computing the active preset: the
   // bundles cover fields this view has no props for (historyEnabled,
@@ -232,12 +241,53 @@ export function SettingsView({
     void savePreferences({ autoLockMinutes: v });
   };
 
+  // Enter never-cache via the shared transition (flip prefs + wipe
+  // history), then sync this view's snapshot and the workspace toggles.
+  const enableNeverCache = async () => {
+    await enterNeverCacheMode();
+    onNeverCacheKeysChange(true);
+    setPrefs(await getPreferences());
+    // The transition also turned historyEnabled off; the always-mounted
+    // workspace renders that toggle, so tell it to re-read.
+    onWorkspacePrefsChanged?.();
+  };
+
+  const handleNeverCacheToggle = async (v: boolean) => {
+    if (!v) {
+      // Turning never-cache OFF never re-enables history; the user
+      // opted out of retention and must opt back in explicitly.
+      onNeverCacheKeysChange(false);
+      void savePreferences({ neverCacheKeys: false });
+      return;
+    }
+    const bytes = await historyByteSize();
+    if (bytes > 0) {
+      // Stored history exists: entering never-cache deletes it, so
+      // confirm with the cost spelled out before flipping anything.
+      setNeverCacheConfirmBytes(bytes);
+      return;
+    }
+    await enableNeverCache();
+  };
+
   const applyPreset = async (id: PresetId) => {
     // storageLocation can't go through plain savePreferences: flipping
     // it without migrating the vault blobs would strand them in the
     // old area. Apply the rest, then run the real migration if needed.
     const { storageLocation: bundleLocation, ...bundle } = PRESETS[id].bundle;
-    await savePreferences(bundle);
+    if (bundle.neverCacheKeys === true) {
+      // Route the never-cache flip (and its history wipe) through the
+      // shared transition so this path can't diverge from the toggle.
+      const {
+        neverCacheKeys: _never,
+        historyEnabled: _history,
+        ...rest
+      } = bundle;
+      await savePreferences(rest);
+      await enterNeverCacheMode();
+    } else {
+      await savePreferences(bundle);
+    }
 
     // Sync the parent-held state for fields this view has props for.
     if (bundle.autoLockEnabled !== undefined) {
@@ -377,10 +427,7 @@ export function SettingsView({
           </div>
           <Switch
             checked={neverCacheKeys}
-            onCheckedChange={(v) => {
-              onNeverCacheKeysChange(v);
-              void savePreferences({ neverCacheKeys: v });
-            }}
+            onCheckedChange={(v) => void handleNeverCacheToggle(v)}
           />
         </label>
       </div>
@@ -579,6 +626,20 @@ export function SettingsView({
 
       {showCrxInfo && (
         <CrxSigningInfoPage onClose={() => setShowCrxInfo(false)} />
+      )}
+
+      {neverCacheConfirmBytes !== null && (
+        <ConfirmPage
+          title="Delete saved history?"
+          confirmLabel="Turn on and delete history"
+          onCancel={() => setNeverCacheConfirmBytes(null)}
+          onConfirm={enableNeverCache}
+        >
+          <p>
+            Never-cache also deletes your saved history (
+            {formatFileSize(neverCacheConfirmBytes)}). It can't be recovered.
+          </p>
+        </ConfirmPage>
       )}
 
       {showPresets && (
