@@ -148,7 +148,7 @@ export function HistoryPage({
           ) : undefined
         }
       >
-        {entries.length > 5 && (
+        {entries.length > 0 && (
           <input
             type="text"
             placeholder="Search history..."
