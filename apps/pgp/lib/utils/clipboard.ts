@@ -28,6 +28,19 @@ function armWipe(delayMs: number): void {
 }
 
 /**
+ * Resolve the wipe delay from the `clipboardWipeSeconds` preference,
+ * falling back to 60 s if preferences are unreadable (e.g. vault locked
+ * mid-copy, storage error).
+ */
+export async function clipboardWipeDelayMs(): Promise<number> {
+  try {
+    return (await getPreferences()).clipboardWipeSeconds * 1000;
+  } catch {
+    return FALLBACK_WIPE_MS;
+  }
+}
+
+/**
  * Schedule the clipboard wipe. With no argument the delay comes from the
  * `clipboardWipeSeconds` preference, read at call time (falling back to
  * 60 s if preferences are unreadable); pass `delayMs` to override.
@@ -39,7 +52,5 @@ export function scheduleClipboardClear(delayMs?: number): void {
     armWipe(delayMs);
     return;
   }
-  void getPreferences()
-    .then((prefs) => armWipe(prefs.clipboardWipeSeconds * 1000))
-    .catch(() => armWipe(FALLBACK_WIPE_MS));
+  void clipboardWipeDelayMs().then(armWipe);
 }
