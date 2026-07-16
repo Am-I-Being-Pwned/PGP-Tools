@@ -122,18 +122,29 @@ export function ImportAllKeysPage({
   const importCrxBlobs = async (blobs: CrxSigningKeyBlob[]) => {
     if (blobs.length === 0 || !onAddCrxKey) return;
     let added = 0;
+    const failures: string[] = [];
     for (const blob of blobs) {
       try {
         await onAddCrxKey(blob);
         added++;
-      } catch {
-        toast.error(
-          `Failed to restore CRX key ${blob.label ?? blob.extensionId.slice(0, 8)}`,
+      } catch (e) {
+        failures.push(
+          `${blob.label ?? blob.extensionId.slice(0, 8)}: ${
+            e instanceof Error ? e.message : "unknown error"
+          }`,
         );
       }
     }
+    if (failures.length > 0)
+      toast.error(
+        `${failures.length} CRX key${failures.length > 1 ? "s" : ""} failed to restore`,
+        { id: "crx-restore-failed", description: failures[0] },
+      );
     if (added > 0)
-      toast.success(`Restored ${added} CRX signing key${added > 1 ? "s" : ""}`);
+      toast.success(
+        `Restored ${added} CRX signing key${added > 1 ? "s" : ""}`,
+        { id: "crx-restored" },
+      );
   };
 
   const handlePasteNext = async (close: () => void) => {
@@ -302,6 +313,7 @@ export function ImportAllKeysPage({
           if (imported > 0)
             toast.success(
               `Imported ${imported} private key${imported > 1 ? "s" : ""}`,
+              { id: "private-keys-imported" },
             );
           const name = key.keyInfo.userIds[0] ?? key.keyInfo.keyId.slice(-8);
           setError(
@@ -316,6 +328,7 @@ export function ImportAllKeysPage({
 
       toast.success(
         `Imported ${imported} private key${imported > 1 ? "s" : ""}`,
+        { id: "private-keys-imported" },
       );
       if (skippedPrivates > 0)
         toast.info(
