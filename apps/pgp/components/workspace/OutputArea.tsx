@@ -14,18 +14,6 @@ interface OutputAreaProps {
   fullHeight?: boolean;
 }
 
-// Friendly label derived from the armor header, so the success note says
-// what was produced without needing the mode passed in.
-function outputLabel(armored: string): string {
-  const kind = /-----BEGIN PGP (.+?)-----/.exec(armored)?.[1] ?? "";
-  if (kind === "MESSAGE") return "Encrypted message";
-  if (kind === "SIGNED MESSAGE") return "Signed message";
-  if (kind === "SIGNATURE") return "Signature";
-  if (kind.includes("PUBLIC KEY")) return "Public key";
-  if (kind.includes("PRIVATE KEY")) return "Private key";
-  return "PGP output";
-}
-
 export function OutputArea({
   output,
   binaryOutput,
@@ -59,15 +47,7 @@ export function OutputArea({
   if (!fullHeight) {
     return (
       <div className="space-y-2">
-        {statusText ? (
-          <p className="text-xs text-green-400">{statusText}</p>
-        ) : (
-          output && (
-            <p className="text-xs text-green-400">
-              {outputLabel(output)} ready - {formatFileSize(output.length)}
-            </p>
-          )
-        )}
+        {statusText && <p className="text-xs text-green-400">{statusText}</p>}
         {binaryOutput && !output && !hasFileResults && !statusText && (
           <p className="text-muted-foreground text-sm">
             {fileName ?? "output.gpg"} - {formatFileSize(binaryOutput.length)}
