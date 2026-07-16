@@ -218,9 +218,13 @@ export function RecipientPicker({
                 <span
                   key={key.keyId}
                   title={detail ? `${name} - ${detail}` : name}
-                  className="bg-secondary text-secondary-foreground inline-flex max-w-40 items-center gap-1 rounded-md border px-2 py-0.5 text-xs"
+                  // max-w-full (not a fixed cap): a chip sizes to its
+                  // content and only truncates when the row genuinely
+                  // can't fit it. With several chips the flex-wrap row
+                  // wraps first, so truncation stays a last resort.
+                  className="bg-secondary text-secondary-foreground inline-flex max-w-full items-center gap-1 rounded-md border px-2 py-0.5 text-xs"
                 >
-                  <span className="truncate">{name}</span>
+                  <span className="min-w-0 truncate">{name}</span>
                   <button
                     type="button"
                     aria-label={`Remove ${name}`}
