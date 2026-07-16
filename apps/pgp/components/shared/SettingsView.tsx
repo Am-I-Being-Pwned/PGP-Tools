@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ChevronRightIcon } from "lucide-react";
 
 import { Button } from "@amibeingpwned/ui/button";
 import { Switch } from "@amibeingpwned/ui/switch";
@@ -31,7 +32,7 @@ import { ExportKeysPage } from "../keys/ExportKeysPage";
 import { CrxSigningInfoPage } from "../settings/CrxSigningInfoPage";
 import { DevToolsPage } from "../settings/DevToolsPage";
 import { ImportAllKeysPage } from "../settings/ImportAllKeysPage";
-import { PresetPicker } from "./PresetPicker";
+import { SecurityPresetPage } from "../settings/SecurityPresetPage";
 import { StorageLocationPicker } from "./StorageLocationPicker";
 
 const AUTO_LOCK_OPTIONS: { value: AutoLockTimeout; label: string }[] = [
@@ -123,6 +124,7 @@ export function SettingsView({
   const [showImportAll, setShowImportAll] = useState(false);
   const [showCrxInfo, setShowCrxInfo] = useState(false);
   const [showDevTools, setShowDevTools] = useState(false);
+  const [showPresets, setShowPresets] = useState(false);
 
   // Full preferences snapshot for computing the active preset: the
   // bundles cover fields this view has no props for (historyEnabled,
@@ -140,11 +142,6 @@ export function SettingsView({
     neverCacheKeys,
     storageLocation,
   ]);
-
-  // Preset awaiting an explicit confirm because applying it would
-  // overwrite custom settings.
-  const [pendingPreset, setPendingPreset] = useState<PresetId | null>(null);
-  const [applyingPreset, setApplyingPreset] = useState(false);
 
   const currentPreset = prefs ? activePreset(prefs) : null;
 
@@ -236,99 +233,62 @@ export function SettingsView({
   };
 
   const applyPreset = async (id: PresetId) => {
-    setPendingPreset(null);
-    setApplyingPreset(true);
-    try {
-      // storageLocation can't go through plain savePreferences: flipping
-      // it without migrating the vault blobs would strand them in the
-      // old area. Apply the rest, then run the real migration if needed.
-      const { storageLocation: bundleLocation, ...bundle } = PRESETS[id].bundle;
-      await savePreferences(bundle);
+    // storageLocation can't go through plain savePreferences: flipping
+    // it without migrating the vault blobs would strand them in the
+    // old area. Apply the rest, then run the real migration if needed.
+    const { storageLocation: bundleLocation, ...bundle } = PRESETS[id].bundle;
+    await savePreferences(bundle);
 
-      // Sync the parent-held state for fields this view has props for.
-      if (bundle.autoLockEnabled !== undefined) {
-        onAutoLockEnabledChange(bundle.autoLockEnabled);
-      }
-      if (bundle.autoLockMinutes !== undefined) {
-        onAutoLockChange(bundle.autoLockMinutes);
-      }
-      if (bundle.lockOnTabAway !== undefined) {
-        onLockOnTabAwayChange(bundle.lockOnTabAway);
-      }
-      if (bundle.neverCacheKeys !== undefined) {
-        onNeverCacheKeysChange(bundle.neverCacheKeys);
-      }
-      setPrefs(await getPreferences());
-      // The bundle rewrote toggles the always-mounted workspace renders
-      // (historyEnabled, encryptToSelf); tell it to re-read.
-      onWorkspacePrefsChanged?.();
-
-      if (bundleLocation !== undefined && bundleLocation !== storageLocation) {
-        await handleStorageChange(bundleLocation);
-      }
-    } finally {
-      setApplyingPreset(false);
+    // Sync the parent-held state for fields this view has props for.
+    if (bundle.autoLockEnabled !== undefined) {
+      onAutoLockEnabledChange(bundle.autoLockEnabled);
     }
-  };
-
-  const handlePresetSelect = (id: PresetId) => {
-    if (applyingPreset || migratingTo !== null) return;
-    // Overwriting a custom setup deserves a confirm; re-applying from a
-    // clean preset state is a no-op-or-obvious change, so just do it.
-    if (currentPreset === "custom") {
-      setPendingPreset(id);
-      return;
+    if (bundle.autoLockMinutes !== undefined) {
+      onAutoLockChange(bundle.autoLockMinutes);
     }
-    void applyPreset(id);
+    if (bundle.lockOnTabAway !== undefined) {
+      onLockOnTabAwayChange(bundle.lockOnTabAway);
+    }
+    if (bundle.neverCacheKeys !== undefined) {
+      onNeverCacheKeysChange(bundle.neverCacheKeys);
+    }
+    setPrefs(await getPreferences());
+    // The bundle rewrote toggles the always-mounted workspace renders
+    // (historyEnabled, encryptToSelf); tell it to re-read.
+    onWorkspacePrefsChanged?.();
+
+    if (bundleLocation !== undefined && bundleLocation !== storageLocation) {
+      await handleStorageChange(bundleLocation);
+    }
   };
 
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="mb-2 text-sm font-semibold">Security preset</h2>
-        {currentPreset === "custom" && (
-          <p className="text-muted-foreground mb-2 text-xs">
-            Current: Custom. A bundled setting was changed, so no preset matches
-            exactly.
-          </p>
-        )}
-        <PresetPicker
-          selected={
-            currentPreset !== null && currentPreset !== "custom"
-              ? currentPreset
-              : null
-          }
-          onSelect={handlePresetSelect}
-        />
-        {pendingPreset !== null && (
-          <div className="border-border bg-muted/40 mt-2 rounded-md border p-3">
-            <p className="text-xs">
-              Replace your custom settings with the{" "}
-              <b>{PRESETS[pendingPreset].title}</b> preset? Only the settings
-              listed on its card change, and you can adjust any of them again
-              afterwards.
-            </p>
-            <div className="mt-2 flex gap-2">
-              <Button
-                size="sm"
-                className="flex-1"
-                disabled={applyingPreset}
-                onClick={() => void applyPreset(pendingPreset)}
-              >
-                Apply preset
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1"
-                disabled={applyingPreset}
-                onClick={() => setPendingPreset(null)}
-              >
-                Cancel
-              </Button>
-            </div>
+        <button
+          type="button"
+          onClick={() => setShowPresets(true)}
+          className="border-border hover:border-muted-foreground/40 flex w-full items-center justify-between gap-4 rounded-md border p-4 text-left transition-colors"
+        >
+          <div className="min-w-0">
+            <span className="text-sm">Security preset</span>
+            {currentPreset === "custom" && (
+              <p className="text-muted-foreground text-xs">
+                A bundled setting was changed
+              </p>
+            )}
           </div>
-        )}
+          <span className="flex min-w-0 items-center gap-1">
+            <span className="text-muted-foreground truncate text-sm">
+              {currentPreset === null
+                ? ""
+                : currentPreset === "custom"
+                  ? "Custom"
+                  : PRESETS[currentPreset].title}
+            </span>
+            <ChevronRightIcon className="text-muted-foreground h-4 w-4 shrink-0" />
+          </span>
+        </button>
       </div>
 
       <div>
@@ -619,6 +579,14 @@ export function SettingsView({
 
       {showCrxInfo && (
         <CrxSigningInfoPage onClose={() => setShowCrxInfo(false)} />
+      )}
+
+      {showPresets && (
+        <SecurityPresetPage
+          currentPreset={currentPreset}
+          onApply={applyPreset}
+          onClose={() => setShowPresets(false)}
+        />
       )}
 
       {import.meta.env.DEV && showDevTools && (
