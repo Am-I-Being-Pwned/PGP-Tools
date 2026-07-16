@@ -26,6 +26,7 @@ import {
 } from "@amibeingpwned/ui/select";
 
 import type { WorkspaceOpsBridge } from "../../hooks/useActionContext";
+import { useDelayedFlag } from "../../hooks/useDelayedFlag";
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
 import type { WorkspaceAction } from "../../lib/messages";
 import type { PublicContactKey } from "../../lib/storage/contacts";
@@ -146,6 +147,11 @@ export function WorkspaceView({
     autoDownloadText,
     onOperationComplete,
   });
+
+  // Deferred loading labels: buttons disable immediately off s.loading,
+  // but the label swap waits so sub-150ms crypto ops never flash
+  // "Processing..." (Linear's deferred-fallback rule).
+  const showLoadingLabel = useDelayedFlag(s.loading);
 
   const needsRecipient = s.mode === "encrypt";
   const needsPrivateKey = s.mode === "decrypt" || s.mode === "sign";
@@ -558,7 +564,7 @@ export function WorkspaceView({
               onClick={ops.handlePasswordSubmit}
               disabled={s.loading}
             >
-              {s.loading
+              {showLoadingLabel
                 ? "..."
                 : s.pendingCrxSign
                   ? "Sign"
@@ -627,7 +633,7 @@ export function WorkspaceView({
                 onClick={s.operationDone ? s.resetAll : ops.verifyCrxInput}
                 disabled={s.loading}
               >
-                {s.loading
+                {showLoadingLabel
                   ? "Verifying..."
                   : s.operationDone
                     ? "Reset"
@@ -639,7 +645,7 @@ export function WorkspaceView({
                 onClick={ops.executeCrxSign}
                 disabled={s.loading}
               >
-                {s.loading ? "Processing..." : "Sign for Web Store"}
+                {showLoadingLabel ? "Processing..." : "Sign for Web Store"}
               </Button>
             ) : (
               <div className="flex gap-2">
@@ -688,7 +694,7 @@ export function WorkspaceView({
                     disabled={s.loading || !hasInput}
                     shortcut={RUN_SHORTCUT}
                   >
-                    {s.loading
+                    {showLoadingLabel
                       ? "Processing..."
                       : s.operationDone && s.mode === "verify"
                         ? "Reset"

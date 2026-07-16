@@ -5,6 +5,7 @@ import { Button } from "@amibeingpwned/ui/button";
 
 import type { PresentedError } from "../../lib/errors/present";
 import { presentError } from "../../lib/errors/present";
+import { useDelayedFlag } from "../../hooks/useDelayedFlag";
 import { useShortcut } from "../../hooks/useShortcut";
 import { SlideOverHeader, SlideOverPanel, useSlideOver } from "./SlideOver";
 
@@ -87,6 +88,9 @@ export function SubPage({
   const [showDetail, setShowDetail] = useState(false);
 
   const busy = busyIndex !== null;
+  // Buttons disable immediately off `busy`; the busyText label swap is
+  // deferred so sub-150ms actions never flash a loading state.
+  const showBusyLabel = useDelayedFlag(busy);
 
   const runAction = (index: number) => {
     const action = actions?.[index];
@@ -167,7 +171,9 @@ export function SubPage({
               onClick={() => runAction(i)}
               shortcut={i === shortcutIndex ? SUBMIT_SHORTCUT : undefined}
             >
-              {busyIndex === i ? (action.busyText ?? "...") : action.text}
+              {busyIndex === i && showBusyLabel
+                ? (action.busyText ?? "...")
+                : action.text}
             </Button>
           ))}
         </div>
