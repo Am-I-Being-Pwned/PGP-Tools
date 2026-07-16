@@ -181,8 +181,10 @@ function HistoryEntryPage({
         )}
         {entry.files && entry.files.length > 0 && (
           <ul>
-            {entry.files.map((f) => (
-              <li key={f.name} className="truncate">
+            {/* Index keys: duplicate filenames are legal and the list
+                never reorders. */}
+            {entry.files.map((f, i) => (
+              <li key={i} className="truncate">
                 {f.name} ({formatFileSize(f.size)})
               </li>
             ))}

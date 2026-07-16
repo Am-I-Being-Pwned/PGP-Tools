@@ -52,6 +52,12 @@ const SEGMENT_SEAL_BYTES = 64 * 1024;
 /** Per-entry content cap (UTF-16 code units) -- applies in ALL cases,
  *  independent of the total byte budget. */
 export const CONTENT_CAP = 32 * 1024;
+/** Max files kept per entry. Content is capped at CONTENT_CAP but file
+ *  metadata has no natural bound -- a many-thousand-file drop must not
+ *  balloon a single entry past the segment/budget scale. */
+export const FILES_CAP = 500;
+/** Max stored filename length (UTF-16 code units). */
+const FILE_NAME_CAP = 256;
 /** Total byte budget without the optional `unlimitedStorage` permission. */
 const DEFAULT_BUDGET_BYTES = 2 * 1024 * 1024;
 /** Generous budget once `unlimitedStorage` has been granted. */
@@ -314,13 +320,41 @@ export async function appendHistoryEntry(
   });
 }
 
+/** Cap a file-metadata list to FILES_CAP entries and FILE_NAME_CAP
+ *  characters per name. Returns the (possibly) capped list and whether
+ *  anything was cut. */
+function capFiles(files: NonNullable<HistoryEntry["files"]>): {
+  files: NonNullable<HistoryEntry["files"]>;
+  capped: boolean;
+} {
+  const capped =
+    files.length > FILES_CAP ||
+    files.some((f) => f.name.length > FILE_NAME_CAP);
+  if (!capped) return { files, capped };
+  return {
+    files: files
+      .slice(0, FILES_CAP)
+      .map((f) =>
+        f.name.length > FILE_NAME_CAP
+          ? { ...f, name: f.name.slice(0, FILE_NAME_CAP) }
+          : f,
+      ),
+    capped,
+  };
+}
+
 function finalizeEntry(entry: NewHistoryEntry): HistoryEntry {
-  const { content, truncated, ...rest } = entry;
+  const { content, truncated, files, ...rest } = entry;
   const full: HistoryEntry = {
     ...rest,
     id: crypto.randomUUID(),
     ts: Date.now(),
   };
+  if (files !== undefined) {
+    const result = capFiles(files);
+    full.files = result.files;
+    if (result.capped) full.truncated = true;
+  }
   // decrypt/verify are metadata-only; enforce here so no caller mistake
   // can persist decrypted plaintext.
   if (entry.op === "decrypt" || entry.op === "verify") return full;
