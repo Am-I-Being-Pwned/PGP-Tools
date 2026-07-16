@@ -47,6 +47,9 @@ export interface PgpPreferences {
   crxSigningEnabled: boolean;
   /** Opt-in encrypted history of workspace operations. Off by default. */
   historyEnabled: boolean;
+  /** Seconds a sensitive clipboard copy (exported private key, revocation
+   *  certificate) survives before the best-effort wipe fires. */
+  clipboardWipeSeconds: number;
 }
 
 const DEFAULT_PREFERENCES: PgpPreferences = {
@@ -66,6 +69,7 @@ const DEFAULT_PREFERENCES: PgpPreferences = {
   lockOnTabAway: false,
   crxSigningEnabled: false,
   historyEnabled: false,
+  clipboardWipeSeconds: 60,
 };
 
 // ── bootstrap vs settings split ──────────────────────────────────────

@@ -1,4 +1,10 @@
-/** Best-effort clipboard wipe after `delayMs` for copies of sensitive
+import { getPreferences } from "../storage/preferences";
+
+/** Fallback wipe delay when preferences are unreadable (e.g. vault
+ *  locked mid-copy, storage error). Matches the pref default. */
+const FALLBACK_WIPE_MS = 60_000;
+
+/** Best-effort clipboard wipe after a delay for copies of sensitive
  *  material (exported private keys, revocation certificates). We can't
  *  read the clipboard to know if the user has since copied something
  *  else (no permission), so the wipe is unconditional -- acceptable to
@@ -12,11 +18,28 @@
  *  A re-copy from anywhere resets the single deadline. */
 let clearTimer: ReturnType<typeof setTimeout> | undefined;
 
-export function scheduleClipboardClear(delayMs = 60_000): void {
+function armWipe(delayMs: number): void {
   if (clearTimer) clearTimeout(clearTimer);
   clearTimer = setTimeout(() => {
     void navigator.clipboard.writeText("").catch(() => {
       /* clipboard API may have been revoked; nothing to do */
     });
   }, delayMs);
+}
+
+/**
+ * Schedule the clipboard wipe. With no argument the delay comes from the
+ * `clipboardWipeSeconds` preference, read at call time (falling back to
+ * 60 s if preferences are unreadable); pass `delayMs` to override.
+ * Synchronous for callers either way -- the pref read arms the timer
+ * when it resolves.
+ */
+export function scheduleClipboardClear(delayMs?: number): void {
+  if (delayMs !== undefined) {
+    armWipe(delayMs);
+    return;
+  }
+  void getPreferences()
+    .then((prefs) => armWipe(prefs.clipboardWipeSeconds * 1000))
+    .catch(() => armWipe(FALLBACK_WIPE_MS));
 }
