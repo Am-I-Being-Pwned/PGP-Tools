@@ -278,6 +278,14 @@ export function HistoryPage({
                       {formatDistanceToNow(entry.ts, { addSuffix: true })}
                     </span>
                   </span>
+                  {/* Content is the point of history: preview it by default
+                      rather than hiding everything behind a click. The
+                      search snippet replaces this while a query is active. */}
+                  {!expanded && !search && entry.content !== undefined && (
+                    <span className="text-muted-foreground mt-1 line-clamp-2 block pl-6 text-xs">
+                      {entry.content.replace(/\s+/g, " ").trim().slice(0, 240)}
+                    </span>
+                  )}
                   {snippet && (
                     <span className="text-muted-foreground mt-1 line-clamp-2 block pl-6 text-xs">
                       {snippet.truncatedStart && "…"}
