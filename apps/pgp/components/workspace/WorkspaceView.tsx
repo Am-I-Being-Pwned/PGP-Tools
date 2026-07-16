@@ -25,13 +25,13 @@ import {
   SelectValue,
 } from "@amibeingpwned/ui/select";
 
+import type { WorkspaceOpsBridge } from "../../hooks/useActionContext";
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
 import type { WorkspaceAction } from "../../lib/messages";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { WorkspaceDraft } from "../../lib/workspace-draft";
 import type { WorkspaceIntake } from "./useWorkspaceState";
-import { useShortcut } from "../../hooks/useShortcut";
 import { requestUnlimitedHistoryStorage } from "../../lib/storage/history";
 import { savePreferences } from "../../lib/storage/preferences";
 import { saveCrxViaPrompt } from "../../lib/utils/download";
@@ -79,6 +79,8 @@ interface WorkspaceViewProps {
   /** A drop routed to the workspace by the global dropzone. */
   intake?: WorkspaceIntake | null;
   onIntakeConsumed?: () => void;
+  /** Pushes the palette-facing state/ops slice up on every change. */
+  onPaletteOps?: (bridge: WorkspaceOpsBridge | null) => void;
 }
 
 export function WorkspaceView({
@@ -102,6 +104,7 @@ export function WorkspaceView({
   onDraftChange,
   intake,
   onIntakeConsumed,
+  onPaletteOps,
 }: WorkspaceViewProps) {
   const allPublicKeys: (ProtectedKeyBlob | PublicContactKey)[] = [
     ...myKeys,
@@ -224,9 +227,9 @@ export function WorkspaceView({
   const showFullOutput =
     s.operationDone && s.mode === "decrypt" && s.output.length > 0;
 
-  // mod+Enter mirrors the main action button: bound only while that
-  // button is rendered (the trailing branch of the action bar) and
-  // would be enabled. In verify-done state it resets, like the button.
+  // Whether the main action button is rendered (the trailing branch of
+  // the action bar). The Run action only fires while it would be
+  // enabled; in verify-done state it resets, like the button.
   const mainActionShown =
     !showFullOutput &&
     !s.needsPassword &&
@@ -234,20 +237,46 @@ export function WorkspaceView({
     !showCrxVerify &&
     !showCrxSign &&
     !(s.operationDone && s.mode !== "verify");
-  useShortcut(
-    RUN_SHORTCUT,
-    () => {
-      if (s.operationDone && s.mode === "verify") s.resetAll();
-      else void ops.execute();
-    },
-    { enabled: mainActionShown && !s.loading && hasInput },
-  );
 
-  // mod+shift+C copies completed text output (both the inline Copy
-  // button and the full-output view route through handleCopy).
-  useShortcut(COPY_SHORTCUT, () => void handleCopy(), {
-    enabled: s.operationDone && s.output.length > 0 && !s.loading,
+  // mod+Enter (run) and mod+shift+C (copy) are dispatched through the
+  // action registry (lib/actions), which reads the state slice pushed
+  // up here. Ops close over fresh state via a ref; the snapshot effect
+  // below re-pushes only when a palette-readable value changes.
+  const hasOutput = s.operationDone && s.output.length > 0 && !s.loading;
+  const canRun = mainActionShown && !s.loading;
+  const paletteRef = useRef({ s, canRun, hasOutput, handleCopy, ops });
+  useEffect(() => {
+    paletteRef.current = { s, canRun, hasOutput, handleCopy, ops };
   });
+  useEffect(() => {
+    onPaletteOps?.({
+      mode: s.mode,
+      hasInput,
+      hasOutput,
+      historyEnabled: s.saveToHistory,
+      // Mirrors the mode Select: a completed operation resets fully,
+      // otherwise only the (now stale) output is cleared.
+      setMode: (m) => {
+        const p = paletteRef.current;
+        p.s.setMode(m);
+        if (p.s.operationDone) p.s.resetAll();
+        else p.s.resetOutput();
+      },
+      // In verify-done state Run resets, like the button it mirrors.
+      execute: () => {
+        const p = paletteRef.current;
+        if (!p.canRun) return;
+        if (p.s.operationDone && p.s.mode === "verify") p.s.resetAll();
+        else void p.ops.execute();
+      },
+      clearInput: () => paletteRef.current.s.resetAll(),
+      copyOutput: () => {
+        if (paletteRef.current.hasOutput) void paletteRef.current.handleCopy();
+      },
+    });
+  }, [onPaletteOps, s.mode, hasInput, hasOutput, s.saveToHistory]);
+  useEffect(() => () => onPaletteOps?.(null), [onPaletteOps]);
+
   const copyTitle = `Copy (${formatShortcutTitle(COPY_SHORTCUT, isMacPlatform())})`;
   const copyAria = ariaKeyShortcuts(COPY_SHORTCUT, isMacPlatform());
 
