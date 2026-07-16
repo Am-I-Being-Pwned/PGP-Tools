@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import type { PgpPreferences } from "./storage/preferences";
-import { activePreset, describeBundle, PRESET_IDS, PRESETS } from "./presets";
+import {
+  activePreset,
+  describeBundle,
+  PRESET_IDS,
+  PRESETS,
+  snapshotBundleFields,
+} from "./presets";
 
 /** A full preferences object with every field populated; tests overlay
  *  preset bundles on top of it. Mirrors the shipped defaults. */
@@ -170,5 +176,53 @@ describe("describeBundle", () => {
         expect(line).not.toMatch(/—/);
       }
     }
+  });
+});
+
+describe("snapshotBundleFields", () => {
+  it("captures exactly the bundled fields, with the CURRENT values", () => {
+    const prefs = fullPrefs({
+      autoLockEnabled: false,
+      autoLockMinutes: 60,
+      lockOnTabAway: true,
+      neverCacheKeys: true,
+      historyEnabled: true,
+      encryptToSelf: false,
+      clipboardWipeSeconds: 15,
+    });
+    expect(snapshotBundleFields(prefs, PRESETS.casual.bundle)).toEqual({
+      autoLockEnabled: false,
+      autoLockMinutes: 60,
+      lockOnTabAway: true,
+      neverCacheKeys: true,
+      historyEnabled: true,
+      encryptToSelf: false,
+      clipboardWipeSeconds: 15,
+    });
+  });
+
+  it("includes storageLocation only when the bundle sets it", () => {
+    const prefs = fullPrefs({ storageLocation: "sync" });
+    expect(
+      snapshotBundleFields(prefs, PRESETS.casual.bundle),
+    ).not.toHaveProperty("storageLocation");
+    expect(
+      snapshotBundleFields(prefs, PRESETS.paranoid.bundle).storageLocation,
+    ).toBe("sync");
+  });
+
+  it("never captures fields outside the bundle", () => {
+    const prefs = fullPrefs({ advancedMode: true, defaultKeyId: "abc" });
+    const snapshot = snapshotBundleFields(prefs, PRESETS.careful.bundle);
+    expect(Object.keys(snapshot).sort()).toEqual(
+      Object.keys(PRESETS.careful.bundle).sort(),
+    );
+  });
+
+  it("round-trips: applying a bundle then the snapshot restores prefs", () => {
+    const before = fullPrefs({ autoLockMinutes: 60, historyEnabled: false });
+    const snapshot = snapshotBundleFields(before, PRESETS.casual.bundle);
+    const applied = { ...before, ...PRESETS.casual.bundle };
+    expect({ ...applied, ...snapshot }).toEqual(before);
   });
 });

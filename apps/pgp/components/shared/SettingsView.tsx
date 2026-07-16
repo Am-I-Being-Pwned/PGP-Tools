@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronRightIcon } from "lucide-react";
 
 import { Button } from "@amibeingpwned/ui/button";
@@ -21,15 +21,16 @@ import {
   STORAGE_SETTINGS,
 } from "../../lib/constants";
 import { enterNeverCacheMode } from "../../lib/never-cache";
-import { activePreset, PRESETS } from "../../lib/presets";
+import { activePreset, PRESETS, snapshotBundleFields } from "../../lib/presets";
 import { isQuotaExceeded } from "../../lib/storage/chunked";
-import { historyByteSize } from "../../lib/storage/history";
 import {
   copyEncryptedBlobRepacked,
   purgeEncryptedBlob,
 } from "../../lib/storage/encrypted-store";
 import { invalidateLocationCache } from "../../lib/storage/engine";
+import { historyByteSize } from "../../lib/storage/history";
 import { getPreferences, savePreferences } from "../../lib/storage/preferences";
+import { toast } from "../../lib/toast";
 import { formatFileSize } from "../../lib/utils/formatting";
 import { ExportKeysPage } from "../keys/ExportKeysPage";
 import { CrxSigningInfoPage } from "../settings/CrxSigningInfoPage";
@@ -270,12 +271,58 @@ export function SettingsView({
     await enableNeverCache();
   };
 
+  // Sync the parent-held state for fields this view has props for
+  // (shared by applyPreset and its Undo).
+  const syncBundledProps = (values: Partial<PgpPreferences>) => {
+    if (values.autoLockEnabled !== undefined) {
+      onAutoLockEnabledChange(values.autoLockEnabled);
+    }
+    if (values.autoLockMinutes !== undefined) {
+      onAutoLockChange(values.autoLockMinutes);
+    }
+    if (values.lockOnTabAway !== undefined) {
+      onLockOnTabAwayChange(values.lockOnTabAway);
+    }
+    if (values.neverCacheKeys !== undefined) {
+      onNeverCacheKeysChange(values.neverCacheKeys);
+    }
+  };
+
+  // Restore the pre-apply snapshot of the bundled fields. Cleared
+  // history is gone for good; the apply toast says so. storageLocation
+  // can't be restored by a plain save, it needs the full migration.
+  const undoPresetApply = async (snapshot: Partial<PgpPreferences>) => {
+    const { storageLocation: prevLocation, ...rest } = snapshot;
+    await savePreferences(rest);
+    syncBundledProps(rest);
+    setPrefs(await getPreferences());
+    onWorkspacePrefsChanged?.();
+    if (prevLocation !== undefined && prevLocation !== storageLocation) {
+      await handleStorageChange(prevLocation);
+    }
+  };
+  // The undo toast can outlive this render (and a preset may have
+  // migrated storage, changing the props undoPresetApply closes over),
+  // so the toast action always calls the latest instance via a ref.
+  const undoPresetApplyRef = useRef(undoPresetApply);
+  useEffect(() => {
+    undoPresetApplyRef.current = undoPresetApply;
+  });
+
   const applyPreset = async (id: PresetId) => {
+    // Snapshot exactly the bundled fields first, so Undo can restore
+    // what the preset overwrote and nothing else.
+    const snapshot = snapshotBundleFields(
+      await getPreferences(),
+      PRESETS[id].bundle,
+    );
     // storageLocation can't go through plain savePreferences: flipping
     // it without migrating the vault blobs would strand them in the
     // old area. Apply the rest, then run the real migration if needed.
     const { storageLocation: bundleLocation, ...bundle } = PRESETS[id].bundle;
+    let historyCleared = false;
     if (bundle.neverCacheKeys === true) {
+      historyCleared = (await historyByteSize()) > 0;
       // Route the never-cache flip (and its history wipe) through the
       // shared transition so this path can't diverge from the toggle.
       const {
@@ -289,19 +336,7 @@ export function SettingsView({
       await savePreferences(bundle);
     }
 
-    // Sync the parent-held state for fields this view has props for.
-    if (bundle.autoLockEnabled !== undefined) {
-      onAutoLockEnabledChange(bundle.autoLockEnabled);
-    }
-    if (bundle.autoLockMinutes !== undefined) {
-      onAutoLockChange(bundle.autoLockMinutes);
-    }
-    if (bundle.lockOnTabAway !== undefined) {
-      onLockOnTabAwayChange(bundle.lockOnTabAway);
-    }
-    if (bundle.neverCacheKeys !== undefined) {
-      onNeverCacheKeysChange(bundle.neverCacheKeys);
-    }
+    syncBundledProps(bundle);
     setPrefs(await getPreferences());
     // The bundle rewrote toggles the always-mounted workspace renders
     // (historyEnabled, encryptToSelf); tell it to re-read.
@@ -310,6 +345,19 @@ export function SettingsView({
     if (bundleLocation !== undefined && bundleLocation !== storageLocation) {
       await handleStorageChange(bundleLocation);
     }
+
+    toast.success(`Preset applied: ${PRESETS[id].title}`, {
+      id: "preset-applied",
+      // Undo restores the bundled preferences, but a paranoid apply
+      // wiped stored history and that is unrecoverable; say so.
+      description: historyCleared
+        ? "History was deleted and is not restored by Undo."
+        : undefined,
+      action: {
+        label: "Undo",
+        onClick: () => void undoPresetApplyRef.current(snapshot),
+      },
+    });
   };
 
   return (
