@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
 import type { EncryptInput, SignatureStatus } from "../../lib/pgp/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
+import type { NewHistoryEntry } from "../../lib/storage/history";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { FileResult } from "../../lib/utils/download";
 import type { WorkspaceState } from "./useWorkspaceState";
@@ -15,6 +16,7 @@ import { isWebAuthnCancel } from "../../lib/protection/webauthn-prf";
 import { updateRecentRecipients } from "../../lib/recipient-ordering";
 import { recordHistory } from "../../lib/storage/history";
 import { savePreferences } from "../../lib/storage/preferences";
+import { toast } from "../../lib/toast";
 import {
   downloadBinary,
   downloadResults,
@@ -208,6 +210,20 @@ export function useWorkspaceOperations({
     return s.files.map((f) => ({ name: f.name, size: f.size }));
   }
 
+  /** Fire-and-forget history capture: never delays the operation, but a
+   *  storage failure (quota / device full) surfaces one deduped error
+   *  toast -- a user who believes history is recording may delete the
+   *  original message trusting the copy exists. */
+  function captureHistory(entry: NewHistoryEntry): void {
+    void recordHistory(entry).then((result) => {
+      if (result === "failed") {
+        toast.error("Couldn't save to history - storage may be full", {
+          id: "history-save-failed",
+        });
+      }
+    });
+  }
+
   const execute = async () => {
     s.setError(null);
     s.setOutput("");
@@ -360,7 +376,7 @@ export function useWorkspaceOperations({
       });
     }
     // Fire-and-forget: capture must never delay showing the result.
-    void recordHistory({
+    captureHistory({
       op: "encrypt",
       recipients: historyRecipients,
       signed: signingHandle !== null,
@@ -506,7 +522,7 @@ export function useWorkspaceOperations({
         });
       }
       // Metadata only for decrypt -- never the plaintext.
-      void recordHistory({
+      captureHistory({
         op: "decrypt",
         recipients: [],
         ...(isFileInput ? { files: historyFileMeta() } : {}),
@@ -567,7 +583,7 @@ export function useWorkspaceOperations({
       maybeAutoDownload(false, { text: signed });
     }
 
-    void recordHistory({
+    captureHistory({
       op: "sign",
       recipients: [],
       signed: true,
@@ -635,7 +651,7 @@ export function useWorkspaceOperations({
         result.signatureStatus === "unknown_key"
       ) {
         // Metadata only for verify -- never the message content.
-        void recordHistory({
+        captureHistory({
           op: "verify",
           recipients: [],
           signed: true,

@@ -218,14 +218,19 @@ async function pruneToBudget(manifest: HistoryManifest): Promise<boolean> {
 
 // ── public API ───────────────────────────────────────────────────────
 
-/** Append one entry. No-op while locked. Content is capped at
- *  CONTENT_CAP (with `truncated: true`); decrypt/verify entries have any
- *  content stripped defensively -- those ops are metadata-only. */
-export async function appendHistoryEntry(entry: NewHistoryEntry): Promise<void> {
-  if (!(await hasContactsSession())) return;
-  await withLock(STORAGE_HISTORY, async () => {
+/** Append one entry. No-op while locked (returns false). Content is
+ *  capped at CONTENT_CAP (with `truncated: true`); decrypt/verify entries
+ *  have any content stripped defensively -- those ops are metadata-only.
+ *  Returns whether the entry was actually written; storage failures
+ *  (quota exhaustion, device full) propagate as rejections so callers
+ *  can tell a dropped capture from a saved one. */
+export async function appendHistoryEntry(
+  entry: NewHistoryEntry,
+): Promise<boolean> {
+  if (!(await hasContactsSession())) return false;
+  return withLock(STORAGE_HISTORY, async () => {
     // Re-check inside the lock: a queued append must not run after lock.
-    if (!(await hasContactsSession())) return;
+    if (!(await hasContactsSession())) return false;
 
     const manifest = await readManifest();
     const last = manifest.segs.at(-1);
@@ -243,6 +248,7 @@ export async function appendHistoryEntry(entry: NewHistoryEntry): Promise<void> 
 
     await pruneToBudget(manifest);
     await writeManifest(manifest);
+    return true;
   });
 }
 
@@ -301,15 +307,26 @@ export async function historyByteSize(): Promise<number> {
   return manifest.segs.reduce((sum, s) => sum + s.bytes, 0);
 }
 
+/** Outcome of a {@link recordHistory} capture attempt. `skipped` means
+ *  capture was intentionally not attempted (opted out, never-cache mode,
+ *  or locked); `failed` means the user expected the entry to be recorded
+ *  but storage rejected the write (quota / device full). */
+export type RecordHistoryResult = "saved" | "skipped" | "failed";
+
 /** Capture hook for the workspace operations: appends only when the user
  *  has opted in (`historyEnabled`) and isn't in never-cache mode. Never
- *  throws -- history capture must never break or delay an operation. */
-export async function recordHistory(entry: NewHistoryEntry): Promise<void> {
+ *  throws -- history capture must never break or delay an operation --
+ *  but reports the outcome so the call site can warn the user when a
+ *  capture they were relying on silently failed (they may delete the
+ *  original message trusting history has it). */
+export async function recordHistory(
+  entry: NewHistoryEntry,
+): Promise<RecordHistoryResult> {
   try {
     const prefs = await getPreferences();
-    if (!prefs.historyEnabled || prefs.neverCacheKeys) return;
-    await appendHistoryEntry(entry);
+    if (!prefs.historyEnabled || prefs.neverCacheKeys) return "skipped";
+    return (await appendHistoryEntry(entry)) ? "saved" : "skipped";
   } catch {
-    // best-effort: a failed capture is invisible to the operation
+    return "failed";
   }
 }
