@@ -259,7 +259,8 @@ export function HistoryPage({
       <SubPage
         title="History"
         onClose={onClose}
-        bodyClassName="p-3"
+        // Flex column: search pinned top, list scrolls, usage pinned bottom.
+        bodyClassName="flex h-full flex-col p-3"
         headerActions={
           entries.length > 0 ? (
             <button
@@ -313,7 +314,7 @@ export function HistoryPage({
           </p>
         )}
 
-        <div className="space-y-2">
+        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto">
           {filtered.map((entry) => {
             const Icon = OP_ICON[entry.op];
             // Show WHY a row matched: a content hit renders a snippet
@@ -386,7 +387,7 @@ export function HistoryPage({
         </div>
 
         {usage && entries.length > 0 && (
-          <p className="text-muted-foreground mt-3 text-center text-[10px]">
+          <p className="text-muted-foreground mt-2 shrink-0 pt-1 text-center text-[10px]">
             {formatFileSize(usage.used)} of {formatFileSize(usage.budget)} used
           </p>
         )}
