@@ -281,29 +281,38 @@ export function RecipientPicker({
               {selectedKeys.map((key) => {
                 const { name, detail } = getKeyDisplay(key);
                 return (
-                  <span
+                  // The WHOLE chip is the remove button (the bare x was
+                  // too small a target); the x icon stays as the visual
+                  // affordance. Legal because the trigger box is a div,
+                  // not a button -- no nested-button problem.
+                  <button
                     key={key.keyId}
-                    title={detail ? `${name} - ${detail}` : name}
+                    type="button"
+                    aria-label={`Remove ${name}`}
+                    title={
+                      detail ? `Remove ${name} - ${detail}` : `Remove ${name}`
+                    }
                     // max-w-full (not a fixed cap): a chip sizes to its
                     // content and only truncates when the row genuinely
                     // can't fit it. With several chips the flex-wrap row
                     // wraps first, so truncation stays a last resort.
-                    className="bg-secondary text-secondary-foreground inline-flex max-w-full items-center gap-1 rounded-md border px-2 py-0.5 text-xs"
+                    // Hover tints destructive (the HistoryPage-delete
+                    // idiom) so the click reads as removal, not selection.
+                    className="bg-secondary text-secondary-foreground hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive inline-flex max-w-full cursor-pointer items-center gap-1 rounded-md border px-2 py-0.5 text-xs transition-colors"
+                    onClick={(e) => {
+                      // Removing a chip must not toggle the dropdown
+                      // (the container's own click handler opens it).
+                      e.stopPropagation();
+                      removeRecipient(key.keyId);
+                      // The chip unmounts with focus on it; hand focus
+                      // back to the input (suppressed, so it doesn't
+                      // reopen the dropdown) so the user can keep typing.
+                      refocusInput();
+                    }}
                   >
                     <span className="min-w-0 truncate">{name}</span>
-                    <button
-                      type="button"
-                      aria-label={`Remove ${name}`}
-                      className="text-muted-foreground hover:text-foreground -mr-0.5 shrink-0 rounded-sm"
-                      onClick={(e) => {
-                        // Removing a chip must not toggle the dropdown.
-                        e.stopPropagation();
-                        removeRecipient(key.keyId);
-                      }}
-                    >
-                      <XIcon className="h-3 w-3" />
-                    </button>
-                  </span>
+                    <XIcon className="-mr-0.5 h-3 w-3 shrink-0 opacity-60" />
+                  </button>
                 );
               })}
               <input
