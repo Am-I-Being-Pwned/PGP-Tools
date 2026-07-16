@@ -124,6 +124,11 @@ export function useWorkspaceState(opts: {
   /** A drop routed here by the global dropzone. Applied once per nonce. */
   intake?: WorkspaceIntake | null;
   onIntakeConsumed?: () => void;
+  /** Bumped when preference-backed fields (signWhenEncrypting,
+   *  encryptToSelf, historyEnabled) change outside this view -- e.g. a
+   *  security preset applied in Settings while the workspace stays
+   *  mounted. Triggers a re-read so toggles never go stale. */
+  prefsVersion?: number;
 }): WorkspaceState {
   const [mode, setMode] = useState<Mode>("encrypt");
   const [input, setInput] = useState("");
@@ -201,7 +206,9 @@ export function useWorkspaceState(opts: {
       setSaveToHistory(p.historyEnabled);
       setRecentRecipients(p.recentRecipients);
     });
-  }, []);
+    // Re-read on mount and whenever the parent signals an external
+    // preference change (e.g. a preset applied in Settings).
+  }, [opts.prefsVersion]);
 
   // Restore an encrypted draft (if any) on mount. Single-shot: the
   // parent clears the ciphertext via `onDraftRestored` so re-renders

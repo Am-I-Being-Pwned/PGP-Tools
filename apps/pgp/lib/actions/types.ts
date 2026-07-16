@@ -22,6 +22,9 @@ export interface ActionCtx {
   mode: PgpMode;
   /** Workspace has text input or dropped files. */
   hasInput: boolean;
+  /** Encrypt has at least one selected recipient. Only consulted in
+   *  encrypt mode; other modes ignore it. */
+  hasRecipients: boolean;
   /** A completed operation produced copyable text output. */
   hasOutput: boolean;
   masterUnlocked: boolean;

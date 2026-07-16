@@ -62,6 +62,10 @@ interface SettingsViewProps {
   onLockOnTabAwayChange: (v: boolean) => void;
   crxSigningEnabled: boolean;
   onCrxSigningEnabledChange: (v: boolean) => void;
+  /** Fired after a preset bundle rewrites preference-backed toggles the
+   *  workspace also renders (historyEnabled, encryptToSelf, ...), so the
+   *  always-mounted workspace can re-read them. */
+  onWorkspacePrefsChanged?: () => void;
   // Backup (export/import all keys)
   myKeys: ProtectedKeyBlob[];
   contacts: PublicContactKey[];
@@ -100,6 +104,7 @@ export function SettingsView({
   onLockOnTabAwayChange,
   crxSigningEnabled,
   onCrxSigningEnabledChange,
+  onWorkspacePrefsChanged,
   myKeys,
   contacts,
   isUnlocked,
@@ -254,6 +259,9 @@ export function SettingsView({
         onNeverCacheKeysChange(bundle.neverCacheKeys);
       }
       setPrefs(await getPreferences());
+      // The bundle rewrote toggles the always-mounted workspace renders
+      // (historyEnabled, encryptToSelf); tell it to re-read.
+      onWorkspacePrefsChanged?.();
 
       if (bundleLocation !== undefined && bundleLocation !== storageLocation) {
         await handleStorageChange(bundleLocation);

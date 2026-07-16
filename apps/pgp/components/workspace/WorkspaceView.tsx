@@ -81,6 +81,9 @@ interface WorkspaceViewProps {
   onIntakeConsumed?: () => void;
   /** Pushes the palette-facing state/ops slice up on every change. */
   onPaletteOps?: (bridge: WorkspaceOpsBridge | null) => void;
+  /** Bumped when preference-backed toggles change outside this view
+   *  (e.g. a security preset applied in Settings); re-reads prefs. */
+  prefsVersion?: number;
 }
 
 export function WorkspaceView({
@@ -105,6 +108,7 @@ export function WorkspaceView({
   intake,
   onIntakeConsumed,
   onPaletteOps,
+  prefsVersion,
 }: WorkspaceViewProps) {
   const allPublicKeys: (ProtectedKeyBlob | PublicContactKey)[] = [
     ...myKeys,
@@ -125,6 +129,7 @@ export function WorkspaceView({
     onDraftChange,
     intake,
     onIntakeConsumed,
+    prefsVersion,
   });
 
   const ops = useWorkspaceOperations({
@@ -252,6 +257,7 @@ export function WorkspaceView({
     onPaletteOps?.({
       mode: s.mode,
       hasInput,
+      hasRecipients: s.selectedRecipientIds.length > 0,
       hasOutput,
       historyEnabled: s.saveToHistory,
       // Mirrors the mode Select: a completed operation resets fully,
@@ -274,7 +280,14 @@ export function WorkspaceView({
         if (paletteRef.current.hasOutput) void paletteRef.current.handleCopy();
       },
     });
-  }, [onPaletteOps, s.mode, hasInput, hasOutput, s.saveToHistory]);
+  }, [
+    onPaletteOps,
+    s.mode,
+    hasInput,
+    s.selectedRecipientIds,
+    hasOutput,
+    s.saveToHistory,
+  ]);
   useEffect(() => () => onPaletteOps?.(null), [onPaletteOps]);
 
   const copyTitle = `Copy (${formatShortcutTitle(COPY_SHORTCUT, isMacPlatform())})`;

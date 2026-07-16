@@ -326,6 +326,9 @@ export default function App() {
   // ActionCtx the registry evaluates against.
   const [workspaceBridge, setWorkspaceBridge] =
     useState<WorkspaceOpsBridge | null>(null);
+  // Bumped when Settings rewrites preference-backed workspace toggles
+  // (preset apply); the always-mounted WorkspaceView re-reads prefs.
+  const [workspacePrefsVersion, setWorkspacePrefsVersion] = useState(0);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [keysRoute, setKeysRoute] = useState<"generate" | "import" | null>(
     null,
@@ -534,6 +537,7 @@ export default function App() {
               intake={workspaceIntake}
               onIntakeConsumed={clearWorkspaceIntake}
               onPaletteOps={setWorkspaceBridge}
+              prefsVersion={workspacePrefsVersion}
             />
           </div>
           {activeTab === "keys" && (
@@ -598,6 +602,9 @@ export default function App() {
               lockOnTabAway={lockOnTabAway}
               onLockOnTabAwayChange={setLockOnTabAway}
               crxSigningEnabled={crxSigningEnabled}
+              onWorkspacePrefsChanged={() =>
+                setWorkspacePrefsVersion((v) => v + 1)
+              }
               onCrxSigningEnabledChange={setCrxSigningEnabled}
               myKeys={keyring.keys}
               contacts={contacts.contacts}

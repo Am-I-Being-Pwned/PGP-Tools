@@ -24,6 +24,7 @@ function fullPrefs(overrides: Partial<PgpPreferences> = {}): PgpPreferences {
     crxSigningEnabled: false,
     historyEnabled: false,
     clipboardWipeSeconds: 60,
+    recentRecipients: [],
     ...overrides,
   };
 }

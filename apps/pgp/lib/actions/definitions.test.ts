@@ -11,6 +11,7 @@ function fakeCtx(overrides: Partial<ActionCtx> = {}): ActionCtx {
     tab: "workspace",
     mode: "encrypt",
     hasInput: false,
+    hasRecipients: true,
     hasOutput: false,
     masterUnlocked: true,
     historyEnabled: false,
@@ -82,6 +83,18 @@ describe("workspace.run", () => {
     expect(reason("decrypt")).toContain("Nothing to decrypt");
     expect(reason("sign")).toContain("Nothing to sign");
     expect(reason("verify")).toContain("Nothing to verify");
+  });
+
+  it("requires a recipient in encrypt mode, and only there", () => {
+    const reason = (mode: PgpMode) =>
+      byId(
+        fakeCtx({ mode, hasInput: true, hasRecipients: false }),
+        "workspace.run",
+      )?.disabledReason;
+    expect(reason("encrypt")).toBe("Select at least one recipient");
+    expect(reason("decrypt")).toBeUndefined();
+    expect(reason("sign")).toBeUndefined();
+    expect(reason("verify")).toBeUndefined();
   });
 
   it("is enabled with input and runs ops.execute", () => {

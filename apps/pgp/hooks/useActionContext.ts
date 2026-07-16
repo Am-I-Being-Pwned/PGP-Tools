@@ -11,6 +11,8 @@ import type { ActionCtx, AppTab, PgpMode } from "../lib/actions/types";
 export interface WorkspaceOpsBridge {
   mode: PgpMode;
   hasInput: boolean;
+  /** Encrypt has at least one selected recipient. */
+  hasRecipients: boolean;
   hasOutput: boolean;
   historyEnabled: boolean;
   setMode: (mode: PgpMode) => void;
@@ -48,6 +50,7 @@ export function useActionContext(args: UseActionContextArgs): ActionCtx {
   const { tab, workspace, counts } = args;
   const mode = workspace?.mode ?? "encrypt";
   const hasInput = workspace?.hasInput ?? false;
+  const hasRecipients = workspace?.hasRecipients ?? false;
   const hasOutput = workspace?.hasOutput ?? false;
   const historyEnabled = workspace?.historyEnabled ?? false;
   const { ownKeys, contacts } = counts;
@@ -57,6 +60,7 @@ export function useActionContext(args: UseActionContextArgs): ActionCtx {
       tab,
       mode,
       hasInput,
+      hasRecipients,
       hasOutput,
       masterUnlocked: true,
       historyEnabled,
@@ -75,6 +79,15 @@ export function useActionContext(args: UseActionContextArgs): ActionCtx {
         lockNow: () => argsRef.current.lockNow(),
       },
     }),
-    [tab, mode, hasInput, hasOutput, historyEnabled, ownKeys, contacts],
+    [
+      tab,
+      mode,
+      hasInput,
+      hasRecipients,
+      hasOutput,
+      historyEnabled,
+      ownKeys,
+      contacts,
+    ],
   );
 }

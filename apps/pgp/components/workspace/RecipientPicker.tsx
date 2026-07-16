@@ -127,6 +127,9 @@ export function RecipientPicker({
     }
     // Digits quick-pick the nth visible option, but only while the search
     // box is EMPTY -- typing numbers into a query must never trigger picks.
+    // Plain digits only: mod+1..4 belong to the global mode shortcuts
+    // (action registry), which fire even while an input has focus.
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (search === "" && /^[1-9]$/.test(e.key)) {
       const index = Number(e.key) - 1;
       if (index < visibleKeys.length) {

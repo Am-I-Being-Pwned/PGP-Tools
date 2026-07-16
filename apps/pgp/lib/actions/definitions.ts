@@ -46,8 +46,12 @@ export const ACTIONS: readonly PgpAction[] = [
     keywords: ["go", "execute", "submit"],
     shortcut: { mod: true, key: "Enter" },
     applicable: (ctx) => ctx.tab === "workspace",
-    disabledReason: (ctx) =>
-      ctx.hasInput ? undefined : NO_INPUT_REASON[ctx.mode],
+    disabledReason: (ctx) => {
+      if (!ctx.hasInput) return NO_INPUT_REASON[ctx.mode];
+      if (ctx.mode === "encrypt" && !ctx.hasRecipients)
+        return "Select at least one recipient";
+      return undefined;
+    },
     execute: (ctx) => ctx.ops.execute(),
   },
   {
