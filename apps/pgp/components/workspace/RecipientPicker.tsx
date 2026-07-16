@@ -184,10 +184,24 @@ export function RecipientPicker({
     }
     // Enter with the list closed opens it -- the box should always
     // "show the thing" from the keyboard. When open, Enter bubbles to
-    // the Command root and picks the highlighted option.
-    if (e.key === "Enter" && !open) {
-      e.preventDefault();
-      setOpen(true);
+    // the Command root and picks the highlighted option -- UNLESS the
+    // filter has moved on and the highlight points at nothing visible
+    // (cmdk would silently no-op); then Enter picks the TOP match, so
+    // "type until one result, Enter" always works.
+    if (e.key === "Enter") {
+      if (!open) {
+        e.preventDefault();
+        setOpen(true);
+        return;
+      }
+      const highlightVisible = visibleKeys.some(
+        (k) => itemValue(k) === highlighted,
+      );
+      if (!highlightVisible && visibleKeys.length > 0) {
+        e.preventDefault();
+        e.stopPropagation();
+        addRecipient(visibleKeys[0].keyId);
+      }
       return;
     }
     // Backspace in the empty input pops the last chip.
@@ -217,6 +231,12 @@ export function RecipientPicker({
     }
   };
 
+  /** The cmdk item value for a key -- must match renderOption's value. */
+  const itemValue = (key: AnyKey): string => {
+    const { name, detail } = getKeyDisplay(key);
+    return detail ? `${name} ${detail} ${key.keyId}` : `${name} ${key.keyId}`;
+  };
+
   /** 1-based digit shortcut for `key` in the visible list, if it has one. */
   const digitFor = (key: AnyKey): number | null => {
     if (search !== "") return null;
@@ -233,9 +253,7 @@ export function RecipientPicker({
     return (
       <CommandItem
         key={key.keyId}
-        value={
-          detail ? `${name} ${detail} ${key.keyId}` : `${name} ${key.keyId}`
-        }
+        value={itemValue(key)}
         onSelect={() => addRecipient(key.keyId)}
         className="gap-2"
         aria-keyshortcuts={digit !== null ? String(digit) : undefined}
