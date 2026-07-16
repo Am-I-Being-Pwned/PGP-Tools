@@ -94,10 +94,17 @@ export function RecipientPicker({
   // Already-selected recipients don't reappear in the dropdown.
   const selectedSet = new Set(selectedKeyIds);
   const available = allKeys.filter((k) => !selectedSet.has(k.keyId));
-  const { recent, rest } = orderRecipients(available, recentKeyIds);
   const contactIds = new Set(contacts.map((c) => c.keyId));
-  const restContacts = rest.filter((k) => contactIds.has(k.keyId));
-  const restMyKeys = rest.filter((k) => !contactIds.has(k.keyId));
+  // Own keys always sort BELOW contacts: they never join the Recent group
+  // (you rarely encrypt to yourself explicitly), so recency ordering only
+  // applies to actual recipients.
+  const availableContacts = available.filter((k) => contactIds.has(k.keyId));
+  const availableOwn = available.filter((k) => !contactIds.has(k.keyId));
+  const { recent, rest: restContacts } = orderRecipients(
+    availableContacts,
+    recentKeyIds,
+  );
+  const { rest: restMyKeys } = orderRecipients(availableOwn, []);
   // Render order, flattened -- what the digit shortcuts index into.
   const visibleKeys = [...recent, ...restContacts, ...restMyKeys];
 
