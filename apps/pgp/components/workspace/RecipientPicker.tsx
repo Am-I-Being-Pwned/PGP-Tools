@@ -325,6 +325,17 @@ export function RecipientPicker({
                       // reopen the dropdown) so the user can keep typing.
                       refocusInput();
                     }}
+                    onKeyDown={(e) => {
+                      // A Tab-focused chip should also delete on
+                      // Backspace/Delete, not only Enter/Space -- that's
+                      // what a keyboard user reaches for on a chip.
+                      if (e.key === "Backspace" || e.key === "Delete") {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        removeRecipient(key.keyId);
+                        refocusInput();
+                      }
+                    }}
                   >
                     <span className="min-w-0 truncate">{name}</span>
                     <XIcon className="-mr-0.5 h-3 w-3 shrink-0 opacity-60" />

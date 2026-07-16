@@ -284,6 +284,9 @@ export function WorkspaceView({
       duration: 4000,
       action: { label: "Undo", onClick: restoreCleared },
     });
+    // A cleared box invites retyping: focus it (next tick -- resetAll may
+    // have just remounted the textarea in place of the file list).
+    setTimeout(() => document.getElementById("pgp-input")?.focus(), 0);
   };
   useShortcut({ mod: true, key: "z" }, restoreCleared, {
     enabled: clearSnapshot !== null && s.input.length === 0,
