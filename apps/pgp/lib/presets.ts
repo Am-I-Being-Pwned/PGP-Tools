@@ -1,4 +1,5 @@
 import type { PgpPreferences } from "./storage/preferences";
+import { DEFAULT_PREFERENCES } from "./storage/preferences";
 
 /** Identifier for a named security preset. */
 export type PresetId = "casual" | "careful" | "paranoid";
@@ -84,6 +85,24 @@ export function activePreset(prefs: PgpPreferences): PresetId | "custom" {
     if (matches) return id;
   }
   return "custom";
+}
+
+/**
+ * Whether any preference a preset bundle can set differs from the
+ * shipped defaults. Distinguishes the two "custom" states: a user who
+ * changed a bundled setting (true) vs. one who simply never picked a
+ * preset -- e.g. upgraded from a version without presets -- and is
+ * still on all defaults (false). The Settings preset row uses this to
+ * avoid claiming "a bundled setting was changed" to upgraders.
+ */
+export function bundledSettingsCustomized(prefs: PgpPreferences): boolean {
+  const keys = new Set<keyof PgpPreferences>();
+  for (const id of PRESET_IDS) {
+    for (const key of Object.keys(PRESETS[id].bundle)) {
+      keys.add(key as keyof PgpPreferences);
+    }
+  }
+  return [...keys].some((key) => prefs[key] !== DEFAULT_PREFERENCES[key]);
 }
 
 /**

@@ -59,7 +59,12 @@ export interface PgpPreferences {
   defaultKeyId: string | null;
 }
 
-const DEFAULT_PREFERENCES: PgpPreferences = {
+/** Shipped defaults. Stored blobs are partial overlays on top of these,
+ *  so a blob written by an older version (missing newer fields) reads
+ *  back with the new fields at their defaults. Exported so callers
+ *  (e.g. preset detection) can tell "still on defaults" apart from
+ *  "explicitly customized". */
+export const DEFAULT_PREFERENCES: PgpPreferences = {
   defaultSigningKeyId: null,
   armoredOutput: true,
   advancedMode: false,
