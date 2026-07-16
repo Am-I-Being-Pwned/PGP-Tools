@@ -23,7 +23,7 @@ export function ToggleBadge({
       onClick={() => onPressedChange(!pressed)}
       className={`inline-flex h-6 items-center rounded-[5px] border px-2 text-xs font-medium transition-colors duration-150 ${
         pressed
-          ? "border-border bg-secondary text-foreground hover:bg-secondary/70"
+          ? "bg-secondary text-foreground hover:bg-secondary/70 border-green-500/40"
           : "text-muted-foreground hover:bg-accent/50 hover:text-foreground border-transparent bg-transparent"
       }`}
     >
