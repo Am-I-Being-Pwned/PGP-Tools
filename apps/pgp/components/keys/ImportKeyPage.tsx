@@ -166,6 +166,17 @@ export function ImportKeyPage({
     }
   }, [step]);
 
+  // The slide-over's focus trap only places focus once, at panel mount,
+  // so an in-panel step change must move focus itself or it stays on
+  // the now-hidden Next button. Focus the confirm-replace warning box
+  // (tabIndex=-1) rather than autofocusing the destructive "Replace
+  // key" button: the step's whole point is to be read first, and a
+  // stray Enter must not confirm an overwrite.
+  const confirmReplaceRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (step === "confirm-replace") confirmReplaceRef.current?.focus();
+  }, [step]);
+
   // Header back mirrors the step order; from the first step it slides out.
   const handleBack = () => {
     if (importing) return;
@@ -493,7 +504,11 @@ export function ImportKeyPage({
         {step === "confirm-replace" && overwrite && (
           <div className="flex flex-1 flex-col overflow-hidden">
             <div className="flex-1 space-y-3 overflow-y-auto p-3">
-              <div className="border-destructive/30 bg-destructive/5 flex items-start gap-2 rounded-md border p-3">
+              <div
+                ref={confirmReplaceRef}
+                tabIndex={-1}
+                className="border-destructive/30 bg-destructive/5 flex items-start gap-2 rounded-md border p-3 outline-none"
+              >
                 <TriangleAlertIcon className="text-destructive mt-0.5 h-4 w-4 shrink-0" />
                 <div className="min-w-0 flex-1 text-xs">
                   <p>
