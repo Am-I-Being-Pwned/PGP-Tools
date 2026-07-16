@@ -21,7 +21,7 @@ export function ToggleBadge({
       role="switch"
       aria-checked={pressed}
       onClick={() => onPressedChange(!pressed)}
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors ${
+      className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs transition-colors ${
         pressed
           ? "text-foreground border-green-500/40 bg-green-500/15"
           : "border-input text-muted-foreground hover:bg-accent/50 hover:text-foreground"
