@@ -313,12 +313,18 @@ export async function loadHistory(): Promise<HistoryEntry[]> {
 }
 
 /** Remove every segment and the manifest. Works while locked (deleting
- *  ciphertext needs no session). */
+ *  ciphertext needs no session). Sweeps by key prefix rather than
+ *  trusting the manifest: a failed manifest write or a concurrent
+ *  append from another extension context can leave segments the
+ *  manifest doesn't list, and "clear history" must remove those too. */
 export async function clearHistory(): Promise<void> {
   await withLock(STORAGE_HISTORY, async () => {
-    const manifest = await readManifest();
-    const keys = manifest.segs.map((s) => segKey(s.n));
-    await chrome.storage.local.remove([...keys, STORAGE_HISTORY]);
+    const all = await chrome.storage.local.get(null);
+    const keys = Object.keys(all).filter(
+      (k) =>
+        k === STORAGE_HISTORY || k.startsWith(STORAGE_HISTORY_SEGMENT_PREFIX),
+    );
+    if (keys.length > 0) await chrome.storage.local.remove(keys);
   });
 }
 
