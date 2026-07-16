@@ -21,6 +21,9 @@ test("onboards, locks, and unlocks with a PRF passkey", async ({
     await panel.getByPlaceholder("Your full name").fill("Passkey User");
     await panel.getByPlaceholder("you@example.com").fill("passkey@test.local");
     await panel.getByRole("button", { name: "Create my PGP key" }).click();
+    await panel
+      .getByRole("button", { name: "Keep the defaults" })
+      .click({ timeout: 30_000 });
     await expect(panel.getByRole("tab", { name: "Keys" })).toBeVisible({
       timeout: 30_000,
     });

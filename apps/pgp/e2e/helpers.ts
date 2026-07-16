@@ -23,6 +23,11 @@ export async function onboardWithPassword(
   await panel.getByPlaceholder("you@example.com").fill("e2e@test.local");
   await panel.getByRole("button", { name: "Create my PGP key" }).click();
 
+  // Preset step: keep the defaults so specs see the stock preferences.
+  await panel
+    .getByRole("button", { name: "Keep the defaults" })
+    .click({ timeout: 30_000 });
+
   // Onboarding lands on the main UI (default: Main/workspace tab).
   await expect(panel.getByRole("tab", { name: "Keys" })).toBeVisible({
     timeout: 30_000,
@@ -41,6 +46,7 @@ export async function onboardWithPasswordSkipKey(
   await panel.getByLabel("Confirm password").fill(password);
   await panel.getByRole("button", { name: "Set password" }).click();
   await panel.getByRole("button", { name: "I'll set up later" }).click();
+  await panel.getByRole("button", { name: "Keep the defaults" }).click();
   await expect(panel.getByRole("tab", { name: "Keys" })).toBeVisible({
     timeout: 30_000,
   });

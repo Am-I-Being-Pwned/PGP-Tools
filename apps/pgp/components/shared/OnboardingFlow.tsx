@@ -10,11 +10,13 @@ import {
   SelectValue,
 } from "@amibeingpwned/ui/select";
 
+import type { PresetId } from "../../lib/presets";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { MasterProtection } from "../../lib/storage/master-protection";
 import type { StorageLocation } from "../../lib/storage/preferences";
 import { toBase64, unpackIvCiphertext } from "../../lib/encoding";
 import * as wasmApi from "../../lib/pgp/wasm";
+import { PRESETS } from "../../lib/presets";
 import {
   ARGON2_ITERATIONS,
   ARGON2_MEMORY_KIB,
@@ -37,9 +39,10 @@ import {
   ProtectionMethodPicker,
   validatePassword,
 } from "../keys/ProtectionMethodPicker";
+import { PresetPicker } from "./PresetPicker";
 import { StorageLocationPicker } from "./StorageLocationPicker";
 
-type Step = "storage" | "protection" | "identity" | "generating";
+type Step = "storage" | "protection" | "identity" | "generating" | "preset";
 type KeyAlgorithm = "ecc" | "rsa";
 type ExpiryOption = "never" | "1y" | "2y" | "3y";
 
@@ -122,6 +125,25 @@ export function OnboardingFlow({
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [keyAlgorithm, setKeyAlgorithm] = useState<KeyAlgorithm>("ecc");
   const [expiryOption, setExpiryOption] = useState<ExpiryOption>("2y");
+  const [presetChoice, setPresetChoice] = useState<PresetId>("careful");
+
+  /** Final onboarding step: optionally apply a preset bundle, then
+   *  persist completion and hand off to the app. */
+  const finishOnboarding = async (preset?: PresetId) => {
+    if (preset) {
+      // Never write the bundle's storageLocation here: the user picked
+      // theirs in step 1 and the vault blobs already live there, so
+      // flipping the pointer without a migration would strand them.
+      // The preset simply reads as "Custom" if the locations differ.
+      const { storageLocation: _ignored, ...bundle } = PRESETS[preset].bundle;
+      await savePreferences(bundle);
+    }
+    await savePreferences({
+      storageLocation: location,
+      onboardingComplete: true,
+    });
+    onComplete(location);
+  };
 
   const handleProtectionSubmit = async () => {
     setError(null);
@@ -268,11 +290,7 @@ export function OnboardingFlow({
         onKeyCached(blob.keyId, handle);
       }
       setPassword("");
-      await savePreferences({
-        storageLocation: location,
-        onboardingComplete: true,
-      });
-      onComplete(location);
+      setStep("preset");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Key generation failed");
       setStep("identity");
@@ -282,12 +300,8 @@ export function OnboardingFlow({
     }
   };
 
-  const handleSkip = async () => {
-    await savePreferences({
-      storageLocation: location,
-      onboardingComplete: true,
-    });
-    onComplete(location);
+  const handleSkip = () => {
+    setStep("preset");
   };
 
   return (
@@ -493,6 +507,39 @@ export function OnboardingFlow({
             </p>
           )}
         </div>
+      )}
+
+      {step === "preset" && (
+        <>
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold">Pick a security preset</h2>
+              <p className="text-muted-foreground mt-1 text-sm">
+                How careful should PGP Tools be with your keys? Each option
+                shows exactly what it sets, and you can change any of it later
+                in Settings.
+              </p>
+            </div>
+
+            <PresetPicker selected={presetChoice} onSelect={setPresetChoice} />
+          </div>
+
+          <div className="space-y-2 pt-4">
+            <Button
+              className="w-full"
+              onClick={() => void finishOnboarding(presetChoice)}
+            >
+              Use this preset
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => void finishOnboarding()}
+            >
+              Keep the defaults
+            </Button>
+          </div>
+        </>
       )}
     </div>
   );
