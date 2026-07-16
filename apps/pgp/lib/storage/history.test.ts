@@ -5,6 +5,7 @@ import {
   appendHistoryEntry,
   clearHistory,
   CONTENT_CAP,
+  FILES_CAP,
   historyByteSize,
   loadHistory,
   recordHistory,
@@ -277,6 +278,176 @@ describe("byte budget", () => {
     expect(await historyByteSize()).toBeLessThanOrEqual(2 * 1024 * 1024);
     expect(h[0].content?.startsWith("83:")).toBe(true);
     expect(h.some((e) => e.content?.startsWith("0:"))).toBe(false);
+  });
+});
+
+/** Make the area's set() reject like Chrome's quota error from the
+ *  `nth` call onward (1-based). Gets/removes keep working, mirroring a
+ *  full-but-readable chrome.storage.local. */
+function failSetFrom(area: ReturnType<typeof fakeArea>, nth: number): void {
+  const original = area.set;
+  let calls = 0;
+  area.set = (items: Record<string, unknown>) => {
+    calls++;
+    if (calls >= nth) {
+      return Promise.reject(new Error("Resource::kQuotaBytes quota exceeded"));
+    }
+    return original(items);
+  };
+}
+
+describe("quota exhaustion mid-append", () => {
+  it("rejects and leaves storage untouched when the segment write fails", async () => {
+    failSetFrom(local, 1);
+
+    await expect(appendHistoryEntry(entry("doomed"))).rejects.toThrow(/quota/i);
+    // Nothing persisted: no manifest, no segment, no orphan.
+    expect(historyKeys(local.store)).toEqual([]);
+  });
+
+  it("removes the orphaned new segment when the manifest write fails", async () => {
+    // Seal segment 0 (>= 64KB after 3 x ~30KB entries) so the next
+    // append must create segment 1.
+    for (let i = 0; i < 3; i++) {
+      await appendHistoryEntry(entry(`${i}:${"x".repeat(30_000)}`));
+    }
+    expect(local.store.has("pgp_history_seg_1")).toBe(false);
+
+    // Within the next append: set #1 = segment 1 write (succeeds),
+    // set #2 = manifest write (quota-fails).
+    failSetFrom(local, 2);
+    await expect(appendHistoryEntry(entry("lost"))).rejects.toThrow(/quota/i);
+
+    // The freshly written segment was cleaned up, so the store matches
+    // the manifest that is actually persisted.
+    expect(local.store.has("pgp_history_seg_1")).toBe(false);
+    const h = await loadHistory();
+    expect(h).toHaveLength(3);
+    expect(h.some((e) => e.content === "lost")).toBe(false);
+  });
+
+  it("keeps an existing head readable when only the manifest write fails", async () => {
+    await appendHistoryEntry(entry("first"));
+
+    // Segment 0 is rewritten in place (set #1 succeeds); the manifest
+    // update (set #2) quota-fails. The entry is in the segment and the
+    // stale manifest still references it, so nothing is lost.
+    failSetFrom(local, 2);
+    await expect(appendHistoryEntry(entry("second"))).rejects.toThrow(
+      /quota/i,
+    );
+
+    const h = await loadHistory();
+    expect(h.map((e) => e.content)).toEqual(["second", "first"]);
+  });
+
+  it("recordHistory reports failed on quota, saved on success, skipped when locked", async () => {
+    await expect(recordHistory(entry("ok"))).resolves.toBe("saved");
+
+    failSetFrom(local, 1);
+    await expect(recordHistory(entry("full"))).resolves.toBe("failed");
+
+    wasmMock.session = false;
+    await expect(recordHistory(entry("locked"))).resolves.toBe("skipped");
+  });
+
+  it("recordHistory reports skipped when capture is disabled", async () => {
+    prefsMock.historyEnabled = false;
+    await expect(recordHistory(entry("off"))).resolves.toBe("skipped");
+  });
+});
+
+describe("cross-context manifest divergence", () => {
+  it("loadHistory recovers entries from segments the manifest lost", async () => {
+    await appendHistoryEntry(entry("kept-1"));
+    await appendHistoryEntry(entry("kept-2"));
+
+    // Another context's racing manifest write clobbered ours: the
+    // manifest no longer references segment 0, but the blob exists.
+    await local.set({ pgp_history: { segs: [] } });
+    expect(await historyByteSize()).toBe(0);
+
+    const h = await loadHistory();
+    expect(h.map((e) => e.content)).toEqual(["kept-2", "kept-1"]);
+    // The stray segment was adopted back into the manifest...
+    expect(await historyByteSize()).toBeGreaterThan(0);
+    // ...so the next append extends it instead of clobbering it.
+    await appendHistoryEntry(entry("kept-3"));
+    const after = await loadHistory();
+    expect(after.map((e) => e.content)).toEqual([
+      "kept-3",
+      "kept-2",
+      "kept-1",
+    ]);
+  });
+
+  it("clearHistory removes segments the manifest doesn't reference", async () => {
+    await appendHistoryEntry(entry("orphan-to-be"));
+    await local.set({ pgp_history: { segs: [] } });
+
+    await clearHistory();
+    expect(historyKeys(local.store)).toEqual([]);
+  });
+});
+
+describe("file metadata edge cases", () => {
+  it("caps a huge files[] list at FILES_CAP and flags truncation", async () => {
+    const files = Array.from({ length: 1000 }, (_, i) => ({
+      name: `report-${i}.pdf`,
+      size: i,
+    }));
+    await appendHistoryEntry({ op: "encrypt", recipients: [], files });
+
+    const [e] = await loadHistory();
+    expect(e.files).toHaveLength(FILES_CAP);
+    expect(e.files?.[0]).toEqual({ name: "report-0.pdf", size: 0 });
+    expect(e.truncated).toBe(true);
+  });
+
+  it("caps absurdly long filenames but keeps normal ones verbatim", async () => {
+    await appendHistoryEntry({
+      op: "sign",
+      recipients: [],
+      files: [
+        { name: "a".repeat(5000) + ".bin", size: 1 },
+        { name: "normal.txt", size: 2 },
+      ],
+    });
+
+    const [e] = await loadHistory();
+    expect(e.files?.[0].name).toHaveLength(256);
+    expect(e.files?.[1].name).toBe("normal.txt");
+    expect(e.truncated).toBe(true);
+  });
+
+  it("round-trips zero-byte files and hostile filenames untouched", async () => {
+    const files = [
+      { name: "", size: 0 },
+      { name: "emoji-🚀🔐.txt", size: 0 },
+      { name: "rtl-‮txt.gpg", size: 12 },
+      { name: "ctrl- .dat", size: 3 },
+      { name: "dupe.txt", size: 1 },
+      { name: "dupe.txt", size: 2 },
+    ];
+    await appendHistoryEntry({ op: "encrypt", recipients: [], files });
+
+    const [e] = await loadHistory();
+    expect(e.files).toEqual(files);
+    expect(e.truncated).toBeUndefined();
+  });
+
+  it("keeps files and content together when both are captured", async () => {
+    await appendHistoryEntry({
+      op: "sign",
+      recipients: [],
+      signed: true,
+      content: "signed zip manifest",
+      files: [{ name: "bundle.zip", size: 4096 }],
+    });
+
+    const [e] = await loadHistory();
+    expect(e.content).toBe("signed zip manifest");
+    expect(e.files).toEqual([{ name: "bundle.zip", size: 4096 }]);
   });
 });
 
