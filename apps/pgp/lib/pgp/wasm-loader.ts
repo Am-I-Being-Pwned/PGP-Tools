@@ -22,8 +22,14 @@ export async function loadWasm(): Promise<WasmModule> {
     const mod = await import("../../gpg-wasm/pkg/gpg_wasm");
     // Same-origin chrome-extension:// fetch: loads the WASM blob from
     // the extension's own bundle. This is the only outbound fetch the
-    // wasm subsystem ever makes.
-    const wasmUrl = chrome.runtime.getURL("gpg_wasm_bg.wasm");
+    // wasm subsystem ever makes. The `new URL(..., import.meta.url)`
+    // form lets the bundler emit ONE hashed asset shared with the
+    // wasm-bindgen glue's own reference -- previously a second verbatim
+    // copy shipped from public/, doubling the extension size.
+    const wasmUrl = new URL(
+      "../../gpg-wasm/pkg/gpg_wasm_bg.wasm",
+      import.meta.url,
+    );
     const wasmBytes = await fetch(wasmUrl).then((r) => r.arrayBuffer());
     const output = mod.initSync({ module: wasmBytes });
     wasmMemory = output.memory;
