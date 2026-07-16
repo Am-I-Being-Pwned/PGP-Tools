@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { format } from "date-fns";
+import { TriangleAlertIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@amibeingpwned/ui/button";
@@ -10,6 +12,8 @@ import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import { readKeyFile } from "../../lib/binary-armor";
 import { importCrxKey } from "../../lib/crx/operations";
+import type { ImportOverwrite } from "../../lib/import-overwrite";
+import { detectImportOverwrite } from "../../lib/import-overwrite";
 import {
   importRejectionMessage,
   isUsableContact,
@@ -30,7 +34,7 @@ import {
   validatePassword,
 } from "./ProtectionMethodPicker";
 
-type Step = "paste" | "unlock" | "protect";
+type Step = "paste" | "confirm-replace" | "unlock" | "protect";
 
 /** A raw RSA private key PEM (PKCS#8 or PKCS#1) — a CRX signing key, not
  *  OpenPGP. Matched only when it is NOT a PGP armored block. */
@@ -59,6 +63,10 @@ interface ImportKeyPageProps {
   onClose: () => void;
   onImportPrivate: (blob: ProtectedKeyBlob) => Promise<void>;
   onImportPublic: (contact: PublicContactKey) => Promise<void>;
+  /** Current keyring/contacts, to detect an import that would replace an
+   *  existing key (same fingerprint) and confirm before saving. */
+  existingKeys?: ProtectedKeyBlob[];
+  existingContacts?: PublicContactKey[];
   /** Pass the primary key's passkey credential ID to allow reuse. */
   reusePasskeyCredentialId?: string;
   /** When provided, prefill the paste step with this armored key (e.g. from
@@ -81,6 +89,8 @@ export function ImportKeyPage({
   onClose,
   onImportPrivate,
   onImportPublic,
+  existingKeys = [],
+  existingContacts = [],
   reusePasskeyCredentialId,
   initialArmored,
   crxSigningEnabled,
@@ -101,6 +111,12 @@ export function ImportKeyPage({
   const [reusePasskey, setReusePasskey] = useState(true);
   const [sourcePassphrase, setSourcePassphrase] = useState("");
   const [parsed, setParsed] = useState<ParsedPrivate | null>(null);
+  // A fingerprint collision with a stored key: the confirm-replace step
+  // shows what would be overwritten before the import proceeds.
+  const [overwrite, setOverwrite] = useState<ImportOverwrite | null>(null);
+  const [overwriteKind, setOverwriteKind] = useState<"private" | "public">(
+    "private",
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // The pasted key armor is the crown-jewel secret, so it lives in a ref
@@ -154,7 +170,11 @@ export function ImportKeyPage({
   const handleBack = () => {
     if (importing) return;
     setError(null);
-    if (step === "unlock") {
+    if (step === "confirm-replace") {
+      setOverwrite(null);
+      if (overwriteKind === "private") setParsed(null);
+      setStep("paste");
+    } else if (step === "unlock") {
       setParsed(null);
       setSourcePassphrase("");
       setStep("paste");
@@ -212,7 +232,18 @@ export function ImportKeyPage({
       if (result.keyInfo.securityWarning) {
         toast.warning(result.keyInfo.securityWarning);
       }
-      setStep(result.secretEncrypted ? "unlock" : "protect");
+      // Same fingerprint as a stored key: confirm the replacement before
+      // continuing (the keyring upserts by keyId, silently otherwise).
+      const collision = detectImportOverwrite(result.keyInfo.keyId, existingKeys, {
+        userIds: result.keyInfo.userIds,
+      });
+      if (collision) {
+        setOverwrite(collision);
+        setOverwriteKind("private");
+        setStep("confirm-replace");
+      } else {
+        setStep(result.secretEncrypted ? "unlock" : "protect");
+      }
     } catch (e) {
       setError(errorMessage(e, "Import failed"));
     } finally {
@@ -229,7 +260,7 @@ export function ImportKeyPage({
     setStep("protect");
   };
 
-  const handleImportPublic = async () => {
+  const handleImportPublic = async (confirmedReplace = false) => {
     setImporting(true);
     setError(null);
     try {
@@ -241,6 +272,23 @@ export function ImportKeyPage({
       if (usable.length === 0) {
         setError(importRejectionMessage(certs[0]?.keyInfo));
         return;
+      }
+      // Any cert matching a stored contact replaces it -- confirm first
+      // (once; the confirm step re-enters here with confirmedReplace).
+      if (!confirmedReplace) {
+        for (const { keyInfo } of usable) {
+          const collision = detectImportOverwrite(
+            keyInfo.keyId,
+            existingContacts,
+            { expiresAt: keyInfo.expiresAt, userIds: keyInfo.userIds },
+          );
+          if (collision) {
+            setOverwrite(collision);
+            setOverwriteKind("public");
+            setStep("confirm-replace");
+            return;
+          }
+        }
       }
       let warning: string | undefined;
       for (const { keyInfo, armored: certArmored } of usable) {
@@ -430,6 +478,58 @@ export function ImportKeyPage({
                   : detectedType === "public"
                     ? "Import"
                     : "Next"}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {step === "confirm-replace" && overwrite && (
+          <div className="flex flex-1 flex-col overflow-hidden">
+            <div className="flex-1 space-y-3 overflow-y-auto p-3">
+              <div className="border-destructive/30 bg-destructive/5 flex items-start gap-2 rounded-md border p-3">
+                <TriangleAlertIcon className="text-destructive mt-0.5 h-4 w-4 shrink-0" />
+                <div className="min-w-0 flex-1 text-xs">
+                  <p>
+                    This replaces your existing key for{" "}
+                    <span className="font-medium">{overwrite.userId}</span>
+                    {overwrite.addedAt
+                      ? ` (added ${format(overwrite.addedAt, "PPP")})`
+                      : ""}
+                    .
+                  </p>
+                  {overwrite.changes.length > 0 && (
+                    <p className="text-muted-foreground mt-2">
+                      Changes: {overwrite.changes.join(", ")}.
+                    </p>
+                  )}
+                  <p className="mt-2">
+                    The stored key is overwritten; if this import is a
+                    mistake, you'd need to re-import the old key.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-border space-y-2 border-t p-3">
+              {error && (
+                <p className="text-destructive text-xs" role="alert">
+                  {error}
+                </p>
+              )}
+              <Button
+                variant="destructive"
+                className="w-full"
+                disabled={importing}
+                onClick={() => {
+                  if (overwriteKind === "public") {
+                    void handleImportPublic(true);
+                  } else {
+                    setOverwrite(null);
+                    setStep(parsed?.secretEncrypted ? "unlock" : "protect");
+                  }
+                }}
+              >
+                {importing ? "Importing..." : "Replace key"}
               </Button>
             </div>
           </div>

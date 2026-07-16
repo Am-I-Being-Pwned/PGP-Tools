@@ -5,8 +5,10 @@ import {
   ClipboardIcon,
   DownloadIcon,
   RotateCcwIcon,
+  TriangleAlertIcon,
 } from "lucide-react";
 
+import { Alert, AlertDescription } from "@amibeingpwned/ui/alert";
 import { Button } from "@amibeingpwned/ui/button";
 import { Checkbox } from "@amibeingpwned/ui/checkbox";
 import {
@@ -319,6 +321,21 @@ export function WorkspaceView({
           />
         )}
 
+        {needsRecipient && myKeys.length > 0 && (
+          <label className="flex items-center gap-2">
+            <Checkbox
+              checked={s.encryptToSelf}
+              onCheckedChange={(v) => {
+                const checked = v === true;
+                s.setEncryptToSelf(checked);
+                s.resetOutput();
+                void savePreferences({ encryptToSelf: checked });
+              }}
+            />
+            <span className="text-sm">Also encrypt to me</span>
+          </label>
+        )}
+
         {/* An extension zip can carry two signature kinds; let the user pick
             (defaults to CRX, the overwhelmingly likely intent) instead of
             hijacking the PGP sign flow. */}
@@ -453,6 +470,15 @@ export function WorkspaceView({
         )}
         {s.passwordError && (
           <p className="text-destructive text-xs">{s.passwordError}</p>
+        )}
+
+        {s.selfDecryptWarning && (
+          <Alert className="border-amber-500/40 bg-amber-500/10 text-amber-400">
+            <TriangleAlertIcon className="h-4 w-4" />
+            <AlertDescription className="text-xs text-amber-400/90">
+              {s.selfDecryptWarning}
+            </AlertDescription>
+          </Alert>
         )}
 
         <WorkspaceResults

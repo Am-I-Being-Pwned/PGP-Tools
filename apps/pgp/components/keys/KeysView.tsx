@@ -405,6 +405,8 @@ export function KeysView({
                 onClose={nav.pop}
                 onImportPrivate={onAddKey}
                 onImportPublic={onAddContact}
+                existingKeys={myKeys}
+                existingContacts={contacts}
                 reusePasskeyCredentialId={primaryPasskeyCredentialId}
                 initialArmored={route.initialArmored}
                 crxSigningEnabled={crxSigningEnabled}
@@ -502,11 +504,21 @@ export function KeysView({
             );
           }
           if (route.page === "bulk-delete") {
+            // Deleting private key material (PGP or CRX) is unrecoverable,
+            // so those bulk deletes are gated behind type-to-confirm;
+            // contacts-only selections keep the plain confirm.
+            const hasPrivate =
+              selectedMyKeys.length > 0 || selectedCrxKeys.length > 0;
             return (
               <ConfirmPage
                 key={entry.id}
                 title="Delete selected?"
                 confirmLabel={`Delete ${selected.size} item${selected.size === 1 ? "" : "s"} permanently`}
+                confirmPromptText={
+                  hasPrivate
+                    ? `delete ${selected.size} key${selected.size === 1 ? "" : "s"}`
+                    : undefined
+                }
                 onCancel={nav.pop}
                 onConfirm={async () => {
                   await bulkDelete();
@@ -549,6 +561,16 @@ export function KeysView({
                 target.kind === "contact"
                   ? "Remove contact"
                   : "Delete key permanently"
+              }
+              // Both "own" (PGP) and "crx" targets hold private key
+              // material, so they require typing the key's name; contact
+              // removal (public key only) keeps the plain confirm.
+              confirmPromptText={
+                target.kind === "own"
+                  ? parseUserId(target.keyBlob.userIds[0]).name
+                  : target.kind === "crx"
+                    ? (target.keyBlob.label ?? target.keyBlob.extensionId)
+                    : undefined
               }
               onCancel={nav.pop}
               onConfirm={async () => {

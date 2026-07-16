@@ -26,6 +26,10 @@ export interface PgpPreferences {
   onboardingComplete: boolean;
   autoLockMinutes: AutoLockTimeout;
   signWhenEncrypting: boolean;
+  /** When encrypting to a contact, also encrypt to one of the user's own
+   *  keys so they can decrypt their own ciphertext later. On by default;
+   *  turning it off produces output only the recipient can read. */
+  encryptToSelf: boolean;
   activeTab: "workspace" | "keys" | "settings";
   neverCacheKeys: boolean;
   autoDownloadFiles: boolean;
@@ -51,6 +55,7 @@ const DEFAULT_PREFERENCES: PgpPreferences = {
   onboardingComplete: false,
   autoLockMinutes: 15,
   signWhenEncrypting: false,
+  encryptToSelf: true,
   activeTab: "workspace",
   neverCacheKeys: false,
   autoDownloadFiles: false,
