@@ -21,7 +21,6 @@ import {
   downloadText,
 } from "../../lib/utils/download";
 import { formatFileSize } from "../../lib/utils/formatting";
-import { parseUserId } from "../../lib/utils/key-naming";
 import {
   isZipArchive,
   zipFiles as zipFilesToArchive,
@@ -217,7 +216,6 @@ export function useWorkspaceOperations({
     s.setOperationDone(false);
     s.setStatusText(null);
     s.setVerifiedSigner(null);
-    s.setSelfDecryptWarning(null);
     s.setNeedsPassword(false);
     s.setLoading(true);
 
@@ -260,21 +258,20 @@ export function useWorkspaceOperations({
       signingHandle = handle;
     }
 
-    // With encrypt-to-self on, the user's own key rides along so they can
-    // decrypt their own ciphertext later; when it's off (or they own no
-    // key), flag it so a warning shows on the output.
-    const { recipientPublicKeys, selfExcluded, selfKeyId } =
-      buildEncryptRecipients({
-        recipients: recipients.map((k) => ({
-          keyId: k.keyId,
-          armored:
-            "armoredPublicKey" in k ? k.armoredPublicKey : k.publicKeyArmored,
-        })),
-        encryptToSelf: s.encryptToSelf,
-        ownKeys: myKeys,
-        signingKeyId: s.alsoSign ? s.selectedKeyId : null,
-        defaultKeyId,
-      });
+    // With encrypt-to-self on, the user's own key rides along so they
+    // can decrypt their own ciphertext later. (The can't-decrypt case
+    // is warned about BEFORE running, in WorkspaceView.)
+    const { recipientPublicKeys, selfKeyId } = buildEncryptRecipients({
+      recipients: recipients.map((k) => ({
+        keyId: k.keyId,
+        armored:
+          "armoredPublicKey" in k ? k.armoredPublicKey : k.publicKeyArmored,
+      })),
+      encryptToSelf: s.encryptToSelf,
+      ownKeys: myKeys,
+      signingKeyId: s.alsoSign ? s.selectedKeyId : null,
+      defaultKeyId,
+    });
 
     const doEncrypt = async (input: EncryptInput) => {
       if (signingHandle !== null) {
@@ -346,18 +343,6 @@ export function useWorkspaceOperations({
         text: typeof result === "string" ? result : undefined,
         binary: typeof result !== "string" ? result : undefined,
       });
-    }
-
-    if (selfExcluded) {
-      const firstName = parseUserId(recipients[0].userIds[0]).name;
-      const others = recipients.length - 1;
-      const label =
-        others === 0
-          ? firstName
-          : `${firstName} and ${others} other${others > 1 ? "s" : ""}`;
-      s.setSelfDecryptWarning(
-        `Encrypted only to ${label} - you will not be able to decrypt this.`,
-      );
     }
 
     // Record the FINAL recipient set: when encrypt-to-self rode the

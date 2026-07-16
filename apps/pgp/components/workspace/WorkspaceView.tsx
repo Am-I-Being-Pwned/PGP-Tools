@@ -5,11 +5,9 @@ import {
   ClipboardIcon,
   DownloadIcon,
   RotateCcwIcon,
-  TriangleAlertIcon,
 } from "lucide-react";
 
 import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
-import { Alert, AlertDescription } from "@amibeingpwned/ui/alert";
 import { Button } from "@amibeingpwned/ui/button";
 import { Checkbox } from "@amibeingpwned/ui/checkbox";
 import {
@@ -168,6 +166,16 @@ export function WorkspaceView({
   const needsRecipient = s.mode === "encrypt";
   const needsPrivateKey = s.mode === "decrypt" || s.mode === "sign";
   const hasInput = s.files.length > 0 || s.input.length > 0;
+
+  // Warn BEFORE encrypting when the user won't be able to decrypt the
+  // result: encrypt-to-self is off and no selected recipient is one of
+  // their own keys (mirrors buildEncryptRecipients' selfExcluded).
+  const selfDecryptRisk =
+    s.mode === "encrypt" &&
+    myKeys.length > 0 &&
+    !s.encryptToSelf &&
+    s.selectedRecipientIds.length > 0 &&
+    !s.selectedRecipientIds.some((id) => myKeys.some((k) => k.keyId === id));
 
   // Copy the armored output straight from the bottom action bar (the compact
   // preview no longer carries its own copy button). Binary/file output has no
@@ -579,6 +587,11 @@ export function WorkspaceView({
                 </>
               )}
             </div>
+            {selfDecryptRisk && (
+              <p className="text-muted-foreground text-xs">
+                You won't be able to decrypt the result
+              </p>
+            )}
             {s.alsoSign && myKeys.length > 1 && (
               <KeySelector
                 label="Sign with"
@@ -624,15 +637,6 @@ export function WorkspaceView({
         )}
         {s.passwordError && (
           <p className="text-destructive text-xs">{s.passwordError}</p>
-        )}
-
-        {s.selfDecryptWarning && (
-          <Alert className="border-amber-500/40 bg-amber-500/10 text-amber-400">
-            <TriangleAlertIcon className="h-4 w-4" />
-            <AlertDescription className="text-xs text-amber-400/90">
-              {s.selfDecryptWarning}
-            </AlertDescription>
-          </Alert>
         )}
 
         <WorkspaceResults
