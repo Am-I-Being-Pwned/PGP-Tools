@@ -108,9 +108,12 @@ export function RecipientPicker({
   // Render order, flattened -- what the digit shortcuts index into.
   const visibleKeys = [...recent, ...restContacts, ...restMyKeys];
 
-  const addRecipient = (keyId: string) => {
+  // Click/Enter picks close the popover (the deliberate single pick);
+  // digit quick-picks keep it open for rapid multi-add.
+  const addRecipient = (keyId: string, opts?: { keepOpen?: boolean }) => {
     onChange([...selectedKeyIds, keyId]);
     setSearch("");
+    if (!opts?.keepOpen) setOpen(false);
   };
   const removeRecipient = (keyId: string) => {
     onChange(selectedKeyIds.filter((id) => id !== keyId));
@@ -140,7 +143,7 @@ export function RecipientPicker({
       const index = Number(e.key) - 1;
       if (index < visibleKeys.length) {
         e.preventDefault();
-        addRecipient(visibleKeys[index].keyId);
+        addRecipient(visibleKeys[index].keyId, { keepOpen: true });
       }
     }
   };
