@@ -11,9 +11,9 @@ import { formatKeyDisplayName } from "./utils/key-naming";
  *  the maximum size of the picker's "Recent" section. */
 export const RECENT_RECIPIENTS_CAP = 10;
 
-/** The minimal shape orderRecipients needs -- both `PublicContactKey`
- *  and `ProtectedKeyBlob` satisfy it. */
-interface RecipientLike {
+/** The minimal shape the recipient helpers need -- both
+ *  `PublicContactKey` and `ProtectedKeyBlob` satisfy it. */
+export interface RecipientLike {
   keyId: string;
   userIds: string[];
 }
@@ -51,6 +51,24 @@ export function orderRecipients<T extends RecipientLike>(
     .filter((item) => !recentIds.has(item.keyId))
     .sort((a, b) => displayName(a).localeCompare(displayName(b)));
   return { recent, rest };
+}
+
+/**
+ * Whether a picker option matches a search query. Every whitespace-
+ * separated token of the query must appear (case-insensitive) somewhere
+ * in the option's display name, detail (comment/email) or key id, so
+ * "james rno" narrows the same way it would in Linear's comboboxes.
+ * An empty/blank query matches everything.
+ */
+export function matchesRecipientSearch(
+  item: RecipientLike,
+  query: string,
+): boolean {
+  const tokens = query.toLowerCase().split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return true;
+  const { name, detail } = formatKeyDisplayName(item.userIds[0]);
+  const haystack = `${name} ${detail} ${item.keyId}`.toLowerCase();
+  return tokens.every((token) => haystack.includes(token));
 }
 
 /**
