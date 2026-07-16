@@ -200,6 +200,17 @@ export function HistoryPage({
             autoFocus
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => {
+              // Escape clears a non-empty query ONLY -- stop it here so
+              // the surrounding slide-over (document-level listener)
+              // doesn't also close; a second Escape on the now-empty
+              // box falls through and closes the page.
+              if (e.key === "Escape" && search !== "") {
+                e.preventDefault();
+                e.stopPropagation();
+                setSearch("");
+              }
+            }}
             className={`${INPUT_CLASS} mb-2`}
           />
         )}
