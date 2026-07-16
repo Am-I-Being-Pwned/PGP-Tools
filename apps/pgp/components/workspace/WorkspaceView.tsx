@@ -27,14 +27,17 @@ import type { WorkspaceDraft } from "../../lib/workspace-draft";
 import type { WorkspaceIntake } from "./useWorkspaceState";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import { useDelayedFlag } from "../../hooks/useDelayedFlag";
+import { useShortcut } from "../../hooks/useShortcut";
 import {
   COPY_SHORTCUT,
   DOWNLOAD_SHORTCUT,
 } from "../../lib/actions/definitions";
 import { requestUnlimitedHistoryStorage } from "../../lib/storage/history";
 import { savePreferences } from "../../lib/storage/preferences";
+import { toast } from "../../lib/toast";
 import { saveCrxViaPrompt } from "../../lib/utils/download";
 import { INPUT_CLASS } from "../../lib/utils/styles";
+import { hasOpenSlideOver } from "../shared/SlideOver";
 import { ToggleBadge } from "../shared/ToggleBadge";
 import { HistoryButton } from "./HistoryPage";
 import { KeySelector } from "./KeySelector";
@@ -253,6 +256,68 @@ export function WorkspaceView({
   // a Back button, instead of cramming it into a small fixed-height preview.
   const showFullOutput =
     s.operationDone && s.mode === "decrypt" && s.output.length > 0;
+
+  // Snapshot of the box at the moment a double-Escape cleared it, so the
+  // clear is undoable (toast Undo, or mod+z while the box is still empty
+  // -- once the user types again, native undo owns mod+z).
+  const [clearSnapshot, setClearSnapshot] = useState<{
+    input: string;
+    files: File[];
+  } | null>(null);
+  const lastEscapeAt = useRef(0);
+
+  const restoreCleared = () => {
+    setClearSnapshot((snap) => {
+      if (snap) {
+        s.setInput(snap.input);
+        s.setFiles(snap.files);
+      }
+      return null;
+    });
+  };
+  const clearBoxUndoable = () => {
+    if (s.input.length === 0 && s.files.length === 0) return;
+    setClearSnapshot({ input: s.input, files: s.files });
+    s.resetAll();
+    toast.message("Workspace cleared", {
+      id: "workspace-text-cleared",
+      duration: 4000,
+      action: { label: "Undo", onClick: restoreCleared },
+    });
+  };
+  useShortcut({ mod: true, key: "z" }, restoreCleared, {
+    enabled: clearSnapshot !== null && s.input.length === 0,
+  });
+
+  // Escape layers for the workspace itself (subpages and the palette
+  // own their Escapes and never let them reach this listener): in the
+  // full-output view a single press mirrors Back; in the form view a
+  // quick double-tap clears the box, undoably.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || e.defaultPrevented) return;
+      if (hasOpenSlideOver()) return;
+      // Escapes that are closing a dropdown (mode select, pickers)
+      // belong to the dropdown, not to us.
+      const target = e.target as HTMLElement | null;
+      if (target?.closest("[data-radix-popper-content-wrapper]")) return;
+      if (showFullOutput) {
+        // The back-press never counts toward the clear double-tap.
+        lastEscapeAt.current = 0;
+        s.resetOutput();
+        return;
+      }
+      const now = Date.now();
+      if (now - lastEscapeAt.current < 350) {
+        lastEscapeAt.current = 0;
+        clearBoxUndoable();
+      } else {
+        lastEscapeAt.current = now;
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  });
 
   // Whether the main action button is rendered (the trailing branch of
   // the action bar). The Run action only fires while it would be
