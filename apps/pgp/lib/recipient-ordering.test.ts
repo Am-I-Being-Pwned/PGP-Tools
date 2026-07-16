@@ -49,7 +49,11 @@ describe("orderRecipients", () => {
   });
 
   it("respects an explicit cap", () => {
-    const { recent, rest } = orderRecipients([ALICE, BOB, CAROL], ["B", "C"], 1);
+    const { recent, rest } = orderRecipients(
+      [ALICE, BOB, CAROL],
+      ["B", "C"],
+      1,
+    );
     expect(recent).toEqual([BOB]);
     expect(rest).toEqual([ALICE, CAROL]);
   });
