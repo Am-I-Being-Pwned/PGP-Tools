@@ -46,8 +46,13 @@ export interface WorkspaceState {
   setBinaryOutput: (b: Uint8Array | undefined) => void;
   fileResults: FileResult[];
   setFileResults: (r: FileResult[]) => void;
-  selectedRecipientId: string | null;
-  setSelectedRecipientId: (s: string | null) => void;
+  /** Recipient key ids for encrypt mode, in selection (chip) order. */
+  selectedRecipientIds: string[];
+  setSelectedRecipientIds: (ids: string[]) => void;
+  /** Recently used recipient fingerprints, most recent first
+   *  (preference-backed; updated after each successful encrypt). */
+  recentRecipients: string[];
+  setRecentRecipients: (ids: string[]) => void;
   selectedKeyId: string | null;
   setSelectedKeyId: (s: string | null) => void;
   selectedCrxKeyId: string | null;
@@ -133,9 +138,10 @@ export function useWorkspaceState(opts: {
   );
   const [binaryOutput, setBinaryOutput] = useState<Uint8Array | undefined>();
   const [fileResults, setFileResults] = useState<FileResult[]>([]);
-  const [selectedRecipientId, setSelectedRecipientId] = useState<string | null>(
-    null,
+  const [selectedRecipientIds, setSelectedRecipientIds] = useState<string[]>(
+    [],
   );
+  const [recentRecipients, setRecentRecipients] = useState<string[]>([]);
   const [selectedKeyId, setSelectedKeyId] = useState<string | null>(null);
   const [selectedCrxKeyId, setSelectedCrxKeyId] = useState<string | null>(null);
   const [pendingCrxSign, setPendingCrxSign] = useState(false);
@@ -193,6 +199,7 @@ export function useWorkspaceState(opts: {
       setAlsoSign(p.signWhenEncrypting);
       setEncryptToSelf(p.encryptToSelf);
       setSaveToHistory(p.historyEnabled);
+      setRecentRecipients(p.recentRecipients);
     });
   }, []);
 
@@ -211,7 +218,7 @@ export function useWorkspaceState(opts: {
         setMode(draft.mode);
         setInput(draft.input);
         setOutput(draft.output);
-        setSelectedRecipientId(draft.selectedRecipientId);
+        setSelectedRecipientIds(draft.selectedRecipientIds);
         setSelectedKeyId(draft.selectedKeyId);
       }
       onRestored?.();
@@ -238,14 +245,14 @@ export function useWorkspaceState(opts: {
       mode,
       input,
       output,
-      selectedRecipientId,
+      selectedRecipientIds,
       selectedKeyId,
     });
   }, [
     mode,
     input,
     output,
-    selectedRecipientId,
+    selectedRecipientIds,
     selectedKeyId,
     privateKeyDetected,
     onDraftChange,
@@ -313,16 +320,21 @@ export function useWorkspaceState(opts: {
     );
   }, [isExtensionZip, opts.crxSigningEnabled, crxKeys]);
 
+  // Default-select the first available key ONCE, mirroring the old
+  // single-select behavior. The latch matters for multi-select: without
+  // it, removing the last chip would immediately re-add the default and
+  // the user could never reach an empty selection.
   const allRecipientKeys = opts.allPublicKeys;
+  const recipientDefaulted = useRef(false);
   useEffect(() => {
-    if (
-      allRecipientKeys &&
-      allRecipientKeys.length > 0 &&
-      !selectedRecipientId
-    ) {
-      setSelectedRecipientId(allRecipientKeys[0].keyId);
+    if (recipientDefaulted.current) return;
+    if (allRecipientKeys && allRecipientKeys.length > 0) {
+      recipientDefaulted.current = true;
+      if (selectedRecipientIds.length === 0) {
+        setSelectedRecipientIds([allRecipientKeys[0].keyId]);
+      }
     }
-  }, [allRecipientKeys, selectedRecipientId]);
+  }, [allRecipientKeys, selectedRecipientIds]);
 
   const { pendingAction, onClearPending, encryptToKeyId, onClearEncryptTo } =
     opts;
@@ -340,7 +352,8 @@ export function useWorkspaceState(opts: {
   useEffect(() => {
     if (!encryptToKeyId) return;
     setMode("encrypt");
-    setSelectedRecipientId(encryptToKeyId);
+    recipientDefaulted.current = true;
+    setSelectedRecipientIds([encryptToKeyId]);
     onClearEncryptTo?.();
   }, [encryptToKeyId, onClearEncryptTo]);
 
@@ -432,8 +445,10 @@ export function useWorkspaceState(opts: {
     setBinaryOutput,
     fileResults,
     setFileResults,
-    selectedRecipientId,
-    setSelectedRecipientId,
+    selectedRecipientIds,
+    setSelectedRecipientIds,
+    recentRecipients,
+    setRecentRecipients,
     selectedKeyId,
     setSelectedKeyId,
     selectedCrxKeyId,

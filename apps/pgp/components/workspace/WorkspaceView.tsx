@@ -38,6 +38,7 @@ import { saveCrxViaPrompt } from "../../lib/utils/download";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 import { HistoryButton } from "./HistoryPage";
 import { KeySelector } from "./KeySelector";
+import { RecipientPicker } from "./RecipientPicker";
 import { useWorkspaceOperations } from "./useWorkspaceOperations";
 import { useWorkspaceState } from "./useWorkspaceState";
 import { WorkspaceInput } from "./WorkspaceInput";
@@ -341,21 +342,21 @@ export function WorkspaceView({
 
       <div className="space-y-3">
         {needsRecipient && (
-          <KeySelector
-            label="Key for recipient"
+          <RecipientPicker
+            label="Recipients"
             // Only offer contacts you can actually encrypt to. Sign-only
             // keys are valid contacts (for verification) but have no
             // encryption key. Legacy records (undefined) are assumed
             // encryptable until the contacts backfill fills the flag in.
             contacts={contacts.filter((c) => c.usableForEncryption !== false)}
             myKeys={myKeys}
-            selectedKeyId={s.selectedRecipientId}
-            // Changing the recipient invalidates any completed ciphertext —
-            // clear it so the user can re-encrypt to the new key rather than
-            // being stuck downloading output encrypted to the wrong one.
-            onSelect={(id) => {
-              if (id === s.selectedRecipientId) return;
-              s.setSelectedRecipientId(id);
+            selectedKeyIds={s.selectedRecipientIds}
+            recentKeyIds={s.recentRecipients}
+            // Changing the recipient set (adding OR removing) invalidates
+            // any completed ciphertext — clear it so the user re-encrypts
+            // to the new set rather than downloading stale output.
+            onChange={(ids) => {
+              s.setSelectedRecipientIds(ids);
               s.resetOutput();
             }}
             emptyText="No contacts yet."

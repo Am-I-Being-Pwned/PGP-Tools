@@ -20,7 +20,7 @@ export interface WorkspaceDraft {
   mode: WorkspaceAction;
   input: string;
   output: string;
-  selectedRecipientId: string | null;
+  selectedRecipientIds: string[];
   selectedKeyId: string | null;
 }
 
@@ -77,8 +77,8 @@ function isWorkspaceDraft(v: unknown): v is WorkspaceDraft {
       o.mode === "verify") &&
     typeof o.input === "string" &&
     typeof o.output === "string" &&
-    (o.selectedRecipientId === null ||
-      typeof o.selectedRecipientId === "string") &&
+    Array.isArray(o.selectedRecipientIds) &&
+    o.selectedRecipientIds.every((id) => typeof id === "string") &&
     (o.selectedKeyId === null || typeof o.selectedKeyId === "string")
   );
 }
