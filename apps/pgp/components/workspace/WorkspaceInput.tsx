@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { Button } from "@amibeingpwned/ui/button";
+import { ariaKeyShortcuts, isMacPlatform, Kbd } from "@amibeingpwned/ui/kbd";
 import {
   Select,
   SelectContent,
@@ -10,10 +11,18 @@ import {
 } from "@amibeingpwned/ui/select";
 
 import type { WorkspaceAction } from "../../lib/messages";
+import { MODE_SHORTCUTS } from "../../lib/actions/definitions";
 import { toast } from "../../lib/toast";
 import { DropZone } from "./DropZone";
 
 type Mode = WorkspaceAction;
+
+const MODE_ITEMS: { value: Mode; label: string }[] = [
+  { value: "encrypt", label: "Encrypt" },
+  { value: "decrypt", label: "Decrypt" },
+  { value: "sign", label: "Sign" },
+  { value: "verify", label: "Verify" },
+];
 
 interface WorkspaceInputProps {
   mode: Mode;
@@ -70,30 +79,25 @@ export function WorkspaceInput({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem
-            className="focus:bg-border/70 cursor-pointer"
-            value="encrypt"
-          >
-            Encrypt
-          </SelectItem>
-          <SelectItem
-            className="focus:bg-border/70 cursor-pointer"
-            value="decrypt"
-          >
-            Decrypt
-          </SelectItem>
-          <SelectItem
-            className="focus:bg-border/70 cursor-pointer"
-            value="sign"
-          >
-            Sign
-          </SelectItem>
-          <SelectItem
-            className="focus:bg-border/70 cursor-pointer"
-            value="verify"
-          >
-            Verify
-          </SelectItem>
+          {MODE_ITEMS.map(({ value, label }) => (
+            <SelectItem
+              key={value}
+              className="focus:bg-border/70 cursor-pointer"
+              value={value}
+              aria-keyshortcuts={ariaKeyShortcuts(
+                MODE_SHORTCUTS[value],
+                isMacPlatform(),
+              )}
+              trailing={
+                <Kbd
+                  shortcut={MODE_SHORTCUTS[value]}
+                  className="text-muted-foreground ml-auto pl-4"
+                />
+              }
+            >
+              {label}
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
 

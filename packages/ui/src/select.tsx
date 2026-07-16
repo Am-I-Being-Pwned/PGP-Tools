@@ -117,8 +117,14 @@ function SelectLabel({
 function SelectItem({
   className,
   children,
+  trailing,
   ...props
-}: React.ComponentProps<typeof SelectPrimitive.Item>) {
+}: React.ComponentProps<typeof SelectPrimitive.Item> & {
+  /** Decorative content rendered after the item text (e.g. a shortcut
+   *  hint). Kept outside ItemText so it never leaks into the trigger's
+   *  SelectValue. */
+  trailing?: React.ReactNode;
+}) {
   return (
     <SelectPrimitive.Item
       className={cn(
@@ -133,6 +139,7 @@ function SelectItem({
         </SelectPrimitive.ItemIndicator>
       </span>
       <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+      {trailing}
     </SelectPrimitive.Item>
   );
 }

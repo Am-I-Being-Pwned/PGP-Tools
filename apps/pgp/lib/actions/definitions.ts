@@ -5,6 +5,8 @@
 // deliberately NOT palette actions in v1: they keep their dedicated
 // confirmation pages, out of reach of a stray Enter in a fuzzy matcher.
 
+import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
+
 import type { ActionCtx, PgpAction, PgpMode } from "./types";
 
 /** What "no input" means per mode, for Run's disabled reason. */
@@ -15,20 +17,30 @@ const NO_INPUT_REASON: Record<PgpMode, string> = {
   verify: "Nothing to verify - paste a signed message or drop a file",
 };
 
-const MODES: { mode: PgpMode; name: string; digit: string }[] = [
-  { mode: "encrypt", name: "Encrypt", digit: "1" },
-  { mode: "decrypt", name: "Decrypt", digit: "2" },
-  { mode: "sign", name: "Sign", digit: "3" },
-  { mode: "verify", name: "Verify", digit: "4" },
+const MODES: { mode: PgpMode; name: string }[] = [
+  { mode: "encrypt", name: "Encrypt" },
+  { mode: "decrypt", name: "Decrypt" },
+  { mode: "sign", name: "Sign" },
+  { mode: "verify", name: "Verify" },
 ];
 
+/** The mod+digit shortcut for each workspace mode. Single source of
+ *  truth shared by the registry's mode actions (below) and the mode
+ *  dropdown's Kbd hints, so the two can never drift. */
+export const MODE_SHORTCUTS: Record<PgpMode, ShortcutSpec> = {
+  encrypt: { mod: true, key: "1" },
+  decrypt: { mod: true, key: "2" },
+  sign: { mod: true, key: "3" },
+  verify: { mod: true, key: "4" },
+};
+
 /** Switch the workspace to a mode (jumping to the tab if needed). */
-const modeActions: PgpAction[] = MODES.map(({ mode, name, digit }) => ({
+const modeActions: PgpAction[] = MODES.map(({ mode, name }) => ({
   id: `mode.${mode}`,
   name,
   group: "Mode",
   keywords: ["mode", "switch"],
-  shortcut: { mod: true, key: digit },
+  shortcut: MODE_SHORTCUTS[mode],
   execute: (ctx: ActionCtx) => {
     ctx.navigation.setTab("workspace");
     ctx.navigation.setMode(mode);

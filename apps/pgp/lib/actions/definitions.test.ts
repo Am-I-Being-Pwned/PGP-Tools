@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { ShortcutKeyEvent } from "../shortcuts";
 import type { ActionCtx, PgpMode } from "./types";
-import { ACTIONS } from "./definitions";
+import { ACTIONS, MODE_SHORTCUTS } from "./definitions";
 import { findByShortcut, visibleActions } from "./registry";
 
 function fakeCtx(overrides: Partial<ActionCtx> = {}): ActionCtx {
@@ -173,6 +173,16 @@ describe("mode shortcuts", () => {
       );
       expect(hit?.action.id).toBe(id);
       expect(hit?.disabledReason).toBeUndefined();
+    }
+  });
+
+  // Drift guard: the mode dropdown renders its Kbd hints from
+  // MODE_SHORTCUTS, while keydown dispatch goes through each action's
+  // `shortcut`. Both must stay the same object per mode.
+  it("MODE_SHORTCUTS matches the registry's mode actions", () => {
+    for (const mode of ["encrypt", "decrypt", "sign", "verify"] as const) {
+      const action = ACTIONS.find((a) => a.id === `mode.${mode}`);
+      expect(action?.shortcut).toEqual(MODE_SHORTCUTS[mode]);
     }
   });
 
