@@ -3,6 +3,7 @@ import { formatDistanceToNow } from "date-fns";
 import {
   BadgeCheckIcon,
   CheckIcon,
+  ChevronRightIcon,
   ClipboardIcon,
   HistoryIcon,
   LockIcon,
@@ -123,6 +124,98 @@ function HighlightedContent({ text, query }: { text: string; query: string }) {
   });
 }
 
+/** Full view of one history entry: metadata block, complete content
+ *  (search-highlighted, first match scrolled into view), and Copy. */
+function HistoryEntryPage({
+  entry,
+  search,
+  onClose,
+}: {
+  entry: HistoryEntry;
+  search: string;
+  onClose: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+  const { copy } = useCopyToClipboard();
+  const handleCopy = async () => {
+    if (!entry.content) return;
+    // No label: the button's own 2s check is the success feedback.
+    if (!(await copy(entry.content))) return;
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  const Icon = OP_ICON[entry.op];
+
+  return (
+    <SubPage
+      title={entryTitle(entry)}
+      onClose={onClose}
+      bodyClassName="flex h-full flex-col gap-3 p-3"
+    >
+      <div className="text-muted-foreground space-y-1 text-xs">
+        <p className="flex items-center gap-1.5 capitalize">
+          <Icon className="h-3.5 w-3.5" />
+          {entry.op}
+          {entry.signed && entry.op === "encrypt" ? " + sign" : ""}
+          <span className="normal-case">
+            {" · "}
+            {new Date(entry.ts).toLocaleString()} (
+            {formatDistanceToNow(entry.ts, { addSuffix: true })})
+          </span>
+        </p>
+        {entry.recipients.length > 0 && (
+          <p className="break-words">
+            To{" "}
+            {entry.recipients
+              .map((r) =>
+                r.name
+                  ? `${r.name} (${r.fingerprint.slice(-8).toUpperCase()})`
+                  : r.fingerprint.slice(-8).toUpperCase(),
+              )
+              .join(", ")}
+          </p>
+        )}
+        {entry.files && entry.files.length > 0 && (
+          <ul>
+            {entry.files.map((f) => (
+              <li key={f.name} className="truncate">
+                {f.name} ({formatFileSize(f.size)})
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {entry.content !== undefined ? (
+        <>
+          <pre className="bg-muted/30 min-h-0 flex-1 overflow-auto rounded p-2 text-xs whitespace-pre-wrap">
+            {search ? (
+              <HighlightedContent text={entry.content} query={search} />
+            ) : (
+              entry.content
+            )}
+            {entry.truncated ? "\n[truncated]" : ""}
+          </pre>
+          <Button variant="outline" size="sm" onClick={() => void handleCopy()}>
+            <span className="flex items-center gap-2">
+              {copied ? (
+                <CheckIcon className="h-4 w-4 text-green-400" />
+              ) : (
+                <ClipboardIcon className="h-4 w-4" />
+              )}
+              {copied ? "Copied" : "Copy"}
+            </span>
+          </Button>
+        </>
+      ) : (
+        <p className="text-muted-foreground text-xs">
+          Metadata only - content is not stored for this operation.
+        </p>
+      )}
+    </SubPage>
+  );
+}
+
 /**
  * Encrypted-history browser. Decrypted entries live ONLY in this
  * component's state: the page is mounted inside the masterUnlocked-gated
@@ -140,12 +233,11 @@ export function HistoryPage({
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [search, setSearch] = useState("");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [detailEntry, setDetailEntry] = useState<HistoryEntry | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
   const [usage, setUsage] = useState<{ used: number; budget: number } | null>(
     null,
   );
-  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -161,16 +253,6 @@ export function HistoryPage({
   const filtered = search
     ? entries.filter((e) => entryMatchesQuery(e, search))
     : entries;
-
-  const { copy } = useCopyToClipboard();
-  const handleCopy = async (entry: HistoryEntry) => {
-    if (!entry.content) return;
-    // No label: the row's own 2s check is the success feedback. A
-    // rejected write (panel not focused) surfaces as an error toast.
-    if (!(await copy(entry.content))) return;
-    setCopiedId(entry.id);
-    setTimeout(() => setCopiedId(null), 2000);
-  };
 
   return (
     <>
@@ -234,125 +316,71 @@ export function HistoryPage({
         <div className="space-y-2">
           {filtered.map((entry) => {
             const Icon = OP_ICON[entry.op];
-            const expanded = expandedId === entry.id;
             // Show WHY a row matched: a content hit renders a snippet
-            // under the header (hidden once expanded -- the full
-            // highlighted content supersedes it). Recipient/file-name
-            // hits are already visible, highlighted, in the title.
+            // under the header. Recipient/file-name hits are already
+            // visible, highlighted, in the title.
             const snippet =
-              search && !expanded && entry.content !== undefined
+              search && entry.content !== undefined
                 ? buildSnippet(entry.content, search)
                 : undefined;
             // decrypt/verify rows never store content (see history.ts);
-            // mark them at a glance so users don't expand expecting text.
+            // mark them at a glance so users don't open expecting text.
             const metadataOnly =
               entry.content === undefined &&
               (!entry.files || entry.files.length === 0);
             return (
-              <div
+              <button
                 key={entry.id}
-                className="border-border rounded-lg border p-2.5"
+                type="button"
+                onClick={() => setDetailEntry(entry)}
+                aria-label={`Open ${entryTitle(entry)}`}
+                className="border-border hover:bg-muted/40 block w-full rounded-lg border p-2.5 text-left transition-colors"
               >
-                <button
-                  type="button"
-                  className="w-full text-left"
-                  onClick={() => setExpandedId(expanded ? null : entry.id)}
-                  aria-expanded={expanded}
-                >
-                  <span className="flex w-full items-center gap-2">
-                    <Icon className="text-muted-foreground h-4 w-4 shrink-0" />
-                    <span className="min-w-0 flex-1 truncate text-sm">
-                      {metadataOnly ? (
-                        <span className="text-muted-foreground italic">
-                          No content saved
-                        </span>
-                      ) : (
-                        <Highlighted text={entryTitle(entry)} query={search} />
-                      )}
-                    </span>
-                    <span className="text-muted-foreground shrink-0 text-xs whitespace-nowrap capitalize">
-                      {entry.op}
-                      {entry.signed && entry.op === "encrypt" ? " + sign" : ""}
-                    </span>
-                    <span className="text-muted-foreground shrink-0 text-xs whitespace-nowrap">
-                      {formatDistanceToNow(entry.ts, { addSuffix: true })}
-                    </span>
+                <span className="flex w-full items-center gap-2">
+                  <Icon className="text-muted-foreground h-4 w-4 shrink-0" />
+                  <span className="min-w-0 flex-1 truncate text-sm">
+                    {metadataOnly ? (
+                      <span className="text-muted-foreground italic">
+                        No content saved
+                      </span>
+                    ) : (
+                      <Highlighted text={entryTitle(entry)} query={search} />
+                    )}
                   </span>
-                  {/* Content is the point of history: preview it by default
-                      rather than hiding everything behind a click. The
-                      search snippet replaces this while a query is active. */}
-                  {!expanded && !search && entry.content !== undefined && (
-                    <span className="text-muted-foreground mt-1 line-clamp-2 block pl-6 text-xs">
-                      {entry.content.replace(/\s+/g, " ").trim().slice(0, 240)}
-                    </span>
-                  )}
-                  {snippet && (
-                    <span className="text-muted-foreground mt-1 line-clamp-2 block pl-6 text-xs">
-                      {snippet.truncatedStart && "…"}
-                      {snippet.before}
-                      <mark className={MARK_CLASS}>{snippet.match}</mark>
-                      {snippet.after}
-                      {snippet.truncatedEnd && "…"}
-                      {snippet.moreMatches > 0 && (
-                        <span className="text-muted-foreground/70">
-                          {" "}
-                          +{snippet.moreMatches} more{" "}
-                          {snippet.moreMatches === 1 ? "match" : "matches"}
-                        </span>
-                      )}
-                    </span>
-                  )}
-                </button>
-                {expanded && (
-                  <div className="mt-2 space-y-2">
-                    {entry.files && entry.files.length > 0 && (
-                      <ul className="text-muted-foreground text-xs">
-                        {entry.files.map((f) => (
-                          <li key={f.name} className="truncate">
-                            {f.name} ({formatFileSize(f.size)})
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                    {entry.content !== undefined && (
-                      <>
-                        <pre className="bg-muted/30 max-h-48 overflow-auto rounded p-2 text-xs whitespace-pre-wrap">
-                          {search ? (
-                            <HighlightedContent
-                              text={entry.content}
-                              query={search}
-                            />
-                          ) : (
-                            entry.content
-                          )}
-                          {entry.truncated ? "\n[truncated]" : ""}
-                        </pre>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => void handleCopy(entry)}
-                        >
-                          <span className="flex items-center gap-2">
-                            {copiedId === entry.id ? (
-                              <CheckIcon className="h-4 w-4 text-green-400" />
-                            ) : (
-                              <ClipboardIcon className="h-4 w-4" />
-                            )}
-                            {copiedId === entry.id ? "Copied" : "Copy"}
-                          </span>
-                        </Button>
-                      </>
-                    )}
-                    {entry.content === undefined &&
-                      (!entry.files || entry.files.length === 0) && (
-                        <p className="text-muted-foreground text-xs">
-                          Metadata only - content is not stored for this
-                          operation.
-                        </p>
-                      )}
-                  </div>
+                  <span className="text-muted-foreground shrink-0 text-xs whitespace-nowrap capitalize">
+                    {entry.op}
+                    {entry.signed && entry.op === "encrypt" ? " + sign" : ""}
+                  </span>
+                  <span className="text-muted-foreground shrink-0 text-xs whitespace-nowrap">
+                    {formatDistanceToNow(entry.ts, { addSuffix: true })}
+                  </span>
+                  <ChevronRightIcon className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
+                </span>
+                {/* Content is the point of history: preview it by default
+                    rather than hiding everything behind a click. The
+                    search snippet replaces this while a query is active. */}
+                {!search && entry.content !== undefined && (
+                  <span className="text-muted-foreground mt-1 line-clamp-2 block pl-6 text-xs">
+                    {entry.content.replace(/\s+/g, " ").trim().slice(0, 240)}
+                  </span>
                 )}
-              </div>
+                {snippet && (
+                  <span className="text-muted-foreground mt-1 line-clamp-2 block pl-6 text-xs">
+                    {snippet.truncatedStart && "…"}
+                    {snippet.before}
+                    <mark className={MARK_CLASS}>{snippet.match}</mark>
+                    {snippet.after}
+                    {snippet.truncatedEnd && "…"}
+                    {snippet.moreMatches > 0 && (
+                      <span className="text-muted-foreground/70">
+                        {" "}
+                        +{snippet.moreMatches} more{" "}
+                        {snippet.moreMatches === 1 ? "match" : "matches"}
+                      </span>
+                    )}
+                  </span>
+                )}
+              </button>
             );
           })}
         </div>
@@ -363,6 +391,14 @@ export function HistoryPage({
           </p>
         )}
       </SubPage>
+
+      {detailEntry && (
+        <HistoryEntryPage
+          entry={detailEntry}
+          search={search}
+          onClose={() => setDetailEntry(null)}
+        />
+      )}
 
       {confirmClear && (
         <ConfirmPage
