@@ -1,13 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@amibeingpwned/ui/button";
 import { Switch } from "@amibeingpwned/ui/switch";
 
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
+import type { PresetId } from "../../lib/presets";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type {
   AutoLockTimeout,
+  PgpPreferences,
   StorageLocation,
 } from "../../lib/storage/preferences";
 import {
@@ -17,17 +19,19 @@ import {
   STORAGE_MASTER_PROTECTION,
   STORAGE_SETTINGS,
 } from "../../lib/constants";
+import { activePreset, PRESETS } from "../../lib/presets";
 import { isQuotaExceeded } from "../../lib/storage/chunked";
 import {
   copyEncryptedBlobRepacked,
   purgeEncryptedBlob,
 } from "../../lib/storage/encrypted-store";
 import { invalidateLocationCache } from "../../lib/storage/engine";
-import { savePreferences } from "../../lib/storage/preferences";
+import { getPreferences, savePreferences } from "../../lib/storage/preferences";
 import { ExportKeysPage } from "../keys/ExportKeysPage";
 import { CrxSigningInfoPage } from "../settings/CrxSigningInfoPage";
 import { DevToolsPage } from "../settings/DevToolsPage";
 import { ImportAllKeysPage } from "../settings/ImportAllKeysPage";
+import { PresetPicker } from "./PresetPicker";
 import { StorageLocationPicker } from "./StorageLocationPicker";
 
 const AUTO_LOCK_OPTIONS: { value: AutoLockTimeout; label: string }[] = [
@@ -114,6 +118,30 @@ export function SettingsView({
   const [showImportAll, setShowImportAll] = useState(false);
   const [showCrxInfo, setShowCrxInfo] = useState(false);
   const [showDevTools, setShowDevTools] = useState(false);
+
+  // Full preferences snapshot for computing the active preset: the
+  // bundles cover fields this view has no props for (historyEnabled,
+  // encryptToSelf, clipboardWipeSeconds). Re-read whenever a bundled
+  // setting editable in this view changes, so the "Custom" state tracks
+  // live edits. Toggles in other views can't change while this tab is
+  // showing in the same panel.
+  const [prefs, setPrefs] = useState<PgpPreferences | null>(null);
+  useEffect(() => {
+    void getPreferences().then(setPrefs);
+  }, [
+    autoLockEnabled,
+    autoLockMinutes,
+    lockOnTabAway,
+    neverCacheKeys,
+    storageLocation,
+  ]);
+
+  // Preset awaiting an explicit confirm because applying it would
+  // overwrite custom settings.
+  const [pendingPreset, setPendingPreset] = useState<PresetId | null>(null);
+  const [applyingPreset, setApplyingPreset] = useState(false);
+
+  const currentPreset = prefs ? activePreset(prefs) : null;
 
   const toggleAdvanced = () => {
     const next = !advancedMode;
@@ -202,8 +230,99 @@ export function SettingsView({
     void savePreferences({ autoLockMinutes: v });
   };
 
+  const applyPreset = async (id: PresetId) => {
+    setPendingPreset(null);
+    setApplyingPreset(true);
+    try {
+      // storageLocation can't go through plain savePreferences: flipping
+      // it without migrating the vault blobs would strand them in the
+      // old area. Apply the rest, then run the real migration if needed.
+      const { storageLocation: bundleLocation, ...bundle } = PRESETS[id].bundle;
+      await savePreferences(bundle);
+
+      // Sync the parent-held state for fields this view has props for.
+      if (bundle.autoLockEnabled !== undefined) {
+        onAutoLockEnabledChange(bundle.autoLockEnabled);
+      }
+      if (bundle.autoLockMinutes !== undefined) {
+        onAutoLockChange(bundle.autoLockMinutes);
+      }
+      if (bundle.lockOnTabAway !== undefined) {
+        onLockOnTabAwayChange(bundle.lockOnTabAway);
+      }
+      if (bundle.neverCacheKeys !== undefined) {
+        onNeverCacheKeysChange(bundle.neverCacheKeys);
+      }
+      setPrefs(await getPreferences());
+
+      if (bundleLocation !== undefined && bundleLocation !== storageLocation) {
+        await handleStorageChange(bundleLocation);
+      }
+    } finally {
+      setApplyingPreset(false);
+    }
+  };
+
+  const handlePresetSelect = (id: PresetId) => {
+    if (applyingPreset || migratingTo !== null) return;
+    // Overwriting a custom setup deserves a confirm; re-applying from a
+    // clean preset state is a no-op-or-obvious change, so just do it.
+    if (currentPreset === "custom") {
+      setPendingPreset(id);
+      return;
+    }
+    void applyPreset(id);
+  };
+
   return (
     <div className="space-y-5">
+      <div>
+        <h2 className="mb-2 text-sm font-semibold">Security preset</h2>
+        {currentPreset === "custom" && (
+          <p className="text-muted-foreground mb-2 text-xs">
+            Current: Custom. A bundled setting was changed, so no preset matches
+            exactly.
+          </p>
+        )}
+        <PresetPicker
+          selected={
+            currentPreset !== null && currentPreset !== "custom"
+              ? currentPreset
+              : null
+          }
+          onSelect={handlePresetSelect}
+        />
+        {pendingPreset !== null && (
+          <div className="border-border bg-muted/40 mt-2 rounded-md border p-3">
+            <p className="text-xs">
+              Replace your custom settings with the{" "}
+              <b>{PRESETS[pendingPreset].title}</b> preset? Only the settings
+              listed on its card change, and you can adjust any of them again
+              afterwards.
+            </p>
+            <div className="mt-2 flex gap-2">
+              <Button
+                size="sm"
+                className="flex-1"
+                disabled={applyingPreset}
+                onClick={() => void applyPreset(pendingPreset)}
+              >
+                Apply preset
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                disabled={applyingPreset}
+                onClick={() => setPendingPreset(null)}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+
       <div>
         <h2 className="mb-2 text-sm font-semibold">Key storage</h2>
         <StorageLocationPicker
