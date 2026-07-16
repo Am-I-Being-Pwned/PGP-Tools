@@ -663,7 +663,10 @@ export function WorkspaceView({
 
         {s.mode === "encrypt" && (
           <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
+            {/* pl-2 tucks the badges in line with the inner text column of
+                the input boxes above (their borders sit at the container
+                edge; their content is inset by the same 8px). */}
+            <div className="flex flex-wrap items-center gap-2 pl-2">
               {myKeys.length > 0 && (
                 <ToggleBadge
                   pressed={s.encryptToSelf}
