@@ -570,7 +570,7 @@ export function WorkspaceView({
               disabled={s.loading}
             >
               {showLoadingLabel
-                ? "..."
+                ? "Unlocking..."
                 : s.pendingCrxSign
                   ? "Sign"
                   : s.mode === "decrypt"
