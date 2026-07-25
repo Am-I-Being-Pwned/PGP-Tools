@@ -267,7 +267,12 @@ export default function App() {
     // fires fast, getPreferences resolves later and clobbers `activeTab`,
     // which unmounts the target view (KeysView) and closes the dialog.
     if (!pendingRoutedRef.current) {
-      setActiveTab(prefs.activeTab);
+      // Settings is never a launch destination: restoring it means a
+      // panel that was last closed on Settings reopens there instead of
+      // on the workspace. Workspace/keys still restore as saved.
+      setActiveTab(
+        prefs.activeTab === "settings" ? "workspace" : prefs.activeTab,
+      );
     }
     setNeverCacheKeys(prefs.neverCacheKeys);
     setAutoLockEnabled(prefs.autoLockEnabled);
