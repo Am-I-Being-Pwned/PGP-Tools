@@ -4,6 +4,7 @@ import {
   ArrowRightIcon,
   CheckCircleIcon,
   CopyIcon,
+  DownloadIcon,
   EllipsisVerticalIcon,
   ListChecksIcon,
   LockIcon,
@@ -30,6 +31,7 @@ interface ContactCardProps {
   onRemove?: () => void;
   onEncryptTo?: () => void;
   onCopyPublicKey?: () => void;
+  onDownloadPublicKey?: () => void;
   /** When set, shows a bottom-right arrow opening the key-details page. */
   onShowDetails?: () => void;
   advancedMode?: boolean;
@@ -54,6 +56,7 @@ export function ContactCard({
   onRemove,
   onEncryptTo,
   onCopyPublicKey,
+  onDownloadPublicKey,
   onShowDetails,
   advancedMode,
   readOnly,
@@ -202,6 +205,12 @@ export function ContactCard({
                 <DropdownMenuItem onClick={onCopyPublicKey}>
                   <CopyIcon />
                   Copy public key
+                </DropdownMenuItem>
+              )}
+              {onDownloadPublicKey && (
+                <DropdownMenuItem onClick={onDownloadPublicKey}>
+                  <DownloadIcon />
+                  Download public key
                 </DropdownMenuItem>
               )}
               {onStartSelect && (

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   ArrowRightIcon,
   CopyIcon,
+  DownloadIcon,
   EllipsisVerticalIcon,
   KeyIcon,
   ListChecksIcon,
@@ -65,6 +66,7 @@ export interface KeyCardModel {
   /** Present ⇒ enable "Copy private key" (opens the unified export page). */
   exporter: PrivateKeyExporter | null;
   onCopyPublicKey: () => void;
+  onDownloadPublicKey: () => void;
   onDelete: () => void;
   onRename?: () => void;
   /** Present ⇒ card is clickable into a details page (PGP). */
@@ -241,6 +243,10 @@ export function KeyCard({
             >
               <CopyIcon />
               Copy public key
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={model.onDownloadPublicKey}>
+              <DownloadIcon />
+              Download public key
             </DropdownMenuItem>
             {canExportPrivate && (
               <DropdownMenuItem

@@ -10,7 +10,10 @@ import type { KeyCardModel } from "./KeyCard";
 import type { KeyDetailsTarget } from "./KeyDetailsPage";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import { publicKeyDerToPem } from "../../lib/crx/types";
-import { downloadPublicKeysBundle } from "../../lib/keys/export-bundle";
+import {
+  downloadPublicKey,
+  downloadPublicKeysBundle,
+} from "../../lib/keys/export-bundle";
 import { crxKeyExporter, pgpKeyExporter } from "../../lib/keys/exporters";
 import { revocationCertificateWithHandle } from "../../lib/pgp/wasm";
 import { toast } from "../../lib/toast";
@@ -274,6 +277,8 @@ export function KeysView({
       // No label: KeyCard shows its own inline "Public key copied"
       // feedback; the hook still surfaces a rejected write.
       onCopyPublicKey: () => void copy(blob.publicKeyArmored),
+      onDownloadPublicKey: () =>
+        downloadPublicKey(blob.publicKeyArmored, blob.alias ?? realName),
       onDelete: () =>
         nav.push({
           page: "confirm-delete",
@@ -300,6 +305,12 @@ export function KeysView({
     session: undefined,
     exporter: crxKeyExporter(blob),
     onCopyPublicKey: () => void copy(publicKeyDerToPem(blob.publicKeyDerB64)),
+    onDownloadPublicKey: () =>
+      downloadPublicKey(
+        publicKeyDerToPem(blob.publicKeyDerB64),
+        blob.label ?? blob.extensionId,
+        "pem",
+      ),
     onDelete: () =>
       nav.push({
         page: "confirm-delete",
@@ -814,6 +825,12 @@ function ContactsList({
                     }
                     onCopyPublicKey={() =>
                       void copy(c.armoredPublicKey, { label: "Public key" })
+                    }
+                    onDownloadPublicKey={() =>
+                      downloadPublicKey(
+                        c.armoredPublicKey,
+                        parseUserId(c.userIds[0] ?? "").name || c.keyId,
+                      )
                     }
                     onShowDetails={() => onShowDetails(c)}
                     advancedMode={advancedMode}
