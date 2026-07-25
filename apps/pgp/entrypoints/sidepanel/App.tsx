@@ -78,6 +78,14 @@ export default function App() {
   // avoid overriding our routed tab with the stale saved value when
   // getPreferences resolves after our pending route.
   const pendingRoutedRef = useRef(false);
+  // True once the user has explicitly navigated (tab click or an action
+  // that routes tabs) this panel session. Until then applyPrefs is
+  // restoring the saved tab at launch/unlock, where Settings is never a
+  // destination; afterwards it must apply the saved value faithfully —
+  // the storage.onChanged re-apply fires right after changeTab persists
+  // a tab switch, and coercing there would bounce the user straight
+  // back off Settings.
+  const userNavigatedRef = useRef(false);
 
   // Master protection state
   const [masterProtection, setMasterProtection] =
@@ -269,9 +277,13 @@ export default function App() {
     if (!pendingRoutedRef.current) {
       // Settings is never a launch destination: restoring it means a
       // panel that was last closed on Settings reopens there instead of
-      // on the workspace. Workspace/keys still restore as saved.
+      // on the workspace. Workspace/keys still restore as saved, and
+      // once the user has navigated themselves the saved value applies
+      // as-is (see userNavigatedRef).
       setActiveTab(
-        prefs.activeTab === "settings" ? "workspace" : prefs.activeTab,
+        !userNavigatedRef.current && prefs.activeTab === "settings"
+          ? "workspace"
+          : prefs.activeTab,
       );
     }
     setNeverCacheKeys(prefs.neverCacheKeys);
@@ -383,6 +395,7 @@ export default function App() {
   const [presetsRoute, setPresetsRoute] = useState(false);
 
   const changeTab = useCallback((tab: Tab) => {
+    userNavigatedRef.current = true;
     setActiveTab(tab);
     void savePreferences({ activeTab: tab });
     toast.dismiss();
