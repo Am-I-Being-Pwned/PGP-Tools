@@ -1,3 +1,4 @@
+import type { ReactElement } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeftIcon,
@@ -8,7 +9,14 @@ import {
 } from "lucide-react";
 
 import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
+import { ariaKeyShortcuts, isMacPlatform } from "@amibeingpwned/ui/kbd-helpers";
 import { Button } from "@amibeingpwned/ui/button";
+import { Kbd } from "@amibeingpwned/ui/kbd";
+import {
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+} from "@amibeingpwned/ui/popover";
 import {
   Select,
   SelectContent,
@@ -49,6 +57,40 @@ import { WorkspaceResults } from "./WorkspaceResults";
 
 /** mod+Enter mirrors the main action button (Encrypt/Decrypt/Sign/...). */
 const RUN_SHORTCUT: ShortcutSpec = { mod: true, key: "Enter" };
+
+/** Hover/focus popover showing a button's keyboard shortcut as keycap
+ *  chips. The child (a single Button) is the popover anchor; open state
+ *  is driven by hover and focus rather than click, so the button's own
+ *  onClick is untouched. */
+function ShortcutHint({
+  shortcut,
+  children,
+}: {
+  shortcut: ShortcutSpec;
+  children: ReactElement;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverAnchor
+        asChild
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
+      >
+        {children}
+      </PopoverAnchor>
+      <PopoverContent
+        side="top"
+        className="pointer-events-none w-auto px-2 py-1.5"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        <Kbd shortcut={shortcut} />
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 interface WorkspaceViewProps {
   myKeys: ProtectedKeyBlob[];
@@ -514,34 +556,41 @@ export function WorkspaceView({
         />
         <div className="flex gap-2">
           <div className="flex flex-1 gap-2">
-            {/* Icon + keycaps only: the labels crowded the half-width
-                buttons, and the icons with shortcut chips say it all.
-                aria-label/title keep the names for AT and hover. */}
-            <Button
-              className="flex-1"
-              onClick={() => ops.triggerDownload()}
-              disabled={s.loading}
-              shortcut={DOWNLOAD_SHORTCUT}
-              aria-label="Download"
-              title="Download"
-            >
-              <DownloadIcon className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={handleCopy}
-              disabled={s.loading}
-              shortcut={COPY_SHORTCUT}
-              aria-label={copied ? "Copied" : "Copy"}
-              title="Copy"
-            >
-              {copied ? (
-                <CheckIcon className="h-4 w-4 text-green-400" />
-              ) : (
-                <ClipboardIcon className="h-4 w-4" />
-              )}
-            </Button>
+            {/* Icon + label; the shortcut lives in a hover popover so it
+                doesn't crowd the half-width buttons. */}
+            <ShortcutHint shortcut={DOWNLOAD_SHORTCUT}>
+              <Button
+                className="flex-1"
+                onClick={() => ops.triggerDownload()}
+                disabled={s.loading}
+                aria-keyshortcuts={ariaKeyShortcuts(
+                  DOWNLOAD_SHORTCUT,
+                  isMacPlatform(),
+                )}
+              >
+                <DownloadIcon className="h-4 w-4" />
+                Download
+              </Button>
+            </ShortcutHint>
+            <ShortcutHint shortcut={COPY_SHORTCUT}>
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={handleCopy}
+                disabled={s.loading}
+                aria-keyshortcuts={ariaKeyShortcuts(
+                  COPY_SHORTCUT,
+                  isMacPlatform(),
+                )}
+              >
+                {copied ? (
+                  <CheckIcon className="h-4 w-4 text-green-400" />
+                ) : (
+                  <ClipboardIcon className="h-4 w-4" />
+                )}
+                {copied ? "Copied" : "Copy"}
+              </Button>
+            </ShortcutHint>
           </div>
           <Button
             variant="outline"
@@ -820,34 +869,42 @@ export function WorkspaceView({
                   // Completed encrypt/sign: the result is ready to take away.
                   // Download is primary; Copy rides alongside for text output.
                   <div className="flex flex-1 gap-2">
-                    {/* Icon + keycaps only (labels crowded the buttons);
-                        aria-label/title keep the names for AT and hover. */}
-                    <Button
-                      className="flex-1"
-                      onClick={() => ops.triggerDownload()}
-                      disabled={s.loading}
-                      shortcut={DOWNLOAD_SHORTCUT}
-                      aria-label="Download"
-                      title="Download"
-                    >
-                      <DownloadIcon className="h-4 w-4" />
-                    </Button>
-                    {s.output && (
+                    {/* Icon + label; the shortcut lives in a hover
+                        popover so it doesn't crowd the buttons. */}
+                    <ShortcutHint shortcut={DOWNLOAD_SHORTCUT}>
                       <Button
-                        variant="outline"
                         className="flex-1"
-                        onClick={handleCopy}
+                        onClick={() => ops.triggerDownload()}
                         disabled={s.loading}
-                        shortcut={COPY_SHORTCUT}
-                        aria-label={copied ? "Copied" : "Copy"}
-                        title="Copy"
-                      >
-                        {copied ? (
-                          <CheckIcon className="h-4 w-4 text-green-400" />
-                        ) : (
-                          <ClipboardIcon className="h-4 w-4" />
+                        aria-keyshortcuts={ariaKeyShortcuts(
+                          DOWNLOAD_SHORTCUT,
+                          isMacPlatform(),
                         )}
+                      >
+                        <DownloadIcon className="h-4 w-4" />
+                        Download
                       </Button>
+                    </ShortcutHint>
+                    {s.output && (
+                      <ShortcutHint shortcut={COPY_SHORTCUT}>
+                        <Button
+                          variant="outline"
+                          className="flex-1"
+                          onClick={handleCopy}
+                          disabled={s.loading}
+                          aria-keyshortcuts={ariaKeyShortcuts(
+                            COPY_SHORTCUT,
+                            isMacPlatform(),
+                          )}
+                        >
+                          {copied ? (
+                            <CheckIcon className="h-4 w-4 text-green-400" />
+                          ) : (
+                            <ClipboardIcon className="h-4 w-4" />
+                          )}
+                          {copied ? "Copied" : "Copy"}
+                        </Button>
+                      </ShortcutHint>
                     )}
                   </div>
                 ) : (
