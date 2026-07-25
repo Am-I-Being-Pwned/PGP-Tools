@@ -44,7 +44,7 @@ export default defineConfig({
     // panel -- see saveCrxViaPrompt.)
     // `unlimitedStorage` is requested when the user enables the history
     // feature; a denial just keeps history on its conservative byte budget.
-    optional_permissions: ["downloads", "unlimitedStorage"],
+    optional_permissions: ["downloads"],
     icons: {
       16: "icon-16.png",
       32: "icon-32.png",
