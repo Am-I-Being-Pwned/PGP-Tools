@@ -210,16 +210,6 @@ export function WorkspaceView({
   const needsPrivateKey = s.mode === "decrypt" || s.mode === "sign";
   const hasInput = s.files.length > 0 || s.hasInput;
 
-  // Warn BEFORE encrypting when the user won't be able to decrypt the
-  // result: encrypt-to-self is off and no selected recipient is one of
-  // their own keys (mirrors buildEncryptRecipients' selfExcluded).
-  const selfDecryptRisk =
-    s.mode === "encrypt" &&
-    myKeys.length > 0 &&
-    !s.encryptToSelf &&
-    s.selectedRecipientIds.length > 0 &&
-    !s.selectedRecipientIds.some((id) => myKeys.some((k) => k.keyId === id));
-
   // Copy the armored output straight from the bottom action bar (the compact
   // preview no longer carries its own copy button). Binary/file output has no
   // text to copy, so the Copy half is only shown when there is output text.
@@ -822,11 +812,6 @@ export function WorkspaceView({
                 </>
               )}
             </div>
-            {selfDecryptRisk && (
-              <p className="text-muted-foreground text-xs">
-                You won't be able to decrypt the result
-              </p>
-            )}
             {s.alsoSign && myKeys.length > 1 && (
               <KeySelector
                 label="Sign with"
