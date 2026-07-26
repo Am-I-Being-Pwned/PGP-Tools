@@ -10,7 +10,8 @@
  *    `{ storageLocation, onboardingComplete }`
  *  - `pgp_settings` (engine-routed): `{ iv, ciphertext }` where the
  *    plaintext is JSON of the twelve v1.3.1 settings fields, padded on
- *    `local`, unpadded on `sync`
+ *    `local`, unpadded on `sync`, and sealed under the pre-domain-
+ *    separation shared envelope (one key + one AAD for every store)
  *  - workspace draft ciphertext: JSON with a single
  *    `selectedRecipientId: string | null` (now `selectedRecipientIds`)
  *  - history keys (`pgp_history*`): did not exist at all
@@ -18,15 +19,21 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { PgpPreferences } from "./preferences";
 import type { WorkspaceDraft } from "../workspace-draft";
+import type { StoredEnvelope } from "./envelope";
+import type { PgpPreferences } from "./preferences";
+import { STORAGE_PREFERENCES, STORAGE_SETTINGS } from "../constants";
+import { toBase64 } from "../encoding";
 import {
   decryptWorkspaceDraft,
   encryptWorkspaceDraft,
 } from "../workspace-draft";
-import { STORAGE_PREFERENCES, STORAGE_SETTINGS } from "../constants";
-import { fromBase64, toBase64 } from "../encoding";
 import { invalidateLocationCache } from "./engine";
+import {
+  isDomainSealed,
+  sealedDomain,
+  storedPlaintext,
+} from "./fake-store-crypto";
 import {
   hasUnlimitedStorage,
   historyByteSize,
@@ -36,35 +43,40 @@ import {
 import { padPlaintext, unpadPlaintext } from "./padding";
 import { getPreferences, savePreferences } from "./preferences";
 
-// Fake WASM session, matching the real packing contract: encrypt returns
-// [12-byte IV][plaintext], decrypt returns the ciphertext bytes verbatim.
-// The draft key uses an identity transform too, except for one marker
-// input that throws to simulate an undecryptable blob.
+// Fake WASM session (see fake-store-crypto.ts): the domain-bound
+// primitives tag the plaintext with their domain, the legacy shared ones
+// are the identity transform v1.3.1 effectively had. The draft key uses an
+// identity transform too, except for one marker input that throws to
+// simulate an undecryptable blob.
 const wasmMock = vi.hoisted(() => ({ session: true }));
 
 const UNDECRYPTABLE = new TextEncoder().encode("@@undecryptable@@");
 
-vi.mock("../pgp/wasm", () => ({
-  hasContactsSession: () => Promise.resolve(wasmMock.session),
-  encryptContacts: (plaintext: Uint8Array) => {
-    const packed = new Uint8Array(12 + plaintext.length);
-    packed.set(plaintext, 12);
-    return Promise.resolve(packed);
-  },
-  decryptContacts: (ciphertext: Uint8Array) =>
-    Promise.resolve(new Uint8Array(ciphertext)),
-  encryptDraft: (plaintext: Uint8Array) =>
-    Promise.resolve(new Uint8Array(plaintext)),
-  decryptDraft: (ciphertext: Uint8Array) => {
-    if (
-      ciphertext.length === UNDECRYPTABLE.length &&
-      ciphertext.every((b, i) => b === UNDECRYPTABLE[i])
-    ) {
-      return Promise.reject(new Error("decryption failed"));
-    }
-    return Promise.resolve(new Uint8Array(ciphertext));
-  },
-}));
+vi.mock("../pgp/wasm", async () => {
+  const fake = await import("./fake-store-crypto");
+  return {
+    hasContactsSession: () => Promise.resolve(wasmMock.session),
+    encryptStore: (domain: string, plaintext: Uint8Array) =>
+      Promise.resolve(fake.fakeEncryptStore(domain, plaintext)),
+    decryptStore: (domain: string, ciphertext: Uint8Array) =>
+      Promise.resolve(fake.fakeDecryptStore(domain, ciphertext)),
+    encryptContacts: (plaintext: Uint8Array) =>
+      Promise.resolve(fake.fakeEncryptContacts(plaintext)),
+    decryptContacts: (ciphertext: Uint8Array) =>
+      Promise.resolve(fake.fakeDecryptContacts(ciphertext)),
+    encryptDraft: (plaintext: Uint8Array) =>
+      Promise.resolve(new Uint8Array(plaintext)),
+    decryptDraft: (ciphertext: Uint8Array) => {
+      if (
+        ciphertext.length === UNDECRYPTABLE.length &&
+        ciphertext.every((b, i) => b === UNDECRYPTABLE[i])
+      ) {
+        return Promise.reject(new Error("decryption failed"));
+      }
+      return Promise.resolve(new Uint8Array(ciphertext));
+    },
+  };
+});
 
 /** In-memory chrome.storage area (same shape as history.test.ts). */
 function fakeArea() {
@@ -151,15 +163,14 @@ function seedV131Profile(location: "local" | "sync" = "local"): void {
 }
 
 /** Decrypt the stored settings blob back to its JSON object (test-side
- *  mirror of loadSettings, for asserting what a write persisted). */
+ *  mirror of loadSettings, for asserting what a write persisted).
+ *  `storedPlaintext` accepts either sealing scheme, so this works on a
+ *  v1.3.1 fixture and on a blob the current build rewrote. */
 function readStoredSettings(
   area: ReturnType<typeof fakeArea>,
 ): Record<string, unknown> {
-  const blob = area.store.get(STORAGE_SETTINGS) as {
-    iv: string;
-    ciphertext: string;
-  };
-  const plaintext = unpadPlaintext(fromBase64(blob.ciphertext));
+  const blob = area.store.get(STORAGE_SETTINGS) as StoredEnvelope;
+  const plaintext = unpadPlaintext(storedPlaintext(blob));
   return JSON.parse(new TextDecoder().decode(plaintext)) as Record<
     string,
     unknown
@@ -205,7 +216,10 @@ describe("v1.3.1 preferences blob", () => {
       });
       local.store.set(
         STORAGE_SETTINGS,
-        makeSettingsBlob({ ...V131_SETTINGS, autoLockMinutes: minutes }, "local"),
+        makeSettingsBlob(
+          { ...V131_SETTINGS, autoLockMinutes: minutes },
+          "local",
+        ),
       );
 
       const prefs = await getPreferences();
@@ -230,10 +244,7 @@ describe("v1.3.1 preferences blob", () => {
     });
     local.store.set(
       STORAGE_SETTINGS,
-      makeSettingsBlob(
-        { ...V131_SETTINGS, futureFeature: "keep-me" },
-        "local",
-      ),
+      makeSettingsBlob({ ...V131_SETTINGS, futureFeature: "keep-me" }, "local"),
     );
 
     await savePreferences({ armoredOutput: true });
@@ -243,6 +254,34 @@ describe("v1.3.1 preferences blob", () => {
     expect(stored.armoredOutput).toBe(true);
     // Untouched v1.3.1 fields survive the merge too.
     expect(stored.defaultSigningKeyId).toBe("SIGKEY01");
+  });
+
+  // v1.3.1 sealed every store under one shared key and one shared AAD, so
+  // its blobs carry no domain binding. They must keep opening (the legacy
+  // fallback in envelope.ts), and the first write must upgrade them.
+  it("reads the legacy shared-envelope settings blob and upgrades it on write", async () => {
+    seedV131Profile("local");
+    expect(isDomainSealed(local.store.get(STORAGE_SETTINGS))).toBe(false);
+
+    // Reading alone must not rewrite anything...
+    const before = local.store.get(STORAGE_SETTINGS);
+    await expect(getPreferences()).resolves.toMatchObject(V131_SETTINGS);
+    expect(local.store.get(STORAGE_SETTINGS)).toBe(before);
+
+    // ...but the next write reseals for the settings key as its domain,
+    // carrying every v1.3.1 field across.
+    await savePreferences({ armoredOutput: true });
+    const blob = local.store.get(STORAGE_SETTINGS);
+    expect(isDomainSealed(blob)).toBe(true);
+    expect(sealedDomain(blob)).toBe(STORAGE_SETTINGS);
+    expect(readStoredSettings(local)).toMatchObject({
+      ...V131_SETTINGS,
+      armoredOutput: true,
+    });
+    await expect(getPreferences()).resolves.toMatchObject({
+      ...V131_SETTINGS,
+      armoredOutput: true,
+    });
   });
 
   it("writing one new-field preference does not disturb v1.3.1 fields", async () => {
@@ -322,9 +361,8 @@ describe("history on a v1.3.1 profile (no history keys)", () => {
 
 describe("preset state for an upgraded v1.3.1 user", () => {
   it("all-default upgraded prefs read as custom, not as a preset", async () => {
-    const { activePreset, bundledSettingsCustomized } = await import(
-      "../presets"
-    );
+    const { activePreset, bundledSettingsCustomized } =
+      await import("../presets");
     // A v1.3.1 user who never touched settings: bootstrap present, no
     // settings blob at all (v1.3.1 only wrote it on the first change).
     sync.store.set(STORAGE_PREFERENCES, {

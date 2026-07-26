@@ -116,7 +116,19 @@ classic one, loads extensions) — so no display or `xvfb` is needed. Set
 > retainer of an input's text and *masks* the application-owned chain
 > underneath it. This was observed while fixing §8.11: with tracing on,
 > the only visible retainer was Playwright's own cache; with it off, the
-> real React fiber `alternate` chain appeared.
+> real React fiber `alternate` chain appeared. Note the config default is
+> `trace: "retain-on-failure"`, which is **active during passing runs**, so
+> this bites even when nothing is failing — `draft-memory.spec.ts` therefore
+> sets `test.use({ trace: "off" })` rather than relying on a CLI flag. Only
+> specs whose canary is an input's `value` are affected.
+>
+> **Validate before you believe a zero.** A retainer walk returning nothing
+> can mean "no leak" or "the walk is broken". Prove the measurement by
+> temporarily reintroducing the leak (e.g. an effect closing over the
+> plaintext), confirming the count goes to 1, then removing it. The
+> differential is the trustworthy signal — not the absence of a hit, and not
+> the chain text, since the walker reports the shortest path and that may run
+> through V8 internals such as the externalised-string table.
 
 Specs are `*.spec.ts` (Playwright); unit tests are `*.test.ts` (vitest),
 so the two runners never collide.

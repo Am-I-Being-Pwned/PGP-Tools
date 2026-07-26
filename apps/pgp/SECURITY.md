@@ -156,7 +156,8 @@ has exactly one shipping call site.
 | Encrypted workspace draft                   | App-level `draftCiphertext`                                          | Cleared once `WorkspaceView` rehydrates on unlock                         | `App.tsx`, `useWorkspaceState.ts`                                |
 | Decrypted message text (user data, not key) | `decryptWithHandle`                                                  | UI-controlled; cleared on view dismiss / panel close                      | `WorkspaceView.tsx`                                              |
 | Clipboard contents after key export         | `clipboard.writeText`                                                | `setTimeout` overwrites with `""` (60s encrypted, 30s plaintext)          | `KeyCard.tsx` `scheduleClipboardClear`                           |
-| Workspace input plaintext in the DOM        | textarea `value` (`#pgp-input`)                                      | **NOT cleared on master lock** — survives unmount via React's value-tracker closure + Chromium autofill `FormTracker`. See §8.11 | `App.tsx` `doMasterLock`, `WorkspaceView.tsx`                    |
+| Workspace input plaintext (ref + DOM node)  | `useWorkspaceState` `inputRef` / textarea `#pgp-input`               | `wipe()` in `doMasterLock` clears the ref, the DOM value and the clear-undo buffer. Uncontrolled on purpose — never in render state. §8.11 | `useWorkspaceState.ts`, `App.tsx` `doMasterLock`                  |
+| Decrypted output plaintext (React state)    | `useWorkspaceState` `output`                                         | **NOT cleared on master lock** — retained via React's `fiber.alternate`. Cleared only by reload. See §8.11 / `T-OUTPUT-HEAP-RESIDUE` | `useWorkspaceState.ts`, `WorkspaceView.tsx`                      |
 | History segment plaintext JSON (JS)         | `JSON.stringify` → `TextEncoder.encode` in `writeSegment`            | **NOT zeroized** — the `Uint8Array` is never `.fill(0)`'d and the intermediate JSON string is unzeroizable. See §11.2 | `lib/storage/history.ts`                                         |
 | History segment plaintext `&[u8]` (wasm)    | wasm-bindgen mallocs a borrowed copy into linear memory              | **NOT zeroized as an owned value** — `encrypt_contacts` takes `&[u8]`, so no `Zeroizing` wrapper; up to 64 KB of content per call | `lib.rs` `encrypt_contacts` / `decrypt_contacts`                 |
 | Decrypted segment bytes returned to JS      | `decryptContacts` in `readSegment`                                   | **NOT zeroized** — decoded and dropped without `.fill(0)`                 | `lib/storage/history.ts`                                         |
@@ -394,20 +395,20 @@ narrow `MessagePort`) would change the structure. We have not done that.
 Pinned by `e2e/hostile-dep.spec.ts`, which asserts both the gaps and the
 two genuine wins (linear memory and React state stay opaque).
 
-### 8.11 Known open defect — draft plaintext survives master lock
+### 8.11 Composer plaintext across a lock (fixed; output still open)
 
-Unlike the rest of §8, this is **not** an accepted boundary. It is a
-defect with an identified fix, recorded here because it is currently
-true.
+Unlike the rest of §8, this was **not** an accepted boundary — it was a
+defect. It is recorded in full because the diagnosis is the useful part,
+and because one half of it is still open.
 
-After an in-app master lock, the user's composed plaintext is still
-retained in the V8 heap. `doMasterLock` encrypts the draft and unmounts
-the workspace, so the app believes it holds only ciphertext — but the
-plaintext survives alongside it. Confirmed not to be a GC artefact:
-still present after six forced collections over ten seconds plus
-deliberate string churn.
+The original defect: after an in-app master lock, the user's composed
+plaintext remained in the V8 heap. `doMasterLock` encrypted the draft and
+unmounted the workspace, so the app believed it held only ciphertext,
+while a live plaintext copy survived alongside it. Confirmed not a GC
+artefact — still present after six forced collections over ten seconds
+plus deliberate string churn.
 
-The retainer chain:
+The first retainer chain found:
 
 ```
 (GC roots) → C++ Persistent roots
@@ -423,11 +424,9 @@ Persistent** handle to the last-interacted form control, so unmounting
 the textarea does not free the node — and the captured plaintext stays
 strongly reachable from a GC root.
 
-**Partially mitigated.** `doMasterLock` now blanks the textarea's DOM
-value once `draftCiphertext` is stashed, mirroring `ImportKeyPage`'s
-`resetAndClose`. That verifiably removes the value-tracker retainer above
-— but it is **not sufficient**, and the leak remains. With the DOM value
-cleared, a second, independent retainer appears:
+Blanking the DOM value (as `ImportKeyPage`'s `resetAndClose` does for
+pasted key armor) removed that chain and revealed a **second** one, which
+is the more important lesson:
 
 ```
 (GC roots) → (Global handles) → closure
@@ -437,27 +436,40 @@ cleared, a second, independent retainer appears:
         → property[input]  [string]  the user's plaintext
 ```
 
-The plaintext is in React **state**, not only in the DOM. `#pgp-input` is
-a *controlled* textarea (`value={input}` in `WorkspaceInput.tsx`), so the
-string is held by `useWorkspaceState` and captured by an effect closure
-that React keeps alive on the fiber's `alternate`. Blanking the DOM
-cannot reach it, and neither can unmounting, because the alternate fiber
-outlives the mount.
+The plaintext was in React **state**, not only in the DOM. React
+double-buffers hook state onto `fiber.alternate` and keeps effect closures
+hanging off it reachable from a GC root long after unmount, so a
+controlled `value={input}` retained the string no matter what the DOM
+said. **Clearing the DOM was never going to be sufficient.**
 
-The principled fix is the one `ImportKeyPage` already uses for pasted key
-armor: make the box **uncontrolled** — hold the text in a ref so it never
-enters render state at all. Its comment says exactly why ("the paste box
-is uncontrolled (armor never enters render state)"). Applying that to the
-workspace composer is a larger change than the lock path, since
-`WorkspaceView` reads `input` for mode switching, draft snapshotting and
-the operation handlers.
+**Fixed.** The composer input is now **uncontrolled**: the message lives
+in a ref and in the DOM node, never in React render state. Only
+non-sensitive derived facts (`hasInput`, `hasTrimmedInput`,
+`inputVersion`) enter state. `doMasterLock` *pulls* the draft via
+`WorkspaceDraftSource.getDraft()`, encrypts it under the in-WASM draft
+key, then calls `wipe()` — clearing the input ref, the textarea's DOM
+value, and the clear-undo buffer — before flipping `masterUnlocked`. A ref
+is a single mutable slot shared by both fiber copies, so clearing it
+actually releases the string; the unmount alone does not.
+
+This also deleted `App.tsx`'s `latestDraftRef`, which had held a live
+plaintext copy for the entire panel session on top of the copy React was
+already retaining. Push became pull for that reason.
+
+Guarded by `e2e/draft-memory.spec.ts`, which asserts a heap count of zero
+after an in-app lock with a positive control proving the scan works. That
+spec must run with tracing off — see the caveats in `e2e/README.md`.
+
+**Still open: decrypted output.** `s.output` in `useWorkspaceState` is
+ordinary render state and is retained by the identical mechanism after a
+lock (measured count 1 following a real encrypt→decrypt→lock cycle).
+Reload or relaunch clears it; an in-app lock does not. Making it
+uncontrolled is its own refactor — output is rendered, copied, downloaded
+and part of the draft. Tracked as `T-OUTPUT-HEAP-RESIDUE`.
 
 Note this is distinct from §8.5's accepted "plaintext is observable in
 the rendered UI." That accepts plaintext being visible *while composing*.
 This is plaintext persisting *after* the lock, when nothing is rendered.
-
-Pinned by `e2e/draft-memory.spec.ts` as a `test.fail()`, so the suite
-will fail on an unexpected pass the moment this is fixed.
 
 ---
 
@@ -584,7 +596,54 @@ so this is the only store that persists user plaintext by design.
   `requestUnlimitedHistoryStorage` can never succeed and
   `UNLIMITED_BUDGET_BYTES` (50 MB) is unreachable dead code.
 
-### 11.1 Known gap: segments are not bound to their slot or store
+### 11.1 Segments are bound to their slot and store
+
+Every store sealed under the master session — keyring, contacts, settings,
+CRX keys, and each history segment — is sealed for a **domain**, and the
+domain is the `chrome.storage` key the blob lives under. The wasm side
+derives both an HKDF-SHA256 subkey and the AEAD's AAD from it
+(`gpg-tools:store-subkey:v1:<key>` and `gpg-tools:store:v1:<key>`), so a
+blob only opens in the slot it was written to. Moving an intact blob to
+another segment number, or to another store, fails the tag check.
+
+Two independent bindings on purpose: the AAD alone would suffice for a
+correct AEAD, but a distinct key means a future bug that drops or
+mismatches the AAD still cannot cross a domain boundary. An empty domain
+is rejected outright so it cannot silently collapse back to one subkey.
+
+Using the storage key as the domain means there is no mapping table to
+keep in sync, and the read and write paths physically cannot disagree
+about a slot. It is the *key*, not the storage area, so a `local`↔`sync`
+move is unaffected. Per-segment binding falls out for free rather than
+being a special case.
+
+**Migration.** Blobs written before this keep opening: `openEnvelope`
+tries the domain-bound scheme first and falls back to the legacy shared
+one. History re-seals on read (it already holds its lock, and re-seals the
+exact plaintext bytes so the manifest's `bytes` accounting stays correct);
+the shared stores re-seal on the next mutation; and `normalizePadding` —
+which runs on unlock — upgrades a store the user only ever reads,
+including one whose padding is already canonical. Reads never write, so an
+upgrade cannot race a mutation. A failed re-seal leaves the readable
+legacy blob alone.
+
+Verified by `e2e/history-memory.spec.ts`, `lib/storage/envelope.test.ts`,
+`lib/storage/history.test.ts` and `lib/storage/upgrade.test.ts` (the last
+exercises a real v1.3.1 settings blob). The e2e pair was validated against
+a negative control: collapsing every domain to one constant makes both
+tests fail, each on its own assertion.
+
+> **This does not fix the key coupling.** The per-store subkey is derived
+> *from* the contacts session key, so it inherits that key's lifetime
+> exactly and possession of the contacts key still yields it. Domain
+> separation buys cryptographic separation between stores, not lifetime
+> independence — `T-HISTORY-KEY-COUPLING` remains open, and the Rust test
+> `test_store_envelope_unreadable_after_the_session_drops` asserts the
+> coupling rather than pretending it is gone. Resolving it needs an
+> independently generated history key persisted under master protection.
+
+<details>
+<summary>The original gap, for the record</summary>
 
 History reuses both the contacts **session key** and the contacts
 **AAD** (`gpg-tools:contacts:master`), which is shared with the keyring,
@@ -610,20 +669,34 @@ vault key, can:
 Both are demonstrated by `e2e/history-memory.spec.ts`
 (`history ciphertext is not bound to its slot or its store`).
 
-The workspace draft shows the correct pattern: its own session key
-**and** its own versioned AAD (`gpg-tools:workspace-draft:v1`). The fix
-is to apply that consistently — an HKDF subkey per store, or at minimum
-a per-store/per-segment AAD such as
-`gpg-tools:history:v1:seg:<n>`. Tracked as `T-HISTORY-AAD-SHARED`.
+The workspace draft showed the correct pattern all along: its own session
+key **and** its own versioned AAD (`gpg-tools:workspace-draft:v1`).
 
-### 11.2 Known gap: history plaintext is not zeroized
+</details>
 
-The draft path zeroizes carefully; the history path does not. Three
-places, all listed in §5: the `Uint8Array` written in `writeSegment` is
-never `.fill(0)`'d, the wasm side takes it as a borrowed `&[u8]` so
-there is no `Zeroizing` wrapper (the same class of gap as
-§8.4/`T-UNLOCK-PARAM-NOT-OWNED`, here covering up to 64 KB of message
-content per call), and the bytes `decryptContacts` returns in
-`readSegment` are dropped without being cleared. Compare
-`encryptWorkspaceDraft` / `decryptWorkspaceDraft`, which `.fill(0)` in a
-`finally`, and `encrypt_draft`, which does `Zeroizing::new(plaintext)`.
+### 11.2 History plaintext is zeroized
+
+Three places, all listed in §5, all previously unzeroized and now fixed:
+the `Uint8Array` in `writeSegment` is `.fill(0)`'d in a `finally`;
+`encrypt_contacts` and `encrypt_store` take the plaintext **by value**
+under `Zeroizing::new` rather than as a borrowed `&[u8]` (the same class
+of gap as §8.4, here covering up to 64 KB of message content per call);
+and the bytes `decryptContacts` returns in `readSegment` are `.fill(0)`'d
+in a `finally`.
+
+Proven behaviourally rather than by inspection: the unit-test mock retains
+references to the *actual* buffers that crossed the wasm boundary and
+asserts they are non-empty before the call and all-zero after — on write,
+on read, on an unparseable segment, and on the legacy-migration path where
+one buffer is both the decrypt output and the re-seal input.
+
+The intermediate `JSON.stringify` string remains genuinely unzeroizable
+(JS strings are immutable). Avoiding it means hand-serialising entries
+into a byte buffer, which is a larger change than the residual leak
+justifies; it is called out in `writeSegment`'s doc comment.
+
+> Enforcement note: `audit-invariants.mjs` did not originally match
+> `encrypt_store` / `encrypt_contacts` or the `plaintext` param, so this
+> claim was unenforced and the check passed either way. `SECRET_FN_RE` and
+> `SECRET_PARAM_NAMES` were extended, and the extension was verified to
+> fail on a deliberate regression. A gate that cannot fail is not a gate.

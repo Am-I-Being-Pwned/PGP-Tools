@@ -31,7 +31,7 @@ import type { RemedyAction } from "../../lib/errors/present";
 import type { WorkspaceAction } from "../../lib/messages";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
-import type { WorkspaceDraft } from "../../lib/workspace-draft";
+import type { WorkspaceDraftSource } from "../../lib/workspace-draft";
 import type { WorkspaceIntake } from "./useWorkspaceState";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import { useDelayedFlag } from "../../hooks/useDelayedFlag";
@@ -117,8 +117,9 @@ interface WorkspaceViewProps {
   restoreDraft?: Uint8Array | null;
   /** Fired once the draft has been decrypted + applied. */
   onDraftRestored?: () => void;
-  /** Fired on every salient state change so the parent can stash a snapshot. */
-  onDraftChange?: (draft: WorkspaceDraft | null) => void;
+  /** Hands the parent a pull-model draft source: it asks for the draft once,
+   *  at lock time, then tells the workspace to drop its plaintext. */
+  onRegisterDraftSource?: (src: WorkspaceDraftSource | null) => void;
   /** A drop routed to the workspace by the global dropzone. */
   intake?: WorkspaceIntake | null;
   onIntakeConsumed?: () => void;
@@ -153,7 +154,7 @@ export function WorkspaceView({
   onOperationComplete,
   restoreDraft,
   onDraftRestored,
-  onDraftChange,
+  onRegisterDraftSource,
   intake,
   onIntakeConsumed,
   onPaletteOps,
@@ -177,7 +178,7 @@ export function WorkspaceView({
     onClearEncryptTo,
     restoreDraft,
     onDraftRestored,
-    onDraftChange,
+    onRegisterDraftSource,
     intake,
     onIntakeConsumed,
     prefsVersion,
@@ -207,7 +208,7 @@ export function WorkspaceView({
 
   const needsRecipient = s.mode === "encrypt";
   const needsPrivateKey = s.mode === "decrypt" || s.mode === "sign";
-  const hasInput = s.files.length > 0 || s.input.length > 0;
+  const hasInput = s.files.length > 0 || s.hasInput;
 
   // Warn BEFORE encrypting when the user won't be able to decrypt the
   // result: encrypt-to-self is off and no selected recipient is one of
@@ -299,39 +300,47 @@ export function WorkspaceView({
   const showFullOutput =
     s.operationDone && s.mode === "decrypt" && s.output.length > 0;
 
-  // Snapshot of the box at the moment a double-Escape cleared it, so the
-  // clear is undoable (toast Undo, or mod+z while the box is still empty
-  // -- once the user types again, native undo owns mod+z).
-  const [clearSnapshot, setClearSnapshot] = useState<{
-    input: string;
-    files: File[];
-  } | null>(null);
+  // Undoable clears (toast Undo, or mod+z while the box is still empty --
+  // once the user types again, native undo owns mod+z). The snapshot itself
+  // lives in `useWorkspaceState`'s ref, not in state here and not captured
+  // in the toast's closure: sonner holds an action callback alive for the
+  // toast's whole lifetime, and anything that closes over the plaintext
+  // survives a master lock. `s.wipeInput()` clears the buffer too.
   const lastEscapeAt = useRef(0);
 
-  const restoreCleared = () => {
-    setClearSnapshot((snap) => {
-      if (snap) {
-        s.setInput(snap.input);
-        s.setFiles(snap.files);
-      }
-      return null;
-    });
-  };
-  const clearBoxUndoable = () => {
-    if (s.input.length === 0 && s.files.length === 0) return;
-    setClearSnapshot({ input: s.input, files: s.files });
+  const restoreCleared = () => s.restoreClearUndo();
+
+  const clearWithUndo = (message: string) => {
+    s.stashClearUndo();
     s.resetAll();
-    toast.message("Workspace cleared", {
+    toast.message(message, {
       id: "workspace-text-cleared",
       duration: 4000,
       action: { label: "Undo", onClick: restoreCleared },
     });
+  };
+
+  const clearBoxUndoable = () => {
+    if (!s.hasInput && s.files.length === 0) return;
+    clearWithUndo("Workspace cleared");
     // A cleared box invites retyping: focus it (next tick -- resetAll may
     // have just remounted the textarea in place of the file list).
     setTimeout(() => document.getElementById("pgp-input")?.focus(), 0);
   };
+
+  // The in-box "Clear text" button. Same mechanism; it stays silent once an
+  // operation has completed (the result panel is its own feedback).
+  const clearTextUndoable = () => {
+    if (s.operationDone) {
+      s.stashClearUndo();
+      s.resetAll();
+      return;
+    }
+    clearWithUndo("Text cleared");
+  };
+
   useShortcut({ mod: true, key: "z" }, restoreCleared, {
-    enabled: clearSnapshot !== null && s.input.length === 0,
+    enabled: s.clearUndoAvailable && !s.hasInput,
   });
 
   // Escape layers for the workspace itself (subpages and the palette
@@ -663,8 +672,11 @@ export function WorkspaceView({
       <WorkspaceInput
         mode={s.mode}
         onModeChange={s.setMode}
-        input={s.input}
+        inputElRef={s.inputElRef}
+        getInput={s.getInput}
+        hasInput={s.hasInput}
         onInputChange={s.handleInputChange}
+        onClearText={clearTextUndoable}
         files={s.files}
         onFileDrop={s.handleFileDrop}
         onRemoveFile={s.removeFile}

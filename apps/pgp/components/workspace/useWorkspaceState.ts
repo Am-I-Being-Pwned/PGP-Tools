@@ -6,7 +6,10 @@ import type { WorkspaceAction } from "../../lib/messages";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { FileResult } from "../../lib/utils/download";
-import type { WorkspaceDraft } from "../../lib/workspace-draft";
+import type {
+  WorkspaceDraft,
+  WorkspaceDraftSource,
+} from "../../lib/workspace-draft";
 import { looksLikePrivateKey } from "../../lib/drop-routing";
 import { resolveSelfKey } from "../../lib/encrypt-recipients";
 import { getPreferences } from "../../lib/storage/preferences";
@@ -23,11 +26,42 @@ export interface WorkspaceIntake {
   nonce: number;
 }
 
+/** What the double-Escape / "Clear text" undo affordances restore. */
+interface ClearUndoSnapshot {
+  input: string;
+  files: File[];
+}
+
 export interface WorkspaceState {
   mode: Mode;
   setMode: (m: Mode) => void;
-  input: string;
+  /** The message textarea's DOM node. It is UNCONTROLLED — the composed
+   *  plaintext lives in a ref and in the DOM, never in render state (see
+   *  `getInput`). `WorkspaceInput` attaches this via a callback ref that
+   *  also re-seeds the node from the ref on every (re)mount. */
+  inputElRef: React.MutableRefObject<HTMLTextAreaElement | null>;
+  /** Read the composed message. Always call this at the point of use;
+   *  never hoist the result into state or into a long-lived closure. */
+  getInput: () => string;
+  /** Replace the message programmatically (ref + DOM node + derived flags). */
   setInput: (s: string) => void;
+  /** Derived, non-sensitive: the box has at least one character. */
+  hasInput: boolean;
+  /** Derived, non-sensitive: the box has at least one non-whitespace char. */
+  hasTrimmedInput: boolean;
+  /** Bumped on every input change. Use as an effect dependency for work
+   *  that must react to the content without capturing it. */
+  inputVersion: number;
+  /** Drop every plaintext copy this hook owns: the input ref, the
+   *  textarea's DOM value, and the clear-undo buffer. Called by the App
+   *  at master lock, after the draft has been encrypted. */
+  wipeInput: () => void;
+  /** Capture input+files so the next clear is undoable. */
+  stashClearUndo: () => void;
+  /** Put back what `stashClearUndo` captured (single-shot). */
+  restoreClearUndo: () => void;
+  /** Whether a stashed clear is still undoable. */
+  clearUndoAvailable: boolean;
   output: string;
   setOutput: (s: string) => void;
   operationDone: boolean;
@@ -110,9 +144,9 @@ export function useWorkspaceState(opts: {
    *  Once consumed, `onDraftRestored` fires so the parent can clear it. */
   restoreDraft?: Uint8Array | null;
   onDraftRestored?: () => void;
-  /** Fires whenever the salient draft state changes. The parent stores
-   *  the snapshot in a ref so it can encrypt on auto-lock. */
-  onDraftChange?: (draft: WorkspaceDraft | null) => void;
+  /** Hands the parent a pull-model draft source (see `WorkspaceDraftSource`).
+   *  The parent calls `getDraft()` once, at lock time, then `wipe()`. */
+  onRegisterDraftSource?: (src: WorkspaceDraftSource | null) => void;
   /** A drop routed here by the global dropzone. Applied once per nonce. */
   intake?: WorkspaceIntake | null;
   onIntakeConsumed?: () => void;
@@ -126,7 +160,74 @@ export function useWorkspaceState(opts: {
   prefsVersion?: number;
 }): WorkspaceState {
   const [mode, setMode] = useState<Mode>("encrypt");
-  const [input, setInput] = useState("");
+
+  // ---------------------------------------------------------------------
+  // The composed message.
+  //
+  // It lives in a ref + the uncontrolled textarea's DOM node, NOT in
+  // useState. A controlled `value={input}` puts the user's plaintext into
+  // render state, and React snapshots hook state onto `fiber.alternate`
+  // (its double buffer) and keeps effect closures hanging off it alive
+  // well past unmount — so an in-app master lock that unmounts the
+  // workspace still left the whole plaintext reachable from a GC root via
+  // `alternate -> updateQueue.lastEffect.create -> context`. A ref is one
+  // mutable slot shared by both fiber copies, so clearing it in
+  // `wipeInput` really does drop the last reference. Same reasoning, and
+  // the same shape, as the paste box in `ImportKeyPage`.
+  //
+  // Only non-sensitive *derived* facts are allowed into state: how long
+  // the text is, and a version counter for effects that must react to it.
+  const inputRef = useRef("");
+  const inputElRef = useRef<HTMLTextAreaElement | null>(null);
+  const [inputInfo, setInputInfo] = useState({
+    len: 0,
+    nonBlank: false,
+    version: 0,
+  });
+  const getInput = useCallback(() => inputRef.current, []);
+
+  // Record a new value in the ref and refresh the derived state. `\S`
+  // rather than `.trim()` on purpose: trim() would materialise a second
+  // copy of the plaintext just to ask a yes/no question.
+  const syncInput = useCallback((text: string) => {
+    inputRef.current = text;
+    setInputInfo((prev) => ({
+      len: text.length,
+      nonBlank: /\S/.test(text),
+      version: prev.version + 1,
+    }));
+  }, []);
+
+  // Programmatic writes (draft restore, drops, clears, undo) must also
+  // push into the uncontrolled DOM node. When the textarea isn't mounted
+  // (files staged, or the full-output view is up) the callback ref
+  // re-seeds it from `inputRef` as soon as it comes back.
+  // The `!== text` guard is load-bearing, not an optimisation: this also
+  // runs on the textarea's own onChange, and assigning to `.value` moves
+  // the caret to the end of the box. Skipping the write when the node
+  // already agrees keeps typing in the middle of a message working.
+  const setInput = useCallback(
+    (text: string) => {
+      const el = inputElRef.current;
+      if (el && el.value !== text) el.value = text;
+      syncInput(text);
+    },
+    [syncInput],
+  );
+
+  const clearUndoRef = useRef<ClearUndoSnapshot | null>(null);
+  const [clearUndoAvailable, setClearUndoAvailable] = useState(false);
+
+  // Deliberately does NOT setState: it runs inside `doMasterLock`, one
+  // statement before the unmount, and a re-render here would only build
+  // a fresh set of closures for React to retain. Dropping the references
+  // is the whole job.
+  const wipeInput = useCallback(() => {
+    inputRef.current = "";
+    if (inputElRef.current) inputElRef.current.value = "";
+    clearUndoRef.current = null;
+  }, []);
+
   const [output, setOutput] = useState("");
   const [operationDone, setOperationDone] = useState(false);
   const [statusText, setStatusText] = useState<string | null>(null);
@@ -178,7 +279,44 @@ export function useWorkspaceState(opts: {
     setPublicKeyDetected(false);
     setPrivateKeyDetected(false);
     resetOutput();
-  }, [resetOutput]);
+  }, [resetOutput, setInput]);
+
+  // Public/private-key detection (and the armor-driven mode nudge) for a
+  // new box value. Split out of `handleInputChange` so the clear-undo path
+  // can re-arm the private-key warning + mask: undoing a clear must not
+  // silently drop the "don't paste private keys here" banner.
+  const applyDetection = useCallback((text: string) => {
+    setPublicKeyDetected(false);
+    setPrivateKeyDetected(false);
+    if (looksLikePrivateKey(text)) {
+      // Flag first; the draft snapshot is refused while this is true so the
+      // armor never reaches the encrypted draft blob. Covers every armored
+      // private-key flavour (PGP + any raw PEM), not just PGP, so a pasted
+      // OpenSSH/EC/etc. key can't leak into the draft either.
+      setPrivateKeyDetected(true);
+    } else if (text.includes("-----BEGIN PGP MESSAGE-----")) {
+      setMode("decrypt");
+    } else if (text.includes("-----BEGIN PGP SIGNED MESSAGE-----")) {
+      setMode("verify");
+    } else if (text.includes("-----BEGIN PGP PUBLIC KEY BLOCK-----")) {
+      setPublicKeyDetected(true);
+    }
+  }, []);
+
+  const stashClearUndo = useCallback(() => {
+    clearUndoRef.current = { input: inputRef.current, files };
+    setClearUndoAvailable(true);
+  }, [files]);
+
+  const restoreClearUndo = useCallback(() => {
+    const snap = clearUndoRef.current;
+    clearUndoRef.current = null;
+    setClearUndoAvailable(false);
+    if (!snap) return;
+    setInput(snap.input);
+    setFiles(snap.files);
+    applyDetection(snap.input);
+  }, [setInput, applyDetection]);
 
   useEffect(() => {
     void getPreferences().then((p) => {
@@ -204,6 +342,7 @@ export function useWorkspaceState(opts: {
       const draft = await decryptWorkspaceDraft(restoreCt);
       if (draft) {
         setMode(draft.mode);
+        // Writes the ref + the (already mounted) textarea's DOM value.
         setInput(draft.input);
         setOutput(draft.output);
         setSelectedRecipientIds(draft.selectedRecipientIds);
@@ -211,40 +350,55 @@ export function useWorkspaceState(opts: {
       }
       onRestored?.();
     })();
-  }, [restoreCt, onRestored]);
+  }, [restoreCt, onRestored, setInput]);
 
-  // Mirror salient draft state to the parent on every change. The
-  // parent stores the latest snapshot in a ref and encrypts it
-  // synchronously when an auto-lock fires.
-  const onDraftChange = opts.onDraftChange;
+  // Expose the draft to the parent as a PULL, not a push. The old push
+  // contract fired an effect on every keystroke whose closure captured the
+  // plaintext, and React retains such closures on the previous fiber
+  // (`alternate`) after unmount -- which is precisely how the composed
+  // message survived a master lock. A stable getter reads `inputRef` at
+  // call time instead, so nothing durable ever closes over the string.
+  const draftFieldsRef = useRef({
+    mode,
+    output,
+    selectedRecipientIds,
+    selectedKeyId,
+    privateKeyDetected,
+  });
   useEffect(() => {
-    if (!onDraftChange) return;
+    draftFieldsRef.current = {
+      mode,
+      output,
+      selectedRecipientIds,
+      selectedKeyId,
+      privateKeyDetected,
+    };
+  });
+
+  const getDraft = useCallback((): WorkspaceDraft | null => {
+    const f = draftFieldsRef.current;
     // Refuse to snapshot armored private-key material into the draft.
     // The draft is encrypted at rest, but the plaintext armor still
     // exists in JS heap while the draft serializer runs and during
     // any future restore. Pasting a private key here is almost always
     // a user error (they meant to use the Import flow), so dropping
     // the snapshot is safer than persisting it.
-    if (privateKeyDetected) {
-      onDraftChange(null);
-      return;
-    }
-    onDraftChange({
-      mode,
-      input,
-      output,
-      selectedRecipientIds,
-      selectedKeyId,
-    });
-  }, [
-    mode,
-    input,
-    output,
-    selectedRecipientIds,
-    selectedKeyId,
-    privateKeyDetected,
-    onDraftChange,
-  ]);
+    if (f.privateKeyDetected) return null;
+    return {
+      mode: f.mode,
+      input: inputRef.current,
+      output: f.output,
+      selectedRecipientIds: f.selectedRecipientIds,
+      selectedKeyId: f.selectedKeyId,
+    };
+  }, []);
+
+  const onRegisterDraftSource = opts.onRegisterDraftSource;
+  useEffect(() => {
+    if (!onRegisterDraftSource) return;
+    onRegisterDraftSource({ getDraft, wipe: wipeInput });
+    return () => onRegisterDraftSource(null);
+  }, [onRegisterDraftSource, getDraft, wipeInput]);
 
   // Default-select a private key for sign/decrypt when the user hasn't
   // picked one: the configured default key, else the first key.
@@ -342,7 +496,7 @@ export function useWorkspaceState(opts: {
       }
       onClearPending?.();
     }
-  }, [pendingAction, onClearPending, resetOutput]);
+  }, [pendingAction, onClearPending, resetOutput, setInput]);
 
   useEffect(() => {
     if (!encryptToKeyId) return;
@@ -351,28 +505,16 @@ export function useWorkspaceState(opts: {
     onClearEncryptTo?.();
   }, [encryptToKeyId, onClearEncryptTo]);
 
+  // Serves both the textarea's own onChange and programmatic writes
+  // (drops, intake, the clear buttons); `setInput` handles the difference.
   const handleInputChange = useCallback(
     (text: string) => {
       setInput(text);
       setFiles([]);
       resetOutput();
-      setPublicKeyDetected(false);
-      setPrivateKeyDetected(false);
-      if (looksLikePrivateKey(text)) {
-        // Flag first; the drafting effect skips snapshots while this is true
-        // so the armor doesn't end up in the encrypted draft blob. Covers
-        // every armored private-key flavour (PGP + any raw PEM), not just
-        // PGP, so a pasted OpenSSH/EC/etc. key can't leak into the draft.
-        setPrivateKeyDetected(true);
-      } else if (text.includes("-----BEGIN PGP MESSAGE-----")) {
-        setMode("decrypt");
-      } else if (text.includes("-----BEGIN PGP SIGNED MESSAGE-----")) {
-        setMode("verify");
-      } else if (text.includes("-----BEGIN PGP PUBLIC KEY BLOCK-----")) {
-        setPublicKeyDetected(true);
-      }
+      applyDetection(text);
     },
-    [resetOutput],
+    [resetOutput, setInput, applyDetection],
   );
 
   const handleFileDrop = useCallback(
@@ -392,7 +534,7 @@ export function useWorkspaceState(opts: {
       });
       resetOutput();
     },
-    [resetOutput],
+    [resetOutput, setInput],
   );
 
   const removeFile = useCallback((index: number) => {
@@ -403,7 +545,7 @@ export function useWorkspaceState(opts: {
     setFiles([]);
     setInput("");
     resetOutput();
-  }, [resetOutput]);
+  }, [resetOutput, setInput]);
 
   // Apply a drop routed here by the global dropzone. Reuses the same
   // file/text handlers as an in-panel drop (so mode auto-detection still
@@ -422,8 +564,16 @@ export function useWorkspaceState(opts: {
   return {
     mode,
     setMode,
-    input,
+    inputElRef,
+    getInput,
     setInput,
+    hasInput: inputInfo.len > 0,
+    hasTrimmedInput: inputInfo.nonBlank,
+    inputVersion: inputInfo.version,
+    wipeInput,
+    stashClearUndo,
+    restoreClearUndo,
+    clearUndoAvailable,
     output,
     setOutput,
     operationDone,

@@ -289,11 +289,16 @@ export const THREAT_MODEL: Threat[] = [
     attacker:
       "Anyone who can write chrome.storage.local -- another process on the device, a synced device, or malicious in-realm code -- with NO knowledge of the vault key.",
     defence:
-      "None. History reuses the contacts session key AND the contacts AAD (`gpg-tools:contacts:master`), shared with the keyring, contacts, settings and CRX key store. Nothing sealed names the store or the segment number.",
-    status: "pending",
+      "FIXED. Every store sealed under the master session -- keyring, contacts, settings, CRX keys, and each history segment -- is sealed for a DOMAIN, and the domain is the chrome.storage key the blob lives under. Both an HKDF-SHA256 subkey and the AEAD's AAD derive from it (`gpg-tools:store-subkey:v1:<key>`, `gpg-tools:store:v1:<key>`), so a blob only opens in the slot it was written to.",
+    status: "defended",
     rationale:
-      "Confidentiality is unaffected (see T-HISTORY-AT-REST), but integrity is not, and this is demonstrated rather than theorised. Copying pgp_history_seg_0 to seg_1 makes loadHistory's adoptStraySegments adopt it and show duplicate entries -- and since adoption only happens for segments it ACTUALLY decrypted, that is rigorous proof the AEAD accepts a blob in a slot it was never sealed for. Writing the same blob to pgp_public_contacts silently empties the contact list, with loadEncryptedArray giving the UI no way to distinguish a failed tag from a successful decrypt whose items failed validation. The workspace draft shows the correct pattern -- its own key AND its own versioned AAD (gpg-tools:workspace-draft:v1). Fix: an HKDF subkey per store, or at minimum a per-store/per-segment AAD. Marked pending because the fix is understood and worth doing, not accepted.",
-    verifiedBy: ["apps/pgp/e2e/history-memory.spec.ts"],
+      "Was demonstrated, not theorised: copying pgp_history_seg_0 to seg_1 made adoptStraySegments adopt it (rigorous, since adoption only happens for a segment actually decrypted), and the same blob written to pgp_public_contacts read as a legitimately EMPTY contact list -- so the next contact import would have persisted over the user's real contacts permanently. Two bindings deliberately: the AAD alone suffices for a correct AEAD, but a distinct key means a future bug that drops or mismatches the AAD still cannot cross a domain boundary. Using the storage key as the domain means no mapping table to keep in sync and no way for read and write paths to disagree about a slot; it is the key not the storage area, so local<->sync moves are unaffected. All five stores were separated, not just history, since keyring<->contacts<->settings<->CRX substitution is the same bug. Migration: openEnvelope tries the domain scheme then falls back to legacy -- history re-seals on read (it already holds its lock), shared stores re-seal on next mutation, and normalizePadding (which runs on unlock) upgrades a store the user only ever reads, including when its padding is already canonical. Reads never write, so an upgrade cannot race a mutation. Verified by a negative control: collapsing every domain to one constant makes both e2e tests fail on their own separate assertions.",
+    verifiedBy: [
+      "apps/pgp/e2e/history-memory.spec.ts",
+      "apps/pgp/lib/storage/envelope.test.ts",
+      "apps/pgp/lib/storage/history.test.ts",
+      "apps/pgp/lib/storage/upgrade.test.ts",
+    ],
     section: "§11.1",
   },
   {
@@ -302,10 +307,14 @@ export const THREAT_MODEL: Threat[] = [
     attacker:
       "Anyone who can inspect JS-heap or WASM memory after a history write or read.",
     defence:
-      "None, in three places: the Uint8Array in writeSegment is never .fill(0)'d, `encrypt_contacts` takes the plaintext as borrowed `&[u8]` so there is no Zeroizing wrapper, and the bytes decryptContacts returns in readSegment are dropped without clearing.",
-    status: "pending",
+      "FIXED in all three places: writeSegment does json.fill(0) in a finally, `encrypt_contacts` and `encrypt_store` take the plaintext by value under Zeroizing::new, and readSegment does plaintext?.fill(0) in a finally.",
+    status: "defended",
     rationale:
-      "Up to 64 KB of user message content per call, and the same class of gap as T-UNLOCK-PARAM-NOT-OWNED. Notable because the draft path -- written by the same project, for a very similar job -- does all three correctly: encryptWorkspaceDraft/decryptWorkspaceDraft .fill(0) in a finally, and encrypt_draft wraps in Zeroizing::new. So this is an inconsistency to close, not a design constraint. The intermediate JSON string is genuinely unzeroizable (JS strings are immutable), which is an argument for not routing content through JSON.stringify at all.",
+      "Up to 64 KB of user message content per call, and the same class of gap as T-UNLOCK-PARAM-NOT-OWNED. The draft path already did all three correctly, so this was an inconsistency to close rather than a design constraint. Proven behaviourally, not by inspection: the vitest mock retains references to the ACTUAL buffers that crossed the wasm boundary and asserts they are non-empty before the call and all-zero after -- on write, on read, on an unparseable segment, and on the legacy-migration path where the same buffer is both decrypt output and re-seal input. NOTE: the intermediate JSON.stringify string remains genuinely unzeroizable (JS strings are immutable); avoiding it means hand-serialising entries into a byte buffer, judged a larger change than the residual leak justifies, and called out in writeSegment's doc comment. Enforcement gap found and closed separately: audit-invariants.mjs did not originally match encrypt_store/encrypt_contacts or the `plaintext` param, so it passed either way and this claim was unenforced -- SECRET_FN_RE and SECRET_PARAM_NAMES were extended, and the extension was verified to fail on a deliberate regression.",
+    verifiedBy: [
+      "apps/pgp/lib/storage/history.test.ts",
+      "apps/pgp/scripts/audit-invariants.mjs",
+    ],
     section: "§11.2",
   },
   {
@@ -316,7 +325,7 @@ export const THREAT_MODEL: Threat[] = [
       "None needed for confidentiality: the contacts key is itself master-protected and zeroized on master lock.",
     status: "accepted",
     rationale:
-      "Reusing the contacts session key couples two unrelated features' lifetimes: anything that initialises a contacts session also makes history readable, and a future change to contacts-session scope silently changes history's exposure window. Accepted because both are gated on the same master unlock, so there is no confidentiality gap today, and canary coverage confirms it. NOTE: the shared AAD is a separate and worse problem with a demonstrated integrity consequence -- see T-HISTORY-AAD-SHARED. Fixing that with an HKDF subkey per store would resolve this coupling as a side effect.",
+      "Reusing the contacts session key couples two unrelated features' lifetimes: anything that initialises a contacts session also makes history readable, and a future change to contacts-session scope silently changes history's exposure window. Accepted because both are gated on the same master unlock, so there is no confidentiality gap today, and canary coverage confirms it. CORRECTION: an earlier version of this entry claimed the T-HISTORY-AAD-SHARED fix would resolve this coupling as a side effect. That was wrong. The per-store subkey is derived FROM the contacts session key via HKDF, so it inherits that key's lifetime exactly, and possession of the contacts key still yields it. Domain separation buys cryptographic separation between stores, not lifetime independence. Resolving this properly needs an independently generated history key persisted under master protection -- a new stored blob and a new unlock path. Asserted rather than glossed by the Rust test test_store_envelope_unreadable_after_the_session_drops.",
     verifiedBy: ["apps/pgp/e2e/history-memory.spec.ts"],
     section: "§5, §11.1",
   },
@@ -334,16 +343,28 @@ export const THREAT_MODEL: Threat[] = [
     section: "§5, §6",
   },
   {
-    id: "T-DRAFT-DOM-RESIDUE",
-    title: "Composed plaintext survives master lock in the DOM",
+    id: "T-DRAFT-HEAP-RESIDUE",
+    title: "Composed draft plaintext survives master lock in the JS heap",
     attacker:
       "Anyone who can read the V8 heap after a master lock -- the T-HEAP-SCRAPE capability, or any of the §8.1 OS-level routes.",
     defence:
-      "Partially mitigated, still leaking. `doMasterLock` now blanks the `#pgp-input` DOM value once `draftCiphertext` is stashed, which removes the value-tracker retainer -- but the plaintext also lives in React state and survives via the fiber `alternate`.",
+      "FIXED. The composer input is uncontrolled: the message lives in a ref and the DOM node, never in React render state. doMasterLock pulls the draft via WorkspaceDraftSource.getDraft(), encrypts it, then calls wipe() (input ref + DOM value + clear-undo buffer) before flipping masterUnlocked.",
+    status: "defended",
+    rationale:
+      "Renamed from T-DRAFT-DOM-RESIDUE: the retainer was never the DOM, and that misnomer cost a round of work. Sequence worth preserving. Original chain: GC roots -> C++ Persistent roots -> autofill::FormTracker (pinning the textarea) -> React value-tracker closure -> plaintext; durable across six forced GCs over ten seconds with string churn. Blanking the DOM value removed THAT chain and revealed a second: (Global handles) -> closure -> property[alternate] -> updateQueue.lastEffect.create -> context -> workspace -> input. React double-buffers hook state onto fiber.alternate and keeps effect closures hanging off it reachable from a GC root, so a controlled value={input} retained the string regardless of the DOM -- clearing the DOM could never have been sufficient. The fix was to stop holding it in render state at all, following ImportKeyPage's uncontrolled paste box. This also deleted App.tsx's latestDraftRef, which had held a live plaintext copy for the whole panel session. Explicitly NOT the same as T-PLAINTEXT-IN-UI, which accepts plaintext being visible while composing. MEASUREMENT NOTE: this test only passes with tracing off -- Playwright's __playwright_snapshot_cache_ retains a textarea's value and masks the app-owned chain, so the spec sets test.use({ trace: 'off' }). A retainer walk should be validated against a deliberate negative control before its zero is believed.",
+    verifiedBy: ["apps/pgp/e2e/draft-memory.spec.ts"],
+    section: "§8.11",
+  },
+  {
+    id: "T-OUTPUT-HEAP-RESIDUE",
+    title: "Decrypted output survives master lock in the JS heap",
+    attacker:
+      "Same capability as T-DRAFT-HEAP-RESIDUE: anyone reading the V8 heap after a master lock.",
+    defence:
+      "None. `s.output` in useWorkspaceState is ordinary React render state and is retained by the identical fiber.alternate mechanism the input draft used to suffer from.",
     status: "pending",
     rationale:
-      "A real defect, not an accepted boundary -- the only finding in this audit that contradicted what the app believes about itself: after lock it holds ciphertext AND a live plaintext copy. Not a GC artefact (survived six forced collections over ten seconds plus string churn). The original retainer was GC roots -> C++ Persistent roots -> autofill::FormTracker (pinning the textarea) -> React value-tracker closure -> plaintext. Blanking the DOM value verifiably removed THAT chain, and a second one took its place: (Global handles) -> closure -> property[alternate] -> updateQueue.lastEffect.create -> context -> workspace -> input. #pgp-input is a CONTROLLED textarea (value={input}), so the string is held by useWorkspaceState and captured by an effect closure React keeps alive on the double-buffered fiber's alternate, which outlives the unmount. The principled fix is the one ImportKeyPage already uses for pasted key armor -- make the box uncontrolled and hold the text in a ref so it never enters render state -- but that is a larger change, since WorkspaceView reads `input` for mode switching, draft snapshotting and the operation handlers. Explicitly NOT the same as T-PLAINTEXT-IN-UI, which accepts plaintext being visible while composing. NOTE for future analysis: with Playwright tracing ON, its __playwright_snapshot_cache_ also retains the value and masks the app-owned chain -- use --trace=off when reading retainers.",
-    verifiedBy: ["apps/pgp/e2e/draft-memory.spec.ts"],
+      "Found while fixing T-DRAFT-HEAP-RESIDUE and measured, not inferred: count 1 after a real encrypt->decrypt->lock cycle. This is decrypted MESSAGE plaintext, so the exposure is comparable to the draft, and an in-app lock does not clear it -- only a reload or relaunch does. Not folded into the draft fix because output is rendered, copied, downloaded and part of the draft snapshot, so making it uncontrolled is its own refactor rather than a one-line change. Note e2e/draft-memory.spec.ts deliberately asserts only on the input draft, so it does not silently imply coverage here.",
     section: "§8.11",
   },
   {

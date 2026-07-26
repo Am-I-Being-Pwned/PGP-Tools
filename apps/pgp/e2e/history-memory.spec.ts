@@ -6,6 +6,7 @@ import {
   enableSaveToHistory,
   encryptToSelfInWorkspace,
   goToKeys,
+  importContact,
   lockMasterViaPalette,
   openHistoryPage,
   runPaletteAction,
@@ -154,67 +155,173 @@ test("a master lock leaves no decrypted history in the JS heap", async ({
   });
 });
 
-// ── consequence of sharing the contacts session key ──────────────────
-// History does not have a key of its own: `writeSegment` calls
-// `encryptContacts`, so segments are sealed under the same in-WASM
+// ── segments are bound to their slot and their store ─────────────────
+// History used to have no envelope of its own: `writeSegment` called
+// `encryptContacts`, so every segment was sealed under the same in-WASM
 // CONTACTS_KEY as the keyring, the contacts list, the settings blob and
 // the CRX key store -- and under the same fixed AAD,
-// `CONTACTS_AAD = "gpg-tools:contacts:master"` (gpg-wasm/src/lib.rs).
-// Nothing in the sealed data names the store or the segment it belongs to.
+// `CONTACTS_AAD = "gpg-tools:contacts:master"`. Nothing in the sealed data
+// named the store or the segment, so anyone who could write
+// chrome.storage.local -- with NO knowledge of the vault key -- could
+// replay a segment into another slot, or into an entirely different store,
+// and the AEAD accepted it. This spec used to demonstrate exactly that.
 //
-// Contrast the workspace draft, which does it the other way: its own
-// in-WASM key AND its own versioned AAD, "gpg-tools:workspace-draft:v1".
-//
-// The confidentiality consequence is the intended one and is covered
-// above: history is unreadable the moment the master session drops. The
-// INTEGRITY consequence is what this test demonstrates -- an encrypted
-// blob is not bound to where it is stored, so anyone who can write
-// chrome.storage.local (without knowing the vault key) can replay a
-// history segment into another slot, or into an entirely different store,
-// and the AEAD accepts it.
+// Each segment is now sealed for its own storage key as the domain: the
+// wasm side derives BOTH an HKDF subkey and the AAD from it (see
+// `gpg-wasm/src/lib.rs` `encrypt_store` and `lib/storage/envelope.ts`), so
+// moving an intact blob to any other key breaks its tag check. The two
+// attacks below must now FAIL, and each is paired with a positive control
+// so a passing assertion cannot be a dead code path.
 const CONTACTS_KEY = "pgp_public_contacts";
 const contact = keyBySlug("standard");
 
-test("history ciphertext is not bound to its slot or its store", async ({
+interface StoredBlob {
+  iv: string;
+  ciphertext: string;
+}
+
+/** The contact as it appears ON SCREEN. A bare `getByText` also matches a
+ *  copy inside the inactive Main tab's recipient picker, which is in the
+ *  DOM but hidden -- so `.first()` on the unfiltered locator can resolve
+ *  to a node that will never become visible. */
+function visibleContact(panel: Page) {
+  return panel.getByText(contact.label).filter({ visible: true });
+}
+
+/** The manifest's record of segment `n`, or undefined. */
+async function segmentRef(
+  panel: Page,
+  n: number,
+): Promise<SegmentRef | undefined> {
+  const local = await readStorage(panel, "local");
+  const manifest = local[HISTORY_KEY] as { segs?: SegmentRef[] };
+  return manifest.segs?.find((s) => s.n === n);
+}
+
+/**
+ * Close the History slide-over and wait until it is really gone.
+ *
+ * Why this exists -- the flake it replaces had two independent halves, and
+ * the old `Escape` + `Escape` + `goToKeys(...)` sequence needed both to go
+ * its way:
+ *
+ *  1. **Escape does not always close the page.** The search input swallows
+ *     Escape while its query is non-empty (`HistoryPage.tsx`: Esc clears
+ *     the query, a *second* Esc closes) -- and the box only mounts at all
+ *     once the async `loadHistory()` resolves with entries, so whether a
+ *     given Escape closes the page, clears a query, or lands on the
+ *     document depends on timing the test never controlled.
+ *  2. **The panel outlives its close by 300 ms.** `useSlideOver.close()`
+ *     flips `entered` and only calls `onClosed` after `SLIDE_MS`, so a
+ *     `fixed inset-0 z-50` overlay stays mounted (and top of the Escape
+ *     stack) for that window.
+ *
+ * Either way the following tab click could be fired at a page that was
+ * still covered, or never closed -- and `toBeVisible` retries the
+ * *assertion*, never the lost click, so it just burned its timeout.
+ *
+ * Clearing the query first means exactly one Escape is needed, and waiting
+ * for the region to be DETACHED (not merely hidden) means nothing runs
+ * during the slide-out.
+ */
+async function closeHistoryPage(panel: Page): Promise<void> {
+  const search = panel.getByLabel("Search history");
+  if ((await search.count()) > 0) await search.fill("");
+  await panel.keyboard.press("Escape");
+  await expect(panel.getByRole("region", { name: "History" })).toHaveCount(0);
+}
+
+// Two separate tests, not two steps of one: each attack must be provable
+// on its own. (Checked by collapsing every domain to a single constant in
+// `envelope.ts` and rebuilding -- both tests then fail, each on its own
+// assertion. As two steps of one test the first failure would have masked
+// the second.)
+
+test("a history segment does not replay into another segment slot", async ({
+  panel,
+}) => {
+  await seedVault(panel, MASTER);
+  await recordCanaryEntry(panel);
+
+  // How many nodes one canary entry renders in the viewer. Measured
+  // rather than hardcoded (the snippet is nested markup), so the
+  // duplicate-row check below can't drift with the row layout.
+  let canaryNodes = 0;
+  await test.step("baseline: one recorded entry, as the viewer renders it", async () => {
+    await openHistoryPage(panel);
+    await panel.getByLabel("Search history").fill(CANARY);
+    await expect(panel.getByText(CANARY).first()).toBeVisible();
+    canaryNodes = await panel.getByText(CANARY).count();
+    expect(canaryNodes).toBeGreaterThan(0);
+    await closeHistoryPage(panel);
+  });
+
+  await test.step("a segment does not replay into another segment slot", async () => {
+    // One storage write sets up BOTH halves of this step, so they run
+    // through the same `loadHistory` -> `adoptStraySegments` pass and the
+    // only difference between them is which slot the blob sits in:
+    //
+    //   - forget segment 0 in the manifest, leaving its real blob a stray.
+    //     Adopting it back is the POSITIVE CONTROL: adoption only happens
+    //     for a segment `readSegment` actually DECRYPTED and got valid
+    //     entries out of, so seeing seg 0 return proves the prefix scan,
+    //     the decrypt and the adopt path are all live in this run.
+    //   - plant a byte-for-byte copy of that same blob at segment 1. No
+    //     knowledge of the vault key needed -- just a copy of the
+    //     ciphertext. It must NOT be adopted.
+    await panel.evaluate(async () => {
+      const all = await chrome.storage.local.get(null);
+      await chrome.storage.local.set({
+        pgp_history: { segs: [] },
+        pgp_history_seg_1: all.pgp_history_seg_0,
+      });
+    });
+
+    await openHistoryPage(panel);
+
+    // `adoptStraySegments` scans ascending and writes the manifest ONCE
+    // after deciding about every stray, so as soon as segment 0 is back
+    // the verdict on segment 1 is already in that same manifest.
+    await expect
+      .poll(async () => (await segmentRef(panel, 0))?.bytes ?? 0, {
+        timeout: 15_000,
+      })
+      .toBeGreaterThan(0);
+
+    expect(
+      await segmentRef(panel, 1),
+      "a segment blob copied into another slot must fail its tag check, so adoptStraySegments must not adopt it",
+    ).toBeUndefined();
+
+    // ...and the viewer still shows the entry ONCE: an adopted replay
+    // would have rendered a second, identical row, i.e. double the
+    // baseline node count.
+    await panel.getByLabel("Search history").fill(CANARY);
+    await expect(
+      panel.getByText(CANARY),
+      "a replayed segment must not surface as a duplicate history row",
+    ).toHaveCount(canaryNodes);
+  });
+});
+
+test("a history segment is no longer accepted as the contacts blob", async ({
   panel,
 }) => {
   await seedVault(panel, MASTER, [contact.publicKey]);
   await recordCanaryEntry(panel);
 
-  await test.step("a segment replays into another segment slot", async () => {
-    // No knowledge of the key needed -- just a copy of the ciphertext.
-    await panel.evaluate(async () => {
-      const all = await chrome.storage.local.get(null);
-      await chrome.storage.local.set({
-        pgp_history_seg_1: all.pgp_history_seg_0,
-      });
-    });
-    // Opening history runs loadHistory -> adoptStraySegments, which finds
-    // segments by prefix scan and adopts one only if `readSegment` DECRYPTED
-    // it and got valid entries out (a failed tag check yields [] and is
-    // skipped). So the manifest growing to include segment 1, with a
-    // non-zero plaintext size, is proof the AEAD accepted a segment blob in
-    // a slot it was never sealed for.
-    await openHistoryPage(panel);
-    await expect
-      .poll(
-        async () => {
-          const local = await readStorage(panel, "local");
-          const manifest = local[HISTORY_KEY] as { segs?: SegmentRef[] };
-          return manifest.segs?.find((s) => s.n === 1)?.bytes ?? 0;
-        },
-        { timeout: 15_000 },
-      )
-      .toBeGreaterThan(0);
+  await test.step("the seeded contact is on the Keys tab to begin with", async () => {
+    await goToKeys(panel);
+    await expect(visibleContact(panel).first()).toBeVisible();
   });
 
-  await test.step("a segment is also accepted as the CONTACTS blob", async () => {
-    // Before: the seeded contact is on the Keys tab.
-    await panel.keyboard.press("Escape");
-    await panel.keyboard.press("Escape");
-    await goToKeys(panel);
-    await expect(panel.getByText(contact.label).first()).toBeVisible();
+  // Keep both blobs: the real one to restore, the segment to compare
+  // against after the app has had its chance to overwrite it.
+  const before = await readStorage(panel, "local");
+  const realContacts = before[CONTACTS_KEY] as StoredBlob;
+  const segment = before[`${SEGMENT_PREFIX}0`] as StoredBlob;
 
+  await test.step("the substituted blob is not read as a contacts list", async () => {
     await panel.evaluate(
       async ([contactsKey]) => {
         const all = await chrome.storage.local.get(null);
@@ -228,16 +335,45 @@ test("history ciphertext is not bound to its slot or its store", async ({
     await unlockWithPassword(panel, MASTER);
     await goToKeys(panel);
 
-    // The contact list is silently empty and nothing is reported. Note what
-    // this step does and does not establish: the *decryption* half of the
-    // claim is proved by the slot-replay step above (adoptStraySegments only
-    // adopts a segment it actually decrypted). Here the visible outcome is
-    // the same whether the tag check passed and the items failed
-    // `isPublicContactKey`, or the tag check failed outright -- because
-    // loadEncryptedArray gives the UI no way to tell those apart. Either
-    // way, a store swapped out from under the app loses the user's contacts
-    // without a word.
-    await expect(panel.getByText(contact.label)).toHaveCount(0);
-    await expect(panel.locator("p.text-destructive")).toHaveCount(0);
+    // The contact being gone is NOT what this step establishes: the write
+    // above destroyed the real blob, so it would be gone either way.
+    await expect(visibleContact(panel)).toHaveCount(0);
+
+    // What DOES distinguish the fix is whether the substituted blob is
+    // READ as a contacts list. Before the fix the AEAD accepted it, every
+    // item failed `isValidContact`, and the store read as a legitimately
+    // empty list -- indistinguishable, from the UI, from having no
+    // contacts. The next contacts write would then have persisted that
+    // empty list and cemented the loss. Now the tag check fails,
+    // `loadEncryptedArray` rejects, and the read-modify-write never runs.
+    //
+    // Probe it through the app's own read-modify-write and use a reload as
+    // the barrier, so there is no timing to get wrong: whatever the import
+    // was going to write has either landed or been abandoned by the time
+    // the panel comes back.
+    await importContact(panel, contact.publicKey).catch(() => undefined);
+    await panel.reload();
+    await unlockWithPassword(panel, MASTER);
+
+    expect(
+      (await readStorage(panel, "local"))[CONTACTS_KEY],
+      "a contacts blob that failed to open must not be replaced by the write that follows the failed read -- pre-fix this slot held a fresh single-contact blob and the user's other contacts were gone for good",
+    ).toEqual(segment);
+  });
+
+  // POSITIVE CONTROL: put the real blob back and it opens again, in its
+  // own slot, under the same session key. So the rejection above was the
+  // domain binding, not a broken vault or a store that never loads.
+  await test.step("restoring the real blob makes the contact readable again", async () => {
+    await panel.evaluate(
+      async ({ contactsKey, blob }) => {
+        await chrome.storage.local.set({ [contactsKey]: blob });
+      },
+      { contactsKey: CONTACTS_KEY, blob: realContacts },
+    );
+    await panel.reload();
+    await unlockWithPassword(panel, MASTER);
+    await goToKeys(panel);
+    await expect(visibleContact(panel).first()).toBeVisible();
   });
 });

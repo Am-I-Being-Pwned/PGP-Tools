@@ -24,6 +24,31 @@ export interface WorkspaceDraft {
   selectedKeyId: string | null;
 }
 
+/**
+ * A pull-model handle the workspace registers with the App.
+ *
+ * Deliberately pull, not push: a push contract ("here is my latest
+ * draft") means the App holds a live plaintext copy for the whole
+ * session, and every copy is one more thing that has to be released at
+ * lock time. Instead the App asks for the draft exactly once — inside
+ * `doMasterLock`, while the workspace is still mounted — encrypts it,
+ * and then calls `wipe()` so the workspace drops its own plaintext
+ * (input ref, textarea DOM node, undo buffer) before it unmounts.
+ *
+ * `wipe()` matters because React keeps the previous fiber alive on
+ * `fiber.alternate`, and effect closures hanging off it keep reaching
+ * the hook state they captured long after unmount. Refs are a single
+ * mutable slot shared by both copies, so emptying the slot is what
+ * actually releases the string — the unmount alone does not.
+ */
+export interface WorkspaceDraftSource {
+  /** Snapshot the salient workspace state. `null` when there is nothing
+   *  safe to persist (e.g. armored private-key material is in the box). */
+  getDraft: () => WorkspaceDraft | null;
+  /** Drop every plaintext copy the workspace owns. */
+  wipe: () => void;
+}
+
 /** True iff the draft has any user-typed content worth persisting. */
 export function draftHasContent(d: WorkspaceDraft | null): boolean {
   if (!d) return false;

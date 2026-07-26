@@ -252,6 +252,38 @@ export async function hasContactsSession(): Promise<boolean> {
   return wasm.hasContactsSession();
 }
 
+// ── per-store envelope (domain-separated key AND AAD) ────────────────
+// `domain` must be the chrome.storage key the blob lives under, so a
+// sealed blob is bound to its slot and its store. Nothing outside
+// `lib/storage/envelope.ts` should call these directly -- that module
+// owns the domain convention and the legacy-blob fallback.
+
+/** Seal `plaintext` for `domain`. Returns `[12-byte IV][ciphertext]`. */
+export async function encryptStore(
+  domain: string,
+  plaintext: Uint8Array,
+): Promise<Uint8Array> {
+  const wasm = await loadWasm();
+  return wasm.encryptStore(domain, plaintext);
+}
+
+/** Open a blob sealed for the SAME `domain`; any other domain rejects. */
+export async function decryptStore(
+  domain: string,
+  ciphertext: Uint8Array,
+  iv: Uint8Array,
+): Promise<Uint8Array> {
+  const wasm = await loadWasm();
+  return wasm.decryptStore(domain, ciphertext, iv);
+}
+
+// ── legacy (pre-v1) shared envelope ─────────────────────────────────
+// Every store used to be sealed under the raw contacts key with one
+// shared AAD. `decryptContacts` is retained as the migration read path
+// for blobs already on users' disks; `encryptContacts` only exists so
+// tests can synthesise one. Production code must not write this format
+// -- use `encryptStore`.
+
 export async function encryptContacts(
   plaintext: Uint8Array,
 ): Promise<Uint8Array> {

@@ -1,6 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { StoredEnvelope } from "./envelope";
 import type { NewHistoryEntry } from "./history";
+import {
+  domainEnvelope,
+  isDomainSealed,
+  legacyEnvelope,
+  sealedDomain,
+  storedPlaintext,
+} from "./fake-store-crypto";
 import {
   appendHistoryEntry,
   clearHistory,
@@ -13,28 +21,44 @@ import {
   resolveBudget,
 } from "./history";
 
-// Fake WASM contacts session: "encryption" packs a zero IV in front of
-// the plaintext, "decryption" strips it. Call counters let tests prove
-// the module keeps no plaintext cache (every load must decrypt anew).
+// Fake WASM sealing primitives (see fake-store-crypto.ts for the
+// contract). Call counters let tests prove the module keeps no plaintext
+// cache (every load must decrypt anew). `sealed` / `opened` keep the
+// ACTUAL buffers that crossed the boundary -- not copies -- so tests can
+// assert they were zeroized once the call returned.
 const wasmMock = vi.hoisted(() => ({
   session: true,
   encryptCalls: 0,
   decryptCalls: 0,
+  sealed: [] as Uint8Array[],
+  opened: [] as Uint8Array[],
 }));
 
-vi.mock("../pgp/wasm", () => ({
-  hasContactsSession: () => Promise.resolve(wasmMock.session),
-  encryptContacts: (plaintext: Uint8Array) => {
-    wasmMock.encryptCalls++;
-    const packed = new Uint8Array(12 + plaintext.length);
-    packed.set(plaintext, 12);
-    return Promise.resolve(packed);
-  },
-  decryptContacts: (ciphertext: Uint8Array) => {
-    wasmMock.decryptCalls++;
-    return Promise.resolve(new Uint8Array(ciphertext));
-  },
-}));
+vi.mock("../pgp/wasm", async () => {
+  const fake = await import("./fake-store-crypto");
+  return {
+    hasContactsSession: () => Promise.resolve(wasmMock.session),
+    encryptStore: (domain: string, plaintext: Uint8Array) => {
+      wasmMock.encryptCalls++;
+      wasmMock.sealed.push(plaintext);
+      return Promise.resolve(fake.fakeEncryptStore(domain, plaintext));
+    },
+    decryptStore: (domain: string, ciphertext: Uint8Array) => {
+      wasmMock.decryptCalls++;
+      const out = fake.fakeDecryptStore(domain, ciphertext);
+      wasmMock.opened.push(out);
+      return Promise.resolve(out);
+    },
+    encryptContacts: (plaintext: Uint8Array) =>
+      Promise.resolve(fake.fakeEncryptContacts(plaintext)),
+    decryptContacts: (ciphertext: Uint8Array) => {
+      wasmMock.decryptCalls++;
+      const out = fake.fakeDecryptContacts(ciphertext);
+      wasmMock.opened.push(out);
+      return Promise.resolve(out);
+    },
+  };
+});
 
 const prefsMock = vi.hoisted(() => ({
   historyEnabled: true,
@@ -87,6 +111,8 @@ beforeEach(() => {
   wasmMock.session = true;
   wasmMock.encryptCalls = 0;
   wasmMock.decryptCalls = 0;
+  wasmMock.sealed = [];
+  wasmMock.opened = [];
   prefsMock.historyEnabled = true;
   prefsMock.neverCacheKeys = false;
 });
@@ -333,9 +359,7 @@ describe("quota exhaustion mid-append", () => {
     // update (set #2) quota-fails. The entry is in the segment and the
     // stale manifest still references it, so nothing is lost.
     failSetFrom(local, 2);
-    await expect(appendHistoryEntry(entry("second"))).rejects.toThrow(
-      /quota/i,
-    );
+    await expect(appendHistoryEntry(entry("second"))).rejects.toThrow(/quota/i);
 
     const h = await loadHistory();
     expect(h.map((e) => e.content)).toEqual(["second", "first"]);
@@ -374,11 +398,7 @@ describe("cross-context manifest divergence", () => {
     // ...so the next append extends it instead of clobbering it.
     await appendHistoryEntry(entry("kept-3"));
     const after = await loadHistory();
-    expect(after.map((e) => e.content)).toEqual([
-      "kept-3",
-      "kept-2",
-      "kept-1",
-    ]);
+    expect(after.map((e) => e.content)).toEqual(["kept-3", "kept-2", "kept-1"]);
   });
 
   it("clearHistory removes segments the manifest doesn't reference", async () => {
@@ -387,6 +407,212 @@ describe("cross-context manifest divergence", () => {
 
     await clearHistory();
     expect(historyKeys(local.store)).toEqual([]);
+  });
+});
+
+// Each segment is sealed for its own storage key as the domain, so a
+// segment blob is bound to the slot it was written to. These are the unit
+// counterparts of e2e/history-memory.spec.ts's substitution test.
+describe("segment domain binding", () => {
+  it("seals every segment for its own key, never under the legacy envelope", async () => {
+    for (let i = 0; i < 4; i++) {
+      await appendHistoryEntry(entry(`${i}:${"x".repeat(30_000)}`));
+    }
+    for (const n of [0, 1]) {
+      const blob = local.store.get(`pgp_history_seg_${n}`);
+      expect(isDomainSealed(blob)).toBe(true);
+      expect(sealedDomain(blob)).toBe(`pgp_history_seg_${n}`);
+    }
+  });
+
+  it("refuses a segment blob replayed into another segment slot", async () => {
+    await appendHistoryEntry(entry("original"));
+    const seg0 = local.store.get("pgp_history_seg_0");
+
+    // Positive control FIRST: a blob genuinely sealed for seg_1 IS adopted,
+    // which proves the prefix scan + adoption path is live and that the
+    // rejection below is the domain binding rather than a dead code path.
+    await local.set({
+      pgp_history_seg_1: domainEnvelope(
+        "pgp_history_seg_1",
+        new TextEncoder().encode(
+          JSON.stringify([
+            { id: "legit", ts: 1, op: "encrypt", recipients: [] },
+          ]),
+        ),
+      ),
+    });
+    expect((await loadHistory()).map((e) => e.id)).toContain("legit");
+
+    // Now the attack: byte-for-byte copy of seg_0 into the seg_2 slot, with
+    // no knowledge of the vault key. It must NOT be adopted.
+    await local.set({ pgp_history_seg_2: seg0 });
+    const after = await loadHistory();
+    expect(after.filter((e) => e.content === "original")).toHaveLength(1);
+    const manifest = local.store.get("pgp_history") as {
+      segs: { n: number }[];
+    };
+    expect(manifest.segs.map((s) => s.n)).not.toContain(2);
+  });
+
+  it("refuses a blob sealed for another store", async () => {
+    // A settings/keyring/contacts blob planted in a segment slot.
+    for (const domain of ["pgp_public_contacts", "pgp_keyring"]) {
+      await local.set({
+        pgp_history_seg_0: domainEnvelope(
+          domain,
+          new TextEncoder().encode(
+            JSON.stringify([
+              { id: "planted", ts: 1, op: "encrypt", recipients: [] },
+            ]),
+          ),
+        ),
+      });
+      expect(await loadHistory()).toEqual([]);
+    }
+  });
+});
+
+describe("legacy envelope migration", () => {
+  /** A segment blob exactly as a pre-domain-separation build wrote it:
+   *  the shared contacts key, the shared AAD, no slot binding. */
+  function seedLegacySegment(n: number, contents: string[]): void {
+    const entries = contents.map((content, i) => ({
+      id: `legacy-${n}-${i}`,
+      ts: 1_700_000_000_000 + i,
+      op: "encrypt",
+      recipients: [],
+      content,
+    }));
+    const json = new TextEncoder().encode(JSON.stringify(entries));
+    local.store.set(`pgp_history_seg_${n}`, legacyEnvelope(json));
+    local.store.set("pgp_history", { segs: [{ n, bytes: json.length }] });
+  }
+
+  it("still loads a segment sealed by a shipped older build", async () => {
+    seedLegacySegment(0, ["written before the fix"]);
+
+    const h = await loadHistory();
+    expect(h.map((e) => e.content)).toEqual(["written before the fix"]);
+  });
+
+  it("re-seals it under the domain-bound scheme on that first read", async () => {
+    seedLegacySegment(0, ["written before the fix"]);
+    expect(isDomainSealed(local.store.get("pgp_history_seg_0"))).toBe(false);
+
+    await loadHistory();
+
+    const blob = local.store.get("pgp_history_seg_0");
+    expect(isDomainSealed(blob)).toBe(true);
+    expect(sealedDomain(blob)).toBe("pgp_history_seg_0");
+    // Re-sealed byte-for-byte, so the manifest's byte accounting is still
+    // right and nothing was dropped in translation.
+    const manifest = local.store.get("pgp_history") as {
+      segs: { n: number; bytes: number }[];
+    };
+    expect(storedPlaintext(blob as StoredEnvelope)).toHaveLength(
+      manifest.segs[0].bytes,
+    );
+    // ...and it reads back the same both times.
+    expect((await loadHistory()).map((e) => e.content)).toEqual([
+      "written before the fix",
+    ]);
+  });
+
+  it("keeps appending to a migrated segment without losing its entries", async () => {
+    seedLegacySegment(0, ["old-1", "old-2"]);
+
+    await appendHistoryEntry(entry("new-1"));
+
+    expect((await loadHistory()).map((e) => e.content)).toEqual([
+      "new-1",
+      "old-2",
+      "old-1",
+    ]);
+    expect(isDomainSealed(local.store.get("pgp_history_seg_0"))).toBe(true);
+  });
+
+  it("leaves the readable legacy blob in place when the re-seal write fails", async () => {
+    seedLegacySegment(0, ["precious"]);
+    const before = local.store.get("pgp_history_seg_0");
+    failSetFrom(local, 1);
+
+    // The entry still loads; only the opportunistic upgrade was lost.
+    expect((await loadHistory()).map((e) => e.content)).toEqual(["precious"]);
+    expect(local.store.get("pgp_history_seg_0")).toBe(before);
+  });
+
+  it("a migrated segment is no longer replayable into another slot", async () => {
+    seedLegacySegment(0, ["was-replayable"]);
+    await loadHistory(); // migrates
+
+    await local.set({
+      pgp_history_seg_1: local.store.get("pgp_history_seg_0"),
+    });
+    expect((await loadHistory()).map((e) => e.content)).toEqual([
+      "was-replayable",
+    ]);
+  });
+});
+
+// Message content is the most sensitive thing this store writes, and the
+// buffers it crosses the wasm boundary in are the copies we CAN clear (the
+// intermediate JSON string is immutable, so it is not). The mock keeps a
+// reference to every buffer that crossed, so these assert the real thing:
+// after the call returned, the buffer is all zeros.
+describe("plaintext zeroization", () => {
+  /** Every buffer the mock saw, asserted non-empty first so a scan that
+   *  never ran can't pass as "all zeros". */
+  function expectAllZeroed(buffers: Uint8Array[]): void {
+    expect(buffers.length).toBeGreaterThan(0);
+    for (const buf of buffers) {
+      expect(buf.length).toBeGreaterThan(0);
+      expect(buf.every((b) => b === 0)).toBe(true);
+    }
+  }
+
+  it("zeroizes the encoded segment JSON after sealing it", async () => {
+    await appendHistoryEntry(entry("sensitive-on-write"));
+    expectAllZeroed(wasmMock.sealed);
+  });
+
+  it("zeroizes the decrypted segment bytes after parsing them", async () => {
+    await appendHistoryEntry(entry("sensitive-on-read"));
+    wasmMock.opened = [];
+
+    await loadHistory();
+
+    expectAllZeroed(wasmMock.opened);
+  });
+
+  it("zeroizes the decrypted bytes even when the segment is unparseable", async () => {
+    await local.set({
+      pgp_history_seg_0: domainEnvelope(
+        "pgp_history_seg_0",
+        new TextEncoder().encode("not json at all"),
+      ),
+    });
+    await local.set({ pgp_history: { segs: [{ n: 0, bytes: 15 }] } });
+
+    expect(await loadHistory()).toEqual([]);
+    expectAllZeroed(wasmMock.opened);
+  });
+
+  it("zeroizes the plaintext of a legacy segment it migrates", async () => {
+    const json = new TextEncoder().encode(
+      JSON.stringify([
+        { id: "legacy", ts: 1, op: "encrypt", recipients: [], content: "old" },
+      ]),
+    );
+    local.store.set("pgp_history_seg_0", legacyEnvelope(json));
+    local.store.set("pgp_history", { segs: [{ n: 0, bytes: json.length }] });
+
+    expect(await loadHistory()).toHaveLength(1);
+
+    // Both halves: the buffer decryptContacts returned AND the one handed
+    // back to the re-seal must end up cleared.
+    expectAllZeroed(wasmMock.opened);
+    expectAllZeroed(wasmMock.sealed);
   });
 });
 

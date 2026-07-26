@@ -141,7 +141,8 @@ function saveAll(keys: ProtectedKeyBlob[]): Promise<void> {
   return saveEncryptedArray(KEYRING_STORE, keys);
 }
 
-/** One-time upgrade of an unpadded keyring blob to canonical padding. */
+/** One-time upgrade of a keyring blob to canonical padding and to the
+ *  domain-bound sealing envelope. */
 export function normalizeKeyringPadding(): Promise<void> {
   return normalizePadding(KEYRING_STORE);
 }

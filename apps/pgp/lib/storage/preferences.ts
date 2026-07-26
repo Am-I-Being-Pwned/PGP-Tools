@@ -1,10 +1,6 @@
+import type { StoredEnvelope } from "./envelope";
 import { STORAGE_PREFERENCES, STORAGE_SETTINGS } from "../constants";
-import { fromBase64, toBase64, unpackIvCiphertext } from "../encoding";
-import {
-  decryptContacts,
-  encryptContacts,
-  hasContactsSession,
-} from "../pgp/wasm";
+import { hasContactsSession } from "../pgp/wasm";
 import {
   currentStorageLocation,
   getItem,
@@ -12,6 +8,7 @@ import {
   setItem,
   withLock,
 } from "./engine";
+import { isStoredEnvelope, openEnvelope, sealEnvelope } from "./envelope";
 import { padPlaintext, unpadPlaintext } from "./padding";
 
 export type StorageLocation = "local" | "sync";
@@ -106,17 +103,6 @@ function isBootKey(k: string): k is keyof BootPrefs {
   return (BOOT_KEYS as string[]).includes(k);
 }
 
-interface EncryptedBlob {
-  iv: string;
-  ciphertext: string;
-}
-
-function isEncryptedBlob(v: unknown): v is EncryptedBlob {
-  if (typeof v !== "object" || v === null) return false;
-  const o = v as Record<string, unknown>;
-  return typeof o.iv === "string" && typeof o.ciphertext === "string";
-}
-
 /** A stored plaintext object that predates the split still carries the
  *  settings fields (e.g. `advancedMode`); the post-split bootstrap only
  *  has `storageLocation`/`onboardingComplete`. */
@@ -140,25 +126,26 @@ async function writeBoot(patch: Partial<BootPrefs>): Promise<void> {
 }
 
 // ── settings (encrypted, user area, padded) ──────────────────────────
+// Sealed for `STORAGE_SETTINGS` as its domain (see `envelope.ts`), so the
+// settings blob and, say, a keyring or history blob are no longer
+// interchangeable. Blobs written before domain separation are read via
+// `openEnvelope`'s legacy fallback; every settings write goes through
+// `saveSettings`, so the first preference change upgrades them, and
+// `savePreferences` read-merge-writes so nothing is lost in the process.
 
 async function saveSettings(settings: SettingsPrefs): Promise<void> {
   const json = new TextEncoder().encode(JSON.stringify(settings));
   const pad = (await currentStorageLocation()) === "local";
-  const packed = await encryptContacts(padPlaintext(json, pad));
-  const { iv, ciphertext } = unpackIvCiphertext(packed);
-  await setItem<EncryptedBlob>(STORAGE_SETTINGS, {
-    iv: toBase64(iv),
-    ciphertext: toBase64(ciphertext),
-  });
+  await setItem<StoredEnvelope>(
+    STORAGE_SETTINGS,
+    await sealEnvelope(STORAGE_SETTINGS, padPlaintext(json, pad)),
+  );
 }
 
 async function loadSettings(): Promise<Partial<SettingsPrefs>> {
   const blob = await getItem<unknown>(STORAGE_SETTINGS);
-  if (!isEncryptedBlob(blob)) return {};
-  const plaintext = await decryptContacts(
-    fromBase64(blob.ciphertext),
-    fromBase64(blob.iv),
-  );
+  if (!isStoredEnvelope(blob)) return {};
+  const { plaintext } = await openEnvelope(STORAGE_SETTINGS, blob);
   const json = unpadPlaintext(plaintext);
   const parsed: unknown = JSON.parse(new TextDecoder().decode(json));
   if (typeof parsed !== "object" || parsed === null) return {};
@@ -198,7 +185,7 @@ async function migrateLegacyIfNeeded(): Promise<void> {
     const merged = { ...DEFAULT_PREFERENCES, ...legacy };
 
     // Encrypt the settings unless a prior (crashed) run already did.
-    if (!isEncryptedBlob(await getItem<unknown>(STORAGE_SETTINGS))) {
+    if (!isStoredEnvelope(await getItem<unknown>(STORAGE_SETTINGS))) {
       await saveSettings(pickSettings(merged));
     }
 

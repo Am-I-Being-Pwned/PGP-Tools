@@ -430,7 +430,7 @@ fn test_contacts_encrypt_decrypt_round_trip_prf() {
     init_contacts_session_with_prf(prf_output.to_vec(), stored_secret.to_vec()).unwrap();
 
     let plaintext = b"[{\"keyId\":\"abc123\",\"name\":\"Alice\"}]";
-    let packed = encrypt_contacts(plaintext).unwrap();
+    let packed = encrypt_contacts(plaintext.to_vec()).unwrap();
 
     // Packed format: [12-byte IV][ciphertext]
     assert!(packed.len() > 12);
@@ -447,7 +447,7 @@ fn test_contacts_encrypt_decrypt_round_trip_prf() {
 fn test_contacts_encrypt_without_session_fails() {
     reset_contacts_session();
 
-    let result = encrypt_contacts(b"should fail");
+    let result = encrypt_contacts(b"should fail".to_vec());
     assert!(result.is_err());
     assert!(result
         .unwrap_err()
@@ -474,7 +474,7 @@ fn test_contacts_decrypt_wrong_key_fails() {
     let stored_secret_a = b"aaaa-fake-stored-secret-32bytes!";
     init_contacts_session_with_prf(prf_output_a.to_vec(), stored_secret_a.to_vec()).unwrap();
 
-    let packed = encrypt_contacts(b"secret contacts").unwrap();
+    let packed = encrypt_contacts(b"secret contacts".to_vec()).unwrap();
     let iv = &packed[..12];
     let ciphertext = &packed[12..];
 
@@ -498,13 +498,13 @@ fn test_contacts_session_replaced_on_reinit() {
     let prf_a = b"aaaa-fake-prf-output-32-bytes!!!";
     let secret_a = b"aaaa-fake-stored-secret-32bytes!";
     init_contacts_session_with_prf(prf_a.to_vec(), secret_a.to_vec()).unwrap();
-    let packed_a = encrypt_contacts(b"data-a").unwrap();
+    let packed_a = encrypt_contacts(b"data-a".to_vec()).unwrap();
 
     // Re-init with key B (should replace, not accumulate)
     let prf_b = b"bbbb-fake-prf-output-32-bytes!!!";
     let secret_b = b"bbbb-fake-stored-secret-32bytes!";
     init_contacts_session_with_prf(prf_b.to_vec(), secret_b.to_vec()).unwrap();
-    let packed_b = encrypt_contacts(b"data-b").unwrap();
+    let packed_b = encrypt_contacts(b"data-b".to_vec()).unwrap();
 
     // Decrypt B should work
     let iv_b = &packed_b[..12];
@@ -533,7 +533,7 @@ fn test_encrypt_canary_and_init_session() {
     assert!(has_contacts_session());
 
     // Should be able to encrypt/decrypt contacts
-    let ct = encrypt_contacts(b"test contacts").unwrap();
+    let ct = encrypt_contacts(b"test contacts".to_vec()).unwrap();
     let iv = &ct[..12];
     let ciphertext = &ct[12..];
     assert_eq!(decrypt_contacts(ciphertext, iv).unwrap(), b"test contacts");
@@ -601,7 +601,7 @@ fn test_verify_canary_then_encrypt_contacts() {
     let canary_ct = &packed[12..];
 
     // Encrypt some contacts while session is active
-    let contacts_packed = encrypt_contacts(b"[{\"keyId\":\"def456\"}]").unwrap();
+    let contacts_packed = encrypt_contacts(b"[{\"keyId\":\"def456\"}]".to_vec()).unwrap();
     let contacts_iv = &contacts_packed[..12];
     let contacts_ct = &contacts_packed[12..];
 
@@ -627,7 +627,7 @@ fn test_contacts_key_domain_separation_password_vs_prf() {
     let password = b"test-password-for-sep";
     let salt = b"16-byte-salt!!!!";
     encrypt_canary_and_init_session(password, salt, 4096, 3, 1).unwrap();
-    let packed = encrypt_contacts(b"password-contacts").unwrap();
+    let packed = encrypt_contacts(b"password-contacts".to_vec()).unwrap();
     let iv = &packed[..12];
     let ct = &packed[12..];
 
@@ -651,13 +651,13 @@ fn test_empty_contacts_encrypt_decrypt() {
     init_contacts_session_with_prf(prf_output.to_vec(), stored_secret.to_vec()).unwrap();
 
     // Empty JSON array
-    let packed = encrypt_contacts(b"[]").unwrap();
+    let packed = encrypt_contacts(b"[]".to_vec()).unwrap();
     let iv = &packed[..12];
     let ct = &packed[12..];
     assert_eq!(decrypt_contacts(ct, iv).unwrap(), b"[]");
 
     // Empty bytes
-    let packed2 = encrypt_contacts(b"").unwrap();
+    let packed2 = encrypt_contacts(b"".to_vec()).unwrap();
     let iv2 = &packed2[..12];
     let ct2 = &packed2[12..];
     assert_eq!(decrypt_contacts(ct2, iv2).unwrap(), b"");
@@ -675,12 +675,180 @@ fn test_large_contacts_encrypt_decrypt() {
 
     // Simulate ~100 contacts worth of data (~100KB)
     let large_data: Vec<u8> = (0..100_000).map(|i| (i % 256) as u8).collect();
-    let packed = encrypt_contacts(&large_data).unwrap();
+    let packed = encrypt_contacts(large_data.clone()).unwrap();
     let iv = &packed[..12];
     let ct = &packed[12..];
     assert_eq!(decrypt_contacts(ct, iv).unwrap(), large_data);
 
     reset_contacts_session();
+}
+
+// ── per-store envelope (domain separation) ──────────────────────────
+
+/// Start a contacts session with a deterministic fake PRF pair.
+fn init_test_contacts_session() {
+    reset_contacts_session();
+    init_contacts_session_with_prf(
+        b"32-byte-fake-prf-output-for-test".to_vec(),
+        b"32-byte-fake-stored-secret-test!".to_vec(),
+    )
+    .unwrap();
+}
+
+#[test]
+fn test_store_envelope_round_trips_within_its_domain() {
+    init_test_contacts_session();
+
+    let plaintext = b"[{\"id\":\"entry-1\",\"content\":\"dinner at eight\"}]";
+    let packed = encrypt_store("pgp_history_seg_0", plaintext.to_vec()).unwrap();
+    assert!(packed.len() > 12);
+    let (iv, ct) = packed.split_at(12);
+
+    assert_eq!(
+        decrypt_store("pgp_history_seg_0", ct, iv).unwrap(),
+        plaintext
+    );
+
+    reset_contacts_session();
+}
+
+#[test]
+fn test_store_envelope_rejects_a_blob_from_another_segment_slot() {
+    init_test_contacts_session();
+
+    // Exactly the replay the old scheme accepted: copy seg_0's blob into
+    // the seg_1 slot. Same session key, same everything -- only the slot
+    // (and so the domain) differs.
+    let packed = encrypt_store("pgp_history_seg_0", b"[{\"id\":\"a\"}]".to_vec()).unwrap();
+    let (iv, ct) = packed.split_at(12);
+
+    assert!(decrypt_store("pgp_history_seg_1", ct, iv).is_err());
+    // ...and the correct slot still opens it, so the failure above is the
+    // domain binding rather than a broken blob.
+    assert!(decrypt_store("pgp_history_seg_0", ct, iv).is_ok());
+
+    reset_contacts_session();
+}
+
+#[test]
+fn test_store_envelope_rejects_a_blob_from_another_store() {
+    init_test_contacts_session();
+
+    let packed = encrypt_store("pgp_history_seg_0", b"[{\"id\":\"a\"}]".to_vec()).unwrap();
+    let (iv, ct) = packed.split_at(12);
+
+    // Substituting a history segment for the contacts / keyring / settings
+    // / CRX blob must fail the tag check, not silently decode to something
+    // that validates away to an empty list.
+    for domain in [
+        "pgp_public_contacts",
+        "pgp_keyring",
+        "pgp_settings",
+        "pgp_crx_keys",
+    ] {
+        assert!(
+            decrypt_store(domain, ct, iv).is_err(),
+            "a history segment must not open as {domain}"
+        );
+    }
+
+    reset_contacts_session();
+}
+
+#[test]
+fn test_store_envelope_is_not_interchangeable_with_the_legacy_envelope() {
+    init_test_contacts_session();
+
+    // A legacy blob (shared key + shared CONTACTS_AAD) must not open as a
+    // domain-bound one...
+    let legacy = encrypt_contacts(b"[{\"id\":\"legacy\"}]".to_vec()).unwrap();
+    let (l_iv, l_ct) = legacy.split_at(12);
+    assert!(decrypt_store("pgp_public_contacts", l_ct, l_iv).is_err());
+    assert!(decrypt_contacts(l_ct, l_iv).is_ok());
+
+    // ...and a domain-bound blob must not open as a legacy one. Together
+    // these are what make the JS "try new, fall back to legacy" migration
+    // read unambiguous.
+    let sealed = encrypt_store("pgp_public_contacts", b"[{\"id\":\"new\"}]".to_vec()).unwrap();
+    let (s_iv, s_ct) = sealed.split_at(12);
+    assert!(decrypt_contacts(s_ct, s_iv).is_err());
+    assert!(decrypt_store("pgp_public_contacts", s_ct, s_iv).is_ok());
+
+    reset_contacts_session();
+}
+
+#[test]
+fn test_store_envelope_requires_a_session_and_a_domain() {
+    reset_contacts_session();
+    assert!(encrypt_store("pgp_keyring", b"x".to_vec())
+        .unwrap_err()
+        .contains("Contacts session not active"));
+    assert!(decrypt_store("pgp_keyring", b"fake", &[0u8; 12])
+        .unwrap_err()
+        .contains("Contacts session not active"));
+
+    init_test_contacts_session();
+    // An empty domain would silently collapse every store back onto one
+    // subkey, so it is rejected outright rather than defaulted.
+    assert!(encrypt_store("", b"x".to_vec())
+        .unwrap_err()
+        .contains("domain must not be empty"));
+    assert!(decrypt_store("", b"fake", &[0u8; 12])
+        .unwrap_err()
+        .contains("domain must not be empty"));
+
+    reset_contacts_session();
+}
+
+#[test]
+fn test_store_subkeys_differ_per_domain_and_from_the_session_key() {
+    init_test_contacts_session();
+
+    let a = derive_store_subkey("pgp_keyring").unwrap();
+    let b = derive_store_subkey("pgp_public_contacts").unwrap();
+    let a_again = derive_store_subkey("pgp_keyring").unwrap();
+
+    assert_eq!(a.len(), 32);
+    assert_ne!(a.as_slice(), b.as_slice());
+    // Deterministic: the same domain must derive the same subkey or stored
+    // blobs would be unreadable after a reload.
+    assert_eq!(a.as_slice(), a_again.as_slice());
+    // And distinct from the session key itself, so a leak of one subkey
+    // does not hand over the others.
+    let session_key = CONTACTS_KEY.with(|slot| slot.borrow().clone().unwrap());
+    assert_ne!(a.as_slice(), session_key.as_slice());
+
+    reset_contacts_session();
+}
+
+#[test]
+fn test_store_envelope_handles_empty_and_large_plaintexts() {
+    init_test_contacts_session();
+
+    let packed = encrypt_store("pgp_settings", Vec::new()).unwrap();
+    let (iv, ct) = packed.split_at(12);
+    assert_eq!(decrypt_store("pgp_settings", ct, iv).unwrap(), Vec::<u8>::new());
+
+    // A full history segment is ~64 KB; go past it.
+    let large: Vec<u8> = (0..100_000).map(|i| (i % 256) as u8).collect();
+    let packed = encrypt_store("pgp_history_seg_3", large.clone()).unwrap();
+    let (iv, ct) = packed.split_at(12);
+    assert_eq!(decrypt_store("pgp_history_seg_3", ct, iv).unwrap(), large);
+
+    reset_contacts_session();
+}
+
+#[test]
+fn test_store_envelope_unreadable_after_the_session_drops() {
+    init_test_contacts_session();
+    let packed = encrypt_store("pgp_history_seg_0", b"[{\"id\":\"a\"}]".to_vec()).unwrap();
+    let (iv, ct) = packed.split_at(12);
+    assert!(decrypt_store("pgp_history_seg_0", ct, iv).is_ok());
+
+    // Master lock: the subkey has no independent lifetime, so dropping the
+    // session makes every domain unreadable.
+    drop_contacts_session();
+    assert!(decrypt_store("pgp_history_seg_0", ct, iv).is_err());
 }
 
 #[test]

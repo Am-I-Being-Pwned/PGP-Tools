@@ -2072,16 +2072,99 @@ pub fn decrypt_draft(packed: &[u8]) -> Result<Vec<u8>, String> {
     with_draft_key(|key| aes_gcm_decrypt(key, iv, ct, DRAFT_AAD))?
 }
 
-// ── Contacts encrypt / decrypt ──────────────────────────────────────
+// ── Per-store envelope (v1): domain-separated key AND AAD ───────────
+//
+// Every store sealed under the master session (keyring, contacts,
+// settings, CRX keys, each history segment) gets its OWN AES key and its
+// OWN AAD, both derived from a caller-supplied `domain` string. The JS
+// side always passes the chrome.storage key the blob lives under
+// (`pgp_keyring`, `pgp_public_contacts`, `pgp_settings`, `pgp_crx_keys`,
+// `pgp_history_seg_<n>`), so a sealed blob is bound to the exact slot it
+// was written to.
+//
+// Why this exists: the legacy scheme below (`encrypt_contacts` /
+// `decrypt_contacts`) sealed EVERY store under the same key and the same
+// fixed `CONTACTS_AAD`, so nothing in the sealed data named the store or
+// the segment. Anyone able to write chrome.storage -- with no knowledge
+// of the vault key -- could replay one store's blob into another slot and
+// the AEAD would accept it. Binding the domain into both the subkey and
+// the AAD makes any such move fail the tag check.
+//
+// Two independent bindings on purpose: the AAD alone would be enough for
+// a correct AEAD, but deriving a distinct key means even a future bug
+// that drops or mismatches the AAD cannot cross a domain boundary.
+const STORE_SUBKEY_INFO_PREFIX: &str = "gpg-tools:store-subkey:v1:";
+const STORE_AAD_PREFIX: &str = "gpg-tools:store:v1:";
 
-/// Encrypt contacts JSON using the session key.
-/// Returns `[12-byte IV][ciphertext]`.
-#[wasm_bindgen(js_name = "encryptContacts")]
-pub fn encrypt_contacts(plaintext: &[u8]) -> Result<Vec<u8>, String> {
-    with_contacts_key(|key| aes_gcm_encrypt(key, plaintext, CONTACTS_AAD))?
+/// HKDF-Expand the contacts session key into a 32-byte subkey unique to
+/// `domain`. The subkey is `Zeroizing`, so it is scrubbed when the
+/// enclosing call returns.
+///
+/// NOTE on lifetimes: the subkey is derived FROM the contacts session
+/// key, so it inherits that key's lifetime exactly -- this buys domain
+/// separation, not an independent unlock window. See
+/// `T-HISTORY-KEY-COUPLING`.
+fn derive_store_subkey(domain: &str) -> Result<Zeroizing<Vec<u8>>, String> {
+    if domain.is_empty() {
+        return Err("Store domain must not be empty".to_string());
+    }
+    let info = format!("{STORE_SUBKEY_INFO_PREFIX}{domain}");
+    with_contacts_key(|key| {
+        // The session key is already a 32-byte HKDF output, so Extract is
+        // a formality; keep it for a conventional HKDF construction.
+        let hk = Hkdf::<Sha256>::new(None, key);
+        let mut subkey = Zeroizing::new(vec![0u8; 32]);
+        hk.expand(info.as_bytes(), subkey.as_mut_slice())
+            .map_err(|e| format!("HKDF failed: {e}"))?;
+        Ok(subkey)
+    })?
 }
 
-/// Decrypt contacts JSON using the session key.
+/// Seal `plaintext` for `domain`. Returns `[12-byte IV][ciphertext]`.
+/// Plaintext is taken by value and wrapped in `Zeroizing` so the copy
+/// wasm-bindgen marshalled in is scrubbed at function exit -- up to
+/// 64 KB of user message content per history segment write.
+#[wasm_bindgen(js_name = "encryptStore")]
+pub fn encrypt_store(domain: &str, plaintext: Vec<u8>) -> Result<Vec<u8>, String> {
+    let plaintext = Zeroizing::new(plaintext);
+    let subkey = derive_store_subkey(domain)?;
+    let aad = format!("{STORE_AAD_PREFIX}{domain}");
+    aes_gcm_encrypt(&subkey, &plaintext, aad.as_bytes())
+}
+
+/// Open a blob sealed by `encrypt_store` for the SAME `domain`. Any other
+/// domain fails the tag check.
+#[wasm_bindgen(js_name = "decryptStore")]
+pub fn decrypt_store(domain: &str, ciphertext: &[u8], iv: &[u8]) -> Result<Vec<u8>, String> {
+    let subkey = derive_store_subkey(domain)?;
+    let aad = format!("{STORE_AAD_PREFIX}{domain}");
+    aes_gcm_decrypt(&subkey, iv, ciphertext, aad.as_bytes())
+}
+
+// ── Legacy (pre-v1) shared envelope ─────────────────────────────────
+//
+// The scheme every store used before `encrypt_store`: the raw contacts
+// session key with the shared `CONTACTS_AAD`. RETAINED, not dead:
+//   - `decrypt_contacts` is the migration read path. Blobs written by
+//     shipped versions are still on real users' disks and must keep
+//     opening; the JS side (`lib/storage/envelope.ts`) tries the
+//     domain-bound scheme first and falls back to this.
+//   - `encrypt_contacts` is how the tests (here and in
+//     `lib/storage/*.test.ts`, via the same packing contract) synthesise
+//     a legacy blob to prove that fallback works. Production code no
+//     longer writes this format.
+// Do NOT reintroduce either as a production write path.
+
+/// Encrypt under the legacy shared envelope. See the note above.
+/// Plaintext is owned + `Zeroizing` for the same reason as
+/// `encrypt_store`.
+#[wasm_bindgen(js_name = "encryptContacts")]
+pub fn encrypt_contacts(plaintext: Vec<u8>) -> Result<Vec<u8>, String> {
+    let plaintext = Zeroizing::new(plaintext);
+    with_contacts_key(|key| aes_gcm_encrypt(key, &plaintext, CONTACTS_AAD))?
+}
+
+/// Decrypt a legacy shared-envelope blob. See the note above.
 #[wasm_bindgen(js_name = "decryptContacts")]
 pub fn decrypt_contacts(ciphertext: &[u8], iv: &[u8]) -> Result<Vec<u8>, String> {
     with_contacts_key(|key| aes_gcm_decrypt(key, iv, ciphertext, CONTACTS_AAD))?

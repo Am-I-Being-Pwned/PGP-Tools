@@ -610,12 +610,20 @@ const SECRET_PARAM_NAMES = [
   "source_passphrase",
   "prf_output",
   "stored_secret",
+  // User content, not a credential, but just as secret: `encrypt_store` /
+  // `encrypt_contacts` carry up to 64 KB of message plaintext per call.
+  "plaintext",
 ];
+// Two families: the credential-taking `*_with_password` / `*_with_prf` fns,
+// and the store-sealing fns that take user plaintext by value. The latter
+// were NOT covered until an agent pointed out this check passed either way
+// on `encrypt_contacts` -- i.e. SECURITY.md §11.2's claim was unenforced.
+// A gate that cannot fail is not a gate.
 const SECRET_FN_RE =
-  /\bfn\s+((?:encrypt|protect|generate|unlock|verify_canary|encrypt_canary|init_contacts)\w*_with_(?:password|prf))\s*\(/;
+  /\bfn\s+((?:encrypt|protect|generate|unlock|verify_canary|encrypt_canary|init_contacts)\w*_with_(?:password|prf)|encrypt_store|encrypt_contacts)\s*\(/;
 const invariantZeroizedParams = {
   id: "owned-secret-params-zeroized",
-  name: "owned secret params of *_with_password / *_with_prf fns are Zeroizing-wrapped",
+  name: "owned secret params (credentials + store plaintext) are Zeroizing-wrapped",
   expectation: "must be empty (zero un-zeroized owned secret params)",
   why: "An owned Vec<u8> of key material that is never moved into Zeroizing stays in wasm linear memory after the call returns, defeating the 'no plaintext secret survives the call' guarantee.",
   run() {

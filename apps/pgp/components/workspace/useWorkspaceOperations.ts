@@ -92,7 +92,7 @@ export function useWorkspaceOperations({
   // the message or key set changes; a later manual pick is left untouched.
   useEffect(() => {
     if (s.mode !== "decrypt") return;
-    const hasContent = s.files.length > 0 || s.input.trim().length > 0;
+    const hasContent = s.files.length > 0 || s.hasTrimmedInput;
     if (!hasContent || myKeys.length === 0) return;
 
     // Object guard (not a bare `let`) so a stale async run can't clobber a
@@ -106,7 +106,7 @@ export function useWorkspaceOperations({
                 kind: "binary" as const,
                 binaryMessage: new Uint8Array(await s.files[0].arrayBuffer()),
               }
-            : { kind: "armored" as const, armoredMessage: s.input };
+            : { kind: "armored" as const, armoredMessage: s.getInput() };
         const match = await pgpOps.selectDecryptionKey(
           input,
           myKeys.map((k) => k.publicKeyArmored),
@@ -121,8 +121,11 @@ export function useWorkspaceOperations({
     return () => {
       run.cancelled = true;
     };
+    // `inputVersion` stands in for the message text: it bumps on every
+    // change so this still re-runs as the user pastes, but nothing here
+    // closes over the plaintext (see the input block in useWorkspaceState).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [s.mode, s.input, s.files, myKeys]);
+  }, [s.mode, s.inputVersion, s.files, myKeys]);
 
   function findSigner(signerKeyId: string | null) {
     if (!signerKeyId) return null;
@@ -369,7 +372,7 @@ export function useWorkspaceOperations({
         binary: typeof result !== "string" ? result : undefined,
       });
     } else {
-      const result = await doEncrypt({ kind: "text", text: s.input });
+      const result = await doEncrypt({ kind: "text", text: s.getInput() });
       if (typeof result === "string") {
         s.setOutput(result);
       } else {
@@ -401,7 +404,7 @@ export function useWorkspaceOperations({
       op: "encrypt",
       recipients: historyRecipients,
       signed: signingHandle !== null,
-      ...(isFileInput ? { files: historyFileMeta() } : { content: s.input }),
+      ...(isFileInput ? { files: historyFileMeta() } : { content: s.getInput() }),
     });
 
     // A successful encrypt promotes its recipients in the picker's
@@ -526,7 +529,7 @@ export function useWorkspaceOperations({
         });
       } else {
         const result = await pgpOps.decryptWithHandle({
-          input: { kind: "armored", armoredMessage: s.input },
+          input: { kind: "armored", armoredMessage: s.getInput() },
           keyHandle,
           verificationPublicKeys: allPubArmored,
         });
@@ -596,7 +599,7 @@ export function useWorkspaceOperations({
       s.setOperationDone(true);
       maybeAutoDownload(true, { results });
     } else {
-      const signed = await pgpOps.signWithHandle(s.input, keyHandle);
+      const signed = await pgpOps.signWithHandle(s.getInput(), keyHandle);
       s.setOutput(signed);
       s.setOperationDone(true);
       maybeAutoDownload(false, { text: signed });
@@ -608,7 +611,7 @@ export function useWorkspaceOperations({
       signed: true,
       ...(s.files.length > 0
         ? { files: historyFileMeta() }
-        : { content: s.input }),
+        : { content: s.getInput() }),
     });
   }
 
@@ -620,7 +623,7 @@ export function useWorkspaceOperations({
 
     try {
       const messageText =
-        s.files.length > 0 ? await s.files[0].text() : s.input;
+        s.files.length > 0 ? await s.files[0].text() : s.getInput();
       const result = await pgpOps.verify({
         signedMessage: messageText,
         verificationPublicKeys: allPubArmored,

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "@amibeingpwned/ui/button";
 import { ariaKeyShortcuts, isMacPlatform, Kbd } from "@amibeingpwned/ui/kbd";
@@ -12,7 +12,6 @@ import {
 
 import type { WorkspaceAction } from "../../lib/messages";
 import { MODE_SHORTCUTS } from "../../lib/actions/definitions";
-import { toast } from "../../lib/toast";
 import { DropZone } from "./DropZone";
 
 type Mode = WorkspaceAction;
@@ -27,8 +26,18 @@ const MODE_ITEMS: { value: Mode; label: string }[] = [
 interface WorkspaceInputProps {
   mode: Mode;
   onModeChange: (mode: Mode) => void;
-  input: string;
+  /** The message box is UNCONTROLLED: the composed plaintext lives in the
+   *  DOM node and in the owning hook's ref, never in render state. See the
+   *  input block in `useWorkspaceState` for why. */
+  inputElRef: React.MutableRefObject<HTMLTextAreaElement | null>;
+  /** Read the current text at the point of use (import prefill). */
+  getInput: () => string;
+  /** Derived, non-sensitive: the box has at least one character. */
+  hasInput: boolean;
   onInputChange: (text: string) => void;
+  /** Clear the text with a 4s undo. Owned by the parent so the undo buffer
+   *  sits in the workspace's wipeable ref, not in a live toast closure. */
+  onClearText: () => void;
   files: File[];
   onFileDrop: (files: File[]) => void;
   onRemoveFile: (index: number) => void;
@@ -44,8 +53,11 @@ interface WorkspaceInputProps {
 export function WorkspaceInput({
   mode,
   onModeChange,
-  input,
+  inputElRef,
+  getInput,
+  hasInput,
   onInputChange,
+  onClearText,
   files,
   onFileDrop,
   onRemoveFile,
@@ -64,6 +76,19 @@ export function WorkspaceInput({
   useEffect(() => {
     if (privateKeyDetected) setMaskIgnored(false);
   }, [privateKeyDetected]);
+
+  // Callback ref: publish the node to the owning hook and re-seed its value
+  // from the ref on every (re)mount. The textarea unmounts whenever files are
+  // staged or the full-output view takes over, and an uncontrolled node comes
+  // back empty -- re-seeding is what makes the text survive those swaps (the
+  // same trick ImportKeyPage uses for its paste box).
+  const attachInput = useCallback(
+    (el: HTMLTextAreaElement | null) => {
+      inputElRef.current = el;
+      if (el) el.value = getInput();
+    },
+    [inputElRef, getInput],
+  );
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
@@ -101,29 +126,12 @@ export function WorkspaceInput({
         </SelectContent>
       </Select>
 
-      {input.length > 0 ? (
+      {hasInput ? (
         <div className="border-border shrink-0 rounded-lg border-2 border-dashed p-5 text-center">
           <p className="text-muted-foreground mb-2 text-sm">
             Text entered below
           </p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              const prev = input;
-              onInputChange("");
-              if (!operationDone) {
-                toast.message("Text cleared", {
-                  id: "workspace-text-cleared",
-                  duration: 4000,
-                  action: {
-                    label: "Undo",
-                    onClick: () => onInputChange(prev),
-                  },
-                });
-              }
-            }}
-          >
+          <Button variant="outline" size="sm" onClick={onClearText}>
             Clear text
           </Button>
         </div>
@@ -141,7 +149,7 @@ export function WorkspaceInput({
         <textarea
           id="pgp-input"
           aria-label="Message input"
-          value={input}
+          ref={attachInput}
           onChange={(e) => onInputChange(e.target.value)}
           className="border-border bg-background placeholder:text-muted-foreground focus:ring-ring min-h-20 w-full flex-1 resize-none rounded-md border p-3 text-sm focus:ring-2 focus:outline-none"
           // Visually mask armored private-key material. NOTE: this is
@@ -189,7 +197,7 @@ export function WorkspaceInput({
           </p>
           <div className="flex gap-2 pt-1">
             <button
-              onClick={() => onNavigateToKeys?.(input)}
+              onClick={() => onNavigateToKeys?.(getInput())}
               className="border-destructive/40 hover:bg-destructive/20 rounded border px-2 py-1 font-medium"
             >
               Import this key safely
@@ -208,7 +216,7 @@ export function WorkspaceInput({
         <div className="rounded-md bg-blue-500/10 px-3 py-2 text-xs text-blue-400">
           This looks like someone's public key.{" "}
           <button
-            onClick={() => onNavigateToKeys?.(input)}
+            onClick={() => onNavigateToKeys?.(getInput())}
             className="underline"
           >
             Import it as a contact

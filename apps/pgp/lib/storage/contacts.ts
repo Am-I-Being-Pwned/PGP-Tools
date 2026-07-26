@@ -50,7 +50,8 @@ function saveAll(contacts: PublicContactKey[]): Promise<void> {
   return saveEncryptedArray(CONTACTS_STORE, contacts);
 }
 
-/** One-time upgrade of an unpadded contacts blob to canonical padding. */
+/** One-time upgrade of a contacts blob to canonical padding and to the
+ *  domain-bound sealing envelope. */
 export function normalizeContactsPadding(): Promise<void> {
   return normalizePadding(CONTACTS_STORE);
 }

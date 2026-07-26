@@ -13,16 +13,32 @@ import { scanWasmMemory } from "./wasm-memory";
 
 // The workspace draft (lib/workspace-draft.ts + App.tsx's doMasterLock)
 // keeps the user's in-progress message across an auto-lock. Its whole
-// reason to exist as an encrypted blob rather than plain App state is the
-// claim in App.tsx: "The plaintext draft never survives the lock event in
-// the JS heap." Only the ciphertext, encrypted under a separate in-WASM
-// draft key, is supposed to be left behind.
+// reason to exist as an encrypted blob rather than plain App state is that
+// the plaintext draft must not survive the lock event in the JS heap. Only
+// the ciphertext, encrypted under a separate in-WASM draft key, is supposed
+// to be left behind.
 //
 // A canary goes into the workspace and the vault is master-locked in-app
 // via `doMasterLock` (a reload would not exercise the draft path at all).
-// The first test checks the parts of that claim that hold: the ciphertext
-// path itself, WASM, and storage. The second checks the JS heap -- and
-// currently fails, which is the point of it.
+// The first test covers the ciphertext path, WASM, and storage. The second
+// covers the JS heap: it used to fail (see SECURITY.md §8.11), and passes
+// now that the composer input is uncontrolled -- the plaintext lives in a
+// ref and the DOM node, never in React render state, so `wipe()` at lock
+// time actually releases it. React double-buffers hook state onto
+// `fiber.alternate` and keeps effect closures reachable from a GC root long
+// after unmount, which is why a controlled `value={input}` could not be
+// fixed by clearing the DOM alone.
+
+// Tracing MUST be off for this file. Playwright's snapshot cache attaches a
+// `__playwright_snapshot_cache_` symbol to DOM nodes holding cached
+// serialised values -- including a textarea's text. That makes the HARNESS a
+// live retainer of the canary and fails the heap assertion for a reason that
+// has nothing to do with the app. This spec is uniquely exposed because its
+// canary IS an input's value; the other heap specs are unaffected. Verified
+// both ways: with tracing on the only retainer left is Playwright's cache,
+// with it off the count is 0. Do not "fix" a red here by relaxing the
+// assertion -- check the retainer chain first.
+test.use({ trace: "off" });
 
 const MASTER = "correct horse battery staple";
 /** Unique, newline-free, and not a literal anywhere in the bundle. */
@@ -80,40 +96,43 @@ test("the workspace draft crosses a master lock as ciphertext, in WASM and on di
   });
 });
 
-// ── known defect: expected to fail ───────────────────────────────────
-// Marked test.fail() rather than deleted or weakened, so the suite reports
-// it the moment it starts passing (an unexpected pass fails the run).
+// ── regression guard for a fixed defect ──────────────────────────────
+// This test used to fail and was marked test.fail(). It now passes; the
+// test.fail() is gone, so a regression fails the run.
 //
-// `doMasterLock` encrypts the draft and unmounts the workspace, but
-// nothing blanks the input first, so the plaintext outlives the lock. The
-// retainer chain, printed by the assertion below and reproduced here:
+// The original defect: `doMasterLock` encrypted the draft and unmounted the
+// workspace, but the plaintext outlived the lock via this chain --
 //
 //   (GC roots) → C++ Persistent roots
 //     → autofill::FormTracker  [native] <textarea id="pgp-input">
 //       → property[get value]  [closure]
 //         → context[n]         [string] "half-written note DRAFT-CANARY…"
 //
-// Two things combine. React installs its own `value` getter/setter on
-// controlled inputs (inputValueTracking) whose closure captures the last
-// value it saw -- that `context[n]` slot IS the user's plaintext. And
-// Chromium's autofill FormTracker holds a C++ *Persistent* handle to the
-// last-interacted form control, so unmounting the textarea does not free
-// it: the node, the tracker closure, and the plaintext all stay reachable
-// from a GC root. Verified durable -- it survives 6 forced GCs over 10s
-// with heavy string churn.
+// React installs its own value getter/setter on CONTROLLED inputs
+// (inputValueTracking) whose closure captures the last value it saw, and
+// Chromium's autofill FormTracker holds a C++ Persistent handle to the
+// last-interacted form control, so unmounting did not free it. Durable
+// across 6 forced GCs over 10s with heavy string churn.
 //
-// ImportKeyPage already solves exactly this for pasted key armor,
-// deliberately and with a comment: `resetAndClose` sets
-// `textareaRef.current.value = ""` before the panel slides out (assigning
-// through React's patched setter is what replaces the captured value). The
-// workspace needs the same at lock time: once the draft ciphertext is
-// stashed, clear input/output in state AND blank the textarea's DOM value
-// before flipping `masterUnlocked`. Nothing is lost -- rehydration comes
-// from the ciphertext.
+// Blanking the DOM value (as ImportKeyPage's resetAndClose does for pasted
+// key armor) removed THAT chain and revealed a second one: React
+// double-buffers hook state onto `fiber.alternate` and keeps effect closures
+// hanging off it reachable from a GC root, so `value={input}` meant the
+// plaintext survived in render state regardless of the DOM.
+//
+// The actual fix was to stop holding it in render state at all: the composer
+// input is now UNCONTROLLED (ref + DOM node only, like ImportKeyPage's paste
+// box), and doMasterLock pulls the draft via `WorkspaceDraftSource.getDraft`
+// then calls `wipe()` -- clearing the ref, the DOM value, and the clear-undo
+// buffer -- before flipping masterUnlocked. See SECURITY.md §8.11.
+//
+// NOTE: decrypted OUTPUT is still ordinary render state and is retained by
+// the same mechanism after a lock. That is a separate open threat
+// (T-OUTPUT-HEAP-RESIDUE); this test deliberately asserts only on the input
+// draft, so it does not silently cover something it never checked.
 test("the draft plaintext does not survive a master lock in the JS heap", async ({
   panel,
 }) => {
-  test.fail();
   await draftThenLock(panel);
 
   const control = await strongRetainers(panel, HEAP_CONTROL);

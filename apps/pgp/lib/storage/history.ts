@@ -9,6 +9,13 @@
  * numbers and byte sizes -- never entry data -- so pruning and usage
  * reporting work without decrypting anything.
  *
+ * Each segment is sealed for its own storage key as the domain (see
+ * `envelope.ts`), so `pgp_history_seg_0`'s blob cannot be replayed into
+ * `pgp_history_seg_1` or into any other store: both the HKDF subkey and
+ * the AAD are derived from the slot name, and moving the blob breaks the
+ * tag check. Segments written before domain separation still open (legacy
+ * fallback) and are re-sealed in place on the first read.
+ *
  * History always lives in chrome.storage.local, regardless of the user's
  * storageLocation preference: sync's total quota (~100 KB) couldn't hold
  * it, and history shouldn't leave the device anyway.
@@ -20,13 +27,9 @@
  */
 
 import { STORAGE_HISTORY, STORAGE_HISTORY_SEGMENT_PREFIX } from "../constants";
-import { fromBase64, toBase64, unpackIvCiphertext } from "../encoding";
-import {
-  decryptContacts,
-  encryptContacts,
-  hasContactsSession,
-} from "../pgp/wasm";
+import { hasContactsSession } from "../pgp/wasm";
 import { withLock } from "./engine";
+import { isStoredEnvelope, openEnvelope, sealEnvelope } from "./envelope";
 import { getPreferences } from "./preferences";
 
 export type HistoryOp = "encrypt" | "sign" | "decrypt" | "verify";
@@ -72,17 +75,6 @@ interface SegmentRef {
 /** Oldest → newest; the last element is the head segment. */
 interface HistoryManifest {
   segs: SegmentRef[];
-}
-
-interface EncryptedBlob {
-  iv: string;
-  ciphertext: string;
-}
-
-function isEncryptedBlob(v: unknown): v is EncryptedBlob {
-  if (typeof v !== "object" || v === null) return false;
-  const o = v as Record<string, unknown>;
-  return typeof o.iv === "string" && typeof o.ciphertext === "string";
 }
 
 function isManifest(v: unknown): v is HistoryManifest {
@@ -174,35 +166,71 @@ async function writeManifest(manifest: HistoryManifest): Promise<void> {
 }
 
 /** Decrypt one segment. Throw-safe: a segment that is missing, garbled,
- *  or undecryptable is skipped rather than failing the whole load. */
+ *  or undecryptable is skipped rather than failing the whole load -- and a
+ *  blob sitting in the wrong slot is now exactly that, since the segment
+ *  key is the sealing domain.
+ *
+ *  A segment written before domain separation is re-sealed in place. Safe
+ *  to do from a read: every caller holds `withLock(STORAGE_HISTORY)`, and
+ *  the re-seal writes the SAME plaintext bytes, so the manifest's byte
+ *  accounting is unchanged. Best-effort -- a failed re-seal leaves the
+ *  readable legacy blob alone and the next read retries.
+ *
+ *  The decrypted bytes are zeroized on the way out: up to ~64 KB of the
+ *  user's own message content per segment. (The intermediate string from
+ *  `TextDecoder.decode` / `JSON.parse` is not zeroizable -- JS strings are
+ *  immutable -- so this clears the buffer, not every copy. See the
+ *  `JSON.stringify` note on `writeSegment`.) */
 async function readSegment(n: number): Promise<HistoryEntry[]> {
+  let plaintext: Uint8Array | null = null;
   try {
     const blob = (await chrome.storage.local.get(segKey(n)))[segKey(n)];
-    if (!isEncryptedBlob(blob)) return [];
-    const plaintext = await decryptContacts(
-      fromBase64(blob.ciphertext),
-      fromBase64(blob.iv),
-    );
+    if (!isStoredEnvelope(blob)) return [];
+    const opened = await openEnvelope(segKey(n), blob);
+    plaintext = opened.plaintext;
     const parsed: unknown = JSON.parse(new TextDecoder().decode(plaintext));
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isValidEntry);
+    const entries = parsed.filter(isValidEntry);
+    if (opened.legacy) {
+      // Re-seal the exact plaintext (not a re-serialisation of `entries`)
+      // so nothing is dropped and `bytes` stays byte-for-byte correct.
+      try {
+        await chrome.storage.local.set({
+          [segKey(n)]: await sealEnvelope(segKey(n), plaintext),
+        });
+      } catch {
+        // best-effort; the legacy blob is still there and still readable
+      }
+    }
+    return entries;
   } catch {
     return [];
+  } finally {
+    plaintext?.fill(0);
   }
 }
 
-/** Encrypt + write one segment; returns its plaintext JSON byte size. */
+/** Encrypt + write one segment; returns its plaintext JSON byte size.
+ *
+ *  The encoded plaintext is zeroized in a `finally` (matching
+ *  `encryptWorkspaceDraft`). The `JSON.stringify` result it is encoded
+ *  from is a JS string and so cannot be cleared; avoiding that would mean
+ *  hand-serialising entries straight into a byte buffer, which is a much
+ *  larger change than the leak justifies -- noted rather than done. */
 async function writeSegment(
   n: number,
   entries: HistoryEntry[],
 ): Promise<number> {
   const json = new TextEncoder().encode(JSON.stringify(entries));
-  const packed = await encryptContacts(json);
-  const { iv, ciphertext } = unpackIvCiphertext(packed);
-  await chrome.storage.local.set({
-    [segKey(n)]: { iv: toBase64(iv), ciphertext: toBase64(ciphertext) },
-  });
-  return json.length;
+  const bytes = json.length;
+  try {
+    await chrome.storage.local.set({
+      [segKey(n)]: await sealEnvelope(segKey(n), json),
+    });
+    return bytes;
+  } finally {
+    json.fill(0);
+  }
 }
 
 /** Drop oldest segments until the total fits the active budget. The head
@@ -246,7 +274,12 @@ async function scanSegmentNumbers(): Promise<number[]> {
  *  it (see {@link scanSegmentNumbers} for how they arise). Mutates
  *  `manifest`; returns whether anything was adopted (i.e. the manifest
  *  needs rewriting). Unreadable strays are left for clearHistory's
- *  prefix sweep rather than adopted as empty. */
+ *  prefix sweep rather than adopted as empty.
+ *
+ *  This is the path that made the old shared-AAD gap visible: a blob
+ *  planted under any `pgp_history_seg_*` key used to decrypt and get
+ *  adopted as real history. Now `readSegment`'s domain is the segment key,
+ *  so a planted or replayed blob yields [] and is never adopted. */
 async function adoptStraySegments(manifest: HistoryManifest): Promise<boolean> {
   const known = new Set(manifest.segs.map((s) => s.n));
   let adopted = false;

@@ -1,8 +1,9 @@
 /**
  * Persistence for CRX signing keys. Uses the same double-envelope
  * encrypted store as the keyring: the array is JSON-serialised then
- * AES-256-GCM encrypted under the in-WASM contacts/master session key
- * before it reaches chrome.storage. See `storage/encrypted-store.ts`.
+ * AES-256-GCM sealed under a subkey of the in-WASM contacts/master
+ * session key, domain-separated by this store's own storage key, before
+ * it reaches chrome.storage. See `storage/encrypted-store.ts`.
  */
 
 import type { CrxSigningKeyBlob } from "./types";
@@ -31,7 +32,8 @@ function saveAll(keys: CrxSigningKeyBlob[]): Promise<void> {
   return saveEncryptedArray(CRX_STORE, keys);
 }
 
-/** One-time upgrade of an unpadded CRX-keys blob to canonical padding. */
+/** One-time upgrade of a CRX-keys blob to canonical padding and to the
+ *  domain-bound sealing envelope. */
 export function normalizeCrxPadding(): Promise<void> {
   return normalizePadding(CRX_STORE);
 }

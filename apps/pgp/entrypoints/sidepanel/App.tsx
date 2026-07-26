@@ -11,7 +11,7 @@ import type {
   PgpPreferences,
   StorageLocation,
 } from "../../lib/storage/preferences";
-import type { WorkspaceDraft } from "../../lib/workspace-draft";
+import type { WorkspaceDraftSource } from "../../lib/workspace-draft";
 import { CommandPalette } from "../../components/CommandPalette";
 import { KeysView } from "../../components/keys/KeysView";
 import { AppFooter } from "../../components/shared/AppFooter";
@@ -116,25 +116,27 @@ export default function App() {
   // pop a system passkey dialog without an explicit user action.
   const [masterAutoLocked, setMasterAutoLocked] = useState(false);
 
-  // Workspace-draft persistence across lock cycles. WorkspaceView pushes
-  // its current state into `latestDraftRef` on every change; on master
-  // lock we encrypt that snapshot under the in-WASM draft key and stash
-  // the ciphertext here so the workspace can rehydrate after re-unlock.
+  // Workspace-draft persistence across lock cycles. WorkspaceView registers
+  // a pull-model source here; on master lock we ask it for a snapshot,
+  // encrypt that under the in-WASM draft key, stash the ciphertext, and then
+  // tell the workspace to drop its plaintext so the workspace can rehydrate
+  // after re-unlock without the plaintext outliving the lock.
   //
-  // NOTE: the plaintext draft DOES currently survive the lock in the JS
-  // heap -- not here, but via React's fiber `alternate` retaining an effect
-  // closure over the controlled textarea's state. Blanking the DOM value
-  // below removes one retainer, not that one. See SECURITY.md §8.11 and
-  // T-DRAFT-DOM-RESIDUE; pinned by e2e/draft-memory.spec.ts.
-  const latestDraftRef = useRef<WorkspaceDraft | null>(null);
+  // Pull rather than push on purpose: the old push contract meant this
+  // component held a live plaintext copy for the whole session, on top of
+  // the copy React was already retaining inside the workspace.
+  const draftSourceRef = useRef<WorkspaceDraftSource | null>(null);
   const [draftCiphertext, setDraftCiphertext] = useState<Uint8Array | null>(
     null,
   );
 
   // Stable callbacks so WorkspaceView's effect deps don't churn.
-  const handleDraftChange = useCallback((draft: WorkspaceDraft | null) => {
-    latestDraftRef.current = draft;
-  }, []);
+  const registerDraftSource = useCallback(
+    (src: WorkspaceDraftSource | null) => {
+      draftSourceRef.current = src;
+    },
+    [],
+  );
   const handleDraftRestored = useCallback(() => {
     setDraftCiphertext(null);
   }, []);
@@ -144,7 +146,10 @@ export default function App() {
       // Encrypt + stash the workspace draft before flipping
       // masterUnlocked (which unmounts the workspace). On error, lock
       // anyway -- a lost draft is preferable to a failed lock.
-      const draft = latestDraftRef.current;
+      const source = draftSourceRef.current;
+      // `let` so the plaintext snapshot can be released as soon as it has
+      // been encrypted, rather than living until this frame returns.
+      let draft = source?.getDraft() ?? null;
       if (draft && draftHasContent(draft)) {
         try {
           await wasmApi.initDraftSessionIfUnset();
@@ -154,20 +159,12 @@ export default function App() {
           /* lock anyway */
         }
       }
-      latestDraftRef.current = null;
-
-      // The draft is stashed as ciphertext now -- but unmounting the
-      // workspace does NOT release the plaintext still sitting in the
-      // textarea. React's value-tracker installs its own value setter whose
-      // closure captures the last value it saw, and Chromium's autofill
-      // FormTracker holds a C++ Persistent handle to the last-interacted
-      // form control, so node -> closure -> plaintext stays strongly
-      // reachable from a GC root across the lock. Assigning through React's
-      // patched setter is what replaces that captured string. Nothing is
-      // lost: rehydration reads from draftCiphertext. Same fix as
-      // ImportKeyPage's resetAndClose. See SECURITY.md §8.11.
-      const input = document.getElementById("pgp-input");
-      if (input instanceof HTMLTextAreaElement) input.value = "";
+      draft = null;
+      // The unmount alone does NOT release the workspace's plaintext: React
+      // keeps the previous fiber on `alternate`, and effect closures hanging
+      // off it stay reachable from a GC root. Only clearing the refs (and the
+      // textarea's DOM value) that those closures point at actually drops it.
+      source?.wipe();
 
       // Wipe any unconsumed context-menu pending op. Without this a
       // selection that landed during an unlocked session could sit
@@ -382,10 +379,7 @@ export default function App() {
     openFocusDoneRef.current = true;
     if (activeTab !== "workspace") return;
     // Deferred a tick so the workspace has mounted the textarea.
-    const t = setTimeout(
-      () => document.getElementById("pgp-input")?.focus(),
-      0,
-    );
+    const t = setTimeout(() => document.getElementById("pgp-input")?.focus(), 0);
     return () => clearTimeout(t);
   }, [
     onboardingComplete,
@@ -677,7 +671,7 @@ export default function App() {
               onOperationComplete={session.lockAllIfNoCache}
               restoreDraft={draftCiphertext}
               onDraftRestored={handleDraftRestored}
-              onDraftChange={handleDraftChange}
+              onRegisterDraftSource={registerDraftSource}
               intake={workspaceIntake}
               onIntakeConsumed={clearWorkspaceIntake}
               onPaletteOps={setWorkspaceBridge}
