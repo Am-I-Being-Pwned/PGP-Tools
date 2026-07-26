@@ -322,21 +322,10 @@ export function useWorkspaceState(opts: {
     );
   }, [isExtensionZip, opts.crxSigningEnabled, crxKeys]);
 
-  // Default-select the first available key ONCE, mirroring the old
-  // single-select behavior. The latch matters for multi-select: without
-  // it, removing the last chip would immediately re-add the default and
-  // the user could never reach an empty selection.
-  const allRecipientKeys = opts.allPublicKeys;
-  const recipientDefaulted = useRef(false);
-  useEffect(() => {
-    if (recipientDefaulted.current) return;
-    if (allRecipientKeys && allRecipientKeys.length > 0) {
-      recipientDefaulted.current = true;
-      if (selectedRecipientIds.length === 0) {
-        setSelectedRecipientIds([allRecipientKeys[0].keyId]);
-      }
-    }
-  }, [allRecipientKeys, selectedRecipientIds]);
+  // Recipients start EMPTY on purpose: encrypting is addressed to
+  // someone, and pre-seeding the user's own key made "encrypted to
+  // myself by accident" the default failure mode. (Encrypt-to-self is
+  // its own checkbox and adds the self key at encrypt time.)
 
   const { pendingAction, onClearPending, encryptToKeyId, onClearEncryptTo } =
     opts;
@@ -358,7 +347,6 @@ export function useWorkspaceState(opts: {
   useEffect(() => {
     if (!encryptToKeyId) return;
     setMode("encrypt");
-    recipientDefaulted.current = true;
     setSelectedRecipientIds([encryptToKeyId]);
     onClearEncryptTo?.();
   }, [encryptToKeyId, onClearEncryptTo]);

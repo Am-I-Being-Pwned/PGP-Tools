@@ -103,9 +103,10 @@ export async function encryptToSelfInWorkspace(
   await panel.getByRole("tab", { name: "Main" }).click();
   await panel.getByRole("combobox").first().click();
   await panel.getByRole("option", { name: "Encrypt", exact: true }).click();
-  // Recipient: the single own (encryption-capable) key auto-selects as
-  // a chip -- assert it rather than picking (the dropdown filters out
-  // already-selected keys, so there is nothing left to pick).
+  // Recipient: the box starts empty by design; pick the single own
+  // (encryption-capable) key from the dropdown.
+  await panel.getByRole("combobox", { name: "Recipients" }).click();
+  await panel.getByRole("option").first().click();
   await expect(
     panel.getByRole("button", { name: /^Remove / }).first(),
   ).toBeVisible();

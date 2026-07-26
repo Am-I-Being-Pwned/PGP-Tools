@@ -71,7 +71,14 @@ export function KeySelector({
           {emptyAction && (
             <>
               {" "}
-              <button onClick={emptyAction} className="text-primary underline">
+              <button
+                type="button"
+                // Don't pass emptyAction directly: the MouseEvent would leak
+                // into callers typed (importPrefill?: string) and get treated
+                // as a truthy prefill.
+                onClick={() => emptyAction()}
+                className="text-primary underline"
+              >
                 {emptyActionLabel ?? "Set up"}
               </button>
             </>
@@ -123,7 +130,21 @@ export function KeySelector({
             avoidCollisions={false}
             className="w-(--radix-popover-trigger-width) p-0"
           >
-            <Command>
+            <Command
+              onKeyDown={(e) => {
+                // mod+Enter is the global Run shortcut, never a pick:
+                // preventDefault so cmdk skips its own Enter handler (it
+                // bails on defaultPrevented), close the popover, and let
+                // the event bubble to the window-level shortcut listener.
+                if (
+                  e.key === "Enter" &&
+                  (e.metaKey || e.ctrlKey || e.altKey)
+                ) {
+                  e.preventDefault();
+                  setOpen(false);
+                }
+              }}
+            >
               <CommandInput placeholder="Search..." />
               {/* Fixed height (not just max-h) so the list stays a constant
                 size and doesn't grow/shrink as search filters the results. */}

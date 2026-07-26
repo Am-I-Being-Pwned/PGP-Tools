@@ -92,7 +92,14 @@ export function RecipientPicker({
           {emptyAction && (
             <>
               {" "}
-              <button onClick={emptyAction} className="text-primary underline">
+              <button
+                type="button"
+                // Don't pass emptyAction directly: the MouseEvent would leak
+                // into callers typed (importPrefill?: string) and get treated
+                // as a truthy prefill.
+                onClick={() => emptyAction()}
+                className="text-primary underline"
+              >
                 {emptyActionLabel ?? "Set up"}
               </button>
             </>
@@ -189,6 +196,15 @@ export function RecipientPicker({
     // (cmdk would silently no-op); then Enter picks the TOP match, so
     // "type until one result, Enter" always works.
     if (e.key === "Enter") {
+      // mod+Enter is the global Run shortcut, never a picker gesture:
+      // preventDefault so cmdk skips its own Enter pick (it bails on
+      // defaultPrevented), close the list, and let the event bubble on
+      // to the window-level shortcut listener that runs the action.
+      if (e.metaKey || e.ctrlKey || e.altKey) {
+        e.preventDefault();
+        if (open) closeDropdown();
+        return;
+      }
       if (!open) {
         e.preventDefault();
         setOpen(true);
@@ -309,6 +325,22 @@ export function RecipientPicker({
               onClick={() => {
                 setOpen(true);
                 inputRef.current?.focus();
+              }}
+              onKeyDown={(e) => {
+                // Typing while focus sits elsewhere in the box (a chip,
+                // the clear-all/chevron buttons) belongs to the search
+                // input: refocus it and let the browser insert the
+                // character there. Space stays with the focused control
+                // (it activates chips/buttons), and modified keys stay
+                // shortcuts.
+                if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey)
+                  return;
+                if (e.key.length !== 1 || e.key === " ") return;
+                const input = inputRef.current;
+                if (!input || e.target === input) return;
+                // Focus opens the dropdown via the input's onFocus, so
+                // the newly typed filter is visible immediately.
+                input.focus();
               }}
               className="border-input focus-within:ring-ring flex min-h-9 w-full cursor-text flex-wrap items-center gap-1 rounded-md border bg-transparent px-2 py-1.5 text-sm focus-within:ring-1"
             >

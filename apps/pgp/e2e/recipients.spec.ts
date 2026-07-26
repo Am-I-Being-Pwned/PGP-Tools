@@ -49,8 +49,8 @@ test("typing in the recipient box filters, Enter picks a chip", async ({
   await expect(panel.getByText("No matches")).toBeVisible();
 
   // Enter picks the highlighted option, closes the dropdown, and
-  // renders the pick as a chip inside the box (alongside the app's
-  // default encrypt-to-self chip for the user's own key).
+  // renders the pick as a chip inside the box (the box starts empty --
+  // nothing is pre-selected).
   await input.fill("alice");
   await input.press("Enter");
   await expect(panel.getByRole("option")).toHaveCount(0);
@@ -60,4 +60,64 @@ test("typing in the recipient box filters, Enter picks a chip", async ({
   // Backspace on the empty input pops the last chip back off.
   await input.press("Backspace");
   await expect(panel.getByTitle(new RegExp(encryptable.label))).toHaveCount(0);
+});
+
+test("typing while a chip is focused diverts into the search input", async ({
+  panel,
+}) => {
+  await onboardWithPassword(panel, PASSWORD);
+  await importContact(panel, encryptable.publicKey);
+
+  await panel.getByRole("tab", { name: "Main" }).click();
+  const input = panel.getByRole("combobox", { name: "Recipients" });
+  await input.fill("alice");
+  await input.press("Enter");
+
+  // Focus a chip (its whole body is the remove button) and type: the
+  // keystrokes must land in the search input, not vanish into a
+  // non-editable button.
+  const chips = panel.getByRole("button", { name: /^Remove / });
+  await chips.first().focus();
+  await panel.keyboard.type("zz");
+  await expect(input).toBeFocused();
+  await expect(input).toHaveValue("zz");
+  // Refocusing opened the dropdown, so the (empty) filter result shows.
+  await expect(panel.getByText("No matches")).toBeVisible();
+
+  // Space is not stolen: on a focused chip it still activates the
+  // remove button instead of typing into the search input.
+  await input.press("Escape"); // close the dropdown
+  await input.press("Escape"); // clear the query
+  const before = await chips.count();
+  await chips.first().focus();
+  await panel.keyboard.press(" ");
+  await expect(chips).toHaveCount(before - 1);
+  await expect(input).toHaveValue("");
+});
+
+test("mod+Enter with the recipient dropdown open runs the action, not a pick", async ({
+  panel,
+}) => {
+  await onboardWithPassword(panel, PASSWORD);
+  await importContact(panel, encryptable.publicKey);
+
+  await panel.getByRole("tab", { name: "Main" }).click();
+  await panel.locator("#pgp-input").fill("hello");
+  const input = panel.getByRole("combobox", { name: "Recipients" });
+  await input.fill("alice");
+  await input.press("Enter");
+  await expect(panel.getByRole("button", { name: /^Remove / })).toHaveCount(1);
+
+  // Reopen the dropdown so the own key is highlighted as a pickable
+  // option, then hit the Run shortcut with the list open.
+  await input.click();
+  await expect(panel.getByRole("option").first()).toBeVisible();
+  const mod = process.platform === "darwin" ? "Meta" : "Control";
+  await input.press(`${mod}+Enter`);
+
+  // The encrypt ran (Download appears) and the shortcut neither picked
+  // the highlighted option nor left the dropdown open.
+  await expect(panel.getByRole("button", { name: "Download" })).toBeVisible();
+  await expect(panel.getByRole("option")).toHaveCount(0);
+  await expect(panel.getByRole("button", { name: /^Remove / })).toHaveCount(1);
 });

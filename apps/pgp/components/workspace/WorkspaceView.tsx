@@ -364,6 +364,58 @@ export function WorkspaceView({
     return () => document.removeEventListener("keydown", handler);
   });
 
+  // Type-to-focus (encrypt and sign modes): a printable key pressed
+  // while nothing typable has focus refocuses the message box so the
+  // keystroke lands there instead of vanishing. Not armed in
+  // decrypt/verify, where input is pasted armor, never typed prose.
+  // Focusing during keydown is enough — the browser inserts the
+  // character into the newly focused textarea, so IME/dead-key input
+  // stays native.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (s.mode !== "encrypt" && s.mode !== "sign") return;
+      // While the inline key-password row is up, every keystroke is
+      // presumed passphrase — never divert it into the plaintext box
+      // (which draft-snapshots its content).
+      if (s.needsPassword) return;
+      // Printable characters only; leave shortcuts and key repeats alone.
+      if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key.length !== 1) return;
+      if (hasOpenSlideOver()) return;
+      // Any open dialog (command palette, confirm dialogs) owns the
+      // keyboard even when focus has slipped to <body> — a click on
+      // non-focusable dialog chrome blurs its input, and keys must not
+      // land invisibly in the box behind the overlay.
+      if (document.querySelector('[role="dialog"]')) return;
+      const active = document.activeElement;
+      if (active instanceof HTMLElement && active !== document.body) {
+        if (active.isContentEditable) return;
+        const tag = active.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+        // Space activates focused buttons/checkboxes/links — never steal it.
+        if (e.key === " ") return;
+        // Dropdowns and comboboxes own their own type-ahead.
+        if (
+          active.closest(
+            '[data-radix-popper-content-wrapper], [role="combobox"], [role="listbox"], [role="menu"]',
+          )
+        )
+          return;
+      }
+      const box = document.getElementById("pgp-input");
+      // Absent when the textarea isn't rendered (files staged); a null
+      // offsetParent means it's hidden (another tab is active).
+      if (!(box instanceof HTMLTextAreaElement) || box.offsetParent === null)
+        return;
+      box.focus();
+      // Caret to the end so stray keystrokes append rather than clobber
+      // any auto-selected existing text.
+      box.setSelectionRange(box.value.length, box.value.length);
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  });
+
   // Whether the main action button is rendered (the trailing branch of
   // the action bar). The Run action only fires while it would be
   // enabled; in verify-done state it resets, like the button.
