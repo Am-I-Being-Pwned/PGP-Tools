@@ -2,7 +2,7 @@
   "name": "@amibeingpwned/pgp",
   "description": "PGP Tools - Encrypt, Decrypt & Sign",
   "private": true,
-  "version": "1.4.1",
+  "version": "1.4.2",
   "type": "module",
   "scripts": {
     "dev": "wxt",

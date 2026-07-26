@@ -25,6 +25,32 @@ async function changeTabPersisted(panel: Page, name: string): Promise<void> {
   await expect.poll(() => settingsBlob(panel)).not.toBe(before);
 }
 
+test("message input is focused when the panel opens on Main", async ({
+  panel,
+}) => {
+  await onboardWithPassword(panel, PASSWORD);
+  await expect(panel.locator("#pgp-input")).toBeFocused();
+
+  await test.step("focus also lands after an unlock relaunch", async () => {
+    await panel.reload();
+    await unlockWithPassword(panel, PASSWORD);
+    await expect(panel.locator("#pgp-input")).toBeFocused();
+  });
+
+  await test.step("a Keys launch does not focus the hidden input", async () => {
+    await changeTabPersisted(panel, "Keys");
+    await panel.reload();
+    await unlockWithPassword(panel, PASSWORD);
+    await expect(tab(panel, "Keys")).toHaveAttribute("aria-selected", "true");
+    await expect(panel.locator("#pgp-input")).not.toBeFocused();
+    // The open-focus is one-shot: navigating to Main mid-session must
+    // not steal focus into the textarea.
+    await tab(panel, "Main").click();
+    await expect(tab(panel, "Main")).toHaveAttribute("aria-selected", "true");
+    await expect(panel.locator("#pgp-input")).not.toBeFocused();
+  });
+});
+
 test("tab switching sticks, and Settings is never the launch tab", async ({
   panel,
 }) => {

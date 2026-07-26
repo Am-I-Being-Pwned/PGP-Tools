@@ -349,6 +349,31 @@ export default function App() {
     void savePreferences({ activeTab: "workspace" });
   }, [pending, clearPending]);
 
+  // One-shot focus of the message input when the panel opens onto the
+  // Main tab. Waits for masterProtectionLoaded so the saved activeTab
+  // has already been applied (the getPreferences call resolves before
+  // that flag is set), and for the unlock screen to be out of the way
+  // -- while it shows, its own password field owns focus. The done-ref
+  // flips on the first ready render regardless of tab so a later manual
+  // switch to the workspace doesn't steal focus mid-session.
+  const openFocusDoneRef = useRef(false);
+  useEffect(() => {
+    if (openFocusDoneRef.current) return;
+    if (!onboardingComplete || !masterProtectionLoaded) return;
+    if (masterProtection && !masterUnlocked) return;
+    openFocusDoneRef.current = true;
+    if (activeTab !== "workspace") return;
+    // Deferred a tick so the workspace has mounted the textarea.
+    const t = setTimeout(() => document.getElementById("pgp-input")?.focus(), 0);
+    return () => clearTimeout(t);
+  }, [
+    onboardingComplete,
+    masterProtectionLoaded,
+    masterProtection,
+    masterUnlocked,
+    activeTab,
+  ]);
+
   // ── Command palette / action registry wiring ─────────────────────
   // WorkspaceView pushes its palette-facing state/ops slice up here;
   // useActionContext folds it with tab + navigation callbacks into the
