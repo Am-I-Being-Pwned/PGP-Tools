@@ -34,6 +34,11 @@ zeroize = { version = "1", features = ["derive"] }
 # sequoia's crypto-rust backend -- declaring them direct adds no new build.
 rsa = { version = "0.9", features = ["std", "pem"] }
 rand_core = "0.6"
+# NEW DIRECT DEPENDENCY: ChaCha20 CSPRNG for `src/rng.rs`. Already in
+# Cargo.lock at 0.3.1 via sequoia's `rand 0.8`, so this adds no crate to
+# the build graph -- it makes an existing transitive dep direct. Pinned to
+# the rand_core 0.6 line, matching `rand_core` and `rsa` above.
+rand_chacha = "0.3"
 base64 = "0.22"
 
 [profile.release]

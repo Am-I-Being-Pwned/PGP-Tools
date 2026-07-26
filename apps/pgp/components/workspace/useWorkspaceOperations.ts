@@ -202,7 +202,7 @@ export function useWorkspaceOperations({
     if (s.binaryOutput) {
       downloadBinary(s.binaryOutput, currentOutputName());
     } else {
-      downloadText(s.output, currentOutputName());
+      downloadText(s.getOutput(), currentOutputName());
     }
   }
 

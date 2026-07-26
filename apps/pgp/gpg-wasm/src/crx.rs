@@ -34,7 +34,6 @@ use std::collections::HashMap;
 
 use base64::engine::general_purpose::STANDARD as B64;
 use base64::Engine as _;
-use rand_core::{CryptoRng, RngCore};
 use rsa::pkcs1::DecodeRsaPrivateKey;
 use rsa::pkcs8::{DecodePrivateKey, DecodePublicKey, EncodePrivateKey, EncodePublicKey};
 use rsa::{Pkcs1v15Sign, RsaPrivateKey, RsaPublicKey};
@@ -66,35 +65,9 @@ const CRX_PASSKEY_AAD_PREFIX: &str = "gpg-tools:crx-passkey:";
 const CRX_PRF_HKDF_INFO: &[u8] = b"gpg-tools-crx-prf-v1";
 
 // ---------------------------------------------------------------------------
-// RNG: RSA keygen needs an RngCore; wrap the same getrandom the rest of the
-// crate uses so we don't depend on rand_core's OsRng/getrandom-0.2 plumbing.
-// ---------------------------------------------------------------------------
-
-struct WasmRng;
-
-impl RngCore for WasmRng {
-    fn next_u32(&mut self) -> u32 {
-        let mut b = [0u8; 4];
-        self.fill_bytes(&mut b);
-        u32::from_le_bytes(b)
-    }
-    fn next_u64(&mut self) -> u64 {
-        let mut b = [0u8; 8];
-        self.fill_bytes(&mut b);
-        u64::from_le_bytes(b)
-    }
-    fn fill_bytes(&mut self, dest: &mut [u8]) {
-        // A CSPRNG failure in a browser is unrecoverable; the rest of the
-        // crate treats it the same way (getrandom::fill behind `?`).
-        getrandom::fill(dest).expect("getrandom (CSPRNG) failed");
-    }
-    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand_core::Error> {
-        self.fill_bytes(dest);
-        Ok(())
-    }
-}
-
-impl CryptoRng for WasmRng {}
+// RNG: RSA keygen takes an `RngCore`, so it gets the crate's ChaCha20
+// CSPRNG (`crate::rng::VaultRng`) rather than a per-call `getrandom`.
+// See `src/rng.rs`.
 
 // ---------------------------------------------------------------------------
 // Minimal protobuf writer/reader (only length-delimited + varint scalars).
@@ -412,7 +385,7 @@ fn verify_crx_checked(crx: &[u8]) -> Result<VerifyOutcome, String> {
 // ---------------------------------------------------------------------------
 
 fn generate_rsa2048() -> Result<RsaPrivateKey, String> {
-    let mut rng = WasmRng;
+    let mut rng = crate::rng::VaultRng;
     RsaPrivateKey::new(&mut rng, 2048).str_err()
 }
 
@@ -444,7 +417,7 @@ fn encrypt_der_with_password(
     parallelism: u32,
 ) -> Result<Vec<u8>, String> {
     let mut salt = [0u8; 16];
-    getrandom::fill(&mut salt).str_err()?;
+    crate::rng::fill(&mut salt)?;
 
     let mut derived = crate::argon2_derive(password, &salt, memory_kib, iterations, parallelism)?;
     let aad = format!("{CRX_PASSWORD_AAD_PREFIX}{ext_id}");
@@ -1189,6 +1162,79 @@ mod crx_tests {
             ext_id,
             "extension identity must survive the export"
         );
+    }
+
+    // ── entropy: behaviour under a constant platform RNG (see src/rng.rs) ──
+
+    /// The property that matters. With `crypto.getRandomValues` pinned to a
+    /// constant, the old per-call `getrandom` fed RSA keygen an identical
+    /// byte stream every time. Seeded once into ChaCha20, two generations in
+    /// the same session diverge.
+    #[test]
+    fn constant_platform_rng_no_longer_yields_identical_rsa_keys() {
+        crate::rng::poison_platform_rng_for_test(0x41);
+
+        let key_a = generate_rsa2048().unwrap();
+        let spki_a = spki_der(&key_a).unwrap();
+
+        // The platform RNG stays pinned; the CSPRNG is NOT reseeded, it just
+        // keeps advancing, so the second keygen draws different keystream.
+        let key_b = generate_rsa2048().unwrap();
+        let spki_b = spki_der(&key_b).unwrap();
+
+        crate::rng::restore_platform_rng_for_test();
+
+        assert_ne!(
+            spki_a, spki_b,
+            "two keygens under a constant platform RNG must not collide"
+        );
+        assert_ne!(
+            extension_id(&crx_id_from_spki(&spki_a)),
+            extension_id(&crx_id_from_spki(&spki_b)),
+        );
+    }
+
+    /// Same idea one level up: Argon2id salt and AES-GCM nonce in the at-rest
+    /// blob stay fresh under a constant platform RNG. Nonce reuse under a
+    /// fixed key is the catastrophic case.
+    #[test]
+    fn constant_platform_rng_no_longer_yields_repeated_salt_or_nonce() {
+        let (handle, ext_id, _spki) = insert_generated_key();
+        let password = b"same password twice";
+
+        crate::rng::poison_platform_rng_for_test(0x00);
+
+        let packed_a = reprotect_crx_key_with_password(
+            handle,
+            password.to_vec(),
+            TEST_ARGON2_MEM,
+            TEST_ARGON2_ITERS,
+            TEST_ARGON2_PAR,
+        )
+        .unwrap();
+        let packed_b = reprotect_crx_key_with_password(
+            handle,
+            password.to_vec(),
+            TEST_ARGON2_MEM,
+            TEST_ARGON2_ITERS,
+            TEST_ARGON2_PAR,
+        )
+        .unwrap();
+        drop_crx_key(handle).unwrap();
+        crate::rng::restore_platform_rng_for_test();
+
+        let (_meta_a, blob_a) = unpack_meta_blob(&packed_a);
+        let (_meta_b, blob_b) = unpack_meta_blob(&packed_b);
+
+        assert_ne!(&blob_a[0..16], &blob_b[0..16], "salt must still be fresh");
+        assert_ne!(&blob_a[16..28], &blob_b[16..28], "iv must still be fresh");
+        assert_ne!(&blob_a[0..16], &[0u8; 16], "must not pass the constant through");
+        assert_ne!(&blob_a[16..28], &[0u8; 12], "must not pass the constant through");
+
+        // Still correct, not merely different.
+        let der_a = decrypt_password_blob(&blob_a, &ext_id, password).unwrap();
+        let der_b = decrypt_password_blob(&blob_b, &ext_id, password).unwrap();
+        assert_eq!(der_a, der_b);
     }
 
     #[test]

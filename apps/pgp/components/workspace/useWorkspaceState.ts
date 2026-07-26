@@ -53,17 +53,31 @@ export interface WorkspaceState {
    *  that must react to the content without capturing it. */
   inputVersion: number;
   /** Drop every plaintext copy this hook owns: the input ref, the
-   *  textarea's DOM value, and the clear-undo buffer. Called by the App
-   *  at master lock, after the draft has been encrypted. */
-  wipeInput: () => void;
+   *  textarea's DOM value, the clear-undo buffer, the output ref and the
+   *  output node's text. Called by the App at master lock, after the
+   *  draft has been encrypted. */
+  wipePlaintext: () => void;
   /** Capture input+files so the next clear is undoable. */
   stashClearUndo: () => void;
   /** Put back what `stashClearUndo` captured (single-shot). */
   restoreClearUndo: () => void;
   /** Whether a stashed clear is still undoable. */
   clearUndoAvailable: boolean;
-  output: string;
+  /** The `<pre>` that displays a decrypted result. Like the input box it
+   *  is UNCONTROLLED — the plaintext is written to the node's
+   *  `textContent` imperatively and never appears in render state, so a
+   *  master lock can actually release it. `OutputArea` attaches this via
+   *  a callback ref that re-seeds the node from the ref on every
+   *  (re)mount. */
+  outputElRef: React.MutableRefObject<HTMLPreElement | null>;
+  /** Read the operation result. Always call this at the point of use
+   *  (copy, download, draft); never hoist it into state or into a
+   *  long-lived closure. */
+  getOutput: () => string;
+  /** Replace the result programmatically (ref + DOM node + derived flags). */
   setOutput: (s: string) => void;
+  /** Derived, non-sensitive: there is a textual result. */
+  hasOutput: boolean;
   operationDone: boolean;
   setOperationDone: (b: boolean) => void;
   statusText: string | null;
@@ -222,13 +236,44 @@ export function useWorkspaceState(opts: {
   // statement before the unmount, and a re-render here would only build
   // a fresh set of closures for React to retain. Dropping the references
   // is the whole job.
-  const wipeInput = useCallback(() => {
+  // ---------------------------------------------------------------------
+  // The operation result (decrypted plaintext, or armored ciphertext).
+  //
+  // Held exactly like the input, and for the same reason: a decrypted
+  // message in `useState` is retained past unmount via `fiber.alternate`,
+  // so an in-app master lock left the plaintext reachable from a GC root
+  // (T-OUTPUT-HEAP-RESIDUE). It lives in a ref and, when it is on screen,
+  // in the display node's text — never in render state.
+  //
+  // The display node is a `<pre>` written through `textContent` rather
+  // than a React child. Rendering `{output}` as JSX would put the string
+  // back into the fiber's element tree, which is the very thing being
+  // avoided; an imperative write keeps React from ever seeing it while
+  // leaving the markup, styling and select-all behaviour untouched.
+  const outputRef = useRef("");
+  const outputElRef = useRef<HTMLPreElement | null>(null);
+  const [outputInfo, setOutputInfo] = useState({ len: 0 });
+  const getOutput = useCallback(() => outputRef.current, []);
+
+  const setOutput = useCallback((text: string) => {
+    outputRef.current = text;
+    const el = outputElRef.current;
+    // The `!== text` guard keeps an unchanged re-render from blowing away
+    // the user's selection inside the result box.
+    if (el && el.textContent !== text) el.textContent = text;
+    setOutputInfo((prev) =>
+      prev.len === text.length ? prev : { len: text.length },
+    );
+  }, []);
+
+  const wipePlaintext = useCallback(() => {
     inputRef.current = "";
     if (inputElRef.current) inputElRef.current.value = "";
     clearUndoRef.current = null;
+    outputRef.current = "";
+    if (outputElRef.current) outputElRef.current.textContent = "";
   }, []);
 
-  const [output, setOutput] = useState("");
   const [operationDone, setOperationDone] = useState(false);
   const [statusText, setStatusText] = useState<string | null>(null);
   const [verifiedSigner, setVerifiedSigner] = useState<
@@ -271,7 +316,7 @@ export function useWorkspaceState(opts: {
     setSignatureTone("success");
     setNeedsPassword(false);
     setPendingCrxSign(false);
-  }, []);
+  }, [setOutput]);
 
   const resetAll = useCallback(() => {
     setInput("");
@@ -344,13 +389,14 @@ export function useWorkspaceState(opts: {
         setMode(draft.mode);
         // Writes the ref + the (already mounted) textarea's DOM value.
         setInput(draft.input);
+        // Writes the ref; the `<pre>` re-seeds from it if/when it mounts.
         setOutput(draft.output);
         setSelectedRecipientIds(draft.selectedRecipientIds);
         setSelectedKeyId(draft.selectedKeyId);
       }
       onRestored?.();
     })();
-  }, [restoreCt, onRestored, setInput]);
+  }, [restoreCt, onRestored, setInput, setOutput]);
 
   // Expose the draft to the parent as a PULL, not a push. The old push
   // contract fired an effect on every keystroke whose closure captured the
@@ -360,7 +406,6 @@ export function useWorkspaceState(opts: {
   // call time instead, so nothing durable ever closes over the string.
   const draftFieldsRef = useRef({
     mode,
-    output,
     selectedRecipientIds,
     selectedKeyId,
     privateKeyDetected,
@@ -368,7 +413,6 @@ export function useWorkspaceState(opts: {
   useEffect(() => {
     draftFieldsRef.current = {
       mode,
-      output,
       selectedRecipientIds,
       selectedKeyId,
       privateKeyDetected,
@@ -387,7 +431,7 @@ export function useWorkspaceState(opts: {
     return {
       mode: f.mode,
       input: inputRef.current,
-      output: f.output,
+      output: outputRef.current,
       selectedRecipientIds: f.selectedRecipientIds,
       selectedKeyId: f.selectedKeyId,
     };
@@ -396,9 +440,9 @@ export function useWorkspaceState(opts: {
   const onRegisterDraftSource = opts.onRegisterDraftSource;
   useEffect(() => {
     if (!onRegisterDraftSource) return;
-    onRegisterDraftSource({ getDraft, wipe: wipeInput });
+    onRegisterDraftSource({ getDraft, wipe: wipePlaintext });
     return () => onRegisterDraftSource(null);
-  }, [onRegisterDraftSource, getDraft, wipeInput]);
+  }, [onRegisterDraftSource, getDraft, wipePlaintext]);
 
   // Default-select a private key for sign/decrypt when the user hasn't
   // picked one: the configured default key, else the first key.
@@ -570,12 +614,14 @@ export function useWorkspaceState(opts: {
     hasInput: inputInfo.len > 0,
     hasTrimmedInput: inputInfo.nonBlank,
     inputVersion: inputInfo.version,
-    wipeInput,
+    wipePlaintext,
     stashClearUndo,
     restoreClearUndo,
     clearUndoAvailable,
-    output,
+    outputElRef,
+    getOutput,
     setOutput,
+    hasOutput: outputInfo.len > 0,
     operationDone,
     setOperationDone,
     statusText,

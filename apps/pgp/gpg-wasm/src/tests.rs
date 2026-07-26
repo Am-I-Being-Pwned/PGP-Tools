@@ -1080,3 +1080,73 @@ fn minted_revocation_certificate_revokes_the_cert() {
         info.policy_error,
     );
 }
+
+
+// =====================================================================
+// Entropy: behaviour under a poisoned platform RNG. See src/rng.rs.
+// =====================================================================
+
+/// AES-GCM nonce reuse under a fixed key is the catastrophic failure this
+/// buys back. With `crypto.getRandomValues` pinned to a constant, the old
+/// per-call `getrandom` gave every ciphertext the same 12-byte IV.
+#[test]
+fn constant_platform_rng_no_longer_repeats_aes_gcm_nonces() {
+    let key = [7u8; 32];
+    crate::rng::poison_platform_rng_for_test(0xAB);
+
+    let mut nonces = Vec::new();
+    for i in 0..16u8 {
+        let ct = aes_gcm_encrypt(&key, &[i; 8], b"aad").unwrap();
+        let nonce = ct[0..12].to_vec();
+        assert_ne!(nonce, vec![0xABu8; 12], "must not pass the constant through");
+        nonces.push(nonce);
+    }
+    crate::rng::restore_platform_rng_for_test();
+
+    for i in 0..nonces.len() {
+        for j in (i + 1)..nonces.len() {
+            assert_ne!(nonces[i], nonces[j], "nonce {i} and {j} collided");
+        }
+    }
+}
+
+/// The Argon2id salt on a password-protected cert blob must stay fresh
+/// even when the platform RNG is degenerate; a fixed salt collapses every
+/// vault sealed by this build into one KDF output space.
+#[test]
+fn constant_platform_rng_no_longer_repeats_argon2_salts() {
+    let generated: serde_json::Value = serde_json::from_str(&gen_test_key()).unwrap();
+    let cert =
+        openpgp::Cert::from_bytes(generated["privateKeyArmored"].as_str().unwrap().as_bytes())
+            .unwrap();
+
+    crate::rng::poison_platform_rng_for_test(0x00);
+    let blob_a = encrypt_cert_with_password(&cert, b"pw", 4096, 3, 1).unwrap();
+    let blob_b = encrypt_cert_with_password(&cert, b"pw", 4096, 3, 1).unwrap();
+    crate::rng::restore_platform_rng_for_test();
+
+    assert_ne!(&blob_a[0..16], &blob_b[0..16], "salt must be fresh");
+    assert_ne!(&blob_a[0..16], &[0u8; 16], "must not pass the constant through");
+    assert_ne!(&blob_a[16..28], &blob_b[16..28], "iv must be fresh");
+    assert_ne!(blob_a, blob_b);
+}
+
+/// Draft session keys must not collide across re-initialisation.
+#[test]
+fn constant_platform_rng_no_longer_repeats_draft_session_keys() {
+    crate::rng::poison_platform_rng_for_test(0x5A);
+
+    drop_draft_session();
+    init_draft_session_if_unset().unwrap();
+    let key_a = with_draft_key(|k| k.to_vec()).unwrap();
+
+    drop_draft_session();
+    init_draft_session_if_unset().unwrap();
+    let key_b = with_draft_key(|k| k.to_vec()).unwrap();
+
+    drop_draft_session();
+    crate::rng::restore_platform_rng_for_test();
+
+    assert_ne!(key_a, key_b, "two draft sessions must not share a key");
+    assert_ne!(key_a, vec![0x5Au8; 32], "must not pass the constant through");
+}

@@ -71,7 +71,10 @@ interface WorkspaceResultsProps {
   /** Maps a remedy action (e.g. "import-key") to an existing handler.
    *  When absent, remedies render as message-only guidance. */
   onRemedy?: (action: RemedyAction) => void;
-  output: string;
+  /** Uncontrolled result node + reader; see `OutputArea`. */
+  outputElRef: React.MutableRefObject<HTMLPreElement | null>;
+  getOutput: () => string;
+  hasOutput: boolean;
   binaryOutput: Uint8Array | undefined;
   fileResults: FileResult[];
   fileName: string;
@@ -88,7 +91,9 @@ interface WorkspaceResultsProps {
 export function WorkspaceResults({
   error,
   onRemedy,
-  output,
+  outputElRef,
+  getOutput,
+  hasOutput,
   binaryOutput,
   fileResults,
   fileName,
@@ -103,7 +108,7 @@ export function WorkspaceResults({
   const hasContent =
     !!error ||
     !!verifiedSigner ||
-    !!output ||
+    hasOutput ||
     !!binaryOutput ||
     fileResults.length > 0;
   if (!fullHeight && !hasContent) return null;
@@ -143,7 +148,9 @@ export function WorkspaceResults({
       )}
 
       <OutputArea
-        output={output}
+        outputElRef={outputElRef}
+        getOutput={getOutput}
+        hasOutput={hasOutput}
         binaryOutput={binaryOutput}
         fileResults={fileResults}
         fileName={fileName}

@@ -12,7 +12,7 @@ If a claim here disagrees with the code, the code wins.
   present in the JS heap, so a memory-scraping bug, a heap snapshot, or
   a crash dump of the JS heap yields only encrypted blobs. Verified by
   `e2e/heap.spec.ts`.
-  This does **not** extend to code *executing* in the side-panel realm.
+  This does **not** extend to code _executing_ in the side-panel realm.
   A compromised UI dependency does not need the heap — it can call the
   WASM exports directly. See §8.10.
 - Forensic recovery of plaintext key material after the user is done
@@ -70,7 +70,7 @@ Private-key material crosses from WASM into JS in only two places:
 - `encryptKeyForExportWithHandle(handle, passphrase)` — armored cert
   re-encrypted under a user-supplied export passphrase.
 
-Both are user-initiated destructive-export paths *in the UI*. Neither is
+Both are user-initiated destructive-export paths _in the UI_. Neither is
 enforced as such at the WASM boundary — the type-to-confirm gate is React
 state, not a capability check. Code running in the side-panel realm can
 call either export directly. See §8.10.
@@ -84,7 +84,7 @@ call either export directly. See §8.10.
 | 1   | `apps/pgp/SECURITY.md` (this file)         | The contract                                                                                                                 |
 | 2   | `apps/pgp/gpg-wasm/src/lib.rs`             | The WASM crate. The actual sandbox.                                                                                          |
 | 2a  | `apps/pgp/gpg-wasm/src/crx.rs`             | RSA-2048 CRX (Chrome extension) signer/verifier. Separate `CRX_KEY_STORE`; see §10.                                          |
-| 5a  | `apps/pgp/lib/crx/`                        | JS-side CRX key storage, sign/verify coordinator, and backup (de)serialization.                                             |
+| 5a  | `apps/pgp/lib/crx/`                        | JS-side CRX key storage, sign/verify coordinator, and backup (de)serialization.                                              |
 | 3   | `apps/pgp/lib/pgp/wasm.ts`                 | JS-side barrel.                                                                                                              |
 | 4   | `apps/pgp/lib/pgp/wasm-public.ts`          | Wasm wrappers that don't carry secrets.                                                                                      |
 | 5   | `apps/pgp/lib/pgp/wasm-secrets.ts`         | Wasm wrappers that do, each with a `@secret-handling` block.                                                                 |
@@ -99,6 +99,7 @@ call either export directly. See §8.10.
 | 12  | `apps/pgp/lib/workspace-draft.ts`          | In-progress composer text, encrypted under a separate in-WASM draft session key (§6).                                        |
 | 13  | `apps/pgp/lib/security/threat-model.ts`    | This document's attack model as typed data. `threat-model.test.ts` fails if a claimed defence names no live test.            |
 | 14  | `apps/pgp/scripts/audit-invariants.mjs`    | Build-time enforcement of §9. Replaces running those greps by hand.                                                          |
+| 15  | `apps/pgp/gpg-wasm/src/rng.rs`             | ChaCha20 CSPRNG between us and `crypto.getRandomValues`. See §12 for what it does and does not cover.                        |
 
 ---
 
@@ -138,31 +139,31 @@ has exactly one shipping call site.
 
 ## 5. Zeroization — per-secret lifetime
 
-| Secret                                      | Created in                                                           | Zero / drop point                                                         | File                                                             |
-| ------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| Typed password (JS string)                  | React `<input>` state                                                | `setX("")`; V8 GC eventually reclaims                                     | dialog components                                                |
-| Password bytes (`Uint8Array`) for wasm      | `TextEncoder.encode(password)`                                       | `.fill(0)` in `finally`                                                   | `protect-flow.ts`, `useKeySession.ts`, dialog components         |
-| Argon2id-derived AES key (Rust)             | `argon2_derive`                                                      | `derived.zeroize()` after AES-GCM                                         | `lib.rs` `encrypt_cert_with_password`, `unlock_with_password`    |
-| HKDF-derived AES key (Rust)                 | `Hkdf::expand` into `vec![0u8; 32]`                                  | `derived.zeroize()` after AES-GCM                                         | `lib.rs` `encrypt_cert_with_prf`, `unlock_with_prf`              |
-| Sequoia `Password`                          | `Password::from(bytes)`                                              | Drop (Sequoia uses `Protected<Vec<u8>>`)                                  | `lib.rs` `decrypt_cert_secrets`, `encrypt_cert_for_export`       |
-| Wasm-side password / PRF `Vec<u8>` (owned)  | wasm-bindgen marshals from JS `Uint8Array`                           | `Zeroizing::new(...)` on entry — every secret param is taken by value      | `lib.rs` all `_with_password` / `_with_prf` fns, incl. the three unlock/contacts entry points |
-| WebAuthn PRF output                         | `authenticateAndGetPrf`                                              | `prfOutput.fill(0)` in `finally`                                          | `protect-flow.ts`, `useKeySession.ts`, master/onboarding screens |
-| Plaintext serialized cert (Rust)            | `cert.as_tsk().to_vec()`                                             | `Zeroizing<Vec<u8>>`, pre-sized to avoid realloc trail                    | `lib.rs` `serialize_secret_cert`, `StoredKey::from_cert`         |
-| `StoredKey.bytes` (KEY_STORE entry)         | `StoredKey::from_cert`                                               | `Drop for StoredKey`: `bytes.zeroize()`                                   | `lib.rs`                                                         |
-| Cached handle in JS                         | `useKeySession.handleRef`                                            | `dropKey(handle)` on lock / idle / unmount                                | `useKeySession.ts`, `App.tsx`, `ImportKeyPage.tsx`               |
-| Contacts session AES key                    | `init_contacts_session_with_prf` / `encrypt_canary_and_init_session` | `set_contacts_key(None)` zeroizes; `dropContactsSession()` on master lock | `lib.rs`, `App.tsx` `doMasterLock`                               |
-| AES cipher expanded key schedule            | `Aes256Gcm::new_from_slice`                                          | `zeroize_cipher` after every encrypt/decrypt                              | `lib.rs` `aes_gcm_encrypt`, `aes_gcm_decrypt`                    |
-| Workspace draft AES key                     | `init_draft_session_if_unset`                                        | `set_draft_key(None)` on `dropDraftSession` (or panel close)              | `lib.rs`                                                         |
-| Encrypted workspace draft                   | App-level `draftCiphertext`                                          | Cleared once `WorkspaceView` rehydrates on unlock                         | `App.tsx`, `useWorkspaceState.ts`                                |
-| Decrypted message text (user data, not key) | `decryptWithHandle`                                                  | UI-controlled; cleared on view dismiss / panel close                      | `WorkspaceView.tsx`                                              |
-| Clipboard contents after key export         | `clipboard.writeText`                                                | `setTimeout` overwrites with `""` (60s encrypted, 30s plaintext)          | `KeyCard.tsx` `scheduleClipboardClear`                           |
-| Workspace input plaintext (ref + DOM node)  | `useWorkspaceState` `inputRef` / textarea `#pgp-input`               | `wipe()` in `doMasterLock` clears the ref, the DOM value and the clear-undo buffer. Uncontrolled on purpose — never in render state. §8.11 | `useWorkspaceState.ts`, `App.tsx` `doMasterLock`                  |
-| Decrypted output plaintext (React state)    | `useWorkspaceState` `output`                                         | **NOT cleared on master lock** — retained via React's `fiber.alternate`. Cleared only by reload. See §8.11 / `T-OUTPUT-HEAP-RESIDUE` | `useWorkspaceState.ts`, `WorkspaceView.tsx`                      |
-| History segment plaintext JSON (JS)         | `JSON.stringify` → `TextEncoder.encode` in `writeSegment`            | **NOT zeroized** — the `Uint8Array` is never `.fill(0)`'d and the intermediate JSON string is unzeroizable. See §11.2 | `lib/storage/history.ts`                                         |
-| History segment plaintext `&[u8]` (wasm)    | wasm-bindgen mallocs a borrowed copy into linear memory              | **NOT zeroized as an owned value** — `encrypt_contacts` takes `&[u8]`, so no `Zeroizing` wrapper; up to 64 KB of content per call | `lib.rs` `encrypt_contacts` / `decrypt_contacts`                 |
-| Decrypted segment bytes returned to JS      | `decryptContacts` in `readSegment`                                   | **NOT zeroized** — decoded and dropped without `.fill(0)`                 | `lib/storage/history.ts`                                         |
-| Decrypted history entries (JS objects)      | `loadHistory` → `HistoryPage` state                                  | Component unmount on master lock; nothing module-level. Verified by `e2e/history-memory.spec.ts` | `HistoryPage.tsx`, `lib/storage/history.ts`                      |
-| CRX RSA PKCS#8 DER (`CRX_KEY_STORE`)        | `unlock_crx_with_*` → `insert_crx_key`                               | `Zeroizing<Vec<u8>>`; `dropCrxKey` / drop. Verified present-then-absent by `e2e/crx-memory.spec.ts` | `gpg-wasm/src/crx.rs`                                            |
+| Secret                                      | Created in                                                           | Zero / drop point                                                                                                                                     | File                                                                                          |
+| ------------------------------------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Typed password (JS string)                  | React `<input>` state                                                | `setX("")`; V8 GC eventually reclaims                                                                                                                 | dialog components                                                                             |
+| Password bytes (`Uint8Array`) for wasm      | `TextEncoder.encode(password)`                                       | `.fill(0)` in `finally`                                                                                                                               | `protect-flow.ts`, `useKeySession.ts`, dialog components                                      |
+| Argon2id-derived AES key (Rust)             | `argon2_derive`                                                      | `derived.zeroize()` after AES-GCM                                                                                                                     | `lib.rs` `encrypt_cert_with_password`, `unlock_with_password`                                 |
+| HKDF-derived AES key (Rust)                 | `Hkdf::expand` into `vec![0u8; 32]`                                  | `derived.zeroize()` after AES-GCM                                                                                                                     | `lib.rs` `encrypt_cert_with_prf`, `unlock_with_prf`                                           |
+| Sequoia `Password`                          | `Password::from(bytes)`                                              | Drop (Sequoia uses `Protected<Vec<u8>>`)                                                                                                              | `lib.rs` `decrypt_cert_secrets`, `encrypt_cert_for_export`                                    |
+| Wasm-side password / PRF `Vec<u8>` (owned)  | wasm-bindgen marshals from JS `Uint8Array`                           | `Zeroizing::new(...)` on entry — every secret param is taken by value                                                                                 | `lib.rs` all `_with_password` / `_with_prf` fns, incl. the three unlock/contacts entry points |
+| WebAuthn PRF output                         | `authenticateAndGetPrf`                                              | `prfOutput.fill(0)` in `finally`                                                                                                                      | `protect-flow.ts`, `useKeySession.ts`, master/onboarding screens                              |
+| Plaintext serialized cert (Rust)            | `cert.as_tsk().to_vec()`                                             | `Zeroizing<Vec<u8>>`, pre-sized to avoid realloc trail                                                                                                | `lib.rs` `serialize_secret_cert`, `StoredKey::from_cert`                                      |
+| `StoredKey.bytes` (KEY_STORE entry)         | `StoredKey::from_cert`                                               | `Drop for StoredKey`: `bytes.zeroize()`                                                                                                               | `lib.rs`                                                                                      |
+| Cached handle in JS                         | `useKeySession.handleRef`                                            | `dropKey(handle)` on lock / idle / unmount                                                                                                            | `useKeySession.ts`, `App.tsx`, `ImportKeyPage.tsx`                                            |
+| Contacts session AES key                    | `init_contacts_session_with_prf` / `encrypt_canary_and_init_session` | `set_contacts_key(None)` zeroizes; `dropContactsSession()` on master lock                                                                             | `lib.rs`, `App.tsx` `doMasterLock`                                                            |
+| AES cipher expanded key schedule            | `Aes256Gcm::new_from_slice`                                          | `zeroize_cipher` after every encrypt/decrypt                                                                                                          | `lib.rs` `aes_gcm_encrypt`, `aes_gcm_decrypt`                                                 |
+| Workspace draft AES key                     | `init_draft_session_if_unset`                                        | `set_draft_key(None)` on `dropDraftSession` (or panel close)                                                                                          | `lib.rs`                                                                                      |
+| Encrypted workspace draft                   | App-level `draftCiphertext`                                          | Cleared once `WorkspaceView` rehydrates on unlock                                                                                                     | `App.tsx`, `useWorkspaceState.ts`                                                             |
+| Decrypted message text (user data, not key) | `decryptWithHandle`                                                  | UI-controlled; cleared on view dismiss / panel close                                                                                                  | `WorkspaceView.tsx`                                                                           |
+| Clipboard contents after key export         | `clipboard.writeText`                                                | `setTimeout` overwrites with `""` (60s encrypted, 30s plaintext)                                                                                      | `KeyCard.tsx` `scheduleClipboardClear`                                                        |
+| Workspace input plaintext (ref + DOM node)  | `useWorkspaceState` `inputRef` / textarea `#pgp-input`               | `wipe()` in `doMasterLock` clears the ref, the DOM value and the clear-undo buffer. Uncontrolled on purpose — never in render state. §8.11            | `useWorkspaceState.ts`, `App.tsx` `doMasterLock`                                              |
+| Decrypted output plaintext (ref + DOM node) | `useWorkspaceState` `outputRef` / the result `<pre>`                 | `wipe()` in `doMasterLock` clears the ref and the node's text. Written via `textContent`, never a React child, so it never enters render state. §8.11 | `useWorkspaceState.ts`, `OutputArea.tsx`                                                      |
+| History segment plaintext JSON (JS)         | `JSON.stringify` → `TextEncoder.encode` in `writeSegment`            | **NOT zeroized** — the `Uint8Array` is never `.fill(0)`'d and the intermediate JSON string is unzeroizable. See §11.2                                 | `lib/storage/history.ts`                                                                      |
+| History segment plaintext `&[u8]` (wasm)    | wasm-bindgen mallocs a borrowed copy into linear memory              | **NOT zeroized as an owned value** — `encrypt_contacts` takes `&[u8]`, so no `Zeroizing` wrapper; up to 64 KB of content per call                     | `lib.rs` `encrypt_contacts` / `decrypt_contacts`                                              |
+| Decrypted segment bytes returned to JS      | `decryptContacts` in `readSegment`                                   | **NOT zeroized** — decoded and dropped without `.fill(0)`                                                                                             | `lib/storage/history.ts`                                                                      |
+| Decrypted history entries (JS objects)      | `loadHistory` → `HistoryPage` state                                  | Component unmount on master lock; nothing module-level. Verified by `e2e/history-memory.spec.ts`                                                      | `HistoryPage.tsx`, `lib/storage/history.ts`                                                   |
+| CRX RSA PKCS#8 DER (`CRX_KEY_STORE`)        | `unlock_crx_with_*` → `insert_crx_key`                               | `Zeroizing<Vec<u8>>`; `dropCrxKey` / drop. Verified present-then-absent by `e2e/crx-memory.spec.ts`                                                   | `gpg-wasm/src/crx.rs`                                                                         |
 
 ---
 
@@ -277,7 +278,7 @@ fails the build on a borrowed secret param.
 > derived AES key, leaving the raw password / PRF bytes in a freed
 > allocation — on the app's three most frequently exercised secret entry
 > points. Fixed by taking them by value (`T-UNLOCK-PARAM-NOT-OWNED`).
-> Note the residual limit: an inner copy made *by* wasm-bindgen before
+> Note the residual limit: an inner copy made _by_ wasm-bindgen before
 > our binding sees the value is still outside our reach. What changed is
 > that the copy we own is now scrubbed deterministically rather than left
 > to allocator reuse.
@@ -298,8 +299,8 @@ fails the build on a borrowed secret param.
 - **Download filenames leak metadata.** Encrypt output defaults to a
   descriptive name carrying the first recipient and a minute-precision
   timestamp — `message.to-alice.2026-07-16-1432.gpg`
-  (`components/workspace/output-name.ts`). The *contents* are
-  ciphertext; the *filename* is not. Once saved it is cleartext in the
+  (`components/workspace/output-name.ts`). The _contents_ are
+  ciphertext; the _filename_ is not. Once saved it is cleartext in the
   Downloads folder, indexed by Spotlight / Windows Search, and recorded
   in `chrome://downloads`, which syncs across the user's devices if
   Chrome Sync is on. Anyone with filesystem or browsing-history access
@@ -347,16 +348,32 @@ Unfixable in software given the feature exists.
 
 ### 8.10 Malicious code executing in the side-panel realm
 
-A compromised UI dependency is **not** defended against. This is the
-sharpest limit of the design and it is worth stating precisely, because
-§1's WASM-isolation guarantee is easy to over-read.
+A compromised UI dependency is **not** defended against.
 
-What *is* opaque to such code: WASM linear memory (no in-page API
+**Calibration first, because the rest of this section is detailed and that
+can read as alarm.** This is a statement about _consequence_, not
+likelihood. It is downstream of §8.8: an attacker must first get code into
+the side-panel realm, which means compromising a dependency, our build, or
+the Web Store account. We already accept that risk there. §8.10 exists to
+say honestly what it would cost us if it happened, rather than to claim a
+new or probable attack.
+
+The preconditions are not trivial. The extension ships seven runtime
+dependencies plus transitives, runs no content scripts, loads no remote
+code, and the CSP forbids fetching any. So the realistic path is a
+poisoned package or a poisoned release, not something a website or another
+tab can reach.
+
+What makes it worth writing down anyway is that §1's WASM-isolation
+guarantee is easy to over-read — someone could reasonably assume the
+sandbox protects keys from in-panel JS in general, and it does not.
+
+What _is_ opaque to such code: WASM linear memory (no in-page API
 enumerates a `WebAssembly.Memory` it doesn't already hold — reading ours
 needs a debugger capability like CDP `queryObjects`), and the React tree,
 which carries only public metadata plus opaque `u32` handles.
 
-What is **not** opaque is the module's *export table*. The wasm-bindgen
+What is **not** opaque is the module's _export table_. The wasm-bindgen
 glue ships as an ES module chunk in our own bundle, and the ES module
 registry is keyed by resolved URL — so `import()`-ing that chunk returns
 the **already-initialised** instance, with the live `KEY_STORE`, not a
@@ -373,15 +390,24 @@ of which are looked up per call:
 - `TextEncoder.prototype.encode` — the unlock password in transit. The
   `.fill(0)` contract is forensic hygiene, not a defence here.
 - `TextDecoder.prototype.decode` — every string returned from WASM, so
-  even a perfectly gated export path leaks when the *user* legitimately
+  even a perfectly gated export path leaks when the _user_ legitimately
   exports.
 - `Crypto.prototype.getRandomValues` — the WASM module's only entropy
   source. A hook returning constants makes every subsequently generated
-  key predictable.
+  key predictable. `getrandom`'s wasm backend caches the `Crypto`
+  **object** and looks the method up on that instance per call, so the
+  own slot on `globalThis.crypto` is pinned as well as the prototype.
 - `navigator.clipboard.writeText` — read at write time, so the 30s/60s
-  auto-clear (a defence against clipboard *managers*) does not apply.
+  auto-clear (a defence against clipboard _managers_) does not apply.
 
-What *does* still apply: the size of the unlocked window (§6 — no handle
+Two layers are needed for these, and they block different routes: freezing
+the prototype defeats plain assignment (`[[Set]]` walks the prototype chain
+and refuses when it finds a non-writable data property there), while only
+pinning the instance's own slot defeats `Object.defineProperty`, which
+skips that check. `hostile-dep.spec.ts` probes both separately — a single
+probe reported "blocked" while the `defineProperty` route was still open.
+
+What _does_ still apply: the size of the unlocked window (§6 — no handle
 survives a lock, so the attack window is exactly the unlocked window,
 which makes auto-lock load-bearing security rather than convenience) and
 the network lockdown (§7 — exfiltration still has to leave the process).
@@ -389,17 +415,65 @@ the network lockdown (§7 — exfiltration still has to leave the process).
 The honest general statement: you cannot defend against arbitrary JS in
 your own realm using in-realm mechanisms. Freezing the primitives above
 and shrinking the unlocked window raise an attacker's cost; only moving
-the engine into a separate realm (a Worker, with the panel holding just a
-narrow `MessagePort`) would change the structure. We have not done that.
+the engine into a separate realm would change the structure.
+
+**We considered moving the engine into a Worker and decided against it.**
+This is a deliberate decision, not an oversight, so it should not be
+silently reopened:
+
+- A Worker alone does **not** stop a compromised panel dependency. It can
+  post messages to the Worker as easily as it can call the exports today.
+  Relocating the engine relocates the code, not the authority.
+- It only pays off combined with gating the two export paths on a proof
+  the panel realm cannot forge — e.g. a challenge minted inside WASM and
+  satisfied by a fresh WebAuthn assertion verified inside WASM. That turns
+  silent exfiltration into exfiltration the user sees a passkey prompt
+  for, which is the real property on offer.
+- But that gate is a **protocol we would have to design ourselves.** This
+  project's rule is that every algorithm it relies on is one designed and
+  reviewed by someone else; we do not invent constructions. That rules the
+  gate out, and without the gate the rewrite buys close to nothing.
+- The cost is not small: every `wasm-secrets.ts` call becomes async over
+  `postMessage`, `Uint8Array` transfers need care not to create fresh
+  un-zeroized copies, and the CDP-based `wasm-memory.ts` harness that
+  several of our strongest tests depend on would need rebuilding.
+
+**We also considered requiring re-authentication for the export paths**
+(the PGP export rides the live session handle; the CRX path already opens
+a transient handle from the password/passkey). Rejected, and the reason
+generalises:
+
+- A user who sees a passkey prompt inside a PGP tool will approve it. That
+  is not user error — prompts in context get approved, and an attacker
+  chooses the context.
+- Worse, an in-realm attacker **owns the UI**, so it can fabricate a
+  convincing prompt whenever it likes. For a password vault it can simply
+  phish the password. Re-authentication through an interface the attacker
+  controls is not authentication.
+- The only unforgeable element is the OS passkey dialog chrome, and that is
+  precisely the element habituation defeats.
+
+What remains is that the attacker must be interactive rather than
+passively harvesting, and cannot exfiltrate while the user is away — and
+auto-lock already covers the unattended case. Not worth the friction.
+
+So the limit stated above is the posture, not a temporary state. The
+effort goes instead to the two levers that need no new design and route
+around no user decision: shrinking the unlocked window (§6 — no handle
+survives a lock, so the attack window _is_ the unlocked window, which
+makes auto-lock load-bearing security rather than convenience), and the
+supply-chain precondition itself (§8.8), since that is the actual cause
+rather than the symptom. The primitive freeze above and the network
+lockdown (§7) raise cost within the window.
 
 Pinned by `e2e/hostile-dep.spec.ts`, which asserts both the gaps and the
 two genuine wins (linear memory and React state stay opaque).
 
-### 8.11 Composer plaintext across a lock (fixed; output still open)
+### 8.11 Composer and output plaintext across a lock (fixed)
 
 Unlike the rest of §8, this was **not** an accepted boundary — it was a
-defect. It is recorded in full because the diagnosis is the useful part,
-and because one half of it is still open.
+defect. It is recorded in full because the diagnosis is the useful part:
+the first fix attempt was wrong in an instructive way.
 
 The original defect: after an in-app master lock, the user's composed
 plaintext remained in the V8 heap. `doMasterLock` encrypted the draft and
@@ -445,7 +519,7 @@ said. **Clearing the DOM was never going to be sufficient.**
 **Fixed.** The composer input is now **uncontrolled**: the message lives
 in a ref and in the DOM node, never in React render state. Only
 non-sensitive derived facts (`hasInput`, `hasTrimmedInput`,
-`inputVersion`) enter state. `doMasterLock` *pulls* the draft via
+`inputVersion`) enter state. `doMasterLock` _pulls_ the draft via
 `WorkspaceDraftSource.getDraft()`, encrypts it under the in-WASM draft
 key, then calls `wipe()` — clearing the input ref, the textarea's DOM
 value, and the clear-undo buffer — before flipping `masterUnlocked`. A ref
@@ -460,16 +534,26 @@ Guarded by `e2e/draft-memory.spec.ts`, which asserts a heap count of zero
 after an in-app lock with a positive control proving the scan works. That
 spec must run with tracing off — see the caveats in `e2e/README.md`.
 
-**Still open: decrypted output.** `s.output` in `useWorkspaceState` is
-ordinary render state and is retained by the identical mechanism after a
-lock (measured count 1 following a real encrypt→decrypt→lock cycle).
-Reload or relaunch clears it; an in-app lock does not. Making it
-uncontrolled is its own refactor — output is rendered, copied, downloaded
-and part of the draft. Tracked as `T-OUTPUT-HEAP-RESIDUE`.
+**Also fixed: decrypted output.** `s.output` was ordinary render state and
+was retained by the identical mechanism (measured count 1 after a real
+encrypt→decrypt→lock cycle). It now lives in `outputRef` plus the result
+`<pre>`'s `textContent`, with only the boolean `hasOutput` derived into
+state; `wipe()` clears both. The display node is written imperatively
+through a callback ref rather than as a React child — rendering
+`{output}` as JSX would put the string straight back into the fiber's
+element tree, which is the whole thing being avoided. The `<pre>` was
+kept rather than swapped for a textarea, so the existing wrapping and
+select-all behaviour are untouched.
+
+Guarded by a third test in `e2e/draft-memory.spec.ts`, validated against a
+deliberate negative control: with an effect closing over the output the
+count is 1 via `alternate → updateQueue.lastEffect.create → … →
+lastRenderedState`; without it, 0 on both the retainer walk and the plain
+heap scan — absent from the snapshot entirely, not merely weakly held.
 
 Note this is distinct from §8.5's accepted "plaintext is observable in
-the rendered UI." That accepts plaintext being visible *while composing*.
-This is plaintext persisting *after* the lock, when nothing is rendered.
+the rendered UI." That accepts plaintext being visible _while composing_.
+This is plaintext persisting _after_ the lock, when nothing is rendered.
 
 ---
 
@@ -540,10 +624,10 @@ in CI. All of it lives in `apps/pgp/gpg-wasm/src/crx.rs`.
   WebAuthn-PRF → AES-256-GCM, AAD-bound via
   `gpg-tools:crx-{password,passkey}:{extensionId}` (distinct from the PGP
   prefixes, so blobs can't be cross-substituted).
-- **Identity binding.** The AAD only covers the extension id *string*, not
+- **Identity binding.** The AAD only covers the extension id _string_, not
   the stored public key — and AAD strings are public. So both trust
   boundaries re-derive the id from the key itself: on unlock, `store_
-  decrypted_der` (`crx.rs`) recomputes SHA-256(SPKI) → id and refuses a key
+decrypted_der` (`crx.rs`) recomputes SHA-256(SPKI) → id and refuses a key
   that doesn't match the id it was sealed under; on the JS side, `addCrxKey`
   / backup import reject a blob whose `publicKeyDerB64` doesn't hash to its
   `extensionId`. A forged blob carrying a foreign key (or a swapped public
@@ -554,7 +638,7 @@ in CI. All of it lives in `apps/pgp/gpg-wasm/src/crx.rs`.
   extension id. The parser is panic-free on malformed input.
 - **Backup.** Export/Import All Keys round-trips CRX keys in a labelled
   `PGP TOOLS CRX SIGNING KEY` block (`lib/crx/backup.ts`). Bulk export
-  *unlocks* each key and *re-seals* it under the single export passphrase so
+  _unlocks_ each key and _re-seals_ it under the single export passphrase so
   the backup restores on any device (a passkey seal is bound to one
   authenticator); this needs each key unlocked first, exactly like the
   per-key "Copy private key". Import stores the blob under whatever
@@ -574,7 +658,7 @@ in CI. All of it lives in `apps/pgp/gpg-wasm/src/crx.rs`.
 
 ## 11. Operation history
 
-Opt-in, off by default. Records what the user *produces* (encrypt/sign),
+Opt-in, off by default. Records what the user _produces_ (encrypt/sign),
 not what they read — decrypt/verify rows are deliberately not captured.
 Each entry may carry up to 32 KB of **message content** (`CONTENT_CAP`),
 so this is the only store that persists user plaintext by design.
@@ -613,7 +697,7 @@ is rejected outright so it cannot silently collapse back to one subkey.
 
 Using the storage key as the domain means there is no mapping table to
 keep in sync, and the read and write paths physically cannot disagree
-about a slot. It is the *key*, not the storage area, so a `local`↔`sync`
+about a slot. It is the _key_, not the storage area, so a `local`↔`sync`
 move is unaffected. Per-segment binding falls out for free rather than
 being a special case.
 
@@ -634,7 +718,7 @@ a negative control: collapsing every domain to one constant makes both
 tests fail, each on its own assertion.
 
 > **This does not fix the key coupling.** The per-store subkey is derived
-> *from* the contacts session key, so it inherits that key's lifetime
+> _from_ the contacts session key, so it inherits that key's lifetime
 > exactly and possession of the contacts key still yields it. Domain
 > separation buys cryptographic separation between stores, not lifetime
 > independence — `T-HISTORY-KEY-COUPLING` remains open, and the Rust test
@@ -658,8 +742,8 @@ vault key, can:
 - **Replay a segment into another slot.** Copying
   `pgp_history_seg_0` → `pgp_history_seg_1` causes `loadHistory`'s
   `adoptStraySegments` to adopt it, producing duplicate entries in the
-  viewer. Because adoption only happens for segments it *actually
-  decrypted*, this is a rigorous demonstration that the AEAD accepts a
+  viewer. Because adoption only happens for segments it _actually
+  decrypted_, this is a rigorous demonstration that the AEAD accepts a
   blob in a slot it was never sealed for.
 - **Substitute across stores.** Writing that segment blob to
   `pgp_public_contacts` yields a silently empty contact list after
@@ -685,7 +769,7 @@ and the bytes `decryptContacts` returns in `readSegment` are `.fill(0)`'d
 in a `finally`.
 
 Proven behaviourally rather than by inspection: the unit-test mock retains
-references to the *actual* buffers that crossed the wasm boundary and
+references to the _actual_ buffers that crossed the wasm boundary and
 asserts they are non-empty before the call and all-zero after — on write,
 on read, on an unparseable segment, and on the legacy-migration path where
 one buffer is both the decrypt output and the re-seal input.
@@ -700,3 +784,51 @@ justifies; it is called out in `writeSegment`'s doc comment.
 > claim was unenforced and the check passed either way. `SECRET_FN_RE` and
 > `SECRET_PARAM_NAMES` were extended, and the extension was verified to
 > fail on a deliberate regression. A gate that cannot fail is not a gate.
+
+---
+
+## 12. Randomness
+
+All randomness inside WASM ultimately comes from one place:
+`crypto.getRandomValues`. On `wasm32-unknown-unknown` the `getrandom`
+crate has no other source, so there is no independent entropy in the
+sandbox. That is the fixed constraint everything below works within.
+
+**A ChaCha20 CSPRNG sits between us and that source** (`gpg-wasm/src/rng.rs`,
+`rand_chacha`). It is seeded once with 32 bytes from the platform RNG and
+**never reseeded** — reseeding means re-reading the source we distrust, and
+would let a later poisoning replace good state with attacker-chosen state.
+`getrandom` is called in exactly one place in the crate.
+
+It backs: AES-256-GCM nonces (every protected blob, every draft, every
+`encrypt_store`), Argon2id salts on both the PGP and CRX paths, the draft
+session key, and CRX RSA-2048 key generation.
+
+**What this defends:** a platform RNG that is poisoned _after_ our first
+draw, or that returns constant/degenerate output. The important case is
+AES-GCM nonce reuse under a fixed key — that leaks the keystream and the
+GHASH key across every blob we have ever written, so it is worth ruling
+out even under an unlikely precondition.
+
+**What it does not defend, stated plainly:**
+
+- Poisoning that lands **before** the first draw. The attacker then knows
+  the seed and therefore the entire stream, and this construction buys
+  nothing. `rng.rs` carries a test (`a_known_seed_still_yields_a_known_stream`)
+  asserting exactly this, so the suite cannot be misread as a claim of
+  unpredictability.
+- **OpenPGP key generation** — the primary asset — is not covered at all.
+  Sequoia's `CertBuilder::generate` takes no RNG parameter and its
+  `crypto-rust` backend hard-codes `OsRng`, both via `Backend::random()`
+  and in per-algorithm paths (X25519, Ed25519, RSA, the PQC algorithms).
+  There is no trait object, thread-local hook, or feature flag to
+  intercept. Overriding it would require forking or patching Sequoia,
+  which we deliberately have not done.
+
+No jitter, allocation-address, or timing-based entropy sources were added.
+Combining entropy sources is a design activity, and this project's rule is
+that it relies only on constructions designed and reviewed elsewhere — so
+the CSPRNG is used exactly as its authors intended and nothing is mixed.
+
+This narrows one window. It is not a fix for `T-ENTROPY-POISON`, which
+remains gated on the same supply-chain precondition as §8.10.

@@ -149,10 +149,66 @@ test("a compromised side-panel dependency: what it can and cannot reach", async 
           return realWrite(text);
         };
 
+      // The RNG taps, probed as TWO separate routes because they fail for
+      // different reasons and a single probe hides one of them.
+      //
+      // getrandom's wasm backend caches the Crypto OBJECT and looks
+      // `getRandomValues` up on that instance per call, so an own property on
+      // the instance is what would actually poison wasm entropy.
+      //
+      // Route 1, plain assignment (`crypto.getRandomValues = f`): already
+      // blocked by freezing Crypto.prototype, because `[[Set]]` walks the
+      // prototype chain and refuses when it finds a non-writable data
+      // property. Verified by differential -- removing the instance pin does
+      // NOT make this succeed.
+      // Route 2, `Object.defineProperty`: skips that check entirely and
+      // installs an own property regardless. ONLY the instance pin stops it.
+      // Verified by differential -- removing the pin flips this to true.
+      //
+      // NB: compare against the UNBOUND original. `.bind()` returns a fresh
+      // function object, so comparing the slot to a bound copy is always
+      // "different" and would report the tap installed even when the write
+      // silently failed. That false positive cost a debugging round.
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      const rngBefore = crypto.getRandomValues;
+      const realInstanceRng = crypto.getRandomValues.bind(crypto);
+      try {
+        (crypto as unknown as Record<string, unknown>).getRandomValues =
+          function <T extends ArrayBufferView | null>(array: T): T {
+            sink.rng++;
+            return realInstanceRng(array as never);
+          };
+      } catch {
+        // A non-writable own slot throws in strict mode -- that is the win.
+      }
+      const rngAssignShadowed = crypto.getRandomValues !== rngBefore;
+
+      // The route that plain assignment does NOT cover. `obj.x = f` walks the
+      // prototype chain and ECMAScript refuses the [[Set]] when it finds a
+      // non-writable data property there -- so freezing Crypto.prototype
+      // already defeats the assignment above. defineProperty skips that check
+      // entirely and installs an own property regardless, so it is the route
+      // that actually requires pinning the own slot on the instance.
+      try {
+        Object.defineProperty(crypto, "getRandomValues", {
+          value: function <T extends ArrayBufferView | null>(array: T): T {
+            sink.rng++;
+            return realInstanceRng(array as never);
+          },
+          configurable: true,
+          writable: true,
+        });
+      } catch {
+        // A non-configurable own slot makes this throw -- that is the win.
+      }
+      const rngDefineShadowed = crypto.getRandomValues !== rngBefore;
+
       return {
         encode: TextEncoder.prototype.encode !== realEncode,
         decode: TextDecoder.prototype.decode !== realDecode,
         rng: Crypto.prototype.getRandomValues !== realRng,
+        rngAssign: rngAssignShadowed,
+        rngDefine: rngDefineShadowed,
       };
     });
 
@@ -168,7 +224,17 @@ test("a compromised side-panel dependency: what it can and cannot reach", async 
     expect(
       installed,
       "boundary primitives must be frozen against an in-realm tap",
-    ).toEqual({ encode: false, decode: false, rng: false });
+    ).toEqual({
+      encode: false,
+      decode: false,
+      rng: false,
+      // rngAssign: blocked by the PROTOTYPE freeze (assignment respects a
+      // non-writable inherited data property). rngDefine: blocked only by
+      // pinning the own slot on the crypto instance, since defineProperty
+      // bypasses the prototype check. Both matter; they fail differently.
+      rngAssign: false,
+      rngDefine: false,
+    });
   });
 
   // ── step 2: the unlock happens, with the taps attempted ────────────
@@ -361,7 +427,7 @@ test("a compromised side-panel dependency: what it can and cannot reach", async 
         };
         visit((root as unknown as Record<string, unknown>)[containerKey]);
 
-        const joined = strings.join(" ");
+        const joined = strings.join("\u0000");
         return {
           reachedTree: true,
           nodes,

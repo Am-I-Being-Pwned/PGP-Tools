@@ -4,6 +4,8 @@ import { expect, readStorage, test } from "./fixtures";
 import { scanJsHeap } from "./heap";
 import { strongRetainers } from "./heap-retainers";
 import {
+  decryptInWorkspace,
+  encryptToSelfInWorkspace,
   lockMasterViaPalette,
   seedVault,
   setWorkspaceMode,
@@ -46,6 +48,12 @@ const CANARY = "DRAFT-CANARY-4c8e02f5-do-not-leak";
 const MESSAGE = `half-written note ${CANARY} finish this later`;
 /** Present on every screen incl. the master lock screen (AppFooter). */
 const HEAP_CONTROL = "A privacy tool by";
+/** Canary for the DECRYPTED-OUTPUT test below. Distinct from CANARY so a
+ *  hit can never be confused with the input-draft chain. Kept at offset 0
+ *  of the message: V8 truncates each recorded string value to the first
+ *  1024 chars, so a needle beyond that returns 0 for the wrong reason. */
+const OUTPUT_CANARY = "OUTPUT-CANARY-9b71ad34-do-not-leak";
+const SECRET_MESSAGE = `${OUTPUT_CANARY} the decrypted body of a message`;
 /** A static string in the wasm data segment (see memory.spec.ts). */
 const WASM_CONTROL = "gpg-wasm ok";
 
@@ -126,10 +134,8 @@ test("the workspace draft crosses a master lock as ciphertext, in WASM and on di
 // then calls `wipe()` -- clearing the ref, the DOM value, and the clear-undo
 // buffer -- before flipping masterUnlocked. See SECURITY.md §8.11.
 //
-// NOTE: decrypted OUTPUT is still ordinary render state and is retained by
-// the same mechanism after a lock. That is a separate open threat
-// (T-OUTPUT-HEAP-RESIDUE); this test deliberately asserts only on the input
-// draft, so it does not silently cover something it never checked.
+// NOTE: this test asserts only on the INPUT draft. Decrypted output is
+// covered separately, by the test below.
 test("the draft plaintext does not survive a master lock in the JS heap", async ({
   panel,
 }) => {
@@ -152,5 +158,58 @@ test("the draft plaintext does not survive a master lock in the JS heap", async 
   expect(
     counts[CANARY],
     "draft plaintext must not appear in a heap snapshot after a master lock",
+  ).toBe(0);
+});
+
+// ── regression guard for T-OUTPUT-HEAP-RESIDUE ───────────────────────
+// The sibling of the test above, for the other half of §8.11. `s.output`
+// holds DECRYPTED MESSAGE PLAINTEXT, and it used to be ordinary React
+// render state -- so it survived an in-app master lock by exactly the
+// mechanism the input draft used to suffer from: React double-buffers hook
+// state onto `fiber.alternate` and keeps effect closures hanging off it
+// reachable from a GC root long after unmount. Measured count was 1 after a
+// real encrypt->decrypt->lock cycle; only a reload cleared it.
+//
+// The fix mirrors the input: output lives in `outputRef` plus the display
+// node's `textContent`, never in render state. Only `hasOutput` (a boolean)
+// is derived into state. The result `<pre>` is written imperatively through
+// a callback ref rather than as a React child -- rendering `{output}` as
+// JSX would put the string straight back into the fiber's element tree --
+// and `doMasterLock`'s `wipe()` now clears the output ref and node too.
+//
+// This does a REAL round trip (encrypt in the app, then decrypt the app's
+// own ciphertext) so the canary reaching the heap is genuinely decrypted
+// output, not something the test typed straight in. Note the same plaintext
+// is also the encrypt-side INPUT earlier in the cycle, so a non-zero count
+// could in principle come from either -- the retainer chain in the failure
+// report is what tells them apart, and both are supposed to be zero.
+//
+// Tracing is off for the whole file (see the note at the top); this test
+// needs that for the same reason the draft test does.
+test("decrypted output does not survive a master lock in the JS heap", async ({
+  panel,
+}) => {
+  await seedVault(panel, MASTER);
+  const armored = await encryptToSelfInWorkspace(panel, SECRET_MESSAGE);
+  // Asserts the plaintext is on screen, which also proves the uncontrolled
+  // `<pre>` really renders (its text is set via textContent, not JSX).
+  await decryptInWorkspace(panel, armored, SECRET_MESSAGE);
+  await lockMasterViaPalette(panel);
+
+  const control = await strongRetainers(panel, HEAP_CONTROL);
+  expect(control.count, "control retained (analysis works)").toBeGreaterThan(0);
+  const hits = await strongRetainers(panel, OUTPUT_CANARY);
+  expect(
+    hits.count,
+    `decrypted output must not be retained by any live JS object after a master lock${hits.report}`,
+  ).toBe(0);
+
+  const counts = await scanJsHeap(panel, [OUTPUT_CANARY, HEAP_CONTROL]);
+  expect(counts[HEAP_CONTROL], "control present (scan works)").toBeGreaterThan(
+    0,
+  );
+  expect(
+    counts[OUTPUT_CANARY],
+    "decrypted output must not appear in a heap snapshot after a master lock",
   ).toBe(0);
 });

@@ -222,14 +222,14 @@ export function WorkspaceView({
 
   // Copy the armored output straight from the bottom action bar (the compact
   // preview no longer carries its own copy button). Binary/file output has no
-  // text to copy, so the Copy half is only shown when `s.output` is present.
+  // text to copy, so the Copy half is only shown when there is output text.
   const [copied, setCopied] = useState(false);
   const copyTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const { copy } = useCopyToClipboard();
   const handleCopy = async () => {
     // No label: the button's own 2s check is the success feedback. A
     // rejected write (panel not focused) surfaces as an error toast.
-    if (!(await copy(s.output))) return;
+    if (!(await copy(s.getOutput()))) return;
     setCopied(true);
     clearTimeout(copyTimer.current);
     copyTimer.current = setTimeout(() => setCopied(false), 2000);
@@ -297,15 +297,14 @@ export function WorkspaceView({
 
   // After decrypting to readable text, give the plaintext the whole panel with
   // a Back button, instead of cramming it into a small fixed-height preview.
-  const showFullOutput =
-    s.operationDone && s.mode === "decrypt" && s.output.length > 0;
+  const showFullOutput = s.operationDone && s.mode === "decrypt" && s.hasOutput;
 
   // Undoable clears (toast Undo, or mod+z while the box is still empty --
   // once the user types again, native undo owns mod+z). The snapshot itself
   // lives in `useWorkspaceState`'s ref, not in state here and not captured
   // in the toast's closure: sonner holds an action callback alive for the
   // toast's whole lifetime, and anything that closes over the plaintext
-  // survives a master lock. `s.wipeInput()` clears the buffer too.
+  // survives a master lock. `s.wipePlaintext()` clears the buffer too.
   const lastEscapeAt = useRef(0);
 
   const restoreCleared = () => s.restoreClearUndo();
@@ -462,7 +461,7 @@ export function WorkspaceView({
   // action registry (lib/actions), which reads the state slice pushed
   // up here. Ops close over fresh state via a ref; the snapshot effect
   // below re-pushes only when a palette-readable value changes.
-  const hasOutput = s.operationDone && s.output.length > 0 && !s.loading;
+  const hasOutput = s.operationDone && s.hasOutput && !s.loading;
   // Broader than hasOutput: file/binary results have no copyable text
   // but do download. Verify is excluded -- its "result" is a verdict,
   // not an artifact (the UI shows no Download button there either).
@@ -470,7 +469,7 @@ export function WorkspaceView({
     s.operationDone &&
     !s.loading &&
     s.mode !== "verify" &&
-    (s.fileResults.length > 0 || !!s.binaryOutput || s.output.length > 0);
+    (s.fileResults.length > 0 || !!s.binaryOutput || s.hasOutput);
   // Mirrors the main button's disabled logic, incl. the encrypt
   // needs-a-recipient gate (the palette shows the reason as a toast).
   const canRun =
@@ -605,7 +604,9 @@ export function WorkspaceView({
         </div>
         <WorkspaceResults
           error={s.error}
-          output={s.output}
+          outputElRef={s.outputElRef}
+          getOutput={s.getOutput}
+          hasOutput={s.hasOutput}
           binaryOutput={s.binaryOutput}
           fileResults={s.fileResults}
           fileName={ops.outputFileName()}
@@ -876,7 +877,9 @@ export function WorkspaceView({
         <WorkspaceResults
           error={s.error}
           onRemedy={handleRemedy}
-          output={s.output}
+          outputElRef={s.outputElRef}
+          getOutput={s.getOutput}
+          hasOutput={s.hasOutput}
           binaryOutput={s.binaryOutput}
           fileResults={s.fileResults}
           fileName={ops.outputFileName()}
@@ -949,7 +952,7 @@ export function WorkspaceView({
                         Download
                       </Button>
                     </ShortcutHint>
-                    {s.output && (
+                    {s.hasOutput && (
                       <ShortcutHint shortcut={COPY_SHORTCUT}>
                         <Button
                           variant="outline"

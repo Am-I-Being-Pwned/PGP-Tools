@@ -1,10 +1,18 @@
-import { useRef } from "react";
+import { useCallback } from "react";
 
 import type { FileResult } from "../../lib/utils/download";
 import { formatFileSize } from "../../lib/utils/formatting";
 
 interface OutputAreaProps {
-  output: string;
+  /** The result `<pre>`. It is UNCONTROLLED: the plaintext is written to
+   *  `textContent` by the owning hook, never rendered as a React child,
+   *  so it stays out of render state. See the output block in
+   *  `useWorkspaceState` for why. */
+  outputElRef: React.MutableRefObject<HTMLPreElement | null>;
+  /** Read the result text at the point of use. */
+  getOutput: () => string;
+  /** Derived, non-sensitive: there is a textual result. */
+  hasOutput: boolean;
   binaryOutput?: Uint8Array;
   fileResults?: FileResult[];
   fileName?: string;
@@ -15,7 +23,9 @@ interface OutputAreaProps {
 }
 
 export function OutputArea({
-  output,
+  outputElRef,
+  getOutput,
+  hasOutput,
   binaryOutput,
   fileResults,
   fileName,
@@ -23,19 +33,31 @@ export function OutputArea({
   statusText,
   fullHeight,
 }: OutputAreaProps) {
-  const preRef = useRef<HTMLPreElement>(null);
+  // Callback ref: publish the node to the owning hook and seed its text
+  // from the ref on every (re)mount. The node genuinely unmounts (the
+  // compact encrypt/sign path renders no `<pre>` at all, and Back tears
+  // the full-height view down), and an imperatively-written node comes
+  // back empty -- re-seeding is what makes the result survive those
+  // swaps, exactly as `WorkspaceInput`'s `attachInput` does for the box.
+  const attachOutput = useCallback(
+    (el: HTMLPreElement | null) => {
+      outputElRef.current = el;
+      if (el) el.textContent = getOutput();
+    },
+    [outputElRef, getOutput],
+  );
 
   const hasFileResults = fileResults && fileResults.length > 0;
-  if (!output && !binaryOutput && !hasFileResults) {
+  if (!hasOutput && !binaryOutput && !hasFileResults) {
     return null;
   }
 
   const selectAllOnCtrlA = (e: React.KeyboardEvent<HTMLPreElement>) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === "a" && preRef.current) {
+    if ((e.ctrlKey || e.metaKey) && e.key === "a" && outputElRef.current) {
       e.preventDefault();
       const sel = window.getSelection();
       const range = document.createRange();
-      range.selectNodeContents(preRef.current);
+      range.selectNodeContents(outputElRef.current);
       sel?.removeAllRanges();
       sel?.addRange(range);
     }
@@ -48,7 +70,7 @@ export function OutputArea({
     return (
       <div className="space-y-2">
         {statusText && <p className="text-xs text-green-400">{statusText}</p>}
-        {binaryOutput && !output && !hasFileResults && !statusText && (
+        {binaryOutput && !hasOutput && !hasFileResults && !statusText && (
           <p className="text-muted-foreground text-sm">
             {fileName ?? "output.gpg"} - {formatFileSize(binaryOutput.length)}
           </p>
@@ -65,19 +87,19 @@ export function OutputArea({
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2">
       {statusText && <p className="text-xs text-green-400">{statusText}</p>}
-      {output && (
+      {hasOutput && (
         <div className="relative min-h-0 flex-1">
+          {/* No React children on purpose: `attachOutput` writes the text
+              imperatively so the plaintext never enters the element tree. */}
           <pre
-            ref={preRef}
+            ref={attachOutput}
             tabIndex={0}
             onKeyDown={selectAllOnCtrlA}
             className={`bg-muted/50 h-full overflow-auto rounded-md border p-3 font-mono text-xs break-all whitespace-pre-wrap focus:outline-none ${borderColor}`}
-          >
-            {output}
-          </pre>
+          />
         </div>
       )}
-      {binaryOutput && !output && !hasFileResults && !statusText && (
+      {binaryOutput && !hasOutput && !hasFileResults && !statusText && (
         <p className="text-muted-foreground text-sm">
           {fileName ?? "output.gpg"} - {formatFileSize(binaryOutput.length)}
         </p>

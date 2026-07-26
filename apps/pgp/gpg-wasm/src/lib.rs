@@ -529,7 +529,7 @@ fn aes_gcm_encrypt(
         Aes256Gcm::new_from_slice(key).map_err(|e| format!("AES key init failed: {e}"))?;
 
     let mut iv = [0u8; 12];
-    getrandom::fill(&mut iv).map_err(|e| format!("RNG failed: {e}"))?;
+    rng::fill(&mut iv)?;
 
     let ciphertext = cipher
         .encrypt(Nonce::from_slice(&iv), Payload { msg: plaintext, aad })
@@ -1411,7 +1411,7 @@ fn encrypt_cert_with_password(
     let key_id = cert.fingerprint().to_hex();
 
     let mut salt = [0u8; 16];
-    getrandom::fill(&mut salt).map_err(|e| format!("RNG failed: {e}"))?;
+    rng::fill(&mut salt)?;
 
     let mut derived = argon2_derive(password, &salt, memory_kib, iterations, parallelism)?;
 
@@ -2040,7 +2040,7 @@ pub fn init_draft_session_if_unset() -> Result<(), String> {
         return Ok(());
     }
     let mut key = vec![0u8; 32];
-    getrandom::fill(&mut key).map_err(|e| format!("RNG failed: {e}"))?;
+    rng::fill(&mut key)?;
     set_draft_key(Some(key));
     Ok(())
 }
@@ -2226,6 +2226,11 @@ pub fn verify_canary_and_init_session(
 /// vault/unlock/zeroize machinery for an RSA-2048 signing key; see the
 /// module header for why CRX3 is not OpenPGP.
 mod crx;
+
+/// The crate's CSPRNG: a ChaCha20 stream seeded once from
+/// `crypto.getRandomValues`. See the module header for what it does and
+/// does not buy against T-ENTROPY-POISON.
+mod rng;
 
 #[cfg(test)]
 mod tests;

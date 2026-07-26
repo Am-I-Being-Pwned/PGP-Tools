@@ -157,20 +157,30 @@ if (import.meta.env.DEV) {
   freezeMethod(globalThis.Crypto.prototype, "getRandomValues");
   freezeMethod(globalThis.Clipboard.prototype, "writeText");
 
-  // `navigator.clipboard` is an extensible OBJECT, so freezing
-  // Clipboard.prototype.writeText alone is not enough -- an own property on
-  // the instance shadows the prototype method, which is exactly how a
-  // realistic tap is written. Pin the own slot as well.
-  const clip = globalThis.navigator.clipboard;
-  if (typeof clip.writeText === "function") {
-    const boundWrite = clip.writeText.bind(clip);
-    Object.defineProperty(clip, "writeText", {
-      value: Object.freeze(boundWrite),
+  // Freezing a prototype method is NOT enough when the object you actually
+  // call through is extensible: an own property on the instance shadows the
+  // prototype, which is exactly how a realistic tap is written. Pin the own
+  // slot on every such instance too.
+  function pinOwnMethod(obj: object, name: string) {
+    const current = (obj as Record<string, unknown>)[name];
+    if (typeof current !== "function") return;
+    const bound = (current as (...a: unknown[]) => unknown).bind(obj);
+    Object.defineProperty(obj, name, {
+      value: Object.freeze(bound),
       writable: false,
       configurable: false,
       enumerable: false,
     });
   }
+
+  pinOwnMethod(globalThis.navigator.clipboard, "writeText");
+
+  // `globalThis.crypto` matters more than it looks. getrandom's wasm backend
+  // caches the Crypto OBJECT in a thread-local and then does a property
+  // lookup for `getRandomValues` on that instance per call -- so pinning the
+  // prototype alone left the wasm module's only entropy source tappable via
+  // `crypto.getRandomValues = f`. That is T-ENTROPY-POISON's actual route.
+  pinOwnMethod(globalThis.crypto, "getRandomValues");
 } // end !import.meta.env.DEV
 
 export {};
