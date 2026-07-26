@@ -8,7 +8,7 @@
     "dev": "wxt",
     "dev:firefox": "wxt -b firefox",
     "build:wasm": "cd gpg-wasm && wasm-pack build --target web --release",
-    "build": "pnpm build:wasm && wxt build && node scripts/audit-network.mjs",
+    "build": "pnpm build:wasm && wxt build && node scripts/audit-invariants.mjs && node scripts/audit-network.mjs",
     "build:firefox": "wxt build -b firefox",
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",

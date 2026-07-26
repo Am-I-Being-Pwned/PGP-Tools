@@ -9,24 +9,35 @@
  *   - which return values carry secret material
  *   - the caller's zeroization contract
  *
- * Wasm-side handling: the Rust crate wraps every secret param in
- * `Zeroizing<Vec<u8>>` immediately on entry, so the wasm-bindgen
- * marshalled copy is overwritten on function exit. See
- * `apps/pgp/gpg-wasm/src/lib.rs` for each `_with_password` /
- * `_with_prf` function and the doc-comment header for the
- * KEY_STORE-only-via-explicit-unlock invariant.
+ * Wasm-side handling: the Rust crate wraps secret params it takes BY
+ * VALUE in `Zeroizing<Vec<u8>>` immediately on entry, so the
+ * wasm-bindgen marshalled copy is overwritten on function exit. This
+ * holds for the four `generate_protected_*` / `protect_imported_*`
+ * functions. It does NOT hold for `unlock_with_password`,
+ * `unlock_with_prf` or `init_contacts_session_with_prf`, which take
+ * `&[u8]`: there is no owned copy to wrap, so the marshalled password /
+ * PRF bytes are freed un-zeroized and only the derived key is scrubbed.
+ * See `T-UNLOCK-PARAM-NOT-OWNED` in `lib/security/threat-model.ts`.
+ * `apps/pgp/gpg-wasm/src/lib.rs` also carries the doc-comment header for
+ * the KEY_STORE-only-via-explicit-unlock invariant.
  *
  * JS-side handling: callers MUST pass `Uint8Array` for password/PRF
  * material (never JS strings -- those are immutable and unzeroizable)
- * and MUST `.fill(0)` the buffer in a `finally` block. This contract
- * is enforced by code review; the audit checklist in `SECURITY.md`
- * §9 contains the grep that verifies no callsite outside this file
- * touches the underlying wasm exports directly.
+ * and MUST `.fill(0)` the buffer in a `finally` block. This contract is
+ * enforced by code review plus `scripts/audit-invariants.mjs`.
+ *
+ * SCOPE OF THAT ENFORCEMENT: the §9 grep proves no *first-party*
+ * callsite outside this file touches the underlying wasm exports. It is
+ * code hygiene, NOT a security boundary. The glue ships as an ES module
+ * chunk, and the module registry is keyed by resolved URL, so any code
+ * running in this realm can `import()` it and reach the live, populated
+ * `KEY_STORE` directly -- bypassing this file entirely. See §8.10.
  *
  * The single exception: `getKeyArmored` returns plaintext armored
  * secret-key bytes as a JS String for the user-initiated destructive
- * export. That path is gated by a type-to-confirm UI ("EXPORT") and
- * a clipboard auto-clear timer.
+ * export. That path is gated by a type-to-confirm UI ("EXPORT") and a
+ * clipboard auto-clear timer -- both UI-level, neither a capability
+ * check at the WASM boundary.
  */
 
 import type { GenerateKeyOptions, ProtectResultMeta } from "./types";

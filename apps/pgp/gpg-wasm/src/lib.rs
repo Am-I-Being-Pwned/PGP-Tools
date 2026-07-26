@@ -1834,12 +1834,17 @@ pub fn unlock_with_password(
     iv: &[u8],
     salt: &[u8],
     key_id: &str,
-    password: &[u8],
+    password: Vec<u8>,
     memory_kib: u32,
     iterations: u32,
     parallelism: u32,
 ) -> Result<u32, String> {
-    let mut derived = argon2_derive(password, salt, memory_kib, iterations, parallelism)?;
+    // Owned, not `&[u8]`: with a borrowed param the wasm-bindgen glue frees
+    // its marshalled copy of the password without clearing it, leaving the
+    // plaintext in linear memory. Owning it lets Zeroizing scrub on exit.
+    // See SECURITY.md §8.4 and T-UNLOCK-PARAM-NOT-OWNED.
+    let password = Zeroizing::new(password);
+    let mut derived = argon2_derive(&password, salt, memory_kib, iterations, parallelism)?;
     let aad = format!("{PASSWORD_AAD_PREFIX}{key_id}");
     let result = aes_gcm_decrypt(&derived, iv, ciphertext, aad.as_bytes());
     derived.zeroize();
@@ -1855,11 +1860,15 @@ pub fn unlock_with_password(
 pub fn unlock_with_prf(
     ciphertext: &[u8],
     iv: &[u8],
-    prf_output: &[u8],
-    stored_secret: &[u8],
+    prf_output: Vec<u8>,
+    stored_secret: Vec<u8>,
     key_id: &str,
 ) -> Result<u32, String> {
-    let hk = Hkdf::<Sha256>::new(Some(stored_secret), prf_output);
+    // Owned + Zeroizing for the same reason as unlock_with_password, and
+    // matching generate_protected_with_prf, which already takes both owned.
+    let prf_output = Zeroizing::new(prf_output);
+    let stored_secret = Zeroizing::new(stored_secret);
+    let hk = Hkdf::<Sha256>::new(Some(&stored_secret), &prf_output);
     let mut derived = vec![0u8; 32];
     hk.expand(b"gpg-tools-prf-v1", &mut derived)
         .map_err(|e| format!("HKDF failed: {e}"))?;
@@ -1960,10 +1969,13 @@ fn derive_contacts_key_from_password(
 /// HKDF(prfOutput, storedSecret, "gpg-tools-contacts-v1") -> session key.
 #[wasm_bindgen(js_name = "initContactsSessionWithPrf")]
 pub fn init_contacts_session_with_prf(
-    prf_output: &[u8],
-    stored_secret: &[u8],
+    prf_output: Vec<u8>,
+    stored_secret: Vec<u8>,
 ) -> Result<(), String> {
-    let key = derive_contacts_key(prf_output, stored_secret)?;
+    // Owned + Zeroizing: see unlock_with_password.
+    let prf_output = Zeroizing::new(prf_output);
+    let stored_secret = Zeroizing::new(stored_secret);
+    let key = derive_contacts_key(&prf_output, &stored_secret)?;
     set_contacts_key(Some(key));
     Ok(())
 }

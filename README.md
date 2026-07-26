@@ -38,7 +38,6 @@
 - Sign & verify Chrome extension packages (`.crx`) for the Web Store's Verified CRX Uploads (optional; off by default)
 - Right-click context menu on selected text
 - Auto-lock on inactivity, panel close, or per-operation (never-cache mode)
-- Exponential backoff on failed password attempts
 - Optional Chrome sync or local-only storage
 
 ## Security model
@@ -51,7 +50,7 @@
 | Memory | `zeroize` crate (Rust) + manual zeroing (JS) |
 | Signatures | Atomic decrypt+verify (no TOCTOU) |
 | Sessions | Auto-lock on inactivity, panel close, or per-op |
-| Brute-force | Exponential backoff on failed unlocks |
+| Brute-force | Argon2id 64 MB / 3 iterations - the cost sits in the KDF, which also holds against an offline attack on a stolen blob |
 | Scope | No content scripts - extension sandbox only |
 
 ## Stack

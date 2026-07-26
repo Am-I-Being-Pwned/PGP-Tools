@@ -324,7 +324,7 @@ fn test_unlock_with_password() {
 
     // Now unlock entirely in WASM
     let handle = unlock_with_password(
-        &ciphertext, &iv, salt, key_id, password, 4096, 3, 1,
+        &ciphertext, &iv, salt, key_id, password.to_vec(), 4096, 3, 1,
     ).unwrap();
     assert!(handle > 0);
 
@@ -367,7 +367,7 @@ fn test_unlock_with_prf() {
 
     // Unlock entirely in WASM
     let handle = unlock_with_prf(
-        &ciphertext, &iv, prf_output, stored_secret, key_id,
+        &ciphertext, &iv, prf_output.to_vec(), stored_secret.to_vec(), key_id,
     ).unwrap();
     assert!(handle > 0);
 
@@ -414,7 +414,7 @@ fn test_contacts_session_lifecycle_with_prf() {
 
     assert!(!has_contacts_session());
 
-    init_contacts_session_with_prf(prf_output, stored_secret).unwrap();
+    init_contacts_session_with_prf(prf_output.to_vec(), stored_secret.to_vec()).unwrap();
     assert!(has_contacts_session());
 
     drop_contacts_session();
@@ -427,7 +427,7 @@ fn test_contacts_encrypt_decrypt_round_trip_prf() {
 
     let prf_output = b"32-byte-fake-prf-output-for-test";
     let stored_secret = b"32-byte-fake-stored-secret-test!";
-    init_contacts_session_with_prf(prf_output, stored_secret).unwrap();
+    init_contacts_session_with_prf(prf_output.to_vec(), stored_secret.to_vec()).unwrap();
 
     let plaintext = b"[{\"keyId\":\"abc123\",\"name\":\"Alice\"}]";
     let packed = encrypt_contacts(plaintext).unwrap();
@@ -472,7 +472,7 @@ fn test_contacts_decrypt_wrong_key_fails() {
     // Encrypt with one key
     let prf_output_a = b"aaaa-fake-prf-output-32-bytes!!!";
     let stored_secret_a = b"aaaa-fake-stored-secret-32bytes!";
-    init_contacts_session_with_prf(prf_output_a, stored_secret_a).unwrap();
+    init_contacts_session_with_prf(prf_output_a.to_vec(), stored_secret_a.to_vec()).unwrap();
 
     let packed = encrypt_contacts(b"secret contacts").unwrap();
     let iv = &packed[..12];
@@ -481,7 +481,7 @@ fn test_contacts_decrypt_wrong_key_fails() {
     // Switch to a different key
     let prf_output_b = b"bbbb-fake-prf-output-32-bytes!!!";
     let stored_secret_b = b"bbbb-fake-stored-secret-32bytes!";
-    init_contacts_session_with_prf(prf_output_b, stored_secret_b).unwrap();
+    init_contacts_session_with_prf(prf_output_b.to_vec(), stored_secret_b.to_vec()).unwrap();
 
     // Decryption should fail (wrong key)
     let result = decrypt_contacts(ciphertext, iv);
@@ -497,13 +497,13 @@ fn test_contacts_session_replaced_on_reinit() {
     // Init with key A, encrypt
     let prf_a = b"aaaa-fake-prf-output-32-bytes!!!";
     let secret_a = b"aaaa-fake-stored-secret-32bytes!";
-    init_contacts_session_with_prf(prf_a, secret_a).unwrap();
+    init_contacts_session_with_prf(prf_a.to_vec(), secret_a.to_vec()).unwrap();
     let packed_a = encrypt_contacts(b"data-a").unwrap();
 
     // Re-init with key B (should replace, not accumulate)
     let prf_b = b"bbbb-fake-prf-output-32-bytes!!!";
     let secret_b = b"bbbb-fake-stored-secret-32bytes!";
-    init_contacts_session_with_prf(prf_b, secret_b).unwrap();
+    init_contacts_session_with_prf(prf_b.to_vec(), secret_b.to_vec()).unwrap();
     let packed_b = encrypt_contacts(b"data-b").unwrap();
 
     // Decrypt B should work
@@ -634,7 +634,7 @@ fn test_contacts_key_domain_separation_password_vs_prf() {
     // Switch to a PRF-derived session (different key derivation path)
     let prf_output = b"32-byte-fake-prf-output-for-test";
     let stored_secret = b"32-byte-fake-stored-secret-test!";
-    init_contacts_session_with_prf(prf_output, stored_secret).unwrap();
+    init_contacts_session_with_prf(prf_output.to_vec(), stored_secret.to_vec()).unwrap();
 
     // Should NOT be able to decrypt password-encrypted contacts with PRF key
     assert!(decrypt_contacts(ct, iv).is_err());
@@ -648,7 +648,7 @@ fn test_empty_contacts_encrypt_decrypt() {
 
     let prf_output = b"32-byte-fake-prf-output-for-test";
     let stored_secret = b"32-byte-fake-stored-secret-test!";
-    init_contacts_session_with_prf(prf_output, stored_secret).unwrap();
+    init_contacts_session_with_prf(prf_output.to_vec(), stored_secret.to_vec()).unwrap();
 
     // Empty JSON array
     let packed = encrypt_contacts(b"[]").unwrap();
@@ -671,7 +671,7 @@ fn test_large_contacts_encrypt_decrypt() {
 
     let prf_output = b"32-byte-fake-prf-output-for-test";
     let stored_secret = b"32-byte-fake-stored-secret-test!";
-    init_contacts_session_with_prf(prf_output, stored_secret).unwrap();
+    init_contacts_session_with_prf(prf_output.to_vec(), stored_secret.to_vec()).unwrap();
 
     // Simulate ~100 contacts worth of data (~100KB)
     let large_data: Vec<u8> = (0..100_000).map(|i| (i % 256) as u8).collect();

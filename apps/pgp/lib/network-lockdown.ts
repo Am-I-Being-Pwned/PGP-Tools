@@ -1,5 +1,15 @@
 /**
- * Runtime network hooks — MUST be the first import in every entrypoint.
+ * Runtime lockdown — MUST be the first import in every entrypoint.
+ *
+ * Two jobs, and the "first import" guarantee is what makes both work:
+ *   1. Outbound network hooks (§7) — fetch/XHR/WS/EventSource/RTC/beacon.
+ *   2. Boundary primitive freeze (§8.10) — pins the encode/decode/RNG/
+ *      clipboard methods the wasm boundary depends on, so a dependency
+ *      loaded after us cannot patch them. See the block at the bottom.
+ *
+ * (The filename still says "network" for historical reasons; scope is now
+ * broader. Renaming means touching every entrypoint import plus the
+ * exemption path in scripts/audit-invariants.mjs.)
  *
  * Hooks are frozen + non-configurable. CSP covers iframes (frame-src
  * 'none') and inline scripts (no 'unsafe-inline'), so no DOM hooks needed.
@@ -102,6 +112,63 @@ if (import.meta.env.DEV) {
       }),
       writable: false,
       configurable: false,
+    });
+  }
+
+  // ── Boundary primitive freeze — SECURITY.md §8.10 ──────────────────
+  //
+  // The wasm-bindgen glue looks each of these up per call, so a
+  // dependency that patches one taps every secret crossing the boundary:
+  //
+  //   TextEncoder.encode      the unlock password, as React converts it
+  //   TextDecoder.decode      every string WASM returns -- so even a
+  //                           perfectly gated export path leaks while the
+  //                           user does a LEGITIMATE export
+  //   getRandomValues         the module's ONLY entropy source; a constant
+  //                           return makes every key generated afterwards
+  //                           predictable, silently and with no artefact
+  //   Clipboard.writeText     read at write time, which the 30s/60s
+  //                           auto-clear cannot reach
+  //
+  // Freezing them non-writable/non-configurable is meaningful ONLY because
+  // this module is the first import in every entrypoint, so code loaded
+  // later cannot patch them. It does NOT stop a dependency that runs
+  // earlier in the module graph, and it does nothing about a hostile
+  // realm calling the wasm exports directly (§8.10). This raises an
+  // attacker's cost; it does not close the hole.
+  //
+  // Threats: T-PRIMITIVE-HOOK, T-ENTROPY-POISON.
+  function freezeMethod(obj: object | undefined, name: string) {
+    if (!obj) return;
+    const desc = Object.getOwnPropertyDescriptor(obj, name);
+    // Skip anything absent, non-method, or already locked down.
+    if (!desc || typeof desc.value !== "function" || !desc.configurable) return;
+    Object.defineProperty(obj, name, {
+      value: desc.value,
+      writable: false,
+      configurable: false,
+      enumerable: desc.enumerable,
+    });
+  }
+
+  freezeMethod(TextEncoder.prototype, "encode");
+  freezeMethod(TextEncoder.prototype, "encodeInto");
+  freezeMethod(TextDecoder.prototype, "decode");
+  freezeMethod(globalThis.Crypto.prototype, "getRandomValues");
+  freezeMethod(globalThis.Clipboard.prototype, "writeText");
+
+  // `navigator.clipboard` is an extensible OBJECT, so freezing
+  // Clipboard.prototype.writeText alone is not enough -- an own property on
+  // the instance shadows the prototype method, which is exactly how a
+  // realistic tap is written. Pin the own slot as well.
+  const clip = globalThis.navigator.clipboard;
+  if (typeof clip.writeText === "function") {
+    const boundWrite = clip.writeText.bind(clip);
+    Object.defineProperty(clip, "writeText", {
+      value: Object.freeze(boundWrite),
+      writable: false,
+      configurable: false,
+      enumerable: false,
     });
   }
 } // end !import.meta.env.DEV

@@ -120,7 +120,12 @@ export default function App() {
   // its current state into `latestDraftRef` on every change; on master
   // lock we encrypt that snapshot under the in-WASM draft key and stash
   // the ciphertext here so the workspace can rehydrate after re-unlock.
-  // The plaintext draft never survives the lock event in the JS heap.
+  //
+  // NOTE: the plaintext draft DOES currently survive the lock in the JS
+  // heap -- not here, but via React's fiber `alternate` retaining an effect
+  // closure over the controlled textarea's state. Blanking the DOM value
+  // below removes one retainer, not that one. See SECURITY.md §8.11 and
+  // T-DRAFT-DOM-RESIDUE; pinned by e2e/draft-memory.spec.ts.
   const latestDraftRef = useRef<WorkspaceDraft | null>(null);
   const [draftCiphertext, setDraftCiphertext] = useState<Uint8Array | null>(
     null,
@@ -150,6 +155,19 @@ export default function App() {
         }
       }
       latestDraftRef.current = null;
+
+      // The draft is stashed as ciphertext now -- but unmounting the
+      // workspace does NOT release the plaintext still sitting in the
+      // textarea. React's value-tracker installs its own value setter whose
+      // closure captures the last value it saw, and Chromium's autofill
+      // FormTracker holds a C++ Persistent handle to the last-interacted
+      // form control, so node -> closure -> plaintext stays strongly
+      // reachable from a GC root across the lock. Assigning through React's
+      // patched setter is what replaces that captured string. Nothing is
+      // lost: rehydration reads from draftCiphertext. Same fix as
+      // ImportKeyPage's resetAndClose. See SECURITY.md §8.11.
+      const input = document.getElementById("pgp-input");
+      if (input instanceof HTMLTextAreaElement) input.value = "";
 
       // Wipe any unconsumed context-menu pending op. Without this a
       // selection that landed during an unlocked session could sit
@@ -364,7 +382,10 @@ export default function App() {
     openFocusDoneRef.current = true;
     if (activeTab !== "workspace") return;
     // Deferred a tick so the workspace has mounted the textarea.
-    const t = setTimeout(() => document.getElementById("pgp-input")?.focus(), 0);
+    const t = setTimeout(
+      () => document.getElementById("pgp-input")?.focus(),
+      0,
+    );
     return () => clearTimeout(t);
   }, [
     onboardingComplete,

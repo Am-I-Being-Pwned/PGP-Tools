@@ -303,6 +303,112 @@ export async function seedVault(
   if (contactKeys.length > 0) await importContactsBulk(panel, contactKeys);
 }
 
+// ── command palette ──────────────────────────────────────────────────
+
+/** Open the command palette (the footer's "Commands" button is the
+ *  click-driven equivalent of mod+K) and run the action named `name`. */
+export async function runPaletteAction(
+  panel: Page,
+  name: string,
+): Promise<void> {
+  await panel.getByRole("button", { name: "Commands" }).click();
+  await expect(
+    panel.getByRole("dialog", { name: "Command palette" }),
+  ).toBeVisible();
+  // cmdk renders each item as role=option.
+  await panel.getByRole("option", { name }).click();
+}
+
+/** Master-lock the vault in-app via the palette's "Lock now" (NOT a
+ *  reload): this is the only path that runs `doMasterLock`, which is what
+ *  encrypts + stashes the workspace draft and drops the contacts session.
+ *  Leaves the panel on the master unlock screen. */
+export async function lockMasterViaPalette(panel: Page): Promise<void> {
+  await runPaletteAction(panel, "Lock now");
+  await expect(panel.getByLabel("Master password")).toBeVisible();
+}
+
+// ── operation history (opt-in) ───────────────────────────────────────
+
+/** Turn on the "Save to history" toggle. It only renders in encrypt mode
+ *  (and only when never-cache is off), so this also selects that mode. */
+export async function enableSaveToHistory(panel: Page): Promise<void> {
+  await setWorkspaceMode(panel, "Encrypt");
+  const toggle = panel.getByRole("switch", { name: "Save to history" });
+  await expect(toggle).toBeVisible();
+  if ((await toggle.getAttribute("aria-checked")) !== "true") {
+    await toggle.click();
+  }
+  await expect(toggle).toHaveAttribute("aria-checked", "true");
+}
+
+/** Open the History page via the palette (the icon button is
+ *  deliberately out of the tab order and has no stable text). */
+export async function openHistoryPage(panel: Page): Promise<void> {
+  await runPaletteAction(panel, "Open history");
+  await expect(panel.getByRole("heading", { name: "History" })).toBeVisible();
+}
+
+// ── CRX signing (opt-in, off by default) ─────────────────────────────
+
+/** Flip the Settings-tab "Enable CRX signing" switch on. */
+export async function enableCrxSigning(panel: Page): Promise<void> {
+  await panel.getByRole("tab", { name: "Settings" }).click();
+  const sw = panel.getByRole("switch", { name: "Enable CRX signing" });
+  await expect(sw).toBeVisible();
+  if ((await sw.getAttribute("aria-checked")) !== "true") await sw.click();
+  await expect(sw).toHaveAttribute("aria-checked", "true");
+}
+
+/** Open the Import Key page and paste a raw RSA private-key PEM, stopping
+ *  on the paste step. Split out from {@link importCrxSigningKey} so a spec
+ *  can inspect the page while the PEM is still on screen. Requires CRX
+ *  signing to be enabled -- the page only recognises a raw RSA PEM then. */
+export async function pasteCrxSigningKey(
+  panel: Page,
+  pem: string,
+  label: string,
+): Promise<void> {
+  await goToKeys(panel);
+  await panel.getByRole("button", { name: "Import Key" }).click();
+  await panel
+    .getByPlaceholder("Paste a key here, or browse for a file...")
+    .fill(pem);
+  // Detection is what routes this to the CRX branch; assert it so a
+  // regression there fails loudly instead of importing as a PGP key.
+  await expect(panel.getByText("RSA signing key")).toBeVisible();
+  await panel.getByPlaceholder("e.g. My Extension").fill(label);
+}
+
+/** Finish a {@link pasteCrxSigningKey} flow, protecting the key with a
+ *  password. Returns once the Import page has fully slid out. */
+export async function completeCrxSigningKeyImport(
+  panel: Page,
+  password: string,
+): Promise<void> {
+  await panel.getByRole("button", { name: "Next" }).click();
+  await panel.locator('input[name="protection"]').nth(1).check();
+  await panel.getByLabel("Password", { exact: true }).fill(password);
+  await panel.getByLabel("Confirm password").fill(password);
+  await panel.getByRole("button", { name: "Import", exact: true }).click();
+  await expect(
+    panel.getByPlaceholder("Paste a key here, or browse for a file..."),
+  ).toBeHidden();
+  await expect(panel.getByRole("region", { name: "Import key" })).toBeHidden();
+}
+
+/** Import a raw RSA private-key PEM as a password-protected CRX signing
+ *  key via the Import Key page. */
+export async function importCrxSigningKey(
+  panel: Page,
+  pem: string,
+  password: string,
+  label: string,
+): Promise<void> {
+  await pasteCrxSigningKey(panel, pem, label);
+  await completeCrxSigningKeyImport(panel, password);
+}
+
 /** Paste a cleartext-signed message into the workspace (auto-switches to
  *  Verify) and run verification. */
 export async function verifySignedMessage(
