@@ -69,40 +69,60 @@ classic one, loads extensions) — so no display or `xvfb` is needed. Set
 - `memory.spec.ts` — complementary: reads the live WASM linear memory via
   CDP (`wasm-memory.ts`) and asserts a distinctive master password does
   not linger there after unlock — an in-browser check of the
-  zeroize-on-free allocator. **Caveat:** the unlock path takes its
-  password as `&[u8]`, so nothing explicitly zeroizes the marshalled copy
-  (`T-UNLOCK-PARAM-NOT-OWNED`). Treat a pass here as evidence about the
-  allocator's incidental behaviour, not proof of a deliberate scrub.
+  zeroize-on-free allocator. Note this test passed even while the unlock
+  path took its password as `&[u8]` and nothing scrubbed the marshalled
+  copy — so it was never the thing establishing that guarantee. The
+  params are owned + `Zeroizing`-wrapped now (`T-UNLOCK-PARAM-NOT-OWNED`),
+  which `audit-invariants.mjs` enforces.
 - `hostile-dep.spec.ts` — the ACTIVE counterpart to `heap.spec.ts`:
   simulates a compromised in-panel dependency and pins exactly what
   in-realm JS can and cannot reach. Live WASM export table: **yes** — an
   `import()` of the glue chunk plus `getKeyArmored(1)` returns plaintext
-  secret material with no user gesture. Prototype hooks on
-  encode/decode/getRandomValues/clipboard: **yes**. Linear memory and
-  React state: **no** (the two genuine design wins). Gaps are asserted
-  *as* gaps and commented `GAP (documented, not desired)` so the suite
-  stays green; flip those assertions when hardening lands. See §8.10.
+  secret material with no user gesture (still true — see §8.10 for why
+  that is accepted rather than fixed). Taps on
+  encode/decode/getRandomValues/clipboard: **no longer** — the primitive
+  freeze blocks them, and each is asserted separately. The RNG is probed
+  by BOTH routes because they fail differently: plain assignment is
+  stopped by the prototype freeze, `defineProperty` only by pinning the
+  own slot on the instance. Linear memory and React state: **no** (the
+  genuine design wins). Remaining gaps are asserted _as_ gaps and
+  commented `GAP (documented, not desired)`; flip them when hardening
+  lands.
 - `history-memory.spec.ts` — the opt-in operation history: manifest holds
   only `{n,bytes}`, canary absent from all three storage areas, and the
   JS-heap count is 0 after an in-app master lock (including with the
   viewer never opened, proving nothing module-level caches decrypted
-  entries). Also demonstrates the **integrity** gap in §11.1: replaying a
-  segment into another slot, and substituting one across stores.
+  entries). Two further tests pin the §11.1 **integrity** property that
+  used to be a gap: a segment replayed into another slot is no longer
+  adopted, and one written over the contacts blob is no longer accepted.
+  Both carry positive controls, since "nothing happened" is the expected
+  outcome and is easy to reach for the wrong reason.
 - `draft-memory.spec.ts` — the workspace draft. Ciphertext mechanism
-  passes (absent from WASM memory and storage, rehydrates on unlock); the
-  second test is a deliberate `test.fail()` pinning §8.11, the plaintext
-  that survives master lock in the DOM. It will fail on an unexpected
-  pass the moment that is fixed.
+  passes (absent from WASM memory and storage, rehydrates on unlock). Two
+  further tests guard §8.11 — composed input and decrypted output must not
+  survive a master lock in the JS heap. Both were failing defects; the fix
+  was making those fields uncontrolled so the plaintext never enters React
+  render state. Sets `test.use({ trace: "off" })` — see the trace caveat
+  below.
 - `crx-memory.spec.ts` — the CRX RSA signing key, asserted
   **present-then-absent** rather than absence-only: a needle from the
   interior of prime `p` is found while a `CRX_KEY_STORE` handle is held
   open, then gone after `closeCrxKey`, with a liveness re-assert so the
   zero can't come from a dead scan.
+- `migration.spec.ts` — the upgrade path for users who already have a
+  vault. Seals the contacts blob with the **real** legacy primitive
+  through the live wasm instance, then drives the real app over it:
+  contacts still open after reload + unlock, and the blob is re-sealed
+  under the domain scheme in place. The unit suites cover the migration
+  _control flow_ against `fake-store-crypto.ts`; only this one covers what
+  is actually on a user's disk. Validated by negative control — removing
+  the legacy fallback in `envelope.ts` makes it fail on the
+  contact-still-visible assertion.
 - `heap-retainers.ts` — retainer-aware companion to `heap.ts`. Walks the
   snapshot's edges back to GC roots, which is how §8.11's
   `FormTracker → value-tracker closure → plaintext` chain was found.
   Reach for this when a canary count is non-zero and you need to know
-  *why* rather than just *that*.
+  _why_ rather than just _that_.
 
 > **Heap-needle caveat.** V8 truncates each string node's recorded value
 > to the **first 1024 characters** of the string. A needle taken from
@@ -113,7 +133,7 @@ classic one, loads extensions) — so no display or `xvfb` is needed. Set
 > **Trace-cache caveat.** Run retainer analysis with `--trace=off`.
 > Playwright's tracing attaches a `__playwright_snapshot_cache_` symbol to
 > DOM nodes holding cached serialised values, which shows up as a live
-> retainer of an input's text and *masks* the application-owned chain
+> retainer of an input's text and _masks_ the application-owned chain
 > underneath it. This was observed while fixing §8.11: with tracing on,
 > the only visible retainer was Playwright's own cache; with it off, the
 > real React fiber `alternate` chain appeared. Note the config default is
