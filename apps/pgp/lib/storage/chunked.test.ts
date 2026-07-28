@@ -10,14 +10,15 @@ import {
 } from "./chunked";
 
 /**
- * In-memory stand-in for a chrome.storage area. `perItemCap` mirrors
+ * In-memory stand-in for a browser.storage area. `perItemCap` mirrors
  * sync's QUOTA_BYTES_PER_ITEM: set() throws the same way Chrome does when
  * an item's key + JSON(value) exceeds the cap, so a test can prove that
  * chunking keeps every item under the limit.
  */
 function fakeArea(perItemCap = Infinity) {
   const store = new Map<string, unknown>();
-  const itemBytes = (k: string, v: unknown) => k.length + JSON.stringify(v).length;
+  const itemBytes = (k: string, v: unknown) =>
+    k.length + JSON.stringify(v).length;
   const area = {
     store,
     get: (keys?: string | string[] | null) => {

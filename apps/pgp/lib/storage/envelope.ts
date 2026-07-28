@@ -5,7 +5,7 @@
  * ## Domain separation
  *
  * Each blob is sealed for a **domain**, and the domain is always the
- * chrome.storage key the blob lives under (`pgp_keyring`,
+ * browser.storage key the blob lives under (`pgp_keyring`,
  * `pgp_public_contacts`, `pgp_settings`, `pgp_crx_keys`,
  * `pgp_history_seg_<n>`). The wasm side derives BOTH an HKDF subkey and
  * the AEAD's AAD from it (`gpg-tools:store-subkey:v1:<domain>` /
@@ -24,7 +24,7 @@
  * Before this, every store was sealed under the raw contacts session key
  * with one fixed shared AAD, and nothing in the sealed data named the
  * store or the segment. Confidentiality was fine; integrity was not.
- * Anyone able to write chrome.storage -- with NO knowledge of the vault
+ * Anyone able to write browser.storage -- with NO knowledge of the vault
  * key -- could copy `pgp_history_seg_0` to `pgp_history_seg_1` and have
  * it adopted as a real segment, or drop it on `pgp_public_contacts` and
  * silently empty the user's contact list. Both fail the tag check now.

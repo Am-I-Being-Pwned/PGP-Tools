@@ -1,4 +1,4 @@
-// Browser-global keyboard commands (chrome.commands) that open the
+// Browser-global keyboard commands (browser.commands) that open the
 // side panel in a specific workspace mode. The manifest half lives in
 // wxt.config.ts; the dispatch half in entrypoints/background.ts. Kept
 // as a pure module so the mapping is unit-testable.
@@ -15,7 +15,7 @@ export const COMMAND_TO_MODE: Record<string, WorkspaceAction> = {
   "open-verify": "verify",
 };
 
-/** Resolve a chrome.commands id to its workspace mode, or undefined
+/** Resolve a browser.commands id to its workspace mode, or undefined
  *  for commands we don't route (e.g. _execute_action). */
 export function commandToMode(command: string): WorkspaceAction | undefined {
   return COMMAND_TO_MODE[command];

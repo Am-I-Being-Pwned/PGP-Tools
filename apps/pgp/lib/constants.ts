@@ -11,7 +11,7 @@ export const STORAGE_PREFERENCES = "pgp_preferences";
 export const STORAGE_SETTINGS = "pgp_settings";
 export const STORAGE_MASTER_PROTECTION = "pgp_master_protection";
 /** Plaintext manifest for the segmented encrypted history store: segment
- *  numbers + byte sizes only, never entry data. Always chrome.storage.local
+ *  numbers + byte sizes only, never entry data. Always browser.storage.local
  *  (sync's total quota is ~100 KB, and history shouldn't leave the device). */
 export const STORAGE_HISTORY = "pgp_history";
 /** Encrypted history segments live at `pgp_history_seg_<n>`. */
@@ -25,7 +25,7 @@ export const STORAGE_CRX_KEYS = "pgp_crx_keys";
  *  Chrome's auto-submenu grouping. */
 export const MENU_OPEN_IN_PGP = "pgp-open";
 
-/** chrome.storage.session key for the most-recent pending context-menu
+/** browser.storage.session key for the most-recent pending context-menu
  *  operation. Survives service-worker restarts and lets the side panel
  *  pick the op up on mount regardless of timing. */
 export const SESSION_PENDING_OP = "pgp_pending_operation";

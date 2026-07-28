@@ -1,3 +1,4 @@
+import type { Browser } from "wxt/browser";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SettingsIcon } from "lucide-react";
 
@@ -169,7 +170,7 @@ export default function App() {
       // Wipe any unconsumed context-menu pending op. Without this a
       // selection that landed during an unlocked session could sit
       // in storage.session and surface on the next unlock.
-      void chrome.storage.session.remove(SESSION_PENDING_OP);
+      void browser.storage.session.remove(SESSION_PENDING_OP);
 
       // Password-master path leaves the contacts session key in WASM
       // (passkey path already drops it after each decrypt).
@@ -236,7 +237,7 @@ export default function App() {
     };
   }, []);
 
-  // Tab-away lock via `chrome.windows.onFocusChanged`. Fires on real
+  // Tab-away lock via `browser.windows.onFocusChanged`. Fires on real
   // window/app focus changes only -- not on system overlays like the
   // WebAuthn dialog -- so it avoids the visibilitychange flicker that
   // was re-locking the user mid-unlock. Locks when focus leaves
@@ -244,7 +245,7 @@ export default function App() {
   const ownWindowIdRef = useRef<number | null>(null);
   useEffect(() => {
     let cancelled = false;
-    void chrome.windows.getCurrent().then((win) => {
+    void browser.windows.getCurrent().then((win) => {
       if (cancelled) return;
       ownWindowIdRef.current = win.id ?? null;
     });
@@ -257,15 +258,15 @@ export default function App() {
       if (s.unlockedKeyIds.size > 0) s.lockAll();
       if (masterUnlockedRef.current) void doMasterLockRef.current(true);
     };
-    chrome.windows.onFocusChanged.addListener(onFocus);
+    browser.windows.onFocusChanged.addListener(onFocus);
     return () => {
       cancelled = true;
-      chrome.windows.onFocusChanged.removeListener(onFocus);
+      browser.windows.onFocusChanged.removeListener(onFocus);
     };
   }, []);
 
   // OS lockscreen → always lock. We do not subscribe to
-  // chrome.idle's `"idle"` state -- only `"locked"`.
+  // browser.idle's `"idle"` state -- only `"locked"`.
   useEffect(() => {
     const onState = (state: "idle" | "active" | "locked") => {
       if (state !== "locked") return;
@@ -273,8 +274,8 @@ export default function App() {
       if (s.unlockedKeyIds.size > 0) s.lockAll();
       if (masterUnlockedRef.current) void doMasterLockRef.current(true);
     };
-    chrome.idle.onStateChanged.addListener(onState);
-    return () => chrome.idle.onStateChanged.removeListener(onState);
+    browser.idle.onStateChanged.addListener(onState);
+    return () => browser.idle.onStateChanged.removeListener(onState);
   }, []);
 
   // Apply the encrypted (non-bootstrap) settings to UI state. These
@@ -322,7 +323,7 @@ export default function App() {
       setMasterProtection(mp);
       setMasterProtectionLoaded(true);
     })();
-    // Pending op delivery is now via chrome.storage.session
+    // Pending op delivery is now via browser.storage.session
     // (see usePendingOperation). No runtime handshake needed.
   }, [applyPrefs]);
 
@@ -379,7 +380,10 @@ export default function App() {
     openFocusDoneRef.current = true;
     if (activeTab !== "workspace") return;
     // Deferred a tick so the workspace has mounted the textarea.
-    const t = setTimeout(() => document.getElementById("pgp-input")?.focus(), 0);
+    const t = setTimeout(
+      () => document.getElementById("pgp-input")?.focus(),
+      0,
+    );
     return () => clearTimeout(t);
   }, [
     onboardingComplete,
@@ -409,8 +413,8 @@ export default function App() {
   // unlock effect re-read instead.
   useEffect(() => {
     const onPrefsStorageChanged = (
-      changes: Record<string, chrome.storage.StorageChange>,
-      area: chrome.storage.AreaName,
+      changes: Record<string, Browser.storage.StorageChange>,
+      area: Browser.storage.AreaName,
     ) => {
       if (area !== "local" && area !== "sync") return;
       if (!(STORAGE_SETTINGS in changes) && !(STORAGE_PREFERENCES in changes)) {
@@ -422,8 +426,9 @@ export default function App() {
         setWorkspacePrefsVersion((v) => v + 1);
       });
     };
-    chrome.storage.onChanged.addListener(onPrefsStorageChanged);
-    return () => chrome.storage.onChanged.removeListener(onPrefsStorageChanged);
+    browser.storage.onChanged.addListener(onPrefsStorageChanged);
+    return () =>
+      browser.storage.onChanged.removeListener(onPrefsStorageChanged);
   }, [applyPrefs]);
 
   const [historyOpen, setHistoryOpen] = useState(false);

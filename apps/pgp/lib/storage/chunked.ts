@@ -1,7 +1,9 @@
+import type { Browser } from "wxt/browser";
+
 /**
- * Transparent per-item chunking for chrome.storage.
+ * Transparent per-item chunking for browser.storage.
  *
- * chrome.storage.sync caps each item at QUOTA_BYTES_PER_ITEM (8 KB),
+ * browser.storage.sync caps each item at QUOTA_BYTES_PER_ITEM (8 KB),
  * measured as the JSON-stringified value plus the key's length. A single
  * encrypted keyring / contacts / settings blob (base64 { iv, ciphertext })
  * sails past that once a couple of private keys are stored -- which is why
@@ -20,13 +22,12 @@
  */
 
 export type StorageArea =
-  | chrome.storage.LocalStorageArea
-  | chrome.storage.SyncStorageArea;
+  Browser.storage.LocalStorageArea | Browser.storage.SyncStorageArea;
 
 /** Manifest written in place of an oversized value. `__sc` is the chunk
  *  count; `__len` is the total length of the reassembled JSON string. No
  *  real stored value carries these fields, so `__sc` is an unambiguous
- *  marker. `__len` binds the chunks to this manifest: chrome.storage.sync
+ *  marker. `__len` binds the chunks to this manifest: browser.storage.sync
  *  propagates each item to other devices independently, so a reader can
  *  briefly see this manifest before every chunk arrives (or alongside a
  *  stale chunk of a different length). Verifying the reassembled length
@@ -179,7 +180,7 @@ export async function removeChunked(
   await area.remove(key);
 }
 
-/** True for a chrome.storage quota error (per-item or total). Used to
+/** True for a browser.storage quota error (per-item or total). Used to
  *  turn the raw `...quota exceeded` throw into a friendly message. */
 export function isQuotaExceeded(e: unknown): boolean {
   const msg = e instanceof Error ? e.message : String(e);

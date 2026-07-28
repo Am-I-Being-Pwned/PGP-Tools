@@ -8,9 +8,11 @@
   "packageManager": "pnpm@10.19.0",
   "scripts": {
     "build": "turbo run build",
+    "build:firefox": "turbo run build:firefox",
     "clean": "git clean -xdf node_modules",
     "clean:workspaces": "turbo run clean",
     "dev": "turbo watch dev -F @amibeingpwned/pgp...",
+    "dev:firefox": "turbo watch dev:firefox -F @amibeingpwned/pgp...",
     "format": "turbo run format --continue -- --cache --cache-location .cache/.prettiercache",
     "format:fix": "turbo run format --continue -- --write --cache --cache-location .cache/.prettiercache",
     "lint": "turbo run lint --continue -- --cache --cache-location .cache/.eslintcache",
@@ -18,7 +20,9 @@
     "test": "turbo run test",
     "test:e2e": "turbo run test:e2e",
     "typecheck": "turbo run typecheck",
-    "zip": "turbo -F @amibeingpwned/pgp zip",
+    "zip": "pnpm zip:chrome && pnpm zip:firefox",
+    "zip:chrome": "turbo -F @amibeingpwned/pgp zip",
+    "zip:firefox": "turbo -F @amibeingpwned/pgp zip:firefox",
     "ui-add": "turbo run ui-add"
   },
   "devDependencies": {

@@ -109,7 +109,10 @@ describe("presentError", () => {
   });
 
   it("omits the key ID when the error has none", () => {
-    const presented = presentError("No suitable decryption key found", FALLBACK);
+    const presented = presentError(
+      "No suitable decryption key found",
+      FALLBACK,
+    );
     expect(presented.message).not.toMatch(/key ID/);
   });
 
@@ -123,7 +126,10 @@ describe("presentError", () => {
 
   describe("WebAuthn", () => {
     it("treats NotAllowedError as a user cancel, not a failure", () => {
-      const e = new DOMException("The operation was aborted", "NotAllowedError");
+      const e = new DOMException(
+        "The operation was aborted",
+        "NotAllowedError",
+      );
       const presented = presentError(e, FALLBACK);
       expect(presented.message).toMatch(/dismissed/i);
       expect(presented.remedy?.action).toBe("retry");
@@ -190,7 +196,7 @@ describe("presentError", () => {
     expect(presented.remedy?.action).toBe("unlock");
   });
 
-  it("classifies chrome.storage quota errors", () => {
+  it("classifies browser.storage quota errors", () => {
     const e = new Error("Resource::kQuotaBytesPerItem quota exceeded");
     const presented = presentError(e, FALLBACK);
     expect(presented.message).toMatch(/storage is full/i);

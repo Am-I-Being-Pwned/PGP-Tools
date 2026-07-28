@@ -9,7 +9,7 @@
     "dev:firefox": "wxt -b firefox",
     "build:wasm": "cd gpg-wasm && wasm-pack build --target web --release",
     "build": "pnpm build:wasm && wxt build && node scripts/audit-invariants.mjs && node scripts/audit-network.mjs",
-    "build:firefox": "wxt build -b firefox",
+    "build:firefox": "pnpm build:wasm && wxt build -b firefox && node scripts/audit-invariants.mjs && node scripts/audit-network.mjs .output/firefox-mv2",
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
     "format": "prettier --check . --ignore-path ../../.gitignore --ignore-path .prettierignore",

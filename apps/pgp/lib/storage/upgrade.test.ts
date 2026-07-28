@@ -78,7 +78,7 @@ vi.mock("../pgp/wasm", async () => {
   };
 });
 
-/** In-memory chrome.storage area (same shape as history.test.ts). */
+/** In-memory browser.storage area (same shape as history.test.ts). */
 function fakeArea() {
   const store = new Map<string, unknown>();
   return {
@@ -109,9 +109,9 @@ beforeEach(() => {
   local = fakeArea();
   sync = fakeArea();
   // Deliberately NO `permissions` key: v1.3.1 never requested
-  // unlimitedStorage, and Firefox doesn't expose chrome.permissions the
+  // unlimitedStorage, and Firefox doesn't expose browser.permissions the
   // same way -- history's budget code must tolerate its absence.
-  vi.stubGlobal("chrome", { storage: { local, sync } });
+  vi.stubGlobal("browser", { storage: { local, sync } });
   wasmMock.session = true;
   invalidateLocationCache();
 });
@@ -351,7 +351,7 @@ describe("history on a v1.3.1 profile (no history keys)", () => {
     expect(historyKeys).toEqual([]);
   });
 
-  it("treats an absent chrome.permissions API as no unlimited storage", async () => {
+  it("treats an absent browser.permissions API as no unlimited storage", async () => {
     await expect(hasUnlimitedStorage()).resolves.toBe(false);
     await expect(requestUnlimitedHistoryStorage()).resolves.toBe(false);
   });

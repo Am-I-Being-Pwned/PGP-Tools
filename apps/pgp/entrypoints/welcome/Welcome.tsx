@@ -3,6 +3,8 @@ import { ArrowRightIcon, LockKeyholeIcon } from "lucide-react";
 
 import { Button } from "@amibeingpwned/ui/button";
 
+import { hasSidePanel, openSidePanel } from "../../lib/side-panel";
+
 export function Welcome() {
   const [opened, setOpened] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -10,14 +12,22 @@ export function Welcome() {
   const handleStart = async () => {
     setError(null);
     try {
-      // Must run in this user-gesture handler -- chrome.sidePanel.open
-      // requires one. We can't do this from background's `onInstalled`,
-      // hence this welcome page.
-      const win = await chrome.windows.getCurrent();
-      if (win.id === undefined) {
-        throw new Error("No window id");
+      // Must run in this user-gesture handler -- opening the panel
+      // requires one on both Chrome and Firefox. We can't do this from
+      // background's `onInstalled`, hence this welcome page.
+      //
+      // Firefox's sidebarAction.open() takes no target and would lose
+      // the gesture behind the getCurrent() await, so only look the
+      // window up on Chrome, which needs it.
+      if (hasSidePanel()) {
+        const win = await browser.windows.getCurrent();
+        if (win.id === undefined) {
+          throw new Error("No window id");
+        }
+        await openSidePanel({ windowId: win.id });
+      } else {
+        await openSidePanel({});
       }
-      await chrome.sidePanel.open({ windowId: win.id });
       setOpened(true);
     } catch (e) {
       setError(

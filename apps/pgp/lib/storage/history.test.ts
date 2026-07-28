@@ -69,7 +69,7 @@ vi.mock("./preferences", () => ({
   getPreferences: () => Promise.resolve({ ...prefsMock }),
 }));
 
-/** In-memory chrome.storage area (same shape as chunked.test.ts). */
+/** In-memory browser.storage area (same shape as chunked.test.ts). */
 function fakeArea() {
   const store = new Map<string, unknown>();
   return {
@@ -107,7 +107,7 @@ beforeEach(() => {
     contains: vi.fn().mockResolvedValue(false),
     request: vi.fn().mockResolvedValue(false),
   };
-  vi.stubGlobal("chrome", { storage: { local, sync }, permissions });
+  vi.stubGlobal("browser", { storage: { local, sync }, permissions });
   wasmMock.session = true;
   wasmMock.encryptCalls = 0;
   wasmMock.decryptCalls = 0;
@@ -196,7 +196,7 @@ describe("append / load", () => {
     expect(decrypt.files).toEqual([{ name: "a.gpg", size: 10 }]);
   });
 
-  it("writes to chrome.storage.local even when storageLocation is sync", async () => {
+  it("writes to browser.storage.local even when storageLocation is sync", async () => {
     await sync.set({ pgp_preferences: { storageLocation: "sync" } });
 
     await appendHistoryEntry(entry("hello"));
@@ -309,7 +309,7 @@ describe("byte budget", () => {
 
 /** Make the area's set() reject like Chrome's quota error from the
  *  `nth` call onward (1-based). Gets/removes keep working, mirroring a
- *  full-but-readable chrome.storage.local. */
+ *  full-but-readable browser.storage.local. */
 function failSetFrom(area: ReturnType<typeof fakeArea>, nth: number): void {
   const original = area.set;
   let calls = 0;
@@ -699,7 +699,7 @@ describe("requestUnlimitedHistoryStorage", () => {
   });
 
   it("treats a missing permissions API as not granted (Firefox-safe)", async () => {
-    vi.stubGlobal("chrome", { storage: { local, sync } });
+    vi.stubGlobal("browser", { storage: { local, sync } });
     await expect(requestUnlimitedHistoryStorage()).resolves.toBe(false);
     // The budget also falls back to the conservative tier.
     await appendHistoryEntry(entry("still works"));

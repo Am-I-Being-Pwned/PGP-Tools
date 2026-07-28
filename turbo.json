@@ -9,12 +9,21 @@
       "dependsOn": ["^build"],
       "outputs": [".cache/tsbuildinfo.json", "dist/**", ".output/**"]
     },
+    "build:firefox": {
+      "dependsOn": ["^build"],
+      "outputs": [".cache/tsbuildinfo.json", "dist/**", ".output/**"]
+    },
     "dev": {
       "dependsOn": ["^dev"],
       "cache": false,
       "persistent": false
     },
     "@amibeingpwned/pgp#dev": {
+      "persistent": true
+    },
+    "@amibeingpwned/pgp#dev:firefox": {
+      "dependsOn": ["^dev"],
+      "cache": false,
       "persistent": true
     },
     "@amibeingpwned/pgp#typecheck": {
@@ -44,6 +53,10 @@
     },
     "zip": {
       "dependsOn": ["build"],
+      "outputs": [".output/*.zip"]
+    },
+    "zip:firefox": {
+      "dependsOn": ["build:firefox"],
       "outputs": [".output/*.zip"]
     },
     "clean": {

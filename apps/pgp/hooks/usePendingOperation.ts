@@ -1,3 +1,4 @@
+import type { Browser } from "wxt/browser";
 import { useCallback, useEffect, useState } from "react";
 
 import type { OperationAction, PendingOperation } from "../lib/messages";
@@ -37,7 +38,7 @@ function isFresh(op: PendingOperation): boolean {
 }
 
 /**
- * Source of truth: `chrome.storage.session` under `SESSION_PENDING_OP`.
+ * Source of truth: `browser.storage.session` under `SESSION_PENDING_OP`.
  * The background writes there on context-menu click; we read on mount
  * and subscribe to changes, removing the entry as soon as we consume
  * it so re-renders don't re-apply the same op.
@@ -58,12 +59,12 @@ export function usePendingOperation() {
     const ac = new AbortController();
 
     const consume = async (): Promise<boolean> => {
-      const result = await chrome.storage.session.get(SESSION_PENDING_OP);
+      const result = await browser.storage.session.get(SESSION_PENDING_OP);
       const op = result[SESSION_PENDING_OP];
       if (!isPendingOperation(op)) return false;
       // Always remove first, regardless of freshness -- a stale op
       // shouldn't keep sitting in storage even if we don't apply it.
-      await chrome.storage.session.remove(SESSION_PENDING_OP);
+      await browser.storage.session.remove(SESSION_PENDING_OP);
       if (!isFresh(op)) return false;
       if (ac.signal.aborted) return true;
       setPending(op);
@@ -87,8 +88,8 @@ export function usePendingOperation() {
     })();
 
     const onChange = (
-      changes: Record<string, chrome.storage.StorageChange>,
-      area: chrome.storage.AreaName,
+      changes: Record<string, Browser.storage.StorageChange>,
+      area: Browser.storage.AreaName,
     ) => {
       if (area !== "session") return;
       if (!(SESSION_PENDING_OP in changes)) return;
@@ -98,10 +99,10 @@ export function usePendingOperation() {
       }
     };
 
-    chrome.storage.onChanged.addListener(onChange);
+    browser.storage.onChanged.addListener(onChange);
     return () => {
       ac.abort();
-      chrome.storage.onChanged.removeListener(onChange);
+      browser.storage.onChanged.removeListener(onChange);
     };
   }, []);
 

@@ -49,7 +49,7 @@ vi.mock("../pgp/wasm", async () => {
   };
 });
 
-/** In-memory chrome.storage area (same shape as history.test.ts). */
+/** In-memory browser.storage area (same shape as history.test.ts). */
 function fakeArea() {
   const store = new Map<string, unknown>();
   return {
@@ -79,7 +79,7 @@ let sync: ReturnType<typeof fakeArea>;
 beforeEach(() => {
   local = fakeArea();
   sync = fakeArea();
-  vi.stubGlobal("chrome", { storage: { local, sync } });
+  vi.stubGlobal("browser", { storage: { local, sync } });
   wasmMock.session = true;
   invalidateLocationCache();
 });

@@ -328,6 +328,61 @@ function scanCssFile(filePath, relPath) {
   return findings;
 }
 
+// ── Expected production policy ──────────────────────────────────────
+// Restated here INDEPENDENTLY of wxt.config.ts on purpose: the point of
+// the audit is to catch the config being changed, so importing the
+// value from it would defeat the check. Both the Chrome MV3 build and
+// the Firefox MV2 build must land on exactly this policy -- a directive
+// added, dropped or re-valued fails the build.
+const EXPECTED_PROD_CSP = {
+  "default-src": "'none'",
+  "script-src": "'self' 'wasm-unsafe-eval'",
+  "connect-src": "'self'",
+  "style-src": "'self' 'unsafe-inline'",
+  "img-src": "'self' data:",
+  "font-src": "'self'",
+  "worker-src": "'self'",
+  "frame-src": "'none'",
+  "child-src": "'none'",
+  "form-action": "'none'",
+  "object-src": "'none'",
+  "media-src": "'none'",
+  "base-uri": "'none'",
+  "manifest-src": "'none'",
+};
+
+/** Parse a policy string into { directive: "normalised value" }. */
+function parseCsp(csp) {
+  const out = {};
+  for (const part of csp.split(";")) {
+    const tokens = part.trim().split(/\s+/).filter(Boolean);
+    if (tokens.length === 0) continue;
+    out[tokens[0].toLowerCase()] = tokens.slice(1).join(" ");
+  }
+  return out;
+}
+
+/** Exact diff of the built policy against EXPECTED_PROD_CSP. */
+function diffAgainstExpected(csp) {
+  const actual = parseCsp(csp);
+  const errors = [];
+  for (const [directive, expected] of Object.entries(EXPECTED_PROD_CSP)) {
+    if (!(directive in actual)) {
+      errors.push(`CSP is missing ${directive} (expected "${expected}")`);
+    } else if (actual[directive] !== expected) {
+      errors.push(
+        `CSP ${directive} is "${actual[directive]}", expected "${expected}"`,
+      );
+    }
+  }
+  for (const directive of Object.keys(actual)) {
+    if (!(directive in EXPECTED_PROD_CSP)) {
+      errors.push(`CSP has an unexpected directive: ${directive}`);
+    }
+  }
+  return errors;
+}
+
 // ── Manifest CSP validator ──────────────────────────────────────────
 // Ensures the built manifest.json contains the expected CSP directives.
 // A malicious build plugin could strip or weaken the CSP.
@@ -341,8 +396,70 @@ function validateManifestCsp(outputDir) {
     return ["manifest.json not found or invalid"];
   }
 
-  const csp = manifest.content_security_policy?.extension_pages ?? "";
+  // MV3 nests the policy under `extension_pages`; MV2 (the Firefox
+  // build) keeps `content_security_policy` as a plain string.
+  const rawCsp = manifest.content_security_policy;
+  const csp =
+    (typeof rawCsp === "string" ? rawCsp : rawCsp?.extension_pages) ?? "";
   const errors = [];
+
+  // A shipped build must never carry the dev-server relaxations. These
+  // tokens are what a dev CSP needs and prod must never contain, so a
+  // dev-mode manifest reaching a release build fails here loudly rather
+  // than shipping with the panel talking to localhost.
+  const FORBIDDEN_IN_PROD = [
+    [
+      /localhost/i,
+      "CSP references localhost (dev-server policy in a prod build)",
+    ],
+    [
+      /\b127\.0\.0\.1\b/,
+      "CSP references 127.0.0.1 (dev-server policy in a prod build)",
+    ],
+    [
+      /wss?:\/\//i,
+      "CSP allows a websocket origin (dev-server policy in a prod build)",
+    ],
+    [/http:\/\//i, "CSP allows a plaintext http origin"],
+    // The extension makes no remote requests at all, so ANY remote origin
+    // is a regression. Adding one is a deliberate act; update this audit
+    // in the same commit.
+    [/https:\/\//i, "CSP allows a remote https origin"],
+    [
+      /'unsafe-inline'(?![^;]*style-src)/,
+      "CSP allows 'unsafe-inline' outside style-src",
+    ],
+    [/data:(?![^;]*img-src)/, "CSP allows data: outside img-src"],
+  ];
+  for (const [pattern, message] of FORBIDDEN_IN_PROD) {
+    // style-src legitimately carries 'unsafe-inline' and img-src carries
+    // data:, so test those two directives separately from the rest.
+    const scoped = csp
+      .split(";")
+      .filter((d) => {
+        const name = d.trim().split(/\s+/)[0];
+        if (pattern.source.includes("unsafe-inline"))
+          return name !== "style-src";
+        if (pattern.source.includes("data:")) return name !== "img-src";
+        return true;
+      })
+      .join(";");
+    if (pattern.test(scoped)) errors.push(message);
+  }
+
+  // The policy must actually be present. An empty string here means the
+  // manifest shipped with no CSP at all (or a shape we failed to read),
+  // which the per-directive checks below would report as eight separate
+  // failures; call it once, clearly.
+  if (csp.trim() === "") {
+    errors.push("No content_security_policy in the built manifest");
+    return errors;
+  }
+
+  // Exact match against the expected policy. This subsumes the
+  // per-directive minimums below, but both are kept: the diff says
+  // precisely WHAT drifted, the minimums say why it matters.
+  errors.push(...diffAgainstExpected(csp));
 
   // Each directive must contain at least one of the acceptable tokens.
   // 'none' is strictly stronger than 'self' and always acceptable.

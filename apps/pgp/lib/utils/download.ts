@@ -1,3 +1,5 @@
+import type { Browser } from "wxt/browser";
+
 /** Browser download helpers shared by the workspace views. */
 
 /** A named output produced by a per-file operation. */
@@ -33,35 +35,31 @@ export function downloadResults(results: FileResult[]): void {
   }
 }
 
-const DOWNLOADS_PERMISSION: chrome.permissions.Permissions = {
+const DOWNLOADS_PERMISSION: Browser.permissions.Permissions = {
   permissions: ["downloads"],
 };
 
 /** Prompt for the optional `downloads` permission (idempotent). Returns
  *  whether it is now granted. Requesting a not-yet-granted permission needs
  *  a user gesture; when called without one (e.g. the auto-save right after
- *  an async sign) `chrome.permissions.request` throws -- treat that as "not
+ *  an async sign) `browser.permissions.request` throws -- treat that as "not
  *  granted" so the caller falls back to the manual Save button rather than
  *  surfacing an unhandled rejection. An already-granted permission needs no
  *  gesture, so auto-save works on every sign after the first. */
 async function requestDownloadsPermission(): Promise<boolean> {
-  if (await chrome.permissions.contains(DOWNLOADS_PERMISSION)) return true;
+  if (await browser.permissions.contains(DOWNLOADS_PERMISSION)) return true;
   try {
-    return await chrome.permissions.request(DOWNLOADS_PERMISSION);
+    return await browser.permissions.request(DOWNLOADS_PERMISSION);
   } catch {
     return false;
   }
 }
 
 export type SaveResult =
-  | "saved"
-  | "cancelled"
-  | "denied"
-  | "unsupported"
-  | "blocked";
+  "saved" | "cancelled" | "denied" | "unsupported" | "blocked";
 
 /**
- * Save a signed `.crx` to disk via `chrome.downloads` with a "Save As"
+ * Save a signed `.crx` to disk via `browser.downloads` with a "Save As"
  * prompt, and WITHOUT letting Chrome install it. This is subtle -- here is
  * exactly why it works, straight from the Chromium source:
  *
@@ -93,7 +91,7 @@ export async function saveCrxViaPrompt(
   if (!(await requestDownloadsPermission())) return "denied";
   // The namespace only exists once the optional permission is granted, so
   // the @types "always present" typing is a lie here -- guard at runtime.
-  const downloads = (chrome as { downloads?: typeof chrome.downloads })
+  const downloads = (browser as { downloads?: typeof browser.downloads })
     .downloads;
   if (!downloads) return "unsupported";
 
@@ -129,7 +127,7 @@ function interruptResult(reason: string | undefined): SaveResult {
 
 /** Resolve once the download reaches a terminal state. */
 function waitForDownload(
-  downloads: typeof chrome.downloads,
+  downloads: typeof browser.downloads,
   id: number,
 ): Promise<SaveResult> {
   return new Promise((resolve) => {
@@ -137,7 +135,7 @@ function waitForDownload(
       downloads.onChanged.removeListener(onChanged);
       resolve(result);
     };
-    const onChanged = (delta: chrome.downloads.DownloadDelta) => {
+    const onChanged = (delta: Browser.downloads.DownloadDelta) => {
       if (delta.id !== id) return;
       if (delta.state?.current === "complete") settle("saved");
       else if (delta.state?.current === "interrupted")
@@ -145,7 +143,10 @@ function waitForDownload(
     };
     downloads.onChanged.addListener(onChanged);
     // If it already reached a decision before we attached the listener.
-    downloads.search({ id }, (items) => {
+    // Promise form, not the callback overload: Firefox's promise-based
+    // API ignores a trailing callback outright, which would leave this
+    // safety net dead and hang the caller on an already-finished download.
+    void downloads.search({ id }).then((items) => {
       if (items.length === 0) return;
       const item = items[0];
       if (item.state === "complete") settle("saved");

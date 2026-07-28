@@ -3,7 +3,7 @@
  * encrypted store as the keyring: the array is JSON-serialised then
  * AES-256-GCM sealed under a subkey of the in-WASM contacts/master
  * session key, domain-separated by this store's own storage key, before
- * it reaches chrome.storage. See `storage/encrypted-store.ts`.
+ * it reaches browser.storage. See `storage/encrypted-store.ts`.
  */
 
 import type { CrxSigningKeyBlob } from "./types";

@@ -1,12 +1,14 @@
+import type { Browser } from "wxt/browser";
+
 import type { StorageLocation } from "./preferences";
 import { STORAGE_PREFERENCES } from "../constants";
 import { getChunked, removeChunked, setChunked } from "./chunked";
 
 /**
- * Thin wrapper over chrome.storage that routes reads/writes to the
+ * Thin wrapper over browser.storage that routes reads/writes to the
  * user's chosen location (local or sync).
  *
- * The location is itself stored in chrome.storage.sync (so it's always
+ * The location is itself stored in browser.storage.sync (so it's always
  * reachable regardless of the current choice).
  *
  * Includes a per-key mutex to prevent read-modify-write races and
@@ -38,7 +40,7 @@ let cachedLocation: StorageLocation | null = null;
 
 async function resolveLocation(): Promise<StorageLocation> {
   if (cachedLocation) return cachedLocation;
-  const result = await chrome.storage.sync.get(STORAGE_PREFERENCES);
+  const result = await browser.storage.sync.get(STORAGE_PREFERENCES);
   const prefs = result[STORAGE_PREFERENCES] as
     { storageLocation?: StorageLocation } | undefined;
   cachedLocation = prefs?.storageLocation ?? "local";
@@ -60,8 +62,8 @@ export function currentStorageLocation(): Promise<StorageLocation> {
 
 function area(
   location: StorageLocation,
-): chrome.storage.LocalStorageArea | chrome.storage.SyncStorageArea {
-  return location === "sync" ? chrome.storage.sync : chrome.storage.local;
+): Browser.storage.LocalStorageArea | Browser.storage.SyncStorageArea {
+  return location === "sync" ? browser.storage.sync : browser.storage.local;
 }
 
 export async function getItem<T>(key: string): Promise<T | undefined> {

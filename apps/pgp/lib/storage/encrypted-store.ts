@@ -34,7 +34,7 @@ import { isStoredEnvelope, openEnvelope, sealEnvelope } from "./envelope";
 import { isCanonicalPadding, padPlaintext, unpadPlaintext } from "./padding";
 
 export interface EncryptedStore<T> {
-  /** chrome.storage key the encrypted blob lives under. */
+  /** browser.storage key the encrypted blob lives under. */
   storageKey: string;
   /** Runtime validator applied to every deserialised item. */
   isValid: (v: unknown) => v is T;
@@ -93,7 +93,7 @@ export async function saveEncryptedArray<T>(
 }
 
 function area(loc: StorageLocation) {
-  return loc === "sync" ? chrome.storage.sync : chrome.storage.local;
+  return loc === "sync" ? browser.storage.sync : browser.storage.local;
 }
 
 /**

@@ -622,7 +622,7 @@ export function SettingsView({
           <h2 className="mb-2 text-sm font-semibold">Developer</h2>
           <div className="border-border rounded-md border p-4">
             <p className="text-muted-foreground text-xs">
-              Inspect chrome.storage and dump WASM memory for testing. This
+              Inspect browser.storage and dump WASM memory for testing. This
               section only appears in development builds.
             </p>
             <Button

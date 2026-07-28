@@ -23,7 +23,11 @@ if (import.meta.env.DEV) {
   // No-op in dev so HMR can use WebSocket etc. See SECURITY.md §7 --
   // production CSP + this lockdown together pin outbound network.
 } else {
-  const isExtensionUrl = (url: string) => url.startsWith("chrome-extension://");
+  // Our own packaged resources. Chrome serves them from chrome-extension://
+  // and Firefox from moz-extension://; missing the Firefox scheme sent the
+  // wasm load down the header-stripping branch instead of straight through.
+  const isExtensionUrl = (url: string) =>
+    url.startsWith("chrome-extension://") || url.startsWith("moz-extension://");
   const BLOCKED_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
   const _fetch = globalThis.fetch;

@@ -16,7 +16,7 @@
  * tag check. Segments written before domain separation still open (legacy
  * fallback) and are re-sealed in place on the first read.
  *
- * History always lives in chrome.storage.local, regardless of the user's
+ * History always lives in browser.storage.local, regardless of the user's
  * storageLocation preference: sync's total quota (~100 KB) couldn't hold
  * it, and history shouldn't leave the device anyway.
  *
@@ -117,10 +117,10 @@ export function resolveBudget(hasUnlimited: boolean): number {
 }
 
 /** The permission API, or undefined where it isn't exposed (Firefox
- *  behaves differently here) -- the chrome types claim it always exists,
+ *  behaves differently here) -- the types claim it always exists,
  *  hence the widening. */
-function permissionsApi(): typeof chrome.permissions | undefined {
-  return (chrome as Partial<typeof chrome>).permissions;
+function permissionsApi(): typeof browser.permissions | undefined {
+  return (browser as Partial<typeof browser>).permissions;
 }
 
 /** Whether the optional `unlimitedStorage` permission is currently
@@ -152,17 +152,17 @@ export async function requestUnlimitedHistoryStorage(): Promise<boolean> {
   }
 }
 
-// ── storage plumbing (always chrome.storage.local) ───────────────────
+// ── storage plumbing (always browser.storage.local) ───────────────────
 
 async function readManifest(): Promise<HistoryManifest> {
-  const raw = (await chrome.storage.local.get(STORAGE_HISTORY))[
+  const raw = (await browser.storage.local.get(STORAGE_HISTORY))[
     STORAGE_HISTORY
   ];
   return isManifest(raw) ? raw : { segs: [] };
 }
 
 async function writeManifest(manifest: HistoryManifest): Promise<void> {
-  await chrome.storage.local.set({ [STORAGE_HISTORY]: manifest });
+  await browser.storage.local.set({ [STORAGE_HISTORY]: manifest });
 }
 
 /** Decrypt one segment. Throw-safe: a segment that is missing, garbled,
@@ -184,7 +184,7 @@ async function writeManifest(manifest: HistoryManifest): Promise<void> {
 async function readSegment(n: number): Promise<HistoryEntry[]> {
   let plaintext: Uint8Array | null = null;
   try {
-    const blob = (await chrome.storage.local.get(segKey(n)))[segKey(n)];
+    const blob = (await browser.storage.local.get(segKey(n)))[segKey(n)];
     if (!isStoredEnvelope(blob)) return [];
     const opened = await openEnvelope(segKey(n), blob);
     plaintext = opened.plaintext;
@@ -195,7 +195,7 @@ async function readSegment(n: number): Promise<HistoryEntry[]> {
       // Re-seal the exact plaintext (not a re-serialisation of `entries`)
       // so nothing is dropped and `bytes` stays byte-for-byte correct.
       try {
-        await chrome.storage.local.set({
+        await browser.storage.local.set({
           [segKey(n)]: await sealEnvelope(segKey(n), plaintext),
         });
       } catch {
@@ -224,7 +224,7 @@ async function writeSegment(
   const json = new TextEncoder().encode(JSON.stringify(entries));
   const bytes = json.length;
   try {
-    await chrome.storage.local.set({
+    await browser.storage.local.set({
       [segKey(n)]: await sealEnvelope(segKey(n), json),
     });
     return bytes;
@@ -244,7 +244,7 @@ async function pruneToBudget(manifest: HistoryManifest): Promise<boolean> {
     const oldest = manifest.segs.shift();
     if (!oldest) break;
     total -= oldest.bytes;
-    await chrome.storage.local.remove(segKey(oldest.n));
+    await browser.storage.local.remove(segKey(oldest.n));
     pruned = true;
   }
   return pruned;
@@ -252,7 +252,7 @@ async function pruneToBudget(manifest: HistoryManifest): Promise<boolean> {
 
 /** Segment numbers present in storage under the segment prefix,
  *  ascending. `withLock` only serializes within one JS context and
- *  chrome.storage has no compare-and-swap, so two extension contexts
+ *  browser.storage has no compare-and-swap, so two extension contexts
  *  (e.g. side panels in two browser windows) appending concurrently do
  *  racing read-modify-writes on the manifest: one context's manifest
  *  write can drop a segment the other just published. Scanning by
@@ -260,9 +260,9 @@ async function pruneToBudget(manifest: HistoryManifest): Promise<boolean> {
  *  trusting the manifest alone. Residual race, accepted honestly: two
  *  contexts appending to the SAME head segment blob still last-write-
  *  wins (one entry lost) -- that can't be fixed without a cross-context
- *  CAS, which chrome.storage doesn't offer. */
+ *  CAS, which browser.storage doesn't offer. */
 async function scanSegmentNumbers(): Promise<number[]> {
-  const all = await chrome.storage.local.get(null);
+  const all = await browser.storage.local.get(null);
   return Object.keys(all)
     .filter((k) => k.startsWith(STORAGE_HISTORY_SEGMENT_PREFIX))
     .map((k) => Number(k.slice(STORAGE_HISTORY_SEGMENT_PREFIX.length)))
@@ -342,7 +342,7 @@ export async function appendHistoryEntry(
       // still references it, only with an undercounted byte size.
       if (isNewSegment) {
         try {
-          await chrome.storage.local.remove(segKey(head.n));
+          await browser.storage.local.remove(segKey(head.n));
         } catch {
           // best-effort; clearHistory's prefix scan sweeps leftovers
         }
@@ -429,12 +429,12 @@ export async function loadHistory(): Promise<HistoryEntry[]> {
  *  manifest doesn't list, and "clear history" must remove those too. */
 export async function clearHistory(): Promise<void> {
   await withLock(STORAGE_HISTORY, async () => {
-    const all = await chrome.storage.local.get(null);
+    const all = await browser.storage.local.get(null);
     const keys = Object.keys(all).filter(
       (k) =>
         k === STORAGE_HISTORY || k.startsWith(STORAGE_HISTORY_SEGMENT_PREFIX),
     );
-    if (keys.length > 0) await chrome.storage.local.remove(keys);
+    if (keys.length > 0) await browser.storage.local.remove(keys);
   });
 }
 

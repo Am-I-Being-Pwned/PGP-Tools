@@ -1,10 +1,13 @@
 import "../lib/network-lockdown";
 
+import type { Browser } from "wxt/browser";
+
 import type { OperationAction, PendingOperation } from "../lib/messages";
 import { recoverArmorIfNeeded } from "../lib/armor-recovery";
 import { classifyAction } from "../lib/classify-action";
 import { MENU_OPEN_IN_PGP, SESSION_PENDING_OP } from "../lib/constants";
 import { commandToMode } from "../lib/mode-commands";
+import { installActionOpener, openSidePanel } from "../lib/side-panel";
 
 /**
  * Open the side panel and hand it a pending operation. Shared by the
@@ -16,50 +19,50 @@ import { commandToMode } from "../lib/mode-commands";
 function openPanelWithOperation(
   action: OperationAction,
   text: string,
-  tab: chrome.tabs.Tab | undefined,
+  tab: Browser.tabs.Tab | undefined,
 ): void {
   const operation: PendingOperation = {
     type: "PENDING_OPERATION",
     id: crypto.randomUUID(),
     action,
     text,
-    sourceTabId: tab?.id ?? chrome.tabs.TAB_ID_NONE,
+    sourceTabId: tab?.id ?? browser.tabs.TAB_ID_NONE,
     createdAt: Date.now(),
   };
 
   const target =
     tab?.id !== undefined
       ? { tabId: tab.id }
-      : { windowId: tab?.windowId ?? chrome.windows.WINDOW_ID_CURRENT };
-  chrome.sidePanel.open(target).catch(() => {
+      : { windowId: tab?.windowId ?? browser.windows.WINDOW_ID_CURRENT };
+  openSidePanel(target).catch(() => {
     /* sidepanel already open in this tab -- harmless */
   });
   // The in-flight storage write keeps the MV3 service worker alive
   // until it commits; the side panel reads the op on mount (or via
   // its storage.onChanged listener when already open).
-  void chrome.storage.session.set({ [SESSION_PENDING_OP]: operation });
+  void browser.storage.session.set({ [SESSION_PENDING_OP]: operation });
 }
 
 export default defineBackground(() => {
-  void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+  installActionOpener();
 
-  chrome.runtime.onInstalled.addListener((details) => {
+  browser.runtime.onInstalled.addListener((details) => {
     if (details.reason === "install") {
-      void chrome.tabs.create({
-        url: chrome.runtime.getURL("welcome.html"),
+      void browser.tabs.create({
+        url: browser.runtime.getURL("/welcome.html"),
       });
     }
 
     // Single top-level item. Action is decided at click time so Chrome
     // never has more than one item to group into a submenu.
-    chrome.contextMenus.create({
+    browser.contextMenus.create({
       id: MENU_OPEN_IN_PGP,
       title: "Open in PGP Tools",
       contexts: ["selection"],
     });
   });
 
-  chrome.contextMenus.onClicked.addListener((info, tab) => {
+  browser.contextMenus.onClicked.addListener((info, tab) => {
     if (!tab?.id || !info.selectionText) return;
     if (info.menuItemId !== MENU_OPEN_IN_PGP) return;
 
@@ -76,7 +79,7 @@ export default defineBackground(() => {
   // the user in chrome://extensions/shortcuts). Same pending-op channel
   // as the context menu, but with empty text: the panel switches mode
   // without touching the current input.
-  chrome.commands.onCommand.addListener((command, tab) => {
+  browser.commands.onCommand.addListener((command, tab) => {
     const mode = commandToMode(command);
     if (!mode) return;
     openPanelWithOperation(mode, "", tab);

@@ -171,7 +171,7 @@ export function DevToolsPage({ onClose }: { onClose: () => void }) {
         </div>
 
         <div>
-          <h3 className="mb-1.5 text-xs font-semibold">chrome.storage</h3>
+          <h3 className="mb-1.5 text-xs font-semibold">browser.storage</h3>
           <pre className="border-border bg-muted/30 max-h-64 overflow-auto rounded-md border p-2 font-mono text-[10px] leading-relaxed">
             {storageJson ?? (loading ? "Loading…" : "-")}
           </pre>
@@ -202,7 +202,7 @@ export function DevToolsPage({ onClose }: { onClose: () => void }) {
             Restore / reset (migration testing)
           </h3>
           <p className="text-muted-foreground mb-2 text-[11px]">
-            Overwrite chrome.storage from a dump (e.g. a pre-migration
+            Overwrite browser.storage from a dump (e.g. a pre-migration
             snapshot), then reload and unlock to exercise the migration. Both
             actions replace current storage.
           </p>

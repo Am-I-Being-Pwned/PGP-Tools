@@ -113,14 +113,14 @@ function isLegacyFullPrefs(v: unknown): v is Partial<PgpPreferences> {
 // ── bootstrap (plaintext, sync) ──────────────────────────────────────
 
 async function readBoot(): Promise<Partial<BootPrefs>> {
-  const result = await chrome.storage.sync.get(STORAGE_PREFERENCES);
+  const result = await browser.storage.sync.get(STORAGE_PREFERENCES);
   const stored = result[STORAGE_PREFERENCES] as Partial<BootPrefs> | undefined;
   return stored ?? {};
 }
 
 async function writeBoot(patch: Partial<BootPrefs>): Promise<void> {
   const current = await readBoot();
-  await chrome.storage.sync.set({
+  await browser.storage.sync.set({
     [STORAGE_PREFERENCES]: { ...current, ...patch },
   });
 }
@@ -193,7 +193,7 @@ async function migrateLegacyIfNeeded(): Promise<void> {
     // plaintext fields. Merging would leave the legacy settings fields
     // plaintext in the sync object for sync users -- exactly what we're
     // trying to encrypt away.
-    await chrome.storage.sync.set({
+    await browser.storage.sync.set({
       [STORAGE_PREFERENCES]: {
         storageLocation: merged.storageLocation,
         onboardingComplete: merged.onboardingComplete,

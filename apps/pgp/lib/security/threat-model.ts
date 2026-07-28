@@ -271,7 +271,7 @@ export const THREAT_MODEL: Threat[] = [
     id: "T-HISTORY-AT-REST",
     title: "Operation history exposes past message content at rest",
     attacker:
-      "Someone with read access to `chrome.storage.local` on a locked or unattended device.",
+      "Someone with read access to `browser.storage.local` on a locked or unattended device.",
     defence:
       "Opt-in, off by default. Entries are AES-256-GCM segments under the in-WASM contacts session key; the plaintext manifest holds only segment numbers and byte sizes. No plaintext cached at module level, so a master lock leaves nothing readable.",
     status: "defended",
@@ -287,9 +287,9 @@ export const THREAT_MODEL: Threat[] = [
     id: "T-HISTORY-AAD-SHARED",
     title: "History segments are not bound to their slot or their store",
     attacker:
-      "Anyone who can write chrome.storage.local -- another process on the device, a synced device, or malicious in-realm code -- with NO knowledge of the vault key.",
+      "Anyone who can write browser.storage.local -- another process on the device, a synced device, or malicious in-realm code -- with NO knowledge of the vault key.",
     defence:
-      "FIXED. Every store sealed under the master session -- keyring, contacts, settings, CRX keys, and each history segment -- is sealed for a DOMAIN, and the domain is the chrome.storage key the blob lives under. Both an HKDF-SHA256 subkey and the AEAD's AAD derive from it (`gpg-tools:store-subkey:v1:<key>`, `gpg-tools:store:v1:<key>`), so a blob only opens in the slot it was written to.",
+      "FIXED. Every store sealed under the master session -- keyring, contacts, settings, CRX keys, and each history segment -- is sealed for a DOMAIN, and the domain is the browser.storage key the blob lives under. Both an HKDF-SHA256 subkey and the AEAD's AAD derive from it (`gpg-tools:store-subkey:v1:<key>`, `gpg-tools:store:v1:<key>`), so a blob only opens in the slot it was written to.",
     status: "defended",
     rationale:
       "Was demonstrated, not theorised: copying pgp_history_seg_0 to seg_1 made adoptStraySegments adopt it (rigorous, since adoption only happens for a segment actually decrypted), and the same blob written to pgp_public_contacts read as a legitimately EMPTY contact list -- so the next contact import would have persisted over the user's real contacts permanently. Two bindings deliberately: the AAD alone suffices for a correct AEAD, but a distinct key means a future bug that drops or mismatches the AAD still cannot cross a domain boundary. Using the storage key as the domain means no mapping table to keep in sync and no way for read and write paths to disagree about a slot; it is the key not the storage area, so local<->sync moves are unaffected. All five stores were separated, not just history, since keyring<->contacts<->settings<->CRX substitution is the same bug. Migration: openEnvelope tries the domain scheme then falls back to legacy -- history re-seals on read (it already holds its lock), shared stores re-seal on next mutation, and normalizePadding (which runs on unlock) upgrades a store the user only ever reads, including when its padding is already canonical. Reads never write, so an upgrade cannot race a mutation. Verified by a negative control: collapsing every domain to one constant makes both e2e tests fail on their own separate assertions.",
@@ -457,11 +457,11 @@ export const THREAT_MODEL: Threat[] = [
     id: "T-DEVTOOLS",
     title: "DevTools attached to the side panel",
     attacker:
-      "Anyone who can open DevTools on our page, or another extension with chrome.debugger.",
+      "Anyone who can open DevTools on our page, or another extension with browser.debugger.",
     defence: "None.",
     status: "accepted",
     rationale:
-      "Equivalent to root on our realm. Also covers other extensions holding chrome.debugger or broad tabs permissions. §8.5, §8.6.",
+      "Equivalent to root on our realm. Also covers other extensions holding browser.debugger or broad tabs permissions. §8.5, §8.6.",
     section: "§8.5, §8.6",
   },
 ];

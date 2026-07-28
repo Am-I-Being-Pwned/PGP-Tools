@@ -32,7 +32,7 @@ function EntryKeys({ entry }: { entry: ShortcutRefEntry }) {
 /**
  * Settings subpage listing every keyboard shortcut, grouped: palette,
  * workspace, modes (derived from MODE_SHORTCUTS), and the browser-wide
- * chrome.commands bindings. The data lives in lib/shortcuts-reference.
+ * browser.commands bindings. The data lives in lib/shortcuts-reference.
  */
 export function KeyboardShortcutsPage({ onClose }: { onClose: () => void }) {
   return (
@@ -62,7 +62,7 @@ export function KeyboardShortcutsPage({ onClose }: { onClose: () => void }) {
               ))}
             </div>
             {/* chrome:// URLs render as plain text: pages can't link to
-                them, but an extension MAY open one via chrome.tabs. */}
+                them, but an extension MAY open one via browser.tabs. */}
             {section.note && (
               <p className="text-muted-foreground mt-1 text-xs">
                 {section.note}
@@ -74,7 +74,7 @@ export function KeyboardShortcutsPage({ onClose }: { onClose: () => void }) {
                 size="sm"
                 className="mt-2 w-full"
                 onClick={() =>
-                  void chrome.tabs.create({ url: CHROME_SHORTCUTS_URL })
+                  void browser.tabs.create({ url: CHROME_SHORTCUTS_URL })
                 }
               >
                 Manage browser shortcuts

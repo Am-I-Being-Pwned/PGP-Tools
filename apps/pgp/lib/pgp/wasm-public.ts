@@ -253,7 +253,7 @@ export async function hasContactsSession(): Promise<boolean> {
 }
 
 // ── per-store envelope (domain-separated key AND AAD) ────────────────
-// `domain` must be the chrome.storage key the blob lives under, so a
+// `domain` must be the browser.storage key the blob lives under, so a
 // sealed blob is bound to its slot and its store. Nothing outside
 // `lib/storage/envelope.ts` should call these directly -- that module
 // owns the domain convention and the legacy-blob fallback.

@@ -10,20 +10,20 @@ export interface StorageDump {
   session: Record<string, unknown>;
 }
 
-/** Read every key from all three chrome.storage areas. The keyring and
+/** Read every key from all three browser.storage areas. The keyring and
  *  contacts entries come back as their at-rest ciphertext (base64), which
  *  is the point -- you're inspecting what actually landed on disk. */
 export async function dumpAllStorage(): Promise<StorageDump> {
   const [local, sync, session] = await Promise.all([
-    chrome.storage.local.get(null),
-    chrome.storage.sync.get(null),
-    chrome.storage.session.get(null),
+    browser.storage.local.get(null),
+    browser.storage.sync.get(null),
+    browser.storage.session.get(null),
   ]);
   return { local, sync, session };
 }
 
 /**
- * Overwrite chrome.storage with a previously-dumped snapshot: each area
+ * Overwrite browser.storage with a previously-dumped snapshot: each area
  * is cleared then repopulated. Used to rewind to a known state (e.g. a
  * pre-migration dump) before exercising a migration. The running panel
  * still holds the old state in memory, so reload it afterwards.
@@ -32,25 +32,25 @@ export async function restoreAllStorage(
   dump: Partial<StorageDump>,
 ): Promise<void> {
   if (dump.local) {
-    await chrome.storage.local.clear();
-    await chrome.storage.local.set(dump.local);
+    await browser.storage.local.clear();
+    await browser.storage.local.set(dump.local);
   }
   if (dump.sync) {
-    await chrome.storage.sync.clear();
-    await chrome.storage.sync.set(dump.sync);
+    await browser.storage.sync.clear();
+    await browser.storage.sync.set(dump.sync);
   }
   if (dump.session) {
-    await chrome.storage.session.clear();
-    await chrome.storage.session.set(dump.session);
+    await browser.storage.session.clear();
+    await browser.storage.session.set(dump.session);
   }
 }
 
 /** Wipe all three storage areas -- simulate a fresh install. */
 export async function clearAllStorage(): Promise<void> {
   await Promise.all([
-    chrome.storage.local.clear(),
-    chrome.storage.sync.clear(),
-    chrome.storage.session.clear(),
+    browser.storage.local.clear(),
+    browser.storage.sync.clear(),
+    browser.storage.session.clear(),
   ]);
 }
 

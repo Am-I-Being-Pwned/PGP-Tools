@@ -38,7 +38,7 @@ export interface ShortcutRefSection {
 
 /** Where Chrome lets users rebind extension commands. Rendered as
  *  plain text (chrome:// links don't open from extension pages) and
- *  opened via chrome.tabs.create from the reference page's button. */
+ *  opened via browser.tabs.create from the reference page's button. */
 export const CHROME_SHORTCUTS_URL = "chrome://extensions/shortcuts";
 
 const MODE_NAMES: Record<PgpMode, string> = {
