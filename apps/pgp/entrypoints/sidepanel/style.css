@@ -6,12 +6,33 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* DELIBERATELY UNLAYERED -- do not fold these into @layer base below.
+ *
+ * Firefox injects chrome://browser/content/extension.css into sidebar
+ * documents, and its rule
+ *
+ *   @layer { html, body { background: transparent; user-select: none; ... } }
+ *
+ * lands in a cascade layer ordered after our `base` layer, so it beats
+ * anything we put there: the panel painted the browser's own (light)
+ * sidebar backdrop instead of --background, and no text in the sidebar
+ * could be selected. The tokens were resolving correctly the whole time
+ * -- only these two declarations were losing.
+ *
+ * Unlayered author declarations outrank every layered one in the same
+ * origin, which is what makes these stick. Chrome injects no such sheet,
+ * so it is unaffected either way.
+ */
+html,
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  user-select: text;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
   }
 
   /* Theme-aware scrollbars */
