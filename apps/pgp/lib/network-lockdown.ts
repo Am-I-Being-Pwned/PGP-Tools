@@ -155,7 +155,17 @@ if (import.meta.env.DEV) {
   freezeMethod(TextEncoder.prototype, "encodeInto");
   freezeMethod(TextDecoder.prototype, "decode");
   freezeMethod(globalThis.Crypto.prototype, "getRandomValues");
-  freezeMethod(globalThis.Clipboard.prototype, "writeText");
+  // Clipboard is a DOCUMENT-only API: it does not exist in a service
+  // worker, and reading `.prototype` off `undefined` throws at module
+  // scope. This module is the first import in EVERY entrypoint including
+  // `background.ts`, so an unguarded reference here does not degrade the
+  // lockdown -- it kills the whole worker before its first statement
+  // runs, taking the context menu, the keyboard commands, the
+  // install-time welcome tab and `setPanelBehavior` with it, silently.
+  // (That was live in shipped builds; see the note in SECURITY.md.)
+  if (globalThis.Clipboard !== undefined) {
+    freezeMethod(globalThis.Clipboard.prototype, "writeText");
+  }
 
   // Freezing a prototype method is NOT enough when the object you actually
   // call through is extensible: an own property on the instance shadows the
@@ -173,7 +183,12 @@ if (import.meta.env.DEV) {
     });
   }
 
-  pinOwnMethod(globalThis.navigator.clipboard, "writeText");
+  // Same reason as the Clipboard guard above: no `navigator.clipboard`
+  // in a worker realm. There is nothing to pin there and nothing that
+  // could tap it, because the API the tap would target does not exist.
+  if (globalThis.navigator?.clipboard !== undefined) {
+    pinOwnMethod(globalThis.navigator.clipboard, "writeText");
+  }
 
   // `globalThis.crypto` matters more than it looks. getrandom's wasm backend
   // caches the Crypto OBJECT in a thread-local and then does a property

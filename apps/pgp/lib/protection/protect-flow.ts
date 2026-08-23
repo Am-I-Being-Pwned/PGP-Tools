@@ -1,16 +1,26 @@
 /**
  * ============================================================================
- * Generate / import + protect flows.
+ * Generate / import + protect flows (OpenPGP keys).
  * ============================================================================
  *
  * This is the JS-side coordinator that drives every "produce a fresh
- * encrypted-key blob" path. It owns:
- *   - the password / passphrase / PRF input lifetime (encode → call →
- *     `.fill(0)` in `finally`),
- *   - the optional `cache: true` chained unlock (so KEY_STORE
- *     insertion is always tied to the user-just-typed-credentials
- *     unlock action, never to the protect call itself),
- *   - the wire-format unpacking from the wasm packed-binary return.
+ * encrypted-key blob" path for PGP certs. The mechanics it used to own —
+ * the password / PRF input lifetime (encode → call → `.fill(0)` in
+ * `finally`), the optional `cache: true` chained unlock, and the
+ * wire-format unpacking of the wasm packed-binary return — now live once
+ * in `protect-runner.ts`, shared with the CRX signing-key flow. What
+ * stays here is the PGP-specific half: which wasm export to call, and how
+ * the returned cert metadata lands in a `ProtectedKeyBlob`.
+ *
+ * The guarantees are unchanged and still load-bearing:
+ *   - password / PRF material crosses as `Uint8Array`, never a JS string,
+ *     and is `.fill(0)`'d in a `finally` (`protect-runner.ts`),
+ *   - `cache: true` performs a chained unlock through the standard
+ *     `unlockWith*` path, so KEY_STORE insertion is always tied to the
+ *     user-just-typed-credentials unlock action, never to the protect
+ *     call itself,
+ *   - the source passphrase of an imported key is `.fill(0)`'d here, on
+ *     every exit from `importAndProtect`.
  *
  * For the threat model and per-secret zeroization audit table, see
  * `apps/pgp/SECURITY.md`. For the wasm-side guarantee that the cert
@@ -21,8 +31,9 @@
 import type { GenerateKeyOptions } from "../pgp/types";
 import type { ProtectFlowResult } from "../pgp/wasm";
 import type { ProtectedKeyBlob } from "../storage/keyring";
+import type { ProtectionInput, ProtectSpec } from "./protect-runner";
+import type { PasswordBlobParts, PrfBlobParts } from "./protected-blob";
 import { toBase64 } from "../encoding";
-import { AppError } from "../errors/app-error";
 import {
   generateProtectedWithPassword,
   generateProtectedWithPrf,
@@ -37,72 +48,19 @@ import {
   ARGON2_MEMORY_KIB,
   ARGON2_PARALLELISM,
 } from "./password-kdf";
-import {
-  authenticateAndGetPrf,
-  generatePrfSalt,
-  generateStoredSecret,
-  registerPasskey,
-} from "./webauthn-prf";
+import { runProtect } from "./protect-runner";
 
 const EMPTY = new Uint8Array(0);
 
-function unpackPasswordBlob(packed: Uint8Array) {
-  return {
-    salt: packed.slice(0, 16),
-    iv: packed.slice(16, 28),
-    ct: packed.slice(28),
-  };
-}
+// ── blob assembly (the PGP-specific half of the flow) ────────────────
 
-function unpackPrfBlob(packed: Uint8Array) {
-  return { iv: packed.slice(0, 12), ct: packed.slice(12) };
-}
-
-function buildPasswordBlob(result: ProtectFlowResult): ProtectedKeyBlob {
-  const { salt, iv, ct } = unpackPasswordBlob(result.blob);
-  const blob = blobFromEncrypted(
-    result.meta.keyInfo.keyId,
-    result.meta.keyInfo.userIds,
-    result.meta.keyInfo.algorithm,
-    result.meta.publicKeyArmored,
-    {
-      method: "password",
-      ciphertext: toBase64(ct),
-      iv: toBase64(iv),
-      salt: toBase64(salt),
-    },
-  );
-  if (result.meta.revocationCertificate) {
-    blob.revocationCertificate = result.meta.revocationCertificate;
-  }
-  if (result.meta.keyInfo.securityWarning) {
-    blob.securityWarning = result.meta.keyInfo.securityWarning;
-  }
-  return blob;
-}
-
-function buildPasskeyBlob(
+/** Copy across the optional cert facts that live outside the encrypted
+ *  half: a revocation certificate minted at generation time, and the
+ *  non-blocking parse warning shown as a badge. */
+function withCertMeta(
+  blob: ProtectedKeyBlob,
   result: ProtectFlowResult,
-  credentialId: string,
-  prfSalt: ArrayBuffer,
-  storedSecret: ArrayBuffer,
 ): ProtectedKeyBlob {
-  const { iv, ct } = unpackPrfBlob(result.blob);
-  const blob = blobFromEncrypted(
-    result.meta.keyInfo.keyId,
-    result.meta.keyInfo.userIds,
-    result.meta.keyInfo.algorithm,
-    result.meta.publicKeyArmored,
-    {
-      method: "passkey",
-      ciphertext: toBase64(ct),
-      iv: toBase64(iv),
-      credentialId,
-      prfSalt: toBase64(prfSalt),
-      // storedSecret is HKDF salt, persisted in plaintext alongside ct.
-      storedSecret: toBase64(storedSecret),
-    },
-  );
   if (result.meta.revocationCertificate) {
     blob.revocationCertificate = result.meta.revocationCertificate;
   }
@@ -112,53 +70,84 @@ function buildPasskeyBlob(
   return blob;
 }
 
-async function resolvePasskeyCredential(
-  reusePasskeyCredentialId: string | undefined,
+/**
+ * The PGP half of a protect flow: the two wasm exports to call, how their
+ * metadata maps into a `ProtectedKeyBlob`, and the chained unlocks that
+ * back `cache: true`.
+ */
+function keySpec(
   userIdHint: string,
-): Promise<string> {
-  if (reusePasskeyCredentialId) return reusePasskeyCredentialId;
-  const reg = await registerPasskey(userIdHint, userIdHint);
-  if (!reg.prfEnabled) {
-    throw new Error(
-      "Your authenticator doesn't support PRF. Try a different passkey or use a password instead.",
-    );
-  }
-  return reg.credentialId;
+  runPassword: ProtectSpec<ProtectFlowResult, ProtectedKeyBlob>["runPassword"],
+  runPrf: ProtectSpec<ProtectFlowResult, ProtectedKeyBlob>["runPrf"],
+): ProtectSpec<ProtectFlowResult, ProtectedKeyBlob> {
+  return {
+    userIdHint,
+    runPassword,
+    runPrf,
+
+    fromPassword: (result, { salt, iv, ct }: PasswordBlobParts) =>
+      withCertMeta(
+        blobFromEncrypted(
+          result.meta.keyInfo.keyId,
+          result.meta.keyInfo.userIds,
+          result.meta.keyInfo.algorithm,
+          result.meta.publicKeyArmored,
+          {
+            method: "password",
+            ciphertext: toBase64(ct),
+            iv: toBase64(iv),
+            salt: toBase64(salt),
+          },
+        ),
+        result,
+      ),
+
+    fromPrf: (result, { iv, ct }: PrfBlobParts, prf) =>
+      withCertMeta(
+        blobFromEncrypted(
+          result.meta.keyInfo.keyId,
+          result.meta.keyInfo.userIds,
+          result.meta.keyInfo.algorithm,
+          result.meta.publicKeyArmored,
+          {
+            method: "passkey",
+            ciphertext: toBase64(ct),
+            iv: toBase64(iv),
+            credentialId: prf.credentialId,
+            prfSalt: toBase64(prf.prfSalt),
+            // storedSecret is HKDF salt, persisted in plaintext alongside ct.
+            storedSecret: toBase64(prf.storedSecret),
+          },
+        ),
+        result,
+      ),
+
+    cachePassword: (result, { salt, iv, ct }, passwordBytes) =>
+      unlockWithPassword(
+        ct,
+        iv,
+        salt,
+        result.meta.keyInfo.keyId,
+        passwordBytes,
+        ARGON2_MEMORY_KIB,
+        ARGON2_ITERATIONS,
+        ARGON2_PARALLELISM,
+      ),
+
+    cachePrf: (result, { iv, ct }, prf) =>
+      unlockWithPrf(
+        ct,
+        iv,
+        prf.prfOutput,
+        prf.storedSecretBytes,
+        result.meta.keyInfo.keyId,
+      ),
+  };
 }
 
 // ── public API ───────────────────────────────────────────────────────
 
-export type ProtectionInput =
-  | {
-      method: "password";
-      password: string;
-      /** If true, immediately unlock the new blob into KEY_STORE so the
-       *  caller can use the key without re-prompting. The unlock goes
-       *  through the standard `unlockWithPassword` path so KEY_STORE
-       *  insertion is always tied to a user-initiated unlock action. */
-      cache?: boolean;
-    }
-  | {
-      method: "passkey";
-      reusePasskeyCredentialId?: string;
-      /** See above. Reuses the just-obtained PRF output -- no second
-       *  WebAuthn prompt. */
-      cache?: boolean;
-      /** Skip the WebAuthn ceremony entirely by reusing a PRF output
-       *  already obtained for `reusePasskeyCredentialId` (e.g. during
-       *  onboarding where the master setup just authenticated, or a
-       *  bulk import protecting several keys off one ceremony). The
-       *  returned blob will carry `prfSalt` so later unlocks
-       *  re-authenticate with the same WebAuthn challenge and reproduce
-       *  the same PRF output. A fresh `storedSecret` is still generated
-       *  per blob to keep the derived AES key distinct from the master
-       *  / other blobs. Caller owns `prfOutput`'s lifetime; this fn
-       *  does NOT zero it. */
-      prfReuse?: {
-        prfOutput: Uint8Array;
-        prfSalt: ArrayBuffer;
-      };
-    };
+export type { ProtectionInput };
 
 interface CommonOpts {
   /** Used to label a freshly-registered passkey, ignored for reuse/password. */
@@ -184,92 +173,22 @@ export async function generateAndProtect(
   protection: ProtectionInput,
   common: CommonOpts = {},
 ): Promise<ProtectFlowOutput> {
-  if (protection.method === "password") {
-    if (!protection.password || protection.password.length < 8) {
-      throw new AppError(
-        "weak-password",
-        "Password must be at least 8 characters",
-      );
-    }
-    const passwordBytes = new TextEncoder().encode(protection.password);
-    try {
-      const result = await generateProtectedWithPassword(
-        keyOpts,
-        passwordBytes,
-        ARGON2_MEMORY_KIB,
-        ARGON2_ITERATIONS,
-        ARGON2_PARALLELISM,
-      );
-      const blob = buildPasswordBlob(result);
-      let handle: number | undefined;
-      if (protection.cache) {
-        const { salt, iv, ct } = unpackPasswordBlob(result.blob);
-        handle = await unlockWithPassword(
-          ct,
-          iv,
-          salt,
-          result.meta.keyInfo.keyId,
-          passwordBytes,
+  return runProtect(
+    protection,
+    keySpec(
+      common.userIdHint ?? `${keyOpts.name} <${keyOpts.email}>`,
+      (password) =>
+        generateProtectedWithPassword(
+          keyOpts,
+          password,
           ARGON2_MEMORY_KIB,
           ARGON2_ITERATIONS,
           ARGON2_PARALLELISM,
-        );
-      }
-      return { blob, handle };
-    } finally {
-      passwordBytes.fill(0);
-    }
-  }
-
-  const userIdHint = common.userIdHint ?? `${keyOpts.name} <${keyOpts.email}>`;
-  const credentialId =
-    protection.prfReuse !== undefined && protection.reusePasskeyCredentialId
-      ? protection.reusePasskeyCredentialId
-      : await resolvePasskeyCredential(
-          protection.reusePasskeyCredentialId,
-          userIdHint,
-        );
-
-  // PRF + prfSalt: either reuse from caller (no new WebAuthn dialog)
-  // or run our own ceremony. `storedSecret` is always fresh per blob
-  // so the derived AES key is unique even when prfOutput is shared.
-  let prfSalt: ArrayBuffer;
-  let prfOutput: Uint8Array;
-  let ownsPrfOutput: boolean;
-  if (protection.prfReuse) {
-    prfSalt = protection.prfReuse.prfSalt;
-    prfOutput = protection.prfReuse.prfOutput;
-    ownsPrfOutput = false; // caller zeros it
-  } else {
-    prfSalt = generatePrfSalt();
-    ({ prfOutput } = await authenticateAndGetPrf(credentialId, prfSalt));
-    ownsPrfOutput = true;
-  }
-
-  const storedSecret = generateStoredSecret();
-  const storedSecretBytes = new Uint8Array(storedSecret);
-  try {
-    const result = await generateProtectedWithPrf(
-      keyOpts,
-      prfOutput,
-      storedSecretBytes,
-    );
-    const blob = buildPasskeyBlob(result, credentialId, prfSalt, storedSecret);
-    let handle: number | undefined;
-    if (protection.cache) {
-      const { iv, ct } = unpackPrfBlob(result.blob);
-      handle = await unlockWithPrf(
-        ct,
-        iv,
-        prfOutput,
-        storedSecretBytes,
-        result.meta.keyInfo.keyId,
-      );
-    }
-    return { blob, handle };
-  } finally {
-    if (ownsPrfOutput) prfOutput.fill(0);
-  }
+        ),
+      (prfOutput, storedSecret) =>
+        generateProtectedWithPrf(keyOpts, prfOutput, storedSecret),
+    ),
+  );
 }
 
 /**
@@ -277,6 +196,11 @@ export async function generateAndProtect(
  * re-protect it under the chosen method. Plaintext cert exists only
  * inside the wasm call. Same KEY_STORE invariants as
  * `generateAndProtect` w/r/t the optional `cache` flag.
+ *
+ * @secret-handling `sourcePassphrase` is encoded to a `Uint8Array` and
+ * `.fill(0)`'d in a `finally` that wraps the whole flow -- including the
+ * password-strength gate and the WebAuthn ceremony, both of which can
+ * throw before wasm is ever reached.
  */
 export async function importAndProtect(
   armoredPrivateKey: string,
@@ -289,95 +213,30 @@ export async function importAndProtect(
     ? new TextEncoder().encode(sourcePassphrase)
     : EMPTY;
 
-  if (protection.method === "password") {
-    if (!protection.password || protection.password.length < 8) {
-      throw new AppError(
-        "weak-password",
-        "Password must be at least 8 characters",
-      );
-    }
-    const passwordBytes = new TextEncoder().encode(protection.password);
-    try {
-      const result = await protectImportedWithPassword(
-        armoredPrivateKey,
-        sourcePassphraseBytes,
-        passwordBytes,
-        ARGON2_MEMORY_KIB,
-        ARGON2_ITERATIONS,
-        ARGON2_PARALLELISM,
-      );
-      const blob = buildPasswordBlob(result);
-      let handle: number | undefined;
-      if (protection.cache) {
-        const { salt, iv, ct } = unpackPasswordBlob(result.blob);
-        handle = await unlockWithPassword(
-          ct,
-          iv,
-          salt,
-          result.meta.keyInfo.keyId,
-          passwordBytes,
-          ARGON2_MEMORY_KIB,
-          ARGON2_ITERATIONS,
-          ARGON2_PARALLELISM,
-        );
-      }
-      return { blob, handle };
-    } finally {
-      passwordBytes.fill(0);
-      if (sourcePassphraseBytes.length > 0) sourcePassphraseBytes.fill(0);
-    }
-  }
-
-  const userIdHint = common.userIdHint ?? "Imported PGP Key";
-  const credentialId =
-    protection.prfReuse !== undefined && protection.reusePasskeyCredentialId
-      ? protection.reusePasskeyCredentialId
-      : await resolvePasskeyCredential(
-          protection.reusePasskeyCredentialId,
-          userIdHint,
-        );
-
-  // PRF + prfSalt: either reuse from caller (no new WebAuthn dialog --
-  // e.g. a bulk import protecting several keys off one ceremony) or run
-  // our own. `storedSecret` is always fresh per blob so the derived AES
-  // key is unique even when prfOutput is shared.
-  let prfSalt: ArrayBuffer;
-  let prfOutput: Uint8Array;
-  let ownsPrfOutput: boolean;
-  if (protection.prfReuse) {
-    prfSalt = protection.prfReuse.prfSalt;
-    prfOutput = protection.prfReuse.prfOutput;
-    ownsPrfOutput = false; // caller zeros it
-  } else {
-    prfSalt = generatePrfSalt();
-    ({ prfOutput } = await authenticateAndGetPrf(credentialId, prfSalt));
-    ownsPrfOutput = true;
-  }
-
-  const storedSecret = generateStoredSecret();
-  const storedSecretBytes = new Uint8Array(storedSecret);
   try {
-    const result = await protectImportedWithPrf(
-      armoredPrivateKey,
-      sourcePassphraseBytes,
-      prfOutput,
-      storedSecretBytes,
+    return await runProtect(
+      protection,
+      keySpec(
+        common.userIdHint ?? "Imported PGP Key",
+        (password) =>
+          protectImportedWithPassword(
+            armoredPrivateKey,
+            sourcePassphraseBytes,
+            password,
+            ARGON2_MEMORY_KIB,
+            ARGON2_ITERATIONS,
+            ARGON2_PARALLELISM,
+          ),
+        (prfOutput, storedSecret) =>
+          protectImportedWithPrf(
+            armoredPrivateKey,
+            sourcePassphraseBytes,
+            prfOutput,
+            storedSecret,
+          ),
+      ),
     );
-    const blob = buildPasskeyBlob(result, credentialId, prfSalt, storedSecret);
-    let handle: number | undefined;
-    if (protection.cache) {
-      const { iv, ct } = unpackPrfBlob(result.blob);
-      handle = await unlockWithPrf(
-        ct,
-        iv,
-        prfOutput,
-        storedSecretBytes,
-        result.meta.keyInfo.keyId,
-      );
-    }
-    return { blob, handle };
   } finally {
-    if (ownsPrfOutput) prfOutput.fill(0);
     if (sourcePassphraseBytes.length > 0) sourcePassphraseBytes.fill(0);
   }
 }

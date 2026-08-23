@@ -5,9 +5,12 @@
  *
  * Drives generate / import / sign / verify for CRX (Chrome extension)
  * signing keys, reusing the exact protection machinery the PGP keys use
- * (Argon2id / WebAuthn-PRF -> AES-256-GCM, all inside WASM). Mirrors
- * `protection/protect-flow.ts`; every password / PRF buffer is `.fill(0)`'d
- * in a `finally`. The RSA private key never leaves WASM in the clear.
+ * (Argon2id / WebAuthn-PRF -> AES-256-GCM, all inside WASM). The protect
+ * path itself is literally shared with `protection/protect-flow.ts` — see
+ * `protection/protect-runner.ts`, which owns the secret lifetimes; every
+ * password / PRF buffer is `.fill(0)`'d in a `finally`, there and in the
+ * unlock/reseal paths below. The RSA private key never leaves WASM in the
+ * clear.
  */
 
 import { fromBase64, toBase64 } from "../encoding";
@@ -25,40 +28,46 @@ import {
   unlockCrxWithPrf,
   verifyCrx,
 } from "../pgp/wasm";
+import type { ProtectSpec } from "../protection/protect-runner";
 import {
   ARGON2_ITERATIONS,
   ARGON2_MEMORY_KIB,
   ARGON2_PARALLELISM,
 } from "../protection/password-kdf";
 import {
-  authenticateAndGetPrf,
-  generatePrfSalt,
-  generateStoredSecret,
-  registerPasskey,
-} from "../protection/webauthn-prf";
+  assertStrongPassword,
+  runProtect,
+} from "../protection/protect-runner";
+import { unpackPasswordBlob } from "../protection/protected-blob";
+import { authenticateAndGetPrf } from "../protection/webauthn-prf";
 import { updateCrxLastUsed } from "./storage";
-import type { CrxSigningKeyBlob } from "./types";
+import type { CrxProtection, CrxSigningKeyBlob } from "./types";
 
 export type CrxProtectionInput =
   | { method: "password"; password: string }
   | { method: "passkey"; reusePasskeyCredentialId?: string };
 
-// ── blob assembly ────────────────────────────────────────────────────
+// ── blob assembly (the CRX-specific half of the flow) ───────────────
 
-function buildPasswordCrxBlob(
+type CrxSpec = ProtectSpec<CrxProtectFlowResult, CrxSigningKeyBlob>;
+
+/** Assemble a stored blob from the wasm metadata plus the already-unpacked
+ *  seal. The protection union and the packed-blob layout are shared with
+ *  the PGP keyring — see `protection/protected-blob.ts`. */
+function crxBlob(
   result: CrxProtectFlowResult,
+  protection: CrxProtection,
+  iv: Uint8Array,
+  ct: Uint8Array,
   label?: string,
 ): CrxSigningKeyBlob {
-  const salt = result.blob.slice(0, 16);
-  const iv = result.blob.slice(16, 28);
-  const ct = result.blob.slice(28);
   return {
     version: 1,
     extensionId: result.meta.extensionId,
     label,
     publicKeyDerB64: result.meta.publicKeyDerB64,
     algorithm: result.meta.algorithm,
-    protection: { method: "password", kdfSalt: toBase64(salt) },
+    protection,
     encryptedPrivateKey: toBase64(ct),
     iv: toBase64(iv),
     createdAt: Date.now(),
@@ -66,98 +75,45 @@ function buildPasswordCrxBlob(
   };
 }
 
-function buildPasskeyCrxBlob(
-  result: CrxProtectFlowResult,
-  credentialId: string,
-  prfSalt: ArrayBuffer,
-  storedSecret: ArrayBuffer,
-  label?: string,
-): CrxSigningKeyBlob {
-  const iv = result.blob.slice(0, 12);
-  const ct = result.blob.slice(12);
-  return {
-    version: 1,
-    extensionId: result.meta.extensionId,
-    label,
-    publicKeyDerB64: result.meta.publicKeyDerB64,
-    algorithm: result.meta.algorithm,
-    protection: {
-      method: "passkey",
-      credentialId,
-      prfSalt: toBase64(prfSalt),
-      // storedSecret is HKDF salt, persisted in plaintext alongside ct.
-      storedSecret: toBase64(storedSecret),
-    },
-    encryptedPrivateKey: toBase64(ct),
-    iv: toBase64(iv),
-    createdAt: Date.now(),
-    lastUsedAt: Date.now(),
-  };
-}
-
-// ── protection helpers (shared by generate + import) ─────────────────
-
-type PasswordRunner = (password: Uint8Array) => Promise<CrxProtectFlowResult>;
-type PrfRunner = (
-  prfOutput: Uint8Array,
-  storedSecret: Uint8Array,
-) => Promise<CrxProtectFlowResult>;
-
-async function protectWithPassword(
-  password: string,
-  run: PasswordRunner,
-  label?: string,
-): Promise<CrxSigningKeyBlob> {
-  if (!password || password.length < 8) {
-    throw new AppError(
-      "weak-password",
-      "Password must be at least 8 characters",
-    );
-  }
-  const passwordBytes = new TextEncoder().encode(password);
-  try {
-    return buildPasswordCrxBlob(await run(passwordBytes), label);
-  } finally {
-    passwordBytes.fill(0);
-  }
-}
-
-async function resolveCredential(userIdHint: string): Promise<string> {
-  const reg = await registerPasskey(userIdHint, userIdHint);
-  if (!reg.prfEnabled) {
-    throw new Error(
-      "Your authenticator doesn't support PRF. Try a different passkey or use a password instead.",
-    );
-  }
-  return reg.credentialId;
-}
-
-async function protectWithPasskey(
-  protection: Extract<CrxProtectionInput, { method: "passkey" }>,
-  run: PrfRunner,
+/**
+ * The CRX half of a protect flow: the two wasm exports to call and how
+ * their metadata maps into a `CrxSigningKeyBlob`. No `cache*` hooks — a
+ * CRX key is never held open past the act that needed it, so there is
+ * nothing to chain an unlock into.
+ */
+function crxSpec(
   userIdHint: string,
+  runPassword: CrxSpec["runPassword"],
+  runPrf: CrxSpec["runPrf"],
   label?: string,
-): Promise<CrxSigningKeyBlob> {
-  const credentialId =
-    protection.reusePasskeyCredentialId ??
-    (await resolveCredential(userIdHint));
-
-  const prfSalt = generatePrfSalt();
-  const { prfOutput } = await authenticateAndGetPrf(credentialId, prfSalt);
-  const storedSecret = generateStoredSecret();
-  const storedSecretBytes = new Uint8Array(storedSecret);
-  try {
-    const result = await run(prfOutput, storedSecretBytes);
-    return buildPasskeyCrxBlob(
-      result,
-      credentialId,
-      prfSalt,
-      storedSecret,
-      label,
-    );
-  } finally {
-    prfOutput.fill(0);
-  }
+): CrxSpec {
+  return {
+    userIdHint,
+    runPassword,
+    runPrf,
+    fromPassword: (result, { salt, iv, ct }) =>
+      crxBlob(
+        result,
+        { method: "password", kdfSalt: toBase64(salt) },
+        iv,
+        ct,
+        label,
+      ),
+    fromPrf: (result, { iv, ct }, prf) =>
+      crxBlob(
+        result,
+        {
+          method: "passkey",
+          credentialId: prf.credentialId,
+          prfSalt: toBase64(prf.prfSalt),
+          // storedSecret is HKDF salt, persisted in plaintext alongside ct.
+          storedSecret: toBase64(prf.storedSecret),
+        },
+        iv,
+        ct,
+        label,
+      ),
+  };
 }
 
 // ── public API: generate / import ────────────────────────────────────
@@ -169,24 +125,23 @@ export async function generateCrxKey(
   protection: CrxProtectionInput,
   label?: string,
 ): Promise<CrxSigningKeyBlob> {
-  return protection.method === "password"
-    ? await protectWithPassword(
-        protection.password,
-        (pw) =>
-          generateCrxKeyWithPassword(
-            pw,
-            ARGON2_MEMORY_KIB,
-            ARGON2_ITERATIONS,
-            ARGON2_PARALLELISM,
-          ),
-        label,
-      )
-    : await protectWithPasskey(
-        protection,
-        (prf, ss) => generateCrxKeyWithPrf(prf, ss),
-        label ?? "CRX signing key",
-        label,
-      );
+  const { blob } = await runProtect(
+    protection,
+    crxSpec(
+      label ?? "CRX signing key",
+      (password) =>
+        generateCrxKeyWithPassword(
+          password,
+          ARGON2_MEMORY_KIB,
+          ARGON2_ITERATIONS,
+          ARGON2_PARALLELISM,
+        ),
+      (prfOutput, storedSecret) =>
+        generateCrxKeyWithPrf(prfOutput, storedSecret),
+      label,
+    ),
+  );
+  return blob;
 }
 
 /** Import an existing RSA private key (PKCS#8 or PKCS#1 PEM) and re-protect
@@ -197,25 +152,23 @@ export async function importCrxKey(
   protection: CrxProtectionInput,
   label?: string,
 ): Promise<CrxSigningKeyBlob> {
-  return protection.method === "password"
-    ? await protectWithPassword(
-        protection.password,
-        (pw) =>
-          importCrxKeyWithPassword(
-            pem,
-            pw,
-            ARGON2_MEMORY_KIB,
-            ARGON2_ITERATIONS,
-            ARGON2_PARALLELISM,
-          ),
-        label,
-      )
-    : await protectWithPasskey(
-        protection,
-        (prf, ss) => importCrxKeyWithPrf(pem, prf, ss),
-        label ?? "CRX signing key",
-        label,
-      );
+  const { blob } = await runProtect(
+    protection,
+    crxSpec(
+      label ?? "CRX signing key",
+      (password) =>
+        importCrxKeyWithPassword(
+          pem,
+          password,
+          ARGON2_MEMORY_KIB,
+          ARGON2_ITERATIONS,
+          ARGON2_PARALLELISM,
+        ),
+      (prfOutput, storedSecret) => importCrxKeyWithPrf(pem, prfOutput, storedSecret),
+      label,
+    ),
+  );
+  return blob;
 }
 
 // ── public API: unlock + sign + verify ───────────────────────────────
@@ -259,12 +212,7 @@ export async function resealCrxKeyUnderPassword(
   password: string,
   label?: string,
 ): Promise<CrxSigningKeyBlob> {
-  if (!password || password.length < 8) {
-    throw new AppError(
-      "weak-password",
-      "Password must be at least 8 characters",
-    );
-  }
+  assertStrongPassword(password);
   const passwordBytes = new TextEncoder().encode(password);
   try {
     const result = await reprotectCrxKeyWithPassword(
@@ -274,7 +222,14 @@ export async function resealCrxKeyUnderPassword(
       ARGON2_ITERATIONS,
       ARGON2_PARALLELISM,
     );
-    return buildPasswordCrxBlob(result, label);
+    const { salt, iv, ct } = unpackPasswordBlob(result.blob);
+    return crxBlob(
+      result,
+      { method: "password", kdfSalt: toBase64(salt) },
+      iv,
+      ct,
+      label,
+    );
   } finally {
     passwordBytes.fill(0);
   }

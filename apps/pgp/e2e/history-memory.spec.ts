@@ -332,12 +332,16 @@ test("a history segment is no longer accepted as the contacts blob", async ({
       [CONTACTS_KEY],
     );
     await panel.reload();
-    await unlockWithPassword(panel, MASTER);
-    await goToKeys(panel);
-
-    // The contact being gone is NOT what this step establishes: the write
-    // above destroyed the real blob, so it would be gone either way.
-    await expect(visibleContact(panel)).toHaveCount(0);
+    await unlockWithPassword(panel, MASTER, { expectVaultUnreadable: true });
+    // The panel now says so rather than rendering an empty vault: a
+    // store that fails to open throws, and showing "no contacts" for a
+    // blob we simply could not read is indistinguishable from having
+    // lost them. The contact being gone is NOT what this establishes --
+    // the write above destroyed the real blob, so it would be gone
+    // either way.
+    await expect(
+      panel.getByText("Your vault could not be read"),
+    ).toBeVisible();
 
     // What DOES distinguish the fix is whether the substituted blob is
     // READ as a contacts list. Before the fix the AEAD accepted it, every
@@ -353,7 +357,7 @@ test("a history segment is no longer accepted as the contacts blob", async ({
     // the panel comes back.
     await importContact(panel, contact.publicKey).catch(() => undefined);
     await panel.reload();
-    await unlockWithPassword(panel, MASTER);
+    await unlockWithPassword(panel, MASTER, { expectVaultUnreadable: true });
 
     expect(
       (await readStorage(panel, "local"))[CONTACTS_KEY],

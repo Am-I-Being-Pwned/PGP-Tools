@@ -10,7 +10,23 @@ const PROD_CSP =
   [
     "default-src 'none'",
     "script-src 'self' 'wasm-unsafe-eval'",
-    "connect-src 'self'",
+    // Widened for the GitHub SSH-recipient import. CSP applies to the
+    // MV3 service worker (verified: with plain `connect-src 'self'` the
+    // worker's fetch to api.github.com fails), so the worker cannot
+    // reach the endpoint without this entry.
+    //
+    // What the `/users/` path prefix buys: other API paths are blocked
+    // -- verified that `/users/<name>/keys` returns 200 while `/gists`
+    // is refused by the browser. What it does NOT buy: CSP does not
+    // path-match query strings, so `?anything=x` appended to an allowed
+    // path still passes. The real defence against a crafted path is
+    // lib/github/username.ts, which pins the username charset and
+    // asserts the final origin + pathname before fetching.
+    //
+    // The side panel does not need this and does not get it: its
+    // index.html carries a meta CSP that keeps it on `connect-src
+    // 'self'`. Only the worker talks to GitHub.
+    "connect-src 'self' https://api.github.com/users/",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data:",
     "font-src 'self'",
@@ -23,6 +39,36 @@ const PROD_CSP =
     "base-uri 'none'",
     "manifest-src 'none'",
   ].join("; ") + ";";
+
+/**
+ * Inject the side panel's tightening meta CSP -- PRODUCTION ONLY.
+ *
+ * A meta CSP can only ever narrow the policy the manifest sets, which is
+ * exactly what we want in prod: the manifest widens `connect-src` so the
+ * background worker can reach api.github.com, and this pulls the PANEL
+ * back to `connect-src 'self'`, browser-enforced, so the realm holding
+ * keys and plaintext cannot name a remote host. MV3 has one CSP for all
+ * contexts; this is the only way to scope it per-context.
+ *
+ * It must NOT ship in dev. `extension_pages` is omitted entirely in dev
+ * (see below) so the WXT dev server can serve HMR over ws://localhost
+ * and the wasm blob over http://localhost -- a meta tag baked into the
+ * HTML has no such mode-awareness and would block both, leaving the
+ * panel unable to load its own crypto engine. Hence a build-time
+ * injection rather than a literal in index.html.
+ */
+function panelCspMeta(enabled: boolean) {
+  return {
+    name: "pgp-tools:panel-csp-meta",
+    transformIndexHtml(html: string) {
+      if (!enabled) return html;
+      return html.replace(
+        "<head>",
+        `<head>\n    <meta http-equiv="Content-Security-Policy" content="connect-src 'self'" />`,
+      );
+    },
+  };
+}
 
 // In dev we omit `content_security_policy.extension_pages` entirely,
 // so MV3's default CSP applies (which is already strict and allows
@@ -109,8 +155,8 @@ export default defineConfig({
           },
         }),
   }),
-  vite: () => ({
-    plugins: [tailwindcss(), wasm()],
+  vite: (env) => ({
+    plugins: [tailwindcss(), wasm(), panelCspMeta(env.command === "build")],
     server: { port: 3004 },
     build: {
       // We ship to Chrome MV3 only; <link rel="modulepreload"> has

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 
 import type { ActionCtx, AppTab, PgpMode } from "../lib/actions/types";
+import type { StoredKeyKind } from "../lib/storage/key-kind";
 
 /**
  * The slice of workspace state + operations the action system needs,
@@ -13,6 +14,9 @@ export interface WorkspaceOpsBridge {
   hasInput: boolean;
   /** Encrypt has at least one selected recipient. */
   hasRecipients: boolean;
+  /** Which engine those recipients encrypt with (null when none are
+   *  selected). See ActionCtx.encryptEngine. */
+  encryptEngine: StoredKeyKind | null;
   hasOutput: boolean;
   /** A completed operation produced anything downloadable. */
   hasDownload: boolean;
@@ -66,6 +70,7 @@ export function useActionContext(args: UseActionContextArgs): ActionCtx {
   const mode = workspace?.mode ?? "encrypt";
   const hasInput = workspace?.hasInput ?? false;
   const hasRecipients = workspace?.hasRecipients ?? false;
+  const encryptEngine = workspace?.encryptEngine ?? null;
   const hasOutput = workspace?.hasOutput ?? false;
   const hasDownload = workspace?.hasDownload ?? false;
   const historyEnabled = workspace?.historyEnabled ?? false;
@@ -79,6 +84,7 @@ export function useActionContext(args: UseActionContextArgs): ActionCtx {
       mode,
       hasInput,
       hasRecipients,
+      encryptEngine,
       hasOutput,
       hasDownload,
       masterUnlocked: true,
@@ -115,6 +121,7 @@ export function useActionContext(args: UseActionContextArgs): ActionCtx {
       mode,
       hasInput,
       hasRecipients,
+      encryptEngine,
       hasOutput,
       hasDownload,
       historyEnabled,

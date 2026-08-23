@@ -16,8 +16,9 @@
 //!
 //! ## Security model
 //!
-//! - Key isolation: Private keys live in WASM's linear memory (StoredKey),
-//!   serialized bytes that are zeroized on drop. JS holds only integer handles.
+//! - Key isolation: Private keys live in WASM's linear memory (KEY_STORE,
+//!   a `protected::HandleStore`), serialized bytes that are zeroized on
+//!   drop. JS holds only integer handles.
 //! - Signature verification: check() returns Err on bad signatures,
 //!   aborting the entire operation. No plaintext is surfaced for forged messages.
 //! - Argon2id KDF: Password-derived keys use Argon2id (64MB, 3 iterations),
@@ -48,7 +49,6 @@
 
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::io::Write;
 use std::time::{Duration, SystemTime};
 
@@ -706,40 +706,24 @@ fn process_signatures(structure: MessageStructure) -> (&'static str, Option<Stri
 // Private key store (keys live in WASM linear memory, never in JS)
 // =====================================================================
 
-/// Private key stored as serialized bytes. Zeroized when dropped.
-struct StoredKey {
-    bytes: Vec<u8>,
-}
-
-impl StoredKey {
-    fn from_cert(cert: &openpgp::Cert) -> Result<Self, String> {
-        // SerializeInto::to_vec() pre-allocates exactly serialized_len() bytes,
-        // so the backing buffer is never grown -- no realloc trail of unzeroed
-        // partial copies for the zeroize-on-drop to miss.
-        let bytes = cert.as_tsk().to_vec().str_err()?;
-        Ok(StoredKey { bytes })
-    }
-
-    fn to_cert(&self) -> Result<openpgp::Cert, String> {
-        openpgp::Cert::from_bytes(&self.bytes).str_err()
-    }
-}
-
-impl Drop for StoredKey {
-    fn drop(&mut self) {
-        self.bytes.zeroize();
-    }
-}
-
+// KEY_STORE: the unlocked-cert cache. Entries are the serialized secret cert
+// (`serialize_secret_cert`) in a `Zeroizing<Vec<u8>>`, so removal, overwrite
+// and teardown all wipe the bytes -- the store type is
+// `protected::HandleStore`, the same machinery `crx.rs` uses for
+// `CRX_KEY_STORE`.
+//
+// It is a *distinct instance*, not a shared one: nothing outside this module
+// can reach it, which is what keeps "populated only by the unlock paths"
+// (SECURITY.md §4) a property of `insert_key`'s call sites rather than a hope
+// about every caller in the crate.
 thread_local! {
-    static KEY_STORE: RefCell<HashMap<u32, StoredKey>> = RefCell::new(HashMap::new());
+    static KEY_STORE: protected::HandleStore = protected::HandleStore::new();
     static NEXT_HANDLE: RefCell<u32> = RefCell::new(1);
 }
 
-fn with_store<T>(f: impl FnOnce(&mut HashMap<u32, StoredKey>) -> T) -> T {
-    KEY_STORE.with(|store| f(&mut store.borrow_mut()))
-}
-
+/// Hand out the next handle. Monotonic and never reused across *any* store
+/// in the crate (`crx.rs` draws from this counter too), so a stale handle
+/// from a dropped key can never silently address a later one.
 fn next_handle() -> Result<u32, String> {
     NEXT_HANDLE.with(|next| {
         let mut n = next.borrow_mut();
@@ -751,14 +735,13 @@ fn next_handle() -> Result<u32, String> {
 }
 
 fn insert_key(cert: &openpgp::Cert) -> Result<u32, String> {
-    let stored = StoredKey::from_cert(cert)?;
-    let handle = next_handle()?;
-    with_store(|store| store.insert(handle, stored));
-    Ok(handle)
+    let stored = serialize_secret_cert(cert)?;
+    KEY_STORE.with(|store| store.insert(stored))
 }
 
 fn get_cert_from_handle(handle: u32) -> Result<openpgp::Cert, String> {
-    with_store(|store| store.get(&handle).map(|sk| sk.to_cert()))
+    KEY_STORE
+        .with(|store| store.with(handle, |bytes| openpgp::Cert::from_bytes(bytes).str_err()))
         .ok_or("Key handle not found - key may have been locked")?
 }
 
@@ -1180,7 +1163,7 @@ pub fn verify_message(
 /// Drop a key from WASM memory. The backing bytes are zeroized.
 #[wasm_bindgen(js_name = "dropKey")]
 pub fn drop_key(handle: u32) -> Result<(), String> {
-    with_store(|store| store.remove(&handle));
+    KEY_STORE.with(|store| store.remove(handle));
     Ok(())
 }
 
@@ -1385,22 +1368,19 @@ fn serialize_secret_cert(cert: &openpgp::Cert) -> Result<Zeroizing<Vec<u8>>, Str
     Ok(Zeroizing::new(cert.as_tsk().to_vec().str_err()?))
 }
 
-/// Pack `[u32_le json_len][json][blob]` so JS can split metadata from
-/// the protection blob in one wasm call.
+/// Serialize the metadata and pack it ahead of the protection blob as
+/// `[u32_le json_len][json][blob]` -- see `protected::pack_meta_blob`, which
+/// the CRX protect paths share.
 fn pack_protect_result(meta: &ProtectResultMeta, blob: &[u8]) -> Result<Vec<u8>, String> {
     let json = serde_json::to_string(meta).str_err()?;
-    let json_bytes = json.as_bytes();
-    let mut out = Vec::with_capacity(4 + json_bytes.len() + blob.len());
-    out.extend_from_slice(&(json_bytes.len() as u32).to_le_bytes());
-    out.extend_from_slice(json_bytes);
-    out.extend_from_slice(blob);
-    Ok(out)
+    Ok(protected::pack_meta_blob(&json, blob))
 }
 
 /// Encrypt a cert's secret material under an Argon2id-derived AES-GCM key.
 /// Returns `[16-byte salt][12-byte iv][ciphertext]`.
 /// AAD is bound to the cert's fingerprint so the blob can't be swapped
-/// between key entries.
+/// between key entries, and prefixed with `PASSWORD_AAD_PREFIX` so it can't
+/// be swapped with a CRX blob either.
 fn encrypt_cert_with_password(
     cert: &openpgp::Cert,
     password: &[u8],
@@ -1408,23 +1388,16 @@ fn encrypt_cert_with_password(
     iterations: u32,
     parallelism: u32,
 ) -> Result<Vec<u8>, String> {
-    let key_id = cert.fingerprint().to_hex();
-
-    let mut salt = [0u8; 16];
-    rng::fill(&mut salt)?;
-
-    let mut derived = argon2_derive(password, &salt, memory_kib, iterations, parallelism)?;
-
     let plaintext = serialize_secret_cert(cert)?;
-    let aad = format!("{PASSWORD_AAD_PREFIX}{key_id}");
-    let iv_and_ct = aes_gcm_encrypt(&derived, &plaintext, aad.as_bytes());
-    derived.zeroize();
-    let iv_and_ct = iv_and_ct?;
-
-    let mut out = Vec::with_capacity(16 + iv_and_ct.len());
-    out.extend_from_slice(&salt);
-    out.extend_from_slice(&iv_and_ct);
-    Ok(out)
+    protected::seal_with_password(
+        &plaintext,
+        &cert.fingerprint().to_hex(),
+        PASSWORD_AAD_PREFIX,
+        password,
+        memory_kib,
+        iterations,
+        parallelism,
+    )
 }
 
 /// Encrypt a cert's secret material under a HKDF(PRF, storedSecret)-derived
@@ -1434,18 +1407,15 @@ fn encrypt_cert_with_prf(
     prf_output: &[u8],
     stored_secret: &[u8],
 ) -> Result<Vec<u8>, String> {
-    let key_id = cert.fingerprint().to_hex();
-
-    let hk = Hkdf::<Sha256>::new(Some(stored_secret), prf_output);
-    let mut derived = vec![0u8; 32];
-    hk.expand(b"gpg-tools-prf-v1", &mut derived)
-        .map_err(|e| format!("HKDF failed: {e}"))?;
-
     let plaintext = serialize_secret_cert(cert)?;
-    let aad = format!("{PASSKEY_AAD_PREFIX}{key_id}");
-    let iv_and_ct = aes_gcm_encrypt(&derived, &plaintext, aad.as_bytes());
-    derived.zeroize();
-    iv_and_ct
+    protected::seal_with_prf(
+        &plaintext,
+        &cert.fingerprint().to_hex(),
+        PASSKEY_AAD_PREFIX,
+        PASSKEY_HKDF_INFO,
+        prf_output,
+        stored_secret,
+    )
 }
 
 /// Decrypt one S2K-protected component key, falling back to a manual
@@ -1791,12 +1761,36 @@ fn encrypt_cert_for_export(cert: &openpgp::Cert, passphrase: &[u8]) -> Result<St
 // Argon2id key derivation (password -> AES key)
 // =====================================================================
 
-/// Derive a 32-byte AES key from a password using Argon2id.
+/// Derive a 32-byte AES key from a password using Argon2id (JS entry point).
 ///
 /// Parameters are chosen for browser use: 64MB memory, 3 iterations,
 /// parallelism 1 (WASM is single-threaded). This makes GPU brute-force
 /// impractical for passwords with reasonable entropy.
+///
+/// Owned, not `&[u8]`: with a borrowed param the wasm-bindgen glue frees
+/// its marshalled copy of the password without clearing it, leaving the
+/// plaintext in linear memory. Owning it lets Zeroizing scrub on exit.
+/// See SECURITY.md §8.4 and T-UNLOCK-PARAM-NOT-OWNED.
+///
+/// The derivation itself lives in `argon2_derive`, which stays borrowing:
+/// its in-crate callers (`protected`, `crx`) already hold the password in a
+/// `Zeroizing` of their own, and taking it by value there would add an
+/// un-scrubbed copy rather than remove one. Ownership is required at the
+/// ABI boundary, which is exactly here.
 #[wasm_bindgen(js_name = "argon2Derive")]
+pub fn argon2_derive_owned(
+    password: Vec<u8>,
+    salt: &[u8],
+    memory_kib: u32,
+    iterations: u32,
+    parallelism: u32,
+) -> Result<Vec<u8>, String> {
+    let password = Zeroizing::new(password);
+    argon2_derive(&password, salt, memory_kib, iterations, parallelism)
+}
+
+/// In-crate Argon2id derivation. Not a wasm export -- see
+/// `argon2_derive_owned` for the JS entry point and why the split exists.
 pub fn argon2_derive(
     password: &[u8],
     salt: &[u8],
@@ -1844,11 +1838,18 @@ pub fn unlock_with_password(
     // plaintext in linear memory. Owning it lets Zeroizing scrub on exit.
     // See SECURITY.md §8.4 and T-UNLOCK-PARAM-NOT-OWNED.
     let password = Zeroizing::new(password);
-    let mut derived = argon2_derive(&password, salt, memory_kib, iterations, parallelism)?;
-    let aad = format!("{PASSWORD_AAD_PREFIX}{key_id}");
-    let result = aes_gcm_decrypt(&derived, iv, ciphertext, aad.as_bytes());
-    derived.zeroize();
-    parse_and_store_private_key(result?)
+    let plaintext = protected::open_with_password(
+        ciphertext,
+        iv,
+        salt,
+        key_id,
+        PASSWORD_AAD_PREFIX,
+        &password,
+        memory_kib,
+        iterations,
+        parallelism,
+    )?;
+    parse_and_store_private_key(plaintext)
 }
 
 /// Unlock a passkey-protected key entirely in WASM. Returns a key handle.
@@ -1868,15 +1869,16 @@ pub fn unlock_with_prf(
     // matching generate_protected_with_prf, which already takes both owned.
     let prf_output = Zeroizing::new(prf_output);
     let stored_secret = Zeroizing::new(stored_secret);
-    let hk = Hkdf::<Sha256>::new(Some(&stored_secret), &prf_output);
-    let mut derived = vec![0u8; 32];
-    hk.expand(b"gpg-tools-prf-v1", &mut derived)
-        .map_err(|e| format!("HKDF failed: {e}"))?;
-
-    let aad = format!("{PASSKEY_AAD_PREFIX}{key_id}");
-    let result = aes_gcm_decrypt(&derived, iv, ciphertext, aad.as_bytes());
-    derived.zeroize();
-    parse_and_store_private_key(result?)
+    let plaintext = protected::open_with_prf(
+        ciphertext,
+        iv,
+        key_id,
+        PASSKEY_AAD_PREFIX,
+        PASSKEY_HKDF_INFO,
+        &prf_output,
+        &stored_secret,
+    )?;
+    parse_and_store_private_key(plaintext)
 }
 
 // =====================================================================
@@ -1884,14 +1886,24 @@ pub fn unlock_with_prf(
 // =====================================================================
 
 /// AAD prefixes for per-key protection (also used by the JS side in
-/// `encrypt-private-key.ts` -- keep in sync).
+/// `encrypt-private-key.ts` -- keep in sync). Distinct from the
+/// `gpg-tools:crx-*` prefixes in `crx.rs`, so an OpenPGP blob and a CRX blob
+/// can never be opened as each other.
 const PASSWORD_AAD_PREFIX: &str = "gpg-tools:password:";
 const PASSKEY_AAD_PREFIX: &str = "gpg-tools:passkey:";
+/// HKDF info string for the PRF-derived AES key protecting an OpenPGP cert.
+/// Distinct from `crx.rs`'s `CRX_PRF_HKDF_INFO`: the same authenticator PRF
+/// output must never derive the same key for two key types.
+const PASSKEY_HKDF_INFO: &[u8] = b"gpg-tools-prf-v1";
 
 /// Parse a decrypted private key, zeroize the plaintext, and store it.
-fn parse_and_store_private_key(mut plaintext: Vec<u8>) -> Result<u32, String> {
+///
+/// The plaintext arrives in `Zeroizing` from `protected::open_*` and is
+/// dropped (wiped) as soon as the cert is parsed, before it reaches the
+/// store -- so the serialized copy exists in only one place at a time.
+fn parse_and_store_private_key(plaintext: Zeroizing<Vec<u8>>) -> Result<u32, String> {
     let result = openpgp::Cert::from_bytes(&plaintext).str_err();
-    plaintext.zeroize();
+    drop(plaintext);
     let cert = result?;
     if cert.keys().secret().next().is_none() {
         return Err("Decrypted data is not a private key".to_string());
@@ -2177,13 +2189,21 @@ pub fn decrypt_contacts(ciphertext: &[u8], iv: &[u8]) -> Result<Vec<u8>, String>
 /// Returns `[12-byte IV][ciphertext]`.
 #[wasm_bindgen(js_name = "encryptCanaryAndInitSession")]
 pub fn encrypt_canary_and_init_session(
-    password: &[u8],
+    password: Vec<u8>,
     salt: &[u8],
     memory_kib: u32,
     iterations: u32,
     parallelism: u32,
 ) -> Result<Vec<u8>, String> {
-    let mut key = derive_contacts_key_from_password(password, salt, memory_kib, iterations, parallelism)?;
+    // Owned, not `&[u8]`: with a borrowed param the wasm-bindgen glue frees
+    // its marshalled copy of the password without clearing it, leaving the
+    // plaintext in linear memory. Owning it lets Zeroizing scrub on exit.
+    // This is the onboarding path, so the secret here is the master password
+    // that gates the whole vault. See SECURITY.md §8.4 and
+    // T-UNLOCK-PARAM-NOT-OWNED.
+    let password = Zeroizing::new(password);
+    let mut key =
+        derive_contacts_key_from_password(&password, salt, memory_kib, iterations, parallelism)?;
     let result = aes_gcm_encrypt(&key, CANARY_PLAINTEXT, CONTACTS_AAD);
     if result.is_ok() {
         set_contacts_key(Some(key));
@@ -2200,13 +2220,21 @@ pub fn encrypt_canary_and_init_session(
 pub fn verify_canary_and_init_session(
     canary_ciphertext: &[u8],
     canary_iv: &[u8],
-    password: &[u8],
+    password: Vec<u8>,
     salt: &[u8],
     memory_kib: u32,
     iterations: u32,
     parallelism: u32,
 ) -> Result<bool, String> {
-    let mut key = derive_contacts_key_from_password(password, salt, memory_kib, iterations, parallelism)?;
+    // Owned, not `&[u8]`: with a borrowed param the wasm-bindgen glue frees
+    // its marshalled copy of the password without clearing it, leaving the
+    // plaintext in linear memory. Owning it lets Zeroizing scrub on exit --
+    // including on the wrong-password branch, which is the one an attacker
+    // gets to trigger repeatedly. This is the master-unlock path. See
+    // SECURITY.md §8.4 and T-UNLOCK-PARAM-NOT-OWNED.
+    let password = Zeroizing::new(password);
+    let mut key =
+        derive_contacts_key_from_password(&password, salt, memory_kib, iterations, parallelism)?;
     match aes_gcm_decrypt(&key, canary_iv, canary_ciphertext, CONTACTS_AAD) {
         Ok(_) => {
             // AES-GCM is AEAD: successful decryption guarantees correct key.
@@ -2222,10 +2250,22 @@ pub fn verify_canary_and_init_session(
 
 // =====================================================================
 
+/// The at-rest key-protection envelope (Argon2id / PRF -> AES-256-GCM, the
+/// handle store, and the packed meta+blob wire format), shared by every key
+/// type the vault holds. See the module header for what is parameterised and
+/// why it must stay that way.
+mod protected;
+
 /// CRX (Chrome extension) signing & verification. Reuses this module's
 /// vault/unlock/zeroize machinery for an RSA-2048 signing key; see the
 /// module header for why CRX3 is not OpenPGP.
 mod crx;
+
+/// age encryption to imported SSH keys (`ssh-ed25519`, `ssh-rsa`). Reuses
+/// this module's vault/unlock/zeroize machinery for the identity; see the
+/// module header for why `ssh-key` is needed and where age's own randomness
+/// stays out of reach.
+mod age;
 
 /// The crate's CSPRNG: a ChaCha20 stream seeded once from
 /// `crypto.getRandomValues`. See the module header for what it does and

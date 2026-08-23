@@ -1,4 +1,5 @@
 import type { WorkspaceAction } from "../../lib/messages";
+import type { StoredKeyKind } from "../../lib/storage/key-kind";
 
 /** Filesystem-safe slug of a recipient display name, capped so long
  *  corporate names don't swallow the whole filename. */
@@ -32,29 +33,38 @@ function timestampTag(now: Date): string {
  * Encrypt outputs carry a recipient tag and a timestamp so a Downloads
  * folder full of ciphertext stays identifiable
  * ("message.to-alice.2026-07-16-1432.gpg").
+ *
+ * `engine` names the format the ciphertext is actually in: `.gpg` for
+ * OpenPGP, `.age` for age. The extension is not decoration -- it is what
+ * tells the user (and every other tool they might open the file with)
+ * which program can read it, so an age file must never be handed over
+ * named `.gpg`.
  */
 export function outputFileName(
   mode: WorkspaceAction,
   fileNames: string[],
   zipFiles: boolean,
-  opts?: { recipients?: string[]; now?: Date },
+  opts?: { recipients?: string[]; now?: Date; engine?: StoredKeyKind | null },
 ): string {
+  const ext = opts?.engine === "ssh" ? "age" : "gpg";
   if (mode === "encrypt") {
     const parts = [
       recipientTag(opts?.recipients ?? []),
       timestampTag(opts?.now ?? new Date()),
     ].filter(Boolean);
     const suffix = parts.join(".");
-    if (fileNames.length === 0) return `message.${suffix}.gpg`;
+    if (fileNames.length === 0) return `message.${suffix}.${ext}`;
     if (fileNames.length === 1 || !zipFiles)
-      return `${fileNames[0]}.${suffix}.gpg`;
-    return `files.${suffix}.zip.gpg`;
+      return `${fileNames[0]}.${suffix}.${ext}`;
+    return `files.${suffix}.zip.${ext}`;
   }
-  if (fileNames.length === 0) return "output.gpg";
+  if (fileNames.length === 0) return `output.${ext}`;
   if (fileNames.length === 1 || !zipFiles) {
     const name = fileNames[0];
     if (mode === "sign") return `${name}.asc`;
-    return name.replace(/\.(gpg|pgp|asc)$/i, "") || name;
+    // Strip whichever ciphertext extension the input carried, so
+    // "report.pdf.age" decrypts back to "report.pdf".
+    return name.replace(/\.(gpg|pgp|asc|age)$/i, "") || name;
   }
   return "decrypted-files.zip";
 }

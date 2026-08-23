@@ -1,9 +1,16 @@
 import "../lib/network-lockdown";
 
-import type { OperationAction, PendingOperation } from "../lib/messages";
+import type {
+  GithubKeysRequest,
+  GithubKeysResponse,
+  OperationAction,
+  PendingOperation,
+} from "../lib/messages";
 import { recoverArmorIfNeeded } from "../lib/armor-recovery";
 import { classifyAction } from "../lib/classify-action";
 import { MENU_OPEN_IN_PGP, SESSION_PENDING_OP } from "../lib/constants";
+import { fetchGithubKeys } from "../lib/github/fetch-keys";
+import { isGithubUsername } from "../lib/github/username";
 import { commandToMode } from "../lib/mode-commands";
 
 /**
@@ -38,6 +45,40 @@ function openPanelWithOperation(
   // until it commits; the side panel reads the op on mount (or via
   // its storage.onChanged listener when already open).
   void chrome.storage.session.set({ [SESSION_PENDING_OP]: operation });
+}
+
+/**
+ * Handle a GitHub SSH-key lookup for the side panel.
+ *
+ * Why this one is a message and not the `chrome.storage.session` channel
+ * `openPanelWithOperation` uses: that channel is one-way (worker tells
+ * panel something happened). This is a request that needs a reply, and
+ * the panel needs to know which reply belongs to which request.
+ *
+ * Why the network call lives in the worker at all: the manifest CSP has
+ * to be widened for api.github.com, and doing that for the worker only
+ * lets the side panel keep the exact `connect-src 'self'` it had before
+ * (see the meta CSP in sidepanel/index.html).
+ *
+ * The username is re-validated here even though the panel validates too:
+ * the panel is the untrusted side of this boundary. Anything that can
+ * send a runtime message -- a compromised panel, a future entrypoint --
+ * reaches this function, and without the check `username` is a path
+ * fragment and this becomes an arbitrary GET.
+ */
+async function handleGithubKeysRequest(
+  message: GithubKeysRequest,
+): Promise<GithubKeysResponse> {
+  const { username } = message;
+  if (!isGithubUsername(username)) {
+    return { ok: false, error: "invalid-username" };
+  }
+
+  const result = await fetchGithubKeys(username);
+  if (!result.ok) {
+    return { ok: false, error: result.error, resetAt: result.resetAt };
+  }
+  return { ok: true, username, lines: result.lines };
 }
 
 export default defineBackground(() => {
@@ -81,4 +122,28 @@ export default defineBackground(() => {
     if (!mode) return;
     openPanelWithOperation(mode, "", tab);
   });
+
+  // The app's first onMessage listener. Returning `true` keeps the
+  // channel open for the async sendResponse; returning it only on the
+  // message types we own leaves any future listener free to claim the
+  // rest.
+  chrome.runtime.onMessage.addListener(
+    (message: unknown, _sender, sendResponse) => {
+      if (
+        typeof message !== "object" ||
+        message === null ||
+        (message as { type?: unknown }).type !== "GITHUB_KEYS_REQUEST"
+      ) {
+        return undefined;
+      }
+
+      void handleGithubKeysRequest(message as GithubKeysRequest).then(
+        sendResponse,
+        () => {
+          sendResponse({ ok: false, error: "server-error" });
+        },
+      );
+      return true;
+    },
+  );
 });

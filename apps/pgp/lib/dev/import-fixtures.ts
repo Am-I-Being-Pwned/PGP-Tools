@@ -82,7 +82,7 @@ export const IMPORT_SCENARIOS: ImportScenario[] = [
     hint: "The common case: a public key you've never seen.",
     incoming: {
       keyId: FP_ALICE,
-      kind: "public",
+      kind: "pgp-public",
       status: "new",
       userIds: [
         "Alice Example <alice@example.com>",
@@ -106,7 +106,7 @@ export const IMPORT_SCENARIOS: ImportScenario[] = [
     hint: "Same fingerprint, cert has moved on -- imports as an update.",
     incoming: {
       keyId: FP_ALICE,
-      kind: "public",
+      kind: "pgp-public",
       status: "update",
       userIds: ["Alice Example <alice@example.com>"],
       info: info({ keyId: FP_ALICE, expiresAt: NOW + 900 * DAY }),
@@ -122,7 +122,7 @@ export const IMPORT_SCENARIOS: ImportScenario[] = [
     hint: "Byte-identical to a stored key -- in the real flow this never opens a panel.",
     incoming: {
       keyId: FP_BOB,
-      kind: "public",
+      kind: "pgp-public",
       status: "duplicate",
       userIds: ["Bob Example <bob@example.com>"],
       info: info({
@@ -141,7 +141,7 @@ export const IMPORT_SCENARIOS: ImportScenario[] = [
     hint: "Unusable key: the health banner and the reason, no import button.",
     incoming: {
       keyId: FP_CAROL,
-      kind: "public",
+      kind: "pgp-public",
       status: "rejected",
       userIds: ["Carol Example <carol@example.com>"],
       info: info({
@@ -171,7 +171,7 @@ export const IMPORT_SCENARIOS: ImportScenario[] = [
     hint: "Importable, with a security warning shown inline.",
     incoming: {
       keyId: FP_CAROL,
-      kind: "public",
+      kind: "pgp-public",
       status: "new",
       userIds: ["Carol Example <carol@example.com>"],
       info: info({
@@ -192,7 +192,7 @@ export const IMPORT_SCENARIOS: ImportScenario[] = [
     hint: "Preview first, then the protect step -- button reads Continue.",
     incoming: {
       keyId: FP_ALICE,
-      kind: "private",
+      kind: "pgp-private",
       status: "new",
       userIds: ["Alice Example <alice@example.com>"],
       info: info({ keyId: FP_ALICE, isPrivate: true }),
@@ -207,7 +207,7 @@ export const IMPORT_SCENARIOS: ImportScenario[] = [
     hint: "Usable, but you can't encrypt to it -- warning banner.",
     incoming: {
       keyId: FP_BOB,
-      kind: "public",
+      kind: "pgp-public",
       status: "new",
       userIds: ["Bob Example <bob@example.com>"],
       info: info({

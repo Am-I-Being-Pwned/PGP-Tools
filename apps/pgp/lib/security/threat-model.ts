@@ -115,9 +115,25 @@ export const THREAT_MODEL: Threat[] = [
       "Partial, on two fronts. (1) `Crypto.prototype.getRandomValues` is frozen AND the own slot on the `globalThis.crypto` instance is pinned non-configurable, which together block both the assignment and defineProperty shadowing routes. (2) A thread-local ChaCha20 CSPRNG (`rand_chacha`, seeded once from the platform RNG, never reseeded) now backs AES-GCM nonces, Argon2id salts, the draft session key, and CRX RSA keygen.",
     status: "partial",
     rationale:
-      "The most severe variant of T-PRIMITIVE-HOOK and the one with the longest blast radius: it does not exfiltrate an existing key, it makes keys generated afterwards predictable, silently, with valid-looking output and no artefact left in the vault. WHAT THE CSPRNG BUYS: poisoning that lands AFTER the first draw, and poisoning that is constant/degenerate, no longer propagates -- most importantly it prevents AES-GCM nonce reuse under a fixed key, which would leak the keystream and the GHASH key across every blob and every draft. Never reseeded on purpose: reseeding means re-reading the source we distrust, and would let a later poisoning replace good state. WHAT IT DOES NOT BUY, and this is the important half: poisoning that lands BEFORE the first draw gives the attacker the seed and therefore the whole stream, so it buys nothing there; and it does NOT cover OpenPGP key generation at all, which is the primary asset. Sequoia's CertBuilder::generate takes no RNG and the crypto-rust backend hard-codes OsRng in ~28 places plus per-algorithm direct uses, with no trait object, thread-local hook, or feature flag -- overriding it needs a fork or patch, which was deliberately not done. A test (a_known_seed_still_yields_a_known_stream) asserts the limitation so the suite cannot be misread as a claim of unpredictability. There is no independent entropy source inside WASM; getrandom on wasm32 bottoms out at crypto.getRandomValues and that is the only door. No jitter or address-based sources were added -- combining entropy sources is a design activity and out of scope.",
+      "The most severe variant of T-PRIMITIVE-HOOK and the one with the longest blast radius: it does not exfiltrate an existing key, it makes keys generated afterwards predictable, silently, with valid-looking output and no artefact left in the vault. WHAT THE CSPRNG BUYS: poisoning that lands AFTER the first draw, and poisoning that is constant/degenerate, no longer propagates -- most importantly it prevents AES-GCM nonce reuse under a fixed key, which would leak the keystream and the GHASH key across every blob and every draft. Never reseeded on purpose: reseeding means re-reading the source we distrust, and would let a later poisoning replace good state. WHAT IT DOES NOT BUY, and this is the important half: poisoning that lands BEFORE the first draw gives the attacker the seed and therefore the whole stream, so it buys nothing there; and it does NOT cover OpenPGP key generation at all, which is the primary asset. Sequoia's CertBuilder::generate takes no RNG and the crypto-rust backend hard-codes OsRng in ~28 places plus per-algorithm direct uses, with no trait object, thread-local hook, or feature flag -- overriding it needs a fork or patch, which was deliberately not done. A test (a_known_seed_still_yields_a_known_stream) asserts the limitation so the suite cannot be misread as a claim of unpredictability. There is no independent entropy source inside WASM; getrandom on wasm32 bottoms out at crypto.getRandomValues and that is the only door. No jitter or address-based sources were added -- combining entropy sources is a design activity and out of scope. The age engine has the same carve-out for the same structural reason and is tracked separately as T-AGE-RNG-UNHOOKABLE, because the APIs, the affected values and the blast radius all differ.",
     verifiedBy: ["apps/pgp/e2e/hostile-dep.spec.ts"],
     section: "§8.10",
+  },
+  {
+    id: "T-AGE-RNG-UNHOOKABLE",
+    title: "age's internal randomness bypasses the ChaCha20 hardening",
+    attacker:
+      "The same capability as T-ENTROPY-POISON: a compromised UI dependency that patches `Crypto.prototype.getRandomValues` to return attacker-chosen or constant bytes.",
+    defence:
+      "Partial, and unevenly. Everything age.rs itself draws goes through the crate CSPRNG: the Argon2id salt and AES-GCM nonce of the at-rest envelope (inside protected.rs) and the random probe validate_identity round-trips on unlock. Everything age draws internally does not, and cannot -- `age::Encryptor::with_recipients` (new_file_key(), Nonce::random()) and `<age::ssh::Recipient as age::Recipient>::wrap_file_key` (the ephemeral X25519 secret for ssh-ed25519, the RSA-OAEP randomness for ssh-rsa) each construct their own `rand::rngs::OsRng` and take no RNG argument. The frozen `Crypto.prototype.getRandomValues` plus the pinned own slot on `globalThis.crypto` (T-PRIMITIVE-HOOK) is the only layer that applies to those draws.",
+    status: "partial",
+    rationale:
+      "Recorded as its own entry rather than folded into T-ENTROPY-POISON because the shape is identical but the facts are not: different crate, different APIs, and a different blast radius -- there is no long-lived asset to make predictable here, since the app never GENERATES an age or SSH key (import only, §13). What a poisoned draw costs instead is per-file: a predictable file key or ephemeral X25519 secret makes that message's contents recoverable to the attacker, and a repeated payload nonce under a repeated file key is the usual catastrophic AEAD failure. Keeping it separate also keeps it findable -- someone auditing the age surface greps for `age`, not for `Sequoia`. STRUCTURALLY THE SAME CARVE-OUT AS SEQUOIA'S CertBuilder::generate: no trait object, no thread-local hook, no feature flag; intercepting would need a fork or patch of the age crate, which was deliberately not done, exactly as for Sequoia. On wasm32-unknown-unknown those OsRng draws resolve crypto.getRandomValues per call, so they sit fully inside T-ENTROPY-POISON / §8.10 and inherit its supply-chain precondition. WHAT IS NOT CLAIMED: no test asserts anything about age's internal draws, because there is no seam to observe them through -- the evidence below covers the primitive freeze and the CSPRNG's own documented limits, not age's behaviour. Reading rng.rs's tests as coverage of this entry would be a misreading.",
+    verifiedBy: [
+      "apps/pgp/e2e/hostile-dep.spec.ts",
+      "apps/pgp/gpg-wasm/src/rng.rs",
+    ],
+    section: "§8.10, §12, §13",
   },
   {
     id: "T-UNLOCK-PARAM-NOT-OWNED",
@@ -141,7 +157,7 @@ export const THREAT_MODEL: Threat[] = [
     attacker:
       "Anyone who can inspect process memory after the user is finished with a key.",
     defence:
-      "`Drop for StoredKey` zeroizes; JS-side password and PRF buffers are `.fill(0)`ed in `finally`; auto-lock drops handles on six triggers (§6).",
+      "KEY_STORE entries are `Zeroizing<Vec<u8>>`, zeroized on drop; JS-side password and PRF buffers are `.fill(0)`ed in `finally`; auto-lock drops handles on six triggers (§6).",
     status: "defended",
     verifiedBy: [
       "apps/pgp/e2e/memory.spec.ts",
@@ -200,12 +216,65 @@ export const THREAT_MODEL: Threat[] = [
     attacker:
       "Malicious code in any extension context attempting to POST key material or plaintext to a remote host.",
     defence:
-      "Manifest CSP `connect-src 'self'` blocks non-extension destinations at the network layer. Defence in depth: `network-lockdown.ts` freezes `fetch` non-configurable and stubs XHR / WebSocket / EventSource / RTCPeerConnection / sendBeacon. Re-asserted at build time.",
+      "Per-context, and no longer uniform -- the extension-wide `connect-src 'self'` claim this entry used to make stopped being true when the GitHub SSH-key lookup shipped. PANEL AND WELCOME REALMS: still exactly `connect-src 'self'`, now via the `<meta http-equiv=\"Content-Security-Policy\">` tag in `sidepanel.html` rather than via the manifest. Meta CSP can only tighten, never loosen, and the browser enforces it. WORKER REALM: the manifest CSP is `connect-src 'self' https://api.github.com/users/` -- one origin, narrowed to one path prefix, GET only. Defence in depth in both realms: `network-lockdown.ts` freezes `fetch` non-configurable (forcing `credentials: \"omit\"`, stripping Cookie/Authorization/X-Api-Key, rejecting plain HTTP and POST/PUT/PATCH/DELETE) and stubs XHR / WebSocket / EventSource / RTCPeerConnection / sendBeacon. Re-asserted at build time per context: the audit pins the worker bundle to exactly one `fetch` call site and exactly one `https://` origin literal, and the page bundles to the two wasm loaders and a fixed set of non-connect URL literals.",
     status: "partial",
     rationale:
-      "Both layers are static or same-realm. The build-time audit proves no unexpected network code ships; it does not prove the runtime stubs cannot be circumvented in a realm we do not control. A runtime assertion suite for the lockdown does not exist yet.",
+      "Both layers are static or same-realm. The build-time audit proves no unexpected network code ships; it does not prove the runtime stubs cannot be circumvented in a realm we do not control. A runtime assertion suite for the lockdown does not exist yet. The CSP half is browser-enforced and so does not share that weakness -- but it is now only as narrow as `https://api.github.com/users/` in the worker, and CSP does not path-match query strings, which is T-GITHUB-CSP-SCOPE. The audit's URL-literal checks are a change detector, not a proof: a destination assembled at runtime from fragments never appears as a literal.",
     verifiedBy: ["apps/pgp/scripts/audit-network.mjs"],
     section: "§7",
+  },
+  {
+    id: "T-GITHUB-LOOKUP-DISCLOSURE",
+    title: "The GitHub lookup tells GitHub who the user is about to encrypt to",
+    attacker:
+      "GitHub itself, and anyone with access to its request logs or to the network path (the user's ISP, employer, or a state observer of TLS metadata). No compromise of anything is required -- this is the ordinary operation of the feature.",
+    defence:
+      "None, and none is possible. Asking api.github.com for `/users/<u>/keys` IS the feature. The request discloses the username being looked up, the requester's IP, and the time -- before any message exists.",
+    status: "accepted",
+    rationale:
+      'Stated so a user can calibrate rather than guess. WHAT IS SENT: the username, in the URL path, over TLS. Nothing else -- no message content, no key material, no vault identifier, no extension id, no installation id, no telemetry, and no body (the request is a GET). WHAT IT IS NOT JOINED TO: `network-lockdown.ts` forces `credentials: "omit"` and strips `Cookie` and `Authorization`, and no host permission exists (the endpoint answers unauthenticated CORS with `access-control-allow-origin: *`, measured), so the request does not carry the user\'s GitHub session and cannot be attributed to their account FROM THE REQUEST ALONE. That is a narrower statement than "anonymous" and should not be read as one: it can still be joined on IP address, and it WILL be if the same IP browses github.com while logged in, which for most users it does. Tor, a VPN or a different network are the user\'s tools here, not ours. WHEN IT FIRES: only on an explicit button press in the import UI. Never on a timer, never as a background refresh, never on encrypt, never on unlock, never on install. One press, one request. THE ALTERNATIVE STAYS FIRST-CLASS: pasting an `ssh-ed25519 …` line does exactly the same thing with no network at all, and it is the same code path once the string exists -- the lookup is a convenience that fetches a string the user could have typed. A user who does not want GitHub to learn their correspondents should paste. Accepted rather than partial because there is no partial version: an anonymising proxy would only move the disclosure to whoever runs the proxy, and this project does not run servers. Related in kind to T-FILENAME-METADATA and T-AGE-SSH-STANZA-LINKABLE: contents stay confidential, identity and timing do not.',
+    section: "§7, §13",
+  },
+  {
+    id: "T-GITHUB-KEY-SUBSTITUTION",
+    title: "GitHub asserts a key; nothing proves it is the right one",
+    attacker:
+      "GitHub (or an insider there); anyone who compromises the target's GitHub account long enough to add an SSH key; anyone who can mint a publicly-trusted certificate for api.github.com and sit on the path.",
+    defence:
+      "None cryptographic. `/users/<u>/keys` is an ASSERTION BY GITHUB, not a proof of anything. There is no transparency log, no signature over the response, no certificate pinning, and no out-of-band confirmation. The import preview shows every key's SHA-256 fingerprint before anything is stored, and the resulting contact records `source` so the UI can say where the key came from.",
+    status: "accepted",
+    rationale:
+      'Written down because the failure is silent and the UI is reassuring: a substituted key produces a message that encrypts cleanly, looks correct, and is readable by the attacker. Adding a key to a GitHub account is a normal, unremarkable action that generates no alert the sender will see. THE PREVIEW IS NOT VERIFICATION. Showing the fingerprint before storing only helps a user who already knows the real one; for the common case -- looking up a person precisely because you do NOT have their key -- it is a display of a number with nothing to compare it against, and it must not be read as a check. Nor does the shape of the key help: GitHub strips comments and emails, so the string carries no identity claim beyond the account name in the URL. WHAT `source` DOES AND DOES NOT BUY: it lets the UI distinguish "GitHub said so" from "I verified this myself", which is worth having; it is a provenance label, not a trust decision, and the app ships NO affordance for a user to record an out-of-band verification and upgrade the label. That gap is deliberate rather than overlooked -- a verification affordance is a UX and key-management design problem, and shipping a half-built one that produces a green tick for something nobody checked would be worse than shipping the honest label. Say it plainly rather than let the label imply it. Accepted, not pending: the fixes are TOFU pinning with change alerts, or a real web of trust, and both are features this app has deliberately not taken on (§13 is import-only by design). Distinct from T-GITHUB-UNTRUSTED-PARSE, which is about safely handling the BYTES: parsing them correctly says nothing about whether the key they encode is the right person\'s.',
+    section: "§7, §13",
+  },
+  {
+    id: "T-GITHUB-UNTRUSTED-PARSE",
+    title: "Attacker-controlled response bytes parsed in the service worker",
+    attacker:
+      "Anyone who controls what api.github.com returns: a compromised GitHub account choosing the key strings it serves, a TLS interceptor returning an arbitrary body, or a captive portal or proxy substituting HTML for JSON.",
+    defence:
+      "A deliberately boring parse. `JSON.parse` and nothing else -- no eval, no dynamic import, no Function constructor, no regex over the body beyond a shape check. Hard caps applied BEFORE parsing: 64 KiB of body, 20 keys, and a per-key-string length cap. Content type must be JSON. Unknown fields are ignored rather than rejected, because GitHub adds fields. Error text from the response never crosses the message boundary -- results are tagged codes, not prose GitHub wrote.",
+    status: "defended",
+    rationale:
+      "Recorded because this is the first time in the app's life that bytes chosen by a remote party are parsed in the service worker, a context with no wasm, no keys and no plaintext but privileged extension APIs. THE INVARIANT THAT KEEPS THE WORKER BORING: the worker is a transport that shape-checks; the wasm engine is the only thing that decides validity. The worker NEVER concludes that a string is a key -- it forwards strings, and every one is re-parsed by `parseSshRecipient` in the panel, the identical path a pasted `.pub` line already takes, before it can become a recipient. A string the engine refuses surfaces as a rejected row carrying the engine's own message. So a key that reaches storage has been through wasm, whatever its source. WHAT THIS DOES NOT CLAIM: nothing here says the key is TRUSTWORTHY. A perfectly well-formed, correctly-parsed, engine-accepted key can still be the attacker's -- that is T-GITHUB-KEY-SUBSTITUTION, and the two entries deliberately do not overlap.",
+    verifiedBy: [
+      "apps/pgp/lib/github/response.test.ts",
+      "apps/pgp/lib/github/username.test.ts",
+    ],
+    section: "§7, §13",
+  },
+  {
+    id: "T-GITHUB-CSP-SCOPE",
+    title: "Widening connect-src for the worker widens it for every realm",
+    attacker:
+      "Malicious code already running in the background service worker -- the T-SUPPLY-CHAIN precondition, applied to the worker bundle rather than the panel.",
+    defence:
+      "Two-tier CSP. The manifest's `content_security_policy.extension_pages` is extension-WIDE, so `connect-src 'self' https://api.github.com/users/` reaches the panel too; `sidepanel.html` pulls the panel realm back to `connect-src 'self'` with a `<meta http-equiv=\"Content-Security-Policy\">` tag. Meta CSP can only tighten, never loosen. CSP path-prefix matching is real, not folklore: verified in a real build that `/users/<u>/keys` returns 200 while `/gists` is blocked, and that with the manifest widened the WORKER fetch succeeded while the same fetch from the PANEL failed.",
+    status: "partial",
+    rationale:
+      "IMPORTANT DISTINCTION FROM §8.10: the meta tag is enforced by the browser before any of our JS runs, so it is NOT subject to the same-realm hook problem that limits `network-lockdown.ts`. A compromised panel dependency can unhook the lockdown; it cannot unhook a CSP the browser parsed at document load. THE RESIDUAL, stated because it is real: CSP path-matches the PATH and not the QUERY STRING -- verified that `/users/x/keys?leak=SECRET` is permitted by this policy. So a compromised WORKER bundle could exfiltrate by appending a query string to an allowed `/users/` path. That is inherent to CSP and cannot be closed by a narrower policy. WHAT BOUNDS IT: the worker holds no key material, no wasm instance and no message plaintext -- it is a transport and a context-menu router -- so the secrets worth exfiltrating are not in the realm that has the allowance, and the realm that has them has `connect-src 'self'`. And `scripts/audit-network.mjs` asserts the worker bundle's exact contents: one pinned `fetch` call site, one `https://` origin literal, that origin named in exactly one built file, no module imports (so worker code cannot be hiding in a shared chunk), plus that `host_permissions` and `optional_host_permissions` are both ABSENT and that the meta tag is present in the built `sidepanel.html`. Partial rather than defended because the query-string gap is unfixable at the CSP layer and the audit is a build-time check, not a runtime one.",
+    verifiedBy: ["apps/pgp/scripts/audit-network.mjs"],
+    section: "§7, §8.10, §13",
   },
   {
     id: "T-CLIPBOARD-EXFIL",
@@ -231,6 +300,19 @@ export const THREAT_MODEL: Threat[] = [
     rationale:
       "Deliberate usability trade: a Downloads folder of identically-named .gpg blobs is unusable. The consequence is that the encrypt-to-file path protects message contents but NOT recipient identity or activity timing. Documented in §8.5 so users can rename before sharing. Revisit if a metadata-sensitive threat profile becomes a target audience.",
     section: "§8.5",
+  },
+
+  {
+    id: "T-AGE-SSH-STANZA-LINKABLE",
+    title: "An age file names the SSH public key it was encrypted to",
+    attacker:
+      "Anyone holding an age ciphertext plus a candidate SSH public key -- which for most users is public (`https://github.com/<user>.keys`, `https://gitlab.com/<user>.keys`, an authorized_keys file, a leaked backup).",
+    defence:
+      "None. The stanza type is chosen by the age format, not by us, and the identifier is what the recipient's own client uses to find its matching key.",
+    status: "accepted",
+    rationale:
+      "Upstream states this plainly rather than us inferring it. age/src/ssh.rs: 'these recipient types are not anonymous: the encrypted message will include a short 32-bit ID of the public key'. The age man page: 'This feature employs more complex cryptography, and should only be used when a native key is not available for the recipient. Note that SSH keys might not be protected long-term by the recipient, since they are revokable when used only for authentication.' So two things are accepted, not one: the ciphertext leaks WHO IT IS FOR to anyone who can test a candidate public key, and the recipient's custody of an authentication key is weaker than that of a dedicated encryption key -- neither is something this app can fix from the sender side. Accepted rather than pending because the alternative is native age recipients (age1...), which are anonymous, and those are deliberately out of scope (§13: SSH keys only, import only). Related in kind to T-FILENAME-METADATA -- both leak recipient identity while the contents stay confidential -- but strictly worse in one respect: a filename can be changed before sharing, and this identifier is inside the ciphertext and survives any renaming, re-armoring or re-transport. A user who needs unlinkability must not use this engine. Worth recording alongside: the ssh-rsa and ssh-ed25519 stanza types are NOT in the C2SP age specification. They are a convention shared by Go age and Rust age, so cross-tool agreement is the only specification there is, which is why age.rs pins vectors from the Go CLI in both directions rather than testing against a spec document.",
+    section: "§8.5, §13",
   },
 
   // ---------------------------------------------------------------------

@@ -7,14 +7,19 @@ import type { NewHistoryEntry } from "../../lib/storage/history";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { FileResult } from "../../lib/utils/download";
 import type { WorkspaceState } from "./useWorkspaceState";
+import * as ageOps from "../../lib/age/operations";
 import { signZipWithCrxKey, verifyCrxFile } from "../../lib/crx/operations";
-import { buildEncryptRecipients } from "../../lib/encrypt-recipients";
+import {
+  buildEncryptRecipients,
+  toSelectedRecipient,
+} from "../../lib/encrypt-recipients";
 import { AppError } from "../../lib/errors/app-error";
 import { presentError } from "../../lib/errors/present";
 import * as pgpOps from "../../lib/pgp/operations";
 import { isWebAuthnCancel } from "../../lib/protection/webauthn-prf";
 import { updateRecentRecipients } from "../../lib/recipient-ordering";
 import { recordHistory } from "../../lib/storage/history";
+import { isSshRecord } from "../../lib/storage/key-kind";
 import { savePreferences } from "../../lib/storage/preferences";
 import { toast } from "../../lib/toast";
 import {
@@ -29,6 +34,7 @@ import {
   zipFiles as zipFilesToArchive,
 } from "../../lib/utils/zip";
 import { outputFileName } from "./output-name";
+import { selectionEngine } from "./recipient-engine";
 
 interface WorkspaceOperationsOptions {
   s: WorkspaceState;
@@ -100,6 +106,30 @@ export function useWorkspaceOperations({
     const run = { cancelled: false };
     void (async () => {
       try {
+        const bytes = async () =>
+          s.files.length > 0
+            ? new Uint8Array(await s.files[0].arrayBuffer())
+            : new TextEncoder().encode(s.getInput());
+
+        // Two engines, two matchers. An age file has no OpenPGP packet
+        // header at all, so the PGP matcher throws on it, the catch below
+        // swallows that, and whatever PGP key was selected would stay
+        // selected -- the one key that certainly cannot read it. Ask the
+        // engine that owns the format instead.
+        if (s.inputIsAge) {
+          const sshKeys = myKeys.filter(isSshRecord);
+          if (sshKeys.length === 0) return;
+          const index = await ageOps.selectDecryptionKey(
+            await bytes(),
+            sshKeys.map((k) => k.publicKeyArmored),
+          );
+          const match = index === null ? null : sshKeys[index]?.keyId;
+          if (!run.cancelled && match && match !== s.selectedKeyId) {
+            selectPrivateKey(match);
+          }
+          return;
+        }
+
         const input =
           s.files.length > 0
             ? {
@@ -115,7 +145,8 @@ export function useWorkspaceOperations({
           selectPrivateKey(match);
         }
       } catch {
-        // Not a parseable PGP message yet (still typing/pasting) -- ignore.
+        // Not a parseable message of either engine yet (still
+        // typing/pasting) -- ignore.
       }
     })();
     return () => {
@@ -125,7 +156,7 @@ export function useWorkspaceOperations({
     // change so this still re-runs as the user pastes, but nothing here
     // closes over the plaintext (see the input block in useWorkspaceState).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [s.mode, s.inputVersion, s.files, myKeys]);
+  }, [s.mode, s.inputVersion, s.files, s.inputIsAge, myKeys]);
 
   function findSigner(signerKeyId: string | null) {
     if (!signerKeyId) return null;
@@ -149,6 +180,20 @@ export function useWorkspaceOperations({
       });
   }
 
+  /** The keys behind the current recipient chips. */
+  function selectedRecipientKeys() {
+    return s.selectedRecipientIds
+      .map((id) => allPublicKeys.find((k) => k.keyId === id))
+      .filter((k) => k !== undefined);
+  }
+
+  /** Which engine the current selection encrypts with -- and therefore
+   *  which extension the ciphertext gets. Null while nothing is selected;
+   *  the picker guarantees the selection is never mixed. */
+  function selectedEngine() {
+    return selectionEngine(selectedRecipientKeys());
+  }
+
   function currentOutputName(): string {
     // Encrypt downloads carry who-and-when in the name, so a Downloads
     // folder of ciphertext stays identifiable weeks later.
@@ -156,7 +201,7 @@ export function useWorkspaceOperations({
       s.mode,
       s.files.map((f) => f.name),
       s.zipFiles,
-      { recipients: selectedRecipientNames() },
+      { recipients: selectedRecipientNames(), engine: selectedEngine() },
     );
   }
 
@@ -278,37 +323,74 @@ export function useWorkspaceOperations({
   };
 
   async function executeEncrypt() {
-    const recipients = s.selectedRecipientIds
-      .map((id) => allPublicKeys.find((k) => k.keyId === id))
-      .filter((k) => k !== undefined);
+    const recipients = selectedRecipientKeys();
     if (recipients.length === 0) {
       s.setError({ message: "Select at least one recipient key." });
       return;
     }
 
+    // Which engine this message is in, decided by the recipients. It
+    // also decides what happens below: age has no signing operation, so
+    // the persisted "Sign" preference must not drag the message onto the
+    // PGP signing path (nor pull a PGP key in as the signer).
+    const isAge = selectedEngine() === "ssh";
+
+    // With encrypt-to-self on, the user's own key rides along so they
+    // can decrypt their own ciphertext later. When no own key of this
+    // engine exists, `selfExcluded` comes back true -- and WorkspaceView
+    // renders that same answer as a line under the toggle before the
+    // user presses the button, so this path never has to explain it
+    // after the fact.
+    const { recipientPublicKeys, selfKeyId, engine, refusal } =
+      buildEncryptRecipients({
+        // One selected contact can carry several keys; the message goes
+        // to all of them (see toSelectedRecipient).
+        recipients: recipients.map(toSelectedRecipient),
+        encryptToSelf: s.encryptToSelf,
+        ownKeys: myKeys,
+        signingKeyId: s.alsoSign && !isAge ? s.selectedKeyId : null,
+        defaultKeyId,
+      });
+
+    // Backstop only: the picker disables the other engine's options, so
+    // a mixed set cannot normally be assembled. If one ever is, refuse
+    // rather than encrypt to the subset that happens to work.
+    if (refusal !== null) {
+      s.setError({ message: refusal });
+      return;
+    }
+
+    // `engine` is the same answer arrived at inside the recipient
+    // assembly; if the two ever disagreed, the assembly's is the one the
+    // ciphertext follows.
+    if (engine !== null && (engine === "ssh") !== isAge) {
+      s.setError({ message: "Couldn't work out which format to encrypt in." });
+      return;
+    }
+
     let signingHandle: number | null = null;
-    if (s.alsoSign && s.selectedKeyId) {
+    // Never take the signing path for age, even with the persisted
+    // "Sign when encrypting" preference on: age has no signature format,
+    // so there is nothing to sign WITH and the PGP signer would be a
+    // wrong-engine key. The toggle stays visible and dimmed with that
+    // reason in WorkspaceView.
+    if (s.alsoSign && s.selectedKeyId && !isAge) {
       const handle = await ensureUnlocked(s.selectedKeyId);
       if (handle === null) return;
       signingHandle = handle;
     }
 
-    // With encrypt-to-self on, the user's own key rides along so they
-    // can decrypt their own ciphertext later. (The can't-decrypt case
-    // is warned about BEFORE running, in WorkspaceView.)
-    const { recipientPublicKeys, selfKeyId } = buildEncryptRecipients({
-      recipients: recipients.map((k) => ({
-        keyId: k.keyId,
-        armored:
-          "armoredPublicKey" in k ? k.armoredPublicKey : k.publicKeyArmored,
-      })),
-      encryptToSelf: s.encryptToSelf,
-      ownKeys: myKeys,
-      signingKeyId: s.alsoSign ? s.selectedKeyId : null,
-      defaultKeyId,
-    });
+    if (isAge) {
+      s.setStatusText("age message - encrypted to SSH recipients");
+    }
 
     const doEncrypt = async (input: EncryptInput) => {
+      if (isAge) {
+        return ageOps.encryptToRecipients({
+          input,
+          recipients: recipientPublicKeys,
+        });
+      }
       if (signingHandle !== null) {
         return pgpOps.encryptWithSigningHandle({
           input,
@@ -340,6 +422,7 @@ export function useWorkspaceOperations({
         results.push({
           name: outputFileName("encrypt", [file.name], false, {
             recipients: selectedRecipientNames(),
+            engine: engine,
           }),
           data,
         });
@@ -387,6 +470,14 @@ export function useWorkspaceOperations({
 
     // Record the FINAL recipient set: when encrypt-to-self rode the
     // user's own key along, history shows it too.
+    //
+    // One entry per selected CONTACT, not per key: history answers "who
+    // did I send this to", and a contact holding three SSH keys is one
+    // person. Expanding it to three entries would render as "To alice,
+    // , " -- ContactRecipient carries no name -- and would report three
+    // recipients for one reader. `k.keyId` is the contact record id,
+    // which equals its first key's fingerprint, so the reference stays a
+    // real fingerprint.
     const historyRecipients = recipients.map((k) => ({
       fingerprint: k.keyId,
       name: k.userIds[0] ?? "",
@@ -403,8 +494,13 @@ export function useWorkspaceOperations({
     captureHistory({
       op: "encrypt",
       recipients: historyRecipients,
-      signed: signingHandle !== null,
-      ...(isFileInput ? { files: historyFileMeta() } : { content: s.getInput() }),
+      // age produces no signature, ever -- recorded as a fact about the
+      // message rather than inferred from a handle that is null for two
+      // different reasons.
+      signed: !isAge && signingHandle !== null,
+      ...(isFileInput
+        ? { files: historyFileMeta() }
+        : { content: s.getInput() }),
     });
 
     // A successful encrypt promotes its recipients in the picker's
@@ -417,6 +513,80 @@ export function useWorkspaceOperations({
     void savePreferences({ recentRecipients: updatedRecents });
   }
 
+  /**
+   * Decrypt an age message with an unlocked SSH identity.
+   *
+   * Deliberately not folded into the PGP path: there are no verification
+   * keys to pass (age messages carry no signature), so there is no
+   * signature status to report and no signer card to show -- the
+   * branches would be empty rather than shared. The error hygiene IS
+   * shared, and matters for the same reason it does there: a failure
+   * must never leave plaintext from a previous run on screen.
+   */
+  async function executeDecryptAge(keyHandle: number) {
+    const isFileInput = s.files.length > 0;
+    try {
+      if (isFileInput && s.files.length > 1) {
+        const results: FileResult[] = [];
+        for (const file of s.files) {
+          const bytes = new Uint8Array(await file.arrayBuffer());
+          const data = await ageOps.decryptWithHandle({
+            input: { kind: "binary", binaryMessage: bytes },
+            keyHandle,
+          });
+          results.push({
+            name: file.name.replace(/\.age$/i, "") || file.name,
+            data:
+              typeof data === "string" ? new TextEncoder().encode(data) : data,
+          });
+        }
+        s.setFileResults(results);
+        const totalSize = results.reduce((sum, r) => sum + r.data.length, 0);
+        s.setStatusText(
+          `${results.length} files decrypted (${formatFileSize(totalSize)} total)`,
+        );
+        s.setOperationDone(true);
+        maybeAutoDownload(true, { results });
+        return;
+      }
+
+      const data = await ageOps.decryptWithHandle({
+        input: isFileInput
+          ? {
+              kind: "binary",
+              binaryMessage: new Uint8Array(await s.files[0].arrayBuffer()),
+            }
+          : { kind: "armored", armoredMessage: s.getInput() },
+        keyHandle,
+      });
+      if (typeof data === "string") {
+        s.setOutput(data);
+      } else if (isZipArchive(data)) {
+        s.setBinaryOutput(data);
+        s.setStatusText("Decrypted archive containing multiple files");
+      } else {
+        s.setBinaryOutput(data);
+      }
+      s.setOperationDone(true);
+      maybeAutoDownload(isFileInput, {
+        text: typeof data === "string" ? data : undefined,
+        binary: typeof data === "string" ? undefined : data,
+      });
+    } catch (err) {
+      s.setOutput("");
+      s.setBinaryOutput(undefined);
+      s.setFileResults([]);
+      s.setOperationDone(false);
+      s.setVerifiedSigner(null);
+      s.setError(
+        presentError(
+          err,
+          "Decryption failed. The message may be corrupted, or it isn't encrypted to any of your SSH keys.",
+        ),
+      );
+    }
+  }
+
   async function executeDecrypt() {
     if (!s.selectedKeyId) {
       s.setError({ message: "Select a decryption key." });
@@ -424,6 +594,11 @@ export function useWorkspaceOperations({
     }
     const keyHandle = await ensureUnlocked(s.selectedKeyId);
     if (keyHandle === null) return;
+
+    if (s.inputIsAge) {
+      await executeDecryptAge(keyHandle);
+      return;
+    }
 
     const allPubArmored = [
       ...myKeys.map((k) => k.publicKeyArmored),

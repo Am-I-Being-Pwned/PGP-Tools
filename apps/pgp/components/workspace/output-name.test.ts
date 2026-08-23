@@ -82,4 +82,45 @@ describe("outputFileName", () => {
       }),
     ).toBe(`a.txt.to-alice.${TS}.gpg`);
   });
+  // The extension is what tells the user (and every other tool) which
+  // program can read the file, so it follows the ENGINE that produced
+  // it, not the mode.
+  it("names age ciphertext .age, not .gpg", () => {
+    expect(
+      outputFileName("encrypt", [], false, {
+        ...AT,
+        recipients: ["Alice"],
+        engine: "ssh",
+      }),
+    ).toBe(`message.to-alice.${TS}.age`);
+    expect(
+      outputFileName("encrypt", ["a.txt", "b.txt"], true, {
+        ...AT,
+        recipients: ["Alice"],
+        engine: "ssh",
+      }),
+    ).toBe(`files.to-alice.${TS}.zip.age`);
+  });
+
+  it("keeps .gpg for OpenPGP, and for an engine it wasn't told", () => {
+    expect(
+      outputFileName("encrypt", [], false, {
+        ...AT,
+        recipients: ["Alice"],
+        engine: "pgp",
+      }),
+    ).toBe(`message.to-alice.${TS}.gpg`);
+    // No engine passed: every existing caller predates the age engine
+    // and must keep producing exactly what it did before.
+    expect(
+      outputFileName("encrypt", [], false, { ...AT, recipients: ["Alice"] }),
+    ).toBe(`message.to-alice.${TS}.gpg`);
+  });
+
+  it("strips .age when decrypting, like the PGP extensions", () => {
+    expect(outputFileName("decrypt", ["report.pdf.age"], true)).toBe(
+      "report.pdf",
+    );
+    expect(outputFileName("decrypt", ["data.AGE"], true)).toBe("data");
+  });
 });

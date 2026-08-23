@@ -232,10 +232,116 @@ export async function revocationCertificateWithHandle(
 }
 
 /** Drop a KEY_STORE entry. Backing bytes are zeroized in Rust via the
- *  `Drop for StoredKey` impl. */
+ *  `Zeroizing<Vec<u8>>` payload's `Drop` impl. */
 export async function dropKey(handle: number): Promise<void> {
   const wasm = await loadWasm();
   wasm.dropKey(handle);
+}
+
+// ── age / SSH recipients (public key material only) ──────────────────
+// The age engine's no-secret half (`gpg-wasm/src/age.rs`). An SSH
+// *public* key line is exactly as public as a PGP public cert, and age
+// ciphertext is ciphertext, so all three of these belong on this side of
+// the split. The identity (private) half lives in `wasm-secrets.ts`.
+
+/** An SSH public key line, decomposed. */
+export interface SshRecipientInfo {
+  /** Canonical `<type> <base64>` line with the comment stripped -- the
+   *  form `encryptAgeToRecipients` expects back, and what we persist as
+   *  an SSH contact's "armor". */
+  recipient: string;
+  /** `ssh-ed25519` / `ssh-rsa`. */
+  algorithm: string;
+  /** OpenSSH `SHA256:...` fingerprint; the key's stable identity. */
+  fingerprint: string;
+  /** Trailing comment, conventionally `user@host`. Empty when absent. */
+  comment: string;
+}
+
+/** Parse one SSH public key line. Throws on anything that is not a
+ *  usable `ssh-ed25519` / `ssh-rsa` recipient. */
+export async function parseSshRecipient(
+  line: string,
+): Promise<SshRecipientInfo> {
+  const wasm = await loadWasm();
+  return JSON.parse(wasm.parseSshRecipient(line)) as SshRecipientInfo;
+}
+
+/** Encrypt to one or more SSH recipients (canonical `<type> <base64>`
+ *  lines). `armor` selects the `-----BEGIN AGE ENCRYPTED FILE-----`
+ *  form. A single unusable recipient fails the whole call rather than
+ *  producing a file the user cannot share as intended. */
+export async function encryptAgeToRecipients(
+  plaintext: Uint8Array,
+  recipients: string[],
+  armor: boolean,
+): Promise<Uint8Array> {
+  const wasm = await loadWasm();
+  return wasm.encryptAgeToRecipients(plaintext, JSON.stringify(recipients), armor);
+}
+
+/**
+ * Which of `candidateRecipients` an age file is encrypted to, as an index
+ * into that array, or null when none of them is a recipient.
+ *
+ * The age counterpart of {@link selectDecryptionKey}, and the same job:
+ * default-select the right identity before anything is unlocked. It reads
+ * only the file's header, whose ssh stanzas name their recipient by a
+ * hash of its PUBLIC key -- so no identity is needed and nothing secret
+ * crosses. Throws when `ciphertext` is not an age file at all.
+ */
+export async function selectAgeDecryptionKey(
+  ciphertext: Uint8Array,
+  candidateRecipients: string[],
+): Promise<number | null> {
+  const wasm = await loadWasm();
+  const json = wasm.selectAgeDecryptionKey(
+    ciphertext,
+    JSON.stringify(candidateRecipients),
+  );
+  return JSON.parse(json) as number | null;
+}
+
+/**
+ * Name the format of a private key file the age engine will not accept --
+ * a PuTTY `.ppk`, a PKCS#8 key, a legacy encrypted PEM -- or null when it
+ * is not one of those.
+ *
+ * Recognition, not acceptance: it lets the import preview say which
+ * format this is and what to run instead, rather than making the user
+ * pick a password first and fail at the protect step.
+ *
+ * Filed on this side for the reason `parseKey` is: the key file crosses
+ * in, but nothing secret comes back, and the wasm side takes it by value
+ * into a `Zeroizing` so the marshalled copy is wiped on return.
+ */
+export async function sshPrivateKeyFormatRejection(
+  keyFile: Uint8Array,
+): Promise<string | null> {
+  const wasm = await loadWasm();
+  return JSON.parse(wasm.sshPrivateKeyFormatRejection(keyFile)) as
+    | string
+    | null;
+}
+
+/**
+ * The exact message the SSH protect calls return when the key still
+ * needs its passphrase. Read at runtime so the caller can recognise that
+ * case by value instead of matching on prose -- a transcribed copy is
+ * silently wrong the moment the Rust wording is edited, and the symptom
+ * is that the passphrase field stops appearing and passphrase-protected
+ * keys become unimportable. Carries no secret.
+ */
+export async function sshPassphraseRequiredMessage(): Promise<string> {
+  const wasm = await loadWasm();
+  return wasm.sshPassphraseRequiredMessage();
+}
+
+/** Whether `data` looks like an age message -- binary header or armor
+ *  marker. A cheap sniff for routing, not a validity check. */
+export async function isAgeMessage(data: Uint8Array): Promise<boolean> {
+  const wasm = await loadWasm();
+  return wasm.isAgeMessage(data);
 }
 
 // ── contacts session (uses an in-WASM AES key derived from master) ───

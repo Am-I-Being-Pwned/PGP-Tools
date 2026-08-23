@@ -40,31 +40,20 @@
  * check at the WASM boundary.
  */
 
+import type { MetaBlob } from "../protection/protected-blob";
 import type { GenerateKeyOptions, ProtectResultMeta } from "./types";
+import { unpackMetaBlob } from "../protection/protected-blob";
 import { loadWasm } from "./wasm-loader";
 
 // ── shared types ─────────────────────────────────────────────────────
 
 /** Atomic-blob protect-flow result: metadata + the raw protection blob.
- *  Plaintext cert lives only inside the wasm call. */
-export interface ProtectFlowResult {
-  meta: ProtectResultMeta;
-  /** Packed binary protection blob -- shape depends on the variant:
-   *  password: [16 salt][12 iv][ciphertext]; prf: [12 iv][ciphertext]. */
-  blob: Uint8Array;
-}
+ *  Plaintext cert lives only inside the wasm call. The packed wire format
+ *  it arrives in is identical for every key type, so it is unpacked once
+ *  in `protection/protected-blob.ts` -- see {@link unpackMetaBlob}. */
+export type ProtectFlowResult = MetaBlob<ProtectResultMeta>;
 
-function unpackProtectResult(packed: Uint8Array): ProtectFlowResult {
-  const view = new DataView(
-    packed.buffer,
-    packed.byteOffset,
-    packed.byteLength,
-  );
-  const jsonLen = view.getUint32(0, true);
-  const json = new TextDecoder().decode(packed.slice(4, 4 + jsonLen));
-  const meta = JSON.parse(json) as ProtectResultMeta;
-  return { meta, blob: packed.slice(4 + jsonLen) };
-}
+const unpackProtectResult = unpackMetaBlob<ProtectResultMeta>;
 
 // ── Argon2id ─────────────────────────────────────────────────────────
 
@@ -403,24 +392,11 @@ export interface CrxProtectMeta {
   algorithm: string;
 }
 
-/** Metadata + raw protection blob, matching {@link ProtectFlowResult}.
- *  password blob: [16 salt][12 iv][ct]; prf blob: [12 iv][ct]. */
-export interface CrxProtectFlowResult {
-  meta: CrxProtectMeta;
-  blob: Uint8Array;
-}
+/** Metadata + raw protection blob, matching {@link ProtectFlowResult} --
+ *  the same packed format, so the same unpacker. */
+export type CrxProtectFlowResult = MetaBlob<CrxProtectMeta>;
 
-function unpackCrxProtectResult(packed: Uint8Array): CrxProtectFlowResult {
-  const view = new DataView(
-    packed.buffer,
-    packed.byteOffset,
-    packed.byteLength,
-  );
-  const jsonLen = view.getUint32(0, true);
-  const json = new TextDecoder().decode(packed.slice(4, 4 + jsonLen));
-  const meta = JSON.parse(json) as CrxProtectMeta;
-  return { meta, blob: packed.slice(4 + jsonLen) };
-}
+const unpackCrxProtectResult = unpackMetaBlob<CrxProtectMeta>;
 
 /**
  * @secret-handling
@@ -624,6 +600,190 @@ export async function signCrxWithHandle(
 export async function dropCrxKey(handle: number): Promise<void> {
   const wasm = await loadWasm();
   wasm.dropCrxKey(handle);
+}
+
+// ── age / SSH identities ─────────────────────────────────────────────
+// An OpenSSH private key lives in the WASM-side SSH_KEY_STORE (a sibling
+// of KEY_STORE and CRX_KEY_STORE), unlocked via the same Argon2id / PRF
+// paths. The key itself NEVER crosses back to JS -- there is no
+// `getSshIdentityArmored`, deliberately; the only export trapdoor in the
+// system stays the OpenPGP one below. See `gpg-wasm/src/age.rs` and
+// `apps/pgp/lib/age/`.
+
+/** Public-only metadata describing a freshly-protected SSH identity.
+ *  Every field is derived from the key's PUBLIC half. */
+export interface SshProtectMeta {
+  /** OpenSSH `SHA256:...` fingerprint. The identity this blob is
+   *  AAD-bound to, and the `keyId` it is stored under. */
+  fingerprint: string;
+  /** Canonical `<type> <base64>` recipient line -- the SSH equivalent of
+   *  a PGP cert's public armor. */
+  recipient: string;
+  /** `ssh-ed25519` / `ssh-rsa`. */
+  algorithm: string;
+  /** Trailing comment from the key file, conventionally `user@host`.
+   *  The only human-readable name an SSH key carries. */
+  comment: string;
+}
+
+/** Metadata + raw protection blob, matching {@link ProtectFlowResult}. */
+export type SshProtectFlowResult = MetaBlob<SshProtectMeta>;
+
+const unpackSshProtectResult = unpackMetaBlob<SshProtectMeta>;
+
+/**
+ * @secret-handling
+ *   in:  keyFile (the OpenSSH private key bytes -- SECRET),
+ *        sourcePassphrase bytes (the passphrase already on the file;
+ *        pass an empty `Uint8Array(0)` when it has none),
+ *        password bytes (the new vault password)
+ *   out: encrypted blob bytes (NOT secret); public-only metadata
+ *   contract: caller MUST `.fill(0)` ALL THREE input buffers in a
+ *             `finally`.
+ *
+ * `keyFile` is bytes rather than a string on purpose: the imported key is
+ * secret material for the whole of its life in JS, and a JS String could
+ * not be scrubbed afterwards (contrast `importCrxKeyWithPassword`, whose
+ * PEM parameter carries exactly that caveat).
+ *
+ * Wasm-side: parses the OpenSSH file, strips its source passphrase,
+ * re-seals under the new password, drops the key at function exit.
+ * SSH_KEY_STORE is NOT touched.
+ */
+export async function protectSshIdentityWithPassword(
+  keyFile: Uint8Array,
+  sourcePassphrase: Uint8Array,
+  password: Uint8Array,
+  memoryKib: number,
+  iterations: number,
+  parallelism: number,
+): Promise<SshProtectFlowResult> {
+  const wasm = await loadWasm();
+  return unpackSshProtectResult(
+    wasm.protectSshIdentityWithPassword(
+      keyFile,
+      sourcePassphrase,
+      password,
+      memoryKib,
+      iterations,
+      parallelism,
+    ),
+  );
+}
+
+/**
+ * @secret-handling
+ *   in:  keyFile (SECRET), sourcePassphrase bytes, prfOutput bytes,
+ *        storedSecret bytes
+ *   out: encrypted blob bytes (NOT secret); public-only metadata
+ *   contract: caller MUST `.fill(0)` `keyFile`, `sourcePassphrase` and
+ *             `prfOutput`. `storedSecret` is persisted as the HKDF salt
+ *             in the resulting blob and is NOT a secret in itself.
+ */
+export async function protectSshIdentityWithPrf(
+  keyFile: Uint8Array,
+  sourcePassphrase: Uint8Array,
+  prfOutput: Uint8Array,
+  storedSecret: Uint8Array,
+): Promise<SshProtectFlowResult> {
+  const wasm = await loadWasm();
+  return unpackSshProtectResult(
+    wasm.protectSshIdentityWithPrf(
+      keyFile,
+      sourcePassphrase,
+      prfOutput,
+      storedSecret,
+    ),
+  );
+}
+
+/**
+ * @secret-handling
+ *   in:  password bytes; ciphertext/iv/salt/fingerprint are not secret
+ *   out: opaque u32 SSH_KEY_STORE handle (NOT secret); the key lives in
+ *        wasm linear memory until `dropSshIdentity(handle)`
+ *   contract: caller MUST `.fill(0)` `password` in a `finally`.
+ *
+ * One of the two paths that may insert into SSH_KEY_STORE, mirroring the
+ * KEY_STORE rule in SECURITY.md §4: every entry traces back to a
+ * user-initiated unlock.
+ */
+export async function unlockSshIdentityWithPassword(
+  ciphertext: Uint8Array,
+  iv: Uint8Array,
+  salt: Uint8Array,
+  fingerprint: string,
+  password: Uint8Array,
+  memoryKib: number,
+  iterations: number,
+  parallelism: number,
+): Promise<number> {
+  const wasm = await loadWasm();
+  return wasm.unlockSshIdentityWithPassword(
+    ciphertext,
+    iv,
+    salt,
+    fingerprint,
+    password,
+    memoryKib,
+    iterations,
+    parallelism,
+  );
+}
+
+/**
+ * @secret-handling
+ *   in:  prfOutput bytes; storedSecret/ciphertext/iv/fingerprint not secret
+ *   out: opaque u32 SSH_KEY_STORE handle (NOT secret)
+ *   contract: caller MUST `.fill(0)` `prfOutput`.
+ *
+ * The other SSH_KEY_STORE-insert call site.
+ */
+export async function unlockSshIdentityWithPrf(
+  ciphertext: Uint8Array,
+  iv: Uint8Array,
+  prfOutput: Uint8Array,
+  storedSecret: Uint8Array,
+  fingerprint: string,
+): Promise<number> {
+  const wasm = await loadWasm();
+  return wasm.unlockSshIdentityWithPrf(
+    ciphertext,
+    iv,
+    prfOutput,
+    storedSecret,
+    fingerprint,
+  );
+}
+
+/**
+ * @secret-handling
+ *   in:  age ciphertext (NOT secret); an opaque SSH_KEY_STORE handle
+ *   out: the decrypted plaintext -- the user's message, which is secret
+ *        user data (not key material) and crosses by design
+ *   contract: caller SHOULD `.fill(0)` the returned buffer once the
+ *             plaintext has been handed to the UI. The SSH key itself
+ *             stays in wasm behind `handle`.
+ *
+ * Lives here rather than in `wasm-public.ts` -- where the equivalent
+ * `decryptWithHandle` sits -- because `age.rs` files it under its own
+ * secret-side header and gives it a `@secret-handling` block. Keeping the
+ * two sides in agreement matters more than the local precedent.
+ */
+export async function decryptAgeWithHandle(
+  ciphertext: Uint8Array,
+  keyHandle: number,
+): Promise<Uint8Array> {
+  const wasm = await loadWasm();
+  return wasm.decryptAgeWithHandle(ciphertext, keyHandle);
+}
+
+/** Drop (and zeroize) an unlocked SSH identity handle from
+ *  SSH_KEY_STORE. Backing bytes are wiped in Rust by the
+ *  `Zeroizing<Vec<u8>>` payload's `Drop` impl. */
+export async function dropSshIdentity(handle: number): Promise<void> {
+  const wasm = await loadWasm();
+  wasm.dropSshIdentity(handle);
 }
 
 // ── destructive export (last resort) ─────────────────────────────────

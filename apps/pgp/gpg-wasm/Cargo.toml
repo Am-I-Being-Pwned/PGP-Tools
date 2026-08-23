@@ -41,6 +41,25 @@ rand_core = "0.6"
 rand_chacha = "0.3"
 base64 = "0.22"
 
+# age encryption to SSH recipients (`src/age.rs`). `armor` gives the
+# `-----BEGIN AGE ENCRYPTED FILE-----` form; `ssh` gives the ssh-ed25519 /
+# ssh-rsa recipient + identity stanzas. No default features are enabled
+# (age's default set is empty; stated explicitly so a future default gains
+# nothing implicitly).
+age = { version = "0.12", default-features = false, features = ["ssh", "armor"] }
+# RustCrypto OpenSSH key parser. Required because age 0.12 offers no way to
+# unwrap a passphrase-protected SSH key into reusable material -- see the
+# "Why ssh-key" section of `src/age.rs`. `encryption` brings bcrypt-pbkdf +
+# the OpenSSH ciphers so we can decrypt at import; `ecdsa` is enabled only so
+# an ECDSA key parses far enough to be *named* in its rejection message.
+ssh-key = { version = "0.6", default-features = false, features = [
+    "std",
+    "ecdsa",
+    "ed25519",
+    "rsa",
+    "encryption",
+] }
+
 [profile.release]
 opt-level = "s"
 lto = true

@@ -6,6 +6,7 @@
  *  (e.g. a detached-signature file, a vCard, a backup bundle) add a rule;
  *  nothing in the dropzone component itself needs to change. */
 
+import { splitSshPublicKeyLines } from "./armor-blocks";
 import { looksLikeBinaryKey, readKeyFile } from "./binary-armor";
 
 /** A drag payload once dropped: the raw files and any dragged text/plain. */
@@ -43,14 +44,31 @@ const PRIVATE_KEY_HEADER_RE =
   /-----BEGIN (?:PGP PRIVATE KEY BLOCK|(?:[A-Z0-9]+ )*PRIVATE KEY)-----/;
 const PUBLIC_KEY_HEADER = "-----BEGIN PGP PUBLIC KEY BLOCK-----";
 
-/** True when the text carries an armored private-key header of any kind. */
+/** True when the text carries an armored private-key header of any kind.
+ *  `BEGIN OPENSSH PRIVATE KEY` has always matched the regex above -- what
+ *  it lacked was a destination, which the import pipeline now provides
+ *  (`lib/import/prepare.ts`, kind `ssh-private`). */
 export function looksLikePrivateKey(text: string): boolean {
   return PRIVATE_KEY_HEADER_RE.test(text);
 }
 
-/** True when the text carries an importable key header (public or private). */
+/** True when the text carries an SSH PUBLIC key line -- a dropped
+ *  `id_ed25519.pub` or `authorized_keys`. Unlike every other key form we
+ *  route, this one has no armor header at all, so the private-key regex
+ *  above cannot see it and a drop of one used to land in the workspace as
+ *  if it were a message to encrypt. */
+export function looksLikeSshPublicKey(text: string): boolean {
+  return splitSshPublicKeyLines(text).length > 0;
+}
+
+/** True when the text carries an importable key of any kind -- either
+ *  engine, either half. */
 export function looksLikeKey(text: string): boolean {
-  return PRIVATE_KEY_HEADER_RE.test(text) || text.includes(PUBLIC_KEY_HEADER);
+  return (
+    PRIVATE_KEY_HEADER_RE.test(text) ||
+    text.includes(PUBLIC_KEY_HEADER) ||
+    looksLikeSshPublicKey(text)
+  );
 }
 
 // Armored keys sit at the very top of their file, so a prefix is enough to

@@ -19,3 +19,35 @@ export interface PendingOperation {
    *  resurrecting stale selections that were never picked up. */
   createdAt: number;
 }
+
+/** Ask the background worker to fetch a GitHub user's public SSH keys.
+ *  A request needs a reply, so this is a real message rather than the
+ *  one-way `chrome.storage.session` channel used for pending ops. */
+export interface GithubKeysRequest {
+  type: "GITHUB_KEYS_REQUEST";
+  username: string;
+}
+
+/**
+ * Closed set of failure codes. Tagged codes ONLY -- never prose that
+ * came off the network. Whatever GitHub writes in `{"message": ...}`
+ * stays in the worker; the panel renders its own copy per code, the
+ * same discipline as the `ssh-passphrase-required` AppError code.
+ */
+export type GithubKeysFailure =
+  | "invalid-username"
+  | "not-found"
+  | "no-keys"
+  | "offline"
+  | "rate-limited"
+  | "server-error";
+
+export type GithubKeysResponse =
+  | { ok: true; username: string; lines: string[] }
+  | {
+      ok: false;
+      error: GithubKeysFailure;
+      /** ms since epoch, only for `rate-limited`, so the panel can say
+       *  when access recovers. */
+      resetAt?: number;
+    };

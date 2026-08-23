@@ -10,8 +10,10 @@ import type {
   WorkspaceDraft,
   WorkspaceDraftSource,
 } from "../../lib/workspace-draft";
+import { looksLikeAgeMessage } from "../../lib/armor-blocks";
 import { looksLikePrivateKey } from "../../lib/drop-routing";
 import { resolveSelfKey } from "../../lib/encrypt-recipients";
+import { isSshRecord } from "../../lib/storage/key-kind";
 import { getPreferences } from "../../lib/storage/preferences";
 import { zipHasManifest } from "../../lib/utils/zip";
 import { decryptWorkspaceDraft } from "../../lib/workspace-draft";
@@ -52,6 +54,11 @@ export interface WorkspaceState {
   /** Bumped on every input change. Use as an effect dependency for work
    *  that must react to the content without capturing it. */
   inputVersion: number;
+  /** Derived, non-sensitive: the staged input is an age message (armored
+   *  or binary), or the dropped files are `.age`. A boolean, derived from
+   *  `inputVersion` / `files` -- the text it was derived FROM never
+   *  enters state (see the input block below). */
+  inputIsAge: boolean;
   /** Drop every plaintext copy this hook owns: the input ref, the
    *  textarea's DOM value, the clear-undo buffer, the output ref and the
    *  output node's text. Called by the App at master lock, after the
@@ -323,8 +330,17 @@ export function useWorkspaceState(opts: {
   const [needsPassword, setNeedsPassword] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  // Which engine the staged input is in, as a BOOLEAN derived from the
+  // text at the moment it was set -- the text itself never enters state
+  // (see the input block above). Split from the file half so a drop and
+  // a paste each own their answer.
+  const [inputIsAgeText, setInputIsAgeText] = useState(false);
   const [publicKeyDetected, setPublicKeyDetected] = useState(false);
   const [privateKeyDetected, setPrivateKeyDetected] = useState(false);
+  // The one derived answer both the effect below and consumers read.
+  const inputIsAge =
+    inputIsAgeText || files.some((f) => /\.age$/i.test(f.name));
+
   const resetOutput = useCallback(() => {
     setOutput("");
     setBinaryOutput(undefined);
@@ -343,6 +359,7 @@ export function useWorkspaceState(opts: {
     setFiles([]);
     setPublicKeyDetected(false);
     setPrivateKeyDetected(false);
+    setInputIsAgeText(false);
     resetOutput();
   }, [resetOutput, setInput]);
 
@@ -353,13 +370,19 @@ export function useWorkspaceState(opts: {
   const applyDetection = useCallback((text: string) => {
     setPublicKeyDetected(false);
     setPrivateKeyDetected(false);
+    setInputIsAgeText(looksLikeAgeMessage(text));
     if (looksLikePrivateKey(text)) {
       // Flag first; the draft snapshot is refused while this is true so the
       // armor never reaches the encrypted draft blob. Covers every armored
       // private-key flavour (PGP + any raw PEM), not just PGP, so a pasted
       // OpenSSH/EC/etc. key can't leak into the draft either.
       setPrivateKeyDetected(true);
-    } else if (text.includes("-----BEGIN PGP MESSAGE-----")) {
+    } else if (
+      text.includes("-----BEGIN PGP MESSAGE-----") ||
+      looksLikeAgeMessage(text)
+    ) {
+      // Both engines' ciphertext means the same thing to the user: this
+      // is something to decrypt.
       setMode("decrypt");
     } else if (text.includes("-----BEGIN PGP SIGNED MESSAGE-----")) {
       setMode("verify");
@@ -484,6 +507,21 @@ export function useWorkspaceState(opts: {
     }
   }, [opts.myKeys, opts.defaultKeyId, selectedKeyId]);
 
+  // An age message can only be decrypted by an SSH identity, so a PGP
+  // key left selected from a moment ago is the one key that definitely
+  // cannot read it. Drop that stale cross-engine selection and, in the
+  // overwhelmingly common single-SSH-key case, land on the only answer.
+  // (Which of SEVERAL SSH keys it is gets refined in
+  // `useWorkspaceOperations`, which can ask the engine.)
+  const myKeysForAge = opts.myKeys;
+  useEffect(() => {
+    if (mode !== "decrypt" || !inputIsAge) return;
+    const sshKeys = myKeysForAge.filter(isSshRecord);
+    const selected = sshKeys.some((k) => k.keyId === selectedKeyId);
+    if (selected) return;
+    setSelectedKeyId(sshKeys.length > 0 ? sshKeys[0].keyId : null);
+  }, [mode, inputIsAge, myKeysForAge, selectedKeyId]);
+
   // Keep the CRX key selection pointing at a key that actually exists —
   // when the selected key is deleted, fall to the first remaining one
   // HERE (visibly, the Select updates) rather than silently at sign time.
@@ -591,7 +629,7 @@ export function useWorkspaceState(opts: {
       setInput("");
       setMode((current) => {
         if (current !== "encrypt" && current !== "decrypt") return current;
-        if (newFiles.some((f) => /\.(gpg|pgp|asc)$/i.test(f.name))) {
+        if (newFiles.some((f) => /\.(gpg|pgp|asc|age)$/i.test(f.name))) {
           return "decrypt";
         }
         return current;
@@ -634,6 +672,7 @@ export function useWorkspaceState(opts: {
     hasInput: inputInfo.len > 0,
     hasTrimmedInput: inputInfo.nonBlank,
     inputVersion: inputInfo.version,
+    inputIsAge,
     wipePlaintext,
     stashClearUndo,
     restoreClearUndo,

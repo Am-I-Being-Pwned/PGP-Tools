@@ -16,6 +16,7 @@ import {
 } from "../../lib/keys/export-bundle";
 import { crxKeyExporter, pgpKeyExporter } from "../../lib/keys/exporters";
 import { revocationCertificateWithHandle } from "../../lib/pgp/wasm";
+import { isPgpRecord, isSshRecord } from "../../lib/storage/key-kind";
 import { toast } from "../../lib/toast";
 import { formatAlgorithm, formatFingerprint } from "../../lib/utils/formatting";
 import { parseUserId } from "../../lib/utils/key-naming";
@@ -258,8 +259,22 @@ export function KeysView({
   // Export the selection. A contacts-only selection has no private key to
   // unlock, so skip the unlock/passphrase page and just download the public
   // keys; anything with a private key (PGP or CRX) opens the page.
+  // An SSH identity has no private-key export at all (see the pgpModels
+  // note): the export page's paths run through `getKeyArmored`, the
+  // OpenPGP trapdoor, which has no SSH sibling by design. Selecting one
+  // alongside PGP keys exports the PGP keys and says what was left out,
+  // rather than silently handing an SSH handle to the PGP exporter.
+  const exportableMyKeys = selectedMyKeys.filter(isPgpRecord);
+  const skippedSshKeys = selectedMyKeys.length - exportableMyKeys.length;
+
   const bulkExport = () => {
-    if (selectedMyKeys.length === 0 && selectedCrxKeys.length === 0) {
+    if (skippedSshKeys > 0) {
+      toast.info(
+        `${skippedSshKeys} SSH key${skippedSshKeys === 1 ? "" : "s"} can't be exported - an imported SSH key never leaves this device.`,
+        { id: "ssh-export-skipped" },
+      );
+    }
+    if (exportableMyKeys.length === 0 && selectedCrxKeys.length === 0) {
       afterExport(downloadPublicKeysBundle(selectedContacts), false);
       return;
     }
@@ -272,8 +287,19 @@ export function KeysView({
     for (const c of selectedContacts) await onDeleteContact(c.keyId);
   };
 
-  // Build one unified descriptor per key so PGP + CRX render through KeyCard.
-  const pgpModels: KeyCardModel[] = myKeys.map((blob) => {
+  // Build one unified descriptor per key so PGP + SSH + CRX render
+  // through KeyCard.
+  //
+  // The keyring holds both engines, so it is split by `isPgpRecord` /
+  // `isSshRecord` (never by reading `blob.kind`, which is absent on every
+  // key stored before the age engine existed). The split is not cosmetic:
+  // `pgpKeyExporter` is backed by `getKeyArmored`, the OpenPGP plaintext
+  // export trapdoor, and SECURITY.md says an imported SSH identity must
+  // have no such thing -- it can leave this app only as ciphertext it
+  // produced. Attaching the PGP exporter to every own key would have
+  // offered "Copy private key" on an SSH key and failed somewhere deep in
+  // wasm, or worse, not failed.
+  const pgpModels: KeyCardModel[] = myKeys.filter(isPgpRecord).map((blob) => {
     const realName = blob.userIds[0] ?? "Unknown";
     return {
       kind: "pgp",
@@ -298,6 +324,61 @@ export function KeysView({
       onCopyPublicKey: () => void copy(blob.publicKeyArmored),
       onDownloadPublicKey: () =>
         downloadPublicKey(blob.publicKeyArmored, blob.alias ?? realName),
+      onDelete: () =>
+        nav.push({
+          page: "confirm-delete",
+          target: { kind: "own", keyBlob: blob },
+        }),
+      onRename: onRenameKey
+        ? () =>
+            nav.push({ page: "rename", target: { kind: "own", keyBlob: blob } })
+        : undefined,
+      onShowDetails: () =>
+        nav.push({ page: "details", target: { kind: "own", keyBlob: blob } }),
+    };
+  });
+
+  const sshModels: KeyCardModel[] = myKeys.filter(isSshRecord).map((blob) => {
+    // An SSH key's name is the comment `ssh-keygen` wrote (`user@host`),
+    // or nothing at all -- there are no User IDs to fall back through.
+    const realName = blob.userIds[0] ?? blob.keyId;
+    return {
+      // The card's id namespace names the STORE it came from, and an SSH
+      // identity lives in the same keyring as the PGP certs.
+      kind: "pgp",
+      id: blob.keyId,
+      displayName: blob.alias ?? realName,
+      realName,
+      // The WHOLE `SHA256:...` fingerprint, not a tail slice: an OpenSSH
+      // fingerprint is a base64 hash, and its last 16 characters are not
+      // an identifier anyone recognises or can look up (unlike a PGP long
+      // key id, which is a real short form).
+      shortId: blob.keyId,
+      algorithm: formatAlgorithm(blob.algorithm),
+      // No `fingerprint` line in advanced mode: that row regroups a hex
+      // fingerprint into 4-character blocks, which would chop a base64
+      // hash into meaningless quarters. `shortId` above already shows it
+      // in full, in the only form it has.
+      badge: "SSH",
+      protectionMethod: blob.protection.method,
+      securityWarning: blob.securityWarning,
+      // SSH keys really do unlock into a handle store (SSH_KEY_STORE),
+      // so the lock/unlock lifecycle is genuine here -- unlike CRX keys,
+      // which are sealed at rest and have no session.
+      session: {
+        isUnlocked: isUnlocked(blob.keyId),
+        unlockWithPassword: (pw) => onUnlockWithPassword(blob, pw),
+        unlockWithPasskey: () => onUnlockWithPasskey(blob),
+        lock: () => onLock(blob.keyId),
+      },
+      // No private-key export for an SSH identity -- see the note above
+      // pgpModels.
+      exporter: null,
+      // The "public key" of an SSH identity is its recipient line; `.pub`
+      // is the extension every other tool expects it under.
+      onCopyPublicKey: () => void copy(blob.publicKeyArmored),
+      onDownloadPublicKey: () =>
+        downloadPublicKey(blob.publicKeyArmored, blob.alias ?? realName, "pub"),
       onDelete: () =>
         nav.push({
           page: "confirm-delete",
@@ -342,7 +423,10 @@ export function KeysView({
     onShowDetails: undefined,
   }));
 
-  const keyModels = [...pgpModels, ...crxModels];
+  // One list, in one place: an SSH key is one of the user's keys, and a
+  // second heading would ask the user to know which engine they need
+  // before they can find their own key.
+  const keyModels = [...pgpModels, ...sshModels, ...crxModels];
 
   return (
     // Plain wrapper (no space-y) so mounting the sticky bar doesn't shift the
@@ -633,7 +717,7 @@ export function KeysView({
               <ExportKeysPage
                 key={entry.id}
                 onClose={nav.pop}
-                myKeys={selectedMyKeys}
+                myKeys={exportableMyKeys}
                 contacts={selectedContacts}
                 crxKeys={selectedCrxKeys}
                 isUnlocked={isUnlocked}

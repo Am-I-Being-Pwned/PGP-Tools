@@ -8,7 +8,11 @@ export type AppErrorCode =
   | "vault-locked"
   | "weak-password"
   | "password-required"
-  | "passkey-failed";
+  | "passkey-failed"
+  /** An imported SSH key is passphrase-protected and none was given.
+   *  Not a failure: the import flow reveals its passphrase field and
+   *  retries from the same step. */
+  | "ssh-passphrase-required";
 
 /**
  * An error from code we control, tagged with a stable cause. The message

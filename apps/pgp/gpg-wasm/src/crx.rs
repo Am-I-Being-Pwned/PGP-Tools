@@ -29,19 +29,17 @@
 //! `lib.rs` stays true. The store holds `Zeroizing<Vec<u8>>` (zeroized on
 //! drop / removal) and the key crosses to JS only as its public half.
 
-use std::cell::RefCell;
-use std::collections::HashMap;
-
 use base64::engine::general_purpose::STANDARD as B64;
 use base64::Engine as _;
 use rsa::pkcs1::DecodeRsaPrivateKey;
 use rsa::pkcs8::{DecodePrivateKey, DecodePublicKey, EncodePrivateKey, EncodePublicKey};
 use rsa::{Pkcs1v15Sign, RsaPrivateKey, RsaPublicKey};
 use sha2::{Digest, Sha256};
-use zeroize::{Zeroize, Zeroizing};
+use zeroize::Zeroizing;
 
 use wasm_bindgen::prelude::*;
 
+use crate::protected;
 use crate::StrErr;
 
 // ---------------------------------------------------------------------------
@@ -408,6 +406,7 @@ fn private_key_der(private_key: &RsaPrivateKey) -> Result<Zeroizing<Vec<u8>>, St
 // over raw DER, bound by AAD to the extension id).
 // ---------------------------------------------------------------------------
 
+/// Seal a PKCS#8 DER key under a password. Returns `[16 salt][12 iv][ct]`.
 fn encrypt_der_with_password(
     der: &[u8],
     ext_id: &str,
@@ -416,36 +415,32 @@ fn encrypt_der_with_password(
     iterations: u32,
     parallelism: u32,
 ) -> Result<Vec<u8>, String> {
-    let mut salt = [0u8; 16];
-    crate::rng::fill(&mut salt)?;
-
-    let mut derived = crate::argon2_derive(password, &salt, memory_kib, iterations, parallelism)?;
-    let aad = format!("{CRX_PASSWORD_AAD_PREFIX}{ext_id}");
-    let iv_and_ct = crate::aes_gcm_encrypt(&derived, der, aad.as_bytes());
-    derived.zeroize();
-    let iv_and_ct = iv_and_ct?;
-
-    let mut out = Vec::with_capacity(16 + iv_and_ct.len());
-    out.extend_from_slice(&salt);
-    out.extend_from_slice(&iv_and_ct);
-    Ok(out)
+    protected::seal_with_password(
+        der,
+        ext_id,
+        CRX_PASSWORD_AAD_PREFIX,
+        password,
+        memory_kib,
+        iterations,
+        parallelism,
+    )
 }
 
+/// Seal a PKCS#8 DER key under a passkey PRF. Returns `[12 iv][ct]`.
 fn encrypt_der_with_prf(
     der: &[u8],
     ext_id: &str,
     prf_output: &[u8],
     stored_secret: &[u8],
 ) -> Result<Vec<u8>, String> {
-    let hk = hkdf::Hkdf::<Sha256>::new(Some(stored_secret), prf_output);
-    let mut derived = vec![0u8; 32];
-    hk.expand(CRX_PRF_HKDF_INFO, &mut derived)
-        .map_err(|e| format!("HKDF failed: {e}"))?;
-
-    let aad = format!("{CRX_PASSKEY_AAD_PREFIX}{ext_id}");
-    let iv_and_ct = crate::aes_gcm_encrypt(&derived, der, aad.as_bytes());
-    derived.zeroize();
-    iv_and_ct
+    protected::seal_with_prf(
+        der,
+        ext_id,
+        CRX_PASSKEY_AAD_PREFIX,
+        CRX_PRF_HKDF_INFO,
+        prf_output,
+        stored_secret,
+    )
 }
 
 /// `{ extensionId, publicKeyDerB64, algorithm }` describing a freshly
@@ -460,39 +455,23 @@ fn protect_meta_json(private_key: &RsaPrivateKey, ext_id: &str) -> Result<String
     .to_string())
 }
 
-/// Pack `[u32_le json_len][json][blob]`, matching `pack_protect_result`.
-fn pack_meta_blob(json: &str, blob: &[u8]) -> Vec<u8> {
-    let json_bytes = json.as_bytes();
-    let mut out = Vec::with_capacity(4 + json_bytes.len() + blob.len());
-    out.extend_from_slice(&(json_bytes.len() as u32).to_le_bytes());
-    out.extend_from_slice(json_bytes);
-    out.extend_from_slice(blob);
-    out
-}
-
 // ---------------------------------------------------------------------------
 // CRX key store (raw RSA keys, kept separate from the OpenPGP KEY_STORE)
 // ---------------------------------------------------------------------------
 
+// CRX_KEY_STORE: a `protected::HandleStore` of its own -- same machinery as
+// `lib.rs`'s `KEY_STORE`, deliberately a separate instance so the "KEY_STORE
+// is OpenPGP-only and populated only by unlockWith*" invariant
+// (SECURITY.md §4) stays true. Handles still come from the crate-wide
+// `next_handle`, so the two stores never issue the same handle.
 thread_local! {
-    static CRX_KEY_STORE: RefCell<HashMap<u32, Zeroizing<Vec<u8>>>> =
-        RefCell::new(HashMap::new());
-}
-
-fn crx_store_insert(der: Vec<u8>) -> Result<u32, String> {
-    let handle = crate::next_handle()?;
-    CRX_KEY_STORE.with(|store| store.borrow_mut().insert(handle, Zeroizing::new(der)));
-    Ok(handle)
+    static CRX_KEY_STORE: protected::HandleStore = protected::HandleStore::new();
 }
 
 fn crx_store_get(handle: u32) -> Result<RsaPrivateKey, String> {
-    CRX_KEY_STORE.with(|store| {
-        let store = store.borrow();
-        let der = store
-            .get(&handle)
-            .ok_or("CRX key handle not found - key may have been locked")?;
-        RsaPrivateKey::from_pkcs8_der(der).str_err()
-    })
+    CRX_KEY_STORE
+        .with(|store| store.with(handle, |der| RsaPrivateKey::from_pkcs8_der(der).str_err()))
+        .ok_or("CRX key handle not found - key may have been locked")?
 }
 
 /// Validate a decrypted DER key — it must parse AND its public half must
@@ -502,21 +481,18 @@ fn crx_store_get(handle: u32) -> Result<RsaPrivateKey, String> {
 /// a foreign private key sealed (by them) under a victim's extension id;
 /// without this check that key would unlock and sign under the wrong
 /// identity. On any failure the plaintext is zeroized before returning.
-fn store_decrypted_der(mut der: Vec<u8>, expected_ext_id: &str) -> Result<u32, String> {
-    let checked = (|| -> Result<(), String> {
-        let key = RsaPrivateKey::from_pkcs8_der(&der)
-            .map_err(|_| "Decrypted data is not a valid RSA private key".to_string())?;
-        let actual = extension_id(&crx_id_from_spki(&spki_der(&key)?));
-        if actual != expected_ext_id {
-            return Err("Decrypted key does not belong to this extension id".to_string());
-        }
-        Ok(())
-    })();
-    if let Err(e) = checked {
-        der.zeroize();
-        return Err(e);
-    }
-    crx_store_insert(der)
+fn store_decrypted_der(der: Zeroizing<Vec<u8>>, expected_ext_id: &str) -> Result<u32, String> {
+    CRX_KEY_STORE.with(|store| {
+        store.insert_validated(der, |der| {
+            let key = RsaPrivateKey::from_pkcs8_der(der)
+                .map_err(|_| "Decrypted data is not a valid RSA private key".to_string())?;
+            let actual = extension_id(&crx_id_from_spki(&spki_der(&key)?));
+            if actual != expected_ext_id {
+                return Err("Decrypted key does not belong to this extension id".to_string());
+            }
+            Ok(())
+        })
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -538,7 +514,7 @@ pub fn generate_crx_key_with_password(
     let ext_id = extension_id(&crx_id_from_spki(&spki_der(&private_key)?));
     let blob =
         encrypt_der_with_password(&der, &ext_id, &password, memory_kib, iterations, parallelism)?;
-    Ok(pack_meta_blob(&protect_meta_json(&private_key, &ext_id)?, &blob))
+    Ok(protected::pack_meta_blob(&protect_meta_json(&private_key, &ext_id)?, &blob))
 }
 
 /// Generate a fresh RSA-2048 CRX signing key and protect it with a passkey (PRF).
@@ -554,7 +530,7 @@ pub fn generate_crx_key_with_prf(
     let der = private_key_der(&private_key)?;
     let ext_id = extension_id(&crx_id_from_spki(&spki_der(&private_key)?));
     let blob = encrypt_der_with_prf(&der, &ext_id, &prf_output, &stored_secret)?;
-    Ok(pack_meta_blob(&protect_meta_json(&private_key, &ext_id)?, &blob))
+    Ok(protected::pack_meta_blob(&protect_meta_json(&private_key, &ext_id)?, &blob))
 }
 
 /// Import an existing RSA private key (PKCS#8 or PKCS#1 PEM) and protect it
@@ -573,7 +549,7 @@ pub fn import_crx_key_with_password(
     let ext_id = extension_id(&crx_id_from_spki(&spki_der(&private_key)?));
     let blob =
         encrypt_der_with_password(&der, &ext_id, &password, memory_kib, iterations, parallelism)?;
-    Ok(pack_meta_blob(&protect_meta_json(&private_key, &ext_id)?, &blob))
+    Ok(protected::pack_meta_blob(&protect_meta_json(&private_key, &ext_id)?, &blob))
 }
 
 /// Import an existing RSA private key (PKCS#8 or PKCS#1 PEM) and protect it
@@ -590,7 +566,7 @@ pub fn import_crx_key_with_prf(
     let der = private_key_der(&private_key)?;
     let ext_id = extension_id(&crx_id_from_spki(&spki_der(&private_key)?));
     let blob = encrypt_der_with_prf(&der, &ext_id, &prf_output, &stored_secret)?;
-    Ok(pack_meta_blob(&protect_meta_json(&private_key, &ext_id)?, &blob))
+    Ok(protected::pack_meta_blob(&protect_meta_json(&private_key, &ext_id)?, &blob))
 }
 
 /// Re-seal an already-unlocked CRX key (by handle) under a password, WITHOUT
@@ -612,7 +588,7 @@ pub fn reprotect_crx_key_with_password(
     let ext_id = extension_id(&crx_id_from_spki(&spki_der(&private_key)?));
     let blob =
         encrypt_der_with_password(&der, &ext_id, &password, memory_kib, iterations, parallelism)?;
-    Ok(pack_meta_blob(&protect_meta_json(&private_key, &ext_id)?, &blob))
+    Ok(protected::pack_meta_blob(&protect_meta_json(&private_key, &ext_id)?, &blob))
 }
 
 /// Export an already-unlocked CRX key (by handle) as an UNENCRYPTED PKCS#8
@@ -641,16 +617,30 @@ pub fn unlock_crx_with_password(
     iv: &[u8],
     salt: &[u8],
     ext_id: &str,
-    password: &[u8],
+    password: Vec<u8>,
     memory_kib: u32,
     iterations: u32,
     parallelism: u32,
 ) -> Result<u32, String> {
-    let mut derived = crate::argon2_derive(password, salt, memory_kib, iterations, parallelism)?;
-    let aad = format!("{CRX_PASSWORD_AAD_PREFIX}{ext_id}");
-    let result = crate::aes_gcm_decrypt(&derived, iv, ciphertext, aad.as_bytes());
-    derived.zeroize();
-    store_decrypted_der(result?, ext_id)
+    // Owned, not `&[u8]`: with a borrowed param the wasm-bindgen glue frees
+    // its marshalled copy of the password without clearing it, leaving the
+    // plaintext in linear memory. Owning it lets Zeroizing scrub on exit.
+    // Mirrors `lib.rs`'s `unlock_with_password`, and the four
+    // generate/import/reprotect CRX fns above, which already take owned.
+    // See SECURITY.md §8.4 and T-UNLOCK-PARAM-NOT-OWNED.
+    let password = Zeroizing::new(password);
+    let der = protected::open_with_password(
+        ciphertext,
+        iv,
+        salt,
+        ext_id,
+        CRX_PASSWORD_AAD_PREFIX,
+        &password,
+        memory_kib,
+        iterations,
+        parallelism,
+    )?;
+    store_decrypted_der(der, ext_id)
 }
 
 /// Unlock a passkey-protected CRX key into `CRX_KEY_STORE`; returns a handle.
@@ -658,19 +648,25 @@ pub fn unlock_crx_with_password(
 pub fn unlock_crx_with_prf(
     ciphertext: &[u8],
     iv: &[u8],
-    prf_output: &[u8],
-    stored_secret: &[u8],
+    prf_output: Vec<u8>,
+    stored_secret: Vec<u8>,
     ext_id: &str,
 ) -> Result<u32, String> {
-    let hk = hkdf::Hkdf::<Sha256>::new(Some(stored_secret), prf_output);
-    let mut derived = vec![0u8; 32];
-    hk.expand(CRX_PRF_HKDF_INFO, &mut derived)
-        .map_err(|e| format!("HKDF failed: {e}"))?;
-
-    let aad = format!("{CRX_PASSKEY_AAD_PREFIX}{ext_id}");
-    let result = crate::aes_gcm_decrypt(&derived, iv, ciphertext, aad.as_bytes());
-    derived.zeroize();
-    store_decrypted_der(result?, ext_id)
+    // Owned + Zeroizing for the same reason as `unlock_crx_with_password`,
+    // and matching `generate_crx_key_with_prf`, which already takes both
+    // owned. See SECURITY.md §8.4 and T-UNLOCK-PARAM-NOT-OWNED.
+    let prf_output = Zeroizing::new(prf_output);
+    let stored_secret = Zeroizing::new(stored_secret);
+    let der = protected::open_with_prf(
+        ciphertext,
+        iv,
+        ext_id,
+        CRX_PASSKEY_AAD_PREFIX,
+        CRX_PRF_HKDF_INFO,
+        &prf_output,
+        &stored_secret,
+    )?;
+    store_decrypted_der(der, ext_id)
 }
 
 /// Sign a packed extension ZIP into a CRX3 `.crx` using an unlocked handle.
@@ -683,7 +679,7 @@ pub fn sign_crx_with_handle(zip_bytes: &[u8], key_handle: u32) -> Result<Vec<u8>
 /// Drop (and zeroize) an unlocked CRX key handle.
 #[wasm_bindgen(js_name = "dropCrxKey")]
 pub fn drop_crx_key(handle: u32) -> Result<(), String> {
-    CRX_KEY_STORE.with(|store| store.borrow_mut().remove(&handle));
+    CRX_KEY_STORE.with(|store| store.remove(handle));
     Ok(())
 }
 
@@ -708,6 +704,9 @@ pub fn verify_crx(crx: &[u8]) -> String {
 #[cfg(test)]
 mod crx_tests {
     use super::*;
+    // The hand-rolled decrypt helpers below deliberately do NOT go through
+    // `protected::open_*`, so they scrub their own derived key.
+    use zeroize::Zeroize;
 
     #[test]
     fn crx_embeds_the_input_archive_verbatim() {
@@ -786,7 +785,7 @@ mod crx_tests {
         let key = generate_rsa2048().unwrap();
         let der = private_key_der(&key).unwrap();
         let ext_id = extension_id(&crx_id_from_spki(&spki_der(&key).unwrap()));
-        let handle = store_decrypted_der(der.to_vec(), &ext_id).unwrap();
+        let handle = store_decrypted_der(der, &ext_id).unwrap();
         let reloaded = crx_store_get(handle).unwrap();
         drop_crx_key(handle).unwrap();
         // Same key -> same extension id.
@@ -803,7 +802,7 @@ mod crx_tests {
         let ext_id_a = extension_id(&crx_id_from_spki(&spki_der(&key_a).unwrap()));
         let der_b = private_key_der(&key_b).unwrap();
 
-        let result = store_decrypted_der(der_b.to_vec(), &ext_id_a);
+        let result = store_decrypted_der(der_b, &ext_id_a);
         assert!(result.is_err(), "foreign key under ext id A must be refused");
         assert!(result.unwrap_err().contains("does not belong"));
     }
@@ -991,13 +990,13 @@ mod crx_tests {
 
     /// Generate an RSA key and insert its DER into `CRX_KEY_STORE`, returning
     /// the handle plus the original extension id and SPKI for cross-checks.
-    /// Mirrors the generate path (`private_key_der` -> `crx_store_insert`).
+    /// Mirrors the generate path (`private_key_der` -> the store insert).
     fn insert_generated_key() -> (u32, String, Vec<u8>) {
         let key = generate_rsa2048().unwrap();
         let spki = spki_der(&key).unwrap();
         let ext_id = extension_id(&crx_id_from_spki(&spki));
         let der = private_key_der(&key).unwrap();
-        let handle = crx_store_insert(der.to_vec()).unwrap();
+        let handle = CRX_KEY_STORE.with(|store| store.insert(der)).unwrap();
         (handle, ext_id, spki)
     }
 
@@ -1241,5 +1240,106 @@ mod crx_tests {
     fn export_pem_absent_handle_returns_err_not_panic() {
         let result = export_crx_private_key_pem(0xDEAD_BEEF);
         assert!(result.is_err(), "bogus handle must be an Err, not a panic");
+    }
+
+    /// A key sealed by `import_crx_key_with_password` must be openable by
+    /// `unlock_crx_with_password` -- the seal/open pair round-trips end to
+    /// end, through the real exports rather than the hand-rolled test
+    /// decrypt helper above.
+    #[test]
+    fn import_then_unlock_round_trips_through_the_real_exports() {
+        let key = generate_rsa2048().unwrap();
+        let spki = spki_der(&key).unwrap();
+        let ext_id = extension_id(&crx_id_from_spki(&spki));
+        let pem = key
+            .to_pkcs8_pem(rsa::pkcs8::LineEnding::LF)
+            .unwrap()
+            .to_string();
+
+        let packed = import_crx_key_with_password(
+            &pem,
+            b"correct horse battery staple".to_vec(),
+            TEST_ARGON2_MEM,
+            TEST_ARGON2_ITERS,
+            TEST_ARGON2_PAR,
+        )
+        .unwrap();
+        let (meta, blob) = unpack_meta_blob(&packed);
+        assert_eq!(meta["extensionId"], ext_id);
+
+        let handle = unlock_crx_with_password(
+            &blob[28..],
+            &blob[16..28],
+            &blob[0..16],
+            &ext_id,
+            b"correct horse battery staple".to_vec(),
+            TEST_ARGON2_MEM,
+            TEST_ARGON2_ITERS,
+            TEST_ARGON2_PAR,
+        )
+        .unwrap();
+        let recovered = crx_store_get(handle).unwrap();
+        drop_crx_key(handle).unwrap();
+        assert_eq!(spki_der(&recovered).unwrap(), spki);
+
+        // And a wrong password must still be refused by the GCM tag.
+        assert!(
+            unlock_crx_with_password(
+                &blob[28..],
+                &blob[16..28],
+                &blob[0..16],
+                &ext_id,
+                b"not the password".to_vec(),
+                TEST_ARGON2_MEM,
+                TEST_ARGON2_ITERS,
+                TEST_ARGON2_PAR,
+            )
+            .is_err(),
+            "wrong password must fail"
+        );
+    }
+
+    /// A CRX key sealed by the BUILD THAT SHIPPED BEFORE `unlock_crx_with_*`
+    /// took its secrets by value must still open. Changing a param from
+    /// `&[u8]` to `Vec<u8>` moves the wasm-bindgen boundary, so this is a
+    /// frozen at-rest fixture rather than a same-run round trip: the packed
+    /// blob below was emitted by the pre-change code (AAD prefix, HKDF info,
+    /// blob layout `[16 salt][12 iv][ct]` and Argon2 params all as shipped).
+    /// If this test ever fails, an at-rest format change has been made and
+    /// every stored CRX signing key on every user's disk is unreadable.
+    #[test]
+    fn a_blob_sealed_before_the_owned_param_change_still_unlocks() {
+        // Emitted by the pre-change build via `import_crx_key_with_password`
+        // over a throwaway generated RSA-2048 key. Password: below.
+        const SEALED_PACKED_B64: &str = "5QEAAHsiYWxnb3JpdGhtIjoicnNhMjA0OCIsImV4dGVuc2lvbklkIjoiaGNnZGVncGFmbmxnbWNwa2NlbGJnaGtqYmJrb2loaWUiLCJwdWJsaWNLZXlEZXJCNjQiOiJNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXZEQmJZcW9LSU9OaXY2Z3pFWVAzR0RPMjNKYnFBVWhuNjlqVE9XNGdCU3hvVEpKbmtNaWNpdHdFY0JrSW92TlFiczIwYkNUVkpnb0UvMkk0VUZCQU1BT2VKa1JyN3o0YkFGNE9FR0wxZlppaFM3Smd4eXhmdGhnT2pWMjFoR2V5VllGcnFUclB6TFRCTFUrV2RjYW1zcmFEOGRKeGJYTkozekY2MDE2ZTZKZGIzVUtMdUZEcWJ6blJlRU5vc29DcWszNjZpVFB6RXp4cTJsNU9UNFFGUU5KZjdIa2JFZmt3bEw1TTlxYys4STJIQ2FSdUwva2plRzlPMURlUWJVTUxtM2owVWdkeHJJQzJjU214cThwYTZjVE1WNXVCdWdjdEJTVG9jdFE3TGVidERtYnBSZzBCL3lNSjN4M0Q4VCt1cjVVWUVNSFVsSlpHZzMxTkFHK1NrUUlEQVFBQiJ9QA/ATlc/xtOIxkpQeyD5ECZ8e9TkCLBK+NKXDTWOTK+AzuFJ0q4cE5YMs2jSsqcZXZXRDkREJkxUYZcutFGB0RAxpkMzGYHyi8w88+2wtxJ8rvTHwncxACAXTBMowPFheXTw+b0ielI10gtAY+K1yzN7vGHt+2oXHfdKTeNqfg0cVv9MvkJP6LRd245IUS4OoxgwAbvz0BnkVlTpwntcm7BT1pYCL+59IFn7JiSGIpMQdbHaVAbkDlD2W5VyaOtFde/GQC8OA/v2BfrDh0BH8QHCq2Mt9Vb5ci28ZsPwj32WhhuqcoiW8IPez3BuqcE6Ulixf0HchiOCvA+53d55RO2Zj0UDce27xQvtDfqonEXta5v4dS+eoPVb45r4laj+lOI4nsyNBuWaQAD84UPFbrdWr2+MHIALzWZTGM5AaV5WmzvXQZmM8rRtbMk91agTu/s9fYoe08lnfwjgHSvNCSJbqeooVI60G/khAAXjgpKzotxTsG2Cr1mqxt/ycIUDcSSmI9ih7D27JbNsYS+IEYPNDAmQiP3tsHIkETFVsukwvWBzRq9fd90d9vyCUIAuqzxiWMjPBTnKuFXSAIMwvgBnor6YlMkD9B+pj+7Lo7nsk8OVsAphkMfDL/FbAtfxazUvPlLKpGo9s9z9WSDYGijGCk4QLPElDjiSjkA/8rbcYij2nRn+GmKsBEDGUyM9lC90Gl6PYBCUuUPUwz54wxU1zGdnlZP6w/7W3xGmHJRN9FRgmQwLWuxI19VDWFQoHwegQoijYmvxPV5WIWG436MWdEnc/sRZNtxAvNklDvJKstsHMonsnRfQXq2cRbdme2KuM72ehXPPIP1XgMFTMCbJn4TZamJse0unCoePMlqlDPsfPxEmmzU/Tcw2cwRYFEz5RGCizveYOhERwQLU5lyIyRjrZZWdfZ/LkPD7A6TpNV0Juy0qsnJC0cDEL8+ensqfFWMnKfghdQSVPr8ZBvByw1+NRDVoAIXEh5Z1yOK9AupXwvwtcRwR5bryhBYjjv9e+wb80ER+IFBDsC2h7LJVv3Lq15lJ4SwFe2bquC/CtyjQrwFo2llkR8O80cF62GiTzQNEvHaAnVSAfeVIujRYyPSMZV5DgoJHhH5Z4iwv6ycMf/ZS68pymonQITJ8spVvvv+0iqxweESeKmmgA9AEGkcULwvJj4jk0wmjkwPvQs/XNxAaUDikDerXqPJf2x1e29NMNxf1O+y5Ai44gfYE4x3JylEMZPwki8kKHL2V69Hy5bjsKyExzZtTzdXJrkS9ENxIPMsior15iV7VHicPwdy+4rvwPaOIO2IquJgrbY3BwA4vkNAruIbkyr1y0tx5k8ul1smj5qvGqODE4IYG67oAd0NTLSzYL6ojCQY82vGaOEU5sAVpBLqkIniYA0M9SvWo00zU8UdQHZURbdiNFi+lwzIxFmLK4b0gYPo86foZICLIGy6DnBIwQKmGL4mNZsdgyRg+ZokSOFK70A6JQeWO/d3KqMiK3qQWff01sc/K+J4wJj2P2d43+9j5JVocSCzgN1wyiryChGE6udPii1uJXtvslupDxjALwLt0z+tmTFiiikXe/g54EuhEO4FuEiKBqsy+WZTtsfmZ19z8hxZVVLNd6Rd/wxhBrUn4DZiyzslUn4MXIfIKvokXpZSnbssAswKCiTDLJQ==";
+        const SEALED_EXT_ID: &str = "hcgdegpafnlgmcpkcelbghkjbbkoihie";
+        let password = b"fixture password";
+
+        let packed = B64.decode(SEALED_PACKED_B64).unwrap();
+        let (meta, blob) = unpack_meta_blob(&packed);
+        assert_eq!(meta["extensionId"], SEALED_EXT_ID);
+        assert_eq!(meta["algorithm"], "rsa2048");
+
+        let handle = unlock_crx_with_password(
+            &blob[28..],
+            &blob[16..28],
+            &blob[0..16],
+            SEALED_EXT_ID,
+            password.to_vec(),
+            TEST_ARGON2_MEM,
+            TEST_ARGON2_ITERS,
+            TEST_ARGON2_PAR,
+        )
+        .expect("a key sealed by the shipped build must still open");
+        let recovered = crx_store_get(handle).unwrap();
+        drop_crx_key(handle).unwrap();
+
+        // The recovered key really is the one the fixture's metadata names.
+        let recovered_spki = spki_der(&recovered).unwrap();
+        assert_eq!(meta["publicKeyDerB64"], B64.encode(&recovered_spki));
+        assert_eq!(
+            extension_id(&crx_id_from_spki(&recovered_spki)),
+            SEALED_EXT_ID
+        );
     }
 }

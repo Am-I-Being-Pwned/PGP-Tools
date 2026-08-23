@@ -8,12 +8,14 @@ export function backupFileName(): string {
 
 /**
  * Download one key's public half under a name derived from its display name,
- * e.g. alice-example-public.asc. `ext` is "asc" (PGP armor) or "pem" (CRX).
+ * e.g. alice-example-public.asc. `ext` is "asc" (PGP armor), "pem" (CRX), or
+ * "pub" (an SSH recipient line -- what every other tool on the machine
+ * expects that file to be called).
  */
 export function downloadPublicKey(
   text: string,
   displayName: string,
-  ext: "asc" | "pem" = "asc",
+  ext: "asc" | "pem" | "pub" = "asc",
 ): void {
   const slug = displayName
     .toLowerCase()

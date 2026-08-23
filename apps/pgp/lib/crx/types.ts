@@ -1,3 +1,8 @@
+import type {
+  KeyProtection,
+  PasskeyProtection,
+  PasswordProtection,
+} from "../protection/protected-blob";
 import { fromBase64 } from "../encoding";
 
 /**
@@ -10,20 +15,15 @@ import { fromBase64 } from "../encoding";
  * (`publicKeyDerB64`) and the derived `extensionId` are stored in clear.
  */
 
-/** Shared protection discriminated union — mirrors the keyring's. */
-export interface CrxPasswordProtection {
-  method: "password";
-  kdfSalt: string; // base64 (Argon2id salt)
-}
-
-export interface CrxPasskeyProtection {
-  method: "passkey";
-  credentialId: string; // base64url
-  prfSalt: string; // base64
-  storedSecret: string; // base64 (HKDF salt; not itself secret)
-}
-
-export type CrxProtection = CrxPasswordProtection | CrxPasskeyProtection;
+/**
+ * How the private half is sealed at rest. Structurally identical to the
+ * keyring's, because it IS the same seal — so it is the same union,
+ * defined once in `protection/protected-blob.ts`. These aliases stay so
+ * CRX call sites keep reading in CRX terms.
+ */
+export type CrxPasswordProtection = PasswordProtection;
+export type CrxPasskeyProtection = PasskeyProtection;
+export type CrxProtection = KeyProtection;
 
 export interface CrxSigningKeyBlob {
   version: 1;

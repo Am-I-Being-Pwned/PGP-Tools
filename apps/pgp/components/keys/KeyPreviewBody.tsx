@@ -9,7 +9,7 @@ import {
   XCircleIcon,
 } from "lucide-react";
 
-import type { KeyDetails, KeyInfo, SubkeyDetail } from "../../lib/pgp/types";
+import type { ComponentKeyRow, KeyFacts, KeyHealth } from "./key-facts";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import { formatAlgorithm } from "../../lib/utils/formatting";
 
@@ -17,16 +17,19 @@ import { formatAlgorithm } from "../../lib/utils/formatting";
  * The read-only body of a key: identity header, health banner, the facts
  * card (fingerprint, algorithm, dates) and the subkey list.
  *
- * Deliberately presentational -- it takes already-parsed `KeyInfo` /
- * `KeyDetails` rather than armor, and knows nothing about storage. That's
- * what lets the SAME component render a stored key (KeyDetailsPage) and a
- * key that has not been imported yet (the import preview): the preview is
- * the details page, so the two can't drift apart.
+ * Deliberately presentational -- it takes already-derived `KeyFacts`
+ * (see ./key-facts) rather than armor or any one engine's parse result,
+ * and knows nothing about storage. That's what lets the SAME component
+ * render a stored key (KeyDetailsPage) and a key that has not been
+ * imported yet (the import preview): the preview is the details page, so
+ * the two can't drift apart -- and what lets a non-OpenPGP key, which has
+ * no user IDs, dates or subkeys, render here as the smaller set of facts
+ * it actually has instead of as a half-empty certificate.
  */
 
 const EXPIRING_SOON_MS = 30 * 24 * 60 * 60 * 1000;
 
-const STATUS_STYLES: Record<SubkeyDetail["status"], string> = {
+const STATUS_STYLES: Record<ComponentKeyRow["status"], string> = {
   active: "border-green-500/40 bg-green-500/10 text-green-400",
   expired: "border-amber-500/40 bg-amber-500/10 text-amber-400",
   revoked: "border-red-500/40 bg-red-500/10 text-red-400",
@@ -34,7 +37,7 @@ const STATUS_STYLES: Record<SubkeyDetail["status"], string> = {
 };
 
 /** What this component key is used for, in plain words. */
-function capabilityText(row: SubkeyDetail): string {
+function capabilityText(row: ComponentKeyRow): string {
   const parts: string[] = [];
   if (row.canSign) parts.push("Signs messages");
   if (row.canEncrypt) parts.push("Receives encrypted messages");
@@ -54,12 +57,12 @@ interface Banner {
 }
 
 function deriveBanner(
-  info: KeyInfo,
-  primaryRow: SubkeyDetail | null,
+  health: KeyHealth,
+  expiresAt: number | null,
+  primaryRow: ComponentKeyRow | null,
   isOwn: boolean,
 ): Banner | null {
   const now = Date.now();
-  const expiresAt = info.expiresAt;
 
   if (primaryRow?.status === "revoked") {
     return {
@@ -87,19 +90,19 @@ function deriveBanner(
     };
   }
 
-  if (!info.usableForEncryption && !info.usableForSigning) {
+  if (!health.usableForEncryption && !health.usableForSigning) {
     return {
       tone: "bad",
       title: "This key can't be used",
       lines: [
-        info.policyError ?? "It has no usable encryption or signing subkey.",
+        health.policyError ?? "It has no usable encryption or signing subkey.",
       ],
     };
   }
 
   // A healthy key shows no banner at all -- silence means fine. Only
   // limitations and problems earn screen space.
-  if (info.usableForEncryption && !info.usableForSigning) {
+  if (health.usableForEncryption && !health.usableForSigning) {
     return {
       tone: "warn",
       title: isOwn
@@ -108,7 +111,7 @@ function deriveBanner(
       lines: [],
     };
   }
-  if (!info.usableForEncryption && info.usableForSigning) {
+  if (!health.usableForEncryption && health.usableForSigning) {
     return {
       tone: "warn",
       title: isOwn
@@ -162,9 +165,32 @@ function StatusBanner({ banner }: { banner: Banner }) {
 
 // ── building blocks ──────────────────────────────────────────────────
 
-/** Fingerprint as aligned rows of five 4-char groups (the way GnuPG
- *  prints it), so two fingerprints can be compared block by block. */
+/** A fingerprint that is nothing but hex digits -- an OpenPGP one. The
+ *  shape, not the prefix: an OpenSSH fingerprint happens to start
+ *  `SHA256:`, but testing for that literal would mangle the next non-hex
+ *  format just as badly, and this predicate keeps working without being
+ *  told about it. */
+const HEX_FINGERPRINT = /^[0-9a-fA-F]+$/;
+
+/**
+ * Fingerprint as aligned rows of five 4-char groups (the way GnuPG
+ * prints it), so two fingerprints can be compared block by block.
+ *
+ * ONLY for a hex fingerprint. An OpenSSH one is `SHA256:` followed by
+ * unpadded base64, where the grouping is not a convention but damage:
+ * it split the prefix itself (`SHA2 56:I oCz+ ...`) and chopped the
+ * base64 at offsets that mean nothing. That reached the clipboard too
+ * (see `handleCopyFingerprint`), and comparing a fingerprint out of band
+ * is the ONLY check a user has that GitHub served the key its owner
+ * published -- `T-GITHUB-KEY-SUBSTITUTION` in
+ * `lib/security/threat-model.ts`. A mangled copy defeats that silently:
+ * it neither matches nor visibly fails.
+ *
+ * So a non-hex fingerprint is returned as ONE unbroken line -- rendered
+ * whole, and copied byte-for-byte as `ssh-keygen -lf` prints it.
+ */
 export function fingerprintLines(fp: string): string[] {
+  if (!HEX_FINGERPRINT.test(fp)) return [fp];
   const groups = fp.match(/.{1,4}/g) ?? [fp];
   const lines: string[] = [];
   for (let i = 0; i < groups.length; i += 5) {
@@ -207,12 +233,36 @@ export function Chip({
   );
 }
 
-function SubkeyRow({ row }: { row: SubkeyDetail }) {
+function SubkeyRow({
+  row,
+  label = "Subkey",
+  action,
+}: {
+  row: ComponentKeyRow;
+  label?: string;
+  /** Optional trailing control for this row, supplied by the page (the
+   *  details page's include/exclude toggle). Absent -- as it is in the
+   *  import preview -- renders nothing, so the two screens keep sharing
+   *  one component instead of forking. */
+  action?: React.ReactNode;
+}) {
   const caps = capabilityText(row);
+  // An engine whose keys carry no dates (SSH) supplies neither, and the
+  // whole clause is dropped rather than printed as the epoch.
+  const dates =
+    row.createdAt === undefined && row.expiresAt === undefined
+      ? ""
+      : `${row.createdAt !== undefined ? ` \u00b7 created ${format(new Date(row.createdAt), "PP")}` : ""}${
+          row.expiresAt
+            ? ` \u00b7 ${row.status === "expired" ? "expired" : "expires"} ${format(new Date(row.expiresAt), "PP")}`
+            : row.expiresAt === null
+              ? " \u00b7 never expires"
+              : ""
+        }`;
   return (
     <div className="border-border rounded-md border p-2.5">
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="text-xs font-medium">Subkey</span>
+        <span className="text-xs font-medium">{label}</span>
         {row.status !== "active" && (
           <span
             className={`rounded-full border px-1.5 py-px text-[10px] font-medium ${STATUS_STYLES[row.status]}`}
@@ -220,6 +270,7 @@ function SubkeyRow({ row }: { row: SubkeyDetail }) {
             {row.status}
           </span>
         )}
+        {action && <span className="ml-auto">{action}</span>}
       </div>
       {caps && <p className="text-muted-foreground mt-0.5 text-xs">{caps}</p>}
       <p className="text-muted-foreground mt-1.5 font-mono text-[10px] leading-relaxed">
@@ -231,11 +282,8 @@ function SubkeyRow({ row }: { row: SubkeyDetail }) {
       </p>
       <p className="text-muted-foreground mt-0.5 text-[11px]">
         {formatAlgorithm(row.algorithm)}
-        {row.bits ? ` (${row.bits}-bit)` : ""} · created{" "}
-        {format(new Date(row.createdAt), "PP")}
-        {row.expiresAt
-          ? ` · ${row.status === "expired" ? "expired" : "expires"} ${format(new Date(row.expiresAt), "PP")}`
-          : " · never expires"}
+        {row.bits ? ` (${row.bits}-bit)` : ""}
+        {dates}
       </p>
       {row.revocationReason && (
         <p className="mt-1 text-[11px] text-red-400">
@@ -265,9 +313,16 @@ export interface KeyPreviewBodyProps {
   /** Other identities on the cert, as deduped emails. */
   akaEmails?: string[];
   chips?: KeyPreviewChip[];
-  /** Parsed cert facts. `null` renders the loading line. */
-  info: KeyInfo | null;
-  details: KeyDetails | null;
+  /** What this key is, in the terms the body renders (see ./key-facts).
+   *  `null` means there is nothing to show -- a cert that failed to parse,
+   *  or an engine whose keys carry no metadata until they're imported --
+   *  and every fact-driven section is simply left out. */
+  facts: KeyFacts | null;
+  /** True while the facts are still being fetched. Explicit rather than
+   *  inferred from `facts === null`: "still loading" and "this key has no
+   *  facts to show" are different screens, and conflating them left a
+   *  metadata-less key saying "Loading…" forever. */
+  loading?: boolean;
   error?: string | null;
   /** Wording of the health banner ("you can sign" vs "it can sign"). */
   isOwn?: boolean;
@@ -280,6 +335,10 @@ export interface KeyPreviewBodyProps {
   statusStrip?: React.ReactNode;
   /** Trailing sections (e.g. the revocation certificate card). */
   children?: React.ReactNode;
+  /** Per-row control rendered in each component-key row's header. The
+   *  import preview doesn't pass it; the details page uses it to hang an
+   *  include/exclude toggle off each of a contact's keys. */
+  rowAction?: (row: ComponentKeyRow) => React.ReactNode;
 }
 
 export function KeyPreviewBody({
@@ -288,8 +347,8 @@ export function KeyPreviewBody({
   email,
   akaEmails = [],
   chips = [],
-  info,
-  details,
+  facts,
+  loading = false,
   error,
   isOwn = false,
   securityWarning,
@@ -297,6 +356,7 @@ export function KeyPreviewBody({
   lastUsedAt,
   statusStrip,
   children,
+  rowAction,
 }: KeyPreviewBodyProps) {
   const [showInactive, setShowInactive] = useState(false);
   const [copiedFp, setCopiedFp] = useState(false);
@@ -307,7 +367,7 @@ export function KeyPreviewBody({
     return () => clearTimeout(copyTimer.current);
   }, []);
 
-  const rows = details?.keys ?? null;
+  const rows = facts?.components?.rows ?? null;
   const primaryRow = rows?.find((r) => r.isPrimary) ?? null;
   const subkeys = rows?.filter((r) => !r.isPrimary) ?? [];
   const activeSubkeys = subkeys.filter((r) => r.status === "active");
@@ -318,16 +378,22 @@ export function KeyPreviewBody({
       ? "revoked"
       : "unusable";
 
-  const banner = info ? deriveBanner(info, primaryRow, isOwn) : null;
-
   // Captured once at mount; the page is short-lived so drift is moot.
   const [now] = useState(() => Date.now());
-  const expiresAt = info?.expiresAt ?? null;
+  const expiresAt = facts?.expiresAt ?? null;
+  const banner = facts?.health
+    ? deriveBanner(facts.health, expiresAt, primaryRow, isOwn)
+    : null;
   const keyExpired = expiresAt !== null && expiresAt < now;
   const keyExpiringSoon =
     expiresAt !== null && !keyExpired && expiresAt - now < EXPIRING_SOON_MS;
 
   const handleCopyFingerprint = (fp: string) => {
+    // Joins the DISPLAYED lines, so what lands on the clipboard is what
+    // is on screen. That is exactly why `fingerprintLines` must return a
+    // non-hex fingerprint as a single line: this join would otherwise
+    // put spaces inside an OpenSSH `SHA256:...` hash and quietly break
+    // the out-of-band comparison it exists for.
     // No label: the inline 2s check is the success feedback.
     void copy(fingerprintLines(fp).join(" ")).then((ok) => {
       if (!ok) return;
@@ -383,7 +449,7 @@ export function KeyPreviewBody({
       {statusStrip}
 
       {error && <p className="text-destructive text-xs">{error}</p>}
-      {!error && info === null && (
+      {!error && loading && (
         <p className="text-muted-foreground text-xs">Loading…</p>
       )}
 
@@ -398,12 +464,12 @@ export function KeyPreviewBody({
         </div>
       )}
 
-      {info && (
+      {facts && (
         <div className="border-border divide-border divide-y rounded-md border">
           <InfoRow label="Fingerprint">
             <span className="flex items-start gap-1.5">
               <span className="font-mono text-[11px] leading-relaxed">
-                {fingerprintLines(info.keyId).map((line) => (
+                {fingerprintLines(facts.fingerprint).map((line) => (
                   <span key={line} className="block">
                     {line}
                   </span>
@@ -411,7 +477,7 @@ export function KeyPreviewBody({
               </span>
               <button
                 type="button"
-                onClick={() => handleCopyFingerprint(info.keyId)}
+                onClick={() => handleCopyFingerprint(facts.fingerprint)}
                 aria-label="Copy fingerprint"
                 className="text-muted-foreground hover:text-foreground rounded p-0.5 transition-colors"
               >
@@ -424,36 +490,40 @@ export function KeyPreviewBody({
             </span>
           </InfoRow>
           <InfoRow label="Algorithm">
-            {formatAlgorithm(info.algorithm)}
+            {formatAlgorithm(facts.algorithm)}
             {primaryRow?.bits ? ` · ${primaryRow.bits}-bit` : ""}
           </InfoRow>
           {primaryRow && capabilityText(primaryRow) && (
             <InfoRow label="Used for">{capabilityText(primaryRow)}</InfoRow>
           )}
-          <InfoRow label="Created">
-            {format(new Date(info.createdAt), "PPP")}
-          </InfoRow>
-          <InfoRow label="Expires">
-            {expiresAt === null ? (
-              "Never"
-            ) : (
-              <span
-                className={
-                  keyExpired
-                    ? "text-red-400"
-                    : keyExpiringSoon
-                      ? "text-amber-400"
-                      : undefined
-                }
-              >
-                {format(new Date(expiresAt), "PPP")} (
-                {formatDistanceToNow(new Date(expiresAt), {
-                  addSuffix: true,
-                })}
-                )
-              </span>
-            )}
-          </InfoRow>
+          {facts.createdAt !== undefined && (
+            <InfoRow label="Created">
+              {format(new Date(facts.createdAt), "PPP")}
+            </InfoRow>
+          )}
+          {facts.expiresAt !== undefined && (
+            <InfoRow label="Expires">
+              {expiresAt === null ? (
+                "Never"
+              ) : (
+                <span
+                  className={
+                    keyExpired
+                      ? "text-red-400"
+                      : keyExpiringSoon
+                        ? "text-amber-400"
+                        : undefined
+                  }
+                >
+                  {format(new Date(expiresAt), "PPP")} (
+                  {formatDistanceToNow(new Date(expiresAt), {
+                    addSuffix: true,
+                  })}
+                  )
+                </span>
+              )}
+            </InfoRow>
+          )}
           {addedAt !== undefined && (
             <InfoRow label="Added">{format(new Date(addedAt), "PPP")}</InfoRow>
           )}
@@ -468,18 +538,18 @@ export function KeyPreviewBody({
         </div>
       )}
 
-      {details && (
+      {facts?.components && (
         <div>
           <h3 className="mb-2 text-xs font-semibold">
-            Subkeys{" "}
+            {facts.components.title ?? "Subkeys"}{" "}
             <span className="text-muted-foreground font-normal">
               ({subkeys.length})
             </span>
           </h3>
-          {details.truncated && (
+          {facts.components.truncated && (
             <p className="mb-2 text-xs text-amber-400">
               This certificate has an unusually large number of subkeys; only
-              the first {details.keys.length} are shown.
+              the first {facts.components.rows.length} are shown.
             </p>
           )}
           {subkeys.length === 0 && (
@@ -489,7 +559,12 @@ export function KeyPreviewBody({
           )}
           <div className="space-y-2">
             {activeSubkeys.map((row) => (
-              <SubkeyRow key={row.fingerprint} row={row} />
+              <SubkeyRow
+                key={row.fingerprint}
+                row={row}
+                label={facts.components?.rowLabel}
+                action={rowAction?.(row)}
+              />
             ))}
           </div>
           {inactiveSubkeys.length > 0 && (
@@ -511,7 +586,12 @@ export function KeyPreviewBody({
               {showInactive && (
                 <div className="mt-1 space-y-2">
                   {inactiveSubkeys.map((row) => (
-                    <SubkeyRow key={row.fingerprint} row={row} />
+                    <SubkeyRow
+                      key={row.fingerprint}
+                      row={row}
+                      label={facts.components?.rowLabel}
+                      action={rowAction?.(row)}
+                    />
                   ))}
                 </div>
               )}

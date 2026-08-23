@@ -5,6 +5,8 @@
 
 import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
 
+import type { StoredKeyKind } from "../storage/key-kind";
+
 /** The workspace operation modes (mirrors WorkspaceAction). */
 export type PgpMode = "encrypt" | "decrypt" | "sign" | "verify";
 
@@ -25,6 +27,11 @@ export interface ActionCtx {
   /** Encrypt has at least one selected recipient. Only consulted in
    *  encrypt mode; other modes ignore it. */
   hasRecipients: boolean;
+  /** Which engine the current recipient selection encrypts with:
+   *  `"pgp"` (OpenPGP), `"ssh"` (age), or null while nothing is
+   *  selected. age has no signing operation, so actions about signing
+   *  have to know. */
+  encryptEngine: StoredKeyKind | null;
   /** A completed operation produced copyable text output. */
   hasOutput: boolean;
   /** A completed operation produced something downloadable (text,

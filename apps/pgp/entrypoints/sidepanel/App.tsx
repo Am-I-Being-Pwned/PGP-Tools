@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SettingsIcon } from "lucide-react";
 
+import { Button } from "@amibeingpwned/ui/button";
+
 import type { WorkspaceIntake } from "../../components/workspace/useWorkspaceState";
 import type { WorkspaceOpsBridge } from "../../hooks/useActionContext";
 import type { DropRule } from "../../lib/drop-routing";
@@ -607,6 +609,45 @@ export default function App() {
               void crxKeys.refresh();
             }}
           />
+        </main>
+        <AppFooter />
+      </div>
+    );
+  }
+
+  // The vault session exists but cannot open the stores: every read
+  // throws on a failed AEAD tag. Rendering the normal UI here would show
+  // an empty keyring and an empty contacts list, which reads as "your
+  // keys are gone" -- the single most alarming thing this panel can say,
+  // and it would be false. The keys are on disk and intact; the session
+  // key is simply the wrong one.
+  //
+  // Reachable today via the passkey master path, which installs its
+  // session key without verifying it (MasterPasskeyProtection carries no
+  // canary, unlike the password variant), so a PRF output that isn't the
+  // one the vault was sealed under unlocks the screen and fails here.
+  const vaultReadError = keyring.error ?? contacts.error;
+  if (masterProtection && masterUnlocked && vaultReadError) {
+    return (
+      <div className="flex h-screen flex-col">
+        <main className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 overflow-y-auto p-6 text-center">
+          <p className="text-destructive text-sm font-medium">
+            Your vault could not be read.
+          </p>
+          <p className="text-muted-foreground max-w-xs text-xs leading-relaxed">
+            Your keys are still stored on this device -- they could not be
+            unlocked with{" "}
+            {masterProtection.method === "passkey"
+              ? "that passkey"
+              : "that password"}
+            . Lock and try again
+            {masterProtection.method === "passkey"
+              ? ", making sure you use the same passkey you set up."
+              : "."}
+          </p>
+          <Button variant="outline" onClick={() => void doMasterLock()}>
+            Lock and try again
+          </Button>
         </main>
         <AppFooter />
       </div>

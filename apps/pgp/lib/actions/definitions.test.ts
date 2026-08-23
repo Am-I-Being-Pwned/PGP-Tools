@@ -12,6 +12,7 @@ function fakeCtx(overrides: Partial<ActionCtx> = {}): ActionCtx {
     mode: "encrypt",
     hasInput: false,
     hasRecipients: true,
+    encryptEngine: "pgp",
     hasOutput: false,
     hasDownload: false,
     masterUnlocked: true,
@@ -212,6 +213,30 @@ describe("preference toggles", () => {
           ?.disabledReason,
       ).toBeUndefined();
     }
+  });
+
+  it("sign toggle explains the FORMAT before the key count for age", () => {
+    // With SSH recipients selected there is no key of any kind that
+    // would make the message signable, so "add one of your own keys
+    // first" would send the user off to do something pointless.
+    const age = { encryptEngine: "ssh" as const };
+    expect(byId(fakeCtx(age), "workspace.toggle-sign")?.disabledReason).toBe(
+      "age messages can't be signed",
+    );
+    expect(
+      byId(
+        fakeCtx({ ...age, counts: { ownKeys: 3, contacts: 0 } }),
+        "workspace.toggle-sign",
+      )?.disabledReason,
+    ).toBe("age messages can't be signed");
+    // Encrypt-to-self is untouched: the user's own SSH key CAN ride
+    // along on an age message.
+    expect(
+      byId(
+        fakeCtx({ ...age, counts: { ownKeys: 1, contacts: 0 } }),
+        "workspace.toggle-encrypt-to-self",
+      )?.disabledReason,
+    ).toBeUndefined();
   });
 
   it("history toggle is unavailable under never-cache", () => {

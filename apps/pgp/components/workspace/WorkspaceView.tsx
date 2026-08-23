@@ -40,7 +40,12 @@ import {
   COPY_SHORTCUT,
   DOWNLOAD_SHORTCUT,
 } from "../../lib/actions/definitions";
+import {
+  buildEncryptRecipients,
+  toSelectedRecipient,
+} from "../../lib/encrypt-recipients";
 import { requestUnlimitedHistoryStorage } from "../../lib/storage/history";
+import { isSshRecord } from "../../lib/storage/key-kind";
 import { savePreferences } from "../../lib/storage/preferences";
 import { toast } from "../../lib/toast";
 import { saveCrxViaPrompt } from "../../lib/utils/download";
@@ -49,6 +54,7 @@ import { hasOpenSlideOver } from "../shared/SlideOver";
 import { ToggleBadge } from "../shared/ToggleBadge";
 import { HistoryButton } from "./HistoryPage";
 import { KeySelector } from "./KeySelector";
+import { selectionEngine } from "./recipient-engine";
 import { RecipientPicker } from "./RecipientPicker";
 import { useWorkspaceOperations } from "./useWorkspaceOperations";
 import { useWorkspaceState } from "./useWorkspaceState";
@@ -292,6 +298,35 @@ export function WorkspaceView({
   // a Back button, instead of cramming it into a small fixed-height preview.
   const showFullOutput = s.operationDone && s.mode === "decrypt" && s.hasOutput;
 
+  // Which engine the current recipient selection commits this message to
+  // ("ssh" = age, "pgp" = OpenPGP, null = nothing selected yet), and what
+  // that rules out. The picker prevents a mixed selection, so this is a
+  // single answer rather than a conflict to resolve.
+  const selectedRecipientKeys = s.selectedRecipientIds
+    .map((id) => allPublicKeys.find((k) => k.keyId === id))
+    .filter((k) => k !== undefined);
+  const encryptEngine = selectionEngine(selectedRecipientKeys);
+  // age has no signing operation at all, so the Sign toggle can't apply.
+  const signBlockedReason =
+    encryptEngine === "ssh"
+      ? "age messages can't be signed - SSH keys have no signature format here."
+      : undefined;
+  // Asked of the same function the encrypt runs through, rather than
+  // re-derived: whether the user's own key rides along depends on the
+  // engine, the default key and whether a selected recipient already is
+  // one of their keys, and a second implementation of that would be free
+  // to disagree with the one that actually encrypts.
+  const selfExcluded =
+    s.mode === "encrypt" && s.selectedRecipientIds.length > 0
+      ? buildEncryptRecipients({
+          recipients: selectedRecipientKeys.map(toSelectedRecipient),
+          encryptToSelf: s.encryptToSelf,
+          ownKeys: myKeys,
+          signingKeyId: s.alsoSign ? s.selectedKeyId : null,
+          defaultKeyId,
+        }).selfExcluded
+      : false;
+
   // Undoable clears (toast Undo, or mod+z while the box is still empty --
   // once the user types again, native undo owns mod+z). The snapshot itself
   // lives in `useWorkspaceState`'s ref, not in state here and not captured
@@ -498,6 +533,7 @@ export function WorkspaceView({
       mode: s.mode,
       hasInput,
       hasRecipients: s.selectedRecipientIds.length > 0,
+      encryptEngine,
       hasOutput,
       hasDownload,
       historyEnabled: s.saveToHistory,
@@ -544,6 +580,7 @@ export function WorkspaceView({
     s.mode,
     hasInput,
     s.selectedRecipientIds,
+    encryptEngine,
     hasOutput,
     hasDownload,
     s.saveToHistory,
@@ -580,6 +617,11 @@ export function WorkspaceView({
         }
       }
     : undefined;
+
+  // Which of the user's keys can open what is staged. Only narrowed for
+  // an age message, where the answer is categorical.
+  const decryptKeyChoices =
+    s.mode === "decrypt" && s.inputIsAge ? myKeys.filter(isSshRecord) : myKeys;
 
   if (showFullOutput) {
     return (
@@ -716,6 +758,15 @@ export function WorkspaceView({
           />
         )}
 
+        {/* Say which format is about to come out, once the recipients
+            have decided it. Not a warning -- the picker has already made
+            mixing impossible -- just the name of the thing being made. */}
+        {needsRecipient && encryptEngine === "ssh" && (
+          <p className="text-muted-foreground pl-2 text-xs">
+            age message - SSH recipients can't be mixed with PGP
+          </p>
+        )}
+
         {/* An extension zip can carry two signature kinds; let the user pick
             (defaults to CRX, the overwhelmingly likely intent) instead of
             hijacking the PGP sign flow. */}
@@ -743,7 +794,12 @@ export function WorkspaceView({
         {needsPrivateKey && !showCrxSign && (
           <KeySelector
             label={s.mode === "sign" ? "Sign with" : "Decrypt with"}
-            keys={myKeys}
+            // An age message can only be opened by an SSH identity, so
+            // offering the PGP keys here would be offering keys that
+            // cannot work. Narrowed rather than dimmed: this is a "which
+            // of your keys", and a key of the wrong engine is not a
+            // candidate at all.
+            keys={decryptKeyChoices}
             selectedKeyId={s.selectedKeyId}
             onSelect={ops.selectPrivateKey}
             emptyText="No keys yet"
@@ -783,6 +839,13 @@ export function WorkspaceView({
                 edge; their content is inset by the same 8px). */}
             <div className="flex flex-wrap items-center gap-2 pl-2">
               {myKeys.length > 0 && (
+                // Deliberately left pressed AND enabled even when this
+                // particular message can't include the user (no own key
+                // of the chosen engine): it is a persisted global
+                // preference, and silently flipping it off from a
+                // transient recipient choice would leave the next
+                // message unreadable to them for reasons they never saw.
+                // The line below says what happens this time instead.
                 <ToggleBadge
                   pressed={s.encryptToSelf}
                   onPressedChange={setEncryptToSelfPref}
@@ -794,6 +857,7 @@ export function WorkspaceView({
                 <ToggleBadge
                   pressed={s.alsoSign}
                   onPressedChange={setAlsoSignPref}
+                  disabledReason={signBlockedReason}
                 >
                   Sign
                 </ToggleBadge>
@@ -823,13 +887,33 @@ export function WorkspaceView({
                 </>
               )}
             </div>
-            {s.alsoSign && myKeys.length > 1 && (
+            {/* Nothing will be signed on the age path, so the "which key
+                signs" question doesn't arise -- the toggle above stays,
+                dimmed with its reason, and this selector goes. */}
+            {s.alsoSign && !signBlockedReason && myKeys.length > 1 && (
               <KeySelector
                 label="Sign with"
                 keys={myKeys}
                 selectedKeyId={s.selectedKeyId}
                 onSelect={ops.selectPrivateKey}
               />
+            )}
+            {s.encryptToSelf && selfExcluded && (
+              <p className="text-muted-foreground pl-2 text-xs">
+                You won't be able to read this one:{" "}
+                {encryptEngine === "ssh"
+                  ? "you have no SSH key of your own, and an age message can't include a PGP one."
+                  : "none of your own keys can be added to this message."}{" "}
+                {onNavigateToKeys && (
+                  <button
+                    type="button"
+                    onClick={() => onNavigateToKeys()}
+                    className="text-primary underline"
+                  >
+                    Import one
+                  </button>
+                )}
+              </p>
             )}
           </div>
         )}

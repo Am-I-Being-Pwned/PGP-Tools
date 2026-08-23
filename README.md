@@ -36,6 +36,7 @@
 - Import/export armored keys
 - One-file backup: export/import all keys and contacts (passphrase-encrypted by default)
 - Sign & verify Chrome extension packages (`.crx`) for the Web Store's Verified CRX Uploads (optional; off by default)
+- age encryption with an SSH key you already have - import an `ssh-ed25519` or `ssh-rsa` key and encrypt/decrypt [age](https://age-encryption.org/) files (binary or armored), cross-checked against the Go `age` CLI. Import only (the app never generates SSH keys); encrypt/decrypt only (age has no signing). Native `age1…` keys are out of scope, and ECDSA, DSA and FIDO `sk-*` keys are rejected
 - Right-click context menu on selected text
 - Auto-lock on inactivity, panel close, or per-operation (never-cache mode)
 - Optional Chrome sync or local-only storage
@@ -45,8 +46,9 @@
 | Layer | Mechanism |
 | --- | --- |
 | Crypto engine | Sequoia-PGP in WASM (keys in JS only during gen/import) |
+| Second engine | age in the same WASM sandbox, to imported SSH keys only - no signing, no key generation. An age file names the SSH public key it was encrypted to, so it is linkable to that key |
 | Key unlock | WebAuthn PRF (passkeys) or Argon2id 64 MB (passwords) |
-| Key storage | AES-256-GCM with per-key AAD |
+| Key storage | AES-256-GCM with per-key AAD - one shared envelope for PGP, CRX and SSH keys, with a distinct AAD prefix per key type |
 | Memory | `zeroize` crate (Rust) + manual zeroing (JS) |
 | Signatures | Atomic decrypt+verify (no TOCTOU) |
 | Sessions | Auto-lock on inactivity, panel close, or per-op |
@@ -56,6 +58,7 @@
 ## Stack
 
 - **PGP**: Rust / [Sequoia-PGP](https://sequoia-pgp.org/) / WebAssembly
+- **age**: Rust / [`age`](https://crates.io/crates/age) + [`ssh-key`](https://crates.io/crates/ssh-key) / WebAssembly - `ssh-ed25519` and `ssh-rsa` recipients only
 - **Extension**: [WXT](https://wxt.dev/) + React + Tailwind
 - **Key protection**: WebAuthn PRF or Argon2id + AES-256-GCM
 - **UI**: shadcn/ui

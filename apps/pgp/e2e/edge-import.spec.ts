@@ -27,6 +27,7 @@ test("rejects an expired key with the expiry date", async ({ panel }) => {
     // The health banner spells it out across a few lines: when it
     // expired, and what to do about it.
     /expired[\s\S]*Ask the owner for an updated key/,
+    /expired[\s\S]*current key/,
   );
 });
 

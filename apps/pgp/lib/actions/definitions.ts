@@ -18,7 +18,7 @@ import type { ActionCtx, PgpAction, PgpMode } from "./types";
 /** What "no input" means per mode, for Run's disabled reason. */
 const NO_INPUT_REASON: Record<PgpMode, string> = {
   encrypt: "Nothing to encrypt - add text or drop a file",
-  decrypt: "Nothing to decrypt - paste a PGP message or drop a file",
+  decrypt: "Nothing to decrypt - paste an encrypted message or drop a file",
   sign: "Nothing to sign - add text or drop a file",
   verify: "Nothing to verify - paste a signed message or drop a file",
 };
@@ -167,8 +167,17 @@ export const ACTIONS: readonly PgpAction[] = [
       `${ctx.alsoSign ? "Turn off" : "Turn on"}: Sign when encrypting`,
     group: "Workspace",
     keywords: ["toggle", "signature", "preference"],
-    disabledReason: (ctx) =>
-      ctx.counts.ownKeys === 0 ? "Add one of your own keys first" : undefined,
+    disabledReason: (ctx) => {
+      // Checked BEFORE the own-keys count: with SSH recipients selected,
+      // "add one of your own keys first" would be the wrong advice --
+      // no key of any kind makes an age message signable.
+      if (ctx.encryptEngine === "ssh") {
+        return "age messages can't be signed";
+      }
+      return ctx.counts.ownKeys === 0
+        ? "Add one of your own keys first"
+        : undefined;
+    },
     execute: (ctx) => ctx.ops.toggleAlsoSign(),
   },
   {

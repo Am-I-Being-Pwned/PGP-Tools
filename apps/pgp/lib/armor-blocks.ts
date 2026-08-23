@@ -1,4 +1,10 @@
-/** Split text into individual armored key blocks (public + private). */
+/** Split text into individual armored key blocks and message blocks, for
+ *  both engines: OpenPGP armor, and the age / OpenSSH forms.
+ *
+ *  This module is also where the marker patterns themselves live, because
+ *  `classify-action.ts` and `drop-routing.ts` must agree with it exactly:
+ *  a header one of them recognises and another does not is a drop routed
+ *  to a screen that then reports it found nothing. */
 
 const PUBLIC_BLOCK =
   /-----BEGIN PGP PUBLIC KEY BLOCK-----[\s\S]*?-----END PGP PUBLIC KEY BLOCK-----/g;
@@ -26,16 +32,125 @@ export function splitPrivateKeyBlocks(text: string): string[] {
   return matchAll(text, PRIVATE_BLOCK);
 }
 
+// ── age / SSH markers ────────────────────────────────────────────────
+
+/** age's armored form. The binary form has no header line -- it starts
+ *  with {@link AGE_BINARY_MAGIC} instead. */
+export const AGE_ARMOR_BEGIN = "-----BEGIN AGE ENCRYPTED FILE-----";
+
+/** First line of a BINARY age file: the format's version string. Matching
+ *  it as text is safe -- it is ASCII, and it is the literal the Rust
+ *  sniffer (`is_age_message`) checks for. */
+export const AGE_BINARY_MAGIC = "age-encryption.org/v1";
+
+/** OpenSSH's private key container. Note this is the *only* PEM label
+ *  OpenSSH emits for a private key, encrypted or not -- the passphrase
+ *  state is inside the body, not the header, so it cannot be told apart
+ *  here. */
+export const OPENSSH_PRIVATE_BEGIN = "-----BEGIN OPENSSH PRIVATE KEY-----";
+
+/**
+ * Private-key files that are NOT OpenSSH v1 but are still the age
+ * engine's to answer for: a PuTTY `.ppk`, a PKCS#8 key, and a legacy PEM
+ * encrypted with the pre-OpenSSH-v1 scheme.
+ *
+ * Recognition, deliberately not acceptance. `gpg-wasm/src/age.rs` has a
+ * curated message for each ("export it with PuTTYgen", "convert it with
+ * `ssh-keygen -p -f`"), and none of them could ever be shown while these
+ * formats were not recognised anywhere: they fell through to the OpenPGP
+ * parse and came back as the generic "that doesn't look like a key".
+ *
+ * The markers mirror `reject_foreign_private_key_format` exactly -- a
+ * format matched here that wasm does not name would route into the SSH
+ * branch and then report nothing, which is the same failure the header
+ * of this module warns about.
+ *
+ * Note what is NOT here: an unencrypted `-----BEGIN RSA PRIVATE KEY-----`
+ * (PKCS#1). That is a CRX signing key in this app, and the import flow
+ * checks for one before it reaches the SSH branch at all.
+ */
+const FOREIGN_SSH_PRIVATE_MARKERS = [
+  "PuTTY-User-Key-File",
+  "-----BEGIN PRIVATE KEY-----",
+  "-----BEGIN ENCRYPTED PRIVATE KEY-----",
+] as const;
+
+/** The legacy PEM encryption header. Matched anywhere in the text rather
+ *  than at the start: it sits under the BEGIN line, and which BEGIN line
+ *  varies (`RSA PRIVATE KEY`, `DSA PRIVATE KEY`, `EC PRIVATE KEY`). */
+export const LEGACY_PEM_ENCRYPTED = "Proc-Type: 4,ENCRYPTED";
+
+/** True when the text is a private key in a format the age engine
+ *  recognises but refuses. See {@link FOREIGN_SSH_PRIVATE_MARKERS}. */
+export function looksLikeForeignSshPrivateKey(text: string): boolean {
+  if (text.includes(LEGACY_PEM_ENCRYPTED)) return true;
+  const trimmed = text.trimStart();
+  return FOREIGN_SSH_PRIVATE_MARKERS.some((m) => trimmed.startsWith(m));
+}
+
+const AGE_BLOCK =
+  /-----BEGIN AGE ENCRYPTED FILE-----[\s\S]*?-----END AGE ENCRYPTED FILE-----/g;
+const OPENSSH_PRIVATE_BLOCK =
+  /-----BEGIN OPENSSH PRIVATE KEY-----[\s\S]*?-----END OPENSSH PRIVATE KEY-----/g;
+
+/**
+ * One SSH public key line: `<type> <base64>[ comment]`.
+ *
+ * Anchored to the start of a line (`/m`) and required to begin `AAAA` --
+ * every SSH wire-format blob opens with a 4-byte big-endian length whose
+ * top bytes are zero, so its base64 always does. Together those two rules
+ * keep the pattern from firing on prose that merely mentions
+ * `ssh-ed25519`, and on the base64 body of an armored block (whose lines
+ * carry no spaces).
+ *
+ * `ssh-ed25519` and `ssh-rsa` only: those are the recipient types the age
+ * engine supports (`gpg-wasm/src/age.rs`). A dropped `ssh-dss` key should
+ * be reported as unusable, not silently ignored as "not a key".
+ */
+const SSH_PUBLIC_LINE =
+  /^[ \t]*(?:ssh-ed25519|ssh-rsa)[ \t]+AAAA[A-Za-z0-9+/]+={0,3}(?:[ \t]+[^\r\n]*)?/gm;
+
+/** Every armored age block in `text`, in order. */
+export function splitAgeBlocks(text: string): string[] {
+  return matchAll(text, AGE_BLOCK);
+}
+
+/** Every OpenSSH private key block in `text`, in order. */
+export function splitSshPrivateKeyBlocks(text: string): string[] {
+  return matchAll(text, OPENSSH_PRIVATE_BLOCK);
+}
+
+/** Every SSH public key line in `text`, in order, trimmed. A pasted
+ *  `authorized_keys` file is exactly this and nothing else. */
+export function splitSshPublicKeyLines(text: string): string[] {
+  return matchAll(text, SSH_PUBLIC_LINE).map((line) => line.trim());
+}
+
+/** True when the text carries age ciphertext in either form. Used for
+ *  routing only -- the engine re-checks. */
+export function looksLikeAgeMessage(text: string): boolean {
+  return text.includes(AGE_ARMOR_BEGIN) || text.includes(AGE_BINARY_MAGIC);
+}
+
 export interface ArmoredKeyBlocks {
   publicKeys: string[];
   privateKeys: string[];
+  /** SSH public key lines -- age recipients. */
+  sshPublicKeys: string[];
+  /** OpenSSH private key blocks -- age identities. */
+  sshPrivateKeys: string[];
 }
 
-/** Split a (possibly mixed) armored dump into public and private key
- *  blocks -- e.g. a "backup all keys" file with several of each. */
+/** Split a (possibly mixed) armored dump into key blocks of every kind
+ *  we import -- e.g. a "backup all keys" file with several of each, or a
+ *  pasted `authorized_keys` alongside a PGP block. The two SSH lists are
+ *  additive: a caller that only knows about OpenPGP keeps working
+ *  unchanged. */
 export function splitArmoredKeyBlocks(text: string): ArmoredKeyBlocks {
   return {
     publicKeys: splitPublicKeyBlocks(text),
     privateKeys: splitPrivateKeyBlocks(text),
+    sshPublicKeys: splitSshPublicKeyLines(text),
+    sshPrivateKeys: splitSshPrivateKeyBlocks(text),
   };
 }

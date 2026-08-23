@@ -4,8 +4,12 @@ import type { DropRule, DropSample } from "./drop-routing";
 import {
   looksLikeKey,
   looksLikePrivateKey,
+  looksLikeSshPublicKey,
   resolveDropRule,
 } from "./drop-routing";
+
+const ED25519_PUB =
+  "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIALwHu/03Nd9eyyrPgxjkFu80Fe1EgN06J8iaY8B+wf6 alice@example.com";
 
 function sample(text: string): DropSample {
   return { files: [], text, sampleText: text, hasBinaryKeyFile: false };
@@ -35,10 +39,52 @@ describe("looksLikeKey", () => {
     ).toBe(true);
   });
 
+  it("detects an SSH public key line, which carries no armor header", () => {
+    // The private-key regex is anchored to "-----BEGIN ", so a dropped
+    // `id_ed25519.pub` matches nothing there. Before this it fell
+    // through to the workspace and was treated as a message to encrypt.
+    expect(looksLikeKey(ED25519_PUB)).toBe(true);
+    expect(looksLikeKey("ssh-rsa AAAAB3NzaC1yc2EAAAA= bob@host")).toBe(true);
+  });
+
+  it("detects an OpenSSH private key, which now has somewhere to land", () => {
+    expect(looksLikeKey("-----BEGIN OPENSSH PRIVATE KEY-----\nb3Bl")).toBe(
+      true,
+    );
+  });
+
   it("does not fire on a plain message or a stray substring", () => {
     expect(looksLikeKey("-----BEGIN PGP MESSAGE-----\n...")).toBe(false);
     expect(looksLikeKey("please send me your private key")).toBe(false);
     expect(looksLikeKey("hello world")).toBe(false);
+    expect(looksLikeKey("my ssh-ed25519 key is on the other laptop")).toBe(
+      false,
+    );
+  });
+});
+
+describe("looksLikeSshPublicKey", () => {
+  it("matches a .pub line and an authorized_keys paste", () => {
+    expect(looksLikeSshPublicKey(ED25519_PUB)).toBe(true);
+    expect(
+      looksLikeSshPublicKey(`${ED25519_PUB}\nssh-rsa AAAAB3Nza= b@h\n`),
+    ).toBe(true);
+  });
+
+  it("does not match an OpenSSH PRIVATE key container", () => {
+    // The container embeds the public half, but only inside base64 --
+    // a private key must route to the protect step, never to contacts.
+    expect(
+      looksLikeSshPublicKey(
+        "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEA\n-----END OPENSSH PRIVATE KEY-----",
+      ),
+    ).toBe(false);
+  });
+
+  it("does not match an age message", () => {
+    expect(looksLikeSshPublicKey("-----BEGIN AGE ENCRYPTED FILE-----")).toBe(
+      false,
+    );
   });
 });
 
@@ -79,6 +125,19 @@ describe("resolveDropRule", () => {
     expect(
       resolveDropRule(rules, sample("-----BEGIN PGP PUBLIC KEY BLOCK-----"))
         ?.id,
+    ).toBe("keys");
+  });
+
+  it("routes a dropped SSH public key to the keys rule, not the workspace", () => {
+    expect(resolveDropRule(rules, sample(ED25519_PUB))?.id).toBe("keys");
+  });
+
+  it("routes a dropped OpenSSH private key to the keys rule", () => {
+    expect(
+      resolveDropRule(
+        rules,
+        sample("-----BEGIN OPENSSH PRIVATE KEY-----\nb3Bl"),
+      )?.id,
     ).toBe("keys");
   });
 

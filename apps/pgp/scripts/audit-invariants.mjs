@@ -33,7 +33,8 @@ import { fileURLToPath } from "node:url";
 const APP_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 // repo root, so printed paths match the ones written in SECURITY.md §9
 const REPO_ROOT = resolve(APP_DIR, "..", "..");
-const WASM_LIB = join(APP_DIR, "gpg-wasm", "src", "lib.rs");
+const WASM_SRC_DIR = join(APP_DIR, "gpg-wasm", "src");
+const WASM_LIB = join(WASM_SRC_DIR, "lib.rs");
 
 const rel = (p) => relative(REPO_ROOT, p).split(sep).join("/");
 
@@ -341,16 +342,150 @@ function indexRust(maskedSource) {
   return { lines, fnName, testGated };
 }
 
-let RUST_CACHE = null;
-function rustIndex() {
-  if (!RUST_CACHE) {
-    const src = readFileSync(WASM_LIB, "utf-8");
-    RUST_CACHE = {
-      raw: src.split("\n"),
-      ...indexRust(maskRust(src)),
-    };
+// ── Rust source collection ──────────────────────────────────────────
+// This used to read lib.rs and nothing else, and that was the hole the
+// borrowed-secret bug walked through: crx.rs is a whole file of
+// credential-handling `#[wasm_bindgen]` exports that no invariant could
+// see, so `unlock_crx_with_password(password: &[u8])` passed the gate the
+// gate exists to catch. The scan is now a glob over gpg-wasm/src/*.rs, so a
+// new key type's module is covered the moment it lands rather than when
+// someone remembers to add it to a list here.
+//
+// Read defensively: a module may be mid-write (a concurrent build, an editor
+// swap) and a *source* audit must not turn a transient read failure into a
+// security verdict either way. Unreadable files are skipped and named in the
+// header line, so a silently-unscanned file is visible rather than assumed.
+
+/// Modules lib.rs declares as `#[cfg(test)] mod x;`. Nothing inside such a
+/// file marks itself test-only, so per-line `testGated` cannot see it -- the
+/// gate lives at the declaration site. Resolved from source rather than
+/// hard-coded so renaming or un-gating the module changes the answer.
+function cfgTestModules(libMasked) {
+  const found = new Set();
+  const lines = libMasked.split("\n");
+  const CFG_TEST = /^\s*#\s*\[\s*cfg\s*\(.*\btest\b.*\)\s*\]\s*$/;
+  for (let i = 0; i < lines.length; i++) {
+    if (!CFG_TEST.test(lines[i])) continue;
+    for (let j = i + 1; j < lines.length; j++) {
+      // attributes / doc comments (masked to blanks) between cfg and item
+      if (/^\s*(#\s*\[|$)/.test(lines[j])) continue;
+      const m = /^\s*(?:pub(?:\s*\([^)]*\))?\s+)?mod\s+([A-Za-z_]\w*)\s*;/.exec(
+        lines[j],
+      );
+      if (m) found.add(m[1]);
+      break;
+    }
   }
+  return found;
+}
+
+let RUST_CACHE = null;
+function rustSources() {
+  if (RUST_CACHE) return RUST_CACHE;
+  const libMasked = maskRust(readFileSync(WASM_LIB, "utf-8"));
+  const testOnlyMods = cfgTestModules(libMasked);
+
+  let entries = [];
+  try {
+    entries = readdirSync(WASM_SRC_DIR);
+  } catch {
+    entries = [];
+  }
+
+  const files = [];
+  const unreadable = [];
+  for (const entry of entries.sort()) {
+    if (!entry.endsWith(".rs")) continue;
+    const full = join(WASM_SRC_DIR, entry);
+    let src;
+    try {
+      src = readFileSync(full, "utf-8");
+    } catch {
+      unreadable.push(entry);
+      continue;
+    }
+    const idx = indexRust(maskRust(src));
+    // EXEMPTION: a `#[cfg(test)] mod x;` module is test-only in its entirety.
+    // cfg(test) code is not compiled into the shipped wasm, so it cannot
+    // weaken a runtime invariant -- same rationale as the per-fn exemptions.
+    if (testOnlyMods.has(entry.slice(0, -3))) {
+      idx.testGated = idx.testGated.map(() => true);
+    }
+    files.push({ path: full, rel: rel(full), raw: src.split("\n"), ...idx });
+  }
+  RUST_CACHE = { files, unreadable };
   return RUST_CACHE;
+}
+
+/// Every (file, line) pair across the scanned Rust sources.
+function* rustLines() {
+  for (const f of rustSources().files) {
+    for (let i = 0; i < f.lines.length; i++) yield { f, i, code: f.lines[i] };
+  }
+}
+
+/// True when the `fn` on `lines[fnLine]` carries a `#[wasm_bindgen]`
+/// attribute, i.e. it is a real export across the JS/wasm ABI rather than an
+/// internal helper. Walks up over attributes and blank lines (doc comments
+/// are already masked to blanks) and stops at the first line of real code,
+/// so an attribute belonging to a previous item cannot be borrowed.
+function isWasmExport(lines, fnLine) {
+  for (let k = fnLine - 1; k >= 0; k--) {
+    const t = lines[k].trim();
+    if (t === "") continue;
+    if (t.startsWith("#")) {
+      if (/#\s*\[\s*wasm_bindgen/.test(t)) return true;
+      continue;
+    }
+    return false;
+  }
+  return false;
+}
+
+/// The `(...)` signature text and `{...}` body text of the fn whose `fn`
+/// keyword is on `lines[i]`, scanning forward on masked source. Returns null
+/// if either fails to close (a mid-write file).
+function fnSpan(lines, i, searchFrom) {
+  let depth = 0;
+  let sigEnd = -1;
+  let ci = lines[i].indexOf("(", searchFrom);
+  if (ci === -1) return null;
+  for (let li = i; li < lines.length && sigEnd === -1; li++, ci = 0) {
+    const line = lines[li];
+    for (; ci < line.length; ci++) {
+      if (line[ci] === "(") depth++;
+      else if (line[ci] === ")") {
+        depth--;
+        if (depth === 0) {
+          sigEnd = li;
+          break;
+        }
+      }
+    }
+  }
+  if (sigEnd === -1) return null;
+
+  let bodyStart = -1;
+  let bodyEnd = -1;
+  let bDepth = 0;
+  for (let k = sigEnd; k < lines.length && bodyEnd === -1; k++) {
+    for (const ch of lines[k]) {
+      if (ch === "{") {
+        if (bodyStart === -1) bodyStart = k;
+        bDepth++;
+      } else if (ch === "}") {
+        bDepth--;
+        if (bodyStart !== -1 && bDepth === 0) bodyEnd = k;
+      }
+    }
+  }
+  if (bodyStart === -1) return null;
+  return {
+    signature: lines.slice(i, sigEnd + 1).join("\n"),
+    body: lines
+      .slice(bodyStart, (bodyEnd === -1 ? lines.length - 1 : bodyEnd) + 1)
+      .join("\n"),
+  };
 }
 
 // ── TS/TSX file collection ──────────────────────────────────────────
@@ -415,20 +550,22 @@ const invariantKeyStoreInsert = {
     "1 definition + exactly 1 non-test call site, inside parse_and_store_private_key()",
   why: "Every extra insert_key() call is another way a cert can reach KEY_STORE without going through an unlock, which is what makes 'keys only enter the store via unlock' true.",
   run() {
-    const { lines, raw, fnName, testGated } = rustIndex();
     const definitions = [];
     const liveCalls = [];
     const exempt = [];
 
-    for (let i = 0; i < lines.length; i++) {
-      if (!/\binsert_key\s*\(/.test(lines[i])) continue;
+    // Scanned across every gpg-wasm module, not just lib.rs: a sibling
+    // module reaching into KEY_STORE would bypass this check entirely if it
+    // were only ever pointed at one file.
+    for (const { f, i, code } of rustLines()) {
+      if (!/\binsert_key\s*\(/.test(code)) continue;
       const hit = {
-        file: rel(WASM_LIB),
+        file: f.rel,
         line: i + 1,
-        text: (raw[i] ?? "").trim(),
-        fn: fnName[i],
+        text: (f.raw[i] ?? "").trim(),
+        fn: f.fnName[i],
       };
-      if (/\bfn\s+insert_key\s*\(/.test(lines[i])) {
+      if (/\bfn\s+insert_key\s*\(/.test(code)) {
         definitions.push(hit);
         continue;
       }
@@ -437,7 +574,7 @@ const invariantKeyStoreInsert = {
       // shim to mint a handle. cfg(test) code is not compiled into the
       // shipped wasm, so it cannot weaken the runtime invariant. Detected
       // structurally (enclosing fn/mod is cfg(test)-gated), never by line.
-      if (testGated[i]) {
+      if (f.testGated[i]) {
         exempt.push({ ...hit, reason: "#[cfg(test)]-gated" });
         continue;
       }
@@ -485,26 +622,25 @@ const invariantUnlockOnly = {
   expectation: `1 definition + exactly ${UNLOCK_ENTRYPOINTS.length} non-test call sites, from ${UNLOCK_ENTRYPOINTS.join(" / ")}`,
   why: "This is the sole path into KEY_STORE (invariant 1); if anything but an unlock can call it, a caller could load a private key without proving possession of the password/passkey.",
   run() {
-    const { lines, raw, fnName, testGated } = rustIndex();
     const definitions = [];
     const callers = [];
     const exempt = [];
 
-    for (let i = 0; i < lines.length; i++) {
-      if (!/\bparse_and_store_private_key\s*\(/.test(lines[i])) continue;
+    for (const { f, i, code } of rustLines()) {
+      if (!/\bparse_and_store_private_key\s*\(/.test(code)) continue;
       const hit = {
-        file: rel(WASM_LIB),
+        file: f.rel,
         line: i + 1,
-        text: (raw[i] ?? "").trim(),
-        fn: fnName[i],
+        text: (f.raw[i] ?? "").trim(),
+        fn: f.fnName[i],
       };
-      if (/\bfn\s+parse_and_store_private_key\s*\(/.test(lines[i])) {
+      if (/\bfn\s+parse_and_store_private_key\s*\(/.test(code)) {
         definitions.push(hit);
         continue;
       }
       // EXEMPTION: same rationale as invariant 1 — cfg(test) code ships
       // nowhere.
-      if (testGated[i]) {
+      if (f.testGated[i]) {
         exempt.push({ ...hit, reason: "#[cfg(test)]-gated" });
         continue;
       }
@@ -562,9 +698,36 @@ const SECRET_WASM_EXPORTS = [
   "decryptDraft",
   "initDraftSessionIfUnset",
   "dropDraftSession",
+  // CRX signing keys. Absent until now for the same reason crx.rs went
+  // unscanned on the Rust side: the list was written when only PGP keys
+  // existed and nobody widened it. Prefixes, so both the ...WithPassword and
+  // ...WithPrf variant of each is covered.
+  "generateCrxKeyWith",
+  "importCrxKeyWith",
+  "reprotectCrxKeyWithPassword",
+  "unlockCrxWith",
+  "exportCrxPrivateKeyPem",
+  // age / SSH identities. Added with the engine itself rather than after
+  // the fact -- the CRX entries above record what it costs to widen this
+  // list late. Prefixes, so both the ...WithPassword and ...WithPrf
+  // variant of each is covered. `decryptAgeWithHandle` is listed because
+  // age.rs files it on its secret side (it takes a KEY_STORE handle and
+  // returns plaintext); `dropSshIdentity` is listed for the same reason
+  // `dropCrxKey`'s lifecycle is owned by the boundary module.
+  "protectSshIdentityWith",
+  "unlockSshIdentityWith",
+  "decryptAgeWithHandle",
+  "dropSshIdentity",
 ];
 // EXEMPTION: the boundary module itself is *supposed* to make these calls.
 const SECRETS_BOUNDARY = "apps/pgp/lib/pgp/wasm-secrets.ts";
+// EXEMPTION: test/spec files. In a vitest spec `wasm` is a locally-declared
+// `vi.hoisted({...})` object of `vi.fn()` stubs — `wasm.unlockWithPassword`
+// there is a mock assertion, not a call into the wasm module, and no key
+// material exists to leak. Narrowed the same way, and for the same reason,
+// as the console invariant below: without this the check was permanently red
+// on protect-runner.test.ts, and a permanently-red gate reports nothing.
+// (`isTestFile` is defined with that invariant.)
 const invariantWasmBoundary = {
   id: "wasm-secrets-boundary",
   name: "secret-bearing wasm calls happen only in lib/pgp/wasm-secrets.ts",
@@ -573,10 +736,17 @@ const invariantWasmBoundary = {
   run() {
     const re = new RegExp(`wasm\\.(?:${SECRET_WASM_EXPORTS.join("|")})`, "g");
     const all = scanTs(re);
-    const exempt = all
-      .filter((h) => h.file === SECRETS_BOUNDARY)
-      .map((h) => ({ ...h, reason: "boundary module" }));
-    const bad = all.filter((h) => h.file !== SECRETS_BOUNDARY);
+    const exempt = [
+      ...all
+        .filter((h) => h.file === SECRETS_BOUNDARY)
+        .map((h) => ({ ...h, reason: "boundary module" })),
+      ...all
+        .filter((h) => h.file !== SECRETS_BOUNDARY && isTestFile(h.file))
+        .map((h) => ({ ...h, reason: "test/spec file - mocked wasm module" })),
+    ];
+    const bad = all.filter(
+      (h) => h.file !== SECRETS_BOUNDARY && !isTestFile(h.file),
+    );
     return {
       violations: bad.length
         ? [
@@ -587,7 +757,7 @@ const invariantWasmBoundary = {
           ]
         : [],
       exempt,
-      detail: `${all.length} secret wasm call(s), ${bad.length === 0 ? "all inside the boundary module" : `${bad.length} OUTSIDE the boundary module`}`,
+      detail: `${all.length} secret wasm call(s), ${bad.length === 0 ? "all inside the boundary module or test mocks" : `${bad.length} OUTSIDE the boundary module`}`,
     };
   },
 };
@@ -613,32 +783,73 @@ const SECRET_PARAM_NAMES = [
   // User content, not a credential, but just as secret: `encrypt_store` /
   // `encrypt_contacts` carry up to 64 KB of message plaintext per call.
   "plaintext",
+  // The age/SSH engine's private key FILE. Strictly more sensitive than a
+  // password: a password is a means to a secret, `key_file` IS the secret
+  // -- an unencrypted OpenSSH or PKCS#8 private key, in full. It was
+  // invisible to both invariants until now (see the note on
+  // SECRET_FN_RE below for why the naming convention could not see
+  // it), so `ssh_private_key_format_rejection(key_file: Vec<u8>)` was
+  // covered by nothing and dropping its `Zeroizing` wrapper passed green.
+  "key_file",
 ];
 // Two families: the credential-taking `*_with_password` / `*_with_prf` fns,
 // and the store-sealing fns that take user plaintext by value. The latter
 // were NOT covered until an agent pointed out this check passed either way
 // on `encrypt_contacts` -- i.e. SECURITY.md §11.2's claim was unenforced.
 // A gate that cannot fail is not a gate.
+// This was a prefix allowlist (`encrypt|protect|generate|unlock|...`) and
+// the allowlist was itself a hole: `reprotect_crx_key_with_password` starts
+// with "re", matched nothing, and was silently unchecked — and so were
+// protected.rs's `seal_with_password` / `open_with_password`, the shared
+// envelope every key type's credential bytes actually pass through. Any fn
+// name is accepted now; the `_with_password` / `_with_prf` SUFFIX is the
+// convention that is actually load-bearing, and a new key type's module gets
+// covered without editing this regex.
 const SECRET_FN_RE =
-  /\bfn\s+((?:encrypt|protect|generate|unlock|verify_canary|encrypt_canary|init_contacts)\w*_with_(?:password|prf)|encrypt_store|encrypt_contacts)\s*\(/;
+  /\bfn\s+(\w*_with_(?:password|prf)|encrypt_store|encrypt_contacts)\s*\(/;
+// ...and the convention was STILL not enough. It describes how a fn USES a
+// secret (seal it under a credential, seal the store), which says nothing
+// about fns that merely *receive* one:
+// `ssh_private_key_format_rejection(key_file: Vec<u8>)` takes a whole
+// private key file, matches no suffix and no name above, and so was checked
+// by no invariant at all — its `Zeroizing` wrapper could have been deleted
+// without turning a single gate red. Rather than bolt its name onto the
+// regex (a fourth allowlist entry, rotting the same way the prefix list
+// did), the scope is widened structurally: ANY `#[wasm_bindgen]` export is
+// checked too. Exports without a param in SECRET_PARAM_NAMES contribute
+// nothing, so this costs no false positives; what it buys is that a new
+// export taking `key_file` / `password` / `plaintext` by value is covered
+// on the day it lands, whatever it is called. Internal helpers stay out for
+// the reason invariant 5 spells out: the boundary is the ABI.
+const ANY_FN_RE = /(?:^|[^A-Za-z0-9_])fn\s+([A-Za-z_]\w*)\s*(?:<[^>]*>)?\s*\(/;
+/// The fn declared on `code`, and why it is in scope — or null if it isn't.
+function secretFnMatch(f, i, code) {
+  const byName = SECRET_FN_RE.exec(code);
+  if (byName) return { m: byName, via: "naming convention" };
+  const anyFn = ANY_FN_RE.exec(code);
+  if (anyFn && isWasmExport(f.lines, i)) return { m: anyFn, via: "wasm export" };
+  return null;
+}
 const invariantZeroizedParams = {
   id: "owned-secret-params-zeroized",
   name: "owned secret params (credentials + store plaintext) are Zeroizing-wrapped",
   expectation: "must be empty (zero un-zeroized owned secret params)",
   why: "An owned Vec<u8> of key material that is never moved into Zeroizing stays in wasm linear memory after the call returns, defeating the 'no plaintext secret survives the call' guarantee.",
   run() {
-    const { lines, raw, testGated } = rustIndex();
     const violations = [];
     const exempt = [];
     const checked = [];
 
-    for (let i = 0; i < lines.length; i++) {
-      const m = SECRET_FN_RE.exec(lines[i]);
-      if (!m) continue;
-      if (testGated[i]) {
+    for (const { f, i, code } of rustLines()) {
+      const lines = f.lines;
+      const raw = f.raw;
+      const found = secretFnMatch(f, i, code);
+      if (!found) continue;
+      const { m, via } = found;
+      if (f.testGated[i]) {
         // EXEMPTION: cfg(test) helpers never ship.
         exempt.push({
-          file: rel(WASM_LIB),
+          file: f.rel,
           line: i + 1,
           text: m[1],
           reason: "#[cfg(test)]-gated",
@@ -649,47 +860,9 @@ const invariantZeroizedParams = {
 
       // Signature runs from the `(` to the matching `)`; body from the next
       // `{` to its matching `}`. Scan forward on the masked source.
-      let depth = 0;
-      let sigEnd = -1;
-      let start = lines[i].indexOf("(", m.index);
-      let li = i;
-      let ci = start;
-      while (li < lines.length) {
-        const line = lines[li];
-        for (; ci < line.length; ci++) {
-          if (line[ci] === "(") depth++;
-          else if (line[ci] === ")") {
-            depth--;
-            if (depth === 0) {
-              sigEnd = li;
-              break;
-            }
-          }
-        }
-        if (sigEnd !== -1) break;
-        li++;
-        ci = 0;
-      }
-      if (sigEnd === -1) continue;
-      const signature = lines.slice(i, sigEnd + 1).join("\n");
-
-      let bodyStart = -1;
-      let bDepth = 0;
-      let bodyEnd = -1;
-      for (let k = sigEnd; k < lines.length; k++) {
-        for (const ch of lines[k]) {
-          if (ch === "{") {
-            if (bodyStart === -1) bodyStart = k;
-            bDepth++;
-          } else if (ch === "}") {
-            bDepth--;
-            if (bodyStart !== -1 && bDepth === 0) bodyEnd = k;
-          }
-        }
-        if (bodyEnd !== -1) break;
-      }
-      if (bodyStart === -1) continue;
-      const body = lines.slice(bodyStart, bodyEnd + 1).join("\n");
+      const span = fnSpan(lines, i, m.index);
+      if (!span) continue;
+      const { signature, body } = span;
 
       // Owned secret params: `name: Vec<u8>` (no leading `&`).
       const owned = [];
@@ -703,24 +876,29 @@ const invariantZeroizedParams = {
         else if (borrows) borrowed.push(p);
       }
 
+      // An export pulled in by the structural widening that carries no
+      // secret param is not "checked", it is simply out of scope: counting
+      // it would inflate the detail line and, worse, make the
+      // "convention changed" guard below unfalsifiable.
+      if (via === "wasm export" && !owned.length && !borrowed.length) continue;
+
       const unwrapped = owned.filter(
         (p) =>
           !new RegExp(`let\\s+(?:mut\\s+)?${p}\\s*=\\s*Zeroizing::new\\(`).test(
             body,
           ),
       );
-      checked.push({ fn: fnNameHere, owned, borrowed });
+      checked.push({ fn: fnNameHere, file: f.rel, owned, borrowed, via });
       if (unwrapped.length) {
         violations.push({
           summary: `${fnNameHere}() takes owned Vec<u8> secret(s) never moved into Zeroizing: ${unwrapped.join(", ")}`,
-          hits: [
-            { file: rel(WASM_LIB), line: i + 1, text: (raw[i] ?? "").trim() },
-          ],
+          hits: [{ file: f.rel, line: i + 1, text: (raw[i] ?? "").trim() }],
         });
       }
     }
 
-    if (checked.length === 0) {
+    const byConvention = checked.filter((c) => c.via === "naming convention");
+    if (byConvention.length === 0) {
       violations.push({
         summary:
           "found no *_with_password / *_with_prf fns at all - the naming convention changed and this invariant is no longer checking anything",
@@ -730,21 +908,200 @@ const invariantZeroizedParams = {
 
     const ownedCount = checked.reduce((n, c) => n + c.owned.length, 0);
     const borrowedCount = checked.reduce((n, c) => n + c.borrowed.length, 0);
+    const fileCount = new Set(checked.map((c) => c.file)).size;
     const unwrappedCount = violations.length;
+    // Which param names actually matched is printed, not just how many: the
+    // list is finite and a secret named something it does not contain
+    // (`secret`, `pin`, `recovery_code`) passes vacuously and silently.
+    // Naming the matched set makes an unmatched name visible to a reader
+    // comparing it against SECRET_PARAM_NAMES.
+    const matchedParams = [
+      ...new Set(checked.flatMap((c) => [...c.owned, ...c.borrowed])),
+    ].sort();
+    const unmatched = SECRET_PARAM_NAMES.filter(
+      (p) => !matchedParams.includes(p),
+    );
     return {
       violations,
       exempt,
       detail:
-        `${checked.length} fn(s); ${ownedCount} owned secret param(s) ` +
+        `${checked.length} fn(s) across ${fileCount} file(s) ` +
+        `(${byConvention.length} by naming convention, ${checked.length - byConvention.length} other wasm export(s)); ` +
+        `${ownedCount} owned secret param(s) ` +
         (unwrappedCount === 0
           ? "all Zeroizing-wrapped"
           : `- ${unwrappedCount} fn(s) with an UNWRAPPED param`) +
-        `, ${borrowedCount} borrowed (&[u8], caller-owned)`,
+        `, ${borrowedCount} borrowed (&[u8], caller-owned)` +
+        `; matched on: ${matchedParams.join(", ") || "-"}` +
+        (unmatched.length ? ` (never seen: ${unmatched.join(", ")})` : ""),
     };
   },
 };
 
-// ── Invariant 5 — no console.* outside the network lockdown ──────────
+// ── Invariant 5 — wasm exports take credential material BY VALUE ─────
+//
+// The gap invariant 4 could not see. Invariant 4 asks "if an owned secret
+// param exists, is it Zeroizing-wrapped?" — a fn that borrows its password
+// has no owned param, so it passes vacuously. That is exactly how
+// `unlock_crx_with_password(password: &[u8], ...)` shipped: it was correct
+// by invariant 4's question and wrong by the one that matters.
+//
+// Why borrowing is the bug, not a style preference (SECURITY.md §8.4,
+// T-UNLOCK-PARAM-NOT-OWNED): at a `#[wasm_bindgen]` boundary a `&[u8]` param
+// is a view onto a buffer wasm-bindgen allocated, copied the JS bytes into,
+// and frees WITHOUT scrubbing once the call returns. There is no owned value
+// to move into `Zeroizing`, so the plaintext password / PRF output is left
+// in freed linear memory and its lifetime becomes whatever the allocator
+// decides. Taking `Vec<u8>` hands us that same allocation to own — and to
+// wipe. Internal helpers are a different case and are exempt below.
+//
+// Deliberately keyed on PARAM NAME, not on the fn naming convention that
+// invariant 4 uses: a new key type can call its unlock fn anything, but a
+// param carrying a password is going to be called `password`.
+const CREDENTIAL_PARAM_NAMES = [
+  "password",
+  "passphrase",
+  "source_passphrase",
+  "prf_output",
+  "stored_secret",
+  // The private key file itself (age/SSH engine). Belongs here even more
+  // clearly than a password does: a borrowed `key_file: &[u8]` would leave
+  // a full unencrypted private key in the wasm-bindgen allocation that is
+  // freed WITHOUT scrubbing -- the same defect as
+  // T-UNLOCK-PARAM-NOT-OWNED, with the actual key rather than the
+  // credential that guards it. Unlike `plaintext` below there is no
+  // pass-through case to false-positive on: every export that names a
+  // `key_file` is consuming it.
+  "key_file",
+];
+// NOTE: `plaintext` is deliberately NOT in that list even though invariant 4
+// treats it as secret. `encrypt` / `encryptWithSigningHandle` borrow message
+// bytes they only ever pass through to the recipients' session key, and the
+// store-sealing fns that DO own their plaintext are already covered by
+// invariant 4. Adding it here would flag the pass-through fns, and an
+// invariant that cries wolf gets ignored — which is how this class of bug
+// survives.
+
+// EXEMPTION (KNOWN GAP, not an approval): `#[wasm_bindgen]` exports that
+// still borrow a credential today. Each such entry is the same defect as
+// T-UNLOCK-PARAM-NOT-OWNED and should be converted to `Vec<u8>` +
+// `Zeroizing`; listing one rather than silently tolerating it keeps (a) the
+// gap enumerable and (b) NEW borrowed-credential exports failing the gate.
+// Shrink this list; never grow it. Removing an entry after fixing the fn
+// requires no other change here.
+//
+// CURRENTLY EMPTY, and that is the goal state, not a dormant mechanism:
+// every wasm export taking credential material now takes it owned. The map
+// stays because it is the only pressure valve — without it, the next
+// borrowed-credential export would be argued into the invariant itself
+// rather than into a named, commented line here. An empty map means the
+// gate is at full strength: any borrowed credential param on an export is
+// an outright failure.
+//
+// The last three entries were `argon2_derive` (exported as `argon2Derive`),
+// `encrypt_canary_and_init_session` and `verify_canary_and_init_session` —
+// the onboarding and master-unlock paths, i.e. the master password itself.
+// All three now take `password: Vec<u8>` and wrap it in `Zeroizing` on
+// entry. `argon2_derive` was split: the export is `argon2_derive_owned`,
+// and the borrowing `argon2_derive` it delegates to is an in-crate helper,
+// which this invariant deliberately does not check (see the note above on
+// why internal helpers are a different case).
+const BORROWED_CREDENTIAL_EXPORT_EXEMPTIONS = new Map();
+
+const invariantExportsOwnCredentials = {
+  id: "wasm-exports-own-credential-params",
+  name: "#[wasm_bindgen] exports take password/PRF material owned, not borrowed",
+  expectation:
+    BORROWED_CREDENTIAL_EXPORT_EXEMPTIONS.size === 0
+      ? "no borrowed credential params on wasm exports (no known-gap exemptions outstanding)"
+      : `no borrowed credential params on wasm exports, outside the ${BORROWED_CREDENTIAL_EXPORT_EXEMPTIONS.size} named known-gap exemption(s)`,
+  why: "A borrowed &[u8] credential param at the wasm-bindgen boundary is a buffer we do not own: wasm-bindgen frees its marshalled copy of the password / PRF output without scrubbing it, so there is nothing to wrap in Zeroizing and the plaintext outlives the call in linear memory.",
+  run() {
+    const violations = [];
+    const exempt = [];
+    const checked = [];
+
+    for (const { f, i, code } of rustLines()) {
+      const m =
+        /(?:^|[^A-Za-z0-9_])fn\s+([A-Za-z_]\w*)\s*(?:<[^>]*>)?\s*\(/.exec(code);
+      if (!m) continue;
+      // EXEMPTION: cfg(test) code is not compiled into the shipped wasm.
+      if (f.testGated[i]) continue;
+      // EXEMPTION: internal (non-`#[wasm_bindgen]`) helpers such as
+      // protected::open_with_password and crx::encrypt_der_with_password.
+      // They never see a wasm-bindgen allocation — the reference they get is
+      // to a `Zeroizing` their exported caller already owns, and taking it by
+      // value there would mean an extra un-scrubbed copy, not one fewer.
+      // The boundary is the ABI, so that is where ownership is required.
+      if (!isWasmExport(f.lines, i)) continue;
+
+      const span = fnSpan(f.lines, i, m.index);
+      if (!span) continue;
+      const fnHere = m[1];
+      const borrowed = CREDENTIAL_PARAM_NAMES.filter((param) =>
+        new RegExp(`\\b${param}\\s*:\\s*&`).test(span.signature),
+      );
+      const owned = CREDENTIAL_PARAM_NAMES.filter((param) =>
+        new RegExp(`\\b${param}\\s*:\\s*Vec\\s*<\\s*u8\\s*>`).test(
+          span.signature,
+        ),
+      );
+      if (!borrowed.length && !owned.length) continue;
+      checked.push({ fn: fnHere, file: f.rel, owned, borrowed });
+      if (!borrowed.length) continue;
+
+      const hit = {
+        file: f.rel,
+        line: i + 1,
+        text: (f.raw[i] ?? "").trim(),
+        fn: fnHere,
+      };
+      const excuse = BORROWED_CREDENTIAL_EXPORT_EXEMPTIONS.get(fnHere);
+      if (excuse) {
+        exempt.push({ ...hit, reason: `${excuse} (${borrowed.join(", ")})` });
+        continue;
+      }
+      violations.push({
+        summary: `${fnHere}() is a wasm export that borrows credential material: ${borrowed.map((b) => `${b}: &[u8]`).join(", ")} - take it as Vec<u8> and wrap in Zeroizing`,
+        hits: [hit],
+      });
+    }
+
+    if (checked.length === 0) {
+      violations.push({
+        summary:
+          "found no wasm export taking password/PRF material at all - the param naming convention changed and this invariant is no longer checking anything",
+        hits: [],
+      });
+    }
+
+    const fileCount = new Set(checked.map((c) => c.file)).size;
+    const ownedCount = checked.reduce((n, c) => n + c.owned.length, 0);
+    // Same reasoning as invariant 4's detail line: CREDENTIAL_PARAM_NAMES is
+    // a fixed list, so an export whose secret param is called `secret`,
+    // `pin` or `recovery_code` is not caught -- it is simply never seen, and
+    // a silent zero is indistinguishable from a clean bill of health.
+    // Printing the names that DID match, and the listed names that never
+    // appeared, is the cheap version of making that gap legible; it does not
+    // close it.
+    const matchedParams = [
+      ...new Set(checked.flatMap((c) => [...c.owned, ...c.borrowed])),
+    ].sort();
+    const unmatched = CREDENTIAL_PARAM_NAMES.filter(
+      (p) => !matchedParams.includes(p),
+    );
+    return {
+      violations,
+      exempt,
+      detail:
+        `${checked.length} credential-taking export(s) across ${fileCount} file(s); ${ownedCount} owned param(s), ${violations.length} borrowed unexempted, ${exempt.length} known-gap exemption(s)` +
+        `; matched on: ${matchedParams.join(", ") || "-"}` +
+        (unmatched.length ? ` (never seen: ${unmatched.join(", ")})` : ""),
+    };
+  },
+};
+
+// ── Invariant 6 — no console.* outside the network lockdown ──────────
 // SECURITY.md §9 check 5.
 //
 // EXEMPTION: lib/network-lockdown.ts logs the URL of a blocked request. That
@@ -815,6 +1172,7 @@ const INVARIANTS = [
   invariantUnlockOnly,
   invariantWasmBoundary,
   invariantZeroizedParams,
+  invariantExportsOwnCredentials,
   invariantNoConsole,
 ];
 
@@ -828,6 +1186,17 @@ try {
 
 console.log("");
 console.log("── SECURITY.md §9 invariants ────────────────");
+{
+  const { files, unreadable } = rustSources();
+  console.log(
+    `   rust sources scanned: ${files.map((f) => f.rel.split("/").pop()).join(", ")}`,
+  );
+  if (unreadable.length) {
+    // Named, never swallowed: a file skipped because it was mid-write is a
+    // file no invariant covered on this run.
+    console.log(`   ⚠️  unreadable (skipped): ${unreadable.join(", ")}`);
+  }
+}
 
 const results = [];
 for (const inv of INVARIANTS) {

@@ -138,9 +138,22 @@ export async function decryptInWorkspace(
 export async function unlockWithPassword(
   panel: Page,
   password: string,
+  opts: {
+    /** Expect the vault-unreadable screen instead of the tab bar.
+     *  A session key that cannot open the stores gets its own screen --
+     *  there is no tab bar to wait for, because rendering the normal UI
+     *  would show an empty keyring for a vault that is intact on disk. */
+    expectVaultUnreadable?: boolean;
+  } = {},
 ): Promise<void> {
   await panel.getByLabel("Master password").fill(password);
   await panel.getByRole("button", { name: "Unlock" }).click();
+  if (opts.expectVaultUnreadable) {
+    await expect(panel.getByText("Your vault could not be read")).toBeVisible({
+      timeout: 15_000,
+    });
+    return;
+  }
   await expect(panel.getByRole("tab", { name: "Keys" })).toBeVisible({
     timeout: 15_000,
   });
@@ -240,17 +253,33 @@ export async function importPrivateKey(
 export async function importContactExpectRejected(
   panel: Page,
   armoredPublicKey: string,
+  /** Matched against the whole panel -- the health banner's wording. */
   reason: RegExp,
+  /** Matched against the footer alert, which states the rejection in
+   *  `importRejectionMessage`'s words rather than the banner's. Defaults
+   *  to `reason` for callers where the two agree. */
+  footerReason: RegExp = reason,
 ): Promise<void> {
   await goToKeys(panel);
   await panel.getByRole("button", { name: "Import Key" }).click();
   await importFileInPanel(panel, armoredPublicKey);
   // An unusable key still previews -- with its health banner explaining
-  // why, and no import button (the footer says so next to Done).
-  await expect(panel.getByRole("alert")).toContainText("can't be imported");
+  // why, and no import button.
+  //
+  // The footer names the SPECIFIC reason now, not a generic "this key
+  // can't be imported": `IncomingKey.rejection` was declared and never
+  // rendered, so every refusal -- expired, revoked, an ECDSA SSH key,
+  // a PuTTY file -- read as the same sentence. Asserting the reason
+  // rather than the fallback is also the stronger check: the fallback
+  // only proved SOMETHING was refused.
+  await expect(panel.getByRole("alert")).toContainText(footerReason);
   await expect(panel.getByRole("region", { name: "Import key" })).toContainText(
     reason,
   );
+  // The actual invariant behind the message: there is no way to import it.
+  await expect(
+    panel.getByRole("button", { name: "Import contact" }),
+  ).toHaveCount(0);
 }
 
 /** Feed armored key text to the open Import Key page via its file input
@@ -392,10 +421,13 @@ export async function pasteCrxSigningKey(
   await goToKeys(panel);
   await panel.getByRole("button", { name: "Import Key" }).click();
   await importFileInPanel(panel, pem);
-  // Detection is what routes this to the CRX branch (straight to
-  // protection -- a bare RSA PEM has no cert to preview); assert it so a
-  // regression there fails loudly instead of importing as a PGP key.
+  // Detection is what routes this to the CRX branch; assert it so a
+  // regression there fails loudly instead of importing as a PGP key. A
+  // bare RSA PEM has no cert to show, but it still gets the preview step
+  // every other key kind gets -- one classifier, one flow -- so step
+  // through it before the protect step's label field.
   await expect(panel.getByText("RSA signing key")).toBeVisible();
+  await panel.getByRole("button", { name: "Continue", exact: true }).click();
   await panel.getByPlaceholder("e.g. My Extension").fill(label);
 }
 

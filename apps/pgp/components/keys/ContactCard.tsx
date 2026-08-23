@@ -22,6 +22,12 @@ import {
 } from "@amibeingpwned/ui/dropdown-menu";
 
 import type { PublicContactKey } from "../../lib/storage/contacts";
+import {
+  activeRecipients,
+  contactRecipients,
+  contactSource,
+} from "../../lib/storage/contacts";
+import { isSshRecord } from "../../lib/storage/key-kind";
 import { formatAlgorithm, formatFingerprint } from "../../lib/utils/formatting";
 import { parseUserId } from "../../lib/utils/key-naming";
 import { useJustImported } from "./useJustImported";
@@ -79,6 +85,23 @@ export function ContactCard({
   const ToneIcon = isWarning ? TriangleAlertIcon : CheckCircleIcon;
   // Captured once at mount; cards are short-lived so drift is moot.
   const [now] = useState(() => Date.now());
+  // Read off the record rather than taken as a prop: which engine a
+  // contact belongs to is a fact ABOUT the contact, so both call sites
+  // (the keys list, the verified-signer card) stay untouched and can't
+  // forget to pass it. Legacy contacts carry no `kind` and are PGP --
+  // hence `isSshRecord`, never `contact.kind === ...`.
+  const isSsh = isSshRecord(contact);
+  // Both read through the accessors for the same reason `kind` is: an
+  // absent `recipients`/`source` is the legacy (and single-key,
+  // hand-supplied) shape, not a missing value -- so no prop is added and
+  // neither call site has to know a contact can hold several keys.
+  const recipients = contactRecipients(contact);
+  // What is DISPLAYED is every key; what gets encrypted to is the active
+  // subset. When the user has turned some off, saying "3 keys" would be
+  // a lie about the file they are about to produce -- so the badge says
+  // "2 of 3 keys" instead.
+  const activeKeys = activeRecipients(contact).length;
+  const source = contactSource(contact);
   const userId = contact.userIds[0] ?? "Unknown";
   const { name: rawName, email, comment } = parseUserId(userId);
   const name = comment ? `${rawName} (${comment})` : rawName;
@@ -125,7 +148,34 @@ export function ContactCard({
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
-            <p className="truncate text-sm font-medium">{name}</p>
+            <p className="flex min-w-0 items-center gap-1.5 truncate text-sm font-medium">
+              <span className="truncate">{name}</span>
+              {isSsh && (
+                <span
+                  title="An SSH key, used with age. It can't be combined with PGP recipients in one message."
+                  className="bg-secondary text-muted-foreground shrink-0 rounded border px-1 text-[10px] leading-4 font-normal"
+                >
+                  SSH
+                </span>
+              )}
+              {recipients.length > 1 && (
+                /* One person, several machines. Said on the card because
+                   the fingerprint line below shows only the first: a
+                   3-stanza file is otherwise a surprise at decrypt time. */
+                <span
+                  title={
+                    activeKeys < recipients.length
+                      ? `Messages are encrypted to ${activeKeys} of this contact's ${recipients.length} keys; the rest are turned off in their key details.`
+                      : "Messages are encrypted to all of this contact's keys; any one of them can decrypt."
+                  }
+                  className="bg-secondary text-muted-foreground shrink-0 rounded border px-1 text-[10px] leading-4 font-normal"
+                >
+                  {activeKeys < recipients.length
+                    ? `${activeKeys} of ${recipients.length} keys`
+                    : `${recipients.length} keys`}
+                </span>
+              )}
+            </p>
             {verifiedLabel && (
               <span
                 className={`flex shrink-0 items-center gap-1 text-xs ${toneText}`}
@@ -138,14 +188,28 @@ export function ContactCard({
           {email && (
             <p className="text-muted-foreground truncate text-xs">{email}</p>
           )}
-          <p className="text-muted-foreground mt-0.5 font-mono text-xs">
-            {contact.keyId.slice(-16)}
+          <p className="text-muted-foreground mt-0.5 font-mono text-xs break-all">
+            {/* An OpenSSH fingerprint is a base64 hash: its last 16
+                characters identify nothing, so it shows in full. */}
+            {isSsh ? contact.keyId : contact.keyId.slice(-16)}
             {contact.algorithm
               ? ` - ${formatAlgorithm(contact.algorithm)}`
               : ""}
           </p>
+          {source?.type === "github" && (
+            /* Where this contact came from, which is also its upsert
+               identity: looking the same user up again updates THIS
+               record rather than adding a second one. */
+            <p className="text-muted-foreground mt-0.5 text-xs">
+              From github.com/{source.user}
+            </p>
+          )}
           {note && <p className="text-muted-foreground mt-1 text-xs">{note}</p>}
-          {advancedMode && (
+          {/* Advanced mode regroups a hex fingerprint into 4-character
+              blocks; doing that to a base64 hash would only chop it into
+              meaningless quarters, and the line above already shows it in
+              full. */}
+          {advancedMode && !isSsh && (
             <p className="text-muted-foreground mt-0.5 font-mono text-[10px] leading-relaxed">
               {formatFingerprint(contact.keyId)}
             </p>

@@ -526,7 +526,7 @@ fn test_encrypt_canary_and_init_session() {
     let password = b"strong-password-123";
     let salt = b"16-byte-salt!!!!";
 
-    let packed = encrypt_canary_and_init_session(password, salt, 4096, 3, 1).unwrap();
+    let packed = encrypt_canary_and_init_session(password.to_vec(), salt, 4096, 3, 1).unwrap();
     assert!(packed.len() > 12);
 
     // Session should now be active
@@ -549,7 +549,7 @@ fn test_verify_canary_correct_password() {
     let salt = b"16-byte-salt!!!!";
 
     // Setup: encrypt canary
-    let packed = encrypt_canary_and_init_session(password, salt, 4096, 3, 1).unwrap();
+    let packed = encrypt_canary_and_init_session(password.to_vec(), salt, 4096, 3, 1).unwrap();
     let canary_iv = &packed[..12];
     let canary_ct = &packed[12..];
 
@@ -558,7 +558,7 @@ fn test_verify_canary_correct_password() {
     assert!(!has_contacts_session());
 
     // Verify with correct password should succeed and init session
-    let ok = verify_canary_and_init_session(canary_ct, canary_iv, password, salt, 4096, 3, 1).unwrap();
+    let ok = verify_canary_and_init_session(canary_ct, canary_iv, password.to_vec(), salt, 4096, 3, 1).unwrap();
     assert!(ok);
     assert!(has_contacts_session());
 
@@ -574,14 +574,14 @@ fn test_verify_canary_wrong_password() {
     let salt = b"16-byte-salt!!!!";
 
     // Setup: encrypt canary
-    let packed = encrypt_canary_and_init_session(password, salt, 4096, 3, 1).unwrap();
+    let packed = encrypt_canary_and_init_session(password.to_vec(), salt, 4096, 3, 1).unwrap();
     let canary_iv = &packed[..12];
     let canary_ct = &packed[12..];
 
     drop_contacts_session();
 
     // Verify with wrong password should return false and NOT init session
-    let ok = verify_canary_and_init_session(canary_ct, canary_iv, wrong_password, salt, 4096, 3, 1).unwrap();
+    let ok = verify_canary_and_init_session(canary_ct, canary_iv, wrong_password.to_vec(), salt, 4096, 3, 1).unwrap();
     assert!(!ok);
     assert!(!has_contacts_session());
 
@@ -596,7 +596,7 @@ fn test_verify_canary_then_encrypt_contacts() {
     let salt = b"16-byte-salt!!!!";
 
     // Setup
-    let packed = encrypt_canary_and_init_session(password, salt, 4096, 3, 1).unwrap();
+    let packed = encrypt_canary_and_init_session(password.to_vec(), salt, 4096, 3, 1).unwrap();
     let canary_iv = &packed[..12];
     let canary_ct = &packed[12..];
 
@@ -609,7 +609,7 @@ fn test_verify_canary_then_encrypt_contacts() {
     drop_contacts_session();
 
     // Re-verify password → session should be restored
-    let ok = verify_canary_and_init_session(canary_ct, canary_iv, password, salt, 4096, 3, 1).unwrap();
+    let ok = verify_canary_and_init_session(canary_ct, canary_iv, password.to_vec(), salt, 4096, 3, 1).unwrap();
     assert!(ok);
 
     // Decrypt contacts should work with the restored session
@@ -626,7 +626,7 @@ fn test_contacts_key_domain_separation_password_vs_prf() {
     // Encrypt contacts with a password-derived session
     let password = b"test-password-for-sep";
     let salt = b"16-byte-salt!!!!";
-    encrypt_canary_and_init_session(password, salt, 4096, 3, 1).unwrap();
+    encrypt_canary_and_init_session(password.to_vec(), salt, 4096, 3, 1).unwrap();
     let packed = encrypt_contacts(b"password-contacts".to_vec()).unwrap();
     let iv = &packed[..12];
     let ct = &packed[12..];
@@ -858,7 +858,7 @@ fn test_canary_tampered_ciphertext_fails() {
     let password = b"test-password-tamper";
     let salt = b"16-byte-salt!!!!";
 
-    let packed = encrypt_canary_and_init_session(password, salt, 4096, 3, 1).unwrap();
+    let packed = encrypt_canary_and_init_session(password.to_vec(), salt, 4096, 3, 1).unwrap();
     let canary_iv = &packed[..12];
     let mut canary_ct = packed[12..].to_vec();
 
@@ -870,7 +870,7 @@ fn test_canary_tampered_ciphertext_fails() {
     }
 
     // Should fail gracefully (return false, not panic/error)
-    let ok = verify_canary_and_init_session(&canary_ct, canary_iv, password, salt, 4096, 3, 1).unwrap();
+    let ok = verify_canary_and_init_session(&canary_ct, canary_iv, password.to_vec(), salt, 4096, 3, 1).unwrap();
     assert!(!ok);
     assert!(!has_contacts_session());
 
@@ -1149,4 +1149,120 @@ fn constant_platform_rng_no_longer_repeats_draft_session_keys() {
 
     assert_ne!(key_a, key_b, "two draft sessions must not share a key");
     assert_ne!(key_a, vec![0x5Au8; 32], "must not pass the constant through");
+}
+
+// ── Owned-credential params on the canary exports ───────────────────
+//
+// `encryptCanaryAndInitSession` / `verifyCanaryAndInitSession` take the
+// master password as an owned `Vec<u8>` (SECURITY.md §8.4,
+// T-UNLOCK-PARAM-NOT-OWNED). That change moves the wasm-bindgen boundary,
+// and these two functions gate master unlock: a regression in either does
+// not degrade gracefully, it locks every existing user out of their vault.
+// So the round trip is asserted through the new signatures, and — as with
+// the CRX unlock exports — a canary blob emitted by the PRE-change code is
+// frozen below and must still verify.
+
+#[test]
+fn test_canary_round_trip_through_owned_password_params() {
+    reset_contacts_session();
+
+    let password = b"owned-param-master-password";
+    let salt = b"16-byte-salt!!!!";
+
+    // Each call gets its own `Vec`, exactly as wasm-bindgen would hand over
+    // a fresh marshalled copy per call; nothing may depend on the caller
+    // still holding the bytes afterwards.
+    let packed = encrypt_canary_and_init_session(password.to_vec(), salt, 4096, 3, 1).unwrap();
+    let canary_iv = &packed[..12];
+    let canary_ct = &packed[12..];
+
+    drop_contacts_session();
+    assert!(!has_contacts_session());
+
+    assert!(
+        verify_canary_and_init_session(canary_ct, canary_iv, password.to_vec(), salt, 4096, 3, 1)
+            .unwrap(),
+        "a canary sealed through the owned-param signature must verify through it"
+    );
+    assert!(has_contacts_session());
+
+    // And the wrong password must still be rejected without a session.
+    drop_contacts_session();
+    assert!(
+        !verify_canary_and_init_session(
+            canary_ct,
+            canary_iv,
+            b"not-the-master-password".to_vec(),
+            salt,
+            4096,
+            3,
+            1
+        )
+        .unwrap()
+    );
+    assert!(!has_contacts_session());
+
+    reset_contacts_session();
+}
+
+/// A canary blob produced by the shipped, PRE-change build (when
+/// `encrypt_canary_and_init_session` still took `password: &[u8]`), captured
+/// verbatim as `[12-byte IV][ciphertext||tag]`. Regenerating this defeats
+/// its purpose: it exists to prove the at-rest format did not move when the
+/// param went from borrowed to owned. Only the marshalling changed, so a
+/// vault sealed by the shipped build must still unlock.
+const PRE_CHANGE_CANARY_PACKED: [u8; 47] = [
+    0xe5, 0x24, 0xf3, 0xed, 0x95, 0x14, 0xb5, 0x68, 0x93, 0x18, 0x25, 0x48, 0x52, 0xed, 0xc8, 0xfa,
+    0x7e, 0x99, 0x5e, 0x7e, 0x9c, 0x4f, 0x2b, 0x23, 0xc4, 0xbf, 0xa9, 0xc5, 0x04, 0xb2, 0xb0, 0x61,
+    0xfa, 0xdb, 0x4b, 0x0c, 0x6a, 0xe6, 0x69, 0x93, 0x69, 0x1f, 0x59, 0xd0, 0x9d, 0x96, 0x1f,
+];
+const PRE_CHANGE_CANARY_PASSWORD: &[u8] = b"pre-change-master-password";
+const PRE_CHANGE_CANARY_SALT: &[u8] = b"canary-fixture!!";
+
+#[test]
+fn test_pre_change_canary_still_verifies() {
+    reset_contacts_session();
+
+    let canary_iv = &PRE_CHANGE_CANARY_PACKED[..12];
+    let canary_ct = &PRE_CHANGE_CANARY_PACKED[12..];
+
+    assert!(
+        verify_canary_and_init_session(
+            canary_ct,
+            canary_iv,
+            PRE_CHANGE_CANARY_PASSWORD.to_vec(),
+            PRE_CHANGE_CANARY_SALT,
+            4096,
+            3,
+            1
+        )
+        .unwrap(),
+        "a canary sealed by the pre-change build no longer verifies - existing \
+         vaults would be permanently unopenable"
+    );
+    // Verification must also restore a usable session, not merely report true.
+    assert!(has_contacts_session());
+    let sealed = encrypt_contacts(b"post-unlock".to_vec()).unwrap();
+    assert_eq!(
+        decrypt_contacts(&sealed[12..], &sealed[..12]).unwrap(),
+        b"post-unlock"
+    );
+
+    reset_contacts_session();
+}
+
+#[test]
+fn test_argon2_derive_owned_matches_borrowed_helper() {
+    let password = b"argon2-owned-vs-borrowed";
+    let salt = b"16-byte-salt!!!!";
+
+    // The exported wrapper only changes how the secret is marshalled; the
+    // derivation it delegates to must produce identical bytes.
+    let owned = argon2_derive_owned(password.to_vec(), salt, 4096, 3, 1).unwrap();
+    let borrowed = argon2_derive(password, salt, 4096, 3, 1).unwrap();
+    assert_eq!(owned, borrowed);
+    assert_eq!(owned.len(), 32);
+
+    // Input validation must survive the split.
+    assert!(argon2_derive_owned(password.to_vec(), b"short", 4096, 3, 1).is_err());
 }

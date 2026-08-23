@@ -18,11 +18,22 @@ import {
 
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
+import { MIXED_ENGINE_REASON } from "../../lib/encrypt-recipients";
 import {
   matchesRecipientSearch,
   orderRecipients,
 } from "../../lib/recipient-ordering";
+import {
+  activeRecipients,
+  contactRecipients,
+} from "../../lib/storage/contacts";
+import { isSshRecord } from "../../lib/storage/key-kind";
 import { formatKeyDisplayName } from "../../lib/utils/key-naming";
+import {
+  blockedByEngine,
+  pickableKeys,
+  selectionEngine,
+} from "./recipient-engine";
 
 type AnyKey = ProtectedKeyBlob | PublicContactKey;
 
@@ -134,8 +145,16 @@ export function RecipientPicker({
     recentKeyIds,
   );
   const { rest: restMyKeys } = orderRecipients(availableOwn, []);
-  // Render order, flattened -- what the digit shortcuts index into.
+  // Render order, flattened.
   const visibleKeys = [...recent, ...restContacts, ...restMyKeys];
+  // The engine the selection has committed to (null while nothing is
+  // selected), and the subset of the rendered list a keyboard gesture may
+  // land on. The two lists are deliberately separate: options of the
+  // other engine still RENDER -- dimmed, with the reason -- but must be
+  // invisible to the digit shortcuts and to Enter, or a disabled row
+  // sitting third would silently eat the `3` keystroke.
+  const engine = selectionEngine(selectedKeys);
+  const pickable = pickableKeys(visibleKeys, engine);
 
   const closeDropdown = () => {
     setOpen(false);
@@ -213,13 +232,13 @@ export function RecipientPicker({
         setOpen(true);
         return;
       }
-      const highlightVisible = visibleKeys.some(
+      const highlightVisible = pickable.some(
         (k) => itemValue(k) === highlighted,
       );
-      if (!highlightVisible && visibleKeys.length > 0) {
+      if (!highlightVisible && pickable.length > 0) {
         e.preventDefault();
         e.stopPropagation();
-        addRecipient(visibleKeys[0].keyId);
+        addRecipient(pickable[0].keyId);
       }
       return;
     }
@@ -243,9 +262,9 @@ export function RecipientPicker({
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (open && search === "" && /^[1-9]$/.test(e.key)) {
       const index = Number(e.key) - 1;
-      if (index < visibleKeys.length) {
+      if (index < pickable.length) {
         e.preventDefault();
-        addRecipient(visibleKeys[index].keyId, { keepOpen: true });
+        addRecipient(pickable[index].keyId, { keepOpen: true });
       }
     }
   };
@@ -256,25 +275,58 @@ export function RecipientPicker({
     return detail ? `${name} ${detail} ${key.keyId}` : `${name} ${key.keyId}`;
   };
 
-  /** 1-based digit shortcut for `key` in the visible list, if it has one. */
+  /** 1-based digit shortcut for `key`, if it has one. Numbered off the
+   *  PICKABLE list so the digits shown match the digits that work -- a
+   *  blocked option shows no number at all. */
   const digitFor = (key: AnyKey): number | null => {
     if (search !== "") return null;
-    const index = visibleKeys.indexOf(key);
+    const index = pickable.indexOf(key);
     return index >= 0 && index < 9 ? index + 1 : null;
   };
+
+  // The first blocked option in render order carries the reason as a
+  // visible sub-line. Only the first: repeating one sentence down a whole
+  // group turns the explanation into wallpaper, and hover-only (a
+  // `title`) would leave it undiscoverable on touch and to the keyboard.
+  const firstBlockedId = visibleKeys.find((k) =>
+    blockedByEngine(k, engine),
+  )?.keyId;
 
   const renderOption = (key: AnyKey) => {
     const { name, detail } = getKeyDisplay(key);
     const digit = digitFor(key);
     // Own keys carry a "You" badge so they read at a glance in mixed
     // groups (Recent, search results) where the group heading can't help.
+    // An "SSH" badge does the same job for the engine, which otherwise
+    // shows up only once the mixing is already refused.
     const isOwn = !contactIds.has(key.keyId);
+    const isSsh = isSshRecord(key);
+    // A contact can hold several keys (a fetched person's laptop,
+    // desktop, phone), and picking it encrypts to all of them. Nothing
+    // about the selection changes -- one contact, one chip, one keyId --
+    // but the resulting file has a stanza per key, so say so here rather
+    // than letting the size of the output be the first hint.
+    const keyCount =
+      "armoredPublicKey" in key ? contactRecipients(key).length : 1;
+    // ...minus any the user turned off in the contact's key details.
+    // The sub-line exists so the number of stanzas in the output is not
+    // a surprise, which only works if it counts the keys that will
+    // actually be there.
+    const activeKeyCount =
+      "armoredPublicKey" in key ? activeRecipients(key).length : 1;
+    const blocked = blockedByEngine(key, engine);
     return (
       <CommandItem
         key={key.keyId}
         value={itemValue(key)}
-        onSelect={() => addRecipient(key.keyId)}
-        className="gap-2"
+        disabled={blocked}
+        aria-disabled={blocked || undefined}
+        title={blocked ? MIXED_ENGINE_REASON : undefined}
+        onSelect={() => {
+          if (blocked) return;
+          addRecipient(key.keyId);
+        }}
+        className={`gap-2 ${blocked ? "opacity-50" : ""}`}
         aria-keyshortcuts={digit !== null ? String(digit) : undefined}
       >
         <div className="min-w-0 flex-1">
@@ -285,9 +337,30 @@ export function RecipientPicker({
                 You
               </span>
             )}
+            {isSsh && (
+              <span className="bg-secondary text-muted-foreground shrink-0 rounded border px-1 text-[10px] leading-4">
+                SSH
+              </span>
+            )}
           </p>
-          {detail && (
-            <p className="text-muted-foreground truncate text-xs">{detail}</p>
+          {(detail || keyCount > 1) && (
+            <p className="text-muted-foreground truncate text-xs">
+              {[
+                detail,
+                keyCount > 1
+                  ? activeKeyCount < keyCount
+                    ? `${activeKeyCount} of ${keyCount} keys`
+                    : `${keyCount} keys`
+                  : "",
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+          )}
+          {key.keyId === firstBlockedId && (
+            <p className="text-muted-foreground mt-0.5 text-xs">
+              {MIXED_ENGINE_REASON}
+            </p>
           )}
         </div>
         {digit !== null && <CommandShortcut>{digit}</CommandShortcut>}
@@ -391,6 +464,11 @@ export function RecipientPicker({
                     }}
                   >
                     <span className="min-w-0 truncate">{name}</span>
+                    {isSshRecord(key) && (
+                      <span className="text-muted-foreground shrink-0 rounded border px-1 text-[10px] leading-4">
+                        SSH
+                      </span>
+                    )}
                     <XIcon className="-mr-0.5 h-3 w-3 shrink-0 opacity-60" />
                   </button>
                 );

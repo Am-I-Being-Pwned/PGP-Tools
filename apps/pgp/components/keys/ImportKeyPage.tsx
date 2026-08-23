@@ -6,11 +6,24 @@ import { Button } from "@amibeingpwned/ui/button";
 import type { CrxProtectionInput } from "../../lib/crx/operations";
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
 import type { IncomingKey } from "../../lib/import/types";
+import type { GithubKeysRequest, GithubKeysResponse } from "../../lib/messages";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
+import { parseRecipient } from "../../lib/age/operations";
+import {
+  githubContact,
+  importSshIdentity,
+  sshContact,
+} from "../../lib/age/protect-flow";
 import { readKeyFile } from "../../lib/binary-armor";
 import { importCrxKey } from "../../lib/crx/operations";
+import { AppError } from "../../lib/errors/app-error";
+import {
+  githubFailureCopy,
+  prepareGithubImport,
+} from "../../lib/import/github";
 import { importable, prepareImport } from "../../lib/import/prepare";
+import { isPublicKind, isSecretKind } from "../../lib/import/types";
 import { importAndProtect } from "../../lib/protection/protect-flow";
 import { toast } from "../../lib/toast";
 import { errorMessage } from "../../lib/utils/errors";
@@ -32,13 +45,6 @@ type Step = "source" | "preview" | "protect";
 /** "⌘V" on a Mac, "Ctrl+V" everywhere else. */
 function modKeyLabel(): string {
   return navigator.platform.includes("Mac") ? "⌘V" : "Ctrl+V";
-}
-
-/** A raw RSA private key PEM (PKCS#8 or PKCS#1) — a CRX signing key, not
- *  OpenPGP. Matched only when it is NOT a PGP armored block. */
-const RSA_PEM_RE = /-----BEGIN (?:RSA )?PRIVATE KEY-----/;
-function isRsaPrivatePem(text: string): boolean {
-  return RSA_PEM_RE.test(text) && !text.includes("PGP");
 }
 
 interface ImportKeyPageProps {
@@ -101,6 +107,14 @@ export function ImportKeyPage({
   const [reusePasskey, setReusePasskey] = useState(true);
   const [sourcePassphrase, setSourcePassphrase] = useState("");
   const [dragOver, setDragOver] = useState(false);
+  const [githubUser, setGithubUser] = useState("");
+  /** A failure the user didn't cause and can't fix by retrying -- today
+   *  only "this person has published no SSH keys". Rendered as muted body
+   *  text, not in the destructive error slot. */
+  const [notice, setNotice] = useState<string | null>(null);
+  // The document-level paste listener below must not swallow a username
+  // pasted into the GitHub field; it identifies the field by node.
+  const githubInputRef = useRef<HTMLInputElement>(null);
   // Re-entrancy guard for the parse. A ref, not the `parsing` state: two
   // handlers can fire for one gesture (the paste box and the panel-wide
   // listener) inside a single render, before state catches up.
@@ -111,7 +125,6 @@ export function ImportKeyPage({
   /** The key being previewed/imported. Safe for React state: it carries
    *  the PUBLIC armor only (see IncomingKey). */
   const [incoming, setIncoming] = useState<IncomingKey | null>(null);
-  const [isCrx, setIsCrx] = useState(false);
   const [secretEncrypted, setSecretEncrypted] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -122,13 +135,15 @@ export function ImportKeyPage({
   // fiber, which React keeps alive for the whole slide-out animation,
   // leaving the private key lingering in the GC heap (see SECURITY.md's
   // zeroization table).
+  //
+  // Holds whatever secret half the previewed key carries -- OpenPGP
+  // private armor, or a CRX signing key's RSA PEM. One slot, because the
+  // panel only ever previews one key at a time, and one slot is one
+  // thing to remember to clear.
   const secretArmorRef = useRef<string | null>(null);
-  /** Raw source text for the CRX path, which has no OpenPGP parse. */
-  const crxPemRef = useRef<string | null>(null);
 
   const clearSecrets = () => {
     secretArmorRef.current = null;
-    crxPemRef.current = null;
   };
 
   const resetAndClose = () => {
@@ -149,6 +164,30 @@ export function ImportKeyPage({
     setImporting(true);
     try {
       for (const key of keys) {
+        if (key.group) {
+          // A person with several keys is ONE contact holding all of
+          // them (see storage/contacts). Built by the age engine's own
+          // constructor for the same reason the single-key branch below
+          // is -- and `recipientsField` inside it means a user with
+          // exactly one key produces the very same record that branch
+          // would have written.
+          await onImportPublic(githubContact(key.group));
+          continue;
+        }
+        if (key.kind === "ssh-public") {
+          // Built by the age engine's own constructor rather than
+          // assembled here: `sshContact` is what decides an SSH contact's
+          // shape (kind marker, comment-as-userIds, canonical recipient
+          // line), and a second hand-rolled copy of that shape would be
+          // free to drift from the one `importSshIdentity` writes.
+          // `expiresAt: null` is added because SSH keys have no expiry
+          // and `undefined` would mean "not computed yet" -- which sends
+          // the contacts backfill off to parse a recipient line as PGP
+          // armor on every refresh (see useContacts).
+          const info = await parseRecipient(key.publicArmored);
+          await onImportPublic({ ...sshContact(info), expiresAt: null });
+          continue;
+        }
         await onImportPublic({
           keyId: key.keyId,
           userIds: key.userIds,
@@ -197,44 +236,49 @@ export function ImportKeyPage({
   };
 
   /**
-   * Classify pasted/dropped/browsed text and route it: a CRX PEM goes
-   * straight to protection, a bundle of several importable keys imports
-   * in one go (no point previewing five certs one at a time), and a
-   * single key gets the preview.
+   * Classify pasted/dropped/browsed text and route it: a bundle of
+   * several importable public keys imports in one go (no point previewing
+   * five certs one at a time), and anything else gets the preview.
+   *
+   * `prepareImport` recognises every engine, so there is nothing to route
+   * around it -- which is what keeps the CRX path from drifting away from
+   * the OpenPGP one.
    */
   const handleSource = async (text: string) => {
     setError(null);
+    setNotice(null);
     if (!text.trim() || parsingRef.current) return;
-
-    if (crxEnabled && isRsaPrivatePem(text)) {
-      crxPemRef.current = text.trim();
-      setIsCrx(true);
-      setStep("protect");
-      return;
-    }
 
     setParsing(true);
     parsingRef.current = true;
     try {
-      const prepared = await prepareImport(text, {
-        own: existingKeys.map((k) => ({
-          keyId: k.keyId,
-          userIds: k.userIds,
-          armored: k.publicKeyArmored,
-          createdAt: k.createdAt,
-        })),
-        contacts: existingContacts.map((c) => ({
-          keyId: c.keyId,
-          userIds: c.userIds,
-          armored: c.armoredPublicKey,
-          addedAt: c.addedAt,
-          expiresAt: c.expiresAt,
-        })),
-      });
+      const prepared = await prepareImport(
+        text,
+        {
+          own: existingKeys.map((k) => ({
+            keyId: k.keyId,
+            userIds: k.userIds,
+            armored: k.publicKeyArmored,
+            createdAt: k.createdAt,
+          })),
+          contacts: existingContacts.map((c) => ({
+            keyId: c.keyId,
+            userIds: c.userIds,
+            armored: c.armoredPublicKey,
+            addedAt: c.addedAt,
+            expiresAt: c.expiresAt,
+          })),
+        },
+        // SSH is always on: unlike CRX signing it is not a setting, it
+        // is simply another kind of key the app reads. Off, an `.pub`
+        // line would come back `unparseable` -- which is what the panel
+        // did before the engine existed (see ImportEngines).
+        { crx: crxEnabled, ssh: true },
+      );
 
       if (prepared.unparseable || prepared.keys.length === 0) {
         setError(
-          "That doesn't look like a PGP key. Paste an armored key block, or browse for a .asc file.",
+          "That doesn't look like a key we can read. Paste an armored PGP key block or an SSH public key line, or browse for a key file.",
         );
         return;
       }
@@ -245,21 +289,32 @@ export function ImportKeyPage({
       // one at a time would be worse than the summary toast.
       if (
         worthImporting.length > 1 &&
-        worthImporting.every((k) => k.kind === "public")
+        worthImporting.every((k) => isPublicKind(k.kind))
       ) {
         await importPublicKeys(worthImporting);
         return;
       }
 
       const key = worthImporting[0] ?? prepared.keys[0];
-      if (key.kind === "private") {
+      if (isSecretKind(key.kind)) {
         const secret = prepared.secrets.get(key.keyId);
         if (!secret) {
           setError("Could not read that private key.");
           return;
         }
         secretArmorRef.current = secret;
-        setSecretEncrypted(await isSecretProtected(secret));
+        // Only OpenPGP secrets are probed. A CRX PEM the user can hand
+        // us is one we can already read, and an OpenSSH container is
+        // deliberately NOT probed: the engine already answers "is this
+        // passphrase-protected" as part of importing it, so probing here
+        // would mean parsing the key twice to ask the same question --
+        // and would show a passphrase field to the majority of users
+        // whose key has none. The import is attempted optimistically and
+        // the field appears only if the engine asks for it (see
+        // handleImportSsh).
+        setSecretEncrypted(
+          key.kind === "pgp-private" ? await isSecretProtected(secret) : false,
+        );
       }
       if (key.securityWarning) {
         // Stable id: re-pasting the same key must not stack duplicates.
@@ -269,6 +324,76 @@ export function ImportKeyPage({
       setStep("preview");
     } catch (e) {
       setError(errorMessage(e, "Import failed"));
+    } finally {
+      setParsing(false);
+      parsingRef.current = false;
+    }
+  };
+
+  /**
+   * Look up a GitHub user's published SSH keys and preview them.
+   *
+   * Lands in the SAME preview as every other kind: the fetch produces one
+   * IncomingKey (a group -- see ContactGroup), so there is no second
+   * import flow to keep in step with this one, and no new tab.
+   *
+   * The fetch itself happens in the background worker, which owns the
+   * only `fetch` and the only api.github.com literal in the app; what
+   * comes back is a tagged code or a list of unvalidated strings, and
+   * `prepareGithubImport` is what decides any of them is a key.
+   */
+  const lookupGithubUser = async () => {
+    const username = githubUser.trim();
+    setError(null);
+    setNotice(null);
+    // Same guard as the paste path, and deliberately the same ref: a
+    // double-click on Look up (or Enter racing the click) would otherwise
+    // start a second lookup whose response overwrites the first's.
+    if (!username || parsingRef.current) return;
+
+    setParsing(true);
+    parsingRef.current = true;
+    try {
+      const request: GithubKeysRequest = {
+        type: "GITHUB_KEYS_REQUEST",
+        username,
+      };
+      const response = await chrome.runtime.sendMessage<
+        GithubKeysRequest,
+        GithubKeysResponse | undefined
+      >(request);
+
+      if (!response) {
+        // The worker died or no listener answered: nothing came back at
+        // all, which is not one of the tagged codes.
+        setError("Couldn't reach the extension's background worker.");
+        return;
+      }
+      if (!response.ok) {
+        // Inline copy in the slot that is already there, never a toast:
+        // every one of these tells the user something to do next, and a
+        // toast takes that away after four seconds.
+        const copy = githubFailureCopy(
+          response.error,
+          username,
+          response.resetAt,
+        );
+        if (copy.tone === "notice") setNotice(copy.message);
+        else setError(copy.message);
+        return;
+      }
+
+      const prepared = await prepareGithubImport(
+        // The worker's echoed username, not the typed one: it is the
+        // name the request was actually made for.
+        response.username,
+        response.lines,
+        { contacts: existingContacts },
+      );
+      setIncoming(prepared.keys[0]);
+      setStep("preview");
+    } catch (e) {
+      setError(errorMessage(e, "Lookup failed"));
     } finally {
       setParsing(false);
       parsingRef.current = false;
@@ -298,6 +423,19 @@ export function ImportKeyPage({
   useEffect(() => {
     if (step !== "source") return;
     const onPaste = (e: ClipboardEvent) => {
+      // A paste into the GitHub field is a USERNAME, not armor. Without
+      // this the document listener claims it, calls preventDefault, and
+      // hands "octocat" to the key parser -- which reports that it
+      // doesn't look like a key, while the field the user pasted into
+      // stays empty. The step's "paste anywhere" rule holds for
+      // everywhere else on it.
+      const target = e.target;
+      if (
+        target instanceof Node &&
+        githubInputRef.current?.contains(target) === true
+      ) {
+        return;
+      }
       const text = e.clipboardData?.getData("text/plain");
       if (!text?.trim()) return;
       e.preventDefault();
@@ -309,7 +447,7 @@ export function ImportKeyPage({
 
   const handleConfirm = () => {
     if (!incoming) return;
-    if (incoming.kind === "public") {
+    if (isPublicKind(incoming.kind)) {
       void importPublicKeys([incoming]);
       return;
     }
@@ -319,15 +457,9 @@ export function ImportKeyPage({
   const handleBack = () => {
     if (importing || parsing) return;
     setError(null);
+    setNotice(null);
     if (step === "protect") {
-      // The CRX path has no preview to go back to.
-      if (isCrx) {
-        crxPemRef.current = null;
-        setIsCrx(false);
-        setStep("source");
-      } else {
-        setStep("preview");
-      }
+      setStep("preview");
     } else if (step === "preview") {
       // Opened with a key already in hand (a drop, or the workspace
       // banner): there is no source step behind this one, so Back means
@@ -396,7 +528,7 @@ export function ImportKeyPage({
         return;
       }
     }
-    const pem = crxPemRef.current;
+    const pem = secretArmorRef.current;
     if (!onImportCrx || !pem) return;
 
     setImporting(true);
@@ -423,6 +555,96 @@ export function ImportKeyPage({
       setImporting(false);
     }
   };
+
+  /**
+   * Import an OpenSSH private key under the chosen protection.
+   *
+   * The key file crosses into wasm as BYTES (`importSshIdentity`
+   * zeroizes them), so the string is encoded here, at the call site,
+   * and a fresh copy is made per attempt -- the previous copy is already
+   * wiped by the time we could retry.
+   *
+   * The source passphrase is never probed for. Most SSH keys have none,
+   * so the import is attempted optimistically and the field appears only
+   * when the engine says it needs one; the user then retries on this
+   * same step rather than being sent back through the preview.
+   */
+  const handleImportSsh = async () => {
+    setError(null);
+    if (method === "password") {
+      const pwError = validatePassword(password, confirmPassword);
+      if (pwError) {
+        setError(pwError);
+        return;
+      }
+    }
+    if (secretEncrypted && !sourcePassphrase) {
+      setError("Enter the key's passphrase.");
+      return;
+    }
+    const keyText = secretArmorRef.current;
+    if (!incoming || !keyText) {
+      setError("No key to import.");
+      return;
+    }
+
+    setImporting(true);
+    try {
+      const { blob } = await importSshIdentity(
+        new TextEncoder().encode(keyText),
+        sourcePassphrase || null,
+        method === "password"
+          ? { method: "password", password }
+          : {
+              method: "passkey",
+              reusePasskeyCredentialId: reusePasskey
+                ? reusePasskeyCredentialId
+                : undefined,
+            },
+        { userIdHint: incoming.userIds[0] ?? "Imported SSH key" },
+      );
+      await onImportPrivate(blob);
+      // Success: drop the key text now rather than waiting for the
+      // panel's close, so it isn't held across the slide-out.
+      secretArmorRef.current = null;
+      finish([blob.keyId]);
+    } catch (e) {
+      const message = errorMessage(e, "Import failed");
+      // Revealing the field IS the retry affordance -- the key text is
+      // still in the ref, so the next attempt runs from this same step.
+      // Keyed on the tagged code, never on the engine's wording: a prose
+      // match here fails silently when the message is reworded, and the
+      // symptom is that passphrase-protected keys stop being importable
+      // at all. `lib/age/protect-flow` does the translation once.
+      if (e instanceof AppError && e.code === "ssh-passphrase-required") {
+        setSecretEncrypted(true);
+      }
+      setError(message);
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  /**
+   * The protect step's one submit. Every engine that carries secret
+   * material lands here and is routed by kind, so a new engine adds a
+   * branch rather than another `isX ? ... : ...` at the call site (which
+   * is what the CRX flag had already grown into).
+   */
+  const handleProtectSubmit = () => {
+    switch (incoming?.kind) {
+      case "crx":
+        void handleImportCrx();
+        return;
+      case "ssh-private":
+        void handleImportSsh();
+        return;
+      default:
+        void handleImportPrivate();
+    }
+  };
+
+  const isCrx = incoming?.kind === "crx";
 
   const title =
     step === "preview" && incoming?.status === "update"
@@ -528,10 +750,50 @@ export function ImportKeyPage({
                   if (file) await handleSource(await readKeyFile(file));
                 }}
               />
+              {/* A row on the SAME step, not a tab of its own: "get me a
+                  key" is one question, and github.com is just another
+                  place a key comes from. It lands in the same preview. */}
+              <div className="space-y-1">
+                <label
+                  htmlFor="github-username"
+                  className="text-muted-foreground block text-xs"
+                >
+                  Or look up a GitHub user's SSH keys
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    id="github-username"
+                    ref={githubInputRef}
+                    type="text"
+                    spellCheck={false}
+                    autoComplete="off"
+                    placeholder="GitHub username"
+                    value={githubUser}
+                    disabled={parsing}
+                    onChange={(e) => setGithubUser(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key !== "Enter") return;
+                      e.preventDefault();
+                      void lookupGithubUser();
+                    }}
+                    className={INPUT_CLASS}
+                  />
+                  <Button
+                    variant="outline"
+                    onClick={() => void lookupGithubUser()}
+                    disabled={parsing || !githubUser.trim()}
+                  >
+                    Look up
+                  </Button>
+                </div>
+              </div>
               <p className="text-muted-foreground text-xs">
                 Public keys are added as contacts. A private key stays on this
                 device - you'll choose how it's protected next.
               </p>
+              {notice && (
+                <p className="text-muted-foreground text-xs">{notice}</p>
+              )}
               {error && (
                 <p className="text-destructive text-xs" role="alert">
                   {error}
@@ -557,29 +819,22 @@ export function ImportKeyPage({
         {step === "protect" && (
           <div className="flex-1 space-y-3 overflow-y-auto p-3">
             {isCrx && (
-              <>
-                {/* A CRX key is a bare RSA PEM: there's no OpenPGP cert to
-                    preview, so the protect step has to say what was
-                    detected -- otherwise this path shows the user nothing
-                    at all about what they're importing. */}
-                <p className="text-muted-foreground text-xs">
-                  Detected: <span className="font-medium">RSA signing key</span>{" "}
-                  for a Chrome extension (.crx).
-                </p>
-                <div>
-                  <label className="text-muted-foreground mb-1 block text-xs">
-                    Label{" "}
-                    <span className="text-muted-foreground/60">optional</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. My Extension"
-                    value={label}
-                    onChange={(e) => setLabel(e.target.value)}
-                    className={INPUT_CLASS}
-                  />
-                </div>
-              </>
+              // What the key IS was already said on the preview step; the
+              // only thing left to ask is what to call it, since a CRX key
+              // has no user ID to name itself with.
+              <div>
+                <label className="text-muted-foreground mb-1 block text-xs">
+                  Label{" "}
+                  <span className="text-muted-foreground/60">optional</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. My Extension"
+                  value={label}
+                  onChange={(e) => setLabel(e.target.value)}
+                  className={INPUT_CLASS}
+                />
+              </div>
             )}
             {/* Unlocking the source key and choosing its new protection are
                 one screen: they're both "how is this secret handled", and
@@ -608,7 +863,7 @@ export function ImportKeyPage({
               confirmPassword={confirmPassword}
               onConfirmPasswordChange={setConfirmPassword}
               error={error}
-              onSubmit={isCrx ? handleImportCrx : handleImportPrivate}
+              onSubmit={handleProtectSubmit}
               onBack={handleBack}
               submitting={importing}
               submitLabel="Import"

@@ -76,6 +76,12 @@ function fromAppError(e: AppError): PresentedError {
         detail: e.message,
         remedy: { label: "Try again", action: "retry" },
       };
+    case "ssh-passphrase-required":
+      // The engine's own sentence already says exactly what to do, and
+      // the import step answers it in place by revealing its passphrase
+      // field -- so this is passed through unrewritten and carries no
+      // remedy, which would send the user somewhere else mid-import.
+      return { message: e.message };
   }
 }
 

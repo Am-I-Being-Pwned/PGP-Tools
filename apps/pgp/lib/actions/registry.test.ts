@@ -18,6 +18,7 @@ function fakeCtx(overrides: Partial<ActionCtx> = {}): ActionCtx {
     mode: "encrypt",
     hasInput: false,
     hasRecipients: true,
+    encryptEngine: "pgp",
     hasOutput: false,
     hasDownload: false,
     masterUnlocked: true,
