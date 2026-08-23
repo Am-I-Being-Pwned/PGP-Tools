@@ -1,15 +1,17 @@
-import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import path from "node:path";
 import type { BrowserContext, Page } from "@playwright/test";
 
+import type { SshKeyPair } from "./helpers";
 import { expect, test } from "./fixtures";
 import {
+  ageStanzaTags,
+  generateSshKeys,
   goToKeys,
   onboardWithPasswordSkipKey,
+  readContacts,
+  setEncryptToSelf,
   setWorkspaceMode,
+  unlockWithPassword,
 } from "./helpers";
 
 /**
@@ -47,58 +49,29 @@ import {
  * (or fails offline) and the count assertion fails -- this spec cannot
  * quietly pass by never having intercepted anything.
  *
- * NOT VERIFIED BY RUNNING: this file was written while another agent held
- * the build, so it has never been executed. The mechanism above is
- * verified statically; the selectors follow the existing helpers.
+ * ── A KNOWN PRODUCT BUG THIS FILE CATCHES ────────────────────────────
+ * "a GitHub user's three keys import as one contact, and all three can
+ * decrypt" FAILS, and it is right to. The recipient chip resolves its
+ * selection out of `[...myKeys, ...contacts]` by `keyId`
+ * (`useWorkspaceOperations.selectedRecipientKeys`), and a contact record's
+ * `keyId` is its HEAD key's fingerprint -- so when the user already holds
+ * that same key as an identity of their own, the lookup finds the OWN key
+ * first. An own key has no `recipients` list, `toSelectedRecipient` takes
+ * its single-key branch, and the message is silently encrypted to that ONE
+ * key instead of the contact's whole set. That is exactly the failure this
+ * spec was written for, arrived at from an unexpected direction; it is
+ * reported, not worked around here. The header of the ciphertext that test
+ * produces carries a single `-> ssh-ed25519` stanza.
+ *
+ * The per-key tests below steer AROUND that bug on purpose (their contact's
+ * head key is deliberately not one of the user's own), because they are
+ * about a different property and a second test failing for the first
+ * test's reason would prove nothing new.
  */
 
 const PASSWORD = "correct horse battery staple";
 const GITHUB_USER = "octocat";
 const MESSAGE = "three machines, one message";
-const CONTACTS_KEY = "pgp_public_contacts";
-
-interface SshKeyPair {
-  /** OpenSSH private key file contents. */
-  privateKey: string;
-  /** `ssh-ed25519 AAAA...` with the comment stripped, the way GitHub
-   *  serves it. */
-  publicLine: string;
-  /** The `-C` comment, which is the key's display name once imported --
-   *  and what the delete confirmation asks the user to type. */
-  comment: string;
-}
-
-/** Generate throwaway ed25519 keypairs with `ssh-keygen`.
- *
- *  Generated per run rather than committed: no real key material lives in
- *  this repo, and an OpenSSH private key in a fixture file is exactly the
- *  thing that rule exists for. */
-function generateSshKeys(count: number): SshKeyPair[] {
-  const dir = mkdtempSync(path.join(tmpdir(), "pgp-e2e-ssh-"));
-  try {
-    return Array.from({ length: count }, (_, i) => {
-      const comment = `e2e-ssh-${i + 1}`;
-      const file = path.join(dir, comment);
-      execFileSync("ssh-keygen", [
-        ...["-t", "ed25519"],
-        ...["-N", ""],
-        ...["-C", comment],
-        ...["-f", file],
-        "-q",
-      ]);
-      const pub = readFileSync(`${file}.pub`, "utf8").trim();
-      return {
-        privateKey: readFileSync(file, "utf8"),
-        // GitHub serves `<type> <base64>` with no comment; mimic that so
-        // the stub is not kinder than the real endpoint.
-        publicLine: pub.split(/\s+/).slice(0, 2).join(" "),
-        comment,
-      };
-    });
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
-}
 
 /**
  * Answer `https://api.github.com/users/*\/keys` with `lines`, in the
@@ -123,17 +96,33 @@ async function stubGithubKeys(
   return { count: () => served };
 }
 
-/** Answer the lookup with a failure status instead. */
+/** Answer the lookup with a failure status instead.
+ *
+ * `access-control-expose-headers` is set from `headers` rather than left
+ * out, because this is a CROSS-ORIGIN read: the worker's fetch of
+ * api.github.com can only see the CORS-safelisted response headers plus
+ * whatever that header names. `x-ratelimit-reset` is not safelisted, so a
+ * stub that merely SETS it hands the worker a header it is not allowed to
+ * read -- `headers.get()` returns null and the reset time silently
+ * vanishes. The real endpoint exposes it (verified against the live API);
+ * a stub that did not would be less permissive than production and would
+ * fail a test the shipped code passes. */
 async function stubGithubStatus(
   context: BrowserContext,
   status: number,
   headers: Record<string, string> = {},
 ): Promise<void> {
+  const exposed = Object.keys(headers);
   await context.route("https://api.github.com/users/*/keys", (route) =>
     route.fulfill({
       status,
       contentType: "application/json",
-      headers,
+      headers: {
+        ...headers,
+        ...(exposed.length > 0
+          ? { "access-control-expose-headers": exposed.join(", ") }
+          : {}),
+      },
       body: JSON.stringify({ message: "Not Found" }),
     }),
   );
@@ -167,9 +156,31 @@ async function importSshIdentity(
 /** Look up `user` on the Keys tab's import flow, landing on the preview. */
 async function lookUpGithubUser(panel: Page, user: string): Promise<void> {
   await goToKeys(panel);
+  // Wait for any previous import panel to finish sliding OUT before
+  // opening a new one. The slide-over animates on a transform, so a
+  // freshly-opened panel's controls are "visible" while still moving,
+  // and Playwright's actionability check waits for stability -- which
+  // never arrives if the old panel is animating away underneath. Only
+  // the tests that import a key before looking one up hit this, which
+  // is why it shows up in exactly one spec.
+  await expect(panel.getByRole("region", { name: "Import key" })).toBeHidden();
   await panel.getByRole("button", { name: "Import Key" }).click();
-  await panel.getByLabel(/GitHub user/i).fill(user);
-  await panel.getByRole("button", { name: "Look up" }).click();
+  const field = panel.getByLabel(/GitHub user/i);
+  const lookUp = panel.getByRole("button", { name: "Look up", exact: true });
+  // A fill that lands while the panel is still sliding in can be undone
+  // by the re-render behind it: `fill` asserts the value it typed at the
+  // moment it types it, so it returns happily and the field is empty a
+  // frame later. The button is the only durable signal -- it is disabled
+  // until the field holds something -- so re-fill until it goes live,
+  // rather than spending the timeout clicking a dead control (which is
+  // exactly how this read in CI: "element is not enabled", 28 retries).
+  await expect
+    .poll(async () => {
+      await field.fill(user);
+      return lookUp.isEnabled();
+    })
+    .toBe(true);
+  await lookUp.click();
 }
 
 /** Delete one own key, typing its name into the confirmation. */
@@ -189,61 +200,6 @@ async function deleteOwnKey(panel: Page, name: string): Promise<void> {
   await panel.getByRole("textbox", { name: /to confirm/ }).fill(name);
   await panel.getByRole("button", { name: "Delete key permanently" }).click();
   await expect(panel.getByText(name)).toHaveCount(0);
-}
-
-/** One stored contact record, as far as this spec cares. */
-interface StoredContact {
-  keyId: string;
-  userIds: string[];
-  recipients?: { keyId: string }[];
-  source?: { type: string; user: string };
-}
-
-/**
- * The contacts store, DECRYPTED -- because "one contact" is a property of
- * storage, and asserting it through the DOM cannot tell a real duplicate
- * record from a label the panel happens to render twice.
- *
- * Driven through the panel's LIVE wasm instance (with its live contacts
- * session), located from the page's own entry script the way
- * `migration.spec.ts` does it; kept local so the two specs stay
- * independent. The plaintext is `[json][0x00][padding]` (see
- * `lib/storage/padding.ts`), so it is cut at the first NUL.
- */
-async function readContacts(panel: Page): Promise<StoredContact[]> {
-  const url = await panel.evaluate(async () => {
-    const entry = document.querySelector<HTMLScriptElement>(
-      'script[type="module"][src]',
-    );
-    if (!entry) return null;
-    const source = await fetch(entry.src).then((r) => r.text());
-    const match = /gpg_wasm-[A-Za-z0-9_-]+\.js/.exec(source);
-    return match ? new URL(match[0], entry.src).href : null;
-  });
-  if (url === null) throw new Error("wasm glue chunk not locatable");
-
-  return panel.evaluate(
-    async ({ u, key }: { u: string; key: string }) => {
-      const mod = (await import(/* @vite-ignore */ u)) as {
-        decryptStore: (d: string, ct: Uint8Array, iv: Uint8Array) => Uint8Array;
-      };
-      const b64ToBytes = (s: string) =>
-        Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
-      const stored = (await chrome.storage.local.get(key))[key] as
-        | { iv: string; ciphertext: string }
-        | undefined;
-      if (!stored) return [];
-      const plaintext = mod.decryptStore(
-        key,
-        b64ToBytes(stored.ciphertext),
-        b64ToBytes(stored.iv),
-      );
-      const nul = plaintext.indexOf(0);
-      const json = nul === -1 ? plaintext : plaintext.subarray(0, nul);
-      return JSON.parse(new TextDecoder().decode(json)) as StoredContact[];
-    },
-    { u: url, key: CONTACTS_KEY },
-  );
 }
 
 /** Unlock every locked key on the Keys tab. Deleting a key does not lock
@@ -379,7 +335,6 @@ test("re-looking up the same user updates the contact instead of adding a second
   ]);
 
   await goToKeys(panel);
-  console.log(JSON.stringify(await panel.getByText(`${GITHUB_USER} (GitHub)`).evaluateAll((els) => els.map((e) => ({ tag: e.tagName, cls: (e as HTMLElement).className, parent: (e.parentElement?.outerHTML ?? "").slice(0, 400) }))), null, 1));
   await expect(panel.getByText(`${GITHUB_USER} (GitHub)`)).toHaveCount(1);
 });
 
@@ -451,4 +406,192 @@ test("a paste into the GitHub field is a username, not armor", async ({
     `${GITHUB_USER} (GitHub)`,
   );
   expect(github.count()).toBe(1);
+});
+
+// ── per-key enable/disable on a multi-key contact ─────────────────────
+
+/**
+ * Open a contact's key-details page. The card itself is the target: it
+ * carries the click handler, so this is the same gesture a user makes.
+ */
+async function openContactDetails(panel: Page, label: string): Promise<void> {
+  await goToKeys(panel);
+  await panel.getByText(label, { exact: true }).click();
+  await expect(
+    panel.getByRole("region", { name: `Key details for ${label}` }),
+  ).toBeVisible();
+}
+
+/** One key's row on the details page, found by the fingerprint it prints.
+ *  The innermost div holding that text, so nothing depends on a class
+ *  name -- and the fingerprint is unique on the page, because a multi-key
+ *  contact deliberately has no head fingerprint in its facts card (it
+ *  would be printing one of these rows twice, and implying a primary key
+ *  this model does not have). */
+function recipientRow(panel: Page, fingerprint: string) {
+  return panel
+    .locator("div")
+    .filter({ has: panel.getByText(fingerprint, { exact: true }) })
+    .last();
+}
+
+/** Force the workspace's "Decrypt with" identity, rather than accepting
+ *  the one the panel auto-selected by matching the header. Located via
+ *  its label because `KeySelector`'s trigger has no accessible name of
+ *  its own and there are several comboboxes on screen. */
+async function decryptWithIdentity(panel: Page, name: string): Promise<void> {
+  const selector = panel
+    .locator("div")
+    .filter({ has: panel.getByText("Decrypt with", { exact: true }) })
+    .last();
+  await selector.getByRole("combobox").click();
+  await panel.getByRole("option", { name, exact: true }).click();
+  await expect(selector.getByRole("combobox")).toContainText(name);
+}
+
+test("a key turned off on a contact is left out of the message", async ({
+  context,
+  panel,
+}) => {
+  // FOUR keys, of which the user holds the last three as identities of
+  // their own. The contact's HEAD key (keys[0]) is deliberately NOT one
+  // of them: a contact record's id is its head key's fingerprint, and the
+  // recipient chip resolves that id against the user's own keys first, so
+  // a shared head key silently collapses the whole contact to one key.
+  // That is a real (reported) bug, and not this test's subject -- see the
+  // file header.
+  const keys = generateSshKeys(4);
+  await stubGithubKeys(
+    context,
+    keys.map((k) => k.publicLine),
+  );
+  await onboardWithPasswordSkipKey(panel, PASSWORD);
+  for (const key of keys.slice(1)) await importSshIdentity(panel, key);
+
+  await lookUpGithubUser(panel, GITHUB_USER);
+  const preview = panel.getByRole("region", { name: "Import key" });
+  await preview.getByRole("button", { name: "Import contact" }).click();
+  await expect(preview).toBeHidden();
+
+  // Turn ONE key off -- one the user can also decrypt with, so "the
+  // message didn't open" can only mean "there was no stanza for it".
+  const off = keys[1];
+  const label = `${GITHUB_USER} (GitHub)`;
+  await openContactDetails(panel, label);
+  await recipientRow(panel, off.fingerprint)
+    .getByRole("button", { name: "Don't use", exact: true })
+    .click();
+  await expect(recipientRow(panel, off.fingerprint)).toContainText("Not used");
+
+  // Persisted, not merely rendered: the toggle writes optimistically, so
+  // the on-screen state proves nothing about the record an encrypt will
+  // read. Polled because that write is in flight.
+  await expect
+    .poll(async () => {
+      const [contact] = await readContacts(panel);
+      return contact.recipients?.filter((r) => r.disabled).map((r) => r.keyId);
+    })
+    .toEqual([off.fingerprint]);
+
+  // And it survives the panel being torn down and the store re-read from
+  // disk -- a preference that only lives in a mounted component's state
+  // would pass every assertion above.
+  await panel.reload();
+  await unlockWithPassword(panel, PASSWORD);
+  await openContactDetails(panel, label);
+  await expect(recipientRow(panel, off.fingerprint)).toContainText("Not used");
+  await expect(
+    recipientRow(panel, off.fingerprint).getByRole("button", {
+      name: "Use",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await panel.getByRole("button", { name: "Back" }).click();
+  // The card says what the file will actually contain, not how many keys
+  // the person has.
+  await expect(panel.getByText("3 of 4 keys")).toBeVisible();
+
+  // Encrypt with "Also encrypt to me" OFF: with it on, one of the user's
+  // own keys rides along and adds a stanza that has nothing to do with
+  // the contact's recipient list -- and here that key would BE the one
+  // just turned off.
+  await setEncryptToSelf(panel, false);
+  const recipients = panel.getByRole("combobox", { name: "Recipients" });
+  await recipients.fill(GITHUB_USER);
+  await recipients.press("Enter");
+  await panel.locator("textarea").first().fill(MESSAGE);
+  await panel.getByRole("button", { name: /^encrypt$/i }).click();
+  const downloaded = panel.waitForEvent("download");
+  await panel.getByRole("button", { name: "Download" }).click();
+  const ciphertext = await readFile(await (await downloaded).path(), "utf8");
+
+  // ── the assertion this test exists for, part one ──────────────────
+  // WHICH keys the file is encrypted to, read straight off its own
+  // header. "It still decrypts" cannot tell an excluded key from an
+  // included one; a missing stanza tag can.
+  expect(ageStanzaTags(ciphertext).sort()).toEqual(
+    [keys[0], keys[2], keys[3]].map((k) => k.stanzaTag).sort(),
+  );
+
+  // ── part two: the same fact, in the terms the user experiences ────
+  // Forced onto the disabled key's identity (the panel would otherwise
+  // helpfully pick one that works), the message does not open.
+  await unlockAllKeys(panel);
+  await setWorkspaceMode(panel, "Decrypt");
+  await panel.locator("textarea").first().fill(ciphertext);
+  await decryptWithIdentity(panel, off.comment);
+  await panel.getByRole("button", { name: /^decrypt$/i }).click();
+  await expect(panel.getByRole("alert")).toContainText(
+    /isn't encrypted to any of your SSH keys/,
+  );
+  await expect(panel.getByText(MESSAGE)).toHaveCount(0);
+
+  // Positive control for that failure: the ciphertext is fine, and an
+  // identity that was NOT turned off opens it. Without this, "decryption
+  // failed" would also be satisfied by an encrypt that produced garbage.
+  await decryptWithIdentity(panel, keys[2].comment);
+  await panel.getByRole("button", { name: /^decrypt$/i }).click();
+  await expect(panel.getByText(MESSAGE).first()).toBeVisible();
+});
+
+test("the last key in use on a contact cannot be turned off", async ({
+  context,
+  panel,
+}) => {
+  // Two keys, so one toggle reaches the boundary. No own identities are
+  // needed: this is about the control, not about what decrypts.
+  const keys = generateSshKeys(2);
+  await stubGithubKeys(
+    context,
+    keys.map((k) => k.publicLine),
+  );
+  await onboardWithPasswordSkipKey(panel, PASSWORD);
+  await lookUpGithubUser(panel, GITHUB_USER);
+  await panel.getByRole("button", { name: "Import contact" }).click();
+  await expect(panel.getByRole("region", { name: "Import key" })).toBeHidden();
+
+  await openContactDetails(panel, `${GITHUB_USER} (GitHub)`);
+  await recipientRow(panel, keys[0].fingerprint)
+    .getByRole("button", { name: "Don't use", exact: true })
+    .click();
+  await expect(recipientRow(panel, keys[0].fingerprint)).toContainText(
+    "Not used",
+  );
+
+  // Dimmed WITH a reason rather than hidden -- and genuinely inert, not
+  // merely styled: `toBeDisabled` is the assertion, because a control
+  // that only LOOKS disabled would still encrypt to nobody when clicked.
+  const last = recipientRow(panel, keys[1].fingerprint).getByRole("button", {
+    name: "Don't use",
+    exact: true,
+  });
+  await expect(last).toBeDisabled();
+  await expect(last).toHaveAttribute(
+    "title",
+    /only key left in use.*encrypt messages to nobody/,
+  );
+
+  // Nothing changed underneath it either: still exactly one key off.
+  const [contact] = await readContacts(panel);
+  expect(contact.recipients?.filter((r) => r.disabled)).toHaveLength(1);
 });

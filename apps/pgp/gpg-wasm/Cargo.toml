@@ -26,6 +26,15 @@ argon2 = "0.5"
 # `aes` also comes in via aes-gcm; declared direct for the CFB fallback
 # that decrypts GnuPG's zero-padded ECC secret keys (see cfb_decrypt).
 aes = "0.8"
+# CFB-128 for that same fallback. The mode is a library implementation,
+# never hand-rolled here. Already in Cargo.lock at 0.8.2 via sequoia's
+# crypto-rust backend, so declaring it direct adds no crate to the build
+# graph -- the same precedent as `aes`/`rsa`/`rand_chacha` above.
+cfb-mode = "0.8"
+# Constant-time equality for the secret-key checksum and SHA-1 digest,
+# which are what decide "was the passphrase correct". Already in
+# Cargo.lock at 2.6.1 (sequoia, aes-gcm, rsa and curve25519 all pull it).
+subtle = "2.6"
 aes-gcm = "0.10"
 hkdf = "0.12"
 sha2 = { version = "0.10", features = ["oid"] }

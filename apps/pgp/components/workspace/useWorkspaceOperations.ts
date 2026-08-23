@@ -11,6 +11,7 @@ import * as ageOps from "../../lib/age/operations";
 import { signZipWithCrxKey, verifyCrxFile } from "../../lib/crx/operations";
 import {
   buildEncryptRecipients,
+  resolveSelectedRecipients,
   toSelectedRecipient,
 } from "../../lib/encrypt-recipients";
 import { AppError } from "../../lib/errors/app-error";
@@ -182,9 +183,11 @@ export function useWorkspaceOperations({
 
   /** The keys behind the current recipient chips. */
   function selectedRecipientKeys() {
-    return s.selectedRecipientIds
-      .map((id) => allPublicKeys.find((k) => k.keyId === id))
-      .filter((k) => k !== undefined);
+    // Contacts before own keys -- see `resolveSelectedRecipients`. A
+    // contact's keyId is its head recipient's fingerprint, so an own key
+    // with that fingerprint used to win the lookup and silently drop the
+    // contact's other recipients.
+    return resolveSelectedRecipients(s.selectedRecipientIds, contacts, myKeys);
   }
 
   /** Which engine the current selection encrypts with -- and therefore

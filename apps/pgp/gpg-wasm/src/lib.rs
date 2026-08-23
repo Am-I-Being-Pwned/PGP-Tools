@@ -99,6 +99,7 @@ use aes_gcm::{Aes256Gcm, KeyInit, Nonce};
 use argon2::{Algorithm, Argon2, Params, Version};
 use hkdf::Hkdf;
 use sha2::Sha256;
+use subtle::ConstantTimeEq;
 use zeroize::{Zeroize, Zeroizing};
 
 use openpgp::cert::prelude::*;
@@ -1430,7 +1431,42 @@ where
 {
     match key.clone().decrypt_secret(password) {
         Ok(k) => Ok(k),
-        Err(_) => decrypt_gpg_padded_secret(key, password),
+        Err(e) => decrypt_gpg_padded_secret(key, password, &e),
+    }
+}
+
+/// Was a `decrypt_secret` failure the one the manual fallback exists
+/// for -- Sequoia's strict secret-MPI parser refusing GnuPG's padded
+/// scalar?
+///
+/// What this *can* distinguish: `Error::MalformedMPI` from every other
+/// error kind. In particular Sequoia rejects protection schemes RFC 9580
+/// forbids (Argon2 without AEAD, implicit/simple S2K on a v6 key,
+/// malleable CFB on a v6 key) with `InvalidOperation` *before* touching
+/// the ciphertext -- and our manual path does not re-implement those
+/// checks, so routing those errors here would have been a genuine
+/// validation downgrade. They no longer reach it.
+///
+/// It also excludes the "checksum wrong" MalformedMPI: that one means
+/// the decrypted MPIs parsed cleanly and only the trailing checksum
+/// failed, i.e. the plaintext was well-formed and the passphrase is
+/// simply wrong. Matching on the message is unpleasant, but Sequoia
+/// gives both failures the same variant, so the message is the only
+/// signal there is; if it ever stops matching we fall back more often,
+/// never less safely.
+///
+/// What this *cannot* distinguish: a padded-MPI parse failure from a
+/// wrong-passphrase parse failure. Sequoia deliberately collapses every
+/// secret-MPI parse error into a single uniform
+/// `MalformedMPI("Details omitted, parsing secret")` so the error kind
+/// cannot leak anything about the secret, so both land in this arm. The
+/// manual path re-verifies the checksum itself, so a wrong passphrase
+/// still ends as "Incorrect passphrase" -- it just costs one more S2K +
+/// CFB pass to get there.
+fn is_padded_mpi_failure(e: &anyhow::Error) -> bool {
+    match e.downcast_ref::<openpgp::Error>() {
+        Some(openpgp::Error::MalformedMPI(msg)) => !msg.contains("checksum"),
+        _ => false,
     }
 }
 
@@ -1445,6 +1481,7 @@ where
 fn decrypt_gpg_padded_secret<R>(
     key: openpgp::packet::Key<openpgp::packet::key::SecretParts, R>,
     password: &openpgp::crypto::Password,
+    sequoia_err: &anyhow::Error,
 ) -> Result<openpgp::packet::Key<openpgp::packet::key::SecretParts, R>, String>
 where
     R: openpgp::packet::key::KeyRole,
@@ -1482,6 +1519,17 @@ where
         return Err(WRONG.into());
     }
 
+    // Everything above is diagnosis, not decryption: it decides which
+    // message the user sees and touches no ciphertext. Only here do we
+    // commit to redoing the crypto by hand, and only for the failure
+    // this function was written for -- see `is_padded_mpi_failure`.
+    // Anything else (a protection scheme Sequoia refused outright, a
+    // truncated packet) is not something a second, less strict attempt
+    // should be given a chance at.
+    if !is_padded_mpi_failure(sequoia_err) {
+        return Err(WRONG.into());
+    }
+
     let sym = e.algo();
     let key_size = sym.key_size().map_err(|_| WRONG.to_string())?;
     let block_size = sym.block_size().map_err(|_| WRONG.to_string())?;
@@ -1509,7 +1557,11 @@ where
                 .for_digest();
             ctx.update(body);
             let got = ctx.into_digest().map_err(|_| WRONG.to_string())?;
-            if got.as_slice() != want {
+            // Constant-time: this comparison *is* the passphrase check,
+            // so a variable-time `!=` would leak how many leading bytes
+            // of a guess were right. `ct_eq` on slices also yields a
+            // false `Choice` (not a panic) on a length mismatch.
+            if !bool::from(got.as_slice().ct_eq(want)) {
                 return Err(WRONG.into());
             }
             body
@@ -1520,7 +1572,8 @@ where
             let got = body
                 .iter()
                 .fold(0u16, |acc, b| acc.wrapping_add(*b as u16));
-            if got.to_be_bytes() != want {
+            // Constant-time for the same reason as the SHA-1 arm above.
+            if !bool::from(got.to_be_bytes().ct_eq(want)) {
                 return Err(WRONG.into());
             }
             body
@@ -1545,32 +1598,43 @@ where
     Ok(key.parts_into_public().add_secret(material.into()).0)
 }
 
-/// Minimal CFB decryption (OpenPGP secret-key protection mode) for the
+/// CFB-128 decryption (OpenPGP's secret-key protection mode) for the
 /// AES family. Used only by the gpg-padded fallback above; the checksum
 /// verified afterwards authenticates the result.
+///
+/// The mode itself comes from RustCrypto's `cfb-mode` -- crypto is never
+/// implemented in-house here. That is not just hygiene: a hostile key
+/// file chooses the cipher, the IV and the ciphertext length, and the
+/// hand-rolled feedback loop this replaced was panic-free only because
+/// its caller happened never to pass an 8-byte-block cipher or an empty
+/// IV. `new_from_slices` turns every such size mismatch into an `Err`,
+/// and a partial trailing block is the library's problem rather than
+/// ours. A panic here would not be a failed import: `panic = abort`
+/// semantics in wasm tear the whole module down, side panel and
+/// unlocked keys included.
+///
+/// The AES-only restriction stays, but it is now a policy choice about
+/// what we accept from an untrusted key file rather than the thing
+/// keeping the code memory-safe.
 fn cfb_decrypt(
     sym: SymmetricAlgorithm,
     key: &[u8],
     iv: &[u8],
     ciphertext: &[u8],
 ) -> Result<Vec<u8>, String> {
-    use aes::cipher::{Block, BlockEncrypt};
+    use cfb_mode::cipher::{AsyncStreamCipher, BlockCipher, BlockEncryptMut, KeyIvInit};
 
-    fn run<C: BlockEncrypt + aes::cipher::KeyInit>(
-        key: &[u8],
-        iv: &[u8],
-        ciphertext: &[u8],
-    ) -> Result<Vec<u8>, String> {
-        let cipher = C::new_from_slice(key).map_err(|_| "bad key size".to_string())?;
-        let mut feedback = Zeroizing::new(iv.to_vec());
-        let mut out = Vec::with_capacity(ciphertext.len());
-        for chunk in ciphertext.chunks(feedback.len()) {
-            let mut keystream = Block::<C>::clone_from_slice(&feedback);
-            cipher.encrypt_block(&mut keystream);
-            out.extend(chunk.iter().zip(keystream.iter()).map(|(c, k)| c ^ k));
-            feedback[..chunk.len()].copy_from_slice(chunk);
-        }
-        Ok(out)
+    fn run<C>(key: &[u8], iv: &[u8], ciphertext: &[u8]) -> Result<Vec<u8>, String>
+    where
+        C: BlockEncryptMut + BlockCipher + aes::cipher::KeyInit,
+    {
+        let mut buf = ciphertext.to_vec();
+        cfb_mode::Decryptor::<C>::new_from_slices(key, iv)
+            .map_err(|_| {
+                "This key's protection header is malformed (bad key or IV size)".to_string()
+            })?
+            .decrypt(&mut buf);
+        Ok(buf)
     }
 
     match sym {

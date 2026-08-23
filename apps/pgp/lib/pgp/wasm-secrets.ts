@@ -761,9 +761,22 @@ export async function unlockSshIdentityWithPrf(
  *   in:  age ciphertext (NOT secret); an opaque SSH_KEY_STORE handle
  *   out: the decrypted plaintext -- the user's message, which is secret
  *        user data (not key material) and crosses by design
- *   contract: caller SHOULD `.fill(0)` the returned buffer once the
- *             plaintext has been handed to the UI. The SSH key itself
- *             stays in wasm behind `handle`.
+ *   contract: the returned buffer is a JS-owned copy (wasm-bindgen
+ *             `.slice()`s it out of linear memory and frees the Rust
+ *             side), so it is the caller's to scrub. Caller MUST
+ *             `.fill(0)` it once the plaintext has been handed to the
+ *             UI in another form, and MUST NOT when the buffer itself
+ *             IS what it hands on -- scrubbing then returns zeros.
+ *             `lib/age/operations.ts` `decryptWithHandle` is the only
+ *             caller and does both: it fills on the UTF-8 branch (where
+ *             the decoded string is the result) and passes ownership on
+ *             the binary branch, where the workspace's
+ *             `zeroizeResultBytes` wipes it at master lock instead.
+ *             WHAT THAT BUYS, so the contract is not read as more than
+ *             it is: one fewer live copy. The decoded string is an
+ *             immutable V8 string and is not zeroizable at all, and it
+ *             outlives this buffer by far. The SSH key itself stays in
+ *             wasm behind `handle` and never crosses.
  *
  * Lives here rather than in `wasm-public.ts` -- where the equivalent
  * `decryptWithHandle` sits -- because `age.rs` files it under its own

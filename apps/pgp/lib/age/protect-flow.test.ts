@@ -59,7 +59,7 @@ vi.mock("../protection/webauthn-prf", () => webauthn);
 import { AppError } from "../errors/app-error";
 import {
   closeSshIdentity,
-  githubContact,
+  groupContact,
   importSshIdentity,
   openSshIdentity,
   sshContact,
@@ -333,7 +333,7 @@ describe("sshContact", () => {
   });
 });
 
-describe("githubContact", () => {
+describe("groupContact", () => {
   const SECOND = {
     keyId: "SHA256:secondsecondsecondsecondsecondsecondsecond",
     armored: "ssh-ed25519 AAAAsecond",
@@ -351,7 +351,7 @@ describe("githubContact", () => {
     // single-key fetched contact must serialise as the plain single-key
     // record a pasted `.pub` line writes, so there is nothing to migrate
     // and an older build reads it unchanged.
-    const contact = githubContact(
+    const contact = groupContact(
       { label: "octocat (GitHub)", source, members: [head], rejected: [] },
       1234,
     );
@@ -391,7 +391,7 @@ describe("githubContact", () => {
     // `recipients[0]` disagrees with `keyId`/`armoredPublicKey` is
     // dropped on load, because an older build would encrypt to a key
     // this build never lists.
-    const contact = githubContact(
+    const contact = groupContact(
       {
         label: "octocat (GitHub)",
         source,
@@ -405,9 +405,56 @@ describe("githubContact", () => {
     expect(contact.recipients?.[0].armored).toBe(contact.armoredPublicKey);
   });
 
+  /**
+   * A group the USER assembled: three pasted keys whose comments did not
+   * agree, filed under a name they typed (see `prepareImport`'s
+   * `groupProposal`).
+   *
+   * It goes through this same constructor, and that is the property --
+   * two ways to build a contact is how the two shapes drift apart, and a
+   * hand-grouped contact must be indistinguishable from a fetched one
+   * except for the one thing that genuinely differs: it has no source,
+   * because a hand-supplied contact has no identity beyond its keys.
+   */
+  it("builds a hand-grouped contact the same way, minus the source", () => {
+    const THIRD = {
+      keyId: "SHA256:thirdthirdthirdthirdthirdthirdthirdthirdth",
+      armored: "ssh-ed25519 AAAAthird",
+      algorithm: "ssh-ed25519",
+    };
+    const contact = groupContact(
+      {
+        label: "Alice (all machines)",
+        members: [head, SECOND, THIRD],
+        rejected: [],
+      },
+      1234,
+    );
+    // One contact, the user's name, all three keys.
+    expect(contact.userIds).toEqual(["Alice (all machines)"]);
+    expect(contact.recipients).toHaveLength(3);
+    expect(contact.recipients?.[0].keyId).toBe(contact.keyId);
+    // Absent, never `source: undefined`: the omit-don't-emit rule the
+    // whole record follows.
+    expect("source" in contact).toBe(false);
+    // Byte-identical to the fetched shape apart from that one field, so
+    // nothing downstream can tell a hand-made group from a lookup.
+    const fetched = groupContact(
+      {
+        label: "Alice (all machines)",
+        source,
+        members: [head, SECOND, THIRD],
+        rejected: [],
+      },
+      1234,
+    );
+    const { source: _dropped, ...rest } = fetched;
+    expect(JSON.stringify(contact)).toBe(JSON.stringify(rest));
+  });
+
   it("refuses a group with no usable key rather than writing a headless record", () => {
     expect(() =>
-      githubContact({
+      groupContact({
         label: "octocat (GitHub)",
         source,
         members: [],

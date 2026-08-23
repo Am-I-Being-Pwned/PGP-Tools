@@ -624,7 +624,21 @@ base.describe.serial("upgrade from 1.4.4: passkey (WebAuthn PRF) vault", () => {
       `run the cross-version upgrade test.`,
   );
 
-  let phase1: PasskeyPhaseOne;
+  // `| undefined` is the honest type, not a concession to the linter:
+  // if `beforeAll` throws before this is assigned, `afterAll` still runs
+  // and would dereference it. Typing it as always-assigned made the
+  // guard below look redundant to `no-unnecessary-condition` -- deleting
+  // the guard to satisfy that would have introduced the crash it
+  // prevents.
+  let phase1: PasskeyPhaseOne | undefined;
+
+  /** `phase1`, narrowed. Assigned in `beforeAll`; if that threw, every
+   *  test below would otherwise run against a half-built fixture and
+   *  fail somewhere confusing. This says which step actually broke. */
+  const ph = (): PasskeyPhaseOne => {
+    if (!phase1) throw new Error("phase-one setup did not complete");
+    return phase1;
+  };
 
   /**
    * The 1.4.4 half, run once. The three tests below are three separate
@@ -742,9 +756,13 @@ base.describe.serial("upgrade from 1.4.4: passkey (WebAuthn PRF) vault", () => {
    * credential restored and the PRF replay armed.
    */
   async function openUpgraded(options: { corrupt?: boolean } = {}) {
+    // Narrow once, loudly. `phase1` is assigned in `beforeAll`; if that
+    // threw, every assertion in this file would otherwise run against a
+    // half-built fixture and fail somewhere confusing. Failing here says
+    // which step actually broke.
     const context = await launchWithProfile(
-      phase1.extensionDir,
-      phase1.userDataDir,
+      ph().extensionDir,
+      ph().userDataDir,
     );
     const extensionId = await getExtensionId(context);
     // If this ever fails, every assertion below would be running against
@@ -752,12 +770,12 @@ base.describe.serial("upgrade from 1.4.4: passkey (WebAuthn PRF) vault", () => {
     expect(
       extensionId,
       "extension id must be identical across the upgrade",
-    ).toBe(phase1.extensionId);
+    ).toBe(ph().extensionId);
 
     const panel = await context.newPage();
     const auth = await addPrfAuthenticatorWithId(context, panel);
-    await restoreCredentials(auth, phase1.credentials);
-    await installPrfReplay(panel, phase1.prfRecords, options);
+    await restoreCredentials(auth, ph().credentials);
+    await installPrfReplay(panel, ph().prfRecords, options);
     await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
     await panel.bringToFront();
     return { context, panel, auth };
@@ -803,7 +821,7 @@ base.describe.serial("upgrade from 1.4.4: passkey (WebAuthn PRF) vault", () => {
               ).toBe(true);
             }
             expect(requests[0].credentialId).toBe(
-              phase1.masterProtection.credentialId,
+              ph().masterProtection.credentialId,
             );
           },
         );
@@ -814,7 +832,7 @@ base.describe.serial("upgrade from 1.4.4: passkey (WebAuthn PRF) vault", () => {
             // A rewrite would be survivable but is worth knowing about:
             // it would mean a downgrade to 1.4.4 is no longer safe.
             const after = await readMasterProtection(panel);
-            expect(after).toEqual(phase1.masterProtection);
+            expect(after).toEqual(ph().masterProtection);
           },
         );
       } finally {
@@ -844,11 +862,13 @@ base.describe.serial("upgrade from 1.4.4: passkey (WebAuthn PRF) vault", () => {
           await panel
             .getByRole("button", { name: "Unlock", exact: true })
             .click();
-          await expect(panel.getByRole("button", { name: "Lock" })).toBeVisible(
-            {
-              timeout: 20_000,
-            },
-          );
+          // exact: the default name match is a case-insensitive SUBSTRING,
+          // so "Lock" also matches the "Unlock" button that is on screen
+          // while the key is still locked -- this assertion would pass
+          // against the state it exists to disprove. See e2e/helpers.ts.
+          await expect(
+            panel.getByRole("button", { name: "Lock", exact: true }),
+          ).toBeVisible({ timeout: 20_000 });
         });
 
         await base.step(
@@ -857,7 +877,7 @@ base.describe.serial("upgrade from 1.4.4: passkey (WebAuthn PRF) vault", () => {
             // THE assertion: an unsealed blob that merely looks intact
             // would still show an unlocked card. Only a real private key
             // recovers the sentinel.
-            await decryptInWorkspace(panel, phase1.armored, PASSKEY_SECRET);
+            await decryptInWorkspace(panel, ph().armored, PASSKEY_SECRET);
           },
         );
 
@@ -866,7 +886,7 @@ base.describe.serial("upgrade from 1.4.4: passkey (WebAuthn PRF) vault", () => {
           async () => {
             const keyring = await readStoreRecords(panel, STORAGE_KEYRING);
             expect(keyring.length).toBe(1);
-            expect(keyring[0].protection).toEqual(phase1.keyProtection);
+            expect(keyring[0].protection).toEqual(ph().keyProtection);
           },
         );
       } finally {

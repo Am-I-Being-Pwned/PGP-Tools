@@ -19,7 +19,7 @@ import { revocationCertificateWithHandle } from "../../lib/pgp/wasm";
 import { isPgpRecord, isSshRecord } from "../../lib/storage/key-kind";
 import { toast } from "../../lib/toast";
 import { formatAlgorithm, formatFingerprint } from "../../lib/utils/formatting";
-import { parseUserId } from "../../lib/utils/key-naming";
+import { displayUserId, parseUserId } from "../../lib/utils/key-naming";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 import { ConfirmPage } from "../shared/ConfirmPage";
 import { RenamePage } from "../shared/RenamePage";
@@ -83,12 +83,35 @@ interface KeysViewProps {
   onRenameKey?: (keyId: string, alias: string) => Promise<void>;
   /** Set the user-facing label on a CRX signing key. */
   onRenameCrxKey?: (extensionId: string, label: string) => Promise<void>;
+  /** Set a local display alias on a contact. Without it a contact is
+   *  stuck with whatever `userIds[0]` it was imported with -- which for
+   *  an SSH key is the key's comment, and may be `user@laptop`, may
+   *  differ between one person's keys, or may not exist at all. */
+  onRenameContact?: (keyId: string, alias: string) => Promise<void>;
 }
 
 /** A key whose local display name is being edited. */
 type RenameTarget =
   | { kind: "own"; keyBlob: ProtectedKeyBlob }
-  | { kind: "crx"; keyBlob: CrxSigningKeyBlob };
+  | { kind: "crx"; keyBlob: CrxSigningKeyBlob }
+  | { kind: "contact"; contact: PublicContactKey };
+
+/**
+ * What the subject is REALLY called, shown under the rename field so a
+ * local name never hides the identity it stands in for.
+ *
+ * One function for all three targets because the fallback chain is the
+ * thing that must not drift: an SSH key (own or contact) has no User IDs
+ * at all, only a comment, and may not even have that -- hence the
+ * fingerprint at the end of the chain. A CRX signing key has no identity
+ * beyond its extension ID.
+ */
+function realIdentityOf(target: RenameTarget): string {
+  if (target.kind === "crx") return target.keyBlob.extensionId;
+  const record = target.kind === "own" ? target.keyBlob : target.contact;
+  const { name, comment } = parseUserId(record.userIds[0] ?? record.keyId);
+  return comment ? `${name} (${comment})` : name;
+}
 
 /** A pending deletion, confirmed on its own slide-over page. */
 type DeleteTarget =
@@ -142,6 +165,7 @@ export function KeysView({
   onSetDefaultKey,
   onRenameKey,
   onRenameCrxKey,
+  onRenameContact,
 }: KeysViewProps) {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -496,6 +520,11 @@ export function KeysView({
           contacts={contacts}
           contactsLocked={contactsLocked}
           justImported={justImported}
+          onRequestRename={
+            onRenameContact
+              ? (contact) => nav.push({ page: "rename", target: { kind: "contact", contact } })
+              : undefined
+          }
           onImportText={(text) =>
             nav.push({ page: "import", initialArmored: text })
           }
@@ -557,36 +586,45 @@ export function KeysView({
           }
           if (route.page === "rename") {
             const target = route.target;
-            const isOwn = target.kind === "own";
             // Clean display name from the first User ID ("Name <email>" ->
             // "Name"), so the field starts from the current name to tweak
             // rather than blank. CRX keys have no such identity; fall back
             // to their label only.
-            const realIdentity = isOwn
-              ? (() => {
-                  const { name, comment } = parseUserId(
-                    target.keyBlob.userIds[0] ?? target.keyBlob.keyId,
-                  );
-                  return comment ? `${name} (${comment})` : name;
-                })()
-              : target.keyBlob.extensionId;
-            const currentName = isOwn
-              ? (target.keyBlob.alias ?? realIdentity)
-              : (target.keyBlob.label ?? "");
+            const realIdentity = realIdentityOf(target);
+            const currentName =
+              target.kind === "crx"
+                ? (target.keyBlob.label ?? "")
+                : ((target.kind === "own"
+                    ? target.keyBlob.alias
+                    : target.contact.alias) ?? realIdentity);
             return (
               <RenamePage
                 key={entry.id}
-                title={isOwn ? "Rename key" : "Rename signing key"}
+                title={
+                  target.kind === "own"
+                    ? "Rename key"
+                    : target.kind === "crx"
+                      ? "Rename signing key"
+                      : "Rename contact"
+                }
                 fieldLabel="Display name"
                 initialValue={currentName}
                 hint={`Shown in place of ${realIdentity}. This is a local label only.`}
-                placeholder={isOwn ? "e.g. Work laptop" : "e.g. My Extension"}
+                placeholder={
+                  target.kind === "own"
+                    ? "e.g. Work laptop"
+                    : target.kind === "crx"
+                      ? "e.g. My Extension"
+                      : "e.g. Alice (all machines)"
+                }
                 onCancel={nav.pop}
                 onSave={async (value) => {
-                  if (isOwn) {
+                  if (target.kind === "own") {
                     await onRenameKey?.(target.keyBlob.keyId, value);
-                  } else {
+                  } else if (target.kind === "crx") {
                     await onRenameCrxKey?.(target.keyBlob.extensionId, value);
+                  } else {
+                    await onRenameContact?.(target.contact.keyId, value);
                   }
                   // Reveal the (refreshed) list beneath as this slides out.
                   nav.collapseToTop();
@@ -610,12 +648,13 @@ export function KeysView({
                     : undefined
                 }
                 onRename={
-                  target.kind === "own" && onRenameKey
-                    ? () =>
-                        nav.push({
-                          page: "rename",
-                          target: { kind: "own", keyBlob: target.keyBlob },
-                        })
+                  // A contact reaches the SAME rename page as an own key:
+                  // the details target union is the rename target union
+                  // for these two members, so there is nothing to
+                  // translate and no second page to keep in step.
+                  (target.kind === "own" && onRenameKey) ||
+                  (target.kind === "contact" && onRenameContact)
+                    ? () => nav.push({ page: "rename", target })
                     : undefined
                 }
                 isDefault={
@@ -834,9 +873,14 @@ function DeleteSummary({ target }: { target: DeleteTarget }) {
     );
   }
   const isOwn = target.kind === "own";
-  const userIds = isOwn ? target.keyBlob.userIds : target.contact.userIds;
   const keyId = isOwn ? target.keyBlob.keyId : target.contact.keyId;
-  const name = userIds[0] ?? "Unknown";
+  // The name the user knows this contact by, alias included -- removing
+  // "Alice (all machines)" must not be confirmed against a `user@host`
+  // comment they have never seen. Own keys keep their real identity: the
+  // confirm prompt above asks the user to type it.
+  const name = isOwn
+    ? (target.keyBlob.userIds[0] ?? "Unknown")
+    : (displayUserId(target.contact) ?? "Unknown");
   return (
     <>
       <p className="font-medium">{name}</p>
@@ -856,6 +900,7 @@ function ContactsList({
   contacts,
   contactsLocked,
   onRequestRemove,
+  onRequestRename,
   onEncryptTo,
   onShowDetails,
   advancedMode,
@@ -869,6 +914,9 @@ function ContactsList({
   contacts: PublicContactKey[];
   contactsLocked: boolean;
   onRequestRemove: (contact: PublicContactKey) => void;
+  /** Absent when the host cannot persist a rename, which hides the
+   *  menu item rather than offering one that silently does nothing. */
+  onRequestRename?: (contact: PublicContactKey) => void;
   onEncryptTo?: (keyId: string) => void;
   onShowDetails: (contact: PublicContactKey) => void;
   advancedMode?: boolean;
@@ -888,7 +936,10 @@ function ContactsList({
   const filtered = search
     ? contacts.filter((c) => {
         const q = search.toLowerCase();
+        // Both names, not just the displayed one: after a rename the
+        // real identity is still how the user might look for them.
         return (
+          (displayUserId(c) ?? "").toLowerCase().includes(q) ||
           (c.userIds[0] ?? "").toLowerCase().includes(q) ||
           c.keyId.toLowerCase().includes(q)
         );
@@ -942,8 +993,11 @@ function ContactsList({
                     onDownloadPublicKey={() =>
                       downloadPublicKey(
                         c.armoredPublicKey,
-                        parseUserId(c.userIds[0] ?? "").name || c.keyId,
+                        parseUserId(displayUserId(c) ?? "").name || c.keyId,
                       )
+                    }
+                    onRename={
+                      onRequestRename ? () => onRequestRename(c) : undefined
                     }
                     onShowDetails={() => onShowDetails(c)}
                     advancedMode={advancedMode}

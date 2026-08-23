@@ -42,6 +42,7 @@ import {
 } from "../../lib/actions/definitions";
 import {
   buildEncryptRecipients,
+  resolveSelectedRecipients,
   toSelectedRecipient,
 } from "../../lib/encrypt-recipients";
 import { requestUnlimitedHistoryStorage } from "../../lib/storage/history";
@@ -302,9 +303,12 @@ export function WorkspaceView({
   // ("ssh" = age, "pgp" = OpenPGP, null = nothing selected yet), and what
   // that rules out. The picker prevents a mixed selection, so this is a
   // single answer rather than a conflict to resolve.
-  const selectedRecipientKeys = s.selectedRecipientIds
-    .map((id) => allPublicKeys.find((k) => k.keyId === id))
-    .filter((k) => k !== undefined);
+  // Contacts before own keys -- see `resolveSelectedRecipients`.
+  const selectedRecipientKeys = resolveSelectedRecipients(
+    s.selectedRecipientIds,
+    contacts,
+    myKeys,
+  );
   const encryptEngine = selectionEngine(selectedRecipientKeys);
   // age has no signing operation at all, so the Sign toggle can't apply.
   const signBlockedReason =

@@ -20,7 +20,10 @@ import {
 
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
-import { formatKeyDisplayName } from "../../lib/utils/key-naming";
+import {
+  displayUserId,
+  formatKeyDisplayName,
+} from "../../lib/utils/key-naming";
 import { KeyDetailsButton } from "../keys/KeyDetailsButton";
 
 type AnyKey = ProtectedKeyBlob | PublicContactKey;
@@ -38,7 +41,9 @@ interface KeySelectorProps {
 }
 
 function getKeyDisplay(key: AnyKey): { name: string; detail: string } {
-  const userId = key.userIds[0];
+  // The local alias when there is one -- through the shared accessor, so
+  // a key renamed in the Keys tab is renamed here too.
+  const userId = displayUserId(key);
   if (!userId) return { name: key.keyId.slice(-8).toUpperCase(), detail: "" };
   return formatKeyDisplayName(userId);
 }

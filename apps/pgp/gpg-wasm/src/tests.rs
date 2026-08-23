@@ -1050,6 +1050,48 @@ OO5a/hK/DR12WoUg1lFspDebSz2rFz0A
     assert_eq!(err, "Incorrect passphrase");
 }
 
+/// The CFB fallback takes its cipher, key and IV from an untrusted key
+/// file, so every size mismatch must come back as an `Err`, never a
+/// panic -- in wasm a panic aborts the module and takes the side panel,
+/// with its unlocked keys, down with it. The hand-rolled feedback loop
+/// this replaced was panic-free only because the caller never handed it
+/// an 8-byte-block cipher or an empty IV; now the guarantee comes from
+/// `cfb-mode`'s own `Result`-returning constructor, so it holds
+/// regardless of what the caller does.
+#[test]
+fn cfb_decrypt_rejects_bad_sizes_instead_of_panicking() {
+    let ct = [0u8; 48];
+
+    // Key too short for AES256 (needs 32 bytes).
+    assert!(crate::cfb_decrypt(SymmetricAlgorithm::AES256, &[0u8; 16], &[0u8; 16], &ct).is_err());
+    // Key too long for AES128 (needs 16).
+    assert!(crate::cfb_decrypt(SymmetricAlgorithm::AES128, &[0u8; 32], &[0u8; 16], &ct).is_err());
+    // IV that is not one AES block. An 8-byte IV is exactly what a
+    // 64-bit-block legacy cipher would have produced, and is what used
+    // to make `Block::clone_from_slice` panic.
+    assert!(crate::cfb_decrypt(SymmetricAlgorithm::AES256, &[0u8; 32], &[0u8; 8], &ct).is_err());
+    // Empty IV: the old loop's `chunks(0)` panicked outright.
+    assert!(crate::cfb_decrypt(SymmetricAlgorithm::AES256, &[0u8; 32], &[], &ct).is_err());
+
+    // Non-AES ciphers stay refused, with the re-export advice intact.
+    let err =
+        crate::cfb_decrypt(SymmetricAlgorithm::Twofish, &[0u8; 32], &[0u8; 16], &ct).unwrap_err();
+    assert!(err.contains("--s2k-cipher-algo AES256"), "{err}");
+
+    // Well-formed sizes still work, including a ciphertext that is not
+    // a whole number of blocks and an empty one (both reachable from a
+    // truncated key packet).
+    for len in [0usize, 1, 15, 16, 17, 48] {
+        assert!(crate::cfb_decrypt(
+            SymmetricAlgorithm::AES256,
+            &[0u8; 32],
+            &[0u8; 16],
+            &vec![0u8; len],
+        )
+        .is_ok());
+    }
+}
+
 /// A revocation certificate minted on demand for a stored key (the
 /// imported-key backfill path) must actually revoke the cert when
 /// applied, and must be recognized by our own import policy.

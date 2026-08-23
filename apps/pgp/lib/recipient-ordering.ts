@@ -5,7 +5,7 @@
  * each successful encrypt.
  */
 
-import { formatKeyDisplayName } from "./utils/key-naming";
+import { displayUserId, formatKeyDisplayName } from "./utils/key-naming";
 
 /** Maximum number of fingerprints kept in the recents preference, and
  *  the maximum size of the picker's "Recent" section. */
@@ -16,6 +16,10 @@ export const RECENT_RECIPIENTS_CAP = 10;
 export interface RecipientLike {
   keyId: string;
   userIds: string[];
+  /** Local display name, when the user has set one. Absent means "fall
+   *  back to the first User ID" -- read through `displayUserId`, never
+   *  directly, so ordering and search agree with what the picker shows. */
+  alias?: string;
 }
 
 /** An ordered split of the picker's options: `recent` first (in the
@@ -26,7 +30,7 @@ export interface OrderedRecipients<T> {
 }
 
 function displayName(item: RecipientLike): string {
-  return formatKeyDisplayName(item.userIds[0]).name.toLowerCase();
+  return formatKeyDisplayName(displayUserId(item)).name.toLowerCase();
 }
 
 /**
@@ -66,8 +70,12 @@ export function matchesRecipientSearch(
 ): boolean {
   const tokens = query.toLowerCase().split(/\s+/).filter(Boolean);
   if (tokens.length === 0) return true;
-  const { name, detail } = formatKeyDisplayName(item.userIds[0]);
-  const haystack = `${name} ${detail} ${item.keyId}`.toLowerCase();
+  const { name, detail } = formatKeyDisplayName(displayUserId(item));
+  // The real identity stays in the haystack alongside the alias: after a
+  // rename, the name on the certificate is still how someone might look
+  // for the key.
+  const haystack =
+    `${name} ${detail} ${item.userIds[0] ?? ""} ${item.keyId}`.toLowerCase();
   return tokens.every((token) => haystack.includes(token));
 }
 

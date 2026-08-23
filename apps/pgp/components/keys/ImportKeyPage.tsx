@@ -11,7 +11,7 @@ import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import { parseRecipient } from "../../lib/age/operations";
 import {
-  githubContact,
+  groupContact,
   importSshIdentity,
   sshContact,
 } from "../../lib/age/protect-flow";
@@ -126,6 +126,20 @@ export function ImportKeyPage({
    *  the PUBLIC armor only (see IncomingKey). */
   const [incoming, setIncoming] = useState<IncomingKey | null>(null);
   const [secretEncrypted, setSecretEncrypted] = useState(false);
+  /**
+   * The pasted SSH keys as SEPARATE contacts, held while the preview
+   * offers to file them as one.
+   *
+   * Both readings of the same paste are on screen at once (see
+   * `PreparedImport.groupProposal`): `incoming` is the grouped one, this
+   * is what a blank name still produces. Safe for React state -- public
+   * halves only, like `incoming` itself.
+   */
+  const [groupSeparates, setGroupSeparates] = useState<IncomingKey[] | null>(
+    null,
+  );
+  /** The name typed for that group. Blank means "keep them separate". */
+  const [groupName, setGroupName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Secret key material is the crown jewel, so it lives in refs rather than
@@ -144,6 +158,23 @@ export function ImportKeyPage({
 
   const clearSecrets = () => {
     secretArmorRef.current = null;
+    // The credentials typed on the protect step are secrets too, and
+    // unlike the armor above they are in `useState` -- they have to be,
+    // the inputs are controlled. So they get the treatment §5's first row
+    // prescribes for a typed password and `MasterUnlockScreen` applies on
+    // every path including failure: `setX("")`, and let V8 reclaim.
+    // `sourcePassphrase` in particular is the passphrase on the user's
+    // real OpenSSH key file, not one this app minted.
+    //
+    // This is weaker than what the ref above gets, and deliberately not
+    // described as equivalent: a JS string cannot be zeroized, so the
+    // old value survives until GC and the previous fiber's snapshot of
+    // it survives the slide-out animation. It bounds the lifetime rather
+    // than ending it -- which is the whole reason key material is in a
+    // ref and these are the exception.
+    setPassword("");
+    setConfirmPassword("");
+    setSourcePassphrase("");
   };
 
   const resetAndClose = () => {
@@ -171,7 +202,7 @@ export function ImportKeyPage({
           // is -- and `recipientsField` inside it means a user with
           // exactly one key produces the very same record that branch
           // would have written.
-          await onImportPublic(githubContact(key.group));
+          await onImportPublic(groupContact(key.group));
           continue;
         }
         if (key.kind === "ssh-public") {
@@ -285,6 +316,19 @@ export function ImportKeyPage({
 
       const worthImporting = importable(prepared.keys);
 
+      // Several SSH public keys that do not agree on a name. They may be
+      // one person's three machines or three different people, and
+      // nothing in the text says which -- so the preview asks, instead
+      // of the bulk import below quietly filing three contacts the user
+      // then cannot label or merge.
+      if (prepared.groupProposal) {
+        setGroupSeparates(worthImporting);
+        setGroupName("");
+        setIncoming(prepared.groupProposal);
+        setStep("preview");
+        return;
+      }
+
       // A bundle of public keys: import the lot. Previewing five certs
       // one at a time would be worse than the summary toast.
       if (
@@ -389,6 +433,10 @@ export function ImportKeyPage({
         response.username,
         response.lines,
         { contacts: existingContacts },
+        // Keys the worker's caps held back. Passed through so the
+        // preview can say the list is partial instead of asserting
+        // "every key listed above" over a truncated one.
+        { omitted: response.omitted },
       );
       setIncoming(prepared.keys[0]);
       setStep("preview");
@@ -447,6 +495,27 @@ export function ImportKeyPage({
 
   const handleConfirm = () => {
     if (!incoming) return;
+    // The grouping offer. A blank name is a real answer, not a skipped
+    // step: it means today's behaviour, one contact per key.
+    if (groupSeparates) {
+      const name = groupName.trim();
+      if (!name || !incoming.group) {
+        void importPublicKeys(groupSeparates);
+        return;
+      }
+      // The user's name replaces the preview's placeholder on the way to
+      // the ONE constructor every multi-key contact goes through
+      // (`groupContact`), so a hand-grouped contact and a fetched one are
+      // the same record.
+      void importPublicKeys([
+        {
+          ...incoming,
+          userIds: [name],
+          group: { ...incoming.group, label: name },
+        },
+      ]);
+      return;
+    }
     if (isPublicKind(incoming.kind)) {
       void importPublicKeys([incoming]);
       return;
@@ -469,7 +538,13 @@ export function ImportKeyPage({
         return;
       }
       secretArmorRef.current = null;
+      // Back to the source step drops the key, so the passphrase that
+      // was for THAT key file goes with it -- leaving it would also
+      // pre-fill it against whatever key is picked next.
+      setSourcePassphrase("");
       setIncoming(null);
+      setGroupSeparates(null);
+      setGroupName("");
       setStep("source");
     } else {
       resetAndClose();
@@ -813,6 +888,15 @@ export function ImportKeyPage({
             onReveal={() => finish([incoming.keyId], { reveal: true })}
             busy={importing}
             error={error}
+            grouping={
+              groupSeparates
+                ? {
+                    name: groupName,
+                    onNameChange: setGroupName,
+                    separateCount: groupSeparates.length,
+                  }
+                : undefined
+            }
           />
         )}
 

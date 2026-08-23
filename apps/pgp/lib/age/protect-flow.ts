@@ -315,13 +315,21 @@ export function sshContact(
 }
 
 /**
- * A fetched group of SSH public keys as ONE stored contact.
+ * A group of SSH public keys as ONE stored contact.
  *
  * The sibling of {@link sshContact}, here for the same reason that one
  * is here: what an SSH contact's record looks like -- the `kind` marker,
  * the canonical recipient line as "armor", `usableForEncryption` -- is
  * this module's business, and a second hand-rolled copy in the import
  * panel would be free to drift from the one `importSshIdentity` writes.
+ *
+ * The ONLY constructor for a multi-key contact, whichever way the group
+ * was assembled: a GitHub lookup, several pasted lines that agree on a
+ * comment, or several that the user grouped and named by hand. Two ways
+ * to build a contact is how the two shapes drift apart. A hand-made
+ * group carries no {@link ContactSource} -- absent means hand-supplied
+ * on the record too, and `sameSource` refuses to let two source-less
+ * contacts collide.
  *
  * `keyId`/`armoredPublicKey` are the FIRST member's, and the full list
  * goes through `recipientsField`, which writes nothing at all for a
@@ -335,7 +343,7 @@ export function sshContact(
  * contacts backfill off to parse a recipient line as PGP armor on every
  * refresh (see useContacts). SSH keys simply do not expire.
  */
-export function githubContact(
+export function groupContact(
   group: ContactGroup,
   now: number = Date.now(),
 ): PublicContactKey {
@@ -344,7 +352,7 @@ export function githubContact(
     // member is classified `rejected` and never reaches an import -- but
     // a contact whose head is undefined would fail `isValidContact` on
     // the way back OUT of storage, i.e. silently vanish. Refuse here.
-    throw new Error("githubContact: group has no usable keys");
+    throw new Error("groupContact: group has no usable keys");
   }
   const head = group.members[0];
   return {
@@ -357,7 +365,11 @@ export function githubContact(
     lastUsedAt: now,
     usableForEncryption: true,
     expiresAt: null,
-    source: group.source,
+    // Spread conditionally, never `source: group.source`: a hand-made
+    // group has none, and the omit-don't-emit rule the whole record
+    // follows is what keeps a source-less contact serialising the way
+    // a pasted single key already does.
+    ...(group.source ? { source: group.source } : {}),
     ...recipientsField(group.members),
   };
 }

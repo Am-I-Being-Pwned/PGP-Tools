@@ -1,14 +1,17 @@
 import { readFile } from "node:fs/promises";
-import type { Page } from "@playwright/test";
+import type { BrowserContext, Page } from "@playwright/test";
 
 import { expect, test } from "./fixtures";
 import {
   decryptInWorkspace,
   encryptToSelfInWorkspace,
+  generateSshKeys,
   goToKeys,
   importContact,
   importFileInPanel,
   onboardWithPassword,
+  onboardWithPasswordSkipKey,
+  readContacts,
 } from "./helpers";
 import { keyBySlug } from "./keys";
 import { PRIVATE_KEY_FIXTURE } from "./private-key";
@@ -247,4 +250,150 @@ test("key details downloads the public key", async ({ panel }) => {
   const body = await readFile(await file.path(), "utf8");
   expect(body).toContain("BEGIN PGP PUBLIC KEY BLOCK");
   expect(body).not.toContain("PRIVATE KEY");
+});
+
+// ── grouping several pasted SSH public keys ──────────────────────────
+//
+// Pasting 2+ SSH public lines used to bulk-import them, one contact per
+// line, with no way back: the app cannot know whether three `.pub` files
+// are three machines of one person or three different people, and it
+// silently answered "three people". It now asks -- except when the lines
+// answer for themselves by carrying the SAME comment.
+//
+// The property that carries the weight here is a STORAGE one ("exactly
+// one contact holding three recipients"), so these assert on the
+// decrypted contacts store. Counting cards in the DOM cannot tell one
+// contact from a label that matched twice.
+
+/** Paste `text` into the Import Key page's paste box with a real paste
+ *  gesture -- the flow has no typable field, and this feature is reached
+ *  by pasting. */
+async function pasteIntoImport(
+  panel: Page,
+  context: BrowserContext,
+  text: string,
+): Promise<void> {
+  await goToKeys(panel);
+  await panel.getByRole("button", { name: "Import Key" }).click();
+  const box = panel.getByLabel("Paste a key");
+  await expect(box).toBeFocused();
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await panel.evaluate((t) => navigator.clipboard.writeText(t), text);
+  await box.focus();
+  await panel.keyboard.press(
+    process.platform === "darwin" ? "Meta+V" : "Control+V",
+  );
+}
+
+/** The grouping question, as it appears on the preview. */
+function groupNameField(panel: Page) {
+  return panel.getByPlaceholder("e.g. Alice (all machines)");
+}
+
+test("SSH keys that agree on a comment are grouped without asking", async ({
+  panel,
+  context,
+}) => {
+  // The strictest rule that can exist: every line carries a comment and
+  // every comment is byte-identical. The lines have said whose they are,
+  // so there is nothing to ask.
+  const keys = generateSshKeys(3, () => "alice@corp");
+  await onboardWithPasswordSkipKey(panel, PASSWORD);
+  await pasteIntoImport(
+    panel,
+    context,
+    keys.map((k) => k.publicLineWithComment).join("\n"),
+  );
+
+  const page = panel.getByRole("region", { name: "Import key" });
+  await expect(page.getByText("alice@corp").first()).toBeVisible();
+  await expect(page.getByText("3 keys")).toBeVisible();
+  // No question asked -- and the button says "contact", singular, rather
+  // than the "Import 3 contacts" of the undecided case.
+  await expect(groupNameField(panel)).toHaveCount(0);
+  await expect(page.getByText(/^SHA256:/)).toHaveCount(3);
+  await panel.getByRole("button", { name: "Import contact" }).click();
+  await expect(page).toBeHidden();
+
+  const stored = await readContacts(panel);
+  expect(stored).toHaveLength(1);
+  expect(stored[0].userIds).toEqual(["alice@corp"]);
+  expect(stored[0].recipients?.map((r) => r.keyId)).toEqual(
+    keys.map((k) => k.fingerprint),
+  );
+});
+
+test("declining the grouping offer files the keys separately", async ({
+  panel,
+  context,
+}) => {
+  // Comments that do not agree: `root@web01` and `root@db02` share a user
+  // and nothing else. Blank is the default and a real answer -- today's
+  // behaviour, one contact per key.
+  const keys = generateSshKeys(3, (i) => `root@host-${i + 1}`);
+  await onboardWithPasswordSkipKey(panel, PASSWORD);
+  await pasteIntoImport(
+    panel,
+    context,
+    keys.map((k) => k.publicLineWithComment).join("\n"),
+  );
+
+  await expect(groupNameField(panel)).toBeVisible();
+  // The footer states which answer the blank field is, instead of
+  // leaving the user to infer it.
+  const confirm = panel.getByRole("button", { name: "Import 3 contacts" });
+  await expect(confirm).toBeVisible();
+  await confirm.click();
+  await expect(panel.getByRole("region", { name: "Import key" })).toBeHidden();
+
+  const stored = await readContacts(panel);
+  expect(stored).toHaveLength(3);
+  // Three records of one key each -- not one record with three
+  // recipients. `recipients` is written only when there is more than one
+  // key, so its absence is what "a single-key contact" means on disk.
+  expect(stored.map((c) => c.recipients)).toEqual([
+    undefined,
+    undefined,
+    undefined,
+  ]);
+  expect(stored.map((c) => c.keyId).sort()).toEqual(
+    keys.map((k) => k.fingerprint).sort(),
+  );
+});
+
+test("naming the group files one contact holding every key", async ({
+  panel,
+  context,
+}) => {
+  const keys = generateSshKeys(3, (i) => `alice@machine-${i + 1}`);
+  const name = "Alice (all machines)";
+  await onboardWithPasswordSkipKey(panel, PASSWORD);
+  await pasteIntoImport(
+    panel,
+    context,
+    keys.map((k) => k.publicLineWithComment).join("\n"),
+  );
+
+  await groupNameField(panel).fill(name);
+  // Typing a name changes what the button will do, so it changes what
+  // the button says.
+  await panel.getByRole("button", { name: "Import as one contact" }).click();
+  await expect(panel.getByRole("region", { name: "Import key" })).toBeHidden();
+
+  // ── the assertion this test exists for ────────────────────────────
+  // ONE record, holding all three keys, under the name the user gave --
+  // a storage property, so it is read out of storage. A hand-grouped
+  // contact must reach the store in exactly the shape a fetched one
+  // does, which is what makes the encrypt path treat them alike.
+  const stored = await readContacts(panel);
+  expect(stored).toHaveLength(1);
+  expect(stored[0].userIds).toEqual([name]);
+  expect(stored[0].recipients?.map((r) => r.keyId)).toEqual(
+    keys.map((k) => k.fingerprint),
+  );
+
+  // And the name the user typed is what the list calls them.
+  await goToKeys(panel);
+  await expect(panel.getByText(name)).toHaveCount(1);
+  await expect(panel.getByText("3 keys")).toBeVisible();
 });

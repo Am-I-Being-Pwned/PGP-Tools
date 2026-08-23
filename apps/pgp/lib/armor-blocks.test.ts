@@ -2,11 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   looksLikeAgeMessage,
+  looksLikeForeignSshPrivateKey,
   splitAgeBlocks,
   splitArmoredKeyBlocks,
   splitPublicKeyBlocks,
-  looksLikeForeignSshPrivateKey,
   splitSshPrivateKeyBlocks,
+  splitSshPublicKeyCandidateLines,
   splitSshPublicKeyLines,
 } from "./armor-blocks";
 
@@ -134,9 +135,9 @@ describe("splitSshPublicKeyLines", () => {
   it("does not match inside an armored body", () => {
     // Base64 armor lines carry no spaces, so no line inside a block can
     // look like `<type> <base64>`.
-    expect(splitSshPublicKeyLines(sshPrivateBlock("b3BlbnNzaC1rZXktdjEA"))).toEqual(
-      [],
-    );
+    expect(
+      splitSshPublicKeyLines(sshPrivateBlock("b3BlbnNzaC1rZXktdjEA")),
+    ).toEqual([]);
     expect(splitSshPublicKeyLines(publicBlock("mQINBGabc"))).toEqual([]);
   });
 });
@@ -184,7 +185,10 @@ describe("looksLikeAgeMessage", () => {
 describe("looksLikeForeignSshPrivateKey", () => {
   it.each([
     ["a PuTTY .ppk", "PuTTY-User-Key-File-3: ssh-ed25519\nEncryption: none\n"],
-    ["PKCS#8", "-----BEGIN PRIVATE KEY-----\nMC4CAQAw\n-----END PRIVATE KEY-----\n"],
+    [
+      "PKCS#8",
+      "-----BEGIN PRIVATE KEY-----\nMC4CAQAw\n-----END PRIVATE KEY-----\n",
+    ],
     [
       "encrypted PKCS#8",
       "-----BEGIN ENCRYPTED PRIVATE KEY-----\nMIIB\n-----END ENCRYPTED PRIVATE KEY-----\n",
@@ -200,7 +204,10 @@ describe("looksLikeForeignSshPrivateKey", () => {
 
   it.each([
     // A CRX signing key, and the age engine must not steal it.
-    ["an unencrypted PKCS#1 PEM", "-----BEGIN RSA PRIVATE KEY-----\nMIIEow==\n"],
+    [
+      "an unencrypted PKCS#1 PEM",
+      "-----BEGIN RSA PRIVATE KEY-----\nMIIEow==\n",
+    ],
     ["an OpenSSH container", "-----BEGIN OPENSSH PRIVATE KEY-----\nb3Bl\n"],
     ["a PGP private block", "-----BEGIN PGP PRIVATE KEY BLOCK-----\nlQ==\n"],
     ["a .pub line", "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA alice@host"],
@@ -208,5 +215,63 @@ describe("looksLikeForeignSshPrivateKey", () => {
     ["nothing at all", ""],
   ])("leaves %s alone", (_name, text) => {
     expect(looksLikeForeignSshPrivateKey(text)).toBe(false);
+  });
+});
+
+describe("splitSshPublicKeyCandidateLines", () => {
+  // The wide form, for the GitHub path: it forwards a line the engine
+  // will refuse, so the user gets "ECDSA keys are not supported" rather
+  // than "this account has published no keys". See the doc comment on
+  // SSH_PUBLIC_CANDIDATE_LINE -- the narrow matcher above is what caused
+  // that, twice.
+  it.each([
+    ["ecdsa", "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAA"],
+    ["fido", "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9w"],
+    ["fido ecdsa", "sk-ecdsa-sha2-nistp256@openssh.com AAAAInNrLWVjZHNh"],
+    ["dss", "ssh-dss AAAAB3NzaC1kc3MAAACBAO body@host"],
+    ["ed25519", "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIALwHu alice@host"],
+    ["rsa", "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQ"],
+  ])("forwards a %s line", (_label, line) => {
+    expect(splitSshPublicKeyCandidateLines(line)).toEqual([line]);
+  });
+
+  it("still refuses prose, html and bare base64", () => {
+    expect(
+      splitSshPublicKeyCandidateLines("my ssh-ed25519 key is on the laptop"),
+    ).toEqual([]);
+    expect(splitSshPublicKeyCandidateLines("ssh-ed25519 please")).toEqual([]);
+    expect(
+      splitSshPublicKeyCandidateLines("<p>Your account is suspended</p>"),
+    ).toEqual([]);
+    expect(
+      splitSshPublicKeyCandidateLines("AAAAB3NzaC1yc2EAAAADAQABAAABgQ"),
+    ).toEqual([]);
+  });
+
+  it("does not match a real armored body", () => {
+    // Same reason as the narrow matcher: armor lines carry no spaces, so
+    // none of them can look like `<type> <base64>`, and armor HEADER
+    // lines (`Version:`, `Comment:`, `Proc-Type:`) carry a colon the
+    // algorithm token cannot contain.
+    //
+    // This form IS now applied to pasted and dropped text, not only to a
+    // GitHub `key` field -- `import/prepare.ts`, `classify-action.ts`
+    // and `drop-routing.ts` all use it, so this test guards a real path
+    // rather than a hypothetical one. That is exactly why the exclusions
+    // below matter: a paste is arbitrary user text, and mistaking part
+    // of an armored block for a key line would hand the engine garbage.
+    expect(splitSshPublicKeyCandidateLines(publicBlock("mQINBGabc"))).toEqual(
+      [],
+    );
+    expect(
+      splitSshPublicKeyCandidateLines(sshPrivateBlock("b3BlbnNzaC1rZXk")),
+    ).toEqual([]);
+  });
+
+  it("is a superset of the narrow matcher", () => {
+    const text = `${ED25519_PUB}\n${RSA_PUB}`;
+    expect(splitSshPublicKeyCandidateLines(text)).toEqual(
+      splitSshPublicKeyLines(text),
+    );
   });
 });

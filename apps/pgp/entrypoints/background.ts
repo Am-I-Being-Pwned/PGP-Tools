@@ -12,6 +12,7 @@ import { MENU_OPEN_IN_PGP, SESSION_PENDING_OP } from "../lib/constants";
 import { fetchGithubKeys } from "../lib/github/fetch-keys";
 import { isGithubUsername } from "../lib/github/username";
 import { commandToMode } from "../lib/mode-commands";
+import { sweepStalePendingOp } from "../lib/pending-op";
 
 /**
  * Open the side panel and hand it a pending operation. Shared by the
@@ -44,6 +45,14 @@ function openPanelWithOperation(
   // The in-flight storage write keeps the MV3 service worker alive
   // until it commits; the side panel reads the op on mount (or via
   // its storage.onChanged listener when already open).
+  //
+  // `text` is the user's raw selection and goes in UNSEALED. That is not
+  // an oversight: the worker has no wasm instance, so it has no draft
+  // key (or any other key) to seal with, and it is the party that holds
+  // the plaintext anyway -- sealing here would defend against nobody who
+  // is not already holding it. What bounds the exposure is lifetime, so
+  // see `sweepStalePendingOp` for the path where the panel never opens
+  // to consume it.
   void chrome.storage.session.set({ [SESSION_PENDING_OP]: operation });
 }
 
@@ -78,11 +87,21 @@ async function handleGithubKeysRequest(
   if (!result.ok) {
     return { ok: false, error: result.error, resetAt: result.resetAt };
   }
-  return { ok: true, username, lines: result.lines };
+  // `omitted` travels with the lines: the panel cannot tell a truncated
+  // list from a complete one by looking at it.
+  return { ok: true, username, lines: result.lines, omitted: result.omitted };
 }
 
 export default defineBackground(() => {
   void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+
+  // Every worker start, not just onStartup/onInstalled: a pending op is
+  // normally deleted by the side panel when it reads it, so the only
+  // ones still here are the ones no panel ever collected. Cheap (one
+  // session-storage read, which is memory), and it is the only thing
+  // stopping an uncollected selection from outliving its TTL by the
+  // whole browser session.
+  void sweepStalePendingOp();
 
   chrome.runtime.onInstalled.addListener((details) => {
     if (details.reason === "install") {

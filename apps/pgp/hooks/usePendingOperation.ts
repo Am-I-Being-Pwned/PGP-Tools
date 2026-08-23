@@ -1,40 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 
-import type { OperationAction, PendingOperation } from "../lib/messages";
+import type { PendingOperation } from "../lib/messages";
 import { SESSION_PENDING_OP } from "../lib/constants";
-
-const VALID_ACTIONS = new Set<OperationAction>([
-  "encrypt",
-  "decrypt",
-  "sign",
-  "verify",
-  "import-public",
-  "import-private",
-]);
-
-/** Drop ops older than this. Catches the case where the user
- *  triggered the context menu, closed the side panel without
- *  unlocking, and only opens it much later for some unrelated
- *  reason -- we don't want the stale selection to surface. */
-const PENDING_OP_TTL_MS = 60_000;
-
-function isPendingOperation(msg: unknown): msg is PendingOperation {
-  if (typeof msg !== "object" || msg === null) return false;
-  const obj = msg as Record<string, unknown>;
-  return (
-    obj.type === "PENDING_OPERATION" &&
-    typeof obj.id === "string" &&
-    typeof obj.action === "string" &&
-    VALID_ACTIONS.has(obj.action as OperationAction) &&
-    typeof obj.text === "string" &&
-    typeof obj.sourceTabId === "number" &&
-    typeof obj.createdAt === "number"
-  );
-}
-
-function isFresh(op: PendingOperation): boolean {
-  return Date.now() - op.createdAt < PENDING_OP_TTL_MS;
-}
+import { isPendingOperation, isPendingOpFresh } from "../lib/pending-op";
 
 /**
  * Source of truth: `chrome.storage.session` under `SESSION_PENDING_OP`.
@@ -47,11 +15,34 @@ function isFresh(op: PendingOperation): boolean {
  * causing the side panel to miss the selection text. Session storage
  * is in-memory but persists across SW restarts and is read at any
  * time by the App once the user has finished unlocking.
+ *
+ * `ready` GATES THE CONSUME, and it is a security control rather than a
+ * convenience. Consuming means moving the payload -- the user's raw
+ * selection, i.e. the plaintext they are about to encrypt -- out of
+ * session storage and into React state, where `App` holds it until
+ * something routes it. Nothing can route it while the panel is showing
+ * onboarding or the master-unlock screen (`WorkspaceView` is not mounted
+ * then), so consuming early bought nothing and left the plaintext
+ * retained on the fiber for the whole locked window: measured as one
+ * live retainer, `property[lastRenderedState] -> property[text]`, i.e.
+ * this hook's own update queue. That is T-OUTPUT-HEAP-RESIDUE's class
+ * applied to the pending op, and it is why the payload now waits where
+ * `T-PENDING-OP-AT-REST` already accounts for it -- in session storage,
+ * bounded by `PENDING_OP_TTL_MS` and `sweepStalePendingOp` -- until the
+ * App can actually act on it.
+ *
+ * Consequence, stated rather than hidden: an unlock that takes longer
+ * than `PENDING_OP_TTL_MS` now drops the selection instead of applying
+ * it, because freshness is judged when we consume and no longer when the
+ * panel merely mounted. That is what the TTL is for.
  */
-export function usePendingOperation() {
+export function usePendingOperation(ready: boolean) {
   const [pending, setPending] = useState<PendingOperation | null>(null);
 
   useEffect(() => {
+    // Leave it in storage until the App is in a state that can route it.
+    if (!ready) return;
+
     // AbortController gives us a properly-typed mutable `aborted`
     // boolean for cross-async cancellation. (A plain `let` or ref
     // gets narrowed to the literal `false` by typescript-eslint.)
@@ -64,7 +55,7 @@ export function usePendingOperation() {
       // Always remove first, regardless of freshness -- a stale op
       // shouldn't keep sitting in storage even if we don't apply it.
       await chrome.storage.session.remove(SESSION_PENDING_OP);
-      if (!isFresh(op)) return false;
+      if (!isPendingOpFresh(op)) return false;
       if (ac.signal.aborted) return true;
       setPending(op);
       return true;
@@ -103,7 +94,7 @@ export function usePendingOperation() {
       ac.abort();
       chrome.storage.onChanged.removeListener(onChange);
     };
-  }, []);
+  }, [ready]);
 
   // Stable identity so consumer effects with clearPending in deps
   // don't re-fire on every render.

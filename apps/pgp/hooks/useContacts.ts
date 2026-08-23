@@ -6,6 +6,9 @@ import {
   loadContacts,
   removeContact,
   saveContact,
+  updateContact,
+  updateContactAlias,
+  upsertContacts,
 } from "../lib/storage/contacts";
 import { isSshRecord } from "../lib/storage/key-kind";
 
@@ -28,27 +31,44 @@ async function backfillExpiry(
   const patched: PublicContactKey[] = [];
   for (const c of contacts) {
     if (c.expiresAt !== undefined) continue;
+    // Parsed here, applied through `updateContact` -- which re-reads the
+    // record inside the store's lock. Saving `{ ...c, expiresAt }`
+    // instead would republish this whole snapshot, silently reverting
+    // anything written to that contact since the load that produced it
+    // (the recipient toggle is one full load+save per contact away).
+    let patch: Partial<PublicContactKey>;
     if (isSshRecord(c)) {
       // No parse: an SSH key has no expiry, no signing capability and no
       // SHA-1 problem to report. Persisting `null` closes the loop.
-      const updated: PublicContactKey = { ...c, expiresAt: null };
-      await saveContact(updated);
-      patched.push(updated);
-      continue;
+      patch = { expiresAt: null };
+    } else {
+      try {
+        const info = await parseKey(c.armoredPublicKey);
+        patch = {
+          expiresAt: info.expiresAt,
+          usableForEncryption: info.usableForEncryption,
+          ...(info.securityWarning
+            ? { securityWarning: info.securityWarning }
+            : {}),
+        };
+      } catch {
+        // Unparseable armor: leave untouched; the card just won't warn.
+        continue;
+      }
     }
-    try {
-      const info = await parseKey(c.armoredPublicKey);
-      const updated: PublicContactKey = {
-        ...c,
-        expiresAt: info.expiresAt,
-        usableForEncryption: info.usableForEncryption,
-        securityWarning: c.securityWarning ?? info.securityWarning,
-      };
-      await saveContact(updated);
-      patched.push(updated);
-    } catch {
-      // Unparseable armor: leave untouched; the card just won't warn.
-    }
+    const updated = await updateContact(c.keyId, (current) => ({
+      // `current` first: it is the record as it is on disk right now, and
+      // spreading it first also keeps its existing keys in their existing
+      // order, so a backfilled record differs from the stored one by
+      // exactly the fields being backfilled.
+      ...current,
+      ...patch,
+      // Never overwrite a warning the stored record already carries.
+      ...(current.securityWarning
+        ? { securityWarning: current.securityWarning }
+        : {}),
+    }));
+    if (updated) patched.push(updated);
   }
   return patched;
 }
@@ -100,19 +120,25 @@ export function useContacts() {
 
   const add = useCallback(async (contact: PublicContactKey) => {
     const op = mutexRef.current.then(async () => {
-      let existing: PublicContactKey | undefined;
+      // The SAME rules `saveContact` applies, from the same function --
+      // source-based identity, a hand-pasted duplicate that must not
+      // replace a fetched person, `disabled` carried forward. This list
+      // is what the Keys tab and the recipient picker render, and a
+      // weaker rule here does not merely look wrong: a re-fetched GitHub
+      // contact whose first key stopped being published gets a NEW
+      // keyId, so a keyId-only filter would leave the superseded record
+      // on screen (and selectable as a recipient) even though storage
+      // holds exactly one contact.
+      let previous: PublicContactKey[] = [];
       setContacts((prev) => {
-        existing = prev.find((c) => c.keyId === contact.keyId);
-        return [...prev.filter((c) => c.keyId !== contact.keyId), contact];
+        previous = prev;
+        return upsertContacts(prev, contact);
       });
 
       try {
         await saveContact(contact);
       } catch (e) {
-        setContacts((prev) => {
-          const without = prev.filter((c) => c.keyId !== contact.keyId);
-          return existing ? [...without, existing] : without;
-        });
+        setContacts(previous);
         throw e;
       }
     });
@@ -144,5 +170,21 @@ export function useContacts() {
     return op;
   }, []);
 
-  return { contacts, loading, error, refresh, add, remove };
+  /** Set (or clear, with a blank value) a contact's local display name.
+   *  Same shape as `useKeyring.rename`: the store owns the write, and
+   *  the list is re-read rather than patched, so the record on screen is
+   *  the record on disk -- including anything else that changed under
+   *  the lock. */
+  const rename = useCallback(
+    async (keyId: string, alias: string) => {
+      const op = mutexRef.current.then(() => updateContactAlias(keyId, alias));
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
+      mutexRef.current = op.catch(() => {});
+      await op;
+      await refresh();
+    },
+    [refresh],
+  );
+
+  return { contacts, loading, error, refresh, add, remove, rename };
 }

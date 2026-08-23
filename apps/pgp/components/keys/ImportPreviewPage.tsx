@@ -2,11 +2,13 @@ import { format } from "date-fns";
 import { CheckCircleIcon, RefreshCwIcon } from "lucide-react";
 
 import { Button } from "@amibeingpwned/ui/button";
+import { Kbd } from "@amibeingpwned/ui/kbd";
 
 import type { IncomingKey, KeyKind } from "../../lib/import/types";
 import type { KeyPreviewChip } from "./KeyPreviewBody";
 import { isPublicKind } from "../../lib/import/types";
 import { parseUserId } from "../../lib/utils/key-naming";
+import { INPUT_CLASS } from "../../lib/utils/styles";
 import {
   SlideOverHeader,
   SlideOverPanel,
@@ -148,6 +150,23 @@ interface ImportPreviewProps {
   /** True while the import is running. */
   busy?: boolean;
   error?: string | null;
+  /**
+   * Present when this preview is OFFERING to file several pasted keys as
+   * one contact rather than several.
+   *
+   * A person's keys rarely agree about who they belong to -- three
+   * self-hosted `.pub` files can say `alice@laptop`, `alice@desktop` and
+   * nothing at all -- and nothing in the text says they are one person,
+   * so the import must not decide it (see `sharedComment`). Blank is
+   * therefore the default and means "import them separately", which is
+   * what the button then says; a name means one contact called that.
+   */
+  grouping?: {
+    name: string;
+    onNameChange: (name: string) => void;
+    /** How many contacts a blank name produces. */
+    separateCount: number;
+  };
 }
 
 /** The preview's content and footer, without a panel of its own, so the
@@ -160,6 +179,7 @@ export function ImportPreview({
   onReveal,
   busy,
   error,
+  grouping,
 }: ImportPreviewProps) {
   const primaryUserId = incoming.userIds[0] ?? "Unknown";
   const { name: rawName, email, comment } = parseUserId(primaryUserId);
@@ -227,7 +247,47 @@ export function ImportPreview({
           securityWarning={incoming.securityWarning}
           statusStrip={<ImportStatusStrip incoming={incoming} />}
         >
-          {incoming.group && (
+          {grouping && (
+            /* The one thing the keys cannot say for themselves. Named
+               like the CRX label field on the protect step, and optional
+               in the same way -- leaving it blank is a real answer, not
+               a skipped step, so the footer button says which one it is
+               rather than making the user infer it. */
+            <div>
+              <label className="text-muted-foreground mb-1 block text-xs">
+                Group as one contact{" "}
+                <span className="text-muted-foreground/60">optional</span>
+              </label>
+              <input
+                type="text"
+                autoFocus
+                maxLength={200}
+                placeholder="e.g. Alice (all machines)"
+                value={grouping.name}
+                onChange={(e) => grouping.onNameChange(e.target.value)}
+                onKeyDown={(e) => {
+                  // This field is autofocused, so it -- not the button --
+                  // is what Return reaches when a group is being named.
+                  // Without this the chip on the button below would be a
+                  // lie in exactly the case where the user is most
+                  // likely to press Return: they have just typed a name.
+                  if (e.key === "Enter" && !busy && canConfirm) {
+                    e.preventDefault();
+                    onConfirm();
+                  }
+                }}
+                className={INPUT_CLASS}
+              />
+              <p className="text-muted-foreground mt-1 text-[11px]">
+                These keys don&apos;t agree on a name, so they&apos;re imported
+                as {grouping.separateCount} separate contacts. Name them here to
+                keep them together as one person - messages are then encrypted
+                to all {grouping.separateCount} keys, and any one of their
+                machines can read them.
+              </p>
+            </div>
+          )}
+          {incoming.group?.source && (
             /* Where it came from, and -- the part that must not be
                swallowed -- every line the engine refused, in its own
                words. A key missing from someone's recipient list shows
@@ -306,8 +366,25 @@ export function ImportPreview({
             onClick={onConfirm}
             disabled={busy}
             autoFocus
+            // The button is autofocused, so Return already activates it
+            // -- but nothing said so, and a keyboard user only found out
+            // by trying. The chip is the affordance for a behaviour that
+            // already existed. `aria-keyshortcuts` carries it for screen
+            // readers; `Kbd` itself is aria-hidden and decorative.
+            aria-keyshortcuts="Enter"
           >
-            {busy ? "Importing..." : actionLabel(incoming)}
+            <span className="flex w-full items-center justify-center gap-2">
+              {busy
+                ? "Importing..."
+                : grouping
+                  ? grouping.name.trim()
+                    ? "Import as one contact"
+                    : `Import ${grouping.separateCount} contacts`
+                  : actionLabel(incoming)}
+              {!busy && (
+                <Kbd shortcut={{ key: "Enter" }} className="opacity-70" />
+              )}
+            </span>
           </Button>
         ) : incoming.status === "duplicate" && onReveal ? (
           // Nothing to write, but the useful action isn't "Done" -- it's

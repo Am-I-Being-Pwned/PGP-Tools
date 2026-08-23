@@ -234,12 +234,19 @@ describe("sshGroupKeyFacts", () => {
     ]);
   });
 
-  it("keeps the head key as the record's identity", () => {
-    // What the facts card shows, and what the stored contact's `keyId`
-    // will be (see `recipientsField`).
+  it("shows no head fingerprint when there are several keys", () => {
+    // The head key is still the stored record's `keyId` -- that is a
+    // STORAGE property (see `recipientsField`) and it is asserted in
+    // `lib/storage/contacts.test.ts`. It is deliberately NOT shown as
+    // the card's fingerprint: it is already one of the rows below, so a
+    // head row renders it twice, and singling it out implies a primary
+    // key that this model does not have.
     const facts = sshGroupKeyFacts(members);
-    expect(facts.fingerprint).toBe("SHA256:aaa");
+    expect(facts.fingerprint).toBeUndefined();
     expect(facts.algorithm).toBe("ssh-ed25519");
+    expect(facts.components?.rows.map((r) => r.fingerprint)).toContain(
+      "SHA256:aaa",
+    );
   });
 
   it("lists every key as a peer, never as a subkey of the first", () => {

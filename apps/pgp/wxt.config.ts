@@ -75,6 +75,40 @@ function panelCspMeta(enabled: boolean) {
 // HMR). Loosening our prod CSP for dev kept hitting MV3's "insecure
 // value" rejections; not worth the fight.
 
+/**
+ * CHROME (MV3) IS THE ONLY SUPPORTED TARGET.
+ *
+ * Firefox does not work and is not expected to for the foreseeable
+ * future: the blocker is passkey unlock. That path derives its key from
+ * the WebAuthn PRF extension (`lib/protection/webauthn-prf.ts`), and
+ * without it a passkey-protected vault cannot be opened at all -- this
+ * is not a degraded experience, it is a user who cannot reach their
+ * keys. Password protection would work; shipping a build where half the
+ * protection methods silently fail is worse than shipping none.
+ *
+ * `dev:firefox`, `build:firefox` and `zip:firefox` still exist in
+ * package.json, and stale `*-firefox.zip` artifacts may still be sitting
+ * in `.output/`. Neither means the target is supported. Do not publish
+ * one without reading the rest of this comment.
+ *
+ * TWO THINGS TO FIX FIRST if Firefox is ever revived:
+ *
+ *  1. `build:firefox` and `zip:firefox` run NEITHER audit script --
+ *     `pnpm build` chains `audit-invariants` and `audit-network`, those
+ *     scripts do not. So the per-context network census, the
+ *     "exactly one https origin literal", the host-permissions-absent
+ *     check and the panel meta-CSP check are all unenforced on a Firefox
+ *     artifact. Today that is harmless only because nothing ships.
+ *  2. `validateManifest` in `scripts/audit-network.mjs` reads
+ *     `content_security_policy.extension_pages`, which is undefined for
+ *     MV2's string-valued CSP -- so it currently emits ~10 spurious CSP
+ *     errors against a Firefox build. Anyone wiring the audits in
+ *     without fixing that first gets a wall of false positives and will
+ *     reasonably conclude the audit is broken rather than the build.
+ *
+ * CI only ever runs the Chrome build (`.github/workflows/ci.yml`), which
+ * is consistent with the above and deliberate.
+ */
 export default defineConfig({
   modules: ["@wxt-dev/module-react"],
   manifest: () => ({

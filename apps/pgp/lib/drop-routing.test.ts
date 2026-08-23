@@ -152,3 +152,58 @@ describe("resolveDropRule", () => {
     expect(resolveDropRule(noCatchAll, sample("plain text"))).toBeNull();
   });
 });
+
+/**
+ * The third file that has to agree: a dropped `.pub` of any algorithm is
+ * a key, so the "keys" rule owns the drop and `prepareImport` gets to
+ * show the engine's refusal. With the narrow matcher an ECDSA or FIDO
+ * `.pub` landed in the workspace as if it were a message to encrypt.
+ * The engine decides validity; every layer above it forwards and
+ * displays.
+ */
+describe("looksLikeSshPublicKey - any algorithm", () => {
+  const rules: DropRule[] = [
+    { id: "keys", match: (s) => looksLikeKey(s.sampleText), run: () => undefined },
+    { id: "workspace", match: () => true, run: () => undefined },
+  ];
+
+  it.each([
+    ["ECDSA", "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTY= a@host"],
+    [
+      "FIDO",
+      "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9w a@host",
+    ],
+    ["DSA", "ssh-dss AAAAB3NzaC1kc3MAAACBAO0= a@host"],
+  ])("routes a dropped %s .pub to the key import", (_name, line) => {
+    expect(looksLikeSshPublicKey(line)).toBe(true);
+    expect(looksLikeKey(line)).toBe(true);
+    expect(resolveDropRule(rules, sample(line))?.id).toBe("keys");
+  });
+
+  it.each([
+    ["prose about ECDSA", "we should probably move off ecdsa-sha2-nistp256"],
+    ["HTML", "<p>ssh-ed25519 keys are listed below</p>"],
+    ["bare base64", "AAAAB3NzaC1yc2EAAAADAQABAAABgQ=="],
+  ])("leaves %s to the workspace", (_name, text) => {
+    expect(looksLikeSshPublicKey(text)).toBe(false);
+    expect(resolveDropRule(rules, sample(text))?.id).toBe("workspace");
+  });
+
+  it("does not claim an armored block's body", () => {
+    const armored =
+      "-----BEGIN PGP PUBLIC KEY BLOCK-----\nmQINBGabc\nAAAA+/abc=\n-----END PGP PUBLIC KEY BLOCK-----";
+    expect(looksLikeSshPublicKey(armored)).toBe(false);
+    const openssh =
+      "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEA\n-----END OPENSSH PRIVATE KEY-----";
+    expect(looksLikeSshPublicKey(openssh)).toBe(false);
+    // Still a private key, and still routed as one.
+    expect(looksLikePrivateKey(openssh)).toBe(true);
+  });
+
+  it("does not claim a raw RSA PEM (the CRX signing key)", () => {
+    const pem =
+      "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA\n-----END RSA PRIVATE KEY-----";
+    expect(looksLikeSshPublicKey(pem)).toBe(false);
+    expect(looksLikePrivateKey(pem)).toBe(true);
+  });
+});

@@ -1,4 +1,9 @@
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { readFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import type { Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 
@@ -63,13 +68,25 @@ export async function unlockOnlyKey(
   const pw = panel.getByPlaceholder("Enter password");
   await pw.fill(password);
   await pw.press("Enter");
-  await expect(panel.getByRole("button", { name: "Lock" })).toBeVisible();
+  // `exact: true` is LOAD-BEARING. Playwright's default accessible-name
+  // match is a case-insensitive SUBSTRING, so `{ name: "Lock" }` also
+  // matches the "Unlock" button -- which is exactly what is on screen
+  // when the key is still locked. Without it this wait is satisfied by
+  // the state it is supposed to prove we have left, so every caller
+  // that relies on "the key is now unlocked" proceeds against a locked
+  // key and its later assertions mean nothing. Found when it silently
+  // defeated an early draft of `e2e/ssh-memory.spec.ts`.
+  await expect(
+    panel.getByRole("button", { name: "Lock", exact: true }),
+  ).toBeVisible();
 }
 
 /** Lock the single (unlocked) key from the Keys tab -- in-app, no reload. */
 export async function lockOnlyKey(panel: Page): Promise<void> {
   await goToKeys(panel);
-  await panel.getByRole("button", { name: "Lock" }).click();
+  // Exact for the same reason as above: a substring match here would
+  // happily click "Unlock" and this helper would lock nothing.
+  await panel.getByRole("button", { name: "Lock", exact: true }).click();
   await expect(
     panel.getByRole("button", { name: "Unlock", exact: true }),
   ).toBeVisible();
@@ -466,4 +483,173 @@ export async function verifySignedMessage(
   await panel.locator("textarea").first().fill(signedMessage);
   // The idle action button is labelled with the (auto-selected) mode.
   await panel.getByRole("button", { name: /^verify$/i }).click();
+}
+
+// ── SSH key material and the contacts store ──────────────────────────
+
+/** One throwaway OpenSSH keypair, in the forms the specs need it. */
+export interface SshKeyPair {
+  /** OpenSSH private key file contents. */
+  privateKey: string;
+  /** `ssh-ed25519 AAAA...` with the comment stripped, the way GitHub
+   *  serves it. */
+  publicLine: string;
+  /** `ssh-ed25519 AAAA... comment` -- the form a `.pub` file on disk
+   *  has, and the only one that can auto-group (see `sharedComment`:
+   *  grouping without asking requires every line to carry the SAME
+   *  comment, and a stripped line carries none). */
+  publicLineWithComment: string;
+  /** The `-C` comment, which is the key's display name once imported --
+   *  and what the delete confirmation asks the user to type. */
+  comment: string;
+  /** The OpenSSH `SHA256:...` fingerprint, which is what the UI prints
+   *  for this key and what a stored `ContactRecipient.keyId` holds. */
+  fingerprint: string;
+  /** The first argument of this key's `-> ssh-ed25519` stanza in an age
+   *  header: base64 of the first four bytes of the same SHA-256 the
+   *  fingerprint is. Lets a spec assert WHICH keys a ciphertext was
+   *  encrypted to, from the header alone -- see {@link ageStanzaTags}. */
+  stanzaTag: string;
+}
+
+/** Generate throwaway ed25519 keypairs with `ssh-keygen`.
+ *
+ *  Generated per run rather than committed: no real key material lives in
+ *  this repo, and an OpenSSH private key in a fixture file is exactly the
+ *  thing that rule exists for.
+ *
+ *  `comment` receives the 0-based index so a caller can give every key
+ *  the SAME comment -- the one input that makes an import auto-group. */
+export function generateSshKeys(
+  count: number,
+  comment: (index: number) => string = (i) => `e2e-ssh-${i + 1}`,
+): SshKeyPair[] {
+  const dir = mkdtempSync(path.join(tmpdir(), "pgp-e2e-ssh-"));
+  try {
+    return Array.from({ length: count }, (_, i) => {
+      const label = comment(i);
+      // The comment can repeat across keys, so the FILE name cannot be
+      // it -- ssh-keygen would refuse to overwrite the first key.
+      const file = path.join(dir, `key-${i}`);
+      execFileSync("ssh-keygen", [
+        ...["-t", "ed25519"],
+        ...["-N", ""],
+        ...["-C", label],
+        ...["-f", file],
+        "-q",
+      ]);
+      const pub = readFileSync(`${file}.pub`, "utf8").trim();
+      const [algorithm, blob] = pub.split(/\s+/);
+      const hash = createHash("sha256").update(Buffer.from(blob, "base64"));
+      const digest = hash.digest();
+      return {
+        privateKey: readFileSync(file, "utf8"),
+        // GitHub serves `<type> <base64>` with no comment; mimic that so
+        // a stub is not kinder than the real endpoint.
+        publicLine: `${algorithm} ${blob}`,
+        publicLineWithComment: `${algorithm} ${blob} ${label}`,
+        comment: label,
+        // Base64 of the whole digest, unpadded: OpenSSH's own form.
+        fingerprint: `SHA256:${digest.toString("base64").replace(/=+$/, "")}`,
+        stanzaTag: digest.subarray(0, 4).toString("base64").replace(/=+$/, ""),
+      };
+    });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * The `-> ssh-ed25519 <tag>` tags in an armored age file's header.
+ *
+ * WHICH keys a message was encrypted to, read off the ciphertext itself
+ * rather than inferred from whether some identity could open it. The
+ * header is ASCII inside the armor and self-delimiting: a version line,
+ * one stanza per recipient, then a `---` MAC line. Stops at the MAC so
+ * the binary payload after it is never scanned as text (the same rule
+ * `age_header_stanzas` follows in the engine).
+ */
+export function ageStanzaTags(armored: string): string[] {
+  const body = armored
+    .replace(/-----BEGIN AGE ENCRYPTED FILE-----/, "")
+    .replace(/-----END AGE ENCRYPTED FILE-----/, "")
+    .replace(/\s+/g, "");
+  const header = Buffer.from(body, "base64").toString("binary");
+  const tags: string[] = [];
+  for (const line of header.split("\n")) {
+    if (line.startsWith("---")) break;
+    const match = /^-> ssh-ed25519 (\S+)/.exec(line);
+    if (match) tags.push(match[1]);
+  }
+  return tags;
+}
+
+/** One stored contact record, as far as the e2e specs care. */
+export interface StoredContact {
+  keyId: string;
+  userIds: string[];
+  alias?: string;
+  recipients?: { keyId: string; disabled?: true }[];
+  source?: { type: string; user: string };
+}
+
+/**
+ * The contacts store, DECRYPTED -- because "one contact" is a property of
+ * storage, and asserting it through the DOM cannot tell a real duplicate
+ * record from a label the panel happens to render twice.
+ *
+ * Driven through the panel's LIVE wasm instance (with its live contacts
+ * session), located from the page's own entry script the way
+ * `migration.spec.ts` does it. The plaintext is `[json][0x00][padding]`
+ * (see `lib/storage/padding.ts`), so it is cut at the first NUL.
+ */
+export async function readContacts(panel: Page): Promise<StoredContact[]> {
+  const url = await panel.evaluate(async () => {
+    const entry = document.querySelector<HTMLScriptElement>(
+      'script[type="module"][src]',
+    );
+    if (!entry) return null;
+    const source = await fetch(entry.src).then((r) => r.text());
+    const match = /gpg_wasm-[A-Za-z0-9_-]+\.js/.exec(source);
+    return match ? new URL(match[0], entry.src).href : null;
+  });
+  if (url === null) throw new Error("wasm glue chunk not locatable");
+
+  return panel.evaluate(
+    async ({ u, key }: { u: string; key: string }) => {
+      const mod = (await import(/* @vite-ignore */ u)) as {
+        decryptStore: (d: string, ct: Uint8Array, iv: Uint8Array) => Uint8Array;
+      };
+      const b64ToBytes = (s: string) =>
+        Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+      const stored = (await chrome.storage.local.get(key))[key] as
+        { iv: string; ciphertext: string } | undefined;
+      if (!stored) return [];
+      const plaintext = mod.decryptStore(
+        key,
+        b64ToBytes(stored.ciphertext),
+        b64ToBytes(stored.iv),
+      );
+      const nul = plaintext.indexOf(0);
+      const json = nul === -1 ? plaintext : plaintext.subarray(0, nul);
+      return JSON.parse(new TextDecoder().decode(json)) as StoredContact[];
+    },
+    { u: url, key: "pgp_public_contacts" },
+  );
+}
+
+/** Set the encrypt-mode "Also encrypt to me" preference. Off is what a
+ *  test asserting WHICH recipients a message reached wants: with it on,
+ *  the user's own key rides along and adds a stanza of its own. */
+export async function setEncryptToSelf(
+  panel: Page,
+  on: boolean,
+): Promise<void> {
+  await setWorkspaceMode(panel, "Encrypt");
+  const toggle = panel.getByRole("switch", { name: "Also encrypt to me" });
+  await expect(toggle).toBeVisible();
+  if ((await toggle.getAttribute("aria-checked")) !== String(on)) {
+    await toggle.click();
+  }
+  await expect(toggle).toHaveAttribute("aria-checked", String(on));
 }

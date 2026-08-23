@@ -23,16 +23,28 @@
  * unreachable.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { PublicContactKey } from "../storage/contacts";
 import type { ContactGroup } from "./types";
+import { parseGithubKeysResponse } from "../github/response";
+import { parseSshRecipient } from "../pgp/wasm";
 import {
   classifyGithubGroup,
   githubFailureCopy,
   githubGroup,
   githubLabel,
+  prepareGithubImport,
 } from "./github";
+
+// The engine, stubbed to say exactly what the real one says: a
+// fingerprint for a supported type, and one of its eight curated
+// refusals for everything else. Only `prepareGithubImport` reaches it;
+// every other test in this file is pure.
+vi.mock("../pgp/wasm", () => ({ parseSshRecipient: vi.fn() }));
+
+const ECDSA_REFUSAL =
+  "ECDSA keys are not supported for encryption. Add an Ed25519 key with `ssh-keygen -t ed25519`.";
 
 const FP_A = "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const FP_B = "SHA256:BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB";
@@ -86,10 +98,9 @@ describe("classifyGithubGroup - identity", () => {
     // The whole reason the match is by source. The stored record's
     // `keyId` is FP_A; the fetch no longer contains FP_A at all, so a
     // fingerprint match finds nothing and would say "new".
-    const key = classifyGithubGroup(
-      group([FP_B, FP_C]),
-      [stored("octocat", [FP_A, FP_B])],
-    );
+    const key = classifyGithubGroup(group([FP_B, FP_C]), [
+      stored("octocat", [FP_A, FP_B]),
+    ]);
     expect(key.status).toBe("update");
     expect(key.changes).toEqual(["1 key added", "1 key removed"]);
     expect(key.existingAddedAt).toBe(500);
@@ -107,10 +118,9 @@ describe("classifyGithubGroup - identity", () => {
   });
 
   it("does not match a different github user with the same keys", () => {
-    const key = classifyGithubGroup(
-      group([FP_A], [], "hubot"),
-      [stored("octocat", [FP_A])],
-    );
+    const key = classifyGithubGroup(group([FP_A], [], "hubot"), [
+      stored("octocat", [FP_A]),
+    ]);
     expect(key.status).toBe("new");
   });
 });
@@ -120,28 +130,25 @@ describe("classifyGithubGroup - what changed", () => {
     // GitHub's ordering is not contractual. Comparing as a list would
     // make "nothing has changed" unreachable for a reordered response,
     // and every re-fetch would offer a pointless update.
-    const key = classifyGithubGroup(
-      group([FP_C, FP_A, FP_B]),
-      [stored("octocat", [FP_A, FP_B, FP_C])],
-    );
+    const key = classifyGithubGroup(group([FP_C, FP_A, FP_B]), [
+      stored("octocat", [FP_A, FP_B, FP_C]),
+    ]);
     expect(key.status).toBe("duplicate");
     expect(key.changes).toEqual([]);
   });
 
   it("counts only additions when a key was added", () => {
-    const key = classifyGithubGroup(
-      group([FP_A, FP_B, FP_C]),
-      [stored("octocat", [FP_A])],
-    );
+    const key = classifyGithubGroup(group([FP_A, FP_B, FP_C]), [
+      stored("octocat", [FP_A]),
+    ]);
     expect(key.status).toBe("update");
     expect(key.changes).toEqual(["2 keys added"]);
   });
 
   it("counts only removals when a key was revoked upstream", () => {
-    const key = classifyGithubGroup(
-      group([FP_A]),
-      [stored("octocat", [FP_A, FP_B])],
-    );
+    const key = classifyGithubGroup(group([FP_A]), [
+      stored("octocat", [FP_A, FP_B]),
+    ]);
     expect(key.status).toBe("update");
     expect(key.changes).toEqual(["1 key removed"]);
   });
@@ -187,10 +194,13 @@ describe("classifyGithubGroup - refused lines", () => {
 
   it("summarises when the refusals differ", () => {
     const key = classifyGithubGroup(
-      group([], [
-        { line: "a", reason: ECDSA },
-        { line: "b", reason: "DSA keys are not supported." },
-      ]),
+      group(
+        [],
+        [
+          { line: "a", reason: ECDSA },
+          { line: "b", reason: "DSA keys are not supported." },
+        ],
+      ),
       [],
     );
     expect(key.status).toBe("rejected");
@@ -239,6 +249,31 @@ describe("githubFailureCopy", () => {
     expect(copy.message).toMatch(/about 12 minutes/);
   });
 
+  it("carries the reset header all the way from a raw 403 to the words", () => {
+    // The seam the e2e nearly became the only cover for: the response
+    // parser turns `x-ratelimit-reset` (unix SECONDS) into `resetAt`
+    // (ms), and the copy turns that into a clause. Either half can be
+    // right while the join is wrong, and a lost reset time is invisible
+    // -- the rest of the sentence still renders.
+    const now = 1_750_000_000_000;
+    const result = parseGithubKeysResponse({
+      status: 403,
+      contentType: "application/json",
+      body: "{}",
+      rateLimitRemaining: "0",
+      rateLimitReset: String(1_750_000_000 + 15 * 60),
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    const copy = githubFailureCopy(
+      result.error,
+      "octocat",
+      result.resetAt,
+      now,
+    );
+    expect(copy.message).toMatch(/about 15 minutes/);
+  });
+
   it("says nothing about timing when no reset time was reported", () => {
     const copy = githubFailureCopy("rate-limited", "octocat");
     expect(copy.message).toMatch(/IP address/);
@@ -251,5 +286,83 @@ describe("githubLabel", () => {
     // Auto-labelled: no prompt, no extra field. It lands in `userIds[0]`,
     // which is the one field every consumer reads for "who is this".
     expect(githubLabel("octocat")).toBe("octocat (GitHub)");
+  });
+});
+
+describe("prepareGithubImport - the engine decides, not the worker", () => {
+  const stub = vi.mocked(parseSshRecipient);
+
+  /** Ed25519 parses; anything else comes back as the engine's own
+   *  refusal, which is the text the preview must show. */
+  function engine() {
+    stub.mockReset();
+    stub.mockImplementation((line: string) => {
+      if (!line.startsWith("ssh-ed25519")) throw new Error(ECDSA_REFUSAL);
+      return Promise.resolve({
+        fingerprint: `SHA256:${line.slice(-8)}`,
+        recipient: line,
+        algorithm: "ssh-ed25519",
+      } as Awaited<ReturnType<typeof parseSshRecipient>>);
+    });
+  }
+
+  const ED_A = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAaaaaaaaa";
+  const ED_B = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAbbbbbbbb";
+  const ECDSA = "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTY";
+
+  it("reports an ECDSA-only account with the engine's words, not silence", async () => {
+    engine();
+    const prepared = await prepareGithubImport(
+      "octocat",
+      [ECDSA],
+      { contacts: [] },
+      { now: 1000 },
+    );
+    const key = prepared.keys[0];
+    // Rejected, and carrying WHY -- not "octocat hasn't published any
+    // SSH keys", which is what the user used to be told.
+    expect(key.status).toBe("rejected");
+    expect(key.group?.rejected).toEqual([
+      { line: ECDSA, reason: ECDSA_REFUSAL },
+    ]);
+    expect(key.rejection).toBe(ECDSA_REFUSAL);
+  });
+
+  it("keeps the refusal alongside the keys that did parse", async () => {
+    engine();
+    const prepared = await prepareGithubImport(
+      "octocat",
+      [ED_A, ED_B, ECDSA],
+      { contacts: [] },
+      { now: 1000 },
+    );
+    const key = prepared.keys[0];
+    expect(key.status).toBe("new");
+    expect(key.group?.members).toHaveLength(2);
+    // The preview says "encrypted to every key listed above"; a silently
+    // dropped third key makes that sentence false.
+    expect(key.group?.rejected.map((r) => r.reason)).toEqual([ECDSA_REFUSAL]);
+  });
+
+  it("says so when the worker's caps held keys back", async () => {
+    engine();
+    const prepared = await prepareGithubImport(
+      "octocat",
+      [ED_A],
+      { contacts: [] },
+      { omitted: 3, now: 1000 },
+    );
+    const rejected = prepared.keys[0].group?.rejected ?? [];
+    expect(rejected).toHaveLength(1);
+    expect(rejected[0].reason).toMatch(/3 of octocat's published keys/);
+    expect(rejected[0].reason).toMatch(/at most 20 keys/);
+  });
+
+  it("says nothing about caps when nothing was held back", async () => {
+    engine();
+    const prepared = await prepareGithubImport("octocat", [ED_A], {
+      contacts: [],
+    });
+    expect(prepared.keys[0].group?.rejected).toEqual([]);
   });
 });

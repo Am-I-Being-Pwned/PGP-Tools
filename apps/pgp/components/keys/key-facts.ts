@@ -60,10 +60,20 @@ export interface KeyHealth {
 export interface KeyFacts {
   /**
    * The identifier shown in the facts card and copied by the button
-   * beside it, grouped into 4-character blocks. An OpenPGP fingerprint
-   * today; an SSH public-key hash later.
+   * beside it, grouped into 4-character blocks for a hex fingerprint and
+   * left unbroken otherwise. An OpenPGP fingerprint, or an SSH
+   * public-key hash.
+   *
+   * OMITTED when the subject has no single identifying fingerprint --
+   * a contact holding several SSH keys is N peers, not one key with
+   * extras. Naming one of them at the top would render it twice (it is
+   * already in the rows below) and would imply a primary key, which this
+   * model deliberately does not have: a message is encrypted to every
+   * enabled recipient because you cannot know which machine the person
+   * is reading on. Absent means the row does not render, per the
+   * KeyFacts contract.
    */
-  fingerprint: string;
+  fingerprint?: string;
   /** Raw algorithm name; the body runs it through `formatAlgorithm`. */
   algorithm: string;
   /** Omitted by engines whose keys carry no creation date. */
@@ -148,7 +158,14 @@ export function sshGroupKeyFacts(
   members: readonly ContactRecipient[],
 ): KeyFacts {
   return {
-    fingerprint: members[0].keyId,
+    // A head fingerprint ONLY when there is exactly one key. With
+    // several, naming one at the top renders it twice (it is already a
+    // row below) and implies a primary key this model does not have --
+    // every enabled recipient is encrypted to, because you cannot know
+    // which machine the person reads on. With one key there is nothing
+    // to duplicate and nothing to imply, and the card reads better with
+    // its identity on it.
+    ...(members.length === 1 ? { fingerprint: members[0].keyId } : {}),
     algorithm: members[0].algorithm,
     components: {
       // None is `isPrimary`: they are peers, not a certificate, and the

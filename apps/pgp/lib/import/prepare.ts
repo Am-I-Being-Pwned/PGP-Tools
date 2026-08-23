@@ -1,10 +1,12 @@
 import type { KeyDetails, KeyInfo } from "../pgp/types";
+import type { SshRecipientInfo } from "../pgp/wasm";
+import type { ContactRecipient } from "../storage/contacts";
 import type { IncomingKey } from "./types";
 import {
   LEGACY_PEM_ENCRYPTED,
   looksLikeForeignSshPrivateKey,
   splitSshPrivateKeyBlocks,
-  splitSshPublicKeyLines,
+  splitSshPublicKeyCandidateLines,
 } from "../armor-blocks";
 import { detectImportOverwrite } from "../import-overwrite";
 import { importRejectionMessage, isUsableContact } from "../import-public-keys";
@@ -304,6 +306,78 @@ function rejectedSshPrivateKey(rejection: string): IncomingKey {
   };
 }
 
+/** One parsed `.pub` line as a member of a contact. The canonical line
+ *  wasm returned, never the pasted one -- that is what gets stored and
+ *  what the engine expects back as a recipient. */
+function sshMember(info: SshRecipientInfo): ContactRecipient {
+  return {
+    keyId: info.fingerprint,
+    armored: info.recipient,
+    algorithm: info.algorithm,
+  };
+}
+
+/**
+ * The name several pasted keys AGREE they belong to, or null.
+ *
+ * The automatic grouping rule, and deliberately the strictest one that
+ * can exist: every line must carry a comment and every comment must be
+ * byte-identical. Anything looser is a guess -- `root@web01` and
+ * `root@db02` share a user and nothing else, and folding them into one
+ * contact silently makes two machines (quite possibly two people) a
+ * single identity that is then encrypted to as one. Automatic grouping
+ * must never guess; when the comments do not agree, the user is asked
+ * instead (see {@link PreparedImport.groupProposal}).
+ */
+function sharedComment(parsed: readonly SshRecipientInfo[]): string | null {
+  const first = parsed[0]?.comment.trim();
+  if (!first) return null;
+  return parsed.every((i) => i.comment.trim() === first) ? first : null;
+}
+
+/**
+ * Several SSH public keys as ONE incoming contact.
+ *
+ * The same {@link ContactGroup} a GitHub lookup produces, so the preview,
+ * the facts card and `groupContact` all work on it unchanged -- and so a
+ * hand-grouped contact reaches storage in exactly the shape a fetched one
+ * does. No `source`: a pasted group is hand-supplied, and absent is what
+ * that means on the stored record too.
+ *
+ * `duplicate` only when EVERY member is already stored, since importing
+ * is otherwise not a no-op. There is no `update` state, for the same
+ * reason a single SSH line has none: a recipient line carries nothing
+ * that can change.
+ */
+function sshGroupKey(
+  label: string,
+  members: ContactRecipient[],
+  stored: StoredKey[],
+): IncomingKey {
+  const known = new Set(stored.map((s) => s.keyId));
+  const head = members[0];
+  return {
+    // The head member's, so every path that reads an IncomingKey's
+    // identity -- the preview, the highlight-after-import, the map key --
+    // works on a group without knowing it is one.
+    keyId: head.keyId,
+    kind: "ssh-public",
+    status: members.every((m) => known.has(m.keyId)) ? "duplicate" : "new",
+    info: null,
+    details: null,
+    userIds: [label],
+    changes: [],
+    publicArmored: head.armored,
+    group: { label, members, rejected: [] },
+  };
+}
+
+/** The headline for a group the user has not named yet. Never stored:
+ *  leaving the name blank imports the keys separately instead. */
+function proposalLabel(count: number): string {
+  return `${count} SSH keys`;
+}
+
 /** The message an engine threw, or a last-resort generic. Engine errors
  *  are already user-facing prose (see `gpg-wasm/src/age.rs`), so they are
  *  surfaced verbatim rather than re-worded here.
@@ -328,6 +402,22 @@ export interface PreparedImport {
   secrets: Map<string, string>;
   /** The text carried no OpenPGP certificate at all. */
   unparseable: boolean;
+  /**
+   * The same keys as `keys`, offered as ONE contact under a name the
+   * user supplies.
+   *
+   * Present only when several pasted SSH public keys did NOT auto-group
+   * (see {@link sharedComment}) and every one of them is new. A
+   * self-hosting friend's three keys, commented `alice@laptop`,
+   * `alice@desktop` and not at all, are one person -- but nothing in the
+   * text says so, and the import must not decide it. So both readings
+   * are carried: `keys` is what importing them separately produces
+   * (today's behaviour, and what a blank name still means), and this is
+   * what grouping them produces. Its `group.label` is a placeholder for
+   * the preview headline; the user's name replaces it before anything is
+   * stored.
+   */
+  groupProposal?: IncomingKey;
 }
 
 /**
@@ -414,15 +504,44 @@ export async function prepareImport(
       }
     }
 
-    const lines = splitSshPublicKeyLines(text);
+    // The CANDIDATE splitter, not the narrow one: any
+    // `<algorithm> AAAA<base64>` line, whatever the algorithm calls
+    // itself. The narrow form matches `ssh-ed25519|ssh-rsa` only, so an
+    // ECDSA / FIDO `sk-*` / `ssh-dss` `.pub` was never split out here at
+    // all -- it fell through to the OpenPGP parse and came back
+    // `unparseable`, which is the panel's "that doesn't look like a key"
+    // standing in for three of the engine's eight curated refusals.
+    //
+    // Fourth instance of one pattern. A `catch { continue }` in this loop
+    // swallowed five of those messages; `github/response.ts` filtered the
+    // rest out of the fetch path; `splitSshPublicKeyLines` withheld the
+    // remaining three from the paste path. The invariant, stated once:
+    // THE ENGINE DECIDES VALIDITY; EVERY LAYER ABOVE IT FORWARDS AND
+    // DISPLAYS. Shape is all that is checked here -- `parseSshRecipient`
+    // says whether a line is usable, and a line it refuses becomes a
+    // `rejected` IncomingKey carrying its words.
+    //
+    // Widening the shape widens routing with it: `classify-action.ts` and
+    // `drop-routing.ts` use the same splitter, so a pasted ECDSA `.pub`
+    // reaches this function instead of stopping at a route that never
+    // opens the import flow.
+    const lines = splitSshPublicKeyCandidateLines(text);
     if (lines.length > 0) {
       const keys: IncomingKey[] = [];
+      // The parsed form of every line that was accepted, kept alongside
+      // the IncomingKeys because a group is assembled from the engine's
+      // own output (fingerprint, canonical line, algorithm) -- none of
+      // which an ssh-public IncomingKey carries in a form worth
+      // re-deriving.
+      const parsed: SshRecipientInfo[] = [];
       for (const line of lines) {
         try {
           // The wasm parse is what makes the line canonical; a line it
           // refuses is never stored as a recipient the engine would later
           // reject -- but it IS reported, with the engine's own reason.
-          keys.push(sshPublicKey(await parseSshRecipient(line), stored.contacts));
+          const info = await parseSshRecipient(line);
+          parsed.push(info);
+          keys.push(sshPublicKey(info, stored.contacts));
         } catch (error) {
           keys.push(rejectedSshPublicKey(line, engineRejection(error)));
         }
@@ -431,6 +550,38 @@ export async function prepareImport(
       // alongside usable ones is a stale entry in someone's
       // `authorized_keys`, not something to interrupt the import for.
       const usable = keys.filter((k) => k.status !== "rejected");
+
+      if (usable.length > 1) {
+        const members = parsed.map(sshMember);
+        // The lines say, unambiguously, that they are one person's: one
+        // contact, no question asked.
+        const shared = sharedComment(parsed);
+        if (shared !== null) {
+          return {
+            keys: [sshGroupKey(shared, members, stored.contacts)],
+            secrets: new Map(),
+            unparseable: false,
+          };
+        }
+        // They might be one person's, and only the user knows. Both
+        // readings travel; the preview asks. Skipped once any of them is
+        // already stored, so the offer is never over a set where
+        // "import these separately" and "import these as one" do
+        // different amounts of work.
+        if (usable.every((k) => k.status === "new")) {
+          return {
+            keys: usable,
+            groupProposal: sshGroupKey(
+              proposalLabel(members.length),
+              members,
+              stored.contacts,
+            ),
+            secrets: new Map(),
+            unparseable: false,
+          };
+        }
+      }
+
       return {
         keys: usable.length > 0 ? usable : keys,
         secrets: new Map(),

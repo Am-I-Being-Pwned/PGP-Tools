@@ -466,29 +466,31 @@ export function KeyPreviewBody({
 
       {facts && (
         <div className="border-border divide-border divide-y rounded-md border">
-          <InfoRow label="Fingerprint">
-            <span className="flex items-start gap-1.5">
-              <span className="font-mono text-[11px] leading-relaxed">
-                {fingerprintLines(facts.fingerprint).map((line) => (
-                  <span key={line} className="block">
-                    {line}
-                  </span>
-                ))}
+          {facts.fingerprint !== undefined && (
+            <InfoRow label="Fingerprint">
+              <span className="flex items-start gap-1.5">
+                <span className="font-mono text-[11px] leading-relaxed">
+                  {fingerprintLines(facts.fingerprint).map((line) => (
+                    <span key={line} className="block">
+                      {line}
+                    </span>
+                  ))}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleCopyFingerprint(facts.fingerprint ?? "")}
+                  aria-label="Copy fingerprint"
+                  className="text-muted-foreground hover:text-foreground rounded p-0.5 transition-colors"
+                >
+                  {copiedFp ? (
+                    <CheckIcon className="h-3 w-3 text-green-500" />
+                  ) : (
+                    <CopyIcon className="h-3 w-3" />
+                  )}
+                </button>
               </span>
-              <button
-                type="button"
-                onClick={() => handleCopyFingerprint(facts.fingerprint)}
-                aria-label="Copy fingerprint"
-                className="text-muted-foreground hover:text-foreground rounded p-0.5 transition-colors"
-              >
-                {copiedFp ? (
-                  <CheckIcon className="h-3 w-3 text-green-500" />
-                ) : (
-                  <CopyIcon className="h-3 w-3" />
-                )}
-              </button>
-            </span>
-          </InfoRow>
+            </InfoRow>
+          )}
           <InfoRow label="Algorithm">
             {formatAlgorithm(facts.algorithm)}
             {primaryRow?.bits ? ` · ${primaryRow.bits}-bit` : ""}

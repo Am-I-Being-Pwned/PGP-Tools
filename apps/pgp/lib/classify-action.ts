@@ -2,7 +2,7 @@ import type { OperationAction } from "./messages";
 import {
   looksLikeAgeMessage,
   OPENSSH_PRIVATE_BEGIN,
-  splitSshPublicKeyLines,
+  splitSshPublicKeyCandidateLines,
 } from "./armor-blocks";
 
 /**
@@ -33,7 +33,22 @@ export function classifyAction(text: string): OperationAction {
   // Checked after the private container, which never contains a public
   // line at column 0 -- so this only ever sees a genuine `.pub` /
   // `authorized_keys` paste.
-  if (splitSshPublicKeyLines(text).length > 0) return "import-public";
+  //
+  // The CANDIDATE splitter, matching `import/prepare.ts` and
+  // `drop-routing.ts`: any `<algorithm> AAAA<base64>` line, not just the
+  // two types the age engine accepts. Routing must recognise everything
+  // the import flow can explain, or a pasted ECDSA / FIDO / `ssh-dss`
+  // `.pub` falls through to `encrypt` and the engine's curated refusal
+  // never gets a screen to appear on. Fourth instance of the pattern
+  // (see the comment in `import/prepare.ts`): the engine decides
+  // validity; every layer above it forwards and displays.
+  //
+  // It cannot steal a message from the branches below: `AAAA` must
+  // follow a space at the start of a line, and armored bodies -- PGP,
+  // age, OpenSSH -- carry no spaces on their base64 lines, while their
+  // header lines (`Version:`, `Comment:`) hold a colon the algorithm
+  // token does not admit.
+  if (splitSshPublicKeyCandidateLines(text).length > 0) return "import-public";
   if (text.includes("-----BEGIN PGP MESSAGE-----")) return "decrypt";
   // age, armored or binary. The binary form's magic is ASCII and sits at
   // byte 0, so a paste of it reads as text well enough to route.

@@ -1,4 +1,5 @@
 import { Button } from "@amibeingpwned/ui/button";
+import { Kbd } from "@amibeingpwned/ui/kbd";
 
 import { checkPrfSupport } from "../../lib/protection/webauthn-prf";
 import { INPUT_CLASS } from "../../lib/utils/styles";
@@ -139,6 +140,17 @@ export function ProtectionMethodPicker({
             placeholder="Confirm password"
             value={confirmPassword}
             onChange={(e) => onConfirmPasswordChange(e.target.value)}
+            onKeyDown={(e) => {
+              // Return submits from the last field, which is where a
+              // keyboard user ends up anyway. Nothing here is a <form>,
+              // so without this the key does nothing at all -- and the
+              // chip on the button below would be advertising a
+              // behaviour that did not exist.
+              if (e.key === "Enter" && !submitting) {
+                e.preventDefault();
+                onSubmit();
+              }
+            }}
             className={INPUT_CLASS}
             aria-label="Confirm password"
           />
@@ -166,11 +178,20 @@ export function ProtectionMethodPicker({
           className="flex-1"
           onClick={onSubmit}
           disabled={submitting}
+          aria-keyshortcuts="Enter"
         >
-          {submitting
-            ? "..."
-            : (submitLabel ??
-              (method === "passkey" ? "Create passkey" : "Continue"))}
+          <span className="flex w-full items-center justify-center gap-2">
+            {submitting
+              ? "..."
+              : (submitLabel ??
+                (method === "passkey" ? "Create passkey" : "Continue"))}
+            {!submitting && method === "password" && (
+              // Password only: the passkey path submits by starting a
+              // WebAuthn ceremony from a click, and there is no field to
+              // press Return in.
+              <Kbd shortcut={{ key: "Enter" }} className="opacity-70" />
+            )}
+          </span>
         </Button>
       </div>
     </div>

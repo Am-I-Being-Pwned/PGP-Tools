@@ -163,8 +163,22 @@ if (import.meta.env.DEV) {
   // runs, taking the context menu, the keyboard commands, the
   // install-time welcome tab and `setPanelBehavior` with it, silently.
   // (That was live in shipped builds; see the note in SECURITY.md.)
-  if (globalThis.Clipboard !== undefined) {
-    freezeMethod(globalThis.Clipboard.prototype, "writeText");
+  //
+  // The cast is the point, not a workaround. TypeScript's DOM lib types
+  // `Clipboard` and `navigator.clipboard` as always-present, because it
+  // assumes a document realm -- which is exactly why nobody guarded
+  // them and why the worker died. `no-unnecessary-condition` calls the
+  // guard redundant for the same reason: it believes the lib. This view
+  // states what is actually true of a realm that may be a worker, so
+  // the guard type-checks as meaningful rather than being silenced with
+  // a disable comment that would leave the lie in place.
+  const realm = globalThis as {
+    Clipboard?: typeof Clipboard;
+    navigator?: { clipboard?: Navigator["clipboard"] };
+  };
+
+  if (realm.Clipboard !== undefined) {
+    freezeMethod(realm.Clipboard.prototype, "writeText");
   }
 
   // Freezing a prototype method is NOT enough when the object you actually
@@ -186,8 +200,8 @@ if (import.meta.env.DEV) {
   // Same reason as the Clipboard guard above: no `navigator.clipboard`
   // in a worker realm. There is nothing to pin there and nothing that
   // could tap it, because the API the tap would target does not exist.
-  if (globalThis.navigator?.clipboard !== undefined) {
-    pinOwnMethod(globalThis.navigator.clipboard, "writeText");
+  if (realm.navigator?.clipboard !== undefined) {
+    pinOwnMethod(realm.navigator.clipboard, "writeText");
   }
 
   // `globalThis.crypto` matters more than it looks. getrandom's wasm backend

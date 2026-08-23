@@ -6,7 +6,7 @@
  *  (e.g. a detached-signature file, a vCard, a backup bundle) add a rule;
  *  nothing in the dropzone component itself needs to change. */
 
-import { splitSshPublicKeyLines } from "./armor-blocks";
+import { splitSshPublicKeyCandidateLines } from "./armor-blocks";
 import { looksLikeBinaryKey, readKeyFile } from "./binary-armor";
 
 /** A drag payload once dropped: the raw files and any dragged text/plain. */
@@ -56,9 +56,19 @@ export function looksLikePrivateKey(text: string): boolean {
  *  `id_ed25519.pub` or `authorized_keys`. Unlike every other key form we
  *  route, this one has no armor header at all, so the private-key regex
  *  above cannot see it and a drop of one used to land in the workspace as
- *  if it were a message to encrypt. */
+ *  if it were a message to encrypt.
+ *
+ *  ANY algorithm, via the candidate splitter -- the same one
+ *  `import/prepare.ts` and `classify-action.ts` now use. A dropped ECDSA
+ *  or FIDO `sk-*` `.pub` is a key the import flow has something to say
+ *  about ("ECDSA keys are not supported ..."), so routing it to the
+ *  workspace as message text is the fourth instance of one pattern: the
+ *  engine decides validity; every layer above it forwards and displays.
+ *  Widening here cannot take a drop from another engine -- an armored
+ *  block of any kind is matched by the header rules above and its base64
+ *  body has no spaces for this shape to catch. */
 export function looksLikeSshPublicKey(text: string): boolean {
-  return splitSshPublicKeyLines(text).length > 0;
+  return splitSshPublicKeyCandidateLines(text).length > 0;
 }
 
 /** True when the text carries an importable key of any kind -- either

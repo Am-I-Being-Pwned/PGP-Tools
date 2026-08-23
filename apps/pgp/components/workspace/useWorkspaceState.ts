@@ -34,6 +34,39 @@ interface ClearUndoSnapshot {
   files: File[];
 }
 
+/**
+ * Overwrite the bytes of a binary result and of every multi-file result
+ * with zeroes, in place.
+ *
+ * Dropping the reference is NOT enough for these two. Unlike the text
+ * output (a ref + the display node) they are ordinary React render state,
+ * and React double-buffers hook state onto `fiber.alternate`: at master
+ * lock the workspace unmounts in the SAME synchronous run, so a
+ * `setBinaryOutput(undefined)` scheduled a statement earlier is batched
+ * with the unmount and never commits -- the previous fiber's
+ * `lastRenderedState` goes on holding the old `Uint8Array`, which is the
+ * exact retainer chain T-OUTPUT-HEAP-RESIDUE describes. Zeroing the
+ * buffer works regardless of who is still holding it.
+ *
+ * Detached buffers (transferred to a worker) throw on write; they carry no
+ * readable bytes any more, so skipping them is correct rather than lossy.
+ */
+export function zeroizeResultBytes(
+  binary: Uint8Array | undefined,
+  results: readonly FileResult[],
+): void {
+  const wipe = (buf: Uint8Array | undefined) => {
+    if (!buf || buf.byteLength === 0) return;
+    try {
+      buf.fill(0);
+    } catch {
+      /* detached ArrayBuffer -- nothing readable left to wipe */
+    }
+  };
+  wipe(binary);
+  for (const r of results) wipe(r.data);
+}
+
 export interface WorkspaceState {
   mode: Mode;
   setMode: (m: Mode) => void;
@@ -61,8 +94,9 @@ export interface WorkspaceState {
   inputIsAge: boolean;
   /** Drop every plaintext copy this hook owns: the input ref, the
    *  textarea's DOM value, the clear-undo buffer, the output ref and the
-   *  output node's text. Called by the App at master lock, after the
-   *  draft has been encrypted. */
+   *  output node's text -- and zeroize the decrypted bytes behind
+   *  `binaryOutput` / `fileResults`. Called by the App at master lock,
+   *  after the draft has been encrypted. */
   wipePlaintext: () => void;
   /** Capture input+files so the next clear is undoable. */
   stashClearUndo: () => void;
@@ -293,12 +327,32 @@ export function useWorkspaceState(opts: {
     );
   }, []);
 
+  // The decrypted bytes of a binary or multi-file result. These are the
+  // one part of the operation result that CANNOT live in a ref alone: the
+  // results card renders a row per file, so the values have to reach
+  // render state. The refs below mirror the current state values purely so
+  // `wipePlaintext` can reach the buffers at lock time -- see
+  // `zeroizeResultBytes` for why clearing the state instead does not
+  // release them.
+  const binaryOutputRef = useRef<Uint8Array | undefined>(undefined);
+  const fileResultsRef = useRef<FileResult[]>([]);
+
   const wipePlaintext = useCallback(() => {
     inputRef.current = "";
     if (inputElRef.current) inputElRef.current.value = "";
     clearUndoRef.current = null;
     outputRef.current = "";
     if (outputElRef.current) outputElRef.current.textContent = "";
+    // Binary / multi-file results hold DECRYPTED MESSAGE BYTES just as
+    // `outputRef` holds decrypted text (executeDecrypt's file branches,
+    // and executeDecryptAge, both land here). `resetOutput()` clears them
+    // the ordinary way, but it is a `setState` pair and so is useless on
+    // this path: the caller flips `masterUnlocked` in the same
+    // synchronous run and the update is batched away with the unmount.
+    // Overwriting the buffers is what actually removes the plaintext.
+    zeroizeResultBytes(binaryOutputRef.current, fileResultsRef.current);
+    binaryOutputRef.current = undefined;
+    fileResultsRef.current = [];
   }, []);
 
   const [operationDone, setOperationDone] = useState(false);
@@ -309,8 +363,20 @@ export function useWorkspaceState(opts: {
   const [signatureTone, setSignatureTone] = useState<"success" | "warning">(
     "success",
   );
-  const [binaryOutput, setBinaryOutput] = useState<Uint8Array | undefined>();
-  const [fileResults, setFileResults] = useState<FileResult[]>([]);
+  const [binaryOutput, setBinaryOutputState] = useState<
+    Uint8Array | undefined
+  >();
+  const [fileResults, setFileResultsState] = useState<FileResult[]>([]);
+  // Every write goes through these so the mirror refs stay in step with
+  // render state and `wipePlaintext` can never miss a live buffer.
+  const setBinaryOutput = useCallback((b: Uint8Array | undefined) => {
+    binaryOutputRef.current = b;
+    setBinaryOutputState(b);
+  }, []);
+  const setFileResults = useCallback((r: FileResult[]) => {
+    fileResultsRef.current = r;
+    setFileResultsState(r);
+  }, []);
   const [selectedRecipientIds, setSelectedRecipientIds] = useState<string[]>(
     [],
   );
@@ -352,7 +418,7 @@ export function useWorkspaceState(opts: {
     setSignatureTone("success");
     setNeedsPassword(false);
     setPendingCrxSign(false);
-  }, [setOutput]);
+  }, [setOutput, setBinaryOutput, setFileResults]);
 
   const resetAll = useCallback(() => {
     setInput("");

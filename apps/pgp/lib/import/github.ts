@@ -2,6 +2,7 @@ import type { GithubKeysFailure } from "../messages";
 import type { ContactRecipient, PublicContactKey } from "../storage/contacts";
 import type { PreparedImport } from "./prepare";
 import type { ContactGroup, IncomingKey, RejectedLine } from "./types";
+import { MAX_KEYS } from "../github/response";
 import { parseSshRecipient } from "../pgp/wasm";
 import { contactRecipients, sameSource } from "../storage/contacts";
 import { engineRejection } from "./prepare";
@@ -153,6 +154,15 @@ function groupRejection(group: ContactGroup): string {
   return "None of the published keys can be used for encryption.";
 }
 
+export interface PrepareGithubOptions {
+  /** Published keys the worker's caps held back -- see
+   *  `lib/github/response.ts`. Surfaced as a rejected line, because the
+   *  preview otherwise claims the list is the whole account. */
+  omitted?: number;
+  /** Injectable clock, for the `fetchedAt` stamp. */
+  now?: number;
+}
+
 /**
  * Fetched lines -> the single {@link IncomingKey} the preview renders.
  *
@@ -169,10 +179,24 @@ export async function prepareGithubImport(
   username: string,
   lines: readonly string[],
   stored: GithubStoredContacts,
-  now: number = Date.now(),
+  options: PrepareGithubOptions = {},
 ): Promise<PreparedImport> {
+  const { omitted = 0, now = Date.now() } = options;
   const members: ContactRecipient[] = [];
   const rejected: RejectedLine[] = [];
+
+  // The worker's caps, said out loud. It forwards at most MAX_KEYS lines
+  // and skips any single key string over MAX_KEY_CHARS; without this the
+  // preview would print "messages are encrypted to every key listed
+  // above" over a list that is quietly missing some of the account's
+  // keys -- the same silence this whole function exists to avoid, one
+  // level up.
+  if (omitted > 0) {
+    rejected.push({
+      line: `+${omitted} more published key${omitted === 1 ? "" : "s"}`,
+      reason: `This import takes at most ${MAX_KEYS} keys per account, and skips any single key that is implausibly long. ${omitted} of ${username}'s published keys weren't fetched - paste one here if you need it.`,
+    });
+  }
 
   for (const line of lines) {
     try {

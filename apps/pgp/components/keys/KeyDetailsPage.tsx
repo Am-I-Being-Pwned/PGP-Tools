@@ -25,8 +25,7 @@ import { parseKey, parseKeyDetails } from "../../lib/pgp/wasm";
 import {
   contactRecipients,
   isRecipientDisabled,
-  recipientsField,
-  saveContact,
+  setContactRecipientDisabled,
   withRecipientDisabled,
 } from "../../lib/storage/contacts";
 import { isSshRecord } from "../../lib/storage/key-kind";
@@ -51,7 +50,8 @@ interface KeyDetailsPageProps {
   onBack: () => void;
   /** Contacts only: jump to the workspace with this key preselected. */
   onEncryptTo?: () => void;
-  /** Own keys only: open the rename page for this key. */
+  /** Open the rename page for this key or contact (local display name
+   *  only -- the certificate is never touched). */
   onRename?: () => void;
   /** True when this is the user's configured default key. */
   isDefault?: boolean;
@@ -243,8 +243,10 @@ export function KeyDetailsPage({
   const { name: rawName, email, comment } = parseUserId(primaryUserId);
   const realName = comment ? `${rawName} (${comment})` : rawName;
   // Local alias wins as the headline; the real identity moves to a
-  // subtitle so it's never hidden.
-  const alias = isOwn ? target.keyBlob.alias : undefined;
+  // subtitle so it's never hidden. Contacts carry one too: an SSH
+  // contact's "identity" is a key comment, which may be `user@laptop`,
+  // may differ between one person's keys, or may not exist at all.
+  const alias = isOwn ? target.keyBlob.alias : target.contact.alias;
   const name = alias ?? realName;
 
   // Other identities on the cert, shown as deduped emails so we don't
@@ -332,11 +334,19 @@ export function KeyDetailsPage({
 
   /** Turn one of this contact's keys on or off, and persist it.
    *
-   *  Written through `recipientsField`, so the record keeps the same
-   *  shape the importer writes; `withRecipientDisabled` drops the flag
-   *  entirely when re-enabling, so nothing ever stores `disabled:
-   *  false`. Optimistic, with a rollback: the list on screen must never
-   *  claim a key is excluded when the store still has it enabled. */
+   *  Persisted through `setContactRecipientDisabled` rather than a
+   *  `saveContact` of `{ ...target.contact, ... }`, and that is the
+   *  whole point: `target.contact` is a snapshot captured when this page
+   *  mounted, so saving a spread of it would republish every other field
+   *  as it was then -- reverting, say, the expiry backfill that ran in
+   *  the meantime. The store re-reads the record inside its own lock and
+   *  touches `recipients` alone, which also serialises this write with
+   *  the ones `useContacts` makes (its mutex does not reach here).
+   *
+   *  `withRecipientDisabled` drops the flag entirely when re-enabling,
+   *  so nothing ever stores `disabled: false`. Optimistic, with a
+   *  rollback: the list on screen must never claim a key is excluded
+   *  when the store still has it enabled. */
   const handleToggleRecipient = async (keyId: string, disable: boolean) => {
     if (target.kind !== "contact") return;
     // The last enabled key can never be turned off -- see the disabled
@@ -348,7 +358,7 @@ export function KeyDetailsPage({
     setRecipients(next);
     setSavingKeyId(keyId);
     try {
-      await saveContact({ ...target.contact, ...recipientsField(next) });
+      await setContactRecipientDisabled(target.contact.keyId, keyId, disable);
     } catch (e) {
       setRecipients(previous);
       toast.error(errorMessage(e, "Could not save this change."));

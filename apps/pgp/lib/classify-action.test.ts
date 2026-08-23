@@ -96,3 +96,56 @@ describe("classifyAction - age / SSH", () => {
   });
 });
 
+
+/**
+ * Routing must recognise every `.pub` the import flow can explain.
+ *
+ * `import/prepare.ts` forwards an SSH-shaped line of ANY algorithm to
+ * `parseSshRecipient` so the engine's curated refusal is what the user
+ * sees. That only helps if the right-click actually opens the import
+ * flow: while this classifier used the narrow `ssh-ed25519|ssh-rsa`
+ * matcher, a selected ECDSA / FIDO / `ssh-dss` `.pub` fell through to
+ * `encrypt` and the message had no screen to appear on. The engine
+ * decides validity; every layer above it forwards and displays.
+ */
+describe("classifyAction - SSH public keys of any algorithm", () => {
+  it.each([
+    ["ECDSA", "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTY= a@host"],
+    [
+      "FIDO",
+      "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9w a@host",
+    ],
+    ["DSA", "ssh-dss AAAAB3NzaC1kc3MAAACBAO0= a@host"],
+  ])("routes a %s .pub line to the import flow", (_name, line) => {
+    expect(classifyAction(line)).toBe("import-public");
+  });
+
+  it.each([
+    ["prose about ECDSA", "we should probably move off ecdsa-sha2-nistp256"],
+    ["HTML", "<p>ssh-ed25519 keys are listed below</p>"],
+    ["bare base64", "AAAAB3NzaC1yc2EAAAADAQABAAABgQ=="],
+  ])("still reads %s as text to encrypt", (_name, text) => {
+    expect(classifyAction(text)).toBe("encrypt");
+  });
+
+  it("still leaves an armored OpenPGP block to the OpenPGP path", () => {
+    // A base64 body line starting `AAAA` carries no space, so the wider
+    // SSH shape cannot claim it -- and the PGP header is checked first.
+    expect(
+      classifyAction(
+        "-----BEGIN PGP PUBLIC KEY BLOCK-----\nmQINBGabc\nAAAA+/abc=\n-----END PGP PUBLIC KEY BLOCK-----",
+      ),
+    ).toBe("import-public");
+    expect(
+      classifyAction("-----BEGIN PGP MESSAGE-----\nhQIMA\nAAAAabc=\n"),
+    ).toBe("decrypt");
+  });
+
+  it("still routes an OpenSSH private key to the private import", () => {
+    expect(
+      classifyAction(
+        "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEA\n-----END OPENSSH PRIVATE KEY-----",
+      ),
+    ).toBe("import-private");
+  });
+});

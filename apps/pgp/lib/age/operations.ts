@@ -82,6 +82,27 @@ export async function encryptToRecipients(
  * Returns text when the plaintext is valid UTF-8 and the raw bytes
  * otherwise -- the same fallback `decryptWithHandle` makes for PGP, so a
  * caller can render either engine's result the same way.
+ *
+ * ZEROIZATION, and precisely what it buys. `decryptAgeWithHandle`'s
+ * contract says the caller should scrub the buffer it returns; this is
+ * that caller, and it does -- but only on the branch where it can, and
+ * the two branches differ in kind:
+ *
+ *   - TEXT: the decoded `string` is what goes to the UI, so the buffer
+ *     is a copy nobody needs any more and `.fill(0)` genuinely removes
+ *     one live copy of the plaintext from the JS heap. It does NOT
+ *     reduce the exposure to zero: the returned string is an immutable
+ *     V8 string and cannot be zeroized at all, and it is the copy that
+ *     lives longest (the workspace holds it until `wipe()`, §8.11).
+ *     Same honest caveat as §5's "JS-side OpenSSH key-file Uint8Array"
+ *     row -- one fewer copy, not no copies.
+ *   - BINARY: the buffer IS the return value. Ownership passes to the
+ *     caller, so scrubbing it here would hand back zeros. `wipePlaintext`
+ *     /`zeroizeResultBytes` in the workspace is what wipes this one, and
+ *     that is the right place for it.
+ *
+ * A `finally` would be wrong for exactly that reason: it cannot tell the
+ * two branches apart.
  */
 export async function decryptWithHandle(
   opts: AgeDecryptOptions,
@@ -90,11 +111,16 @@ export async function decryptWithHandle(
     resolveCiphertext(opts.input),
     opts.keyHandle,
   );
+  let text: string;
   try {
-    return new TextDecoder("utf-8", { fatal: true }).decode(plaintext);
+    text = new TextDecoder("utf-8", { fatal: true }).decode(plaintext);
   } catch {
+    // Not UTF-8: the bytes themselves are the result and the caller owns
+    // them from here. Deliberately not scrubbed -- see above.
     return plaintext;
   }
+  plaintext.fill(0);
+  return text;
 }
 
 /** Parse one SSH public key line into its canonical recipient form plus

@@ -1,5 +1,6 @@
 import type { PublicContactKey } from "./storage/contacts";
 import type { StoredKeyKind } from "./storage/key-kind";
+import type { ProtectedKeyBlob } from "./storage/keyring";
 import { activeRecipients } from "./storage/contacts";
 import { storedKeyKind } from "./storage/key-kind";
 
@@ -44,6 +45,46 @@ type PickerKey = OwnKey | PublicContactKey;
  * encrypt itself) go through it, so the preview cannot disagree with
  * what actually runs.
  */
+/**
+ * Resolve picker selection ids to the records they stand for.
+ *
+ * CONTACTS ARE SEARCHED FIRST, and that ordering is the whole point.
+ * A contact's `keyId` is its HEAD recipient's fingerprint, so when that
+ * same key is also one of the user's own identities the id exists in
+ * BOTH collections. Resolving it to the own key silently drops the
+ * contact's other recipients: the message is encrypted to one key
+ * instead of all of them, and the result is a perfectly valid age file
+ * that the person's other machines cannot open. Nothing fails, nothing
+ * warns -- the sender sees a normal encrypt and the recipient sees a
+ * file they cannot read.
+ *
+ * Preferring the contact is safe in the other direction: an own key
+ * NEVER carries `recipients`, so this can only ever resolve to the same
+ * key material or to more of the intended person's keys, never fewer.
+ * The user's own key still reaches the message when they want it to --
+ * "Also encrypt to me" appends it through `buildEncryptRecipients`,
+ * which is a separate path and unaffected by this lookup.
+ *
+ * Exported and shared because both callers (`WorkspaceView`'s engine
+ * derivation and `useWorkspaceOperations`'s encrypt) previously
+ * open-coded the same `find` over a concatenated array -- which is how
+ * this went unnoticed: the two agreed with each other, and both were
+ * wrong.
+ */
+export function resolveSelectedRecipients(
+  selectedIds: readonly string[],
+  contacts: readonly PublicContactKey[],
+  ownKeys: readonly ProtectedKeyBlob[],
+): (ProtectedKeyBlob | PublicContactKey)[] {
+  return selectedIds
+    .map(
+      (id) =>
+        contacts.find((c) => c.keyId === id) ??
+        ownKeys.find((k) => k.keyId === id),
+    )
+    .filter((k) => k !== undefined);
+}
+
 export function toSelectedRecipient(key: PickerKey): SelectedRecipient {
   if ("armoredPublicKey" in key) {
     return {

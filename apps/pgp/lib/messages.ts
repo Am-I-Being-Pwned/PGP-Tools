@@ -43,7 +43,16 @@ export type GithubKeysFailure =
   | "server-error";
 
 export type GithubKeysResponse =
-  | { ok: true; username: string; lines: string[] }
+  | {
+      ok: true;
+      username: string;
+      lines: string[];
+      /** How many of the account's published keys the worker's own caps
+       *  held back (see `lib/github/response.ts`). The panel says so
+       *  rather than presenting a truncated list as the whole account.
+       *  Optional so an older panel build still type-checks. */
+      omitted?: number;
+    }
   | {
       ok: false;
       error: GithubKeysFailure;

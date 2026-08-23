@@ -514,6 +514,137 @@ describe("prepareImport - SSH / age", () => {
     expect(isNoOp(prepared)).toBe(true);
   });
 
+  /**
+   * Grouping several pasted `.pub` lines into ONE contact.
+   *
+   * A person is not a key: someone who self-hosts hands over three
+   * `.pub` files, and a message has to reach all of them (see
+   * `storage/contacts.ts`). But nothing in the text says three lines are
+   * one person, so there are exactly two paths and the split between
+   * them is the property under test:
+   *
+   *  - AUTOMATIC, only on unambiguous agreement -- every line commented,
+   *    every comment byte-identical. Anything looser is a guess, and
+   *    guessing folds `root@web01` and `root@db02` into one identity
+   *    that is then encrypted to as one person.
+   *  - MANUAL otherwise: both readings are carried out of here and the
+   *    preview asks. Blank is still today's behaviour, N contacts.
+   */
+  describe("grouping several pasted keys", () => {
+    /** `n` distinct keys, each with the given comment. */
+    function stubLines(comments: string[]) {
+      const mock = vi.mocked(parseSshRecipient);
+      mock.mockReset();
+      for (const [i, comment] of comments.entries()) {
+        mock.mockResolvedValueOnce({
+          recipient: `ssh-ed25519 AAAAkey${i}`,
+          algorithm: "ssh-ed25519",
+          fingerprint: `SHA256:key${i}`,
+          comment,
+        });
+      }
+      return comments.map((_, i) => `ssh-ed25519 AAAAkey${i} c${i}`).join("\n");
+    }
+
+    it("files keys that agree on a comment as ONE contact, unasked", async () => {
+      const text = stubLines(["alice@laptop", "alice@laptop"]);
+      const prepared = await prepareImport(text, noStores, { ssh: true });
+
+      expect(prepared.keys).toHaveLength(1);
+      const [key] = prepared.keys;
+      expect(key.kind).toBe("ssh-public");
+      expect(key.status).toBe("new");
+      // The comment IS the name -- there is nothing to ask.
+      expect(key.userIds).toEqual(["alice@laptop"]);
+      expect(key.group?.members.map((m) => m.keyId)).toEqual([
+        "SHA256:key0",
+        "SHA256:key1",
+      ]);
+      // The head member's, so every path that reads an IncomingKey's
+      // identity works on a group without knowing it is one.
+      expect(key.keyId).toBe("SHA256:key0");
+      expect(key.publicArmored).toBe("ssh-ed25519 AAAAkey0");
+      // Hand-supplied: absent source, the same as on the stored record.
+      expect(key.group?.source).toBeUndefined();
+      // Nothing to ask, so nothing is offered.
+      expect(prepared.groupProposal).toBeUndefined();
+    });
+
+    it("never groups keys whose comments disagree", async () => {
+      const text = stubLines(["alice@laptop", "alice@desktop", ""]);
+      const prepared = await prepareImport(text, noStores, { ssh: true });
+
+      // Declining is the default, and it is exactly today's behaviour.
+      expect(prepared.keys).toHaveLength(3);
+      expect(prepared.keys.every((k) => k.group === undefined)).toBe(true);
+      expect(importable(prepared.keys)).toHaveLength(3);
+
+      // ...and the other reading travels alongside it.
+      const proposal = prepared.groupProposal;
+      expect(proposal?.group?.members.map((m) => m.keyId)).toEqual([
+        "SHA256:key0",
+        "SHA256:key1",
+        "SHA256:key2",
+      ]);
+      expect(proposal?.status).toBe("new");
+      expect(proposal?.group?.source).toBeUndefined();
+    });
+
+    it("does not treat two missing comments as agreement", async () => {
+      // `user@host` twice is a statement; nothing twice is not one.
+      const prepared = await prepareImport(stubLines(["", ""]), noStores, {
+        ssh: true,
+      });
+      expect(prepared.keys).toHaveLength(2);
+      expect(prepared.groupProposal).toBeDefined();
+    });
+
+    it("offers nothing for a single key", async () => {
+      const prepared = await prepareImport(stubLines(["alice@laptop"]), noStores, {
+        ssh: true,
+      });
+      expect(prepared.keys).toHaveLength(1);
+      expect(prepared.keys[0].group).toBeUndefined();
+      expect(prepared.groupProposal).toBeUndefined();
+    });
+
+    it("offers nothing once one of the keys is already stored", async () => {
+      // "Import these separately" and "import these as one" would do
+      // different amounts of work, so the question is not worth asking.
+      const text = stubLines(["alice@laptop", "alice@desktop"]);
+      const prepared = await prepareImport(
+        text,
+        {
+          own: [],
+          contacts: [
+            storedKey({ keyId: "SHA256:key1", armored: "ssh-ed25519 AAAAkey1" }),
+          ],
+        },
+        { ssh: true },
+      );
+      expect(prepared.groupProposal).toBeUndefined();
+      expect(prepared.keys.map((k) => k.status)).toEqual(["new", "duplicate"]);
+    });
+
+    it("calls a group of already-stored keys a duplicate, not an import", async () => {
+      const text = stubLines(["alice@laptop", "alice@laptop"]);
+      const prepared = await prepareImport(
+        text,
+        {
+          own: [],
+          contacts: [
+            storedKey({ keyId: "SHA256:key0", armored: "ssh-ed25519 AAAAkey0" }),
+            storedKey({ keyId: "SHA256:key1", armored: "ssh-ed25519 AAAAkey1" }),
+          ],
+        },
+        { ssh: true },
+      );
+      expect(prepared.keys).toHaveLength(1);
+      expect(prepared.keys[0].status).toBe("duplicate");
+      expect(importable(prepared.keys)).toEqual([]);
+    });
+  });
+
   it("classifies each line of an authorized_keys paste", async () => {
     vi.mocked(parseSshRecipient)
       .mockResolvedValueOnce({
@@ -797,3 +928,140 @@ describe("prepareImport - SSH / age", () => {
   });
 });
 
+
+/**
+ * The three refusals that could not reach the user at all on the paste
+ * path -- ECDSA, FIDO `sk-*`, DSA.
+ *
+ * `parseSshRecipient` has always had a curated message for each. What it
+ * never had was a line to be given: `splitSshPublicKeyLines` matched
+ * `ssh-ed25519|ssh-rsa` only, so a pasted `.pub` of any other algorithm
+ * was not split out, fell through to the OpenPGP parse, and came back
+ * `unparseable` -- the panel's "that doesn't look like a key" standing in
+ * for the one sentence that names the problem and the fix.
+ *
+ * Fourth instance of one pattern (`catch { continue }` here,
+ * `github/response.ts`'s filter, then this). The invariant these tests
+ * pin: THE ENGINE DECIDES VALIDITY; EVERY LAYER ABOVE IT FORWARDS AND
+ * DISPLAYS. Shape is all `prepareImport` checks.
+ */
+describe("prepareImport - refused SSH algorithms reach the user", () => {
+  const noStores: StoredKeys = { own: [], contacts: [] };
+
+  beforeEach(() => {
+    vi.mocked(parseSshRecipient).mockReset();
+    vi.mocked(sshPrivateKeyFormatRejection).mockReset();
+    vi.mocked(sshPrivateKeyFormatRejection).mockResolvedValue(null);
+    vi.mocked(parseKeys).mockReset();
+    vi.mocked(parseKeys).mockRejectedValue(new Error("no cert"));
+  });
+
+  const REFUSED: [string, string, string][] = [
+    [
+      "ECDSA",
+      "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTY= alice@host",
+      "MSG_ECDSA",
+    ],
+    [
+      "FIDO",
+      "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29t alice@host",
+      "MSG_FIDO",
+    ],
+    ["DSA", "ssh-dss AAAAB3NzaC1kc3MAAACBAO0= alice@host", "MSG_DSA"],
+  ];
+
+  it.each(REFUSED)(
+    "%s: the line is forwarded and the engine's words come back",
+    async (_name, line, constant) => {
+      const message = ageMessage(constant);
+      vi.mocked(parseSshRecipient).mockRejectedValue(new Error(message));
+
+      const prepared = await prepareImport(line, noStores, { ssh: true });
+
+      // Forwarded at all -- the half of this that used to be missing.
+      expect(parseSshRecipient).toHaveBeenCalledWith(line);
+      // Reported as a key we refuse, NOT as text that isn't a key.
+      expect(prepared.unparseable).toBe(false);
+      expect(prepared.keys).toHaveLength(1);
+      expect(prepared.keys[0].kind).toBe("ssh-public");
+      expect(prepared.keys[0].status).toBe("rejected");
+      // Verbatim: the engine names the type and the `ssh-keygen` fix.
+      expect(prepared.keys[0].rejection).toBe(message);
+      // Shown, never stored, and nothing to import.
+      expect(prepared.keys[0].publicArmored).toBe(line);
+      expect(prepared.secrets.size).toBe(0);
+      expect(importable(prepared.keys)).toEqual([]);
+    },
+  );
+
+  it("still drops a refused line when a usable one sits beside it", async () => {
+    // An `authorized_keys` with a stale ECDSA entry is not worth
+    // interrupting the import of the key that does work.
+    vi.mocked(parseSshRecipient)
+      .mockRejectedValueOnce(new Error(ageMessage("MSG_ECDSA")))
+      .mockResolvedValueOnce({
+        recipient: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIALwHu",
+        algorithm: "ssh-ed25519",
+        fingerprint: "SHA256:zzz",
+        comment: "alice@host",
+      });
+    const prepared = await prepareImport(
+      "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNo old@host\nssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIALwHu alice@host",
+      noStores,
+      { ssh: true },
+    );
+    expect(prepared.keys).toHaveLength(1);
+    expect(prepared.keys[0].status).toBe("new");
+  });
+
+  // The other half of widening the shape: what must still NOT look like
+  // an SSH public line. Each of these is owned by another path, and a
+  // candidate matcher that claimed one would have moved the bug rather
+  // than fixed it.
+  it.each([
+    ["prose naming a key type", "my ssh-ed25519 key is on the other laptop"],
+    ["prose about ECDSA", "we should probably move off ecdsa-sha2-nistp256"],
+    ["HTML", "<p>ssh-ed25519 keys are listed below</p>"],
+    ["bare base64", "AAAAB3NzaC1yc2EAAAADAQABAAABgQ=="],
+    ["a colon-headed armor line", "Comment: AAAAB3NzaC1yc2EAAAADAQAB"],
+  ])("does not mistake %s for a key", async (_name, text) => {
+    const prepared = await prepareImport(text, noStores, { ssh: true });
+    expect(parseSshRecipient).not.toHaveBeenCalled();
+    expect(prepared.unparseable).toBe(true);
+  });
+
+  it("leaves an armored OpenPGP block to the OpenPGP path", async () => {
+    vi.mocked(parseKeys).mockResolvedValue([
+      { armored: "ARMOR-A", keyInfo: info() },
+    ]);
+    vi.mocked(parseKeyDetails).mockResolvedValue(details([FP]));
+    const prepared = await prepareImport(
+      "-----BEGIN PGP PUBLIC KEY BLOCK-----\nmQINBGabc\nAAAA+/abc=\n-----END PGP PUBLIC KEY BLOCK-----\n",
+      noStores,
+      { ssh: true },
+    );
+    expect(parseSshRecipient).not.toHaveBeenCalled();
+    expect(prepared.keys[0].kind).toBe("pgp-public");
+  });
+
+  it("leaves a raw RSA PEM to the CRX path", async () => {
+    const prepared = await prepareImport(
+      "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA AAAAB3Nza\n-----END RSA PRIVATE KEY-----\n",
+      noStores,
+      { ssh: true, crx: true },
+    );
+    expect(parseSshRecipient).not.toHaveBeenCalled();
+    expect(prepared.keys[0].kind).toBe("crx");
+  });
+
+  it("leaves an OpenSSH private container to the private-key flow", async () => {
+    const prepared = await prepareImport(
+      "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEA\n-----END OPENSSH PRIVATE KEY-----\n",
+      noStores,
+      { ssh: true },
+    );
+    expect(parseSshRecipient).not.toHaveBeenCalled();
+    expect(prepared.keys[0].kind).toBe("ssh-private");
+    expect(prepared.keys[0].status).toBe("new");
+  });
+});

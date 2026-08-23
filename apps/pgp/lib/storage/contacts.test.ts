@@ -24,19 +24,28 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ContactRecipient, PublicContactKey } from "./contacts";
+import { STORAGE_CONTACTS } from "../constants";
 import {
   activeRecipients,
   contactRecipients,
   contactSource,
   disabledField,
   isRecipientDisabled,
+  aliasField,
   loadContacts,
   recipientsField,
   removeContact,
   sameSource,
   saveContact,
+  setContactRecipientDisabled,
+  updateContact,
+  updateContactAlias,
+  upsertContacts,
+  withAlias,
   withRecipientDisabled,
+  withRecipients,
 } from "./contacts";
+import { displayUserId } from "../utils/key-naming";
 import { invalidateLocationCache } from "./engine";
 import {
   fakeDecryptContacts,
@@ -82,8 +91,11 @@ function fakeArea() {
   };
 }
 
+let local: ReturnType<typeof fakeArea>;
+
 beforeEach(() => {
-  vi.stubGlobal("chrome", { storage: { local: fakeArea(), sync: fakeArea() } });
+  local = fakeArea();
+  vi.stubGlobal("chrome", { storage: { local, sync: fakeArea() } });
   wasmMock.session = true;
   invalidateLocationCache();
 });
@@ -211,45 +223,94 @@ describe("the write rule - recipients only above length 1", () => {
   });
 });
 
-describe("isValidContact - the head-agreement invariant", () => {
+describe("the head-agreement invariant - repaired, never rejected", () => {
   /** The validator isn't exported; it runs on every LOAD, so a rejected
-   *  record simply doesn't come back. */
-  async function survivesLoad(c: PublicContactKey): Promise<boolean> {
+   *  record simply doesn't come back -- and the next write persists the
+   *  filtered array, i.e. the person is gone from disk. Repair is the
+   *  remedy precisely because rejection here is permanent deletion. */
+  async function reload(c: PublicContactKey): Promise<PublicContactKey> {
     await saveContact(c);
-    return (await loadContacts()).some((x) => x.keyId === c.keyId);
+    const [stored] = await loadContacts();
+    return stored;
   }
 
-  it("accepts a record whose recipients[0] agrees", async () => {
-    expect(await survivesLoad(multiContact(3))).toBe(true);
+  it("leaves a record whose recipients[0] agrees exactly as it was", async () => {
+    const c = multiContact(3);
+    expect(JSON.stringify(await reload(c))).toBe(JSON.stringify(c));
   });
 
-  it("rejects a recipients[0] whose keyId disagrees", async () => {
+  it("re-heads a list whose head names another key, keeping every key", async () => {
     const bad = multiContact(3);
-    bad.recipients = [
-      { ...sshRecipient(0), keyId: "SHA256:someone-else" },
-      sshRecipient(1),
-    ];
-    expect(await survivesLoad(bad)).toBe(false);
+    // key1 is the record's own key, but it is not at the head.
+    bad.keyId = sshRecipient(1).keyId;
+    bad.armoredPublicKey = sshRecipient(1).armored;
+
+    const stored = await reload(bad);
+    expect(stored).toBeDefined();
+    const list = contactRecipients(stored);
+    expect(list[0].keyId).toBe(stored.keyId);
+    expect(list[0].armored).toBe(stored.armoredPublicKey);
+    // Nobody was dropped on the way: still three keys, re-ordered.
+    expect(list.map((r) => r.keyId).sort()).toEqual([
+      "SHA256:key0",
+      "SHA256:key1",
+      "SHA256:key2",
+    ]);
   });
 
-  it("rejects a recipients[0] whose armored line disagrees", async () => {
+  it("restores the record's own key as head when no entry matches", async () => {
     const bad = multiContact(3);
     bad.recipients = [
       { ...sshRecipient(0), armored: "ssh-ed25519 AAAAother other@host" },
       sshRecipient(1),
     ];
-    expect(await survivesLoad(bad)).toBe(false);
+
+    const stored = await reload(bad);
+    const list = contactRecipients(stored);
+    expect(list[0]).toEqual({
+      keyId: bad.keyId,
+      armored: bad.armoredPublicKey,
+      algorithm: bad.algorithm,
+    });
+    // The entry claiming this fingerprint with DIFFERENT bytes is the one
+    // thing dropped -- one of the two has to be wrong, and the top-level
+    // copy is the one every older build already encrypts to.
+    expect(list.map((r) => r.keyId)).toEqual(["SHA256:key0", "SHA256:key1"]);
   });
 
-  it("rejects an empty or malformed recipients list", async () => {
-    expect(await survivesLoad({ ...multiContact(3), recipients: [] })).toBe(
-      false,
-    );
+  it("keeps the person when the list is empty or full of junk", async () => {
+    const empty = await reload({ ...multiContact(3), recipients: [] });
+    expect(empty.keyId).toBe(multiContact(3).keyId);
+    expect(contactRecipients(empty)).toHaveLength(1);
+    // Back to the single-key shape, byte-for-byte: no stale field left.
+    expect("recipients" in empty).toBe(false);
+
     const malformed = multiContact(3);
     (malformed as { recipients: unknown }).recipients = [
-      { keyId: multiContact(3).keyId },
+      { keyId: malformed.keyId },
+      sshRecipient(1),
     ];
-    expect(await survivesLoad(malformed)).toBe(false);
+    const stored = await reload(malformed);
+    expect(stored.keyId).toBe(malformed.keyId);
+    expect(contactRecipients(stored).map((r) => r.keyId)).toEqual([
+      "SHA256:key0",
+      "SHA256:key1",
+    ]);
+  });
+
+  it("does not delete the person on the write that follows the bad read", async () => {
+    // The failure this replaces: the bad record is filtered out on load,
+    // and the very next save persists the list without it.
+    const bad = multiContact(3);
+    bad.recipients = [
+      { ...sshRecipient(0), keyId: "SHA256:someone-else" },
+      sshRecipient(1),
+    ];
+    await saveContact(bad);
+    await saveContact(legacyContact());
+
+    const all = await loadContacts();
+    expect(all.map((c) => c.keyId).sort()).toEqual(["CCCC", "SHA256:key0"]);
   });
 });
 
@@ -490,5 +551,380 @@ describe("disabled recipients - absent means enabled", () => {
     const [stored] = await loadContacts();
     expect(stored).toBeDefined();
     expect(activeRecipients(stored)).toHaveLength(3);
+  });
+});
+
+/**
+ * The guard, and the reason it has to exist.
+ *
+ * `loadEncryptedArray` returns `[]` with no contacts session, which is
+ * indistinguishable from an empty store -- so an unguarded delete
+ * computes "nothing left", takes the empty-store shortcut and removes
+ * the sealed blob. Every contact the user has, destroyed, without the
+ * vault ever being opened; and reachable on the ordinary auto-lock path,
+ * because the master lock drops the contacts session without awaiting it
+ * while a mutation is already queued behind the UI's mutex.
+ *
+ * These assert on STORAGE, not on a return value: a delete that reports
+ * success having wiped the blob is the exact failure being prevented.
+ */
+describe("mutating a locked contacts store", () => {
+  async function seed(): Promise<unknown> {
+    await saveContact(legacyContact());
+    await saveContact(multiContact(3));
+    return local.store.get(STORAGE_CONTACTS);
+  }
+
+  it("does NOT delete the blob when the last contact is removed while locked", async () => {
+    await saveContact(legacyContact());
+    const sealed = local.store.get(STORAGE_CONTACTS);
+
+    wasmMock.session = false;
+    await expect(removeContact("CCCC")).rejects.toThrow(/vault is locked/);
+    expect(local.store.has(STORAGE_CONTACTS)).toBe(true);
+    expect(local.store.get(STORAGE_CONTACTS)).toBe(sealed);
+
+    wasmMock.session = true;
+    expect((await loadContacts()).map((c) => c.keyId)).toEqual(["CCCC"]);
+  });
+
+  it("does not overwrite the blob on any locked mutation", async () => {
+    const sealed = await seed();
+
+    wasmMock.session = false;
+    await expect(saveContact(legacyContact({ keyId: "DDDD" }))).rejects.toThrow(
+      /vault is locked/,
+    );
+    await expect(removeContact("SHA256:key0")).rejects.toThrow(
+      /vault is locked/,
+    );
+    await expect(
+      setContactRecipientDisabled("SHA256:key0", "SHA256:key1", true),
+    ).rejects.toThrow(/vault is locked/);
+    await expect(
+      updateContact("CCCC", (c) => ({ ...c, userIds: ["gone"] })),
+    ).rejects.toThrow(/vault is locked/);
+    expect(local.store.get(STORAGE_CONTACTS)).toBe(sealed);
+
+    wasmMock.session = true;
+    expect(await loadContacts()).toHaveLength(2);
+  });
+
+  it("still removes the blob when the store genuinely empties", async () => {
+    await saveContact(legacyContact());
+    await removeContact("CCCC");
+    expect(local.store.has(STORAGE_CONTACTS)).toBe(false);
+  });
+});
+
+/**
+ * `disabled` is the one field on a contact that carries a SECURITY
+ * decision, and a refresh is the one path that would discard it: a
+ * re-fetch builds its record purely from what GitHub just returned, and
+ * the upsert replaces wholesale on a source match. Carried forward in
+ * the STORE rather than at each call site, so no fetch path can forget.
+ */
+describe("saveContact - a refresh keeps the user's decisions", () => {
+  /** The same person, re-fetched: fresh timestamps, no `disabled`. */
+  function refetched(keys: number[], user = "octocat"): PublicContactKey {
+    const list = keys.map(sshRecipient);
+    return {
+      ...multiContact(3, user),
+      keyId: list[0].keyId,
+      armoredPublicKey: list[0].armored,
+      addedAt: 5000,
+      lastUsedAt: 5000,
+      source: { type: "github", user, fetchedAt: 5000 },
+      ...recipientsField(list),
+    };
+  }
+
+  it("keeps a disabled key disabled across a re-fetch", async () => {
+    await saveContact(multiContact(3));
+    await setContactRecipientDisabled("SHA256:key0", "SHA256:key1", true);
+
+    await saveContact(refetched([0, 1, 2]));
+
+    const [stored] = await loadContacts();
+    expect(contactRecipients(stored).map(isRecipientDisabled)).toEqual([
+      false,
+      true,
+      false,
+    ]);
+    expect(activeRecipients(stored).map((r) => r.keyId)).toEqual([
+      "SHA256:key0",
+      "SHA256:key2",
+    ]);
+  });
+
+  it("carries the flag by keyId, not by position", async () => {
+    await saveContact(multiContact(3));
+    await setContactRecipientDisabled("SHA256:key0", "SHA256:key2", true);
+
+    // key0 is gone upstream, so every key shifts one place along.
+    await saveContact(refetched([1, 2]));
+
+    const [stored] = await loadContacts();
+    const list = contactRecipients(stored);
+    expect(list.map((r) => r.keyId)).toEqual(["SHA256:key1", "SHA256:key2"]);
+    expect(list.map(isRecipientDisabled)).toEqual([false, true]);
+  });
+
+  it("leaves a newly published key enabled", async () => {
+    await saveContact(multiContact(3));
+    await setContactRecipientDisabled("SHA256:key0", "SHA256:key1", true);
+
+    await saveContact(refetched([0, 1, 2, 3]));
+
+    const [stored] = await loadContacts();
+    expect(
+      contactRecipients(stored)
+        .filter(isRecipientDisabled)
+        .map((r) => r.keyId),
+    ).toEqual(["SHA256:key1"]);
+  });
+
+  it("does not carry a decision across to a different person", async () => {
+    // Two GitHub accounts publishing the same key collide by keyId
+    // alone. Neither the disable decision nor "known since" belongs to
+    // the other account.
+    await saveContact(multiContact(3, "octocat"));
+    await setContactRecipientDisabled("SHA256:key0", "SHA256:key1", true);
+
+    await saveContact(refetched([0, 1, 2], "hubot"));
+
+    const [stored] = await loadContacts();
+    expect(contactSource(stored)?.user).toBe("hubot");
+    expect(contactRecipients(stored).some(isRecipientDisabled)).toBe(false);
+    expect(stored.addedAt).toBe(5000);
+  });
+
+  it("keeps `addedAt` from the record it replaces", async () => {
+    await saveContact(multiContact(3)); // addedAt: 1
+    await saveContact(refetched([0, 1, 2])); // addedAt: 5000
+    const [stored] = await loadContacts();
+    expect(stored.addedAt).toBe(1);
+    expect(contactSource(stored)?.fetchedAt).toBe(5000);
+  });
+
+  it("writes nothing extra when nothing was disabled", async () => {
+    await saveContact(legacyContact());
+    await saveContact(legacyContact({ lastUsedAt: 9 }));
+    const [stored] = await loadContacts();
+    expect(JSON.stringify(stored)).toBe(
+      JSON.stringify(legacyContact({ lastUsedAt: 9 })),
+    );
+  });
+});
+
+/**
+ * A hand-pasted key is not a reason to lose a person.
+ *
+ * Upsert by keyId means a pasted key whose fingerprint equals a fetched
+ * contact's HEAD would replace that whole record with a one-key,
+ * source-less contact -- the person's other keys silently dropped.
+ */
+describe("upsertContacts - a pasted key never replaces a fetched person", () => {
+  it("leaves the fetched record intact", async () => {
+    await saveContact(multiContact(3));
+    await saveContact(
+      legacyContact({
+        keyId: "SHA256:key0",
+        armoredPublicKey: sshRecipient(0).armored,
+        userIds: ["pasted"],
+      }),
+    );
+
+    const all = await loadContacts();
+    expect(all).toHaveLength(1);
+    expect(contactRecipients(all[0])).toHaveLength(3);
+    expect(contactSource(all[0])?.user).toBe("octocat");
+  });
+
+  it("still lets a fetch replace a source-less record with the same key", async () => {
+    await saveContact(
+      legacyContact({
+        keyId: "SHA256:key0",
+        armoredPublicKey: sshRecipient(0).armored,
+      }),
+    );
+    await saveContact(multiContact(3));
+    const all = await loadContacts();
+    expect(all).toHaveLength(1);
+    expect(contactRecipients(all[0])).toHaveLength(3);
+  });
+
+  it("is the same function the UI's optimistic list uses", () => {
+    // Pure, so the hook can reach exactly the answer storage will.
+    const existing = [multiContact(3)];
+    const pasted = legacyContact({ keyId: "SHA256:key0" });
+    expect(upsertContacts(existing, pasted)).toEqual(existing);
+    expect(upsertContacts([], pasted)).toEqual([pasted]);
+  });
+});
+
+/**
+ * Every write goes through the store's lock, and every write that
+ * touches ONE field re-reads the record rather than republishing a
+ * snapshot. The recipient toggle reaches the store from a component the
+ * contacts hook's mutex does not cover, so serialisation has to live
+ * here.
+ */
+describe("serialised writes", () => {
+  it("does not lose either of two concurrent saves", async () => {
+    await saveContact(legacyContact());
+    await Promise.all([
+      saveContact(legacyContact({ keyId: "DDDD", userIds: ["Dave"] })),
+      saveContact(legacyContact({ keyId: "EEEE", userIds: ["Erin"] })),
+    ]);
+    expect((await loadContacts()).map((c) => c.keyId).sort()).toEqual([
+      "CCCC",
+      "DDDD",
+      "EEEE",
+    ]);
+  });
+
+  it("toggles a key without republishing a stale snapshot", async () => {
+    await saveContact(multiContact(3));
+    const snapshot = (await loadContacts())[0];
+
+    // Something else edits the record after the details page captured it
+    // -- the expiry backfill does exactly this, one contact at a time.
+    await updateContact(snapshot.keyId, (c) => ({ ...c, expiresAt: null }));
+
+    await setContactRecipientDisabled(snapshot.keyId, "SHA256:key1", true);
+
+    const [stored] = await loadContacts();
+    expect(stored.expiresAt).toBeNull();
+    expect(contactRecipients(stored).map(isRecipientDisabled)).toEqual([
+      false,
+      true,
+      false,
+    ]);
+  });
+
+  it("interleaves a toggle and a full-record save without losing one", async () => {
+    await saveContact(multiContact(3));
+    await Promise.all([
+      setContactRecipientDisabled("SHA256:key0", "SHA256:key1", true),
+      updateContact("SHA256:key0", (c) => ({ ...c, lastUsedAt: 4242 })),
+    ]);
+    const [stored] = await loadContacts();
+    expect(stored.lastUsedAt).toBe(4242);
+    expect(contactRecipients(stored)[1].disabled).toBe(true);
+  });
+
+  it("no-ops when the contact is gone", async () => {
+    await saveContact(legacyContact());
+    await expect(
+      setContactRecipientDisabled("MISSING", "MISSING", true),
+    ).resolves.toBeUndefined();
+    expect(await loadContacts()).toHaveLength(1);
+  });
+});
+
+/**
+ * `recipientsField` returns `{}` at length 1, so spreading it over an
+ * existing record cannot clear a list that SHRINKS back to one key --
+ * the stale array would survive and disagree with the top-level fields.
+ * Nothing shrinks a list today, which is why the contract has to be
+ * enforced rather than remembered.
+ */
+describe("withRecipients - a shrinking list clears the field", () => {
+  it("drops the array when the list falls back to one key", () => {
+    const c = multiContact(3);
+    const one = withRecipients(c, [sshRecipient(0)]);
+    expect("recipients" in one).toBe(false);
+    // Byte-identical to a record that never had the field.
+    expect(JSON.parse(JSON.stringify(one))).toEqual(
+      JSON.parse(
+        JSON.stringify({
+          ...multiContact(1),
+          source: c.source,
+        }),
+      ),
+    );
+  });
+
+  it("keeps the field, in place, when the list is still plural", () => {
+    const c = multiContact(3);
+    const two = withRecipients(c, [sshRecipient(0), sshRecipient(1)]);
+    expect(two.recipients).toHaveLength(2);
+    expect(JSON.stringify(Object.keys(two))).toBe(JSON.stringify(Object.keys(c)));
+  });
+});
+
+/**
+ * A contact's local display name.
+ *
+ * The same field, with the same rules, `ProtectedKeyBlob.alias` has for
+ * the user's own keys -- and for the same reason: a contact is otherwise
+ * stuck with whatever `userIds[0]` it was imported with, which for an
+ * SSH key is a key comment that may be `user@laptop`, may differ between
+ * one person's keys, or may not exist at all.
+ *
+ * What is pinned here is the convention every optional field on this
+ * record follows: ABSENT means "fall back", `""` is never written, and a
+ * contact without one serialises byte-for-byte the way it did before the
+ * field existed.
+ */
+describe("alias - absent means the derived name", () => {
+  it("falls back to the first User ID when there is no alias", () => {
+    expect(displayUserId(legacyContact())).toBe("Carol <c@d.test>");
+    expect("alias" in legacyContact()).toBe(false);
+  });
+
+  it("wins over the User IDs when set", () => {
+    const named = withAlias(legacyContact(), "Carol's laptop");
+    expect(displayUserId(named)).toBe("Carol's laptop");
+    // The identity itself is untouched: an alias is a local label, never
+    // a change to the key.
+    expect(named.userIds).toEqual(["Carol <c@d.test>"]);
+  });
+
+  it("trims, and omits the field entirely when nothing is left", () => {
+    expect(aliasField("  Carol  ")).toEqual({ alias: "Carol" });
+    expect(aliasField("")).toEqual({});
+    expect("alias" in aliasField("   ")).toBe(false);
+  });
+
+  it("REMOVES the field on clear rather than writing an empty string", () => {
+    const named = withAlias(legacyContact(), "Carol's laptop");
+    const cleared = withAlias(named, "  ");
+    expect("alias" in cleared).toBe(false);
+    expect(displayUserId(cleared)).toBe("Carol <c@d.test>");
+  });
+
+  it("serialises a contact with no alias byte-identically to a pre-field one", () => {
+    const before = legacyContact();
+    // The same record, put through the write helper. If `aliasField`
+    // ever emitted `alias: ""` (or `alias: undefined`), this JSON would
+    // differ and every existing user's contacts blob would be rewritten
+    // on first touch.
+    const after = withAlias(before, "");
+    expect(JSON.stringify(after)).toBe(JSON.stringify(before));
+  });
+
+  it("round-trips through storage, and clears back to the stored shape", async () => {
+    await saveContact(legacyContact());
+    await updateContactAlias("CCCC", "  Carol's laptop  ");
+    const [named] = await loadContacts();
+    expect(named.alias).toBe("Carol's laptop");
+    expect(displayUserId(named)).toBe("Carol's laptop");
+
+    await updateContactAlias("CCCC", "");
+    const [cleared] = await loadContacts();
+    expect("alias" in cleared).toBe(false);
+    expect(JSON.stringify(cleared)).toBe(JSON.stringify(legacyContact()));
+  });
+
+  it("touches nothing else on the record", async () => {
+    await saveContact(multiContact(3));
+    const before = (await loadContacts())[0];
+    await updateContactAlias(before.keyId, "Octocat");
+    const after = (await loadContacts())[0];
+    expect(contactRecipients(after)).toHaveLength(3);
+    expect(contactSource(after)?.user).toBe("octocat");
+    expect(JSON.stringify(withAlias(after, ""))).toBe(JSON.stringify(before));
   });
 });

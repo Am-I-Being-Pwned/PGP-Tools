@@ -8,6 +8,7 @@ import {
   EllipsisVerticalIcon,
   ListChecksIcon,
   LockIcon,
+  PencilIcon,
   Trash2Icon,
   TriangleAlertIcon,
 } from "lucide-react";
@@ -29,7 +30,7 @@ import {
 } from "../../lib/storage/contacts";
 import { isSshRecord } from "../../lib/storage/key-kind";
 import { formatAlgorithm, formatFingerprint } from "../../lib/utils/formatting";
-import { parseUserId } from "../../lib/utils/key-naming";
+import { displayUserId, parseUserId } from "../../lib/utils/key-naming";
 import { useJustImported } from "./useJustImported";
 import { useLongPress } from "./useLongPress";
 
@@ -39,6 +40,8 @@ interface ContactCardProps {
   onEncryptTo?: () => void;
   onCopyPublicKey?: () => void;
   onDownloadPublicKey?: () => void;
+  /** Open the rename page for this contact (local display name only). */
+  onRename?: () => void;
   /** When set, shows a bottom-right arrow opening the key-details page. */
   onShowDetails?: () => void;
   advancedMode?: boolean;
@@ -66,6 +69,7 @@ export function ContactCard({
   onEncryptTo,
   onCopyPublicKey,
   onDownloadPublicKey,
+  onRename,
   onShowDetails,
   advancedMode,
   readOnly,
@@ -102,7 +106,11 @@ export function ContactCard({
   // "2 of 3 keys" instead.
   const activeKeys = activeRecipients(contact).length;
   const source = contactSource(contact);
-  const userId = contact.userIds[0] ?? "Unknown";
+  // Through the shared accessor, never `userIds[0]`: a contact's name is
+  // its local alias when it has one, and the fallback lives in exactly
+  // one place so the card, the picker and the search box cannot disagree
+  // about what this person is called.
+  const userId = displayUserId(contact) ?? "Unknown";
   const { name: rawName, email, comment } = parseUserId(userId);
   const name = comment ? `${rawName} (${comment})` : rawName;
 
@@ -282,6 +290,12 @@ export function ContactCard({
                 <DropdownMenuItem onClick={onDownloadPublicKey}>
                   <DownloadIcon />
                   Download public key
+                </DropdownMenuItem>
+              )}
+              {onRename && (
+                <DropdownMenuItem onClick={onRename}>
+                  <PencilIcon />
+                  Rename
                 </DropdownMenuItem>
               )}
               {onStartSelect && (

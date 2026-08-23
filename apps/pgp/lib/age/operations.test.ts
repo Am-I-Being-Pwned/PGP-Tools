@@ -125,6 +125,38 @@ describe("decryptWithHandle", () => {
     expect([...(result as Uint8Array)]).toEqual([...bytes]);
   });
 
+  // The `@secret-handling` contract on `decryptAgeWithHandle` says the
+  // JS-side buffer is the caller's to scrub. This IS that caller, and
+  // these two pin the branch-dependent half of the contract: scrub the
+  // copy nobody needs, never the one being handed on.
+  it("zeroizes the plaintext buffer once it has been decoded to text", async () => {
+    const buffer = new TextEncoder().encode("secret message");
+    wasm.decryptAgeWithHandle.mockResolvedValue(buffer);
+
+    const result = await decryptWithHandle({
+      input: { kind: "armored", armoredMessage: ARMORED },
+      keyHandle: 7,
+    });
+
+    // The string still carries the plaintext (it is the result, and a JS
+    // string cannot be zeroized anyway) -- the BUFFER copy is gone.
+    expect(result).toBe("secret message");
+    expect([...buffer]).toEqual(Array(buffer.length).fill(0));
+  });
+
+  it("does NOT zeroize the buffer it hands back as the result", async () => {
+    // Scrubbing here would return zeros. This branch's buffer is wiped
+    // by the workspace (`zeroizeResultBytes` at master lock) instead.
+    const original = [0xff, 0xfe, 0x00, 0x01];
+    wasm.decryptAgeWithHandle.mockResolvedValue(new Uint8Array(original));
+
+    const result = await decryptWithHandle({
+      input: { kind: "binary", binaryMessage: new Uint8Array([1, 2]) },
+      keyHandle: 3,
+    });
+    expect([...(result as Uint8Array)]).toEqual(original);
+  });
+
   it("passes binary ciphertext through untouched", async () => {
     const ciphertext = new Uint8Array([0x61, 0x67, 0x65]);
     wasm.decryptAgeWithHandle.mockResolvedValue(new Uint8Array(0));

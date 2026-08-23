@@ -110,6 +110,48 @@ const OPENSSH_PRIVATE_BLOCK =
 const SSH_PUBLIC_LINE =
   /^[ \t]*(?:ssh-ed25519|ssh-rsa)[ \t]+AAAA[A-Za-z0-9+/]+={0,3}(?:[ \t]+[^\r\n]*)?/gm;
 
+/**
+ * The same line shape with the TYPE LEFT OPEN: any
+ * `<algorithm> AAAA<base64>` line, whatever the algorithm names itself.
+ *
+ * This is the form used where a line is about to be handed to the engine
+ * and the engine's refusal is what the user should see -- the GitHub
+ * import, which fetches keys somebody actually published. Narrowing to
+ * the supported types there turns "ECDSA keys are not supported" into
+ * "this account has published no keys", which is simply false, and it
+ * duplicates the engine's list of supported types in a second place
+ * where it can drift. The worker shape-checks; `parseSshRecipient`
+ * decides validity, and it has a curated message for each type it
+ * refuses (FIDO, ECDSA, DSA, out-of-range RSA, ...).
+ *
+ * That lesson has now had to be learned FOUR times, in four different
+ * shapes, which is why it is written down here rather than fixed
+ * quietly: a bare `catch { continue }` in `import/prepare.ts` swallowed
+ * the messages on the paste path; `github/response.ts` filtered the key
+ * types out of existence on the fetch path; and `prepare.ts`,
+ * `classify-action.ts` and `drop-routing.ts` each narrowed the *shape*
+ * so those lines never reached the engine at all.
+ *
+ * The invariant, stated once: **the engine decides validity; every
+ * layer above it forwards and displays.** A layer that drops a line the
+ * engine would have explained is not being strict, it is replacing a
+ * true, actionable message with a false one.
+ *
+ * Users: `github/response.ts`, `import/prepare.ts`,
+ * `classify-action.ts`, `drop-routing.ts` -- the fetch path AND every
+ * paste/drop/selection path. Keep this list honest; it is how the next
+ * reader knows whether a narrowing they are about to add has a sibling.
+ *
+ * `AAAA` still anchors it: every SSH wire-format blob opens with a
+ * 4-byte big-endian length whose top bytes are zero, so its base64
+ * always starts that way regardless of algorithm. That -- plus a type
+ * token restricted to the characters real algorithm names use
+ * (`ecdsa-sha2-nistp256`, `sk-ssh-ed25519@openssh.com`, `ssh-dss`) --
+ * is what keeps prose and HTML out.
+ */
+const SSH_PUBLIC_CANDIDATE_LINE =
+  /^[ \t]*[A-Za-z][A-Za-z0-9@._-]{2,63}[ \t]+AAAA[A-Za-z0-9+/]+={0,3}(?:[ \t]+[^\r\n]*)?/gm;
+
 /** Every armored age block in `text`, in order. */
 export function splitAgeBlocks(text: string): string[] {
   return matchAll(text, AGE_BLOCK);
@@ -124,6 +166,13 @@ export function splitSshPrivateKeyBlocks(text: string): string[] {
  *  `authorized_keys` file is exactly this and nothing else. */
 export function splitSshPublicKeyLines(text: string): string[] {
   return matchAll(text, SSH_PUBLIC_LINE).map((line) => line.trim());
+}
+
+/** Every line in `text` shaped like an SSH public key of ANY algorithm,
+ *  in order, trimmed. See {@link SSH_PUBLIC_CANDIDATE_LINE}: use this
+ *  where the engine gets to answer for the line, not this module. */
+export function splitSshPublicKeyCandidateLines(text: string): string[] {
+  return matchAll(text, SSH_PUBLIC_CANDIDATE_LINE).map((line) => line.trim());
 }
 
 /** True when the text carries age ciphertext in either form. Used for
@@ -150,6 +199,12 @@ export function splitArmoredKeyBlocks(text: string): ArmoredKeyBlocks {
   return {
     publicKeys: splitPublicKeyBlocks(text),
     privateKeys: splitPrivateKeyBlocks(text),
+    // DELIBERATELY the narrow matcher, and the only remaining caller of
+    // it. This splits a BACKUP bundle we wrote ourselves, so every SSH
+    // line in it is one the engine already accepted -- an unsupported
+    // type could never have been stored. Widening here would buy
+    // nothing and would mean a corrupted bundle yields a "key" that
+    // then has to be refused, instead of simply not matching.
     sshPublicKeys: splitSshPublicKeyLines(text),
     sshPrivateKeys: splitSshPrivateKeyBlocks(text),
   };

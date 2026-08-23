@@ -72,11 +72,13 @@ export function isSecretKind(kind: KeyKind): boolean {
 export const PENDING_KEY_ID = "pending";
 
 /**
- * Several public keys that belong to ONE person, fetched together.
+ * Several public keys that belong to ONE person.
  *
  * A GitHub user commonly publishes three SSH keys and every one of them
  * has to be encrypted to (see `storage/contacts.ts`), so what arrives
- * from a lookup is a person, not a key.
+ * from a lookup is a person, not a key. A pasted `authorized_keys` block
+ * is the same situation without the lookup, and reaches storage as the
+ * same record through the same constructor.
  *
  * Deliberately an optional field on the existing `ssh-public`
  * {@link IncomingKey} rather than a {@link KeyKind} of its own: a new
@@ -89,10 +91,19 @@ export const PENDING_KEY_ID = "pending";
  * a group unchanged and simply shows less than it could.
  */
 export interface ContactGroup {
-  /** Display name for the whole group, e.g. "octocat (GitHub)". */
+  /** Display name for the whole group, e.g. "octocat (GitHub)". This is
+   *  the contact's `userIds[0]` -- auto-derived when the keys say what
+   *  it should be (a lookup's account name, a shared key comment), and
+   *  otherwise supplied by the user, because grouping keys that do not
+   *  agree is never something to guess at. */
   label: string;
-  /** Where it was fetched from -- the contact's upsert identity. */
-  source: ContactSource;
+  /** Where it was fetched from -- the contact's upsert identity.
+   *
+   *  ABSENT MEANS HAND-SUPPLIED, exactly as it does on the stored record
+   *  (see `PublicContactKey.source`): a pasted group has no identity
+   *  beyond its keys, and two source-less contacts must never collide.
+   *  Read it through `contactSource`, never directly. */
+  source?: ContactSource;
   /** Every usable key, in the order the source listed them. Empty only
    *  when every line was refused, which is a `rejected` import. */
   members: ContactRecipient[];

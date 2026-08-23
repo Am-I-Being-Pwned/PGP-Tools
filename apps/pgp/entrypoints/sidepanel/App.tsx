@@ -111,7 +111,21 @@ export default function App() {
   });
   const contacts = useContacts();
   const crxKeys = useCrxKeys();
-  const { pending, clearPending } = usePendingOperation();
+  // Only pull the context-menu selection out of session storage once the
+  // panel is actually rendering the tree that can route it. The same
+  // condition the early returns below use to decide whether to show
+  // onboarding / the master-unlock screen instead of the main UI. While
+  // either of those is up there is no `WorkspaceView` and no import
+  // screen to hand the op to, so consuming would only move the user's
+  // plaintext from storage (bounded by `PENDING_OP_TTL_MS` and
+  // `sweepStalePendingOp`) into React state, where it would sit retained
+  // on the fiber for the whole locked window. See usePendingOperation's
+  // doc comment for the measured retainer.
+  const canRoutePendingOp =
+    onboardingComplete === true &&
+    masterProtectionLoaded &&
+    !(masterProtection && !masterUnlocked);
+  const { pending, clearPending } = usePendingOperation(canRoutePendingOp);
 
   // True when the most recent master-lock was system-initiated (idle
   // timer, visibility hidden, OS idle). Used to suppress the
@@ -172,16 +186,74 @@ export default function App() {
       // Wipe any unconsumed context-menu pending op. Without this a
       // selection that landed during an unlocked session could sit
       // in storage.session and surface on the next unlock.
+      //
+      // BOTH COPIES, because there are two. The `remove` below drops the
+      // storage one; `clearPending()` drops the React-state one, which
+      // exists whenever the hook consumed an op that nothing routed yet
+      // -- and that copy is the plaintext the user was about to encrypt,
+      // retained off the fiber by the `lastRenderedState` chain of
+      // T-OUTPUT-HEAP-RESIDUE.
+      //
+      // Dropping the reference IS enough, unlike `binaryOutput` and
+      // `fileResults` (which have to be zeroized in place, see
+      // `zeroizeResultBytes`): those live in a component that unmounts on
+      // this very state flip, so their `setState` is batched with the
+      // unmount and never commits. This hook's state belongs to `App`,
+      // which stays mounted and re-renders into the lock screen, so the
+      // `null` really lands and overwrites the retained value --
+      // demonstrated by `usePendingOperation`'s own consume-then-clear
+      // path, which measures zero retainers after a lock.
+      //
+      // HONEST NOTE ON COVERAGE: no test is red without this line. The
+      // window it closes is a lock landing between the hook's
+      // `setPending` and the routing effect that clears it -- one commit
+      // wide, so it cannot be driven deterministically from Playwright.
+      // What `e2e/draft-memory.spec.ts` does cover is the reachable case,
+      // an op arriving while locked, and that is fixed at the hook's
+      // `ready` gate rather than here. This stays because it costs one
+      // synchronous call and makes the two copies symmetric: the `remove`
+      // below has always been unconditional for the same reason.
+      clearPending();
       void chrome.storage.session.remove(SESSION_PENDING_OP);
 
       // Password-master path leaves the contacts session key in WASM
       // (passkey path already drops it after each decrypt).
+      //
+      // FIRE-AND-FORGET, deliberately. Do NOT "fix" this to an await --
+      // I tried, and it regresses all three of
+      // `e2e/draft-memory.spec.ts`. Everything above (stashing the
+      // encrypted draft, `wipePlaintext()`) and the state flip below
+      // have to land in ONE synchronous run. An await here leaves the
+      // workspace mounted across a microtask boundary; the draft then
+      // fails to rehydrate on unlock AND its plaintext stays reachable
+      // in the JS heap -- precisely the retention SECURITY.md §8.11 and
+      // T-DRAFT-HEAP-RESIDUE exist to prevent. Awaiting trades a real,
+      // tested guarantee for a theoretical one.
+      //
+      // The window it looks like it should close -- a store mutation
+      // completing after the UI says locked -- is covered where it
+      // belongs, at the store: every contacts and keyring mutation
+      // re-checks `hasContactsSession()` INSIDE its lock and throws,
+      // rather than reading `[]` and treating an unopenable store as
+      // empty (`mutateContacts`, `removeKey`). Ordering here is not the
+      // mechanism and must not be made to carry it.
       void wasmApi.dropContactsSession();
       setMasterAutoLocked(auto);
       setMasterUnlocked(false);
+      // UNCONDITIONAL, and it must stay that way. `lockAll` does two
+      // things: it drops the handles currently in the map, AND it bumps
+      // the lock generation that `useKeySession` re-checks when an
+      // in-flight unlock resolves. An unlock that started before this
+      // lock -- a passkey ceremony is seconds long and user-interactive
+      // -- would otherwise complete afterwards and insert a live key
+      // into the store while this very function is rendering the lock
+      // screen. The idle and tab-away handlers below skip `lockAll()`
+      // when no key is currently unlocked, which is exactly the state
+      // that race starts from; this call is what covers it. Adding a
+      // `size > 0` guard here to match them reopens it.
       session.lockAll();
     },
-    [session],
+    [session, clearPending],
   );
 
   const resetMasterLockTimer = useCallback(() => {
@@ -626,6 +698,16 @@ export default function App() {
   // session key without verifying it (MasterPasskeyProtection carries no
   // canary, unlike the password variant), so a PRF output that isn't the
   // one the vault was sealed under unlocks the screen and fails here.
+  // NOTE on the copy below: it deliberately does not tell the user WHY.
+  // We cannot know. The password path verifies a canary before it
+  // reports success, so a wrong password is named as such on the unlock
+  // screen and never reaches here. The passkey path has no canary --
+  // `MasterPasskeyProtection` stores none -- so a PRF that does not
+  // match installs a session key that simply opens nothing, and from
+  // here that is indistinguishable from a corrupted blob or a storage
+  // fault. Naming the passkey would be a guess presented as a
+  // diagnosis, and would send a user whose vault is actually corrupt
+  // off to re-try an authenticator that was never the problem.
   const vaultReadError = keyring.error ?? contacts.error;
   if (masterProtection && masterUnlocked && vaultReadError) {
     return (
@@ -635,14 +717,10 @@ export default function App() {
             Your vault could not be read.
           </p>
           <p className="text-muted-foreground max-w-xs text-xs leading-relaxed">
-            Your keys are still stored on this device -- they could not be
-            unlocked with{" "}
+            Your keys are still stored on this device. Locking and trying again
+            is the first thing to try
             {masterProtection.method === "passkey"
-              ? "that passkey"
-              : "that password"}
-            . Lock and try again
-            {masterProtection.method === "passkey"
-              ? ", making sure you use the same passkey you set up."
+              ? " -- make sure you use the same passkey you set up."
               : "."}
           </p>
           <Button variant="outline" onClick={() => void doMasterLock()}>
@@ -776,6 +854,7 @@ export default function App() {
               defaultKeyId={defaultKeyId}
               onSetDefaultKey={handleSetDefaultKey}
               onRenameKey={keyring.rename}
+              onRenameContact={contacts.rename}
               onRenameCrxKey={crxKeys.rename}
               contactsLocked={false}
               isUnlocked={session.isUnlocked}

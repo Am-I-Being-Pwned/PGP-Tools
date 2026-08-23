@@ -28,7 +28,10 @@ import {
   contactRecipients,
 } from "../../lib/storage/contacts";
 import { isSshRecord } from "../../lib/storage/key-kind";
-import { formatKeyDisplayName } from "../../lib/utils/key-naming";
+import {
+  displayUserId,
+  formatKeyDisplayName,
+} from "../../lib/utils/key-naming";
 import {
   blockedByEngine,
   pickableKeys,
@@ -52,7 +55,9 @@ interface RecipientPickerProps {
 }
 
 function getKeyDisplay(key: AnyKey): { name: string; detail: string } {
-  const userId = key.userIds[0];
+  // The local alias when there is one -- through the shared accessor, so
+  // a key renamed in the Keys tab is renamed here too.
+  const userId = displayUserId(key);
   if (!userId) return { name: key.keyId.slice(-8).toUpperCase(), detail: "" };
   return formatKeyDisplayName(userId);
 }
@@ -465,7 +470,14 @@ export function RecipientPicker({
                   >
                     <span className="min-w-0 truncate">{name}</span>
                     {isSshRecord(key) && (
-                      <span className="text-muted-foreground shrink-0 rounded border px-1 text-[10px] leading-4">
+                      // `mx-0.5` on top of the chip's `gap-1`: the badge
+                      // is a bordered box sitting between two pieces of
+                      // bare text, so the 4px gap that reads fine either
+                      // side of a glyph reads cramped either side of a
+                      // border. Nudged here rather than on the chip's
+                      // gap so chips WITHOUT the badge keep their
+                      // spacing.
+                      <span className="text-muted-foreground mx-0.5 shrink-0 rounded border px-1 text-[10px] leading-4">
                         SSH
                       </span>
                     )}

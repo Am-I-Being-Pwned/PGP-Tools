@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+import type { PublicContactKey } from "./storage/contacts";
+import type { ProtectedKeyBlob } from "./storage/keyring";
 import {
   buildEncryptRecipients,
   MIXED_ENGINE_REASON,
   resolveRecipientEngine,
+  resolveSelectedRecipients,
   resolveSelfKey,
   toSelectedRecipient,
 } from "./encrypt-recipients";
@@ -598,5 +601,74 @@ describe("disabled recipients - what actually gets encrypted to", () => {
     const selected = toSelectedRecipient(contact([0]));
     expect(selected.armored).toBe("k0");
     expect(selected.armoredAll).toEqual(["k1", "k2"]);
+  });
+});
+
+describe("resolveSelectedRecipients", () => {
+  /**
+   * The regression this exists for: a contact's `keyId` IS its head
+   * recipient's fingerprint, so when that key is also one of the user's
+   * own identities the id lives in both collections. Resolving to the
+   * own key drops the contact's other recipients and the message is
+   * encrypted to ONE key instead of all of them -- a valid age file the
+   * person's other machines cannot open, with nothing failing or
+   * warning. Found by e2e (1 stanza where 3 were expected).
+   */
+  const head = {
+    keyId: "SHA256:head",
+    armored: "ssh-ed25519 AAAAhead",
+    algorithm: "ssh-ed25519",
+  };
+  const second = {
+    keyId: "SHA256:two",
+    armored: "ssh-ed25519 AAAAtwo",
+    algorithm: "ssh-ed25519",
+  };
+
+  const contact = {
+    keyId: head.keyId,
+    userIds: ["otto"],
+    algorithm: "ssh-ed25519",
+    armoredPublicKey: head.armored,
+    recipients: [head, second],
+    kind: "ssh" as const,
+    addedAt: 0,
+    lastUsedAt: 0,
+  } as unknown as PublicContactKey;
+
+  const ownKeyWithSameFingerprint = {
+    keyId: head.keyId,
+    userIds: ["me"],
+    algorithm: "ssh-ed25519",
+    publicKeyArmored: head.armored,
+    kind: "ssh" as const,
+  } as unknown as ProtectedKeyBlob;
+
+  it("prefers the contact when an own key shares its head fingerprint", () => {
+    const [resolved] = resolveSelectedRecipients(
+      [head.keyId],
+      [contact],
+      [ownKeyWithSameFingerprint],
+    );
+    expect(resolved).toBe(contact);
+    // The property that actually matters: every recipient survives.
+    expect(toSelectedRecipient(resolved).armoredAll).toEqual([
+      head.armored,
+      second.armored,
+    ]);
+  });
+
+  it("still resolves an own key that no contact claims", () => {
+    const own = { ...ownKeyWithSameFingerprint, keyId: "SHA256:mine" };
+    const [resolved] = resolveSelectedRecipients(
+      ["SHA256:mine"],
+      [contact],
+      [own as unknown as ProtectedKeyBlob],
+    );
+    expect(resolved).toBe(own);
+  });
+
+  it("drops an id that matches nothing", () => {
+    expect(resolveSelectedRecipients(["nope"], [contact], [])).toEqual([]);
   });
 });
