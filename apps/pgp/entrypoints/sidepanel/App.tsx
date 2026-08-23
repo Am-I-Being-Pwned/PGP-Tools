@@ -82,19 +82,11 @@ export default function App() {
   const [workspaceIntake, setWorkspaceIntake] =
     useState<WorkspaceIntake | null>(null);
   const workspaceIntakeNonce = useRef(0);
-  // True once a pending context-menu op has been routed to a tab.
-  // The preferences-loading effect (mount-only) consults this ref to
-  // avoid overriding our routed tab with the stale saved value when
-  // getPreferences resolves after our pending route.
+  // True once a pending context-menu op has been routed. Preferences no
+  // longer carry a tab, so nothing can clobber that routing any more --
+  // the flag survives only to keep the pending op from being handled
+  // twice.
   const pendingRoutedRef = useRef(false);
-  // True once the user has explicitly navigated (tab click or an action
-  // that routes tabs) this panel session. Until then applyPrefs is
-  // restoring the saved tab at launch/unlock, where Settings is never a
-  // destination; afterwards it must apply the saved value faithfully —
-  // the storage.onChanged re-apply fires right after changeTab persists
-  // a tab switch, and coercing there would bounce the user straight
-  // back off Settings.
-  const userNavigatedRef = useRef(false);
 
   // Master protection state
   const [masterProtection, setMasterProtection] =
@@ -293,23 +285,10 @@ export default function App() {
   const applyPrefs = useCallback((prefs: PgpPreferences) => {
     setAdvancedMode(prefs.advancedMode);
     setAutoLockMinutes(prefs.autoLockMinutes);
-    // If a pending context-menu op has already routed us to a tab, do
-    // NOT overwrite that with the saved value. Without this guard,
-    // opening the side panel via the context menu races: pending-routing
-    // fires fast, getPreferences resolves later and clobbers `activeTab`,
-    // which unmounts the target view (KeysView) and closes the dialog.
-    if (!pendingRoutedRef.current) {
-      // Settings is never a launch destination: restoring it means a
-      // panel that was last closed on Settings reopens there instead of
-      // on the workspace. Workspace/keys still restore as saved, and
-      // once the user has navigated themselves the saved value applies
-      // as-is (see userNavigatedRef).
-      setActiveTab(
-        !userNavigatedRef.current && prefs.activeTab === "settings"
-          ? "workspace"
-          : prefs.activeTab,
-      );
-    }
+    // Nothing here touches the active tab. The panel always opens on the
+    // workspace (see the `activeTab` useState) and the current tab is
+    // never persisted, so re-applying preferences -- which happens on
+    // unlock and on every storage.onChanged echo -- can't move the user.
     setNeverCacheKeys(prefs.neverCacheKeys);
     setAutoLockEnabled(prefs.autoLockEnabled);
     setAutoDownloadFiles(prefs.autoDownloadFiles);
@@ -368,13 +347,12 @@ export default function App() {
     // locked workspace draft the way a real selection does.
     if (pending.text) setDraftCiphertext(null);
     setActiveTab("workspace");
-    void savePreferences({ activeTab: "workspace" });
   }, [pending, clearPending]);
 
   // One-shot focus of the message input when the panel opens onto the
-  // Main tab. Waits for masterProtectionLoaded so the saved activeTab
-  // has already been applied (the getPreferences call resolves before
-  // that flag is set), and for the unlock screen to be out of the way
+  // Main tab (which is every launch). Waits for masterProtectionLoaded
+  // so the first ready render has happened, and for the unlock screen to
+  // be out of the way
   // -- while it shows, its own password field owns focus. The done-ref
   // flips on the first ready render regardless of tab so a later manual
   // switch to the workspace doesn't steal focus mid-session.
@@ -445,9 +423,7 @@ export default function App() {
   const [presetsRoute, setPresetsRoute] = useState(false);
 
   const changeTab = useCallback((tab: Tab) => {
-    userNavigatedRef.current = true;
     setActiveTab(tab);
-    void savePreferences({ activeTab: tab });
     toast.dismiss();
   }, []);
 
@@ -461,7 +437,6 @@ export default function App() {
   const revealKey = (keyId: string) => {
     setHighlightKeyId(keyId);
     setActiveTab("keys");
-    void savePreferences({ activeTab: "keys" });
   };
 
   const openHistory = useCallback(() => setHistoryOpen(true), []);
@@ -575,7 +550,6 @@ export default function App() {
         });
         setDraftCiphertext(null);
         setActiveTab("workspace");
-        void savePreferences({ activeTab: "workspace" });
       },
     },
   ];
@@ -725,7 +699,6 @@ export default function App() {
                   return;
                 }
                 setActiveTab("keys");
-                void savePreferences({ activeTab: "keys" });
               }}
               autoDownloadFiles={autoDownloadFiles}
               autoDownloadText={autoDownloadText}
@@ -772,7 +745,6 @@ export default function App() {
               onEncryptTo={(keyId) => {
                 setEncryptToKeyId(keyId);
                 setActiveTab("workspace");
-                void savePreferences({ activeTab: "workspace" });
               }}
               primaryPasskeyCredentialId={masterPasskeyCredentialId}
               cacheKeys={!neverCacheKeys}

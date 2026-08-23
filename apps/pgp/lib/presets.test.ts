@@ -22,7 +22,6 @@ function fullPrefs(overrides: Partial<PgpPreferences> = {}): PgpPreferences {
     autoLockMinutes: 15,
     signWhenEncrypting: false,
     encryptToSelf: true,
-    activeTab: "workspace",
     neverCacheKeys: false,
     autoDownloadFiles: false,
     autoDownloadText: false,

@@ -7,7 +7,8 @@ test("onboarding encrypts and pads storage, and splits settings", async ({
   panel,
 }) => {
   await onboardWithPassword(panel, PASSWORD);
-  // Persist a settings field so the encrypted settings blob is written.
+  // Onboarding itself writes the settings blob (the preset step). Note
+  // switching tabs does NOT: the open tab is not a preference.
   await goToKeys(panel);
 
   const local = await readStorage(panel, "local");

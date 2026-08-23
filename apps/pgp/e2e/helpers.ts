@@ -146,8 +146,8 @@ export async function unlockWithPassword(
   });
 }
 
-/** Switch to the Keys tab (also persists `activeTab`, a settings field,
- *  which forces the encrypted settings blob to be written). */
+/** Switch to the Keys tab. Purely a UI switch -- the open tab is not a
+ *  preference, so this writes nothing to storage. */
 export async function goToKeys(panel: Page): Promise<void> {
   await panel.getByRole("tab", { name: "Keys" }).click();
   await expect(panel.getByRole("heading", { name: "My Keys" })).toBeVisible();

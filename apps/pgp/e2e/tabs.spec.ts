@@ -10,19 +10,19 @@ function tab(panel: Page, name: string) {
 }
 
 /** The encrypted settings blob as a comparable string. Every settings
- *  write re-encrypts with a fresh IV, so ANY persisted change (e.g.
- *  `activeTab`) shows up as a different blob. */
+ *  write re-encrypts with a fresh IV, so ANY persisted change shows up
+ *  as a different blob -- which is how the test below proves a tab
+ *  switch persists nothing. */
 async function settingsBlob(panel: Page): Promise<string> {
   const stored = await readStorage(panel, "local");
   return JSON.stringify(stored.pgp_settings ?? null);
 }
 
-/** Click a tab and wait until the switch has been persisted (the blob
- *  rewrite is what later relaunch steps depend on). */
-async function changeTabPersisted(panel: Page, name: string): Promise<void> {
-  const before = await settingsBlob(panel);
+/** Click a tab and confirm it took. Switching writes nothing: which tab
+ *  is open is UI state for this panel session, not a preference. */
+async function changeTab(panel: Page, name: string): Promise<void> {
   await tab(panel, name).click();
-  await expect.poll(() => settingsBlob(panel)).not.toBe(before);
+  await expect(tab(panel, name)).toHaveAttribute("aria-selected", "true");
 }
 
 test("message input is focused when the panel opens on Main", async ({
@@ -37,32 +37,27 @@ test("message input is focused when the panel opens on Main", async ({
     await expect(panel.locator("#pgp-input")).toBeFocused();
   });
 
-  await test.step("a Keys launch does not focus the hidden input", async () => {
-    await changeTabPersisted(panel, "Keys");
-    await panel.reload();
-    await unlockWithPassword(panel, PASSWORD);
-    await expect(tab(panel, "Keys")).toHaveAttribute("aria-selected", "true");
-    await expect(panel.locator("#pgp-input")).not.toBeFocused();
-    // The open-focus is one-shot: navigating to Main mid-session must
-    // not steal focus into the textarea.
-    await tab(panel, "Main").click();
-    await expect(tab(panel, "Main")).toHaveAttribute("aria-selected", "true");
+  await test.step("the open-focus is one-shot, not per-visit", async () => {
+    // Navigating away and back mid-session must not steal focus into the
+    // textarea -- only the launch does that.
+    await changeTab(panel, "Keys");
+    await changeTab(panel, "Main");
     await expect(panel.locator("#pgp-input")).not.toBeFocused();
   });
 });
 
-test("tab switching sticks, and Settings is never the launch tab", async ({
+test("the panel always launches on Main, wherever you left it", async ({
   panel,
 }) => {
   await onboardWithPassword(panel, PASSWORD);
   await expect(tab(panel, "Main")).toHaveAttribute("aria-selected", "true");
 
-  await test.step("switching to Settings sticks past the pref-sync echo", async () => {
-    await changeTabPersisted(panel, "Settings");
-    // Persisting `activeTab` fires storage.onChanged, which re-applies
-    // preferences asynchronously. Regression guard: that re-apply used
-    // to coerce Settings away, bouncing the user right back off the
-    // tab they just clicked. Let the echo land, then re-assert.
+  await test.step("switching tabs sticks within the session", async () => {
+    await changeTab(panel, "Settings");
+    // Re-applying preferences (on unlock, and on every storage.onChanged
+    // echo) used to be able to move the user: it restored a saved tab.
+    // Nothing does that now, but the echo still fires -- so let it land
+    // and re-assert.
     await panel.waitForTimeout(300);
     await expect(tab(panel, "Settings")).toHaveAttribute(
       "aria-selected",
@@ -74,28 +69,29 @@ test("tab switching sticks, and Settings is never the launch tab", async ({
   });
 
   await test.step("Settings does not restore across relaunch", async () => {
-    // Last tab is Settings; a fresh launch must land on Main instead.
     await panel.reload();
     await unlockWithPassword(panel, PASSWORD);
     await expect(tab(panel, "Main")).toHaveAttribute("aria-selected", "true");
   });
 
-  await test.step("Keys restores across relaunch", async () => {
-    await changeTabPersisted(panel, "Keys");
+  await test.step("nor does Keys -- the workspace is what the app is for", async () => {
+    // The regression this guards: importing, generating and revealing a
+    // key all end on the Keys tab, so persisting the tab meant nearly
+    // every launch opened on Keys.
+    await changeTab(panel, "Keys");
     await panel.reload();
     await unlockWithPassword(panel, PASSWORD);
-    await expect(tab(panel, "Keys")).toHaveAttribute("aria-selected", "true");
-    await expect(panel.getByRole("heading", { name: "My Keys" })).toBeVisible();
+    await expect(tab(panel, "Main")).toHaveAttribute("aria-selected", "true");
+    await expect(panel.locator("#pgp-input")).toBeVisible();
   });
 
-  await test.step("Settings is still reachable after a restore", async () => {
-    // The launch restore must not poison in-session navigation: the
-    // user can still click over to Settings and stay there.
-    await tab(panel, "Settings").click();
+  await test.step("a tab switch writes nothing to storage", async () => {
+    // Which tab is open is not a preference, so it must not re-encrypt
+    // the settings blob (or sync it to another device).
+    const before = await settingsBlob(panel);
+    await changeTab(panel, "Keys");
+    await changeTab(panel, "Settings");
     await panel.waitForTimeout(300);
-    await expect(tab(panel, "Settings")).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
+    expect(await settingsBlob(panel)).toBe(before);
   });
 });

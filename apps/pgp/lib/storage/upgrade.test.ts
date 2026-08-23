@@ -124,7 +124,9 @@ afterEach(() => {
 
 /** The settings blob exactly as v1.3.1's saveSettings wrote it: the
  *  twelve then-known settings fields (bootstrap fields excluded), none
- *  of the fields added since. */
+ *  of the fields added since. `activeTab` is deliberately still here --
+ *  it has since been REMOVED as a preference, and this fixture proves an
+ *  old blob carrying it still reads back fine. */
 const V131_SETTINGS = {
   defaultSigningKeyId: "SIGKEY01",
   armoredOutput: false,

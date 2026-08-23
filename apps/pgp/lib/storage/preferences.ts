@@ -27,7 +27,12 @@ export interface PgpPreferences {
    *  keys so they can decrypt their own ciphertext later. On by default;
    *  turning it off produces output only the recipient can read. */
   encryptToSelf: boolean;
-  activeTab: "workspace" | "keys" | "settings";
+  // NB: no `activeTab`. Which tab is open is UI state for one panel
+  // session, not a preference: persisting it made the panel reopen on
+  // whatever tab the last action happened to end on (usually Keys,
+  // since importing/generating live there). The panel always launches
+  // on the workspace -- that's what the app is for. Blobs written by
+  // older versions may still carry the key; nothing reads it.
   neverCacheKeys: boolean;
   autoDownloadFiles: boolean;
   autoDownloadText: boolean;
@@ -70,7 +75,6 @@ export const DEFAULT_PREFERENCES: PgpPreferences = {
   autoLockMinutes: 15,
   signWhenEncrypting: false,
   encryptToSelf: true,
-  activeTab: "workspace",
   neverCacheKeys: false,
   autoDownloadFiles: false,
   autoDownloadText: false,
