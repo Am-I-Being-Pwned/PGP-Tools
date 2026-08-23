@@ -11,7 +11,9 @@ import {
 } from "@amibeingpwned/ui/select";
 
 import type { WorkspaceAction } from "../../lib/messages";
+import type { PublicContactKey } from "../../lib/storage/contacts";
 import { MODE_SHORTCUTS } from "../../lib/actions/definitions";
+import { DetectedKeyBanner } from "./DetectedKeyBanner";
 import { DropZone } from "./DropZone";
 
 type Mode = WorkspaceAction;
@@ -43,15 +45,12 @@ interface WorkspaceInputProps {
   onRemoveFile: (index: number) => void;
   onClearFiles: () => void;
   publicKeyDetected: boolean;
-  /** Set once the pasted public key has been identified: who it belongs
-   *  to, and whether it is already in the user's contacts. Null while
-   *  the lookup is still running (or if it failed). */
-  detectedPublicKey?: {
-    keyId: string;
-    name: string;
-    /** Already stored -- there is nothing to import. */
-    known: boolean;
-  } | null;
+  /** Contacts, so the banner can tell "import this" from "you already
+   *  have this". */
+  contacts: PublicContactKey[];
+  /** Bumps whenever the input text changes, so a second pasted key is
+   *  identified rather than showing the first one's name. */
+  inputVersion: number;
   privateKeyDetected: boolean;
   onNavigateToKeys?: (importPrefill?: string) => void;
   /** Take the user to a key they already hold, highlighted in the list. */
@@ -74,7 +73,8 @@ export function WorkspaceInput({
   onRemoveFile,
   onClearFiles,
   publicKeyDetected,
-  detectedPublicKey,
+  contacts,
+  inputVersion,
   privateKeyDetected,
   onNavigateToKeys,
   onRevealKey,
@@ -225,33 +225,16 @@ export function WorkspaceInput({
         </div>
       )}
 
-      {publicKeyDetected &&
-        (detectedPublicKey?.known ? (
-          // Offering to import a key we already hold is worse than saying
-          // nothing: it implies we don't have it. Say what's true, and
-          // offer the only useful action -- showing it.
-          <div className="rounded-md bg-green-500/10 px-3 py-2 text-xs text-green-400">
-            You already have {detectedPublicKey.name}'s key.{" "}
-            <button
-              onClick={() => onRevealKey?.(detectedPublicKey.keyId)}
-              className="underline"
-            >
-              Show it in your keys
-            </button>
-          </div>
-        ) : (
-          <div className="rounded-md bg-blue-500/10 px-3 py-2 text-xs text-blue-400">
-            {detectedPublicKey
-              ? `This is ${detectedPublicKey.name}'s public key. `
-              : "This looks like someone's public key. "}
-            <button
-              onClick={() => onNavigateToKeys?.(getInput())}
-              className="underline"
-            >
-              Import it as a contact
-            </button>
-          </div>
-        ))}
+      {publicKeyDetected && (
+        <DetectedKeyBanner
+          getText={getInput}
+          version={inputVersion}
+          contacts={contacts}
+          onImport={(armored) => onNavigateToKeys?.(armored)}
+          onReveal={onRevealKey}
+          source="pasted"
+        />
+      )}
     </div>
   );
 }

@@ -78,6 +78,12 @@ export interface WorkspaceState {
   setOutput: (s: string) => void;
   /** Derived, non-sensitive: there is a textual result. */
   hasOutput: boolean;
+  /** The result contains an armored public key block -- e.g. a
+   *  correspondent sent their key inside a message. */
+  outputPublicKeyDetected: boolean;
+  /** Bumps on every output change, so a second result re-runs anything
+   *  derived from the output text. */
+  outputVersion: number;
   operationDone: boolean;
   setOperationDone: (b: boolean) => void;
   statusText: string | null;
@@ -252,7 +258,15 @@ export function useWorkspaceState(opts: {
   // leaving the markup, styling and select-all behaviour untouched.
   const outputRef = useRef("");
   const outputElRef = useRef<HTMLPreElement | null>(null);
-  const [outputInfo, setOutputInfo] = useState({ len: 0 });
+  // `publicKey` is the same substring probe `applyDetection` runs on the
+  // input, done here because the output never enters render state: a
+  // correspondent's key arrives inside a decrypted message far more often
+  // than it gets pasted into the box.
+  const [outputInfo, setOutputInfo] = useState({
+    len: 0,
+    publicKey: false,
+    version: 0,
+  });
   const getOutput = useCallback(() => outputRef.current, []);
 
   const setOutput = useCallback((text: string) => {
@@ -262,7 +276,13 @@ export function useWorkspaceState(opts: {
     // the user's selection inside the result box.
     if (el && el.textContent !== text) el.textContent = text;
     setOutputInfo((prev) =>
-      prev.len === text.length ? prev : { len: text.length },
+      prev.len === text.length
+        ? prev
+        : {
+            len: text.length,
+            publicKey: text.includes("-----BEGIN PGP PUBLIC KEY BLOCK-----"),
+            version: prev.version + 1,
+          },
     );
   }, []);
 
@@ -622,6 +642,8 @@ export function useWorkspaceState(opts: {
     getOutput,
     setOutput,
     hasOutput: outputInfo.len > 0,
+    outputPublicKeyDetected: outputInfo.publicKey,
+    outputVersion: outputInfo.version,
     operationDone,
     setOperationDone,
     statusText,

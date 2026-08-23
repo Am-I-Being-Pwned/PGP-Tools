@@ -56,10 +56,9 @@ interface KeysViewProps {
     armored: string,
   ) => Promise<void>;
   advancedMode?: boolean;
-  /** Scroll to and pulse this key: an import that happened elsewhere
-   *  (the app-level import panel), or the workspace banner's "show it in
-   *  your keys". */
-  highlightKeyId?: string | null;
+  /** Scroll to and pulse these keys: an import that happened elsewhere
+   *  (the app-level import panel), or a "show it in your keys" action. */
+  highlightKeyIds?: string[] | null;
   onHighlightConsumed?: () => void;
   /** A subpage requested from outside (command palette). */
   autoOpenRoute?: "generate" | "import" | null;
@@ -126,7 +125,7 @@ export function KeysView({
   getKeyHandle,
   onSaveRevocationCertificate,
   advancedMode,
-  highlightKeyId,
+  highlightKeyIds,
   onHighlightConsumed,
   autoOpenRoute,
   onAutoOpenRouteConsumed,
@@ -165,11 +164,11 @@ export function KeysView({
   };
 
   useEffect(() => {
-    if (!highlightKeyId) return;
-    highlightImported([highlightKeyId]);
+    if (!highlightKeyIds?.length) return;
+    highlightImported(highlightKeyIds);
     onHighlightConsumed?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [highlightKeyId]);
+  }, [highlightKeyIds]);
 
   const { copy } = useCopyToClipboard();
   const navPush = nav.push;

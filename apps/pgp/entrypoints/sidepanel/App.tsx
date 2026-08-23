@@ -73,9 +73,9 @@ export default function App() {
   // to the Keys tab first meant Back dumped them on a tab they never
   // asked for, and the panel's slide-out flashed it on the way past.
   const [importPrefill, setImportPrefill] = useState<string | null>(null);
-  // A key to scroll to and pulse on the Keys tab, with no import
-  // involved (the workspace banner's "show it in your keys").
-  const [highlightKeyId, setHighlightKeyId] = useState<string | null>(null);
+  // Keys to scroll to and pulse on the Keys tab: a "show it in your
+  // keys" action, or the View key button on an import's toast.
+  const [highlightKeyIds, setHighlightKeyIds] = useState<string[] | null>(null);
   const [encryptToKeyId, setEncryptToKeyId] = useState<string | null>(null);
   // A file/text drop routed to the workspace by the global dropzone. The
   // nonce bumps on every drop so re-dropping the same files re-applies.
@@ -432,10 +432,12 @@ export default function App() {
    *  panel covers the screen, and closing it leaves you where you were. */
   const routeToImport = (armored: string) => setImportPrefill(armored);
 
-  /** Show a key the user already has, highlighted in the Keys list. This
-   *  one IS a navigation -- it's what they asked for. */
-  const revealKey = (keyId: string) => {
-    setHighlightKeyId(keyId);
+  /** Show keys in the Keys list, highlighted. Only ever called from an
+   *  explicit request ("Show it in your keys", a toast's View key) --
+   *  nothing moves the user between tabs on its own. */
+  const revealKeys = (keyIds: string[]) => {
+    if (keyIds.length === 0) return;
+    setHighlightKeyIds(keyIds);
     setActiveTab("keys");
   };
 
@@ -638,22 +640,30 @@ export default function App() {
             crxSigningEnabled={crxSigningEnabled}
             onImportCrx={crxKeys.add}
             onImported={(keyIds, opts) => {
-              const first = keyIds[0];
-              // "Show it in your keys" is a request to go and look; a
-              // plain import leaves the user where they were, so it gets
-              // a toast instead of a highlight they'd never see.
+              if (keyIds.length === 0) return;
+              // "Show it in your keys" is an explicit request to go and
+              // look, so it navigates.
               if (opts?.reveal) {
-                if (first) revealKey(first);
+                revealKeys(keyIds);
                 return;
               }
-              if (keyIds.length === 0) return;
+              // An import does NOT move the user: they were in the middle
+              // of something. If they're already on the Keys tab the card
+              // pulses; otherwise the toast reports it and carries the
+              // trip to the key as a button they can ignore.
               if (activeTab === "keys") {
-                if (first) setHighlightKeyId(first);
+                setHighlightKeyIds(keyIds);
                 return;
               }
               toast.success(
                 keyIds.length > 1 ? `Added ${keyIds.length} keys` : "Key added",
-                { id: "import-added" },
+                {
+                  id: "import-added",
+                  action: {
+                    label: keyIds.length > 1 ? "View keys" : "View key",
+                    onClick: () => revealKeys(keyIds),
+                  },
+                },
               );
             }}
           />
@@ -692,7 +702,7 @@ export default function App() {
               onClearPending={clearPending}
               encryptToKeyId={encryptToKeyId}
               onClearEncryptTo={() => setEncryptToKeyId(null)}
-              onRevealKey={revealKey}
+              onRevealKey={(keyId) => revealKeys([keyId])}
               onNavigateToKeys={(prefill) => {
                 if (prefill) {
                   routeToImport(prefill);
@@ -738,8 +748,8 @@ export default function App() {
               onAddContact={contacts.add}
               onDeleteContact={contacts.remove}
               advancedMode={advancedMode}
-              highlightKeyId={highlightKeyId}
-              onHighlightConsumed={() => setHighlightKeyId(null)}
+              highlightKeyIds={highlightKeyIds}
+              onHighlightConsumed={() => setHighlightKeyIds(null)}
               autoOpenRoute={keysRoute}
               onAutoOpenRouteConsumed={() => setKeysRoute(null)}
               onEncryptTo={(keyId) => {

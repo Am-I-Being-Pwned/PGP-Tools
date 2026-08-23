@@ -136,10 +136,7 @@ export function KeySelector({
                 // preventDefault so cmdk skips its own Enter handler (it
                 // bails on defaultPrevented), close the popover, and let
                 // the event bubble to the window-level shortcut listener.
-                if (
-                  e.key === "Enter" &&
-                  (e.metaKey || e.ctrlKey || e.altKey)
-                ) {
+                if (e.key === "Enter" && (e.metaKey || e.ctrlKey || e.altKey)) {
                   e.preventDefault();
                   setOpen(false);
                 }

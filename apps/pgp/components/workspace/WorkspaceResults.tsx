@@ -8,6 +8,7 @@ import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { FileResult } from "../../lib/utils/download";
 import { ContactCard } from "../keys/ContactCard";
+import { DetectedKeyBanner } from "./DetectedKeyBanner";
 import { OutputArea } from "./OutputArea";
 
 /** The curated error alert: message up front, the raw error text behind
@@ -51,7 +52,9 @@ function ErrorAlert({
                 className="text-muted-foreground underline underline-offset-2"
                 onClick={() => setShowDetail((v) => !v)}
               >
-                {showDetail ? "Hide technical details" : "Show technical details"}
+                {showDetail
+                  ? "Hide technical details"
+                  : "Show technical details"}
               </button>
             )}
           </div>
@@ -86,6 +89,13 @@ interface WorkspaceResultsProps {
   signatureTone?: "success" | "warning";
   /** Fill the available height (used by the full-screen result view). */
   fullHeight?: boolean;
+  /** For the "there's a key in this message" offer: who we already have,
+   *  and what to do about the one that just arrived. */
+  contacts: PublicContactKey[];
+  outputPublicKeyDetected: boolean;
+  outputVersion: number;
+  onImportKey: (armored: string) => void;
+  onRevealKey?: (keyId: string) => void;
 }
 
 export function WorkspaceResults({
@@ -102,6 +112,11 @@ export function WorkspaceResults({
   verifiedSigner,
   signatureTone = "success",
   fullHeight,
+  contacts,
+  outputPublicKeyDetected,
+  outputVersion,
+  onImportKey,
+  onRevealKey,
 }: WorkspaceResultsProps) {
   const isUnverified = signatureTone === "warning";
 
@@ -158,6 +173,20 @@ export function WorkspaceResults({
         statusText={verifiedSigner ? undefined : statusText}
         fullHeight={fullHeight}
       />
+
+      {/* A key inside a message the user just read: keys travel this way
+          far more often than by paste, and the alternative is copying
+          armor back out into the Keys tab by hand. */}
+      {outputPublicKeyDetected && (
+        <DetectedKeyBanner
+          getText={getOutput}
+          version={outputVersion}
+          contacts={contacts}
+          onImport={onImportKey}
+          onReveal={onRevealKey}
+          source="message"
+        />
+      )}
     </div>
   );
 }
