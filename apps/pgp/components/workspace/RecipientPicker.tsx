@@ -52,6 +52,13 @@ function getKeyDisplay(key: AnyKey): { name: string; detail: string } {
  * affordance -- click anywhere and type), the dropdown offers the
  * remaining keys with recently-used ones first, and digits 1-9
  * quick-pick the nth visible option while the input is empty.
+ *
+ * The dropdown opens only on a deliberate gesture -- a click in the box,
+ * the chevron, typing, or Arrow/Enter -- never on focus alone. Focus is
+ * not intent: the box gets focused by tabbing past it, by the panel
+ * regaining focus, and by re-renders after the mod+Enter Run shortcut,
+ * and popping the list open in those cases reads as a dialog appearing
+ * out of nowhere.
  */
 export function RecipientPicker({
   label,
@@ -72,10 +79,6 @@ export function RecipientPicker({
   const [highlighted, setHighlighted] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  // Focus opens the dropdown -- except when WE move focus back into the
-  // input after a close (e.g. after a click-pick), which must not
-  // immediately reopen it.
-  const suppressOpenOnFocus = useRef(false);
   const inputId = useId();
   const listId = useId();
 
@@ -142,11 +145,11 @@ export function RecipientPicker({
     setHighlighted("");
   };
 
-  /** Return focus to the inline input without reopening the dropdown. */
+  /** Return focus to the inline input. Focus alone never opens the
+   *  dropdown, so this is always safe. */
   const refocusInput = () => {
     const input = inputRef.current;
     if (!input || document.activeElement === input) return;
-    suppressOpenOnFocus.current = true;
     input.focus();
   };
 
@@ -338,8 +341,8 @@ export function RecipientPicker({
                 if (e.key.length !== 1 || e.key === " ") return;
                 const input = inputRef.current;
                 if (!input || e.target === input) return;
-                // Focus opens the dropdown via the input's onFocus, so
-                // the newly typed filter is visible immediately.
+                // The browser then inserts the character into the input,
+                // whose onChange opens the dropdown with the new filter.
                 input.focus();
               }}
               className="border-input focus-within:ring-ring flex min-h-9 w-full cursor-text flex-wrap items-center gap-1 rounded-md border bg-transparent px-2 py-1.5 text-sm focus-within:ring-1"
@@ -410,13 +413,6 @@ export function RecipientPicker({
                 onChange={(e) => {
                   setSearch(e.target.value);
                   if (!open) setOpen(true);
-                }}
-                onFocus={() => {
-                  if (suppressOpenOnFocus.current) {
-                    suppressOpenOnFocus.current = false;
-                    return;
-                  }
-                  setOpen(true);
                 }}
                 onKeyDown={handleInputKeyDown}
                 className="placeholder:text-muted-foreground min-w-16 flex-1 bg-transparent outline-none"

@@ -81,7 +81,8 @@ test("typing while a chip is focused diverts into the search input", async ({
   await panel.keyboard.type("zz");
   await expect(input).toBeFocused();
   await expect(input).toHaveValue("zz");
-  // Refocusing opened the dropdown, so the (empty) filter result shows.
+  // Typing (not the refocus itself) opened the dropdown, so the
+  // empty filter result shows.
   await expect(panel.getByText("No matches")).toBeVisible();
 
   // Space is not stolen: on a focused chip it still activates the
@@ -120,4 +121,53 @@ test("mod+Enter with the recipient dropdown open runs the action, not a pick", a
   await expect(panel.getByRole("button", { name: "Download" })).toBeVisible();
   await expect(panel.getByRole("option")).toHaveCount(0);
   await expect(panel.getByRole("button", { name: /^Remove / })).toHaveCount(1);
+});
+
+test("focus alone never opens the recipient dropdown", async ({ panel }) => {
+  await onboardWithPassword(panel, PASSWORD);
+  await importContact(panel, encryptable.publicKey);
+  await panel.getByRole("tab", { name: "Main" }).click();
+
+  // Tabbing/refocusing into the box (which also happens when the panel
+  // regains focus, or when a re-render hands focus back after the Run
+  // shortcut) must not pop the list open -- only a deliberate gesture does.
+  const input = panel.getByRole("combobox", { name: "Recipients" });
+  await input.focus();
+  await expect(input).toBeFocused();
+  await expect(panel.getByRole("option")).toHaveCount(0);
+
+  // Arrow keys, typing and clicking still open it.
+  await input.press("ArrowDown");
+  await expect(panel.getByRole("option").first()).toBeVisible();
+  await input.press("Escape");
+  await expect(panel.getByRole("option")).toHaveCount(0);
+  await input.pressSequentially("al");
+  await expect(panel.getByRole("option").first()).toBeVisible();
+  await input.press("Escape");
+  await input.press("Escape");
+  await expect(panel.getByRole("option")).toHaveCount(0);
+  await input.click();
+  await expect(panel.getByRole("option").first()).toBeVisible();
+});
+
+test("mod+Enter from the message box leaves the recipient dropdown shut", async ({
+  panel,
+}) => {
+  await onboardWithPassword(panel, PASSWORD);
+  await importContact(panel, encryptable.publicKey);
+  await panel.getByRole("tab", { name: "Main" }).click();
+
+  const input = panel.getByRole("combobox", { name: "Recipients" });
+  await input.fill("alice");
+  await input.press("Enter");
+  await expect(panel.getByRole("button", { name: /^Remove / })).toHaveCount(1);
+
+  const box = panel.locator("#pgp-input");
+  await box.click();
+  await box.fill("hello");
+  const mod = process.platform === "darwin" ? "Meta" : "Control";
+  await box.press(`${mod}+Enter`);
+
+  await expect(panel.getByRole("button", { name: "Download" })).toBeVisible();
+  await expect(panel.getByRole("option")).toHaveCount(0);
 });
