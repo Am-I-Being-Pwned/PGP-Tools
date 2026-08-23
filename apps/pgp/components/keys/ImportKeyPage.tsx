@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { LoaderIcon, UploadCloudIcon } from "lucide-react";
+import { InfoIcon, LoaderIcon, UploadCloudIcon } from "lucide-react";
 
 import { Button } from "@amibeingpwned/ui/button";
 
@@ -109,8 +109,10 @@ export function ImportKeyPage({
   const [dragOver, setDragOver] = useState(false);
   const [githubUser, setGithubUser] = useState("");
   /** A failure the user didn't cause and can't fix by retrying -- today
-   *  only "this person has published no SSH keys". Rendered as muted body
-   *  text, not in the destructive error slot. */
+   *  only "this person has published no SSH keys". Rendered in its own
+   *  amber callout under the GitHub field, never in the destructive
+   *  error slot: it is the ANSWER to the lookup, so it has to be seen,
+   *  but nothing went wrong. */
   const [notice, setNotice] = useState<string | null>(null);
   // The document-level paste listener below must not swallow a username
   // pasted into the GitHub field; it identifies the field by node.
@@ -861,14 +863,31 @@ export function ImportKeyPage({
                     Look up
                   </Button>
                 </div>
+                {notice && (
+                  /* A CALLOUT, not another muted line. The only notice
+                     that reaches here is "this account has no SSH keys",
+                     which is a real answer to the lookup the user just
+                     ran -- and set in the same muted style as the
+                     standing help text below, it read as more
+                     boilerplate and got missed. Amber, bordered and
+                     attached to the field it answers, so it is legible
+                     as a RESULT; deliberately not `text-destructive`,
+                     because nothing failed and nothing needs fixing
+                     (see githubFailureCopy). `status`, not `alert`:
+                     announced without interrupting. */
+                  <div
+                    role="status"
+                    className="mt-2 flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-300"
+                  >
+                    <InfoIcon className="mt-px h-3.5 w-3.5 shrink-0" />
+                    <span>{notice}</span>
+                  </div>
+                )}
               </div>
               <p className="text-muted-foreground text-xs">
                 Public keys are added as contacts. A private key stays on this
                 device - you'll choose how it's protected next.
               </p>
-              {notice && (
-                <p className="text-muted-foreground text-xs">{notice}</p>
-              )}
               {error && (
                 <p className="text-destructive text-xs" role="alert">
                   {error}

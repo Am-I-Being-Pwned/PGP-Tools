@@ -353,6 +353,35 @@ test("an unknown account is refused inline, without a toast", async ({
   await expect(panel.getByRole("button", { name: "Look up" })).toBeVisible();
 });
 
+test("an account with no SSH keys says so where the answer is expected", async ({
+  context,
+  panel,
+}) => {
+  // A real account that has simply published nothing: GitHub answers
+  // `200 []`, which is a successful lookup with an empty result -- not
+  // an error, and the only outcome in this flow the user cannot fix.
+  const github = await stubGithubKeys(context, []);
+  await onboardWithPasswordSkipKey(panel, PASSWORD);
+  await lookUpGithubUser(panel, GITHUB_USER);
+  expect(github.count()).toBe(1);
+
+  // It is the ANSWER to the lookup, so it has to be noticed: its own
+  // callout attached to the field, not a fourth muted line among the
+  // standing help text, which is what it used to be.
+  const status = panel.getByRole("status");
+  await expect(status).toBeVisible();
+  await expect(status).toContainText(
+    new RegExp(`${GITHUB_USER} hasn't published any SSH keys`, "i"),
+  );
+  // Not the destructive slot: nothing failed and there is nothing to
+  // retry, and painting a correct answer red teaches people to distrust
+  // it (see githubFailureCopy).
+  await expect(panel.getByRole("alert")).toHaveCount(0);
+  // And it says what to do instead, on a step still able to do it.
+  await expect(status).toContainText(/paste their key here instead/i);
+  await expect(panel.getByRole("button", { name: "Look up" })).toBeVisible();
+});
+
 test("a rate limit says it is shared, and when it lifts", async ({
   context,
   panel,
