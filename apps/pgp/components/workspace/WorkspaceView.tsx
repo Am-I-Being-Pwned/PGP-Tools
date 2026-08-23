@@ -9,9 +9,9 @@ import {
 } from "lucide-react";
 
 import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
-import { ariaKeyShortcuts, isMacPlatform } from "@amibeingpwned/ui/kbd-helpers";
 import { Button } from "@amibeingpwned/ui/button";
 import { Kbd } from "@amibeingpwned/ui/kbd";
+import { ariaKeyShortcuts, isMacPlatform } from "@amibeingpwned/ui/kbd-helpers";
 import {
   Popover,
   PopoverAnchor,
@@ -40,10 +40,12 @@ import {
   COPY_SHORTCUT,
   DOWNLOAD_SHORTCUT,
 } from "../../lib/actions/definitions";
+import { parseKeys } from "../../lib/pgp/wasm";
 import { requestUnlimitedHistoryStorage } from "../../lib/storage/history";
 import { savePreferences } from "../../lib/storage/preferences";
 import { toast } from "../../lib/toast";
 import { saveCrxViaPrompt } from "../../lib/utils/download";
+import { parseUserId } from "../../lib/utils/key-naming";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 import { hasOpenSlideOver } from "../shared/SlideOver";
 import { ToggleBadge } from "../shared/ToggleBadge";
@@ -110,6 +112,8 @@ interface WorkspaceViewProps {
   encryptToKeyId?: string | null;
   onClearEncryptTo?: () => void;
   onNavigateToKeys?: (importPrefill?: string) => void;
+  /** Take the user to a key they already hold, highlighted in the list. */
+  onRevealKey?: (keyId: string) => void;
   autoDownloadFiles?: boolean;
   autoDownloadText?: boolean;
   onOperationComplete?: () => void;
@@ -149,6 +153,7 @@ export function WorkspaceView({
   encryptToKeyId,
   onClearEncryptTo,
   onNavigateToKeys,
+  onRevealKey,
   autoDownloadFiles,
   autoDownloadText,
   onOperationComplete,
@@ -296,6 +301,46 @@ export function WorkspaceView({
   // toast's whole lifetime, and anything that closes over the plaintext
   // survives a master lock. `s.wipePlaintext()` clears the buffer too.
   const lastEscapeAt = useRef(0);
+
+  // Identify a pasted public key so the banner can tell the user whose it
+  // is -- and, more to the point, stop offering to import a key they
+  // already hold. Only runs while a public key is actually detected, so
+  // the parse cost is paid once per paste, not per keystroke.
+  const [detectedPublicKey, setDetectedPublicKey] = useState<{
+    keyId: string;
+    name: string;
+    known: boolean;
+  } | null>(null);
+  const { publicKeyDetected, getInput } = s;
+  useEffect(() => {
+    if (!publicKeyDetected) {
+      setDetectedPublicKey(null);
+      return;
+    }
+    let cancelled = false;
+    void parseKeys(getInput())
+      .then((certs) => {
+        const cert = certs.at(0);
+        if (cancelled || !cert) return;
+        const stored = contacts.find(
+          (c) => c.keyId.toUpperCase() === cert.keyInfo.keyId.toUpperCase(),
+        );
+        const uid = (stored?.userIds ?? cert.keyInfo.userIds).at(0) ?? "";
+        setDetectedPublicKey({
+          keyId: cert.keyInfo.keyId,
+          name: parseUserId(uid).name || cert.keyInfo.keyId.slice(-8),
+          known: !!stored,
+        });
+      })
+      .catch(() => {
+        // Unparseable: the generic "looks like a public key" wording
+        // still applies, so leave the detail off rather than erroring.
+        if (!cancelled) setDetectedPublicKey(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [publicKeyDetected, getInput, contacts]);
 
   const restoreCleared = () => s.restoreClearUndo();
 
@@ -673,6 +718,8 @@ export function WorkspaceView({
         onRemoveFile={s.removeFile}
         onClearFiles={s.clearFiles}
         publicKeyDetected={s.publicKeyDetected}
+        detectedPublicKey={detectedPublicKey}
+        onRevealKey={onRevealKey}
         privateKeyDetected={s.privateKeyDetected}
         onNavigateToKeys={onNavigateToKeys}
         operationDone={s.operationDone}

@@ -2,66 +2,26 @@ import { useCallback, useRef, useState } from "react";
 
 import { Button } from "@amibeingpwned/ui/button";
 
-import type { PublicContactKey } from "../../lib/storage/contacts";
-import { splitPublicKeyBlocks } from "../../lib/armor-blocks";
 import { readKeyFile } from "../../lib/binary-armor";
-import { importPublicKeyBlocks } from "../../lib/import-public-keys";
-import { toast } from "../../lib/toast";
 
 interface ContactDropZoneProps {
-  onImport: (contact: PublicContactKey) => Promise<void>;
-  existingKeyIds?: string[];
+  /** Hand the dropped/pasted/browsed text to the import flow, which
+   *  parses it, previews a single key, and bulk-imports a bundle. */
+  onKeyText: (text: string) => void;
 }
 
-export function ContactDropZone({
-  onImport,
-  existingKeyIds,
-}: ContactDropZoneProps) {
+/**
+ * Drop target for contact keys.
+ *
+ * It deliberately does no importing of its own any more: it used to
+ * parse and store keys behind the user's back, so a drop produced a
+ * toast ("Added 3 contacts") and no way to see whose key had just landed
+ * in the keyring. Now every route -- this, the Import button, a global
+ * file drop, the workspace banner -- goes through the same preview.
+ */
+export function ContactDropZone({ onKeyText }: ContactDropZoneProps) {
   const [dragOver, setDragOver] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const tryImportMany = useCallback(
-    async (text: string) => {
-      setError(null);
-      const blocks = splitPublicKeyBlocks(text);
-      if (blocks.length === 0) {
-        setError("No public keys found");
-        return;
-      }
-
-      const { added, updated, failed, flagged, rejectionReasons } =
-        await importPublicKeyBlocks(blocks, existingKeyIds ?? [], onImport);
-
-      // Stable ids: re-dropping the same file must update the previous
-      // toasts, not stack duplicates.
-      if (added > 0)
-        toast.success(`Added ${added} contact${added > 1 ? "s" : ""}`, {
-          id: "contacts-added",
-        });
-      if (flagged > 0) {
-        toast.warning(
-          `${flagged} key${flagged > 1 ? "s use" : " uses"} weak crypto (SHA-1) and ${
-            flagged > 1 ? "were" : "was"
-          } flagged - see the warning on the contact.`,
-          { id: "contacts-flagged" },
-        );
-      }
-      if (updated > 0)
-        toast.info(`${updated} contact${updated > 1 ? "s" : ""} updated`, {
-          id: "contacts-updated",
-        });
-      if (failed > 0) {
-        const detail = rejectionReasons[0];
-        setError(
-          detail
-            ? `${failed} key${failed > 1 ? "s" : ""} rejected: ${detail}`
-            : `${failed} key${failed > 1 ? "s" : ""} failed to import`,
-        );
-      }
-    },
-    [onImport, existingKeyIds],
-  );
 
   const handleDrop = useCallback(
     async (e: React.DragEvent) => {
@@ -71,14 +31,14 @@ export function ContactDropZone({
       const files = Array.from(e.dataTransfer.files);
       if (files.length > 0) {
         const texts = await Promise.all(files.map(readKeyFile));
-        await tryImportMany(texts.join("\n"));
+        onKeyText(texts.join("\n"));
         return;
       }
 
       const text = e.dataTransfer.getData("text/plain");
-      if (text) await tryImportMany(text);
+      if (text) onKeyText(text);
     },
-    [tryImportMany],
+    [onKeyText],
   );
 
   const handlePaste = useCallback(
@@ -86,22 +46,22 @@ export function ContactDropZone({
       const text = e.clipboardData.getData("text/plain");
       if (text.includes("PUBLIC KEY")) {
         e.preventDefault();
-        void tryImportMany(text);
+        onKeyText(text);
       }
     },
-    [tryImportMany],
+    [onKeyText],
   );
 
   const handleFileSelect = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(e.target.files ?? []);
+      e.target.value = "";
       if (files.length > 0) {
         const texts = await Promise.all(files.map(readKeyFile));
-        await tryImportMany(texts.join("\n"));
+        onKeyText(texts.join("\n"));
       }
-      e.target.value = "";
     },
-    [tryImportMany],
+    [onKeyText],
   );
 
   return (
@@ -123,7 +83,6 @@ export function ContactDropZone({
       <p className="text-muted-foreground">
         Drop, paste, or browse for public keys
       </p>
-      {error && <p className="text-destructive mt-1">{error}</p>}
       <input
         ref={fileInputRef}
         type="file"

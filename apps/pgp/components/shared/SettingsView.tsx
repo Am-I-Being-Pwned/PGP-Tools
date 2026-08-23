@@ -41,6 +41,7 @@ import { ExportKeysPage } from "../keys/ExportKeysPage";
 import { CrxSigningInfoPage } from "../settings/CrxSigningInfoPage";
 import { DevToolsPage } from "../settings/DevToolsPage";
 import { ImportAllKeysPage } from "../settings/ImportAllKeysPage";
+import { ImportFlowPreviewPage } from "../settings/ImportFlowPreviewPage";
 import { KeyboardShortcutsPage } from "../settings/KeyboardShortcutsPage";
 import { SecurityPresetPage } from "../settings/SecurityPresetPage";
 import { ConfirmPage } from "./ConfirmPage";
@@ -141,6 +142,7 @@ export function SettingsView({
   const [showImportAll, setShowImportAll] = useState(false);
   const [showCrxInfo, setShowCrxInfo] = useState(false);
   const [showDevTools, setShowDevTools] = useState(false);
+  const [showImportFlow, setShowImportFlow] = useState(false);
   const [showPresets, setShowPresets] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   // Stored-history byte size at the moment the user tried to turn
@@ -633,6 +635,14 @@ export function SettingsView({
             >
               Open dev tools
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2 w-full"
+              onClick={() => setShowImportFlow(true)}
+            >
+              Import flow states
+            </Button>
           </div>
         </div>
       )}
@@ -737,6 +747,10 @@ export function SettingsView({
 
       {import.meta.env.DEV && showDevTools && (
         <DevToolsPage onClose={() => setShowDevTools(false)} />
+      )}
+
+      {import.meta.env.DEV && showImportFlow && (
+        <ImportFlowPreviewPage onClose={() => setShowImportFlow(false)} />
       )}
     </div>
   );

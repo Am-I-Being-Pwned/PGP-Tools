@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ImportIcon, PlusIcon } from "lucide-react";
 
 import { Button } from "@amibeingpwned/ui/button";
@@ -56,9 +56,11 @@ interface KeysViewProps {
     armored: string,
   ) => Promise<void>;
   advancedMode?: boolean;
-  /** When non-null, opens the Import dialog with this armored text prefilled. */
-  autoOpenImport?: string | null;
-  onAutoOpenImportConsumed?: () => void;
+  /** Scroll to and pulse this key: an import that happened elsewhere
+   *  (the app-level import panel), or the workspace banner's "show it in
+   *  your keys". */
+  highlightKeyId?: string | null;
+  onHighlightConsumed?: () => void;
   /** A subpage requested from outside (command palette). */
   autoOpenRoute?: "generate" | "import" | null;
   onAutoOpenRouteConsumed?: () => void;
@@ -124,8 +126,8 @@ export function KeysView({
   getKeyHandle,
   onSaveRevocationCertificate,
   advancedMode,
-  autoOpenImport,
-  onAutoOpenImportConsumed,
+  highlightKeyId,
+  onHighlightConsumed,
   autoOpenRoute,
   onAutoOpenRouteConsumed,
   onEncryptTo,
@@ -144,15 +146,33 @@ export function KeysView({
   const [selectionMode, setSelectionMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const nav = useNavStack<KeysRoute>();
-  const { copy } = useCopyToClipboard();
-  const navPush = nav.push;
+
+  // Fingerprints written by the most recent import: the matching cards
+  // scroll into view and pulse once, so the panel sliding away hands the
+  // eye straight to what changed. Cleared on a timer -- a permanent ring
+  // would just become decoration.
+  const [justImported, setJustImported] = useState<Set<string>>(new Set());
+  const highlightTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(highlightTimer.current), []);
+
+  const highlightImported = (keyIds: string[]) => {
+    if (keyIds.length === 0) return;
+    setJustImported(new Set(keyIds));
+    clearTimeout(highlightTimer.current);
+    // Comfortably longer than the 1.6s pulse plus the panel's slide-out,
+    // so the animation isn't half-finished behind a closing panel.
+    highlightTimer.current = setTimeout(() => setJustImported(new Set()), 2600);
+  };
 
   useEffect(() => {
-    if (autoOpenImport) {
-      navPush({ page: "import", initialArmored: autoOpenImport });
-      onAutoOpenImportConsumed?.();
-    }
-  }, [autoOpenImport, onAutoOpenImportConsumed, navPush]);
+    if (!highlightKeyId) return;
+    highlightImported([highlightKeyId]);
+    onHighlightConsumed?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highlightKeyId]);
+
+  const { copy } = useCopyToClipboard();
+  const navPush = nav.push;
 
   useEffect(() => {
     if (autoOpenRoute) {
@@ -355,6 +375,7 @@ export function KeysView({
                   <KeyCard
                     key={id}
                     model={model}
+                    justImported={justImported.has(model.id)}
                     advancedMode={advancedMode}
                     selectionMode={selectionMode}
                     selected={selected.has(id)}
@@ -391,13 +412,16 @@ export function KeysView({
         <ContactsList
           contacts={contacts}
           contactsLocked={contactsLocked}
+          justImported={justImported}
+          onImportText={(text) =>
+            nav.push({ page: "import", initialArmored: text })
+          }
           onRequestRemove={(contact) =>
             nav.push({
               page: "confirm-delete",
               target: { kind: "contact", contact },
             })
           }
-          onAddContact={onAddContact}
           onEncryptTo={onEncryptTo}
           onShowDetails={(contact) =>
             nav.push({ page: "details", target: { kind: "contact", contact } })
@@ -442,6 +466,9 @@ export function KeysView({
                 initialArmored={route.initialArmored}
                 crxSigningEnabled={crxSigningEnabled}
                 onImportCrx={onAddCrxKey}
+                // Both an import and a "show it in your keys" land the
+                // same way here: the user is already looking at the list.
+                onImported={highlightImported}
               />
             );
           }
@@ -746,7 +773,6 @@ function ContactsList({
   contacts,
   contactsLocked,
   onRequestRemove,
-  onAddContact,
   onEncryptTo,
   onShowDetails,
   advancedMode,
@@ -754,11 +780,12 @@ function ContactsList({
   selected,
   onToggleSelect,
   onStartSelect,
+  justImported,
+  onImportText,
 }: {
   contacts: PublicContactKey[];
   contactsLocked: boolean;
   onRequestRemove: (contact: PublicContactKey) => void;
-  onAddContact: (contact: PublicContactKey) => Promise<void>;
   onEncryptTo?: (keyId: string) => void;
   onShowDetails: (contact: PublicContactKey) => void;
   advancedMode?: boolean;
@@ -766,6 +793,11 @@ function ContactsList({
   selected: Set<string>;
   onToggleSelect: (id: string) => void;
   onStartSelect: (id: string) => void;
+  /** Fingerprints to scroll to and pulse after an import. */
+  justImported: Set<string>;
+  /** Hand dropped/pasted key text to the import panel, which previews a
+   *  single key and bulk-imports a bundle. */
+  onImportText: (text: string) => void;
 }) {
   const [search, setSearch] = useState("");
   const { copy } = useCopyToClipboard();
@@ -798,10 +830,7 @@ function ContactsList({
         </div>
       ) : (
         <>
-          <ContactDropZone
-            onImport={onAddContact}
-            existingKeyIds={contacts.map((c) => c.keyId)}
-          />
+          <ContactDropZone onKeyText={onImportText} />
           {contacts.length > 5 && (
             <input
               type="text"
@@ -819,6 +848,7 @@ function ContactsList({
                   <ContactCard
                     key={c.keyId}
                     contact={c}
+                    justImported={justImported.has(c.keyId)}
                     onRemove={() => onRequestRemove(c)}
                     onEncryptTo={
                       onEncryptTo ? () => onEncryptTo(c.keyId) : undefined

@@ -13,6 +13,7 @@ import type {
 } from "../../lib/storage/preferences";
 import type { WorkspaceDraftSource } from "../../lib/workspace-draft";
 import { CommandPalette } from "../../components/CommandPalette";
+import { ImportKeyPage } from "../../components/keys/ImportKeyPage";
 import { KeysView } from "../../components/keys/KeysView";
 import { AppFooter } from "../../components/shared/AppFooter";
 import { GlobalDropZone } from "../../components/shared/GlobalDropZone";
@@ -66,7 +67,15 @@ export default function App() {
   const [onboardingComplete, setOnboardingComplete] = useState<boolean | null>(
     null,
   );
+  // A key handed to the app from outside the Keys tab (pasted in the
+  // workspace, dropped on the window, sent by the context menu). It opens
+  // the import panel OVER whatever the user is looking at: routing them
+  // to the Keys tab first meant Back dumped them on a tab they never
+  // asked for, and the panel's slide-out flashed it on the way past.
   const [importPrefill, setImportPrefill] = useState<string | null>(null);
+  // A key to scroll to and pulse on the Keys tab, with no import
+  // involved (the workspace banner's "show it in your keys").
+  const [highlightKeyId, setHighlightKeyId] = useState<string | null>(null);
   const [encryptToKeyId, setEncryptToKeyId] = useState<string | null>(null);
   // A file/text drop routed to the workspace by the global dropzone. The
   // nonce bumps on every drop so re-dropping the same files re-applies.
@@ -351,8 +360,6 @@ export default function App() {
     ) {
       pendingRoutedRef.current = true;
       setImportPrefill(pending.text);
-      setActiveTab("keys");
-      void savePreferences({ activeTab: "keys" });
       clearPending();
       return;
     }
@@ -379,7 +386,10 @@ export default function App() {
     openFocusDoneRef.current = true;
     if (activeTab !== "workspace") return;
     // Deferred a tick so the workspace has mounted the textarea.
-    const t = setTimeout(() => document.getElementById("pgp-input")?.focus(), 0);
+    const t = setTimeout(
+      () => document.getElementById("pgp-input")?.focus(),
+      0,
+    );
     return () => clearTimeout(t);
   }, [
     onboardingComplete,
@@ -440,6 +450,19 @@ export default function App() {
     void savePreferences({ activeTab: tab });
     toast.dismiss();
   }, []);
+
+  /** Open the import panel over the current tab. Pasting a
+   *  correspondent's key mid-encrypt shouldn't move you anywhere: the
+   *  panel covers the screen, and closing it leaves you where you were. */
+  const routeToImport = (armored: string) => setImportPrefill(armored);
+
+  /** Show a key the user already has, highlighted in the Keys list. This
+   *  one IS a navigation -- it's what they asked for. */
+  const revealKey = (keyId: string) => {
+    setHighlightKeyId(keyId);
+    setActiveTab("keys");
+    void savePreferences({ activeTab: "keys" });
+  };
 
   const openHistory = useCallback(() => setHistoryOpen(true), []);
   const openKeysRoute = useCallback(
@@ -537,9 +560,7 @@ export default function App() {
           ? text
           : await readAllFilesText(files);
         if (!armored.trim()) return;
-        setImportPrefill(armored);
-        setActiveTab("keys");
-        void savePreferences({ activeTab: "keys" });
+        routeToImport(armored);
       },
     },
     {
@@ -627,6 +648,42 @@ export default function App() {
         <TabBar activeTab={activeTab} onTabChange={changeTab} />
 
         <CommandPalette ctx={actionCtx} bindOpen={bindPaletteOpen} />
+
+        {/* A key that arrived from outside the Keys tab. The panel covers
+            the whole side panel, so it opens in place -- no tab switch to
+            flash past on the way in or out. */}
+        {importPrefill !== null && (
+          <ImportKeyPage
+            onClose={() => setImportPrefill(null)}
+            onImportPrivate={handleAddKey}
+            onImportPublic={contacts.add}
+            existingKeys={keyring.keys}
+            existingContacts={contacts.contacts}
+            reusePasskeyCredentialId={masterPasskeyCredentialId}
+            initialArmored={importPrefill}
+            crxSigningEnabled={crxSigningEnabled}
+            onImportCrx={crxKeys.add}
+            onImported={(keyIds, opts) => {
+              const first = keyIds[0];
+              // "Show it in your keys" is a request to go and look; a
+              // plain import leaves the user where they were, so it gets
+              // a toast instead of a highlight they'd never see.
+              if (opts?.reveal) {
+                if (first) revealKey(first);
+                return;
+              }
+              if (keyIds.length === 0) return;
+              if (activeTab === "keys") {
+                if (first) setHighlightKeyId(first);
+                return;
+              }
+              toast.success(
+                keyIds.length > 1 ? `Added ${keyIds.length} keys` : "Key added",
+                { id: "import-added" },
+              );
+            }}
+          />
+        )}
         {historyOpen && (
           <HistoryPage
             enabled={workspaceBridge?.historyEnabled ?? false}
@@ -661,8 +718,12 @@ export default function App() {
               onClearPending={clearPending}
               encryptToKeyId={encryptToKeyId}
               onClearEncryptTo={() => setEncryptToKeyId(null)}
+              onRevealKey={revealKey}
               onNavigateToKeys={(prefill) => {
-                if (prefill) setImportPrefill(prefill);
+                if (prefill) {
+                  routeToImport(prefill);
+                  return;
+                }
                 setActiveTab("keys");
                 void savePreferences({ activeTab: "keys" });
               }}
@@ -704,8 +765,8 @@ export default function App() {
               onAddContact={contacts.add}
               onDeleteContact={contacts.remove}
               advancedMode={advancedMode}
-              autoOpenImport={importPrefill}
-              onAutoOpenImportConsumed={() => setImportPrefill(null)}
+              highlightKeyId={highlightKeyId}
+              onHighlightConsumed={() => setHighlightKeyId(null)}
               autoOpenRoute={keysRoute}
               onAutoOpenRouteConsumed={() => setKeysRoute(null)}
               onEncryptTo={(keyId) => {

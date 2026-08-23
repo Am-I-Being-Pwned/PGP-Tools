@@ -26,6 +26,7 @@ import {
 import type { PrivateKeyExporter } from "./ExportPrivateKeyPage";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 import { ExportPrivateKeyPage } from "./ExportPrivateKeyPage";
+import { useJustImported } from "./useJustImported";
 import { useLongPress } from "./useLongPress";
 
 /** Lock/unlock lifecycle for a key that lives in the per-session vault (PGP).
@@ -82,6 +83,8 @@ interface KeyCardProps {
   onToggleSelect: () => void;
   /** Enter selection mode with this card selected (long-press / menu). */
   onStartSelect: () => void;
+  /** Just arrived from an import: scroll to it and pulse it once. */
+  justImported?: boolean;
 }
 
 export function KeyCard({
@@ -91,7 +94,9 @@ export function KeyCard({
   selected,
   onToggleSelect,
   onStartSelect,
+  justImported,
 }: KeyCardProps) {
+  const [importedRef, importedClass] = useJustImported(justImported);
   const [showPasswordUnlock, setShowPasswordUnlock] = useState(false);
   const [showExportPrivate, setShowExportPrivate] = useState(false);
   const [password, setPassword] = useState("");
@@ -158,10 +163,12 @@ export function KeyCard({
 
   return (
     <div
+      ref={importedRef}
       onClick={handleCardClick}
       {...longPress.handlers}
       className={cn(
         "group relative rounded-md p-3 transition-colors",
+        importedClass,
         // Keep the border width constant (1px) and add thickness with a ring
         // (box-shadow, no layout impact) so selecting doesn't shift the card.
         selected

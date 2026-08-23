@@ -24,7 +24,9 @@ test("rejects an expired key with the expiry date", async ({ panel }) => {
   await importContactExpectRejected(
     panel,
     edgeKey("expired").publicKey,
-    /This key expired on .*Ask the owner/,
+    // The health banner spells it out across a few lines: when it
+    // expired, and what to do about it.
+    /expired[\s\S]*Ask the owner for an updated key/,
   );
 });
 
@@ -141,7 +143,5 @@ test("verify of unsigned text says so plainly", async ({ panel }) => {
   // Plain text isn't a PGP message at all; the error classifier says so
   // with paste-the-full-block guidance (the "not signed" classification
   // is reserved for parseable PGP data).
-  await expect(
-    panel.getByText(/doesn't look like PGP data/),
-  ).toBeVisible();
+  await expect(panel.getByText(/doesn't look like PGP data/)).toBeVisible();
 });

@@ -1,5 +1,4 @@
 import { readFile } from "node:fs/promises";
-
 import type { Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 
@@ -200,8 +199,10 @@ export async function importContact(
       mimeType: "application/pgp-keys",
       buffer: Buffer.from(armoredPublicKey, "utf8"),
     });
-  // `.first()` tolerates a prior import's toast still being on screen.
-  await expect(panel.getByText(/Added \d+ contact/).first()).toBeVisible();
+  // A single key previews before it lands (a bundle imports straight
+  // away -- see importContactsBulk).
+  await panel.getByRole("button", { name: "Import contact" }).click();
+  await expect(panel.getByRole("region", { name: "Import key" })).toBeHidden();
 }
 
 /** Import an armored, unprotected private key via the Import Key page,
@@ -214,21 +215,19 @@ export async function importPrivateKey(
 ): Promise<void> {
   await goToKeys(panel);
   await panel.getByRole("button", { name: "Import Key" }).click();
-  await panel
-    .getByPlaceholder("Paste a key here, or browse for a file...")
-    .fill(armoredPrivateKey);
-  await panel.getByRole("button", { name: "Next" }).click();
+  await importFileInPanel(panel, armoredPrivateKey);
+  // The key is previewed before anything is stored; Continue moves on to
+  // choosing how the secret is protected at rest.
+  await panel.getByRole("button", { name: "Continue" }).click();
   // Protection step: choose password, set it, import.
   await panel.locator('input[name="protection"]').nth(1).check();
   await panel.getByLabel("Password", { exact: true }).fill(password);
   await panel.getByLabel("Confirm password").fill(password);
   // `exact` so it doesn't also match the "Import Key" button behind the page.
   await panel.getByRole("button", { name: "Import", exact: true }).click();
-  // Success closes the page (the paste textarea disappears); on error it
-  // stays open. Then confirm the key landed on the Keys tab.
-  await expect(
-    panel.getByPlaceholder("Paste a key here, or browse for a file..."),
-  ).toBeHidden();
+  // Success closes the page; on error it stays open. Then confirm the key
+  // landed on the Keys tab.
+  await expect(panel.getByRole("region", { name: "Import key" })).toBeHidden();
   await expect(panel.getByText(ownerName).last()).toBeVisible();
   // Wait for the slide-over to finish its exit animation: its onClose
   // fires a deferred nav.collapseToTop() that would dismiss any page the
@@ -245,12 +244,28 @@ export async function importContactExpectRejected(
 ): Promise<void> {
   await goToKeys(panel);
   await panel.getByRole("button", { name: "Import Key" }).click();
+  await importFileInPanel(panel, armoredPublicKey);
+  // An unusable key still previews -- with its health banner explaining
+  // why, and no import button (the footer says so next to Done).
+  await expect(panel.getByRole("alert")).toContainText("can't be imported");
+  await expect(panel.getByRole("region", { name: "Import key" })).toContainText(
+    reason,
+  );
+}
+
+/** Feed armored key text to the open Import Key page via its file input
+ *  (the flow has no paste box -- armor is never rendered). */
+export async function importFileInPanel(
+  panel: Page,
+  armored: string,
+): Promise<void> {
   await panel
-    .getByPlaceholder("Paste a key here, or browse for a file...")
-    .fill(armoredPublicKey);
-  // Public armor is imported straight from the paste step.
-  await panel.getByRole("button", { name: "Import", exact: true }).click();
-  await expect(panel.getByRole("alert")).toContainText(reason);
+    .locator('input[accept=".asc,.gpg,.pub,.key,.pgp,.txt,.pem"]')
+    .setInputFiles({
+      name: "key.asc",
+      mimeType: "application/pgp-keys",
+      buffer: Buffer.from(armored, "utf8"),
+    });
 }
 
 /** Pick a workspace mode explicitly (auto-detect only fires for
@@ -272,6 +287,11 @@ export async function importContactsBulk(
   panel: Page,
   armoredPublicKeys: string[],
 ): Promise<void> {
+  // One key is a preview-then-confirm flow, not a bulk import.
+  if (armoredPublicKeys.length === 1) {
+    await importContact(panel, armoredPublicKeys[0]);
+    return;
+  }
   await goToKeys(panel);
   await panel
     .locator('input[accept=".asc,.gpg,.pub,.key,.pgp,.txt"]')
@@ -371,10 +391,9 @@ export async function pasteCrxSigningKey(
 ): Promise<void> {
   await goToKeys(panel);
   await panel.getByRole("button", { name: "Import Key" }).click();
-  await panel
-    .getByPlaceholder("Paste a key here, or browse for a file...")
-    .fill(pem);
-  // Detection is what routes this to the CRX branch; assert it so a
+  await importFileInPanel(panel, pem);
+  // Detection is what routes this to the CRX branch (straight to
+  // protection -- a bare RSA PEM has no cert to preview); assert it so a
   // regression there fails loudly instead of importing as a PGP key.
   await expect(panel.getByText("RSA signing key")).toBeVisible();
   await panel.getByPlaceholder("e.g. My Extension").fill(label);
@@ -386,14 +405,10 @@ export async function completeCrxSigningKeyImport(
   panel: Page,
   password: string,
 ): Promise<void> {
-  await panel.getByRole("button", { name: "Next" }).click();
   await panel.locator('input[name="protection"]').nth(1).check();
   await panel.getByLabel("Password", { exact: true }).fill(password);
   await panel.getByLabel("Confirm password").fill(password);
   await panel.getByRole("button", { name: "Import", exact: true }).click();
-  await expect(
-    panel.getByPlaceholder("Paste a key here, or browse for a file..."),
-  ).toBeHidden();
   await expect(panel.getByRole("region", { name: "Import key" })).toBeHidden();
 }
 

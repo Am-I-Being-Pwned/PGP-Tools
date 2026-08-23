@@ -24,6 +24,7 @@ import {
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import { formatAlgorithm, formatFingerprint } from "../../lib/utils/formatting";
 import { parseUserId } from "../../lib/utils/key-naming";
+import { useJustImported } from "./useJustImported";
 import { useLongPress } from "./useLongPress";
 
 interface ContactCardProps {
@@ -49,6 +50,8 @@ interface ContactCardProps {
   onToggleSelect?: () => void;
   /** Enter selection mode with this contact selected (long-press / menu). */
   onStartSelect?: () => void;
+  /** Just arrived from an import: scroll to it and pulse it once. */
+  justImported?: boolean;
 }
 
 export function ContactCard({
@@ -67,7 +70,9 @@ export function ContactCard({
   selected = false,
   onToggleSelect,
   onStartSelect,
+  justImported,
 }: ContactCardProps) {
+  const [importedRef, importedClass] = useJustImported(justImported);
   const isWarning = verifiedTone === "warning";
   const toneBorder = isWarning ? "border-orange-500/50" : "border-green-500/50";
   const toneText = isWarning ? "text-orange-400" : "text-green-400";
@@ -101,10 +106,12 @@ export function ContactCard({
 
   return (
     <div
+      ref={importedRef}
       onClick={handleClick}
       {...longPress.handlers}
       className={cn(
         "group relative rounded-md p-3",
+        importedClass,
         // Keep the border width constant (1px) and add thickness with a ring
         // (box-shadow, no layout impact) so selecting doesn't shift the card.
         selected

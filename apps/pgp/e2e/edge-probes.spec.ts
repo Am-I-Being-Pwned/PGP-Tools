@@ -59,7 +59,10 @@ test("imports a binary (non-armored) .gpg public key file", async ({
       mimeType: "application/octet-stream",
       buffer: Buffer.from(key.publicKeyBinaryB64 ?? "", "base64"),
     });
-  await expect(panel.getByText(/Added 1 contact/).first()).toBeVisible();
+  // Decoded to armor and previewed like any other key, by name.
+  await expect(panel.getByText("Bianca Binary").first()).toBeVisible();
+  await panel.getByRole("button", { name: "Import contact" }).click();
+  await expect(panel.getByRole("region", { name: "Import key" })).toBeHidden();
   await expect(panel.getByText("Bianca Binary").first()).toBeVisible();
 });
 
@@ -91,13 +94,17 @@ test("global drop routes a binary key export to import, not the workspace", asyn
   // The drop routes to the Keys tab and opens Import prefilled with the
   // armored form of the binary key.
   await expect(panel.getByRole("region", { name: "Import key" })).toBeVisible();
-  await expect(panel.getByText(/Detected:/)).toBeVisible();
-  // Rendered capitalized via CSS; the DOM text is lowercase.
-  await expect(panel.getByText("public", { exact: true })).toBeVisible();
-  await panel.getByRole("button", { name: "Import", exact: true }).click();
-  await expect(
-    panel.getByRole("region", { name: "Import key" }),
-  ).toBeHidden();
+  // Previewed as a public key, by owner -- not as a wall of armor.
+  await expect(panel.getByText("Bianca Binary").first()).toBeVisible();
+  await expect(panel.getByText("Public key", { exact: true })).toBeVisible();
+  await panel.getByRole("button", { name: "Import contact" }).click();
+  await expect(panel.getByRole("region", { name: "Import key" })).toBeHidden();
+
+  // The panel opened over the tab the user was on and closed back to it:
+  // a dropped key doesn't move them to the Keys tab. The contact is
+  // there when they go looking.
+  await expect(panel.locator("#pgp-input")).toBeVisible();
+  await goToKeys(panel);
   await expect(panel.getByText("Bianca Binary").first()).toBeVisible();
 });
 
@@ -111,7 +118,10 @@ test("strips bidi override characters from displayed user IDs", async ({
   // The UID contains U+202E RIGHT-TO-LEFT OVERRIDE, which visually
   // reverses the characters after it -- classic address-spoofing. The
   // rendered contact must not carry the override into the DOM.
-  const name = await panel.getByText(/Eve .*Bidi/).first().textContent();
+  const name = await panel
+    .getByText(/Eve .*Bidi/)
+    .first()
+    .textContent();
   expect(name).toBeTruthy();
   // U+202A-U+202E (embedding/override) and U+2066-U+2069 (isolates).
   expect(name).not.toMatch(/[\u202A-\u202E\u2066-\u2069]/u);

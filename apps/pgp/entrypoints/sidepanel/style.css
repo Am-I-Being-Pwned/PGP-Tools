@@ -36,3 +36,35 @@
     background-color: var(--muted-foreground);
   }
 }
+
+/* A card that just arrived from an import: a green ring that fades out
+   over ~1.6s, so the eye lands on the key that was added without the
+   list looking permanently decorated. Paired with a scroll-into-view in
+   useJustImported, and dropped from the DOM by KeysView once it's run.
+
+   A ring (box-shadow) rather than a border: no layout shift, and it
+   composes with the selection ring the cards already use. */
+@keyframes just-imported-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgb(34 197 94 / 0.5);
+  }
+  35% {
+    box-shadow: 0 0 0 3px rgb(34 197 94 / 0.45);
+  }
+  100% {
+    box-shadow: 0 0 0 3px rgb(34 197 94 / 0);
+  }
+}
+
+.just-imported {
+  animation: just-imported-pulse 1.6s ease-out 1;
+}
+
+/* Reduced motion still gets the highlight -- it just doesn't move. The
+   class is removed on the same timer, so the ring still goes away. */
+@media (prefers-reduced-motion: reduce) {
+  .just-imported {
+    animation: none;
+    box-shadow: 0 0 0 3px rgb(34 197 94 / 0.45);
+  }
+}

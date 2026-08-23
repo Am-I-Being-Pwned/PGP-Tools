@@ -43,8 +43,19 @@ interface WorkspaceInputProps {
   onRemoveFile: (index: number) => void;
   onClearFiles: () => void;
   publicKeyDetected: boolean;
+  /** Set once the pasted public key has been identified: who it belongs
+   *  to, and whether it is already in the user's contacts. Null while
+   *  the lookup is still running (or if it failed). */
+  detectedPublicKey?: {
+    keyId: string;
+    name: string;
+    /** Already stored -- there is nothing to import. */
+    known: boolean;
+  } | null;
   privateKeyDetected: boolean;
   onNavigateToKeys?: (importPrefill?: string) => void;
+  /** Take the user to a key they already hold, highlighted in the list. */
+  onRevealKey?: (keyId: string) => void;
   operationDone: boolean;
   onReset: () => void;
   onResetOutput: () => void;
@@ -63,8 +74,10 @@ export function WorkspaceInput({
   onRemoveFile,
   onClearFiles,
   publicKeyDetected,
+  detectedPublicKey,
   privateKeyDetected,
   onNavigateToKeys,
+  onRevealKey,
   operationDone,
   onReset,
   onResetOutput,
@@ -212,17 +225,33 @@ export function WorkspaceInput({
         </div>
       )}
 
-      {publicKeyDetected && (
-        <div className="rounded-md bg-blue-500/10 px-3 py-2 text-xs text-blue-400">
-          This looks like someone's public key.{" "}
-          <button
-            onClick={() => onNavigateToKeys?.(getInput())}
-            className="underline"
-          >
-            Import it as a contact
-          </button>
-        </div>
-      )}
+      {publicKeyDetected &&
+        (detectedPublicKey?.known ? (
+          // Offering to import a key we already hold is worse than saying
+          // nothing: it implies we don't have it. Say what's true, and
+          // offer the only useful action -- showing it.
+          <div className="rounded-md bg-green-500/10 px-3 py-2 text-xs text-green-400">
+            You already have {detectedPublicKey.name}'s key.{" "}
+            <button
+              onClick={() => onRevealKey?.(detectedPublicKey.keyId)}
+              className="underline"
+            >
+              Show it in your keys
+            </button>
+          </div>
+        ) : (
+          <div className="rounded-md bg-blue-500/10 px-3 py-2 text-xs text-blue-400">
+            {detectedPublicKey
+              ? `This is ${detectedPublicKey.name}'s public key. `
+              : "This looks like someone's public key. "}
+            <button
+              onClick={() => onNavigateToKeys?.(getInput())}
+              className="underline"
+            >
+              Import it as a contact
+            </button>
+          </div>
+        ))}
     </div>
   );
 }
