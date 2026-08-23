@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   CopyIcon,
+  DownloadIcon,
   LockIcon,
   PencilIcon,
   StarIcon,
@@ -15,6 +16,7 @@ import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { KeyPreviewChip } from "./KeyPreviewBody";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
+import { downloadPublicKey } from "../../lib/keys/export-bundle";
 import { parseKey, parseKeyDetails } from "../../lib/pgp/wasm";
 import { toast } from "../../lib/toast";
 import { downloadText } from "../../lib/utils/download";
@@ -265,6 +267,12 @@ export function KeyDetailsPage({
     void copy(armored, { label: "Public key" });
   };
 
+  const handleDownloadPublicKey = () => {
+    // Named after who the key belongs to, not the fingerprint: the file
+    // usually ends up attached to a message ("here's Alice's key").
+    downloadPublicKey(armored, name || realName || target.kind);
+  };
+
   return (
     <SlideOverPanel entered={entered} ariaLabel={`Key details for ${name}`}>
       <SlideOverHeader title="Key details" onBack={close}>
@@ -298,6 +306,12 @@ export function KeyDetailsPage({
         )}
         <IconAction label="Copy public key" onClick={handleCopyPublicKey}>
           <CopyIcon className="h-4 w-4" />
+        </IconAction>
+        <IconAction
+          label="Download public key"
+          onClick={handleDownloadPublicKey}
+        >
+          <DownloadIcon className="h-4 w-4" />
         </IconAction>
         {onDelete && (
           <IconAction

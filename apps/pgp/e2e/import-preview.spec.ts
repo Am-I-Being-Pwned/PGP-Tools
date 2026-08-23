@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import type { Page } from "@playwright/test";
 
 import { expect, test } from "./fixtures";
@@ -231,4 +232,19 @@ test("a key inside a decrypted message can be imported from the result", async (
   await expect(
     panel.getByRole("button", { name: "Import it as a contact" }),
   ).toHaveCount(0);
+});
+
+test("key details downloads the public key", async ({ panel }) => {
+  await onboardWithPassword(panel, PASSWORD);
+  await importContact(panel, contact.publicKey);
+  await panel.getByRole("button", { name: "Key details" }).first().click();
+
+  const download = panel.waitForEvent("download");
+  await panel.getByRole("button", { name: "Download public key" }).click();
+  const file = await download;
+  // Named after the owner, and the armor is the public half only.
+  expect(file.suggestedFilename()).toMatch(/-public\.asc$/);
+  const body = await readFile((await file.path()) ?? "", "utf8");
+  expect(body).toContain("BEGIN PGP PUBLIC KEY BLOCK");
+  expect(body).not.toContain("PRIVATE KEY");
 });
