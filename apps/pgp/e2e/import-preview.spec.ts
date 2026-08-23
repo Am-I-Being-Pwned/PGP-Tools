@@ -244,7 +244,7 @@ test("key details downloads the public key", async ({ panel }) => {
   const file = await download;
   // Named after the owner, and the armor is the public half only.
   expect(file.suggestedFilename()).toMatch(/-public\.asc$/);
-  const body = await readFile((await file.path()) ?? "", "utf8");
+  const body = await readFile(await file.path(), "utf8");
   expect(body).toContain("BEGIN PGP PUBLIC KEY BLOCK");
   expect(body).not.toContain("PRIVATE KEY");
 });
