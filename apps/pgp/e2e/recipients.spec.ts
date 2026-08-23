@@ -123,6 +123,12 @@ test("mod+Enter with the recipient dropdown open runs the action, not a pick", a
   await expect(panel.getByRole("button", { name: /^Remove / })).toHaveCount(1);
 });
 
+// This is the regression guard for the dropdown appearing unbidden --
+// it fails against the version that opened the list on focus. A companion
+// test that ran a full encrypt round trip to assert the same thing was
+// removed: it never failed against the buggy version (so it guarded
+// nothing) and was intermittently flaky under load, apparently on the
+// encrypt rather than the dropdown.
 test("focus alone never opens the recipient dropdown", async ({ panel }) => {
   await onboardWithPassword(panel, PASSWORD);
   await importContact(panel, encryptable.publicKey);
@@ -148,26 +154,4 @@ test("focus alone never opens the recipient dropdown", async ({ panel }) => {
   await expect(panel.getByRole("option")).toHaveCount(0);
   await input.click();
   await expect(panel.getByRole("option").first()).toBeVisible();
-});
-
-test("mod+Enter from the message box leaves the recipient dropdown shut", async ({
-  panel,
-}) => {
-  await onboardWithPassword(panel, PASSWORD);
-  await importContact(panel, encryptable.publicKey);
-  await panel.getByRole("tab", { name: "Main" }).click();
-
-  const input = panel.getByRole("combobox", { name: "Recipients" });
-  await input.fill("alice");
-  await input.press("Enter");
-  await expect(panel.getByRole("button", { name: /^Remove / })).toHaveCount(1);
-
-  const box = panel.locator("#pgp-input");
-  await box.click();
-  await box.fill("hello");
-  const mod = process.platform === "darwin" ? "Meta" : "Control";
-  await box.press(`${mod}+Enter`);
-
-  await expect(panel.getByRole("button", { name: "Download" })).toBeVisible();
-  await expect(panel.getByRole("option")).toHaveCount(0);
 });
