@@ -141,7 +141,13 @@ export function ContactCard({
       onClick={handleClick}
       {...longPress.handlers}
       className={cn(
-        "group relative rounded-md p-3",
+        // A floor, not a fixed height: a one-line contact (SSH keys carry no
+        // email) would otherwise sit noticeably shorter than its neighbours.
+        // Cards with more to say still grow past it. The slack the floor adds
+        // goes ABOVE the text (justify-end), so the fingerprint line stays
+        // level with the details arrow pinned at bottom-right instead of
+        // drifting away from it.
+        "group relative flex min-h-19 flex-col justify-end rounded-md p-3",
         importedClass,
         // Keep the border width constant (1px) and add thickness with a ring
         // (box-shadow, no layout impact) so selecting doesn't shift the card.

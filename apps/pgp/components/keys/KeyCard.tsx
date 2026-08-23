@@ -167,7 +167,10 @@ export function KeyCard({
       onClick={handleCardClick}
       {...longPress.handlers}
       className={cn(
-        "group relative rounded-md p-3 transition-colors",
+        // Same floor as ContactCard: the two render into one list, so a
+        // sealed-at-rest key (no unlock row, no details arrow) must not
+        // read as a shorter species of card than the contacts above it.
+        "group relative min-h-19 rounded-md p-3 transition-colors",
         importedClass,
         // Keep the border width constant (1px) and add thickness with a ring
         // (box-shadow, no layout impact) so selecting doesn't shift the card.

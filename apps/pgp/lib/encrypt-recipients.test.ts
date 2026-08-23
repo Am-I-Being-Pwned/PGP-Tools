@@ -663,7 +663,7 @@ describe("resolveSelectedRecipients", () => {
     const [resolved] = resolveSelectedRecipients(
       ["SHA256:mine"],
       [contact],
-      [own as unknown as ProtectedKeyBlob],
+      [own],
     );
     expect(resolved).toBe(own);
   });
