@@ -58,6 +58,21 @@ jobs:
       - name: Run e2e tests
         run: pnpm test:e2e
 
+      # The README's badge row is generated from measured values, never
+      # typed. This re-measures and fails if the committed row has
+      # drifted -- a badge is a claim in the first screenful, so it must
+      # not be able to go quietly stale. It runs here, after the
+      # Playwright install, because counting the e2e tests goes through
+      # `playwright test --list`.
+      - name: Check README badges are current
+        working-directory: apps/pgp
+        # Run directly in the package rather than through turbo: the root
+        # scripts are turbo tasks, and a coverage task would need its own
+        # pipeline entry and output caching for one 13-second run.
+        run: |
+          pnpm coverage
+          pnpm badges:check
+
       - name: Upload Playwright traces
         if: ${{ failure() }}
         uses: actions/upload-artifact@v4

@@ -8,5 +8,20 @@ export default defineConfig({
     environment: "node",
     include: ["**/*.test.ts"],
     exclude: ["node_modules/**", ".output/**", ".wxt/**", "gpg-wasm/**"],
+    coverage: {
+      provider: "v8",
+      // `lib/` ONLY, and the badge says "lib coverage" for the same
+      // reason. These tests run without a DOM, so widening the
+      // denominator to components/ and entrypoints/ would fold in ~4000
+      // statements that vitest was never the tool for -- they are
+      // covered by the Playwright suite against the real built
+      // extension, and by the Rust tests for anything touching WASM.
+      // The resulting number would be a smaller figure describing a
+      // larger claim, which is worse than not measuring.
+      include: ["lib/**"],
+      exclude: ["lib/**/*.test.ts", "lib/**/*.d.ts"],
+      reporter: ["text-summary", "json-summary"],
+      reportsDirectory: "coverage",
+    },
   },
 });

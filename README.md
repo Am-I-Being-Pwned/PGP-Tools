@@ -5,9 +5,18 @@
 <h1 align="center">PGP Tools</h1>
 
 <p align="center">
-  Open-source browser extension for PGP encryption, decryption, and signing.<br/>
+  Open-source browser extension for PGP & AGE encryption and decryption.<br/>
   Built with Rust/WebAssembly. Private keys never touch the JS heap unless they have to.
 </p>
+
+<!-- badges:start -->
+<p align="center">
+  <a href="https://github.com/Am-I-Being-Pwned/PGP-Tools/actions/workflows/ci.yml"><img src="https://github.com/Am-I-Being-Pwned/PGP-Tools/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" /></a>
+  <img src="https://img.shields.io/badge/lib_coverage-73.8%25-yellowgreen" alt="lib coverage: 73.8%" />
+  <img src="https://img.shields.io/badge/unit_tests-1136-blue" alt="unit tests: 1136" />
+  <img src="https://img.shields.io/badge/e2e_tests-95-blue" alt="e2e tests: 95" />
+</p>
+<!-- badges:end -->
 
 [Get it here](https://chromewebstore.google.com/detail/pgp-tools-encrypt-decrypt/pgpcdgggohpbombhkffjoiiafdlfcpgp)
 
