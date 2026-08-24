@@ -2,6 +2,11 @@
   "extends": "./.wxt/tsconfig.json",
   "compilerOptions": {
     "allowImportingTsExtensions": true,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    // INTERIM. WXT 0.21's generated .wxt/tsconfig.json enables this; 0.20 did
+    // not, so the codebase was written and reviewed without it. Adopting it is
+    // ~160 sites and cannot use `!` (no-non-null-assertion is an error here),
+    // so each site needs a real restructure -- tracked as separate work.
+    "noUncheckedIndexedAccess": false
   }
 }

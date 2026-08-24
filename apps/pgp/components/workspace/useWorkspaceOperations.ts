@@ -866,7 +866,7 @@ export function useWorkspaceOperations({
   // ── CRX (Chrome extension) signing ────────────────────────────────
 
   function crxOutputName(): string {
-    const base = s.files[0]?.name?.replace(/\.(zip|crx)$/i, "") ?? "extension";
+    const base = s.files[0]?.name.replace(/\.(zip|crx)$/i, "") ?? "extension";
     return `${base}.crx`;
   }
 
