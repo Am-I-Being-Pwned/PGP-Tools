@@ -13,7 +13,7 @@ import type {
 import { looksLikeAgeMessage } from "../../lib/armor-blocks";
 import { looksLikePrivateKey } from "../../lib/drop-routing";
 import { resolveSelfKey } from "../../lib/encrypt-recipients";
-import { isSshRecord } from "../../lib/storage/key-kind";
+import { isPgpRecord, isSshRecord } from "../../lib/storage/key-kind";
 import { getPreferences } from "../../lib/storage/preferences";
 import { zipHasManifest } from "../../lib/utils/zip";
 import { decryptWorkspaceDraft } from "../../lib/workspace-draft";
@@ -587,6 +587,17 @@ export function useWorkspaceState(opts: {
     if (selected) return;
     setSelectedKeyId(sshKeys.length > 0 ? sshKeys[0].keyId : null);
   }, [mode, inputIsAge, myKeysForAge, selectedKeyId]);
+
+  // Signing is OpenPGP-only, so an SSH identity left selected from the
+  // decrypt tab (or auto-picked as the default key) is never a valid
+  // answer to "sign with". Same shape as the age rule above, mirrored.
+  const myKeysForSign = opts.myKeys;
+  useEffect(() => {
+    if (mode !== "sign") return;
+    const pgpKeys = myKeysForSign.filter(isPgpRecord);
+    if (pgpKeys.some((k) => k.keyId === selectedKeyId)) return;
+    setSelectedKeyId(pgpKeys.length > 0 ? pgpKeys[0].keyId : null);
+  }, [mode, myKeysForSign, selectedKeyId]);
 
   // Keep the CRX key selection pointing at a key that actually exists —
   // when the selected key is deleted, fall to the first remaining one

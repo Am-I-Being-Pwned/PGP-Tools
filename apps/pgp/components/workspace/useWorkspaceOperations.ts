@@ -20,7 +20,7 @@ import * as pgpOps from "../../lib/pgp/operations";
 import { isWebAuthnCancel } from "../../lib/protection/webauthn-prf";
 import { updateRecentRecipients } from "../../lib/recipient-ordering";
 import { recordHistory } from "../../lib/storage/history";
-import { isSshRecord } from "../../lib/storage/key-kind";
+import { isPgpRecord, isSshRecord } from "../../lib/storage/key-kind";
 import { savePreferences } from "../../lib/storage/preferences";
 import { toast } from "../../lib/toast";
 import {
@@ -158,6 +158,17 @@ export function useWorkspaceOperations({
     // closes over the plaintext (see the input block in useWorkspaceState).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [s.mode, s.inputVersion, s.files, s.inputIsAge, myKeys]);
+
+  // The signer for any PGP operation: the current selection when it is
+  // an OpenPGP key, else the first one. SSH identities are never
+  // candidates -- age has no signing operation.
+  function resolvePgpSignerId(): string | null {
+    const pgpKeys = myKeys.filter(isPgpRecord);
+    if (s.selectedKeyId && pgpKeys.some((k) => k.keyId === s.selectedKeyId)) {
+      return s.selectedKeyId;
+    }
+    return pgpKeys[0]?.keyId ?? null;
+  }
 
   function findSigner(signerKeyId: string | null) {
     if (!signerKeyId) return null;
@@ -344,6 +355,12 @@ export function useWorkspaceOperations({
     // renders that same answer as a line under the toggle before the
     // user presses the button, so this path never has to explain it
     // after the fact.
+    // Signing is OpenPGP-only, and `selectedKeyId` doubles as the
+    // decrypt selection -- so it can point at an SSH identity, which has
+    // no signature format at all. Resolve it against the PGP keys only,
+    // and use the SAME answer for the recipient set and for the handle
+    // below, so the key the message says signed it is the one that did.
+    const signerKeyId = s.alsoSign && !isAge ? resolvePgpSignerId() : null;
     const { recipientPublicKeys, selfKeyId, engine, refusal } =
       buildEncryptRecipients({
         // One selected contact can carry several keys; the message goes
@@ -351,7 +368,7 @@ export function useWorkspaceOperations({
         recipients: recipients.map(toSelectedRecipient),
         encryptToSelf: s.encryptToSelf,
         ownKeys: myKeys,
-        signingKeyId: s.alsoSign && !isAge ? s.selectedKeyId : null,
+        signingKeyId: signerKeyId,
         defaultKeyId,
       });
 
@@ -377,8 +394,8 @@ export function useWorkspaceOperations({
     // so there is nothing to sign WITH and the PGP signer would be a
     // wrong-engine key. The toggle stays visible and dimmed with that
     // reason in WorkspaceView.
-    if (s.alsoSign && s.selectedKeyId && !isAge) {
-      const handle = await ensureUnlocked(s.selectedKeyId);
+    if (signerKeyId) {
+      const handle = await ensureUnlocked(signerKeyId);
       if (handle === null) return;
       signingHandle = handle;
     }
@@ -752,9 +769,14 @@ export function useWorkspaceOperations({
   }
 
   async function executeSign() {
-    const signKeyId = s.selectedKeyId ?? myKeys[0]?.keyId;
+    const signKeyId = resolvePgpSignerId();
     if (!signKeyId) {
-      s.setError({ message: "No signing key available. Add a key first." });
+      s.setError({
+        message:
+          myKeys.length > 0
+            ? "No signing key available. SSH keys can't sign - add an OpenPGP key first."
+            : "No signing key available. Add a key first.",
+      });
       return;
     }
     const keyHandle = await ensureUnlocked(signKeyId);

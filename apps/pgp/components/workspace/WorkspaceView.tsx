@@ -46,7 +46,7 @@ import {
   toSelectedRecipient,
 } from "../../lib/encrypt-recipients";
 import { requestUnlimitedHistoryStorage } from "../../lib/storage/history";
-import { isSshRecord } from "../../lib/storage/key-kind";
+import { isPgpRecord, isSshRecord } from "../../lib/storage/key-kind";
 import { savePreferences } from "../../lib/storage/preferences";
 import { toast } from "../../lib/toast";
 import { saveCrxViaPrompt } from "../../lib/utils/download";
@@ -310,11 +310,19 @@ export function WorkspaceView({
     myKeys,
   );
   const encryptEngine = selectionEngine(selectedRecipientKeys);
-  // age has no signing operation at all, so the Sign toggle can't apply.
+  // Only OpenPGP keys can sign: age has no signature format, so an SSH
+  // identity is not a candidate signer anywhere -- neither in the "Sign
+  // with" list on the sign tab nor in the one next to the Sign toggle.
+  // Narrowed rather than dimmed, same as the age-decrypt list below.
+  const signKeyChoices = myKeys.filter(isPgpRecord);
+  // age has no signing operation at all, so the Sign toggle can't apply;
+  // neither can it if none of the user's own keys is a PGP key.
   const signBlockedReason =
     encryptEngine === "ssh"
       ? "age messages can't be signed - SSH keys have no signature format here."
-      : undefined;
+      : signKeyChoices.length === 0
+        ? "signing needs an OpenPGP key of your own - SSH keys can't sign."
+        : undefined;
   // Asked of the same function the encrypt runs through, rather than
   // re-derived: whether the user's own key rides along depends on the
   // engine, the default key and whether a selected recipient already is
@@ -627,6 +635,7 @@ export function WorkspaceView({
   const decryptKeyChoices =
     s.mode === "decrypt" && s.inputIsAge ? myKeys.filter(isSshRecord) : myKeys;
 
+
   if (showFullOutput) {
     return (
       <div className="flex h-full flex-col gap-3">
@@ -803,7 +812,7 @@ export function WorkspaceView({
             // cannot work. Narrowed rather than dimmed: this is a "which
             // of your keys", and a key of the wrong engine is not a
             // candidate at all.
-            keys={decryptKeyChoices}
+            keys={s.mode === "sign" ? signKeyChoices : decryptKeyChoices}
             selectedKeyId={s.selectedKeyId}
             onSelect={ops.selectPrivateKey}
             emptyText="No keys yet"
@@ -894,10 +903,10 @@ export function WorkspaceView({
             {/* Nothing will be signed on the age path, so the "which key
                 signs" question doesn't arise -- the toggle above stays,
                 dimmed with its reason, and this selector goes. */}
-            {s.alsoSign && !signBlockedReason && myKeys.length > 1 && (
+            {s.alsoSign && !signBlockedReason && signKeyChoices.length > 1 && (
               <KeySelector
                 label="Sign with"
-                keys={myKeys}
+                keys={signKeyChoices}
                 selectedKeyId={s.selectedKeyId}
                 onSelect={ops.selectPrivateKey}
               />
