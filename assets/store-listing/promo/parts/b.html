@@ -1,0 +1,84 @@
+<div class="tile tile-b">
+  <div
+    class="glow"
+    style="width: 880px; height: 880px; right: -240px; top: -300px"
+  ></div>
+  <div
+    class="glow dim"
+    style="width: 700px; height: 700px; left: -300px; bottom: -340px"
+  ></div>
+  <div class="grid"></div>
+
+  <div class="b-wrap">
+    <div class="b-left">
+      <div class="brand">
+        <img src="__DATA:icon/128.png__" /><span>PGP Tools</span
+        ><span class="by">by Am I Being Pwned</span>
+      </div>
+      <span class="chip">__PART:i-eye-off__ No analytics &middot; no accounts</span>
+      <h1>
+        Encrypted at rest.<br /><span class="green">All of it.</span>
+      </h1>
+      <p class="sub">
+        Not just your keys. Your contacts, your settings and your history are
+        sealed under the same master key, and padded, so even their size
+        tells you nothing.
+      </p>
+      <p class="foot">
+        Who you talk to is as sensitive as what you say. It gets the same
+        treatment.
+      </p>
+    </div>
+
+    <div class="fcard b-card">
+      <div class="fhead">
+        __PART:i-lock__
+        <h3>What's actually on disk</h3>
+      </div>
+      <div class="store">
+        <div class="srow">
+          __PART:i-key__<span class="sname">keyring</span
+          ><span class="sblob">AgAAAB8f7t2K&hellip;</span>
+        </div>
+        <div class="srow">
+          __PART:i-users__<span class="sname">contacts</span
+          ><span class="sblob">AgAAACx91mDp&hellip;</span>
+        </div>
+        <div class="srow">
+          __PART:i-sliders__<span class="sname">settings</span
+          ><span class="sblob">AgAAAB2vQ0Lf&hellip;</span>
+        </div>
+        <div class="srow">
+          __PART:i-shield__<span class="sname">history</span
+          ><span class="sblob">AgAAAC7pLm4X&hellip;</span
+          ><span class="stag">opt-in</span>
+        </div>
+      </div>
+      <p class="fsub">
+        Every store is AES-256-GCM, bound to the slot it lives in. Move a blob
+        between them and it refuses to open.
+      </p>
+    </div>
+  </div>
+</div>
+<style>
+  .tile-b .b-wrap {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    gap: 56px;
+    padding: 0 76px 0 84px;
+  }
+  .tile-b .b-left {
+    width: 552px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+  .tile-b .b-card {
+    width: 512px;
+    flex: none;
+    padding: 30px;
+  }
+</style>

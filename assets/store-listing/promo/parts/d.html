@@ -1,0 +1,78 @@
+<div class="tile tile-d">
+  <div
+    class="glow"
+    style="width: 860px; height: 860px; left: -280px; top: -320px"
+  ></div>
+  <div
+    class="glow red"
+    style="width: 720px; height: 720px; right: -240px; bottom: -320px"
+  ></div>
+  <div class="grid"></div>
+
+  <div class="d-wrap">
+    <div class="d-left">
+      <div class="brand">
+        <img src="__DATA:icon/128.png__" /><span>PGP Tools</span
+        ><span class="by">by Am I Being Pwned</span>
+      </div>
+      <h1>
+        Bad signature,<br /><span class="green">no plaintext</span>
+      </h1>
+      <p class="sub">
+        Decrypt and verify come back together, in one answer. If the signature
+        fails, there is nothing to read.
+      </p>
+      <p class="foot">
+        Most tools hand you the message first and the verdict second. That gap
+        is where you act on text nobody checked.
+      </p>
+    </div>
+
+    <div class="fcard d-card">
+      <div class="d-case">
+        <div class="verdict">
+          __PART:i-key__
+          <span class="vname">James Arnott <i>D5DB 9296 8391 A64B</i></span>
+          <span class="vtag pass">__PART:i-check__ Verified</span>
+        </div>
+        <div class="outcome">Meet me at the usual place at 8.</div>
+      </div>
+
+      <div class="d-case">
+        <div class="verdict">
+          __PART:i-key__
+          <span class="vname">Unknown signer <i>Altered in transit</i></span>
+          <span class="vtag fail">__PART:i-x__ Failed</span>
+        </div>
+        <div class="outcome withheld">Nothing returned.</div>
+      </div>
+    </div>
+  </div>
+</div>
+<style>
+  .tile-d .d-wrap {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    gap: 56px;
+    padding: 0 76px 0 84px;
+  }
+  .tile-d .d-left {
+    width: 548px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+  .tile-d .d-card {
+    width: 516px;
+    flex: none;
+    padding: 30px;
+    gap: 26px;
+  }
+  .tile-d .d-case {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+</style>

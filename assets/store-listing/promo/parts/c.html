@@ -1,0 +1,84 @@
+<div class="tile tile-c">
+  <div
+    class="glow"
+    style="width: 900px; height: 900px; right: -230px; top: -280px"
+  ></div>
+  <div
+    class="glow dim"
+    style="width: 680px; height: 680px; left: -300px; bottom: -330px"
+  ></div>
+  <div class="grid"></div>
+
+  <div class="c-wrap">
+    <div class="c-left">
+      <div class="brand">
+        <img src="__DATA:icon/128.png__" /><span>PGP Tools</span
+        ><span class="by">by Am I Being Pwned</span>
+      </div>
+      <h1>
+        No passphrase.<br /><span class="green">Just Touch ID.</span>
+      </h1>
+      <p class="sub">
+        Unlock your keys with a passkey: Touch&nbsp;ID, Windows&nbsp;Hello
+        or a YubiKey. Nothing to type, nothing to forget.
+      </p>
+      <p class="foot">
+        Prefer a password? <strong>Argon2id at 64&nbsp;MB</strong> is waiting,
+        and it never leaves the sandbox either.
+      </p>
+    </div>
+
+    <div class="c-right">
+      <div class="sheet">
+        <div class="shead">Sign In <span class="cancel">Cancel</span></div>
+        <div class="sbody">
+          <b>Use Touch ID to unlock PGP Tools?</b>
+          <p>
+            Your passkey will derive the key that decrypts your vault. It never
+            leaves this device.
+          </p>
+          <div class="print">__PART:i-fingerprint__</div>
+          <div class="cta">Continue with Touch ID</div>
+        </div>
+      </div>
+
+      <div class="c-locks">
+        <div class="row">
+          __PART:i-lock__
+          <div>Locks itself when you stop using it<small>On idle, on close, or after every operation. Your call.</small></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<style>
+  .tile-c .c-wrap {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    gap: 56px;
+    padding: 0 76px 0 84px;
+  }
+  .tile-c .c-left {
+    width: 556px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+  .tile-c .c-right {
+    width: 464px;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
+  }
+  .tile-c .c-locks {
+    width: 100%;
+    border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+    background: color-mix(in srgb, var(--card) 40%, transparent);
+    border-radius: 16px;
+    padding: 6px 26px;
+  }
+</style>

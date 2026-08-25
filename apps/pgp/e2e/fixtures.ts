@@ -18,6 +18,9 @@ const EXTENSION_PATH = buildDir("chrome-mv3");
  */
 export async function launchExtensionContext(
   extensionDir: string,
+  // Screenshot tooling (`e2e-capture/`) wants 2x pixels; tests want the
+  // default. Optional so no existing caller changes behaviour.
+  opts: { deviceScaleFactor?: number } = {},
 ): Promise<BrowserContext> {
   if (!existsSync(extensionDir)) {
     throw new Error(
@@ -27,6 +30,9 @@ export async function launchExtensionContext(
   const headless = !process.env.HEADED;
   return chromium.launchPersistentContext("", {
     headless: false,
+    ...(opts.deviceScaleFactor === undefined
+      ? {}
+      : { deviceScaleFactor: opts.deviceScaleFactor }),
     args: [
       ...(headless ? ["--headless=new"] : []),
       `--disable-extensions-except=${extensionDir}`,

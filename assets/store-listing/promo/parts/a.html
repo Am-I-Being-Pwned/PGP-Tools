@@ -1,0 +1,59 @@
+<div class="tile tile-a">
+  <div
+    class="glow"
+    style="width: 900px; height: 900px; right: -260px; top: -330px"
+  ></div>
+  <div
+    class="glow dim"
+    style="width: 700px; height: 700px; left: -280px; bottom: -360px"
+  ></div>
+  <div class="grid"></div>
+
+  <div class="a-wrap">
+    <div class="a-left">
+      <div class="brand">
+        <img src="__DATA:icon/128.png__" /><span>PGP Tools</span
+        ><span class="by">by Am I Being Pwned</span>
+      </div>
+      <h1>
+        Encrypt without<br /><span class="green">leaving the tab</span>
+      </h1>
+      <p class="sub">
+        A side panel, not a popup that vanishes the moment you click away.
+        Paste, pick a recipient, done.
+      </p>
+      <div class="keys">
+        <div><kbd>Alt</kbd><kbd>&#8679;</kbd><kbd>E</kbd><span>Encrypt</span></div>
+        <div><kbd>Alt</kbd><kbd>&#8679;</kbd><kbd>D</kbd><span>Decrypt</span></div>
+        <div><kbd>Alt</kbd><kbd>&#8679;</kbd><kbd>S</kbd><span>Sign</span></div>
+      </div>
+    </div>
+
+    <!-- Chrome draws the side panel's own header (icon, name, close), so
+         that part stays CSS. Everything below it is a real screenshot of
+         the real panel, captured by apps/pgp/e2e-capture. -->
+    <div class="panel">
+      <div class="ptop">
+        <img src="__DATA:icon/128.png__" /> PGP Tools
+        <span class="pdot">&times;</span>
+      </div>
+      <img class="pshot" src="__DATA:ui/panel-encrypt.png__" alt="" />
+    </div>
+  </div>
+</div>
+<style>
+  .tile-a .a-wrap {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    gap: 60px;
+    padding: 0 68px 0 84px;
+  }
+  .tile-a .a-left {
+    width: 582px;
+    display: flex;
+    flex-direction: column;
+    gap: 34px;
+  }
+</style>

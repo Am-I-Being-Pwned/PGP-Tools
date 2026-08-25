@@ -1,0 +1,640 @@
+/* ---- fonts (self-hosted copies of the ones the AIBP site uses) ---- */
+@font-face {
+  font-family: "Space Grotesk";
+  font-weight: 400 700;
+  font-display: block;
+  src: url(__DATA:font/SpaceGrotesk-latin.woff2__) format("woff2");
+}
+@font-face {
+  font-family: "Inter";
+  font-weight: 400 700;
+  font-display: block;
+  src: url(__DATA:font/inter-latin.woff2__) format("woff2");
+}
+
+/* ---- dark tokens from packages/tailwind-config theme, i.e. the same
+       values the side panel renders with ---- */
+:root {
+  --background: #121212;
+  --foreground: #fafafa;
+  --card: #1f1f1f;
+  --muted: #242424;
+  --muted-foreground: #898989;
+  --border: #2e2e2e;
+  --primary: #3ecf8e;
+  --red: #ef4444;
+  --amber: #f59e0b;
+}
+
+/* ---- TYPE SCALE ------------------------------------------------------
+   These tiles are shown as ~320px-wide thumbnails in the store grid and
+   rarely opened full size, so everything is sized to survive a 4x
+   downscale: nothing below ~17px, headlines at 60-68px, icons at 26px+.
+   That is the constraint the whole set is drawn to -- if you add copy,
+   cut words rather than shrinking type.
+   -------------------------------------------------------------------- */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+body {
+  background: #0c0c0c;
+  font-family: "Inter", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---- the 1280x800 canvas ---- */
+.tile {
+  position: relative;
+  width: 1280px;
+  height: 800px;
+  overflow: hidden;
+  background: var(--background);
+  color: var(--foreground);
+}
+.tile .grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 64px 64px;
+  -webkit-mask-image: radial-gradient(
+    120% 100% at 50% 0%,
+    #000 18%,
+    transparent 76%
+  );
+}
+.tile .glow {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(62, 207, 142, 0.15),
+    transparent 62%
+  );
+}
+.tile .glow.dim {
+  background: radial-gradient(
+    circle,
+    rgba(62, 207, 142, 0.07),
+    transparent 62%
+  );
+}
+.tile .glow.red {
+  background: radial-gradient(circle, rgba(239, 68, 68, 0.1), transparent 62%);
+}
+
+h1 {
+  font-family: "Space Grotesk";
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.03;
+  font-size: 66px;
+}
+.green {
+  color: var(--primary);
+}
+.sub {
+  font-size: 26px;
+  line-height: 1.45;
+  color: var(--muted-foreground);
+}
+.sub strong {
+  color: var(--foreground);
+  font-weight: 500;
+}
+.sub em {
+  font-style: italic;
+  color: #c4c4c4;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.brand img {
+  width: 46px;
+  height: 46px;
+  border-radius: 10px;
+}
+.brand span {
+  font-family: "Space Grotesk";
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.brand .by {
+  font-family: "Inter";
+  font-size: 17px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--muted-foreground);
+  border-left: 1px solid var(--border);
+  padding-left: 14px;
+  margin-left: 3px;
+}
+
+/* ---- pill above the headline ---- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  align-self: flex-start;
+  border: 1px solid rgba(62, 207, 142, 0.35);
+  background: rgba(62, 207, 142, 0.1);
+  color: var(--primary);
+  border-radius: 999px;
+  padding: 10px 20px;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.chip svg {
+  width: 21px;
+  height: 21px;
+  stroke: var(--primary);
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ---- card shell, same geometry as the FeatureCard on the site ---- */
+.fcard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  background: color-mix(in srgb, var(--card) 40%, transparent);
+  border-radius: 16px;
+  padding: 32px;
+}
+.fcard .fhead {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.fcard .fhead svg {
+  width: 28px;
+  height: 28px;
+  stroke: var(--primary);
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: none;
+}
+.fcard h3 {
+  font-family: "Space Grotesk";
+  font-size: 27px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.fcard .fsub {
+  font-size: 19px;
+  line-height: 1.45;
+  color: var(--muted-foreground);
+}
+.fcard .fsub strong {
+  color: var(--foreground);
+  font-weight: 500;
+}
+
+/* ---- icon rows: a claim per line, no numbers to go stale ---- */
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 17px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+}
+.row:last-child {
+  border-bottom: 0;
+}
+.row > svg {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  margin-top: 2px;
+  stroke: var(--primary);
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.row div {
+  font-size: 21px;
+  line-height: 1.35;
+  color: rgba(250, 250, 250, 0.92);
+  font-weight: 500;
+}
+.row div small {
+  display: block;
+  font-size: 17px;
+  font-weight: 400;
+  color: var(--muted-foreground);
+  margin-top: 5px;
+  line-height: 1.4;
+}
+
+/* ---- verdict rows (decrypt + verify results) ---- */
+.verdict {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  background: rgba(18, 18, 18, 0.7);
+  border-radius: 10px;
+  padding: 16px 18px;
+}
+.verdict > svg {
+  width: 24px;
+  height: 24px;
+  flex: none;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke: rgba(137, 137, 137, 0.7);
+}
+.verdict .vname {
+  flex: 1;
+  font-size: 20px;
+  color: rgba(250, 250, 250, 0.9);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.verdict .vname i {
+  display: block;
+  font-style: normal;
+  font-weight: 400;
+  font-size: 16px;
+  color: var(--muted-foreground);
+  margin-top: 4px;
+}
+.verdict .vtag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 6px 13px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.verdict .vtag svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.verdict .vtag.fail {
+  background: rgba(239, 68, 68, 0.16);
+  color: #f87171;
+}
+.verdict .vtag.fail svg {
+  stroke: #f87171;
+}
+.verdict .vtag.pass {
+  background: rgba(62, 207, 142, 0.16);
+  color: var(--primary);
+}
+.verdict .vtag.pass svg {
+  stroke: var(--primary);
+}
+
+/* ---- an outcome panel under a verdict row ---- */
+.outcome {
+  border: 1px solid var(--border);
+  background: var(--background);
+  border-radius: 10px;
+  padding: 18px 20px;
+  font-size: 20px;
+  line-height: 1.45;
+  color: rgba(250, 250, 250, 0.85);
+}
+.outcome.withheld {
+  color: #6f6f6f;
+  font-style: italic;
+  border-style: dashed;
+}
+
+/* ---- footnote with a green rule ---- */
+.foot {
+  font-size: 19px;
+  color: var(--muted-foreground);
+  border-left: 3px solid rgba(62, 207, 142, 0.45);
+  padding-left: 18px;
+  line-height: 1.45;
+}
+.foot strong {
+  color: #c4c4c4;
+  font-weight: 500;
+}
+
+/* ---- keyboard shortcut rows ---- */
+.keys {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.keys > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.keys kbd {
+  font-family: "Inter";
+  font-size: 17px;
+  font-weight: 500;
+  color: rgba(250, 250, 250, 0.9);
+  border: 1px solid var(--border);
+  border-bottom-width: 3px;
+  background: #1c1c1c;
+  border-radius: 7px;
+  padding: 7px 12px;
+  min-width: 40px;
+  text-align: center;
+}
+.keys span {
+  font-size: 20px;
+  color: var(--muted-foreground);
+  margin-left: 12px;
+}
+
+/* ---- side panel frame ----------------------------------------------
+   Only the header is drawn here, because only the header is Chrome's:
+   the browser renders the extension icon, name and close button above
+   every side panel. Everything below it is a screenshot of the real UI
+   (assets/store-listing/ui/, produced by apps/pgp/e2e-capture), so the
+   tile cannot quietly drift from the shipped product the way a hand-built
+   mock does.
+   -------------------------------------------------------------------- */
+/* 486 is derived, not chosen: the capture is 400x560, so the rendered
+   height is 1.4x the rendered width, and 1.4*486 + the header strip is
+   what fits the 800px canvas with a margin. Change the capture's aspect
+   and this has to move with it. */
+.panel {
+  width: 486px;
+  flex: none;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--background);
+  overflow: hidden;
+  box-shadow: 0 40px 90px -35px #000;
+}
+.panel .ptop {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 16px 20px;
+  background: #181818;
+  border-bottom: 1px solid var(--border);
+  font-size: 18px;
+  color: rgba(250, 250, 250, 0.8);
+}
+.panel .ptop img {
+  width: 22px;
+  height: 22px;
+}
+.panel .ptop .pdot {
+  margin-left: auto;
+  color: var(--muted-foreground);
+  letter-spacing: 3px;
+  font-size: 16px;
+}
+/* The capture is narrower than this frame on purpose (see
+   e2e-capture/panel.spec.ts): rendering it wider than life is what makes
+   the UI legible at store-thumbnail size. Change the capture's viewport
+   there, not the scale here. */
+.panel .pshot {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* ---- OS-native passkey sheet ---- */
+.sheet {
+  width: 430px;
+  border-radius: 16px;
+  background: #2b2b2b;
+  border: 1px solid #3d3d3d;
+  overflow: hidden;
+  box-shadow: 0 40px 90px -30px #000;
+  color: #ededed;
+}
+.sheet .shead {
+  display: flex;
+  align-items: center;
+  padding: 15px 18px;
+  border-bottom: 1px solid #3d3d3d;
+  font-weight: 600;
+  font-size: 18px;
+}
+.sheet .shead .cancel {
+  margin-left: auto;
+  font-weight: 400;
+  font-size: 15px;
+  background: #4a4a4a;
+  border-radius: 7px;
+  padding: 5px 12px;
+  color: #d4d4d4;
+}
+.sheet .sbody {
+  padding: 26px 30px 28px;
+  text-align: center;
+}
+.sheet .sbody b {
+  display: block;
+  font-size: 20px;
+  margin-bottom: 12px;
+}
+.sheet .sbody p {
+  font-size: 16px;
+  line-height: 1.45;
+  color: #b4b4b4;
+}
+.sheet .sbody .print {
+  line-height: 0;
+  margin: 22px 0 14px;
+}
+.sheet .sbody .print svg {
+  width: 62px;
+  height: 62px;
+  stroke: #dcdcdc;
+  stroke-width: 1.5;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.sheet .sbody .cta {
+  font-size: 17px;
+  color: #ededed;
+}
+
+/* ---- sealed-store list: what chrome.storage actually holds ---- */
+.store {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.srow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid var(--border);
+  background: var(--background);
+  border-radius: 10px;
+  padding: 15px 18px;
+}
+.srow > svg {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  stroke: var(--muted-foreground);
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.srow .sname {
+  font-size: 19px;
+  font-weight: 500;
+  color: rgba(250, 250, 250, 0.9);
+  min-width: 128px;
+}
+.srow .sblob {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 17px;
+  color: var(--primary);
+  letter-spacing: -0.01em;
+}
+/* History is off by default, so the row has to say so -- an unqualified
+   entry would claim a store that most installs never create. */
+.srow .stag {
+  margin-left: auto;
+  font-size: 14px;
+  color: var(--muted-foreground);
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+
+/* ---- lab page chrome (never exported) ---- */
+.lab {
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 44px;
+  align-items: flex-start;
+}
+.lab .labtitle {
+  font-family: "Space Grotesk";
+  color: #fafafa;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.lab .labnote {
+  color: #7c7c7c;
+  font-size: 13.5px;
+  max-width: 760px;
+  margin-top: 6px;
+  line-height: 1.5;
+}
+.lab h2 {
+  font-family: "Space Grotesk";
+  color: #fafafa;
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.lab p.meta {
+  font-family: "Inter";
+  color: #7c7c7c;
+  font-size: 13px;
+  margin-bottom: 12px;
+  max-width: 900px;
+  line-height: 1.5;
+}
+.lab .cand {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.lab .chead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 32px;
+  width: 1024px;
+}
+.lab .frame {
+  width: 1024px;
+  height: 640px;
+  overflow: hidden;
+  border-radius: 10px;
+  border: 1px solid #2e2e2e;
+  box-shadow: 0 20px 50px -20px #000;
+}
+.lab .frame .tile {
+  transform: scale(0.8);
+  transform-origin: top left;
+}
+/* The size the store grid actually shows these at. If a slide is
+   illegible here, it is illegible in the store. */
+.lab .thumbs {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.lab .thumb {
+  width: 320px;
+  height: 200px;
+  overflow: hidden;
+  border-radius: 6px;
+  border: 1px solid #2e2e2e;
+}
+.lab .thumb .tile {
+  transform: scale(0.25);
+  transform-origin: top left;
+}
+.lab .dl {
+  flex: none;
+  font-family: "Inter";
+  font-size: 12.5px;
+  text-decoration: none;
+  border: 1px solid #2e2e2e;
+  border-radius: 6px;
+  padding: 7px 12px;
+  color: #d4d4d4;
+}
+.lab .pick {
+  background: rgba(62, 207, 142, 0.14);
+  color: #3ecf8e;
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 11px;
+  font-family: "Inter";
+  font-weight: 500;
+  vertical-align: middle;
+  margin-left: 6px;
+}

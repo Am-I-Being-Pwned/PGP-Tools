@@ -1,0 +1,114 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>PGP Tools store listing artwork</title>
+    <style>
+      __CSS__
+    </style>
+  </head>
+  <body>
+    <div class="lab">
+      <h1 class="labtitle">At store thumbnail size</h1>
+      <p class="labnote">
+        This is roughly how big these actually get on the listing page. Check
+        every slide here first: if a line is unreadable in this strip, it is
+        unreadable where it counts, and the fix is fewer words, not smaller
+        type.
+      </p>
+      <div class="thumbs">
+        <div class="thumb">__PART:a__</div>
+        <div class="thumb">__PART:b__</div>
+        <div class="thumb">__PART:c__</div>
+        <div class="thumb">__PART:d__</div>
+        <div class="thumb">__PART:e__</div>
+      </div>
+
+      <h1 class="labtitle" style="margin-top: 20px">
+        Store screenshots at 1280&times;800
+      </h1>
+      <p class="labnote">
+        Chrome Web Store / Edge Add-ons screenshot size, shown here at 80%. The
+        store shows them in order, so A is the one most people see. A and C sell
+        the convenience; B, D and E are the reasons it is safe to enjoy.
+      </p>
+
+      <div class="cand">
+        <div class="chead">
+          <div>
+            <h2>A: &ldquo;Encrypt without leaving the tab&rdquo;</h2>
+            <p class="meta">
+              The lead slide, and the only one that shows the product. The
+              panel is a real screenshot of the built extension (see
+              <code>apps/pgp/e2e-capture</code>); only the header strip above it
+              is CSS, because that strip is Chrome's, not ours.
+            </p>
+          </div>
+          <a class="dl" href="../exports/a-1280x800.png" download="pgptools-a-1280x800.png">Download PNG</a>
+        </div>
+        <div class="frame">__PART:a__</div>
+      </div>
+
+      <div class="cand">
+        <div class="chead">
+          <div>
+            <h2>B: &ldquo;Encrypted at rest. All of it.&rdquo;</h2>
+            <p class="meta">
+              The privacy slide. Shows what <code>chrome.storage</code> actually
+              holds. Every store is a sealed blob, contacts and settings
+              included, because &ldquo;we encrypt your data&rdquo; is what
+              every extension says. The history row is tagged <b>opt-in</b>: it
+              is off by default and most installs never create that store.
+            </p>
+          </div>
+          <a class="dl" href="../exports/b-1280x800.png" download="pgptools-b-1280x800.png">Download PNG</a>
+        </div>
+        <div class="frame">__PART:b__</div>
+      </div>
+
+      <div class="cand">
+        <div class="chead">
+          <div>
+            <h2>C: &ldquo;No passphrase. Just Touch ID.&rdquo;</h2>
+            <p class="meta">
+              Convenience and security in the same breath, which is why it sits
+              in the middle. The native sheet does the explaining.
+            </p>
+          </div>
+          <a class="dl" href="../exports/c-1280x800.png" download="pgptools-c-1280x800.png">Download PNG</a>
+        </div>
+        <div class="frame">__PART:c__</div>
+      </div>
+
+      <div class="cand">
+        <div class="chead">
+          <div>
+            <h2>D: &ldquo;Bad signature, no plaintext&rdquo;</h2>
+            <p class="meta">
+              Both outcomes side by side: verified returns the message, failed
+              returns an empty dashed panel. The atomic decrypt+verify claim,
+              shown rather than asserted.
+            </p>
+          </div>
+          <a class="dl" href="../exports/d-1280x800.png" download="pgptools-d-1280x800.png">Download PNG</a>
+        </div>
+        <div class="frame">__PART:d__</div>
+      </div>
+
+      <div class="cand">
+        <div class="chead">
+          <div>
+            <h2>E: &ldquo;Nothing here is a black box&rdquo;</h2>
+            <p class="meta">
+              Closing trust slide. Deliberately no counts: test totals
+              and coverage move on their own and a stale number on a store
+              listing is a claim you cannot defend.
+            </p>
+          </div>
+          <a class="dl" href="../exports/e-1280x800.png" download="pgptools-e-1280x800.png">Download PNG</a>
+        </div>
+        <div class="frame">__PART:e__</div>
+      </div>
+    </div>
+  </body>
+</html>

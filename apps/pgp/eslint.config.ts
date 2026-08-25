@@ -45,7 +45,10 @@ export default defineConfig(
   {
     // Playwright E2E tests, not React. The fixture pattern names a
     // `use` argument that the React hooks rule mistakes for a hook.
-    files: ["e2e/**"],
+    // `e2e-capture/**` is the store-listing screenshot tooling: same
+    // fixture pattern, same false positive, deliberately outside the e2e
+    // config's testDir so CI never runs it as a test.
+    files: ["e2e/**", "e2e-capture/**"],
     rules: {
       "react-hooks/rules-of-hooks": "off",
     },

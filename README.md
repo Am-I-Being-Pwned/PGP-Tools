@@ -20,6 +20,10 @@
 
 [Get it here](https://chromewebstore.google.com/detail/pgp-tools-encrypt-decrypt/pgpcdgggohpbombhkffjoiiafdlfcpgp)
 
+<p align="center">
+  <img src="assets/store-listing/promo/exports/a-1280x800.png" alt="PGP Tools side panel: encrypting a message to a recipient, with the sign option checked" width="820" />
+</p>
+
 ## Why PGP Tools?
 
 **Open source and transparent.** Most PGP browser extensions are closed source. You shouldn't trust a black box with your secrets.
@@ -35,6 +39,19 @@
 **Zeroization everywhere.** `zeroize` crate on all stored keys and intermediates (Rust). `Uint8Array.fill(0)` on passwords, PRF outputs, and derived keys (JS). WASM memory isn't GC'd, so zeroization is deterministic.
 
 **Per-key AAD.** Each private key is encrypted with AES-256-GCM using Additional Authenticated Data bound to its fingerprint. Swapping blobs between key slots fails.
+
+<table>
+  <tr>
+    <td width="50%"><img src="assets/store-listing/promo/exports/b-1280x800.png" alt="Encrypted at rest: keyring, contacts, settings and history are each a sealed blob on disk" /></td>
+    <td width="50%"><img src="assets/store-listing/promo/exports/c-1280x800.png" alt="Passkey unlock: a Touch ID prompt derives the key that decrypts the vault" /></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="assets/store-listing/promo/exports/d-1280x800.png" alt="Atomic decrypt and verify: a verified signature returns the message, a failed one returns nothing" /></td>
+    <td width="50%"><img src="assets/store-listing/promo/exports/e-1280x800.png" alt="Open source: crypto runs in Rust, every store is encrypted at rest, bring the keys you already have" /></td>
+  </tr>
+</table>
+
+<sub>Artwork source lives in <a href="assets/store-listing/promo">assets/store-listing/promo</a> and is rebuilt with <code>python3 build.py --render</code>.</sub>
 
 ## Features
 

@@ -1,0 +1,82 @@
+<div class="tile tile-e">
+  <div
+    class="glow"
+    style="width: 900px; height: 900px; left: -300px; top: -320px"
+  ></div>
+  <div
+    class="glow dim"
+    style="width: 760px; height: 760px; right: -220px; bottom: -330px"
+  ></div>
+  <div class="grid"></div>
+
+  <div class="e-wrap">
+    <div class="e-left">
+      <div class="brand">
+        <img src="__DATA:icon/128.png__" /><span>PGP Tools</span
+        ><span class="by">by Am I Being Pwned</span>
+      </div>
+      <span class="chip">__PART:i-git__ Free &amp; open source</span>
+      <h1>
+        Nothing here is<br /><span class="green">a black box</span>
+      </h1>
+      <p class="sub">
+        You shouldn't have to trust a browser extension with your secrets on
+        faith. Read the source, then decide.
+      </p>
+      <p class="foot">
+        No accounts. No telemetry. No content scripts on the pages you visit.
+      </p>
+    </div>
+
+    <div class="fcard e-card">
+      <div class="rows">
+        <div class="row">
+          __PART:i-cpu__
+          <div>
+            Crypto runs in Rust, not JavaScript<small
+              >Sequoia-PGP compiled to WebAssembly. Your key bytes stay inside
+              the sandbox.</small
+            >
+          </div>
+        </div>
+        <div class="row">
+          __PART:i-lock__
+          <div>
+            Encrypted at rest, per key<small
+              >AES-256-GCM, bound to each key's own fingerprint.</small
+            >
+          </div>
+        </div>
+        <div class="row">
+          __PART:i-key__
+          <div>
+            Bring the keys you already have<small
+              >Import armored PGP keys, or an SSH key for age encryption.</small
+            >
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<style>
+  .tile-e .e-wrap {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    gap: 56px;
+    padding: 0 76px 0 84px;
+  }
+  .tile-e .e-left {
+    width: 552px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+  .tile-e .e-card {
+    width: 512px;
+    flex: none;
+    padding: 14px 30px;
+  }
+</style>
