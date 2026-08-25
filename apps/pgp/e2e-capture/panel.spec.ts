@@ -111,13 +111,9 @@ async function onboardAs(
   });
 }
 
-test("capture: workspace in encrypt mode", async ({ panel }) => {
-  test.setTimeout(120_000);
-  await panel.setViewportSize({ width: PANEL_WIDTH, height: PANEL_HEIGHT });
-
-  await onboardAs(panel, "James Arnott", "james@amibeingpwned.com");
-  await importContact(panel, RECIPIENT.publicKey);
-
+/** Drive the workspace into the state both shots want: encrypt mode, a
+ *  recipient chosen, a message typed, signing on. */
+async function composeEncrypt(panel: Page): Promise<void> {
   await panel.getByRole("tab", { name: "Main" }).click();
   await panel.getByRole("combobox").first().click();
   await panel.getByRole("option", { name: "Encrypt", exact: true }).click();
@@ -147,9 +143,24 @@ test("capture: workspace in encrypt mode", async ({ panel }) => {
   // Drop focus so no input carries a focus ring into the artwork.
   await panel.locator("body").click({ position: { x: 5, y: 5 } });
   await panel.waitForTimeout(400);
+}
 
+test("capture: workspace in encrypt mode", async ({ panel }) => {
+  test.setTimeout(120_000);
+
+  await onboardAs(panel, "James Arnott", "james@amibeingpwned.com");
+  await importContact(panel, RECIPIENT.publicKey);
+
+  await panel.setViewportSize({ width: PANEL_WIDTH, height: PANEL_HEIGHT });
+  await composeEncrypt(panel);
   await panel.screenshot({
     path: path.join(OUT, "panel-encrypt.png"),
     scale: "device",
   });
+
+  // The 1400x560 marquee reuses this same shot: `.uicrop` in parts.css
+  // frames a window onto it rather than shrinking the whole panel. A
+  // separate short-and-wide capture was tried first and does not work --
+  // below roughly 500px of viewport height the composer collapses and
+  // overlaps the Recipients label, whatever the width.
 });

@@ -35,13 +35,15 @@ ROOTS = [
     os.path.abspath(os.path.join(HERE, "..")),
 ]
 
-# name -> (width, height). 1280x800 is the CWS / Edge screenshot size.
+# name -> (width, height). 1280x800 is the CWS / Edge screenshot size;
+# 1400x560 is the marquee promo tile.
 TILES = {
     "a": (1280, 800),
     "b": (1280, 800),
     "c": (1280, 800),
     "d": (1280, 800),
     "e": (1280, 800),
+    "m1": (1400, 560),
 }
 
 CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"

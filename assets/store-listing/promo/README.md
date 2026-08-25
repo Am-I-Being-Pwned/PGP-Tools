@@ -53,12 +53,13 @@ before uploading: the stores reject anything off by a pixel.
 
 ## Sizes
 
-| File                    | Size     | Slot                  |
-| ----------------------- | -------- | --------------------- |
-| `a`, `b`, `c`, `d`, `e` | 1280x800 | CWS / Edge screenshot |
+| File                    | Size     | Slot                   |
+| ----------------------- | -------- | ---------------------- |
+| `a`, `b`, `c`, `d`, `e` | 1280x800 | CWS / Edge screenshot  |
+| `m1`                    | 1400x560 | CWS marquee promo tile |
 
-The 1400x560 marquee and 440x280 small promo tiles are not cut yet. Both are
-required to be eligible for store featuring; `assets/pgptools-tile-static.png`
+The 440x280 small promo tile is not cut yet. It is required, along with the
+marquee, to be eligible for store featuring; `assets/pgptools-tile-static.png`
 is the closest thing that exists today.
 
 ## The rules
@@ -102,6 +103,14 @@ objection that stops an install, so it gets answered early.
 | `e`   | Nothing here is a black box       | Open source, Rust/WASM, what it will not do.   |
 
 Slide `a` is the one most people see, so it is the only one that shows the UI.
+
+`m1` is the marquee and stands alone, so it carries the whole product rather
+than one slide's argument. It reuses slide `a`'s capture, but `.uicrop` frames a
+window onto the composer instead of shrinking the whole panel: at 560px tall
+there is no room for a full panel at a size worth looking at. A separate
+short-and-wide capture was tried first and does not work, because below roughly
+500px of viewport height the composer collapses onto the Recipients label
+whatever the width.
 
 ## Layout
 

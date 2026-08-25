@@ -538,6 +538,42 @@ h1 {
   padding: 3px 10px;
 }
 
+/* ---- marquee canvas: 1400x560 (CWS promo tile) ---- */
+.tile-mq {
+  width: 1400px;
+  height: 560px;
+}
+
+/* ---- a cropped window onto the real UI ------------------------------
+   The marquee is 560px tall and the panel capture is 1.4x as tall as it
+   is wide, so the whole panel cannot fit at a size worth looking at. This
+   frames a window onto it instead, from the mode selector down to the
+   Encrypt button, which is the part that says what the product does. The
+   offset and height are in rendered pixels: change `width` and both have
+   to be rescaled by the same factor. The height stops just under the
+   Encrypt button, deliberately short of the footer rule -- a stray
+   horizontal line at the bottom edge reads as a rendering seam.
+   -------------------------------------------------------------------- */
+.uicrop {
+  position: relative;
+  width: 420px;
+  height: 476px;
+  flex: none;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--background);
+  box-shadow: 0 40px 90px -35px #000;
+}
+.uicrop img {
+  position: absolute;
+  top: -55px;
+  left: 0;
+  width: 420px;
+  height: auto;
+  display: block;
+}
+
 /* ---- lab page chrome (never exported) ---- */
 .lab {
   padding: 40px;
@@ -598,6 +634,10 @@ h1 {
 .lab .frame .tile {
   transform: scale(0.8);
   transform-origin: top left;
+}
+.lab .frame-mq {
+  width: 1120px;
+  height: 448px;
 }
 /* The size the store grid actually shows these at. If a slide is
    illegible here, it is illegible in the store. */

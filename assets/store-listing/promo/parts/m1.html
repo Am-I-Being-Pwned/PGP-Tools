@@ -1,0 +1,73 @@
+<div class="tile tile-mq tile-m1">
+  <div
+    class="glow"
+    style="width: 900px; height: 900px; right: -180px; top: -420px"
+  ></div>
+  <div
+    class="glow dim"
+    style="width: 760px; height: 760px; left: -320px; bottom: -420px"
+  ></div>
+  <div class="grid"></div>
+
+  <div class="m-wrap">
+    <div class="m-left">
+      <div class="brand">
+        <img src="__DATA:icon/128.png__" /><span>PGP Tools</span
+        ><span class="by">by Am I Being Pwned</span>
+      </div>
+      <h1>
+        Encrypt and sign,<br /><span class="green"
+          >without leaving the tab</span
+        >
+      </h1>
+      <p class="sub">
+        Real PGP in a side panel. Your keys stay sealed in a Rust sandbox, and
+        a passkey opens them.
+      </p>
+      <div class="m-tags">
+        <span>Open source</span><span>No analytics</span><span>Touch ID</span
+        ><span>age via SSH keys</span>
+      </div>
+    </div>
+
+    <div class="uicrop">
+      <img src="__DATA:ui/panel-encrypt.png__" alt="" />
+    </div>
+  </div>
+</div>
+<style>
+  .tile-m1 .m-wrap {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    gap: 72px;
+    padding: 0 76px 0 84px;
+  }
+  .tile-m1 .m-left {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+  .tile-m1 h1 {
+    font-size: 58px;
+  }
+  .tile-m1 .sub {
+    max-width: 640px;
+  }
+  .tile-m1 .m-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 9px;
+    margin-top: 4px;
+  }
+  .tile-m1 .m-tags span {
+    border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+    background: rgba(31, 31, 31, 0.5);
+    border-radius: 999px;
+    padding: 7px 15px;
+    font-size: 15px;
+    color: rgba(250, 250, 250, 0.72);
+  }
+</style>
