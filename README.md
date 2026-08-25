@@ -51,8 +51,6 @@
   </tr>
 </table>
 
-<sub>Artwork source lives in <a href="assets/store-listing/promo">assets/store-listing/promo</a> and is rebuilt with <code>python3 build.py --render</code>.</sub>
-
 ## Features
 
 - ECC (Cv25519) or RSA-4096 key generation
