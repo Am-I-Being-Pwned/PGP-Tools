@@ -369,6 +369,24 @@ export function WorkspaceView({
 
   const restoreCleared = () => s.restoreClearUndo();
 
+  /** Put the cursor back in the message box.
+   *
+   *  Reached two ways, because ONE of them cannot use the other. The
+   *  document-level Escape listener below covers most of the panel; the
+   *  recipient box cannot, because its input lives inside a cmdk
+   *  `Command` root that consumes Escape before it can bubble to
+   *  document. So the picker calls this directly when its own Escape
+   *  layers are exhausted -- see `onEscapeExhausted`. */
+  const focusMessageBox = () => {
+    // Next tick, not now. Radix restores focus to a popover's anchor
+    // after it closes, and the recipient box IS that anchor -- focusing
+    // synchronously from a keydown it is still unwinding means Radix
+    // puts focus straight back and the press looks like it did nothing.
+    // The same deferral `clearBoxUndoable` needs, for the same class of
+    // reason.
+    setTimeout(() => document.getElementById("pgp-input")?.focus(), 0);
+  };
+
   const clearWithUndo = (message: string) => {
     s.stashClearUndo();
     s.resetAll();
@@ -405,7 +423,15 @@ export function WorkspaceView({
   // Escape layers for the workspace itself (subpages and the palette
   // own their Escapes and never let them reach this listener): in the
   // full-output view a single press mirrors Back; in the form view a
-  // quick double-tap clears the box, undoably.
+  // quick double-tap clears the box, undoably; and on an EMPTY workspace
+  // a single press puts the cursor back in the message box.
+  //
+  // That last layer is what Escape means everywhere else in this panel:
+  // "put me back". With nothing to clear it was the only press that did
+  // nothing at all -- it silently armed a double-tap for a clear that
+  // would return early. It also completes the recipient box's own Escape
+  // chain, which peels list -> query and then, in its words, falls
+  // through: the next press now lands the user in the message.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key !== "Escape" || e.defaultPrevented) return;
@@ -418,6 +444,14 @@ export function WorkspaceView({
         // The back-press never counts toward the clear double-tap.
         lastEscapeAt.current = 0;
         s.resetOutput();
+        return;
+      }
+      // Nothing staged: there is no clear to arm, so Escape means focus.
+      // Gated on `files` too -- with files staged the textarea is not
+      // rendered at all, and the double-tap clear is the useful layer.
+      if (!s.hasInput && s.files.length === 0) {
+        lastEscapeAt.current = 0;
+        focusMessageBox();
         return;
       }
       const now = Date.now();
@@ -773,6 +807,11 @@ export function WorkspaceView({
       <div className="space-y-3">
         {needsRecipient && (
           <RecipientPicker
+            // Escape in the recipient box peels its own layers first
+            // (list, then query); when there are none left it lands the
+            // user back in the message, the same thing Escape does
+            // everywhere else in this panel.
+            onEscapeExhausted={focusMessageBox}
             // A message password rules out age entirely, so SSH rows dim
             // with their own reason rather than being silently
             // unpickable.

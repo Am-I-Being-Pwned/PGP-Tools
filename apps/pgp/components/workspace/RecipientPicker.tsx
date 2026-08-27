@@ -54,6 +54,14 @@ interface RecipientPickerProps {
   /** A message password is set. Rules out SSH recipients entirely --
    *  age has no password mode -- so they dim with their own reason. */
   passwordArmed?: boolean;
+  /** Escape pressed with nothing left for this box to close or clear.
+   *
+   *  A CALLBACK, not bubbling, and that is the whole reason it exists:
+   *  this input lives inside a cmdk `Command` root, which consumes
+   *  Escape before it can reach a document-level listener. The
+   *  workspace's own Escape handling is therefore unreachable from here
+   *  and has to be invoked by hand. */
+  onEscapeExhausted?: () => void;
 }
 
 function getKeyDisplay(key: AnyKey): { name: string; detail: string } {
@@ -90,6 +98,7 @@ export function RecipientPicker({
   emptyAction,
   emptyActionLabel,
   passwordArmed = false,
+  onEscapeExhausted,
 }: RecipientPickerProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -112,6 +121,48 @@ export function RecipientPicker({
   // box gets focused. Any other key (or a pointer press) clears it --
   // otherwise a Tab somewhere else in the panel would still be "armed"
   // when a re-render later parked focus here.
+  // Escape's LAST layer, in capture phase, because the bubble phase is
+  // not available: Radix's dismissable layer registers its own document
+  // capture listener when the popover opens and stops Escape there, so
+  // neither this component's `onKeyDown` nor the workspace's
+  // document-level listener ever sees one. (Measured: the input handler
+  // records `ArrowDown` and never `Escape`.)
+  //
+  // Registered here, before Radix's, so this runs first -- and it does
+  // nothing at all while the popover is open or a query is typed, which
+  // leaves those two layers exactly where they were.
+  // Read through a ref so the listener below can be registered ONCE.
+  // Capture-phase listeners on the same node fire in registration order,
+  // and Radix registers its own when the popover opens -- so a listener
+  // that re-subscribed on every render would keep moving to the back of
+  // the queue and land behind Radix's, which stops the event. Registered
+  // at mount, this one stays in front for good.
+  const escapeState = useRef({ open, search, onEscapeExhausted });
+  useEffect(() => {
+    escapeState.current = { open, search, onEscapeExhausted };
+  });
+
+  useEffect(() => {
+    const onEscape = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || e.defaultPrevented) return;
+      const {
+        open: isOpen,
+        search: query,
+        onEscapeExhausted: exhausted,
+      } = escapeState.current;
+      if (!exhausted) return;
+      // Only when this box owns the focus, and only once it has nothing
+      // of its own left to peel.
+      if (isOpen || query !== "") return;
+      const active = document.activeElement;
+      if (!(active instanceof Node) || !containerRef.current?.contains(active))
+        return;
+      exhausted();
+    };
+    document.addEventListener("keydown", onEscape, true);
+    return () => document.removeEventListener("keydown", onEscape, true);
+  }, []);
+
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       arrivedByTab.current = e.key === "Tab";
@@ -223,13 +274,14 @@ export function RecipientPicker({
   };
 
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Escape peels one layer per press for keyboard users: #1 closes
-    // the list (query kept, so reopening resumes the filter), #2 clears
-    // the typed query, #3 falls through to the slide-over. stopPropagation
-    // so the slide-over's document-level listener doesn't also close.
-    // While the dropdown is open Radix's document capture listener
-    // usually swallows Escape first (see onEscapeKeyDown below); this
-    // branch is the fallback.
+    // Escape peels one layer per press: #1 closes the list (query kept,
+    // so reopening resumes the filter), #2 clears the typed query, #3
+    // hands back to the workspace. ONLY #2 IS HANDLED HERE -- see the
+    // capture-phase effect above for #1 and #3 and for why they cannot
+    // be: Radix's dismissable layer stops Escape on a document capture
+    // listener, so this bubble-phase handler is never called for it. It
+    // was reached only when no popover had ever been opened, which made
+    // the layering look like it worked.
     if (e.key === "Escape") {
       if (open) {
         e.preventDefault();

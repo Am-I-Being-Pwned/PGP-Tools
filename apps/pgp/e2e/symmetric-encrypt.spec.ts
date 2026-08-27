@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+
 import { expect, test } from "./fixtures";
 import {
   generateSshKeys,
@@ -182,9 +184,7 @@ test("what it encrypts can be decrypted again with the same password", async ({
   await panel.getByRole("button", { name: /^encrypt$/i }).click();
   await panel.getByRole("button", { name: "Download" }).click();
   const file = await download;
-  const armored = await (
-    await import("node:fs/promises")
-  ).readFile((await file.path()) ?? "", "utf8");
+  const armored = await readFile(await file.path(), "utf8");
   expect(armored).toContain("BEGIN PGP MESSAGE");
 
   // Back in as a fresh decrypt. The box is refilled directly rather than
@@ -326,4 +326,71 @@ test("focus that did not come from a Tab leaves the list shut", async ({
 
   await expect(box).toBeFocused();
   await expect(box).toHaveAttribute("aria-expanded", "false");
+});
+
+test("Escape from the recipient box lands back in the message box", async ({
+  panel,
+}) => {
+  // The layering: press #1 closes the list, press #2 puts the cursor in
+  // the message. It is a CALLBACK rather than the event bubbling to the
+  // workspace's Escape listener -- the recipient input sits inside a
+  // cmdk `Command` root that consumes Escape, so the documented
+  // "falls through" layer was doing nothing at all.
+  await onboardWithPasswordSkipKey(panel, VAULT_PASSWORD);
+  await importContact(panel, keyBySlug("standard").publicKey);
+  await goToEncrypt(panel);
+
+  const box = panel.locator("textarea").first();
+  const recipients = panel.getByRole("combobox", { name: "Recipients" });
+
+  await recipients.click();
+  await panel.keyboard.press("ArrowDown"); // open the list
+  await expect(recipients).toHaveAttribute("aria-expanded", "true");
+
+  await panel.keyboard.press("Escape");
+  await expect(recipients).toHaveAttribute("aria-expanded", "false");
+  // Still in the recipient box: closing the list is its own layer.
+  await expect(recipients).toBeFocused();
+
+  await panel.keyboard.press("Escape");
+  await expect(box).toBeFocused();
+});
+
+test("Escape on an empty workspace puts the cursor back in the message box", async ({
+  panel,
+}) => {
+  // Escape means "put me back" everywhere else in this panel. On an
+  // empty workspace it was the one press that did nothing at all: it
+  // silently armed a double-tap for a clear that returns early because
+  // there is nothing staged.
+  await onboardWithPasswordSkipKey(panel, VAULT_PASSWORD);
+  await goToEncrypt(panel);
+
+  const box = panel.locator("textarea").first();
+  await expect(box).toHaveValue("");
+
+  // Focus something that is NOT the message box, with no dropdown of its
+  // own to peel first.
+  await panel.getByRole("switch", { name: "Password", exact: true }).focus();
+  await panel.keyboard.press("Escape");
+
+  await expect(box).toBeFocused();
+});
+
+test("Escape still clears a NON-empty workspace on a double tap", async ({
+  panel,
+}) => {
+  // The layer the new one must not have eaten. With something staged,
+  // two quick presses still clear it -- undoably.
+  await onboardWithPasswordSkipKey(panel, VAULT_PASSWORD);
+  await goToEncrypt(panel);
+  const box = panel.locator("textarea").first();
+  await box.fill(MESSAGE);
+  await box.click();
+
+  await panel.keyboard.press("Escape");
+  await panel.keyboard.press("Escape");
+
+  await expect(box).toHaveValue("");
+  await expect(panel.getByText(/cleared/i).first()).toBeVisible();
 });
