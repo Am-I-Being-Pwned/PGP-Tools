@@ -173,6 +173,9 @@ export function KeysView({
 }: KeysViewProps) {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  // The rendered card list, used to resolve shift-click ranges in the order
+  // the user actually sees.
+  const listRef = useRef<HTMLDivElement>(null);
   const nav = useNavStack<KeysRoute>();
 
   // Fingerprints written by the most recent import: the matching cards
@@ -217,18 +220,55 @@ export function KeysView({
   // CRX keys join the same list, gated on the feature being enabled.
   const shownCrxKeys = crxSigningEnabled && crxKeys ? crxKeys : [];
 
-  const toggleSelect = (id: string) =>
+  // Where a shift-click measures its range FROM: the last card the user
+  // touched without shift. Kept across renders (never rendered), and reset
+  // whenever the selection is torn down, so a stale anchor can't sweep in a
+  // range the user can no longer see.
+  const anchorRef = useRef<string | null>(null);
+
+  // Reading the order off the DOM rather than rebuilding it here is what
+  // makes the range match what the user is looking at: the contacts list
+  // owns its own search box, so the ids on screen are not `selectableIds`
+  // whenever a filter is active. Scoped to this view's root -- a
+  // document-wide query would also sweep up cards rendered by an open panel.
+  const visibleIds = () =>
+    Array.from(
+      listRef.current?.querySelectorAll<HTMLElement>("[data-select-id]") ?? [],
+    ).flatMap((el) => (el.dataset.selectId ? [el.dataset.selectId] : []));
+
+  const toggleSelect = (id: string, extend = false) => {
+    const anchor = anchorRef.current;
+    if (extend && anchor && anchor !== id) {
+      const ids = visibleIds();
+      const from = ids.indexOf(anchor);
+      const to = ids.indexOf(id);
+      if (from !== -1 && to !== -1) {
+        // The range REPLACES the selection, and the anchor stays put -- the
+        // standard shift-click contract. Sweeping in additively would look
+        // right while widening a range and then do nothing at all while
+        // narrowing one, since every card the user wanted dropped is already
+        // selected. Re-clicking nearer the anchor has to shrink the run.
+        setSelected(
+          new Set(ids.slice(Math.min(from, to), Math.max(from, to) + 1)),
+        );
+        return;
+      }
+    }
+    anchorRef.current = id;
     setSelected((s) => {
       const next = new Set(s);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
+  };
   const startSelect = (id: string) => {
+    anchorRef.current = id;
     setSelectionMode(true);
     setSelected((s) => new Set(s).add(id));
   };
   const exitSelection = () => {
+    anchorRef.current = null;
     setSelected(new Set());
     setSelectionMode(false);
   };
@@ -257,6 +297,7 @@ export function KeysView({
     if (allSelected) {
       exitSelection();
     } else {
+      anchorRef.current = null;
       setSelectionMode(true);
       setSelected(new Set(selectableIds));
     }
@@ -460,7 +501,7 @@ export function KeysView({
     // Plain wrapper (no space-y) so mounting the sticky bar doesn't shift the
     // first spaced child down by a gap; the vertical rhythm lives on the inner
     // div, whose first child is always "My Keys".
-    <div>
+    <div ref={listRef}>
       <SelectionBar
         open={selectionMode}
         count={selected.size}
@@ -483,16 +524,17 @@ export function KeysView({
               {keyModels.map((model) => {
                 const id = selId(model.kind, model.id);
                 return (
-                  <KeyCard
-                    key={id}
-                    model={model}
-                    justImported={justImported.has(model.id)}
-                    advancedMode={advancedMode}
-                    selectionMode={selectionMode}
-                    selected={selected.has(id)}
-                    onToggleSelect={() => toggleSelect(id)}
-                    onStartSelect={() => startSelect(id)}
-                  />
+                  <div key={id} data-select-id={id}>
+                    <KeyCard
+                      model={model}
+                      justImported={justImported.has(model.id)}
+                      advancedMode={advancedMode}
+                      selectionMode={selectionMode}
+                      selected={selected.has(id)}
+                      onToggleSelect={(extend) => toggleSelect(id, extend)}
+                      onStartSelect={() => startSelect(id)}
+                    />
+                  </div>
                 );
               })}
             </div>
@@ -526,7 +568,11 @@ export function KeysView({
           justImported={justImported}
           onRequestRename={
             onRenameContact
-              ? (contact) => nav.push({ page: "rename", target: { kind: "contact", contact } })
+              ? (contact) =>
+                  nav.push({
+                    page: "rename",
+                    target: { kind: "contact", contact },
+                  })
               : undefined
           }
           onImportText={(text) =>
@@ -927,7 +973,7 @@ function ContactsList({
   advancedMode?: boolean;
   selectionMode: boolean;
   selected: Set<string>;
-  onToggleSelect: (id: string) => void;
+  onToggleSelect: (id: string, extend: boolean) => void;
   onStartSelect: (id: string) => void;
   /** Fingerprints to scroll to and pulse after an import. */
   justImported: Set<string>;
@@ -984,33 +1030,34 @@ function ContactsList({
               {filtered.map((c) => {
                 const id = selId("contact", c.keyId);
                 return (
-                  <ContactCard
-                    key={c.keyId}
-                    contact={c}
-                    justImported={justImported.has(c.keyId)}
-                    onRemove={() => onRequestRemove(c)}
-                    onEncryptTo={
-                      onEncryptTo ? () => onEncryptTo(c.keyId) : undefined
-                    }
-                    onCopyPublicKey={() =>
-                      void copy(c.armoredPublicKey, { label: "Public key" })
-                    }
-                    onDownloadPublicKey={() =>
-                      downloadPublicKey(
-                        c.armoredPublicKey,
-                        parseUserId(displayUserId(c) ?? "").name || c.keyId,
-                      )
-                    }
-                    onRename={
-                      onRequestRename ? () => onRequestRename(c) : undefined
-                    }
-                    onShowDetails={() => onShowDetails(c)}
-                    advancedMode={advancedMode}
-                    selectionMode={selectionMode}
-                    selected={selected.has(id)}
-                    onToggleSelect={() => onToggleSelect(id)}
-                    onStartSelect={() => onStartSelect(id)}
-                  />
+                  <div key={c.keyId} data-select-id={id}>
+                    <ContactCard
+                      contact={c}
+                      justImported={justImported.has(c.keyId)}
+                      onRemove={() => onRequestRemove(c)}
+                      onEncryptTo={
+                        onEncryptTo ? () => onEncryptTo(c.keyId) : undefined
+                      }
+                      onCopyPublicKey={() =>
+                        void copy(c.armoredPublicKey, { label: "Public key" })
+                      }
+                      onDownloadPublicKey={() =>
+                        downloadPublicKey(
+                          c.armoredPublicKey,
+                          parseUserId(displayUserId(c) ?? "").name || c.keyId,
+                        )
+                      }
+                      onRename={
+                        onRequestRename ? () => onRequestRename(c) : undefined
+                      }
+                      onShowDetails={() => onShowDetails(c)}
+                      advancedMode={advancedMode}
+                      selectionMode={selectionMode}
+                      selected={selected.has(id)}
+                      onToggleSelect={(extend) => onToggleSelect(id, extend)}
+                      onStartSelect={() => onStartSelect(id)}
+                    />
+                  </div>
                 );
               })}
             </div>

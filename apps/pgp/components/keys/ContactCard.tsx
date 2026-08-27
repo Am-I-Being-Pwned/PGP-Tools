@@ -1,3 +1,4 @@
+import type { MouseEvent as ReactMouseEvent } from "react";
 import { useState } from "react";
 import { format } from "date-fns";
 import {
@@ -56,7 +57,9 @@ interface ContactCardProps {
    *  and the card's own controls are dimmed/click-through. */
   selectionMode?: boolean;
   selected?: boolean;
-  onToggleSelect?: () => void;
+  /** `extend` is true when Shift was held: select everything between the
+   *  last-touched card and this one, rather than toggling just this one. */
+  onToggleSelect?: (extend: boolean) => void;
   /** Enter selection mode with this contact selected (long-press / menu). */
   onStartSelect?: () => void;
   /** Just arrived from an import: scroll to it and pulse it once. */
@@ -119,10 +122,10 @@ export function ContactCard({
     !selectionMode && !!onStartSelect,
   );
 
-  const handleClick = () => {
+  const handleClick = (e: ReactMouseEvent) => {
     if (longPress.consumeClick()) return;
     if (selectionMode) {
-      onToggleSelect?.();
+      onToggleSelect?.(e.shiftKey);
       return;
     }
     onShowDetails?.();
@@ -144,10 +147,13 @@ export function ContactCard({
         // A floor, not a fixed height: a one-line contact (SSH keys carry no
         // email) would otherwise sit noticeably shorter than its neighbours.
         // Cards with more to say still grow past it. The slack the floor adds
-        // goes ABOVE the text (justify-end), so the fingerprint line stays
-        // level with the details arrow pinned at bottom-right instead of
-        // drifting away from it.
-        "group relative flex min-h-19 flex-col justify-end rounded-md p-3",
+        // is split BETWEEN the two text groups (see justify-between below), so
+        // the name stays pinned to the top edge and the fingerprint line stays
+        // level with the details arrow pinned at bottom-right.
+        // select-none: the whole card is a click target, and a shift-click
+        // to extend a selection would otherwise drag a text range across it
+        // instead. The fingerprint is still copyable from the card's menu.
+        "group relative flex min-h-19 flex-col rounded-md p-3 select-none",
         importedClass,
         // Keep the border width constant (1px) and add thickness with a ring
         // (box-shadow, no layout impact) so selecting doesn't shift the card.
@@ -159,59 +165,66 @@ export function ContactCard({
         clickable && "hover:bg-muted/40 cursor-pointer transition-colors",
       )}
     >
-      <div className="flex items-start gap-2">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-2">
-            <p className="flex min-w-0 items-center gap-1.5 truncate text-sm font-medium">
-              <span className="truncate">{name}</span>
-              {isSsh && (
-                <span
-                  title="An SSH key, used with age. It can't be combined with PGP recipients in one message."
-                  className="bg-secondary text-muted-foreground shrink-0 rounded border px-1 text-[10px] leading-4 font-normal"
-                >
-                  SSH
-                </span>
-              )}
-              {recipients.length > 1 && (
-                /* One person, several machines. Said on the card because
+      <div className="flex flex-1 items-start gap-2">
+        <div className="flex min-w-0 flex-1 flex-col justify-between self-stretch">
+          {/* Two groups, not one run of lines: the slack a short card gets
+              from min-h-19 falls between them, so the name sits on the top
+              edge and the key line on the bottom one. */}
+          <div>
+            <div className="flex items-center justify-between gap-2">
+              <p className="flex min-w-0 items-center gap-1.5 truncate text-sm font-medium">
+                <span className="truncate">{name}</span>
+                {isSsh && (
+                  <span
+                    title="An SSH key, used with age. It can't be combined with PGP recipients in one message."
+                    className="bg-secondary text-muted-foreground shrink-0 rounded border px-1 text-[10px] leading-4 font-normal"
+                  >
+                    SSH
+                  </span>
+                )}
+                {recipients.length > 1 && (
+                  /* One person, several machines. Said on the card because
                    the fingerprint line below shows only the first: a
                    3-stanza file is otherwise a surprise at decrypt time. */
+                  <span
+                    title={
+                      activeKeys < recipients.length
+                        ? `Messages are encrypted to ${activeKeys} of this contact's ${recipients.length} keys; the rest are turned off in their key details.`
+                        : "Messages are encrypted to all of this contact's keys; any one of them can decrypt."
+                    }
+                    className="bg-secondary text-muted-foreground shrink-0 rounded border px-1 text-[10px] leading-4 font-normal"
+                  >
+                    {activeKeys < recipients.length
+                      ? `${activeKeys} of ${recipients.length} keys`
+                      : `${recipients.length} keys`}
+                  </span>
+                )}
+              </p>
+              {verifiedLabel && (
                 <span
-                  title={
-                    activeKeys < recipients.length
-                      ? `Messages are encrypted to ${activeKeys} of this contact's ${recipients.length} keys; the rest are turned off in their key details.`
-                      : "Messages are encrypted to all of this contact's keys; any one of them can decrypt."
-                  }
-                  className="bg-secondary text-muted-foreground shrink-0 rounded border px-1 text-[10px] leading-4 font-normal"
+                  className={`flex shrink-0 items-center gap-1 text-xs ${toneText}`}
                 >
-                  {activeKeys < recipients.length
-                    ? `${activeKeys} of ${recipients.length} keys`
-                    : `${recipients.length} keys`}
+                  <ToneIcon className="h-3.5 w-3.5" />
+                  {verifiedLabel}
                 </span>
               )}
-            </p>
-            {verifiedLabel && (
-              <span
-                className={`flex shrink-0 items-center gap-1 text-xs ${toneText}`}
-              >
-                <ToneIcon className="h-3.5 w-3.5" />
-                {verifiedLabel}
-              </span>
+            </div>
+            {email && (
+              <p className="text-muted-foreground truncate text-xs">{email}</p>
             )}
           </div>
-          {email && (
-            <p className="text-muted-foreground truncate text-xs">{email}</p>
-          )}
-          <p className="text-muted-foreground mt-0.5 font-mono text-xs break-all">
-            {/* An OpenSSH fingerprint is a base64 hash: its last 16
+
+          <div>
+            <p className="text-muted-foreground mt-0.5 font-mono text-xs break-all">
+              {/* An OpenSSH fingerprint is a base64 hash: its last 16
                 characters identify nothing, so it shows in full. */}
-            {isSsh ? contact.keyId : contact.keyId.slice(-16)}
-            {contact.algorithm
-              ? ` - ${formatAlgorithm(contact.algorithm)}`
-              : ""}
-          </p>
-          {source && (
-            /* Where this contact came from, which is also its upsert
+              {isSsh ? contact.keyId : contact.keyId.slice(-16)}
+              {contact.algorithm
+                ? ` - ${formatAlgorithm(contact.algorithm)}`
+                : ""}
+            </p>
+            {source && (
+              /* Where this contact came from, which is also its upsert
                identity: looking the same user (or address) up again
                updates THIS record rather than adding a second one.
 
@@ -219,49 +232,52 @@ export function ContactCard({
                this key is theirs; it does not say anyone checked. See
                T-GITHUB-KEY-SUBSTITUTION and
                T-KEYSERVER-KEY-SUBSTITUTION. */
-            <p className="text-muted-foreground mt-0.5 text-xs">
-              {source.type === "github"
-                ? `From github.com/${source.user}`
-                : `From keys.openpgp.org - ${source.user}`}
-            </p>
-          )}
-          {note && <p className="text-muted-foreground mt-1 text-xs">{note}</p>}
-          {/* Advanced mode regroups a hex fingerprint into 4-character
+              <p className="text-muted-foreground mt-0.5 text-xs">
+                {source.type === "github"
+                  ? `From github.com/${source.user}`
+                  : `From keys.openpgp.org - ${source.user}`}
+              </p>
+            )}
+            {note && (
+              <p className="text-muted-foreground mt-1 text-xs">{note}</p>
+            )}
+            {/* Advanced mode regroups a hex fingerprint into 4-character
               blocks; doing that to a base64 hash would only chop it into
               meaningless quarters, and the line above already shows it in
               full. */}
-          {advancedMode && !isSsh && (
-            <p className="text-muted-foreground mt-0.5 font-mono text-[10px] leading-relaxed">
-              {formatFingerprint(contact.keyId)}
-            </p>
-          )}
-          {contact.expiresAt &&
-            (contact.expiresAt < now ? (
+            {advancedMode && !isSsh && (
+              <p className="text-muted-foreground mt-0.5 font-mono text-[10px] leading-relaxed">
+                {formatFingerprint(contact.keyId)}
+              </p>
+            )}
+            {contact.expiresAt &&
+              (contact.expiresAt < now ? (
+                <div className="mt-1">
+                  <span
+                    title={`This key expired on ${format(new Date(contact.expiresAt), "PPP")} and can no longer be encrypted to. Ask the owner for their current key.`}
+                    className="inline-flex items-center gap-1 rounded-full border border-red-500/40 bg-red-500/10 px-2 py-0.5 text-[10px] font-medium text-red-400"
+                  >
+                    <TriangleAlertIcon className="h-3 w-3" />
+                    Expired {format(new Date(contact.expiresAt), "PP")}
+                  </span>
+                </div>
+              ) : (
+                <p className="text-muted-foreground mt-0.5 text-xs">
+                  Expires {format(new Date(contact.expiresAt), "PPP")}
+                </p>
+              ))}
+            {contact.securityWarning && (
               <div className="mt-1">
                 <span
-                  title={`This key expired on ${format(new Date(contact.expiresAt), "PPP")} and can no longer be encrypted to. Ask the owner for their current key.`}
-                  className="inline-flex items-center gap-1 rounded-full border border-red-500/40 bg-red-500/10 px-2 py-0.5 text-[10px] font-medium text-red-400"
+                  title={contact.securityWarning}
+                  className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-400"
                 >
                   <TriangleAlertIcon className="h-3 w-3" />
-                  Expired {format(new Date(contact.expiresAt), "PP")}
+                  Weak (SHA-1)
                 </span>
               </div>
-            ) : (
-              <p className="text-muted-foreground mt-0.5 text-xs">
-                Expires {format(new Date(contact.expiresAt), "PPP")}
-              </p>
-            ))}
-          {contact.securityWarning && (
-            <div className="mt-1">
-              <span
-                title={contact.securityWarning}
-                className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-400"
-              >
-                <TriangleAlertIcon className="h-3 w-3" />
-                Weak (SHA-1)
-              </span>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {!readOnly && (

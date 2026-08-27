@@ -1,3 +1,4 @@
+import type { MouseEvent as ReactMouseEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowRightIcon,
@@ -80,7 +81,9 @@ interface KeyCardProps {
   selectionMode: boolean;
   selected: boolean;
   /** Toggle this card's membership while already in selection mode. */
-  onToggleSelect: () => void;
+  /** `extend` is true when Shift was held: select everything between the
+   *  last-touched card and this one, rather than toggling just this one. */
+  onToggleSelect: (extend: boolean) => void;
   /** Enter selection mode with this card selected (long-press / menu). */
   onStartSelect: () => void;
   /** Just arrived from an import: scroll to it and pulse it once. */
@@ -145,10 +148,10 @@ export function KeyCard({
     if (!result) setError("Passkey authentication failed");
   };
 
-  const handleCardClick = () => {
+  const handleCardClick = (e: ReactMouseEvent) => {
     if (longPress.consumeClick()) return; // swallow the click ending a long-press
     if (selectionMode) {
-      onToggleSelect();
+      onToggleSelect(e.shiftKey);
       return;
     }
     model.onShowDetails?.();
@@ -170,7 +173,10 @@ export function KeyCard({
         // Same floor as ContactCard: the two render into one list, so a
         // sealed-at-rest key (no unlock row, no details arrow) must not
         // read as a shorter species of card than the contacts above it.
-        "group relative min-h-19 rounded-md p-3 transition-colors",
+        // select-none: the whole card is a click target, and a shift-click
+        // to extend a selection would otherwise drag a text range across it
+        // instead. The key line is still copyable from the card's menu.
+        "group relative min-h-19 rounded-md p-3 transition-colors select-none",
         importedClass,
         // Keep the border width constant (1px) and add thickness with a ring
         // (box-shadow, no layout impact) so selecting doesn't shift the card.

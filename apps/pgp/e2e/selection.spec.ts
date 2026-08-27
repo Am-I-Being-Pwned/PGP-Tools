@@ -171,3 +171,150 @@ test.describe("bulk selection of contacts", () => {
     await expect(bar.getByText("1 selected")).toBeVisible();
   });
 });
+
+const ERIN = keyBySlug("signOnly"); // "Erin SignOnly"
+const FRANK = keyBySlug("signOnlyNoEmail"); // "Frank SignOnlyNoEmail"
+
+/** Every selectable card on screen, in the order the user sees them. */
+function contactCards(panel: Page) {
+  return panel.locator('[data-select-id^="contact:"]');
+}
+
+/** Enter selection mode on the nth contact card, positionally. */
+async function startSelectAt(panel: Page, index: number): Promise<void> {
+  await contactCards(panel)
+    .nth(index)
+    .getByRole("button", { name: "Contact options" })
+    .click();
+  await panel.getByRole("menuitem", { name: "Select" }).click();
+}
+
+test.describe("shift-click range selection", () => {
+  test("shift-click sweeps in every card between the anchor and the target", async ({
+    panel,
+  }) => {
+    await seedVault(panel, PASSWORD, [
+      ALICE.publicKey,
+      BOB.publicKey,
+      CAROL.publicKey,
+      DAVE.publicKey,
+    ]);
+
+    // Positional, not by name: the range is defined by what is on screen, so
+    // the test must not depend on the order the vault hands contacts back in.
+    const contacts = contactCards(panel);
+    await expect(contacts).toHaveCount(4);
+
+    await startSelectAt(panel, 0);
+    const bar = selectionBar(panel);
+    await expect(bar.getByText("1 selected")).toBeVisible();
+
+    // First -> last with Shift: the two cards in between come too.
+    await contacts.nth(3).click({ modifiers: ["Shift"] });
+    await expect(bar.getByText("4 selected")).toBeVisible();
+  });
+
+  test("a second shift-click re-sweeps from the same anchor, widening or narrowing", async ({
+    panel,
+  }) => {
+    await seedVault(panel, PASSWORD, [
+      ALICE.publicKey,
+      BOB.publicKey,
+      CAROL.publicKey,
+      DAVE.publicKey,
+    ]);
+
+    const contacts = contactCards(panel);
+    await startSelectAt(panel, 0);
+    const bar = selectionBar(panel);
+
+    await contacts.nth(1).click({ modifiers: ["Shift"] });
+    await expect(bar.getByText("2 selected")).toBeVisible();
+
+    // Widening measures from the ORIGINAL anchor, not from the card the last
+    // shift-click landed on -- so this is 4, not 3.
+    await contacts.nth(3).click({ modifiers: ["Shift"] });
+    await expect(bar.getByText("4 selected")).toBeVisible();
+
+    // And clicking back nearer the anchor NARROWS it: the range replaces the
+    // selection rather than piling onto it.
+    await contacts.nth(1).click({ modifiers: ["Shift"] });
+    await expect(bar.getByText("2 selected")).toBeVisible();
+  });
+
+  test("a shift-range covers what is on screen, not what the filter hides", async ({
+    panel,
+  }) => {
+    // Six contacts is what makes the contacts search box appear.
+    await seedVault(panel, PASSWORD, [
+      ALICE.publicKey,
+      BOB.publicKey,
+      CAROL.publicKey,
+      DAVE.publicKey,
+      ERIN.publicKey,
+      FRANK.publicKey,
+    ]);
+    await expect(contactCards(panel)).toHaveCount(6);
+
+    // "no" matches "Bob NoEmail", "Erin SigNOnly" and "Frank
+    // SignOnlyNoEmail", leaving Carol and Dave hidden INSIDE that run. (Not a
+    // term like "o": the search reads the raw user ID too, and every seeded
+    // address ends in ".com".) So the visible run is 3 cards where the full
+    // list would give 5 -- a range built from state rather than from what is
+    // rendered would quietly sweep the two hidden contacts in as well.
+    await panel.getByPlaceholder("Search contacts...").fill("no");
+    const shown = contactCards(panel);
+    await expect(shown).toHaveCount(3);
+
+    await startSelectAt(panel, 0);
+    await shown.nth(2).click({ modifiers: ["Shift"] });
+    const bar = selectionBar(panel);
+    await expect(bar.getByText("3 selected")).toBeVisible();
+
+    // Clearing the filter brings the hidden contacts back, unselected.
+    await panel.getByPlaceholder("Search contacts...").fill("");
+    await expect(contactCards(panel)).toHaveCount(6);
+    await expect(bar.getByText("3 selected")).toBeVisible();
+    await expect(
+      contactCards(panel).filter({ hasText: DAVE.name }),
+    ).not.toHaveClass(/ring-2/);
+  });
+
+  test("shift-clicking with no anchor yet just toggles that one card", async ({
+    panel,
+  }) => {
+    await seedVault(panel, PASSWORD, [
+      ALICE.publicKey,
+      BOB.publicKey,
+      CAROL.publicKey,
+    ]);
+
+    await startSelectAt(panel, 0);
+    const bar = selectionBar(panel);
+    // "Select all" then "Deselect all" would exit; instead clear the anchor
+    // the only other way a user can -- selecting everything.
+    await bar.getByRole("button", { name: "Select all" }).click();
+    await expect(bar.getByText("4 selected")).toBeVisible();
+
+    // No anchor now: Shift must not sweep, it just unpicks this one.
+    await contactCards(panel)
+      .nth(2)
+      .click({ modifiers: ["Shift"] });
+    await expect(bar.getByText("3 selected")).toBeVisible();
+  });
+
+  test("cards do not select their text under a shift-click", async ({
+    panel,
+  }) => {
+    await seedVault(panel, PASSWORD, [ALICE.publicKey, BOB.publicKey]);
+
+    const userSelect = await contactCards(panel)
+      .first()
+      .evaluate((el) => {
+        const card = el.firstElementChild;
+        if (!card) throw new Error("wrapper has no card inside it");
+        return getComputedStyle(card).userSelect;
+      });
+    expect(userSelect).toBe("none");
+  });
+});
