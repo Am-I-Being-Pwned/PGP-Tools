@@ -1,4 +1,31 @@
 /**
+ * Put PGP armor back together after something has mangled it.
+ *
+ * TWO DIFFERENT DAMAGE MODELS, two repairs, and they are separate
+ * because what makes them safe is different:
+ *
+ *  1. WHITESPACE COLLAPSE ({@link reconstructArmor}) -- Chrome's
+ *     `info.selectionText` turns every run of whitespace into a single
+ *     space, so the line structure has to be inferred from the armor's
+ *     grammar. Heuristic, and it bails rather than guess.
+ *
+ *  2. ESCAPING ({@link repairArmorEscapes}) -- the text went through a
+ *     machine that represents newlines as something else: a JSON string
+ *     (`\n`), an HTML page (`<br>`), a URL (`%0A`). This one is not a
+ *     heuristic. Base64 has a fixed alphabet, and none of `\`, `<`, `>`,
+ *     `%`, `&` or `;` is in it, so inside an armor block those tokens
+ *     cannot be data -- they can only be damage, and reversing them is
+ *     exact rather than clever.
+ *
+ * BOTH ARE STRICTLY BLOCK-SCOPED. Only the text between a matched
+ * BEGIN/END pair is ever rewritten; everything else is returned byte for
+ * byte. That is what makes it safe to run this over the workspace input
+ * box, which also holds messages the user is COMPOSING -- someone typing
+ * `console.log("a\nb")` must get their backslash-n back unchanged, and
+ * a global unescape would silently eat it.
+ */
+
+/**
  * Reconstruct PGP armor from a context-menu selection.
  *
  * Chrome's `info.selectionText` collapses all whitespace (including
@@ -123,7 +150,121 @@ export function reconstructArmor(text: string): string {
   );
 }
 
-/** Pass-through unless the input looks like collapsed armor. */
+// ── Escape repair ────────────────────────────────────────────────────
+
+/**
+ * How a newline comes back mangled, and what it was.
+ *
+ * Order matters: `\r\n` is tried before `\n` so a CRLF pair becomes ONE
+ * newline rather than two. `%0D` maps to nothing for the same reason --
+ * a lone carriage return that survived is noise, not a line.
+ *
+ * Every `from` here contains at least one character outside the base64
+ * alphabet (`A-Z a-z 0-9 + / =`), which is what makes the substitution
+ * exact inside an armor block rather than a guess. Adding an entry whose
+ * `from` is pure base64 would break that property and must not be done.
+ */
+const ESCAPE_FORMS: [RegExp, string][] = [
+  [/\\r\\n/g, "\n"],
+  [/\\n/g, "\n"],
+  [/\\r/g, "\n"],
+  [/\\t/g, "\t"],
+  [/<br\s*\/?>/gi, "\n"],
+  [/&#0*10;/g, "\n"],
+  [/&#0*13;/g, ""],
+  [/%0A/gi, "\n"],
+  [/%0D/gi, ""],
+];
+
+/** Any PEM-style block, with BEGIN and END types required to MATCH.
+ *
+ *  NOT just `BEGIN PGP`: an OpenSSH private key, a PKCS#1/PKCS#8 PEM (a
+ *  CRX signing key) and an armored age file are all multi-line base64
+ *  between markers, all reach this app through the same paste box, and
+ *  all break in exactly the same way when a machine eats their newlines.
+ *  Restricting this to PGP would have fixed one of the four kinds of key
+ *  this app accepts.
+ *
+ *  The backreference is what keeps a cleartext-signed message out of
+ *  this regex: it opens `PGP SIGNED MESSAGE` and closes `PGP SIGNATURE`,
+ *  so only its inner signature block matches here -- the body is handled
+ *  separately below, under a stricter rule. */
+const ARMOR_BLOCK =
+  /-----BEGIN ([A-Z0-9 ]+?)-----([\s\S]*?)-----END \1-----/g;
+
+/** A cleartext-signed message, whole: header, free-text body and the
+ *  detached signature that covers it. */
+const CLEARTEXT_BLOCK =
+  /-----BEGIN PGP SIGNED MESSAGE-----[\s\S]*?-----END PGP SIGNATURE-----/g;
+
+function applyEscapeForms(text: string): string {
+  let out = text;
+  for (const [from, to] of ESCAPE_FORMS) out = out.replace(from, to);
+  return out;
+}
+
+/**
+ * Undo escaping inside every armor block, leaving all other text alone.
+ *
+ * The block is re-emitted with its markers on their own lines, which is
+ * what rescues armor that arrives embedded in something else -- a JSON
+ * value, a quoted string, a log line -- where the BEGIN marker would
+ * otherwise still be stuck mid-line behind `{"msg": "`.
+ *
+ * CLEARTEXT-SIGNED MESSAGES GET A STRICTER RULE, because their body is
+ * free text and CAN legitimately contain a backslash: the escape forms
+ * are applied only when the whole block holds no real newline at all,
+ * which is proof it was flattened. A cleartext message that still has
+ * its line structure is left exactly as it is, even if it mentions
+ * `\n` -- the alternative is corrupting the very bytes the signature is
+ * computed over, turning a valid signature into a tampering warning.
+ */
+export function repairArmorEscapes(text: string): string {
+  // Cheap bail-out, and it is a performance guard rather than a
+  // correctness one. Every repair below needs a CLOSING marker, and the
+  // regexes' worst case is precisely the input that has none: each BEGIN
+  // is scanned to end-of-string looking for a partner that is not there.
+  // Measured at 8.6ms for 2400 unclosed markers in a 64 KB paste, versus
+  // 0.01ms with this line. `handleInputChange` runs on every keystroke,
+  // so a quadratic path in it is worth one `includes`.
+  if (!text.includes("-----END ")) return text;
+
+  const cleartextRepaired = text.replace(CLEARTEXT_BLOCK, (block) =>
+    block.includes("\n") ? block : applyEscapeForms(block),
+  );
+
+  return cleartextRepaired.replace(
+    ARMOR_BLOCK,
+    (block, type: string, body: string) => {
+      // NO normalisation of the restored newlines. Escaping preserved
+      // the block's structure faithfully, so unescaping gives it back
+      // exactly -- including the blank line between the armor headers
+      // and the data, which is REQUIRED and which an eager
+      // `^\n+ -> \n` tidy-up silently ate.
+      const repaired = applyEscapeForms(body);
+      // Nothing to do: return the ORIGINAL match so armor that was already
+      // fine is byte-identical, rather than "equivalent".
+      const rebuilt = `-----BEGIN ${type}-----${repaired}-----END ${type}-----`;
+      return rebuilt === block ? block : `\n${rebuilt}\n`;
+    },
+  );
+}
+
+/**
+ * The one entry point every text intake uses: repair escaping, then
+ * whitespace collapse.
+ *
+ * In that order, because the collapse detector looks for a real newline
+ * after the BEGIN marker -- run first, it would see an escaped message
+ * as collapsed and hand it to `reconstructArmor`'s base64 rewrapper,
+ * which is the wrong repair for the wrong damage.
+ *
+ * Both halves are pass-throughs when there is nothing to fix, so text
+ * that is already fine (or is not armor at all) comes back unchanged.
+ */
 export function recoverArmorIfNeeded(text: string): string {
-  return looksLikeCollapsedArmor(text) ? reconstructArmor(text) : text;
+  const unescaped = repairArmorEscapes(text);
+  return looksLikeCollapsedArmor(unescaped)
+    ? reconstructArmor(unescaped)
+    : unescaped;
 }

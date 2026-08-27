@@ -21,6 +21,7 @@ import {
   importSshIdentity,
   sshContact,
 } from "../../lib/age/protect-flow";
+import { recoverArmorIfNeeded } from "../../lib/armor-recovery";
 import { readKeyFile } from "../../lib/binary-armor";
 import { importCrxKey } from "../../lib/crx/operations";
 import { AppError } from "../../lib/errors/app-error";
@@ -583,11 +584,26 @@ export function ImportKeyPage({
     }
   };
 
+  /**
+   * A key that ARRIVED as text -- pasted, or dropped as a selection.
+   *
+   * The only route that repairs mangled armor, and deliberately NOT the
+   * file routes: a `.asc` on disk has its newlines intact (nothing
+   * escaped it on the way), so a repair pass there would be scanning
+   * megabytes to find nothing. Paste is where text that has been through
+   * a JSON blob, a web page or a chat client actually comes from.
+   */
+  const handleTextSource = (text: string) =>
+    handleSource(recoverArmorIfNeeded(text));
+
   // Keep the latest handler reachable from the document listeners below
   // without re-binding them on every render (the useShortcut idiom).
-  const handleSourceRef = useRef(handleSource);
+  // It holds the TEXT handler: both listeners below (the panel-wide
+  // paste, and the prefill from a global drop) deliver text, never a
+  // file.
+  const handleSourceRef = useRef(handleTextSource);
   useEffect(() => {
-    handleSourceRef.current = handleSource;
+    handleSourceRef.current = handleTextSource;
   });
 
   // A drop/paste that arrived with the panel (global drop, workspace
@@ -895,7 +911,7 @@ export function ImportKeyPage({
                   e.preventDefault();
                   e.stopPropagation();
                   setTypedIntoPasteBox(false);
-                  void handleSource(e.clipboardData.getData("text/plain"));
+                  void handleTextSource(e.clipboardData.getData("text/plain"));
                 }}
                 className={INPUT_CLASS}
               />
@@ -919,7 +935,7 @@ export function ImportKeyPage({
                     );
                     return;
                   }
-                  void handleSource(e.dataTransfer.getData("text/plain"));
+                  void handleTextSource(e.dataTransfer.getData("text/plain"));
                 }}
                 className={`flex flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed p-6 text-center transition-colors ${
                   dragOver

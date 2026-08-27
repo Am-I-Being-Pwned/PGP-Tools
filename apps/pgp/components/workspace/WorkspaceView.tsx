@@ -40,6 +40,7 @@ import {
   COPY_SHORTCUT,
   DOWNLOAD_SHORTCUT,
 } from "../../lib/actions/definitions";
+import { recoverArmorIfNeeded } from "../../lib/armor-recovery";
 import {
   buildEncryptRecipients,
   resolveSelectedRecipients,
@@ -740,6 +741,7 @@ export function WorkspaceView({
         getInput={s.getInput}
         hasInput={s.hasInput}
         onInputChange={s.handleInputChange}
+        onRepairPastedText={recoverArmorIfNeeded}
         onClearText={clearTextUndoable}
         files={s.files}
         onFileDrop={s.handleFileDrop}

@@ -161,3 +161,65 @@ hF4Dhe4kFYYSt7ISAQdA0000000000000000000000000000000000000000000000
   await expect(panel.getByPlaceholder("Enter message password")).toHaveCount(0);
   await expect(panel.getByText("Decrypt with")).toBeVisible();
 });
+
+/** Paste `text` into the workspace box for real -- via the clipboard and
+ *  a paste keystroke, not `fill()`. The distinction is the whole point of
+ *  these tests: armor repair rides on the paste, never on typing. */
+async function pasteIntoWorkspace(
+  panel: import("@playwright/test").Page,
+  text: string,
+): Promise<void> {
+  await panel.getByRole("tab", { name: "Main" }).click();
+  const box = panel.locator("textarea").first();
+  await box.click();
+  await panel.evaluate(async (t) => {
+    await navigator.clipboard.writeText(t);
+  }, text);
+  await box.press("ControlOrMeta+v");
+}
+
+test("a message mangled into a JSON string still decrypts", async ({
+  panel,
+}) => {
+  // The end-to-end proof for `repairArmorEscapes`: unit tests assert the
+  // transform, this asserts the REAL engine accepts what it produces.
+  // Copied out of a log line or an API response, this is what arrives.
+  await onboardWithPasswordSkipKey(panel, VAULT_PASSWORD);
+  await pasteIntoWorkspace(panel, JSON.stringify({ body: GPG_SYMMETRIC_V4 }));
+
+  // The box shows the repaired armor, not what was pasted -- the repair
+  // is visible and undoable rather than hidden inside the parser.
+  await expect(panel.locator("textarea").first()).toHaveValue(
+    /-----BEGIN PGP MESSAGE-----\n/,
+  );
+
+  await panel.getByRole("button", { name: /^decrypt$/i }).click();
+  const field = panel.getByPlaceholder("Enter message password");
+  await field.fill(MESSAGE_PASSWORD);
+  await field.press("Enter");
+  await expect(panel.getByText(PLAINTEXT)).toBeVisible();
+});
+
+test("typing is never rewritten, even when it looks like mangled armor", async ({
+  panel,
+}) => {
+  // The rule: repair is for content that ARRIVES, not for content being
+  // composed. `fill()` drives the box's onChange the way typing does, so
+  // this is the typing path, and it must leave every character alone --
+  // including a complete escaped block, which the paste path WOULD
+  // repair. Someone writing about PGP gets to quote armor at it.
+  await onboardWithPasswordSkipKey(panel, VAULT_PASSWORD);
+  const typed = GPG_SYMMETRIC_V4.replaceAll("\n", "\\n");
+  await panel.getByRole("tab", { name: "Main" }).click();
+  await panel.locator("textarea").first().fill(typed);
+  await expect(panel.locator("textarea").first()).toHaveValue(typed);
+});
+
+test("pasting a code snippet is left alone", async ({ panel }) => {
+  // The safety property on the path that DOES repair: block-scoping is
+  // what keeps a backslash-n outside any BEGIN/END pair intact.
+  await onboardWithPasswordSkipKey(panel, VAULT_PASSWORD);
+  const code = 'console.log("line one\\nline two");';
+  await pasteIntoWorkspace(panel, code);
+  await expect(panel.locator("textarea").first()).toHaveValue(code);
+});

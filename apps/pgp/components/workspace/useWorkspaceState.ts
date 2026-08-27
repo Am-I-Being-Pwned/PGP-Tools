@@ -12,6 +12,7 @@ import type {
   WorkspaceDraftSource,
 } from "../../lib/workspace-draft";
 import { looksLikeAgeMessage } from "../../lib/armor-blocks";
+import { recoverArmorIfNeeded } from "../../lib/armor-recovery";
 import { looksLikePrivateKey } from "../../lib/drop-routing";
 import { resolveSelfKey } from "../../lib/encrypt-recipients";
 import { isPgpRecord, isSshRecord } from "../../lib/storage/key-kind";
@@ -198,6 +199,9 @@ export interface WorkspaceState {
   privateKeyDetected: boolean;
   setPrivateKeyDetected: (b: boolean) => void;
   handleInputChange: (text: string) => void;
+  /** Text that arrived wholesale (paste / text drop) rather than being
+   *  typed. Repairs mangled armor; `handleInputChange` never does. */
+  handleTextArrival: (text: string) => void;
   handleFileDrop: (newFiles: File[]) => void;
   removeFile: (index: number) => void;
   clearFiles: () => void;
@@ -708,6 +712,16 @@ export function useWorkspaceState(opts: {
 
   // Serves both the textarea's own onChange and programmatic writes
   // (drops, intake, the clear buttons); `setInput` handles the difference.
+  /**
+   * The box's own `onChange`: every keystroke, and nothing is repaired.
+   *
+   * DELIBERATELY NOT the repair path. This handler fires while someone
+   * is TYPING, and armor repair has no business running then -- it is
+   * for content that ARRIVES (a paste, a drop), which is the only way a
+   * mangled key or message can get here. Someone writing prose that
+   * happens to quote a `\n` deserves to be left alone, and rewriting the
+   * box mid-sentence would move their caret to do it.
+   */
   const handleInputChange = useCallback(
     (text: string) => {
       setInput(text);
@@ -716,6 +730,21 @@ export function useWorkspaceState(opts: {
       applyDetection(text);
     },
     [resetOutput, setInput, applyDetection],
+  );
+
+  /**
+   * Text that ARRIVED rather than being typed -- a paste, or a dropped
+   * text selection. This is the only path that repairs armor.
+   *
+   * Detection runs on the REPAIRED text on purpose: an escaped private
+   * key must still trip `looksLikePrivateKey`, or it reaches the draft
+   * sealer as unrecognised prose with the mask off.
+   */
+  const handleTextArrival = useCallback(
+    (text: string) => {
+      handleInputChange(recoverArmorIfNeeded(text));
+    },
+    [handleInputChange],
   );
 
   const handleFileDrop = useCallback(
@@ -765,10 +794,10 @@ export function useWorkspaceState(opts: {
     if (intake.files.length > 0) {
       handleFileDrop(intake.files);
     } else if (intake.text.trim()) {
-      handleInputChange(intake.text);
+      handleTextArrival(intake.text);
     }
     onIntakeConsumed?.();
-  }, [intake, onIntakeConsumed, handleFileDrop, handleInputChange]);
+  }, [intake, onIntakeConsumed, handleFileDrop, handleTextArrival]);
 
   return {
     mode,
@@ -846,6 +875,7 @@ export function useWorkspaceState(opts: {
     privateKeyDetected,
     setPrivateKeyDetected,
     handleInputChange,
+    handleTextArrival,
     handleFileDrop,
     removeFile,
     clearFiles,

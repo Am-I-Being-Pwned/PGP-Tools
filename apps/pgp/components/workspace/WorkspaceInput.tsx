@@ -58,6 +58,10 @@ interface WorkspaceInputProps {
   operationDone: boolean;
   onReset: () => void;
   onResetOutput: () => void;
+  /** Repair mangled armor in text that ARRIVED (a paste). Returns the
+   *  input unchanged when there is nothing to fix, which is the signal
+   *  this component uses to leave the browser's own paste alone. */
+  onRepairPastedText: (text: string) => string;
 }
 
 export function WorkspaceInput({
@@ -81,6 +85,7 @@ export function WorkspaceInput({
   operationDone,
   onReset,
   onResetOutput,
+  onRepairPastedText,
 }: WorkspaceInputProps) {
   // Per-detection mask override. Re-arms whenever a fresh private-key
   // paste is detected so the user can't accidentally leave the mask off
@@ -164,6 +169,36 @@ export function WorkspaceInput({
           aria-label="Message input"
           ref={attachInput}
           onChange={(e) => onInputChange(e.target.value)}
+          onPaste={(e) => {
+            // The ONE place workspace armor repair happens. A paste is
+            // the only way mangled armor reaches this box -- nobody
+            // hand-types a `\n`-escaped key -- so the repair rides on
+            // the paste rather than on `onChange`, which also fires for
+            // every keystroke of someone composing a message.
+            //
+            // Only intercepts when the text actually changed. Otherwise
+            // it falls through to the browser's own paste, which knows
+            // how to handle undo, IME and multi-range selections better
+            // than this handler could.
+            const pasted = e.clipboardData.getData("text/plain");
+            const repaired = onRepairPastedText(pasted);
+            if (repaired === pasted) return;
+            e.preventDefault();
+            // Splice at the caret rather than replacing the box: a paste
+            // into a selection replaces that selection, and a paste with
+            // the caret mid-text inserts there. Clobbering the whole
+            // value would silently discard whatever else was staged.
+            const el = e.currentTarget;
+            // Non-null on a textarea (the `?? length` fallback the DOM
+            // types once needed is gone), so read them straight.
+            const { selectionStart: start, selectionEnd: end } = el;
+            const next =
+              el.value.slice(0, start) + repaired + el.value.slice(end);
+            el.value = next;
+            const caret = start + repaired.length;
+            el.setSelectionRange(caret, caret);
+            onInputChange(next);
+          }}
           className="border-border bg-background placeholder:text-muted-foreground focus:ring-ring min-h-20 w-full flex-1 resize-none rounded-md border p-3 text-sm focus:ring-2 focus:outline-none"
           // Visually mask armored private-key material. NOTE: this is
           // shoulder-surfing protection only; the string still lives in
