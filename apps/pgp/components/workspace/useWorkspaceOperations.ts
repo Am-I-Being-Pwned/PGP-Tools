@@ -1,7 +1,13 @@
 import { useEffect } from "react";
 
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
-import type { EncryptInput, SignatureStatus } from "../../lib/pgp/types";
+import type { PresentedError } from "../../lib/errors/present";
+import type {
+  DecryptOptions,
+  DecryptResult,
+  EncryptInput,
+  SignatureStatus,
+} from "../../lib/pgp/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { NewHistoryEntry } from "../../lib/storage/history";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
@@ -100,7 +106,12 @@ export function useWorkspaceOperations({
   useEffect(() => {
     if (s.mode !== "decrypt") return;
     const hasContent = s.files.length > 0 || s.hasTrimmedInput;
-    if (!hasContent || myKeys.length === 0) return;
+    // NOT gated on `myKeys.length` any more. A password-encrypted message
+    // is readable with no keys at all, and the scan below is what tells
+    // the UI to stop offering a key picker for one -- so returning early
+    // on an empty keyring would leave the user staring at "No keys yet"
+    // for a message that never wanted a key.
+    if (!hasContent) return;
 
     // Object guard (not a bare `let`) so a stale async run can't clobber a
     // newer selection after the effect re-runs.
@@ -131,13 +142,22 @@ export function useWorkspaceOperations({
           return;
         }
 
-        const input =
-          s.files.length > 0
-            ? {
-                kind: "binary" as const,
-                binaryMessage: new Uint8Array(await s.files[0].arrayBuffer()),
-              }
-            : { kind: "armored" as const, armoredMessage: s.getInput() };
+        const input = await stagedPgpInput();
+
+        // How this message can be opened, for the UI: a password-only
+        // message gets no key picker (a picker whose every choice is
+        // wrong is worse than none), and the prompt asks for the right
+        // thing. `executeDecrypt` re-derives this rather than reading it
+        // back, because a paste followed straight by a click would race
+        // this effect.
+        const encryption = await pgpOps.messageEncryption(input);
+        // Guarded, not early-returned: an early return here narrows
+        // `run.cancelled` to `false` for the rest of the closure, and the
+        // match guard below would then be flagged as always-true even
+        // though the await between them is exactly when it flips.
+        if (!run.cancelled) s.setMessageEncryption(encryption);
+
+        if (myKeys.length === 0) return;
         const match = await pgpOps.selectDecryptionKey(
           input,
           myKeys.map((k) => k.publicKeyArmored),
@@ -607,7 +627,74 @@ export function useWorkspaceOperations({
     }
   }
 
+  /** The staged message, in the shape the PGP ops take. */
+  async function stagedPgpInput(): Promise<DecryptOptions["input"]> {
+    return s.files.length > 0
+      ? {
+          kind: "binary",
+          binaryMessage: new Uint8Array(await s.files[0].arrayBuffer()),
+        }
+      : { kind: "armored", armoredMessage: s.getInput() };
+  }
+
+  /**
+   * Decide how this message wants to be opened, then open it.
+   *
+   * THE KEY WINS WHEN ONE OF THE USER'S KEYS ACTUALLY MATCHES. A message
+   * can carry both a password packet (SKESK) and recipient packets
+   * (PKESK); asking which to use would put a question in front of a case
+   * where the answer is obvious, and the key path is also the one that
+   * verifies the signature against a recipient we know. The password is
+   * the FALLBACK -- taken when the message offers one and no key of ours
+   * is named by it, which is the whole `gpg -c` case.
+   *
+   * Detection happens here rather than being read off the effect's state
+   * on purpose: that effect is async and a paste followed immediately by
+   * a click would race it. It is a scan of the packet headers in front of
+   * the encrypted container -- cheap enough to redo, and correctness is
+   * not worth trading for it.
+   */
   async function executeDecrypt() {
+    if (s.inputIsAge) {
+      // age has no password mode at all; it needs an SSH identity.
+      if (!s.selectedKeyId) {
+        s.setError({ message: "Select a decryption key." });
+        return;
+      }
+      const ageHandle = await ensureUnlocked(s.selectedKeyId);
+      if (ageHandle === null) return;
+      await executeDecryptAge(ageHandle);
+      return;
+    }
+
+    const input = await stagedPgpInput();
+    // A failure here means the input is not a message we can even read
+    // the headers of. Fall through to the key path, whose errors already
+    // say so properly.
+    const encryption = await pgpOps.messageEncryption(input).catch(() => null);
+
+    if (encryption?.password) {
+      const keyMatch = encryption.publicKey
+        ? await pgpOps
+            .selectDecryptionKey(
+              input,
+              myKeys.map((k) => k.publicKeyArmored),
+            )
+            .catch(() => null)
+        : null;
+      if (!keyMatch) {
+        // Ask for the MESSAGE password. Same inline row the key-unlock
+        // prompt uses -- one password affordance in this workspace, not
+        // two that look alike and mean different things; the placeholder
+        // is what says which is being asked for.
+        s.setPendingPasswordDecrypt(true);
+        s.setNeedsPassword(true);
+        s.setPasswordInput("");
+        s.setPasswordError(null);
+        return;
+      }
+    }
+
     if (!s.selectedKeyId) {
       s.setError({ message: "Select a decryption key." });
       return;
@@ -615,16 +702,38 @@ export function useWorkspaceOperations({
     const keyHandle = await ensureUnlocked(s.selectedKeyId);
     if (keyHandle === null) return;
 
-    if (s.inputIsAge) {
-      await executeDecryptAge(keyHandle);
-      return;
-    }
+    const failure = await runPgpDecrypt((one) =>
+      pgpOps.decryptWithHandle({
+        input: one,
+        keyHandle,
+        verificationPublicKeys: pgpVerificationKeys(),
+      }),
+    );
+    if (failure) s.setError(failure);
+  }
 
-    const allPubArmored = [
+  /** Every public key a signature could be checked against. */
+  function pgpVerificationKeys(): string[] {
+    return [
       ...myKeys.map((k) => k.publicKeyArmored),
       ...contacts.map((c) => c.armoredPublicKey),
     ];
+  }
 
+  /**
+   * Run a PGP decrypt and render everything that follows from it.
+   *
+   * `decryptOne` is the ONLY difference between opening the message with
+   * a key and opening it with a password: same multi-file loop, same
+   * text/binary sniffing, same signature handling, same auto-download,
+   * same failure teardown. Passing the call in rather than duplicating
+   * the body is what stops the password path quietly drifting -- and it
+   * would drift silently, because everything below this line is the part
+   * a user notices and none of it is engine-specific.
+   */
+  async function runPgpDecrypt(
+    decryptOne: (input: DecryptOptions["input"]) => Promise<DecryptResult>,
+  ): Promise<PresentedError | null> {
     const handleSig = (result: {
       signatureStatus: SignatureStatus;
       signerKeyId: string | null;
@@ -671,10 +780,9 @@ export function useWorkspaceOperations({
         const results: FileResult[] = [];
         for (const file of s.files) {
           const bytes = new Uint8Array(await file.arrayBuffer());
-          const result = await pgpOps.decryptWithHandle({
-            input: { kind: "binary", binaryMessage: bytes },
-            keyHandle,
-            verificationPublicKeys: allPubArmored,
+          const result = await decryptOne({
+            kind: "binary",
+            binaryMessage: bytes,
           });
           const data =
             result.data instanceof Uint8Array
@@ -694,10 +802,9 @@ export function useWorkspaceOperations({
         maybeAutoDownload(true, { results });
       } else if (isFileInput) {
         const bytes = new Uint8Array(await s.files[0].arrayBuffer());
-        const result = await pgpOps.decryptWithHandle({
-          input: { kind: "binary", binaryMessage: bytes },
-          keyHandle,
-          verificationPublicKeys: allPubArmored,
+        const result = await decryptOne({
+          kind: "binary",
+          binaryMessage: bytes,
         });
         if (result.data instanceof Uint8Array) {
           if (isZipArchive(result.data)) {
@@ -723,10 +830,9 @@ export function useWorkspaceOperations({
           binary: result.data instanceof Uint8Array ? result.data : undefined,
         });
       } else {
-        const result = await pgpOps.decryptWithHandle({
-          input: { kind: "armored", armoredMessage: s.getInput() },
-          keyHandle,
-          verificationPublicKeys: allPubArmored,
+        const result = await decryptOne({
+          kind: "armored",
+          armoredMessage: s.getInput(),
         });
         if (typeof result.data === "string") {
           s.setOutput(result.data);
@@ -744,6 +850,7 @@ export function useWorkspaceOperations({
       // it's someone else's message) a decrypt row is just "decrypt,
       // <time>", which answers nothing. History records what YOU
       // produced (encrypt/sign), not what you read.
+      return null;
     } catch (err) {
       // Never leave decrypted plaintext on screen when the operation
       // errored. The single-input branches set the output *before*
@@ -759,11 +866,14 @@ export function useWorkspaceOperations({
       // corrupted data, tampered signature, ...) into curated copy instead
       // of a one-size-fits-all message; the raw error rides along as the
       // collapsed technical detail, so failures stay diagnosable.
-      s.setError(
-        presentError(
-          err,
-          "Decryption failed. The message may be corrupted, or it isn't encrypted to any of your keys.",
-        ),
+      //
+      // RETURNED, not set: where a failure belongs depends on how the
+      // message was being opened. The key path puts it in the page-level
+      // error slot; the password path puts it under the prompt, which
+      // stays up so the user can just retype.
+      return presentError(
+        err,
+        "Decryption failed. The message may be corrupted, or it isn't encrypted to any of your keys.",
       );
     }
   }
@@ -816,10 +926,7 @@ export function useWorkspaceOperations({
   }
 
   async function executeVerify() {
-    const allPubArmored = [
-      ...myKeys.map((k) => k.publicKeyArmored),
-      ...contacts.map((c) => c.armoredPublicKey),
-    ];
+    const allPubArmored = pgpVerificationKeys();
 
     try {
       const messageText =
@@ -987,7 +1094,49 @@ export function useWorkspaceOperations({
     }
   }
 
+  /**
+   * Open the staged message with the password just typed.
+   *
+   * The failure case is the interesting one. A wrong password is not
+   * reliably detectable where the password is used -- a v4 SKESK unwraps
+   * the session key with no integrity check, so a wrong one fails much
+   * later as an MDC mismatch. The engine folds both into one message, and
+   * this keeps the prompt UP rather than tearing it down and showing a
+   * page-level error: the user's next action is to retype the password,
+   * and it should be waiting where they left it.
+   */
+  const runPasswordDecrypt = async (password: string) => {
+    s.setLoading(true);
+    s.setPasswordError(null);
+    try {
+      const failure = await runPgpDecrypt((one) =>
+        pgpOps.decryptWithPassword({
+          input: one,
+          password,
+          verificationPublicKeys: pgpVerificationKeys(),
+        }),
+      );
+      if (failure) {
+        // Inline, under the field, with the prompt still up. The
+        // detail line has nowhere to go here -- the prompt is one row --
+        // so only the curated sentence is shown, the same compromise the
+        // key-unlock branch below makes.
+        s.setPasswordError(failure.message);
+        return;
+      }
+      s.setPendingPasswordDecrypt(false);
+      s.setNeedsPassword(false);
+      s.setPasswordInput("");
+    } finally {
+      s.setLoading(false);
+    }
+  };
+
   const handlePasswordSubmit = async () => {
+    if (s.pendingPasswordDecrypt) {
+      await runPasswordDecrypt(s.passwordInput);
+      return;
+    }
     if (s.pendingCrxSign) {
       const crxKey = pickCrxKey();
       if (!crxKey) return;

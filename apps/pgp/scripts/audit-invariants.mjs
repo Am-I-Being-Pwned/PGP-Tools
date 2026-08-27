@@ -718,6 +718,12 @@ const SECRET_WASM_EXPORTS = [
   "unlockSshIdentityWith",
   "decryptAgeWithHandle",
   "dropSshIdentity",
+  // Symmetric (password) message decryption. On this list because of the
+  // PASSWORD PARAM, not because of the plaintext it returns -- the
+  // plaintext is user data and crosses by design, exactly as
+  // `decryptWithHandle`'s does, which is why that one is NOT listed.
+  // Note it is the one export here that touches no key material at all.
+  "decryptWithPassword",
 ];
 // EXEMPTION: the boundary module itself is *supposed* to make these calls.
 const SECRETS_BOUNDARY = "apps/pgp/lib/pgp/wasm-secrets.ts";

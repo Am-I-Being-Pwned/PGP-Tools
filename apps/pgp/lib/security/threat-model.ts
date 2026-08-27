@@ -141,7 +141,7 @@ export const THREAT_MODEL: Threat[] = [
     attacker:
       "Anyone who can read WASM linear memory after an unlock completes -- the same capability assumed by T-HEAP-SCRAPE and the OS-level threats in §8.1.",
     defence:
-      "FIXED. `unlock_with_password`, `unlock_with_prf` and `init_contacts_session_with_prf` now take their secret params as owned `Vec<u8>` and wrap them in `Zeroizing` on entry, matching the four generate/protect fns. Owning the wasm-bindgen marshalled copy is what makes it scrubbable.",
+      "FIXED. `unlock_with_password`, `unlock_with_prf` and `init_contacts_session_with_prf` now take their secret params as owned `Vec<u8>` and wrap them in `Zeroizing` on entry, matching the four generate/protect fns -- and `decrypt_with_password`, added later for symmetric message decryption, was written that way from the start rather than added to an exemption list. Owning the wasm-bindgen marshalled copy is what makes it scrubbable.",
     status: "partial",
     rationale:
       "Previously these three took `&[u8]` and scrubbed only the derived AES key, leaving the raw password / PRF bytes in a freed allocation on the app's three most exercised secret entry points. Now deterministic rather than dependent on allocator reuse. Kept at `partial` rather than `defended` for an honest residual: §8.4 still applies to any inner copy wasm-bindgen makes before our binding sees the value, which we never get an address for. Also worth recording that e2e/memory.spec.ts passed while the borrowed-param gap was live, so that test was never the thing establishing this guarantee and a pass there should not be read as proof of deliberate zeroization. Enforced going forward by the owned-secret-params-zeroized invariant, which fails the build on a borrowed secret param.",
@@ -304,6 +304,34 @@ export const THREAT_MODEL: Threat[] = [
       "apps/pgp/lib/keyserver/fetch-key.test.ts",
     ],
     section: "§7, §13",
+  },
+  {
+    id: "T-SYMMETRIC-MESSAGE-PASSWORD",
+    title: "A password-decrypted message is only as good as the password",
+    attacker:
+      "Anyone who obtains the password to a `gpg --symmetric` message: it travels out of band (a chat, an email, a phone call) and this app never sees how. Also anyone who can offline-attack the message itself, which is a file the recipient may keep forever.",
+    defence:
+      "None this app can offer, and none it pretends to. Symmetric decryption is READ-ONLY here: the app opens such a message when the user supplies the password, and it cannot produce one, so it never chooses an S2K cost, a cipher, or a password policy on anyone's behalf.",
+    status: "accepted",
+    rationale:
+      "Recorded because the feature reads like key-based decryption in the UI -- same workspace, same prompt row, same result pane -- and is a categorically weaker thing. WHAT IT IS NOT: there is no identity, no key, and no forward secrecy. A public-key message is readable by the holder of a private key that never travelled; a symmetric message is readable by anyone holding a shared secret that necessarily did travel, over a channel this app has no view of. Whoever the sender gave the password to, and whoever intercepted it in transit, can read the message -- and can read it again later, from a copy of the ciphertext, because nothing about the message expires. THE STRENGTH IS THE SENDER'S CHOICE ENTIRELY: GnuPG's S2K iteration count is the only work factor between a captured message and an offline dictionary attack, and it is baked into the ciphertext by whoever ran `gpg -c`. This app reads that parameter; it does not and cannot raise it. WHY DECRYPT-ONLY IS THE RIGHT SHAPE and not a half-finished feature: reading a message someone sent you is a fact you cannot change, so refusing to read it helps nobody. Offering to CREATE one would mean this app recommending a mode of operation with the properties above, and choosing its parameters -- a different decision, deliberately not taken. A SIGNATURE IS STILL WORTH SOMETHING: a symmetric message can be signed, and the signature is checked on this path exactly as on the key path, so `signatureStatus: valid` against a known signer means the same thing here as anywhere. That is the one authenticity claim available, and it comes from the signature, never from the password.",
+    section: "§7, §2",
+  },
+  {
+    id: "T-SYMMETRIC-UNREADABLE-FORMAT",
+    title: "An unreadable AEAD message must not be reported as a bad password",
+    attacker:
+      "Not an attacker: a correctness and honesty failure. GnuPG's `--force-ocb` writes the pre-RFC-9580 AED packet, which Sequoia's policy rejects.",
+    defence:
+      "The container tag is checked BEFORE the password is used, and an AED message returns its own error naming the format. `presentError` renders it with no retry remedy.",
+    status: "defended",
+    rationale:
+      "Worth an entry because the failure it prevents is a loop with no exit. Folded into the wrong-password wording -- which is where it landed before the check existed, since the policy rejection surfaces from inside the decryptor like any other parse error -- a user with a perfectly correct password is told to check their password. No password will ever open that message, so they retype it, get the same sentence, and have no way to learn that the format is the problem. The detector also had to be fixed to see these messages at all: Sequoia yields `Packet::Unknown` for a packet VERSION it does not implement while still reporting the tag, so matching the parsed `Packet::SKESK` variant reported a `--force-ocb` message as having no password and sent the UI off to ask for a key. Matching the TAG describes the message; matching the variant described our parser. NOT CLAIMED: that the format is supported. It is not, and the honest error is the whole of the fix.",
+    verifiedBy: [
+      "apps/pgp/gpg-wasm/src/tests.rs",
+      "apps/pgp/lib/errors/present.test.ts",
+    ],
+    section: "§7",
   },
   {
     id: "T-PENDING-OP-AT-REST",

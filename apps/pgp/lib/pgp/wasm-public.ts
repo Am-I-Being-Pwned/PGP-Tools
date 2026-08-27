@@ -169,19 +169,19 @@ export interface DecryptWithHandleResult {
   signatureInfo: SignatureInfo;
 }
 
-export async function decryptWithHandle(
-  ciphertext: Uint8Array,
-  keyHandle: number,
-  verificationPublicKeys?: string[],
-): Promise<DecryptWithHandleResult> {
-  const wasm = await loadWasm();
-  const packed = wasm.decryptWithHandle(
-    ciphertext,
-    keyHandle,
-    verificationPublicKeys ? JSON.stringify(verificationPublicKeys) : null,
-  );
-
-  // Unpack: [4 bytes sig_json length (LE u32)][sig_json][plaintext]
+/**
+ * Unpack `[4 bytes sig_json length (LE u32)][sig_json][plaintext]`.
+ *
+ * ONE COPY, TWO CALLERS -- `decryptWithHandle` here and
+ * `decryptWithPassword` in `wasm-secrets.ts`. The Rust side packs it in
+ * one function (`pack_decrypt_result`) for the same reason: the packing
+ * is what makes signature status and plaintext arrive ATOMICALLY, and
+ * two hand-rolled readers of that layout are two chances to disagree
+ * with the writer.
+ */
+export function unpackDecryptResult(
+  packed: Uint8Array,
+): DecryptWithHandleResult {
   const view = new DataView(
     packed.buffer,
     packed.byteOffset,
@@ -193,6 +193,20 @@ export async function decryptWithHandle(
   const signatureInfo = JSON.parse(sigJson) as SignatureInfo;
 
   return { plaintext, signatureInfo };
+}
+
+export async function decryptWithHandle(
+  ciphertext: Uint8Array,
+  keyHandle: number,
+  verificationPublicKeys?: string[],
+): Promise<DecryptWithHandleResult> {
+  const wasm = await loadWasm();
+  const packed = wasm.decryptWithHandle(
+    ciphertext,
+    keyHandle,
+    verificationPublicKeys ? JSON.stringify(verificationPublicKeys) : null,
+  );
+  return unpackDecryptResult(packed);
 }
 
 export async function signWithHandle(
@@ -219,6 +233,33 @@ export async function selectDecryptionKey(
     JSON.stringify(candidatePublicKeys),
   );
   return JSON.parse(json) as string | null;
+}
+
+/** Which kinds of session-key packet a message carries. Both can be
+ *  true: a message may be encrypted to a password AND to recipients. */
+export interface MessageEncryption {
+  /** An SKESK is present -- the message can be opened with a password. */
+  password: boolean;
+  /** A PKESK is present -- the message can be opened with a private key. */
+  publicKey: boolean;
+}
+
+/**
+ * Read the session-key packets in front of the encrypted container and
+ * report which kinds are there. Shape only: it cannot say whether any
+ * particular password or key will actually work, and it needs neither to
+ * answer.
+ *
+ * This is what lets the UI ask for the right thing. Without it a
+ * `gpg --symmetric` message goes down the key path and comes back "no
+ * suitable decryption key found" -- true, and useless, because the
+ * message never wanted a key.
+ */
+export async function messageEncryption(
+  ciphertext: Uint8Array,
+): Promise<MessageEncryption> {
+  const wasm = await loadWasm();
+  return JSON.parse(wasm.messageEncryption(ciphertext)) as MessageEncryption;
 }
 
 /** Mint an armored revocation certificate for an unlocked key --
@@ -277,7 +318,11 @@ export async function encryptAgeToRecipients(
   armor: boolean,
 ): Promise<Uint8Array> {
   const wasm = await loadWasm();
-  return wasm.encryptAgeToRecipients(plaintext, JSON.stringify(recipients), armor);
+  return wasm.encryptAgeToRecipients(
+    plaintext,
+    JSON.stringify(recipients),
+    armor,
+  );
 }
 
 /**
@@ -320,8 +365,7 @@ export async function sshPrivateKeyFormatRejection(
 ): Promise<string | null> {
   const wasm = await loadWasm();
   return JSON.parse(wasm.sshPrivateKeyFormatRejection(keyFile)) as
-    | string
-    | null;
+    string | null;
 }
 
 /**

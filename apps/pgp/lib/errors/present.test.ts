@@ -109,7 +109,10 @@ describe("presentError", () => {
   });
 
   it("omits the key ID when the error has none", () => {
-    const presented = presentError("No suitable decryption key found", FALLBACK);
+    const presented = presentError(
+      "No suitable decryption key found",
+      FALLBACK,
+    );
     expect(presented.message).not.toMatch(/key ID/);
   });
 
@@ -123,7 +126,10 @@ describe("presentError", () => {
 
   describe("WebAuthn", () => {
     it("treats NotAllowedError as a user cancel, not a failure", () => {
-      const e = new DOMException("The operation was aborted", "NotAllowedError");
+      const e = new DOMException(
+        "The operation was aborted",
+        "NotAllowedError",
+      );
       const presented = presentError(e, FALLBACK);
       expect(presented.message).toMatch(/dismissed/i);
       expect(presented.remedy?.action).toBe("retry");
@@ -213,5 +219,36 @@ describe("presentError", () => {
       message: FALLBACK,
       detail: undefined,
     });
+  });
+});
+
+describe("symmetric (password) decryption", () => {
+  it("tells the user their password didn't work, not that the data is corrupt", () => {
+    // THE ORDERING TEST. The engine's string carries the underlying
+    // Sequoia error along with it, and for a v4 message that error is an
+    // MDC failure -- which the corrupt/malformed rule matches. If that
+    // rule wins, a user with a mistyped password is told to go and get a
+    // fresh copy of a message that was never damaged.
+    const raw =
+      "Wrong password, or this message is damaged: Malformed MDC packet";
+    const p = presentError(raw, FALLBACK);
+    expect(p.message).toContain("That password didn't open this message");
+    expect(p.message).not.toContain("corrupted");
+    expect(p.detail).toBe(raw);
+    expect(p.remedy?.action).toBe("retry");
+  });
+
+  it("does not blame the password for a format it cannot read", () => {
+    // No password opens an OCB message here, so "check it and try again"
+    // is advice that leads nowhere. This must NOT fall into the rule
+    // above.
+    const raw =
+      "This message uses the older AEAD (OCB) encrypted-data format, which this app cannot read. Ask the sender to re-encrypt it without --force-ocb.";
+    const p = presentError(raw, FALLBACK);
+    expect(p.message).toContain("older AEAD (OCB) format");
+    expect(p.message).not.toContain("Check it and try again");
+    // Nothing to retry: the remedy slot stays empty rather than offering
+    // an action that cannot help.
+    expect(p.remedy).toBeUndefined();
   });
 });

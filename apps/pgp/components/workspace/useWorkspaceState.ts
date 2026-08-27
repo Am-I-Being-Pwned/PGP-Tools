@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
 import type { PresentedError } from "../../lib/errors/present";
 import type { WorkspaceAction } from "../../lib/messages";
+import type { MessageEncryption } from "../../lib/pgp/wasm-public";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { FileResult } from "../../lib/utils/download";
@@ -175,6 +176,18 @@ export interface WorkspaceState {
   zipFiles: boolean;
   setZipFiles: (b: boolean) => void;
   needsPassword: boolean;
+  /** The password prompt is asking for the MESSAGE's password (a
+   *  `gpg --symmetric` message), not for a key's. Same row, same field,
+   *  different question -- and different code on submit, so the two must
+   *  not be confusable by anything downstream. */
+  pendingPasswordDecrypt: boolean;
+  setPendingPasswordDecrypt: (v: boolean) => void;
+  /** What the staged message says about how it can be opened, or null
+   *  before the async scan has answered (or for input that is not a
+   *  readable message). Purely for the UI -- `executeDecrypt` re-derives
+   *  it rather than racing this. */
+  messageEncryption: MessageEncryption | null;
+  setMessageEncryption: (v: MessageEncryption | null) => void;
   setNeedsPassword: (b: boolean) => void;
   passwordInput: string;
   setPasswordInput: (s: string) => void;
@@ -394,6 +407,9 @@ export function useWorkspaceState(opts: {
   const [saveToHistory, setSaveToHistory] = useState(false);
   const [zipFiles, setZipFiles] = useState(true);
   const [needsPassword, setNeedsPassword] = useState(false);
+  const [pendingPasswordDecrypt, setPendingPasswordDecrypt] = useState(false);
+  const [messageEncryption, setMessageEncryption] =
+    useState<MessageEncryption | null>(null);
   const [passwordInput, setPasswordInput] = useState("");
   const [passwordError, setPasswordError] = useState<string | null>(null);
   // Which engine the staged input is in, as a BOOLEAN derived from the
@@ -417,6 +433,7 @@ export function useWorkspaceState(opts: {
     setVerifiedSigner(null);
     setSignatureTone("success");
     setNeedsPassword(false);
+    setPendingPasswordDecrypt(false);
     setPendingCrxSign(false);
   }, [setOutput, setBinaryOutput, setFileResults]);
 
@@ -426,6 +443,7 @@ export function useWorkspaceState(opts: {
     setPublicKeyDetected(false);
     setPrivateKeyDetected(false);
     setInputIsAgeText(false);
+    setMessageEncryption(null);
     resetOutput();
   }, [resetOutput, setInput]);
 
@@ -437,6 +455,10 @@ export function useWorkspaceState(opts: {
     setPublicKeyDetected(false);
     setPrivateKeyDetected(false);
     setInputIsAgeText(looksLikeAgeMessage(text));
+    // Stale the moment the text changes: keeping the previous message's
+    // answer would hide the key picker for a message that needs one (or
+    // show it for one that does not) until the async scan catches up.
+    setMessageEncryption(null);
     if (looksLikePrivateKey(text)) {
       // Flag first; the draft snapshot is refused while this is true so the
       // armor never reaches the encrypted draft blob. Covers every armored
@@ -711,6 +733,12 @@ export function useWorkspaceState(opts: {
         }
         return current;
       });
+      // Cleared wherever the STAGED MESSAGE changes -- here, in
+      // `applyDetection` for text, and in `resetAll` -- but deliberately
+      // NOT in `resetOutput`, which also runs at the START of an
+      // operation: clearing it there would bring the key picker back
+      // while the password prompt for this very message is still up.
+      setMessageEncryption(null);
       resetOutput();
     },
     [resetOutput, setInput],
@@ -718,11 +746,13 @@ export function useWorkspaceState(opts: {
 
   const removeFile = useCallback((index: number) => {
     setFiles((prev) => prev.filter((_, i) => i !== index));
+    setMessageEncryption(null);
   }, []);
 
   const clearFiles = useCallback(() => {
     setFiles([]);
     setInput("");
+    setMessageEncryption(null);
     resetOutput();
   }, [resetOutput, setInput]);
 
@@ -802,6 +832,10 @@ export function useWorkspaceState(opts: {
     zipFiles,
     setZipFiles,
     needsPassword,
+    pendingPasswordDecrypt,
+    setPendingPasswordDecrypt,
+    messageEncryption,
+    setMessageEncryption,
     setNeedsPassword,
     passwordInput,
     setPasswordInput,

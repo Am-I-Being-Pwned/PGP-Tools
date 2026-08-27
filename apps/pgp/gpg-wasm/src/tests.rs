@@ -1308,3 +1308,214 @@ fn test_argon2_derive_owned_matches_borrowed_helper() {
     // Input validation must survive the split.
     assert!(argon2_derive_owned(password.to_vec(), b"short", 4096, 3, 1).is_err());
 }
+
+// =====================================================================
+// Symmetric (password) decryption -- `gpg --symmetric` / `gpg -c`
+// =====================================================================
+//
+// CROSS-TOOL COMPATIBILITY IS THE ONLY SPECIFICATION HERE, the same
+// position `age.rs` takes: these vectors were produced by the real GnuPG
+// CLI (2.5.21) rather than by our own encryptor, because a round-trip
+// against ourselves would pass just as happily if we had implemented the
+// format wrong in a self-consistent way. Symmetric encryption is the one
+// PGP operation this app CANNOT produce (decrypt-only by design), so
+// without pinned foreign vectors there is nothing to test against at all.
+//
+// All three decrypt to `SYMMETRIC_PLAINTEXT` under `symmetric_password()`.
+// The password is in the clear on purpose: it guards nothing, and a
+// reader has to be able to see that the fixture is a fixture.
+
+/// Owned per call: the export takes `Vec<u8>` so it can `Zeroizing`-wrap
+/// it, which means each test hands over its own copy.
+fn symmetric_password() -> Vec<u8> {
+    b"correct horse battery staple".to_vec()
+}
+const SYMMETRIC_PLAINTEXT: &[u8] = b"the password is the key";
+
+/// `gpg -c --rfc4880`: v4 SKESK, AES-256-CFB, MDC. What most tools in the
+/// wild still emit, and the case where a WRONG password is not detected
+/// at the SKESK at all -- it fails later, as an MDC mismatch.
+const GPG_SYMMETRIC_V4: &str = "-----BEGIN PGP MESSAGE-----\n\n\
+jA0ECQMIgYlslpAs65D/0lEB7S0K0+CFdt0IhAB8VpcBcK/6SkSMUGzegcLuFyBj\n\
+KAFUrRe5nBt9CNXSIRuIDsj+k2V4YT+ZnsBO4kx2F3RFv3sKEN8v1cKMq86Qif+p\n\
+wjg=\n\
+=AEHv\n\
+-----END PGP MESSAGE-----\n";
+
+/// `gpg -c --force-ocb`: AEAD. The modern path, where a wrong password
+/// DOES fail at the session-key unwrap. Both ends must produce the same
+/// user-facing answer, which is why both are pinned.
+const GPG_SYMMETRIC_OCB: &str = "-----BEGIN PGP MESSAGE-----\n\n\
+jE0FCQIDCFDkvEpE6tIy/xwgVAOzARqn7B1V/V0igvN9GNaewd51FLEE94tolfSs\n\
+tDn7/sE05fHil10ZCdhTAnGx7bVB6yGRd7UX5yttXNRbAQkCEFu+HvJvMd14ux7U\n\
+BAvbQR/CoZcWMx90z36ymHrm5LUALjtjcYkd3M0qyXdT2V1xx22/z/fY7vH/vASM\n\
+ZEoKujuEOCe/thf7tS6NbpbbXH2lOPGdUySXjA==\n\
+=u+/p\n\
+-----END PGP MESSAGE-----\n";
+
+/// `gpg -c --sign`: symmetric AND signed. A password-encrypted message
+/// can carry a signature, so the password path must run the same
+/// signature classification the key path does -- and must NOT report
+/// "unsigned" for this one.
+const GPG_SYMMETRIC_SIGNED: &str = "-----BEGIN PGP MESSAGE-----\n\n\
+jA0ECQMIGI2S2lO8Ow//0sA6AZNUChy/HdmSVtZ1OomQSmWGl4iQkkxbBNgAE/Gs\n\
+85JsksQ735CORnLNEZsgxQDcwPGSkZGEaeexL5H9ShMxBOqNBvfkX1AI80b04oz9\n\
+A5rY4+cULCTlVRtCNvEQxBjxev308EIiUgwfsuixT3KW3/EgQIid62q4sSFMwuWu\n\
+WiBxZq2I/AWd5FGNMs589tVMeRTdfaIEg5i79MoovtNILe+ZdDnGeThg890vZUIo\n\
+wmk8j9C8z6U/hZzCmdF5zUX2I0RLhhF7sB/Xbp085L7ZRGiK6EFkelNIpPkaVB+e\n\
+C3K0w4Vhhii7ewxRfBHAJDjD+C88gOP6D71FRA==\n\
+=mTY0\n\
+-----END PGP MESSAGE-----\n";
+
+/// The signer of `GPG_SYMMETRIC_SIGNED`, so the signature has something
+/// to verify against. A public half only.
+const GPG_SYMMETRIC_SIGNER: &str = "-----BEGIN PGP PUBLIC KEY BLOCK-----\n\n\
+mDMEapBj+RYJKwYBBAHaRw8BAQdADK/m+TiE39BTvOnrevM5ZRBr5FLywpXfnvNa\n\
+LGXZjSW0HFN5bSBUZXN0ZXIgPHN5bUBleGFtcGxlLmNvbT6ItQQTFgoAXRYhBPh3\n\
+rp5NlKEkUyjYtVaANUzeCGrsBQJqkGP5GxSAAAAAAAQADm1hbnUyLDIuNSsxLjEy\n\
+LDAsMwIbAwUJBaOagAULCQgHAgIiAgYVCgkICwIEFgIDAQIeBwIXgAAKCRBWgDVM\n\
+3ghq7NNnAP4xvjE6iWb4K4T0+2fc9Htrktm6AJ822zkVQpfuInMizQD/ZfvFjcyH\n\
+q5wr07KTsVKIOf8NZ9563BA2VmWN/bKk8Ao=\n\
+=6IJK\n\
+-----END PGP PUBLIC KEY BLOCK-----\n";
+
+/// Unpack the shared `[len][sig_json][plaintext]` return.
+fn unpack(packed: &[u8]) -> (Vec<u8>, serde_json::Value) {
+    let sig_len = u32::from_le_bytes([packed[0], packed[1], packed[2], packed[3]]) as usize;
+    let sig: serde_json::Value =
+        serde_json::from_str(std::str::from_utf8(&packed[4..4 + sig_len]).unwrap()).unwrap();
+    (packed[4 + sig_len..].to_vec(), sig)
+}
+
+#[test]
+fn test_decrypt_password_gpg_v4() {
+    let packed =
+        decrypt_with_password(GPG_SYMMETRIC_V4.as_bytes(), symmetric_password(), None).unwrap();
+    let (plaintext, sig) = unpack(&packed);
+    assert_eq!(plaintext, SYMMETRIC_PLAINTEXT);
+    assert_eq!(sig["signatureStatus"], "unsigned");
+}
+
+#[test]
+fn test_decrypt_password_names_the_unreadable_aead_format() {
+    // `gpg -c --force-ocb` writes the pre-RFC-9580 AED packet, which
+    // Sequoia's policy rejects. NOT READABLE, and the message must say
+    // so: folded into the wrong-password wording it would send a user
+    // with a perfectly good password off to check their password, and no
+    // password will ever open this.
+    //
+    // The RIGHT password is used here on purpose -- the point is that the
+    // answer does not depend on it.
+    let err =
+        decrypt_with_password(GPG_SYMMETRIC_OCB.as_bytes(), symmetric_password(), None).unwrap_err();
+    assert!(err.contains("AEAD (OCB)"), "unexpected error: {err}");
+    assert!(!err.contains("Wrong password"), "unexpected error: {err}");
+}
+
+#[test]
+fn test_decrypt_password_verifies_a_signature() {
+    // A symmetric message can be signed. If the password path skipped
+    // signature classification, this would come back "unsigned" and the
+    // UI would silently drop a signer it could have shown.
+    let certs = serde_json::to_string(&vec![GPG_SYMMETRIC_SIGNER]).unwrap();
+    let packed = decrypt_with_password(
+        GPG_SYMMETRIC_SIGNED.as_bytes(),
+        symmetric_password(),
+        Some(certs),
+    )
+    .unwrap();
+    let (plaintext, sig) = unpack(&packed);
+    assert_eq!(plaintext, SYMMETRIC_PLAINTEXT);
+    assert_eq!(sig["signatureStatus"], "valid");
+    assert_eq!(sig["signatureValid"], true);
+}
+
+#[test]
+fn test_decrypt_password_signed_without_the_signer_key() {
+    // Same message, no certs supplied. Decryption must still SUCCEED --
+    // a signature we cannot check is a status, never a reason to withhold
+    // the plaintext (the rule `DecryptHelper::check` already keeps).
+    let packed = decrypt_with_password(
+        GPG_SYMMETRIC_SIGNED.as_bytes(),
+        symmetric_password(),
+        None,
+    )
+    .unwrap();
+    let (plaintext, sig) = unpack(&packed);
+    assert_eq!(plaintext, SYMMETRIC_PLAINTEXT);
+    assert_eq!(sig["signatureStatus"], "unknown_key");
+    assert_eq!(sig["signatureValid"], false);
+}
+
+#[test]
+fn test_decrypt_password_wrong_password_is_one_message() {
+    // A v4 SKESK unwraps the session key with NO integrity check, so a
+    // wrong password does not fail where it is used -- it fails much
+    // later, as an MDC mismatch inside the reader. This is the test that
+    // the one `map_err` around the whole parse catches that, rather than
+    // letting a raw "Malformed MDC packet" reach the user as "the data is
+    // corrupted" when the data is fine and the password is not.
+    let err =
+        decrypt_with_password(GPG_SYMMETRIC_V4.as_bytes(), b"not the password".to_vec(), None).unwrap_err();
+    assert!(
+        err.starts_with("Wrong password, or this message is damaged:"),
+        "unexpected error: {err}"
+    );
+}
+
+#[test]
+fn test_decrypt_password_refuses_a_key_encrypted_message() {
+    // A message with no SKESK at all. It must fail rather than fall back
+    // to some other route -- the helper ignores PKESKs by construction.
+    let key = gen_test_key();
+    let parsed: serde_json::Value = serde_json::from_str(&key).unwrap();
+    let public = parsed["publicKeyArmored"].as_str().unwrap();
+    let recipients = serde_json::to_string(&vec![public]).unwrap();
+    let ciphertext = encrypt(b"hello", &recipients, None).unwrap();
+
+    let err = decrypt_with_password(&ciphertext, symmetric_password(), None).unwrap_err();
+    assert!(err.contains("Wrong password, or this message is damaged"));
+}
+
+#[test]
+fn test_message_encryption_tells_the_two_apart() {
+    let password_only: serde_json::Value =
+        serde_json::from_str(&message_encryption(GPG_SYMMETRIC_V4.as_bytes()).unwrap()).unwrap();
+    assert_eq!(password_only["password"], true);
+    assert_eq!(password_only["publicKey"], false);
+
+    let key = gen_test_key();
+    let parsed: serde_json::Value = serde_json::from_str(&key).unwrap();
+    let recipients =
+        serde_json::to_string(&vec![parsed["publicKeyArmored"].as_str().unwrap()]).unwrap();
+    let ciphertext = encrypt(b"hello", &recipients, None).unwrap();
+    let key_only: serde_json::Value =
+        serde_json::from_str(&message_encryption(&ciphertext).unwrap()).unwrap();
+    assert_eq!(key_only["password"], false);
+    assert_eq!(key_only["publicKey"], true);
+}
+
+#[test]
+fn test_message_encryption_stops_at_the_container() {
+    // The detector must not need the password, the key, or any ability to
+    // read the body -- it answers from the packets in FRONT of the
+    // encrypted container. Proven by the fact that it answers at all for
+    // a message nothing here can open.
+    //
+    // The OCB vector is the one that proves it: its SKESK is a version
+    // Sequoia does not implement, so it parses as `Packet::Unknown` and a
+    // match on the `Packet::SKESK` VARIANT reported it as having no
+    // password. Matching the TAG is what makes the detector describe the
+    // message rather than describe our parser.
+    let json = message_encryption(GPG_SYMMETRIC_OCB.as_bytes()).unwrap();
+    let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+    assert_eq!(parsed["password"], true);
+    assert_eq!(parsed["publicKey"], false);
+}
+
+#[test]
+fn test_message_encryption_rejects_non_pgp_input() {
+    assert!(message_encryption(b"not a pgp message at all").is_err());
+}
+
+

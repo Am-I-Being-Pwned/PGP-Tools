@@ -830,6 +830,79 @@ impl DecryptionHelper for DecryptHelper {
     }
 }
 
+/// The symmetric sibling of [`DecryptHelper`]: opens a message that was
+/// encrypted to a PASSWORD (`gpg -c`) rather than to a public key.
+///
+/// The two are separate helpers rather than one helper with an optional
+/// password, and that is the point. A message can carry both SKESK
+/// (password) and PKESK (public key) packets, and which one this app
+/// uses must be decided by the caller in the open -- not by a helper
+/// that quietly falls back to whichever happens to work. This one
+/// ignores `pkesks` entirely, and `DecryptHelper` ignores `skesks`.
+struct PasswordDecryptHelper {
+    /// Sequoia's `Password` keeps the bytes in protected memory and
+    /// zeroizes on drop, so the passphrase is not left in a plain
+    /// `String` for the lifetime of the parse.
+    password: openpgp::crypto::Password,
+    verification_certs: Vec<openpgp::Cert>,
+    signature_status: &'static str,
+    signer_key_id: Option<String>,
+}
+
+impl VerificationHelper for PasswordDecryptHelper {
+    fn get_certs(&mut self, _ids: &[openpgp::KeyHandle]) -> openpgp::Result<Vec<openpgp::Cert>> {
+        Ok(self.verification_certs.clone())
+    }
+
+    fn check(&mut self, structure: MessageStructure) -> openpgp::Result<()> {
+        // Same rule as the key path: signature classification must never
+        // abort decryption. A symmetric message CAN be signed, and the
+        // signer is then someone whose key we may or may not hold.
+        let (status, key_id) = process_signatures(structure);
+        self.signature_status = status;
+        self.signer_key_id = key_id;
+        Ok(())
+    }
+}
+
+impl DecryptionHelper for PasswordDecryptHelper {
+    fn decrypt(
+        &mut self,
+        _pkesks: &[openpgp::packet::PKESK],
+        skesks: &[openpgp::packet::SKESK],
+        _sym_algo: Option<SymmetricAlgorithm>,
+        decrypt: &mut dyn FnMut(Option<SymmetricAlgorithm>, &SessionKey) -> bool,
+    ) -> openpgp::Result<Option<openpgp::Cert>> {
+        // Every SKESK is tried: `gpg --symmetric` writes one, but the
+        // format permits several (the same message encrypted under more
+        // than one password), and refusing the second one would be a
+        // silent "wrong password" for a message we can actually open.
+        //
+        // NOTE ON WHAT A SUCCESSFUL `skesk.decrypt` MEANS: for a v4 SKESK
+        // it means almost nothing. The password-derived key unwraps the
+        // session key with no integrity check, so a WRONG password
+        // yields a plausible-looking session key here and the failure
+        // surfaces later, as an MDC mismatch, out of the reader. That is
+        // why the wasm entry point below treats a failure anywhere in the
+        // parse as "the password did not work" rather than trying to tell
+        // the two apart. A v5/v6 SKESK is AEAD-protected and does fail
+        // here -- both paths end in the same message.
+        for skesk in skesks {
+            if let Ok((algo, session_key)) = skesk.decrypt(&self.password) {
+                if decrypt(algo, &session_key) {
+                    // No cert was involved: this message was not opened
+                    // with anyone's key, and saying otherwise would put a
+                    // fingerprint in the result that decrypted nothing.
+                    return Ok(None);
+                }
+            }
+        }
+        Err(anyhow::anyhow!(
+            "None of this message's password packets accepted that password"
+        ))
+    }
+}
+
 struct VerifyHelper {
     certs: Vec<openpgp::Cert>,
     signature_status: &'static str,
@@ -1212,11 +1285,30 @@ pub fn decrypt_with_handle(
     std::io::copy(&mut decryptor, &mut plaintext).str_err()?;
     let helper = decryptor.into_helper();
 
-    // Pack sig info + plaintext into one return to avoid TOCTOU
+    Ok(pack_decrypt_result(
+        helper.signature_status,
+        helper.signer_key_id,
+        plaintext,
+    ))
+}
+
+/// `[4-byte LE sig_json_len][sig_json][plaintext]`.
+///
+/// Shared by both decrypt entry points so the packed layout is defined
+/// once. The packing is what makes the return ATOMIC: signature status
+/// and plaintext cross the wasm boundary together, so no caller can
+/// render the plaintext against a signature verdict read separately (the
+/// TOCTOU the original comment names). A second hand-rolled copy of this
+/// layout would be free to disagree with `unpackDecryptResult` in JS.
+fn pack_decrypt_result(
+    signature_status: &str,
+    signer_key_id: Option<String>,
+    plaintext: Vec<u8>,
+) -> Vec<u8> {
     let sig_json = serde_json::json!({
-        "signatureValid": helper.signature_status == "valid",
-        "signatureStatus": helper.signature_status,
-        "signerKeyId": helper.signer_key_id,
+        "signatureValid": signature_status == "valid",
+        "signatureStatus": signature_status,
+        "signerKeyId": signer_key_id,
     })
     .to_string();
     let sig_bytes = sig_json.as_bytes();
@@ -1226,7 +1318,179 @@ pub fn decrypt_with_handle(
     result.extend_from_slice(&sig_len);
     result.extend_from_slice(sig_bytes);
     result.extend_from_slice(&plaintext);
-    Ok(result)
+    result
+}
+
+/// Decrypt a message that was encrypted to a PASSWORD (`gpg --symmetric`).
+///
+/// Returns the same packed binary as [`decrypt_with_handle`], so the
+/// caller unpacks one shape whichever way the message was opened.
+///
+/// NO KEY IS INVOLVED, and that is the whole difference: this works with
+/// an empty keyring, and it never touches `KEY_STORE`. Signature
+/// verification still runs -- a symmetric message can be signed -- against
+/// whatever public keys the caller passes.
+///
+/// ON THE ERROR IT RETURNS: a wrong password is not reliably detectable
+/// at the point the password is used. A v4 SKESK unwraps the session key
+/// with no integrity check, so a wrong password produces a plausible
+/// session key and fails much later as an MDC mismatch inside the reader.
+/// Rather than pretend to tell "wrong password" from "corrupt message"
+/// apart, every failure in the parse comes back under one leading phrase
+/// the JS classifies on, with the underlying error kept after it for the
+/// technical-details line.
+#[wasm_bindgen(js_name = "decryptWithPassword")]
+pub fn decrypt_with_password(
+    ciphertext: &[u8],
+    // BYTES, not a `&str`, and OWNED, not borrowed.
+    //
+    // Bytes for the reason the whole of `lib/pgp/wasm-secrets.ts` exists:
+    // a JS string is immutable and unzeroizable, so a password that
+    // crosses as one is left in the JS heap for the collector to deal
+    // with whenever it feels like it. The caller hands over a
+    // `Uint8Array` and `.fill(0)`s it in a `finally`.
+    //
+    // Owned so this side can scrub too. `unlock_with_password` and its
+    // siblings borrow `&[u8]`, which means wasm-bindgen frees its
+    // marshalled copy un-scrubbed and only the DERIVED key is zeroized --
+    // the known gap `T-UNLOCK-PARAM-NOT-OWNED` records. Taking `Vec<u8>`
+    // here means there is something to wrap, so this export does not
+    // widen that gap and needs no exemption in
+    // `scripts/audit-invariants.mjs`.
+    password: Vec<u8>,
+    verification_keys_json: Option<String>,
+) -> Result<Vec<u8>, String> {
+    // Wrapped FIRST, before anything can return early: the `Drop` is what
+    // scrubs the marshalled copy, and an error path that returns above
+    // this line would skip it.
+    let password = Zeroizing::new(password);
+    let verification_certs = match verification_keys_json {
+        Some(ref json) => parse_armored_certs(json)?,
+        None => Vec::new(),
+    };
+
+    let helper = PasswordDecryptHelper {
+        password: password.as_slice().into(),
+        verification_certs,
+        signature_status: "unsigned",
+        signer_key_id: None,
+    };
+
+    // The unreadable-FORMAT case, separated from the wrong-PASSWORD case
+    // before the password is even used. Sequoia's policy rejects the
+    // draft AEAD packet, and that failure arrives as "Policy rejected
+    // packet type" -- which, folded into the message below, would tell a
+    // user with a perfectly good password to go and check their password.
+    // They would never get anywhere: no password opens this.
+    if scan_session_packets(ciphertext)?.2 == Container::Aed {
+        return Err(
+            "This message uses the older AEAD (OCB) encrypted-data format, which this app cannot read. Ask the sender to re-encrypt it without --force-ocb."
+                .to_string(),
+        );
+    }
+
+    decrypt_with_password_inner(ciphertext, helper)
+        .map_err(|e| format!("Wrong password, or this message is damaged: {e}"))
+}
+
+/// The fallible half, split out so ONE `map_err` covers the whole parse
+/// -- builder, policy check, session-key unwrap and the reader's MDC
+/// check are all "the password did not work" from the caller's side, and
+/// a wrapper applied per-step would inevitably miss one.
+fn decrypt_with_password_inner(
+    ciphertext: &[u8],
+    helper: PasswordDecryptHelper,
+) -> Result<Vec<u8>, String> {
+    let mut decryptor = DecryptorBuilder::from_bytes(ciphertext)
+        .str_err()?
+        .with_policy(policy(), None, helper)
+        .str_err()?;
+
+    let mut plaintext = Vec::new();
+    std::io::copy(&mut decryptor, &mut plaintext).str_err()?;
+    let helper = decryptor.into_helper();
+
+    Ok(pack_decrypt_result(
+        helper.signature_status,
+        helper.signer_key_id,
+        plaintext,
+    ))
+}
+
+/// The encrypted container a message uses, which decides whether we can
+/// read it at all.
+#[derive(PartialEq)]
+enum Container {
+    /// `SEIP` -- v1 (CFB + MDC) or v2 (RFC 9580 AEAD). Both supported.
+    Seip,
+    /// `AED`, tag 20: the pre-RFC-9580 draft AEAD packet that GnuPG
+    /// writes under `--force-ocb` and that LibrePGP kept. Sequoia's
+    /// StandardPolicy rejects it, so we cannot read it -- and the point of
+    /// naming it here is that the failure must not be reported as a wrong
+    /// password. See `decrypt_with_password`.
+    Aed,
+    /// No encrypted container found (not an encrypted message).
+    None,
+}
+
+/// What the session-key packets in FRONT of the encrypted container say.
+///
+/// Matched on the packet TAG rather than on the parsed `Packet` variant,
+/// and that is load-bearing rather than stylistic: Sequoia yields
+/// `Packet::Unknown` for a packet VERSION it does not implement, while
+/// still reporting the original tag. GnuPG's `--force-ocb` SKESK is
+/// exactly such a packet, and a `Packet::SKESK(_)` match reported that
+/// message as having no password at all -- sending the UI to ask for a
+/// key for a message that never wanted one. The tag is what the format
+/// guarantees; the variant is what our parser happened to manage.
+fn scan_session_packets(ciphertext: &[u8]) -> Result<(bool, bool, Container), String> {
+    use openpgp::packet::Tag;
+    use openpgp::parse::{PacketParser, PacketParserResult};
+
+    let mut password = false;
+    let mut public_key = false;
+    let mut container = Container::None;
+    let mut ppr = PacketParser::from_bytes(ciphertext).str_err()?;
+    while let PacketParserResult::Some(pp) = ppr {
+        match pp.packet.tag() {
+            Tag::SKESK => password = true,
+            Tag::PKESK => public_key = true,
+            // The session-key packets all precede the encrypted
+            // container; once we reach it there is nothing further to
+            // learn, and descending into it would mean decrypting.
+            Tag::SEIP => {
+                container = Container::Seip;
+                break;
+            }
+            Tag::AED => {
+                container = Container::Aed;
+                break;
+            }
+            _ => {}
+        }
+        let (_packet, next) = pp.next().str_err()?;
+        ppr = next;
+    }
+    Ok((password, public_key, container))
+}
+
+/// How a message can be opened, as JSON: `{"password":bool,"publicKey":bool}`.
+///
+/// Shape only -- it reads the session-key packets that precede the
+/// encrypted container and says which KINDS are present. It does not and
+/// cannot say whether any particular password or key will work.
+///
+/// The UI needs this to decide what to ASK FOR before it asks: without
+/// it, a `gpg -c` message reaches the key path and comes back "no
+/// suitable decryption key found", which is true and useless -- the
+/// message never wanted a key. Both flags can be true at once (a message
+/// encrypted to a password AND to recipients); the caller decides which
+/// to use, and `useWorkspaceOperations` prefers the key when one of the
+/// user's own matches.
+#[wasm_bindgen(js_name = "messageEncryption")]
+pub fn message_encryption(ciphertext: &[u8]) -> Result<String, String> {
+    let (password, public_key, _container) = scan_session_packets(ciphertext)?;
+    Ok(serde_json::json!({ "password": password, "publicKey": public_key }).to_string())
 }
 
 /// Collect the recipient key handles referenced by a message's public-key

@@ -217,7 +217,18 @@ export function WorkspaceView({
   const showLoadingLabel = useDelayedFlag(s.loading);
 
   const needsRecipient = s.mode === "encrypt";
-  const needsPrivateKey = s.mode === "decrypt" || s.mode === "sign";
+  // A message encrypted to a PASSWORD and to nobody's key cannot be
+  // opened by any key in the vault, so offering a picker would be
+  // offering choices that are all wrong -- the same reasoning that
+  // narrows the picker to SSH identities for an age message, taken to
+  // its end. It also means the flow works with an empty keyring, which
+  // is the honest behaviour: this message needs no key.
+  const passwordOnlyMessage =
+    s.mode === "decrypt" &&
+    s.messageEncryption?.password === true &&
+    !s.messageEncryption.publicKey;
+  const needsPrivateKey =
+    (s.mode === "decrypt" && !passwordOnlyMessage) || s.mode === "sign";
   const hasInput = s.files.length > 0 || s.hasInput;
 
   // Copy the armored output straight from the bottom action bar (the compact
@@ -635,7 +646,6 @@ export function WorkspaceView({
   const decryptKeyChoices =
     s.mode === "decrypt" && s.inputIsAge ? myKeys.filter(isSshRecord) : myKeys;
 
-
   if (showFullOutput) {
     return (
       <div className="flex h-full flex-col gap-3">
@@ -936,7 +946,16 @@ export function WorkspaceView({
             <input
               ref={passwordInputRef}
               type="password"
-              placeholder="Enter key password"
+              // The one thing that says WHICH password is being asked
+              // for. The row, the field and the button are deliberately
+              // the same as the key-unlock prompt's -- there is one
+              // password affordance in this workspace -- so this string
+              // is carrying the whole distinction.
+              placeholder={
+                s.pendingPasswordDecrypt
+                  ? "Enter message password"
+                  : "Enter key password"
+              }
               value={s.passwordInput}
               onChange={(e) => s.setPasswordInput(e.target.value)}
               onKeyDown={(e) => {
@@ -952,7 +971,9 @@ export function WorkspaceView({
               disabled={s.loading}
             >
               {showLoadingLabel
-                ? "Unlocking..."
+                ? s.pendingPasswordDecrypt
+                  ? "Decrypting..."
+                  : "Unlocking..."
                 : s.pendingCrxSign
                   ? "Sign"
                   : s.mode === "decrypt"

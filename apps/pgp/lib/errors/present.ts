@@ -5,7 +5,8 @@ import { AppError } from "./app-error";
 /** What the UI can offer the user to fix the error. Kept as a small
  *  union (not callbacks) so this module stays decoupled from React --
  *  each surface maps actions to its own handlers, or ignores them. */
-export type RemedyAction = "import-key" | "unlock" | "retry" | "check-recipient";
+export type RemedyAction =
+  "import-key" | "unlock" | "retry" | "check-recipient";
 
 /** A curated, user-facing rendering of a caught error. `message` always
  *  states what happened and what to do; raw error text only ever appears
@@ -101,6 +102,38 @@ function fromKnownString(raw: string): PresentedError | null {
       message: "Wrong password for this key. Check it and try again.",
       detail: raw,
       remedy: { label: "Try again", action: "retry" },
+    };
+  }
+
+  // Symmetric decrypt: the password did not open the message. The engine
+  // folds two different failure POINTS into this one phrase on purpose --
+  // a v4 SKESK unwraps the session key with no integrity check, so a
+  // wrong password fails later as an MDC mismatch, while an AEAD one
+  // fails at the unwrap. Both are the same answer to the user.
+  //
+  // BEFORE the corrupt/malformed rules below, which the raw Sequoia text
+  // riding along in this string would otherwise match -- "the data is
+  // corrupted, get a fresh copy" is the wrong instruction for a message
+  // that is fine and a password that is not.
+  if (lower.includes("wrong password, or this message is damaged")) {
+    return {
+      message:
+        "That password didn't open this message. Check it and try again - if you're sure it's right, the message may be damaged.",
+      detail: raw,
+      remedy: { label: "Try again", action: "retry" },
+    };
+  }
+
+  // A message we cannot read whatever the password is: GnuPG's
+  // `--force-ocb` writes the pre-RFC-9580 AEAD packet, which Sequoia's
+  // policy rejects. Named separately from the rule above because telling
+  // someone to check a password that will never work is worse than
+  // telling them nothing.
+  if (lower.includes("aead (ocb) encrypted-data format")) {
+    return {
+      message:
+        "This message uses an older AEAD (OCB) format this app can't read. Ask the sender to re-send it encrypted normally - any password they choose will work, it's the format that isn't supported.",
+      detail: raw,
     };
   }
 
@@ -225,10 +258,7 @@ function fromKnownString(raw: string): PresentedError | null {
   }
 
   // Locked-session errors reported as plain strings.
-  if (
-    lower.includes("vault is locked") ||
-    lower.includes("is not unlocked")
-  ) {
+  if (lower.includes("vault is locked") || lower.includes("is not unlocked")) {
     return {
       message:
         "Your vault is locked, so nothing was changed. Unlock it and run this again.",

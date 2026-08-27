@@ -42,8 +42,10 @@
 
 import type { MetaBlob } from "../protection/protected-blob";
 import type { GenerateKeyOptions, ProtectResultMeta } from "./types";
+import type { DecryptWithHandleResult } from "./wasm-public";
 import { unpackMetaBlob } from "../protection/protected-blob";
 import { loadWasm } from "./wasm-loader";
+import { unpackDecryptResult } from "./wasm-public";
 
 // ── shared types ─────────────────────────────────────────────────────
 
@@ -200,6 +202,46 @@ export async function protectImportedWithPrf(
 }
 
 // ── unlock-and-store (the ONLY paths that populate KEY_STORE) ────────
+
+/**
+ * Decrypt a message that was encrypted to a PASSWORD (`gpg --symmetric`),
+ * not to anybody's key.
+ *
+ * IN THIS FILE BECAUSE OF THE PASSWORD, not because of the plaintext.
+ * The message plaintext is user data -- it crosses to JS by design,
+ * exactly as `decryptWithHandle`'s does, and it is the user's whole
+ * reason for pressing the button. What makes this a secret-side call is
+ * the passphrase parameter.
+ *
+ * NO KEY IS INVOLVED. This never touches KEY_STORE, needs no handle, and
+ * works with an empty keyring -- which is the point: a `gpg -c` message
+ * is readable by anyone with the password, and requiring a key of one's
+ * own to read one would be requiring a key for nothing.
+ *
+ * Returns the SAME packed `[len][sigJson][plaintext]` shape
+ * `decryptWithHandle` returns, unpacked identically, so a caller handles
+ * one result type whichever way the message was opened.
+ *
+ * @secret-handling
+ *   in:  password bytes
+ *   out: message plaintext (user data, not key material)
+ *   contract: caller MUST `.fill(0)` `password` in a `finally`. The
+ *             returned plaintext is the user's message and is NOT
+ *             zeroized here -- it is rendered.
+ */
+export async function decryptWithPassword(
+  ciphertext: Uint8Array,
+  password: Uint8Array,
+  verificationPublicKeys?: string[],
+): Promise<DecryptWithHandleResult> {
+  const wasm = await loadWasm();
+  const packed = wasm.decryptWithPassword(
+    ciphertext,
+    password,
+    verificationPublicKeys ? JSON.stringify(verificationPublicKeys) : null,
+  );
+  return unpackDecryptResult(packed);
+}
 
 /**
  * @secret-handling
