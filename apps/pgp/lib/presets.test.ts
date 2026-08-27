@@ -29,6 +29,7 @@ function fullPrefs(overrides: Partial<PgpPreferences> = {}): PgpPreferences {
     lockOnTabAway: false,
     crxSigningEnabled: false,
     historyEnabled: false,
+    keyDiscoveryEnabled: true,
     clipboardWipeSeconds: 60,
     recentRecipients: [],
     defaultKeyId: null,
@@ -44,6 +45,7 @@ describe("PRESETS", () => {
       lockOnTabAway: false,
       neverCacheKeys: false,
       historyEnabled: true,
+      keyDiscoveryEnabled: true,
       encryptToSelf: true,
       clipboardWipeSeconds: 60,
     });
@@ -56,6 +58,7 @@ describe("PRESETS", () => {
       lockOnTabAway: false,
       neverCacheKeys: false,
       historyEnabled: true,
+      keyDiscoveryEnabled: true,
       encryptToSelf: true,
       storageLocation: "local",
       clipboardWipeSeconds: 60,
@@ -70,6 +73,7 @@ describe("PRESETS", () => {
       lockOnTabAway: true,
       neverCacheKeys: true,
       historyEnabled: false,
+      keyDiscoveryEnabled: false,
       encryptToSelf: true,
       storageLocation: "local",
       clipboardWipeSeconds: 15,
@@ -181,6 +185,7 @@ describe("describeBundle", () => {
       "Auto-lock after 30 minutes",
       "Unlocked keys stay cached until you lock",
       "Keeps an encrypted history of what you do",
+      "Keys can be looked up on GitHub and keys.openpgp.org",
       "Copied secrets clear from the clipboard after 60 seconds",
     ]);
   });
@@ -190,6 +195,7 @@ describe("describeBundle", () => {
       "Auto-lock after 10 minutes",
       "Unlocked keys stay cached until you lock",
       "Keeps an encrypted history of what you do",
+      "Keys can be looked up on GitHub and keys.openpgp.org",
       "Keys stay on this device",
       "Copied secrets clear from the clipboard after 60 seconds",
     ]);
@@ -200,6 +206,7 @@ describe("describeBundle", () => {
       "Auto-lock after 2 minutes and when you switch tabs",
       "Keys drop from memory after every use",
       "No history is kept",
+      "No key lookups - nothing leaves this device to find a key",
       "Keys stay on this device",
       "Copied secrets clear from the clipboard after 15 seconds",
     ]);
@@ -231,6 +238,10 @@ describe("snapshotBundleFields", () => {
       lockOnTabAway: true,
       neverCacheKeys: true,
       historyEnabled: true,
+      // Captured from `prefs`, which leaves it at the shipped default --
+      // the point of the snapshot is the CURRENT value, not the
+      // bundle's.
+      keyDiscoveryEnabled: true,
       encryptToSelf: false,
       clipboardWipeSeconds: 15,
     });

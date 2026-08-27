@@ -91,9 +91,11 @@ function chunk(dir: string, prefix: string): string {
 function edit(file: string, from: string, to: string): void {
   const source = readFileSync(file, "utf8");
   // Exactly one occurrence, or the plant lands somewhere other than where
-  // the test thinks it does. `credentials:"omit"` appears twice in the
-  // worker -- once in the lockdown, once at the GitHub call site -- and a
-  // replace-the-first-hit helper quietly mutated the wrong one.
+  // the test thinks it does. `credentials:"omit"` appears three times in
+  // the worker -- once in the lockdown and once at each lookup call site
+  // -- and a replace-the-first-hit helper quietly mutated the wrong one.
+  // This is also what forces every call-site plant below to name WHICH
+  // of the two identical fetches it means.
   if (source.split(from).length !== 2) {
     throw new Error(
       `fixture must contain ${JSON.stringify(from)} exactly once, found ${source.split(from).length - 1}`,
@@ -101,6 +103,19 @@ function edit(file: string, from: string, to: string): void {
   }
   writeFileSync(file, source.replace(from, to));
 }
+
+/** The two worker fetch call sites, told apart by their `Accept` header
+ *  -- the one part of either call the minifier leaves alone. Identifier
+ *  names (`e`, `t`) are minifier output and will move; the header will
+ *  not, so every plant below anchors on it.
+ *
+ *  They have to be told apart at all because the calls are otherwise
+ *  byte-identical, which is the point: `edit`'s exactly-once rule is
+ *  what stopped these plants landing on whichever site came first. */
+const GITHUB_INIT =
+  "credentials:`omit`,redirect:`error`,cache:`no-store`,headers:{Accept:`application/vnd.github+json`}";
+const KEYSERVER_INIT =
+  "credentials:`omit`,redirect:`error`,cache:`no-store`,headers:{Accept:`application/pgp-keys`}";
 
 function editManifest(
   dir: string,
@@ -134,8 +149,8 @@ describe.skipIf(!haveBuild)("audit-network", () => {
       const result = withPlantedViolation((dir) => {
         edit(
           join(dir, "background.js"),
-          "await fetch(e,{method:",
-          "await fetch(globalThis.__dest,{redirect:`error`,method:",
+          `await fetch(e,{method:\`GET\`,signal:t,${GITHUB_INIT}`,
+          `await fetch(globalThis.__dest,{method:\`GET\`,signal:t,${GITHUB_INIT}`,
         );
       });
       expect(result.code).toBe(1);
@@ -156,24 +171,66 @@ describe.skipIf(!haveBuild)("audit-network", () => {
       expect(result.out).toContain("pinned to https://api.github.com");
     });
 
-    it("rejects a weakened fetch init", () => {
+    it("rejects a redirected keyserver destination too", () => {
+      // The second call site gets its own case rather than riding on the
+      // first: an assertion that only ever runs against one of two
+      // otherwise identical calls proves nothing about the other.
       const result = withPlantedViolation((dir) => {
         edit(
           join(dir, "background.js"),
-          "credentials:`omit`,redirect:`error`",
-          "credentials:`include`,redirect:`error`",
+          "`https://keys.openpgp.org`",
+          "`https://evil.tld`",
+        );
+      });
+      expect(result.code).toBe(1);
+      expect(result.out).toContain("destination resolves to https://evil.tld");
+      expect(result.out).toContain("pinned to https://keys.openpgp.org");
+    });
+
+    it("rejects two fetches to the SAME allowed origin", () => {
+      // THE CASE A BARE COUNT OF 2 WOULD MISS. Point the keyserver call
+      // at api.github.com and the census still sees two worker fetches,
+      // both to an allowed origin -- but the keyserver pin now matches
+      // nothing, so an exfiltration call cannot be smuggled in by
+      // duplicating a legitimate destination.
+      const result = withPlantedViolation((dir) => {
+        edit(
+          join(dir, "background.js"),
+          "`https://keys.openpgp.org`",
+          "`https://api.github.com`",
+        );
+      });
+      expect(result.code).toBe(1);
+      expect(result.out).toContain("keys.openpgp.org");
+    });
+
+    it.each([
+      ["github", GITHUB_INIT],
+      ["keyserver", KEYSERVER_INIT],
+    ])("rejects a weakened fetch init (%s)", (_name, init) => {
+      const result = withPlantedViolation((dir) => {
+        edit(
+          join(dir, "background.js"),
+          init,
+          init.replace("credentials:`omit`", "credentials:`include`"),
         );
       });
       expect(result.code).toBe(1);
       expect(result.out).toContain('fetch init must set credentials:"omit"');
     });
 
-    it("rejects an unpinned fetch option", () => {
+    it.each([
+      ["github", GITHUB_INIT],
+      ["keyserver", KEYSERVER_INIT],
+    ])("rejects an unpinned fetch option (%s)", (_name, init) => {
       const result = withPlantedViolation((dir) => {
         edit(
           join(dir, "background.js"),
-          "credentials:`omit`,redirect:`error`",
-          "credentials:`omit`,referrer:`/x`,redirect:`error`",
+          init,
+          init.replace(
+            "credentials:`omit`",
+            "credentials:`omit`,referrer:`/x`",
+          ),
         );
       });
       expect(result.code).toBe(1);
@@ -370,8 +427,8 @@ describe.skipIf(!haveBuild)("audit-network", () => {
         editManifest(dir, (m) => {
           const csp = m.content_security_policy as Record<string, string>;
           csp.extension_pages = csp.extension_pages.replace(
-            "connect-src 'self' https://api.github.com/users/;",
-            "connect-src 'self' https://api.github.com/users/ https://evil.tld;",
+            "https://keys.openpgp.org/vks/v1/;",
+            "https://keys.openpgp.org/vks/v1/ https://evil.tld;",
           );
         });
       });

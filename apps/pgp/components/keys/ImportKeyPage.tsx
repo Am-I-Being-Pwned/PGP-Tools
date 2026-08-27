@@ -6,7 +6,13 @@ import { Button } from "@amibeingpwned/ui/button";
 import type { CrxProtectionInput } from "../../lib/crx/operations";
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
 import type { IncomingKey } from "../../lib/import/types";
-import type { GithubKeysRequest, GithubKeysResponse } from "../../lib/messages";
+import type { KeyserverQuery } from "../../lib/keyserver/query";
+import type {
+  GithubKeysRequest,
+  GithubKeysResponse,
+  KeyserverKeyRequest,
+  KeyserverKeyResponse,
+} from "../../lib/messages";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import { parseRecipient } from "../../lib/age/operations";
@@ -22,6 +28,12 @@ import {
   githubFailureCopy,
   prepareGithubImport,
 } from "../../lib/import/github";
+import {
+  KEYSERVER_HOST,
+  keyserverFailureCopy,
+  prepareKeyserverImport,
+} from "../../lib/import/keyserver";
+import { classifyLookup } from "../../lib/import/lookup";
 import { importable, prepareImport } from "../../lib/import/prepare";
 import { isPublicKind, isSecretKind } from "../../lib/import/types";
 import { importAndProtect } from "../../lib/protection/protect-flow";
@@ -63,6 +75,10 @@ interface ImportKeyPageProps {
   initialArmored?: string | null;
   /** When true, also accept a raw RSA private key PEM as a CRX signing key. */
   crxSigningEnabled?: boolean;
+  /** Master enable for the network lookups on the source step. DEFAULTS
+   *  TO TRUE, matching `DEFAULT_PREFERENCES`: an omitted prop must not
+   *  silently withdraw the GitHub lookup this panel has always had. */
+  keyDiscoveryEnabled?: boolean;
   /** Persist an imported CRX signing key. Required for the CRX path. */
   onImportCrx?: (blob: CrxSigningKeyBlob) => Promise<void>;
   /** Fingerprints to scroll to and highlight once the panel slides away:
@@ -91,6 +107,7 @@ export function ImportKeyPage({
   reusePasskeyCredentialId,
   initialArmored,
   crxSigningEnabled,
+  keyDiscoveryEnabled = true,
   onImportCrx,
   onImported,
 }: ImportKeyPageProps) {
@@ -107,16 +124,19 @@ export function ImportKeyPage({
   const [reusePasskey, setReusePasskey] = useState(true);
   const [sourcePassphrase, setSourcePassphrase] = useState("");
   const [dragOver, setDragOver] = useState(false);
-  const [githubUser, setGithubUser] = useState("");
-  /** A failure the user didn't cause and can't fix by retrying -- today
-   *  only "this person has published no SSH keys". Rendered in its own
-   *  amber callout under the GitHub field, never in the destructive
-   *  error slot: it is the ANSWER to the lookup, so it has to be seen,
-   *  but nothing went wrong. */
+  /** What is typed in the one lookup box. It is ONE box because getting
+   *  a key is one question -- `classifyLookup` decides whether the
+   *  answer comes from GitHub or from keys.openpgp.org. */
+  const [lookupInput, setLookupInput] = useState("");
+  /** A failure the user didn't cause and can't fix by retrying -- "this
+   *  person has published no SSH keys", or "the keyserver has no key for
+   *  that address". Rendered in its own amber callout under the lookup
+   *  field, never in the destructive error slot: it is the ANSWER to the
+   *  lookup, so it has to be seen, but nothing went wrong. */
   const [notice, setNotice] = useState<string | null>(null);
   // The document-level paste listener below must not swallow a username
-  // pasted into the GitHub field; it identifies the field by node.
-  const githubInputRef = useRef<HTMLInputElement>(null);
+  // or address pasted into the lookup field; it identifies it by node.
+  const lookupInputRef = useRef<HTMLInputElement>(null);
   // Re-entrancy guard for the parse. A ref, not the `parsing` state: two
   // handlers can fire for one gesture (the paste box and the panel-wide
   // listener) inside a single render, before state catches up.
@@ -229,6 +249,11 @@ export function ImportKeyPage({
           addedAt: Date.now(),
           lastUsedAt: Date.now(),
           expiresAt: key.info?.expiresAt ?? null,
+          // Spread, not `source: key.source`: an absent source must stay
+          // ABSENT on the stored record (it is what `sameSource` reads to
+          // mean "hand-supplied"), and writing `undefined` would change
+          // the bytes every pasted contact has always serialised to.
+          ...(key.source ? { source: key.source } : {}),
           // Sign-only keys are valid contacts (for verification) but can't
           // be offered as encryption recipients -- record which is which.
           usableForEncryption: key.info?.usableForEncryption ?? true,
@@ -277,6 +302,25 @@ export function ImportKeyPage({
    * around it -- which is what keeps the CRX path from drifting away from
    * the OpenPGP one.
    */
+  /** Stored keys in the shape every `prepare*` entry point takes. Built
+   *  once here so the paste path and both lookups classify against the
+   *  same list. */
+  const storedForImport = () => ({
+    own: existingKeys.map((k) => ({
+      keyId: k.keyId,
+      userIds: k.userIds,
+      armored: k.publicKeyArmored,
+      createdAt: k.createdAt,
+    })),
+    contacts: existingContacts.map((c) => ({
+      keyId: c.keyId,
+      userIds: c.userIds,
+      armored: c.armoredPublicKey,
+      addedAt: c.addedAt,
+      expiresAt: c.expiresAt,
+    })),
+  });
+
   const handleSource = async (text: string) => {
     setError(null);
     setNotice(null);
@@ -287,21 +331,7 @@ export function ImportKeyPage({
     try {
       const prepared = await prepareImport(
         text,
-        {
-          own: existingKeys.map((k) => ({
-            keyId: k.keyId,
-            userIds: k.userIds,
-            armored: k.publicKeyArmored,
-            createdAt: k.createdAt,
-          })),
-          contacts: existingContacts.map((c) => ({
-            keyId: c.keyId,
-            userIds: c.userIds,
-            armored: c.armoredPublicKey,
-            addedAt: c.addedAt,
-            expiresAt: c.expiresAt,
-          })),
-        },
+        storedForImport(),
         // SSH is always on: unlike CRX signing it is not a setting, it
         // is simply another kind of key the app reads. Off, an `.pub`
         // line would come back `unparseable` -- which is what the panel
@@ -388,60 +418,163 @@ export function ImportKeyPage({
    * comes back is a tagged code or a list of unvalidated strings, and
    * `prepareGithubImport` is what decides any of them is a key.
    */
-  const lookupGithubUser = async () => {
-    const username = githubUser.trim();
+  const lookupGithubUser = async (username: string) => {
+    const request: GithubKeysRequest = {
+      type: "GITHUB_KEYS_REQUEST",
+      username,
+    };
+    const response = await chrome.runtime.sendMessage<
+      GithubKeysRequest,
+      GithubKeysResponse | undefined
+    >(request);
+
+    if (!response) {
+      // The worker died or no listener answered: nothing came back at
+      // all, which is not one of the tagged codes.
+      setError("Couldn't reach the extension's background worker.");
+      return;
+    }
+    if (!response.ok) {
+      // Inline copy in the slot that is already there, never a toast:
+      // every one of these tells the user something to do next, and a
+      // toast takes that away after four seconds.
+      const copy = githubFailureCopy(
+        response.error,
+        username,
+        response.resetAt,
+      );
+      if (copy.tone === "notice") setNotice(copy.message);
+      else setError(copy.message);
+      return;
+    }
+
+    const prepared = await prepareGithubImport(
+      // The worker's echoed username, not the typed one: it is the
+      // name the request was actually made for.
+      response.username,
+      response.lines,
+      { contacts: existingContacts },
+      // Keys the worker's caps held back. Passed through so the
+      // preview can say the list is partial instead of asserting
+      // "every key listed above" over a truncated one.
+      { omitted: response.omitted },
+    );
+    setIncoming(prepared.keys[0]);
+    setStep("preview");
+  };
+
+  /**
+   * Look up a certificate on keys.openpgp.org and preview it.
+   *
+   * Thinner than the GitHub path on purpose: what comes back is armor,
+   * which is what this panel already knows how to classify, so
+   * `prepareKeyserverImport` hands it to the very same `prepareImport`
+   * a paste goes through and only stamps the provenance on the result.
+   * The worker owns the only `fetch` and the only keys.openpgp.org
+   * literal; the armor it forwards is untrusted text until the engine
+   * behind that call says otherwise.
+   */
+  const lookupKeyserverKey = async (query: KeyserverQuery) => {
+    const request: KeyserverKeyRequest = {
+      type: "KEYSERVER_KEY_REQUEST",
+      query,
+    };
+    const response = await chrome.runtime.sendMessage<
+      KeyserverKeyRequest,
+      KeyserverKeyResponse | undefined
+    >(request);
+
+    if (!response) {
+      setError("Couldn't reach the extension's background worker.");
+      return;
+    }
+    if (!response.ok) {
+      const copy = keyserverFailureCopy(
+        response.error,
+        query,
+        response.retryAt,
+      );
+      if (copy.tone === "notice") setNotice(copy.message);
+      else setError(copy.message);
+      return;
+    }
+
+    const prepared = await prepareKeyserverImport(
+      // The worker's echoed query, not the typed one: it is what the
+      // request was actually made for, and what the contact's source
+      // will record.
+      response.query,
+      response.armored,
+      storedForImport(),
+    );
+
+    if (prepared.unparseable || prepared.keys.length === 0) {
+      // The worker checked the content type and the armor markers; it
+      // deliberately did not check that the bytes between them are a
+      // certificate, because that is the engine's call and this is
+      // where the engine gets made. So this branch is reachable.
+      setError(
+        `${KEYSERVER_HOST} answered, but what it sent isn't a key we can read.`,
+      );
+      return;
+    }
+    if ((response.omitted ?? 0) > 0) {
+      // The endpoint returns exactly one key by construction, so this
+      // says the response was not the one we asked for. Shown rather
+      // than swallowed: importing the first of several blocks silently
+      // is how you end up encrypting to a key nobody chose.
+      //
+      // A TOAST, not the `notice` callout: this call ends on the preview
+      // step, and the callout lives on the source step -- setting it here
+      // would put the warning on a screen the user has just left. Same
+      // stable-id discipline as the security warning below.
+      toast.warning(
+        `${KEYSERVER_HOST} returned more than one key for this lookup. Only the first is shown - check the fingerprint before importing it.`,
+        { id: "keyserver-multiple-keys" },
+      );
+    }
+
+    const key = prepared.keys[0];
+    if (key.securityWarning) {
+      // Stable id: re-running the same lookup must not stack duplicates.
+      toast.warning(key.securityWarning, { id: "import-key-warning" });
+    }
+    setIncoming(key);
+    setStep("preview");
+  };
+
+  /**
+   * Run whichever lookup the typed text names.
+   *
+   * The routing rule lives in `classifyLookup`, not here: it is the part
+   * of this feature a user can be surprised by (a 40-character hex
+   * string is a valid GitHub username AND a fingerprint), so it is pure
+   * and tested rather than inline in a handler.
+   */
+  const runLookup = async () => {
     setError(null);
     setNotice(null);
     // Same guard as the paste path, and deliberately the same ref: a
     // double-click on Look up (or Enter racing the click) would otherwise
     // start a second lookup whose response overwrites the first's.
-    if (!username || parsingRef.current) return;
+    if (parsingRef.current) return;
+
+    const routed = classifyLookup(lookupInput);
+    if (!routed) {
+      setError(
+        "That isn't a GitHub username, an email address or a key fingerprint. Try “octocat”, “alice@example.com”, or the full 40-character fingerprint.",
+      );
+      return;
+    }
 
     setParsing(true);
     parsingRef.current = true;
     try {
-      const request: GithubKeysRequest = {
-        type: "GITHUB_KEYS_REQUEST",
-        username,
-      };
-      const response = await chrome.runtime.sendMessage<
-        GithubKeysRequest,
-        GithubKeysResponse | undefined
-      >(request);
-
-      if (!response) {
-        // The worker died or no listener answered: nothing came back at
-        // all, which is not one of the tagged codes.
-        setError("Couldn't reach the extension's background worker.");
-        return;
+      if (routed.target === "github") {
+        await lookupGithubUser(routed.username);
+      } else {
+        await lookupKeyserverKey(routed.query);
       }
-      if (!response.ok) {
-        // Inline copy in the slot that is already there, never a toast:
-        // every one of these tells the user something to do next, and a
-        // toast takes that away after four seconds.
-        const copy = githubFailureCopy(
-          response.error,
-          username,
-          response.resetAt,
-        );
-        if (copy.tone === "notice") setNotice(copy.message);
-        else setError(copy.message);
-        return;
-      }
-
-      const prepared = await prepareGithubImport(
-        // The worker's echoed username, not the typed one: it is the
-        // name the request was actually made for.
-        response.username,
-        response.lines,
-        { contacts: existingContacts },
-        // Keys the worker's caps held back. Passed through so the
-        // preview can say the list is partial instead of asserting
-        // "every key listed above" over a truncated one.
-        { omitted: response.omitted },
-      );
-      setIncoming(prepared.keys[0]);
-      setStep("preview");
     } catch (e) {
       setError(errorMessage(e, "Lookup failed"));
     } finally {
@@ -473,16 +606,16 @@ export function ImportKeyPage({
   useEffect(() => {
     if (step !== "source") return;
     const onPaste = (e: ClipboardEvent) => {
-      // A paste into the GitHub field is a USERNAME, not armor. Without
-      // this the document listener claims it, calls preventDefault, and
-      // hands "octocat" to the key parser -- which reports that it
-      // doesn't look like a key, while the field the user pasted into
-      // stays empty. The step's "paste anywhere" rule holds for
-      // everywhere else on it.
+      // A paste into the lookup field is a USERNAME, an address or a
+      // fingerprint, not armor. Without this the document listener
+      // claims it, calls preventDefault, and hands "octocat" to the key
+      // parser -- which reports that it doesn't look like a key, while
+      // the field the user pasted into stays empty. The step's "paste
+      // anywhere" rule holds for everywhere else on it.
       const target = e.target;
       if (
         target instanceof Node &&
-        githubInputRef.current?.contains(target) === true
+        lookupInputRef.current?.contains(target) === true
       ) {
         return;
       }
@@ -828,62 +961,74 @@ export function ImportKeyPage({
                 }}
               />
               {/* A row on the SAME step, not a tab of its own: "get me a
-                  key" is one question, and github.com is just another
-                  place a key comes from. It lands in the same preview. */}
-              <div className="space-y-1">
-                <label
-                  htmlFor="github-username"
-                  className="text-muted-foreground block text-xs"
-                >
-                  Or look up a GitHub user's SSH keys
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    id="github-username"
-                    ref={githubInputRef}
-                    type="text"
-                    spellCheck={false}
-                    autoComplete="off"
-                    placeholder="GitHub username"
-                    value={githubUser}
-                    disabled={parsing}
-                    onChange={(e) => setGithubUser(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key !== "Enter") return;
-                      e.preventDefault();
-                      void lookupGithubUser();
-                    }}
-                    className={INPUT_CLASS}
-                  />
-                  <Button
-                    variant="outline"
-                    onClick={() => void lookupGithubUser()}
-                    disabled={parsing || !githubUser.trim()}
+                  key" is one question, and a lookup is just another
+                  place a key comes from. It lands in the same preview.
+                  ONE field for both services, routed by what is typed
+                  (see classifyLookup) -- two labelled boxes would make
+                  the user answer a question about our plumbing before
+                  they could ask theirs. Absent entirely when key
+                  discovery is off: a disabled control that explains
+                  itself is still an invitation to turn it on, and the
+                  strictest preset means it. */}
+              {keyDiscoveryEnabled && (
+                <div className="space-y-1">
+                  <label
+                    htmlFor="key-lookup"
+                    className="text-muted-foreground block text-xs"
                   >
-                    Look up
-                  </Button>
-                </div>
-                {notice && (
-                  /* A CALLOUT, not another muted line. The only notice
-                     that reaches here is "this account has no SSH keys",
-                     which is a real answer to the lookup the user just
-                     ran -- and set in the same muted style as the
-                     standing help text below, it read as more
-                     boilerplate and got missed. Amber, bordered and
-                     attached to the field it answers, so it is legible
-                     as a RESULT; deliberately not `text-destructive`,
-                     because nothing failed and nothing needs fixing
-                     (see githubFailureCopy). `status`, not `alert`:
-                     announced without interrupting. */
-                  <div
-                    role="status"
-                    className="mt-2 flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-300"
-                  >
-                    <InfoIcon className="mt-px h-3.5 w-3.5 shrink-0" />
-                    <span>{notice}</span>
+                    Or look someone up
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      id="key-lookup"
+                      ref={lookupInputRef}
+                      type="text"
+                      spellCheck={false}
+                      autoComplete="off"
+                      autoCapitalize="off"
+                      placeholder="GitHub username, email, or fingerprint"
+                      value={lookupInput}
+                      disabled={parsing}
+                      onChange={(e) => setLookupInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key !== "Enter") return;
+                        e.preventDefault();
+                        void runLookup();
+                      }}
+                      className={INPUT_CLASS}
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={() => void runLookup()}
+                      disabled={parsing || !lookupInput.trim()}
+                    >
+                      Look up
+                    </Button>
                   </div>
-                )}
-              </div>
+                  {notice && (
+                    /* A CALLOUT, not another muted line. What reaches
+                       here is "this account has no SSH keys" or "the
+                       keyserver has no key for that address" -- a real
+                       answer to the lookup the user just ran, and set in
+                       the same muted style as the standing help text
+                       below it read as more boilerplate and got missed.
+                       Amber, bordered and attached to the field it
+                       answers, so it is legible as a RESULT;
+                       deliberately not `text-destructive`, because
+                       nothing failed and nothing needs fixing (see
+                       githubFailureCopy / keyserverFailureCopy).
+                       `status`, not `alert`: announced without
+                       interrupting. */
+                    <div
+                      role="status"
+                      className="mt-2 flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-300"
+                    >
+                      <InfoIcon className="mt-px h-3.5 w-3.5 shrink-0" />
+                      <span>{notice}</span>
+                    </div>
+                  )}
+                </div>
+              )}
               <p className="text-muted-foreground text-xs">
                 Public keys are added as contacts. A private key stays on this
                 device - you'll choose how it's protected next.

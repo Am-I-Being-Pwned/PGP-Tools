@@ -53,7 +53,14 @@ export interface ContactRecipient {
  * see {@link sameSource}.
  */
 export interface ContactSource {
-  type: "github";
+  /** Which lookup produced this contact. Part of the composite identity
+   *  `sameSource` compares, so a keyserver query and a GitHub account
+   *  name that happen to read the same are never the same person. */
+  type: "github" | "keyserver";
+  /** The lookup's own identity for this person: a GitHub account name,
+   *  or the canonical keyserver query (a lowercased address, or an
+   *  uppercase fingerprint). NOT a fingerprint for either -- see
+   *  `sameSource` for why the key is the wrong identity here. */
   user: string;
   fetchedAt: number;
 }

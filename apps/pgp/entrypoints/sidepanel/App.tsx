@@ -62,6 +62,11 @@ export default function App() {
   const [autoDownloadText, setAutoDownloadText] = useState(false);
   const [lockOnTabAway, setLockOnTabAway] = useState(false);
   const [crxSigningEnabled, setCrxSigningEnabled] = useState(false);
+  // Default TRUE, matching DEFAULT_PREFERENCES: this state is what the
+  // UI shows for the moment before the first `getPreferences` lands, and
+  // starting it false would flicker the lookup box away from every user
+  // who has it on.
+  const [keyDiscoveryEnabled, setKeyDiscoveryEnabled] = useState(true);
   // The user's preferred own key (null = implicit first-key default).
   // Owned here so Keys (badge/action) and the workspace (self-key and
   // sign/decrypt preselection) stay in sync without a prefs re-read.
@@ -369,6 +374,7 @@ export default function App() {
     setAutoDownloadText(prefs.autoDownloadText);
     setLockOnTabAway(prefs.lockOnTabAway);
     setCrxSigningEnabled(prefs.crxSigningEnabled);
+    setKeyDiscoveryEnabled(prefs.keyDiscoveryEnabled);
     setDefaultKeyId(prefs.defaultKeyId);
   }, []);
 
@@ -848,6 +854,7 @@ export default function App() {
               myKeys={keyring.keys}
               contacts={contacts.contacts}
               crxSigningEnabled={crxSigningEnabled}
+              keyDiscoveryEnabled={keyDiscoveryEnabled}
               crxKeys={crxKeys.keys}
               onAddCrxKey={crxKeys.add}
               onDeleteCrxKey={crxKeys.remove}
@@ -911,6 +918,8 @@ export default function App() {
                 setWorkspacePrefsVersion((v) => v + 1)
               }
               onCrxSigningEnabledChange={setCrxSigningEnabled}
+              keyDiscoveryEnabled={keyDiscoveryEnabled}
+              onKeyDiscoveryEnabledChange={setKeyDiscoveryEnabled}
               myKeys={keyring.keys}
               contacts={contacts.contacts}
               isUnlocked={session.isUnlocked}

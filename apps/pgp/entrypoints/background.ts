@@ -3,6 +3,8 @@ import "../lib/network-lockdown";
 import type {
   GithubKeysRequest,
   GithubKeysResponse,
+  KeyserverKeyRequest,
+  KeyserverKeyResponse,
   OperationAction,
   PendingOperation,
 } from "../lib/messages";
@@ -11,6 +13,8 @@ import { classifyAction } from "../lib/classify-action";
 import { MENU_OPEN_IN_PGP, SESSION_PENDING_OP } from "../lib/constants";
 import { fetchGithubKeys } from "../lib/github/fetch-keys";
 import { isGithubUsername } from "../lib/github/username";
+import { fetchKeyserverKey } from "../lib/keyserver/fetch-key";
+import { isKeyserverQuery } from "../lib/keyserver/query";
 import { commandToMode } from "../lib/mode-commands";
 import { sweepStalePendingOp } from "../lib/pending-op";
 
@@ -92,6 +96,36 @@ async function handleGithubKeysRequest(
   return { ok: true, username, lines: result.lines, omitted: result.omitted };
 }
 
+/**
+ * Handle a keys.openpgp.org key lookup for the side panel.
+ *
+ * The twin of {@link handleGithubKeysRequest}, and it is a twin on
+ * purpose: two lookups that both take untrusted bytes off the network in
+ * the worker should not have two different shapes for anyone auditing
+ * them. Same message-not-session-channel reasoning, same
+ * re-validate-at-the-boundary rule, same tagged-codes-never-prose rule.
+ *
+ * The query is re-derived here even though the panel derives it too: the
+ * panel is the untrusted side of this boundary. Anything that can send a
+ * runtime message reaches this function, and without the check `query`
+ * is a path fragment and this becomes an arbitrary GET against
+ * keys.openpgp.org.
+ */
+async function handleKeyserverKeyRequest(
+  message: KeyserverKeyRequest,
+): Promise<KeyserverKeyResponse> {
+  const { query } = message;
+  if (!isKeyserverQuery(query)) {
+    return { ok: false, error: "invalid-query" };
+  }
+
+  const result = await fetchKeyserverKey(query);
+  if (!result.ok) {
+    return { ok: false, error: result.error, retryAt: result.retryAt };
+  }
+  return { ok: true, query, armored: result.armored, omitted: result.omitted };
+}
+
 export default defineBackground(() => {
   void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 
@@ -148,21 +182,33 @@ export default defineBackground(() => {
   // rest.
   chrome.runtime.onMessage.addListener(
     (message: unknown, _sender, sendResponse) => {
-      if (
-        typeof message !== "object" ||
-        message === null ||
-        (message as { type?: unknown }).type !== "GITHUB_KEYS_REQUEST"
-      ) {
-        return undefined;
+      if (typeof message !== "object" || message === null) return undefined;
+      const type = (message as { type?: unknown }).type;
+
+      // Both lookups answer the same way: a tagged code on every failure
+      // path, including the rejection handler, so a thrown error can
+      // never reach the panel as prose.
+      if (type === "GITHUB_KEYS_REQUEST") {
+        void handleGithubKeysRequest(message as GithubKeysRequest).then(
+          sendResponse,
+          () => {
+            sendResponse({ ok: false, error: "server-error" });
+          },
+        );
+        return true;
       }
 
-      void handleGithubKeysRequest(message as GithubKeysRequest).then(
-        sendResponse,
-        () => {
-          sendResponse({ ok: false, error: "server-error" });
-        },
-      );
-      return true;
+      if (type === "KEYSERVER_KEY_REQUEST") {
+        void handleKeyserverKeyRequest(message as KeyserverKeyRequest).then(
+          sendResponse,
+          () => {
+            sendResponse({ ok: false, error: "server-error" });
+          },
+        );
+        return true;
+      }
+
+      return undefined;
     },
   );
 });

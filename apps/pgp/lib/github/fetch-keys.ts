@@ -17,6 +17,7 @@
  */
 
 import type { GithubKeysFailure } from "../messages";
+import { readCappedBody } from "../net/capped-body";
 import { MAX_BODY_BYTES, parseGithubKeysResponse } from "./response";
 import { githubKeysUrl } from "./username";
 
@@ -37,65 +38,6 @@ const GITHUB_API_ORIGIN = "https://api.github.com";
  * admits an attacker who can write the response.
  */
 const REQUEST_TIMEOUT_MS = 15_000;
-
-/**
- * Read at most `MAX_BODY_BYTES + 1` bytes of the response.
- *
- * `await response.text()` would buffer the WHOLE body first and only
- * then let us measure it -- the cap would be applied after the
- * allocation it exists to prevent, which is not what SECURITY.md and
- * `T-GITHUB-UNTRUSTED-PARSE` say ("caps applied before parsing"). One
- * byte over the cap is enough for `parseGithubKeysResponse` to refuse,
- * so we stop there and drop the connection.
- *
- * The extra byte matters: stopping exactly AT the cap would make a
- * hostile 10 GB body indistinguishable from a legitimate 64 KiB one.
- */
-/** What an over-cap body is reported as: one byte past the cap, which
- *  is all `parseGithubKeysResponse` needs to refuse it. */
-const OVER_CAP_BODY = "x".repeat(MAX_BODY_BYTES + 1);
-
-async function readCappedBody(response: Response): Promise<string> {
-  // Content-Length is a hint, not a promise -- it can lie, be absent, or
-  // be dropped by a chunked/compressed response. Believing it when it is
-  // over the cap costs nothing; the reader below is what enforces.
-  const declared = Number(response.headers.get("content-length"));
-  if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) {
-    void response.body?.cancel();
-    // Over the cap either way; the parser only needs to see that.
-    return OVER_CAP_BODY;
-  }
-
-  const body = response.body;
-  // No stream to read (a body-less status, or a fetch implementation
-  // without one): fall back, still slicing before the parse.
-  if (!body) return (await response.text()).slice(0, MAX_BODY_BYTES + 1);
-
-  const reader = body.getReader();
-  const decoder = new TextDecoder();
-  let read = 0;
-  let text = "";
-  try {
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      read += value.byteLength;
-      if (read > MAX_BODY_BYTES) {
-        // Hang up and decode nothing further. What comes back is a
-        // stand-in one byte over the cap rather than the bytes read:
-        // past this point the body is refused whatever it says, so
-        // decoding the rest of it would be work done for nothing.
-        void reader.cancel();
-        return OVER_CAP_BODY;
-      }
-      text += decoder.decode(value, { stream: true });
-    }
-    text += decoder.decode();
-  } finally {
-    reader.releaseLock();
-  }
-  return text;
-}
 
 export async function fetchGithubKeys(
   username: string,
@@ -153,7 +95,7 @@ async function requestKeys(
   let body: string;
   try {
     // Bounded as it arrives -- never buffered whole and measured after.
-    body = await readCappedBody(response);
+    body = await readCappedBody(response, MAX_BODY_BYTES);
   } catch {
     return { ok: false, error: "server-error" };
   }

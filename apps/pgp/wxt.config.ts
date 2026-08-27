@@ -10,23 +10,33 @@ const PROD_CSP =
   [
     "default-src 'none'",
     "script-src 'self' 'wasm-unsafe-eval'",
-    // Widened for the GitHub SSH-recipient import. CSP applies to the
-    // MV3 service worker (verified: with plain `connect-src 'self'` the
+    // Widened for the two key-discovery lookups. CSP applies to the MV3
+    // service worker (verified: with plain `connect-src 'self'` the
     // worker's fetch to api.github.com fails), so the worker cannot
-    // reach the endpoint without this entry.
+    // reach either endpoint without these entries.
     //
-    // What the `/users/` path prefix buys: other API paths are blocked
-    // -- verified that `/users/<name>/keys` returns 200 while `/gists`
-    // is refused by the browser. What it does NOT buy: CSP does not
-    // path-match query strings, so `?anything=x` appended to an allowed
-    // path still passes. The real defence against a crafted path is
-    // lib/github/username.ts, which pins the username charset and
-    // asserts the final origin + pathname before fetching.
+    // What the path prefixes buy: other paths on those hosts are
+    // blocked -- verified that `/users/<name>/keys` returns 200 while
+    // `/gists` is refused by the browser. What they do NOT buy: CSP
+    // does not path-match query strings, so `?anything=x` appended to an
+    // allowed path still passes. The real defence against a crafted
+    // path is lib/github/username.ts and lib/keyserver/query.ts, which
+    // pin the charset of what goes into the path and assert the final
+    // origin + pathname before fetching.
+    //
+    // BOTH ENTRIES ARE HERE WHETHER OR NOT THE USER WANTS THEM. The
+    // `keyDiscoveryEnabled` preference decides whether the panel ever
+    // ASKS for a lookup; a manifest is static, so it cannot narrow with
+    // a setting. Turning the preference off removes the only code path
+    // that reaches these origins -- it does not, and cannot, remove the
+    // permission. Said out loud because the difference matters to
+    // anyone reading the manifest to find out what this extension can
+    // talk to.
     //
     // The side panel does not need this and does not get it: its
     // index.html carries a meta CSP that keeps it on `connect-src
-    // 'self'`. Only the worker talks to GitHub.
-    "connect-src 'self' https://api.github.com/users/",
+    // 'self'`. Only the worker talks to either host.
+    "connect-src 'self' https://api.github.com/users/ https://keys.openpgp.org/vks/v1/",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data:",
     "font-src 'self'",

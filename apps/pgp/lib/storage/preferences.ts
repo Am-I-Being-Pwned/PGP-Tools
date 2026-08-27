@@ -49,6 +49,19 @@ export interface PgpPreferences {
   crxSigningEnabled: boolean;
   /** Opt-in encrypted history of workspace operations. Off by default. */
   historyEnabled: boolean;
+  /** Master enable for the two network key lookups on the import step:
+   *  a GitHub user's published SSH keys, and a certificate from
+   *  keys.openpgp.org. ON by default, so an existing install keeps the
+   *  GitHub lookup it already had (a stored settings blob is a partial
+   *  overlay on these defaults, so a blob written before this field
+   *  existed reads back as `true`).
+   *
+   *  It is one switch for both because it gates one capability: the
+   *  panel asking a third party who someone is. Off means the import
+   *  step makes no outbound request at all, whatever is typed -- which
+   *  is what the strictest preset wants, and the only reason this
+   *  preference exists (see `lib/presets.ts`). */
+  keyDiscoveryEnabled: boolean;
   /** Seconds a sensitive clipboard copy (exported private key, revocation
    *  certificate) survives before the best-effort wipe fires. */
   clipboardWipeSeconds: number;
@@ -82,6 +95,7 @@ export const DEFAULT_PREFERENCES: PgpPreferences = {
   lockOnTabAway: false,
   crxSigningEnabled: false,
   historyEnabled: false,
+  keyDiscoveryEnabled: true,
   clipboardWipeSeconds: 60,
   recentRecipients: [],
   defaultKeyId: null,

@@ -165,7 +165,7 @@ async function lookUpGithubUser(panel: Page, user: string): Promise<void> {
   // is why it shows up in exactly one spec.
   await expect(panel.getByRole("region", { name: "Import key" })).toBeHidden();
   await panel.getByRole("button", { name: "Import Key" }).click();
-  const field = panel.getByLabel(/GitHub user/i);
+  const field = panel.getByLabel(/look someone up/i);
   const lookUp = panel.getByRole("button", { name: "Look up", exact: true });
   // A fill that lands while the panel is still sliding in can be undone
   // by the re-render behind it: `fill` asserts the value it typed at the
@@ -417,7 +417,7 @@ test("a paste into the GitHub field is a username, not armor", async ({
   // claimed by that listener, preventDefault'd, and handed to the key
   // parser -- which says it doesn't look like a key while the field the
   // user pasted into stays empty.
-  const field = panel.getByLabel(/GitHub user/i);
+  const field = panel.getByLabel(/look someone up/i);
   await field.focus();
   // A REAL paste gesture, because the bug is in a real paste listener: a
   // synthetic ClipboardEvent would not insert the text either, so it

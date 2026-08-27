@@ -25,12 +25,15 @@ If a claim here disagrees with the code, the code wins.
   fingerprint — under a per-key-type prefix, so swapping two encrypted-key
   blobs on disk fails authentication, whether they are the same key type
   or not.
-- Outbound network exfiltration (§7) — with one deliberate exception as
-  of the GitHub recipient lookup: the background service worker may reach
-  `https://api.github.com/users/`, and only that. The side panel, which is
-  the realm that holds key handles and composed plaintext, is still
-  pinned to
-  `connect-src 'self'`. Read §7 before relying on this line.
+- Outbound network exfiltration (§7) — with two deliberate exceptions,
+  both of them key-discovery lookups: the background service worker may
+  reach `https://api.github.com/users/` and
+  `https://keys.openpgp.org/vks/v1/`, and only those. Neither is reachable
+  by any code path unless the `keyDiscoveryEnabled` preference is on (it
+  is on by default, and off in the strictest security preset). The side
+  panel, which is the realm that holds key handles and composed
+  plaintext, is still pinned to `connect-src 'self'`. Read §7 before
+  relying on this line.
 
 What we do **not** defend is in §8.
 
@@ -94,30 +97,30 @@ call either export directly. See §8.10.
 
 ## 3. File map
 
-| #   | File                                       | What's in it                                                                                                                                                                                                   |
-| --- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `apps/pgp/SECURITY.md` (this file)         | The contract                                                                                                                                                                                                   |
-| 2   | `apps/pgp/gpg-wasm/src/lib.rs`             | The WASM crate. The actual sandbox.                                                                                                                                                                            |
-| 2a  | `apps/pgp/gpg-wasm/src/crx.rs`             | RSA-2048 CRX (Chrome extension) signer/verifier. Separate `CRX_KEY_STORE`; see §10.                                                                                                                            |
-| 2b  | `apps/pgp/gpg-wasm/src/age.rs`             | age encrypt/decrypt to imported SSH keys (`ssh-ed25519`, `ssh-rsa`). Separate `SSH_KEY_STORE`; see §13.                                                                                                        |
-| 2c  | `apps/pgp/gpg-wasm/src/protected.rs`       | The at-rest envelope every key type is sealed by (`seal_with_*` / `open_*`), plus the generic `HandleStore`. See §5, §13.                                                                                      |
-| 5b  | `apps/pgp/lib/age/`                        | JS-side age coordinator and SSH-identity import/unlock/drop. Holds recipient lines and `u32` handles; no key material.                                                                                         |
-| 5a  | `apps/pgp/lib/crx/`                        | JS-side CRX key storage, sign/verify coordinator, and backup (de)serialization.                                                                                                                                |
-| 3   | `apps/pgp/lib/pgp/wasm.ts`                 | JS-side barrel.                                                                                                                                                                                                |
-| 4   | `apps/pgp/lib/pgp/wasm-public.ts`          | Wasm wrappers that don't carry secrets.                                                                                                                                                                        |
-| 5   | `apps/pgp/lib/pgp/wasm-secrets.ts`         | Wasm wrappers that do, each with a `@secret-handling` block.                                                                                                                                                   |
-| 6   | `apps/pgp/lib/protection/protect-flow.ts`  | Generate/import/protect. Owns the `Uint8Array.fill(0)` calls.                                                                                                                                                  |
-| 7   | `apps/pgp/hooks/useKeySession.ts`          | KEY_STORE lifetime in JS (handle map, idle-/visibility-/OS-idle locks).                                                                                                                                        |
-| 8   | `apps/pgp/entrypoints/sidepanel/App.tsx`   | Auto-lock wiring + workspace-draft persistence.                                                                                                                                                                |
-| 8a  | `apps/pgp/entrypoints/welcome/Welcome.tsx` | First-install welcome page; only does `chrome.sidePanel.open` from a user-gesture click. No secret material.                                                                                                   |
-| 8b  | `apps/pgp/entrypoints/background.ts`       | Service worker. Context menus + welcome tab, the one GitHub key lookup (§7), and the pending-op channel. No wasm, no keys -- but it writes the user's raw selection to `chrome.storage.session` unsealed (§7). |
-| 9   | `apps/pgp/lib/network-lockdown.ts`         | Frozen `globalThis.fetch`; blocks XHR/WS/EventSource/RTC/sendBeacon.                                                                                                                                           |
-| 10  | `apps/pgp/scripts/audit-network.mjs`       | Build-time per-context census: worker = 1 pinned fetch to api.github.com; pages = no code that can name a remote destination.                                                                                  |
-| 11  | `apps/pgp/lib/storage/history.ts`          | Opt-in operation history. Segmented AES-256-GCM blobs under the contacts session key; holds message content. See §11.                                                                                          |
-| 12  | `apps/pgp/lib/workspace-draft.ts`          | In-progress composer text, encrypted under a separate in-WASM draft session key (§6).                                                                                                                          |
-| 13  | `apps/pgp/lib/security/threat-model.ts`    | This document's attack model as typed data. `threat-model.test.ts` fails if a claimed defence names no live test.                                                                                              |
-| 14  | `apps/pgp/scripts/audit-invariants.mjs`    | Build-time enforcement of §9. Replaces running those greps by hand.                                                                                                                                            |
-| 15  | `apps/pgp/gpg-wasm/src/rng.rs`             | ChaCha20 CSPRNG between us and `crypto.getRandomValues`. See §12 for what it does and does not cover.                                                                                                          |
+| #   | File                                       | What's in it                                                                                                                                                                                                             |
+| --- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | `apps/pgp/SECURITY.md` (this file)         | The contract                                                                                                                                                                                                             |
+| 2   | `apps/pgp/gpg-wasm/src/lib.rs`             | The WASM crate. The actual sandbox.                                                                                                                                                                                      |
+| 2a  | `apps/pgp/gpg-wasm/src/crx.rs`             | RSA-2048 CRX (Chrome extension) signer/verifier. Separate `CRX_KEY_STORE`; see §10.                                                                                                                                      |
+| 2b  | `apps/pgp/gpg-wasm/src/age.rs`             | age encrypt/decrypt to imported SSH keys (`ssh-ed25519`, `ssh-rsa`). Separate `SSH_KEY_STORE`; see §13.                                                                                                                  |
+| 2c  | `apps/pgp/gpg-wasm/src/protected.rs`       | The at-rest envelope every key type is sealed by (`seal_with_*` / `open_*`), plus the generic `HandleStore`. See §5, §13.                                                                                                |
+| 5b  | `apps/pgp/lib/age/`                        | JS-side age coordinator and SSH-identity import/unlock/drop. Holds recipient lines and `u32` handles; no key material.                                                                                                   |
+| 5a  | `apps/pgp/lib/crx/`                        | JS-side CRX key storage, sign/verify coordinator, and backup (de)serialization.                                                                                                                                          |
+| 3   | `apps/pgp/lib/pgp/wasm.ts`                 | JS-side barrel.                                                                                                                                                                                                          |
+| 4   | `apps/pgp/lib/pgp/wasm-public.ts`          | Wasm wrappers that don't carry secrets.                                                                                                                                                                                  |
+| 5   | `apps/pgp/lib/pgp/wasm-secrets.ts`         | Wasm wrappers that do, each with a `@secret-handling` block.                                                                                                                                                             |
+| 6   | `apps/pgp/lib/protection/protect-flow.ts`  | Generate/import/protect. Owns the `Uint8Array.fill(0)` calls.                                                                                                                                                            |
+| 7   | `apps/pgp/hooks/useKeySession.ts`          | KEY_STORE lifetime in JS (handle map, idle-/visibility-/OS-idle locks).                                                                                                                                                  |
+| 8   | `apps/pgp/entrypoints/sidepanel/App.tsx`   | Auto-lock wiring + workspace-draft persistence.                                                                                                                                                                          |
+| 8a  | `apps/pgp/entrypoints/welcome/Welcome.tsx` | First-install welcome page; only does `chrome.sidePanel.open` from a user-gesture click. No secret material.                                                                                                             |
+| 8b  | `apps/pgp/entrypoints/background.ts`       | Service worker. Context menus + welcome tab, the two key-discovery lookups (§7, §7.1), and the pending-op channel. No wasm, no keys -- but it writes the user's raw selection to `chrome.storage.session` unsealed (§7). |
+| 9   | `apps/pgp/lib/network-lockdown.ts`         | Frozen `globalThis.fetch`; blocks XHR/WS/EventSource/RTC/sendBeacon.                                                                                                                                                     |
+| 10  | `apps/pgp/scripts/audit-network.mjs`       | Build-time per-context census: worker = 2 fetches, pinned apart to api.github.com and keys.openpgp.org; pages = no code that can name a remote destination.                                                              |
+| 11  | `apps/pgp/lib/storage/history.ts`          | Opt-in operation history. Segmented AES-256-GCM blobs under the contacts session key; holds message content. See §11.                                                                                                    |
+| 12  | `apps/pgp/lib/workspace-draft.ts`          | In-progress composer text, encrypted under a separate in-WASM draft session key (§6).                                                                                                                                    |
+| 13  | `apps/pgp/lib/security/threat-model.ts`    | This document's attack model as typed data. `threat-model.test.ts` fails if a claimed defence names no live test.                                                                                                        |
+| 14  | `apps/pgp/scripts/audit-invariants.mjs`    | Build-time enforcement of §9. Replaces running those greps by hand.                                                                                                                                                      |
+| 15  | `apps/pgp/gpg-wasm/src/rng.rs`             | ChaCha20 CSPRNG between us and `crypto.getRandomValues`. See §12 for what it does and does not cover.                                                                                                                    |
 
 ---
 
@@ -284,6 +287,40 @@ and this section says so before it says anything else.
      does the same job with no network at all and stays first-class.
      `T-GITHUB-LOOKUP-DISCLOSURE`.
 
+3. **Keyserver certificate lookup**, `GET
+https://keys.openpgp.org/vks/v1/by-{email,fingerprint,keyid}/<q>`.
+   - **Where.** The background service worker, and only there. The panel
+     asks the worker over the message boundary and never issues the
+     request itself.
+   - **When.** Only on an explicit button press in the import UI, and
+     only while `keyDiscoveryEnabled` is on — with it off, the field that
+     starts a lookup is not rendered and no code path reaches either
+     endpoint. Never on a timer, never on install, never on unlock,
+     never on encrypt, never as a background refresh. One press, one
+     request.
+   - **What it carries.** The canonical query — a lowercased address, or
+     an uppercase fingerprint or long key id — in the URL path. Nothing
+     else: no body (it is a GET), no message content, no key material, no
+     vault or installation identifier, no telemetry.
+   - **What it does not carry.** No credentials, exactly as above; the
+     endpoint answers unauthenticated with `access-control-allow-origin:
+*` (measured), so no host permission is needed or requested.
+   - **What it does not buy, and why this one is worse than the GitHub
+     lookup.** A GitHub lookup discloses an account name; this discloses
+     an **email address** — the identity of the person the user is about
+     to write to — in the clear in a URL path, to a third party with no
+     other reason to know it. Looking up **by fingerprint** discloses
+     strictly less (it names a key, not a person) and the same field
+     accepts one. Pasting the armored cert does the same job with no
+     network at all and stays first-class.
+     `T-KEYSERVER-LOOKUP-DISCLOSURE`.
+   - **What the service's own verification means.** keys.openpgp.org
+     publishes an address only after an email round-trip to it. That is
+     **mailbox control at upload time, not identity**, and it is a
+     property an attacker who controls or intercepts that mailbox also
+     has. It is not verification and the UI does not present it as such.
+     `T-KEYSERVER-KEY-SUBSTITUTION`.
+
 **The CSP is no longer uniform, and `connect-src 'self'` is no longer an
 extension-wide claim.** It is now two policies:
 
@@ -291,7 +328,10 @@ extension-wide claim.** It is now two policies:
   including the MV3 service worker — CSP does reach the worker, verified:
   with plain `connect-src 'self'` the worker's fetch fails, and widened it
   returns 200):
-  `connect-src 'self' https://api.github.com/users/`.
+  `connect-src 'self' https://api.github.com/users/ https://keys.openpgp.org/vks/v1/`.
+  Note that a manifest is static: the `keyDiscoveryEnabled` preference
+  removes the only code path that reaches these origins, it does not and
+  cannot narrow this policy.
 - **Panel** (`entrypoints/sidepanel/index.html`): a
   `<meta http-equiv="Content-Security-Policy" content="connect-src 'self'">`
   tag. Meta CSP can only tighten, never loosen, so the panel realm is
@@ -304,7 +344,9 @@ extension-wide claim.** It is now two policies:
 **The residual, stated rather than glossed.** CSP path-matches the path
 and **not the query string**. `https://api.github.com/users/x/keys` is
 allowed and so is `…/keys?leak=SECRET` — verified. A `/gists` path is
-blocked, so the prefix itself works. What this means: a compromised
+blocked, so the prefix itself works. The keyserver origin adds a second
+host the same channel can be pointed at; it does not change the shape of
+the residual. What this means: a compromised
 _worker_ bundle could exfiltrate inside a query string on an allowed
 path, and no narrower CSP can close that. What bounds it: the worker
 is the ORIGIN of one plaintext rather than a router of it:
@@ -335,12 +377,16 @@ headers and reject plain HTTP and POST/PUT/PATCH/DELETE; replaces
 does so **per context with exact counts** rather than against one flat
 allowlist:
 
-- **worker bundle** — exactly one `fetch` call site beyond the lockdown's
-  own reference to `globalThis.fetch`, pinned to the GitHub call; exactly
-  one `https://` origin literal, and it is `https://api.github.com`; that
-  literal appears in exactly one built file in the whole output, and that
-  file is `background.js`; and `background.js` has no module imports, so
-  worker code cannot be hiding in a chunk shared with the panel.
+- **worker bundle** — exactly two `fetch` call sites beyond the
+  lockdown's own reference to `globalThis.fetch`, and they are pinned
+  **apart**: one call's destination must resolve statically to
+  `https://api.github.com` and the other's to `https://keys.openpgp.org`,
+  so two fetches to the same permitted host fail the build rather than
+  sharing a budget. Exactly two `https://` origin literals, and they are
+  those two; each appears in exactly one built file in the whole output,
+  and that file is `background.js`; and `background.js` has no module
+  imports, so worker code cannot be hiding in a chunk shared with the
+  panel.
 - **panel and welcome bundles** — no `fetch` beyond the two wasm loaders,
   no XHR / WebSocket / EventSource / RTCPeerConnection / sendBeacon /
   `new Worker` / `new Function` / `eval` at all, and no absolute URL
@@ -364,6 +410,75 @@ wasm loader is a real `fetch`, and the lockdown reads `globalThis.fetch`
 in order to replace it. The defensible claim is the narrower one the
 audit actually makes: **the side-panel bundle contains no code that can
 name a remote destination.**
+
+### 7.1 The keyserver lookup, in detail
+
+The GitHub lookup's own mechanics are in §13.1, next to the age engine it
+feeds. This one produces an OpenPGP certificate, so it lives here.
+
+**One preference gates both lookups.** `keyDiscoveryEnabled` (default
+on; off in the "If this leaks, I'm in trouble" preset) is what decides
+whether the import step renders the field that starts a lookup. Off, no
+code path in the app issues either request. What it is **not** is a
+capability revocation: a manifest is static, so the `connect-src` entries
+remain, and code injected into the panel realm under §8.10's precondition
+could still send the worker a lookup message. The preference removes the
+feature, not the permission. It is one switch rather than
+two because it gates one capability — the panel asking a third party who
+someone is — and a user who does not want that does not want half of it.
+
+**The query never becomes an arbitrary path.** `lib/keyserver/query.ts`
+holds no `https://keys.openpgp.org` literal at all — it is handed the
+origin — and admits exactly three shapes: a conservative address grammar,
+40 hex characters, or 16 hex characters (each accepting an `0x` prefix
+and GnuPG's grouping spaces, which are stripped). None admits `/`, `?`,
+`#`, `\`, `:` or whitespace. The value is then **percent-encoded** rather
+than interpolated — a legal `%` or `+` in a local part is data, not
+syntax — and the URL is built with `new URL()` and its origin, pathname,
+search, hash, username and password each re-asserted before the request
+is issued. Without all of that, "look up a key" is an arbitrary-GET
+primitive against keys.openpgp.org driven by the untrusted side of the
+message boundary.
+
+**The query is canonical, and the worker re-derives it.** An address is
+lowercased and a fingerprint uppercased before the request, so the same
+person looked up twice is one contact rather than two. The panel sends
+the canonical form and the worker re-parses it and compares — a value the
+panel merely _claims_ is canonical is refused, because the URL builder
+interpolates what it is given.
+
+**Redirects are refused.** `redirect: "error"`. A redirect is a
+server-chosen destination, and the whole point of the URL builder is that
+the destination is ours; following one would let the endpoint hand the
+lookup — and the identity in its path — to any origin it liked, with the
+`connect-src` entry as the only thing left saying no.
+
+**The worker is a transport that shape-checks; the engine decides.** It
+bounds the body before it is in memory: a 15-second deadline, a
+`Content-Length` pre-check that cancels without reading a byte, and a
+reader loop that stops at 128 KiB measured in **bytes**, not UTF-16 code
+units. (That loop is `lib/net/capped-body.ts` and is shared with the
+GitHub lookup — one copy, because a second hand-rolled bounded reader is
+free to drift from the one this document quotes, and the drift would be
+silent.) It requires `application/pgp-keys`, then extracts only the text
+between a matched BEGIN/END **public** key armor pair. A private key
+block cannot match, so the endpoint has no way to hand this app
+secret-shaped material to classify. Extra blocks are counted and
+surfaced, never silently truncated. Tagged result codes cross the message
+boundary, never prose the service wrote — which matters more here than
+for GitHub, whose 404 is JSON: this endpoint's 404 body is `text/html`
+quoting the query back at you.
+
+The armor is then re-parsed by `prepareImport` in the panel, the
+identical wasm path a pasted certificate takes. **A key that reaches
+storage has been through wasm, whatever its source.**
+`T-KEYSERVER-UNTRUSTED-PARSE`.
+
+**What none of that establishes is that the key is the right one.** See
+`T-KEYSERVER-KEY-SUBSTITUTION`, and note in particular that the service's
+email verification proves **mailbox control at upload time, not
+identity**. A by-fingerprint lookup is the one path here that is
+self-verifying, because the query is the check.
 
 ---
 

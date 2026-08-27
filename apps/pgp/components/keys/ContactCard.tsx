@@ -210,12 +210,19 @@ export function ContactCard({
               ? ` - ${formatAlgorithm(contact.algorithm)}`
               : ""}
           </p>
-          {source?.type === "github" && (
+          {source && (
             /* Where this contact came from, which is also its upsert
-               identity: looking the same user up again updates THIS
-               record rather than adding a second one. */
+               identity: looking the same user (or address) up again
+               updates THIS record rather than adding a second one.
+
+               A PROVENANCE LABEL, NOT A TRUST CLAIM. It says who told us
+               this key is theirs; it does not say anyone checked. See
+               T-GITHUB-KEY-SUBSTITUTION and
+               T-KEYSERVER-KEY-SUBSTITUTION. */
             <p className="text-muted-foreground mt-0.5 text-xs">
-              From github.com/{source.user}
+              {source.type === "github"
+                ? `From github.com/${source.user}`
+                : `From keys.openpgp.org - ${source.user}`}
             </p>
           )}
           {note && <p className="text-muted-foreground mt-1 text-xs">{note}</p>}

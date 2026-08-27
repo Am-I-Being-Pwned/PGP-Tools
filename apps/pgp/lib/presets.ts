@@ -34,6 +34,7 @@ export const PRESETS: Record<PresetId, SecurityPreset> = {
       lockOnTabAway: false,
       neverCacheKeys: false,
       historyEnabled: true,
+      keyDiscoveryEnabled: true,
       encryptToSelf: true,
       clipboardWipeSeconds: 60,
     },
@@ -48,6 +49,7 @@ export const PRESETS: Record<PresetId, SecurityPreset> = {
       lockOnTabAway: false,
       neverCacheKeys: false,
       historyEnabled: true,
+      keyDiscoveryEnabled: true,
       encryptToSelf: true,
       storageLocation: "local",
       clipboardWipeSeconds: 60,
@@ -63,6 +65,11 @@ export const PRESETS: Record<PresetId, SecurityPreset> = {
       lockOnTabAway: true,
       neverCacheKeys: true,
       historyEnabled: false,
+      // The only preset that turns key discovery off. Looking someone up
+      // tells GitHub or keys.openpgp.org that this network is about to
+      // write to that person, and a user who has picked this card has
+      // said that is a cost they do not want to pay.
+      keyDiscoveryEnabled: false,
       encryptToSelf: true,
       storageLocation: "local",
       clipboardWipeSeconds: 15,
@@ -144,6 +151,12 @@ const LINE_BUILDERS: BundleLine[] = [
     return b.historyEnabled
       ? "Keeps an encrypted history of what you do"
       : "No history is kept";
+  },
+  (b) => {
+    if (b.keyDiscoveryEnabled === undefined) return null;
+    return b.keyDiscoveryEnabled
+      ? "Keys can be looked up on GitHub and keys.openpgp.org"
+      : "No key lookups - nothing leaves this device to find a key";
   },
   (b) => {
     if (b.storageLocation === undefined) return null;

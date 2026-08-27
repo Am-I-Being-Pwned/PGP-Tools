@@ -155,4 +155,16 @@ export interface IncomingKey {
    *  GitHub lookup). `keyId`/`publicArmored` stay the FIRST member's, so
    *  nothing that reads them needs to know. */
   group?: ContactGroup;
+  /**
+   * Where a SINGLE fetched key came from -- the keyserver lookup, which
+   * returns one certificate and so has no {@link ContactGroup} to carry
+   * its source on.
+   *
+   * ABSENT MEANS HAND-SUPPLIED, exactly as it does on the stored record
+   * and on a group. A pasted cert must never acquire a provenance it
+   * does not have: the label is what the UI shows instead of "I verified
+   * this myself", so inventing one would be worse than showing none.
+   * Read it through `contactSource` once stored, never directly.
+   */
+  source?: ContactSource;
 }

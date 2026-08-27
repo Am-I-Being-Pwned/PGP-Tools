@@ -418,6 +418,17 @@ export async function openHistoryPage(panel: Page): Promise<void> {
 // ── CRX signing (opt-in, off by default) ─────────────────────────────
 
 /** Flip the Settings-tab "Enable CRX signing" switch on. */
+/** Turn the import step's network lookups (GitHub, keys.openpgp.org) on
+ *  or off. On by default, so tests only need this to turn it OFF -- or
+ *  to prove that turning it back on restores the field. */
+export async function setKeyDiscovery(panel: Page, on: boolean): Promise<void> {
+  await panel.getByRole("tab", { name: "Settings" }).click();
+  const sw = panel.getByRole("switch", { name: "Look up keys online" });
+  await expect(sw).toBeVisible();
+  if ((await sw.getAttribute("aria-checked")) !== String(on)) await sw.click();
+  await expect(sw).toHaveAttribute("aria-checked", String(on));
+}
+
 export async function enableCrxSigning(panel: Page): Promise<void> {
   await panel.getByRole("tab", { name: "Settings" }).click();
   const sw = panel.getByRole("switch", { name: "Enable CRX signing" });
@@ -590,7 +601,7 @@ export interface StoredContact {
   userIds: string[];
   alias?: string;
   recipients?: { keyId: string; disabled?: true }[];
-  source?: { type: string; user: string };
+  source?: { type: string; user: string; fetchedAt?: number };
 }
 
 /**

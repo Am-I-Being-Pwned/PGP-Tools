@@ -72,6 +72,9 @@ interface KeysViewProps {
   cacheKeys?: boolean;
   /** When true, expose CRX (Chrome extension) signing keys. */
   crxSigningEnabled?: boolean;
+  /** Master enable for the import step's network lookups (GitHub SSH
+   *  keys, keys.openpgp.org certificates). */
+  keyDiscoveryEnabled?: boolean;
   crxKeys?: CrxSigningKeyBlob[];
   onAddCrxKey?: (blob: CrxSigningKeyBlob) => Promise<void>;
   onDeleteCrxKey?: (extensionId: string) => Promise<void>;
@@ -158,6 +161,7 @@ export function KeysView({
   onKeyCached,
   cacheKeys,
   crxSigningEnabled,
+  keyDiscoveryEnabled,
   crxKeys,
   onAddCrxKey,
   onDeleteCrxKey,
@@ -577,6 +581,7 @@ export function KeysView({
                 reusePasskeyCredentialId={primaryPasskeyCredentialId}
                 initialArmored={route.initialArmored}
                 crxSigningEnabled={crxSigningEnabled}
+                keyDiscoveryEnabled={keyDiscoveryEnabled}
                 onImportCrx={onAddCrxKey}
                 // Both an import and a "show it in your keys" land the
                 // same way here: the user is already looking at the list.

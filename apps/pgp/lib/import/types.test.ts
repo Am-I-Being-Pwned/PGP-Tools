@@ -116,6 +116,10 @@ describe("IncomingKey", () => {
       // the same canonical recipient line `publicArmored` does, and its
       // rejected lines are the text that was fetched.
       group: true,
+      // Provenance for a single fetched cert (the keyserver lookup): a
+      // type tag, the query it was fetched for, and a timestamp. No key
+      // material of either half.
+      source: true,
     };
     const names = Object.keys(FIELDS);
 

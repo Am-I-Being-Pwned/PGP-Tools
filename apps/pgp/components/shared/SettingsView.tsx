@@ -75,6 +75,8 @@ interface SettingsViewProps {
   onLockOnTabAwayChange: (v: boolean) => void;
   crxSigningEnabled: boolean;
   onCrxSigningEnabledChange: (v: boolean) => void;
+  keyDiscoveryEnabled: boolean;
+  onKeyDiscoveryEnabledChange: (v: boolean) => void;
   /** Fired after a preset bundle rewrites preference-backed toggles the
    *  workspace also renders (historyEnabled, encryptToSelf, ...), so the
    *  always-mounted workspace can re-read them. */
@@ -121,6 +123,8 @@ export function SettingsView({
   onLockOnTabAwayChange,
   crxSigningEnabled,
   onCrxSigningEnabledChange,
+  keyDiscoveryEnabled,
+  onKeyDiscoveryEnabledChange,
   onWorkspacePrefsChanged,
   myKeys,
   contacts,
@@ -307,6 +311,9 @@ export function SettingsView({
     }
     if (values.neverCacheKeys !== undefined) {
       onNeverCacheKeysChange(values.neverCacheKeys);
+    }
+    if (values.keyDiscoveryEnabled !== undefined) {
+      onKeyDiscoveryEnabledChange(values.keyDiscoveryEnabled);
     }
   };
 
@@ -545,6 +552,33 @@ export function SettingsView({
             onCheckedChange={(v) => {
               onAutoDownloadTextChange(v);
               void savePreferences({ autoDownloadText: v });
+            }}
+          />
+        </label>
+      </div>
+
+      <div>
+        <h2 className="mb-2 text-sm font-semibold">Key discovery</h2>
+        <label className="border-border flex items-center justify-between gap-4 rounded-md border p-4">
+          <div>
+            <span className="text-sm">Look up keys online</span>
+            {/* Says exactly which hosts and exactly what they learn.
+                This is the only preference that lets the extension talk
+                to anyone, so a vague "enable lookups" would be hiding
+                the thing worth deciding about. */}
+            <p className="text-muted-foreground text-xs">
+              Adds a lookup box to the import screen for GitHub SSH keys and
+              keys.openpgp.org certificates. Off means nothing leaves this
+              device to find a key. Turning it on means a lookup tells that host
+              your IP address and who you searched for - it does not tell them
+              anything about your keys or messages.
+            </p>
+          </div>
+          <Switch
+            checked={keyDiscoveryEnabled}
+            onCheckedChange={(v) => {
+              onKeyDiscoveryEnabledChange(v);
+              void savePreferences({ keyDiscoveryEnabled: v });
             }}
           />
         </label>

