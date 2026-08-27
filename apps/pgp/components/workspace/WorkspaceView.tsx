@@ -36,6 +36,7 @@ import type { WorkspaceIntake } from "./useWorkspaceState";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import { useDelayedFlag } from "../../hooks/useDelayedFlag";
 import { useShortcut } from "../../hooks/useShortcut";
+import { useTranslation } from "../../hooks/useTranslation";
 import {
   COPY_SHORTCUT,
   DOWNLOAD_SHORTCUT,
@@ -60,6 +61,7 @@ import { KeySelector } from "./KeySelector";
 import { MessagePasswordPage } from "./MessagePasswordPage";
 import { selectionEngine } from "./recipient-engine";
 import { RecipientPicker } from "./RecipientPicker";
+import { TranslationPanel } from "./TranslationPanel";
 import { useWorkspaceOperations } from "./useWorkspaceOperations";
 import { useWorkspaceState } from "./useWorkspaceState";
 import { WorkspaceInput } from "./WorkspaceInput";
@@ -146,6 +148,13 @@ interface WorkspaceViewProps {
   /** When true (never-cache mode), history is disabled and wiped, so
    *  the "Save to history" checkbox and History button are hidden. */
   neverCacheKeys?: boolean;
+  /** Master enable for on-device translation of decrypted messages. */
+  aiTranslateEnabled?: boolean;
+  /** BCP 47 tag translations are produced in. */
+  translationTargetLanguage?: string;
+  /** Takes the user to Settings, where language packs are downloaded.
+   *  The decrypt screen never downloads one itself. */
+  onNavigateToSettings?: () => void;
 }
 
 export function WorkspaceView({
@@ -174,6 +183,9 @@ export function WorkspaceView({
   prefsVersion,
   defaultKeyId,
   neverCacheKeys,
+  aiTranslateEnabled,
+  translationTargetLanguage = "en",
+  onNavigateToSettings,
 }: WorkspaceViewProps) {
   const allPublicKeys: (ProtectedKeyBlob | PublicContactKey)[] = [
     ...myKeys,
@@ -213,6 +225,30 @@ export function WorkspaceView({
     onOperationComplete,
     defaultKeyId,
   });
+
+  const translation = useTranslation({
+    getOutput: s.getOutput,
+    outputVersion: s.outputVersion,
+    setTranslation: s.setTranslation,
+    targetLanguage: translationTargetLanguage,
+  });
+
+  // Rendered only under the full-height decrypt result, which is the one
+  // place a readable plaintext is on screen. Building it here (rather
+  // than inside WorkspaceResults) keeps the translation refs owned by
+  // the workspace state that wipes them at master lock.
+  const translationSlot = aiTranslateEnabled ? (
+    <TranslationPanel
+      status={translation.status}
+      onTranslate={() => void translation.translate()}
+      onDismiss={translation.reset}
+      onOpenSettings={onNavigateToSettings}
+      translationElRef={s.translationElRef}
+      getTranslation={s.getTranslation}
+      hasTranslation={s.hasTranslation}
+      targetLanguage={translationTargetLanguage}
+    />
+  ) : null;
 
   // Deferred loading labels: buttons disable immediately off s.loading,
   // but the label swap waits so sub-150ms crypto ops never flash
@@ -720,6 +756,7 @@ export function WorkspaceView({
           verifiedSigner={s.verifiedSigner}
           signatureTone={s.signatureTone}
           contacts={contacts}
+          translationSlot={translationSlot}
           outputPublicKeyDetected={s.outputPublicKeyDetected}
           outputVersion={s.outputVersion}
           onImportKey={(armored) => onNavigateToKeys?.(armored)}

@@ -100,7 +100,8 @@ export interface WorkspaceState {
   inputIsAge: boolean;
   /** Drop every plaintext copy this hook owns: the input ref, the
    *  textarea's DOM value, the clear-undo buffer, the output ref and the
-   *  output node's text -- and zeroize the decrypted bytes behind
+   *  output node's text, the translation ref and ITS node -- and
+   *  zeroize the decrypted bytes behind
    *  `binaryOutput` / `fileResults`. Called by the App at master lock,
    *  after the draft has been encrypted. */
   wipePlaintext: () => void;
@@ -131,6 +132,19 @@ export interface WorkspaceState {
   /** Bumps on every output change, so a second result re-runs anything
    *  derived from the output text. */
   outputVersion: number;
+  /** The `<pre>` showing an on-device translation of the result. A
+   *  translation is a SECOND COPY of the decrypted plaintext, so it is
+   *  held exactly like `outputElRef` -- ref plus imperative
+   *  `textContent`, never render state -- and cleared by
+   *  `wipePlaintext`. See the translation block below. */
+  translationElRef: React.MutableRefObject<HTMLPreElement | null>;
+  /** Read the current translation at the point of use. */
+  getTranslation: () => string;
+  /** Replace the translation (ref + DOM node + derived flag). Pass "" to
+   *  drop it, which is what a fresh operation does. */
+  setTranslation: (s: string) => void;
+  /** Derived, non-sensitive: a translation is on screen. */
+  hasTranslation: boolean;
   operationDone: boolean;
   setOperationDone: (b: boolean) => void;
   statusText: string | null;
@@ -362,6 +376,33 @@ export function useWorkspaceState(opts: {
     );
   }, []);
 
+  // ── the translation, held exactly like the output and for the same
+  // reason ────────────────────────────────────────────────────────────
+  //
+  // An on-device translation is a second, equally readable copy of the
+  // decrypted message. Putting it in `useState` would reintroduce
+  // T-OUTPUT-HEAP-RESIDUE through a side door: the string would be
+  // retained on `fiber.alternate` past a master-lock unmount, so the
+  // panel would release the plaintext it decrypted and hold on to the
+  // translation of it. Ref + `textContent`, wiped alongside the output.
+  //
+  // Only the LENGTH reaches render state, so the UI can tell "there is a
+  // translation" without the text itself crossing into the element tree.
+  const translationRef = useRef("");
+  const translationElRef = useRef<HTMLPreElement | null>(null);
+  const [translationLen, setTranslationLen] = useState(0);
+
+  const getTranslation = useCallback(() => translationRef.current, []);
+
+  const setTranslation = useCallback((text: string) => {
+    translationRef.current = text;
+    const el = translationElRef.current;
+    // Same guard as `setOutput`: an unchanged re-render must not blow
+    // away a selection the user is making inside the translation.
+    if (el && el.textContent !== text) el.textContent = text;
+    setTranslationLen((prev) => (prev === text.length ? prev : text.length));
+  }, []);
+
   // The decrypted bytes of a binary or multi-file result. These are the
   // one part of the operation result that CANNOT live in a ref alone: the
   // results card renders a row per file, so the values have to reach
@@ -387,6 +428,10 @@ export function useWorkspaceState(opts: {
     clearUndoRef.current = null;
     outputRef.current = "";
     if (outputElRef.current) outputElRef.current.textContent = "";
+    // The translation is decrypted plaintext too. Cleared here rather
+    // than left to unmount for the same reason as the output ref.
+    translationRef.current = "";
+    if (translationElRef.current) translationElRef.current.textContent = "";
     // Binary / multi-file results hold DECRYPTED MESSAGE BYTES just as
     // `outputRef` holds decrypted text (executeDecrypt's file branches,
     // and executeDecryptAge, both land here). `resetOutput()` clears them
@@ -862,6 +907,10 @@ export function useWorkspaceState(opts: {
     hasOutput: outputInfo.len > 0,
     outputPublicKeyDetected: outputInfo.publicKey,
     outputVersion: outputInfo.version,
+    translationElRef,
+    getTranslation,
+    setTranslation,
+    hasTranslation: translationLen > 0,
     operationDone,
     setOperationDone,
     statusText,

@@ -32,6 +32,8 @@ function fullPrefs(overrides: Partial<PgpPreferences> = {}): PgpPreferences {
     keyDiscoveryEnabled: true,
     clipboardWipeSeconds: 60,
     recentRecipients: [],
+    aiTranslateEnabled: true,
+    translationTargetLanguage: "en",
     defaultKeyId: null,
     ...overrides,
   };
@@ -77,7 +79,16 @@ describe("PRESETS", () => {
       encryptToSelf: true,
       storageLocation: "local",
       clipboardWipeSeconds: 15,
+      aiTranslateEnabled: false,
     });
+  });
+
+  it("is the only preset that decides the translation setting", () => {
+    expect(PRESETS.paranoid.bundle.aiTranslateEnabled).toBe(false);
+    // Casual and Careful deliberately leave an opt-in feature the user
+    // turned on alone, rather than flipping it as a side effect.
+    expect("aiTranslateEnabled" in PRESETS.casual.bundle).toBe(false);
+    expect("aiTranslateEnabled" in PRESETS.careful.bundle).toBe(false);
   });
 
   it("uses the exact strictest-preset title", () => {
@@ -154,12 +165,12 @@ describe("bundledSettingsCustomized", () => {
   });
 
   it("is true once any bundled setting deviates from the defaults", () => {
-    expect(
-      bundledSettingsCustomized(fullPrefs({ autoLockMinutes: 30 })),
-    ).toBe(true);
-    expect(
-      bundledSettingsCustomized(fullPrefs({ encryptToSelf: false })),
-    ).toBe(true);
+    expect(bundledSettingsCustomized(fullPrefs({ autoLockMinutes: 30 }))).toBe(
+      true,
+    );
+    expect(bundledSettingsCustomized(fullPrefs({ encryptToSelf: false }))).toBe(
+      true,
+    );
   });
 
   it("ignores preferences outside every bundle", () => {

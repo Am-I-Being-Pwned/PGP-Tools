@@ -78,6 +78,21 @@
 //    destination; and `sidepanel.html` pins the panel realm to
 //    `connect-src 'self'` with a meta CSP the browser enforces.
 //
+// 5. SINCE ON-DEVICE TRANSLATION, "no fetch in the panel" AND "the panel
+//    causes no network activity" ARE NO LONGER THE SAME CLAIM, and only
+//    the first is checked here. Chrome's built-in AI APIs
+//    (`Translator`, `LanguageDetector`) are browser-mediated globals, not
+//    network primitives: calling one is invisible to this scanner, does
+//    not traverse lib/network-lockdown.ts, and is not constrained by the
+//    manifest's `connect-src`. But a language-pack download IS real
+//    network activity, performed by Chrome's component updater on the
+//    extension's behalf. The counts below correctly stay at zero for it.
+//    What bounds that traffic is not this file: it is that the download
+//    call lives in exactly one function reachable from exactly one
+//    settings page, behind a preference that is off by default. See
+//    T-AI-AUDIT-BLINDSPOT and T-AI-TRANSLATE-METADATA in
+//    lib/security/threat-model.ts.
+//
 // Usage:  node scripts/audit-network.mjs [output-dir]
 //         Default output-dir: .output/chrome-mv3
 //         --census dumps the observed census instead of judging it,

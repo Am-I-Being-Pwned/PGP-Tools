@@ -67,6 +67,12 @@ export default function App() {
   // starting it false would flicker the lookup box away from every user
   // who has it on.
   const [keyDiscoveryEnabled, setKeyDiscoveryEnabled] = useState(true);
+  // Default TRUE for the same reason as the line above: it must match
+  // DEFAULT_PREFERENCES, or the frame before `getPreferences` lands
+  // flickers the Translate button in (or out) for everyone.
+  const [aiTranslateEnabled, setAiTranslateEnabled] = useState(true);
+  const [translationTargetLanguage, setTranslationTargetLanguage] =
+    useState("en");
   // The user's preferred own key (null = implicit first-key default).
   // Owned here so Keys (badge/action) and the workspace (self-key and
   // sign/decrypt preselection) stay in sync without a prefs re-read.
@@ -375,6 +381,8 @@ export default function App() {
     setLockOnTabAway(prefs.lockOnTabAway);
     setCrxSigningEnabled(prefs.crxSigningEnabled);
     setKeyDiscoveryEnabled(prefs.keyDiscoveryEnabled);
+    setAiTranslateEnabled(prefs.aiTranslateEnabled);
+    setTranslationTargetLanguage(prefs.translationTargetLanguage);
     setDefaultKeyId(prefs.defaultKeyId);
   }, []);
 
@@ -837,6 +845,9 @@ export default function App() {
               }}
               autoDownloadFiles={autoDownloadFiles}
               autoDownloadText={autoDownloadText}
+              aiTranslateEnabled={aiTranslateEnabled}
+              translationTargetLanguage={translationTargetLanguage}
+              onNavigateToSettings={() => setActiveTab("settings")}
               onOperationComplete={session.lockAllIfNoCache}
               restoreDraft={draftCiphertext}
               onDraftRestored={handleDraftRestored}
@@ -920,6 +931,10 @@ export default function App() {
               onCrxSigningEnabledChange={setCrxSigningEnabled}
               keyDiscoveryEnabled={keyDiscoveryEnabled}
               onKeyDiscoveryEnabledChange={setKeyDiscoveryEnabled}
+              aiTranslateEnabled={aiTranslateEnabled}
+              onAiTranslateEnabledChange={setAiTranslateEnabled}
+              translationTargetLanguage={translationTargetLanguage}
+              onTranslationTargetLanguageChange={setTranslationTargetLanguage}
               myKeys={keyring.keys}
               contacts={contacts.contacts}
               isUnlocked={session.isUnlocked}

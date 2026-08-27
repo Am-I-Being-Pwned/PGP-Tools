@@ -44,6 +44,7 @@ import { ImportAllKeysPage } from "../settings/ImportAllKeysPage";
 import { ImportFlowPreviewPage } from "../settings/ImportFlowPreviewPage";
 import { KeyboardShortcutsPage } from "../settings/KeyboardShortcutsPage";
 import { SecurityPresetPage } from "../settings/SecurityPresetPage";
+import { TranslationPage } from "../settings/TranslationPage";
 import { ConfirmPage } from "./ConfirmPage";
 import { StorageLocationPicker } from "./StorageLocationPicker";
 
@@ -77,6 +78,10 @@ interface SettingsViewProps {
   onCrxSigningEnabledChange: (v: boolean) => void;
   keyDiscoveryEnabled: boolean;
   onKeyDiscoveryEnabledChange: (v: boolean) => void;
+  aiTranslateEnabled: boolean;
+  onAiTranslateEnabledChange: (v: boolean) => void;
+  translationTargetLanguage: string;
+  onTranslationTargetLanguageChange: (code: string) => void;
   /** Fired after a preset bundle rewrites preference-backed toggles the
    *  workspace also renders (historyEnabled, encryptToSelf, ...), so the
    *  always-mounted workspace can re-read them. */
@@ -125,6 +130,10 @@ export function SettingsView({
   onCrxSigningEnabledChange,
   keyDiscoveryEnabled,
   onKeyDiscoveryEnabledChange,
+  aiTranslateEnabled,
+  onAiTranslateEnabledChange,
+  translationTargetLanguage,
+  onTranslationTargetLanguageChange,
   onWorkspacePrefsChanged,
   myKeys,
   contacts,
@@ -149,6 +158,7 @@ export function SettingsView({
   const [showImportFlow, setShowImportFlow] = useState(false);
   const [showPresets, setShowPresets] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showTranslation, setShowTranslation] = useState(false);
   // Stored-history byte size at the moment the user tried to turn
   // never-cache on; non-null renders the delete-history confirm page.
   const [neverCacheConfirmBytes, setNeverCacheConfirmBytes] = useState<
@@ -414,6 +424,22 @@ export function SettingsView({
                 : currentPreset === "custom"
                   ? "Custom"
                   : PRESETS[currentPreset].title}
+            </span>
+            <ChevronRightIcon className="text-muted-foreground h-4 w-4 shrink-0" />
+          </span>
+        </button>
+      </div>
+
+      <div>
+        <button
+          type="button"
+          onClick={() => setShowTranslation(true)}
+          className="border-border hover:border-muted-foreground/40 flex w-full items-center justify-between gap-4 rounded-md border p-4 text-left transition-colors"
+        >
+          <span className="text-sm">Translation</span>
+          <span className="flex items-center gap-2">
+            <span className="text-muted-foreground text-xs">
+              {aiTranslateEnabled ? "On" : "Off"}
             </span>
             <ChevronRightIcon className="text-muted-foreground h-4 w-4 shrink-0" />
           </span>
@@ -755,6 +781,22 @@ export function SettingsView({
 
       {showShortcuts && (
         <KeyboardShortcutsPage onClose={() => setShowShortcuts(false)} />
+      )}
+
+      {showTranslation && (
+        <TranslationPage
+          onClose={() => setShowTranslation(false)}
+          enabled={aiTranslateEnabled}
+          onEnabledChange={(v) => {
+            onAiTranslateEnabledChange(v);
+            void savePreferences({ aiTranslateEnabled: v });
+          }}
+          targetLanguage={translationTargetLanguage}
+          onTargetLanguageChange={(code) => {
+            onTranslationTargetLanguageChange(code);
+            void savePreferences({ translationTargetLanguage: code });
+          }}
+        />
       )}
 
       {neverCacheConfirmBytes !== null && (

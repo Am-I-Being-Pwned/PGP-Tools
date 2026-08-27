@@ -388,6 +388,48 @@ export const THREAT_MODEL: Threat[] = [
     section: "§8.5",
   },
 
+  // ---------------------------------------------------------------------
+  // On-device AI (translation of decrypted messages)
+  // ---------------------------------------------------------------------
+  {
+    id: "T-AI-PLAINTEXT-DISCLOSURE",
+    title: "Decrypted plaintext is handed to Chrome's built-in model",
+    attacker:
+      "Google, or anyone who can compel or compromise them. Not an attacker inside the browser: this is the browser vendor being trusted with the message body itself, on a path the user opted into.",
+    defence:
+      "Never invoked without a click: no translation and no language DETECTION runs on decrypt, on mount, or on output change, so the feature being enabled is not the same as the feature being used. Disabled outright by the strictest security preset. Sessions are created per call and destroyed in a `finally`, so no model session outlives the translation it was asked for, and the plaintext is aborted out of flight at master lock.",
+    status: "accepted",
+    rationale:
+      "There is no way to verify this one and it should not be presented as though there were. Chrome's Translator is documented as on-device, but in May 2026 Google REMOVED the sentence from Chrome's settings stating that on-device AI operates without sending user data to Google servers, and did not replace it with an equivalent promise or explain the change. There is also no API-level attestation: nothing lets a caller prove a given inference stayed local, so this cannot be closed by writing better code at this layer. What that leaves is scope control, which is what the defence field describes -- the feature is click-triggered, disabled by the paranoid preset, and touches ONLY the decrypt output, never a private key, a passphrase, or the composed input. NOTE THE DEFAULT CHANGED: `aiTranslateEnabled` now ships TRUE, and this entry is no longer allowed to lean on 'off by default' as mitigation. What carries the weight instead is that the preference gates whether the BUTTON is offered, not whether anything is sent: a user who never presses it is in exactly the position they were in before the feature existed, and that is the property that keeps shipping it acceptable. If a future change ever makes translation or detection fire without a press, this entry stops being honest and the change is wrong. Note this is a strictly WIDER disclosure than T-GITHUB-LOOKUP-DISCLOSURE: that one discloses a username, this one discloses the message.",
+    section: "§7, §8",
+  },
+  {
+    id: "T-AI-TRANSLATE-METADATA",
+    title:
+      "A language-pack download reveals the language of a just-decrypted message",
+    attacker:
+      "A network observer, or the pack-serving infrastructure, correlating the timing and identity of a model download with the message the user decrypted moments earlier.",
+    defence:
+      "Partial, and narrowed on purpose. A pack IS fetched from the decrypt path when it is missing, but never implicitly: it takes a Translate press, it reports progress under a label naming what is being fetched, and `translateText`/`detectLanguage` still refuse to download at all (fetching lives only in `ensureDetectorReady`, `ensureLanguagePack` and `downloadLanguagePack`). Settings can pre-download every pack, which is the one way to obtain one with no message on screen.",
+    status: "partial",
+    rationale:
+      "The original design refused to download on the decrypt path outright and sent the user to Settings. That was reversed after it became clear what it cost: a fresh Chrome profile has neither a language pack NOR the language detector, so the first press of Translate could only ever say 'not available', for every user, forever. A correct guarantee protecting a feature nobody can use is not a good trade, so the guarantee was weakened to 'no download without a gesture' rather than 'no download here'. WHAT IS STILL LEAKED, stated plainly: Google can observe that this Chrome profile fetched, say, the fr-to-en pack at time T, and that timing correlates with the user having just decrypted something in French. WHAT IS NOT: the message, the sender, the recipients, the key, or that PGP was involved at all -- the fetch is indistinguishable from the same profile translating a web page. The leak is also once per direction for the lifetime of the profile, not once per message, so it says nothing about volume or frequency. The detector download is weaker still: one model shared by every language, revealing only that this profile wants detection. Chrome refuses model downloads on metered connections, so this cannot surprise a user with bandwidth costs. Users who want the original property keep it by pre-downloading in Settings, which is why that page still exists and says so.",
+    verifiedBy: ["apps/pgp/lib/ai/translate.test.ts"],
+    section: "§7",
+  },
+  {
+    id: "T-AI-AUDIT-BLINDSPOT",
+    title: "Model downloads are network the build-time census cannot see",
+    attacker:
+      "Not an attacker. A reader of `audit-network.mjs` who takes its exact per-context fetch counts as a complete account of what the extension causes to happen on the wire.",
+    defence:
+      "None available at this layer, and none claimed. Documented here and in the scanner's own 'WHAT THIS DOES NOT PROVE' header so the count is not read as more than it is.",
+    status: "accepted",
+    rationale:
+      "Model and language-pack downloads are performed by Chrome's component updater at browser level, not by extension code from our origin. They therefore appear in NO artefact the audit inspects: they are not a `fetch` in any bundle, they do not traverse `network-lockdown.ts`, and they are not constrained by the manifest CSP's `connect-src`. The counts stay at zero and the build keeps passing, which is exactly why this needs saying -- before this feature, 'zero fetch sites in the panel' and 'the panel causes no network activity' were close enough to the same statement to conflate; they are now genuinely different, and only the first is machine-checked. The user-visible activity is still bounded and consented: every fetch is behind a click, either the Translate press or a Settings pre-download, and none happens merely because the feature is enabled (T-AI-TRANSLATE-METADATA). It is NOT bounded by the preference being off, since it now ships on -- the click is the boundary, not the toggle.",
+    section: "§7",
+  },
+
   {
     id: "T-AGE-SSH-STANZA-LINKABLE",
     title: "An age file names the SSH public key it was encrypted to",
@@ -522,6 +564,19 @@ export const THREAT_MODEL: Threat[] = [
     rationale:
       "Renamed from T-DRAFT-DOM-RESIDUE: the retainer was never the DOM, and that misnomer cost a round of work. Sequence worth preserving. Original chain: GC roots -> C++ Persistent roots -> autofill::FormTracker (pinning the textarea) -> React value-tracker closure -> plaintext; durable across six forced GCs over ten seconds with string churn. Blanking the DOM value removed THAT chain and revealed a second: (Global handles) -> closure -> property[alternate] -> updateQueue.lastEffect.create -> context -> workspace -> input. React double-buffers hook state onto fiber.alternate and keeps effect closures hanging off it reachable from a GC root, so a controlled value={input} retained the string regardless of the DOM -- clearing the DOM could never have been sufficient. The fix was to stop holding it in render state at all, following ImportKeyPage's uncontrolled paste box. This also deleted App.tsx's latestDraftRef, which had held a live plaintext copy for the whole panel session. Explicitly NOT the same as T-PLAINTEXT-IN-UI, which accepts plaintext being visible while composing. MEASUREMENT NOTE: this test only passes with tracing off -- Playwright's __playwright_snapshot_cache_ retains a textarea's value and masks the app-owned chain, so the spec sets test.use({ trace: 'off' }). A retainer walk should be validated against a deliberate negative control before its zero is believed. Decrypted output is covered by a separate test in the same spec (T-OUTPUT-HEAP-RESIDUE); this entry's test asserts only on the input draft.",
     verifiedBy: ["apps/pgp/e2e/draft-memory.spec.ts"],
+    section: "§8.11",
+  },
+  {
+    id: "T-TRANSLATION-HEAP-RESIDUE",
+    title: "A translation of a decrypted message survives master lock",
+    attacker:
+      "Same capability as T-OUTPUT-HEAP-RESIDUE: anyone reading the V8 heap after a master lock.",
+    defence:
+      "Built to the same rule as the output it derives from: `translationRef` plus the translation `<pre>`'s textContent, written imperatively through a callback ref and never as a React child, with only the LENGTH in render state. `wipePlaintext` clears the ref and the node alongside `outputRef`. In-flight translations are aborted on unmount and every model session is destroyed in a `finally`, so none outlives the plaintext it was handed.",
+    status: "partial",
+    rationale:
+      "Structurally identical to T-OUTPUT-HEAP-RESIDUE and fixed by the same mechanism -- but NOT yet measured, which is the whole reason this is `partial` rather than `defended`. That entry earned its status from a differential heap measurement (count 1 with a retaining effect, 0 without) and the equivalent has not been run for the translation buffer, so what exists here is a correct-by-construction argument, not evidence. Treat the gap as real: a translation is a second, fully readable copy of a decrypted message, so a mistake in this wiring costs exactly what a mistake in the output wiring would. The e2e coverage that does exist (translate.spec.ts) proves the feature's behaviour and its no-download rule, not its heap residue. Closing this means a case in draft-memory.spec.ts that translates, master-locks, and asserts absence with a positive control, observing the needle-offset rule in the EvidencePath doc above.",
+    verifiedBy: ["apps/pgp/e2e/translate.spec.ts"],
     section: "§8.11",
   },
   {

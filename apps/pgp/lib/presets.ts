@@ -73,6 +73,13 @@ export const PRESETS: Record<PresetId, SecurityPreset> = {
       encryptToSelf: true,
       storageLocation: "local",
       clipboardWipeSeconds: 15,
+      // The only preset that touches this. Translation is the one
+      // feature that hands decrypted plaintext to a model whose
+      // locality we cannot verify (T-AI-PLAINTEXT-DISCLOSURE), which is
+      // squarely against what this preset promises. Casual and Careful
+      // leave the user's own choice alone rather than turning a
+      // deliberately opt-in feature back on or off behind their back.
+      aiTranslateEnabled: false,
     },
   },
 };

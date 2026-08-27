@@ -68,6 +68,19 @@ export interface PgpPreferences {
   /** Fingerprints of recently used encrypt recipients, most recent
    *  first (capped). Orders the recipient picker's suggestions. */
   recentRecipients: string[];
+  /** Master enable for on-device translation of decrypted messages.
+   *
+   *  ON by default, and what that does NOT mean is the important part:
+   *  it controls whether the Translate BUTTON is offered, not whether
+   *  anything is translated. No text reaches a model, and no model is
+   *  downloaded, until the button is pressed. A user who never presses
+   *  it is in exactly the position they were in before the feature
+   *  existed. The strictest security preset still turns it off, and
+   *  T-AI-PLAINTEXT-DISCLOSURE records what pressing it costs. */
+  aiTranslateEnabled: boolean;
+  /** BCP 47 tag to translate INTO -- the language the user reads.
+   *  Language packs are downloaded per direction, from Settings only. */
+  translationTargetLanguage: string;
   /** The user's preferred own key: preselected for sign/decrypt and
    *  used as the encrypt-to-self key. Null means no explicit choice
    *  (the first key acts as the implicit default). */
@@ -98,6 +111,8 @@ export const DEFAULT_PREFERENCES: PgpPreferences = {
   keyDiscoveryEnabled: true,
   clipboardWipeSeconds: 60,
   recentRecipients: [],
+  aiTranslateEnabled: true,
+  translationTargetLanguage: "en",
   defaultKeyId: null,
 };
 
