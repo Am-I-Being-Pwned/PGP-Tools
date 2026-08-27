@@ -223,3 +223,44 @@ test("pasting a code snippet is left alone", async ({ panel }) => {
   await pasteIntoWorkspace(panel, code);
   await expect(panel.locator("textarea").first()).toHaveValue(code);
 });
+
+test("armor pasted straight out of a source file decrypts, and asks for a password", async ({
+  panel,
+}) => {
+  // THE REPORTED BUG, end to end. Pasting this project's own Rust
+  // fixture produced armor with a stranded backslash on every line, so
+  // `messageEncryption` could not parse it -- and the panel fell back to
+  // offering a KEY PICKER for a message no key can open, with no
+  // password prompt anywhere.
+  //
+  // Both halves are asserted: that the repair works, and that the panel
+  // then asks for the right thing.
+  await onboardWithPasswordSkipKey(panel, VAULT_PASSWORD);
+
+  const BS = "\\";
+  const pastedFromSource = [
+    `-----BEGIN PGP MESSAGE-----${BS}n${BS}n${BS}`,
+    `jA0ECQMIgYlslpAs65D/0lEB7S0K0+CFdt0IhAB8VpcBcK/6SkSMUGzegcLuFyBj${BS}n${BS}`,
+    `KAFUrRe5nBt9CNXSIRuIDsj+k2V4YT+ZnsBO4kx2F3RFv3sKEN8v1cKMq86Qif+p${BS}n${BS}`,
+    `wjg=${BS}n${BS}`,
+    `=AEHv${BS}n${BS}`,
+    `-----END PGP MESSAGE-----${BS}n`,
+  ].join("\n");
+
+  await pasteIntoWorkspace(panel, pastedFromSource);
+
+  // No stranded backslashes left in the box.
+  const box = panel.locator("textarea").first();
+  await expect(box).toHaveValue(/-----BEGIN PGP MESSAGE-----\n\njA0ECQ/);
+
+  // The picker is gone and the password prompt is there -- the half of
+  // the bug that was about what the panel ASKS for.
+  await expect(panel.getByText("Decrypt with")).toHaveCount(0);
+  await panel.getByRole("button", { name: /^decrypt$/i }).click();
+  const field = panel.getByPlaceholder("Enter message password");
+  await expect(field).toBeVisible();
+
+  await field.fill(MESSAGE_PASSWORD);
+  await field.press("Enter");
+  await expect(panel.getByText(PLAINTEXT)).toBeVisible();
+});

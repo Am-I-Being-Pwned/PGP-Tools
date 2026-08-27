@@ -213,12 +213,9 @@ export default defineConfig({
   }),
   dev: {
     server: {
-      port: 3003,
+      port: 3051,
     },
   },
-  // Renamed from `runner` in WXT 0.21 (`runner` was deprecated in 0.20
-  // and removed in 0.21). Keeps `wxt dev` from launching a browser --
-  // this project is loaded unpacked by hand.
   webExt: {
     disabled: true,
   },

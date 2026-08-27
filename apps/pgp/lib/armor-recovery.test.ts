@@ -251,6 +251,59 @@ describe("repairArmorEscapes", () => {
     ).toBe(block);
   });
 
+  it("repairs armor copied out of a SOURCE FILE, continuations and all", () => {
+    // REGRESSION, from a real paste. This is the literal in
+    // `gpg-wasm/src/tests.rs` selected in an editor and dropped into the
+    // workspace -- and it broke, because it carries TWO layers of damage
+    // at once: the `\n` escaping AND Rust's backslash-before-newline line
+    // continuations. Every other fixture in this file was built by
+    // applying ONE mechanical transformation to clean armor, which is a
+    // model of the problem rather than the problem; this one was copied.
+    //
+    // The same shape comes out of C, shell and Python source.
+    //
+    // `BS` is one literal backslash. Spelling it out beats escaping
+    // soup: `${BS}n` is the two characters a JSON escape leaves behind,
+    // and a trailing `${BS}` is the continuation.
+    const BS = "\\";
+    const pasted = [
+      `-----BEGIN PGP MESSAGE-----${BS}n${BS}n${BS}`,
+      `jA0ECQMIgYlslpAs65D/0lEB7S0K0+CFdt0IhAB8VpcBcK/6SkSMUGzegcLuFyBj${BS}n${BS}`,
+      `KAFUrRe5nBt9CNXSIRuIDsj+k2V4YT+ZnsBO4kx2F3RFv3sKEN8v1cKMq86Qif+p${BS}n${BS}`,
+      `wjg=${BS}n${BS}`,
+      `=AEHv${BS}n${BS}`,
+      `-----END PGP MESSAGE-----${BS}n`,
+    ].join("\n");
+
+    const expected = [
+      "-----BEGIN PGP MESSAGE-----",
+      "",
+      "jA0ECQMIgYlslpAs65D/0lEB7S0K0+CFdt0IhAB8VpcBcK/6SkSMUGzegcLuFyBj",
+      "KAFUrRe5nBt9CNXSIRuIDsj+k2V4YT+ZnsBO4kx2F3RFv3sKEN8v1cKMq86Qif+p",
+      "wjg=",
+      "=AEHv",
+      "-----END PGP MESSAGE-----",
+    ].join("\n");
+
+    expect(blockIn(repairArmorEscapes(pasted))).toBe(expected);
+  });
+
+  it("keeps a backslash that is not a continuation", () => {
+    // The rule is a backslash IMMEDIATELY before a newline. One sitting
+    // mid-line is not a continuation and must not vanish -- otherwise the
+    // rule stops being the reversal of a known transform and starts
+    // deleting characters it does not understand.
+    const BS = "\\";
+    const block = [
+      "-----BEGIN PGP MESSAGE-----",
+      `Comment: C:${BS}dir${BS}file`,
+      "",
+      "AAAA",
+      "-----END PGP MESSAGE-----",
+    ].join("\n");
+    expect(repairArmorEscapes(block)).toBe(block);
+  });
+
   it("does not repair across two different blocks", () => {
     // A BEGIN whose END belongs to a different block must not swallow
     // the text between them -- that would splice unrelated content into

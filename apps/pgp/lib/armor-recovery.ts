@@ -189,16 +189,45 @@ const ESCAPE_FORMS: [RegExp, string][] = [
  *  this regex: it opens `PGP SIGNED MESSAGE` and closes `PGP SIGNATURE`,
  *  so only its inner signature block matches here -- the body is handled
  *  separately below, under a stricter rule. */
-const ARMOR_BLOCK =
-  /-----BEGIN ([A-Z0-9 ]+?)-----([\s\S]*?)-----END \1-----/g;
+const ARMOR_BLOCK = /-----BEGIN ([A-Z0-9 ]+?)-----([\s\S]*?)-----END \1-----/g;
 
 /** A cleartext-signed message, whole: header, free-text body and the
  *  detached signature that covers it. */
 const CLEARTEXT_BLOCK =
   /-----BEGIN PGP SIGNED MESSAGE-----[\s\S]*?-----END PGP SIGNATURE-----/g;
 
+/**
+ * A source-language LINE CONTINUATION: a backslash immediately before a
+ * newline, plus the next line's indentation.
+ *
+ * Rust, C, shell and Python all use it, and it is what turns a long
+ * escaped string into a readable block in a source file -- so armor
+ * copied out of a test fixture or a code sample arrives carrying BOTH
+ * this and the `\n` escaping. Repairing only the escaping leaves a
+ * stranded backslash on every line, which is not valid base64 and does
+ * not parse. (Found by pasting this project's own Rust fixture into the
+ * workspace.)
+ *
+ * Safe for the same reason the escape forms are: a backslash is not in
+ * the base64 alphabet, so inside an armor block it cannot be data. It is
+ * matched only IMMEDIATELY before a newline -- a backslash mid-line is
+ * left alone, because a rule that deleted those would be guessing rather
+ * than reversing a known transform.
+ *
+ * NOT DONE HERE: quoted-printable soft line breaks (`=` before a
+ * newline), which is the same idea for email. `=` IS in the base64
+ * alphabet -- it is the padding, and it ends the `wjg=` and `=AEHv`
+ * lines of every armor block -- so that rule would corrupt healthy
+ * armor. Left out on purpose.
+ */
+const LINE_CONTINUATION = /\\\n[ \t]*/g;
+
 function applyEscapeForms(text: string): string {
-  let out = text;
+  // Continuations first: they are the OUTER layer. The source file wrote
+  // `\n\` + newline, so unescaping before un-continuing would turn the
+  // `\n` into a real newline and leave the backslash behind, attached to
+  // the wrong line.
+  let out = text.replace(LINE_CONTINUATION, "");
   for (const [from, to] of ESCAPE_FORMS) out = out.replace(from, to);
   return out;
 }
