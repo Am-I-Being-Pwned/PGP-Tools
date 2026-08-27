@@ -61,7 +61,7 @@ import { KeySelector } from "./KeySelector";
 import { MessagePasswordPage } from "./MessagePasswordPage";
 import { selectionEngine } from "./recipient-engine";
 import { RecipientPicker } from "./RecipientPicker";
-import { TranslationPanel } from "./TranslationPanel";
+import { TranslateToggle, TranslationNote } from "./TranslationPanel";
 import { useWorkspaceOperations } from "./useWorkspaceOperations";
 import { useWorkspaceState } from "./useWorkspaceState";
 import { WorkspaceInput } from "./WorkspaceInput";
@@ -152,9 +152,6 @@ interface WorkspaceViewProps {
   aiTranslateEnabled?: boolean;
   /** BCP 47 tag translations are produced in. */
   translationTargetLanguage?: string;
-  /** Takes the user to Settings, where language packs are downloaded.
-   *  The decrypt screen never downloads one itself. */
-  onNavigateToSettings?: () => void;
 }
 
 export function WorkspaceView({
@@ -185,7 +182,6 @@ export function WorkspaceView({
   neverCacheKeys,
   aiTranslateEnabled,
   translationTargetLanguage = "en",
-  onNavigateToSettings,
 }: WorkspaceViewProps) {
   const allPublicKeys: (ProtectedKeyBlob | PublicContactKey)[] = [
     ...myKeys,
@@ -234,20 +230,29 @@ export function WorkspaceView({
   });
 
   // Rendered only under the full-height decrypt result, which is the one
-  // place a readable plaintext is on screen. Building it here (rather
-  // than inside WorkspaceResults) keeps the translation refs owned by
-  // the workspace state that wipes them at master lock.
-  const translationSlot = aiTranslateEnabled ? (
-    <TranslationPanel
-      status={translation.status}
-      onTranslate={() => void translation.translate()}
-      onDismiss={translation.reset}
-      onOpenSettings={onNavigateToSettings}
-      translationElRef={s.translationElRef}
-      getTranslation={s.getTranslation}
-      hasTranslation={s.hasTranslation}
-      targetLanguage={translationTargetLanguage}
-    />
+  // place a readable plaintext is on screen. Built here (rather than
+  // inside WorkspaceResults) so the translation refs stay owned by the
+  // workspace state that wipes them at master lock.
+  // A footer bar on the result box: status text on the left, the
+  // translate toggle on the right. The bar is permanent chrome once
+  // translation is enabled, so a status appearing or clearing never
+  // resizes the message above it -- which is exactly what happened while
+  // this was a line rendered under the box.
+  const translationFooter = aiTranslateEnabled ? (
+    <>
+      <TranslationNote
+        status={translation.status}
+        showing={translation.showing}
+      />
+      <TranslateToggle
+        status={translation.status}
+        showing={translation.showing}
+        hasTranslation={s.hasTranslation}
+        onTranslate={() => void translation.translate()}
+        onToggle={translation.toggle}
+        targetLanguage={translationTargetLanguage}
+      />
+    </>
   ) : null;
 
   // Deferred loading labels: buttons disable immediately off s.loading,
@@ -756,7 +761,10 @@ export function WorkspaceView({
           verifiedSigner={s.verifiedSigner}
           signatureTone={s.signatureTone}
           contacts={contacts}
-          translationSlot={translationSlot}
+          translationFooter={translationFooter}
+          showTranslation={translation.showing}
+          translationElRef={s.translationElRef}
+          getTranslation={s.getTranslation}
           outputPublicKeyDetected={s.outputPublicKeyDetected}
           outputVersion={s.outputVersion}
           onImportKey={(armored) => onNavigateToKeys?.(armored)}

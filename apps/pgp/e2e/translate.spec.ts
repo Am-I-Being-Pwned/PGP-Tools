@@ -216,10 +216,30 @@ test("translates a decrypted message on demand", async ({ context, panel }) => {
     expect(calls).toContain("translator.destroy");
   });
 
-  await test.step("the original plaintext is still on screen", async () => {
-    // The translation is shown ALONGSIDE the message, never in place of
-    // it: a user must be able to check the model against the original.
+  await test.step("the same control toggles back to the original", async () => {
+    // The translation REPLACES the message, so getting back to it is the
+    // only way to check the model's version against what was actually
+    // sent. That path must not require re-translating.
+    await panel.getByRole("button", { name: "Show original" }).click();
     await expect(panel.getByText(MESSAGE).first()).toBeVisible();
+    await expect(panel.getByText(`TRANSLATED(${MESSAGE})`)).toHaveCount(0);
+    // Provenance follows what is on screen: claiming the original was
+    // "translated on this device" would be a lie about the text shown.
+    await expect(panel.getByText(/Translated on this device/)).toHaveCount(0);
+  });
+
+  await test.step("and back again without a second translation", async () => {
+    const before = (await aiCalls(panel)).filter((c) =>
+      c.startsWith("translator.create"),
+    ).length;
+    await panel
+      .getByRole("button", { name: /Show English translation/ })
+      .click();
+    await expect(panel.getByText(`TRANSLATED(${MESSAGE})`)).toBeVisible();
+    const after = (await aiCalls(panel)).filter((c) =>
+      c.startsWith("translator.create"),
+    ).length;
+    expect(after).toBe(before);
   });
 });
 
@@ -292,7 +312,7 @@ test("declines to guess when the detector is not confident", async ({
   await panel.getByRole("button", { name: /Translate to English/ }).click();
 
   await expect(
-    panel.getByText(/Could not identify the language/),
+    panel.getByText(/Not sure what language this message is in/),
   ).toBeVisible();
   expect(
     (await aiCalls(panel)).filter((c) => c.startsWith("translator.create")),

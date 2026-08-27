@@ -59,14 +59,23 @@ export function useTranslation({
   targetLanguage,
 }: UseTranslationOptions) {
   const [status, setStatus] = useState<TranslationStatus>({ kind: "idle" });
+  // Which of the two texts the result box is showing. The translation
+  // REPLACES the message rather than sitting under it, so this is the
+  // only thing that decides which one the user is reading; both strings
+  // stay in their refs either way.
+  const [showing, setShowing] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
   const reset = useCallback(() => {
     abortRef.current?.abort();
     abortRef.current = null;
     setStatus({ kind: "idle" });
+    setShowing(false);
     setTranslation("");
   }, [setTranslation]);
+
+  /** Flip between the decrypted message and its translation. */
+  const toggle = useCallback(() => setShowing((v) => !v), []);
 
   // A new decrypt result invalidates the previous translation. Without
   // this, translating message A and then decrypting message B leaves A's
@@ -174,6 +183,10 @@ export function useTranslation({
         case "translated":
           setTranslation(result.text);
           setStatus({ kind: "done", from });
+          // Show it immediately: the press asked for the translation, so
+          // landing on the untranslated text would make the button look
+          // like it had done nothing.
+          setShowing(true);
           break;
         // Unreachable in practice: `ensureLanguagePack` just resolved
         // this direction. Kept as a real branch rather than a throw so a
@@ -201,5 +214,5 @@ export function useTranslation({
     }
   }, [getOutput, setTranslation, targetLanguage]);
 
-  return { status, translate, reset };
+  return { status, showing, translate, toggle, reset };
 }

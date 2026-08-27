@@ -20,6 +20,20 @@ interface OutputAreaProps {
   statusText?: string;
   /** Fill the available height instead of the compact fixed-height output. */
   fullHeight?: boolean;
+  /** Show the translation in place of the message. The two are never on
+   *  screen together: a translation is meant to be read as the message,
+   *  and stacking them halves the space each gets in a side panel. */
+  showTranslation?: boolean;
+  /** The translation's node + reader. Held exactly like the output --
+   *  ref plus imperative `textContent`, never a React child -- because
+   *  it is a second copy of the same plaintext. */
+  translationElRef?: React.MutableRefObject<HTMLPreElement | null>;
+  getTranslation?: () => string;
+  /** Contents of a footer bar attached to the bottom of the text box
+   *  (full-height path only). The bar is part of the box's chrome, so
+   *  whatever it holds can appear and clear without ever resizing the
+   *  text above it. Omit it entirely and the box renders as before. */
+  footer?: React.ReactNode;
 }
 
 export function OutputArea({
@@ -32,6 +46,10 @@ export function OutputArea({
   success,
   statusText,
   fullHeight,
+  showTranslation,
+  translationElRef,
+  getTranslation,
+  footer,
 }: OutputAreaProps) {
   // Callback ref: publish the node to the owning hook and seed its text
   // from the ref on every (re)mount. The node genuinely unmounts (the
@@ -45,6 +63,17 @@ export function OutputArea({
       if (el) el.textContent = getOutput();
     },
     [outputElRef, getOutput],
+  );
+
+  // Same contract for the translation's node. It genuinely unmounts on
+  // every toggle, so the re-seed is what makes the text survive flipping
+  // back and forth rather than coming back blank.
+  const attachTranslation = useCallback(
+    (el: HTMLPreElement | null) => {
+      if (translationElRef) translationElRef.current = el;
+      if (el && getTranslation) el.textContent = getTranslation();
+    },
+    [translationElRef, getTranslation],
   );
 
   const hasFileResults = fileResults && fileResults.length > 0;
@@ -89,14 +118,37 @@ export function OutputArea({
       {statusText && <p className="text-xs text-green-400">{statusText}</p>}
       {hasOutput && (
         <div className="relative min-h-0 flex-1">
-          {/* No React children on purpose: `attachOutput` writes the text
-              imperatively so the plaintext never enters the element tree. */}
-          <pre
-            ref={attachOutput}
-            tabIndex={0}
-            onKeyDown={selectAllOnCtrlA}
-            className={`bg-muted/50 h-full overflow-auto rounded-md border p-3 font-mono text-xs break-all whitespace-pre-wrap focus:outline-none ${borderColor}`}
-          />
+          {/* No React children on purpose: the attach callbacks write the
+              text imperatively so the plaintext never enters the element
+              tree. Exactly one of the two is mounted at a time. */}
+          {showTranslation ? (
+            <pre
+              key="translation"
+              ref={attachTranslation}
+              tabIndex={0}
+              className={`bg-muted/50 h-full overflow-auto rounded-md border p-3 pb-11 font-mono text-xs break-all whitespace-pre-wrap focus:outline-none ${borderColor}`}
+            />
+          ) : (
+            <pre
+              key="output"
+              ref={attachOutput}
+              tabIndex={0}
+              onKeyDown={selectAllOnCtrlA}
+              className={`bg-muted/50 h-full overflow-auto rounded-md border p-3 pb-11 font-mono text-xs break-all whitespace-pre-wrap focus:outline-none ${borderColor}`}
+            />
+          )}
+          {/* Floats over the bottom of the box rather than sitting in a
+              bar of its own: a permanent bar is chrome for a control
+              most messages never need, and anything in normal flow here
+              resizes the text every time a status appears. The `pb-11`
+              above keeps the last line of the message clear of it.
+              `pointer-events-none` so the strip does not eat selection
+              drags; the button re-enables them for itself. */}
+          {footer && (
+            <div className="pointer-events-none absolute inset-x-2 bottom-2 flex items-center justify-end gap-2">
+              {footer}
+            </div>
+          )}
         </div>
       )}
       {binaryOutput && !hasOutput && !hasFileResults && !statusText && (

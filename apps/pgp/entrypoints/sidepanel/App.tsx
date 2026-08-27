@@ -847,7 +847,6 @@ export default function App() {
               autoDownloadText={autoDownloadText}
               aiTranslateEnabled={aiTranslateEnabled}
               translationTargetLanguage={translationTargetLanguage}
-              onNavigateToSettings={() => setActiveTab("settings")}
               onOperationComplete={session.lockAllIfNoCache}
               restoreDraft={draftCiphertext}
               onDraftRestored={handleDraftRestored}

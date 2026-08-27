@@ -92,11 +92,15 @@ interface WorkspaceResultsProps {
   /** For the "there's a key in this message" offer: who we already have,
    *  and what to do about the one that just arrived. */
   contacts: PublicContactKey[];
-  /** The on-device translation control, rendered under the result. A
-   *  slot rather than a prop bundle: the panel needs the workspace's
-   *  translation ref and status, and threading five more props through
-   *  here would only pass them straight back out. */
-  translationSlot?: React.ReactNode;
+  /** Contents of the result box's footer bar: the translation status and
+   *  its toggle. A slot rather than a prop bundle, because it needs the
+   *  workspace's translation state and threading that through here would
+   *  only pass it straight back out. */
+  translationFooter?: React.ReactNode;
+  /** Show the translation in place of the message. */
+  showTranslation?: boolean;
+  translationElRef?: React.MutableRefObject<HTMLPreElement | null>;
+  getTranslation?: () => string;
   outputPublicKeyDetected: boolean;
   outputVersion: number;
   onImportKey: (armored: string) => void;
@@ -118,7 +122,10 @@ export function WorkspaceResults({
   signatureTone = "success",
   fullHeight,
   contacts,
-  translationSlot,
+  translationFooter,
+  showTranslation,
+  translationElRef,
+  getTranslation,
   outputPublicKeyDetected,
   outputVersion,
   onImportKey,
@@ -178,11 +185,11 @@ export function WorkspaceResults({
         success={operationDone}
         statusText={verifiedSigner ? undefined : statusText}
         fullHeight={fullHeight}
+        showTranslation={showTranslation}
+        translationElRef={translationElRef}
+        getTranslation={getTranslation}
+        footer={translationFooter}
       />
-
-      {/* Only under a readable result: there is nothing to translate on
-          the encrypt/sign path, where the output is armored ciphertext. */}
-      {hasOutput && translationSlot}
 
       {/* A key inside a message the user just read: keys travel this way
           far more often than by paste, and the alternative is copying
