@@ -125,6 +125,22 @@ export function toSelectedRecipient(key: PickerKey): SelectedRecipient {
  * would have no way to tell which recipient got which -- so the selection
  * is refused up front instead, with this reason for the UI to show.
  */
+/**
+ * Why an SSH recipient is refused once a message password is set.
+ *
+ * A password is an OpenPGP SKESK packet. age has no equivalent -- there
+ * is no "age file with a passphrase" this app can produce -- so the two
+ * choices name different formats just as surely as mixing the engines
+ * does, and for the same underlying reason.
+ *
+ * Stated as its own refusal rather than folded into
+ * {@link MIXED_ENGINE_REASON}: the user has not mixed anything, and
+ * being told they have would send them looking for a second recipient
+ * that is not there.
+ */
+export const SSH_PASSWORD_REASON =
+  "A message password is an OpenPGP feature and age has none, so SSH recipients can't be used with one. Remove the password, or encrypt to this person without it.";
+
 export const MIXED_ENGINE_REASON =
   "PGP and SSH recipients can't be combined in one message: OpenPGP and age are different formats. Encrypt to one group, then the other.";
 

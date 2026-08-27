@@ -11,7 +11,7 @@ function fakeCtx(overrides: Partial<ActionCtx> = {}): ActionCtx {
     tab: "workspace",
     mode: "encrypt",
     hasInput: false,
-    hasRecipients: true,
+    canEncrypt: true,
     encryptEngine: "pgp",
     hasOutput: false,
     hasDownload: false,
@@ -95,16 +95,33 @@ describe("workspace.run", () => {
     expect(reason("verify")).toContain("Nothing to verify");
   });
 
-  it("requires a recipient in encrypt mode, and only there", () => {
+  it("requires someone who can open the result, in encrypt mode only", () => {
     const reason = (mode: PgpMode) =>
       byId(
-        fakeCtx({ mode, hasInput: true, hasRecipients: false }),
+        fakeCtx({ mode, hasInput: true, canEncrypt: false }),
         "workspace.run",
       )?.disabledReason;
-    expect(reason("encrypt")).toBe("Select at least one recipient");
+    expect(reason("encrypt")).toBe(
+      "Select at least one recipient, or set a password",
+    );
     expect(reason("decrypt")).toBeUndefined();
     expect(reason("sign")).toBeUndefined();
     expect(reason("verify")).toBeUndefined();
+  });
+
+  it("runs a password-only encrypt, with no recipients at all", () => {
+    // REGRESSION. `canEncrypt` was `hasRecipients`, and symmetric
+    // encryption added a second way to satisfy the gate without this
+    // context field learning about it. The BUTTON was updated and this
+    // was not, so the palette and the mod+Enter shortcut refused a
+    // message the button beside them would happily encrypt -- reported
+    // from the running app, as a toast reading "Run Encrypt is disabled:
+    // Select at least one recipient" over an armed Password badge.
+    const action = byId(
+      fakeCtx({ mode: "encrypt", hasInput: true, canEncrypt: true }),
+      "workspace.run",
+    );
+    expect(action?.disabledReason).toBeUndefined();
   });
 
   it("is enabled with input and runs ops.execute", () => {

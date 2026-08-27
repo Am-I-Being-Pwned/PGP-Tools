@@ -2,6 +2,10 @@ import type {
   KindDiscriminated,
   StoredKeyKind,
 } from "../../lib/storage/key-kind";
+import {
+  MIXED_ENGINE_REASON,
+  SSH_PASSWORD_REASON,
+} from "../../lib/encrypt-recipients";
 import { storedKeyKind } from "../../lib/storage/key-kind";
 
 /**
@@ -40,6 +44,30 @@ export function blockedByEngine(
 }
 
 /**
+ * WHY `key` cannot join this message, or null when it can.
+ *
+ * Two different refusals, and they are kept apart on purpose. A mixed
+ * selection is the user's own doing and the fix is to pick differently;
+ * a password rules out age entirely and the fix is to drop the password.
+ * Telling someone they have "mixed" recipients when they have selected
+ * one sends them hunting for a second.
+ *
+ * The password rule is checked FIRST: with a password set, an SSH key is
+ * out whatever else is selected, and "you can't mix engines" would be
+ * the less useful of two true statements.
+ */
+export function recipientBlockReason(
+  key: KindDiscriminated,
+  engine: StoredKeyKind | null,
+  passwordArmed: boolean,
+): string | null {
+  if (passwordArmed && storedKeyKind(key) === "ssh") {
+    return SSH_PASSWORD_REASON;
+  }
+  return blockedByEngine(key, engine) ? MIXED_ENGINE_REASON : null;
+}
+
+/**
  * The options a keyboard gesture may actually land on.
  *
  * Render order and pick order are NOT the same list once some rows are
@@ -52,6 +80,9 @@ export function blockedByEngine(
 export function pickableKeys<T extends KindDiscriminated>(
   visible: readonly T[],
   engine: StoredKeyKind | null,
+  passwordArmed = false,
 ): T[] {
-  return visible.filter((k) => !blockedByEngine(k, engine));
+  return visible.filter(
+    (k) => recipientBlockReason(k, engine, passwordArmed) === null,
+  );
 }

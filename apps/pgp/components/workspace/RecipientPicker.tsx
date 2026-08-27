@@ -18,7 +18,6 @@ import {
 
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
-import { MIXED_ENGINE_REASON } from "../../lib/encrypt-recipients";
 import {
   matchesRecipientSearch,
   orderRecipients,
@@ -33,8 +32,8 @@ import {
   formatKeyDisplayName,
 } from "../../lib/utils/key-naming";
 import {
-  blockedByEngine,
   pickableKeys,
+  recipientBlockReason,
   selectionEngine,
 } from "./recipient-engine";
 
@@ -52,6 +51,9 @@ interface RecipientPickerProps {
   emptyText?: string;
   emptyAction?: () => void;
   emptyActionLabel?: string;
+  /** A message password is set. Rules out SSH recipients entirely --
+   *  age has no password mode -- so they dim with their own reason. */
+  passwordArmed?: boolean;
 }
 
 function getKeyDisplay(key: AnyKey): { name: string; detail: string } {
@@ -69,12 +71,13 @@ function getKeyDisplay(key: AnyKey): { name: string; detail: string } {
  * remaining keys with recently-used ones first, and digits 1-9
  * quick-pick the nth visible option while the input is empty.
  *
- * The dropdown opens only on a deliberate gesture -- a click in the box,
- * the chevron, typing, or Arrow/Enter -- never on focus alone. Focus is
- * not intent: the box gets focused by tabbing past it, by the panel
- * regaining focus, and by re-renders after the mod+Enter Run shortcut,
- * and popping the list open in those cases reads as a dialog appearing
- * out of nowhere.
+ * The dropdown opens on a deliberate gesture -- a click in the box, the
+ * chevron, typing, Arrow/Enter, or TABBING INTO IT. Focus on its own is
+ * still not intent: the box also gets focused when the panel regains
+ * focus, by re-renders after the mod+Enter Run shortcut, and by
+ * programmatic focus, and popping the list open in those cases reads as
+ * a dialog appearing out of nowhere. So the focus handler opens only
+ * when a Tab keydown immediately preceded it -- see `arrivedByTab`.
  */
 export function RecipientPicker({
   label,
@@ -86,9 +89,15 @@ export function RecipientPicker({
   emptyText = "No keys available",
   emptyAction,
   emptyActionLabel,
+  passwordArmed = false,
 }: RecipientPickerProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  // Whether the focus about to arrive came from a TAB. Focus alone is
+  // not intent (see this component's doc comment); a Tab press is. The
+  // flag is set on the keydown that will move focus and cleared the
+  // moment it is used, so a later programmatic focus cannot inherit it.
+  const arrivedByTab = useRef(false);
   // cmdk's highlighted option, controlled so it can reset between opens
   // (otherwise cmdk keeps pointing at the just-picked, now-absent item
   // and Enter silently does nothing on reopen).
@@ -97,6 +106,26 @@ export function RecipientPicker({
   const inputRef = useRef<HTMLInputElement>(null);
   const inputId = useId();
   const listId = useId();
+
+  // Capture phase, on the keydown BEFORE the browser moves focus, so the
+  // focus handler below can tell a Tab arrival from every other way this
+  // box gets focused. Any other key (or a pointer press) clears it --
+  // otherwise a Tab somewhere else in the panel would still be "armed"
+  // when a re-render later parked focus here.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      arrivedByTab.current = e.key === "Tab";
+    };
+    const clear = () => {
+      arrivedByTab.current = false;
+    };
+    document.addEventListener("keydown", onKeyDown, true);
+    document.addEventListener("pointerdown", clear, true);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown, true);
+      document.removeEventListener("pointerdown", clear, true);
+    };
+  }, []);
 
   const allKeys: AnyKey[] = [...contacts, ...myKeys];
 
@@ -159,7 +188,7 @@ export function RecipientPicker({
   // invisible to the digit shortcuts and to Enter, or a disabled row
   // sitting third would silently eat the `3` keystroke.
   const engine = selectionEngine(selectedKeys);
-  const pickable = pickableKeys(visibleKeys, engine);
+  const pickable = pickableKeys(visibleKeys, engine, passwordArmed);
 
   const closeDropdown = () => {
     setOpen(false);
@@ -293,8 +322,8 @@ export function RecipientPicker({
   // visible sub-line. Only the first: repeating one sentence down a whole
   // group turns the explanation into wallpaper, and hover-only (a
   // `title`) would leave it undiscoverable on touch and to the keyboard.
-  const firstBlockedId = visibleKeys.find((k) =>
-    blockedByEngine(k, engine),
+  const firstBlockedId = visibleKeys.find(
+    (k) => recipientBlockReason(k, engine, passwordArmed) !== null,
   )?.keyId;
 
   const renderOption = (key: AnyKey) => {
@@ -319,14 +348,15 @@ export function RecipientPicker({
     // actually be there.
     const activeKeyCount =
       "armoredPublicKey" in key ? activeRecipients(key).length : 1;
-    const blocked = blockedByEngine(key, engine);
+    const blockReason = recipientBlockReason(key, engine, passwordArmed);
+    const blocked = blockReason !== null;
     return (
       <CommandItem
         key={key.keyId}
         value={itemValue(key)}
         disabled={blocked}
         aria-disabled={blocked || undefined}
-        title={blocked ? MIXED_ENGINE_REASON : undefined}
+        title={blockReason ?? undefined}
         onSelect={() => {
           if (blocked) return;
           addRecipient(key.keyId);
@@ -362,9 +392,12 @@ export function RecipientPicker({
                 .join(" · ")}
             </p>
           )}
-          {key.keyId === firstBlockedId && (
+          {/* Spelled out once, on the first dimmed row: a `title`
+              tooltip is invisible to touch and to the keyboard, and this
+              is the only place the refusal gets explained. */}
+          {key.keyId === firstBlockedId && blockReason !== null && (
             <p className="text-muted-foreground mt-0.5 text-xs">
-              {MIXED_ENGINE_REASON}
+              {blockReason}
             </p>
           )}
         </div>
@@ -503,6 +536,17 @@ export function RecipientPicker({
                 onChange={(e) => {
                   setSearch(e.target.value);
                   if (!open) setOpen(true);
+                }}
+                onFocus={() => {
+                  // Tab arrivals open the list; every other route into
+                  // this box does not. The three cases the component's
+                  // doc comment names -- the panel regaining focus, a
+                  // re-render after the mod+Enter Run shortcut, and a
+                  // programmatic focus -- all reach here with no Tab
+                  // keydown behind them and are left alone.
+                  if (!arrivedByTab.current) return;
+                  arrivedByTab.current = false;
+                  setOpen(true);
                 }}
                 onKeyDown={handleInputKeyDown}
                 className="placeholder:text-muted-foreground min-w-16 flex-1 bg-transparent outline-none"

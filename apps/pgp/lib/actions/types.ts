@@ -24,9 +24,16 @@ export interface ActionCtx {
   mode: PgpMode;
   /** Workspace has text input or dropped files. */
   hasInput: boolean;
-  /** Encrypt has at least one selected recipient. Only consulted in
-   *  encrypt mode; other modes ignore it. */
-  hasRecipients: boolean;
+  /** Encrypt has SOMEONE who could open the result: at least one
+   *  selected recipient, or an armed message password. Only consulted in
+   *  encrypt mode; other modes ignore it.
+   *
+   *  Named for the question rather than for one of its answers. It was
+   *  `hasRecipients`, and when password encryption shipped that name
+   *  quietly became a lie -- the palette and the mod+Enter shortcut went
+   *  on refusing to run a password-only encrypt that the button next to
+   *  them was happy to perform. */
+  canEncrypt: boolean;
   /** Which engine the current recipient selection encrypts with:
    *  `"pgp"` (OpenPGP), `"ssh"` (age), or null while nothing is
    *  selected. age has no signing operation, so actions about signing

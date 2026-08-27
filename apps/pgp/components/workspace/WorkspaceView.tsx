@@ -44,6 +44,7 @@ import { recoverArmorIfNeeded } from "../../lib/armor-recovery";
 import {
   buildEncryptRecipients,
   resolveSelectedRecipients,
+  SSH_PASSWORD_REASON,
   toSelectedRecipient,
 } from "../../lib/encrypt-recipients";
 import { requestUnlimitedHistoryStorage } from "../../lib/storage/history";
@@ -56,6 +57,7 @@ import { hasOpenSlideOver } from "../shared/SlideOver";
 import { ToggleBadge } from "../shared/ToggleBadge";
 import { HistoryButton } from "./HistoryPage";
 import { KeySelector } from "./KeySelector";
+import { MessagePasswordPage } from "./MessagePasswordPage";
 import { selectionEngine } from "./recipient-engine";
 import { RecipientPicker } from "./RecipientPicker";
 import { useWorkspaceOperations } from "./useWorkspaceOperations";
@@ -218,6 +220,12 @@ export function WorkspaceView({
   const showLoadingLabel = useDelayedFlag(s.loading);
 
   const needsRecipient = s.mode === "encrypt";
+  // What makes an encrypt runnable: someone must be able to open the
+  // result. A recipient does that, and so does an armed password -- the
+  // latter on its own is the whole `gpg -c` case.
+  const canEncrypt =
+    s.selectedRecipientIds.length > 0 || s.encryptPasswordReady;
+
   // A message encrypted to a PASSWORD and to nobody's key cannot be
   // opened by any key in the vault, so offering a picker would be
   // offering choices that are all wrong -- the same reasoning that
@@ -525,9 +533,7 @@ export function WorkspaceView({
   // Mirrors the main button's disabled logic, incl. the encrypt
   // needs-a-recipient gate (the palette shows the reason as a toast).
   const canRun =
-    mainActionShown &&
-    !s.loading &&
-    !(s.mode === "encrypt" && s.selectedRecipientIds.length === 0);
+    mainActionShown && !s.loading && !(s.mode === "encrypt" && !canEncrypt);
   const paletteRef = useRef({
     s,
     canRun,
@@ -556,7 +562,7 @@ export function WorkspaceView({
     onPaletteOps?.({
       mode: s.mode,
       hasInput,
-      hasRecipients: s.selectedRecipientIds.length > 0,
+      canEncrypt,
       encryptEngine,
       hasOutput,
       hasDownload,
@@ -603,7 +609,13 @@ export function WorkspaceView({
     onPaletteOps,
     s.mode,
     hasInput,
-    s.selectedRecipientIds,
+    // `canEncrypt`, not `s.selectedRecipientIds`: the published value is
+    // now "someone can open this", which is also true when a message
+    // password is armed. Depending on the recipient list meant arming a
+    // password changed nothing this effect watched, so the palette went
+    // on serving a stale `canEncrypt: false` -- the button ran the
+    // encrypt while the palette refused it.
+    canEncrypt,
     encryptEngine,
     hasOutput,
     hasDownload,
@@ -761,6 +773,10 @@ export function WorkspaceView({
       <div className="space-y-3">
         {needsRecipient && (
           <RecipientPicker
+            // A message password rules out age entirely, so SSH rows dim
+            // with their own reason rather than being silently
+            // unpickable.
+            passwordArmed={s.encryptPasswordReady}
             label="Recipients"
             // Only offer contacts you can actually encrypt to. Sign-only
             // keys are valid contacts (for verification) but have no
@@ -878,6 +894,42 @@ export function WorkspaceView({
                   Also encrypt to me
                 </ToggleBadge>
               )}
+              {/* Symmetric encryption, and ADDITIVE: it adds a password
+                  the message can also be opened with, on top of whatever
+                  recipients are selected. It does not replace them and it
+                  does not touch "Also encrypt to me" -- a badge, not a
+                  mode.
+
+                  DIMMED, NOT HIDDEN, for an age selection. It was hidden
+                  first, which is the thing this codebase says not to do:
+                  a control that vanishes looks like a feature that does
+                  not exist, and the user is left with no way to learn
+                  that age simply has no password mode. */}
+              {
+                <ToggleBadge
+                  // Pressed means A PASSWORD IS SET, not "the dialog was
+                  // opened" -- so cancelling out of the dialog leaves the
+                  // badge off, which is the honest reading of it.
+                  pressed={s.encryptPasswordReady}
+                  // The mirror of the picker dimming SSH rows once a
+                  // password is set. Dimmed with a reason rather than
+                  // hidden, the rule this app states for every other
+                  // unavailable control.
+                  disabledReason={
+                    encryptEngine === "ssh" ? SSH_PASSWORD_REASON : undefined
+                  }
+                  onPressedChange={(v) => {
+                    // Un-pressing drops the password rather than parking
+                    // it: one kept out of sight would re-arm on the next
+                    // press against a message it was never meant for.
+                    if (v) s.setPasswordDialogOpen(true);
+                    else s.setEncryptPassword("");
+                    s.resetOutput();
+                  }}
+                >
+                  Password
+                </ToggleBadge>
+              }
               {myKeys.length > 0 && (
                 <ToggleBadge
                   pressed={s.alsoSign}
@@ -1106,13 +1158,11 @@ export function WorkspaceView({
                     disabled={
                       s.loading ||
                       !hasInput ||
-                      (s.mode === "encrypt" &&
-                        s.selectedRecipientIds.length === 0)
+                      (s.mode === "encrypt" && !canEncrypt)
                     }
                     title={
-                      s.mode === "encrypt" &&
-                      s.selectedRecipientIds.length === 0
-                        ? "Select at least one recipient"
+                      s.mode === "encrypt" && !canEncrypt
+                        ? "Select at least one recipient, or set a password"
                         : undefined
                     }
                     shortcut={RUN_SHORTCUT}
@@ -1144,6 +1194,24 @@ export function WorkspaceView({
           </div>
         )}
       </div>
+
+      {/* The password dialog. Mounted last so it overlays the panel, and
+          conditionally so `useSlideOver`'s Escape stack sees it appear
+          and disappear -- the same mount-when-open shape Settings and the
+          lock screen use. */}
+      {s.passwordDialogOpen && (
+        <MessagePasswordPage
+          onSet={(password) => {
+            s.setEncryptPassword(password);
+            s.setPasswordDialogOpen(false);
+            // A new password means the armored output on screen was made
+            // with the old one (or none). Drop it rather than leave a
+            // result that no longer matches the settings above it.
+            s.resetOutput();
+          }}
+          onCancel={() => s.setPasswordDialogOpen(false)}
+        />
+      )}
     </div>
   );
 }

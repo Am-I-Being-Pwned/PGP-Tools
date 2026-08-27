@@ -16,8 +16,13 @@ import { describe, expect, it } from "vitest";
 
 import type { KindDiscriminated } from "../../lib/storage/key-kind";
 import {
+  MIXED_ENGINE_REASON,
+  SSH_PASSWORD_REASON,
+} from "../../lib/encrypt-recipients";
+import {
   blockedByEngine,
   pickableKeys,
+  recipientBlockReason,
   selectionEngine,
 } from "./recipient-engine";
 
@@ -76,5 +81,56 @@ describe("pickableKeys", () => {
 
   it("can be empty, so Enter picks nothing rather than the wrong thing", () => {
     expect(pickableKeys([ssh], "pgp")).toEqual([]);
+  });
+});
+
+describe("recipientBlockReason", () => {
+  it("blocks nothing when no engine is committed and no password is set", () => {
+    expect(recipientBlockReason(ssh, null, false)).toBeNull();
+    expect(recipientBlockReason(pgp, null, false)).toBeNull();
+    expect(recipientBlockReason(legacy, null, false)).toBeNull();
+  });
+
+  it("blocks SSH recipients once a message password is set", () => {
+    // A password is an OpenPGP SKESK; age has no equivalent, so the two
+    // choices name different formats. Without this the age path silently
+    // drops the password and produces a file with no password on it.
+    expect(recipientBlockReason(ssh, null, true)).toBe(SSH_PASSWORD_REASON);
+    expect(recipientBlockReason(ssh, "ssh", true)).toBe(SSH_PASSWORD_REASON);
+  });
+
+  it("leaves PGP recipients alone when a password is set", () => {
+    // The password is ADDITIVE for OpenPGP: SKESK alongside the PKESKs,
+    // either opens the message.
+    expect(recipientBlockReason(pgp, null, true)).toBeNull();
+    expect(recipientBlockReason(pgp, "pgp", true)).toBeNull();
+    // ...including the records that predate the `kind` field.
+    expect(recipientBlockReason(legacy, "pgp", true)).toBeNull();
+  });
+
+  it("prefers the password reason over the mixed-engine one", () => {
+    // With a password set AND a PGP recipient already chosen, an SSH key
+    // is out for both reasons. "You can't mix engines" is the less
+    // useful of two true statements: the fix is to drop the password,
+    // not to pick differently.
+    expect(recipientBlockReason(ssh, "pgp", true)).toBe(SSH_PASSWORD_REASON);
+  });
+
+  it("still reports a genuine engine mix", () => {
+    expect(recipientBlockReason(ssh, "pgp", false)).toBe(MIXED_ENGINE_REASON);
+    expect(recipientBlockReason(pgp, "ssh", false)).toBe(MIXED_ENGINE_REASON);
+  });
+});
+
+describe("pickableKeys with a password set", () => {
+  it("makes SSH rows invisible to the digit shortcuts", () => {
+    // Render order and pick order are different lists (see the header):
+    // a dimmed row that stayed pickable would swallow a keystroke, and
+    // here it would swallow it into an encrypt that cannot happen.
+    expect(pickableKeys([ssh, pgp, legacy], null, true)).toEqual([pgp, legacy]);
+  });
+
+  it("is unchanged when no password is set", () => {
+    expect(pickableKeys([ssh, pgp], null, false)).toEqual([ssh, pgp]);
   });
 });

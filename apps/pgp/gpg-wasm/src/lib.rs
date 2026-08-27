@@ -555,6 +555,11 @@ fn encrypt_impl(
     plaintext: &[u8],
     recipient_keys_json: &str,
     signer_cert: Option<&openpgp::Cert>,
+    // Already `Zeroizing` -- the EXPORTS wrap it, because they are where
+    // the wasm-bindgen allocation lands and where `audit-invariants.mjs`
+    // checks. Taking the wrapper here rather than re-wrapping keeps that
+    // one owner: it is moved down, never copied.
+    password: Option<Zeroizing<Vec<u8>>>,
 ) -> Result<Vec<u8>, String> {
     let recipient_armors: Vec<String> =
         serde_json::from_str(recipient_keys_json).str_err()?;
@@ -585,11 +590,35 @@ fn encrypt_impl(
         }
     }
 
+    // A message must be openable by SOMEONE. Without this, an empty
+    // recipient list and no password produce a valid OpenPGP message that
+    // nothing on earth can decrypt -- and it would look like a success.
+    if recipient_keys.is_empty() && password.is_none() {
+        return Err("No recipients and no password: nothing could open this message".to_string());
+    }
+
     let mut sink = Vec::new();
     let message = Armorer::new(Message::new(&mut sink)).build().str_err()?;
-    let encryptor = Encryptor::for_recipients(message, recipient_keys)
-        .build()
-        .str_err()?;
+
+    let mut builder = Encryptor::for_recipients(message, recipient_keys)
+        // PINNED, not inherited. Sequoia's default happens to be AES-256
+        // today, and a default that changes underneath us is a cipher
+        // change nobody reviewed. The S2K is NOT pinned here because the
+        // stream API does not expose it -- see the note in
+        // `encrypt_with_password` about what it uses and why that is the
+        // strongest the format can express.
+        .symmetric_algo(SymmetricAlgorithm::AES256);
+    if let Some(ref pw) = password {
+        // ADDITIVE. A password does not replace the recipients: the
+        // message gets an SKESK alongside whatever PKESKs it already had,
+        // and either opens it. That mirrors the UI, where the password is
+        // a badge next to the recipient list rather than a mode that
+        // replaces it.
+        builder = builder.add_passwords(vec![openpgp::crypto::Password::from(
+            pw.as_slice(),
+        )]);
+    }
+    let encryptor = builder.build().str_err()?;
 
     let inner: Message = if let Some(cert) = signer_cert {
         let keypair = signing_keypair(cert)?;
@@ -1178,12 +1207,27 @@ pub fn encrypt(
     plaintext: &[u8],
     recipient_keys_json: &str,
     signing_key_armored: Option<String>,
+    // Optional, OWNED, and bytes -- the same three properties
+    // `decrypt_with_password` takes them with, for the same reasons. See
+    // `T-SYMMETRIC-ENCRYPT-PASSWORD` for what this password is and is not
+    // worth.
+    //
+    // THE S2K IS SEQUOIA'S DEFAULT and is deliberately not overridden:
+    // SHA-256 iterated at count 0x3e00000, which is the LARGEST the
+    // OpenPGP wire format can represent (~354ms to derive on a moderate
+    // CPU). There is no stronger value to choose, so this app is taking
+    // the format's maximum rather than picking a number on the user's
+    // behalf. The stream API exposes no setter for it in any case.
+    password: Option<Vec<u8>>,
 ) -> Result<Vec<u8>, String> {
+    // Wrapped at the boundary, before anything can return early, so the
+    // marshalled copy is scrubbed on every path including the error ones.
+    let password = password.map(Zeroizing::new);
     let signer_cert = signing_key_armored
         .as_deref()
         .map(|armor| openpgp::Cert::from_bytes(armor.as_bytes()).str_err())
         .transpose()?;
-    encrypt_impl(plaintext, recipient_keys_json, signer_cert.as_ref())
+    encrypt_impl(plaintext, recipient_keys_json, signer_cert.as_ref(), password)
 }
 
 /// Create a cleartext-signed message.
@@ -1247,9 +1291,16 @@ pub fn encrypt_with_signing_handle(
     plaintext: &[u8],
     recipient_keys_json: &str,
     signing_key_handle: u32,
+    password: Option<Vec<u8>>,
 ) -> Result<Vec<u8>, String> {
+    let password = password.map(Zeroizing::new);
     let signer_cert = get_cert_from_handle(signing_key_handle)?;
-    encrypt_impl(plaintext, recipient_keys_json, Some(&signer_cert))
+    encrypt_impl(
+        plaintext,
+        recipient_keys_json,
+        Some(&signer_cert),
+        password,
+    )
 }
 
 /// Decrypt a message using a stored key handle.

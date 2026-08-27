@@ -169,12 +169,35 @@ export function SlideOverPanel({
       escapeDeactivates: false,
       // Clicks on portalled content (popovers, toasts) must keep working.
       allowOutsideClick: true,
-      // Initial focus: the first autofocus element if the page marked
-      // one, else the first tabbable, else the panel itself.
-      initialFocus: () =>
-        panel.querySelector<HTMLElement>("[autofocus]") ??
-        tabbable(panel).at(0) ??
-        panel,
+      // Initial focus, in order: whatever inside the panel is ALREADY
+      // focused, then a marked autofocus element, then the first
+      // tabbable, then the panel itself.
+      //
+      // THE FIRST CLAUSE IS THE ONE THAT MATTERS, and it is not
+      // belt-and-braces. React does not render `autoFocus` as an
+      // ATTRIBUTE -- it calls `.focus()` on mount instead -- so
+      // `[autofocus]` matches nothing in this app and every page that
+      // marked a field with it was falling through to `tabbable().at(0)`,
+      // which is the header's Back button. The symptom is nasty and easy
+      // to miss: the field IS focused on mount, so typing starts fine,
+      // and focus is yanked to Back a few hundred milliseconds later when
+      // the trap activates -- mid-word, with the rest of the keystrokes
+      // going nowhere. Found on the message-password dialog; it was also
+      // affecting Rename, Export, the history search and Import-all.
+      //
+      // Reading the live focus keeps React's own autofocus working
+      // without asking every page to switch to a non-standard marker.
+      initialFocus: () => {
+        const active = document.activeElement;
+        if (active instanceof HTMLElement && panel.contains(active)) {
+          return active;
+        }
+        return (
+          panel.querySelector<HTMLElement>("[autofocus]") ??
+          tabbable(panel).at(0) ??
+          panel
+        );
+      },
       fallbackFocus: panel,
       // Return-focus guards. Deactivation runs AFTER the slide-out
       // animation, so the user may have already focused something else

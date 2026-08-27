@@ -14,7 +14,10 @@ import * as wasm from "./wasm";
 // module (`lib/age/operations.ts` does the same for
 // `decryptAgeWithHandle`). What is imported here IS the boundary
 // module's wrapper -- the barrel re-exports the wrappers, never the glue.
-import { decryptWithPassword as decryptWithPasswordWasm } from "./wasm-secrets";
+import {
+  decryptWithPassword as decryptWithPasswordWasm,
+  encryptWithPassword as encryptWithPasswordWasm,
+} from "./wasm-secrets";
 
 function resolveInput(input: EncryptInput): Uint8Array {
   return input.kind === "binary"
@@ -31,10 +34,39 @@ function formatOutput(
   return raw;
 }
 
-/** Encrypt to one or more recipients (no signing). */
-export async function encrypt(
-  opts: EncryptOptions,
+/**
+ * Encrypt to a password, on top of any recipients.
+ *
+ * The password is taken as a STRING and encoded inside, with the buffer
+ * wiped in a `finally` -- the same trade `decryptWithPassword` makes and
+ * for the same reason: it comes from an `<input type="password">`, which
+ * can only ever produce one, and making every caller encode would spread
+ * the un-wipeable copy rather than contain it.
+ */
+async function encryptToPassword(
+  opts: EncryptOptions & { password: string; signingKeyHandle?: number },
 ): Promise<string | Uint8Array> {
+  const passwordBytes = new TextEncoder().encode(opts.password);
+  try {
+    const result = await encryptWithPasswordWasm(
+      resolveInput(opts.input),
+      opts.recipientPublicKeys,
+      passwordBytes,
+      opts.signingKeyHandle,
+    );
+    return formatOutput(opts.input, result);
+  } finally {
+    passwordBytes.fill(0);
+  }
+}
+
+/** Encrypt to one or more recipients, and/or to a password. */
+export async function encrypt(
+  opts: EncryptOptions & { password?: string },
+): Promise<string | Uint8Array> {
+  if (opts.password !== undefined) {
+    return encryptToPassword({ ...opts, password: opts.password });
+  }
   const result = await wasm.encrypt(
     resolveInput(opts.input),
     opts.recipientPublicKeys,
@@ -42,10 +74,13 @@ export async function encrypt(
   return formatOutput(opts.input, result);
 }
 
-/** Encrypt with signing via a WASM key handle. */
+/** Encrypt with signing via a WASM key handle, and/or to a password. */
 export async function encryptWithSigningHandle(
-  opts: EncryptOptions & { signingKeyHandle: number },
+  opts: EncryptOptions & { signingKeyHandle: number; password?: string },
 ): Promise<string | Uint8Array> {
+  if (opts.password !== undefined) {
+    return encryptToPassword({ ...opts, password: opts.password });
+  }
   const result = await wasm.encryptWithSigningHandle(
     resolveInput(opts.input),
     opts.recipientPublicKeys,

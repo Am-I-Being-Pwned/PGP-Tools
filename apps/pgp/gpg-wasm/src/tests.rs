@@ -95,7 +95,7 @@ fn test_encrypt_decrypt_text() {
     let priv_armor = gen["privateKeyArmored"].as_str().unwrap();
 
     let recipients = serde_json::to_string(&vec![pub_armor]).unwrap();
-    let ciphertext = encrypt(b"Hello, Sequoia!", &recipients, None).unwrap();
+    let ciphertext = encrypt(b"Hello, Sequoia!", &recipients, None, None).unwrap();
     assert!(!ciphertext.is_empty());
 
     let (plaintext_bytes, _sig) = test_decrypt(&ciphertext, priv_armor, None);
@@ -114,7 +114,7 @@ fn test_encrypt_decrypt_with_signature() {
 
     let recipients = serde_json::to_string(&vec![pub_armor]).unwrap();
     let ciphertext =
-        encrypt(b"Signed message", &recipients, Some(priv_armor.to_string())).unwrap();
+        encrypt(b"Signed message", &recipients, Some(priv_armor.to_string()), None).unwrap();
 
     let verification_keys = serde_json::to_string(&vec![pub_armor]).unwrap();
     let (plaintext_bytes, sig) =
@@ -144,7 +144,7 @@ fn test_decrypt_signed_without_signer_key_succeeds() {
 
     let recipients = serde_json::to_string(&vec![recip_pub]).unwrap();
     let ciphertext =
-        encrypt(b"Message from a stranger", &recipients, Some(signer_priv.to_string()))
+        encrypt(b"Message from a stranger", &recipients, Some(signer_priv.to_string()), None)
             .unwrap();
 
     // Decrypt WITHOUT any verification keys -> must not error.
@@ -169,7 +169,7 @@ fn test_select_decryption_key_picks_the_recipient() {
     let b_fpr = b["keyInfo"]["keyId"].as_str().unwrap();
 
     let recipients = serde_json::to_string(&vec![b_pub]).unwrap();
-    let ciphertext = encrypt(b"pick me", &recipients, None).unwrap();
+    let ciphertext = encrypt(b"pick me", &recipients, None, None).unwrap();
 
     // Candidate set contains both keys (a first) -- must still choose b.
     let candidates = serde_json::to_string(&vec![a_pub, b_pub]).unwrap();
@@ -229,7 +229,7 @@ fn test_encrypt_decrypt_binary() {
 
     let binary_data: Vec<u8> = (0..256).map(|i| i as u8).collect();
     let recipients = serde_json::to_string(&vec![pub_armor]).unwrap();
-    let ciphertext = encrypt(&binary_data, &recipients, None).unwrap();
+    let ciphertext = encrypt(&binary_data, &recipients, None, None).unwrap();
 
     let (plaintext_bytes, _sig) = test_decrypt(&ciphertext, priv_armor, None);
     assert_eq!(plaintext_bytes, binary_data);
@@ -253,7 +253,7 @@ fn test_ed25519_full_round_trip() {
 
     let recipients = serde_json::to_string(&vec![pub_armor]).unwrap();
     let ciphertext =
-        encrypt(b"Ed25519 round trip", &recipients, Some(priv_armor.to_string())).unwrap();
+        encrypt(b"Ed25519 round trip", &recipients, Some(priv_armor.to_string()), None).unwrap();
 
     let verification_keys = serde_json::to_string(&vec![pub_armor]).unwrap();
     let (plaintext_bytes, sig) =
@@ -275,7 +275,7 @@ fn test_ed25519_full_round_trip() {
     let handle = store_key(priv_armor).unwrap();
     let handle_signed = sign_with_handle("Handle Ed25519", handle).unwrap();
     assert!(handle_signed.contains("BEGIN PGP SIGNED MESSAGE"));
-    let handle_ct = encrypt(b"Handle decrypt", &recipients, None).unwrap();
+    let handle_ct = encrypt(b"Handle decrypt", &recipients, None, None).unwrap();
     let (handle_plaintext, _) = test_decrypt(&handle_ct, priv_armor, None);
     assert_eq!(
         std::str::from_utf8(&handle_plaintext).unwrap(),
@@ -389,7 +389,7 @@ fn test_rsa_key_generation() {
     let pub_armor = result["publicKeyArmored"].as_str().unwrap();
     let priv_armor = result["privateKeyArmored"].as_str().unwrap();
     let recipients = serde_json::to_string(&vec![pub_armor]).unwrap();
-    let ct = encrypt(b"RSA test", &recipients, None).unwrap();
+    let ct = encrypt(b"RSA test", &recipients, None, None).unwrap();
     let (dec_bytes, _sig) = test_decrypt(&ct, priv_armor, None);
     assert_eq!(std::str::from_utf8(&dec_bytes).unwrap(), "RSA test");
 }
@@ -1471,7 +1471,7 @@ fn test_decrypt_password_refuses_a_key_encrypted_message() {
     let parsed: serde_json::Value = serde_json::from_str(&key).unwrap();
     let public = parsed["publicKeyArmored"].as_str().unwrap();
     let recipients = serde_json::to_string(&vec![public]).unwrap();
-    let ciphertext = encrypt(b"hello", &recipients, None).unwrap();
+    let ciphertext = encrypt(b"hello", &recipients, None, None).unwrap();
 
     let err = decrypt_with_password(&ciphertext, symmetric_password(), None).unwrap_err();
     assert!(err.contains("Wrong password, or this message is damaged"));
@@ -1488,7 +1488,7 @@ fn test_message_encryption_tells_the_two_apart() {
     let parsed: serde_json::Value = serde_json::from_str(&key).unwrap();
     let recipients =
         serde_json::to_string(&vec![parsed["publicKeyArmored"].as_str().unwrap()]).unwrap();
-    let ciphertext = encrypt(b"hello", &recipients, None).unwrap();
+    let ciphertext = encrypt(b"hello", &recipients, None, None).unwrap();
     let key_only: serde_json::Value =
         serde_json::from_str(&message_encryption(&ciphertext).unwrap()).unwrap();
     assert_eq!(key_only["password"], false);
@@ -1519,3 +1519,185 @@ fn test_message_encryption_rejects_non_pgp_input() {
 }
 
 
+
+// =====================================================================
+// Symmetric (password) ENCRYPTION
+// =====================================================================
+
+#[test]
+fn test_encrypt_with_password_round_trips() {
+    let ct = encrypt(
+        b"symmetric hello",
+        "[]",
+        None,
+        Some(symmetric_password()),
+    )
+    .unwrap();
+    let packed = decrypt_with_password(&ct, symmetric_password(), None).unwrap();
+    let (plaintext, sig) = unpack(&packed);
+    assert_eq!(plaintext, b"symmetric hello");
+    assert_eq!(sig["signatureStatus"], "unsigned");
+}
+
+#[test]
+fn test_encrypt_with_password_produces_a_password_only_message() {
+    // No recipients means no PKESK: the detector the UI routes on must
+    // see a message that wants a password and nothing else.
+    let ct = encrypt(b"x", "[]", None, Some(symmetric_password())).unwrap();
+    let enc: serde_json::Value =
+        serde_json::from_str(&message_encryption(&ct).unwrap()).unwrap();
+    assert_eq!(enc["password"], true);
+    assert_eq!(enc["publicKey"], false);
+}
+
+#[test]
+fn test_encrypt_with_password_is_additive_not_a_mode() {
+    // A password ADDS an SKESK; it does not replace the recipients. The
+    // message must then open BOTH ways -- this is what makes the badge
+    // sitting next to "Also encrypt to me" honest rather than a mode
+    // switch that silently drops the recipient list.
+    let gen: serde_json::Value = serde_json::from_str(&gen_test_key()).unwrap();
+    let pub_armor = gen["publicKeyArmored"].as_str().unwrap();
+    let priv_armor = gen["privateKeyArmored"].as_str().unwrap();
+    let recipients = serde_json::to_string(&vec![pub_armor]).unwrap();
+
+    let ct = encrypt(b"both ways", &recipients, None, Some(symmetric_password()))
+        .unwrap();
+
+    let enc: serde_json::Value =
+        serde_json::from_str(&message_encryption(&ct).unwrap()).unwrap();
+    assert_eq!(enc["password"], true);
+    assert_eq!(enc["publicKey"], true);
+
+    // ...by password,
+    let (by_password, _) =
+        unpack(&decrypt_with_password(&ct, symmetric_password(), None).unwrap());
+    assert_eq!(by_password, b"both ways");
+
+    // ...and by key.
+    let (by_key, _) = test_decrypt(&ct, priv_armor, None);
+    assert_eq!(by_key, b"both ways");
+}
+
+#[test]
+fn test_encrypt_with_password_and_a_signature() {
+    // Signing and password-encrypting are independent knobs, so the
+    // combination has to work -- and the signature has to verify on the
+    // password path, which is a different helper from the key path.
+    let gen: serde_json::Value = serde_json::from_str(&gen_test_key()).unwrap();
+    let pub_armor = gen["publicKeyArmored"].as_str().unwrap();
+    let priv_armor = gen["privateKeyArmored"].as_str().unwrap();
+
+    let ct = encrypt(
+        b"signed and sealed",
+        "[]",
+        Some(priv_armor.to_string()),
+        Some(symmetric_password()),
+    )
+    .unwrap();
+
+    let certs = serde_json::to_string(&vec![pub_armor]).unwrap();
+    let (plaintext, sig) =
+        unpack(&decrypt_with_password(&ct, symmetric_password(), Some(certs)).unwrap());
+    assert_eq!(plaintext, b"signed and sealed");
+    assert_eq!(sig["signatureStatus"], "valid");
+}
+
+#[test]
+fn test_encrypt_refuses_a_message_nobody_could_open() {
+    // No recipients AND no password is a valid OpenPGP message that
+    // nothing can decrypt. Silently producing one would look like a
+    // success and fail hours later, in someone else's hands.
+    let err = encrypt(b"x", "[]", None, None).unwrap_err();
+    assert!(err.contains("nothing could open this message"), "{err}");
+}
+
+#[test]
+fn test_encrypt_with_password_rejects_the_wrong_password() {
+    let ct = encrypt(b"x", "[]", None, Some(symmetric_password())).unwrap();
+    let err = decrypt_with_password(&ct, b"not it".to_vec(), None).unwrap_err();
+    assert!(err.starts_with("Wrong password, or this message is damaged:"), "{err}");
+}
+
+#[test]
+fn test_encrypt_with_password_uses_aes256_and_the_max_s2k() {
+    // The two parameters this app picks on the user's behalf, asserted
+    // rather than trusted to a dependency's `Default`.
+    //
+    // The S2K count is the LARGEST the OpenPGP wire format can encode
+    // (0x3e00000). There is no stronger value available, which is the
+    // whole reason this feature was comfortable to ship: the app is
+    // taking the format's maximum, not choosing a number.
+    use openpgp::crypto::S2K;
+    use openpgp::parse::{PacketParser, PacketParserResult};
+
+    let ct = encrypt(b"x", "[]", None, Some(symmetric_password())).unwrap();
+    let mut ppr = PacketParser::from_bytes(&ct).unwrap();
+    let mut checked = false;
+    while let PacketParserResult::Some(pp) = ppr {
+        if let openpgp::Packet::SKESK(openpgp::packet::SKESK::V4(skesk)) = &pp.packet {
+            assert_eq!(skesk.symmetric_algo(), SymmetricAlgorithm::AES256);
+            match skesk.s2k() {
+                S2K::Iterated { hash, hash_bytes, .. } => {
+                    assert_eq!(*hash, HashAlgorithm::SHA256);
+                    assert_eq!(*hash_bytes, 0x3e00000);
+                }
+                other => panic!("expected an iterated S2K, got {other:?}"),
+            }
+            checked = true;
+        }
+        let (_p, next) = pp.next().unwrap();
+        ppr = next;
+    }
+    assert!(checked, "no SKESK packet found");
+}
+
+/// The other direction: our password-encrypted message must open in real
+/// GnuPG.
+///
+/// Skipped when `gpg` is not installed -- the pinned vectors above cover
+/// GnuPG -> us unconditionally, but us -> GnuPG can only be proven
+/// against a live CLI. Same shape, and the same reasoning, as
+/// `age_cli_decrypts_our_ciphertext`.
+///
+/// This matters more than a round-trip against ourselves: symmetric
+/// encryption is the one thing here whose whole point is that someone
+/// ELSE opens it, usually with the tool we did not write.
+#[test]
+fn gpg_cli_decrypts_our_symmetric_message() {
+    use std::process::Command;
+
+    if Command::new("gpg").arg("--version").output().is_err() {
+        eprintln!("skipping: the `gpg` CLI is not installed");
+        return;
+    }
+
+    let dir = std::env::temp_dir().join(format!("gpg-wasm-sym-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let ct_path = dir.join("ours.asc");
+    let home = dir.join("gnupghome");
+    std::fs::create_dir_all(&home).unwrap();
+
+    std::fs::write(
+        &ct_path,
+        encrypt(SYMMETRIC_PLAINTEXT, "[]", None, Some(symmetric_password())).unwrap(),
+    )
+    .unwrap();
+
+    let out = Command::new("gpg")
+        .env("GNUPGHOME", &home)
+        .args(["--batch", "--yes", "--pinentry-mode", "loopback", "--passphrase"])
+        .arg(std::str::from_utf8(&symmetric_password()).unwrap())
+        .arg("--decrypt")
+        .arg(&ct_path)
+        .output()
+        .unwrap();
+
+    assert!(
+        out.status.success(),
+        "gpg could not decrypt our message: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert_eq!(out.stdout, SYMMETRIC_PLAINTEXT);
+    let _ = std::fs::remove_dir_all(&dir);
+}

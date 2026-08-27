@@ -116,7 +116,12 @@ export async function encrypt(
   recipientPublicKeys: string[],
 ): Promise<Uint8Array> {
   const wasm = await loadWasm();
-  return wasm.encrypt(plaintext, JSON.stringify(recipientPublicKeys), null);
+  return wasm.encrypt(
+    plaintext,
+    JSON.stringify(recipientPublicKeys),
+    null,
+    null,
+  );
 }
 
 export interface SignatureInfo {
@@ -159,6 +164,7 @@ export async function encryptWithSigningHandle(
     plaintext,
     JSON.stringify(recipientPublicKeys),
     signingKeyHandle,
+    null,
   );
 }
 

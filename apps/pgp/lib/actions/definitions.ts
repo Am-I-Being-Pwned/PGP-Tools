@@ -89,8 +89,8 @@ export const ACTIONS: readonly PgpAction[] = [
     disabledReason: (ctx) => {
       if (ctx.tab !== "workspace") return "Switch to Workspace first";
       if (!ctx.hasInput) return NO_INPUT_REASON[ctx.mode];
-      if (ctx.mode === "encrypt" && !ctx.hasRecipients)
-        return "Select at least one recipient";
+      if (ctx.mode === "encrypt" && !ctx.canEncrypt)
+        return "Select at least one recipient, or set a password";
       return undefined;
     },
     execute: (ctx) => ctx.ops.execute(),

@@ -621,11 +621,33 @@ that makes the gap legible, it does not close it.
 - **Auto-update.** Chrome Web Store can push silent updates; a
   compromised publisher account would ship malicious code.
 
-### 8.9a Password-encrypted messages are weaker, and we read them anyway
+### 8.9a Password-encrypted messages are weaker than key-encrypted ones
 
-`gpg --symmetric` messages are decryptable here. That is a **read-only**
-capability: this app cannot produce one, so it never chooses an S2K cost,
-a cipher, or a password policy on anyone's behalf.
+`gpg --symmetric` messages are both **readable and writable** here. An
+earlier version of this section said the capability was read-only, and
+that the app therefore never chose an S2K cost or a cipher on anyone's
+behalf. Encryption shipped afterwards, so here is what it actually picks:
+
+- **Cipher: AES-256**, pinned explicitly rather than inherited from
+  Sequoia's `Default` — a default that changes underneath us is a cipher
+  change nobody reviewed.
+- **S2K: SHA-256, iterated, count `0x3e00000`.** That is the _largest
+  count the OpenPGP wire format can represent_ (~354ms to derive on a
+  moderate CPU). There is no stronger value to choose, which is what
+  made this comfortable to ship: the app takes the format's maximum
+  rather than picking a number. Asserted by a test that reads the SKESK
+  packet back, not left to a dependency's default.
+- **Minimum password length: 8**, the same floor the vault's own
+  `validatePassword` applies. A message password guards a file that can
+  be attacked offline forever, so it has no business being weaker than
+  the one guarding the keyring.
+
+The password is **additive**: it adds an SKESK alongside whatever PKESKs
+the message already had, and either opens it. It is a badge next to the
+recipient list, not a mode that replaces it — and it does not touch
+"Also encrypt to me". A message with neither recipients nor a password is
+refused in the engine, because that is a valid OpenPGP message nothing
+can decrypt and producing one would look like success.
 
 What it is not: there is no identity, no key, and no forward secrecy. A
 public-key message is readable by the holder of a private key that never
@@ -636,10 +658,7 @@ about the message expires. The only work factor between a captured
 message and an offline dictionary attack is the S2K iteration count the
 **sender** baked in; we read that parameter and cannot raise it.
 
-Reading a message someone already sent you is a fact you cannot change,
-so refusing to read it helps nobody — which is why decrypt is in and
-encrypt is deliberately out. A signature on such a message is still worth
-what a signature is worth: it is verified on this path exactly as on the
+A signature on such a message is still worth what a signature is worth: it is verified on this path exactly as on the
 key path, and it is the one authenticity claim available. It comes from
 the signature, never from the password. `T-SYMMETRIC-MESSAGE-PASSWORD`.
 

@@ -22,6 +22,10 @@ import { decryptWorkspaceDraft } from "../../lib/workspace-draft";
 
 type Mode = WorkspaceAction;
 
+/** Shortest message password accepted. Same floor as the vault's
+ *  `validatePassword`, deliberately: see `encryptPasswordReady`. */
+export const MIN_MESSAGE_PASSWORD_LENGTH = 8;
+
 /** A drop routed to the workspace from the global dropzone. `nonce`
  *  changes on every drop so the same files/text re-trigger intake. */
 export interface WorkspaceIntake {
@@ -202,6 +206,20 @@ export interface WorkspaceState {
   /** Text that arrived wholesale (paste / text drop) rather than being
    *  typed. Repairs mangled armor; `handleInputChange` never does. */
   handleTextArrival: (text: string) => void;
+  /** Encrypt mode: the message password, `""` when none is set. Typed in
+   *  `MessagePasswordPage`, never inline -- an inline field shifted the
+   *  whole panel every time the badge was pressed. */
+  encryptPassword: string;
+  setEncryptPassword: (v: string) => void;
+  /** The password dialog is open. Separate from having a password: the
+   *  dialog can be open with none set (first press) and closed with one
+   *  set (the normal armed state). */
+  passwordDialogOpen: boolean;
+  setPasswordDialogOpen: (v: boolean) => void;
+  /** A usable password is set -- the only state in which one is added to
+   *  the message. Derived from the password itself, so nothing can arm it
+   *  by flipping a flag. */
+  encryptPasswordReady: boolean;
   handleFileDrop: (newFiles: File[]) => void;
   removeFile: (index: number) => void;
   clearFiles: () => void;
@@ -354,6 +372,15 @@ export function useWorkspaceState(opts: {
   const binaryOutputRef = useRef<Uint8Array | undefined>(undefined);
   const fileResultsRef = useRef<FileResult[]>([]);
 
+  // The MESSAGE password for symmetric encryption. In React state, like
+  // the key-unlock prompt's `passwordInput` -- and, like it, wiped
+  // by `wipePlaintext` at master lock. It is never persisted: the
+  // encrypted workspace draft carries mode/input/output/recipients only
+  // (see `WorkspaceDraft`), so an armed password does not survive a lock
+  // and reappear against a message the user has forgotten it was set for.
+  const [encryptPassword, setEncryptPassword] = useState("");
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+
   const wipePlaintext = useCallback(() => {
     inputRef.current = "";
     if (inputElRef.current) inputElRef.current.value = "";
@@ -370,6 +397,14 @@ export function useWorkspaceState(opts: {
     zeroizeResultBytes(binaryOutputRef.current, fileResultsRef.current);
     binaryOutputRef.current = undefined;
     fileResultsRef.current = [];
+    // The message password is a credential the user typed, so it goes
+    // with the plaintext. `setState` is enough here where it is not for
+    // the buffers above: a JS string cannot be overwritten in place
+    // anyway, so dropping the reference is the whole of what is available
+    // (the same limitation the zeroization table records for every typed
+    // password).
+    setEncryptPassword("");
+    setPasswordDialogOpen(false);
   }, []);
 
   const [operationDone, setOperationDone] = useState(false);
@@ -426,6 +461,14 @@ export function useWorkspaceState(opts: {
   // The one derived answer both the effect below and consumers read.
   const inputIsAge =
     inputIsAgeText || files.some((f) => /\.age$/i.test(f.name));
+
+  /** MIN_LENGTH matches the vault's own `validatePassword`: a message
+   *  password guards a file that can be attacked offline forever, so it
+   *  has no business being weaker than the one guarding the keyring. The
+   *  dialog will not hand back a shorter one; this is the second check
+   *  that makes the encrypt path independent of it. */
+  const encryptPasswordReady =
+    encryptPassword.length >= MIN_MESSAGE_PASSWORD_LENGTH;
 
   const resetOutput = useCallback(() => {
     setOutput("");
@@ -876,6 +919,11 @@ export function useWorkspaceState(opts: {
     setPrivateKeyDetected,
     handleInputChange,
     handleTextArrival,
+    encryptPassword,
+    setEncryptPassword,
+    passwordDialogOpen,
+    setPasswordDialogOpen,
+    encryptPasswordReady,
     handleFileDrop,
     removeFile,
     clearFiles,

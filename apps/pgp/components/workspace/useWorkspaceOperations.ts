@@ -18,6 +18,7 @@ import { signZipWithCrxKey, verifyCrxFile } from "../../lib/crx/operations";
 import {
   buildEncryptRecipients,
   resolveSelectedRecipients,
+  SSH_PASSWORD_REASON,
   toSelectedRecipient,
 } from "../../lib/encrypt-recipients";
 import { AppError } from "../../lib/errors/app-error";
@@ -358,8 +359,16 @@ export function useWorkspaceOperations({
 
   async function executeEncrypt() {
     const recipients = selectedRecipientKeys();
-    if (recipients.length === 0) {
-      s.setError({ message: "Select at least one recipient key." });
+    // A password is a way for the message to be openable, so it
+    // satisfies this gate on its own -- that IS the `gpg -c` case, and
+    // requiring a recipient for it would make password-only encryption
+    // unreachable. The engine refuses "no recipients and no password"
+    // independently, so a message nobody can open cannot be produced
+    // even if this check is wrong.
+    if (recipients.length === 0 && !s.encryptPasswordReady) {
+      s.setError({
+        message: "Select at least one recipient key, or set a password.",
+      });
       return;
     }
 
@@ -368,6 +377,20 @@ export function useWorkspaceOperations({
     // the persisted "Sign" preference must not drag the message onto the
     // PGP signing path (nor pull a PGP key in as the signer).
     const isAge = selectedEngine() === "ssh";
+
+    // A password and an age message are mutually exclusive, and getting
+    // this wrong is SILENT: the age branch below never sees
+    // `messagePassword`, so without this the user gets a .age file with
+    // no password on it while the Password badge sits lit above the
+    // button. They would only find out when the recipient asked what the
+    // password was for. The picker dims SSH recipients once a password
+    // is set and the badge disables once SSH ones are picked, so this is
+    // the backstop for a state the UI should not allow, not the main
+    // defence.
+    if (isAge && s.encryptPasswordReady) {
+      s.setError({ message: SSH_PASSWORD_REASON });
+      return;
+    }
 
     // With encrypt-to-self on, the user's own key rides along so they
     // can decrypt their own ciphertext later. When no own key of this
@@ -424,6 +447,17 @@ export function useWorkspaceOperations({
       s.setStatusText("age message - encrypted to SSH recipients");
     }
 
+    // The message password, when the badge is armed. `undefined` -- not
+    // `""` -- when it is not: an empty string is a password, and passing
+    // one would produce a message "protected" by nothing.
+    //
+    // NOT offered on the age path: age has no password mode, and adding
+    // one would mean inventing a construction rather than using a
+    // format's own. The badge is hidden for an age message in the view.
+    const messagePassword = s.encryptPasswordReady
+      ? s.encryptPassword
+      : undefined;
+
     const doEncrypt = async (input: EncryptInput) => {
       if (isAge) {
         return ageOps.encryptToRecipients({
@@ -436,11 +470,13 @@ export function useWorkspaceOperations({
           input,
           recipientPublicKeys,
           signingKeyHandle: signingHandle,
+          password: messagePassword,
         });
       }
       return pgpOps.encrypt({
         input,
         recipientPublicKeys,
+        password: messagePassword,
       });
     };
 

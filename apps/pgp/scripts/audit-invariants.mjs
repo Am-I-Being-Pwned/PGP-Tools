@@ -836,6 +836,20 @@ function secretFnMatch(f, i, code) {
   if (anyFn && isWasmExport(f.lines, i)) return { m: anyFn, via: "wasm export" };
   return null;
 }
+/** `name: Vec<u8>` or `name: Option<Vec<u8>>` -- an owned secret the
+ *  callee can therefore scrub. */
+const OWNED_SECRET_RE = (p) =>
+  new RegExp(`\\b${p}\\s*:\\s*(?:Option\\s*<\\s*)?Vec\\s*<\\s*u8\\s*>`);
+
+/** The two ways of taking ownership under `Zeroizing`: directly, or
+ *  through the `Option` (`let pw = pw.map(Zeroizing::new)`). Both end
+ *  with the bytes scrubbed on drop; the second is what an optional
+ *  secret param looks like. */
+const ZEROIZED_RE = (p) =>
+  new RegExp(
+    `let\\s+(?:mut\\s+)?${p}\\s*=\\s*(?:Zeroizing::new\\(|${p}\\s*\\.map\\(\\s*Zeroizing::new\\s*\\))`,
+  );
+
 const invariantZeroizedParams = {
   id: "owned-secret-params-zeroized",
   name: "owned secret params (credentials + store plaintext) are Zeroizing-wrapped",
@@ -870,13 +884,21 @@ const invariantZeroizedParams = {
       if (!span) continue;
       const { signature, body } = span;
 
-      // Owned secret params: `name: Vec<u8>` (no leading `&`).
+      // Owned secret params: `name: Vec<u8>` or `name: Option<Vec<u8>>`
+      // (no leading `&`).
+      //
+      // The `Option` arm is not cosmetic. Before it, `password:
+      // Option<Vec<u8>>` matched NEITHER the owned pattern (which
+      // demanded `Vec` immediately after the colon) nor the borrowed one
+      // (no `&`), so such a param was invisible to this invariant AND to
+      // the borrowed-credential one below -- an optional secret could be
+      // added to a wasm export and never zeroized, with both checks
+      // reporting green. Found while adding the optional password to
+      // `encrypt`; see OWNED_SECRET_RE.
       const owned = [];
       const borrowed = [];
       for (const p of SECRET_PARAM_NAMES) {
-        const owns = new RegExp(`\\b${p}\\s*:\\s*Vec\\s*<\\s*u8\\s*>`).test(
-          signature,
-        );
+        const owns = OWNED_SECRET_RE(p).test(signature);
         const borrows = new RegExp(`\\b${p}\\s*:\\s*&`).test(signature);
         if (owns) owned.push(p);
         else if (borrows) borrowed.push(p);
@@ -888,12 +910,7 @@ const invariantZeroizedParams = {
       // "convention changed" guard below unfalsifiable.
       if (via === "wasm export" && !owned.length && !borrowed.length) continue;
 
-      const unwrapped = owned.filter(
-        (p) =>
-          !new RegExp(`let\\s+(?:mut\\s+)?${p}\\s*=\\s*Zeroizing::new\\(`).test(
-            body,
-          ),
-      );
+      const unwrapped = owned.filter((p) => !ZEROIZED_RE(p).test(body));
       checked.push({ fn: fnNameHere, file: f.rel, owned, borrowed, via });
       if (unwrapped.length) {
         violations.push({
@@ -1048,9 +1065,7 @@ const invariantExportsOwnCredentials = {
         new RegExp(`\\b${param}\\s*:\\s*&`).test(span.signature),
       );
       const owned = CREDENTIAL_PARAM_NAMES.filter((param) =>
-        new RegExp(`\\b${param}\\s*:\\s*Vec\\s*<\\s*u8\\s*>`).test(
-          span.signature,
-        ),
+        OWNED_SECRET_RE(param).test(span.signature),
       );
       if (!borrowed.length && !owned.length) continue;
       checked.push({ fn: fnHere, file: f.rel, owned, borrowed });

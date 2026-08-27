@@ -17,7 +17,7 @@ function fakeCtx(overrides: Partial<ActionCtx> = {}): ActionCtx {
     tab: "workspace",
     mode: "encrypt",
     hasInput: false,
-    hasRecipients: true,
+    canEncrypt: true,
     encryptEngine: "pgp",
     hasOutput: false,
     hasDownload: false,

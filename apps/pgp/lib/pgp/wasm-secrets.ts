@@ -204,6 +204,51 @@ export async function protectImportedWithPrf(
 // ── unlock-and-store (the ONLY paths that populate KEY_STORE) ────────
 
 /**
+ * Encrypt a message to a PASSWORD, on top of whatever recipients it
+ * already has.
+ *
+ * ADDITIVE, not a mode: the message gets an SKESK alongside any PKESKs,
+ * and either opens it. Passing an empty recipient list is what produces
+ * a `gpg -c`-style password-only message.
+ *
+ * IN THIS FILE BECAUSE OF THE PASSWORD. The password-less
+ * `encrypt`/`encryptWithSigningHandle` wrappers stay in `wasm-public.ts`
+ * and are untouched; this is the one that carries a credential, so this
+ * is the one that lives behind the secret boundary.
+ *
+ * WHY THE UNDERLYING EXPORT NAMES ARE NOT IN `SECRET_WASM_EXPORTS`:
+ * `wasm.encrypt` is dual-use -- it carries a password only when the
+ * fourth argument is non-null, and a name-based grep cannot express
+ * "only when". Listing it would make the password-less call in
+ * `wasm-public.ts` a permanent violation, and a permanently-red gate
+ * reports nothing (the same reasoning the console invariant records).
+ * What IS enforced, on the Rust side and by the invariant this feature
+ * extended: the param is owned and `Zeroizing`-wrapped on entry.
+ *
+ * @secret-handling
+ *   in:  password bytes
+ *   out: ciphertext (not secret -- it is the thing being produced)
+ *   contract: caller MUST `.fill(0)` `password` in a `finally`.
+ */
+export async function encryptWithPassword(
+  plaintext: Uint8Array,
+  recipientPublicKeys: string[],
+  password: Uint8Array,
+  signingKeyHandle?: number,
+): Promise<Uint8Array> {
+  const wasm = await loadWasm();
+  const recipients = JSON.stringify(recipientPublicKeys);
+  return signingKeyHandle === undefined
+    ? wasm.encrypt(plaintext, recipients, null, password)
+    : wasm.encryptWithSigningHandle(
+        plaintext,
+        recipients,
+        signingKeyHandle,
+        password,
+      );
+}
+
+/**
  * Decrypt a message that was encrypted to a PASSWORD (`gpg --symmetric`),
  * not to anybody's key.
  *
