@@ -2,14 +2,21 @@ import { describe, expect, it } from "vitest";
 
 import type { DropRule, DropSample } from "./drop-routing";
 import {
+  buildDropSample,
   looksLikeKey,
   looksLikePrivateKey,
   looksLikeSshPublicKey,
+  readAllFilesText,
   resolveDropRule,
 } from "./drop-routing";
 
 const ED25519_PUB =
   "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIALwHu/03Nd9eyyrPgxjkFu80Fe1EgN06J8iaY8B+wf6 alice@example.com";
+
+/** A text file, as the browser hands one to a drop handler. */
+function file(body: string, name = "dropped.txt"): File {
+  return new File([body], name, { type: "text/plain" });
+}
 
 function sample(text: string): DropSample {
   return { files: [], text, sampleText: text, hasBinaryKeyFile: false };
@@ -163,16 +170,17 @@ describe("resolveDropRule", () => {
  */
 describe("looksLikeSshPublicKey - any algorithm", () => {
   const rules: DropRule[] = [
-    { id: "keys", match: (s) => looksLikeKey(s.sampleText), run: () => undefined },
+    {
+      id: "keys",
+      match: (s) => looksLikeKey(s.sampleText),
+      run: () => undefined,
+    },
     { id: "workspace", match: () => true, run: () => undefined },
   ];
 
   it.each([
     ["ECDSA", "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTY= a@host"],
-    [
-      "FIDO",
-      "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9w a@host",
-    ],
+    ["FIDO", "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9w a@host"],
     ["DSA", "ssh-dss AAAAB3NzaC1kc3MAAACBAO0= a@host"],
   ])("routes a dropped %s .pub to the key import", (_name, line) => {
     expect(looksLikeSshPublicKey(line)).toBe(true);
@@ -205,5 +213,141 @@ describe("looksLikeSshPublicKey - any algorithm", () => {
       "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA\n-----END RSA PRIVATE KEY-----";
     expect(looksLikeSshPublicKey(pem)).toBe(false);
     expect(looksLikePrivateKey(pem)).toBe(true);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// Reading the drop.
+//
+// `buildDropSample` and `readAllFilesText` are the two places a dropped
+// FILE (rather than dragged text) becomes something a rule can look at,
+// and both carry deliberate bounds: a prefix per file, a cap on how many
+// files are sampled, and a size ceiling on what the import path will
+// read whole. Those bounds are the whole point -- without them a dropped
+// disk image is slurped into memory just to decide it isn't a key -- so
+// they are what these tests pin, alongside the "one bad file must not
+// lose the rest of the drop" behaviour.
+// ─────────────────────────────────────────────────────────────────────
+
+describe("buildDropSample", () => {
+  it("combines the dragged text with a prefix of each file", async () => {
+    const sample = await buildDropSample({
+      files: [file("alpha"), file("beta")],
+      text: "dragged",
+    });
+
+    expect(sample.sampleText).toContain("dragged");
+    expect(sample.sampleText).toContain("alpha");
+    expect(sample.sampleText).toContain("beta");
+  });
+
+  it("passes the files and text through untouched", async () => {
+    const files = [file("alpha")];
+    const sample = await buildDropSample({ files, text: "dragged" });
+
+    expect(sample.files).toBe(files);
+    expect(sample.text).toBe("dragged");
+  });
+
+  it("reads only a bounded prefix of a large file", async () => {
+    // A 2 MB file must not arrive in the sample whole. An armored key
+    // header sits in the first bytes, so a prefix is all a rule needs.
+    const big = file(
+      "-----BEGIN PGP PUBLIC KEY BLOCK-----" + "A".repeat(2_000_000),
+    );
+    const sample = await buildDropSample({ files: [big], text: "" });
+
+    expect(looksLikeKey(sample.sampleText)).toBe(true);
+    expect(sample.sampleText.length).toBeLessThan(200_000);
+  });
+
+  it("samples at most 50 files from a pathological drop", async () => {
+    const files = Array.from({ length: 60 }, (_, i) => file(`file-${i}-body`));
+    const sample = await buildDropSample({ files, text: "" });
+
+    expect(sample.sampleText).toContain("file-49-body");
+    expect(sample.sampleText).not.toContain("file-50-body");
+    // All 60 still reach the rule that wins -- only classification is capped.
+    expect(sample.files).toHaveLength(60);
+  });
+
+  it("survives a file that refuses to be read", async () => {
+    // A dragged file whose backing store has gone away (moved, unmounted,
+    // permission revoked) rejects on read. Losing the whole drop over one
+    // of them would be worse than classifying without it.
+    const broken = {
+      slice: () => ({ arrayBuffer: () => Promise.reject(new Error("gone")) }),
+    } as unknown as File;
+
+    const sample = await buildDropSample({
+      files: [broken, file("-----BEGIN PGP PUBLIC KEY BLOCK-----")],
+      text: "",
+    });
+
+    expect(looksLikeKey(sample.sampleText)).toBe(true);
+  });
+
+  it("flags a raw binary key export, which carries no armor header", async () => {
+    // 0x99 = an OpenPGP public-key packet tag; nothing to sample as text.
+    const binary = new File(
+      [new Uint8Array([0x99, 0x01, 0x0d, 0x04])],
+      "key.gpg",
+    );
+    const sample = await buildDropSample({ files: [binary], text: "" });
+
+    expect(sample.hasBinaryKeyFile).toBe(true);
+  });
+
+  it("does not flag ordinary text as a binary key", async () => {
+    const sample = await buildDropSample({ files: [file("hello")], text: "" });
+    expect(sample.hasBinaryKeyFile).toBe(false);
+  });
+
+  it("handles a drop with no files at all", async () => {
+    const sample = await buildDropSample({ files: [], text: "just text" });
+
+    expect(sample.sampleText).toContain("just text");
+    expect(sample.hasBinaryKeyFile).toBe(false);
+  });
+});
+
+describe("readAllFilesText", () => {
+  it("joins every file's contents", async () => {
+    const text = await readAllFilesText([file("alpha"), file("beta")]);
+    expect(text).toContain("alpha");
+    expect(text).toContain("beta");
+  });
+
+  it("skips a file above the size ceiling rather than slurping it", async () => {
+    // The ceiling is 1 MB: an armored key is tiny, and a huge file whose
+    // first bytes merely LOOK like a key must not be read whole.
+    const huge = file("x".repeat(1024 * 1024 + 1));
+    const text = await readAllFilesText([huge, file("alpha")]);
+
+    expect(text).toContain("alpha");
+    expect(text).not.toContain("xxxx");
+  });
+
+  it("reads a file exactly at the ceiling", async () => {
+    const atLimit = file("y".repeat(1024 * 1024));
+    const text = await readAllFilesText([atLimit]);
+    expect(text.length).toBe(1024 * 1024);
+  });
+
+  it("substitutes empty text for a file that fails to read", async () => {
+    const broken = {
+      size: 10,
+      slice: () => ({ arrayBuffer: () => Promise.reject(new Error("gone")) }),
+      arrayBuffer: () => Promise.reject(new Error("gone")),
+      text: () => Promise.reject(new Error("gone")),
+    } as unknown as File;
+
+    await expect(readAllFilesText([broken, file("alpha")])).resolves.toContain(
+      "alpha",
+    );
+  });
+
+  it("returns empty for no files", async () => {
+    await expect(readAllFilesText([])).resolves.toBe("");
   });
 });

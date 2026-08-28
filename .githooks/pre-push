@@ -1,0 +1,65 @@
+#!/bin/sh
+#
+# Refuse a push to main whose README badges don't match the code being
+# pushed.
+#
+# WHY A HOOK AND NOT JUST CI. CI already runs `badges:check`, so a stale
+# badge is caught either way -- but only after a red build on main, which
+# then needs a second "chore: update badges" commit to clear. That has
+# happened repeatedly. Catching it here costs ~30s on a main push and
+# turns a broken build plus a follow-up commit into an amend.
+#
+# It CHECKS rather than regenerates: a hook cannot add files to the push
+# already in flight, so silently rewriting README.md would leave the
+# working tree dirty and push the stale version anyway.
+#
+# Only main. Feature branches push freely -- the badges are a claim made
+# on the default branch, and CI is the backstop before a merge lands.
+#
+# Escape hatches: `git push --no-verify`, or SKIP_BADGE_CHECK=1.
+
+[ -n "$SKIP_BADGE_CHECK" ] && exit 0
+
+root=$(git rev-parse --show-toplevel) || exit 0
+zero=$(git hash-object --stdin </dev/null | tr '0-9a-f' '0')
+
+pushing_main=0
+# stdin: <local ref> <local sha> <remote ref> <remote sha>, one per ref.
+while read -r _local_ref local_sha remote_ref _remote_sha; do
+  # A deletion carries an all-zero local sha and no tree to check.
+  [ "$local_sha" = "$zero" ] && continue
+  case "$remote_ref" in
+    refs/heads/main) pushing_main=1 ;;
+  esac
+done
+
+[ "$pushing_main" -eq 1 ] || exit 0
+
+echo "pre-push: verifying README badges against apps/pgp (main only)..."
+
+cd "$root/apps/pgp" || exit 0
+
+if ! pnpm coverage >/dev/null 2>&1; then
+  echo "pre-push: could not compute coverage; skipping the badge check." >&2
+  echo "          Run 'pnpm --filter @amibeingpwned/pgp coverage' to see why." >&2
+  exit 0
+fi
+
+if pnpm badges:check >/dev/null 2>&1; then
+  echo "pre-push: README badges are current."
+  exit 0
+fi
+
+cat >&2 <<'MSG'
+
+  ✗ README badges are out of date, and CI will fail on this push.
+
+    Regenerate and fold them into the commit you are pushing:
+
+        pnpm --filter @amibeingpwned/pgp badges
+        git add README.md && git commit --amend --no-edit
+
+    Or push anyway with --no-verify (CI will still flag it).
+
+MSG
+exit 1

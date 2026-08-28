@@ -252,3 +252,87 @@ describe("symmetric (password) decryption", () => {
     expect(p.remedy).toBeUndefined();
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────
+// The remaining AppError codes.
+//
+// What matters about each of these is not the wording but the REMEDY: it
+// is what the error surface renders as a button, so an unlock failure
+// that offers "Try again" instead of "Unlock" sends the user in a
+// circle. The `ssh-passphrase-required` case is the one deliberate
+// exception -- it carries no remedy, because the import step answers it
+// in place and a button would navigate away mid-import.
+// ─────────────────────────────────────────────────────────────────────
+
+describe("presentError: unlock-related codes", () => {
+  it("password-required offers Unlock, not Try again", () => {
+    const presented = presentError(
+      new AppError("password-required", "needs password"),
+      FALLBACK,
+    );
+
+    expect(presented.message).toMatch(/key password/i);
+    expect(presented.remedy).toEqual({ label: "Unlock", action: "unlock" });
+    expect(presented.detail).toBe("needs password");
+  });
+
+  it("passkey-failed offers Try again", () => {
+    // A passkey ceremony that didn't complete is worth retrying in place.
+    const presented = presentError(
+      new AppError("passkey-failed", "ceremony aborted"),
+      FALLBACK,
+    );
+
+    expect(presented.remedy).toEqual({ label: "Try again", action: "retry" });
+  });
+
+  it("weak-password names the actual requirement", () => {
+    const presented = presentError(
+      new AppError("weak-password", "too short"),
+      FALLBACK,
+    );
+
+    expect(presented.message).toMatch(/at least 8 characters/i);
+    // Nothing to navigate to: the user is already in the field.
+    expect(presented.remedy).toBeUndefined();
+  });
+
+  it("ssh-passphrase-required passes the engine's sentence through unrewritten", () => {
+    // The engine's own wording already says exactly what to do, and the
+    // import step reveals its passphrase field in response.
+    const message = "This SSH key is passphrase-protected.";
+    const presented = presentError(
+      new AppError("ssh-passphrase-required", message),
+      FALLBACK,
+    );
+
+    expect(presented.message).toBe(message);
+    expect(presented.remedy).toBeUndefined();
+    // No `detail` either -- a duplicate of the message helps nobody.
+    expect(presented.detail).toBeUndefined();
+  });
+});
+
+describe("presentError: PrfNotSupportedError", () => {
+  it("passes its curated platform-specific copy straight through", () => {
+    // This error builds its own message from the user agent (which
+    // authenticator to try on macOS vs Windows). Rewriting it here would
+    // throw away the only actionable part.
+    const e = new Error("macOS requires 15+ with iCloud Keychain.");
+    e.name = "PrfNotSupportedError";
+
+    const presented = presentError(e, FALLBACK);
+
+    expect(presented.message).toBe("macOS requires 15+ with iCloud Keychain.");
+    expect(presented.message).not.toBe(FALLBACK);
+  });
+
+  it("is matched by name, not by class identity", () => {
+    // The error crosses a module boundary, so an `instanceof` check
+    // against a re-imported class would be brittle.
+    const e = new Error("no PRF here");
+    e.name = "PrfNotSupportedError";
+
+    expect(presentError(e, FALLBACK).message).toBe("no PRF here");
+  });
+});

@@ -399,3 +399,134 @@ describe("shortcut dispatch through the registry", () => {
     }
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────
+// Wiring.
+//
+// Every action's `execute` is a one-liner delegating to a nav or op
+// callback, which is exactly why it is worth asserting: a copy-paste
+// slip wires "Download output" to `copyOutput`, and nothing about that
+// looks wrong on the page. The palette is also the only route to some
+// of these, so a mis-wire has no second path that would surface it.
+//
+// One table, one call each: the invariant is "this id fires that
+// callback and nothing else".
+// ─────────────────────────────────────────────────────────────────────
+
+describe("action wiring", () => {
+  /** A ctx whose every callback is a spy, so we can assert that exactly
+   *  one fires. */
+  function spyCtx() {
+    const navigation = {
+      setTab: vi.fn(),
+      openHistory: vi.fn(),
+      openGenerate: vi.fn(),
+      openImport: vi.fn(),
+      setMode: vi.fn(),
+      openSecurityPresets: vi.fn(),
+    };
+    const ops = {
+      execute: vi.fn(),
+      clearInput: vi.fn(),
+      copyOutput: vi.fn(),
+      downloadOutput: vi.fn(),
+      lockNow: vi.fn(),
+      toggleEncryptToSelf: vi.fn(),
+      toggleAlsoSign: vi.fn(),
+      toggleSaveToHistory: vi.fn(),
+    };
+    return { ctx: fakeCtx({ navigation, ops }), navigation, ops };
+  }
+
+  function run(id: string, ctx: ActionCtx) {
+    const action = ACTIONS.find((a) => a.id === id);
+    if (!action) throw new Error(`no action with id ${id}`);
+    void action.execute(ctx);
+  }
+
+  it.each([
+    ["workspace.run", "ops", "execute", undefined],
+    ["workspace.copy-output", "ops", "copyOutput", undefined],
+    ["workspace.download", "ops", "downloadOutput", undefined],
+    ["workspace.clear", "ops", "clearInput", undefined],
+    ["history.open", "navigation", "openHistory", undefined],
+    [
+      "workspace.toggle-encrypt-to-self",
+      "ops",
+      "toggleEncryptToSelf",
+      undefined,
+    ],
+    ["workspace.toggle-sign", "ops", "toggleAlsoSign", undefined],
+    ["workspace.toggle-history", "ops", "toggleSaveToHistory", undefined],
+    ["keys.generate", "navigation", "openGenerate", undefined],
+    ["keys.import", "navigation", "openImport", undefined],
+    ["nav.workspace", "navigation", "setTab", "workspace"],
+    ["nav.keys", "navigation", "setTab", "keys"],
+    ["nav.settings", "navigation", "setTab", "settings"],
+    [
+      "settings.security-presets",
+      "navigation",
+      "openSecurityPresets",
+      undefined,
+    ],
+    ["session.lock", "ops", "lockNow", undefined],
+  ] as const)("%s calls %s.%s", (id, group, method, arg) => {
+    const { ctx, navigation, ops } = spyCtx();
+
+    run(id, ctx);
+
+    const target = (group === "ops" ? ops : navigation) as Record<
+      string,
+      ReturnType<typeof vi.fn>
+    >;
+    expect(target[method]).toHaveBeenCalledTimes(1);
+    if (arg !== undefined) expect(target[method]).toHaveBeenCalledWith(arg);
+
+    // Nothing else fired: this is what catches a mis-wire that happens to
+    // land on a plausible-looking neighbour.
+    const others = [
+      ...Object.entries(navigation),
+      ...Object.entries(ops),
+    ].filter(([name]) => name !== method);
+    for (const [, fn] of others) expect(fn).not.toHaveBeenCalled();
+  });
+
+  it("covers every action in the registry", () => {
+    // A new action added without a wiring test would otherwise slip
+    // through this file entirely.
+    const wired = new Set([
+      "workspace.run",
+      "workspace.copy-output",
+      "workspace.download",
+      "workspace.clear",
+      "history.open",
+      "workspace.toggle-encrypt-to-self",
+      "workspace.toggle-sign",
+      "workspace.toggle-history",
+      "keys.generate",
+      "keys.import",
+      "nav.workspace",
+      "nav.keys",
+      "nav.settings",
+      "settings.security-presets",
+      "session.lock",
+    ]);
+    const modeActions = ACTIONS.filter((a) => a.id.startsWith("mode."));
+    const unwired = ACTIONS.filter(
+      (a) => !wired.has(a.id) && !a.id.startsWith("mode."),
+    );
+
+    expect(unwired.map((a) => a.id)).toEqual([]);
+    expect(modeActions.length).toBeGreaterThan(0);
+  });
+
+  it("mode actions set their own mode", () => {
+    for (const action of ACTIONS.filter((a) => a.id.startsWith("mode."))) {
+      const { ctx, navigation } = spyCtx();
+      void action.execute(ctx);
+      expect(navigation.setMode).toHaveBeenCalledWith(
+        action.id.slice("mode.".length) as PgpMode,
+      );
+    }
+  });
+});

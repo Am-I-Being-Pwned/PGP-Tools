@@ -29,6 +29,9 @@ const appDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const repoRoot = path.resolve(appDir, "../..");
 const readmePath = path.join(repoRoot, "README.md");
 
+const CHROME_ID = "pgpcdgggohpbombhkffjoiiafdlfcpgp";
+const CHROME_LISTING = `https://chromewebstore.google.com/detail/pgp-tools-encrypt-decrypt/${CHROME_ID}`;
+
 const START = "<!-- badges:start -->";
 const END = "<!-- badges:end -->";
 
@@ -107,8 +110,19 @@ function buildBadgeRow() {
     '<a href="https://github.com/Am-I-Being-Pwned/PGP-Tools/actions/workflows/ci.yml">' +
     '<img src="https://github.com/Am-I-Being-Pwned/PGP-Tools/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" />' +
     "</a>";
+  // Store install count and rating are live shields endpoints for the
+  // same reason as the CI badge: they move when a user installs or
+  // rates, with no commit involved. Snapshotting them here would bake
+  // in a number that only goes stale. The Edge listing is deliberately
+  // absent -- its counts are still zero, and a "0 users" badge reads as
+  // a verdict on the extension rather than on the listing's age.
+  const store = [
+    `<a href="${CHROME_LISTING}"><img src="https://img.shields.io/chrome-web-store/users/${CHROME_ID}" alt="Chrome Web Store users" /></a>`,
+    `<a href="${CHROME_LISTING}"><img src="https://img.shields.io/chrome-web-store/rating/${CHROME_ID}" alt="Chrome Web Store rating" /></a>`,
+  ];
   return [
     ci,
+    ...store,
     badge("lib coverage", `${rounded}%`, coverageColour(pct)),
     badge("unit tests", unitTestCount(), "blue"),
     badge("e2e tests", e2eTestCount(), "blue"),

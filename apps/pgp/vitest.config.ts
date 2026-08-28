@@ -19,7 +19,12 @@ export default defineConfig({
       // The resulting number would be a smaller figure describing a
       // larger claim, which is worse than not measuring.
       include: ["lib/**"],
-      exclude: ["lib/**/*.test.ts", "lib/**/*.d.ts"],
+      // `fake-*.ts` are TEST DOUBLES (a chrome.storage area, the wasm
+      // sealing primitives). They are imported only from `*.test.ts` and
+      // tree-shaken out of the extension bundle, so measuring how much
+      // of a stub the tests exercise would only pad the denominator with
+      // code that never ships.
+      exclude: ["lib/**/*.test.ts", "lib/**/*.d.ts", "lib/**/fake-*.ts"],
       reporter: ["text-summary", "json-summary"],
       reportsDirectory: "coverage",
     },
