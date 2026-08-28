@@ -48,6 +48,15 @@
         "!shots/**"
       ]
     },
+    "@amibeingpwned/pgp#test:rust": {
+      "inputs": [
+        "gpg-wasm/src/**",
+        "gpg-wasm/Cargo.toml",
+        "gpg-wasm/Cargo.lock",
+        "package.json"
+      ],
+      "outputs": []
+    },
     "@amibeingpwned/pgp#badges:check": {
       "dependsOn": ["test"],
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/README.md"],

@@ -1701,3 +1701,548 @@ fn gpg_cli_decrypts_our_symmetric_message() {
     assert_eq!(out.stdout, SYMMETRIC_PLAINTEXT);
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+// =====================================================================
+// ADVERSARIAL TESTS
+//
+// Everything above this line asks "does the happy path work". These ask
+// "what does a hostile input get out of us". They are written against
+// the properties the README and SECURITY.md actually claim, because
+// those are the claims a user relies on:
+//
+//   - a tampered or truncated ciphertext yields NO plaintext, not
+//     partial plaintext (a streaming decryptor that emits before the
+//     integrity check is the classic way this goes wrong);
+//   - a signature is bound to the bytes it signed, so it cannot be
+//     transplanted onto other text;
+//   - `signatureValid: true` is never reachable from key material an
+//     attacker chose;
+//   - hostile bytes produce an Err, never a panic -- a panic in wasm
+//     aborts the module, which is a denial of service on the whole
+//     extension rather than a failed parse.
+// =====================================================================
+
+/// A fresh ECC keypair as (public_armor, private_armor).
+fn adv_keypair() -> (String, String) {
+    let gen: serde_json::Value = serde_json::from_str(&gen_test_key()).unwrap();
+    (
+        gen["publicKeyArmored"].as_str().unwrap().to_string(),
+        gen["privateKeyArmored"].as_str().unwrap().to_string(),
+    )
+}
+
+fn adv_recipients(pub_armor: &str) -> String {
+    serde_json::to_string(&vec![pub_armor]).unwrap()
+}
+
+// ── ciphertext integrity ─────────────────────────────────────────────
+
+/// De-armor a message so corruption lands on real ciphertext bytes
+/// rather than on base64 framing. Flipping a bit in the ASCII armor is
+/// not the attack -- it mostly hits the CRC, a newline, or a character
+/// whose low bits are padding, and it makes an integrity test look
+/// stricter than it is.
+fn dearmor(armored: &[u8]) -> Vec<u8> {
+    use std::io::Read;
+    let mut raw = Vec::new();
+    openpgp::armor::Reader::from_bytes(armored, None)
+        .read_to_end(&mut raw)
+        .unwrap();
+    raw
+}
+
+#[test]
+fn no_single_bit_corruption_ever_yields_altered_plaintext() {
+    // THE property, stated the way an attacker would have to break it:
+    // flip any one bit anywhere in the ciphertext and the caller either
+    // gets an error or gets the message that was actually sent. Never a
+    // third thing.
+    //
+    // Exhaustive over every byte, not a sample: the interesting bits are
+    // exactly the ones nobody thought to poke. Most flips in the body are
+    // caught outright; a flip in the PKESK's advisory recipient key ID is
+    // *expected* to still decrypt, because Sequoia falls back to trying
+    // the keys it holds. Both outcomes are safe. Altered plaintext is not.
+    let (pub_armor, priv_armor) = adv_keypair();
+    let expected = "SECRET-".repeat(24);
+    let ciphertext = encrypt(
+        expected.as_bytes(),
+        &adv_recipients(&pub_armor),
+        None,
+        None,
+    )
+    .unwrap();
+
+    let raw = dearmor(&ciphertext);
+    let handle = store_key(&priv_armor).unwrap();
+
+    let mut detected = 0;
+    for offset in 0..raw.len() {
+        for bit in [0u8, 3, 7] {
+            let mut corrupted = raw.clone();
+            corrupted[offset] ^= 1 << bit;
+
+            match decrypt_with_handle(&corrupted, handle, None) {
+                Err(_) => detected += 1,
+                Ok(packed) => {
+                    let sig_len =
+                        u32::from_le_bytes([packed[0], packed[1], packed[2], packed[3]]) as usize;
+                    assert_eq!(
+                        &packed[4 + sig_len..],
+                        expected.as_bytes(),
+                        "bit {bit} at offset {offset} produced ALTERED plaintext",
+                    );
+                }
+            }
+        }
+    }
+
+    // Sanity on the test itself: if corruption stopped being detected at
+    // all, the loop above would pass vacuously against a broken build.
+    assert!(
+        detected > raw.len(),
+        "integrity checks fired on only {detected} of {} corruptions -- \
+         suspiciously few, the test may no longer be corrupting ciphertext",
+        raw.len() * 3,
+    );
+
+    drop_key(handle).unwrap();
+}
+
+#[test]
+fn truncating_the_ciphertext_never_yields_plaintext() {
+    // Removing the tail removes the integrity check. A decryptor that
+    // streamed plaintext out before validating would hand back the
+    // surviving prefix -- the "no TOCTOU window" claim failing exactly
+    // where it matters. Every truncation must be an error.
+    //
+    // The plaintext spans many reads on purpose: a short message can sit
+    // entirely in one buffer and get validated before any of it is
+    // written, which would hide the bug this is looking for.
+    let (pub_armor, priv_armor) = adv_keypair();
+    let plaintext = "SECRET-".repeat(4096);
+    let ciphertext = encrypt(
+        plaintext.as_bytes(),
+        &adv_recipients(&pub_armor),
+        None,
+        None,
+    )
+    .unwrap();
+
+    let raw = dearmor(&ciphertext);
+    let handle = store_key(&priv_armor).unwrap();
+
+    for cut in [1usize, 2, 8, 32, 128, 512, raw.len() / 2] {
+        let truncated = &raw[..raw.len() - cut];
+        assert!(
+            decrypt_with_handle(truncated, handle, None).is_err(),
+            "truncating {cut} bytes still produced output",
+        );
+    }
+
+    drop_key(handle).unwrap();
+}
+
+#[test]
+fn decrypt_with_a_non_recipient_handle_fails() {
+    // Holding *a* private key must not open a message encrypted to
+    // someone else -- and the failure must be an error, not an empty
+    // success that a caller could mistake for an empty message.
+    let (recipient_pub, _recipient_priv) = adv_keypair();
+    let (_other_pub, other_priv) = adv_keypair();
+
+    let ciphertext = encrypt(
+        b"for the recipient only",
+        &adv_recipients(&recipient_pub),
+        None,
+        None,
+    )
+    .unwrap();
+
+    let wrong_handle = store_key(&other_priv).unwrap();
+    let result = decrypt_with_handle(&ciphertext, wrong_handle, None);
+    drop_key(wrong_handle).unwrap();
+
+    assert!(result.is_err(), "a non-recipient key decrypted the message");
+}
+
+// ── signature binding ────────────────────────────────────────────────
+
+#[test]
+fn cleartext_signature_does_not_transfer_to_other_text() {
+    // The signature covers the bytes it was made over. Swapping the body
+    // underneath it is the whole attack, so "valid" here would mean the
+    // signature asserts nothing at all.
+    let (pub_armor, priv_armor) = adv_keypair();
+    let signed = sign_message("transfer 10 to alice", &priv_armor).unwrap();
+    let keys = serde_json::to_string(&vec![&pub_armor]).unwrap();
+
+    let swapped = signed.replace("transfer 10 to alice", "transfer 99 to mallory");
+    assert_ne!(swapped, signed, "test did not actually alter the body");
+
+    // Either the parse rejects it outright or it verifies as invalid --
+    // both are safe. What must never happen is `valid`.
+    match verify_message(&swapped, &keys) {
+        Ok(json) => {
+            let v: serde_json::Value = serde_json::from_str(&json).unwrap();
+            assert_ne!(v["signatureStatus"], "valid", "swapped body verified");
+            assert_eq!(v["signatureValid"], false);
+        }
+        Err(_) => {}
+    }
+}
+
+#[test]
+fn cleartext_signature_rejects_a_single_character_edit() {
+    // The minimal tamper. A one-character edit that still verifies would
+    // mean the digest is not covering the text.
+    let (pub_armor, priv_armor) = adv_keypair();
+    let signed = sign_message("balance: 100", &priv_armor).unwrap();
+    let keys = serde_json::to_string(&vec![&pub_armor]).unwrap();
+
+    let edited = signed.replace("balance: 100", "balance: 900");
+
+    match verify_message(&edited, &keys) {
+        Ok(json) => {
+            let v: serde_json::Value = serde_json::from_str(&json).unwrap();
+            assert_ne!(v["signatureStatus"], "valid");
+        }
+        Err(_) => {}
+    }
+}
+
+#[test]
+fn verification_against_an_attacker_chosen_key_is_never_valid() {
+    // `valid` must mean "this key signed this", so supplying a DIFFERENT
+    // key must never produce it. An attacker who can influence which
+    // public keys are offered for verification (a contact import, a
+    // GitHub lookup) otherwise gets to mint trust.
+    let (_signer_pub, signer_priv) = adv_keypair();
+    let (attacker_pub, _attacker_priv) = adv_keypair();
+
+    let signed = sign_message("authentic notice", &signer_priv).unwrap();
+    let attacker_keys = serde_json::to_string(&vec![&attacker_pub]).unwrap();
+
+    let json = verify_message(&signed, &attacker_keys).unwrap();
+    let v: serde_json::Value = serde_json::from_str(&json).unwrap();
+
+    assert_ne!(v["signatureStatus"], "valid");
+    assert_eq!(v["signatureValid"], false);
+    // "we don't hold the signer's key" is the honest answer here.
+    assert_eq!(v["signatureStatus"], "unknown_key");
+}
+
+#[test]
+fn signed_and_encrypted_body_tamper_is_never_reported_valid() {
+    // The combined path: if the body is altered, the caller must not be
+    // told `signatureValid: true` alongside whatever came out.
+    let (pub_armor, priv_armor) = adv_keypair();
+    let ciphertext = encrypt(
+        b"the original statement",
+        &adv_recipients(&pub_armor),
+        Some(priv_armor.clone()),
+        None,
+    )
+    .unwrap();
+
+    let handle = store_key(&priv_armor).unwrap();
+    let keys = serde_json::to_string(&vec![&pub_armor]).unwrap();
+
+    let len = ciphertext.len();
+    for offset in [len * 7 / 10, len * 8 / 10] {
+        let mut corrupted = ciphertext.clone();
+        corrupted[offset] ^= 0x01;
+
+        if let Ok(packed) = decrypt_with_handle(&corrupted, handle, Some(keys.clone())) {
+            let sig_len =
+                u32::from_le_bytes([packed[0], packed[1], packed[2], packed[3]]) as usize;
+            let sig: serde_json::Value =
+                serde_json::from_str(std::str::from_utf8(&packed[4..4 + sig_len]).unwrap())
+                    .unwrap();
+            assert_ne!(
+                sig["signatureValid"], true,
+                "tampered message reported a valid signature",
+            );
+        }
+    }
+
+    drop_key(handle).unwrap();
+}
+
+// ── hostile input must not panic ─────────────────────────────────────
+
+#[test]
+fn hostile_bytes_return_errors_rather_than_panicking() {
+    // A panic inside wasm aborts the module: the extension's whole crypto
+    // engine dies until reload, from nothing more than a pasted string.
+    // Every one of these must come back as Err.
+    //
+    // `#[test]` turns a panic into a failure, so this catches the thing
+    // it is looking for without any harness of its own.
+    let hostile: Vec<&[u8]> = vec![
+        b"",
+        b"\x00",
+        b"\xff\xff\xff\xff",
+        b"not armor at all",
+        b"-----BEGIN PGP MESSAGE-----",
+        b"-----BEGIN PGP MESSAGE-----\n\n-----END PGP MESSAGE-----",
+        b"-----BEGIN PGP PUBLIC KEY BLOCK-----\n\nAAAA\n-----END PGP PUBLIC KEY BLOCK-----",
+        b"-----BEGIN PGP PRIVATE KEY BLOCK-----\n\n////\n-----END PGP PRIVATE KEY BLOCK-----",
+        // A length header claiming far more than follows.
+        b"\xc2\xff\xff\xff\xff\x01",
+        // Valid base64, structurally meaningless as packets.
+        b"-----BEGIN PGP MESSAGE-----\n\nSGVsbG8gd29ybGQh\n-----END PGP MESSAGE-----",
+    ];
+
+    for input in hostile {
+        let text = String::from_utf8_lossy(input).to_string();
+
+        // Parsers.
+        let _ = parse_key(&text);
+        let _ = parse_keys(&text);
+        let _ = parse_key_details(&text);
+        let _ = extract_public_key(&text);
+        let _ = is_secret_encrypted(&text);
+
+        // Message-shaped entry points.
+        let _ = message_encryption(input);
+        let _ = verify_message(&text, "[]");
+        let _ = decrypt_with_password(input, b"password".to_vec(), None);
+        let _ = select_decryption_key(input, "[]");
+    }
+}
+
+#[test]
+fn a_dropped_handle_cannot_be_reused() {
+    // Use-after-free at the API level: once a key is locked, its handle
+    // must be dead. A stale handle that still resolves would keep a
+    // "locked" key usable for as long as the number is remembered.
+    let (pub_armor, priv_armor) = adv_keypair();
+    let ciphertext = encrypt(b"secret", &adv_recipients(&pub_armor), None, None).unwrap();
+
+    let handle = store_key(&priv_armor).unwrap();
+    assert!(decrypt_with_handle(&ciphertext, handle, None).is_ok());
+
+    drop_key(handle).unwrap();
+
+    assert!(
+        decrypt_with_handle(&ciphertext, handle, None).is_err(),
+        "a dropped handle still decrypted",
+    );
+    assert!(get_key_armored(handle).is_err(), "a dropped handle still exported");
+}
+
+#[test]
+fn an_unissued_handle_is_never_valid() {
+    // Guessing handle numbers must not reach a key.
+    for handle in [0u32, 1, 2, 42, u32::MAX] {
+        let _ = decrypt_with_handle(b"whatever", handle, None);
+        assert!(
+            get_key_armored(handle).is_err(),
+            "handle {handle} resolved to a key without being issued",
+        );
+    }
+}
+
+/// REGRESSION -- decompression bomb (was: no output cap).
+///
+/// `decrypt_with_handle`, `decrypt_with_password` and `verify_message`
+/// each do a bare `std::io::copy` from the reader into a `Vec`, and the
+/// crate is built with `compression-deflate`. Nothing bounds the result.
+/// A message the user PASTES or DROPS is fully attacker-controlled, so
+/// the expansion factor is theirs to choose: measured at 756x here, and
+/// deflate reaches ~1000x, so a few MB of pasted text is several GB of
+/// allocation inside a 32-bit wasm linear memory. That aborts the module
+/// -- the extension's whole crypto engine, not just this operation.
+///
+/// Now capped by `MAX_DECRYPTED_BYTES`. The bomb is cheap to build
+/// (a small ciphertext), so this costs almost nothing to run: the cap
+/// refuses it long before 64 MiB is materialised.
+#[test]
+fn decompression_bomb_is_refused_by_the_expansion_ratio() {
+    use openpgp::serialize::stream::{Armorer, Compressor, Encryptor, LiteralWriter, Message};
+    use openpgp::types::CompressionAlgorithm;
+
+    // Comfortably past MIN_EXPANSION_ALLOWANCE, so the ratio is what
+    // refuses it rather than any flat ceiling.
+    const EXPANDED: usize = 256 * 1024 * 1024;
+
+    let (pub_armor, priv_armor) = adv_keypair();
+    let cert = openpgp::Cert::from_bytes(pub_armor.as_bytes()).unwrap();
+    let vc = cert.with_policy(policy(), None).unwrap();
+    let recipient_keys: Vec<_> = vc
+        .keys()
+        .supported()
+        .alive()
+        .revoked(false)
+        .for_transport_encryption()
+        .collect();
+
+    let mut sink = Vec::new();
+    {
+        let message = Message::new(&mut sink);
+        let message = Armorer::new(message).build().unwrap();
+        let message = Encryptor::for_recipients(message, recipient_keys)
+            .build()
+            .unwrap();
+        let message = Compressor::new(message)
+            .algo(CompressionAlgorithm::Zip)
+            .build()
+            .unwrap();
+        let mut message = LiteralWriter::new(message).build().unwrap();
+        let chunk = vec![0u8; 1024 * 1024];
+        for _ in 0..(EXPANDED / chunk.len()) {
+            std::io::Write::write_all(&mut message, &chunk).unwrap();
+        }
+        message.finalize().unwrap();
+    }
+
+    let ratio = EXPANDED as f64 / sink.len() as f64;
+    println!(
+        "bomb: {} byte ciphertext -> {} bytes ({ratio:.0}x amplification)",
+        sink.len(),
+        EXPANDED,
+    );
+    assert!(ratio > 100.0, "expected large amplification, got {ratio:.0}x");
+
+    let handle = store_key(&priv_armor).unwrap();
+    let outcome = decrypt_with_handle(&sink, handle, None);
+    drop_key(handle).unwrap();
+
+    match outcome {
+        Ok(packed) => panic!(
+            "decrypted {} bytes from a {} byte message with no cap -- \
+             an attacker picks this number",
+            packed.len(),
+            sink.len(),
+        ),
+        Err(e) => {
+            // The state we want: a bounded refusal.
+            assert!(
+                e.to_lowercase().contains("large") || e.to_lowercase().contains("limit"),
+                "rejected, but not with a size error: {e}",
+            );
+        }
+    }
+}
+
+/// REGRESSION -- the same bomb on the path that needs NO key.
+///
+/// `verify_message` is reachable from pasted text alone: no unlock, no
+/// private key, no password. It inflates the compressed literal into
+/// `content`, then puts that content into a JSON string -- and JSON
+/// escaping of NUL bytes costs another 6x on top (`\u0000` per byte).
+///
+/// Measured: an 88 KB paste produced a 402 MB JSON string, ~4500x, which
+/// then has to cross the wasm->JS boundary as a single value. This is a
+/// strictly easier target than the decrypt path, and is capped harder
+/// (`MAX_VERIFIED_BYTES`) precisely because of that escaping multiplier.
+#[test]
+fn verify_bomb_is_refused_by_the_size_cap() {
+    use openpgp::serialize::stream::{Armorer, Compressor, LiteralWriter, Message, Signer};
+    use openpgp::types::CompressionAlgorithm;
+
+    const EXPANDED: usize = 64 * 1024 * 1024;
+
+    let (pub_armor, priv_armor) = adv_keypair();
+    let cert = openpgp::Cert::from_bytes(priv_armor.as_bytes()).unwrap();
+    let vc = cert.with_policy(policy(), None).unwrap();
+    let key = vc
+        .keys()
+        .secret()
+        .alive()
+        .revoked(false)
+        .for_signing()
+        .next()
+        .unwrap();
+    let keypair = key.key().clone().into_keypair().unwrap();
+
+    let mut sink = Vec::new();
+    {
+        let message = Message::new(&mut sink);
+        let message = Armorer::new(message).build().unwrap();
+        let message = Compressor::new(message)
+            .algo(CompressionAlgorithm::Zip)
+            .build()
+            .unwrap();
+        let message = Signer::new(message, keypair).unwrap().build().unwrap();
+        let mut message = LiteralWriter::new(message).build().unwrap();
+        let chunk = vec![0u8; 1024 * 1024];
+        for _ in 0..(EXPANDED / chunk.len()) {
+            std::io::Write::write_all(&mut message, &chunk).unwrap();
+        }
+        message.finalize().unwrap();
+    }
+
+    let keys = serde_json::to_string(&vec![&pub_armor]).unwrap();
+    let armored = String::from_utf8_lossy(&sink).to_string();
+
+    match verify_message(&armored, &keys) {
+        Ok(json) => panic!(
+            "a {} byte paste produced a {} byte result ({:.0}x) with no cap",
+            sink.len(),
+            json.len(),
+            json.len() as f64 / sink.len() as f64,
+        ),
+        Err(e) => assert!(
+            e.to_lowercase().contains("large") || e.to_lowercase().contains("limit"),
+            "rejected, but not with a size error: {e}",
+        ),
+    }
+}
+
+#[test]
+fn read_capped_admits_exactly_the_limit_and_refuses_one_more() {
+    // The boundary itself, away from any crypto: a cap that is off by one
+    // either rejects a legitimate message of exactly the maximum size or
+    // lets one byte through. Cheap to test exactly, so it is tested
+    // exactly rather than inferred from the end-to-end bomb tests.
+    let data = vec![b'x'; 1024];
+
+    let exact = read_capped(&data[..], 1024u64, "message").unwrap();
+    assert_eq!(exact.len(), 1024, "a message exactly at the limit was refused");
+
+    let under = read_capped(&data[..], 1025u64, "message").unwrap();
+    assert_eq!(under.len(), 1024);
+
+    let err = read_capped(&data[..], 1023u64, "message").unwrap_err();
+    assert!(err.contains("too large"), "unexpected error: {err}");
+
+    // Empty input is not a special case.
+    assert_eq!(read_capped(&[][..], 0u64, "message").unwrap().len(), 0);
+}
+
+#[test]
+fn the_output_ceiling_follows_the_input_rather_than_a_flat_number() {
+    // The property that lets a big FILE through while refusing a bomb.
+    // A flat ceiling cannot do both: set it high enough for a 1 GiB file
+    // and a 5 MiB paste that expands 750x sails under it.
+
+    // A large legitimate file: ciphertext ~= plaintext, so its own size
+    // buys its allowance.
+    let one_gib = 1024 * 1024 * 1024usize;
+    assert!(
+        decrypt_limit(one_gib) >= one_gib as u64,
+        "a 1 GiB file would be refused by its own limit",
+    );
+
+    // A bomb: a small ciphertext gets a small allowance, however much it
+    // wants to expand to.
+    let bomb_ciphertext = 89 * 1024usize; // the measured bomb
+    assert!(
+        decrypt_limit(bomb_ciphertext) < 100 * 1024 * 1024,
+        "a tiny ciphertext was granted a huge allowance",
+    );
+
+    // Small messages are not squeezed by the ratio -- framing overhead
+    // alone exceeds 4x for a short message.
+    assert_eq!(decrypt_limit(200), MIN_EXPANSION_ALLOWANCE);
+    assert_eq!(decrypt_limit(0), MIN_EXPANSION_ALLOWANCE);
+
+    // Nothing may exceed what wasm32 can address, whatever the input.
+    assert_eq!(decrypt_limit(usize::MAX), MAX_DECRYPTED_BYTES);
+
+    // Verify stays far tighter: its output becomes one JSON String.
+    assert!(MAX_VERIFIED_BYTES < MAX_DECRYPTED_BYTES);
+}
+

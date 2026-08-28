@@ -15,6 +15,7 @@ import { looksLikeAgeMessage } from "../../lib/armor-blocks";
 import { recoverArmorIfNeeded } from "../../lib/armor-recovery";
 import { looksLikePrivateKey } from "../../lib/drop-routing";
 import { resolveSelfKey } from "../../lib/encrypt-recipients";
+import { oversizedFilesMessage, splitOversizedFiles } from "../../lib/limits";
 import { isPgpRecord, isSshRecord } from "../../lib/storage/key-kind";
 import { getPreferences } from "../../lib/storage/preferences";
 import { zipHasManifest } from "../../lib/utils/zip";
@@ -836,7 +837,24 @@ export function useWorkspaceState(opts: {
   );
 
   const handleFileDrop = useCallback(
-    (newFiles: File[]) => {
+    (dropped: File[]) => {
+      // Refuse oversized files HERE, before anything reads them.
+      // `file.arrayBuffer()` pulls the whole file into the JS heap and
+      // wasm-bindgen copies it again into linear memory, so a file large
+      // enough to exhaust wasm memory aborts the module and takes the
+      // crypto engine (and the unlocked keys) down with it. `File.size`
+      // costs nothing to check. See `lib/limits.ts`.
+      const { accepted: newFiles, rejected } = splitOversizedFiles(dropped);
+      const oversized = oversizedFilesMessage(rejected);
+
+      if (newFiles.length === 0) {
+        // Nothing staged, so leave the workspace exactly as it was and
+        // just say why. Wiping someone's in-progress message because
+        // they dropped the wrong file would be its own bug.
+        if (oversized) setError({ message: oversized });
+        return;
+      }
+
       setFiles((prev) => {
         const existing = new Set(prev.map((f) => f.name));
         const deduped = newFiles.filter((f) => !existing.has(f.name));
@@ -857,6 +875,9 @@ export function useWorkspaceState(opts: {
       // while the password prompt for this very message is still up.
       setMessageEncryption(null);
       resetOutput();
+      // AFTER `resetOutput`, which clears the error slot: a partial drop
+      // stages the files it can AND still reports the ones it skipped.
+      if (oversized) setError({ message: oversized });
     },
     [resetOutput, setInput],
   );

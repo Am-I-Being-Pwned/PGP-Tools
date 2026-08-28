@@ -800,6 +800,75 @@ fn store_key(armored: &str) -> Result<u32, String> {
     insert_key(&cert)
 }
 
+
+// =====================================================================
+// Output size caps
+// =====================================================================
+
+/// Absolute ceiling on any decrypted message: wasm32 cannot address more
+/// than 4 GiB in total, so nothing above this is reachable regardless of
+/// what we allow. `u64` because 4 GiB does not fit in a wasm32 `usize`
+/// (it overflows by exactly one byte).
+const MAX_DECRYPTED_BYTES: u64 = 4 * 1024 * 1024 * 1024;
+
+/// How much larger than its ciphertext a message may legitimately
+/// decrypt to.
+///
+/// THIS, not a flat number, is what separates a big file from a bomb.
+/// A real encrypted file decrypts to roughly its own size -- this app's
+/// own `encrypt` does not even compress (8 MiB of one repeated byte
+/// produced an 11 MiB ciphertext), and GnuPG's deflate manages single
+/// digits on ordinary data. A decompression bomb is 754x, measured.
+/// Four leaves enormous room for the former while refusing the latter,
+/// and unlike a flat ceiling it does not have to choose between allowing
+/// a 1 GiB file and refusing a 5 MiB paste that expands to 3.7 GiB.
+const MAX_EXPANSION_RATIO: u64 = 4;
+
+/// Below this, the ratio is meaningless: a 200-byte message legitimately
+/// decrypts to far more than 4x its armored size once the PKESK and
+/// packet framing come off. So small messages get a flat allowance and
+/// the ratio only starts binding once there is enough size for it to
+/// mean something.
+const MIN_EXPANSION_ALLOWANCE: u64 = 64 * 1024 * 1024;
+
+/// Ceiling on verified cleartext. Kept separate and much tighter, and
+/// not as a matter of taste: `verify_message` returns its content inside
+/// a JSON string, escaping costs 6 bytes per NUL (`\u0000`), and the
+/// whole thing then has to exist as one `String` in a 32-bit address
+/// space. 4 GiB is not merely unwise here, it is unrepresentable.
+///
+/// 16 MiB of UTF-8 is on the order of ten thousand pages -- no
+/// cleartext-signed message a person reads in a side panel comes close.
+const MAX_VERIFIED_BYTES: u64 = 16 * 1024 * 1024;
+
+/// The output ceiling for a given ciphertext: generous in absolute terms
+/// so a legitimately large file is not refused, but tied to the input so
+/// amplification cannot run away.
+fn decrypt_limit(ciphertext_len: usize) -> u64 {
+    (ciphertext_len as u64)
+        .saturating_mul(MAX_EXPANSION_RATIO)
+        .max(MIN_EXPANSION_ALLOWANCE)
+        .min(MAX_DECRYPTED_BYTES)
+}
+
+fn read_capped<R: std::io::Read>(
+    reader: R,
+    limit: u64,
+    what: &str,
+) -> Result<Vec<u8>, String> {
+    let mut out = Vec::new();
+    std::io::copy(&mut reader.take(limit + 1), &mut out).str_err()?;
+
+    if out.len() as u64 > limit {
+        out.zeroize();
+        return Err(format!(
+            "This {what} is too large to open here (limit {} MiB).",
+            limit / (1024 * 1024),
+        ));
+    }
+    Ok(out)
+}
+
 // =====================================================================
 // Sequoia verification/decryption helpers
 // =====================================================================
@@ -1256,8 +1325,7 @@ pub fn verify_message(
         .with_policy(policy(), None, helper)
         .str_err()?;
 
-    let mut content = Vec::new();
-    std::io::copy(&mut verifier, &mut content).str_err()?;
+    let content = read_capped(&mut verifier, MAX_VERIFIED_BYTES, "signed message")?;
     let helper = verifier.into_helper();
 
     serde_json::to_string(&VerifyResult {
@@ -1332,8 +1400,7 @@ pub fn decrypt_with_handle(
         .with_policy(policy(), None, helper)
         .str_err()?;
 
-    let mut plaintext = Vec::new();
-    std::io::copy(&mut decryptor, &mut plaintext).str_err()?;
+    let plaintext = read_capped(&mut decryptor, decrypt_limit(ciphertext.len()), "message")?;
     let helper = decryptor.into_helper();
 
     Ok(pack_decrypt_result(
@@ -1457,8 +1524,7 @@ fn decrypt_with_password_inner(
         .with_policy(policy(), None, helper)
         .str_err()?;
 
-    let mut plaintext = Vec::new();
-    std::io::copy(&mut decryptor, &mut plaintext).str_err()?;
+    let plaintext = read_capped(&mut decryptor, decrypt_limit(ciphertext.len()), "message")?;
     let helper = decryptor.into_helper();
 
     Ok(pack_decrypt_result(

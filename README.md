@@ -14,8 +14,8 @@
   <a href="https://github.com/Am-I-Being-Pwned/PGP-Tools/actions/workflows/ci.yml"><img src="https://github.com/Am-I-Being-Pwned/PGP-Tools/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" /></a>
   <a href="https://chromewebstore.google.com/detail/pgp-tools-encrypt-decrypt/pgpcdgggohpbombhkffjoiiafdlfcpgp"><img src="https://img.shields.io/chrome-web-store/users/pgpcdgggohpbombhkffjoiiafdlfcpgp" alt="Chrome Web Store users" /></a>
   <a href="https://chromewebstore.google.com/detail/pgp-tools-encrypt-decrypt/pgpcdgggohpbombhkffjoiiafdlfcpgp"><img src="https://img.shields.io/chrome-web-store/rating/pgpcdgggohpbombhkffjoiiafdlfcpgp" alt="Chrome Web Store rating" /></a>
-  <img src="https://img.shields.io/badge/lib_coverage-83.8%25-green" alt="lib coverage: 83.8%" />
-  <img src="https://img.shields.io/badge/unit_tests-1566-blue" alt="unit tests: 1566" />
+  <img src="https://img.shields.io/badge/lib_coverage-83.9%25-green" alt="lib coverage: 83.9%" />
+  <img src="https://img.shields.io/badge/unit_tests-1581-blue" alt="unit tests: 1581" />
   <img src="https://img.shields.io/badge/e2e_tests-133-blue" alt="e2e tests: 133" />
 </p>
 <!-- badges:end -->

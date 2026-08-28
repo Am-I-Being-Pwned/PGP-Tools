@@ -37,9 +37,33 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # Turbo's cache is per-machine, and a CI runner is a fresh machine
+      # every time -- without this every task is a guaranteed miss and the
+      # pipeline's caching does nothing here. Keyed on the commit so each
+      # run writes its own entry, with a branch-then-global fallback so a
+      # run still starts from the most recent cache it can find.
+      - name: Restore turbo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo/cache
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+
+      # The crypto core's own tests: KEY_STORE isolation, AAD domain
+      # separation, the unlock canary, ciphertext integrity under
+      # corruption, and the decompression-bomb caps. They guard the
+      # properties SECURITY.md claims, so they gate a merge rather than
+      # only existing. Release mode because the RSA keygen test is ~60s
+      # of the debug run and a few seconds of the release one; the
+      # compile is cached by rust-cache above, and turbo skips the whole
+      # task when nothing under gpg-wasm/ changed.
+      - run: pnpm test:rust
+
       - run: pnpm build
 
       - name: Upload build artifact

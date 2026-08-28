@@ -15,6 +15,7 @@
     "format": "prettier --check . --ignore-path ../../.gitignore --ignore-path .prettierignore",
     "lint": "eslint --flag unstable_native_nodejs_ts_config",
     "test": "vitest run --coverage",
+    "test:rust": "cd gpg-wasm && cargo test --release --lib",
     "coverage": "vitest run --coverage",
     "badges": "node scripts/update-badges.mjs",
     "badges:check": "node scripts/update-badges.mjs --check",
