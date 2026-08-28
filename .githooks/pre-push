@@ -37,16 +37,28 @@ done
 
 echo "pre-push: verifying README badges against apps/pgp (main only)..."
 
-cd "$root/apps/pgp" || exit 0
+cd "$root" || exit 0
 
-if ! pnpm coverage >/dev/null 2>&1; then
-  echo "pre-push: could not compute coverage; skipping the badge check." >&2
-  echo "          Run 'pnpm --filter @amibeingpwned/pgp coverage' to see why." >&2
+# Through turbo: the unit suite is the expensive half, and turbo restores
+# its coverage output when nothing that feeds it has changed. In practice
+# that costs ~20s the first time after a source change and a few
+# milliseconds on every push after it.
+out=$(pnpm badges:check 2>&1)
+status=$?
+
+if [ "$status" -eq 0 ]; then
+  echo "pre-push: README badges are current."
   exit 0
 fi
 
-if pnpm badges:check >/dev/null 2>&1; then
-  echo "pre-push: README badges are current."
+# A non-zero exit is not automatically drift: no pnpm, a half-finished
+# install, or a genuinely failing unit suite all land here too. Only the
+# script's own drift message should block a push -- a broken local
+# toolchain is CI's problem, and refusing to push over it would just
+# teach everyone to reach for --no-verify.
+if ! printf '%s' "$out" | grep -q "badges are out of date"; then
+  echo "pre-push: badge check could not run; pushing anyway. Tail:" >&2
+  printf '%s\n' "$out" | tail -15 >&2
   exit 0
 fi
 

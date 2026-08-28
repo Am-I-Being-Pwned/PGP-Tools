@@ -17,6 +17,8 @@
     "lint": "turbo run lint --continue -- --cache --cache-location .cache/.eslintcache",
     "lint:fix": "turbo run lint --continue -- --fix --cache --cache-location .cache/.eslintcache",
     "test": "turbo run test",
+    "badges": "pnpm --filter @amibeingpwned/pgp badges",
+    "badges:check": "turbo run badges:check",
     "test:e2e": "turbo run test:e2e",
     "typecheck": "turbo run typecheck",
     "zip": "turbo -F @amibeingpwned/pgp zip",

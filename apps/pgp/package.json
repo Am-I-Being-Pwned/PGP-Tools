@@ -14,7 +14,7 @@
     "zip:firefox": "wxt zip -b firefox",
     "format": "prettier --check . --ignore-path ../../.gitignore --ignore-path .prettierignore",
     "lint": "eslint --flag unstable_native_nodejs_ts_config",
-    "test": "vitest run",
+    "test": "vitest run --coverage",
     "coverage": "vitest run --coverage",
     "badges": "node scripts/update-badges.mjs",
     "badges:check": "node scripts/update-badges.mjs --check",

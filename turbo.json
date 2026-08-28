@@ -7,7 +7,14 @@
     },
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".cache/tsbuildinfo.json", "dist/**", ".output/**"]
+      "outputs": [
+        ".cache/tsbuildinfo.json",
+        "dist/**",
+        ".output/**",
+        "gpg-wasm/pkg/**",
+        "public/gpg_wasm_bg.wasm"
+      ],
+      "inputs": ["$TURBO_DEFAULT$", "!**/*.test.ts", "!e2e/**", "!shots/**"]
     },
     "dev": {
       "dependsOn": ["^dev"],
@@ -31,12 +38,25 @@
     },
     "test": {
       "dependsOn": ["^topo", "^build"],
+      "outputs": ["coverage/**"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!e2e/**",
+        "!e2e-capture/**",
+        "!playwright.config.ts",
+        "!playwright.capture.config.ts",
+        "!shots/**"
+      ]
+    },
+    "@amibeingpwned/pgp#badges:check": {
+      "dependsOn": ["test"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/README.md"],
       "outputs": []
     },
     "test:e2e": {
       "dependsOn": ["build"],
       "env": ["CI", "HEADED"],
-      "outputs": []
+      "outputs": ["test-results/**", "playwright-report/**"]
     },
     "typecheck": {
       "dependsOn": ["^topo", "^build"],

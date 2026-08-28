@@ -64,14 +64,13 @@ jobs:
       # not be able to go quietly stale. It runs here, after the
       # Playwright install, because counting the e2e tests goes through
       # `playwright test --list`.
+      #
+      # Through turbo, so it reuses the coverage `pnpm test` above already
+      # produced rather than running the unit suite a second time. The
+      # task names the root README.md as an input, so a hand-edited badge
+      # still busts the cache and fails here.
       - name: Check README badges are current
-        working-directory: apps/pgp
-        # Run directly in the package rather than through turbo: the root
-        # scripts are turbo tasks, and a coverage task would need its own
-        # pipeline entry and output caching for one 13-second run.
-        run: |
-          pnpm coverage
-          pnpm badges:check
+        run: pnpm badges:check
 
       - name: Upload Playwright traces
         if: ${{ failure() }}
