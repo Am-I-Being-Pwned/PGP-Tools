@@ -12,7 +12,7 @@
 <!-- badges:start -->
 <p align="center">
   <a href="https://github.com/Am-I-Being-Pwned/PGP-Tools/actions/workflows/ci.yml"><img src="https://github.com/Am-I-Being-Pwned/PGP-Tools/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" /></a>
-  <img src="https://img.shields.io/badge/lib_coverage-73.8%25-yellowgreen" alt="lib coverage: 73.8%" />
+  <img src="https://img.shields.io/badge/lib_coverage-74.5%25-yellowgreen" alt="lib coverage: 74.5%" />
   <img src="https://img.shields.io/badge/unit_tests-1286-blue" alt="unit tests: 1286" />
   <img src="https://img.shields.io/badge/e2e_tests-133-blue" alt="e2e tests: 133" />
 </p>
