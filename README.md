@@ -12,13 +12,19 @@
 <!-- badges:start -->
 <p align="center">
   <a href="https://github.com/Am-I-Being-Pwned/PGP-Tools/actions/workflows/ci.yml"><img src="https://github.com/Am-I-Being-Pwned/PGP-Tools/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" /></a>
+  <a href="https://chromewebstore.google.com/detail/pgp-tools-encrypt-decrypt/pgpcdgggohpbombhkffjoiiafdlfcpgp"><img src="https://img.shields.io/chrome-web-store/users/pgpcdgggohpbombhkffjoiiafdlfcpgp" alt="Chrome Web Store users" /></a>
+  <a href="https://chromewebstore.google.com/detail/pgp-tools-encrypt-decrypt/pgpcdgggohpbombhkffjoiiafdlfcpgp"><img src="https://img.shields.io/chrome-web-store/rating/pgpcdgggohpbombhkffjoiiafdlfcpgp" alt="Chrome Web Store rating" /></a>
   <img src="https://img.shields.io/badge/lib_coverage-74.5%25-yellowgreen" alt="lib coverage: 74.5%" />
   <img src="https://img.shields.io/badge/unit_tests-1286-blue" alt="unit tests: 1286" />
   <img src="https://img.shields.io/badge/e2e_tests-133-blue" alt="e2e tests: 133" />
 </p>
 <!-- badges:end -->
 
-[Get it here](https://chromewebstore.google.com/detail/pgp-tools-encrypt-decrypt/pgpcdgggohpbombhkffjoiiafdlfcpgp)
+<p align="center">
+  <a href="https://chromewebstore.google.com/detail/pgp-tools-encrypt-decrypt/pgpcdgggohpbombhkffjoiiafdlfcpgp"><img src=".github/chrome-web-store-badge.png" alt="Available in the Chrome Web Store" height="58" /></a>
+  &nbsp;
+  <a href="https://microsoftedge.microsoft.com/addons/detail/pgp-tools-encrypt-decr/ngdbamkfldpokifphlmbflhoaepkcehf"><img src=".github/microsoft-edge-addons-badge.png" alt="Get it from Microsoft Edge Add-ons" height="58" /></a>
+</p>
 
 <p align="center">
   <img src="assets/store-listing/promo/exports/a-1280x800.png" alt="PGP Tools side panel: encrypting a message to a recipient, with the sign option checked" width="820" />
