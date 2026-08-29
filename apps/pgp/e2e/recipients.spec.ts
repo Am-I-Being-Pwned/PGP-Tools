@@ -87,10 +87,18 @@ test("typing while a chip is focused diverts into the search input", async ({
 
   // Space is not stolen: on a focused chip it still activates the
   // remove button instead of typing into the search input.
-  await input.press("Escape"); // close the dropdown
-  await input.press("Escape"); // clear the query
+  // One Escape both closes the list and clears the query (Radix's
+  // dismissable layer routes the close through onOpenChange, which
+  // resets the search). A SECOND press would land on the exhausted
+  // layer, which hands focus to the message box on a timeout -- and
+  // that steal can outrace the chip focus below on a slow machine,
+  // sending the Space to the textarea instead of the chip.
+  await input.press("Escape");
+  await expect(panel.getByRole("option")).toHaveCount(0);
+  await expect(input).toHaveValue("");
   const before = await chips.count();
   await chips.first().focus();
+  await expect(chips.first()).toBeFocused();
   await panel.keyboard.press(" ");
   await expect(chips).toHaveCount(before - 1);
   await expect(input).toHaveValue("");
