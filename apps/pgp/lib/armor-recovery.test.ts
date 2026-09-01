@@ -47,6 +47,16 @@ describe("looksLikeCollapsedArmor", () => {
   it("rejects text without a BEGIN marker", () => {
     expect(looksLikeCollapsedArmor("hello world")).toBe(false);
   });
+
+  // Regression: CRLF armor (Gpg4win / Kleopatra, and anything exported
+  // on Windows) is intact, not collapsed. Reading it as collapsed sent
+  // healthy armor through `reconstructArmor`, which rewrote it until it
+  // no longer parsed.
+  it("rejects intact armor with CRLF line endings", () => {
+    expect(
+      looksLikeCollapsedArmor(ARMOR_WITH_HEADERS.replace(/\n/g, "\r\n")),
+    ).toBe(false);
+  });
 });
 
 describe("reconstructArmor", () => {
@@ -368,5 +378,43 @@ describe("recoverArmorIfNeeded", () => {
     for (const text of ["", "hello", "a\\nb", "-----BEGIN SOMETHING-----"]) {
       expect(recoverArmorIfNeeded(text)).toBe(text);
     }
+  });
+});
+
+// ── Real-world regression: a Kleopatra-style export ──────────────────
+//
+// Two things about it broke the import, and they are independent:
+// CRLF line endings (which made intact armor look collapsed), and a
+// `Comment: Fingerprint: <40 hex>` header (whose value is 40 characters
+// of the base64 alphabet, so it read as the start of the data).
+describe("Kleopatra-style armor", () => {
+  const KLEOPATRA = [
+    "-----BEGIN PGP PUBLIC KEY BLOCK-----",
+    "Comment: User-ID:   Swift Alert <alert@example.com>",
+    "Comment: Created:   22/01/2019 12:00",
+    "Comment: Type:      2048-bit RSA (secret key available)",
+    "Comment: Usage:     Signing, Encryption, Certifying User-IDs",
+    "Comment: Fingerprint:     07DF8027AAFCFA3A349E96CB1AC6ADD598DFB505",
+    "",
+    "",
+    LINE_A,
+    LINE_B,
+    "CCCC",
+    "=AbCd",
+    "-----END PGP PUBLIC KEY BLOCK-----",
+  ].join("\r\n");
+
+  it("passes CRLF armor through byte for byte", () => {
+    expect(recoverArmorIfNeeded(KLEOPATRA)).toBe(KLEOPATRA);
+  });
+
+  it("keeps the fingerprint header out of the data when collapsed", () => {
+    const rebuilt = recoverArmorIfNeeded(collapse(KLEOPATRA));
+    // The payload is exactly the base64 that was there -- the 40-char
+    // fingerprint is not folded into its first line.
+    expect(rebuilt).toContain(`\n${LINE_A}\n${LINE_B}\nCCCC\n=AbCd`);
+    expect(rebuilt).toContain(
+      "Fingerprint: 07DF8027AAFCFA3A349E96CB1AC6ADD598DFB505",
+    );
   });
 });

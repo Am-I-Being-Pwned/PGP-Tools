@@ -110,6 +110,27 @@ test("real-world sample: rotation notice verifies as unknown signer", async ({
   await expect(panel.getByText(/Verification failed/)).toBeHidden();
 });
 
+// The sample that prompted the armor-recovery fix: a Kleopatra export
+// with CRLF line endings and a `Comment: Fingerprint: ...` header. It
+// parses fine in the engine -- what broke it was the paste/drop repair
+// step ahead of the engine treating intact CRLF armor as collapsed.
+test("real-world sample: a CRLF Kleopatra export imports as a contact", async ({
+  panel,
+}) => {
+  test.skip(
+    !existsSync(join(SAMPLE_DIR, "public-pgp-key.txt")),
+    "messy/sample-failed not present (local-only sample)",
+  );
+  const publicKey = readFileSync(
+    join(SAMPLE_DIR, "public-pgp-key.txt"),
+    "utf8",
+  );
+
+  await onboardWithPassword(panel, PASSWORD);
+  await importContact(panel, publicKey);
+  await expect(panel.getByText("SWIFT_Security_Alert").first()).toBeVisible();
+});
+
 test("verify of a message signed by an expired key degrades to unknown signer", async ({
   panel,
 }) => {

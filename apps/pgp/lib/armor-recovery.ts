@@ -62,12 +62,53 @@ const BASE64_TOKEN = /^[A-Za-z0-9+/=]+$/;
 const CRC_TOKEN = /^=[A-Za-z0-9+/]{4}$/;
 const HEADER_KEY = /^[A-Za-z][A-Za-z0-9-]*:$/;
 const MIN_DATA_TOKEN_LEN = 40;
+/** Columns armor wraps its base64 to -- the width `reconstructArmor`
+ *  re-wraps to, and the bar a token has to clear to be data rather than
+ *  a header value (see {@link isDataToken}). */
+const ARMOR_LINE_LEN = 64;
 
 /** True if the text contains a BEGIN PGP marker but the line right
- *  after it has been collapsed (i.e. no `\n` after the marker). */
+ *  after it has been collapsed (i.e. no line break after the marker).
+ *
+ *  `\r?\n`, not `\n`: armor written on Windows -- and by plenty of
+ *  Windows-born tools on any platform, e.g. Gpg4win's "export to file"
+ *  -- ends every line with CRLF. Matching only `\n` declared all of it
+ *  collapsed and handed intact armor to {@link reconstructArmor}, which
+ *  rewrote it (and, with a `Comment: Fingerprint: ...` header, folded
+ *  the fingerprint into the base64) until it no longer parsed. */
 export function looksLikeCollapsedArmor(text: string): boolean {
   if (!BEGIN_MARKER.test(text)) return false;
-  return !/-----BEGIN PGP [A-Z ]+-----\n/.test(text);
+  return !/-----BEGIN PGP [A-Z ]+-----\r?\n/.test(text);
+}
+
+/**
+ * True when a token starts the base64 DATA rather than being a header's
+ * value.
+ *
+ * The plain "long and base64-shaped" test is not enough, because header
+ * values can be long and base64-shaped too. The case that broke a real
+ * key: Kleopatra exports carry
+ * `Comment: Fingerprint: 07DF8027AAFCFA3A349E96CB1AC6ADD598DFB505`, and
+ * a 40-hex fingerprint is 40 characters drawn entirely from the base64
+ * alphabet -- exactly {@link MIN_DATA_TOKEN_LEN}. Data therefore
+ * "started" at the fingerprint, which was folded into the payload and
+ * corrupted every byte after it.
+ *
+ * So a token sitting directly after a `Key:` token has to clear a higher
+ * bar: a full 64-character armor line. Armor wraps its base64 at 64
+ * columns, so the first data line is 64 characters whenever there is
+ * more than one line of it -- and no header value is. The looser bound
+ * still applies everywhere else, which keeps working the case this
+ * guard could otherwise break: a header with an EMPTY value
+ * (`Comment:`) sitting immediately before the data.
+ */
+function isDataToken(token: string, previous: string | undefined): boolean {
+  if (!BASE64_TOKEN.test(token)) return false;
+  const min =
+    previous !== undefined && HEADER_KEY.test(previous)
+      ? ARMOR_LINE_LEN
+      : MIN_DATA_TOKEN_LEN;
+  return token.length >= min;
 }
 
 /** Best-effort reconstruction. If anything looks off, returns the
@@ -87,10 +128,7 @@ export function reconstructArmor(text: string): string {
   // Locate the first long pure-base64 token: this is the start of data.
   let dataStart = -1;
   for (let i = 0; i < tokens.length; i++) {
-    if (
-      tokens[i].length >= MIN_DATA_TOKEN_LEN &&
-      BASE64_TOKEN.test(tokens[i])
-    ) {
+    if (isDataToken(tokens[i], tokens[i - 1])) {
       dataStart = i;
       break;
     }
