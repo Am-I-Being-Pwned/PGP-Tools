@@ -1,0 +1,8 @@
+{
+  "extName": {
+    "message": "PGP Tools - تشفير البريد بـ OpenPGP و GPG وحماية الخصوصية"
+  },
+  "extDescription": {
+    "message": "شفّر وفك تشفير ووقّع وتحقق من البريد والرسائل باستخدام OpenPGP و GPG."
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "extName": {
+    "message": "PGP Tools - Encriptação OpenPGP e GPG de e-mail e privacidade"
+  },
+  "extDescription": {
+    "message": "Encripte, desencripte, assine e verifique mensagens com OpenPGP e GPG. Faça a gestão das chaves."
+  }
+}

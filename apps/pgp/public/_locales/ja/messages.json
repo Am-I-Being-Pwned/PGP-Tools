@@ -1,0 +1,8 @@
+{
+  "extName": {
+    "message": "PGP Tools - OpenPGP・GPGメール暗号化と鍵管理"
+  },
+  "extDescription": {
+    "message": "OpenPGPとGPGでメールやメッセージを暗号化、復号、署名、検証。ブラウザ上で鍵を管理。"
+  }
+}

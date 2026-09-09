@@ -1,0 +1,8 @@
+{
+  "extName": {
+    "message": "PGP Tools - OpenPGP ja GPG e-posti krüpteerimine ja privaatsus"
+  },
+  "extDescription": {
+    "message": "Krüpteeri, dekrüpteeri, allkirjasta ja kontrolli sõnumeid OpenPGP ja GPG abil."
+  }
+}

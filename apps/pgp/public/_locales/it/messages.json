@@ -1,0 +1,8 @@
+{
+  "extName": {
+    "message": "PGP Tools - Crittografia OpenPGP e GPG per email e privacy"
+  },
+  "extDescription": {
+    "message": "Cifra, decifra, firma e verifica email e messaggi con OpenPGP e GPG. Gestisci le tue chiavi."
+  }
+}

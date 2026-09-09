@@ -1,0 +1,8 @@
+{
+  "extName": {
+    "message": "PGP Tools - Chiffrement OpenPGP, GPG et GnuPG d'e-mails"
+  },
+  "extDescription": {
+    "message": "Chiffrez, déchiffrez, signez et vérifiez vos e-mails avec OpenPGP et GPG. Gérez vos clés."
+  }
+}

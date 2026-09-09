@@ -1,0 +1,8 @@
+{
+  "extName": {
+    "message": "PGP Tools - OpenPGP 与 GPG 邮件加密及隐私保护"
+  },
+  "extDescription": {
+    "message": "使用 OpenPGP 和 GPG 加密、解密、签名和验证邮件与消息，并管理密钥。"
+  }
+}

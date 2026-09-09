@@ -1,0 +1,8 @@
+{
+  "extName": {
+    "message": "PGP Tools - Шифрование OpenPGP и GPG для почты и сообщений"
+  },
+  "extDescription": {
+    "message": "Шифруйте, расшифровывайте, подписывайте и проверяйте сообщения с помощью OpenPGP и GPG."
+  }
+}

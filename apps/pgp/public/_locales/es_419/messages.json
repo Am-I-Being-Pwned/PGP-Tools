@@ -1,0 +1,8 @@
+{
+  "extName": {
+    "message": "PGP Tools - Encriptación PGP y GPG de email con firma digital"
+  },
+  "extDescription": {
+    "message": "Encripta y desencripta archivos, firma y verifica mensajes con PGP y GPG. Privacidad real."
+  }
+}

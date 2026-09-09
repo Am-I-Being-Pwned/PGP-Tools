@@ -1,0 +1,8 @@
+{
+  "extName": {
+    "message": "PGP Tools - Criptare OpenPGP și GPG pentru e-mail și mesaje"
+  },
+  "extDescription": {
+    "message": "Criptează, decriptează, semnează și verifică mesaje cu OpenPGP și GPG. Gestionează cheile."
+  }
+}

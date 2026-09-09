@@ -1,0 +1,8 @@
+{
+  "extName": {
+    "message": "PGP Tools - OpenPGP- og GPG-kryptering af e-mail og filer"
+  },
+  "extDescription": {
+    "message": "Krypter, dekrypter, signer og verificer e-mail med OpenPGP og GPG. Håndter dine nøgler."
+  }
+}

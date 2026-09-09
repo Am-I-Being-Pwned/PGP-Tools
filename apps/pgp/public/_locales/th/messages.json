@@ -1,0 +1,8 @@
+{
+  "extName": {
+    "message": "PGP Tools - เข้ารหัสอีเมล OpenPGP และ GPG เพื่อความเป็นส่วนตัว"
+  },
+  "extDescription": {
+    "message": "เข้ารหัส ถอดรหัส ลงลายเซ็น และตรวจสอบอีเมลและข้อความด้วย OpenPGP และ GPG"
+  }
+}

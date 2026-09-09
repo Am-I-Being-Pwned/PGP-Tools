@@ -122,10 +122,19 @@ function panelCspMeta(enabled: boolean) {
 export default defineConfig({
   modules: ["@wxt-dev/module-react"],
   manifest: () => ({
-    name: "PGP Tools - Encrypt, Decrypt & Sign",
+    // Name and summary come from public/_locales. The store keeps one shared
+    // index and treats each locale's name as its own matchable string, and
+    // those strings do not dilute one another, so the vocabulary we cannot fit
+    // in one English title is spread across locales instead.
+    //
+    // The `en` name is deliberately identical to what shipped before: it holds
+    // #1 for "pgp tools" and #5 for "pgp", and a title change reallocates
+    // relevance at even odds rather than adding it. There is nothing to gain by
+    // gambling a ranking that already works.
+    default_locale: "en",
+    name: "__MSG_extName__",
     short_name: "PGP Tools",
-    description:
-      "Encrypt, decrypt, sign, and verify messages with PGP. Drag-and-drop files and manage keys.",
+    description: "__MSG_extDescription__",
     permissions: ["sidePanel", "contextMenus", "storage", "idle"],
     // Requested at runtime the first time a user saves a signed .crx. Saving
     // goes through chrome.downloads with a "Save As" prompt, the one path that
