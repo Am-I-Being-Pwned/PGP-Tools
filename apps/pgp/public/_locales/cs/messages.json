@@ -1,6 +1,6 @@
 {
   "extName": {
-    "message": "PGP Tools - Šifrování OpenPGP a GPG pro e-mail a zprávy"
+    "message": "Šifrování emailu OpenPGP a GPG - Thunderbird & Proton Mail Compatible"
   },
   "extDescription": {
     "message": "Šifrujte, dešifrujte, podepisujte a ověřujte zprávy pomocí OpenPGP a GPG. Spravujte klíče."

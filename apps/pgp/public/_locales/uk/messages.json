@@ -1,6 +1,6 @@
 {
   "extName": {
-    "message": "PGP Tools - Шифрування OpenPGP і GPG для пошти та повідомлень"
+    "message": "Шифрування пошти OpenPGP і GPG - PGP Encryption Tool, Gmail Compatible"
   },
   "extDescription": {
     "message": "Шифруйте, розшифровуйте, підписуйте та перевіряйте повідомлення за допомогою OpenPGP і GPG."

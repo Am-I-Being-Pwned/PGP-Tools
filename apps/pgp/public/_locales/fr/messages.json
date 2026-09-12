@@ -1,8 +1,8 @@
 {
   "extName": {
-    "message": "PGP Tools - Chiffrement OpenPGP, GPG et GnuPG d'e-mails"
+    "message": "Chiffrement des emails OpenPGP et GPG - Slack & Discord Compatible"
   },
   "extDescription": {
-    "message": "Chiffrez, déchiffrez, signez et vérifiez vos e-mails avec OpenPGP et GPG. Gérez vos clés."
+    "message": "Chiffrez, déchiffrez, signez et vérifiez vos emails avec OpenPGP et GPG. Gérez vos clés."
   }
 }

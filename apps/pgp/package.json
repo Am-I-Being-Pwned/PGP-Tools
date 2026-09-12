@@ -23,7 +23,8 @@
     "test:e2e": "playwright test",
     "test:e2e:build": "pnpm build && playwright test",
     "typecheck": "tsc --noEmit",
-    "postinstall": "wxt prepare"
+    "postinstall": "wxt prepare",
+    "listing:check": "node scripts/check-locale-names.mjs && node scripts/check-listing-mentions.mjs"
   },
   "dependencies": {
     "@amibeingpwned/ui": "workspace:*",

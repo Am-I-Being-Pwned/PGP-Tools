@@ -1,6 +1,6 @@
 {
   "extName": {
-    "message": "PGP Tools - OpenPGP ja GPG e-posti krüpteerimine ja privaatsus"
+    "message": "E-posti krüpteerimine OpenPGP ja GPG - FlowCrypt Alternative"
   },
   "extDescription": {
     "message": "Krüpteeri, dekrüpteeri, allkirjasta ja kontrolli sõnumeid OpenPGP ja GPG abil."

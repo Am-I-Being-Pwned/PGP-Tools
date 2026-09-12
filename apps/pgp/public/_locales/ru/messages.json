@@ -1,6 +1,6 @@
 {
   "extName": {
-    "message": "PGP Tools - Шифрование OpenPGP и GPG для почты и сообщений"
+    "message": "Шифрование почты OpenPGP и GPG - Secure Email Encryption, Slack Compatible"
   },
   "extDescription": {
     "message": "Шифруйте, расшифровывайте, подписывайте и проверяйте сообщения с помощью OpenPGP и GPG."

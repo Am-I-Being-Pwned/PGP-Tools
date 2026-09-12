@@ -1,8 +1,8 @@
 {
   "extName": {
-    "message": "PGP Tools - OpenPGP-, GPG- und GnuPG-E-Mail-Verschlüsselung"
+    "message": "Emails verschlüsseln mit OpenPGP und GPG - Gmail & Outlook Compatible"
   },
   "extDescription": {
-    "message": "E-Mails verschlüsseln, entschlüsseln, signieren und verifizieren mit OpenPGP und GPG."
+    "message": "Emails verschlüsseln, entschlüsseln, signieren und verifizieren mit OpenPGP und GPG."
   }
 }

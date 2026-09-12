@@ -14,14 +14,48 @@ const FLOOR = 2;
 const CEILING = 5;
 
 const PHRASES = [
-  "openpgp", "gpg", "message encryption", "email security", "file encryption",
-  "digital signature", "key management", "privacy", "security",
+  "openpgp",
+  "gpg",
+  "gnupg",
+  "message encryption",
+  "email security",
+  "file encryption",
+  "digital signature",
+  "key management",
+  "privacy",
+  "security",
+  // Messaging: the softest SERPs measured, and true of any paste target.
+  "encrypted messaging",
+  "secure messaging",
+  "end-to-end",
+  "chat",
+  "webmail",
+  // Platforms and other PGP software we interoperate with. Nominative use in
+  // the description only; brand names never go in a title.
+  "gmail",
+  "outlook",
+  "proton mail",
+  "thunderbird",
+  "mailvelope",
+  "flowcrypt",
+  "kleopatra",
+  "slack",
+  "discord",
+  "telegram",
+  "whatsapp",
+  // Adjacent-tool audience. Description only, never a title token.
+  "vpn",
+  "tor browser",
+  "password manager",
 ];
 
 const path = process.argv[2] ?? "STORE-LISTING.md";
 const text = readFileSync(path, "utf8");
 
-const block = /## Detailed description \(English\)[\s\S]*?```text\n([\s\S]*?)```/.exec(text);
+const block =
+  /## Detailed description \(English\)[\s\S]*?```text\n([\s\S]*?)```/.exec(
+    text,
+  );
 if (!block) {
   console.error(`no \`\`\`text detailed-description block found in ${path}`);
   process.exit(1);
@@ -34,7 +68,11 @@ const failures = [];
 for (const phrase of PHRASES) {
   const n = count(phrase);
   if (n < FLOOR) {
-    failures.push([phrase, n, `below the ${FLOOR}-mention floor, invisible to the index`]);
+    failures.push([
+      phrase,
+      n,
+      `below the ${FLOOR}-mention floor, invisible to the index`,
+    ]);
   } else if (n > CEILING) {
     failures.push([phrase, n, `above ${CEILING}, invites a spam review`]);
   }
@@ -48,4 +86,6 @@ if (failures.length) {
   }
   process.exit(1);
 }
-console.log(`\nall ${PHRASES.length} phrases inside the ${FLOOR}-${CEILING} window`);
+console.log(
+  `\nall ${PHRASES.length} phrases inside the ${FLOOR}-${CEILING} window`,
+);

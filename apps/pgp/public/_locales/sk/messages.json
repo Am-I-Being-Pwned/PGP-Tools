@@ -1,6 +1,6 @@
 {
   "extName": {
-    "message": "PGP Tools - Šifrovanie OpenPGP a GPG pre e-mail a správy"
+    "message": "Šifrovanie emailu OpenPGP a GPG - PGP Encryption Tool"
   },
   "extDescription": {
     "message": "Šifrujte, dešifrujte, podpisujte a overujte správy pomocou OpenPGP a GPG. Spravujte kľúče."
