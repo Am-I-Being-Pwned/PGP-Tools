@@ -14,9 +14,21 @@ import { authenticateAndGetPrf } from "../../lib/protection/webauthn-prf";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 import { DevToolsPage } from "../settings/DevToolsPage";
 
+/** The passkey ceremony's PRF output, on loan to `onUnlocked` for the
+ *  duration of that call so "unlock keys when the vault unlocks" can open
+ *  the keys sealed under the master salt off the same ceremony. */
+export interface MasterPrfLoan {
+  prfOutput: Uint8Array;
+}
+
 interface MasterUnlockScreenProps {
   masterProtection: MasterProtection;
-  onUnlocked: () => void;
+  /** The vault session is live. On the passkey path `prf` carries the
+   *  ceremony's PRF output; it is valid only until the returned promise
+   *  settles (this screen zeroes it in a `finally`), so a consumer must
+   *  await everything it does with it and keep no reference. Absent on
+   *  the password path. */
+  onUnlocked: (prf?: MasterPrfLoan) => void | Promise<void>;
   /** True when the lock was system-initiated (idle timer / visibility /
    *  OS idle). Suppresses the otherwise-automatic passkey prompt: a
    *  re-lock should not pop a passkey dialog without explicit user
@@ -69,7 +81,12 @@ export function MasterUnlockScreen({
         prfOutput,
         fromBase64(masterProtection.storedSecret),
       );
-      onUnlocked();
+      // Loaned, not handed over: the `finally` below zeroes it once the
+      // consumer's promise settles. A consumer that throws lands in the
+      // catch below and shows a generic error, but the session is live
+      // by then -- App's handler owns its own failure modes and does not
+      // throw for a key that will not open.
+      await onUnlocked({ prfOutput });
     } catch (e) {
       if (ac.signal.aborted) return;
       const name = e instanceof Error ? e.name : "";
@@ -110,7 +127,7 @@ export function MasterUnlockScreen({
         return;
       }
       setPassword("");
-      onUnlocked();
+      await onUnlocked();
     } catch {
       setError("Unlock failed. Try again.");
       setPassword("");

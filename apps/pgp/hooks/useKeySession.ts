@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import type {
+  MasterPasskey,
+  SealedParts,
+} from "../lib/protection/vault-unlock";
 import type { StoredKeyKind } from "../lib/storage/key-kind";
 import type { ProtectedKeyBlob } from "../lib/storage/keyring";
 import type { AutoLockTimeout } from "../lib/storage/preferences";
@@ -11,6 +15,11 @@ import {
   ARGON2_MEMORY_KIB,
   ARGON2_PARALLELISM,
 } from "../lib/protection/password-kdf";
+import {
+  needsMasterReseal,
+  openWithMasterPrf,
+  resealUnderMaster,
+} from "../lib/protection/vault-unlock";
 import { authenticateAndGetPrf } from "../lib/protection/webauthn-prf";
 import { storedKeyKind } from "../lib/storage/key-kind";
 import {
@@ -25,6 +34,16 @@ interface KeySessionOptions {
    *  drop handles. */
   autoLockEnabled: boolean;
   neverCacheKeys: boolean;
+  /** "Unlock keys with the vault" is on and the master is a passkey:
+   *  a per-key passkey unlock of a key on the master credential (but
+   *  its own salt) also evaluates the master salt in the SAME ceremony
+   *  and re-seals the key under it, so from the next vault unlock on it
+   *  needs no prompt of its own. Null when the option is off or the
+   *  master is a password. */
+  masterReseal: {
+    master: MasterPasskey;
+    replaceProtection: (keyId: string, parts: SealedParts) => Promise<void>;
+  } | null;
 }
 
 /** One live handle plus the store it came from. The kind is not
@@ -62,6 +81,14 @@ export interface KeySessionStoreDeps {
   onActivity: () => void;
 }
 
+/** One item of a batch unlock: which key, which engine's store, and the
+ *  call that produces its handle. */
+export interface UnlockEntry {
+  keyId: string;
+  kind: StoredKeyKind;
+  open: () => Promise<number>;
+}
+
 export interface KeySessionStore {
   /**
    * The ONLY way a handle gets into the map. `open` is the call that
@@ -77,6 +104,29 @@ export interface KeySessionStore {
     kind: StoredKeyKind,
     open: () => Promise<number>,
   ) => Promise<boolean>;
+  /**
+   * Several unlocks off ONE credential, in sequence. Same funnel as
+   * `unlock` for each entry, plus a batch-level rule: the loop stops
+   * at the first entry whose turn comes after a lock. Without that, a
+   * lock landing mid-batch (tab-away, OS lockscreen) would cancel only
+   * the unlock in flight; the next iteration would start under the NEW
+   * generation and insert a live key behind the lock screen. The check
+   * and the capture inside `unlock` are back-to-back synchronous, so
+   * there is no gap for a lock to slip into.
+   *
+   * `entries` may be a LOADER. The batch's generation is captured before
+   * the loader is awaited, so a lock that lands while the entries are
+   * still being read (the keyring is an IndexedDB round trip) cancels
+   * the whole batch too -- otherwise that window would sit outside the
+   * check and rely on the store read failing without a session, which
+   * is true today but is not the mechanism this rule is meant to be.
+   *
+   * Per-entry failures are skipped, not fatal. Resolves to the number
+   * of handles stored.
+   */
+  unlockMany: (
+    entries: UnlockEntry[] | (() => Promise<UnlockEntry[]>),
+  ) => Promise<number>;
   lock: (keyId: string) => void;
   lockAll: () => void;
   getHandle: (keyId: string) => number | null;
@@ -178,6 +228,24 @@ export function createKeySessionStore(
     return true;
   };
 
+  const unlockMany = async (
+    entries: UnlockEntry[] | (() => Promise<UnlockEntry[]>),
+  ): Promise<number> => {
+    const startedAt = generation;
+    const list = typeof entries === "function" ? await entries() : entries;
+    let stored = 0;
+    for (const entry of list) {
+      if (generation !== startedAt) break;
+      try {
+        if (await unlock(entry.keyId, entry.kind, entry.open)) stored += 1;
+      } catch {
+        // One blob that will not open (tampered, or sealed under a
+        // different output after all) must not stop the others.
+      }
+    }
+    return stored;
+  };
+
   const getHandle = (keyId: string): number | null => {
     const entry = handles.get(keyId);
     if (entry === undefined) return null;
@@ -188,7 +256,14 @@ export function createKeySessionStore(
     return entry.handle;
   };
 
-  return { unlock, lock, lockAll, getHandle, size: () => handles.size };
+  return {
+    unlock,
+    unlockMany,
+    lock,
+    lockAll,
+    getHandle,
+    size: () => handles.size,
+  };
 }
 
 /**
@@ -327,53 +402,83 @@ export function useKeySession(opts: KeySessionOptions) {
 
   const passkeyAbortRef = useRef<AbortController | null>(null);
 
+  const masterReseal = opts.masterReseal;
+
   const unlockWithPasskey = useCallback(
     async (blob: ProtectedKeyBlob): Promise<boolean | "cancelled"> => {
       const encrypted = encryptedBlobFromProtected(blob);
       if (encrypted.method !== "passkey") return false;
+      const kind = storedKeyKind(blob);
 
-      // `openSshIdentity` runs the WebAuthn ceremony itself and takes no
-      // AbortSignal, so an SSH unlock cannot be pre-empted the way the
-      // PGP one is below, and a ceremony the USER dismissed is only
-      // distinguishable by the error the browser throws. That covers the
-      // common "changed my mind" case; a ceremony superseded by a second
-      // unlock still reports as a plain failure. A ceremony superseded by
-      // a LOCK is handled inside `store.unlock`, which drops the handle
-      // the ceremony produced rather than storing it.
-      if (storedKeyKind(blob) === "ssh") {
-        try {
-          return await store.unlock(blob.keyId, "ssh", () =>
-            openSshIdentity(blob),
-          );
-        } catch (e) {
-          const name = e instanceof Error ? e.name : "";
-          return name === "NotAllowedError" || name === "AbortError"
-            ? "cancelled"
-            : false;
-        }
-      }
+      // The ceremony the user is answering for THIS key can carry the
+      // master salt as its second PRF evaluation. When it does, the key
+      // is re-sealed under the master right after it unlocks, so the
+      // next vault unlock opens it with no prompt of its own. This is
+      // the whole migration story: there is no other step.
+      const reseal =
+        masterReseal && needsMasterReseal(blob, masterReseal.master)
+          ? masterReseal
+          : null;
 
+      // Both engines run the ceremony HERE (rather than SSH going
+      // through `openSshIdentity`, which runs its own) so both get the
+      // abort signal and the second-salt evaluation.
       passkeyAbortRef.current?.abort();
       const ac = new AbortController();
       passkeyAbortRef.current = ac;
 
       let prfOutput: Uint8Array | undefined;
+      let secondOutput: Uint8Array | undefined;
       try {
-        return await store.unlock(blob.keyId, "pgp", async () => {
-          ({ prfOutput } = await authenticateAndGetPrf(
+        const stored = await store.unlock(blob.keyId, kind, async () => {
+          ({ prfOutput, secondOutput } = await authenticateAndGetPrf(
             encrypted.credentialId,
             fromBase64(encrypted.prfSalt),
             ac.signal,
+            reseal ? fromBase64(reseal.master.prfSalt) : undefined,
           ));
-
-          return await wasmApi.unlockWithPrf(
-            fromBase64(encrypted.ciphertext),
-            fromBase64(encrypted.iv),
-            prfOutput,
-            fromBase64(encrypted.storedSecret),
-            blob.keyId,
-          );
+          const ciphertext = fromBase64(encrypted.ciphertext);
+          const iv = fromBase64(encrypted.iv);
+          const storedSecret = fromBase64(encrypted.storedSecret);
+          return kind === "ssh"
+            ? await wasmApi.unlockSshIdentityWithPrf(
+                ciphertext,
+                iv,
+                prfOutput,
+                storedSecret,
+                blob.keyId,
+              )
+            : await wasmApi.unlockWithPrf(
+                ciphertext,
+                iv,
+                prfOutput,
+                storedSecret,
+                blob.keyId,
+              );
         });
+
+        // Re-seal off the same ceremony. Best-effort: the key IS
+        // unlocked either way, and a failure here just means this key
+        // keeps its own prompt until the next time it is unlocked.
+        if (stored && reseal && secondOutput) {
+          const handle = store.getHandle(blob.keyId);
+          if (handle !== null) {
+            try {
+              await reseal.replaceProtection(
+                blob.keyId,
+                await resealUnderMaster(
+                  blob,
+                  handle,
+                  reseal.master,
+                  secondOutput,
+                ),
+              );
+            } catch {
+              /* keep the per-key prompt; nothing is lost */
+            }
+          }
+        }
+        return stored;
       } catch (e) {
         if (ac.signal.aborted) return "cancelled";
         const name = e instanceof Error ? e.name : "";
@@ -383,8 +488,32 @@ export function useKeySession(opts: KeySessionOptions) {
         return false;
       } finally {
         prfOutput?.fill(0);
+        secondOutput?.fill(0);
       }
     },
+    [store, masterReseal],
+  );
+
+  /**
+   * "Unlock keys when the vault unlocks": open every blob `loadBlobs`
+   * yields off the master ceremony's PRF output, no per-key prompt.
+   * `loadBlobs` is awaited INSIDE the batch so the lock-generation
+   * check covers the read as well (see `unlockMany`); it must return
+   * only master-sealed blobs (`partitionByMasterSeal`). `prfOutput` is
+   * caller-owned and zeroed by the caller after this resolves.
+   */
+  const unlockAllWithMasterPrf = useCallback(
+    (
+      loadBlobs: () => Promise<ProtectedKeyBlob[]>,
+      prfOutput: Uint8Array,
+    ): Promise<number> =>
+      store.unlockMany(async () =>
+        (await loadBlobs()).map((blob) => ({
+          keyId: blob.keyId,
+          kind: storedKeyKind(blob),
+          open: () => openWithMasterPrf(blob, prfOutput),
+        })),
+      ),
     [store],
   );
 
@@ -422,6 +551,7 @@ export function useKeySession(opts: KeySessionOptions) {
   return {
     unlockWithPassword,
     unlockWithPasskey,
+    unlockAllWithMasterPrf,
     lock,
     lockAll: doLockAll,
     lockAllIfNoCache,

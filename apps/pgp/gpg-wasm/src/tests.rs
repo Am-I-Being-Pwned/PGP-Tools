@@ -378,6 +378,75 @@ fn test_unlock_with_prf() {
 }
 
 #[test]
+fn test_reprotect_key_with_prf() {
+    let gen_json = gen_test_key();
+    let gen: serde_json::Value = serde_json::from_str(&gen_json).unwrap();
+    let priv_armor = gen["privateKeyArmored"].as_str().unwrap();
+    let key_id = gen["keyInfo"]["keyId"].as_str().unwrap();
+    let handle = store_key(priv_armor).unwrap();
+
+    let master_prf = vec![42u8; 32];
+    let fresh_secret = vec![3u8; 32];
+    let packed = reprotect_key_with_prf(handle, master_prf.clone(), fresh_secret.clone()).unwrap();
+    // `[u32_le json_len][json][blob]`: the metadata names the fingerprint
+    // the blob's AAD was derived from.
+    let json_len = u32::from_le_bytes([packed[0], packed[1], packed[2], packed[3]]) as usize;
+    let meta: serde_json::Value = serde_json::from_slice(&packed[4..4 + json_len]).unwrap();
+    assert_eq!(meta["keyId"].as_str().unwrap(), key_id);
+    let blob = packed[4 + json_len..].to_vec();
+    assert!(blob.len() > 12);
+
+    // The source handle survives a reprotect (it is read, not consumed).
+    let signed = sign_with_handle("still unlocked", handle).unwrap();
+    assert!(signed.contains("BEGIN PGP SIGNED MESSAGE"));
+
+    // The re-sealed blob opens with the new material under the real
+    // fingerprint AAD...
+    let h2 = unlock_with_prf(
+        &blob[12..],
+        &blob[..12],
+        master_prf.clone(),
+        fresh_secret.clone(),
+        key_id,
+    )
+    .unwrap();
+    let signed = sign_with_handle("resealed", h2).unwrap();
+    assert!(signed.contains("BEGIN PGP SIGNED MESSAGE"));
+
+    // ...and not with a different PRF, a different stored secret, or a
+    // different identity.
+    assert!(unlock_with_prf(
+        &blob[12..],
+        &blob[..12],
+        vec![1u8; 32],
+        fresh_secret.clone(),
+        key_id
+    )
+    .is_err());
+    assert!(unlock_with_prf(
+        &blob[12..],
+        &blob[..12],
+        master_prf.clone(),
+        vec![4u8; 32],
+        key_id
+    )
+    .is_err());
+    assert!(unlock_with_prf(
+        &blob[12..],
+        &blob[..12],
+        master_prf.clone(),
+        fresh_secret.clone(),
+        "OTHER"
+    )
+    .is_err());
+
+    drop_key(handle).unwrap();
+    drop_key(h2).unwrap();
+    // A dropped handle cannot be re-sealed.
+    assert!(reprotect_key_with_prf(handle, master_prf, fresh_secret).is_err());
+}
+
+#[test]
 fn test_rsa_key_generation() {
     let opts = r#"{"name":"RSA User","email":"rsa@test.com","type":"rsa"}"#;
     let json = generate_key(opts).unwrap();

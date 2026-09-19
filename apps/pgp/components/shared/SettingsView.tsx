@@ -6,6 +6,7 @@ import { Switch } from "@amibeingpwned/ui/switch";
 
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
 import type { PresetId } from "../../lib/presets";
+import type { MasterPasskey } from "../../lib/protection/vault-unlock";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type {
@@ -74,6 +75,13 @@ interface SettingsViewProps {
   onAutoDownloadTextChange: (v: boolean) => void;
   lockOnTabAway: boolean;
   onLockOnTabAwayChange: (v: boolean) => void;
+  unlockKeysOnOpen: boolean;
+  onUnlockKeysOnOpenChange: (v: boolean) => void;
+  /** The master passkey, or null for a password master -- in which case
+   *  the unlock-on-open toggle is not offered (nothing to reuse). */
+  masterPasskey: MasterPasskey | null;
+  /** See `ImportAllKeysPage`. */
+  masterSealSalt?: ArrayBuffer;
   crxSigningEnabled: boolean;
   onCrxSigningEnabledChange: (v: boolean) => void;
   keyDiscoveryEnabled: boolean;
@@ -126,6 +134,10 @@ export function SettingsView({
   onAutoDownloadTextChange,
   lockOnTabAway,
   onLockOnTabAwayChange,
+  unlockKeysOnOpen,
+  onUnlockKeysOnOpenChange,
+  masterPasskey,
+  masterSealSalt,
   crxSigningEnabled,
   onCrxSigningEnabledChange,
   keyDiscoveryEnabled,
@@ -186,6 +198,7 @@ export function SettingsView({
     autoLockMinutes,
     lockOnTabAway,
     neverCacheKeys,
+    unlockKeysOnOpen,
     storageLocation,
   ]);
 
@@ -283,10 +296,25 @@ export function SettingsView({
   const enableNeverCache = async () => {
     await enterNeverCacheMode();
     onNeverCacheKeysChange(true);
+    // Mirror what the transition persisted (see `enterNeverCacheMode`).
+    onUnlockKeysOnOpenChange(false);
     setPrefs(await getPreferences());
     // The transition also turned historyEnabled off; the always-mounted
     // workspace renders that toggle, so tell it to re-read.
     onWorkspacePrefsChanged?.();
+  };
+
+  const handleUnlockOnOpenToggle = async (v: boolean) => {
+    onUnlockKeysOnOpenChange(v);
+    if (!v) {
+      await savePreferences({ unlockKeysOnOpen: false });
+      return;
+    }
+    // Entering unlock-on-open leaves never-cache (see enableNeverCache
+    // for the converse). History stays as the user had it.
+    onNeverCacheKeysChange(false);
+    await savePreferences({ unlockKeysOnOpen: true, neverCacheKeys: false });
+    setPrefs(await getPreferences());
   };
 
   const handleNeverCacheToggle = async (v: boolean) => {
@@ -321,6 +349,9 @@ export function SettingsView({
     }
     if (values.neverCacheKeys !== undefined) {
       onNeverCacheKeysChange(values.neverCacheKeys);
+    }
+    if (values.unlockKeysOnOpen !== undefined) {
+      onUnlockKeysOnOpenChange(values.unlockKeysOnOpen);
     }
     if (values.keyDiscoveryEnabled !== undefined) {
       onKeyDiscoveryEnabledChange(values.keyDiscoveryEnabled);
@@ -546,6 +577,23 @@ export function SettingsView({
             onCheckedChange={(v) => void handleNeverCacheToggle(v)}
           />
         </label>
+
+        {masterPasskey && (
+          <label className="border-border mt-2 flex items-center justify-between gap-4 rounded-md border p-4">
+            <div>
+              <span className="text-sm">Unlock keys with the vault</span>
+              <p className="text-muted-foreground text-xs">
+                The passkey prompt that opens the vault also unlocks your keys.
+                A key that still asks on its own moves over the next time you
+                unlock it. Password-protected keys keep their password.
+              </p>
+            </div>
+            <Switch
+              checked={unlockKeysOnOpen}
+              onCheckedChange={(v) => void handleUnlockOnOpenToggle(v)}
+            />
+          </label>
+        )}
       </div>
 
       <div>
@@ -772,6 +820,7 @@ export function SettingsView({
           onAddCrxKey={onAddCrxKey}
           crxKeys={crxKeys}
           reusePasskeyCredentialId={primaryPasskeyCredentialId}
+          masterSealSalt={masterSealSalt}
         />
       )}
 

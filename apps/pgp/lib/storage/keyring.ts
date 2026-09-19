@@ -186,6 +186,32 @@ export async function updateAlias(keyId: string, alias: string): Promise<void> {
   });
 }
 
+/** Swap a key's at-rest sealing for a new one (the "unlock keys with the
+ *  vault" re-protect). Only the three sealing fields change; identity,
+ *  alias, timestamps and the rest are read fresh under the store lock, so
+ *  a caller holding a stale snapshot cannot clobber them. Throws when the
+ *  key is not in the keyring -- the caller has just re-sealed a live
+ *  handle and reports success, so a silent no-op would leave the user
+ *  believing a key was migrated when nothing was written. */
+export async function replaceKeyProtection(
+  keyId: string,
+  parts: Pick<ProtectedKeyBlob, "protection" | "encryptedPrivateKey" | "iv">,
+): Promise<void> {
+  await keyringStore.update(
+    keyId,
+    (key) => {
+      key.protection = parts.protection;
+      key.encryptedPrivateKey = parts.encryptedPrivateKey;
+      key.iv = parts.iv;
+    },
+    {
+      onMissing: (id) => {
+        throw new AppError("key-not-found", `Key ${id} is not in the keyring`);
+      },
+    },
+  );
+}
+
 /** Backfill the revocation certificate for an imported key (generated
  *  keys store one at creation time). Overwriting is harmless: every
  *  revocation certificate ever minted for a key stays valid. */

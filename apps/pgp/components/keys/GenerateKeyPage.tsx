@@ -61,6 +61,9 @@ interface GenerateKeyPageProps {
   addKey: (blob: ProtectedKeyBlob) => Promise<void>;
   /** Pass the primary key's passkey credential ID to allow reuse. */
   reusePasskeyCredentialId?: string;
+  /** With reuse, seal under the master's PRF salt so the vault ceremony
+   *  opens the key ("unlock keys when the vault unlocks"). */
+  masterSealSalt?: ArrayBuffer;
   /** If true, cache the decrypted key in WASM and return the handle via onKeyGenerated. */
   cacheKey?: boolean;
   /** When true, offer generating a CRX (Chrome extension) signing key. */
@@ -79,6 +82,7 @@ export function GenerateKeyPage({
   onKeyGenerated,
   addKey,
   reusePasskeyCredentialId,
+  masterSealSalt,
   cacheKey,
   crxSigningEnabled,
   addCrxKey,
@@ -230,6 +234,7 @@ export function GenerateKeyPage({
               reusePasskeyCredentialId: reusePasskey
                 ? reusePasskeyCredentialId
                 : undefined,
+              prfSalt: reusePasskey ? masterSealSalt : undefined,
               cache: cacheKey,
             },
       );

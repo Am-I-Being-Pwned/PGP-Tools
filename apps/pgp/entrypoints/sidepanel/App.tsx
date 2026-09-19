@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SettingsIcon } from "lucide-react";
 
 import { Button } from "@amibeingpwned/ui/button";
@@ -27,7 +27,7 @@ import { WorkspaceView } from "../../components/workspace/WorkspaceView";
 import { useActionContext } from "../../hooks/useActionContext";
 import { useContacts } from "../../hooks/useContacts";
 import { useCrxKeys } from "../../hooks/useCrxKeys";
-import { useKeyring } from "../../hooks/useKeyring";
+import { readKeyring, useKeyring } from "../../hooks/useKeyring";
 import { useKeySession } from "../../hooks/useKeySession";
 import { usePendingOperation } from "../../hooks/usePendingOperation";
 import {
@@ -37,7 +37,12 @@ import {
 } from "../../lib/constants";
 import { normalizeCrxPadding } from "../../lib/crx/storage";
 import { looksLikeKey, readAllFilesText } from "../../lib/drop-routing";
+import { fromBase64 } from "../../lib/encoding";
 import * as wasmApi from "../../lib/pgp/wasm";
+import {
+  masterPasskeyOf,
+  partitionByMasterSeal,
+} from "../../lib/protection/vault-unlock";
 import { normalizeContactsPadding } from "../../lib/storage/contacts";
 import { normalizeKeyringPadding } from "../../lib/storage/keyring";
 import { getMasterProtection } from "../../lib/storage/master-protection";
@@ -61,6 +66,7 @@ export default function App() {
   const [autoDownloadFiles, setAutoDownloadFiles] = useState(false);
   const [autoDownloadText, setAutoDownloadText] = useState(false);
   const [lockOnTabAway, setLockOnTabAway] = useState(false);
+  const [unlockKeysOnOpen, setUnlockKeysOnOpen] = useState(false);
   const [crxSigningEnabled, setCrxSigningEnabled] = useState(false);
   // Default TRUE, matching DEFAULT_PREFERENCES: this state is what the
   // UI shows for the moment before the first `getPreferences` lands, and
@@ -115,10 +121,19 @@ export default function App() {
   const masterLockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const keyring = useKeyring();
+  // "Unlock keys with the vault": lets a per-key passkey unlock re-seal
+  // the key under the master salt off its own ceremony. Memoised so the
+  // session hook's unlock callback keeps a stable identity.
+  const replaceProtection = keyring.replaceProtection;
+  const masterReseal = useMemo(() => {
+    const master = masterPasskeyOf(masterProtection);
+    return unlockKeysOnOpen && master ? { master, replaceProtection } : null;
+  }, [unlockKeysOnOpen, masterProtection, replaceProtection]);
   const session = useKeySession({
     autoLockEnabled,
     autoLockMinutes,
     neverCacheKeys,
+    masterReseal,
   });
   const contacts = useContacts();
   const crxKeys = useCrxKeys();
@@ -379,6 +394,7 @@ export default function App() {
     setAutoDownloadFiles(prefs.autoDownloadFiles);
     setAutoDownloadText(prefs.autoDownloadText);
     setLockOnTabAway(prefs.lockOnTabAway);
+    setUnlockKeysOnOpen(prefs.unlockKeysOnOpen);
     setCrxSigningEnabled(prefs.crxSigningEnabled);
     setKeyDiscoveryEnabled(prefs.keyDiscoveryEnabled);
     setAiTranslateEnabled(prefs.aiTranslateEnabled);
@@ -686,13 +702,35 @@ export default function App() {
           <MasterUnlockScreen
             masterProtection={masterProtection}
             autoLocked={masterAutoLocked}
-            onUnlocked={() => {
+            onUnlocked={async (prf) => {
               setMasterUnlocked(true);
               setMasterAutoLocked(false);
               resetMasterLockTimer();
-              void keyring.refresh();
               void contacts.refresh();
               void crxKeys.refresh();
+              // "Unlock keys when the vault unlocks": off the SAME
+              // ceremony, open every key sealed under the master salt.
+              // The preference is an encrypted setting, readable only
+              // now that the session is live -- so it is read here, not
+              // from state (which still holds the locked-time default).
+              // Both reads happen INSIDE the batch so a lock landing
+              // during them cancels it (`unlockMany`). `prf` is on loan
+              // until this resolves; nothing below keeps a reference
+              // past the await, and nothing here throws for a key that
+              // will not open -- the screen is already gone by then.
+              const master = masterPasskeyOf(masterProtection);
+              if (prf && master) {
+                try {
+                  await session.unlockAllWithMasterPrf(async () => {
+                    if (!(await getPreferences()).unlockKeysOnOpen) return [];
+                    const { keys } = await readKeyring();
+                    return partitionByMasterSeal(keys, master).eligible;
+                  }, prf.prfOutput);
+                } catch {
+                  // Best-effort: the vault is open; keys just stay locked.
+                }
+              }
+              void keyring.refresh();
             }}
           />
         </main>
@@ -750,6 +788,14 @@ export default function App() {
     masterProtection?.method === "passkey"
       ? masterProtection.credentialId
       : undefined;
+  const masterPasskey = masterPasskeyOf(masterProtection);
+  // Only while the option is on do new keys get sealed under the master
+  // SALT (not just the master credential): sharing the salt is what lets
+  // the vault ceremony open them, and that is the opt-in.
+  const masterSealSalt =
+    unlockKeysOnOpen && masterPasskey
+      ? fromBase64(masterPasskey.prfSalt).buffer
+      : undefined;
 
   return (
     <GlobalDropZone rules={dropRules}>
@@ -769,6 +815,7 @@ export default function App() {
             existingKeys={keyring.keys}
             existingContacts={contacts.contacts}
             reusePasskeyCredentialId={masterPasskeyCredentialId}
+            masterSealSalt={masterSealSalt}
             initialArmored={importPrefill}
             crxSigningEnabled={crxSigningEnabled}
             onImportCrx={crxKeys.add}
@@ -894,6 +941,7 @@ export default function App() {
                 setActiveTab("workspace");
               }}
               primaryPasskeyCredentialId={masterPasskeyCredentialId}
+              masterSealSalt={masterSealSalt}
               cacheKeys={!neverCacheKeys}
               onKeyCached={(keyId, handle) => {
                 void session.cacheKeyHandle(keyId, handle);
@@ -923,6 +971,10 @@ export default function App() {
               onAutoDownloadTextChange={setAutoDownloadText}
               lockOnTabAway={lockOnTabAway}
               onLockOnTabAwayChange={setLockOnTabAway}
+              unlockKeysOnOpen={unlockKeysOnOpen}
+              onUnlockKeysOnOpenChange={setUnlockKeysOnOpen}
+              masterPasskey={masterPasskey}
+              masterSealSalt={masterSealSalt}
               crxSigningEnabled={crxSigningEnabled}
               onWorkspacePrefsChanged={() =>
                 setWorkspacePrefsVersion((v) => v + 1)

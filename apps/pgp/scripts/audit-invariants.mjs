@@ -688,6 +688,9 @@ const SECRET_WASM_EXPORTS = [
   "generateProtectedWith",
   "protectImportedWith",
   "unlockWith",
+  // Re-seals a live KEY_STORE handle under the master passkey's PRF (the
+  // "unlock keys when the vault unlocks" migration). Takes `prf_output`.
+  "reprotectKeyWithPrf",
   "encryptKeyForExportWithHandle",
   "getKeyArmored",
   "argon2Derive",
@@ -716,6 +719,7 @@ const SECRET_WASM_EXPORTS = [
   // `dropCrxKey`'s lifecycle is owned by the boundary module.
   "protectSshIdentityWith",
   "unlockSshIdentityWith",
+  "reprotectSshIdentityWithPrf",
   "decryptAgeWithHandle",
   "dropSshIdentity",
   // Symmetric (password) message decryption. On this list because of the
@@ -833,7 +837,8 @@ function secretFnMatch(f, i, code) {
   const byName = SECRET_FN_RE.exec(code);
   if (byName) return { m: byName, via: "naming convention" };
   const anyFn = ANY_FN_RE.exec(code);
-  if (anyFn && isWasmExport(f.lines, i)) return { m: anyFn, via: "wasm export" };
+  if (anyFn && isWasmExport(f.lines, i))
+    return { m: anyFn, via: "wasm export" };
   return null;
 }
 /** `name: Vec<u8>` or `name: Option<Vec<u8>>` -- an owned secret the

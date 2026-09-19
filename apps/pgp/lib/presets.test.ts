@@ -35,6 +35,7 @@ function fullPrefs(overrides: Partial<PgpPreferences> = {}): PgpPreferences {
     aiTranslateEnabled: true,
     translationTargetLanguage: "en",
     defaultKeyId: null,
+    unlockKeysOnOpen: false,
     ...overrides,
   };
 }
@@ -80,6 +81,7 @@ describe("PRESETS", () => {
       storageLocation: "local",
       clipboardWipeSeconds: 15,
       aiTranslateEnabled: false,
+      unlockKeysOnOpen: false,
     });
   });
 

@@ -49,6 +49,9 @@ interface ImportAllKeysPageProps {
   crxKeys?: CrxSigningKeyBlob[];
   /** Pass the primary key's passkey credential ID to allow reuse. */
   reusePasskeyCredentialId?: string;
+  /** With reuse, run the one ceremony under the master's PRF salt so the
+   *  vault ceremony opens every imported key. */
+  masterSealSalt?: ArrayBuffer;
 }
 
 /**
@@ -68,6 +71,7 @@ export function ImportAllKeysPage({
   onAddCrxKey,
   crxKeys,
   reusePasskeyCredentialId,
+  masterSealSalt,
 }: ImportAllKeysPageProps) {
   const [step, setStep] = useState<Step>("paste");
   const [text, setText] = useState("");
@@ -270,6 +274,9 @@ export function ImportAllKeysPage({
           reusePasskey && reusePasskeyCredentialId
             ? reusePasskeyCredentialId
             : undefined;
+        // Only a REUSED master credential may take the master salt; a
+        // freshly registered passkey gets its own random one below.
+        const sealSalt = credentialId ? masterSealSalt : undefined;
         if (!credentialId) {
           const reg = await registerPasskey(
             "PGP Tools Import",
@@ -282,7 +289,7 @@ export function ImportAllKeysPage({
           }
           credentialId = reg.credentialId;
         }
-        const prfSalt = generatePrfSalt();
+        const prfSalt = sealSalt ?? generatePrfSalt();
         ({ prfOutput } = await authenticateAndGetPrf(credentialId, prfSalt));
         passkeyReuse = { credentialId, prfOutput, prfSalt };
       }

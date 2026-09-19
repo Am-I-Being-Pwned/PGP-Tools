@@ -64,6 +64,10 @@ export const PRESETS: Record<PresetId, SecurityPreset> = {
       autoLockMinutes: 2,
       lockOnTabAway: true,
       neverCacheKeys: true,
+      // The only preset that touches this. Never-cache and unlock-on-open
+      // are opposites (see `preferences.ts`), and this preset picks the
+      // former; the other two leave the user's opt-in alone.
+      unlockKeysOnOpen: false,
       historyEnabled: false,
       // The only preset that turns key discovery off. Looking someone up
       // tells GitHub or keys.openpgp.org that this network is about to

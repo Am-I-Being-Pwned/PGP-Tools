@@ -295,6 +295,29 @@ describe("savePreferences", () => {
     expect(boot()).toEqual({ onboardingComplete: true });
   });
 
+  it("reads unlockKeysOnOpen as false from a blob written before it existed, and round-trips true", async () => {
+    // Off by default is a security property (SECURITY.md §14): a user
+    // who never opted in must never have the vault ceremony open keys.
+    local.store.set(
+      STORAGE_SETTINGS,
+      legacyEnvelope(
+        new TextEncoder().encode(JSON.stringify({ advancedMode: true })),
+      ),
+    );
+    const { getPreferences, savePreferences } = await loadModule();
+
+    await expect(getPreferences()).resolves.toMatchObject({
+      unlockKeysOnOpen: false,
+    });
+
+    await savePreferences({ unlockKeysOnOpen: true });
+
+    expect(storedSettings()).toMatchObject({ unlockKeysOnOpen: true });
+    await expect(getPreferences()).resolves.toMatchObject({
+      unlockKeysOnOpen: true,
+    });
+  });
+
   it("fills unset fields from the defaults on first write", async () => {
     const { savePreferences, DEFAULT_PREFERENCES } = await loadModule();
     await savePreferences({ advancedMode: true });

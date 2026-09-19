@@ -43,6 +43,7 @@ import {
   getKeyring,
   normalizeKeyringPadding,
   removeKey,
+  replaceKeyProtection,
   updateAlias,
 } from "./keyring";
 
@@ -211,6 +212,51 @@ describe("normalizeKeyringPadding", () => {
 
     expect(isDomainSealed(local.store.get(STORAGE_KEYRING))).toBe(true);
     expect(await getKeyring()).toEqual(stored);
+  });
+});
+
+describe("replaceKeyProtection", () => {
+  it("swaps only the three sealing fields and keeps the rest", async () => {
+    await addKey(blob({ alias: "work", lastUsedAt: 42 }));
+
+    await replaceKeyProtection("FPR1", {
+      protection: {
+        method: "passkey",
+        credentialId: "master-cred",
+        prfSalt: "bWFzdGVyLXNhbHQ=",
+        storedSecret: "ZnJlc2gtc2VjcmV0",
+      },
+      encryptedPrivateKey: "bmV3LWN0",
+      iv: "bmV3LWl2",
+    });
+
+    const [stored] = await getKeyring();
+    expect(stored.protection).toEqual({
+      method: "passkey",
+      credentialId: "master-cred",
+      prfSalt: "bWFzdGVyLXNhbHQ=",
+      storedSecret: "ZnJlc2gtc2VjcmV0",
+    });
+    expect(stored.encryptedPrivateKey).toBe("bmV3LWN0");
+    expect(stored.iv).toBe("bmV3LWl2");
+    // Read under the lock, not from the caller's snapshot.
+    expect(stored.alias).toBe("work");
+    expect(stored.lastUsedAt).toBe(42);
+    expect(stored.userIds).toEqual(["Alice <a@b.test>"]);
+  });
+
+  it("throws for a key that is not in the keyring", async () => {
+    // The caller has just re-sealed a live handle and will report
+    // success; a silent no-op would leave the user believing a key was
+    // migrated when nothing was written.
+    await addKey(blob());
+    await expect(
+      replaceKeyProtection("NOPE", {
+        protection: { method: "password", kdfSalt: "c2FsdA==" },
+        encryptedPrivateKey: "Y3Q=",
+        iv: "aXY=",
+      }),
+    ).rejects.toThrow(/not in the keyring/);
   });
 });
 

@@ -66,6 +66,9 @@ interface KeysViewProps {
   onAutoOpenRouteConsumed?: () => void;
   onEncryptTo?: (keyId: string) => void;
   primaryPasskeyCredentialId?: string;
+  /** Seal new passkey-protected keys under the master's PRF salt, so the
+   *  vault ceremony opens them (only set while `unlockKeysOnOpen` is on). */
+  masterSealSalt?: ArrayBuffer;
   /** Called when a newly generated key is cached in WASM. */
   onKeyCached?: (keyId: string, keyHandle: number) => void;
   /** Whether to cache decrypted keys in WASM after generation. */
@@ -158,6 +161,7 @@ export function KeysView({
   onAutoOpenRouteConsumed,
   onEncryptTo,
   primaryPasskeyCredentialId,
+  masterSealSalt,
   onKeyCached,
   cacheKeys,
   crxSigningEnabled,
@@ -609,6 +613,7 @@ export function KeysView({
                 }}
                 addKey={onAddKey}
                 reusePasskeyCredentialId={primaryPasskeyCredentialId}
+                masterSealSalt={masterSealSalt}
                 cacheKey={cacheKeys}
                 crxSigningEnabled={crxSigningEnabled}
                 addCrxKey={onAddCrxKey}
@@ -625,6 +630,7 @@ export function KeysView({
                 existingKeys={myKeys}
                 existingContacts={contacts}
                 reusePasskeyCredentialId={primaryPasskeyCredentialId}
+                masterSealSalt={masterSealSalt}
                 initialArmored={route.initialArmored}
                 crxSigningEnabled={crxSigningEnabled}
                 keyDiscoveryEnabled={keyDiscoveryEnabled}

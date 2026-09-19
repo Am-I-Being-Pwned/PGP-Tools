@@ -693,6 +693,25 @@ export const THREAT_MODEL: Threat[] = [
     section: "§8.9",
   },
   {
+    id: "T-VAULT-UNLOCK-OPENS-KEYS",
+    title:
+      "One vault ceremony unlocks every key sealed under the master passkey",
+    attacker:
+      "Anyone who can obtain ONE WebAuthn ceremony from the user -- a coerced or shoulder-surfed biometric, or a passkey dialog the user approves reflexively -- while `unlockKeysOnOpen` is on.",
+    defence:
+      "Opt-in, off by default, and an existing install reads back off (the settings blob is a partial overlay on defaults). Only keys sealed under the master's EXACT credential AND PRF salt are opened (`isSealedUnderMaster`); a key on the master credential but its own salt is re-sealed under the master off ITS OWN next prompt (the PRF extension's second evaluation, `needsMasterReseal`) -- no extra ceremony, no migration step; a key on another passkey or a password keeps its per-key prompt. The batch unlock runs through `KeySessionStore.unlockMany`, so a lock landing mid-batch drops the in-flight handle AND stops the loop; nothing is inserted behind the lock screen. The PRF output is on loan to the unlock handler for the duration of that call and zeroed by the unlock screen's `finally`. Mutually exclusive with `neverCacheKeys`; the Paranoid preset pins it off. System-initiated locks still suppress the auto-prompt (§6), so a re-lock never pre-launches the ceremony that would now open everything.",
+    status: "accepted",
+    rationale:
+      "This is the feature: the user has said one prompt is the trade they want. Before it, the same attacker got the vault (keyring metadata, contacts, settings) off that one ceremony and needed a second ceremony per key; now the keys come too. What is NOT weakened: the at-rest sealing (each blob still has its own stored secret and fingerprint AAD, and a vault dump without the authenticator opens nothing), the lock invariants (every handle still dies on every lock trigger in §6), and the KEY_STORE insert paths (`unlock_with_prf` is still the only PGP insert site; `reprotect_key_with_prf` reads a handle and inserts nothing).",
+    verifiedBy: [
+      "apps/pgp/lib/protection/vault-unlock.test.ts",
+      "apps/pgp/hooks/useKeySession.test.ts",
+      "apps/pgp/e2e/unlock-on-open.spec.ts",
+      "apps/pgp/gpg-wasm/src/tests.rs",
+    ],
+    section: "§4, §6, §14",
+  },
+  {
     id: "T-DEVTOOLS",
     title: "DevTools attached to the side panel",
     attacker:

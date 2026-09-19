@@ -69,6 +69,7 @@
 - age encryption with an SSH key you already have - import an `ssh-ed25519` or `ssh-rsa` key and encrypt/decrypt [age](https://age-encryption.org/) files (binary or armored), cross-checked against the Go `age` CLI. Import only (the app never generates SSH keys); encrypt/decrypt only (age has no signing). Native `age1…` keys are out of scope, and ECDSA, DSA and FIDO `sk-*` keys are rejected
 - Right-click context menu on selected text
 - Auto-lock on inactivity, panel close, or per-operation (never-cache mode)
+- Optional: unlock keys with the vault - the one passkey prompt that opens the vault also unlocks every key protected by it (off by default)
 - Optional Chrome sync or local-only storage
 
 ## Security model

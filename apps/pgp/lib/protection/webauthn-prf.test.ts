@@ -57,8 +57,12 @@ class FakeCredential {
   }
 }
 
-let create: ReturnType<typeof vi.fn<(o: CredentialCreationOptions) => Promise<unknown>>>;
-let get: ReturnType<typeof vi.fn<(o: CredentialRequestOptions) => Promise<unknown>>>;
+let create: ReturnType<
+  typeof vi.fn<(o: CredentialCreationOptions) => Promise<unknown>>
+>;
+let get: ReturnType<
+  typeof vi.fn<(o: CredentialRequestOptions) => Promise<unknown>>
+>;
 
 /** Byte length of a `BufferSource`, which is either an ArrayBuffer or a
  *  view over one -- both carry `byteLength`. */
@@ -123,6 +127,70 @@ afterEach(() => {
 
 // ── random material ──────────────────────────────────────────────────
 
+describe("authenticateAndGetPrf with a second salt", () => {
+  // "Unlock keys with the vault" re-seals a key under the master salt
+  // off the key's OWN prompt, which is only possible because the PRF
+  // extension evaluates two salts per ceremony. Drop the `second`
+  // request and the re-seal silently never happens; return a `second`
+  // that was not asked for and a caller might zero the wrong thing.
+  const FIRST = new Uint8Array(32).fill(0xa1).buffer;
+  const SECOND = new Uint8Array(32).fill(0xb2).buffer;
+
+  it("requests both salts and returns both outputs", async () => {
+    stubCredentials({
+      get: new FakeCredential(RAW_ID, {
+        prf: { results: { first: FIRST, second: SECOND } },
+      }),
+    });
+
+    const { prfOutput, secondOutput } = await authenticateAndGetPrf(
+      toBase64url(RAW_ID),
+      new Uint8Array(32).fill(1),
+      undefined,
+      new Uint8Array(32).fill(2),
+    );
+
+    const evalArg = getArgs().extensions?.prf?.eval;
+    expect(evalArg && byteLength(evalArg.first)).toBe(32);
+    expect(evalArg?.second && byteLength(evalArg.second)).toBe(32);
+    expect([...prfOutput]).toEqual(new Array(32).fill(0xa1));
+    expect(secondOutput && [...secondOutput]).toEqual(new Array(32).fill(0xb2));
+  });
+
+  it("requests only `first` and returns no `secondOutput` when no second salt is given", async () => {
+    stubCredentials({
+      get: new FakeCredential(RAW_ID, {
+        prf: { results: { first: FIRST, second: SECOND } },
+      }),
+    });
+
+    const result = await authenticateAndGetPrf(
+      toBase64url(RAW_ID),
+      new Uint8Array(32).fill(1),
+    );
+
+    expect(getArgs().extensions?.prf?.eval?.second).toBeUndefined();
+    expect(result).not.toHaveProperty("secondOutput");
+  });
+
+  it("still unlocks when the authenticator ignores the second salt", async () => {
+    // A re-seal that cannot happen must not cost the user the unlock.
+    stubCredentials({
+      get: new FakeCredential(RAW_ID, { prf: { results: { first: FIRST } } }),
+    });
+
+    const result = await authenticateAndGetPrf(
+      toBase64url(RAW_ID),
+      new Uint8Array(32).fill(1),
+      undefined,
+      new Uint8Array(32).fill(2),
+    );
+
+    expect([...result.prfOutput]).toEqual(new Array(32).fill(0xa1));
+    expect(result.secondOutput).toBeUndefined();
+  });
+});
+
 describe("random material", () => {
   it.each([
     ["generatePrfSalt", generatePrfSalt],
@@ -182,9 +250,7 @@ describe("registerPasskey", () => {
     // A security key that does only RS256 must still be usable.
     stubCredentials({ create: credential() });
     await registerPasskey();
-    expect(
-      createArgs().pubKeyCredParams.map((p) => p.alg),
-    ).toEqual([-7, -257]);
+    expect(createArgs().pubKeyCredParams.map((p) => p.alg)).toEqual([-7, -257]);
   });
 
   it("returns the credential id base64url-encoded", async () => {
@@ -222,9 +288,7 @@ describe("registerPasskey", () => {
 
     // displayName omitted falls back to the user name, then to a default.
     await registerPasskey("alice@example.com");
-    expect(createArgs(1).user.displayName).toBe(
-      "alice@example.com",
-    );
+    expect(createArgs(1).user.displayName).toBe("alice@example.com");
 
     await registerPasskey();
     expect(createArgs(2).user).toMatchObject({
