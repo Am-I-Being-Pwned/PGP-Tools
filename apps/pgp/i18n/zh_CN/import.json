@@ -1,0 +1,344 @@
+{
+  "import_title": {
+    "message": "导入密钥"
+  },
+  "import_title_update": {
+    "message": "更新密钥"
+  },
+  "import_panel_aria_with_id": {
+    "message": "导入 $keyid$"
+  },
+  "import_failed": {
+    "message": "导入失败"
+  },
+  "import_lookup_failed": {
+    "message": "查找失败"
+  },
+  "import_unreadable": {
+    "message": "这看起来不像我们能读取的密钥。请粘贴 ASCII 装甲格式的 PGP 密钥块或一行 SSH 公钥，或浏览选择密钥文件。"
+  },
+  "import_private_unreadable": {
+    "message": "无法读取该私钥。"
+  },
+  "import_worker_unreachable": {
+    "message": "无法连接到扩展程序的后台工作进程。"
+  },
+  "import_keyserver_not_a_key": {
+    "message": "$host$ 已响应，但返回的内容不是我们能读取的密钥。"
+  },
+  "import_keyserver_multiple_keys": {
+    "message": "$host$ 为此次查找返回了多个密钥。此处仅显示第一个，导入前请核对指纹。"
+  },
+  "import_lookup_invalid": {
+    "message": "这不是 GitHub 用户名、电子邮件地址或密钥指纹。请尝试“octocat”、“alice@example.com”或完整的 40 位指纹。"
+  },
+  "import_no_key": {
+    "message": "没有可导入的密钥。"
+  },
+  "import_enter_passphrase": {
+    "message": "请输入密钥的密码短语。"
+  },
+  "import_default_pgp_name": {
+    "message": "导入的 PGP 密钥"
+  },
+  "import_default_ssh_name": {
+    "message": "导入的 SSH 密钥"
+  },
+  "import_flagged_toast_one": {
+    "message": "$count$ 个密钥使用弱加密算法 (SHA-1)，已被标记，请查看联系人上的警告。"
+  },
+  "import_flagged_toast_other": {
+    "message": "$count$ 个密钥使用弱加密算法 (SHA-1)，已被标记，请查看联系人上的警告。"
+  },
+  "import_added_contacts_one": {
+    "message": "已添加 $count$ 个联系人"
+  },
+  "import_added_contacts_other": {
+    "message": "已添加 $count$ 个联系人"
+  },
+  "import_updated_contacts_one": {
+    "message": "已更新 $count$ 个联系人"
+  },
+  "import_updated_contacts_other": {
+    "message": "已更新 $count$ 个联系人"
+  },
+  "import_paste_label": {
+    "message": "粘贴密钥"
+  },
+  "import_paste_placeholder": {
+    "message": "按 $shortcut$ 粘贴密钥"
+  },
+  "import_paste_hint": {
+    "message": "请粘贴完整的密钥块，密钥太长，无法手动输入。"
+  },
+  "import_reading": {
+    "message": "正在读取密钥…"
+  },
+  "import_drop_here": {
+    "message": "将密钥文件拖放到此处"
+  },
+  "import_browse": {
+    "message": "浏览密钥文件"
+  },
+  "import_lookup_label": {
+    "message": "或查找某人"
+  },
+  "import_lookup_placeholder": {
+    "message": "GitHub 用户名、电子邮件或指纹"
+  },
+  "import_lookup_button": {
+    "message": "查找"
+  },
+  "import_source_help": {
+    "message": "公钥会添加为联系人。私钥仅保留在此设备上，下一步你将选择如何保护它。"
+  },
+  "import_label_field": {
+    "message": "标签"
+  },
+  "import_optional": {
+    "message": "可选"
+  },
+  "import_label_placeholder": {
+    "message": "例如：我的扩展程序"
+  },
+  "import_passphrase_label": {
+    "message": "此密钥受密码短语保护"
+  },
+  "import_passphrase_placeholder": {
+    "message": "密钥密码短语"
+  },
+  "import_submit": {
+    "message": "导入"
+  },
+  "import_status_duplicate": {
+    "message": "已在你的密钥中"
+  },
+  "import_status_duplicate_added": {
+    "message": "你已于 $date$ 添加过它，且没有任何变化。"
+  },
+  "import_status_update": {
+    "message": "更新你已有的密钥"
+  },
+  "import_status_added_on": {
+    "message": "添加于 $date$。"
+  },
+  "import_action_replace_stored": {
+    "message": "替换已存储的密钥"
+  },
+  "import_action_update_contact": {
+    "message": "更新联系人"
+  },
+  "import_action_import_contact": {
+    "message": "导入联系人"
+  },
+  "import_chip_pgp_private_title": {
+    "message": "包含私钥材料，下一步你将为其设置保护"
+  },
+  "import_chip_pgp_public_title": {
+    "message": "他人的密钥，将作为联系人导入"
+  },
+  "import_chip_ssh_private": {
+    "message": "SSH 密钥"
+  },
+  "import_chip_ssh_private_title": {
+    "message": "一个 OpenSSH 私钥，下一步你将为其设置保护"
+  },
+  "import_chip_ssh_public": {
+    "message": "SSH 公钥"
+  },
+  "import_chip_ssh_public_title": {
+    "message": "他人的 SSH 密钥，将作为 age 收件人导入"
+  },
+  "import_chip_crx": {
+    "message": "扩展程序密钥"
+  },
+  "import_chip_crx_title": {
+    "message": "用于 Chrome 扩展程序 (.crx) 的 RSA 签名密钥"
+  },
+  "import_group_keys_chip_one": {
+    "message": "$count$ 个密钥"
+  },
+  "import_group_keys_chip_other": {
+    "message": "$count$ 个密钥"
+  },
+  "import_group_keys_chip_title": {
+    "message": "消息会加密给其中所有密钥；任一密钥都可以解密"
+  },
+  "import_unknown_name": {
+    "message": "未知"
+  },
+  "import_group_label": {
+    "message": "合并为一个联系人"
+  },
+  "import_group_placeholder": {
+    "message": "例如：Alice（所有设备）"
+  },
+  "import_group_help_one": {
+    "message": "这些密钥的名称不一致，因此会作为 $count$ 个独立联系人导入。在此处命名可将它们合并为同一个人：消息会加密给全部 $count$ 个密钥，其任何一台设备都能读取。"
+  },
+  "import_group_help_other": {
+    "message": "这些密钥的名称不一致，因此会作为 $count$ 个独立联系人导入。在此处命名可将它们合并为同一个人：消息会加密给全部 $count$ 个密钥，其任何一台设备都能读取。"
+  },
+  "import_github_fetched_note": {
+    "message": "获取自 github.com/$user$.keys。消息会加密给上面列出的每个密钥，因此其任何一台设备都能读取。"
+  },
+  "import_github_rejected_heading_one": {
+    "message": "$count$ 个已发布的密钥无法使用"
+  },
+  "import_github_rejected_heading_other": {
+    "message": "$count$ 个已发布的密钥无法使用"
+  },
+  "import_ssh_private_note": {
+    "message": "一个与 age 配合使用的 OpenSSH 私钥。导入时会从密钥本身读取其指纹。它不能签名（age 没有签名功能），也不能以明文导出。"
+  },
+  "import_crx_note": {
+    "message": "用于 Chrome 扩展程序 (.crx) 的 RSA 签名密钥。导入时会从密钥本身计算出其扩展程序 ID。"
+  },
+  "import_rejected_generic": {
+    "message": "此密钥无法导入。"
+  },
+  "import_importing": {
+    "message": "正在导入…"
+  },
+  "import_as_one_contact": {
+    "message": "导入为一个联系人"
+  },
+  "import_n_contacts_one": {
+    "message": "导入 $count$ 个联系人"
+  },
+  "import_n_contacts_other": {
+    "message": "导入 $count$ 个联系人"
+  },
+  "import_reveal": {
+    "message": "在密钥中显示"
+  },
+  "import_dropzone_text": {
+    "message": "拖放、粘贴或浏览选择公钥"
+  },
+  "import_dropzone_browse": {
+    "message": "浏览文件"
+  },
+  "import_reject_no_public_key": {
+    "message": "此密钥块不包含可用的公钥。"
+  },
+  "import_reject_expired": {
+    "message": "此密钥已于 $date$ 过期。请向所有者索取其当前密钥。"
+  },
+  "import_reject_unusable": {
+    "message": "此公钥没有可用的加密密钥或签名密钥。"
+  },
+  "import_reject_ssh_generic": {
+    "message": "此 SSH 密钥不能用于加密。"
+  },
+  "import_change_no_expiry": {
+    "message": "不再过期"
+  },
+  "import_change_new_expiry": {
+    "message": "新的过期时间：$date$"
+  },
+  "import_change_new_user_ids_one": {
+    "message": "$count$ 个新用户 ID"
+  },
+  "import_change_new_user_ids_other": {
+    "message": "$count$ 个新用户 ID"
+  },
+  "import_change_new_subkeys_one": {
+    "message": "$count$ 个新子密钥"
+  },
+  "import_change_new_subkeys_other": {
+    "message": "$count$ 个新子密钥"
+  },
+  "import_change_reissued": {
+    "message": "该密钥已重新签发"
+  },
+  "import_change_keys_added_one": {
+    "message": "新增 $count$ 个密钥"
+  },
+  "import_change_keys_added_other": {
+    "message": "新增 $count$ 个密钥"
+  },
+  "import_change_keys_removed_one": {
+    "message": "移除 $count$ 个密钥"
+  },
+  "import_change_keys_removed_other": {
+    "message": "移除 $count$ 个密钥"
+  },
+  "import_crx_headline": {
+    "message": "Chrome 扩展程序签名密钥"
+  },
+  "import_ssh_headline": {
+    "message": "SSH 密钥"
+  },
+  "import_ssh_private_headline": {
+    "message": "SSH 私钥"
+  },
+  "import_group_proposal_label_one": {
+    "message": "$count$ 个 SSH 密钥"
+  },
+  "import_group_proposal_label_other": {
+    "message": "$count$ 个 SSH 密钥"
+  },
+  "import_github_none_usable": {
+    "message": "已发布的密钥中没有一个可用于加密。"
+  },
+  "import_github_omitted_line_one": {
+    "message": "+$count$ 个其他已发布的密钥"
+  },
+  "import_github_omitted_line_other": {
+    "message": "+$count$ 个其他已发布的密钥"
+  },
+  "import_github_omitted_reason": {
+    "message": "此导入每个账号最多获取 $max$ 个密钥，并会跳过任何长度异常的单个密钥。$username$ 已发布的密钥中有 $count$ 个未获取，如有需要，请在此处粘贴。"
+  },
+  "import_retry_minute": {
+    "message": "请在一分钟后重试。"
+  },
+  "import_retry_minutes_one": {
+    "message": "请在约 $count$ 分钟后重试。"
+  },
+  "import_retry_minutes_other": {
+    "message": "请在约 $count$ 分钟后重试。"
+  },
+  "import_retry_hours_one": {
+    "message": "请在约 $count$ 小时后重试。"
+  },
+  "import_retry_hours_other": {
+    "message": "请在约 $count$ 小时后重试。"
+  },
+  "import_github_invalid_username": {
+    "message": "这不是 GitHub 用户名。请使用个人资料网址中的账号名，例如 github.com/octocat 对应“octocat”。"
+  },
+  "import_github_not_found": {
+    "message": "没有名为“$username$”的 GitHub 账号。请检查拼写，应使用个人资料网址中的名称。"
+  },
+  "import_github_no_keys": {
+    "message": "$username$ 尚未在 GitHub 上发布任何 SSH 密钥。请让对方在 github.com/settings/keys 添加一个，或改为在此处粘贴其密钥。"
+  },
+  "import_github_offline": {
+    "message": "无法连接到 github.com。请检查网络连接后重试。"
+  },
+  "import_github_rate_limited": {
+    "message": "GitHub 正在对此网络限流。限制按 IP 地址计算，因此同一网络上的其他人也可能用尽额度。"
+  },
+  "import_github_server_error": {
+    "message": "GitHub 暂时无法响应。请稍后重试。"
+  },
+  "import_keyserver_invalid_query": {
+    "message": "这不是电子邮件地址或密钥指纹。请使用密钥发布时所用的地址，或粘贴完整的 40 位指纹。"
+  },
+  "import_keyserver_not_found_email": {
+    "message": "$host$ 上没有 $subject$ 的密钥。该服务器只在密钥所有者确认后才会公开地址，所以对方可能有密钥但此次查找找不到。请直接向对方索取，或按指纹查找。"
+  },
+  "import_keyserver_not_found_fingerprint": {
+    "message": "$host$ 上没有指纹为 $subject$ 的密钥。请与你拿到的指纹核对，错一个字符都会找不到。"
+  },
+  "import_keyserver_offline": {
+    "message": "无法连接到 $host$。请检查网络连接后重试。"
+  },
+  "import_keyserver_rate_limited": {
+    "message": "$host$ 正在对此网络限流。"
+  },
+  "import_keyserver_server_error": {
+    "message": "$host$ 暂时无法响应。请稍后重试。"
+  }
+}

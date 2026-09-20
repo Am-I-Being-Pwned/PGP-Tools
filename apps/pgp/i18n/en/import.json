@@ -1,0 +1,458 @@
+{
+  "import_title": {
+    "message": "Import key",
+    "description": "Import slide-over panel header title and aria-label, shown while a key is being pasted or previewed for the first time."
+  },
+  "import_title_update": {
+    "message": "Update key",
+    "description": "Import slide-over panel header title when the previewed key updates one that is already stored."
+  },
+  "import_panel_aria_with_id": {
+    "message": "Import $keyid$",
+    "description": "aria-label of the standalone preview panel (dev harness). $keyid$ is a key fingerprint, not translated."
+  },
+  "import_failed": {
+    "message": "Import failed",
+    "description": "Fallback error text on the import panel when an import throws with no message of its own."
+  },
+  "import_lookup_failed": {
+    "message": "Lookup failed",
+    "description": "Fallback error text when a GitHub / keyserver lookup throws with no message of its own."
+  },
+  "import_unreadable": {
+    "message": "That doesn't look like a key we can read. Paste an armored PGP key block or an SSH public key line, or browse for a key file.",
+    "description": "Error under the import source step when the pasted/dropped text parses as no key at all."
+  },
+  "import_private_unreadable": {
+    "message": "Could not read that private key.",
+    "description": "Error on the import source step when a private key was detected but its secret half could not be extracted."
+  },
+  "import_worker_unreachable": {
+    "message": "Couldn't reach the extension's background worker.",
+    "description": "Error on the import source step when a lookup request to the extension's background service worker gets no reply."
+  },
+  "import_keyserver_not_a_key": {
+    "message": "$host$ answered, but what it sent isn't a key we can read.",
+    "description": "Error after a keyserver lookup whose response was not a parseable certificate. $host$ is the keyserver hostname (keys.openpgp.org)."
+  },
+  "import_keyserver_multiple_keys": {
+    "message": "$host$ returned more than one key for this lookup. Only the first is shown - check the fingerprint before importing it.",
+    "description": "Warning toast after a keyserver lookup that returned several keys. $host$ is the keyserver hostname (keys.openpgp.org)."
+  },
+  "import_lookup_invalid": {
+    "message": "That isn't a GitHub username, an email address or a key fingerprint. Try “octocat”, “alice@example.com”, or the full 40-character fingerprint.",
+    "description": "Error under the lookup field when the typed text is neither a GitHub username, an email address nor a fingerprint. Keep the example values as they are."
+  },
+  "import_no_key": {
+    "message": "No key to import.",
+    "description": "Error on the protect step when the import is submitted but no key material is held."
+  },
+  "import_enter_passphrase": {
+    "message": "Enter the key's passphrase.",
+    "description": "Error on the protect step when the source key is passphrase-protected and the passphrase field is empty."
+  },
+  "import_default_pgp_name": {
+    "message": "Imported PGP Key",
+    "description": "Fallback name stored for an imported PGP private key that carries no user ID."
+  },
+  "import_default_ssh_name": {
+    "message": "Imported SSH key",
+    "description": "Fallback name stored for an imported SSH private key that carries no comment."
+  },
+  "import_flagged_toast_one": {
+    "message": "$count$ key uses weak crypto (SHA-1) and was flagged - see the warning on the contact.",
+    "description": "Warning toast after importing contacts, when $count$ of them carry a security warning. SHA-1 is an algorithm name."
+  },
+  "import_flagged_toast_other": {
+    "message": "$count$ keys use weak crypto (SHA-1) and were flagged - see the warning on the contact.",
+    "description": "Warning toast after importing contacts, when $count$ of them carry a security warning. SHA-1 is an algorithm name."
+  },
+  "import_added_contacts_one": {
+    "message": "Added $count$ contact",
+    "description": "Success toast after a bulk import; $count$ is how many new contacts were written."
+  },
+  "import_added_contacts_other": {
+    "message": "Added $count$ contacts",
+    "description": "Success toast after a bulk import; $count$ is how many new contacts were written."
+  },
+  "import_updated_contacts_one": {
+    "message": "$count$ contact updated",
+    "description": "Info toast after a bulk import; $count$ is how many existing contacts were refreshed."
+  },
+  "import_updated_contacts_other": {
+    "message": "$count$ contacts updated",
+    "description": "Info toast after a bulk import; $count$ is how many existing contacts were refreshed."
+  },
+  "import_paste_label": {
+    "message": "Paste a key",
+    "description": "aria-label of the one-line paste target box on the import source step."
+  },
+  "import_paste_placeholder": {
+    "message": "Paste a key with $shortcut$",
+    "description": "Placeholder of the paste target box. $shortcut$ is the keyboard shortcut (\"⌘V\" or \"Ctrl+V\"), not translated."
+  },
+  "import_paste_hint": {
+    "message": "Paste the whole key block - a key is too long to type out.",
+    "description": "Hint shown under the paste box when the user starts typing into it instead of pasting."
+  },
+  "import_reading": {
+    "message": "Reading key...",
+    "description": "Status text in the drop zone while pasted or dropped text is being parsed."
+  },
+  "import_drop_here": {
+    "message": "Drop a key file here",
+    "description": "Drop zone caption on the import source step."
+  },
+  "import_browse": {
+    "message": "Browse for key file",
+    "description": "Small outline button in the drop zone that opens the file picker."
+  },
+  "import_lookup_label": {
+    "message": "Or look someone up",
+    "description": "Label above the lookup field (GitHub username / email / fingerprint) on the import source step."
+  },
+  "import_lookup_placeholder": {
+    "message": "GitHub username, email, or fingerprint",
+    "description": "Placeholder of the lookup field on the import source step."
+  },
+  "import_lookup_button": {
+    "message": "Look up",
+    "description": "Button next to the lookup field that runs the GitHub / keyserver lookup. Short."
+  },
+  "import_source_help": {
+    "message": "Public keys are added as contacts. A private key stays on this device - you'll choose how it's protected next.",
+    "description": "Muted help text at the bottom of the import source step."
+  },
+  "import_label_field": {
+    "message": "Label",
+    "description": "Field label on the protect step for naming an imported Chrome extension signing key."
+  },
+  "import_optional": {
+    "message": "optional",
+    "description": "Lower-case suffix after a field label meaning the field may be left blank (\"Label optional\", \"Group as one contact optional\")."
+  },
+  "import_label_placeholder": {
+    "message": "e.g. My Extension",
+    "description": "Placeholder of the Label field for a Chrome extension signing key."
+  },
+  "import_passphrase_label": {
+    "message": "This key is protected with a passphrase",
+    "description": "Label above the passphrase field on the protect step, shown when the source key is encrypted."
+  },
+  "import_passphrase_placeholder": {
+    "message": "Key passphrase",
+    "description": "Placeholder of the passphrase field on the protect step."
+  },
+  "import_submit": {
+    "message": "Import",
+    "description": "Submit button of the protect step. Short, button width."
+  },
+  "import_status_duplicate": {
+    "message": "Already in your keys",
+    "description": "Green strip heading on the preview when the key is already stored and unchanged."
+  },
+  "import_status_duplicate_added": {
+    "message": "You added it on $date$, and nothing about it has changed.",
+    "description": "Line under the 'Already in your keys' heading. $date$ is a localised long date."
+  },
+  "import_status_update": {
+    "message": "Updates the key you already have",
+    "description": "Blue strip heading on the preview when the key updates a stored one."
+  },
+  "import_status_added_on": {
+    "message": "Added on $date$.",
+    "description": "Line under the 'Updates the key you already have' heading. $date$ is a localised long date."
+  },
+  "import_action_replace_stored": {
+    "message": "Replace stored key",
+    "description": "Preview primary button for a private key that replaces one already stored. Button width."
+  },
+  "import_action_update_contact": {
+    "message": "Update contact",
+    "description": "Preview primary button for a public key that updates an existing contact. Button width."
+  },
+  "import_action_import_contact": {
+    "message": "Import contact",
+    "description": "Preview primary button for a new public key. Button width."
+  },
+  "import_chip_pgp_private_title": {
+    "message": "Includes secret key material - you'll protect it next",
+    "description": "Tooltip on the 'Private key' chip in the import preview."
+  },
+  "import_chip_pgp_public_title": {
+    "message": "Someone else's key - imported as a contact",
+    "description": "Tooltip on the 'Public key' chip in the import preview."
+  },
+  "import_chip_ssh_private": {
+    "message": "SSH key",
+    "description": "Chip label in the import preview for an OpenSSH private key. Very short."
+  },
+  "import_chip_ssh_private_title": {
+    "message": "An OpenSSH private key - you'll protect it next",
+    "description": "Tooltip on the 'SSH key' chip in the import preview."
+  },
+  "import_chip_ssh_public": {
+    "message": "SSH public key",
+    "description": "Chip label in the import preview for an SSH public key line. Very short."
+  },
+  "import_chip_ssh_public_title": {
+    "message": "Someone else's SSH key - imported as an age recipient",
+    "description": "Tooltip on the 'SSH public key' chip. 'age' is the name of an encryption tool, not translated."
+  },
+  "import_chip_crx": {
+    "message": "Extension key",
+    "description": "Chip label in the import preview for a Chrome extension signing key. Very short."
+  },
+  "import_chip_crx_title": {
+    "message": "An RSA signing key for a Chrome extension (.crx)",
+    "description": "Tooltip on the 'Extension key' chip. RSA and .crx stay as they are."
+  },
+  "import_group_keys_chip_one": {
+    "message": "$count$ key",
+    "description": "Chip in the import preview saying how many keys a multi-key contact holds."
+  },
+  "import_group_keys_chip_other": {
+    "message": "$count$ keys",
+    "description": "Chip in the import preview saying how many keys a multi-key contact holds."
+  },
+  "import_group_keys_chip_title": {
+    "message": "Messages are encrypted to all of them; any one can decrypt",
+    "description": "Tooltip on the key-count chip of a multi-key contact in the import preview."
+  },
+  "import_unknown_name": {
+    "message": "Unknown",
+    "description": "Headline of the import preview when the key carries no user ID at all."
+  },
+  "import_group_label": {
+    "message": "Group as one contact",
+    "description": "Field label on the import preview asking for a name to file several pasted SSH keys under as one contact."
+  },
+  "import_group_placeholder": {
+    "message": "e.g. Alice (all machines)",
+    "description": "Placeholder of the 'Group as one contact' field."
+  },
+  "import_group_help_one": {
+    "message": "These keys don't agree on a name, so they're imported as $count$ separate contact. Name them here to keep them together as one person - messages are then encrypted to all $count$ keys, and any one of their machines can read them.",
+    "description": "Help text under the 'Group as one contact' field. $count$ is how many keys were pasted (always 2 or more in practice)."
+  },
+  "import_group_help_other": {
+    "message": "These keys don't agree on a name, so they're imported as $count$ separate contacts. Name them here to keep them together as one person - messages are then encrypted to all $count$ keys, and any one of their machines can read them.",
+    "description": "Help text under the 'Group as one contact' field. $count$ is how many keys were pasted."
+  },
+  "import_github_fetched_note": {
+    "message": "Fetched from github.com/$user$.keys. Messages are encrypted to every key listed above, so any one of their machines can read them.",
+    "description": "Note on the import preview for keys fetched from GitHub. $user$ is the GitHub username; 'github.com/$user$.keys' is a URL and stays as is."
+  },
+  "import_github_rejected_heading_one": {
+    "message": "$count$ published key can't be used",
+    "description": "Amber heading on the import preview above the list of fetched GitHub keys the engine refused."
+  },
+  "import_github_rejected_heading_other": {
+    "message": "$count$ published keys can't be used",
+    "description": "Amber heading on the import preview above the list of fetched GitHub keys the engine refused."
+  },
+  "import_ssh_private_note": {
+    "message": "An OpenSSH private key, used with age. Its fingerprint is read from the key itself when you import it. It can't sign - age has no signatures - and it can't be exported in the clear.",
+    "description": "Explanatory note on the import preview for an OpenSSH private key. 'age' is the name of an encryption tool, not translated."
+  },
+  "import_crx_note": {
+    "message": "An RSA signing key for a Chrome extension (.crx). Its extension ID is worked out from the key itself when you import it.",
+    "description": "Explanatory note on the import preview for a Chrome extension signing key."
+  },
+  "import_rejected_generic": {
+    "message": "This key can't be imported.",
+    "description": "Fallback reason above the preview footer when a key is rejected and no specific reason is known."
+  },
+  "import_importing": {
+    "message": "Importing...",
+    "description": "Preview primary button text while the import is running."
+  },
+  "import_as_one_contact": {
+    "message": "Import as one contact",
+    "description": "Preview primary button when the user has named a group of pasted SSH keys. Button width."
+  },
+  "import_n_contacts_one": {
+    "message": "Import $count$ contact",
+    "description": "Preview primary button when pasted SSH keys are imported separately; $count$ is how many contacts result. Button width."
+  },
+  "import_n_contacts_other": {
+    "message": "Import $count$ contacts",
+    "description": "Preview primary button when pasted SSH keys are imported separately; $count$ is how many contacts result. Button width."
+  },
+  "import_reveal": {
+    "message": "Show it in your keys",
+    "description": "Preview button for a key that is already stored: closes the panel and highlights the key in the list."
+  },
+  "import_dropzone_text": {
+    "message": "Drop, paste, or browse for public keys",
+    "description": "Caption of the small contacts drop zone at the bottom of the keys list."
+  },
+  "import_dropzone_browse": {
+    "message": "Browse files",
+    "description": "Button in the contacts drop zone that opens the file picker. Short."
+  },
+  "import_reject_no_public_key": {
+    "message": "This block contains no usable public key.",
+    "description": "Reason a pasted armored block cannot be imported as a contact: it parsed to no certificate."
+  },
+  "import_reject_expired": {
+    "message": "This key expired on $date$. Ask the owner for their current key.",
+    "description": "Reason a public key cannot be imported as a contact. $date$ is a localised long date."
+  },
+  "import_reject_unusable": {
+    "message": "This public key has no usable encryption or signing key.",
+    "description": "Reason a public key cannot be imported as a contact: no live subkey for either purpose."
+  },
+  "import_reject_ssh_generic": {
+    "message": "This SSH key can't be used for encryption.",
+    "description": "Fallback reason when the SSH engine refuses a key without giving a message."
+  },
+  "import_change_no_expiry": {
+    "message": "no longer expires",
+    "description": "One line in the 'what changed' list of the update preview: the new certificate has no expiry. Lower-case sentence fragment."
+  },
+  "import_change_new_expiry": {
+    "message": "new expiry: $date$",
+    "description": "One line in the 'what changed' list of the update preview. $date$ is a localised long date. Lower-case sentence fragment."
+  },
+  "import_change_new_user_ids_one": {
+    "message": "$count$ new user ID",
+    "description": "One line in the 'what changed' list of the update preview: user IDs the stored key lacks."
+  },
+  "import_change_new_user_ids_other": {
+    "message": "$count$ new user IDs",
+    "description": "One line in the 'what changed' list of the update preview: user IDs the stored key lacks."
+  },
+  "import_change_new_subkeys_one": {
+    "message": "$count$ new subkey",
+    "description": "One line in the 'what changed' list of the update preview: subkeys the stored key lacks."
+  },
+  "import_change_new_subkeys_other": {
+    "message": "$count$ new subkeys",
+    "description": "One line in the 'what changed' list of the update preview: subkeys the stored key lacks."
+  },
+  "import_change_reissued": {
+    "message": "The key has been re-issued",
+    "description": "The only line in the 'what changed' list when the certificate differs but nothing displayable changed."
+  },
+  "import_change_keys_added_one": {
+    "message": "$count$ key added",
+    "description": "One line in the 'what changed' list when a re-fetched GitHub contact gained keys."
+  },
+  "import_change_keys_added_other": {
+    "message": "$count$ keys added",
+    "description": "One line in the 'what changed' list when a re-fetched GitHub contact gained keys."
+  },
+  "import_change_keys_removed_one": {
+    "message": "$count$ key removed",
+    "description": "One line in the 'what changed' list when a re-fetched GitHub contact lost keys."
+  },
+  "import_change_keys_removed_other": {
+    "message": "$count$ keys removed",
+    "description": "One line in the 'what changed' list when a re-fetched GitHub contact lost keys."
+  },
+  "import_crx_headline": {
+    "message": "Chrome extension signing key",
+    "description": "Headline name shown in the preview for a Chrome extension signing key, which has no identity of its own."
+  },
+  "import_ssh_headline": {
+    "message": "SSH key",
+    "description": "Headline name shown in the preview for an SSH public key line that carries no comment."
+  },
+  "import_ssh_private_headline": {
+    "message": "SSH private key",
+    "description": "Headline name shown in the preview for an OpenSSH private key before it is imported."
+  },
+  "import_group_proposal_label_one": {
+    "message": "$count$ SSH key",
+    "description": "Headline of the preview for several pasted SSH keys the user has not named yet. $count$ is how many."
+  },
+  "import_group_proposal_label_other": {
+    "message": "$count$ SSH keys",
+    "description": "Headline of the preview for several pasted SSH keys the user has not named yet. $count$ is how many."
+  },
+  "import_github_none_usable": {
+    "message": "None of the published keys can be used for encryption.",
+    "description": "Rejection reason when every key a GitHub account publishes was refused for differing reasons."
+  },
+  "import_github_omitted_line_one": {
+    "message": "+$count$ more published key",
+    "description": "Shown in place of a key line on the preview when the fetch cap held back $count$ of the account's keys."
+  },
+  "import_github_omitted_line_other": {
+    "message": "+$count$ more published keys",
+    "description": "Shown in place of a key line on the preview when the fetch cap held back $count$ of the account's keys."
+  },
+  "import_github_omitted_reason": {
+    "message": "This import takes at most $max$ keys per account, and skips any single key that is implausibly long. $count$ of $username$'s published keys weren't fetched - paste one here if you need it.",
+    "description": "Reason under the '+N more published keys' line. $max$ is the per-account cap (a number), $count$ how many were skipped, $username$ the GitHub account name."
+  },
+  "import_retry_minute": {
+    "message": "Try again in a minute.",
+    "description": "Appended to a rate-limit error when the limit lifts within a minute."
+  },
+  "import_retry_minutes_one": {
+    "message": "Try again in about $count$ minute.",
+    "description": "Appended to a rate-limit error; $count$ is minutes until the limit lifts (2 to 59 in practice)."
+  },
+  "import_retry_minutes_other": {
+    "message": "Try again in about $count$ minutes.",
+    "description": "Appended to a rate-limit error; $count$ is minutes until the limit lifts (2 to 59 in practice)."
+  },
+  "import_retry_hours_one": {
+    "message": "Try again in about $count$ hour.",
+    "description": "Appended to a rate-limit error; $count$ is hours until the limit lifts."
+  },
+  "import_retry_hours_other": {
+    "message": "Try again in about $count$ hours.",
+    "description": "Appended to a rate-limit error; $count$ is hours until the limit lifts."
+  },
+  "import_github_invalid_username": {
+    "message": "That isn't a GitHub username. Use the account name from the profile URL, e.g. “octocat” for github.com/octocat.",
+    "description": "Lookup error when the background worker rejects the username. Keep the example as is."
+  },
+  "import_github_not_found": {
+    "message": "There's no GitHub account called “$username$”. Check the spelling - the name in the profile URL is the one to use.",
+    "description": "Lookup error when GitHub has no such account. $username$ is what the user typed."
+  },
+  "import_github_no_keys": {
+    "message": "$username$ hasn't published any SSH keys on GitHub. Ask them to add one at github.com/settings/keys, or paste their key here instead.",
+    "description": "Amber notice (not an error) when the GitHub account exists but publishes no SSH keys. $username$ is the account name; github.com/settings/keys is a URL."
+  },
+  "import_github_offline": {
+    "message": "Couldn't reach github.com. Check your connection and try again.",
+    "description": "Lookup error when github.com could not be reached."
+  },
+  "import_github_rate_limited": {
+    "message": "GitHub is rate-limiting this network. The limit is counted per IP address, so it can be used up by other people on the same connection.",
+    "description": "Lookup error when GitHub returned a rate-limit response. A 'Try again in ...' sentence may follow it."
+  },
+  "import_github_server_error": {
+    "message": "GitHub couldn't answer just now. Try again in a moment.",
+    "description": "Lookup error when GitHub returned a server error."
+  },
+  "import_keyserver_invalid_query": {
+    "message": "That isn't an email address or a key fingerprint. Use the address the key is published under, or paste the full 40-character fingerprint.",
+    "description": "Lookup error when the background worker rejects the keyserver query."
+  },
+  "import_keyserver_not_found_email": {
+    "message": "$host$ has no key for $subject$. It only publishes an address once the key's owner has confirmed it, so they may have a key there that this lookup can't find - ask them for it directly, or look it up by fingerprint.",
+    "description": "Amber notice (not an error) when the keyserver has no key for an email address. $host$ is the keyserver hostname (keys.openpgp.org), $subject$ the address typed."
+  },
+  "import_keyserver_not_found_fingerprint": {
+    "message": "$host$ has no key with the fingerprint $subject$. Check it against the one you were given - a single wrong character is enough.",
+    "description": "Amber notice (not an error) when the keyserver has no key for a fingerprint. $host$ is the keyserver hostname, $subject$ the fingerprint in groups of four."
+  },
+  "import_keyserver_offline": {
+    "message": "Couldn't reach $host$. Check your connection and try again.",
+    "description": "Lookup error when the keyserver could not be reached. $host$ is the keyserver hostname (keys.openpgp.org)."
+  },
+  "import_keyserver_rate_limited": {
+    "message": "$host$ is rate-limiting this network.",
+    "description": "Lookup error when the keyserver returned a rate-limit response. $host$ is the keyserver hostname. A 'Try again in ...' sentence may follow it."
+  },
+  "import_keyserver_server_error": {
+    "message": "$host$ couldn't answer just now. Try again in a moment.",
+    "description": "Lookup error when the keyserver returned a server error. $host$ is the keyserver hostname."
+  }
+}

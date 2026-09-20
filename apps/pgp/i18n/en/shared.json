@@ -1,0 +1,426 @@
+{
+  "shared_security_preset": {
+    "message": "Security preset",
+    "description": "Settings row label that opens the security presets subpage; also the aria-label of the preset radio group"
+  },
+  "shared_preset_bundled_changed": {
+    "message": "A bundled setting was changed",
+    "description": "Settings preset row, small subtitle when the user edited a setting a preset controls"
+  },
+  "shared_preset_none_selected": {
+    "message": "No preset selected",
+    "description": "Settings preset row, small subtitle when the user never picked a preset"
+  },
+  "shared_preset_custom": {
+    "message": "Custom",
+    "description": "Settings preset row value when settings match no preset"
+  },
+  "shared_translation": {
+    "message": "Translation",
+    "description": "Settings row label opening the translation subpage"
+  },
+  "shared_keyboard_shortcuts": {
+    "message": "Keyboard shortcuts",
+    "description": "Settings row label opening the keyboard shortcuts subpage"
+  },
+  "shared_key_storage": {
+    "message": "Key storage",
+    "description": "Settings section heading"
+  },
+  "shared_key_security": {
+    "message": "Key security",
+    "description": "Settings section heading"
+  },
+  "shared_auto_lock_title": {
+    "message": "Auto-lock after inactivity",
+    "description": "Settings toggle label"
+  },
+  "shared_auto_lock_desc": {
+    "message": "Lock unlocked keys after a period of no activity in the panel. The OS lockscreen always locks immediately regardless of this setting.",
+    "description": "Settings toggle description under 'Auto-lock after inactivity'"
+  },
+  "shared_lock_after": {
+    "message": "Lock after",
+    "description": "Label above the auto-lock timeout dropdown"
+  },
+  "shared_minutes_one": {
+    "message": "$count$ minute",
+    "description": "Duration in minutes; auto-lock dropdown option and preset card line. $count$ is the number"
+  },
+  "shared_minutes_other": {
+    "message": "$count$ minutes",
+    "description": "Duration in minutes; auto-lock dropdown option and preset card line. $count$ is the number"
+  },
+  "shared_one_hour": {
+    "message": "1 hour",
+    "description": "Auto-lock dropdown option for 60 minutes"
+  },
+  "shared_lock_tab_away_title": {
+    "message": "Lock when I tab away",
+    "description": "Settings toggle label"
+  },
+  "shared_lock_tab_away_desc": {
+    "message": "Lock the moment the side panel isn't visible (alt-tab, collapsed, or window minimised).",
+    "description": "Settings toggle description under 'Lock when I tab away'"
+  },
+  "shared_never_cache_title": {
+    "message": "Never auto-cache keys",
+    "description": "Settings toggle label"
+  },
+  "shared_never_cache_desc": {
+    "message": "Keys are wiped from memory after each operation. You can still manually unlock keys from the Keys tab.",
+    "description": "Settings toggle description under 'Never auto-cache keys'. 'Keys tab' is the app's Keys tab"
+  },
+  "shared_unlock_with_vault_title": {
+    "message": "Unlock keys with the vault",
+    "description": "Settings toggle label (passkey vaults only)"
+  },
+  "shared_unlock_with_vault_desc": {
+    "message": "The passkey prompt that opens the vault also unlocks your keys. A key that still asks on its own moves over the next time you unlock it. Password-protected keys keep their password.",
+    "description": "Settings toggle description under 'Unlock keys with the vault'"
+  },
+  "shared_downloads": {
+    "message": "Downloads",
+    "description": "Settings section heading"
+  },
+  "shared_auto_download_files_title": {
+    "message": "Auto-download file results",
+    "description": "Settings toggle label"
+  },
+  "shared_auto_download_files_desc": {
+    "message": "Automatically download after encrypting or decrypting files.",
+    "description": "Settings toggle description"
+  },
+  "shared_auto_download_text_title": {
+    "message": "Auto-download text results",
+    "description": "Settings toggle label"
+  },
+  "shared_auto_download_text_desc": {
+    "message": "Automatically download after encrypting or decrypting text.",
+    "description": "Settings toggle description"
+  },
+  "shared_key_discovery": {
+    "message": "Key discovery",
+    "description": "Settings section heading"
+  },
+  "shared_lookup_online_title": {
+    "message": "Look up keys online",
+    "description": "Settings toggle label"
+  },
+  "shared_lookup_online_desc": {
+    "message": "Adds a lookup box to the import screen for GitHub SSH keys and keys.openpgp.org certificates. Off means nothing leaves this device to find a key. Turning it on means a lookup tells that host your IP address and who you searched for - it does not tell them anything about your keys or messages.",
+    "description": "Settings toggle description under 'Look up keys online'. Keep 'GitHub' and 'keys.openpgp.org' as-is; this is a privacy disclosure, translate precisely"
+  },
+  "shared_crx_signing": {
+    "message": "CRX signing",
+    "description": "Settings section heading. CRX is the Chrome extension package format"
+  },
+  "shared_crx_enable_title": {
+    "message": "Enable CRX signing",
+    "description": "Settings toggle label"
+  },
+  "shared_crx_enable_desc": {
+    "message": "Sign Chrome extension packages (.crx) for the Web Store’s Verified CRX Uploads, using a key kept in your vault instead of your build pipeline.",
+    "description": "Settings toggle description. 'Verified CRX Uploads' is a Chrome Web Store feature name"
+  },
+  "shared_crx_how": {
+    "message": "How CRX signing works",
+    "description": "Button opening the CRX signing explainer subpage"
+  },
+  "shared_backup": {
+    "message": "Backup",
+    "description": "Settings section heading"
+  },
+  "shared_backup_desc": {
+    "message": "Export your keys and contacts as a single armored file, or restore from one. Exported private keys are encrypted with a passphrase of your choice.",
+    "description": "Settings backup section description"
+  },
+  "shared_export_all_keys": {
+    "message": "Export all keys",
+    "description": "Backup button and the title of the export-all subpage"
+  },
+  "shared_import_keys": {
+    "message": "Import keys",
+    "description": "Backup button opening the import-all subpage"
+  },
+  "shared_display": {
+    "message": "Display",
+    "description": "Settings section heading"
+  },
+  "shared_advanced_mode": {
+    "message": "Advanced mode",
+    "description": "Settings toggle label"
+  },
+  "shared_advanced_mode_desc": {
+    "message": "Show key fingerprints, algorithms, and output format options.",
+    "description": "Settings description under the advanced mode toggle"
+  },
+  "shared_developer": {
+    "message": "Developer",
+    "description": "Settings section heading, development builds only"
+  },
+  "shared_developer_desc": {
+    "message": "Inspect chrome.storage and dump WASM memory for testing. This section only appears in development builds.",
+    "description": "Settings developer section description, development builds only"
+  },
+  "shared_open_dev_tools": {
+    "message": "Open dev tools",
+    "description": "Button, development builds only"
+  },
+  "shared_import_flow_states": {
+    "message": "Import flow states",
+    "description": "Button opening a preview of import flow screens, development builds only"
+  },
+  "shared_dev_tools": {
+    "message": "Dev tools",
+    "description": "Small link on the unlock screen, development builds only"
+  },
+  "shared_about": {
+    "message": "About",
+    "description": "Settings section heading"
+  },
+  "shared_byline_before": {
+    "message": "A privacy tool by",
+    "description": "Byline in the footer and About section; followed by a link with the brand name 'Am I Being Pwned'. Rendered as '<this> Am I Being Pwned'"
+  },
+  "shared_source_on_github": {
+    "message": "Source on GitHub",
+    "description": "Link text to the source repository in the About section"
+  },
+  "shared_about_extensions": {
+    "message": "Worried about malicious browser extensions? Scan your extensions for data harvesting, session hijacking, and other threats.",
+    "description": "About section promo text for the extension scanner"
+  },
+  "shared_check_extensions": {
+    "message": "Check your extensions",
+    "description": "About section button linking to the extension scanner website"
+  },
+  "shared_delete_history_title": {
+    "message": "Delete saved history?",
+    "description": "Confirmation page title when turning on never-cache would delete stored history"
+  },
+  "shared_delete_history_confirm": {
+    "message": "Turn on and delete history",
+    "description": "Destructive confirm button on the delete-history confirmation page"
+  },
+  "shared_delete_history_body": {
+    "message": "Never-cache also deletes your saved history ($size$). It can't be recovered.",
+    "description": "Body of the delete-history confirmation page. $size$ is a formatted byte size such as '12 KB'"
+  },
+  "shared_sync_quota_error": {
+    "message": "Not enough sync space. Chrome caps synced data at about 100 KB total, so this vault is too large to sync across devices. Keep it on this device, or remove some keys and try again.",
+    "description": "Error shown under the storage location picker when moving the vault to Chrome sync exceeds the sync quota"
+  },
+  "shared_migration_failed": {
+    "message": "Migration failed",
+    "description": "Generic error under the storage location picker when moving the vault fails for an unknown reason"
+  },
+  "shared_preset_applied": {
+    "message": "Preset applied: $title$",
+    "description": "Success toast after applying a security preset. $title$ is the preset's title"
+  },
+  "shared_preset_applied_history_deleted": {
+    "message": "History was deleted and is not restored by Undo.",
+    "description": "Toast description after applying a preset that wiped history. 'Undo' refers to the toast's Undo button"
+  },
+  "shared_undo": {
+    "message": "Undo",
+    "description": "Toast action button that reverts an applied preset"
+  },
+  "shared_commands": {
+    "message": "Commands",
+    "description": "Footer button (next to a keyboard shortcut chip) that opens the command palette; keep short"
+  },
+  "shared_unlock_aria": {
+    "message": "Unlock PGP Tools",
+    "description": "aria-label of the vault unlock screen. 'PGP Tools' is the product name"
+  },
+  "shared_unlock_intro": {
+    "message": "Your keys and contacts are encrypted. Authenticate to continue.",
+    "description": "Vault unlock screen subtitle"
+  },
+  "shared_unlock_with_passkey": {
+    "message": "Unlock with passkey",
+    "description": "Vault unlock screen primary button (passkey vaults)"
+  },
+  "shared_master_password": {
+    "message": "Master password",
+    "description": "Vault unlock screen password field placeholder and aria-label"
+  },
+  "shared_unlocking": {
+    "message": "Unlocking...",
+    "description": "Vault unlock button label while the password is being checked"
+  },
+  "shared_unlock_lost_password": {
+    "message": "If you have lost your password, your encrypted keys and contacts cannot be recovered.",
+    "description": "Vault unlock screen warning at the bottom"
+  },
+  "shared_passkey_failed": {
+    "message": "Passkey authentication failed. Try again.",
+    "description": "Vault unlock screen error"
+  },
+  "shared_wrong_password": {
+    "message": "Wrong password.",
+    "description": "Vault unlock screen error"
+  },
+  "shared_unlock_failed": {
+    "message": "Unlock failed. Try again.",
+    "description": "Vault unlock screen error for an unexpected failure"
+  },
+  "shared_saving": {
+    "message": "Saving...",
+    "description": "Rename page save button label while saving"
+  },
+  "shared_clear_name": {
+    "message": "Clear name",
+    "description": "Rename page link that empties the name field"
+  },
+  "shared_confirm_type_before": {
+    "message": "To confirm, type",
+    "description": "Type-to-confirm prompt, text before the bold expected word. Rendered as '<this> <bold word> <shared_confirm_type_after>'"
+  },
+  "shared_confirm_type_after": {
+    "message": "below",
+    "description": "Type-to-confirm prompt, text after the bold expected word. See shared_confirm_type_before"
+  },
+  "shared_confirm_type_aria": {
+    "message": "Type \"$text$\" to confirm",
+    "description": "aria-label of the type-to-confirm input. $text$ is the exact expected word"
+  },
+  "shared_drop_to_import": {
+    "message": "Drop to import",
+    "description": "Heading of the full-window overlay shown while dragging files over the panel"
+  },
+  "shared_drop_desc": {
+    "message": "Keys are added to your keyring; files and text go to the workspace.",
+    "description": "Subtitle of the drag-and-drop overlay"
+  },
+  "shared_storage_local_label": {
+    "message": "This device only",
+    "description": "Storage location option label (chrome.storage.local)"
+  },
+  "shared_storage_local_desc": {
+    "message": "Your data stays on this computer. If you switch devices or reinstall, you'll need to set up again.",
+    "description": "Storage location option description for 'This device only'"
+  },
+  "shared_storage_sync_label": {
+    "message": "Sync across devices",
+    "description": "Storage location option label (chrome.storage.sync)"
+  },
+  "shared_storage_sync_desc": {
+    "message": "Your data is synced via your Chrome account. Available anywhere you're signed in.",
+    "description": "Storage location option description for 'Sync across devices'"
+  },
+  "shared_something_went_wrong": {
+    "message": "Something went wrong. Try again.",
+    "description": "Fallback error line above subpage footer buttons when an action fails without a message"
+  },
+  "shared_show_technical_details": {
+    "message": "Show technical details",
+    "description": "Toggle link under an error that reveals the raw error text"
+  },
+  "shared_hide_technical_details": {
+    "message": "Hide technical details",
+    "description": "Toggle link under an error that hides the raw error text"
+  },
+  "shared_preset_current": {
+    "message": "Current",
+    "description": "Tiny badge on the preset card the user's settings currently match; keep very short"
+  },
+  "shared_preset_recommended": {
+    "message": "Recommended",
+    "description": "Tiny badge on the recommended preset card; keep very short"
+  },
+  "shared_preset_paranoid_note": {
+    "message": "Your messages stay readable by you - turn off 'Also encrypt to me' later if even that is a risk.",
+    "description": "Extra bullet on the strictest preset's card. 'Also encrypt to me' is the workspace toggle label"
+  },
+  "shared_preset_casual_title": {
+    "message": "Casual",
+    "description": "Security preset title (most convenient); short"
+  },
+  "shared_preset_casual_tagline": {
+    "message": "Convenience first - for keys that guard low-stakes stuff",
+    "description": "One-line tagline under the Casual preset title"
+  },
+  "shared_preset_careful_title": {
+    "message": "Careful",
+    "description": "Security preset title (recommended middle option); short"
+  },
+  "shared_preset_careful_tagline": {
+    "message": "Sensible defaults for real secrets",
+    "description": "One-line tagline under the Careful preset title"
+  },
+  "shared_preset_paranoid_title": {
+    "message": "If this leaks, I'm in trouble",
+    "description": "Security preset title (strictest); deliberately a spoken phrase, keep the tone"
+  },
+  "shared_preset_paranoid_tagline": {
+    "message": "Nothing sticks around. Shortest locks, no history, no cached keys.",
+    "description": "One-line tagline under the strictest preset title"
+  },
+  "shared_bundle_auto_lock_off": {
+    "message": "Auto-lock is off",
+    "description": "Preset card bullet"
+  },
+  "shared_bundle_auto_lock": {
+    "message": "Auto-lock after $duration$",
+    "description": "Preset card bullet. $duration$ is a localised duration such as '10 minutes'"
+  },
+  "shared_bundle_auto_lock_tabs": {
+    "message": "Auto-lock after $duration$ and when you switch tabs",
+    "description": "Preset card bullet when the preset also locks on tab-away. $duration$ is a localised duration such as '2 minutes'"
+  },
+  "shared_bundle_never_cache_on": {
+    "message": "Keys drop from memory after every use",
+    "description": "Preset card bullet"
+  },
+  "shared_bundle_never_cache_off": {
+    "message": "Unlocked keys stay cached until you lock",
+    "description": "Preset card bullet"
+  },
+  "shared_bundle_unlock_on_open_on": {
+    "message": "One passkey prompt unlocks the vault and your keys",
+    "description": "Preset card bullet"
+  },
+  "shared_bundle_unlock_on_open_off": {
+    "message": "Every key asks for its own unlock",
+    "description": "Preset card bullet"
+  },
+  "shared_bundle_history_on": {
+    "message": "Keeps an encrypted history of what you do",
+    "description": "Preset card bullet"
+  },
+  "shared_bundle_history_off": {
+    "message": "No history is kept",
+    "description": "Preset card bullet"
+  },
+  "shared_bundle_discovery_on": {
+    "message": "Keys can be looked up on GitHub and keys.openpgp.org",
+    "description": "Preset card bullet. Keep 'GitHub' and 'keys.openpgp.org' as-is"
+  },
+  "shared_bundle_discovery_off": {
+    "message": "No key lookups - nothing leaves this device to find a key",
+    "description": "Preset card bullet"
+  },
+  "shared_bundle_storage_local": {
+    "message": "Keys stay on this device",
+    "description": "Preset card bullet"
+  },
+  "shared_bundle_storage_sync": {
+    "message": "Keys sync across your Chrome profile",
+    "description": "Preset card bullet"
+  },
+  "shared_bundle_clipboard_one": {
+    "message": "Copied secrets clear from the clipboard after $count$ second",
+    "description": "Preset card bullet. $count$ is the number of seconds"
+  },
+  "shared_bundle_clipboard_other": {
+    "message": "Copied secrets clear from the clipboard after $count$ seconds",
+    "description": "Preset card bullet. $count$ is the number of seconds"
+  },
+  "shared_bundle_no_encrypt_to_self": {
+    "message": "Messages you encrypt are not readable by you afterwards",
+    "description": "Preset card bullet, only when a preset turns encrypt-to-self off"
+  }
+}

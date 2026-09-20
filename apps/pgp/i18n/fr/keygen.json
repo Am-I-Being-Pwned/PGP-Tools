@@ -1,0 +1,359 @@
+{
+  "keygen_title": {
+    "message": "Générer une clé"
+  },
+  "keygen_error_name_required": {
+    "message": "Le nom est obligatoire."
+  },
+  "keygen_error_expiry_required": {
+    "message": "Sélectionnez une date d'expiration."
+  },
+  "keygen_error_expiry_past": {
+    "message": "La date d'expiration doit être dans le futur."
+  },
+  "keygen_error_generation_failed": {
+    "message": "Échec de la génération de la clé"
+  },
+  "keygen_create_heading": {
+    "message": "Créer une nouvelle clé"
+  },
+  "keygen_create_subtitle_crx": {
+    "message": "Une nouvelle clé de signature RSA-2048 pour empaqueter une extension Chrome (.crx)."
+  },
+  "keygen_create_subtitle_pgp": {
+    "message": "Une nouvelle paire de clés OpenPGP pour chiffrer, déchiffrer et signer des messages."
+  },
+  "keygen_type_pgp": {
+    "message": "Clé de messagerie (PGP)"
+  },
+  "keygen_type_crx": {
+    "message": "Extension Chrome (CRX)"
+  },
+  "keygen_label_label": {
+    "message": "Libellé"
+  },
+  "keygen_optional": {
+    "message": "facultatif"
+  },
+  "keygen_label_placeholder": {
+    "message": "ex. Mon extension"
+  },
+  "keygen_name_label": {
+    "message": "Nom *"
+  },
+  "keygen_name_placeholder": {
+    "message": "Votre nom complet"
+  },
+  "keygen_email_label": {
+    "message": "Email"
+  },
+  "keygen_email_placeholder": {
+    "message": "vous@exemple.fr"
+  },
+  "keygen_comment_label": {
+    "message": "Commentaire"
+  },
+  "keygen_comment_placeholder": {
+    "message": "ex. travail, personnel"
+  },
+  "keygen_advanced_options": {
+    "message": "Options avancées"
+  },
+  "keygen_algorithm_label": {
+    "message": "Algorithme"
+  },
+  "keygen_algorithm_hint_ecc": {
+    "message": "Moderne, rapide, clés compactes. Recommandé dans la plupart des cas."
+  },
+  "keygen_algorithm_hint_rsa": {
+    "message": "Largement compatible. Génération de clé plus lente."
+  },
+  "keygen_key_size_label": {
+    "message": "Taille de la clé"
+  },
+  "keygen_key_size_4096": {
+    "message": "4096 bits"
+  },
+  "keygen_expiry_label": {
+    "message": "Expiration de la clé"
+  },
+  "keygen_expiry_never": {
+    "message": "Jamais"
+  },
+  "keygen_expiry_1y": {
+    "message": "1 an"
+  },
+  "keygen_expiry_2y": {
+    "message": "2 ans"
+  },
+  "keygen_expiry_3y": {
+    "message": "3 ans"
+  },
+  "keygen_expiry_custom": {
+    "message": "Date personnalisée"
+  },
+  "keygen_next": {
+    "message": "Suivant"
+  },
+  "keygen_expiry_heading": {
+    "message": "Choisissez une date d'expiration"
+  },
+  "keygen_expiry_subtitle": {
+    "message": "Après cette date, la clé ne pourra plus être utilisée ; vous pourrez toujours en générer une nouvelle."
+  },
+  "keygen_expires_on": {
+    "message": "Expire le $date$"
+  },
+  "keygen_protect_heading": {
+    "message": "Protégez votre clé"
+  },
+  "keygen_protect_subtitle": {
+    "message": "Choisissez comment déverrouiller cette clé lorsque vous l'utilisez."
+  },
+  "keygen_submit_use_passkey": {
+    "message": "Utiliser la clé d'accès"
+  },
+  "keygen_submit_create_passkey": {
+    "message": "Créer une clé d'accès"
+  },
+  "keygen_submit_generate": {
+    "message": "Générer"
+  },
+  "keygen_generating_passkey": {
+    "message": "Suivez l'invite de clé d'accès de votre navigateur..."
+  },
+  "keygen_generating_key": {
+    "message": "Génération de la clé..."
+  },
+  "keygen_generating_rsa_hint": {
+    "message": "La génération d'une clé RSA prend un moment"
+  },
+  "keygen_protection_intro": {
+    "message": "Choisissez comment protéger votre clé privée :"
+  },
+  "keygen_protection_passkey": {
+    "message": "Clé d'accès"
+  },
+  "keygen_protection_recommended": {
+    "message": "Recommandé"
+  },
+  "keygen_protection_passkey_desc": {
+    "message": "Utilisez votre empreinte digitale, votre visage ou une clé de sécurité. Aucun mot de passe à retenir."
+  },
+  "keygen_protection_passkey_unavailable": {
+    "message": "Non disponible dans ce navigateur."
+  },
+  "keygen_protection_reuse_passkey": {
+    "message": "Utiliser la clé d'accès que j'ai déjà configurée"
+  },
+  "keygen_protection_password": {
+    "message": "Mot de passe"
+  },
+  "keygen_protection_password_desc": {
+    "message": "Protéger par un mot de passe. Vous le saisirez à chaque déverrouillage."
+  },
+  "keygen_password_placeholder": {
+    "message": "Mot de passe (8 caractères min.)"
+  },
+  "keygen_confirm_password": {
+    "message": "Confirmer le mot de passe"
+  },
+  "keygen_error_password_short": {
+    "message": "Le mot de passe doit comporter au moins 8 caractères."
+  },
+  "keygen_error_password_mismatch": {
+    "message": "Les mots de passe ne correspondent pas."
+  },
+  "keygen_key_password_placeholder": {
+    "message": "Mot de passe de la clé"
+  },
+  "keygen_error_wrong_password": {
+    "message": "Mot de passe incorrect."
+  },
+  "keygen_error_passkey_failed": {
+    "message": "Échec de l'authentification par clé d'accès."
+  },
+  "keygen_error_key_not_unlocked": {
+    "message": "La clé n'est pas déverrouillée."
+  },
+  "keygen_error_passphrase_short": {
+    "message": "La phrase secrète doit comporter au moins 8 caractères."
+  },
+  "keygen_error_passphrase_mismatch": {
+    "message": "Les phrases secrètes ne correspondent pas."
+  },
+  "keygen_export_failed": {
+    "message": "Échec de l'exportation."
+  },
+  "keygen_export_failed_detail": {
+    "message": "Échec de l'exportation : $message$"
+  },
+  "keygen_export_toast_exported_one": {
+    "message": "$count$ clé exportée"
+  },
+  "keygen_export_toast_exported_other": {
+    "message": "$count$ clés exportées"
+  },
+  "keygen_export_toast_exported_unsafe_one": {
+    "message": "$count$ clé exportée (clés privées NON CHIFFRÉES)"
+  },
+  "keygen_export_toast_exported_unsafe_other": {
+    "message": "$count$ clés exportées (clés privées NON CHIFFRÉES)"
+  },
+  "keygen_export_title": {
+    "message": "Exporter les clés"
+  },
+  "keygen_export_unlock_intro": {
+    "message": "Exporter une clé privée exige de la déverrouiller d'abord. Déverrouillez les clés ci-dessous pour les inclure dans la sauvegarde."
+  },
+  "keygen_export_contacts_included_one": {
+    "message": "$count$ contact sera également inclus (clé publique, aucun déverrouillage nécessaire)."
+  },
+  "keygen_export_contacts_included_other": {
+    "message": "$count$ contacts seront également inclus (clés publiques, aucun déverrouillage nécessaire)."
+  },
+  "keygen_export_skip_locked": {
+    "message": "Ignorer les clés verrouillées et continuer"
+  },
+  "keygen_export_crx_included_one": {
+    "message": "Plus $count$ clé de signature CRX, rechiffrée avec cette phrase secrète pour pouvoir être restaurée sur n'importe quel appareil."
+  },
+  "keygen_export_crx_included_other": {
+    "message": "Plus $count$ clés de signature CRX, rechiffrées avec cette phrase secrète pour pouvoir être restaurées sur n'importe quel appareil."
+  },
+  "keygen_export_still_locked_one": {
+    "message": "$count$ clé est toujours verrouillée et sera exclue."
+  },
+  "keygen_export_still_locked_other": {
+    "message": "$count$ clés sont toujours verrouillées et seront exclues."
+  },
+  "keygen_export_go_back_unlock": {
+    "message": "Revenir en arrière pour déverrouiller"
+  },
+  "keygen_export_still_locked_after": {
+    "message": "."
+  },
+  "keygen_export_passphrase_intro": {
+    "message": "Définissez une phrase secrète pour chiffrer les clés privées exportées (OpenPGP S2K -- importable dans GnuPG et d'autres outils). Quiconque possède cette phrase secrète et le fichier peut déchiffrer vos messages et signer en votre nom."
+  },
+  "keygen_passphrase_placeholder": {
+    "message": "Phrase secrète (8 caractères min.)"
+  },
+  "keygen_confirm_passphrase_placeholder": {
+    "message": "Confirmer la phrase secrète"
+  },
+  "keygen_exporting": {
+    "message": "Exportation..."
+  },
+  "keygen_export_with_passphrase": {
+    "message": "Exporter avec une phrase secrète"
+  },
+  "keygen_export_plaintext_warning_file": {
+    "message": "Exportation en clair. Quiconque lit le fichier téléchargé obtient le contrôle total de chaque clé PGP qu'il contient."
+  },
+  "keygen_export_plaintext_crx_left_out": {
+    "message": "Les clés de signature CRX sont exclues d'une exportation en clair -- utilisez une phrase secrète pour les inclure."
+  },
+  "keygen_type_to_confirm_before": {
+    "message": "Saisissez"
+  },
+  "keygen_confirm_word": {
+    "message": "EXPORTER"
+  },
+  "keygen_type_to_confirm_after": {
+    "message": "pour confirmer :"
+  },
+  "keygen_export_without_passphrase": {
+    "message": "Exporter sans phrase secrète (dangereux)"
+  },
+  "keygen_export": {
+    "message": "Exporter"
+  },
+  "keygen_export_nothing": {
+    "message": "Rien à exporter"
+  },
+  "keygen_copied_encrypted": {
+    "message": "Clé chiffrée copiée (effacée dans 60 s)"
+  },
+  "keygen_copied_plaintext": {
+    "message": "Clé non protégée copiée (effacée dans 30 s)"
+  },
+  "keygen_unlock_gate_passkey": {
+    "message": "Authentifiez-vous avec votre clé d'accès pour copier cette clé."
+  },
+  "keygen_unlock_gate_password": {
+    "message": "Saisissez le mot de passe de la clé pour la copier."
+  },
+  "keygen_unlocking": {
+    "message": "Déverrouillage..."
+  },
+  "keygen_encrypting": {
+    "message": "Chiffrement..."
+  },
+  "keygen_exporter_pgp_title": {
+    "message": "Exporter la clé privée"
+  },
+  "keygen_exporter_pgp_encrypted_blurb": {
+    "message": "Définissez une phrase secrète pour chiffrer la clé exportée. Quiconque possède cette phrase secrète et la clé exportée peut déchiffrer vos messages et signer en votre nom."
+  },
+  "keygen_exporter_pgp_plaintext_blurb": {
+    "message": "Exportation en clair. Quiconque lit votre presse-papiers obtient le contrôle total de cette clé."
+  },
+  "keygen_exporter_crx_title": {
+    "message": "Copier la clé privée CRX"
+  },
+  "keygen_exporter_crx_unlock_passkey": {
+    "message": "Déverrouillez cette clé de signature pour la copier. Authentifiez-vous avec votre clé d'accès."
+  },
+  "keygen_exporter_crx_unlock_password": {
+    "message": "Déverrouillez cette clé de signature pour la copier. Saisissez le mot de passe de la clé."
+  },
+  "keygen_exporter_crx_encrypted_blurb": {
+    "message": "Définissez une phrase secrète pour chiffrer la clé copiée (réimportable dans PGP Tools via Importer les clés). Quiconque possède cette phrase secrète et le bloc copié peut signer des extensions en votre nom."
+  },
+  "keygen_exporter_crx_encrypted_button": {
+    "message": "Copier avec une phrase secrète"
+  },
+  "keygen_exporter_crx_plaintext_blurb": {
+    "message": "Exportation en clair (PKCS#8 PEM brut). Quiconque lit votre presse-papiers obtient le contrôle total de cette clé de signature."
+  },
+  "keygen_exporter_crx_plaintext_button": {
+    "message": "Copier sans phrase secrète (dangereux)"
+  },
+  "keygen_passkey_default_user": {
+    "message": "Protection de clé PGP"
+  },
+  "keygen_passkey_imported_user": {
+    "message": "Clé PGP importée"
+  },
+  "keygen_error_prf_unsupported_authenticator": {
+    "message": "Votre authentificateur ne prend pas en charge PRF. Essayez une autre clé d'accès ou utilisez plutôt un mot de passe."
+  },
+  "keygen_prf_unsupported_intro": {
+    "message": "PRF n'est pas pris en charge par cet authentificateur."
+  },
+  "keygen_prf_unsupported_mac": {
+    "message": "macOS requiert la version 15 ou ultérieure avec le trousseau iCloud."
+  },
+  "keygen_prf_unsupported_windows": {
+    "message": "Windows Hello ne prend pas en charge PRF - utilisez une clé de sécurité (ex. YubiKey)."
+  },
+  "keygen_prf_unsupported_chrome": {
+    "message": "Les clés d'accès du profil Chrome peuvent ne pas prendre en charge PRF - essayez le Gestionnaire de mots de passe Google ou une clé externe."
+  },
+  "keygen_export_summary": {
+    "message": "Télécharge un fichier $ext$ (OpenPGP standard, armé en ASCII) : $private_keys$ sous forme de blocs $private_block$ et $contacts$ sous forme de blocs $public_block$."
+  },
+  "keygen_export_summary_private_keys_one": {
+    "message": "$count$ clé privée déverrouillée"
+  },
+  "keygen_export_summary_private_keys_other": {
+    "message": "$count$ clés privées déverrouillées"
+  },
+  "keygen_export_summary_contacts_one": {
+    "message": "$count$ contact"
+  },
+  "keygen_export_summary_contacts_other": {
+    "message": "$count$ contacts"
+  }
+}

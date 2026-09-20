@@ -1,0 +1,365 @@
+{
+  "settings_crx_info_title": {
+    "message": "CRX 署名"
+  },
+  "settings_crx_info_pitch_title": {
+    "message": "検証済み CRX アップロード"
+  },
+  "settings_crx_info_pitch_p1": {
+    "message": "Chrome Web Store では、拡張機能のすべての更新に、自分だけが持つ鍵での署名を必須にできます。誰かが Web Store アカウントやビルド パイプラインを乗っ取ったとしても、署名鍵がなければ悪意のある更新を配信することはできません。"
+  },
+  "settings_crx_info_pitch_p2": {
+    "message": "これが成り立つのは、鍵が攻撃者の手の届かない場所にある場合だけです。CI のシークレットに置かれた鍵では意味がありません。PGP Tools は鍵を保管庫内で暗号化して保持し、パスワードまたはパスキーの背後で署名のときだけロックを解除します。パイプラインに置くことはありません。"
+  },
+  "settings_crx_info_how_title": {
+    "message": "使い方"
+  },
+  "settings_crx_info_step_1": {
+    "message": "設定でトグルをオンにし、CRX 署名鍵 (RSA-2048) を作成またはインポートします。秘密鍵はここに置いたままにし、エクスポートはバックアップが必要な場合だけにしてください。"
+  },
+  "settings_crx_info_step_2": {
+    "message": "この鍵の$public$を、Chrome Web Store ダッシュボードの $path$ にコピーします。"
+  },
+  "settings_crx_info_term_public": {
+    "message": "公開鍵"
+  },
+  "settings_crx_info_term_dashboard_path": {
+    "message": "パッケージ → 検証済み CRX アップロード"
+  },
+  "settings_crx_info_step_3": {
+    "message": "リリースを作成するには、パッケージ化した拡張機能の $zip$ をワークスペースにドロップして署名します。$save$ を使うと、$crx$ が正しい名前でディスクに直接保存されます (チップをデスクトップにドラッグしても構いません)。それをダッシュボードにアップロードしてください。Chrome は通常の $crx$ のダウンロードを横取りしてインストールしようとするため、ダウンロードではなく保存にしています。"
+  },
+  "settings_crx_info_step_4": {
+    "message": "拡張機能パッケージを確認するには、$crx$ をワークスペースにドロップします。PGP Tools が署名を検証し、そのパッケージが名乗る拡張機能 ID を表示します。"
+  },
+  "settings_crx_info_get_title": {
+    "message": "得られるもの"
+  },
+  "settings_crx_info_get_body": {
+    "message": "この $crx$ は Web Store ダッシュボードにアップロードするための成果物であり、直接インストールできるパッケージではありません。Chrome はストアが署名した拡張機能しかインストールしません。拡張機能をローカルで実行するには、フォルダに対して $load_unpacked$ を使用してください。"
+  },
+  "settings_crx_info_term_load_unpacked": {
+    "message": "パッケージ化されていない拡張機能を読み込む"
+  },
+  "settings_crx_info_ladder_title": {
+    "message": "セキュリティ上の位置づけ"
+  },
+  "settings_crx_info_ladder_ci_term": {
+    "message": "CI のシークレットに置いた鍵"
+  },
+  "settings_crx_info_ladder_ci": {
+    "message": "$term$はより弱い方法です。汚染された依存関係や漏洩したトークンによって持ち去られます。"
+  },
+  "settings_crx_info_ladder_vault_term": {
+    "message": "保管庫内で暗号化された鍵"
+  },
+  "settings_crx_info_ladder_vault": {
+    "message": "$term$ (現在の状態) は、パスワードまたはパスキーの背後に置かれ、署名のときだけロックが解除されます。"
+  },
+  "settings_crx_info_ladder_hardware_term": {
+    "message": "ハードウェア トークン (YubiKey / HSM)"
+  },
+  "settings_crx_info_ladder_hardware": {
+    "message": "$term$はさらに強力です。鍵がチップの外に出ることはありません。一方ここでは、署名中に WASM サンドボックス内で鍵が一時的に復元され、直後にゼロ消去されます。"
+  },
+  "settings_crx_info_not_pgp_title": {
+    "message": "これは PGP ではありません"
+  },
+  "settings_crx_info_not_pgp_body": {
+    "message": "$crx$ は OpenPGP 署名ではなく、生の RSA-2048 鍵 (PKCS#1-SHA256) で署名されます。PGP Tools はこの鍵を PGP 鍵と同じ保護 (Argon2id またはパスキー → AES-256-GCM、すべて WASM サンドボックス内) で生成、保存しますが、鍵自体は別物で、CRX 署名にのみ使用されます。"
+  },
+  "settings_crx_info_link": {
+    "message": "Chrome Web Store: パッケージの更新を保護する"
+  },
+  "settings_crx_default_key_name": {
+    "message": "CRX 署名鍵"
+  },
+  "settings_import_keys_title": {
+    "message": "鍵をインポート"
+  },
+  "settings_import_next": {
+    "message": "次へ"
+  },
+  "settings_import_importing": {
+    "message": "インポートしています..."
+  },
+  "settings_import_paste_intro": {
+    "message": "鍵ファイルを貼り付けるか選択してください。たとえば「すべての鍵をエクスポート」で作成したファイルです。秘密鍵は選択した方法で再保護され、公開鍵は連絡先になります。"
+  },
+  "settings_import_paste_placeholder": {
+    "message": "ここに鍵を貼り付けるか、ファイルを選択..."
+  },
+  "settings_import_browse": {
+    "message": "鍵ファイルを選択"
+  },
+  "settings_import_no_keys": {
+    "message": "入力内容に鍵が見つかりません。"
+  },
+  "settings_import_unlock_intro_one": {
+    "message": "$count$ 個の秘密鍵のうち $encrypted$ 個がパスフレーズで保護されています。入力してロックを解除してください。次の画面で、すべての鍵を選択した方法で再保護します。"
+  },
+  "settings_import_unlock_intro_other": {
+    "message": "$count$ 個の秘密鍵のうち $encrypted$ 個がパスフレーズで保護されています。入力してロックを解除してください。次の画面で、すべての鍵を選択した方法で再保護します。"
+  },
+  "settings_import_passphrase_placeholder": {
+    "message": "鍵のパスフレーズ"
+  },
+  "settings_import_protect_intro_one": {
+    "message": "インポートする $count$ 個の秘密鍵の保護方法を選択してください。"
+  },
+  "settings_import_protect_intro_other": {
+    "message": "インポートする $count$ 個の秘密鍵の保護方法を選択してください。"
+  },
+  "settings_import_submit_one": {
+    "message": "$count$ 個の鍵をインポート"
+  },
+  "settings_import_submit_other": {
+    "message": "$count$ 個の鍵をインポート"
+  },
+  "settings_import_passkey_name": {
+    "message": "PGP Tools インポート"
+  },
+  "settings_import_prf_unsupported": {
+    "message": "お使いの認証器は PRF に対応していません。別のパスキーを試すか、代わりにパスワードを使用してください。"
+  },
+  "settings_import_default_user_id": {
+    "message": "インポートした PGP 鍵"
+  },
+  "settings_import_failed": {
+    "message": "インポートに失敗しました"
+  },
+  "settings_import_unknown_error": {
+    "message": "不明なエラー"
+  },
+  "settings_import_failed_named": {
+    "message": "「$name$」をインポートできませんでした: $error$"
+  },
+  "settings_import_private_imported_one": {
+    "message": "$count$ 個の秘密鍵をインポートしました"
+  },
+  "settings_import_private_imported_other": {
+    "message": "$count$ 個の秘密鍵をインポートしました"
+  },
+  "settings_import_private_skipped_one": {
+    "message": "$count$ 個の秘密鍵はインポート済みです"
+  },
+  "settings_import_private_skipped_other": {
+    "message": "$count$ 個の秘密鍵はインポート済みです"
+  },
+  "settings_import_private_unparseable_one": {
+    "message": "$count$ 個の秘密鍵を解析できませんでした。"
+  },
+  "settings_import_private_unparseable_other": {
+    "message": "$count$ 個の秘密鍵を解析できませんでした。"
+  },
+  "settings_import_contacts_added_one": {
+    "message": "$count$ 件の連絡先を追加しました"
+  },
+  "settings_import_contacts_added_other": {
+    "message": "$count$ 件の連絡先を追加しました"
+  },
+  "settings_import_contacts_flagged_one": {
+    "message": "インポートした鍵 $count$ 個に弱い暗号 (SHA-1) の警告を付けました"
+  },
+  "settings_import_contacts_flagged_other": {
+    "message": "インポートした鍵 $count$ 個に弱い暗号 (SHA-1) の警告を付けました"
+  },
+  "settings_import_contacts_updated_one": {
+    "message": "$count$ 件の連絡先を更新しました"
+  },
+  "settings_import_contacts_updated_other": {
+    "message": "$count$ 件の連絡先を更新しました"
+  },
+  "settings_import_contacts_rejected_one": {
+    "message": "$count$ 個の公開鍵を拒否しました"
+  },
+  "settings_import_contacts_rejected_other": {
+    "message": "$count$ 個の公開鍵を拒否しました"
+  },
+  "settings_import_contacts_rejected_reason_one": {
+    "message": "$count$ 個の公開鍵を拒否しました: $reason$"
+  },
+  "settings_import_contacts_rejected_reason_other": {
+    "message": "$count$ 個の公開鍵を拒否しました: $reason$"
+  },
+  "settings_import_crx_failure_detail": {
+    "message": "$name$: $error$"
+  },
+  "settings_import_crx_failed_one": {
+    "message": "$count$ 個の CRX 鍵を復元できませんでした"
+  },
+  "settings_import_crx_failed_other": {
+    "message": "$count$ 個の CRX 鍵を復元できませんでした"
+  },
+  "settings_import_crx_restored_one": {
+    "message": "$count$ 個の CRX 署名鍵を復元しました"
+  },
+  "settings_import_crx_restored_other": {
+    "message": "$count$ 個の CRX 署名鍵を復元しました"
+  },
+  "settings_import_crx_skipped_one": {
+    "message": "$count$ 個の CRX 署名鍵はインポート済みです"
+  },
+  "settings_import_crx_skipped_other": {
+    "message": "$count$ 個の CRX 署名鍵はインポート済みです"
+  },
+  "settings_import_crx_rejected_one": {
+    "message": "$count$ 個の CRX 署名鍵を拒否しました: 公開鍵が拡張機能 ID と一致しません"
+  },
+  "settings_import_crx_rejected_other": {
+    "message": "$count$ 個の CRX 署名鍵を拒否しました: 公開鍵が拡張機能 ID と一致しません"
+  },
+  "settings_shortcuts_title": {
+    "message": "キーボード ショートカット"
+  },
+  "settings_shortcuts_unbound": {
+    "message": "未割り当て"
+  },
+  "settings_shortcuts_manage": {
+    "message": "ブラウザのショートカットを管理"
+  },
+  "settings_shortcuts_group_palette": {
+    "message": "コマンド パレット"
+  },
+  "settings_shortcuts_open_palette": {
+    "message": "コマンド パレットを開く"
+  },
+  "settings_shortcuts_open_palette_note": {
+    "message": "以下のすべての操作はそこからも検索できます。"
+  },
+  "settings_shortcuts_group_workspace": {
+    "message": "ワークスペース"
+  },
+  "settings_shortcuts_run_mode": {
+    "message": "現在のモードを実行"
+  },
+  "settings_shortcuts_copy_output": {
+    "message": "出力をコピー"
+  },
+  "settings_shortcuts_download_output": {
+    "message": "出力をダウンロード"
+  },
+  "settings_shortcuts_pick_recipient": {
+    "message": "n 番目の宛先を選択"
+  },
+  "settings_shortcuts_pick_recipient_note": {
+    "message": "宛先のドロップダウン内で、検索ボックスが空のとき。"
+  },
+  "settings_shortcuts_remove_recipient": {
+    "message": "最後の宛先を削除"
+  },
+  "settings_shortcuts_remove_recipient_note": {
+    "message": "宛先のドロップダウンの空の検索ボックス内で。"
+  },
+  "settings_shortcuts_group_message": {
+    "message": "メッセージ ボックス"
+  },
+  "settings_shortcuts_find_replace": {
+    "message": "検索と置換"
+  },
+  "settings_shortcuts_style_note": {
+    "message": "暗号化または署名するメッセージの作成中。Unicode の文字形を使うため、どの経路でも失われません。"
+  },
+  "settings_shortcuts_group_modes": {
+    "message": "モード"
+  },
+  "settings_shortcuts_switch_mode": {
+    "message": "$mode$に切り替え"
+  },
+  "settings_shortcuts_group_global": {
+    "message": "ブラウザ全体のショートカット"
+  },
+  "settings_shortcuts_open_app": {
+    "message": "PGP Tools を開く"
+  },
+  "settings_shortcuts_open_in_mode": {
+    "message": "$mode$モードで開く"
+  },
+  "settings_shortcuts_unbound_note": {
+    "message": "デフォルトでは未割り当てです (Chrome が提案できるキーは 4 つまでです)。"
+  },
+  "settings_shortcuts_global_note": {
+    "message": "これらはブラウザのどこでも使えます。$url$ で割り当てを変更できます。"
+  },
+  "settings_preset_title": {
+    "message": "セキュリティ プリセット"
+  },
+  "settings_preset_apply": {
+    "message": "プリセットを適用"
+  },
+  "settings_preset_applying": {
+    "message": "適用しています..."
+  },
+  "settings_preset_replace_custom": {
+    "message": "カスタム設定を置き換える"
+  },
+  "settings_preset_apply_delete_history": {
+    "message": "適用して履歴を削除"
+  },
+  "settings_preset_keep_custom": {
+    "message": "カスタム設定を維持"
+  },
+  "settings_preset_intro": {
+    "message": "各プリセットは 1 つの脅威モデルに合わせたセキュリティ設定をまとめたもので、そのカードには設定内容が正確に記載されています。適用してもそれらの設定だけが変わり、後からいずれも調整し直せます。"
+  },
+  "settings_preset_custom_notice": {
+    "message": "現在は$custom$です。まとめて設定される項目が変更されたため、完全に一致するプリセットはありません。"
+  },
+  "settings_preset_custom_name": {
+    "message": "カスタム"
+  },
+  "settings_preset_confirm_replace": {
+    "message": "カスタム設定を「$preset$」プリセットに置き換えますか？カードに記載された設定だけが変わり、後からいずれも調整し直せます。"
+  },
+  "settings_preset_confirm_history": {
+    "message": "このプリセットは鍵をキャッシュしない設定をオンにするため、保存済みの履歴 ($size$) も削除されます。復元することはできません。"
+  },
+  "settings_translation_title": {
+    "message": "翻訳"
+  },
+  "settings_translation_enable": {
+    "message": "復号したメッセージを翻訳"
+  },
+  "settings_translation_enable_desc": {
+    "message": "復号したメッセージの下に「翻訳」ボタンを追加します。翻訳は Chrome の組み込みモデルを使ってこのデバイス上で行われ、ボタンを押すまで何も翻訳されません。"
+  },
+  "settings_translation_unsupported": {
+    "message": "Chrome のデバイス上翻訳はここでは利用できません。Windows 10 以降、macOS 13 以降、Linux、または Chromebook Plus のデスクトップ版 Chrome と、モデル用の十分な空きディスク容量とメモリが必要です。"
+  },
+  "settings_translation_target": {
+    "message": "翻訳先"
+  },
+  "settings_translation_packs": {
+    "message": "言語パック"
+  },
+  "settings_translation_packs_desc": {
+    "message": "省略可。足りないパックは、その言語から初めて翻訳するときに自動的にダウンロードされるため、これは先回りしたい場合にだけ必要です。ここでダウンロードしておく利点は 1 つあります。メッセージを復号した瞬間にダウンロードが起きなくなるため、そのタイミングから今読んだ内容について何も推測されません。各パックは $size$ で、この拡張機能ではなく Chrome が保存します。"
+  },
+  "settings_translation_pack_ready": {
+    "message": "準備完了"
+  },
+  "settings_translation_pack_progress": {
+    "message": "$percent$%"
+  },
+  "settings_translation_pack_not_offered": {
+    "message": "提供なし"
+  },
+  "settings_translation_download_failed": {
+    "message": "ダウンロードに失敗しました。"
+  },
+  "settings_translation_pack_pair": {
+    "message": "$from$から$to$への翻訳モデル"
+  },
+  "settings_translation_detector": {
+    "message": "言語検出モデル"
+  },
+  "settings_translation_pack_gone": {
+    "message": "言語パックが見つからなくなりました。もう一度お試しください。"
+  },
+  "settings_translation_failed": {
+    "message": "翻訳に失敗しました。"
+  },
+  "settings_translation_unavailable_device": {
+    "message": "このデバイスでは翻訳を利用できません。"
+  }
+}

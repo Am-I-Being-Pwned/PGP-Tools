@@ -1,0 +1,437 @@
+{
+  "workspace_undo": {
+    "message": "Rückgängig"
+  },
+  "workspace_compose_translated": {
+    "message": "Übersetzt von $from$ nach $to$"
+  },
+  "workspace_compose_same_language": {
+    "message": "Das ist bereits Ihre Sprache ($language$)."
+  },
+  "workspace_compose_translate_unavailable": {
+    "message": "Übersetzung in diese Sprache ist hier nicht verfügbar."
+  },
+  "workspace_crx_saved": {
+    "message": "$name$ gespeichert."
+  },
+  "workspace_crx_save_failed": {
+    "message": "Automatisches Speichern fehlgeschlagen - klicken Sie auf „Speichern“, um es erneut zu versuchen."
+  },
+  "workspace_sign_blocked_age": {
+    "message": "age-Nachrichten können nicht signiert werden - SSH-Schlüssel haben hier kein Signaturformat."
+  },
+  "workspace_sign_blocked_no_pgp_key": {
+    "message": "Zum Signieren brauchen Sie einen eigenen OpenPGP-Schlüssel - SSH-Schlüssel können nicht signieren."
+  },
+  "workspace_cleared_toast": {
+    "message": "Arbeitsbereich geleert"
+  },
+  "workspace_text_cleared_toast": {
+    "message": "Text gelöscht"
+  },
+  "workspace_clear_input_output": {
+    "message": "Eingabe und Ausgabe leeren"
+  },
+  "workspace_recipients_label": {
+    "message": "Empfänger"
+  },
+  "workspace_no_contacts_yet": {
+    "message": "Noch keine Kontakte"
+  },
+  "workspace_add_a_contact": {
+    "message": "Kontakt hinzufügen"
+  },
+  "workspace_age_message_note": {
+    "message": "age-Nachricht - SSH-Empfänger können nicht mit PGP gemischt werden"
+  },
+  "workspace_sign_kind_crx": {
+    "message": "Chrome-Erweiterung (.crx)"
+  },
+  "workspace_sign_kind_pgp": {
+    "message": "PGP-Signatur"
+  },
+  "workspace_sign_with": {
+    "message": "Signieren mit"
+  },
+  "workspace_decrypt_with": {
+    "message": "Entschlüsseln mit"
+  },
+  "workspace_no_keys_yet": {
+    "message": "Noch keine Schlüssel"
+  },
+  "workspace_create_one": {
+    "message": "Schlüssel erstellen"
+  },
+  "workspace_select_signing_key": {
+    "message": "Signaturschlüssel auswählen"
+  },
+  "workspace_toggle_encrypt_to_self": {
+    "message": "Auch für mich verschlüsseln"
+  },
+  "workspace_toggle_password": {
+    "message": "Passwort"
+  },
+  "workspace_toggle_zip_files": {
+    "message": "Dateien zippen"
+  },
+  "workspace_toggle_save_to_history": {
+    "message": "Im Verlauf speichern"
+  },
+  "workspace_self_excluded_intro": {
+    "message": "Diese Nachricht werden Sie nicht lesen können:"
+  },
+  "workspace_self_excluded_age": {
+    "message": "Sie haben keinen eigenen SSH-Schlüssel, und eine age-Nachricht kann keinen PGP-Schlüssel enthalten."
+  },
+  "workspace_self_excluded_pgp": {
+    "message": "Keiner Ihrer eigenen Schlüssel kann dieser Nachricht hinzugefügt werden."
+  },
+  "workspace_import_one": {
+    "message": "Schlüssel importieren"
+  },
+  "workspace_enter_message_password": {
+    "message": "Nachrichtenpasswort eingeben"
+  },
+  "workspace_enter_key_password": {
+    "message": "Schlüsselpasswort eingeben"
+  },
+  "workspace_decrypting": {
+    "message": "Wird entschlüsselt..."
+  },
+  "workspace_unlocking": {
+    "message": "Wird entsperrt..."
+  },
+  "workspace_go": {
+    "message": "Los"
+  },
+  "workspace_save_file": {
+    "message": "$name$ speichern"
+  },
+  "workspace_verifying": {
+    "message": "Wird verifiziert..."
+  },
+  "workspace_reset": {
+    "message": "Zurücksetzen"
+  },
+  "workspace_verify_signature": {
+    "message": "Signatur verifizieren"
+  },
+  "workspace_processing": {
+    "message": "Wird verarbeitet..."
+  },
+  "workspace_sign_for_web_store": {
+    "message": "Für den Web Store signieren"
+  },
+  "workspace_need_recipient_or_password": {
+    "message": "Wählen Sie mindestens einen Empfänger oder legen Sie ein Passwort fest"
+  },
+  "workspace_text_entered_below": {
+    "message": "Text unten eingegeben"
+  },
+  "workspace_clear_text": {
+    "message": "Text löschen"
+  },
+  "workspace_message_input_aria": {
+    "message": "Nachrichteneingabe"
+  },
+  "workspace_placeholder_decrypt": {
+    "message": "Fügen Sie die empfangene verschlüsselte Nachricht ein..."
+  },
+  "workspace_placeholder_verify": {
+    "message": "Fügen Sie die zu prüfende signierte Nachricht ein..."
+  },
+  "workspace_placeholder_compose": {
+    "message": "Nachricht eingeben oder einfügen..."
+  },
+  "workspace_private_key_pasted_title": {
+    "message": "Das sieht nach einem privaten Schlüssel aus. Fügen Sie hier keine privaten Schlüssel ein."
+  },
+  "workspace_private_key_show_cleartext": {
+    "message": "Den eingefügten Text im Klartext anzeigen"
+  },
+  "workspace_private_key_ignore": {
+    "message": "Ignorieren"
+  },
+  "workspace_private_key_pasted_body": {
+    "message": "Das Feld zum Ver- und Entschlüsseln ist kein sicherer Ort für geheimes Schlüsselmaterial. Verwenden Sie den Importablauf, damit der Schlüssel in den sicheren Speicher geladen wird und in keinem Entwurfsabbild landet."
+  },
+  "workspace_private_key_import_safely": {
+    "message": "Diesen Schlüssel sicher importieren"
+  },
+  "workspace_private_key_clear_input": {
+    "message": "Eingabe leeren"
+  },
+  "workspace_hide_technical_details": {
+    "message": "Technische Details ausblenden"
+  },
+  "workspace_show_technical_details": {
+    "message": "Technische Details anzeigen"
+  },
+  "workspace_unverified": {
+    "message": "Nicht verifiziert"
+  },
+  "workspace_signature_verified": {
+    "message": "Signatur verifiziert"
+  },
+  "workspace_output_size_line": {
+    "message": "$name$ - $size$"
+  },
+  "workspace_find_replace": {
+    "message": "Suchen und ersetzen"
+  },
+  "workspace_find_hide_replace": {
+    "message": "Ersetzen ausblenden"
+  },
+  "workspace_find_show_replace": {
+    "message": "Ersetzen einblenden"
+  },
+  "workspace_find_label": {
+    "message": "Suchen"
+  },
+  "workspace_replace_with": {
+    "message": "Ersetzen durch"
+  },
+  "workspace_replace": {
+    "message": "Ersetzen"
+  },
+  "workspace_replace_all_short": {
+    "message": "Alle"
+  },
+  "workspace_replace_all": {
+    "message": "Alle ersetzen"
+  },
+  "workspace_replace_all_shortcut": {
+    "message": "Alle ersetzen ($shortcut$)"
+  },
+  "workspace_match_case": {
+    "message": "Groß-/Kleinschreibung beachten"
+  },
+  "workspace_previous_match": {
+    "message": "Vorheriger Treffer"
+  },
+  "workspace_next_match": {
+    "message": "Nächster Treffer"
+  },
+  "workspace_close_find": {
+    "message": "Suche schließen"
+  },
+  "workspace_message_tools": {
+    "message": "Nachrichtenwerkzeuge"
+  },
+  "workspace_style_bold": {
+    "message": "Fett"
+  },
+  "workspace_style_italic": {
+    "message": "Kursiv"
+  },
+  "workspace_style_strike": {
+    "message": "Durchgestrichen"
+  },
+  "workspace_style_code": {
+    "message": "Code"
+  },
+  "workspace_translating": {
+    "message": "Wird übersetzt..."
+  },
+  "workspace_translate_to": {
+    "message": "In $language$ übersetzen"
+  },
+  "workspace_translate": {
+    "message": "Übersetzen"
+  },
+  "workspace_translate_menu_heading": {
+    "message": "Nachricht übersetzen in"
+  },
+  "workspace_search_languages": {
+    "message": "Sprachen durchsuchen"
+  },
+  "workspace_no_such_language": {
+    "message": "Keine passende Sprache."
+  },
+  "workspace_restore_original": {
+    "message": "Original wiederherstellen"
+  },
+  "workspace_show_original": {
+    "message": "Original anzeigen"
+  },
+  "workspace_show_translation": {
+    "message": "Übersetzung ($language$) anzeigen"
+  },
+  "workspace_working": {
+    "message": "Wird bearbeitet..."
+  },
+  "workspace_note_same_language": {
+    "message": "Diese Nachricht ist bereits auf $language$."
+  },
+  "workspace_note_uncertain": {
+    "message": "Die Sprache dieser Nachricht ist unklar."
+  },
+  "workspace_note_downloading_progress": {
+    "message": "Wird heruntergeladen: $what$, $percent$ %"
+  },
+  "workspace_note_downloading": {
+    "message": "Wird heruntergeladen: $what$..."
+  },
+  "workspace_note_translated_from": {
+    "message": "Auf diesem Gerät aus $language$ übersetzt."
+  },
+  "workspace_drop_files_or_text": {
+    "message": "Dateien oder Text hier ablegen"
+  },
+  "workspace_browse_files": {
+    "message": "Dateien auswählen"
+  },
+  "workspace_clear_all_files": {
+    "message": "Alle entfernen"
+  },
+  "workspace_detected_key_known": {
+    "message": "Sie haben den Schlüssel von $name$ bereits."
+  },
+  "workspace_detected_key_show": {
+    "message": "In Ihren Schlüsseln anzeigen"
+  },
+  "workspace_detected_key_in_message": {
+    "message": "Diese Nachricht enthält den öffentlichen Schlüssel von $name$."
+  },
+  "workspace_detected_key_pasted": {
+    "message": "Das ist der öffentliche Schlüssel von $name$."
+  },
+  "workspace_detected_key_in_message_anon": {
+    "message": "Diese Nachricht enthält den öffentlichen Schlüssel einer Person."
+  },
+  "workspace_detected_key_pasted_anon": {
+    "message": "Das sieht nach dem öffentlichen Schlüssel einer Person aus."
+  },
+  "workspace_detected_key_import": {
+    "message": "Als Kontakt importieren"
+  },
+  "workspace_message_password_title": {
+    "message": "Passwort für diese Nachricht"
+  },
+  "workspace_set_password": {
+    "message": "Passwort festlegen"
+  },
+  "workspace_message_password_label": {
+    "message": "Nachrichtenpasswort"
+  },
+  "workspace_hide_password": {
+    "message": "Passwort ausblenden"
+  },
+  "workspace_show_password": {
+    "message": "Passwort anzeigen"
+  },
+  "workspace_password_too_short_one": {
+    "message": "Verwenden Sie mindestens $count$ Zeichen."
+  },
+  "workspace_password_too_short_other": {
+    "message": "Verwenden Sie mindestens $count$ Zeichen."
+  },
+  "workspace_password_min_length_one": {
+    "message": "Mindestens $count$ Zeichen."
+  },
+  "workspace_password_min_length_other": {
+    "message": "Mindestens $count$ Zeichen."
+  },
+  "workspace_message_password_help": {
+    "message": "Jeder mit diesem Passwort kann die Nachricht lesen; übermitteln Sie es daher auf einem anderen Weg - nicht zusammen mit der Nachricht selbst. Es wird zusätzlich zu den gewählten Empfängern zur Nachricht hinzugefügt; beides kann sie öffnen."
+  },
+  "workspace_history_save_failed": {
+    "message": "Konnte nicht im Verlauf gespeichert werden - der Speicher ist möglicherweise voll"
+  },
+  "workspace_operation_failed": {
+    "message": "Der Vorgang ist fehlgeschlagen. Versuchen Sie es erneut."
+  },
+  "workspace_error_need_recipient_or_password": {
+    "message": "Wählen Sie mindestens einen Empfängerschlüssel oder legen Sie ein Passwort fest."
+  },
+  "workspace_error_engine_mismatch": {
+    "message": "Es konnte nicht ermittelt werden, in welchem Format verschlüsselt werden soll."
+  },
+  "workspace_status_age_encrypted": {
+    "message": "age-Nachricht - für SSH-Empfänger verschlüsselt"
+  },
+  "workspace_files_encrypted_one": {
+    "message": "$count$ Datei verschlüsselt ($size$ insgesamt)"
+  },
+  "workspace_files_encrypted_other": {
+    "message": "$count$ Dateien verschlüsselt ($size$ insgesamt)"
+  },
+  "workspace_files_zipped_encrypted_one": {
+    "message": "$count$ Datei gezippt und verschlüsselt"
+  },
+  "workspace_files_zipped_encrypted_other": {
+    "message": "$count$ Dateien gezippt und verschlüsselt"
+  },
+  "workspace_files_decrypted_one": {
+    "message": "$count$ Datei entschlüsselt ($size$ insgesamt)"
+  },
+  "workspace_files_decrypted_other": {
+    "message": "$count$ Dateien entschlüsselt ($size$ insgesamt)"
+  },
+  "workspace_files_signed_one": {
+    "message": "$count$ Datei signiert"
+  },
+  "workspace_files_signed_other": {
+    "message": "$count$ Dateien signiert"
+  },
+  "workspace_status_decrypted_archive": {
+    "message": "Entschlüsseltes Archiv mit mehreren Dateien"
+  },
+  "workspace_error_decrypt_failed_ssh": {
+    "message": "Entschlüsselung fehlgeschlagen. Die Nachricht ist möglicherweise beschädigt oder für keinen Ihrer SSH-Schlüssel verschlüsselt."
+  },
+  "workspace_error_decrypt_failed": {
+    "message": "Entschlüsselung fehlgeschlagen. Die Nachricht ist möglicherweise beschädigt oder für keinen Ihrer Schlüssel verschlüsselt."
+  },
+  "workspace_error_select_decryption_key": {
+    "message": "Wählen Sie einen Schlüssel zum Entschlüsseln."
+  },
+  "workspace_unknown_signer": {
+    "message": "Unbekannter Unterzeichner"
+  },
+  "workspace_status_signer_unknown": {
+    "message": "Diese Nachricht ist signiert, aber der öffentliche Schlüssel des Unterzeichners ist weder in Ihren Schlüsseln noch in Ihren Kontakten, daher konnte die Signatur nicht verifiziert werden."
+  },
+  "workspace_error_signature_invalid": {
+    "message": "Signaturprüfung FEHLGESCHLAGEN - diese Nachricht wurde möglicherweise manipuliert"
+  },
+  "workspace_error_not_signed": {
+    "message": "Diese Nachricht ist nicht signiert."
+  },
+  "workspace_error_verify_failed": {
+    "message": "Verifizierung fehlgeschlagen. Die Eingabe sieht nicht nach einer signierten PGP-Nachricht aus."
+  },
+  "workspace_error_no_signing_key_ssh": {
+    "message": "Kein Signaturschlüssel verfügbar. SSH-Schlüssel können nicht signieren - fügen Sie zuerst einen OpenPGP-Schlüssel hinzu."
+  },
+  "workspace_error_no_signing_key": {
+    "message": "Kein Signaturschlüssel verfügbar. Fügen Sie zuerst einen Schlüssel hinzu."
+  },
+  "workspace_status_crx_signed": {
+    "message": "$name$ signiert - wird gespeichert..."
+  },
+  "workspace_error_crx_wrong_password": {
+    "message": "Falsches Passwort oder Signieren fehlgeschlagen."
+  },
+  "workspace_error_crx_sign_failed": {
+    "message": "CRX-Signierung fehlgeschlagen. Versuchen Sie es erneut."
+  },
+  "workspace_error_select_crx_key": {
+    "message": "Wählen Sie zuerst einen CRX-Signaturschlüssel."
+  },
+  "workspace_status_crx_valid": {
+    "message": "Gültige CRX - Erweiterung $id$"
+  },
+  "workspace_error_crx_invalid": {
+    "message": "Die CRX-Signatur dieser Datei konnte nicht verifiziert werden."
+  },
+  "workspace_error_read_file": {
+    "message": "Diese Datei konnte nicht gelesen werden. Versuchen Sie es erneut."
+  },
+  "workspace_error_wrong_key_password": {
+    "message": "Falsches Passwort. Prüfen Sie es und versuchen Sie es erneut."
+  },
+  "workspace_error_unlock_failed": {
+    "message": "Entsperren fehlgeschlagen. Versuchen Sie es erneut."
+  }
+}

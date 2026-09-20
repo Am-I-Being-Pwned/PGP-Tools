@@ -1,0 +1,68 @@
+{
+  "common_cancel": {
+    "message": "キャンセル"
+  },
+  "common_back": {
+    "message": "戻る"
+  },
+  "common_done": {
+    "message": "完了"
+  },
+  "common_save": {
+    "message": "保存"
+  },
+  "common_delete": {
+    "message": "削除"
+  },
+  "common_remove": {
+    "message": "削除"
+  },
+  "common_copy": {
+    "message": "コピー"
+  },
+  "common_copied": {
+    "message": "コピーしました"
+  },
+  "common_download": {
+    "message": "ダウンロード"
+  },
+  "common_continue": {
+    "message": "続行"
+  },
+  "common_on": {
+    "message": "オン"
+  },
+  "common_off": {
+    "message": "オフ"
+  },
+  "common_settings": {
+    "message": "設定"
+  },
+  "common_keys": {
+    "message": "鍵"
+  },
+  "common_encrypt": {
+    "message": "暗号化"
+  },
+  "common_decrypt": {
+    "message": "復号"
+  },
+  "common_sign": {
+    "message": "署名"
+  },
+  "common_verify": {
+    "message": "検証"
+  },
+  "common_public_key": {
+    "message": "公開鍵"
+  },
+  "common_private_key": {
+    "message": "秘密鍵"
+  },
+  "common_unlock": {
+    "message": "ロック解除"
+  },
+  "common_lock": {
+    "message": "ロック"
+  }
+}

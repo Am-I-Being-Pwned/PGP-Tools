@@ -1,0 +1,512 @@
+{
+  "keys_my_keys_heading": {
+    "message": "Mes clés"
+  },
+  "keys_empty": {
+    "message": "Aucune clé pour l'instant. Générez ou importez une clé pour commencer."
+  },
+  "keys_generate_button": {
+    "message": "Générer une clé"
+  },
+  "keys_import_button": {
+    "message": "Importer une clé"
+  },
+  "keys_unknown_name": {
+    "message": "Inconnu"
+  },
+  "keys_exported_one": {
+    "message": "$count$ clé exportée"
+  },
+  "keys_exported_other": {
+    "message": "$count$ clés exportées"
+  },
+  "keys_exported_unsafe_one": {
+    "message": "$count$ clé exportée (clés privées NON CHIFFRÉES)"
+  },
+  "keys_exported_unsafe_other": {
+    "message": "$count$ clés exportées (clés privées NON CHIFFRÉES)"
+  },
+  "keys_reselect": {
+    "message": "Resélectionner"
+  },
+  "keys_ssh_export_skipped_one": {
+    "message": "$count$ clé SSH ne peut pas être exportée - une clé SSH importée ne quitte jamais cet appareil."
+  },
+  "keys_ssh_export_skipped_other": {
+    "message": "$count$ clés SSH ne peuvent pas être exportées - une clé SSH importée ne quitte jamais cet appareil."
+  },
+  "keys_rename_key_title": {
+    "message": "Renommer la clé"
+  },
+  "keys_rename_crx_title": {
+    "message": "Renommer la clé de signature"
+  },
+  "keys_rename_contact_title": {
+    "message": "Renommer le contact"
+  },
+  "keys_rename_field_label": {
+    "message": "Nom affiché"
+  },
+  "keys_rename_hint": {
+    "message": "Affiché à la place de $identity$. Ce libellé est purement local."
+  },
+  "keys_rename_placeholder_key": {
+    "message": "ex. Portable pro"
+  },
+  "keys_rename_placeholder_crx": {
+    "message": "ex. Mon extension"
+  },
+  "keys_rename_placeholder_contact": {
+    "message": "ex. Alice (toutes ses machines)"
+  },
+  "keys_revocation_unlock_first": {
+    "message": "Déverrouillez d'abord cette clé, puis réessayez."
+  },
+  "keys_bulk_delete_title": {
+    "message": "Supprimer la sélection ?"
+  },
+  "keys_bulk_delete_confirm_one": {
+    "message": "Supprimer définitivement $count$ élément"
+  },
+  "keys_bulk_delete_confirm_other": {
+    "message": "Supprimer définitivement $count$ éléments"
+  },
+  "keys_bulk_delete_prompt_one": {
+    "message": "supprimer $count$ clé"
+  },
+  "keys_bulk_delete_prompt_other": {
+    "message": "supprimer $count$ clés"
+  },
+  "keys_contacts_removed_one": {
+    "message": "Contact retiré"
+  },
+  "keys_contacts_removed_other": {
+    "message": "$count$ contacts retirés"
+  },
+  "keys_undo": {
+    "message": "Annuler"
+  },
+  "keys_confirm_remove_contact_title": {
+    "message": "Retirer le contact ?"
+  },
+  "keys_confirm_delete_key_title": {
+    "message": "Supprimer la clé ?"
+  },
+  "keys_remove_contact": {
+    "message": "Retirer le contact"
+  },
+  "keys_delete_key_permanently": {
+    "message": "Supprimer définitivement la clé"
+  },
+  "keys_count_private_keys_one": {
+    "message": "$count$ clé privée"
+  },
+  "keys_count_private_keys_other": {
+    "message": "$count$ clés privées"
+  },
+  "keys_count_signing_keys_one": {
+    "message": "$count$ clé de signature"
+  },
+  "keys_count_signing_keys_other": {
+    "message": "$count$ clés de signature"
+  },
+  "keys_count_contacts_one": {
+    "message": "$count$ contact"
+  },
+  "keys_count_contacts_other": {
+    "message": "$count$ contacts"
+  },
+  "keys_bulk_delete_private_body": {
+    "message": "Cette action supprime définitivement de cet appareil les clés privées sélectionnées. Tout ce qui est chiffré uniquement pour une clé supprimée devient irrécupérable. Assurez-vous d'avoir une sauvegarde si vous pourriez un jour en avoir besoin."
+  },
+  "keys_bulk_delete_contacts_body": {
+    "message": "Vous ne pourrez plus chiffrer pour ces contacts ni vérifier leurs signatures. Vous pourrez réimporter leurs clés publiques plus tard."
+  },
+  "keys_delete_crx_body": {
+    "message": "Vous ne pourrez plus signer de mises à jour pour cette extension, et la clé ne pourra pas être récupérée sans sauvegarde."
+  },
+  "keys_delete_key_body": {
+    "message": "Cette action supprime définitivement la clé privée de cet appareil. Tout ce qui est chiffré uniquement pour cette clé devient irrécupérable. Assurez-vous d'avoir une sauvegarde si vous pourriez un jour en avoir besoin."
+  },
+  "keys_remove_contact_body": {
+    "message": "Vous ne pourrez plus chiffrer de messages pour ce contact ni vérifier ses signatures. Vous pourrez réimporter sa clé publique plus tard."
+  },
+  "keys_contacts_heading": {
+    "message": "Contacts"
+  },
+  "keys_contacts_heading_encrypted": {
+    "message": "Contacts (chiffrés)"
+  },
+  "keys_contacts_heading_count": {
+    "message": "Contacts ($count$)"
+  },
+  "keys_contacts_locked": {
+    "message": "Les contacts sont chiffrés. Déverrouillez PGP Tools pour les afficher et les gérer."
+  },
+  "keys_search_contacts_placeholder": {
+    "message": "Rechercher des contacts..."
+  },
+  "keys_no_contacts_match": {
+    "message": "Aucun contact ne correspond à « $query$ »"
+  },
+  "keys_wrong_password": {
+    "message": "Mot de passe incorrect"
+  },
+  "keys_passkey_failed": {
+    "message": "Échec de l'authentification par clé d'accès"
+  },
+  "keys_status_unlocked": {
+    "message": "Déverrouillée"
+  },
+  "keys_status_locked": {
+    "message": "Verrouillée"
+  },
+  "keys_status_sealed": {
+    "message": "Scellée au repos"
+  },
+  "keys_default_badge": {
+    "message": "Par défaut"
+  },
+  "keys_default_title": {
+    "message": "Utilisée par défaut pour signer, déchiffrer et chiffrer pour vous-même"
+  },
+  "keys_key_options_aria": {
+    "message": "Options de la clé"
+  },
+  "keys_rename": {
+    "message": "Renommer"
+  },
+  "keys_public_key_copied": {
+    "message": "Clé publique copiée"
+  },
+  "keys_copy_public_key": {
+    "message": "Copier la clé publique"
+  },
+  "keys_download_public_key": {
+    "message": "Télécharger la clé publique"
+  },
+  "keys_copy_private_key": {
+    "message": "Copier la clé privée"
+  },
+  "keys_select": {
+    "message": "Sélectionner"
+  },
+  "keys_delete_key": {
+    "message": "Supprimer la clé"
+  },
+  "keys_protection_passkey": {
+    "message": "Clé d'accès"
+  },
+  "keys_protection_password": {
+    "message": "Mot de passe"
+  },
+  "keys_weak_sha1": {
+    "message": "Faible (SHA-1)"
+  },
+  "keys_enter_password_placeholder": {
+    "message": "Saisir le mot de passe"
+  },
+  "keys_key_details": {
+    "message": "Détails de la clé"
+  },
+  "keys_details_aria": {
+    "message": "Détails de la clé $name$"
+  },
+  "keys_cap_sign": {
+    "message": "Signe les messages"
+  },
+  "keys_cap_encrypt": {
+    "message": "Reçoit les messages chiffrés"
+  },
+  "keys_cap_auth": {
+    "message": "Authentifie (ex. SSH)"
+  },
+  "keys_cap_certify": {
+    "message": "Certifie des identités"
+  },
+  "keys_banner_revoked_title": {
+    "message": "Cette clé a été révoquée"
+  },
+  "keys_banner_no_reason": {
+    "message": "Aucun motif n'a été indiqué."
+  },
+  "keys_banner_revoked_own": {
+    "message": "Générez ou importez une clé de remplacement."
+  },
+  "keys_banner_revoked_contact": {
+    "message": "Ne chiffrez pas pour cette clé et ne faites pas confiance à ses nouvelles signatures."
+  },
+  "keys_banner_expired_title": {
+    "message": "Cette clé a expiré $when$"
+  },
+  "keys_banner_expired_on": {
+    "message": "Elle n'est plus valide depuis le $date$."
+  },
+  "keys_banner_expired_own": {
+    "message": "Générez ou importez une clé plus récente."
+  },
+  "keys_banner_expired_contact": {
+    "message": "Demandez à son propriétaire une clé à jour."
+  },
+  "keys_banner_unusable_title": {
+    "message": "Cette clé ne peut pas être utilisée"
+  },
+  "keys_banner_unusable_body": {
+    "message": "Elle n'a aucune sous-clé de chiffrement ou de signature utilisable."
+  },
+  "keys_banner_encrypt_only_own": {
+    "message": "Vous pouvez recevoir des messages chiffrés, mais cette clé ne peut pas signer."
+  },
+  "keys_banner_encrypt_only_contact": {
+    "message": "Vous pouvez chiffrer pour cette clé, mais elle ne peut pas signer."
+  },
+  "keys_banner_sign_only_own": {
+    "message": "Vous pouvez signer des messages, mais cette clé ne peut pas en recevoir de chiffrés."
+  },
+  "keys_banner_sign_only_contact": {
+    "message": "Vous pouvez vérifier ses signatures, mais pas chiffrer pour elle."
+  },
+  "keys_banner_expires_soon": {
+    "message": "Cette clé expire bientôt"
+  },
+  "keys_subkey_label": {
+    "message": "Sous-clé"
+  },
+  "keys_bits": {
+    "message": "$bits$ bits"
+  },
+  "keys_row_created": {
+    "message": "créée le $date$"
+  },
+  "keys_row_expires": {
+    "message": "expire le $date$"
+  },
+  "keys_row_expired": {
+    "message": "expirée le $date$"
+  },
+  "keys_row_never_expires": {
+    "message": "n'expire jamais"
+  },
+  "keys_status_expired": {
+    "message": "expirée"
+  },
+  "keys_status_revoked": {
+    "message": "révoquée"
+  },
+  "keys_status_invalid": {
+    "message": "invalide"
+  },
+  "keys_revoked_reason": {
+    "message": "Révoquée : $reason$"
+  },
+  "keys_also_known_as": {
+    "message": "Autres identités"
+  },
+  "keys_loading": {
+    "message": "Chargement…"
+  },
+  "keys_copy_fingerprint_aria": {
+    "message": "Copier l'empreinte"
+  },
+  "keys_fact_fingerprint": {
+    "message": "Empreinte"
+  },
+  "keys_fact_algorithm": {
+    "message": "Algorithme"
+  },
+  "keys_fact_used_for": {
+    "message": "Usages"
+  },
+  "keys_fact_created": {
+    "message": "Créée"
+  },
+  "keys_fact_expires": {
+    "message": "Expire"
+  },
+  "keys_fact_added": {
+    "message": "Ajoutée"
+  },
+  "keys_fact_last_used": {
+    "message": "Dernier usage"
+  },
+  "keys_never": {
+    "message": "Jamais"
+  },
+  "keys_expires_value": {
+    "message": "$date$ ($when$)"
+  },
+  "keys_subkeys_title": {
+    "message": "Sous-clés"
+  },
+  "keys_group_row_label": {
+    "message": "Clé"
+  },
+  "keys_subkeys_truncated": {
+    "message": "Ce certificat comporte un nombre inhabituellement élevé de sous-clés ; seules les $count$ premières sont affichées."
+  },
+  "keys_no_subkeys": {
+    "message": "Cette clé n'a pas de sous-clés ; la clé principale fait tout elle-même."
+  },
+  "keys_inactive_subkeys_expired_one": {
+    "message": "$count$ sous-clé expirée"
+  },
+  "keys_inactive_subkeys_expired_other": {
+    "message": "$count$ sous-clés expirées"
+  },
+  "keys_inactive_subkeys_revoked_one": {
+    "message": "$count$ sous-clé révoquée"
+  },
+  "keys_inactive_subkeys_revoked_other": {
+    "message": "$count$ sous-clés révoquées"
+  },
+  "keys_inactive_subkeys_unusable_one": {
+    "message": "$count$ sous-clé inutilisable"
+  },
+  "keys_inactive_subkeys_unusable_other": {
+    "message": "$count$ sous-clés inutilisables"
+  },
+  "keys_revocation_certificate": {
+    "message": "Certificat de révocation"
+  },
+  "keys_revocation_created": {
+    "message": "Certificat de révocation créé"
+  },
+  "keys_revocation_create_failed": {
+    "message": "Impossible de créer un certificat de révocation."
+  },
+  "keys_revocation_have_body": {
+    "message": "Si cette clé est un jour perdue ou compromise, publier ce certificat indique à vos contacts de cesser de l'utiliser. Sauvegardez-le en lieu sûr - quiconque le détient peut révoquer votre clé."
+  },
+  "keys_revocation_missing_body": {
+    "message": "Cette clé a été importée sans certificat de révocation. Créez-en un maintenant et sauvegardez-le, afin de pouvoir révoquer la clé plus tard même si vous en perdez l'accès."
+  },
+  "keys_revocation_creating": {
+    "message": "Création..."
+  },
+  "keys_revocation_create": {
+    "message": "Créer un certificat de révocation"
+  },
+  "keys_chip_your_key": {
+    "message": "Votre clé"
+  },
+  "keys_chip_your_key_title": {
+    "message": "Vous détenez la clé privée"
+  },
+  "keys_chip_contact": {
+    "message": "Contact"
+  },
+  "keys_chip_contact_title": {
+    "message": "Vous détenez sa clé publique"
+  },
+  "keys_ssh_chip_title": {
+    "message": "Une clé SSH, utilisée avec age. Elle ne peut pas être combinée avec des destinataires PGP dans un même message."
+  },
+  "keys_chip_protection_title": {
+    "message": "Comment la clé privée est protégée au repos"
+  },
+  "keys_parse_failed": {
+    "message": "Impossible d'analyser cette clé."
+  },
+  "keys_save_failed": {
+    "message": "Impossible d'enregistrer cette modification."
+  },
+  "keys_recipient_off_title": {
+    "message": "Les messages pour ce contact ne sont pas chiffrés pour cette clé."
+  },
+  "keys_recipient_not_used": {
+    "message": "Non utilisée"
+  },
+  "keys_recipient_last_active_title": {
+    "message": "C'est la seule clé encore en usage. La désactiver aussi chiffrerait les messages pour personne."
+  },
+  "keys_recipient_enable_title": {
+    "message": "Chiffrer de nouveau pour cette clé."
+  },
+  "keys_recipient_disable_title": {
+    "message": "Cesser de chiffrer pour cette clé. Elle reste listée ici."
+  },
+  "keys_recipient_use": {
+    "message": "Utiliser"
+  },
+  "keys_recipient_dont_use": {
+    "message": "Ne pas utiliser"
+  },
+  "keys_encrypt_to": {
+    "message": "Chiffrer pour"
+  },
+  "keys_remove_default": {
+    "message": "Retirer la clé par défaut"
+  },
+  "keys_set_default": {
+    "message": "Définir comme clé par défaut"
+  },
+  "keys_default_removed": {
+    "message": "Clé par défaut retirée"
+  },
+  "keys_default_set": {
+    "message": "Clé par défaut définie"
+  },
+  "keys_contact_keys_partial_title": {
+    "message": "Les messages sont chiffrés pour $active$ des $total$ clés de ce contact ; les autres sont désactivées dans les détails de sa clé."
+  },
+  "keys_contact_keys_all_title": {
+    "message": "Les messages sont chiffrés pour toutes les clés de ce contact ; n'importe laquelle peut déchiffrer."
+  },
+  "keys_contact_keys_partial": {
+    "message": "$active$ clés sur $total$"
+  },
+  "keys_contact_keys_count_one": {
+    "message": "$count$ clé"
+  },
+  "keys_contact_keys_count_other": {
+    "message": "$count$ clés"
+  },
+  "keys_source_github": {
+    "message": "Depuis github.com/$user$"
+  },
+  "keys_source_keyserver": {
+    "message": "Depuis keys.openpgp.org - $user$"
+  },
+  "keys_contact_expired_title": {
+    "message": "Cette clé a expiré le $date$ et ne peut plus servir au chiffrement. Demandez à son propriétaire sa clé actuelle."
+  },
+  "keys_contact_expired": {
+    "message": "Expirée le $date$"
+  },
+  "keys_contact_expires": {
+    "message": "Expire le $date$"
+  },
+  "keys_contact_options_aria": {
+    "message": "Options du contact"
+  },
+  "keys_selection_actions_aria": {
+    "message": "Actions sur la sélection"
+  },
+  "keys_cancel_selection_aria": {
+    "message": "Annuler la sélection"
+  },
+  "keys_selected_count_one": {
+    "message": "$count$ sélectionné"
+  },
+  "keys_selected_count_other": {
+    "message": "$count$ sélectionnés"
+  },
+  "keys_select_all": {
+    "message": "Tout sélectionner"
+  },
+  "keys_deselect_all": {
+    "message": "Tout désélectionner"
+  },
+  "keys_export": {
+    "message": "Exporter"
+  },
+  "keys_size_bytes": {
+    "message": "$size$ o"
+  },
+  "keys_size_kb": {
+    "message": "$size$ Ko"
+  },
+  "keys_size_mb": {
+    "message": "$size$ Mo"
+  }
+}

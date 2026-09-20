@@ -1,0 +1,8 @@
+{
+  "extName": {
+    "message": "Sähköpostin salaus OpenPGP ja GPG - PGP Chrome Extension"
+  },
+  "extDescription": {
+    "message": "Salaa, pura, allekirjoita ja vahvista viestejä OpenPGP:llä ja GPG:llä. Hallitse avaimiasi."
+  }
+}

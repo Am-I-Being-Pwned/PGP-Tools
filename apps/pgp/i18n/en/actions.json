@@ -1,0 +1,402 @@
+{
+  "actions_history": {
+    "message": "History",
+    "description": "History page title, and the tooltip / aria-label of the small clock icon button in the workspace that opens it."
+  },
+  "actions_history_to": {
+    "message": "To $names$",
+    "description": "History row title and entry detail line for an encrypt operation. $names$ is a comma-separated list of recipient names (or short key ids)."
+  },
+  "actions_history_recipient_with_id": {
+    "message": "$name$ ($id$)",
+    "description": "One recipient in the history entry's 'To' line: display name followed by the 8-character short key id in parentheses."
+  },
+  "actions_history_files_one": {
+    "message": "$count$ file",
+    "description": "History row title when the operation ran on files (the single-file case usually shows the filename instead)."
+  },
+  "actions_history_files_other": {
+    "message": "$count$ files",
+    "description": "History row title when the operation ran on several files."
+  },
+  "actions_history_op_signed": {
+    "message": "$op$ + sign",
+    "description": "Operation label for an encrypt that was also signed. $op$ is the operation name ('Encrypt'). Keep the ' + ' pattern short: it sits in a narrow column."
+  },
+  "actions_history_when": {
+    "message": "$date$ ($relative$)",
+    "description": "History entry timestamp: $date$ is a full localised date-time, $relative$ is a relative phrase like '2 hours ago'."
+  },
+  "actions_history_file_with_size": {
+    "message": "$name$ ($size$)",
+    "description": "One file in the history entry detail: filename and its formatted size, e.g. 'report.pdf (1.2 MB)'."
+  },
+  "actions_history_truncated": {
+    "message": "[truncated]",
+    "description": "Marker appended on its own line at the end of a stored history content that was cut short. Keep the square brackets."
+  },
+  "actions_history_metadata_only": {
+    "message": "Metadata only - content is not stored for this operation.",
+    "description": "History entry detail page, shown instead of content for decrypt/verify entries, whose plaintext is never saved."
+  },
+  "actions_history_clear": {
+    "message": "Clear history",
+    "description": "Trash icon tooltip / aria-label in the history page header, and the title and confirm button of the confirmation page."
+  },
+  "actions_history_search_placeholder": {
+    "message": "Search history...",
+    "description": "Placeholder of the search box at the top of the history page."
+  },
+  "actions_history_search_label": {
+    "message": "Search history",
+    "description": "aria-label of the history search box."
+  },
+  "actions_history_empty": {
+    "message": "No history",
+    "description": "Empty state of the history page when history is on but nothing has been recorded yet."
+  },
+  "actions_history_off_reason": {
+    "message": "History is off - enable it next to Sign",
+    "description": "Shown when history is disabled: the history page empty state, and the disabled reason of the 'Open history' command in the command palette. 'Sign' refers to the 'Sign when encrypting' checkbox in the workspace, next to which the history checkbox sits."
+  },
+  "actions_history_no_matches": {
+    "message": "No history matches \"$query$\"",
+    "description": "History page, when a search query matches no entry. $query$ is the user's typed search text."
+  },
+  "actions_history_open_entry": {
+    "message": "Open $title$",
+    "description": "aria-label of a history row button. $title$ is the row's title (recipient list, filename, or operation name)."
+  },
+  "actions_history_no_content": {
+    "message": "No content saved",
+    "description": "History row title (italic) for an entry that stored no content and no files, e.g. a decrypt."
+  },
+  "actions_history_more_matches_one": {
+    "message": "+$count$ more match",
+    "description": "Suffix after a history search snippet when the query occurs again further in the content. Keep the leading plus sign."
+  },
+  "actions_history_more_matches_other": {
+    "message": "+$count$ more matches",
+    "description": "Suffix after a history search snippet when the query occurs again further in the content. Keep the leading plus sign."
+  },
+  "actions_history_usage": {
+    "message": "$used$ of $budget$ used",
+    "description": "Tiny storage usage line at the bottom of the history page. $used$ and $budget$ are formatted byte sizes like '12 KB'."
+  },
+  "actions_history_delete_all_one": {
+    "message": "Delete all $count$ history entry",
+    "description": "Bold headline of the clear-history confirmation page."
+  },
+  "actions_history_delete_all_other": {
+    "message": "Delete all $count$ history entries",
+    "description": "Bold headline of the clear-history confirmation page."
+  },
+  "actions_history_delete_warning": {
+    "message": "This permanently deletes your encrypted operation history from this device. It can't be recovered.",
+    "description": "Body text of the clear-history confirmation page."
+  },
+  "actions_no_keys_available": {
+    "message": "No keys available",
+    "description": "Default empty text of the key selector and recipient picker when there is no key to choose from."
+  },
+  "actions_set_up": {
+    "message": "Set up",
+    "description": "Default label of the inline link shown after the 'No keys available' text, which opens key setup. Very short."
+  },
+  "actions_badge_you": {
+    "message": "You",
+    "description": "Tiny badge on a recipient option that is one of the user's own keys. Must fit in a small pill: 1 short word."
+  },
+  "actions_keys_of_total": {
+    "message": "$active$ of $count$ keys",
+    "description": "Recipient option sub-line for a contact holding several keys, some of which the user turned off. $active$ = keys that will be used, $count$ = keys the contact holds."
+  },
+  "actions_keys_count_one": {
+    "message": "$count$ key",
+    "description": "Recipient option sub-line: how many keys a contact holds (always more than one when shown)."
+  },
+  "actions_keys_count_other": {
+    "message": "$count$ keys",
+    "description": "Recipient option sub-line: how many keys a contact holds."
+  },
+  "actions_remove_recipient": {
+    "message": "Remove $name$",
+    "description": "aria-label and tooltip of a selected-recipient chip; clicking the chip removes it. $name$ is the recipient's display name."
+  },
+  "actions_remove_recipient_detail": {
+    "message": "Remove $name$ - $detail$",
+    "description": "Tooltip of a selected-recipient chip when the key has a detail (email or comment). $name$ is the display name, $detail$ the email/comment."
+  },
+  "actions_add_recipients_placeholder": {
+    "message": "Add recipients...",
+    "description": "Placeholder of the recipient picker's inline search input while no recipient is selected."
+  },
+  "actions_recipient_input_hint": {
+    "message": "Backspace removes the last recipient",
+    "description": "Tooltip of the recipient picker's inline input. 'Backspace' is the keyboard key."
+  },
+  "actions_clear_all_recipients": {
+    "message": "Clear all recipients",
+    "description": "aria-label and tooltip of the x button that removes every selected recipient."
+  },
+  "actions_toggle_recipient_list": {
+    "message": "Toggle recipient list",
+    "description": "aria-label of the chevron button that opens/closes the recipient dropdown."
+  },
+  "actions_no_matches": {
+    "message": "No matches",
+    "description": "Recipient dropdown empty state when the search filters out every key."
+  },
+  "actions_group_recent": {
+    "message": "Recent",
+    "description": "Recipient dropdown group heading: recently used recipients."
+  },
+  "actions_group_contacts": {
+    "message": "Contacts",
+    "description": "Key selector / recipient dropdown group heading: other people's public keys."
+  },
+  "actions_group_my_keys": {
+    "message": "My Keys",
+    "description": "Key selector / recipient dropdown group heading: the user's own keys. Must match the Keys tab heading of the same name."
+  },
+  "actions_select_key_placeholder": {
+    "message": "Select a key...",
+    "description": "Key selector button text while no key is selected."
+  },
+  "actions_search_placeholder": {
+    "message": "Search...",
+    "description": "Placeholder of the search box inside the key selector dropdown."
+  },
+  "actions_no_keys_found": {
+    "message": "No keys found",
+    "description": "Key selector dropdown empty state when the search filters out every key."
+  },
+  "actions_mixed_engine_reason": {
+    "message": "PGP and SSH recipients can't be combined in one message: OpenPGP and age are different formats. Encrypt to one group, then the other.",
+    "description": "Why a recipient of the other kind is dimmed in the picker, and the error when encrypt is attempted with a mixed selection. 'OpenPGP', 'PGP', 'SSH' and 'age' are format/tool names: keep them."
+  },
+  "actions_ssh_password_reason": {
+    "message": "A message password is an OpenPGP feature and age has none, so SSH recipients can't be used with one. Remove the password, or encrypt to this person without it.",
+    "description": "Why SSH recipients are dimmed in the picker once a message password is set, and the error when encrypt is attempted anyway. 'OpenPGP', 'SSH' and 'age' are format/tool names: keep them."
+  },
+  "actions_palette_label": {
+    "message": "Command palette",
+    "description": "aria-label of the command palette dialog (opened with Ctrl/Cmd+K)."
+  },
+  "actions_palette_placeholder": {
+    "message": "Type a command...",
+    "description": "Placeholder of the command palette search box."
+  },
+  "actions_palette_no_match": {
+    "message": "No match.",
+    "description": "Command palette second step (e.g. language list) when the query matches no option."
+  },
+  "actions_palette_no_commands": {
+    "message": "No matching commands.",
+    "description": "Command palette when the query matches no command."
+  },
+  "actions_disabled_toast": {
+    "message": "$name$ is disabled: $reason$",
+    "description": "Toast shown when a keyboard shortcut fires for a command that cannot run right now. $name$ is the command name, $reason$ the short explanation."
+  },
+  "actions_group_mode": {
+    "message": "Mode",
+    "description": "Command palette group heading: commands that switch the workspace mode."
+  },
+  "actions_group_workspace": {
+    "message": "Workspace",
+    "description": "Command palette group heading: workspace commands. Must match the Workspace tab name."
+  },
+  "actions_group_keys": {
+    "message": "Keys",
+    "description": "Command palette group heading: key management commands. Must match the Keys tab name."
+  },
+  "actions_group_navigation": {
+    "message": "Navigation",
+    "description": "Command palette group heading: 'Go to ...' commands."
+  },
+  "actions_group_settings": {
+    "message": "Settings",
+    "description": "Command palette group heading: settings commands. Must match the Settings tab name."
+  },
+  "actions_group_session": {
+    "message": "Session",
+    "description": "Command palette group heading: session commands (lock)."
+  },
+  "actions_group_message": {
+    "message": "Message",
+    "description": "Command palette group heading: message text editing commands."
+  },
+  "actions_group_result": {
+    "message": "Result",
+    "description": "Command palette group heading: commands acting on the decrypted/verified result."
+  },
+  "actions_no_input_encrypt": {
+    "message": "Nothing to encrypt - add text or drop a file",
+    "description": "Disabled reason of the Run command in encrypt mode when the workspace has no input."
+  },
+  "actions_no_input_decrypt": {
+    "message": "Nothing to decrypt - paste an encrypted message or drop a file",
+    "description": "Disabled reason of the Run command in decrypt mode when the workspace has no input."
+  },
+  "actions_no_input_sign": {
+    "message": "Nothing to sign - add text or drop a file",
+    "description": "Disabled reason of the Run command in sign mode when the workspace has no input."
+  },
+  "actions_no_input_verify": {
+    "message": "Nothing to verify - paste a signed message or drop a file",
+    "description": "Disabled reason of the Run command in verify mode when the workspace has no input."
+  },
+  "actions_run_mode": {
+    "message": "Run $mode$",
+    "description": "Command palette name of the Run command. $mode$ is the current mode name (Encrypt, Decrypt, Sign, Verify)."
+  },
+  "actions_switch_to_workspace_first": {
+    "message": "Switch to Workspace first",
+    "description": "Disabled reason of workspace commands while another tab is showing. 'Workspace' is the tab name."
+  },
+  "actions_need_recipient_or_password": {
+    "message": "Select at least one recipient, or set a password",
+    "description": "Disabled reason of the Run command in encrypt mode when nobody could open the result."
+  },
+  "actions_copy_output": {
+    "message": "Copy output",
+    "description": "Command palette: copy the operation result to the clipboard."
+  },
+  "actions_no_output_to_copy": {
+    "message": "No output to copy yet",
+    "description": "Disabled reason of 'Copy output' before an operation has produced text."
+  },
+  "actions_download_output": {
+    "message": "Download output",
+    "description": "Command palette: download the operation result."
+  },
+  "actions_nothing_to_download": {
+    "message": "Nothing to download yet",
+    "description": "Disabled reason of 'Download output' before an operation has produced a result."
+  },
+  "actions_clear_input": {
+    "message": "Clear input",
+    "description": "Command palette: clear the workspace input and output."
+  },
+  "actions_nothing_to_clear": {
+    "message": "Nothing to clear",
+    "description": "Disabled reason of 'Clear input' when the workspace is already empty."
+  },
+  "actions_open_history": {
+    "message": "Open history",
+    "description": "Command palette: open the history page."
+  },
+  "actions_history_off_never_cache": {
+    "message": "History is off while keys never cache",
+    "description": "Disabled reason of history commands when the 'Never auto-cache keys' setting is on, which makes history unavailable."
+  },
+  "actions_encrypt_to_self_on": {
+    "message": "Turn on: Also encrypt to me",
+    "description": "Command palette toggle, shown while the 'Also encrypt to me' preference is off; running it turns the preference on. 'Also encrypt to me' must match the workspace checkbox label."
+  },
+  "actions_encrypt_to_self_off": {
+    "message": "Turn off: Also encrypt to me",
+    "description": "Command palette toggle, shown while the 'Also encrypt to me' preference is on; running it turns the preference off."
+  },
+  "actions_sign_when_encrypting_on": {
+    "message": "Turn on: Sign when encrypting",
+    "description": "Command palette toggle, shown while the 'Sign when encrypting' preference is off. Must match the workspace checkbox label."
+  },
+  "actions_sign_when_encrypting_off": {
+    "message": "Turn off: Sign when encrypting",
+    "description": "Command palette toggle, shown while the 'Sign when encrypting' preference is on."
+  },
+  "actions_save_to_history_on": {
+    "message": "Turn on: Save to history",
+    "description": "Command palette toggle, shown while the 'Save to history' preference is off. Must match the workspace checkbox label."
+  },
+  "actions_save_to_history_off": {
+    "message": "Turn off: Save to history",
+    "description": "Command palette toggle, shown while the 'Save to history' preference is on."
+  },
+  "actions_add_own_key_first": {
+    "message": "Add one of your own keys first",
+    "description": "Disabled reason of toggles that need one of the user's own keys when they own none."
+  },
+  "actions_age_cannot_sign": {
+    "message": "age messages can't be signed",
+    "description": "Disabled reason of the sign toggle while SSH (age) recipients are selected. 'age' is the tool name, lower-case."
+  },
+  "actions_generate_key": {
+    "message": "Generate key",
+    "description": "Command palette: open the key generation page."
+  },
+  "actions_import_key": {
+    "message": "Import key",
+    "description": "Command palette: open the key import page."
+  },
+  "actions_go_to_workspace": {
+    "message": "Go to Workspace",
+    "description": "Command palette navigation to the Workspace tab. 'Workspace' is the tab name."
+  },
+  "actions_go_to_keys": {
+    "message": "Go to Keys",
+    "description": "Command palette navigation to the Keys tab. 'Keys' is the tab name."
+  },
+  "actions_go_to_settings": {
+    "message": "Go to Settings",
+    "description": "Command palette navigation to the Settings tab. 'Settings' is the tab name."
+  },
+  "actions_open_security_presets": {
+    "message": "Open security presets",
+    "description": "Command palette: open the security presets page in Settings."
+  },
+  "actions_lock_now": {
+    "message": "Lock now",
+    "description": "Command palette: lock the extension immediately."
+  },
+  "actions_style_bold": {
+    "message": "Bold selection",
+    "description": "Command palette: make the selected message text bold."
+  },
+  "actions_style_italic": {
+    "message": "Italic selection",
+    "description": "Command palette: make the selected message text italic."
+  },
+  "actions_style_strike": {
+    "message": "Strikethrough selection",
+    "description": "Command palette: strike through the selected message text."
+  },
+  "actions_style_code": {
+    "message": "Code selection",
+    "description": "Command palette: format the selected message text as code (monospace)."
+  },
+  "actions_find_replace": {
+    "message": "Find and replace in message",
+    "description": "Command palette: open the message box's find and replace bar."
+  },
+  "actions_translate_message": {
+    "message": "Translate message...",
+    "description": "Command palette: translate the message being written; opens a language list as a second step."
+  },
+  "actions_translation_off": {
+    "message": "Translation is off in Settings",
+    "description": "Disabled reason of the translate commands when the translation feature is turned off. 'Settings' is the tab name."
+  },
+  "actions_nothing_to_translate": {
+    "message": "Nothing to translate yet",
+    "description": "Disabled reason of 'Translate message...' when the message box is empty."
+  },
+  "actions_language_last_used": {
+    "message": "$label$ (last used)",
+    "description": "Language option in the translate picker for the language most recently translated into. $label$ is the language name."
+  },
+  "actions_translate_to_title": {
+    "message": "Translate the message to",
+    "description": "Heading of the language list in the command palette's translate step."
+  },
+  "actions_pick_language_placeholder": {
+    "message": "Pick a language...",
+    "description": "Placeholder of the search box in the command palette's language list."
+  },
+  "actions_translate_result_to": {
+    "message": "Translate to $language$",
+    "description": "Command palette: translate the decrypted/verified result into the user's reading language. $language$ is the language name."
+  }
+}

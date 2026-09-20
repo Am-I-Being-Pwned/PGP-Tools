@@ -1,0 +1,281 @@
+{
+  "app_action_title": {
+    "message": "PGP Tools"
+  },
+  "app_cmd_open": {
+    "message": "PGP Tools を開く"
+  },
+  "app_cmd_open_encrypt": {
+    "message": "PGP Tools を暗号化モードで開く"
+  },
+  "app_cmd_open_decrypt": {
+    "message": "PGP Tools を復号モードで開く"
+  },
+  "app_cmd_open_sign": {
+    "message": "PGP Tools を署名モードで開く"
+  },
+  "app_cmd_open_verify": {
+    "message": "PGP Tools を検証モードで開く"
+  },
+  "app_menu_open_in_pgp_tools": {
+    "message": "PGP Tools で開く"
+  },
+  "app_tab_main": {
+    "message": "メイン"
+  },
+  "app_nav_label": {
+    "message": "メイン ナビゲーション"
+  },
+  "app_vault_unreadable_title": {
+    "message": "保管庫を読み取れませんでした。"
+  },
+  "app_vault_unreadable_body": {
+    "message": "鍵はこのデバイスに保存されたままです。まずはロックしてから、もう一度お試しください。"
+  },
+  "app_vault_unreadable_body_passkey": {
+    "message": "鍵はこのデバイスに保存されたままです。まずはロックしてから、もう一度お試しください。その際は、設定したときと同じパスキーを使用してください。"
+  },
+  "app_vault_lock_retry": {
+    "message": "ロックしてやり直す"
+  },
+  "app_import_added_one": {
+    "message": "鍵を追加しました"
+  },
+  "app_import_added_other": {
+    "message": "$count$ 個の鍵を追加しました"
+  },
+  "app_import_view_key_one": {
+    "message": "鍵を表示"
+  },
+  "app_import_view_key_other": {
+    "message": "鍵を表示"
+  },
+  "app_welcome_open_failed": {
+    "message": "サイドパネルを開けませんでした。ツールバーの PGP Tools アイコンをクリックしてください。"
+  },
+  "app_welcome_opened": {
+    "message": "サイドパネルの手順に従って始めましょう"
+  },
+  "app_welcome_title": {
+    "message": "PGP Tools がインストールされました"
+  },
+  "app_welcome_body": {
+    "message": "下のボタンをクリックしてサイドパネルを開き、鍵の設定を完了してください。その後は、ツールバーの PGP Tools アイコンからいつでも再度開けます。"
+  },
+  "app_welcome_start": {
+    "message": "ここをクリックして始める"
+  },
+  "app_welcome_credit_before": {
+    "message": "このプライバシーツールの提供元は"
+  },
+  "app_welcome_credit_after": {
+    "message": "です。"
+  },
+  "app_onboarding_prf_unsupported": {
+    "message": "お使いの認証器は PRF に対応していません。別のパスキーを試すか、代わりにパスワードを使用してください。"
+  },
+  "app_onboarding_setup_failed": {
+    "message": "セットアップに失敗しました"
+  },
+  "app_onboarding_name_required": {
+    "message": "名前は必須です。"
+  },
+  "app_onboarding_generate_failed": {
+    "message": "鍵の生成に失敗しました"
+  },
+  "app_onboarding_intro_body": {
+    "message": "正しい相手だけが読めるプライベートなメッセージを送り、メッセージが本当に名乗っている相手からのものかを検証できます。"
+  },
+  "app_onboarding_storage_question": {
+    "message": "データをどこに保存しますか？"
+  },
+  "app_onboarding_next": {
+    "message": "次へ"
+  },
+  "app_onboarding_protection_title": {
+    "message": "データを保護する"
+  },
+  "app_onboarding_protection_body": {
+    "message": "連絡先と鍵の保護方法を選択してください。PGP Tools を開くたびにこれを使用します。"
+  },
+  "app_onboarding_create_passkey": {
+    "message": "パスキーを作成"
+  },
+  "app_onboarding_set_password": {
+    "message": "パスワードを設定"
+  },
+  "app_onboarding_identity_title": {
+    "message": "PGP 鍵を作成"
+  },
+  "app_onboarding_identity_body": {
+    "message": "メッセージの暗号化、復号、署名に使う鍵ペアを作成します。"
+  },
+  "app_onboarding_name_label": {
+    "message": "名前 *"
+  },
+  "app_onboarding_name_placeholder": {
+    "message": "氏名"
+  },
+  "app_onboarding_email_label": {
+    "message": "メールアドレス"
+  },
+  "app_onboarding_optional": {
+    "message": "省略可"
+  },
+  "app_onboarding_email_placeholder": {
+    "message": "you@example.com"
+  },
+  "app_onboarding_comment_label": {
+    "message": "コメント"
+  },
+  "app_onboarding_comment_placeholder": {
+    "message": "例: 仕事用、個人用"
+  },
+  "app_onboarding_advanced_options": {
+    "message": "詳細オプション"
+  },
+  "app_onboarding_algorithm_label": {
+    "message": "アルゴリズム"
+  },
+  "app_onboarding_algo_ecc_hint": {
+    "message": "最新の方式で高速、鍵も小さめです。ほとんどの用途におすすめです。"
+  },
+  "app_onboarding_algo_rsa_hint": {
+    "message": "幅広い互換性があります。鍵の生成に時間がかかります。"
+  },
+  "app_onboarding_expiry_label": {
+    "message": "鍵の有効期限"
+  },
+  "app_onboarding_expiry_never": {
+    "message": "無期限"
+  },
+  "app_onboarding_expiry_years_one": {
+    "message": "$count$ 年"
+  },
+  "app_onboarding_expiry_years_other": {
+    "message": "$count$ 年"
+  },
+  "app_onboarding_create_key": {
+    "message": "PGP 鍵を作成する"
+  },
+  "app_onboarding_skip": {
+    "message": "後で設定する"
+  },
+  "app_onboarding_passkey_prompt": {
+    "message": "ブラウザのパスキーの案内に従ってください..."
+  },
+  "app_onboarding_generating": {
+    "message": "鍵を生成しています..."
+  },
+  "app_onboarding_rsa_slow": {
+    "message": "RSA 鍵の生成には少し時間がかかります"
+  },
+  "app_onboarding_preset_title": {
+    "message": "セキュリティ プリセットを選択"
+  },
+  "app_onboarding_preset_body": {
+    "message": "PGP Tools に鍵をどの程度慎重に扱わせますか？各オプションには設定内容が正確に表示され、後から設定でいつでも変更できます。"
+  },
+  "app_onboarding_unlock_with_vault": {
+    "message": "保管庫と一緒に鍵のロックを解除"
+  },
+  "app_onboarding_unlock_with_vault_hint": {
+    "message": "保管庫を開くパスキーの認証で、鍵のロックも一緒に解除されます。鍵ごとの認証はありません。設定で変更できます。"
+  },
+  "app_onboarding_use_preset": {
+    "message": "このプリセットを使用"
+  },
+  "app_onboarding_keep_defaults": {
+    "message": "デフォルトのままにする"
+  },
+  "app_copy_failed": {
+    "message": "コピーに失敗しました。拡張機能のパネルをクリックしてから、もう一度お試しください。"
+  },
+  "app_copied": {
+    "message": "$label$をコピーしました"
+  },
+  "app_copied_wipe": {
+    "message": "$label$をコピーしました。クリップボードは $seconds$ 秒後に消去されます"
+  },
+  "app_oversized_more": {
+    "message": "$names$、他 $count$ 件"
+  },
+  "app_oversized_files_one": {
+    "message": "$files$: ファイルが $limit$ を超えているため、パネルでは処理できません。"
+  },
+  "app_oversized_files_other": {
+    "message": "$files$: ファイルが $limit$ を超えているため、パネルでは処理できません。"
+  },
+  "app_error_remedy_import_key": {
+    "message": "鍵をインポート"
+  },
+  "app_error_remedy_try_again": {
+    "message": "再試行"
+  },
+  "app_error_remedy_check_key": {
+    "message": "鍵を確認"
+  },
+  "app_error_key_not_found": {
+    "message": "その鍵はもうキーリングにないため、何も保存されませんでした。鍵を再度インポートしてから、やり直してください。"
+  },
+  "app_error_key_locked": {
+    "message": "この鍵はロックされています。ロックを解除してから、やり直してください。"
+  },
+  "app_error_vault_locked": {
+    "message": "保管庫がロックされているため、何も変更されませんでした。ロックを解除してから、もう一度実行してください。"
+  },
+  "app_error_weak_password": {
+    "message": "そのパスワードは短すぎます。8 文字以上にしてください。"
+  },
+  "app_error_password_required": {
+    "message": "この鍵にはパスワードが必要です。鍵のパスワードを入力してロックを解除してください。"
+  },
+  "app_error_passkey_failed": {
+    "message": "パスキーの認証が完了しませんでした。もう一度試すか、別の方法でロックを解除してください。"
+  },
+  "app_error_passkey_dismissed": {
+    "message": "パスキーの案内が閉じられました。準備ができたら、操作をもう一度実行してください。"
+  },
+  "app_error_wrong_password": {
+    "message": "この鍵のパスワードが違います。確認してから、やり直してください。"
+  },
+  "app_error_symmetric_wrong_password": {
+    "message": "そのパスワードではこのメッセージを開けませんでした。確認してから、やり直してください。パスワードが正しいと確信できる場合は、メッセージが破損している可能性があります。"
+  },
+  "app_error_ocb_unsupported": {
+    "message": "このメッセージは、このアプリでは読み取れない古い AEAD (OCB) 形式を使用しています。送信者に通常の方法で暗号化して再送するよう依頼してください。パスワードはどれでも構いません。対応していないのは形式のほうです。"
+  },
+  "app_error_no_decryption_key": {
+    "message": "このメッセージは、お持ちでない鍵に対して暗号化されています。その秘密鍵をインポートするか、送信者にあなたの鍵のいずれかに対して暗号化するよう依頼してください。"
+  },
+  "app_error_no_decryption_key_with_id": {
+    "message": "このメッセージは、お持ちでない鍵 (鍵 ID $key_id$) に対して暗号化されています。その秘密鍵をインポートするか、送信者にあなたの鍵のいずれかに対して暗号化するよう依頼してください。"
+  },
+  "app_error_not_crx": {
+    "message": "これは、このツールで検証できる Chrome 拡張機能パッケージではありません。CRX3 (.crx) ファイルを選択してください。"
+  },
+  "app_error_crx_unsigned": {
+    "message": "CRX の署名が一致しません。この鍵で署名されていないか、署名後にファイルが変更されています。公開元から新しいコピーを入手してください。"
+  },
+  "app_error_tampered": {
+    "message": "署名の検証に失敗しました。このメッセージは改ざんされている可能性があります。内容を信用せず、送信者に再送を依頼してください。"
+  },
+  "app_error_key_expired": {
+    "message": "この操作に関係する鍵の有効期限が切れています。鍵の所有者に更新された鍵を依頼し、インポートしてください。"
+  },
+  "app_error_key_revoked": {
+    "message": "この操作に関係する鍵が、所有者によって失効されています。代わりの鍵を入手して、インポートしてください。"
+  },
+  "app_error_weak_algorithm": {
+    "message": "この鍵は、もはや安全とみなされていない署名アルゴリズムを使用しています。鍵の所有者に SHA-256 以上で再発行するよう依頼してください。"
+  },
+  "app_error_corrupted": {
+    "message": "データが破損しているか、途中で切れています。完全な新しいコピーを入手して、やり直してください。"
+  },
+  "app_error_not_pgp_data": {
+    "message": "これは PGP データではないようです。BEGIN 行と END 行を含む、アーマー形式のブロック全体を貼り付けたか確認してください。"
+  },
+  "app_error_storage_full": {
+    "message": "ブラウザのストレージがいっぱいのため、保存できませんでした。不要になった鍵や連絡先を削除してから、やり直してください。"
+  }
+}

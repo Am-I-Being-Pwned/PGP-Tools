@@ -1,0 +1,8 @@
+{
+  "extName": {
+    "message": "OpenPGP と GPG のメール暗号化 - Gmail & Outlook Compatible, Slack Compatible"
+  },
+  "extDescription": {
+    "message": "OpenPGPとGPGでメールやメッセージを暗号化、復号、署名、検証。ブラウザ上で鍵を管理。"
+  }
+}

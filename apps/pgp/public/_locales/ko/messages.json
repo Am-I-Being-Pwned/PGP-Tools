@@ -1,8 +1,8 @@
 {
-  "extName": {
-    "message": "OpenPGP 및 GPG 이메일 암호화 - Slack & Discord Compatible, Gmail Compatible"
-  },
   "extDescription": {
     "message": "OpenPGP와 GPG로 이메일과 메시지를 암호화, 복호화, 서명, 검증하고 키를 관리하세요."
+  },
+  "extName": {
+    "message": "OpenPGP 및 GPG 이메일 암호화 - Slack & Discord Compatible, Gmail Compatible"
   }
 }

@@ -1,0 +1,478 @@
+{
+  "keygen_title": {
+    "message": "Generate key",
+    "description": "Header title and accessible name of the key generation slide-over page."
+  },
+  "keygen_error_name_required": {
+    "message": "Name is required.",
+    "description": "Validation error on the identity step when the name field is empty."
+  },
+  "keygen_error_expiry_required": {
+    "message": "Select an expiry date.",
+    "description": "Validation error on the custom expiry step when no calendar date is picked."
+  },
+  "keygen_error_expiry_past": {
+    "message": "Expiry date must be in the future.",
+    "description": "Validation error on the custom expiry step when the picked date is not after today."
+  },
+  "keygen_error_generation_failed": {
+    "message": "Key generation failed",
+    "description": "Fallback error shown on the protection step when key generation throws without a message."
+  },
+  "keygen_create_heading": {
+    "message": "Create a new key",
+    "description": "Big heading on the first (identity) step of key generation."
+  },
+  "keygen_create_subtitle_crx": {
+    "message": "A new RSA-2048 signing key for packaging a Chrome extension (.crx).",
+    "description": "Subtitle under the heading when the CRX (Chrome extension signing) key type is selected. RSA-2048 and .crx stay as is."
+  },
+  "keygen_create_subtitle_pgp": {
+    "message": "A new OpenPGP keypair for encrypting, decrypting, and signing messages.",
+    "description": "Subtitle under the heading when the PGP (messaging) key type is selected."
+  },
+  "keygen_type_pgp": {
+    "message": "Messaging key (PGP)",
+    "description": "Toggle button label choosing the PGP key type. Sits side by side with keygen_type_crx in a narrow side panel; keep short."
+  },
+  "keygen_type_crx": {
+    "message": "Chrome extension (CRX)",
+    "description": "Toggle button label choosing the Chrome extension signing key type. Sits side by side with keygen_type_pgp; keep short."
+  },
+  "keygen_label_label": {
+    "message": "Label",
+    "description": "Field label for the optional display label of a CRX signing key."
+  },
+  "keygen_optional": {
+    "message": "optional",
+    "description": "Small muted tag after a field label meaning the field may be left blank (lowercase in English)."
+  },
+  "keygen_label_placeholder": {
+    "message": "e.g. My Extension",
+    "description": "Placeholder inside the CRX key label field; an example name."
+  },
+  "keygen_name_label": {
+    "message": "Name *",
+    "description": "Field label for the key owner's name; the asterisk marks it required."
+  },
+  "keygen_name_placeholder": {
+    "message": "Your full name",
+    "description": "Placeholder inside the name field of key generation."
+  },
+  "keygen_email_label": {
+    "message": "Email",
+    "description": "Field label for the optional email address in the key's user ID."
+  },
+  "keygen_email_placeholder": {
+    "message": "you@example.com",
+    "description": "Placeholder inside the email field; an example address."
+  },
+  "keygen_comment_label": {
+    "message": "Comment",
+    "description": "Field label for the optional OpenPGP user ID comment."
+  },
+  "keygen_comment_placeholder": {
+    "message": "e.g. work, personal",
+    "description": "Placeholder inside the comment field; example comments."
+  },
+  "keygen_advanced_options": {
+    "message": "Advanced options",
+    "description": "Toggle that reveals algorithm, key size and expiry settings."
+  },
+  "keygen_algorithm_label": {
+    "message": "Algorithm",
+    "description": "Field label above the key algorithm dropdown (ECC / RSA)."
+  },
+  "keygen_algorithm_hint_ecc": {
+    "message": "Modern, fast, small keys. Recommended for most uses.",
+    "description": "Tiny hint under the algorithm dropdown when ECC (Ed25519) is selected."
+  },
+  "keygen_algorithm_hint_rsa": {
+    "message": "Widely compatible. Slower key generation.",
+    "description": "Tiny hint under the algorithm dropdown when RSA is selected."
+  },
+  "keygen_key_size_label": {
+    "message": "Key size",
+    "description": "Field label above the RSA key size dropdown."
+  },
+  "keygen_key_size_4096": {
+    "message": "4096 bit",
+    "description": "The only RSA key size option in the key size dropdown."
+  },
+  "keygen_expiry_label": {
+    "message": "Key expiry",
+    "description": "Field label above the key expiry dropdown."
+  },
+  "keygen_expiry_never": {
+    "message": "Never",
+    "description": "Expiry dropdown option: the key never expires."
+  },
+  "keygen_expiry_1y": {
+    "message": "1 year",
+    "description": "Expiry dropdown option: expires one year from now."
+  },
+  "keygen_expiry_2y": {
+    "message": "2 years",
+    "description": "Expiry dropdown option: expires two years from now (the default)."
+  },
+  "keygen_expiry_3y": {
+    "message": "3 years",
+    "description": "Expiry dropdown option: expires three years from now."
+  },
+  "keygen_expiry_custom": {
+    "message": "Custom date",
+    "description": "Expiry dropdown option: pick a specific date on a calendar."
+  },
+  "keygen_next": {
+    "message": "Next",
+    "description": "Full-width button advancing to the next key generation step."
+  },
+  "keygen_expiry_heading": {
+    "message": "Choose an expiry date",
+    "description": "Big heading on the custom expiry calendar step."
+  },
+  "keygen_expiry_subtitle": {
+    "message": "After this date the key can no longer be used; you can always generate a new one.",
+    "description": "Subtitle under the expiry heading explaining what expiry means."
+  },
+  "keygen_expires_on": {
+    "message": "Expires $date$",
+    "description": "Line under the calendar once a date is picked. $date$ is a localised long date."
+  },
+  "keygen_protect_heading": {
+    "message": "Protect your key",
+    "description": "Big heading on the protection method step."
+  },
+  "keygen_protect_subtitle": {
+    "message": "Choose how to unlock this key when you use it.",
+    "description": "Subtitle under the protection heading."
+  },
+  "keygen_submit_use_passkey": {
+    "message": "Use passkey",
+    "description": "Submit button on the protection step when reusing the passkey already set up for the vault. Half-width button; keep short."
+  },
+  "keygen_submit_create_passkey": {
+    "message": "Create passkey",
+    "description": "Submit button on the protection step that registers a new passkey. Half-width button; keep short."
+  },
+  "keygen_submit_generate": {
+    "message": "Generate",
+    "description": "Submit button on the protection step when protecting with a password. Half-width button; keep short."
+  },
+  "keygen_generating_passkey": {
+    "message": "Follow your browser's passkey prompt...",
+    "description": "Spinner text while the browser's passkey (WebAuthn) dialog is open."
+  },
+  "keygen_generating_key": {
+    "message": "Generating key...",
+    "description": "Spinner text while the key is being generated with a password."
+  },
+  "keygen_generating_rsa_hint": {
+    "message": "RSA keys take a moment to generate",
+    "description": "Small note under the spinner for RSA / CRX keys, which are slow to generate."
+  },
+  "keygen_protection_intro": {
+    "message": "Choose how to protect your private key:",
+    "description": "Muted line above the passkey / password radio cards."
+  },
+  "keygen_protection_passkey": {
+    "message": "Passkey",
+    "description": "Title of the passkey radio card."
+  },
+  "keygen_protection_recommended": {
+    "message": "Recommended",
+    "description": "Small tag on the right of the passkey card title."
+  },
+  "keygen_protection_passkey_desc": {
+    "message": "Use your fingerprint, face, or security key. No password to remember.",
+    "description": "Description under the passkey card title."
+  },
+  "keygen_protection_passkey_unavailable": {
+    "message": "Not available in this browser.",
+    "description": "Red note in the passkey card when the browser lacks WebAuthn PRF support; the card is disabled."
+  },
+  "keygen_protection_reuse_passkey": {
+    "message": "Use the same passkey I already set up",
+    "description": "Checkbox label in the passkey card offering to reuse the vault's existing passkey instead of registering a new one."
+  },
+  "keygen_protection_password": {
+    "message": "Password",
+    "description": "Title of the password radio card; also the accessible name of the password field."
+  },
+  "keygen_protection_password_desc": {
+    "message": "Protect with a password. You'll enter it each time you unlock.",
+    "description": "Description under the password card title."
+  },
+  "keygen_password_placeholder": {
+    "message": "Password (min 8 characters)",
+    "description": "Placeholder of the new key password field; 8 is the enforced minimum."
+  },
+  "keygen_confirm_password": {
+    "message": "Confirm password",
+    "description": "Placeholder and accessible name of the repeat-password field."
+  },
+  "keygen_error_password_short": {
+    "message": "Password must be at least 8 characters.",
+    "description": "Validation error when the new key password is under 8 characters."
+  },
+  "keygen_error_password_mismatch": {
+    "message": "Passwords don't match.",
+    "description": "Validation error when the two password fields differ."
+  },
+  "keygen_key_password_placeholder": {
+    "message": "Key password",
+    "description": "Placeholder of the field asking for an existing key's password to unlock it."
+  },
+  "keygen_error_wrong_password": {
+    "message": "Wrong password.",
+    "description": "Error under a key's unlock field when the entered password does not open it."
+  },
+  "keygen_error_passkey_failed": {
+    "message": "Passkey authentication failed.",
+    "description": "Error under a key's unlock control when the passkey ceremony fails (not when the user cancels)."
+  },
+  "keygen_error_key_not_unlocked": {
+    "message": "Key is not unlocked.",
+    "description": "Error on the export private key page when the key's session handle has gone (key re-locked)."
+  },
+  "keygen_error_passphrase_short": {
+    "message": "Passphrase must be at least 8 characters.",
+    "description": "Validation error when the export passphrase is under 8 characters."
+  },
+  "keygen_error_passphrase_mismatch": {
+    "message": "Passphrases do not match.",
+    "description": "Validation error when the two export passphrase fields differ."
+  },
+  "keygen_export_failed": {
+    "message": "Export failed.",
+    "description": "Generic error when building or downloading the export fails without a message."
+  },
+  "keygen_export_failed_detail": {
+    "message": "Export failed: $message$",
+    "description": "Error when building the export bundle throws. $message$ is the underlying error text (may be English)."
+  },
+  "keygen_export_toast_exported_one": {
+    "message": "Exported $count$ key",
+    "description": "Success toast after a passphrase-protected export. $count$ is the number of keys written."
+  },
+  "keygen_export_toast_exported_other": {
+    "message": "Exported $count$ keys",
+    "description": "Success toast after a passphrase-protected export. $count$ is the number of keys written."
+  },
+  "keygen_export_toast_exported_unsafe_one": {
+    "message": "Exported $count$ key (private keys UNENCRYPTED)",
+    "description": "Success toast after a plaintext export. $count$ is the number of keys written. UNENCRYPTED is deliberately shouted."
+  },
+  "keygen_export_toast_exported_unsafe_other": {
+    "message": "Exported $count$ keys (private keys UNENCRYPTED)",
+    "description": "Success toast after a plaintext export. $count$ is the number of keys written. UNENCRYPTED is deliberately shouted."
+  },
+  "keygen_export_title": {
+    "message": "Export keys",
+    "description": "Default header title of the bulk key export page."
+  },
+  "keygen_export_unlock_intro": {
+    "message": "Exporting a private key requires unlocking it first. Unlock the keys below to include them in the backup.",
+    "description": "Muted intro on the unlock step of bulk export, above the list of keys to unlock."
+  },
+  "keygen_export_contacts_included_one": {
+    "message": "$count$ contact will also be included (public keys, no unlock needed).",
+    "description": "Note on the unlock step of bulk export. $count$ is the number of contacts whose public keys go in the file."
+  },
+  "keygen_export_contacts_included_other": {
+    "message": "$count$ contacts will also be included (public keys, no unlock needed).",
+    "description": "Note on the unlock step of bulk export. $count$ is the number of contacts whose public keys go in the file."
+  },
+  "keygen_export_skip_locked": {
+    "message": "Skip locked keys and continue",
+    "description": "Button on the unlock step that proceeds to export without the still-locked keys."
+  },
+  "keygen_export_crx_included_one": {
+    "message": "Plus $count$ CRX signing key, re-encrypted under this passphrase so they restore on any device.",
+    "description": "Export step note when CRX (Chrome extension) signing keys are unlocked. $count$ is how many."
+  },
+  "keygen_export_crx_included_other": {
+    "message": "Plus $count$ CRX signing keys, re-encrypted under this passphrase so they restore on any device.",
+    "description": "Export step note when CRX (Chrome extension) signing keys are unlocked. $count$ is how many."
+  },
+  "keygen_export_still_locked_one": {
+    "message": "$count$ key still locked and will be left out.",
+    "description": "Amber warning on the export step. $count$ is the number of keys left locked. Followed by a space, the keygen_export_go_back_unlock link, then keygen_export_still_locked_after."
+  },
+  "keygen_export_still_locked_other": {
+    "message": "$count$ keys still locked and will be left out.",
+    "description": "Amber warning on the export step. $count$ is the number of keys left locked. Followed by a space, the keygen_export_go_back_unlock link, then keygen_export_still_locked_after."
+  },
+  "keygen_export_go_back_unlock": {
+    "message": "Go back to unlock",
+    "description": "Underlined inline link in the still-locked warning that returns to the unlock step. Read as a sentence with keygen_export_still_locked_after: 'Go back to unlock.'"
+  },
+  "keygen_export_still_locked_after": {
+    "message": ".",
+    "description": "Punctuation directly after the keygen_export_go_back_unlock link, closing that sentence. May be empty if your language needs no closing mark."
+  },
+  "keygen_export_passphrase_intro": {
+    "message": "Set a passphrase to encrypt the exported private keys (OpenPGP S2K -- imports into GnuPG and other tools). Anyone with this passphrase and the file can decrypt your messages and sign as you.",
+    "description": "Muted explanation above the passphrase fields on the export step. 'OpenPGP S2K' and 'GnuPG' are technical names; keep."
+  },
+  "keygen_passphrase_placeholder": {
+    "message": "Passphrase (min 8 characters)",
+    "description": "Placeholder of the export passphrase field; 8 is the enforced minimum."
+  },
+  "keygen_confirm_passphrase_placeholder": {
+    "message": "Confirm passphrase",
+    "description": "Placeholder of the repeat-passphrase field on export."
+  },
+  "keygen_exporting": {
+    "message": "Exporting...",
+    "description": "Export button text while the bundle is being built."
+  },
+  "keygen_export_with_passphrase": {
+    "message": "Export with passphrase",
+    "description": "Primary button that exports private keys encrypted under the passphrase (bulk export and single PGP key export)."
+  },
+  "keygen_export_plaintext_warning_file": {
+    "message": "Plaintext export. Anyone who reads the downloaded file gets full control of every PGP key in it.",
+    "description": "Red warning above the type-to-confirm field for an unencrypted bulk export. Followed by keygen_export_plaintext_crx_left_out (when CRX keys exist) and then the 'Type EXPORT to confirm:' fragments."
+  },
+  "keygen_export_plaintext_crx_left_out": {
+    "message": "CRX signing keys are left out of a plaintext export -- use a passphrase to include them.",
+    "description": "Extra sentence appended to the plaintext warning when CRX signing keys exist; they are never written unencrypted."
+  },
+  "keygen_type_to_confirm_before": {
+    "message": "Type",
+    "description": "Fragment before the bold confirmation word (keygen_confirm_word). Read together: 'Type EXPORT to confirm:'"
+  },
+  "keygen_confirm_word": {
+    "message": "EXPORT",
+    "description": "The word the user must type exactly to allow an unencrypted export. Shown in bold and as the field placeholder, and compared against the input; keep it a single uppercase word."
+  },
+  "keygen_type_to_confirm_after": {
+    "message": "to confirm:",
+    "description": "Fragment after the bold confirmation word (keygen_confirm_word). Read together: 'Type EXPORT to confirm:'"
+  },
+  "keygen_export_without_passphrase": {
+    "message": "Export without passphrase (unsafe)",
+    "description": "Red button that exports private keys unencrypted (bulk export and single PGP key export)."
+  },
+  "keygen_export": {
+    "message": "Export",
+    "description": "Primary button on the export step when only public keys (contacts) are being exported, so no passphrase is needed."
+  },
+  "keygen_export_nothing": {
+    "message": "Nothing to export",
+    "description": "Muted line on the export step when there are no unlocked keys and no contacts."
+  },
+  "keygen_copied_encrypted": {
+    "message": "Encrypted key copied (clears in 60s)",
+    "description": "Green feedback after copying a passphrase-encrypted private key to the clipboard; the clipboard is wiped after 60 seconds."
+  },
+  "keygen_copied_plaintext": {
+    "message": "Unprotected key copied (clears in 30s)",
+    "description": "Green feedback after copying an unencrypted private key to the clipboard; the clipboard is wiped after 30 seconds."
+  },
+  "keygen_unlock_gate_passkey": {
+    "message": "Authenticate with your passkey to copy this key.",
+    "description": "Default intro on the unlock gate of the copy-private-key page for a passkey-protected key."
+  },
+  "keygen_unlock_gate_password": {
+    "message": "Enter the key password to copy this key.",
+    "description": "Default intro on the unlock gate of the copy-private-key page for a password-protected key."
+  },
+  "keygen_unlocking": {
+    "message": "Unlocking...",
+    "description": "Unlock button text while the key is being unlocked."
+  },
+  "keygen_encrypting": {
+    "message": "Encrypting...",
+    "description": "Copy/export button text while the private key is being encrypted under the passphrase."
+  },
+  "keygen_exporter_pgp_title": {
+    "message": "Export Private Key",
+    "description": "Header title of the page that copies a PGP private key to the clipboard."
+  },
+  "keygen_exporter_pgp_encrypted_blurb": {
+    "message": "Set a passphrase to encrypt the exported key. Anyone with this passphrase and the exported key can decrypt your messages and sign as you.",
+    "description": "Muted explanation above the passphrase fields when copying a PGP private key."
+  },
+  "keygen_exporter_pgp_plaintext_blurb": {
+    "message": "Plaintext export. Anyone who reads your clipboard gets full control of this key.",
+    "description": "Red warning above the type-to-confirm field when copying a PGP private key unencrypted. Followed by 'Type EXPORT to confirm:'."
+  },
+  "keygen_exporter_crx_title": {
+    "message": "Copy CRX private key",
+    "description": "Header title of the page that copies a CRX (Chrome extension) signing key to the clipboard."
+  },
+  "keygen_exporter_crx_unlock_passkey": {
+    "message": "Unlock this signing key to copy it. Authenticate with your passkey.",
+    "description": "Intro on the unlock gate when copying a passkey-protected CRX signing key."
+  },
+  "keygen_exporter_crx_unlock_password": {
+    "message": "Unlock this signing key to copy it. Enter the key password.",
+    "description": "Intro on the unlock gate when copying a password-protected CRX signing key."
+  },
+  "keygen_exporter_crx_encrypted_blurb": {
+    "message": "Set a passphrase to encrypt the copied key (re-importable into PGP Tools via Import Keys). Anyone with this passphrase and the copied block can sign extensions as you.",
+    "description": "Muted explanation above the passphrase fields when copying a CRX signing key. 'PGP Tools' is the product name; 'Import Keys' is the name of the import page."
+  },
+  "keygen_exporter_crx_encrypted_button": {
+    "message": "Copy with passphrase",
+    "description": "Primary button that copies the CRX signing key encrypted under the passphrase."
+  },
+  "keygen_exporter_crx_plaintext_blurb": {
+    "message": "Plaintext export (raw PKCS#8 PEM). Anyone who reads your clipboard gets full control of this signing key.",
+    "description": "Red warning above the type-to-confirm field when copying a CRX signing key unencrypted. 'PKCS#8 PEM' is a format name; keep."
+  },
+  "keygen_exporter_crx_plaintext_button": {
+    "message": "Copy without passphrase (unsafe)",
+    "description": "Red button that copies the CRX signing key unencrypted."
+  },
+  "keygen_passkey_default_user": {
+    "message": "PGP Key Protection",
+    "description": "Account name shown in the browser's passkey dialog when registering a passkey with no key owner name available."
+  },
+  "keygen_passkey_imported_user": {
+    "message": "Imported PGP Key",
+    "description": "Account name shown in the browser's passkey dialog when protecting an imported key that has no user ID."
+  },
+  "keygen_error_prf_unsupported_authenticator": {
+    "message": "Your authenticator doesn't support PRF. Try a different passkey or use a password instead.",
+    "description": "Error shown on the protection step when the passkey just registered cannot derive a key (no WebAuthn PRF). 'PRF' is a technical name; keep."
+  },
+  "keygen_prf_unsupported_intro": {
+    "message": "PRF not supported by this authenticator.",
+    "description": "First sentence of the error when a passkey cannot derive a key. Followed, separated by spaces, by the platform hints keygen_prf_unsupported_mac / _windows / _chrome as applicable."
+  },
+  "keygen_prf_unsupported_mac": {
+    "message": "macOS requires 15+ with iCloud Keychain.",
+    "description": "Platform hint appended to keygen_prf_unsupported_intro on macOS."
+  },
+  "keygen_prf_unsupported_windows": {
+    "message": "Windows Hello doesn't support PRF - use a security key (e.g. YubiKey).",
+    "description": "Platform hint appended to keygen_prf_unsupported_intro on Windows. Plain hyphen, not a dash."
+  },
+  "keygen_prf_unsupported_chrome": {
+    "message": "Chrome profile passkeys may not support PRF - try Google Password Manager or an external key.",
+    "description": "Hint appended to keygen_prf_unsupported_intro on desktop Chrome. Plain hyphen, not a dash."
+  },
+  "keygen_export_summary": {
+    "message": "Downloads one $ext$ file (standard ASCII-armored OpenPGP): your $private_keys$ as $private_block$s and your $contacts$ as $public_block$s.",
+    "description": "Export step summary. $ext$ is the literal '.asc'; $private_keys$ is keygen_export_summary_private_keys ('2 unlocked private keys'); $contacts$ is keygen_export_summary_contacts ('3 contacts'); $private_block$ / $public_block$ are the literal armor headers 'PGP PRIVATE KEY BLOCK' / 'PGP PUBLIC KEY BLOCK' (rendered monospace; the trailing 's' after each pluralises it in English, drop or rephrase as your language needs)."
+  },
+  "keygen_export_summary_private_keys_one": {
+    "message": "$count$ unlocked private key",
+    "description": "Substituted into keygen_export_summary as $private_keys$."
+  },
+  "keygen_export_summary_private_keys_other": {
+    "message": "$count$ unlocked private keys",
+    "description": "Substituted into keygen_export_summary as $private_keys$."
+  },
+  "keygen_export_summary_contacts_one": {
+    "message": "$count$ contact",
+    "description": "Substituted into keygen_export_summary as $contacts$."
+  },
+  "keygen_export_summary_contacts_other": {
+    "message": "$count$ contacts",
+    "description": "Substituted into keygen_export_summary as $contacts$."
+  }
+}

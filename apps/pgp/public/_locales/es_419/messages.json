@@ -1,8 +1,8 @@
 {
-  "extName": {
-    "message": "Encriptación PGP y GPG de email - Encrypt Email Online"
-  },
   "extDescription": {
     "message": "Encripta y desencripta archivos, firma y verifica mensajes con PGP y GPG. Privacidad real."
+  },
+  "extName": {
+    "message": "Encriptación PGP y GPG de email - Encrypt Email Online"
   }
 }

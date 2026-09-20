@@ -1,0 +1,365 @@
+{
+  "settings_crx_info_title": {
+    "message": "Signature CRX"
+  },
+  "settings_crx_info_pitch_title": {
+    "message": "Importations CRX vérifiées"
+  },
+  "settings_crx_info_pitch_p1": {
+    "message": "Le Chrome Web Store vous permet d'exiger que chaque mise à jour de votre extension soit signée avec une clé que vous seul détenez. Même si quelqu'un compromet votre compte Web Store ou votre chaîne de compilation, il ne peut pas publier de mise à jour malveillante sans votre clé de signature."
+  },
+  "settings_crx_info_pitch_p2": {
+    "message": "Cela ne tient que si la clé se trouve hors de portée d'un attaquant - une clé rangée dans les secrets de votre CI va à l'encontre du but recherché. PGP Tools la garde chiffrée dans votre coffre et ne la déverrouille que pour l'acte de signature, derrière votre mot de passe ou votre clé d'accès, jamais dans votre pipeline."
+  },
+  "settings_crx_info_how_title": {
+    "message": "Comment l'utiliser"
+  },
+  "settings_crx_info_step_1": {
+    "message": "Activez l'option dans les Paramètres, puis créez ou importez une clé de signature CRX (RSA-2048). Gardez la clé privée ici - ne l'exportez que si vous avez besoin d'une sauvegarde."
+  },
+  "settings_crx_info_step_2": {
+    "message": "Copiez la moitié $public$ de la clé dans le tableau de bord du Chrome Web Store, sous $path$."
+  },
+  "settings_crx_info_term_public": {
+    "message": "publique"
+  },
+  "settings_crx_info_term_dashboard_path": {
+    "message": "Package → Importations CRX vérifiées"
+  },
+  "settings_crx_info_step_3": {
+    "message": "Pour publier une version, déposez le $zip$ de votre extension empaquetée dans l'Espace de travail et signez-le. Utilisez $save$ pour écrire le $crx$ directement sur le disque avec le bon nom (ou faites glisser la puce vers votre bureau), puis importez-le dans le tableau de bord. Chrome intercepte les téléchargements de $crx$ et tente de les installer, c'est pourquoi nous enregistrons au lieu de télécharger."
+  },
+  "settings_crx_info_step_4": {
+    "message": "Pour contrôler n'importe quel paquet d'extension, déposez un $crx$ dans l'Espace de travail - PGP Tools vérifie sa signature et affiche l'ID d'extension qu'il prétend porter."
+  },
+  "settings_crx_info_get_title": {
+    "message": "Ce que vous obtenez"
+  },
+  "settings_crx_info_get_body": {
+    "message": "Ce $crx$ est un artefact à importer dans le tableau de bord du Web Store, pas un paquet directement installable - Chrome n'installe que les extensions signées par le Store. Pour exécuter votre extension en local, utilisez $load_unpacked$ sur le dossier."
+  },
+  "settings_crx_info_term_load_unpacked": {
+    "message": "Charger l'extension non empaquetée"
+  },
+  "settings_crx_info_ladder_title": {
+    "message": "Où cela se situe en matière de sécurité"
+  },
+  "settings_crx_info_ladder_ci_term": {
+    "message": "Une clé dans les secrets de la CI"
+  },
+  "settings_crx_info_ladder_ci": {
+    "message": "$term$ est plus faible : une dépendance empoisonnée ou un jeton divulgué suffit à l'emporter."
+  },
+  "settings_crx_info_ladder_vault_term": {
+    "message": "Une clé chiffrée dans votre coffre"
+  },
+  "settings_crx_info_ladder_vault": {
+    "message": "$term$ - votre situation - se trouve derrière votre mot de passe ou votre clé d'accès et n'est déverrouillée que pour l'acte de signature."
+  },
+  "settings_crx_info_ladder_hardware_term": {
+    "message": "Un jeton matériel (YubiKey / HSM)"
+  },
+  "settings_crx_info_ladder_hardware": {
+    "message": "$term$ est encore plus fort : la clé ne quitte jamais la puce, alors qu'ici elle est brièvement reconstituée dans le bac à sable WASM pendant la signature, puis effacée immédiatement après."
+  },
+  "settings_crx_info_not_pgp_title": {
+    "message": "Ce n'est pas du PGP"
+  },
+  "settings_crx_info_not_pgp_body": {
+    "message": "Un $crx$ est signé avec une clé RSA-2048 brute (PKCS#1-SHA256), pas avec une signature OpenPGP. PGP Tools génère et stocke cette clé avec la même protection que vos clés PGP (Argon2id ou clé d'accès → AES-256-GCM, le tout dans le bac à sable WASM), mais la clé elle-même est distincte et ne sert qu'à la signature CRX."
+  },
+  "settings_crx_info_link": {
+    "message": "Chrome Web Store : protéger les mises à jour de paquet"
+  },
+  "settings_crx_default_key_name": {
+    "message": "Clé de signature CRX"
+  },
+  "settings_import_keys_title": {
+    "message": "Importer les clés"
+  },
+  "settings_import_next": {
+    "message": "Suivant"
+  },
+  "settings_import_importing": {
+    "message": "Importation..."
+  },
+  "settings_import_paste_intro": {
+    "message": "Collez ou parcourez un fichier de clés -- par exemple celui produit par « Exporter toutes les clés ». Les clés privées sont reprotégées avec la méthode de votre choix ; les clés publiques deviennent des contacts."
+  },
+  "settings_import_paste_placeholder": {
+    "message": "Collez des clés ici, ou parcourez vos fichiers..."
+  },
+  "settings_import_browse": {
+    "message": "Parcourir les fichiers de clé"
+  },
+  "settings_import_no_keys": {
+    "message": "Aucune clé trouvée dans l'entrée."
+  },
+  "settings_import_unlock_intro_one": {
+    "message": "Clé privée protégée par une phrase secrète : $encrypted$ sur $count$. Saisissez-la pour la déverrouiller -- vous reprotégerez ensuite chaque clé avec la méthode de votre choix à l'étape suivante."
+  },
+  "settings_import_unlock_intro_other": {
+    "message": "Clés privées protégées par une phrase secrète : $encrypted$ sur $count$. Saisissez-la pour les déverrouiller -- vous reprotégerez ensuite chaque clé avec la méthode de votre choix à l'étape suivante."
+  },
+  "settings_import_passphrase_placeholder": {
+    "message": "Phrase secrète de la clé"
+  },
+  "settings_import_protect_intro_one": {
+    "message": "Choisissez comment protéger la clé privée importée ($count$)."
+  },
+  "settings_import_protect_intro_other": {
+    "message": "Choisissez comment protéger les $count$ clés privées importées."
+  },
+  "settings_import_submit_one": {
+    "message": "Importer $count$ clé"
+  },
+  "settings_import_submit_other": {
+    "message": "Importer $count$ clés"
+  },
+  "settings_import_passkey_name": {
+    "message": "Importation PGP Tools"
+  },
+  "settings_import_prf_unsupported": {
+    "message": "Votre authentificateur ne prend pas en charge PRF. Essayez une autre clé d'accès ou utilisez plutôt un mot de passe."
+  },
+  "settings_import_default_user_id": {
+    "message": "Clé PGP importée"
+  },
+  "settings_import_failed": {
+    "message": "Échec de l'importation"
+  },
+  "settings_import_unknown_error": {
+    "message": "erreur inconnue"
+  },
+  "settings_import_failed_named": {
+    "message": "Échec de l'importation de « $name$ » : $error$"
+  },
+  "settings_import_private_imported_one": {
+    "message": "$count$ clé privée importée"
+  },
+  "settings_import_private_imported_other": {
+    "message": "$count$ clés privées importées"
+  },
+  "settings_import_private_skipped_one": {
+    "message": "$count$ clé privée déjà importée"
+  },
+  "settings_import_private_skipped_other": {
+    "message": "$count$ clés privées déjà importées"
+  },
+  "settings_import_private_unparseable_one": {
+    "message": "$count$ clé privée n'a pas pu être analysée."
+  },
+  "settings_import_private_unparseable_other": {
+    "message": "$count$ clés privées n'ont pas pu être analysées."
+  },
+  "settings_import_contacts_added_one": {
+    "message": "$count$ contact ajouté"
+  },
+  "settings_import_contacts_added_other": {
+    "message": "$count$ contacts ajoutés"
+  },
+  "settings_import_contacts_flagged_one": {
+    "message": "$count$ clé importée signalée pour cryptographie faible (SHA-1)"
+  },
+  "settings_import_contacts_flagged_other": {
+    "message": "$count$ clés importées signalées pour cryptographie faible (SHA-1)"
+  },
+  "settings_import_contacts_updated_one": {
+    "message": "$count$ contact mis à jour"
+  },
+  "settings_import_contacts_updated_other": {
+    "message": "$count$ contacts mis à jour"
+  },
+  "settings_import_contacts_rejected_one": {
+    "message": "$count$ clé publique rejetée"
+  },
+  "settings_import_contacts_rejected_other": {
+    "message": "$count$ clés publiques rejetées"
+  },
+  "settings_import_contacts_rejected_reason_one": {
+    "message": "$count$ clé publique rejetée : $reason$"
+  },
+  "settings_import_contacts_rejected_reason_other": {
+    "message": "$count$ clés publiques rejetées : $reason$"
+  },
+  "settings_import_crx_failure_detail": {
+    "message": "$name$ : $error$"
+  },
+  "settings_import_crx_failed_one": {
+    "message": "$count$ clé CRX n'a pas pu être restaurée"
+  },
+  "settings_import_crx_failed_other": {
+    "message": "$count$ clés CRX n'ont pas pu être restaurées"
+  },
+  "settings_import_crx_restored_one": {
+    "message": "$count$ clé de signature CRX restaurée"
+  },
+  "settings_import_crx_restored_other": {
+    "message": "$count$ clés de signature CRX restaurées"
+  },
+  "settings_import_crx_skipped_one": {
+    "message": "$count$ clé de signature CRX déjà importée"
+  },
+  "settings_import_crx_skipped_other": {
+    "message": "$count$ clés de signature CRX déjà importées"
+  },
+  "settings_import_crx_rejected_one": {
+    "message": "$count$ clé de signature CRX rejetée : la clé publique ne correspond pas à son ID d'extension"
+  },
+  "settings_import_crx_rejected_other": {
+    "message": "$count$ clés de signature CRX rejetées : la clé publique ne correspond pas à leur ID d'extension"
+  },
+  "settings_shortcuts_title": {
+    "message": "Raccourcis clavier"
+  },
+  "settings_shortcuts_unbound": {
+    "message": "Non attribué"
+  },
+  "settings_shortcuts_manage": {
+    "message": "Gérer les raccourcis du navigateur"
+  },
+  "settings_shortcuts_group_palette": {
+    "message": "Palette de commandes"
+  },
+  "settings_shortcuts_open_palette": {
+    "message": "Ouvrir la palette de commandes"
+  },
+  "settings_shortcuts_open_palette_note": {
+    "message": "Toutes les actions ci-dessous y sont aussi accessibles par recherche."
+  },
+  "settings_shortcuts_group_workspace": {
+    "message": "Espace de travail"
+  },
+  "settings_shortcuts_run_mode": {
+    "message": "Exécuter le mode actuel"
+  },
+  "settings_shortcuts_copy_output": {
+    "message": "Copier le résultat"
+  },
+  "settings_shortcuts_download_output": {
+    "message": "Télécharger le résultat"
+  },
+  "settings_shortcuts_pick_recipient": {
+    "message": "Choisir le n-ième destinataire"
+  },
+  "settings_shortcuts_pick_recipient_note": {
+    "message": "Dans la liste des destinataires, quand son champ de recherche est vide."
+  },
+  "settings_shortcuts_remove_recipient": {
+    "message": "Retirer le dernier destinataire"
+  },
+  "settings_shortcuts_remove_recipient_note": {
+    "message": "Dans le champ de recherche vide de la liste des destinataires."
+  },
+  "settings_shortcuts_group_message": {
+    "message": "Zone de message"
+  },
+  "settings_shortcuts_find_replace": {
+    "message": "Rechercher et remplacer"
+  },
+  "settings_shortcuts_style_note": {
+    "message": "Pendant la rédaction d'un message à chiffrer ou à signer. Utilise des variantes Unicode des lettres, ce qui résiste à n'importe quel canal."
+  },
+  "settings_shortcuts_group_modes": {
+    "message": "Modes"
+  },
+  "settings_shortcuts_switch_mode": {
+    "message": "Passer en mode $mode$"
+  },
+  "settings_shortcuts_group_global": {
+    "message": "Raccourcis globaux du navigateur"
+  },
+  "settings_shortcuts_open_app": {
+    "message": "Ouvrir PGP Tools"
+  },
+  "settings_shortcuts_open_in_mode": {
+    "message": "Ouvrir en mode $mode$"
+  },
+  "settings_shortcuts_unbound_note": {
+    "message": "Non attribué par défaut (Chrome limite les raccourcis suggérés à quatre)."
+  },
+  "settings_shortcuts_global_note": {
+    "message": "Ces raccourcis fonctionnent partout dans le navigateur. Modifiez-les sur $url$."
+  },
+  "settings_preset_title": {
+    "message": "Profil de sécurité"
+  },
+  "settings_preset_apply": {
+    "message": "Appliquer le profil"
+  },
+  "settings_preset_applying": {
+    "message": "Application..."
+  },
+  "settings_preset_replace_custom": {
+    "message": "Remplacer les réglages personnalisés"
+  },
+  "settings_preset_apply_delete_history": {
+    "message": "Appliquer et supprimer l'historique"
+  },
+  "settings_preset_keep_custom": {
+    "message": "Conserver les réglages personnalisés"
+  },
+  "settings_preset_intro": {
+    "message": "Chaque profil regroupe les réglages de sécurité pour un modèle de menace, et sa carte liste exactement ce qu'il règle. En appliquer un ne modifie que ces réglages, et vous pourrez de nouveau ajuster chacun d'eux ensuite."
+  },
+  "settings_preset_custom_notice": {
+    "message": "Votre profil actuel est $custom$ : un réglage inclus a été modifié, aucun profil ne correspond donc exactement."
+  },
+  "settings_preset_custom_name": {
+    "message": "Personnalisé"
+  },
+  "settings_preset_confirm_replace": {
+    "message": "Remplacer vos réglages personnalisés par le profil $preset$ ? Seuls les réglages listés sur sa carte changent, et vous pourrez de nouveau ajuster chacun d'eux ensuite."
+  },
+  "settings_preset_confirm_history": {
+    "message": "Ce profil active « Ne jamais garder les clés en mémoire », ce qui supprime aussi votre historique enregistré ($size$). Il ne pourra pas être récupéré."
+  },
+  "settings_translation_title": {
+    "message": "Traduction"
+  },
+  "settings_translation_enable": {
+    "message": "Traduire les messages déchiffrés"
+  },
+  "settings_translation_enable_desc": {
+    "message": "Ajoute un bouton Traduire sous chaque message déchiffré. La traduction s'exécute sur cet appareil avec le modèle intégré de Chrome, et rien n'est traduit tant que vous n'appuyez pas sur le bouton."
+  },
+  "settings_translation_unsupported": {
+    "message": "La traduction sur l'appareil de Chrome n'est pas disponible ici. Elle nécessite Chrome pour ordinateur sous Windows 10 ou ultérieur, macOS 13 ou ultérieur, Linux ou un Chromebook Plus, avec assez d'espace disque et de mémoire pour les modèles."
+  },
+  "settings_translation_target": {
+    "message": "Traduire en"
+  },
+  "settings_translation_packs": {
+    "message": "Packs de langue"
+  },
+  "settings_translation_packs_desc": {
+    "message": "Facultatif. Un pack manquant se télécharge tout seul la première fois que vous traduisez depuis cette langue ; ceci ne sert donc qu'à prendre les devants. Télécharger ici vous apporte une chose : le téléchargement n'a plus lieu au moment où vous déchiffrez un message, son horodatage ne révèle donc rien de ce que vous venez de lire. Chaque pack fait $size$ et est stocké par Chrome, pas par cette extension."
+  },
+  "settings_translation_pack_ready": {
+    "message": "Prêt"
+  },
+  "settings_translation_pack_progress": {
+    "message": "$percent$ %"
+  },
+  "settings_translation_pack_not_offered": {
+    "message": "Non proposé"
+  },
+  "settings_translation_download_failed": {
+    "message": "Échec du téléchargement."
+  },
+  "settings_translation_pack_pair": {
+    "message": "$from$ vers $to$"
+  },
+  "settings_translation_detector": {
+    "message": "détecteur de langue"
+  },
+  "settings_translation_pack_gone": {
+    "message": "Le pack de langue a disparu. Réessayez."
+  },
+  "settings_translation_failed": {
+    "message": "Échec de la traduction."
+  },
+  "settings_translation_unavailable_device": {
+    "message": "La traduction n'est pas disponible sur cet appareil."
+  }
+}

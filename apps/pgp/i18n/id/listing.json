@@ -1,0 +1,8 @@
+{
+  "extName": {
+    "message": "Enkripsi email OpenPGP dan GPG - Slack Compatible, Gmail Compatible"
+  },
+  "extDescription": {
+    "message": "Enkripsi, dekripsi, tanda tangani, dan verifikasi email dan pesan dengan OpenPGP dan GPG."
+  }
+}

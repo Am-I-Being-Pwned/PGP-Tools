@@ -1,0 +1,320 @@
+{
+  "shared_security_preset": {
+    "message": "Profilo di sicurezza"
+  },
+  "shared_preset_bundled_changed": {
+    "message": "Un'impostazione inclusa nel profilo è stata modificata"
+  },
+  "shared_preset_none_selected": {
+    "message": "Nessun profilo selezionato"
+  },
+  "shared_preset_custom": {
+    "message": "Personalizzato"
+  },
+  "shared_translation": {
+    "message": "Traduzione"
+  },
+  "shared_keyboard_shortcuts": {
+    "message": "Scorciatoie da tastiera"
+  },
+  "shared_key_storage": {
+    "message": "Archiviazione delle chiavi"
+  },
+  "shared_key_security": {
+    "message": "Sicurezza delle chiavi"
+  },
+  "shared_auto_lock_title": {
+    "message": "Blocco automatico dopo inattività"
+  },
+  "shared_auto_lock_desc": {
+    "message": "Blocca le chiavi sbloccate dopo un periodo senza attività nel pannello. La schermata di blocco del sistema operativo blocca sempre immediatamente, a prescindere da questa impostazione."
+  },
+  "shared_lock_after": {
+    "message": "Blocca dopo"
+  },
+  "shared_minutes_one": {
+    "message": "$count$ minuto"
+  },
+  "shared_minutes_other": {
+    "message": "$count$ minuti"
+  },
+  "shared_one_hour": {
+    "message": "1 ora"
+  },
+  "shared_lock_tab_away_title": {
+    "message": "Blocca quando cambio scheda"
+  },
+  "shared_lock_tab_away_desc": {
+    "message": "Blocca nell'istante in cui il pannello laterale non è visibile (alt-tab, pannello chiuso o finestra ridotta a icona)."
+  },
+  "shared_never_cache_title": {
+    "message": "Non memorizzare mai le chiavi nella cache"
+  },
+  "shared_never_cache_desc": {
+    "message": "Le chiavi vengono cancellate dalla memoria dopo ogni operazione. Puoi comunque sbloccarle manualmente dalla scheda Chiavi."
+  },
+  "shared_unlock_with_vault_title": {
+    "message": "Sblocca le chiavi insieme alla cassaforte"
+  },
+  "shared_unlock_with_vault_desc": {
+    "message": "La richiesta della passkey che apre la cassaforte sblocca anche le tue chiavi. Una chiave che chiede ancora conferma per conto suo passa a questo metodo la prossima volta che la sblocchi. Le chiavi protette da password mantengono la loro password."
+  },
+  "shared_downloads": {
+    "message": "Download"
+  },
+  "shared_auto_download_files_title": {
+    "message": "Scarica automaticamente i risultati dei file"
+  },
+  "shared_auto_download_files_desc": {
+    "message": "Scarica automaticamente dopo aver cifrato o decifrato dei file."
+  },
+  "shared_auto_download_text_title": {
+    "message": "Scarica automaticamente i risultati di testo"
+  },
+  "shared_auto_download_text_desc": {
+    "message": "Scarica automaticamente dopo aver cifrato o decifrato del testo."
+  },
+  "shared_key_discovery": {
+    "message": "Ricerca delle chiavi"
+  },
+  "shared_lookup_online_title": {
+    "message": "Cerca le chiavi online"
+  },
+  "shared_lookup_online_desc": {
+    "message": "Aggiunge alla schermata di importazione una casella di ricerca per le chiavi SSH di GitHub e i certificati di keys.openpgp.org. Se è disattivata, nulla lascia questo dispositivo per trovare una chiave. Se la attivi, una ricerca comunica a quel server il tuo indirizzo IP e chi hai cercato - non gli rivela nulla sulle tue chiavi o sui tuoi messaggi."
+  },
+  "shared_crx_signing": {
+    "message": "Firma CRX"
+  },
+  "shared_crx_enable_title": {
+    "message": "Attiva la firma CRX"
+  },
+  "shared_crx_enable_desc": {
+    "message": "Firma i pacchetti di estensioni Chrome (.crx) per i Caricamenti CRX verificati del Web Store, usando una chiave conservata nella tua cassaforte anziché nella tua pipeline di build."
+  },
+  "shared_crx_how": {
+    "message": "Come funziona la firma CRX"
+  },
+  "shared_backup": {
+    "message": "Backup"
+  },
+  "shared_backup_desc": {
+    "message": "Esporta le tue chiavi e i tuoi contatti in un unico file armored, oppure ripristinali da uno. Le chiavi private esportate vengono cifrate con una passphrase a tua scelta."
+  },
+  "shared_export_all_keys": {
+    "message": "Esporta tutte le chiavi"
+  },
+  "shared_import_keys": {
+    "message": "Importa chiavi"
+  },
+  "shared_display": {
+    "message": "Visualizzazione"
+  },
+  "shared_advanced_mode": {
+    "message": "Modalità avanzata"
+  },
+  "shared_advanced_mode_desc": {
+    "message": "Mostra le impronte delle chiavi, gli algoritmi e le opzioni del formato di output."
+  },
+  "shared_developer": {
+    "message": "Sviluppatore"
+  },
+  "shared_developer_desc": {
+    "message": "Ispeziona chrome.storage e scarica la memoria WASM per i test. Questa sezione compare solo nelle build di sviluppo."
+  },
+  "shared_open_dev_tools": {
+    "message": "Apri gli strumenti per sviluppatori"
+  },
+  "shared_import_flow_states": {
+    "message": "Stati del flusso di importazione"
+  },
+  "shared_dev_tools": {
+    "message": "Strumenti per sviluppatori"
+  },
+  "shared_about": {
+    "message": "Informazioni"
+  },
+  "shared_byline_before": {
+    "message": "Uno strumento per la privacy di"
+  },
+  "shared_source_on_github": {
+    "message": "Codice sorgente su GitHub"
+  },
+  "shared_about_extensions": {
+    "message": "Ti preoccupano le estensioni del browser malevole? Analizza le tue estensioni alla ricerca di raccolta dati, dirottamento di sessione e altre minacce."
+  },
+  "shared_check_extensions": {
+    "message": "Controlla le tue estensioni"
+  },
+  "shared_delete_history_title": {
+    "message": "Eliminare la cronologia salvata?"
+  },
+  "shared_delete_history_confirm": {
+    "message": "Attiva ed elimina la cronologia"
+  },
+  "shared_delete_history_body": {
+    "message": "L'opzione “Non memorizzare mai le chiavi nella cache” elimina anche la cronologia salvata ($size$). Non può essere recuperata."
+  },
+  "shared_sync_quota_error": {
+    "message": "Spazio di sincronizzazione insufficiente. Chrome limita i dati sincronizzati a circa 100 KB in totale, quindi questa cassaforte è troppo grande per essere sincronizzata tra dispositivi. Tienila su questo dispositivo, oppure rimuovi alcune chiavi e riprova."
+  },
+  "shared_migration_failed": {
+    "message": "Migrazione non riuscita"
+  },
+  "shared_preset_applied": {
+    "message": "Profilo applicato: $title$"
+  },
+  "shared_preset_applied_history_deleted": {
+    "message": "La cronologia è stata eliminata e Annulla non la ripristina."
+  },
+  "shared_undo": {
+    "message": "Annulla"
+  },
+  "shared_commands": {
+    "message": "Comandi"
+  },
+  "shared_unlock_aria": {
+    "message": "Sblocca PGP Tools"
+  },
+  "shared_unlock_intro": {
+    "message": "Le tue chiavi e i tuoi contatti sono cifrati. Autenticati per continuare."
+  },
+  "shared_unlock_with_passkey": {
+    "message": "Sblocca con passkey"
+  },
+  "shared_master_password": {
+    "message": "Password principale"
+  },
+  "shared_unlocking": {
+    "message": "Sblocco..."
+  },
+  "shared_unlock_lost_password": {
+    "message": "Se hai perso la password, le tue chiavi e i tuoi contatti cifrati non possono essere recuperati."
+  },
+  "shared_passkey_failed": {
+    "message": "Autenticazione con passkey non riuscita. Riprova."
+  },
+  "shared_wrong_password": {
+    "message": "Password errata."
+  },
+  "shared_unlock_failed": {
+    "message": "Sblocco non riuscito. Riprova."
+  },
+  "shared_saving": {
+    "message": "Salvataggio..."
+  },
+  "shared_clear_name": {
+    "message": "Cancella il nome"
+  },
+  "shared_confirm_type_before": {
+    "message": "Per confermare, digita"
+  },
+  "shared_confirm_type_after": {
+    "message": "qui sotto"
+  },
+  "shared_confirm_type_aria": {
+    "message": "Digita “$text$” per confermare"
+  },
+  "shared_drop_to_import": {
+    "message": "Rilascia per importare"
+  },
+  "shared_drop_desc": {
+    "message": "Le chiavi vengono aggiunte al tuo portachiavi; file e testo vanno nell'area di lavoro."
+  },
+  "shared_storage_local_label": {
+    "message": "Solo questo dispositivo"
+  },
+  "shared_storage_local_desc": {
+    "message": "I tuoi dati restano su questo computer. Se cambi dispositivo o reinstalli, dovrai rifare la configurazione."
+  },
+  "shared_storage_sync_label": {
+    "message": "Sincronizza tra dispositivi"
+  },
+  "shared_storage_sync_desc": {
+    "message": "I tuoi dati vengono sincronizzati tramite il tuo account Chrome. Disponibili ovunque tu abbia eseguito l'accesso."
+  },
+  "shared_something_went_wrong": {
+    "message": "Qualcosa è andato storto. Riprova."
+  },
+  "shared_show_technical_details": {
+    "message": "Mostra i dettagli tecnici"
+  },
+  "shared_hide_technical_details": {
+    "message": "Nascondi i dettagli tecnici"
+  },
+  "shared_preset_current": {
+    "message": "Attuale"
+  },
+  "shared_preset_recommended": {
+    "message": "Consigliato"
+  },
+  "shared_preset_paranoid_note": {
+    "message": "I tuoi messaggi restano leggibili da te - disattiva in seguito “Cifra anche per me” se perfino questo è un rischio."
+  },
+  "shared_preset_casual_title": {
+    "message": "Rilassato"
+  },
+  "shared_preset_casual_tagline": {
+    "message": "Prima la comodità - per chiavi che proteggono cose poco importanti"
+  },
+  "shared_preset_careful_title": {
+    "message": "Prudente"
+  },
+  "shared_preset_careful_tagline": {
+    "message": "Impostazioni ragionevoli per segreti veri"
+  },
+  "shared_preset_paranoid_title": {
+    "message": "Se trapela, sono nei guai"
+  },
+  "shared_preset_paranoid_tagline": {
+    "message": "Niente resta in giro. Blocchi più brevi, nessuna cronologia, nessuna chiave in cache."
+  },
+  "shared_bundle_auto_lock_off": {
+    "message": "Il blocco automatico è disattivato"
+  },
+  "shared_bundle_auto_lock": {
+    "message": "Blocco automatico dopo $duration$"
+  },
+  "shared_bundle_auto_lock_tabs": {
+    "message": "Blocco automatico dopo $duration$ e quando cambi scheda"
+  },
+  "shared_bundle_never_cache_on": {
+    "message": "Le chiavi vengono rimosse dalla memoria dopo ogni uso"
+  },
+  "shared_bundle_never_cache_off": {
+    "message": "Le chiavi sbloccate restano in cache finché non blocchi"
+  },
+  "shared_bundle_unlock_on_open_on": {
+    "message": "Una sola richiesta della passkey sblocca la cassaforte e le tue chiavi"
+  },
+  "shared_bundle_unlock_on_open_off": {
+    "message": "Ogni chiave chiede il proprio sblocco"
+  },
+  "shared_bundle_history_on": {
+    "message": "Conserva una cronologia cifrata di ciò che fai"
+  },
+  "shared_bundle_history_off": {
+    "message": "Nessuna cronologia viene conservata"
+  },
+  "shared_bundle_discovery_on": {
+    "message": "Le chiavi possono essere cercate su GitHub e keys.openpgp.org"
+  },
+  "shared_bundle_discovery_off": {
+    "message": "Nessuna ricerca di chiavi - nulla lascia questo dispositivo per trovare una chiave"
+  },
+  "shared_bundle_storage_local": {
+    "message": "Le chiavi restano su questo dispositivo"
+  },
+  "shared_bundle_storage_sync": {
+    "message": "Le chiavi si sincronizzano nel tuo profilo Chrome"
+  },
+  "shared_bundle_clipboard_one": {
+    "message": "I segreti copiati vengono rimossi dagli appunti dopo $count$ secondo"
+  },
+  "shared_bundle_clipboard_other": {
+    "message": "I segreti copiati vengono rimossi dagli appunti dopo $count$ secondi"
+  },
+  "shared_bundle_no_encrypt_to_self": {
+    "message": "I messaggi che cifri non sono più leggibili da te in seguito"
+  }
+}

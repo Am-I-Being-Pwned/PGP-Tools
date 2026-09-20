@@ -1,8 +1,4263 @@
 {
-  "extName": {
-    "message": "OpenPGP 与 GPG 邮件加密 - Gmail & Outlook Compatible, Slack Compatible"
+  "actions_add_own_key_first": {
+    "message": "请先添加一个你自己的密钥"
+  },
+  "actions_add_recipients_placeholder": {
+    "message": "添加收件人…"
+  },
+  "actions_age_cannot_sign": {
+    "message": "age 消息无法签名"
+  },
+  "actions_badge_you": {
+    "message": "我"
+  },
+  "actions_clear_all_recipients": {
+    "message": "清除所有收件人"
+  },
+  "actions_clear_input": {
+    "message": "清除输入"
+  },
+  "actions_copy_output": {
+    "message": "复制输出"
+  },
+  "actions_disabled_toast": {
+    "message": "“$name$”已停用：$reason$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "reason": {
+        "content": "$2"
+      }
+    }
+  },
+  "actions_download_output": {
+    "message": "下载输出"
+  },
+  "actions_encrypt_to_self_off": {
+    "message": "关闭：同时加密给我"
+  },
+  "actions_encrypt_to_self_on": {
+    "message": "开启：同时加密给我"
+  },
+  "actions_find_replace": {
+    "message": "在消息中查找和替换"
+  },
+  "actions_generate_key": {
+    "message": "生成密钥"
+  },
+  "actions_go_to_keys": {
+    "message": "前往密钥"
+  },
+  "actions_go_to_settings": {
+    "message": "前往设置"
+  },
+  "actions_go_to_workspace": {
+    "message": "前往工作区"
+  },
+  "actions_group_contacts": {
+    "message": "联系人"
+  },
+  "actions_group_keys": {
+    "message": "密钥"
+  },
+  "actions_group_message": {
+    "message": "消息"
+  },
+  "actions_group_mode": {
+    "message": "模式"
+  },
+  "actions_group_my_keys": {
+    "message": "我的密钥"
+  },
+  "actions_group_navigation": {
+    "message": "导航"
+  },
+  "actions_group_recent": {
+    "message": "最近"
+  },
+  "actions_group_result": {
+    "message": "结果"
+  },
+  "actions_group_session": {
+    "message": "会话"
+  },
+  "actions_group_settings": {
+    "message": "设置"
+  },
+  "actions_group_workspace": {
+    "message": "工作区"
+  },
+  "actions_history": {
+    "message": "历史记录"
+  },
+  "actions_history_clear": {
+    "message": "清除历史记录"
+  },
+  "actions_history_delete_all_one": {
+    "message": "删除全部 $count$ 条历史记录",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_delete_all_other": {
+    "message": "删除全部 $count$ 条历史记录",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_delete_warning": {
+    "message": "这将永久删除此设备上已加密的操作历史记录，且无法恢复。"
+  },
+  "actions_history_empty": {
+    "message": "暂无历史记录"
+  },
+  "actions_history_file_with_size": {
+    "message": "$name$ ($size$)",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "size": {
+        "content": "$2"
+      }
+    }
+  },
+  "actions_history_files_one": {
+    "message": "$count$ 个文件",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_files_other": {
+    "message": "$count$ 个文件",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_metadata_only": {
+    "message": "仅元数据，此操作不保存内容。"
+  },
+  "actions_history_more_matches_one": {
+    "message": "+$count$ 处匹配",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_more_matches_other": {
+    "message": "+$count$ 处匹配",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_no_content": {
+    "message": "未保存内容"
+  },
+  "actions_history_no_matches": {
+    "message": "没有与“$query$”匹配的历史记录",
+    "placeholders": {
+      "query": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_off_never_cache": {
+    "message": "密钥从不缓存时，历史记录不可用"
+  },
+  "actions_history_off_reason": {
+    "message": "历史记录已关闭，可在“签名”旁边启用"
+  },
+  "actions_history_op_signed": {
+    "message": "$op$ + 签名",
+    "placeholders": {
+      "op": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_open_entry": {
+    "message": "打开 $title$",
+    "placeholders": {
+      "title": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_recipient_with_id": {
+    "message": "$name$ ($id$)",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "id": {
+        "content": "$2"
+      }
+    }
+  },
+  "actions_history_search_label": {
+    "message": "搜索历史记录"
+  },
+  "actions_history_search_placeholder": {
+    "message": "搜索历史记录…"
+  },
+  "actions_history_to": {
+    "message": "发给 $names$",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_truncated": {
+    "message": "[已截断]"
+  },
+  "actions_history_usage": {
+    "message": "已使用 $used$ / $budget$",
+    "placeholders": {
+      "used": {
+        "content": "$1"
+      },
+      "budget": {
+        "content": "$2"
+      }
+    }
+  },
+  "actions_history_when": {
+    "message": "$date$ ($relative$)",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      },
+      "relative": {
+        "content": "$2"
+      }
+    }
+  },
+  "actions_import_key": {
+    "message": "导入密钥"
+  },
+  "actions_keys_count_one": {
+    "message": "$count$ 个密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_keys_count_other": {
+    "message": "$count$ 个密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_keys_of_total": {
+    "message": "$active$/$count$ 个密钥",
+    "placeholders": {
+      "active": {
+        "content": "$1"
+      },
+      "count": {
+        "content": "$2"
+      }
+    }
+  },
+  "actions_language_last_used": {
+    "message": "$label$（上次使用）",
+    "placeholders": {
+      "label": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_lock_now": {
+    "message": "立即锁定"
+  },
+  "actions_mixed_engine_reason": {
+    "message": "PGP 和 SSH 收件人不能放在同一条消息中：OpenPGP 和 age 是不同的格式。请先加密给其中一组，再加密给另一组。"
+  },
+  "actions_need_recipient_or_password": {
+    "message": "请至少选择一个收件人，或设置密码"
+  },
+  "actions_no_input_decrypt": {
+    "message": "没有可解密的内容，请粘贴加密消息或拖入文件"
+  },
+  "actions_no_input_encrypt": {
+    "message": "没有可加密的内容，请添加文本或拖入文件"
+  },
+  "actions_no_input_sign": {
+    "message": "没有可签名的内容，请添加文本或拖入文件"
+  },
+  "actions_no_input_verify": {
+    "message": "没有可验证的内容，请粘贴已签名消息或拖入文件"
+  },
+  "actions_no_keys_available": {
+    "message": "没有可用的密钥"
+  },
+  "actions_no_keys_found": {
+    "message": "未找到密钥"
+  },
+  "actions_no_matches": {
+    "message": "无匹配项"
+  },
+  "actions_no_output_to_copy": {
+    "message": "尚无可复制的输出"
+  },
+  "actions_nothing_to_clear": {
+    "message": "没有可清除的内容"
+  },
+  "actions_nothing_to_download": {
+    "message": "尚无可下载的内容"
+  },
+  "actions_nothing_to_translate": {
+    "message": "尚无可翻译的内容"
+  },
+  "actions_open_history": {
+    "message": "打开历史记录"
+  },
+  "actions_open_security_presets": {
+    "message": "打开安全预设"
+  },
+  "actions_palette_label": {
+    "message": "命令面板"
+  },
+  "actions_palette_no_commands": {
+    "message": "没有匹配的命令。"
+  },
+  "actions_palette_no_match": {
+    "message": "无匹配项。"
+  },
+  "actions_palette_placeholder": {
+    "message": "输入命令…"
+  },
+  "actions_pick_language_placeholder": {
+    "message": "选择语言…"
+  },
+  "actions_recipient_input_hint": {
+    "message": "按 Backspace 移除最后一个收件人"
+  },
+  "actions_remove_recipient": {
+    "message": "移除 $name$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_remove_recipient_detail": {
+    "message": "移除 $name$ - $detail$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "detail": {
+        "content": "$2"
+      }
+    }
+  },
+  "actions_run_mode": {
+    "message": "运行$mode$",
+    "placeholders": {
+      "mode": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_save_to_history_off": {
+    "message": "关闭：保存到历史记录"
+  },
+  "actions_save_to_history_on": {
+    "message": "开启：保存到历史记录"
+  },
+  "actions_search_placeholder": {
+    "message": "搜索…"
+  },
+  "actions_select_key_placeholder": {
+    "message": "选择一个密钥…"
+  },
+  "actions_set_up": {
+    "message": "去设置"
+  },
+  "actions_sign_when_encrypting_off": {
+    "message": "关闭：加密时签名"
+  },
+  "actions_sign_when_encrypting_on": {
+    "message": "开启：加密时签名"
+  },
+  "actions_ssh_password_reason": {
+    "message": "消息密码是 OpenPGP 的功能，age 没有此功能，因此设置了密码时不能使用 SSH 收件人。请移除密码，或不带密码加密给此人。"
+  },
+  "actions_style_bold": {
+    "message": "将所选文本加粗"
+  },
+  "actions_style_code": {
+    "message": "将所选文本设为代码"
+  },
+  "actions_style_italic": {
+    "message": "将所选文本设为斜体"
+  },
+  "actions_style_strike": {
+    "message": "为所选文本添加删除线"
+  },
+  "actions_switch_to_workspace_first": {
+    "message": "请先切换到工作区"
+  },
+  "actions_toggle_recipient_list": {
+    "message": "展开或收起收件人列表"
+  },
+  "actions_translate_message": {
+    "message": "翻译消息…"
+  },
+  "actions_translate_result_to": {
+    "message": "翻译为$language$",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_translate_to_title": {
+    "message": "将消息翻译为"
+  },
+  "actions_translation_off": {
+    "message": "翻译功能已在“设置”中关闭"
+  },
+  "app_action_title": {
+    "message": "PGP Tools"
+  },
+  "app_cmd_open": {
+    "message": "打开 PGP Tools"
+  },
+  "app_cmd_open_decrypt": {
+    "message": "以解密模式打开 PGP Tools"
+  },
+  "app_cmd_open_encrypt": {
+    "message": "以加密模式打开 PGP Tools"
+  },
+  "app_cmd_open_sign": {
+    "message": "以签名模式打开 PGP Tools"
+  },
+  "app_cmd_open_verify": {
+    "message": "以验证模式打开 PGP Tools"
+  },
+  "app_copied": {
+    "message": "已复制$label$",
+    "placeholders": {
+      "label": {
+        "content": "$1"
+      }
+    }
+  },
+  "app_copied_wipe": {
+    "message": "已复制$label$，剪贴板将在 $seconds$ 秒后清空",
+    "placeholders": {
+      "label": {
+        "content": "$1"
+      },
+      "seconds": {
+        "content": "$2"
+      }
+    }
+  },
+  "app_copy_failed": {
+    "message": "复制失败，请先点击扩展程序面板，然后重试。"
+  },
+  "app_error_corrupted": {
+    "message": "数据已损坏或被截断。请获取完整的新副本后重试。"
+  },
+  "app_error_crx_unsigned": {
+    "message": "CRX 签名不匹配：它不是由此密钥签名的，或文件在签名后被修改过。请从发布者处获取新的副本。"
+  },
+  "app_error_key_expired": {
+    "message": "此操作涉及的某个密钥已过期。请向密钥所有者索取更新后的密钥并导入。"
+  },
+  "app_error_key_locked": {
+    "message": "此密钥已锁定。请解锁后重试。"
+  },
+  "app_error_key_not_found": {
+    "message": "该密钥已不在你的密钥环中，因此未保存任何内容。请重新导入该密钥后重试。"
+  },
+  "app_error_key_revoked": {
+    "message": "此操作涉及的某个密钥已被其所有者吊销。请获取其替代密钥并导入。"
+  },
+  "app_error_no_decryption_key": {
+    "message": "此消息加密给了一个你没有的密钥。请导入该私钥，或让发送者加密给你的某个密钥。"
+  },
+  "app_error_no_decryption_key_with_id": {
+    "message": "此消息加密给了一个你没有的密钥（密钥 ID $key_id$）。请导入该私钥，或让发送者加密给你的某个密钥。",
+    "placeholders": {
+      "key_id": {
+        "content": "$1"
+      }
+    }
+  },
+  "app_error_not_crx": {
+    "message": "这不是本工具可验证的 Chrome 扩展程序包。请选择一个 CRX3 (.crx) 文件。"
+  },
+  "app_error_not_pgp_data": {
+    "message": "这看起来不像 PGP 数据。请确保粘贴了完整的 ASCII 装甲块，包括 BEGIN 和 END 行。"
+  },
+  "app_error_ocb_unsupported": {
+    "message": "此消息使用了本应用无法读取的旧版 AEAD (OCB) 格式。请让发送者以常规方式重新加密并发送；他们选择任何密码都可以，不受支持的只是这种格式。"
+  },
+  "app_error_passkey_dismissed": {
+    "message": "通行密钥提示已被关闭。准备好后请重新运行该操作。"
+  },
+  "app_error_passkey_failed": {
+    "message": "通行密钥验证未完成。请重试，或改用其他方式解锁。"
+  },
+  "app_error_password_required": {
+    "message": "此密钥需要密码。请输入密钥密码以解锁。"
+  },
+  "app_error_remedy_check_key": {
+    "message": "检查密钥"
+  },
+  "app_error_remedy_import_key": {
+    "message": "导入密钥"
+  },
+  "app_error_remedy_try_again": {
+    "message": "重试"
+  },
+  "app_error_storage_full": {
+    "message": "浏览器存储空间已满，无法保存。请移除不再需要的密钥或联系人，然后重试。"
+  },
+  "app_error_symmetric_wrong_password": {
+    "message": "该密码无法打开此消息。请检查后重试；如果你确定密码正确，则消息可能已损坏。"
+  },
+  "app_error_tampered": {
+    "message": "签名验证失败，此消息可能已被篡改。请勿信任其内容；让发送者重新发送。"
+  },
+  "app_error_vault_locked": {
+    "message": "你的保险库已锁定，因此未作任何更改。请解锁后再运行一次。"
+  },
+  "app_error_weak_algorithm": {
+    "message": "此密钥使用的签名算法已不再被认为安全。请让密钥所有者使用 SHA-256 或更强的算法重新签发。"
+  },
+  "app_error_weak_password": {
+    "message": "该密码太短。请至少使用 8 个字符。"
+  },
+  "app_error_wrong_password": {
+    "message": "此密钥的密码不正确。请检查后重试。"
+  },
+  "app_import_added_one": {
+    "message": "已添加密钥"
+  },
+  "app_import_added_other": {
+    "message": "已添加 $count$ 个密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "app_import_view_key_one": {
+    "message": "查看密钥"
+  },
+  "app_import_view_key_other": {
+    "message": "查看密钥"
+  },
+  "app_menu_open_in_pgp_tools": {
+    "message": "在 PGP Tools 中打开"
+  },
+  "app_nav_label": {
+    "message": "主导航"
+  },
+  "app_onboarding_advanced_options": {
+    "message": "高级选项"
+  },
+  "app_onboarding_algo_ecc_hint": {
+    "message": "现代、快速、密钥体积小。推荐大多数用途使用。"
+  },
+  "app_onboarding_algo_rsa_hint": {
+    "message": "兼容性广。密钥生成较慢。"
+  },
+  "app_onboarding_algorithm_label": {
+    "message": "算法"
+  },
+  "app_onboarding_comment_label": {
+    "message": "备注"
+  },
+  "app_onboarding_comment_placeholder": {
+    "message": "例如：工作、个人"
+  },
+  "app_onboarding_create_key": {
+    "message": "创建我的 PGP 密钥"
+  },
+  "app_onboarding_create_passkey": {
+    "message": "创建通行密钥"
+  },
+  "app_onboarding_email_label": {
+    "message": "电子邮件"
+  },
+  "app_onboarding_email_placeholder": {
+    "message": "you@example.com"
+  },
+  "app_onboarding_expiry_label": {
+    "message": "密钥有效期"
+  },
+  "app_onboarding_expiry_never": {
+    "message": "永不过期"
+  },
+  "app_onboarding_expiry_years_one": {
+    "message": "$count$ 年",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "app_onboarding_expiry_years_other": {
+    "message": "$count$ 年",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "app_onboarding_generate_failed": {
+    "message": "密钥生成失败"
+  },
+  "app_onboarding_generating": {
+    "message": "正在生成密钥…"
+  },
+  "app_onboarding_identity_body": {
+    "message": "创建一个用于加密、解密和签名消息的密钥对。"
+  },
+  "app_onboarding_identity_title": {
+    "message": "创建你的 PGP 密钥"
+  },
+  "app_onboarding_intro_body": {
+    "message": "发送只有指定收件人才能读取的私密消息，并验证消息确实来自其声称的发送者。"
+  },
+  "app_onboarding_keep_defaults": {
+    "message": "保留默认设置"
+  },
+  "app_onboarding_name_label": {
+    "message": "姓名 *"
+  },
+  "app_onboarding_name_placeholder": {
+    "message": "你的全名"
+  },
+  "app_onboarding_name_required": {
+    "message": "姓名为必填项。"
+  },
+  "app_onboarding_next": {
+    "message": "下一步"
+  },
+  "app_onboarding_optional": {
+    "message": "可选"
+  },
+  "app_onboarding_passkey_prompt": {
+    "message": "请按照浏览器的通行密钥提示操作…"
+  },
+  "app_onboarding_preset_body": {
+    "message": "PGP Tools 应以多谨慎的方式对待你的密钥？每个选项都会明确列出它所设置的内容，之后你随时可以在“设置”中更改其中任何一项。"
+  },
+  "app_onboarding_preset_title": {
+    "message": "选择一个安全预设"
+  },
+  "app_onboarding_prf_unsupported": {
+    "message": "你的身份验证器不支持 PRF。请换一个通行密钥，或改用密码。"
+  },
+  "app_onboarding_protection_body": {
+    "message": "选择如何保护你的联系人和密钥。每次打开 PGP Tools 时都会用到。"
+  },
+  "app_onboarding_protection_title": {
+    "message": "保护你的数据"
+  },
+  "app_onboarding_rsa_slow": {
+    "message": "RSA 密钥生成需要稍等片刻"
+  },
+  "app_onboarding_set_password": {
+    "message": "设置密码"
+  },
+  "app_onboarding_setup_failed": {
+    "message": "设置失败"
+  },
+  "app_onboarding_skip": {
+    "message": "稍后再设置"
+  },
+  "app_onboarding_storage_question": {
+    "message": "你的数据应存储在哪里？"
+  },
+  "app_onboarding_unlock_with_vault": {
+    "message": "随保险库一起解锁密钥"
+  },
+  "app_onboarding_unlock_with_vault_hint": {
+    "message": "打开保险库的通行密钥提示会同时解锁你的密钥，无需再为每个密钥单独确认。可在“设置”中更改。"
+  },
+  "app_onboarding_use_preset": {
+    "message": "使用此预设"
+  },
+  "app_oversized_files_one": {
+    "message": "$files$：文件大于 $limit$，无法在面板中处理。",
+    "placeholders": {
+      "files": {
+        "content": "$1"
+      },
+      "limit": {
+        "content": "$2"
+      }
+    }
+  },
+  "app_oversized_files_other": {
+    "message": "$files$：文件大于 $limit$，无法在面板中处理。",
+    "placeholders": {
+      "files": {
+        "content": "$1"
+      },
+      "limit": {
+        "content": "$2"
+      }
+    }
+  },
+  "app_oversized_more": {
+    "message": "$names$ 及另外 $count$ 个",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      },
+      "count": {
+        "content": "$2"
+      }
+    }
+  },
+  "app_tab_main": {
+    "message": "主页"
+  },
+  "app_vault_lock_retry": {
+    "message": "锁定并重试"
+  },
+  "app_vault_unreadable_body": {
+    "message": "你的密钥仍保存在此设备上。请先锁定后重试。"
+  },
+  "app_vault_unreadable_body_passkey": {
+    "message": "你的密钥仍保存在此设备上。请先锁定后重试，并确保使用的是当初设置的那个通行密钥。"
+  },
+  "app_vault_unreadable_title": {
+    "message": "无法读取你的保险库。"
+  },
+  "app_welcome_body": {
+    "message": "点击下方按钮打开侧边栏，完成密钥设置。之后可随时点击工具栏中的 PGP Tools 图标重新打开。"
+  },
+  "app_welcome_credit_after": {
+    "message": "。"
+  },
+  "app_welcome_credit_before": {
+    "message": "隐私工具，出品方："
+  },
+  "app_welcome_open_failed": {
+    "message": "无法打开侧边栏。请点击工具栏中的 PGP Tools 图标。"
+  },
+  "app_welcome_opened": {
+    "message": "按照侧边栏中的说明开始使用"
+  },
+  "app_welcome_start": {
+    "message": "点击此处开始"
+  },
+  "app_welcome_title": {
+    "message": "PGP Tools 已安装"
+  },
+  "common_back": {
+    "message": "返回"
+  },
+  "common_cancel": {
+    "message": "取消"
+  },
+  "common_continue": {
+    "message": "继续"
+  },
+  "common_copied": {
+    "message": "已复制"
+  },
+  "common_copy": {
+    "message": "复制"
+  },
+  "common_decrypt": {
+    "message": "解密"
+  },
+  "common_delete": {
+    "message": "删除"
+  },
+  "common_done": {
+    "message": "完成"
+  },
+  "common_download": {
+    "message": "下载"
+  },
+  "common_encrypt": {
+    "message": "加密"
+  },
+  "common_keys": {
+    "message": "密钥"
+  },
+  "common_lock": {
+    "message": "锁定"
+  },
+  "common_off": {
+    "message": "关"
+  },
+  "common_on": {
+    "message": "开"
+  },
+  "common_private_key": {
+    "message": "私钥"
+  },
+  "common_public_key": {
+    "message": "公钥"
+  },
+  "common_remove": {
+    "message": "移除"
+  },
+  "common_save": {
+    "message": "保存"
+  },
+  "common_settings": {
+    "message": "设置"
+  },
+  "common_sign": {
+    "message": "签名"
+  },
+  "common_unlock": {
+    "message": "解锁"
+  },
+  "common_verify": {
+    "message": "验证"
   },
   "extDescription": {
     "message": "使用 OpenPGP 和 GPG 加密、解密、签名和验证邮件与消息，并管理密钥。"
+  },
+  "extName": {
+    "message": "OpenPGP 与 GPG 邮件加密 - Gmail & Outlook Compatible, Slack Compatible"
+  },
+  "import_action_import_contact": {
+    "message": "导入联系人"
+  },
+  "import_action_replace_stored": {
+    "message": "替换已存储的密钥"
+  },
+  "import_action_update_contact": {
+    "message": "更新联系人"
+  },
+  "import_added_contacts_one": {
+    "message": "已添加 $count$ 个联系人",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_added_contacts_other": {
+    "message": "已添加 $count$ 个联系人",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_as_one_contact": {
+    "message": "导入为一个联系人"
+  },
+  "import_browse": {
+    "message": "浏览密钥文件"
+  },
+  "import_change_keys_added_one": {
+    "message": "新增 $count$ 个密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_keys_added_other": {
+    "message": "新增 $count$ 个密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_keys_removed_one": {
+    "message": "移除 $count$ 个密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_keys_removed_other": {
+    "message": "移除 $count$ 个密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_new_expiry": {
+    "message": "新的过期时间：$date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_new_subkeys_one": {
+    "message": "$count$ 个新子密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_new_subkeys_other": {
+    "message": "$count$ 个新子密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_new_user_ids_one": {
+    "message": "$count$ 个新用户 ID",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_new_user_ids_other": {
+    "message": "$count$ 个新用户 ID",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_no_expiry": {
+    "message": "不再过期"
+  },
+  "import_change_reissued": {
+    "message": "该密钥已重新签发"
+  },
+  "import_chip_crx": {
+    "message": "扩展程序密钥"
+  },
+  "import_chip_crx_title": {
+    "message": "用于 Chrome 扩展程序 (.crx) 的 RSA 签名密钥"
+  },
+  "import_chip_pgp_private_title": {
+    "message": "包含私钥材料，下一步你将为其设置保护"
+  },
+  "import_chip_pgp_public_title": {
+    "message": "他人的密钥，将作为联系人导入"
+  },
+  "import_chip_ssh_private": {
+    "message": "SSH 密钥"
+  },
+  "import_chip_ssh_private_title": {
+    "message": "一个 OpenSSH 私钥，下一步你将为其设置保护"
+  },
+  "import_chip_ssh_public": {
+    "message": "SSH 公钥"
+  },
+  "import_chip_ssh_public_title": {
+    "message": "他人的 SSH 密钥，将作为 age 收件人导入"
+  },
+  "import_crx_headline": {
+    "message": "Chrome 扩展程序签名密钥"
+  },
+  "import_crx_note": {
+    "message": "用于 Chrome 扩展程序 (.crx) 的 RSA 签名密钥。导入时会从密钥本身计算出其扩展程序 ID。"
+  },
+  "import_default_pgp_name": {
+    "message": "导入的 PGP 密钥"
+  },
+  "import_default_ssh_name": {
+    "message": "导入的 SSH 密钥"
+  },
+  "import_drop_here": {
+    "message": "将密钥文件拖放到此处"
+  },
+  "import_dropzone_browse": {
+    "message": "浏览文件"
+  },
+  "import_dropzone_text": {
+    "message": "拖放、粘贴或浏览选择公钥"
+  },
+  "import_enter_passphrase": {
+    "message": "请输入密钥的密码短语。"
+  },
+  "import_failed": {
+    "message": "导入失败"
+  },
+  "import_flagged_toast_one": {
+    "message": "$count$ 个密钥使用弱加密算法 (SHA-1)，已被标记，请查看联系人上的警告。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_flagged_toast_other": {
+    "message": "$count$ 个密钥使用弱加密算法 (SHA-1)，已被标记，请查看联系人上的警告。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_fetched_note": {
+    "message": "获取自 github.com/$user$.keys。消息会加密给上面列出的每个密钥，因此其任何一台设备都能读取。",
+    "placeholders": {
+      "user": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_invalid_username": {
+    "message": "这不是 GitHub 用户名。请使用个人资料网址中的账号名，例如 github.com/octocat 对应“octocat”。"
+  },
+  "import_github_no_keys": {
+    "message": "$username$ 尚未在 GitHub 上发布任何 SSH 密钥。请让对方在 github.com/settings/keys 添加一个，或改为在此处粘贴其密钥。",
+    "placeholders": {
+      "username": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_none_usable": {
+    "message": "已发布的密钥中没有一个可用于加密。"
+  },
+  "import_github_not_found": {
+    "message": "没有名为“$username$”的 GitHub 账号。请检查拼写，应使用个人资料网址中的名称。",
+    "placeholders": {
+      "username": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_offline": {
+    "message": "无法连接到 github.com。请检查网络连接后重试。"
+  },
+  "import_github_omitted_line_one": {
+    "message": "+$count$ 个其他已发布的密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_omitted_line_other": {
+    "message": "+$count$ 个其他已发布的密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_omitted_reason": {
+    "message": "此导入每个账号最多获取 $max$ 个密钥，并会跳过任何长度异常的单个密钥。$username$ 已发布的密钥中有 $count$ 个未获取，如有需要，请在此处粘贴。",
+    "placeholders": {
+      "max": {
+        "content": "$1"
+      },
+      "count": {
+        "content": "$2"
+      },
+      "username": {
+        "content": "$3"
+      }
+    }
+  },
+  "import_github_rate_limited": {
+    "message": "GitHub 正在对此网络限流。限制按 IP 地址计算，因此同一网络上的其他人也可能用尽额度。"
+  },
+  "import_github_rejected_heading_one": {
+    "message": "$count$ 个已发布的密钥无法使用",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_rejected_heading_other": {
+    "message": "$count$ 个已发布的密钥无法使用",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_server_error": {
+    "message": "GitHub 暂时无法响应。请稍后重试。"
+  },
+  "import_group_help_one": {
+    "message": "这些密钥的名称不一致，因此会作为 $count$ 个独立联系人导入。在此处命名可将它们合并为同一个人：消息会加密给全部 $count$ 个密钥，其任何一台设备都能读取。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_group_help_other": {
+    "message": "这些密钥的名称不一致，因此会作为 $count$ 个独立联系人导入。在此处命名可将它们合并为同一个人：消息会加密给全部 $count$ 个密钥，其任何一台设备都能读取。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_group_keys_chip_one": {
+    "message": "$count$ 个密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_group_keys_chip_other": {
+    "message": "$count$ 个密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_group_keys_chip_title": {
+    "message": "消息会加密给其中所有密钥；任一密钥都可以解密"
+  },
+  "import_group_label": {
+    "message": "合并为一个联系人"
+  },
+  "import_group_placeholder": {
+    "message": "例如：Alice（所有设备）"
+  },
+  "import_group_proposal_label_one": {
+    "message": "$count$ 个 SSH 密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_group_proposal_label_other": {
+    "message": "$count$ 个 SSH 密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_importing": {
+    "message": "正在导入…"
+  },
+  "import_keyserver_invalid_query": {
+    "message": "这不是电子邮件地址或密钥指纹。请使用密钥发布时所用的地址，或粘贴完整的 40 位指纹。"
+  },
+  "import_keyserver_multiple_keys": {
+    "message": "$host$ 为此次查找返回了多个密钥。此处仅显示第一个，导入前请核对指纹。",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_keyserver_not_a_key": {
+    "message": "$host$ 已响应，但返回的内容不是我们能读取的密钥。",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_keyserver_not_found_email": {
+    "message": "$host$ 上没有 $subject$ 的密钥。该服务器只在密钥所有者确认后才会公开地址，所以对方可能有密钥但此次查找找不到。请直接向对方索取，或按指纹查找。",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "subject": {
+        "content": "$2"
+      }
+    }
+  },
+  "import_keyserver_not_found_fingerprint": {
+    "message": "$host$ 上没有指纹为 $subject$ 的密钥。请与你拿到的指纹核对，错一个字符都会找不到。",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "subject": {
+        "content": "$2"
+      }
+    }
+  },
+  "import_keyserver_offline": {
+    "message": "无法连接到 $host$。请检查网络连接后重试。",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_keyserver_rate_limited": {
+    "message": "$host$ 正在对此网络限流。",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_keyserver_server_error": {
+    "message": "$host$ 暂时无法响应。请稍后重试。",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_label_field": {
+    "message": "标签"
+  },
+  "import_label_placeholder": {
+    "message": "例如：我的扩展程序"
+  },
+  "import_lookup_button": {
+    "message": "查找"
+  },
+  "import_lookup_failed": {
+    "message": "查找失败"
+  },
+  "import_lookup_invalid": {
+    "message": "这不是 GitHub 用户名、电子邮件地址或密钥指纹。请尝试“octocat”、“alice@example.com”或完整的 40 位指纹。"
+  },
+  "import_lookup_label": {
+    "message": "或查找某人"
+  },
+  "import_lookup_placeholder": {
+    "message": "GitHub 用户名、电子邮件或指纹"
+  },
+  "import_n_contacts_one": {
+    "message": "导入 $count$ 个联系人",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_n_contacts_other": {
+    "message": "导入 $count$ 个联系人",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_no_key": {
+    "message": "没有可导入的密钥。"
+  },
+  "import_optional": {
+    "message": "可选"
+  },
+  "import_panel_aria_with_id": {
+    "message": "导入 $keyid$",
+    "placeholders": {
+      "keyid": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_passphrase_label": {
+    "message": "此密钥受密码短语保护"
+  },
+  "import_passphrase_placeholder": {
+    "message": "密钥密码短语"
+  },
+  "import_paste_hint": {
+    "message": "请粘贴完整的密钥块，密钥太长，无法手动输入。"
+  },
+  "import_paste_label": {
+    "message": "粘贴密钥"
+  },
+  "import_paste_placeholder": {
+    "message": "按 $shortcut$ 粘贴密钥",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_private_unreadable": {
+    "message": "无法读取该私钥。"
+  },
+  "import_reading": {
+    "message": "正在读取密钥…"
+  },
+  "import_reject_expired": {
+    "message": "此密钥已于 $date$ 过期。请向所有者索取其当前密钥。",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_reject_no_public_key": {
+    "message": "此密钥块不包含可用的公钥。"
+  },
+  "import_reject_ssh_generic": {
+    "message": "此 SSH 密钥不能用于加密。"
+  },
+  "import_reject_unusable": {
+    "message": "此公钥没有可用的加密密钥或签名密钥。"
+  },
+  "import_rejected_generic": {
+    "message": "此密钥无法导入。"
+  },
+  "import_retry_hours_one": {
+    "message": "请在约 $count$ 小时后重试。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_retry_hours_other": {
+    "message": "请在约 $count$ 小时后重试。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_retry_minute": {
+    "message": "请在一分钟后重试。"
+  },
+  "import_retry_minutes_one": {
+    "message": "请在约 $count$ 分钟后重试。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_retry_minutes_other": {
+    "message": "请在约 $count$ 分钟后重试。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_reveal": {
+    "message": "在密钥中显示"
+  },
+  "import_source_help": {
+    "message": "公钥会添加为联系人。私钥仅保留在此设备上，下一步你将选择如何保护它。"
+  },
+  "import_ssh_headline": {
+    "message": "SSH 密钥"
+  },
+  "import_ssh_private_headline": {
+    "message": "SSH 私钥"
+  },
+  "import_ssh_private_note": {
+    "message": "一个与 age 配合使用的 OpenSSH 私钥。导入时会从密钥本身读取其指纹。它不能签名（age 没有签名功能），也不能以明文导出。"
+  },
+  "import_status_added_on": {
+    "message": "添加于 $date$。",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_status_duplicate": {
+    "message": "已在你的密钥中"
+  },
+  "import_status_duplicate_added": {
+    "message": "你已于 $date$ 添加过它，且没有任何变化。",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_status_update": {
+    "message": "更新你已有的密钥"
+  },
+  "import_submit": {
+    "message": "导入"
+  },
+  "import_title": {
+    "message": "导入密钥"
+  },
+  "import_title_update": {
+    "message": "更新密钥"
+  },
+  "import_unknown_name": {
+    "message": "未知"
+  },
+  "import_unreadable": {
+    "message": "这看起来不像我们能读取的密钥。请粘贴 ASCII 装甲格式的 PGP 密钥块或一行 SSH 公钥，或浏览选择密钥文件。"
+  },
+  "import_updated_contacts_one": {
+    "message": "已更新 $count$ 个联系人",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_updated_contacts_other": {
+    "message": "已更新 $count$ 个联系人",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_worker_unreachable": {
+    "message": "无法连接到扩展程序的后台工作进程。"
+  },
+  "keygen_advanced_options": {
+    "message": "高级选项"
+  },
+  "keygen_algorithm_hint_ecc": {
+    "message": "现代、快速、密钥体积小。推荐大多数用途使用。"
+  },
+  "keygen_algorithm_hint_rsa": {
+    "message": "兼容性广。密钥生成较慢。"
+  },
+  "keygen_algorithm_label": {
+    "message": "算法"
+  },
+  "keygen_comment_label": {
+    "message": "备注"
+  },
+  "keygen_comment_placeholder": {
+    "message": "例如：工作、个人"
+  },
+  "keygen_confirm_passphrase_placeholder": {
+    "message": "确认密码短语"
+  },
+  "keygen_confirm_password": {
+    "message": "确认密码"
+  },
+  "keygen_confirm_word": {
+    "message": "导出"
+  },
+  "keygen_copied_encrypted": {
+    "message": "已复制加密后的密钥（60 秒后清空）"
+  },
+  "keygen_copied_plaintext": {
+    "message": "已复制未受保护的密钥（30 秒后清空）"
+  },
+  "keygen_create_heading": {
+    "message": "创建新密钥"
+  },
+  "keygen_create_subtitle_crx": {
+    "message": "用于打包 Chrome 扩展程序 (.crx) 的新 RSA-2048 签名密钥。"
+  },
+  "keygen_create_subtitle_pgp": {
+    "message": "用于加密、解密和签名消息的新 OpenPGP 密钥对。"
+  },
+  "keygen_email_label": {
+    "message": "电子邮件"
+  },
+  "keygen_email_placeholder": {
+    "message": "you@example.com"
+  },
+  "keygen_encrypting": {
+    "message": "正在加密…"
+  },
+  "keygen_error_expiry_past": {
+    "message": "过期日期必须是未来的日期。"
+  },
+  "keygen_error_expiry_required": {
+    "message": "请选择过期日期。"
+  },
+  "keygen_error_generation_failed": {
+    "message": "密钥生成失败"
+  },
+  "keygen_error_key_not_unlocked": {
+    "message": "密钥未解锁。"
+  },
+  "keygen_error_name_required": {
+    "message": "姓名为必填项。"
+  },
+  "keygen_error_passkey_failed": {
+    "message": "通行密钥验证失败。"
+  },
+  "keygen_error_passphrase_mismatch": {
+    "message": "两次输入的密码短语不一致。"
+  },
+  "keygen_error_passphrase_short": {
+    "message": "密码短语至少需要 8 个字符。"
+  },
+  "keygen_error_password_mismatch": {
+    "message": "两次输入的密码不一致。"
+  },
+  "keygen_error_password_short": {
+    "message": "密码至少需要 8 个字符。"
+  },
+  "keygen_error_prf_unsupported_authenticator": {
+    "message": "你的身份验证器不支持 PRF。请换一个通行密钥，或改用密码。"
+  },
+  "keygen_error_wrong_password": {
+    "message": "密码错误。"
+  },
+  "keygen_expires_on": {
+    "message": "$date$过期",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_expiry_1y": {
+    "message": "1 年"
+  },
+  "keygen_expiry_2y": {
+    "message": "2 年"
+  },
+  "keygen_expiry_3y": {
+    "message": "3 年"
+  },
+  "keygen_expiry_custom": {
+    "message": "自定义日期"
+  },
+  "keygen_expiry_heading": {
+    "message": "选择过期日期"
+  },
+  "keygen_expiry_label": {
+    "message": "密钥有效期"
+  },
+  "keygen_expiry_never": {
+    "message": "永不过期"
+  },
+  "keygen_expiry_subtitle": {
+    "message": "此日期之后该密钥将不能再使用；你随时可以生成新的密钥。"
+  },
+  "keygen_export": {
+    "message": "导出"
+  },
+  "keygen_export_contacts_included_one": {
+    "message": "另外还会包含 $count$ 个联系人（公钥，无需解锁）。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_contacts_included_other": {
+    "message": "另外还会包含 $count$ 个联系人（公钥，无需解锁）。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_crx_included_one": {
+    "message": "此外还有 $count$ 个 CRX 签名密钥，会用此密码短语重新加密，以便在任何设备上恢复。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_crx_included_other": {
+    "message": "此外还有 $count$ 个 CRX 签名密钥，会用此密码短语重新加密，以便在任何设备上恢复。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_failed": {
+    "message": "导出失败。"
+  },
+  "keygen_export_failed_detail": {
+    "message": "导出失败：$message$",
+    "placeholders": {
+      "message": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_go_back_unlock": {
+    "message": "返回解锁"
+  },
+  "keygen_export_nothing": {
+    "message": "没有可导出的内容"
+  },
+  "keygen_export_passphrase_intro": {
+    "message": "设置一个密码短语来加密导出的私钥（OpenPGP S2K，可导入 GnuPG 和其他工具）。任何持有此密码短语和该文件的人都能解密你的消息并以你的身份签名。"
+  },
+  "keygen_export_plaintext_crx_left_out": {
+    "message": "明文导出不包含 CRX 签名密钥，如需包含请使用密码短语。"
+  },
+  "keygen_export_plaintext_warning_file": {
+    "message": "明文导出。任何读取到下载文件的人都将完全控制其中的每一个 PGP 密钥。"
+  },
+  "keygen_export_skip_locked": {
+    "message": "跳过已锁定的密钥并继续"
+  },
+  "keygen_export_still_locked_after": {
+    "message": "。"
+  },
+  "keygen_export_still_locked_one": {
+    "message": "$count$ 个密钥仍处于锁定状态，将不会被包含。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_still_locked_other": {
+    "message": "$count$ 个密钥仍处于锁定状态，将不会被包含。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_summary": {
+    "message": "将下载一个 $ext$ 文件（标准 ASCII 装甲格式的 OpenPGP）：其中$private_keys$以 $private_block$ 形式写入，$contacts$以 $public_block$ 形式写入。",
+    "placeholders": {
+      "ext": {
+        "content": "$1"
+      },
+      "private_keys": {
+        "content": "$2"
+      },
+      "private_block": {
+        "content": "$3"
+      },
+      "contacts": {
+        "content": "$4"
+      },
+      "public_block": {
+        "content": "$5"
+      }
+    }
+  },
+  "keygen_export_summary_contacts_one": {
+    "message": "你的 $count$ 个联系人",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_summary_contacts_other": {
+    "message": "你的 $count$ 个联系人",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_summary_private_keys_one": {
+    "message": "你已解锁的 $count$ 个私钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_summary_private_keys_other": {
+    "message": "你已解锁的 $count$ 个私钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_title": {
+    "message": "导出密钥"
+  },
+  "keygen_export_toast_exported_one": {
+    "message": "已导出 $count$ 个密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_toast_exported_other": {
+    "message": "已导出 $count$ 个密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_toast_exported_unsafe_one": {
+    "message": "已导出 $count$ 个密钥（私钥未加密）",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_toast_exported_unsafe_other": {
+    "message": "已导出 $count$ 个密钥（私钥未加密）",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_unlock_intro": {
+    "message": "导出私钥前需要先解锁。解锁下面的密钥即可将其包含在备份中。"
+  },
+  "keygen_export_with_passphrase": {
+    "message": "使用密码短语导出"
+  },
+  "keygen_export_without_passphrase": {
+    "message": "不使用密码短语导出（不安全）"
+  },
+  "keygen_exporter_crx_encrypted_blurb": {
+    "message": "设置一个密码短语来加密复制的密钥（可通过“导入密钥”重新导入 PGP Tools）。任何持有此密码短语和复制内容的人都能以你的身份签名扩展程序。"
+  },
+  "keygen_exporter_crx_encrypted_button": {
+    "message": "使用密码短语复制"
+  },
+  "keygen_exporter_crx_plaintext_blurb": {
+    "message": "明文导出（原始 PKCS#8 PEM）。任何读取到你剪贴板的人都将完全控制此签名密钥。"
+  },
+  "keygen_exporter_crx_plaintext_button": {
+    "message": "不使用密码短语复制（不安全）"
+  },
+  "keygen_exporter_crx_title": {
+    "message": "复制 CRX 私钥"
+  },
+  "keygen_exporter_crx_unlock_passkey": {
+    "message": "解锁此签名密钥以复制。请使用通行密钥验证身份。"
+  },
+  "keygen_exporter_crx_unlock_password": {
+    "message": "解锁此签名密钥以复制。请输入密钥密码。"
+  },
+  "keygen_exporter_pgp_encrypted_blurb": {
+    "message": "设置一个密码短语来加密导出的密钥。任何持有此密码短语和导出密钥的人都能解密你的消息并以你的身份签名。"
+  },
+  "keygen_exporter_pgp_plaintext_blurb": {
+    "message": "明文导出。任何读取到你剪贴板的人都将完全控制此密钥。"
+  },
+  "keygen_exporter_pgp_title": {
+    "message": "导出私钥"
+  },
+  "keygen_exporting": {
+    "message": "正在导出…"
+  },
+  "keygen_generating_key": {
+    "message": "正在生成密钥…"
+  },
+  "keygen_generating_passkey": {
+    "message": "请按照浏览器的通行密钥提示操作…"
+  },
+  "keygen_generating_rsa_hint": {
+    "message": "RSA 密钥生成需要稍等片刻"
+  },
+  "keygen_key_password_placeholder": {
+    "message": "密钥密码"
+  },
+  "keygen_key_size_4096": {
+    "message": "4096 位"
+  },
+  "keygen_key_size_label": {
+    "message": "密钥长度"
+  },
+  "keygen_label_label": {
+    "message": "标签"
+  },
+  "keygen_label_placeholder": {
+    "message": "例如：我的扩展程序"
+  },
+  "keygen_name_label": {
+    "message": "姓名 *"
+  },
+  "keygen_name_placeholder": {
+    "message": "你的全名"
+  },
+  "keygen_next": {
+    "message": "下一步"
+  },
+  "keygen_optional": {
+    "message": "可选"
+  },
+  "keygen_passkey_default_user": {
+    "message": "PGP 密钥保护"
+  },
+  "keygen_passkey_imported_user": {
+    "message": "导入的 PGP 密钥"
+  },
+  "keygen_passphrase_placeholder": {
+    "message": "密码短语（至少 8 个字符）"
+  },
+  "keygen_password_placeholder": {
+    "message": "密码（至少 8 个字符）"
+  },
+  "keygen_prf_unsupported_chrome": {
+    "message": "Chrome 个人资料中的通行密钥可能不支持 PRF，请尝试 Google 密码管理器或外部安全密钥。"
+  },
+  "keygen_prf_unsupported_intro": {
+    "message": "此身份验证器不支持 PRF。"
+  },
+  "keygen_prf_unsupported_mac": {
+    "message": "macOS 需要 15 或更高版本并启用 iCloud 钥匙串。"
+  },
+  "keygen_prf_unsupported_windows": {
+    "message": "Windows Hello 不支持 PRF，请使用安全密钥（例如 YubiKey）。"
+  },
+  "keygen_protect_heading": {
+    "message": "保护你的密钥"
+  },
+  "keygen_protect_subtitle": {
+    "message": "选择使用此密钥时的解锁方式。"
+  },
+  "keygen_protection_intro": {
+    "message": "选择如何保护你的私钥："
+  },
+  "keygen_protection_passkey": {
+    "message": "通行密钥"
+  },
+  "keygen_protection_passkey_desc": {
+    "message": "使用指纹、面容或安全密钥。无需记住密码。"
+  },
+  "keygen_protection_passkey_unavailable": {
+    "message": "此浏览器不支持。"
+  },
+  "keygen_protection_password": {
+    "message": "密码"
+  },
+  "keygen_protection_password_desc": {
+    "message": "使用密码保护。每次解锁时都需要输入。"
+  },
+  "keygen_protection_recommended": {
+    "message": "推荐"
+  },
+  "keygen_protection_reuse_passkey": {
+    "message": "使用我已设置的同一个通行密钥"
+  },
+  "keygen_submit_create_passkey": {
+    "message": "创建通行密钥"
+  },
+  "keygen_submit_generate": {
+    "message": "生成"
+  },
+  "keygen_submit_use_passkey": {
+    "message": "使用通行密钥"
+  },
+  "keygen_title": {
+    "message": "生成密钥"
+  },
+  "keygen_type_crx": {
+    "message": "Chrome 扩展程序 (CRX)"
+  },
+  "keygen_type_pgp": {
+    "message": "消息密钥 (PGP)"
+  },
+  "keygen_type_to_confirm_after": {
+    "message": "以确认："
+  },
+  "keygen_type_to_confirm_before": {
+    "message": "请输入"
+  },
+  "keygen_unlock_gate_passkey": {
+    "message": "使用通行密钥验证身份以复制此密钥。"
+  },
+  "keygen_unlock_gate_password": {
+    "message": "输入密钥密码以复制此密钥。"
+  },
+  "keygen_unlocking": {
+    "message": "正在解锁…"
+  },
+  "keys_also_known_as": {
+    "message": "其他身份"
+  },
+  "keys_banner_encrypt_only_contact": {
+    "message": "你可以加密给它，但它不能签名。"
+  },
+  "keys_banner_encrypt_only_own": {
+    "message": "你可以接收加密消息，但此密钥不能签名。"
+  },
+  "keys_banner_expired_contact": {
+    "message": "请向所有者索取更新后的密钥。"
+  },
+  "keys_banner_expired_on": {
+    "message": "它自 $date$ 起失效。",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_banner_expired_own": {
+    "message": "请生成或导入更新的密钥。"
+  },
+  "keys_banner_expired_title": {
+    "message": "此密钥已于$when$过期",
+    "placeholders": {
+      "when": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_banner_expires_soon": {
+    "message": "此密钥即将过期"
+  },
+  "keys_banner_no_reason": {
+    "message": "未给出原因。"
+  },
+  "keys_banner_revoked_contact": {
+    "message": "请勿加密给它，也不要信任它的新签名。"
+  },
+  "keys_banner_revoked_own": {
+    "message": "请生成或导入替代密钥。"
+  },
+  "keys_banner_revoked_title": {
+    "message": "此密钥已被吊销"
+  },
+  "keys_banner_sign_only_contact": {
+    "message": "你可以验证它的签名，但不能加密给它。"
+  },
+  "keys_banner_sign_only_own": {
+    "message": "你可以签名消息，但此密钥不能接收加密消息。"
+  },
+  "keys_banner_unusable_body": {
+    "message": "它没有可用的加密子密钥或签名子密钥。"
+  },
+  "keys_banner_unusable_title": {
+    "message": "此密钥无法使用"
+  },
+  "keys_bits": {
+    "message": "$bits$ 位",
+    "placeholders": {
+      "bits": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_bulk_delete_confirm_one": {
+    "message": "永久删除 $count$ 项",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_bulk_delete_confirm_other": {
+    "message": "永久删除 $count$ 项",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_bulk_delete_contacts_body": {
+    "message": "你将无法再加密给这些联系人或验证其签名。之后可以重新导入他们的公钥。"
+  },
+  "keys_bulk_delete_private_body": {
+    "message": "这将从此设备永久删除所选私钥。仅加密给已删除密钥的任何内容都将无法恢复。如果将来可能还需要它们，请确保已有备份。"
+  },
+  "keys_bulk_delete_prompt_one": {
+    "message": "删除$count$个密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_bulk_delete_prompt_other": {
+    "message": "删除$count$个密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_bulk_delete_title": {
+    "message": "删除所选项？"
+  },
+  "keys_cancel_selection_aria": {
+    "message": "取消选择"
+  },
+  "keys_cap_auth": {
+    "message": "身份验证（例如 SSH）"
+  },
+  "keys_cap_certify": {
+    "message": "认证身份"
+  },
+  "keys_cap_encrypt": {
+    "message": "接收加密消息"
+  },
+  "keys_cap_sign": {
+    "message": "签名消息"
+  },
+  "keys_chip_contact": {
+    "message": "联系人"
+  },
+  "keys_chip_contact_title": {
+    "message": "你持有对方的公钥"
+  },
+  "keys_chip_protection_title": {
+    "message": "私钥在存储时的保护方式"
+  },
+  "keys_chip_your_key": {
+    "message": "你的密钥"
+  },
+  "keys_chip_your_key_title": {
+    "message": "你持有私钥"
+  },
+  "keys_confirm_delete_key_title": {
+    "message": "删除密钥？"
+  },
+  "keys_confirm_remove_contact_title": {
+    "message": "移除联系人？"
+  },
+  "keys_contact_expired": {
+    "message": "已于 $date$ 过期",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_contact_expired_title": {
+    "message": "此密钥已于 $date$ 过期，不能再加密给它。请向所有者索取其当前密钥。",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_contact_expires": {
+    "message": "$date$过期",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_contact_keys_all_title": {
+    "message": "消息会加密给此联系人的所有密钥；任一密钥都可以解密。"
+  },
+  "keys_contact_keys_count_one": {
+    "message": "$count$ 个密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_contact_keys_count_other": {
+    "message": "$count$ 个密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_contact_keys_partial": {
+    "message": "$active$/$total$ 个密钥",
+    "placeholders": {
+      "active": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_contact_keys_partial_title": {
+    "message": "消息会加密给此联系人 $total$ 个密钥中的 $active$ 个；其余密钥已在其密钥详情中关闭。",
+    "placeholders": {
+      "active": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_contact_options_aria": {
+    "message": "联系人选项"
+  },
+  "keys_contacts_heading": {
+    "message": "联系人"
+  },
+  "keys_contacts_heading_count": {
+    "message": "联系人 ($count$)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_contacts_heading_encrypted": {
+    "message": "联系人（已加密）"
+  },
+  "keys_contacts_locked": {
+    "message": "联系人已加密。请解锁 PGP Tools 以查看和管理。"
+  },
+  "keys_contacts_removed_one": {
+    "message": "已移除联系人"
+  },
+  "keys_contacts_removed_other": {
+    "message": "已移除 $count$ 个联系人",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_copy_fingerprint_aria": {
+    "message": "复制指纹"
+  },
+  "keys_copy_private_key": {
+    "message": "复制私钥"
+  },
+  "keys_copy_public_key": {
+    "message": "复制公钥"
+  },
+  "keys_count_contacts_one": {
+    "message": "$count$ 个联系人",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_count_contacts_other": {
+    "message": "$count$ 个联系人",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_count_private_keys_one": {
+    "message": "$count$ 个私钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_count_private_keys_other": {
+    "message": "$count$ 个私钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_count_signing_keys_one": {
+    "message": "$count$ 个签名密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_count_signing_keys_other": {
+    "message": "$count$ 个签名密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_default_badge": {
+    "message": "默认"
+  },
+  "keys_default_removed": {
+    "message": "已取消默认密钥"
+  },
+  "keys_default_set": {
+    "message": "已设置默认密钥"
+  },
+  "keys_default_title": {
+    "message": "默认用于签名、解密和“同时加密给我”"
+  },
+  "keys_delete_crx_body": {
+    "message": "你将无法再为此扩展程序签名更新，且除非有备份，否则该密钥无法恢复。"
+  },
+  "keys_delete_key": {
+    "message": "删除密钥"
+  },
+  "keys_delete_key_body": {
+    "message": "这将从此设备永久删除该私钥。仅加密给此密钥的任何内容都将无法恢复。如果将来可能还需要它，请确保已有备份。"
+  },
+  "keys_delete_key_permanently": {
+    "message": "永久删除密钥"
+  },
+  "keys_deselect_all": {
+    "message": "取消全选"
+  },
+  "keys_details_aria": {
+    "message": "$name$ 的密钥详情",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_download_public_key": {
+    "message": "下载公钥"
+  },
+  "keys_empty": {
+    "message": "还没有密钥。生成或导入一个密钥即可开始。"
+  },
+  "keys_encrypt_to": {
+    "message": "加密给"
+  },
+  "keys_enter_password_placeholder": {
+    "message": "输入密码"
+  },
+  "keys_expires_value": {
+    "message": "$date$ ($when$)",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      },
+      "when": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_export": {
+    "message": "导出"
+  },
+  "keys_exported_one": {
+    "message": "已导出 $count$ 个密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_exported_other": {
+    "message": "已导出 $count$ 个密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_exported_unsafe_one": {
+    "message": "已导出 $count$ 个密钥（私钥未加密）",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_exported_unsafe_other": {
+    "message": "已导出 $count$ 个密钥（私钥未加密）",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_fact_added": {
+    "message": "添加时间"
+  },
+  "keys_fact_algorithm": {
+    "message": "算法"
+  },
+  "keys_fact_created": {
+    "message": "创建时间"
+  },
+  "keys_fact_expires": {
+    "message": "过期时间"
+  },
+  "keys_fact_fingerprint": {
+    "message": "指纹"
+  },
+  "keys_fact_last_used": {
+    "message": "上次使用"
+  },
+  "keys_fact_used_for": {
+    "message": "用途"
+  },
+  "keys_generate_button": {
+    "message": "生成密钥"
+  },
+  "keys_group_row_label": {
+    "message": "密钥"
+  },
+  "keys_import_button": {
+    "message": "导入密钥"
+  },
+  "keys_inactive_subkeys_expired_one": {
+    "message": "$count$ 个已过期的子密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_inactive_subkeys_expired_other": {
+    "message": "$count$ 个已过期的子密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_inactive_subkeys_revoked_one": {
+    "message": "$count$ 个已吊销的子密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_inactive_subkeys_revoked_other": {
+    "message": "$count$ 个已吊销的子密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_inactive_subkeys_unusable_one": {
+    "message": "$count$ 个不可用的子密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_inactive_subkeys_unusable_other": {
+    "message": "$count$ 个不可用的子密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_key_details": {
+    "message": "密钥详情"
+  },
+  "keys_key_options_aria": {
+    "message": "密钥选项"
+  },
+  "keys_loading": {
+    "message": "正在加载…"
+  },
+  "keys_my_keys_heading": {
+    "message": "我的密钥"
+  },
+  "keys_never": {
+    "message": "永不"
+  },
+  "keys_no_contacts_match": {
+    "message": "没有与“$query$”匹配的联系人",
+    "placeholders": {
+      "query": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_no_subkeys": {
+    "message": "此密钥没有子密钥；所有操作都由主密钥自身完成。"
+  },
+  "keys_parse_failed": {
+    "message": "无法解析此密钥。"
+  },
+  "keys_passkey_failed": {
+    "message": "通行密钥验证失败"
+  },
+  "keys_protection_passkey": {
+    "message": "通行密钥"
+  },
+  "keys_protection_password": {
+    "message": "密码"
+  },
+  "keys_public_key_copied": {
+    "message": "已复制公钥"
+  },
+  "keys_recipient_disable_title": {
+    "message": "停止加密给此密钥。它仍会列在这里。"
+  },
+  "keys_recipient_dont_use": {
+    "message": "不使用"
+  },
+  "keys_recipient_enable_title": {
+    "message": "重新加密给此密钥。"
+  },
+  "keys_recipient_last_active_title": {
+    "message": "这是唯一仍在使用的密钥。再关闭它，消息就没有任何收件人了。"
+  },
+  "keys_recipient_not_used": {
+    "message": "未使用"
+  },
+  "keys_recipient_off_title": {
+    "message": "发给此联系人的消息不会加密给此密钥。"
+  },
+  "keys_recipient_use": {
+    "message": "使用"
+  },
+  "keys_remove_contact": {
+    "message": "移除联系人"
+  },
+  "keys_remove_contact_body": {
+    "message": "你将无法再向此联系人加密消息或验证其签名。之后可以重新导入其公钥。"
+  },
+  "keys_remove_default": {
+    "message": "取消默认"
+  },
+  "keys_rename": {
+    "message": "重命名"
+  },
+  "keys_rename_contact_title": {
+    "message": "重命名联系人"
+  },
+  "keys_rename_crx_title": {
+    "message": "重命名签名密钥"
+  },
+  "keys_rename_field_label": {
+    "message": "显示名称"
+  },
+  "keys_rename_hint": {
+    "message": "将代替 $identity$ 显示。这只是本地标签。",
+    "placeholders": {
+      "identity": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_rename_key_title": {
+    "message": "重命名密钥"
+  },
+  "keys_rename_placeholder_contact": {
+    "message": "例如：Alice（所有设备）"
+  },
+  "keys_rename_placeholder_crx": {
+    "message": "例如：我的扩展程序"
+  },
+  "keys_rename_placeholder_key": {
+    "message": "例如：工作笔记本"
+  },
+  "keys_reselect": {
+    "message": "重新选择"
+  },
+  "keys_revocation_certificate": {
+    "message": "吊销证书"
+  },
+  "keys_revocation_create": {
+    "message": "创建吊销证书"
+  },
+  "keys_revocation_create_failed": {
+    "message": "无法创建吊销证书。"
+  },
+  "keys_revocation_created": {
+    "message": "已创建吊销证书"
+  },
+  "keys_revocation_creating": {
+    "message": "正在创建…"
+  },
+  "keys_revocation_have_body": {
+    "message": "如果此密钥丢失或泄露，发布此证书即可告知你的联系人停止使用该密钥。请将其备份到安全的地方：任何持有它的人都能吊销你的密钥。"
+  },
+  "keys_revocation_missing_body": {
+    "message": "此密钥导入时没有吊销证书。现在创建一个并备份，这样即使之后无法访问该密钥，你也能将其吊销。"
+  },
+  "keys_revocation_unlock_first": {
+    "message": "请先解锁此密钥，然后重试。"
+  },
+  "keys_revoked_reason": {
+    "message": "已吊销：$reason$",
+    "placeholders": {
+      "reason": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_row_created": {
+    "message": "创建于 $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_row_expired": {
+    "message": "已于 $date$ 过期",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_row_expires": {
+    "message": "$date$过期",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_row_never_expires": {
+    "message": "永不过期"
+  },
+  "keys_save_failed": {
+    "message": "无法保存此更改。"
+  },
+  "keys_search_contacts_placeholder": {
+    "message": "搜索联系人…"
+  },
+  "keys_select": {
+    "message": "选择"
+  },
+  "keys_select_all": {
+    "message": "全选"
+  },
+  "keys_selected_count_one": {
+    "message": "已选择 $count$ 项",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_selected_count_other": {
+    "message": "已选择 $count$ 项",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_selection_actions_aria": {
+    "message": "所选项操作"
+  },
+  "keys_set_default": {
+    "message": "设为默认密钥"
+  },
+  "keys_size_bytes": {
+    "message": "$size$ B",
+    "placeholders": {
+      "size": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_size_kb": {
+    "message": "$size$ KB",
+    "placeholders": {
+      "size": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_size_mb": {
+    "message": "$size$ MB",
+    "placeholders": {
+      "size": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_source_github": {
+    "message": "来自 github.com/$user$",
+    "placeholders": {
+      "user": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_source_keyserver": {
+    "message": "来自 keys.openpgp.org - $user$",
+    "placeholders": {
+      "user": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_ssh_chip_title": {
+    "message": "一个与 age 配合使用的 SSH 密钥。它不能与 PGP 收件人放在同一条消息中。"
+  },
+  "keys_ssh_export_skipped_one": {
+    "message": "$count$ 个 SSH 密钥无法导出，导入的 SSH 密钥不会离开此设备。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_ssh_export_skipped_other": {
+    "message": "$count$ 个 SSH 密钥无法导出，导入的 SSH 密钥不会离开此设备。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_status_expired": {
+    "message": "已过期"
+  },
+  "keys_status_invalid": {
+    "message": "无效"
+  },
+  "keys_status_locked": {
+    "message": "已锁定"
+  },
+  "keys_status_revoked": {
+    "message": "已吊销"
+  },
+  "keys_status_sealed": {
+    "message": "存储时始终加密"
+  },
+  "keys_status_unlocked": {
+    "message": "已解锁"
+  },
+  "keys_subkey_label": {
+    "message": "子密钥"
+  },
+  "keys_subkeys_title": {
+    "message": "子密钥"
+  },
+  "keys_subkeys_truncated": {
+    "message": "此证书的子密钥数量异常多；仅显示前 $count$ 个。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_undo": {
+    "message": "撤销"
+  },
+  "keys_unknown_name": {
+    "message": "未知"
+  },
+  "keys_weak_sha1": {
+    "message": "弱 (SHA-1)"
+  },
+  "keys_wrong_password": {
+    "message": "密码错误"
+  },
+  "settings_crx_default_key_name": {
+    "message": "CRX 签名密钥"
+  },
+  "settings_crx_info_get_body": {
+    "message": "此 $crx$ 是供应用商店信息中心使用的上传文件，而不是可直接安装的软件包，Chrome 只安装由应用商店签名的扩展程序。要在本地运行你的扩展程序，请对该文件夹使用$load_unpacked$。",
+    "placeholders": {
+      "crx": {
+        "content": "$1"
+      },
+      "load_unpacked": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_crx_info_get_title": {
+    "message": "你会得到什么"
+  },
+  "settings_crx_info_how_title": {
+    "message": "使用方法"
+  },
+  "settings_crx_info_ladder_ci": {
+    "message": "$term$更弱：一个被投毒的依赖或一个泄露的令牌就能把它带走。",
+    "placeholders": {
+      "term": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_crx_info_ladder_ci_term": {
+    "message": "放在 CI 密钥变量中的密钥"
+  },
+  "settings_crx_info_ladder_hardware": {
+    "message": "$term$更强：密钥永远不会离开芯片；而在这里，密钥会在签名期间于 WASM 沙盒中被短暂重建，并在签名后立即清零。",
+    "placeholders": {
+      "term": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_crx_info_ladder_hardware_term": {
+    "message": "硬件令牌（YubiKey / HSM）"
+  },
+  "settings_crx_info_ladder_title": {
+    "message": "在安全层级中的位置"
+  },
+  "settings_crx_info_ladder_vault": {
+    "message": "$term$（你现在的位置）受你的密码或通行密钥保护，仅在签名时解锁。",
+    "placeholders": {
+      "term": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_crx_info_ladder_vault_term": {
+    "message": "加密保存在保险库中的密钥"
+  },
+  "settings_crx_info_link": {
+    "message": "Chrome 应用商店：保护软件包更新"
+  },
+  "settings_crx_info_not_pgp_body": {
+    "message": "$crx$ 使用原始的 RSA-2048 密钥 (PKCS#1-SHA256) 签名，而不是 OpenPGP 签名。PGP Tools 以与你的 PGP 密钥相同的保护方式生成和存储此密钥（Argon2id 或通行密钥 → AES-256-GCM，全部在 WASM 沙盒内完成），但该密钥本身是独立的，仅用于 CRX 签名。",
+    "placeholders": {
+      "crx": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_crx_info_not_pgp_title": {
+    "message": "这不是 PGP"
+  },
+  "settings_crx_info_pitch_p1": {
+    "message": "Chrome 应用商店允许你要求扩展程序的每次更新都必须由只有你持有的密钥签名。即使有人入侵了你的应用商店账号或构建流水线，没有你的签名密钥也无法发布恶意更新。"
+  },
+  "settings_crx_info_pitch_p2": {
+    "message": "这只有在密钥存放在攻击者无法触及的地方时才成立，放在 CI 密钥变量里的密钥会让这一切失去意义。PGP Tools 将其加密保存在你的保险库中，仅在签名时解锁，由你的密码或通行密钥保护，绝不会进入你的流水线。"
+  },
+  "settings_crx_info_pitch_title": {
+    "message": "Verified CRX Uploads"
+  },
+  "settings_crx_info_step_1": {
+    "message": "在“设置”中打开开关，然后创建或导入一个 CRX 签名密钥 (RSA-2048)。将私钥保留在此处，仅在需要备份时才导出。"
+  },
+  "settings_crx_info_step_2": {
+    "message": "将密钥的$public$部分复制到 Chrome 应用商店开发者信息中心的$path$下。",
+    "placeholders": {
+      "public": {
+        "content": "$1"
+      },
+      "path": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_crx_info_step_3": {
+    "message": "要发布版本，将打包好的扩展程序 $zip$ 拖入工作区并签名。使用$save$可将 $crx$ 直接以正确的名称写入磁盘（或将该文件块拖到桌面），然后上传到信息中心。Chrome 会拦截普通的 $crx$ 下载并尝试安装，所以我们采用保存而非下载。",
+    "placeholders": {
+      "zip": {
+        "content": "$1"
+      },
+      "save": {
+        "content": "$2"
+      },
+      "crx": {
+        "content": "$3"
+      }
+    }
+  },
+  "settings_crx_info_step_4": {
+    "message": "要检查任何扩展程序包，将 $crx$ 拖入工作区即可，PGP Tools 会验证其签名并显示它所声称的扩展程序 ID。",
+    "placeholders": {
+      "crx": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_crx_info_term_dashboard_path": {
+    "message": "软件包 → Verified CRX Uploads"
+  },
+  "settings_crx_info_term_load_unpacked": {
+    "message": "加载已解压的扩展程序"
+  },
+  "settings_crx_info_term_public": {
+    "message": "公钥"
+  },
+  "settings_crx_info_title": {
+    "message": "CRX 签名"
+  },
+  "settings_import_browse": {
+    "message": "浏览密钥文件"
+  },
+  "settings_import_contacts_added_one": {
+    "message": "已添加 $count$ 个联系人",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_added_other": {
+    "message": "已添加 $count$ 个联系人",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_flagged_one": {
+    "message": "$count$ 个导入的密钥因使用弱加密算法 (SHA-1) 而被标记",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_flagged_other": {
+    "message": "$count$ 个导入的密钥因使用弱加密算法 (SHA-1) 而被标记",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_rejected_one": {
+    "message": "$count$ 个公钥被拒绝",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_rejected_other": {
+    "message": "$count$ 个公钥被拒绝",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_rejected_reason_one": {
+    "message": "$count$ 个公钥被拒绝：$reason$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "reason": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_import_contacts_rejected_reason_other": {
+    "message": "$count$ 个公钥被拒绝：$reason$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "reason": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_import_contacts_updated_one": {
+    "message": "已更新 $count$ 个联系人",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_updated_other": {
+    "message": "已更新 $count$ 个联系人",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_failed_one": {
+    "message": "$count$ 个 CRX 密钥恢复失败",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_failed_other": {
+    "message": "$count$ 个 CRX 密钥恢复失败",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_failure_detail": {
+    "message": "$name$：$error$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "error": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_import_crx_rejected_one": {
+    "message": "$count$ 个 CRX 签名密钥被拒绝：公钥与其扩展程序 ID 不匹配",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_rejected_other": {
+    "message": "$count$ 个 CRX 签名密钥被拒绝：公钥与其扩展程序 ID 不匹配",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_restored_one": {
+    "message": "已恢复 $count$ 个 CRX 签名密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_restored_other": {
+    "message": "已恢复 $count$ 个 CRX 签名密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_skipped_one": {
+    "message": "$count$ 个 CRX 签名密钥此前已导入",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_skipped_other": {
+    "message": "$count$ 个 CRX 签名密钥此前已导入",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_default_user_id": {
+    "message": "导入的 PGP 密钥"
+  },
+  "settings_import_failed": {
+    "message": "导入失败"
+  },
+  "settings_import_failed_named": {
+    "message": "导入“$name$”失败：$error$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "error": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_import_importing": {
+    "message": "正在导入…"
+  },
+  "settings_import_keys_title": {
+    "message": "导入密钥"
+  },
+  "settings_import_next": {
+    "message": "下一步"
+  },
+  "settings_import_no_keys": {
+    "message": "输入中未找到密钥。"
+  },
+  "settings_import_passkey_name": {
+    "message": "PGP Tools 导入"
+  },
+  "settings_import_passphrase_placeholder": {
+    "message": "密钥密码短语"
+  },
+  "settings_import_paste_intro": {
+    "message": "粘贴或浏览选择一个密钥文件，例如来自“导出所有密钥”的文件。私钥会用你选择的方式重新保护；公钥会成为联系人。"
+  },
+  "settings_import_paste_placeholder": {
+    "message": "在此粘贴密钥，或浏览选择文件…"
+  },
+  "settings_import_prf_unsupported": {
+    "message": "你的身份验证器不支持 PRF。请换一个通行密钥，或改用密码。"
+  },
+  "settings_import_private_imported_one": {
+    "message": "已导入 $count$ 个私钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_private_imported_other": {
+    "message": "已导入 $count$ 个私钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_private_skipped_one": {
+    "message": "$count$ 个私钥此前已导入",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_private_skipped_other": {
+    "message": "$count$ 个私钥此前已导入",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_private_unparseable_one": {
+    "message": "$count$ 个私钥无法解析。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_private_unparseable_other": {
+    "message": "$count$ 个私钥无法解析。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_protect_intro_one": {
+    "message": "选择如何保护导入的 $count$ 个私钥。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_protect_intro_other": {
+    "message": "选择如何保护导入的 $count$ 个私钥。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_submit_one": {
+    "message": "导入 $count$ 个密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_submit_other": {
+    "message": "导入 $count$ 个密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_unknown_error": {
+    "message": "未知错误"
+  },
+  "settings_import_unlock_intro_one": {
+    "message": "$count$ 个私钥中有 $encrypted$ 个受密码短语保护。请输入密码短语以解锁，下一步你将用所选方式重新保护每个密钥。",
+    "placeholders": {
+      "encrypted": {
+        "content": "$1"
+      },
+      "count": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_import_unlock_intro_other": {
+    "message": "$count$ 个私钥中有 $encrypted$ 个受密码短语保护。请输入密码短语以解锁，下一步你将用所选方式重新保护每个密钥。",
+    "placeholders": {
+      "encrypted": {
+        "content": "$1"
+      },
+      "count": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_preset_apply": {
+    "message": "应用预设"
+  },
+  "settings_preset_apply_delete_history": {
+    "message": "应用并删除历史记录"
+  },
+  "settings_preset_applying": {
+    "message": "正在应用…"
+  },
+  "settings_preset_confirm_history": {
+    "message": "此预设会开启“从不缓存”，这也会删除你已保存的历史记录（$size$），且无法恢复。",
+    "placeholders": {
+      "size": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_preset_confirm_replace": {
+    "message": "要用“$preset$”预设替换你的自定义设置吗？只有其卡片上列出的设置会更改，之后你仍可以逐项调整。",
+    "placeholders": {
+      "preset": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_preset_custom_name": {
+    "message": "自定义"
+  },
+  "settings_preset_custom_notice": {
+    "message": "你当前处于$custom$状态：预设包含的某项设置已被更改，因此没有完全匹配的预设。",
+    "placeholders": {
+      "custom": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_preset_intro": {
+    "message": "每个预设都为一种威胁模型打包了一组安全设置，其卡片会明确列出它所设置的内容。应用预设只会更改这些设置，之后你仍可以逐项调整。"
+  },
+  "settings_preset_keep_custom": {
+    "message": "保留自定义设置"
+  },
+  "settings_preset_replace_custom": {
+    "message": "替换自定义设置"
+  },
+  "settings_preset_title": {
+    "message": "安全预设"
+  },
+  "settings_shortcuts_copy_output": {
+    "message": "复制输出"
+  },
+  "settings_shortcuts_download_output": {
+    "message": "下载输出"
+  },
+  "settings_shortcuts_find_replace": {
+    "message": "查找和替换"
+  },
+  "settings_shortcuts_global_note": {
+    "message": "这些快捷键在浏览器的任何位置都有效。可在 $url$ 重新绑定其中任何一个。",
+    "placeholders": {
+      "url": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_shortcuts_group_global": {
+    "message": "浏览器全局快捷键"
+  },
+  "settings_shortcuts_group_message": {
+    "message": "消息框"
+  },
+  "settings_shortcuts_group_modes": {
+    "message": "模式"
+  },
+  "settings_shortcuts_group_palette": {
+    "message": "命令面板"
+  },
+  "settings_shortcuts_group_workspace": {
+    "message": "工作区"
+  },
+  "settings_shortcuts_manage": {
+    "message": "管理浏览器快捷键"
+  },
+  "settings_shortcuts_open_app": {
+    "message": "打开 PGP Tools"
+  },
+  "settings_shortcuts_open_in_mode": {
+    "message": "以$mode$模式打开",
+    "placeholders": {
+      "mode": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_shortcuts_open_palette": {
+    "message": "打开命令面板"
+  },
+  "settings_shortcuts_open_palette_note": {
+    "message": "下面的每个操作也都可以在那里搜索到。"
+  },
+  "settings_shortcuts_pick_recipient": {
+    "message": "选择第 n 个收件人"
+  },
+  "settings_shortcuts_pick_recipient_note": {
+    "message": "在收件人下拉列表中，且其搜索框为空时。"
+  },
+  "settings_shortcuts_remove_recipient": {
+    "message": "移除最后一个收件人"
+  },
+  "settings_shortcuts_remove_recipient_note": {
+    "message": "在收件人下拉列表的空搜索框中。"
+  },
+  "settings_shortcuts_run_mode": {
+    "message": "运行当前模式"
+  },
+  "settings_shortcuts_style_note": {
+    "message": "在撰写要加密或签名的消息时使用。采用 Unicode 字母变体，因此在任何渠道中都能保留。"
+  },
+  "settings_shortcuts_switch_mode": {
+    "message": "切换到$mode$",
+    "placeholders": {
+      "mode": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_shortcuts_title": {
+    "message": "键盘快捷键"
+  },
+  "settings_shortcuts_unbound": {
+    "message": "未绑定"
+  },
+  "settings_shortcuts_unbound_note": {
+    "message": "默认未绑定（Chrome 最多允许四个建议快捷键）。"
+  },
+  "settings_translation_detector": {
+    "message": "语言检测器"
+  },
+  "settings_translation_download_failed": {
+    "message": "下载失败。"
+  },
+  "settings_translation_enable": {
+    "message": "翻译已解密的消息"
+  },
+  "settings_translation_enable_desc": {
+    "message": "在已解密的消息下方添加“翻译”按钮。翻译使用 Chrome 的内置模型在此设备上进行，按下按钮之前不会翻译任何内容。"
+  },
+  "settings_translation_failed": {
+    "message": "翻译失败。"
+  },
+  "settings_translation_pack_gone": {
+    "message": "语言包已不可用。请重试。"
+  },
+  "settings_translation_pack_not_offered": {
+    "message": "不提供"
+  },
+  "settings_translation_pack_pair": {
+    "message": "$from$到$to$翻译包",
+    "placeholders": {
+      "from": {
+        "content": "$1"
+      },
+      "to": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_translation_pack_progress": {
+    "message": "$percent$%",
+    "placeholders": {
+      "percent": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_translation_pack_ready": {
+    "message": "已就绪"
+  },
+  "settings_translation_packs": {
+    "message": "语言包"
+  },
+  "settings_translation_packs_desc": {
+    "message": "可选。缺少的语言包会在你第一次从该语言翻译时自动下载，所以此处只是让你提前准备。不过在这里下载有一个好处：下载不再发生在你解密消息的那一刻，其时间点也就不会透露你刚刚读了什么。每个语言包$size$，由 Chrome 而非本扩展程序存储。",
+    "placeholders": {
+      "size": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_translation_target": {
+    "message": "翻译为"
+  },
+  "settings_translation_title": {
+    "message": "翻译"
+  },
+  "settings_translation_unavailable_device": {
+    "message": "此设备不支持翻译。"
+  },
+  "settings_translation_unsupported": {
+    "message": "Chrome 的设备端翻译在此处不可用。它需要 Windows 10 及以上、macOS 13 及以上、Linux 的桌面版 Chrome 或 Chromebook Plus，并有足够的可用磁盘空间和内存来存放模型。"
+  },
+  "shared_about": {
+    "message": "关于"
+  },
+  "shared_about_extensions": {
+    "message": "担心恶意浏览器扩展程序？扫描你的扩展程序，检查数据收集、会话劫持及其他威胁。"
+  },
+  "shared_advanced_mode": {
+    "message": "高级模式"
+  },
+  "shared_advanced_mode_desc": {
+    "message": "显示密钥指纹、算法和输出格式选项。"
+  },
+  "shared_auto_download_files_desc": {
+    "message": "加密或解密文件后自动下载。"
+  },
+  "shared_auto_download_files_title": {
+    "message": "自动下载文件结果"
+  },
+  "shared_auto_download_text_desc": {
+    "message": "加密或解密文本后自动下载。"
+  },
+  "shared_auto_download_text_title": {
+    "message": "自动下载文本结果"
+  },
+  "shared_auto_lock_desc": {
+    "message": "面板中一段时间无操作后锁定已解锁的密钥。无论此设置如何，操作系统锁屏时总会立即锁定。"
+  },
+  "shared_auto_lock_title": {
+    "message": "闲置后自动锁定"
+  },
+  "shared_backup": {
+    "message": "备份"
+  },
+  "shared_backup_desc": {
+    "message": "将你的密钥和联系人导出为单个 ASCII 装甲文件，或从此类文件恢复。导出的私钥会使用你选择的密码短语加密。"
+  },
+  "shared_bundle_auto_lock": {
+    "message": "$duration$后自动锁定",
+    "placeholders": {
+      "duration": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_bundle_auto_lock_off": {
+    "message": "自动锁定已关闭"
+  },
+  "shared_bundle_auto_lock_tabs": {
+    "message": "$duration$后以及切换标签页时自动锁定",
+    "placeholders": {
+      "duration": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_bundle_clipboard_one": {
+    "message": "复制的机密内容在 $count$ 秒后从剪贴板清除",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_bundle_clipboard_other": {
+    "message": "复制的机密内容在 $count$ 秒后从剪贴板清除",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_bundle_discovery_off": {
+    "message": "不在线查找密钥：查找密钥时没有任何数据离开此设备"
+  },
+  "shared_bundle_discovery_on": {
+    "message": "可在 GitHub 和 keys.openpgp.org 上查找密钥"
+  },
+  "shared_bundle_history_off": {
+    "message": "不保留历史记录"
+  },
+  "shared_bundle_history_on": {
+    "message": "保留你操作的加密历史记录"
+  },
+  "shared_bundle_never_cache_off": {
+    "message": "已解锁的密钥保持缓存，直到你锁定"
+  },
+  "shared_bundle_never_cache_on": {
+    "message": "每次使用后密钥都从内存中清除"
+  },
+  "shared_bundle_no_encrypt_to_self": {
+    "message": "你加密的消息事后自己也无法读取"
+  },
+  "shared_bundle_storage_local": {
+    "message": "密钥只保留在此设备上"
+  },
+  "shared_bundle_storage_sync": {
+    "message": "密钥在你的 Chrome 个人资料中跨设备同步"
+  },
+  "shared_bundle_unlock_on_open_off": {
+    "message": "每个密钥都单独要求解锁"
+  },
+  "shared_bundle_unlock_on_open_on": {
+    "message": "一次通行密钥提示即可解锁保险库和你的密钥"
+  },
+  "shared_byline_before": {
+    "message": "隐私工具，出品方："
+  },
+  "shared_check_extensions": {
+    "message": "检查你的扩展程序"
+  },
+  "shared_clear_name": {
+    "message": "清除名称"
+  },
+  "shared_commands": {
+    "message": "命令"
+  },
+  "shared_confirm_type_after": {
+    "message": "以确认"
+  },
+  "shared_confirm_type_aria": {
+    "message": "输入“$text$”以确认",
+    "placeholders": {
+      "text": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_confirm_type_before": {
+    "message": "请在下方输入"
+  },
+  "shared_crx_enable_desc": {
+    "message": "为 Chrome 应用商店的“Verified CRX Uploads”签名 Chrome 扩展程序包 (.crx)，使用保存在你保险库中的密钥，而不是构建流水线中的密钥。"
+  },
+  "shared_crx_enable_title": {
+    "message": "启用 CRX 签名"
+  },
+  "shared_crx_how": {
+    "message": "CRX 签名的工作原理"
+  },
+  "shared_crx_signing": {
+    "message": "CRX 签名"
+  },
+  "shared_delete_history_body": {
+    "message": "从不缓存也会删除你已保存的历史记录（$size$），且无法恢复。",
+    "placeholders": {
+      "size": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_delete_history_confirm": {
+    "message": "开启并删除历史记录"
+  },
+  "shared_delete_history_title": {
+    "message": "删除已保存的历史记录？"
+  },
+  "shared_dev_tools": {
+    "message": "开发工具"
+  },
+  "shared_developer": {
+    "message": "开发者"
+  },
+  "shared_developer_desc": {
+    "message": "检查 chrome.storage 并转储 WASM 内存以进行测试。此部分仅在开发版本中显示。"
+  },
+  "shared_display": {
+    "message": "显示"
+  },
+  "shared_downloads": {
+    "message": "下载"
+  },
+  "shared_drop_desc": {
+    "message": "密钥会添加到你的密钥环；文件和文本会进入工作区。"
+  },
+  "shared_drop_to_import": {
+    "message": "松开即可导入"
+  },
+  "shared_export_all_keys": {
+    "message": "导出所有密钥"
+  },
+  "shared_hide_technical_details": {
+    "message": "隐藏技术详情"
+  },
+  "shared_import_flow_states": {
+    "message": "导入流程状态"
+  },
+  "shared_import_keys": {
+    "message": "导入密钥"
+  },
+  "shared_key_discovery": {
+    "message": "密钥查找"
+  },
+  "shared_key_security": {
+    "message": "密钥安全"
+  },
+  "shared_key_storage": {
+    "message": "密钥存储"
+  },
+  "shared_keyboard_shortcuts": {
+    "message": "键盘快捷键"
+  },
+  "shared_lock_after": {
+    "message": "闲置多久后锁定"
+  },
+  "shared_lock_tab_away_desc": {
+    "message": "侧边栏不可见时立即锁定（切换窗口、收起或窗口最小化）。"
+  },
+  "shared_lock_tab_away_title": {
+    "message": "切换离开时锁定"
+  },
+  "shared_lookup_online_desc": {
+    "message": "在导入界面添加一个查找框，用于获取 GitHub SSH 密钥和 keys.openpgp.org 证书。关闭时，查找密钥不会向此设备之外发送任何数据。开启后，每次查找都会向相应主机透露你的 IP 地址以及你搜索的对象，但不会透露任何有关你的密钥或消息的信息。"
+  },
+  "shared_lookup_online_title": {
+    "message": "在线查找密钥"
+  },
+  "shared_master_password": {
+    "message": "主密码"
+  },
+  "shared_migration_failed": {
+    "message": "迁移失败"
+  },
+  "shared_minutes_one": {
+    "message": "$count$ 分钟",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_minutes_other": {
+    "message": "$count$ 分钟",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_never_cache_desc": {
+    "message": "每次操作后都会将密钥从内存中清除。你仍可在“密钥”标签页中手动解锁密钥。"
+  },
+  "shared_never_cache_title": {
+    "message": "从不自动缓存密钥"
+  },
+  "shared_one_hour": {
+    "message": "1 小时"
+  },
+  "shared_open_dev_tools": {
+    "message": "打开开发工具"
+  },
+  "shared_passkey_failed": {
+    "message": "通行密钥验证失败。请重试。"
+  },
+  "shared_preset_applied": {
+    "message": "已应用预设：$title$",
+    "placeholders": {
+      "title": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_preset_applied_history_deleted": {
+    "message": "历史记录已删除，“撤销”不会将其恢复。"
+  },
+  "shared_preset_bundled_changed": {
+    "message": "预设包含的某项设置已被更改"
+  },
+  "shared_preset_careful_tagline": {
+    "message": "面向真正机密内容的合理默认设置"
+  },
+  "shared_preset_careful_title": {
+    "message": "谨慎"
+  },
+  "shared_preset_casual_tagline": {
+    "message": "便利优先，适合守护低风险内容的密钥"
+  },
+  "shared_preset_casual_title": {
+    "message": "随意"
+  },
+  "shared_preset_current": {
+    "message": "当前"
+  },
+  "shared_preset_custom": {
+    "message": "自定义"
+  },
+  "shared_preset_none_selected": {
+    "message": "未选择预设"
+  },
+  "shared_preset_paranoid_note": {
+    "message": "你的消息仍可由你自己读取；如果连这一点也有风险，之后可关闭“同时加密给我”。"
+  },
+  "shared_preset_paranoid_tagline": {
+    "message": "什么都不留。最短的锁定时间，无历史记录，不缓存密钥。"
+  },
+  "shared_preset_paranoid_title": {
+    "message": "这要是泄露了，我就麻烦大了"
+  },
+  "shared_preset_recommended": {
+    "message": "推荐"
+  },
+  "shared_saving": {
+    "message": "正在保存…"
+  },
+  "shared_security_preset": {
+    "message": "安全预设"
+  },
+  "shared_show_technical_details": {
+    "message": "显示技术详情"
+  },
+  "shared_something_went_wrong": {
+    "message": "出了点问题。请重试。"
+  },
+  "shared_source_on_github": {
+    "message": "在 GitHub 上查看源代码"
+  },
+  "shared_storage_local_desc": {
+    "message": "你的数据只保存在这台电脑上。如果更换设备或重新安装，需要重新设置。"
+  },
+  "shared_storage_local_label": {
+    "message": "仅此设备"
+  },
+  "shared_storage_sync_desc": {
+    "message": "你的数据通过 Chrome 账号同步。在任何已登录的设备上都可使用。"
+  },
+  "shared_storage_sync_label": {
+    "message": "跨设备同步"
+  },
+  "shared_sync_quota_error": {
+    "message": "同步空间不足。Chrome 将同步数据总量限制在约 100 KB，因此此保险库太大，无法跨设备同步。请将其保留在此设备上，或移除一些密钥后重试。"
+  },
+  "shared_translation": {
+    "message": "翻译"
+  },
+  "shared_undo": {
+    "message": "撤销"
+  },
+  "shared_unlock_aria": {
+    "message": "解锁 PGP Tools"
+  },
+  "shared_unlock_failed": {
+    "message": "解锁失败。请重试。"
+  },
+  "shared_unlock_intro": {
+    "message": "你的密钥和联系人已加密。请验证身份以继续。"
+  },
+  "shared_unlock_lost_password": {
+    "message": "如果你丢失了密码，你已加密的密钥和联系人将无法恢复。"
+  },
+  "shared_unlock_with_passkey": {
+    "message": "使用通行密钥解锁"
+  },
+  "shared_unlock_with_vault_desc": {
+    "message": "打开保险库的通行密钥提示会同时解锁你的密钥。仍单独提示的密钥会在你下次解锁它时自动转换。受密码保护的密钥保留其密码。"
+  },
+  "shared_unlock_with_vault_title": {
+    "message": "随保险库一起解锁密钥"
+  },
+  "shared_unlocking": {
+    "message": "正在解锁…"
+  },
+  "shared_wrong_password": {
+    "message": "密码错误。"
+  },
+  "workspace_add_a_contact": {
+    "message": "添加联系人"
+  },
+  "workspace_age_message_note": {
+    "message": "age 消息，SSH 收件人不能与 PGP 混用"
+  },
+  "workspace_browse_files": {
+    "message": "浏览文件"
+  },
+  "workspace_clear_all_files": {
+    "message": "全部清除"
+  },
+  "workspace_clear_input_output": {
+    "message": "清除输入和输出"
+  },
+  "workspace_clear_text": {
+    "message": "清除文本"
+  },
+  "workspace_cleared_toast": {
+    "message": "已清空工作区"
+  },
+  "workspace_close_find": {
+    "message": "关闭查找"
+  },
+  "workspace_compose_same_language": {
+    "message": "这已经是你的语言（$language$）。",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_compose_translate_unavailable": {
+    "message": "此处不支持翻译为该语言。"
+  },
+  "workspace_compose_translated": {
+    "message": "已从$from$翻译为$to$",
+    "placeholders": {
+      "from": {
+        "content": "$1"
+      },
+      "to": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_create_one": {
+    "message": "创建一个"
+  },
+  "workspace_crx_save_failed": {
+    "message": "无法自动保存，请点击“保存”重试。"
+  },
+  "workspace_crx_saved": {
+    "message": "已保存 $name$。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_decrypt_with": {
+    "message": "解密密钥"
+  },
+  "workspace_decrypting": {
+    "message": "正在解密…"
+  },
+  "workspace_detected_key_import": {
+    "message": "作为联系人导入"
+  },
+  "workspace_detected_key_in_message": {
+    "message": "此消息包含 $name$ 的公钥。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_detected_key_in_message_anon": {
+    "message": "此消息包含某人的公钥。"
+  },
+  "workspace_detected_key_known": {
+    "message": "你已经有 $name$ 的密钥。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_detected_key_pasted": {
+    "message": "这是 $name$ 的公钥。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_detected_key_pasted_anon": {
+    "message": "这看起来像是某人的公钥。"
+  },
+  "workspace_detected_key_show": {
+    "message": "在密钥中显示"
+  },
+  "workspace_drop_files_or_text": {
+    "message": "将文件或文本拖放到此处"
+  },
+  "workspace_enter_key_password": {
+    "message": "输入密钥密码"
+  },
+  "workspace_enter_message_password": {
+    "message": "输入消息密码"
+  },
+  "workspace_error_crx_invalid": {
+    "message": "无法验证此文件的 CRX 签名。"
+  },
+  "workspace_error_crx_sign_failed": {
+    "message": "CRX 签名失败。请重试。"
+  },
+  "workspace_error_crx_wrong_password": {
+    "message": "密码错误或签名失败。"
+  },
+  "workspace_error_decrypt_failed": {
+    "message": "解密失败。消息可能已损坏，或者它没有加密给你的任何密钥。"
+  },
+  "workspace_error_decrypt_failed_ssh": {
+    "message": "解密失败。消息可能已损坏，或者它没有加密给你的任何 SSH 密钥。"
+  },
+  "workspace_error_engine_mismatch": {
+    "message": "无法确定应使用哪种格式加密。"
+  },
+  "workspace_error_need_recipient_or_password": {
+    "message": "请至少选择一个收件人密钥，或设置密码。"
+  },
+  "workspace_error_no_signing_key": {
+    "message": "没有可用的签名密钥。请先添加一个密钥。"
+  },
+  "workspace_error_no_signing_key_ssh": {
+    "message": "没有可用的签名密钥。SSH 密钥不能签名，请先添加一个 OpenPGP 密钥。"
+  },
+  "workspace_error_not_signed": {
+    "message": "此消息未签名。"
+  },
+  "workspace_error_read_file": {
+    "message": "无法读取此文件。请重试。"
+  },
+  "workspace_error_select_crx_key": {
+    "message": "请先选择一个 CRX 签名密钥。"
+  },
+  "workspace_error_select_decryption_key": {
+    "message": "请选择解密密钥。"
+  },
+  "workspace_error_signature_invalid": {
+    "message": "签名验证失败，此消息可能已被篡改"
+  },
+  "workspace_error_unlock_failed": {
+    "message": "解锁失败。请重试。"
+  },
+  "workspace_error_verify_failed": {
+    "message": "验证失败。输入内容看起来不像已签名的 PGP 消息。"
+  },
+  "workspace_error_wrong_key_password": {
+    "message": "密码错误。请检查后重试。"
+  },
+  "workspace_files_decrypted_one": {
+    "message": "已解密 $count$ 个文件（共 $size$）",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "size": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_files_decrypted_other": {
+    "message": "已解密 $count$ 个文件（共 $size$）",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "size": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_files_encrypted_one": {
+    "message": "已加密 $count$ 个文件（共 $size$）",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "size": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_files_encrypted_other": {
+    "message": "已加密 $count$ 个文件（共 $size$）",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "size": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_files_signed_one": {
+    "message": "已签名 $count$ 个文件",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_files_signed_other": {
+    "message": "已签名 $count$ 个文件",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_files_zipped_encrypted_one": {
+    "message": "已将 $count$ 个文件打包为 zip 并加密",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_files_zipped_encrypted_other": {
+    "message": "已将 $count$ 个文件打包为 zip 并加密",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_find_hide_replace": {
+    "message": "隐藏替换"
+  },
+  "workspace_find_label": {
+    "message": "查找"
+  },
+  "workspace_find_replace": {
+    "message": "查找和替换"
+  },
+  "workspace_find_show_replace": {
+    "message": "显示替换"
+  },
+  "workspace_go": {
+    "message": "确定"
+  },
+  "workspace_hide_password": {
+    "message": "隐藏密码"
+  },
+  "workspace_hide_technical_details": {
+    "message": "隐藏技术详情"
+  },
+  "workspace_history_save_failed": {
+    "message": "无法保存到历史记录，存储空间可能已满"
+  },
+  "workspace_import_one": {
+    "message": "导入一个"
+  },
+  "workspace_match_case": {
+    "message": "区分大小写"
+  },
+  "workspace_message_input_aria": {
+    "message": "消息输入"
+  },
+  "workspace_message_password_help": {
+    "message": "任何知道此密码的人都能读取该消息，因此请通过其他途径发送密码，不要与消息一起发送。密码会在你选择的收件人之外附加到消息上；两者中的任一方都能打开它。"
+  },
+  "workspace_message_password_label": {
+    "message": "消息密码"
+  },
+  "workspace_message_password_title": {
+    "message": "此消息的密码"
+  },
+  "workspace_message_tools": {
+    "message": "消息工具"
+  },
+  "workspace_need_recipient_or_password": {
+    "message": "请至少选择一个收件人，或设置密码"
+  },
+  "workspace_next_match": {
+    "message": "下一个匹配项"
+  },
+  "workspace_no_contacts_yet": {
+    "message": "还没有联系人"
+  },
+  "workspace_no_keys_yet": {
+    "message": "还没有密钥"
+  },
+  "workspace_no_such_language": {
+    "message": "没有这种语言。"
+  },
+  "workspace_note_downloading": {
+    "message": "正在下载$what$…",
+    "placeholders": {
+      "what": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_note_downloading_progress": {
+    "message": "正在下载$what$，$percent$%",
+    "placeholders": {
+      "what": {
+        "content": "$1"
+      },
+      "percent": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_note_same_language": {
+    "message": "此消息已经是$language$。",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_note_translated_from": {
+    "message": "已在此设备上从$language$翻译。",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_note_uncertain": {
+    "message": "无法确定此消息的语言。"
+  },
+  "workspace_operation_failed": {
+    "message": "操作失败。请重试。"
+  },
+  "workspace_output_size_line": {
+    "message": "$name$ - $size$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "size": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_password_min_length_one": {
+    "message": "至少 $count$ 个字符。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_password_min_length_other": {
+    "message": "至少 $count$ 个字符。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_password_too_short_one": {
+    "message": "请至少使用 $count$ 个字符。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_password_too_short_other": {
+    "message": "请至少使用 $count$ 个字符。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_placeholder_compose": {
+    "message": "输入或粘贴你的消息…"
+  },
+  "workspace_placeholder_decrypt": {
+    "message": "粘贴你收到的加密消息…"
+  },
+  "workspace_placeholder_verify": {
+    "message": "粘贴要检查的已签名消息…"
+  },
+  "workspace_previous_match": {
+    "message": "上一个匹配项"
+  },
+  "workspace_private_key_clear_input": {
+    "message": "清除输入"
+  },
+  "workspace_private_key_ignore": {
+    "message": "忽略"
+  },
+  "workspace_private_key_import_safely": {
+    "message": "安全导入此密钥"
+  },
+  "workspace_private_key_pasted_body": {
+    "message": "加密/解密框不是存放私钥材料的安全位置。请使用导入流程，这样密钥会被载入安全存储，并且不会进入任何草稿快照。"
+  },
+  "workspace_private_key_pasted_title": {
+    "message": "这看起来像是私钥。请勿在此处粘贴私钥。"
+  },
+  "workspace_private_key_show_cleartext": {
+    "message": "以明文显示粘贴的文本"
+  },
+  "workspace_processing": {
+    "message": "正在处理…"
+  },
+  "workspace_recipients_label": {
+    "message": "收件人"
+  },
+  "workspace_replace": {
+    "message": "替换"
+  },
+  "workspace_replace_all": {
+    "message": "全部替换"
+  },
+  "workspace_replace_all_short": {
+    "message": "全部"
+  },
+  "workspace_replace_all_shortcut": {
+    "message": "全部替换 ($shortcut$)",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_replace_with": {
+    "message": "替换为"
+  },
+  "workspace_reset": {
+    "message": "重置"
+  },
+  "workspace_restore_original": {
+    "message": "恢复原文"
+  },
+  "workspace_save_file": {
+    "message": "保存 $name$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_search_languages": {
+    "message": "搜索语言"
+  },
+  "workspace_select_signing_key": {
+    "message": "选择签名密钥"
+  },
+  "workspace_self_excluded_age": {
+    "message": "你没有自己的 SSH 密钥，而 age 消息不能包含 PGP 密钥。"
+  },
+  "workspace_self_excluded_intro": {
+    "message": "你将无法读取这条消息："
+  },
+  "workspace_self_excluded_pgp": {
+    "message": "你自己的密钥都无法添加到这条消息中。"
+  },
+  "workspace_set_password": {
+    "message": "设置密码"
+  },
+  "workspace_show_original": {
+    "message": "显示原文"
+  },
+  "workspace_show_password": {
+    "message": "显示密码"
+  },
+  "workspace_show_technical_details": {
+    "message": "显示技术详情"
+  },
+  "workspace_show_translation": {
+    "message": "显示$language$译文",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_sign_blocked_age": {
+    "message": "age 消息无法签名，SSH 密钥在此处没有签名格式。"
+  },
+  "workspace_sign_blocked_no_pgp_key": {
+    "message": "签名需要你自己的 OpenPGP 密钥，SSH 密钥不能签名。"
+  },
+  "workspace_sign_for_web_store": {
+    "message": "为应用商店签名"
+  },
+  "workspace_sign_kind_crx": {
+    "message": "Chrome 扩展程序 (.crx)"
+  },
+  "workspace_sign_kind_pgp": {
+    "message": "PGP 签名"
+  },
+  "workspace_sign_with": {
+    "message": "签名密钥"
+  },
+  "workspace_signature_verified": {
+    "message": "签名已验证"
+  },
+  "workspace_status_age_encrypted": {
+    "message": "age 消息，已加密给 SSH 收件人"
+  },
+  "workspace_status_crx_signed": {
+    "message": "已签名 $name$，正在保存…",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_status_crx_valid": {
+    "message": "有效的 CRX，扩展程序 $id$",
+    "placeholders": {
+      "id": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_status_decrypted_archive": {
+    "message": "已解密包含多个文件的压缩包"
+  },
+  "workspace_status_signer_unknown": {
+    "message": "此消息已签名，但签名者的公钥不在你的密钥或联系人中，因此无法验证签名。"
+  },
+  "workspace_style_bold": {
+    "message": "加粗"
+  },
+  "workspace_style_code": {
+    "message": "代码"
+  },
+  "workspace_style_italic": {
+    "message": "斜体"
+  },
+  "workspace_style_strike": {
+    "message": "删除线"
+  },
+  "workspace_text_cleared_toast": {
+    "message": "已清除文本"
+  },
+  "workspace_text_entered_below": {
+    "message": "已在下方输入文本"
+  },
+  "workspace_toggle_encrypt_to_self": {
+    "message": "同时加密给我"
+  },
+  "workspace_toggle_password": {
+    "message": "密码"
+  },
+  "workspace_toggle_save_to_history": {
+    "message": "保存到历史记录"
+  },
+  "workspace_toggle_zip_files": {
+    "message": "打包为 zip"
+  },
+  "workspace_translate": {
+    "message": "翻译"
+  },
+  "workspace_translate_menu_heading": {
+    "message": "将消息翻译为"
+  },
+  "workspace_translate_to": {
+    "message": "翻译为$language$",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_translating": {
+    "message": "正在翻译…"
+  },
+  "workspace_undo": {
+    "message": "撤销"
+  },
+  "workspace_unknown_signer": {
+    "message": "未知签名者"
+  },
+  "workspace_unlocking": {
+    "message": "正在解锁…"
+  },
+  "workspace_unverified": {
+    "message": "未验证"
+  },
+  "workspace_verify_signature": {
+    "message": "验证签名"
+  },
+  "workspace_verifying": {
+    "message": "正在验证…"
+  },
+  "workspace_working": {
+    "message": "正在处理…"
   }
 }

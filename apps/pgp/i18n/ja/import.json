@@ -1,0 +1,344 @@
+{
+  "import_title": {
+    "message": "鍵をインポート"
+  },
+  "import_title_update": {
+    "message": "鍵を更新"
+  },
+  "import_panel_aria_with_id": {
+    "message": "$keyid$ をインポート"
+  },
+  "import_failed": {
+    "message": "インポートに失敗しました"
+  },
+  "import_lookup_failed": {
+    "message": "検索に失敗しました"
+  },
+  "import_unreadable": {
+    "message": "読み取れる鍵ではないようです。アーマー形式の PGP 鍵ブロックか SSH 公開鍵の行を貼り付けるか、鍵ファイルを選択してください。"
+  },
+  "import_private_unreadable": {
+    "message": "その秘密鍵を読み取れませんでした。"
+  },
+  "import_worker_unreachable": {
+    "message": "拡張機能のバックグラウンド ワーカーに接続できませんでした。"
+  },
+  "import_keyserver_not_a_key": {
+    "message": "$host$ から応答はありましたが、送られてきたものは読み取れる鍵ではありません。"
+  },
+  "import_keyserver_multiple_keys": {
+    "message": "$host$ はこの検索に対して複数の鍵を返しました。最初の 1 つだけを表示しています。インポートする前にフィンガープリントを確認してください。"
+  },
+  "import_lookup_invalid": {
+    "message": "GitHub のユーザー名、メールアドレス、鍵のフィンガープリントのいずれでもありません。“octocat”、“alice@example.com”、または 40 文字の完全なフィンガープリントをお試しください。"
+  },
+  "import_no_key": {
+    "message": "インポートする鍵がありません。"
+  },
+  "import_enter_passphrase": {
+    "message": "鍵のパスフレーズを入力してください。"
+  },
+  "import_default_pgp_name": {
+    "message": "インポートした PGP 鍵"
+  },
+  "import_default_ssh_name": {
+    "message": "インポートした SSH 鍵"
+  },
+  "import_flagged_toast_one": {
+    "message": "$count$ 個の鍵が弱い暗号 (SHA-1) を使用しているため、警告を付けました。連絡先の警告を確認してください。"
+  },
+  "import_flagged_toast_other": {
+    "message": "$count$ 個の鍵が弱い暗号 (SHA-1) を使用しているため、警告を付けました。連絡先の警告を確認してください。"
+  },
+  "import_added_contacts_one": {
+    "message": "$count$ 件の連絡先を追加しました"
+  },
+  "import_added_contacts_other": {
+    "message": "$count$ 件の連絡先を追加しました"
+  },
+  "import_updated_contacts_one": {
+    "message": "$count$ 件の連絡先を更新しました"
+  },
+  "import_updated_contacts_other": {
+    "message": "$count$ 件の連絡先を更新しました"
+  },
+  "import_paste_label": {
+    "message": "鍵を貼り付け"
+  },
+  "import_paste_placeholder": {
+    "message": "$shortcut$ で鍵を貼り付け"
+  },
+  "import_paste_hint": {
+    "message": "鍵ブロック全体を貼り付けてください。鍵は長すぎて手入力できません。"
+  },
+  "import_reading": {
+    "message": "鍵を読み取っています..."
+  },
+  "import_drop_here": {
+    "message": "ここに鍵ファイルをドロップ"
+  },
+  "import_browse": {
+    "message": "鍵ファイルを選択"
+  },
+  "import_lookup_label": {
+    "message": "または相手を検索"
+  },
+  "import_lookup_placeholder": {
+    "message": "GitHub ユーザー名、メールアドレス、またはフィンガープリント"
+  },
+  "import_lookup_button": {
+    "message": "検索"
+  },
+  "import_source_help": {
+    "message": "公開鍵は連絡先として追加されます。秘密鍵はこのデバイスに留まります。保護方法は次の画面で選択します。"
+  },
+  "import_label_field": {
+    "message": "ラベル"
+  },
+  "import_optional": {
+    "message": "省略可"
+  },
+  "import_label_placeholder": {
+    "message": "例: My Extension"
+  },
+  "import_passphrase_label": {
+    "message": "この鍵はパスフレーズで保護されています"
+  },
+  "import_passphrase_placeholder": {
+    "message": "鍵のパスフレーズ"
+  },
+  "import_submit": {
+    "message": "インポート"
+  },
+  "import_status_duplicate": {
+    "message": "すでに鍵一覧にあります"
+  },
+  "import_status_duplicate_added": {
+    "message": "$date$ に追加済みで、内容に変更はありません。"
+  },
+  "import_status_update": {
+    "message": "お持ちの鍵を更新します"
+  },
+  "import_status_added_on": {
+    "message": "$date$ に追加。"
+  },
+  "import_action_replace_stored": {
+    "message": "保存済みの鍵を置き換え"
+  },
+  "import_action_update_contact": {
+    "message": "連絡先を更新"
+  },
+  "import_action_import_contact": {
+    "message": "連絡先をインポート"
+  },
+  "import_chip_pgp_private_title": {
+    "message": "秘密鍵の情報が含まれています。次の画面で保護します"
+  },
+  "import_chip_pgp_public_title": {
+    "message": "他の人の鍵。連絡先としてインポートされます"
+  },
+  "import_chip_ssh_private": {
+    "message": "SSH 鍵"
+  },
+  "import_chip_ssh_private_title": {
+    "message": "OpenSSH 秘密鍵。次の画面で保護します"
+  },
+  "import_chip_ssh_public": {
+    "message": "SSH 公開鍵"
+  },
+  "import_chip_ssh_public_title": {
+    "message": "他の人の SSH 鍵。age の宛先としてインポートされます"
+  },
+  "import_chip_crx": {
+    "message": "拡張機能の鍵"
+  },
+  "import_chip_crx_title": {
+    "message": "Chrome 拡張機能 (.crx) 用の RSA 署名鍵"
+  },
+  "import_group_keys_chip_one": {
+    "message": "$count$ 個の鍵"
+  },
+  "import_group_keys_chip_other": {
+    "message": "$count$ 個の鍵"
+  },
+  "import_group_keys_chip_title": {
+    "message": "メッセージはすべての鍵に対して暗号化され、いずれか 1 つで復号できます"
+  },
+  "import_unknown_name": {
+    "message": "不明"
+  },
+  "import_group_label": {
+    "message": "1 つの連絡先にまとめる"
+  },
+  "import_group_placeholder": {
+    "message": "例: Alice (全デバイス)"
+  },
+  "import_group_help_one": {
+    "message": "これらの鍵には共通の名前がないため、$count$ 件の別々の連絡先としてインポートされます。ここで名前を付けると 1 人の相手としてまとめられ、メッセージは $count$ 個すべての鍵に対して暗号化されて、相手のどのデバイスからでも読めるようになります。"
+  },
+  "import_group_help_other": {
+    "message": "これらの鍵には共通の名前がないため、$count$ 件の別々の連絡先としてインポートされます。ここで名前を付けると 1 人の相手としてまとめられ、メッセージは $count$ 個すべての鍵に対して暗号化されて、相手のどのデバイスからでも読めるようになります。"
+  },
+  "import_github_fetched_note": {
+    "message": "github.com/$user$.keys から取得しました。メッセージは上記のすべての鍵に対して暗号化されるため、相手のどのデバイスからでも読めます。"
+  },
+  "import_github_rejected_heading_one": {
+    "message": "公開されている鍵のうち $count$ 個は使用できません"
+  },
+  "import_github_rejected_heading_other": {
+    "message": "公開されている鍵のうち $count$ 個は使用できません"
+  },
+  "import_ssh_private_note": {
+    "message": "age で使用する OpenSSH 秘密鍵です。フィンガープリントはインポート時に鍵自体から読み取られます。age には署名がないため署名には使えず、平文でエクスポートすることもできません。"
+  },
+  "import_crx_note": {
+    "message": "Chrome 拡張機能 (.crx) 用の RSA 署名鍵です。拡張機能 ID はインポート時に鍵自体から算出されます。"
+  },
+  "import_rejected_generic": {
+    "message": "この鍵はインポートできません。"
+  },
+  "import_importing": {
+    "message": "インポートしています..."
+  },
+  "import_as_one_contact": {
+    "message": "1 つの連絡先としてインポート"
+  },
+  "import_n_contacts_one": {
+    "message": "$count$ 件の連絡先をインポート"
+  },
+  "import_n_contacts_other": {
+    "message": "$count$ 件の連絡先をインポート"
+  },
+  "import_reveal": {
+    "message": "鍵一覧で表示"
+  },
+  "import_dropzone_text": {
+    "message": "公開鍵をドロップ、貼り付け、または選択"
+  },
+  "import_dropzone_browse": {
+    "message": "ファイルを選択"
+  },
+  "import_reject_no_public_key": {
+    "message": "このブロックには使用できる公開鍵が含まれていません。"
+  },
+  "import_reject_expired": {
+    "message": "この鍵は $date$ に期限切れになりました。所有者に現在の鍵を依頼してください。"
+  },
+  "import_reject_unusable": {
+    "message": "この公開鍵には、使用できる暗号化用または署名用の鍵がありません。"
+  },
+  "import_reject_ssh_generic": {
+    "message": "この SSH 鍵は暗号化に使用できません。"
+  },
+  "import_change_no_expiry": {
+    "message": "有効期限がなくなりました"
+  },
+  "import_change_new_expiry": {
+    "message": "新しい有効期限: $date$"
+  },
+  "import_change_new_user_ids_one": {
+    "message": "$count$ 件の新しいユーザー ID"
+  },
+  "import_change_new_user_ids_other": {
+    "message": "$count$ 件の新しいユーザー ID"
+  },
+  "import_change_new_subkeys_one": {
+    "message": "$count$ 個の新しい副鍵"
+  },
+  "import_change_new_subkeys_other": {
+    "message": "$count$ 個の新しい副鍵"
+  },
+  "import_change_reissued": {
+    "message": "鍵が再発行されました"
+  },
+  "import_change_keys_added_one": {
+    "message": "$count$ 個の鍵が追加されました"
+  },
+  "import_change_keys_added_other": {
+    "message": "$count$ 個の鍵が追加されました"
+  },
+  "import_change_keys_removed_one": {
+    "message": "$count$ 個の鍵が削除されました"
+  },
+  "import_change_keys_removed_other": {
+    "message": "$count$ 個の鍵が削除されました"
+  },
+  "import_crx_headline": {
+    "message": "Chrome 拡張機能の署名鍵"
+  },
+  "import_ssh_headline": {
+    "message": "SSH 鍵"
+  },
+  "import_ssh_private_headline": {
+    "message": "SSH 秘密鍵"
+  },
+  "import_group_proposal_label_one": {
+    "message": "$count$ 個の SSH 鍵"
+  },
+  "import_group_proposal_label_other": {
+    "message": "$count$ 個の SSH 鍵"
+  },
+  "import_github_none_usable": {
+    "message": "公開されている鍵はどれも暗号化に使用できません。"
+  },
+  "import_github_omitted_line_one": {
+    "message": "+他 $count$ 個の公開されている鍵"
+  },
+  "import_github_omitted_line_other": {
+    "message": "+他 $count$ 個の公開されている鍵"
+  },
+  "import_github_omitted_reason": {
+    "message": "このインポートでは 1 アカウントにつき最大 $max$ 個の鍵を取得し、極端に長い鍵は個別にスキップします。$username$ が公開している鍵のうち $count$ 個は取得されませんでした。必要な場合はここに貼り付けてください。"
+  },
+  "import_retry_minute": {
+    "message": "1 分ほど待ってからやり直してください。"
+  },
+  "import_retry_minutes_one": {
+    "message": "約 $count$ 分後にやり直してください。"
+  },
+  "import_retry_minutes_other": {
+    "message": "約 $count$ 分後にやり直してください。"
+  },
+  "import_retry_hours_one": {
+    "message": "約 $count$ 時間後にやり直してください。"
+  },
+  "import_retry_hours_other": {
+    "message": "約 $count$ 時間後にやり直してください。"
+  },
+  "import_github_invalid_username": {
+    "message": "GitHub のユーザー名ではありません。プロフィール URL のアカウント名を使用してください。例: github.com/octocat なら “octocat”。"
+  },
+  "import_github_not_found": {
+    "message": "“$username$” という GitHub アカウントはありません。つづりを確認してください。使用するのはプロフィール URL にある名前です。"
+  },
+  "import_github_no_keys": {
+    "message": "$username$ は GitHub に SSH 鍵を公開していません。github.com/settings/keys で追加するよう依頼するか、代わりに相手の鍵をここに貼り付けてください。"
+  },
+  "import_github_offline": {
+    "message": "github.com に接続できませんでした。接続を確認してから、やり直してください。"
+  },
+  "import_github_rate_limited": {
+    "message": "GitHub がこのネットワークからのアクセスを制限しています。制限は IP アドレスごとに数えられるため、同じ回線を使う他の人によって上限に達することがあります。"
+  },
+  "import_github_server_error": {
+    "message": "GitHub が現在応答できません。しばらくしてからやり直してください。"
+  },
+  "import_keyserver_invalid_query": {
+    "message": "メールアドレスでも鍵のフィンガープリントでもありません。鍵が公開されているアドレスを使用するか、40 文字の完全なフィンガープリントを貼り付けてください。"
+  },
+  "import_keyserver_not_found_email": {
+    "message": "$host$ に $subject$ の鍵はありません。このサーバーはアドレスを鍵の所有者が確認した後にのみ公開するため、この検索では見つからない鍵がそこにある可能性があります。相手に直接鍵を依頼するか、フィンガープリントで検索してください。"
+  },
+  "import_keyserver_not_found_fingerprint": {
+    "message": "$host$ にフィンガープリント $subject$ の鍵はありません。受け取ったものと照合してください。1 文字違うだけで見つかりません。"
+  },
+  "import_keyserver_offline": {
+    "message": "$host$ に接続できませんでした。接続を確認してから、やり直してください。"
+  },
+  "import_keyserver_rate_limited": {
+    "message": "$host$ がこのネットワークからのアクセスを制限しています。"
+  },
+  "import_keyserver_server_error": {
+    "message": "$host$ が現在応答できません。しばらくしてからやり直してください。"
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "common_cancel": {
+    "message": "Annuler"
+  },
+  "common_back": {
+    "message": "Retour"
+  },
+  "common_done": {
+    "message": "Terminé"
+  },
+  "common_save": {
+    "message": "Enregistrer"
+  },
+  "common_delete": {
+    "message": "Supprimer"
+  },
+  "common_remove": {
+    "message": "Retirer"
+  },
+  "common_copy": {
+    "message": "Copier"
+  },
+  "common_copied": {
+    "message": "Copié"
+  },
+  "common_download": {
+    "message": "Télécharger"
+  },
+  "common_continue": {
+    "message": "Continuer"
+  },
+  "common_on": {
+    "message": "Activé"
+  },
+  "common_off": {
+    "message": "Désactivé"
+  },
+  "common_settings": {
+    "message": "Paramètres"
+  },
+  "common_keys": {
+    "message": "Clés"
+  },
+  "common_encrypt": {
+    "message": "Chiffrer"
+  },
+  "common_decrypt": {
+    "message": "Déchiffrer"
+  },
+  "common_sign": {
+    "message": "Signer"
+  },
+  "common_verify": {
+    "message": "Vérifier"
+  },
+  "common_public_key": {
+    "message": "Clé publique"
+  },
+  "common_private_key": {
+    "message": "Clé privée"
+  },
+  "common_unlock": {
+    "message": "Déverrouiller"
+  },
+  "common_lock": {
+    "message": "Verrouiller"
+  }
+}

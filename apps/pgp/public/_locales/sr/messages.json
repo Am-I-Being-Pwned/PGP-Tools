@@ -1,8 +1,8 @@
 {
-  "extName": {
-    "message": "Шифровање е-поште OpenPGP и GPG - Encrypt Messages Online"
-  },
   "extDescription": {
     "message": "Шифрујте, дешифрујте, потпишите и проверите поруке помоћу OpenPGP и GPG."
+  },
+  "extName": {
+    "message": "Шифровање е-поште OpenPGP и GPG - Encrypt Messages Online"
   }
 }

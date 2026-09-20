@@ -1,0 +1,344 @@
+{
+  "import_title": {
+    "message": "Schlüssel importieren"
+  },
+  "import_title_update": {
+    "message": "Schlüssel aktualisieren"
+  },
+  "import_panel_aria_with_id": {
+    "message": "$keyid$ importieren"
+  },
+  "import_failed": {
+    "message": "Import fehlgeschlagen"
+  },
+  "import_lookup_failed": {
+    "message": "Suche fehlgeschlagen"
+  },
+  "import_unreadable": {
+    "message": "Das sieht nicht nach einem lesbaren Schlüssel aus. Fügen Sie einen PGP-Schlüsselblock im ASCII-Armor-Format oder eine öffentliche SSH-Schlüsselzeile ein, oder wählen Sie eine Schlüsseldatei aus."
+  },
+  "import_private_unreadable": {
+    "message": "Dieser private Schlüssel konnte nicht gelesen werden."
+  },
+  "import_worker_unreachable": {
+    "message": "Der Hintergrund-Worker der Erweiterung war nicht erreichbar."
+  },
+  "import_keyserver_not_a_key": {
+    "message": "$host$ hat geantwortet, aber die Antwort ist kein lesbarer Schlüssel."
+  },
+  "import_keyserver_multiple_keys": {
+    "message": "$host$ hat für diese Suche mehr als einen Schlüssel zurückgegeben. Nur der erste wird angezeigt - prüfen Sie den Fingerabdruck, bevor Sie ihn importieren."
+  },
+  "import_lookup_invalid": {
+    "message": "Das ist weder ein GitHub-Benutzername noch eine E-Mail-Adresse oder ein Schlüssel-Fingerabdruck. Versuchen Sie „octocat“, „alice@example.com“ oder den vollständigen 40-stelligen Fingerabdruck."
+  },
+  "import_no_key": {
+    "message": "Kein Schlüssel zum Importieren."
+  },
+  "import_enter_passphrase": {
+    "message": "Geben Sie die Passphrase des Schlüssels ein."
+  },
+  "import_default_pgp_name": {
+    "message": "Importierter PGP-Schlüssel"
+  },
+  "import_default_ssh_name": {
+    "message": "Importierter SSH-Schlüssel"
+  },
+  "import_flagged_toast_one": {
+    "message": "$count$ Schlüssel verwendet schwache Kryptografie (SHA-1) und wurde markiert - siehe Warnung beim Kontakt."
+  },
+  "import_flagged_toast_other": {
+    "message": "$count$ Schlüssel verwenden schwache Kryptografie (SHA-1) und wurden markiert - siehe Warnung beim Kontakt."
+  },
+  "import_added_contacts_one": {
+    "message": "$count$ Kontakt hinzugefügt"
+  },
+  "import_added_contacts_other": {
+    "message": "$count$ Kontakte hinzugefügt"
+  },
+  "import_updated_contacts_one": {
+    "message": "$count$ Kontakt aktualisiert"
+  },
+  "import_updated_contacts_other": {
+    "message": "$count$ Kontakte aktualisiert"
+  },
+  "import_paste_label": {
+    "message": "Schlüssel einfügen"
+  },
+  "import_paste_placeholder": {
+    "message": "Schlüssel mit $shortcut$ einfügen"
+  },
+  "import_paste_hint": {
+    "message": "Fügen Sie den gesamten Schlüsselblock ein - ein Schlüssel ist zu lang zum Abtippen."
+  },
+  "import_reading": {
+    "message": "Schlüssel wird gelesen..."
+  },
+  "import_drop_here": {
+    "message": "Schlüsseldatei hier ablegen"
+  },
+  "import_browse": {
+    "message": "Schlüsseldatei auswählen"
+  },
+  "import_lookup_label": {
+    "message": "Oder jemanden suchen"
+  },
+  "import_lookup_placeholder": {
+    "message": "GitHub-Benutzername, E-Mail oder Fingerabdruck"
+  },
+  "import_lookup_button": {
+    "message": "Suchen"
+  },
+  "import_source_help": {
+    "message": "Öffentliche Schlüssel werden als Kontakte hinzugefügt. Ein privater Schlüssel bleibt auf diesem Gerät - wie er geschützt wird, wählen Sie im nächsten Schritt."
+  },
+  "import_label_field": {
+    "message": "Bezeichnung"
+  },
+  "import_optional": {
+    "message": "optional"
+  },
+  "import_label_placeholder": {
+    "message": "z. B. Meine Erweiterung"
+  },
+  "import_passphrase_label": {
+    "message": "Dieser Schlüssel ist mit einer Passphrase geschützt"
+  },
+  "import_passphrase_placeholder": {
+    "message": "Schlüssel-Passphrase"
+  },
+  "import_submit": {
+    "message": "Importieren"
+  },
+  "import_status_duplicate": {
+    "message": "Bereits in Ihren Schlüsseln"
+  },
+  "import_status_duplicate_added": {
+    "message": "Sie haben ihn am $date$ hinzugefügt, und nichts daran hat sich geändert."
+  },
+  "import_status_update": {
+    "message": "Aktualisiert den Schlüssel, den Sie bereits haben"
+  },
+  "import_status_added_on": {
+    "message": "Hinzugefügt am $date$."
+  },
+  "import_action_replace_stored": {
+    "message": "Gespeicherten Schlüssel ersetzen"
+  },
+  "import_action_update_contact": {
+    "message": "Kontakt aktualisieren"
+  },
+  "import_action_import_contact": {
+    "message": "Kontakt importieren"
+  },
+  "import_chip_pgp_private_title": {
+    "message": "Enthält geheimes Schlüsselmaterial - Sie schützen es im nächsten Schritt"
+  },
+  "import_chip_pgp_public_title": {
+    "message": "Schlüssel einer anderen Person - wird als Kontakt importiert"
+  },
+  "import_chip_ssh_private": {
+    "message": "SSH-Schlüssel"
+  },
+  "import_chip_ssh_private_title": {
+    "message": "Ein privater OpenSSH-Schlüssel - Sie schützen ihn im nächsten Schritt"
+  },
+  "import_chip_ssh_public": {
+    "message": "Öffentlicher SSH-Schlüssel"
+  },
+  "import_chip_ssh_public_title": {
+    "message": "SSH-Schlüssel einer anderen Person - wird als age-Empfänger importiert"
+  },
+  "import_chip_crx": {
+    "message": "Erweiterungsschlüssel"
+  },
+  "import_chip_crx_title": {
+    "message": "Ein RSA-Signaturschlüssel für eine Chrome-Erweiterung (.crx)"
+  },
+  "import_group_keys_chip_one": {
+    "message": "$count$ Schlüssel"
+  },
+  "import_group_keys_chip_other": {
+    "message": "$count$ Schlüssel"
+  },
+  "import_group_keys_chip_title": {
+    "message": "Nachrichten werden für alle verschlüsselt; jeder einzelne kann entschlüsseln"
+  },
+  "import_unknown_name": {
+    "message": "Unbekannt"
+  },
+  "import_group_label": {
+    "message": "Als einen Kontakt zusammenfassen"
+  },
+  "import_group_placeholder": {
+    "message": "z. B. Alice (alle Geräte)"
+  },
+  "import_group_help_one": {
+    "message": "Diese Schlüssel haben keinen gemeinsamen Namen, daher werden sie als $count$ separater Kontakt importiert. Geben Sie hier einen Namen an, um sie als eine Person zusammenzuhalten - Nachrichten werden dann für alle $count$ Schlüssel verschlüsselt, und jedes ihrer Geräte kann sie lesen."
+  },
+  "import_group_help_other": {
+    "message": "Diese Schlüssel haben keinen gemeinsamen Namen, daher werden sie als $count$ separate Kontakte importiert. Geben Sie hier einen Namen an, um sie als eine Person zusammenzuhalten - Nachrichten werden dann für alle $count$ Schlüssel verschlüsselt, und jedes ihrer Geräte kann sie lesen."
+  },
+  "import_github_fetched_note": {
+    "message": "Abgerufen von github.com/$user$.keys. Nachrichten werden für jeden oben aufgeführten Schlüssel verschlüsselt, sodass jedes ihrer Geräte sie lesen kann."
+  },
+  "import_github_rejected_heading_one": {
+    "message": "$count$ veröffentlichter Schlüssel kann nicht verwendet werden"
+  },
+  "import_github_rejected_heading_other": {
+    "message": "$count$ veröffentlichte Schlüssel können nicht verwendet werden"
+  },
+  "import_ssh_private_note": {
+    "message": "Ein privater OpenSSH-Schlüssel, verwendet mit age. Sein Fingerabdruck wird beim Import aus dem Schlüssel selbst gelesen. Er kann nicht signieren - age kennt keine Signaturen - und er kann nicht im Klartext exportiert werden."
+  },
+  "import_crx_note": {
+    "message": "Ein RSA-Signaturschlüssel für eine Chrome-Erweiterung (.crx). Die Erweiterungs-ID wird beim Import aus dem Schlüssel selbst ermittelt."
+  },
+  "import_rejected_generic": {
+    "message": "Dieser Schlüssel kann nicht importiert werden."
+  },
+  "import_importing": {
+    "message": "Wird importiert..."
+  },
+  "import_as_one_contact": {
+    "message": "Als einen Kontakt importieren"
+  },
+  "import_n_contacts_one": {
+    "message": "$count$ Kontakt importieren"
+  },
+  "import_n_contacts_other": {
+    "message": "$count$ Kontakte importieren"
+  },
+  "import_reveal": {
+    "message": "In Ihren Schlüsseln anzeigen"
+  },
+  "import_dropzone_text": {
+    "message": "Öffentliche Schlüssel ablegen, einfügen oder auswählen"
+  },
+  "import_dropzone_browse": {
+    "message": "Dateien auswählen"
+  },
+  "import_reject_no_public_key": {
+    "message": "Dieser Block enthält keinen verwendbaren öffentlichen Schlüssel."
+  },
+  "import_reject_expired": {
+    "message": "Dieser Schlüssel ist am $date$ abgelaufen. Bitten Sie den Besitzer um seinen aktuellen Schlüssel."
+  },
+  "import_reject_unusable": {
+    "message": "Dieser öffentliche Schlüssel hat keinen verwendbaren Verschlüsselungs- oder Signaturschlüssel."
+  },
+  "import_reject_ssh_generic": {
+    "message": "Dieser SSH-Schlüssel kann nicht zum Verschlüsseln verwendet werden."
+  },
+  "import_change_no_expiry": {
+    "message": "läuft nicht mehr ab"
+  },
+  "import_change_new_expiry": {
+    "message": "neues Ablaufdatum: $date$"
+  },
+  "import_change_new_user_ids_one": {
+    "message": "$count$ neue Benutzer-ID"
+  },
+  "import_change_new_user_ids_other": {
+    "message": "$count$ neue Benutzer-IDs"
+  },
+  "import_change_new_subkeys_one": {
+    "message": "$count$ neuer Unterschlüssel"
+  },
+  "import_change_new_subkeys_other": {
+    "message": "$count$ neue Unterschlüssel"
+  },
+  "import_change_reissued": {
+    "message": "Der Schlüssel wurde neu ausgestellt"
+  },
+  "import_change_keys_added_one": {
+    "message": "$count$ Schlüssel hinzugefügt"
+  },
+  "import_change_keys_added_other": {
+    "message": "$count$ Schlüssel hinzugefügt"
+  },
+  "import_change_keys_removed_one": {
+    "message": "$count$ Schlüssel entfernt"
+  },
+  "import_change_keys_removed_other": {
+    "message": "$count$ Schlüssel entfernt"
+  },
+  "import_crx_headline": {
+    "message": "Signaturschlüssel für Chrome-Erweiterung"
+  },
+  "import_ssh_headline": {
+    "message": "SSH-Schlüssel"
+  },
+  "import_ssh_private_headline": {
+    "message": "Privater SSH-Schlüssel"
+  },
+  "import_group_proposal_label_one": {
+    "message": "$count$ SSH-Schlüssel"
+  },
+  "import_group_proposal_label_other": {
+    "message": "$count$ SSH-Schlüssel"
+  },
+  "import_github_none_usable": {
+    "message": "Keiner der veröffentlichten Schlüssel kann zum Verschlüsseln verwendet werden."
+  },
+  "import_github_omitted_line_one": {
+    "message": "+$count$ weiterer veröffentlichter Schlüssel"
+  },
+  "import_github_omitted_line_other": {
+    "message": "+$count$ weitere veröffentlichte Schlüssel"
+  },
+  "import_github_omitted_reason": {
+    "message": "Dieser Import übernimmt höchstens $max$ Schlüssel pro Konto und überspringt jeden einzelnen Schlüssel, der unplausibel lang ist. $count$ der veröffentlichten Schlüssel von $username$ wurden nicht abgerufen - fügen Sie einen hier ein, wenn Sie ihn brauchen."
+  },
+  "import_retry_minute": {
+    "message": "Versuchen Sie es in einer Minute erneut."
+  },
+  "import_retry_minutes_one": {
+    "message": "Versuchen Sie es in etwa $count$ Minute erneut."
+  },
+  "import_retry_minutes_other": {
+    "message": "Versuchen Sie es in etwa $count$ Minuten erneut."
+  },
+  "import_retry_hours_one": {
+    "message": "Versuchen Sie es in etwa $count$ Stunde erneut."
+  },
+  "import_retry_hours_other": {
+    "message": "Versuchen Sie es in etwa $count$ Stunden erneut."
+  },
+  "import_github_invalid_username": {
+    "message": "Das ist kein GitHub-Benutzername. Verwenden Sie den Kontonamen aus der Profil-URL, z. B. „octocat“ für github.com/octocat."
+  },
+  "import_github_not_found": {
+    "message": "Es gibt kein GitHub-Konto namens „$username$“. Prüfen Sie die Schreibweise - der Name in der Profil-URL ist der richtige."
+  },
+  "import_github_no_keys": {
+    "message": "$username$ hat auf GitHub keine SSH-Schlüssel veröffentlicht. Bitten Sie die Person, unter github.com/settings/keys einen hinzuzufügen, oder fügen Sie den Schlüssel stattdessen hier ein."
+  },
+  "import_github_offline": {
+    "message": "github.com war nicht erreichbar. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut."
+  },
+  "import_github_rate_limited": {
+    "message": "GitHub begrenzt die Anfragen aus diesem Netzwerk. Das Limit gilt pro IP-Adresse und kann daher von anderen Personen mit derselben Verbindung aufgebraucht werden."
+  },
+  "import_github_server_error": {
+    "message": "GitHub konnte gerade nicht antworten. Versuchen Sie es gleich noch einmal."
+  },
+  "import_keyserver_invalid_query": {
+    "message": "Das ist weder eine E-Mail-Adresse noch ein Schlüssel-Fingerabdruck. Verwenden Sie die Adresse, unter der der Schlüssel veröffentlicht ist, oder fügen Sie den vollständigen 40-stelligen Fingerabdruck ein."
+  },
+  "import_keyserver_not_found_email": {
+    "message": "$host$ hat keinen Schlüssel für $subject$. Eine Adresse wird dort erst veröffentlicht, wenn der Besitzer des Schlüssels sie bestätigt hat. Es kann also ein Schlüssel dort liegen, den diese Suche nicht findet - fragen Sie die Person direkt danach oder suchen Sie per Fingerabdruck."
+  },
+  "import_keyserver_not_found_fingerprint": {
+    "message": "$host$ hat keinen Schlüssel mit dem Fingerabdruck $subject$. Vergleichen Sie ihn mit dem, den Sie erhalten haben - ein einziges falsches Zeichen genügt."
+  },
+  "import_keyserver_offline": {
+    "message": "$host$ war nicht erreichbar. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut."
+  },
+  "import_keyserver_rate_limited": {
+    "message": "$host$ begrenzt die Anfragen aus diesem Netzwerk."
+  },
+  "import_keyserver_server_error": {
+    "message": "$host$ konnte gerade nicht antworten. Versuchen Sie es gleich noch einmal."
+  }
+}

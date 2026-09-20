@@ -1,0 +1,374 @@
+{
+  "app_action_title": {
+    "message": "PGP Tools",
+    "description": "Manifest: tooltip on the toolbar icon (action.default_title). Brand name, keep as 'PGP Tools' in every locale."
+  },
+  "app_cmd_open": {
+    "message": "Open PGP Tools",
+    "description": "Manifest: description of the keyboard shortcut that opens the side panel, shown at chrome://extensions/shortcuts. 'PGP Tools' is the brand name."
+  },
+  "app_cmd_open_encrypt": {
+    "message": "Open PGP Tools in Encrypt mode",
+    "description": "Manifest: keyboard shortcut description, shown at chrome://extensions/shortcuts. Opens the panel switched to the Encrypt mode."
+  },
+  "app_cmd_open_decrypt": {
+    "message": "Open PGP Tools in Decrypt mode",
+    "description": "Manifest: keyboard shortcut description, shown at chrome://extensions/shortcuts. Opens the panel switched to the Decrypt mode."
+  },
+  "app_cmd_open_sign": {
+    "message": "Open PGP Tools in Sign mode",
+    "description": "Manifest: keyboard shortcut description, shown at chrome://extensions/shortcuts. Opens the panel switched to the Sign mode."
+  },
+  "app_cmd_open_verify": {
+    "message": "Open PGP Tools in Verify mode",
+    "description": "Manifest: keyboard shortcut description, shown at chrome://extensions/shortcuts. Opens the panel switched to the Verify mode."
+  },
+  "app_menu_open_in_pgp_tools": {
+    "message": "Open in PGP Tools",
+    "description": "Right-click context menu item shown when text is selected on a web page. Sends the selection to the side panel. 'PGP Tools' is the brand name."
+  },
+  "app_tab_main": {
+    "message": "Main",
+    "description": "Label of the first tab in the side panel's top tab bar (the workspace where encrypt/decrypt happens). Short: shares a narrow bar with the Keys tab."
+  },
+  "app_nav_label": {
+    "message": "Main navigation",
+    "description": "aria-label of the side panel's top tab bar (screen readers only)."
+  },
+  "app_vault_unreadable_title": {
+    "message": "Your vault could not be read.",
+    "description": "Full-screen error shown after unlock when the stored keys cannot be decrypted. Heading line."
+  },
+  "app_vault_unreadable_body": {
+    "message": "Your keys are still stored on this device. Locking and trying again is the first thing to try.",
+    "description": "Body text under app_vault_unreadable_title when the vault is protected by a password."
+  },
+  "app_vault_unreadable_body_passkey": {
+    "message": "Your keys are still stored on this device. Locking and trying again is the first thing to try -- make sure you use the same passkey you set up.",
+    "description": "Body text under app_vault_unreadable_title when the vault is protected by a passkey. Same as app_vault_unreadable_body plus the passkey reminder; keep the double hyphen as a dash."
+  },
+  "app_vault_lock_retry": {
+    "message": "Lock and try again",
+    "description": "Button under the vault-unreadable error. Locks the vault so the user can unlock again."
+  },
+  "app_import_added_one": {
+    "message": "Key added",
+    "description": "Success toast after importing keys from outside the Keys tab. $count$ is the number of keys imported (here 1; the English singular does not show the number)."
+  },
+  "app_import_added_other": {
+    "message": "Added $count$ keys",
+    "description": "Success toast after importing keys from outside the Keys tab. $count$ is the number of keys imported."
+  },
+  "app_import_view_key_one": {
+    "message": "View key",
+    "description": "Action button on the key-added toast; jumps to the Keys tab and highlights the imported key. $count$ is the number of keys (1 here)."
+  },
+  "app_import_view_key_other": {
+    "message": "View keys",
+    "description": "Action button on the keys-added toast; jumps to the Keys tab and highlights the imported keys. $count$ is the number of keys."
+  },
+  "app_welcome_open_failed": {
+    "message": "Could not open the side panel. Click the PGP Tools icon in your toolbar.",
+    "description": "Welcome page (opened on install): error shown under the start button when the side panel could not be opened. 'PGP Tools' is the brand name."
+  },
+  "app_welcome_opened": {
+    "message": "Follow the instructions in the side panel to get started",
+    "description": "Welcome page: large text shown next to an arrow pointing at the side panel once it has opened."
+  },
+  "app_welcome_title": {
+    "message": "PGP Tools is installed",
+    "description": "Welcome page heading shown right after the extension is installed. 'PGP Tools' is the brand name."
+  },
+  "app_welcome_body": {
+    "message": "Click below to open the side panel and finish setting up your keys. After this, use the PGP Tools icon in the toolbar to re-open it any time.",
+    "description": "Welcome page paragraph under the heading, above the start button. 'PGP Tools' is the brand name."
+  },
+  "app_welcome_start": {
+    "message": "Click here to get started",
+    "description": "Welcome page primary button; opens the side panel."
+  },
+  "app_welcome_credit_before": {
+    "message": "A privacy tool by",
+    "description": "Welcome page footer, text before the linked brand name 'Am I Being Pwned'. Rendered as: '<before> <link><after>' and the link text is not translated."
+  },
+  "app_welcome_credit_after": {
+    "message": ".",
+    "description": "Welcome page footer, punctuation right after the linked brand name 'Am I Being Pwned' (no leading space). Use the locale's sentence terminator or leave empty if none is wanted."
+  },
+  "app_onboarding_prf_unsupported": {
+    "message": "Your authenticator does not support PRF. Try a different passkey or use a password instead.",
+    "description": "Onboarding, protection step: error shown when the passkey the user created cannot derive an encryption key (WebAuthn PRF extension). 'PRF' is a technical name; keep it."
+  },
+  "app_onboarding_setup_failed": {
+    "message": "Setup failed",
+    "description": "Onboarding, protection step: fallback error shown when setting up the vault protection fails for an unknown reason."
+  },
+  "app_onboarding_name_required": {
+    "message": "Name is required.",
+    "description": "Onboarding, key creation step: validation error when the Name field is empty."
+  },
+  "app_onboarding_generate_failed": {
+    "message": "Key generation failed",
+    "description": "Onboarding, key creation step: fallback error shown when generating the key fails for an unknown reason."
+  },
+  "app_onboarding_intro_body": {
+    "message": "Send private messages that only the right person can read, and verify messages really came from who they claim.",
+    "description": "Onboarding, first screen: one-sentence pitch under the 'PGP Tools' heading."
+  },
+  "app_onboarding_storage_question": {
+    "message": "Where should we store your data?",
+    "description": "Onboarding, first screen: heading above the storage location picker (this device vs. synced)."
+  },
+  "app_onboarding_next": {
+    "message": "Next",
+    "description": "Onboarding: full-width button that goes to the next step."
+  },
+  "app_onboarding_protection_title": {
+    "message": "Secure your data",
+    "description": "Onboarding, protection step heading (choose a password or a passkey)."
+  },
+  "app_onboarding_protection_body": {
+    "message": "Choose how to protect your contacts and keys. You will use this each time you open PGP Tools.",
+    "description": "Onboarding, protection step: paragraph under the heading. 'PGP Tools' is the brand name."
+  },
+  "app_onboarding_create_passkey": {
+    "message": "Create passkey",
+    "description": "Onboarding, protection step: submit button when the passkey method is selected."
+  },
+  "app_onboarding_set_password": {
+    "message": "Set password",
+    "description": "Onboarding, protection step: submit button when the password method is selected."
+  },
+  "app_onboarding_identity_title": {
+    "message": "Create your PGP key",
+    "description": "Onboarding, key creation step heading."
+  },
+  "app_onboarding_identity_body": {
+    "message": "Create a keypair for encrypting, decrypting, and signing messages.",
+    "description": "Onboarding, key creation step: paragraph under the heading."
+  },
+  "app_onboarding_name_label": {
+    "message": "Name *",
+    "description": "Onboarding, key creation step: label of the required Name field. The asterisk marks it as required; keep it."
+  },
+  "app_onboarding_name_placeholder": {
+    "message": "Your full name",
+    "description": "Onboarding, key creation step: placeholder of the Name field."
+  },
+  "app_onboarding_email_label": {
+    "message": "Email",
+    "description": "Onboarding, key creation step: label of the email field (followed by app_onboarding_optional in lighter text)."
+  },
+  "app_onboarding_optional": {
+    "message": "optional",
+    "description": "Onboarding, key creation step: lowercase word shown after a field label (Email, Comment) to mark the field as optional."
+  },
+  "app_onboarding_email_placeholder": {
+    "message": "you@example.com",
+    "description": "Onboarding, key creation step: example address used as the email field placeholder. Use an obviously fake example address."
+  },
+  "app_onboarding_comment_label": {
+    "message": "Comment",
+    "description": "Onboarding, key creation step: label of the optional PGP user ID comment field."
+  },
+  "app_onboarding_comment_placeholder": {
+    "message": "e.g. work, personal",
+    "description": "Onboarding, key creation step: placeholder of the Comment field, suggesting what a comment might say."
+  },
+  "app_onboarding_advanced_options": {
+    "message": "Advanced options",
+    "description": "Onboarding, key creation step: small toggle that reveals the algorithm and expiry choices."
+  },
+  "app_onboarding_algorithm_label": {
+    "message": "Algorithm",
+    "description": "Onboarding, advanced options: label of the key algorithm dropdown (ECC / RSA)."
+  },
+  "app_onboarding_algo_ecc_hint": {
+    "message": "Modern, fast, small keys. Recommended for most uses.",
+    "description": "Onboarding, advanced options: tiny hint under the algorithm dropdown when ECC is selected."
+  },
+  "app_onboarding_algo_rsa_hint": {
+    "message": "Widely compatible. Slower key generation.",
+    "description": "Onboarding, advanced options: tiny hint under the algorithm dropdown when RSA is selected."
+  },
+  "app_onboarding_expiry_label": {
+    "message": "Key expiry",
+    "description": "Onboarding, advanced options: label of the key expiry dropdown."
+  },
+  "app_onboarding_expiry_never": {
+    "message": "Never",
+    "description": "Onboarding, key expiry dropdown option: the key never expires."
+  },
+  "app_onboarding_expiry_years_one": {
+    "message": "$count$ year",
+    "description": "Onboarding, key expiry dropdown option. $count$ is the number of years (1, 2 or 3)."
+  },
+  "app_onboarding_expiry_years_other": {
+    "message": "$count$ years",
+    "description": "Onboarding, key expiry dropdown option. $count$ is the number of years (1, 2 or 3)."
+  },
+  "app_onboarding_create_key": {
+    "message": "Create my PGP key",
+    "description": "Onboarding, key creation step: primary full-width button that generates the key."
+  },
+  "app_onboarding_skip": {
+    "message": "I'll set up later",
+    "description": "Onboarding, key creation step: secondary button that skips creating a key for now."
+  },
+  "app_onboarding_passkey_prompt": {
+    "message": "Follow your browser's passkey prompt...",
+    "description": "Onboarding, generating step: status text under a spinner while the browser shows its passkey dialog."
+  },
+  "app_onboarding_generating": {
+    "message": "Generating key...",
+    "description": "Onboarding, generating step: status text under a spinner while the key is being generated."
+  },
+  "app_onboarding_rsa_slow": {
+    "message": "RSA keys take a moment to generate",
+    "description": "Onboarding, generating step: small note under the spinner shown only when RSA was chosen."
+  },
+  "app_onboarding_preset_title": {
+    "message": "Pick a security preset",
+    "description": "Onboarding, final step heading: choose a bundle of security settings."
+  },
+  "app_onboarding_preset_body": {
+    "message": "How careful should PGP Tools be with your keys? Each option shows exactly what it sets, and you can change any of it later in Settings.",
+    "description": "Onboarding, final step: paragraph under the heading. 'PGP Tools' is the brand name; 'Settings' is the settings tab."
+  },
+  "app_onboarding_unlock_with_vault": {
+    "message": "Unlock keys with the vault",
+    "description": "Onboarding, final step: checkbox label (passkey users only). Opening the vault with the passkey also unlocks every key."
+  },
+  "app_onboarding_unlock_with_vault_hint": {
+    "message": "The passkey prompt that opens the vault also unlocks your keys. No separate prompt per key. You can change this in Settings.",
+    "description": "Onboarding, final step: small explanation under the 'Unlock keys with the vault' checkbox."
+  },
+  "app_onboarding_use_preset": {
+    "message": "Use this preset",
+    "description": "Onboarding, final step: primary button that applies the selected security preset and finishes onboarding."
+  },
+  "app_onboarding_keep_defaults": {
+    "message": "Keep the defaults",
+    "description": "Onboarding, final step: secondary button that finishes onboarding without applying a preset."
+  },
+  "app_copy_failed": {
+    "message": "Copy failed - click the extension panel first, then try again.",
+    "description": "Error toast when writing to the clipboard fails because the side panel is not the focused window."
+  },
+  "app_copied": {
+    "message": "$label$ copied",
+    "description": "Success toast after copying to the clipboard. $label$ names what was copied, e.g. 'Public key', 'Fingerprint'."
+  },
+  "app_copied_wipe": {
+    "message": "$label$ copied - clipboard clears in $seconds$s",
+    "description": "Success toast after copying sensitive material (a private key, a revocation certificate). $label$ names what was copied; $seconds$ is the number of seconds until the clipboard is wiped, followed by the seconds abbreviation."
+  },
+  "app_oversized_more": {
+    "message": "$names$ and $count$ more",
+    "description": "Part of app_oversized_files: when more than three files were too large, the first three names ($names$, already comma separated) followed by how many others ($count$)."
+  },
+  "app_oversized_files_one": {
+    "message": "$files$: file is larger than $limit$ and can't be processed in the panel.",
+    "description": "Error shown when a dropped file exceeds the size ceiling. $files$ is the file name; $limit$ is the ceiling, e.g. '4 GB'; $count$ is the number of oversized files (1 here)."
+  },
+  "app_oversized_files_other": {
+    "message": "$files$: files are larger than $limit$ and can't be processed in the panel.",
+    "description": "Error shown when several dropped files exceed the size ceiling. $files$ is the list of file names (comma separated, or app_oversized_more); $limit$ is the ceiling, e.g. '4 GB'; $count$ is the number of oversized files."
+  },
+  "app_error_remedy_import_key": {
+    "message": "Import key",
+    "description": "Button offered next to an error whose fix is importing a key."
+  },
+  "app_error_remedy_try_again": {
+    "message": "Try again",
+    "description": "Button offered next to an error whose fix is retrying the operation."
+  },
+  "app_error_remedy_check_key": {
+    "message": "Check key",
+    "description": "Button offered next to an expired/revoked key error; opens the recipient key so the user can check it."
+  },
+  "app_error_key_not_found": {
+    "message": "That key is no longer in your keyring, so nothing was saved. Re-import the key and try again.",
+    "description": "User-facing error: an operation referenced a key that has since been deleted from the keyring."
+  },
+  "app_error_key_locked": {
+    "message": "This key is locked. Unlock it and try again.",
+    "description": "User-facing error: the private key needed is still locked."
+  },
+  "app_error_vault_locked": {
+    "message": "Your vault is locked, so nothing was changed. Unlock it and run this again.",
+    "description": "User-facing error: the encrypted vault (keys and contacts store) is locked so the write was refused."
+  },
+  "app_error_weak_password": {
+    "message": "That password is too short. Use at least 8 characters.",
+    "description": "User-facing error: a chosen password is under the minimum length. The 8 is fixed."
+  },
+  "app_error_password_required": {
+    "message": "This key needs its password. Enter the key password to unlock it.",
+    "description": "User-facing error: a password-protected key was used without its password."
+  },
+  "app_error_passkey_failed": {
+    "message": "Your passkey didn't complete. Try again, or unlock with a different method.",
+    "description": "User-facing error: the passkey (WebAuthn) ceremony failed."
+  },
+  "app_error_passkey_dismissed": {
+    "message": "The passkey prompt was dismissed. Run the operation again when you're ready.",
+    "description": "User-facing notice: the user cancelled the browser's passkey prompt. Not a failure."
+  },
+  "app_error_wrong_password": {
+    "message": "Wrong password for this key. Check it and try again.",
+    "description": "User-facing error: the password entered does not unlock the key."
+  },
+  "app_error_symmetric_wrong_password": {
+    "message": "That password didn't open this message. Check it and try again - if you're sure it's right, the message may be damaged.",
+    "description": "User-facing error: decrypting a password-encrypted (symmetric) message failed."
+  },
+  "app_error_ocb_unsupported": {
+    "message": "This message uses an older AEAD (OCB) format this app can't read. Ask the sender to re-send it encrypted normally - any password they choose will work, it's the format that isn't supported.",
+    "description": "User-facing error: the message uses GnuPG's pre-standard AEAD (OCB) packet format. 'AEAD (OCB)' is a technical name; keep it."
+  },
+  "app_error_no_decryption_key": {
+    "message": "This message is encrypted to a key you don't hold. Import that private key, or ask the sender to encrypt to one of your keys.",
+    "description": "User-facing error: none of the user's private keys can decrypt this message (the recipient key ID is unknown)."
+  },
+  "app_error_no_decryption_key_with_id": {
+    "message": "This message is encrypted to a key you don't hold (key ID $key_id$). Import that private key, or ask the sender to encrypt to one of your keys.",
+    "description": "User-facing error: none of the user's private keys can decrypt this message. $key_id$ is the hexadecimal ID of the key it was encrypted to."
+  },
+  "app_error_not_crx": {
+    "message": "This isn't a Chrome extension package this tool can verify. Choose a CRX3 (.crx) file.",
+    "description": "User-facing error: the file given for CRX verification is not a Chrome extension package. 'CRX3' and '.crx' are technical names."
+  },
+  "app_error_crx_unsigned": {
+    "message": "The CRX signature doesn't match: it wasn't signed by this key, or the file was modified after signing. Get a fresh copy from the publisher.",
+    "description": "User-facing error: a Chrome extension package (CRX) failed signature verification against the chosen key."
+  },
+  "app_error_tampered": {
+    "message": "Signature verification failed - this message may have been tampered with. Don't trust the contents; ask the sender to re-send it.",
+    "description": "User-facing error: the signature on a decrypted message did not verify."
+  },
+  "app_error_key_expired": {
+    "message": "A key involved in this operation has expired. Ask the key's owner for an updated key, then import it.",
+    "description": "User-facing error: a recipient or signer key has passed its expiry date."
+  },
+  "app_error_key_revoked": {
+    "message": "A key involved in this operation has been revoked by its owner. Get their replacement key, then import it.",
+    "description": "User-facing error: a recipient or signer key carries a revocation."
+  },
+  "app_error_weak_algorithm": {
+    "message": "This key uses a signature algorithm that is no longer considered secure. Ask the key's owner to reissue it with SHA-256 or stronger.",
+    "description": "User-facing error: the key was rejected by the security policy (SHA-1 / MD5 signatures). 'SHA-256' is a technical name."
+  },
+  "app_error_corrupted": {
+    "message": "The data is corrupted or was cut off. Get a fresh, complete copy and try again.",
+    "description": "User-facing error: the PGP data is malformed or truncated."
+  },
+  "app_error_not_pgp_data": {
+    "message": "This doesn't look like PGP data. Make sure you pasted the full armored block, including the BEGIN and END lines.",
+    "description": "User-facing error: the input could not be parsed as PGP at all. 'BEGIN' and 'END' refer to the literal armor header lines."
+  },
+  "app_error_storage_full": {
+    "message": "Browser storage is full, so this couldn't be saved. Remove keys or contacts you no longer need, then try again.",
+    "description": "User-facing error: the browser's extension storage quota is exhausted."
+  }
+}

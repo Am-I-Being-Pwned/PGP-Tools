@@ -1,0 +1,486 @@
+{
+  "settings_crx_info_title": {
+    "message": "CRX signing",
+    "description": "Title of the CRX signing explainer subpage in Settings."
+  },
+  "settings_crx_info_pitch_title": {
+    "message": "Verified CRX Uploads",
+    "description": "Heading of the intro card on the CRX signing explainer. Name of a Chrome Web Store feature; keep as Chrome names it in the target language."
+  },
+  "settings_crx_info_pitch_p1": {
+    "message": "The Chrome Web Store lets you require that every update to your extension is signed with a key only you hold. Even if someone compromises your Web Store account or your build pipeline, they still can’t ship a malicious update without your signing key.",
+    "description": "First paragraph of the intro card on the CRX signing explainer."
+  },
+  "settings_crx_info_pitch_p2": {
+    "message": "That only holds if the key lives somewhere an attacker can’t reach - a key sitting in CI secrets defeats the purpose. PGP Tools keeps it encrypted in your vault and unlocks it only for the signing act, behind your password or passkey, never in your pipeline.",
+    "description": "Second paragraph of the intro card on the CRX signing explainer."
+  },
+  "settings_crx_info_how_title": {
+    "message": "How to use it",
+    "description": "Section heading on the CRX signing explainer, above the four steps."
+  },
+  "settings_crx_info_step_1": {
+    "message": "Turn on the toggle in Settings, then create or import a CRX signing key (RSA-2048). Keep the private key here - export it only if you need a backup.",
+    "description": "Step 1 of 4 on the CRX signing explainer."
+  },
+  "settings_crx_info_step_2": {
+    "message": "Copy the key’s $public$ half into the Chrome Web Store dashboard under $path$.",
+    "description": "Step 2 of 4 on the CRX signing explainer. $public$ is the word for the public half of the key (settings_crx_info_term_public); $path$ is the dashboard menu path (settings_crx_info_term_dashboard_path). Both are rendered in bold."
+  },
+  "settings_crx_info_term_public": {
+    "message": "public",
+    "description": "The word 'public' (as in public key), inserted in bold into settings_crx_info_step_2."
+  },
+  "settings_crx_info_term_dashboard_path": {
+    "message": "Package → Verified CRX Uploads",
+    "description": "Menu path in the Chrome Web Store developer dashboard, inserted in bold into settings_crx_info_step_2. Use the names Chrome's dashboard shows in the target language."
+  },
+  "settings_crx_info_step_3": {
+    "message": "To cut a release, drop your packed extension $zip$ into the Workspace and sign it. Use $save$ to write the $crx$ straight to disk with the right name (or drag the chip to your desktop), then upload it to the dashboard. Chrome intercepts plain $crx$ downloads and tries to install them, which is why we save rather than download.",
+    "description": "Step 3 of 4 on the CRX signing explainer. $zip$ is the literal file extension '.zip', $crx$ the literal '.crx', $save$ the label of the Save button; all three render in bold."
+  },
+  "settings_crx_info_step_4": {
+    "message": "To check any extension package, drop a $crx$ into the Workspace - PGP Tools verifies its signature and shows the extension ID it claims to be.",
+    "description": "Step 4 of 4 on the CRX signing explainer. $crx$ is the literal file extension '.crx', rendered in bold."
+  },
+  "settings_crx_info_get_title": {
+    "message": "What you get out of it",
+    "description": "Section heading on the CRX signing explainer."
+  },
+  "settings_crx_info_get_body": {
+    "message": "This $crx$ is an upload artifact for the Web Store dashboard, not a directly-installable package - Chrome only installs store-signed extensions. To run your extension locally, use $load_unpacked$ on the folder.",
+    "description": "Body under 'What you get out of it' on the CRX signing explainer. $crx$ is the literal '.crx'; $load_unpacked$ is the Chrome extensions page button label (settings_crx_info_term_load_unpacked). Both render in bold."
+  },
+  "settings_crx_info_term_load_unpacked": {
+    "message": "Load unpacked",
+    "description": "Chrome's own 'Load unpacked' button label on chrome://extensions; use Chrome's wording in the target language. Inserted into settings_crx_info_get_body."
+  },
+  "settings_crx_info_ladder_title": {
+    "message": "Where this sits security-wise",
+    "description": "Section heading on the CRX signing explainer, above three comparison lines."
+  },
+  "settings_crx_info_ladder_ci_term": {
+    "message": "A key in CI secrets",
+    "description": "Bold lead-in of the first comparison line (settings_crx_info_ladder_ci)."
+  },
+  "settings_crx_info_ladder_ci": {
+    "message": "$term$ is weaker: a poisoned dependency or a leaked token walks away with it.",
+    "description": "First comparison line on the CRX signing explainer. $term$ is settings_crx_info_ladder_ci_term, rendered in bold."
+  },
+  "settings_crx_info_ladder_vault_term": {
+    "message": "A key encrypted in your vault",
+    "description": "Bold lead-in of the second comparison line (settings_crx_info_ladder_vault)."
+  },
+  "settings_crx_info_ladder_vault": {
+    "message": "$term$ - where you are - sits behind your password or passkey and is unlocked only for the signing act.",
+    "description": "Second comparison line on the CRX signing explainer. $term$ is settings_crx_info_ladder_vault_term, rendered in bold."
+  },
+  "settings_crx_info_ladder_hardware_term": {
+    "message": "A hardware token (YubiKey / HSM)",
+    "description": "Bold lead-in of the third comparison line (settings_crx_info_ladder_hardware)."
+  },
+  "settings_crx_info_ladder_hardware": {
+    "message": "$term$ is stronger still: the key never leaves the chip, whereas here it is briefly reconstructed in the WASM sandbox during signing and zeroized immediately after.",
+    "description": "Third comparison line on the CRX signing explainer. $term$ is settings_crx_info_ladder_hardware_term, rendered in bold."
+  },
+  "settings_crx_info_not_pgp_title": {
+    "message": "This is not PGP",
+    "description": "Section heading on the CRX signing explainer."
+  },
+  "settings_crx_info_not_pgp_body": {
+    "message": "A $crx$ is signed with a raw RSA-2048 key (PKCS#1-SHA256), not an OpenPGP signature. PGP Tools generates and stores this key with the same protection as your PGP keys (Argon2id or passkey → AES-256-GCM, all inside the WASM sandbox), but the key itself is separate and used only for CRX signing.",
+    "description": "Body under 'This is not PGP' on the CRX signing explainer. $crx$ is the literal '.crx', rendered in bold."
+  },
+  "settings_crx_info_link": {
+    "message": "Chrome Web Store: protecting package updates",
+    "description": "Label of the external link to Chrome's developer documentation at the bottom of the CRX signing explainer."
+  },
+  "settings_crx_default_key_name": {
+    "message": "CRX signing key",
+    "description": "Default display name for a CRX signing key when the user gave it no label; also shown by the OS passkey dialog when the key is protected with a passkey."
+  },
+  "settings_import_keys_title": {
+    "message": "Import keys",
+    "description": "Title of the bulk 'Import keys' subpage in Settings."
+  },
+  "settings_import_next": {
+    "message": "Next",
+    "description": "Footer button advancing to the next step of the bulk import flow."
+  },
+  "settings_import_importing": {
+    "message": "Importing...",
+    "description": "Busy label on the Next button while the pasted keys are being parsed."
+  },
+  "settings_import_paste_intro": {
+    "message": "Paste or browse for a key file -- for example one from \"Export all keys\". Private keys are re-protected with your chosen method; public keys become contacts.",
+    "description": "Intro text on the paste step of the bulk import page. 'Export all keys' is the name of the export action in Settings."
+  },
+  "settings_import_paste_placeholder": {
+    "message": "Paste keys here, or browse for a file...",
+    "description": "Placeholder of the textarea on the paste step of the bulk import page."
+  },
+  "settings_import_browse": {
+    "message": "Browse for key file",
+    "description": "Button opening the file picker on the paste step of the bulk import page."
+  },
+  "settings_import_no_keys": {
+    "message": "No keys found in the input.",
+    "description": "Error shown when the pasted text contains no recognisable keys."
+  },
+  "settings_import_unlock_intro_one": {
+    "message": "$encrypted$ of the $count$ private key is protected with a passphrase. Enter it to unlock them -- you'll then re-protect every key with your chosen method on the next step.",
+    "description": "Intro on the unlock step of the bulk import page. $count$ is the number of private keys found (here 1), $encrypted$ how many of them need a passphrase."
+  },
+  "settings_import_unlock_intro_other": {
+    "message": "$encrypted$ of the $count$ private keys are protected with a passphrase. Enter it to unlock them -- you'll then re-protect every key with your chosen method on the next step.",
+    "description": "Intro on the unlock step of the bulk import page. $count$ is the number of private keys found, $encrypted$ how many of them need a passphrase."
+  },
+  "settings_import_passphrase_placeholder": {
+    "message": "Key passphrase",
+    "description": "Placeholder of the passphrase field on the unlock step of the bulk import page."
+  },
+  "settings_import_protect_intro_one": {
+    "message": "Choose how to protect the $count$ imported private key.",
+    "description": "Intro on the protect step of the bulk import page. $count$ is the number of private keys being imported."
+  },
+  "settings_import_protect_intro_other": {
+    "message": "Choose how to protect the $count$ imported private keys.",
+    "description": "Intro on the protect step of the bulk import page. $count$ is the number of private keys being imported."
+  },
+  "settings_import_submit_one": {
+    "message": "Import $count$ key",
+    "description": "Submit button on the protect step of the bulk import page. $count$ is the number of private keys."
+  },
+  "settings_import_submit_other": {
+    "message": "Import $count$ keys",
+    "description": "Submit button on the protect step of the bulk import page. $count$ is the number of private keys."
+  },
+  "settings_import_passkey_name": {
+    "message": "PGP Tools Import",
+    "description": "Name shown by the OS passkey dialog when registering a new passkey for a bulk import. 'PGP Tools' is the product name."
+  },
+  "settings_import_prf_unsupported": {
+    "message": "Your authenticator doesn't support PRF. Try a different passkey or use a password instead.",
+    "description": "Error on the protect step when the chosen passkey cannot derive a key (WebAuthn PRF extension missing)."
+  },
+  "settings_import_default_user_id": {
+    "message": "Imported PGP Key",
+    "description": "Fallback display name for an imported private key that carries no user ID; shown by the OS passkey dialog."
+  },
+  "settings_import_failed": {
+    "message": "Import failed",
+    "description": "Generic error on the bulk import page when the failure has no message of its own."
+  },
+  "settings_import_unknown_error": {
+    "message": "unknown error",
+    "description": "Stands in for an error message that is missing, inside settings_import_failed_named and settings_import_crx_failure_detail."
+  },
+  "settings_import_failed_named": {
+    "message": "Failed to import \"$name$\": $error$",
+    "description": "Error on the bulk import page for one key. $name$ is the key's user ID or short key ID, $error$ the underlying error text."
+  },
+  "settings_import_private_imported_one": {
+    "message": "Imported $count$ private key",
+    "description": "Success toast after the bulk import. $count$ is the number of private keys imported."
+  },
+  "settings_import_private_imported_other": {
+    "message": "Imported $count$ private keys",
+    "description": "Success toast after the bulk import. $count$ is the number of private keys imported."
+  },
+  "settings_import_private_skipped_one": {
+    "message": "$count$ private key already imported",
+    "description": "Info toast: a private key in the file was skipped because the vault already holds it."
+  },
+  "settings_import_private_skipped_other": {
+    "message": "$count$ private keys already imported",
+    "description": "Info toast: private keys in the file were skipped because the vault already holds them."
+  },
+  "settings_import_private_unparseable_one": {
+    "message": "$count$ private key could not be parsed.",
+    "description": "Error on the paste step: a private key block in the file was unreadable."
+  },
+  "settings_import_private_unparseable_other": {
+    "message": "$count$ private keys could not be parsed.",
+    "description": "Error on the paste step: private key blocks in the file were unreadable."
+  },
+  "settings_import_contacts_added_one": {
+    "message": "Added $count$ contact",
+    "description": "Success toast after public keys from the file were saved as contacts. Must stay a prefix match for 'Added N contact' (e2e tests)."
+  },
+  "settings_import_contacts_added_other": {
+    "message": "Added $count$ contacts",
+    "description": "Success toast after public keys from the file were saved as contacts."
+  },
+  "settings_import_contacts_flagged_one": {
+    "message": "$count$ imported key flagged for weak crypto (SHA-1)",
+    "description": "Warning toast: an imported public key uses a weak hash and was marked as such."
+  },
+  "settings_import_contacts_flagged_other": {
+    "message": "$count$ imported keys flagged for weak crypto (SHA-1)",
+    "description": "Warning toast: imported public keys use a weak hash and were marked as such."
+  },
+  "settings_import_contacts_updated_one": {
+    "message": "$count$ contact updated",
+    "description": "Info toast: an existing contact was refreshed from a newer copy of its public key."
+  },
+  "settings_import_contacts_updated_other": {
+    "message": "$count$ contacts updated",
+    "description": "Info toast: existing contacts were refreshed from newer copies of their public keys."
+  },
+  "settings_import_contacts_rejected_one": {
+    "message": "$count$ public key rejected",
+    "description": "Error toast: a public key in the file could not be imported (no reason known)."
+  },
+  "settings_import_contacts_rejected_other": {
+    "message": "$count$ public keys rejected",
+    "description": "Error toast: public keys in the file could not be imported (no reason known)."
+  },
+  "settings_import_contacts_rejected_reason_one": {
+    "message": "$count$ public key rejected: $reason$",
+    "description": "Error toast: a public key in the file could not be imported. $reason$ is the first rejection reason."
+  },
+  "settings_import_contacts_rejected_reason_other": {
+    "message": "$count$ public keys rejected: $reason$",
+    "description": "Error toast: public keys in the file could not be imported. $reason$ is the first rejection reason."
+  },
+  "settings_import_crx_failure_detail": {
+    "message": "$name$: $error$",
+    "description": "Toast description line for a CRX signing key that failed to restore. $name$ is the key's label or extension ID prefix, $error$ the error text."
+  },
+  "settings_import_crx_failed_one": {
+    "message": "$count$ CRX key failed to restore",
+    "description": "Error toast: a CRX signing key in the backup could not be stored."
+  },
+  "settings_import_crx_failed_other": {
+    "message": "$count$ CRX keys failed to restore",
+    "description": "Error toast: CRX signing keys in the backup could not be stored."
+  },
+  "settings_import_crx_restored_one": {
+    "message": "Restored $count$ CRX signing key",
+    "description": "Success toast after CRX signing keys from a backup were stored."
+  },
+  "settings_import_crx_restored_other": {
+    "message": "Restored $count$ CRX signing keys",
+    "description": "Success toast after CRX signing keys from a backup were stored."
+  },
+  "settings_import_crx_skipped_one": {
+    "message": "$count$ CRX signing key already imported",
+    "description": "Info toast: a CRX signing key in the backup was skipped because it is already stored."
+  },
+  "settings_import_crx_skipped_other": {
+    "message": "$count$ CRX signing keys already imported",
+    "description": "Info toast: CRX signing keys in the backup were skipped because they are already stored."
+  },
+  "settings_import_crx_rejected_one": {
+    "message": "$count$ CRX signing key rejected: public key does not match its extension id",
+    "description": "Error toast: a CRX signing key in the backup is corrupt or forged."
+  },
+  "settings_import_crx_rejected_other": {
+    "message": "$count$ CRX signing keys rejected: public key does not match its extension id",
+    "description": "Error toast: CRX signing keys in the backup are corrupt or forged."
+  },
+  "settings_shortcuts_title": {
+    "message": "Keyboard shortcuts",
+    "description": "Title of the keyboard shortcuts reference subpage in Settings."
+  },
+  "settings_shortcuts_unbound": {
+    "message": "Unbound",
+    "description": "Shown in place of keycaps for a shortcut that has no key assigned."
+  },
+  "settings_shortcuts_manage": {
+    "message": "Manage browser shortcuts",
+    "description": "Button under the global shortcuts group that opens Chrome's extension shortcut settings."
+  },
+  "settings_shortcuts_group_palette": {
+    "message": "Command palette",
+    "description": "Group heading on the shortcuts reference."
+  },
+  "settings_shortcuts_open_palette": {
+    "message": "Open the command palette",
+    "description": "Shortcut row label."
+  },
+  "settings_shortcuts_open_palette_note": {
+    "message": "Every action below is also searchable there.",
+    "description": "Fine print under the 'Open the command palette' row."
+  },
+  "settings_shortcuts_group_workspace": {
+    "message": "Workspace",
+    "description": "Group heading on the shortcuts reference; the Workspace is the main encrypt/decrypt screen."
+  },
+  "settings_shortcuts_run_mode": {
+    "message": "Run the current mode",
+    "description": "Shortcut row label: runs the encrypt/decrypt/sign/verify action."
+  },
+  "settings_shortcuts_copy_output": {
+    "message": "Copy the output",
+    "description": "Shortcut row label."
+  },
+  "settings_shortcuts_download_output": {
+    "message": "Download the output",
+    "description": "Shortcut row label."
+  },
+  "settings_shortcuts_pick_recipient": {
+    "message": "Pick the nth recipient",
+    "description": "Shortcut row label: digit keys 1-9 choose a recipient by position."
+  },
+  "settings_shortcuts_pick_recipient_note": {
+    "message": "In the recipient dropdown, while its search box is empty.",
+    "description": "Fine print under the 'Pick the nth recipient' row."
+  },
+  "settings_shortcuts_remove_recipient": {
+    "message": "Remove the last recipient",
+    "description": "Shortcut row label (Backspace)."
+  },
+  "settings_shortcuts_remove_recipient_note": {
+    "message": "In the recipient dropdown's empty search box.",
+    "description": "Fine print under the 'Remove the last recipient' row."
+  },
+  "settings_shortcuts_group_message": {
+    "message": "Message box",
+    "description": "Group heading on the shortcuts reference: shortcuts inside the message text area."
+  },
+  "settings_shortcuts_find_replace": {
+    "message": "Find and replace",
+    "description": "Shortcut row label."
+  },
+  "settings_shortcuts_style_note": {
+    "message": "While writing a message to encrypt or sign. Uses Unicode letter forms, so it survives any channel.",
+    "description": "Fine print under each text-style row (bold, italic, ...) on the shortcuts reference."
+  },
+  "settings_shortcuts_group_modes": {
+    "message": "Modes",
+    "description": "Group heading on the shortcuts reference: switching between encrypt/decrypt/sign/verify."
+  },
+  "settings_shortcuts_switch_mode": {
+    "message": "Switch to $mode$",
+    "description": "Shortcut row label. $mode$ is a mode name (Encrypt, Decrypt, Sign, Verify)."
+  },
+  "settings_shortcuts_group_global": {
+    "message": "Global browser shortcuts",
+    "description": "Group heading on the shortcuts reference: shortcuts that work anywhere in Chrome."
+  },
+  "settings_shortcuts_open_app": {
+    "message": "Open PGP Tools",
+    "description": "Shortcut row label. 'PGP Tools' is the product name."
+  },
+  "settings_shortcuts_open_in_mode": {
+    "message": "Open in $mode$ mode",
+    "description": "Shortcut row label. $mode$ is a mode name (Encrypt, Decrypt, Sign, Verify)."
+  },
+  "settings_shortcuts_unbound_note": {
+    "message": "Unbound by default (Chrome caps suggested keys at four).",
+    "description": "Fine print under the 'Open in Verify mode' row, which ships without a key."
+  },
+  "settings_shortcuts_global_note": {
+    "message": "These work anywhere in the browser. Rebind any of them at $url$.",
+    "description": "Fine print under the global shortcuts group. $url$ is the chrome://extensions/shortcuts address, shown as plain text."
+  },
+  "settings_preset_title": {
+    "message": "Security preset",
+    "description": "Title of the security preset subpage in Settings."
+  },
+  "settings_preset_apply": {
+    "message": "Apply preset",
+    "description": "Footer button applying the selected security preset."
+  },
+  "settings_preset_applying": {
+    "message": "Applying...",
+    "description": "Busy label while a preset is being applied."
+  },
+  "settings_preset_replace_custom": {
+    "message": "Replace custom settings",
+    "description": "Confirm button when applying a preset over hand-tuned settings."
+  },
+  "settings_preset_apply_delete_history": {
+    "message": "Apply and delete history",
+    "description": "Confirm button when applying a preset that also wipes the saved history."
+  },
+  "settings_preset_keep_custom": {
+    "message": "Keep custom settings",
+    "description": "Cancel button in the confirm step when on custom settings."
+  },
+  "settings_preset_intro": {
+    "message": "Each preset bundles the security settings for one threat model, and its card lists exactly what it sets. Applying one only changes those settings, and you can adjust any of them again afterwards.",
+    "description": "Intro text on the security preset page."
+  },
+  "settings_preset_custom_notice": {
+    "message": "You are on $custom$: a bundled setting was changed, so no preset matches exactly.",
+    "description": "Notice on the security preset page when no preset matches. $custom$ is settings_preset_custom_name, rendered in bold."
+  },
+  "settings_preset_custom_name": {
+    "message": "Custom",
+    "description": "Name of the 'no preset matches' state, inserted in bold into settings_preset_custom_notice."
+  },
+  "settings_preset_confirm_replace": {
+    "message": "Replace your custom settings with the $preset$ preset? Only the settings listed on its card change, and you can adjust any of them again afterwards.",
+    "description": "Confirm text when applying a preset over custom settings. $preset$ is the preset's title, rendered in bold."
+  },
+  "settings_preset_confirm_history": {
+    "message": "This preset turns on never-cache, which also deletes your saved history ($size$). It can't be recovered.",
+    "description": "Confirm text when the preset wipes saved history. $size$ is a formatted byte size such as '12 KB'."
+  },
+  "settings_translation_title": {
+    "message": "Translation",
+    "description": "Title of the translation subpage in Settings."
+  },
+  "settings_translation_enable": {
+    "message": "Translate decrypted messages",
+    "description": "Label and aria-label of the switch that turns on the Translate button under decrypted messages."
+  },
+  "settings_translation_enable_desc": {
+    "message": "Adds a Translate button under a decrypted message. Translation runs on this device using Chrome's built-in model, and nothing is translated until you press the button.",
+    "description": "Description under the 'Translate decrypted messages' switch."
+  },
+  "settings_translation_unsupported": {
+    "message": "Chrome's on-device translation is not available here. It needs a desktop Chrome on Windows 10+, macOS 13+, Linux or a Chromebook Plus, with enough free disk space and memory for the models.",
+    "description": "Shown on the translation page when Chrome's built-in translator is missing. Must keep the phrase 'not available here' (e2e tests match on it)."
+  },
+  "settings_translation_target": {
+    "message": "Translate into",
+    "description": "Label of the target-language picker on the translation page."
+  },
+  "settings_translation_packs": {
+    "message": "Language packs",
+    "description": "Heading of the language pack list on the translation page."
+  },
+  "settings_translation_packs_desc": {
+    "message": "Optional. A missing pack downloads by itself the first time you translate from that language, so you only need this to get ahead of it. Downloading here does buy you one thing: the download no longer happens at the moment you decrypt a message, so its timing reveals nothing about what you just read. Each pack is $size$ and is stored by Chrome, not by this extension.",
+    "description": "Explanation above the language pack list. $size$ is an approximate size phrase such as 'about 25 MB'."
+  },
+  "settings_translation_pack_ready": {
+    "message": "Ready",
+    "description": "Status next to a language whose pack is downloaded."
+  },
+  "settings_translation_pack_progress": {
+    "message": "$percent$%",
+    "description": "Download progress next to a language. $percent$ is a whole number 0-100."
+  },
+  "settings_translation_pack_not_offered": {
+    "message": "Not offered",
+    "description": "Status next to a language Chrome cannot translate to or from the chosen target."
+  },
+  "settings_translation_download_failed": {
+    "message": "Download failed.",
+    "description": "Error next to a language when its pack download failed without a message."
+  },
+  "settings_translation_pack_pair": {
+    "message": "$from$ to $to$",
+    "description": "Names the pack being downloaded, e.g. 'French to English'; inserted after 'Downloading' in the workspace status line. $from$ and $to$ are language names."
+  },
+  "settings_translation_detector": {
+    "message": "language detector",
+    "description": "Names the language-detection model being downloaded; inserted after 'Downloading' in the workspace status line."
+  },
+  "settings_translation_pack_gone": {
+    "message": "The language pack went away. Try again.",
+    "description": "Error under a decrypted message when a pack that was just present is missing."
+  },
+  "settings_translation_failed": {
+    "message": "Translation failed.",
+    "description": "Generic error under a decrypted message when translation threw without a message."
+  },
+  "settings_translation_unavailable_device": {
+    "message": "Translation is not available on this device.",
+    "description": "Error when a pack download is attempted but Chrome has no built-in translator."
+  }
+}

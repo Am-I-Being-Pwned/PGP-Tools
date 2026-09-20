@@ -1,0 +1,302 @@
+{
+  "actions_history": {
+    "message": "Cronologia"
+  },
+  "actions_history_to": {
+    "message": "A $names$"
+  },
+  "actions_history_recipient_with_id": {
+    "message": "$name$ ($id$)"
+  },
+  "actions_history_files_one": {
+    "message": "$count$ file"
+  },
+  "actions_history_files_other": {
+    "message": "$count$ file"
+  },
+  "actions_history_op_signed": {
+    "message": "$op$ + firma"
+  },
+  "actions_history_when": {
+    "message": "$date$ ($relative$)"
+  },
+  "actions_history_file_with_size": {
+    "message": "$name$ ($size$)"
+  },
+  "actions_history_truncated": {
+    "message": "[troncato]"
+  },
+  "actions_history_metadata_only": {
+    "message": "Solo metadati - per questa operazione il contenuto non viene salvato."
+  },
+  "actions_history_clear": {
+    "message": "Cancella cronologia"
+  },
+  "actions_history_search_placeholder": {
+    "message": "Cerca nella cronologia..."
+  },
+  "actions_history_search_label": {
+    "message": "Cerca nella cronologia"
+  },
+  "actions_history_empty": {
+    "message": "Nessuna cronologia"
+  },
+  "actions_history_off_reason": {
+    "message": "La cronologia è disattivata - attivala accanto a Firma"
+  },
+  "actions_history_no_matches": {
+    "message": "Nessun risultato nella cronologia per “$query$”"
+  },
+  "actions_history_open_entry": {
+    "message": "Apri $title$"
+  },
+  "actions_history_no_content": {
+    "message": "Nessun contenuto salvato"
+  },
+  "actions_history_more_matches_one": {
+    "message": "+$count$ altra corrispondenza"
+  },
+  "actions_history_more_matches_other": {
+    "message": "+$count$ altre corrispondenze"
+  },
+  "actions_history_usage": {
+    "message": "$used$ di $budget$ in uso"
+  },
+  "actions_history_delete_all_one": {
+    "message": "Elimina $count$ voce della cronologia"
+  },
+  "actions_history_delete_all_other": {
+    "message": "Elimina tutte le $count$ voci della cronologia"
+  },
+  "actions_history_delete_warning": {
+    "message": "Questa azione elimina definitivamente da questo dispositivo la cronologia cifrata delle tue operazioni. Non può essere recuperata."
+  },
+  "actions_no_keys_available": {
+    "message": "Nessuna chiave disponibile"
+  },
+  "actions_set_up": {
+    "message": "Configura"
+  },
+  "actions_badge_you": {
+    "message": "Tu"
+  },
+  "actions_keys_of_total": {
+    "message": "$active$ di $count$ chiavi"
+  },
+  "actions_keys_count_one": {
+    "message": "$count$ chiave"
+  },
+  "actions_keys_count_other": {
+    "message": "$count$ chiavi"
+  },
+  "actions_remove_recipient": {
+    "message": "Rimuovi $name$"
+  },
+  "actions_remove_recipient_detail": {
+    "message": "Rimuovi $name$ - $detail$"
+  },
+  "actions_add_recipients_placeholder": {
+    "message": "Aggiungi destinatari..."
+  },
+  "actions_recipient_input_hint": {
+    "message": "Backspace rimuove l'ultimo destinatario"
+  },
+  "actions_clear_all_recipients": {
+    "message": "Rimuovi tutti i destinatari"
+  },
+  "actions_toggle_recipient_list": {
+    "message": "Mostra o nascondi l'elenco dei destinatari"
+  },
+  "actions_no_matches": {
+    "message": "Nessuna corrispondenza"
+  },
+  "actions_group_recent": {
+    "message": "Recenti"
+  },
+  "actions_group_contacts": {
+    "message": "Contatti"
+  },
+  "actions_group_my_keys": {
+    "message": "Le mie chiavi"
+  },
+  "actions_select_key_placeholder": {
+    "message": "Seleziona una chiave..."
+  },
+  "actions_search_placeholder": {
+    "message": "Cerca..."
+  },
+  "actions_no_keys_found": {
+    "message": "Nessuna chiave trovata"
+  },
+  "actions_mixed_engine_reason": {
+    "message": "Destinatari PGP e SSH non possono essere combinati in un unico messaggio: OpenPGP e age sono formati diversi. Cifra prima per un gruppo, poi per l'altro."
+  },
+  "actions_ssh_password_reason": {
+    "message": "La password del messaggio è una funzione di OpenPGP e age non ce l'ha, quindi non può essere usata con destinatari SSH. Rimuovi la password, oppure cifra per questa persona senza password."
+  },
+  "actions_palette_label": {
+    "message": "Palette dei comandi"
+  },
+  "actions_palette_placeholder": {
+    "message": "Digita un comando..."
+  },
+  "actions_palette_no_match": {
+    "message": "Nessuna corrispondenza."
+  },
+  "actions_palette_no_commands": {
+    "message": "Nessun comando corrispondente."
+  },
+  "actions_disabled_toast": {
+    "message": "$name$ non è disponibile: $reason$"
+  },
+  "actions_group_mode": {
+    "message": "Modalità"
+  },
+  "actions_group_workspace": {
+    "message": "Area di lavoro"
+  },
+  "actions_group_keys": {
+    "message": "Chiavi"
+  },
+  "actions_group_navigation": {
+    "message": "Navigazione"
+  },
+  "actions_group_settings": {
+    "message": "Impostazioni"
+  },
+  "actions_group_session": {
+    "message": "Sessione"
+  },
+  "actions_group_message": {
+    "message": "Messaggio"
+  },
+  "actions_group_result": {
+    "message": "Risultato"
+  },
+  "actions_no_input_encrypt": {
+    "message": "Niente da cifrare - aggiungi del testo o trascina un file"
+  },
+  "actions_no_input_decrypt": {
+    "message": "Niente da decifrare - incolla un messaggio cifrato o trascina un file"
+  },
+  "actions_no_input_sign": {
+    "message": "Niente da firmare - aggiungi del testo o trascina un file"
+  },
+  "actions_no_input_verify": {
+    "message": "Niente da verificare - incolla un messaggio firmato o trascina un file"
+  },
+  "actions_run_mode": {
+    "message": "Esegui $mode$"
+  },
+  "actions_switch_to_workspace_first": {
+    "message": "Passa prima all'Area di lavoro"
+  },
+  "actions_need_recipient_or_password": {
+    "message": "Seleziona almeno un destinatario o imposta una password"
+  },
+  "actions_copy_output": {
+    "message": "Copia il risultato"
+  },
+  "actions_no_output_to_copy": {
+    "message": "Nessun risultato da copiare per ora"
+  },
+  "actions_download_output": {
+    "message": "Scarica il risultato"
+  },
+  "actions_nothing_to_download": {
+    "message": "Niente da scaricare per ora"
+  },
+  "actions_clear_input": {
+    "message": "Cancella l'input"
+  },
+  "actions_nothing_to_clear": {
+    "message": "Niente da cancellare"
+  },
+  "actions_open_history": {
+    "message": "Apri la cronologia"
+  },
+  "actions_history_off_never_cache": {
+    "message": "La cronologia è disattivata mentre “Non memorizzare mai le chiavi nella cache” è attivo"
+  },
+  "actions_encrypt_to_self_on": {
+    "message": "Attiva: Cifra anche per me"
+  },
+  "actions_encrypt_to_self_off": {
+    "message": "Disattiva: Cifra anche per me"
+  },
+  "actions_sign_when_encrypting_on": {
+    "message": "Attiva: Firma quando cifri"
+  },
+  "actions_sign_when_encrypting_off": {
+    "message": "Disattiva: Firma quando cifri"
+  },
+  "actions_save_to_history_on": {
+    "message": "Attiva: Salva nella cronologia"
+  },
+  "actions_save_to_history_off": {
+    "message": "Disattiva: Salva nella cronologia"
+  },
+  "actions_add_own_key_first": {
+    "message": "Aggiungi prima una tua chiave"
+  },
+  "actions_age_cannot_sign": {
+    "message": "I messaggi age non possono essere firmati"
+  },
+  "actions_generate_key": {
+    "message": "Genera chiave"
+  },
+  "actions_import_key": {
+    "message": "Importa chiave"
+  },
+  "actions_go_to_workspace": {
+    "message": "Vai all'Area di lavoro"
+  },
+  "actions_go_to_keys": {
+    "message": "Vai a Chiavi"
+  },
+  "actions_go_to_settings": {
+    "message": "Vai a Impostazioni"
+  },
+  "actions_open_security_presets": {
+    "message": "Apri i profili di sicurezza"
+  },
+  "actions_lock_now": {
+    "message": "Blocca adesso"
+  },
+  "actions_style_bold": {
+    "message": "Selezione in grassetto"
+  },
+  "actions_style_italic": {
+    "message": "Selezione in corsivo"
+  },
+  "actions_style_strike": {
+    "message": "Selezione barrata"
+  },
+  "actions_style_code": {
+    "message": "Selezione come codice"
+  },
+  "actions_find_replace": {
+    "message": "Trova e sostituisci nel messaggio"
+  },
+  "actions_translate_message": {
+    "message": "Traduci il messaggio..."
+  },
+  "actions_translation_off": {
+    "message": "La traduzione è disattivata nelle Impostazioni"
+  },
+  "actions_nothing_to_translate": {
+    "message": "Niente da tradurre per ora"
+  },
+  "actions_language_last_used": {
+    "message": "$label$ (ultima usata)"
+  },
+  "actions_translate_to_title": {
+    "message": "Traduci il messaggio in"
+  },
+  "actions_pick_language_placeholder": {
+    "message": "Scegli una lingua..."
+  },
+  "actions_translate_result_to": {
+    "message": "Traduci in $language$"
+  }
+}

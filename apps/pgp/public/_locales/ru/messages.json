@@ -1,8 +1,5355 @@
 {
-  "extName": {
-    "message": "Шифрование почты OpenPGP и GPG - Secure Email Encryption, Slack Compatible"
+  "actions_add_own_key_first": {
+    "message": "Сначала добавьте один из своих ключей"
+  },
+  "actions_add_recipients_placeholder": {
+    "message": "Добавить получателей..."
+  },
+  "actions_age_cannot_sign": {
+    "message": "Сообщения age нельзя подписать"
+  },
+  "actions_badge_you": {
+    "message": "Вы"
+  },
+  "actions_clear_all_recipients": {
+    "message": "Убрать всех получателей"
+  },
+  "actions_clear_input": {
+    "message": "Очистить ввод"
+  },
+  "actions_copy_output": {
+    "message": "Копировать результат"
+  },
+  "actions_disabled_toast": {
+    "message": "Команда «$name$» недоступна: $reason$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "reason": {
+        "content": "$2"
+      }
+    }
+  },
+  "actions_download_output": {
+    "message": "Скачать результат"
+  },
+  "actions_encrypt_to_self_off": {
+    "message": "Выключить: Шифровать и для меня"
+  },
+  "actions_encrypt_to_self_on": {
+    "message": "Включить: Шифровать и для меня"
+  },
+  "actions_find_replace": {
+    "message": "Найти и заменить в сообщении"
+  },
+  "actions_generate_key": {
+    "message": "Создать ключ"
+  },
+  "actions_go_to_keys": {
+    "message": "Перейти в Ключи"
+  },
+  "actions_go_to_settings": {
+    "message": "Перейти в Настройки"
+  },
+  "actions_go_to_workspace": {
+    "message": "Перейти в Рабочую область"
+  },
+  "actions_group_contacts": {
+    "message": "Контакты"
+  },
+  "actions_group_keys": {
+    "message": "Ключи"
+  },
+  "actions_group_message": {
+    "message": "Сообщение"
+  },
+  "actions_group_mode": {
+    "message": "Режим"
+  },
+  "actions_group_my_keys": {
+    "message": "Мои ключи"
+  },
+  "actions_group_navigation": {
+    "message": "Навигация"
+  },
+  "actions_group_recent": {
+    "message": "Недавние"
+  },
+  "actions_group_result": {
+    "message": "Результат"
+  },
+  "actions_group_session": {
+    "message": "Сеанс"
+  },
+  "actions_group_settings": {
+    "message": "Настройки"
+  },
+  "actions_group_workspace": {
+    "message": "Рабочая область"
+  },
+  "actions_history": {
+    "message": "История"
+  },
+  "actions_history_clear": {
+    "message": "Очистить историю"
+  },
+  "actions_history_delete_all_few": {
+    "message": "Удалить все $count$ записи истории",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_delete_all_many": {
+    "message": "Удалить все $count$ записей истории",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_delete_all_one": {
+    "message": "Удалить $count$ запись истории",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_delete_all_other": {
+    "message": "Удалить все $count$ записи истории",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_delete_warning": {
+    "message": "Это навсегда удалит вашу зашифрованную историю операций с этого устройства. Восстановить её будет невозможно."
+  },
+  "actions_history_empty": {
+    "message": "История пуста"
+  },
+  "actions_history_file_with_size": {
+    "message": "$name$ ($size$)",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "size": {
+        "content": "$2"
+      }
+    }
+  },
+  "actions_history_files_few": {
+    "message": "$count$ файла",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_files_many": {
+    "message": "$count$ файлов",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_files_one": {
+    "message": "$count$ файл",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_files_other": {
+    "message": "$count$ файла",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_metadata_only": {
+    "message": "Только метаданные - содержимое для этой операции не сохраняется."
+  },
+  "actions_history_more_matches_few": {
+    "message": "+ещё $count$ совпадения",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_more_matches_many": {
+    "message": "+ещё $count$ совпадений",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_more_matches_one": {
+    "message": "+ещё $count$ совпадение",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_more_matches_other": {
+    "message": "+ещё $count$ совпадения",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_no_content": {
+    "message": "Содержимое не сохранено"
+  },
+  "actions_history_no_matches": {
+    "message": "По запросу «$query$» в истории ничего не найдено",
+    "placeholders": {
+      "query": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_off_never_cache": {
+    "message": "История выключена, пока ключи не кешируются"
+  },
+  "actions_history_off_reason": {
+    "message": "История выключена - включите её рядом с «Подписывать при шифровании»"
+  },
+  "actions_history_op_signed": {
+    "message": "$op$ + подпись",
+    "placeholders": {
+      "op": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_open_entry": {
+    "message": "Открыть $title$",
+    "placeholders": {
+      "title": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_recipient_with_id": {
+    "message": "$name$ ($id$)",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "id": {
+        "content": "$2"
+      }
+    }
+  },
+  "actions_history_search_label": {
+    "message": "Поиск по истории"
+  },
+  "actions_history_search_placeholder": {
+    "message": "Поиск по истории..."
+  },
+  "actions_history_to": {
+    "message": "Кому: $names$",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_truncated": {
+    "message": "[обрезано]"
+  },
+  "actions_history_usage": {
+    "message": "Использовано $used$ из $budget$",
+    "placeholders": {
+      "used": {
+        "content": "$1"
+      },
+      "budget": {
+        "content": "$2"
+      }
+    }
+  },
+  "actions_history_when": {
+    "message": "$date$ ($relative$)",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      },
+      "relative": {
+        "content": "$2"
+      }
+    }
+  },
+  "actions_import_key": {
+    "message": "Импортировать ключ"
+  },
+  "actions_keys_count_few": {
+    "message": "$count$ ключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_keys_count_many": {
+    "message": "$count$ ключей",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_keys_count_one": {
+    "message": "$count$ ключ",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_keys_count_other": {
+    "message": "$count$ ключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_keys_of_total": {
+    "message": "$active$ из $count$ ключей",
+    "placeholders": {
+      "active": {
+        "content": "$1"
+      },
+      "count": {
+        "content": "$2"
+      }
+    }
+  },
+  "actions_language_last_used": {
+    "message": "$label$ (последний)",
+    "placeholders": {
+      "label": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_lock_now": {
+    "message": "Заблокировать сейчас"
+  },
+  "actions_mixed_engine_reason": {
+    "message": "Получателей PGP и SSH нельзя объединить в одном сообщении: OpenPGP и age - разные форматы. Зашифруйте сначала для одной группы, затем для другой."
+  },
+  "actions_need_recipient_or_password": {
+    "message": "Выберите хотя бы одного получателя или задайте пароль"
+  },
+  "actions_no_input_decrypt": {
+    "message": "Нечего расшифровывать - вставьте зашифрованное сообщение или перетащите файл"
+  },
+  "actions_no_input_encrypt": {
+    "message": "Нечего шифровать - введите текст или перетащите файл"
+  },
+  "actions_no_input_sign": {
+    "message": "Нечего подписывать - введите текст или перетащите файл"
+  },
+  "actions_no_input_verify": {
+    "message": "Нечего проверять - вставьте подписанное сообщение или перетащите файл"
+  },
+  "actions_no_keys_available": {
+    "message": "Нет доступных ключей"
+  },
+  "actions_no_keys_found": {
+    "message": "Ключи не найдены"
+  },
+  "actions_no_matches": {
+    "message": "Ничего не найдено"
+  },
+  "actions_no_output_to_copy": {
+    "message": "Пока нечего копировать"
+  },
+  "actions_nothing_to_clear": {
+    "message": "Нечего очищать"
+  },
+  "actions_nothing_to_download": {
+    "message": "Пока нечего скачивать"
+  },
+  "actions_nothing_to_translate": {
+    "message": "Пока нечего переводить"
+  },
+  "actions_open_history": {
+    "message": "Открыть историю"
+  },
+  "actions_open_security_presets": {
+    "message": "Открыть профили безопасности"
+  },
+  "actions_palette_label": {
+    "message": "Палитра команд"
+  },
+  "actions_palette_no_commands": {
+    "message": "Подходящих команд нет."
+  },
+  "actions_palette_no_match": {
+    "message": "Совпадений нет."
+  },
+  "actions_palette_placeholder": {
+    "message": "Введите команду..."
+  },
+  "actions_pick_language_placeholder": {
+    "message": "Выберите язык..."
+  },
+  "actions_recipient_input_hint": {
+    "message": "Backspace убирает последнего получателя"
+  },
+  "actions_remove_recipient": {
+    "message": "Убрать $name$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_remove_recipient_detail": {
+    "message": "Убрать $name$ - $detail$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "detail": {
+        "content": "$2"
+      }
+    }
+  },
+  "actions_run_mode": {
+    "message": "Выполнить: $mode$",
+    "placeholders": {
+      "mode": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_save_to_history_off": {
+    "message": "Выключить: Сохранять в историю"
+  },
+  "actions_save_to_history_on": {
+    "message": "Включить: Сохранять в историю"
+  },
+  "actions_search_placeholder": {
+    "message": "Поиск..."
+  },
+  "actions_select_key_placeholder": {
+    "message": "Выберите ключ..."
+  },
+  "actions_set_up": {
+    "message": "Настроить"
+  },
+  "actions_sign_when_encrypting_off": {
+    "message": "Выключить: Подписывать при шифровании"
+  },
+  "actions_sign_when_encrypting_on": {
+    "message": "Включить: Подписывать при шифровании"
+  },
+  "actions_ssh_password_reason": {
+    "message": "Пароль сообщения - это функция OpenPGP, а в age её нет, поэтому получателей SSH нельзя использовать вместе с ним. Уберите пароль или зашифруйте сообщение для этого человека без него."
+  },
+  "actions_style_bold": {
+    "message": "Выделить жирным"
+  },
+  "actions_style_code": {
+    "message": "Оформить выделенное как код"
+  },
+  "actions_style_italic": {
+    "message": "Выделить курсивом"
+  },
+  "actions_style_strike": {
+    "message": "Зачеркнуть выделенное"
+  },
+  "actions_switch_to_workspace_first": {
+    "message": "Сначала перейдите в Рабочую область"
+  },
+  "actions_toggle_recipient_list": {
+    "message": "Показать или скрыть список получателей"
+  },
+  "actions_translate_message": {
+    "message": "Перевести сообщение..."
+  },
+  "actions_translate_result_to": {
+    "message": "Перевести на $language$",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_translate_to_title": {
+    "message": "Перевести сообщение на"
+  },
+  "actions_translation_off": {
+    "message": "Перевод выключен в Настройках"
+  },
+  "app_action_title": {
+    "message": "PGP Tools"
+  },
+  "app_cmd_open": {
+    "message": "Открыть PGP Tools"
+  },
+  "app_cmd_open_decrypt": {
+    "message": "Открыть PGP Tools в режиме расшифровки"
+  },
+  "app_cmd_open_encrypt": {
+    "message": "Открыть PGP Tools в режиме шифрования"
+  },
+  "app_cmd_open_sign": {
+    "message": "Открыть PGP Tools в режиме подписи"
+  },
+  "app_cmd_open_verify": {
+    "message": "Открыть PGP Tools в режиме проверки"
+  },
+  "app_copied": {
+    "message": "Скопировано: $label$",
+    "placeholders": {
+      "label": {
+        "content": "$1"
+      }
+    }
+  },
+  "app_copied_wipe": {
+    "message": "Скопировано: $label$ - буфер обмена очистится через $seconds$ с",
+    "placeholders": {
+      "label": {
+        "content": "$1"
+      },
+      "seconds": {
+        "content": "$2"
+      }
+    }
+  },
+  "app_copy_failed": {
+    "message": "Не удалось скопировать - сначала нажмите на панель расширения, затем повторите попытку."
+  },
+  "app_error_corrupted": {
+    "message": "Данные повреждены или обрезаны. Получите полную свежую копию и повторите попытку."
+  },
+  "app_error_crx_unsigned": {
+    "message": "Подпись CRX не совпадает: файл подписан не этим ключом или был изменён после подписания. Получите новую копию у издателя."
+  },
+  "app_error_key_expired": {
+    "message": "Срок действия одного из ключей, участвующих в операции, истёк. Попросите владельца ключа прислать обновлённый ключ и импортируйте его."
+  },
+  "app_error_key_locked": {
+    "message": "Этот ключ заблокирован. Разблокируйте его и повторите попытку."
+  },
+  "app_error_key_not_found": {
+    "message": "Этого ключа больше нет в вашей связке ключей, поэтому ничего не сохранено. Импортируйте ключ заново и повторите попытку."
+  },
+  "app_error_key_revoked": {
+    "message": "Один из ключей, участвующих в операции, отозван владельцем. Получите у него новый ключ и импортируйте его."
+  },
+  "app_error_no_decryption_key": {
+    "message": "Это сообщение зашифровано для ключа, которого у вас нет. Импортируйте этот закрытый ключ или попросите отправителя зашифровать сообщение для одного из ваших ключей."
+  },
+  "app_error_no_decryption_key_with_id": {
+    "message": "Это сообщение зашифровано для ключа, которого у вас нет (идентификатор ключа $key_id$). Импортируйте этот закрытый ключ или попросите отправителя зашифровать сообщение для одного из ваших ключей.",
+    "placeholders": {
+      "key_id": {
+        "content": "$1"
+      }
+    }
+  },
+  "app_error_not_crx": {
+    "message": "Это не пакет расширения Chrome, который может проверить этот инструмент. Выберите файл CRX3 (.crx)."
+  },
+  "app_error_not_pgp_data": {
+    "message": "Это не похоже на данные PGP. Убедитесь, что вставили весь блок ASCII-armor целиком, включая строки BEGIN и END."
+  },
+  "app_error_ocb_unsupported": {
+    "message": "Это сообщение использует устаревший формат AEAD (OCB), который приложение не может прочитать. Попросите отправителя отправить его заново, зашифровав обычным способом - подойдёт любой пароль, не поддерживается именно формат."
+  },
+  "app_error_passkey_dismissed": {
+    "message": "Запрос ключа доступа был закрыт. Запустите операцию снова, когда будете готовы."
+  },
+  "app_error_passkey_failed": {
+    "message": "Проверка ключа доступа не завершилась. Повторите попытку или разблокируйте другим способом."
+  },
+  "app_error_password_required": {
+    "message": "Для этого ключа нужен пароль. Введите пароль ключа, чтобы разблокировать его."
+  },
+  "app_error_remedy_check_key": {
+    "message": "Проверить ключ"
+  },
+  "app_error_remedy_import_key": {
+    "message": "Импортировать ключ"
+  },
+  "app_error_remedy_try_again": {
+    "message": "Повторить"
+  },
+  "app_error_storage_full": {
+    "message": "Хранилище браузера заполнено, поэтому сохранить не удалось. Удалите ненужные ключи или контакты и повторите попытку."
+  },
+  "app_error_symmetric_wrong_password": {
+    "message": "Этот пароль не открыл сообщение. Проверьте его и повторите попытку - если вы уверены, что пароль верный, сообщение может быть повреждено."
+  },
+  "app_error_tampered": {
+    "message": "Проверка подписи не пройдена - сообщение могло быть изменено. Не доверяйте его содержимому; попросите отправителя отправить его заново."
+  },
+  "app_error_vault_locked": {
+    "message": "Ваше хранилище заблокировано, поэтому ничего не изменено. Разблокируйте его и повторите операцию."
+  },
+  "app_error_weak_algorithm": {
+    "message": "Этот ключ использует алгоритм подписи, который больше не считается безопасным. Попросите владельца ключа перевыпустить его с SHA-256 или более стойким алгоритмом."
+  },
+  "app_error_weak_password": {
+    "message": "Этот пароль слишком короткий. Используйте не менее 8 символов."
+  },
+  "app_error_wrong_password": {
+    "message": "Неверный пароль для этого ключа. Проверьте его и повторите попытку."
+  },
+  "app_import_added_few": {
+    "message": "Добавлено $count$ ключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "app_import_added_many": {
+    "message": "Добавлено $count$ ключей",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "app_import_added_one": {
+    "message": "Ключ добавлен"
+  },
+  "app_import_added_other": {
+    "message": "Добавлено $count$ ключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "app_import_view_key_few": {
+    "message": "Показать ключи"
+  },
+  "app_import_view_key_many": {
+    "message": "Показать ключи"
+  },
+  "app_import_view_key_one": {
+    "message": "Показать ключ"
+  },
+  "app_import_view_key_other": {
+    "message": "Показать ключи"
+  },
+  "app_menu_open_in_pgp_tools": {
+    "message": "Открыть в PGP Tools"
+  },
+  "app_nav_label": {
+    "message": "Основная навигация"
+  },
+  "app_onboarding_advanced_options": {
+    "message": "Дополнительные параметры"
+  },
+  "app_onboarding_algo_ecc_hint": {
+    "message": "Современные, быстрые, компактные ключи. Рекомендуется для большинства случаев."
+  },
+  "app_onboarding_algo_rsa_hint": {
+    "message": "Широкая совместимость. Ключ создаётся медленнее."
+  },
+  "app_onboarding_algorithm_label": {
+    "message": "Алгоритм"
+  },
+  "app_onboarding_comment_label": {
+    "message": "Комментарий"
+  },
+  "app_onboarding_comment_placeholder": {
+    "message": "например, рабочий, личный"
+  },
+  "app_onboarding_create_key": {
+    "message": "Создать мой PGP-ключ"
+  },
+  "app_onboarding_create_passkey": {
+    "message": "Создать ключ доступа"
+  },
+  "app_onboarding_email_label": {
+    "message": "Эл. почта"
+  },
+  "app_onboarding_email_placeholder": {
+    "message": "you@example.com"
+  },
+  "app_onboarding_expiry_label": {
+    "message": "Срок действия ключа"
+  },
+  "app_onboarding_expiry_never": {
+    "message": "Бессрочно"
+  },
+  "app_onboarding_expiry_years_few": {
+    "message": "$count$ года",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "app_onboarding_expiry_years_many": {
+    "message": "$count$ лет",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "app_onboarding_expiry_years_one": {
+    "message": "$count$ год",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "app_onboarding_expiry_years_other": {
+    "message": "$count$ года",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "app_onboarding_generate_failed": {
+    "message": "Не удалось создать ключ"
+  },
+  "app_onboarding_generating": {
+    "message": "Создание ключа..."
+  },
+  "app_onboarding_identity_body": {
+    "message": "Создайте пару ключей для шифрования, расшифровки и подписи сообщений."
+  },
+  "app_onboarding_identity_title": {
+    "message": "Создайте свой PGP-ключ"
+  },
+  "app_onboarding_intro_body": {
+    "message": "Отправляйте личные сообщения, которые сможет прочитать только нужный человек, и проверяйте, действительно ли сообщение пришло от заявленного отправителя."
+  },
+  "app_onboarding_keep_defaults": {
+    "message": "Оставить настройки по умолчанию"
+  },
+  "app_onboarding_name_label": {
+    "message": "Имя *"
+  },
+  "app_onboarding_name_placeholder": {
+    "message": "Ваше полное имя"
+  },
+  "app_onboarding_name_required": {
+    "message": "Укажите имя."
+  },
+  "app_onboarding_next": {
+    "message": "Далее"
+  },
+  "app_onboarding_optional": {
+    "message": "необязательно"
+  },
+  "app_onboarding_passkey_prompt": {
+    "message": "Следуйте запросу браузера о ключе доступа..."
+  },
+  "app_onboarding_preset_body": {
+    "message": "Насколько осторожно PGP Tools должен обращаться с вашими ключами? Каждый вариант показывает, что именно он задаёт, и всё это можно позже изменить в Настройках."
+  },
+  "app_onboarding_preset_title": {
+    "message": "Выберите профиль безопасности"
+  },
+  "app_onboarding_prf_unsupported": {
+    "message": "Ваш аутентификатор не поддерживает PRF. Попробуйте другой ключ доступа или используйте пароль."
+  },
+  "app_onboarding_protection_body": {
+    "message": "Выберите, как защитить контакты и ключи. Это потребуется при каждом открытии PGP Tools."
+  },
+  "app_onboarding_protection_title": {
+    "message": "Защитите свои данные"
+  },
+  "app_onboarding_rsa_slow": {
+    "message": "Создание RSA-ключа занимает некоторое время"
+  },
+  "app_onboarding_set_password": {
+    "message": "Задать пароль"
+  },
+  "app_onboarding_setup_failed": {
+    "message": "Не удалось выполнить настройку"
+  },
+  "app_onboarding_skip": {
+    "message": "Настрою позже"
+  },
+  "app_onboarding_storage_question": {
+    "message": "Где хранить ваши данные?"
+  },
+  "app_onboarding_unlock_with_vault": {
+    "message": "Разблокировать ключи вместе с хранилищем"
+  },
+  "app_onboarding_unlock_with_vault_hint": {
+    "message": "Запрос ключа доступа, открывающий хранилище, разблокирует и ваши ключи. Отдельного запроса на каждый ключ не будет. Это можно изменить в Настройках."
+  },
+  "app_onboarding_use_preset": {
+    "message": "Использовать этот профиль"
+  },
+  "app_oversized_files_few": {
+    "message": "$files$: файлы больше $limit$, и их нельзя обработать в панели.",
+    "placeholders": {
+      "files": {
+        "content": "$1"
+      },
+      "limit": {
+        "content": "$2"
+      }
+    }
+  },
+  "app_oversized_files_many": {
+    "message": "$files$: файлы больше $limit$, и их нельзя обработать в панели.",
+    "placeholders": {
+      "files": {
+        "content": "$1"
+      },
+      "limit": {
+        "content": "$2"
+      }
+    }
+  },
+  "app_oversized_files_one": {
+    "message": "$files$: файл больше $limit$, и его нельзя обработать в панели.",
+    "placeholders": {
+      "files": {
+        "content": "$1"
+      },
+      "limit": {
+        "content": "$2"
+      }
+    }
+  },
+  "app_oversized_files_other": {
+    "message": "$files$: файлы больше $limit$, и их нельзя обработать в панели.",
+    "placeholders": {
+      "files": {
+        "content": "$1"
+      },
+      "limit": {
+        "content": "$2"
+      }
+    }
+  },
+  "app_oversized_more": {
+    "message": "$names$ и ещё $count$",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      },
+      "count": {
+        "content": "$2"
+      }
+    }
+  },
+  "app_tab_main": {
+    "message": "Главная"
+  },
+  "app_vault_lock_retry": {
+    "message": "Заблокировать и повторить"
+  },
+  "app_vault_unreadable_body": {
+    "message": "Ваши ключи по-прежнему хранятся на этом устройстве. Для начала заблокируйте хранилище и попробуйте снова."
+  },
+  "app_vault_unreadable_body_passkey": {
+    "message": "Ваши ключи по-прежнему хранятся на этом устройстве. Для начала заблокируйте хранилище и попробуйте снова - убедитесь, что используете тот же ключ доступа, который настроили."
+  },
+  "app_vault_unreadable_title": {
+    "message": "Не удалось прочитать хранилище."
+  },
+  "app_welcome_body": {
+    "message": "Нажмите кнопку ниже, чтобы открыть боковую панель и завершить настройку ключей. Затем её можно будет открыть в любой момент через значок PGP Tools на панели инструментов."
+  },
+  "app_welcome_credit_after": {
+    "message": "."
+  },
+  "app_welcome_credit_before": {
+    "message": "Инструмент для защиты приватности от"
+  },
+  "app_welcome_open_failed": {
+    "message": "Не удалось открыть боковую панель. Нажмите значок PGP Tools на панели инструментов."
+  },
+  "app_welcome_opened": {
+    "message": "Следуйте инструкциям в боковой панели, чтобы начать"
+  },
+  "app_welcome_start": {
+    "message": "Нажмите здесь, чтобы начать"
+  },
+  "app_welcome_title": {
+    "message": "PGP Tools установлен"
+  },
+  "common_back": {
+    "message": "Назад"
+  },
+  "common_cancel": {
+    "message": "Отмена"
+  },
+  "common_continue": {
+    "message": "Продолжить"
+  },
+  "common_copied": {
+    "message": "Скопировано"
+  },
+  "common_copy": {
+    "message": "Копировать"
+  },
+  "common_decrypt": {
+    "message": "Расшифровать"
+  },
+  "common_delete": {
+    "message": "Удалить"
+  },
+  "common_done": {
+    "message": "Готово"
+  },
+  "common_download": {
+    "message": "Скачать"
+  },
+  "common_encrypt": {
+    "message": "Зашифровать"
+  },
+  "common_keys": {
+    "message": "Ключи"
+  },
+  "common_lock": {
+    "message": "Заблокировать"
+  },
+  "common_off": {
+    "message": "Выкл."
+  },
+  "common_on": {
+    "message": "Вкл."
+  },
+  "common_private_key": {
+    "message": "Закрытый ключ"
+  },
+  "common_public_key": {
+    "message": "Открытый ключ"
+  },
+  "common_remove": {
+    "message": "Убрать"
+  },
+  "common_save": {
+    "message": "Сохранить"
+  },
+  "common_settings": {
+    "message": "Настройки"
+  },
+  "common_sign": {
+    "message": "Подписать"
+  },
+  "common_unlock": {
+    "message": "Разблокировать"
+  },
+  "common_verify": {
+    "message": "Проверить"
   },
   "extDescription": {
     "message": "Шифруйте, расшифровывайте, подписывайте и проверяйте сообщения с помощью OpenPGP и GPG."
+  },
+  "extName": {
+    "message": "Шифрование почты OpenPGP и GPG - Secure Email Encryption, Slack Compatible"
+  },
+  "import_action_import_contact": {
+    "message": "Импортировать контакт"
+  },
+  "import_action_replace_stored": {
+    "message": "Заменить сохранённый ключ"
+  },
+  "import_action_update_contact": {
+    "message": "Обновить контакт"
+  },
+  "import_added_contacts_few": {
+    "message": "Добавлено $count$ контакта",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_added_contacts_many": {
+    "message": "Добавлено $count$ контактов",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_added_contacts_one": {
+    "message": "Добавлен $count$ контакт",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_added_contacts_other": {
+    "message": "Добавлено $count$ контакта",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_as_one_contact": {
+    "message": "Импортировать как один контакт"
+  },
+  "import_browse": {
+    "message": "Выбрать файл ключа"
+  },
+  "import_change_keys_added_few": {
+    "message": "$count$ ключа добавлено",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_keys_added_many": {
+    "message": "$count$ ключей добавлено",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_keys_added_one": {
+    "message": "$count$ ключ добавлен",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_keys_added_other": {
+    "message": "$count$ ключа добавлено",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_keys_removed_few": {
+    "message": "$count$ ключа удалено",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_keys_removed_many": {
+    "message": "$count$ ключей удалено",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_keys_removed_one": {
+    "message": "$count$ ключ удалён",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_keys_removed_other": {
+    "message": "$count$ ключа удалено",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_new_expiry": {
+    "message": "новый срок действия: до $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_new_subkeys_few": {
+    "message": "$count$ новых подключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_new_subkeys_many": {
+    "message": "$count$ новых подключей",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_new_subkeys_one": {
+    "message": "$count$ новый подключ",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_new_subkeys_other": {
+    "message": "$count$ новых подключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_new_user_ids_few": {
+    "message": "$count$ новых идентификатора пользователя",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_new_user_ids_many": {
+    "message": "$count$ новых идентификаторов пользователя",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_new_user_ids_one": {
+    "message": "$count$ новый идентификатор пользователя",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_new_user_ids_other": {
+    "message": "$count$ новых идентификатора пользователя",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_no_expiry": {
+    "message": "больше не истекает"
+  },
+  "import_change_reissued": {
+    "message": "Ключ был перевыпущен"
+  },
+  "import_chip_crx": {
+    "message": "Ключ расширения"
+  },
+  "import_chip_crx_title": {
+    "message": "RSA-ключ для подписи расширения Chrome (.crx)"
+  },
+  "import_chip_pgp_private_title": {
+    "message": "Содержит секретный ключевой материал - далее вы его защитите"
+  },
+  "import_chip_pgp_public_title": {
+    "message": "Чужой ключ - импортируется как контакт"
+  },
+  "import_chip_ssh_private": {
+    "message": "SSH-ключ"
+  },
+  "import_chip_ssh_private_title": {
+    "message": "Закрытый ключ OpenSSH - далее вы его защитите"
+  },
+  "import_chip_ssh_public": {
+    "message": "Открытый SSH-ключ"
+  },
+  "import_chip_ssh_public_title": {
+    "message": "Чужой SSH-ключ - импортируется как получатель age"
+  },
+  "import_crx_headline": {
+    "message": "Ключ подписи расширения Chrome"
+  },
+  "import_crx_note": {
+    "message": "RSA-ключ для подписи расширения Chrome (.crx). Идентификатор расширения вычисляется из самого ключа при импорте."
+  },
+  "import_default_pgp_name": {
+    "message": "Импортированный PGP-ключ"
+  },
+  "import_default_ssh_name": {
+    "message": "Импортированный SSH-ключ"
+  },
+  "import_drop_here": {
+    "message": "Перетащите файл ключа сюда"
+  },
+  "import_dropzone_browse": {
+    "message": "Выбрать файлы"
+  },
+  "import_dropzone_text": {
+    "message": "Перетащите, вставьте или выберите открытые ключи"
+  },
+  "import_enter_passphrase": {
+    "message": "Введите парольную фразу ключа."
+  },
+  "import_failed": {
+    "message": "Не удалось импортировать"
+  },
+  "import_flagged_toast_few": {
+    "message": "$count$ ключа используют слабую криптографию (SHA-1) и помечены - см. предупреждение на контакте.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_flagged_toast_many": {
+    "message": "$count$ ключей используют слабую криптографию (SHA-1) и помечены - см. предупреждение на контакте.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_flagged_toast_one": {
+    "message": "$count$ ключ использует слабую криптографию (SHA-1) и помечен - см. предупреждение на контакте.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_flagged_toast_other": {
+    "message": "$count$ ключа используют слабую криптографию (SHA-1) и помечены - см. предупреждение на контакте.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_fetched_note": {
+    "message": "Получено с github.com/$user$.keys. Сообщения шифруются для каждого ключа из списка выше, поэтому прочитать их сможет любое из устройств этого человека.",
+    "placeholders": {
+      "user": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_invalid_username": {
+    "message": "Это не имя пользователя GitHub. Используйте имя аккаунта из URL профиля, например «octocat» для github.com/octocat."
+  },
+  "import_github_no_keys": {
+    "message": "У пользователя $username$ нет опубликованных SSH-ключей на GitHub. Попросите его добавить ключ на github.com/settings/keys или вставьте ключ сюда.",
+    "placeholders": {
+      "username": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_none_usable": {
+    "message": "Ни один из опубликованных ключей нельзя использовать для шифрования."
+  },
+  "import_github_not_found": {
+    "message": "Аккаунта GitHub с именем «$username$» не существует. Проверьте написание - нужно имя из URL профиля.",
+    "placeholders": {
+      "username": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_offline": {
+    "message": "Не удалось связаться с github.com. Проверьте подключение и повторите попытку."
+  },
+  "import_github_omitted_line_few": {
+    "message": "+ещё $count$ опубликованных ключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_omitted_line_many": {
+    "message": "+ещё $count$ опубликованных ключей",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_omitted_line_one": {
+    "message": "+ещё $count$ опубликованный ключ",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_omitted_line_other": {
+    "message": "+ещё $count$ опубликованных ключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_omitted_reason": {
+    "message": "Этот импорт берёт не более $max$ ключей на аккаунт и пропускает отдельные ключи неправдоподобной длины. $count$ из опубликованных ключей пользователя $username$ не были получены - при необходимости вставьте нужный ключ сюда.",
+    "placeholders": {
+      "max": {
+        "content": "$1"
+      },
+      "count": {
+        "content": "$2"
+      },
+      "username": {
+        "content": "$3"
+      }
+    }
+  },
+  "import_github_rate_limited": {
+    "message": "GitHub ограничивает число запросов из этой сети. Лимит считается по IP-адресу, поэтому его могут исчерпать другие люди на том же подключении."
+  },
+  "import_github_rejected_heading_few": {
+    "message": "$count$ опубликованных ключа нельзя использовать",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_rejected_heading_many": {
+    "message": "$count$ опубликованных ключей нельзя использовать",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_rejected_heading_one": {
+    "message": "$count$ опубликованный ключ нельзя использовать",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_rejected_heading_other": {
+    "message": "$count$ опубликованных ключа нельзя использовать",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_server_error": {
+    "message": "GitHub сейчас не отвечает. Повторите попытку чуть позже."
+  },
+  "import_group_help_few": {
+    "message": "У этих ключей разные имена, поэтому они импортируются как $count$ отдельных контакта. Укажите здесь имя, чтобы объединить их как одного человека - тогда сообщения будут шифроваться для всех этих ключей, и прочитать их сможет любое из устройств этого человека.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_group_help_many": {
+    "message": "У этих ключей разные имена, поэтому они импортируются как $count$ отдельных контактов. Укажите здесь имя, чтобы объединить их как одного человека - тогда сообщения будут шифроваться для всех этих ключей, и прочитать их сможет любое из устройств этого человека.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_group_help_one": {
+    "message": "У этих ключей разные имена, поэтому они импортируются как $count$ отдельный контакт. Укажите здесь имя, чтобы объединить их как одного человека - тогда сообщения будут шифроваться для всех этих ключей, и прочитать их сможет любое из устройств этого человека.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_group_help_other": {
+    "message": "У этих ключей разные имена, поэтому они импортируются как $count$ отдельных контакта. Укажите здесь имя, чтобы объединить их как одного человека - тогда сообщения будут шифроваться для всех этих ключей, и прочитать их сможет любое из устройств этого человека.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_group_keys_chip_few": {
+    "message": "$count$ ключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_group_keys_chip_many": {
+    "message": "$count$ ключей",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_group_keys_chip_one": {
+    "message": "$count$ ключ",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_group_keys_chip_other": {
+    "message": "$count$ ключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_group_keys_chip_title": {
+    "message": "Сообщения шифруются для всех этих ключей; расшифровать может любой из них"
+  },
+  "import_group_label": {
+    "message": "Объединить в один контакт"
+  },
+  "import_group_placeholder": {
+    "message": "например, Алиса (все устройства)"
+  },
+  "import_group_proposal_label_few": {
+    "message": "$count$ SSH-ключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_group_proposal_label_many": {
+    "message": "$count$ SSH-ключей",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_group_proposal_label_one": {
+    "message": "$count$ SSH-ключ",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_group_proposal_label_other": {
+    "message": "$count$ SSH-ключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_importing": {
+    "message": "Импорт..."
+  },
+  "import_keyserver_invalid_query": {
+    "message": "Это не адрес эл. почты и не отпечаток ключа. Используйте адрес, под которым опубликован ключ, или вставьте полный 40-символьный отпечаток."
+  },
+  "import_keyserver_multiple_keys": {
+    "message": "$host$ вернул несколько ключей по этому запросу. Показан только первый - проверьте отпечаток перед импортом.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_keyserver_not_a_key": {
+    "message": "$host$ ответил, но прислал не ключ, который можно прочитать.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_keyserver_not_found_email": {
+    "message": "На $host$ нет ключа для $subject$. Адрес публикуется только после подтверждения владельцем ключа, поэтому ключ там может быть, но этот поиск его не найдёт - попросите ключ напрямую или найдите его по отпечатку.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "subject": {
+        "content": "$2"
+      }
+    }
+  },
+  "import_keyserver_not_found_fingerprint": {
+    "message": "На $host$ нет ключа с отпечатком $subject$. Сверьте его с тем, который вам дали - достаточно одного неверного символа.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "subject": {
+        "content": "$2"
+      }
+    }
+  },
+  "import_keyserver_offline": {
+    "message": "Не удалось связаться с $host$. Проверьте подключение и повторите попытку.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_keyserver_rate_limited": {
+    "message": "$host$ ограничивает число запросов из этой сети.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_keyserver_server_error": {
+    "message": "$host$ сейчас не отвечает. Повторите попытку чуть позже.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_label_field": {
+    "message": "Метка"
+  },
+  "import_label_placeholder": {
+    "message": "например, Моё расширение"
+  },
+  "import_lookup_button": {
+    "message": "Найти"
+  },
+  "import_lookup_failed": {
+    "message": "Не удалось выполнить поиск"
+  },
+  "import_lookup_invalid": {
+    "message": "Это не имя пользователя GitHub, не адрес эл. почты и не отпечаток ключа. Попробуйте «octocat», «alice@example.com» или полный 40-символьный отпечаток."
+  },
+  "import_lookup_label": {
+    "message": "Или найдите кого-нибудь"
+  },
+  "import_lookup_placeholder": {
+    "message": "Имя пользователя GitHub, эл. почта или отпечаток"
+  },
+  "import_n_contacts_few": {
+    "message": "Импортировать $count$ контакта",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_n_contacts_many": {
+    "message": "Импортировать $count$ контактов",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_n_contacts_one": {
+    "message": "Импортировать $count$ контакт",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_n_contacts_other": {
+    "message": "Импортировать $count$ контакта",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_no_key": {
+    "message": "Нет ключа для импорта."
+  },
+  "import_optional": {
+    "message": "необязательно"
+  },
+  "import_panel_aria_with_id": {
+    "message": "Импорт $keyid$",
+    "placeholders": {
+      "keyid": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_passphrase_label": {
+    "message": "Этот ключ защищён парольной фразой"
+  },
+  "import_passphrase_placeholder": {
+    "message": "Парольная фраза ключа"
+  },
+  "import_paste_hint": {
+    "message": "Вставьте весь блок ключа целиком - ключ слишком длинный, чтобы набирать его вручную."
+  },
+  "import_paste_label": {
+    "message": "Вставьте ключ"
+  },
+  "import_paste_placeholder": {
+    "message": "Вставьте ключ с помощью $shortcut$",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_private_unreadable": {
+    "message": "Не удалось прочитать этот закрытый ключ."
+  },
+  "import_reading": {
+    "message": "Чтение ключа..."
+  },
+  "import_reject_expired": {
+    "message": "Срок действия этого ключа истёк $date$. Попросите владельца прислать актуальный ключ.",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_reject_no_public_key": {
+    "message": "В этом блоке нет пригодного открытого ключа."
+  },
+  "import_reject_ssh_generic": {
+    "message": "Этот SSH-ключ нельзя использовать для шифрования."
+  },
+  "import_reject_unusable": {
+    "message": "У этого открытого ключа нет пригодного ключа для шифрования или подписи."
+  },
+  "import_rejected_generic": {
+    "message": "Этот ключ нельзя импортировать."
+  },
+  "import_retry_hours_few": {
+    "message": "Повторите попытку примерно через $count$ часа.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_retry_hours_many": {
+    "message": "Повторите попытку примерно через $count$ часов.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_retry_hours_one": {
+    "message": "Повторите попытку примерно через $count$ час.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_retry_hours_other": {
+    "message": "Повторите попытку примерно через $count$ часа.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_retry_minute": {
+    "message": "Повторите попытку через минуту."
+  },
+  "import_retry_minutes_few": {
+    "message": "Повторите попытку примерно через $count$ минуты.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_retry_minutes_many": {
+    "message": "Повторите попытку примерно через $count$ минут.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_retry_minutes_one": {
+    "message": "Повторите попытку примерно через $count$ минуту.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_retry_minutes_other": {
+    "message": "Повторите попытку примерно через $count$ минуты.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_reveal": {
+    "message": "Показать в ваших ключах"
+  },
+  "import_source_help": {
+    "message": "Открытые ключи добавляются как контакты. Закрытый ключ остаётся на этом устройстве - на следующем шаге вы выберете, как его защитить."
+  },
+  "import_ssh_headline": {
+    "message": "SSH-ключ"
+  },
+  "import_ssh_private_headline": {
+    "message": "Закрытый SSH-ключ"
+  },
+  "import_ssh_private_note": {
+    "message": "Закрытый ключ OpenSSH, используемый с age. Его отпечаток считывается из самого ключа при импорте. Он не может подписывать - в age нет подписей - и не может быть экспортирован в открытом виде."
+  },
+  "import_status_added_on": {
+    "message": "Добавлен $date$.",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_status_duplicate": {
+    "message": "Уже есть в ваших ключах"
+  },
+  "import_status_duplicate_added": {
+    "message": "Вы добавили его $date$, и с тех пор он не менялся.",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_status_update": {
+    "message": "Обновляет ключ, который у вас уже есть"
+  },
+  "import_submit": {
+    "message": "Импортировать"
+  },
+  "import_title": {
+    "message": "Импорт ключа"
+  },
+  "import_title_update": {
+    "message": "Обновление ключа"
+  },
+  "import_unknown_name": {
+    "message": "Неизвестно"
+  },
+  "import_unreadable": {
+    "message": "Это не похоже на ключ, который можно прочитать. Вставьте PGP-ключ в формате ASCII-armor или строку открытого SSH-ключа либо выберите файл ключа."
+  },
+  "import_updated_contacts_few": {
+    "message": "Обновлено $count$ контакта",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_updated_contacts_many": {
+    "message": "Обновлено $count$ контактов",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_updated_contacts_one": {
+    "message": "Обновлён $count$ контакт",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_updated_contacts_other": {
+    "message": "Обновлено $count$ контакта",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_worker_unreachable": {
+    "message": "Не удалось связаться с фоновым процессом расширения."
+  },
+  "keygen_advanced_options": {
+    "message": "Дополнительные параметры"
+  },
+  "keygen_algorithm_hint_ecc": {
+    "message": "Современные, быстрые, компактные ключи. Рекомендуется для большинства случаев."
+  },
+  "keygen_algorithm_hint_rsa": {
+    "message": "Широкая совместимость. Ключ создаётся медленнее."
+  },
+  "keygen_algorithm_label": {
+    "message": "Алгоритм"
+  },
+  "keygen_comment_label": {
+    "message": "Комментарий"
+  },
+  "keygen_comment_placeholder": {
+    "message": "например, рабочий, личный"
+  },
+  "keygen_confirm_passphrase_placeholder": {
+    "message": "Подтвердите парольную фразу"
+  },
+  "keygen_confirm_password": {
+    "message": "Подтвердите пароль"
+  },
+  "keygen_confirm_word": {
+    "message": "ЭКСПОРТ"
+  },
+  "keygen_copied_encrypted": {
+    "message": "Зашифрованный ключ скопирован (очистится через 60 с)"
+  },
+  "keygen_copied_plaintext": {
+    "message": "Незащищённый ключ скопирован (очистится через 30 с)"
+  },
+  "keygen_create_heading": {
+    "message": "Создание нового ключа"
+  },
+  "keygen_create_subtitle_crx": {
+    "message": "Новый ключ подписи RSA-2048 для упаковки расширения Chrome (.crx)."
+  },
+  "keygen_create_subtitle_pgp": {
+    "message": "Новая пара ключей OpenPGP для шифрования, расшифровки и подписи сообщений."
+  },
+  "keygen_email_label": {
+    "message": "Эл. почта"
+  },
+  "keygen_email_placeholder": {
+    "message": "you@example.com"
+  },
+  "keygen_encrypting": {
+    "message": "Шифрование..."
+  },
+  "keygen_error_expiry_past": {
+    "message": "Дата окончания срока действия должна быть в будущем."
+  },
+  "keygen_error_expiry_required": {
+    "message": "Выберите дату окончания срока действия."
+  },
+  "keygen_error_generation_failed": {
+    "message": "Не удалось создать ключ"
+  },
+  "keygen_error_key_not_unlocked": {
+    "message": "Ключ не разблокирован."
+  },
+  "keygen_error_name_required": {
+    "message": "Укажите имя."
+  },
+  "keygen_error_passkey_failed": {
+    "message": "Не удалось пройти проверку ключа доступа."
+  },
+  "keygen_error_passphrase_mismatch": {
+    "message": "Парольные фразы не совпадают."
+  },
+  "keygen_error_passphrase_short": {
+    "message": "Парольная фраза должна содержать не менее 8 символов."
+  },
+  "keygen_error_password_mismatch": {
+    "message": "Пароли не совпадают."
+  },
+  "keygen_error_password_short": {
+    "message": "Пароль должен содержать не менее 8 символов."
+  },
+  "keygen_error_prf_unsupported_authenticator": {
+    "message": "Ваш аутентификатор не поддерживает PRF. Попробуйте другой ключ доступа или используйте пароль."
+  },
+  "keygen_error_wrong_password": {
+    "message": "Неверный пароль."
+  },
+  "keygen_expires_on": {
+    "message": "Истекает $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_expiry_1y": {
+    "message": "1 год"
+  },
+  "keygen_expiry_2y": {
+    "message": "2 года"
+  },
+  "keygen_expiry_3y": {
+    "message": "3 года"
+  },
+  "keygen_expiry_custom": {
+    "message": "Своя дата"
+  },
+  "keygen_expiry_heading": {
+    "message": "Выберите дату окончания срока действия"
+  },
+  "keygen_expiry_label": {
+    "message": "Срок действия ключа"
+  },
+  "keygen_expiry_never": {
+    "message": "Бессрочно"
+  },
+  "keygen_expiry_subtitle": {
+    "message": "После этой даты ключ больше нельзя будет использовать; вы всегда сможете создать новый."
+  },
+  "keygen_export": {
+    "message": "Экспортировать"
+  },
+  "keygen_export_contacts_included_few": {
+    "message": "Также будут включены $count$ контакта (открытые ключи, разблокировка не нужна).",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_contacts_included_many": {
+    "message": "Также будут включены $count$ контактов (открытые ключи, разблокировка не нужна).",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_contacts_included_one": {
+    "message": "Также будет включён $count$ контакт (открытые ключи, разблокировка не нужна).",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_contacts_included_other": {
+    "message": "Также будут включены $count$ контакта (открытые ключи, разблокировка не нужна).",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_crx_included_few": {
+    "message": "Плюс $count$ ключа подписи CRX, перешифрованных под этой парольной фразой, чтобы их можно было восстановить на любом устройстве.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_crx_included_many": {
+    "message": "Плюс $count$ ключей подписи CRX, перешифрованных под этой парольной фразой, чтобы их можно было восстановить на любом устройстве.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_crx_included_one": {
+    "message": "Плюс $count$ ключ подписи CRX, перешифрованный под этой парольной фразой, чтобы его можно было восстановить на любом устройстве.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_crx_included_other": {
+    "message": "Плюс $count$ ключа подписи CRX, перешифрованных под этой парольной фразой, чтобы их можно было восстановить на любом устройстве.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_failed": {
+    "message": "Не удалось экспортировать."
+  },
+  "keygen_export_failed_detail": {
+    "message": "Не удалось экспортировать: $message$",
+    "placeholders": {
+      "message": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_go_back_unlock": {
+    "message": "Вернуться к разблокировке"
+  },
+  "keygen_export_nothing": {
+    "message": "Нечего экспортировать"
+  },
+  "keygen_export_passphrase_intro": {
+    "message": "Задайте парольную фразу для шифрования экспортируемых закрытых ключей (OpenPGP S2K - импортируется в GnuPG и другие инструменты). Любой, у кого есть эта парольная фраза и файл, сможет расшифровывать ваши сообщения и подписывать от вашего имени."
+  },
+  "keygen_export_plaintext_crx_left_out": {
+    "message": "Ключи подписи CRX не включаются в экспорт в открытом виде - используйте парольную фразу, чтобы включить их."
+  },
+  "keygen_export_plaintext_warning_file": {
+    "message": "Экспорт в открытом виде. Любой, кто прочитает скачанный файл, получит полный контроль над каждым PGP-ключом в нём."
+  },
+  "keygen_export_skip_locked": {
+    "message": "Пропустить заблокированные ключи и продолжить"
+  },
+  "keygen_export_still_locked_after": {
+    "message": "."
+  },
+  "keygen_export_still_locked_few": {
+    "message": "$count$ ключа всё ещё заблокированы и не будут включены.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_still_locked_many": {
+    "message": "$count$ ключей всё ещё заблокированы и не будут включены.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_still_locked_one": {
+    "message": "$count$ ключ всё ещё заблокирован и не будет включён.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_still_locked_other": {
+    "message": "$count$ ключа всё ещё заблокированы и не будут включены.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_summary": {
+    "message": "Скачивается один файл $ext$ (стандартный OpenPGP в формате ASCII-armor): $private_keys$ в виде блоков $private_block$ и $contacts$ в виде блоков $public_block$.",
+    "placeholders": {
+      "ext": {
+        "content": "$1"
+      },
+      "private_keys": {
+        "content": "$2"
+      },
+      "private_block": {
+        "content": "$3"
+      },
+      "contacts": {
+        "content": "$4"
+      },
+      "public_block": {
+        "content": "$5"
+      }
+    }
+  },
+  "keygen_export_summary_contacts_few": {
+    "message": "$count$ контакта",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_summary_contacts_many": {
+    "message": "$count$ контактов",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_summary_contacts_one": {
+    "message": "$count$ контакт",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_summary_contacts_other": {
+    "message": "$count$ контакта",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_summary_private_keys_few": {
+    "message": "$count$ разблокированных закрытых ключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_summary_private_keys_many": {
+    "message": "$count$ разблокированных закрытых ключей",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_summary_private_keys_one": {
+    "message": "$count$ разблокированный закрытый ключ",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_summary_private_keys_other": {
+    "message": "$count$ разблокированных закрытых ключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_title": {
+    "message": "Экспорт ключей"
+  },
+  "keygen_export_toast_exported_few": {
+    "message": "Экспортировано $count$ ключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_toast_exported_many": {
+    "message": "Экспортировано $count$ ключей",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_toast_exported_one": {
+    "message": "Экспортирован $count$ ключ",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_toast_exported_other": {
+    "message": "Экспортировано $count$ ключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_toast_exported_unsafe_few": {
+    "message": "Экспортировано $count$ ключа (закрытые ключи НЕ ЗАШИФРОВАНЫ)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_toast_exported_unsafe_many": {
+    "message": "Экспортировано $count$ ключей (закрытые ключи НЕ ЗАШИФРОВАНЫ)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_toast_exported_unsafe_one": {
+    "message": "Экспортирован $count$ ключ (закрытые ключи НЕ ЗАШИФРОВАНЫ)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_toast_exported_unsafe_other": {
+    "message": "Экспортировано $count$ ключа (закрытые ключи НЕ ЗАШИФРОВАНЫ)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_unlock_intro": {
+    "message": "Чтобы экспортировать закрытый ключ, его нужно сначала разблокировать. Разблокируйте ключи ниже, чтобы включить их в резервную копию."
+  },
+  "keygen_export_with_passphrase": {
+    "message": "Экспортировать с парольной фразой"
+  },
+  "keygen_export_without_passphrase": {
+    "message": "Экспортировать без парольной фразы (небезопасно)"
+  },
+  "keygen_exporter_crx_encrypted_blurb": {
+    "message": "Задайте парольную фразу для шифрования копируемого ключа (его можно снова импортировать в PGP Tools через «Импорт ключей»). Любой, у кого есть эта парольная фраза и скопированный блок, сможет подписывать расширения от вашего имени."
+  },
+  "keygen_exporter_crx_encrypted_button": {
+    "message": "Копировать с парольной фразой"
+  },
+  "keygen_exporter_crx_plaintext_blurb": {
+    "message": "Экспорт в открытом виде (PKCS#8 PEM без шифрования). Любой, кто прочитает ваш буфер обмена, получит полный контроль над этим ключом подписи."
+  },
+  "keygen_exporter_crx_plaintext_button": {
+    "message": "Копировать без парольной фразы (небезопасно)"
+  },
+  "keygen_exporter_crx_title": {
+    "message": "Копирование закрытого ключа CRX"
+  },
+  "keygen_exporter_crx_unlock_passkey": {
+    "message": "Разблокируйте этот ключ подписи, чтобы скопировать его. Подтвердите ключ доступа."
+  },
+  "keygen_exporter_crx_unlock_password": {
+    "message": "Разблокируйте этот ключ подписи, чтобы скопировать его. Введите пароль ключа."
+  },
+  "keygen_exporter_pgp_encrypted_blurb": {
+    "message": "Задайте парольную фразу для шифрования экспортируемого ключа. Любой, у кого есть эта парольная фраза и экспортированный ключ, сможет расшифровывать ваши сообщения и подписывать от вашего имени."
+  },
+  "keygen_exporter_pgp_plaintext_blurb": {
+    "message": "Экспорт в открытом виде. Любой, кто прочитает ваш буфер обмена, получит полный контроль над этим ключом."
+  },
+  "keygen_exporter_pgp_title": {
+    "message": "Экспорт закрытого ключа"
+  },
+  "keygen_exporting": {
+    "message": "Экспорт..."
+  },
+  "keygen_generating_key": {
+    "message": "Создание ключа..."
+  },
+  "keygen_generating_passkey": {
+    "message": "Следуйте запросу браузера о ключе доступа..."
+  },
+  "keygen_generating_rsa_hint": {
+    "message": "Создание RSA-ключа занимает некоторое время"
+  },
+  "keygen_key_password_placeholder": {
+    "message": "Пароль ключа"
+  },
+  "keygen_key_size_4096": {
+    "message": "4096 бит"
+  },
+  "keygen_key_size_label": {
+    "message": "Размер ключа"
+  },
+  "keygen_label_label": {
+    "message": "Метка"
+  },
+  "keygen_label_placeholder": {
+    "message": "например, Моё расширение"
+  },
+  "keygen_name_label": {
+    "message": "Имя *"
+  },
+  "keygen_name_placeholder": {
+    "message": "Ваше полное имя"
+  },
+  "keygen_next": {
+    "message": "Далее"
+  },
+  "keygen_optional": {
+    "message": "необязательно"
+  },
+  "keygen_passkey_default_user": {
+    "message": "Защита PGP-ключа"
+  },
+  "keygen_passkey_imported_user": {
+    "message": "Импортированный PGP-ключ"
+  },
+  "keygen_passphrase_placeholder": {
+    "message": "Парольная фраза (не менее 8 символов)"
+  },
+  "keygen_password_placeholder": {
+    "message": "Пароль (не менее 8 символов)"
+  },
+  "keygen_prf_unsupported_chrome": {
+    "message": "Ключи доступа профиля Chrome могут не поддерживать PRF - попробуйте Google Менеджер паролей или внешний ключ."
+  },
+  "keygen_prf_unsupported_intro": {
+    "message": "Этот аутентификатор не поддерживает PRF."
+  },
+  "keygen_prf_unsupported_mac": {
+    "message": "Для macOS требуется версия 15 или новее со Связкой ключей iCloud."
+  },
+  "keygen_prf_unsupported_windows": {
+    "message": "Windows Hello не поддерживает PRF - используйте аппаратный ключ безопасности (например, YubiKey)."
+  },
+  "keygen_protect_heading": {
+    "message": "Защитите свой ключ"
+  },
+  "keygen_protect_subtitle": {
+    "message": "Выберите, как разблокировать этот ключ при использовании."
+  },
+  "keygen_protection_intro": {
+    "message": "Выберите, как защитить закрытый ключ:"
+  },
+  "keygen_protection_passkey": {
+    "message": "Ключ доступа"
+  },
+  "keygen_protection_passkey_desc": {
+    "message": "Используйте отпечаток пальца, лицо или аппаратный ключ безопасности. Не нужно запоминать пароль."
+  },
+  "keygen_protection_passkey_unavailable": {
+    "message": "Недоступно в этом браузере."
+  },
+  "keygen_protection_password": {
+    "message": "Пароль"
+  },
+  "keygen_protection_password_desc": {
+    "message": "Защита паролем. Вы будете вводить его при каждой разблокировке."
+  },
+  "keygen_protection_recommended": {
+    "message": "Рекомендуется"
+  },
+  "keygen_protection_reuse_passkey": {
+    "message": "Использовать уже настроенный ключ доступа"
+  },
+  "keygen_submit_create_passkey": {
+    "message": "Создать ключ доступа"
+  },
+  "keygen_submit_generate": {
+    "message": "Создать"
+  },
+  "keygen_submit_use_passkey": {
+    "message": "Использовать ключ доступа"
+  },
+  "keygen_title": {
+    "message": "Создание ключа"
+  },
+  "keygen_type_crx": {
+    "message": "Расширение Chrome (CRX)"
+  },
+  "keygen_type_pgp": {
+    "message": "Ключ для сообщений (PGP)"
+  },
+  "keygen_type_to_confirm_after": {
+    "message": "для подтверждения:"
+  },
+  "keygen_type_to_confirm_before": {
+    "message": "Введите"
+  },
+  "keygen_unlock_gate_passkey": {
+    "message": "Подтвердите ключ доступа, чтобы скопировать этот ключ."
+  },
+  "keygen_unlock_gate_password": {
+    "message": "Введите пароль ключа, чтобы скопировать его."
+  },
+  "keygen_unlocking": {
+    "message": "Разблокировка..."
+  },
+  "keys_also_known_as": {
+    "message": "Также известен как"
+  },
+  "keys_banner_encrypt_only_contact": {
+    "message": "Вы можете шифровать для него, но он не может подписывать."
+  },
+  "keys_banner_encrypt_only_own": {
+    "message": "Вы можете получать зашифрованные сообщения, но этот ключ не может подписывать."
+  },
+  "keys_banner_expired_contact": {
+    "message": "Попросите владельца прислать обновлённый ключ."
+  },
+  "keys_banner_expired_on": {
+    "message": "Он перестал быть действительным $date$.",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_banner_expired_own": {
+    "message": "Создайте или импортируйте более новый ключ."
+  },
+  "keys_banner_expired_title": {
+    "message": "Срок действия этого ключа истёк $when$",
+    "placeholders": {
+      "when": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_banner_expires_soon": {
+    "message": "Срок действия этого ключа скоро истекает"
+  },
+  "keys_banner_no_reason": {
+    "message": "Причина не указана."
+  },
+  "keys_banner_revoked_contact": {
+    "message": "Не шифруйте для него и не доверяйте новым подписям от него."
+  },
+  "keys_banner_revoked_own": {
+    "message": "Создайте или импортируйте ключ на замену."
+  },
+  "keys_banner_revoked_title": {
+    "message": "Этот ключ отозван"
+  },
+  "keys_banner_sign_only_contact": {
+    "message": "Вы можете проверять его подписи, но не можете шифровать для него."
+  },
+  "keys_banner_sign_only_own": {
+    "message": "Вы можете подписывать сообщения, но этот ключ не может получать зашифрованные."
+  },
+  "keys_banner_unusable_body": {
+    "message": "У него нет пригодного подключа для шифрования или подписи."
+  },
+  "keys_banner_unusable_title": {
+    "message": "Этот ключ нельзя использовать"
+  },
+  "keys_bits": {
+    "message": "$bits$ бит",
+    "placeholders": {
+      "bits": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_bulk_delete_confirm_few": {
+    "message": "Удалить $count$ элемента навсегда",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_bulk_delete_confirm_many": {
+    "message": "Удалить $count$ элементов навсегда",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_bulk_delete_confirm_one": {
+    "message": "Удалить $count$ элемент навсегда",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_bulk_delete_confirm_other": {
+    "message": "Удалить $count$ элемента навсегда",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_bulk_delete_contacts_body": {
+    "message": "Вы больше не сможете шифровать сообщения для этих контактов и проверять их подписи. Позже можно снова импортировать их открытые ключи."
+  },
+  "keys_bulk_delete_private_body": {
+    "message": "Это навсегда удалит выбранные закрытые ключи с этого устройства. Всё, что зашифровано только для удалённого ключа, станет невозможно восстановить. Убедитесь, что у вас есть резервная копия, если ключи могут понадобиться."
+  },
+  "keys_bulk_delete_prompt_few": {
+    "message": "удалить $count$ ключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_bulk_delete_prompt_many": {
+    "message": "удалить $count$ ключей",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_bulk_delete_prompt_one": {
+    "message": "удалить $count$ ключ",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_bulk_delete_prompt_other": {
+    "message": "удалить $count$ ключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_bulk_delete_title": {
+    "message": "Удалить выбранное?"
+  },
+  "keys_cancel_selection_aria": {
+    "message": "Отменить выбор"
+  },
+  "keys_cap_auth": {
+    "message": "Аутентификация (например, SSH)"
+  },
+  "keys_cap_certify": {
+    "message": "Заверяет идентификаторы"
+  },
+  "keys_cap_encrypt": {
+    "message": "Получает зашифрованные сообщения"
+  },
+  "keys_cap_sign": {
+    "message": "Подписывает сообщения"
+  },
+  "keys_chip_contact": {
+    "message": "Контакт"
+  },
+  "keys_chip_contact_title": {
+    "message": "У вас есть его открытый ключ"
+  },
+  "keys_chip_protection_title": {
+    "message": "Как защищён закрытый ключ при хранении"
+  },
+  "keys_chip_your_key": {
+    "message": "Ваш ключ"
+  },
+  "keys_chip_your_key_title": {
+    "message": "У вас есть закрытый ключ"
+  },
+  "keys_confirm_delete_key_title": {
+    "message": "Удалить ключ?"
+  },
+  "keys_confirm_remove_contact_title": {
+    "message": "Удалить контакт?"
+  },
+  "keys_contact_expired": {
+    "message": "Истёк $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_contact_expired_title": {
+    "message": "Срок действия этого ключа истёк $date$, и для него больше нельзя шифровать. Попросите владельца прислать актуальный ключ.",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_contact_expires": {
+    "message": "Истекает $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_contact_keys_all_title": {
+    "message": "Сообщения шифруются для всех ключей этого контакта; расшифровать может любой из них."
+  },
+  "keys_contact_keys_count_few": {
+    "message": "$count$ ключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_contact_keys_count_many": {
+    "message": "$count$ ключей",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_contact_keys_count_one": {
+    "message": "$count$ ключ",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_contact_keys_count_other": {
+    "message": "$count$ ключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_contact_keys_partial": {
+    "message": "$active$ из $total$ ключей",
+    "placeholders": {
+      "active": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_contact_keys_partial_title": {
+    "message": "Сообщения шифруются для $active$ из $total$ ключей этого контакта; остальные выключены в сведениях о ключе.",
+    "placeholders": {
+      "active": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_contact_options_aria": {
+    "message": "Параметры контакта"
+  },
+  "keys_contacts_heading": {
+    "message": "Контакты"
+  },
+  "keys_contacts_heading_count": {
+    "message": "Контакты ($count$)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_contacts_heading_encrypted": {
+    "message": "Контакты (зашифрованы)"
+  },
+  "keys_contacts_locked": {
+    "message": "Контакты зашифрованы. Разблокируйте PGP Tools, чтобы просматривать их и управлять ими."
+  },
+  "keys_contacts_removed_few": {
+    "message": "Удалено $count$ контакта",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_contacts_removed_many": {
+    "message": "Удалено $count$ контактов",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_contacts_removed_one": {
+    "message": "Контакт удалён"
+  },
+  "keys_contacts_removed_other": {
+    "message": "Удалено $count$ контакта",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_copy_fingerprint_aria": {
+    "message": "Копировать отпечаток"
+  },
+  "keys_copy_private_key": {
+    "message": "Копировать закрытый ключ"
+  },
+  "keys_copy_public_key": {
+    "message": "Копировать открытый ключ"
+  },
+  "keys_count_contacts_few": {
+    "message": "$count$ контакта",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_count_contacts_many": {
+    "message": "$count$ контактов",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_count_contacts_one": {
+    "message": "$count$ контакт",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_count_contacts_other": {
+    "message": "$count$ контакта",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_count_private_keys_few": {
+    "message": "$count$ закрытых ключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_count_private_keys_many": {
+    "message": "$count$ закрытых ключей",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_count_private_keys_one": {
+    "message": "$count$ закрытый ключ",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_count_private_keys_other": {
+    "message": "$count$ закрытых ключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_count_signing_keys_few": {
+    "message": "$count$ ключа подписи",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_count_signing_keys_many": {
+    "message": "$count$ ключей подписи",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_count_signing_keys_one": {
+    "message": "$count$ ключ подписи",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_count_signing_keys_other": {
+    "message": "$count$ ключа подписи",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_default_badge": {
+    "message": "По умолчанию"
+  },
+  "keys_default_removed": {
+    "message": "Ключ по умолчанию сброшен"
+  },
+  "keys_default_set": {
+    "message": "Ключ по умолчанию задан"
+  },
+  "keys_default_title": {
+    "message": "Используется по умолчанию для подписи, расшифровки и шифрования для себя"
+  },
+  "keys_delete_crx_body": {
+    "message": "Вы больше не сможете подписывать обновления этого расширения, а ключ нельзя будет восстановить без резервной копии."
+  },
+  "keys_delete_key": {
+    "message": "Удалить ключ"
+  },
+  "keys_delete_key_body": {
+    "message": "Это навсегда удалит закрытый ключ с этого устройства. Всё, что зашифровано только для этого ключа, станет невозможно восстановить. Убедитесь, что у вас есть резервная копия, если ключ может понадобиться."
+  },
+  "keys_delete_key_permanently": {
+    "message": "Удалить ключ навсегда"
+  },
+  "keys_deselect_all": {
+    "message": "Снять выбор"
+  },
+  "keys_details_aria": {
+    "message": "Сведения о ключе $name$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_download_public_key": {
+    "message": "Скачать открытый ключ"
+  },
+  "keys_empty": {
+    "message": "Ключей пока нет. Создайте или импортируйте ключ, чтобы начать."
+  },
+  "keys_encrypt_to": {
+    "message": "Зашифровать для"
+  },
+  "keys_enter_password_placeholder": {
+    "message": "Введите пароль"
+  },
+  "keys_expires_value": {
+    "message": "$date$ ($when$)",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      },
+      "when": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_export": {
+    "message": "Экспорт"
+  },
+  "keys_exported_few": {
+    "message": "Экспортировано $count$ ключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_exported_many": {
+    "message": "Экспортировано $count$ ключей",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_exported_one": {
+    "message": "Экспортирован $count$ ключ",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_exported_other": {
+    "message": "Экспортировано $count$ ключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_exported_unsafe_few": {
+    "message": "Экспортировано $count$ ключа (закрытые ключи НЕ ЗАШИФРОВАНЫ)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_exported_unsafe_many": {
+    "message": "Экспортировано $count$ ключей (закрытые ключи НЕ ЗАШИФРОВАНЫ)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_exported_unsafe_one": {
+    "message": "Экспортирован $count$ ключ (закрытые ключи НЕ ЗАШИФРОВАНЫ)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_exported_unsafe_other": {
+    "message": "Экспортировано $count$ ключа (закрытые ключи НЕ ЗАШИФРОВАНЫ)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_fact_added": {
+    "message": "Добавлен"
+  },
+  "keys_fact_algorithm": {
+    "message": "Алгоритм"
+  },
+  "keys_fact_created": {
+    "message": "Создан"
+  },
+  "keys_fact_expires": {
+    "message": "Истекает"
+  },
+  "keys_fact_fingerprint": {
+    "message": "Отпечаток"
+  },
+  "keys_fact_last_used": {
+    "message": "Использован"
+  },
+  "keys_fact_used_for": {
+    "message": "Назначение"
+  },
+  "keys_generate_button": {
+    "message": "Создать ключ"
+  },
+  "keys_group_row_label": {
+    "message": "Ключ"
+  },
+  "keys_import_button": {
+    "message": "Импортировать ключ"
+  },
+  "keys_inactive_subkeys_expired_few": {
+    "message": "$count$ истёкших подключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_inactive_subkeys_expired_many": {
+    "message": "$count$ истёкших подключей",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_inactive_subkeys_expired_one": {
+    "message": "$count$ истёкший подключ",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_inactive_subkeys_expired_other": {
+    "message": "$count$ истёкших подключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_inactive_subkeys_revoked_few": {
+    "message": "$count$ отозванных подключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_inactive_subkeys_revoked_many": {
+    "message": "$count$ отозванных подключей",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_inactive_subkeys_revoked_one": {
+    "message": "$count$ отозванный подключ",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_inactive_subkeys_revoked_other": {
+    "message": "$count$ отозванных подключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_inactive_subkeys_unusable_few": {
+    "message": "$count$ непригодных подключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_inactive_subkeys_unusable_many": {
+    "message": "$count$ непригодных подключей",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_inactive_subkeys_unusable_one": {
+    "message": "$count$ непригодный подключ",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_inactive_subkeys_unusable_other": {
+    "message": "$count$ непригодных подключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_key_details": {
+    "message": "Сведения о ключе"
+  },
+  "keys_key_options_aria": {
+    "message": "Параметры ключа"
+  },
+  "keys_loading": {
+    "message": "Загрузка…"
+  },
+  "keys_my_keys_heading": {
+    "message": "Мои ключи"
+  },
+  "keys_never": {
+    "message": "Бессрочно"
+  },
+  "keys_no_contacts_match": {
+    "message": "По запросу «$query$» контакты не найдены",
+    "placeholders": {
+      "query": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_no_subkeys": {
+    "message": "У этого ключа нет подключей; основной ключ делает всё сам."
+  },
+  "keys_parse_failed": {
+    "message": "Не удалось разобрать этот ключ."
+  },
+  "keys_passkey_failed": {
+    "message": "Не удалось пройти проверку ключа доступа"
+  },
+  "keys_protection_passkey": {
+    "message": "Ключ доступа"
+  },
+  "keys_protection_password": {
+    "message": "Пароль"
+  },
+  "keys_public_key_copied": {
+    "message": "Открытый ключ скопирован"
+  },
+  "keys_recipient_disable_title": {
+    "message": "Перестать шифровать для этого ключа. Он останется в списке."
+  },
+  "keys_recipient_dont_use": {
+    "message": "Не использовать"
+  },
+  "keys_recipient_enable_title": {
+    "message": "Снова шифровать для этого ключа."
+  },
+  "keys_recipient_last_active_title": {
+    "message": "Это единственный оставшийся используемый ключ. Если выключить и его, сообщения будет не для кого шифровать."
+  },
+  "keys_recipient_not_used": {
+    "message": "Не используется"
+  },
+  "keys_recipient_off_title": {
+    "message": "Сообщения этому контакту не шифруются для этого ключа."
+  },
+  "keys_recipient_use": {
+    "message": "Использовать"
+  },
+  "keys_remove_contact": {
+    "message": "Удалить контакт"
+  },
+  "keys_remove_contact_body": {
+    "message": "Вы больше не сможете шифровать сообщения для этого контакта и проверять его подписи. Позже можно снова импортировать его открытый ключ."
+  },
+  "keys_remove_default": {
+    "message": "Убрать «по умолчанию»"
+  },
+  "keys_rename": {
+    "message": "Переименовать"
+  },
+  "keys_rename_contact_title": {
+    "message": "Переименовать контакт"
+  },
+  "keys_rename_crx_title": {
+    "message": "Переименовать ключ подписи"
+  },
+  "keys_rename_field_label": {
+    "message": "Отображаемое имя"
+  },
+  "keys_rename_hint": {
+    "message": "Показывается вместо $identity$. Это только локальная метка.",
+    "placeholders": {
+      "identity": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_rename_key_title": {
+    "message": "Переименовать ключ"
+  },
+  "keys_rename_placeholder_contact": {
+    "message": "например, Алиса (все устройства)"
+  },
+  "keys_rename_placeholder_crx": {
+    "message": "например, Моё расширение"
+  },
+  "keys_rename_placeholder_key": {
+    "message": "например, Рабочий ноутбук"
+  },
+  "keys_reselect": {
+    "message": "Выбрать снова"
+  },
+  "keys_revocation_certificate": {
+    "message": "Сертификат отзыва"
+  },
+  "keys_revocation_create": {
+    "message": "Создать сертификат отзыва"
+  },
+  "keys_revocation_create_failed": {
+    "message": "Не удалось создать сертификат отзыва."
+  },
+  "keys_revocation_created": {
+    "message": "Сертификат отзыва создан"
+  },
+  "keys_revocation_creating": {
+    "message": "Создание..."
+  },
+  "keys_revocation_have_body": {
+    "message": "Если этот ключ будет утерян или скомпрометирован, публикация этого сертификата сообщит вашим контактам, что ключ больше использовать нельзя. Храните его резервную копию в надёжном месте - любой, у кого он есть, может отозвать ваш ключ."
+  },
+  "keys_revocation_missing_body": {
+    "message": "Этот ключ был импортирован без сертификата отзыва. Создайте его сейчас и сохраните резервную копию, чтобы можно было отозвать ключ позже, даже если вы потеряете к нему доступ."
+  },
+  "keys_revocation_unlock_first": {
+    "message": "Сначала разблокируйте этот ключ, затем повторите попытку."
+  },
+  "keys_revoked_reason": {
+    "message": "Отозван: $reason$",
+    "placeholders": {
+      "reason": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_row_created": {
+    "message": "создан $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_row_expired": {
+    "message": "истёк $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_row_expires": {
+    "message": "истекает $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_row_never_expires": {
+    "message": "бессрочный"
+  },
+  "keys_save_failed": {
+    "message": "Не удалось сохранить это изменение."
+  },
+  "keys_search_contacts_placeholder": {
+    "message": "Поиск контактов..."
+  },
+  "keys_select": {
+    "message": "Выбрать"
+  },
+  "keys_select_all": {
+    "message": "Выбрать все"
+  },
+  "keys_selected_count_few": {
+    "message": "Выбрано: $count$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_selected_count_many": {
+    "message": "Выбрано: $count$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_selected_count_one": {
+    "message": "Выбрано: $count$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_selected_count_other": {
+    "message": "Выбрано: $count$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_selection_actions_aria": {
+    "message": "Действия с выбранным"
+  },
+  "keys_set_default": {
+    "message": "Сделать ключом по умолчанию"
+  },
+  "keys_size_bytes": {
+    "message": "$size$ Б",
+    "placeholders": {
+      "size": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_size_kb": {
+    "message": "$size$ КБ",
+    "placeholders": {
+      "size": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_size_mb": {
+    "message": "$size$ МБ",
+    "placeholders": {
+      "size": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_source_github": {
+    "message": "С github.com/$user$",
+    "placeholders": {
+      "user": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_source_keyserver": {
+    "message": "С keys.openpgp.org - $user$",
+    "placeholders": {
+      "user": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_ssh_chip_title": {
+    "message": "SSH-ключ, используемый с age. Его нельзя сочетать с получателями PGP в одном сообщении."
+  },
+  "keys_ssh_export_skipped_few": {
+    "message": "$count$ SSH-ключа нельзя экспортировать - импортированный SSH-ключ никогда не покидает это устройство.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_ssh_export_skipped_many": {
+    "message": "$count$ SSH-ключей нельзя экспортировать - импортированный SSH-ключ никогда не покидает это устройство.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_ssh_export_skipped_one": {
+    "message": "$count$ SSH-ключ нельзя экспортировать - импортированный SSH-ключ никогда не покидает это устройство.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_ssh_export_skipped_other": {
+    "message": "$count$ SSH-ключа нельзя экспортировать - импортированный SSH-ключ никогда не покидает это устройство.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_status_expired": {
+    "message": "истёк"
+  },
+  "keys_status_invalid": {
+    "message": "недействителен"
+  },
+  "keys_status_locked": {
+    "message": "Заблокирован"
+  },
+  "keys_status_revoked": {
+    "message": "отозван"
+  },
+  "keys_status_sealed": {
+    "message": "Зашифрован при хранении"
+  },
+  "keys_status_unlocked": {
+    "message": "Разблокирован"
+  },
+  "keys_subkey_label": {
+    "message": "Подключ"
+  },
+  "keys_subkeys_title": {
+    "message": "Подключи"
+  },
+  "keys_subkeys_truncated": {
+    "message": "У этого сертификата необычно много подключей; показаны только первые $count$.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_undo": {
+    "message": "Отменить"
+  },
+  "keys_unknown_name": {
+    "message": "Неизвестно"
+  },
+  "keys_weak_sha1": {
+    "message": "Слабый (SHA-1)"
+  },
+  "keys_wrong_password": {
+    "message": "Неверный пароль"
+  },
+  "settings_crx_default_key_name": {
+    "message": "Ключ подписи CRX"
+  },
+  "settings_crx_info_get_body": {
+    "message": "Этот $crx$ - артефакт для загрузки в панель разработчика Web Store, а не пакет для прямой установки: Chrome устанавливает только расширения, подписанные магазином. Чтобы запустить расширение локально, используйте $load_unpacked$ для папки.",
+    "placeholders": {
+      "crx": {
+        "content": "$1"
+      },
+      "load_unpacked": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_crx_info_get_title": {
+    "message": "Что вы получаете"
+  },
+  "settings_crx_info_how_title": {
+    "message": "Как этим пользоваться"
+  },
+  "settings_crx_info_ladder_ci": {
+    "message": "$term$ слабее: отравленная зависимость или утёкший токен уносит его с собой.",
+    "placeholders": {
+      "term": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_crx_info_ladder_ci_term": {
+    "message": "Ключ в секретах CI"
+  },
+  "settings_crx_info_ladder_hardware": {
+    "message": "$term$ ещё надёжнее: ключ никогда не покидает чип, тогда как здесь он ненадолго восстанавливается в песочнице WASM во время подписи и сразу после этого обнуляется.",
+    "placeholders": {
+      "term": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_crx_info_ladder_hardware_term": {
+    "message": "Аппаратный токен (YubiKey / HSM)"
+  },
+  "settings_crx_info_ladder_title": {
+    "message": "Место в иерархии безопасности"
+  },
+  "settings_crx_info_ladder_vault": {
+    "message": "$term$ - ваш вариант - находится за вашим паролем или ключом доступа и разблокируется только для акта подписи.",
+    "placeholders": {
+      "term": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_crx_info_ladder_vault_term": {
+    "message": "Ключ, зашифрованный в вашем хранилище"
+  },
+  "settings_crx_info_link": {
+    "message": "Chrome Web Store: защита обновлений пакетов"
+  },
+  "settings_crx_info_not_pgp_body": {
+    "message": "$crx$ подписывается «сырым» ключом RSA-2048 (PKCS#1-SHA256), а не подписью OpenPGP. PGP Tools создаёт и хранит этот ключ с той же защитой, что и ваши PGP-ключи (Argon2id или ключ доступа → AES-256-GCM, всё внутри песочницы WASM), но сам ключ отдельный и используется только для подписи CRX.",
+    "placeholders": {
+      "crx": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_crx_info_not_pgp_title": {
+    "message": "Это не PGP"
+  },
+  "settings_crx_info_pitch_p1": {
+    "message": "Chrome Web Store позволяет требовать, чтобы каждое обновление вашего расширения было подписано ключом, который есть только у вас. Даже если кто-то взломает ваш аккаунт в Web Store или систему сборки, он не сможет выпустить вредоносное обновление без вашего ключа подписи."
+  },
+  "settings_crx_info_pitch_p2": {
+    "message": "Это работает, только если ключ хранится там, куда злоумышленник не доберётся - ключ в секретах CI сводит смысл на нет. PGP Tools хранит его зашифрованным в вашем хранилище и разблокирует только для самого акта подписи, за вашим паролем или ключом доступа, и никогда в конвейере сборки."
+  },
+  "settings_crx_info_pitch_title": {
+    "message": "Проверенные загрузки CRX"
+  },
+  "settings_crx_info_step_1": {
+    "message": "Включите переключатель в Настройках, затем создайте или импортируйте ключ подписи CRX (RSA-2048). Держите закрытый ключ здесь - экспортируйте его только для резервной копии."
+  },
+  "settings_crx_info_step_2": {
+    "message": "Скопируйте $public$ половину ключа в панель разработчика Chrome Web Store в разделе $path$.",
+    "placeholders": {
+      "public": {
+        "content": "$1"
+      },
+      "path": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_crx_info_step_3": {
+    "message": "Чтобы выпустить релиз, перетащите упакованное расширение $zip$ в Рабочую область и подпишите его. Нажмите $save$, чтобы записать $crx$ прямо на диск с правильным именем (или перетащите чип на рабочий стол), а затем загрузите его в панель разработчика. Chrome перехватывает обычное скачивание $crx$ и пытается его установить, поэтому мы сохраняем, а не скачиваем.",
+    "placeholders": {
+      "zip": {
+        "content": "$1"
+      },
+      "save": {
+        "content": "$2"
+      },
+      "crx": {
+        "content": "$3"
+      }
+    }
+  },
+  "settings_crx_info_step_4": {
+    "message": "Чтобы проверить любой пакет расширения, перетащите $crx$ в Рабочую область - PGP Tools проверит его подпись и покажет идентификатор расширения, за которое он себя выдаёт.",
+    "placeholders": {
+      "crx": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_crx_info_term_dashboard_path": {
+    "message": "Пакет → Проверенные загрузки CRX"
+  },
+  "settings_crx_info_term_load_unpacked": {
+    "message": "Загрузить распакованное расширение"
+  },
+  "settings_crx_info_term_public": {
+    "message": "открытую"
+  },
+  "settings_crx_info_title": {
+    "message": "Подпись CRX"
+  },
+  "settings_import_browse": {
+    "message": "Выбрать файл ключей"
+  },
+  "settings_import_contacts_added_few": {
+    "message": "Добавлено $count$ контакта",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_added_many": {
+    "message": "Добавлено $count$ контактов",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_added_one": {
+    "message": "Добавлен $count$ контакт",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_added_other": {
+    "message": "Добавлено $count$ контакта",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_flagged_few": {
+    "message": "$count$ импортированных ключа помечены из-за слабой криптографии (SHA-1)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_flagged_many": {
+    "message": "$count$ импортированных ключей помечены из-за слабой криптографии (SHA-1)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_flagged_one": {
+    "message": "$count$ импортированный ключ помечен из-за слабой криптографии (SHA-1)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_flagged_other": {
+    "message": "$count$ импортированных ключа помечены из-за слабой криптографии (SHA-1)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_rejected_few": {
+    "message": "Отклонено $count$ открытых ключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_rejected_many": {
+    "message": "Отклонено $count$ открытых ключей",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_rejected_one": {
+    "message": "Отклонён $count$ открытый ключ",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_rejected_other": {
+    "message": "Отклонено $count$ открытых ключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_rejected_reason_few": {
+    "message": "Отклонено $count$ открытых ключа: $reason$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "reason": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_import_contacts_rejected_reason_many": {
+    "message": "Отклонено $count$ открытых ключей: $reason$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "reason": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_import_contacts_rejected_reason_one": {
+    "message": "Отклонён $count$ открытый ключ: $reason$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "reason": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_import_contacts_rejected_reason_other": {
+    "message": "Отклонено $count$ открытых ключа: $reason$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "reason": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_import_contacts_updated_few": {
+    "message": "Обновлено $count$ контакта",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_updated_many": {
+    "message": "Обновлено $count$ контактов",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_updated_one": {
+    "message": "Обновлён $count$ контакт",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_updated_other": {
+    "message": "Обновлено $count$ контакта",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_failed_few": {
+    "message": "Не удалось восстановить $count$ ключа CRX",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_failed_many": {
+    "message": "Не удалось восстановить $count$ ключей CRX",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_failed_one": {
+    "message": "Не удалось восстановить $count$ ключ CRX",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_failed_other": {
+    "message": "Не удалось восстановить $count$ ключа CRX",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_failure_detail": {
+    "message": "$name$: $error$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "error": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_import_crx_rejected_few": {
+    "message": "Отклонено $count$ ключа подписи CRX: открытый ключ не соответствует идентификатору расширения",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_rejected_many": {
+    "message": "Отклонено $count$ ключей подписи CRX: открытый ключ не соответствует идентификатору расширения",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_rejected_one": {
+    "message": "Отклонён $count$ ключ подписи CRX: открытый ключ не соответствует идентификатору расширения",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_rejected_other": {
+    "message": "Отклонено $count$ ключа подписи CRX: открытый ключ не соответствует идентификатору расширения",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_restored_few": {
+    "message": "Восстановлено $count$ ключа подписи CRX",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_restored_many": {
+    "message": "Восстановлено $count$ ключей подписи CRX",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_restored_one": {
+    "message": "Восстановлен $count$ ключ подписи CRX",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_restored_other": {
+    "message": "Восстановлено $count$ ключа подписи CRX",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_skipped_few": {
+    "message": "$count$ ключа подписи CRX уже импортированы",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_skipped_many": {
+    "message": "$count$ ключей подписи CRX уже импортированы",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_skipped_one": {
+    "message": "$count$ ключ подписи CRX уже импортирован",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_skipped_other": {
+    "message": "$count$ ключа подписи CRX уже импортированы",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_default_user_id": {
+    "message": "Импортированный PGP-ключ"
+  },
+  "settings_import_failed": {
+    "message": "Не удалось импортировать"
+  },
+  "settings_import_failed_named": {
+    "message": "Не удалось импортировать «$name$»: $error$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "error": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_import_importing": {
+    "message": "Импорт..."
+  },
+  "settings_import_keys_title": {
+    "message": "Импорт ключей"
+  },
+  "settings_import_next": {
+    "message": "Далее"
+  },
+  "settings_import_no_keys": {
+    "message": "Во введённых данных ключи не найдены."
+  },
+  "settings_import_passkey_name": {
+    "message": "Импорт PGP Tools"
+  },
+  "settings_import_passphrase_placeholder": {
+    "message": "Парольная фраза ключа"
+  },
+  "settings_import_paste_intro": {
+    "message": "Вставьте или выберите файл ключей - например, полученный через «Экспортировать все ключи». Закрытые ключи будут заново защищены выбранным способом; открытые ключи станут контактами."
+  },
+  "settings_import_paste_placeholder": {
+    "message": "Вставьте ключи сюда или выберите файл..."
+  },
+  "settings_import_prf_unsupported": {
+    "message": "Ваш аутентификатор не поддерживает PRF. Попробуйте другой ключ доступа или используйте пароль."
+  },
+  "settings_import_private_imported_few": {
+    "message": "Импортировано $count$ закрытых ключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_private_imported_many": {
+    "message": "Импортировано $count$ закрытых ключей",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_private_imported_one": {
+    "message": "Импортирован $count$ закрытый ключ",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_private_imported_other": {
+    "message": "Импортировано $count$ закрытых ключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_private_skipped_few": {
+    "message": "$count$ закрытых ключа уже импортированы",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_private_skipped_many": {
+    "message": "$count$ закрытых ключей уже импортированы",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_private_skipped_one": {
+    "message": "$count$ закрытый ключ уже импортирован",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_private_skipped_other": {
+    "message": "$count$ закрытых ключа уже импортированы",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_private_unparseable_few": {
+    "message": "Не удалось разобрать $count$ закрытых ключа.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_private_unparseable_many": {
+    "message": "Не удалось разобрать $count$ закрытых ключей.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_private_unparseable_one": {
+    "message": "Не удалось разобрать $count$ закрытый ключ.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_private_unparseable_other": {
+    "message": "Не удалось разобрать $count$ закрытых ключа.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_protect_intro_few": {
+    "message": "Выберите, как защитить $count$ импортированных закрытых ключа.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_protect_intro_many": {
+    "message": "Выберите, как защитить $count$ импортированных закрытых ключей.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_protect_intro_one": {
+    "message": "Выберите, как защитить $count$ импортированный закрытый ключ.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_protect_intro_other": {
+    "message": "Выберите, как защитить $count$ импортированных закрытых ключа.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_submit_few": {
+    "message": "Импортировать $count$ ключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_submit_many": {
+    "message": "Импортировать $count$ ключей",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_submit_one": {
+    "message": "Импортировать $count$ ключ",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_submit_other": {
+    "message": "Импортировать $count$ ключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_unknown_error": {
+    "message": "неизвестная ошибка"
+  },
+  "settings_import_unlock_intro_few": {
+    "message": "Парольной фразой защищено $encrypted$ из $count$ закрытых ключей. Введите её, чтобы разблокировать ключи - затем на следующем шаге вы заново защитите каждый ключ выбранным способом.",
+    "placeholders": {
+      "encrypted": {
+        "content": "$1"
+      },
+      "count": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_import_unlock_intro_many": {
+    "message": "Парольной фразой защищено $encrypted$ из $count$ закрытых ключей. Введите её, чтобы разблокировать ключи - затем на следующем шаге вы заново защитите каждый ключ выбранным способом.",
+    "placeholders": {
+      "encrypted": {
+        "content": "$1"
+      },
+      "count": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_import_unlock_intro_one": {
+    "message": "Парольной фразой защищено $encrypted$ из $count$ закрытого ключа. Введите её, чтобы разблокировать ключи - затем на следующем шаге вы заново защитите каждый ключ выбранным способом.",
+    "placeholders": {
+      "encrypted": {
+        "content": "$1"
+      },
+      "count": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_import_unlock_intro_other": {
+    "message": "Парольной фразой защищено $encrypted$ из $count$ закрытых ключей. Введите её, чтобы разблокировать ключи - затем на следующем шаге вы заново защитите каждый ключ выбранным способом.",
+    "placeholders": {
+      "encrypted": {
+        "content": "$1"
+      },
+      "count": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_preset_apply": {
+    "message": "Применить профиль"
+  },
+  "settings_preset_apply_delete_history": {
+    "message": "Применить и удалить историю"
+  },
+  "settings_preset_applying": {
+    "message": "Применение..."
+  },
+  "settings_preset_confirm_history": {
+    "message": "Этот профиль включает режим «не кешировать», который также удаляет сохранённую историю ($size$). Восстановить её будет невозможно.",
+    "placeholders": {
+      "size": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_preset_confirm_replace": {
+    "message": "Заменить пользовательские настройки профилем $preset$? Изменятся только настройки, перечисленные на его карточке, и любую из них потом можно изменить снова.",
+    "placeholders": {
+      "preset": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_preset_custom_name": {
+    "message": "Пользовательский"
+  },
+  "settings_preset_custom_notice": {
+    "message": "У вас профиль $custom$: одна из настроек профиля была изменена, поэтому ни один профиль не совпадает полностью.",
+    "placeholders": {
+      "custom": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_preset_intro": {
+    "message": "Каждый профиль объединяет настройки безопасности для одной модели угроз, а его карточка перечисляет, что именно он задаёт. Применение профиля меняет только эти настройки, и любую из них потом можно изменить снова."
+  },
+  "settings_preset_keep_custom": {
+    "message": "Оставить пользовательские настройки"
+  },
+  "settings_preset_replace_custom": {
+    "message": "Заменить пользовательские настройки"
+  },
+  "settings_preset_title": {
+    "message": "Профиль безопасности"
+  },
+  "settings_shortcuts_copy_output": {
+    "message": "Копировать результат"
+  },
+  "settings_shortcuts_download_output": {
+    "message": "Скачать результат"
+  },
+  "settings_shortcuts_find_replace": {
+    "message": "Найти и заменить"
+  },
+  "settings_shortcuts_global_note": {
+    "message": "Они работают в любом месте браузера. Переназначить любое из них можно на странице $url$.",
+    "placeholders": {
+      "url": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_shortcuts_group_global": {
+    "message": "Глобальные сочетания клавиш браузера"
+  },
+  "settings_shortcuts_group_message": {
+    "message": "Поле сообщения"
+  },
+  "settings_shortcuts_group_modes": {
+    "message": "Режимы"
+  },
+  "settings_shortcuts_group_palette": {
+    "message": "Палитра команд"
+  },
+  "settings_shortcuts_group_workspace": {
+    "message": "Рабочая область"
+  },
+  "settings_shortcuts_manage": {
+    "message": "Настроить сочетания клавиш браузера"
+  },
+  "settings_shortcuts_open_app": {
+    "message": "Открыть PGP Tools"
+  },
+  "settings_shortcuts_open_in_mode": {
+    "message": "Открыть в режиме «$mode$»",
+    "placeholders": {
+      "mode": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_shortcuts_open_palette": {
+    "message": "Открыть палитру команд"
+  },
+  "settings_shortcuts_open_palette_note": {
+    "message": "Все действия ниже также можно найти там."
+  },
+  "settings_shortcuts_pick_recipient": {
+    "message": "Выбрать n-го получателя"
+  },
+  "settings_shortcuts_pick_recipient_note": {
+    "message": "В списке получателей, пока его поле поиска пустое."
+  },
+  "settings_shortcuts_remove_recipient": {
+    "message": "Убрать последнего получателя"
+  },
+  "settings_shortcuts_remove_recipient_note": {
+    "message": "В пустом поле поиска списка получателей."
+  },
+  "settings_shortcuts_run_mode": {
+    "message": "Выполнить текущий режим"
+  },
+  "settings_shortcuts_style_note": {
+    "message": "При написании сообщения для шифрования или подписи. Используются буквы Unicode, поэтому форматирование сохраняется в любом канале."
+  },
+  "settings_shortcuts_switch_mode": {
+    "message": "Перейти в режим «$mode$»",
+    "placeholders": {
+      "mode": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_shortcuts_title": {
+    "message": "Сочетания клавиш"
+  },
+  "settings_shortcuts_unbound": {
+    "message": "Не назначено"
+  },
+  "settings_shortcuts_unbound_note": {
+    "message": "По умолчанию не назначено (Chrome допускает не более четырёх предлагаемых сочетаний)."
+  },
+  "settings_translation_detector": {
+    "message": "определитель языка"
+  },
+  "settings_translation_download_failed": {
+    "message": "Не удалось скачать."
+  },
+  "settings_translation_enable": {
+    "message": "Переводить расшифрованные сообщения"
+  },
+  "settings_translation_enable_desc": {
+    "message": "Добавляет кнопку «Перевести» под расшифрованным сообщением. Перевод выполняется на этом устройстве встроенной моделью Chrome, и ничего не переводится, пока вы не нажмёте кнопку."
+  },
+  "settings_translation_failed": {
+    "message": "Не удалось перевести."
+  },
+  "settings_translation_pack_gone": {
+    "message": "Языковой пакет пропал. Повторите попытку."
+  },
+  "settings_translation_pack_not_offered": {
+    "message": "Недоступен"
+  },
+  "settings_translation_pack_pair": {
+    "message": "$from$ → $to$",
+    "placeholders": {
+      "from": {
+        "content": "$1"
+      },
+      "to": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_translation_pack_progress": {
+    "message": "$percent$%",
+    "placeholders": {
+      "percent": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_translation_pack_ready": {
+    "message": "Готов"
+  },
+  "settings_translation_packs": {
+    "message": "Языковые пакеты"
+  },
+  "settings_translation_packs_desc": {
+    "message": "Необязательно. Отсутствующий пакет скачивается сам при первом переводе с этого языка, так что здесь это нужно только для того, чтобы сделать это заранее. Скачивание здесь даёт одно преимущество: загрузка больше не происходит в момент расшифровки сообщения, поэтому её время ничего не говорит о том, что вы только что прочитали. Каждый пакет занимает $size$ и хранится Chrome, а не этим расширением.",
+    "placeholders": {
+      "size": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_translation_target": {
+    "message": "Переводить на"
+  },
+  "settings_translation_title": {
+    "message": "Перевод"
+  },
+  "settings_translation_unavailable_device": {
+    "message": "Перевод недоступен на этом устройстве."
+  },
+  "settings_translation_unsupported": {
+    "message": "Встроенный перевод Chrome здесь недоступен. Для него нужен настольный Chrome на Windows 10+, macOS 13+, Linux или Chromebook Plus с достаточным объёмом свободного места на диске и памяти для моделей."
+  },
+  "shared_about": {
+    "message": "О расширении"
+  },
+  "shared_about_extensions": {
+    "message": "Беспокоитесь о вредоносных расширениях браузера? Проверьте свои расширения на сбор данных, перехват сеансов и другие угрозы."
+  },
+  "shared_advanced_mode": {
+    "message": "Расширенный режим"
+  },
+  "shared_advanced_mode_desc": {
+    "message": "Показывать отпечатки ключей, алгоритмы и параметры формата вывода."
+  },
+  "shared_auto_download_files_desc": {
+    "message": "Автоматически скачивать результат после шифрования или расшифровки файлов."
+  },
+  "shared_auto_download_files_title": {
+    "message": "Автоматически скачивать файлы"
+  },
+  "shared_auto_download_text_desc": {
+    "message": "Автоматически скачивать результат после шифрования или расшифровки текста."
+  },
+  "shared_auto_download_text_title": {
+    "message": "Автоматически скачивать текст"
+  },
+  "shared_auto_lock_desc": {
+    "message": "Блокировать разблокированные ключи после периода бездействия в панели. Блокировка экрана ОС всегда блокирует ключи сразу, независимо от этой настройки."
+  },
+  "shared_auto_lock_title": {
+    "message": "Автоблокировка при бездействии"
+  },
+  "shared_backup": {
+    "message": "Резервная копия"
+  },
+  "shared_backup_desc": {
+    "message": "Экспортируйте ключи и контакты в один файл ASCII-armor или восстановите их из него. Экспортируемые закрытые ключи шифруются парольной фразой по вашему выбору."
+  },
+  "shared_bundle_auto_lock": {
+    "message": "Автоблокировка через $duration$",
+    "placeholders": {
+      "duration": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_bundle_auto_lock_off": {
+    "message": "Автоблокировка выключена"
+  },
+  "shared_bundle_auto_lock_tabs": {
+    "message": "Автоблокировка через $duration$ и при переключении вкладок",
+    "placeholders": {
+      "duration": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_bundle_clipboard_few": {
+    "message": "Скопированные секреты стираются из буфера обмена через $count$ секунды",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_bundle_clipboard_many": {
+    "message": "Скопированные секреты стираются из буфера обмена через $count$ секунд",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_bundle_clipboard_one": {
+    "message": "Скопированные секреты стираются из буфера обмена через $count$ секунду",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_bundle_clipboard_other": {
+    "message": "Скопированные секреты стираются из буфера обмена через $count$ секунды",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_bundle_discovery_off": {
+    "message": "Без поиска ключей - для поиска ключа ничего не покидает это устройство"
+  },
+  "shared_bundle_discovery_on": {
+    "message": "Ключи можно искать на GitHub и keys.openpgp.org"
+  },
+  "shared_bundle_history_off": {
+    "message": "История не ведётся"
+  },
+  "shared_bundle_history_on": {
+    "message": "Ведётся зашифрованная история ваших действий"
+  },
+  "shared_bundle_never_cache_off": {
+    "message": "Разблокированные ключи остаются в кеше до блокировки"
+  },
+  "shared_bundle_never_cache_on": {
+    "message": "Ключи стираются из памяти после каждого использования"
+  },
+  "shared_bundle_no_encrypt_to_self": {
+    "message": "Зашифрованные вами сообщения вы сами потом прочитать не сможете"
+  },
+  "shared_bundle_storage_local": {
+    "message": "Ключи остаются на этом устройстве"
+  },
+  "shared_bundle_storage_sync": {
+    "message": "Ключи синхронизируются в вашем профиле Chrome"
+  },
+  "shared_bundle_unlock_on_open_off": {
+    "message": "Каждый ключ запрашивает разблокировку отдельно"
+  },
+  "shared_bundle_unlock_on_open_on": {
+    "message": "Один запрос ключа доступа разблокирует хранилище и ваши ключи"
+  },
+  "shared_byline_before": {
+    "message": "Инструмент для защиты приватности от"
+  },
+  "shared_check_extensions": {
+    "message": "Проверить расширения"
+  },
+  "shared_clear_name": {
+    "message": "Очистить имя"
+  },
+  "shared_commands": {
+    "message": "Команды"
+  },
+  "shared_confirm_type_after": {
+    "message": "ниже"
+  },
+  "shared_confirm_type_aria": {
+    "message": "Введите «$text$» для подтверждения",
+    "placeholders": {
+      "text": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_confirm_type_before": {
+    "message": "Для подтверждения введите"
+  },
+  "shared_crx_enable_desc": {
+    "message": "Подписывайте пакеты расширений Chrome (.crx) для функции «Проверенные загрузки CRX» в Web Store, используя ключ из вашего хранилища, а не из конвейера сборки."
+  },
+  "shared_crx_enable_title": {
+    "message": "Включить подпись CRX"
+  },
+  "shared_crx_how": {
+    "message": "Как работает подпись CRX"
+  },
+  "shared_crx_signing": {
+    "message": "Подпись CRX"
+  },
+  "shared_delete_history_body": {
+    "message": "Режим «не кешировать» также удаляет сохранённую историю ($size$). Восстановить её будет невозможно.",
+    "placeholders": {
+      "size": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_delete_history_confirm": {
+    "message": "Включить и удалить историю"
+  },
+  "shared_delete_history_title": {
+    "message": "Удалить сохранённую историю?"
+  },
+  "shared_dev_tools": {
+    "message": "Инструменты разработчика"
+  },
+  "shared_developer": {
+    "message": "Разработчик"
+  },
+  "shared_developer_desc": {
+    "message": "Просмотр chrome.storage и дамп памяти WASM для тестирования. Этот раздел есть только в сборках для разработки."
+  },
+  "shared_display": {
+    "message": "Отображение"
+  },
+  "shared_downloads": {
+    "message": "Скачивание"
+  },
+  "shared_drop_desc": {
+    "message": "Ключи добавляются в вашу связку ключей; файлы и текст попадают в рабочую область."
+  },
+  "shared_drop_to_import": {
+    "message": "Отпустите, чтобы импортировать"
+  },
+  "shared_export_all_keys": {
+    "message": "Экспортировать все ключи"
+  },
+  "shared_hide_technical_details": {
+    "message": "Скрыть технические подробности"
+  },
+  "shared_import_flow_states": {
+    "message": "Состояния процесса импорта"
+  },
+  "shared_import_keys": {
+    "message": "Импортировать ключи"
+  },
+  "shared_key_discovery": {
+    "message": "Поиск ключей"
+  },
+  "shared_key_security": {
+    "message": "Безопасность ключей"
+  },
+  "shared_key_storage": {
+    "message": "Хранение ключей"
+  },
+  "shared_keyboard_shortcuts": {
+    "message": "Сочетания клавиш"
+  },
+  "shared_lock_after": {
+    "message": "Блокировать через"
+  },
+  "shared_lock_tab_away_desc": {
+    "message": "Блокировать, как только боковая панель перестаёт быть видимой (переключение окон, сворачивание панели или окна)."
+  },
+  "shared_lock_tab_away_title": {
+    "message": "Блокировать при уходе с панели"
+  },
+  "shared_lookup_online_desc": {
+    "message": "Добавляет на экран импорта поле поиска SSH-ключей на GitHub и сертификатов на keys.openpgp.org. Если выключено, для поиска ключа ничего не покидает это устройство. Если включено, при поиске этот сервер узнаёт ваш IP-адрес и кого вы искали - но ничего о ваших ключах или сообщениях."
+  },
+  "shared_lookup_online_title": {
+    "message": "Искать ключи в интернете"
+  },
+  "shared_master_password": {
+    "message": "Мастер-пароль"
+  },
+  "shared_migration_failed": {
+    "message": "Не удалось перенести данные"
+  },
+  "shared_minutes_few": {
+    "message": "$count$ минуты",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_minutes_many": {
+    "message": "$count$ минут",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_minutes_one": {
+    "message": "$count$ минуту",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_minutes_other": {
+    "message": "$count$ минуты",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_never_cache_desc": {
+    "message": "Ключи стираются из памяти после каждой операции. Вы по-прежнему можете вручную разблокировать ключи на вкладке «Ключи»."
+  },
+  "shared_never_cache_title": {
+    "message": "Не кешировать ключи"
+  },
+  "shared_one_hour": {
+    "message": "1 час"
+  },
+  "shared_open_dev_tools": {
+    "message": "Открыть инструменты разработчика"
+  },
+  "shared_passkey_failed": {
+    "message": "Не удалось пройти проверку ключа доступа. Повторите попытку."
+  },
+  "shared_preset_applied": {
+    "message": "Профиль применён: $title$",
+    "placeholders": {
+      "title": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_preset_applied_history_deleted": {
+    "message": "История удалена, и кнопка «Отменить» её не восстанавливает."
+  },
+  "shared_preset_bundled_changed": {
+    "message": "Настройка из профиля была изменена"
+  },
+  "shared_preset_careful_tagline": {
+    "message": "Разумные настройки для настоящих секретов"
+  },
+  "shared_preset_careful_title": {
+    "message": "Осторожный"
+  },
+  "shared_preset_casual_tagline": {
+    "message": "Удобство прежде всего - для ключей, защищающих что-то малозначимое"
+  },
+  "shared_preset_casual_title": {
+    "message": "Обычный"
+  },
+  "shared_preset_current": {
+    "message": "Текущий"
+  },
+  "shared_preset_custom": {
+    "message": "Пользовательский"
+  },
+  "shared_preset_none_selected": {
+    "message": "Профиль не выбран"
+  },
+  "shared_preset_paranoid_note": {
+    "message": "Ваши сообщения остаются читаемыми для вас - позже выключите «Шифровать и для меня», если даже это риск."
+  },
+  "shared_preset_paranoid_tagline": {
+    "message": "Ничего не задерживается. Самая быстрая блокировка, без истории, без кеширования ключей."
+  },
+  "shared_preset_paranoid_title": {
+    "message": "Если это утечёт, мне конец"
+  },
+  "shared_preset_recommended": {
+    "message": "Рекомендуется"
+  },
+  "shared_saving": {
+    "message": "Сохранение..."
+  },
+  "shared_security_preset": {
+    "message": "Профиль безопасности"
+  },
+  "shared_show_technical_details": {
+    "message": "Показать технические подробности"
+  },
+  "shared_something_went_wrong": {
+    "message": "Что-то пошло не так. Повторите попытку."
+  },
+  "shared_source_on_github": {
+    "message": "Исходный код на GitHub"
+  },
+  "shared_storage_local_desc": {
+    "message": "Ваши данные остаются на этом компьютере. При смене устройства или переустановке потребуется настроить всё заново."
+  },
+  "shared_storage_local_label": {
+    "message": "Только на этом устройстве"
+  },
+  "shared_storage_sync_desc": {
+    "message": "Ваши данные синхронизируются через аккаунт Chrome. Доступны везде, где вы вошли в аккаунт."
+  },
+  "shared_storage_sync_label": {
+    "message": "Синхронизация между устройствами"
+  },
+  "shared_sync_quota_error": {
+    "message": "Недостаточно места для синхронизации. Chrome ограничивает синхронизируемые данные примерно 100 КБ, поэтому это хранилище слишком велико для синхронизации между устройствами. Оставьте его на этом устройстве или удалите часть ключей и повторите попытку."
+  },
+  "shared_translation": {
+    "message": "Перевод"
+  },
+  "shared_undo": {
+    "message": "Отменить"
+  },
+  "shared_unlock_aria": {
+    "message": "Разблокировать PGP Tools"
+  },
+  "shared_unlock_failed": {
+    "message": "Не удалось разблокировать. Повторите попытку."
+  },
+  "shared_unlock_intro": {
+    "message": "Ваши ключи и контакты зашифрованы. Пройдите аутентификацию, чтобы продолжить."
+  },
+  "shared_unlock_lost_password": {
+    "message": "Если вы потеряли пароль, ваши зашифрованные ключи и контакты восстановить невозможно."
+  },
+  "shared_unlock_with_passkey": {
+    "message": "Разблокировать ключом доступа"
+  },
+  "shared_unlock_with_vault_desc": {
+    "message": "Запрос ключа доступа, открывающий хранилище, разблокирует и ваши ключи. Ключ, который пока запрашивает разблокировку отдельно, перейдёт на этот режим при следующей разблокировке. Ключи, защищённые паролем, сохраняют свой пароль."
+  },
+  "shared_unlock_with_vault_title": {
+    "message": "Разблокировать ключи вместе с хранилищем"
+  },
+  "shared_unlocking": {
+    "message": "Разблокировка..."
+  },
+  "shared_wrong_password": {
+    "message": "Неверный пароль."
+  },
+  "workspace_add_a_contact": {
+    "message": "Добавить контакт"
+  },
+  "workspace_age_message_note": {
+    "message": "Сообщение age - получателей SSH нельзя смешивать с PGP"
+  },
+  "workspace_browse_files": {
+    "message": "Выбрать файлы"
+  },
+  "workspace_clear_all_files": {
+    "message": "Очистить все"
+  },
+  "workspace_clear_input_output": {
+    "message": "Очистить ввод и результат"
+  },
+  "workspace_clear_text": {
+    "message": "Очистить текст"
+  },
+  "workspace_cleared_toast": {
+    "message": "Рабочая область очищена"
+  },
+  "workspace_close_find": {
+    "message": "Закрыть поиск"
+  },
+  "workspace_compose_same_language": {
+    "message": "Это уже ваш язык ($language$).",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_compose_translate_unavailable": {
+    "message": "Перевод на этот язык здесь недоступен."
+  },
+  "workspace_compose_translated": {
+    "message": "Переведено: $from$ → $to$",
+    "placeholders": {
+      "from": {
+        "content": "$1"
+      },
+      "to": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_create_one": {
+    "message": "Создать ключ"
+  },
+  "workspace_crx_save_failed": {
+    "message": "Не удалось сохранить автоматически - нажмите «Сохранить», чтобы повторить попытку."
+  },
+  "workspace_crx_saved": {
+    "message": "Сохранён файл $name$.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_decrypt_with": {
+    "message": "Расшифровать ключом"
+  },
+  "workspace_decrypting": {
+    "message": "Расшифровка..."
+  },
+  "workspace_detected_key_import": {
+    "message": "Импортировать как контакт"
+  },
+  "workspace_detected_key_in_message": {
+    "message": "Это сообщение содержит открытый ключ $name$.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_detected_key_in_message_anon": {
+    "message": "Это сообщение содержит чей-то открытый ключ."
+  },
+  "workspace_detected_key_known": {
+    "message": "У вас уже есть ключ $name$.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_detected_key_pasted": {
+    "message": "Это открытый ключ $name$.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_detected_key_pasted_anon": {
+    "message": "Это похоже на чей-то открытый ключ."
+  },
+  "workspace_detected_key_show": {
+    "message": "Показать в ваших ключах"
+  },
+  "workspace_drop_files_or_text": {
+    "message": "Перетащите сюда файлы или текст"
+  },
+  "workspace_enter_key_password": {
+    "message": "Введите пароль ключа"
+  },
+  "workspace_enter_message_password": {
+    "message": "Введите пароль сообщения"
+  },
+  "workspace_error_crx_invalid": {
+    "message": "Не удалось проверить подпись CRX этого файла."
+  },
+  "workspace_error_crx_sign_failed": {
+    "message": "Не удалось подписать CRX. Повторите попытку."
+  },
+  "workspace_error_crx_wrong_password": {
+    "message": "Неверный пароль или не удалось подписать."
+  },
+  "workspace_error_decrypt_failed": {
+    "message": "Не удалось расшифровать. Сообщение может быть повреждено или зашифровано не для ваших ключей."
+  },
+  "workspace_error_decrypt_failed_ssh": {
+    "message": "Не удалось расшифровать. Сообщение может быть повреждено или зашифровано не для ваших SSH-ключей."
+  },
+  "workspace_error_engine_mismatch": {
+    "message": "Не удалось определить, в каком формате шифровать."
+  },
+  "workspace_error_need_recipient_or_password": {
+    "message": "Выберите хотя бы один ключ получателя или задайте пароль."
+  },
+  "workspace_error_no_signing_key": {
+    "message": "Нет ключа для подписи. Сначала добавьте ключ."
+  },
+  "workspace_error_no_signing_key_ssh": {
+    "message": "Нет ключа для подписи. SSH-ключи не могут подписывать - сначала добавьте ключ OpenPGP."
+  },
+  "workspace_error_not_signed": {
+    "message": "Это сообщение не подписано."
+  },
+  "workspace_error_read_file": {
+    "message": "Не удалось прочитать этот файл. Повторите попытку."
+  },
+  "workspace_error_select_crx_key": {
+    "message": "Сначала выберите ключ подписи CRX."
+  },
+  "workspace_error_select_decryption_key": {
+    "message": "Выберите ключ для расшифровки."
+  },
+  "workspace_error_signature_invalid": {
+    "message": "Проверка подписи НЕ ПРОЙДЕНА - сообщение могло быть изменено"
+  },
+  "workspace_error_unlock_failed": {
+    "message": "Не удалось разблокировать. Повторите попытку."
+  },
+  "workspace_error_verify_failed": {
+    "message": "Не удалось проверить. Введённые данные не похожи на подписанное PGP-сообщение."
+  },
+  "workspace_error_wrong_key_password": {
+    "message": "Неверный пароль. Проверьте его и повторите попытку."
+  },
+  "workspace_files_decrypted_few": {
+    "message": "Расшифровано $count$ файла (всего $size$)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "size": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_files_decrypted_many": {
+    "message": "Расшифровано $count$ файлов (всего $size$)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "size": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_files_decrypted_one": {
+    "message": "Расшифрован $count$ файл (всего $size$)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "size": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_files_decrypted_other": {
+    "message": "Расшифровано $count$ файла (всего $size$)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "size": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_files_encrypted_few": {
+    "message": "Зашифровано $count$ файла (всего $size$)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "size": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_files_encrypted_many": {
+    "message": "Зашифровано $count$ файлов (всего $size$)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "size": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_files_encrypted_one": {
+    "message": "Зашифрован $count$ файл (всего $size$)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "size": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_files_encrypted_other": {
+    "message": "Зашифровано $count$ файла (всего $size$)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "size": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_files_signed_few": {
+    "message": "Подписано $count$ файла",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_files_signed_many": {
+    "message": "Подписано $count$ файлов",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_files_signed_one": {
+    "message": "Подписан $count$ файл",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_files_signed_other": {
+    "message": "Подписано $count$ файла",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_files_zipped_encrypted_few": {
+    "message": "$count$ файла упакованы и зашифрованы",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_files_zipped_encrypted_many": {
+    "message": "$count$ файлов упакованы и зашифрованы",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_files_zipped_encrypted_one": {
+    "message": "$count$ файл упакован и зашифрован",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_files_zipped_encrypted_other": {
+    "message": "$count$ файла упакованы и зашифрованы",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_find_hide_replace": {
+    "message": "Скрыть замену"
+  },
+  "workspace_find_label": {
+    "message": "Найти"
+  },
+  "workspace_find_replace": {
+    "message": "Найти и заменить"
+  },
+  "workspace_find_show_replace": {
+    "message": "Показать замену"
+  },
+  "workspace_go": {
+    "message": "ОК"
+  },
+  "workspace_hide_password": {
+    "message": "Скрыть пароль"
+  },
+  "workspace_hide_technical_details": {
+    "message": "Скрыть технические подробности"
+  },
+  "workspace_history_save_failed": {
+    "message": "Не удалось сохранить в историю - возможно, хранилище заполнено"
+  },
+  "workspace_import_one": {
+    "message": "Импортировать ключ"
+  },
+  "workspace_match_case": {
+    "message": "Учитывать регистр"
+  },
+  "workspace_message_input_aria": {
+    "message": "Ввод сообщения"
+  },
+  "workspace_message_password_help": {
+    "message": "Любой, у кого есть этот пароль, сможет прочитать сообщение, поэтому передайте его другим способом - не вместе с самим сообщением. Он добавляется к сообщению в дополнение к выбранным получателям; открыть его сможет любой из них."
+  },
+  "workspace_message_password_label": {
+    "message": "Пароль сообщения"
+  },
+  "workspace_message_password_title": {
+    "message": "Пароль для этого сообщения"
+  },
+  "workspace_message_tools": {
+    "message": "Инструменты сообщения"
+  },
+  "workspace_need_recipient_or_password": {
+    "message": "Выберите хотя бы одного получателя или задайте пароль"
+  },
+  "workspace_next_match": {
+    "message": "Следующее совпадение"
+  },
+  "workspace_no_contacts_yet": {
+    "message": "Контактов пока нет"
+  },
+  "workspace_no_keys_yet": {
+    "message": "Ключей пока нет"
+  },
+  "workspace_no_such_language": {
+    "message": "Такого языка нет."
+  },
+  "workspace_note_downloading": {
+    "message": "Скачивание: $what$...",
+    "placeholders": {
+      "what": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_note_downloading_progress": {
+    "message": "Скачивание: $what$, $percent$%",
+    "placeholders": {
+      "what": {
+        "content": "$1"
+      },
+      "percent": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_note_same_language": {
+    "message": "Сообщение уже на этом языке ($language$).",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_note_translated_from": {
+    "message": "Переведено на этом устройстве. Исходный язык: $language$.",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_note_uncertain": {
+    "message": "Не удалось определить язык этого сообщения."
+  },
+  "workspace_operation_failed": {
+    "message": "Не удалось выполнить операцию. Повторите попытку."
+  },
+  "workspace_output_size_line": {
+    "message": "$name$ - $size$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "size": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_password_min_length_few": {
+    "message": "Не менее $count$ символов.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_password_min_length_many": {
+    "message": "Не менее $count$ символов.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_password_min_length_one": {
+    "message": "Не менее $count$ символа.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_password_min_length_other": {
+    "message": "Не менее $count$ символа.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_password_too_short_few": {
+    "message": "Используйте не менее $count$ символов.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_password_too_short_many": {
+    "message": "Используйте не менее $count$ символов.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_password_too_short_one": {
+    "message": "Используйте не менее $count$ символа.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_password_too_short_other": {
+    "message": "Используйте не менее $count$ символа.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_placeholder_compose": {
+    "message": "Введите или вставьте сообщение..."
+  },
+  "workspace_placeholder_decrypt": {
+    "message": "Вставьте полученное зашифрованное сообщение..."
+  },
+  "workspace_placeholder_verify": {
+    "message": "Вставьте подписанное сообщение для проверки..."
+  },
+  "workspace_previous_match": {
+    "message": "Предыдущее совпадение"
+  },
+  "workspace_private_key_clear_input": {
+    "message": "Очистить ввод"
+  },
+  "workspace_private_key_ignore": {
+    "message": "Игнорировать"
+  },
+  "workspace_private_key_import_safely": {
+    "message": "Импортировать этот ключ безопасно"
+  },
+  "workspace_private_key_pasted_body": {
+    "message": "Поле шифрования и расшифровки - небезопасное место для секретного ключевого материала. Используйте импорт, чтобы ключ попал в защищённое хранилище и не сохранялся в черновиках."
+  },
+  "workspace_private_key_pasted_title": {
+    "message": "Это похоже на закрытый ключ. Не вставляйте сюда закрытые ключи."
+  },
+  "workspace_private_key_show_cleartext": {
+    "message": "Показать вставленный текст в открытом виде"
+  },
+  "workspace_processing": {
+    "message": "Обработка..."
+  },
+  "workspace_recipients_label": {
+    "message": "Получатели"
+  },
+  "workspace_replace": {
+    "message": "Заменить"
+  },
+  "workspace_replace_all": {
+    "message": "Заменить все"
+  },
+  "workspace_replace_all_short": {
+    "message": "Все"
+  },
+  "workspace_replace_all_shortcut": {
+    "message": "Заменить все ($shortcut$)",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_replace_with": {
+    "message": "Заменить на"
+  },
+  "workspace_reset": {
+    "message": "Сбросить"
+  },
+  "workspace_restore_original": {
+    "message": "Восстановить оригинал"
+  },
+  "workspace_save_file": {
+    "message": "Сохранить $name$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_search_languages": {
+    "message": "Поиск языка"
+  },
+  "workspace_select_signing_key": {
+    "message": "Выберите ключ подписи"
+  },
+  "workspace_self_excluded_age": {
+    "message": "у вас нет собственного SSH-ключа, а сообщение age не может содержать PGP-ключ."
+  },
+  "workspace_self_excluded_intro": {
+    "message": "Вы не сможете прочитать это сообщение:"
+  },
+  "workspace_self_excluded_pgp": {
+    "message": "ни один из ваших ключей нельзя добавить в это сообщение."
+  },
+  "workspace_set_password": {
+    "message": "Задать пароль"
+  },
+  "workspace_show_original": {
+    "message": "Показать оригинал"
+  },
+  "workspace_show_password": {
+    "message": "Показать пароль"
+  },
+  "workspace_show_technical_details": {
+    "message": "Показать технические подробности"
+  },
+  "workspace_show_translation": {
+    "message": "Показать перевод: $language$",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_sign_blocked_age": {
+    "message": "Сообщения age нельзя подписать - у SSH-ключей здесь нет формата подписи."
+  },
+  "workspace_sign_blocked_no_pgp_key": {
+    "message": "для подписи нужен собственный ключ OpenPGP - SSH-ключи не могут подписывать."
+  },
+  "workspace_sign_for_web_store": {
+    "message": "Подписать для Web Store"
+  },
+  "workspace_sign_kind_crx": {
+    "message": "Расширение Chrome (.crx)"
+  },
+  "workspace_sign_kind_pgp": {
+    "message": "Подпись PGP"
+  },
+  "workspace_sign_with": {
+    "message": "Подписать ключом"
+  },
+  "workspace_signature_verified": {
+    "message": "Подпись проверена"
+  },
+  "workspace_status_age_encrypted": {
+    "message": "Сообщение age - зашифровано для получателей SSH"
+  },
+  "workspace_status_crx_signed": {
+    "message": "Подписан $name$ - сохранение...",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_status_crx_valid": {
+    "message": "Действительный CRX - расширение $id$",
+    "placeholders": {
+      "id": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_status_decrypted_archive": {
+    "message": "Расшифрован архив с несколькими файлами"
+  },
+  "workspace_status_signer_unknown": {
+    "message": "Это сообщение подписано, но открытого ключа подписанта нет среди ваших ключей и контактов, поэтому проверить подпись не удалось."
+  },
+  "workspace_style_bold": {
+    "message": "Жирный"
+  },
+  "workspace_style_code": {
+    "message": "Код"
+  },
+  "workspace_style_italic": {
+    "message": "Курсив"
+  },
+  "workspace_style_strike": {
+    "message": "Зачёркнутый"
+  },
+  "workspace_text_cleared_toast": {
+    "message": "Текст очищен"
+  },
+  "workspace_text_entered_below": {
+    "message": "Текст введён ниже"
+  },
+  "workspace_toggle_encrypt_to_self": {
+    "message": "Шифровать и для меня"
+  },
+  "workspace_toggle_password": {
+    "message": "Пароль"
+  },
+  "workspace_toggle_save_to_history": {
+    "message": "Сохранять в историю"
+  },
+  "workspace_toggle_zip_files": {
+    "message": "Упаковать в ZIP"
+  },
+  "workspace_translate": {
+    "message": "Перевести"
+  },
+  "workspace_translate_menu_heading": {
+    "message": "Перевести сообщение на"
+  },
+  "workspace_translate_to": {
+    "message": "Перевести на $language$",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_translating": {
+    "message": "Перевод..."
+  },
+  "workspace_undo": {
+    "message": "Отменить"
+  },
+  "workspace_unknown_signer": {
+    "message": "Неизвестный подписант"
+  },
+  "workspace_unlocking": {
+    "message": "Разблокировка..."
+  },
+  "workspace_unverified": {
+    "message": "Не проверена"
+  },
+  "workspace_verify_signature": {
+    "message": "Проверить подпись"
+  },
+  "workspace_verifying": {
+    "message": "Проверка..."
+  },
+  "workspace_working": {
+    "message": "Обработка..."
   }
 }

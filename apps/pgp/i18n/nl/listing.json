@@ -1,0 +1,8 @@
+{
+  "extName": {
+    "message": "Email versleutelen met OpenPGP en GPG - Secure Email Encryption"
+  },
+  "extDescription": {
+    "message": "Versleutel, ontsleutel, onderteken en verifieer email met OpenPGP en GPG. Beheer je sleutels."
+  }
+}
