@@ -1,0 +1,198 @@
+{
+  "shared_security_preset": { "message": "सुरक्षा प्रीसेट" },
+  "shared_preset_bundled_changed": { "message": "समूह की एक सेटिंग बदली गई" },
+  "shared_preset_none_selected": { "message": "कोई प्रीसेट नहीं चुना गया" },
+  "shared_preset_custom": { "message": "कस्टम" },
+  "shared_translation": { "message": "अनुवाद" },
+  "shared_keyboard_shortcuts": { "message": "कीबोर्ड शॉर्टकट" },
+  "shared_key_storage": { "message": "कुंजी स्टोरेज" },
+  "shared_key_security": { "message": "कुंजी सुरक्षा" },
+  "shared_auto_lock_title": {
+    "message": "निष्क्रियता के बाद अपने आप लॉक करें"
+  },
+  "shared_auto_lock_desc": {
+    "message": "पैनल में कुछ समय तक कोई गतिविधि न होने पर अनलॉक कुंजियों को लॉक करें। OS की लॉक स्क्रीन इस सेटिंग की परवाह किए बिना हमेशा तुरंत लॉक करती है।"
+  },
+  "shared_lock_after": { "message": "इसके बाद लॉक करें" },
+  "shared_minutes_one": { "message": "$count$ मिनट" },
+  "shared_minutes_other": { "message": "$count$ मिनट" },
+  "shared_one_hour": { "message": "1 घंटा" },
+  "shared_lock_tab_away_title": { "message": "टैब से हटते ही लॉक करें" },
+  "shared_lock_tab_away_desc": {
+    "message": "जैसे ही साइड पैनल दिखना बंद हो (alt-tab, समेटा गया, या विंडो छोटी की गई), तुरंत लॉक करें।"
+  },
+  "shared_never_cache_title": { "message": "कुंजियां कभी अपने आप कैश न करें" },
+  "shared_never_cache_desc": {
+    "message": "हर कार्रवाई के बाद कुंजियां मेमोरी से मिटा दी जाती हैं। आप अब भी 'कुंजियां' टैब से कुंजियों को मैन्युअल रूप से अनलॉक कर सकते हैं।"
+  },
+  "shared_unlock_with_vault_title": {
+    "message": "वॉल्ट के साथ कुंजियां अनलॉक करें"
+  },
+  "shared_unlock_with_vault_desc": {
+    "message": "वॉल्ट खोलने वाला पासकी प्रॉम्प्ट आपकी कुंजियां भी अनलॉक कर देता है। जो कुंजी अब भी अलग से पूछती है, वह अगली बार अनलॉक करने पर इसमें आ जाती है। पासवर्ड से सुरक्षित कुंजियां अपना पासवर्ड बनाए रखती हैं।"
+  },
+  "shared_downloads": { "message": "डाउनलोड" },
+  "shared_auto_download_files_title": {
+    "message": "फ़ाइल परिणाम अपने आप डाउनलोड करें"
+  },
+  "shared_auto_download_files_desc": {
+    "message": "फ़ाइलें एन्क्रिप्ट या डिक्रिप्ट करने के बाद अपने आप डाउनलोड करें।"
+  },
+  "shared_auto_download_text_title": {
+    "message": "टेक्स्ट परिणाम अपने आप डाउनलोड करें"
+  },
+  "shared_auto_download_text_desc": {
+    "message": "टेक्स्ट एन्क्रिप्ट या डिक्रिप्ट करने के बाद अपने आप डाउनलोड करें।"
+  },
+  "shared_key_discovery": { "message": "कुंजी खोज" },
+  "shared_lookup_online_title": { "message": "कुंजियां ऑनलाइन खोजें" },
+  "shared_lookup_online_desc": {
+    "message": "आयात स्क्रीन पर GitHub SSH कुंजियों और keys.openpgp.org प्रमाणपत्रों के लिए एक खोज बॉक्स जोड़ता है। बंद होने पर कुंजी ढूंढने के लिए इस डिवाइस से कुछ भी बाहर नहीं जाता। चालू करने पर, हर खोज उस होस्ट को आपका IP पता और यह बताती है कि आपने किसे खोजा - यह उन्हें आपकी कुंजियों या संदेशों के बारे में कुछ नहीं बताती।"
+  },
+  "shared_crx_signing": { "message": "CRX हस्ताक्षर" },
+  "shared_crx_enable_title": { "message": "CRX हस्ताक्षर चालू करें" },
+  "shared_crx_enable_desc": {
+    "message": "Web Store के Verified CRX Uploads के लिए Chrome एक्सटेंशन पैकेज (.crx) पर हस्ताक्षर करें, अपनी बिल्ड पाइपलाइन के बजाय वॉल्ट में रखी कुंजी से।"
+  },
+  "shared_crx_how": { "message": "CRX हस्ताक्षर कैसे काम करता है" },
+  "shared_backup": { "message": "बैकअप" },
+  "shared_backup_desc": {
+    "message": "अपनी कुंजियां और संपर्क एक ही आर्मर्ड फ़ाइल के रूप में निर्यात करें, या ऐसी फ़ाइल से बहाल करें। निर्यात की गई निजी कुंजियां आपके चुने हुए पासफ़्रेज़ से एन्क्रिप्ट की जाती हैं।"
+  },
+  "shared_export_all_keys": { "message": "सभी कुंजियां निर्यात करें" },
+  "shared_import_keys": { "message": "कुंजियां आयात करें" },
+  "shared_display": { "message": "डिसप्ले" },
+  "shared_advanced_mode": { "message": "उन्नत मोड" },
+  "shared_advanced_mode_desc": {
+    "message": "कुंजी फ़िंगरप्रिंट, एल्गोरिदम और आउटपुट फ़ॉर्मैट के विकल्प दिखाएं।"
+  },
+  "shared_developer": { "message": "डेवलपर" },
+  "shared_developer_desc": {
+    "message": "परीक्षण के लिए chrome.storage देखें और WASM मेमोरी डंप करें। यह अनुभाग सिर्फ़ डेवलपमेंट बिल्ड में दिखता है।"
+  },
+  "shared_open_dev_tools": { "message": "डेव टूल खोलें" },
+  "shared_import_flow_states": { "message": "आयात फ़्लो की अवस्थाएं" },
+  "shared_dev_tools": { "message": "डेव टूल" },
+  "shared_about": { "message": "इसके बारे में" },
+  "shared_byline_before": { "message": "एक निजता टूल, निर्माता:" },
+  "shared_source_on_github": { "message": "GitHub पर सोर्स कोड" },
+  "shared_about_extensions": {
+    "message": "दुर्भावनापूर्ण ब्राउज़र एक्सटेंशन की चिंता है? अपने एक्सटेंशन को डेटा चोरी, सत्र हाइजैकिंग और अन्य खतरों के लिए स्कैन करें।"
+  },
+  "shared_check_extensions": { "message": "अपने एक्सटेंशन जांचें" },
+  "shared_delete_history_title": { "message": "सहेजा गया इतिहास मिटाएं?" },
+  "shared_delete_history_confirm": { "message": "चालू करें और इतिहास मिटाएं" },
+  "shared_delete_history_body": {
+    "message": "'कभी कैश न करें' से आपका सहेजा गया इतिहास ($size$) भी मिट जाता है। इसे वापस नहीं पाया जा सकता।"
+  },
+  "shared_sync_quota_error": {
+    "message": "सिंक के लिए पर्याप्त जगह नहीं है। Chrome सिंक किए गए डेटा की सीमा कुल लगभग 100 KB रखता है, इसलिए यह वॉल्ट डिवाइसों के बीच सिंक करने के लिए बहुत बड़ा है। इसे इसी डिवाइस पर रखें, या कुछ कुंजियां हटाकर फिर से कोशिश करें।"
+  },
+  "shared_migration_failed": { "message": "माइग्रेशन विफल रहा" },
+  "shared_preset_applied": { "message": "प्रीसेट लागू किया गया: $title$" },
+  "shared_preset_applied_history_deleted": {
+    "message": "इतिहास मिटा दिया गया और 'पूर्ववत करें' से वापस नहीं आता।"
+  },
+  "shared_undo": { "message": "पूर्ववत करें" },
+  "shared_commands": { "message": "कमांड" },
+  "shared_unlock_aria": { "message": "PGP Tools अनलॉक करें" },
+  "shared_unlock_intro": {
+    "message": "आपकी कुंजियां और संपर्क एन्क्रिप्टेड हैं। जारी रखने के लिए प्रमाणित करें।"
+  },
+  "shared_unlock_with_passkey": { "message": "पासकी से अनलॉक करें" },
+  "shared_master_password": { "message": "मास्टर पासवर्ड" },
+  "shared_unlocking": { "message": "अनलॉक किया जा रहा है..." },
+  "shared_unlock_lost_password": {
+    "message": "अगर आप अपना पासवर्ड खो चुके हैं, तो आपकी एन्क्रिप्टेड कुंजियां और संपर्क वापस नहीं पाए जा सकते।"
+  },
+  "shared_passkey_failed": {
+    "message": "पासकी प्रमाणीकरण विफल रहा। फिर से कोशिश करें।"
+  },
+  "shared_wrong_password": { "message": "पासवर्ड गलत है।" },
+  "shared_unlock_failed": { "message": "अनलॉक विफल रहा। फिर से कोशिश करें।" },
+  "shared_saving": { "message": "सहेजा जा रहा है..." },
+  "shared_clear_name": { "message": "नाम साफ़ करें" },
+  "shared_confirm_type_before": { "message": "पुष्टि के लिए, नीचे" },
+  "shared_confirm_type_after": { "message": "टाइप करें" },
+  "shared_confirm_type_aria": {
+    "message": "पुष्टि के लिए \"$text$\" टाइप करें"
+  },
+  "shared_drop_to_import": { "message": "आयात करने के लिए छोड़ें" },
+  "shared_drop_desc": {
+    "message": "कुंजियां आपकी कीरिंग में जुड़ती हैं; फ़ाइलें और टेक्स्ट वर्कस्पेस में जाते हैं।"
+  },
+  "shared_storage_local_label": { "message": "सिर्फ़ यह डिवाइस" },
+  "shared_storage_local_desc": {
+    "message": "आपका डेटा इसी कंप्यूटर पर रहता है। डिवाइस बदलने या फिर से इंस्टॉल करने पर आपको दोबारा सेट अप करना होगा।"
+  },
+  "shared_storage_sync_label": { "message": "सभी डिवाइसों पर सिंक करें" },
+  "shared_storage_sync_desc": {
+    "message": "आपका डेटा आपके Chrome खाते से सिंक होता है। जहां भी आप साइन इन हों, वहां उपलब्ध।"
+  },
+  "shared_something_went_wrong": {
+    "message": "कुछ गड़बड़ हो गई। फिर से कोशिश करें।"
+  },
+  "shared_show_technical_details": { "message": "तकनीकी विवरण दिखाएं" },
+  "shared_hide_technical_details": { "message": "तकनीकी विवरण छिपाएं" },
+  "shared_preset_current": { "message": "मौजूदा" },
+  "shared_preset_recommended": { "message": "अनुशंसित" },
+  "shared_preset_paranoid_note": {
+    "message": "आपके संदेश आपके लिए पढ़ने योग्य रहते हैं - अगर यह भी जोखिम लगे, तो बाद में 'मेरे लिए भी एन्क्रिप्ट करें' बंद कर दें।"
+  },
+  "shared_preset_casual_title": { "message": "सहज" },
+  "shared_preset_casual_tagline": {
+    "message": "सुविधा पहले - ऐसी कुंजियों के लिए जो कम अहम चीज़ें संभालती हैं"
+  },
+  "shared_preset_careful_title": { "message": "सावधान" },
+  "shared_preset_careful_tagline": {
+    "message": "असली राज़ के लिए समझदारी भरे डिफ़ॉल्ट"
+  },
+  "shared_preset_paranoid_title": {
+    "message": "यह लीक हुआ तो मैं मुसीबत में हूं"
+  },
+  "shared_preset_paranoid_tagline": {
+    "message": "कुछ भी टिकता नहीं। सबसे छोटे लॉक समय, कोई इतिहास नहीं, कोई कैश की गई कुंजी नहीं।"
+  },
+  "shared_bundle_auto_lock_off": { "message": "अपने आप लॉक होना बंद है" },
+  "shared_bundle_auto_lock": { "message": "$duration$ बाद अपने आप लॉक" },
+  "shared_bundle_auto_lock_tabs": {
+    "message": "$duration$ बाद और टैब बदलने पर अपने आप लॉक"
+  },
+  "shared_bundle_never_cache_on": {
+    "message": "हर उपयोग के बाद कुंजियां मेमोरी से हट जाती हैं"
+  },
+  "shared_bundle_never_cache_off": {
+    "message": "अनलॉक कुंजियां लॉक करने तक कैश में रहती हैं"
+  },
+  "shared_bundle_unlock_on_open_on": {
+    "message": "एक पासकी प्रॉम्प्ट वॉल्ट और आपकी कुंजियां अनलॉक करता है"
+  },
+  "shared_bundle_unlock_on_open_off": {
+    "message": "हर कुंजी अपना अलग अनलॉक मांगती है"
+  },
+  "shared_bundle_history_on": {
+    "message": "आपकी कार्रवाइयों का एन्क्रिप्टेड इतिहास रखता है"
+  },
+  "shared_bundle_history_off": { "message": "कोई इतिहास नहीं रखा जाता" },
+  "shared_bundle_discovery_on": {
+    "message": "कुंजियां GitHub और keys.openpgp.org पर खोजी जा सकती हैं"
+  },
+  "shared_bundle_discovery_off": {
+    "message": "कोई कुंजी खोज नहीं - कुंजी ढूंढने के लिए इस डिवाइस से कुछ बाहर नहीं जाता"
+  },
+  "shared_bundle_storage_local": {
+    "message": "कुंजियां इसी डिवाइस पर रहती हैं"
+  },
+  "shared_bundle_storage_sync": {
+    "message": "कुंजियां आपकी Chrome प्रोफ़ाइल में सिंक होती हैं"
+  },
+  "shared_bundle_clipboard_one": {
+    "message": "कॉपी किए गए राज़ $count$ सेकंड बाद क्लिपबोर्ड से साफ़ हो जाते हैं"
+  },
+  "shared_bundle_clipboard_other": {
+    "message": "कॉपी किए गए राज़ $count$ सेकंड बाद क्लिपबोर्ड से साफ़ हो जाते हैं"
+  },
+  "shared_bundle_no_encrypt_to_self": {
+    "message": "आपके एन्क्रिप्ट किए गए संदेश बाद में आप खुद नहीं पढ़ सकते"
+  }
+}

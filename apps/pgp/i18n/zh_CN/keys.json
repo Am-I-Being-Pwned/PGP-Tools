@@ -6,11 +6,19 @@
   "keys_unknown_name": { "message": "未知" },
   "keys_exported_one": { "message": "已导出 $count$ 个密钥" },
   "keys_exported_other": { "message": "已导出 $count$ 个密钥" },
-  "keys_exported_unsafe_one": { "message": "已导出 $count$ 个密钥（私钥未加密）" },
-  "keys_exported_unsafe_other": { "message": "已导出 $count$ 个密钥（私钥未加密）" },
+  "keys_exported_unsafe_one": {
+    "message": "已导出 $count$ 个密钥（私钥未加密）"
+  },
+  "keys_exported_unsafe_other": {
+    "message": "已导出 $count$ 个密钥（私钥未加密）"
+  },
   "keys_reselect": { "message": "重新选择" },
-  "keys_ssh_export_skipped_one": { "message": "$count$ 个 SSH 密钥无法导出，导入的 SSH 密钥不会离开此设备。" },
-  "keys_ssh_export_skipped_other": { "message": "$count$ 个 SSH 密钥无法导出，导入的 SSH 密钥不会离开此设备。" },
+  "keys_ssh_export_skipped_one": {
+    "message": "$count$ 个 SSH 密钥无法导出，导入的 SSH 密钥不会离开此设备。"
+  },
+  "keys_ssh_export_skipped_other": {
+    "message": "$count$ 个 SSH 密钥无法导出，导入的 SSH 密钥不会离开此设备。"
+  },
   "keys_rename_key_title": { "message": "重命名密钥" },
   "keys_rename_crx_title": { "message": "重命名签名密钥" },
   "keys_rename_contact_title": { "message": "重命名联系人" },
@@ -38,15 +46,27 @@
   "keys_count_signing_keys_other": { "message": "$count$ 个签名密钥" },
   "keys_count_contacts_one": { "message": "$count$ 个联系人" },
   "keys_count_contacts_other": { "message": "$count$ 个联系人" },
-  "keys_bulk_delete_private_body": { "message": "这将从此设备永久删除所选私钥。仅加密给已删除密钥的任何内容都将无法恢复。如果将来可能还需要它们，请确保已有备份。" },
-  "keys_bulk_delete_contacts_body": { "message": "你将无法再加密给这些联系人或验证其签名。之后可以重新导入他们的公钥。" },
-  "keys_delete_crx_body": { "message": "你将无法再为此扩展程序签名更新，且除非有备份，否则该密钥无法恢复。" },
-  "keys_delete_key_body": { "message": "这将从此设备永久删除该私钥。仅加密给此密钥的任何内容都将无法恢复。如果将来可能还需要它，请确保已有备份。" },
-  "keys_remove_contact_body": { "message": "你将无法再向此联系人加密消息或验证其签名。之后可以重新导入其公钥。" },
+  "keys_bulk_delete_private_body": {
+    "message": "这将从此设备永久删除所选私钥。仅加密给已删除密钥的任何内容都将无法恢复。如果将来可能还需要它们，请确保已有备份。"
+  },
+  "keys_bulk_delete_contacts_body": {
+    "message": "你将无法再加密给这些联系人或验证其签名。之后可以重新导入他们的公钥。"
+  },
+  "keys_delete_crx_body": {
+    "message": "你将无法再为此扩展程序签名更新，且除非有备份，否则该密钥无法恢复。"
+  },
+  "keys_delete_key_body": {
+    "message": "这将从此设备永久删除该私钥。仅加密给此密钥的任何内容都将无法恢复。如果将来可能还需要它，请确保已有备份。"
+  },
+  "keys_remove_contact_body": {
+    "message": "你将无法再向此联系人加密消息或验证其签名。之后可以重新导入其公钥。"
+  },
   "keys_contacts_heading": { "message": "联系人" },
   "keys_contacts_heading_encrypted": { "message": "联系人（已加密）" },
   "keys_contacts_heading_count": { "message": "联系人 ($count$)" },
-  "keys_contacts_locked": { "message": "联系人已加密。请解锁 PGP Tools 以查看和管理。" },
+  "keys_contacts_locked": {
+    "message": "联系人已加密。请解锁 PGP Tools 以查看和管理。"
+  },
   "keys_search_contacts_placeholder": { "message": "搜索联系人…" },
   "keys_no_contacts_match": { "message": "没有与“$query$”匹配的联系人" },
   "keys_wrong_password": { "message": "密码错误" },
@@ -77,17 +97,29 @@
   "keys_banner_revoked_title": { "message": "此密钥已被吊销" },
   "keys_banner_no_reason": { "message": "未给出原因。" },
   "keys_banner_revoked_own": { "message": "请生成或导入替代密钥。" },
-  "keys_banner_revoked_contact": { "message": "请勿加密给它，也不要信任它的新签名。" },
+  "keys_banner_revoked_contact": {
+    "message": "请勿加密给它，也不要信任它的新签名。"
+  },
   "keys_banner_expired_title": { "message": "此密钥已于$when$过期" },
   "keys_banner_expired_on": { "message": "它自 $date$ 起失效。" },
   "keys_banner_expired_own": { "message": "请生成或导入更新的密钥。" },
   "keys_banner_expired_contact": { "message": "请向所有者索取更新后的密钥。" },
   "keys_banner_unusable_title": { "message": "此密钥无法使用" },
-  "keys_banner_unusable_body": { "message": "它没有可用的加密子密钥或签名子密钥。" },
-  "keys_banner_encrypt_only_own": { "message": "你可以接收加密消息，但此密钥不能签名。" },
-  "keys_banner_encrypt_only_contact": { "message": "你可以加密给它，但它不能签名。" },
-  "keys_banner_sign_only_own": { "message": "你可以签名消息，但此密钥不能接收加密消息。" },
-  "keys_banner_sign_only_contact": { "message": "你可以验证它的签名，但不能加密给它。" },
+  "keys_banner_unusable_body": {
+    "message": "它没有可用的加密子密钥或签名子密钥。"
+  },
+  "keys_banner_encrypt_only_own": {
+    "message": "你可以接收加密消息，但此密钥不能签名。"
+  },
+  "keys_banner_encrypt_only_contact": {
+    "message": "你可以加密给它，但它不能签名。"
+  },
+  "keys_banner_sign_only_own": {
+    "message": "你可以签名消息，但此密钥不能接收加密消息。"
+  },
+  "keys_banner_sign_only_contact": {
+    "message": "你可以验证它的签名，但不能加密给它。"
+  },
   "keys_banner_expires_soon": { "message": "此密钥即将过期" },
   "keys_subkey_label": { "message": "子密钥" },
   "keys_bits": { "message": "$bits$ 位" },
@@ -113,34 +145,62 @@
   "keys_expires_value": { "message": "$date$ ($when$)" },
   "keys_subkeys_title": { "message": "子密钥" },
   "keys_group_row_label": { "message": "密钥" },
-  "keys_subkeys_truncated": { "message": "此证书的子密钥数量异常多；仅显示前 $count$ 个。" },
-  "keys_no_subkeys": { "message": "此密钥没有子密钥；所有操作都由主密钥自身完成。" },
-  "keys_inactive_subkeys_expired_one": { "message": "$count$ 个已过期的子密钥" },
-  "keys_inactive_subkeys_expired_other": { "message": "$count$ 个已过期的子密钥" },
-  "keys_inactive_subkeys_revoked_one": { "message": "$count$ 个已吊销的子密钥" },
-  "keys_inactive_subkeys_revoked_other": { "message": "$count$ 个已吊销的子密钥" },
-  "keys_inactive_subkeys_unusable_one": { "message": "$count$ 个不可用的子密钥" },
-  "keys_inactive_subkeys_unusable_other": { "message": "$count$ 个不可用的子密钥" },
+  "keys_subkeys_truncated": {
+    "message": "此证书的子密钥数量异常多；仅显示前 $count$ 个。"
+  },
+  "keys_no_subkeys": {
+    "message": "此密钥没有子密钥；所有操作都由主密钥自身完成。"
+  },
+  "keys_inactive_subkeys_expired_one": {
+    "message": "$count$ 个已过期的子密钥"
+  },
+  "keys_inactive_subkeys_expired_other": {
+    "message": "$count$ 个已过期的子密钥"
+  },
+  "keys_inactive_subkeys_revoked_one": {
+    "message": "$count$ 个已吊销的子密钥"
+  },
+  "keys_inactive_subkeys_revoked_other": {
+    "message": "$count$ 个已吊销的子密钥"
+  },
+  "keys_inactive_subkeys_unusable_one": {
+    "message": "$count$ 个不可用的子密钥"
+  },
+  "keys_inactive_subkeys_unusable_other": {
+    "message": "$count$ 个不可用的子密钥"
+  },
   "keys_revocation_certificate": { "message": "吊销证书" },
   "keys_revocation_created": { "message": "已创建吊销证书" },
   "keys_revocation_create_failed": { "message": "无法创建吊销证书。" },
-  "keys_revocation_have_body": { "message": "如果此密钥丢失或泄露，发布此证书即可告知你的联系人停止使用该密钥。请将其备份到安全的地方：任何持有它的人都能吊销你的密钥。" },
-  "keys_revocation_missing_body": { "message": "此密钥导入时没有吊销证书。现在创建一个并备份，这样即使之后无法访问该密钥，你也能将其吊销。" },
+  "keys_revocation_have_body": {
+    "message": "如果此密钥丢失或泄露，发布此证书即可告知你的联系人停止使用该密钥。请将其备份到安全的地方：任何持有它的人都能吊销你的密钥。"
+  },
+  "keys_revocation_missing_body": {
+    "message": "此密钥导入时没有吊销证书。现在创建一个并备份，这样即使之后无法访问该密钥，你也能将其吊销。"
+  },
   "keys_revocation_creating": { "message": "正在创建…" },
   "keys_revocation_create": { "message": "创建吊销证书" },
   "keys_chip_your_key": { "message": "你的密钥" },
   "keys_chip_your_key_title": { "message": "你持有私钥" },
   "keys_chip_contact": { "message": "联系人" },
   "keys_chip_contact_title": { "message": "你持有对方的公钥" },
-  "keys_ssh_chip_title": { "message": "一个与 age 配合使用的 SSH 密钥。它不能与 PGP 收件人放在同一条消息中。" },
+  "keys_ssh_chip_title": {
+    "message": "一个与 age 配合使用的 SSH 密钥。它不能与 PGP 收件人放在同一条消息中。"
+  },
   "keys_chip_protection_title": { "message": "私钥在存储时的保护方式" },
   "keys_parse_failed": { "message": "无法解析此密钥。" },
   "keys_save_failed": { "message": "无法保存此更改。" },
-  "keys_recipient_off_title": { "message": "发给此联系人的消息不会加密给此密钥。" },
+  "keys_recipient_off_title": {
+    "message": "发给此联系人的消息不会加密给此密钥。"
+  },
   "keys_recipient_not_used": { "message": "未使用" },
-  "keys_recipient_last_active_title": { "message": "这是唯一仍在使用的密钥。再关闭它，消息就没有任何收件人了。" },
+  "keys_recipient_last_active_title": {
+    "message": "这是唯一仍在使用的密钥。再关闭它，消息就没有任何收件人了。"
+  },
   "keys_recipient_enable_title": { "message": "重新加密给此密钥。" },
-  "keys_recipient_disable_title": { "message": "停止加密给此密钥。它仍会列在这里。" },
+  "keys_recipient_disable_title": {
+    "message": "停止加密给此密钥。它仍会列在这里。"
+  },
   "keys_recipient_use": { "message": "使用" },
   "keys_recipient_dont_use": { "message": "不使用" },
   "keys_encrypt_to": { "message": "加密给" },
@@ -148,14 +208,20 @@
   "keys_set_default": { "message": "设为默认密钥" },
   "keys_default_removed": { "message": "已取消默认密钥" },
   "keys_default_set": { "message": "已设置默认密钥" },
-  "keys_contact_keys_partial_title": { "message": "消息会加密给此联系人 $total$ 个密钥中的 $active$ 个；其余密钥已在其密钥详情中关闭。" },
-  "keys_contact_keys_all_title": { "message": "消息会加密给此联系人的所有密钥；任一密钥都可以解密。" },
+  "keys_contact_keys_partial_title": {
+    "message": "消息会加密给此联系人 $total$ 个密钥中的 $active$ 个；其余密钥已在其密钥详情中关闭。"
+  },
+  "keys_contact_keys_all_title": {
+    "message": "消息会加密给此联系人的所有密钥；任一密钥都可以解密。"
+  },
   "keys_contact_keys_partial": { "message": "$active$/$total$ 个密钥" },
   "keys_contact_keys_count_one": { "message": "$count$ 个密钥" },
   "keys_contact_keys_count_other": { "message": "$count$ 个密钥" },
   "keys_source_github": { "message": "来自 github.com/$user$" },
   "keys_source_keyserver": { "message": "来自 keys.openpgp.org - $user$" },
-  "keys_contact_expired_title": { "message": "此密钥已于 $date$ 过期，不能再加密给它。请向所有者索取其当前密钥。" },
+  "keys_contact_expired_title": {
+    "message": "此密钥已于 $date$ 过期，不能再加密给它。请向所有者索取其当前密钥。"
+  },
   "keys_contact_expired": { "message": "已于 $date$ 过期" },
   "keys_contact_expires": { "message": "$date$过期" },
   "keys_contact_options_aria": { "message": "联系人选项" },

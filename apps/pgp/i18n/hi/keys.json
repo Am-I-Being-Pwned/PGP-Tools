@@ -1,0 +1,266 @@
+{
+  "keys_my_keys_heading": { "message": "मेरी कुंजियां" },
+  "keys_empty": {
+    "message": "अभी कोई कुंजी नहीं। शुरू करने के लिए कोई कुंजी बनाएं या आयात करें।"
+  },
+  "keys_generate_button": { "message": "कुंजी बनाएं" },
+  "keys_import_button": { "message": "कुंजी आयात करें" },
+  "keys_unknown_name": { "message": "अज्ञात" },
+  "keys_exported_one": { "message": "$count$ कुंजी निर्यात की गई" },
+  "keys_exported_other": { "message": "$count$ कुंजियां निर्यात की गईं" },
+  "keys_exported_unsafe_one": {
+    "message": "$count$ कुंजी निर्यात की गई (निजी कुंजियां बिना एन्क्रिप्शन के)"
+  },
+  "keys_exported_unsafe_other": {
+    "message": "$count$ कुंजियां निर्यात की गईं (निजी कुंजियां बिना एन्क्रिप्शन के)"
+  },
+  "keys_reselect": { "message": "फिर से चुनें" },
+  "keys_ssh_export_skipped_one": {
+    "message": "$count$ SSH कुंजी निर्यात नहीं की जा सकती - आयात की गई SSH कुंजी कभी इस डिवाइस से बाहर नहीं जाती।"
+  },
+  "keys_ssh_export_skipped_other": {
+    "message": "$count$ SSH कुंजियां निर्यात नहीं की जा सकतीं - आयात की गई SSH कुंजी कभी इस डिवाइस से बाहर नहीं जाती।"
+  },
+  "keys_rename_key_title": { "message": "कुंजी का नाम बदलें" },
+  "keys_rename_crx_title": { "message": "हस्ताक्षर कुंजी का नाम बदलें" },
+  "keys_rename_contact_title": { "message": "संपर्क का नाम बदलें" },
+  "keys_rename_field_label": { "message": "प्रदर्शित नाम" },
+  "keys_rename_hint": {
+    "message": "$identity$ की जगह दिखाया जाता है। यह सिर्फ़ एक स्थानीय लेबल है।"
+  },
+  "keys_rename_placeholder_key": { "message": "जैसे: ऑफ़िस का लैपटॉप" },
+  "keys_rename_placeholder_crx": { "message": "जैसे: मेरा एक्सटेंशन" },
+  "keys_rename_placeholder_contact": { "message": "जैसे: Alice (सभी मशीनें)" },
+  "keys_revocation_unlock_first": {
+    "message": "पहले इस कुंजी को अनलॉक करें, फिर दोबारा कोशिश करें।"
+  },
+  "keys_bulk_delete_title": { "message": "चुने गए आइटम मिटाएं?" },
+  "keys_bulk_delete_confirm_one": {
+    "message": "$count$ आइटम हमेशा के लिए मिटाएं"
+  },
+  "keys_bulk_delete_confirm_other": {
+    "message": "$count$ आइटम हमेशा के लिए मिटाएं"
+  },
+  "keys_bulk_delete_prompt_one": { "message": "delete $count$ key" },
+  "keys_bulk_delete_prompt_other": { "message": "delete $count$ keys" },
+  "keys_contacts_removed_one": { "message": "संपर्क हटाया गया" },
+  "keys_contacts_removed_other": { "message": "$count$ संपर्क हटाए गए" },
+  "keys_undo": { "message": "पूर्ववत करें" },
+  "keys_confirm_remove_contact_title": { "message": "संपर्क हटाएं?" },
+  "keys_confirm_delete_key_title": { "message": "कुंजी मिटाएं?" },
+  "keys_remove_contact": { "message": "संपर्क हटाएं" },
+  "keys_delete_key_permanently": { "message": "कुंजी हमेशा के लिए मिटाएं" },
+  "keys_count_private_keys_one": { "message": "$count$ निजी कुंजी" },
+  "keys_count_private_keys_other": { "message": "$count$ निजी कुंजियां" },
+  "keys_count_signing_keys_one": { "message": "$count$ हस्ताक्षर कुंजी" },
+  "keys_count_signing_keys_other": { "message": "$count$ हस्ताक्षर कुंजियां" },
+  "keys_count_contacts_one": { "message": "$count$ संपर्क" },
+  "keys_count_contacts_other": { "message": "$count$ संपर्क" },
+  "keys_bulk_delete_private_body": {
+    "message": "इससे चुनी गई निजी कुंजियां इस डिवाइस से हमेशा के लिए मिट जाती हैं। जो कुछ भी सिर्फ़ मिटाई गई कुंजी के लिए एन्क्रिप्ट किया गया है, वह कभी वापस नहीं पाया जा सकेगा। अगर आपको इनकी कभी ज़रूरत पड़ सकती है, तो पक्का करें कि आपके पास बैकअप है।"
+  },
+  "keys_bulk_delete_contacts_body": {
+    "message": "आप अब इन संपर्कों के लिए एन्क्रिप्ट नहीं कर पाएंगे या इनके हस्ताक्षर सत्यापित नहीं कर पाएंगे। आप इनकी सार्वजनिक कुंजियां बाद में फिर से आयात कर सकते हैं।"
+  },
+  "keys_delete_crx_body": {
+    "message": "आप अब इस एक्सटेंशन के अपडेट पर हस्ताक्षर नहीं कर पाएंगे, और बैकअप न होने पर कुंजी वापस नहीं पाई जा सकती।"
+  },
+  "keys_delete_key_body": {
+    "message": "इससे निजी कुंजी इस डिवाइस से हमेशा के लिए मिट जाती है। जो कुछ भी सिर्फ़ इस कुंजी के लिए एन्क्रिप्ट किया गया है, वह कभी वापस नहीं पाया जा सकेगा। अगर आपको इसकी कभी ज़रूरत पड़ सकती है, तो पक्का करें कि आपके पास बैकअप है।"
+  },
+  "keys_remove_contact_body": {
+    "message": "आप अब इस संपर्क के लिए संदेश एन्क्रिप्ट नहीं कर पाएंगे या इसके हस्ताक्षर सत्यापित नहीं कर पाएंगे। आप इसकी सार्वजनिक कुंजी बाद में फिर से आयात कर सकते हैं।"
+  },
+  "keys_contacts_heading": { "message": "संपर्क" },
+  "keys_contacts_heading_encrypted": { "message": "संपर्क (एन्क्रिप्टेड)" },
+  "keys_contacts_heading_count": { "message": "संपर्क ($count$)" },
+  "keys_contacts_locked": {
+    "message": "संपर्क एन्क्रिप्टेड हैं। इन्हें देखने और प्रबंधित करने के लिए PGP Tools अनलॉक करें।"
+  },
+  "keys_search_contacts_placeholder": { "message": "संपर्क खोजें..." },
+  "keys_no_contacts_match": {
+    "message": "\"$query$\" से मेल खाता कोई संपर्क नहीं"
+  },
+  "keys_wrong_password": { "message": "पासवर्ड गलत है" },
+  "keys_passkey_failed": { "message": "पासकी प्रमाणीकरण विफल रहा" },
+  "keys_status_unlocked": { "message": "अनलॉक है" },
+  "keys_status_locked": { "message": "लॉक है" },
+  "keys_status_sealed": { "message": "स्टोरेज में सील है" },
+  "keys_default_badge": { "message": "डिफ़ॉल्ट" },
+  "keys_default_title": {
+    "message": "हस्ताक्षर, डिक्रिप्ट और खुद के लिए एन्क्रिप्ट करने में डिफ़ॉल्ट रूप से इस्तेमाल होती है"
+  },
+  "keys_key_options_aria": { "message": "कुंजी के विकल्प" },
+  "keys_rename": { "message": "नाम बदलें" },
+  "keys_public_key_copied": { "message": "सार्वजनिक कुंजी कॉपी हो गई" },
+  "keys_copy_public_key": { "message": "सार्वजनिक कुंजी कॉपी करें" },
+  "keys_download_public_key": { "message": "सार्वजनिक कुंजी डाउनलोड करें" },
+  "keys_copy_private_key": { "message": "निजी कुंजी कॉपी करें" },
+  "keys_select": { "message": "चुनें" },
+  "keys_delete_key": { "message": "कुंजी मिटाएं" },
+  "keys_protection_passkey": { "message": "पासकी" },
+  "keys_protection_password": { "message": "पासवर्ड" },
+  "keys_weak_sha1": { "message": "कमज़ोर (SHA-1)" },
+  "keys_enter_password_placeholder": { "message": "पासवर्ड डालें" },
+  "keys_key_details": { "message": "कुंजी का विवरण" },
+  "keys_details_aria": { "message": "$name$ की कुंजी का विवरण" },
+  "keys_cap_sign": { "message": "संदेशों पर हस्ताक्षर करती है" },
+  "keys_cap_encrypt": { "message": "एन्क्रिप्टेड संदेश प्राप्त करती है" },
+  "keys_cap_auth": { "message": "प्रमाणीकरण करती है (जैसे SSH)" },
+  "keys_cap_certify": { "message": "पहचानों को प्रमाणित करती है" },
+  "keys_banner_revoked_title": { "message": "यह कुंजी निरस्त कर दी गई है" },
+  "keys_banner_no_reason": { "message": "कोई कारण नहीं दिया गया।" },
+  "keys_banner_revoked_own": {
+    "message": "इसकी जगह नई कुंजी बनाएं या आयात करें।"
+  },
+  "keys_banner_revoked_contact": {
+    "message": "इसके लिए एन्क्रिप्ट न करें और इसके नए हस्ताक्षरों पर भरोसा न करें।"
+  },
+  "keys_banner_expired_title": {
+    "message": "इस कुंजी की अवधि $when$ समाप्त हो गई"
+  },
+  "keys_banner_expired_on": { "message": "यह $date$ से मान्य नहीं रही।" },
+  "keys_banner_expired_own": { "message": "कोई नई कुंजी बनाएं या आयात करें।" },
+  "keys_banner_expired_contact": {
+    "message": "मालिक से अपडेट की गई कुंजी मांगें।"
+  },
+  "keys_banner_unusable_title": {
+    "message": "यह कुंजी इस्तेमाल नहीं की जा सकती"
+  },
+  "keys_banner_unusable_body": {
+    "message": "इसमें एन्क्रिप्शन या हस्ताक्षर के लिए कोई उपयोगी उपकुंजी नहीं है।"
+  },
+  "keys_banner_encrypt_only_own": {
+    "message": "आप एन्क्रिप्टेड संदेश प्राप्त कर सकते हैं, लेकिन यह कुंजी हस्ताक्षर नहीं कर सकती।"
+  },
+  "keys_banner_encrypt_only_contact": {
+    "message": "आप इसके लिए एन्क्रिप्ट कर सकते हैं, लेकिन यह हस्ताक्षर नहीं कर सकती।"
+  },
+  "keys_banner_sign_only_own": {
+    "message": "आप संदेशों पर हस्ताक्षर कर सकते हैं, लेकिन यह कुंजी एन्क्रिप्टेड संदेश प्राप्त नहीं कर सकती।"
+  },
+  "keys_banner_sign_only_contact": {
+    "message": "आप इसके हस्ताक्षर सत्यापित कर सकते हैं, लेकिन इसके लिए एन्क्रिप्ट नहीं कर सकते।"
+  },
+  "keys_banner_expires_soon": {
+    "message": "यह कुंजी जल्द ही समाप्त हो रही है"
+  },
+  "keys_subkey_label": { "message": "उपकुंजी" },
+  "keys_bits": { "message": "$bits$-बिट" },
+  "keys_row_created": { "message": "$date$ को बनी" },
+  "keys_row_expires": { "message": "$date$ को समाप्त होगी" },
+  "keys_row_expired": { "message": "$date$ को समाप्त हुई" },
+  "keys_row_never_expires": { "message": "कभी समाप्त नहीं होती" },
+  "keys_status_expired": { "message": "समाप्त" },
+  "keys_status_revoked": { "message": "निरस्त" },
+  "keys_status_invalid": { "message": "अमान्य" },
+  "keys_revoked_reason": { "message": "निरस्त: $reason$" },
+  "keys_also_known_as": { "message": "अन्य पहचान" },
+  "keys_loading": { "message": "लोड हो रहा है…" },
+  "keys_copy_fingerprint_aria": { "message": "फ़िंगरप्रिंट कॉपी करें" },
+  "keys_fact_fingerprint": { "message": "फ़िंगरप्रिंट" },
+  "keys_fact_algorithm": { "message": "एल्गोरिदम" },
+  "keys_fact_used_for": { "message": "उपयोग" },
+  "keys_fact_created": { "message": "बनी" },
+  "keys_fact_expires": { "message": "समाप्ति" },
+  "keys_fact_added": { "message": "जोड़ी गई" },
+  "keys_fact_last_used": { "message": "अंतिम उपयोग" },
+  "keys_never": { "message": "कभी नहीं" },
+  "keys_expires_value": { "message": "$date$ ($when$)" },
+  "keys_subkeys_title": { "message": "उपकुंजियां" },
+  "keys_group_row_label": { "message": "कुंजी" },
+  "keys_subkeys_truncated": {
+    "message": "इस प्रमाणपत्र में असामान्य रूप से बहुत सारी उपकुंजियां हैं; सिर्फ़ पहली $count$ दिखाई गई हैं।"
+  },
+  "keys_no_subkeys": {
+    "message": "इस कुंजी में कोई उपकुंजी नहीं है; प्राथमिक कुंजी ही सब कुछ करती है।"
+  },
+  "keys_inactive_subkeys_expired_one": { "message": "$count$ समाप्त उपकुंजी" },
+  "keys_inactive_subkeys_expired_other": {
+    "message": "$count$ समाप्त उपकुंजियां"
+  },
+  "keys_inactive_subkeys_revoked_one": { "message": "$count$ निरस्त उपकुंजी" },
+  "keys_inactive_subkeys_revoked_other": {
+    "message": "$count$ निरस्त उपकुंजियां"
+  },
+  "keys_inactive_subkeys_unusable_one": {
+    "message": "$count$ अनुपयोगी उपकुंजी"
+  },
+  "keys_inactive_subkeys_unusable_other": {
+    "message": "$count$ अनुपयोगी उपकुंजियां"
+  },
+  "keys_revocation_certificate": { "message": "निरस्तीकरण प्रमाणपत्र" },
+  "keys_revocation_created": { "message": "निरस्तीकरण प्रमाणपत्र बनाया गया" },
+  "keys_revocation_create_failed": {
+    "message": "निरस्तीकरण प्रमाणपत्र नहीं बनाया जा सका।"
+  },
+  "keys_revocation_have_body": {
+    "message": "अगर यह कुंजी कभी खो जाए या उससे समझौता हो जाए, तो इस प्रमाणपत्र को प्रकाशित करने से आपके संपर्कों को पता चल जाता है कि इस कुंजी का इस्तेमाल बंद करना है। इसका बैकअप किसी सुरक्षित जगह रखें - जिसके पास यह होगा, वह आपकी कुंजी निरस्त कर सकता है।"
+  },
+  "keys_revocation_missing_body": {
+    "message": "यह कुंजी बिना निरस्तीकरण प्रमाणपत्र के आयात की गई थी। अभी एक बनाएं और उसका बैकअप रखें, ताकि कुंजी तक पहुंच खो देने पर भी आप बाद में उसे निरस्त कर सकें।"
+  },
+  "keys_revocation_creating": { "message": "बनाया जा रहा है..." },
+  "keys_revocation_create": { "message": "निरस्तीकरण प्रमाणपत्र बनाएं" },
+  "keys_chip_your_key": { "message": "आपकी कुंजी" },
+  "keys_chip_your_key_title": { "message": "निजी कुंजी आपके पास है" },
+  "keys_chip_contact": { "message": "संपर्क" },
+  "keys_chip_contact_title": { "message": "इनकी सार्वजनिक कुंजी आपके पास है" },
+  "keys_ssh_chip_title": {
+    "message": "एक SSH कुंजी, जो age के साथ इस्तेमाल होती है। इसे एक ही संदेश में PGP प्राप्तकर्ताओं के साथ नहीं जोड़ा जा सकता।"
+  },
+  "keys_chip_protection_title": {
+    "message": "निजी कुंजी स्टोरेज में कैसे सुरक्षित है"
+  },
+  "keys_parse_failed": { "message": "यह कुंजी पार्स नहीं की जा सकी।" },
+  "keys_save_failed": { "message": "यह बदलाव सहेजा नहीं जा सका।" },
+  "keys_recipient_off_title": {
+    "message": "इस संपर्क को भेजे गए संदेश इस कुंजी के लिए एन्क्रिप्ट नहीं किए जाते।"
+  },
+  "keys_recipient_not_used": { "message": "इस्तेमाल में नहीं" },
+  "keys_recipient_last_active_title": {
+    "message": "यह इस्तेमाल में बची एकमात्र कुंजी है। इसे भी बंद करने पर संदेश किसी के लिए भी एन्क्रिप्ट नहीं होंगे।"
+  },
+  "keys_recipient_enable_title": {
+    "message": "इस कुंजी के लिए फिर से एन्क्रिप्ट करें।"
+  },
+  "keys_recipient_disable_title": {
+    "message": "इस कुंजी के लिए एन्क्रिप्ट करना बंद करें। यह यहां सूची में बनी रहेगी।"
+  },
+  "keys_recipient_use": { "message": "इस्तेमाल करें" },
+  "keys_recipient_dont_use": { "message": "इस्तेमाल न करें" },
+  "keys_encrypt_to": { "message": "इसके लिए एन्क्रिप्ट करें" },
+  "keys_remove_default": { "message": "डिफ़ॉल्ट हटाएं" },
+  "keys_set_default": { "message": "डिफ़ॉल्ट कुंजी बनाएं" },
+  "keys_default_removed": { "message": "डिफ़ॉल्ट कुंजी हटाई गई" },
+  "keys_default_set": { "message": "डिफ़ॉल्ट कुंजी सेट की गई" },
+  "keys_contact_keys_partial_title": {
+    "message": "संदेश इस संपर्क की $total$ में से $active$ कुंजियों के लिए एन्क्रिप्ट किए जाते हैं; बाकी इसकी कुंजी के विवरण में बंद की गई हैं।"
+  },
+  "keys_contact_keys_all_title": {
+    "message": "संदेश इस संपर्क की सभी कुंजियों के लिए एन्क्रिप्ट किए जाते हैं; इनमें से कोई भी डिक्रिप्ट कर सकती है।"
+  },
+  "keys_contact_keys_partial": {
+    "message": "$total$ में से $active$ कुंजियां"
+  },
+  "keys_contact_keys_count_one": { "message": "$count$ कुंजी" },
+  "keys_contact_keys_count_other": { "message": "$count$ कुंजियां" },
+  "keys_source_github": { "message": "github.com/$user$ से" },
+  "keys_source_keyserver": { "message": "keys.openpgp.org से - $user$" },
+  "keys_contact_expired_title": {
+    "message": "इस कुंजी की अवधि $date$ को समाप्त हो गई और अब इसके लिए एन्क्रिप्ट नहीं किया जा सकता। मालिक से उनकी मौजूदा कुंजी मांगें।"
+  },
+  "keys_contact_expired": { "message": "$date$ को समाप्त" },
+  "keys_contact_expires": { "message": "$date$ को समाप्त होगी" },
+  "keys_contact_options_aria": { "message": "संपर्क के विकल्प" },
+  "keys_selection_actions_aria": { "message": "चयन कार्रवाइयां" },
+  "keys_cancel_selection_aria": { "message": "चयन रद्द करें" },
+  "keys_selected_count_one": { "message": "$count$ चुना गया" },
+  "keys_selected_count_other": { "message": "$count$ चुने गए" },
+  "keys_select_all": { "message": "सभी चुनें" },
+  "keys_deselect_all": { "message": "सभी का चयन हटाएं" },
+  "keys_export": { "message": "निर्यात करें" },
+  "keys_size_bytes": { "message": "$size$ B" },
+  "keys_size_kb": { "message": "$size$ KB" },
+  "keys_size_mb": { "message": "$size$ MB" }
+}

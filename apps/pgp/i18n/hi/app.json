@@ -1,0 +1,179 @@
+{
+  "app_action_title": { "message": "PGP Tools" },
+  "app_cmd_open": { "message": "PGP Tools खोलें" },
+  "app_cmd_open_encrypt": {
+    "message": "PGP Tools को एन्क्रिप्ट मोड में खोलें"
+  },
+  "app_cmd_open_decrypt": { "message": "PGP Tools को डिक्रिप्ट मोड में खोलें" },
+  "app_cmd_open_sign": { "message": "PGP Tools को हस्ताक्षर मोड में खोलें" },
+  "app_cmd_open_verify": { "message": "PGP Tools को सत्यापन मोड में खोलें" },
+  "app_menu_open_in_pgp_tools": { "message": "PGP Tools में खोलें" },
+  "app_tab_main": { "message": "मुख्य" },
+  "app_nav_label": { "message": "मुख्य नेविगेशन" },
+  "app_vault_unreadable_title": { "message": "आपका वॉल्ट पढ़ा नहीं जा सका।" },
+  "app_vault_unreadable_body": {
+    "message": "आपकी कुंजियां अब भी इस डिवाइस पर सहेजी हुई हैं। सबसे पहले लॉक करके फिर से कोशिश करें।"
+  },
+  "app_vault_unreadable_body_passkey": {
+    "message": "आपकी कुंजियां अब भी इस डिवाइस पर सहेजी हुई हैं। सबसे पहले लॉक करके फिर से कोशिश करें -- ध्यान रहे कि वही पासकी इस्तेमाल करें जो आपने सेट की थी।"
+  },
+  "app_vault_lock_retry": { "message": "लॉक करके फिर से कोशिश करें" },
+  "app_import_added_one": { "message": "कुंजी जोड़ी गई" },
+  "app_import_added_other": { "message": "$count$ कुंजियां जोड़ी गईं" },
+  "app_import_view_key_one": { "message": "कुंजी देखें" },
+  "app_import_view_key_other": { "message": "कुंजियां देखें" },
+  "app_welcome_open_failed": {
+    "message": "साइड पैनल नहीं खुल सका। अपने टूलबार में PGP Tools आइकन पर क्लिक करें।"
+  },
+  "app_welcome_opened": {
+    "message": "शुरू करने के लिए साइड पैनल में दिए गए निर्देशों का पालन करें"
+  },
+  "app_welcome_title": { "message": "PGP Tools इंस्टॉल हो गया है" },
+  "app_welcome_body": {
+    "message": "साइड पैनल खोलने और अपनी कुंजियों का सेटअप पूरा करने के लिए नीचे क्लिक करें। इसके बाद, इसे कभी भी फिर से खोलने के लिए टूलबार में PGP Tools आइकन का इस्तेमाल करें।"
+  },
+  "app_welcome_start": { "message": "शुरू करने के लिए यहां क्लिक करें" },
+  "app_welcome_credit_before": { "message": "एक निजता टूल, निर्माता:" },
+  "app_welcome_credit_after": { "message": "।" },
+  "app_onboarding_prf_unsupported": {
+    "message": "आपका ऑथेंटिकेटर PRF का समर्थन नहीं करता। कोई दूसरी पासकी आज़माएं या इसके बजाय पासवर्ड इस्तेमाल करें।"
+  },
+  "app_onboarding_setup_failed": { "message": "सेटअप विफल रहा" },
+  "app_onboarding_name_required": { "message": "नाम ज़रूरी है।" },
+  "app_onboarding_generate_failed": { "message": "कुंजी बनाना विफल रहा" },
+  "app_onboarding_intro_body": {
+    "message": "ऐसे निजी संदेश भेजें जिन्हें सिर्फ़ सही व्यक्ति ही पढ़ सके, और सत्यापित करें कि संदेश वाकई उसी ने भेजे हैं जिसका दावा किया गया है।"
+  },
+  "app_onboarding_storage_question": { "message": "हम आपका डेटा कहां सहेजें?" },
+  "app_onboarding_next": { "message": "आगे" },
+  "app_onboarding_protection_title": { "message": "अपना डेटा सुरक्षित करें" },
+  "app_onboarding_protection_body": {
+    "message": "चुनें कि अपने संपर्कों और कुंजियों को कैसे सुरक्षित रखना है। PGP Tools खोलने पर हर बार आप इसी का इस्तेमाल करेंगे।"
+  },
+  "app_onboarding_create_passkey": { "message": "पासकी बनाएं" },
+  "app_onboarding_set_password": { "message": "पासवर्ड सेट करें" },
+  "app_onboarding_identity_title": { "message": "अपनी PGP कुंजी बनाएं" },
+  "app_onboarding_identity_body": {
+    "message": "संदेशों को एन्क्रिप्ट, डिक्रिप्ट और हस्ताक्षरित करने के लिए एक कुंजी युग्म बनाएं।"
+  },
+  "app_onboarding_name_label": { "message": "नाम *" },
+  "app_onboarding_name_placeholder": { "message": "आपका पूरा नाम" },
+  "app_onboarding_email_label": { "message": "ईमेल" },
+  "app_onboarding_optional": { "message": "वैकल्पिक" },
+  "app_onboarding_email_placeholder": { "message": "you@example.com" },
+  "app_onboarding_comment_label": { "message": "टिप्पणी" },
+  "app_onboarding_comment_placeholder": { "message": "जैसे: काम, निजी" },
+  "app_onboarding_advanced_options": { "message": "उन्नत विकल्प" },
+  "app_onboarding_algorithm_label": { "message": "एल्गोरिदम" },
+  "app_onboarding_algo_ecc_hint": {
+    "message": "आधुनिक, तेज़, छोटी कुंजियां। ज़्यादातर उपयोगों के लिए अनुशंसित।"
+  },
+  "app_onboarding_algo_rsa_hint": {
+    "message": "व्यापक रूप से संगत। कुंजी बनाने में ज़्यादा समय लगता है।"
+  },
+  "app_onboarding_expiry_label": { "message": "कुंजी की समाप्ति" },
+  "app_onboarding_expiry_never": { "message": "कभी नहीं" },
+  "app_onboarding_expiry_years_one": { "message": "$count$ साल" },
+  "app_onboarding_expiry_years_other": { "message": "$count$ साल" },
+  "app_onboarding_create_key": { "message": "मेरी PGP कुंजी बनाएं" },
+  "app_onboarding_skip": { "message": "बाद में सेट अप करें" },
+  "app_onboarding_passkey_prompt": {
+    "message": "अपने ब्राउज़र के पासकी प्रॉम्प्ट का पालन करें..."
+  },
+  "app_onboarding_generating": { "message": "कुंजी बनाई जा रही है..." },
+  "app_onboarding_rsa_slow": {
+    "message": "RSA कुंजियां बनने में थोड़ा समय लगता है"
+  },
+  "app_onboarding_preset_title": { "message": "एक सुरक्षा प्रीसेट चुनें" },
+  "app_onboarding_preset_body": {
+    "message": "PGP Tools को आपकी कुंजियों के साथ कितनी सावधानी बरतनी चाहिए? हर विकल्प ठीक-ठीक दिखाता है कि वह क्या सेट करता है, और आप इनमें से कुछ भी बाद में सेटिंग में बदल सकते हैं।"
+  },
+  "app_onboarding_unlock_with_vault": {
+    "message": "वॉल्ट के साथ कुंजियां अनलॉक करें"
+  },
+  "app_onboarding_unlock_with_vault_hint": {
+    "message": "वॉल्ट खोलने वाला पासकी प्रॉम्प्ट आपकी कुंजियां भी अनलॉक कर देता है। हर कुंजी के लिए अलग प्रॉम्प्ट नहीं आता। आप इसे सेटिंग में बदल सकते हैं।"
+  },
+  "app_onboarding_use_preset": { "message": "यह प्रीसेट इस्तेमाल करें" },
+  "app_onboarding_keep_defaults": { "message": "डिफ़ॉल्ट ही रखें" },
+  "app_copy_failed": {
+    "message": "कॉपी नहीं हो सका - पहले एक्सटेंशन पैनल पर क्लिक करें, फिर से कोशिश करें।"
+  },
+  "app_copied": { "message": "$label$ कॉपी हो गया" },
+  "app_copied_wipe": {
+    "message": "$label$ कॉपी हो गया - क्लिपबोर्ड $seconds$ सेकंड में साफ़ हो जाएगा"
+  },
+  "app_oversized_more": { "message": "$names$ और $count$ अन्य" },
+  "app_oversized_files_one": {
+    "message": "$files$: फ़ाइल $limit$ से बड़ी है और पैनल में प्रोसेस नहीं की जा सकती।"
+  },
+  "app_oversized_files_other": {
+    "message": "$files$: फ़ाइलें $limit$ से बड़ी हैं और पैनल में प्रोसेस नहीं की जा सकतीं।"
+  },
+  "app_error_remedy_import_key": { "message": "कुंजी आयात करें" },
+  "app_error_remedy_try_again": { "message": "फिर से कोशिश करें" },
+  "app_error_remedy_check_key": { "message": "कुंजी जांचें" },
+  "app_error_key_not_found": {
+    "message": "वह कुंजी अब आपकी कीरिंग में नहीं है, इसलिए कुछ भी सहेजा नहीं गया। कुंजी को फिर से आयात करें और दोबारा कोशिश करें।"
+  },
+  "app_error_key_locked": {
+    "message": "यह कुंजी लॉक है। इसे अनलॉक करके फिर से कोशिश करें।"
+  },
+  "app_error_vault_locked": {
+    "message": "आपका वॉल्ट लॉक है, इसलिए कुछ भी नहीं बदला गया। इसे अनलॉक करके यह काम फिर से करें।"
+  },
+  "app_error_weak_password": {
+    "message": "वह पासवर्ड बहुत छोटा है। कम से कम 8 वर्ण इस्तेमाल करें।"
+  },
+  "app_error_password_required": {
+    "message": "इस कुंजी को उसका पासवर्ड चाहिए। इसे अनलॉक करने के लिए कुंजी का पासवर्ड डालें।"
+  },
+  "app_error_passkey_failed": {
+    "message": "आपकी पासकी पूरी नहीं हो सकी। फिर से कोशिश करें, या किसी दूसरे तरीके से अनलॉक करें।"
+  },
+  "app_error_passkey_dismissed": {
+    "message": "पासकी प्रॉम्प्ट खारिज कर दिया गया। तैयार होने पर यह काम फिर से करें।"
+  },
+  "app_error_wrong_password": {
+    "message": "इस कुंजी के लिए पासवर्ड गलत है। इसे जांचकर फिर से कोशिश करें।"
+  },
+  "app_error_symmetric_wrong_password": {
+    "message": "उस पासवर्ड से यह संदेश नहीं खुला। इसे जांचकर फिर से कोशिश करें - अगर आपको पक्का है कि यह सही है, तो हो सकता है कि संदेश क्षतिग्रस्त हो।"
+  },
+  "app_error_ocb_unsupported": {
+    "message": "यह संदेश एक पुराने AEAD (OCB) फ़ॉर्मैट में है, जिसे यह ऐप नहीं पढ़ सकता। भेजने वाले से कहें कि इसे सामान्य तरीके से एन्क्रिप्ट करके फिर से भेजें - वे कोई भी पासवर्ड चुन सकते हैं, समस्या सिर्फ़ फ़ॉर्मैट की है, जो समर्थित नहीं है।"
+  },
+  "app_error_no_decryption_key": {
+    "message": "यह संदेश ऐसी कुंजी के लिए एन्क्रिप्ट किया गया है जो आपके पास नहीं है। वह निजी कुंजी आयात करें, या भेजने वाले से कहें कि आपकी किसी कुंजी के लिए एन्क्रिप्ट करें।"
+  },
+  "app_error_no_decryption_key_with_id": {
+    "message": "यह संदेश ऐसी कुंजी के लिए एन्क्रिप्ट किया गया है जो आपके पास नहीं है (कुंजी ID $key_id$)। वह निजी कुंजी आयात करें, या भेजने वाले से कहें कि आपकी किसी कुंजी के लिए एन्क्रिप्ट करें।"
+  },
+  "app_error_not_crx": {
+    "message": "यह ऐसा Chrome एक्सटेंशन पैकेज नहीं है जिसे यह टूल सत्यापित कर सके। कोई CRX3 (.crx) फ़ाइल चुनें।"
+  },
+  "app_error_crx_unsigned": {
+    "message": "CRX हस्ताक्षर मेल नहीं खाता: या तो इस पर इस कुंजी से हस्ताक्षर नहीं किए गए थे, या हस्ताक्षर के बाद फ़ाइल बदली गई। प्रकाशक से नई प्रति लें।"
+  },
+  "app_error_tampered": {
+    "message": "हस्ताक्षर सत्यापन विफल रहा - हो सकता है कि इस संदेश से छेड़छाड़ की गई हो। इसकी सामग्री पर भरोसा न करें; भेजने वाले से इसे फिर से भेजने को कहें।"
+  },
+  "app_error_key_expired": {
+    "message": "इस काम में शामिल एक कुंजी की अवधि समाप्त हो चुकी है। कुंजी के मालिक से अपडेट की गई कुंजी मांगें, फिर उसे आयात करें।"
+  },
+  "app_error_key_revoked": {
+    "message": "इस काम में शामिल एक कुंजी को उसके मालिक ने निरस्त कर दिया है। उनकी नई कुंजी लें, फिर उसे आयात करें।"
+  },
+  "app_error_weak_algorithm": {
+    "message": "यह कुंजी ऐसे हस्ताक्षर एल्गोरिदम का इस्तेमाल करती है जिसे अब सुरक्षित नहीं माना जाता। कुंजी के मालिक से कहें कि इसे SHA-256 या उससे मज़बूत एल्गोरिदम के साथ फिर से जारी करें।"
+  },
+  "app_error_corrupted": {
+    "message": "डेटा क्षतिग्रस्त है या अधूरा है। एक नई, पूरी प्रति लें और फिर से कोशिश करें।"
+  },
+  "app_error_not_pgp_data": {
+    "message": "यह PGP डेटा जैसा नहीं लगता। पक्का करें कि आपने पूरा आर्मर्ड ब्लॉक पेस्ट किया है, जिसमें BEGIN और END वाली पंक्तियां भी शामिल हों।"
+  },
+  "app_error_storage_full": {
+    "message": "ब्राउज़र स्टोरेज भर गया है, इसलिए यह सहेजा नहीं जा सका। जिन कुंजियों या संपर्कों की अब ज़रूरत नहीं है उन्हें हटाएं, फिर से कोशिश करें।"
+  }
+}

@@ -1,0 +1,279 @@
+{
+  "workspace_undo": { "message": "पूर्ववत करें" },
+  "workspace_compose_translated": {
+    "message": "$from$ से $to$ में अनुवाद किया गया"
+  },
+  "workspace_compose_same_language": {
+    "message": "यह पहले से आपकी भाषा ($language$) में है।"
+  },
+  "workspace_compose_translate_unavailable": {
+    "message": "उस भाषा के लिए अनुवाद यहां उपलब्ध नहीं है।"
+  },
+  "workspace_crx_saved": { "message": "$name$ सहेजी गई।" },
+  "workspace_crx_save_failed": {
+    "message": "अपने आप सहेजा नहीं जा सका - फिर से कोशिश करने के लिए 'सहेजें' दबाएं।"
+  },
+  "workspace_sign_blocked_age": {
+    "message": "age संदेशों पर हस्ताक्षर नहीं किए जा सकते - यहां SSH कुंजियों का कोई हस्ताक्षर फ़ॉर्मैट नहीं है।"
+  },
+  "workspace_sign_blocked_no_pgp_key": {
+    "message": "हस्ताक्षर के लिए आपकी अपनी OpenPGP कुंजी चाहिए - SSH कुंजियां हस्ताक्षर नहीं कर सकतीं।"
+  },
+  "workspace_cleared_toast": { "message": "वर्कस्पेस साफ़ किया गया" },
+  "workspace_text_cleared_toast": { "message": "टेक्स्ट साफ़ किया गया" },
+  "workspace_clear_input_output": { "message": "इनपुट और आउटपुट साफ़ करें" },
+  "workspace_recipients_label": { "message": "प्राप्तकर्ता" },
+  "workspace_no_contacts_yet": { "message": "अभी कोई संपर्क नहीं" },
+  "workspace_add_a_contact": { "message": "संपर्क जोड़ें" },
+  "workspace_age_message_note": {
+    "message": "age संदेश - SSH प्राप्तकर्ताओं को PGP के साथ नहीं मिलाया जा सकता"
+  },
+  "workspace_sign_kind_crx": { "message": "Chrome एक्सटेंशन (.crx)" },
+  "workspace_sign_kind_pgp": { "message": "PGP हस्ताक्षर" },
+  "workspace_sign_with": { "message": "इससे हस्ताक्षर करें" },
+  "workspace_decrypt_with": { "message": "इससे डिक्रिप्ट करें" },
+  "workspace_no_keys_yet": { "message": "अभी कोई कुंजी नहीं" },
+  "workspace_create_one": { "message": "एक बनाएं" },
+  "workspace_select_signing_key": { "message": "हस्ताक्षर कुंजी चुनें" },
+  "workspace_toggle_encrypt_to_self": {
+    "message": "मेरे लिए भी एन्क्रिप्ट करें"
+  },
+  "workspace_toggle_password": { "message": "पासवर्ड" },
+  "workspace_toggle_zip_files": { "message": "फ़ाइलें ज़िप करें" },
+  "workspace_toggle_save_to_history": { "message": "इतिहास में सहेजें" },
+  "workspace_self_excluded_intro": { "message": "आप इसे नहीं पढ़ पाएंगे:" },
+  "workspace_self_excluded_age": {
+    "message": "आपकी अपनी कोई SSH कुंजी नहीं है, और age संदेश में PGP कुंजी शामिल नहीं की जा सकती।"
+  },
+  "workspace_self_excluded_pgp": {
+    "message": "आपकी अपनी कोई भी कुंजी इस संदेश में जोड़ी नहीं जा सकती।"
+  },
+  "workspace_import_one": { "message": "एक आयात करें" },
+  "workspace_enter_message_password": { "message": "संदेश का पासवर्ड डालें" },
+  "workspace_enter_key_password": { "message": "कुंजी का पासवर्ड डालें" },
+  "workspace_decrypting": { "message": "डिक्रिप्ट किया जा रहा है..." },
+  "workspace_unlocking": { "message": "अनलॉक किया जा रहा है..." },
+  "workspace_go": { "message": "जाएं" },
+  "workspace_save_file": { "message": "$name$ सहेजें" },
+  "workspace_verifying": { "message": "सत्यापित किया जा रहा है..." },
+  "workspace_reset": { "message": "रीसेट करें" },
+  "workspace_verify_signature": { "message": "हस्ताक्षर सत्यापित करें" },
+  "workspace_processing": { "message": "प्रोसेस किया जा रहा है..." },
+  "workspace_sign_for_web_store": {
+    "message": "Web Store के लिए हस्ताक्षर करें"
+  },
+  "workspace_need_recipient_or_password": {
+    "message": "कम से कम एक प्राप्तकर्ता चुनें, या पासवर्ड सेट करें"
+  },
+  "workspace_text_entered_below": { "message": "टेक्स्ट नीचे लिखा गया है" },
+  "workspace_clear_text": { "message": "टेक्स्ट साफ़ करें" },
+  "workspace_message_input_aria": { "message": "संदेश इनपुट" },
+  "workspace_placeholder_decrypt": {
+    "message": "आपको मिला एन्क्रिप्टेड संदेश यहां पेस्ट करें..."
+  },
+  "workspace_placeholder_verify": {
+    "message": "जांचने के लिए हस्ताक्षरित संदेश पेस्ट करें..."
+  },
+  "workspace_placeholder_compose": {
+    "message": "अपना संदेश लिखें या पेस्ट करें..."
+  },
+  "workspace_private_key_pasted_title": {
+    "message": "यह निजी कुंजी जैसी लगती है। निजी कुंजियां यहां पेस्ट न करें।"
+  },
+  "workspace_private_key_show_cleartext": {
+    "message": "पेस्ट किया गया टेक्स्ट सादे रूप में दिखाएं"
+  },
+  "workspace_private_key_ignore": { "message": "अनदेखा करें" },
+  "workspace_private_key_pasted_body": {
+    "message": "एन्क्रिप्ट/डिक्रिप्ट बॉक्स गुप्त कुंजी सामग्री के लिए सुरक्षित जगह नहीं है। आयात फ़्लो इस्तेमाल करें ताकि कुंजी सुरक्षित स्टोर में लोड हो और किसी भी ड्राफ़्ट स्नैपशॉट से बाहर रहे।"
+  },
+  "workspace_private_key_import_safely": {
+    "message": "इस कुंजी को सुरक्षित रूप से आयात करें"
+  },
+  "workspace_private_key_clear_input": { "message": "इनपुट साफ़ करें" },
+  "workspace_hide_technical_details": { "message": "तकनीकी विवरण छिपाएं" },
+  "workspace_show_technical_details": { "message": "तकनीकी विवरण दिखाएं" },
+  "workspace_unverified": { "message": "असत्यापित" },
+  "workspace_signature_verified": { "message": "हस्ताक्षर सत्यापित" },
+  "workspace_output_size_line": { "message": "$name$ - $size$" },
+  "workspace_find_replace": { "message": "ढूंढें और बदलें" },
+  "workspace_find_hide_replace": { "message": "'बदलें' छिपाएं" },
+  "workspace_find_show_replace": { "message": "'बदलें' दिखाएं" },
+  "workspace_find_label": { "message": "ढूंढें" },
+  "workspace_replace_with": { "message": "इससे बदलें" },
+  "workspace_replace": { "message": "बदलें" },
+  "workspace_replace_all_short": { "message": "सभी" },
+  "workspace_replace_all": { "message": "सभी बदलें" },
+  "workspace_replace_all_shortcut": { "message": "सभी बदलें ($shortcut$)" },
+  "workspace_match_case": { "message": "केस मिलाएं" },
+  "workspace_previous_match": { "message": "पिछला मिलान" },
+  "workspace_next_match": { "message": "अगला मिलान" },
+  "workspace_close_find": { "message": "खोज बंद करें" },
+  "workspace_message_tools": { "message": "संदेश टूल" },
+  "workspace_style_bold": { "message": "बोल्ड" },
+  "workspace_style_italic": { "message": "इटैलिक" },
+  "workspace_style_strike": { "message": "स्ट्राइकथ्रू" },
+  "workspace_style_code": { "message": "कोड" },
+  "workspace_translating": { "message": "अनुवाद किया जा रहा है..." },
+  "workspace_translate_to": { "message": "$language$ में अनुवाद करें" },
+  "workspace_translate": { "message": "अनुवाद करें" },
+  "workspace_translate_menu_heading": {
+    "message": "संदेश का अनुवाद इस भाषा में करें"
+  },
+  "workspace_search_languages": { "message": "भाषाएं खोजें" },
+  "workspace_no_such_language": { "message": "ऐसी कोई भाषा नहीं।" },
+  "workspace_restore_original": { "message": "मूल संदेश वापस लाएं" },
+  "workspace_show_original": { "message": "मूल दिखाएं" },
+  "workspace_show_translation": { "message": "$language$ अनुवाद दिखाएं" },
+  "workspace_working": { "message": "काम चल रहा है..." },
+  "workspace_note_same_language": {
+    "message": "यह संदेश पहले से $language$ में है।"
+  },
+  "workspace_note_uncertain": {
+    "message": "पता नहीं चल सका कि यह संदेश किस भाषा में है।"
+  },
+  "workspace_note_downloading_progress": {
+    "message": "$what$ डाउनलोड हो रहा है, $percent$%"
+  },
+  "workspace_note_downloading": { "message": "$what$ डाउनलोड हो रहा है..." },
+  "workspace_note_translated_from": {
+    "message": "इसी डिवाइस पर $language$ से अनुवाद किया गया।"
+  },
+  "workspace_drop_files_or_text": {
+    "message": "फ़ाइलें या टेक्स्ट यहां छोड़ें"
+  },
+  "workspace_browse_files": { "message": "फ़ाइलें ब्राउज़ करें" },
+  "workspace_clear_all_files": { "message": "सभी हटाएं" },
+  "workspace_detected_key_known": {
+    "message": "$name$ की कुंजी आपके पास पहले से है।"
+  },
+  "workspace_detected_key_show": { "message": "इसे अपनी कुंजियों में दिखाएं" },
+  "workspace_detected_key_in_message": {
+    "message": "इस संदेश में $name$ की सार्वजनिक कुंजी है।"
+  },
+  "workspace_detected_key_pasted": {
+    "message": "यह $name$ की सार्वजनिक कुंजी है।"
+  },
+  "workspace_detected_key_in_message_anon": {
+    "message": "इस संदेश में किसी की सार्वजनिक कुंजी है।"
+  },
+  "workspace_detected_key_pasted_anon": {
+    "message": "यह किसी की सार्वजनिक कुंजी जैसी लगती है।"
+  },
+  "workspace_detected_key_import": {
+    "message": "इसे संपर्क के रूप में आयात करें"
+  },
+  "workspace_message_password_title": { "message": "इस संदेश का पासवर्ड" },
+  "workspace_set_password": { "message": "पासवर्ड सेट करें" },
+  "workspace_message_password_label": { "message": "संदेश का पासवर्ड" },
+  "workspace_hide_password": { "message": "पासवर्ड छिपाएं" },
+  "workspace_show_password": { "message": "पासवर्ड दिखाएं" },
+  "workspace_password_too_short_one": {
+    "message": "कम से कम $count$ वर्ण इस्तेमाल करें।"
+  },
+  "workspace_password_too_short_other": {
+    "message": "कम से कम $count$ वर्ण इस्तेमाल करें।"
+  },
+  "workspace_password_min_length_one": { "message": "कम से कम $count$ वर्ण।" },
+  "workspace_password_min_length_other": {
+    "message": "कम से कम $count$ वर्ण।"
+  },
+  "workspace_message_password_help": {
+    "message": "जिसके पास यह पासवर्ड होगा, वह संदेश पढ़ सकता है, इसलिए इसे किसी दूसरे माध्यम से भेजें - संदेश के साथ नहीं। यह आपके चुने हुए प्राप्तकर्ताओं के अलावा संदेश में जोड़ा जाता है; दोनों में से कोई भी इसे खोल सकता है।"
+  },
+  "workspace_history_save_failed": {
+    "message": "इतिहास में सहेजा नहीं जा सका - स्टोरेज भर गया हो सकता है"
+  },
+  "workspace_operation_failed": {
+    "message": "कार्रवाई विफल रही। फिर से कोशिश करें।"
+  },
+  "workspace_error_need_recipient_or_password": {
+    "message": "कम से कम एक प्राप्तकर्ता कुंजी चुनें, या पासवर्ड सेट करें।"
+  },
+  "workspace_error_engine_mismatch": {
+    "message": "यह तय नहीं हो सका कि किस फ़ॉर्मैट में एन्क्रिप्ट करना है।"
+  },
+  "workspace_status_age_encrypted": {
+    "message": "age संदेश - SSH प्राप्तकर्ताओं के लिए एन्क्रिप्ट किया गया"
+  },
+  "workspace_files_encrypted_one": {
+    "message": "$count$ फ़ाइल एन्क्रिप्ट की गई (कुल $size$)"
+  },
+  "workspace_files_encrypted_other": {
+    "message": "$count$ फ़ाइलें एन्क्रिप्ट की गईं (कुल $size$)"
+  },
+  "workspace_files_zipped_encrypted_one": {
+    "message": "$count$ फ़ाइल ज़िप और एन्क्रिप्ट की गई"
+  },
+  "workspace_files_zipped_encrypted_other": {
+    "message": "$count$ फ़ाइलें ज़िप और एन्क्रिप्ट की गईं"
+  },
+  "workspace_files_decrypted_one": {
+    "message": "$count$ फ़ाइल डिक्रिप्ट की गई (कुल $size$)"
+  },
+  "workspace_files_decrypted_other": {
+    "message": "$count$ फ़ाइलें डिक्रिप्ट की गईं (कुल $size$)"
+  },
+  "workspace_files_signed_one": {
+    "message": "$count$ फ़ाइल पर हस्ताक्षर किए गए"
+  },
+  "workspace_files_signed_other": {
+    "message": "$count$ फ़ाइलों पर हस्ताक्षर किए गए"
+  },
+  "workspace_status_decrypted_archive": {
+    "message": "कई फ़ाइलों वाला आर्काइव डिक्रिप्ट किया गया"
+  },
+  "workspace_error_decrypt_failed_ssh": {
+    "message": "डिक्रिप्शन विफल रहा। संदेश क्षतिग्रस्त हो सकता है, या यह आपकी किसी भी SSH कुंजी के लिए एन्क्रिप्ट नहीं किया गया है।"
+  },
+  "workspace_error_decrypt_failed": {
+    "message": "डिक्रिप्शन विफल रहा। संदेश क्षतिग्रस्त हो सकता है, या यह आपकी किसी भी कुंजी के लिए एन्क्रिप्ट नहीं किया गया है।"
+  },
+  "workspace_error_select_decryption_key": {
+    "message": "डिक्रिप्शन कुंजी चुनें।"
+  },
+  "workspace_unknown_signer": { "message": "अज्ञात हस्ताक्षरकर्ता" },
+  "workspace_status_signer_unknown": {
+    "message": "इस संदेश पर हस्ताक्षर हैं, लेकिन हस्ताक्षरकर्ता की सार्वजनिक कुंजी आपकी कुंजियों या संपर्कों में नहीं है, इसलिए हस्ताक्षर सत्यापित नहीं किया जा सका।"
+  },
+  "workspace_error_signature_invalid": {
+    "message": "हस्ताक्षर सत्यापन विफल रहा - हो सकता है कि इस संदेश से छेड़छाड़ की गई हो"
+  },
+  "workspace_error_not_signed": {
+    "message": "इस संदेश पर हस्ताक्षर नहीं हैं।"
+  },
+  "workspace_error_verify_failed": {
+    "message": "सत्यापन विफल रहा। इनपुट हस्ताक्षरित PGP संदेश जैसा नहीं लगता।"
+  },
+  "workspace_error_no_signing_key_ssh": {
+    "message": "कोई हस्ताक्षर कुंजी उपलब्ध नहीं। SSH कुंजियां हस्ताक्षर नहीं कर सकतीं - पहले कोई OpenPGP कुंजी जोड़ें।"
+  },
+  "workspace_error_no_signing_key": {
+    "message": "कोई हस्ताक्षर कुंजी उपलब्ध नहीं। पहले कोई कुंजी जोड़ें।"
+  },
+  "workspace_status_crx_signed": {
+    "message": "$name$ पर हस्ताक्षर किए गए - सहेजा जा रहा है..."
+  },
+  "workspace_error_crx_wrong_password": {
+    "message": "पासवर्ड गलत है या हस्ताक्षर विफल रहा।"
+  },
+  "workspace_error_crx_sign_failed": {
+    "message": "CRX हस्ताक्षर विफल रहा। फिर से कोशिश करें।"
+  },
+  "workspace_error_select_crx_key": {
+    "message": "पहले कोई CRX हस्ताक्षर कुंजी चुनें।"
+  },
+  "workspace_status_crx_valid": { "message": "मान्य CRX - एक्सटेंशन $id$" },
+  "workspace_error_crx_invalid": {
+    "message": "इस फ़ाइल का CRX हस्ताक्षर सत्यापित नहीं किया जा सका।"
+  },
+  "workspace_error_read_file": {
+    "message": "यह फ़ाइल पढ़ी नहीं जा सकी। फिर से कोशिश करें।"
+  },
+  "workspace_error_wrong_key_password": {
+    "message": "पासवर्ड गलत है। इसे जांचकर फिर से कोशिश करें।"
+  },
+  "workspace_error_unlock_failed": {
+    "message": "अनलॉक विफल रहा। फिर से कोशिश करें।"
+  }
+}

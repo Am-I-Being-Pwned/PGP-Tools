@@ -9,33 +9,49 @@
   "app_tab_main": { "message": "主页" },
   "app_nav_label": { "message": "主导航" },
   "app_vault_unreadable_title": { "message": "无法读取你的保险库。" },
-  "app_vault_unreadable_body": { "message": "你的密钥仍保存在此设备上。请先锁定后重试。" },
-  "app_vault_unreadable_body_passkey": { "message": "你的密钥仍保存在此设备上。请先锁定后重试，并确保使用的是当初设置的那个通行密钥。" },
+  "app_vault_unreadable_body": {
+    "message": "你的密钥仍保存在此设备上。请先锁定后重试。"
+  },
+  "app_vault_unreadable_body_passkey": {
+    "message": "你的密钥仍保存在此设备上。请先锁定后重试，并确保使用的是当初设置的那个通行密钥。"
+  },
   "app_vault_lock_retry": { "message": "锁定并重试" },
   "app_import_added_one": { "message": "已添加密钥" },
   "app_import_added_other": { "message": "已添加 $count$ 个密钥" },
   "app_import_view_key_one": { "message": "查看密钥" },
   "app_import_view_key_other": { "message": "查看密钥" },
-  "app_welcome_open_failed": { "message": "无法打开侧边栏。请点击工具栏中的 PGP Tools 图标。" },
+  "app_welcome_open_failed": {
+    "message": "无法打开侧边栏。请点击工具栏中的 PGP Tools 图标。"
+  },
   "app_welcome_opened": { "message": "按照侧边栏中的说明开始使用" },
   "app_welcome_title": { "message": "PGP Tools 已安装" },
-  "app_welcome_body": { "message": "点击下方按钮打开侧边栏，完成密钥设置。之后可随时点击工具栏中的 PGP Tools 图标重新打开。" },
+  "app_welcome_body": {
+    "message": "点击下方按钮打开侧边栏，完成密钥设置。之后可随时点击工具栏中的 PGP Tools 图标重新打开。"
+  },
   "app_welcome_start": { "message": "点击此处开始" },
   "app_welcome_credit_before": { "message": "隐私工具，出品方：" },
   "app_welcome_credit_after": { "message": "。" },
-  "app_onboarding_prf_unsupported": { "message": "你的身份验证器不支持 PRF。请换一个通行密钥，或改用密码。" },
+  "app_onboarding_prf_unsupported": {
+    "message": "你的身份验证器不支持 PRF。请换一个通行密钥，或改用密码。"
+  },
   "app_onboarding_setup_failed": { "message": "设置失败" },
   "app_onboarding_name_required": { "message": "姓名为必填项。" },
   "app_onboarding_generate_failed": { "message": "密钥生成失败" },
-  "app_onboarding_intro_body": { "message": "发送只有指定收件人才能读取的私密消息，并验证消息确实来自其声称的发送者。" },
+  "app_onboarding_intro_body": {
+    "message": "发送只有指定收件人才能读取的私密消息，并验证消息确实来自其声称的发送者。"
+  },
   "app_onboarding_storage_question": { "message": "你的数据应存储在哪里？" },
   "app_onboarding_next": { "message": "下一步" },
   "app_onboarding_protection_title": { "message": "保护你的数据" },
-  "app_onboarding_protection_body": { "message": "选择如何保护你的联系人和密钥。每次打开 PGP Tools 时都会用到。" },
+  "app_onboarding_protection_body": {
+    "message": "选择如何保护你的联系人和密钥。每次打开 PGP Tools 时都会用到。"
+  },
   "app_onboarding_create_passkey": { "message": "创建通行密钥" },
   "app_onboarding_set_password": { "message": "设置密码" },
   "app_onboarding_identity_title": { "message": "创建你的 PGP 密钥" },
-  "app_onboarding_identity_body": { "message": "创建一个用于加密、解密和签名消息的密钥对。" },
+  "app_onboarding_identity_body": {
+    "message": "创建一个用于加密、解密和签名消息的密钥对。"
+  },
   "app_onboarding_name_label": { "message": "姓名 *" },
   "app_onboarding_name_placeholder": { "message": "你的全名" },
   "app_onboarding_email_label": { "message": "电子邮件" },
@@ -45,7 +61,9 @@
   "app_onboarding_comment_placeholder": { "message": "例如：工作、个人" },
   "app_onboarding_advanced_options": { "message": "高级选项" },
   "app_onboarding_algorithm_label": { "message": "算法" },
-  "app_onboarding_algo_ecc_hint": { "message": "现代、快速、密钥体积小。推荐大多数用途使用。" },
+  "app_onboarding_algo_ecc_hint": {
+    "message": "现代、快速、密钥体积小。推荐大多数用途使用。"
+  },
   "app_onboarding_algo_rsa_hint": { "message": "兼容性广。密钥生成较慢。" },
   "app_onboarding_expiry_label": { "message": "密钥有效期" },
   "app_onboarding_expiry_never": { "message": "永不过期" },
@@ -53,43 +71,95 @@
   "app_onboarding_expiry_years_other": { "message": "$count$ 年" },
   "app_onboarding_create_key": { "message": "创建我的 PGP 密钥" },
   "app_onboarding_skip": { "message": "稍后再设置" },
-  "app_onboarding_passkey_prompt": { "message": "请按照浏览器的通行密钥提示操作…" },
+  "app_onboarding_passkey_prompt": {
+    "message": "请按照浏览器的通行密钥提示操作…"
+  },
   "app_onboarding_generating": { "message": "正在生成密钥…" },
   "app_onboarding_rsa_slow": { "message": "RSA 密钥生成需要稍等片刻" },
   "app_onboarding_preset_title": { "message": "选择一个安全预设" },
-  "app_onboarding_preset_body": { "message": "PGP Tools 应以多谨慎的方式对待你的密钥？每个选项都会明确列出它所设置的内容，之后你随时可以在“设置”中更改其中任何一项。" },
+  "app_onboarding_preset_body": {
+    "message": "PGP Tools 应以多谨慎的方式对待你的密钥？每个选项都会明确列出它所设置的内容，之后你随时可以在“设置”中更改其中任何一项。"
+  },
   "app_onboarding_unlock_with_vault": { "message": "随保险库一起解锁密钥" },
-  "app_onboarding_unlock_with_vault_hint": { "message": "打开保险库的通行密钥提示会同时解锁你的密钥，无需再为每个密钥单独确认。可在“设置”中更改。" },
+  "app_onboarding_unlock_with_vault_hint": {
+    "message": "打开保险库的通行密钥提示会同时解锁你的密钥，无需再为每个密钥单独确认。可在“设置”中更改。"
+  },
   "app_onboarding_use_preset": { "message": "使用此预设" },
   "app_onboarding_keep_defaults": { "message": "保留默认设置" },
-  "app_copy_failed": { "message": "复制失败，请先点击扩展程序面板，然后重试。" },
+  "app_copy_failed": {
+    "message": "复制失败，请先点击扩展程序面板，然后重试。"
+  },
   "app_copied": { "message": "已复制$label$" },
-  "app_copied_wipe": { "message": "已复制$label$，剪贴板将在 $seconds$ 秒后清空" },
+  "app_copied_wipe": {
+    "message": "已复制$label$，剪贴板将在 $seconds$ 秒后清空"
+  },
   "app_oversized_more": { "message": "$names$ 及另外 $count$ 个" },
-  "app_oversized_files_one": { "message": "$files$：文件大于 $limit$，无法在面板中处理。" },
-  "app_oversized_files_other": { "message": "$files$：文件大于 $limit$，无法在面板中处理。" },
+  "app_oversized_files_one": {
+    "message": "$files$：文件大于 $limit$，无法在面板中处理。"
+  },
+  "app_oversized_files_other": {
+    "message": "$files$：文件大于 $limit$，无法在面板中处理。"
+  },
   "app_error_remedy_import_key": { "message": "导入密钥" },
   "app_error_remedy_try_again": { "message": "重试" },
   "app_error_remedy_check_key": { "message": "检查密钥" },
-  "app_error_key_not_found": { "message": "该密钥已不在你的密钥环中，因此未保存任何内容。请重新导入该密钥后重试。" },
+  "app_error_key_not_found": {
+    "message": "该密钥已不在你的密钥环中，因此未保存任何内容。请重新导入该密钥后重试。"
+  },
   "app_error_key_locked": { "message": "此密钥已锁定。请解锁后重试。" },
-  "app_error_vault_locked": { "message": "你的保险库已锁定，因此未作任何更改。请解锁后再运行一次。" },
+  "app_error_vault_locked": {
+    "message": "你的保险库已锁定，因此未作任何更改。请解锁后再运行一次。"
+  },
   "app_error_weak_password": { "message": "该密码太短。请至少使用 8 个字符。" },
-  "app_error_password_required": { "message": "此密钥需要密码。请输入密钥密码以解锁。" },
-  "app_error_passkey_failed": { "message": "通行密钥验证未完成。请重试，或改用其他方式解锁。" },
-  "app_error_passkey_dismissed": { "message": "通行密钥提示已被关闭。准备好后请重新运行该操作。" },
-  "app_error_wrong_password": { "message": "此密钥的密码不正确。请检查后重试。" },
-  "app_error_symmetric_wrong_password": { "message": "该密码无法打开此消息。请检查后重试；如果你确定密码正确，则消息可能已损坏。" },
-  "app_error_ocb_unsupported": { "message": "此消息使用了本应用无法读取的旧版 AEAD (OCB) 格式。请让发送者以常规方式重新加密并发送；他们选择任何密码都可以，不受支持的只是这种格式。" },
-  "app_error_no_decryption_key": { "message": "此消息加密给了一个你没有的密钥。请导入该私钥，或让发送者加密给你的某个密钥。" },
-  "app_error_no_decryption_key_with_id": { "message": "此消息加密给了一个你没有的密钥（密钥 ID $key_id$）。请导入该私钥，或让发送者加密给你的某个密钥。" },
-  "app_error_not_crx": { "message": "这不是本工具可验证的 Chrome 扩展程序包。请选择一个 CRX3 (.crx) 文件。" },
-  "app_error_crx_unsigned": { "message": "CRX 签名不匹配：它不是由此密钥签名的，或文件在签名后被修改过。请从发布者处获取新的副本。" },
-  "app_error_tampered": { "message": "签名验证失败，此消息可能已被篡改。请勿信任其内容；让发送者重新发送。" },
-  "app_error_key_expired": { "message": "此操作涉及的某个密钥已过期。请向密钥所有者索取更新后的密钥并导入。" },
-  "app_error_key_revoked": { "message": "此操作涉及的某个密钥已被其所有者吊销。请获取其替代密钥并导入。" },
-  "app_error_weak_algorithm": { "message": "此密钥使用的签名算法已不再被认为安全。请让密钥所有者使用 SHA-256 或更强的算法重新签发。" },
-  "app_error_corrupted": { "message": "数据已损坏或被截断。请获取完整的新副本后重试。" },
-  "app_error_not_pgp_data": { "message": "这看起来不像 PGP 数据。请确保粘贴了完整的 ASCII 装甲块，包括 BEGIN 和 END 行。" },
-  "app_error_storage_full": { "message": "浏览器存储空间已满，无法保存。请移除不再需要的密钥或联系人，然后重试。" }
+  "app_error_password_required": {
+    "message": "此密钥需要密码。请输入密钥密码以解锁。"
+  },
+  "app_error_passkey_failed": {
+    "message": "通行密钥验证未完成。请重试，或改用其他方式解锁。"
+  },
+  "app_error_passkey_dismissed": {
+    "message": "通行密钥提示已被关闭。准备好后请重新运行该操作。"
+  },
+  "app_error_wrong_password": {
+    "message": "此密钥的密码不正确。请检查后重试。"
+  },
+  "app_error_symmetric_wrong_password": {
+    "message": "该密码无法打开此消息。请检查后重试；如果你确定密码正确，则消息可能已损坏。"
+  },
+  "app_error_ocb_unsupported": {
+    "message": "此消息使用了本应用无法读取的旧版 AEAD (OCB) 格式。请让发送者以常规方式重新加密并发送；他们选择任何密码都可以，不受支持的只是这种格式。"
+  },
+  "app_error_no_decryption_key": {
+    "message": "此消息加密给了一个你没有的密钥。请导入该私钥，或让发送者加密给你的某个密钥。"
+  },
+  "app_error_no_decryption_key_with_id": {
+    "message": "此消息加密给了一个你没有的密钥（密钥 ID $key_id$）。请导入该私钥，或让发送者加密给你的某个密钥。"
+  },
+  "app_error_not_crx": {
+    "message": "这不是本工具可验证的 Chrome 扩展程序包。请选择一个 CRX3 (.crx) 文件。"
+  },
+  "app_error_crx_unsigned": {
+    "message": "CRX 签名不匹配：它不是由此密钥签名的，或文件在签名后被修改过。请从发布者处获取新的副本。"
+  },
+  "app_error_tampered": {
+    "message": "签名验证失败，此消息可能已被篡改。请勿信任其内容；让发送者重新发送。"
+  },
+  "app_error_key_expired": {
+    "message": "此操作涉及的某个密钥已过期。请向密钥所有者索取更新后的密钥并导入。"
+  },
+  "app_error_key_revoked": {
+    "message": "此操作涉及的某个密钥已被其所有者吊销。请获取其替代密钥并导入。"
+  },
+  "app_error_weak_algorithm": {
+    "message": "此密钥使用的签名算法已不再被认为安全。请让密钥所有者使用 SHA-256 或更强的算法重新签发。"
+  },
+  "app_error_corrupted": {
+    "message": "数据已损坏或被截断。请获取完整的新副本后重试。"
+  },
+  "app_error_not_pgp_data": {
+    "message": "这看起来不像 PGP 数据。请确保粘贴了完整的 ASCII 装甲块，包括 BEGIN 和 END 行。"
+  },
+  "app_error_storage_full": {
+    "message": "浏览器存储空间已满，无法保存。请移除不再需要的密钥或联系人，然后重试。"
+  }
 }
