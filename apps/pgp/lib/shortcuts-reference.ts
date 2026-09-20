@@ -8,12 +8,18 @@
 import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
 
 import type { PgpMode } from "./actions/types";
+import type { InlineStyle } from "./compose/text-format";
 import {
   COPY_SHORTCUT,
   DOWNLOAD_SHORTCUT,
   MODE_SHORTCUTS,
   PALETTE_SHORTCUT,
 } from "./actions/definitions";
+import {
+  FIND_SHORTCUT,
+  STYLE_LABELS,
+  STYLE_SHORTCUTS,
+} from "./compose/shortcuts";
 
 /** One row of the reference: a label plus how to render its keys. */
 export interface ShortcutRefEntry {
@@ -85,6 +91,20 @@ export const SHORTCUT_REFERENCE: readonly ShortcutRefSection[] = [
         chips: ["Backspace"],
         note: "In the recipient dropdown's empty search box.",
       },
+    ],
+  },
+  {
+    title: "Message box",
+    entries: [
+      {
+        label: "Find and replace",
+        shortcut: FIND_SHORTCUT,
+      },
+      ...(Object.keys(STYLE_SHORTCUTS) as InlineStyle[]).map((style) => ({
+        label: STYLE_LABELS[style],
+        shortcut: STYLE_SHORTCUTS[style],
+        note: "While writing a message to encrypt or sign. Uses Unicode letter forms, so it survives any channel.",
+      })),
     ],
   },
   {

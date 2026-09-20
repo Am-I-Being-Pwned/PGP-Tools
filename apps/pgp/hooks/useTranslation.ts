@@ -1,12 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { baseLanguage, languageLabel } from "../lib/ai/languages";
-import {
-  detectLanguage,
-  ensureDetectorReady,
-  ensureLanguagePack,
-  translateText,
-} from "../lib/ai/translate";
+import type { TranslationStatus } from "../lib/ai/run-translation";
+import { runTranslation } from "../lib/ai/run-translation";
 
 /**
  * Drives on-device translation of a decrypted message.
@@ -24,21 +19,7 @@ import {
  * DOM node and wipes at master lock. Only the STATUS is state here.
  */
 
-export type TranslationStatus =
-  | { kind: "idle" }
-  | { kind: "working" }
-  | { kind: "done"; from: string }
-  /** A one-time model download is running, triggered by this click.
-   *  `progress` is 0..1; Chrome does not always report it, so the UI
-   *  must stay sensible at a flat 0. */
-  | { kind: "downloading"; what: string; progress: number }
-  /** Already in the target language, so there is nothing to do. */
-  | { kind: "same-language"; language: string }
-  /** The detector would only be guessing. */
-  | { kind: "uncertain" }
-  /** No model on this device, or the direction is not offered. */
-  | { kind: "unavailable" }
-  | { kind: "error"; message: string };
+export type { TranslationStatus };
 
 interface UseTranslationOptions {
   /** Read the decrypted text at the point of use, never hoisted. */
@@ -101,114 +82,21 @@ export function useTranslation({
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
-    setStatus({ kind: "working" });
-
-    // Read through a call, not `controller.signal.aborted` directly.
-    // TypeScript narrows that property to `false` after the first check
-    // and keeps the narrowing across every `await`, which is exactly
-    // backwards here: the value changing WHILE we wait is the case these
-    // checks exist for. A call is not narrowed.
-    const aborted = () => controller.signal.aborted;
 
     try {
-      // A fresh Chrome profile has neither the detector nor any language
-      // pack, so both may need fetching before anything can happen. Both
-      // are one-time and both report progress; neither runs without this
-      // click. Ordered detector-first because we cannot know WHICH pack
-      // to fetch until the language is known.
-      const detectorReady = await ensureDetectorReady(
-        (loaded) =>
-          setStatus({
-            kind: "downloading",
-            what: "language detector",
-            progress: loaded,
-          }),
-        controller.signal,
-      );
-      if (aborted()) return;
-      if (!detectorReady) {
-        setStatus({ kind: "unavailable" });
-        return;
-      }
-
-      setStatus({ kind: "working" });
-      const detected = await detectLanguage(text);
-      if (aborted()) return;
-
-      if (detected.status === "unavailable") {
-        setStatus({ kind: "unavailable" });
-        return;
-      }
-      // "too-short" and "uncertain" are the same thing to the user: we
-      // are not confident enough to pick a source language for them.
-      if (detected.status !== "detected") {
-        setStatus({ kind: "uncertain" });
-        return;
-      }
-
-      const from = detected.language;
-      const to = baseLanguage(targetLanguage);
-      if (from === to) {
-        setStatus({ kind: "same-language", language: from });
-        return;
-      }
-
-      const pair: TranslatorPair = {
-        sourceLanguage: from,
-        targetLanguage: to,
-      };
-      const packReady = await ensureLanguagePack(
-        pair,
-        (loaded) =>
-          setStatus({
-            kind: "downloading",
-            what: `${languageLabel(from)} to ${languageLabel(to)}`,
-            progress: loaded,
-          }),
-        controller.signal,
-      );
-      if (aborted()) return;
-      if (!packReady) {
-        // Chrome does not offer this direction at all. Not something the
-        // user can fix by downloading, so it is not phrased as a pack.
-        setStatus({ kind: "unavailable" });
-        return;
-      }
-
-      setStatus({ kind: "working" });
-      const result = await translateText(text, pair, controller.signal);
-      if (aborted()) return;
-
-      switch (result.status) {
-        case "translated":
-          setTranslation(result.text);
-          setStatus({ kind: "done", from });
-          // Show it immediately: the press asked for the translation, so
-          // landing on the untranslated text would make the button look
-          // like it had done nothing.
-          setShowing(true);
-          break;
-        // Unreachable in practice: `ensureLanguagePack` just resolved
-        // this direction. Kept as a real branch rather than a throw so a
-        // race (a pack evicted between the two calls) degrades to a
-        // retryable message instead of an unhandled rejection.
-        case "needs-pack":
-          setStatus({
-            kind: "error",
-            message: "The language pack went away. Try again.",
-          });
-          break;
-        case "unsupported-pair":
-        case "unavailable":
-          setStatus({ kind: "unavailable" });
-          break;
-      }
-    } catch (e) {
-      if (aborted()) return;
-      setStatus({
-        kind: "error",
-        message: e instanceof Error ? e.message : "Translation failed.",
+      const result = await runTranslation({
+        text,
+        targetLanguage,
+        signal: controller.signal,
+        onStatus: setStatus,
       });
+      if (result) {
+        setTranslation(result.text);
+        // Show it immediately: the press asked for the translation, so
+        // landing on the untranslated text would make the button look
+        // like it had done nothing.
+        setShowing(true);
+      }
     } finally {
       if (abortRef.current === controller) abortRef.current = null;
     }

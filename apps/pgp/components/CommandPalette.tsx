@@ -10,6 +10,7 @@ import {
 import { Kbd } from "@amibeingpwned/ui/kbd";
 import { isMacPlatform } from "@amibeingpwned/ui/kbd-helpers";
 
+import type { ResolvedAction } from "../lib/actions/registry";
 import type { ActionCtx } from "../lib/actions/types";
 import { useShortcut } from "../hooks/useShortcut";
 import { ACTIONS, PALETTE_SHORTCUT } from "../lib/actions/definitions";
@@ -86,6 +87,8 @@ export function CommandPalette({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  // A second step: the action whose options are being listed.
+  const [picking, setPicking] = useState<ResolvedAction | null>(null);
 
   // While the palette is up, any slide-over focus trap must pause --
   // and it must pause BEFORE the palette mounts, or the trap would
@@ -102,6 +105,7 @@ export function CommandPalette({
   const openPalette = () => {
     releaseTrapHold.current ??= holdFocusTraps();
     setQuery("");
+    setPicking(null);
     setOpen(true);
   };
 
@@ -121,14 +125,33 @@ export function CommandPalette({
 
   const close = () => {
     setOpen(false);
+    setPicking(null);
     releaseHold();
   };
   const resolved = visibleActions(ACTIONS, ctx);
-  const showSearch = resolved.length >= MIN_ACTIONS_FOR_SEARCH;
+  const showSearch = resolved.length >= MIN_ACTIONS_FOR_SEARCH || !!picking;
   const matches = filterActions(resolved, showSearch ? query : "");
   const groups = groupActions(matches);
   // Group headers only earn their space when they separate something.
   const showHeadings = groups.length >= 2;
+
+  // The picker step's options, filtered with the same token rule.
+  const step = picking?.action.pick?.(ctx);
+  const tokens = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const options = step
+    ? step.options.filter((o) => {
+        const hay = [o.label, ...(o.keywords ?? [])].join(" ").toLowerCase();
+        return tokens.every((t) => hay.includes(t));
+      })
+    : [];
+  const enterStep = (r: ResolvedAction) => {
+    setPicking(r);
+    setQuery("");
+  };
+  const leaveStep = () => {
+    setPicking(null);
+    setQuery("");
+  };
 
   return (
     <div
@@ -143,7 +166,14 @@ export function CommandPalette({
           matchesShortcut(e.nativeEvent, PALETTE_SHORTCUT, isMacPlatform())
         ) {
           e.preventDefault();
-          close();
+          // Escape backs out of a picker step before it closes.
+          if (picking && e.key === "Escape") leaveStep();
+          else close();
+        }
+        // Backspace on an empty picker query backs out too.
+        if (e.key === "Backspace" && picking && query === "") {
+          e.preventDefault();
+          leaveStep();
         }
         e.stopPropagation();
       }}
@@ -162,49 +192,80 @@ export function CommandPalette({
               of unmounting it. Typed text is ignored while hidden. */}
           <div className={showSearch ? undefined : "sr-only"}>
             <CommandInput
+              // Remount on step change so cmdk's selection resets to
+              // the first option of the new list.
+              key={picking ? picking.action.id : "top"}
               value={query}
               onValueChange={setQuery}
-              placeholder="Type a command..."
+              placeholder={step ? step.placeholder : "Type a command..."}
               autoFocus
             />
           </div>
           <CommandList>
-            {matches.length === 0 && (
+            {step && picking && (
+              <CommandGroup heading={step.title}>
+                {options.length === 0 && (
+                  <p className="text-muted-foreground py-6 text-center text-sm">
+                    No match.
+                  </p>
+                )}
+                {options.map((o) => (
+                  <CommandItem
+                    key={o.id}
+                    value={o.id}
+                    onSelect={() => {
+                      const action = picking.action;
+                      close();
+                      void action.execute(ctx, o.id);
+                    }}
+                  >
+                    <span className="truncate">{o.label}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+            {!step && matches.length === 0 && (
               <p className="text-muted-foreground py-6 text-center text-sm">
                 No matching commands.
               </p>
             )}
-            {groups.map(({ group, items }) => (
-              <CommandGroup
-                key={group || "other"}
-                heading={showHeadings ? group : undefined}
-              >
-                {items.map(({ action, name, disabledReason }) => (
-                  <CommandItem
-                    key={action.id}
-                    value={action.id}
-                    disabled={disabledReason !== undefined}
-                    onSelect={() => {
-                      // Close first, then run: the action may move
-                      // focus or open a slide-over of its own.
-                      close();
-                      void action.execute(ctx);
-                    }}
-                  >
-                    <span className="truncate">{name}</span>
-                    <span className="ml-auto flex shrink-0 items-center pl-3">
-                      {disabledReason !== undefined ? (
-                        <span className="text-muted-foreground text-xs">
-                          {disabledReason}
-                        </span>
-                      ) : (
-                        action.shortcut && <Kbd shortcut={action.shortcut} />
-                      )}
-                    </span>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            ))}
+            {!step &&
+              groups.map(({ group, items }) => (
+                <CommandGroup
+                  key={group || "other"}
+                  heading={showHeadings ? group : undefined}
+                >
+                  {items.map(({ action, name, disabledReason }) => (
+                    <CommandItem
+                      key={action.id}
+                      value={action.id}
+                      disabled={disabledReason !== undefined}
+                      onSelect={() => {
+                        // An action with a second step stays open on
+                        // it; otherwise close first, then run: the
+                        // action may move focus or open a slide-over.
+                        if (action.pick) {
+                          enterStep({ action, name, disabledReason });
+                          return;
+                        }
+                        close();
+                        void action.execute(ctx);
+                      }}
+                    >
+                      <span className="truncate">{name}</span>
+                      <span className="ml-auto flex shrink-0 items-center pl-3">
+                        {disabledReason !== undefined ? (
+                          <span className="text-muted-foreground text-xs">
+                            {disabledReason}
+                          </span>
+                        ) : (
+                          action.shortcut && <Kbd shortcut={action.shortcut} />
+                        )}
+                      </span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              ))}
           </CommandList>
         </Command>
       </div>

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 
 import type { ActionCtx, AppTab, PgpMode } from "../lib/actions/types";
+import type { InlineStyle } from "../lib/compose/text-format";
 import type { StoredKeyKind } from "../lib/storage/key-kind";
 
 /**
@@ -37,6 +38,17 @@ export interface WorkspaceOpsBridge {
   toggleEncryptToSelf: () => void;
   toggleAlsoSign: () => void;
   toggleSaveToHistory: () => void;
+  /** See ActionCtx.result. */
+  resultCanTranslate: boolean;
+  readingLanguage: string;
+  translateOutput: () => void;
+  /** See ActionCtx.compose. */
+  composeCanEdit: boolean;
+  translateEnabled: boolean;
+  translateTarget: string | null;
+  applyStyle: (style: InlineStyle) => void;
+  openFind: () => void;
+  translateTo: (language: string) => void;
 }
 
 interface UseActionContextArgs {
@@ -78,6 +90,11 @@ export function useActionContext(args: UseActionContextArgs): ActionCtx {
   const historyEnabled = workspace?.historyEnabled ?? false;
   const encryptToSelf = workspace?.encryptToSelf ?? false;
   const alsoSign = workspace?.alsoSign ?? false;
+  const resultCanTranslate = workspace?.resultCanTranslate ?? false;
+  const readingLanguage = workspace?.readingLanguage ?? "en";
+  const composeCanEdit = workspace?.composeCanEdit ?? false;
+  const translateEnabled = workspace?.translateEnabled ?? false;
+  const translateTarget = workspace?.translateTarget ?? null;
   const { ownKeys, contacts } = counts;
 
   return useMemo(
@@ -95,6 +112,12 @@ export function useActionContext(args: UseActionContextArgs): ActionCtx {
       alsoSign,
       neverCacheKeys,
       counts: { ownKeys, contacts },
+      result: { canTranslate: resultCanTranslate, readingLanguage },
+      compose: {
+        canEdit: composeCanEdit,
+        translateEnabled,
+        translateTarget,
+      },
       navigation: {
         setTab: (t) => argsRef.current.setTab(t),
         openHistory: () => argsRef.current.openHistory(),
@@ -116,6 +139,13 @@ export function useActionContext(args: UseActionContextArgs): ActionCtx {
           (argsRef.current.workspace?.toggleAlsoSign ?? noop)(),
         toggleSaveToHistory: () =>
           (argsRef.current.workspace?.toggleSaveToHistory ?? noop)(),
+        applyStyle: (style) =>
+          (argsRef.current.workspace?.applyStyle ?? noop)(style),
+        openFind: () => (argsRef.current.workspace?.openFind ?? noop)(),
+        translateTo: (language) =>
+          (argsRef.current.workspace?.translateTo ?? noop)(language),
+        translateOutput: () =>
+          (argsRef.current.workspace?.translateOutput ?? noop)(),
       },
     }),
     [
@@ -132,6 +162,11 @@ export function useActionContext(args: UseActionContextArgs): ActionCtx {
       neverCacheKeys,
       ownKeys,
       contacts,
+      composeCanEdit,
+      translateEnabled,
+      translateTarget,
+      resultCanTranslate,
+      readingLanguage,
     ],
   );
 }

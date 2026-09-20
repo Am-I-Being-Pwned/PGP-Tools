@@ -41,7 +41,7 @@ interface TranslateToggleProps {
 /** Hover/focus label, matching `ShortcutHint`'s pattern in WorkspaceView
  *  (the UI kit has no tooltip, so a Popover anchored to the trigger is
  *  the house idiom). */
-function HoverLabel({
+export function HoverLabel({
   label,
   children,
 }: {
