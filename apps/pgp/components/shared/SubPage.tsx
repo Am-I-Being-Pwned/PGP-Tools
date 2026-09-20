@@ -7,6 +7,7 @@ import type { PresentedError } from "../../lib/errors/present";
 import { useDelayedFlag } from "../../hooks/useDelayedFlag";
 import { useShortcut } from "../../hooks/useShortcut";
 import { presentError } from "../../lib/errors/present";
+import { t } from "../../lib/i18n";
 import { SlideOverHeader, SlideOverPanel, useSlideOver } from "./SlideOver";
 
 /** mod+Enter submits the primary footer action from anywhere on the
@@ -107,7 +108,7 @@ export function SubPage({
         await action.onClick?.(api);
         if (action.closeOnSuccess) close();
       } catch (e) {
-        setError(presentError(e, "Something went wrong. Try again."));
+        setError(presentError(e, t("shared_something_went_wrong")));
       } finally {
         setBusyIndex(null);
       }
@@ -151,8 +152,8 @@ export function SubPage({
                   onClick={() => setShowDetail((v) => !v)}
                 >
                   {showDetail
-                    ? "Hide technical details"
-                    : "Show technical details"}
+                    ? t("shared_hide_technical_details")
+                    : t("shared_show_technical_details")}
                 </button>
               )}
               {showDetail && error.detail && (

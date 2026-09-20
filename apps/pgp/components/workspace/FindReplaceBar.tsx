@@ -20,6 +20,7 @@ import {
   replaceAll,
   replaceAt,
 } from "../../lib/compose/text-format";
+import { t } from "../../lib/i18n";
 import { matchesShortcut } from "../../lib/shortcuts";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 
@@ -186,7 +187,7 @@ export function FindReplaceBar({
   return (
     <div
       role="search"
-      aria-label="Find and replace"
+      aria-label={t("workspace_find_replace")}
       onKeyDown={onBarKey}
       // Three columns, each stacking its own rows (toggle | fields |
       // buttons) rather than one row-major grid, so the two text fields
@@ -197,9 +198,17 @@ export function FindReplaceBar({
     >
       <button
         type="button"
-        aria-label={showReplace ? "Hide replace" : "Show replace"}
+        aria-label={
+          showReplace
+            ? t("workspace_find_hide_replace")
+            : t("workspace_find_show_replace")
+        }
         aria-expanded={showReplace}
-        title={showReplace ? "Hide replace" : "Replace"}
+        title={
+          showReplace
+            ? t("workspace_find_hide_replace")
+            : t("workspace_replace")
+        }
         onClick={() => setShowReplace((v) => !v)}
         className="text-muted-foreground hover:text-foreground hover:bg-border/70 flex h-8 w-6 shrink-0 items-center justify-center rounded transition-colors"
       >
@@ -214,8 +223,8 @@ export function FindReplaceBar({
           <input
             ref={findRef}
             type="text"
-            aria-label="Find"
-            placeholder="Find"
+            aria-label={t("workspace_find_label")}
+            placeholder={t("workspace_find_label")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onFindKey}
@@ -231,8 +240,8 @@ export function FindReplaceBar({
         {showReplace && (
           <input
             type="text"
-            aria-label="Replace with"
-            placeholder="Replace with"
+            aria-label={t("workspace_replace_with")}
+            placeholder={t("workspace_replace_with")}
             value={replacement}
             onChange={(e) => setReplacement(e.target.value)}
             onKeyDown={(e) => {
@@ -252,14 +261,19 @@ export function FindReplaceBar({
         {showReplace && (
           <div className="flex items-center justify-end gap-1">
             <TextButton
-              label="Replace"
+              label={t("workspace_replace")}
               disabled={current < 0}
               onClick={replaceCurrent}
             />
             <TextButton
-              label="All"
-              ariaLabel="Replace all"
-              title={`Replace all (${formatShortcutTitle(REPLACE_ALL_SHORTCUT, isMacPlatform())})`}
+              label={t("workspace_replace_all_short")}
+              ariaLabel={t("workspace_replace_all")}
+              title={t("workspace_replace_all_shortcut", {
+                shortcut: formatShortcutTitle(
+                  REPLACE_ALL_SHORTCUT,
+                  isMacPlatform(),
+                ),
+              })}
               disabled={matches.length === 0}
               onClick={replaceEvery}
             />
@@ -269,8 +283,8 @@ export function FindReplaceBar({
           <button
             type="button"
             aria-pressed={caseSensitive}
-            aria-label="Match case"
-            title="Match case"
+            aria-label={t("workspace_match_case")}
+            title={t("workspace_match_case")}
             onClick={() => setCaseSensitive((v) => !v)}
             className={`hover:text-foreground h-8 w-7 shrink-0 rounded font-mono text-[11px] transition-colors ${
               caseSensitive
@@ -278,15 +292,19 @@ export function FindReplaceBar({
                 : "text-muted-foreground"
             }`}
           >
+            {/* i18n-ignore */}
             Aa
           </button>
-          <IconButton label="Previous match" onClick={() => step(-1)}>
+          <IconButton
+            label={t("workspace_previous_match")}
+            onClick={() => step(-1)}
+          >
             <ChevronUpIcon className="h-4 w-4" />
           </IconButton>
-          <IconButton label="Next match" onClick={() => step(1)}>
+          <IconButton label={t("workspace_next_match")} onClick={() => step(1)}>
             <ChevronDownIcon className="h-4 w-4" />
           </IconButton>
-          <IconButton label="Close find" onClick={onClose}>
+          <IconButton label={t("workspace_close_find")} onClick={onClose}>
             <XIcon className="h-4 w-4" />
           </IconButton>
         </div>

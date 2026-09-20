@@ -1,0 +1,437 @@
+{
+  "workspace_undo": {
+    "message": "元に戻す"
+  },
+  "workspace_compose_translated": {
+    "message": "$from$から$to$に翻訳しました"
+  },
+  "workspace_compose_same_language": {
+    "message": "すでにあなたの言語 ($language$) です。"
+  },
+  "workspace_compose_translate_unavailable": {
+    "message": "その言語への翻訳はここでは利用できません。"
+  },
+  "workspace_crx_saved": {
+    "message": "$name$ を保存しました。"
+  },
+  "workspace_crx_save_failed": {
+    "message": "自動保存できませんでした。「保存」を押してやり直してください。"
+  },
+  "workspace_sign_blocked_age": {
+    "message": "age メッセージには署名できません。SSH 鍵にはここで使える署名形式がありません。"
+  },
+  "workspace_sign_blocked_no_pgp_key": {
+    "message": "署名には自分の OpenPGP 鍵が必要です。SSH 鍵では署名できません。"
+  },
+  "workspace_cleared_toast": {
+    "message": "ワークスペースを消去しました"
+  },
+  "workspace_text_cleared_toast": {
+    "message": "テキストを消去しました"
+  },
+  "workspace_clear_input_output": {
+    "message": "入力と出力を消去"
+  },
+  "workspace_recipients_label": {
+    "message": "宛先"
+  },
+  "workspace_no_contacts_yet": {
+    "message": "連絡先はまだありません"
+  },
+  "workspace_add_a_contact": {
+    "message": "連絡先を追加"
+  },
+  "workspace_age_message_note": {
+    "message": "age メッセージ。SSH の宛先は PGP と混在できません"
+  },
+  "workspace_sign_kind_crx": {
+    "message": "Chrome 拡張機能 (.crx)"
+  },
+  "workspace_sign_kind_pgp": {
+    "message": "PGP 署名"
+  },
+  "workspace_sign_with": {
+    "message": "署名に使う鍵"
+  },
+  "workspace_decrypt_with": {
+    "message": "復号に使う鍵"
+  },
+  "workspace_no_keys_yet": {
+    "message": "鍵はまだありません"
+  },
+  "workspace_create_one": {
+    "message": "鍵を作成"
+  },
+  "workspace_select_signing_key": {
+    "message": "署名鍵を選択"
+  },
+  "workspace_toggle_encrypt_to_self": {
+    "message": "自分にも暗号化"
+  },
+  "workspace_toggle_password": {
+    "message": "パスワード"
+  },
+  "workspace_toggle_zip_files": {
+    "message": "ファイルを zip 化"
+  },
+  "workspace_toggle_save_to_history": {
+    "message": "履歴に保存"
+  },
+  "workspace_self_excluded_intro": {
+    "message": "このメッセージは自分では読めません:"
+  },
+  "workspace_self_excluded_age": {
+    "message": "自分の SSH 鍵がなく、age メッセージには PGP 鍵を含められません。"
+  },
+  "workspace_self_excluded_pgp": {
+    "message": "自分の鍵はどれもこのメッセージに追加できません。"
+  },
+  "workspace_import_one": {
+    "message": "鍵をインポート"
+  },
+  "workspace_enter_message_password": {
+    "message": "メッセージのパスワードを入力"
+  },
+  "workspace_enter_key_password": {
+    "message": "鍵のパスワードを入力"
+  },
+  "workspace_decrypting": {
+    "message": "復号しています..."
+  },
+  "workspace_unlocking": {
+    "message": "ロックを解除しています..."
+  },
+  "workspace_go": {
+    "message": "実行"
+  },
+  "workspace_save_file": {
+    "message": "$name$ を保存"
+  },
+  "workspace_verifying": {
+    "message": "検証しています..."
+  },
+  "workspace_reset": {
+    "message": "リセット"
+  },
+  "workspace_verify_signature": {
+    "message": "署名を検証"
+  },
+  "workspace_processing": {
+    "message": "処理しています..."
+  },
+  "workspace_sign_for_web_store": {
+    "message": "Web Store 用に署名"
+  },
+  "workspace_need_recipient_or_password": {
+    "message": "宛先を 1 つ以上選択するか、パスワードを設定してください"
+  },
+  "workspace_text_entered_below": {
+    "message": "下にテキストが入力されています"
+  },
+  "workspace_clear_text": {
+    "message": "テキストを消去"
+  },
+  "workspace_message_input_aria": {
+    "message": "メッセージ入力"
+  },
+  "workspace_placeholder_decrypt": {
+    "message": "受け取った暗号化メッセージを貼り付け..."
+  },
+  "workspace_placeholder_verify": {
+    "message": "確認したい署名付きメッセージを貼り付け..."
+  },
+  "workspace_placeholder_compose": {
+    "message": "メッセージを入力または貼り付け..."
+  },
+  "workspace_private_key_pasted_title": {
+    "message": "これは秘密鍵のようです。ここに秘密鍵を貼り付けないでください。"
+  },
+  "workspace_private_key_show_cleartext": {
+    "message": "貼り付けたテキストを平文で表示"
+  },
+  "workspace_private_key_ignore": {
+    "message": "無視"
+  },
+  "workspace_private_key_pasted_body": {
+    "message": "暗号化/復号ボックスは秘密鍵の情報を置く場所として安全ではありません。インポート機能を使えば、鍵は安全なストアに読み込まれ、下書きのスナップショットに残りません。"
+  },
+  "workspace_private_key_import_safely": {
+    "message": "この鍵を安全にインポート"
+  },
+  "workspace_private_key_clear_input": {
+    "message": "入力を消去"
+  },
+  "workspace_hide_technical_details": {
+    "message": "技術的な詳細を非表示"
+  },
+  "workspace_show_technical_details": {
+    "message": "技術的な詳細を表示"
+  },
+  "workspace_unverified": {
+    "message": "未検証"
+  },
+  "workspace_signature_verified": {
+    "message": "署名を検証しました"
+  },
+  "workspace_output_size_line": {
+    "message": "$name$ ($size$)"
+  },
+  "workspace_find_replace": {
+    "message": "検索と置換"
+  },
+  "workspace_find_hide_replace": {
+    "message": "置換を非表示"
+  },
+  "workspace_find_show_replace": {
+    "message": "置換を表示"
+  },
+  "workspace_find_label": {
+    "message": "検索"
+  },
+  "workspace_replace_with": {
+    "message": "置換後の文字列"
+  },
+  "workspace_replace": {
+    "message": "置換"
+  },
+  "workspace_replace_all_short": {
+    "message": "すべて"
+  },
+  "workspace_replace_all": {
+    "message": "すべて置換"
+  },
+  "workspace_replace_all_shortcut": {
+    "message": "すべて置換 ($shortcut$)"
+  },
+  "workspace_match_case": {
+    "message": "大文字と小文字を区別"
+  },
+  "workspace_previous_match": {
+    "message": "前の一致"
+  },
+  "workspace_next_match": {
+    "message": "次の一致"
+  },
+  "workspace_close_find": {
+    "message": "検索を閉じる"
+  },
+  "workspace_message_tools": {
+    "message": "メッセージ ツール"
+  },
+  "workspace_style_bold": {
+    "message": "太字"
+  },
+  "workspace_style_italic": {
+    "message": "斜体"
+  },
+  "workspace_style_strike": {
+    "message": "取り消し線"
+  },
+  "workspace_style_code": {
+    "message": "コード"
+  },
+  "workspace_translating": {
+    "message": "翻訳しています..."
+  },
+  "workspace_translate_to": {
+    "message": "$language$に翻訳"
+  },
+  "workspace_translate": {
+    "message": "翻訳"
+  },
+  "workspace_translate_menu_heading": {
+    "message": "メッセージの翻訳先"
+  },
+  "workspace_search_languages": {
+    "message": "言語を検索"
+  },
+  "workspace_no_such_language": {
+    "message": "該当する言語はありません。"
+  },
+  "workspace_restore_original": {
+    "message": "原文に戻す"
+  },
+  "workspace_show_original": {
+    "message": "原文を表示"
+  },
+  "workspace_show_translation": {
+    "message": "$language$の翻訳を表示"
+  },
+  "workspace_working": {
+    "message": "処理しています..."
+  },
+  "workspace_note_same_language": {
+    "message": "このメッセージはすでに$language$です。"
+  },
+  "workspace_note_uncertain": {
+    "message": "このメッセージの言語を判別できません。"
+  },
+  "workspace_note_downloading_progress": {
+    "message": "$what$をダウンロード中、$percent$%"
+  },
+  "workspace_note_downloading": {
+    "message": "$what$をダウンロード中..."
+  },
+  "workspace_note_translated_from": {
+    "message": "このデバイス上で$language$から翻訳しました。"
+  },
+  "workspace_drop_files_or_text": {
+    "message": "ここにファイルまたはテキストをドロップ"
+  },
+  "workspace_browse_files": {
+    "message": "ファイルを選択"
+  },
+  "workspace_clear_all_files": {
+    "message": "すべて消去"
+  },
+  "workspace_detected_key_known": {
+    "message": "$name$ の鍵はすでにお持ちです。"
+  },
+  "workspace_detected_key_show": {
+    "message": "鍵一覧で表示"
+  },
+  "workspace_detected_key_in_message": {
+    "message": "このメッセージには $name$ の公開鍵が含まれています。"
+  },
+  "workspace_detected_key_pasted": {
+    "message": "これは $name$ の公開鍵です。"
+  },
+  "workspace_detected_key_in_message_anon": {
+    "message": "このメッセージには誰かの公開鍵が含まれています。"
+  },
+  "workspace_detected_key_pasted_anon": {
+    "message": "これは誰かの公開鍵のようです。"
+  },
+  "workspace_detected_key_import": {
+    "message": "連絡先としてインポート"
+  },
+  "workspace_message_password_title": {
+    "message": "このメッセージのパスワード"
+  },
+  "workspace_set_password": {
+    "message": "パスワードを設定"
+  },
+  "workspace_message_password_label": {
+    "message": "メッセージ パスワード"
+  },
+  "workspace_hide_password": {
+    "message": "パスワードを非表示"
+  },
+  "workspace_show_password": {
+    "message": "パスワードを表示"
+  },
+  "workspace_password_too_short_one": {
+    "message": "$count$ 文字以上にしてください。"
+  },
+  "workspace_password_too_short_other": {
+    "message": "$count$ 文字以上にしてください。"
+  },
+  "workspace_password_min_length_one": {
+    "message": "$count$ 文字以上。"
+  },
+  "workspace_password_min_length_other": {
+    "message": "$count$ 文字以上。"
+  },
+  "workspace_message_password_help": {
+    "message": "このパスワードを知っている人は誰でもメッセージを読めるため、メッセージと一緒ではなく別の経路で伝えてください。パスワードは、選択した宛先に加えてメッセージに追加され、どちらでも開けます。"
+  },
+  "workspace_history_save_failed": {
+    "message": "履歴に保存できませんでした。ストレージがいっぱいの可能性があります"
+  },
+  "workspace_operation_failed": {
+    "message": "操作に失敗しました。もう一度お試しください。"
+  },
+  "workspace_error_need_recipient_or_password": {
+    "message": "宛先の鍵を 1 つ以上選択するか、パスワードを設定してください。"
+  },
+  "workspace_error_engine_mismatch": {
+    "message": "どの形式で暗号化すればよいか判断できませんでした。"
+  },
+  "workspace_status_age_encrypted": {
+    "message": "age メッセージ。SSH の宛先に対して暗号化しました"
+  },
+  "workspace_files_encrypted_one": {
+    "message": "$count$ 個のファイルを暗号化しました (合計 $size$)"
+  },
+  "workspace_files_encrypted_other": {
+    "message": "$count$ 個のファイルを暗号化しました (合計 $size$)"
+  },
+  "workspace_files_zipped_encrypted_one": {
+    "message": "$count$ 個のファイルを zip 化して暗号化しました"
+  },
+  "workspace_files_zipped_encrypted_other": {
+    "message": "$count$ 個のファイルを zip 化して暗号化しました"
+  },
+  "workspace_files_decrypted_one": {
+    "message": "$count$ 個のファイルを復号しました (合計 $size$)"
+  },
+  "workspace_files_decrypted_other": {
+    "message": "$count$ 個のファイルを復号しました (合計 $size$)"
+  },
+  "workspace_files_signed_one": {
+    "message": "$count$ 個のファイルに署名しました"
+  },
+  "workspace_files_signed_other": {
+    "message": "$count$ 個のファイルに署名しました"
+  },
+  "workspace_status_decrypted_archive": {
+    "message": "複数のファイルを含むアーカイブを復号しました"
+  },
+  "workspace_error_decrypt_failed_ssh": {
+    "message": "復号に失敗しました。メッセージが破損しているか、お持ちのどの SSH 鍵に対しても暗号化されていません。"
+  },
+  "workspace_error_decrypt_failed": {
+    "message": "復号に失敗しました。メッセージが破損しているか、お持ちのどの鍵に対しても暗号化されていません。"
+  },
+  "workspace_error_select_decryption_key": {
+    "message": "復号に使う鍵を選択してください。"
+  },
+  "workspace_unknown_signer": {
+    "message": "不明な署名者"
+  },
+  "workspace_status_signer_unknown": {
+    "message": "このメッセージは署名されていますが、署名者の公開鍵が鍵にも連絡先にもないため、署名を検証できませんでした。"
+  },
+  "workspace_error_signature_invalid": {
+    "message": "署名の検証に失敗しました。このメッセージは改ざんされている可能性があります"
+  },
+  "workspace_error_not_signed": {
+    "message": "このメッセージは署名されていません。"
+  },
+  "workspace_error_verify_failed": {
+    "message": "検証に失敗しました。入力が署名付き PGP メッセージのようには見えません。"
+  },
+  "workspace_error_no_signing_key_ssh": {
+    "message": "使用できる署名鍵がありません。SSH 鍵では署名できません。先に OpenPGP 鍵を追加してください。"
+  },
+  "workspace_error_no_signing_key": {
+    "message": "使用できる署名鍵がありません。先に鍵を追加してください。"
+  },
+  "workspace_status_crx_signed": {
+    "message": "$name$ に署名しました。保存しています..."
+  },
+  "workspace_error_crx_wrong_password": {
+    "message": "パスワードが違うか、署名に失敗しました。"
+  },
+  "workspace_error_crx_sign_failed": {
+    "message": "CRX 署名に失敗しました。もう一度お試しください。"
+  },
+  "workspace_error_select_crx_key": {
+    "message": "先に CRX 署名鍵を選択してください。"
+  },
+  "workspace_status_crx_valid": {
+    "message": "有効な CRX。拡張機能 $id$"
+  },
+  "workspace_error_crx_invalid": {
+    "message": "このファイルの CRX 署名を検証できませんでした。"
+  },
+  "workspace_error_read_file": {
+    "message": "このファイルを読み取れませんでした。もう一度お試しください。"
+  },
+  "workspace_error_wrong_key_password": {
+    "message": "パスワードが違います。確認してから、やり直してください。"
+  },
+  "workspace_error_unlock_failed": {
+    "message": "ロックを解除できませんでした。もう一度お試しください。"
+  }
+}

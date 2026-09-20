@@ -1,0 +1,302 @@
+{
+  "actions_history": {
+    "message": "履歴"
+  },
+  "actions_history_to": {
+    "message": "宛先: $names$"
+  },
+  "actions_history_recipient_with_id": {
+    "message": "$name$ ($id$)"
+  },
+  "actions_history_files_one": {
+    "message": "$count$ 個のファイル"
+  },
+  "actions_history_files_other": {
+    "message": "$count$ 個のファイル"
+  },
+  "actions_history_op_signed": {
+    "message": "$op$ + 署名"
+  },
+  "actions_history_when": {
+    "message": "$date$ ($relative$)"
+  },
+  "actions_history_file_with_size": {
+    "message": "$name$ ($size$)"
+  },
+  "actions_history_truncated": {
+    "message": "[省略]"
+  },
+  "actions_history_metadata_only": {
+    "message": "メタデータのみ。この操作の内容は保存されません。"
+  },
+  "actions_history_clear": {
+    "message": "履歴を消去"
+  },
+  "actions_history_search_placeholder": {
+    "message": "履歴を検索..."
+  },
+  "actions_history_search_label": {
+    "message": "履歴を検索"
+  },
+  "actions_history_empty": {
+    "message": "履歴はありません"
+  },
+  "actions_history_off_reason": {
+    "message": "履歴はオフです。「署名」の横で有効にできます"
+  },
+  "actions_history_no_matches": {
+    "message": "「$query$」に一致する履歴はありません"
+  },
+  "actions_history_open_entry": {
+    "message": "$title$ を開く"
+  },
+  "actions_history_no_content": {
+    "message": "内容は保存されていません"
+  },
+  "actions_history_more_matches_one": {
+    "message": "+$count$ 件の一致"
+  },
+  "actions_history_more_matches_other": {
+    "message": "+$count$ 件の一致"
+  },
+  "actions_history_usage": {
+    "message": "$budget$ 中 $used$ を使用"
+  },
+  "actions_history_delete_all_one": {
+    "message": "$count$ 件の履歴をすべて削除"
+  },
+  "actions_history_delete_all_other": {
+    "message": "$count$ 件の履歴をすべて削除"
+  },
+  "actions_history_delete_warning": {
+    "message": "このデバイス上の暗号化された操作履歴が完全に削除されます。復元することはできません。"
+  },
+  "actions_no_keys_available": {
+    "message": "利用できる鍵がありません"
+  },
+  "actions_set_up": {
+    "message": "設定する"
+  },
+  "actions_badge_you": {
+    "message": "自分"
+  },
+  "actions_keys_of_total": {
+    "message": "$count$ 個中 $active$ 個の鍵"
+  },
+  "actions_keys_count_one": {
+    "message": "$count$ 個の鍵"
+  },
+  "actions_keys_count_other": {
+    "message": "$count$ 個の鍵"
+  },
+  "actions_remove_recipient": {
+    "message": "$name$ を削除"
+  },
+  "actions_remove_recipient_detail": {
+    "message": "$name$ を削除 ($detail$)"
+  },
+  "actions_add_recipients_placeholder": {
+    "message": "宛先を追加..."
+  },
+  "actions_recipient_input_hint": {
+    "message": "Backspace で最後の宛先を削除します"
+  },
+  "actions_clear_all_recipients": {
+    "message": "宛先をすべて消去"
+  },
+  "actions_toggle_recipient_list": {
+    "message": "宛先リストを開閉"
+  },
+  "actions_no_matches": {
+    "message": "一致するものはありません"
+  },
+  "actions_group_recent": {
+    "message": "最近使用"
+  },
+  "actions_group_contacts": {
+    "message": "連絡先"
+  },
+  "actions_group_my_keys": {
+    "message": "自分の鍵"
+  },
+  "actions_select_key_placeholder": {
+    "message": "鍵を選択..."
+  },
+  "actions_search_placeholder": {
+    "message": "検索..."
+  },
+  "actions_no_keys_found": {
+    "message": "鍵が見つかりません"
+  },
+  "actions_mixed_engine_reason": {
+    "message": "PGP と SSH の宛先を 1 つのメッセージにまとめることはできません。OpenPGP と age は異なる形式です。一方のグループに暗号化してから、もう一方に暗号化してください。"
+  },
+  "actions_ssh_password_reason": {
+    "message": "メッセージ パスワードは OpenPGP の機能で age にはないため、SSH の宛先と併用できません。パスワードを外すか、パスワードなしでこの相手に暗号化してください。"
+  },
+  "actions_palette_label": {
+    "message": "コマンド パレット"
+  },
+  "actions_palette_placeholder": {
+    "message": "コマンドを入力..."
+  },
+  "actions_palette_no_match": {
+    "message": "一致するものはありません。"
+  },
+  "actions_palette_no_commands": {
+    "message": "一致するコマンドはありません。"
+  },
+  "actions_disabled_toast": {
+    "message": "$name$ は無効です: $reason$"
+  },
+  "actions_group_mode": {
+    "message": "モード"
+  },
+  "actions_group_workspace": {
+    "message": "ワークスペース"
+  },
+  "actions_group_keys": {
+    "message": "鍵"
+  },
+  "actions_group_navigation": {
+    "message": "ナビゲーション"
+  },
+  "actions_group_settings": {
+    "message": "設定"
+  },
+  "actions_group_session": {
+    "message": "セッション"
+  },
+  "actions_group_message": {
+    "message": "メッセージ"
+  },
+  "actions_group_result": {
+    "message": "結果"
+  },
+  "actions_no_input_encrypt": {
+    "message": "暗号化するものがありません。テキストを入力するか、ファイルをドロップしてください"
+  },
+  "actions_no_input_decrypt": {
+    "message": "復号するものがありません。暗号化されたメッセージを貼り付けるか、ファイルをドロップしてください"
+  },
+  "actions_no_input_sign": {
+    "message": "署名するものがありません。テキストを入力するか、ファイルをドロップしてください"
+  },
+  "actions_no_input_verify": {
+    "message": "検証するものがありません。署名されたメッセージを貼り付けるか、ファイルをドロップしてください"
+  },
+  "actions_run_mode": {
+    "message": "$mode$を実行"
+  },
+  "actions_switch_to_workspace_first": {
+    "message": "先にワークスペースに切り替えてください"
+  },
+  "actions_need_recipient_or_password": {
+    "message": "宛先を 1 つ以上選択するか、パスワードを設定してください"
+  },
+  "actions_copy_output": {
+    "message": "出力をコピー"
+  },
+  "actions_no_output_to_copy": {
+    "message": "コピーする出力はまだありません"
+  },
+  "actions_download_output": {
+    "message": "出力をダウンロード"
+  },
+  "actions_nothing_to_download": {
+    "message": "ダウンロードするものはまだありません"
+  },
+  "actions_clear_input": {
+    "message": "入力を消去"
+  },
+  "actions_nothing_to_clear": {
+    "message": "消去するものがありません"
+  },
+  "actions_open_history": {
+    "message": "履歴を開く"
+  },
+  "actions_history_off_never_cache": {
+    "message": "鍵をキャッシュしない設定のため、履歴はオフです"
+  },
+  "actions_encrypt_to_self_on": {
+    "message": "オンにする: 自分にも暗号化"
+  },
+  "actions_encrypt_to_self_off": {
+    "message": "オフにする: 自分にも暗号化"
+  },
+  "actions_sign_when_encrypting_on": {
+    "message": "オンにする: 暗号化時に署名"
+  },
+  "actions_sign_when_encrypting_off": {
+    "message": "オフにする: 暗号化時に署名"
+  },
+  "actions_save_to_history_on": {
+    "message": "オンにする: 履歴に保存"
+  },
+  "actions_save_to_history_off": {
+    "message": "オフにする: 履歴に保存"
+  },
+  "actions_add_own_key_first": {
+    "message": "先に自分の鍵を追加してください"
+  },
+  "actions_age_cannot_sign": {
+    "message": "age メッセージには署名できません"
+  },
+  "actions_generate_key": {
+    "message": "鍵を生成"
+  },
+  "actions_import_key": {
+    "message": "鍵をインポート"
+  },
+  "actions_go_to_workspace": {
+    "message": "ワークスペースへ移動"
+  },
+  "actions_go_to_keys": {
+    "message": "鍵へ移動"
+  },
+  "actions_go_to_settings": {
+    "message": "設定へ移動"
+  },
+  "actions_open_security_presets": {
+    "message": "セキュリティ プリセットを開く"
+  },
+  "actions_lock_now": {
+    "message": "今すぐロック"
+  },
+  "actions_style_bold": {
+    "message": "選択範囲を太字にする"
+  },
+  "actions_style_italic": {
+    "message": "選択範囲を斜体にする"
+  },
+  "actions_style_strike": {
+    "message": "選択範囲に取り消し線を引く"
+  },
+  "actions_style_code": {
+    "message": "選択範囲をコードにする"
+  },
+  "actions_find_replace": {
+    "message": "メッセージ内を検索して置換"
+  },
+  "actions_translate_message": {
+    "message": "メッセージを翻訳..."
+  },
+  "actions_translation_off": {
+    "message": "設定で翻訳がオフになっています"
+  },
+  "actions_nothing_to_translate": {
+    "message": "翻訳するものはまだありません"
+  },
+  "actions_language_last_used": {
+    "message": "$label$ (前回使用)"
+  },
+  "actions_translate_to_title": {
+    "message": "メッセージの翻訳先"
+  },
+  "actions_pick_language_placeholder": {
+    "message": "言語を選択..."
+  },
+  "actions_translate_result_to": {
+    "message": "$language$に翻訳"
+  }
+}

@@ -1,0 +1,302 @@
+{
+  "actions_history": {
+    "message": "Histórico"
+  },
+  "actions_history_to": {
+    "message": "Para $names$"
+  },
+  "actions_history_recipient_with_id": {
+    "message": "$name$ ($id$)"
+  },
+  "actions_history_files_one": {
+    "message": "$count$ arquivo"
+  },
+  "actions_history_files_other": {
+    "message": "$count$ arquivos"
+  },
+  "actions_history_op_signed": {
+    "message": "$op$ + assinar"
+  },
+  "actions_history_when": {
+    "message": "$date$ ($relative$)"
+  },
+  "actions_history_file_with_size": {
+    "message": "$name$ ($size$)"
+  },
+  "actions_history_truncated": {
+    "message": "[truncado]"
+  },
+  "actions_history_metadata_only": {
+    "message": "Somente metadados - o conteúdo não é armazenado para esta operação."
+  },
+  "actions_history_clear": {
+    "message": "Limpar histórico"
+  },
+  "actions_history_search_placeholder": {
+    "message": "Pesquisar no histórico..."
+  },
+  "actions_history_search_label": {
+    "message": "Pesquisar no histórico"
+  },
+  "actions_history_empty": {
+    "message": "Sem histórico"
+  },
+  "actions_history_off_reason": {
+    "message": "O histórico está desativado - ative-o ao lado de Assinar"
+  },
+  "actions_history_no_matches": {
+    "message": "Nenhum item do histórico corresponde a “$query$”"
+  },
+  "actions_history_open_entry": {
+    "message": "Abrir $title$"
+  },
+  "actions_history_no_content": {
+    "message": "Nenhum conteúdo salvo"
+  },
+  "actions_history_more_matches_one": {
+    "message": "+$count$ outra ocorrência"
+  },
+  "actions_history_more_matches_other": {
+    "message": "+$count$ outras ocorrências"
+  },
+  "actions_history_usage": {
+    "message": "$used$ de $budget$ usados"
+  },
+  "actions_history_delete_all_one": {
+    "message": "Excluir todo o histórico ($count$ entrada)"
+  },
+  "actions_history_delete_all_other": {
+    "message": "Excluir todo o histórico ($count$ entradas)"
+  },
+  "actions_history_delete_warning": {
+    "message": "Isso exclui permanentemente seu histórico criptografado de operações deste dispositivo. Não é possível recuperá-lo."
+  },
+  "actions_no_keys_available": {
+    "message": "Nenhuma chave disponível"
+  },
+  "actions_set_up": {
+    "message": "Configurar"
+  },
+  "actions_badge_you": {
+    "message": "Você"
+  },
+  "actions_keys_of_total": {
+    "message": "$active$ de $count$ chaves"
+  },
+  "actions_keys_count_one": {
+    "message": "$count$ chave"
+  },
+  "actions_keys_count_other": {
+    "message": "$count$ chaves"
+  },
+  "actions_remove_recipient": {
+    "message": "Remover $name$"
+  },
+  "actions_remove_recipient_detail": {
+    "message": "Remover $name$ - $detail$"
+  },
+  "actions_add_recipients_placeholder": {
+    "message": "Adicionar destinatários..."
+  },
+  "actions_recipient_input_hint": {
+    "message": "Backspace remove o último destinatário"
+  },
+  "actions_clear_all_recipients": {
+    "message": "Remover todos os destinatários"
+  },
+  "actions_toggle_recipient_list": {
+    "message": "Mostrar ou ocultar a lista de destinatários"
+  },
+  "actions_no_matches": {
+    "message": "Nenhum resultado"
+  },
+  "actions_group_recent": {
+    "message": "Recentes"
+  },
+  "actions_group_contacts": {
+    "message": "Contatos"
+  },
+  "actions_group_my_keys": {
+    "message": "Minhas chaves"
+  },
+  "actions_select_key_placeholder": {
+    "message": "Selecione uma chave..."
+  },
+  "actions_search_placeholder": {
+    "message": "Pesquisar..."
+  },
+  "actions_no_keys_found": {
+    "message": "Nenhuma chave encontrada"
+  },
+  "actions_mixed_engine_reason": {
+    "message": "Destinatários PGP e SSH não podem ser combinados em uma mesma mensagem: OpenPGP e age são formatos diferentes. Criptografe para um grupo e depois para o outro."
+  },
+  "actions_ssh_password_reason": {
+    "message": "A senha de mensagem é um recurso do OpenPGP e o age não tem isso, então destinatários SSH não podem ser usados com senha. Remova a senha ou criptografe para esta pessoa sem ela."
+  },
+  "actions_palette_label": {
+    "message": "Paleta de comandos"
+  },
+  "actions_palette_placeholder": {
+    "message": "Digite um comando..."
+  },
+  "actions_palette_no_match": {
+    "message": "Nenhum resultado."
+  },
+  "actions_palette_no_commands": {
+    "message": "Nenhum comando correspondente."
+  },
+  "actions_disabled_toast": {
+    "message": "$name$ está desativado: $reason$"
+  },
+  "actions_group_mode": {
+    "message": "Modo"
+  },
+  "actions_group_workspace": {
+    "message": "Área de trabalho"
+  },
+  "actions_group_keys": {
+    "message": "Chaves"
+  },
+  "actions_group_navigation": {
+    "message": "Navegação"
+  },
+  "actions_group_settings": {
+    "message": "Configurações"
+  },
+  "actions_group_session": {
+    "message": "Sessão"
+  },
+  "actions_group_message": {
+    "message": "Mensagem"
+  },
+  "actions_group_result": {
+    "message": "Resultado"
+  },
+  "actions_no_input_encrypt": {
+    "message": "Nada para criptografar - adicione texto ou solte um arquivo"
+  },
+  "actions_no_input_decrypt": {
+    "message": "Nada para descriptografar - cole uma mensagem criptografada ou solte um arquivo"
+  },
+  "actions_no_input_sign": {
+    "message": "Nada para assinar - adicione texto ou solte um arquivo"
+  },
+  "actions_no_input_verify": {
+    "message": "Nada para verificar - cole uma mensagem assinada ou solte um arquivo"
+  },
+  "actions_run_mode": {
+    "message": "Executar $mode$"
+  },
+  "actions_switch_to_workspace_first": {
+    "message": "Vá para a Área de trabalho primeiro"
+  },
+  "actions_need_recipient_or_password": {
+    "message": "Selecione pelo menos um destinatário ou defina uma senha"
+  },
+  "actions_copy_output": {
+    "message": "Copiar resultado"
+  },
+  "actions_no_output_to_copy": {
+    "message": "Ainda não há resultado para copiar"
+  },
+  "actions_download_output": {
+    "message": "Baixar resultado"
+  },
+  "actions_nothing_to_download": {
+    "message": "Ainda não há nada para baixar"
+  },
+  "actions_clear_input": {
+    "message": "Limpar entrada"
+  },
+  "actions_nothing_to_clear": {
+    "message": "Nada para limpar"
+  },
+  "actions_open_history": {
+    "message": "Abrir histórico"
+  },
+  "actions_history_off_never_cache": {
+    "message": "O histórico fica desativado enquanto “Nunca manter chaves em cache” estiver ativado"
+  },
+  "actions_encrypt_to_self_on": {
+    "message": "Ativar: Criptografar para mim também"
+  },
+  "actions_encrypt_to_self_off": {
+    "message": "Desativar: Criptografar para mim também"
+  },
+  "actions_sign_when_encrypting_on": {
+    "message": "Ativar: Assinar ao criptografar"
+  },
+  "actions_sign_when_encrypting_off": {
+    "message": "Desativar: Assinar ao criptografar"
+  },
+  "actions_save_to_history_on": {
+    "message": "Ativar: Salvar no histórico"
+  },
+  "actions_save_to_history_off": {
+    "message": "Desativar: Salvar no histórico"
+  },
+  "actions_add_own_key_first": {
+    "message": "Adicione uma chave sua primeiro"
+  },
+  "actions_age_cannot_sign": {
+    "message": "mensagens age não podem ser assinadas"
+  },
+  "actions_generate_key": {
+    "message": "Gerar chave"
+  },
+  "actions_import_key": {
+    "message": "Importar chave"
+  },
+  "actions_go_to_workspace": {
+    "message": "Ir para a Área de trabalho"
+  },
+  "actions_go_to_keys": {
+    "message": "Ir para Chaves"
+  },
+  "actions_go_to_settings": {
+    "message": "Ir para Configurações"
+  },
+  "actions_open_security_presets": {
+    "message": "Abrir perfis de segurança"
+  },
+  "actions_lock_now": {
+    "message": "Bloquear agora"
+  },
+  "actions_style_bold": {
+    "message": "Seleção em negrito"
+  },
+  "actions_style_italic": {
+    "message": "Seleção em itálico"
+  },
+  "actions_style_strike": {
+    "message": "Seleção tachada"
+  },
+  "actions_style_code": {
+    "message": "Seleção como código"
+  },
+  "actions_find_replace": {
+    "message": "Localizar e substituir na mensagem"
+  },
+  "actions_translate_message": {
+    "message": "Traduzir mensagem..."
+  },
+  "actions_translation_off": {
+    "message": "A tradução está desativada em Configurações"
+  },
+  "actions_nothing_to_translate": {
+    "message": "Ainda não há nada para traduzir"
+  },
+  "actions_language_last_used": {
+    "message": "$label$ (último usado)"
+  },
+  "actions_translate_to_title": {
+    "message": "Traduzir a mensagem para"
+  },
+  "actions_pick_language_placeholder": {
+    "message": "Escolha um idioma..."
+  },
+  "actions_translate_result_to": {
+    "message": "Traduzir para $language$"
+  }
+}

@@ -1,0 +1,130 @@
+{
+  "actions_history": { "message": "历史记录" },
+  "actions_history_to": { "message": "发给 $names$" },
+  "actions_history_recipient_with_id": { "message": "$name$ ($id$)" },
+  "actions_history_files_one": { "message": "$count$ 个文件" },
+  "actions_history_files_other": { "message": "$count$ 个文件" },
+  "actions_history_op_signed": { "message": "$op$ + 签名" },
+  "actions_history_when": { "message": "$date$ ($relative$)" },
+  "actions_history_file_with_size": { "message": "$name$ ($size$)" },
+  "actions_history_truncated": { "message": "[已截断]" },
+  "actions_history_metadata_only": {
+    "message": "仅元数据，此操作不保存内容。"
+  },
+  "actions_history_clear": { "message": "清除历史记录" },
+  "actions_history_search_placeholder": { "message": "搜索历史记录…" },
+  "actions_history_search_label": { "message": "搜索历史记录" },
+  "actions_history_empty": { "message": "暂无历史记录" },
+  "actions_history_off_reason": {
+    "message": "历史记录已关闭，可在“签名”旁边启用"
+  },
+  "actions_history_no_matches": { "message": "没有与“$query$”匹配的历史记录" },
+  "actions_history_open_entry": { "message": "打开 $title$" },
+  "actions_history_no_content": { "message": "未保存内容" },
+  "actions_history_more_matches_one": { "message": "+$count$ 处匹配" },
+  "actions_history_more_matches_other": { "message": "+$count$ 处匹配" },
+  "actions_history_usage": { "message": "已使用 $used$ / $budget$" },
+  "actions_history_delete_all_one": {
+    "message": "删除全部 $count$ 条历史记录"
+  },
+  "actions_history_delete_all_other": {
+    "message": "删除全部 $count$ 条历史记录"
+  },
+  "actions_history_delete_warning": {
+    "message": "这将永久删除此设备上已加密的操作历史记录，且无法恢复。"
+  },
+  "actions_no_keys_available": { "message": "没有可用的密钥" },
+  "actions_set_up": { "message": "去设置" },
+  "actions_badge_you": { "message": "我" },
+  "actions_keys_of_total": { "message": "$active$/$count$ 个密钥" },
+  "actions_keys_count_one": { "message": "$count$ 个密钥" },
+  "actions_keys_count_other": { "message": "$count$ 个密钥" },
+  "actions_remove_recipient": { "message": "移除 $name$" },
+  "actions_remove_recipient_detail": { "message": "移除 $name$ - $detail$" },
+  "actions_add_recipients_placeholder": { "message": "添加收件人…" },
+  "actions_recipient_input_hint": {
+    "message": "按 Backspace 移除最后一个收件人"
+  },
+  "actions_clear_all_recipients": { "message": "清除所有收件人" },
+  "actions_toggle_recipient_list": { "message": "展开或收起收件人列表" },
+  "actions_no_matches": { "message": "无匹配项" },
+  "actions_group_recent": { "message": "最近" },
+  "actions_group_contacts": { "message": "联系人" },
+  "actions_group_my_keys": { "message": "我的密钥" },
+  "actions_select_key_placeholder": { "message": "选择一个密钥…" },
+  "actions_search_placeholder": { "message": "搜索…" },
+  "actions_no_keys_found": { "message": "未找到密钥" },
+  "actions_mixed_engine_reason": {
+    "message": "PGP 和 SSH 收件人不能放在同一条消息中：OpenPGP 和 age 是不同的格式。请先加密给其中一组，再加密给另一组。"
+  },
+  "actions_ssh_password_reason": {
+    "message": "消息密码是 OpenPGP 的功能，age 没有此功能，因此设置了密码时不能使用 SSH 收件人。请移除密码，或不带密码加密给此人。"
+  },
+  "actions_palette_label": { "message": "命令面板" },
+  "actions_palette_placeholder": { "message": "输入命令…" },
+  "actions_palette_no_match": { "message": "无匹配项。" },
+  "actions_palette_no_commands": { "message": "没有匹配的命令。" },
+  "actions_disabled_toast": { "message": "“$name$”已停用：$reason$" },
+  "actions_group_mode": { "message": "模式" },
+  "actions_group_workspace": { "message": "工作区" },
+  "actions_group_keys": { "message": "密钥" },
+  "actions_group_navigation": { "message": "导航" },
+  "actions_group_settings": { "message": "设置" },
+  "actions_group_session": { "message": "会话" },
+  "actions_group_message": { "message": "消息" },
+  "actions_group_result": { "message": "结果" },
+  "actions_no_input_encrypt": {
+    "message": "没有可加密的内容，请添加文本或拖入文件"
+  },
+  "actions_no_input_decrypt": {
+    "message": "没有可解密的内容，请粘贴加密消息或拖入文件"
+  },
+  "actions_no_input_sign": {
+    "message": "没有可签名的内容，请添加文本或拖入文件"
+  },
+  "actions_no_input_verify": {
+    "message": "没有可验证的内容，请粘贴已签名消息或拖入文件"
+  },
+  "actions_run_mode": { "message": "运行$mode$" },
+  "actions_switch_to_workspace_first": { "message": "请先切换到工作区" },
+  "actions_need_recipient_or_password": {
+    "message": "请至少选择一个收件人，或设置密码"
+  },
+  "actions_copy_output": { "message": "复制输出" },
+  "actions_no_output_to_copy": { "message": "尚无可复制的输出" },
+  "actions_download_output": { "message": "下载输出" },
+  "actions_nothing_to_download": { "message": "尚无可下载的内容" },
+  "actions_clear_input": { "message": "清除输入" },
+  "actions_nothing_to_clear": { "message": "没有可清除的内容" },
+  "actions_open_history": { "message": "打开历史记录" },
+  "actions_history_off_never_cache": {
+    "message": "密钥从不缓存时，历史记录不可用"
+  },
+  "actions_encrypt_to_self_on": { "message": "开启：同时加密给我" },
+  "actions_encrypt_to_self_off": { "message": "关闭：同时加密给我" },
+  "actions_sign_when_encrypting_on": { "message": "开启：加密时签名" },
+  "actions_sign_when_encrypting_off": { "message": "关闭：加密时签名" },
+  "actions_save_to_history_on": { "message": "开启：保存到历史记录" },
+  "actions_save_to_history_off": { "message": "关闭：保存到历史记录" },
+  "actions_add_own_key_first": { "message": "请先添加一个你自己的密钥" },
+  "actions_age_cannot_sign": { "message": "age 消息无法签名" },
+  "actions_generate_key": { "message": "生成密钥" },
+  "actions_import_key": { "message": "导入密钥" },
+  "actions_go_to_workspace": { "message": "前往工作区" },
+  "actions_go_to_keys": { "message": "前往密钥" },
+  "actions_go_to_settings": { "message": "前往设置" },
+  "actions_open_security_presets": { "message": "打开安全预设" },
+  "actions_lock_now": { "message": "立即锁定" },
+  "actions_style_bold": { "message": "将所选文本加粗" },
+  "actions_style_italic": { "message": "将所选文本设为斜体" },
+  "actions_style_strike": { "message": "为所选文本添加删除线" },
+  "actions_style_code": { "message": "将所选文本设为代码" },
+  "actions_find_replace": { "message": "在消息中查找和替换" },
+  "actions_translate_message": { "message": "翻译消息…" },
+  "actions_translation_off": { "message": "翻译功能已在“设置”中关闭" },
+  "actions_nothing_to_translate": { "message": "尚无可翻译的内容" },
+  "actions_language_last_used": { "message": "$label$（上次使用）" },
+  "actions_translate_to_title": { "message": "将消息翻译为" },
+  "actions_pick_language_placeholder": { "message": "选择语言…" },
+  "actions_translate_result_to": { "message": "翻译为$language$" }
+}

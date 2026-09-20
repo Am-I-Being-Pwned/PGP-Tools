@@ -1,0 +1,156 @@
+{
+  "actions_history": { "message": "इतिहास" },
+  "actions_history_to": { "message": "$names$ को" },
+  "actions_history_recipient_with_id": { "message": "$name$ ($id$)" },
+  "actions_history_files_one": { "message": "$count$ फ़ाइल" },
+  "actions_history_files_other": { "message": "$count$ फ़ाइलें" },
+  "actions_history_op_signed": { "message": "$op$ + हस्ताक्षर" },
+  "actions_history_when": { "message": "$date$ ($relative$)" },
+  "actions_history_file_with_size": { "message": "$name$ ($size$)" },
+  "actions_history_truncated": { "message": "[काटा गया]" },
+  "actions_history_metadata_only": {
+    "message": "सिर्फ़ मेटाडेटा - इस कार्रवाई की सामग्री सहेजी नहीं जाती।"
+  },
+  "actions_history_clear": { "message": "इतिहास मिटाएं" },
+  "actions_history_search_placeholder": { "message": "इतिहास में खोजें..." },
+  "actions_history_search_label": { "message": "इतिहास में खोजें" },
+  "actions_history_empty": { "message": "कोई इतिहास नहीं" },
+  "actions_history_off_reason": {
+    "message": "इतिहास बंद है - इसे 'हस्ताक्षर' के बगल में चालू करें"
+  },
+  "actions_history_no_matches": {
+    "message": "\"$query$\" से मेल खाता कोई इतिहास नहीं"
+  },
+  "actions_history_open_entry": { "message": "$title$ खोलें" },
+  "actions_history_no_content": { "message": "कोई सामग्री सहेजी नहीं गई" },
+  "actions_history_more_matches_one": { "message": "+$count$ और मिलान" },
+  "actions_history_more_matches_other": { "message": "+$count$ और मिलान" },
+  "actions_history_usage": { "message": "$budget$ में से $used$ इस्तेमाल हुआ" },
+  "actions_history_delete_all_one": {
+    "message": "इतिहास की सभी $count$ प्रविष्टि मिटाएं"
+  },
+  "actions_history_delete_all_other": {
+    "message": "इतिहास की सभी $count$ प्रविष्टियां मिटाएं"
+  },
+  "actions_history_delete_warning": {
+    "message": "इससे इस डिवाइस से आपकी कार्रवाइयों का एन्क्रिप्टेड इतिहास हमेशा के लिए मिट जाता है। इसे वापस नहीं पाया जा सकता।"
+  },
+  "actions_no_keys_available": { "message": "कोई कुंजी उपलब्ध नहीं" },
+  "actions_set_up": { "message": "सेट अप करें" },
+  "actions_badge_you": { "message": "आप" },
+  "actions_keys_of_total": { "message": "$count$ में से $active$ कुंजियां" },
+  "actions_keys_count_one": { "message": "$count$ कुंजी" },
+  "actions_keys_count_other": { "message": "$count$ कुंजियां" },
+  "actions_remove_recipient": { "message": "$name$ को हटाएं" },
+  "actions_remove_recipient_detail": {
+    "message": "$name$ को हटाएं - $detail$"
+  },
+  "actions_add_recipients_placeholder": { "message": "प्राप्तकर्ता जोड़ें..." },
+  "actions_recipient_input_hint": {
+    "message": "Backspace से आखिरी प्राप्तकर्ता हट जाता है"
+  },
+  "actions_clear_all_recipients": { "message": "सभी प्राप्तकर्ता हटाएं" },
+  "actions_toggle_recipient_list": {
+    "message": "प्राप्तकर्ता सूची खोलें/बंद करें"
+  },
+  "actions_no_matches": { "message": "कोई मिलान नहीं" },
+  "actions_group_recent": { "message": "हाल के" },
+  "actions_group_contacts": { "message": "संपर्क" },
+  "actions_group_my_keys": { "message": "मेरी कुंजियां" },
+  "actions_select_key_placeholder": { "message": "कोई कुंजी चुनें..." },
+  "actions_search_placeholder": { "message": "खोजें..." },
+  "actions_no_keys_found": { "message": "कोई कुंजी नहीं मिली" },
+  "actions_mixed_engine_reason": {
+    "message": "PGP और SSH प्राप्तकर्ताओं को एक ही संदेश में नहीं जोड़ा जा सकता: OpenPGP और age अलग-अलग फ़ॉर्मैट हैं। पहले एक समूह के लिए एन्क्रिप्ट करें, फिर दूसरे के लिए।"
+  },
+  "actions_ssh_password_reason": {
+    "message": "संदेश पासवर्ड OpenPGP की सुविधा है और age में यह नहीं होती, इसलिए SSH प्राप्तकर्ताओं के साथ इसका इस्तेमाल नहीं किया जा सकता। पासवर्ड हटाएं, या इस व्यक्ति के लिए बिना पासवर्ड के एन्क्रिप्ट करें।"
+  },
+  "actions_palette_label": { "message": "कमांड पैलेट" },
+  "actions_palette_placeholder": { "message": "कोई कमांड लिखें..." },
+  "actions_palette_no_match": { "message": "कोई मिलान नहीं।" },
+  "actions_palette_no_commands": { "message": "मेल खाती कोई कमांड नहीं।" },
+  "actions_disabled_toast": { "message": "$name$ अक्षम है: $reason$" },
+  "actions_group_mode": { "message": "मोड" },
+  "actions_group_workspace": { "message": "वर्कस्पेस" },
+  "actions_group_keys": { "message": "कुंजियां" },
+  "actions_group_navigation": { "message": "नेविगेशन" },
+  "actions_group_settings": { "message": "सेटिंग" },
+  "actions_group_session": { "message": "सत्र" },
+  "actions_group_message": { "message": "संदेश" },
+  "actions_group_result": { "message": "परिणाम" },
+  "actions_no_input_encrypt": {
+    "message": "एन्क्रिप्ट करने के लिए कुछ नहीं - टेक्स्ट लिखें या कोई फ़ाइल छोड़ें"
+  },
+  "actions_no_input_decrypt": {
+    "message": "डिक्रिप्ट करने के लिए कुछ नहीं - एन्क्रिप्टेड संदेश पेस्ट करें या कोई फ़ाइल छोड़ें"
+  },
+  "actions_no_input_sign": {
+    "message": "हस्ताक्षर करने के लिए कुछ नहीं - टेक्स्ट लिखें या कोई फ़ाइल छोड़ें"
+  },
+  "actions_no_input_verify": {
+    "message": "सत्यापित करने के लिए कुछ नहीं - हस्ताक्षरित संदेश पेस्ट करें या कोई फ़ाइल छोड़ें"
+  },
+  "actions_run_mode": { "message": "$mode$ चलाएं" },
+  "actions_switch_to_workspace_first": { "message": "पहले वर्कस्पेस पर जाएं" },
+  "actions_need_recipient_or_password": {
+    "message": "कम से कम एक प्राप्तकर्ता चुनें, या पासवर्ड सेट करें"
+  },
+  "actions_copy_output": { "message": "आउटपुट कॉपी करें" },
+  "actions_no_output_to_copy": {
+    "message": "कॉपी करने के लिए अभी कोई आउटपुट नहीं"
+  },
+  "actions_download_output": { "message": "आउटपुट डाउनलोड करें" },
+  "actions_nothing_to_download": {
+    "message": "डाउनलोड करने के लिए अभी कुछ नहीं"
+  },
+  "actions_clear_input": { "message": "इनपुट साफ़ करें" },
+  "actions_nothing_to_clear": { "message": "साफ़ करने के लिए कुछ नहीं" },
+  "actions_open_history": { "message": "इतिहास खोलें" },
+  "actions_history_off_never_cache": {
+    "message": "कुंजियां कभी कैश न होने की सेटिंग चालू रहने तक इतिहास बंद है"
+  },
+  "actions_encrypt_to_self_on": {
+    "message": "चालू करें: मेरे लिए भी एन्क्रिप्ट करें"
+  },
+  "actions_encrypt_to_self_off": {
+    "message": "बंद करें: मेरे लिए भी एन्क्रिप्ट करें"
+  },
+  "actions_sign_when_encrypting_on": {
+    "message": "चालू करें: एन्क्रिप्ट करते समय हस्ताक्षर करें"
+  },
+  "actions_sign_when_encrypting_off": {
+    "message": "बंद करें: एन्क्रिप्ट करते समय हस्ताक्षर करें"
+  },
+  "actions_save_to_history_on": { "message": "चालू करें: इतिहास में सहेजें" },
+  "actions_save_to_history_off": { "message": "बंद करें: इतिहास में सहेजें" },
+  "actions_add_own_key_first": { "message": "पहले अपनी कोई कुंजी जोड़ें" },
+  "actions_age_cannot_sign": {
+    "message": "age संदेशों पर हस्ताक्षर नहीं किए जा सकते"
+  },
+  "actions_generate_key": { "message": "कुंजी बनाएं" },
+  "actions_import_key": { "message": "कुंजी आयात करें" },
+  "actions_go_to_workspace": { "message": "वर्कस्पेस पर जाएं" },
+  "actions_go_to_keys": { "message": "'कुंजियां' टैब पर जाएं" },
+  "actions_go_to_settings": { "message": "सेटिंग पर जाएं" },
+  "actions_open_security_presets": { "message": "सुरक्षा प्रीसेट खोलें" },
+  "actions_lock_now": { "message": "अभी लॉक करें" },
+  "actions_style_bold": { "message": "चयन को बोल्ड करें" },
+  "actions_style_italic": { "message": "चयन को इटैलिक करें" },
+  "actions_style_strike": { "message": "चयन पर स्ट्राइकथ्रू लगाएं" },
+  "actions_style_code": { "message": "चयन को कोड बनाएं" },
+  "actions_find_replace": { "message": "संदेश में ढूंढें और बदलें" },
+  "actions_translate_message": { "message": "संदेश का अनुवाद करें..." },
+  "actions_translation_off": { "message": "अनुवाद सेटिंग में बंद है" },
+  "actions_nothing_to_translate": {
+    "message": "अनुवाद करने के लिए अभी कुछ नहीं"
+  },
+  "actions_language_last_used": {
+    "message": "$label$ (पिछली बार इस्तेमाल की गई)"
+  },
+  "actions_translate_to_title": {
+    "message": "संदेश का अनुवाद इस भाषा में करें"
+  },
+  "actions_pick_language_placeholder": { "message": "कोई भाषा चुनें..." },
+  "actions_translate_result_to": { "message": "$language$ में अनुवाद करें" }
+}

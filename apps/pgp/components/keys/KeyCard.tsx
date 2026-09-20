@@ -25,6 +25,7 @@ import {
 } from "@amibeingpwned/ui/dropdown-menu";
 
 import type { PrivateKeyExporter } from "./ExportPrivateKeyPage";
+import { t } from "../../lib/i18n";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 import { ExportPrivateKeyPage } from "./ExportPrivateKeyPage";
 import { useJustImported } from "./useJustImported";
@@ -135,7 +136,7 @@ export function KeyCard({
       setShowPasswordUnlock(false);
       setPassword("");
     } else {
-      setError("Wrong password");
+      setError(t("keys_wrong_password"));
     }
     setUnlocking(false);
   };
@@ -145,7 +146,7 @@ export function KeyCard({
     setError(null);
     const result = await session.unlockWithPasskey();
     if (result === "cancelled") return;
-    if (!result) setError("Passkey authentication failed");
+    if (!result) setError(t("keys_passkey_failed"));
   };
 
   const handleCardClick = (e: ReactMouseEvent) => {
@@ -190,7 +191,11 @@ export function KeyCard({
         <span
           className={`shrink-0 text-sm ${isUnlocked ? "text-green-400" : "text-muted-foreground"}`}
           title={
-            session ? (isUnlocked ? "Unlocked" : "Locked") : "Sealed at rest"
+            session
+              ? isUnlocked
+                ? t("keys_status_unlocked")
+                : t("keys_status_locked")
+              : t("keys_status_sealed")
           }
         >
           {isUnlocked ? (
@@ -210,10 +215,10 @@ export function KeyCard({
             )}
             {model.isDefault && (
               <span
-                title="Used by default for signing, decrypting, and encrypt-to-self"
+                title={t("keys_default_title")}
                 className="border-border text-muted-foreground ml-1.5 rounded-full border px-1.5 py-px text-[10px] font-medium whitespace-nowrap"
               >
-                Default
+                {t("keys_default_badge")}
               </span>
             )}
           </p>
@@ -236,7 +241,7 @@ export function KeyCard({
                 "text-muted-foreground rounded p-1 transition-colors",
                 selectionMode ? dimmed : "hover:text-foreground",
               )}
-              aria-label="Key options"
+              aria-label={t("keys_key_options_aria")}
             >
               <EllipsisVerticalIcon className="h-4 w-4" />
             </button>
@@ -248,21 +253,21 @@ export function KeyCard({
             {model.onRename && (
               <DropdownMenuItem onClick={model.onRename}>
                 <PencilIcon />
-                Rename
+                {t("keys_rename")}
               </DropdownMenuItem>
             )}
             <DropdownMenuItem
               onClick={() => {
                 model.onCopyPublicKey();
-                showFeedback("Public key copied");
+                showFeedback(t("keys_public_key_copied"));
               }}
             >
               <CopyIcon />
-              Copy public key
+              {t("keys_copy_public_key")}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={model.onDownloadPublicKey}>
               <DownloadIcon />
-              Download public key
+              {t("keys_download_public_key")}
             </DropdownMenuItem>
             {canExportPrivate && (
               <DropdownMenuItem
@@ -270,27 +275,29 @@ export function KeyCard({
                 onClick={() => setShowExportPrivate(true)}
               >
                 <KeyIcon className="text-destructive" />
-                Copy private key
+                {t("keys_copy_private_key")}
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={onStartSelect}>
               <ListChecksIcon />
-              Select
+              {t("keys_select")}
             </DropdownMenuItem>
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"
               onClick={model.onDelete}
             >
               <Trash2Icon className="text-destructive" />
-              Delete key
+              {t("keys_delete_key")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
 
       <p className="text-muted-foreground mt-0.5 ml-6 text-xs">
-        {isPasskey ? "Passkey" : "Password"}
+        {isPasskey
+          ? t("keys_protection_passkey")
+          : t("keys_protection_password")}
       </p>
 
       {model.securityWarning && (
@@ -300,7 +307,7 @@ export function KeyCard({
             className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-400"
           >
             <TriangleAlertIcon className="h-3 w-3" />
-            Weak (SHA-1)
+            {t("keys_weak_sha1")}
           </span>
         </div>
       )}
@@ -319,7 +326,7 @@ export function KeyCard({
             <input
               type="password"
               autoComplete="current-password"
-              placeholder="Enter password"
+              placeholder={t("keys_enter_password_placeholder")}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               onKeyDown={(e) => {
@@ -338,14 +345,14 @@ export function KeyCard({
                   setError(null);
                 }}
               >
-                Cancel
+                {t("common_cancel")}
               </Button>
               <Button
                 size="sm"
                 onClick={() => void handlePasswordUnlock()}
                 disabled={unlocking}
               >
-                {unlocking ? "..." : "Unlock"}
+                {unlocking ? "..." : t("common_unlock")}
               </Button>
             </div>
           </div>
@@ -390,7 +397,7 @@ export function KeyCard({
                   session.lock();
                 }}
               >
-                Lock
+                {t("common_lock")}
               </Button>
             ) : isPasskey ? (
               <Button
@@ -401,7 +408,7 @@ export function KeyCard({
                   void handlePasskeyUnlock();
                 }}
               >
-                Unlock
+                {t("common_unlock")}
               </Button>
             ) : (
               <Button
@@ -412,7 +419,7 @@ export function KeyCard({
                   setShowPasswordUnlock(true);
                 }}
               >
-                Unlock
+                {t("common_unlock")}
               </Button>
             ))}
           {model.onShowDetails && (
@@ -422,7 +429,7 @@ export function KeyCard({
                 e.stopPropagation();
                 model.onShowDetails?.();
               }}
-              aria-label="Key details"
+              aria-label={t("keys_key_details")}
               className={cn(
                 "text-muted-foreground rounded p-1.5 transition-colors",
                 !selectionMode && "group-hover:text-foreground",

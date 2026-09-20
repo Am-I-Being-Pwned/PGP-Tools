@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { format } from "date-fns";
 import { ChevronRightIcon, LoaderIcon } from "lucide-react";
 
 import { Button } from "@amibeingpwned/ui/button";
@@ -16,6 +15,8 @@ import type { CrxProtectionInput } from "../../lib/crx/operations";
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import { generateCrxKey } from "../../lib/crx/operations";
+import { t } from "../../lib/i18n";
+import { formatDate } from "../../lib/i18n/format";
 import { generateAndProtect } from "../../lib/protection/protect-flow";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 import {
@@ -149,7 +150,7 @@ export function GenerateKeyPage({
       return;
     }
     if (!name.trim()) {
-      setError("Name is required.");
+      setError(t("keygen_error_name_required"));
       return;
     }
     if (expiryOption === "custom") {
@@ -164,13 +165,13 @@ export function GenerateKeyPage({
   const handleExpiryNext = () => {
     setError(null);
     if (!customExpiry) {
-      setError("Select an expiry date.");
+      setError(t("keygen_error_expiry_required"));
       return;
     }
     // The calendar already disables anything before tomorrow; this is a
     // belt-and-braces check against the bounds captured at step open.
     if (expiryBounds && customExpiry < expiryBounds.tomorrow) {
-      setError("Expiry date must be in the future.");
+      setError(t("keygen_error_expiry_past"));
       return;
     }
     if (canSkipProtection) {
@@ -239,7 +240,9 @@ export function GenerateKeyPage({
       onKeyGenerated(blob.keyId, handle);
       close();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Key generation failed");
+      setError(
+        e instanceof Error ? e.message : t("keygen_error_generation_failed"),
+      );
       setStep("protection");
     } finally {
       setGenerating(false);
@@ -249,21 +252,23 @@ export function GenerateKeyPage({
   return (
     <SlideOverPanel
       entered={entered}
-      ariaLabel="Generate key"
+      ariaLabel={t("keygen_title")}
       onDismiss={close}
     >
-      <SlideOverHeader title="Generate key" onBack={handleBack} />
+      <SlideOverHeader title={t("keygen_title")} onBack={handleBack} />
 
       <div className="flex flex-1 flex-col overflow-hidden">
         {step === "identity" && (
           <div className="flex flex-1 flex-col overflow-hidden">
             <div className="flex-1 space-y-4 overflow-y-auto p-4">
               <div>
-                <h2 className="text-lg font-semibold">Create a new key</h2>
+                <h2 className="text-lg font-semibold">
+                  {t("keygen_create_heading")}
+                </h2>
                 <p className="text-muted-foreground mt-1 text-sm">
                   {keyType === "crx"
-                    ? "A new RSA-2048 signing key for packaging a Chrome extension (.crx)."
-                    : "A new OpenPGP keypair for encrypting, decrypting, and signing messages."}
+                    ? t("keygen_create_subtitle_crx")
+                    : t("keygen_create_subtitle_pgp")}
                 </p>
               </div>
 
@@ -275,7 +280,7 @@ export function GenerateKeyPage({
                     className="flex-1"
                     onClick={() => setKeyType("pgp")}
                   >
-                    Messaging key (PGP)
+                    {t("keygen_type_pgp")}
                   </Button>
                   <Button
                     variant={keyType === "crx" ? "default" : "outline"}
@@ -283,7 +288,7 @@ export function GenerateKeyPage({
                     className="flex-1"
                     onClick={() => setKeyType("crx")}
                   >
-                    Chrome extension (CRX)
+                    {t("keygen_type_crx")}
                   </Button>
                 </div>
               )}
@@ -291,12 +296,14 @@ export function GenerateKeyPage({
               {keyType === "crx" ? (
                 <div>
                   <label className="text-muted-foreground mb-1 block text-xs">
-                    Label{" "}
-                    <span className="text-muted-foreground/60">optional</span>
+                    {t("keygen_label_label")}{" "}
+                    <span className="text-muted-foreground/60">
+                      {t("keygen_optional")}
+                    </span>
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. My Extension"
+                    placeholder={t("keygen_label_placeholder")}
                     value={label}
                     onChange={(e) => setLabel(e.target.value)}
                     className={INPUT_CLASS}
@@ -307,11 +314,11 @@ export function GenerateKeyPage({
                   <div className="space-y-2">
                     <div>
                       <label className="text-muted-foreground mb-1 block text-xs">
-                        Name *
+                        {t("keygen_name_label")}
                       </label>
                       <input
                         type="text"
-                        placeholder="Your full name"
+                        placeholder={t("keygen_name_placeholder")}
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         className={INPUT_CLASS}
@@ -319,14 +326,14 @@ export function GenerateKeyPage({
                     </div>
                     <div>
                       <label className="text-muted-foreground mb-1 block text-xs">
-                        Email{" "}
+                        {t("keygen_email_label")}{" "}
                         <span className="text-muted-foreground/60">
-                          optional
+                          {t("keygen_optional")}
                         </span>
                       </label>
                       <input
                         type="email"
-                        placeholder="you@example.com"
+                        placeholder={t("keygen_email_placeholder")}
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         className={INPUT_CLASS}
@@ -334,14 +341,14 @@ export function GenerateKeyPage({
                     </div>
                     <div>
                       <label className="text-muted-foreground mb-1 block text-xs">
-                        Comment{" "}
+                        {t("keygen_comment_label")}{" "}
                         <span className="text-muted-foreground/60">
-                          optional
+                          {t("keygen_optional")}
                         </span>
                       </label>
                       <input
                         type="text"
-                        placeholder="e.g. work, personal"
+                        placeholder={t("keygen_comment_placeholder")}
                         value={comment}
                         onChange={(e) => setComment(e.target.value)}
                         className={INPUT_CLASS}
@@ -357,14 +364,14 @@ export function GenerateKeyPage({
                     <ChevronRightIcon
                       className={`h-3 w-3 transition-transform ${showAdvanced ? "rotate-90" : ""}`}
                     />
-                    Advanced options
+                    {t("keygen_advanced_options")}
                   </button>
 
                   {showAdvanced && (
                     <div className="border-border space-y-3 rounded-md border p-3">
                       <div>
                         <label className="text-muted-foreground mb-1.5 block text-xs">
-                          Algorithm
+                          {t("keygen_algorithm_label")}
                         </label>
                         <Select
                           value={keyAlgorithm}
@@ -376,21 +383,23 @@ export function GenerateKeyPage({
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
+                            {/* i18n-ignore */}
                             <SelectItem value="ecc">ECC (Ed25519)</SelectItem>
+                            {/* i18n-ignore */}
                             <SelectItem value="rsa">RSA</SelectItem>
                           </SelectContent>
                         </Select>
                         <p className="text-muted-foreground/60 mt-1 text-[10px]">
                           {keyAlgorithm === "ecc"
-                            ? "Modern, fast, small keys. Recommended for most uses."
-                            : "Widely compatible. Slower key generation."}
+                            ? t("keygen_algorithm_hint_ecc")
+                            : t("keygen_algorithm_hint_rsa")}
                         </p>
                       </div>
 
                       {keyAlgorithm === "rsa" && (
                         <div>
                           <label className="text-muted-foreground mb-1.5 block text-xs">
-                            Key size
+                            {t("keygen_key_size_label")}
                           </label>
                           {/* RSA-4096 is the only size the WASM engine generates. */}
                           <Select value="4096">
@@ -398,7 +407,9 @@ export function GenerateKeyPage({
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="4096">4096 bit</SelectItem>
+                              <SelectItem value="4096">
+                                {t("keygen_key_size_4096")}
+                              </SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -406,7 +417,7 @@ export function GenerateKeyPage({
 
                       <div>
                         <label className="text-muted-foreground mb-1.5 block text-xs">
-                          Key expiry
+                          {t("keygen_expiry_label")}
                         </label>
                         <Select
                           value={expiryOption}
@@ -418,11 +429,21 @@ export function GenerateKeyPage({
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="never">Never</SelectItem>
-                            <SelectItem value="1y">1 year</SelectItem>
-                            <SelectItem value="2y">2 years</SelectItem>
-                            <SelectItem value="3y">3 years</SelectItem>
-                            <SelectItem value="custom">Custom date</SelectItem>
+                            <SelectItem value="never">
+                              {t("keygen_expiry_never")}
+                            </SelectItem>
+                            <SelectItem value="1y">
+                              {t("keygen_expiry_1y")}
+                            </SelectItem>
+                            <SelectItem value="2y">
+                              {t("keygen_expiry_2y")}
+                            </SelectItem>
+                            <SelectItem value="3y">
+                              {t("keygen_expiry_3y")}
+                            </SelectItem>
+                            <SelectItem value="custom">
+                              {t("keygen_expiry_custom")}
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -439,7 +460,7 @@ export function GenerateKeyPage({
                 </p>
               )}
               <Button className="w-full" onClick={handleNext}>
-                Next
+                {t("keygen_next")}
               </Button>
             </div>
           </div>
@@ -449,10 +470,11 @@ export function GenerateKeyPage({
           <div className="flex flex-1 flex-col overflow-hidden">
             <div className="flex-1 space-y-4 overflow-y-auto p-4">
               <div>
-                <h2 className="text-lg font-semibold">Choose an expiry date</h2>
+                <h2 className="text-lg font-semibold">
+                  {t("keygen_expiry_heading")}
+                </h2>
                 <p className="text-muted-foreground mt-1 text-sm">
-                  After this date the key can no longer be used; you can always
-                  generate a new one.
+                  {t("keygen_expiry_subtitle")}
                 </p>
               </div>
               <Calendar
@@ -468,7 +490,7 @@ export function GenerateKeyPage({
               />
               {customExpiry && (
                 <p className="text-center text-xs">
-                  Expires {format(customExpiry, "PPP")}
+                  {t("keygen_expires_on", { date: formatDate(customExpiry) })}
                 </p>
               )}
             </div>
@@ -480,7 +502,7 @@ export function GenerateKeyPage({
                 </p>
               )}
               <Button className="w-full" onClick={handleExpiryNext}>
-                Next
+                {t("keygen_next")}
               </Button>
             </div>
           </div>
@@ -489,9 +511,11 @@ export function GenerateKeyPage({
         {step === "protection" && (
           <div className="flex-1 space-y-4 overflow-y-auto p-4">
             <div>
-              <h2 className="text-lg font-semibold">Protect your key</h2>
+              <h2 className="text-lg font-semibold">
+                {t("keygen_protect_heading")}
+              </h2>
               <p className="text-muted-foreground mt-1 text-sm">
-                Choose how to unlock this key when you use it.
+                {t("keygen_protect_subtitle")}
               </p>
             </div>
             <ProtectionMethodPicker
@@ -508,9 +532,9 @@ export function GenerateKeyPage({
               submitLabel={
                 method === "passkey"
                   ? reusePasskeyCredentialId && reusePasskey
-                    ? "Use passkey"
-                    : "Create passkey"
-                  : "Generate"
+                    ? t("keygen_submit_use_passkey")
+                    : t("keygen_submit_create_passkey")
+                  : t("keygen_submit_generate")
               }
               reusePasskeyCredentialId={reusePasskeyCredentialId}
               reusePasskey={reusePasskey}
@@ -526,12 +550,12 @@ export function GenerateKeyPage({
             </div>
             <p className="text-muted-foreground text-sm">
               {method === "passkey"
-                ? "Follow your browser's passkey prompt..."
-                : "Generating key..."}
+                ? t("keygen_generating_passkey")
+                : t("keygen_generating_key")}
             </p>
             {(keyAlgorithm === "rsa" || keyType === "crx") && (
               <p className="text-muted-foreground/60 mt-1 text-xs">
-                RSA keys take a moment to generate
+                {t("keygen_generating_rsa_hint")}
               </p>
             )}
           </div>

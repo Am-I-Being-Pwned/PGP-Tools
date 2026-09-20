@@ -1,8 +1,8 @@
 {
-  "extName": {
-    "message": "Kryptering af email med OpenPGP og GPG - Slack & Discord Compatible"
-  },
   "extDescription": {
     "message": "Krypter, dekrypter, signer og verificer email med OpenPGP og GPG. Håndter dine nøgler."
+  },
+  "extName": {
+    "message": "Kryptering af email med OpenPGP og GPG - Slack & Discord Compatible"
   }
 }

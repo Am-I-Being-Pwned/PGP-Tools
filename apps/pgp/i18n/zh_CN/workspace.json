@@ -1,0 +1,437 @@
+{
+  "workspace_undo": {
+    "message": "撤销"
+  },
+  "workspace_compose_translated": {
+    "message": "已从$from$翻译为$to$"
+  },
+  "workspace_compose_same_language": {
+    "message": "这已经是你的语言（$language$）。"
+  },
+  "workspace_compose_translate_unavailable": {
+    "message": "此处不支持翻译为该语言。"
+  },
+  "workspace_crx_saved": {
+    "message": "已保存 $name$。"
+  },
+  "workspace_crx_save_failed": {
+    "message": "无法自动保存，请点击“保存”重试。"
+  },
+  "workspace_sign_blocked_age": {
+    "message": "age 消息无法签名，SSH 密钥在此处没有签名格式。"
+  },
+  "workspace_sign_blocked_no_pgp_key": {
+    "message": "签名需要你自己的 OpenPGP 密钥，SSH 密钥不能签名。"
+  },
+  "workspace_cleared_toast": {
+    "message": "已清空工作区"
+  },
+  "workspace_text_cleared_toast": {
+    "message": "已清除文本"
+  },
+  "workspace_clear_input_output": {
+    "message": "清除输入和输出"
+  },
+  "workspace_recipients_label": {
+    "message": "收件人"
+  },
+  "workspace_no_contacts_yet": {
+    "message": "还没有联系人"
+  },
+  "workspace_add_a_contact": {
+    "message": "添加联系人"
+  },
+  "workspace_age_message_note": {
+    "message": "age 消息，SSH 收件人不能与 PGP 混用"
+  },
+  "workspace_sign_kind_crx": {
+    "message": "Chrome 扩展程序 (.crx)"
+  },
+  "workspace_sign_kind_pgp": {
+    "message": "PGP 签名"
+  },
+  "workspace_sign_with": {
+    "message": "签名密钥"
+  },
+  "workspace_decrypt_with": {
+    "message": "解密密钥"
+  },
+  "workspace_no_keys_yet": {
+    "message": "还没有密钥"
+  },
+  "workspace_create_one": {
+    "message": "创建一个"
+  },
+  "workspace_select_signing_key": {
+    "message": "选择签名密钥"
+  },
+  "workspace_toggle_encrypt_to_self": {
+    "message": "同时加密给我"
+  },
+  "workspace_toggle_password": {
+    "message": "密码"
+  },
+  "workspace_toggle_zip_files": {
+    "message": "打包为 zip"
+  },
+  "workspace_toggle_save_to_history": {
+    "message": "保存到历史记录"
+  },
+  "workspace_self_excluded_intro": {
+    "message": "你将无法读取这条消息："
+  },
+  "workspace_self_excluded_age": {
+    "message": "你没有自己的 SSH 密钥，而 age 消息不能包含 PGP 密钥。"
+  },
+  "workspace_self_excluded_pgp": {
+    "message": "你自己的密钥都无法添加到这条消息中。"
+  },
+  "workspace_import_one": {
+    "message": "导入一个"
+  },
+  "workspace_enter_message_password": {
+    "message": "输入消息密码"
+  },
+  "workspace_enter_key_password": {
+    "message": "输入密钥密码"
+  },
+  "workspace_decrypting": {
+    "message": "正在解密…"
+  },
+  "workspace_unlocking": {
+    "message": "正在解锁…"
+  },
+  "workspace_go": {
+    "message": "确定"
+  },
+  "workspace_save_file": {
+    "message": "保存 $name$"
+  },
+  "workspace_verifying": {
+    "message": "正在验证…"
+  },
+  "workspace_reset": {
+    "message": "重置"
+  },
+  "workspace_verify_signature": {
+    "message": "验证签名"
+  },
+  "workspace_processing": {
+    "message": "正在处理…"
+  },
+  "workspace_sign_for_web_store": {
+    "message": "为应用商店签名"
+  },
+  "workspace_need_recipient_or_password": {
+    "message": "请至少选择一个收件人，或设置密码"
+  },
+  "workspace_text_entered_below": {
+    "message": "已在下方输入文本"
+  },
+  "workspace_clear_text": {
+    "message": "清除文本"
+  },
+  "workspace_message_input_aria": {
+    "message": "消息输入"
+  },
+  "workspace_placeholder_decrypt": {
+    "message": "粘贴你收到的加密消息…"
+  },
+  "workspace_placeholder_verify": {
+    "message": "粘贴要检查的已签名消息…"
+  },
+  "workspace_placeholder_compose": {
+    "message": "输入或粘贴你的消息…"
+  },
+  "workspace_private_key_pasted_title": {
+    "message": "这看起来像是私钥。请勿在此处粘贴私钥。"
+  },
+  "workspace_private_key_show_cleartext": {
+    "message": "以明文显示粘贴的文本"
+  },
+  "workspace_private_key_ignore": {
+    "message": "忽略"
+  },
+  "workspace_private_key_pasted_body": {
+    "message": "加密/解密框不是存放私钥材料的安全位置。请使用导入流程，这样密钥会被载入安全存储，并且不会进入任何草稿快照。"
+  },
+  "workspace_private_key_import_safely": {
+    "message": "安全导入此密钥"
+  },
+  "workspace_private_key_clear_input": {
+    "message": "清除输入"
+  },
+  "workspace_hide_technical_details": {
+    "message": "隐藏技术详情"
+  },
+  "workspace_show_technical_details": {
+    "message": "显示技术详情"
+  },
+  "workspace_unverified": {
+    "message": "未验证"
+  },
+  "workspace_signature_verified": {
+    "message": "签名已验证"
+  },
+  "workspace_output_size_line": {
+    "message": "$name$ - $size$"
+  },
+  "workspace_find_replace": {
+    "message": "查找和替换"
+  },
+  "workspace_find_hide_replace": {
+    "message": "隐藏替换"
+  },
+  "workspace_find_show_replace": {
+    "message": "显示替换"
+  },
+  "workspace_find_label": {
+    "message": "查找"
+  },
+  "workspace_replace_with": {
+    "message": "替换为"
+  },
+  "workspace_replace": {
+    "message": "替换"
+  },
+  "workspace_replace_all_short": {
+    "message": "全部"
+  },
+  "workspace_replace_all": {
+    "message": "全部替换"
+  },
+  "workspace_replace_all_shortcut": {
+    "message": "全部替换 ($shortcut$)"
+  },
+  "workspace_match_case": {
+    "message": "区分大小写"
+  },
+  "workspace_previous_match": {
+    "message": "上一个匹配项"
+  },
+  "workspace_next_match": {
+    "message": "下一个匹配项"
+  },
+  "workspace_close_find": {
+    "message": "关闭查找"
+  },
+  "workspace_message_tools": {
+    "message": "消息工具"
+  },
+  "workspace_style_bold": {
+    "message": "加粗"
+  },
+  "workspace_style_italic": {
+    "message": "斜体"
+  },
+  "workspace_style_strike": {
+    "message": "删除线"
+  },
+  "workspace_style_code": {
+    "message": "代码"
+  },
+  "workspace_translating": {
+    "message": "正在翻译…"
+  },
+  "workspace_translate_to": {
+    "message": "翻译为$language$"
+  },
+  "workspace_translate": {
+    "message": "翻译"
+  },
+  "workspace_translate_menu_heading": {
+    "message": "将消息翻译为"
+  },
+  "workspace_search_languages": {
+    "message": "搜索语言"
+  },
+  "workspace_no_such_language": {
+    "message": "没有这种语言。"
+  },
+  "workspace_restore_original": {
+    "message": "恢复原文"
+  },
+  "workspace_show_original": {
+    "message": "显示原文"
+  },
+  "workspace_show_translation": {
+    "message": "显示$language$译文"
+  },
+  "workspace_working": {
+    "message": "正在处理…"
+  },
+  "workspace_note_same_language": {
+    "message": "此消息已经是$language$。"
+  },
+  "workspace_note_uncertain": {
+    "message": "无法确定此消息的语言。"
+  },
+  "workspace_note_downloading_progress": {
+    "message": "正在下载$what$，$percent$%"
+  },
+  "workspace_note_downloading": {
+    "message": "正在下载$what$…"
+  },
+  "workspace_note_translated_from": {
+    "message": "已在此设备上从$language$翻译。"
+  },
+  "workspace_drop_files_or_text": {
+    "message": "将文件或文本拖放到此处"
+  },
+  "workspace_browse_files": {
+    "message": "浏览文件"
+  },
+  "workspace_clear_all_files": {
+    "message": "全部清除"
+  },
+  "workspace_detected_key_known": {
+    "message": "你已经有 $name$ 的密钥。"
+  },
+  "workspace_detected_key_show": {
+    "message": "在密钥中显示"
+  },
+  "workspace_detected_key_in_message": {
+    "message": "此消息包含 $name$ 的公钥。"
+  },
+  "workspace_detected_key_pasted": {
+    "message": "这是 $name$ 的公钥。"
+  },
+  "workspace_detected_key_in_message_anon": {
+    "message": "此消息包含某人的公钥。"
+  },
+  "workspace_detected_key_pasted_anon": {
+    "message": "这看起来像是某人的公钥。"
+  },
+  "workspace_detected_key_import": {
+    "message": "作为联系人导入"
+  },
+  "workspace_message_password_title": {
+    "message": "此消息的密码"
+  },
+  "workspace_set_password": {
+    "message": "设置密码"
+  },
+  "workspace_message_password_label": {
+    "message": "消息密码"
+  },
+  "workspace_hide_password": {
+    "message": "隐藏密码"
+  },
+  "workspace_show_password": {
+    "message": "显示密码"
+  },
+  "workspace_password_too_short_one": {
+    "message": "请至少使用 $count$ 个字符。"
+  },
+  "workspace_password_too_short_other": {
+    "message": "请至少使用 $count$ 个字符。"
+  },
+  "workspace_password_min_length_one": {
+    "message": "至少 $count$ 个字符。"
+  },
+  "workspace_password_min_length_other": {
+    "message": "至少 $count$ 个字符。"
+  },
+  "workspace_message_password_help": {
+    "message": "任何知道此密码的人都能读取该消息，因此请通过其他途径发送密码，不要与消息一起发送。密码会在你选择的收件人之外附加到消息上；两者中的任一方都能打开它。"
+  },
+  "workspace_history_save_failed": {
+    "message": "无法保存到历史记录，存储空间可能已满"
+  },
+  "workspace_operation_failed": {
+    "message": "操作失败。请重试。"
+  },
+  "workspace_error_need_recipient_or_password": {
+    "message": "请至少选择一个收件人密钥，或设置密码。"
+  },
+  "workspace_error_engine_mismatch": {
+    "message": "无法确定应使用哪种格式加密。"
+  },
+  "workspace_status_age_encrypted": {
+    "message": "age 消息，已加密给 SSH 收件人"
+  },
+  "workspace_files_encrypted_one": {
+    "message": "已加密 $count$ 个文件（共 $size$）"
+  },
+  "workspace_files_encrypted_other": {
+    "message": "已加密 $count$ 个文件（共 $size$）"
+  },
+  "workspace_files_zipped_encrypted_one": {
+    "message": "已将 $count$ 个文件打包为 zip 并加密"
+  },
+  "workspace_files_zipped_encrypted_other": {
+    "message": "已将 $count$ 个文件打包为 zip 并加密"
+  },
+  "workspace_files_decrypted_one": {
+    "message": "已解密 $count$ 个文件（共 $size$）"
+  },
+  "workspace_files_decrypted_other": {
+    "message": "已解密 $count$ 个文件（共 $size$）"
+  },
+  "workspace_files_signed_one": {
+    "message": "已签名 $count$ 个文件"
+  },
+  "workspace_files_signed_other": {
+    "message": "已签名 $count$ 个文件"
+  },
+  "workspace_status_decrypted_archive": {
+    "message": "已解密包含多个文件的压缩包"
+  },
+  "workspace_error_decrypt_failed_ssh": {
+    "message": "解密失败。消息可能已损坏，或者它没有加密给你的任何 SSH 密钥。"
+  },
+  "workspace_error_decrypt_failed": {
+    "message": "解密失败。消息可能已损坏，或者它没有加密给你的任何密钥。"
+  },
+  "workspace_error_select_decryption_key": {
+    "message": "请选择解密密钥。"
+  },
+  "workspace_unknown_signer": {
+    "message": "未知签名者"
+  },
+  "workspace_status_signer_unknown": {
+    "message": "此消息已签名，但签名者的公钥不在你的密钥或联系人中，因此无法验证签名。"
+  },
+  "workspace_error_signature_invalid": {
+    "message": "签名验证失败，此消息可能已被篡改"
+  },
+  "workspace_error_not_signed": {
+    "message": "此消息未签名。"
+  },
+  "workspace_error_verify_failed": {
+    "message": "验证失败。输入内容看起来不像已签名的 PGP 消息。"
+  },
+  "workspace_error_no_signing_key_ssh": {
+    "message": "没有可用的签名密钥。SSH 密钥不能签名，请先添加一个 OpenPGP 密钥。"
+  },
+  "workspace_error_no_signing_key": {
+    "message": "没有可用的签名密钥。请先添加一个密钥。"
+  },
+  "workspace_status_crx_signed": {
+    "message": "已签名 $name$，正在保存…"
+  },
+  "workspace_error_crx_wrong_password": {
+    "message": "密码错误或签名失败。"
+  },
+  "workspace_error_crx_sign_failed": {
+    "message": "CRX 签名失败。请重试。"
+  },
+  "workspace_error_select_crx_key": {
+    "message": "请先选择一个 CRX 签名密钥。"
+  },
+  "workspace_status_crx_valid": {
+    "message": "有效的 CRX，扩展程序 $id$"
+  },
+  "workspace_error_crx_invalid": {
+    "message": "无法验证此文件的 CRX 签名。"
+  },
+  "workspace_error_read_file": {
+    "message": "无法读取此文件。请重试。"
+  },
+  "workspace_error_wrong_key_password": {
+    "message": "密码错误。请检查后重试。"
+  },
+  "workspace_error_unlock_failed": {
+    "message": "解锁失败。请重试。"
+  }
+}

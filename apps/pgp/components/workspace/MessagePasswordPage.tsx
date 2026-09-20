@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 
+import { t, tn } from "../../lib/i18n";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 import { SubPage } from "../shared/SubPage";
 import { MIN_MESSAGE_PASSWORD_LENGTH } from "./useWorkspaceState";
@@ -48,16 +49,16 @@ export function MessagePasswordPage({
 
   return (
     <SubPage
-      title="Password for this message"
+      title={t("workspace_message_password_title")}
       onClose={onCancel}
       actions={[
         {
-          text: "Set password",
+          text: t("workspace_set_password"),
           disabled: !ready,
           onClick: () => onSet(password),
           closeOnSuccess: true,
         },
-        { type: "outline", text: "Cancel" },
+        { type: "outline", text: t("common_cancel") },
       ]}
     >
       {(api) => (
@@ -67,7 +68,7 @@ export function MessagePasswordPage({
               htmlFor="message-password"
               className="text-muted-foreground mb-1 block text-xs"
             >
-              Message password
+              {t("workspace_message_password_label")}
             </label>
             <div className="flex items-stretch gap-2">
               <input
@@ -93,8 +94,16 @@ export function MessagePasswordPage({
                 type="button"
                 onClick={() => setRevealed((v) => !v)}
                 aria-pressed={revealed}
-                aria-label={revealed ? "Hide password" : "Show password"}
-                title={revealed ? "Hide password" : "Show password"}
+                aria-label={
+                  revealed
+                    ? t("workspace_hide_password")
+                    : t("workspace_show_password")
+                }
+                title={
+                  revealed
+                    ? t("workspace_hide_password")
+                    : t("workspace_show_password")
+                }
                 className="border-border text-muted-foreground hover:text-foreground hover:bg-accent/50 focus:ring-ring inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border focus:ring-2 focus:outline-none"
               >
                 {revealed ? (
@@ -118,14 +127,15 @@ export function MessagePasswordPage({
             role={tooShort ? "alert" : undefined}
           >
             {tooShort
-              ? `Use at least ${MIN_MESSAGE_PASSWORD_LENGTH} characters.`
-              : `At least ${MIN_MESSAGE_PASSWORD_LENGTH} characters.`}
+              ? tn("workspace_password_too_short", MIN_MESSAGE_PASSWORD_LENGTH)
+              : tn(
+                  "workspace_password_min_length",
+                  MIN_MESSAGE_PASSWORD_LENGTH,
+                )}
           </p>
 
           <p className="text-muted-foreground text-xs">
-            Anyone with this password can read the message, so send it another
-            way - not alongside the message itself. It is added to the message
-            on top of any recipients you have picked; either can open it.
+            {t("workspace_message_password_help")}
           </p>
         </div>
       )}

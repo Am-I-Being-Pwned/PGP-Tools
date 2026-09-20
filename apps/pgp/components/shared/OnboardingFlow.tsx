@@ -15,6 +15,7 @@ import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { MasterProtection } from "../../lib/storage/master-protection";
 import type { StorageLocation } from "../../lib/storage/preferences";
 import { toBase64, unpackIvCiphertext } from "../../lib/encoding";
+import { t, tn } from "../../lib/i18n";
 import * as wasmApi from "../../lib/pgp/wasm";
 import { PRESETS } from "../../lib/presets";
 import {
@@ -192,9 +193,7 @@ export function OnboardingFlow({
           abort.signal,
         );
         if (!reg.prfEnabled) {
-          setError(
-            "Your authenticator does not support PRF. Try a different passkey or use a password instead.",
-          );
+          setError(t("app_onboarding_prf_unsupported"));
           setSubmitting(false);
           return;
         }
@@ -260,7 +259,9 @@ export function OnboardingFlow({
       if (isWebAuthnCancel(e)) {
         setError(null);
       } else {
-        setError(e instanceof Error ? e.message : "Setup failed");
+        setError(
+          e instanceof Error ? e.message : t("app_onboarding_setup_failed"),
+        );
       }
     } finally {
       passkeyAbortRef.current = null;
@@ -272,7 +273,7 @@ export function OnboardingFlow({
     setError(null);
 
     if (!name.trim()) {
-      setError("Name is required.");
+      setError(t("app_onboarding_name_required"));
       return;
     }
 
@@ -305,7 +306,9 @@ export function OnboardingFlow({
       setPassword("");
       setStep("preset");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Key generation failed");
+      setError(
+        e instanceof Error ? e.message : t("app_onboarding_generate_failed"),
+      );
       setStep("identity");
     } finally {
       masterPrfRef.current?.prfOutput.fill(0);
@@ -323,16 +326,16 @@ export function OnboardingFlow({
         <>
           <div className="space-y-5">
             <div>
+              {/* i18n-ignore */}
               <h1 className="text-lg font-semibold">PGP Tools</h1>
               <p className="text-muted-foreground mt-1 text-sm">
-                Send private messages that only the right person can read, and
-                verify messages really came from who they claim.
+                {t("app_onboarding_intro_body")}
               </p>
             </div>
 
             <div>
               <h2 className="mb-2 text-sm font-semibold">
-                Where should we store your data?
+                {t("app_onboarding_storage_question")}
               </h2>
               <StorageLocationPicker value={location} onChange={setLocation} />
             </div>
@@ -340,7 +343,7 @@ export function OnboardingFlow({
 
           <div className="pt-4">
             <Button className="w-full" onClick={() => setStep("protection")}>
-              Next
+              {t("app_onboarding_next")}
             </Button>
           </div>
         </>
@@ -349,10 +352,11 @@ export function OnboardingFlow({
       {step === "protection" && (
         <div className="space-y-5">
           <div>
-            <h2 className="text-lg font-semibold">Secure your data</h2>
+            <h2 className="text-lg font-semibold">
+              {t("app_onboarding_protection_title")}
+            </h2>
             <p className="text-muted-foreground mt-1 text-sm">
-              Choose how to protect your contacts and keys. You will use this
-              each time you open PGP Tools.
+              {t("app_onboarding_protection_body")}
             </p>
           </div>
 
@@ -371,7 +375,9 @@ export function OnboardingFlow({
             }}
             submitting={submitting}
             submitLabel={
-              method === "passkey" ? "Create passkey" : "Set password"
+              method === "passkey"
+                ? t("app_onboarding_create_passkey")
+                : t("app_onboarding_set_password")
             }
           />
         </div>
@@ -381,21 +387,22 @@ export function OnboardingFlow({
         <>
           <div className="space-y-4">
             <div>
-              <h2 className="text-lg font-semibold">Create your PGP key</h2>
+              <h2 className="text-lg font-semibold">
+                {t("app_onboarding_identity_title")}
+              </h2>
               <p className="text-muted-foreground mt-1 text-sm">
-                Create a keypair for encrypting, decrypting, and signing
-                messages.
+                {t("app_onboarding_identity_body")}
               </p>
             </div>
 
             <div className="space-y-2">
               <div>
                 <label className="text-muted-foreground mb-1 block text-xs">
-                  Name *
+                  {t("app_onboarding_name_label")}
                 </label>
                 <input
                   type="text"
-                  placeholder="Your full name"
+                  placeholder={t("app_onboarding_name_placeholder")}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className={INPUT_CLASS}
@@ -403,12 +410,14 @@ export function OnboardingFlow({
               </div>
               <div>
                 <label className="text-muted-foreground mb-1 block text-xs">
-                  Email{" "}
-                  <span className="text-muted-foreground/60">optional</span>
+                  {t("app_onboarding_email_label")}{" "}
+                  <span className="text-muted-foreground/60">
+                    {t("app_onboarding_optional")}
+                  </span>
                 </label>
                 <input
                   type="email"
-                  placeholder="you@example.com"
+                  placeholder={t("app_onboarding_email_placeholder")}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className={INPUT_CLASS}
@@ -416,12 +425,14 @@ export function OnboardingFlow({
               </div>
               <div>
                 <label className="text-muted-foreground mb-1 block text-xs">
-                  Comment{" "}
-                  <span className="text-muted-foreground/60">optional</span>
+                  {t("app_onboarding_comment_label")}{" "}
+                  <span className="text-muted-foreground/60">
+                    {t("app_onboarding_optional")}
+                  </span>
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. work, personal"
+                  placeholder={t("app_onboarding_comment_placeholder")}
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
                   className={INPUT_CLASS}
@@ -437,14 +448,14 @@ export function OnboardingFlow({
               <ChevronRightIcon
                 className={`h-3 w-3 transition-transform ${showAdvanced ? "rotate-90" : ""}`}
               />
-              Advanced options
+              {t("app_onboarding_advanced_options")}
             </button>
 
             {showAdvanced && (
               <div className="border-border space-y-3 rounded-md border p-3">
                 <div>
                   <label className="text-muted-foreground mb-1.5 block text-xs">
-                    Algorithm
+                    {t("app_onboarding_algorithm_label")}
                   </label>
                   <Select
                     value={keyAlgorithm}
@@ -454,20 +465,21 @@ export function OnboardingFlow({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      {/* i18n-ignore */}
                       <SelectItem value="ecc">ECC (Ed25519)</SelectItem>
                       <SelectItem value="rsa">RSA</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-muted-foreground/60 mt-1 text-[10px]">
                     {keyAlgorithm === "ecc"
-                      ? "Modern, fast, small keys. Recommended for most uses."
-                      : "Widely compatible. Slower key generation."}
+                      ? t("app_onboarding_algo_ecc_hint")
+                      : t("app_onboarding_algo_rsa_hint")}
                   </p>
                 </div>
 
                 <div>
                   <label className="text-muted-foreground mb-1.5 block text-xs">
-                    Key expiry
+                    {t("app_onboarding_expiry_label")}
                   </label>
                   <Select
                     value={expiryOption}
@@ -477,10 +489,18 @@ export function OnboardingFlow({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="never">Never</SelectItem>
-                      <SelectItem value="1y">1 year</SelectItem>
-                      <SelectItem value="2y">2 years</SelectItem>
-                      <SelectItem value="3y">3 years</SelectItem>
+                      <SelectItem value="never">
+                        {t("app_onboarding_expiry_never")}
+                      </SelectItem>
+                      <SelectItem value="1y">
+                        {tn("app_onboarding_expiry_years", 1)}
+                      </SelectItem>
+                      <SelectItem value="2y">
+                        {tn("app_onboarding_expiry_years", 2)}
+                      </SelectItem>
+                      <SelectItem value="3y">
+                        {tn("app_onboarding_expiry_years", 3)}
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -496,10 +516,10 @@ export function OnboardingFlow({
 
           <div className="space-y-2 pt-4">
             <Button className="w-full" onClick={handleGenerateKey}>
-              Create my PGP key
+              {t("app_onboarding_create_key")}
             </Button>
             <Button variant="outline" className="w-full" onClick={handleSkip}>
-              I'll set up later
+              {t("app_onboarding_skip")}
             </Button>
           </div>
         </>
@@ -512,12 +532,12 @@ export function OnboardingFlow({
           </div>
           <p className="text-muted-foreground text-sm">
             {masterCredentialId
-              ? "Follow your browser's passkey prompt..."
-              : "Generating key..."}
+              ? t("app_onboarding_passkey_prompt")
+              : t("app_onboarding_generating")}
           </p>
           {keyAlgorithm === "rsa" && (
             <p className="text-muted-foreground/60 mt-1 text-xs">
-              RSA keys take a moment to generate
+              {t("app_onboarding_rsa_slow")}
             </p>
           )}
         </div>
@@ -527,11 +547,11 @@ export function OnboardingFlow({
         <>
           <div className="space-y-4">
             <div>
-              <h2 className="text-lg font-semibold">Pick a security preset</h2>
+              <h2 className="text-lg font-semibold">
+                {t("app_onboarding_preset_title")}
+              </h2>
               <p className="text-muted-foreground mt-1 text-sm">
-                How careful should PGP Tools be with your keys? Each option
-                shows exactly what it sets, and you can change any of it later
-                in Settings.
+                {t("app_onboarding_preset_body")}
               </p>
             </div>
 
@@ -546,11 +566,9 @@ export function OnboardingFlow({
                   onChange={(e) => setUnlockKeysOnOpen(e.target.checked)}
                 />
                 <span>
-                  Unlock keys with the vault
+                  {t("app_onboarding_unlock_with_vault")}
                   <span className="text-muted-foreground block text-xs">
-                    The passkey prompt that opens the vault also unlocks your
-                    keys. No separate prompt per key. You can change this in
-                    Settings.
+                    {t("app_onboarding_unlock_with_vault_hint")}
                   </span>
                 </span>
               </label>
@@ -562,14 +580,14 @@ export function OnboardingFlow({
               className="w-full"
               onClick={() => void finishOnboarding(presetChoice)}
             >
-              Use this preset
+              {t("app_onboarding_use_preset")}
             </Button>
             <Button
               variant="outline"
               className="w-full"
               onClick={() => void finishOnboarding()}
             >
-              Keep the defaults
+              {t("app_onboarding_keep_defaults")}
             </Button>
           </div>
         </>

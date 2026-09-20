@@ -1,0 +1,68 @@
+{
+  "common_cancel": {
+    "message": "Cancelar"
+  },
+  "common_back": {
+    "message": "Atrás"
+  },
+  "common_done": {
+    "message": "Listo"
+  },
+  "common_save": {
+    "message": "Guardar"
+  },
+  "common_delete": {
+    "message": "Eliminar"
+  },
+  "common_remove": {
+    "message": "Quitar"
+  },
+  "common_copy": {
+    "message": "Copiar"
+  },
+  "common_copied": {
+    "message": "Copiado"
+  },
+  "common_download": {
+    "message": "Descargar"
+  },
+  "common_continue": {
+    "message": "Continuar"
+  },
+  "common_on": {
+    "message": "Activado"
+  },
+  "common_off": {
+    "message": "Desactivado"
+  },
+  "common_settings": {
+    "message": "Configuración"
+  },
+  "common_keys": {
+    "message": "Claves"
+  },
+  "common_encrypt": {
+    "message": "Cifrar"
+  },
+  "common_decrypt": {
+    "message": "Descifrar"
+  },
+  "common_sign": {
+    "message": "Firmar"
+  },
+  "common_verify": {
+    "message": "Verificar"
+  },
+  "common_public_key": {
+    "message": "Clave pública"
+  },
+  "common_private_key": {
+    "message": "Clave privada"
+  },
+  "common_unlock": {
+    "message": "Desbloquear"
+  },
+  "common_lock": {
+    "message": "Bloquear"
+  }
+}

@@ -13,9 +13,12 @@
  * clear.
  */
 
+import type { CrxProtectFlowResult, CrxVerifyResult } from "../pgp/wasm";
+import type { ProtectSpec } from "../protection/protect-runner";
+import type { CrxProtection, CrxSigningKeyBlob } from "./types";
 import { fromBase64, toBase64 } from "../encoding";
 import { AppError } from "../errors/app-error";
-import type { CrxProtectFlowResult, CrxVerifyResult } from "../pgp/wasm";
+import { t } from "../i18n";
 import {
   dropCrxKey,
   generateCrxKeyWithPassword,
@@ -28,20 +31,15 @@ import {
   unlockCrxWithPrf,
   verifyCrx,
 } from "../pgp/wasm";
-import type { ProtectSpec } from "../protection/protect-runner";
 import {
   ARGON2_ITERATIONS,
   ARGON2_MEMORY_KIB,
   ARGON2_PARALLELISM,
 } from "../protection/password-kdf";
-import {
-  assertStrongPassword,
-  runProtect,
-} from "../protection/protect-runner";
+import { assertStrongPassword, runProtect } from "../protection/protect-runner";
 import { unpackPasswordBlob } from "../protection/protected-blob";
 import { authenticateAndGetPrf } from "../protection/webauthn-prf";
 import { updateCrxLastUsed } from "./storage";
-import type { CrxProtection, CrxSigningKeyBlob } from "./types";
 
 export type CrxProtectionInput =
   | { method: "password"; password: string }
@@ -128,7 +126,7 @@ export async function generateCrxKey(
   const { blob } = await runProtect(
     protection,
     crxSpec(
-      label ?? "CRX signing key",
+      label ?? t("settings_crx_default_key_name"),
       (password) =>
         generateCrxKeyWithPassword(
           password,
@@ -155,7 +153,7 @@ export async function importCrxKey(
   const { blob } = await runProtect(
     protection,
     crxSpec(
-      label ?? "CRX signing key",
+      label ?? t("settings_crx_default_key_name"),
       (password) =>
         importCrxKeyWithPassword(
           pem,
@@ -164,7 +162,8 @@ export async function importCrxKey(
           ARGON2_ITERATIONS,
           ARGON2_PARALLELISM,
         ),
-      (prfOutput, storedSecret) => importCrxKeyWithPrf(pem, prfOutput, storedSecret),
+      (prfOutput, storedSecret) =>
+        importCrxKeyWithPrf(pem, prfOutput, storedSecret),
       label,
     ),
   );
@@ -304,8 +303,6 @@ export async function signZipWithCrxKey(
 }
 
 /** Verify a `.crx` file's embedded signature. No key material involved. */
-export async function verifyCrxFile(
-  crx: Uint8Array,
-): Promise<CrxVerifyResult> {
+export async function verifyCrxFile(crx: Uint8Array): Promise<CrxVerifyResult> {
   return verifyCrx(crx);
 }

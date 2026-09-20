@@ -1,0 +1,434 @@
+{
+  "import_title": {
+    "message": "Импорт ключа"
+  },
+  "import_title_update": {
+    "message": "Обновление ключа"
+  },
+  "import_panel_aria_with_id": {
+    "message": "Импорт $keyid$"
+  },
+  "import_failed": {
+    "message": "Не удалось импортировать"
+  },
+  "import_lookup_failed": {
+    "message": "Не удалось выполнить поиск"
+  },
+  "import_unreadable": {
+    "message": "Это не похоже на ключ, который можно прочитать. Вставьте PGP-ключ в формате ASCII-armor или строку открытого SSH-ключа либо выберите файл ключа."
+  },
+  "import_private_unreadable": {
+    "message": "Не удалось прочитать этот закрытый ключ."
+  },
+  "import_worker_unreachable": {
+    "message": "Не удалось связаться с фоновым процессом расширения."
+  },
+  "import_keyserver_not_a_key": {
+    "message": "$host$ ответил, но прислал не ключ, который можно прочитать."
+  },
+  "import_keyserver_multiple_keys": {
+    "message": "$host$ вернул несколько ключей по этому запросу. Показан только первый - проверьте отпечаток перед импортом."
+  },
+  "import_lookup_invalid": {
+    "message": "Это не имя пользователя GitHub, не адрес эл. почты и не отпечаток ключа. Попробуйте «octocat», «alice@example.com» или полный 40-символьный отпечаток."
+  },
+  "import_no_key": {
+    "message": "Нет ключа для импорта."
+  },
+  "import_enter_passphrase": {
+    "message": "Введите парольную фразу ключа."
+  },
+  "import_default_pgp_name": {
+    "message": "Импортированный PGP-ключ"
+  },
+  "import_default_ssh_name": {
+    "message": "Импортированный SSH-ключ"
+  },
+  "import_flagged_toast_one": {
+    "message": "$count$ ключ использует слабую криптографию (SHA-1) и помечен - см. предупреждение на контакте."
+  },
+  "import_flagged_toast_few": {
+    "message": "$count$ ключа используют слабую криптографию (SHA-1) и помечены - см. предупреждение на контакте."
+  },
+  "import_flagged_toast_many": {
+    "message": "$count$ ключей используют слабую криптографию (SHA-1) и помечены - см. предупреждение на контакте."
+  },
+  "import_flagged_toast_other": {
+    "message": "$count$ ключа используют слабую криптографию (SHA-1) и помечены - см. предупреждение на контакте."
+  },
+  "import_added_contacts_one": {
+    "message": "Добавлен $count$ контакт"
+  },
+  "import_added_contacts_few": {
+    "message": "Добавлено $count$ контакта"
+  },
+  "import_added_contacts_many": {
+    "message": "Добавлено $count$ контактов"
+  },
+  "import_added_contacts_other": {
+    "message": "Добавлено $count$ контакта"
+  },
+  "import_updated_contacts_one": {
+    "message": "Обновлён $count$ контакт"
+  },
+  "import_updated_contacts_few": {
+    "message": "Обновлено $count$ контакта"
+  },
+  "import_updated_contacts_many": {
+    "message": "Обновлено $count$ контактов"
+  },
+  "import_updated_contacts_other": {
+    "message": "Обновлено $count$ контакта"
+  },
+  "import_paste_label": {
+    "message": "Вставьте ключ"
+  },
+  "import_paste_placeholder": {
+    "message": "Вставьте ключ с помощью $shortcut$"
+  },
+  "import_paste_hint": {
+    "message": "Вставьте весь блок ключа целиком - ключ слишком длинный, чтобы набирать его вручную."
+  },
+  "import_reading": {
+    "message": "Чтение ключа..."
+  },
+  "import_drop_here": {
+    "message": "Перетащите файл ключа сюда"
+  },
+  "import_browse": {
+    "message": "Выбрать файл ключа"
+  },
+  "import_lookup_label": {
+    "message": "Или найдите кого-нибудь"
+  },
+  "import_lookup_placeholder": {
+    "message": "Имя пользователя GitHub, эл. почта или отпечаток"
+  },
+  "import_lookup_button": {
+    "message": "Найти"
+  },
+  "import_source_help": {
+    "message": "Открытые ключи добавляются как контакты. Закрытый ключ остаётся на этом устройстве - на следующем шаге вы выберете, как его защитить."
+  },
+  "import_label_field": {
+    "message": "Метка"
+  },
+  "import_optional": {
+    "message": "необязательно"
+  },
+  "import_label_placeholder": {
+    "message": "например, Моё расширение"
+  },
+  "import_passphrase_label": {
+    "message": "Этот ключ защищён парольной фразой"
+  },
+  "import_passphrase_placeholder": {
+    "message": "Парольная фраза ключа"
+  },
+  "import_submit": {
+    "message": "Импортировать"
+  },
+  "import_status_duplicate": {
+    "message": "Уже есть в ваших ключах"
+  },
+  "import_status_duplicate_added": {
+    "message": "Вы добавили его $date$, и с тех пор он не менялся."
+  },
+  "import_status_update": {
+    "message": "Обновляет ключ, который у вас уже есть"
+  },
+  "import_status_added_on": {
+    "message": "Добавлен $date$."
+  },
+  "import_action_replace_stored": {
+    "message": "Заменить сохранённый ключ"
+  },
+  "import_action_update_contact": {
+    "message": "Обновить контакт"
+  },
+  "import_action_import_contact": {
+    "message": "Импортировать контакт"
+  },
+  "import_chip_pgp_private_title": {
+    "message": "Содержит секретный ключевой материал - далее вы его защитите"
+  },
+  "import_chip_pgp_public_title": {
+    "message": "Чужой ключ - импортируется как контакт"
+  },
+  "import_chip_ssh_private": {
+    "message": "SSH-ключ"
+  },
+  "import_chip_ssh_private_title": {
+    "message": "Закрытый ключ OpenSSH - далее вы его защитите"
+  },
+  "import_chip_ssh_public": {
+    "message": "Открытый SSH-ключ"
+  },
+  "import_chip_ssh_public_title": {
+    "message": "Чужой SSH-ключ - импортируется как получатель age"
+  },
+  "import_chip_crx": {
+    "message": "Ключ расширения"
+  },
+  "import_chip_crx_title": {
+    "message": "RSA-ключ для подписи расширения Chrome (.crx)"
+  },
+  "import_group_keys_chip_one": {
+    "message": "$count$ ключ"
+  },
+  "import_group_keys_chip_few": {
+    "message": "$count$ ключа"
+  },
+  "import_group_keys_chip_many": {
+    "message": "$count$ ключей"
+  },
+  "import_group_keys_chip_other": {
+    "message": "$count$ ключа"
+  },
+  "import_group_keys_chip_title": {
+    "message": "Сообщения шифруются для всех этих ключей; расшифровать может любой из них"
+  },
+  "import_unknown_name": {
+    "message": "Неизвестно"
+  },
+  "import_group_label": {
+    "message": "Объединить в один контакт"
+  },
+  "import_group_placeholder": {
+    "message": "например, Алиса (все устройства)"
+  },
+  "import_group_help_one": {
+    "message": "У этих ключей разные имена, поэтому они импортируются как $count$ отдельный контакт. Укажите здесь имя, чтобы объединить их как одного человека - тогда сообщения будут шифроваться для всех этих ключей, и прочитать их сможет любое из устройств этого человека."
+  },
+  "import_group_help_few": {
+    "message": "У этих ключей разные имена, поэтому они импортируются как $count$ отдельных контакта. Укажите здесь имя, чтобы объединить их как одного человека - тогда сообщения будут шифроваться для всех этих ключей, и прочитать их сможет любое из устройств этого человека."
+  },
+  "import_group_help_many": {
+    "message": "У этих ключей разные имена, поэтому они импортируются как $count$ отдельных контактов. Укажите здесь имя, чтобы объединить их как одного человека - тогда сообщения будут шифроваться для всех этих ключей, и прочитать их сможет любое из устройств этого человека."
+  },
+  "import_group_help_other": {
+    "message": "У этих ключей разные имена, поэтому они импортируются как $count$ отдельных контакта. Укажите здесь имя, чтобы объединить их как одного человека - тогда сообщения будут шифроваться для всех этих ключей, и прочитать их сможет любое из устройств этого человека."
+  },
+  "import_github_fetched_note": {
+    "message": "Получено с github.com/$user$.keys. Сообщения шифруются для каждого ключа из списка выше, поэтому прочитать их сможет любое из устройств этого человека."
+  },
+  "import_github_rejected_heading_one": {
+    "message": "$count$ опубликованный ключ нельзя использовать"
+  },
+  "import_github_rejected_heading_few": {
+    "message": "$count$ опубликованных ключа нельзя использовать"
+  },
+  "import_github_rejected_heading_many": {
+    "message": "$count$ опубликованных ключей нельзя использовать"
+  },
+  "import_github_rejected_heading_other": {
+    "message": "$count$ опубликованных ключа нельзя использовать"
+  },
+  "import_ssh_private_note": {
+    "message": "Закрытый ключ OpenSSH, используемый с age. Его отпечаток считывается из самого ключа при импорте. Он не может подписывать - в age нет подписей - и не может быть экспортирован в открытом виде."
+  },
+  "import_crx_note": {
+    "message": "RSA-ключ для подписи расширения Chrome (.crx). Идентификатор расширения вычисляется из самого ключа при импорте."
+  },
+  "import_rejected_generic": {
+    "message": "Этот ключ нельзя импортировать."
+  },
+  "import_importing": {
+    "message": "Импорт..."
+  },
+  "import_as_one_contact": {
+    "message": "Импортировать как один контакт"
+  },
+  "import_n_contacts_one": {
+    "message": "Импортировать $count$ контакт"
+  },
+  "import_n_contacts_few": {
+    "message": "Импортировать $count$ контакта"
+  },
+  "import_n_contacts_many": {
+    "message": "Импортировать $count$ контактов"
+  },
+  "import_n_contacts_other": {
+    "message": "Импортировать $count$ контакта"
+  },
+  "import_reveal": {
+    "message": "Показать в ваших ключах"
+  },
+  "import_dropzone_text": {
+    "message": "Перетащите, вставьте или выберите открытые ключи"
+  },
+  "import_dropzone_browse": {
+    "message": "Выбрать файлы"
+  },
+  "import_reject_no_public_key": {
+    "message": "В этом блоке нет пригодного открытого ключа."
+  },
+  "import_reject_expired": {
+    "message": "Срок действия этого ключа истёк $date$. Попросите владельца прислать актуальный ключ."
+  },
+  "import_reject_unusable": {
+    "message": "У этого открытого ключа нет пригодного ключа для шифрования или подписи."
+  },
+  "import_reject_ssh_generic": {
+    "message": "Этот SSH-ключ нельзя использовать для шифрования."
+  },
+  "import_change_no_expiry": {
+    "message": "больше не истекает"
+  },
+  "import_change_new_expiry": {
+    "message": "новый срок действия: до $date$"
+  },
+  "import_change_new_user_ids_one": {
+    "message": "$count$ новый идентификатор пользователя"
+  },
+  "import_change_new_user_ids_few": {
+    "message": "$count$ новых идентификатора пользователя"
+  },
+  "import_change_new_user_ids_many": {
+    "message": "$count$ новых идентификаторов пользователя"
+  },
+  "import_change_new_user_ids_other": {
+    "message": "$count$ новых идентификатора пользователя"
+  },
+  "import_change_new_subkeys_one": {
+    "message": "$count$ новый подключ"
+  },
+  "import_change_new_subkeys_few": {
+    "message": "$count$ новых подключа"
+  },
+  "import_change_new_subkeys_many": {
+    "message": "$count$ новых подключей"
+  },
+  "import_change_new_subkeys_other": {
+    "message": "$count$ новых подключа"
+  },
+  "import_change_reissued": {
+    "message": "Ключ был перевыпущен"
+  },
+  "import_change_keys_added_one": {
+    "message": "$count$ ключ добавлен"
+  },
+  "import_change_keys_added_few": {
+    "message": "$count$ ключа добавлено"
+  },
+  "import_change_keys_added_many": {
+    "message": "$count$ ключей добавлено"
+  },
+  "import_change_keys_added_other": {
+    "message": "$count$ ключа добавлено"
+  },
+  "import_change_keys_removed_one": {
+    "message": "$count$ ключ удалён"
+  },
+  "import_change_keys_removed_few": {
+    "message": "$count$ ключа удалено"
+  },
+  "import_change_keys_removed_many": {
+    "message": "$count$ ключей удалено"
+  },
+  "import_change_keys_removed_other": {
+    "message": "$count$ ключа удалено"
+  },
+  "import_crx_headline": {
+    "message": "Ключ подписи расширения Chrome"
+  },
+  "import_ssh_headline": {
+    "message": "SSH-ключ"
+  },
+  "import_ssh_private_headline": {
+    "message": "Закрытый SSH-ключ"
+  },
+  "import_group_proposal_label_one": {
+    "message": "$count$ SSH-ключ"
+  },
+  "import_group_proposal_label_few": {
+    "message": "$count$ SSH-ключа"
+  },
+  "import_group_proposal_label_many": {
+    "message": "$count$ SSH-ключей"
+  },
+  "import_group_proposal_label_other": {
+    "message": "$count$ SSH-ключа"
+  },
+  "import_github_none_usable": {
+    "message": "Ни один из опубликованных ключей нельзя использовать для шифрования."
+  },
+  "import_github_omitted_line_one": {
+    "message": "+ещё $count$ опубликованный ключ"
+  },
+  "import_github_omitted_line_few": {
+    "message": "+ещё $count$ опубликованных ключа"
+  },
+  "import_github_omitted_line_many": {
+    "message": "+ещё $count$ опубликованных ключей"
+  },
+  "import_github_omitted_line_other": {
+    "message": "+ещё $count$ опубликованных ключа"
+  },
+  "import_github_omitted_reason": {
+    "message": "Этот импорт берёт не более $max$ ключей на аккаунт и пропускает отдельные ключи неправдоподобной длины. $count$ из опубликованных ключей пользователя $username$ не были получены - при необходимости вставьте нужный ключ сюда."
+  },
+  "import_retry_minute": {
+    "message": "Повторите попытку через минуту."
+  },
+  "import_retry_minutes_one": {
+    "message": "Повторите попытку примерно через $count$ минуту."
+  },
+  "import_retry_minutes_few": {
+    "message": "Повторите попытку примерно через $count$ минуты."
+  },
+  "import_retry_minutes_many": {
+    "message": "Повторите попытку примерно через $count$ минут."
+  },
+  "import_retry_minutes_other": {
+    "message": "Повторите попытку примерно через $count$ минуты."
+  },
+  "import_retry_hours_one": {
+    "message": "Повторите попытку примерно через $count$ час."
+  },
+  "import_retry_hours_few": {
+    "message": "Повторите попытку примерно через $count$ часа."
+  },
+  "import_retry_hours_many": {
+    "message": "Повторите попытку примерно через $count$ часов."
+  },
+  "import_retry_hours_other": {
+    "message": "Повторите попытку примерно через $count$ часа."
+  },
+  "import_github_invalid_username": {
+    "message": "Это не имя пользователя GitHub. Используйте имя аккаунта из URL профиля, например «octocat» для github.com/octocat."
+  },
+  "import_github_not_found": {
+    "message": "Аккаунта GitHub с именем «$username$» не существует. Проверьте написание - нужно имя из URL профиля."
+  },
+  "import_github_no_keys": {
+    "message": "У пользователя $username$ нет опубликованных SSH-ключей на GitHub. Попросите его добавить ключ на github.com/settings/keys или вставьте ключ сюда."
+  },
+  "import_github_offline": {
+    "message": "Не удалось связаться с github.com. Проверьте подключение и повторите попытку."
+  },
+  "import_github_rate_limited": {
+    "message": "GitHub ограничивает число запросов из этой сети. Лимит считается по IP-адресу, поэтому его могут исчерпать другие люди на том же подключении."
+  },
+  "import_github_server_error": {
+    "message": "GitHub сейчас не отвечает. Повторите попытку чуть позже."
+  },
+  "import_keyserver_invalid_query": {
+    "message": "Это не адрес эл. почты и не отпечаток ключа. Используйте адрес, под которым опубликован ключ, или вставьте полный 40-символьный отпечаток."
+  },
+  "import_keyserver_not_found_email": {
+    "message": "На $host$ нет ключа для $subject$. Адрес публикуется только после подтверждения владельцем ключа, поэтому ключ там может быть, но этот поиск его не найдёт - попросите ключ напрямую или найдите его по отпечатку."
+  },
+  "import_keyserver_not_found_fingerprint": {
+    "message": "На $host$ нет ключа с отпечатком $subject$. Сверьте его с тем, который вам дали - достаточно одного неверного символа."
+  },
+  "import_keyserver_offline": {
+    "message": "Не удалось связаться с $host$. Проверьте подключение и повторите попытку."
+  },
+  "import_keyserver_rate_limited": {
+    "message": "$host$ ограничивает число запросов из этой сети."
+  },
+  "import_keyserver_server_error": {
+    "message": "$host$ сейчас не отвечает. Повторите попытку чуть позже."
+  }
+}

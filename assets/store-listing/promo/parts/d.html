@@ -13,19 +13,12 @@
     <div class="d-left">
       <div class="brand">
         <img src="__DATA:icon/128.png__" /><span>PGP Tools</span
-        ><span class="by">by Am I Being Pwned</span>
+        ><span class="by">__T:by__</span>
       </div>
       <h1>
-        Bad signature,<br /><span class="green">no plaintext</span>
+        __T:d.h1_1__<br /><span class="green">__T:d.h1_2__</span>
       </h1>
-      <p class="sub">
-        Decrypt and verify come back together, in one answer. If the signature
-        fails, there is nothing to read.
-      </p>
-      <p class="foot">
-        Most tools hand you the message first and the verdict second. That gap
-        is where you act on text nobody checked.
-      </p>
+      <p class="sub">__T:d.sub__</p>
     </div>
 
     <div class="fcard d-card">
@@ -33,18 +26,18 @@
         <div class="verdict">
           __PART:i-key__
           <span class="vname">James Arnott <i>D5DB 9296 8391 A64B</i></span>
-          <span class="vtag pass">__PART:i-check__ Verified</span>
+          <span class="vtag pass">__PART:i-check__ __T:d.verified__</span>
         </div>
-        <div class="outcome">Meet me at the usual place at 8.</div>
+        <div class="outcome">__T:d.message__</div>
       </div>
 
       <div class="d-case">
         <div class="verdict">
           __PART:i-key__
-          <span class="vname">Unknown signer <i>Altered in transit</i></span>
-          <span class="vtag fail">__PART:i-x__ Failed</span>
+          <span class="vname">__T:d.unknown__ <i>__T:d.altered__</i></span>
+          <span class="vtag fail">__PART:i-x__ __T:d.failed__</span>
         </div>
-        <div class="outcome withheld">Nothing returned.</div>
+        <div class="outcome withheld">__T:d.nothing__</div>
       </div>
     </div>
   </div>
@@ -55,24 +48,65 @@
     inset: 0;
     display: flex;
     align-items: center;
-    gap: 56px;
-    padding: 0 76px 0 84px;
+    gap: 48px;
+    padding: 0 64px 0 84px;
   }
   .tile-d .d-left {
-    width: 548px;
+    width: 470px;
+    flex: none;
     display: flex;
     flex-direction: column;
-    gap: 32px;
+    gap: 34px;
   }
+  .tile-d h1 {
+    font-size: 66px;
+  }
+  .tile-d .sub {
+    font-size: 30px;
+    color: #c4c4c4;
+  }
+  /* The mock result cards are the "screenshot" here, so they are drawn
+     at ~1.5x the size the panel renders them: readable at half size. */
   .tile-d .d-card {
-    width: 516px;
-    flex: none;
-    padding: 30px;
-    gap: 26px;
+    flex: 1;
+    padding: 34px;
+    gap: 30px;
   }
   .tile-d .d-case {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 14px;
+  }
+  .tile-d .verdict {
+    padding: 22px 24px;
+    gap: 18px;
+  }
+  .tile-d .verdict > svg {
+    width: 32px;
+    height: 32px;
+  }
+  /* Signer names run long in translation: wrap instead of truncating. */
+  .tile-d .vname {
+    font-size: 26px;
+    white-space: normal;
+    line-height: 1.2;
+    text-overflow: clip;
+  }
+  .tile-d .vname i {
+    font-size: 22px;
+    margin-top: 6px;
+  }
+  .tile-d .vtag {
+    font-size: 19px;
+    padding: 9px 16px;
+    gap: 8px;
+  }
+  .tile-d .vtag svg {
+    width: 22px;
+    height: 22px;
+  }
+  .tile-d .outcome {
+    font-size: 29px;
+    padding: 24px 26px;
   }
 </style>

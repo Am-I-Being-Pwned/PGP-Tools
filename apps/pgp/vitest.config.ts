@@ -7,6 +7,8 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["**/*.test.ts"],
+    // Installs an en-backed `chrome.i18n` so `t()` resolves in node.
+    setupFiles: ["lib/i18n/fake-chrome-i18n.ts"],
     exclude: ["node_modules/**", ".output/**", ".wxt/**", "gpg-wasm/**"],
     coverage: {
       provider: "v8",

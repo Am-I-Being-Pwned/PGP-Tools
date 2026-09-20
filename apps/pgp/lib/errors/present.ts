@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import { isQuotaExceeded } from "../storage/chunked";
 import { errorMessage } from "../utils/errors";
 import { AppError } from "./app-error";
@@ -40,42 +41,41 @@ function fromAppError(e: AppError): PresentedError {
   switch (e.code) {
     case "key-not-found":
       return {
-        message:
-          "That key is no longer in your keyring, so nothing was saved. Re-import the key and try again.",
+        message: t("app_error_key_not_found"),
         detail: e.message,
-        remedy: { label: "Import key", action: "import-key" },
+        remedy: {
+          label: t("app_error_remedy_import_key"),
+          action: "import-key",
+        },
       };
     case "key-locked":
       return {
-        message: "This key is locked. Unlock it and try again.",
+        message: t("app_error_key_locked"),
         detail: e.message,
-        remedy: { label: "Unlock", action: "unlock" },
+        remedy: { label: t("common_unlock"), action: "unlock" },
       };
     case "vault-locked":
       return {
-        message:
-          "Your vault is locked, so nothing was changed. Unlock it and run this again.",
+        message: t("app_error_vault_locked"),
         detail: e.message,
-        remedy: { label: "Unlock", action: "unlock" },
+        remedy: { label: t("common_unlock"), action: "unlock" },
       };
     case "weak-password":
       return {
-        message: "That password is too short. Use at least 8 characters.",
+        message: t("app_error_weak_password"),
         detail: e.message,
       };
     case "password-required":
       return {
-        message:
-          "This key needs its password. Enter the key password to unlock it.",
+        message: t("app_error_password_required"),
         detail: e.message,
-        remedy: { label: "Unlock", action: "unlock" },
+        remedy: { label: t("common_unlock"), action: "unlock" },
       };
     case "passkey-failed":
       return {
-        message:
-          "Your passkey didn't complete. Try again, or unlock with a different method.",
+        message: t("app_error_passkey_failed"),
         detail: e.message,
-        remedy: { label: "Try again", action: "retry" },
+        remedy: { label: t("app_error_remedy_try_again"), action: "retry" },
       };
     case "ssh-passphrase-required":
       // The engine's own sentence already says exactly what to do, and
@@ -99,9 +99,9 @@ function fromKnownString(raw: string): PresentedError | null {
     lower.includes("wrong credentials or corrupted data")
   ) {
     return {
-      message: "Wrong password for this key. Check it and try again.",
+      message: t("app_error_wrong_password"),
       detail: raw,
-      remedy: { label: "Try again", action: "retry" },
+      remedy: { label: t("app_error_remedy_try_again"), action: "retry" },
     };
   }
 
@@ -117,10 +117,9 @@ function fromKnownString(raw: string): PresentedError | null {
   // that is fine and a password that is not.
   if (lower.includes("wrong password, or this message is damaged")) {
     return {
-      message:
-        "That password didn't open this message. Check it and try again - if you're sure it's right, the message may be damaged.",
+      message: t("app_error_symmetric_wrong_password"),
       detail: raw,
-      remedy: { label: "Try again", action: "retry" },
+      remedy: { label: t("app_error_remedy_try_again"), action: "retry" },
     };
   }
 
@@ -131,8 +130,7 @@ function fromKnownString(raw: string): PresentedError | null {
   // telling them nothing.
   if (lower.includes("aead (ocb) encrypted-data format")) {
     return {
-      message:
-        "This message uses an older AEAD (OCB) format this app can't read. Ask the sender to re-send it encrypted normally - any password they choose will work, it's the format that isn't supported.",
+      message: t("app_error_ocb_unsupported"),
       detail: raw,
     };
   }
@@ -144,12 +142,11 @@ function fromKnownString(raw: string): PresentedError | null {
   ) {
     const keyId = extractKeyId(raw);
     return {
-      message:
-        "This message is encrypted to a key you don't hold" +
-        (keyId ? ` (key ID ${keyId})` : "") +
-        ". Import that private key, or ask the sender to encrypt to one of your keys.",
+      message: keyId
+        ? t("app_error_no_decryption_key_with_id", { key_id: keyId })
+        : t("app_error_no_decryption_key"),
       detail: raw,
-      remedy: { label: "Import key", action: "import-key" },
+      remedy: { label: t("app_error_remedy_import_key"), action: "import-key" },
     };
   }
 
@@ -160,15 +157,13 @@ function fromKnownString(raw: string): PresentedError | null {
     lower.includes("unsupported crx version")
   ) {
     return {
-      message:
-        "This isn't a Chrome extension package this tool can verify. Choose a CRX3 (.crx) file.",
+      message: t("app_error_not_crx"),
       detail: raw,
     };
   }
   if (lower.includes("crx is unsigned by this key")) {
     return {
-      message:
-        "The CRX signature doesn't match: it wasn't signed by this key, or the file was modified after signing. Get a fresh copy from the publisher.",
+      message: t("app_error_crx_unsigned"),
       detail: raw,
     };
   }
@@ -176,8 +171,7 @@ function fromKnownString(raw: string): PresentedError | null {
   // Tampered signature (thrown by decrypt's signature check).
   if (lower.includes("tampered")) {
     return {
-      message:
-        "Signature verification failed - this message may have been tampered with. Don't trust the contents; ask the sender to re-send it.",
+      message: t("app_error_tampered"),
       detail: raw,
     };
   }
@@ -185,18 +179,22 @@ function fromKnownString(raw: string): PresentedError | null {
   // Expired / revoked key material.
   if (lower.includes("expired")) {
     return {
-      message:
-        "A key involved in this operation has expired. Ask the key's owner for an updated key, then import it.",
+      message: t("app_error_key_expired"),
       detail: raw,
-      remedy: { label: "Check key", action: "check-recipient" },
+      remedy: {
+        label: t("app_error_remedy_check_key"),
+        action: "check-recipient",
+      },
     };
   }
   if (lower.includes("revoked")) {
     return {
-      message:
-        "A key involved in this operation has been revoked by its owner. Get their replacement key, then import it.",
+      message: t("app_error_key_revoked"),
       detail: raw,
-      remedy: { label: "Check key", action: "check-recipient" },
+      remedy: {
+        label: t("app_error_remedy_check_key"),
+        action: "check-recipient",
+      },
     };
   }
 
@@ -207,8 +205,7 @@ function fromKnownString(raw: string): PresentedError | null {
     lower.includes("md5 signatures")
   ) {
     return {
-      message:
-        "This key uses a signature algorithm that is no longer considered secure. Ask the key's owner to reissue it with SHA-256 or stronger.",
+      message: t("app_error_weak_algorithm"),
       detail: raw,
     };
   }
@@ -222,10 +219,9 @@ function fromKnownString(raw: string): PresentedError | null {
     lower.includes("corrupt")
   ) {
     return {
-      message:
-        "The data is corrupted or was cut off. Get a fresh, complete copy and try again.",
+      message: t("app_error_corrupted"),
       detail: raw,
-      remedy: { label: "Try again", action: "retry" },
+      remedy: { label: t("app_error_remedy_try_again"), action: "retry" },
     };
   }
 
@@ -238,8 +234,7 @@ function fromKnownString(raw: string): PresentedError | null {
     lower.includes("no openpgp certificate found")
   ) {
     return {
-      message:
-        "This doesn't look like PGP data. Make sure you pasted the full armored block, including the BEGIN and END lines.",
+      message: t("app_error_not_pgp_data"),
       detail: raw,
     };
   }
@@ -250,20 +245,18 @@ function fromKnownString(raw: string): PresentedError | null {
     lower.includes("passkey registration failed")
   ) {
     return {
-      message:
-        "Your passkey didn't complete. Try again, or unlock with a different method.",
+      message: t("app_error_passkey_failed"),
       detail: raw,
-      remedy: { label: "Try again", action: "retry" },
+      remedy: { label: t("app_error_remedy_try_again"), action: "retry" },
     };
   }
 
   // Locked-session errors reported as plain strings.
   if (lower.includes("vault is locked") || lower.includes("is not unlocked")) {
     return {
-      message:
-        "Your vault is locked, so nothing was changed. Unlock it and run this again.",
+      message: t("app_error_vault_locked"),
       detail: raw,
-      remedy: { label: "Unlock", action: "unlock" },
+      remedy: { label: t("common_unlock"), action: "unlock" },
     };
   }
 
@@ -281,9 +274,8 @@ export function presentError(e: unknown, fallback: string): PresentedError {
   // Backing out of a passkey prompt is a decision, not a failure.
   if (isWebAuthnCancelName(e)) {
     return {
-      message:
-        "The passkey prompt was dismissed. Run the operation again when you're ready.",
-      remedy: { label: "Try again", action: "retry" },
+      message: t("app_error_passkey_dismissed"),
+      remedy: { label: t("app_error_remedy_try_again"), action: "retry" },
     };
   }
 
@@ -296,8 +288,7 @@ export function presentError(e: unknown, fallback: string): PresentedError {
 
   if (isQuotaExceeded(e)) {
     return {
-      message:
-        "Browser storage is full, so this couldn't be saved. Remove keys or contacts you no longer need, then try again.",
+      message: t("app_error_storage_full"),
       detail: errorMessage(e, ""),
     };
   }

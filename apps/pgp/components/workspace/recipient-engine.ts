@@ -3,8 +3,8 @@ import type {
   StoredKeyKind,
 } from "../../lib/storage/key-kind";
 import {
-  MIXED_ENGINE_REASON,
-  SSH_PASSWORD_REASON,
+  mixedEngineReason,
+  sshPasswordReason,
 } from "../../lib/encrypt-recipients";
 import { storedKeyKind } from "../../lib/storage/key-kind";
 
@@ -62,9 +62,9 @@ export function recipientBlockReason(
   passwordArmed: boolean,
 ): string | null {
   if (passwordArmed && storedKeyKind(key) === "ssh") {
-    return SSH_PASSWORD_REASON;
+    return sshPasswordReason();
   }
-  return blockedByEngine(key, engine) ? MIXED_ENGINE_REASON : null;
+  return blockedByEngine(key, engine) ? mixedEngineReason() : null;
 }
 
 /**

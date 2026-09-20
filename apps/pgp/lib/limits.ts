@@ -1,3 +1,5 @@
+import { t, tn } from "./i18n";
+
 /**
  * Sanity ceiling on a file the panel will attempt.
  *
@@ -72,7 +74,12 @@ export function oversizedFilesMessage(
   const listed =
     names.length <= 3
       ? names.join(", ")
-      : `${names.slice(0, 3).join(", ")} and ${names.length - 3} more`;
-  const subject = names.length === 1 ? "file is" : "files are";
-  return `${listed}: ${subject} larger than ${MAX_FILE_LABEL} and can't be processed in the panel.`;
+      : t("app_oversized_more", {
+          names: names.slice(0, 3).join(", "),
+          count: names.length - 3,
+        });
+  return tn("app_oversized_files", names.length, {
+    files: listed,
+    limit: MAX_FILE_LABEL,
+  });
 }

@@ -1,0 +1,239 @@
+{
+  "settings_crx_info_title": { "message": "CRX 签名" },
+  "settings_crx_info_pitch_title": { "message": "Verified CRX Uploads" },
+  "settings_crx_info_pitch_p1": {
+    "message": "Chrome 应用商店允许你要求扩展程序的每次更新都必须由只有你持有的密钥签名。即使有人入侵了你的应用商店账号或构建流水线，没有你的签名密钥也无法发布恶意更新。"
+  },
+  "settings_crx_info_pitch_p2": {
+    "message": "这只有在密钥存放在攻击者无法触及的地方时才成立，放在 CI 密钥变量里的密钥会让这一切失去意义。PGP Tools 将其加密保存在你的保险库中，仅在签名时解锁，由你的密码或通行密钥保护，绝不会进入你的流水线。"
+  },
+  "settings_crx_info_how_title": { "message": "使用方法" },
+  "settings_crx_info_step_1": {
+    "message": "在“设置”中打开开关，然后创建或导入一个 CRX 签名密钥 (RSA-2048)。将私钥保留在此处，仅在需要备份时才导出。"
+  },
+  "settings_crx_info_step_2": {
+    "message": "将密钥的$public$部分复制到 Chrome 应用商店开发者信息中心的$path$下。"
+  },
+  "settings_crx_info_term_public": { "message": "公钥" },
+  "settings_crx_info_term_dashboard_path": {
+    "message": "软件包 → Verified CRX Uploads"
+  },
+  "settings_crx_info_step_3": {
+    "message": "要发布版本，将打包好的扩展程序 $zip$ 拖入工作区并签名。使用$save$可将 $crx$ 直接以正确的名称写入磁盘（或将该文件块拖到桌面），然后上传到信息中心。Chrome 会拦截普通的 $crx$ 下载并尝试安装，所以我们采用保存而非下载。"
+  },
+  "settings_crx_info_step_4": {
+    "message": "要检查任何扩展程序包，将 $crx$ 拖入工作区即可，PGP Tools 会验证其签名并显示它所声称的扩展程序 ID。"
+  },
+  "settings_crx_info_get_title": { "message": "你会得到什么" },
+  "settings_crx_info_get_body": {
+    "message": "此 $crx$ 是供应用商店信息中心使用的上传文件，而不是可直接安装的软件包，Chrome 只安装由应用商店签名的扩展程序。要在本地运行你的扩展程序，请对该文件夹使用$load_unpacked$。"
+  },
+  "settings_crx_info_term_load_unpacked": { "message": "加载已解压的扩展程序" },
+  "settings_crx_info_ladder_title": { "message": "在安全层级中的位置" },
+  "settings_crx_info_ladder_ci_term": { "message": "放在 CI 密钥变量中的密钥" },
+  "settings_crx_info_ladder_ci": {
+    "message": "$term$更弱：一个被投毒的依赖或一个泄露的令牌就能把它带走。"
+  },
+  "settings_crx_info_ladder_vault_term": {
+    "message": "加密保存在保险库中的密钥"
+  },
+  "settings_crx_info_ladder_vault": {
+    "message": "$term$（你现在的位置）受你的密码或通行密钥保护，仅在签名时解锁。"
+  },
+  "settings_crx_info_ladder_hardware_term": {
+    "message": "硬件令牌（YubiKey / HSM）"
+  },
+  "settings_crx_info_ladder_hardware": {
+    "message": "$term$更强：密钥永远不会离开芯片；而在这里，密钥会在签名期间于 WASM 沙盒中被短暂重建，并在签名后立即清零。"
+  },
+  "settings_crx_info_not_pgp_title": { "message": "这不是 PGP" },
+  "settings_crx_info_not_pgp_body": {
+    "message": "$crx$ 使用原始的 RSA-2048 密钥 (PKCS#1-SHA256) 签名，而不是 OpenPGP 签名。PGP Tools 以与你的 PGP 密钥相同的保护方式生成和存储此密钥（Argon2id 或通行密钥 → AES-256-GCM，全部在 WASM 沙盒内完成），但该密钥本身是独立的，仅用于 CRX 签名。"
+  },
+  "settings_crx_info_link": { "message": "Chrome 应用商店：保护软件包更新" },
+  "settings_crx_default_key_name": { "message": "CRX 签名密钥" },
+  "settings_import_keys_title": { "message": "导入密钥" },
+  "settings_import_next": { "message": "下一步" },
+  "settings_import_importing": { "message": "正在导入…" },
+  "settings_import_paste_intro": {
+    "message": "粘贴或浏览选择一个密钥文件，例如来自“导出所有密钥”的文件。私钥会用你选择的方式重新保护；公钥会成为联系人。"
+  },
+  "settings_import_paste_placeholder": {
+    "message": "在此粘贴密钥，或浏览选择文件…"
+  },
+  "settings_import_browse": { "message": "浏览密钥文件" },
+  "settings_import_no_keys": { "message": "输入中未找到密钥。" },
+  "settings_import_unlock_intro_one": {
+    "message": "$count$ 个私钥中有 $encrypted$ 个受密码短语保护。请输入密码短语以解锁，下一步你将用所选方式重新保护每个密钥。"
+  },
+  "settings_import_unlock_intro_other": {
+    "message": "$count$ 个私钥中有 $encrypted$ 个受密码短语保护。请输入密码短语以解锁，下一步你将用所选方式重新保护每个密钥。"
+  },
+  "settings_import_passphrase_placeholder": { "message": "密钥密码短语" },
+  "settings_import_protect_intro_one": {
+    "message": "选择如何保护导入的 $count$ 个私钥。"
+  },
+  "settings_import_protect_intro_other": {
+    "message": "选择如何保护导入的 $count$ 个私钥。"
+  },
+  "settings_import_submit_one": { "message": "导入 $count$ 个密钥" },
+  "settings_import_submit_other": { "message": "导入 $count$ 个密钥" },
+  "settings_import_passkey_name": { "message": "PGP Tools 导入" },
+  "settings_import_prf_unsupported": {
+    "message": "你的身份验证器不支持 PRF。请换一个通行密钥，或改用密码。"
+  },
+  "settings_import_default_user_id": { "message": "导入的 PGP 密钥" },
+  "settings_import_failed": { "message": "导入失败" },
+  "settings_import_unknown_error": { "message": "未知错误" },
+  "settings_import_failed_named": { "message": "导入“$name$”失败：$error$" },
+  "settings_import_private_imported_one": {
+    "message": "已导入 $count$ 个私钥"
+  },
+  "settings_import_private_imported_other": {
+    "message": "已导入 $count$ 个私钥"
+  },
+  "settings_import_private_skipped_one": {
+    "message": "$count$ 个私钥此前已导入"
+  },
+  "settings_import_private_skipped_other": {
+    "message": "$count$ 个私钥此前已导入"
+  },
+  "settings_import_private_unparseable_one": {
+    "message": "$count$ 个私钥无法解析。"
+  },
+  "settings_import_private_unparseable_other": {
+    "message": "$count$ 个私钥无法解析。"
+  },
+  "settings_import_contacts_added_one": {
+    "message": "已添加 $count$ 个联系人"
+  },
+  "settings_import_contacts_added_other": {
+    "message": "已添加 $count$ 个联系人"
+  },
+  "settings_import_contacts_flagged_one": {
+    "message": "$count$ 个导入的密钥因使用弱加密算法 (SHA-1) 而被标记"
+  },
+  "settings_import_contacts_flagged_other": {
+    "message": "$count$ 个导入的密钥因使用弱加密算法 (SHA-1) 而被标记"
+  },
+  "settings_import_contacts_updated_one": {
+    "message": "已更新 $count$ 个联系人"
+  },
+  "settings_import_contacts_updated_other": {
+    "message": "已更新 $count$ 个联系人"
+  },
+  "settings_import_contacts_rejected_one": {
+    "message": "$count$ 个公钥被拒绝"
+  },
+  "settings_import_contacts_rejected_other": {
+    "message": "$count$ 个公钥被拒绝"
+  },
+  "settings_import_contacts_rejected_reason_one": {
+    "message": "$count$ 个公钥被拒绝：$reason$"
+  },
+  "settings_import_contacts_rejected_reason_other": {
+    "message": "$count$ 个公钥被拒绝：$reason$"
+  },
+  "settings_import_crx_failure_detail": { "message": "$name$：$error$" },
+  "settings_import_crx_failed_one": {
+    "message": "$count$ 个 CRX 密钥恢复失败"
+  },
+  "settings_import_crx_failed_other": {
+    "message": "$count$ 个 CRX 密钥恢复失败"
+  },
+  "settings_import_crx_restored_one": {
+    "message": "已恢复 $count$ 个 CRX 签名密钥"
+  },
+  "settings_import_crx_restored_other": {
+    "message": "已恢复 $count$ 个 CRX 签名密钥"
+  },
+  "settings_import_crx_skipped_one": {
+    "message": "$count$ 个 CRX 签名密钥此前已导入"
+  },
+  "settings_import_crx_skipped_other": {
+    "message": "$count$ 个 CRX 签名密钥此前已导入"
+  },
+  "settings_import_crx_rejected_one": {
+    "message": "$count$ 个 CRX 签名密钥被拒绝：公钥与其扩展程序 ID 不匹配"
+  },
+  "settings_import_crx_rejected_other": {
+    "message": "$count$ 个 CRX 签名密钥被拒绝：公钥与其扩展程序 ID 不匹配"
+  },
+  "settings_shortcuts_title": { "message": "键盘快捷键" },
+  "settings_shortcuts_unbound": { "message": "未绑定" },
+  "settings_shortcuts_manage": { "message": "管理浏览器快捷键" },
+  "settings_shortcuts_group_palette": { "message": "命令面板" },
+  "settings_shortcuts_open_palette": { "message": "打开命令面板" },
+  "settings_shortcuts_open_palette_note": {
+    "message": "下面的每个操作也都可以在那里搜索到。"
+  },
+  "settings_shortcuts_group_workspace": { "message": "工作区" },
+  "settings_shortcuts_run_mode": { "message": "运行当前模式" },
+  "settings_shortcuts_copy_output": { "message": "复制输出" },
+  "settings_shortcuts_download_output": { "message": "下载输出" },
+  "settings_shortcuts_pick_recipient": { "message": "选择第 n 个收件人" },
+  "settings_shortcuts_pick_recipient_note": {
+    "message": "在收件人下拉列表中，且其搜索框为空时。"
+  },
+  "settings_shortcuts_remove_recipient": { "message": "移除最后一个收件人" },
+  "settings_shortcuts_remove_recipient_note": {
+    "message": "在收件人下拉列表的空搜索框中。"
+  },
+  "settings_shortcuts_group_message": { "message": "消息框" },
+  "settings_shortcuts_find_replace": { "message": "查找和替换" },
+  "settings_shortcuts_style_note": {
+    "message": "在撰写要加密或签名的消息时使用。采用 Unicode 字母变体，因此在任何渠道中都能保留。"
+  },
+  "settings_shortcuts_group_modes": { "message": "模式" },
+  "settings_shortcuts_switch_mode": { "message": "切换到$mode$" },
+  "settings_shortcuts_group_global": { "message": "浏览器全局快捷键" },
+  "settings_shortcuts_open_app": { "message": "打开 PGP Tools" },
+  "settings_shortcuts_open_in_mode": { "message": "以$mode$模式打开" },
+  "settings_shortcuts_unbound_note": {
+    "message": "默认未绑定（Chrome 最多允许四个建议快捷键）。"
+  },
+  "settings_shortcuts_global_note": {
+    "message": "这些快捷键在浏览器的任何位置都有效。可在 $url$ 重新绑定其中任何一个。"
+  },
+  "settings_preset_title": { "message": "安全预设" },
+  "settings_preset_apply": { "message": "应用预设" },
+  "settings_preset_applying": { "message": "正在应用…" },
+  "settings_preset_replace_custom": { "message": "替换自定义设置" },
+  "settings_preset_apply_delete_history": { "message": "应用并删除历史记录" },
+  "settings_preset_keep_custom": { "message": "保留自定义设置" },
+  "settings_preset_intro": {
+    "message": "每个预设都为一种威胁模型打包了一组安全设置，其卡片会明确列出它所设置的内容。应用预设只会更改这些设置，之后你仍可以逐项调整。"
+  },
+  "settings_preset_custom_notice": {
+    "message": "你当前处于$custom$状态：预设包含的某项设置已被更改，因此没有完全匹配的预设。"
+  },
+  "settings_preset_custom_name": { "message": "自定义" },
+  "settings_preset_confirm_replace": {
+    "message": "要用“$preset$”预设替换你的自定义设置吗？只有其卡片上列出的设置会更改，之后你仍可以逐项调整。"
+  },
+  "settings_preset_confirm_history": {
+    "message": "此预设会开启“从不缓存”，这也会删除你已保存的历史记录（$size$），且无法恢复。"
+  },
+  "settings_translation_title": { "message": "翻译" },
+  "settings_translation_enable": { "message": "翻译已解密的消息" },
+  "settings_translation_enable_desc": {
+    "message": "在已解密的消息下方添加“翻译”按钮。翻译使用 Chrome 的内置模型在此设备上进行，按下按钮之前不会翻译任何内容。"
+  },
+  "settings_translation_unsupported": {
+    "message": "Chrome 的设备端翻译在此处不可用。它需要 Windows 10 及以上、macOS 13 及以上、Linux 的桌面版 Chrome 或 Chromebook Plus，并有足够的可用磁盘空间和内存来存放模型。"
+  },
+  "settings_translation_target": { "message": "翻译为" },
+  "settings_translation_packs": { "message": "语言包" },
+  "settings_translation_packs_desc": {
+    "message": "可选。缺少的语言包会在你第一次从该语言翻译时自动下载，所以此处只是让你提前准备。不过在这里下载有一个好处：下载不再发生在你解密消息的那一刻，其时间点也就不会透露你刚刚读了什么。每个语言包$size$，由 Chrome 而非本扩展程序存储。"
+  },
+  "settings_translation_pack_ready": { "message": "已就绪" },
+  "settings_translation_pack_progress": { "message": "$percent$%" },
+  "settings_translation_pack_not_offered": { "message": "不提供" },
+  "settings_translation_download_failed": { "message": "下载失败。" },
+  "settings_translation_pack_pair": { "message": "$from$到$to$翻译包" },
+  "settings_translation_detector": { "message": "语言检测器" },
+  "settings_translation_pack_gone": { "message": "语言包已不可用。请重试。" },
+  "settings_translation_failed": { "message": "翻译失败。" },
+  "settings_translation_unavailable_device": { "message": "此设备不支持翻译。" }
+}

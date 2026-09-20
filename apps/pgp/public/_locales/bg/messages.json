@@ -1,8 +1,8 @@
 {
-  "extName": {
-    "message": "Криптиране на имейл с OpenPGP и GPG - Slack & Discord Compatible"
-  },
   "extDescription": {
     "message": "Криптирайте, декриптирайте, подписвайте и проверявайте съобщения с OpenPGP и GPG."
+  },
+  "extName": {
+    "message": "Криптиране на имейл с OpenPGP и GPG - Slack & Discord Compatible"
   }
 }

@@ -1,0 +1,218 @@
+{
+  "import_title": { "message": "कुंजी आयात करें" },
+  "import_title_update": { "message": "कुंजी अपडेट करें" },
+  "import_panel_aria_with_id": { "message": "$keyid$ आयात करें" },
+  "import_failed": { "message": "आयात विफल रहा" },
+  "import_lookup_failed": { "message": "खोज विफल रही" },
+  "import_unreadable": {
+    "message": "यह ऐसी कुंजी नहीं लगती जिसे हम पढ़ सकें। कोई आर्मर्ड PGP कुंजी ब्लॉक या SSH सार्वजनिक कुंजी की पंक्ति पेस्ट करें, या कुंजी फ़ाइल ब्राउज़ करें।"
+  },
+  "import_private_unreadable": { "message": "वह निजी कुंजी पढ़ी नहीं जा सकी।" },
+  "import_worker_unreachable": {
+    "message": "एक्सटेंशन के बैकग्राउंड वर्कर से संपर्क नहीं हो सका।"
+  },
+  "import_keyserver_not_a_key": {
+    "message": "$host$ ने जवाब दिया, लेकिन जो भेजा गया वह ऐसी कुंजी नहीं है जिसे हम पढ़ सकें।"
+  },
+  "import_keyserver_multiple_keys": {
+    "message": "$host$ ने इस खोज के लिए एक से ज़्यादा कुंजियां लौटाईं। सिर्फ़ पहली दिखाई गई है - आयात करने से पहले फ़िंगरप्रिंट जांच लें।"
+  },
+  "import_lookup_invalid": {
+    "message": "यह न तो GitHub उपयोगकर्ता नाम है, न ईमेल पता और न ही कुंजी फ़िंगरप्रिंट। “octocat”, “alice@example.com”, या पूरा 40-वर्ण वाला फ़िंगरप्रिंट आज़माएं।"
+  },
+  "import_no_key": { "message": "आयात करने के लिए कोई कुंजी नहीं।" },
+  "import_enter_passphrase": { "message": "कुंजी का पासफ़्रेज़ डालें।" },
+  "import_default_pgp_name": { "message": "आयात की गई PGP कुंजी" },
+  "import_default_ssh_name": { "message": "आयात की गई SSH कुंजी" },
+  "import_flagged_toast_one": {
+    "message": "$count$ कुंजी कमज़ोर क्रिप्टो (SHA-1) इस्तेमाल करती है और उसे चिह्नित किया गया - संपर्क पर दी गई चेतावनी देखें।"
+  },
+  "import_flagged_toast_other": {
+    "message": "$count$ कुंजियां कमज़ोर क्रिप्टो (SHA-1) इस्तेमाल करती हैं और उन्हें चिह्नित किया गया - संपर्क पर दी गई चेतावनी देखें।"
+  },
+  "import_added_contacts_one": { "message": "$count$ संपर्क जोड़ा गया" },
+  "import_added_contacts_other": { "message": "$count$ संपर्क जोड़े गए" },
+  "import_updated_contacts_one": { "message": "$count$ संपर्क अपडेट किया गया" },
+  "import_updated_contacts_other": { "message": "$count$ संपर्क अपडेट किए गए" },
+  "import_paste_label": { "message": "कुंजी पेस्ट करें" },
+  "import_paste_placeholder": { "message": "$shortcut$ से कुंजी पेस्ट करें" },
+  "import_paste_hint": {
+    "message": "पूरा कुंजी ब्लॉक पेस्ट करें - कुंजी टाइप करने के लिए बहुत लंबी होती है।"
+  },
+  "import_reading": { "message": "कुंजी पढ़ी जा रही है..." },
+  "import_drop_here": { "message": "कुंजी फ़ाइल यहां छोड़ें" },
+  "import_browse": { "message": "कुंजी फ़ाइल ब्राउज़ करें" },
+  "import_lookup_label": { "message": "या किसी को खोजें" },
+  "import_lookup_placeholder": {
+    "message": "GitHub उपयोगकर्ता नाम, ईमेल या फ़िंगरप्रिंट"
+  },
+  "import_lookup_button": { "message": "खोजें" },
+  "import_source_help": {
+    "message": "सार्वजनिक कुंजियां संपर्क के रूप में जोड़ी जाती हैं। निजी कुंजी इसी डिवाइस पर रहती है - आगे आप चुनेंगे कि उसे कैसे सुरक्षित रखना है।"
+  },
+  "import_label_field": { "message": "लेबल" },
+  "import_optional": { "message": "वैकल्पिक" },
+  "import_label_placeholder": { "message": "जैसे: मेरा एक्सटेंशन" },
+  "import_passphrase_label": {
+    "message": "यह कुंजी पासफ़्रेज़ से सुरक्षित है"
+  },
+  "import_passphrase_placeholder": { "message": "कुंजी का पासफ़्रेज़" },
+  "import_submit": { "message": "आयात करें" },
+  "import_status_duplicate": { "message": "पहले से आपकी कुंजियों में है" },
+  "import_status_duplicate_added": {
+    "message": "आपने इसे $date$ को जोड़ा था, और इसमें कुछ भी नहीं बदला है।"
+  },
+  "import_status_update": {
+    "message": "आपके पास मौजूद कुंजी को अपडेट करती है"
+  },
+  "import_status_added_on": { "message": "$date$ को जोड़ी गई।" },
+  "import_action_replace_stored": { "message": "सहेजी गई कुंजी बदलें" },
+  "import_action_update_contact": { "message": "संपर्क अपडेट करें" },
+  "import_action_import_contact": { "message": "संपर्क आयात करें" },
+  "import_chip_pgp_private_title": {
+    "message": "इसमें गुप्त कुंजी सामग्री शामिल है - आगे आप इसे सुरक्षित करेंगे"
+  },
+  "import_chip_pgp_public_title": {
+    "message": "किसी और की कुंजी - संपर्क के रूप में आयात की जाती है"
+  },
+  "import_chip_ssh_private": { "message": "SSH कुंजी" },
+  "import_chip_ssh_private_title": {
+    "message": "एक OpenSSH निजी कुंजी - आगे आप इसे सुरक्षित करेंगे"
+  },
+  "import_chip_ssh_public": { "message": "SSH सार्वजनिक कुंजी" },
+  "import_chip_ssh_public_title": {
+    "message": "किसी और की SSH कुंजी - age प्राप्तकर्ता के रूप में आयात की जाती है"
+  },
+  "import_chip_crx": { "message": "एक्सटेंशन कुंजी" },
+  "import_chip_crx_title": {
+    "message": "Chrome एक्सटेंशन (.crx) के लिए एक RSA हस्ताक्षर कुंजी"
+  },
+  "import_group_keys_chip_one": { "message": "$count$ कुंजी" },
+  "import_group_keys_chip_other": { "message": "$count$ कुंजियां" },
+  "import_group_keys_chip_title": {
+    "message": "संदेश इन सभी के लिए एन्क्रिप्ट किए जाते हैं; इनमें से कोई भी डिक्रिप्ट कर सकती है"
+  },
+  "import_unknown_name": { "message": "अज्ञात" },
+  "import_group_label": { "message": "एक संपर्क के रूप में समूहित करें" },
+  "import_group_placeholder": { "message": "जैसे: Alice (सभी मशीनें)" },
+  "import_group_help_one": {
+    "message": "इन कुंजियों का नाम एक जैसा नहीं है, इसलिए इन्हें $count$ अलग संपर्क के रूप में आयात किया जाता है। इन्हें एक व्यक्ति के रूप में साथ रखने के लिए यहां नाम दें - तब संदेश सभी $count$ कुंजियों के लिए एन्क्रिप्ट होंगे, और उनकी कोई भी मशीन उन्हें पढ़ सकेगी।"
+  },
+  "import_group_help_other": {
+    "message": "इन कुंजियों का नाम एक जैसा नहीं है, इसलिए इन्हें $count$ अलग-अलग संपर्कों के रूप में आयात किया जाता है। इन्हें एक व्यक्ति के रूप में साथ रखने के लिए यहां नाम दें - तब संदेश सभी $count$ कुंजियों के लिए एन्क्रिप्ट होंगे, और उनकी कोई भी मशीन उन्हें पढ़ सकेगी।"
+  },
+  "import_github_fetched_note": {
+    "message": "github.com/$user$.keys से प्राप्त। संदेश ऊपर दी गई हर कुंजी के लिए एन्क्रिप्ट किए जाते हैं, इसलिए उनकी कोई भी मशीन उन्हें पढ़ सकती है।"
+  },
+  "import_github_rejected_heading_one": {
+    "message": "$count$ प्रकाशित कुंजी इस्तेमाल नहीं की जा सकती"
+  },
+  "import_github_rejected_heading_other": {
+    "message": "$count$ प्रकाशित कुंजियां इस्तेमाल नहीं की जा सकतीं"
+  },
+  "import_ssh_private_note": {
+    "message": "एक OpenSSH निजी कुंजी, जो age के साथ इस्तेमाल होती है। आयात करते समय इसका फ़िंगरप्रिंट कुंजी से ही पढ़ लिया जाता है। यह हस्ताक्षर नहीं कर सकती - age में हस्ताक्षर नहीं होते - और इसे बिना एन्क्रिप्शन के निर्यात नहीं किया जा सकता।"
+  },
+  "import_crx_note": {
+    "message": "Chrome एक्सटेंशन (.crx) के लिए एक RSA हस्ताक्षर कुंजी। आयात करते समय इसका एक्सटेंशन ID कुंजी से ही निकाल लिया जाता है।"
+  },
+  "import_rejected_generic": { "message": "यह कुंजी आयात नहीं की जा सकती।" },
+  "import_importing": { "message": "आयात किया जा रहा है..." },
+  "import_as_one_contact": { "message": "एक संपर्क के रूप में आयात करें" },
+  "import_n_contacts_one": { "message": "$count$ संपर्क आयात करें" },
+  "import_n_contacts_other": { "message": "$count$ संपर्क आयात करें" },
+  "import_reveal": { "message": "इसे अपनी कुंजियों में दिखाएं" },
+  "import_dropzone_text": {
+    "message": "सार्वजनिक कुंजियां छोड़ें, पेस्ट करें या ब्राउज़ करें"
+  },
+  "import_dropzone_browse": { "message": "फ़ाइलें ब्राउज़ करें" },
+  "import_reject_no_public_key": {
+    "message": "इस ब्लॉक में कोई उपयोगी सार्वजनिक कुंजी नहीं है।"
+  },
+  "import_reject_expired": {
+    "message": "इस कुंजी की अवधि $date$ को समाप्त हो गई। मालिक से उनकी मौजूदा कुंजी मांगें।"
+  },
+  "import_reject_unusable": {
+    "message": "इस सार्वजनिक कुंजी में एन्क्रिप्शन या हस्ताक्षर के लिए कोई उपयोगी कुंजी नहीं है।"
+  },
+  "import_reject_ssh_generic": {
+    "message": "यह SSH कुंजी एन्क्रिप्शन के लिए इस्तेमाल नहीं की जा सकती।"
+  },
+  "import_change_no_expiry": { "message": "अब समाप्त नहीं होती" },
+  "import_change_new_expiry": { "message": "नई समाप्ति: $date$" },
+  "import_change_new_user_ids_one": { "message": "$count$ नया उपयोगकर्ता ID" },
+  "import_change_new_user_ids_other": { "message": "$count$ नए उपयोगकर्ता ID" },
+  "import_change_new_subkeys_one": { "message": "$count$ नई उपकुंजी" },
+  "import_change_new_subkeys_other": { "message": "$count$ नई उपकुंजियां" },
+  "import_change_reissued": { "message": "कुंजी फिर से जारी की गई है" },
+  "import_change_keys_added_one": { "message": "$count$ कुंजी जोड़ी गई" },
+  "import_change_keys_added_other": { "message": "$count$ कुंजियां जोड़ी गईं" },
+  "import_change_keys_removed_one": { "message": "$count$ कुंजी हटाई गई" },
+  "import_change_keys_removed_other": {
+    "message": "$count$ कुंजियां हटाई गईं"
+  },
+  "import_crx_headline": { "message": "Chrome एक्सटेंशन हस्ताक्षर कुंजी" },
+  "import_ssh_headline": { "message": "SSH कुंजी" },
+  "import_ssh_private_headline": { "message": "SSH निजी कुंजी" },
+  "import_group_proposal_label_one": { "message": "$count$ SSH कुंजी" },
+  "import_group_proposal_label_other": { "message": "$count$ SSH कुंजियां" },
+  "import_github_none_usable": {
+    "message": "प्रकाशित कुंजियों में से कोई भी एन्क्रिप्शन के लिए इस्तेमाल नहीं की जा सकती।"
+  },
+  "import_github_omitted_line_one": { "message": "+$count$ और प्रकाशित कुंजी" },
+  "import_github_omitted_line_other": {
+    "message": "+$count$ और प्रकाशित कुंजियां"
+  },
+  "import_github_omitted_reason": {
+    "message": "यह आयात प्रति खाता अधिकतम $max$ कुंजियां लेता है, और असामान्य रूप से लंबी किसी भी कुंजी को छोड़ देता है। $username$ की $count$ प्रकाशित कुंजियां प्राप्त नहीं की गईं - ज़रूरत हो तो उसे यहां पेस्ट करें।"
+  },
+  "import_retry_minute": { "message": "एक मिनट में फिर से कोशिश करें।" },
+  "import_retry_minutes_one": {
+    "message": "लगभग $count$ मिनट में फिर से कोशिश करें।"
+  },
+  "import_retry_minutes_other": {
+    "message": "लगभग $count$ मिनट में फिर से कोशिश करें।"
+  },
+  "import_retry_hours_one": {
+    "message": "लगभग $count$ घंटे में फिर से कोशिश करें।"
+  },
+  "import_retry_hours_other": {
+    "message": "लगभग $count$ घंटे में फिर से कोशिश करें।"
+  },
+  "import_github_invalid_username": {
+    "message": "यह GitHub उपयोगकर्ता नाम नहीं है। प्रोफ़ाइल URL में दिया गया खाता नाम इस्तेमाल करें, जैसे github.com/octocat के लिए “octocat”।"
+  },
+  "import_github_not_found": {
+    "message": "“$username$” नाम का कोई GitHub खाता नहीं है। वर्तनी जांचें - प्रोफ़ाइल URL में दिया गया नाम ही इस्तेमाल करना है।"
+  },
+  "import_github_no_keys": {
+    "message": "$username$ ने GitHub पर कोई SSH कुंजी प्रकाशित नहीं की है। उनसे github.com/settings/keys पर एक जोड़ने को कहें, या इसके बजाय उनकी कुंजी यहां पेस्ट करें।"
+  },
+  "import_github_offline": {
+    "message": "github.com से संपर्क नहीं हो सका। अपना कनेक्शन जांचकर फिर से कोशिश करें।"
+  },
+  "import_github_rate_limited": {
+    "message": "GitHub इस नेटवर्क पर दर-सीमा लगा रहा है। सीमा IP पते के हिसाब से गिनी जाती है, इसलिए इसी कनेक्शन पर मौजूद दूसरे लोग भी इसे खर्च कर सकते हैं।"
+  },
+  "import_github_server_error": {
+    "message": "GitHub अभी जवाब नहीं दे सका। थोड़ी देर में फिर से कोशिश करें।"
+  },
+  "import_keyserver_invalid_query": {
+    "message": "यह न तो ईमेल पता है और न ही कुंजी फ़िंगरप्रिंट। वह पता इस्तेमाल करें जिसके तहत कुंजी प्रकाशित है, या पूरा 40-वर्ण वाला फ़िंगरप्रिंट पेस्ट करें।"
+  },
+  "import_keyserver_not_found_email": {
+    "message": "$host$ पर $subject$ के लिए कोई कुंजी नहीं है। यह किसी पते को तभी प्रकाशित करता है जब कुंजी के मालिक ने उसकी पुष्टि कर दी हो, इसलिए हो सकता है कि वहां उनकी कुंजी हो, पर यह खोज उसे न ढूंढ पाए - उनसे सीधे कुंजी मांगें, या फ़िंगरप्रिंट से खोजें।"
+  },
+  "import_keyserver_not_found_fingerprint": {
+    "message": "$host$ पर $subject$ फ़िंगरप्रिंट वाली कोई कुंजी नहीं है। इसे उस फ़िंगरप्रिंट से मिलाएं जो आपको दिया गया था - एक भी गलत वर्ण काफ़ी है।"
+  },
+  "import_keyserver_offline": {
+    "message": "$host$ से संपर्क नहीं हो सका। अपना कनेक्शन जांचकर फिर से कोशिश करें।"
+  },
+  "import_keyserver_rate_limited": {
+    "message": "$host$ इस नेटवर्क पर दर-सीमा लगा रहा है।"
+  },
+  "import_keyserver_server_error": {
+    "message": "$host$ अभी जवाब नहीं दे सका। थोड़ी देर में फिर से कोशिश करें।"
+  }
+}

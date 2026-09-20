@@ -1,0 +1,473 @@
+{
+  "workspace_undo": {
+    "message": "Отменить"
+  },
+  "workspace_compose_translated": {
+    "message": "Переведено: $from$ → $to$"
+  },
+  "workspace_compose_same_language": {
+    "message": "Это уже ваш язык ($language$)."
+  },
+  "workspace_compose_translate_unavailable": {
+    "message": "Перевод на этот язык здесь недоступен."
+  },
+  "workspace_crx_saved": {
+    "message": "Сохранён файл $name$."
+  },
+  "workspace_crx_save_failed": {
+    "message": "Не удалось сохранить автоматически - нажмите «Сохранить», чтобы повторить попытку."
+  },
+  "workspace_sign_blocked_age": {
+    "message": "Сообщения age нельзя подписать - у SSH-ключей здесь нет формата подписи."
+  },
+  "workspace_sign_blocked_no_pgp_key": {
+    "message": "для подписи нужен собственный ключ OpenPGP - SSH-ключи не могут подписывать."
+  },
+  "workspace_cleared_toast": {
+    "message": "Рабочая область очищена"
+  },
+  "workspace_text_cleared_toast": {
+    "message": "Текст очищен"
+  },
+  "workspace_clear_input_output": {
+    "message": "Очистить ввод и результат"
+  },
+  "workspace_recipients_label": {
+    "message": "Получатели"
+  },
+  "workspace_no_contacts_yet": {
+    "message": "Контактов пока нет"
+  },
+  "workspace_add_a_contact": {
+    "message": "Добавить контакт"
+  },
+  "workspace_age_message_note": {
+    "message": "Сообщение age - получателей SSH нельзя смешивать с PGP"
+  },
+  "workspace_sign_kind_crx": {
+    "message": "Расширение Chrome (.crx)"
+  },
+  "workspace_sign_kind_pgp": {
+    "message": "Подпись PGP"
+  },
+  "workspace_sign_with": {
+    "message": "Подписать ключом"
+  },
+  "workspace_decrypt_with": {
+    "message": "Расшифровать ключом"
+  },
+  "workspace_no_keys_yet": {
+    "message": "Ключей пока нет"
+  },
+  "workspace_create_one": {
+    "message": "Создать ключ"
+  },
+  "workspace_select_signing_key": {
+    "message": "Выберите ключ подписи"
+  },
+  "workspace_toggle_encrypt_to_self": {
+    "message": "Шифровать и для меня"
+  },
+  "workspace_toggle_password": {
+    "message": "Пароль"
+  },
+  "workspace_toggle_zip_files": {
+    "message": "Упаковать в ZIP"
+  },
+  "workspace_toggle_save_to_history": {
+    "message": "Сохранять в историю"
+  },
+  "workspace_self_excluded_intro": {
+    "message": "Вы не сможете прочитать это сообщение:"
+  },
+  "workspace_self_excluded_age": {
+    "message": "у вас нет собственного SSH-ключа, а сообщение age не может содержать PGP-ключ."
+  },
+  "workspace_self_excluded_pgp": {
+    "message": "ни один из ваших ключей нельзя добавить в это сообщение."
+  },
+  "workspace_import_one": {
+    "message": "Импортировать ключ"
+  },
+  "workspace_enter_message_password": {
+    "message": "Введите пароль сообщения"
+  },
+  "workspace_enter_key_password": {
+    "message": "Введите пароль ключа"
+  },
+  "workspace_decrypting": {
+    "message": "Расшифровка..."
+  },
+  "workspace_unlocking": {
+    "message": "Разблокировка..."
+  },
+  "workspace_go": {
+    "message": "ОК"
+  },
+  "workspace_save_file": {
+    "message": "Сохранить $name$"
+  },
+  "workspace_verifying": {
+    "message": "Проверка..."
+  },
+  "workspace_reset": {
+    "message": "Сбросить"
+  },
+  "workspace_verify_signature": {
+    "message": "Проверить подпись"
+  },
+  "workspace_processing": {
+    "message": "Обработка..."
+  },
+  "workspace_sign_for_web_store": {
+    "message": "Подписать для Web Store"
+  },
+  "workspace_need_recipient_or_password": {
+    "message": "Выберите хотя бы одного получателя или задайте пароль"
+  },
+  "workspace_text_entered_below": {
+    "message": "Текст введён ниже"
+  },
+  "workspace_clear_text": {
+    "message": "Очистить текст"
+  },
+  "workspace_message_input_aria": {
+    "message": "Ввод сообщения"
+  },
+  "workspace_placeholder_decrypt": {
+    "message": "Вставьте полученное зашифрованное сообщение..."
+  },
+  "workspace_placeholder_verify": {
+    "message": "Вставьте подписанное сообщение для проверки..."
+  },
+  "workspace_placeholder_compose": {
+    "message": "Введите или вставьте сообщение..."
+  },
+  "workspace_private_key_pasted_title": {
+    "message": "Это похоже на закрытый ключ. Не вставляйте сюда закрытые ключи."
+  },
+  "workspace_private_key_show_cleartext": {
+    "message": "Показать вставленный текст в открытом виде"
+  },
+  "workspace_private_key_ignore": {
+    "message": "Игнорировать"
+  },
+  "workspace_private_key_pasted_body": {
+    "message": "Поле шифрования и расшифровки - небезопасное место для секретного ключевого материала. Используйте импорт, чтобы ключ попал в защищённое хранилище и не сохранялся в черновиках."
+  },
+  "workspace_private_key_import_safely": {
+    "message": "Импортировать этот ключ безопасно"
+  },
+  "workspace_private_key_clear_input": {
+    "message": "Очистить ввод"
+  },
+  "workspace_hide_technical_details": {
+    "message": "Скрыть технические подробности"
+  },
+  "workspace_show_technical_details": {
+    "message": "Показать технические подробности"
+  },
+  "workspace_unverified": {
+    "message": "Не проверена"
+  },
+  "workspace_signature_verified": {
+    "message": "Подпись проверена"
+  },
+  "workspace_output_size_line": {
+    "message": "$name$ - $size$"
+  },
+  "workspace_find_replace": {
+    "message": "Найти и заменить"
+  },
+  "workspace_find_hide_replace": {
+    "message": "Скрыть замену"
+  },
+  "workspace_find_show_replace": {
+    "message": "Показать замену"
+  },
+  "workspace_find_label": {
+    "message": "Найти"
+  },
+  "workspace_replace_with": {
+    "message": "Заменить на"
+  },
+  "workspace_replace": {
+    "message": "Заменить"
+  },
+  "workspace_replace_all_short": {
+    "message": "Все"
+  },
+  "workspace_replace_all": {
+    "message": "Заменить все"
+  },
+  "workspace_replace_all_shortcut": {
+    "message": "Заменить все ($shortcut$)"
+  },
+  "workspace_match_case": {
+    "message": "Учитывать регистр"
+  },
+  "workspace_previous_match": {
+    "message": "Предыдущее совпадение"
+  },
+  "workspace_next_match": {
+    "message": "Следующее совпадение"
+  },
+  "workspace_close_find": {
+    "message": "Закрыть поиск"
+  },
+  "workspace_message_tools": {
+    "message": "Инструменты сообщения"
+  },
+  "workspace_style_bold": {
+    "message": "Жирный"
+  },
+  "workspace_style_italic": {
+    "message": "Курсив"
+  },
+  "workspace_style_strike": {
+    "message": "Зачёркнутый"
+  },
+  "workspace_style_code": {
+    "message": "Код"
+  },
+  "workspace_translating": {
+    "message": "Перевод..."
+  },
+  "workspace_translate_to": {
+    "message": "Перевести на $language$"
+  },
+  "workspace_translate": {
+    "message": "Перевести"
+  },
+  "workspace_translate_menu_heading": {
+    "message": "Перевести сообщение на"
+  },
+  "workspace_search_languages": {
+    "message": "Поиск языка"
+  },
+  "workspace_no_such_language": {
+    "message": "Такого языка нет."
+  },
+  "workspace_restore_original": {
+    "message": "Восстановить оригинал"
+  },
+  "workspace_show_original": {
+    "message": "Показать оригинал"
+  },
+  "workspace_show_translation": {
+    "message": "Показать перевод: $language$"
+  },
+  "workspace_working": {
+    "message": "Обработка..."
+  },
+  "workspace_note_same_language": {
+    "message": "Сообщение уже на этом языке ($language$)."
+  },
+  "workspace_note_uncertain": {
+    "message": "Не удалось определить язык этого сообщения."
+  },
+  "workspace_note_downloading_progress": {
+    "message": "Скачивание: $what$, $percent$%"
+  },
+  "workspace_note_downloading": {
+    "message": "Скачивание: $what$..."
+  },
+  "workspace_note_translated_from": {
+    "message": "Переведено на этом устройстве. Исходный язык: $language$."
+  },
+  "workspace_drop_files_or_text": {
+    "message": "Перетащите сюда файлы или текст"
+  },
+  "workspace_browse_files": {
+    "message": "Выбрать файлы"
+  },
+  "workspace_clear_all_files": {
+    "message": "Очистить все"
+  },
+  "workspace_detected_key_known": {
+    "message": "У вас уже есть ключ $name$."
+  },
+  "workspace_detected_key_show": {
+    "message": "Показать в ваших ключах"
+  },
+  "workspace_detected_key_in_message": {
+    "message": "Это сообщение содержит открытый ключ $name$."
+  },
+  "workspace_detected_key_pasted": {
+    "message": "Это открытый ключ $name$."
+  },
+  "workspace_detected_key_in_message_anon": {
+    "message": "Это сообщение содержит чей-то открытый ключ."
+  },
+  "workspace_detected_key_pasted_anon": {
+    "message": "Это похоже на чей-то открытый ключ."
+  },
+  "workspace_detected_key_import": {
+    "message": "Импортировать как контакт"
+  },
+  "workspace_message_password_title": {
+    "message": "Пароль для этого сообщения"
+  },
+  "workspace_set_password": {
+    "message": "Задать пароль"
+  },
+  "workspace_message_password_label": {
+    "message": "Пароль сообщения"
+  },
+  "workspace_hide_password": {
+    "message": "Скрыть пароль"
+  },
+  "workspace_show_password": {
+    "message": "Показать пароль"
+  },
+  "workspace_password_too_short_one": {
+    "message": "Используйте не менее $count$ символа."
+  },
+  "workspace_password_too_short_few": {
+    "message": "Используйте не менее $count$ символов."
+  },
+  "workspace_password_too_short_many": {
+    "message": "Используйте не менее $count$ символов."
+  },
+  "workspace_password_too_short_other": {
+    "message": "Используйте не менее $count$ символа."
+  },
+  "workspace_password_min_length_one": {
+    "message": "Не менее $count$ символа."
+  },
+  "workspace_password_min_length_few": {
+    "message": "Не менее $count$ символов."
+  },
+  "workspace_password_min_length_many": {
+    "message": "Не менее $count$ символов."
+  },
+  "workspace_password_min_length_other": {
+    "message": "Не менее $count$ символа."
+  },
+  "workspace_message_password_help": {
+    "message": "Любой, у кого есть этот пароль, сможет прочитать сообщение, поэтому передайте его другим способом - не вместе с самим сообщением. Он добавляется к сообщению в дополнение к выбранным получателям; открыть его сможет любой из них."
+  },
+  "workspace_history_save_failed": {
+    "message": "Не удалось сохранить в историю - возможно, хранилище заполнено"
+  },
+  "workspace_operation_failed": {
+    "message": "Не удалось выполнить операцию. Повторите попытку."
+  },
+  "workspace_error_need_recipient_or_password": {
+    "message": "Выберите хотя бы один ключ получателя или задайте пароль."
+  },
+  "workspace_error_engine_mismatch": {
+    "message": "Не удалось определить, в каком формате шифровать."
+  },
+  "workspace_status_age_encrypted": {
+    "message": "Сообщение age - зашифровано для получателей SSH"
+  },
+  "workspace_files_encrypted_one": {
+    "message": "Зашифрован $count$ файл (всего $size$)"
+  },
+  "workspace_files_encrypted_few": {
+    "message": "Зашифровано $count$ файла (всего $size$)"
+  },
+  "workspace_files_encrypted_many": {
+    "message": "Зашифровано $count$ файлов (всего $size$)"
+  },
+  "workspace_files_encrypted_other": {
+    "message": "Зашифровано $count$ файла (всего $size$)"
+  },
+  "workspace_files_zipped_encrypted_one": {
+    "message": "$count$ файл упакован и зашифрован"
+  },
+  "workspace_files_zipped_encrypted_few": {
+    "message": "$count$ файла упакованы и зашифрованы"
+  },
+  "workspace_files_zipped_encrypted_many": {
+    "message": "$count$ файлов упакованы и зашифрованы"
+  },
+  "workspace_files_zipped_encrypted_other": {
+    "message": "$count$ файла упакованы и зашифрованы"
+  },
+  "workspace_files_decrypted_one": {
+    "message": "Расшифрован $count$ файл (всего $size$)"
+  },
+  "workspace_files_decrypted_few": {
+    "message": "Расшифровано $count$ файла (всего $size$)"
+  },
+  "workspace_files_decrypted_many": {
+    "message": "Расшифровано $count$ файлов (всего $size$)"
+  },
+  "workspace_files_decrypted_other": {
+    "message": "Расшифровано $count$ файла (всего $size$)"
+  },
+  "workspace_files_signed_one": {
+    "message": "Подписан $count$ файл"
+  },
+  "workspace_files_signed_few": {
+    "message": "Подписано $count$ файла"
+  },
+  "workspace_files_signed_many": {
+    "message": "Подписано $count$ файлов"
+  },
+  "workspace_files_signed_other": {
+    "message": "Подписано $count$ файла"
+  },
+  "workspace_status_decrypted_archive": {
+    "message": "Расшифрован архив с несколькими файлами"
+  },
+  "workspace_error_decrypt_failed_ssh": {
+    "message": "Не удалось расшифровать. Сообщение может быть повреждено или зашифровано не для ваших SSH-ключей."
+  },
+  "workspace_error_decrypt_failed": {
+    "message": "Не удалось расшифровать. Сообщение может быть повреждено или зашифровано не для ваших ключей."
+  },
+  "workspace_error_select_decryption_key": {
+    "message": "Выберите ключ для расшифровки."
+  },
+  "workspace_unknown_signer": {
+    "message": "Неизвестный подписант"
+  },
+  "workspace_status_signer_unknown": {
+    "message": "Это сообщение подписано, но открытого ключа подписанта нет среди ваших ключей и контактов, поэтому проверить подпись не удалось."
+  },
+  "workspace_error_signature_invalid": {
+    "message": "Проверка подписи НЕ ПРОЙДЕНА - сообщение могло быть изменено"
+  },
+  "workspace_error_not_signed": {
+    "message": "Это сообщение не подписано."
+  },
+  "workspace_error_verify_failed": {
+    "message": "Не удалось проверить. Введённые данные не похожи на подписанное PGP-сообщение."
+  },
+  "workspace_error_no_signing_key_ssh": {
+    "message": "Нет ключа для подписи. SSH-ключи не могут подписывать - сначала добавьте ключ OpenPGP."
+  },
+  "workspace_error_no_signing_key": {
+    "message": "Нет ключа для подписи. Сначала добавьте ключ."
+  },
+  "workspace_status_crx_signed": {
+    "message": "Подписан $name$ - сохранение..."
+  },
+  "workspace_error_crx_wrong_password": {
+    "message": "Неверный пароль или не удалось подписать."
+  },
+  "workspace_error_crx_sign_failed": {
+    "message": "Не удалось подписать CRX. Повторите попытку."
+  },
+  "workspace_error_select_crx_key": {
+    "message": "Сначала выберите ключ подписи CRX."
+  },
+  "workspace_status_crx_valid": {
+    "message": "Действительный CRX - расширение $id$"
+  },
+  "workspace_error_crx_invalid": {
+    "message": "Не удалось проверить подпись CRX этого файла."
+  },
+  "workspace_error_read_file": {
+    "message": "Не удалось прочитать этот файл. Повторите попытку."
+  },
+  "workspace_error_wrong_key_password": {
+    "message": "Неверный пароль. Проверьте его и повторите попытку."
+  },
+  "workspace_error_unlock_failed": {
+    "message": "Не удалось разблокировать. Повторите попытку."
+  }
+}

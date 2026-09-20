@@ -3,6 +3,8 @@ import { ArrowRightIcon, LockKeyholeIcon } from "lucide-react";
 
 import { Button } from "@amibeingpwned/ui/button";
 
+import { t } from "../../lib/i18n";
+
 export function Welcome() {
   const [opened, setOpened] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,11 +22,7 @@ export function Welcome() {
       await chrome.sidePanel.open({ windowId: win.id });
       setOpened(true);
     } catch (e) {
-      setError(
-        e instanceof Error
-          ? e.message
-          : "Could not open the side panel. Click the PGP Tools icon in your toolbar.",
-      );
+      setError(e instanceof Error ? e.message : t("app_welcome_open_failed"));
     }
   };
 
@@ -33,7 +31,7 @@ export function Welcome() {
       <div className="flex min-h-screen items-center justify-end p-12">
         <div className="flex max-w-md items-center gap-6 text-right">
           <p className="text-2xl leading-snug font-medium">
-            Follow the instructions in the side panel to get started
+            {t("app_welcome_opened")}
           </p>
           <ArrowRightIcon className="text-primary h-16 w-16 shrink-0" />
         </div>
@@ -49,16 +47,14 @@ export function Welcome() {
         </div>
 
         <div>
-          <h1 className="text-xl font-semibold">PGP Tools is installed</h1>
+          <h1 className="text-xl font-semibold">{t("app_welcome_title")}</h1>
           <p className="text-muted-foreground mt-2 text-sm">
-            Click below to open the side panel and finish setting up your keys.
-            After this, use the PGP Tools icon in the toolbar to re-open it any
-            time.
+            {t("app_welcome_body")}
           </p>
         </div>
 
         <Button className="w-full" onClick={() => void handleStart()}>
-          Click here to get started
+          {t("app_welcome_start")}
         </Button>
 
         {error && (
@@ -68,16 +64,17 @@ export function Welcome() {
         )}
 
         <p className="text-muted-foreground text-xs">
-          A privacy tool by{" "}
+          {t("app_welcome_credit_before")}{" "}
           <a
             href="https://amibeingpwned.com"
             target="_blank"
             rel="noopener noreferrer"
             className="text-primary underline"
           >
+            {/* i18n-ignore */}
             Am I Being Pwned
           </a>
-          .
+          {t("app_welcome_credit_after")}
         </p>
       </div>
     </div>

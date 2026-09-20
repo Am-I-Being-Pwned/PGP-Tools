@@ -6,6 +6,7 @@ import { Button } from "@amibeingpwned/ui/button";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { KeyDetailsTarget } from "./KeyDetailsPage";
+import { t } from "../../lib/i18n";
 import { KeyDetailsPage } from "./KeyDetailsPage";
 
 type AnyKey = ProtectedKeyBlob | PublicContactKey;
@@ -29,8 +30,8 @@ export function KeyDetailsButton({ keyData }: { keyData: AnyKey }) {
       <Button
         type="button"
         variant="outline"
-        aria-label="Key details"
-        title="Key details"
+        aria-label={t("keys_key_details")}
+        title={t("keys_key_details")}
         className="text-muted-foreground hover:text-foreground h-auto shrink-0 px-2"
         onClick={() => setOpen(true)}
       >

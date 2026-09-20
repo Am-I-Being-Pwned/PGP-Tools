@@ -1,8 +1,8 @@
 {
-  "extName": {
-    "message": "Email titkosítás OpenPGP és GPG - Telegram & WhatsApp Compatible"
-  },
   "extDescription": {
     "message": "Titkosítson, fejtsen vissza, írjon alá és ellenőrizzen OpenPGP és GPG segítségével."
+  },
+  "extName": {
+    "message": "Email titkosítás OpenPGP és GPG - Telegram & WhatsApp Compatible"
   }
 }

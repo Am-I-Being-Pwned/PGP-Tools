@@ -25,6 +25,7 @@ import { recoverArmorIfNeeded } from "../../lib/armor-recovery";
 import { readKeyFile } from "../../lib/binary-armor";
 import { importCrxKey } from "../../lib/crx/operations";
 import { AppError } from "../../lib/errors/app-error";
+import { t, tn } from "../../lib/i18n";
 import {
   githubFailureCopy,
   prepareGithubImport,
@@ -268,12 +269,9 @@ export function ImportKeyPage({
       }
       const flagged = keys.filter((k) => k.securityWarning).length;
       if (flagged > 0) {
-        toast.warning(
-          `${flagged} key${flagged > 1 ? "s use" : " uses"} weak crypto (SHA-1) and ${
-            flagged > 1 ? "were" : "was"
-          } flagged - see the warning on the contact.`,
-          { id: "contacts-flagged" },
-        );
+        toast.warning(tn("import_flagged_toast", flagged), {
+          id: "contacts-flagged",
+        });
       }
       // Only bundles get a toast: a single import is confirmed by the
       // card lighting up in the list behind the panel.
@@ -281,19 +279,19 @@ export function ImportKeyPage({
         const added = keys.filter((k) => k.status === "new").length;
         const updated = keys.filter((k) => k.status === "update").length;
         if (added > 0) {
-          toast.success(`Added ${added} contact${added > 1 ? "s" : ""}`, {
+          toast.success(tn("import_added_contacts", added), {
             id: "contacts-added",
           });
         }
         if (updated > 0) {
-          toast.info(`${updated} contact${updated > 1 ? "s" : ""} updated`, {
+          toast.info(tn("import_updated_contacts", updated), {
             id: "contacts-updated",
           });
         }
       }
       finish(keys.map((k) => k.keyId));
     } catch (e) {
-      setError(errorMessage(e, "Import failed"));
+      setError(errorMessage(e, t("import_failed")));
       setImporting(false);
     }
   };
@@ -345,9 +343,7 @@ export function ImportKeyPage({
       );
 
       if (prepared.unparseable || prepared.keys.length === 0) {
-        setError(
-          "That doesn't look like a key we can read. Paste an armored PGP key block or an SSH public key line, or browse for a key file.",
-        );
+        setError(t("import_unreadable"));
         return;
       }
 
@@ -380,7 +376,7 @@ export function ImportKeyPage({
       if (isSecretKind(key.kind)) {
         const secret = prepared.secrets.get(key.keyId);
         if (!secret) {
-          setError("Could not read that private key.");
+          setError(t("import_private_unreadable"));
           return;
         }
         secretArmorRef.current = secret;
@@ -404,7 +400,7 @@ export function ImportKeyPage({
       setIncoming(key);
       setStep("preview");
     } catch (e) {
-      setError(errorMessage(e, "Import failed"));
+      setError(errorMessage(e, t("import_failed")));
     } finally {
       setParsing(false);
       parsingRef.current = false;
@@ -436,7 +432,7 @@ export function ImportKeyPage({
     if (!response) {
       // The worker died or no listener answered: nothing came back at
       // all, which is not one of the tagged codes.
-      setError("Couldn't reach the extension's background worker.");
+      setError(t("import_worker_unreachable"));
       return;
     }
     if (!response.ok) {
@@ -490,7 +486,7 @@ export function ImportKeyPage({
     >(request);
 
     if (!response) {
-      setError("Couldn't reach the extension's background worker.");
+      setError(t("import_worker_unreachable"));
       return;
     }
     if (!response.ok) {
@@ -518,9 +514,7 @@ export function ImportKeyPage({
       // deliberately did not check that the bytes between them are a
       // certificate, because that is the engine's call and this is
       // where the engine gets made. So this branch is reachable.
-      setError(
-        `${KEYSERVER_HOST} answered, but what it sent isn't a key we can read.`,
-      );
+      setError(t("import_keyserver_not_a_key", { host: KEYSERVER_HOST }));
       return;
     }
     if ((response.omitted ?? 0) > 0) {
@@ -534,7 +528,7 @@ export function ImportKeyPage({
       // would put the warning on a screen the user has just left. Same
       // stable-id discipline as the security warning below.
       toast.warning(
-        `${KEYSERVER_HOST} returned more than one key for this lookup. Only the first is shown - check the fingerprint before importing it.`,
+        t("import_keyserver_multiple_keys", { host: KEYSERVER_HOST }),
         { id: "keyserver-multiple-keys" },
       );
     }
@@ -566,9 +560,7 @@ export function ImportKeyPage({
 
     const routed = classifyLookup(lookupInput);
     if (!routed) {
-      setError(
-        "That isn't a GitHub username, an email address or a key fingerprint. Try “octocat”, “alice@example.com”, or the full 40-character fingerprint.",
-      );
+      setError(t("import_lookup_invalid"));
       return;
     }
 
@@ -581,7 +573,7 @@ export function ImportKeyPage({
         await lookupKeyserverKey(routed.query);
       }
     } catch (e) {
-      setError(errorMessage(e, "Lookup failed"));
+      setError(errorMessage(e, t("import_lookup_failed")));
     } finally {
       setParsing(false);
       parsingRef.current = false;
@@ -717,11 +709,11 @@ export function ImportKeyPage({
     }
     const secret = secretArmorRef.current;
     if (!incoming || !secret) {
-      setError("No key to import.");
+      setError(t("import_no_key"));
       return;
     }
     if (secretEncrypted && !sourcePassphrase) {
-      setError("Enter the key's passphrase.");
+      setError(t("import_enter_passphrase"));
       return;
     }
 
@@ -739,12 +731,12 @@ export function ImportKeyPage({
                 : undefined,
               prfSalt: reusePasskey ? masterSealSalt : undefined,
             },
-        { userIdHint: incoming.userIds[0] ?? "Imported PGP Key" },
+        { userIdHint: incoming.userIds[0] ?? t("import_default_pgp_name") },
       );
       await onImportPrivate(blob);
       finish([blob.keyId]);
     } catch (e) {
-      setError(errorMessage(e, "Import failed"));
+      setError(errorMessage(e, t("import_failed")));
     } finally {
       setImporting(false);
     }
@@ -781,7 +773,7 @@ export function ImportKeyPage({
       await onImportCrx(blob);
       finish([blob.extensionId]);
     } catch (e) {
-      setError(errorMessage(e, "Import failed"));
+      setError(errorMessage(e, t("import_failed")));
     } finally {
       setImporting(false);
     }
@@ -810,12 +802,12 @@ export function ImportKeyPage({
       }
     }
     if (secretEncrypted && !sourcePassphrase) {
-      setError("Enter the key's passphrase.");
+      setError(t("import_enter_passphrase"));
       return;
     }
     const keyText = secretArmorRef.current;
     if (!incoming || !keyText) {
-      setError("No key to import.");
+      setError(t("import_no_key"));
       return;
     }
 
@@ -833,7 +825,7 @@ export function ImportKeyPage({
                 : undefined,
               prfSalt: reusePasskey ? masterSealSalt : undefined,
             },
-        { userIdHint: incoming.userIds[0] ?? "Imported SSH key" },
+        { userIdHint: incoming.userIds[0] ?? t("import_default_ssh_name") },
       );
       await onImportPrivate(blob);
       // Success: drop the key text now rather than waiting for the
@@ -841,7 +833,7 @@ export function ImportKeyPage({
       secretArmorRef.current = null;
       finish([blob.keyId]);
     } catch (e) {
-      const message = errorMessage(e, "Import failed");
+      const message = errorMessage(e, t("import_failed"));
       // Revealing the field IS the retry affordance -- the key text is
       // still in the ref, so the next attempt runs from this same step.
       // Keyed on the tagged code, never on the engine's wording: a prose
@@ -880,11 +872,15 @@ export function ImportKeyPage({
 
   const title =
     step === "preview" && incoming?.status === "update"
-      ? "Update key"
-      : "Import key";
+      ? t("import_title_update")
+      : t("import_title");
 
   return (
-    <SlideOverPanel entered={entered} ariaLabel="Import key" onDismiss={close}>
+    <SlideOverPanel
+      entered={entered}
+      ariaLabel={t("import_title")}
+      onDismiss={close}
+    >
       <SlideOverHeader title={title} onBack={handleBack} />
       <div className="flex flex-1 flex-col overflow-hidden">
         {step === "source" && (
@@ -906,8 +902,10 @@ export function ImportKeyPage({
                 ref={(el) => el?.setAttribute("autofocus", "")}
                 spellCheck={false}
                 autoComplete="off"
-                aria-label="Paste a key"
-                placeholder={`Paste a key with ${modKeyLabel()}`}
+                aria-label={t("import_paste_label")}
+                placeholder={t("import_paste_placeholder", {
+                  shortcut: modKeyLabel(),
+                })}
                 value=""
                 disabled={parsing}
                 onChange={() => setTypedIntoPasteBox(true)}
@@ -923,7 +921,7 @@ export function ImportKeyPage({
               />
               {typedIntoPasteBox && (
                 <p className="text-muted-foreground -mt-2 text-xs">
-                  Paste the whole key block - a key is too long to type out.
+                  {t("import_paste_hint")}
                 </p>
               )}
               <div
@@ -953,20 +951,22 @@ export function ImportKeyPage({
                   <>
                     <LoaderIcon className="text-primary h-5 w-5 animate-spin" />
                     <p className="text-muted-foreground text-xs">
-                      Reading key...
+                      {t("import_reading")}
                     </p>
                   </>
                 ) : (
                   <>
                     <UploadCloudIcon className="text-muted-foreground h-6 w-6" />
-                    <p className="text-sm font-medium">Drop a key file here</p>
+                    <p className="text-sm font-medium">
+                      {t("import_drop_here")}
+                    </p>
                     <Button
                       variant="outline"
                       size="sm"
                       className="mt-1"
                       onClick={() => fileInputRef.current?.click()}
                     >
-                      Browse for key file
+                      {t("import_browse")}
                     </Button>
                   </>
                 )}
@@ -998,7 +998,7 @@ export function ImportKeyPage({
                     htmlFor="key-lookup"
                     className="text-muted-foreground block text-xs"
                   >
-                    Or look someone up
+                    {t("import_lookup_label")}
                   </label>
                   <div className="flex gap-2">
                     <input
@@ -1008,7 +1008,7 @@ export function ImportKeyPage({
                       spellCheck={false}
                       autoComplete="off"
                       autoCapitalize="off"
-                      placeholder="GitHub username, email, or fingerprint"
+                      placeholder={t("import_lookup_placeholder")}
                       value={lookupInput}
                       disabled={parsing}
                       onChange={(e) => setLookupInput(e.target.value)}
@@ -1024,7 +1024,7 @@ export function ImportKeyPage({
                       onClick={() => void runLookup()}
                       disabled={parsing || !lookupInput.trim()}
                     >
-                      Look up
+                      {t("import_lookup_button")}
                     </Button>
                   </div>
                   {notice && (
@@ -1052,8 +1052,7 @@ export function ImportKeyPage({
                 </div>
               )}
               <p className="text-muted-foreground text-xs">
-                Public keys are added as contacts. A private key stays on this
-                device - you'll choose how it's protected next.
+                {t("import_source_help")}
               </p>
               {error && (
                 <p className="text-destructive text-xs" role="alert">
@@ -1094,12 +1093,14 @@ export function ImportKeyPage({
               // has no user ID to name itself with.
               <div>
                 <label className="text-muted-foreground mb-1 block text-xs">
-                  Label{" "}
-                  <span className="text-muted-foreground/60">optional</span>
+                  {t("import_label_field")}{" "}
+                  <span className="text-muted-foreground/60">
+                    {t("import_optional")}
+                  </span>
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. My Extension"
+                  placeholder={t("import_label_placeholder")}
                   value={label}
                   onChange={(e) => setLabel(e.target.value)}
                   className={INPUT_CLASS}
@@ -1112,7 +1113,7 @@ export function ImportKeyPage({
             {secretEncrypted && (
               <div className="space-y-1">
                 <label className="text-muted-foreground block text-xs">
-                  This key is protected with a passphrase
+                  {t("import_passphrase_label")}
                 </label>
                 <input
                   type="password"
@@ -1120,7 +1121,7 @@ export function ImportKeyPage({
                   autoComplete="current-password"
                   value={sourcePassphrase}
                   onChange={(e) => setSourcePassphrase(e.target.value)}
-                  placeholder="Key passphrase"
+                  placeholder={t("import_passphrase_placeholder")}
                   className={INPUT_CLASS}
                 />
               </div>
@@ -1136,7 +1137,7 @@ export function ImportKeyPage({
               onSubmit={handleProtectSubmit}
               onBack={handleBack}
               submitting={importing}
-              submitLabel="Import"
+              submitLabel={t("import_submit")}
               reusePasskeyCredentialId={reusePasskeyCredentialId}
               reusePasskey={reusePasskey}
               onReusePasskeyChange={setReusePasskey}

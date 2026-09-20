@@ -1,5 +1,6 @@
 import type { KeyDetails, KeyInfo } from "../../lib/pgp/types";
 import type { ContactRecipient } from "../../lib/storage/contacts";
+import { t } from "../../lib/i18n";
 
 /**
  * What the key body RENDERS, as opposed to what any one engine parses.
@@ -183,8 +184,8 @@ export function sshGroupKeyFacts(
         status: "active" as const,
       })),
       truncated: false,
-      title: "Keys",
-      rowLabel: "Key",
+      title: t("common_keys"),
+      rowLabel: t("keys_group_row_label"),
     },
   };
 }

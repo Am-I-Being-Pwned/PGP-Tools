@@ -1,8 +1,4263 @@
 {
-  "extName": {
-    "message": "Cifrado de correo OpenPGP y GPG - Gmail & Outlook Compatible"
+  "actions_add_own_key_first": {
+    "message": "Añada primero una clave propia"
+  },
+  "actions_add_recipients_placeholder": {
+    "message": "Añadir destinatarios..."
+  },
+  "actions_age_cannot_sign": {
+    "message": "Los mensajes age no se pueden firmar"
+  },
+  "actions_badge_you": {
+    "message": "Yo"
+  },
+  "actions_clear_all_recipients": {
+    "message": "Quitar todos los destinatarios"
+  },
+  "actions_clear_input": {
+    "message": "Borrar entrada"
+  },
+  "actions_copy_output": {
+    "message": "Copiar resultado"
+  },
+  "actions_disabled_toast": {
+    "message": "$name$ está desactivado: $reason$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "reason": {
+        "content": "$2"
+      }
+    }
+  },
+  "actions_download_output": {
+    "message": "Descargar resultado"
+  },
+  "actions_encrypt_to_self_off": {
+    "message": "Desactivar: Cifrar también para mí"
+  },
+  "actions_encrypt_to_self_on": {
+    "message": "Activar: Cifrar también para mí"
+  },
+  "actions_find_replace": {
+    "message": "Buscar y reemplazar en el mensaje"
+  },
+  "actions_generate_key": {
+    "message": "Generar clave"
+  },
+  "actions_go_to_keys": {
+    "message": "Ir a Claves"
+  },
+  "actions_go_to_settings": {
+    "message": "Ir a Configuración"
+  },
+  "actions_go_to_workspace": {
+    "message": "Ir al Espacio de trabajo"
+  },
+  "actions_group_contacts": {
+    "message": "Contactos"
+  },
+  "actions_group_keys": {
+    "message": "Claves"
+  },
+  "actions_group_message": {
+    "message": "Mensaje"
+  },
+  "actions_group_mode": {
+    "message": "Modo"
+  },
+  "actions_group_my_keys": {
+    "message": "Mis claves"
+  },
+  "actions_group_navigation": {
+    "message": "Navegación"
+  },
+  "actions_group_recent": {
+    "message": "Recientes"
+  },
+  "actions_group_result": {
+    "message": "Resultado"
+  },
+  "actions_group_session": {
+    "message": "Sesión"
+  },
+  "actions_group_settings": {
+    "message": "Configuración"
+  },
+  "actions_group_workspace": {
+    "message": "Espacio de trabajo"
+  },
+  "actions_history": {
+    "message": "Historial"
+  },
+  "actions_history_clear": {
+    "message": "Borrar historial"
+  },
+  "actions_history_delete_all_one": {
+    "message": "Eliminar $count$ entrada del historial",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_delete_all_other": {
+    "message": "Eliminar las $count$ entradas del historial",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_delete_warning": {
+    "message": "Esto elimina de forma permanente el historial cifrado de operaciones de este dispositivo. No se puede recuperar."
+  },
+  "actions_history_empty": {
+    "message": "Sin historial"
+  },
+  "actions_history_file_with_size": {
+    "message": "$name$ ($size$)",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "size": {
+        "content": "$2"
+      }
+    }
+  },
+  "actions_history_files_one": {
+    "message": "$count$ archivo",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_files_other": {
+    "message": "$count$ archivos",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_metadata_only": {
+    "message": "Solo metadatos - el contenido no se guarda para esta operación."
+  },
+  "actions_history_more_matches_one": {
+    "message": "+$count$ coincidencia más",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_more_matches_other": {
+    "message": "+$count$ coincidencias más",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_no_content": {
+    "message": "Sin contenido guardado"
+  },
+  "actions_history_no_matches": {
+    "message": "Ninguna entrada del historial coincide con «$query$»",
+    "placeholders": {
+      "query": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_off_never_cache": {
+    "message": "El historial está desactivado mientras «Nunca guardar claves en caché» esté activado"
+  },
+  "actions_history_off_reason": {
+    "message": "El historial está desactivado - actívelo junto a Firmar"
+  },
+  "actions_history_op_signed": {
+    "message": "$op$ + firma",
+    "placeholders": {
+      "op": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_open_entry": {
+    "message": "Abrir $title$",
+    "placeholders": {
+      "title": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_recipient_with_id": {
+    "message": "$name$ ($id$)",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "id": {
+        "content": "$2"
+      }
+    }
+  },
+  "actions_history_search_label": {
+    "message": "Buscar en el historial"
+  },
+  "actions_history_search_placeholder": {
+    "message": "Buscar en el historial..."
+  },
+  "actions_history_to": {
+    "message": "Para $names$",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_truncated": {
+    "message": "[truncado]"
+  },
+  "actions_history_usage": {
+    "message": "$used$ de $budget$ usados",
+    "placeholders": {
+      "used": {
+        "content": "$1"
+      },
+      "budget": {
+        "content": "$2"
+      }
+    }
+  },
+  "actions_history_when": {
+    "message": "$date$ ($relative$)",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      },
+      "relative": {
+        "content": "$2"
+      }
+    }
+  },
+  "actions_import_key": {
+    "message": "Importar clave"
+  },
+  "actions_keys_count_one": {
+    "message": "$count$ clave",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_keys_count_other": {
+    "message": "$count$ claves",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_keys_of_total": {
+    "message": "$active$ de $count$ claves",
+    "placeholders": {
+      "active": {
+        "content": "$1"
+      },
+      "count": {
+        "content": "$2"
+      }
+    }
+  },
+  "actions_language_last_used": {
+    "message": "$label$ (último usado)",
+    "placeholders": {
+      "label": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_lock_now": {
+    "message": "Bloquear ahora"
+  },
+  "actions_mixed_engine_reason": {
+    "message": "No se pueden combinar destinatarios PGP y SSH en un mismo mensaje: OpenPGP y age son formatos distintos. Cifre para un grupo y luego para el otro."
+  },
+  "actions_need_recipient_or_password": {
+    "message": "Seleccione al menos un destinatario o establezca una contraseña"
+  },
+  "actions_no_input_decrypt": {
+    "message": "Nada que descifrar - pegue un mensaje cifrado o suelte un archivo"
+  },
+  "actions_no_input_encrypt": {
+    "message": "Nada que cifrar - añada texto o suelte un archivo"
+  },
+  "actions_no_input_sign": {
+    "message": "Nada que firmar - añada texto o suelte un archivo"
+  },
+  "actions_no_input_verify": {
+    "message": "Nada que verificar - pegue un mensaje firmado o suelte un archivo"
+  },
+  "actions_no_keys_available": {
+    "message": "No hay claves disponibles"
+  },
+  "actions_no_keys_found": {
+    "message": "No se han encontrado claves"
+  },
+  "actions_no_matches": {
+    "message": "Sin coincidencias"
+  },
+  "actions_no_output_to_copy": {
+    "message": "Todavía no hay resultado que copiar"
+  },
+  "actions_nothing_to_clear": {
+    "message": "Nada que borrar"
+  },
+  "actions_nothing_to_download": {
+    "message": "Todavía no hay nada que descargar"
+  },
+  "actions_nothing_to_translate": {
+    "message": "Todavía no hay nada que traducir"
+  },
+  "actions_open_history": {
+    "message": "Abrir historial"
+  },
+  "actions_open_security_presets": {
+    "message": "Abrir perfiles de seguridad"
+  },
+  "actions_palette_label": {
+    "message": "Paleta de comandos"
+  },
+  "actions_palette_no_commands": {
+    "message": "No hay comandos que coincidan."
+  },
+  "actions_palette_no_match": {
+    "message": "Sin coincidencias."
+  },
+  "actions_palette_placeholder": {
+    "message": "Escriba un comando..."
+  },
+  "actions_pick_language_placeholder": {
+    "message": "Elija un idioma..."
+  },
+  "actions_recipient_input_hint": {
+    "message": "Retroceso quita el último destinatario"
+  },
+  "actions_remove_recipient": {
+    "message": "Quitar a $name$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_remove_recipient_detail": {
+    "message": "Quitar a $name$ - $detail$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "detail": {
+        "content": "$2"
+      }
+    }
+  },
+  "actions_run_mode": {
+    "message": "Ejecutar $mode$",
+    "placeholders": {
+      "mode": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_save_to_history_off": {
+    "message": "Desactivar: Guardar en el historial"
+  },
+  "actions_save_to_history_on": {
+    "message": "Activar: Guardar en el historial"
+  },
+  "actions_search_placeholder": {
+    "message": "Buscar..."
+  },
+  "actions_select_key_placeholder": {
+    "message": "Seleccione una clave..."
+  },
+  "actions_set_up": {
+    "message": "Configurar"
+  },
+  "actions_sign_when_encrypting_off": {
+    "message": "Desactivar: Firmar al cifrar"
+  },
+  "actions_sign_when_encrypting_on": {
+    "message": "Activar: Firmar al cifrar"
+  },
+  "actions_ssh_password_reason": {
+    "message": "La contraseña de mensaje es una función de OpenPGP y age no la tiene, así que los destinatarios SSH no se pueden usar con ella. Quite la contraseña o cifre para esta persona sin ella."
+  },
+  "actions_style_bold": {
+    "message": "Selección en negrita"
+  },
+  "actions_style_code": {
+    "message": "Selección como código"
+  },
+  "actions_style_italic": {
+    "message": "Selección en cursiva"
+  },
+  "actions_style_strike": {
+    "message": "Selección tachada"
+  },
+  "actions_switch_to_workspace_first": {
+    "message": "Cambie primero al Espacio de trabajo"
+  },
+  "actions_toggle_recipient_list": {
+    "message": "Mostrar u ocultar la lista de destinatarios"
+  },
+  "actions_translate_message": {
+    "message": "Traducir mensaje..."
+  },
+  "actions_translate_result_to": {
+    "message": "Traducir al $language$",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_translate_to_title": {
+    "message": "Traducir el mensaje al"
+  },
+  "actions_translation_off": {
+    "message": "La traducción está desactivada en Configuración"
+  },
+  "app_action_title": {
+    "message": "PGP Tools"
+  },
+  "app_cmd_open": {
+    "message": "Abrir PGP Tools"
+  },
+  "app_cmd_open_decrypt": {
+    "message": "Abrir PGP Tools en modo Descifrar"
+  },
+  "app_cmd_open_encrypt": {
+    "message": "Abrir PGP Tools en modo Cifrar"
+  },
+  "app_cmd_open_sign": {
+    "message": "Abrir PGP Tools en modo Firmar"
+  },
+  "app_cmd_open_verify": {
+    "message": "Abrir PGP Tools en modo Verificar"
+  },
+  "app_copied": {
+    "message": "Copiado: $label$",
+    "placeholders": {
+      "label": {
+        "content": "$1"
+      }
+    }
+  },
+  "app_copied_wipe": {
+    "message": "Copiado: $label$ - el portapapeles se borrará en $seconds$ s",
+    "placeholders": {
+      "label": {
+        "content": "$1"
+      },
+      "seconds": {
+        "content": "$2"
+      }
+    }
+  },
+  "app_copy_failed": {
+    "message": "No se ha podido copiar - haga clic primero en el panel de la extensión y vuelva a intentarlo."
+  },
+  "app_error_corrupted": {
+    "message": "Los datos están dañados o incompletos. Consiga una copia nueva y completa e inténtelo de nuevo."
+  },
+  "app_error_crx_unsigned": {
+    "message": "La firma CRX no coincide: no se firmó con esta clave o el archivo se modificó después de firmarlo. Obtenga una copia nueva del editor."
+  },
+  "app_error_key_expired": {
+    "message": "Una de las claves implicadas en esta operación ha caducado. Pida al propietario de la clave una clave actualizada e impórtela."
+  },
+  "app_error_key_locked": {
+    "message": "Esta clave está bloqueada. Desbloquéela e inténtelo de nuevo."
+  },
+  "app_error_key_not_found": {
+    "message": "Esa clave ya no está en su llavero, así que no se ha guardado nada. Vuelva a importar la clave e inténtelo de nuevo."
+  },
+  "app_error_key_revoked": {
+    "message": "Una de las claves implicadas en esta operación ha sido revocada por su propietario. Consiga su clave de reemplazo e impórtela."
+  },
+  "app_error_no_decryption_key": {
+    "message": "Este mensaje está cifrado para una clave que usted no tiene. Importe esa clave privada o pida al remitente que lo cifre para una de sus claves."
+  },
+  "app_error_no_decryption_key_with_id": {
+    "message": "Este mensaje está cifrado para una clave que usted no tiene (ID de clave $key_id$). Importe esa clave privada o pida al remitente que lo cifre para una de sus claves.",
+    "placeholders": {
+      "key_id": {
+        "content": "$1"
+      }
+    }
+  },
+  "app_error_not_crx": {
+    "message": "Esto no es un paquete de extensión de Chrome que esta herramienta pueda verificar. Elija un archivo CRX3 (.crx)."
+  },
+  "app_error_not_pgp_data": {
+    "message": "Esto no parecen datos PGP. Asegúrese de pegar el bloque con armadura completo, incluidas las líneas BEGIN y END."
+  },
+  "app_error_ocb_unsupported": {
+    "message": "Este mensaje usa un formato AEAD (OCB) antiguo que esta aplicación no puede leer. Pida al remitente que lo vuelva a enviar cifrado de forma normal - cualquier contraseña que elija servirá; lo que no se admite es el formato."
+  },
+  "app_error_passkey_dismissed": {
+    "message": "Se ha cerrado la solicitud de llave de acceso. Vuelva a ejecutar la operación cuando quiera."
+  },
+  "app_error_passkey_failed": {
+    "message": "Su llave de acceso no ha completado la operación. Inténtelo de nuevo o desbloquee con otro método."
+  },
+  "app_error_password_required": {
+    "message": "Esta clave necesita su contraseña. Introduzca la contraseña de la clave para desbloquearla."
+  },
+  "app_error_remedy_check_key": {
+    "message": "Revisar clave"
+  },
+  "app_error_remedy_import_key": {
+    "message": "Importar clave"
+  },
+  "app_error_remedy_try_again": {
+    "message": "Reintentar"
+  },
+  "app_error_storage_full": {
+    "message": "El almacenamiento del navegador está lleno, así que no se ha podido guardar. Quite las claves o los contactos que ya no necesite e inténtelo de nuevo."
+  },
+  "app_error_symmetric_wrong_password": {
+    "message": "Esa contraseña no ha abierto este mensaje. Compruébela e inténtelo de nuevo - si está seguro de que es correcta, puede que el mensaje esté dañado."
+  },
+  "app_error_tampered": {
+    "message": "Error al verificar la firma - puede que este mensaje haya sido manipulado. No confíe en el contenido; pida al remitente que lo vuelva a enviar."
+  },
+  "app_error_vault_locked": {
+    "message": "Su bóveda está bloqueada, así que no se ha cambiado nada. Desbloquéela y vuelva a ejecutar la operación."
+  },
+  "app_error_weak_algorithm": {
+    "message": "Esta clave usa un algoritmo de firma que ya no se considera seguro. Pida al propietario de la clave que la vuelva a emitir con SHA-256 o superior."
+  },
+  "app_error_weak_password": {
+    "message": "Esa contraseña es demasiado corta. Use al menos 8 caracteres."
+  },
+  "app_error_wrong_password": {
+    "message": "Contraseña incorrecta para esta clave. Compruébela e inténtelo de nuevo."
+  },
+  "app_import_added_one": {
+    "message": "Clave añadida"
+  },
+  "app_import_added_other": {
+    "message": "$count$ claves añadidas",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "app_import_view_key_one": {
+    "message": "Ver clave"
+  },
+  "app_import_view_key_other": {
+    "message": "Ver claves"
+  },
+  "app_menu_open_in_pgp_tools": {
+    "message": "Abrir en PGP Tools"
+  },
+  "app_nav_label": {
+    "message": "Navegación principal"
+  },
+  "app_onboarding_advanced_options": {
+    "message": "Opciones avanzadas"
+  },
+  "app_onboarding_algo_ecc_hint": {
+    "message": "Claves modernas, rápidas y pequeñas. Recomendado para la mayoría de los usos."
+  },
+  "app_onboarding_algo_rsa_hint": {
+    "message": "Amplia compatibilidad. Generación de claves más lenta."
+  },
+  "app_onboarding_algorithm_label": {
+    "message": "Algoritmo"
+  },
+  "app_onboarding_comment_label": {
+    "message": "Comentario"
+  },
+  "app_onboarding_comment_placeholder": {
+    "message": "p. ej. trabajo, personal"
+  },
+  "app_onboarding_create_key": {
+    "message": "Crear mi clave PGP"
+  },
+  "app_onboarding_create_passkey": {
+    "message": "Crear llave de acceso"
+  },
+  "app_onboarding_email_label": {
+    "message": "Correo electrónico"
+  },
+  "app_onboarding_email_placeholder": {
+    "message": "usted@example.com"
+  },
+  "app_onboarding_expiry_label": {
+    "message": "Caducidad de la clave"
+  },
+  "app_onboarding_expiry_never": {
+    "message": "Nunca"
+  },
+  "app_onboarding_expiry_years_one": {
+    "message": "$count$ año",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "app_onboarding_expiry_years_other": {
+    "message": "$count$ años",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "app_onboarding_generate_failed": {
+    "message": "Error al generar la clave"
+  },
+  "app_onboarding_generating": {
+    "message": "Generando clave..."
+  },
+  "app_onboarding_identity_body": {
+    "message": "Cree un par de claves para cifrar, descifrar y firmar mensajes."
+  },
+  "app_onboarding_identity_title": {
+    "message": "Cree su clave PGP"
+  },
+  "app_onboarding_intro_body": {
+    "message": "Envíe mensajes privados que solo pueda leer la persona correcta y verifique que los mensajes proceden realmente de quien dice enviarlos."
+  },
+  "app_onboarding_keep_defaults": {
+    "message": "Mantener los valores predeterminados"
+  },
+  "app_onboarding_name_label": {
+    "message": "Nombre *"
+  },
+  "app_onboarding_name_placeholder": {
+    "message": "Su nombre completo"
+  },
+  "app_onboarding_name_required": {
+    "message": "El nombre es obligatorio."
+  },
+  "app_onboarding_next": {
+    "message": "Siguiente"
+  },
+  "app_onboarding_optional": {
+    "message": "opcional"
+  },
+  "app_onboarding_passkey_prompt": {
+    "message": "Siga las indicaciones de llave de acceso de su navegador..."
+  },
+  "app_onboarding_preset_body": {
+    "message": "¿Cuánto cuidado debe tener PGP Tools con sus claves? Cada opción muestra exactamente qué ajustes aplica, y podrá cambiar cualquiera de ellos más tarde en Configuración."
+  },
+  "app_onboarding_preset_title": {
+    "message": "Elija un perfil de seguridad"
+  },
+  "app_onboarding_prf_unsupported": {
+    "message": "Su autenticador no admite PRF. Pruebe con otra llave de acceso o use una contraseña."
+  },
+  "app_onboarding_protection_body": {
+    "message": "Elija cómo proteger sus contactos y claves. Lo usará cada vez que abra PGP Tools."
+  },
+  "app_onboarding_protection_title": {
+    "message": "Proteja sus datos"
+  },
+  "app_onboarding_rsa_slow": {
+    "message": "Las claves RSA tardan un momento en generarse"
+  },
+  "app_onboarding_set_password": {
+    "message": "Establecer contraseña"
+  },
+  "app_onboarding_setup_failed": {
+    "message": "Error en la configuración"
+  },
+  "app_onboarding_skip": {
+    "message": "Lo configuraré más tarde"
+  },
+  "app_onboarding_storage_question": {
+    "message": "¿Dónde quiere guardar sus datos?"
+  },
+  "app_onboarding_unlock_with_vault": {
+    "message": "Desbloquear las claves con la bóveda"
+  },
+  "app_onboarding_unlock_with_vault_hint": {
+    "message": "La solicitud de llave de acceso que abre la bóveda también desbloquea sus claves. Sin solicitudes separadas por clave. Puede cambiarlo en Configuración."
+  },
+  "app_onboarding_use_preset": {
+    "message": "Usar este perfil"
+  },
+  "app_oversized_files_one": {
+    "message": "$files$: el archivo supera los $limit$ y no se puede procesar en el panel.",
+    "placeholders": {
+      "files": {
+        "content": "$1"
+      },
+      "limit": {
+        "content": "$2"
+      }
+    }
+  },
+  "app_oversized_files_other": {
+    "message": "$files$: los archivos superan los $limit$ y no se pueden procesar en el panel.",
+    "placeholders": {
+      "files": {
+        "content": "$1"
+      },
+      "limit": {
+        "content": "$2"
+      }
+    }
+  },
+  "app_oversized_more": {
+    "message": "$names$ y $count$ más",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      },
+      "count": {
+        "content": "$2"
+      }
+    }
+  },
+  "app_tab_main": {
+    "message": "Principal"
+  },
+  "app_vault_lock_retry": {
+    "message": "Bloquear y volver a intentar"
+  },
+  "app_vault_unreadable_body": {
+    "message": "Sus claves siguen guardadas en este dispositivo. Lo primero que conviene probar es bloquear e intentarlo de nuevo."
+  },
+  "app_vault_unreadable_body_passkey": {
+    "message": "Sus claves siguen guardadas en este dispositivo. Lo primero que conviene probar es bloquear e intentarlo de nuevo -- asegúrese de usar la misma llave de acceso que configuró."
+  },
+  "app_vault_unreadable_title": {
+    "message": "No se ha podido leer su bóveda."
+  },
+  "app_welcome_body": {
+    "message": "Haga clic abajo para abrir el panel lateral y terminar de configurar sus claves. Después, use el icono de PGP Tools en la barra de herramientas para volver a abrirlo cuando quiera."
+  },
+  "app_welcome_credit_after": {
+    "message": "."
+  },
+  "app_welcome_credit_before": {
+    "message": "Una herramienta de privacidad de"
+  },
+  "app_welcome_open_failed": {
+    "message": "No se ha podido abrir el panel lateral. Haga clic en el icono de PGP Tools en la barra de herramientas."
+  },
+  "app_welcome_opened": {
+    "message": "Siga las instrucciones del panel lateral para empezar"
+  },
+  "app_welcome_start": {
+    "message": "Haga clic aquí para empezar"
+  },
+  "app_welcome_title": {
+    "message": "PGP Tools está instalado"
+  },
+  "common_back": {
+    "message": "Atrás"
+  },
+  "common_cancel": {
+    "message": "Cancelar"
+  },
+  "common_continue": {
+    "message": "Continuar"
+  },
+  "common_copied": {
+    "message": "Copiado"
+  },
+  "common_copy": {
+    "message": "Copiar"
+  },
+  "common_decrypt": {
+    "message": "Descifrar"
+  },
+  "common_delete": {
+    "message": "Eliminar"
+  },
+  "common_done": {
+    "message": "Listo"
+  },
+  "common_download": {
+    "message": "Descargar"
+  },
+  "common_encrypt": {
+    "message": "Cifrar"
+  },
+  "common_keys": {
+    "message": "Claves"
+  },
+  "common_lock": {
+    "message": "Bloquear"
+  },
+  "common_off": {
+    "message": "Desactivado"
+  },
+  "common_on": {
+    "message": "Activado"
+  },
+  "common_private_key": {
+    "message": "Clave privada"
+  },
+  "common_public_key": {
+    "message": "Clave pública"
+  },
+  "common_remove": {
+    "message": "Quitar"
+  },
+  "common_save": {
+    "message": "Guardar"
+  },
+  "common_settings": {
+    "message": "Configuración"
+  },
+  "common_sign": {
+    "message": "Firmar"
+  },
+  "common_unlock": {
+    "message": "Desbloquear"
+  },
+  "common_verify": {
+    "message": "Verificar"
   },
   "extDescription": {
     "message": "Cifra, descifra, firma y verifica correo y mensajes con OpenPGP y GPG. Gestiona tus claves."
+  },
+  "extName": {
+    "message": "Cifrado de correo OpenPGP y GPG - Gmail & Outlook Compatible"
+  },
+  "import_action_import_contact": {
+    "message": "Importar contacto"
+  },
+  "import_action_replace_stored": {
+    "message": "Reemplazar clave guardada"
+  },
+  "import_action_update_contact": {
+    "message": "Actualizar contacto"
+  },
+  "import_added_contacts_one": {
+    "message": "$count$ contacto añadido",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_added_contacts_other": {
+    "message": "$count$ contactos añadidos",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_as_one_contact": {
+    "message": "Importar como un solo contacto"
+  },
+  "import_browse": {
+    "message": "Buscar archivo de clave"
+  },
+  "import_change_keys_added_one": {
+    "message": "$count$ clave añadida",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_keys_added_other": {
+    "message": "$count$ claves añadidas",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_keys_removed_one": {
+    "message": "$count$ clave eliminada",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_keys_removed_other": {
+    "message": "$count$ claves eliminadas",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_new_expiry": {
+    "message": "nueva caducidad: $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_new_subkeys_one": {
+    "message": "$count$ subclave nueva",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_new_subkeys_other": {
+    "message": "$count$ subclaves nuevas",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_new_user_ids_one": {
+    "message": "$count$ ID de usuario nuevo",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_new_user_ids_other": {
+    "message": "$count$ ID de usuario nuevos",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_no_expiry": {
+    "message": "ya no caduca"
+  },
+  "import_change_reissued": {
+    "message": "La clave se ha vuelto a emitir"
+  },
+  "import_chip_crx": {
+    "message": "Clave de extensión"
+  },
+  "import_chip_crx_title": {
+    "message": "Una clave de firma RSA para una extensión de Chrome (.crx)"
+  },
+  "import_chip_pgp_private_title": {
+    "message": "Incluye material de clave secreta - a continuación lo protegerá"
+  },
+  "import_chip_pgp_public_title": {
+    "message": "Clave de otra persona - se importa como contacto"
+  },
+  "import_chip_ssh_private": {
+    "message": "Clave SSH"
+  },
+  "import_chip_ssh_private_title": {
+    "message": "Una clave privada OpenSSH - a continuación la protegerá"
+  },
+  "import_chip_ssh_public": {
+    "message": "Clave pública SSH"
+  },
+  "import_chip_ssh_public_title": {
+    "message": "Clave SSH de otra persona - se importa como destinatario age"
+  },
+  "import_crx_headline": {
+    "message": "Clave de firma de extensión de Chrome"
+  },
+  "import_crx_note": {
+    "message": "Una clave de firma RSA para una extensión de Chrome (.crx). Su ID de extensión se calcula a partir de la propia clave al importarla."
+  },
+  "import_default_pgp_name": {
+    "message": "Clave PGP importada"
+  },
+  "import_default_ssh_name": {
+    "message": "Clave SSH importada"
+  },
+  "import_drop_here": {
+    "message": "Suelte aquí un archivo de clave"
+  },
+  "import_dropzone_browse": {
+    "message": "Buscar archivos"
+  },
+  "import_dropzone_text": {
+    "message": "Suelte, pegue o busque claves públicas"
+  },
+  "import_enter_passphrase": {
+    "message": "Introduzca la frase de contraseña de la clave."
+  },
+  "import_failed": {
+    "message": "Error al importar"
+  },
+  "import_flagged_toast_one": {
+    "message": "$count$ clave usa criptografía débil (SHA-1) y se ha marcado - vea el aviso en el contacto.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_flagged_toast_other": {
+    "message": "$count$ claves usan criptografía débil (SHA-1) y se han marcado - vea el aviso en el contacto.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_fetched_note": {
+    "message": "Obtenidas de github.com/$user$.keys. Los mensajes se cifran para todas las claves de la lista, así que cualquiera de sus equipos podrá leerlos.",
+    "placeholders": {
+      "user": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_invalid_username": {
+    "message": "Eso no es un nombre de usuario de GitHub. Use el nombre de la cuenta que aparece en la URL del perfil, p. ej. «octocat» para github.com/octocat."
+  },
+  "import_github_no_keys": {
+    "message": "$username$ no ha publicado ninguna clave SSH en GitHub. Pídale que añada una en github.com/settings/keys o pegue aquí su clave.",
+    "placeholders": {
+      "username": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_none_usable": {
+    "message": "Ninguna de las claves publicadas se puede usar para cifrar."
+  },
+  "import_github_not_found": {
+    "message": "No existe ninguna cuenta de GitHub llamada «$username$». Revise la ortografía - el nombre que hay que usar es el de la URL del perfil.",
+    "placeholders": {
+      "username": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_offline": {
+    "message": "No se ha podido conectar con github.com. Compruebe su conexión e inténtelo de nuevo."
+  },
+  "import_github_omitted_line_one": {
+    "message": "+$count$ clave publicada más",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_omitted_line_other": {
+    "message": "+$count$ claves publicadas más",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_omitted_reason": {
+    "message": "Esta importación admite como máximo $max$ claves por cuenta y omite cualquier clave de longitud inverosímil. $count$ de las claves publicadas por $username$ no se han obtenido - pegue aquí la que necesite.",
+    "placeholders": {
+      "max": {
+        "content": "$1"
+      },
+      "count": {
+        "content": "$2"
+      },
+      "username": {
+        "content": "$3"
+      }
+    }
+  },
+  "import_github_rate_limited": {
+    "message": "GitHub está limitando las solicitudes desde esta red. El límite se cuenta por dirección IP, así que otras personas en la misma conexión pueden agotarlo."
+  },
+  "import_github_rejected_heading_one": {
+    "message": "$count$ clave publicada no se puede usar",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_rejected_heading_other": {
+    "message": "$count$ claves publicadas no se pueden usar",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_server_error": {
+    "message": "GitHub no ha podido responder ahora mismo. Inténtelo de nuevo en un momento."
+  },
+  "import_group_help_one": {
+    "message": "Estas claves no coinciden en el nombre, así que se importan como $count$ contacto separado. Póngales un nombre aquí para mantenerlas juntas como una sola persona - los mensajes se cifrarán entonces para las $count$ claves y cualquiera de sus equipos podrá leerlos.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_group_help_other": {
+    "message": "Estas claves no coinciden en el nombre, así que se importan como $count$ contactos separados. Póngales un nombre aquí para mantenerlas juntas como una sola persona - los mensajes se cifrarán entonces para las $count$ claves y cualquiera de sus equipos podrá leerlos.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_group_keys_chip_one": {
+    "message": "$count$ clave",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_group_keys_chip_other": {
+    "message": "$count$ claves",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_group_keys_chip_title": {
+    "message": "Los mensajes se cifran para todas ellas; cualquiera puede descifrarlos"
+  },
+  "import_group_label": {
+    "message": "Agrupar como un solo contacto"
+  },
+  "import_group_placeholder": {
+    "message": "p. ej. Alicia (todos los equipos)"
+  },
+  "import_group_proposal_label_one": {
+    "message": "$count$ clave SSH",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_group_proposal_label_other": {
+    "message": "$count$ claves SSH",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_importing": {
+    "message": "Importando..."
+  },
+  "import_keyserver_invalid_query": {
+    "message": "Eso no es una dirección de correo ni una huella digital de clave. Use la dirección con la que se publicó la clave o pegue la huella digital completa de 40 caracteres."
+  },
+  "import_keyserver_multiple_keys": {
+    "message": "$host$ ha devuelto más de una clave para esta búsqueda. Solo se muestra la primera - compruebe la huella digital antes de importarla.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_keyserver_not_a_key": {
+    "message": "$host$ ha respondido, pero lo que ha enviado no es una clave que podamos leer.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_keyserver_not_found_email": {
+    "message": "$host$ no tiene ninguna clave para $subject$. Solo publica una dirección cuando el propietario de la clave la ha confirmado, así que puede que tenga allí una clave que esta búsqueda no encuentra - pídasela directamente o búsquela por huella digital.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "subject": {
+        "content": "$2"
+      }
+    }
+  },
+  "import_keyserver_not_found_fingerprint": {
+    "message": "$host$ no tiene ninguna clave con la huella digital $subject$. Compárela con la que le dieron - basta con un solo carácter equivocado.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "subject": {
+        "content": "$2"
+      }
+    }
+  },
+  "import_keyserver_offline": {
+    "message": "No se ha podido conectar con $host$. Compruebe su conexión e inténtelo de nuevo.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_keyserver_rate_limited": {
+    "message": "$host$ está limitando las solicitudes desde esta red.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_keyserver_server_error": {
+    "message": "$host$ no ha podido responder ahora mismo. Inténtelo de nuevo en un momento.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_label_field": {
+    "message": "Etiqueta"
+  },
+  "import_label_placeholder": {
+    "message": "p. ej. Mi extensión"
+  },
+  "import_lookup_button": {
+    "message": "Buscar"
+  },
+  "import_lookup_failed": {
+    "message": "Error en la búsqueda"
+  },
+  "import_lookup_invalid": {
+    "message": "Eso no es un nombre de usuario de GitHub, una dirección de correo ni una huella digital de clave. Pruebe con «octocat», «alice@example.com» o la huella digital completa de 40 caracteres."
+  },
+  "import_lookup_label": {
+    "message": "O busque a alguien"
+  },
+  "import_lookup_placeholder": {
+    "message": "Usuario de GitHub, correo o huella digital"
+  },
+  "import_n_contacts_one": {
+    "message": "Importar $count$ contacto",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_n_contacts_other": {
+    "message": "Importar $count$ contactos",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_no_key": {
+    "message": "No hay ninguna clave que importar."
+  },
+  "import_optional": {
+    "message": "opcional"
+  },
+  "import_panel_aria_with_id": {
+    "message": "Importar $keyid$",
+    "placeholders": {
+      "keyid": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_passphrase_label": {
+    "message": "Esta clave está protegida con una frase de contraseña"
+  },
+  "import_passphrase_placeholder": {
+    "message": "Frase de contraseña de la clave"
+  },
+  "import_paste_hint": {
+    "message": "Pegue el bloque de clave completo - una clave es demasiado larga para escribirla a mano."
+  },
+  "import_paste_label": {
+    "message": "Pegar una clave"
+  },
+  "import_paste_placeholder": {
+    "message": "Pegue una clave con $shortcut$",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_private_unreadable": {
+    "message": "No se ha podido leer esa clave privada."
+  },
+  "import_reading": {
+    "message": "Leyendo clave..."
+  },
+  "import_reject_expired": {
+    "message": "Esta clave caducó el $date$. Pida al propietario su clave actual.",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_reject_no_public_key": {
+    "message": "Este bloque no contiene ninguna clave pública utilizable."
+  },
+  "import_reject_ssh_generic": {
+    "message": "Esta clave SSH no se puede usar para cifrar."
+  },
+  "import_reject_unusable": {
+    "message": "Esta clave pública no tiene ninguna clave de cifrado ni de firma utilizable."
+  },
+  "import_rejected_generic": {
+    "message": "Esta clave no se puede importar."
+  },
+  "import_retry_hours_one": {
+    "message": "Inténtelo de nuevo en aproximadamente $count$ hora.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_retry_hours_other": {
+    "message": "Inténtelo de nuevo en aproximadamente $count$ horas.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_retry_minute": {
+    "message": "Inténtelo de nuevo en un minuto."
+  },
+  "import_retry_minutes_one": {
+    "message": "Inténtelo de nuevo en aproximadamente $count$ minuto.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_retry_minutes_other": {
+    "message": "Inténtelo de nuevo en aproximadamente $count$ minutos.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_reveal": {
+    "message": "Mostrarla en sus claves"
+  },
+  "import_source_help": {
+    "message": "Las claves públicas se añaden como contactos. Una clave privada se queda en este dispositivo - a continuación elegirá cómo protegerla."
+  },
+  "import_ssh_headline": {
+    "message": "Clave SSH"
+  },
+  "import_ssh_private_headline": {
+    "message": "Clave privada SSH"
+  },
+  "import_ssh_private_note": {
+    "message": "Una clave privada OpenSSH, usada con age. Su huella digital se lee de la propia clave al importarla. No puede firmar - age no tiene firmas - y no se puede exportar sin cifrar."
+  },
+  "import_status_added_on": {
+    "message": "Añadida el $date$.",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_status_duplicate": {
+    "message": "Ya está en sus claves"
+  },
+  "import_status_duplicate_added": {
+    "message": "La añadió el $date$ y no ha cambiado nada.",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_status_update": {
+    "message": "Actualiza la clave que ya tiene"
+  },
+  "import_submit": {
+    "message": "Importar"
+  },
+  "import_title": {
+    "message": "Importar clave"
+  },
+  "import_title_update": {
+    "message": "Actualizar clave"
+  },
+  "import_unknown_name": {
+    "message": "Desconocido"
+  },
+  "import_unreadable": {
+    "message": "Esto no parece una clave que podamos leer. Pegue un bloque de clave PGP con armadura o una línea de clave pública SSH, o busque un archivo de clave."
+  },
+  "import_updated_contacts_one": {
+    "message": "$count$ contacto actualizado",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_updated_contacts_other": {
+    "message": "$count$ contactos actualizados",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_worker_unreachable": {
+    "message": "No se ha podido contactar con el proceso en segundo plano de la extensión."
+  },
+  "keygen_advanced_options": {
+    "message": "Opciones avanzadas"
+  },
+  "keygen_algorithm_hint_ecc": {
+    "message": "Claves modernas, rápidas y pequeñas. Recomendado para la mayoría de los usos."
+  },
+  "keygen_algorithm_hint_rsa": {
+    "message": "Amplia compatibilidad. Generación de claves más lenta."
+  },
+  "keygen_algorithm_label": {
+    "message": "Algoritmo"
+  },
+  "keygen_comment_label": {
+    "message": "Comentario"
+  },
+  "keygen_comment_placeholder": {
+    "message": "p. ej. trabajo, personal"
+  },
+  "keygen_confirm_passphrase_placeholder": {
+    "message": "Confirmar frase de contraseña"
+  },
+  "keygen_confirm_password": {
+    "message": "Confirmar contraseña"
+  },
+  "keygen_confirm_word": {
+    "message": "EXPORTAR"
+  },
+  "keygen_copied_encrypted": {
+    "message": "Clave cifrada copiada (se borra en 60 s)"
+  },
+  "keygen_copied_plaintext": {
+    "message": "Clave sin proteger copiada (se borra en 30 s)"
+  },
+  "keygen_create_heading": {
+    "message": "Crear una clave nueva"
+  },
+  "keygen_create_subtitle_crx": {
+    "message": "Una clave de firma RSA-2048 nueva para empaquetar una extensión de Chrome (.crx)."
+  },
+  "keygen_create_subtitle_pgp": {
+    "message": "Un par de claves OpenPGP nuevo para cifrar, descifrar y firmar mensajes."
+  },
+  "keygen_email_label": {
+    "message": "Correo electrónico"
+  },
+  "keygen_email_placeholder": {
+    "message": "usted@example.com"
+  },
+  "keygen_encrypting": {
+    "message": "Cifrando..."
+  },
+  "keygen_error_expiry_past": {
+    "message": "La fecha de caducidad debe ser futura."
+  },
+  "keygen_error_expiry_required": {
+    "message": "Seleccione una fecha de caducidad."
+  },
+  "keygen_error_generation_failed": {
+    "message": "Error al generar la clave"
+  },
+  "keygen_error_key_not_unlocked": {
+    "message": "La clave no está desbloqueada."
+  },
+  "keygen_error_name_required": {
+    "message": "El nombre es obligatorio."
+  },
+  "keygen_error_passkey_failed": {
+    "message": "Error de autenticación con la llave de acceso."
+  },
+  "keygen_error_passphrase_mismatch": {
+    "message": "Las frases de contraseña no coinciden."
+  },
+  "keygen_error_passphrase_short": {
+    "message": "La frase de contraseña debe tener al menos 8 caracteres."
+  },
+  "keygen_error_password_mismatch": {
+    "message": "Las contraseñas no coinciden."
+  },
+  "keygen_error_password_short": {
+    "message": "La contraseña debe tener al menos 8 caracteres."
+  },
+  "keygen_error_prf_unsupported_authenticator": {
+    "message": "Su autenticador no admite PRF. Pruebe con otra llave de acceso o use una contraseña."
+  },
+  "keygen_error_wrong_password": {
+    "message": "Contraseña incorrecta."
+  },
+  "keygen_expires_on": {
+    "message": "Caduca el $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_expiry_1y": {
+    "message": "1 año"
+  },
+  "keygen_expiry_2y": {
+    "message": "2 años"
+  },
+  "keygen_expiry_3y": {
+    "message": "3 años"
+  },
+  "keygen_expiry_custom": {
+    "message": "Fecha personalizada"
+  },
+  "keygen_expiry_heading": {
+    "message": "Elija una fecha de caducidad"
+  },
+  "keygen_expiry_label": {
+    "message": "Caducidad de la clave"
+  },
+  "keygen_expiry_never": {
+    "message": "Nunca"
+  },
+  "keygen_expiry_subtitle": {
+    "message": "Después de esta fecha la clave ya no se podrá usar; siempre puede generar una nueva."
+  },
+  "keygen_export": {
+    "message": "Exportar"
+  },
+  "keygen_export_contacts_included_one": {
+    "message": "También se incluirá $count$ contacto (claves públicas, sin necesidad de desbloqueo).",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_contacts_included_other": {
+    "message": "También se incluirán $count$ contactos (claves públicas, sin necesidad de desbloqueo).",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_crx_included_one": {
+    "message": "Además, $count$ clave de firma CRX, cifrada de nuevo con esta frase de contraseña para poder restaurarla en cualquier dispositivo.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_crx_included_other": {
+    "message": "Además, $count$ claves de firma CRX, cifradas de nuevo con esta frase de contraseña para poder restaurarlas en cualquier dispositivo.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_failed": {
+    "message": "Error al exportar."
+  },
+  "keygen_export_failed_detail": {
+    "message": "Error al exportar: $message$",
+    "placeholders": {
+      "message": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_go_back_unlock": {
+    "message": "Volver atrás para desbloquear"
+  },
+  "keygen_export_nothing": {
+    "message": "Nada que exportar"
+  },
+  "keygen_export_passphrase_intro": {
+    "message": "Establezca una frase de contraseña para cifrar las claves privadas exportadas (OpenPGP S2K -- se puede importar en GnuPG y otras herramientas). Cualquiera que tenga esta frase de contraseña y el archivo podrá descifrar sus mensajes y firmar en su nombre."
+  },
+  "keygen_export_plaintext_crx_left_out": {
+    "message": "Las claves de firma CRX quedan fuera de una exportación sin cifrar -- use una frase de contraseña para incluirlas."
+  },
+  "keygen_export_plaintext_warning_file": {
+    "message": "Exportación sin cifrar. Cualquiera que lea el archivo descargado obtiene el control total de todas las claves PGP que contiene."
+  },
+  "keygen_export_skip_locked": {
+    "message": "Omitir las claves bloqueadas y continuar"
+  },
+  "keygen_export_still_locked_after": {
+    "message": "."
+  },
+  "keygen_export_still_locked_one": {
+    "message": "$count$ clave sigue bloqueada y quedará fuera.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_still_locked_other": {
+    "message": "$count$ claves siguen bloqueadas y quedarán fuera.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_summary": {
+    "message": "Descarga un archivo $ext$ (OpenPGP estándar con armadura ASCII): $private_keys$ como bloques $private_block$ y $contacts$ como bloques $public_block$.",
+    "placeholders": {
+      "ext": {
+        "content": "$1"
+      },
+      "private_keys": {
+        "content": "$2"
+      },
+      "private_block": {
+        "content": "$3"
+      },
+      "contacts": {
+        "content": "$4"
+      },
+      "public_block": {
+        "content": "$5"
+      }
+    }
+  },
+  "keygen_export_summary_contacts_one": {
+    "message": "su $count$ contacto",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_summary_contacts_other": {
+    "message": "sus $count$ contactos",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_summary_private_keys_one": {
+    "message": "su $count$ clave privada desbloqueada",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_summary_private_keys_other": {
+    "message": "sus $count$ claves privadas desbloqueadas",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_title": {
+    "message": "Exportar claves"
+  },
+  "keygen_export_toast_exported_one": {
+    "message": "$count$ clave exportada",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_toast_exported_other": {
+    "message": "$count$ claves exportadas",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_toast_exported_unsafe_one": {
+    "message": "$count$ clave exportada (claves privadas SIN CIFRAR)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_toast_exported_unsafe_other": {
+    "message": "$count$ claves exportadas (claves privadas SIN CIFRAR)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_unlock_intro": {
+    "message": "Para exportar una clave privada hay que desbloquearla primero. Desbloquee las claves siguientes para incluirlas en la copia de seguridad."
+  },
+  "keygen_export_with_passphrase": {
+    "message": "Exportar con frase de contraseña"
+  },
+  "keygen_export_without_passphrase": {
+    "message": "Exportar sin frase de contraseña (inseguro)"
+  },
+  "keygen_exporter_crx_encrypted_blurb": {
+    "message": "Establezca una frase de contraseña para cifrar la clave copiada (se puede volver a importar en PGP Tools desde Importar claves). Cualquiera que tenga esta frase de contraseña y el bloque copiado podrá firmar extensiones en su nombre."
+  },
+  "keygen_exporter_crx_encrypted_button": {
+    "message": "Copiar con frase de contraseña"
+  },
+  "keygen_exporter_crx_plaintext_blurb": {
+    "message": "Exportación sin cifrar (PKCS#8 PEM en bruto). Cualquiera que lea su portapapeles obtiene el control total de esta clave de firma."
+  },
+  "keygen_exporter_crx_plaintext_button": {
+    "message": "Copiar sin frase de contraseña (inseguro)"
+  },
+  "keygen_exporter_crx_title": {
+    "message": "Copiar clave privada CRX"
+  },
+  "keygen_exporter_crx_unlock_passkey": {
+    "message": "Desbloquee esta clave de firma para copiarla. Autentíquese con su llave de acceso."
+  },
+  "keygen_exporter_crx_unlock_password": {
+    "message": "Desbloquee esta clave de firma para copiarla. Introduzca la contraseña de la clave."
+  },
+  "keygen_exporter_pgp_encrypted_blurb": {
+    "message": "Establezca una frase de contraseña para cifrar la clave exportada. Cualquiera que tenga esta frase de contraseña y la clave exportada podrá descifrar sus mensajes y firmar en su nombre."
+  },
+  "keygen_exporter_pgp_plaintext_blurb": {
+    "message": "Exportación sin cifrar. Cualquiera que lea su portapapeles obtiene el control total de esta clave."
+  },
+  "keygen_exporter_pgp_title": {
+    "message": "Exportar clave privada"
+  },
+  "keygen_exporting": {
+    "message": "Exportando..."
+  },
+  "keygen_generating_key": {
+    "message": "Generando clave..."
+  },
+  "keygen_generating_passkey": {
+    "message": "Siga las indicaciones de llave de acceso de su navegador..."
+  },
+  "keygen_generating_rsa_hint": {
+    "message": "Las claves RSA tardan un momento en generarse"
+  },
+  "keygen_key_password_placeholder": {
+    "message": "Contraseña de la clave"
+  },
+  "keygen_key_size_4096": {
+    "message": "4096 bits"
+  },
+  "keygen_key_size_label": {
+    "message": "Tamaño de clave"
+  },
+  "keygen_label_label": {
+    "message": "Etiqueta"
+  },
+  "keygen_label_placeholder": {
+    "message": "p. ej. Mi extensión"
+  },
+  "keygen_name_label": {
+    "message": "Nombre *"
+  },
+  "keygen_name_placeholder": {
+    "message": "Su nombre completo"
+  },
+  "keygen_next": {
+    "message": "Siguiente"
+  },
+  "keygen_optional": {
+    "message": "opcional"
+  },
+  "keygen_passkey_default_user": {
+    "message": "Protección de clave PGP"
+  },
+  "keygen_passkey_imported_user": {
+    "message": "Clave PGP importada"
+  },
+  "keygen_passphrase_placeholder": {
+    "message": "Frase de contraseña (mín. 8 caracteres)"
+  },
+  "keygen_password_placeholder": {
+    "message": "Contraseña (mín. 8 caracteres)"
+  },
+  "keygen_prf_unsupported_chrome": {
+    "message": "Puede que las llaves de acceso del perfil de Chrome no admitan PRF - pruebe con el Gestor de contraseñas de Google o una llave externa."
+  },
+  "keygen_prf_unsupported_intro": {
+    "message": "Este autenticador no admite PRF."
+  },
+  "keygen_prf_unsupported_mac": {
+    "message": "En macOS se necesita la versión 15 o superior con el llavero de iCloud."
+  },
+  "keygen_prf_unsupported_windows": {
+    "message": "Windows Hello no admite PRF - use una llave de seguridad (p. ej. YubiKey)."
+  },
+  "keygen_protect_heading": {
+    "message": "Proteja su clave"
+  },
+  "keygen_protect_subtitle": {
+    "message": "Elija cómo desbloquear esta clave cuando la use."
+  },
+  "keygen_protection_intro": {
+    "message": "Elija cómo proteger su clave privada:"
+  },
+  "keygen_protection_passkey": {
+    "message": "Llave de acceso"
+  },
+  "keygen_protection_passkey_desc": {
+    "message": "Use su huella dactilar, su cara o una llave de seguridad. Sin contraseñas que recordar."
+  },
+  "keygen_protection_passkey_unavailable": {
+    "message": "No disponible en este navegador."
+  },
+  "keygen_protection_password": {
+    "message": "Contraseña"
+  },
+  "keygen_protection_password_desc": {
+    "message": "Proteger con una contraseña. La introducirá cada vez que desbloquee la clave."
+  },
+  "keygen_protection_recommended": {
+    "message": "Recomendado"
+  },
+  "keygen_protection_reuse_passkey": {
+    "message": "Usar la misma llave de acceso que ya configuré"
+  },
+  "keygen_submit_create_passkey": {
+    "message": "Crear llave de acceso"
+  },
+  "keygen_submit_generate": {
+    "message": "Generar"
+  },
+  "keygen_submit_use_passkey": {
+    "message": "Usar llave de acceso"
+  },
+  "keygen_title": {
+    "message": "Generar clave"
+  },
+  "keygen_type_crx": {
+    "message": "Extensión de Chrome (CRX)"
+  },
+  "keygen_type_pgp": {
+    "message": "Clave de mensajería (PGP)"
+  },
+  "keygen_type_to_confirm_after": {
+    "message": "para confirmar:"
+  },
+  "keygen_type_to_confirm_before": {
+    "message": "Escriba"
+  },
+  "keygen_unlock_gate_passkey": {
+    "message": "Autentíquese con su llave de acceso para copiar esta clave."
+  },
+  "keygen_unlock_gate_password": {
+    "message": "Introduzca la contraseña de la clave para copiarla."
+  },
+  "keygen_unlocking": {
+    "message": "Desbloqueando..."
+  },
+  "keys_also_known_as": {
+    "message": "También conocida como"
+  },
+  "keys_banner_encrypt_only_contact": {
+    "message": "Puede cifrar para ella, pero no puede firmar."
+  },
+  "keys_banner_encrypt_only_own": {
+    "message": "Puede recibir mensajes cifrados, pero esta clave no puede firmar."
+  },
+  "keys_banner_expired_contact": {
+    "message": "Pida al propietario una clave actualizada."
+  },
+  "keys_banner_expired_on": {
+    "message": "Dejó de ser válida el $date$.",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_banner_expired_own": {
+    "message": "Genere o importe una clave más reciente."
+  },
+  "keys_banner_expired_title": {
+    "message": "Esta clave caducó $when$",
+    "placeholders": {
+      "when": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_banner_expires_soon": {
+    "message": "Esta clave caduca pronto"
+  },
+  "keys_banner_no_reason": {
+    "message": "No se indicó ningún motivo."
+  },
+  "keys_banner_revoked_contact": {
+    "message": "No cifre para ella ni confíe en nuevas firmas suyas."
+  },
+  "keys_banner_revoked_own": {
+    "message": "Genere o importe una clave de reemplazo."
+  },
+  "keys_banner_revoked_title": {
+    "message": "Esta clave ha sido revocada"
+  },
+  "keys_banner_sign_only_contact": {
+    "message": "Puede verificar sus firmas, pero no cifrar para ella."
+  },
+  "keys_banner_sign_only_own": {
+    "message": "Puede firmar mensajes, pero esta clave no puede recibir mensajes cifrados."
+  },
+  "keys_banner_unusable_body": {
+    "message": "No tiene ninguna subclave de cifrado ni de firma utilizable."
+  },
+  "keys_banner_unusable_title": {
+    "message": "Esta clave no se puede usar"
+  },
+  "keys_bits": {
+    "message": "$bits$ bits",
+    "placeholders": {
+      "bits": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_bulk_delete_confirm_one": {
+    "message": "Eliminar $count$ elemento de forma permanente",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_bulk_delete_confirm_other": {
+    "message": "Eliminar $count$ elementos de forma permanente",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_bulk_delete_contacts_body": {
+    "message": "Ya no podrá cifrar para estos contactos ni verificar sus firmas. Puede volver a importar sus claves públicas más adelante."
+  },
+  "keys_bulk_delete_private_body": {
+    "message": "Esto elimina de forma permanente las claves privadas seleccionadas de este dispositivo. Todo lo que esté cifrado únicamente para una clave eliminada quedará irrecuperable. Asegúrese de tener una copia de seguridad si alguna vez pudiera necesitarlas."
+  },
+  "keys_bulk_delete_prompt_one": {
+    "message": "eliminar $count$ clave",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_bulk_delete_prompt_other": {
+    "message": "eliminar $count$ claves",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_bulk_delete_title": {
+    "message": "¿Eliminar la selección?"
+  },
+  "keys_cancel_selection_aria": {
+    "message": "Cancelar selección"
+  },
+  "keys_cap_auth": {
+    "message": "Autentica (p. ej. SSH)"
+  },
+  "keys_cap_certify": {
+    "message": "Certifica identidades"
+  },
+  "keys_cap_encrypt": {
+    "message": "Recibe mensajes cifrados"
+  },
+  "keys_cap_sign": {
+    "message": "Firma mensajes"
+  },
+  "keys_chip_contact": {
+    "message": "Contacto"
+  },
+  "keys_chip_contact_title": {
+    "message": "Usted tiene su clave pública"
+  },
+  "keys_chip_protection_title": {
+    "message": "Cómo está protegida la clave privada en reposo"
+  },
+  "keys_chip_your_key": {
+    "message": "Su clave"
+  },
+  "keys_chip_your_key_title": {
+    "message": "Usted tiene la clave privada"
+  },
+  "keys_confirm_delete_key_title": {
+    "message": "¿Eliminar la clave?"
+  },
+  "keys_confirm_remove_contact_title": {
+    "message": "¿Quitar el contacto?"
+  },
+  "keys_contact_expired": {
+    "message": "Caducó el $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_contact_expired_title": {
+    "message": "Esta clave caducó el $date$ y ya no se puede cifrar para ella. Pida al propietario su clave actual.",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_contact_expires": {
+    "message": "Caduca el $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_contact_keys_all_title": {
+    "message": "Los mensajes se cifran para todas las claves de este contacto; cualquiera de ellas puede descifrarlos."
+  },
+  "keys_contact_keys_count_one": {
+    "message": "$count$ clave",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_contact_keys_count_other": {
+    "message": "$count$ claves",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_contact_keys_partial": {
+    "message": "$active$ de $total$ claves",
+    "placeholders": {
+      "active": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_contact_keys_partial_title": {
+    "message": "Los mensajes se cifran para $active$ de las $total$ claves de este contacto; el resto están desactivadas en los detalles de la clave.",
+    "placeholders": {
+      "active": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_contact_options_aria": {
+    "message": "Opciones del contacto"
+  },
+  "keys_contacts_heading": {
+    "message": "Contactos"
+  },
+  "keys_contacts_heading_count": {
+    "message": "Contactos ($count$)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_contacts_heading_encrypted": {
+    "message": "Contactos (cifrados)"
+  },
+  "keys_contacts_locked": {
+    "message": "Los contactos están cifrados. Desbloquee PGP Tools para verlos y gestionarlos."
+  },
+  "keys_contacts_removed_one": {
+    "message": "Contacto quitado"
+  },
+  "keys_contacts_removed_other": {
+    "message": "$count$ contactos quitados",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_copy_fingerprint_aria": {
+    "message": "Copiar huella digital"
+  },
+  "keys_copy_private_key": {
+    "message": "Copiar clave privada"
+  },
+  "keys_copy_public_key": {
+    "message": "Copiar clave pública"
+  },
+  "keys_count_contacts_one": {
+    "message": "$count$ contacto",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_count_contacts_other": {
+    "message": "$count$ contactos",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_count_private_keys_one": {
+    "message": "$count$ clave privada",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_count_private_keys_other": {
+    "message": "$count$ claves privadas",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_count_signing_keys_one": {
+    "message": "$count$ clave de firma",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_count_signing_keys_other": {
+    "message": "$count$ claves de firma",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_default_badge": {
+    "message": "Predeterminada"
+  },
+  "keys_default_removed": {
+    "message": "Clave predeterminada quitada"
+  },
+  "keys_default_set": {
+    "message": "Clave predeterminada establecida"
+  },
+  "keys_default_title": {
+    "message": "Se usa de forma predeterminada para firmar, descifrar y cifrar para mí"
+  },
+  "keys_delete_crx_body": {
+    "message": "Ya no podrá firmar actualizaciones de esta extensión, y la clave no se puede recuperar a menos que tenga una copia de seguridad."
+  },
+  "keys_delete_key": {
+    "message": "Eliminar clave"
+  },
+  "keys_delete_key_body": {
+    "message": "Esto elimina de forma permanente la clave privada de este dispositivo. Todo lo que esté cifrado únicamente para esta clave quedará irrecuperable. Asegúrese de tener una copia de seguridad si alguna vez pudiera necesitarla."
+  },
+  "keys_delete_key_permanently": {
+    "message": "Eliminar la clave de forma permanente"
+  },
+  "keys_deselect_all": {
+    "message": "Deseleccionar todo"
+  },
+  "keys_details_aria": {
+    "message": "Detalles de la clave de $name$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_download_public_key": {
+    "message": "Descargar clave pública"
+  },
+  "keys_empty": {
+    "message": "Todavía no hay claves. Genere o importe una clave para empezar."
+  },
+  "keys_encrypt_to": {
+    "message": "Cifrar para"
+  },
+  "keys_enter_password_placeholder": {
+    "message": "Introduzca la contraseña"
+  },
+  "keys_expires_value": {
+    "message": "$date$ ($when$)",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      },
+      "when": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_export": {
+    "message": "Exportar"
+  },
+  "keys_exported_one": {
+    "message": "$count$ clave exportada",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_exported_other": {
+    "message": "$count$ claves exportadas",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_exported_unsafe_one": {
+    "message": "$count$ clave exportada (claves privadas SIN CIFRAR)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_exported_unsafe_other": {
+    "message": "$count$ claves exportadas (claves privadas SIN CIFRAR)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_fact_added": {
+    "message": "Añadida"
+  },
+  "keys_fact_algorithm": {
+    "message": "Algoritmo"
+  },
+  "keys_fact_created": {
+    "message": "Creada"
+  },
+  "keys_fact_expires": {
+    "message": "Caduca"
+  },
+  "keys_fact_fingerprint": {
+    "message": "Huella"
+  },
+  "keys_fact_last_used": {
+    "message": "Último uso"
+  },
+  "keys_fact_used_for": {
+    "message": "Uso"
+  },
+  "keys_generate_button": {
+    "message": "Generar clave"
+  },
+  "keys_group_row_label": {
+    "message": "Clave"
+  },
+  "keys_import_button": {
+    "message": "Importar clave"
+  },
+  "keys_inactive_subkeys_expired_one": {
+    "message": "$count$ subclave caducada",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_inactive_subkeys_expired_other": {
+    "message": "$count$ subclaves caducadas",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_inactive_subkeys_revoked_one": {
+    "message": "$count$ subclave revocada",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_inactive_subkeys_revoked_other": {
+    "message": "$count$ subclaves revocadas",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_inactive_subkeys_unusable_one": {
+    "message": "$count$ subclave inutilizable",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_inactive_subkeys_unusable_other": {
+    "message": "$count$ subclaves inutilizables",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_key_details": {
+    "message": "Detalles de la clave"
+  },
+  "keys_key_options_aria": {
+    "message": "Opciones de la clave"
+  },
+  "keys_loading": {
+    "message": "Cargando…"
+  },
+  "keys_my_keys_heading": {
+    "message": "Mis claves"
+  },
+  "keys_never": {
+    "message": "Nunca"
+  },
+  "keys_no_contacts_match": {
+    "message": "Ningún contacto coincide con «$query$»",
+    "placeholders": {
+      "query": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_no_subkeys": {
+    "message": "Esta clave no tiene subclaves; la clave principal lo hace todo por sí misma."
+  },
+  "keys_parse_failed": {
+    "message": "No se ha podido analizar esta clave."
+  },
+  "keys_passkey_failed": {
+    "message": "Error de autenticación con la llave de acceso"
+  },
+  "keys_protection_passkey": {
+    "message": "Llave de acceso"
+  },
+  "keys_protection_password": {
+    "message": "Contraseña"
+  },
+  "keys_public_key_copied": {
+    "message": "Clave pública copiada"
+  },
+  "keys_recipient_disable_title": {
+    "message": "Dejar de cifrar para esta clave. Seguirá apareciendo aquí."
+  },
+  "keys_recipient_dont_use": {
+    "message": "No usar"
+  },
+  "keys_recipient_enable_title": {
+    "message": "Volver a cifrar para esta clave."
+  },
+  "keys_recipient_last_active_title": {
+    "message": "Es la única clave que queda en uso. Si también la desactiva, los mensajes no se cifrarían para nadie."
+  },
+  "keys_recipient_not_used": {
+    "message": "No se usa"
+  },
+  "keys_recipient_off_title": {
+    "message": "Los mensajes para este contacto no se cifran para esta clave."
+  },
+  "keys_recipient_use": {
+    "message": "Usar"
+  },
+  "keys_remove_contact": {
+    "message": "Quitar contacto"
+  },
+  "keys_remove_contact_body": {
+    "message": "Ya no podrá cifrar mensajes para este contacto ni verificar sus firmas. Puede volver a importar su clave pública más adelante."
+  },
+  "keys_remove_default": {
+    "message": "Quitar como predeterminada"
+  },
+  "keys_rename": {
+    "message": "Cambiar nombre"
+  },
+  "keys_rename_contact_title": {
+    "message": "Cambiar nombre del contacto"
+  },
+  "keys_rename_crx_title": {
+    "message": "Cambiar nombre de la clave de firma"
+  },
+  "keys_rename_field_label": {
+    "message": "Nombre para mostrar"
+  },
+  "keys_rename_hint": {
+    "message": "Se muestra en lugar de $identity$. Es solo una etiqueta local.",
+    "placeholders": {
+      "identity": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_rename_key_title": {
+    "message": "Cambiar nombre de la clave"
+  },
+  "keys_rename_placeholder_contact": {
+    "message": "p. ej. Alicia (todos los equipos)"
+  },
+  "keys_rename_placeholder_crx": {
+    "message": "p. ej. Mi extensión"
+  },
+  "keys_rename_placeholder_key": {
+    "message": "p. ej. Portátil del trabajo"
+  },
+  "keys_reselect": {
+    "message": "Reseleccionar"
+  },
+  "keys_revocation_certificate": {
+    "message": "Certificado de revocación"
+  },
+  "keys_revocation_create": {
+    "message": "Crear certificado de revocación"
+  },
+  "keys_revocation_create_failed": {
+    "message": "No se ha podido crear el certificado de revocación."
+  },
+  "keys_revocation_created": {
+    "message": "Certificado de revocación creado"
+  },
+  "keys_revocation_creating": {
+    "message": "Creando..."
+  },
+  "keys_revocation_have_body": {
+    "message": "Si alguna vez pierde esta clave o se ve comprometida, publicar este certificado indica a sus contactos que dejen de usarla. Guarde una copia en un lugar seguro - cualquiera que lo tenga puede revocar su clave."
+  },
+  "keys_revocation_missing_body": {
+    "message": "Esta clave se importó sin certificado de revocación. Cree uno ahora y guarde una copia de seguridad para poder revocar la clave más adelante aunque pierda el acceso a ella."
+  },
+  "keys_revocation_unlock_first": {
+    "message": "Desbloquee primero esta clave e inténtelo de nuevo."
+  },
+  "keys_revoked_reason": {
+    "message": "Revocada: $reason$",
+    "placeholders": {
+      "reason": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_row_created": {
+    "message": "creada el $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_row_expired": {
+    "message": "caducó el $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_row_expires": {
+    "message": "caduca el $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_row_never_expires": {
+    "message": "nunca caduca"
+  },
+  "keys_save_failed": {
+    "message": "No se ha podido guardar este cambio."
+  },
+  "keys_search_contacts_placeholder": {
+    "message": "Buscar contactos..."
+  },
+  "keys_select": {
+    "message": "Seleccionar"
+  },
+  "keys_select_all": {
+    "message": "Seleccionar todo"
+  },
+  "keys_selected_count_one": {
+    "message": "$count$ seleccionado",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_selected_count_other": {
+    "message": "$count$ seleccionados",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_selection_actions_aria": {
+    "message": "Acciones de la selección"
+  },
+  "keys_set_default": {
+    "message": "Establecer como clave predeterminada"
+  },
+  "keys_size_bytes": {
+    "message": "$size$ B",
+    "placeholders": {
+      "size": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_size_kb": {
+    "message": "$size$ KB",
+    "placeholders": {
+      "size": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_size_mb": {
+    "message": "$size$ MB",
+    "placeholders": {
+      "size": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_source_github": {
+    "message": "De github.com/$user$",
+    "placeholders": {
+      "user": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_source_keyserver": {
+    "message": "De keys.openpgp.org - $user$",
+    "placeholders": {
+      "user": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_ssh_chip_title": {
+    "message": "Una clave SSH, usada con age. No se puede combinar con destinatarios PGP en un mismo mensaje."
+  },
+  "keys_ssh_export_skipped_one": {
+    "message": "$count$ clave SSH no se puede exportar - una clave SSH importada nunca sale de este dispositivo.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_ssh_export_skipped_other": {
+    "message": "$count$ claves SSH no se pueden exportar - una clave SSH importada nunca sale de este dispositivo.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_status_expired": {
+    "message": "caducada"
+  },
+  "keys_status_invalid": {
+    "message": "no válida"
+  },
+  "keys_status_locked": {
+    "message": "Bloqueada"
+  },
+  "keys_status_revoked": {
+    "message": "revocada"
+  },
+  "keys_status_sealed": {
+    "message": "Sellada en reposo"
+  },
+  "keys_status_unlocked": {
+    "message": "Desbloqueada"
+  },
+  "keys_subkey_label": {
+    "message": "Subclave"
+  },
+  "keys_subkeys_title": {
+    "message": "Subclaves"
+  },
+  "keys_subkeys_truncated": {
+    "message": "Este certificado tiene un número inusualmente alto de subclaves; solo se muestran las $count$ primeras.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_undo": {
+    "message": "Deshacer"
+  },
+  "keys_unknown_name": {
+    "message": "Desconocido"
+  },
+  "keys_weak_sha1": {
+    "message": "Débil (SHA-1)"
+  },
+  "keys_wrong_password": {
+    "message": "Contraseña incorrecta"
+  },
+  "settings_crx_default_key_name": {
+    "message": "Clave de firma CRX"
+  },
+  "settings_crx_info_get_body": {
+    "message": "Este $crx$ es un artefacto de subida para el panel de Web Store, no un paquete instalable directamente - Chrome solo instala extensiones firmadas por la tienda. Para ejecutar su extensión localmente, use $load_unpacked$ con la carpeta.",
+    "placeholders": {
+      "crx": {
+        "content": "$1"
+      },
+      "load_unpacked": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_crx_info_get_title": {
+    "message": "Qué obtiene con esto"
+  },
+  "settings_crx_info_how_title": {
+    "message": "Cómo usarlo"
+  },
+  "settings_crx_info_ladder_ci": {
+    "message": "$term$ es más débil: una dependencia envenenada o un token filtrado se la llevan.",
+    "placeholders": {
+      "term": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_crx_info_ladder_ci_term": {
+    "message": "Una clave en los secretos de CI"
+  },
+  "settings_crx_info_ladder_hardware": {
+    "message": "$term$ es aún más fuerte: la clave nunca sale del chip, mientras que aquí se reconstruye brevemente en el entorno aislado WASM durante la firma y se pone a cero inmediatamente después.",
+    "placeholders": {
+      "term": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_crx_info_ladder_hardware_term": {
+    "message": "Un token de hardware (YubiKey / HSM)"
+  },
+  "settings_crx_info_ladder_title": {
+    "message": "Dónde se sitúa en cuanto a seguridad"
+  },
+  "settings_crx_info_ladder_vault": {
+    "message": "$term$ - donde está usted - queda tras su contraseña o llave de acceso y se desbloquea solo para el acto de firmar.",
+    "placeholders": {
+      "term": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_crx_info_ladder_vault_term": {
+    "message": "Una clave cifrada en su bóveda"
+  },
+  "settings_crx_info_link": {
+    "message": "Chrome Web Store: protección de las actualizaciones de paquetes"
+  },
+  "settings_crx_info_not_pgp_body": {
+    "message": "Un $crx$ se firma con una clave RSA-2048 en bruto (PKCS#1-SHA256), no con una firma OpenPGP. PGP Tools genera y guarda esta clave con la misma protección que sus claves PGP (Argon2id o llave de acceso → AES-256-GCM, todo dentro del entorno aislado WASM), pero la clave en sí es independiente y se usa solo para firmar CRX.",
+    "placeholders": {
+      "crx": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_crx_info_not_pgp_title": {
+    "message": "Esto no es PGP"
+  },
+  "settings_crx_info_pitch_p1": {
+    "message": "Chrome Web Store le permite exigir que cada actualización de su extensión esté firmada con una clave que solo usted tiene. Aunque alguien comprometa su cuenta de Web Store o su cadena de compilación, seguirá sin poder publicar una actualización maliciosa sin su clave de firma."
+  },
+  "settings_crx_info_pitch_p2": {
+    "message": "Eso solo se cumple si la clave está en un lugar fuera del alcance de un atacante - una clave guardada en los secretos de CI anula el propósito. PGP Tools la mantiene cifrada en su bóveda y la desbloquea solo para el acto de firmar, tras su contraseña o llave de acceso, nunca en su cadena de compilación."
+  },
+  "settings_crx_info_pitch_title": {
+    "message": "Verified CRX Uploads"
+  },
+  "settings_crx_info_step_1": {
+    "message": "Active el interruptor en Configuración y luego cree o importe una clave de firma CRX (RSA-2048). Mantenga la clave privada aquí - expórtela solo si necesita una copia de seguridad."
+  },
+  "settings_crx_info_step_2": {
+    "message": "Copie la mitad $public$ de la clave en el panel de desarrollador de Chrome Web Store, en $path$.",
+    "placeholders": {
+      "public": {
+        "content": "$1"
+      },
+      "path": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_crx_info_step_3": {
+    "message": "Para publicar una versión, suelte el $zip$ de su extensión empaquetada en el Espacio de trabajo y fírmelo. Use $save$ para escribir el $crx$ directamente en el disco con el nombre correcto (o arrastre la ficha del archivo a su escritorio) y luego súbalo al panel. Chrome intercepta las descargas normales de $crx$ e intenta instalarlas; por eso guardamos en lugar de descargar.",
+    "placeholders": {
+      "zip": {
+        "content": "$1"
+      },
+      "save": {
+        "content": "$2"
+      },
+      "crx": {
+        "content": "$3"
+      }
+    }
+  },
+  "settings_crx_info_step_4": {
+    "message": "Para comprobar cualquier paquete de extensión, suelte un $crx$ en el Espacio de trabajo - PGP Tools verifica su firma y muestra el ID de extensión que dice tener.",
+    "placeholders": {
+      "crx": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_crx_info_term_dashboard_path": {
+    "message": "Paquete → Verified CRX Uploads"
+  },
+  "settings_crx_info_term_load_unpacked": {
+    "message": "Cargar descomprimida"
+  },
+  "settings_crx_info_term_public": {
+    "message": "pública"
+  },
+  "settings_crx_info_title": {
+    "message": "Firma CRX"
+  },
+  "settings_import_browse": {
+    "message": "Buscar archivo de claves"
+  },
+  "settings_import_contacts_added_one": {
+    "message": "$count$ contacto añadido",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_added_other": {
+    "message": "$count$ contactos añadidos",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_flagged_one": {
+    "message": "$count$ clave importada marcada por criptografía débil (SHA-1)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_flagged_other": {
+    "message": "$count$ claves importadas marcadas por criptografía débil (SHA-1)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_rejected_one": {
+    "message": "$count$ clave pública rechazada",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_rejected_other": {
+    "message": "$count$ claves públicas rechazadas",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_rejected_reason_one": {
+    "message": "$count$ clave pública rechazada: $reason$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "reason": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_import_contacts_rejected_reason_other": {
+    "message": "$count$ claves públicas rechazadas: $reason$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "reason": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_import_contacts_updated_one": {
+    "message": "$count$ contacto actualizado",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_updated_other": {
+    "message": "$count$ contactos actualizados",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_failed_one": {
+    "message": "No se ha podido restaurar $count$ clave CRX",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_failed_other": {
+    "message": "No se han podido restaurar $count$ claves CRX",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_failure_detail": {
+    "message": "$name$: $error$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "error": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_import_crx_rejected_one": {
+    "message": "$count$ clave de firma CRX rechazada: la clave pública no coincide con su ID de extensión",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_rejected_other": {
+    "message": "$count$ claves de firma CRX rechazadas: la clave pública no coincide con su ID de extensión",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_restored_one": {
+    "message": "$count$ clave de firma CRX restaurada",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_restored_other": {
+    "message": "$count$ claves de firma CRX restauradas",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_skipped_one": {
+    "message": "$count$ clave de firma CRX ya estaba importada",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_skipped_other": {
+    "message": "$count$ claves de firma CRX ya estaban importadas",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_default_user_id": {
+    "message": "Clave PGP importada"
+  },
+  "settings_import_failed": {
+    "message": "Error al importar"
+  },
+  "settings_import_failed_named": {
+    "message": "No se ha podido importar «$name$»: $error$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "error": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_import_importing": {
+    "message": "Importando..."
+  },
+  "settings_import_keys_title": {
+    "message": "Importar claves"
+  },
+  "settings_import_next": {
+    "message": "Siguiente"
+  },
+  "settings_import_no_keys": {
+    "message": "No se han encontrado claves en la entrada."
+  },
+  "settings_import_passkey_name": {
+    "message": "Importación de PGP Tools"
+  },
+  "settings_import_passphrase_placeholder": {
+    "message": "Frase de contraseña de la clave"
+  },
+  "settings_import_paste_intro": {
+    "message": "Pegue o busque un archivo de claves -- por ejemplo, uno de «Exportar todas las claves». Las claves privadas se vuelven a proteger con el método que elija; las claves públicas se convierten en contactos."
+  },
+  "settings_import_paste_placeholder": {
+    "message": "Pegue aquí las claves o busque un archivo..."
+  },
+  "settings_import_prf_unsupported": {
+    "message": "Su autenticador no admite PRF. Pruebe con otra llave de acceso o use una contraseña."
+  },
+  "settings_import_private_imported_one": {
+    "message": "$count$ clave privada importada",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_private_imported_other": {
+    "message": "$count$ claves privadas importadas",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_private_skipped_one": {
+    "message": "$count$ clave privada ya estaba importada",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_private_skipped_other": {
+    "message": "$count$ claves privadas ya estaban importadas",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_private_unparseable_one": {
+    "message": "No se ha podido analizar $count$ clave privada.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_private_unparseable_other": {
+    "message": "No se han podido analizar $count$ claves privadas.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_protect_intro_one": {
+    "message": "Elija cómo proteger la $count$ clave privada importada.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_protect_intro_other": {
+    "message": "Elija cómo proteger las $count$ claves privadas importadas.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_submit_one": {
+    "message": "Importar $count$ clave",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_submit_other": {
+    "message": "Importar $count$ claves",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_unknown_error": {
+    "message": "error desconocido"
+  },
+  "settings_import_unlock_intro_one": {
+    "message": "$encrypted$ de la $count$ clave privada está protegida con una frase de contraseña. Introdúzcala para desbloquearla -- en el paso siguiente volverá a proteger cada clave con el método que elija.",
+    "placeholders": {
+      "encrypted": {
+        "content": "$1"
+      },
+      "count": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_import_unlock_intro_other": {
+    "message": "$encrypted$ de las $count$ claves privadas están protegidas con una frase de contraseña. Introdúzcala para desbloquearlas -- en el paso siguiente volverá a proteger cada clave con el método que elija.",
+    "placeholders": {
+      "encrypted": {
+        "content": "$1"
+      },
+      "count": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_preset_apply": {
+    "message": "Aplicar perfil"
+  },
+  "settings_preset_apply_delete_history": {
+    "message": "Aplicar y eliminar el historial"
+  },
+  "settings_preset_applying": {
+    "message": "Aplicando..."
+  },
+  "settings_preset_confirm_history": {
+    "message": "Este perfil activa «Nunca guardar claves en caché», lo que también elimina su historial guardado ($size$). No se puede recuperar.",
+    "placeholders": {
+      "size": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_preset_confirm_replace": {
+    "message": "¿Reemplazar sus ajustes personalizados por el perfil $preset$? Solo cambian los ajustes indicados en su tarjeta, y después puede volver a modificar cualquiera de ellos.",
+    "placeholders": {
+      "preset": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_preset_custom_name": {
+    "message": "Personalizado"
+  },
+  "settings_preset_custom_notice": {
+    "message": "Está en $custom$: se cambió un ajuste agrupado, así que ningún perfil coincide exactamente.",
+    "placeholders": {
+      "custom": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_preset_intro": {
+    "message": "Cada perfil agrupa los ajustes de seguridad para un modelo de amenaza, y su tarjeta indica exactamente qué establece. Aplicar uno solo cambia esos ajustes, y después puede volver a modificar cualquiera de ellos."
+  },
+  "settings_preset_keep_custom": {
+    "message": "Mantener ajustes personalizados"
+  },
+  "settings_preset_replace_custom": {
+    "message": "Reemplazar ajustes personalizados"
+  },
+  "settings_preset_title": {
+    "message": "Perfil de seguridad"
+  },
+  "settings_shortcuts_copy_output": {
+    "message": "Copiar el resultado"
+  },
+  "settings_shortcuts_download_output": {
+    "message": "Descargar el resultado"
+  },
+  "settings_shortcuts_find_replace": {
+    "message": "Buscar y reemplazar"
+  },
+  "settings_shortcuts_global_note": {
+    "message": "Funcionan en cualquier parte del navegador. Puede reasignar cualquiera de ellos en $url$.",
+    "placeholders": {
+      "url": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_shortcuts_group_global": {
+    "message": "Atajos globales del navegador"
+  },
+  "settings_shortcuts_group_message": {
+    "message": "Cuadro de mensaje"
+  },
+  "settings_shortcuts_group_modes": {
+    "message": "Modos"
+  },
+  "settings_shortcuts_group_palette": {
+    "message": "Paleta de comandos"
+  },
+  "settings_shortcuts_group_workspace": {
+    "message": "Espacio de trabajo"
+  },
+  "settings_shortcuts_manage": {
+    "message": "Gestionar atajos del navegador"
+  },
+  "settings_shortcuts_open_app": {
+    "message": "Abrir PGP Tools"
+  },
+  "settings_shortcuts_open_in_mode": {
+    "message": "Abrir en modo $mode$",
+    "placeholders": {
+      "mode": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_shortcuts_open_palette": {
+    "message": "Abrir la paleta de comandos"
+  },
+  "settings_shortcuts_open_palette_note": {
+    "message": "Todas las acciones siguientes también se pueden buscar allí."
+  },
+  "settings_shortcuts_pick_recipient": {
+    "message": "Elegir el enésimo destinatario"
+  },
+  "settings_shortcuts_pick_recipient_note": {
+    "message": "En el desplegable de destinatarios, mientras su cuadro de búsqueda esté vacío."
+  },
+  "settings_shortcuts_remove_recipient": {
+    "message": "Quitar el último destinatario"
+  },
+  "settings_shortcuts_remove_recipient_note": {
+    "message": "En el cuadro de búsqueda vacío del desplegable de destinatarios."
+  },
+  "settings_shortcuts_run_mode": {
+    "message": "Ejecutar el modo actual"
+  },
+  "settings_shortcuts_style_note": {
+    "message": "Al escribir un mensaje para cifrar o firmar. Usa formas de letras Unicode, así que sobrevive a cualquier canal."
+  },
+  "settings_shortcuts_switch_mode": {
+    "message": "Cambiar a $mode$",
+    "placeholders": {
+      "mode": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_shortcuts_title": {
+    "message": "Atajos de teclado"
+  },
+  "settings_shortcuts_unbound": {
+    "message": "Sin asignar"
+  },
+  "settings_shortcuts_unbound_note": {
+    "message": "Sin asignar de forma predeterminada (Chrome limita las teclas sugeridas a cuatro)."
+  },
+  "settings_translation_detector": {
+    "message": "detector de idioma"
+  },
+  "settings_translation_download_failed": {
+    "message": "Error en la descarga."
+  },
+  "settings_translation_enable": {
+    "message": "Traducir mensajes descifrados"
+  },
+  "settings_translation_enable_desc": {
+    "message": "Añade un botón Traducir bajo cada mensaje descifrado. La traducción se hace en este dispositivo con el modelo integrado de Chrome, y no se traduce nada hasta que pulse el botón."
+  },
+  "settings_translation_failed": {
+    "message": "Error en la traducción."
+  },
+  "settings_translation_pack_gone": {
+    "message": "El paquete de idioma ha desaparecido. Inténtelo de nuevo."
+  },
+  "settings_translation_pack_not_offered": {
+    "message": "No disponible"
+  },
+  "settings_translation_pack_pair": {
+    "message": "traductor de $from$ a $to$",
+    "placeholders": {
+      "from": {
+        "content": "$1"
+      },
+      "to": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_translation_pack_progress": {
+    "message": "$percent$ %",
+    "placeholders": {
+      "percent": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_translation_pack_ready": {
+    "message": "Listo"
+  },
+  "settings_translation_packs": {
+    "message": "Paquetes de idioma"
+  },
+  "settings_translation_packs_desc": {
+    "message": "Opcional. Un paquete que falte se descarga solo la primera vez que traduzca desde ese idioma, así que esto solo sirve para adelantarse. Descargarlo aquí aporta una cosa: la descarga ya no ocurre en el momento en que descifra un mensaje, de modo que su momento no revela nada sobre lo que acaba de leer. Cada paquete ocupa $size$ y lo guarda Chrome, no esta extensión.",
+    "placeholders": {
+      "size": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_translation_target": {
+    "message": "Traducir al"
+  },
+  "settings_translation_title": {
+    "message": "Traducción"
+  },
+  "settings_translation_unavailable_device": {
+    "message": "La traducción no está disponible en este dispositivo."
+  },
+  "settings_translation_unsupported": {
+    "message": "La traducción en el dispositivo de Chrome no está disponible aquí. Necesita Chrome de escritorio en Windows 10 o superior, macOS 13 o superior, Linux o un Chromebook Plus, con suficiente espacio libre en disco y memoria para los modelos."
+  },
+  "shared_about": {
+    "message": "Acerca de"
+  },
+  "shared_about_extensions": {
+    "message": "¿Le preocupan las extensiones de navegador maliciosas? Analice sus extensiones en busca de recopilación de datos, secuestro de sesión y otras amenazas."
+  },
+  "shared_advanced_mode": {
+    "message": "Modo avanzado"
+  },
+  "shared_advanced_mode_desc": {
+    "message": "Muestra las huellas digitales de las claves, los algoritmos y las opciones de formato de salida."
+  },
+  "shared_auto_download_files_desc": {
+    "message": "Descarga automáticamente tras cifrar o descifrar archivos."
+  },
+  "shared_auto_download_files_title": {
+    "message": "Descargar automáticamente los resultados de archivos"
+  },
+  "shared_auto_download_text_desc": {
+    "message": "Descarga automáticamente tras cifrar o descifrar texto."
+  },
+  "shared_auto_download_text_title": {
+    "message": "Descargar automáticamente los resultados de texto"
+  },
+  "shared_auto_lock_desc": {
+    "message": "Bloquea las claves desbloqueadas tras un periodo sin actividad en el panel. La pantalla de bloqueo del sistema siempre bloquea de inmediato, independientemente de este ajuste."
+  },
+  "shared_auto_lock_title": {
+    "message": "Bloqueo automático por inactividad"
+  },
+  "shared_backup": {
+    "message": "Copia de seguridad"
+  },
+  "shared_backup_desc": {
+    "message": "Exporte sus claves y contactos en un único archivo con armadura, o restáurelos desde uno. Las claves privadas exportadas se cifran con una frase de contraseña que usted elige."
+  },
+  "shared_bundle_auto_lock": {
+    "message": "Bloqueo automático tras $duration$",
+    "placeholders": {
+      "duration": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_bundle_auto_lock_off": {
+    "message": "El bloqueo automático está desactivado"
+  },
+  "shared_bundle_auto_lock_tabs": {
+    "message": "Bloqueo automático tras $duration$ y al cambiar de pestaña",
+    "placeholders": {
+      "duration": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_bundle_clipboard_one": {
+    "message": "Los secretos copiados se borran del portapapeles tras $count$ segundo",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_bundle_clipboard_other": {
+    "message": "Los secretos copiados se borran del portapapeles tras $count$ segundos",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_bundle_discovery_off": {
+    "message": "Sin búsqueda de claves - nada sale de este dispositivo para encontrar una clave"
+  },
+  "shared_bundle_discovery_on": {
+    "message": "Las claves se pueden buscar en GitHub y keys.openpgp.org"
+  },
+  "shared_bundle_history_off": {
+    "message": "No se guarda historial"
+  },
+  "shared_bundle_history_on": {
+    "message": "Guarda un historial cifrado de lo que hace"
+  },
+  "shared_bundle_never_cache_off": {
+    "message": "Las claves desbloqueadas se mantienen en caché hasta que bloquee"
+  },
+  "shared_bundle_never_cache_on": {
+    "message": "Las claves se borran de la memoria tras cada uso"
+  },
+  "shared_bundle_no_encrypt_to_self": {
+    "message": "Los mensajes que cifre no podrá leerlos después"
+  },
+  "shared_bundle_storage_local": {
+    "message": "Las claves se quedan en este dispositivo"
+  },
+  "shared_bundle_storage_sync": {
+    "message": "Las claves se sincronizan en su perfil de Chrome"
+  },
+  "shared_bundle_unlock_on_open_off": {
+    "message": "Cada clave pide su propio desbloqueo"
+  },
+  "shared_bundle_unlock_on_open_on": {
+    "message": "Una sola solicitud de llave de acceso desbloquea la bóveda y sus claves"
+  },
+  "shared_byline_before": {
+    "message": "Una herramienta de privacidad de"
+  },
+  "shared_check_extensions": {
+    "message": "Comprobar sus extensiones"
+  },
+  "shared_clear_name": {
+    "message": "Borrar nombre"
+  },
+  "shared_commands": {
+    "message": "Comandos"
+  },
+  "shared_confirm_type_after": {
+    "message": "a continuación"
+  },
+  "shared_confirm_type_aria": {
+    "message": "Escriba «$text$» para confirmar",
+    "placeholders": {
+      "text": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_confirm_type_before": {
+    "message": "Para confirmar, escriba"
+  },
+  "shared_crx_enable_desc": {
+    "message": "Firme paquetes de extensiones de Chrome (.crx) para Verified CRX Uploads de Web Store, usando una clave guardada en su bóveda en lugar de en su cadena de compilación."
+  },
+  "shared_crx_enable_title": {
+    "message": "Activar la firma CRX"
+  },
+  "shared_crx_how": {
+    "message": "Cómo funciona la firma CRX"
+  },
+  "shared_crx_signing": {
+    "message": "Firma CRX"
+  },
+  "shared_delete_history_body": {
+    "message": "«Nunca guardar claves en caché» también elimina su historial guardado ($size$). No se puede recuperar.",
+    "placeholders": {
+      "size": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_delete_history_confirm": {
+    "message": "Activar y eliminar el historial"
+  },
+  "shared_delete_history_title": {
+    "message": "¿Eliminar el historial guardado?"
+  },
+  "shared_dev_tools": {
+    "message": "Herramientas de desarrollo"
+  },
+  "shared_developer": {
+    "message": "Desarrollador"
+  },
+  "shared_developer_desc": {
+    "message": "Inspeccione chrome.storage y vuelque la memoria WASM para pruebas. Esta sección solo aparece en compilaciones de desarrollo."
+  },
+  "shared_display": {
+    "message": "Apariencia"
+  },
+  "shared_downloads": {
+    "message": "Descargas"
+  },
+  "shared_drop_desc": {
+    "message": "Las claves se añaden a su llavero; los archivos y el texto van al espacio de trabajo."
+  },
+  "shared_drop_to_import": {
+    "message": "Suelte para importar"
+  },
+  "shared_export_all_keys": {
+    "message": "Exportar todas las claves"
+  },
+  "shared_hide_technical_details": {
+    "message": "Ocultar detalles técnicos"
+  },
+  "shared_import_flow_states": {
+    "message": "Estados del flujo de importación"
+  },
+  "shared_import_keys": {
+    "message": "Importar claves"
+  },
+  "shared_key_discovery": {
+    "message": "Búsqueda de claves"
+  },
+  "shared_key_security": {
+    "message": "Seguridad de las claves"
+  },
+  "shared_key_storage": {
+    "message": "Almacenamiento de claves"
+  },
+  "shared_keyboard_shortcuts": {
+    "message": "Atajos de teclado"
+  },
+  "shared_lock_after": {
+    "message": "Bloquear tras"
+  },
+  "shared_lock_tab_away_desc": {
+    "message": "Bloquea en cuanto el panel lateral deja de estar visible (cambio de ventana, panel plegado o ventana minimizada)."
+  },
+  "shared_lock_tab_away_title": {
+    "message": "Bloquear al cambiar de pestaña"
+  },
+  "shared_lookup_online_desc": {
+    "message": "Añade un cuadro de búsqueda a la pantalla de importación para claves SSH de GitHub y certificados de keys.openpgp.org. Desactivado significa que nada sale de este dispositivo para encontrar una clave. Activarlo significa que cada búsqueda comunica a ese servidor su dirección IP y a quién ha buscado - no le comunica nada sobre sus claves ni sus mensajes."
+  },
+  "shared_lookup_online_title": {
+    "message": "Buscar claves en línea"
+  },
+  "shared_master_password": {
+    "message": "Contraseña maestra"
+  },
+  "shared_migration_failed": {
+    "message": "Error en la migración"
+  },
+  "shared_minutes_one": {
+    "message": "$count$ minuto",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_minutes_other": {
+    "message": "$count$ minutos",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_never_cache_desc": {
+    "message": "Las claves se borran de la memoria tras cada operación. Puede seguir desbloqueando claves manualmente desde la pestaña Claves."
+  },
+  "shared_never_cache_title": {
+    "message": "Nunca guardar claves en caché"
+  },
+  "shared_one_hour": {
+    "message": "1 hora"
+  },
+  "shared_open_dev_tools": {
+    "message": "Abrir herramientas de desarrollo"
+  },
+  "shared_passkey_failed": {
+    "message": "Error de autenticación con la llave de acceso. Inténtelo de nuevo."
+  },
+  "shared_preset_applied": {
+    "message": "Perfil aplicado: $title$",
+    "placeholders": {
+      "title": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_preset_applied_history_deleted": {
+    "message": "El historial se ha eliminado y Deshacer no lo restaura."
+  },
+  "shared_preset_bundled_changed": {
+    "message": "Se cambió un ajuste agrupado"
+  },
+  "shared_preset_careful_tagline": {
+    "message": "Valores sensatos para secretos de verdad"
+  },
+  "shared_preset_careful_title": {
+    "message": "Prudente"
+  },
+  "shared_preset_casual_tagline": {
+    "message": "Comodidad ante todo - para claves que protegen cosas de poca importancia"
+  },
+  "shared_preset_casual_title": {
+    "message": "Relajado"
+  },
+  "shared_preset_current": {
+    "message": "Actual"
+  },
+  "shared_preset_custom": {
+    "message": "Personalizado"
+  },
+  "shared_preset_none_selected": {
+    "message": "Ningún perfil seleccionado"
+  },
+  "shared_preset_paranoid_note": {
+    "message": "Sus mensajes siguen siendo legibles para usted - desactive después «Cifrar también para mí» si incluso eso supone un riesgo."
+  },
+  "shared_preset_paranoid_tagline": {
+    "message": "Nada permanece. Bloqueos más cortos, sin historial, sin claves en caché."
+  },
+  "shared_preset_paranoid_title": {
+    "message": "Si esto se filtra, tengo un problema"
+  },
+  "shared_preset_recommended": {
+    "message": "Recomendado"
+  },
+  "shared_saving": {
+    "message": "Guardando..."
+  },
+  "shared_security_preset": {
+    "message": "Perfil de seguridad"
+  },
+  "shared_show_technical_details": {
+    "message": "Mostrar detalles técnicos"
+  },
+  "shared_something_went_wrong": {
+    "message": "Se ha producido un error. Inténtelo de nuevo."
+  },
+  "shared_source_on_github": {
+    "message": "Código fuente en GitHub"
+  },
+  "shared_storage_local_desc": {
+    "message": "Sus datos se quedan en este equipo. Si cambia de dispositivo o reinstala, tendrá que volver a configurarlo todo."
+  },
+  "shared_storage_local_label": {
+    "message": "Solo en este dispositivo"
+  },
+  "shared_storage_sync_desc": {
+    "message": "Sus datos se sincronizan a través de su cuenta de Chrome. Disponibles allí donde haya iniciado sesión."
+  },
+  "shared_storage_sync_label": {
+    "message": "Sincronizar entre dispositivos"
+  },
+  "shared_sync_quota_error": {
+    "message": "No hay suficiente espacio de sincronización. Chrome limita los datos sincronizados a unos 100 KB en total, así que esta bóveda es demasiado grande para sincronizarla entre dispositivos. Manténgala en este dispositivo, o quite algunas claves e inténtelo de nuevo."
+  },
+  "shared_translation": {
+    "message": "Traducción"
+  },
+  "shared_undo": {
+    "message": "Deshacer"
+  },
+  "shared_unlock_aria": {
+    "message": "Desbloquear PGP Tools"
+  },
+  "shared_unlock_failed": {
+    "message": "Error al desbloquear. Inténtelo de nuevo."
+  },
+  "shared_unlock_intro": {
+    "message": "Sus claves y contactos están cifrados. Autentíquese para continuar."
+  },
+  "shared_unlock_lost_password": {
+    "message": "Si ha perdido su contraseña, sus claves y contactos cifrados no se pueden recuperar."
+  },
+  "shared_unlock_with_passkey": {
+    "message": "Desbloquear con llave de acceso"
+  },
+  "shared_unlock_with_vault_desc": {
+    "message": "La solicitud de llave de acceso que abre la bóveda también desbloquea sus claves. Una clave que todavía pregunte por su cuenta pasará a este modo la próxima vez que la desbloquee. Las claves protegidas con contraseña conservan su contraseña."
+  },
+  "shared_unlock_with_vault_title": {
+    "message": "Desbloquear las claves con la bóveda"
+  },
+  "shared_unlocking": {
+    "message": "Desbloqueando..."
+  },
+  "shared_wrong_password": {
+    "message": "Contraseña incorrecta."
+  },
+  "workspace_add_a_contact": {
+    "message": "Añadir un contacto"
+  },
+  "workspace_age_message_note": {
+    "message": "Mensaje age - los destinatarios SSH no se pueden mezclar con PGP"
+  },
+  "workspace_browse_files": {
+    "message": "Buscar archivos"
+  },
+  "workspace_clear_all_files": {
+    "message": "Quitar todos"
+  },
+  "workspace_clear_input_output": {
+    "message": "Borrar entrada y resultado"
+  },
+  "workspace_clear_text": {
+    "message": "Borrar texto"
+  },
+  "workspace_cleared_toast": {
+    "message": "Espacio de trabajo borrado"
+  },
+  "workspace_close_find": {
+    "message": "Cerrar búsqueda"
+  },
+  "workspace_compose_same_language": {
+    "message": "Ese ya es su idioma ($language$).",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_compose_translate_unavailable": {
+    "message": "La traducción a ese idioma no está disponible aquí."
+  },
+  "workspace_compose_translated": {
+    "message": "Traducido de $from$ a $to$",
+    "placeholders": {
+      "from": {
+        "content": "$1"
+      },
+      "to": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_create_one": {
+    "message": "Crear una"
+  },
+  "workspace_crx_save_failed": {
+    "message": "No se ha podido guardar automáticamente - pulse Guardar para volver a intentarlo."
+  },
+  "workspace_crx_saved": {
+    "message": "Se ha guardado $name$.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_decrypt_with": {
+    "message": "Descifrar con"
+  },
+  "workspace_decrypting": {
+    "message": "Descifrando..."
+  },
+  "workspace_detected_key_import": {
+    "message": "Importarla como contacto"
+  },
+  "workspace_detected_key_in_message": {
+    "message": "Este mensaje contiene la clave pública de $name$.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_detected_key_in_message_anon": {
+    "message": "Este mensaje contiene la clave pública de alguien."
+  },
+  "workspace_detected_key_known": {
+    "message": "Ya tiene la clave de $name$.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_detected_key_pasted": {
+    "message": "Esta es la clave pública de $name$.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_detected_key_pasted_anon": {
+    "message": "Esto parece la clave pública de alguien."
+  },
+  "workspace_detected_key_show": {
+    "message": "Mostrarla en sus claves"
+  },
+  "workspace_drop_files_or_text": {
+    "message": "Suelte aquí archivos o texto"
+  },
+  "workspace_enter_key_password": {
+    "message": "Introduzca la contraseña de la clave"
+  },
+  "workspace_enter_message_password": {
+    "message": "Introduzca la contraseña del mensaje"
+  },
+  "workspace_error_crx_invalid": {
+    "message": "No se ha podido verificar la firma CRX de este archivo."
+  },
+  "workspace_error_crx_sign_failed": {
+    "message": "Error en la firma CRX. Inténtelo de nuevo."
+  },
+  "workspace_error_crx_wrong_password": {
+    "message": "Contraseña incorrecta o error al firmar."
+  },
+  "workspace_error_decrypt_failed": {
+    "message": "Error al descifrar. Puede que el mensaje esté dañado o que no esté cifrado para ninguna de sus claves."
+  },
+  "workspace_error_decrypt_failed_ssh": {
+    "message": "Error al descifrar. Puede que el mensaje esté dañado o que no esté cifrado para ninguna de sus claves SSH."
+  },
+  "workspace_error_engine_mismatch": {
+    "message": "No se ha podido determinar en qué formato cifrar."
+  },
+  "workspace_error_need_recipient_or_password": {
+    "message": "Seleccione al menos una clave de destinatario o establezca una contraseña."
+  },
+  "workspace_error_no_signing_key": {
+    "message": "No hay ninguna clave de firma disponible. Añada primero una clave."
+  },
+  "workspace_error_no_signing_key_ssh": {
+    "message": "No hay ninguna clave de firma disponible. Las claves SSH no pueden firmar - añada primero una clave OpenPGP."
+  },
+  "workspace_error_not_signed": {
+    "message": "Este mensaje no está firmado."
+  },
+  "workspace_error_read_file": {
+    "message": "No se ha podido leer este archivo. Inténtelo de nuevo."
+  },
+  "workspace_error_select_crx_key": {
+    "message": "Seleccione primero una clave de firma CRX."
+  },
+  "workspace_error_select_decryption_key": {
+    "message": "Seleccione una clave de descifrado."
+  },
+  "workspace_error_signature_invalid": {
+    "message": "La verificación de la firma ha FALLADO - puede que este mensaje haya sido manipulado"
+  },
+  "workspace_error_unlock_failed": {
+    "message": "Error al desbloquear. Inténtelo de nuevo."
+  },
+  "workspace_error_verify_failed": {
+    "message": "Error al verificar. La entrada no parece un mensaje PGP firmado."
+  },
+  "workspace_error_wrong_key_password": {
+    "message": "Contraseña incorrecta. Compruébela e inténtelo de nuevo."
+  },
+  "workspace_files_decrypted_one": {
+    "message": "$count$ archivo descifrado ($size$ en total)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "size": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_files_decrypted_other": {
+    "message": "$count$ archivos descifrados ($size$ en total)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "size": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_files_encrypted_one": {
+    "message": "$count$ archivo cifrado ($size$ en total)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "size": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_files_encrypted_other": {
+    "message": "$count$ archivos cifrados ($size$ en total)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "size": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_files_signed_one": {
+    "message": "$count$ archivo firmado",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_files_signed_other": {
+    "message": "$count$ archivos firmados",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_files_zipped_encrypted_one": {
+    "message": "$count$ archivo comprimido y cifrado",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_files_zipped_encrypted_other": {
+    "message": "$count$ archivos comprimidos y cifrados",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_find_hide_replace": {
+    "message": "Ocultar reemplazar"
+  },
+  "workspace_find_label": {
+    "message": "Buscar"
+  },
+  "workspace_find_replace": {
+    "message": "Buscar y reemplazar"
+  },
+  "workspace_find_show_replace": {
+    "message": "Mostrar reemplazar"
+  },
+  "workspace_go": {
+    "message": "Ir"
+  },
+  "workspace_hide_password": {
+    "message": "Ocultar contraseña"
+  },
+  "workspace_hide_technical_details": {
+    "message": "Ocultar detalles técnicos"
+  },
+  "workspace_history_save_failed": {
+    "message": "No se ha podido guardar en el historial - puede que el almacenamiento esté lleno"
+  },
+  "workspace_import_one": {
+    "message": "Importar una"
+  },
+  "workspace_match_case": {
+    "message": "Coincidir mayúsculas y minúsculas"
+  },
+  "workspace_message_input_aria": {
+    "message": "Entrada de mensaje"
+  },
+  "workspace_message_password_help": {
+    "message": "Cualquiera que tenga esta contraseña puede leer el mensaje, así que envíela por otra vía - no junto con el propio mensaje. Se añade al mensaje además de los destinatarios que haya elegido; cualquiera de las dos cosas puede abrirlo."
+  },
+  "workspace_message_password_label": {
+    "message": "Contraseña del mensaje"
+  },
+  "workspace_message_password_title": {
+    "message": "Contraseña para este mensaje"
+  },
+  "workspace_message_tools": {
+    "message": "Herramientas de mensaje"
+  },
+  "workspace_need_recipient_or_password": {
+    "message": "Seleccione al menos un destinatario o establezca una contraseña"
+  },
+  "workspace_next_match": {
+    "message": "Coincidencia siguiente"
+  },
+  "workspace_no_contacts_yet": {
+    "message": "Todavía no hay contactos"
+  },
+  "workspace_no_keys_yet": {
+    "message": "Todavía no hay claves"
+  },
+  "workspace_no_such_language": {
+    "message": "No existe ese idioma."
+  },
+  "workspace_note_downloading": {
+    "message": "Descargando $what$...",
+    "placeholders": {
+      "what": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_note_downloading_progress": {
+    "message": "Descargando $what$, $percent$ %",
+    "placeholders": {
+      "what": {
+        "content": "$1"
+      },
+      "percent": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_note_same_language": {
+    "message": "Este mensaje ya está en $language$.",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_note_translated_from": {
+    "message": "Traducido en este dispositivo del $language$.",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_note_uncertain": {
+    "message": "No se sabe en qué idioma está este mensaje."
+  },
+  "workspace_operation_failed": {
+    "message": "La operación ha fallado. Inténtelo de nuevo."
+  },
+  "workspace_output_size_line": {
+    "message": "$name$ - $size$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "size": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_password_min_length_one": {
+    "message": "Al menos $count$ carácter.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_password_min_length_other": {
+    "message": "Al menos $count$ caracteres.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_password_too_short_one": {
+    "message": "Use al menos $count$ carácter.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_password_too_short_other": {
+    "message": "Use al menos $count$ caracteres.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_placeholder_compose": {
+    "message": "Escriba o pegue su mensaje..."
+  },
+  "workspace_placeholder_decrypt": {
+    "message": "Pegue el mensaje cifrado que ha recibido..."
+  },
+  "workspace_placeholder_verify": {
+    "message": "Pegue el mensaje firmado que quiere comprobar..."
+  },
+  "workspace_previous_match": {
+    "message": "Coincidencia anterior"
+  },
+  "workspace_private_key_clear_input": {
+    "message": "Borrar entrada"
+  },
+  "workspace_private_key_ignore": {
+    "message": "Ignorar"
+  },
+  "workspace_private_key_import_safely": {
+    "message": "Importar esta clave de forma segura"
+  },
+  "workspace_private_key_pasted_body": {
+    "message": "El cuadro de Cifrar/Descifrar no es un lugar seguro para material de clave secreta. Use el flujo de importación para que la clave se cargue en el almacén seguro y quede fuera de cualquier borrador guardado."
+  },
+  "workspace_private_key_pasted_title": {
+    "message": "Esto parece una clave privada. No pegue claves privadas aquí."
+  },
+  "workspace_private_key_show_cleartext": {
+    "message": "Mostrar el texto pegado en texto claro"
+  },
+  "workspace_processing": {
+    "message": "Procesando..."
+  },
+  "workspace_recipients_label": {
+    "message": "Destinatarios"
+  },
+  "workspace_replace": {
+    "message": "Reemplazar"
+  },
+  "workspace_replace_all": {
+    "message": "Reemplazar todo"
+  },
+  "workspace_replace_all_short": {
+    "message": "Todo"
+  },
+  "workspace_replace_all_shortcut": {
+    "message": "Reemplazar todo ($shortcut$)",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_replace_with": {
+    "message": "Reemplazar por"
+  },
+  "workspace_reset": {
+    "message": "Restablecer"
+  },
+  "workspace_restore_original": {
+    "message": "Restaurar el original"
+  },
+  "workspace_save_file": {
+    "message": "Guardar $name$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_search_languages": {
+    "message": "Buscar idiomas"
+  },
+  "workspace_select_signing_key": {
+    "message": "Seleccione una clave de firma"
+  },
+  "workspace_self_excluded_age": {
+    "message": "no tiene ninguna clave SSH propia, y un mensaje age no puede incluir una clave PGP."
+  },
+  "workspace_self_excluded_intro": {
+    "message": "No podrá leer este mensaje:"
+  },
+  "workspace_self_excluded_pgp": {
+    "message": "ninguna de sus claves se puede añadir a este mensaje."
+  },
+  "workspace_set_password": {
+    "message": "Establecer contraseña"
+  },
+  "workspace_show_original": {
+    "message": "Mostrar original"
+  },
+  "workspace_show_password": {
+    "message": "Mostrar contraseña"
+  },
+  "workspace_show_technical_details": {
+    "message": "Mostrar detalles técnicos"
+  },
+  "workspace_show_translation": {
+    "message": "Mostrar traducción al $language$",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_sign_blocked_age": {
+    "message": "Los mensajes age no se pueden firmar - las claves SSH no tienen formato de firma aquí."
+  },
+  "workspace_sign_blocked_no_pgp_key": {
+    "message": "para firmar necesita una clave OpenPGP propia - las claves SSH no pueden firmar."
+  },
+  "workspace_sign_for_web_store": {
+    "message": "Firmar para Web Store"
+  },
+  "workspace_sign_kind_crx": {
+    "message": "Extensión de Chrome (.crx)"
+  },
+  "workspace_sign_kind_pgp": {
+    "message": "Firma PGP"
+  },
+  "workspace_sign_with": {
+    "message": "Firmar con"
+  },
+  "workspace_signature_verified": {
+    "message": "Firma verificada"
+  },
+  "workspace_status_age_encrypted": {
+    "message": "Mensaje age - cifrado para destinatarios SSH"
+  },
+  "workspace_status_crx_signed": {
+    "message": "$name$ firmado - guardando...",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_status_crx_valid": {
+    "message": "CRX válido - extensión $id$",
+    "placeholders": {
+      "id": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_status_decrypted_archive": {
+    "message": "Archivo comprimido descifrado con varios archivos"
+  },
+  "workspace_status_signer_unknown": {
+    "message": "Este mensaje está firmado, pero la clave pública del firmante no está en sus claves ni en sus contactos, así que no se ha podido verificar la firma."
+  },
+  "workspace_style_bold": {
+    "message": "Negrita"
+  },
+  "workspace_style_code": {
+    "message": "Código"
+  },
+  "workspace_style_italic": {
+    "message": "Cursiva"
+  },
+  "workspace_style_strike": {
+    "message": "Tachado"
+  },
+  "workspace_text_cleared_toast": {
+    "message": "Texto borrado"
+  },
+  "workspace_text_entered_below": {
+    "message": "Texto introducido abajo"
+  },
+  "workspace_toggle_encrypt_to_self": {
+    "message": "Cifrar también para mí"
+  },
+  "workspace_toggle_password": {
+    "message": "Contraseña"
+  },
+  "workspace_toggle_save_to_history": {
+    "message": "Guardar en el historial"
+  },
+  "workspace_toggle_zip_files": {
+    "message": "Comprimir archivos"
+  },
+  "workspace_translate": {
+    "message": "Traducir"
+  },
+  "workspace_translate_menu_heading": {
+    "message": "Traducir el mensaje al"
+  },
+  "workspace_translate_to": {
+    "message": "Traducir al $language$",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_translating": {
+    "message": "Traduciendo..."
+  },
+  "workspace_undo": {
+    "message": "Deshacer"
+  },
+  "workspace_unknown_signer": {
+    "message": "Firmante desconocido"
+  },
+  "workspace_unlocking": {
+    "message": "Desbloqueando..."
+  },
+  "workspace_unverified": {
+    "message": "Sin verificar"
+  },
+  "workspace_verify_signature": {
+    "message": "Verificar firma"
+  },
+  "workspace_verifying": {
+    "message": "Verificando..."
+  },
+  "workspace_working": {
+    "message": "Trabajando..."
   }
 }

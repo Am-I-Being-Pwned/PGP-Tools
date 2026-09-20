@@ -4,7 +4,7 @@ import type { PublicContactKey } from "./storage/contacts";
 import type { ProtectedKeyBlob } from "./storage/keyring";
 import {
   buildEncryptRecipients,
-  MIXED_ENGINE_REASON,
+  mixedEngineReason,
   resolveRecipientEngine,
   resolveSelectedRecipients,
   resolveSelfKey,
@@ -336,7 +336,7 @@ describe("resolveRecipientEngine", () => {
       SSH_RECIPIENT,
     ]);
     expect(engine).toBeNull();
-    expect(reason).toBe(MIXED_ENGINE_REASON);
+    expect(reason).toBe(mixedEngineReason());
   });
 
   it("refuses a mix of an explicit pgp kind and an absent one alike", () => {
@@ -357,7 +357,7 @@ describe("buildEncryptRecipients - engines", () => {
       encryptToSelf: true,
       ownKeys: [OWN_A],
     });
-    expect(result.refusal).toBe(MIXED_ENGINE_REASON);
+    expect(result.refusal).toBe(mixedEngineReason());
     expect(result.recipientPublicKeys).toEqual([]);
     expect(result.engine).toBeNull();
     expect(result.selfKeyId).toBeNull();
@@ -481,7 +481,7 @@ describe("multi-recipient contacts", () => {
       encryptToSelf: true,
       ownKeys: [OWN_A],
     });
-    expect(result.refusal).toBe(MIXED_ENGINE_REASON);
+    expect(result.refusal).toBe(mixedEngineReason());
     expect(result.recipientPublicKeys).toEqual([]);
     expect(result.engine).toBeNull();
   });

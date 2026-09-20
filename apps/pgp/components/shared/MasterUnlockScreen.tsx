@@ -4,6 +4,7 @@ import { Button } from "@amibeingpwned/ui/button";
 
 import type { MasterProtection } from "../../lib/storage/master-protection";
 import { fromBase64 } from "../../lib/encoding";
+import { t } from "../../lib/i18n";
 import * as wasmApi from "../../lib/pgp/wasm";
 import {
   ARGON2_ITERATIONS,
@@ -93,7 +94,7 @@ export function MasterUnlockScreen({
       if (name === "NotAllowedError" || name === "AbortError") {
         // User dismissed the passkey dialog.
       } else {
-        setError("Passkey authentication failed. Try again.");
+        setError(t("shared_passkey_failed"));
       }
     } finally {
       prfOutput?.fill(0);
@@ -120,7 +121,7 @@ export function MasterUnlockScreen({
       );
 
       if (!ok) {
-        setError("Wrong password.");
+        setError(t("shared_wrong_password"));
         // Drop the JS reference to the wrong-password string. Retries
         // build a new immutable string anyway; minimising heap lifetime.
         setPassword("");
@@ -129,7 +130,7 @@ export function MasterUnlockScreen({
       setPassword("");
       await onUnlocked();
     } catch {
-      setError("Unlock failed. Try again.");
+      setError(t("shared_unlock_failed"));
       setPassword("");
     } finally {
       passwordBytes.fill(0);
@@ -141,7 +142,7 @@ export function MasterUnlockScreen({
     <div
       className="flex h-full flex-col items-center justify-center p-6"
       role="main"
-      aria-label="Unlock PGP Tools"
+      aria-label={t("shared_unlock_aria")}
     >
       <div className="w-full max-w-xs space-y-6 text-center">
         <img
@@ -152,15 +153,16 @@ export function MasterUnlockScreen({
         />
 
         <div>
+          {/* i18n-ignore */}
           <h1 className="text-lg font-semibold">PGP Tools</h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            Your keys and contacts are encrypted. Authenticate to continue.
+            {t("shared_unlock_intro")}
           </p>
         </div>
 
         {masterProtection.method === "passkey" && (
           <Button className="w-full" onClick={handlePasskeyUnlock} autoFocus>
-            Unlock with passkey
+            {t("shared_unlock_with_passkey")}
           </Button>
         )}
 
@@ -175,11 +177,11 @@ export function MasterUnlockScreen({
             <input
               type="password"
               autoComplete="current-password"
-              placeholder="Master password"
+              placeholder={t("shared_master_password")}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className={INPUT_CLASS}
-              aria-label="Master password"
+              aria-label={t("shared_master_password")}
               autoFocus
             />
             <Button
@@ -187,7 +189,7 @@ export function MasterUnlockScreen({
               className="w-full"
               disabled={unlocking || !password}
             >
-              {unlocking ? "Unlocking..." : "Unlock"}
+              {unlocking ? t("shared_unlocking") : t("common_unlock")}
             </Button>
           </form>
         )}
@@ -199,8 +201,7 @@ export function MasterUnlockScreen({
         )}
 
         <p className="text-muted-foreground text-xs">
-          If you have lost your password, your encrypted keys and contacts
-          cannot be recovered.
+          {t("shared_unlock_lost_password")}
         </p>
 
         {import.meta.env.DEV && (
@@ -209,7 +210,7 @@ export function MasterUnlockScreen({
             onClick={() => setShowDevTools(true)}
             className="text-muted-foreground hover:text-foreground text-[10px] underline transition-colors"
           >
-            Dev tools
+            {t("shared_dev_tools")}
           </button>
         )}
       </div>

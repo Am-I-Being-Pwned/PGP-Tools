@@ -1,0 +1,8 @@
+{
+  "extName": {
+    "message": "Szyfrowanie email OpenPGP i GPG - PGP Key Generator"
+  },
+  "extDescription": {
+    "message": "Szyfruj, odszyfrowuj, podpisuj i weryfikuj email i wiadomości za pomocą OpenPGP i GPG."
+  }
+}

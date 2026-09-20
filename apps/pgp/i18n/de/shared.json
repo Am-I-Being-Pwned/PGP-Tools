@@ -1,0 +1,214 @@
+{
+  "shared_security_preset": { "message": "Sicherheitsvoreinstellung" },
+  "shared_preset_bundled_changed": {
+    "message": "Eine gebündelte Einstellung wurde geändert"
+  },
+  "shared_preset_none_selected": { "message": "Keine Voreinstellung gewählt" },
+  "shared_preset_custom": { "message": "Eigene Einstellungen" },
+  "shared_translation": { "message": "Übersetzung" },
+  "shared_keyboard_shortcuts": { "message": "Tastenkombinationen" },
+  "shared_key_storage": { "message": "Schlüsselspeicherung" },
+  "shared_key_security": { "message": "Schlüsselsicherheit" },
+  "shared_auto_lock_title": {
+    "message": "Bei Inaktivität automatisch sperren"
+  },
+  "shared_auto_lock_desc": {
+    "message": "Entsperrte Schlüssel nach einer Zeit ohne Aktivität in der Seitenleiste sperren. Der Sperrbildschirm des Betriebssystems sperrt unabhängig von dieser Einstellung immer sofort."
+  },
+  "shared_lock_after": { "message": "Sperren nach" },
+  "shared_minutes_one": { "message": "$count$ Minute" },
+  "shared_minutes_other": { "message": "$count$ Minuten" },
+  "shared_one_hour": { "message": "1 Stunde" },
+  "shared_lock_tab_away_title": {
+    "message": "Sperren, wenn ich den Tab wechsle"
+  },
+  "shared_lock_tab_away_desc": {
+    "message": "Sofort sperren, sobald die Seitenleiste nicht sichtbar ist (Alt+Tab, eingeklappt oder Fenster minimiert)."
+  },
+  "shared_never_cache_title": { "message": "Schlüssel nie zwischenspeichern" },
+  "shared_never_cache_desc": {
+    "message": "Schlüssel werden nach jedem Vorgang aus dem Speicher gelöscht. Sie können Schlüssel weiterhin manuell im Tab „Schlüssel“ entsperren."
+  },
+  "shared_unlock_with_vault_title": {
+    "message": "Schlüssel mit dem Tresor entsperren"
+  },
+  "shared_unlock_with_vault_desc": {
+    "message": "Die Passkey-Abfrage, die den Tresor öffnet, entsperrt auch Ihre Schlüssel. Ein Schlüssel, der noch einzeln nachfragt, wird beim nächsten Entsperren übernommen. Passwortgeschützte Schlüssel behalten ihr Passwort."
+  },
+  "shared_downloads": { "message": "Downloads" },
+  "shared_auto_download_files_title": {
+    "message": "Dateiergebnisse automatisch herunterladen"
+  },
+  "shared_auto_download_files_desc": {
+    "message": "Nach dem Ver- oder Entschlüsseln von Dateien automatisch herunterladen."
+  },
+  "shared_auto_download_text_title": {
+    "message": "Textergebnisse automatisch herunterladen"
+  },
+  "shared_auto_download_text_desc": {
+    "message": "Nach dem Ver- oder Entschlüsseln von Text automatisch herunterladen."
+  },
+  "shared_key_discovery": { "message": "Schlüsselsuche" },
+  "shared_lookup_online_title": { "message": "Schlüssel online suchen" },
+  "shared_lookup_online_desc": {
+    "message": "Fügt dem Importbildschirm ein Suchfeld für SSH-Schlüssel von GitHub und Zertifikate von keys.openpgp.org hinzu. Aus bedeutet: Nichts verlässt dieses Gerät, um einen Schlüssel zu finden. An bedeutet: Eine Suche teilt dem jeweiligen Host Ihre IP-Adresse mit und wen Sie gesucht haben - nichts über Ihre Schlüssel oder Nachrichten."
+  },
+  "shared_crx_signing": { "message": "CRX-Signierung" },
+  "shared_crx_enable_title": { "message": "CRX-Signierung aktivieren" },
+  "shared_crx_enable_desc": {
+    "message": "Chrome-Erweiterungspakete (.crx) für die verifizierten CRX-Uploads des Web Store signieren, mit einem Schlüssel aus Ihrem Tresor statt aus Ihrer Build-Pipeline."
+  },
+  "shared_crx_how": { "message": "So funktioniert die CRX-Signierung" },
+  "shared_backup": { "message": "Sicherung" },
+  "shared_backup_desc": {
+    "message": "Exportieren Sie Ihre Schlüssel und Kontakte als eine einzige Datei im ASCII-Armor-Format oder stellen Sie sie aus einer solchen wieder her. Exportierte private Schlüssel werden mit einer Passphrase Ihrer Wahl verschlüsselt."
+  },
+  "shared_export_all_keys": { "message": "Alle Schlüssel exportieren" },
+  "shared_import_keys": { "message": "Schlüssel importieren" },
+  "shared_display": { "message": "Anzeige" },
+  "shared_advanced_mode": { "message": "Erweiterter Modus" },
+  "shared_advanced_mode_desc": {
+    "message": "Schlüssel-Fingerabdrücke, Algorithmen und Optionen für das Ausgabeformat anzeigen."
+  },
+  "shared_developer": { "message": "Entwickler" },
+  "shared_developer_desc": {
+    "message": "chrome.storage untersuchen und WASM-Speicher zu Testzwecken ausgeben. Dieser Abschnitt erscheint nur in Entwicklungs-Builds."
+  },
+  "shared_open_dev_tools": { "message": "Entwicklertools öffnen" },
+  "shared_import_flow_states": { "message": "Zustände des Importablaufs" },
+  "shared_dev_tools": { "message": "Entwicklertools" },
+  "shared_about": { "message": "Über" },
+  "shared_byline_before": { "message": "Ein Datenschutz-Tool von" },
+  "shared_source_on_github": { "message": "Quellcode auf GitHub" },
+  "shared_about_extensions": {
+    "message": "Sorgen wegen schädlicher Browser-Erweiterungen? Prüfen Sie Ihre Erweiterungen auf Datensammlung, Session-Hijacking und andere Bedrohungen."
+  },
+  "shared_check_extensions": { "message": "Erweiterungen prüfen" },
+  "shared_delete_history_title": {
+    "message": "Gespeicherten Verlauf löschen?"
+  },
+  "shared_delete_history_confirm": {
+    "message": "Einschalten und Verlauf löschen"
+  },
+  "shared_delete_history_body": {
+    "message": "„Nie zwischenspeichern“ löscht auch Ihren gespeicherten Verlauf ($size$). Er kann nicht wiederhergestellt werden."
+  },
+  "shared_sync_quota_error": {
+    "message": "Nicht genügend Synchronisierungsspeicher. Chrome begrenzt synchronisierte Daten auf etwa 100 KB insgesamt, daher ist dieser Tresor zu groß, um ihn geräteübergreifend zu synchronisieren. Behalten Sie ihn auf diesem Gerät oder entfernen Sie einige Schlüssel und versuchen Sie es erneut."
+  },
+  "shared_migration_failed": { "message": "Migration fehlgeschlagen" },
+  "shared_preset_applied": { "message": "Voreinstellung angewendet: $title$" },
+  "shared_preset_applied_history_deleted": {
+    "message": "Der Verlauf wurde gelöscht und wird durch „Rückgängig“ nicht wiederhergestellt."
+  },
+  "shared_undo": { "message": "Rückgängig" },
+  "shared_commands": { "message": "Befehle" },
+  "shared_unlock_aria": { "message": "PGP Tools entsperren" },
+  "shared_unlock_intro": {
+    "message": "Ihre Schlüssel und Kontakte sind verschlüsselt. Authentifizieren Sie sich, um fortzufahren."
+  },
+  "shared_unlock_with_passkey": { "message": "Mit Passkey entsperren" },
+  "shared_master_password": { "message": "Master-Passwort" },
+  "shared_unlocking": { "message": "Wird entsperrt..." },
+  "shared_unlock_lost_password": {
+    "message": "Wenn Sie Ihr Passwort verloren haben, können Ihre verschlüsselten Schlüssel und Kontakte nicht wiederhergestellt werden."
+  },
+  "shared_passkey_failed": {
+    "message": "Passkey-Authentifizierung fehlgeschlagen. Versuchen Sie es erneut."
+  },
+  "shared_wrong_password": { "message": "Falsches Passwort." },
+  "shared_unlock_failed": {
+    "message": "Entsperren fehlgeschlagen. Versuchen Sie es erneut."
+  },
+  "shared_saving": { "message": "Wird gespeichert..." },
+  "shared_clear_name": { "message": "Namen löschen" },
+  "shared_confirm_type_before": { "message": "Geben Sie zur Bestätigung" },
+  "shared_confirm_type_after": { "message": "unten ein" },
+  "shared_confirm_type_aria": {
+    "message": "Geben Sie zur Bestätigung „$text$“ ein"
+  },
+  "shared_drop_to_import": { "message": "Zum Importieren ablegen" },
+  "shared_drop_desc": {
+    "message": "Schlüssel werden zu Ihrem Schlüsselbund hinzugefügt; Dateien und Text gehen in den Arbeitsbereich."
+  },
+  "shared_storage_local_label": { "message": "Nur dieses Gerät" },
+  "shared_storage_local_desc": {
+    "message": "Ihre Daten bleiben auf diesem Computer. Wenn Sie das Gerät wechseln oder neu installieren, müssen Sie alles neu einrichten."
+  },
+  "shared_storage_sync_label": {
+    "message": "Geräteübergreifend synchronisieren"
+  },
+  "shared_storage_sync_desc": {
+    "message": "Ihre Daten werden über Ihr Chrome-Konto synchronisiert. Überall verfügbar, wo Sie angemeldet sind."
+  },
+  "shared_something_went_wrong": {
+    "message": "Etwas ist schiefgelaufen. Versuchen Sie es erneut."
+  },
+  "shared_show_technical_details": { "message": "Technische Details anzeigen" },
+  "shared_hide_technical_details": {
+    "message": "Technische Details ausblenden"
+  },
+  "shared_preset_current": { "message": "Aktuell" },
+  "shared_preset_recommended": { "message": "Empfohlen" },
+  "shared_preset_paranoid_note": {
+    "message": "Ihre Nachrichten bleiben für Sie lesbar - schalten Sie „Auch für mich verschlüsseln“ später aus, falls selbst das ein Risiko ist."
+  },
+  "shared_preset_casual_title": { "message": "Locker" },
+  "shared_preset_casual_tagline": {
+    "message": "Bequemlichkeit zuerst - für Schlüssel, die nichts Wichtiges schützen"
+  },
+  "shared_preset_careful_title": { "message": "Vorsichtig" },
+  "shared_preset_careful_tagline": {
+    "message": "Vernünftige Standardwerte für echte Geheimnisse"
+  },
+  "shared_preset_paranoid_title": {
+    "message": "Wenn das durchsickert, bin ich in Schwierigkeiten"
+  },
+  "shared_preset_paranoid_tagline": {
+    "message": "Nichts bleibt liegen. Kürzeste Sperrzeiten, kein Verlauf, keine zwischengespeicherten Schlüssel."
+  },
+  "shared_bundle_auto_lock_off": { "message": "Automatisches Sperren ist aus" },
+  "shared_bundle_auto_lock": {
+    "message": "Automatisch sperren nach $duration$"
+  },
+  "shared_bundle_auto_lock_tabs": {
+    "message": "Automatisch sperren nach $duration$ und beim Tab-Wechsel"
+  },
+  "shared_bundle_never_cache_on": {
+    "message": "Schlüssel werden nach jeder Verwendung aus dem Speicher entfernt"
+  },
+  "shared_bundle_never_cache_off": {
+    "message": "Entsperrte Schlüssel bleiben bis zum Sperren zwischengespeichert"
+  },
+  "shared_bundle_unlock_on_open_on": {
+    "message": "Eine Passkey-Abfrage entsperrt den Tresor und Ihre Schlüssel"
+  },
+  "shared_bundle_unlock_on_open_off": {
+    "message": "Jeder Schlüssel fragt einzeln nach dem Entsperren"
+  },
+  "shared_bundle_history_on": {
+    "message": "Führt einen verschlüsselten Verlauf Ihrer Vorgänge"
+  },
+  "shared_bundle_history_off": { "message": "Es wird kein Verlauf geführt" },
+  "shared_bundle_discovery_on": {
+    "message": "Schlüssel können auf GitHub und keys.openpgp.org gesucht werden"
+  },
+  "shared_bundle_discovery_off": {
+    "message": "Keine Schlüsselsuche - nichts verlässt dieses Gerät, um einen Schlüssel zu finden"
+  },
+  "shared_bundle_storage_local": {
+    "message": "Schlüssel bleiben auf diesem Gerät"
+  },
+  "shared_bundle_storage_sync": {
+    "message": "Schlüssel werden über Ihr Chrome-Profil synchronisiert"
+  },
+  "shared_bundle_clipboard_one": {
+    "message": "Kopierte Geheimnisse werden nach $count$ Sekunde aus der Zwischenablage entfernt"
+  },
+  "shared_bundle_clipboard_other": {
+    "message": "Kopierte Geheimnisse werden nach $count$ Sekunden aus der Zwischenablage entfernt"
+  },
+  "shared_bundle_no_encrypt_to_self": {
+    "message": "Von Ihnen verschlüsselte Nachrichten sind für Sie danach nicht mehr lesbar"
+  }
+}

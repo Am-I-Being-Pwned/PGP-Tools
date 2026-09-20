@@ -1,0 +1,203 @@
+{
+  "app_action_title": { "message": "PGP Tools" },
+  "app_cmd_open": { "message": "Открыть PGP Tools" },
+  "app_cmd_open_encrypt": {
+    "message": "Открыть PGP Tools в режиме шифрования"
+  },
+  "app_cmd_open_decrypt": {
+    "message": "Открыть PGP Tools в режиме расшифровки"
+  },
+  "app_cmd_open_sign": { "message": "Открыть PGP Tools в режиме подписи" },
+  "app_cmd_open_verify": { "message": "Открыть PGP Tools в режиме проверки" },
+  "app_menu_open_in_pgp_tools": { "message": "Открыть в PGP Tools" },
+  "app_tab_main": { "message": "Главная" },
+  "app_nav_label": { "message": "Основная навигация" },
+  "app_vault_unreadable_title": {
+    "message": "Не удалось прочитать хранилище."
+  },
+  "app_vault_unreadable_body": {
+    "message": "Ваши ключи по-прежнему хранятся на этом устройстве. Для начала заблокируйте хранилище и попробуйте снова."
+  },
+  "app_vault_unreadable_body_passkey": {
+    "message": "Ваши ключи по-прежнему хранятся на этом устройстве. Для начала заблокируйте хранилище и попробуйте снова - убедитесь, что используете тот же ключ доступа, который настроили."
+  },
+  "app_vault_lock_retry": { "message": "Заблокировать и повторить" },
+  "app_import_added_one": { "message": "Ключ добавлен" },
+  "app_import_added_few": { "message": "Добавлено $count$ ключа" },
+  "app_import_added_many": { "message": "Добавлено $count$ ключей" },
+  "app_import_added_other": { "message": "Добавлено $count$ ключа" },
+  "app_import_view_key_one": { "message": "Показать ключ" },
+  "app_import_view_key_few": { "message": "Показать ключи" },
+  "app_import_view_key_many": { "message": "Показать ключи" },
+  "app_import_view_key_other": { "message": "Показать ключи" },
+  "app_welcome_open_failed": {
+    "message": "Не удалось открыть боковую панель. Нажмите значок PGP Tools на панели инструментов."
+  },
+  "app_welcome_opened": {
+    "message": "Следуйте инструкциям в боковой панели, чтобы начать"
+  },
+  "app_welcome_title": { "message": "PGP Tools установлен" },
+  "app_welcome_body": {
+    "message": "Нажмите кнопку ниже, чтобы открыть боковую панель и завершить настройку ключей. Затем её можно будет открыть в любой момент через значок PGP Tools на панели инструментов."
+  },
+  "app_welcome_start": { "message": "Нажмите здесь, чтобы начать" },
+  "app_welcome_credit_before": {
+    "message": "Инструмент для защиты приватности от"
+  },
+  "app_welcome_credit_after": { "message": "." },
+  "app_onboarding_prf_unsupported": {
+    "message": "Ваш аутентификатор не поддерживает PRF. Попробуйте другой ключ доступа или используйте пароль."
+  },
+  "app_onboarding_setup_failed": {
+    "message": "Не удалось выполнить настройку"
+  },
+  "app_onboarding_name_required": { "message": "Укажите имя." },
+  "app_onboarding_generate_failed": { "message": "Не удалось создать ключ" },
+  "app_onboarding_intro_body": {
+    "message": "Отправляйте личные сообщения, которые сможет прочитать только нужный человек, и проверяйте, действительно ли сообщение пришло от заявленного отправителя."
+  },
+  "app_onboarding_storage_question": { "message": "Где хранить ваши данные?" },
+  "app_onboarding_next": { "message": "Далее" },
+  "app_onboarding_protection_title": { "message": "Защитите свои данные" },
+  "app_onboarding_protection_body": {
+    "message": "Выберите, как защитить контакты и ключи. Это потребуется при каждом открытии PGP Tools."
+  },
+  "app_onboarding_create_passkey": { "message": "Создать ключ доступа" },
+  "app_onboarding_set_password": { "message": "Задать пароль" },
+  "app_onboarding_identity_title": { "message": "Создайте свой PGP-ключ" },
+  "app_onboarding_identity_body": {
+    "message": "Создайте пару ключей для шифрования, расшифровки и подписи сообщений."
+  },
+  "app_onboarding_name_label": { "message": "Имя *" },
+  "app_onboarding_name_placeholder": { "message": "Ваше полное имя" },
+  "app_onboarding_email_label": { "message": "Эл. почта" },
+  "app_onboarding_optional": { "message": "необязательно" },
+  "app_onboarding_email_placeholder": { "message": "you@example.com" },
+  "app_onboarding_comment_label": { "message": "Комментарий" },
+  "app_onboarding_comment_placeholder": {
+    "message": "например, рабочий, личный"
+  },
+  "app_onboarding_advanced_options": { "message": "Дополнительные параметры" },
+  "app_onboarding_algorithm_label": { "message": "Алгоритм" },
+  "app_onboarding_algo_ecc_hint": {
+    "message": "Современные, быстрые, компактные ключи. Рекомендуется для большинства случаев."
+  },
+  "app_onboarding_algo_rsa_hint": {
+    "message": "Широкая совместимость. Ключ создаётся медленнее."
+  },
+  "app_onboarding_expiry_label": { "message": "Срок действия ключа" },
+  "app_onboarding_expiry_never": { "message": "Бессрочно" },
+  "app_onboarding_expiry_years_one": { "message": "$count$ год" },
+  "app_onboarding_expiry_years_few": { "message": "$count$ года" },
+  "app_onboarding_expiry_years_many": { "message": "$count$ лет" },
+  "app_onboarding_expiry_years_other": { "message": "$count$ года" },
+  "app_onboarding_create_key": { "message": "Создать мой PGP-ключ" },
+  "app_onboarding_skip": { "message": "Настрою позже" },
+  "app_onboarding_passkey_prompt": {
+    "message": "Следуйте запросу браузера о ключе доступа..."
+  },
+  "app_onboarding_generating": { "message": "Создание ключа..." },
+  "app_onboarding_rsa_slow": {
+    "message": "Создание RSA-ключа занимает некоторое время"
+  },
+  "app_onboarding_preset_title": { "message": "Выберите профиль безопасности" },
+  "app_onboarding_preset_body": {
+    "message": "Насколько осторожно PGP Tools должен обращаться с вашими ключами? Каждый вариант показывает, что именно он задаёт, и всё это можно позже изменить в Настройках."
+  },
+  "app_onboarding_unlock_with_vault": {
+    "message": "Разблокировать ключи вместе с хранилищем"
+  },
+  "app_onboarding_unlock_with_vault_hint": {
+    "message": "Запрос ключа доступа, открывающий хранилище, разблокирует и ваши ключи. Отдельного запроса на каждый ключ не будет. Это можно изменить в Настройках."
+  },
+  "app_onboarding_use_preset": { "message": "Использовать этот профиль" },
+  "app_onboarding_keep_defaults": {
+    "message": "Оставить настройки по умолчанию"
+  },
+  "app_copy_failed": {
+    "message": "Не удалось скопировать - сначала нажмите на панель расширения, затем повторите попытку."
+  },
+  "app_copied": { "message": "Скопировано: $label$" },
+  "app_copied_wipe": {
+    "message": "Скопировано: $label$ - буфер обмена очистится через $seconds$ с"
+  },
+  "app_oversized_more": { "message": "$names$ и ещё $count$" },
+  "app_oversized_files_one": {
+    "message": "$files$: файл больше $limit$, и его нельзя обработать в панели."
+  },
+  "app_oversized_files_few": {
+    "message": "$files$: файлы больше $limit$, и их нельзя обработать в панели."
+  },
+  "app_oversized_files_many": {
+    "message": "$files$: файлы больше $limit$, и их нельзя обработать в панели."
+  },
+  "app_oversized_files_other": {
+    "message": "$files$: файлы больше $limit$, и их нельзя обработать в панели."
+  },
+  "app_error_remedy_import_key": { "message": "Импортировать ключ" },
+  "app_error_remedy_try_again": { "message": "Повторить" },
+  "app_error_remedy_check_key": { "message": "Проверить ключ" },
+  "app_error_key_not_found": {
+    "message": "Этого ключа больше нет в вашей связке ключей, поэтому ничего не сохранено. Импортируйте ключ заново и повторите попытку."
+  },
+  "app_error_key_locked": {
+    "message": "Этот ключ заблокирован. Разблокируйте его и повторите попытку."
+  },
+  "app_error_vault_locked": {
+    "message": "Ваше хранилище заблокировано, поэтому ничего не изменено. Разблокируйте его и повторите операцию."
+  },
+  "app_error_weak_password": {
+    "message": "Этот пароль слишком короткий. Используйте не менее 8 символов."
+  },
+  "app_error_password_required": {
+    "message": "Для этого ключа нужен пароль. Введите пароль ключа, чтобы разблокировать его."
+  },
+  "app_error_passkey_failed": {
+    "message": "Проверка ключа доступа не завершилась. Повторите попытку или разблокируйте другим способом."
+  },
+  "app_error_passkey_dismissed": {
+    "message": "Запрос ключа доступа был закрыт. Запустите операцию снова, когда будете готовы."
+  },
+  "app_error_wrong_password": {
+    "message": "Неверный пароль для этого ключа. Проверьте его и повторите попытку."
+  },
+  "app_error_symmetric_wrong_password": {
+    "message": "Этот пароль не открыл сообщение. Проверьте его и повторите попытку - если вы уверены, что пароль верный, сообщение может быть повреждено."
+  },
+  "app_error_ocb_unsupported": {
+    "message": "Это сообщение использует устаревший формат AEAD (OCB), который приложение не может прочитать. Попросите отправителя отправить его заново, зашифровав обычным способом - подойдёт любой пароль, не поддерживается именно формат."
+  },
+  "app_error_no_decryption_key": {
+    "message": "Это сообщение зашифровано для ключа, которого у вас нет. Импортируйте этот закрытый ключ или попросите отправителя зашифровать сообщение для одного из ваших ключей."
+  },
+  "app_error_no_decryption_key_with_id": {
+    "message": "Это сообщение зашифровано для ключа, которого у вас нет (идентификатор ключа $key_id$). Импортируйте этот закрытый ключ или попросите отправителя зашифровать сообщение для одного из ваших ключей."
+  },
+  "app_error_not_crx": {
+    "message": "Это не пакет расширения Chrome, который может проверить этот инструмент. Выберите файл CRX3 (.crx)."
+  },
+  "app_error_crx_unsigned": {
+    "message": "Подпись CRX не совпадает: файл подписан не этим ключом или был изменён после подписания. Получите новую копию у издателя."
+  },
+  "app_error_tampered": {
+    "message": "Проверка подписи не пройдена - сообщение могло быть изменено. Не доверяйте его содержимому; попросите отправителя отправить его заново."
+  },
+  "app_error_key_expired": {
+    "message": "Срок действия одного из ключей, участвующих в операции, истёк. Попросите владельца ключа прислать обновлённый ключ и импортируйте его."
+  },
+  "app_error_key_revoked": {
+    "message": "Один из ключей, участвующих в операции, отозван владельцем. Получите у него новый ключ и импортируйте его."
+  },
+  "app_error_weak_algorithm": {
+    "message": "Этот ключ использует алгоритм подписи, который больше не считается безопасным. Попросите владельца ключа перевыпустить его с SHA-256 или более стойким алгоритмом."
+  },
+  "app_error_corrupted": {
+    "message": "Данные повреждены или обрезаны. Получите полную свежую копию и повторите попытку."
+  },
+  "app_error_not_pgp_data": {
+    "message": "Это не похоже на данные PGP. Убедитесь, что вставили весь блок ASCII-armor целиком, включая строки BEGIN и END."
+  },
+  "app_error_storage_full": {
+    "message": "Хранилище браузера заполнено, поэтому сохранить не удалось. Удалите ненужные ключи или контакты и повторите попытку."
+  }
+}

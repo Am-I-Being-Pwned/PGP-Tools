@@ -1,4 +1,5 @@
 import type { PgpPreferences } from "./storage/preferences";
+import { t, tn } from "./i18n";
 import { DEFAULT_PREFERENCES } from "./storage/preferences";
 
 /** Identifier for a named security preset. */
@@ -9,8 +10,9 @@ export type PresetId = "casual" | "careful" | "paranoid";
  *  explicit selection (onboarding or settings) via savePreferences;
  *  nothing enforces them afterwards. */
 export interface SecurityPreset {
-  title: string;
-  tagline: string;
+  /** Localised; a getter so `t()` runs at read time, not module load. */
+  readonly title: string;
+  readonly tagline: string;
   /** Highlight this preset as the recommended default in pickers. */
   recommended?: boolean;
   bundle: Partial<PgpPreferences>;
@@ -26,8 +28,12 @@ export const PRESET_IDS: readonly PresetId[] = [
 /** The three threat-model presets, keyed by id. */
 export const PRESETS: Record<PresetId, SecurityPreset> = {
   casual: {
-    title: "Casual",
-    tagline: "Convenience first - for keys that guard low-stakes stuff",
+    get title() {
+      return t("shared_preset_casual_title");
+    },
+    get tagline() {
+      return t("shared_preset_casual_tagline");
+    },
     bundle: {
       autoLockEnabled: true,
       autoLockMinutes: 30,
@@ -44,8 +50,12 @@ export const PRESETS: Record<PresetId, SecurityPreset> = {
     },
   },
   careful: {
-    title: "Careful",
-    tagline: "Sensible defaults for real secrets",
+    get title() {
+      return t("shared_preset_careful_title");
+    },
+    get tagline() {
+      return t("shared_preset_careful_tagline");
+    },
     recommended: true,
     bundle: {
       autoLockEnabled: true,
@@ -60,9 +70,12 @@ export const PRESETS: Record<PresetId, SecurityPreset> = {
     },
   },
   paranoid: {
-    title: "If this leaks, I'm in trouble",
-    tagline:
-      "Nothing sticks around. Shortest locks, no history, no cached keys.",
+    get title() {
+      return t("shared_preset_paranoid_title");
+    },
+    get tagline() {
+      return t("shared_preset_paranoid_tagline");
+    },
     bundle: {
       autoLockEnabled: true,
       autoLockMinutes: 2,
@@ -150,57 +163,55 @@ type BundleLine = (bundle: Partial<PgpPreferences>) => string | null;
 const LINE_BUILDERS: BundleLine[] = [
   // Locking behaviour, folded into one line.
   (b) => {
-    if (b.autoLockEnabled === false) return "Auto-lock is off";
+    if (b.autoLockEnabled === false) return t("shared_bundle_auto_lock_off");
     if (b.autoLockMinutes === undefined) return null;
-    const base = `Auto-lock after ${formatMinutes(b.autoLockMinutes)}`;
-    return b.lockOnTabAway ? `${base} and when you switch tabs` : base;
+    const duration = tn("shared_minutes", b.autoLockMinutes);
+    return b.lockOnTabAway
+      ? t("shared_bundle_auto_lock_tabs", { duration })
+      : t("shared_bundle_auto_lock", { duration });
   },
   (b) => {
     if (b.neverCacheKeys === undefined) return null;
     return b.neverCacheKeys
-      ? "Keys drop from memory after every use"
-      : "Unlocked keys stay cached until you lock";
+      ? t("shared_bundle_never_cache_on")
+      : t("shared_bundle_never_cache_off");
   },
   (b) => {
     if (b.unlockKeysOnOpen === undefined) return null;
     return b.unlockKeysOnOpen
-      ? "One passkey prompt unlocks the vault and your keys"
-      : "Every key asks for its own unlock";
+      ? t("shared_bundle_unlock_on_open_on")
+      : t("shared_bundle_unlock_on_open_off");
   },
   (b) => {
     if (b.historyEnabled === undefined) return null;
     return b.historyEnabled
-      ? "Keeps an encrypted history of what you do"
-      : "No history is kept";
+      ? t("shared_bundle_history_on")
+      : t("shared_bundle_history_off");
   },
   (b) => {
     if (b.keyDiscoveryEnabled === undefined) return null;
     return b.keyDiscoveryEnabled
-      ? "Keys can be looked up on GitHub and keys.openpgp.org"
-      : "No key lookups - nothing leaves this device to find a key";
+      ? t("shared_bundle_discovery_on")
+      : t("shared_bundle_discovery_off");
   },
   (b) => {
     if (b.storageLocation === undefined) return null;
     return b.storageLocation === "local"
-      ? "Keys stay on this device"
-      : "Keys sync across your Chrome profile";
+      ? t("shared_bundle_storage_local")
+      : t("shared_bundle_storage_sync");
   },
   (b) => {
     if (b.clipboardWipeSeconds === undefined) return null;
-    return `Copied secrets clear from the clipboard after ${b.clipboardWipeSeconds} seconds`;
+    return tn("shared_bundle_clipboard", b.clipboardWipeSeconds);
   },
   // Encrypt-to-self is on in every preset (and by default), so only an
   // explicit "off" is worth a line; pickers surface the "on" nuance
   // themselves where it matters (the strictest preset's card).
   (b) => {
     if (b.encryptToSelf !== false) return null;
-    return "Messages you encrypt are not readable by you afterwards";
+    return t("shared_bundle_no_encrypt_to_self");
   },
 ];
-
-function formatMinutes(minutes: number): string {
-  return minutes === 1 ? "1 minute" : `${minutes} minutes`;
-}
 
 /**
  * Human-readable lines describing exactly what a preset bundle sets,

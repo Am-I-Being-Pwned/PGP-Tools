@@ -1,0 +1,8 @@
+{
+  "extName": {
+    "message": "Kryptering av e-post OpenPGP og GPG - Thunderbird & Proton Mail Compatible"
+  },
+  "extDescription": {
+    "message": "Krypter, dekrypter, signer og verifiser med OpenPGP og GPG. Håndter nøklene dine."
+  }
+}

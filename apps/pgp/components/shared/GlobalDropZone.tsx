@@ -3,6 +3,7 @@ import { UploadCloudIcon } from "lucide-react";
 
 import type { DropRule } from "../../lib/drop-routing";
 import { buildDropSample, resolveDropRule } from "../../lib/drop-routing";
+import { t } from "../../lib/i18n";
 
 interface GlobalDropZoneProps {
   /** Ordered routing rules; first match wins (see lib/drop-routing). */
@@ -112,10 +113,11 @@ export function GlobalDropZone({ rules, children }: GlobalDropZoneProps) {
         >
           <div className="border-primary bg-primary/5 text-primary flex h-full w-full flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed p-6 text-center">
             <UploadCloudIcon className="h-10 w-10" />
-            <p className="text-base font-semibold">Drop to import</p>
+            <p className="text-base font-semibold">
+              {t("shared_drop_to_import")}
+            </p>
             <p className="text-muted-foreground max-w-xs text-sm">
-              Keys are added to your keyring; files and text go to the
-              workspace.
+              {t("shared_drop_desc")}
             </p>
           </div>
         </div>

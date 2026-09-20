@@ -21,6 +21,7 @@ import {
   STORAGE_MASTER_PROTECTION,
   STORAGE_SETTINGS,
 } from "../../lib/constants";
+import { t, tn } from "../../lib/i18n";
 import { enterNeverCacheMode } from "../../lib/never-cache";
 import {
   activePreset,
@@ -49,14 +50,11 @@ import { TranslationPage } from "../settings/TranslationPage";
 import { ConfirmPage } from "./ConfirmPage";
 import { StorageLocationPicker } from "./StorageLocationPicker";
 
-const AUTO_LOCK_OPTIONS: { value: AutoLockTimeout; label: string }[] = [
-  { value: 2, label: "2 minutes" },
-  { value: 5, label: "5 minutes" },
-  { value: 10, label: "10 minutes" },
-  { value: 15, label: "15 minutes" },
-  { value: 30, label: "30 minutes" },
-  { value: 60, label: "1 hour" },
-];
+const AUTO_LOCK_OPTIONS: AutoLockTimeout[] = [2, 5, 10, 15, 30, 60];
+
+function autoLockLabel(minutes: AutoLockTimeout): string {
+  return minutes === 60 ? t("shared_one_hour") : tn("shared_minutes", minutes);
+}
 
 interface SettingsViewProps {
   advancedMode: boolean;
@@ -276,10 +274,10 @@ export function SettingsView({
       }
       setError(
         isQuotaExceeded(e)
-          ? "Not enough sync space. Chrome caps synced data at about 100 KB total, so this vault is too large to sync across devices. Keep it on this device, or remove some keys and try again."
+          ? t("shared_sync_quota_error")
           : e instanceof Error
             ? e.message
-            : "Migration failed",
+            : t("shared_migration_failed"),
       );
     } finally {
       setMigratingTo(null);
@@ -420,15 +418,15 @@ export function SettingsView({
       await handleStorageChange(bundleLocation);
     }
 
-    toast.success(`Preset applied: ${PRESETS[id].title}`, {
+    toast.success(t("shared_preset_applied", { title: PRESETS[id].title }), {
       id: "preset-applied",
       // Undo restores the bundled preferences, but a paranoid apply
       // wiped stored history and that is unrecoverable; say so.
       description: historyCleared
-        ? "History was deleted and is not restored by Undo."
+        ? t("shared_preset_applied_history_deleted")
         : undefined,
       action: {
-        label: "Undo",
+        label: t("shared_undo"),
         onClick: () => void undoPresetApplyRef.current(snapshot),
       },
     });
@@ -443,12 +441,12 @@ export function SettingsView({
           className="border-border hover:border-muted-foreground/40 flex w-full items-center justify-between gap-4 rounded-md border p-4 text-left transition-colors"
         >
           <div className="min-w-0">
-            <span className="text-sm">Security preset</span>
+            <span className="text-sm">{t("shared_security_preset")}</span>
             {prefs && currentPreset === "custom" && (
               <p className="text-muted-foreground text-xs">
                 {bundledSettingsCustomized(prefs)
-                  ? "A bundled setting was changed"
-                  : "No preset selected"}
+                  ? t("shared_preset_bundled_changed")
+                  : t("shared_preset_none_selected")}
               </p>
             )}
           </div>
@@ -457,7 +455,7 @@ export function SettingsView({
               {currentPreset === null
                 ? ""
                 : currentPreset === "custom"
-                  ? "Custom"
+                  ? t("shared_preset_custom")
                   : PRESETS[currentPreset].title}
             </span>
             <ChevronRightIcon className="text-muted-foreground h-4 w-4 shrink-0" />
@@ -471,10 +469,10 @@ export function SettingsView({
           onClick={() => setShowTranslation(true)}
           className="border-border hover:border-muted-foreground/40 flex w-full items-center justify-between gap-4 rounded-md border p-4 text-left transition-colors"
         >
-          <span className="text-sm">Translation</span>
+          <span className="text-sm">{t("shared_translation")}</span>
           <span className="flex items-center gap-2">
             <span className="text-muted-foreground text-xs">
-              {aiTranslateEnabled ? "On" : "Off"}
+              {aiTranslateEnabled ? t("common_on") : t("common_off")}
             </span>
             <ChevronRightIcon className="text-muted-foreground h-4 w-4 shrink-0" />
           </span>
@@ -487,13 +485,15 @@ export function SettingsView({
           onClick={() => setShowShortcuts(true)}
           className="border-border hover:border-muted-foreground/40 flex w-full items-center justify-between gap-4 rounded-md border p-4 text-left transition-colors"
         >
-          <span className="text-sm">Keyboard shortcuts</span>
+          <span className="text-sm">{t("shared_keyboard_shortcuts")}</span>
           <ChevronRightIcon className="text-muted-foreground h-4 w-4 shrink-0" />
         </button>
       </div>
 
       <div>
-        <h2 className="mb-2 text-sm font-semibold">Key storage</h2>
+        <h2 className="mb-2 text-sm font-semibold">
+          {t("shared_key_storage")}
+        </h2>
         <StorageLocationPicker
           value={storageLocation}
           onChange={handleStorageChange}
@@ -503,16 +503,16 @@ export function SettingsView({
       </div>
 
       <div>
-        <h2 className="mb-2 text-sm font-semibold">Key security</h2>
+        <h2 className="mb-2 text-sm font-semibold">
+          {t("shared_key_security")}
+        </h2>
 
         <div className="border-border rounded-md border p-4">
           <label className="flex items-center justify-between gap-4">
             <div>
-              <span className="text-sm">Auto-lock after inactivity</span>
+              <span className="text-sm">{t("shared_auto_lock_title")}</span>
               <p className="text-muted-foreground text-xs">
-                Lock unlocked keys after a period of no activity in the panel.
-                The OS lockscreen always locks immediately regardless of this
-                setting.
+                {t("shared_auto_lock_desc")}
               </p>
             </div>
             <Switch
@@ -529,7 +529,7 @@ export function SettingsView({
                 htmlFor="auto-lock-after"
                 className="text-muted-foreground mb-1 block text-xs"
               >
-                Lock after
+                {t("shared_lock_after")}
               </label>
               <select
                 id="auto-lock-after"
@@ -541,9 +541,9 @@ export function SettingsView({
                 }
                 className="border-border bg-background focus:ring-ring w-full rounded-md border px-2 py-1.5 text-sm focus:ring-2 focus:outline-none"
               >
-                {AUTO_LOCK_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
+                {AUTO_LOCK_OPTIONS.map((minutes) => (
+                  <option key={minutes} value={minutes}>
+                    {autoLockLabel(minutes)}
                   </option>
                 ))}
               </select>
@@ -553,10 +553,9 @@ export function SettingsView({
 
         <label className="border-border mt-2 flex items-center justify-between gap-4 rounded-md border p-4">
           <div>
-            <span className="text-sm">Lock when I tab away</span>
+            <span className="text-sm">{t("shared_lock_tab_away_title")}</span>
             <p className="text-muted-foreground text-xs">
-              Lock the moment the side panel isn't visible (alt-tab, collapsed,
-              or window minimised).
+              {t("shared_lock_tab_away_desc")}
             </p>
           </div>
           <Switch
@@ -570,10 +569,9 @@ export function SettingsView({
 
         <label className="border-border mt-2 flex items-center justify-between gap-4 rounded-md border p-4">
           <div>
-            <span className="text-sm">Never auto-cache keys</span>
+            <span className="text-sm">{t("shared_never_cache_title")}</span>
             <p className="text-muted-foreground text-xs">
-              Keys are wiped from memory after each operation. You can still
-              manually unlock keys from the Keys tab.
+              {t("shared_never_cache_desc")}
             </p>
           </div>
           <Switch
@@ -585,11 +583,11 @@ export function SettingsView({
         {masterPasskey && (
           <label className="border-border mt-2 flex items-center justify-between gap-4 rounded-md border p-4">
             <div>
-              <span className="text-sm">Unlock keys with the vault</span>
+              <span className="text-sm">
+                {t("shared_unlock_with_vault_title")}
+              </span>
               <p className="text-muted-foreground text-xs">
-                The passkey prompt that opens the vault also unlocks your keys.
-                A key that still asks on its own moves over the next time you
-                unlock it. Password-protected keys keep their password.
+                {t("shared_unlock_with_vault_desc")}
               </p>
             </div>
             <Switch
@@ -601,12 +599,14 @@ export function SettingsView({
       </div>
 
       <div>
-        <h2 className="mb-2 text-sm font-semibold">Downloads</h2>
+        <h2 className="mb-2 text-sm font-semibold">{t("shared_downloads")}</h2>
         <label className="border-border flex items-center justify-between gap-4 rounded-md border p-4">
           <div>
-            <span className="text-sm">Auto-download file results</span>
+            <span className="text-sm">
+              {t("shared_auto_download_files_title")}
+            </span>
             <p className="text-muted-foreground text-xs">
-              Automatically download after encrypting or decrypting files.
+              {t("shared_auto_download_files_desc")}
             </p>
           </div>
           <Switch
@@ -620,9 +620,11 @@ export function SettingsView({
 
         <label className="border-border mt-2 flex items-center justify-between gap-4 rounded-md border p-4">
           <div>
-            <span className="text-sm">Auto-download text results</span>
+            <span className="text-sm">
+              {t("shared_auto_download_text_title")}
+            </span>
             <p className="text-muted-foreground text-xs">
-              Automatically download after encrypting or decrypting text.
+              {t("shared_auto_download_text_desc")}
             </p>
           </div>
           <Switch
@@ -636,20 +638,18 @@ export function SettingsView({
       </div>
 
       <div>
-        <h2 className="mb-2 text-sm font-semibold">Key discovery</h2>
+        <h2 className="mb-2 text-sm font-semibold">
+          {t("shared_key_discovery")}
+        </h2>
         <label className="border-border flex items-center justify-between gap-4 rounded-md border p-4">
           <div>
-            <span className="text-sm">Look up keys online</span>
+            <span className="text-sm">{t("shared_lookup_online_title")}</span>
             {/* Says exactly which hosts and exactly what they learn.
                 This is the only preference that lets the extension talk
                 to anyone, so a vague "enable lookups" would be hiding
                 the thing worth deciding about. */}
             <p className="text-muted-foreground text-xs">
-              Adds a lookup box to the import screen for GitHub SSH keys and
-              keys.openpgp.org certificates. Off means nothing leaves this
-              device to find a key. Turning it on means a lookup tells that host
-              your IP address and who you searched for - it does not tell them
-              anything about your keys or messages.
+              {t("shared_lookup_online_desc")}
             </p>
           </div>
           <Switch
@@ -663,14 +663,14 @@ export function SettingsView({
       </div>
 
       <div>
-        <h2 className="mb-2 text-sm font-semibold">CRX signing</h2>
+        <h2 className="mb-2 text-sm font-semibold">
+          {t("shared_crx_signing")}
+        </h2>
         <label className="border-border flex items-center justify-between gap-4 rounded-md border p-4">
           <div>
-            <span className="text-sm">Enable CRX signing</span>
+            <span className="text-sm">{t("shared_crx_enable_title")}</span>
             <p className="text-muted-foreground text-xs">
-              Sign Chrome extension packages (.crx) for the Web Store&rsquo;s
-              Verified CRX Uploads, using a key kept in your vault instead of
-              your build pipeline.
+              {t("shared_crx_enable_desc")}
             </p>
           </div>
           <Switch
@@ -687,17 +687,15 @@ export function SettingsView({
           className="mt-2 w-full"
           onClick={() => setShowCrxInfo(true)}
         >
-          How CRX signing works
+          {t("shared_crx_how")}
         </Button>
       </div>
 
       <div>
-        <h2 className="mb-2 text-sm font-semibold">Backup</h2>
+        <h2 className="mb-2 text-sm font-semibold">{t("shared_backup")}</h2>
         <div className="border-border rounded-md border p-4">
           <p className="text-muted-foreground text-xs">
-            Export your keys and contacts as a single armored file, or restore
-            from one. Exported private keys are encrypted with a passphrase of
-            your choice.
+            {t("shared_backup_desc")}
           </p>
           <div className="mt-2 flex gap-2">
             <Button
@@ -706,7 +704,7 @@ export function SettingsView({
               className="flex-1"
               onClick={() => setShowExportAll(true)}
             >
-              Export all keys
+              {t("shared_export_all_keys")}
             </Button>
             <Button
               variant="outline"
@@ -714,30 +712,31 @@ export function SettingsView({
               className="flex-1"
               onClick={() => setShowImportAll(true)}
             >
-              Import keys
+              {t("shared_import_keys")}
             </Button>
           </div>
         </div>
       </div>
 
       <div>
-        <h2 className="mb-2 text-sm font-semibold">Display</h2>
+        <h2 className="mb-2 text-sm font-semibold">{t("shared_display")}</h2>
         <label className="border-border flex items-center justify-between gap-4 rounded-md border p-4">
-          <span className="text-sm">Advanced mode</span>
+          <span className="text-sm">{t("shared_advanced_mode")}</span>
           <Switch checked={advancedMode} onCheckedChange={toggleAdvanced} />
         </label>
         <p className="text-muted-foreground mt-1 text-xs">
-          Show key fingerprints, algorithms, and output format options.
+          {t("shared_advanced_mode_desc")}
         </p>
       </div>
 
       {import.meta.env.DEV && (
         <div>
-          <h2 className="mb-2 text-sm font-semibold">Developer</h2>
+          <h2 className="mb-2 text-sm font-semibold">
+            {t("shared_developer")}
+          </h2>
           <div className="border-border rounded-md border p-4">
             <p className="text-muted-foreground text-xs">
-              Inspect chrome.storage and dump WASM memory for testing. This
-              section only appears in development builds.
+              {t("shared_developer_desc")}
             </p>
             <Button
               variant="outline"
@@ -745,7 +744,7 @@ export function SettingsView({
               className="mt-2 w-full"
               onClick={() => setShowDevTools(true)}
             >
-              Open dev tools
+              {t("shared_open_dev_tools")}
             </Button>
             <Button
               variant="outline"
@@ -753,24 +752,26 @@ export function SettingsView({
               className="mt-2 w-full"
               onClick={() => setShowImportFlow(true)}
             >
-              Import flow states
+              {t("shared_import_flow_states")}
             </Button>
           </div>
         </div>
       )}
 
       <div>
-        <h2 className="mb-2 text-sm font-semibold">About</h2>
+        <h2 className="mb-2 text-sm font-semibold">{t("shared_about")}</h2>
         <div className="border-border rounded-md border p-4">
+          {/* i18n-ignore */}
           <p className="text-sm">PGP Tools</p>
           <p className="text-muted-foreground mt-1 text-xs">
-            A privacy tool by{" "}
+            {t("shared_byline_before")}{" "}
             <a
               href="https://amibeingpwned.com"
               target="_blank"
               rel="noopener noreferrer"
               className="text-primary underline"
             >
+              {/* i18n-ignore */}
               Am I Being Pwned
             </a>
             . <br />
@@ -780,13 +781,12 @@ export function SettingsView({
               rel="noopener noreferrer"
               className="text-primary underline"
             >
-              Source on GitHub
+              {t("shared_source_on_github")}
             </a>
             .
           </p>
           <p className="text-muted-foreground mt-2 text-xs">
-            Worried about malicious browser extensions? Scan your extensions for
-            data harvesting, session hijacking, and other threats.
+            {t("shared_about_extensions")}
           </p>
           <a
             href="https://amibeingpwned.com"
@@ -794,7 +794,7 @@ export function SettingsView({
             rel="noopener noreferrer"
           >
             <Button variant="outline" size="sm" className="mt-2">
-              Check your extensions
+              {t("shared_check_extensions")}
             </Button>
           </a>
         </div>
@@ -802,7 +802,7 @@ export function SettingsView({
 
       {showExportAll && (
         <ExportKeysPage
-          title="Export all keys"
+          title={t("shared_export_all_keys")}
           onClose={() => setShowExportAll(false)}
           myKeys={myKeys}
           contacts={contacts}
@@ -854,14 +854,15 @@ export function SettingsView({
 
       {neverCacheConfirmBytes !== null && (
         <ConfirmPage
-          title="Delete saved history?"
-          confirmLabel="Turn on and delete history"
+          title={t("shared_delete_history_title")}
+          confirmLabel={t("shared_delete_history_confirm")}
           onCancel={() => setNeverCacheConfirmBytes(null)}
           onConfirm={enableNeverCache}
         >
           <p>
-            Never-cache also deletes your saved history (
-            {formatFileSize(neverCacheConfirmBytes)}). It can't be recovered.
+            {t("shared_delete_history_body", {
+              size: formatFileSize(neverCacheConfirmBytes),
+            })}
           </p>
         </ConfirmPage>
       )}

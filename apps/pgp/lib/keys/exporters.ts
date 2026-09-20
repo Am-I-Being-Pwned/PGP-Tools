@@ -2,13 +2,14 @@ import type { PrivateKeyExporter } from "../../components/keys/ExportPrivateKeyP
 import type { CrxSigningKeyBlob } from "../crx/types";
 import type { ProtectedKeyBlob } from "../storage/keyring";
 import { serializeCrxKeyBlocks } from "../crx/backup";
-import { AppError } from "../errors/app-error";
 import {
   closeCrxKey,
   exportCrxPrivateKeyPem,
   openCrxKey,
   resealCrxKeyUnderPassword,
 } from "../crx/operations";
+import { AppError } from "../errors/app-error";
+import { t } from "../i18n";
 import { encryptKeyForExportWithHandle, getKeyArmored } from "../pgp/wasm";
 
 /**
@@ -22,13 +23,15 @@ export function pgpKeyExporter(
   getKeyHandle: (keyId: string) => number | null,
 ): PrivateKeyExporter {
   return {
-    title: "Export Private Key",
+    title: t("keygen_exporter_pgp_title"),
     isPasskey: blob.protection.method === "passkey",
     needsUnlock: false,
     acquire: () => {
       const handle = getKeyHandle(blob.keyId);
       return handle === null
-        ? Promise.reject(new AppError("key-locked", "Key is not unlocked."))
+        ? Promise.reject(
+            new AppError("key-locked", t("keygen_error_key_not_unlocked")),
+          )
         : Promise.resolve(handle);
     },
     release: () => {
@@ -43,12 +46,10 @@ export function pgpKeyExporter(
       }
     },
     exportPlaintext: (handle) => getKeyArmored(handle),
-    encryptedBlurb:
-      "Set a passphrase to encrypt the exported key. Anyone with this passphrase and the exported key can decrypt your messages and sign as you.",
-    encryptedButton: "Export with passphrase",
-    plaintextBlurb:
-      "Plaintext export. Anyone who reads your clipboard gets full control of this key.",
-    plaintextButton: "Export without passphrase (unsafe)",
+    encryptedBlurb: t("keygen_exporter_pgp_encrypted_blurb"),
+    encryptedButton: t("keygen_export_with_passphrase"),
+    plaintextBlurb: t("keygen_exporter_pgp_plaintext_blurb"),
+    plaintextButton: t("keygen_export_without_passphrase"),
   };
 }
 
@@ -60,7 +61,7 @@ export function pgpKeyExporter(
 export function crxKeyExporter(blob: CrxSigningKeyBlob): PrivateKeyExporter {
   const isPasskey = blob.protection.method === "passkey";
   return {
-    title: "Copy CRX private key",
+    title: t("keygen_exporter_crx_title"),
     isPasskey,
     needsUnlock: true,
     acquire: (password) => openCrxKey(blob, password),
@@ -76,14 +77,12 @@ export function crxKeyExporter(blob: CrxSigningKeyBlob): PrivateKeyExporter {
       return serializeCrxKeyBlocks([portable]);
     },
     exportPlaintext: (handle) => exportCrxPrivateKeyPem(handle),
-    unlockBlurb: `Unlock this signing key to copy it. ${
-      isPasskey ? "Authenticate with your passkey." : "Enter the key password."
-    }`,
-    encryptedBlurb:
-      "Set a passphrase to encrypt the copied key (re-importable into PGP Tools via Import Keys). Anyone with this passphrase and the copied block can sign extensions as you.",
-    encryptedButton: "Copy with passphrase",
-    plaintextBlurb:
-      "Plaintext export (raw PKCS#8 PEM). Anyone who reads your clipboard gets full control of this signing key.",
-    plaintextButton: "Copy without passphrase (unsafe)",
+    unlockBlurb: isPasskey
+      ? t("keygen_exporter_crx_unlock_passkey")
+      : t("keygen_exporter_crx_unlock_password"),
+    encryptedBlurb: t("keygen_exporter_crx_encrypted_blurb"),
+    encryptedButton: t("keygen_exporter_crx_encrypted_button"),
+    plaintextBlurb: t("keygen_exporter_crx_plaintext_blurb"),
+    plaintextButton: t("keygen_exporter_crx_plaintext_button"),
   };
 }

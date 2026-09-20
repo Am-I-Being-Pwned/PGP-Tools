@@ -1,0 +1,8 @@
+{
+  "extName": {
+    "message": "E-posti krüpteerimine OpenPGP ja GPG - FlowCrypt Alternative"
+  },
+  "extDescription": {
+    "message": "Krüpteeri, dekrüpteeri, allkirjasta ja kontrolli sõnumeid OpenPGP ja GPG abil."
+  }
+}

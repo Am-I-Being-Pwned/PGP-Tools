@@ -2,18 +2,18 @@
   "name": "@amibeingpwned/pgp",
   "description": "PGP Tools - Encrypt, Decrypt & Sign",
   "private": true,
-  "version": "1.7.0",
+  "version": "1.7.1",
   "type": "module",
   "scripts": {
     "dev": "wxt",
     "dev:firefox": "wxt -b firefox",
     "build:wasm": "cd gpg-wasm && wasm-pack build --target web --release",
-    "build": "pnpm build:wasm && wxt build && node scripts/audit-invariants.mjs && node scripts/audit-network.mjs",
+    "build": "pnpm build:wasm && pnpm i18n:check && wxt build && node scripts/audit-invariants.mjs && node scripts/audit-network.mjs",
     "build:firefox": "wxt build -b firefox",
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
     "format": "prettier --check . --ignore-path ../../.gitignore --ignore-path .prettierignore",
-    "lint": "eslint --flag unstable_native_nodejs_ts_config",
+    "lint": "eslint --flag unstable_native_nodejs_ts_config && node scripts/i18n-check.mjs",
     "test": "vitest run --coverage",
     "test:rust": "cd gpg-wasm && cargo test --release --lib",
     "coverage": "vitest run --coverage",
@@ -24,7 +24,9 @@
     "test:e2e:build": "pnpm build && playwright test",
     "typecheck": "tsc --noEmit",
     "postinstall": "wxt prepare",
-    "listing:check": "node scripts/check-locale-names.mjs && node scripts/check-listing-mentions.mjs"
+    "listing:check": "node scripts/check-locale-names.mjs && node scripts/check-listing-mentions.mjs",
+    "i18n:build": "node scripts/i18n-build.mjs",
+    "i18n:check": "node scripts/i18n-check.mjs"
   },
   "dependencies": {
     "@amibeingpwned/ui": "workspace:*",

@@ -1,0 +1,302 @@
+{
+  "actions_history": {
+    "message": "Historique"
+  },
+  "actions_history_to": {
+    "message": "Pour $names$"
+  },
+  "actions_history_recipient_with_id": {
+    "message": "$name$ ($id$)"
+  },
+  "actions_history_files_one": {
+    "message": "$count$ fichier"
+  },
+  "actions_history_files_other": {
+    "message": "$count$ fichiers"
+  },
+  "actions_history_op_signed": {
+    "message": "$op$ + signature"
+  },
+  "actions_history_when": {
+    "message": "$date$ ($relative$)"
+  },
+  "actions_history_file_with_size": {
+    "message": "$name$ ($size$)"
+  },
+  "actions_history_truncated": {
+    "message": "[tronqué]"
+  },
+  "actions_history_metadata_only": {
+    "message": "Métadonnées seulement - le contenu n'est pas conservé pour cette opération."
+  },
+  "actions_history_clear": {
+    "message": "Effacer l'historique"
+  },
+  "actions_history_search_placeholder": {
+    "message": "Rechercher dans l'historique..."
+  },
+  "actions_history_search_label": {
+    "message": "Rechercher dans l'historique"
+  },
+  "actions_history_empty": {
+    "message": "Aucun historique"
+  },
+  "actions_history_off_reason": {
+    "message": "L'historique est désactivé - activez-le à côté de Signer"
+  },
+  "actions_history_no_matches": {
+    "message": "Aucune entrée ne correspond à « $query$ »"
+  },
+  "actions_history_open_entry": {
+    "message": "Ouvrir $title$"
+  },
+  "actions_history_no_content": {
+    "message": "Aucun contenu enregistré"
+  },
+  "actions_history_more_matches_one": {
+    "message": "+$count$ autre correspondance"
+  },
+  "actions_history_more_matches_other": {
+    "message": "+$count$ autres correspondances"
+  },
+  "actions_history_usage": {
+    "message": "$used$ sur $budget$ utilisés"
+  },
+  "actions_history_delete_all_one": {
+    "message": "Supprimer $count$ entrée de l'historique"
+  },
+  "actions_history_delete_all_other": {
+    "message": "Supprimer les $count$ entrées de l'historique"
+  },
+  "actions_history_delete_warning": {
+    "message": "Cette action supprime définitivement de cet appareil votre historique chiffré des opérations. Il ne pourra pas être récupéré."
+  },
+  "actions_no_keys_available": {
+    "message": "Aucune clé disponible"
+  },
+  "actions_set_up": {
+    "message": "Configurer"
+  },
+  "actions_badge_you": {
+    "message": "Vous"
+  },
+  "actions_keys_of_total": {
+    "message": "$active$ clés sur $count$"
+  },
+  "actions_keys_count_one": {
+    "message": "$count$ clé"
+  },
+  "actions_keys_count_other": {
+    "message": "$count$ clés"
+  },
+  "actions_remove_recipient": {
+    "message": "Retirer $name$"
+  },
+  "actions_remove_recipient_detail": {
+    "message": "Retirer $name$ - $detail$"
+  },
+  "actions_add_recipients_placeholder": {
+    "message": "Ajouter des destinataires..."
+  },
+  "actions_recipient_input_hint": {
+    "message": "Retour arrière retire le dernier destinataire"
+  },
+  "actions_clear_all_recipients": {
+    "message": "Retirer tous les destinataires"
+  },
+  "actions_toggle_recipient_list": {
+    "message": "Afficher ou masquer la liste des destinataires"
+  },
+  "actions_no_matches": {
+    "message": "Aucun résultat"
+  },
+  "actions_group_recent": {
+    "message": "Récents"
+  },
+  "actions_group_contacts": {
+    "message": "Contacts"
+  },
+  "actions_group_my_keys": {
+    "message": "Mes clés"
+  },
+  "actions_select_key_placeholder": {
+    "message": "Sélectionner une clé..."
+  },
+  "actions_search_placeholder": {
+    "message": "Rechercher..."
+  },
+  "actions_no_keys_found": {
+    "message": "Aucune clé trouvée"
+  },
+  "actions_mixed_engine_reason": {
+    "message": "Les destinataires PGP et SSH ne peuvent pas être combinés dans un même message : OpenPGP et age sont des formats différents. Chiffrez pour un groupe, puis pour l'autre."
+  },
+  "actions_ssh_password_reason": {
+    "message": "Le mot de passe de message est une fonction OpenPGP qui n'existe pas dans age ; les destinataires SSH ne peuvent donc pas être utilisés avec. Retirez le mot de passe, ou chiffrez pour cette personne sans mot de passe."
+  },
+  "actions_palette_label": {
+    "message": "Palette de commandes"
+  },
+  "actions_palette_placeholder": {
+    "message": "Saisissez une commande..."
+  },
+  "actions_palette_no_match": {
+    "message": "Aucun résultat."
+  },
+  "actions_palette_no_commands": {
+    "message": "Aucune commande ne correspond."
+  },
+  "actions_disabled_toast": {
+    "message": "« $name$ » est indisponible : $reason$"
+  },
+  "actions_group_mode": {
+    "message": "Mode"
+  },
+  "actions_group_workspace": {
+    "message": "Espace de travail"
+  },
+  "actions_group_keys": {
+    "message": "Clés"
+  },
+  "actions_group_navigation": {
+    "message": "Navigation"
+  },
+  "actions_group_settings": {
+    "message": "Paramètres"
+  },
+  "actions_group_session": {
+    "message": "Session"
+  },
+  "actions_group_message": {
+    "message": "Message"
+  },
+  "actions_group_result": {
+    "message": "Résultat"
+  },
+  "actions_no_input_encrypt": {
+    "message": "Rien à chiffrer - ajoutez du texte ou déposez un fichier"
+  },
+  "actions_no_input_decrypt": {
+    "message": "Rien à déchiffrer - collez un message chiffré ou déposez un fichier"
+  },
+  "actions_no_input_sign": {
+    "message": "Rien à signer - ajoutez du texte ou déposez un fichier"
+  },
+  "actions_no_input_verify": {
+    "message": "Rien à vérifier - collez un message signé ou déposez un fichier"
+  },
+  "actions_run_mode": {
+    "message": "Exécuter : $mode$"
+  },
+  "actions_switch_to_workspace_first": {
+    "message": "Passez d'abord à l'Espace de travail"
+  },
+  "actions_need_recipient_or_password": {
+    "message": "Sélectionnez au moins un destinataire, ou définissez un mot de passe"
+  },
+  "actions_copy_output": {
+    "message": "Copier le résultat"
+  },
+  "actions_no_output_to_copy": {
+    "message": "Aucun résultat à copier pour l'instant"
+  },
+  "actions_download_output": {
+    "message": "Télécharger le résultat"
+  },
+  "actions_nothing_to_download": {
+    "message": "Rien à télécharger pour l'instant"
+  },
+  "actions_clear_input": {
+    "message": "Effacer l'entrée"
+  },
+  "actions_nothing_to_clear": {
+    "message": "Rien à effacer"
+  },
+  "actions_open_history": {
+    "message": "Ouvrir l'historique"
+  },
+  "actions_history_off_never_cache": {
+    "message": "L'historique est désactivé tant que les clés ne sont jamais gardées en mémoire"
+  },
+  "actions_encrypt_to_self_on": {
+    "message": "Activer : Chiffrer aussi pour moi"
+  },
+  "actions_encrypt_to_self_off": {
+    "message": "Désactiver : Chiffrer aussi pour moi"
+  },
+  "actions_sign_when_encrypting_on": {
+    "message": "Activer : Signer lors du chiffrement"
+  },
+  "actions_sign_when_encrypting_off": {
+    "message": "Désactiver : Signer lors du chiffrement"
+  },
+  "actions_save_to_history_on": {
+    "message": "Activer : Enregistrer dans l'historique"
+  },
+  "actions_save_to_history_off": {
+    "message": "Désactiver : Enregistrer dans l'historique"
+  },
+  "actions_add_own_key_first": {
+    "message": "Ajoutez d'abord une de vos propres clés"
+  },
+  "actions_age_cannot_sign": {
+    "message": "Les messages age ne peuvent pas être signés"
+  },
+  "actions_generate_key": {
+    "message": "Générer une clé"
+  },
+  "actions_import_key": {
+    "message": "Importer une clé"
+  },
+  "actions_go_to_workspace": {
+    "message": "Aller à l'Espace de travail"
+  },
+  "actions_go_to_keys": {
+    "message": "Aller aux Clés"
+  },
+  "actions_go_to_settings": {
+    "message": "Aller aux Paramètres"
+  },
+  "actions_open_security_presets": {
+    "message": "Ouvrir les profils de sécurité"
+  },
+  "actions_lock_now": {
+    "message": "Verrouiller maintenant"
+  },
+  "actions_style_bold": {
+    "message": "Mettre la sélection en gras"
+  },
+  "actions_style_italic": {
+    "message": "Mettre la sélection en italique"
+  },
+  "actions_style_strike": {
+    "message": "Barrer la sélection"
+  },
+  "actions_style_code": {
+    "message": "Mettre la sélection en code"
+  },
+  "actions_find_replace": {
+    "message": "Rechercher et remplacer dans le message"
+  },
+  "actions_translate_message": {
+    "message": "Traduire le message..."
+  },
+  "actions_translation_off": {
+    "message": "La traduction est désactivée dans les Paramètres"
+  },
+  "actions_nothing_to_translate": {
+    "message": "Rien à traduire pour l'instant"
+  },
+  "actions_language_last_used": {
+    "message": "$label$ (dernière utilisée)"
+  },
+  "actions_translate_to_title": {
+    "message": "Traduire le message en"
+  },
+  "actions_pick_language_placeholder": {
+    "message": "Choisir une langue..."
+  },
+  "actions_translate_result_to": {
+    "message": "Traduire en $language$"
+  }
+}

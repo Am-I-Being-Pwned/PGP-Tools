@@ -1,8 +1,8 @@
 {
-  "extName": {
-    "message": "Κρυπτογράφηση email OpenPGP και GPG - Telegram & WhatsApp Compatible"
-  },
   "extDescription": {
     "message": "Κρυπτογραφήστε, αποκρυπτογραφήστε, υπογράψτε και επαληθεύστε με OpenPGP και GPG."
+  },
+  "extName": {
+    "message": "Κρυπτογράφηση email OpenPGP και GPG - Telegram & WhatsApp Compatible"
   }
 }

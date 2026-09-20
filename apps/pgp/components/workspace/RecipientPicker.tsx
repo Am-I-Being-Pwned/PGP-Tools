@@ -18,6 +18,7 @@ import {
 
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
+import { t, tn } from "../../lib/i18n";
 import {
   matchesRecipientSearch,
   orderRecipients,
@@ -94,7 +95,7 @@ export function RecipientPicker({
   selectedKeyIds,
   recentKeyIds,
   onChange,
-  emptyText = "No keys available",
+  emptyText,
   emptyAction,
   emptyActionLabel,
   passwordArmed = false,
@@ -187,7 +188,7 @@ export function RecipientPicker({
           {label}
         </span>
         <p className="text-muted-foreground text-xs">
-          {emptyText}
+          {emptyText ?? t("actions_no_keys_available")}
           {emptyAction && (
             <>
               {" "}
@@ -199,7 +200,7 @@ export function RecipientPicker({
                 onClick={() => emptyAction()}
                 className="text-primary underline"
               >
-                {emptyActionLabel ?? "Set up"}
+                {emptyActionLabel ?? t("actions_set_up")}
               </button>
             </>
           )}
@@ -421,11 +422,12 @@ export function RecipientPicker({
             <span className="truncate">{name}</span>
             {isOwn && (
               <span className="bg-secondary text-muted-foreground shrink-0 rounded border px-1 text-[10px] leading-4">
-                You
+                {t("actions_badge_you")}
               </span>
             )}
             {isSsh && (
               <span className="bg-secondary text-muted-foreground shrink-0 rounded border px-1 text-[10px] leading-4">
+                {/* i18n-ignore */}
                 SSH
               </span>
             )}
@@ -436,8 +438,11 @@ export function RecipientPicker({
                 detail,
                 keyCount > 1
                   ? activeKeyCount < keyCount
-                    ? `${activeKeyCount} of ${keyCount} keys`
-                    : `${keyCount} keys`
+                    ? t("actions_keys_of_total", {
+                        active: activeKeyCount,
+                        count: keyCount,
+                      })
+                    : tn("actions_keys_count", keyCount)
                   : "",
               ]
                 .filter(Boolean)
@@ -520,9 +525,11 @@ export function RecipientPicker({
                   <button
                     key={key.keyId}
                     type="button"
-                    aria-label={`Remove ${name}`}
+                    aria-label={t("actions_remove_recipient", { name })}
                     title={
-                      detail ? `Remove ${name} - ${detail}` : `Remove ${name}`
+                      detail
+                        ? t("actions_remove_recipient_detail", { name, detail })
+                        : t("actions_remove_recipient", { name })
                     }
                     // max-w-full (not a fixed cap): a chip sizes to its
                     // content and only truncates when the row genuinely
@@ -563,6 +570,7 @@ export function RecipientPicker({
                       // gap so chips WITHOUT the badge keep their
                       // spacing.
                       <span className="text-muted-foreground mx-0.5 shrink-0 rounded border px-1 text-[10px] leading-4">
+                        {/* i18n-ignore */}
                         SSH
                       </span>
                     )}
@@ -581,9 +589,11 @@ export function RecipientPicker({
                 autoComplete="off"
                 spellCheck={false}
                 placeholder={
-                  selectedKeys.length > 0 ? undefined : "Add recipients..."
+                  selectedKeys.length > 0
+                    ? undefined
+                    : t("actions_add_recipients_placeholder")
                 }
-                title="Backspace removes the last recipient"
+                title={t("actions_recipient_input_hint")}
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
@@ -606,8 +616,8 @@ export function RecipientPicker({
               {selectedKeys.length > 1 && (
                 <button
                   type="button"
-                  aria-label="Clear all recipients"
-                  title="Clear all recipients"
+                  aria-label={t("actions_clear_all_recipients")}
+                  title={t("actions_clear_all_recipients")}
                   className="text-muted-foreground hover:text-foreground shrink-0 rounded-sm"
                   onClick={(e) => {
                     // Clearing must not toggle the dropdown.
@@ -623,7 +633,7 @@ export function RecipientPicker({
                 // Not a tab stop: the input is the control, the chevron
                 // is a pointer convenience.
                 tabIndex={-1}
-                aria-label="Toggle recipient list"
+                aria-label={t("actions_toggle_recipient_list")}
                 className="ml-1 shrink-0 rounded-sm"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -672,10 +682,10 @@ export function RecipientPicker({
             {/* Fixed height (not just max-h) so the list stays a constant
                 size and doesn't grow/shrink as search filters the results. */}
             <CommandList id={listId} className="h-[300px]">
-              <CommandEmpty>No matches</CommandEmpty>
+              <CommandEmpty>{t("actions_no_matches")}</CommandEmpty>
               {recent.length > 0 && (
                 <>
-                  <CommandGroup heading="Recent">
+                  <CommandGroup heading={t("actions_group_recent")}>
                     {recent.map(renderOption)}
                   </CommandGroup>
                   {(restContacts.length > 0 || restMyKeys.length > 0) && (
@@ -684,7 +694,7 @@ export function RecipientPicker({
                 </>
               )}
               {restContacts.length > 0 && (
-                <CommandGroup heading="Contacts">
+                <CommandGroup heading={t("actions_group_contacts")}>
                   {restContacts.map(renderOption)}
                 </CommandGroup>
               )}
@@ -692,7 +702,7 @@ export function RecipientPicker({
                 <CommandSeparator />
               )}
               {restMyKeys.length > 0 && (
-                <CommandGroup heading="My Keys">
+                <CommandGroup heading={t("actions_group_my_keys")}>
                   {restMyKeys.map(renderOption)}
                 </CommandGroup>
               )}

@@ -1,0 +1,10 @@
+{
+  "extName": {
+    "message": "PGP Tools - Encrypt, Decrypt & Sign",
+    "description": "Store listing title. Unchanged on purpose: it holds #1 for 'pgp tools'."
+  },
+  "extDescription": {
+    "message": "Encrypt, decrypt, sign, and verify messages with PGP. Drag-and-drop files and manage keys.",
+    "description": "Store listing summary. Hard cap 132 characters."
+  }
+}

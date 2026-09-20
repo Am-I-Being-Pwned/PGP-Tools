@@ -1,0 +1,355 @@
+{
+  "settings_crx_info_title": { "message": "Подпись CRX" },
+  "settings_crx_info_pitch_title": { "message": "Проверенные загрузки CRX" },
+  "settings_crx_info_pitch_p1": {
+    "message": "Chrome Web Store позволяет требовать, чтобы каждое обновление вашего расширения было подписано ключом, который есть только у вас. Даже если кто-то взломает ваш аккаунт в Web Store или систему сборки, он не сможет выпустить вредоносное обновление без вашего ключа подписи."
+  },
+  "settings_crx_info_pitch_p2": {
+    "message": "Это работает, только если ключ хранится там, куда злоумышленник не доберётся - ключ в секретах CI сводит смысл на нет. PGP Tools хранит его зашифрованным в вашем хранилище и разблокирует только для самого акта подписи, за вашим паролем или ключом доступа, и никогда в конвейере сборки."
+  },
+  "settings_crx_info_how_title": { "message": "Как этим пользоваться" },
+  "settings_crx_info_step_1": {
+    "message": "Включите переключатель в Настройках, затем создайте или импортируйте ключ подписи CRX (RSA-2048). Держите закрытый ключ здесь - экспортируйте его только для резервной копии."
+  },
+  "settings_crx_info_step_2": {
+    "message": "Скопируйте $public$ половину ключа в панель разработчика Chrome Web Store в разделе $path$."
+  },
+  "settings_crx_info_term_public": { "message": "открытую" },
+  "settings_crx_info_term_dashboard_path": {
+    "message": "Пакет → Проверенные загрузки CRX"
+  },
+  "settings_crx_info_step_3": {
+    "message": "Чтобы выпустить релиз, перетащите упакованное расширение $zip$ в Рабочую область и подпишите его. Нажмите $save$, чтобы записать $crx$ прямо на диск с правильным именем (или перетащите чип на рабочий стол), а затем загрузите его в панель разработчика. Chrome перехватывает обычное скачивание $crx$ и пытается его установить, поэтому мы сохраняем, а не скачиваем."
+  },
+  "settings_crx_info_step_4": {
+    "message": "Чтобы проверить любой пакет расширения, перетащите $crx$ в Рабочую область - PGP Tools проверит его подпись и покажет идентификатор расширения, за которое он себя выдаёт."
+  },
+  "settings_crx_info_get_title": { "message": "Что вы получаете" },
+  "settings_crx_info_get_body": {
+    "message": "Этот $crx$ - артефакт для загрузки в панель разработчика Web Store, а не пакет для прямой установки: Chrome устанавливает только расширения, подписанные магазином. Чтобы запустить расширение локально, используйте $load_unpacked$ для папки."
+  },
+  "settings_crx_info_term_load_unpacked": {
+    "message": "Загрузить распакованное расширение"
+  },
+  "settings_crx_info_ladder_title": {
+    "message": "Место в иерархии безопасности"
+  },
+  "settings_crx_info_ladder_ci_term": { "message": "Ключ в секретах CI" },
+  "settings_crx_info_ladder_ci": {
+    "message": "$term$ слабее: отравленная зависимость или утёкший токен уносит его с собой."
+  },
+  "settings_crx_info_ladder_vault_term": {
+    "message": "Ключ, зашифрованный в вашем хранилище"
+  },
+  "settings_crx_info_ladder_vault": {
+    "message": "$term$ - ваш вариант - находится за вашим паролем или ключом доступа и разблокируется только для акта подписи."
+  },
+  "settings_crx_info_ladder_hardware_term": {
+    "message": "Аппаратный токен (YubiKey / HSM)"
+  },
+  "settings_crx_info_ladder_hardware": {
+    "message": "$term$ ещё надёжнее: ключ никогда не покидает чип, тогда как здесь он ненадолго восстанавливается в песочнице WASM во время подписи и сразу после этого обнуляется."
+  },
+  "settings_crx_info_not_pgp_title": { "message": "Это не PGP" },
+  "settings_crx_info_not_pgp_body": {
+    "message": "$crx$ подписывается «сырым» ключом RSA-2048 (PKCS#1-SHA256), а не подписью OpenPGP. PGP Tools создаёт и хранит этот ключ с той же защитой, что и ваши PGP-ключи (Argon2id или ключ доступа → AES-256-GCM, всё внутри песочницы WASM), но сам ключ отдельный и используется только для подписи CRX."
+  },
+  "settings_crx_info_link": {
+    "message": "Chrome Web Store: защита обновлений пакетов"
+  },
+  "settings_crx_default_key_name": { "message": "Ключ подписи CRX" },
+  "settings_import_keys_title": { "message": "Импорт ключей" },
+  "settings_import_next": { "message": "Далее" },
+  "settings_import_importing": { "message": "Импорт..." },
+  "settings_import_paste_intro": {
+    "message": "Вставьте или выберите файл ключей - например, полученный через «Экспортировать все ключи». Закрытые ключи будут заново защищены выбранным способом; открытые ключи станут контактами."
+  },
+  "settings_import_paste_placeholder": {
+    "message": "Вставьте ключи сюда или выберите файл..."
+  },
+  "settings_import_browse": { "message": "Выбрать файл ключей" },
+  "settings_import_no_keys": {
+    "message": "Во введённых данных ключи не найдены."
+  },
+  "settings_import_unlock_intro_one": {
+    "message": "Парольной фразой защищено $encrypted$ из $count$ закрытого ключа. Введите её, чтобы разблокировать ключи - затем на следующем шаге вы заново защитите каждый ключ выбранным способом."
+  },
+  "settings_import_unlock_intro_few": {
+    "message": "Парольной фразой защищено $encrypted$ из $count$ закрытых ключей. Введите её, чтобы разблокировать ключи - затем на следующем шаге вы заново защитите каждый ключ выбранным способом."
+  },
+  "settings_import_unlock_intro_many": {
+    "message": "Парольной фразой защищено $encrypted$ из $count$ закрытых ключей. Введите её, чтобы разблокировать ключи - затем на следующем шаге вы заново защитите каждый ключ выбранным способом."
+  },
+  "settings_import_unlock_intro_other": {
+    "message": "Парольной фразой защищено $encrypted$ из $count$ закрытых ключей. Введите её, чтобы разблокировать ключи - затем на следующем шаге вы заново защитите каждый ключ выбранным способом."
+  },
+  "settings_import_passphrase_placeholder": {
+    "message": "Парольная фраза ключа"
+  },
+  "settings_import_protect_intro_one": {
+    "message": "Выберите, как защитить $count$ импортированный закрытый ключ."
+  },
+  "settings_import_protect_intro_few": {
+    "message": "Выберите, как защитить $count$ импортированных закрытых ключа."
+  },
+  "settings_import_protect_intro_many": {
+    "message": "Выберите, как защитить $count$ импортированных закрытых ключей."
+  },
+  "settings_import_protect_intro_other": {
+    "message": "Выберите, как защитить $count$ импортированных закрытых ключа."
+  },
+  "settings_import_submit_one": { "message": "Импортировать $count$ ключ" },
+  "settings_import_submit_few": { "message": "Импортировать $count$ ключа" },
+  "settings_import_submit_many": { "message": "Импортировать $count$ ключей" },
+  "settings_import_submit_other": { "message": "Импортировать $count$ ключа" },
+  "settings_import_passkey_name": { "message": "Импорт PGP Tools" },
+  "settings_import_prf_unsupported": {
+    "message": "Ваш аутентификатор не поддерживает PRF. Попробуйте другой ключ доступа или используйте пароль."
+  },
+  "settings_import_default_user_id": { "message": "Импортированный PGP-ключ" },
+  "settings_import_failed": { "message": "Не удалось импортировать" },
+  "settings_import_unknown_error": { "message": "неизвестная ошибка" },
+  "settings_import_failed_named": {
+    "message": "Не удалось импортировать «$name$»: $error$"
+  },
+  "settings_import_private_imported_one": {
+    "message": "Импортирован $count$ закрытый ключ"
+  },
+  "settings_import_private_imported_few": {
+    "message": "Импортировано $count$ закрытых ключа"
+  },
+  "settings_import_private_imported_many": {
+    "message": "Импортировано $count$ закрытых ключей"
+  },
+  "settings_import_private_imported_other": {
+    "message": "Импортировано $count$ закрытых ключа"
+  },
+  "settings_import_private_skipped_one": {
+    "message": "$count$ закрытый ключ уже импортирован"
+  },
+  "settings_import_private_skipped_few": {
+    "message": "$count$ закрытых ключа уже импортированы"
+  },
+  "settings_import_private_skipped_many": {
+    "message": "$count$ закрытых ключей уже импортированы"
+  },
+  "settings_import_private_skipped_other": {
+    "message": "$count$ закрытых ключа уже импортированы"
+  },
+  "settings_import_private_unparseable_one": {
+    "message": "Не удалось разобрать $count$ закрытый ключ."
+  },
+  "settings_import_private_unparseable_few": {
+    "message": "Не удалось разобрать $count$ закрытых ключа."
+  },
+  "settings_import_private_unparseable_many": {
+    "message": "Не удалось разобрать $count$ закрытых ключей."
+  },
+  "settings_import_private_unparseable_other": {
+    "message": "Не удалось разобрать $count$ закрытых ключа."
+  },
+  "settings_import_contacts_added_one": {
+    "message": "Добавлен $count$ контакт"
+  },
+  "settings_import_contacts_added_few": {
+    "message": "Добавлено $count$ контакта"
+  },
+  "settings_import_contacts_added_many": {
+    "message": "Добавлено $count$ контактов"
+  },
+  "settings_import_contacts_added_other": {
+    "message": "Добавлено $count$ контакта"
+  },
+  "settings_import_contacts_flagged_one": {
+    "message": "$count$ импортированный ключ помечен из-за слабой криптографии (SHA-1)"
+  },
+  "settings_import_contacts_flagged_few": {
+    "message": "$count$ импортированных ключа помечены из-за слабой криптографии (SHA-1)"
+  },
+  "settings_import_contacts_flagged_many": {
+    "message": "$count$ импортированных ключей помечены из-за слабой криптографии (SHA-1)"
+  },
+  "settings_import_contacts_flagged_other": {
+    "message": "$count$ импортированных ключа помечены из-за слабой криптографии (SHA-1)"
+  },
+  "settings_import_contacts_updated_one": {
+    "message": "Обновлён $count$ контакт"
+  },
+  "settings_import_contacts_updated_few": {
+    "message": "Обновлено $count$ контакта"
+  },
+  "settings_import_contacts_updated_many": {
+    "message": "Обновлено $count$ контактов"
+  },
+  "settings_import_contacts_updated_other": {
+    "message": "Обновлено $count$ контакта"
+  },
+  "settings_import_contacts_rejected_one": {
+    "message": "Отклонён $count$ открытый ключ"
+  },
+  "settings_import_contacts_rejected_few": {
+    "message": "Отклонено $count$ открытых ключа"
+  },
+  "settings_import_contacts_rejected_many": {
+    "message": "Отклонено $count$ открытых ключей"
+  },
+  "settings_import_contacts_rejected_other": {
+    "message": "Отклонено $count$ открытых ключа"
+  },
+  "settings_import_contacts_rejected_reason_one": {
+    "message": "Отклонён $count$ открытый ключ: $reason$"
+  },
+  "settings_import_contacts_rejected_reason_few": {
+    "message": "Отклонено $count$ открытых ключа: $reason$"
+  },
+  "settings_import_contacts_rejected_reason_many": {
+    "message": "Отклонено $count$ открытых ключей: $reason$"
+  },
+  "settings_import_contacts_rejected_reason_other": {
+    "message": "Отклонено $count$ открытых ключа: $reason$"
+  },
+  "settings_import_crx_failure_detail": { "message": "$name$: $error$" },
+  "settings_import_crx_failed_one": {
+    "message": "Не удалось восстановить $count$ ключ CRX"
+  },
+  "settings_import_crx_failed_few": {
+    "message": "Не удалось восстановить $count$ ключа CRX"
+  },
+  "settings_import_crx_failed_many": {
+    "message": "Не удалось восстановить $count$ ключей CRX"
+  },
+  "settings_import_crx_failed_other": {
+    "message": "Не удалось восстановить $count$ ключа CRX"
+  },
+  "settings_import_crx_restored_one": {
+    "message": "Восстановлен $count$ ключ подписи CRX"
+  },
+  "settings_import_crx_restored_few": {
+    "message": "Восстановлено $count$ ключа подписи CRX"
+  },
+  "settings_import_crx_restored_many": {
+    "message": "Восстановлено $count$ ключей подписи CRX"
+  },
+  "settings_import_crx_restored_other": {
+    "message": "Восстановлено $count$ ключа подписи CRX"
+  },
+  "settings_import_crx_skipped_one": {
+    "message": "$count$ ключ подписи CRX уже импортирован"
+  },
+  "settings_import_crx_skipped_few": {
+    "message": "$count$ ключа подписи CRX уже импортированы"
+  },
+  "settings_import_crx_skipped_many": {
+    "message": "$count$ ключей подписи CRX уже импортированы"
+  },
+  "settings_import_crx_skipped_other": {
+    "message": "$count$ ключа подписи CRX уже импортированы"
+  },
+  "settings_import_crx_rejected_one": {
+    "message": "Отклонён $count$ ключ подписи CRX: открытый ключ не соответствует идентификатору расширения"
+  },
+  "settings_import_crx_rejected_few": {
+    "message": "Отклонено $count$ ключа подписи CRX: открытый ключ не соответствует идентификатору расширения"
+  },
+  "settings_import_crx_rejected_many": {
+    "message": "Отклонено $count$ ключей подписи CRX: открытый ключ не соответствует идентификатору расширения"
+  },
+  "settings_import_crx_rejected_other": {
+    "message": "Отклонено $count$ ключа подписи CRX: открытый ключ не соответствует идентификатору расширения"
+  },
+  "settings_shortcuts_title": { "message": "Сочетания клавиш" },
+  "settings_shortcuts_unbound": { "message": "Не назначено" },
+  "settings_shortcuts_manage": {
+    "message": "Настроить сочетания клавиш браузера"
+  },
+  "settings_shortcuts_group_palette": { "message": "Палитра команд" },
+  "settings_shortcuts_open_palette": { "message": "Открыть палитру команд" },
+  "settings_shortcuts_open_palette_note": {
+    "message": "Все действия ниже также можно найти там."
+  },
+  "settings_shortcuts_group_workspace": { "message": "Рабочая область" },
+  "settings_shortcuts_run_mode": { "message": "Выполнить текущий режим" },
+  "settings_shortcuts_copy_output": { "message": "Копировать результат" },
+  "settings_shortcuts_download_output": { "message": "Скачать результат" },
+  "settings_shortcuts_pick_recipient": { "message": "Выбрать n-го получателя" },
+  "settings_shortcuts_pick_recipient_note": {
+    "message": "В списке получателей, пока его поле поиска пустое."
+  },
+  "settings_shortcuts_remove_recipient": {
+    "message": "Убрать последнего получателя"
+  },
+  "settings_shortcuts_remove_recipient_note": {
+    "message": "В пустом поле поиска списка получателей."
+  },
+  "settings_shortcuts_group_message": { "message": "Поле сообщения" },
+  "settings_shortcuts_find_replace": { "message": "Найти и заменить" },
+  "settings_shortcuts_style_note": {
+    "message": "При написании сообщения для шифрования или подписи. Используются буквы Unicode, поэтому форматирование сохраняется в любом канале."
+  },
+  "settings_shortcuts_group_modes": { "message": "Режимы" },
+  "settings_shortcuts_switch_mode": { "message": "Перейти в режим «$mode$»" },
+  "settings_shortcuts_group_global": {
+    "message": "Глобальные сочетания клавиш браузера"
+  },
+  "settings_shortcuts_open_app": { "message": "Открыть PGP Tools" },
+  "settings_shortcuts_open_in_mode": { "message": "Открыть в режиме «$mode$»" },
+  "settings_shortcuts_unbound_note": {
+    "message": "По умолчанию не назначено (Chrome допускает не более четырёх предлагаемых сочетаний)."
+  },
+  "settings_shortcuts_global_note": {
+    "message": "Они работают в любом месте браузера. Переназначить любое из них можно на странице $url$."
+  },
+  "settings_preset_title": { "message": "Профиль безопасности" },
+  "settings_preset_apply": { "message": "Применить профиль" },
+  "settings_preset_applying": { "message": "Применение..." },
+  "settings_preset_replace_custom": {
+    "message": "Заменить пользовательские настройки"
+  },
+  "settings_preset_apply_delete_history": {
+    "message": "Применить и удалить историю"
+  },
+  "settings_preset_keep_custom": {
+    "message": "Оставить пользовательские настройки"
+  },
+  "settings_preset_intro": {
+    "message": "Каждый профиль объединяет настройки безопасности для одной модели угроз, а его карточка перечисляет, что именно он задаёт. Применение профиля меняет только эти настройки, и любую из них потом можно изменить снова."
+  },
+  "settings_preset_custom_notice": {
+    "message": "У вас профиль $custom$: одна из настроек профиля была изменена, поэтому ни один профиль не совпадает полностью."
+  },
+  "settings_preset_custom_name": { "message": "Пользовательский" },
+  "settings_preset_confirm_replace": {
+    "message": "Заменить пользовательские настройки профилем $preset$? Изменятся только настройки, перечисленные на его карточке, и любую из них потом можно изменить снова."
+  },
+  "settings_preset_confirm_history": {
+    "message": "Этот профиль включает режим «не кешировать», который также удаляет сохранённую историю ($size$). Восстановить её будет невозможно."
+  },
+  "settings_translation_title": { "message": "Перевод" },
+  "settings_translation_enable": {
+    "message": "Переводить расшифрованные сообщения"
+  },
+  "settings_translation_enable_desc": {
+    "message": "Добавляет кнопку «Перевести» под расшифрованным сообщением. Перевод выполняется на этом устройстве встроенной моделью Chrome, и ничего не переводится, пока вы не нажмёте кнопку."
+  },
+  "settings_translation_unsupported": {
+    "message": "Встроенный перевод Chrome здесь недоступен. Для него нужен настольный Chrome на Windows 10+, macOS 13+, Linux или Chromebook Plus с достаточным объёмом свободного места на диске и памяти для моделей."
+  },
+  "settings_translation_target": { "message": "Переводить на" },
+  "settings_translation_packs": { "message": "Языковые пакеты" },
+  "settings_translation_packs_desc": {
+    "message": "Необязательно. Отсутствующий пакет скачивается сам при первом переводе с этого языка, так что здесь это нужно только для того, чтобы сделать это заранее. Скачивание здесь даёт одно преимущество: загрузка больше не происходит в момент расшифровки сообщения, поэтому её время ничего не говорит о том, что вы только что прочитали. Каждый пакет занимает $size$ и хранится Chrome, а не этим расширением."
+  },
+  "settings_translation_pack_ready": { "message": "Готов" },
+  "settings_translation_pack_progress": { "message": "$percent$%" },
+  "settings_translation_pack_not_offered": { "message": "Недоступен" },
+  "settings_translation_download_failed": { "message": "Не удалось скачать." },
+  "settings_translation_pack_pair": { "message": "$from$ → $to$" },
+  "settings_translation_detector": { "message": "определитель языка" },
+  "settings_translation_pack_gone": {
+    "message": "Языковой пакет пропал. Повторите попытку."
+  },
+  "settings_translation_failed": { "message": "Не удалось перевести." },
+  "settings_translation_unavailable_device": {
+    "message": "Перевод недоступен на этом устройстве."
+  }
+}

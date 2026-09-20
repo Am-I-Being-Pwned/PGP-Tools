@@ -1,8 +1,4263 @@
 {
-  "extName": {
-    "message": "OpenPGP と GPG のメール暗号化 - Gmail & Outlook Compatible, Slack Compatible"
+  "actions_add_own_key_first": {
+    "message": "先に自分の鍵を追加してください"
+  },
+  "actions_add_recipients_placeholder": {
+    "message": "宛先を追加..."
+  },
+  "actions_age_cannot_sign": {
+    "message": "age メッセージには署名できません"
+  },
+  "actions_badge_you": {
+    "message": "自分"
+  },
+  "actions_clear_all_recipients": {
+    "message": "宛先をすべて消去"
+  },
+  "actions_clear_input": {
+    "message": "入力を消去"
+  },
+  "actions_copy_output": {
+    "message": "出力をコピー"
+  },
+  "actions_disabled_toast": {
+    "message": "$name$ は無効です: $reason$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "reason": {
+        "content": "$2"
+      }
+    }
+  },
+  "actions_download_output": {
+    "message": "出力をダウンロード"
+  },
+  "actions_encrypt_to_self_off": {
+    "message": "オフにする: 自分にも暗号化"
+  },
+  "actions_encrypt_to_self_on": {
+    "message": "オンにする: 自分にも暗号化"
+  },
+  "actions_find_replace": {
+    "message": "メッセージ内を検索して置換"
+  },
+  "actions_generate_key": {
+    "message": "鍵を生成"
+  },
+  "actions_go_to_keys": {
+    "message": "鍵へ移動"
+  },
+  "actions_go_to_settings": {
+    "message": "設定へ移動"
+  },
+  "actions_go_to_workspace": {
+    "message": "ワークスペースへ移動"
+  },
+  "actions_group_contacts": {
+    "message": "連絡先"
+  },
+  "actions_group_keys": {
+    "message": "鍵"
+  },
+  "actions_group_message": {
+    "message": "メッセージ"
+  },
+  "actions_group_mode": {
+    "message": "モード"
+  },
+  "actions_group_my_keys": {
+    "message": "自分の鍵"
+  },
+  "actions_group_navigation": {
+    "message": "ナビゲーション"
+  },
+  "actions_group_recent": {
+    "message": "最近使用"
+  },
+  "actions_group_result": {
+    "message": "結果"
+  },
+  "actions_group_session": {
+    "message": "セッション"
+  },
+  "actions_group_settings": {
+    "message": "設定"
+  },
+  "actions_group_workspace": {
+    "message": "ワークスペース"
+  },
+  "actions_history": {
+    "message": "履歴"
+  },
+  "actions_history_clear": {
+    "message": "履歴を消去"
+  },
+  "actions_history_delete_all_one": {
+    "message": "$count$ 件の履歴をすべて削除",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_delete_all_other": {
+    "message": "$count$ 件の履歴をすべて削除",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_delete_warning": {
+    "message": "このデバイス上の暗号化された操作履歴が完全に削除されます。復元することはできません。"
+  },
+  "actions_history_empty": {
+    "message": "履歴はありません"
+  },
+  "actions_history_file_with_size": {
+    "message": "$name$ ($size$)",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "size": {
+        "content": "$2"
+      }
+    }
+  },
+  "actions_history_files_one": {
+    "message": "$count$ 個のファイル",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_files_other": {
+    "message": "$count$ 個のファイル",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_metadata_only": {
+    "message": "メタデータのみ。この操作の内容は保存されません。"
+  },
+  "actions_history_more_matches_one": {
+    "message": "+$count$ 件の一致",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_more_matches_other": {
+    "message": "+$count$ 件の一致",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_no_content": {
+    "message": "内容は保存されていません"
+  },
+  "actions_history_no_matches": {
+    "message": "「$query$」に一致する履歴はありません",
+    "placeholders": {
+      "query": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_off_never_cache": {
+    "message": "鍵をキャッシュしない設定のため、履歴はオフです"
+  },
+  "actions_history_off_reason": {
+    "message": "履歴はオフです。「署名」の横で有効にできます"
+  },
+  "actions_history_op_signed": {
+    "message": "$op$ + 署名",
+    "placeholders": {
+      "op": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_open_entry": {
+    "message": "$title$ を開く",
+    "placeholders": {
+      "title": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_recipient_with_id": {
+    "message": "$name$ ($id$)",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "id": {
+        "content": "$2"
+      }
+    }
+  },
+  "actions_history_search_label": {
+    "message": "履歴を検索"
+  },
+  "actions_history_search_placeholder": {
+    "message": "履歴を検索..."
+  },
+  "actions_history_to": {
+    "message": "宛先: $names$",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_truncated": {
+    "message": "[省略]"
+  },
+  "actions_history_usage": {
+    "message": "$budget$ 中 $used$ を使用",
+    "placeholders": {
+      "used": {
+        "content": "$1"
+      },
+      "budget": {
+        "content": "$2"
+      }
+    }
+  },
+  "actions_history_when": {
+    "message": "$date$ ($relative$)",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      },
+      "relative": {
+        "content": "$2"
+      }
+    }
+  },
+  "actions_import_key": {
+    "message": "鍵をインポート"
+  },
+  "actions_keys_count_one": {
+    "message": "$count$ 個の鍵",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_keys_count_other": {
+    "message": "$count$ 個の鍵",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_keys_of_total": {
+    "message": "$count$ 個中 $active$ 個の鍵",
+    "placeholders": {
+      "active": {
+        "content": "$1"
+      },
+      "count": {
+        "content": "$2"
+      }
+    }
+  },
+  "actions_language_last_used": {
+    "message": "$label$ (前回使用)",
+    "placeholders": {
+      "label": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_lock_now": {
+    "message": "今すぐロック"
+  },
+  "actions_mixed_engine_reason": {
+    "message": "PGP と SSH の宛先を 1 つのメッセージにまとめることはできません。OpenPGP と age は異なる形式です。一方のグループに暗号化してから、もう一方に暗号化してください。"
+  },
+  "actions_need_recipient_or_password": {
+    "message": "宛先を 1 つ以上選択するか、パスワードを設定してください"
+  },
+  "actions_no_input_decrypt": {
+    "message": "復号するものがありません。暗号化されたメッセージを貼り付けるか、ファイルをドロップしてください"
+  },
+  "actions_no_input_encrypt": {
+    "message": "暗号化するものがありません。テキストを入力するか、ファイルをドロップしてください"
+  },
+  "actions_no_input_sign": {
+    "message": "署名するものがありません。テキストを入力するか、ファイルをドロップしてください"
+  },
+  "actions_no_input_verify": {
+    "message": "検証するものがありません。署名されたメッセージを貼り付けるか、ファイルをドロップしてください"
+  },
+  "actions_no_keys_available": {
+    "message": "利用できる鍵がありません"
+  },
+  "actions_no_keys_found": {
+    "message": "鍵が見つかりません"
+  },
+  "actions_no_matches": {
+    "message": "一致するものはありません"
+  },
+  "actions_no_output_to_copy": {
+    "message": "コピーする出力はまだありません"
+  },
+  "actions_nothing_to_clear": {
+    "message": "消去するものがありません"
+  },
+  "actions_nothing_to_download": {
+    "message": "ダウンロードするものはまだありません"
+  },
+  "actions_nothing_to_translate": {
+    "message": "翻訳するものはまだありません"
+  },
+  "actions_open_history": {
+    "message": "履歴を開く"
+  },
+  "actions_open_security_presets": {
+    "message": "セキュリティ プリセットを開く"
+  },
+  "actions_palette_label": {
+    "message": "コマンド パレット"
+  },
+  "actions_palette_no_commands": {
+    "message": "一致するコマンドはありません。"
+  },
+  "actions_palette_no_match": {
+    "message": "一致するものはありません。"
+  },
+  "actions_palette_placeholder": {
+    "message": "コマンドを入力..."
+  },
+  "actions_pick_language_placeholder": {
+    "message": "言語を選択..."
+  },
+  "actions_recipient_input_hint": {
+    "message": "Backspace で最後の宛先を削除します"
+  },
+  "actions_remove_recipient": {
+    "message": "$name$ を削除",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_remove_recipient_detail": {
+    "message": "$name$ を削除 ($detail$)",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "detail": {
+        "content": "$2"
+      }
+    }
+  },
+  "actions_run_mode": {
+    "message": "$mode$を実行",
+    "placeholders": {
+      "mode": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_save_to_history_off": {
+    "message": "オフにする: 履歴に保存"
+  },
+  "actions_save_to_history_on": {
+    "message": "オンにする: 履歴に保存"
+  },
+  "actions_search_placeholder": {
+    "message": "検索..."
+  },
+  "actions_select_key_placeholder": {
+    "message": "鍵を選択..."
+  },
+  "actions_set_up": {
+    "message": "設定する"
+  },
+  "actions_sign_when_encrypting_off": {
+    "message": "オフにする: 暗号化時に署名"
+  },
+  "actions_sign_when_encrypting_on": {
+    "message": "オンにする: 暗号化時に署名"
+  },
+  "actions_ssh_password_reason": {
+    "message": "メッセージ パスワードは OpenPGP の機能で age にはないため、SSH の宛先と併用できません。パスワードを外すか、パスワードなしでこの相手に暗号化してください。"
+  },
+  "actions_style_bold": {
+    "message": "選択範囲を太字にする"
+  },
+  "actions_style_code": {
+    "message": "選択範囲をコードにする"
+  },
+  "actions_style_italic": {
+    "message": "選択範囲を斜体にする"
+  },
+  "actions_style_strike": {
+    "message": "選択範囲に取り消し線を引く"
+  },
+  "actions_switch_to_workspace_first": {
+    "message": "先にワークスペースに切り替えてください"
+  },
+  "actions_toggle_recipient_list": {
+    "message": "宛先リストを開閉"
+  },
+  "actions_translate_message": {
+    "message": "メッセージを翻訳..."
+  },
+  "actions_translate_result_to": {
+    "message": "$language$に翻訳",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_translate_to_title": {
+    "message": "メッセージの翻訳先"
+  },
+  "actions_translation_off": {
+    "message": "設定で翻訳がオフになっています"
+  },
+  "app_action_title": {
+    "message": "PGP Tools"
+  },
+  "app_cmd_open": {
+    "message": "PGP Tools を開く"
+  },
+  "app_cmd_open_decrypt": {
+    "message": "PGP Tools を復号モードで開く"
+  },
+  "app_cmd_open_encrypt": {
+    "message": "PGP Tools を暗号化モードで開く"
+  },
+  "app_cmd_open_sign": {
+    "message": "PGP Tools を署名モードで開く"
+  },
+  "app_cmd_open_verify": {
+    "message": "PGP Tools を検証モードで開く"
+  },
+  "app_copied": {
+    "message": "$label$をコピーしました",
+    "placeholders": {
+      "label": {
+        "content": "$1"
+      }
+    }
+  },
+  "app_copied_wipe": {
+    "message": "$label$をコピーしました。クリップボードは $seconds$ 秒後に消去されます",
+    "placeholders": {
+      "label": {
+        "content": "$1"
+      },
+      "seconds": {
+        "content": "$2"
+      }
+    }
+  },
+  "app_copy_failed": {
+    "message": "コピーに失敗しました。拡張機能のパネルをクリックしてから、もう一度お試しください。"
+  },
+  "app_error_corrupted": {
+    "message": "データが破損しているか、途中で切れています。完全な新しいコピーを入手して、やり直してください。"
+  },
+  "app_error_crx_unsigned": {
+    "message": "CRX の署名が一致しません。この鍵で署名されていないか、署名後にファイルが変更されています。公開元から新しいコピーを入手してください。"
+  },
+  "app_error_key_expired": {
+    "message": "この操作に関係する鍵の有効期限が切れています。鍵の所有者に更新された鍵を依頼し、インポートしてください。"
+  },
+  "app_error_key_locked": {
+    "message": "この鍵はロックされています。ロックを解除してから、やり直してください。"
+  },
+  "app_error_key_not_found": {
+    "message": "その鍵はもうキーリングにないため、何も保存されませんでした。鍵を再度インポートしてから、やり直してください。"
+  },
+  "app_error_key_revoked": {
+    "message": "この操作に関係する鍵が、所有者によって失効されています。代わりの鍵を入手して、インポートしてください。"
+  },
+  "app_error_no_decryption_key": {
+    "message": "このメッセージは、お持ちでない鍵に対して暗号化されています。その秘密鍵をインポートするか、送信者にあなたの鍵のいずれかに対して暗号化するよう依頼してください。"
+  },
+  "app_error_no_decryption_key_with_id": {
+    "message": "このメッセージは、お持ちでない鍵 (鍵 ID $key_id$) に対して暗号化されています。その秘密鍵をインポートするか、送信者にあなたの鍵のいずれかに対して暗号化するよう依頼してください。",
+    "placeholders": {
+      "key_id": {
+        "content": "$1"
+      }
+    }
+  },
+  "app_error_not_crx": {
+    "message": "これは、このツールで検証できる Chrome 拡張機能パッケージではありません。CRX3 (.crx) ファイルを選択してください。"
+  },
+  "app_error_not_pgp_data": {
+    "message": "これは PGP データではないようです。BEGIN 行と END 行を含む、アーマー形式のブロック全体を貼り付けたか確認してください。"
+  },
+  "app_error_ocb_unsupported": {
+    "message": "このメッセージは、このアプリでは読み取れない古い AEAD (OCB) 形式を使用しています。送信者に通常の方法で暗号化して再送するよう依頼してください。パスワードはどれでも構いません。対応していないのは形式のほうです。"
+  },
+  "app_error_passkey_dismissed": {
+    "message": "パスキーの案内が閉じられました。準備ができたら、操作をもう一度実行してください。"
+  },
+  "app_error_passkey_failed": {
+    "message": "パスキーの認証が完了しませんでした。もう一度試すか、別の方法でロックを解除してください。"
+  },
+  "app_error_password_required": {
+    "message": "この鍵にはパスワードが必要です。鍵のパスワードを入力してロックを解除してください。"
+  },
+  "app_error_remedy_check_key": {
+    "message": "鍵を確認"
+  },
+  "app_error_remedy_import_key": {
+    "message": "鍵をインポート"
+  },
+  "app_error_remedy_try_again": {
+    "message": "再試行"
+  },
+  "app_error_storage_full": {
+    "message": "ブラウザのストレージがいっぱいのため、保存できませんでした。不要になった鍵や連絡先を削除してから、やり直してください。"
+  },
+  "app_error_symmetric_wrong_password": {
+    "message": "そのパスワードではこのメッセージを開けませんでした。確認してから、やり直してください。パスワードが正しいと確信できる場合は、メッセージが破損している可能性があります。"
+  },
+  "app_error_tampered": {
+    "message": "署名の検証に失敗しました。このメッセージは改ざんされている可能性があります。内容を信用せず、送信者に再送を依頼してください。"
+  },
+  "app_error_vault_locked": {
+    "message": "保管庫がロックされているため、何も変更されませんでした。ロックを解除してから、もう一度実行してください。"
+  },
+  "app_error_weak_algorithm": {
+    "message": "この鍵は、もはや安全とみなされていない署名アルゴリズムを使用しています。鍵の所有者に SHA-256 以上で再発行するよう依頼してください。"
+  },
+  "app_error_weak_password": {
+    "message": "そのパスワードは短すぎます。8 文字以上にしてください。"
+  },
+  "app_error_wrong_password": {
+    "message": "この鍵のパスワードが違います。確認してから、やり直してください。"
+  },
+  "app_import_added_one": {
+    "message": "鍵を追加しました"
+  },
+  "app_import_added_other": {
+    "message": "$count$ 個の鍵を追加しました",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "app_import_view_key_one": {
+    "message": "鍵を表示"
+  },
+  "app_import_view_key_other": {
+    "message": "鍵を表示"
+  },
+  "app_menu_open_in_pgp_tools": {
+    "message": "PGP Tools で開く"
+  },
+  "app_nav_label": {
+    "message": "メイン ナビゲーション"
+  },
+  "app_onboarding_advanced_options": {
+    "message": "詳細オプション"
+  },
+  "app_onboarding_algo_ecc_hint": {
+    "message": "最新の方式で高速、鍵も小さめです。ほとんどの用途におすすめです。"
+  },
+  "app_onboarding_algo_rsa_hint": {
+    "message": "幅広い互換性があります。鍵の生成に時間がかかります。"
+  },
+  "app_onboarding_algorithm_label": {
+    "message": "アルゴリズム"
+  },
+  "app_onboarding_comment_label": {
+    "message": "コメント"
+  },
+  "app_onboarding_comment_placeholder": {
+    "message": "例: 仕事用、個人用"
+  },
+  "app_onboarding_create_key": {
+    "message": "PGP 鍵を作成する"
+  },
+  "app_onboarding_create_passkey": {
+    "message": "パスキーを作成"
+  },
+  "app_onboarding_email_label": {
+    "message": "メールアドレス"
+  },
+  "app_onboarding_email_placeholder": {
+    "message": "you@example.com"
+  },
+  "app_onboarding_expiry_label": {
+    "message": "鍵の有効期限"
+  },
+  "app_onboarding_expiry_never": {
+    "message": "無期限"
+  },
+  "app_onboarding_expiry_years_one": {
+    "message": "$count$ 年",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "app_onboarding_expiry_years_other": {
+    "message": "$count$ 年",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "app_onboarding_generate_failed": {
+    "message": "鍵の生成に失敗しました"
+  },
+  "app_onboarding_generating": {
+    "message": "鍵を生成しています..."
+  },
+  "app_onboarding_identity_body": {
+    "message": "メッセージの暗号化、復号、署名に使う鍵ペアを作成します。"
+  },
+  "app_onboarding_identity_title": {
+    "message": "PGP 鍵を作成"
+  },
+  "app_onboarding_intro_body": {
+    "message": "正しい相手だけが読めるプライベートなメッセージを送り、メッセージが本当に名乗っている相手からのものかを検証できます。"
+  },
+  "app_onboarding_keep_defaults": {
+    "message": "デフォルトのままにする"
+  },
+  "app_onboarding_name_label": {
+    "message": "名前 *"
+  },
+  "app_onboarding_name_placeholder": {
+    "message": "氏名"
+  },
+  "app_onboarding_name_required": {
+    "message": "名前は必須です。"
+  },
+  "app_onboarding_next": {
+    "message": "次へ"
+  },
+  "app_onboarding_optional": {
+    "message": "省略可"
+  },
+  "app_onboarding_passkey_prompt": {
+    "message": "ブラウザのパスキーの案内に従ってください..."
+  },
+  "app_onboarding_preset_body": {
+    "message": "PGP Tools に鍵をどの程度慎重に扱わせますか？各オプションには設定内容が正確に表示され、後から設定でいつでも変更できます。"
+  },
+  "app_onboarding_preset_title": {
+    "message": "セキュリティ プリセットを選択"
+  },
+  "app_onboarding_prf_unsupported": {
+    "message": "お使いの認証器は PRF に対応していません。別のパスキーを試すか、代わりにパスワードを使用してください。"
+  },
+  "app_onboarding_protection_body": {
+    "message": "連絡先と鍵の保護方法を選択してください。PGP Tools を開くたびにこれを使用します。"
+  },
+  "app_onboarding_protection_title": {
+    "message": "データを保護する"
+  },
+  "app_onboarding_rsa_slow": {
+    "message": "RSA 鍵の生成には少し時間がかかります"
+  },
+  "app_onboarding_set_password": {
+    "message": "パスワードを設定"
+  },
+  "app_onboarding_setup_failed": {
+    "message": "セットアップに失敗しました"
+  },
+  "app_onboarding_skip": {
+    "message": "後で設定する"
+  },
+  "app_onboarding_storage_question": {
+    "message": "データをどこに保存しますか？"
+  },
+  "app_onboarding_unlock_with_vault": {
+    "message": "保管庫と一緒に鍵のロックを解除"
+  },
+  "app_onboarding_unlock_with_vault_hint": {
+    "message": "保管庫を開くパスキーの認証で、鍵のロックも一緒に解除されます。鍵ごとの認証はありません。設定で変更できます。"
+  },
+  "app_onboarding_use_preset": {
+    "message": "このプリセットを使用"
+  },
+  "app_oversized_files_one": {
+    "message": "$files$: ファイルが $limit$ を超えているため、パネルでは処理できません。",
+    "placeholders": {
+      "files": {
+        "content": "$1"
+      },
+      "limit": {
+        "content": "$2"
+      }
+    }
+  },
+  "app_oversized_files_other": {
+    "message": "$files$: ファイルが $limit$ を超えているため、パネルでは処理できません。",
+    "placeholders": {
+      "files": {
+        "content": "$1"
+      },
+      "limit": {
+        "content": "$2"
+      }
+    }
+  },
+  "app_oversized_more": {
+    "message": "$names$、他 $count$ 件",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      },
+      "count": {
+        "content": "$2"
+      }
+    }
+  },
+  "app_tab_main": {
+    "message": "メイン"
+  },
+  "app_vault_lock_retry": {
+    "message": "ロックしてやり直す"
+  },
+  "app_vault_unreadable_body": {
+    "message": "鍵はこのデバイスに保存されたままです。まずはロックしてから、もう一度お試しください。"
+  },
+  "app_vault_unreadable_body_passkey": {
+    "message": "鍵はこのデバイスに保存されたままです。まずはロックしてから、もう一度お試しください。その際は、設定したときと同じパスキーを使用してください。"
+  },
+  "app_vault_unreadable_title": {
+    "message": "保管庫を読み取れませんでした。"
+  },
+  "app_welcome_body": {
+    "message": "下のボタンをクリックしてサイドパネルを開き、鍵の設定を完了してください。その後は、ツールバーの PGP Tools アイコンからいつでも再度開けます。"
+  },
+  "app_welcome_credit_after": {
+    "message": "です。"
+  },
+  "app_welcome_credit_before": {
+    "message": "このプライバシーツールの提供元は"
+  },
+  "app_welcome_open_failed": {
+    "message": "サイドパネルを開けませんでした。ツールバーの PGP Tools アイコンをクリックしてください。"
+  },
+  "app_welcome_opened": {
+    "message": "サイドパネルの手順に従って始めましょう"
+  },
+  "app_welcome_start": {
+    "message": "ここをクリックして始める"
+  },
+  "app_welcome_title": {
+    "message": "PGP Tools がインストールされました"
+  },
+  "common_back": {
+    "message": "戻る"
+  },
+  "common_cancel": {
+    "message": "キャンセル"
+  },
+  "common_continue": {
+    "message": "続行"
+  },
+  "common_copied": {
+    "message": "コピーしました"
+  },
+  "common_copy": {
+    "message": "コピー"
+  },
+  "common_decrypt": {
+    "message": "復号"
+  },
+  "common_delete": {
+    "message": "削除"
+  },
+  "common_done": {
+    "message": "完了"
+  },
+  "common_download": {
+    "message": "ダウンロード"
+  },
+  "common_encrypt": {
+    "message": "暗号化"
+  },
+  "common_keys": {
+    "message": "鍵"
+  },
+  "common_lock": {
+    "message": "ロック"
+  },
+  "common_off": {
+    "message": "オフ"
+  },
+  "common_on": {
+    "message": "オン"
+  },
+  "common_private_key": {
+    "message": "秘密鍵"
+  },
+  "common_public_key": {
+    "message": "公開鍵"
+  },
+  "common_remove": {
+    "message": "削除"
+  },
+  "common_save": {
+    "message": "保存"
+  },
+  "common_settings": {
+    "message": "設定"
+  },
+  "common_sign": {
+    "message": "署名"
+  },
+  "common_unlock": {
+    "message": "ロック解除"
+  },
+  "common_verify": {
+    "message": "検証"
   },
   "extDescription": {
     "message": "OpenPGPとGPGでメールやメッセージを暗号化、復号、署名、検証。ブラウザ上で鍵を管理。"
+  },
+  "extName": {
+    "message": "OpenPGP と GPG のメール暗号化 - Gmail & Outlook Compatible, Slack Compatible"
+  },
+  "import_action_import_contact": {
+    "message": "連絡先をインポート"
+  },
+  "import_action_replace_stored": {
+    "message": "保存済みの鍵を置き換え"
+  },
+  "import_action_update_contact": {
+    "message": "連絡先を更新"
+  },
+  "import_added_contacts_one": {
+    "message": "$count$ 件の連絡先を追加しました",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_added_contacts_other": {
+    "message": "$count$ 件の連絡先を追加しました",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_as_one_contact": {
+    "message": "1 つの連絡先としてインポート"
+  },
+  "import_browse": {
+    "message": "鍵ファイルを選択"
+  },
+  "import_change_keys_added_one": {
+    "message": "$count$ 個の鍵が追加されました",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_keys_added_other": {
+    "message": "$count$ 個の鍵が追加されました",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_keys_removed_one": {
+    "message": "$count$ 個の鍵が削除されました",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_keys_removed_other": {
+    "message": "$count$ 個の鍵が削除されました",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_new_expiry": {
+    "message": "新しい有効期限: $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_new_subkeys_one": {
+    "message": "$count$ 個の新しい副鍵",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_new_subkeys_other": {
+    "message": "$count$ 個の新しい副鍵",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_new_user_ids_one": {
+    "message": "$count$ 件の新しいユーザー ID",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_new_user_ids_other": {
+    "message": "$count$ 件の新しいユーザー ID",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_no_expiry": {
+    "message": "有効期限がなくなりました"
+  },
+  "import_change_reissued": {
+    "message": "鍵が再発行されました"
+  },
+  "import_chip_crx": {
+    "message": "拡張機能の鍵"
+  },
+  "import_chip_crx_title": {
+    "message": "Chrome 拡張機能 (.crx) 用の RSA 署名鍵"
+  },
+  "import_chip_pgp_private_title": {
+    "message": "秘密鍵の情報が含まれています。次の画面で保護します"
+  },
+  "import_chip_pgp_public_title": {
+    "message": "他の人の鍵。連絡先としてインポートされます"
+  },
+  "import_chip_ssh_private": {
+    "message": "SSH 鍵"
+  },
+  "import_chip_ssh_private_title": {
+    "message": "OpenSSH 秘密鍵。次の画面で保護します"
+  },
+  "import_chip_ssh_public": {
+    "message": "SSH 公開鍵"
+  },
+  "import_chip_ssh_public_title": {
+    "message": "他の人の SSH 鍵。age の宛先としてインポートされます"
+  },
+  "import_crx_headline": {
+    "message": "Chrome 拡張機能の署名鍵"
+  },
+  "import_crx_note": {
+    "message": "Chrome 拡張機能 (.crx) 用の RSA 署名鍵です。拡張機能 ID はインポート時に鍵自体から算出されます。"
+  },
+  "import_default_pgp_name": {
+    "message": "インポートした PGP 鍵"
+  },
+  "import_default_ssh_name": {
+    "message": "インポートした SSH 鍵"
+  },
+  "import_drop_here": {
+    "message": "ここに鍵ファイルをドロップ"
+  },
+  "import_dropzone_browse": {
+    "message": "ファイルを選択"
+  },
+  "import_dropzone_text": {
+    "message": "公開鍵をドロップ、貼り付け、または選択"
+  },
+  "import_enter_passphrase": {
+    "message": "鍵のパスフレーズを入力してください。"
+  },
+  "import_failed": {
+    "message": "インポートに失敗しました"
+  },
+  "import_flagged_toast_one": {
+    "message": "$count$ 個の鍵が弱い暗号 (SHA-1) を使用しているため、警告を付けました。連絡先の警告を確認してください。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_flagged_toast_other": {
+    "message": "$count$ 個の鍵が弱い暗号 (SHA-1) を使用しているため、警告を付けました。連絡先の警告を確認してください。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_fetched_note": {
+    "message": "github.com/$user$.keys から取得しました。メッセージは上記のすべての鍵に対して暗号化されるため、相手のどのデバイスからでも読めます。",
+    "placeholders": {
+      "user": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_invalid_username": {
+    "message": "GitHub のユーザー名ではありません。プロフィール URL のアカウント名を使用してください。例: github.com/octocat なら “octocat”。"
+  },
+  "import_github_no_keys": {
+    "message": "$username$ は GitHub に SSH 鍵を公開していません。github.com/settings/keys で追加するよう依頼するか、代わりに相手の鍵をここに貼り付けてください。",
+    "placeholders": {
+      "username": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_none_usable": {
+    "message": "公開されている鍵はどれも暗号化に使用できません。"
+  },
+  "import_github_not_found": {
+    "message": "“$username$” という GitHub アカウントはありません。つづりを確認してください。使用するのはプロフィール URL にある名前です。",
+    "placeholders": {
+      "username": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_offline": {
+    "message": "github.com に接続できませんでした。接続を確認してから、やり直してください。"
+  },
+  "import_github_omitted_line_one": {
+    "message": "+他 $count$ 個の公開されている鍵",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_omitted_line_other": {
+    "message": "+他 $count$ 個の公開されている鍵",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_omitted_reason": {
+    "message": "このインポートでは 1 アカウントにつき最大 $max$ 個の鍵を取得し、極端に長い鍵は個別にスキップします。$username$ が公開している鍵のうち $count$ 個は取得されませんでした。必要な場合はここに貼り付けてください。",
+    "placeholders": {
+      "max": {
+        "content": "$1"
+      },
+      "count": {
+        "content": "$2"
+      },
+      "username": {
+        "content": "$3"
+      }
+    }
+  },
+  "import_github_rate_limited": {
+    "message": "GitHub がこのネットワークからのアクセスを制限しています。制限は IP アドレスごとに数えられるため、同じ回線を使う他の人によって上限に達することがあります。"
+  },
+  "import_github_rejected_heading_one": {
+    "message": "公開されている鍵のうち $count$ 個は使用できません",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_rejected_heading_other": {
+    "message": "公開されている鍵のうち $count$ 個は使用できません",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_server_error": {
+    "message": "GitHub が現在応答できません。しばらくしてからやり直してください。"
+  },
+  "import_group_help_one": {
+    "message": "これらの鍵には共通の名前がないため、$count$ 件の別々の連絡先としてインポートされます。ここで名前を付けると 1 人の相手としてまとめられ、メッセージは $count$ 個すべての鍵に対して暗号化されて、相手のどのデバイスからでも読めるようになります。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_group_help_other": {
+    "message": "これらの鍵には共通の名前がないため、$count$ 件の別々の連絡先としてインポートされます。ここで名前を付けると 1 人の相手としてまとめられ、メッセージは $count$ 個すべての鍵に対して暗号化されて、相手のどのデバイスからでも読めるようになります。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_group_keys_chip_one": {
+    "message": "$count$ 個の鍵",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_group_keys_chip_other": {
+    "message": "$count$ 個の鍵",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_group_keys_chip_title": {
+    "message": "メッセージはすべての鍵に対して暗号化され、いずれか 1 つで復号できます"
+  },
+  "import_group_label": {
+    "message": "1 つの連絡先にまとめる"
+  },
+  "import_group_placeholder": {
+    "message": "例: Alice (全デバイス)"
+  },
+  "import_group_proposal_label_one": {
+    "message": "$count$ 個の SSH 鍵",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_group_proposal_label_other": {
+    "message": "$count$ 個の SSH 鍵",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_importing": {
+    "message": "インポートしています..."
+  },
+  "import_keyserver_invalid_query": {
+    "message": "メールアドレスでも鍵のフィンガープリントでもありません。鍵が公開されているアドレスを使用するか、40 文字の完全なフィンガープリントを貼り付けてください。"
+  },
+  "import_keyserver_multiple_keys": {
+    "message": "$host$ はこの検索に対して複数の鍵を返しました。最初の 1 つだけを表示しています。インポートする前にフィンガープリントを確認してください。",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_keyserver_not_a_key": {
+    "message": "$host$ から応答はありましたが、送られてきたものは読み取れる鍵ではありません。",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_keyserver_not_found_email": {
+    "message": "$host$ に $subject$ の鍵はありません。このサーバーはアドレスを鍵の所有者が確認した後にのみ公開するため、この検索では見つからない鍵がそこにある可能性があります。相手に直接鍵を依頼するか、フィンガープリントで検索してください。",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "subject": {
+        "content": "$2"
+      }
+    }
+  },
+  "import_keyserver_not_found_fingerprint": {
+    "message": "$host$ にフィンガープリント $subject$ の鍵はありません。受け取ったものと照合してください。1 文字違うだけで見つかりません。",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "subject": {
+        "content": "$2"
+      }
+    }
+  },
+  "import_keyserver_offline": {
+    "message": "$host$ に接続できませんでした。接続を確認してから、やり直してください。",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_keyserver_rate_limited": {
+    "message": "$host$ がこのネットワークからのアクセスを制限しています。",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_keyserver_server_error": {
+    "message": "$host$ が現在応答できません。しばらくしてからやり直してください。",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_label_field": {
+    "message": "ラベル"
+  },
+  "import_label_placeholder": {
+    "message": "例: My Extension"
+  },
+  "import_lookup_button": {
+    "message": "検索"
+  },
+  "import_lookup_failed": {
+    "message": "検索に失敗しました"
+  },
+  "import_lookup_invalid": {
+    "message": "GitHub のユーザー名、メールアドレス、鍵のフィンガープリントのいずれでもありません。“octocat”、“alice@example.com”、または 40 文字の完全なフィンガープリントをお試しください。"
+  },
+  "import_lookup_label": {
+    "message": "または相手を検索"
+  },
+  "import_lookup_placeholder": {
+    "message": "GitHub ユーザー名、メールアドレス、またはフィンガープリント"
+  },
+  "import_n_contacts_one": {
+    "message": "$count$ 件の連絡先をインポート",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_n_contacts_other": {
+    "message": "$count$ 件の連絡先をインポート",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_no_key": {
+    "message": "インポートする鍵がありません。"
+  },
+  "import_optional": {
+    "message": "省略可"
+  },
+  "import_panel_aria_with_id": {
+    "message": "$keyid$ をインポート",
+    "placeholders": {
+      "keyid": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_passphrase_label": {
+    "message": "この鍵はパスフレーズで保護されています"
+  },
+  "import_passphrase_placeholder": {
+    "message": "鍵のパスフレーズ"
+  },
+  "import_paste_hint": {
+    "message": "鍵ブロック全体を貼り付けてください。鍵は長すぎて手入力できません。"
+  },
+  "import_paste_label": {
+    "message": "鍵を貼り付け"
+  },
+  "import_paste_placeholder": {
+    "message": "$shortcut$ で鍵を貼り付け",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_private_unreadable": {
+    "message": "その秘密鍵を読み取れませんでした。"
+  },
+  "import_reading": {
+    "message": "鍵を読み取っています..."
+  },
+  "import_reject_expired": {
+    "message": "この鍵は $date$ に期限切れになりました。所有者に現在の鍵を依頼してください。",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_reject_no_public_key": {
+    "message": "このブロックには使用できる公開鍵が含まれていません。"
+  },
+  "import_reject_ssh_generic": {
+    "message": "この SSH 鍵は暗号化に使用できません。"
+  },
+  "import_reject_unusable": {
+    "message": "この公開鍵には、使用できる暗号化用または署名用の鍵がありません。"
+  },
+  "import_rejected_generic": {
+    "message": "この鍵はインポートできません。"
+  },
+  "import_retry_hours_one": {
+    "message": "約 $count$ 時間後にやり直してください。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_retry_hours_other": {
+    "message": "約 $count$ 時間後にやり直してください。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_retry_minute": {
+    "message": "1 分ほど待ってからやり直してください。"
+  },
+  "import_retry_minutes_one": {
+    "message": "約 $count$ 分後にやり直してください。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_retry_minutes_other": {
+    "message": "約 $count$ 分後にやり直してください。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_reveal": {
+    "message": "鍵一覧で表示"
+  },
+  "import_source_help": {
+    "message": "公開鍵は連絡先として追加されます。秘密鍵はこのデバイスに留まります。保護方法は次の画面で選択します。"
+  },
+  "import_ssh_headline": {
+    "message": "SSH 鍵"
+  },
+  "import_ssh_private_headline": {
+    "message": "SSH 秘密鍵"
+  },
+  "import_ssh_private_note": {
+    "message": "age で使用する OpenSSH 秘密鍵です。フィンガープリントはインポート時に鍵自体から読み取られます。age には署名がないため署名には使えず、平文でエクスポートすることもできません。"
+  },
+  "import_status_added_on": {
+    "message": "$date$ に追加。",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_status_duplicate": {
+    "message": "すでに鍵一覧にあります"
+  },
+  "import_status_duplicate_added": {
+    "message": "$date$ に追加済みで、内容に変更はありません。",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_status_update": {
+    "message": "お持ちの鍵を更新します"
+  },
+  "import_submit": {
+    "message": "インポート"
+  },
+  "import_title": {
+    "message": "鍵をインポート"
+  },
+  "import_title_update": {
+    "message": "鍵を更新"
+  },
+  "import_unknown_name": {
+    "message": "不明"
+  },
+  "import_unreadable": {
+    "message": "読み取れる鍵ではないようです。アーマー形式の PGP 鍵ブロックか SSH 公開鍵の行を貼り付けるか、鍵ファイルを選択してください。"
+  },
+  "import_updated_contacts_one": {
+    "message": "$count$ 件の連絡先を更新しました",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_updated_contacts_other": {
+    "message": "$count$ 件の連絡先を更新しました",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_worker_unreachable": {
+    "message": "拡張機能のバックグラウンド ワーカーに接続できませんでした。"
+  },
+  "keygen_advanced_options": {
+    "message": "詳細オプション"
+  },
+  "keygen_algorithm_hint_ecc": {
+    "message": "最新の方式で高速、鍵も小さめです。ほとんどの用途におすすめです。"
+  },
+  "keygen_algorithm_hint_rsa": {
+    "message": "幅広い互換性があります。鍵の生成に時間がかかります。"
+  },
+  "keygen_algorithm_label": {
+    "message": "アルゴリズム"
+  },
+  "keygen_comment_label": {
+    "message": "コメント"
+  },
+  "keygen_comment_placeholder": {
+    "message": "例: 仕事用、個人用"
+  },
+  "keygen_confirm_passphrase_placeholder": {
+    "message": "パスフレーズの確認"
+  },
+  "keygen_confirm_password": {
+    "message": "パスワードの確認"
+  },
+  "keygen_confirm_word": {
+    "message": "EXPORT"
+  },
+  "keygen_copied_encrypted": {
+    "message": "暗号化した鍵をコピーしました (60 秒後に消去されます)"
+  },
+  "keygen_copied_plaintext": {
+    "message": "保護されていない鍵をコピーしました (30 秒後に消去されます)"
+  },
+  "keygen_create_heading": {
+    "message": "新しい鍵を作成"
+  },
+  "keygen_create_subtitle_crx": {
+    "message": "Chrome 拡張機能 (.crx) をパッケージ化するための新しい RSA-2048 署名鍵。"
+  },
+  "keygen_create_subtitle_pgp": {
+    "message": "メッセージの暗号化、復号、署名に使う新しい OpenPGP 鍵ペア。"
+  },
+  "keygen_email_label": {
+    "message": "メールアドレス"
+  },
+  "keygen_email_placeholder": {
+    "message": "you@example.com"
+  },
+  "keygen_encrypting": {
+    "message": "暗号化しています..."
+  },
+  "keygen_error_expiry_past": {
+    "message": "有効期限は今日より後の日付にしてください。"
+  },
+  "keygen_error_expiry_required": {
+    "message": "有効期限の日付を選択してください。"
+  },
+  "keygen_error_generation_failed": {
+    "message": "鍵の生成に失敗しました"
+  },
+  "keygen_error_key_not_unlocked": {
+    "message": "鍵のロックが解除されていません。"
+  },
+  "keygen_error_name_required": {
+    "message": "名前は必須です。"
+  },
+  "keygen_error_passkey_failed": {
+    "message": "パスキーの認証に失敗しました。"
+  },
+  "keygen_error_passphrase_mismatch": {
+    "message": "パスフレーズが一致しません。"
+  },
+  "keygen_error_passphrase_short": {
+    "message": "パスフレーズは 8 文字以上にしてください。"
+  },
+  "keygen_error_password_mismatch": {
+    "message": "パスワードが一致しません。"
+  },
+  "keygen_error_password_short": {
+    "message": "パスワードは 8 文字以上にしてください。"
+  },
+  "keygen_error_prf_unsupported_authenticator": {
+    "message": "お使いの認証器は PRF に対応していません。別のパスキーを試すか、代わりにパスワードを使用してください。"
+  },
+  "keygen_error_wrong_password": {
+    "message": "パスワードが違います。"
+  },
+  "keygen_expires_on": {
+    "message": "有効期限: $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_expiry_1y": {
+    "message": "1 年"
+  },
+  "keygen_expiry_2y": {
+    "message": "2 年"
+  },
+  "keygen_expiry_3y": {
+    "message": "3 年"
+  },
+  "keygen_expiry_custom": {
+    "message": "日付を指定"
+  },
+  "keygen_expiry_heading": {
+    "message": "有効期限の日付を選択"
+  },
+  "keygen_expiry_label": {
+    "message": "鍵の有効期限"
+  },
+  "keygen_expiry_never": {
+    "message": "無期限"
+  },
+  "keygen_expiry_subtitle": {
+    "message": "この日付を過ぎると鍵は使用できなくなります。新しい鍵はいつでも生成できます。"
+  },
+  "keygen_export": {
+    "message": "エクスポート"
+  },
+  "keygen_export_contacts_included_one": {
+    "message": "$count$ 件の連絡先も含まれます (公開鍵のため、ロック解除は不要です)。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_contacts_included_other": {
+    "message": "$count$ 件の連絡先も含まれます (公開鍵のため、ロック解除は不要です)。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_crx_included_one": {
+    "message": "さらに CRX 署名鍵 $count$ 個を、どのデバイスでも復元できるようこのパスフレーズで再暗号化して含めます。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_crx_included_other": {
+    "message": "さらに CRX 署名鍵 $count$ 個を、どのデバイスでも復元できるようこのパスフレーズで再暗号化して含めます。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_failed": {
+    "message": "エクスポートに失敗しました。"
+  },
+  "keygen_export_failed_detail": {
+    "message": "エクスポートに失敗しました: $message$",
+    "placeholders": {
+      "message": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_go_back_unlock": {
+    "message": "戻ってロックを解除する"
+  },
+  "keygen_export_nothing": {
+    "message": "エクスポートするものがありません"
+  },
+  "keygen_export_passphrase_intro": {
+    "message": "エクスポートする秘密鍵を暗号化するパスフレーズを設定してください (OpenPGP S2K 形式。GnuPG などのツールにインポートできます)。このパスフレーズとファイルを持つ人は誰でも、あなたのメッセージを復号し、あなたとして署名できます。"
+  },
+  "keygen_export_plaintext_crx_left_out": {
+    "message": "CRX 署名鍵は平文エクスポートには含まれません。含めるにはパスフレーズを使用してください。"
+  },
+  "keygen_export_plaintext_warning_file": {
+    "message": "平文でのエクスポートです。ダウンロードしたファイルを読んだ人は誰でも、そこに含まれるすべての PGP 鍵を完全に制御できます。"
+  },
+  "keygen_export_skip_locked": {
+    "message": "ロック中の鍵を除外して続行"
+  },
+  "keygen_export_still_locked_after": {
+    "message": "。"
+  },
+  "keygen_export_still_locked_one": {
+    "message": "$count$ 個の鍵がまだロックされているため、除外されます。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_still_locked_other": {
+    "message": "$count$ 個の鍵がまだロックされているため、除外されます。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_summary": {
+    "message": "1 つの $ext$ ファイル (標準の ASCII アーマー形式 OpenPGP) をダウンロードします。内容は、$private_keys$を $private_block$ として、$contacts$を $public_block$ として書き出したものです。",
+    "placeholders": {
+      "ext": {
+        "content": "$1"
+      },
+      "private_keys": {
+        "content": "$2"
+      },
+      "private_block": {
+        "content": "$3"
+      },
+      "contacts": {
+        "content": "$4"
+      },
+      "public_block": {
+        "content": "$5"
+      }
+    }
+  },
+  "keygen_export_summary_contacts_one": {
+    "message": "連絡先 $count$ 件",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_summary_contacts_other": {
+    "message": "連絡先 $count$ 件",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_summary_private_keys_one": {
+    "message": "ロック解除済みの秘密鍵 $count$ 個",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_summary_private_keys_other": {
+    "message": "ロック解除済みの秘密鍵 $count$ 個",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_title": {
+    "message": "鍵をエクスポート"
+  },
+  "keygen_export_toast_exported_one": {
+    "message": "$count$ 個の鍵をエクスポートしました",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_toast_exported_other": {
+    "message": "$count$ 個の鍵をエクスポートしました",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_toast_exported_unsafe_one": {
+    "message": "$count$ 個の鍵をエクスポートしました (秘密鍵は暗号化されていません)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_toast_exported_unsafe_other": {
+    "message": "$count$ 個の鍵をエクスポートしました (秘密鍵は暗号化されていません)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_unlock_intro": {
+    "message": "秘密鍵をエクスポートするには、先にロックを解除する必要があります。バックアップに含める鍵のロックを下で解除してください。"
+  },
+  "keygen_export_with_passphrase": {
+    "message": "パスフレーズ付きでエクスポート"
+  },
+  "keygen_export_without_passphrase": {
+    "message": "パスフレーズなしでエクスポート (安全ではありません)"
+  },
+  "keygen_exporter_crx_encrypted_blurb": {
+    "message": "コピーする鍵を暗号化するパスフレーズを設定してください (「鍵をインポート」から PGP Tools に再インポートできます)。このパスフレーズとコピーしたブロックを持つ人は誰でも、あなたとして拡張機能に署名できます。"
+  },
+  "keygen_exporter_crx_encrypted_button": {
+    "message": "パスフレーズ付きでコピー"
+  },
+  "keygen_exporter_crx_plaintext_blurb": {
+    "message": "平文でのエクスポートです (生の PKCS#8 PEM)。クリップボードを読んだ人は誰でも、この署名鍵を完全に制御できます。"
+  },
+  "keygen_exporter_crx_plaintext_button": {
+    "message": "パスフレーズなしでコピー (安全ではありません)"
+  },
+  "keygen_exporter_crx_title": {
+    "message": "CRX 秘密鍵をコピー"
+  },
+  "keygen_exporter_crx_unlock_passkey": {
+    "message": "この署名鍵をコピーするにはロックを解除してください。パスキーで認証します。"
+  },
+  "keygen_exporter_crx_unlock_password": {
+    "message": "この署名鍵をコピーするにはロックを解除してください。鍵のパスワードを入力します。"
+  },
+  "keygen_exporter_pgp_encrypted_blurb": {
+    "message": "エクスポートする鍵を暗号化するパスフレーズを設定してください。このパスフレーズとエクスポートした鍵を持つ人は誰でも、あなたのメッセージを復号し、あなたとして署名できます。"
+  },
+  "keygen_exporter_pgp_plaintext_blurb": {
+    "message": "平文でのエクスポートです。クリップボードを読んだ人は誰でも、この鍵を完全に制御できます。"
+  },
+  "keygen_exporter_pgp_title": {
+    "message": "秘密鍵をエクスポート"
+  },
+  "keygen_exporting": {
+    "message": "エクスポートしています..."
+  },
+  "keygen_generating_key": {
+    "message": "鍵を生成しています..."
+  },
+  "keygen_generating_passkey": {
+    "message": "ブラウザのパスキーの案内に従ってください..."
+  },
+  "keygen_generating_rsa_hint": {
+    "message": "RSA 鍵の生成には少し時間がかかります"
+  },
+  "keygen_key_password_placeholder": {
+    "message": "鍵のパスワード"
+  },
+  "keygen_key_size_4096": {
+    "message": "4096 ビット"
+  },
+  "keygen_key_size_label": {
+    "message": "鍵のサイズ"
+  },
+  "keygen_label_label": {
+    "message": "ラベル"
+  },
+  "keygen_label_placeholder": {
+    "message": "例: My Extension"
+  },
+  "keygen_name_label": {
+    "message": "名前 *"
+  },
+  "keygen_name_placeholder": {
+    "message": "氏名"
+  },
+  "keygen_next": {
+    "message": "次へ"
+  },
+  "keygen_optional": {
+    "message": "省略可"
+  },
+  "keygen_passkey_default_user": {
+    "message": "PGP 鍵の保護"
+  },
+  "keygen_passkey_imported_user": {
+    "message": "インポートした PGP 鍵"
+  },
+  "keygen_passphrase_placeholder": {
+    "message": "パスフレーズ (8 文字以上)"
+  },
+  "keygen_password_placeholder": {
+    "message": "パスワード (8 文字以上)"
+  },
+  "keygen_prf_unsupported_chrome": {
+    "message": "Chrome プロファイルのパスキーは PRF に対応していない場合があります。Google パスワード マネージャーまたは外部のキーをお試しください。"
+  },
+  "keygen_prf_unsupported_intro": {
+    "message": "この認証器は PRF に対応していません。"
+  },
+  "keygen_prf_unsupported_mac": {
+    "message": "macOS では 15 以降と iCloud キーチェーンが必要です。"
+  },
+  "keygen_prf_unsupported_windows": {
+    "message": "Windows Hello は PRF に対応していません。セキュリティ キー (YubiKey など) を使用してください。"
+  },
+  "keygen_protect_heading": {
+    "message": "鍵を保護する"
+  },
+  "keygen_protect_subtitle": {
+    "message": "この鍵を使用するときのロック解除方法を選択してください。"
+  },
+  "keygen_protection_intro": {
+    "message": "秘密鍵の保護方法を選択してください:"
+  },
+  "keygen_protection_passkey": {
+    "message": "パスキー"
+  },
+  "keygen_protection_passkey_desc": {
+    "message": "指紋、顔、またはセキュリティ キーを使用します。覚えるパスワードはありません。"
+  },
+  "keygen_protection_passkey_unavailable": {
+    "message": "このブラウザでは利用できません。"
+  },
+  "keygen_protection_password": {
+    "message": "パスワード"
+  },
+  "keygen_protection_password_desc": {
+    "message": "パスワードで保護します。ロック解除のたびに入力します。"
+  },
+  "keygen_protection_recommended": {
+    "message": "おすすめ"
+  },
+  "keygen_protection_reuse_passkey": {
+    "message": "設定済みの同じパスキーを使用する"
+  },
+  "keygen_submit_create_passkey": {
+    "message": "パスキーを作成"
+  },
+  "keygen_submit_generate": {
+    "message": "生成"
+  },
+  "keygen_submit_use_passkey": {
+    "message": "パスキーを使用"
+  },
+  "keygen_title": {
+    "message": "鍵を生成"
+  },
+  "keygen_type_crx": {
+    "message": "Chrome 拡張機能 (CRX)"
+  },
+  "keygen_type_pgp": {
+    "message": "メッセージ用の鍵 (PGP)"
+  },
+  "keygen_type_to_confirm_after": {
+    "message": "と入力してください:"
+  },
+  "keygen_type_to_confirm_before": {
+    "message": "確認のため"
+  },
+  "keygen_unlock_gate_passkey": {
+    "message": "この鍵をコピーするには、パスキーで認証してください。"
+  },
+  "keygen_unlock_gate_password": {
+    "message": "この鍵をコピーするには、鍵のパスワードを入力してください。"
+  },
+  "keygen_unlocking": {
+    "message": "ロックを解除しています..."
+  },
+  "keys_also_known_as": {
+    "message": "別名"
+  },
+  "keys_banner_encrypt_only_contact": {
+    "message": "この鍵に対して暗号化できますが、この鍵では署名できません。"
+  },
+  "keys_banner_encrypt_only_own": {
+    "message": "暗号化メッセージは受信できますが、この鍵では署名できません。"
+  },
+  "keys_banner_expired_contact": {
+    "message": "所有者に更新された鍵を依頼してください。"
+  },
+  "keys_banner_expired_on": {
+    "message": "$date$ に有効期限が切れました。",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_banner_expired_own": {
+    "message": "新しい鍵を生成またはインポートしてください。"
+  },
+  "keys_banner_expired_title": {
+    "message": "この鍵は $when$ に期限切れになりました",
+    "placeholders": {
+      "when": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_banner_expires_soon": {
+    "message": "この鍵はまもなく期限切れになります"
+  },
+  "keys_banner_no_reason": {
+    "message": "理由は示されていません。"
+  },
+  "keys_banner_revoked_contact": {
+    "message": "この鍵に対して暗号化したり、この鍵による新しい署名を信頼したりしないでください。"
+  },
+  "keys_banner_revoked_own": {
+    "message": "代わりの鍵を生成またはインポートしてください。"
+  },
+  "keys_banner_revoked_title": {
+    "message": "この鍵は失効しています"
+  },
+  "keys_banner_sign_only_contact": {
+    "message": "この鍵の署名は検証できますが、この鍵に対して暗号化することはできません。"
+  },
+  "keys_banner_sign_only_own": {
+    "message": "メッセージに署名できますが、この鍵では暗号化メッセージを受信できません。"
+  },
+  "keys_banner_unusable_body": {
+    "message": "使用できる暗号化用または署名用の副鍵がありません。"
+  },
+  "keys_banner_unusable_title": {
+    "message": "この鍵は使用できません"
+  },
+  "keys_bits": {
+    "message": "$bits$ ビット",
+    "placeholders": {
+      "bits": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_bulk_delete_confirm_one": {
+    "message": "$count$ 件を完全に削除",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_bulk_delete_confirm_other": {
+    "message": "$count$ 件を完全に削除",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_bulk_delete_contacts_body": {
+    "message": "これらの連絡先に対する暗号化や、その署名の検証はできなくなります。公開鍵は後で再度インポートできます。"
+  },
+  "keys_bulk_delete_private_body": {
+    "message": "選択した秘密鍵がこのデバイスから完全に削除されます。削除した鍵だけに対して暗号化されたものは復元できなくなります。今後必要になる可能性があるなら、バックアップがあることを確認してください。"
+  },
+  "keys_bulk_delete_prompt_one": {
+    "message": "delete $count$ key",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_bulk_delete_prompt_other": {
+    "message": "delete $count$ keys",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_bulk_delete_title": {
+    "message": "選択した項目を削除しますか？"
+  },
+  "keys_cancel_selection_aria": {
+    "message": "選択をキャンセル"
+  },
+  "keys_cap_auth": {
+    "message": "認証 (SSH など)"
+  },
+  "keys_cap_certify": {
+    "message": "身元を保証"
+  },
+  "keys_cap_encrypt": {
+    "message": "暗号化メッセージを受信"
+  },
+  "keys_cap_sign": {
+    "message": "メッセージに署名"
+  },
+  "keys_chip_contact": {
+    "message": "連絡先"
+  },
+  "keys_chip_contact_title": {
+    "message": "相手の公開鍵を保持しています"
+  },
+  "keys_chip_protection_title": {
+    "message": "保存時の秘密鍵の保護方法"
+  },
+  "keys_chip_your_key": {
+    "message": "自分の鍵"
+  },
+  "keys_chip_your_key_title": {
+    "message": "秘密鍵を保持しています"
+  },
+  "keys_confirm_delete_key_title": {
+    "message": "鍵を削除しますか？"
+  },
+  "keys_confirm_remove_contact_title": {
+    "message": "連絡先を削除しますか？"
+  },
+  "keys_contact_expired": {
+    "message": "$date$ に期限切れ",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_contact_expired_title": {
+    "message": "この鍵は $date$ に期限切れになったため、これに対して暗号化することはできません。所有者に現在の鍵を依頼してください。",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_contact_expires": {
+    "message": "有効期限: $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_contact_keys_all_title": {
+    "message": "メッセージはこの連絡先のすべての鍵に対して暗号化され、いずれか 1 つで復号できます。"
+  },
+  "keys_contact_keys_count_one": {
+    "message": "$count$ 個の鍵",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_contact_keys_count_other": {
+    "message": "$count$ 個の鍵",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_contact_keys_partial": {
+    "message": "$total$ 個中 $active$ 個の鍵",
+    "placeholders": {
+      "active": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_contact_keys_partial_title": {
+    "message": "メッセージは、この連絡先の $total$ 個の鍵のうち $active$ 個に対して暗号化されます。残りは鍵の詳細でオフになっています。",
+    "placeholders": {
+      "active": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_contact_options_aria": {
+    "message": "連絡先のオプション"
+  },
+  "keys_contacts_heading": {
+    "message": "連絡先"
+  },
+  "keys_contacts_heading_count": {
+    "message": "連絡先 ($count$)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_contacts_heading_encrypted": {
+    "message": "連絡先 (暗号化済み)"
+  },
+  "keys_contacts_locked": {
+    "message": "連絡先は暗号化されています。表示や管理には PGP Tools のロックを解除してください。"
+  },
+  "keys_contacts_removed_one": {
+    "message": "連絡先を削除しました"
+  },
+  "keys_contacts_removed_other": {
+    "message": "$count$ 件の連絡先を削除しました",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_copy_fingerprint_aria": {
+    "message": "フィンガープリントをコピー"
+  },
+  "keys_copy_private_key": {
+    "message": "秘密鍵をコピー"
+  },
+  "keys_copy_public_key": {
+    "message": "公開鍵をコピー"
+  },
+  "keys_count_contacts_one": {
+    "message": "$count$ 件の連絡先",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_count_contacts_other": {
+    "message": "$count$ 件の連絡先",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_count_private_keys_one": {
+    "message": "$count$ 個の秘密鍵",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_count_private_keys_other": {
+    "message": "$count$ 個の秘密鍵",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_count_signing_keys_one": {
+    "message": "$count$ 個の署名鍵",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_count_signing_keys_other": {
+    "message": "$count$ 個の署名鍵",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_default_badge": {
+    "message": "デフォルト"
+  },
+  "keys_default_removed": {
+    "message": "デフォルトの鍵を解除しました"
+  },
+  "keys_default_set": {
+    "message": "デフォルトの鍵を設定しました"
+  },
+  "keys_default_title": {
+    "message": "署名、復号、自分への暗号化にデフォルトで使用されます"
+  },
+  "keys_delete_crx_body": {
+    "message": "この拡張機能の更新に署名できなくなります。バックアップがない限り、鍵は復元できません。"
+  },
+  "keys_delete_key": {
+    "message": "鍵を削除"
+  },
+  "keys_delete_key_body": {
+    "message": "この秘密鍵がこのデバイスから完全に削除されます。この鍵だけに対して暗号化されたものは復元できなくなります。今後必要になる可能性があるなら、バックアップがあることを確認してください。"
+  },
+  "keys_delete_key_permanently": {
+    "message": "鍵を完全に削除"
+  },
+  "keys_deselect_all": {
+    "message": "すべて選択解除"
+  },
+  "keys_details_aria": {
+    "message": "$name$ の鍵の詳細",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_download_public_key": {
+    "message": "公開鍵をダウンロード"
+  },
+  "keys_empty": {
+    "message": "鍵はまだありません。鍵を生成またはインポートして始めましょう。"
+  },
+  "keys_encrypt_to": {
+    "message": "この相手に暗号化"
+  },
+  "keys_enter_password_placeholder": {
+    "message": "パスワードを入力"
+  },
+  "keys_expires_value": {
+    "message": "$date$ ($when$)",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      },
+      "when": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_export": {
+    "message": "エクスポート"
+  },
+  "keys_exported_one": {
+    "message": "$count$ 個の鍵をエクスポートしました",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_exported_other": {
+    "message": "$count$ 個の鍵をエクスポートしました",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_exported_unsafe_one": {
+    "message": "$count$ 個の鍵をエクスポートしました (秘密鍵は暗号化されていません)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_exported_unsafe_other": {
+    "message": "$count$ 個の鍵をエクスポートしました (秘密鍵は暗号化されていません)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_fact_added": {
+    "message": "追加日"
+  },
+  "keys_fact_algorithm": {
+    "message": "アルゴリズム"
+  },
+  "keys_fact_created": {
+    "message": "作成日"
+  },
+  "keys_fact_expires": {
+    "message": "有効期限"
+  },
+  "keys_fact_fingerprint": {
+    "message": "フィンガープリント"
+  },
+  "keys_fact_last_used": {
+    "message": "最終使用"
+  },
+  "keys_fact_used_for": {
+    "message": "用途"
+  },
+  "keys_generate_button": {
+    "message": "鍵を生成"
+  },
+  "keys_group_row_label": {
+    "message": "鍵"
+  },
+  "keys_import_button": {
+    "message": "鍵をインポート"
+  },
+  "keys_inactive_subkeys_expired_one": {
+    "message": "期限切れの副鍵 $count$ 個",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_inactive_subkeys_expired_other": {
+    "message": "期限切れの副鍵 $count$ 個",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_inactive_subkeys_revoked_one": {
+    "message": "失効した副鍵 $count$ 個",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_inactive_subkeys_revoked_other": {
+    "message": "失効した副鍵 $count$ 個",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_inactive_subkeys_unusable_one": {
+    "message": "使用できない副鍵 $count$ 個",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_inactive_subkeys_unusable_other": {
+    "message": "使用できない副鍵 $count$ 個",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_key_details": {
+    "message": "鍵の詳細"
+  },
+  "keys_key_options_aria": {
+    "message": "鍵のオプション"
+  },
+  "keys_loading": {
+    "message": "読み込んでいます…"
+  },
+  "keys_my_keys_heading": {
+    "message": "自分の鍵"
+  },
+  "keys_never": {
+    "message": "無期限"
+  },
+  "keys_no_contacts_match": {
+    "message": "「$query$」に一致する連絡先はありません",
+    "placeholders": {
+      "query": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_no_subkeys": {
+    "message": "この鍵に副鍵はありません。主鍵がすべての役割を担います。"
+  },
+  "keys_parse_failed": {
+    "message": "この鍵を解析できませんでした。"
+  },
+  "keys_passkey_failed": {
+    "message": "パスキーの認証に失敗しました"
+  },
+  "keys_protection_passkey": {
+    "message": "パスキー"
+  },
+  "keys_protection_password": {
+    "message": "パスワード"
+  },
+  "keys_public_key_copied": {
+    "message": "公開鍵をコピーしました"
+  },
+  "keys_recipient_disable_title": {
+    "message": "この鍵に対する暗号化をやめます。この一覧には残ります。"
+  },
+  "keys_recipient_dont_use": {
+    "message": "使用しない"
+  },
+  "keys_recipient_enable_title": {
+    "message": "この鍵に対して再び暗号化します。"
+  },
+  "keys_recipient_last_active_title": {
+    "message": "使用中の鍵はこれが最後の 1 つです。これもオフにすると、メッセージを暗号化する相手がいなくなります。"
+  },
+  "keys_recipient_not_used": {
+    "message": "未使用"
+  },
+  "keys_recipient_off_title": {
+    "message": "この連絡先へのメッセージは、この鍵に対しては暗号化されません。"
+  },
+  "keys_recipient_use": {
+    "message": "使用"
+  },
+  "keys_remove_contact": {
+    "message": "連絡先を削除"
+  },
+  "keys_remove_contact_body": {
+    "message": "この連絡先に対するメッセージの暗号化や、その署名の検証はできなくなります。公開鍵は後で再度インポートできます。"
+  },
+  "keys_remove_default": {
+    "message": "デフォルトを解除"
+  },
+  "keys_rename": {
+    "message": "名前を変更"
+  },
+  "keys_rename_contact_title": {
+    "message": "連絡先の名前を変更"
+  },
+  "keys_rename_crx_title": {
+    "message": "署名鍵の名前を変更"
+  },
+  "keys_rename_field_label": {
+    "message": "表示名"
+  },
+  "keys_rename_hint": {
+    "message": "$identity$ の代わりに表示されます。このデバイス上のラベルにすぎません。",
+    "placeholders": {
+      "identity": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_rename_key_title": {
+    "message": "鍵の名前を変更"
+  },
+  "keys_rename_placeholder_contact": {
+    "message": "例: Alice (全デバイス)"
+  },
+  "keys_rename_placeholder_crx": {
+    "message": "例: My Extension"
+  },
+  "keys_rename_placeholder_key": {
+    "message": "例: 仕事用ノート PC"
+  },
+  "keys_reselect": {
+    "message": "再選択"
+  },
+  "keys_revocation_certificate": {
+    "message": "失効証明書"
+  },
+  "keys_revocation_create": {
+    "message": "失効証明書を作成"
+  },
+  "keys_revocation_create_failed": {
+    "message": "失効証明書を作成できませんでした。"
+  },
+  "keys_revocation_created": {
+    "message": "失効証明書を作成しました"
+  },
+  "keys_revocation_creating": {
+    "message": "作成しています..."
+  },
+  "keys_revocation_have_body": {
+    "message": "この鍵を紛失したり漏洩したりした場合、この証明書を公開すると連絡先にこの鍵の使用をやめるよう知らせることができます。安全な場所にバックアップしてください。これを持つ人は誰でもあなたの鍵を失効させることができます。"
+  },
+  "keys_revocation_missing_body": {
+    "message": "この鍵は失効証明書なしでインポートされました。今すぐ作成してバックアップしておくと、鍵にアクセスできなくなった後でも失効させることができます。"
+  },
+  "keys_revocation_unlock_first": {
+    "message": "先にこの鍵のロックを解除してから、やり直してください。"
+  },
+  "keys_revoked_reason": {
+    "message": "失効理由: $reason$",
+    "placeholders": {
+      "reason": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_row_created": {
+    "message": "作成: $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_row_expired": {
+    "message": "$date$ に期限切れ",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_row_expires": {
+    "message": "有効期限: $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_row_never_expires": {
+    "message": "無期限"
+  },
+  "keys_save_failed": {
+    "message": "この変更を保存できませんでした。"
+  },
+  "keys_search_contacts_placeholder": {
+    "message": "連絡先を検索..."
+  },
+  "keys_select": {
+    "message": "選択"
+  },
+  "keys_select_all": {
+    "message": "すべて選択"
+  },
+  "keys_selected_count_one": {
+    "message": "$count$ 件を選択中",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_selected_count_other": {
+    "message": "$count$ 件を選択中",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_selection_actions_aria": {
+    "message": "選択項目の操作"
+  },
+  "keys_set_default": {
+    "message": "デフォルトの鍵に設定"
+  },
+  "keys_size_bytes": {
+    "message": "$size$ B",
+    "placeholders": {
+      "size": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_size_kb": {
+    "message": "$size$ KB",
+    "placeholders": {
+      "size": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_size_mb": {
+    "message": "$size$ MB",
+    "placeholders": {
+      "size": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_source_github": {
+    "message": "取得元: github.com/$user$",
+    "placeholders": {
+      "user": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_source_keyserver": {
+    "message": "取得元: keys.openpgp.org ($user$)",
+    "placeholders": {
+      "user": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_ssh_chip_title": {
+    "message": "age で使用する SSH 鍵です。1 つのメッセージ内で PGP の宛先と組み合わせることはできません。"
+  },
+  "keys_ssh_export_skipped_one": {
+    "message": "$count$ 個の SSH 鍵はエクスポートできません。インポートした SSH 鍵がこのデバイスの外に出ることはありません。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_ssh_export_skipped_other": {
+    "message": "$count$ 個の SSH 鍵はエクスポートできません。インポートした SSH 鍵がこのデバイスの外に出ることはありません。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_status_expired": {
+    "message": "期限切れ"
+  },
+  "keys_status_invalid": {
+    "message": "無効"
+  },
+  "keys_status_locked": {
+    "message": "ロック中"
+  },
+  "keys_status_revoked": {
+    "message": "失効"
+  },
+  "keys_status_sealed": {
+    "message": "使用時まで暗号化されたまま"
+  },
+  "keys_status_unlocked": {
+    "message": "ロック解除済み"
+  },
+  "keys_subkey_label": {
+    "message": "副鍵"
+  },
+  "keys_subkeys_title": {
+    "message": "副鍵"
+  },
+  "keys_subkeys_truncated": {
+    "message": "この証明書には異常に多くの副鍵が含まれているため、最初の $count$ 個のみを表示しています。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_undo": {
+    "message": "元に戻す"
+  },
+  "keys_unknown_name": {
+    "message": "不明"
+  },
+  "keys_weak_sha1": {
+    "message": "脆弱 (SHA-1)"
+  },
+  "keys_wrong_password": {
+    "message": "パスワードが違います"
+  },
+  "settings_crx_default_key_name": {
+    "message": "CRX 署名鍵"
+  },
+  "settings_crx_info_get_body": {
+    "message": "この $crx$ は Web Store ダッシュボードにアップロードするための成果物であり、直接インストールできるパッケージではありません。Chrome はストアが署名した拡張機能しかインストールしません。拡張機能をローカルで実行するには、フォルダに対して $load_unpacked$ を使用してください。",
+    "placeholders": {
+      "crx": {
+        "content": "$1"
+      },
+      "load_unpacked": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_crx_info_get_title": {
+    "message": "得られるもの"
+  },
+  "settings_crx_info_how_title": {
+    "message": "使い方"
+  },
+  "settings_crx_info_ladder_ci": {
+    "message": "$term$はより弱い方法です。汚染された依存関係や漏洩したトークンによって持ち去られます。",
+    "placeholders": {
+      "term": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_crx_info_ladder_ci_term": {
+    "message": "CI のシークレットに置いた鍵"
+  },
+  "settings_crx_info_ladder_hardware": {
+    "message": "$term$はさらに強力です。鍵がチップの外に出ることはありません。一方ここでは、署名中に WASM サンドボックス内で鍵が一時的に復元され、直後にゼロ消去されます。",
+    "placeholders": {
+      "term": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_crx_info_ladder_hardware_term": {
+    "message": "ハードウェア トークン (YubiKey / HSM)"
+  },
+  "settings_crx_info_ladder_title": {
+    "message": "セキュリティ上の位置づけ"
+  },
+  "settings_crx_info_ladder_vault": {
+    "message": "$term$ (現在の状態) は、パスワードまたはパスキーの背後に置かれ、署名のときだけロックが解除されます。",
+    "placeholders": {
+      "term": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_crx_info_ladder_vault_term": {
+    "message": "保管庫内で暗号化された鍵"
+  },
+  "settings_crx_info_link": {
+    "message": "Chrome Web Store: パッケージの更新を保護する"
+  },
+  "settings_crx_info_not_pgp_body": {
+    "message": "$crx$ は OpenPGP 署名ではなく、生の RSA-2048 鍵 (PKCS#1-SHA256) で署名されます。PGP Tools はこの鍵を PGP 鍵と同じ保護 (Argon2id またはパスキー → AES-256-GCM、すべて WASM サンドボックス内) で生成、保存しますが、鍵自体は別物で、CRX 署名にのみ使用されます。",
+    "placeholders": {
+      "crx": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_crx_info_not_pgp_title": {
+    "message": "これは PGP ではありません"
+  },
+  "settings_crx_info_pitch_p1": {
+    "message": "Chrome Web Store では、拡張機能のすべての更新に、自分だけが持つ鍵での署名を必須にできます。誰かが Web Store アカウントやビルド パイプラインを乗っ取ったとしても、署名鍵がなければ悪意のある更新を配信することはできません。"
+  },
+  "settings_crx_info_pitch_p2": {
+    "message": "これが成り立つのは、鍵が攻撃者の手の届かない場所にある場合だけです。CI のシークレットに置かれた鍵では意味がありません。PGP Tools は鍵を保管庫内で暗号化して保持し、パスワードまたはパスキーの背後で署名のときだけロックを解除します。パイプラインに置くことはありません。"
+  },
+  "settings_crx_info_pitch_title": {
+    "message": "検証済み CRX アップロード"
+  },
+  "settings_crx_info_step_1": {
+    "message": "設定でトグルをオンにし、CRX 署名鍵 (RSA-2048) を作成またはインポートします。秘密鍵はここに置いたままにし、エクスポートはバックアップが必要な場合だけにしてください。"
+  },
+  "settings_crx_info_step_2": {
+    "message": "この鍵の$public$を、Chrome Web Store ダッシュボードの $path$ にコピーします。",
+    "placeholders": {
+      "public": {
+        "content": "$1"
+      },
+      "path": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_crx_info_step_3": {
+    "message": "リリースを作成するには、パッケージ化した拡張機能の $zip$ をワークスペースにドロップして署名します。$save$ を使うと、$crx$ が正しい名前でディスクに直接保存されます (チップをデスクトップにドラッグしても構いません)。それをダッシュボードにアップロードしてください。Chrome は通常の $crx$ のダウンロードを横取りしてインストールしようとするため、ダウンロードではなく保存にしています。",
+    "placeholders": {
+      "zip": {
+        "content": "$1"
+      },
+      "save": {
+        "content": "$2"
+      },
+      "crx": {
+        "content": "$3"
+      }
+    }
+  },
+  "settings_crx_info_step_4": {
+    "message": "拡張機能パッケージを確認するには、$crx$ をワークスペースにドロップします。PGP Tools が署名を検証し、そのパッケージが名乗る拡張機能 ID を表示します。",
+    "placeholders": {
+      "crx": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_crx_info_term_dashboard_path": {
+    "message": "パッケージ → 検証済み CRX アップロード"
+  },
+  "settings_crx_info_term_load_unpacked": {
+    "message": "パッケージ化されていない拡張機能を読み込む"
+  },
+  "settings_crx_info_term_public": {
+    "message": "公開鍵"
+  },
+  "settings_crx_info_title": {
+    "message": "CRX 署名"
+  },
+  "settings_import_browse": {
+    "message": "鍵ファイルを選択"
+  },
+  "settings_import_contacts_added_one": {
+    "message": "$count$ 件の連絡先を追加しました",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_added_other": {
+    "message": "$count$ 件の連絡先を追加しました",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_flagged_one": {
+    "message": "インポートした鍵 $count$ 個に弱い暗号 (SHA-1) の警告を付けました",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_flagged_other": {
+    "message": "インポートした鍵 $count$ 個に弱い暗号 (SHA-1) の警告を付けました",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_rejected_one": {
+    "message": "$count$ 個の公開鍵を拒否しました",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_rejected_other": {
+    "message": "$count$ 個の公開鍵を拒否しました",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_rejected_reason_one": {
+    "message": "$count$ 個の公開鍵を拒否しました: $reason$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "reason": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_import_contacts_rejected_reason_other": {
+    "message": "$count$ 個の公開鍵を拒否しました: $reason$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "reason": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_import_contacts_updated_one": {
+    "message": "$count$ 件の連絡先を更新しました",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_updated_other": {
+    "message": "$count$ 件の連絡先を更新しました",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_failed_one": {
+    "message": "$count$ 個の CRX 鍵を復元できませんでした",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_failed_other": {
+    "message": "$count$ 個の CRX 鍵を復元できませんでした",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_failure_detail": {
+    "message": "$name$: $error$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "error": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_import_crx_rejected_one": {
+    "message": "$count$ 個の CRX 署名鍵を拒否しました: 公開鍵が拡張機能 ID と一致しません",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_rejected_other": {
+    "message": "$count$ 個の CRX 署名鍵を拒否しました: 公開鍵が拡張機能 ID と一致しません",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_restored_one": {
+    "message": "$count$ 個の CRX 署名鍵を復元しました",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_restored_other": {
+    "message": "$count$ 個の CRX 署名鍵を復元しました",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_skipped_one": {
+    "message": "$count$ 個の CRX 署名鍵はインポート済みです",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_skipped_other": {
+    "message": "$count$ 個の CRX 署名鍵はインポート済みです",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_default_user_id": {
+    "message": "インポートした PGP 鍵"
+  },
+  "settings_import_failed": {
+    "message": "インポートに失敗しました"
+  },
+  "settings_import_failed_named": {
+    "message": "「$name$」をインポートできませんでした: $error$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "error": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_import_importing": {
+    "message": "インポートしています..."
+  },
+  "settings_import_keys_title": {
+    "message": "鍵をインポート"
+  },
+  "settings_import_next": {
+    "message": "次へ"
+  },
+  "settings_import_no_keys": {
+    "message": "入力内容に鍵が見つかりません。"
+  },
+  "settings_import_passkey_name": {
+    "message": "PGP Tools インポート"
+  },
+  "settings_import_passphrase_placeholder": {
+    "message": "鍵のパスフレーズ"
+  },
+  "settings_import_paste_intro": {
+    "message": "鍵ファイルを貼り付けるか選択してください。たとえば「すべての鍵をエクスポート」で作成したファイルです。秘密鍵は選択した方法で再保護され、公開鍵は連絡先になります。"
+  },
+  "settings_import_paste_placeholder": {
+    "message": "ここに鍵を貼り付けるか、ファイルを選択..."
+  },
+  "settings_import_prf_unsupported": {
+    "message": "お使いの認証器は PRF に対応していません。別のパスキーを試すか、代わりにパスワードを使用してください。"
+  },
+  "settings_import_private_imported_one": {
+    "message": "$count$ 個の秘密鍵をインポートしました",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_private_imported_other": {
+    "message": "$count$ 個の秘密鍵をインポートしました",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_private_skipped_one": {
+    "message": "$count$ 個の秘密鍵はインポート済みです",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_private_skipped_other": {
+    "message": "$count$ 個の秘密鍵はインポート済みです",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_private_unparseable_one": {
+    "message": "$count$ 個の秘密鍵を解析できませんでした。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_private_unparseable_other": {
+    "message": "$count$ 個の秘密鍵を解析できませんでした。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_protect_intro_one": {
+    "message": "インポートする $count$ 個の秘密鍵の保護方法を選択してください。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_protect_intro_other": {
+    "message": "インポートする $count$ 個の秘密鍵の保護方法を選択してください。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_submit_one": {
+    "message": "$count$ 個の鍵をインポート",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_submit_other": {
+    "message": "$count$ 個の鍵をインポート",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_unknown_error": {
+    "message": "不明なエラー"
+  },
+  "settings_import_unlock_intro_one": {
+    "message": "$count$ 個の秘密鍵のうち $encrypted$ 個がパスフレーズで保護されています。入力してロックを解除してください。次の画面で、すべての鍵を選択した方法で再保護します。",
+    "placeholders": {
+      "encrypted": {
+        "content": "$1"
+      },
+      "count": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_import_unlock_intro_other": {
+    "message": "$count$ 個の秘密鍵のうち $encrypted$ 個がパスフレーズで保護されています。入力してロックを解除してください。次の画面で、すべての鍵を選択した方法で再保護します。",
+    "placeholders": {
+      "encrypted": {
+        "content": "$1"
+      },
+      "count": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_preset_apply": {
+    "message": "プリセットを適用"
+  },
+  "settings_preset_apply_delete_history": {
+    "message": "適用して履歴を削除"
+  },
+  "settings_preset_applying": {
+    "message": "適用しています..."
+  },
+  "settings_preset_confirm_history": {
+    "message": "このプリセットは鍵をキャッシュしない設定をオンにするため、保存済みの履歴 ($size$) も削除されます。復元することはできません。",
+    "placeholders": {
+      "size": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_preset_confirm_replace": {
+    "message": "カスタム設定を「$preset$」プリセットに置き換えますか？カードに記載された設定だけが変わり、後からいずれも調整し直せます。",
+    "placeholders": {
+      "preset": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_preset_custom_name": {
+    "message": "カスタム"
+  },
+  "settings_preset_custom_notice": {
+    "message": "現在は$custom$です。まとめて設定される項目が変更されたため、完全に一致するプリセットはありません。",
+    "placeholders": {
+      "custom": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_preset_intro": {
+    "message": "各プリセットは 1 つの脅威モデルに合わせたセキュリティ設定をまとめたもので、そのカードには設定内容が正確に記載されています。適用してもそれらの設定だけが変わり、後からいずれも調整し直せます。"
+  },
+  "settings_preset_keep_custom": {
+    "message": "カスタム設定を維持"
+  },
+  "settings_preset_replace_custom": {
+    "message": "カスタム設定を置き換える"
+  },
+  "settings_preset_title": {
+    "message": "セキュリティ プリセット"
+  },
+  "settings_shortcuts_copy_output": {
+    "message": "出力をコピー"
+  },
+  "settings_shortcuts_download_output": {
+    "message": "出力をダウンロード"
+  },
+  "settings_shortcuts_find_replace": {
+    "message": "検索と置換"
+  },
+  "settings_shortcuts_global_note": {
+    "message": "これらはブラウザのどこでも使えます。$url$ で割り当てを変更できます。",
+    "placeholders": {
+      "url": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_shortcuts_group_global": {
+    "message": "ブラウザ全体のショートカット"
+  },
+  "settings_shortcuts_group_message": {
+    "message": "メッセージ ボックス"
+  },
+  "settings_shortcuts_group_modes": {
+    "message": "モード"
+  },
+  "settings_shortcuts_group_palette": {
+    "message": "コマンド パレット"
+  },
+  "settings_shortcuts_group_workspace": {
+    "message": "ワークスペース"
+  },
+  "settings_shortcuts_manage": {
+    "message": "ブラウザのショートカットを管理"
+  },
+  "settings_shortcuts_open_app": {
+    "message": "PGP Tools を開く"
+  },
+  "settings_shortcuts_open_in_mode": {
+    "message": "$mode$モードで開く",
+    "placeholders": {
+      "mode": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_shortcuts_open_palette": {
+    "message": "コマンド パレットを開く"
+  },
+  "settings_shortcuts_open_palette_note": {
+    "message": "以下のすべての操作はそこからも検索できます。"
+  },
+  "settings_shortcuts_pick_recipient": {
+    "message": "n 番目の宛先を選択"
+  },
+  "settings_shortcuts_pick_recipient_note": {
+    "message": "宛先のドロップダウン内で、検索ボックスが空のとき。"
+  },
+  "settings_shortcuts_remove_recipient": {
+    "message": "最後の宛先を削除"
+  },
+  "settings_shortcuts_remove_recipient_note": {
+    "message": "宛先のドロップダウンの空の検索ボックス内で。"
+  },
+  "settings_shortcuts_run_mode": {
+    "message": "現在のモードを実行"
+  },
+  "settings_shortcuts_style_note": {
+    "message": "暗号化または署名するメッセージの作成中。Unicode の文字形を使うため、どの経路でも失われません。"
+  },
+  "settings_shortcuts_switch_mode": {
+    "message": "$mode$に切り替え",
+    "placeholders": {
+      "mode": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_shortcuts_title": {
+    "message": "キーボード ショートカット"
+  },
+  "settings_shortcuts_unbound": {
+    "message": "未割り当て"
+  },
+  "settings_shortcuts_unbound_note": {
+    "message": "デフォルトでは未割り当てです (Chrome が提案できるキーは 4 つまでです)。"
+  },
+  "settings_translation_detector": {
+    "message": "言語検出モデル"
+  },
+  "settings_translation_download_failed": {
+    "message": "ダウンロードに失敗しました。"
+  },
+  "settings_translation_enable": {
+    "message": "復号したメッセージを翻訳"
+  },
+  "settings_translation_enable_desc": {
+    "message": "復号したメッセージの下に「翻訳」ボタンを追加します。翻訳は Chrome の組み込みモデルを使ってこのデバイス上で行われ、ボタンを押すまで何も翻訳されません。"
+  },
+  "settings_translation_failed": {
+    "message": "翻訳に失敗しました。"
+  },
+  "settings_translation_pack_gone": {
+    "message": "言語パックが見つからなくなりました。もう一度お試しください。"
+  },
+  "settings_translation_pack_not_offered": {
+    "message": "提供なし"
+  },
+  "settings_translation_pack_pair": {
+    "message": "$from$から$to$への翻訳モデル",
+    "placeholders": {
+      "from": {
+        "content": "$1"
+      },
+      "to": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_translation_pack_progress": {
+    "message": "$percent$%",
+    "placeholders": {
+      "percent": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_translation_pack_ready": {
+    "message": "準備完了"
+  },
+  "settings_translation_packs": {
+    "message": "言語パック"
+  },
+  "settings_translation_packs_desc": {
+    "message": "省略可。足りないパックは、その言語から初めて翻訳するときに自動的にダウンロードされるため、これは先回りしたい場合にだけ必要です。ここでダウンロードしておく利点は 1 つあります。メッセージを復号した瞬間にダウンロードが起きなくなるため、そのタイミングから今読んだ内容について何も推測されません。各パックは $size$ で、この拡張機能ではなく Chrome が保存します。",
+    "placeholders": {
+      "size": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_translation_target": {
+    "message": "翻訳先"
+  },
+  "settings_translation_title": {
+    "message": "翻訳"
+  },
+  "settings_translation_unavailable_device": {
+    "message": "このデバイスでは翻訳を利用できません。"
+  },
+  "settings_translation_unsupported": {
+    "message": "Chrome のデバイス上翻訳はここでは利用できません。Windows 10 以降、macOS 13 以降、Linux、または Chromebook Plus のデスクトップ版 Chrome と、モデル用の十分な空きディスク容量とメモリが必要です。"
+  },
+  "shared_about": {
+    "message": "情報"
+  },
+  "shared_about_extensions": {
+    "message": "悪意のあるブラウザ拡張機能が心配ですか？拡張機能をスキャンして、データ収集やセッション ハイジャックなどの脅威を確認できます。"
+  },
+  "shared_advanced_mode": {
+    "message": "詳細モード"
+  },
+  "shared_advanced_mode_desc": {
+    "message": "鍵のフィンガープリント、アルゴリズム、出力形式のオプションを表示します。"
+  },
+  "shared_auto_download_files_desc": {
+    "message": "ファイルの暗号化または復号後に自動的にダウンロードします。"
+  },
+  "shared_auto_download_files_title": {
+    "message": "ファイルの結果を自動ダウンロード"
+  },
+  "shared_auto_download_text_desc": {
+    "message": "テキストの暗号化または復号後に自動的にダウンロードします。"
+  },
+  "shared_auto_download_text_title": {
+    "message": "テキストの結果を自動ダウンロード"
+  },
+  "shared_auto_lock_desc": {
+    "message": "パネルを一定時間操作しないと、ロック解除済みの鍵をロックします。OS のロック画面では、この設定に関係なく常に即座にロックされます。"
+  },
+  "shared_auto_lock_title": {
+    "message": "無操作時に自動ロック"
+  },
+  "shared_backup": {
+    "message": "バックアップ"
+  },
+  "shared_backup_desc": {
+    "message": "鍵と連絡先を 1 つのアーマー形式ファイルにエクスポートするか、そのファイルから復元します。エクスポートされる秘密鍵は、指定したパスフレーズで暗号化されます。"
+  },
+  "shared_bundle_auto_lock": {
+    "message": "$duration$の無操作で自動ロック",
+    "placeholders": {
+      "duration": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_bundle_auto_lock_off": {
+    "message": "自動ロックはオフ"
+  },
+  "shared_bundle_auto_lock_tabs": {
+    "message": "$duration$の無操作、およびタブの切り替え時に自動ロック",
+    "placeholders": {
+      "duration": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_bundle_clipboard_one": {
+    "message": "コピーした秘密情報は $count$ 秒後にクリップボードから消去",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_bundle_clipboard_other": {
+    "message": "コピーした秘密情報は $count$ 秒後にクリップボードから消去",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_bundle_discovery_off": {
+    "message": "鍵の検索なし。鍵を探すためにこのデバイスから外部へ送られる情報はない"
+  },
+  "shared_bundle_discovery_on": {
+    "message": "GitHub と keys.openpgp.org で鍵を検索できる"
+  },
+  "shared_bundle_history_off": {
+    "message": "履歴は保持しない"
+  },
+  "shared_bundle_history_on": {
+    "message": "操作の履歴を暗号化して保持"
+  },
+  "shared_bundle_never_cache_off": {
+    "message": "ロック解除済みの鍵はロックするまでキャッシュ"
+  },
+  "shared_bundle_never_cache_on": {
+    "message": "使用のたびに鍵をメモリから消去"
+  },
+  "shared_bundle_no_encrypt_to_self": {
+    "message": "暗号化したメッセージは後から自分でも読めない"
+  },
+  "shared_bundle_storage_local": {
+    "message": "鍵はこのデバイスに留まる"
+  },
+  "shared_bundle_storage_sync": {
+    "message": "鍵は Chrome プロファイル間で同期"
+  },
+  "shared_bundle_unlock_on_open_off": {
+    "message": "鍵ごとに個別のロック解除を要求"
+  },
+  "shared_bundle_unlock_on_open_on": {
+    "message": "1 回のパスキー認証で保管庫と鍵のロックを解除"
+  },
+  "shared_byline_before": {
+    "message": "プライバシーツールの提供元:"
+  },
+  "shared_check_extensions": {
+    "message": "拡張機能をチェック"
+  },
+  "shared_clear_name": {
+    "message": "名前を消去"
+  },
+  "shared_commands": {
+    "message": "コマンド"
+  },
+  "shared_confirm_type_after": {
+    "message": "と入力してください"
+  },
+  "shared_confirm_type_aria": {
+    "message": "確認のため「$text$」と入力",
+    "placeholders": {
+      "text": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_confirm_type_before": {
+    "message": "確認のため、下に"
+  },
+  "shared_crx_enable_desc": {
+    "message": "Web Store の「検証済み CRX アップロード」向けに、ビルド パイプラインではなく保管庫に置いた鍵で Chrome 拡張機能パッケージ (.crx) に署名します。"
+  },
+  "shared_crx_enable_title": {
+    "message": "CRX 署名を有効にする"
+  },
+  "shared_crx_how": {
+    "message": "CRX 署名の仕組み"
+  },
+  "shared_crx_signing": {
+    "message": "CRX 署名"
+  },
+  "shared_delete_history_body": {
+    "message": "鍵をキャッシュしない設定にすると、保存済みの履歴 ($size$) も削除されます。復元することはできません。",
+    "placeholders": {
+      "size": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_delete_history_confirm": {
+    "message": "オンにして履歴を削除"
+  },
+  "shared_delete_history_title": {
+    "message": "保存済みの履歴を削除しますか？"
+  },
+  "shared_dev_tools": {
+    "message": "開発ツール"
+  },
+  "shared_developer": {
+    "message": "開発者"
+  },
+  "shared_developer_desc": {
+    "message": "chrome.storage の確認と WASM メモリのダンプをテスト用に行います。このセクションは開発ビルドにのみ表示されます。"
+  },
+  "shared_display": {
+    "message": "表示"
+  },
+  "shared_downloads": {
+    "message": "ダウンロード"
+  },
+  "shared_drop_desc": {
+    "message": "鍵はキーリングに追加され、ファイルとテキストはワークスペースに送られます。"
+  },
+  "shared_drop_to_import": {
+    "message": "ドロップしてインポート"
+  },
+  "shared_export_all_keys": {
+    "message": "すべての鍵をエクスポート"
+  },
+  "shared_hide_technical_details": {
+    "message": "技術的な詳細を非表示"
+  },
+  "shared_import_flow_states": {
+    "message": "インポート フローの状態"
+  },
+  "shared_import_keys": {
+    "message": "鍵をインポート"
+  },
+  "shared_key_discovery": {
+    "message": "鍵の検索"
+  },
+  "shared_key_security": {
+    "message": "鍵のセキュリティ"
+  },
+  "shared_key_storage": {
+    "message": "鍵の保存場所"
+  },
+  "shared_keyboard_shortcuts": {
+    "message": "キーボード ショートカット"
+  },
+  "shared_lock_after": {
+    "message": "ロックまでの時間"
+  },
+  "shared_lock_tab_away_desc": {
+    "message": "サイドパネルが見えなくなった瞬間にロックします (Alt+Tab、パネルを閉じた、ウィンドウを最小化した場合など)。"
+  },
+  "shared_lock_tab_away_title": {
+    "message": "別のタブに移ったらロック"
+  },
+  "shared_lookup_online_desc": {
+    "message": "インポート画面に、GitHub の SSH 鍵と keys.openpgp.org の証明書を検索するボックスを追加します。オフの場合、鍵を探すためにこのデバイスから外部へ送られる情報はありません。オンにすると、検索のたびにそのホストにあなたの IP アドレスと検索した相手が伝わります。あなたの鍵やメッセージについては何も伝わりません。"
+  },
+  "shared_lookup_online_title": {
+    "message": "オンラインで鍵を検索"
+  },
+  "shared_master_password": {
+    "message": "マスター パスワード"
+  },
+  "shared_migration_failed": {
+    "message": "移行に失敗しました"
+  },
+  "shared_minutes_one": {
+    "message": "$count$ 分",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_minutes_other": {
+    "message": "$count$ 分",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_never_cache_desc": {
+    "message": "操作のたびに鍵をメモリから消去します。「鍵」タブから手動でロックを解除することはできます。"
+  },
+  "shared_never_cache_title": {
+    "message": "鍵を自動キャッシュしない"
+  },
+  "shared_one_hour": {
+    "message": "1 時間"
+  },
+  "shared_open_dev_tools": {
+    "message": "開発ツールを開く"
+  },
+  "shared_passkey_failed": {
+    "message": "パスキーの認証に失敗しました。もう一度お試しください。"
+  },
+  "shared_preset_applied": {
+    "message": "プリセットを適用しました: $title$",
+    "placeholders": {
+      "title": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_preset_applied_history_deleted": {
+    "message": "履歴は削除され、「元に戻す」では復元されません。"
+  },
+  "shared_preset_bundled_changed": {
+    "message": "まとめて設定される項目が変更されました"
+  },
+  "shared_preset_careful_tagline": {
+    "message": "本当の秘密のための堅実なデフォルト"
+  },
+  "shared_preset_careful_title": {
+    "message": "慎重"
+  },
+  "shared_preset_casual_tagline": {
+    "message": "利便性優先。重要度の低いものを守る鍵向け"
+  },
+  "shared_preset_casual_title": {
+    "message": "気軽"
+  },
+  "shared_preset_current": {
+    "message": "現在"
+  },
+  "shared_preset_custom": {
+    "message": "カスタム"
+  },
+  "shared_preset_none_selected": {
+    "message": "プリセット未選択"
+  },
+  "shared_preset_paranoid_note": {
+    "message": "メッセージは自分では読める状態のままです。それすらリスクなら、後で「自分にも暗号化」をオフにしてください。"
+  },
+  "shared_preset_paranoid_tagline": {
+    "message": "何も残しません。最短のロック、履歴なし、鍵のキャッシュなし。"
+  },
+  "shared_preset_paranoid_title": {
+    "message": "これが漏れたら大変なことになる"
+  },
+  "shared_preset_recommended": {
+    "message": "おすすめ"
+  },
+  "shared_saving": {
+    "message": "保存しています..."
+  },
+  "shared_security_preset": {
+    "message": "セキュリティ プリセット"
+  },
+  "shared_show_technical_details": {
+    "message": "技術的な詳細を表示"
+  },
+  "shared_something_went_wrong": {
+    "message": "問題が発生しました。もう一度お試しください。"
+  },
+  "shared_source_on_github": {
+    "message": "GitHub のソースコード"
+  },
+  "shared_storage_local_desc": {
+    "message": "データはこのパソコンに留まります。デバイスを変えたり再インストールしたりした場合は、再度設定が必要です。"
+  },
+  "shared_storage_local_label": {
+    "message": "このデバイスのみ"
+  },
+  "shared_storage_sync_desc": {
+    "message": "データは Chrome アカウント経由で同期され、ログインしているどのデバイスからでも使えます。"
+  },
+  "shared_storage_sync_label": {
+    "message": "デバイス間で同期"
+  },
+  "shared_sync_quota_error": {
+    "message": "同期の空き容量が足りません。Chrome は同期データを合計約 100 KB に制限しているため、この保管庫は大きすぎてデバイス間で同期できません。このデバイスに置いたままにするか、鍵をいくつか削除してからやり直してください。"
+  },
+  "shared_translation": {
+    "message": "翻訳"
+  },
+  "shared_undo": {
+    "message": "元に戻す"
+  },
+  "shared_unlock_aria": {
+    "message": "PGP Tools のロックを解除"
+  },
+  "shared_unlock_failed": {
+    "message": "ロックを解除できませんでした。もう一度お試しください。"
+  },
+  "shared_unlock_intro": {
+    "message": "鍵と連絡先は暗号化されています。続けるには認証してください。"
+  },
+  "shared_unlock_lost_password": {
+    "message": "パスワードを忘れた場合、暗号化された鍵と連絡先を復元することはできません。"
+  },
+  "shared_unlock_with_passkey": {
+    "message": "パスキーでロック解除"
+  },
+  "shared_unlock_with_vault_desc": {
+    "message": "保管庫を開くパスキーの認証で、鍵のロックも一緒に解除されます。まだ個別に認証を求める鍵は、次にロックを解除したときにこの方式に移行します。パスワードで保護された鍵はそのパスワードのままです。"
+  },
+  "shared_unlock_with_vault_title": {
+    "message": "保管庫と一緒に鍵のロックを解除"
+  },
+  "shared_unlocking": {
+    "message": "ロックを解除しています..."
+  },
+  "shared_wrong_password": {
+    "message": "パスワードが違います。"
+  },
+  "workspace_add_a_contact": {
+    "message": "連絡先を追加"
+  },
+  "workspace_age_message_note": {
+    "message": "age メッセージ。SSH の宛先は PGP と混在できません"
+  },
+  "workspace_browse_files": {
+    "message": "ファイルを選択"
+  },
+  "workspace_clear_all_files": {
+    "message": "すべて消去"
+  },
+  "workspace_clear_input_output": {
+    "message": "入力と出力を消去"
+  },
+  "workspace_clear_text": {
+    "message": "テキストを消去"
+  },
+  "workspace_cleared_toast": {
+    "message": "ワークスペースを消去しました"
+  },
+  "workspace_close_find": {
+    "message": "検索を閉じる"
+  },
+  "workspace_compose_same_language": {
+    "message": "すでにあなたの言語 ($language$) です。",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_compose_translate_unavailable": {
+    "message": "その言語への翻訳はここでは利用できません。"
+  },
+  "workspace_compose_translated": {
+    "message": "$from$から$to$に翻訳しました",
+    "placeholders": {
+      "from": {
+        "content": "$1"
+      },
+      "to": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_create_one": {
+    "message": "鍵を作成"
+  },
+  "workspace_crx_save_failed": {
+    "message": "自動保存できませんでした。「保存」を押してやり直してください。"
+  },
+  "workspace_crx_saved": {
+    "message": "$name$ を保存しました。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_decrypt_with": {
+    "message": "復号に使う鍵"
+  },
+  "workspace_decrypting": {
+    "message": "復号しています..."
+  },
+  "workspace_detected_key_import": {
+    "message": "連絡先としてインポート"
+  },
+  "workspace_detected_key_in_message": {
+    "message": "このメッセージには $name$ の公開鍵が含まれています。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_detected_key_in_message_anon": {
+    "message": "このメッセージには誰かの公開鍵が含まれています。"
+  },
+  "workspace_detected_key_known": {
+    "message": "$name$ の鍵はすでにお持ちです。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_detected_key_pasted": {
+    "message": "これは $name$ の公開鍵です。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_detected_key_pasted_anon": {
+    "message": "これは誰かの公開鍵のようです。"
+  },
+  "workspace_detected_key_show": {
+    "message": "鍵一覧で表示"
+  },
+  "workspace_drop_files_or_text": {
+    "message": "ここにファイルまたはテキストをドロップ"
+  },
+  "workspace_enter_key_password": {
+    "message": "鍵のパスワードを入力"
+  },
+  "workspace_enter_message_password": {
+    "message": "メッセージのパスワードを入力"
+  },
+  "workspace_error_crx_invalid": {
+    "message": "このファイルの CRX 署名を検証できませんでした。"
+  },
+  "workspace_error_crx_sign_failed": {
+    "message": "CRX 署名に失敗しました。もう一度お試しください。"
+  },
+  "workspace_error_crx_wrong_password": {
+    "message": "パスワードが違うか、署名に失敗しました。"
+  },
+  "workspace_error_decrypt_failed": {
+    "message": "復号に失敗しました。メッセージが破損しているか、お持ちのどの鍵に対しても暗号化されていません。"
+  },
+  "workspace_error_decrypt_failed_ssh": {
+    "message": "復号に失敗しました。メッセージが破損しているか、お持ちのどの SSH 鍵に対しても暗号化されていません。"
+  },
+  "workspace_error_engine_mismatch": {
+    "message": "どの形式で暗号化すればよいか判断できませんでした。"
+  },
+  "workspace_error_need_recipient_or_password": {
+    "message": "宛先の鍵を 1 つ以上選択するか、パスワードを設定してください。"
+  },
+  "workspace_error_no_signing_key": {
+    "message": "使用できる署名鍵がありません。先に鍵を追加してください。"
+  },
+  "workspace_error_no_signing_key_ssh": {
+    "message": "使用できる署名鍵がありません。SSH 鍵では署名できません。先に OpenPGP 鍵を追加してください。"
+  },
+  "workspace_error_not_signed": {
+    "message": "このメッセージは署名されていません。"
+  },
+  "workspace_error_read_file": {
+    "message": "このファイルを読み取れませんでした。もう一度お試しください。"
+  },
+  "workspace_error_select_crx_key": {
+    "message": "先に CRX 署名鍵を選択してください。"
+  },
+  "workspace_error_select_decryption_key": {
+    "message": "復号に使う鍵を選択してください。"
+  },
+  "workspace_error_signature_invalid": {
+    "message": "署名の検証に失敗しました。このメッセージは改ざんされている可能性があります"
+  },
+  "workspace_error_unlock_failed": {
+    "message": "ロックを解除できませんでした。もう一度お試しください。"
+  },
+  "workspace_error_verify_failed": {
+    "message": "検証に失敗しました。入力が署名付き PGP メッセージのようには見えません。"
+  },
+  "workspace_error_wrong_key_password": {
+    "message": "パスワードが違います。確認してから、やり直してください。"
+  },
+  "workspace_files_decrypted_one": {
+    "message": "$count$ 個のファイルを復号しました (合計 $size$)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "size": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_files_decrypted_other": {
+    "message": "$count$ 個のファイルを復号しました (合計 $size$)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "size": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_files_encrypted_one": {
+    "message": "$count$ 個のファイルを暗号化しました (合計 $size$)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "size": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_files_encrypted_other": {
+    "message": "$count$ 個のファイルを暗号化しました (合計 $size$)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "size": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_files_signed_one": {
+    "message": "$count$ 個のファイルに署名しました",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_files_signed_other": {
+    "message": "$count$ 個のファイルに署名しました",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_files_zipped_encrypted_one": {
+    "message": "$count$ 個のファイルを zip 化して暗号化しました",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_files_zipped_encrypted_other": {
+    "message": "$count$ 個のファイルを zip 化して暗号化しました",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_find_hide_replace": {
+    "message": "置換を非表示"
+  },
+  "workspace_find_label": {
+    "message": "検索"
+  },
+  "workspace_find_replace": {
+    "message": "検索と置換"
+  },
+  "workspace_find_show_replace": {
+    "message": "置換を表示"
+  },
+  "workspace_go": {
+    "message": "実行"
+  },
+  "workspace_hide_password": {
+    "message": "パスワードを非表示"
+  },
+  "workspace_hide_technical_details": {
+    "message": "技術的な詳細を非表示"
+  },
+  "workspace_history_save_failed": {
+    "message": "履歴に保存できませんでした。ストレージがいっぱいの可能性があります"
+  },
+  "workspace_import_one": {
+    "message": "鍵をインポート"
+  },
+  "workspace_match_case": {
+    "message": "大文字と小文字を区別"
+  },
+  "workspace_message_input_aria": {
+    "message": "メッセージ入力"
+  },
+  "workspace_message_password_help": {
+    "message": "このパスワードを知っている人は誰でもメッセージを読めるため、メッセージと一緒ではなく別の経路で伝えてください。パスワードは、選択した宛先に加えてメッセージに追加され、どちらでも開けます。"
+  },
+  "workspace_message_password_label": {
+    "message": "メッセージ パスワード"
+  },
+  "workspace_message_password_title": {
+    "message": "このメッセージのパスワード"
+  },
+  "workspace_message_tools": {
+    "message": "メッセージ ツール"
+  },
+  "workspace_need_recipient_or_password": {
+    "message": "宛先を 1 つ以上選択するか、パスワードを設定してください"
+  },
+  "workspace_next_match": {
+    "message": "次の一致"
+  },
+  "workspace_no_contacts_yet": {
+    "message": "連絡先はまだありません"
+  },
+  "workspace_no_keys_yet": {
+    "message": "鍵はまだありません"
+  },
+  "workspace_no_such_language": {
+    "message": "該当する言語はありません。"
+  },
+  "workspace_note_downloading": {
+    "message": "$what$をダウンロード中...",
+    "placeholders": {
+      "what": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_note_downloading_progress": {
+    "message": "$what$をダウンロード中、$percent$%",
+    "placeholders": {
+      "what": {
+        "content": "$1"
+      },
+      "percent": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_note_same_language": {
+    "message": "このメッセージはすでに$language$です。",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_note_translated_from": {
+    "message": "このデバイス上で$language$から翻訳しました。",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_note_uncertain": {
+    "message": "このメッセージの言語を判別できません。"
+  },
+  "workspace_operation_failed": {
+    "message": "操作に失敗しました。もう一度お試しください。"
+  },
+  "workspace_output_size_line": {
+    "message": "$name$ ($size$)",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "size": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_password_min_length_one": {
+    "message": "$count$ 文字以上。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_password_min_length_other": {
+    "message": "$count$ 文字以上。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_password_too_short_one": {
+    "message": "$count$ 文字以上にしてください。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_password_too_short_other": {
+    "message": "$count$ 文字以上にしてください。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_placeholder_compose": {
+    "message": "メッセージを入力または貼り付け..."
+  },
+  "workspace_placeholder_decrypt": {
+    "message": "受け取った暗号化メッセージを貼り付け..."
+  },
+  "workspace_placeholder_verify": {
+    "message": "確認したい署名付きメッセージを貼り付け..."
+  },
+  "workspace_previous_match": {
+    "message": "前の一致"
+  },
+  "workspace_private_key_clear_input": {
+    "message": "入力を消去"
+  },
+  "workspace_private_key_ignore": {
+    "message": "無視"
+  },
+  "workspace_private_key_import_safely": {
+    "message": "この鍵を安全にインポート"
+  },
+  "workspace_private_key_pasted_body": {
+    "message": "暗号化/復号ボックスは秘密鍵の情報を置く場所として安全ではありません。インポート機能を使えば、鍵は安全なストアに読み込まれ、下書きのスナップショットに残りません。"
+  },
+  "workspace_private_key_pasted_title": {
+    "message": "これは秘密鍵のようです。ここに秘密鍵を貼り付けないでください。"
+  },
+  "workspace_private_key_show_cleartext": {
+    "message": "貼り付けたテキストを平文で表示"
+  },
+  "workspace_processing": {
+    "message": "処理しています..."
+  },
+  "workspace_recipients_label": {
+    "message": "宛先"
+  },
+  "workspace_replace": {
+    "message": "置換"
+  },
+  "workspace_replace_all": {
+    "message": "すべて置換"
+  },
+  "workspace_replace_all_short": {
+    "message": "すべて"
+  },
+  "workspace_replace_all_shortcut": {
+    "message": "すべて置換 ($shortcut$)",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_replace_with": {
+    "message": "置換後の文字列"
+  },
+  "workspace_reset": {
+    "message": "リセット"
+  },
+  "workspace_restore_original": {
+    "message": "原文に戻す"
+  },
+  "workspace_save_file": {
+    "message": "$name$ を保存",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_search_languages": {
+    "message": "言語を検索"
+  },
+  "workspace_select_signing_key": {
+    "message": "署名鍵を選択"
+  },
+  "workspace_self_excluded_age": {
+    "message": "自分の SSH 鍵がなく、age メッセージには PGP 鍵を含められません。"
+  },
+  "workspace_self_excluded_intro": {
+    "message": "このメッセージは自分では読めません:"
+  },
+  "workspace_self_excluded_pgp": {
+    "message": "自分の鍵はどれもこのメッセージに追加できません。"
+  },
+  "workspace_set_password": {
+    "message": "パスワードを設定"
+  },
+  "workspace_show_original": {
+    "message": "原文を表示"
+  },
+  "workspace_show_password": {
+    "message": "パスワードを表示"
+  },
+  "workspace_show_technical_details": {
+    "message": "技術的な詳細を表示"
+  },
+  "workspace_show_translation": {
+    "message": "$language$の翻訳を表示",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_sign_blocked_age": {
+    "message": "age メッセージには署名できません。SSH 鍵にはここで使える署名形式がありません。"
+  },
+  "workspace_sign_blocked_no_pgp_key": {
+    "message": "署名には自分の OpenPGP 鍵が必要です。SSH 鍵では署名できません。"
+  },
+  "workspace_sign_for_web_store": {
+    "message": "Web Store 用に署名"
+  },
+  "workspace_sign_kind_crx": {
+    "message": "Chrome 拡張機能 (.crx)"
+  },
+  "workspace_sign_kind_pgp": {
+    "message": "PGP 署名"
+  },
+  "workspace_sign_with": {
+    "message": "署名に使う鍵"
+  },
+  "workspace_signature_verified": {
+    "message": "署名を検証しました"
+  },
+  "workspace_status_age_encrypted": {
+    "message": "age メッセージ。SSH の宛先に対して暗号化しました"
+  },
+  "workspace_status_crx_signed": {
+    "message": "$name$ に署名しました。保存しています...",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_status_crx_valid": {
+    "message": "有効な CRX。拡張機能 $id$",
+    "placeholders": {
+      "id": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_status_decrypted_archive": {
+    "message": "複数のファイルを含むアーカイブを復号しました"
+  },
+  "workspace_status_signer_unknown": {
+    "message": "このメッセージは署名されていますが、署名者の公開鍵が鍵にも連絡先にもないため、署名を検証できませんでした。"
+  },
+  "workspace_style_bold": {
+    "message": "太字"
+  },
+  "workspace_style_code": {
+    "message": "コード"
+  },
+  "workspace_style_italic": {
+    "message": "斜体"
+  },
+  "workspace_style_strike": {
+    "message": "取り消し線"
+  },
+  "workspace_text_cleared_toast": {
+    "message": "テキストを消去しました"
+  },
+  "workspace_text_entered_below": {
+    "message": "下にテキストが入力されています"
+  },
+  "workspace_toggle_encrypt_to_self": {
+    "message": "自分にも暗号化"
+  },
+  "workspace_toggle_password": {
+    "message": "パスワード"
+  },
+  "workspace_toggle_save_to_history": {
+    "message": "履歴に保存"
+  },
+  "workspace_toggle_zip_files": {
+    "message": "ファイルを zip 化"
+  },
+  "workspace_translate": {
+    "message": "翻訳"
+  },
+  "workspace_translate_menu_heading": {
+    "message": "メッセージの翻訳先"
+  },
+  "workspace_translate_to": {
+    "message": "$language$に翻訳",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_translating": {
+    "message": "翻訳しています..."
+  },
+  "workspace_undo": {
+    "message": "元に戻す"
+  },
+  "workspace_unknown_signer": {
+    "message": "不明な署名者"
+  },
+  "workspace_unlocking": {
+    "message": "ロックを解除しています..."
+  },
+  "workspace_unverified": {
+    "message": "未検証"
+  },
+  "workspace_verify_signature": {
+    "message": "署名を検証"
+  },
+  "workspace_verifying": {
+    "message": "検証しています..."
+  },
+  "workspace_working": {
+    "message": "処理しています..."
   }
 }

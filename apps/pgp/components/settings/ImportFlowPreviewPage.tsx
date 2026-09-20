@@ -1,3 +1,4 @@
+/* i18n-ignore-file */
 import { useState } from "react";
 
 import { Button } from "@amibeingpwned/ui/button";

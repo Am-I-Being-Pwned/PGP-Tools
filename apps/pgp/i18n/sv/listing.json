@@ -1,0 +1,8 @@
+{
+  "extName": {
+    "message": "Kryptering av e-post med OpenPGP och GPG - Gmail & Outlook Compatible"
+  },
+  "extDescription": {
+    "message": "Kryptera, dekryptera, signera och verifiera med OpenPGP och GPG. Hantera dina nycklar."
+  }
+}

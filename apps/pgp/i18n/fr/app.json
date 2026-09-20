@@ -1,0 +1,281 @@
+{
+  "app_action_title": {
+    "message": "PGP Tools"
+  },
+  "app_cmd_open": {
+    "message": "Ouvrir PGP Tools"
+  },
+  "app_cmd_open_encrypt": {
+    "message": "Ouvrir PGP Tools en mode Chiffrer"
+  },
+  "app_cmd_open_decrypt": {
+    "message": "Ouvrir PGP Tools en mode Déchiffrer"
+  },
+  "app_cmd_open_sign": {
+    "message": "Ouvrir PGP Tools en mode Signer"
+  },
+  "app_cmd_open_verify": {
+    "message": "Ouvrir PGP Tools en mode Vérifier"
+  },
+  "app_menu_open_in_pgp_tools": {
+    "message": "Ouvrir dans PGP Tools"
+  },
+  "app_tab_main": {
+    "message": "Principal"
+  },
+  "app_nav_label": {
+    "message": "Navigation principale"
+  },
+  "app_vault_unreadable_title": {
+    "message": "Votre coffre n'a pas pu être lu."
+  },
+  "app_vault_unreadable_body": {
+    "message": "Vos clés sont toujours stockées sur cet appareil. Commencez par verrouiller puis réessayer."
+  },
+  "app_vault_unreadable_body_passkey": {
+    "message": "Vos clés sont toujours stockées sur cet appareil. Commencez par verrouiller puis réessayer -- veillez à utiliser la même clé d'accès que celle configurée."
+  },
+  "app_vault_lock_retry": {
+    "message": "Verrouiller et réessayer"
+  },
+  "app_import_added_one": {
+    "message": "Clé ajoutée"
+  },
+  "app_import_added_other": {
+    "message": "$count$ clés ajoutées"
+  },
+  "app_import_view_key_one": {
+    "message": "Voir la clé"
+  },
+  "app_import_view_key_other": {
+    "message": "Voir les clés"
+  },
+  "app_welcome_open_failed": {
+    "message": "Impossible d'ouvrir le panneau latéral. Cliquez sur l'icône PGP Tools dans votre barre d'outils."
+  },
+  "app_welcome_opened": {
+    "message": "Suivez les instructions dans le panneau latéral pour commencer"
+  },
+  "app_welcome_title": {
+    "message": "PGP Tools est installé"
+  },
+  "app_welcome_body": {
+    "message": "Cliquez ci-dessous pour ouvrir le panneau latéral et terminer la configuration de vos clés. Ensuite, utilisez l'icône PGP Tools dans la barre d'outils pour le rouvrir à tout moment."
+  },
+  "app_welcome_start": {
+    "message": "Cliquez ici pour commencer"
+  },
+  "app_welcome_credit_before": {
+    "message": "Un outil de confidentialité par"
+  },
+  "app_welcome_credit_after": {
+    "message": "."
+  },
+  "app_onboarding_prf_unsupported": {
+    "message": "Votre authentificateur ne prend pas en charge PRF. Essayez une autre clé d'accès ou utilisez plutôt un mot de passe."
+  },
+  "app_onboarding_setup_failed": {
+    "message": "Échec de la configuration"
+  },
+  "app_onboarding_name_required": {
+    "message": "Le nom est obligatoire."
+  },
+  "app_onboarding_generate_failed": {
+    "message": "Échec de la génération de la clé"
+  },
+  "app_onboarding_intro_body": {
+    "message": "Envoyez des messages privés que seule la bonne personne peut lire, et vérifiez que les messages proviennent bien de qui ils prétendent."
+  },
+  "app_onboarding_storage_question": {
+    "message": "Où stocker vos données ?"
+  },
+  "app_onboarding_next": {
+    "message": "Suivant"
+  },
+  "app_onboarding_protection_title": {
+    "message": "Sécurisez vos données"
+  },
+  "app_onboarding_protection_body": {
+    "message": "Choisissez comment protéger vos contacts et vos clés. Vous l'utiliserez à chaque ouverture de PGP Tools."
+  },
+  "app_onboarding_create_passkey": {
+    "message": "Créer une clé d'accès"
+  },
+  "app_onboarding_set_password": {
+    "message": "Définir un mot de passe"
+  },
+  "app_onboarding_identity_title": {
+    "message": "Créez votre clé PGP"
+  },
+  "app_onboarding_identity_body": {
+    "message": "Créez une paire de clés pour chiffrer, déchiffrer et signer des messages."
+  },
+  "app_onboarding_name_label": {
+    "message": "Nom *"
+  },
+  "app_onboarding_name_placeholder": {
+    "message": "Votre nom complet"
+  },
+  "app_onboarding_email_label": {
+    "message": "Email"
+  },
+  "app_onboarding_optional": {
+    "message": "facultatif"
+  },
+  "app_onboarding_email_placeholder": {
+    "message": "vous@exemple.fr"
+  },
+  "app_onboarding_comment_label": {
+    "message": "Commentaire"
+  },
+  "app_onboarding_comment_placeholder": {
+    "message": "ex. travail, personnel"
+  },
+  "app_onboarding_advanced_options": {
+    "message": "Options avancées"
+  },
+  "app_onboarding_algorithm_label": {
+    "message": "Algorithme"
+  },
+  "app_onboarding_algo_ecc_hint": {
+    "message": "Moderne, rapide, clés compactes. Recommandé dans la plupart des cas."
+  },
+  "app_onboarding_algo_rsa_hint": {
+    "message": "Largement compatible. Génération de clé plus lente."
+  },
+  "app_onboarding_expiry_label": {
+    "message": "Expiration de la clé"
+  },
+  "app_onboarding_expiry_never": {
+    "message": "Jamais"
+  },
+  "app_onboarding_expiry_years_one": {
+    "message": "$count$ an"
+  },
+  "app_onboarding_expiry_years_other": {
+    "message": "$count$ ans"
+  },
+  "app_onboarding_create_key": {
+    "message": "Créer ma clé PGP"
+  },
+  "app_onboarding_skip": {
+    "message": "Je configurerai plus tard"
+  },
+  "app_onboarding_passkey_prompt": {
+    "message": "Suivez l'invite de clé d'accès de votre navigateur..."
+  },
+  "app_onboarding_generating": {
+    "message": "Génération de la clé..."
+  },
+  "app_onboarding_rsa_slow": {
+    "message": "La génération d'une clé RSA prend un moment"
+  },
+  "app_onboarding_preset_title": {
+    "message": "Choisissez un profil de sécurité"
+  },
+  "app_onboarding_preset_body": {
+    "message": "Quel niveau de prudence PGP Tools doit-il appliquer à vos clés ? Chaque option indique exactement ce qu'elle règle, et vous pourrez tout modifier plus tard dans les Paramètres."
+  },
+  "app_onboarding_unlock_with_vault": {
+    "message": "Déverrouiller les clés avec le coffre"
+  },
+  "app_onboarding_unlock_with_vault_hint": {
+    "message": "L'invite de clé d'accès qui ouvre le coffre déverrouille aussi vos clés. Pas d'invite séparée pour chaque clé. Vous pourrez changer cela dans les Paramètres."
+  },
+  "app_onboarding_use_preset": {
+    "message": "Utiliser ce profil"
+  },
+  "app_onboarding_keep_defaults": {
+    "message": "Conserver les réglages par défaut"
+  },
+  "app_copy_failed": {
+    "message": "Échec de la copie - cliquez d'abord sur le panneau de l'extension, puis réessayez."
+  },
+  "app_copied": {
+    "message": "Copié : $label$"
+  },
+  "app_copied_wipe": {
+    "message": "Copié : $label$ - le presse-papiers sera effacé dans $seconds$ s"
+  },
+  "app_oversized_more": {
+    "message": "$names$ et $count$ autres"
+  },
+  "app_oversized_files_one": {
+    "message": "$files$ : ce fichier dépasse $limit$ et ne peut pas être traité dans le panneau."
+  },
+  "app_oversized_files_other": {
+    "message": "$files$ : ces fichiers dépassent $limit$ et ne peuvent pas être traités dans le panneau."
+  },
+  "app_error_remedy_import_key": {
+    "message": "Importer une clé"
+  },
+  "app_error_remedy_try_again": {
+    "message": "Réessayer"
+  },
+  "app_error_remedy_check_key": {
+    "message": "Vérifier la clé"
+  },
+  "app_error_key_not_found": {
+    "message": "Cette clé n'est plus dans votre trousseau, rien n'a donc été enregistré. Réimportez la clé et réessayez."
+  },
+  "app_error_key_locked": {
+    "message": "Cette clé est verrouillée. Déverrouillez-la et réessayez."
+  },
+  "app_error_vault_locked": {
+    "message": "Votre coffre est verrouillé, rien n'a donc été modifié. Déverrouillez-le et relancez l'opération."
+  },
+  "app_error_weak_password": {
+    "message": "Ce mot de passe est trop court. Utilisez au moins 8 caractères."
+  },
+  "app_error_password_required": {
+    "message": "Cette clé requiert son mot de passe. Saisissez le mot de passe de la clé pour la déverrouiller."
+  },
+  "app_error_passkey_failed": {
+    "message": "Votre clé d'accès n'a pas abouti. Réessayez, ou déverrouillez avec une autre méthode."
+  },
+  "app_error_passkey_dismissed": {
+    "message": "L'invite de clé d'accès a été fermée. Relancez l'opération quand vous serez prêt."
+  },
+  "app_error_wrong_password": {
+    "message": "Mot de passe incorrect pour cette clé. Vérifiez-le et réessayez."
+  },
+  "app_error_symmetric_wrong_password": {
+    "message": "Ce mot de passe n'a pas ouvert ce message. Vérifiez-le et réessayez - si vous êtes sûr qu'il est correct, le message est peut-être endommagé."
+  },
+  "app_error_ocb_unsupported": {
+    "message": "Ce message utilise un ancien format AEAD (OCB) que cette application ne peut pas lire. Demandez à l'expéditeur de le renvoyer chiffré normalement - n'importe quel mot de passe fonctionnera, c'est le format qui n'est pas pris en charge."
+  },
+  "app_error_no_decryption_key": {
+    "message": "Ce message est chiffré pour une clé que vous ne détenez pas. Importez cette clé privée, ou demandez à l'expéditeur de chiffrer pour l'une de vos clés."
+  },
+  "app_error_no_decryption_key_with_id": {
+    "message": "Ce message est chiffré pour une clé que vous ne détenez pas (ID de clé $key_id$). Importez cette clé privée, ou demandez à l'expéditeur de chiffrer pour l'une de vos clés."
+  },
+  "app_error_not_crx": {
+    "message": "Ce n'est pas un paquet d'extension Chrome que cet outil peut vérifier. Choisissez un fichier CRX3 (.crx)."
+  },
+  "app_error_crx_unsigned": {
+    "message": "La signature CRX ne correspond pas : le fichier n'a pas été signé par cette clé, ou il a été modifié après la signature. Procurez-vous une nouvelle copie auprès de l'éditeur."
+  },
+  "app_error_tampered": {
+    "message": "Échec de la vérification de la signature - ce message a peut-être été altéré. Ne faites pas confiance à son contenu ; demandez à l'expéditeur de le renvoyer."
+  },
+  "app_error_key_expired": {
+    "message": "Une clé impliquée dans cette opération a expiré. Demandez à son propriétaire une clé à jour, puis importez-la."
+  },
+  "app_error_key_revoked": {
+    "message": "Une clé impliquée dans cette opération a été révoquée par son propriétaire. Procurez-vous sa clé de remplacement, puis importez-la."
+  },
+  "app_error_weak_algorithm": {
+    "message": "Cette clé utilise un algorithme de signature qui n'est plus considéré comme sûr. Demandez à son propriétaire de la réémettre avec SHA-256 ou plus fort."
+  },
+  "app_error_corrupted": {
+    "message": "Les données sont corrompues ou tronquées. Procurez-vous une copie complète et réessayez."
+  },
+  "app_error_not_pgp_data": {
+    "message": "Cela ne ressemble pas à des données PGP. Vérifiez que vous avez collé le bloc armé complet, y compris les lignes BEGIN et END."
+  },
+  "app_error_storage_full": {
+    "message": "Le stockage du navigateur est plein, l'enregistrement a donc échoué. Retirez des clés ou des contacts dont vous n'avez plus besoin, puis réessayez."
+  }
+}

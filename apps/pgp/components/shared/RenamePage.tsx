@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { t } from "../../lib/i18n";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 import { SubPage } from "./SubPage";
 
@@ -41,13 +42,13 @@ export function RenamePage({
       onClose={onCancel}
       actions={[
         {
-          text: "Save",
-          busyText: "Saving...",
+          text: t("common_save"),
+          busyText: t("shared_saving"),
           disabled: !dirty,
           onClick: () => onSave(value.trim()),
           closeOnSuccess: true,
         },
-        { type: "outline", text: "Cancel" },
+        { type: "outline", text: t("common_cancel") },
       ]}
     >
       {(api) => (
@@ -80,7 +81,7 @@ export function RenamePage({
               onClick={() => setValue("")}
               className="text-muted-foreground hover:text-foreground text-xs transition-colors"
             >
-              Clear name
+              {t("shared_clear_name")}
             </button>
           )}
         </div>

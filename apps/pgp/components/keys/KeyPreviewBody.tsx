@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { format, formatDistanceToNow } from "date-fns";
 import {
   CheckIcon,
   ChevronDownIcon,
@@ -11,6 +10,12 @@ import {
 
 import type { ComponentKeyRow, KeyFacts, KeyHealth } from "./key-facts";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
+import { t, tn } from "../../lib/i18n";
+import {
+  formatDate,
+  formatDateShort,
+  formatRelative,
+} from "../../lib/i18n/format";
 import { formatAlgorithm } from "../../lib/utils/formatting";
 
 /**
@@ -29,6 +34,20 @@ import { formatAlgorithm } from "../../lib/utils/formatting";
 
 const EXPIRING_SOON_MS = 30 * 24 * 60 * 60 * 1000;
 
+/** Lowercase status word for the pill; resolved at render time. */
+function statusText(status: ComponentKeyRow["status"]): string {
+  switch (status) {
+    case "expired":
+      return t("keys_status_expired");
+    case "revoked":
+      return t("keys_status_revoked");
+    case "invalid":
+      return t("keys_status_invalid");
+    case "active":
+      return status;
+  }
+}
+
 const STATUS_STYLES: Record<ComponentKeyRow["status"], string> = {
   active: "border-green-500/40 bg-green-500/10 text-green-400",
   expired: "border-amber-500/40 bg-amber-500/10 text-amber-400",
@@ -39,10 +58,10 @@ const STATUS_STYLES: Record<ComponentKeyRow["status"], string> = {
 /** What this component key is used for, in plain words. */
 function capabilityText(row: ComponentKeyRow): string {
   const parts: string[] = [];
-  if (row.canSign) parts.push("Signs messages");
-  if (row.canEncrypt) parts.push("Receives encrypted messages");
-  if (row.canAuthenticate) parts.push("Authenticates (e.g. SSH)");
-  if (row.canCertify) parts.push("Vouches for identities");
+  if (row.canSign) parts.push(t("keys_cap_sign"));
+  if (row.canEncrypt) parts.push(t("keys_cap_encrypt"));
+  if (row.canAuthenticate) parts.push(t("keys_cap_auth"));
+  if (row.canCertify) parts.push(t("keys_cap_certify"));
   return parts.join(" · ");
 }
 
@@ -67,12 +86,10 @@ function deriveBanner(
   if (primaryRow?.status === "revoked") {
     return {
       tone: "bad",
-      title: "This key has been revoked",
+      title: t("keys_banner_revoked_title"),
       lines: [
-        primaryRow.revocationReason ?? "No reason was given.",
-        isOwn
-          ? "Generate or import a replacement key."
-          : "Do not encrypt to it or trust new signatures from it.",
+        primaryRow.revocationReason ?? t("keys_banner_no_reason"),
+        isOwn ? t("keys_banner_revoked_own") : t("keys_banner_revoked_contact"),
       ],
     };
   }
@@ -80,12 +97,12 @@ function deriveBanner(
   if (expiresAt !== null && expiresAt < now) {
     return {
       tone: "bad",
-      title: `This key expired ${formatDistanceToNow(expiresAt, { addSuffix: true })}`,
+      title: t("keys_banner_expired_title", {
+        when: formatRelative(expiresAt),
+      }),
       lines: [
-        `It stopped being valid on ${format(expiresAt, "PPP")}.`,
-        isOwn
-          ? "Generate or import a newer key."
-          : "Ask the owner for an updated key.",
+        t("keys_banner_expired_on", { date: formatDate(expiresAt) }),
+        isOwn ? t("keys_banner_expired_own") : t("keys_banner_expired_contact"),
       ],
     };
   }
@@ -93,10 +110,8 @@ function deriveBanner(
   if (!health.usableForEncryption && !health.usableForSigning) {
     return {
       tone: "bad",
-      title: "This key can't be used",
-      lines: [
-        health.policyError ?? "It has no usable encryption or signing subkey.",
-      ],
+      title: t("keys_banner_unusable_title"),
+      lines: [health.policyError ?? t("keys_banner_unusable_body")],
     };
   }
 
@@ -106,8 +121,8 @@ function deriveBanner(
     return {
       tone: "warn",
       title: isOwn
-        ? "You can receive encrypted messages, but this key can't sign."
-        : "You can encrypt to it, but it can't sign.",
+        ? t("keys_banner_encrypt_only_own")
+        : t("keys_banner_encrypt_only_contact"),
       lines: [],
     };
   }
@@ -115,14 +130,14 @@ function deriveBanner(
     return {
       tone: "warn",
       title: isOwn
-        ? "You can sign messages, but this key can't receive encrypted ones."
-        : "You can verify its signatures, but can't encrypt to it.",
+        ? t("keys_banner_sign_only_own")
+        : t("keys_banner_sign_only_contact"),
       lines: [],
     };
   }
 
   if (expiresAt !== null && expiresAt - now < EXPIRING_SOON_MS) {
-    return { tone: "warn", title: "This key expires soon", lines: [] };
+    return { tone: "warn", title: t("keys_banner_expires_soon"), lines: [] };
   }
 
   return null;
@@ -235,7 +250,7 @@ export function Chip({
 
 function SubkeyRow({
   row,
-  label = "Subkey",
+  label = t("keys_subkey_label"),
   action,
 }: {
   row: ComponentKeyRow;
@@ -249,16 +264,21 @@ function SubkeyRow({
   const caps = capabilityText(row);
   // An engine whose keys carry no dates (SSH) supplies neither, and the
   // whole clause is dropped rather than printed as the epoch.
-  const dates =
-    row.createdAt === undefined && row.expiresAt === undefined
-      ? ""
-      : `${row.createdAt !== undefined ? ` \u00b7 created ${format(new Date(row.createdAt), "PP")}` : ""}${
-          row.expiresAt
-            ? ` \u00b7 ${row.status === "expired" ? "expired" : "expires"} ${format(new Date(row.expiresAt), "PP")}`
-            : row.expiresAt === null
-              ? " \u00b7 never expires"
-              : ""
-        }`;
+  const dateParts: string[] = [];
+  if (row.createdAt !== undefined)
+    dateParts.push(
+      t("keys_row_created", { date: formatDateShort(row.createdAt) }),
+    );
+  if (row.expiresAt) {
+    const date = formatDateShort(row.expiresAt);
+    dateParts.push(
+      row.status === "expired"
+        ? t("keys_row_expired", { date })
+        : t("keys_row_expires", { date }),
+    );
+  } else if (row.expiresAt === null)
+    dateParts.push(t("keys_row_never_expires"));
+  const dates = dateParts.map((p) => ` \u00b7 ${p}`).join("");
   return (
     <div className="border-border rounded-md border p-2.5">
       <div className="flex flex-wrap items-center gap-1.5">
@@ -267,7 +287,7 @@ function SubkeyRow({
           <span
             className={`rounded-full border px-1.5 py-px text-[10px] font-medium ${STATUS_STYLES[row.status]}`}
           >
-            {row.status}
+            {statusText(row.status)}
           </span>
         )}
         {action && <span className="ml-auto">{action}</span>}
@@ -282,12 +302,12 @@ function SubkeyRow({
       </p>
       <p className="text-muted-foreground mt-0.5 text-[11px]">
         {formatAlgorithm(row.algorithm)}
-        {row.bits ? ` (${row.bits}-bit)` : ""}
+        {row.bits ? ` (${t("keys_bits", { bits: row.bits })})` : ""}
         {dates}
       </p>
       {row.revocationReason && (
         <p className="mt-1 text-[11px] text-red-400">
-          Revoked: {row.revocationReason}
+          {t("keys_revoked_reason", { reason: row.revocationReason })}
         </p>
       )}
       {row.policyError && (
@@ -372,11 +392,11 @@ export function KeyPreviewBody({
   const subkeys = rows?.filter((r) => !r.isPrimary) ?? [];
   const activeSubkeys = subkeys.filter((r) => r.status === "active");
   const inactiveSubkeys = subkeys.filter((r) => r.status !== "active");
-  const inactiveWord = inactiveSubkeys.every((r) => r.status === "expired")
-    ? "expired"
+  const inactiveLabel = inactiveSubkeys.every((r) => r.status === "expired")
+    ? tn("keys_inactive_subkeys_expired", inactiveSubkeys.length)
     : inactiveSubkeys.every((r) => r.status === "revoked")
-      ? "revoked"
-      : "unusable";
+      ? tn("keys_inactive_subkeys_revoked", inactiveSubkeys.length)
+      : tn("keys_inactive_subkeys_unusable", inactiveSubkeys.length);
 
   // Captured once at mount; the page is short-lived so drift is moot.
   const [now] = useState(() => Date.now());
@@ -435,7 +455,7 @@ export function KeyPreviewBody({
         {akaEmails.length > 0 && (
           <div className="mt-1.5">
             <p className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
-              Also known as
+              {t("keys_also_known_as")}
             </p>
             {akaEmails.map((aka) => (
               <p key={aka} className="text-muted-foreground text-xs">
@@ -450,7 +470,7 @@ export function KeyPreviewBody({
 
       {error && <p className="text-destructive text-xs">{error}</p>}
       {!error && loading && (
-        <p className="text-muted-foreground text-xs">Loading…</p>
+        <p className="text-muted-foreground text-xs">{t("keys_loading")}</p>
       )}
 
       {banner && <StatusBanner banner={banner} />}
@@ -467,7 +487,7 @@ export function KeyPreviewBody({
       {facts && (
         <div className="border-border divide-border divide-y rounded-md border">
           {facts.fingerprint !== undefined && (
-            <InfoRow label="Fingerprint">
+            <InfoRow label={t("keys_fact_fingerprint")}>
               <span className="flex items-start gap-1.5">
                 <span className="font-mono text-[11px] leading-relaxed">
                   {fingerprintLines(facts.fingerprint).map((line) => (
@@ -479,7 +499,7 @@ export function KeyPreviewBody({
                 <button
                   type="button"
                   onClick={() => handleCopyFingerprint(facts.fingerprint ?? "")}
-                  aria-label="Copy fingerprint"
+                  aria-label={t("keys_copy_fingerprint_aria")}
                   className="text-muted-foreground hover:text-foreground rounded p-0.5 transition-colors"
                 >
                   {copiedFp ? (
@@ -491,22 +511,26 @@ export function KeyPreviewBody({
               </span>
             </InfoRow>
           )}
-          <InfoRow label="Algorithm">
+          <InfoRow label={t("keys_fact_algorithm")}>
             {formatAlgorithm(facts.algorithm)}
-            {primaryRow?.bits ? ` · ${primaryRow.bits}-bit` : ""}
+            {primaryRow?.bits
+              ? ` · ${t("keys_bits", { bits: primaryRow.bits })}`
+              : ""}
           </InfoRow>
           {primaryRow && capabilityText(primaryRow) && (
-            <InfoRow label="Used for">{capabilityText(primaryRow)}</InfoRow>
+            <InfoRow label={t("keys_fact_used_for")}>
+              {capabilityText(primaryRow)}
+            </InfoRow>
           )}
           {facts.createdAt !== undefined && (
-            <InfoRow label="Created">
-              {format(new Date(facts.createdAt), "PPP")}
+            <InfoRow label={t("keys_fact_created")}>
+              {formatDate(facts.createdAt)}
             </InfoRow>
           )}
           {facts.expiresAt !== undefined && (
-            <InfoRow label="Expires">
+            <InfoRow label={t("keys_fact_expires")}>
               {expiresAt === null ? (
-                "Never"
+                t("keys_never")
               ) : (
                 <span
                   className={
@@ -517,24 +541,25 @@ export function KeyPreviewBody({
                         : undefined
                   }
                 >
-                  {format(new Date(expiresAt), "PPP")} (
-                  {formatDistanceToNow(new Date(expiresAt), {
-                    addSuffix: true,
+                  {t("keys_expires_value", {
+                    date: formatDate(expiresAt),
+                    when: formatRelative(expiresAt),
                   })}
-                  )
                 </span>
               )}
             </InfoRow>
           )}
           {addedAt !== undefined && (
-            <InfoRow label="Added">{format(new Date(addedAt), "PPP")}</InfoRow>
+            <InfoRow label={t("keys_fact_added")}>
+              {formatDate(addedAt)}
+            </InfoRow>
           )}
           {/* Only own keys track this (bumped on unlock); a contact's
               lastUsedAt is frozen at import time, so showing it would
               just repeat "Added". */}
           {lastUsedAt !== undefined && (
-            <InfoRow label="Last used">
-              {format(new Date(lastUsedAt), "PPP")}
+            <InfoRow label={t("keys_fact_last_used")}>
+              {formatDate(lastUsedAt)}
             </InfoRow>
           )}
         </div>
@@ -543,20 +568,21 @@ export function KeyPreviewBody({
       {facts?.components && (
         <div>
           <h3 className="mb-2 text-xs font-semibold">
-            {facts.components.title ?? "Subkeys"}{" "}
+            {facts.components.title ?? t("keys_subkeys_title")}{" "}
             <span className="text-muted-foreground font-normal">
               ({subkeys.length})
             </span>
           </h3>
           {facts.components.truncated && (
             <p className="mb-2 text-xs text-amber-400">
-              This certificate has an unusually large number of subkeys; only
-              the first {facts.components.rows.length} are shown.
+              {t("keys_subkeys_truncated", {
+                count: facts.components.rows.length,
+              })}
             </p>
           )}
           {subkeys.length === 0 && (
             <p className="text-muted-foreground text-xs">
-              This key has no subkeys; the primary key does everything itself.
+              {t("keys_no_subkeys")}
             </p>
           )}
           <div className="space-y-2">
@@ -582,8 +608,7 @@ export function KeyPreviewBody({
                 ) : (
                   <ChevronRightIcon className="h-3.5 w-3.5" />
                 )}
-                {inactiveSubkeys.length} {inactiveWord} subkey
-                {inactiveSubkeys.length === 1 ? "" : "s"}
+                {inactiveLabel}
               </button>
               {showInactive && (
                 <div className="mt-1 space-y-2">

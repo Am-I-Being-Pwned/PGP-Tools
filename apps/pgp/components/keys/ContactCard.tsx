@@ -1,6 +1,5 @@
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { useState } from "react";
-import { format } from "date-fns";
 import {
   ArrowRightIcon,
   CheckCircleIcon,
@@ -24,6 +23,8 @@ import {
 } from "@amibeingpwned/ui/dropdown-menu";
 
 import type { PublicContactKey } from "../../lib/storage/contacts";
+import { t, tn } from "../../lib/i18n";
+import { formatDate, formatDateShort } from "../../lib/i18n/format";
 import {
   activeRecipients,
   contactRecipients,
@@ -113,7 +114,7 @@ export function ContactCard({
   // its local alias when it has one, and the fallback lives in exactly
   // one place so the card, the picker and the search box cannot disagree
   // about what this person is called.
-  const userId = displayUserId(contact) ?? "Unknown";
+  const userId = displayUserId(contact) ?? t("keys_unknown_name");
   const { name: rawName, email, comment } = parseUserId(userId);
   const name = comment ? `${rawName} (${comment})` : rawName;
 
@@ -176,7 +177,7 @@ export function ContactCard({
                 <span className="truncate">{name}</span>
                 {isSsh && (
                   <span
-                    title="An SSH key, used with age. It can't be combined with PGP recipients in one message."
+                    title={t("keys_ssh_chip_title")}
                     className="bg-secondary text-muted-foreground shrink-0 rounded border px-1 text-[10px] leading-4 font-normal"
                   >
                     SSH
@@ -189,14 +190,20 @@ export function ContactCard({
                   <span
                     title={
                       activeKeys < recipients.length
-                        ? `Messages are encrypted to ${activeKeys} of this contact's ${recipients.length} keys; the rest are turned off in their key details.`
-                        : "Messages are encrypted to all of this contact's keys; any one of them can decrypt."
+                        ? t("keys_contact_keys_partial_title", {
+                            active: activeKeys,
+                            total: recipients.length,
+                          })
+                        : t("keys_contact_keys_all_title")
                     }
                     className="bg-secondary text-muted-foreground shrink-0 rounded border px-1 text-[10px] leading-4 font-normal"
                   >
                     {activeKeys < recipients.length
-                      ? `${activeKeys} of ${recipients.length} keys`
-                      : `${recipients.length} keys`}
+                      ? t("keys_contact_keys_partial", {
+                          active: activeKeys,
+                          total: recipients.length,
+                        })
+                      : tn("keys_contact_keys_count", recipients.length)}
                   </span>
                 )}
               </p>
@@ -234,8 +241,8 @@ export function ContactCard({
                T-KEYSERVER-KEY-SUBSTITUTION. */
               <p className="text-muted-foreground mt-0.5 text-xs">
                 {source.type === "github"
-                  ? `From github.com/${source.user}`
-                  : `From keys.openpgp.org - ${source.user}`}
+                  ? t("keys_source_github", { user: source.user })
+                  : t("keys_source_keyserver", { user: source.user })}
               </p>
             )}
             {note && (
@@ -254,16 +261,22 @@ export function ContactCard({
               (contact.expiresAt < now ? (
                 <div className="mt-1">
                   <span
-                    title={`This key expired on ${format(new Date(contact.expiresAt), "PPP")} and can no longer be encrypted to. Ask the owner for their current key.`}
+                    title={t("keys_contact_expired_title", {
+                      date: formatDate(contact.expiresAt),
+                    })}
                     className="inline-flex items-center gap-1 rounded-full border border-red-500/40 bg-red-500/10 px-2 py-0.5 text-[10px] font-medium text-red-400"
                   >
                     <TriangleAlertIcon className="h-3 w-3" />
-                    Expired {format(new Date(contact.expiresAt), "PP")}
+                    {t("keys_contact_expired", {
+                      date: formatDateShort(contact.expiresAt),
+                    })}
                   </span>
                 </div>
               ) : (
                 <p className="text-muted-foreground mt-0.5 text-xs">
-                  Expires {format(new Date(contact.expiresAt), "PPP")}
+                  {t("keys_contact_expires", {
+                    date: formatDate(contact.expiresAt),
+                  })}
                 </p>
               ))}
             {contact.securityWarning && (
@@ -273,7 +286,7 @@ export function ContactCard({
                   className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-400"
                 >
                   <TriangleAlertIcon className="h-3 w-3" />
-                  Weak (SHA-1)
+                  {t("keys_weak_sha1")}
                 </span>
               </div>
             )}
@@ -290,7 +303,7 @@ export function ContactCard({
                   "text-muted-foreground rounded p-1 transition-colors",
                   selectionMode ? dimmed : "hover:text-foreground",
                 )}
-                aria-label="Contact options"
+                aria-label={t("keys_contact_options_aria")}
               >
                 <EllipsisVerticalIcon className="h-4 w-4" />
               </button>
@@ -306,31 +319,31 @@ export function ContactCard({
               {onEncryptTo && (
                 <DropdownMenuItem onClick={onEncryptTo}>
                   <LockIcon />
-                  Encrypt to
+                  {t("keys_encrypt_to")}
                 </DropdownMenuItem>
               )}
               {onCopyPublicKey && (
                 <DropdownMenuItem onClick={onCopyPublicKey}>
                   <CopyIcon />
-                  Copy public key
+                  {t("keys_copy_public_key")}
                 </DropdownMenuItem>
               )}
               {onDownloadPublicKey && (
                 <DropdownMenuItem onClick={onDownloadPublicKey}>
                   <DownloadIcon />
-                  Download public key
+                  {t("keys_download_public_key")}
                 </DropdownMenuItem>
               )}
               {onRename && (
                 <DropdownMenuItem onClick={onRename}>
                   <PencilIcon />
-                  Rename
+                  {t("keys_rename")}
                 </DropdownMenuItem>
               )}
               {onStartSelect && (
                 <DropdownMenuItem onClick={onStartSelect}>
                   <ListChecksIcon />
-                  Select
+                  {t("keys_select")}
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
@@ -339,7 +352,7 @@ export function ContactCard({
                 onClick={onRemove}
               >
                 <Trash2Icon className="text-destructive" />
-                Remove contact
+                {t("keys_remove_contact")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -353,7 +366,7 @@ export function ContactCard({
             e.stopPropagation();
             onShowDetails();
           }}
-          aria-label="Key details"
+          aria-label={t("keys_key_details")}
           className={cn(
             "text-muted-foreground absolute right-3 bottom-2 rounded p-1 transition-colors",
             selectionMode ? dimmed : "group-hover:text-foreground",

@@ -34,6 +34,7 @@ import type { ProtectedKeyBlob } from "../storage/keyring";
 import type { ProtectionInput, ProtectSpec } from "./protect-runner";
 import type { PasswordBlobParts, PrfBlobParts } from "./protected-blob";
 import { toBase64 } from "../encoding";
+import { t } from "../i18n";
 import {
   generateProtectedWithPassword,
   generateProtectedWithPrf,
@@ -218,7 +219,7 @@ export async function importAndProtect(
     return await runProtect(
       protection,
       keySpec(
-        common.userIdHint ?? "Imported PGP Key",
+        common.userIdHint ?? t("keygen_passkey_imported_user"),
         (password) =>
           protectImportedWithPassword(
             armoredPrivateKey,

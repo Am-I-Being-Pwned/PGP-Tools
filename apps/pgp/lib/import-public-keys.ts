@@ -1,7 +1,7 @@
-import { format } from "date-fns";
-
 import type { KeyInfo } from "./pgp/types";
 import type { PublicContactKey } from "./storage/contacts";
+import { t } from "./i18n";
+import { formatDate } from "./i18n/format";
 import { parseKeys } from "./pgp/wasm";
 
 /** A contact is worth keeping if you can either encrypt to it OR verify
@@ -17,15 +17,12 @@ export function isUsableContact(keyInfo: KeyInfo): boolean {
  *  catch-all. */
 export function importRejectionMessage(keyInfo: KeyInfo | undefined): string {
   if (!keyInfo) {
-    return "This block contains no usable public key.";
+    return t("import_reject_no_public_key");
   }
   if (keyInfo.expiresAt !== null && keyInfo.expiresAt < Date.now()) {
-    return `This key expired on ${format(keyInfo.expiresAt, "PPP")}. Ask the owner for their current key.`;
+    return t("import_reject_expired", { date: formatDate(keyInfo.expiresAt) });
   }
-  return (
-    keyInfo.policyError ??
-    "This public key has no usable encryption or signing key."
-  );
+  return keyInfo.policyError ?? t("import_reject_unusable");
 }
 
 export interface PublicImportSummary {

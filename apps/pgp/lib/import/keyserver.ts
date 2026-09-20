@@ -20,6 +20,7 @@ import type { KeyserverQuery } from "../keyserver/query";
 import type { KeyserverKeyFailure } from "../messages";
 import type { ContactSource } from "../storage/contacts";
 import type { PreparedImport, StoredKeys } from "./prepare";
+import { t, tn } from "../i18n";
 import { prepareImport } from "./prepare";
 
 /** The host, in one place, for the copy and the provenance label. NOT a
@@ -105,10 +106,10 @@ export interface KeyserverFailureCopy {
  *  later. */
 function retryHint(retryAt: number, now: number): string {
   const minutes = Math.ceil((retryAt - now) / 60_000);
-  if (minutes <= 1) return "Try again in a minute.";
-  if (minutes < 60) return `Try again in about ${minutes} minutes.`;
+  if (minutes <= 1) return t("import_retry_minute");
+  if (minutes < 60) return tn("import_retry_minutes", minutes);
   const hours = Math.ceil(minutes / 60);
-  return `Try again in about ${hours} hour${hours === 1 ? "" : "s"}.`;
+  return tn("import_retry_hours", hours);
 }
 
 /** How the query reads back to the user: an address as typed, a
@@ -129,8 +130,7 @@ export function keyserverFailureCopy(
     case "invalid-query":
       return {
         tone: "error",
-        message:
-          "That isn't an email address or a key fingerprint. Use the address the key is published under, or paste the full 40-character fingerprint.",
+        message: t("import_keyserver_invalid_query"),
       };
     case "not-found":
       // Not an error: the lookup worked and the answer is "no key". Said
@@ -142,19 +142,25 @@ export function keyserverFailureCopy(
         tone: "notice",
         message:
           query.kind === "email"
-            ? `${KEYSERVER_HOST} has no key for ${subject}. It only publishes an address once the key's owner has confirmed it, so they may have a key there that this lookup can't find - ask them for it directly, or look it up by fingerprint.`
-            : `${KEYSERVER_HOST} has no key with the fingerprint ${subject}. Check it against the one you were given - a single wrong character is enough.`,
+            ? t("import_keyserver_not_found_email", {
+                host: KEYSERVER_HOST,
+                subject,
+              })
+            : t("import_keyserver_not_found_fingerprint", {
+                host: KEYSERVER_HOST,
+                subject,
+              }),
       };
     case "offline":
       return {
         tone: "error",
-        message: `Couldn't reach ${KEYSERVER_HOST}. Check your connection and try again.`,
+        message: t("import_keyserver_offline", { host: KEYSERVER_HOST }),
       };
     case "rate-limited":
       return {
         tone: "error",
         message: [
-          `${KEYSERVER_HOST} is rate-limiting this network.`,
+          t("import_keyserver_rate_limited", { host: KEYSERVER_HOST }),
           retryAt !== undefined ? retryHint(retryAt, now) : "",
         ]
           .filter(Boolean)
@@ -163,7 +169,7 @@ export function keyserverFailureCopy(
     case "server-error":
       return {
         tone: "error",
-        message: `${KEYSERVER_HOST} couldn't answer just now. Try again in a moment.`,
+        message: t("import_keyserver_server_error", { host: KEYSERVER_HOST }),
       };
   }
 }

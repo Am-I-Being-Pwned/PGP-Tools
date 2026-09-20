@@ -1,0 +1,263 @@
+{
+  "settings_crx_info_title": { "message": "CRX हस्ताक्षर" },
+  "settings_crx_info_pitch_title": { "message": "Verified CRX Uploads" },
+  "settings_crx_info_pitch_p1": {
+    "message": "Chrome Web Store आपको यह अनिवार्य करने देता है कि आपके एक्सटेंशन के हर अपडेट पर ऐसी कुंजी से हस्ताक्षर हों जो सिर्फ़ आपके पास है। अगर कोई आपके Web Store खाते या आपकी बिल्ड पाइपलाइन से समझौता कर भी ले, तब भी वह आपकी हस्ताक्षर कुंजी के बिना कोई दुर्भावनापूर्ण अपडेट जारी नहीं कर सकता।"
+  },
+  "settings_crx_info_pitch_p2": {
+    "message": "यह तभी कारगर है जब कुंजी ऐसी जगह हो जहां हमलावर न पहुंच सके - CI सीक्रेट में रखी कुंजी इस मकसद को ही खत्म कर देती है। PGP Tools इसे आपके वॉल्ट में एन्क्रिप्टेड रखता है और आपके पासवर्ड या पासकी के पीछे सिर्फ़ हस्ताक्षर करने की क्रिया के लिए अनलॉक करता है, आपकी पाइपलाइन में कभी नहीं।"
+  },
+  "settings_crx_info_how_title": { "message": "इसे कैसे इस्तेमाल करें" },
+  "settings_crx_info_step_1": {
+    "message": "सेटिंग में टॉगल चालू करें, फिर एक CRX हस्ताक्षर कुंजी (RSA-2048) बनाएं या आयात करें। निजी कुंजी यहीं रखें - इसे सिर्फ़ तभी निर्यात करें जब आपको बैकअप चाहिए।"
+  },
+  "settings_crx_info_step_2": {
+    "message": "कुंजी का $public$ हिस्सा Chrome Web Store डैशबोर्ड में $path$ के तहत कॉपी करें।"
+  },
+  "settings_crx_info_term_public": { "message": "सार्वजनिक" },
+  "settings_crx_info_term_dashboard_path": {
+    "message": "Package → Verified CRX Uploads"
+  },
+  "settings_crx_info_step_3": {
+    "message": "रिलीज़ बनाने के लिए, अपने पैक किए गए एक्सटेंशन की $zip$ फ़ाइल वर्कस्पेस में छोड़ें और उस पर हस्ताक्षर करें। $crx$ को सही नाम के साथ सीधे डिस्क पर लिखने के लिए $save$ इस्तेमाल करें (या चिप को अपने डेस्कटॉप पर खींचें), फिर उसे डैशबोर्ड पर अपलोड करें। Chrome सामान्य $crx$ डाउनलोड को रोककर उन्हें इंस्टॉल करने की कोशिश करता है, इसीलिए हम डाउनलोड के बजाय सहेजते हैं।"
+  },
+  "settings_crx_info_step_4": {
+    "message": "किसी भी एक्सटेंशन पैकेज की जांच के लिए, कोई $crx$ वर्कस्पेस में छोड़ें - PGP Tools उसका हस्ताक्षर सत्यापित करता है और वह एक्सटेंशन ID दिखाता है जिसका वह दावा करता है।"
+  },
+  "settings_crx_info_get_title": { "message": "आपको इससे क्या मिलता है" },
+  "settings_crx_info_get_body": {
+    "message": "यह $crx$ Web Store डैशबोर्ड के लिए एक अपलोड आर्टिफ़ैक्ट है, सीधे इंस्टॉल होने वाला पैकेज नहीं - Chrome सिर्फ़ स्टोर द्वारा हस्ताक्षरित एक्सटेंशन ही इंस्टॉल करता है। अपना एक्सटेंशन स्थानीय रूप से चलाने के लिए फ़ोल्डर पर $load_unpacked$ इस्तेमाल करें।"
+  },
+  "settings_crx_info_term_load_unpacked": {
+    "message": "अनपैक किया गया लोड करें"
+  },
+  "settings_crx_info_ladder_title": {
+    "message": "सुरक्षा के लिहाज़ से यह कहां ठहरता है"
+  },
+  "settings_crx_info_ladder_ci_term": { "message": "CI सीक्रेट में रखी कुंजी" },
+  "settings_crx_info_ladder_ci": {
+    "message": "$term$ कमज़ोर है: कोई दूषित डिपेंडेंसी या लीक हुआ टोकन उसे ले उड़ता है।"
+  },
+  "settings_crx_info_ladder_vault_term": {
+    "message": "आपके वॉल्ट में एन्क्रिप्टेड कुंजी"
+  },
+  "settings_crx_info_ladder_vault": {
+    "message": "$term$ - जहां आप अभी हैं - आपके पासवर्ड या पासकी के पीछे रहती है और सिर्फ़ हस्ताक्षर करने की क्रिया के लिए अनलॉक होती है।"
+  },
+  "settings_crx_info_ladder_hardware_term": {
+    "message": "हार्डवेयर टोकन (YubiKey / HSM)"
+  },
+  "settings_crx_info_ladder_hardware": {
+    "message": "$term$ और भी मज़बूत है: कुंजी कभी चिप से बाहर नहीं जाती, जबकि यहां हस्ताक्षर के दौरान इसे WASM सैंडबॉक्स में थोड़ी देर के लिए पुनर्निर्मित किया जाता है और तुरंत बाद शून्य कर दिया जाता है।"
+  },
+  "settings_crx_info_not_pgp_title": { "message": "यह PGP नहीं है" },
+  "settings_crx_info_not_pgp_body": {
+    "message": "$crx$ पर एक रॉ RSA-2048 कुंजी (PKCS#1-SHA256) से हस्ताक्षर होते हैं, OpenPGP हस्ताक्षर से नहीं। PGP Tools इस कुंजी को आपकी PGP कुंजियों जैसी ही सुरक्षा के साथ बनाता और रखता है (Argon2id या पासकी → AES-256-GCM, सब कुछ WASM सैंडबॉक्स के अंदर), लेकिन कुंजी खुद अलग है और सिर्फ़ CRX हस्ताक्षर के लिए इस्तेमाल होती है।"
+  },
+  "settings_crx_info_link": {
+    "message": "Chrome Web Store: पैकेज अपडेट की सुरक्षा"
+  },
+  "settings_crx_default_key_name": { "message": "CRX हस्ताक्षर कुंजी" },
+  "settings_import_keys_title": { "message": "कुंजियां आयात करें" },
+  "settings_import_next": { "message": "आगे" },
+  "settings_import_importing": { "message": "आयात किया जा रहा है..." },
+  "settings_import_paste_intro": {
+    "message": "कोई कुंजी फ़ाइल पेस्ट करें या ब्राउज़ करें -- जैसे \"सभी कुंजियां निर्यात करें\" से बनी फ़ाइल। निजी कुंजियां आपके चुने हुए तरीके से फिर से सुरक्षित की जाती हैं; सार्वजनिक कुंजियां संपर्क बन जाती हैं।"
+  },
+  "settings_import_paste_placeholder": {
+    "message": "कुंजियां यहां पेस्ट करें, या कोई फ़ाइल ब्राउज़ करें..."
+  },
+  "settings_import_browse": { "message": "कुंजी फ़ाइल ब्राउज़ करें" },
+  "settings_import_no_keys": { "message": "इनपुट में कोई कुंजी नहीं मिली।" },
+  "settings_import_unlock_intro_one": {
+    "message": "$count$ निजी कुंजी में से $encrypted$ पासफ़्रेज़ से सुरक्षित है। इसे अनलॉक करने के लिए पासफ़्रेज़ डालें -- फिर अगले चरण में आप हर कुंजी को अपने चुने हुए तरीके से दोबारा सुरक्षित करेंगे।"
+  },
+  "settings_import_unlock_intro_other": {
+    "message": "$count$ निजी कुंजियों में से $encrypted$ पासफ़्रेज़ से सुरक्षित हैं। इन्हें अनलॉक करने के लिए पासफ़्रेज़ डालें -- फिर अगले चरण में आप हर कुंजी को अपने चुने हुए तरीके से दोबारा सुरक्षित करेंगे।"
+  },
+  "settings_import_passphrase_placeholder": {
+    "message": "कुंजी का पासफ़्रेज़"
+  },
+  "settings_import_protect_intro_one": {
+    "message": "चुनें कि आयात की गई $count$ निजी कुंजी को कैसे सुरक्षित रखना है।"
+  },
+  "settings_import_protect_intro_other": {
+    "message": "चुनें कि आयात की गई $count$ निजी कुंजियों को कैसे सुरक्षित रखना है।"
+  },
+  "settings_import_submit_one": { "message": "$count$ कुंजी आयात करें" },
+  "settings_import_submit_other": { "message": "$count$ कुंजियां आयात करें" },
+  "settings_import_passkey_name": { "message": "PGP Tools आयात" },
+  "settings_import_prf_unsupported": {
+    "message": "आपका ऑथेंटिकेटर PRF का समर्थन नहीं करता। कोई दूसरी पासकी आज़माएं या इसके बजाय पासवर्ड इस्तेमाल करें।"
+  },
+  "settings_import_default_user_id": { "message": "आयात की गई PGP कुंजी" },
+  "settings_import_failed": { "message": "आयात विफल रहा" },
+  "settings_import_unknown_error": { "message": "अज्ञात त्रुटि" },
+  "settings_import_failed_named": {
+    "message": "\"$name$\" आयात नहीं हो सकी: $error$"
+  },
+  "settings_import_private_imported_one": {
+    "message": "$count$ निजी कुंजी आयात की गई"
+  },
+  "settings_import_private_imported_other": {
+    "message": "$count$ निजी कुंजियां आयात की गईं"
+  },
+  "settings_import_private_skipped_one": {
+    "message": "$count$ निजी कुंजी पहले से आयात की हुई है"
+  },
+  "settings_import_private_skipped_other": {
+    "message": "$count$ निजी कुंजियां पहले से आयात की हुई हैं"
+  },
+  "settings_import_private_unparseable_one": {
+    "message": "$count$ निजी कुंजी पार्स नहीं की जा सकी।"
+  },
+  "settings_import_private_unparseable_other": {
+    "message": "$count$ निजी कुंजियां पार्स नहीं की जा सकीं।"
+  },
+  "settings_import_contacts_added_one": {
+    "message": "$count$ संपर्क जोड़ा गया"
+  },
+  "settings_import_contacts_added_other": {
+    "message": "$count$ संपर्क जोड़े गए"
+  },
+  "settings_import_contacts_flagged_one": {
+    "message": "$count$ आयात की गई कुंजी कमज़ोर क्रिप्टो (SHA-1) के लिए चिह्नित की गई"
+  },
+  "settings_import_contacts_flagged_other": {
+    "message": "$count$ आयात की गई कुंजियां कमज़ोर क्रिप्टो (SHA-1) के लिए चिह्नित की गईं"
+  },
+  "settings_import_contacts_updated_one": {
+    "message": "$count$ संपर्क अपडेट किया गया"
+  },
+  "settings_import_contacts_updated_other": {
+    "message": "$count$ संपर्क अपडेट किए गए"
+  },
+  "settings_import_contacts_rejected_one": {
+    "message": "$count$ सार्वजनिक कुंजी अस्वीकार की गई"
+  },
+  "settings_import_contacts_rejected_other": {
+    "message": "$count$ सार्वजनिक कुंजियां अस्वीकार की गईं"
+  },
+  "settings_import_contacts_rejected_reason_one": {
+    "message": "$count$ सार्वजनिक कुंजी अस्वीकार की गई: $reason$"
+  },
+  "settings_import_contacts_rejected_reason_other": {
+    "message": "$count$ सार्वजनिक कुंजियां अस्वीकार की गईं: $reason$"
+  },
+  "settings_import_crx_failure_detail": { "message": "$name$: $error$" },
+  "settings_import_crx_failed_one": {
+    "message": "$count$ CRX कुंजी बहाल नहीं हो सकी"
+  },
+  "settings_import_crx_failed_other": {
+    "message": "$count$ CRX कुंजियां बहाल नहीं हो सकीं"
+  },
+  "settings_import_crx_restored_one": {
+    "message": "$count$ CRX हस्ताक्षर कुंजी बहाल की गई"
+  },
+  "settings_import_crx_restored_other": {
+    "message": "$count$ CRX हस्ताक्षर कुंजियां बहाल की गईं"
+  },
+  "settings_import_crx_skipped_one": {
+    "message": "$count$ CRX हस्ताक्षर कुंजी पहले से आयात की हुई है"
+  },
+  "settings_import_crx_skipped_other": {
+    "message": "$count$ CRX हस्ताक्षर कुंजियां पहले से आयात की हुई हैं"
+  },
+  "settings_import_crx_rejected_one": {
+    "message": "$count$ CRX हस्ताक्षर कुंजी अस्वीकार की गई: सार्वजनिक कुंजी उसके एक्सटेंशन ID से मेल नहीं खाती"
+  },
+  "settings_import_crx_rejected_other": {
+    "message": "$count$ CRX हस्ताक्षर कुंजियां अस्वीकार की गईं: सार्वजनिक कुंजी उनके एक्सटेंशन ID से मेल नहीं खाती"
+  },
+  "settings_shortcuts_title": { "message": "कीबोर्ड शॉर्टकट" },
+  "settings_shortcuts_unbound": { "message": "असाइन नहीं" },
+  "settings_shortcuts_manage": { "message": "ब्राउज़र शॉर्टकट प्रबंधित करें" },
+  "settings_shortcuts_group_palette": { "message": "कमांड पैलेट" },
+  "settings_shortcuts_open_palette": { "message": "कमांड पैलेट खोलें" },
+  "settings_shortcuts_open_palette_note": {
+    "message": "नीचे दी गई हर कार्रवाई वहां भी खोजी जा सकती है।"
+  },
+  "settings_shortcuts_group_workspace": { "message": "वर्कस्पेस" },
+  "settings_shortcuts_run_mode": { "message": "मौजूदा मोड चलाएं" },
+  "settings_shortcuts_copy_output": { "message": "आउटपुट कॉपी करें" },
+  "settings_shortcuts_download_output": { "message": "आउटपुट डाउनलोड करें" },
+  "settings_shortcuts_pick_recipient": {
+    "message": "n-वां प्राप्तकर्ता चुनें"
+  },
+  "settings_shortcuts_pick_recipient_note": {
+    "message": "प्राप्तकर्ता ड्रॉपडाउन में, जब उसका खोज बॉक्स खाली हो।"
+  },
+  "settings_shortcuts_remove_recipient": {
+    "message": "आखिरी प्राप्तकर्ता हटाएं"
+  },
+  "settings_shortcuts_remove_recipient_note": {
+    "message": "प्राप्तकर्ता ड्रॉपडाउन के खाली खोज बॉक्स में।"
+  },
+  "settings_shortcuts_group_message": { "message": "संदेश बॉक्स" },
+  "settings_shortcuts_find_replace": { "message": "ढूंढें और बदलें" },
+  "settings_shortcuts_style_note": {
+    "message": "एन्क्रिप्ट या हस्ताक्षर के लिए संदेश लिखते समय। Unicode अक्षर रूपों का इस्तेमाल करता है, इसलिए किसी भी चैनल में बना रहता है।"
+  },
+  "settings_shortcuts_group_modes": { "message": "मोड" },
+  "settings_shortcuts_switch_mode": { "message": "$mode$ पर जाएं" },
+  "settings_shortcuts_group_global": {
+    "message": "ब्राउज़र के ग्लोबल शॉर्टकट"
+  },
+  "settings_shortcuts_open_app": { "message": "PGP Tools खोलें" },
+  "settings_shortcuts_open_in_mode": { "message": "$mode$ मोड में खोलें" },
+  "settings_shortcuts_unbound_note": {
+    "message": "डिफ़ॉल्ट रूप से असाइन नहीं (Chrome सुझाई गई कुंजियों की सीमा चार रखता है)।"
+  },
+  "settings_shortcuts_global_note": {
+    "message": "ये ब्राउज़र में कहीं भी काम करते हैं। इनमें से किसी को भी $url$ पर फिर से असाइन करें।"
+  },
+  "settings_preset_title": { "message": "सुरक्षा प्रीसेट" },
+  "settings_preset_apply": { "message": "प्रीसेट लागू करें" },
+  "settings_preset_applying": { "message": "लागू किया जा रहा है..." },
+  "settings_preset_replace_custom": { "message": "कस्टम सेटिंग बदलें" },
+  "settings_preset_apply_delete_history": {
+    "message": "लागू करें और इतिहास मिटाएं"
+  },
+  "settings_preset_keep_custom": { "message": "कस्टम सेटिंग रखें" },
+  "settings_preset_intro": {
+    "message": "हर प्रीसेट एक खतरे के मॉडल के लिए सुरक्षा सेटिंग का समूह है, और उसका कार्ड ठीक-ठीक बताता है कि वह क्या सेट करता है। किसी प्रीसेट को लागू करने से सिर्फ़ वही सेटिंग बदलती हैं, और आप बाद में उनमें से किसी को भी फिर से बदल सकते हैं।"
+  },
+  "settings_preset_custom_notice": {
+    "message": "आप $custom$ पर हैं: समूह की कोई सेटिंग बदली गई है, इसलिए कोई भी प्रीसेट पूरी तरह मेल नहीं खाता।"
+  },
+  "settings_preset_custom_name": { "message": "कस्टम" },
+  "settings_preset_confirm_replace": {
+    "message": "अपनी कस्टम सेटिंग की जगह $preset$ प्रीसेट लागू करें? सिर्फ़ उसके कार्ड पर दी गई सेटिंग बदलेंगी, और आप बाद में उनमें से किसी को भी फिर से बदल सकते हैं।"
+  },
+  "settings_preset_confirm_history": {
+    "message": "यह प्रीसेट 'कभी कैश न करें' चालू करता है, जिससे आपका सहेजा गया इतिहास ($size$) भी मिट जाता है। इसे वापस नहीं पाया जा सकता।"
+  },
+  "settings_translation_title": { "message": "अनुवाद" },
+  "settings_translation_enable": {
+    "message": "डिक्रिप्ट किए गए संदेशों का अनुवाद करें"
+  },
+  "settings_translation_enable_desc": {
+    "message": "डिक्रिप्ट किए गए संदेश के नीचे 'अनुवाद करें' बटन जोड़ता है। अनुवाद Chrome के इनबिल्ट मॉडल से इसी डिवाइस पर होता है, और जब तक आप बटन नहीं दबाते, कुछ भी अनुवादित नहीं होता।"
+  },
+  "settings_translation_unsupported": {
+    "message": "Chrome का डिवाइस पर होने वाला अनुवाद यहां उपलब्ध नहीं है। इसके लिए Windows 10+, macOS 13+, Linux या Chromebook Plus पर डेस्कटॉप Chrome चाहिए, जिसमें मॉडल के लिए पर्याप्त खाली डिस्क स्थान और मेमोरी हो।"
+  },
+  "settings_translation_target": { "message": "इस भाषा में अनुवाद करें" },
+  "settings_translation_packs": { "message": "भाषा पैक" },
+  "settings_translation_packs_desc": {
+    "message": "वैकल्पिक। जब आप पहली बार किसी भाषा से अनुवाद करते हैं, तो उसका पैक अपने आप डाउनलोड हो जाता है, इसलिए यह सिर्फ़ पहले से तैयार रहने के लिए है। यहां डाउनलोड करने का एक फ़ायदा ज़रूर है: डाउनलोड फिर उस पल नहीं होता जब आप कोई संदेश डिक्रिप्ट करते हैं, इसलिए उसके समय से यह पता नहीं चलता कि आपने अभी क्या पढ़ा। हर पैक $size$ का है और उसे Chrome रखता है, यह एक्सटेंशन नहीं।"
+  },
+  "settings_translation_pack_ready": { "message": "तैयार" },
+  "settings_translation_pack_progress": { "message": "$percent$%" },
+  "settings_translation_pack_not_offered": { "message": "उपलब्ध नहीं" },
+  "settings_translation_download_failed": { "message": "डाउनलोड विफल रहा।" },
+  "settings_translation_pack_pair": { "message": "$from$ से $to$" },
+  "settings_translation_detector": { "message": "भाषा पहचानकर्ता" },
+  "settings_translation_pack_gone": {
+    "message": "भाषा पैक गायब हो गया। फिर से कोशिश करें।"
+  },
+  "settings_translation_failed": { "message": "अनुवाद विफल रहा।" },
+  "settings_translation_unavailable_device": {
+    "message": "इस डिवाइस पर अनुवाद उपलब्ध नहीं है।"
+  }
+}

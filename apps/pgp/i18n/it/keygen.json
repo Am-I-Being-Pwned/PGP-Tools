@@ -1,0 +1,359 @@
+{
+  "keygen_title": {
+    "message": "Genera chiave"
+  },
+  "keygen_error_name_required": {
+    "message": "Il nome è obbligatorio."
+  },
+  "keygen_error_expiry_required": {
+    "message": "Seleziona una data di scadenza."
+  },
+  "keygen_error_expiry_past": {
+    "message": "La data di scadenza deve essere nel futuro."
+  },
+  "keygen_error_generation_failed": {
+    "message": "Generazione della chiave non riuscita"
+  },
+  "keygen_create_heading": {
+    "message": "Crea una nuova chiave"
+  },
+  "keygen_create_subtitle_crx": {
+    "message": "Una nuova chiave di firma RSA-2048 per impacchettare un'estensione Chrome (.crx)."
+  },
+  "keygen_create_subtitle_pgp": {
+    "message": "Una nuova coppia di chiavi OpenPGP per cifrare, decifrare e firmare i messaggi."
+  },
+  "keygen_type_pgp": {
+    "message": "Chiave per messaggi (PGP)"
+  },
+  "keygen_type_crx": {
+    "message": "Estensione Chrome (CRX)"
+  },
+  "keygen_label_label": {
+    "message": "Etichetta"
+  },
+  "keygen_optional": {
+    "message": "facoltativo"
+  },
+  "keygen_label_placeholder": {
+    "message": "es. La mia estensione"
+  },
+  "keygen_name_label": {
+    "message": "Nome *"
+  },
+  "keygen_name_placeholder": {
+    "message": "Il tuo nome completo"
+  },
+  "keygen_email_label": {
+    "message": "Email"
+  },
+  "keygen_email_placeholder": {
+    "message": "tu@example.com"
+  },
+  "keygen_comment_label": {
+    "message": "Commento"
+  },
+  "keygen_comment_placeholder": {
+    "message": "es. lavoro, personale"
+  },
+  "keygen_advanced_options": {
+    "message": "Opzioni avanzate"
+  },
+  "keygen_algorithm_label": {
+    "message": "Algoritmo"
+  },
+  "keygen_algorithm_hint_ecc": {
+    "message": "Chiavi moderne, veloci e compatte. Consigliato nella maggior parte dei casi."
+  },
+  "keygen_algorithm_hint_rsa": {
+    "message": "Ampiamente compatibile. Generazione della chiave più lenta."
+  },
+  "keygen_key_size_label": {
+    "message": "Dimensione della chiave"
+  },
+  "keygen_key_size_4096": {
+    "message": "4096 bit"
+  },
+  "keygen_expiry_label": {
+    "message": "Scadenza della chiave"
+  },
+  "keygen_expiry_never": {
+    "message": "Mai"
+  },
+  "keygen_expiry_1y": {
+    "message": "1 anno"
+  },
+  "keygen_expiry_2y": {
+    "message": "2 anni"
+  },
+  "keygen_expiry_3y": {
+    "message": "3 anni"
+  },
+  "keygen_expiry_custom": {
+    "message": "Data personalizzata"
+  },
+  "keygen_next": {
+    "message": "Avanti"
+  },
+  "keygen_expiry_heading": {
+    "message": "Scegli una data di scadenza"
+  },
+  "keygen_expiry_subtitle": {
+    "message": "Dopo questa data la chiave non potrà più essere usata; potrai sempre generarne una nuova."
+  },
+  "keygen_expires_on": {
+    "message": "Scade il $date$"
+  },
+  "keygen_protect_heading": {
+    "message": "Proteggi la tua chiave"
+  },
+  "keygen_protect_subtitle": {
+    "message": "Scegli come sbloccare questa chiave quando la usi."
+  },
+  "keygen_submit_use_passkey": {
+    "message": "Usa passkey"
+  },
+  "keygen_submit_create_passkey": {
+    "message": "Crea passkey"
+  },
+  "keygen_submit_generate": {
+    "message": "Genera"
+  },
+  "keygen_generating_passkey": {
+    "message": "Segui la richiesta della passkey nel browser..."
+  },
+  "keygen_generating_key": {
+    "message": "Generazione della chiave..."
+  },
+  "keygen_generating_rsa_hint": {
+    "message": "Le chiavi RSA richiedono qualche istante per essere generate"
+  },
+  "keygen_protection_intro": {
+    "message": "Scegli come proteggere la tua chiave privata:"
+  },
+  "keygen_protection_passkey": {
+    "message": "Passkey"
+  },
+  "keygen_protection_recommended": {
+    "message": "Consigliato"
+  },
+  "keygen_protection_passkey_desc": {
+    "message": "Usa l'impronta digitale, il volto o una chiave di sicurezza. Nessuna password da ricordare."
+  },
+  "keygen_protection_passkey_unavailable": {
+    "message": "Non disponibile in questo browser."
+  },
+  "keygen_protection_reuse_passkey": {
+    "message": "Usa la stessa passkey che ho già configurato"
+  },
+  "keygen_protection_password": {
+    "message": "Password"
+  },
+  "keygen_protection_password_desc": {
+    "message": "Proteggi con una password. Dovrai inserirla a ogni sblocco."
+  },
+  "keygen_password_placeholder": {
+    "message": "Password (min. 8 caratteri)"
+  },
+  "keygen_confirm_password": {
+    "message": "Conferma password"
+  },
+  "keygen_error_password_short": {
+    "message": "La password deve avere almeno 8 caratteri."
+  },
+  "keygen_error_password_mismatch": {
+    "message": "Le password non coincidono."
+  },
+  "keygen_key_password_placeholder": {
+    "message": "Password della chiave"
+  },
+  "keygen_error_wrong_password": {
+    "message": "Password errata."
+  },
+  "keygen_error_passkey_failed": {
+    "message": "Autenticazione con passkey non riuscita."
+  },
+  "keygen_error_key_not_unlocked": {
+    "message": "La chiave non è sbloccata."
+  },
+  "keygen_error_passphrase_short": {
+    "message": "La passphrase deve avere almeno 8 caratteri."
+  },
+  "keygen_error_passphrase_mismatch": {
+    "message": "Le passphrase non coincidono."
+  },
+  "keygen_export_failed": {
+    "message": "Esportazione non riuscita."
+  },
+  "keygen_export_failed_detail": {
+    "message": "Esportazione non riuscita: $message$"
+  },
+  "keygen_export_toast_exported_one": {
+    "message": "$count$ chiave esportata"
+  },
+  "keygen_export_toast_exported_other": {
+    "message": "$count$ chiavi esportate"
+  },
+  "keygen_export_toast_exported_unsafe_one": {
+    "message": "$count$ chiave esportata (chiavi private NON CIFRATE)"
+  },
+  "keygen_export_toast_exported_unsafe_other": {
+    "message": "$count$ chiavi esportate (chiavi private NON CIFRATE)"
+  },
+  "keygen_export_title": {
+    "message": "Esporta chiavi"
+  },
+  "keygen_export_unlock_intro": {
+    "message": "Per esportare una chiave privata devi prima sbloccarla. Sblocca le chiavi qui sotto per includerle nel backup."
+  },
+  "keygen_export_contacts_included_one": {
+    "message": "Verrà incluso anche $count$ contatto (chiavi pubbliche, nessuno sblocco necessario)."
+  },
+  "keygen_export_contacts_included_other": {
+    "message": "Verranno inclusi anche $count$ contatti (chiavi pubbliche, nessuno sblocco necessario)."
+  },
+  "keygen_export_skip_locked": {
+    "message": "Salta le chiavi bloccate e continua"
+  },
+  "keygen_export_summary_contacts_one": {
+    "message": "il tuo $count$ contatto"
+  },
+  "keygen_export_summary_contacts_other": {
+    "message": "i tuoi $count$ contatti"
+  },
+  "keygen_export_crx_included_one": {
+    "message": "Più $count$ chiave di firma CRX, ricifrata con questa passphrase in modo da poterla ripristinare su qualsiasi dispositivo."
+  },
+  "keygen_export_crx_included_other": {
+    "message": "Più $count$ chiavi di firma CRX, ricifrate con questa passphrase in modo da poterle ripristinare su qualsiasi dispositivo."
+  },
+  "keygen_export_still_locked_one": {
+    "message": "$count$ chiave è ancora bloccata e verrà esclusa."
+  },
+  "keygen_export_still_locked_other": {
+    "message": "$count$ chiavi sono ancora bloccate e verranno escluse."
+  },
+  "keygen_export_go_back_unlock": {
+    "message": "Torna indietro per sbloccarle"
+  },
+  "keygen_export_still_locked_after": {
+    "message": "."
+  },
+  "keygen_export_passphrase_intro": {
+    "message": "Imposta una passphrase per cifrare le chiavi private esportate (OpenPGP S2K -- importabile in GnuPG e altri strumenti). Chiunque abbia questa passphrase e il file può decifrare i tuoi messaggi e firmare a tuo nome."
+  },
+  "keygen_passphrase_placeholder": {
+    "message": "Passphrase (min. 8 caratteri)"
+  },
+  "keygen_confirm_passphrase_placeholder": {
+    "message": "Conferma passphrase"
+  },
+  "keygen_exporting": {
+    "message": "Esportazione..."
+  },
+  "keygen_export_with_passphrase": {
+    "message": "Esporta con passphrase"
+  },
+  "keygen_export_plaintext_warning_file": {
+    "message": "Esportazione in chiaro. Chiunque legga il file scaricato ottiene il pieno controllo di ogni chiave PGP che contiene."
+  },
+  "keygen_export_plaintext_crx_left_out": {
+    "message": "Le chiavi di firma CRX vengono escluse da un'esportazione in chiaro -- usa una passphrase per includerle."
+  },
+  "keygen_type_to_confirm_before": {
+    "message": "Digita"
+  },
+  "keygen_confirm_word": {
+    "message": "ESPORTA"
+  },
+  "keygen_type_to_confirm_after": {
+    "message": "per confermare:"
+  },
+  "keygen_export_without_passphrase": {
+    "message": "Esporta senza passphrase (non sicuro)"
+  },
+  "keygen_export": {
+    "message": "Esporta"
+  },
+  "keygen_export_nothing": {
+    "message": "Niente da esportare"
+  },
+  "keygen_copied_encrypted": {
+    "message": "Chiave cifrata copiata (gli appunti si svuotano tra 60 s)"
+  },
+  "keygen_copied_plaintext": {
+    "message": "Chiave non protetta copiata (gli appunti si svuotano tra 30 s)"
+  },
+  "keygen_unlock_gate_passkey": {
+    "message": "Autenticati con la tua passkey per copiare questa chiave."
+  },
+  "keygen_unlock_gate_password": {
+    "message": "Inserisci la password della chiave per copiarla."
+  },
+  "keygen_unlocking": {
+    "message": "Sblocco..."
+  },
+  "keygen_encrypting": {
+    "message": "Cifratura..."
+  },
+  "keygen_exporter_pgp_title": {
+    "message": "Esporta chiave privata"
+  },
+  "keygen_exporter_pgp_encrypted_blurb": {
+    "message": "Imposta una passphrase per cifrare la chiave esportata. Chiunque abbia questa passphrase e la chiave esportata può decifrare i tuoi messaggi e firmare a tuo nome."
+  },
+  "keygen_exporter_pgp_plaintext_blurb": {
+    "message": "Esportazione in chiaro. Chiunque legga i tuoi appunti ottiene il pieno controllo di questa chiave."
+  },
+  "keygen_exporter_crx_title": {
+    "message": "Copia chiave privata CRX"
+  },
+  "keygen_exporter_crx_unlock_passkey": {
+    "message": "Sblocca questa chiave di firma per copiarla. Autenticati con la tua passkey."
+  },
+  "keygen_exporter_crx_unlock_password": {
+    "message": "Sblocca questa chiave di firma per copiarla. Inserisci la password della chiave."
+  },
+  "keygen_exporter_crx_encrypted_blurb": {
+    "message": "Imposta una passphrase per cifrare la chiave copiata (reimportabile in PGP Tools tramite Importa chiavi). Chiunque abbia questa passphrase e il blocco copiato può firmare estensioni a tuo nome."
+  },
+  "keygen_exporter_crx_encrypted_button": {
+    "message": "Copia con passphrase"
+  },
+  "keygen_exporter_crx_plaintext_blurb": {
+    "message": "Esportazione in chiaro (PKCS#8 PEM grezzo). Chiunque legga i tuoi appunti ottiene il pieno controllo di questa chiave di firma."
+  },
+  "keygen_exporter_crx_plaintext_button": {
+    "message": "Copia senza passphrase (non sicuro)"
+  },
+  "keygen_passkey_default_user": {
+    "message": "Protezione chiave PGP"
+  },
+  "keygen_passkey_imported_user": {
+    "message": "Chiave PGP importata"
+  },
+  "keygen_error_prf_unsupported_authenticator": {
+    "message": "Il tuo autenticatore non supporta PRF. Prova con un'altra passkey oppure usa una password."
+  },
+  "keygen_prf_unsupported_intro": {
+    "message": "PRF non supportato da questo autenticatore."
+  },
+  "keygen_prf_unsupported_mac": {
+    "message": "Su macOS serve la versione 15 o successiva con il Portachiavi iCloud."
+  },
+  "keygen_prf_unsupported_windows": {
+    "message": "Windows Hello non supporta PRF - usa una chiave di sicurezza (es. YubiKey)."
+  },
+  "keygen_prf_unsupported_chrome": {
+    "message": "Le passkey del profilo Chrome potrebbero non supportare PRF - prova Google Password Manager o una chiave esterna."
+  },
+  "keygen_export_summary": {
+    "message": "Scarica un unico file $ext$ (OpenPGP standard con armor ASCII): $private_keys$ come blocchi $private_block$ e $contacts$ come blocchi $public_block$."
+  },
+  "keygen_export_summary_private_keys_one": {
+    "message": "la tua $count$ chiave privata sbloccata"
+  },
+  "keygen_export_summary_private_keys_other": {
+    "message": "le tue $count$ chiavi private sbloccate"
+  }
+}

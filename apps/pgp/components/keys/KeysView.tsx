@@ -10,6 +10,7 @@ import type { KeyCardModel } from "./KeyCard";
 import type { KeyDetailsTarget } from "./KeyDetailsPage";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import { publicKeyDerToPem } from "../../lib/crx/types";
+import { t, tn } from "../../lib/i18n";
 import {
   downloadPublicKey,
   downloadPublicKeysBundle,
@@ -313,13 +314,11 @@ export function KeysView({
     const prev = new Set(selected);
     exitSelection();
     toast.success(
-      `Exported ${count} key${count === 1 ? "" : "s"}${
-        unsafe ? " (private keys UNENCRYPTED)" : ""
-      }`,
+      unsafe ? tn("keys_exported_unsafe", count) : tn("keys_exported", count),
       {
         id: "keys-exported",
         action: {
-          label: "Reselect",
+          label: t("keys_reselect"),
           onClick: () => {
             setSelected(prev);
             setSelectionMode(true);
@@ -342,10 +341,9 @@ export function KeysView({
 
   const bulkExport = () => {
     if (skippedSshKeys > 0) {
-      toast.info(
-        `${skippedSshKeys} SSH key${skippedSshKeys === 1 ? "" : "s"} can't be exported - an imported SSH key never leaves this device.`,
-        { id: "ssh-export-skipped" },
-      );
+      toast.info(tn("keys_ssh_export_skipped", skippedSshKeys), {
+        id: "ssh-export-skipped",
+      });
     }
     if (exportableMyKeys.length === 0 && selectedCrxKeys.length === 0) {
       afterExport(downloadPublicKeysBundle(selectedContacts), false);
@@ -373,7 +371,7 @@ export function KeysView({
   // offered "Copy private key" on an SSH key and failed somewhere deep in
   // wasm, or worse, not failed.
   const pgpModels: KeyCardModel[] = myKeys.filter(isPgpRecord).map((blob) => {
-    const realName = blob.userIds[0] ?? "Unknown";
+    const realName = blob.userIds[0] ?? t("keys_unknown_name");
     return {
       kind: "pgp",
       id: blob.keyId,
@@ -518,11 +516,11 @@ export function KeysView({
 
       <div className="space-y-4">
         <div>
-          <h2 className="mb-2 text-sm font-semibold">My Keys</h2>
+          <h2 className="mb-2 text-sm font-semibold">
+            {t("keys_my_keys_heading")}
+          </h2>
           {keyModels.length === 0 ? (
-            <p className="text-muted-foreground text-sm">
-              No keys yet. Generate or import a key to get started.
-            </p>
+            <p className="text-muted-foreground text-sm">{t("keys_empty")}</p>
           ) : (
             <div className="space-y-2">
               {keyModels.map((model) => {
@@ -553,7 +551,7 @@ export function KeysView({
             onClick={() => nav.push({ page: "generate" })}
           >
             <PlusIcon className="h-4 w-4" />
-            Generate Key
+            {t("keys_generate_button")}
           </Button>
           <Button
             variant="outline"
@@ -562,7 +560,7 @@ export function KeysView({
             onClick={() => nav.push({ page: "import" })}
           >
             <ImportIcon className="h-4 w-4" />
-            Import Key
+            {t("keys_import_button")}
           </Button>
         </div>
 
@@ -659,20 +657,20 @@ export function KeysView({
                 key={entry.id}
                 title={
                   target.kind === "own"
-                    ? "Rename key"
+                    ? t("keys_rename_key_title")
                     : target.kind === "crx"
-                      ? "Rename signing key"
-                      : "Rename contact"
+                      ? t("keys_rename_crx_title")
+                      : t("keys_rename_contact_title")
                 }
-                fieldLabel="Display name"
+                fieldLabel={t("keys_rename_field_label")}
                 initialValue={currentName}
-                hint={`Shown in place of ${realIdentity}. This is a local label only.`}
+                hint={t("keys_rename_hint", { identity: realIdentity })}
                 placeholder={
                   target.kind === "own"
-                    ? "e.g. Work laptop"
+                    ? t("keys_rename_placeholder_key")
                     : target.kind === "crx"
-                      ? "e.g. My Extension"
-                      : "e.g. Alice (all machines)"
+                      ? t("keys_rename_placeholder_crx")
+                      : t("keys_rename_placeholder_contact")
                 }
                 onCancel={nav.pop}
                 onSave={async (value) => {
@@ -736,9 +734,7 @@ export function KeysView({
                     ? async () => {
                         const handle = getKeyHandle(target.keyBlob.keyId);
                         if (handle === null) {
-                          throw new Error(
-                            "Unlock this key first, then try again.",
-                          );
+                          throw new Error(t("keys_revocation_unlock_first"));
                         }
                         const armored =
                           await revocationCertificateWithHandle(handle);
@@ -762,11 +758,11 @@ export function KeysView({
             return (
               <ConfirmPage
                 key={entry.id}
-                title="Delete selected?"
-                confirmLabel={`Delete ${selected.size} item${selected.size === 1 ? "" : "s"} permanently`}
+                title={t("keys_bulk_delete_title")}
+                confirmLabel={tn("keys_bulk_delete_confirm", selected.size)}
                 confirmPromptText={
                   hasPrivate
-                    ? `delete ${selected.size} key${selected.size === 1 ? "" : "s"}`
+                    ? tn("keys_bulk_delete_prompt", selected.size)
                     : undefined
                 }
                 onCancel={nav.pop}
@@ -781,13 +777,11 @@ export function KeysView({
                   exitSelection();
                   if (removedContacts.length > 0) {
                     toast.success(
-                      removedContacts.length === 1
-                        ? "Contact removed"
-                        : `${removedContacts.length} contacts removed`,
+                      tn("keys_contacts_removed", removedContacts.length),
                       {
                         id: "contact-removed",
                         action: {
-                          label: "Undo",
+                          label: t("keys_undo"),
                           onClick: () =>
                             void (async () => {
                               for (const c of removedContacts) {
@@ -829,12 +823,14 @@ export function KeysView({
             <ConfirmPage
               key={entry.id}
               title={
-                target.kind === "contact" ? "Remove contact?" : "Delete key?"
+                target.kind === "contact"
+                  ? t("keys_confirm_remove_contact_title")
+                  : t("keys_confirm_delete_key_title")
               }
               confirmLabel={
                 target.kind === "contact"
-                  ? "Remove contact"
-                  : "Delete key permanently"
+                  ? t("keys_remove_contact")
+                  : t("keys_delete_key_permanently")
               }
               // Both "own" (PGP) and "crx" targets hold private key
               // material, so they require typing the key's name; contact
@@ -856,10 +852,10 @@ export function KeysView({
                   // reverse, so offer Undo. The blob only lives in this
                   // closure; once the toast expires it's gone for good.
                   const removed = target.contact;
-                  toast.success("Contact removed", {
+                  toast.success(tn("keys_contacts_removed", 1), {
                     id: "contact-removed",
                     action: {
-                      label: "Undo",
+                      label: t("keys_undo"),
                       onClick: () => void onAddContact(removed),
                     },
                   });
@@ -893,19 +889,17 @@ function BulkDeleteSummary({
   contacts: number;
 }) {
   const parts: string[] = [];
-  if (privateKeys)
-    parts.push(`${privateKeys} private key${privateKeys === 1 ? "" : "s"}`);
-  if (signingKeys)
-    parts.push(`${signingKeys} signing key${signingKeys === 1 ? "" : "s"}`);
-  if (contacts) parts.push(`${contacts} contact${contacts === 1 ? "" : "s"}`);
+  if (privateKeys) parts.push(tn("keys_count_private_keys", privateKeys));
+  if (signingKeys) parts.push(tn("keys_count_signing_keys", signingKeys));
+  if (contacts) parts.push(tn("keys_count_contacts", contacts));
   const hasPrivate = privateKeys > 0 || signingKeys > 0;
   return (
     <>
       <p className="font-medium">{parts.join(", ")}</p>
       <p className="mt-2">
         {hasPrivate
-          ? "This permanently deletes the selected private keys from this device. Anything encrypted only to a deleted key becomes unrecoverable. Make sure you have a backup if you might ever need them."
-          : "You'll no longer be able to encrypt to these contacts or verify their signatures. You can re-import their public keys later."}
+          ? t("keys_bulk_delete_private_body")
+          : t("keys_bulk_delete_contacts_body")}
       </p>
     </>
   );
@@ -922,10 +916,7 @@ function DeleteSummary({ target }: { target: DeleteTarget }) {
         <p className="text-muted-foreground mt-0.5 font-mono text-[10px]">
           {target.keyBlob.extensionId}
         </p>
-        <p className="mt-2">
-          You can no longer sign updates for this extension, and the key can't
-          be recovered unless you have a backup.
-        </p>
+        <p className="mt-2">{t("keys_delete_crx_body")}</p>
       </>
     );
   }
@@ -936,8 +927,8 @@ function DeleteSummary({ target }: { target: DeleteTarget }) {
   // comment they have never seen. Own keys keep their real identity: the
   // confirm prompt above asks the user to type it.
   const name = isOwn
-    ? (target.keyBlob.userIds[0] ?? "Unknown")
-    : (displayUserId(target.contact) ?? "Unknown");
+    ? (target.keyBlob.userIds[0] ?? t("keys_unknown_name"))
+    : (displayUserId(target.contact) ?? t("keys_unknown_name"));
   return (
     <>
       <p className="font-medium">{name}</p>
@@ -945,9 +936,7 @@ function DeleteSummary({ target }: { target: DeleteTarget }) {
         {keyId.slice(-16)}
       </p>
       <p className="mt-2">
-        {isOwn
-          ? "This permanently deletes the private key from this device. Anything encrypted only to this key becomes unrecoverable. Make sure you have a backup if you might ever need it."
-          : "You'll no longer be able to encrypt messages to this contact or verify their signatures. You can re-import their public key later."}
+        {isOwn ? t("keys_delete_key_body") : t("keys_remove_contact_body")}
       </p>
     </>
   );
@@ -1006,17 +995,16 @@ function ContactsList({
   return (
     <div>
       <h2 className="mb-2 text-sm font-semibold">
-        Contacts
         {contactsLocked
-          ? " (encrypted)"
+          ? t("keys_contacts_heading_encrypted")
           : contacts.length > 0
-            ? ` (${contacts.length})`
-            : ""}
+            ? t("keys_contacts_heading_count", { count: contacts.length })
+            : t("keys_contacts_heading")}
       </h2>
       {contactsLocked ? (
         <div className="border-border bg-muted/30 rounded-lg border p-4 text-center">
           <p className="text-muted-foreground text-sm">
-            Contacts are encrypted. Unlock PGP Tools to view and manage them.
+            {t("keys_contacts_locked")}
           </p>
         </div>
       ) : (
@@ -1025,7 +1013,7 @@ function ContactsList({
           {contacts.length > 5 && (
             <input
               type="text"
-              placeholder="Search contacts..."
+              placeholder={t("keys_search_contacts_placeholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className={`${INPUT_CLASS} mt-2`}
@@ -1045,7 +1033,9 @@ function ContactsList({
                         onEncryptTo ? () => onEncryptTo(c.keyId) : undefined
                       }
                       onCopyPublicKey={() =>
-                        void copy(c.armoredPublicKey, { label: "Public key" })
+                        void copy(c.armoredPublicKey, {
+                          label: t("common_public_key"),
+                        })
                       }
                       onDownloadPublicKey={() =>
                         downloadPublicKey(
@@ -1070,7 +1060,7 @@ function ContactsList({
           )}
           {search && filtered.length === 0 && (
             <p className="text-muted-foreground mt-2 text-center text-xs">
-              No contacts match "{search}"
+              {t("keys_no_contacts_match", { query: search })}
             </p>
           )}
         </>

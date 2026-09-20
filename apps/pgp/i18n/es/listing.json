@@ -1,0 +1,8 @@
+{
+  "extName": {
+    "message": "Cifrado de correo OpenPGP y GPG - Gmail & Outlook Compatible"
+  },
+  "extDescription": {
+    "message": "Cifra, descifra, firma y verifica correo y mensajes con OpenPGP y GPG. Gestiona tus claves."
+  }
+}

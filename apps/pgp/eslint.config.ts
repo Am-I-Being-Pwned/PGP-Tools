@@ -6,7 +6,13 @@ import { reactConfig } from "@amibeingpwned/eslint-config/react";
 
 export default defineConfig(
   {
-    ignores: [".wxt/**", ".output/**", "gpg-wasm/pkg/**", "gpg-wasm/target/**"],
+    ignores: [
+      ".wxt/**",
+      ".output/**",
+      "gpg-wasm/pkg/**",
+      "gpg-wasm/target/**",
+      "lib/i18n/messages.generated.ts",
+    ],
   },
   baseConfig,
   reactConfig,
@@ -16,7 +22,17 @@ export default defineConfig(
       "turbo/no-undeclared-env-vars": [
         "error",
         // HEADED/CI only affect the Playwright e2e run, not the build.
-        { allowList: ["^DEV$", "^PROD$", "^MODE$", "^HEADED$", "^CI$"] },
+        // LOCALES only narrows the store-listing capture run (e2e-capture/).
+        {
+          allowList: [
+            "^DEV$",
+            "^PROD$",
+            "^MODE$",
+            "^HEADED$",
+            "^CI$",
+            "^LOCALES$",
+          ],
+        },
       ],
       "react-hooks/set-state-in-effect": "off",
       // Extends the base config's em-dash-only rule to en-dashes too.

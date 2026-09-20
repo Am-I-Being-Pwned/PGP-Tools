@@ -20,6 +20,7 @@ import {
 
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
+import { t } from "../../lib/i18n";
 import {
   displayUserId,
   formatKeyDisplayName,
@@ -55,7 +56,7 @@ export function KeySelector({
   myKeys,
   selectedKeyId,
   onSelect,
-  emptyText = "No keys available",
+  emptyText,
   emptyAction,
   emptyActionLabel,
 }: KeySelectorProps) {
@@ -72,7 +73,7 @@ export function KeySelector({
           {label}
         </span>
         <p className="text-muted-foreground text-xs">
-          {emptyText}
+          {emptyText ?? t("actions_no_keys_available")}
           {emptyAction && (
             <>
               {" "}
@@ -84,7 +85,7 @@ export function KeySelector({
                 onClick={() => emptyAction()}
                 className="text-primary underline"
               >
-                {emptyActionLabel ?? "Set up"}
+                {emptyActionLabel ?? t("actions_set_up")}
               </button>
             </>
           )}
@@ -121,7 +122,7 @@ export function KeySelector({
                 </div>
               ) : (
                 <span className="text-muted-foreground text-sm">
-                  Select a key...
+                  {t("actions_select_key_placeholder")}
                 </span>
               )}
               <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -147,15 +148,15 @@ export function KeySelector({
                 }
               }}
             >
-              <CommandInput placeholder="Search..." />
+              <CommandInput placeholder={t("actions_search_placeholder")} />
               {/* Fixed height (not just max-h) so the list stays a constant
                 size and doesn't grow/shrink as search filters the results. */}
               <CommandList className="h-[300px]">
-                <CommandEmpty>No keys found</CommandEmpty>
+                <CommandEmpty>{t("actions_no_keys_found")}</CommandEmpty>
                 {hasGroups ? (
                   <>
                     {contacts && contacts.length > 0 && (
-                      <CommandGroup heading="Contacts">
+                      <CommandGroup heading={t("actions_group_contacts")}>
                         {contacts.map((key) => (
                           <KeyOption
                             key={key.keyId}
@@ -174,7 +175,7 @@ export function KeySelector({
                       myKeys &&
                       myKeys.length > 0 && <CommandSeparator />}
                     {myKeys && myKeys.length > 0 && (
-                      <CommandGroup heading="My Keys">
+                      <CommandGroup heading={t("actions_group_my_keys")}>
                         {myKeys.map((key) => (
                           <KeyOption
                             key={key.keyId}

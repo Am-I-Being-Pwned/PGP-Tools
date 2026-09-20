@@ -1,0 +1,212 @@
+{
+  "shared_security_preset": { "message": "Профиль безопасности" },
+  "shared_preset_bundled_changed": {
+    "message": "Настройка из профиля была изменена"
+  },
+  "shared_preset_none_selected": { "message": "Профиль не выбран" },
+  "shared_preset_custom": { "message": "Пользовательский" },
+  "shared_translation": { "message": "Перевод" },
+  "shared_keyboard_shortcuts": { "message": "Сочетания клавиш" },
+  "shared_key_storage": { "message": "Хранение ключей" },
+  "shared_key_security": { "message": "Безопасность ключей" },
+  "shared_auto_lock_title": { "message": "Автоблокировка при бездействии" },
+  "shared_auto_lock_desc": {
+    "message": "Блокировать разблокированные ключи после периода бездействия в панели. Блокировка экрана ОС всегда блокирует ключи сразу, независимо от этой настройки."
+  },
+  "shared_lock_after": { "message": "Блокировать через" },
+  "shared_minutes_one": { "message": "$count$ минуту" },
+  "shared_minutes_few": { "message": "$count$ минуты" },
+  "shared_minutes_many": { "message": "$count$ минут" },
+  "shared_minutes_other": { "message": "$count$ минуты" },
+  "shared_one_hour": { "message": "1 час" },
+  "shared_lock_tab_away_title": { "message": "Блокировать при уходе с панели" },
+  "shared_lock_tab_away_desc": {
+    "message": "Блокировать, как только боковая панель перестаёт быть видимой (переключение окон, сворачивание панели или окна)."
+  },
+  "shared_never_cache_title": { "message": "Не кешировать ключи" },
+  "shared_never_cache_desc": {
+    "message": "Ключи стираются из памяти после каждой операции. Вы по-прежнему можете вручную разблокировать ключи на вкладке «Ключи»."
+  },
+  "shared_unlock_with_vault_title": {
+    "message": "Разблокировать ключи вместе с хранилищем"
+  },
+  "shared_unlock_with_vault_desc": {
+    "message": "Запрос ключа доступа, открывающий хранилище, разблокирует и ваши ключи. Ключ, который пока запрашивает разблокировку отдельно, перейдёт на этот режим при следующей разблокировке. Ключи, защищённые паролем, сохраняют свой пароль."
+  },
+  "shared_downloads": { "message": "Скачивание" },
+  "shared_auto_download_files_title": {
+    "message": "Автоматически скачивать файлы"
+  },
+  "shared_auto_download_files_desc": {
+    "message": "Автоматически скачивать результат после шифрования или расшифровки файлов."
+  },
+  "shared_auto_download_text_title": {
+    "message": "Автоматически скачивать текст"
+  },
+  "shared_auto_download_text_desc": {
+    "message": "Автоматически скачивать результат после шифрования или расшифровки текста."
+  },
+  "shared_key_discovery": { "message": "Поиск ключей" },
+  "shared_lookup_online_title": { "message": "Искать ключи в интернете" },
+  "shared_lookup_online_desc": {
+    "message": "Добавляет на экран импорта поле поиска SSH-ключей на GitHub и сертификатов на keys.openpgp.org. Если выключено, для поиска ключа ничего не покидает это устройство. Если включено, при поиске этот сервер узнаёт ваш IP-адрес и кого вы искали - но ничего о ваших ключах или сообщениях."
+  },
+  "shared_crx_signing": { "message": "Подпись CRX" },
+  "shared_crx_enable_title": { "message": "Включить подпись CRX" },
+  "shared_crx_enable_desc": {
+    "message": "Подписывайте пакеты расширений Chrome (.crx) для функции «Проверенные загрузки CRX» в Web Store, используя ключ из вашего хранилища, а не из конвейера сборки."
+  },
+  "shared_crx_how": { "message": "Как работает подпись CRX" },
+  "shared_backup": { "message": "Резервная копия" },
+  "shared_backup_desc": {
+    "message": "Экспортируйте ключи и контакты в один файл ASCII-armor или восстановите их из него. Экспортируемые закрытые ключи шифруются парольной фразой по вашему выбору."
+  },
+  "shared_export_all_keys": { "message": "Экспортировать все ключи" },
+  "shared_import_keys": { "message": "Импортировать ключи" },
+  "shared_display": { "message": "Отображение" },
+  "shared_advanced_mode": { "message": "Расширенный режим" },
+  "shared_advanced_mode_desc": {
+    "message": "Показывать отпечатки ключей, алгоритмы и параметры формата вывода."
+  },
+  "shared_developer": { "message": "Разработчик" },
+  "shared_developer_desc": {
+    "message": "Просмотр chrome.storage и дамп памяти WASM для тестирования. Этот раздел есть только в сборках для разработки."
+  },
+  "shared_open_dev_tools": { "message": "Открыть инструменты разработчика" },
+  "shared_import_flow_states": { "message": "Состояния процесса импорта" },
+  "shared_dev_tools": { "message": "Инструменты разработчика" },
+  "shared_about": { "message": "О расширении" },
+  "shared_byline_before": { "message": "Инструмент для защиты приватности от" },
+  "shared_source_on_github": { "message": "Исходный код на GitHub" },
+  "shared_about_extensions": {
+    "message": "Беспокоитесь о вредоносных расширениях браузера? Проверьте свои расширения на сбор данных, перехват сеансов и другие угрозы."
+  },
+  "shared_check_extensions": { "message": "Проверить расширения" },
+  "shared_delete_history_title": { "message": "Удалить сохранённую историю?" },
+  "shared_delete_history_confirm": { "message": "Включить и удалить историю" },
+  "shared_delete_history_body": {
+    "message": "Режим «не кешировать» также удаляет сохранённую историю ($size$). Восстановить её будет невозможно."
+  },
+  "shared_sync_quota_error": {
+    "message": "Недостаточно места для синхронизации. Chrome ограничивает синхронизируемые данные примерно 100 КБ, поэтому это хранилище слишком велико для синхронизации между устройствами. Оставьте его на этом устройстве или удалите часть ключей и повторите попытку."
+  },
+  "shared_migration_failed": { "message": "Не удалось перенести данные" },
+  "shared_preset_applied": { "message": "Профиль применён: $title$" },
+  "shared_preset_applied_history_deleted": {
+    "message": "История удалена, и кнопка «Отменить» её не восстанавливает."
+  },
+  "shared_undo": { "message": "Отменить" },
+  "shared_commands": { "message": "Команды" },
+  "shared_unlock_aria": { "message": "Разблокировать PGP Tools" },
+  "shared_unlock_intro": {
+    "message": "Ваши ключи и контакты зашифрованы. Пройдите аутентификацию, чтобы продолжить."
+  },
+  "shared_unlock_with_passkey": { "message": "Разблокировать ключом доступа" },
+  "shared_master_password": { "message": "Мастер-пароль" },
+  "shared_unlocking": { "message": "Разблокировка..." },
+  "shared_unlock_lost_password": {
+    "message": "Если вы потеряли пароль, ваши зашифрованные ключи и контакты восстановить невозможно."
+  },
+  "shared_passkey_failed": {
+    "message": "Не удалось пройти проверку ключа доступа. Повторите попытку."
+  },
+  "shared_wrong_password": { "message": "Неверный пароль." },
+  "shared_unlock_failed": {
+    "message": "Не удалось разблокировать. Повторите попытку."
+  },
+  "shared_saving": { "message": "Сохранение..." },
+  "shared_clear_name": { "message": "Очистить имя" },
+  "shared_confirm_type_before": { "message": "Для подтверждения введите" },
+  "shared_confirm_type_after": { "message": "ниже" },
+  "shared_confirm_type_aria": {
+    "message": "Введите «$text$» для подтверждения"
+  },
+  "shared_drop_to_import": { "message": "Отпустите, чтобы импортировать" },
+  "shared_drop_desc": {
+    "message": "Ключи добавляются в вашу связку ключей; файлы и текст попадают в рабочую область."
+  },
+  "shared_storage_local_label": { "message": "Только на этом устройстве" },
+  "shared_storage_local_desc": {
+    "message": "Ваши данные остаются на этом компьютере. При смене устройства или переустановке потребуется настроить всё заново."
+  },
+  "shared_storage_sync_label": {
+    "message": "Синхронизация между устройствами"
+  },
+  "shared_storage_sync_desc": {
+    "message": "Ваши данные синхронизируются через аккаунт Chrome. Доступны везде, где вы вошли в аккаунт."
+  },
+  "shared_something_went_wrong": {
+    "message": "Что-то пошло не так. Повторите попытку."
+  },
+  "shared_show_technical_details": {
+    "message": "Показать технические подробности"
+  },
+  "shared_hide_technical_details": {
+    "message": "Скрыть технические подробности"
+  },
+  "shared_preset_current": { "message": "Текущий" },
+  "shared_preset_recommended": { "message": "Рекомендуется" },
+  "shared_preset_paranoid_note": {
+    "message": "Ваши сообщения остаются читаемыми для вас - позже выключите «Шифровать и для меня», если даже это риск."
+  },
+  "shared_preset_casual_title": { "message": "Обычный" },
+  "shared_preset_casual_tagline": {
+    "message": "Удобство прежде всего - для ключей, защищающих что-то малозначимое"
+  },
+  "shared_preset_careful_title": { "message": "Осторожный" },
+  "shared_preset_careful_tagline": {
+    "message": "Разумные настройки для настоящих секретов"
+  },
+  "shared_preset_paranoid_title": { "message": "Если это утечёт, мне конец" },
+  "shared_preset_paranoid_tagline": {
+    "message": "Ничего не задерживается. Самая быстрая блокировка, без истории, без кеширования ключей."
+  },
+  "shared_bundle_auto_lock_off": { "message": "Автоблокировка выключена" },
+  "shared_bundle_auto_lock": { "message": "Автоблокировка через $duration$" },
+  "shared_bundle_auto_lock_tabs": {
+    "message": "Автоблокировка через $duration$ и при переключении вкладок"
+  },
+  "shared_bundle_never_cache_on": {
+    "message": "Ключи стираются из памяти после каждого использования"
+  },
+  "shared_bundle_never_cache_off": {
+    "message": "Разблокированные ключи остаются в кеше до блокировки"
+  },
+  "shared_bundle_unlock_on_open_on": {
+    "message": "Один запрос ключа доступа разблокирует хранилище и ваши ключи"
+  },
+  "shared_bundle_unlock_on_open_off": {
+    "message": "Каждый ключ запрашивает разблокировку отдельно"
+  },
+  "shared_bundle_history_on": {
+    "message": "Ведётся зашифрованная история ваших действий"
+  },
+  "shared_bundle_history_off": { "message": "История не ведётся" },
+  "shared_bundle_discovery_on": {
+    "message": "Ключи можно искать на GitHub и keys.openpgp.org"
+  },
+  "shared_bundle_discovery_off": {
+    "message": "Без поиска ключей - для поиска ключа ничего не покидает это устройство"
+  },
+  "shared_bundle_storage_local": {
+    "message": "Ключи остаются на этом устройстве"
+  },
+  "shared_bundle_storage_sync": {
+    "message": "Ключи синхронизируются в вашем профиле Chrome"
+  },
+  "shared_bundle_clipboard_one": {
+    "message": "Скопированные секреты стираются из буфера обмена через $count$ секунду"
+  },
+  "shared_bundle_clipboard_few": {
+    "message": "Скопированные секреты стираются из буфера обмена через $count$ секунды"
+  },
+  "shared_bundle_clipboard_many": {
+    "message": "Скопированные секреты стираются из буфера обмена через $count$ секунд"
+  },
+  "shared_bundle_clipboard_other": {
+    "message": "Скопированные секреты стираются из буфера обмена через $count$ секунды"
+  },
+  "shared_bundle_no_encrypt_to_self": {
+    "message": "Зашифрованные вами сообщения вы сами потом прочитать не сможете"
+  }
+}

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@amibeingpwned/ui/button";
 
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
+import { t } from "../../lib/i18n";
 import { isWebAuthnCancel } from "../../lib/protection/webauthn-prf";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 import { SubPage } from "../shared/SubPage";
@@ -129,10 +130,10 @@ export function ExportPrivateKeyPage({
     } catch (e) {
       if (isPasskey) {
         if (!isWebAuthnCancel(e)) {
-          setUnlockError("Passkey authentication failed.");
+          setUnlockError(t("keygen_error_passkey_failed"));
         }
       } else {
-        setUnlockError("Wrong password.");
+        setUnlockError(t("keygen_error_wrong_password"));
       }
     } finally {
       unlockInFlight.current = false;
@@ -162,7 +163,9 @@ export function ExportPrivateKeyPage({
         acquired = h;
       } catch (e) {
         setExportError(
-          e instanceof Error && e.message ? e.message : "Key is not unlocked.",
+          e instanceof Error && e.message
+            ? e.message
+            : t("keygen_error_key_not_unlocked"),
         );
         setExporting(false);
         return;
@@ -179,7 +182,7 @@ export function ExportPrivateKeyPage({
         afterSuccess();
       }
     } catch {
-      setExportError("Export failed.");
+      setExportError(t("keygen_export_failed"));
     } finally {
       if (acquired !== null) exporter.release(acquired);
       setExporting(false);
@@ -189,16 +192,16 @@ export function ExportPrivateKeyPage({
   const handleEncryptedExport = async () => {
     setExportError(null);
     if (passphrase.length < 8) {
-      setExportError("Passphrase must be at least 8 characters.");
+      setExportError(t("keygen_error_passphrase_short"));
       return;
     }
     if (passphrase !== confirmPassphrase) {
-      setExportError("Passphrases do not match.");
+      setExportError(t("keygen_error_passphrase_mismatch"));
       return;
     }
     await runExport(
       (h) => exporter.exportEncrypted(h, passphrase),
-      "Encrypted key copied (clears in 60s)",
+      t("keygen_copied_encrypted"),
       60_000,
       () => {
         setPassphrase("");
@@ -210,7 +213,7 @@ export function ExportPrivateKeyPage({
   const handlePlaintextExport = () =>
     runExport(
       (h) => exporter.exportPlaintext(h),
-      "Unprotected key copied (clears in 30s)",
+      t("keygen_copied_plaintext"),
       30_000,
       () => setUnsafeConfirm(""),
     );
@@ -222,14 +225,14 @@ export function ExportPrivateKeyPage({
           <p className="text-muted-foreground text-xs">
             {exporter.unlockBlurb ??
               (isPasskey
-                ? "Authenticate with your passkey to copy this key."
-                : "Enter the key password to copy this key.")}
+                ? t("keygen_unlock_gate_passkey")
+                : t("keygen_unlock_gate_password"))}
           </p>
           {!isPasskey && (
             <input
               type="password"
               autoComplete="current-password"
-              placeholder="Key password"
+              placeholder={t("keygen_key_password_placeholder")}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               onKeyDown={(e) => {
@@ -247,7 +250,7 @@ export function ExportPrivateKeyPage({
             onClick={() => void handleUnlock()}
             disabled={unlocking || (!isPasskey && !password)}
           >
-            {unlocking ? "Unlocking..." : "Unlock"}
+            {unlocking ? t("keygen_unlocking") : t("common_unlock")}
           </Button>
         </div>
       ) : (
@@ -258,7 +261,7 @@ export function ExportPrivateKeyPage({
           <input
             type="password"
             autoComplete="new-password"
-            placeholder="Passphrase (min 8 characters)"
+            placeholder={t("keygen_passphrase_placeholder")}
             value={passphrase}
             onChange={(e) => setPassphrase(e.target.value)}
             className={INPUT_CLASS}
@@ -267,7 +270,7 @@ export function ExportPrivateKeyPage({
           <input
             type="password"
             autoComplete="new-password"
-            placeholder="Confirm passphrase"
+            placeholder={t("keygen_confirm_passphrase_placeholder")}
             value={confirmPassphrase}
             onChange={(e) => setConfirmPassphrase(e.target.value)}
             onKeyDown={(e) => {
@@ -284,13 +287,16 @@ export function ExportPrivateKeyPage({
             onClick={() => void handleEncryptedExport()}
             disabled={exporting || !passphrase}
           >
-            {exporting ? "Encrypting..." : exporter.encryptedButton}
+            {exporting ? t("keygen_encrypting") : exporter.encryptedButton}
           </Button>
 
           <div className="border-border space-y-2 border-t pt-3">
             <p className="text-destructive text-[11px]">
-              {exporter.plaintextBlurb} Type{" "}
-              <span className="font-mono font-bold">EXPORT</span> to confirm:
+              {exporter.plaintextBlurb} {t("keygen_type_to_confirm_before")}{" "}
+              <span className="font-mono font-bold">
+                {t("keygen_confirm_word")}
+              </span>{" "}
+              {t("keygen_type_to_confirm_after")}
             </p>
             <input
               type="text"
@@ -298,14 +304,14 @@ export function ExportPrivateKeyPage({
               spellCheck={false}
               value={unsafeConfirm}
               onChange={(e) => setUnsafeConfirm(e.target.value)}
-              placeholder="EXPORT"
+              placeholder={t("keygen_confirm_word")}
               className={INPUT_CLASS}
             />
             <Button
               variant="destructive"
               size="sm"
               className="w-full"
-              disabled={exporting || unsafeConfirm !== "EXPORT"}
+              disabled={exporting || unsafeConfirm !== t("keygen_confirm_word")}
               onClick={() => void handlePlaintextExport()}
             >
               {exporter.plaintextButton}

@@ -1,8 +1,4263 @@
 {
-  "extName": {
-    "message": "OpenPGP और GPG ईमेल एन्क्रिप्शन - Gmail Compatible, Discord Compatible"
+  "actions_add_own_key_first": {
+    "message": "पहले अपनी कोई कुंजी जोड़ें"
+  },
+  "actions_add_recipients_placeholder": {
+    "message": "प्राप्तकर्ता जोड़ें..."
+  },
+  "actions_age_cannot_sign": {
+    "message": "age संदेशों पर हस्ताक्षर नहीं किए जा सकते"
+  },
+  "actions_badge_you": {
+    "message": "आप"
+  },
+  "actions_clear_all_recipients": {
+    "message": "सभी प्राप्तकर्ता हटाएं"
+  },
+  "actions_clear_input": {
+    "message": "इनपुट साफ़ करें"
+  },
+  "actions_copy_output": {
+    "message": "आउटपुट कॉपी करें"
+  },
+  "actions_disabled_toast": {
+    "message": "$name$ अक्षम है: $reason$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "reason": {
+        "content": "$2"
+      }
+    }
+  },
+  "actions_download_output": {
+    "message": "आउटपुट डाउनलोड करें"
+  },
+  "actions_encrypt_to_self_off": {
+    "message": "बंद करें: मेरे लिए भी एन्क्रिप्ट करें"
+  },
+  "actions_encrypt_to_self_on": {
+    "message": "चालू करें: मेरे लिए भी एन्क्रिप्ट करें"
+  },
+  "actions_find_replace": {
+    "message": "संदेश में ढूंढें और बदलें"
+  },
+  "actions_generate_key": {
+    "message": "कुंजी बनाएं"
+  },
+  "actions_go_to_keys": {
+    "message": "'कुंजियां' टैब पर जाएं"
+  },
+  "actions_go_to_settings": {
+    "message": "सेटिंग पर जाएं"
+  },
+  "actions_go_to_workspace": {
+    "message": "वर्कस्पेस पर जाएं"
+  },
+  "actions_group_contacts": {
+    "message": "संपर्क"
+  },
+  "actions_group_keys": {
+    "message": "कुंजियां"
+  },
+  "actions_group_message": {
+    "message": "संदेश"
+  },
+  "actions_group_mode": {
+    "message": "मोड"
+  },
+  "actions_group_my_keys": {
+    "message": "मेरी कुंजियां"
+  },
+  "actions_group_navigation": {
+    "message": "नेविगेशन"
+  },
+  "actions_group_recent": {
+    "message": "हाल के"
+  },
+  "actions_group_result": {
+    "message": "परिणाम"
+  },
+  "actions_group_session": {
+    "message": "सत्र"
+  },
+  "actions_group_settings": {
+    "message": "सेटिंग"
+  },
+  "actions_group_workspace": {
+    "message": "वर्कस्पेस"
+  },
+  "actions_history": {
+    "message": "इतिहास"
+  },
+  "actions_history_clear": {
+    "message": "इतिहास मिटाएं"
+  },
+  "actions_history_delete_all_one": {
+    "message": "इतिहास की सभी $count$ प्रविष्टि मिटाएं",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_delete_all_other": {
+    "message": "इतिहास की सभी $count$ प्रविष्टियां मिटाएं",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_delete_warning": {
+    "message": "इससे इस डिवाइस से आपकी कार्रवाइयों का एन्क्रिप्टेड इतिहास हमेशा के लिए मिट जाता है। इसे वापस नहीं पाया जा सकता।"
+  },
+  "actions_history_empty": {
+    "message": "कोई इतिहास नहीं"
+  },
+  "actions_history_file_with_size": {
+    "message": "$name$ ($size$)",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "size": {
+        "content": "$2"
+      }
+    }
+  },
+  "actions_history_files_one": {
+    "message": "$count$ फ़ाइल",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_files_other": {
+    "message": "$count$ फ़ाइलें",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_metadata_only": {
+    "message": "सिर्फ़ मेटाडेटा - इस कार्रवाई की सामग्री सहेजी नहीं जाती।"
+  },
+  "actions_history_more_matches_one": {
+    "message": "+$count$ और मिलान",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_more_matches_other": {
+    "message": "+$count$ और मिलान",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_no_content": {
+    "message": "कोई सामग्री सहेजी नहीं गई"
+  },
+  "actions_history_no_matches": {
+    "message": "\"$query$\" से मेल खाता कोई इतिहास नहीं",
+    "placeholders": {
+      "query": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_off_never_cache": {
+    "message": "कुंजियां कभी कैश न होने की सेटिंग चालू रहने तक इतिहास बंद है"
+  },
+  "actions_history_off_reason": {
+    "message": "इतिहास बंद है - इसे 'हस्ताक्षर' के बगल में चालू करें"
+  },
+  "actions_history_op_signed": {
+    "message": "$op$ + हस्ताक्षर",
+    "placeholders": {
+      "op": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_open_entry": {
+    "message": "$title$ खोलें",
+    "placeholders": {
+      "title": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_recipient_with_id": {
+    "message": "$name$ ($id$)",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "id": {
+        "content": "$2"
+      }
+    }
+  },
+  "actions_history_search_label": {
+    "message": "इतिहास में खोजें"
+  },
+  "actions_history_search_placeholder": {
+    "message": "इतिहास में खोजें..."
+  },
+  "actions_history_to": {
+    "message": "$names$ को",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_history_truncated": {
+    "message": "[काटा गया]"
+  },
+  "actions_history_usage": {
+    "message": "$budget$ में से $used$ इस्तेमाल हुआ",
+    "placeholders": {
+      "used": {
+        "content": "$1"
+      },
+      "budget": {
+        "content": "$2"
+      }
+    }
+  },
+  "actions_history_when": {
+    "message": "$date$ ($relative$)",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      },
+      "relative": {
+        "content": "$2"
+      }
+    }
+  },
+  "actions_import_key": {
+    "message": "कुंजी आयात करें"
+  },
+  "actions_keys_count_one": {
+    "message": "$count$ कुंजी",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_keys_count_other": {
+    "message": "$count$ कुंजियां",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_keys_of_total": {
+    "message": "$count$ में से $active$ कुंजियां",
+    "placeholders": {
+      "active": {
+        "content": "$1"
+      },
+      "count": {
+        "content": "$2"
+      }
+    }
+  },
+  "actions_language_last_used": {
+    "message": "$label$ (पिछली बार इस्तेमाल की गई)",
+    "placeholders": {
+      "label": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_lock_now": {
+    "message": "अभी लॉक करें"
+  },
+  "actions_mixed_engine_reason": {
+    "message": "PGP और SSH प्राप्तकर्ताओं को एक ही संदेश में नहीं जोड़ा जा सकता: OpenPGP और age अलग-अलग फ़ॉर्मैट हैं। पहले एक समूह के लिए एन्क्रिप्ट करें, फिर दूसरे के लिए।"
+  },
+  "actions_need_recipient_or_password": {
+    "message": "कम से कम एक प्राप्तकर्ता चुनें, या पासवर्ड सेट करें"
+  },
+  "actions_no_input_decrypt": {
+    "message": "डिक्रिप्ट करने के लिए कुछ नहीं - एन्क्रिप्टेड संदेश पेस्ट करें या कोई फ़ाइल छोड़ें"
+  },
+  "actions_no_input_encrypt": {
+    "message": "एन्क्रिप्ट करने के लिए कुछ नहीं - टेक्स्ट लिखें या कोई फ़ाइल छोड़ें"
+  },
+  "actions_no_input_sign": {
+    "message": "हस्ताक्षर करने के लिए कुछ नहीं - टेक्स्ट लिखें या कोई फ़ाइल छोड़ें"
+  },
+  "actions_no_input_verify": {
+    "message": "सत्यापित करने के लिए कुछ नहीं - हस्ताक्षरित संदेश पेस्ट करें या कोई फ़ाइल छोड़ें"
+  },
+  "actions_no_keys_available": {
+    "message": "कोई कुंजी उपलब्ध नहीं"
+  },
+  "actions_no_keys_found": {
+    "message": "कोई कुंजी नहीं मिली"
+  },
+  "actions_no_matches": {
+    "message": "कोई मिलान नहीं"
+  },
+  "actions_no_output_to_copy": {
+    "message": "कॉपी करने के लिए अभी कोई आउटपुट नहीं"
+  },
+  "actions_nothing_to_clear": {
+    "message": "साफ़ करने के लिए कुछ नहीं"
+  },
+  "actions_nothing_to_download": {
+    "message": "डाउनलोड करने के लिए अभी कुछ नहीं"
+  },
+  "actions_nothing_to_translate": {
+    "message": "अनुवाद करने के लिए अभी कुछ नहीं"
+  },
+  "actions_open_history": {
+    "message": "इतिहास खोलें"
+  },
+  "actions_open_security_presets": {
+    "message": "सुरक्षा प्रीसेट खोलें"
+  },
+  "actions_palette_label": {
+    "message": "कमांड पैलेट"
+  },
+  "actions_palette_no_commands": {
+    "message": "मेल खाती कोई कमांड नहीं।"
+  },
+  "actions_palette_no_match": {
+    "message": "कोई मिलान नहीं।"
+  },
+  "actions_palette_placeholder": {
+    "message": "कोई कमांड लिखें..."
+  },
+  "actions_pick_language_placeholder": {
+    "message": "कोई भाषा चुनें..."
+  },
+  "actions_recipient_input_hint": {
+    "message": "Backspace से आखिरी प्राप्तकर्ता हट जाता है"
+  },
+  "actions_remove_recipient": {
+    "message": "$name$ को हटाएं",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_remove_recipient_detail": {
+    "message": "$name$ को हटाएं - $detail$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "detail": {
+        "content": "$2"
+      }
+    }
+  },
+  "actions_run_mode": {
+    "message": "$mode$ चलाएं",
+    "placeholders": {
+      "mode": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_save_to_history_off": {
+    "message": "बंद करें: इतिहास में सहेजें"
+  },
+  "actions_save_to_history_on": {
+    "message": "चालू करें: इतिहास में सहेजें"
+  },
+  "actions_search_placeholder": {
+    "message": "खोजें..."
+  },
+  "actions_select_key_placeholder": {
+    "message": "कोई कुंजी चुनें..."
+  },
+  "actions_set_up": {
+    "message": "सेट अप करें"
+  },
+  "actions_sign_when_encrypting_off": {
+    "message": "बंद करें: एन्क्रिप्ट करते समय हस्ताक्षर करें"
+  },
+  "actions_sign_when_encrypting_on": {
+    "message": "चालू करें: एन्क्रिप्ट करते समय हस्ताक्षर करें"
+  },
+  "actions_ssh_password_reason": {
+    "message": "संदेश पासवर्ड OpenPGP की सुविधा है और age में यह नहीं होती, इसलिए SSH प्राप्तकर्ताओं के साथ इसका इस्तेमाल नहीं किया जा सकता। पासवर्ड हटाएं, या इस व्यक्ति के लिए बिना पासवर्ड के एन्क्रिप्ट करें।"
+  },
+  "actions_style_bold": {
+    "message": "चयन को बोल्ड करें"
+  },
+  "actions_style_code": {
+    "message": "चयन को कोड बनाएं"
+  },
+  "actions_style_italic": {
+    "message": "चयन को इटैलिक करें"
+  },
+  "actions_style_strike": {
+    "message": "चयन पर स्ट्राइकथ्रू लगाएं"
+  },
+  "actions_switch_to_workspace_first": {
+    "message": "पहले वर्कस्पेस पर जाएं"
+  },
+  "actions_toggle_recipient_list": {
+    "message": "प्राप्तकर्ता सूची खोलें/बंद करें"
+  },
+  "actions_translate_message": {
+    "message": "संदेश का अनुवाद करें..."
+  },
+  "actions_translate_result_to": {
+    "message": "$language$ में अनुवाद करें",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_translate_to_title": {
+    "message": "संदेश का अनुवाद इस भाषा में करें"
+  },
+  "actions_translation_off": {
+    "message": "अनुवाद सेटिंग में बंद है"
+  },
+  "app_action_title": {
+    "message": "PGP Tools"
+  },
+  "app_cmd_open": {
+    "message": "PGP Tools खोलें"
+  },
+  "app_cmd_open_decrypt": {
+    "message": "PGP Tools को डिक्रिप्ट मोड में खोलें"
+  },
+  "app_cmd_open_encrypt": {
+    "message": "PGP Tools को एन्क्रिप्ट मोड में खोलें"
+  },
+  "app_cmd_open_sign": {
+    "message": "PGP Tools को हस्ताक्षर मोड में खोलें"
+  },
+  "app_cmd_open_verify": {
+    "message": "PGP Tools को सत्यापन मोड में खोलें"
+  },
+  "app_copied": {
+    "message": "$label$ कॉपी हो गया",
+    "placeholders": {
+      "label": {
+        "content": "$1"
+      }
+    }
+  },
+  "app_copied_wipe": {
+    "message": "$label$ कॉपी हो गया - क्लिपबोर्ड $seconds$ सेकंड में साफ़ हो जाएगा",
+    "placeholders": {
+      "label": {
+        "content": "$1"
+      },
+      "seconds": {
+        "content": "$2"
+      }
+    }
+  },
+  "app_copy_failed": {
+    "message": "कॉपी नहीं हो सका - पहले एक्सटेंशन पैनल पर क्लिक करें, फिर से कोशिश करें।"
+  },
+  "app_error_corrupted": {
+    "message": "डेटा क्षतिग्रस्त है या अधूरा है। एक नई, पूरी प्रति लें और फिर से कोशिश करें।"
+  },
+  "app_error_crx_unsigned": {
+    "message": "CRX हस्ताक्षर मेल नहीं खाता: या तो इस पर इस कुंजी से हस्ताक्षर नहीं किए गए थे, या हस्ताक्षर के बाद फ़ाइल बदली गई। प्रकाशक से नई प्रति लें।"
+  },
+  "app_error_key_expired": {
+    "message": "इस काम में शामिल एक कुंजी की अवधि समाप्त हो चुकी है। कुंजी के मालिक से अपडेट की गई कुंजी मांगें, फिर उसे आयात करें।"
+  },
+  "app_error_key_locked": {
+    "message": "यह कुंजी लॉक है। इसे अनलॉक करके फिर से कोशिश करें।"
+  },
+  "app_error_key_not_found": {
+    "message": "वह कुंजी अब आपकी कीरिंग में नहीं है, इसलिए कुछ भी सहेजा नहीं गया। कुंजी को फिर से आयात करें और दोबारा कोशिश करें।"
+  },
+  "app_error_key_revoked": {
+    "message": "इस काम में शामिल एक कुंजी को उसके मालिक ने निरस्त कर दिया है। उनकी नई कुंजी लें, फिर उसे आयात करें।"
+  },
+  "app_error_no_decryption_key": {
+    "message": "यह संदेश ऐसी कुंजी के लिए एन्क्रिप्ट किया गया है जो आपके पास नहीं है। वह निजी कुंजी आयात करें, या भेजने वाले से कहें कि आपकी किसी कुंजी के लिए एन्क्रिप्ट करें।"
+  },
+  "app_error_no_decryption_key_with_id": {
+    "message": "यह संदेश ऐसी कुंजी के लिए एन्क्रिप्ट किया गया है जो आपके पास नहीं है (कुंजी ID $key_id$)। वह निजी कुंजी आयात करें, या भेजने वाले से कहें कि आपकी किसी कुंजी के लिए एन्क्रिप्ट करें।",
+    "placeholders": {
+      "key_id": {
+        "content": "$1"
+      }
+    }
+  },
+  "app_error_not_crx": {
+    "message": "यह ऐसा Chrome एक्सटेंशन पैकेज नहीं है जिसे यह टूल सत्यापित कर सके। कोई CRX3 (.crx) फ़ाइल चुनें।"
+  },
+  "app_error_not_pgp_data": {
+    "message": "यह PGP डेटा जैसा नहीं लगता। पक्का करें कि आपने पूरा आर्मर्ड ब्लॉक पेस्ट किया है, जिसमें BEGIN और END वाली पंक्तियां भी शामिल हों।"
+  },
+  "app_error_ocb_unsupported": {
+    "message": "यह संदेश एक पुराने AEAD (OCB) फ़ॉर्मैट में है, जिसे यह ऐप नहीं पढ़ सकता। भेजने वाले से कहें कि इसे सामान्य तरीके से एन्क्रिप्ट करके फिर से भेजें - वे कोई भी पासवर्ड चुन सकते हैं, समस्या सिर्फ़ फ़ॉर्मैट की है, जो समर्थित नहीं है।"
+  },
+  "app_error_passkey_dismissed": {
+    "message": "पासकी प्रॉम्प्ट खारिज कर दिया गया। तैयार होने पर यह काम फिर से करें।"
+  },
+  "app_error_passkey_failed": {
+    "message": "आपकी पासकी पूरी नहीं हो सकी। फिर से कोशिश करें, या किसी दूसरे तरीके से अनलॉक करें।"
+  },
+  "app_error_password_required": {
+    "message": "इस कुंजी को उसका पासवर्ड चाहिए। इसे अनलॉक करने के लिए कुंजी का पासवर्ड डालें।"
+  },
+  "app_error_remedy_check_key": {
+    "message": "कुंजी जांचें"
+  },
+  "app_error_remedy_import_key": {
+    "message": "कुंजी आयात करें"
+  },
+  "app_error_remedy_try_again": {
+    "message": "फिर से कोशिश करें"
+  },
+  "app_error_storage_full": {
+    "message": "ब्राउज़र स्टोरेज भर गया है, इसलिए यह सहेजा नहीं जा सका। जिन कुंजियों या संपर्कों की अब ज़रूरत नहीं है उन्हें हटाएं, फिर से कोशिश करें।"
+  },
+  "app_error_symmetric_wrong_password": {
+    "message": "उस पासवर्ड से यह संदेश नहीं खुला। इसे जांचकर फिर से कोशिश करें - अगर आपको पक्का है कि यह सही है, तो हो सकता है कि संदेश क्षतिग्रस्त हो।"
+  },
+  "app_error_tampered": {
+    "message": "हस्ताक्षर सत्यापन विफल रहा - हो सकता है कि इस संदेश से छेड़छाड़ की गई हो। इसकी सामग्री पर भरोसा न करें; भेजने वाले से इसे फिर से भेजने को कहें।"
+  },
+  "app_error_vault_locked": {
+    "message": "आपका वॉल्ट लॉक है, इसलिए कुछ भी नहीं बदला गया। इसे अनलॉक करके यह काम फिर से करें।"
+  },
+  "app_error_weak_algorithm": {
+    "message": "यह कुंजी ऐसे हस्ताक्षर एल्गोरिदम का इस्तेमाल करती है जिसे अब सुरक्षित नहीं माना जाता। कुंजी के मालिक से कहें कि इसे SHA-256 या उससे मज़बूत एल्गोरिदम के साथ फिर से जारी करें।"
+  },
+  "app_error_weak_password": {
+    "message": "वह पासवर्ड बहुत छोटा है। कम से कम 8 वर्ण इस्तेमाल करें।"
+  },
+  "app_error_wrong_password": {
+    "message": "इस कुंजी के लिए पासवर्ड गलत है। इसे जांचकर फिर से कोशिश करें।"
+  },
+  "app_import_added_one": {
+    "message": "कुंजी जोड़ी गई"
+  },
+  "app_import_added_other": {
+    "message": "$count$ कुंजियां जोड़ी गईं",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "app_import_view_key_one": {
+    "message": "कुंजी देखें"
+  },
+  "app_import_view_key_other": {
+    "message": "कुंजियां देखें"
+  },
+  "app_menu_open_in_pgp_tools": {
+    "message": "PGP Tools में खोलें"
+  },
+  "app_nav_label": {
+    "message": "मुख्य नेविगेशन"
+  },
+  "app_onboarding_advanced_options": {
+    "message": "उन्नत विकल्प"
+  },
+  "app_onboarding_algo_ecc_hint": {
+    "message": "आधुनिक, तेज़, छोटी कुंजियां। ज़्यादातर उपयोगों के लिए अनुशंसित।"
+  },
+  "app_onboarding_algo_rsa_hint": {
+    "message": "व्यापक रूप से संगत। कुंजी बनाने में ज़्यादा समय लगता है।"
+  },
+  "app_onboarding_algorithm_label": {
+    "message": "एल्गोरिदम"
+  },
+  "app_onboarding_comment_label": {
+    "message": "टिप्पणी"
+  },
+  "app_onboarding_comment_placeholder": {
+    "message": "जैसे: काम, निजी"
+  },
+  "app_onboarding_create_key": {
+    "message": "मेरी PGP कुंजी बनाएं"
+  },
+  "app_onboarding_create_passkey": {
+    "message": "पासकी बनाएं"
+  },
+  "app_onboarding_email_label": {
+    "message": "ईमेल"
+  },
+  "app_onboarding_email_placeholder": {
+    "message": "you@example.com"
+  },
+  "app_onboarding_expiry_label": {
+    "message": "कुंजी की समाप्ति"
+  },
+  "app_onboarding_expiry_never": {
+    "message": "कभी नहीं"
+  },
+  "app_onboarding_expiry_years_one": {
+    "message": "$count$ साल",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "app_onboarding_expiry_years_other": {
+    "message": "$count$ साल",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "app_onboarding_generate_failed": {
+    "message": "कुंजी बनाना विफल रहा"
+  },
+  "app_onboarding_generating": {
+    "message": "कुंजी बनाई जा रही है..."
+  },
+  "app_onboarding_identity_body": {
+    "message": "संदेशों को एन्क्रिप्ट, डिक्रिप्ट और हस्ताक्षरित करने के लिए एक कुंजी युग्म बनाएं।"
+  },
+  "app_onboarding_identity_title": {
+    "message": "अपनी PGP कुंजी बनाएं"
+  },
+  "app_onboarding_intro_body": {
+    "message": "ऐसे निजी संदेश भेजें जिन्हें सिर्फ़ सही व्यक्ति ही पढ़ सके, और सत्यापित करें कि संदेश वाकई उसी ने भेजे हैं जिसका दावा किया गया है।"
+  },
+  "app_onboarding_keep_defaults": {
+    "message": "डिफ़ॉल्ट ही रखें"
+  },
+  "app_onboarding_name_label": {
+    "message": "नाम *"
+  },
+  "app_onboarding_name_placeholder": {
+    "message": "आपका पूरा नाम"
+  },
+  "app_onboarding_name_required": {
+    "message": "नाम ज़रूरी है।"
+  },
+  "app_onboarding_next": {
+    "message": "आगे"
+  },
+  "app_onboarding_optional": {
+    "message": "वैकल्पिक"
+  },
+  "app_onboarding_passkey_prompt": {
+    "message": "अपने ब्राउज़र के पासकी प्रॉम्प्ट का पालन करें..."
+  },
+  "app_onboarding_preset_body": {
+    "message": "PGP Tools को आपकी कुंजियों के साथ कितनी सावधानी बरतनी चाहिए? हर विकल्प ठीक-ठीक दिखाता है कि वह क्या सेट करता है, और आप इनमें से कुछ भी बाद में सेटिंग में बदल सकते हैं।"
+  },
+  "app_onboarding_preset_title": {
+    "message": "एक सुरक्षा प्रीसेट चुनें"
+  },
+  "app_onboarding_prf_unsupported": {
+    "message": "आपका ऑथेंटिकेटर PRF का समर्थन नहीं करता। कोई दूसरी पासकी आज़माएं या इसके बजाय पासवर्ड इस्तेमाल करें।"
+  },
+  "app_onboarding_protection_body": {
+    "message": "चुनें कि अपने संपर्कों और कुंजियों को कैसे सुरक्षित रखना है। PGP Tools खोलने पर हर बार आप इसी का इस्तेमाल करेंगे।"
+  },
+  "app_onboarding_protection_title": {
+    "message": "अपना डेटा सुरक्षित करें"
+  },
+  "app_onboarding_rsa_slow": {
+    "message": "RSA कुंजियां बनने में थोड़ा समय लगता है"
+  },
+  "app_onboarding_set_password": {
+    "message": "पासवर्ड सेट करें"
+  },
+  "app_onboarding_setup_failed": {
+    "message": "सेटअप विफल रहा"
+  },
+  "app_onboarding_skip": {
+    "message": "बाद में सेट अप करें"
+  },
+  "app_onboarding_storage_question": {
+    "message": "हम आपका डेटा कहां सहेजें?"
+  },
+  "app_onboarding_unlock_with_vault": {
+    "message": "वॉल्ट के साथ कुंजियां अनलॉक करें"
+  },
+  "app_onboarding_unlock_with_vault_hint": {
+    "message": "वॉल्ट खोलने वाला पासकी प्रॉम्प्ट आपकी कुंजियां भी अनलॉक कर देता है। हर कुंजी के लिए अलग प्रॉम्प्ट नहीं आता। आप इसे सेटिंग में बदल सकते हैं।"
+  },
+  "app_onboarding_use_preset": {
+    "message": "यह प्रीसेट इस्तेमाल करें"
+  },
+  "app_oversized_files_one": {
+    "message": "$files$: फ़ाइल $limit$ से बड़ी है और पैनल में प्रोसेस नहीं की जा सकती।",
+    "placeholders": {
+      "files": {
+        "content": "$1"
+      },
+      "limit": {
+        "content": "$2"
+      }
+    }
+  },
+  "app_oversized_files_other": {
+    "message": "$files$: फ़ाइलें $limit$ से बड़ी हैं और पैनल में प्रोसेस नहीं की जा सकतीं।",
+    "placeholders": {
+      "files": {
+        "content": "$1"
+      },
+      "limit": {
+        "content": "$2"
+      }
+    }
+  },
+  "app_oversized_more": {
+    "message": "$names$ और $count$ अन्य",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      },
+      "count": {
+        "content": "$2"
+      }
+    }
+  },
+  "app_tab_main": {
+    "message": "मुख्य"
+  },
+  "app_vault_lock_retry": {
+    "message": "लॉक करके फिर से कोशिश करें"
+  },
+  "app_vault_unreadable_body": {
+    "message": "आपकी कुंजियां अब भी इस डिवाइस पर सहेजी हुई हैं। सबसे पहले लॉक करके फिर से कोशिश करें।"
+  },
+  "app_vault_unreadable_body_passkey": {
+    "message": "आपकी कुंजियां अब भी इस डिवाइस पर सहेजी हुई हैं। सबसे पहले लॉक करके फिर से कोशिश करें -- ध्यान रहे कि वही पासकी इस्तेमाल करें जो आपने सेट की थी।"
+  },
+  "app_vault_unreadable_title": {
+    "message": "आपका वॉल्ट पढ़ा नहीं जा सका।"
+  },
+  "app_welcome_body": {
+    "message": "साइड पैनल खोलने और अपनी कुंजियों का सेटअप पूरा करने के लिए नीचे क्लिक करें। इसके बाद, इसे कभी भी फिर से खोलने के लिए टूलबार में PGP Tools आइकन का इस्तेमाल करें।"
+  },
+  "app_welcome_credit_after": {
+    "message": "।"
+  },
+  "app_welcome_credit_before": {
+    "message": "एक निजता टूल, निर्माता:"
+  },
+  "app_welcome_open_failed": {
+    "message": "साइड पैनल नहीं खुल सका। अपने टूलबार में PGP Tools आइकन पर क्लिक करें।"
+  },
+  "app_welcome_opened": {
+    "message": "शुरू करने के लिए साइड पैनल में दिए गए निर्देशों का पालन करें"
+  },
+  "app_welcome_start": {
+    "message": "शुरू करने के लिए यहां क्लिक करें"
+  },
+  "app_welcome_title": {
+    "message": "PGP Tools इंस्टॉल हो गया है"
+  },
+  "common_back": {
+    "message": "वापस"
+  },
+  "common_cancel": {
+    "message": "रद्द करें"
+  },
+  "common_continue": {
+    "message": "जारी रखें"
+  },
+  "common_copied": {
+    "message": "कॉपी हो गया"
+  },
+  "common_copy": {
+    "message": "कॉपी करें"
+  },
+  "common_decrypt": {
+    "message": "डिक्रिप्ट"
+  },
+  "common_delete": {
+    "message": "मिटाएं"
+  },
+  "common_done": {
+    "message": "हो गया"
+  },
+  "common_download": {
+    "message": "डाउनलोड करें"
+  },
+  "common_encrypt": {
+    "message": "एन्क्रिप्ट"
+  },
+  "common_keys": {
+    "message": "कुंजियां"
+  },
+  "common_lock": {
+    "message": "लॉक करें"
+  },
+  "common_off": {
+    "message": "बंद"
+  },
+  "common_on": {
+    "message": "चालू"
+  },
+  "common_private_key": {
+    "message": "निजी कुंजी"
+  },
+  "common_public_key": {
+    "message": "सार्वजनिक कुंजी"
+  },
+  "common_remove": {
+    "message": "हटाएं"
+  },
+  "common_save": {
+    "message": "सहेजें"
+  },
+  "common_settings": {
+    "message": "सेटिंग"
+  },
+  "common_sign": {
+    "message": "हस्ताक्षर"
+  },
+  "common_unlock": {
+    "message": "अनलॉक करें"
+  },
+  "common_verify": {
+    "message": "सत्यापन"
   },
   "extDescription": {
     "message": "OpenPGP और GPG से ईमेल और संदेश एन्क्रिप्ट, डिक्रिप्ट, साइन और सत्यापित करें।"
+  },
+  "extName": {
+    "message": "OpenPGP और GPG ईमेल एन्क्रिप्शन - Gmail Compatible, Discord Compatible"
+  },
+  "import_action_import_contact": {
+    "message": "संपर्क आयात करें"
+  },
+  "import_action_replace_stored": {
+    "message": "सहेजी गई कुंजी बदलें"
+  },
+  "import_action_update_contact": {
+    "message": "संपर्क अपडेट करें"
+  },
+  "import_added_contacts_one": {
+    "message": "$count$ संपर्क जोड़ा गया",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_added_contacts_other": {
+    "message": "$count$ संपर्क जोड़े गए",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_as_one_contact": {
+    "message": "एक संपर्क के रूप में आयात करें"
+  },
+  "import_browse": {
+    "message": "कुंजी फ़ाइल ब्राउज़ करें"
+  },
+  "import_change_keys_added_one": {
+    "message": "$count$ कुंजी जोड़ी गई",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_keys_added_other": {
+    "message": "$count$ कुंजियां जोड़ी गईं",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_keys_removed_one": {
+    "message": "$count$ कुंजी हटाई गई",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_keys_removed_other": {
+    "message": "$count$ कुंजियां हटाई गईं",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_new_expiry": {
+    "message": "नई समाप्ति: $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_new_subkeys_one": {
+    "message": "$count$ नई उपकुंजी",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_new_subkeys_other": {
+    "message": "$count$ नई उपकुंजियां",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_new_user_ids_one": {
+    "message": "$count$ नया उपयोगकर्ता ID",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_new_user_ids_other": {
+    "message": "$count$ नए उपयोगकर्ता ID",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_change_no_expiry": {
+    "message": "अब समाप्त नहीं होती"
+  },
+  "import_change_reissued": {
+    "message": "कुंजी फिर से जारी की गई है"
+  },
+  "import_chip_crx": {
+    "message": "एक्सटेंशन कुंजी"
+  },
+  "import_chip_crx_title": {
+    "message": "Chrome एक्सटेंशन (.crx) के लिए एक RSA हस्ताक्षर कुंजी"
+  },
+  "import_chip_pgp_private_title": {
+    "message": "इसमें गुप्त कुंजी सामग्री शामिल है - आगे आप इसे सुरक्षित करेंगे"
+  },
+  "import_chip_pgp_public_title": {
+    "message": "किसी और की कुंजी - संपर्क के रूप में आयात की जाती है"
+  },
+  "import_chip_ssh_private": {
+    "message": "SSH कुंजी"
+  },
+  "import_chip_ssh_private_title": {
+    "message": "एक OpenSSH निजी कुंजी - आगे आप इसे सुरक्षित करेंगे"
+  },
+  "import_chip_ssh_public": {
+    "message": "SSH सार्वजनिक कुंजी"
+  },
+  "import_chip_ssh_public_title": {
+    "message": "किसी और की SSH कुंजी - age प्राप्तकर्ता के रूप में आयात की जाती है"
+  },
+  "import_crx_headline": {
+    "message": "Chrome एक्सटेंशन हस्ताक्षर कुंजी"
+  },
+  "import_crx_note": {
+    "message": "Chrome एक्सटेंशन (.crx) के लिए एक RSA हस्ताक्षर कुंजी। आयात करते समय इसका एक्सटेंशन ID कुंजी से ही निकाल लिया जाता है।"
+  },
+  "import_default_pgp_name": {
+    "message": "आयात की गई PGP कुंजी"
+  },
+  "import_default_ssh_name": {
+    "message": "आयात की गई SSH कुंजी"
+  },
+  "import_drop_here": {
+    "message": "कुंजी फ़ाइल यहां छोड़ें"
+  },
+  "import_dropzone_browse": {
+    "message": "फ़ाइलें ब्राउज़ करें"
+  },
+  "import_dropzone_text": {
+    "message": "सार्वजनिक कुंजियां छोड़ें, पेस्ट करें या ब्राउज़ करें"
+  },
+  "import_enter_passphrase": {
+    "message": "कुंजी का पासफ़्रेज़ डालें।"
+  },
+  "import_failed": {
+    "message": "आयात विफल रहा"
+  },
+  "import_flagged_toast_one": {
+    "message": "$count$ कुंजी कमज़ोर क्रिप्टो (SHA-1) इस्तेमाल करती है और उसे चिह्नित किया गया - संपर्क पर दी गई चेतावनी देखें।",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_flagged_toast_other": {
+    "message": "$count$ कुंजियां कमज़ोर क्रिप्टो (SHA-1) इस्तेमाल करती हैं और उन्हें चिह्नित किया गया - संपर्क पर दी गई चेतावनी देखें।",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_fetched_note": {
+    "message": "github.com/$user$.keys से प्राप्त। संदेश ऊपर दी गई हर कुंजी के लिए एन्क्रिप्ट किए जाते हैं, इसलिए उनकी कोई भी मशीन उन्हें पढ़ सकती है।",
+    "placeholders": {
+      "user": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_invalid_username": {
+    "message": "यह GitHub उपयोगकर्ता नाम नहीं है। प्रोफ़ाइल URL में दिया गया खाता नाम इस्तेमाल करें, जैसे github.com/octocat के लिए “octocat”।"
+  },
+  "import_github_no_keys": {
+    "message": "$username$ ने GitHub पर कोई SSH कुंजी प्रकाशित नहीं की है। उनसे github.com/settings/keys पर एक जोड़ने को कहें, या इसके बजाय उनकी कुंजी यहां पेस्ट करें।",
+    "placeholders": {
+      "username": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_none_usable": {
+    "message": "प्रकाशित कुंजियों में से कोई भी एन्क्रिप्शन के लिए इस्तेमाल नहीं की जा सकती।"
+  },
+  "import_github_not_found": {
+    "message": "“$username$” नाम का कोई GitHub खाता नहीं है। वर्तनी जांचें - प्रोफ़ाइल URL में दिया गया नाम ही इस्तेमाल करना है।",
+    "placeholders": {
+      "username": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_offline": {
+    "message": "github.com से संपर्क नहीं हो सका। अपना कनेक्शन जांचकर फिर से कोशिश करें।"
+  },
+  "import_github_omitted_line_one": {
+    "message": "+$count$ और प्रकाशित कुंजी",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_omitted_line_other": {
+    "message": "+$count$ और प्रकाशित कुंजियां",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_omitted_reason": {
+    "message": "यह आयात प्रति खाता अधिकतम $max$ कुंजियां लेता है, और असामान्य रूप से लंबी किसी भी कुंजी को छोड़ देता है। $username$ की $count$ प्रकाशित कुंजियां प्राप्त नहीं की गईं - ज़रूरत हो तो उसे यहां पेस्ट करें।",
+    "placeholders": {
+      "max": {
+        "content": "$1"
+      },
+      "count": {
+        "content": "$2"
+      },
+      "username": {
+        "content": "$3"
+      }
+    }
+  },
+  "import_github_rate_limited": {
+    "message": "GitHub इस नेटवर्क पर दर-सीमा लगा रहा है। सीमा IP पते के हिसाब से गिनी जाती है, इसलिए इसी कनेक्शन पर मौजूद दूसरे लोग भी इसे खर्च कर सकते हैं।"
+  },
+  "import_github_rejected_heading_one": {
+    "message": "$count$ प्रकाशित कुंजी इस्तेमाल नहीं की जा सकती",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_rejected_heading_other": {
+    "message": "$count$ प्रकाशित कुंजियां इस्तेमाल नहीं की जा सकतीं",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_github_server_error": {
+    "message": "GitHub अभी जवाब नहीं दे सका। थोड़ी देर में फिर से कोशिश करें।"
+  },
+  "import_group_help_one": {
+    "message": "इन कुंजियों का नाम एक जैसा नहीं है, इसलिए इन्हें $count$ अलग संपर्क के रूप में आयात किया जाता है। इन्हें एक व्यक्ति के रूप में साथ रखने के लिए यहां नाम दें - तब संदेश सभी $count$ कुंजियों के लिए एन्क्रिप्ट होंगे, और उनकी कोई भी मशीन उन्हें पढ़ सकेगी।",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_group_help_other": {
+    "message": "इन कुंजियों का नाम एक जैसा नहीं है, इसलिए इन्हें $count$ अलग-अलग संपर्कों के रूप में आयात किया जाता है। इन्हें एक व्यक्ति के रूप में साथ रखने के लिए यहां नाम दें - तब संदेश सभी $count$ कुंजियों के लिए एन्क्रिप्ट होंगे, और उनकी कोई भी मशीन उन्हें पढ़ सकेगी।",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_group_keys_chip_one": {
+    "message": "$count$ कुंजी",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_group_keys_chip_other": {
+    "message": "$count$ कुंजियां",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_group_keys_chip_title": {
+    "message": "संदेश इन सभी के लिए एन्क्रिप्ट किए जाते हैं; इनमें से कोई भी डिक्रिप्ट कर सकती है"
+  },
+  "import_group_label": {
+    "message": "एक संपर्क के रूप में समूहित करें"
+  },
+  "import_group_placeholder": {
+    "message": "जैसे: Alice (सभी मशीनें)"
+  },
+  "import_group_proposal_label_one": {
+    "message": "$count$ SSH कुंजी",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_group_proposal_label_other": {
+    "message": "$count$ SSH कुंजियां",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_importing": {
+    "message": "आयात किया जा रहा है..."
+  },
+  "import_keyserver_invalid_query": {
+    "message": "यह न तो ईमेल पता है और न ही कुंजी फ़िंगरप्रिंट। वह पता इस्तेमाल करें जिसके तहत कुंजी प्रकाशित है, या पूरा 40-वर्ण वाला फ़िंगरप्रिंट पेस्ट करें।"
+  },
+  "import_keyserver_multiple_keys": {
+    "message": "$host$ ने इस खोज के लिए एक से ज़्यादा कुंजियां लौटाईं। सिर्फ़ पहली दिखाई गई है - आयात करने से पहले फ़िंगरप्रिंट जांच लें।",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_keyserver_not_a_key": {
+    "message": "$host$ ने जवाब दिया, लेकिन जो भेजा गया वह ऐसी कुंजी नहीं है जिसे हम पढ़ सकें।",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_keyserver_not_found_email": {
+    "message": "$host$ पर $subject$ के लिए कोई कुंजी नहीं है। यह किसी पते को तभी प्रकाशित करता है जब कुंजी के मालिक ने उसकी पुष्टि कर दी हो, इसलिए हो सकता है कि वहां उनकी कुंजी हो, पर यह खोज उसे न ढूंढ पाए - उनसे सीधे कुंजी मांगें, या फ़िंगरप्रिंट से खोजें।",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "subject": {
+        "content": "$2"
+      }
+    }
+  },
+  "import_keyserver_not_found_fingerprint": {
+    "message": "$host$ पर $subject$ फ़िंगरप्रिंट वाली कोई कुंजी नहीं है। इसे उस फ़िंगरप्रिंट से मिलाएं जो आपको दिया गया था - एक भी गलत वर्ण काफ़ी है।",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "subject": {
+        "content": "$2"
+      }
+    }
+  },
+  "import_keyserver_offline": {
+    "message": "$host$ से संपर्क नहीं हो सका। अपना कनेक्शन जांचकर फिर से कोशिश करें।",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_keyserver_rate_limited": {
+    "message": "$host$ इस नेटवर्क पर दर-सीमा लगा रहा है।",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_keyserver_server_error": {
+    "message": "$host$ अभी जवाब नहीं दे सका। थोड़ी देर में फिर से कोशिश करें।",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_label_field": {
+    "message": "लेबल"
+  },
+  "import_label_placeholder": {
+    "message": "जैसे: मेरा एक्सटेंशन"
+  },
+  "import_lookup_button": {
+    "message": "खोजें"
+  },
+  "import_lookup_failed": {
+    "message": "खोज विफल रही"
+  },
+  "import_lookup_invalid": {
+    "message": "यह न तो GitHub उपयोगकर्ता नाम है, न ईमेल पता और न ही कुंजी फ़िंगरप्रिंट। “octocat”, “alice@example.com”, या पूरा 40-वर्ण वाला फ़िंगरप्रिंट आज़माएं।"
+  },
+  "import_lookup_label": {
+    "message": "या किसी को खोजें"
+  },
+  "import_lookup_placeholder": {
+    "message": "GitHub उपयोगकर्ता नाम, ईमेल या फ़िंगरप्रिंट"
+  },
+  "import_n_contacts_one": {
+    "message": "$count$ संपर्क आयात करें",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_n_contacts_other": {
+    "message": "$count$ संपर्क आयात करें",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_no_key": {
+    "message": "आयात करने के लिए कोई कुंजी नहीं।"
+  },
+  "import_optional": {
+    "message": "वैकल्पिक"
+  },
+  "import_panel_aria_with_id": {
+    "message": "$keyid$ आयात करें",
+    "placeholders": {
+      "keyid": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_passphrase_label": {
+    "message": "यह कुंजी पासफ़्रेज़ से सुरक्षित है"
+  },
+  "import_passphrase_placeholder": {
+    "message": "कुंजी का पासफ़्रेज़"
+  },
+  "import_paste_hint": {
+    "message": "पूरा कुंजी ब्लॉक पेस्ट करें - कुंजी टाइप करने के लिए बहुत लंबी होती है।"
+  },
+  "import_paste_label": {
+    "message": "कुंजी पेस्ट करें"
+  },
+  "import_paste_placeholder": {
+    "message": "$shortcut$ से कुंजी पेस्ट करें",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_private_unreadable": {
+    "message": "वह निजी कुंजी पढ़ी नहीं जा सकी।"
+  },
+  "import_reading": {
+    "message": "कुंजी पढ़ी जा रही है..."
+  },
+  "import_reject_expired": {
+    "message": "इस कुंजी की अवधि $date$ को समाप्त हो गई। मालिक से उनकी मौजूदा कुंजी मांगें।",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_reject_no_public_key": {
+    "message": "इस ब्लॉक में कोई उपयोगी सार्वजनिक कुंजी नहीं है।"
+  },
+  "import_reject_ssh_generic": {
+    "message": "यह SSH कुंजी एन्क्रिप्शन के लिए इस्तेमाल नहीं की जा सकती।"
+  },
+  "import_reject_unusable": {
+    "message": "इस सार्वजनिक कुंजी में एन्क्रिप्शन या हस्ताक्षर के लिए कोई उपयोगी कुंजी नहीं है।"
+  },
+  "import_rejected_generic": {
+    "message": "यह कुंजी आयात नहीं की जा सकती।"
+  },
+  "import_retry_hours_one": {
+    "message": "लगभग $count$ घंटे में फिर से कोशिश करें।",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_retry_hours_other": {
+    "message": "लगभग $count$ घंटे में फिर से कोशिश करें।",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_retry_minute": {
+    "message": "एक मिनट में फिर से कोशिश करें।"
+  },
+  "import_retry_minutes_one": {
+    "message": "लगभग $count$ मिनट में फिर से कोशिश करें।",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_retry_minutes_other": {
+    "message": "लगभग $count$ मिनट में फिर से कोशिश करें।",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_reveal": {
+    "message": "इसे अपनी कुंजियों में दिखाएं"
+  },
+  "import_source_help": {
+    "message": "सार्वजनिक कुंजियां संपर्क के रूप में जोड़ी जाती हैं। निजी कुंजी इसी डिवाइस पर रहती है - आगे आप चुनेंगे कि उसे कैसे सुरक्षित रखना है।"
+  },
+  "import_ssh_headline": {
+    "message": "SSH कुंजी"
+  },
+  "import_ssh_private_headline": {
+    "message": "SSH निजी कुंजी"
+  },
+  "import_ssh_private_note": {
+    "message": "एक OpenSSH निजी कुंजी, जो age के साथ इस्तेमाल होती है। आयात करते समय इसका फ़िंगरप्रिंट कुंजी से ही पढ़ लिया जाता है। यह हस्ताक्षर नहीं कर सकती - age में हस्ताक्षर नहीं होते - और इसे बिना एन्क्रिप्शन के निर्यात नहीं किया जा सकता।"
+  },
+  "import_status_added_on": {
+    "message": "$date$ को जोड़ी गई।",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_status_duplicate": {
+    "message": "पहले से आपकी कुंजियों में है"
+  },
+  "import_status_duplicate_added": {
+    "message": "आपने इसे $date$ को जोड़ा था, और इसमें कुछ भी नहीं बदला है।",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_status_update": {
+    "message": "आपके पास मौजूद कुंजी को अपडेट करती है"
+  },
+  "import_submit": {
+    "message": "आयात करें"
+  },
+  "import_title": {
+    "message": "कुंजी आयात करें"
+  },
+  "import_title_update": {
+    "message": "कुंजी अपडेट करें"
+  },
+  "import_unknown_name": {
+    "message": "अज्ञात"
+  },
+  "import_unreadable": {
+    "message": "यह ऐसी कुंजी नहीं लगती जिसे हम पढ़ सकें। कोई आर्मर्ड PGP कुंजी ब्लॉक या SSH सार्वजनिक कुंजी की पंक्ति पेस्ट करें, या कुंजी फ़ाइल ब्राउज़ करें।"
+  },
+  "import_updated_contacts_one": {
+    "message": "$count$ संपर्क अपडेट किया गया",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_updated_contacts_other": {
+    "message": "$count$ संपर्क अपडेट किए गए",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_worker_unreachable": {
+    "message": "एक्सटेंशन के बैकग्राउंड वर्कर से संपर्क नहीं हो सका।"
+  },
+  "keygen_advanced_options": {
+    "message": "उन्नत विकल्प"
+  },
+  "keygen_algorithm_hint_ecc": {
+    "message": "आधुनिक, तेज़, छोटी कुंजियां। ज़्यादातर उपयोगों के लिए अनुशंसित।"
+  },
+  "keygen_algorithm_hint_rsa": {
+    "message": "व्यापक रूप से संगत। कुंजी बनाने में ज़्यादा समय लगता है।"
+  },
+  "keygen_algorithm_label": {
+    "message": "एल्गोरिदम"
+  },
+  "keygen_comment_label": {
+    "message": "टिप्पणी"
+  },
+  "keygen_comment_placeholder": {
+    "message": "जैसे: काम, निजी"
+  },
+  "keygen_confirm_passphrase_placeholder": {
+    "message": "पासफ़्रेज़ की पुष्टि करें"
+  },
+  "keygen_confirm_password": {
+    "message": "पासवर्ड की पुष्टि करें"
+  },
+  "keygen_confirm_word": {
+    "message": "EXPORT"
+  },
+  "keygen_copied_encrypted": {
+    "message": "एन्क्रिप्टेड कुंजी कॉपी हो गई (60 सेकंड में साफ़ होगी)"
+  },
+  "keygen_copied_plaintext": {
+    "message": "असुरक्षित कुंजी कॉपी हो गई (30 सेकंड में साफ़ होगी)"
+  },
+  "keygen_create_heading": {
+    "message": "नई कुंजी बनाएं"
+  },
+  "keygen_create_subtitle_crx": {
+    "message": "Chrome एक्सटेंशन (.crx) पैकेज करने के लिए एक नई RSA-2048 हस्ताक्षर कुंजी।"
+  },
+  "keygen_create_subtitle_pgp": {
+    "message": "संदेशों को एन्क्रिप्ट, डिक्रिप्ट और हस्ताक्षरित करने के लिए एक नया OpenPGP कुंजी युग्म।"
+  },
+  "keygen_email_label": {
+    "message": "ईमेल"
+  },
+  "keygen_email_placeholder": {
+    "message": "you@example.com"
+  },
+  "keygen_encrypting": {
+    "message": "एन्क्रिप्ट किया जा रहा है..."
+  },
+  "keygen_error_expiry_past": {
+    "message": "समाप्ति तारीख भविष्य में होनी चाहिए।"
+  },
+  "keygen_error_expiry_required": {
+    "message": "समाप्ति तारीख चुनें।"
+  },
+  "keygen_error_generation_failed": {
+    "message": "कुंजी बनाना विफल रहा"
+  },
+  "keygen_error_key_not_unlocked": {
+    "message": "कुंजी अनलॉक नहीं है।"
+  },
+  "keygen_error_name_required": {
+    "message": "नाम ज़रूरी है।"
+  },
+  "keygen_error_passkey_failed": {
+    "message": "पासकी प्रमाणीकरण विफल रहा।"
+  },
+  "keygen_error_passphrase_mismatch": {
+    "message": "पासफ़्रेज़ मेल नहीं खाते।"
+  },
+  "keygen_error_passphrase_short": {
+    "message": "पासफ़्रेज़ कम से कम 8 वर्णों का होना चाहिए।"
+  },
+  "keygen_error_password_mismatch": {
+    "message": "पासवर्ड मेल नहीं खाते।"
+  },
+  "keygen_error_password_short": {
+    "message": "पासवर्ड कम से कम 8 वर्णों का होना चाहिए।"
+  },
+  "keygen_error_prf_unsupported_authenticator": {
+    "message": "आपका ऑथेंटिकेटर PRF का समर्थन नहीं करता। कोई दूसरी पासकी आज़माएं या इसके बजाय पासवर्ड इस्तेमाल करें।"
+  },
+  "keygen_error_wrong_password": {
+    "message": "पासवर्ड गलत है।"
+  },
+  "keygen_expires_on": {
+    "message": "$date$ को समाप्त होगी",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_expiry_1y": {
+    "message": "1 साल"
+  },
+  "keygen_expiry_2y": {
+    "message": "2 साल"
+  },
+  "keygen_expiry_3y": {
+    "message": "3 साल"
+  },
+  "keygen_expiry_custom": {
+    "message": "कस्टम तारीख"
+  },
+  "keygen_expiry_heading": {
+    "message": "समाप्ति तारीख चुनें"
+  },
+  "keygen_expiry_label": {
+    "message": "कुंजी की समाप्ति"
+  },
+  "keygen_expiry_never": {
+    "message": "कभी नहीं"
+  },
+  "keygen_expiry_subtitle": {
+    "message": "इस तारीख के बाद कुंजी इस्तेमाल नहीं की जा सकेगी; आप कभी भी नई कुंजी बना सकते हैं।"
+  },
+  "keygen_export": {
+    "message": "निर्यात करें"
+  },
+  "keygen_export_contacts_included_one": {
+    "message": "$count$ संपर्क भी शामिल किया जाएगा (सार्वजनिक कुंजियां, अनलॉक की ज़रूरत नहीं)।",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_contacts_included_other": {
+    "message": "$count$ संपर्क भी शामिल किए जाएंगे (सार्वजनिक कुंजियां, अनलॉक की ज़रूरत नहीं)।",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_crx_included_one": {
+    "message": "साथ ही $count$ CRX हस्ताक्षर कुंजी, जो इसी पासफ़्रेज़ से फिर से एन्क्रिप्ट की गई है ताकि किसी भी डिवाइस पर बहाल की जा सके।",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_crx_included_other": {
+    "message": "साथ ही $count$ CRX हस्ताक्षर कुंजियां, जो इसी पासफ़्रेज़ से फिर से एन्क्रिप्ट की गई हैं ताकि किसी भी डिवाइस पर बहाल की जा सकें।",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_failed": {
+    "message": "निर्यात विफल रहा।"
+  },
+  "keygen_export_failed_detail": {
+    "message": "निर्यात विफल रहा: $message$",
+    "placeholders": {
+      "message": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_go_back_unlock": {
+    "message": "अनलॉक करने के लिए वापस जाएं"
+  },
+  "keygen_export_nothing": {
+    "message": "निर्यात करने के लिए कुछ नहीं"
+  },
+  "keygen_export_passphrase_intro": {
+    "message": "निर्यात की गई निजी कुंजियों को एन्क्रिप्ट करने के लिए एक पासफ़्रेज़ सेट करें (OpenPGP S2K -- GnuPG और अन्य टूल में आयात किया जा सकता है)। जिसके पास यह पासफ़्रेज़ और फ़ाइल हो, वह आपके संदेश डिक्रिप्ट कर सकता है और आपके नाम से हस्ताक्षर कर सकता है।"
+  },
+  "keygen_export_plaintext_crx_left_out": {
+    "message": "सादे टेक्स्ट वाले निर्यात में CRX हस्ताक्षर कुंजियां शामिल नहीं की जातीं -- उन्हें शामिल करने के लिए पासफ़्रेज़ इस्तेमाल करें।"
+  },
+  "keygen_export_plaintext_warning_file": {
+    "message": "सादे टेक्स्ट में निर्यात। जो कोई भी डाउनलोड की गई फ़ाइल पढ़ लेगा, उसे इसमें मौजूद हर PGP कुंजी पर पूरा नियंत्रण मिल जाएगा।"
+  },
+  "keygen_export_skip_locked": {
+    "message": "लॉक कुंजियां छोड़कर जारी रखें"
+  },
+  "keygen_export_still_locked_after": {
+    "message": "।"
+  },
+  "keygen_export_still_locked_one": {
+    "message": "$count$ कुंजी अब भी लॉक है और छोड़ दी जाएगी।",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_still_locked_other": {
+    "message": "$count$ कुंजियां अब भी लॉक हैं और छोड़ दी जाएंगी।",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_summary": {
+    "message": "एक $ext$ फ़ाइल डाउनलोड होती है (मानक ASCII-आर्मर्ड OpenPGP): आपकी $private_keys$ $private_block$ के रूप में और आपके $contacts$ $public_block$ के रूप में।",
+    "placeholders": {
+      "ext": {
+        "content": "$1"
+      },
+      "private_keys": {
+        "content": "$2"
+      },
+      "private_block": {
+        "content": "$3"
+      },
+      "contacts": {
+        "content": "$4"
+      },
+      "public_block": {
+        "content": "$5"
+      }
+    }
+  },
+  "keygen_export_summary_contacts_one": {
+    "message": "$count$ संपर्क",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_summary_contacts_other": {
+    "message": "$count$ संपर्क",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_summary_private_keys_one": {
+    "message": "$count$ अनलॉक निजी कुंजी",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_summary_private_keys_other": {
+    "message": "$count$ अनलॉक निजी कुंजियां",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_title": {
+    "message": "कुंजियां निर्यात करें"
+  },
+  "keygen_export_toast_exported_one": {
+    "message": "$count$ कुंजी निर्यात की गई",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_toast_exported_other": {
+    "message": "$count$ कुंजियां निर्यात की गईं",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_toast_exported_unsafe_one": {
+    "message": "$count$ कुंजी निर्यात की गई (निजी कुंजियां बिना एन्क्रिप्शन के)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_toast_exported_unsafe_other": {
+    "message": "$count$ कुंजियां निर्यात की गईं (निजी कुंजियां बिना एन्क्रिप्शन के)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keygen_export_unlock_intro": {
+    "message": "निजी कुंजी निर्यात करने के लिए पहले उसे अनलॉक करना ज़रूरी है। बैकअप में शामिल करने के लिए नीचे दी गई कुंजियां अनलॉक करें।"
+  },
+  "keygen_export_with_passphrase": {
+    "message": "पासफ़्रेज़ के साथ निर्यात करें"
+  },
+  "keygen_export_without_passphrase": {
+    "message": "बिना पासफ़्रेज़ के निर्यात करें (असुरक्षित)"
+  },
+  "keygen_exporter_crx_encrypted_blurb": {
+    "message": "कॉपी की गई कुंजी को एन्क्रिप्ट करने के लिए एक पासफ़्रेज़ सेट करें (इसे 'कुंजियां आयात करें' के ज़रिए PGP Tools में फिर से आयात किया जा सकता है)। जिसके पास यह पासफ़्रेज़ और कॉपी किया गया ब्लॉक हो, वह आपके नाम से एक्सटेंशन पर हस्ताक्षर कर सकता है।"
+  },
+  "keygen_exporter_crx_encrypted_button": {
+    "message": "पासफ़्रेज़ के साथ कॉपी करें"
+  },
+  "keygen_exporter_crx_plaintext_blurb": {
+    "message": "सादे टेक्स्ट में निर्यात (रॉ PKCS#8 PEM)। जो कोई भी आपका क्लिपबोर्ड पढ़ लेगा, उसे इस हस्ताक्षर कुंजी पर पूरा नियंत्रण मिल जाएगा।"
+  },
+  "keygen_exporter_crx_plaintext_button": {
+    "message": "बिना पासफ़्रेज़ के कॉपी करें (असुरक्षित)"
+  },
+  "keygen_exporter_crx_title": {
+    "message": "CRX निजी कुंजी कॉपी करें"
+  },
+  "keygen_exporter_crx_unlock_passkey": {
+    "message": "कॉपी करने के लिए इस हस्ताक्षर कुंजी को अनलॉक करें। अपनी पासकी से प्रमाणित करें।"
+  },
+  "keygen_exporter_crx_unlock_password": {
+    "message": "कॉपी करने के लिए इस हस्ताक्षर कुंजी को अनलॉक करें। कुंजी का पासवर्ड डालें।"
+  },
+  "keygen_exporter_pgp_encrypted_blurb": {
+    "message": "निर्यात की गई कुंजी को एन्क्रिप्ट करने के लिए एक पासफ़्रेज़ सेट करें। जिसके पास यह पासफ़्रेज़ और निर्यात की गई कुंजी हो, वह आपके संदेश डिक्रिप्ट कर सकता है और आपके नाम से हस्ताक्षर कर सकता है।"
+  },
+  "keygen_exporter_pgp_plaintext_blurb": {
+    "message": "सादे टेक्स्ट में निर्यात। जो कोई भी आपका क्लिपबोर्ड पढ़ लेगा, उसे इस कुंजी पर पूरा नियंत्रण मिल जाएगा।"
+  },
+  "keygen_exporter_pgp_title": {
+    "message": "निजी कुंजी निर्यात करें"
+  },
+  "keygen_exporting": {
+    "message": "निर्यात किया जा रहा है..."
+  },
+  "keygen_generating_key": {
+    "message": "कुंजी बनाई जा रही है..."
+  },
+  "keygen_generating_passkey": {
+    "message": "अपने ब्राउज़र के पासकी प्रॉम्प्ट का पालन करें..."
+  },
+  "keygen_generating_rsa_hint": {
+    "message": "RSA कुंजियां बनने में थोड़ा समय लगता है"
+  },
+  "keygen_key_password_placeholder": {
+    "message": "कुंजी का पासवर्ड"
+  },
+  "keygen_key_size_4096": {
+    "message": "4096 बिट"
+  },
+  "keygen_key_size_label": {
+    "message": "कुंजी का आकार"
+  },
+  "keygen_label_label": {
+    "message": "लेबल"
+  },
+  "keygen_label_placeholder": {
+    "message": "जैसे: मेरा एक्सटेंशन"
+  },
+  "keygen_name_label": {
+    "message": "नाम *"
+  },
+  "keygen_name_placeholder": {
+    "message": "आपका पूरा नाम"
+  },
+  "keygen_next": {
+    "message": "आगे"
+  },
+  "keygen_optional": {
+    "message": "वैकल्पिक"
+  },
+  "keygen_passkey_default_user": {
+    "message": "PGP कुंजी सुरक्षा"
+  },
+  "keygen_passkey_imported_user": {
+    "message": "आयात की गई PGP कुंजी"
+  },
+  "keygen_passphrase_placeholder": {
+    "message": "पासफ़्रेज़ (कम से कम 8 वर्ण)"
+  },
+  "keygen_password_placeholder": {
+    "message": "पासवर्ड (कम से कम 8 वर्ण)"
+  },
+  "keygen_prf_unsupported_chrome": {
+    "message": "हो सकता है कि Chrome प्रोफ़ाइल की पासकी PRF का समर्थन न करे - Google Password Manager या कोई बाहरी कुंजी आज़माएं।"
+  },
+  "keygen_prf_unsupported_intro": {
+    "message": "यह ऑथेंटिकेटर PRF का समर्थन नहीं करता।"
+  },
+  "keygen_prf_unsupported_mac": {
+    "message": "macOS पर 15 या नया संस्करण और iCloud Keychain ज़रूरी है।"
+  },
+  "keygen_prf_unsupported_windows": {
+    "message": "Windows Hello PRF का समर्थन नहीं करता - कोई सुरक्षा कुंजी (जैसे YubiKey) इस्तेमाल करें।"
+  },
+  "keygen_protect_heading": {
+    "message": "अपनी कुंजी सुरक्षित करें"
+  },
+  "keygen_protect_subtitle": {
+    "message": "चुनें कि इस कुंजी को इस्तेमाल करते समय इसे कैसे अनलॉक करना है।"
+  },
+  "keygen_protection_intro": {
+    "message": "चुनें कि अपनी निजी कुंजी को कैसे सुरक्षित रखना है:"
+  },
+  "keygen_protection_passkey": {
+    "message": "पासकी"
+  },
+  "keygen_protection_passkey_desc": {
+    "message": "अपने फ़िंगरप्रिंट, चेहरे या सुरक्षा कुंजी का इस्तेमाल करें। कोई पासवर्ड याद रखने की ज़रूरत नहीं।"
+  },
+  "keygen_protection_passkey_unavailable": {
+    "message": "इस ब्राउज़र में उपलब्ध नहीं।"
+  },
+  "keygen_protection_password": {
+    "message": "पासवर्ड"
+  },
+  "keygen_protection_password_desc": {
+    "message": "पासवर्ड से सुरक्षित करें। हर बार अनलॉक करते समय आपको इसे डालना होगा।"
+  },
+  "keygen_protection_recommended": {
+    "message": "अनुशंसित"
+  },
+  "keygen_protection_reuse_passkey": {
+    "message": "वही पासकी इस्तेमाल करें जो मैंने पहले से सेट की है"
+  },
+  "keygen_submit_create_passkey": {
+    "message": "पासकी बनाएं"
+  },
+  "keygen_submit_generate": {
+    "message": "बनाएं"
+  },
+  "keygen_submit_use_passkey": {
+    "message": "पासकी इस्तेमाल करें"
+  },
+  "keygen_title": {
+    "message": "कुंजी बनाएं"
+  },
+  "keygen_type_crx": {
+    "message": "Chrome एक्सटेंशन (CRX)"
+  },
+  "keygen_type_pgp": {
+    "message": "संदेश कुंजी (PGP)"
+  },
+  "keygen_type_to_confirm_after": {
+    "message": "टाइप करें:"
+  },
+  "keygen_type_to_confirm_before": {
+    "message": "पुष्टि के लिए"
+  },
+  "keygen_unlock_gate_passkey": {
+    "message": "इस कुंजी को कॉपी करने के लिए अपनी पासकी से प्रमाणित करें।"
+  },
+  "keygen_unlock_gate_password": {
+    "message": "इस कुंजी को कॉपी करने के लिए कुंजी का पासवर्ड डालें।"
+  },
+  "keygen_unlocking": {
+    "message": "अनलॉक किया जा रहा है..."
+  },
+  "keys_also_known_as": {
+    "message": "अन्य पहचान"
+  },
+  "keys_banner_encrypt_only_contact": {
+    "message": "आप इसके लिए एन्क्रिप्ट कर सकते हैं, लेकिन यह हस्ताक्षर नहीं कर सकती।"
+  },
+  "keys_banner_encrypt_only_own": {
+    "message": "आप एन्क्रिप्टेड संदेश प्राप्त कर सकते हैं, लेकिन यह कुंजी हस्ताक्षर नहीं कर सकती।"
+  },
+  "keys_banner_expired_contact": {
+    "message": "मालिक से अपडेट की गई कुंजी मांगें।"
+  },
+  "keys_banner_expired_on": {
+    "message": "यह $date$ से मान्य नहीं रही।",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_banner_expired_own": {
+    "message": "कोई नई कुंजी बनाएं या आयात करें।"
+  },
+  "keys_banner_expired_title": {
+    "message": "इस कुंजी की अवधि $when$ समाप्त हो गई",
+    "placeholders": {
+      "when": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_banner_expires_soon": {
+    "message": "यह कुंजी जल्द ही समाप्त हो रही है"
+  },
+  "keys_banner_no_reason": {
+    "message": "कोई कारण नहीं दिया गया।"
+  },
+  "keys_banner_revoked_contact": {
+    "message": "इसके लिए एन्क्रिप्ट न करें और इसके नए हस्ताक्षरों पर भरोसा न करें।"
+  },
+  "keys_banner_revoked_own": {
+    "message": "इसकी जगह नई कुंजी बनाएं या आयात करें।"
+  },
+  "keys_banner_revoked_title": {
+    "message": "यह कुंजी निरस्त कर दी गई है"
+  },
+  "keys_banner_sign_only_contact": {
+    "message": "आप इसके हस्ताक्षर सत्यापित कर सकते हैं, लेकिन इसके लिए एन्क्रिप्ट नहीं कर सकते।"
+  },
+  "keys_banner_sign_only_own": {
+    "message": "आप संदेशों पर हस्ताक्षर कर सकते हैं, लेकिन यह कुंजी एन्क्रिप्टेड संदेश प्राप्त नहीं कर सकती।"
+  },
+  "keys_banner_unusable_body": {
+    "message": "इसमें एन्क्रिप्शन या हस्ताक्षर के लिए कोई उपयोगी उपकुंजी नहीं है।"
+  },
+  "keys_banner_unusable_title": {
+    "message": "यह कुंजी इस्तेमाल नहीं की जा सकती"
+  },
+  "keys_bits": {
+    "message": "$bits$-बिट",
+    "placeholders": {
+      "bits": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_bulk_delete_confirm_one": {
+    "message": "$count$ आइटम हमेशा के लिए मिटाएं",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_bulk_delete_confirm_other": {
+    "message": "$count$ आइटम हमेशा के लिए मिटाएं",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_bulk_delete_contacts_body": {
+    "message": "आप अब इन संपर्कों के लिए एन्क्रिप्ट नहीं कर पाएंगे या इनके हस्ताक्षर सत्यापित नहीं कर पाएंगे। आप इनकी सार्वजनिक कुंजियां बाद में फिर से आयात कर सकते हैं।"
+  },
+  "keys_bulk_delete_private_body": {
+    "message": "इससे चुनी गई निजी कुंजियां इस डिवाइस से हमेशा के लिए मिट जाती हैं। जो कुछ भी सिर्फ़ मिटाई गई कुंजी के लिए एन्क्रिप्ट किया गया है, वह कभी वापस नहीं पाया जा सकेगा। अगर आपको इनकी कभी ज़रूरत पड़ सकती है, तो पक्का करें कि आपके पास बैकअप है।"
+  },
+  "keys_bulk_delete_prompt_one": {
+    "message": "delete $count$ key",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_bulk_delete_prompt_other": {
+    "message": "delete $count$ keys",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_bulk_delete_title": {
+    "message": "चुने गए आइटम मिटाएं?"
+  },
+  "keys_cancel_selection_aria": {
+    "message": "चयन रद्द करें"
+  },
+  "keys_cap_auth": {
+    "message": "प्रमाणीकरण करती है (जैसे SSH)"
+  },
+  "keys_cap_certify": {
+    "message": "पहचानों को प्रमाणित करती है"
+  },
+  "keys_cap_encrypt": {
+    "message": "एन्क्रिप्टेड संदेश प्राप्त करती है"
+  },
+  "keys_cap_sign": {
+    "message": "संदेशों पर हस्ताक्षर करती है"
+  },
+  "keys_chip_contact": {
+    "message": "संपर्क"
+  },
+  "keys_chip_contact_title": {
+    "message": "इनकी सार्वजनिक कुंजी आपके पास है"
+  },
+  "keys_chip_protection_title": {
+    "message": "निजी कुंजी स्टोरेज में कैसे सुरक्षित है"
+  },
+  "keys_chip_your_key": {
+    "message": "आपकी कुंजी"
+  },
+  "keys_chip_your_key_title": {
+    "message": "निजी कुंजी आपके पास है"
+  },
+  "keys_confirm_delete_key_title": {
+    "message": "कुंजी मिटाएं?"
+  },
+  "keys_confirm_remove_contact_title": {
+    "message": "संपर्क हटाएं?"
+  },
+  "keys_contact_expired": {
+    "message": "$date$ को समाप्त",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_contact_expired_title": {
+    "message": "इस कुंजी की अवधि $date$ को समाप्त हो गई और अब इसके लिए एन्क्रिप्ट नहीं किया जा सकता। मालिक से उनकी मौजूदा कुंजी मांगें।",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_contact_expires": {
+    "message": "$date$ को समाप्त होगी",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_contact_keys_all_title": {
+    "message": "संदेश इस संपर्क की सभी कुंजियों के लिए एन्क्रिप्ट किए जाते हैं; इनमें से कोई भी डिक्रिप्ट कर सकती है।"
+  },
+  "keys_contact_keys_count_one": {
+    "message": "$count$ कुंजी",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_contact_keys_count_other": {
+    "message": "$count$ कुंजियां",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_contact_keys_partial": {
+    "message": "$total$ में से $active$ कुंजियां",
+    "placeholders": {
+      "active": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_contact_keys_partial_title": {
+    "message": "संदेश इस संपर्क की $total$ में से $active$ कुंजियों के लिए एन्क्रिप्ट किए जाते हैं; बाकी इसकी कुंजी के विवरण में बंद की गई हैं।",
+    "placeholders": {
+      "active": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_contact_options_aria": {
+    "message": "संपर्क के विकल्प"
+  },
+  "keys_contacts_heading": {
+    "message": "संपर्क"
+  },
+  "keys_contacts_heading_count": {
+    "message": "संपर्क ($count$)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_contacts_heading_encrypted": {
+    "message": "संपर्क (एन्क्रिप्टेड)"
+  },
+  "keys_contacts_locked": {
+    "message": "संपर्क एन्क्रिप्टेड हैं। इन्हें देखने और प्रबंधित करने के लिए PGP Tools अनलॉक करें।"
+  },
+  "keys_contacts_removed_one": {
+    "message": "संपर्क हटाया गया"
+  },
+  "keys_contacts_removed_other": {
+    "message": "$count$ संपर्क हटाए गए",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_copy_fingerprint_aria": {
+    "message": "फ़िंगरप्रिंट कॉपी करें"
+  },
+  "keys_copy_private_key": {
+    "message": "निजी कुंजी कॉपी करें"
+  },
+  "keys_copy_public_key": {
+    "message": "सार्वजनिक कुंजी कॉपी करें"
+  },
+  "keys_count_contacts_one": {
+    "message": "$count$ संपर्क",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_count_contacts_other": {
+    "message": "$count$ संपर्क",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_count_private_keys_one": {
+    "message": "$count$ निजी कुंजी",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_count_private_keys_other": {
+    "message": "$count$ निजी कुंजियां",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_count_signing_keys_one": {
+    "message": "$count$ हस्ताक्षर कुंजी",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_count_signing_keys_other": {
+    "message": "$count$ हस्ताक्षर कुंजियां",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_default_badge": {
+    "message": "डिफ़ॉल्ट"
+  },
+  "keys_default_removed": {
+    "message": "डिफ़ॉल्ट कुंजी हटाई गई"
+  },
+  "keys_default_set": {
+    "message": "डिफ़ॉल्ट कुंजी सेट की गई"
+  },
+  "keys_default_title": {
+    "message": "हस्ताक्षर, डिक्रिप्ट और खुद के लिए एन्क्रिप्ट करने में डिफ़ॉल्ट रूप से इस्तेमाल होती है"
+  },
+  "keys_delete_crx_body": {
+    "message": "आप अब इस एक्सटेंशन के अपडेट पर हस्ताक्षर नहीं कर पाएंगे, और बैकअप न होने पर कुंजी वापस नहीं पाई जा सकती।"
+  },
+  "keys_delete_key": {
+    "message": "कुंजी मिटाएं"
+  },
+  "keys_delete_key_body": {
+    "message": "इससे निजी कुंजी इस डिवाइस से हमेशा के लिए मिट जाती है। जो कुछ भी सिर्फ़ इस कुंजी के लिए एन्क्रिप्ट किया गया है, वह कभी वापस नहीं पाया जा सकेगा। अगर आपको इसकी कभी ज़रूरत पड़ सकती है, तो पक्का करें कि आपके पास बैकअप है।"
+  },
+  "keys_delete_key_permanently": {
+    "message": "कुंजी हमेशा के लिए मिटाएं"
+  },
+  "keys_deselect_all": {
+    "message": "सभी का चयन हटाएं"
+  },
+  "keys_details_aria": {
+    "message": "$name$ की कुंजी का विवरण",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_download_public_key": {
+    "message": "सार्वजनिक कुंजी डाउनलोड करें"
+  },
+  "keys_empty": {
+    "message": "अभी कोई कुंजी नहीं। शुरू करने के लिए कोई कुंजी बनाएं या आयात करें।"
+  },
+  "keys_encrypt_to": {
+    "message": "इसके लिए एन्क्रिप्ट करें"
+  },
+  "keys_enter_password_placeholder": {
+    "message": "पासवर्ड डालें"
+  },
+  "keys_expires_value": {
+    "message": "$date$ ($when$)",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      },
+      "when": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_export": {
+    "message": "निर्यात करें"
+  },
+  "keys_exported_one": {
+    "message": "$count$ कुंजी निर्यात की गई",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_exported_other": {
+    "message": "$count$ कुंजियां निर्यात की गईं",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_exported_unsafe_one": {
+    "message": "$count$ कुंजी निर्यात की गई (निजी कुंजियां बिना एन्क्रिप्शन के)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_exported_unsafe_other": {
+    "message": "$count$ कुंजियां निर्यात की गईं (निजी कुंजियां बिना एन्क्रिप्शन के)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_fact_added": {
+    "message": "जोड़ी गई"
+  },
+  "keys_fact_algorithm": {
+    "message": "एल्गोरिदम"
+  },
+  "keys_fact_created": {
+    "message": "बनी"
+  },
+  "keys_fact_expires": {
+    "message": "समाप्ति"
+  },
+  "keys_fact_fingerprint": {
+    "message": "फ़िंगरप्रिंट"
+  },
+  "keys_fact_last_used": {
+    "message": "अंतिम उपयोग"
+  },
+  "keys_fact_used_for": {
+    "message": "उपयोग"
+  },
+  "keys_generate_button": {
+    "message": "कुंजी बनाएं"
+  },
+  "keys_group_row_label": {
+    "message": "कुंजी"
+  },
+  "keys_import_button": {
+    "message": "कुंजी आयात करें"
+  },
+  "keys_inactive_subkeys_expired_one": {
+    "message": "$count$ समाप्त उपकुंजी",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_inactive_subkeys_expired_other": {
+    "message": "$count$ समाप्त उपकुंजियां",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_inactive_subkeys_revoked_one": {
+    "message": "$count$ निरस्त उपकुंजी",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_inactive_subkeys_revoked_other": {
+    "message": "$count$ निरस्त उपकुंजियां",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_inactive_subkeys_unusable_one": {
+    "message": "$count$ अनुपयोगी उपकुंजी",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_inactive_subkeys_unusable_other": {
+    "message": "$count$ अनुपयोगी उपकुंजियां",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_key_details": {
+    "message": "कुंजी का विवरण"
+  },
+  "keys_key_options_aria": {
+    "message": "कुंजी के विकल्प"
+  },
+  "keys_loading": {
+    "message": "लोड हो रहा है…"
+  },
+  "keys_my_keys_heading": {
+    "message": "मेरी कुंजियां"
+  },
+  "keys_never": {
+    "message": "कभी नहीं"
+  },
+  "keys_no_contacts_match": {
+    "message": "\"$query$\" से मेल खाता कोई संपर्क नहीं",
+    "placeholders": {
+      "query": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_no_subkeys": {
+    "message": "इस कुंजी में कोई उपकुंजी नहीं है; प्राथमिक कुंजी ही सब कुछ करती है।"
+  },
+  "keys_parse_failed": {
+    "message": "यह कुंजी पार्स नहीं की जा सकी।"
+  },
+  "keys_passkey_failed": {
+    "message": "पासकी प्रमाणीकरण विफल रहा"
+  },
+  "keys_protection_passkey": {
+    "message": "पासकी"
+  },
+  "keys_protection_password": {
+    "message": "पासवर्ड"
+  },
+  "keys_public_key_copied": {
+    "message": "सार्वजनिक कुंजी कॉपी हो गई"
+  },
+  "keys_recipient_disable_title": {
+    "message": "इस कुंजी के लिए एन्क्रिप्ट करना बंद करें। यह यहां सूची में बनी रहेगी।"
+  },
+  "keys_recipient_dont_use": {
+    "message": "इस्तेमाल न करें"
+  },
+  "keys_recipient_enable_title": {
+    "message": "इस कुंजी के लिए फिर से एन्क्रिप्ट करें।"
+  },
+  "keys_recipient_last_active_title": {
+    "message": "यह इस्तेमाल में बची एकमात्र कुंजी है। इसे भी बंद करने पर संदेश किसी के लिए भी एन्क्रिप्ट नहीं होंगे।"
+  },
+  "keys_recipient_not_used": {
+    "message": "इस्तेमाल में नहीं"
+  },
+  "keys_recipient_off_title": {
+    "message": "इस संपर्क को भेजे गए संदेश इस कुंजी के लिए एन्क्रिप्ट नहीं किए जाते।"
+  },
+  "keys_recipient_use": {
+    "message": "इस्तेमाल करें"
+  },
+  "keys_remove_contact": {
+    "message": "संपर्क हटाएं"
+  },
+  "keys_remove_contact_body": {
+    "message": "आप अब इस संपर्क के लिए संदेश एन्क्रिप्ट नहीं कर पाएंगे या इसके हस्ताक्षर सत्यापित नहीं कर पाएंगे। आप इसकी सार्वजनिक कुंजी बाद में फिर से आयात कर सकते हैं।"
+  },
+  "keys_remove_default": {
+    "message": "डिफ़ॉल्ट हटाएं"
+  },
+  "keys_rename": {
+    "message": "नाम बदलें"
+  },
+  "keys_rename_contact_title": {
+    "message": "संपर्क का नाम बदलें"
+  },
+  "keys_rename_crx_title": {
+    "message": "हस्ताक्षर कुंजी का नाम बदलें"
+  },
+  "keys_rename_field_label": {
+    "message": "प्रदर्शित नाम"
+  },
+  "keys_rename_hint": {
+    "message": "$identity$ की जगह दिखाया जाता है। यह सिर्फ़ एक स्थानीय लेबल है।",
+    "placeholders": {
+      "identity": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_rename_key_title": {
+    "message": "कुंजी का नाम बदलें"
+  },
+  "keys_rename_placeholder_contact": {
+    "message": "जैसे: Alice (सभी मशीनें)"
+  },
+  "keys_rename_placeholder_crx": {
+    "message": "जैसे: मेरा एक्सटेंशन"
+  },
+  "keys_rename_placeholder_key": {
+    "message": "जैसे: ऑफ़िस का लैपटॉप"
+  },
+  "keys_reselect": {
+    "message": "फिर से चुनें"
+  },
+  "keys_revocation_certificate": {
+    "message": "निरस्तीकरण प्रमाणपत्र"
+  },
+  "keys_revocation_create": {
+    "message": "निरस्तीकरण प्रमाणपत्र बनाएं"
+  },
+  "keys_revocation_create_failed": {
+    "message": "निरस्तीकरण प्रमाणपत्र नहीं बनाया जा सका।"
+  },
+  "keys_revocation_created": {
+    "message": "निरस्तीकरण प्रमाणपत्र बनाया गया"
+  },
+  "keys_revocation_creating": {
+    "message": "बनाया जा रहा है..."
+  },
+  "keys_revocation_have_body": {
+    "message": "अगर यह कुंजी कभी खो जाए या उससे समझौता हो जाए, तो इस प्रमाणपत्र को प्रकाशित करने से आपके संपर्कों को पता चल जाता है कि इस कुंजी का इस्तेमाल बंद करना है। इसका बैकअप किसी सुरक्षित जगह रखें - जिसके पास यह होगा, वह आपकी कुंजी निरस्त कर सकता है।"
+  },
+  "keys_revocation_missing_body": {
+    "message": "यह कुंजी बिना निरस्तीकरण प्रमाणपत्र के आयात की गई थी। अभी एक बनाएं और उसका बैकअप रखें, ताकि कुंजी तक पहुंच खो देने पर भी आप बाद में उसे निरस्त कर सकें।"
+  },
+  "keys_revocation_unlock_first": {
+    "message": "पहले इस कुंजी को अनलॉक करें, फिर दोबारा कोशिश करें।"
+  },
+  "keys_revoked_reason": {
+    "message": "निरस्त: $reason$",
+    "placeholders": {
+      "reason": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_row_created": {
+    "message": "$date$ को बनी",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_row_expired": {
+    "message": "$date$ को समाप्त हुई",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_row_expires": {
+    "message": "$date$ को समाप्त होगी",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_row_never_expires": {
+    "message": "कभी समाप्त नहीं होती"
+  },
+  "keys_save_failed": {
+    "message": "यह बदलाव सहेजा नहीं जा सका।"
+  },
+  "keys_search_contacts_placeholder": {
+    "message": "संपर्क खोजें..."
+  },
+  "keys_select": {
+    "message": "चुनें"
+  },
+  "keys_select_all": {
+    "message": "सभी चुनें"
+  },
+  "keys_selected_count_one": {
+    "message": "$count$ चुना गया",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_selected_count_other": {
+    "message": "$count$ चुने गए",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_selection_actions_aria": {
+    "message": "चयन कार्रवाइयां"
+  },
+  "keys_set_default": {
+    "message": "डिफ़ॉल्ट कुंजी बनाएं"
+  },
+  "keys_size_bytes": {
+    "message": "$size$ B",
+    "placeholders": {
+      "size": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_size_kb": {
+    "message": "$size$ KB",
+    "placeholders": {
+      "size": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_size_mb": {
+    "message": "$size$ MB",
+    "placeholders": {
+      "size": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_source_github": {
+    "message": "github.com/$user$ से",
+    "placeholders": {
+      "user": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_source_keyserver": {
+    "message": "keys.openpgp.org से - $user$",
+    "placeholders": {
+      "user": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_ssh_chip_title": {
+    "message": "एक SSH कुंजी, जो age के साथ इस्तेमाल होती है। इसे एक ही संदेश में PGP प्राप्तकर्ताओं के साथ नहीं जोड़ा जा सकता।"
+  },
+  "keys_ssh_export_skipped_one": {
+    "message": "$count$ SSH कुंजी निर्यात नहीं की जा सकती - आयात की गई SSH कुंजी कभी इस डिवाइस से बाहर नहीं जाती।",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_ssh_export_skipped_other": {
+    "message": "$count$ SSH कुंजियां निर्यात नहीं की जा सकतीं - आयात की गई SSH कुंजी कभी इस डिवाइस से बाहर नहीं जाती।",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_status_expired": {
+    "message": "समाप्त"
+  },
+  "keys_status_invalid": {
+    "message": "अमान्य"
+  },
+  "keys_status_locked": {
+    "message": "लॉक है"
+  },
+  "keys_status_revoked": {
+    "message": "निरस्त"
+  },
+  "keys_status_sealed": {
+    "message": "स्टोरेज में सील है"
+  },
+  "keys_status_unlocked": {
+    "message": "अनलॉक है"
+  },
+  "keys_subkey_label": {
+    "message": "उपकुंजी"
+  },
+  "keys_subkeys_title": {
+    "message": "उपकुंजियां"
+  },
+  "keys_subkeys_truncated": {
+    "message": "इस प्रमाणपत्र में असामान्य रूप से बहुत सारी उपकुंजियां हैं; सिर्फ़ पहली $count$ दिखाई गई हैं।",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_undo": {
+    "message": "पूर्ववत करें"
+  },
+  "keys_unknown_name": {
+    "message": "अज्ञात"
+  },
+  "keys_weak_sha1": {
+    "message": "कमज़ोर (SHA-1)"
+  },
+  "keys_wrong_password": {
+    "message": "पासवर्ड गलत है"
+  },
+  "settings_crx_default_key_name": {
+    "message": "CRX हस्ताक्षर कुंजी"
+  },
+  "settings_crx_info_get_body": {
+    "message": "यह $crx$ Web Store डैशबोर्ड के लिए एक अपलोड आर्टिफ़ैक्ट है, सीधे इंस्टॉल होने वाला पैकेज नहीं - Chrome सिर्फ़ स्टोर द्वारा हस्ताक्षरित एक्सटेंशन ही इंस्टॉल करता है। अपना एक्सटेंशन स्थानीय रूप से चलाने के लिए फ़ोल्डर पर $load_unpacked$ इस्तेमाल करें।",
+    "placeholders": {
+      "crx": {
+        "content": "$1"
+      },
+      "load_unpacked": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_crx_info_get_title": {
+    "message": "आपको इससे क्या मिलता है"
+  },
+  "settings_crx_info_how_title": {
+    "message": "इसे कैसे इस्तेमाल करें"
+  },
+  "settings_crx_info_ladder_ci": {
+    "message": "$term$ कमज़ोर है: कोई दूषित डिपेंडेंसी या लीक हुआ टोकन उसे ले उड़ता है।",
+    "placeholders": {
+      "term": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_crx_info_ladder_ci_term": {
+    "message": "CI सीक्रेट में रखी कुंजी"
+  },
+  "settings_crx_info_ladder_hardware": {
+    "message": "$term$ और भी मज़बूत है: कुंजी कभी चिप से बाहर नहीं जाती, जबकि यहां हस्ताक्षर के दौरान इसे WASM सैंडबॉक्स में थोड़ी देर के लिए पुनर्निर्मित किया जाता है और तुरंत बाद शून्य कर दिया जाता है।",
+    "placeholders": {
+      "term": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_crx_info_ladder_hardware_term": {
+    "message": "हार्डवेयर टोकन (YubiKey / HSM)"
+  },
+  "settings_crx_info_ladder_title": {
+    "message": "सुरक्षा के लिहाज़ से यह कहां ठहरता है"
+  },
+  "settings_crx_info_ladder_vault": {
+    "message": "$term$ - जहां आप अभी हैं - आपके पासवर्ड या पासकी के पीछे रहती है और सिर्फ़ हस्ताक्षर करने की क्रिया के लिए अनलॉक होती है।",
+    "placeholders": {
+      "term": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_crx_info_ladder_vault_term": {
+    "message": "आपके वॉल्ट में एन्क्रिप्टेड कुंजी"
+  },
+  "settings_crx_info_link": {
+    "message": "Chrome Web Store: पैकेज अपडेट की सुरक्षा"
+  },
+  "settings_crx_info_not_pgp_body": {
+    "message": "$crx$ पर एक रॉ RSA-2048 कुंजी (PKCS#1-SHA256) से हस्ताक्षर होते हैं, OpenPGP हस्ताक्षर से नहीं। PGP Tools इस कुंजी को आपकी PGP कुंजियों जैसी ही सुरक्षा के साथ बनाता और रखता है (Argon2id या पासकी → AES-256-GCM, सब कुछ WASM सैंडबॉक्स के अंदर), लेकिन कुंजी खुद अलग है और सिर्फ़ CRX हस्ताक्षर के लिए इस्तेमाल होती है।",
+    "placeholders": {
+      "crx": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_crx_info_not_pgp_title": {
+    "message": "यह PGP नहीं है"
+  },
+  "settings_crx_info_pitch_p1": {
+    "message": "Chrome Web Store आपको यह अनिवार्य करने देता है कि आपके एक्सटेंशन के हर अपडेट पर ऐसी कुंजी से हस्ताक्षर हों जो सिर्फ़ आपके पास है। अगर कोई आपके Web Store खाते या आपकी बिल्ड पाइपलाइन से समझौता कर भी ले, तब भी वह आपकी हस्ताक्षर कुंजी के बिना कोई दुर्भावनापूर्ण अपडेट जारी नहीं कर सकता।"
+  },
+  "settings_crx_info_pitch_p2": {
+    "message": "यह तभी कारगर है जब कुंजी ऐसी जगह हो जहां हमलावर न पहुंच सके - CI सीक्रेट में रखी कुंजी इस मकसद को ही खत्म कर देती है। PGP Tools इसे आपके वॉल्ट में एन्क्रिप्टेड रखता है और आपके पासवर्ड या पासकी के पीछे सिर्फ़ हस्ताक्षर करने की क्रिया के लिए अनलॉक करता है, आपकी पाइपलाइन में कभी नहीं।"
+  },
+  "settings_crx_info_pitch_title": {
+    "message": "Verified CRX Uploads"
+  },
+  "settings_crx_info_step_1": {
+    "message": "सेटिंग में टॉगल चालू करें, फिर एक CRX हस्ताक्षर कुंजी (RSA-2048) बनाएं या आयात करें। निजी कुंजी यहीं रखें - इसे सिर्फ़ तभी निर्यात करें जब आपको बैकअप चाहिए।"
+  },
+  "settings_crx_info_step_2": {
+    "message": "कुंजी का $public$ हिस्सा Chrome Web Store डैशबोर्ड में $path$ के तहत कॉपी करें।",
+    "placeholders": {
+      "public": {
+        "content": "$1"
+      },
+      "path": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_crx_info_step_3": {
+    "message": "रिलीज़ बनाने के लिए, अपने पैक किए गए एक्सटेंशन की $zip$ फ़ाइल वर्कस्पेस में छोड़ें और उस पर हस्ताक्षर करें। $crx$ को सही नाम के साथ सीधे डिस्क पर लिखने के लिए $save$ इस्तेमाल करें (या चिप को अपने डेस्कटॉप पर खींचें), फिर उसे डैशबोर्ड पर अपलोड करें। Chrome सामान्य $crx$ डाउनलोड को रोककर उन्हें इंस्टॉल करने की कोशिश करता है, इसीलिए हम डाउनलोड के बजाय सहेजते हैं।",
+    "placeholders": {
+      "zip": {
+        "content": "$1"
+      },
+      "save": {
+        "content": "$2"
+      },
+      "crx": {
+        "content": "$3"
+      }
+    }
+  },
+  "settings_crx_info_step_4": {
+    "message": "किसी भी एक्सटेंशन पैकेज की जांच के लिए, कोई $crx$ वर्कस्पेस में छोड़ें - PGP Tools उसका हस्ताक्षर सत्यापित करता है और वह एक्सटेंशन ID दिखाता है जिसका वह दावा करता है।",
+    "placeholders": {
+      "crx": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_crx_info_term_dashboard_path": {
+    "message": "Package → Verified CRX Uploads"
+  },
+  "settings_crx_info_term_load_unpacked": {
+    "message": "अनपैक किया गया लोड करें"
+  },
+  "settings_crx_info_term_public": {
+    "message": "सार्वजनिक"
+  },
+  "settings_crx_info_title": {
+    "message": "CRX हस्ताक्षर"
+  },
+  "settings_import_browse": {
+    "message": "कुंजी फ़ाइल ब्राउज़ करें"
+  },
+  "settings_import_contacts_added_one": {
+    "message": "$count$ संपर्क जोड़ा गया",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_added_other": {
+    "message": "$count$ संपर्क जोड़े गए",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_flagged_one": {
+    "message": "$count$ आयात की गई कुंजी कमज़ोर क्रिप्टो (SHA-1) के लिए चिह्नित की गई",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_flagged_other": {
+    "message": "$count$ आयात की गई कुंजियां कमज़ोर क्रिप्टो (SHA-1) के लिए चिह्नित की गईं",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_rejected_one": {
+    "message": "$count$ सार्वजनिक कुंजी अस्वीकार की गई",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_rejected_other": {
+    "message": "$count$ सार्वजनिक कुंजियां अस्वीकार की गईं",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_rejected_reason_one": {
+    "message": "$count$ सार्वजनिक कुंजी अस्वीकार की गई: $reason$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "reason": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_import_contacts_rejected_reason_other": {
+    "message": "$count$ सार्वजनिक कुंजियां अस्वीकार की गईं: $reason$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "reason": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_import_contacts_updated_one": {
+    "message": "$count$ संपर्क अपडेट किया गया",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_contacts_updated_other": {
+    "message": "$count$ संपर्क अपडेट किए गए",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_failed_one": {
+    "message": "$count$ CRX कुंजी बहाल नहीं हो सकी",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_failed_other": {
+    "message": "$count$ CRX कुंजियां बहाल नहीं हो सकीं",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_failure_detail": {
+    "message": "$name$: $error$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "error": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_import_crx_rejected_one": {
+    "message": "$count$ CRX हस्ताक्षर कुंजी अस्वीकार की गई: सार्वजनिक कुंजी उसके एक्सटेंशन ID से मेल नहीं खाती",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_rejected_other": {
+    "message": "$count$ CRX हस्ताक्षर कुंजियां अस्वीकार की गईं: सार्वजनिक कुंजी उनके एक्सटेंशन ID से मेल नहीं खाती",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_restored_one": {
+    "message": "$count$ CRX हस्ताक्षर कुंजी बहाल की गई",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_restored_other": {
+    "message": "$count$ CRX हस्ताक्षर कुंजियां बहाल की गईं",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_skipped_one": {
+    "message": "$count$ CRX हस्ताक्षर कुंजी पहले से आयात की हुई है",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_crx_skipped_other": {
+    "message": "$count$ CRX हस्ताक्षर कुंजियां पहले से आयात की हुई हैं",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_default_user_id": {
+    "message": "आयात की गई PGP कुंजी"
+  },
+  "settings_import_failed": {
+    "message": "आयात विफल रहा"
+  },
+  "settings_import_failed_named": {
+    "message": "\"$name$\" आयात नहीं हो सकी: $error$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "error": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_import_importing": {
+    "message": "आयात किया जा रहा है..."
+  },
+  "settings_import_keys_title": {
+    "message": "कुंजियां आयात करें"
+  },
+  "settings_import_next": {
+    "message": "आगे"
+  },
+  "settings_import_no_keys": {
+    "message": "इनपुट में कोई कुंजी नहीं मिली।"
+  },
+  "settings_import_passkey_name": {
+    "message": "PGP Tools आयात"
+  },
+  "settings_import_passphrase_placeholder": {
+    "message": "कुंजी का पासफ़्रेज़"
+  },
+  "settings_import_paste_intro": {
+    "message": "कोई कुंजी फ़ाइल पेस्ट करें या ब्राउज़ करें -- जैसे \"सभी कुंजियां निर्यात करें\" से बनी फ़ाइल। निजी कुंजियां आपके चुने हुए तरीके से फिर से सुरक्षित की जाती हैं; सार्वजनिक कुंजियां संपर्क बन जाती हैं।"
+  },
+  "settings_import_paste_placeholder": {
+    "message": "कुंजियां यहां पेस्ट करें, या कोई फ़ाइल ब्राउज़ करें..."
+  },
+  "settings_import_prf_unsupported": {
+    "message": "आपका ऑथेंटिकेटर PRF का समर्थन नहीं करता। कोई दूसरी पासकी आज़माएं या इसके बजाय पासवर्ड इस्तेमाल करें।"
+  },
+  "settings_import_private_imported_one": {
+    "message": "$count$ निजी कुंजी आयात की गई",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_private_imported_other": {
+    "message": "$count$ निजी कुंजियां आयात की गईं",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_private_skipped_one": {
+    "message": "$count$ निजी कुंजी पहले से आयात की हुई है",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_private_skipped_other": {
+    "message": "$count$ निजी कुंजियां पहले से आयात की हुई हैं",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_private_unparseable_one": {
+    "message": "$count$ निजी कुंजी पार्स नहीं की जा सकी।",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_private_unparseable_other": {
+    "message": "$count$ निजी कुंजियां पार्स नहीं की जा सकीं।",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_protect_intro_one": {
+    "message": "चुनें कि आयात की गई $count$ निजी कुंजी को कैसे सुरक्षित रखना है।",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_protect_intro_other": {
+    "message": "चुनें कि आयात की गई $count$ निजी कुंजियों को कैसे सुरक्षित रखना है।",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_submit_one": {
+    "message": "$count$ कुंजी आयात करें",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_submit_other": {
+    "message": "$count$ कुंजियां आयात करें",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_import_unknown_error": {
+    "message": "अज्ञात त्रुटि"
+  },
+  "settings_import_unlock_intro_one": {
+    "message": "$count$ निजी कुंजी में से $encrypted$ पासफ़्रेज़ से सुरक्षित है। इसे अनलॉक करने के लिए पासफ़्रेज़ डालें -- फिर अगले चरण में आप हर कुंजी को अपने चुने हुए तरीके से दोबारा सुरक्षित करेंगे।",
+    "placeholders": {
+      "encrypted": {
+        "content": "$1"
+      },
+      "count": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_import_unlock_intro_other": {
+    "message": "$count$ निजी कुंजियों में से $encrypted$ पासफ़्रेज़ से सुरक्षित हैं। इन्हें अनलॉक करने के लिए पासफ़्रेज़ डालें -- फिर अगले चरण में आप हर कुंजी को अपने चुने हुए तरीके से दोबारा सुरक्षित करेंगे।",
+    "placeholders": {
+      "encrypted": {
+        "content": "$1"
+      },
+      "count": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_preset_apply": {
+    "message": "प्रीसेट लागू करें"
+  },
+  "settings_preset_apply_delete_history": {
+    "message": "लागू करें और इतिहास मिटाएं"
+  },
+  "settings_preset_applying": {
+    "message": "लागू किया जा रहा है..."
+  },
+  "settings_preset_confirm_history": {
+    "message": "यह प्रीसेट 'कभी कैश न करें' चालू करता है, जिससे आपका सहेजा गया इतिहास ($size$) भी मिट जाता है। इसे वापस नहीं पाया जा सकता।",
+    "placeholders": {
+      "size": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_preset_confirm_replace": {
+    "message": "अपनी कस्टम सेटिंग की जगह $preset$ प्रीसेट लागू करें? सिर्फ़ उसके कार्ड पर दी गई सेटिंग बदलेंगी, और आप बाद में उनमें से किसी को भी फिर से बदल सकते हैं।",
+    "placeholders": {
+      "preset": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_preset_custom_name": {
+    "message": "कस्टम"
+  },
+  "settings_preset_custom_notice": {
+    "message": "आप $custom$ पर हैं: समूह की कोई सेटिंग बदली गई है, इसलिए कोई भी प्रीसेट पूरी तरह मेल नहीं खाता।",
+    "placeholders": {
+      "custom": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_preset_intro": {
+    "message": "हर प्रीसेट एक खतरे के मॉडल के लिए सुरक्षा सेटिंग का समूह है, और उसका कार्ड ठीक-ठीक बताता है कि वह क्या सेट करता है। किसी प्रीसेट को लागू करने से सिर्फ़ वही सेटिंग बदलती हैं, और आप बाद में उनमें से किसी को भी फिर से बदल सकते हैं।"
+  },
+  "settings_preset_keep_custom": {
+    "message": "कस्टम सेटिंग रखें"
+  },
+  "settings_preset_replace_custom": {
+    "message": "कस्टम सेटिंग बदलें"
+  },
+  "settings_preset_title": {
+    "message": "सुरक्षा प्रीसेट"
+  },
+  "settings_shortcuts_copy_output": {
+    "message": "आउटपुट कॉपी करें"
+  },
+  "settings_shortcuts_download_output": {
+    "message": "आउटपुट डाउनलोड करें"
+  },
+  "settings_shortcuts_find_replace": {
+    "message": "ढूंढें और बदलें"
+  },
+  "settings_shortcuts_global_note": {
+    "message": "ये ब्राउज़र में कहीं भी काम करते हैं। इनमें से किसी को भी $url$ पर फिर से असाइन करें।",
+    "placeholders": {
+      "url": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_shortcuts_group_global": {
+    "message": "ब्राउज़र के ग्लोबल शॉर्टकट"
+  },
+  "settings_shortcuts_group_message": {
+    "message": "संदेश बॉक्स"
+  },
+  "settings_shortcuts_group_modes": {
+    "message": "मोड"
+  },
+  "settings_shortcuts_group_palette": {
+    "message": "कमांड पैलेट"
+  },
+  "settings_shortcuts_group_workspace": {
+    "message": "वर्कस्पेस"
+  },
+  "settings_shortcuts_manage": {
+    "message": "ब्राउज़र शॉर्टकट प्रबंधित करें"
+  },
+  "settings_shortcuts_open_app": {
+    "message": "PGP Tools खोलें"
+  },
+  "settings_shortcuts_open_in_mode": {
+    "message": "$mode$ मोड में खोलें",
+    "placeholders": {
+      "mode": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_shortcuts_open_palette": {
+    "message": "कमांड पैलेट खोलें"
+  },
+  "settings_shortcuts_open_palette_note": {
+    "message": "नीचे दी गई हर कार्रवाई वहां भी खोजी जा सकती है।"
+  },
+  "settings_shortcuts_pick_recipient": {
+    "message": "n-वां प्राप्तकर्ता चुनें"
+  },
+  "settings_shortcuts_pick_recipient_note": {
+    "message": "प्राप्तकर्ता ड्रॉपडाउन में, जब उसका खोज बॉक्स खाली हो।"
+  },
+  "settings_shortcuts_remove_recipient": {
+    "message": "आखिरी प्राप्तकर्ता हटाएं"
+  },
+  "settings_shortcuts_remove_recipient_note": {
+    "message": "प्राप्तकर्ता ड्रॉपडाउन के खाली खोज बॉक्स में।"
+  },
+  "settings_shortcuts_run_mode": {
+    "message": "मौजूदा मोड चलाएं"
+  },
+  "settings_shortcuts_style_note": {
+    "message": "एन्क्रिप्ट या हस्ताक्षर के लिए संदेश लिखते समय। Unicode अक्षर रूपों का इस्तेमाल करता है, इसलिए किसी भी चैनल में बना रहता है।"
+  },
+  "settings_shortcuts_switch_mode": {
+    "message": "$mode$ पर जाएं",
+    "placeholders": {
+      "mode": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_shortcuts_title": {
+    "message": "कीबोर्ड शॉर्टकट"
+  },
+  "settings_shortcuts_unbound": {
+    "message": "असाइन नहीं"
+  },
+  "settings_shortcuts_unbound_note": {
+    "message": "डिफ़ॉल्ट रूप से असाइन नहीं (Chrome सुझाई गई कुंजियों की सीमा चार रखता है)।"
+  },
+  "settings_translation_detector": {
+    "message": "भाषा पहचानकर्ता"
+  },
+  "settings_translation_download_failed": {
+    "message": "डाउनलोड विफल रहा।"
+  },
+  "settings_translation_enable": {
+    "message": "डिक्रिप्ट किए गए संदेशों का अनुवाद करें"
+  },
+  "settings_translation_enable_desc": {
+    "message": "डिक्रिप्ट किए गए संदेश के नीचे 'अनुवाद करें' बटन जोड़ता है। अनुवाद Chrome के इनबिल्ट मॉडल से इसी डिवाइस पर होता है, और जब तक आप बटन नहीं दबाते, कुछ भी अनुवादित नहीं होता।"
+  },
+  "settings_translation_failed": {
+    "message": "अनुवाद विफल रहा।"
+  },
+  "settings_translation_pack_gone": {
+    "message": "भाषा पैक गायब हो गया। फिर से कोशिश करें।"
+  },
+  "settings_translation_pack_not_offered": {
+    "message": "उपलब्ध नहीं"
+  },
+  "settings_translation_pack_pair": {
+    "message": "$from$ से $to$",
+    "placeholders": {
+      "from": {
+        "content": "$1"
+      },
+      "to": {
+        "content": "$2"
+      }
+    }
+  },
+  "settings_translation_pack_progress": {
+    "message": "$percent$%",
+    "placeholders": {
+      "percent": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_translation_pack_ready": {
+    "message": "तैयार"
+  },
+  "settings_translation_packs": {
+    "message": "भाषा पैक"
+  },
+  "settings_translation_packs_desc": {
+    "message": "वैकल्पिक। जब आप पहली बार किसी भाषा से अनुवाद करते हैं, तो उसका पैक अपने आप डाउनलोड हो जाता है, इसलिए यह सिर्फ़ पहले से तैयार रहने के लिए है। यहां डाउनलोड करने का एक फ़ायदा ज़रूर है: डाउनलोड फिर उस पल नहीं होता जब आप कोई संदेश डिक्रिप्ट करते हैं, इसलिए उसके समय से यह पता नहीं चलता कि आपने अभी क्या पढ़ा। हर पैक $size$ का है और उसे Chrome रखता है, यह एक्सटेंशन नहीं।",
+    "placeholders": {
+      "size": {
+        "content": "$1"
+      }
+    }
+  },
+  "settings_translation_target": {
+    "message": "इस भाषा में अनुवाद करें"
+  },
+  "settings_translation_title": {
+    "message": "अनुवाद"
+  },
+  "settings_translation_unavailable_device": {
+    "message": "इस डिवाइस पर अनुवाद उपलब्ध नहीं है।"
+  },
+  "settings_translation_unsupported": {
+    "message": "Chrome का डिवाइस पर होने वाला अनुवाद यहां उपलब्ध नहीं है। इसके लिए Windows 10+, macOS 13+, Linux या Chromebook Plus पर डेस्कटॉप Chrome चाहिए, जिसमें मॉडल के लिए पर्याप्त खाली डिस्क स्थान और मेमोरी हो।"
+  },
+  "shared_about": {
+    "message": "इसके बारे में"
+  },
+  "shared_about_extensions": {
+    "message": "दुर्भावनापूर्ण ब्राउज़र एक्सटेंशन की चिंता है? अपने एक्सटेंशन को डेटा चोरी, सत्र हाइजैकिंग और अन्य खतरों के लिए स्कैन करें।"
+  },
+  "shared_advanced_mode": {
+    "message": "उन्नत मोड"
+  },
+  "shared_advanced_mode_desc": {
+    "message": "कुंजी फ़िंगरप्रिंट, एल्गोरिदम और आउटपुट फ़ॉर्मैट के विकल्प दिखाएं।"
+  },
+  "shared_auto_download_files_desc": {
+    "message": "फ़ाइलें एन्क्रिप्ट या डिक्रिप्ट करने के बाद अपने आप डाउनलोड करें।"
+  },
+  "shared_auto_download_files_title": {
+    "message": "फ़ाइल परिणाम अपने आप डाउनलोड करें"
+  },
+  "shared_auto_download_text_desc": {
+    "message": "टेक्स्ट एन्क्रिप्ट या डिक्रिप्ट करने के बाद अपने आप डाउनलोड करें।"
+  },
+  "shared_auto_download_text_title": {
+    "message": "टेक्स्ट परिणाम अपने आप डाउनलोड करें"
+  },
+  "shared_auto_lock_desc": {
+    "message": "पैनल में कुछ समय तक कोई गतिविधि न होने पर अनलॉक कुंजियों को लॉक करें। OS की लॉक स्क्रीन इस सेटिंग की परवाह किए बिना हमेशा तुरंत लॉक करती है।"
+  },
+  "shared_auto_lock_title": {
+    "message": "निष्क्रियता के बाद अपने आप लॉक करें"
+  },
+  "shared_backup": {
+    "message": "बैकअप"
+  },
+  "shared_backup_desc": {
+    "message": "अपनी कुंजियां और संपर्क एक ही आर्मर्ड फ़ाइल के रूप में निर्यात करें, या ऐसी फ़ाइल से बहाल करें। निर्यात की गई निजी कुंजियां आपके चुने हुए पासफ़्रेज़ से एन्क्रिप्ट की जाती हैं।"
+  },
+  "shared_bundle_auto_lock": {
+    "message": "$duration$ बाद अपने आप लॉक",
+    "placeholders": {
+      "duration": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_bundle_auto_lock_off": {
+    "message": "अपने आप लॉक होना बंद है"
+  },
+  "shared_bundle_auto_lock_tabs": {
+    "message": "$duration$ बाद और टैब बदलने पर अपने आप लॉक",
+    "placeholders": {
+      "duration": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_bundle_clipboard_one": {
+    "message": "कॉपी किए गए राज़ $count$ सेकंड बाद क्लिपबोर्ड से साफ़ हो जाते हैं",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_bundle_clipboard_other": {
+    "message": "कॉपी किए गए राज़ $count$ सेकंड बाद क्लिपबोर्ड से साफ़ हो जाते हैं",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_bundle_discovery_off": {
+    "message": "कोई कुंजी खोज नहीं - कुंजी ढूंढने के लिए इस डिवाइस से कुछ बाहर नहीं जाता"
+  },
+  "shared_bundle_discovery_on": {
+    "message": "कुंजियां GitHub और keys.openpgp.org पर खोजी जा सकती हैं"
+  },
+  "shared_bundle_history_off": {
+    "message": "कोई इतिहास नहीं रखा जाता"
+  },
+  "shared_bundle_history_on": {
+    "message": "आपकी कार्रवाइयों का एन्क्रिप्टेड इतिहास रखता है"
+  },
+  "shared_bundle_never_cache_off": {
+    "message": "अनलॉक कुंजियां लॉक करने तक कैश में रहती हैं"
+  },
+  "shared_bundle_never_cache_on": {
+    "message": "हर उपयोग के बाद कुंजियां मेमोरी से हट जाती हैं"
+  },
+  "shared_bundle_no_encrypt_to_self": {
+    "message": "आपके एन्क्रिप्ट किए गए संदेश बाद में आप खुद नहीं पढ़ सकते"
+  },
+  "shared_bundle_storage_local": {
+    "message": "कुंजियां इसी डिवाइस पर रहती हैं"
+  },
+  "shared_bundle_storage_sync": {
+    "message": "कुंजियां आपकी Chrome प्रोफ़ाइल में सिंक होती हैं"
+  },
+  "shared_bundle_unlock_on_open_off": {
+    "message": "हर कुंजी अपना अलग अनलॉक मांगती है"
+  },
+  "shared_bundle_unlock_on_open_on": {
+    "message": "एक पासकी प्रॉम्प्ट वॉल्ट और आपकी कुंजियां अनलॉक करता है"
+  },
+  "shared_byline_before": {
+    "message": "एक निजता टूल, निर्माता:"
+  },
+  "shared_check_extensions": {
+    "message": "अपने एक्सटेंशन जांचें"
+  },
+  "shared_clear_name": {
+    "message": "नाम साफ़ करें"
+  },
+  "shared_commands": {
+    "message": "कमांड"
+  },
+  "shared_confirm_type_after": {
+    "message": "टाइप करें"
+  },
+  "shared_confirm_type_aria": {
+    "message": "पुष्टि के लिए \"$text$\" टाइप करें",
+    "placeholders": {
+      "text": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_confirm_type_before": {
+    "message": "पुष्टि के लिए, नीचे"
+  },
+  "shared_crx_enable_desc": {
+    "message": "Web Store के Verified CRX Uploads के लिए Chrome एक्सटेंशन पैकेज (.crx) पर हस्ताक्षर करें, अपनी बिल्ड पाइपलाइन के बजाय वॉल्ट में रखी कुंजी से।"
+  },
+  "shared_crx_enable_title": {
+    "message": "CRX हस्ताक्षर चालू करें"
+  },
+  "shared_crx_how": {
+    "message": "CRX हस्ताक्षर कैसे काम करता है"
+  },
+  "shared_crx_signing": {
+    "message": "CRX हस्ताक्षर"
+  },
+  "shared_delete_history_body": {
+    "message": "'कभी कैश न करें' से आपका सहेजा गया इतिहास ($size$) भी मिट जाता है। इसे वापस नहीं पाया जा सकता।",
+    "placeholders": {
+      "size": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_delete_history_confirm": {
+    "message": "चालू करें और इतिहास मिटाएं"
+  },
+  "shared_delete_history_title": {
+    "message": "सहेजा गया इतिहास मिटाएं?"
+  },
+  "shared_dev_tools": {
+    "message": "डेव टूल"
+  },
+  "shared_developer": {
+    "message": "डेवलपर"
+  },
+  "shared_developer_desc": {
+    "message": "परीक्षण के लिए chrome.storage देखें और WASM मेमोरी डंप करें। यह अनुभाग सिर्फ़ डेवलपमेंट बिल्ड में दिखता है।"
+  },
+  "shared_display": {
+    "message": "डिसप्ले"
+  },
+  "shared_downloads": {
+    "message": "डाउनलोड"
+  },
+  "shared_drop_desc": {
+    "message": "कुंजियां आपकी कीरिंग में जुड़ती हैं; फ़ाइलें और टेक्स्ट वर्कस्पेस में जाते हैं।"
+  },
+  "shared_drop_to_import": {
+    "message": "आयात करने के लिए छोड़ें"
+  },
+  "shared_export_all_keys": {
+    "message": "सभी कुंजियां निर्यात करें"
+  },
+  "shared_hide_technical_details": {
+    "message": "तकनीकी विवरण छिपाएं"
+  },
+  "shared_import_flow_states": {
+    "message": "आयात फ़्लो की अवस्थाएं"
+  },
+  "shared_import_keys": {
+    "message": "कुंजियां आयात करें"
+  },
+  "shared_key_discovery": {
+    "message": "कुंजी खोज"
+  },
+  "shared_key_security": {
+    "message": "कुंजी सुरक्षा"
+  },
+  "shared_key_storage": {
+    "message": "कुंजी स्टोरेज"
+  },
+  "shared_keyboard_shortcuts": {
+    "message": "कीबोर्ड शॉर्टकट"
+  },
+  "shared_lock_after": {
+    "message": "इसके बाद लॉक करें"
+  },
+  "shared_lock_tab_away_desc": {
+    "message": "जैसे ही साइड पैनल दिखना बंद हो (alt-tab, समेटा गया, या विंडो छोटी की गई), तुरंत लॉक करें।"
+  },
+  "shared_lock_tab_away_title": {
+    "message": "टैब से हटते ही लॉक करें"
+  },
+  "shared_lookup_online_desc": {
+    "message": "आयात स्क्रीन पर GitHub SSH कुंजियों और keys.openpgp.org प्रमाणपत्रों के लिए एक खोज बॉक्स जोड़ता है। बंद होने पर कुंजी ढूंढने के लिए इस डिवाइस से कुछ भी बाहर नहीं जाता। चालू करने पर, हर खोज उस होस्ट को आपका IP पता और यह बताती है कि आपने किसे खोजा - यह उन्हें आपकी कुंजियों या संदेशों के बारे में कुछ नहीं बताती।"
+  },
+  "shared_lookup_online_title": {
+    "message": "कुंजियां ऑनलाइन खोजें"
+  },
+  "shared_master_password": {
+    "message": "मास्टर पासवर्ड"
+  },
+  "shared_migration_failed": {
+    "message": "माइग्रेशन विफल रहा"
+  },
+  "shared_minutes_one": {
+    "message": "$count$ मिनट",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_minutes_other": {
+    "message": "$count$ मिनट",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_never_cache_desc": {
+    "message": "हर कार्रवाई के बाद कुंजियां मेमोरी से मिटा दी जाती हैं। आप अब भी 'कुंजियां' टैब से कुंजियों को मैन्युअल रूप से अनलॉक कर सकते हैं।"
+  },
+  "shared_never_cache_title": {
+    "message": "कुंजियां कभी अपने आप कैश न करें"
+  },
+  "shared_one_hour": {
+    "message": "1 घंटा"
+  },
+  "shared_open_dev_tools": {
+    "message": "डेव टूल खोलें"
+  },
+  "shared_passkey_failed": {
+    "message": "पासकी प्रमाणीकरण विफल रहा। फिर से कोशिश करें।"
+  },
+  "shared_preset_applied": {
+    "message": "प्रीसेट लागू किया गया: $title$",
+    "placeholders": {
+      "title": {
+        "content": "$1"
+      }
+    }
+  },
+  "shared_preset_applied_history_deleted": {
+    "message": "इतिहास मिटा दिया गया और 'पूर्ववत करें' से वापस नहीं आता।"
+  },
+  "shared_preset_bundled_changed": {
+    "message": "समूह की एक सेटिंग बदली गई"
+  },
+  "shared_preset_careful_tagline": {
+    "message": "असली राज़ के लिए समझदारी भरे डिफ़ॉल्ट"
+  },
+  "shared_preset_careful_title": {
+    "message": "सावधान"
+  },
+  "shared_preset_casual_tagline": {
+    "message": "सुविधा पहले - ऐसी कुंजियों के लिए जो कम अहम चीज़ें संभालती हैं"
+  },
+  "shared_preset_casual_title": {
+    "message": "सहज"
+  },
+  "shared_preset_current": {
+    "message": "मौजूदा"
+  },
+  "shared_preset_custom": {
+    "message": "कस्टम"
+  },
+  "shared_preset_none_selected": {
+    "message": "कोई प्रीसेट नहीं चुना गया"
+  },
+  "shared_preset_paranoid_note": {
+    "message": "आपके संदेश आपके लिए पढ़ने योग्य रहते हैं - अगर यह भी जोखिम लगे, तो बाद में 'मेरे लिए भी एन्क्रिप्ट करें' बंद कर दें।"
+  },
+  "shared_preset_paranoid_tagline": {
+    "message": "कुछ भी टिकता नहीं। सबसे छोटे लॉक समय, कोई इतिहास नहीं, कोई कैश की गई कुंजी नहीं।"
+  },
+  "shared_preset_paranoid_title": {
+    "message": "यह लीक हुआ तो मैं मुसीबत में हूं"
+  },
+  "shared_preset_recommended": {
+    "message": "अनुशंसित"
+  },
+  "shared_saving": {
+    "message": "सहेजा जा रहा है..."
+  },
+  "shared_security_preset": {
+    "message": "सुरक्षा प्रीसेट"
+  },
+  "shared_show_technical_details": {
+    "message": "तकनीकी विवरण दिखाएं"
+  },
+  "shared_something_went_wrong": {
+    "message": "कुछ गड़बड़ हो गई। फिर से कोशिश करें।"
+  },
+  "shared_source_on_github": {
+    "message": "GitHub पर सोर्स कोड"
+  },
+  "shared_storage_local_desc": {
+    "message": "आपका डेटा इसी कंप्यूटर पर रहता है। डिवाइस बदलने या फिर से इंस्टॉल करने पर आपको दोबारा सेट अप करना होगा।"
+  },
+  "shared_storage_local_label": {
+    "message": "सिर्फ़ यह डिवाइस"
+  },
+  "shared_storage_sync_desc": {
+    "message": "आपका डेटा आपके Chrome खाते से सिंक होता है। जहां भी आप साइन इन हों, वहां उपलब्ध।"
+  },
+  "shared_storage_sync_label": {
+    "message": "सभी डिवाइसों पर सिंक करें"
+  },
+  "shared_sync_quota_error": {
+    "message": "सिंक के लिए पर्याप्त जगह नहीं है। Chrome सिंक किए गए डेटा की सीमा कुल लगभग 100 KB रखता है, इसलिए यह वॉल्ट डिवाइसों के बीच सिंक करने के लिए बहुत बड़ा है। इसे इसी डिवाइस पर रखें, या कुछ कुंजियां हटाकर फिर से कोशिश करें।"
+  },
+  "shared_translation": {
+    "message": "अनुवाद"
+  },
+  "shared_undo": {
+    "message": "पूर्ववत करें"
+  },
+  "shared_unlock_aria": {
+    "message": "PGP Tools अनलॉक करें"
+  },
+  "shared_unlock_failed": {
+    "message": "अनलॉक विफल रहा। फिर से कोशिश करें।"
+  },
+  "shared_unlock_intro": {
+    "message": "आपकी कुंजियां और संपर्क एन्क्रिप्टेड हैं। जारी रखने के लिए प्रमाणित करें।"
+  },
+  "shared_unlock_lost_password": {
+    "message": "अगर आप अपना पासवर्ड खो चुके हैं, तो आपकी एन्क्रिप्टेड कुंजियां और संपर्क वापस नहीं पाए जा सकते।"
+  },
+  "shared_unlock_with_passkey": {
+    "message": "पासकी से अनलॉक करें"
+  },
+  "shared_unlock_with_vault_desc": {
+    "message": "वॉल्ट खोलने वाला पासकी प्रॉम्प्ट आपकी कुंजियां भी अनलॉक कर देता है। जो कुंजी अब भी अलग से पूछती है, वह अगली बार अनलॉक करने पर इसमें आ जाती है। पासवर्ड से सुरक्षित कुंजियां अपना पासवर्ड बनाए रखती हैं।"
+  },
+  "shared_unlock_with_vault_title": {
+    "message": "वॉल्ट के साथ कुंजियां अनलॉक करें"
+  },
+  "shared_unlocking": {
+    "message": "अनलॉक किया जा रहा है..."
+  },
+  "shared_wrong_password": {
+    "message": "पासवर्ड गलत है।"
+  },
+  "workspace_add_a_contact": {
+    "message": "संपर्क जोड़ें"
+  },
+  "workspace_age_message_note": {
+    "message": "age संदेश - SSH प्राप्तकर्ताओं को PGP के साथ नहीं मिलाया जा सकता"
+  },
+  "workspace_browse_files": {
+    "message": "फ़ाइलें ब्राउज़ करें"
+  },
+  "workspace_clear_all_files": {
+    "message": "सभी हटाएं"
+  },
+  "workspace_clear_input_output": {
+    "message": "इनपुट और आउटपुट साफ़ करें"
+  },
+  "workspace_clear_text": {
+    "message": "टेक्स्ट साफ़ करें"
+  },
+  "workspace_cleared_toast": {
+    "message": "वर्कस्पेस साफ़ किया गया"
+  },
+  "workspace_close_find": {
+    "message": "खोज बंद करें"
+  },
+  "workspace_compose_same_language": {
+    "message": "यह पहले से आपकी भाषा ($language$) में है।",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_compose_translate_unavailable": {
+    "message": "उस भाषा के लिए अनुवाद यहां उपलब्ध नहीं है।"
+  },
+  "workspace_compose_translated": {
+    "message": "$from$ से $to$ में अनुवाद किया गया",
+    "placeholders": {
+      "from": {
+        "content": "$1"
+      },
+      "to": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_create_one": {
+    "message": "एक बनाएं"
+  },
+  "workspace_crx_save_failed": {
+    "message": "अपने आप सहेजा नहीं जा सका - फिर से कोशिश करने के लिए 'सहेजें' दबाएं।"
+  },
+  "workspace_crx_saved": {
+    "message": "$name$ सहेजी गई।",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_decrypt_with": {
+    "message": "इससे डिक्रिप्ट करें"
+  },
+  "workspace_decrypting": {
+    "message": "डिक्रिप्ट किया जा रहा है..."
+  },
+  "workspace_detected_key_import": {
+    "message": "इसे संपर्क के रूप में आयात करें"
+  },
+  "workspace_detected_key_in_message": {
+    "message": "इस संदेश में $name$ की सार्वजनिक कुंजी है।",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_detected_key_in_message_anon": {
+    "message": "इस संदेश में किसी की सार्वजनिक कुंजी है।"
+  },
+  "workspace_detected_key_known": {
+    "message": "$name$ की कुंजी आपके पास पहले से है।",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_detected_key_pasted": {
+    "message": "यह $name$ की सार्वजनिक कुंजी है।",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_detected_key_pasted_anon": {
+    "message": "यह किसी की सार्वजनिक कुंजी जैसी लगती है।"
+  },
+  "workspace_detected_key_show": {
+    "message": "इसे अपनी कुंजियों में दिखाएं"
+  },
+  "workspace_drop_files_or_text": {
+    "message": "फ़ाइलें या टेक्स्ट यहां छोड़ें"
+  },
+  "workspace_enter_key_password": {
+    "message": "कुंजी का पासवर्ड डालें"
+  },
+  "workspace_enter_message_password": {
+    "message": "संदेश का पासवर्ड डालें"
+  },
+  "workspace_error_crx_invalid": {
+    "message": "इस फ़ाइल का CRX हस्ताक्षर सत्यापित नहीं किया जा सका।"
+  },
+  "workspace_error_crx_sign_failed": {
+    "message": "CRX हस्ताक्षर विफल रहा। फिर से कोशिश करें।"
+  },
+  "workspace_error_crx_wrong_password": {
+    "message": "पासवर्ड गलत है या हस्ताक्षर विफल रहा।"
+  },
+  "workspace_error_decrypt_failed": {
+    "message": "डिक्रिप्शन विफल रहा। संदेश क्षतिग्रस्त हो सकता है, या यह आपकी किसी भी कुंजी के लिए एन्क्रिप्ट नहीं किया गया है।"
+  },
+  "workspace_error_decrypt_failed_ssh": {
+    "message": "डिक्रिप्शन विफल रहा। संदेश क्षतिग्रस्त हो सकता है, या यह आपकी किसी भी SSH कुंजी के लिए एन्क्रिप्ट नहीं किया गया है।"
+  },
+  "workspace_error_engine_mismatch": {
+    "message": "यह तय नहीं हो सका कि किस फ़ॉर्मैट में एन्क्रिप्ट करना है।"
+  },
+  "workspace_error_need_recipient_or_password": {
+    "message": "कम से कम एक प्राप्तकर्ता कुंजी चुनें, या पासवर्ड सेट करें।"
+  },
+  "workspace_error_no_signing_key": {
+    "message": "कोई हस्ताक्षर कुंजी उपलब्ध नहीं। पहले कोई कुंजी जोड़ें।"
+  },
+  "workspace_error_no_signing_key_ssh": {
+    "message": "कोई हस्ताक्षर कुंजी उपलब्ध नहीं। SSH कुंजियां हस्ताक्षर नहीं कर सकतीं - पहले कोई OpenPGP कुंजी जोड़ें।"
+  },
+  "workspace_error_not_signed": {
+    "message": "इस संदेश पर हस्ताक्षर नहीं हैं।"
+  },
+  "workspace_error_read_file": {
+    "message": "यह फ़ाइल पढ़ी नहीं जा सकी। फिर से कोशिश करें।"
+  },
+  "workspace_error_select_crx_key": {
+    "message": "पहले कोई CRX हस्ताक्षर कुंजी चुनें।"
+  },
+  "workspace_error_select_decryption_key": {
+    "message": "डिक्रिप्शन कुंजी चुनें।"
+  },
+  "workspace_error_signature_invalid": {
+    "message": "हस्ताक्षर सत्यापन विफल रहा - हो सकता है कि इस संदेश से छेड़छाड़ की गई हो"
+  },
+  "workspace_error_unlock_failed": {
+    "message": "अनलॉक विफल रहा। फिर से कोशिश करें।"
+  },
+  "workspace_error_verify_failed": {
+    "message": "सत्यापन विफल रहा। इनपुट हस्ताक्षरित PGP संदेश जैसा नहीं लगता।"
+  },
+  "workspace_error_wrong_key_password": {
+    "message": "पासवर्ड गलत है। इसे जांचकर फिर से कोशिश करें।"
+  },
+  "workspace_files_decrypted_one": {
+    "message": "$count$ फ़ाइल डिक्रिप्ट की गई (कुल $size$)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "size": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_files_decrypted_other": {
+    "message": "$count$ फ़ाइलें डिक्रिप्ट की गईं (कुल $size$)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "size": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_files_encrypted_one": {
+    "message": "$count$ फ़ाइल एन्क्रिप्ट की गई (कुल $size$)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "size": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_files_encrypted_other": {
+    "message": "$count$ फ़ाइलें एन्क्रिप्ट की गईं (कुल $size$)",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "size": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_files_signed_one": {
+    "message": "$count$ फ़ाइल पर हस्ताक्षर किए गए",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_files_signed_other": {
+    "message": "$count$ फ़ाइलों पर हस्ताक्षर किए गए",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_files_zipped_encrypted_one": {
+    "message": "$count$ फ़ाइल ज़िप और एन्क्रिप्ट की गई",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_files_zipped_encrypted_other": {
+    "message": "$count$ फ़ाइलें ज़िप और एन्क्रिप्ट की गईं",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_find_hide_replace": {
+    "message": "'बदलें' छिपाएं"
+  },
+  "workspace_find_label": {
+    "message": "ढूंढें"
+  },
+  "workspace_find_replace": {
+    "message": "ढूंढें और बदलें"
+  },
+  "workspace_find_show_replace": {
+    "message": "'बदलें' दिखाएं"
+  },
+  "workspace_go": {
+    "message": "जाएं"
+  },
+  "workspace_hide_password": {
+    "message": "पासवर्ड छिपाएं"
+  },
+  "workspace_hide_technical_details": {
+    "message": "तकनीकी विवरण छिपाएं"
+  },
+  "workspace_history_save_failed": {
+    "message": "इतिहास में सहेजा नहीं जा सका - स्टोरेज भर गया हो सकता है"
+  },
+  "workspace_import_one": {
+    "message": "एक आयात करें"
+  },
+  "workspace_match_case": {
+    "message": "केस मिलाएं"
+  },
+  "workspace_message_input_aria": {
+    "message": "संदेश इनपुट"
+  },
+  "workspace_message_password_help": {
+    "message": "जिसके पास यह पासवर्ड होगा, वह संदेश पढ़ सकता है, इसलिए इसे किसी दूसरे माध्यम से भेजें - संदेश के साथ नहीं। यह आपके चुने हुए प्राप्तकर्ताओं के अलावा संदेश में जोड़ा जाता है; दोनों में से कोई भी इसे खोल सकता है।"
+  },
+  "workspace_message_password_label": {
+    "message": "संदेश का पासवर्ड"
+  },
+  "workspace_message_password_title": {
+    "message": "इस संदेश का पासवर्ड"
+  },
+  "workspace_message_tools": {
+    "message": "संदेश टूल"
+  },
+  "workspace_need_recipient_or_password": {
+    "message": "कम से कम एक प्राप्तकर्ता चुनें, या पासवर्ड सेट करें"
+  },
+  "workspace_next_match": {
+    "message": "अगला मिलान"
+  },
+  "workspace_no_contacts_yet": {
+    "message": "अभी कोई संपर्क नहीं"
+  },
+  "workspace_no_keys_yet": {
+    "message": "अभी कोई कुंजी नहीं"
+  },
+  "workspace_no_such_language": {
+    "message": "ऐसी कोई भाषा नहीं।"
+  },
+  "workspace_note_downloading": {
+    "message": "$what$ डाउनलोड हो रहा है...",
+    "placeholders": {
+      "what": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_note_downloading_progress": {
+    "message": "$what$ डाउनलोड हो रहा है, $percent$%",
+    "placeholders": {
+      "what": {
+        "content": "$1"
+      },
+      "percent": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_note_same_language": {
+    "message": "यह संदेश पहले से $language$ में है।",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_note_translated_from": {
+    "message": "इसी डिवाइस पर $language$ से अनुवाद किया गया।",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_note_uncertain": {
+    "message": "पता नहीं चल सका कि यह संदेश किस भाषा में है।"
+  },
+  "workspace_operation_failed": {
+    "message": "कार्रवाई विफल रही। फिर से कोशिश करें।"
+  },
+  "workspace_output_size_line": {
+    "message": "$name$ - $size$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "size": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_password_min_length_one": {
+    "message": "कम से कम $count$ वर्ण।",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_password_min_length_other": {
+    "message": "कम से कम $count$ वर्ण।",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_password_too_short_one": {
+    "message": "कम से कम $count$ वर्ण इस्तेमाल करें।",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_password_too_short_other": {
+    "message": "कम से कम $count$ वर्ण इस्तेमाल करें।",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_placeholder_compose": {
+    "message": "अपना संदेश लिखें या पेस्ट करें..."
+  },
+  "workspace_placeholder_decrypt": {
+    "message": "आपको मिला एन्क्रिप्टेड संदेश यहां पेस्ट करें..."
+  },
+  "workspace_placeholder_verify": {
+    "message": "जांचने के लिए हस्ताक्षरित संदेश पेस्ट करें..."
+  },
+  "workspace_previous_match": {
+    "message": "पिछला मिलान"
+  },
+  "workspace_private_key_clear_input": {
+    "message": "इनपुट साफ़ करें"
+  },
+  "workspace_private_key_ignore": {
+    "message": "अनदेखा करें"
+  },
+  "workspace_private_key_import_safely": {
+    "message": "इस कुंजी को सुरक्षित रूप से आयात करें"
+  },
+  "workspace_private_key_pasted_body": {
+    "message": "एन्क्रिप्ट/डिक्रिप्ट बॉक्स गुप्त कुंजी सामग्री के लिए सुरक्षित जगह नहीं है। आयात फ़्लो इस्तेमाल करें ताकि कुंजी सुरक्षित स्टोर में लोड हो और किसी भी ड्राफ़्ट स्नैपशॉट से बाहर रहे।"
+  },
+  "workspace_private_key_pasted_title": {
+    "message": "यह निजी कुंजी जैसी लगती है। निजी कुंजियां यहां पेस्ट न करें।"
+  },
+  "workspace_private_key_show_cleartext": {
+    "message": "पेस्ट किया गया टेक्स्ट सादे रूप में दिखाएं"
+  },
+  "workspace_processing": {
+    "message": "प्रोसेस किया जा रहा है..."
+  },
+  "workspace_recipients_label": {
+    "message": "प्राप्तकर्ता"
+  },
+  "workspace_replace": {
+    "message": "बदलें"
+  },
+  "workspace_replace_all": {
+    "message": "सभी बदलें"
+  },
+  "workspace_replace_all_short": {
+    "message": "सभी"
+  },
+  "workspace_replace_all_shortcut": {
+    "message": "सभी बदलें ($shortcut$)",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_replace_with": {
+    "message": "इससे बदलें"
+  },
+  "workspace_reset": {
+    "message": "रीसेट करें"
+  },
+  "workspace_restore_original": {
+    "message": "मूल संदेश वापस लाएं"
+  },
+  "workspace_save_file": {
+    "message": "$name$ सहेजें",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_search_languages": {
+    "message": "भाषाएं खोजें"
+  },
+  "workspace_select_signing_key": {
+    "message": "हस्ताक्षर कुंजी चुनें"
+  },
+  "workspace_self_excluded_age": {
+    "message": "आपकी अपनी कोई SSH कुंजी नहीं है, और age संदेश में PGP कुंजी शामिल नहीं की जा सकती।"
+  },
+  "workspace_self_excluded_intro": {
+    "message": "आप इसे नहीं पढ़ पाएंगे:"
+  },
+  "workspace_self_excluded_pgp": {
+    "message": "आपकी अपनी कोई भी कुंजी इस संदेश में जोड़ी नहीं जा सकती।"
+  },
+  "workspace_set_password": {
+    "message": "पासवर्ड सेट करें"
+  },
+  "workspace_show_original": {
+    "message": "मूल दिखाएं"
+  },
+  "workspace_show_password": {
+    "message": "पासवर्ड दिखाएं"
+  },
+  "workspace_show_technical_details": {
+    "message": "तकनीकी विवरण दिखाएं"
+  },
+  "workspace_show_translation": {
+    "message": "$language$ अनुवाद दिखाएं",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_sign_blocked_age": {
+    "message": "age संदेशों पर हस्ताक्षर नहीं किए जा सकते - यहां SSH कुंजियों का कोई हस्ताक्षर फ़ॉर्मैट नहीं है।"
+  },
+  "workspace_sign_blocked_no_pgp_key": {
+    "message": "हस्ताक्षर के लिए आपकी अपनी OpenPGP कुंजी चाहिए - SSH कुंजियां हस्ताक्षर नहीं कर सकतीं।"
+  },
+  "workspace_sign_for_web_store": {
+    "message": "Web Store के लिए हस्ताक्षर करें"
+  },
+  "workspace_sign_kind_crx": {
+    "message": "Chrome एक्सटेंशन (.crx)"
+  },
+  "workspace_sign_kind_pgp": {
+    "message": "PGP हस्ताक्षर"
+  },
+  "workspace_sign_with": {
+    "message": "इससे हस्ताक्षर करें"
+  },
+  "workspace_signature_verified": {
+    "message": "हस्ताक्षर सत्यापित"
+  },
+  "workspace_status_age_encrypted": {
+    "message": "age संदेश - SSH प्राप्तकर्ताओं के लिए एन्क्रिप्ट किया गया"
+  },
+  "workspace_status_crx_signed": {
+    "message": "$name$ पर हस्ताक्षर किए गए - सहेजा जा रहा है...",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_status_crx_valid": {
+    "message": "मान्य CRX - एक्सटेंशन $id$",
+    "placeholders": {
+      "id": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_status_decrypted_archive": {
+    "message": "कई फ़ाइलों वाला आर्काइव डिक्रिप्ट किया गया"
+  },
+  "workspace_status_signer_unknown": {
+    "message": "इस संदेश पर हस्ताक्षर हैं, लेकिन हस्ताक्षरकर्ता की सार्वजनिक कुंजी आपकी कुंजियों या संपर्कों में नहीं है, इसलिए हस्ताक्षर सत्यापित नहीं किया जा सका।"
+  },
+  "workspace_style_bold": {
+    "message": "बोल्ड"
+  },
+  "workspace_style_code": {
+    "message": "कोड"
+  },
+  "workspace_style_italic": {
+    "message": "इटैलिक"
+  },
+  "workspace_style_strike": {
+    "message": "स्ट्राइकथ्रू"
+  },
+  "workspace_text_cleared_toast": {
+    "message": "टेक्स्ट साफ़ किया गया"
+  },
+  "workspace_text_entered_below": {
+    "message": "टेक्स्ट नीचे लिखा गया है"
+  },
+  "workspace_toggle_encrypt_to_self": {
+    "message": "मेरे लिए भी एन्क्रिप्ट करें"
+  },
+  "workspace_toggle_password": {
+    "message": "पासवर्ड"
+  },
+  "workspace_toggle_save_to_history": {
+    "message": "इतिहास में सहेजें"
+  },
+  "workspace_toggle_zip_files": {
+    "message": "फ़ाइलें ज़िप करें"
+  },
+  "workspace_translate": {
+    "message": "अनुवाद करें"
+  },
+  "workspace_translate_menu_heading": {
+    "message": "संदेश का अनुवाद इस भाषा में करें"
+  },
+  "workspace_translate_to": {
+    "message": "$language$ में अनुवाद करें",
+    "placeholders": {
+      "language": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_translating": {
+    "message": "अनुवाद किया जा रहा है..."
+  },
+  "workspace_undo": {
+    "message": "पूर्ववत करें"
+  },
+  "workspace_unknown_signer": {
+    "message": "अज्ञात हस्ताक्षरकर्ता"
+  },
+  "workspace_unlocking": {
+    "message": "अनलॉक किया जा रहा है..."
+  },
+  "workspace_unverified": {
+    "message": "असत्यापित"
+  },
+  "workspace_verify_signature": {
+    "message": "हस्ताक्षर सत्यापित करें"
+  },
+  "workspace_verifying": {
+    "message": "सत्यापित किया जा रहा है..."
+  },
+  "workspace_working": {
+    "message": "काम चल रहा है..."
   }
 }

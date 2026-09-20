@@ -1,0 +1,9 @@
+Fanden Sie PGP schon immer umständlich? Genau deshalb gibt es diese Erweiterung.
+
+Mit PGP Tools verschlüsseln, entschlüsseln, signieren und verifizieren Sie Nachrichten direkt im Browser. Schlüssel, Kontakte und Vorgänge verwalten Sie in der Seitenleiste. Kein Terminal nötig.
+
+Ihre privaten Schlüssel sind durch Passkeys (Touch ID, Face ID, YubiKey) oder Argon2id-Passwörter geschützt, und die gesamte Kryptografie läuft in Rust/WebAssembly, nicht in JavaScript.
+
+Open Source, kostenlos, kein Konto erforderlich.
+
+Quellcode: https://github.com/Am-I-Being-Pwned/PGP-Tools

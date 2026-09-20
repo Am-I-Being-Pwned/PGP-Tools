@@ -1,4 +1,5 @@
-import { format } from "date-fns";
+import { t, tn } from "./i18n";
+import { formatDate } from "./i18n/format";
 
 /** A stored key record an import can collide with. Both `ProtectedKeyBlob`
  *  (keyring, `createdAt`) and `PublicContactKey` (contacts, `addedAt` +
@@ -47,14 +48,16 @@ export function detectImportOverwrite(
     ) {
       changes.push(
         incoming.expiresAt == null
-          ? "no longer expires"
-          : `new expiry: ${format(incoming.expiresAt, "PPP")}`,
+          ? t("import_change_no_expiry")
+          : t("import_change_new_expiry", {
+              date: formatDate(incoming.expiresAt),
+            }),
       );
     }
     const known = new Set(match.userIds);
     const newIds = (incoming.userIds ?? []).filter((u) => !known.has(u));
     if (newIds.length > 0) {
-      changes.push(`${newIds.length} new user ID${newIds.length === 1 ? "" : "s"}`);
+      changes.push(tn("import_change_new_user_ids", newIds.length));
     }
   }
 

@@ -1,0 +1,90 @@
+{
+  "common_cancel": {
+    "message": "Cancel",
+    "description": "Generic cancel button"
+  },
+  "common_back": {
+    "message": "Back",
+    "description": "Generic back navigation button"
+  },
+  "common_done": {
+    "message": "Done",
+    "description": "Generic done button"
+  },
+  "common_save": {
+    "message": "Save",
+    "description": "Generic save button"
+  },
+  "common_delete": {
+    "message": "Delete",
+    "description": "Generic delete button"
+  },
+  "common_remove": {
+    "message": "Remove",
+    "description": "Generic remove button"
+  },
+  "common_copy": {
+    "message": "Copy",
+    "description": "Generic copy-to-clipboard button"
+  },
+  "common_copied": {
+    "message": "Copied",
+    "description": "Feedback after a copy-to-clipboard"
+  },
+  "common_download": {
+    "message": "Download",
+    "description": "Generic download button"
+  },
+  "common_continue": {
+    "message": "Continue",
+    "description": "Generic continue button"
+  },
+  "common_on": {
+    "message": "On",
+    "description": "Toggle state label: enabled"
+  },
+  "common_off": {
+    "message": "Off",
+    "description": "Toggle state label: disabled"
+  },
+  "common_settings": {
+    "message": "Settings",
+    "description": "Settings tab / page title"
+  },
+  "common_keys": {
+    "message": "Keys",
+    "description": "Keys tab title"
+  },
+  "common_encrypt": {
+    "message": "Encrypt",
+    "description": "Workspace mode name"
+  },
+  "common_decrypt": {
+    "message": "Decrypt",
+    "description": "Workspace mode name"
+  },
+  "common_sign": {
+    "message": "Sign",
+    "description": "Workspace mode name"
+  },
+  "common_verify": {
+    "message": "Verify",
+    "description": "Workspace mode name"
+  },
+  "common_public_key": {
+    "message": "Public key",
+    "description": "Key kind label"
+  },
+  "common_private_key": {
+    "message": "Private key",
+    "description": "Key kind label"
+  },
+  "common_unlock": {
+    "message": "Unlock",
+    "description": "Generic unlock button"
+  },
+  "common_lock": {
+    "message": "Lock",
+    "description": "Generic lock button"
+  }
+}

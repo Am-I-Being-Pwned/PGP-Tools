@@ -1,3 +1,4 @@
+import { t } from "../lib/i18n";
 import { toast } from "../lib/toast";
 import {
   clipboardWipeDelayMs,
@@ -18,11 +19,6 @@ export interface CopyOptions {
   wipeDelayMs?: number;
 }
 
-/** Clipboard writes reject when the side panel isn't the focused
- *  document (Chrome gates the API on focus). Surfaced, not swallowed. */
-const COPY_FAILED_MESSAGE =
-  "Copy failed - click the extension panel first, then try again.";
-
 /** One toast slot for all clipboard feedback: rapid successive copies
  *  update in place instead of stacking. */
 const COPY_TOAST_ID = "clipboard-copy";
@@ -42,7 +38,9 @@ export async function copyToClipboard(
   try {
     await navigator.clipboard.writeText(text);
   } catch {
-    toast.error(COPY_FAILED_MESSAGE, { id: COPY_TOAST_ID });
+    // Clipboard writes reject when the side panel isn't the focused
+    // document (Chrome gates the API on focus). Surfaced, not swallowed.
+    toast.error(t("app_copy_failed"), { id: COPY_TOAST_ID });
     return false;
   }
   const { label, sensitive, wipeDelayMs } = options;
@@ -51,12 +49,12 @@ export async function copyToClipboard(
     scheduleClipboardClear(delayMs);
     if (label) {
       toast.success(
-        `${label} copied - clipboard clears in ${Math.round(delayMs / 1000)}s`,
+        t("app_copied_wipe", { label, seconds: Math.round(delayMs / 1000) }),
         { id: COPY_TOAST_ID },
       );
     }
   } else if (label) {
-    toast.success(`${label} copied`, { id: COPY_TOAST_ID });
+    toast.success(t("app_copied", { label }), { id: COPY_TOAST_ID });
   }
   return true;
 }

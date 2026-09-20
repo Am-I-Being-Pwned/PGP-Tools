@@ -1,0 +1,682 @@
+{
+  "keys_my_keys_heading": {
+    "message": "My Keys",
+    "description": "Keys tab: heading above the user's own key list."
+  },
+  "keys_empty": {
+    "message": "No keys yet. Generate or import a key to get started.",
+    "description": "Keys tab: shown when the user has no keys of their own."
+  },
+  "keys_generate_button": {
+    "message": "Generate Key",
+    "description": "Keys tab: button opening the key generation page. Short, shares a row with Import Key."
+  },
+  "keys_import_button": {
+    "message": "Import Key",
+    "description": "Keys tab: button opening the key import page. Short, shares a row with Generate Key."
+  },
+  "keys_unknown_name": {
+    "message": "Unknown",
+    "description": "Fallback display name for a key or contact with no user ID at all."
+  },
+  "keys_exported_one": {
+    "message": "Exported $count$ key",
+    "description": "Toast after a bulk export. $count$ is the number of keys exported."
+  },
+  "keys_exported_other": {
+    "message": "Exported $count$ keys",
+    "description": "Toast after a bulk export. $count$ is the number of keys exported."
+  },
+  "keys_exported_unsafe_one": {
+    "message": "Exported $count$ key (private keys UNENCRYPTED)",
+    "description": "Toast after a bulk export where private keys were written without a passphrase. $count$ is the number of keys. Keep the warning emphatic (uppercase)."
+  },
+  "keys_exported_unsafe_other": {
+    "message": "Exported $count$ keys (private keys UNENCRYPTED)",
+    "description": "Toast after a bulk export where private keys were written without a passphrase. $count$ is the number of keys. Keep the warning emphatic (uppercase)."
+  },
+  "keys_reselect": {
+    "message": "Reselect",
+    "description": "Toast action button after a bulk export: restores the previous selection. Very short."
+  },
+  "keys_ssh_export_skipped_one": {
+    "message": "$count$ SSH key can't be exported - an imported SSH key never leaves this device.",
+    "description": "Toast when a bulk export selection included SSH keys, which are skipped. $count$ is how many were skipped."
+  },
+  "keys_ssh_export_skipped_other": {
+    "message": "$count$ SSH keys can't be exported - an imported SSH key never leaves this device.",
+    "description": "Toast when a bulk export selection included SSH keys, which are skipped. $count$ is how many were skipped."
+  },
+  "keys_rename_key_title": {
+    "message": "Rename key",
+    "description": "Title of the rename page for one of the user's own keys."
+  },
+  "keys_rename_crx_title": {
+    "message": "Rename signing key",
+    "description": "Title of the rename page for a Chrome extension (CRX) signing key."
+  },
+  "keys_rename_contact_title": {
+    "message": "Rename contact",
+    "description": "Title of the rename page for a contact."
+  },
+  "keys_rename_field_label": {
+    "message": "Display name",
+    "description": "Rename page: label of the text field holding the local display name."
+  },
+  "keys_rename_hint": {
+    "message": "Shown in place of $identity$. This is a local label only.",
+    "description": "Rename page: hint under the field. $identity$ is the key's real name (user ID, key comment or extension ID) that the alias will stand in for."
+  },
+  "keys_rename_placeholder_key": {
+    "message": "e.g. Work laptop",
+    "description": "Rename page placeholder for one of the user's own keys: an example alias."
+  },
+  "keys_rename_placeholder_crx": {
+    "message": "e.g. My Extension",
+    "description": "Rename page placeholder for a CRX signing key: an example label."
+  },
+  "keys_rename_placeholder_contact": {
+    "message": "e.g. Alice (all machines)",
+    "description": "Rename page placeholder for a contact: an example alias."
+  },
+  "keys_revocation_unlock_first": {
+    "message": "Unlock this key first, then try again.",
+    "description": "Error shown when the user tries to create a revocation certificate while the key is locked."
+  },
+  "keys_bulk_delete_title": {
+    "message": "Delete selected?",
+    "description": "Title of the confirmation page for deleting a bulk selection."
+  },
+  "keys_bulk_delete_confirm_one": {
+    "message": "Delete $count$ item permanently",
+    "description": "Confirm button of the bulk delete page. $count$ is the number of selected keys and contacts."
+  },
+  "keys_bulk_delete_confirm_other": {
+    "message": "Delete $count$ items permanently",
+    "description": "Confirm button of the bulk delete page. $count$ is the number of selected keys and contacts."
+  },
+  "keys_bulk_delete_prompt_one": {
+    "message": "delete $count$ key",
+    "description": "Bulk delete page: the exact phrase the user must type to confirm deleting private keys. $count$ is the number of selected items. Shown to the user and compared with what they type; keep it short and easy to type."
+  },
+  "keys_bulk_delete_prompt_other": {
+    "message": "delete $count$ keys",
+    "description": "Bulk delete page: the exact phrase the user must type to confirm deleting private keys. $count$ is the number of selected items. Shown to the user and compared with what they type; keep it short and easy to type."
+  },
+  "keys_contacts_removed_one": {
+    "message": "Contact removed",
+    "description": "Toast after removing contacts (public keys). Singular form has no count."
+  },
+  "keys_contacts_removed_other": {
+    "message": "$count$ contacts removed",
+    "description": "Toast after removing contacts (public keys). $count$ is how many were removed."
+  },
+  "keys_undo": {
+    "message": "Undo",
+    "description": "Toast action button that re-adds just-removed contacts. Very short."
+  },
+  "keys_confirm_remove_contact_title": {
+    "message": "Remove contact?",
+    "description": "Title of the confirmation page for removing a contact."
+  },
+  "keys_confirm_delete_key_title": {
+    "message": "Delete key?",
+    "description": "Title of the confirmation page for deleting one of the user's own keys."
+  },
+  "keys_remove_contact": {
+    "message": "Remove contact",
+    "description": "Remove a contact: confirm button on the removal page, contact card menu item, and details page action label."
+  },
+  "keys_delete_key_permanently": {
+    "message": "Delete key permanently",
+    "description": "Confirm button on the delete page for one of the user's own keys."
+  },
+  "keys_count_private_keys_one": {
+    "message": "$count$ private key",
+    "description": "Bulk delete summary: part of a comma-separated list of what is selected. $count$ is a number."
+  },
+  "keys_count_private_keys_other": {
+    "message": "$count$ private keys",
+    "description": "Bulk delete summary: part of a comma-separated list of what is selected. $count$ is a number."
+  },
+  "keys_count_signing_keys_one": {
+    "message": "$count$ signing key",
+    "description": "Bulk delete summary: part of a comma-separated list of what is selected (CRX extension signing keys). $count$ is a number."
+  },
+  "keys_count_signing_keys_other": {
+    "message": "$count$ signing keys",
+    "description": "Bulk delete summary: part of a comma-separated list of what is selected (CRX extension signing keys). $count$ is a number."
+  },
+  "keys_count_contacts_one": {
+    "message": "$count$ contact",
+    "description": "Bulk delete summary: part of a comma-separated list of what is selected. $count$ is a number."
+  },
+  "keys_count_contacts_other": {
+    "message": "$count$ contacts",
+    "description": "Bulk delete summary: part of a comma-separated list of what is selected. $count$ is a number."
+  },
+  "keys_bulk_delete_private_body": {
+    "message": "This permanently deletes the selected private keys from this device. Anything encrypted only to a deleted key becomes unrecoverable. Make sure you have a backup if you might ever need them.",
+    "description": "Bulk delete page: warning body when the selection includes private keys."
+  },
+  "keys_bulk_delete_contacts_body": {
+    "message": "You'll no longer be able to encrypt to these contacts or verify their signatures. You can re-import their public keys later.",
+    "description": "Bulk delete page: body when only contacts are selected."
+  },
+  "keys_delete_crx_body": {
+    "message": "You can no longer sign updates for this extension, and the key can't be recovered unless you have a backup.",
+    "description": "Delete page body for a CRX extension signing key."
+  },
+  "keys_delete_key_body": {
+    "message": "This permanently deletes the private key from this device. Anything encrypted only to this key becomes unrecoverable. Make sure you have a backup if you might ever need it.",
+    "description": "Delete page body for one of the user's own keys."
+  },
+  "keys_remove_contact_body": {
+    "message": "You'll no longer be able to encrypt messages to this contact or verify their signatures. You can re-import their public key later.",
+    "description": "Remove page body for a contact."
+  },
+  "keys_contacts_heading": {
+    "message": "Contacts",
+    "description": "Keys tab: heading above the contact list, when the list is empty."
+  },
+  "keys_contacts_heading_encrypted": {
+    "message": "Contacts (encrypted)",
+    "description": "Keys tab: contacts heading while the vault is locked and contacts cannot be read."
+  },
+  "keys_contacts_heading_count": {
+    "message": "Contacts ($count$)",
+    "description": "Keys tab: contacts heading with the number of contacts. $count$ is a number."
+  },
+  "keys_contacts_locked": {
+    "message": "Contacts are encrypted. Unlock PGP Tools to view and manage them.",
+    "description": "Keys tab: notice shown in place of the contact list while the vault is locked. 'PGP Tools' is the product name; keep it."
+  },
+  "keys_search_contacts_placeholder": {
+    "message": "Search contacts...",
+    "description": "Placeholder of the contact search field."
+  },
+  "keys_no_contacts_match": {
+    "message": "No contacts match \"$query$\"",
+    "description": "Contact search: empty result. $query$ is what the user typed."
+  },
+  "keys_wrong_password": {
+    "message": "Wrong password",
+    "description": "Key card: error after a failed password unlock."
+  },
+  "keys_passkey_failed": {
+    "message": "Passkey authentication failed",
+    "description": "Key card: error after a failed passkey unlock."
+  },
+  "keys_status_unlocked": {
+    "message": "Unlocked",
+    "description": "Key card: tooltip on the lock icon when the key is unlocked for this session."
+  },
+  "keys_status_locked": {
+    "message": "Locked",
+    "description": "Key card: tooltip on the lock icon when the key is locked."
+  },
+  "keys_status_sealed": {
+    "message": "Sealed at rest",
+    "description": "Key card: tooltip on the lock icon for a key that has no session unlock (CRX signing key), meaning it stays encrypted until used."
+  },
+  "keys_default_badge": {
+    "message": "Default",
+    "description": "Small pill after a key's name marking it as the default key. One word."
+  },
+  "keys_default_title": {
+    "message": "Used by default for signing, decrypting, and encrypt-to-self",
+    "description": "Tooltip on the Default pill."
+  },
+  "keys_key_options_aria": {
+    "message": "Key options",
+    "description": "Accessible label of the three-dot menu button on a key card."
+  },
+  "keys_rename": {
+    "message": "Rename",
+    "description": "Menu item / action label: open the rename page."
+  },
+  "keys_public_key_copied": {
+    "message": "Public key copied",
+    "description": "Key card: inline feedback after copying the public key."
+  },
+  "keys_copy_public_key": {
+    "message": "Copy public key",
+    "description": "Menu item / action label: copy the public key to the clipboard."
+  },
+  "keys_download_public_key": {
+    "message": "Download public key",
+    "description": "Menu item / action label: download the public key as a file."
+  },
+  "keys_copy_private_key": {
+    "message": "Copy private key",
+    "description": "Key card menu item: opens the private key export page. Destructive styling."
+  },
+  "keys_select": {
+    "message": "Select",
+    "description": "Card menu item: enter bulk selection mode with this card selected."
+  },
+  "keys_delete_key": {
+    "message": "Delete key",
+    "description": "Key card menu item and details page action: delete one of the user's own keys."
+  },
+  "keys_protection_passkey": {
+    "message": "Passkey",
+    "description": "How a private key is protected at rest: a passkey. Shown on the key card and as a chip on the details page."
+  },
+  "keys_protection_password": {
+    "message": "Password",
+    "description": "How a private key is protected at rest: a password. Shown on the key card and as a chip on the details page."
+  },
+  "keys_weak_sha1": {
+    "message": "Weak (SHA-1)",
+    "description": "Small warning pill on a key or contact card whose certificate relies on SHA-1. Keep 'SHA-1'."
+  },
+  "keys_enter_password_placeholder": {
+    "message": "Enter password",
+    "description": "Placeholder of the inline password field used to unlock a key on its card."
+  },
+  "keys_key_details": {
+    "message": "Key details",
+    "description": "Title of the key details page, and accessible label / tooltip of the buttons that open it."
+  },
+  "keys_details_aria": {
+    "message": "Key details for $name$",
+    "description": "Accessible label of the key details panel. $name$ is the key's display name."
+  },
+  "keys_cap_sign": {
+    "message": "Signs messages",
+    "description": "What a component key can do; part of a list separated by a middle dot."
+  },
+  "keys_cap_encrypt": {
+    "message": "Receives encrypted messages",
+    "description": "What a component key can do; part of a list separated by a middle dot."
+  },
+  "keys_cap_auth": {
+    "message": "Authenticates (e.g. SSH)",
+    "description": "What a component key can do; part of a list separated by a middle dot."
+  },
+  "keys_cap_certify": {
+    "message": "Vouches for identities",
+    "description": "What a component key can do (certification); part of a list separated by a middle dot."
+  },
+  "keys_banner_revoked_title": {
+    "message": "This key has been revoked",
+    "description": "Key details: red status banner title for a revoked key."
+  },
+  "keys_banner_no_reason": {
+    "message": "No reason was given.",
+    "description": "Key details: revoked banner line when the certificate carries no revocation reason."
+  },
+  "keys_banner_revoked_own": {
+    "message": "Generate or import a replacement key.",
+    "description": "Key details: revoked banner advice for one of the user's own keys."
+  },
+  "keys_banner_revoked_contact": {
+    "message": "Do not encrypt to it or trust new signatures from it.",
+    "description": "Key details: revoked banner advice for a contact's key."
+  },
+  "keys_banner_expired_title": {
+    "message": "This key expired $when$",
+    "description": "Key details: red banner title for an expired key. $when$ is a relative time such as '2 months ago'."
+  },
+  "keys_banner_expired_on": {
+    "message": "It stopped being valid on $date$.",
+    "description": "Key details: expired banner line. $date$ is a localised long date."
+  },
+  "keys_banner_expired_own": {
+    "message": "Generate or import a newer key.",
+    "description": "Key details: expired banner advice for one of the user's own keys."
+  },
+  "keys_banner_expired_contact": {
+    "message": "Ask the owner for an updated key.",
+    "description": "Key details / import preview: expired banner advice for a contact's key."
+  },
+  "keys_banner_unusable_title": {
+    "message": "This key can't be used",
+    "description": "Key details: red banner title when the key can neither encrypt nor sign."
+  },
+  "keys_banner_unusable_body": {
+    "message": "It has no usable encryption or signing subkey.",
+    "description": "Key details: unusable banner line when the engine gave no specific reason."
+  },
+  "keys_banner_encrypt_only_own": {
+    "message": "You can receive encrypted messages, but this key can't sign.",
+    "description": "Key details: amber banner for one of the user's own keys that can only encrypt."
+  },
+  "keys_banner_encrypt_only_contact": {
+    "message": "You can encrypt to it, but it can't sign.",
+    "description": "Key details: amber banner for a contact's key that can only encrypt."
+  },
+  "keys_banner_sign_only_own": {
+    "message": "You can sign messages, but this key can't receive encrypted ones.",
+    "description": "Key details: amber banner for one of the user's own keys that can only sign."
+  },
+  "keys_banner_sign_only_contact": {
+    "message": "You can verify its signatures, but can't encrypt to it.",
+    "description": "Key details: amber banner for a contact's key that can only sign."
+  },
+  "keys_banner_expires_soon": {
+    "message": "This key expires soon",
+    "description": "Key details: amber banner title when the key expires within 30 days."
+  },
+  "keys_subkey_label": {
+    "message": "Subkey",
+    "description": "Heading of one component-key row in a certificate breakdown."
+  },
+  "keys_bits": {
+    "message": "$bits$-bit",
+    "description": "Key size, e.g. '4096-bit'. $bits$ is a number."
+  },
+  "keys_row_created": {
+    "message": "created $date$",
+    "description": "Subkey row: creation date clause, lowercase, in a middle-dot separated line. $date$ is a localised short date."
+  },
+  "keys_row_expires": {
+    "message": "expires $date$",
+    "description": "Subkey row: expiry clause for a still-valid subkey, lowercase. $date$ is a localised short date."
+  },
+  "keys_row_expired": {
+    "message": "expired $date$",
+    "description": "Subkey row: expiry clause for an expired subkey, lowercase. $date$ is a localised short date."
+  },
+  "keys_row_never_expires": {
+    "message": "never expires",
+    "description": "Subkey row: clause for a subkey with no expiry, lowercase."
+  },
+  "keys_status_expired": {
+    "message": "expired",
+    "description": "Subkey row status pill, lowercase."
+  },
+  "keys_status_revoked": {
+    "message": "revoked",
+    "description": "Subkey row status pill, lowercase."
+  },
+  "keys_status_invalid": {
+    "message": "invalid",
+    "description": "Subkey row status pill, lowercase."
+  },
+  "keys_revoked_reason": {
+    "message": "Revoked: $reason$",
+    "description": "Subkey row: revocation reason line. $reason$ is text from the certificate."
+  },
+  "keys_also_known_as": {
+    "message": "Also known as",
+    "description": "Key details: small uppercase label above the key's other email addresses."
+  },
+  "keys_loading": {
+    "message": "Loading…",
+    "description": "Key details: shown while the certificate is being parsed."
+  },
+  "keys_copy_fingerprint_aria": {
+    "message": "Copy fingerprint",
+    "description": "Accessible label of the copy button next to the fingerprint."
+  },
+  "keys_fact_fingerprint": {
+    "message": "Fingerprint",
+    "description": "Key facts card row label. Fits a narrow (5rem) column."
+  },
+  "keys_fact_algorithm": {
+    "message": "Algorithm",
+    "description": "Key facts card row label. Fits a narrow (5rem) column."
+  },
+  "keys_fact_used_for": {
+    "message": "Used for",
+    "description": "Key facts card row label: what the primary key can do. Fits a narrow (5rem) column."
+  },
+  "keys_fact_created": {
+    "message": "Created",
+    "description": "Key facts card row label: creation date. Fits a narrow (5rem) column."
+  },
+  "keys_fact_expires": {
+    "message": "Expires",
+    "description": "Key facts card row label: expiry date. Fits a narrow (5rem) column."
+  },
+  "keys_fact_added": {
+    "message": "Added",
+    "description": "Key facts card row label: when the key was added to this app. Fits a narrow (5rem) column."
+  },
+  "keys_fact_last_used": {
+    "message": "Last used",
+    "description": "Key facts card row label: when the key was last unlocked. Fits a narrow (5rem) column."
+  },
+  "keys_never": {
+    "message": "Never",
+    "description": "Key facts card: expiry value for a key that never expires."
+  },
+  "keys_expires_value": {
+    "message": "$date$ ($when$)",
+    "description": "Key facts card: expiry value. $date$ is a localised long date, $when$ a relative time such as 'in 3 months'."
+  },
+  "keys_subkeys_title": {
+    "message": "Subkeys",
+    "description": "Heading of the certificate's subkey list (a count follows in parentheses)."
+  },
+  "keys_group_row_label": {
+    "message": "Key",
+    "description": "Heading of one row when a contact holds several separate SSH keys (peers, not subkeys)."
+  },
+  "keys_subkeys_truncated": {
+    "message": "This certificate has an unusually large number of subkeys; only the first $count$ are shown.",
+    "description": "Warning above the subkey list when the parser capped it. $count$ is the number shown (always more than one)."
+  },
+  "keys_no_subkeys": {
+    "message": "This key has no subkeys; the primary key does everything itself.",
+    "description": "Shown in the subkey section when the certificate has no subkeys."
+  },
+  "keys_inactive_subkeys_expired_one": {
+    "message": "$count$ expired subkey",
+    "description": "Toggle button revealing hidden inactive subkeys, all of which are expired. $count$ is a number."
+  },
+  "keys_inactive_subkeys_expired_other": {
+    "message": "$count$ expired subkeys",
+    "description": "Toggle button revealing hidden inactive subkeys, all of which are expired. $count$ is a number."
+  },
+  "keys_inactive_subkeys_revoked_one": {
+    "message": "$count$ revoked subkey",
+    "description": "Toggle button revealing hidden inactive subkeys, all of which are revoked. $count$ is a number."
+  },
+  "keys_inactive_subkeys_revoked_other": {
+    "message": "$count$ revoked subkeys",
+    "description": "Toggle button revealing hidden inactive subkeys, all of which are revoked. $count$ is a number."
+  },
+  "keys_inactive_subkeys_unusable_one": {
+    "message": "$count$ unusable subkey",
+    "description": "Toggle button revealing hidden inactive subkeys of mixed or invalid status. $count$ is a number."
+  },
+  "keys_inactive_subkeys_unusable_other": {
+    "message": "$count$ unusable subkeys",
+    "description": "Toggle button revealing hidden inactive subkeys of mixed or invalid status. $count$ is a number."
+  },
+  "keys_revocation_certificate": {
+    "message": "Revocation certificate",
+    "description": "Key details: section heading, and the clipboard label when the certificate is copied."
+  },
+  "keys_revocation_created": {
+    "message": "Revocation certificate created",
+    "description": "Toast after a revocation certificate was generated."
+  },
+  "keys_revocation_create_failed": {
+    "message": "Could not create a revocation certificate.",
+    "description": "Error when generating a revocation certificate fails for an unknown reason."
+  },
+  "keys_revocation_have_body": {
+    "message": "If this key is ever lost or compromised, publishing this certificate tells your contacts to stop using the key. Back it up somewhere safe - anyone who holds it can revoke your key.",
+    "description": "Key details: explanation shown when the key has a stored revocation certificate."
+  },
+  "keys_revocation_missing_body": {
+    "message": "This key was imported without a revocation certificate. Create one now and back it up, so you can revoke the key later even if you lose access to it.",
+    "description": "Key details: explanation shown when an imported key has no revocation certificate yet."
+  },
+  "keys_revocation_creating": {
+    "message": "Creating...",
+    "description": "Button label while a revocation certificate is being generated."
+  },
+  "keys_revocation_create": {
+    "message": "Create revocation certificate",
+    "description": "Button that generates a revocation certificate for an imported key."
+  },
+  "keys_chip_your_key": {
+    "message": "Your key",
+    "description": "Small chip on the details page of one of the user's own keys. Short."
+  },
+  "keys_chip_your_key_title": {
+    "message": "You hold the private key",
+    "description": "Tooltip on the 'Your key' chip."
+  },
+  "keys_chip_contact": {
+    "message": "Contact",
+    "description": "Small chip on the details page of a contact's key. Short."
+  },
+  "keys_chip_contact_title": {
+    "message": "You hold their public key",
+    "description": "Tooltip on the 'Contact' chip."
+  },
+  "keys_ssh_chip_title": {
+    "message": "An SSH key, used with age. It can't be combined with PGP recipients in one message.",
+    "description": "Tooltip on the SSH badge of a key or contact. 'age' is the name of the encryption tool; keep it lowercase."
+  },
+  "keys_chip_protection_title": {
+    "message": "How the private key is protected at rest",
+    "description": "Tooltip on the Passkey / Password chip on the details page."
+  },
+  "keys_parse_failed": {
+    "message": "Could not parse this key.",
+    "description": "Key details: error when the stored certificate cannot be parsed."
+  },
+  "keys_save_failed": {
+    "message": "Could not save this change.",
+    "description": "Toast when toggling one of a contact's keys on or off could not be persisted."
+  },
+  "keys_recipient_off_title": {
+    "message": "Messages to this contact are not encrypted to this key.",
+    "description": "Tooltip on the 'Not used' pill of a contact's key that the user turned off."
+  },
+  "keys_recipient_not_used": {
+    "message": "Not used",
+    "description": "Small amber pill on a contact's key row that the user turned off. Short."
+  },
+  "keys_recipient_last_active_title": {
+    "message": "This is the only key left in use. Turning it off too would encrypt messages to nobody.",
+    "description": "Tooltip on the disabled 'Don't use' button when it is the contact's last enabled key."
+  },
+  "keys_recipient_enable_title": {
+    "message": "Encrypt to this key again.",
+    "description": "Tooltip on the 'Use' button of a turned-off key."
+  },
+  "keys_recipient_disable_title": {
+    "message": "Stop encrypting to this key. It stays listed here.",
+    "description": "Tooltip on the 'Don't use' button of an enabled key."
+  },
+  "keys_recipient_use": {
+    "message": "Use",
+    "description": "Tiny button on a contact's key row: turn this key back on. Very short."
+  },
+  "keys_recipient_dont_use": {
+    "message": "Don't use",
+    "description": "Tiny button on a contact's key row: stop encrypting to this key. Very short."
+  },
+  "keys_encrypt_to": {
+    "message": "Encrypt to",
+    "description": "Action on a contact: open the workspace with this contact preselected as recipient."
+  },
+  "keys_remove_default": {
+    "message": "Remove default",
+    "description": "Details page action label: clear this key as the default key."
+  },
+  "keys_set_default": {
+    "message": "Set as default key",
+    "description": "Details page action label: make this key the default key."
+  },
+  "keys_default_removed": {
+    "message": "Default key removed",
+    "description": "Toast after clearing the default key."
+  },
+  "keys_default_set": {
+    "message": "Default key set",
+    "description": "Toast after setting the default key."
+  },
+  "keys_contact_keys_partial_title": {
+    "message": "Messages are encrypted to $active$ of this contact's $total$ keys; the rest are turned off in their key details.",
+    "description": "Tooltip on a contact card's key-count badge when some keys are turned off. $active$ and $total$ are numbers."
+  },
+  "keys_contact_keys_all_title": {
+    "message": "Messages are encrypted to all of this contact's keys; any one of them can decrypt.",
+    "description": "Tooltip on a contact card's key-count badge when every key is in use."
+  },
+  "keys_contact_keys_partial": {
+    "message": "$active$ of $total$ keys",
+    "description": "Contact card badge when some of the contact's keys are turned off. $active$ and $total$ are numbers; $total$ is at least 2. Very short."
+  },
+  "keys_contact_keys_count_one": {
+    "message": "$count$ key",
+    "description": "Contact card badge: how many separate keys this contact holds. Very short."
+  },
+  "keys_contact_keys_count_other": {
+    "message": "$count$ keys",
+    "description": "Contact card badge: how many separate keys this contact holds. Very short."
+  },
+  "keys_source_github": {
+    "message": "From github.com/$user$",
+    "description": "Contact card provenance line for a key fetched from GitHub. $user$ is the GitHub username; keep 'github.com/'."
+  },
+  "keys_source_keyserver": {
+    "message": "From keys.openpgp.org - $user$",
+    "description": "Contact card provenance line for a key fetched from keys.openpgp.org. $user$ is the email address looked up; keep 'keys.openpgp.org'."
+  },
+  "keys_contact_expired_title": {
+    "message": "This key expired on $date$ and can no longer be encrypted to. Ask the owner for their current key.",
+    "description": "Tooltip on the Expired pill of a contact card. $date$ is a localised long date."
+  },
+  "keys_contact_expired": {
+    "message": "Expired $date$",
+    "description": "Red pill on a contact card. $date$ is a localised short date. Short."
+  },
+  "keys_contact_expires": {
+    "message": "Expires $date$",
+    "description": "Contact card line. $date$ is a localised long date."
+  },
+  "keys_contact_options_aria": {
+    "message": "Contact options",
+    "description": "Accessible label of the three-dot menu button on a contact card."
+  },
+  "keys_selection_actions_aria": {
+    "message": "Selection actions",
+    "description": "Accessible label of the floating toolbar shown while bulk-selecting."
+  },
+  "keys_cancel_selection_aria": {
+    "message": "Cancel selection",
+    "description": "Accessible label of the X button that leaves bulk selection mode."
+  },
+  "keys_selected_count_one": {
+    "message": "$count$ selected",
+    "description": "Selection toolbar: how many cards are selected. $count$ is a number."
+  },
+  "keys_selected_count_other": {
+    "message": "$count$ selected",
+    "description": "Selection toolbar: how many cards are selected. $count$ is a number."
+  },
+  "keys_select_all": {
+    "message": "Select all",
+    "description": "Selection toolbar: label / tooltip of the select-all button."
+  },
+  "keys_deselect_all": {
+    "message": "Deselect all",
+    "description": "Selection toolbar: label / tooltip of the select-all button when everything is already selected."
+  },
+  "keys_export": {
+    "message": "Export",
+    "description": "Selection toolbar button: export the selected keys and contacts. Short."
+  },
+  "keys_size_bytes": {
+    "message": "$size$ B",
+    "description": "File size in bytes, e.g. '512 B'. $size$ is a whole number."
+  },
+  "keys_size_kb": {
+    "message": "$size$ KB",
+    "description": "File size in kilobytes, e.g. '1.2 KB'. $size$ is a number with one decimal."
+  },
+  "keys_size_mb": {
+    "message": "$size$ MB",
+    "description": "File size in megabytes, e.g. '3.4 MB'. $size$ is a number with one decimal."
+  }
+}

@@ -13,13 +13,18 @@ import { isMacPlatform } from "@amibeingpwned/ui/kbd-helpers";
 import type { ResolvedAction } from "../lib/actions/registry";
 import type { ActionCtx } from "../lib/actions/types";
 import { useShortcut } from "../hooks/useShortcut";
-import { ACTIONS, PALETTE_SHORTCUT } from "../lib/actions/definitions";
+import {
+  ACTIONS,
+  groupLabel,
+  PALETTE_SHORTCUT,
+} from "../lib/actions/definitions";
 import {
   filterActions,
   findByShortcut,
   groupActions,
   visibleActions,
 } from "../lib/actions/registry";
+import { t } from "../lib/i18n";
 import { isEditableTarget, matchesShortcut } from "../lib/shortcuts";
 import { toast } from "../lib/toast";
 import { hasOpenSlideOver, holdFocusTraps } from "./shared/SlideOver";
@@ -59,9 +64,13 @@ function useRegistryShortcuts(ctx: ActionCtx, suspended: boolean) {
       if (hit.disabledReason) {
         // Stable id: holding the shortcut down must not stack a column
         // of identical "disabled" toasts.
-        toast.message(`${hit.name} is disabled: ${hit.disabledReason}`, {
-          id: "action-disabled",
-        });
+        toast.message(
+          t("actions_disabled_toast", {
+            name: hit.name,
+            reason: hit.disabledReason,
+          }),
+          { id: "action-disabled" },
+        );
         return;
       }
       void hit.action.execute(ctxRef.current);
@@ -141,7 +150,7 @@ export function CommandPalette({
   const options = step
     ? step.options.filter((o) => {
         const hay = [o.label, ...(o.keywords ?? [])].join(" ").toLowerCase();
-        return tokens.every((t) => hay.includes(t));
+        return tokens.every((token) => hay.includes(token));
       })
     : [];
   const enterStep = (r: ResolvedAction) => {
@@ -179,13 +188,13 @@ export function CommandPalette({
       }}
       role="dialog"
       aria-modal="true"
-      aria-label="Command palette"
+      aria-label={t("actions_palette_label")}
     >
       <div
         className="border-border w-full max-w-md overflow-hidden rounded-lg border shadow-lg"
         onClick={(e) => e.stopPropagation()}
       >
-        <Command shouldFilter={false} label="Command palette">
+        <Command shouldFilter={false} label={t("actions_palette_label")}>
           {/* With very few actions the search box is noise -- but
               cmdk's keyboard handling
               lives on the focused input, so hide it visually instead
@@ -197,7 +206,9 @@ export function CommandPalette({
               key={picking ? picking.action.id : "top"}
               value={query}
               onValueChange={setQuery}
-              placeholder={step ? step.placeholder : "Type a command..."}
+              placeholder={
+                step ? step.placeholder : t("actions_palette_placeholder")
+              }
               autoFocus
             />
           </div>
@@ -206,7 +217,7 @@ export function CommandPalette({
               <CommandGroup heading={step.title}>
                 {options.length === 0 && (
                   <p className="text-muted-foreground py-6 text-center text-sm">
-                    No match.
+                    {t("actions_palette_no_match")}
                   </p>
                 )}
                 {options.map((o) => (
@@ -226,14 +237,14 @@ export function CommandPalette({
             )}
             {!step && matches.length === 0 && (
               <p className="text-muted-foreground py-6 text-center text-sm">
-                No matching commands.
+                {t("actions_palette_no_commands")}
               </p>
             )}
             {!step &&
               groups.map(({ group, items }) => (
                 <CommandGroup
                   key={group || "other"}
-                  heading={showHeadings ? group : undefined}
+                  heading={showHeadings ? groupLabel(group) : undefined}
                 >
                   {items.map(({ action, name, disabledReason }) => (
                     <CommandItem

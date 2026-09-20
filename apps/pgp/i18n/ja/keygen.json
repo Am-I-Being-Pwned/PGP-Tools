@@ -1,0 +1,359 @@
+{
+  "keygen_title": {
+    "message": "鍵を生成"
+  },
+  "keygen_error_name_required": {
+    "message": "名前は必須です。"
+  },
+  "keygen_error_expiry_required": {
+    "message": "有効期限の日付を選択してください。"
+  },
+  "keygen_error_expiry_past": {
+    "message": "有効期限は今日より後の日付にしてください。"
+  },
+  "keygen_error_generation_failed": {
+    "message": "鍵の生成に失敗しました"
+  },
+  "keygen_create_heading": {
+    "message": "新しい鍵を作成"
+  },
+  "keygen_create_subtitle_crx": {
+    "message": "Chrome 拡張機能 (.crx) をパッケージ化するための新しい RSA-2048 署名鍵。"
+  },
+  "keygen_create_subtitle_pgp": {
+    "message": "メッセージの暗号化、復号、署名に使う新しい OpenPGP 鍵ペア。"
+  },
+  "keygen_type_pgp": {
+    "message": "メッセージ用の鍵 (PGP)"
+  },
+  "keygen_type_crx": {
+    "message": "Chrome 拡張機能 (CRX)"
+  },
+  "keygen_label_label": {
+    "message": "ラベル"
+  },
+  "keygen_optional": {
+    "message": "省略可"
+  },
+  "keygen_label_placeholder": {
+    "message": "例: My Extension"
+  },
+  "keygen_name_label": {
+    "message": "名前 *"
+  },
+  "keygen_name_placeholder": {
+    "message": "氏名"
+  },
+  "keygen_email_label": {
+    "message": "メールアドレス"
+  },
+  "keygen_email_placeholder": {
+    "message": "you@example.com"
+  },
+  "keygen_comment_label": {
+    "message": "コメント"
+  },
+  "keygen_comment_placeholder": {
+    "message": "例: 仕事用、個人用"
+  },
+  "keygen_advanced_options": {
+    "message": "詳細オプション"
+  },
+  "keygen_algorithm_label": {
+    "message": "アルゴリズム"
+  },
+  "keygen_algorithm_hint_ecc": {
+    "message": "最新の方式で高速、鍵も小さめです。ほとんどの用途におすすめです。"
+  },
+  "keygen_algorithm_hint_rsa": {
+    "message": "幅広い互換性があります。鍵の生成に時間がかかります。"
+  },
+  "keygen_key_size_label": {
+    "message": "鍵のサイズ"
+  },
+  "keygen_key_size_4096": {
+    "message": "4096 ビット"
+  },
+  "keygen_expiry_label": {
+    "message": "鍵の有効期限"
+  },
+  "keygen_expiry_never": {
+    "message": "無期限"
+  },
+  "keygen_expiry_1y": {
+    "message": "1 年"
+  },
+  "keygen_expiry_2y": {
+    "message": "2 年"
+  },
+  "keygen_expiry_3y": {
+    "message": "3 年"
+  },
+  "keygen_expiry_custom": {
+    "message": "日付を指定"
+  },
+  "keygen_next": {
+    "message": "次へ"
+  },
+  "keygen_expiry_heading": {
+    "message": "有効期限の日付を選択"
+  },
+  "keygen_expiry_subtitle": {
+    "message": "この日付を過ぎると鍵は使用できなくなります。新しい鍵はいつでも生成できます。"
+  },
+  "keygen_expires_on": {
+    "message": "有効期限: $date$"
+  },
+  "keygen_protect_heading": {
+    "message": "鍵を保護する"
+  },
+  "keygen_protect_subtitle": {
+    "message": "この鍵を使用するときのロック解除方法を選択してください。"
+  },
+  "keygen_submit_use_passkey": {
+    "message": "パスキーを使用"
+  },
+  "keygen_submit_create_passkey": {
+    "message": "パスキーを作成"
+  },
+  "keygen_submit_generate": {
+    "message": "生成"
+  },
+  "keygen_generating_passkey": {
+    "message": "ブラウザのパスキーの案内に従ってください..."
+  },
+  "keygen_generating_key": {
+    "message": "鍵を生成しています..."
+  },
+  "keygen_generating_rsa_hint": {
+    "message": "RSA 鍵の生成には少し時間がかかります"
+  },
+  "keygen_protection_intro": {
+    "message": "秘密鍵の保護方法を選択してください:"
+  },
+  "keygen_protection_passkey": {
+    "message": "パスキー"
+  },
+  "keygen_protection_recommended": {
+    "message": "おすすめ"
+  },
+  "keygen_protection_passkey_desc": {
+    "message": "指紋、顔、またはセキュリティ キーを使用します。覚えるパスワードはありません。"
+  },
+  "keygen_protection_passkey_unavailable": {
+    "message": "このブラウザでは利用できません。"
+  },
+  "keygen_protection_reuse_passkey": {
+    "message": "設定済みの同じパスキーを使用する"
+  },
+  "keygen_protection_password": {
+    "message": "パスワード"
+  },
+  "keygen_protection_password_desc": {
+    "message": "パスワードで保護します。ロック解除のたびに入力します。"
+  },
+  "keygen_password_placeholder": {
+    "message": "パスワード (8 文字以上)"
+  },
+  "keygen_confirm_password": {
+    "message": "パスワードの確認"
+  },
+  "keygen_error_password_short": {
+    "message": "パスワードは 8 文字以上にしてください。"
+  },
+  "keygen_error_password_mismatch": {
+    "message": "パスワードが一致しません。"
+  },
+  "keygen_key_password_placeholder": {
+    "message": "鍵のパスワード"
+  },
+  "keygen_error_wrong_password": {
+    "message": "パスワードが違います。"
+  },
+  "keygen_error_passkey_failed": {
+    "message": "パスキーの認証に失敗しました。"
+  },
+  "keygen_error_key_not_unlocked": {
+    "message": "鍵のロックが解除されていません。"
+  },
+  "keygen_error_passphrase_short": {
+    "message": "パスフレーズは 8 文字以上にしてください。"
+  },
+  "keygen_error_passphrase_mismatch": {
+    "message": "パスフレーズが一致しません。"
+  },
+  "keygen_export_failed": {
+    "message": "エクスポートに失敗しました。"
+  },
+  "keygen_export_failed_detail": {
+    "message": "エクスポートに失敗しました: $message$"
+  },
+  "keygen_export_toast_exported_one": {
+    "message": "$count$ 個の鍵をエクスポートしました"
+  },
+  "keygen_export_toast_exported_other": {
+    "message": "$count$ 個の鍵をエクスポートしました"
+  },
+  "keygen_export_toast_exported_unsafe_one": {
+    "message": "$count$ 個の鍵をエクスポートしました (秘密鍵は暗号化されていません)"
+  },
+  "keygen_export_toast_exported_unsafe_other": {
+    "message": "$count$ 個の鍵をエクスポートしました (秘密鍵は暗号化されていません)"
+  },
+  "keygen_export_title": {
+    "message": "鍵をエクスポート"
+  },
+  "keygen_export_unlock_intro": {
+    "message": "秘密鍵をエクスポートするには、先にロックを解除する必要があります。バックアップに含める鍵のロックを下で解除してください。"
+  },
+  "keygen_export_contacts_included_one": {
+    "message": "$count$ 件の連絡先も含まれます (公開鍵のため、ロック解除は不要です)。"
+  },
+  "keygen_export_contacts_included_other": {
+    "message": "$count$ 件の連絡先も含まれます (公開鍵のため、ロック解除は不要です)。"
+  },
+  "keygen_export_skip_locked": {
+    "message": "ロック中の鍵を除外して続行"
+  },
+  "keygen_export_summary": {
+    "message": "1 つの $ext$ ファイル (標準の ASCII アーマー形式 OpenPGP) をダウンロードします。内容は、$private_keys$を $private_block$ として、$contacts$を $public_block$ として書き出したものです。"
+  },
+  "keygen_export_summary_private_keys_one": {
+    "message": "ロック解除済みの秘密鍵 $count$ 個"
+  },
+  "keygen_export_summary_private_keys_other": {
+    "message": "ロック解除済みの秘密鍵 $count$ 個"
+  },
+  "keygen_export_summary_contacts_one": {
+    "message": "連絡先 $count$ 件"
+  },
+  "keygen_export_summary_contacts_other": {
+    "message": "連絡先 $count$ 件"
+  },
+  "keygen_export_crx_included_one": {
+    "message": "さらに CRX 署名鍵 $count$ 個を、どのデバイスでも復元できるようこのパスフレーズで再暗号化して含めます。"
+  },
+  "keygen_export_crx_included_other": {
+    "message": "さらに CRX 署名鍵 $count$ 個を、どのデバイスでも復元できるようこのパスフレーズで再暗号化して含めます。"
+  },
+  "keygen_export_still_locked_one": {
+    "message": "$count$ 個の鍵がまだロックされているため、除外されます。"
+  },
+  "keygen_export_still_locked_other": {
+    "message": "$count$ 個の鍵がまだロックされているため、除外されます。"
+  },
+  "keygen_export_go_back_unlock": {
+    "message": "戻ってロックを解除する"
+  },
+  "keygen_export_still_locked_after": {
+    "message": "。"
+  },
+  "keygen_export_passphrase_intro": {
+    "message": "エクスポートする秘密鍵を暗号化するパスフレーズを設定してください (OpenPGP S2K 形式。GnuPG などのツールにインポートできます)。このパスフレーズとファイルを持つ人は誰でも、あなたのメッセージを復号し、あなたとして署名できます。"
+  },
+  "keygen_passphrase_placeholder": {
+    "message": "パスフレーズ (8 文字以上)"
+  },
+  "keygen_confirm_passphrase_placeholder": {
+    "message": "パスフレーズの確認"
+  },
+  "keygen_exporting": {
+    "message": "エクスポートしています..."
+  },
+  "keygen_export_with_passphrase": {
+    "message": "パスフレーズ付きでエクスポート"
+  },
+  "keygen_export_plaintext_warning_file": {
+    "message": "平文でのエクスポートです。ダウンロードしたファイルを読んだ人は誰でも、そこに含まれるすべての PGP 鍵を完全に制御できます。"
+  },
+  "keygen_export_plaintext_crx_left_out": {
+    "message": "CRX 署名鍵は平文エクスポートには含まれません。含めるにはパスフレーズを使用してください。"
+  },
+  "keygen_type_to_confirm_before": {
+    "message": "確認のため"
+  },
+  "keygen_confirm_word": {
+    "message": "EXPORT"
+  },
+  "keygen_type_to_confirm_after": {
+    "message": "と入力してください:"
+  },
+  "keygen_export_without_passphrase": {
+    "message": "パスフレーズなしでエクスポート (安全ではありません)"
+  },
+  "keygen_export": {
+    "message": "エクスポート"
+  },
+  "keygen_export_nothing": {
+    "message": "エクスポートするものがありません"
+  },
+  "keygen_copied_encrypted": {
+    "message": "暗号化した鍵をコピーしました (60 秒後に消去されます)"
+  },
+  "keygen_copied_plaintext": {
+    "message": "保護されていない鍵をコピーしました (30 秒後に消去されます)"
+  },
+  "keygen_unlock_gate_passkey": {
+    "message": "この鍵をコピーするには、パスキーで認証してください。"
+  },
+  "keygen_unlock_gate_password": {
+    "message": "この鍵をコピーするには、鍵のパスワードを入力してください。"
+  },
+  "keygen_unlocking": {
+    "message": "ロックを解除しています..."
+  },
+  "keygen_encrypting": {
+    "message": "暗号化しています..."
+  },
+  "keygen_exporter_pgp_title": {
+    "message": "秘密鍵をエクスポート"
+  },
+  "keygen_exporter_pgp_encrypted_blurb": {
+    "message": "エクスポートする鍵を暗号化するパスフレーズを設定してください。このパスフレーズとエクスポートした鍵を持つ人は誰でも、あなたのメッセージを復号し、あなたとして署名できます。"
+  },
+  "keygen_exporter_pgp_plaintext_blurb": {
+    "message": "平文でのエクスポートです。クリップボードを読んだ人は誰でも、この鍵を完全に制御できます。"
+  },
+  "keygen_exporter_crx_title": {
+    "message": "CRX 秘密鍵をコピー"
+  },
+  "keygen_exporter_crx_unlock_passkey": {
+    "message": "この署名鍵をコピーするにはロックを解除してください。パスキーで認証します。"
+  },
+  "keygen_exporter_crx_unlock_password": {
+    "message": "この署名鍵をコピーするにはロックを解除してください。鍵のパスワードを入力します。"
+  },
+  "keygen_exporter_crx_encrypted_blurb": {
+    "message": "コピーする鍵を暗号化するパスフレーズを設定してください (「鍵をインポート」から PGP Tools に再インポートできます)。このパスフレーズとコピーしたブロックを持つ人は誰でも、あなたとして拡張機能に署名できます。"
+  },
+  "keygen_exporter_crx_encrypted_button": {
+    "message": "パスフレーズ付きでコピー"
+  },
+  "keygen_exporter_crx_plaintext_blurb": {
+    "message": "平文でのエクスポートです (生の PKCS#8 PEM)。クリップボードを読んだ人は誰でも、この署名鍵を完全に制御できます。"
+  },
+  "keygen_exporter_crx_plaintext_button": {
+    "message": "パスフレーズなしでコピー (安全ではありません)"
+  },
+  "keygen_passkey_default_user": {
+    "message": "PGP 鍵の保護"
+  },
+  "keygen_passkey_imported_user": {
+    "message": "インポートした PGP 鍵"
+  },
+  "keygen_error_prf_unsupported_authenticator": {
+    "message": "お使いの認証器は PRF に対応していません。別のパスキーを試すか、代わりにパスワードを使用してください。"
+  },
+  "keygen_prf_unsupported_intro": {
+    "message": "この認証器は PRF に対応していません。"
+  },
+  "keygen_prf_unsupported_mac": {
+    "message": "macOS では 15 以降と iCloud キーチェーンが必要です。"
+  },
+  "keygen_prf_unsupported_windows": {
+    "message": "Windows Hello は PRF に対応していません。セキュリティ キー (YubiKey など) を使用してください。"
+  },
+  "keygen_prf_unsupported_chrome": {
+    "message": "Chrome プロファイルのパスキーは PRF に対応していない場合があります。Google パスワード マネージャーまたは外部のキーをお試しください。"
+  }
+}

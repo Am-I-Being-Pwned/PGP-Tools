@@ -1,0 +1,512 @@
+{
+  "keys_my_keys_heading": {
+    "message": "自分の鍵"
+  },
+  "keys_empty": {
+    "message": "鍵はまだありません。鍵を生成またはインポートして始めましょう。"
+  },
+  "keys_generate_button": {
+    "message": "鍵を生成"
+  },
+  "keys_import_button": {
+    "message": "鍵をインポート"
+  },
+  "keys_unknown_name": {
+    "message": "不明"
+  },
+  "keys_exported_one": {
+    "message": "$count$ 個の鍵をエクスポートしました"
+  },
+  "keys_exported_other": {
+    "message": "$count$ 個の鍵をエクスポートしました"
+  },
+  "keys_exported_unsafe_one": {
+    "message": "$count$ 個の鍵をエクスポートしました (秘密鍵は暗号化されていません)"
+  },
+  "keys_exported_unsafe_other": {
+    "message": "$count$ 個の鍵をエクスポートしました (秘密鍵は暗号化されていません)"
+  },
+  "keys_reselect": {
+    "message": "再選択"
+  },
+  "keys_ssh_export_skipped_one": {
+    "message": "$count$ 個の SSH 鍵はエクスポートできません。インポートした SSH 鍵がこのデバイスの外に出ることはありません。"
+  },
+  "keys_ssh_export_skipped_other": {
+    "message": "$count$ 個の SSH 鍵はエクスポートできません。インポートした SSH 鍵がこのデバイスの外に出ることはありません。"
+  },
+  "keys_rename_key_title": {
+    "message": "鍵の名前を変更"
+  },
+  "keys_rename_crx_title": {
+    "message": "署名鍵の名前を変更"
+  },
+  "keys_rename_contact_title": {
+    "message": "連絡先の名前を変更"
+  },
+  "keys_rename_field_label": {
+    "message": "表示名"
+  },
+  "keys_rename_hint": {
+    "message": "$identity$ の代わりに表示されます。このデバイス上のラベルにすぎません。"
+  },
+  "keys_rename_placeholder_key": {
+    "message": "例: 仕事用ノート PC"
+  },
+  "keys_rename_placeholder_crx": {
+    "message": "例: My Extension"
+  },
+  "keys_rename_placeholder_contact": {
+    "message": "例: Alice (全デバイス)"
+  },
+  "keys_revocation_unlock_first": {
+    "message": "先にこの鍵のロックを解除してから、やり直してください。"
+  },
+  "keys_bulk_delete_title": {
+    "message": "選択した項目を削除しますか？"
+  },
+  "keys_bulk_delete_confirm_one": {
+    "message": "$count$ 件を完全に削除"
+  },
+  "keys_bulk_delete_confirm_other": {
+    "message": "$count$ 件を完全に削除"
+  },
+  "keys_bulk_delete_prompt_one": {
+    "message": "delete $count$ key"
+  },
+  "keys_bulk_delete_prompt_other": {
+    "message": "delete $count$ keys"
+  },
+  "keys_contacts_removed_one": {
+    "message": "連絡先を削除しました"
+  },
+  "keys_contacts_removed_other": {
+    "message": "$count$ 件の連絡先を削除しました"
+  },
+  "keys_undo": {
+    "message": "元に戻す"
+  },
+  "keys_confirm_remove_contact_title": {
+    "message": "連絡先を削除しますか？"
+  },
+  "keys_confirm_delete_key_title": {
+    "message": "鍵を削除しますか？"
+  },
+  "keys_remove_contact": {
+    "message": "連絡先を削除"
+  },
+  "keys_delete_key_permanently": {
+    "message": "鍵を完全に削除"
+  },
+  "keys_count_private_keys_one": {
+    "message": "$count$ 個の秘密鍵"
+  },
+  "keys_count_private_keys_other": {
+    "message": "$count$ 個の秘密鍵"
+  },
+  "keys_count_signing_keys_one": {
+    "message": "$count$ 個の署名鍵"
+  },
+  "keys_count_signing_keys_other": {
+    "message": "$count$ 個の署名鍵"
+  },
+  "keys_count_contacts_one": {
+    "message": "$count$ 件の連絡先"
+  },
+  "keys_count_contacts_other": {
+    "message": "$count$ 件の連絡先"
+  },
+  "keys_bulk_delete_private_body": {
+    "message": "選択した秘密鍵がこのデバイスから完全に削除されます。削除した鍵だけに対して暗号化されたものは復元できなくなります。今後必要になる可能性があるなら、バックアップがあることを確認してください。"
+  },
+  "keys_bulk_delete_contacts_body": {
+    "message": "これらの連絡先に対する暗号化や、その署名の検証はできなくなります。公開鍵は後で再度インポートできます。"
+  },
+  "keys_delete_crx_body": {
+    "message": "この拡張機能の更新に署名できなくなります。バックアップがない限り、鍵は復元できません。"
+  },
+  "keys_delete_key_body": {
+    "message": "この秘密鍵がこのデバイスから完全に削除されます。この鍵だけに対して暗号化されたものは復元できなくなります。今後必要になる可能性があるなら、バックアップがあることを確認してください。"
+  },
+  "keys_remove_contact_body": {
+    "message": "この連絡先に対するメッセージの暗号化や、その署名の検証はできなくなります。公開鍵は後で再度インポートできます。"
+  },
+  "keys_contacts_heading": {
+    "message": "連絡先"
+  },
+  "keys_contacts_heading_encrypted": {
+    "message": "連絡先 (暗号化済み)"
+  },
+  "keys_contacts_heading_count": {
+    "message": "連絡先 ($count$)"
+  },
+  "keys_contacts_locked": {
+    "message": "連絡先は暗号化されています。表示や管理には PGP Tools のロックを解除してください。"
+  },
+  "keys_search_contacts_placeholder": {
+    "message": "連絡先を検索..."
+  },
+  "keys_no_contacts_match": {
+    "message": "「$query$」に一致する連絡先はありません"
+  },
+  "keys_wrong_password": {
+    "message": "パスワードが違います"
+  },
+  "keys_passkey_failed": {
+    "message": "パスキーの認証に失敗しました"
+  },
+  "keys_status_unlocked": {
+    "message": "ロック解除済み"
+  },
+  "keys_status_locked": {
+    "message": "ロック中"
+  },
+  "keys_status_sealed": {
+    "message": "使用時まで暗号化されたまま"
+  },
+  "keys_default_badge": {
+    "message": "デフォルト"
+  },
+  "keys_default_title": {
+    "message": "署名、復号、自分への暗号化にデフォルトで使用されます"
+  },
+  "keys_key_options_aria": {
+    "message": "鍵のオプション"
+  },
+  "keys_rename": {
+    "message": "名前を変更"
+  },
+  "keys_public_key_copied": {
+    "message": "公開鍵をコピーしました"
+  },
+  "keys_copy_public_key": {
+    "message": "公開鍵をコピー"
+  },
+  "keys_download_public_key": {
+    "message": "公開鍵をダウンロード"
+  },
+  "keys_copy_private_key": {
+    "message": "秘密鍵をコピー"
+  },
+  "keys_select": {
+    "message": "選択"
+  },
+  "keys_delete_key": {
+    "message": "鍵を削除"
+  },
+  "keys_protection_passkey": {
+    "message": "パスキー"
+  },
+  "keys_protection_password": {
+    "message": "パスワード"
+  },
+  "keys_weak_sha1": {
+    "message": "脆弱 (SHA-1)"
+  },
+  "keys_enter_password_placeholder": {
+    "message": "パスワードを入力"
+  },
+  "keys_key_details": {
+    "message": "鍵の詳細"
+  },
+  "keys_details_aria": {
+    "message": "$name$ の鍵の詳細"
+  },
+  "keys_cap_sign": {
+    "message": "メッセージに署名"
+  },
+  "keys_cap_encrypt": {
+    "message": "暗号化メッセージを受信"
+  },
+  "keys_cap_auth": {
+    "message": "認証 (SSH など)"
+  },
+  "keys_cap_certify": {
+    "message": "身元を保証"
+  },
+  "keys_banner_revoked_title": {
+    "message": "この鍵は失効しています"
+  },
+  "keys_banner_no_reason": {
+    "message": "理由は示されていません。"
+  },
+  "keys_banner_revoked_own": {
+    "message": "代わりの鍵を生成またはインポートしてください。"
+  },
+  "keys_banner_revoked_contact": {
+    "message": "この鍵に対して暗号化したり、この鍵による新しい署名を信頼したりしないでください。"
+  },
+  "keys_banner_expired_title": {
+    "message": "この鍵は $when$ に期限切れになりました"
+  },
+  "keys_banner_expired_on": {
+    "message": "$date$ に有効期限が切れました。"
+  },
+  "keys_banner_expired_own": {
+    "message": "新しい鍵を生成またはインポートしてください。"
+  },
+  "keys_banner_expired_contact": {
+    "message": "所有者に更新された鍵を依頼してください。"
+  },
+  "keys_banner_unusable_title": {
+    "message": "この鍵は使用できません"
+  },
+  "keys_banner_unusable_body": {
+    "message": "使用できる暗号化用または署名用の副鍵がありません。"
+  },
+  "keys_banner_encrypt_only_own": {
+    "message": "暗号化メッセージは受信できますが、この鍵では署名できません。"
+  },
+  "keys_banner_encrypt_only_contact": {
+    "message": "この鍵に対して暗号化できますが、この鍵では署名できません。"
+  },
+  "keys_banner_sign_only_own": {
+    "message": "メッセージに署名できますが、この鍵では暗号化メッセージを受信できません。"
+  },
+  "keys_banner_sign_only_contact": {
+    "message": "この鍵の署名は検証できますが、この鍵に対して暗号化することはできません。"
+  },
+  "keys_banner_expires_soon": {
+    "message": "この鍵はまもなく期限切れになります"
+  },
+  "keys_subkey_label": {
+    "message": "副鍵"
+  },
+  "keys_bits": {
+    "message": "$bits$ ビット"
+  },
+  "keys_row_created": {
+    "message": "作成: $date$"
+  },
+  "keys_row_expires": {
+    "message": "有効期限: $date$"
+  },
+  "keys_row_expired": {
+    "message": "$date$ に期限切れ"
+  },
+  "keys_row_never_expires": {
+    "message": "無期限"
+  },
+  "keys_status_expired": {
+    "message": "期限切れ"
+  },
+  "keys_status_revoked": {
+    "message": "失効"
+  },
+  "keys_status_invalid": {
+    "message": "無効"
+  },
+  "keys_revoked_reason": {
+    "message": "失効理由: $reason$"
+  },
+  "keys_also_known_as": {
+    "message": "別名"
+  },
+  "keys_loading": {
+    "message": "読み込んでいます…"
+  },
+  "keys_copy_fingerprint_aria": {
+    "message": "フィンガープリントをコピー"
+  },
+  "keys_fact_fingerprint": {
+    "message": "フィンガープリント"
+  },
+  "keys_fact_algorithm": {
+    "message": "アルゴリズム"
+  },
+  "keys_fact_used_for": {
+    "message": "用途"
+  },
+  "keys_fact_created": {
+    "message": "作成日"
+  },
+  "keys_fact_expires": {
+    "message": "有効期限"
+  },
+  "keys_fact_added": {
+    "message": "追加日"
+  },
+  "keys_fact_last_used": {
+    "message": "最終使用"
+  },
+  "keys_never": {
+    "message": "無期限"
+  },
+  "keys_expires_value": {
+    "message": "$date$ ($when$)"
+  },
+  "keys_subkeys_title": {
+    "message": "副鍵"
+  },
+  "keys_group_row_label": {
+    "message": "鍵"
+  },
+  "keys_subkeys_truncated": {
+    "message": "この証明書には異常に多くの副鍵が含まれているため、最初の $count$ 個のみを表示しています。"
+  },
+  "keys_no_subkeys": {
+    "message": "この鍵に副鍵はありません。主鍵がすべての役割を担います。"
+  },
+  "keys_inactive_subkeys_expired_one": {
+    "message": "期限切れの副鍵 $count$ 個"
+  },
+  "keys_inactive_subkeys_expired_other": {
+    "message": "期限切れの副鍵 $count$ 個"
+  },
+  "keys_inactive_subkeys_revoked_one": {
+    "message": "失効した副鍵 $count$ 個"
+  },
+  "keys_inactive_subkeys_revoked_other": {
+    "message": "失効した副鍵 $count$ 個"
+  },
+  "keys_inactive_subkeys_unusable_one": {
+    "message": "使用できない副鍵 $count$ 個"
+  },
+  "keys_inactive_subkeys_unusable_other": {
+    "message": "使用できない副鍵 $count$ 個"
+  },
+  "keys_revocation_certificate": {
+    "message": "失効証明書"
+  },
+  "keys_revocation_created": {
+    "message": "失効証明書を作成しました"
+  },
+  "keys_revocation_create_failed": {
+    "message": "失効証明書を作成できませんでした。"
+  },
+  "keys_revocation_have_body": {
+    "message": "この鍵を紛失したり漏洩したりした場合、この証明書を公開すると連絡先にこの鍵の使用をやめるよう知らせることができます。安全な場所にバックアップしてください。これを持つ人は誰でもあなたの鍵を失効させることができます。"
+  },
+  "keys_revocation_missing_body": {
+    "message": "この鍵は失効証明書なしでインポートされました。今すぐ作成してバックアップしておくと、鍵にアクセスできなくなった後でも失効させることができます。"
+  },
+  "keys_revocation_creating": {
+    "message": "作成しています..."
+  },
+  "keys_revocation_create": {
+    "message": "失効証明書を作成"
+  },
+  "keys_chip_your_key": {
+    "message": "自分の鍵"
+  },
+  "keys_chip_your_key_title": {
+    "message": "秘密鍵を保持しています"
+  },
+  "keys_chip_contact": {
+    "message": "連絡先"
+  },
+  "keys_chip_contact_title": {
+    "message": "相手の公開鍵を保持しています"
+  },
+  "keys_ssh_chip_title": {
+    "message": "age で使用する SSH 鍵です。1 つのメッセージ内で PGP の宛先と組み合わせることはできません。"
+  },
+  "keys_chip_protection_title": {
+    "message": "保存時の秘密鍵の保護方法"
+  },
+  "keys_parse_failed": {
+    "message": "この鍵を解析できませんでした。"
+  },
+  "keys_save_failed": {
+    "message": "この変更を保存できませんでした。"
+  },
+  "keys_recipient_off_title": {
+    "message": "この連絡先へのメッセージは、この鍵に対しては暗号化されません。"
+  },
+  "keys_recipient_not_used": {
+    "message": "未使用"
+  },
+  "keys_recipient_last_active_title": {
+    "message": "使用中の鍵はこれが最後の 1 つです。これもオフにすると、メッセージを暗号化する相手がいなくなります。"
+  },
+  "keys_recipient_enable_title": {
+    "message": "この鍵に対して再び暗号化します。"
+  },
+  "keys_recipient_disable_title": {
+    "message": "この鍵に対する暗号化をやめます。この一覧には残ります。"
+  },
+  "keys_recipient_use": {
+    "message": "使用"
+  },
+  "keys_recipient_dont_use": {
+    "message": "使用しない"
+  },
+  "keys_encrypt_to": {
+    "message": "この相手に暗号化"
+  },
+  "keys_remove_default": {
+    "message": "デフォルトを解除"
+  },
+  "keys_set_default": {
+    "message": "デフォルトの鍵に設定"
+  },
+  "keys_default_removed": {
+    "message": "デフォルトの鍵を解除しました"
+  },
+  "keys_default_set": {
+    "message": "デフォルトの鍵を設定しました"
+  },
+  "keys_contact_keys_partial_title": {
+    "message": "メッセージは、この連絡先の $total$ 個の鍵のうち $active$ 個に対して暗号化されます。残りは鍵の詳細でオフになっています。"
+  },
+  "keys_contact_keys_all_title": {
+    "message": "メッセージはこの連絡先のすべての鍵に対して暗号化され、いずれか 1 つで復号できます。"
+  },
+  "keys_contact_keys_partial": {
+    "message": "$total$ 個中 $active$ 個の鍵"
+  },
+  "keys_contact_keys_count_one": {
+    "message": "$count$ 個の鍵"
+  },
+  "keys_contact_keys_count_other": {
+    "message": "$count$ 個の鍵"
+  },
+  "keys_source_github": {
+    "message": "取得元: github.com/$user$"
+  },
+  "keys_source_keyserver": {
+    "message": "取得元: keys.openpgp.org ($user$)"
+  },
+  "keys_contact_expired_title": {
+    "message": "この鍵は $date$ に期限切れになったため、これに対して暗号化することはできません。所有者に現在の鍵を依頼してください。"
+  },
+  "keys_contact_expired": {
+    "message": "$date$ に期限切れ"
+  },
+  "keys_contact_expires": {
+    "message": "有効期限: $date$"
+  },
+  "keys_contact_options_aria": {
+    "message": "連絡先のオプション"
+  },
+  "keys_selection_actions_aria": {
+    "message": "選択項目の操作"
+  },
+  "keys_cancel_selection_aria": {
+    "message": "選択をキャンセル"
+  },
+  "keys_selected_count_one": {
+    "message": "$count$ 件を選択中"
+  },
+  "keys_selected_count_other": {
+    "message": "$count$ 件を選択中"
+  },
+  "keys_select_all": {
+    "message": "すべて選択"
+  },
+  "keys_deselect_all": {
+    "message": "すべて選択解除"
+  },
+  "keys_export": {
+    "message": "エクスポート"
+  },
+  "keys_size_bytes": {
+    "message": "$size$ B"
+  },
+  "keys_size_kb": {
+    "message": "$size$ KB"
+  },
+  "keys_size_mb": {
+    "message": "$size$ MB"
+  }
+}

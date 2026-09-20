@@ -1,0 +1,9 @@
+Hai sempre pensato che PGP fosse una seccatura? È proprio per questo che esiste questa estensione.
+
+PGP Tools ti permette di cifrare, decifrare, firmare e verificare messaggi direttamente dal browser. Gestisci chiavi, contatti e operazioni dal pannello laterale. Nessun terminale necessario.
+
+Le tue chiavi private sono protette da passkey (Touch ID, Face ID, YubiKey) o password Argon2id, e tutta la crittografia gira in Rust/WebAssembly, non in JavaScript.
+
+Open source, gratuito, nessun account richiesto.
+
+Codice sorgente: https://github.com/Am-I-Being-Pwned/PGP-Tools

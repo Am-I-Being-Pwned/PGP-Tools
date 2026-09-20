@@ -1,0 +1,231 @@
+{
+  "keygen_title": { "message": "कुंजी बनाएं" },
+  "keygen_error_name_required": { "message": "नाम ज़रूरी है।" },
+  "keygen_error_expiry_required": { "message": "समाप्ति तारीख चुनें।" },
+  "keygen_error_expiry_past": {
+    "message": "समाप्ति तारीख भविष्य में होनी चाहिए।"
+  },
+  "keygen_error_generation_failed": { "message": "कुंजी बनाना विफल रहा" },
+  "keygen_create_heading": { "message": "नई कुंजी बनाएं" },
+  "keygen_create_subtitle_crx": {
+    "message": "Chrome एक्सटेंशन (.crx) पैकेज करने के लिए एक नई RSA-2048 हस्ताक्षर कुंजी।"
+  },
+  "keygen_create_subtitle_pgp": {
+    "message": "संदेशों को एन्क्रिप्ट, डिक्रिप्ट और हस्ताक्षरित करने के लिए एक नया OpenPGP कुंजी युग्म।"
+  },
+  "keygen_type_pgp": { "message": "संदेश कुंजी (PGP)" },
+  "keygen_type_crx": { "message": "Chrome एक्सटेंशन (CRX)" },
+  "keygen_label_label": { "message": "लेबल" },
+  "keygen_optional": { "message": "वैकल्पिक" },
+  "keygen_label_placeholder": { "message": "जैसे: मेरा एक्सटेंशन" },
+  "keygen_name_label": { "message": "नाम *" },
+  "keygen_name_placeholder": { "message": "आपका पूरा नाम" },
+  "keygen_email_label": { "message": "ईमेल" },
+  "keygen_email_placeholder": { "message": "you@example.com" },
+  "keygen_comment_label": { "message": "टिप्पणी" },
+  "keygen_comment_placeholder": { "message": "जैसे: काम, निजी" },
+  "keygen_advanced_options": { "message": "उन्नत विकल्प" },
+  "keygen_algorithm_label": { "message": "एल्गोरिदम" },
+  "keygen_algorithm_hint_ecc": {
+    "message": "आधुनिक, तेज़, छोटी कुंजियां। ज़्यादातर उपयोगों के लिए अनुशंसित।"
+  },
+  "keygen_algorithm_hint_rsa": {
+    "message": "व्यापक रूप से संगत। कुंजी बनाने में ज़्यादा समय लगता है।"
+  },
+  "keygen_key_size_label": { "message": "कुंजी का आकार" },
+  "keygen_key_size_4096": { "message": "4096 बिट" },
+  "keygen_expiry_label": { "message": "कुंजी की समाप्ति" },
+  "keygen_expiry_never": { "message": "कभी नहीं" },
+  "keygen_expiry_1y": { "message": "1 साल" },
+  "keygen_expiry_2y": { "message": "2 साल" },
+  "keygen_expiry_3y": { "message": "3 साल" },
+  "keygen_expiry_custom": { "message": "कस्टम तारीख" },
+  "keygen_next": { "message": "आगे" },
+  "keygen_expiry_heading": { "message": "समाप्ति तारीख चुनें" },
+  "keygen_expiry_subtitle": {
+    "message": "इस तारीख के बाद कुंजी इस्तेमाल नहीं की जा सकेगी; आप कभी भी नई कुंजी बना सकते हैं।"
+  },
+  "keygen_expires_on": { "message": "$date$ को समाप्त होगी" },
+  "keygen_protect_heading": { "message": "अपनी कुंजी सुरक्षित करें" },
+  "keygen_protect_subtitle": {
+    "message": "चुनें कि इस कुंजी को इस्तेमाल करते समय इसे कैसे अनलॉक करना है।"
+  },
+  "keygen_submit_use_passkey": { "message": "पासकी इस्तेमाल करें" },
+  "keygen_submit_create_passkey": { "message": "पासकी बनाएं" },
+  "keygen_submit_generate": { "message": "बनाएं" },
+  "keygen_generating_passkey": {
+    "message": "अपने ब्राउज़र के पासकी प्रॉम्प्ट का पालन करें..."
+  },
+  "keygen_generating_key": { "message": "कुंजी बनाई जा रही है..." },
+  "keygen_generating_rsa_hint": {
+    "message": "RSA कुंजियां बनने में थोड़ा समय लगता है"
+  },
+  "keygen_protection_intro": {
+    "message": "चुनें कि अपनी निजी कुंजी को कैसे सुरक्षित रखना है:"
+  },
+  "keygen_protection_passkey": { "message": "पासकी" },
+  "keygen_protection_recommended": { "message": "अनुशंसित" },
+  "keygen_protection_passkey_desc": {
+    "message": "अपने फ़िंगरप्रिंट, चेहरे या सुरक्षा कुंजी का इस्तेमाल करें। कोई पासवर्ड याद रखने की ज़रूरत नहीं।"
+  },
+  "keygen_protection_passkey_unavailable": {
+    "message": "इस ब्राउज़र में उपलब्ध नहीं।"
+  },
+  "keygen_protection_reuse_passkey": {
+    "message": "वही पासकी इस्तेमाल करें जो मैंने पहले से सेट की है"
+  },
+  "keygen_protection_password": { "message": "पासवर्ड" },
+  "keygen_protection_password_desc": {
+    "message": "पासवर्ड से सुरक्षित करें। हर बार अनलॉक करते समय आपको इसे डालना होगा।"
+  },
+  "keygen_password_placeholder": { "message": "पासवर्ड (कम से कम 8 वर्ण)" },
+  "keygen_confirm_password": { "message": "पासवर्ड की पुष्टि करें" },
+  "keygen_error_password_short": {
+    "message": "पासवर्ड कम से कम 8 वर्णों का होना चाहिए।"
+  },
+  "keygen_error_password_mismatch": { "message": "पासवर्ड मेल नहीं खाते।" },
+  "keygen_key_password_placeholder": { "message": "कुंजी का पासवर्ड" },
+  "keygen_error_wrong_password": { "message": "पासवर्ड गलत है।" },
+  "keygen_error_passkey_failed": { "message": "पासकी प्रमाणीकरण विफल रहा।" },
+  "keygen_error_key_not_unlocked": { "message": "कुंजी अनलॉक नहीं है।" },
+  "keygen_error_passphrase_short": {
+    "message": "पासफ़्रेज़ कम से कम 8 वर्णों का होना चाहिए।"
+  },
+  "keygen_error_passphrase_mismatch": {
+    "message": "पासफ़्रेज़ मेल नहीं खाते।"
+  },
+  "keygen_export_failed": { "message": "निर्यात विफल रहा।" },
+  "keygen_export_failed_detail": { "message": "निर्यात विफल रहा: $message$" },
+  "keygen_export_toast_exported_one": {
+    "message": "$count$ कुंजी निर्यात की गई"
+  },
+  "keygen_export_toast_exported_other": {
+    "message": "$count$ कुंजियां निर्यात की गईं"
+  },
+  "keygen_export_toast_exported_unsafe_one": {
+    "message": "$count$ कुंजी निर्यात की गई (निजी कुंजियां बिना एन्क्रिप्शन के)"
+  },
+  "keygen_export_toast_exported_unsafe_other": {
+    "message": "$count$ कुंजियां निर्यात की गईं (निजी कुंजियां बिना एन्क्रिप्शन के)"
+  },
+  "keygen_export_title": { "message": "कुंजियां निर्यात करें" },
+  "keygen_export_unlock_intro": {
+    "message": "निजी कुंजी निर्यात करने के लिए पहले उसे अनलॉक करना ज़रूरी है। बैकअप में शामिल करने के लिए नीचे दी गई कुंजियां अनलॉक करें।"
+  },
+  "keygen_export_contacts_included_one": {
+    "message": "$count$ संपर्क भी शामिल किया जाएगा (सार्वजनिक कुंजियां, अनलॉक की ज़रूरत नहीं)।"
+  },
+  "keygen_export_contacts_included_other": {
+    "message": "$count$ संपर्क भी शामिल किए जाएंगे (सार्वजनिक कुंजियां, अनलॉक की ज़रूरत नहीं)।"
+  },
+  "keygen_export_skip_locked": { "message": "लॉक कुंजियां छोड़कर जारी रखें" },
+  "keygen_export_crx_included_one": {
+    "message": "साथ ही $count$ CRX हस्ताक्षर कुंजी, जो इसी पासफ़्रेज़ से फिर से एन्क्रिप्ट की गई है ताकि किसी भी डिवाइस पर बहाल की जा सके।"
+  },
+  "keygen_export_crx_included_other": {
+    "message": "साथ ही $count$ CRX हस्ताक्षर कुंजियां, जो इसी पासफ़्रेज़ से फिर से एन्क्रिप्ट की गई हैं ताकि किसी भी डिवाइस पर बहाल की जा सकें।"
+  },
+  "keygen_export_still_locked_one": {
+    "message": "$count$ कुंजी अब भी लॉक है और छोड़ दी जाएगी।"
+  },
+  "keygen_export_still_locked_other": {
+    "message": "$count$ कुंजियां अब भी लॉक हैं और छोड़ दी जाएंगी।"
+  },
+  "keygen_export_go_back_unlock": { "message": "अनलॉक करने के लिए वापस जाएं" },
+  "keygen_export_still_locked_after": { "message": "।" },
+  "keygen_export_passphrase_intro": {
+    "message": "निर्यात की गई निजी कुंजियों को एन्क्रिप्ट करने के लिए एक पासफ़्रेज़ सेट करें (OpenPGP S2K -- GnuPG और अन्य टूल में आयात किया जा सकता है)। जिसके पास यह पासफ़्रेज़ और फ़ाइल हो, वह आपके संदेश डिक्रिप्ट कर सकता है और आपके नाम से हस्ताक्षर कर सकता है।"
+  },
+  "keygen_passphrase_placeholder": {
+    "message": "पासफ़्रेज़ (कम से कम 8 वर्ण)"
+  },
+  "keygen_confirm_passphrase_placeholder": {
+    "message": "पासफ़्रेज़ की पुष्टि करें"
+  },
+  "keygen_exporting": { "message": "निर्यात किया जा रहा है..." },
+  "keygen_export_with_passphrase": {
+    "message": "पासफ़्रेज़ के साथ निर्यात करें"
+  },
+  "keygen_export_plaintext_warning_file": {
+    "message": "सादे टेक्स्ट में निर्यात। जो कोई भी डाउनलोड की गई फ़ाइल पढ़ लेगा, उसे इसमें मौजूद हर PGP कुंजी पर पूरा नियंत्रण मिल जाएगा।"
+  },
+  "keygen_export_plaintext_crx_left_out": {
+    "message": "सादे टेक्स्ट वाले निर्यात में CRX हस्ताक्षर कुंजियां शामिल नहीं की जातीं -- उन्हें शामिल करने के लिए पासफ़्रेज़ इस्तेमाल करें।"
+  },
+  "keygen_type_to_confirm_before": { "message": "पुष्टि के लिए" },
+  "keygen_confirm_word": { "message": "EXPORT" },
+  "keygen_type_to_confirm_after": { "message": "टाइप करें:" },
+  "keygen_export_without_passphrase": {
+    "message": "बिना पासफ़्रेज़ के निर्यात करें (असुरक्षित)"
+  },
+  "keygen_export": { "message": "निर्यात करें" },
+  "keygen_export_nothing": { "message": "निर्यात करने के लिए कुछ नहीं" },
+  "keygen_copied_encrypted": {
+    "message": "एन्क्रिप्टेड कुंजी कॉपी हो गई (60 सेकंड में साफ़ होगी)"
+  },
+  "keygen_copied_plaintext": {
+    "message": "असुरक्षित कुंजी कॉपी हो गई (30 सेकंड में साफ़ होगी)"
+  },
+  "keygen_unlock_gate_passkey": {
+    "message": "इस कुंजी को कॉपी करने के लिए अपनी पासकी से प्रमाणित करें।"
+  },
+  "keygen_unlock_gate_password": {
+    "message": "इस कुंजी को कॉपी करने के लिए कुंजी का पासवर्ड डालें।"
+  },
+  "keygen_unlocking": { "message": "अनलॉक किया जा रहा है..." },
+  "keygen_encrypting": { "message": "एन्क्रिप्ट किया जा रहा है..." },
+  "keygen_exporter_pgp_title": { "message": "निजी कुंजी निर्यात करें" },
+  "keygen_exporter_pgp_encrypted_blurb": {
+    "message": "निर्यात की गई कुंजी को एन्क्रिप्ट करने के लिए एक पासफ़्रेज़ सेट करें। जिसके पास यह पासफ़्रेज़ और निर्यात की गई कुंजी हो, वह आपके संदेश डिक्रिप्ट कर सकता है और आपके नाम से हस्ताक्षर कर सकता है।"
+  },
+  "keygen_exporter_pgp_plaintext_blurb": {
+    "message": "सादे टेक्स्ट में निर्यात। जो कोई भी आपका क्लिपबोर्ड पढ़ लेगा, उसे इस कुंजी पर पूरा नियंत्रण मिल जाएगा।"
+  },
+  "keygen_exporter_crx_title": { "message": "CRX निजी कुंजी कॉपी करें" },
+  "keygen_exporter_crx_unlock_passkey": {
+    "message": "कॉपी करने के लिए इस हस्ताक्षर कुंजी को अनलॉक करें। अपनी पासकी से प्रमाणित करें।"
+  },
+  "keygen_exporter_crx_unlock_password": {
+    "message": "कॉपी करने के लिए इस हस्ताक्षर कुंजी को अनलॉक करें। कुंजी का पासवर्ड डालें।"
+  },
+  "keygen_exporter_crx_encrypted_blurb": {
+    "message": "कॉपी की गई कुंजी को एन्क्रिप्ट करने के लिए एक पासफ़्रेज़ सेट करें (इसे 'कुंजियां आयात करें' के ज़रिए PGP Tools में फिर से आयात किया जा सकता है)। जिसके पास यह पासफ़्रेज़ और कॉपी किया गया ब्लॉक हो, वह आपके नाम से एक्सटेंशन पर हस्ताक्षर कर सकता है।"
+  },
+  "keygen_exporter_crx_encrypted_button": {
+    "message": "पासफ़्रेज़ के साथ कॉपी करें"
+  },
+  "keygen_exporter_crx_plaintext_blurb": {
+    "message": "सादे टेक्स्ट में निर्यात (रॉ PKCS#8 PEM)। जो कोई भी आपका क्लिपबोर्ड पढ़ लेगा, उसे इस हस्ताक्षर कुंजी पर पूरा नियंत्रण मिल जाएगा।"
+  },
+  "keygen_exporter_crx_plaintext_button": {
+    "message": "बिना पासफ़्रेज़ के कॉपी करें (असुरक्षित)"
+  },
+  "keygen_passkey_default_user": { "message": "PGP कुंजी सुरक्षा" },
+  "keygen_passkey_imported_user": { "message": "आयात की गई PGP कुंजी" },
+  "keygen_error_prf_unsupported_authenticator": {
+    "message": "आपका ऑथेंटिकेटर PRF का समर्थन नहीं करता। कोई दूसरी पासकी आज़माएं या इसके बजाय पासवर्ड इस्तेमाल करें।"
+  },
+  "keygen_prf_unsupported_intro": {
+    "message": "यह ऑथेंटिकेटर PRF का समर्थन नहीं करता।"
+  },
+  "keygen_prf_unsupported_mac": {
+    "message": "macOS पर 15 या नया संस्करण और iCloud Keychain ज़रूरी है।"
+  },
+  "keygen_prf_unsupported_windows": {
+    "message": "Windows Hello PRF का समर्थन नहीं करता - कोई सुरक्षा कुंजी (जैसे YubiKey) इस्तेमाल करें।"
+  },
+  "keygen_prf_unsupported_chrome": {
+    "message": "हो सकता है कि Chrome प्रोफ़ाइल की पासकी PRF का समर्थन न करे - Google Password Manager या कोई बाहरी कुंजी आज़माएं।"
+  },
+  "keygen_export_summary": {
+    "message": "एक $ext$ फ़ाइल डाउनलोड होती है (मानक ASCII-आर्मर्ड OpenPGP): आपकी $private_keys$ $private_block$ के रूप में और आपके $contacts$ $public_block$ के रूप में।"
+  },
+  "keygen_export_summary_private_keys_one": {
+    "message": "$count$ अनलॉक निजी कुंजी"
+  },
+  "keygen_export_summary_private_keys_other": {
+    "message": "$count$ अनलॉक निजी कुंजियां"
+  },
+  "keygen_export_summary_contacts_one": { "message": "$count$ संपर्क" },
+  "keygen_export_summary_contacts_other": { "message": "$count$ संपर्क" }
+}

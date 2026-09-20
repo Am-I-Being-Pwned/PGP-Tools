@@ -1,0 +1,401 @@
+{
+  "keygen_title": {
+    "message": "Создание ключа"
+  },
+  "keygen_error_name_required": {
+    "message": "Укажите имя."
+  },
+  "keygen_error_expiry_required": {
+    "message": "Выберите дату окончания срока действия."
+  },
+  "keygen_error_expiry_past": {
+    "message": "Дата окончания срока действия должна быть в будущем."
+  },
+  "keygen_error_generation_failed": {
+    "message": "Не удалось создать ключ"
+  },
+  "keygen_create_heading": {
+    "message": "Создание нового ключа"
+  },
+  "keygen_create_subtitle_crx": {
+    "message": "Новый ключ подписи RSA-2048 для упаковки расширения Chrome (.crx)."
+  },
+  "keygen_create_subtitle_pgp": {
+    "message": "Новая пара ключей OpenPGP для шифрования, расшифровки и подписи сообщений."
+  },
+  "keygen_type_pgp": {
+    "message": "Ключ для сообщений (PGP)"
+  },
+  "keygen_type_crx": {
+    "message": "Расширение Chrome (CRX)"
+  },
+  "keygen_label_label": {
+    "message": "Метка"
+  },
+  "keygen_optional": {
+    "message": "необязательно"
+  },
+  "keygen_label_placeholder": {
+    "message": "например, Моё расширение"
+  },
+  "keygen_name_label": {
+    "message": "Имя *"
+  },
+  "keygen_name_placeholder": {
+    "message": "Ваше полное имя"
+  },
+  "keygen_email_label": {
+    "message": "Эл. почта"
+  },
+  "keygen_email_placeholder": {
+    "message": "you@example.com"
+  },
+  "keygen_comment_label": {
+    "message": "Комментарий"
+  },
+  "keygen_comment_placeholder": {
+    "message": "например, рабочий, личный"
+  },
+  "keygen_advanced_options": {
+    "message": "Дополнительные параметры"
+  },
+  "keygen_algorithm_label": {
+    "message": "Алгоритм"
+  },
+  "keygen_algorithm_hint_ecc": {
+    "message": "Современные, быстрые, компактные ключи. Рекомендуется для большинства случаев."
+  },
+  "keygen_algorithm_hint_rsa": {
+    "message": "Широкая совместимость. Ключ создаётся медленнее."
+  },
+  "keygen_key_size_label": {
+    "message": "Размер ключа"
+  },
+  "keygen_key_size_4096": {
+    "message": "4096 бит"
+  },
+  "keygen_expiry_label": {
+    "message": "Срок действия ключа"
+  },
+  "keygen_expiry_never": {
+    "message": "Бессрочно"
+  },
+  "keygen_expiry_1y": {
+    "message": "1 год"
+  },
+  "keygen_expiry_2y": {
+    "message": "2 года"
+  },
+  "keygen_expiry_3y": {
+    "message": "3 года"
+  },
+  "keygen_expiry_custom": {
+    "message": "Своя дата"
+  },
+  "keygen_next": {
+    "message": "Далее"
+  },
+  "keygen_expiry_heading": {
+    "message": "Выберите дату окончания срока действия"
+  },
+  "keygen_expiry_subtitle": {
+    "message": "После этой даты ключ больше нельзя будет использовать; вы всегда сможете создать новый."
+  },
+  "keygen_expires_on": {
+    "message": "Истекает $date$"
+  },
+  "keygen_protect_heading": {
+    "message": "Защитите свой ключ"
+  },
+  "keygen_protect_subtitle": {
+    "message": "Выберите, как разблокировать этот ключ при использовании."
+  },
+  "keygen_submit_use_passkey": {
+    "message": "Использовать ключ доступа"
+  },
+  "keygen_submit_create_passkey": {
+    "message": "Создать ключ доступа"
+  },
+  "keygen_submit_generate": {
+    "message": "Создать"
+  },
+  "keygen_generating_passkey": {
+    "message": "Следуйте запросу браузера о ключе доступа..."
+  },
+  "keygen_generating_key": {
+    "message": "Создание ключа..."
+  },
+  "keygen_generating_rsa_hint": {
+    "message": "Создание RSA-ключа занимает некоторое время"
+  },
+  "keygen_protection_intro": {
+    "message": "Выберите, как защитить закрытый ключ:"
+  },
+  "keygen_protection_passkey": {
+    "message": "Ключ доступа"
+  },
+  "keygen_protection_recommended": {
+    "message": "Рекомендуется"
+  },
+  "keygen_protection_passkey_desc": {
+    "message": "Используйте отпечаток пальца, лицо или аппаратный ключ безопасности. Не нужно запоминать пароль."
+  },
+  "keygen_protection_passkey_unavailable": {
+    "message": "Недоступно в этом браузере."
+  },
+  "keygen_protection_reuse_passkey": {
+    "message": "Использовать уже настроенный ключ доступа"
+  },
+  "keygen_protection_password": {
+    "message": "Пароль"
+  },
+  "keygen_protection_password_desc": {
+    "message": "Защита паролем. Вы будете вводить его при каждой разблокировке."
+  },
+  "keygen_password_placeholder": {
+    "message": "Пароль (не менее 8 символов)"
+  },
+  "keygen_confirm_password": {
+    "message": "Подтвердите пароль"
+  },
+  "keygen_error_password_short": {
+    "message": "Пароль должен содержать не менее 8 символов."
+  },
+  "keygen_error_password_mismatch": {
+    "message": "Пароли не совпадают."
+  },
+  "keygen_key_password_placeholder": {
+    "message": "Пароль ключа"
+  },
+  "keygen_error_wrong_password": {
+    "message": "Неверный пароль."
+  },
+  "keygen_error_passkey_failed": {
+    "message": "Не удалось пройти проверку ключа доступа."
+  },
+  "keygen_error_key_not_unlocked": {
+    "message": "Ключ не разблокирован."
+  },
+  "keygen_error_passphrase_short": {
+    "message": "Парольная фраза должна содержать не менее 8 символов."
+  },
+  "keygen_error_passphrase_mismatch": {
+    "message": "Парольные фразы не совпадают."
+  },
+  "keygen_export_failed": {
+    "message": "Не удалось экспортировать."
+  },
+  "keygen_export_failed_detail": {
+    "message": "Не удалось экспортировать: $message$"
+  },
+  "keygen_export_toast_exported_one": {
+    "message": "Экспортирован $count$ ключ"
+  },
+  "keygen_export_toast_exported_few": {
+    "message": "Экспортировано $count$ ключа"
+  },
+  "keygen_export_toast_exported_many": {
+    "message": "Экспортировано $count$ ключей"
+  },
+  "keygen_export_toast_exported_other": {
+    "message": "Экспортировано $count$ ключа"
+  },
+  "keygen_export_toast_exported_unsafe_one": {
+    "message": "Экспортирован $count$ ключ (закрытые ключи НЕ ЗАШИФРОВАНЫ)"
+  },
+  "keygen_export_toast_exported_unsafe_few": {
+    "message": "Экспортировано $count$ ключа (закрытые ключи НЕ ЗАШИФРОВАНЫ)"
+  },
+  "keygen_export_toast_exported_unsafe_many": {
+    "message": "Экспортировано $count$ ключей (закрытые ключи НЕ ЗАШИФРОВАНЫ)"
+  },
+  "keygen_export_toast_exported_unsafe_other": {
+    "message": "Экспортировано $count$ ключа (закрытые ключи НЕ ЗАШИФРОВАНЫ)"
+  },
+  "keygen_export_title": {
+    "message": "Экспорт ключей"
+  },
+  "keygen_export_unlock_intro": {
+    "message": "Чтобы экспортировать закрытый ключ, его нужно сначала разблокировать. Разблокируйте ключи ниже, чтобы включить их в резервную копию."
+  },
+  "keygen_export_contacts_included_one": {
+    "message": "Также будет включён $count$ контакт (открытые ключи, разблокировка не нужна)."
+  },
+  "keygen_export_contacts_included_few": {
+    "message": "Также будут включены $count$ контакта (открытые ключи, разблокировка не нужна)."
+  },
+  "keygen_export_contacts_included_many": {
+    "message": "Также будут включены $count$ контактов (открытые ключи, разблокировка не нужна)."
+  },
+  "keygen_export_contacts_included_other": {
+    "message": "Также будут включены $count$ контакта (открытые ключи, разблокировка не нужна)."
+  },
+  "keygen_export_skip_locked": {
+    "message": "Пропустить заблокированные ключи и продолжить"
+  },
+  "keygen_export_summary": {
+    "message": "Скачивается один файл $ext$ (стандартный OpenPGP в формате ASCII-armor): $private_keys$ в виде блоков $private_block$ и $contacts$ в виде блоков $public_block$."
+  },
+  "keygen_export_summary_private_keys_one": {
+    "message": "$count$ разблокированный закрытый ключ"
+  },
+  "keygen_export_summary_private_keys_few": {
+    "message": "$count$ разблокированных закрытых ключа"
+  },
+  "keygen_export_summary_private_keys_many": {
+    "message": "$count$ разблокированных закрытых ключей"
+  },
+  "keygen_export_summary_private_keys_other": {
+    "message": "$count$ разблокированных закрытых ключа"
+  },
+  "keygen_export_summary_contacts_one": {
+    "message": "$count$ контакт"
+  },
+  "keygen_export_summary_contacts_few": {
+    "message": "$count$ контакта"
+  },
+  "keygen_export_summary_contacts_many": {
+    "message": "$count$ контактов"
+  },
+  "keygen_export_summary_contacts_other": {
+    "message": "$count$ контакта"
+  },
+  "keygen_export_crx_included_one": {
+    "message": "Плюс $count$ ключ подписи CRX, перешифрованный под этой парольной фразой, чтобы его можно было восстановить на любом устройстве."
+  },
+  "keygen_export_crx_included_few": {
+    "message": "Плюс $count$ ключа подписи CRX, перешифрованных под этой парольной фразой, чтобы их можно было восстановить на любом устройстве."
+  },
+  "keygen_export_crx_included_many": {
+    "message": "Плюс $count$ ключей подписи CRX, перешифрованных под этой парольной фразой, чтобы их можно было восстановить на любом устройстве."
+  },
+  "keygen_export_crx_included_other": {
+    "message": "Плюс $count$ ключа подписи CRX, перешифрованных под этой парольной фразой, чтобы их можно было восстановить на любом устройстве."
+  },
+  "keygen_export_still_locked_one": {
+    "message": "$count$ ключ всё ещё заблокирован и не будет включён."
+  },
+  "keygen_export_still_locked_few": {
+    "message": "$count$ ключа всё ещё заблокированы и не будут включены."
+  },
+  "keygen_export_still_locked_many": {
+    "message": "$count$ ключей всё ещё заблокированы и не будут включены."
+  },
+  "keygen_export_still_locked_other": {
+    "message": "$count$ ключа всё ещё заблокированы и не будут включены."
+  },
+  "keygen_export_go_back_unlock": {
+    "message": "Вернуться к разблокировке"
+  },
+  "keygen_export_still_locked_after": {
+    "message": "."
+  },
+  "keygen_export_passphrase_intro": {
+    "message": "Задайте парольную фразу для шифрования экспортируемых закрытых ключей (OpenPGP S2K - импортируется в GnuPG и другие инструменты). Любой, у кого есть эта парольная фраза и файл, сможет расшифровывать ваши сообщения и подписывать от вашего имени."
+  },
+  "keygen_passphrase_placeholder": {
+    "message": "Парольная фраза (не менее 8 символов)"
+  },
+  "keygen_confirm_passphrase_placeholder": {
+    "message": "Подтвердите парольную фразу"
+  },
+  "keygen_exporting": {
+    "message": "Экспорт..."
+  },
+  "keygen_export_with_passphrase": {
+    "message": "Экспортировать с парольной фразой"
+  },
+  "keygen_export_plaintext_warning_file": {
+    "message": "Экспорт в открытом виде. Любой, кто прочитает скачанный файл, получит полный контроль над каждым PGP-ключом в нём."
+  },
+  "keygen_export_plaintext_crx_left_out": {
+    "message": "Ключи подписи CRX не включаются в экспорт в открытом виде - используйте парольную фразу, чтобы включить их."
+  },
+  "keygen_type_to_confirm_before": {
+    "message": "Введите"
+  },
+  "keygen_confirm_word": {
+    "message": "ЭКСПОРТ"
+  },
+  "keygen_type_to_confirm_after": {
+    "message": "для подтверждения:"
+  },
+  "keygen_export_without_passphrase": {
+    "message": "Экспортировать без парольной фразы (небезопасно)"
+  },
+  "keygen_export": {
+    "message": "Экспортировать"
+  },
+  "keygen_export_nothing": {
+    "message": "Нечего экспортировать"
+  },
+  "keygen_copied_encrypted": {
+    "message": "Зашифрованный ключ скопирован (очистится через 60 с)"
+  },
+  "keygen_copied_plaintext": {
+    "message": "Незащищённый ключ скопирован (очистится через 30 с)"
+  },
+  "keygen_unlock_gate_passkey": {
+    "message": "Подтвердите ключ доступа, чтобы скопировать этот ключ."
+  },
+  "keygen_unlock_gate_password": {
+    "message": "Введите пароль ключа, чтобы скопировать его."
+  },
+  "keygen_unlocking": {
+    "message": "Разблокировка..."
+  },
+  "keygen_encrypting": {
+    "message": "Шифрование..."
+  },
+  "keygen_exporter_pgp_title": {
+    "message": "Экспорт закрытого ключа"
+  },
+  "keygen_exporter_pgp_encrypted_blurb": {
+    "message": "Задайте парольную фразу для шифрования экспортируемого ключа. Любой, у кого есть эта парольная фраза и экспортированный ключ, сможет расшифровывать ваши сообщения и подписывать от вашего имени."
+  },
+  "keygen_exporter_pgp_plaintext_blurb": {
+    "message": "Экспорт в открытом виде. Любой, кто прочитает ваш буфер обмена, получит полный контроль над этим ключом."
+  },
+  "keygen_exporter_crx_title": {
+    "message": "Копирование закрытого ключа CRX"
+  },
+  "keygen_exporter_crx_unlock_passkey": {
+    "message": "Разблокируйте этот ключ подписи, чтобы скопировать его. Подтвердите ключ доступа."
+  },
+  "keygen_exporter_crx_unlock_password": {
+    "message": "Разблокируйте этот ключ подписи, чтобы скопировать его. Введите пароль ключа."
+  },
+  "keygen_exporter_crx_encrypted_blurb": {
+    "message": "Задайте парольную фразу для шифрования копируемого ключа (его можно снова импортировать в PGP Tools через «Импорт ключей»). Любой, у кого есть эта парольная фраза и скопированный блок, сможет подписывать расширения от вашего имени."
+  },
+  "keygen_exporter_crx_encrypted_button": {
+    "message": "Копировать с парольной фразой"
+  },
+  "keygen_exporter_crx_plaintext_blurb": {
+    "message": "Экспорт в открытом виде (PKCS#8 PEM без шифрования). Любой, кто прочитает ваш буфер обмена, получит полный контроль над этим ключом подписи."
+  },
+  "keygen_exporter_crx_plaintext_button": {
+    "message": "Копировать без парольной фразы (небезопасно)"
+  },
+  "keygen_passkey_default_user": {
+    "message": "Защита PGP-ключа"
+  },
+  "keygen_passkey_imported_user": {
+    "message": "Импортированный PGP-ключ"
+  },
+  "keygen_error_prf_unsupported_authenticator": {
+    "message": "Ваш аутентификатор не поддерживает PRF. Попробуйте другой ключ доступа или используйте пароль."
+  },
+  "keygen_prf_unsupported_intro": {
+    "message": "Этот аутентификатор не поддерживает PRF."
+  },
+  "keygen_prf_unsupported_mac": {
+    "message": "Для macOS требуется версия 15 или новее со Связкой ключей iCloud."
+  },
+  "keygen_prf_unsupported_windows": {
+    "message": "Windows Hello не поддерживает PRF - используйте аппаратный ключ безопасности (например, YubiKey)."
+  },
+  "keygen_prf_unsupported_chrome": {
+    "message": "Ключи доступа профиля Chrome могут не поддерживать PRF - попробуйте Google Менеджер паролей или внешний ключ."
+  }
+}

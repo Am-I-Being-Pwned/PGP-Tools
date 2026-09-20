@@ -1,0 +1,320 @@
+{
+  "shared_security_preset": {
+    "message": "Perfil de seguridad"
+  },
+  "shared_preset_bundled_changed": {
+    "message": "Se cambió un ajuste agrupado"
+  },
+  "shared_preset_none_selected": {
+    "message": "Ningún perfil seleccionado"
+  },
+  "shared_preset_custom": {
+    "message": "Personalizado"
+  },
+  "shared_translation": {
+    "message": "Traducción"
+  },
+  "shared_keyboard_shortcuts": {
+    "message": "Atajos de teclado"
+  },
+  "shared_key_storage": {
+    "message": "Almacenamiento de claves"
+  },
+  "shared_key_security": {
+    "message": "Seguridad de las claves"
+  },
+  "shared_auto_lock_title": {
+    "message": "Bloqueo automático por inactividad"
+  },
+  "shared_auto_lock_desc": {
+    "message": "Bloquea las claves desbloqueadas tras un periodo sin actividad en el panel. La pantalla de bloqueo del sistema siempre bloquea de inmediato, independientemente de este ajuste."
+  },
+  "shared_lock_after": {
+    "message": "Bloquear tras"
+  },
+  "shared_minutes_one": {
+    "message": "$count$ minuto"
+  },
+  "shared_minutes_other": {
+    "message": "$count$ minutos"
+  },
+  "shared_one_hour": {
+    "message": "1 hora"
+  },
+  "shared_lock_tab_away_title": {
+    "message": "Bloquear al cambiar de pestaña"
+  },
+  "shared_lock_tab_away_desc": {
+    "message": "Bloquea en cuanto el panel lateral deja de estar visible (cambio de ventana, panel plegado o ventana minimizada)."
+  },
+  "shared_never_cache_title": {
+    "message": "Nunca guardar claves en caché"
+  },
+  "shared_never_cache_desc": {
+    "message": "Las claves se borran de la memoria tras cada operación. Puede seguir desbloqueando claves manualmente desde la pestaña Claves."
+  },
+  "shared_unlock_with_vault_title": {
+    "message": "Desbloquear las claves con la bóveda"
+  },
+  "shared_unlock_with_vault_desc": {
+    "message": "La solicitud de llave de acceso que abre la bóveda también desbloquea sus claves. Una clave que todavía pregunte por su cuenta pasará a este modo la próxima vez que la desbloquee. Las claves protegidas con contraseña conservan su contraseña."
+  },
+  "shared_downloads": {
+    "message": "Descargas"
+  },
+  "shared_auto_download_files_title": {
+    "message": "Descargar automáticamente los resultados de archivos"
+  },
+  "shared_auto_download_files_desc": {
+    "message": "Descarga automáticamente tras cifrar o descifrar archivos."
+  },
+  "shared_auto_download_text_title": {
+    "message": "Descargar automáticamente los resultados de texto"
+  },
+  "shared_auto_download_text_desc": {
+    "message": "Descarga automáticamente tras cifrar o descifrar texto."
+  },
+  "shared_key_discovery": {
+    "message": "Búsqueda de claves"
+  },
+  "shared_lookup_online_title": {
+    "message": "Buscar claves en línea"
+  },
+  "shared_lookup_online_desc": {
+    "message": "Añade un cuadro de búsqueda a la pantalla de importación para claves SSH de GitHub y certificados de keys.openpgp.org. Desactivado significa que nada sale de este dispositivo para encontrar una clave. Activarlo significa que cada búsqueda comunica a ese servidor su dirección IP y a quién ha buscado - no le comunica nada sobre sus claves ni sus mensajes."
+  },
+  "shared_crx_signing": {
+    "message": "Firma CRX"
+  },
+  "shared_crx_enable_title": {
+    "message": "Activar la firma CRX"
+  },
+  "shared_crx_enable_desc": {
+    "message": "Firme paquetes de extensiones de Chrome (.crx) para Verified CRX Uploads de Web Store, usando una clave guardada en su bóveda en lugar de en su cadena de compilación."
+  },
+  "shared_crx_how": {
+    "message": "Cómo funciona la firma CRX"
+  },
+  "shared_backup": {
+    "message": "Copia de seguridad"
+  },
+  "shared_backup_desc": {
+    "message": "Exporte sus claves y contactos en un único archivo con armadura, o restáurelos desde uno. Las claves privadas exportadas se cifran con una frase de contraseña que usted elige."
+  },
+  "shared_export_all_keys": {
+    "message": "Exportar todas las claves"
+  },
+  "shared_import_keys": {
+    "message": "Importar claves"
+  },
+  "shared_display": {
+    "message": "Apariencia"
+  },
+  "shared_advanced_mode": {
+    "message": "Modo avanzado"
+  },
+  "shared_advanced_mode_desc": {
+    "message": "Muestra las huellas digitales de las claves, los algoritmos y las opciones de formato de salida."
+  },
+  "shared_developer": {
+    "message": "Desarrollador"
+  },
+  "shared_developer_desc": {
+    "message": "Inspeccione chrome.storage y vuelque la memoria WASM para pruebas. Esta sección solo aparece en compilaciones de desarrollo."
+  },
+  "shared_open_dev_tools": {
+    "message": "Abrir herramientas de desarrollo"
+  },
+  "shared_import_flow_states": {
+    "message": "Estados del flujo de importación"
+  },
+  "shared_dev_tools": {
+    "message": "Herramientas de desarrollo"
+  },
+  "shared_about": {
+    "message": "Acerca de"
+  },
+  "shared_byline_before": {
+    "message": "Una herramienta de privacidad de"
+  },
+  "shared_source_on_github": {
+    "message": "Código fuente en GitHub"
+  },
+  "shared_about_extensions": {
+    "message": "¿Le preocupan las extensiones de navegador maliciosas? Analice sus extensiones en busca de recopilación de datos, secuestro de sesión y otras amenazas."
+  },
+  "shared_check_extensions": {
+    "message": "Comprobar sus extensiones"
+  },
+  "shared_delete_history_title": {
+    "message": "¿Eliminar el historial guardado?"
+  },
+  "shared_delete_history_confirm": {
+    "message": "Activar y eliminar el historial"
+  },
+  "shared_delete_history_body": {
+    "message": "«Nunca guardar claves en caché» también elimina su historial guardado ($size$). No se puede recuperar."
+  },
+  "shared_sync_quota_error": {
+    "message": "No hay suficiente espacio de sincronización. Chrome limita los datos sincronizados a unos 100 KB en total, así que esta bóveda es demasiado grande para sincronizarla entre dispositivos. Manténgala en este dispositivo, o quite algunas claves e inténtelo de nuevo."
+  },
+  "shared_migration_failed": {
+    "message": "Error en la migración"
+  },
+  "shared_preset_applied": {
+    "message": "Perfil aplicado: $title$"
+  },
+  "shared_preset_applied_history_deleted": {
+    "message": "El historial se ha eliminado y Deshacer no lo restaura."
+  },
+  "shared_undo": {
+    "message": "Deshacer"
+  },
+  "shared_commands": {
+    "message": "Comandos"
+  },
+  "shared_unlock_aria": {
+    "message": "Desbloquear PGP Tools"
+  },
+  "shared_unlock_intro": {
+    "message": "Sus claves y contactos están cifrados. Autentíquese para continuar."
+  },
+  "shared_unlock_with_passkey": {
+    "message": "Desbloquear con llave de acceso"
+  },
+  "shared_master_password": {
+    "message": "Contraseña maestra"
+  },
+  "shared_unlocking": {
+    "message": "Desbloqueando..."
+  },
+  "shared_unlock_lost_password": {
+    "message": "Si ha perdido su contraseña, sus claves y contactos cifrados no se pueden recuperar."
+  },
+  "shared_passkey_failed": {
+    "message": "Error de autenticación con la llave de acceso. Inténtelo de nuevo."
+  },
+  "shared_wrong_password": {
+    "message": "Contraseña incorrecta."
+  },
+  "shared_unlock_failed": {
+    "message": "Error al desbloquear. Inténtelo de nuevo."
+  },
+  "shared_saving": {
+    "message": "Guardando..."
+  },
+  "shared_clear_name": {
+    "message": "Borrar nombre"
+  },
+  "shared_confirm_type_before": {
+    "message": "Para confirmar, escriba"
+  },
+  "shared_confirm_type_after": {
+    "message": "a continuación"
+  },
+  "shared_confirm_type_aria": {
+    "message": "Escriba «$text$» para confirmar"
+  },
+  "shared_drop_to_import": {
+    "message": "Suelte para importar"
+  },
+  "shared_drop_desc": {
+    "message": "Las claves se añaden a su llavero; los archivos y el texto van al espacio de trabajo."
+  },
+  "shared_storage_local_label": {
+    "message": "Solo en este dispositivo"
+  },
+  "shared_storage_local_desc": {
+    "message": "Sus datos se quedan en este equipo. Si cambia de dispositivo o reinstala, tendrá que volver a configurarlo todo."
+  },
+  "shared_storage_sync_label": {
+    "message": "Sincronizar entre dispositivos"
+  },
+  "shared_storage_sync_desc": {
+    "message": "Sus datos se sincronizan a través de su cuenta de Chrome. Disponibles allí donde haya iniciado sesión."
+  },
+  "shared_something_went_wrong": {
+    "message": "Se ha producido un error. Inténtelo de nuevo."
+  },
+  "shared_show_technical_details": {
+    "message": "Mostrar detalles técnicos"
+  },
+  "shared_hide_technical_details": {
+    "message": "Ocultar detalles técnicos"
+  },
+  "shared_preset_current": {
+    "message": "Actual"
+  },
+  "shared_preset_recommended": {
+    "message": "Recomendado"
+  },
+  "shared_preset_paranoid_note": {
+    "message": "Sus mensajes siguen siendo legibles para usted - desactive después «Cifrar también para mí» si incluso eso supone un riesgo."
+  },
+  "shared_preset_casual_title": {
+    "message": "Relajado"
+  },
+  "shared_preset_casual_tagline": {
+    "message": "Comodidad ante todo - para claves que protegen cosas de poca importancia"
+  },
+  "shared_preset_careful_title": {
+    "message": "Prudente"
+  },
+  "shared_preset_careful_tagline": {
+    "message": "Valores sensatos para secretos de verdad"
+  },
+  "shared_preset_paranoid_title": {
+    "message": "Si esto se filtra, tengo un problema"
+  },
+  "shared_preset_paranoid_tagline": {
+    "message": "Nada permanece. Bloqueos más cortos, sin historial, sin claves en caché."
+  },
+  "shared_bundle_auto_lock_off": {
+    "message": "El bloqueo automático está desactivado"
+  },
+  "shared_bundle_auto_lock": {
+    "message": "Bloqueo automático tras $duration$"
+  },
+  "shared_bundle_auto_lock_tabs": {
+    "message": "Bloqueo automático tras $duration$ y al cambiar de pestaña"
+  },
+  "shared_bundle_never_cache_on": {
+    "message": "Las claves se borran de la memoria tras cada uso"
+  },
+  "shared_bundle_never_cache_off": {
+    "message": "Las claves desbloqueadas se mantienen en caché hasta que bloquee"
+  },
+  "shared_bundle_unlock_on_open_on": {
+    "message": "Una sola solicitud de llave de acceso desbloquea la bóveda y sus claves"
+  },
+  "shared_bundle_unlock_on_open_off": {
+    "message": "Cada clave pide su propio desbloqueo"
+  },
+  "shared_bundle_history_on": {
+    "message": "Guarda un historial cifrado de lo que hace"
+  },
+  "shared_bundle_history_off": {
+    "message": "No se guarda historial"
+  },
+  "shared_bundle_discovery_on": {
+    "message": "Las claves se pueden buscar en GitHub y keys.openpgp.org"
+  },
+  "shared_bundle_discovery_off": {
+    "message": "Sin búsqueda de claves - nada sale de este dispositivo para encontrar una clave"
+  },
+  "shared_bundle_storage_local": {
+    "message": "Las claves se quedan en este dispositivo"
+  },
+  "shared_bundle_storage_sync": {
+    "message": "Las claves se sincronizan en su perfil de Chrome"
+  },
+  "shared_bundle_clipboard_one": {
+    "message": "Los secretos copiados se borran del portapapeles tras $count$ segundo"
+  },
+  "shared_bundle_clipboard_other": {
+    "message": "Los secretos copiados se borran del portapapeles tras $count$ segundos"
+  },
+  "shared_bundle_no_encrypt_to_self": {
+    "message": "Los mensajes que cifre no podrá leerlos después"
+  }
+}

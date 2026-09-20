@@ -2,6 +2,7 @@ import type {} from "./prf-types";
 
 import { fromBase64url, toBase64url } from "../encoding.ts";
 import { AppError } from "../errors/app-error";
+import { t } from "../i18n";
 
 // ── helpers ──────────────────────────────────────────────────────────
 
@@ -57,8 +58,9 @@ export async function registerPasskey(
       },
       user: {
         id: crypto.getRandomValues(new Uint8Array(16)),
-        name: userName ?? "PGP Key Protection",
-        displayName: displayName ?? userName ?? "PGP Key Protection",
+        name: userName ?? t("keygen_passkey_default_user"),
+        displayName:
+          displayName ?? userName ?? t("keygen_passkey_default_user"),
       },
       pubKeyCredParams: [
         { alg: -7, type: "public-key" }, // ES256
@@ -180,18 +182,16 @@ export function isWebAuthnCancel(e: unknown): boolean {
 export class PrfNotSupportedError extends Error {
   constructor() {
     const ua = navigator.userAgent;
-    let msg = "PRF not supported by this authenticator. ";
+    const parts = [t("keygen_prf_unsupported_intro")];
     if (ua.includes("Mac")) {
-      msg += "macOS requires 15+ with iCloud Keychain. ";
+      parts.push(t("keygen_prf_unsupported_mac"));
     } else if (ua.includes("Windows")) {
-      msg +=
-        "Windows Hello doesn't support PRF - use a security key (e.g. YubiKey). ";
+      parts.push(t("keygen_prf_unsupported_windows"));
     }
     if (ua.includes("Chrome") && !ua.includes("Android")) {
-      msg +=
-        "Chrome profile passkeys may not support PRF - try Google Password Manager or an external key.";
+      parts.push(t("keygen_prf_unsupported_chrome"));
     }
-    super(msg.trim());
+    super(parts.join(" "));
     this.name = "PrfNotSupportedError";
   }
 }

@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 
 import type { FileResult } from "../../lib/utils/download";
+import { t } from "../../lib/i18n";
 import { formatFileSize } from "../../lib/utils/formatting";
 
 interface OutputAreaProps {
@@ -101,7 +102,10 @@ export function OutputArea({
         {statusText && <p className="text-xs text-green-400">{statusText}</p>}
         {binaryOutput && !hasOutput && !hasFileResults && !statusText && (
           <p className="text-muted-foreground text-sm">
-            {fileName ?? "output.gpg"} - {formatFileSize(binaryOutput.length)}
+            {t("workspace_output_size_line", {
+              name: fileName ?? "output.gpg",
+              size: formatFileSize(binaryOutput.length),
+            })}
           </p>
         )}
       </div>
@@ -153,7 +157,10 @@ export function OutputArea({
       )}
       {binaryOutput && !hasOutput && !hasFileResults && !statusText && (
         <p className="text-muted-foreground text-sm">
-          {fileName ?? "output.gpg"} - {formatFileSize(binaryOutput.length)}
+          {t("workspace_output_size_line", {
+            name: fileName ?? "output.gpg",
+            size: formatFileSize(binaryOutput.length),
+          })}
         </p>
       )}
     </div>

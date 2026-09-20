@@ -9,6 +9,7 @@ import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
 
 import type { PgpMode } from "./actions/types";
 import type { InlineStyle } from "./compose/text-format";
+import type { MessageKey } from "./i18n";
 import {
   COPY_SHORTCUT,
   DOWNLOAD_SHORTCUT,
@@ -20,6 +21,7 @@ import {
   STYLE_LABELS,
   STYLE_SHORTCUTS,
 } from "./compose/shortcuts";
+import { t } from "./i18n";
 
 /** One row of the reference: a label plus how to render its keys. */
 export interface ShortcutRefEntry {
@@ -36,6 +38,8 @@ export interface ShortcutRefEntry {
 
 /** A titled group of reference rows. */
 export interface ShortcutRefSection {
+  /** Stable identifier, independent of the translated title. */
+  id: "palette" | "workspace" | "message" | "modes" | "global";
   title: string;
   entries: ShortcutRefEntry[];
   /** Fine print under the whole section. */
@@ -47,101 +51,116 @@ export interface ShortcutRefSection {
  *  opened via chrome.tabs.create from the reference page's button. */
 export const CHROME_SHORTCUTS_URL = "chrome://extensions/shortcuts";
 
-const MODE_NAMES: Record<PgpMode, string> = {
-  encrypt: "Encrypt",
-  decrypt: "Decrypt",
-  sign: "Sign",
-  verify: "Verify",
+const MODE_NAMES: Record<PgpMode, MessageKey> = {
+  encrypt: "common_encrypt",
+  decrypt: "common_decrypt",
+  sign: "common_sign",
+  verify: "common_verify",
 };
 
-/** The full shortcut reference, in display order. */
-export const SHORTCUT_REFERENCE: readonly ShortcutRefSection[] = [
-  {
-    title: "Command palette",
-    entries: [
-      {
-        label: "Open the command palette",
-        shortcut: PALETTE_SHORTCUT,
-        note: "Every action below is also searchable there.",
-      },
-    ],
-  },
-  {
-    title: "Workspace",
-    entries: [
-      {
-        label: "Run the current mode",
-        shortcut: { mod: true, key: "Enter" },
-      },
-      {
-        label: "Copy the output",
-        shortcut: COPY_SHORTCUT,
-      },
-      {
-        label: "Download the output",
-        shortcut: DOWNLOAD_SHORTCUT,
-      },
-      {
-        label: "Pick the nth recipient",
-        chips: ["1-9"],
-        note: "In the recipient dropdown, while its search box is empty.",
-      },
-      {
-        label: "Remove the last recipient",
-        chips: ["Backspace"],
-        note: "In the recipient dropdown's empty search box.",
-      },
-    ],
-  },
-  {
-    title: "Message box",
-    entries: [
-      {
-        label: "Find and replace",
-        shortcut: FIND_SHORTCUT,
-      },
-      ...(Object.keys(STYLE_SHORTCUTS) as InlineStyle[]).map((style) => ({
-        label: STYLE_LABELS[style],
-        shortcut: STYLE_SHORTCUTS[style],
-        note: "While writing a message to encrypt or sign. Uses Unicode letter forms, so it survives any channel.",
-      })),
-    ],
-  },
-  {
-    title: "Modes",
-    // Derived, never hand-listed: MODE_SHORTCUTS is the single source
-    // shared with the registry's mode actions and the mode dropdown.
-    entries: (Object.entries(MODE_SHORTCUTS) as [PgpMode, ShortcutSpec][]).map(
-      ([mode, shortcut]) => ({
-        label: `Switch to ${MODE_NAMES[mode]}`,
+/** Chrome's suggested bindings for the manifest `commands`; the Verify
+ *  mode ships unbound (Chrome caps suggested keys at four). */
+const GLOBAL_MODE_SHORTCUTS: Record<PgpMode, ShortcutSpec | undefined> = {
+  encrypt: { alt: true, shift: true, key: "E" },
+  decrypt: { alt: true, shift: true, key: "D" },
+  sign: { alt: true, shift: true, key: "S" },
+  verify: undefined,
+};
+
+/**
+ * The full shortcut reference, in display order. A function rather than
+ * a constant so every label is looked up in the UI language at render
+ * time, never at module load.
+ */
+export function shortcutReference(): readonly ShortcutRefSection[] {
+  return [
+    {
+      id: "palette",
+      title: t("settings_shortcuts_group_palette"),
+      entries: [
+        {
+          label: t("settings_shortcuts_open_palette"),
+          shortcut: PALETTE_SHORTCUT,
+          note: t("settings_shortcuts_open_palette_note"),
+        },
+      ],
+    },
+    {
+      id: "workspace",
+      title: t("settings_shortcuts_group_workspace"),
+      entries: [
+        {
+          label: t("settings_shortcuts_run_mode"),
+          shortcut: { mod: true, key: "Enter" },
+        },
+        {
+          label: t("settings_shortcuts_copy_output"),
+          shortcut: COPY_SHORTCUT,
+        },
+        {
+          label: t("settings_shortcuts_download_output"),
+          shortcut: DOWNLOAD_SHORTCUT,
+        },
+        {
+          label: t("settings_shortcuts_pick_recipient"),
+          chips: ["1-9"],
+          note: t("settings_shortcuts_pick_recipient_note"),
+        },
+        {
+          label: t("settings_shortcuts_remove_recipient"),
+          chips: ["Backspace"],
+          note: t("settings_shortcuts_remove_recipient_note"),
+        },
+      ],
+    },
+    {
+      id: "message",
+      title: t("settings_shortcuts_group_message"),
+      entries: [
+        {
+          label: t("settings_shortcuts_find_replace"),
+          shortcut: FIND_SHORTCUT,
+        },
+        ...(Object.keys(STYLE_SHORTCUTS) as InlineStyle[]).map((style) => ({
+          label: STYLE_LABELS[style],
+          shortcut: STYLE_SHORTCUTS[style],
+          note: t("settings_shortcuts_style_note"),
+        })),
+      ],
+    },
+    {
+      id: "modes",
+      title: t("settings_shortcuts_group_modes"),
+      // Derived, never hand-listed: MODE_SHORTCUTS is the single source
+      // shared with the registry's mode actions and the mode dropdown.
+      entries: (
+        Object.entries(MODE_SHORTCUTS) as [PgpMode, ShortcutSpec][]
+      ).map(([mode, shortcut]) => ({
+        label: t("settings_shortcuts_switch_mode", {
+          mode: t(MODE_NAMES[mode]),
+        }),
         shortcut,
-      }),
-    ),
-  },
-  {
-    title: "Global browser shortcuts",
-    entries: [
-      {
-        label: "Open PGP Tools",
-        shortcut: { alt: true, shift: true, key: "G" },
-      },
-      {
-        label: "Open in Encrypt mode",
-        shortcut: { alt: true, shift: true, key: "E" },
-      },
-      {
-        label: "Open in Decrypt mode",
-        shortcut: { alt: true, shift: true, key: "D" },
-      },
-      {
-        label: "Open in Sign mode",
-        shortcut: { alt: true, shift: true, key: "S" },
-      },
-      {
-        label: "Open in Verify mode",
-        note: "Unbound by default (Chrome caps suggested keys at four).",
-      },
-    ],
-    note: `These work anywhere in the browser. Rebind any of them at ${CHROME_SHORTCUTS_URL}.`,
-  },
-];
+      })),
+    },
+    {
+      id: "global",
+      title: t("settings_shortcuts_group_global"),
+      entries: [
+        {
+          label: t("settings_shortcuts_open_app"),
+          shortcut: { alt: true, shift: true, key: "G" },
+        },
+        ...(Object.keys(GLOBAL_MODE_SHORTCUTS) as PgpMode[]).map((mode) => {
+          const shortcut = GLOBAL_MODE_SHORTCUTS[mode];
+          const label = t("settings_shortcuts_open_in_mode", {
+            mode: t(MODE_NAMES[mode]),
+          });
+          return shortcut
+            ? { label, shortcut }
+            : { label, note: t("settings_shortcuts_unbound_note") };
+        }),
+      ],
+      note: t("settings_shortcuts_global_note", { url: CHROME_SHORTCUTS_URL }),
+    },
+  ];
+}

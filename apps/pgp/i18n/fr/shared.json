@@ -1,0 +1,320 @@
+{
+  "shared_security_preset": {
+    "message": "Profil de sécurité"
+  },
+  "shared_preset_bundled_changed": {
+    "message": "Un réglage inclus a été modifié"
+  },
+  "shared_preset_none_selected": {
+    "message": "Aucun profil sélectionné"
+  },
+  "shared_preset_custom": {
+    "message": "Personnalisé"
+  },
+  "shared_translation": {
+    "message": "Traduction"
+  },
+  "shared_keyboard_shortcuts": {
+    "message": "Raccourcis clavier"
+  },
+  "shared_key_storage": {
+    "message": "Stockage des clés"
+  },
+  "shared_key_security": {
+    "message": "Sécurité des clés"
+  },
+  "shared_auto_lock_title": {
+    "message": "Verrouillage automatique après inactivité"
+  },
+  "shared_auto_lock_desc": {
+    "message": "Verrouille les clés déverrouillées après une période sans activité dans le panneau. L'écran de verrouillage du système verrouille toujours immédiatement, quel que soit ce réglage."
+  },
+  "shared_lock_after": {
+    "message": "Verrouiller après"
+  },
+  "shared_minutes_one": {
+    "message": "$count$ minute"
+  },
+  "shared_minutes_other": {
+    "message": "$count$ minutes"
+  },
+  "shared_one_hour": {
+    "message": "1 heure"
+  },
+  "shared_lock_tab_away_title": {
+    "message": "Verrouiller quand je change d'onglet"
+  },
+  "shared_lock_tab_away_desc": {
+    "message": "Verrouille dès que le panneau latéral n'est plus visible (changement de fenêtre, panneau replié ou fenêtre réduite)."
+  },
+  "shared_never_cache_title": {
+    "message": "Ne jamais garder les clés en mémoire"
+  },
+  "shared_never_cache_desc": {
+    "message": "Les clés sont effacées de la mémoire après chaque opération. Vous pouvez toujours les déverrouiller manuellement depuis l'onglet Clés."
+  },
+  "shared_unlock_with_vault_title": {
+    "message": "Déverrouiller les clés avec le coffre"
+  },
+  "shared_unlock_with_vault_desc": {
+    "message": "L'invite de clé d'accès qui ouvre le coffre déverrouille aussi vos clés. Une clé qui demande encore sa propre invite bascule lors de son prochain déverrouillage. Les clés protégées par mot de passe conservent leur mot de passe."
+  },
+  "shared_downloads": {
+    "message": "Téléchargements"
+  },
+  "shared_auto_download_files_title": {
+    "message": "Télécharger automatiquement les fichiers"
+  },
+  "shared_auto_download_files_desc": {
+    "message": "Télécharge automatiquement le résultat après le chiffrement ou le déchiffrement de fichiers."
+  },
+  "shared_auto_download_text_title": {
+    "message": "Télécharger automatiquement le texte"
+  },
+  "shared_auto_download_text_desc": {
+    "message": "Télécharge automatiquement le résultat après le chiffrement ou le déchiffrement de texte."
+  },
+  "shared_key_discovery": {
+    "message": "Découverte de clés"
+  },
+  "shared_lookup_online_title": {
+    "message": "Rechercher des clés en ligne"
+  },
+  "shared_lookup_online_desc": {
+    "message": "Ajoute à l'écran d'importation un champ de recherche pour les clés SSH GitHub et les certificats keys.openpgp.org. Désactivé, rien ne quitte cet appareil pour trouver une clé. Activé, une recherche communique à cet hôte votre adresse IP et la personne recherchée - elle ne lui révèle rien sur vos clés ni vos messages."
+  },
+  "shared_crx_signing": {
+    "message": "Signature CRX"
+  },
+  "shared_crx_enable_title": {
+    "message": "Activer la signature CRX"
+  },
+  "shared_crx_enable_desc": {
+    "message": "Signez des paquets d'extension Chrome (.crx) pour les Importations CRX vérifiées du Web Store, avec une clé conservée dans votre coffre plutôt que dans votre chaîne de compilation."
+  },
+  "shared_crx_how": {
+    "message": "Comment fonctionne la signature CRX"
+  },
+  "shared_backup": {
+    "message": "Sauvegarde"
+  },
+  "shared_backup_desc": {
+    "message": "Exportez vos clés et vos contacts dans un seul fichier armé, ou restaurez-les depuis un tel fichier. Les clés privées exportées sont chiffrées avec une phrase secrète de votre choix."
+  },
+  "shared_export_all_keys": {
+    "message": "Exporter toutes les clés"
+  },
+  "shared_import_keys": {
+    "message": "Importer les clés"
+  },
+  "shared_display": {
+    "message": "Affichage"
+  },
+  "shared_advanced_mode": {
+    "message": "Mode avancé"
+  },
+  "shared_advanced_mode_desc": {
+    "message": "Affiche les empreintes des clés, les algorithmes et les options de format de sortie."
+  },
+  "shared_developer": {
+    "message": "Développeur"
+  },
+  "shared_developer_desc": {
+    "message": "Inspecter chrome.storage et vider la mémoire WASM à des fins de test. Cette section n'apparaît que dans les versions de développement."
+  },
+  "shared_open_dev_tools": {
+    "message": "Ouvrir les outils de développement"
+  },
+  "shared_import_flow_states": {
+    "message": "États du flux d'importation"
+  },
+  "shared_dev_tools": {
+    "message": "Outils de développement"
+  },
+  "shared_about": {
+    "message": "À propos"
+  },
+  "shared_byline_before": {
+    "message": "Un outil de confidentialité par"
+  },
+  "shared_source_on_github": {
+    "message": "Code source sur GitHub"
+  },
+  "shared_about_extensions": {
+    "message": "Inquiet des extensions de navigateur malveillantes ? Analysez vos extensions pour détecter la collecte de données, le détournement de session et d'autres menaces."
+  },
+  "shared_check_extensions": {
+    "message": "Vérifier vos extensions"
+  },
+  "shared_delete_history_title": {
+    "message": "Supprimer l'historique enregistré ?"
+  },
+  "shared_delete_history_confirm": {
+    "message": "Activer et supprimer l'historique"
+  },
+  "shared_delete_history_body": {
+    "message": "Ne jamais garder les clés en mémoire supprime aussi votre historique enregistré ($size$). Il ne pourra pas être récupéré."
+  },
+  "shared_sync_quota_error": {
+    "message": "Espace de synchronisation insuffisant. Chrome limite les données synchronisées à environ 100 Ko au total, ce coffre est donc trop volumineux pour être synchronisé entre appareils. Gardez-le sur cet appareil, ou retirez des clés et réessayez."
+  },
+  "shared_migration_failed": {
+    "message": "Échec de la migration"
+  },
+  "shared_preset_applied": {
+    "message": "Profil appliqué : $title$"
+  },
+  "shared_preset_applied_history_deleted": {
+    "message": "L'historique a été supprimé et Annuler ne le restaure pas."
+  },
+  "shared_undo": {
+    "message": "Annuler"
+  },
+  "shared_commands": {
+    "message": "Commandes"
+  },
+  "shared_unlock_aria": {
+    "message": "Déverrouiller PGP Tools"
+  },
+  "shared_unlock_intro": {
+    "message": "Vos clés et vos contacts sont chiffrés. Authentifiez-vous pour continuer."
+  },
+  "shared_unlock_with_passkey": {
+    "message": "Déverrouiller avec la clé d'accès"
+  },
+  "shared_master_password": {
+    "message": "Mot de passe principal"
+  },
+  "shared_unlocking": {
+    "message": "Déverrouillage..."
+  },
+  "shared_unlock_lost_password": {
+    "message": "Si vous avez perdu votre mot de passe, vos clés et contacts chiffrés ne peuvent pas être récupérés."
+  },
+  "shared_passkey_failed": {
+    "message": "Échec de l'authentification par clé d'accès. Réessayez."
+  },
+  "shared_wrong_password": {
+    "message": "Mot de passe incorrect."
+  },
+  "shared_unlock_failed": {
+    "message": "Échec du déverrouillage. Réessayez."
+  },
+  "shared_saving": {
+    "message": "Enregistrement..."
+  },
+  "shared_clear_name": {
+    "message": "Effacer le nom"
+  },
+  "shared_confirm_type_before": {
+    "message": "Pour confirmer, saisissez"
+  },
+  "shared_confirm_type_after": {
+    "message": "ci-dessous"
+  },
+  "shared_confirm_type_aria": {
+    "message": "Saisissez « $text$ » pour confirmer"
+  },
+  "shared_drop_to_import": {
+    "message": "Déposez pour importer"
+  },
+  "shared_drop_desc": {
+    "message": "Les clés sont ajoutées à votre trousseau ; les fichiers et le texte vont dans l'espace de travail."
+  },
+  "shared_storage_local_label": {
+    "message": "Cet appareil uniquement"
+  },
+  "shared_storage_local_desc": {
+    "message": "Vos données restent sur cet ordinateur. Si vous changez d'appareil ou réinstallez, vous devrez tout reconfigurer."
+  },
+  "shared_storage_sync_label": {
+    "message": "Synchroniser entre appareils"
+  },
+  "shared_storage_sync_desc": {
+    "message": "Vos données sont synchronisées via votre compte Chrome. Disponibles partout où vous êtes connecté."
+  },
+  "shared_something_went_wrong": {
+    "message": "Une erreur s'est produite. Réessayez."
+  },
+  "shared_show_technical_details": {
+    "message": "Afficher les détails techniques"
+  },
+  "shared_hide_technical_details": {
+    "message": "Masquer les détails techniques"
+  },
+  "shared_preset_current": {
+    "message": "Actuel"
+  },
+  "shared_preset_recommended": {
+    "message": "Recommandé"
+  },
+  "shared_preset_paranoid_note": {
+    "message": "Vos messages restent lisibles par vous - désactivez « Chiffrer aussi pour moi » plus tard si même cela est un risque."
+  },
+  "shared_preset_casual_title": {
+    "message": "Décontracté"
+  },
+  "shared_preset_casual_tagline": {
+    "message": "La commodité avant tout - pour des clés qui protègent peu de choses"
+  },
+  "shared_preset_careful_title": {
+    "message": "Prudent"
+  },
+  "shared_preset_careful_tagline": {
+    "message": "Des réglages raisonnables pour de vrais secrets"
+  },
+  "shared_preset_paranoid_title": {
+    "message": "Si ça fuite, j'ai de gros ennuis"
+  },
+  "shared_preset_paranoid_tagline": {
+    "message": "Rien ne traîne. Verrouillages les plus courts, pas d'historique, pas de clés en mémoire."
+  },
+  "shared_bundle_auto_lock_off": {
+    "message": "Verrouillage automatique désactivé"
+  },
+  "shared_bundle_auto_lock": {
+    "message": "Verrouillage automatique après $duration$"
+  },
+  "shared_bundle_auto_lock_tabs": {
+    "message": "Verrouillage automatique après $duration$ et quand vous changez d'onglet"
+  },
+  "shared_bundle_never_cache_on": {
+    "message": "Les clés sont effacées de la mémoire après chaque utilisation"
+  },
+  "shared_bundle_never_cache_off": {
+    "message": "Les clés déverrouillées restent en mémoire jusqu'au verrouillage"
+  },
+  "shared_bundle_unlock_on_open_on": {
+    "message": "Une seule invite de clé d'accès déverrouille le coffre et vos clés"
+  },
+  "shared_bundle_unlock_on_open_off": {
+    "message": "Chaque clé demande son propre déverrouillage"
+  },
+  "shared_bundle_history_on": {
+    "message": "Conserve un historique chiffré de vos opérations"
+  },
+  "shared_bundle_history_off": {
+    "message": "Aucun historique n'est conservé"
+  },
+  "shared_bundle_discovery_on": {
+    "message": "Les clés peuvent être recherchées sur GitHub et keys.openpgp.org"
+  },
+  "shared_bundle_discovery_off": {
+    "message": "Aucune recherche de clé - rien ne quitte cet appareil pour trouver une clé"
+  },
+  "shared_bundle_storage_local": {
+    "message": "Les clés restent sur cet appareil"
+  },
+  "shared_bundle_storage_sync": {
+    "message": "Les clés sont synchronisées via votre profil Chrome"
+  },
+  "shared_bundle_clipboard_one": {
+    "message": "Les secrets copiés sont effacés du presse-papiers après $count$ seconde"
+  },
+  "shared_bundle_clipboard_other": {
+    "message": "Les secrets copiés sont effacés du presse-papiers après $count$ secondes"
+  },
+  "shared_bundle_no_encrypt_to_self": {
+    "message": "Les messages que vous chiffrez ne sont plus lisibles par vous ensuite"
+  }
+}

@@ -8,6 +8,7 @@ import {
   splitSshPrivateKeyBlocks,
   splitSshPublicKeyCandidateLines,
 } from "../armor-blocks";
+import { t, tn } from "../i18n";
 import { detectImportOverwrite } from "../import-overwrite";
 import { importRejectionMessage, isUsableContact } from "../import-public-keys";
 import {
@@ -74,7 +75,7 @@ function subkeyChanges(
   if (!incoming || !stored) return [];
   const known = new Set(stored.keys.map((k) => k.fingerprint));
   const added = incoming.keys.filter((k) => !known.has(k.fingerprint)).length;
-  return added === 0 ? [] : [`${added} new subkey${added === 1 ? "" : "s"}`];
+  return added === 0 ? [] : [tn("import_change_new_subkeys", added)];
 }
 
 /**
@@ -141,7 +142,7 @@ export async function classifyCert(
     status: "update",
     // The fingerprint matched but nothing we display differs -- say that,
     // rather than showing an empty "what changed" list.
-    changes: changes.length > 0 ? changes : ["The key has been re-issued"],
+    changes: changes.length > 0 ? changes : [t("import_change_reissued")],
     existingAddedAt: overwrite?.addedAt ?? null,
   };
 }
@@ -197,7 +198,7 @@ function crxSigningKey(): IncomingKey {
     details: null,
     // Not a real user ID -- the preview's headline, for a key that
     // carries no identity of its own.
-    userIds: ["Chrome extension signing key"],
+    userIds: [t("import_crx_headline")],
     changes: [],
     publicArmored: "",
   };
@@ -226,7 +227,7 @@ function sshPublicKey(
     details: null,
     // Not a real user ID -- the preview's headline, for a key that
     // carries no identity beyond its comment.
-    userIds: trimmed ? [trimmed] : ["SSH key"],
+    userIds: trimmed ? [trimmed] : [t("import_ssh_headline")],
     changes: [],
     publicArmored: info.recipient,
   };
@@ -253,7 +254,7 @@ function sshPrivateKey(): IncomingKey {
     status: "new",
     info: null,
     details: null,
-    userIds: ["SSH private key"],
+    userIds: [t("import_ssh_private_headline")],
     changes: [],
     publicArmored: "",
   };
@@ -280,7 +281,7 @@ function rejectedSshPublicKey(line: string, rejection: string): IncomingKey {
     status: "rejected",
     info: null,
     details: null,
-    userIds: ["SSH key"],
+    userIds: [t("import_ssh_headline")],
     changes: [],
     rejection,
     // The line as pasted: unusable as a recipient, but it is what the
@@ -299,7 +300,7 @@ function rejectedSshPrivateKey(rejection: string): IncomingKey {
     status: "rejected",
     info: null,
     details: null,
-    userIds: ["SSH private key"],
+    userIds: [t("import_ssh_private_headline")],
     changes: [],
     rejection,
     publicArmored: "",
@@ -375,7 +376,7 @@ function sshGroupKey(
 /** The headline for a group the user has not named yet. Never stored:
  *  leaving the name blank imports the keys separately instead. */
 function proposalLabel(count: number): string {
-  return `${count} SSH keys`;
+  return tn("import_group_proposal_label", count);
 }
 
 /** The message an engine threw, or a last-resort generic. Engine errors
@@ -387,7 +388,7 @@ function proposalLabel(count: number): string {
  *  this would be two wordings for one refusal. */
 export function engineRejection(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
-  return message.trim() || "This SSH key can't be used for encryption.";
+  return message.trim() || t("import_reject_ssh_generic");
 }
 
 export interface PreparedImport {

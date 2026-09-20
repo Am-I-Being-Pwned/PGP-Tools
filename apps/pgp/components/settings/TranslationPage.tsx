@@ -16,8 +16,12 @@ import {
   translationAvailability,
   translationSupportedHere,
 } from "../../lib/ai/availability";
-import { TRANSLATION_LANGUAGES } from "../../lib/ai/languages";
+import {
+  TRANSLATION_LANGUAGES,
+  translationLanguages,
+} from "../../lib/ai/languages";
 import { downloadLanguagePack } from "../../lib/ai/translate";
+import { t } from "../../lib/i18n";
 import { SubPage } from "../shared/SubPage";
 
 /**
@@ -116,7 +120,10 @@ export function TranslationPage({
           ...p,
           [code]: {
             kind: "error",
-            message: e instanceof Error ? e.message : "Download failed.",
+            message:
+              e instanceof Error
+                ? e.message
+                : t("settings_translation_download_failed"),
           },
         }));
       }
@@ -125,19 +132,19 @@ export function TranslationPage({
   );
 
   return (
-    <SubPage title="Translation" onClose={onClose}>
+    <SubPage title={t("settings_translation_title")} onClose={onClose}>
       <div className="space-y-5">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
-            <p className="text-sm font-medium">Translate decrypted messages</p>
+            <p className="text-sm font-medium">
+              {t("settings_translation_enable")}
+            </p>
             <p className="text-muted-foreground text-xs">
-              Adds a Translate button under a decrypted message. Translation
-              runs on this device using Chrome's built-in model, and nothing is
-              translated until you press the button.
+              {t("settings_translation_enable_desc")}
             </p>
           </div>
           <Switch
-            aria-label="Translate decrypted messages"
+            aria-label={t("settings_translation_enable")}
             checked={enabled}
             onCheckedChange={onEnabledChange}
             disabled={supported === false}
@@ -146,16 +153,16 @@ export function TranslationPage({
 
         {supported === false && (
           <p className="text-muted-foreground text-xs">
-            Chrome's on-device translation is not available here. It needs a
-            desktop Chrome on Windows 10+, macOS 13+, Linux or a Chromebook
-            Plus, with enough free disk space and memory for the models.
+            {t("settings_translation_unsupported")}
           </p>
         )}
 
         {supported && (
           <>
             <div className="space-y-2">
-              <p className="text-sm font-medium">Translate into</p>
+              <p className="text-sm font-medium">
+                {t("settings_translation_target")}
+              </p>
               <Select
                 value={targetLanguage}
                 onValueChange={onTargetLanguageChange}
@@ -164,7 +171,7 @@ export function TranslationPage({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {TRANSLATION_LANGUAGES.map((l) => (
+                  {translationLanguages().map((l) => (
                     <SelectItem key={l.code} value={l.code}>
                       {l.label}
                     </SelectItem>
@@ -174,62 +181,62 @@ export function TranslationPage({
             </div>
 
             <div className="space-y-2">
-              <p className="text-sm font-medium">Language packs</p>
+              <p className="text-sm font-medium">
+                {t("settings_translation_packs")}
+              </p>
               <p className="text-muted-foreground text-xs">
-                Optional. A missing pack downloads by itself the first time you
-                translate from that language, so you only need this to get ahead
-                of it. Downloading here does buy you one thing: the download no
-                longer happens at the moment you decrypt a message, so its
-                timing reveals nothing about what you just read. Each pack is{" "}
-                {LANGUAGE_PACK_SIZE_HINT} and is stored by Chrome, not by this
-                extension.
+                {t("settings_translation_packs_desc", {
+                  size: LANGUAGE_PACK_SIZE_HINT,
+                })}
               </p>
 
               <ul className="divide-border divide-y">
-                {TRANSLATION_LANGUAGES.filter(
-                  (l) => l.code !== targetLanguage,
-                ).map((l) => {
-                  const state = packs[l.code];
-                  return (
-                    <li
-                      key={l.code}
-                      className="flex items-center justify-between gap-3 py-2"
-                    >
-                      <span className="text-sm">{l.label}</span>
-                      {state?.kind === "ready" && (
-                        <span className="flex items-center gap-1 text-xs text-green-400">
-                          <CheckIcon className="h-3.5 w-3.5" />
-                          Ready
-                        </span>
-                      )}
-                      {state?.kind === "downloading" && (
-                        <span className="text-muted-foreground text-xs">
-                          {Math.round(state.progress * 100)}%
-                        </span>
-                      )}
-                      {state?.kind === "downloadable" && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => void download(l.code)}
-                        >
-                          <DownloadIcon className="h-3.5 w-3.5" />
-                          Download
-                        </Button>
-                      )}
-                      {state?.kind === "unsupported" && (
-                        <span className="text-muted-foreground text-xs">
-                          Not offered
-                        </span>
-                      )}
-                      {state?.kind === "error" && (
-                        <span className="text-destructive text-xs">
-                          {state.message}
-                        </span>
-                      )}
-                    </li>
-                  );
-                })}
+                {translationLanguages()
+                  .filter((l) => l.code !== targetLanguage)
+                  .map((l) => {
+                    const state = packs[l.code];
+                    return (
+                      <li
+                        key={l.code}
+                        className="flex items-center justify-between gap-3 py-2"
+                      >
+                        <span className="text-sm">{l.label}</span>
+                        {state?.kind === "ready" && (
+                          <span className="flex items-center gap-1 text-xs text-green-400">
+                            <CheckIcon className="h-3.5 w-3.5" />
+                            {t("settings_translation_pack_ready")}
+                          </span>
+                        )}
+                        {state?.kind === "downloading" && (
+                          <span className="text-muted-foreground text-xs">
+                            {t("settings_translation_pack_progress", {
+                              percent: Math.round(state.progress * 100),
+                            })}
+                          </span>
+                        )}
+                        {state?.kind === "downloadable" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => void download(l.code)}
+                          >
+                            <DownloadIcon className="h-3.5 w-3.5" />
+                            {t("common_download")}
+                          </Button>
+                        )}
+                        {state?.kind === "unsupported" && (
+                          <span className="text-muted-foreground text-xs">
+                            {t("settings_translation_pack_not_offered")}
+                          </span>
+                        )}
+                        {state?.kind === "error" && (
+                          <span className="text-destructive text-xs">
+                            {state.message}
+                          </span>
+                        )}
+                      </li>
+                    );
+                  })}
               </ul>
             </div>
           </>

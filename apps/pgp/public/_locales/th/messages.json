@@ -1,8 +1,8 @@
 {
-  "extName": {
-    "message": "เข้ารหัสอีเมล OpenPGP และ GPG - Slack Compatible, Gmail Compatible"
-  },
   "extDescription": {
     "message": "เข้ารหัส ถอดรหัส ลงลายเซ็น และตรวจสอบอีเมลและข้อความด้วย OpenPGP และ GPG"
+  },
+  "extName": {
+    "message": "เข้ารหัสอีเมล OpenPGP และ GPG - Slack Compatible, Gmail Compatible"
   }
 }

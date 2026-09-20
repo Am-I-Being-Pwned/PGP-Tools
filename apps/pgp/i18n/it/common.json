@@ -1,0 +1,68 @@
+{
+  "common_cancel": {
+    "message": "Annulla"
+  },
+  "common_back": {
+    "message": "Indietro"
+  },
+  "common_done": {
+    "message": "Fine"
+  },
+  "common_save": {
+    "message": "Salva"
+  },
+  "common_delete": {
+    "message": "Elimina"
+  },
+  "common_remove": {
+    "message": "Rimuovi"
+  },
+  "common_copy": {
+    "message": "Copia"
+  },
+  "common_copied": {
+    "message": "Copiato"
+  },
+  "common_download": {
+    "message": "Scarica"
+  },
+  "common_continue": {
+    "message": "Continua"
+  },
+  "common_on": {
+    "message": "On"
+  },
+  "common_off": {
+    "message": "Off"
+  },
+  "common_settings": {
+    "message": "Impostazioni"
+  },
+  "common_keys": {
+    "message": "Chiavi"
+  },
+  "common_encrypt": {
+    "message": "Cifra"
+  },
+  "common_decrypt": {
+    "message": "Decifra"
+  },
+  "common_sign": {
+    "message": "Firma"
+  },
+  "common_verify": {
+    "message": "Verifica"
+  },
+  "common_public_key": {
+    "message": "Chiave pubblica"
+  },
+  "common_private_key": {
+    "message": "Chiave privata"
+  },
+  "common_unlock": {
+    "message": "Sblocca"
+  },
+  "common_lock": {
+    "message": "Blocca"
+  }
+}

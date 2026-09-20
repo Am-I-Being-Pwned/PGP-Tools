@@ -13,6 +13,7 @@ import { classifyAction } from "../lib/classify-action";
 import { MENU_OPEN_IN_PGP, SESSION_PENDING_OP } from "../lib/constants";
 import { fetchGithubKeys } from "../lib/github/fetch-keys";
 import { isGithubUsername } from "../lib/github/username";
+import { t } from "../lib/i18n";
 import { fetchKeyserverKey } from "../lib/keyserver/fetch-key";
 import { isKeyserverQuery } from "../lib/keyserver/query";
 import { commandToMode } from "../lib/mode-commands";
@@ -148,7 +149,7 @@ export default defineBackground(() => {
     // never has more than one item to group into a submenu.
     chrome.contextMenus.create({
       id: MENU_OPEN_IN_PGP,
-      title: "Open in PGP Tools",
+      title: t("app_menu_open_in_pgp_tools"),
       contexts: ["selection"],
     });
   });

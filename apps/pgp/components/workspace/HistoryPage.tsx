@@ -1,5 +1,4 @@
 import { Fragment, useEffect, useRef, useState } from "react";
-import { formatDistanceToNow } from "date-fns";
 import {
   BadgeCheckIcon,
   CheckIcon,
@@ -14,6 +13,7 @@ import {
 
 import { Button } from "@amibeingpwned/ui/button";
 
+import type { MessageKey } from "../../lib/i18n";
 import type { HistoryEntry, HistoryOp } from "../../lib/storage/history";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import {
@@ -21,6 +21,8 @@ import {
   entryMatchesQuery,
   splitHighlight,
 } from "../../lib/history-search";
+import { t, tn } from "../../lib/i18n";
+import { formatDateTime, formatRelative } from "../../lib/i18n/format";
 import {
   clearHistory,
   hasUnlimitedStorage,
@@ -40,6 +42,21 @@ const OP_ICON: Record<HistoryOp, typeof LockIcon> = {
   verify: BadgeCheckIcon,
 };
 
+const OP_NAME: Record<HistoryOp, MessageKey> = {
+  encrypt: "common_encrypt",
+  decrypt: "common_decrypt",
+  sign: "common_sign",
+  verify: "common_verify",
+};
+
+/** "Encrypt", or "Encrypt + sign" for a signed encrypt. */
+function opLabel(entry: HistoryEntry): string {
+  const op = t(OP_NAME[entry.op]);
+  return entry.signed && entry.op === "encrypt"
+    ? t("actions_history_op_signed", { op })
+    : op;
+}
+
 /** Small icon button that opens the history page. Self-contained so the
  *  WorkspaceView diff stays a single element. */
 export function HistoryButton({ enabled }: { enabled: boolean }) {
@@ -49,8 +66,8 @@ export function HistoryButton({ enabled }: { enabled: boolean }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        title="History"
-        aria-label="History"
+        title={t("actions_history")}
+        aria-label={t("actions_history")}
         // Deliberately out of the Tab order: it sits between the toggle
         // badges and the main action, and keyboard users reach history
         // via the palette ("Open history") instead.
@@ -66,14 +83,18 @@ export function HistoryButton({ enabled }: { enabled: boolean }) {
 
 function entryTitle(entry: HistoryEntry): string {
   if (entry.op === "encrypt" && entry.recipients.length > 0) {
-    return `To ${entry.recipients.map((r) => r.name || r.fingerprint.slice(-8)).join(", ")}`;
+    return t("actions_history_to", {
+      names: entry.recipients
+        .map((r) => r.name || r.fingerprint.slice(-8))
+        .join(", "),
+    });
   }
   if (entry.files && entry.files.length > 0) {
     return entry.files.length === 1
       ? entry.files[0].name
-      : `${entry.files.length} files`;
+      : tn("actions_history_files", entry.files.length);
   }
-  return entry.op.charAt(0).toUpperCase() + entry.op.slice(1);
+  return t(OP_NAME[entry.op]);
 }
 
 /** Shared styling for highlighted match text; primary-tinted so it
@@ -159,24 +180,29 @@ function HistoryEntryPage({
       <div className="text-muted-foreground space-y-1 text-xs">
         <p className="flex items-center gap-1.5 capitalize">
           <Icon className="h-3.5 w-3.5" />
-          {entry.op}
-          {entry.signed && entry.op === "encrypt" ? " + sign" : ""}
+          {opLabel(entry)}
           <span className="normal-case">
             {" · "}
-            {new Date(entry.ts).toLocaleString()} (
-            {formatDistanceToNow(entry.ts, { addSuffix: true })})
+            {t("actions_history_when", {
+              date: formatDateTime(entry.ts),
+              relative: formatRelative(entry.ts),
+            })}
           </span>
         </p>
         {entry.recipients.length > 0 && (
           <p className="break-words">
-            To{" "}
-            {entry.recipients
-              .map((r) =>
-                r.name
-                  ? `${r.name} (${r.fingerprint.slice(-8).toUpperCase()})`
-                  : r.fingerprint.slice(-8).toUpperCase(),
-              )
-              .join(", ")}
+            {t("actions_history_to", {
+              names: entry.recipients
+                .map((r) =>
+                  r.name
+                    ? t("actions_history_recipient_with_id", {
+                        name: r.name,
+                        id: r.fingerprint.slice(-8).toUpperCase(),
+                      })
+                    : r.fingerprint.slice(-8).toUpperCase(),
+                )
+                .join(", "),
+            })}
           </p>
         )}
         {entry.files && entry.files.length > 0 && (
@@ -185,7 +211,10 @@ function HistoryEntryPage({
                 never reorders. */}
             {entry.files.map((f, i) => (
               <li key={i} className="truncate">
-                {f.name} ({formatFileSize(f.size)})
+                {t("actions_history_file_with_size", {
+                  name: f.name,
+                  size: formatFileSize(f.size),
+                })}
               </li>
             ))}
           </ul>
@@ -200,7 +229,7 @@ function HistoryEntryPage({
             ) : (
               entry.content
             )}
-            {entry.truncated ? "\n[truncated]" : ""}
+            {entry.truncated ? `\n${t("actions_history_truncated")}` : ""}
           </pre>
           <Button variant="outline" size="sm" onClick={() => void handleCopy()}>
             <span className="flex items-center gap-2">
@@ -209,13 +238,13 @@ function HistoryEntryPage({
               ) : (
                 <ClipboardIcon className="h-4 w-4" />
               )}
-              {copied ? "Copied" : "Copy"}
+              {copied ? t("common_copied") : t("common_copy")}
             </span>
           </Button>
         </>
       ) : (
         <p className="text-muted-foreground text-xs">
-          Metadata only - content is not stored for this operation.
+          {t("actions_history_metadata_only")}
         </p>
       )}
     </SubPage>
@@ -273,7 +302,7 @@ export function HistoryPage({
   return (
     <>
       <SubPage
-        title="History"
+        title={t("actions_history")}
         onClose={onClose}
         // Flex column: search pinned top, list scrolls, usage pinned bottom.
         bodyClassName="flex h-full flex-col p-3"
@@ -282,8 +311,8 @@ export function HistoryPage({
             <button
               type="button"
               onClick={() => setConfirmClear(true)}
-              title="Clear history"
-              aria-label="Clear history"
+              title={t("actions_history_clear")}
+              aria-label={t("actions_history_clear")}
               className="text-muted-foreground hover:text-destructive rounded p-1 transition-colors"
             >
               <Trash2Icon className="h-4 w-4" />
@@ -294,8 +323,8 @@ export function HistoryPage({
         {entries.length > 0 && (
           <input
             type="text"
-            placeholder="Search history..."
-            aria-label="Search history"
+            placeholder={t("actions_history_search_placeholder")}
+            aria-label={t("actions_history_search_label")}
             autoFocus
             ref={searchRef}
             value={search}
@@ -319,15 +348,15 @@ export function HistoryPage({
           <div className="border-border bg-muted/30 rounded-lg border p-4 text-center">
             <p className="text-muted-foreground text-sm">
               {enabled
-                ? "No history"
-                : "History is off - enable it next to Sign"}
+                ? t("actions_history_empty")
+                : t("actions_history_off_reason")}
             </p>
           </div>
         )}
 
         {search && entries.length > 0 && filtered.length === 0 && (
           <p className="text-muted-foreground mt-2 text-center text-xs">
-            No history matches "{search}"
+            {t("actions_history_no_matches", { query: search })}
           </p>
         )}
 
@@ -351,7 +380,9 @@ export function HistoryPage({
                 key={entry.id}
                 type="button"
                 onClick={() => setDetailEntry(entry)}
-                aria-label={`Open ${entryTitle(entry)}`}
+                aria-label={t("actions_history_open_entry", {
+                  title: entryTitle(entry),
+                })}
                 className="border-border hover:bg-muted/40 block w-full rounded-lg border p-2.5 text-left transition-colors"
               >
                 <span className="flex w-full items-center gap-2">
@@ -359,18 +390,17 @@ export function HistoryPage({
                   <span className="min-w-0 flex-1 truncate text-sm">
                     {metadataOnly ? (
                       <span className="text-muted-foreground italic">
-                        No content saved
+                        {t("actions_history_no_content")}
                       </span>
                     ) : (
                       <Highlighted text={entryTitle(entry)} query={search} />
                     )}
                   </span>
                   <span className="text-muted-foreground shrink-0 text-xs whitespace-nowrap capitalize">
-                    {entry.op}
-                    {entry.signed && entry.op === "encrypt" ? " + sign" : ""}
+                    {opLabel(entry)}
                   </span>
                   <span className="text-muted-foreground shrink-0 text-xs whitespace-nowrap">
-                    {formatDistanceToNow(entry.ts, { addSuffix: true })}
+                    {formatRelative(entry.ts)}
                   </span>
                   <ChevronRightIcon className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
                 </span>
@@ -392,8 +422,10 @@ export function HistoryPage({
                     {snippet.moreMatches > 0 && (
                       <span className="text-muted-foreground/70">
                         {" "}
-                        +{snippet.moreMatches} more{" "}
-                        {snippet.moreMatches === 1 ? "match" : "matches"}
+                        {tn(
+                          "actions_history_more_matches",
+                          snippet.moreMatches,
+                        )}
                       </span>
                     )}
                   </span>
@@ -405,7 +437,10 @@ export function HistoryPage({
 
         {usage && entries.length > 0 && (
           <p className="text-muted-foreground mt-2 shrink-0 pt-1 text-center text-[10px]">
-            {formatFileSize(usage.used)} of {formatFileSize(usage.budget)} used
+            {t("actions_history_usage", {
+              used: formatFileSize(usage.used),
+              budget: formatFileSize(usage.budget),
+            })}
           </p>
         )}
       </SubPage>
@@ -420,8 +455,8 @@ export function HistoryPage({
 
       {confirmClear && (
         <ConfirmPage
-          title="Clear history"
-          confirmLabel="Clear history"
+          title={t("actions_history_clear")}
+          confirmLabel={t("actions_history_clear")}
           onConfirm={async () => {
             await clearHistory();
             setEntries([]);
@@ -430,13 +465,9 @@ export function HistoryPage({
           onCancel={() => setConfirmClear(false)}
         >
           <p className="font-medium">
-            Delete all {entries.length} history{" "}
-            {entries.length === 1 ? "entry" : "entries"}
+            {tn("actions_history_delete_all", entries.length)}
           </p>
-          <p className="mt-2">
-            This permanently deletes your encrypted operation history from this
-            device. It can't be recovered.
-          </p>
+          <p className="mt-2">{t("actions_history_delete_warning")}</p>
         </ConfirmPage>
       )}
     </>

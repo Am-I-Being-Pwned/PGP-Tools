@@ -1,0 +1,512 @@
+{
+  "keys_my_keys_heading": {
+    "message": "Le mie chiavi"
+  },
+  "keys_empty": {
+    "message": "Nessuna chiave per ora. Genera o importa una chiave per iniziare."
+  },
+  "keys_generate_button": {
+    "message": "Genera chiave"
+  },
+  "keys_import_button": {
+    "message": "Importa chiave"
+  },
+  "keys_unknown_name": {
+    "message": "Sconosciuto"
+  },
+  "keys_exported_one": {
+    "message": "$count$ chiave esportata"
+  },
+  "keys_exported_other": {
+    "message": "$count$ chiavi esportate"
+  },
+  "keys_exported_unsafe_one": {
+    "message": "$count$ chiave esportata (chiavi private NON CIFRATE)"
+  },
+  "keys_exported_unsafe_other": {
+    "message": "$count$ chiavi esportate (chiavi private NON CIFRATE)"
+  },
+  "keys_reselect": {
+    "message": "Riseleziona"
+  },
+  "keys_ssh_export_skipped_one": {
+    "message": "$count$ chiave SSH non può essere esportata - una chiave SSH importata non lascia mai questo dispositivo."
+  },
+  "keys_ssh_export_skipped_other": {
+    "message": "$count$ chiavi SSH non possono essere esportate - una chiave SSH importata non lascia mai questo dispositivo."
+  },
+  "keys_rename_key_title": {
+    "message": "Rinomina chiave"
+  },
+  "keys_rename_crx_title": {
+    "message": "Rinomina chiave di firma"
+  },
+  "keys_rename_contact_title": {
+    "message": "Rinomina contatto"
+  },
+  "keys_rename_field_label": {
+    "message": "Nome visualizzato"
+  },
+  "keys_rename_hint": {
+    "message": "Mostrato al posto di $identity$. È solo un'etichetta locale."
+  },
+  "keys_rename_placeholder_key": {
+    "message": "es. Portatile di lavoro"
+  },
+  "keys_rename_placeholder_crx": {
+    "message": "es. La mia estensione"
+  },
+  "keys_rename_placeholder_contact": {
+    "message": "es. Alice (tutti i computer)"
+  },
+  "keys_revocation_unlock_first": {
+    "message": "Sblocca prima questa chiave, poi riprova."
+  },
+  "keys_bulk_delete_title": {
+    "message": "Eliminare la selezione?"
+  },
+  "keys_bulk_delete_confirm_one": {
+    "message": "Elimina definitivamente $count$ elemento"
+  },
+  "keys_bulk_delete_confirm_other": {
+    "message": "Elimina definitivamente $count$ elementi"
+  },
+  "keys_bulk_delete_prompt_one": {
+    "message": "elimina $count$ chiave"
+  },
+  "keys_bulk_delete_prompt_other": {
+    "message": "elimina $count$ chiavi"
+  },
+  "keys_contacts_removed_one": {
+    "message": "Contatto rimosso"
+  },
+  "keys_contacts_removed_other": {
+    "message": "$count$ contatti rimossi"
+  },
+  "keys_undo": {
+    "message": "Annulla"
+  },
+  "keys_confirm_remove_contact_title": {
+    "message": "Rimuovere il contatto?"
+  },
+  "keys_confirm_delete_key_title": {
+    "message": "Eliminare la chiave?"
+  },
+  "keys_remove_contact": {
+    "message": "Rimuovi contatto"
+  },
+  "keys_delete_key_permanently": {
+    "message": "Elimina definitivamente la chiave"
+  },
+  "keys_count_private_keys_one": {
+    "message": "$count$ chiave privata"
+  },
+  "keys_count_private_keys_other": {
+    "message": "$count$ chiavi private"
+  },
+  "keys_count_signing_keys_one": {
+    "message": "$count$ chiave di firma"
+  },
+  "keys_count_signing_keys_other": {
+    "message": "$count$ chiavi di firma"
+  },
+  "keys_count_contacts_one": {
+    "message": "$count$ contatto"
+  },
+  "keys_count_contacts_other": {
+    "message": "$count$ contatti"
+  },
+  "keys_bulk_delete_private_body": {
+    "message": "Questa azione elimina definitivamente da questo dispositivo le chiavi private selezionate. Tutto ciò che è cifrato solo per una chiave eliminata diventa irrecuperabile. Assicurati di avere un backup se potresti averne bisogno in futuro."
+  },
+  "keys_bulk_delete_contacts_body": {
+    "message": "Non potrai più cifrare per questi contatti né verificare le loro firme. Potrai reimportare le loro chiavi pubbliche in seguito."
+  },
+  "keys_delete_crx_body": {
+    "message": "Non potrai più firmare aggiornamenti per questa estensione, e la chiave non può essere recuperata a meno che tu non abbia un backup."
+  },
+  "keys_delete_key_body": {
+    "message": "Questa azione elimina definitivamente la chiave privata da questo dispositivo. Tutto ciò che è cifrato solo per questa chiave diventa irrecuperabile. Assicurati di avere un backup se potresti averne bisogno in futuro."
+  },
+  "keys_remove_contact_body": {
+    "message": "Non potrai più cifrare messaggi per questo contatto né verificare le sue firme. Potrai reimportare la sua chiave pubblica in seguito."
+  },
+  "keys_contacts_heading": {
+    "message": "Contatti"
+  },
+  "keys_contacts_heading_encrypted": {
+    "message": "Contatti (cifrati)"
+  },
+  "keys_contacts_heading_count": {
+    "message": "Contatti ($count$)"
+  },
+  "keys_contacts_locked": {
+    "message": "I contatti sono cifrati. Sblocca PGP Tools per vederli e gestirli."
+  },
+  "keys_search_contacts_placeholder": {
+    "message": "Cerca nei contatti..."
+  },
+  "keys_no_contacts_match": {
+    "message": "Nessun contatto corrisponde a “$query$”"
+  },
+  "keys_wrong_password": {
+    "message": "Password errata"
+  },
+  "keys_passkey_failed": {
+    "message": "Autenticazione con passkey non riuscita"
+  },
+  "keys_status_unlocked": {
+    "message": "Sbloccata"
+  },
+  "keys_status_locked": {
+    "message": "Bloccata"
+  },
+  "keys_status_sealed": {
+    "message": "Sigillata a riposo"
+  },
+  "keys_default_badge": {
+    "message": "Predefinita"
+  },
+  "keys_default_title": {
+    "message": "Usata per impostazione predefinita per firmare, decifrare e cifrare per te stesso"
+  },
+  "keys_key_options_aria": {
+    "message": "Opzioni della chiave"
+  },
+  "keys_rename": {
+    "message": "Rinomina"
+  },
+  "keys_public_key_copied": {
+    "message": "Chiave pubblica copiata"
+  },
+  "keys_copy_public_key": {
+    "message": "Copia chiave pubblica"
+  },
+  "keys_download_public_key": {
+    "message": "Scarica chiave pubblica"
+  },
+  "keys_copy_private_key": {
+    "message": "Copia chiave privata"
+  },
+  "keys_select": {
+    "message": "Seleziona"
+  },
+  "keys_delete_key": {
+    "message": "Elimina chiave"
+  },
+  "keys_protection_passkey": {
+    "message": "Passkey"
+  },
+  "keys_protection_password": {
+    "message": "Password"
+  },
+  "keys_weak_sha1": {
+    "message": "Debole (SHA-1)"
+  },
+  "keys_enter_password_placeholder": {
+    "message": "Inserisci la password"
+  },
+  "keys_key_details": {
+    "message": "Dettagli della chiave"
+  },
+  "keys_details_aria": {
+    "message": "Dettagli della chiave di $name$"
+  },
+  "keys_cap_sign": {
+    "message": "Firma i messaggi"
+  },
+  "keys_cap_encrypt": {
+    "message": "Riceve messaggi cifrati"
+  },
+  "keys_cap_auth": {
+    "message": "Autentica (es. SSH)"
+  },
+  "keys_cap_certify": {
+    "message": "Garantisce le identità"
+  },
+  "keys_banner_revoked_title": {
+    "message": "Questa chiave è stata revocata"
+  },
+  "keys_banner_no_reason": {
+    "message": "Non è stato indicato alcun motivo."
+  },
+  "keys_banner_revoked_own": {
+    "message": "Genera o importa una chiave sostitutiva."
+  },
+  "keys_banner_revoked_contact": {
+    "message": "Non cifrare per questa chiave e non fidarti delle nuove firme che produce."
+  },
+  "keys_banner_expired_title": {
+    "message": "Questa chiave è scaduta $when$"
+  },
+  "keys_banner_expired_on": {
+    "message": "Ha smesso di essere valida il $date$."
+  },
+  "keys_banner_expired_own": {
+    "message": "Genera o importa una chiave più recente."
+  },
+  "keys_banner_expired_contact": {
+    "message": "Chiedi al proprietario una chiave aggiornata."
+  },
+  "keys_banner_unusable_title": {
+    "message": "Questa chiave non può essere usata"
+  },
+  "keys_banner_unusable_body": {
+    "message": "Non ha una sottochiave di cifratura o di firma utilizzabile."
+  },
+  "keys_banner_encrypt_only_own": {
+    "message": "Puoi ricevere messaggi cifrati, ma questa chiave non può firmare."
+  },
+  "keys_banner_encrypt_only_contact": {
+    "message": "Puoi cifrare per questa chiave, ma non può firmare."
+  },
+  "keys_banner_sign_only_own": {
+    "message": "Puoi firmare messaggi, ma questa chiave non può riceverne di cifrati."
+  },
+  "keys_banner_sign_only_contact": {
+    "message": "Puoi verificare le sue firme, ma non puoi cifrare per questa chiave."
+  },
+  "keys_banner_expires_soon": {
+    "message": "Questa chiave scade a breve"
+  },
+  "keys_subkey_label": {
+    "message": "Sottochiave"
+  },
+  "keys_bits": {
+    "message": "$bits$ bit"
+  },
+  "keys_row_created": {
+    "message": "creata il $date$"
+  },
+  "keys_row_expires": {
+    "message": "scade il $date$"
+  },
+  "keys_row_expired": {
+    "message": "scaduta il $date$"
+  },
+  "keys_row_never_expires": {
+    "message": "non scade mai"
+  },
+  "keys_status_expired": {
+    "message": "scaduta"
+  },
+  "keys_status_revoked": {
+    "message": "revocata"
+  },
+  "keys_status_invalid": {
+    "message": "non valida"
+  },
+  "keys_revoked_reason": {
+    "message": "Revocata: $reason$"
+  },
+  "keys_also_known_as": {
+    "message": "Altri indirizzi"
+  },
+  "keys_loading": {
+    "message": "Caricamento…"
+  },
+  "keys_copy_fingerprint_aria": {
+    "message": "Copia l'impronta"
+  },
+  "keys_fact_fingerprint": {
+    "message": "Impronta"
+  },
+  "keys_fact_algorithm": {
+    "message": "Algoritmo"
+  },
+  "keys_fact_used_for": {
+    "message": "Usata per"
+  },
+  "keys_fact_created": {
+    "message": "Creata"
+  },
+  "keys_fact_expires": {
+    "message": "Scade"
+  },
+  "keys_fact_added": {
+    "message": "Aggiunta"
+  },
+  "keys_fact_last_used": {
+    "message": "Ultimo uso"
+  },
+  "keys_never": {
+    "message": "Mai"
+  },
+  "keys_expires_value": {
+    "message": "$date$ ($when$)"
+  },
+  "keys_subkeys_title": {
+    "message": "Sottochiavi"
+  },
+  "keys_group_row_label": {
+    "message": "Chiave"
+  },
+  "keys_subkeys_truncated": {
+    "message": "Questo certificato ha un numero insolitamente alto di sottochiavi; vengono mostrate solo le prime $count$."
+  },
+  "keys_no_subkeys": {
+    "message": "Questa chiave non ha sottochiavi; la chiave primaria fa tutto da sola."
+  },
+  "keys_inactive_subkeys_expired_one": {
+    "message": "$count$ sottochiave scaduta"
+  },
+  "keys_inactive_subkeys_expired_other": {
+    "message": "$count$ sottochiavi scadute"
+  },
+  "keys_inactive_subkeys_revoked_one": {
+    "message": "$count$ sottochiave revocata"
+  },
+  "keys_inactive_subkeys_revoked_other": {
+    "message": "$count$ sottochiavi revocate"
+  },
+  "keys_inactive_subkeys_unusable_one": {
+    "message": "$count$ sottochiave inutilizzabile"
+  },
+  "keys_inactive_subkeys_unusable_other": {
+    "message": "$count$ sottochiavi inutilizzabili"
+  },
+  "keys_revocation_certificate": {
+    "message": "Certificato di revoca"
+  },
+  "keys_revocation_created": {
+    "message": "Certificato di revoca creato"
+  },
+  "keys_revocation_create_failed": {
+    "message": "Impossibile creare un certificato di revoca."
+  },
+  "keys_revocation_have_body": {
+    "message": "Se questa chiave venisse persa o compromessa, pubblicando questo certificato comunichi ai tuoi contatti di smettere di usarla. Conservane un backup in un posto sicuro - chiunque lo possieda può revocare la tua chiave."
+  },
+  "keys_revocation_missing_body": {
+    "message": "Questa chiave è stata importata senza un certificato di revoca. Creane uno adesso e fanne un backup, così potrai revocare la chiave in seguito anche se ne perdi l'accesso."
+  },
+  "keys_revocation_creating": {
+    "message": "Creazione..."
+  },
+  "keys_revocation_create": {
+    "message": "Crea certificato di revoca"
+  },
+  "keys_chip_your_key": {
+    "message": "Tua chiave"
+  },
+  "keys_chip_your_key_title": {
+    "message": "Possiedi la chiave privata"
+  },
+  "keys_chip_contact": {
+    "message": "Contatto"
+  },
+  "keys_chip_contact_title": {
+    "message": "Possiedi la sua chiave pubblica"
+  },
+  "keys_ssh_chip_title": {
+    "message": "Una chiave SSH, usata con age. Non può essere combinata con destinatari PGP in un unico messaggio."
+  },
+  "keys_chip_protection_title": {
+    "message": "Come è protetta la chiave privata a riposo"
+  },
+  "keys_parse_failed": {
+    "message": "Impossibile analizzare questa chiave."
+  },
+  "keys_save_failed": {
+    "message": "Impossibile salvare questa modifica."
+  },
+  "keys_recipient_off_title": {
+    "message": "I messaggi per questo contatto non vengono cifrati per questa chiave."
+  },
+  "keys_recipient_not_used": {
+    "message": "Non usata"
+  },
+  "keys_recipient_last_active_title": {
+    "message": "È l'unica chiave ancora in uso. Disattivando anche questa, i messaggi non verrebbero cifrati per nessuno."
+  },
+  "keys_recipient_enable_title": {
+    "message": "Torna a cifrare per questa chiave."
+  },
+  "keys_recipient_disable_title": {
+    "message": "Smetti di cifrare per questa chiave. Resta elencata qui."
+  },
+  "keys_recipient_use": {
+    "message": "Usa"
+  },
+  "keys_recipient_dont_use": {
+    "message": "Non usare"
+  },
+  "keys_encrypt_to": {
+    "message": "Cifra per"
+  },
+  "keys_remove_default": {
+    "message": "Rimuovi come predefinita"
+  },
+  "keys_set_default": {
+    "message": "Imposta come chiave predefinita"
+  },
+  "keys_default_removed": {
+    "message": "Chiave predefinita rimossa"
+  },
+  "keys_default_set": {
+    "message": "Chiave predefinita impostata"
+  },
+  "keys_contact_keys_partial_title": {
+    "message": "I messaggi vengono cifrati per $active$ delle $total$ chiavi di questo contatto; le altre sono disattivate nei dettagli della chiave."
+  },
+  "keys_contact_keys_all_title": {
+    "message": "I messaggi vengono cifrati per tutte le chiavi di questo contatto; una qualsiasi può decifrarli."
+  },
+  "keys_contact_keys_partial": {
+    "message": "$active$ di $total$ chiavi"
+  },
+  "keys_contact_keys_count_one": {
+    "message": "$count$ chiave"
+  },
+  "keys_contact_keys_count_other": {
+    "message": "$count$ chiavi"
+  },
+  "keys_source_github": {
+    "message": "Da github.com/$user$"
+  },
+  "keys_source_keyserver": {
+    "message": "Da keys.openpgp.org - $user$"
+  },
+  "keys_contact_expired_title": {
+    "message": "Questa chiave è scaduta il $date$ e non è più possibile cifrare per essa. Chiedi al proprietario la sua chiave attuale."
+  },
+  "keys_contact_expired": {
+    "message": "Scaduta il $date$"
+  },
+  "keys_contact_expires": {
+    "message": "Scade il $date$"
+  },
+  "keys_contact_options_aria": {
+    "message": "Opzioni del contatto"
+  },
+  "keys_selection_actions_aria": {
+    "message": "Azioni sulla selezione"
+  },
+  "keys_cancel_selection_aria": {
+    "message": "Annulla la selezione"
+  },
+  "keys_selected_count_one": {
+    "message": "$count$ elemento selezionato"
+  },
+  "keys_selected_count_other": {
+    "message": "$count$ elementi selezionati"
+  },
+  "keys_select_all": {
+    "message": "Seleziona tutto"
+  },
+  "keys_deselect_all": {
+    "message": "Deseleziona tutto"
+  },
+  "keys_export": {
+    "message": "Esporta"
+  },
+  "keys_size_bytes": {
+    "message": "$size$ B"
+  },
+  "keys_size_kb": {
+    "message": "$size$ KB"
+  },
+  "keys_size_mb": {
+    "message": "$size$ MB"
+  }
+}
