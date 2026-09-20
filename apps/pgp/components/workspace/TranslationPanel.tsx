@@ -53,8 +53,8 @@ export function HoverLabel({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverAnchor
         asChild
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
+        onPointerEnter={() => setOpen(true)}
+        onPointerLeave={() => setOpen(false)}
         onFocus={() => setOpen(true)}
         onBlur={() => setOpen(false)}
       >

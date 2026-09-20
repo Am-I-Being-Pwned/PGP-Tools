@@ -64,10 +64,10 @@ const STYLE_ICONS: Record<
 
 const STYLE_ORDER: InlineStyle[] = ["bold", "italic", "strike", "code"];
 
-/** The same chip the result box's translate toggle uses, so the two
- *  boxes' floating controls read as one family. */
+/** One button in the strip: borderless, a soft fill on hover, the
+ *  strip itself carries the border and the translucent background. */
 const CHIP =
-  "border-border bg-background/90 hover:border-muted-foreground/40 hover:text-foreground text-muted-foreground pointer-events-auto shrink-0 rounded-md border p-2 shadow-sm backdrop-blur transition-colors disabled:opacity-60";
+  "text-muted-foreground hover:text-foreground hover:bg-border/70 pointer-events-auto flex h-7 w-7 shrink-0 items-center justify-center rounded transition-colors disabled:opacity-60";
 
 /**
  * Editing controls floating in the bottom-right corner of the message
@@ -86,7 +86,7 @@ export function ComposeToolbar({
     <div
       role="toolbar"
       aria-label="Message tools"
-      className="pointer-events-none flex items-center gap-1.5"
+      className="border-border bg-background/90 pointer-events-auto flex items-center gap-0.5 rounded-md border p-0.5 shadow-sm backdrop-blur"
     >
       {STYLE_ORDER.map((style) => {
         const Icon = STYLE_ICONS[style];
@@ -105,11 +105,13 @@ export function ComposeToolbar({
               tabIndex={-1}
               className={CHIP}
             >
-              <Icon className="h-4 w-4" />
+              <Icon className="h-3.5 w-3.5" />
             </button>
           </HoverLabel>
         );
       })}
+
+      <span aria-hidden className="bg-border mx-0.5 h-4 w-px" />
 
       <HoverLabel label="Find and replace">
         <button
@@ -120,7 +122,7 @@ export function ComposeToolbar({
           tabIndex={-1}
           className={CHIP}
         >
-          <SearchIcon className="h-4 w-4" />
+          <SearchIcon className="h-3.5 w-3.5" />
         </button>
       </HoverLabel>
 
@@ -163,9 +165,9 @@ function TranslateMenu({
           className={CHIP}
         >
           {busy ? (
-            <LoaderCircleIcon className="h-4 w-4 animate-spin motion-reduce:animate-none" />
+            <LoaderCircleIcon className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" />
           ) : (
-            <LanguagesIcon className="h-4 w-4" />
+            <LanguagesIcon className="h-3.5 w-3.5" />
           )}
         </button>
       </HoverLabel>
