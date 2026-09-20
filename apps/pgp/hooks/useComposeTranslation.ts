@@ -46,21 +46,49 @@ export function useComposeTranslation({
   // the user never asked for on the button.
   const [targetLanguage, setTargetLanguage] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
-  // The text the translation replaced, for undo. Cleared by `forget`.
+  // The text the translation replaced, for undo. Cleared by `forget`,
+  // which the workspace calls at master lock (its `addWiper`) and which
+  // `noteInputChanged` calls once the user edits past the translation --
+  // the original must not outlive the composition it belongs to.
   const originalRef = useRef<string | null>(null);
+  // What `translate` last wrote, so an input change can tell "the user
+  // edited" from "our own write landed".
+  const lastWrittenRef = useRef<string | null>(null);
   const [canUndo, setCanUndo] = useState(false);
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
   const forget = useCallback(() => {
     originalRef.current = null;
+    lastWrittenRef.current = null;
     setCanUndo(false);
     setStatus((s) => (s.kind === "done" ? { kind: "idle" } : s));
+  }, []);
+
+  /** The box's text changed to `text`. Anything other than our own
+   *  translation landing drops the undo original. */
+  const noteInputChanged = useCallback(
+    (text: string) => {
+      if (lastWrittenRef.current !== null && text !== lastWrittenRef.current) {
+        forget();
+      }
+    },
+    [forget],
+  );
+
+  /** Stop a translation in flight (mode switched, files staged, lock). */
+  const cancel = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setStatus((s) =>
+      s.kind === "working" || s.kind === "downloading" ? { kind: "idle" } : s,
+    );
   }, []);
 
   const undo = useCallback(() => {
     const original = originalRef.current;
     originalRef.current = null;
+    lastWrittenRef.current = original;
     setCanUndo(false);
     setStatus({ kind: "idle" });
     if (original !== null) setInput(original);
@@ -84,8 +112,13 @@ export function useComposeTranslation({
           signal: controller.signal,
           onStatus: setStatus,
         });
-        if (result) {
+        // The box moved on while the model ran (edited, cleared, mode
+        // switched and ciphertext pasted): a stale translation must not
+        // replace what is there now, and the original we hold would
+        // not be the text that was lost.
+        if (result && getInput() === text) {
           originalRef.current = text;
+          lastWrittenRef.current = result.text;
           setCanUndo(true);
           setInput(result.text);
           onTranslated?.(result.from, language);
@@ -97,5 +130,14 @@ export function useComposeTranslation({
     [getInput, setInput, readingLanguage, onTranslated],
   );
 
-  return { status, targetLanguage, translate, canUndo, undo, forget };
+  return {
+    status,
+    targetLanguage,
+    translate,
+    canUndo,
+    undo,
+    forget,
+    noteInputChanged,
+    cancel,
+  };
 }

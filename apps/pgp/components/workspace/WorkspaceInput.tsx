@@ -78,6 +78,8 @@ interface WorkspaceInputProps {
 export interface ComposeTools {
   applyStyle: (style: InlineStyle) => void;
   openFind: () => void;
+  /** Close the find bar and drop its highlight mirror (master lock). */
+  closeFind: () => void;
 }
 
 export function WorkspaceInput({
@@ -234,10 +236,14 @@ export function WorkspaceInput({
   // Shortcuts (mod+B/I/E, mod+shift+X, mod+F) are dispatched by the action
   // registry, which also lists them in the command palette; the tools are
   // published to it through `onToolsReady`.
+  const closeFind = useCallback(() => {
+    setFind(null);
+    setHighlights(null);
+  }, []);
   useEffect(() => {
-    onToolsReady?.({ applyStyle, openFind });
+    onToolsReady?.({ applyStyle, openFind, closeFind });
     return () => onToolsReady?.(null);
-  }, [onToolsReady, applyStyle, openFind]);
+  }, [onToolsReady, applyStyle, openFind, closeFind]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">

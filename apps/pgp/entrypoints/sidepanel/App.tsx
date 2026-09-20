@@ -722,7 +722,11 @@ export default function App() {
               if (prf && master) {
                 try {
                   await session.unlockAllWithMasterPrf(async () => {
-                    if (!(await getPreferences()).unlockKeysOnOpen) return [];
+                    // Never-cache wins even if a stored pair were ever
+                    // inconsistent: the exclusion holds here, not only
+                    // at the toggles that maintain it.
+                    const p = await getPreferences();
+                    if (!p.unlockKeysOnOpen || p.neverCacheKeys) return [];
                     const { keys } = await readKeyring();
                     return partitionByMasterSeal(keys, master).eligible;
                   }, prf.prfOutput);

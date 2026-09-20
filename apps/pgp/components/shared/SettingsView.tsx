@@ -305,15 +305,19 @@ export function SettingsView({
   };
 
   const handleUnlockOnOpenToggle = async (v: boolean) => {
-    onUnlockKeysOnOpenChange(v);
+    // State mirrors storage AFTER the write lands: a failed write must
+    // not leave the toggle saying "off" while the next vault unlock
+    // reads "on" from storage.
     if (!v) {
       await savePreferences({ unlockKeysOnOpen: false });
+      onUnlockKeysOnOpenChange(false);
       return;
     }
     // Entering unlock-on-open leaves never-cache (see enableNeverCache
     // for the converse). History stays as the user had it.
-    onNeverCacheKeysChange(false);
     await savePreferences({ unlockKeysOnOpen: true, neverCacheKeys: false });
+    onNeverCacheKeysChange(false);
+    onUnlockKeysOnOpenChange(true);
     setPrefs(await getPreferences());
   };
 

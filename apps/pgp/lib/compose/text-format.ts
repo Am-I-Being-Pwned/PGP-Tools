@@ -220,13 +220,18 @@ export function findAll(
   opts: FindOptions = {},
 ): number[] {
   if (!query) return [];
-  const hay = opts.caseSensitive ? text : text.toLowerCase();
-  const needle = opts.caseSensitive ? query : query.toLowerCase();
+  // A case-folded regex over the ORIGINAL string, not `indexOf` over a
+  // lowercased copy: lowercasing can change UTF-16 length (İ -> i̇), which
+  // would shift every offset after it and make Replace splice the wrong
+  // span. It also avoids materialising a second copy of the plaintext.
+  const re = new RegExp(
+    query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+    opts.caseSensitive ? "g" : "gi",
+  );
   const out: number[] = [];
-  let i = hay.indexOf(needle);
-  while (i !== -1) {
-    out.push(i);
-    i = hay.indexOf(needle, i + needle.length);
+  for (const m of text.matchAll(re)) {
+    if (m[0].length === 0) break;
+    out.push(m.index);
   }
   return out;
 }

@@ -106,6 +106,9 @@ export interface WorkspaceState {
    *  `binaryOutput` / `fileResults`. Called by the App at master lock,
    *  after the draft has been encrypted. */
   wipePlaintext: () => void;
+  /** Register another holder of plaintext to be cleared by
+   *  `wipePlaintext`. Returns the unregister. */
+  addWiper: (fn: () => void) => () => void;
   /** Capture input+files so the next clear is undoable. */
   stashClearUndo: () => void;
   /** Put back what `stashClearUndo` captured (single-shot). */
@@ -423,7 +426,20 @@ export function useWorkspaceState(opts: {
   const [encryptPassword, setEncryptPassword] = useState("");
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
 
+  // Other holders of composed/decrypted plaintext (the composer's
+  // translate-undo original, the find bar's highlight mirror) register
+  // here so one wipe reaches every copy. A ref, not state: this runs
+  // inside `doMasterLock`, one statement before the unmount.
+  const extraWipers = useRef(new Set<() => void>());
+  const addWiper = useCallback((fn: () => void) => {
+    extraWipers.current.add(fn);
+    return () => {
+      extraWipers.current.delete(fn);
+    };
+  }, []);
+
   const wipePlaintext = useCallback(() => {
+    for (const fn of extraWipers.current) fn();
     inputRef.current = "";
     if (inputElRef.current) inputElRef.current.value = "";
     clearUndoRef.current = null;
@@ -919,6 +935,7 @@ export function useWorkspaceState(opts: {
     inputVersion: inputInfo.version,
     inputIsAge,
     wipePlaintext,
+    addWiper,
     stashClearUndo,
     restoreClearUndo,
     clearUndoAvailable,

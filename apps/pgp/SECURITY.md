@@ -1482,7 +1482,10 @@ nothing); a user who wants per-key salts back re-imports the key.
 
 **The unlock path.** `MasterUnlockScreen` loans its `prfOutput` to
 `onUnlocked` for the duration of that call and `.fill(0)`s it in a
-`finally`. App reads the preference (an encrypted setting, so readable
+`finally`. That loan spans one settings read even when the option is
+off (the preference is encrypted, so it cannot be known sooner); the
+cost is one IndexedDB round trip of extra PRF lifetime, bounded and
+accepted. App reads the preference (an encrypted setting, so readable
 only once the session is live), reads the keyring, partitions it, and
 hands the eligible blobs to `KeySessionStore.unlockMany` -- as a
 LOADER, so the batch's lock generation is captured before the

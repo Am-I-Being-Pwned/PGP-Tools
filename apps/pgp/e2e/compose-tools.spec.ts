@@ -170,12 +170,15 @@ test("translate-before-sending replaces the message off one click, with undo", a
     expect(calls).toContain("translator.destroy");
   });
 
-  await test.step("Cmd/Ctrl+Z puts the original back; the toast's Undo does too", async () => {
-    await box(panel).press("ControlOrMeta+z");
-    await expect(box(panel)).toHaveValue(original);
-    await box(panel).press("ControlOrMeta+Shift+z");
-    await expect(box(panel)).toHaveValue(`TRANSLATED(${original})`);
+  await test.step("the toast's Undo puts the original back; native undo/redo still work", async () => {
     await panel.getByRole("button", { name: "Undo" }).click();
+    await expect(box(panel)).toHaveValue(original);
+    // The translation and the toast's undo were both native edits, so
+    // the browser's own history walks them: Cmd/Ctrl+Z reverts the undo
+    // (back to the translation), Shift+Z redoes it.
+    await box(panel).press("ControlOrMeta+z");
+    await expect(box(panel)).toHaveValue(`TRANSLATED(${original})`);
+    await box(panel).press("ControlOrMeta+Shift+z");
     await expect(box(panel)).toHaveValue(original);
   });
 

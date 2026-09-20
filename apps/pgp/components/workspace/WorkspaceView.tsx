@@ -266,6 +266,16 @@ export function WorkspaceView({
       ),
   });
   const composeStatus = composeTranslation.status;
+  // The undo original is plaintext the workspace's own refs do not
+  // hold: wiped with them at master lock (§8.11), dropped once the user
+  // edits past the translation, and any in-flight translation is
+  // cancelled the moment the box stops being a composer.
+  const { addWiper, inputVersion: composedVersion, getInput: readInput } = s;
+  const { forget, noteInputChanged, cancel } = composeTranslation;
+  useEffect(() => addWiper(forget), [addWiper, forget]);
+  useEffect(() => {
+    noteInputChanged(readInput());
+  }, [composedVersion, noteInputChanged, readInput]);
   // The message box's tools, published for the palette and shortcuts.
   const composeToolsRef = useRef<ComposeTools | null>(null);
   const onToolsReady = useCallback((tools: ComposeTools | null) => {
@@ -275,6 +285,15 @@ export function WorkspaceView({
     (s.mode === "encrypt" || s.mode === "sign") &&
     s.files.length === 0 &&
     !s.privateKeyDetected;
+  useEffect(() => {
+    if (!composeCanEdit) cancel();
+  }, [composeCanEdit, cancel]);
+  // The find bar's highlight mirror holds a copy of the text in the
+  // element tree; close it before the lock flip so it is gone too.
+  useEffect(
+    () => addWiper(() => composeToolsRef.current?.closeFind()),
+    [addWiper],
+  );
   const translateEnabled =
     !!aiTranslateEnabled && composeStatus.kind !== "unavailable";
   // The result side: a decrypted or verified message is readable on
