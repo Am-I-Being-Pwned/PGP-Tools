@@ -17,6 +17,7 @@ import type { ComposeTranslateProps } from "./ComposeToolbar";
 import { MODE_SHORTCUTS } from "../../lib/actions/definitions";
 import { applyTextareaEdit } from "../../lib/compose/apply-edit";
 import { toggleInlineStyle } from "../../lib/compose/text-format";
+import { t } from "../../lib/i18n";
 import { ComposeToolbar } from "./ComposeToolbar";
 import { DetectedKeyBanner } from "./DetectedKeyBanner";
 import { DropZone } from "./DropZone";
@@ -24,12 +25,21 @@ import { FindReplaceBar } from "./FindReplaceBar";
 
 type Mode = WorkspaceAction;
 
-const MODE_ITEMS: { value: Mode; label: string }[] = [
-  { value: "encrypt", label: "Encrypt" },
-  { value: "decrypt", label: "Decrypt" },
-  { value: "sign", label: "Sign" },
-  { value: "verify", label: "Verify" },
-];
+const MODE_ORDER: Mode[] = ["encrypt", "decrypt", "sign", "verify"];
+
+/** Localised mode name; read at render time, never at module load. */
+export function modeLabel(mode: Mode): string {
+  switch (mode) {
+    case "encrypt":
+      return t("common_encrypt");
+    case "decrypt":
+      return t("common_decrypt");
+    case "sign":
+      return t("common_sign");
+    case "verify":
+      return t("common_verify");
+  }
+}
 
 interface WorkspaceInputProps {
   mode: Mode;
@@ -259,7 +269,7 @@ export function WorkspaceInput({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {MODE_ITEMS.map(({ value, label }) => (
+          {MODE_ORDER.map((value) => (
             <SelectItem
               key={value}
               className="focus:bg-border/70 cursor-pointer"
@@ -275,7 +285,7 @@ export function WorkspaceInput({
                 />
               }
             >
-              {label}
+              {modeLabel(value)}
             </SelectItem>
           ))}
         </SelectContent>
@@ -284,10 +294,10 @@ export function WorkspaceInput({
       {hasInput ? (
         <div className="border-border shrink-0 rounded-lg border-2 border-dashed p-5 text-center">
           <p className="text-muted-foreground mb-2 text-sm">
-            Text entered below
+            {t("workspace_text_entered_below")}
           </p>
           <Button variant="outline" size="sm" onClick={onClearText}>
-            Clear text
+            {t("workspace_clear_text")}
           </Button>
         </div>
       ) : (
@@ -312,7 +322,7 @@ export function WorkspaceInput({
           )}
           <textarea
             id="pgp-input"
-            aria-label="Message input"
+            aria-label={t("workspace_message_input_aria")}
             ref={attachInput}
             onChange={(e) => onInputChange(e.target.value)}
             onScroll={painting ? syncBackdropScroll : undefined}
@@ -360,10 +370,10 @@ export function WorkspaceInput({
             }
             placeholder={
               mode === "decrypt"
-                ? "Paste the encrypted message you received..."
+                ? t("workspace_placeholder_decrypt")
                 : mode === "verify"
-                  ? "Paste the signed message to check..."
-                  : "Type or paste your message..."
+                  ? t("workspace_placeholder_verify")
+                  : t("workspace_placeholder_compose")
             }
           />
           {find && (
@@ -404,35 +414,31 @@ export function WorkspaceInput({
         >
           <div className="flex items-start justify-between gap-2">
             <p className="font-semibold">
-              This looks like a private key. Don't paste private keys here.
+              {t("workspace_private_key_pasted_title")}
             </p>
             {!maskIgnored && (
               <button
                 onClick={() => setMaskIgnored(true)}
                 className="border-destructive/40 hover:bg-destructive/20 shrink-0 rounded border px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase"
-                title="Show the pasted text in cleartext"
+                title={t("workspace_private_key_show_cleartext")}
               >
-                Ignore
+                {t("workspace_private_key_ignore")}
               </button>
             )}
           </div>
-          <p>
-            The Encrypt/Decrypt box isn't a safe place for secret key material.
-            Use the Import flow so the key is loaded into the secure store and
-            kept out of any draft snapshots.
-          </p>
+          <p>{t("workspace_private_key_pasted_body")}</p>
           <div className="flex gap-2 pt-1">
             <button
               onClick={() => onNavigateToKeys?.(getInput())}
               className="border-destructive/40 hover:bg-destructive/20 rounded border px-2 py-1 font-medium"
             >
-              Import this key safely
+              {t("workspace_private_key_import_safely")}
             </button>
             <button
               onClick={() => onInputChange("")}
               className="border-destructive/40 hover:bg-destructive/20 rounded border px-2 py-1 font-medium"
             >
-              Clear input
+              {t("workspace_private_key_clear_input")}
             </button>
           </div>
         </div>

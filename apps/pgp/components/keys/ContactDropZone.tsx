@@ -3,6 +3,7 @@ import { useCallback, useRef, useState } from "react";
 import { Button } from "@amibeingpwned/ui/button";
 
 import { readKeyFile } from "../../lib/binary-armor";
+import { t } from "../../lib/i18n";
 
 interface ContactDropZoneProps {
   /** Hand the dropped/pasted/browsed text to the import flow, which
@@ -80,9 +81,7 @@ export function ContactDropZone({ onKeyText }: ContactDropZoneProps) {
           : "border-border hover:border-muted-foreground/50"
       }`}
     >
-      <p className="text-muted-foreground">
-        Drop, paste, or browse for public keys
-      </p>
+      <p className="text-muted-foreground">{t("import_dropzone_text")}</p>
       <input
         ref={fileInputRef}
         type="file"
@@ -97,7 +96,7 @@ export function ContactDropZone({ onKeyText }: ContactDropZoneProps) {
         className="mt-2"
         onClick={() => fileInputRef.current?.click()}
       >
-        Browse files
+        {t("import_dropzone_browse")}
       </Button>
     </div>
   );

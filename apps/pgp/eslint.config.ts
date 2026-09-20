@@ -6,7 +6,13 @@ import { reactConfig } from "@amibeingpwned/eslint-config/react";
 
 export default defineConfig(
   {
-    ignores: [".wxt/**", ".output/**", "gpg-wasm/pkg/**", "gpg-wasm/target/**"],
+    ignores: [
+      ".wxt/**",
+      ".output/**",
+      "gpg-wasm/pkg/**",
+      "gpg-wasm/target/**",
+      "lib/i18n/messages.generated.ts",
+    ],
   },
   baseConfig,
   reactConfig,

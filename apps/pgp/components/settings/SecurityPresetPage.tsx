@@ -1,11 +1,27 @@
 import { useEffect, useState } from "react";
 
 import type { PresetId } from "../../lib/presets";
+import { t } from "../../lib/i18n";
 import { PRESETS } from "../../lib/presets";
 import { historyByteSize } from "../../lib/storage/history";
 import { formatFileSize } from "../../lib/utils/formatting";
 import { PresetPicker } from "../shared/PresetPicker";
 import { SubPage } from "../shared/SubPage";
+
+/** A translated sentence with one substituted term rendered in bold.
+ *  The term is found by string search so the message carries no markup
+ *  and the translator can place it anywhere. */
+function Bolded({ text, term }: { text: string; term: string }) {
+  const at = term === "" ? -1 : text.indexOf(term);
+  if (at === -1) return <>{text}</>;
+  return (
+    <>
+      {text.slice(0, at)}
+      <b>{term}</b>
+      {text.slice(at + term.length)}
+    </>
+  );
+}
 
 interface SecurityPresetPageProps {
   /** Preset the saved preferences currently match, "custom" when none
@@ -60,29 +76,31 @@ export function SecurityPresetPage({
 
   return (
     <SubPage
-      title="Security preset"
+      title={t("settings_preset_title")}
       onClose={onClose}
       actions={
         confirming && selected !== null
           ? [
               {
                 text: isCustom
-                  ? "Replace custom settings"
-                  : "Apply and delete history",
-                busyText: "Applying...",
+                  ? t("settings_preset_replace_custom")
+                  : t("settings_preset_apply_delete_history"),
+                busyText: t("settings_preset_applying"),
                 onClick: () => onApply(selected),
                 closeOnSuccess: true,
               },
               {
                 type: "outline",
-                text: isCustom ? "Keep custom settings" : "Cancel",
+                text: isCustom
+                  ? t("settings_preset_keep_custom")
+                  : t("common_cancel"),
                 onClick: () => setConfirming(false),
               },
             ]
           : [
               {
-                text: "Apply preset",
-                busyText: "Applying...",
+                text: t("settings_preset_apply"),
+                busyText: t("settings_preset_applying"),
                 disabled: applyDisabled,
                 onClick: () => {
                   if (selected === null) return;
@@ -99,14 +117,16 @@ export function SecurityPresetPage({
     >
       <div className="space-y-3">
         <p className="text-muted-foreground text-xs">
-          Each preset bundles the security settings for one threat model, and
-          its card lists exactly what it sets. Applying one only changes those
-          settings, and you can adjust any of them again afterwards.
+          {t("settings_preset_intro")}
         </p>
         {isCustom && (
           <p className="text-muted-foreground text-xs">
-            You are on <b>Custom</b>: a bundled setting was changed, so no
-            preset matches exactly.
+            <Bolded
+              text={t("settings_preset_custom_notice", {
+                custom: t("settings_preset_custom_name"),
+              })}
+              term={t("settings_preset_custom_name")}
+            />
           </p>
         )}
         <PresetPicker
@@ -121,16 +141,19 @@ export function SecurityPresetPage({
           <div className="border-border bg-muted/40 rounded-md border p-3">
             {isCustom && (
               <p className="text-xs">
-                Replace your custom settings with the{" "}
-                <b>{PRESETS[selected].title}</b> preset? Only the settings
-                listed on its card change, and you can adjust any of them again
-                afterwards.
+                <Bolded
+                  text={t("settings_preset_confirm_replace", {
+                    preset: PRESETS[selected].title,
+                  })}
+                  term={PRESETS[selected].title}
+                />
               </p>
             )}
             {deletesHistory && (
               <p className={isCustom ? "mt-2 text-xs" : "text-xs"}>
-                This preset turns on never-cache, which also deletes your saved
-                history ({formatFileSize(historyBytes)}). It can't be recovered.
+                {t("settings_preset_confirm_history", {
+                  size: formatFileSize(historyBytes),
+                })}
               </p>
             )}
           </div>

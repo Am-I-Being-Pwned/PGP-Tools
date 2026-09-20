@@ -4,6 +4,8 @@ import { createFocusTrap } from "focus-trap";
 import { ArrowLeftIcon } from "lucide-react";
 import { tabbable } from "tabbable";
 
+import { t } from "../../lib/i18n";
+
 /** Must match the `duration-300` class on the panel. */
 export const SLIDE_MS = 300;
 
@@ -285,7 +287,7 @@ export function SlideOverHeader({
       <button
         type="button"
         onClick={onBack}
-        aria-label="Back"
+        aria-label={t("common_back")}
         className="text-muted-foreground hover:text-foreground rounded p-1 transition-colors"
       >
         <ArrowLeftIcon className="h-4 w-4" />

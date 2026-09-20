@@ -2,9 +2,10 @@ import { Button } from "@amibeingpwned/ui/button";
 import { Kbd } from "@amibeingpwned/ui/kbd";
 
 import type { ShortcutRefEntry } from "../../lib/shortcuts-reference";
+import { t } from "../../lib/i18n";
 import {
   CHROME_SHORTCUTS_URL,
-  SHORTCUT_REFERENCE,
+  shortcutReference,
 } from "../../lib/shortcuts-reference";
 import { SubPage } from "../shared/SubPage";
 
@@ -26,7 +27,11 @@ function EntryKeys({ entry }: { entry: ShortcutRefEntry }) {
       </span>
     );
   }
-  return <span className="text-muted-foreground text-xs">Unbound</span>;
+  return (
+    <span className="text-muted-foreground text-xs">
+      {t("settings_shortcuts_unbound")}
+    </span>
+  );
 }
 
 /**
@@ -36,10 +41,10 @@ function EntryKeys({ entry }: { entry: ShortcutRefEntry }) {
  */
 export function KeyboardShortcutsPage({ onClose }: { onClose: () => void }) {
   return (
-    <SubPage title="Keyboard shortcuts" onClose={onClose}>
+    <SubPage title={t("settings_shortcuts_title")} onClose={onClose}>
       <div className="space-y-5">
-        {SHORTCUT_REFERENCE.map((section) => (
-          <div key={section.title}>
+        {shortcutReference().map((section) => (
+          <div key={section.id}>
             <h2 className="mb-2 text-sm font-semibold">{section.title}</h2>
             <div className="border-border divide-border divide-y rounded-md border">
               {section.entries.map((entry) => (
@@ -68,7 +73,7 @@ export function KeyboardShortcutsPage({ onClose }: { onClose: () => void }) {
                 {section.note}
               </p>
             )}
-            {section.title === "Global browser shortcuts" && (
+            {section.id === "global" && (
               <Button
                 variant="outline"
                 size="sm"
@@ -77,7 +82,7 @@ export function KeyboardShortcutsPage({ onClose }: { onClose: () => void }) {
                   void chrome.tabs.create({ url: CHROME_SHORTCUTS_URL })
                 }
               >
-                Manage browser shortcuts
+                {t("settings_shortcuts_manage")}
               </Button>
             )}
           </div>

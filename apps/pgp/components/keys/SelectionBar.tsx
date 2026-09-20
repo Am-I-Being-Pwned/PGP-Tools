@@ -3,6 +3,8 @@ import { CheckCheckIcon, DownloadIcon, Trash2Icon, XIcon } from "lucide-react";
 
 import { cn } from "@amibeingpwned/ui";
 
+import { t, tn } from "../../lib/i18n";
+
 /** Must match the `duration-300` on the pill below. */
 const ANIM_MS = 300;
 
@@ -67,7 +69,7 @@ export function SelectionBar({
     <div className="pointer-events-none sticky top-2 z-40 flex h-0 items-start justify-center">
       <div
         role="toolbar"
-        aria-label="Selection actions"
+        aria-label={t("keys_selection_actions_aria")}
         className={cn(
           "bg-background/95 border-border pointer-events-auto flex items-center gap-1.5 rounded-full border px-2.5 py-2 shadow-xl backdrop-blur",
           // Dynamic-island feel, matching the reference's computed styles: the
@@ -83,19 +85,21 @@ export function SelectionBar({
         <button
           type="button"
           onClick={onExit}
-          aria-label="Cancel selection"
+          aria-label={t("keys_cancel_selection_aria")}
           className="text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-full p-2 transition-colors"
         >
           <XIcon className="h-4 w-4" />
         </button>
         <span className="px-1.5 text-sm font-medium whitespace-nowrap tabular-nums">
-          {shownCount} selected
+          {tn("keys_selected_count", shownCount)}
         </span>
         <button
           type="button"
           onClick={onToggleAll}
-          aria-label={allSelected ? "Deselect all" : "Select all"}
-          title={allSelected ? "Deselect all" : "Select all"}
+          aria-label={
+            allSelected ? t("keys_deselect_all") : t("keys_select_all")
+          }
+          title={allSelected ? t("keys_deselect_all") : t("keys_select_all")}
           className={cn(
             "rounded-full p-2 transition-colors",
             allSelected
@@ -112,7 +116,7 @@ export function SelectionBar({
           className="hover:bg-muted/60 flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50"
         >
           <DownloadIcon className="h-4 w-4" />
-          Export
+          {t("keys_export")}
         </button>
         <button
           type="button"
@@ -121,7 +125,7 @@ export function SelectionBar({
           className="text-destructive hover:bg-destructive/10 flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50"
         >
           <Trash2Icon className="h-4 w-4" />
-          Delete
+          {t("common_delete")}
         </button>
       </div>
     </div>

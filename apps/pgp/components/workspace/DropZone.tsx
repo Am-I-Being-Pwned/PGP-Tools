@@ -3,6 +3,7 @@ import { FileIcon } from "lucide-react";
 
 import { Button } from "@amibeingpwned/ui/button";
 
+import { t } from "../../lib/i18n";
 import { formatFileSize } from "../../lib/utils/formatting";
 
 interface DropZoneProps {
@@ -75,7 +76,7 @@ export function DropZone({
         }`}
       >
         <p className="text-muted-foreground mb-2 text-sm">
-          Drop files or text here
+          {t("workspace_drop_files_or_text")}
         </p>
         <input
           ref={fileInputRef}
@@ -89,7 +90,7 @@ export function DropZone({
           size="sm"
           onClick={() => fileInputRef.current?.click()}
         >
-          Browse files
+          {t("workspace_browse_files")}
         </Button>
       </div>
 
@@ -115,7 +116,7 @@ export function DropZone({
                   size="sm"
                   onClick={() => onRemoveFile(index)}
                 >
-                  Remove
+                  {t("common_remove")}
                 </Button>
               </div>
             ))}
@@ -127,7 +128,7 @@ export function DropZone({
               className="w-full shrink-0"
               onClick={onClearFiles}
             >
-              Clear all
+              {t("workspace_clear_all_files")}
             </Button>
           )}
         </>

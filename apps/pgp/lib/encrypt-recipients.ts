@@ -1,6 +1,7 @@
 import type { PublicContactKey } from "./storage/contacts";
 import type { StoredKeyKind } from "./storage/key-kind";
 import type { ProtectedKeyBlob } from "./storage/keyring";
+import { t } from "./i18n";
 import { activeRecipients } from "./storage/contacts";
 import { storedKeyKind } from "./storage/key-kind";
 
@@ -134,15 +135,17 @@ export function toSelectedRecipient(key: PickerKey): SelectedRecipient {
  * does, and for the same underlying reason.
  *
  * Stated as its own refusal rather than folded into
- * {@link MIXED_ENGINE_REASON}: the user has not mixed anything, and
+ * {@link mixedEngineReason}: the user has not mixed anything, and
  * being told they have would send them looking for a second recipient
  * that is not there.
  */
-export const SSH_PASSWORD_REASON =
-  "A message password is an OpenPGP feature and age has none, so SSH recipients can't be used with one. Remove the password, or encrypt to this person without it.";
+export function sshPasswordReason(): string {
+  return t("actions_ssh_password_reason");
+}
 
-export const MIXED_ENGINE_REASON =
-  "PGP and SSH recipients can't be combined in one message: OpenPGP and age are different formats. Encrypt to one group, then the other.";
+export function mixedEngineReason(): string {
+  return t("actions_mixed_engine_reason");
+}
 
 /** The single engine a recipient set implies. `engine` is null when the
  *  set is empty (nothing to imply one) or when it is mixed, and `reason`
@@ -161,7 +164,7 @@ export function resolveRecipientEngine(
   // caller's own key decides in that case (see buildEncryptRecipients).
   if (recipients.length === 0) return { engine: null, reason: null };
   const kinds = new Set(recipients.map(storedKeyKind));
-  if (kinds.size > 1) return { engine: null, reason: MIXED_ENGINE_REASON };
+  if (kinds.size > 1) return { engine: null, reason: mixedEngineReason() };
   const [engine] = kinds;
   return { engine, reason: null };
 }
@@ -176,7 +179,7 @@ export interface EncryptRecipients {
   engine: StoredKeyKind | null;
   /** Non-null when the operation MUST NOT run, with the reason to show
    *  the user. Currently only a mixed PGP/SSH selection
-   *  ({@link MIXED_ENGINE_REASON}). `recipientPublicKeys` is empty in
+   *  ({@link mixedEngineReason}). `recipientPublicKeys` is empty in
    *  that case, so a caller that forgets to check encrypts to nobody
    *  rather than to the wrong set. */
   refusal: string | null;

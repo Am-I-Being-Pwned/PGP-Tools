@@ -39,7 +39,7 @@ import type { PublicContactKey } from "../storage/contacts";
 import type { ProtectedKeyBlob } from "../storage/keyring";
 import { fromBase64, toBase64 } from "../encoding";
 import { AppError } from "../errors/app-error";
-import { errorMessage } from "../utils/errors";
+import { t } from "../i18n";
 import {
   dropSshIdentity,
   protectSshIdentityWithPassword,
@@ -58,6 +58,7 @@ import { authenticateAndGetPrf } from "../protection/webauthn-prf";
 import { recipientsField } from "../storage/contacts";
 import { kindField } from "../storage/key-kind";
 import { blobFromEncrypted } from "../storage/keyring";
+import { errorMessage } from "../utils/errors";
 
 const EMPTY = new Uint8Array(0);
 
@@ -176,7 +177,7 @@ export async function importSshIdentity(
     return await runProtect(
       protection,
       sshSpec(
-        opts.userIdHint ?? "Imported SSH key",
+        opts.userIdHint ?? t("import_default_ssh_name"),
         (password) =>
           protectSshIdentityWithPassword(
             keyFile,

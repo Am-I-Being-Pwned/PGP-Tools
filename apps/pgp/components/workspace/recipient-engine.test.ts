@@ -16,8 +16,8 @@ import { describe, expect, it } from "vitest";
 
 import type { KindDiscriminated } from "../../lib/storage/key-kind";
 import {
-  MIXED_ENGINE_REASON,
-  SSH_PASSWORD_REASON,
+  mixedEngineReason,
+  sshPasswordReason,
 } from "../../lib/encrypt-recipients";
 import {
   blockedByEngine,
@@ -95,8 +95,8 @@ describe("recipientBlockReason", () => {
     // A password is an OpenPGP SKESK; age has no equivalent, so the two
     // choices name different formats. Without this the age path silently
     // drops the password and produces a file with no password on it.
-    expect(recipientBlockReason(ssh, null, true)).toBe(SSH_PASSWORD_REASON);
-    expect(recipientBlockReason(ssh, "ssh", true)).toBe(SSH_PASSWORD_REASON);
+    expect(recipientBlockReason(ssh, null, true)).toBe(sshPasswordReason());
+    expect(recipientBlockReason(ssh, "ssh", true)).toBe(sshPasswordReason());
   });
 
   it("leaves PGP recipients alone when a password is set", () => {
@@ -113,12 +113,12 @@ describe("recipientBlockReason", () => {
     // is out for both reasons. "You can't mix engines" is the less
     // useful of two true statements: the fix is to drop the password,
     // not to pick differently.
-    expect(recipientBlockReason(ssh, "pgp", true)).toBe(SSH_PASSWORD_REASON);
+    expect(recipientBlockReason(ssh, "pgp", true)).toBe(sshPasswordReason());
   });
 
   it("still reports a genuine engine mix", () => {
-    expect(recipientBlockReason(ssh, "pgp", false)).toBe(MIXED_ENGINE_REASON);
-    expect(recipientBlockReason(pgp, "ssh", false)).toBe(MIXED_ENGINE_REASON);
+    expect(recipientBlockReason(ssh, "pgp", false)).toBe(mixedEngineReason());
+    expect(recipientBlockReason(pgp, "ssh", false)).toBe(mixedEngineReason());
   });
 });
 

@@ -1,4 +1,3 @@
-import { format } from "date-fns";
 import { CheckCircleIcon, RefreshCwIcon } from "lucide-react";
 
 import { Button } from "@amibeingpwned/ui/button";
@@ -6,6 +5,8 @@ import { Kbd } from "@amibeingpwned/ui/kbd";
 
 import type { IncomingKey, KeyKind } from "../../lib/import/types";
 import type { KeyPreviewChip } from "./KeyPreviewBody";
+import { t, tn } from "../../lib/i18n";
+import { formatDate } from "../../lib/i18n/format";
 import { isPublicKind } from "../../lib/import/types";
 import { parseUserId } from "../../lib/utils/key-naming";
 import { INPUT_CLASS } from "../../lib/utils/styles";
@@ -40,19 +41,18 @@ function ImportStatusStrip({ incoming }: { incoming: IncomingKey }) {
   const { status, changes, existingAddedAt } = incoming;
   if (status === "new" || status === "rejected") return null;
 
-  const added =
-    existingAddedAt != null ? format(new Date(existingAddedAt), "PPP") : null;
+  const added = existingAddedAt != null ? formatDate(existingAddedAt) : null;
 
   if (status === "duplicate") {
     return (
       <div className="rounded-md border border-green-500/40 bg-green-500/10 p-2.5">
         <p className="flex items-center gap-1.5 text-xs font-medium text-green-400">
           <CheckCircleIcon className="h-3.5 w-3.5 shrink-0" />
-          Already in your keys
+          {t("import_status_duplicate")}
         </p>
         {added && (
           <p className="text-muted-foreground mt-1 pl-5 text-xs">
-            You added it on {added}, and nothing about it has changed.
+            {t("import_status_duplicate_added", { date: added })}
           </p>
         )}
       </div>
@@ -65,11 +65,13 @@ function ImportStatusStrip({ incoming }: { incoming: IncomingKey }) {
     <div className="rounded-md border border-blue-500/40 bg-blue-500/10 p-2.5">
       <p className="flex items-center gap-1.5 text-xs font-medium text-blue-400">
         <RefreshCwIcon className="h-3.5 w-3.5 shrink-0" />
-        Updates the key you already have
+        {t("import_status_update")}
       </p>
       <div className="mt-1 space-y-0.5 pl-5">
         {added && (
-          <p className="text-muted-foreground text-xs">Added on {added}.</p>
+          <p className="text-muted-foreground text-xs">
+            {t("import_status_added_on", { date: added })}
+          </p>
         )}
         {changes.map((change) => (
           <p key={change} className="text-muted-foreground text-xs">
@@ -90,9 +92,13 @@ function actionLabel(incoming: IncomingKey): string {
     // Replacing a stored private key also discards its protection (and
     // any passkey binding), which re-dropping a public key can't undo --
     // so this one says exactly what it does.
-    return incoming.status === "update" ? "Replace stored key" : "Continue";
+    return incoming.status === "update"
+      ? t("import_action_replace_stored")
+      : t("common_continue");
   }
-  return incoming.status === "update" ? "Update contact" : "Import contact";
+  return incoming.status === "update"
+    ? t("import_action_update_contact")
+    : t("import_action_import_contact");
 }
 
 /**
@@ -104,27 +110,27 @@ function actionLabel(incoming: IncomingKey): string {
  * branch happened to be ("Public key", which an OpenSSH private key
  * container very much is not).
  */
-const KIND_CHIPS: Record<KeyKind, KeyPreviewChip> = {
-  "pgp-private": {
-    label: "Private key",
-    title: "Includes secret key material - you'll protect it next",
-  },
-  "pgp-public": {
-    label: "Public key",
-    title: "Someone else's key - imported as a contact",
-  },
-  "ssh-private": {
-    label: "SSH key",
-    title: "An OpenSSH private key - you'll protect it next",
-  },
-  "ssh-public": {
-    label: "SSH public key",
-    title: "Someone else's SSH key - imported as an age recipient",
-  },
-  crx: {
-    label: "Extension key",
-    title: "An RSA signing key for a Chrome extension (.crx)",
-  },
+const KIND_CHIPS: Record<KeyKind, () => KeyPreviewChip> = {
+  "pgp-private": () => ({
+    label: t("common_private_key"),
+    title: t("import_chip_pgp_private_title"),
+  }),
+  "pgp-public": () => ({
+    label: t("common_public_key"),
+    title: t("import_chip_pgp_public_title"),
+  }),
+  "ssh-private": () => ({
+    label: t("import_chip_ssh_private"),
+    title: t("import_chip_ssh_private_title"),
+  }),
+  "ssh-public": () => ({
+    label: t("import_chip_ssh_public"),
+    title: t("import_chip_ssh_public_title"),
+  }),
+  crx: () => ({
+    label: t("import_chip_crx"),
+    title: t("import_chip_crx_title"),
+  }),
 };
 
 /** The algorithm of an SSH recipient line, which is simply its first
@@ -181,7 +187,7 @@ export function ImportPreview({
   error,
   grouping,
 }: ImportPreviewProps) {
-  const primaryUserId = incoming.userIds[0] ?? "Unknown";
+  const primaryUserId = incoming.userIds[0] ?? t("import_unknown_name");
   const { name: rawName, email, comment } = parseUserId(primaryUserId);
   const name = comment ? `${rawName} (${comment})` : rawName;
 
@@ -194,14 +200,14 @@ export function ImportPreview({
     ),
   );
 
-  const chips: KeyPreviewChip[] = [KIND_CHIPS[incoming.kind]];
+  const chips: KeyPreviewChip[] = [KIND_CHIPS[incoming.kind]()];
   // A person with several keys says so up front: the count is the one
   // thing about a group that isn't visible from the headline, and it is
   // what explains the list of fingerprints further down.
   if (incoming.group && incoming.group.members.length > 1) {
     chips.push({
-      label: `${incoming.group.members.length} keys`,
-      title: "Messages are encrypted to all of them; any one can decrypt",
+      label: tn("import_group_keys_chip", incoming.group.members.length),
+      title: t("import_group_keys_chip_title"),
     });
   }
 
@@ -255,14 +261,16 @@ export function ImportPreview({
                rather than making the user infer it. */
             <div>
               <label className="text-muted-foreground mb-1 block text-xs">
-                Group as one contact{" "}
-                <span className="text-muted-foreground/60">optional</span>
+                {t("import_group_label")}{" "}
+                <span className="text-muted-foreground/60">
+                  {t("import_optional")}
+                </span>
               </label>
               <input
                 type="text"
                 autoFocus
                 maxLength={200}
-                placeholder="e.g. Alice (all machines)"
+                placeholder={t("import_group_placeholder")}
                 value={grouping.name}
                 onChange={(e) => grouping.onNameChange(e.target.value)}
                 onKeyDown={(e) => {
@@ -279,11 +287,7 @@ export function ImportPreview({
                 className={INPUT_CLASS}
               />
               <p className="text-muted-foreground mt-1 text-[11px]">
-                These keys don&apos;t agree on a name, so they&apos;re imported
-                as {grouping.separateCount} separate contacts. Name them here to
-                keep them together as one person - messages are then encrypted
-                to all {grouping.separateCount} keys, and any one of their
-                machines can read them.
+                {tn("import_group_help", grouping.separateCount)}
               </p>
             </div>
           )}
@@ -295,16 +299,17 @@ export function ImportPreview({
                the refusal is said here, before the import. */
             <div className="space-y-2">
               <p className="text-muted-foreground text-xs">
-                Fetched from github.com/{incoming.group.source.user}.keys.
-                Messages are encrypted to every key listed above, so any one of
-                their machines can read them.
+                {t("import_github_fetched_note", {
+                  user: incoming.group.source.user,
+                })}
               </p>
               {incoming.group.rejected.length > 0 && (
                 <div className="space-y-1.5">
                   <p className="text-xs font-medium text-amber-400">
-                    {incoming.group.rejected.length} published key
-                    {incoming.group.rejected.length === 1 ? "" : "s"} can&apos;t
-                    be used
+                    {tn(
+                      "import_github_rejected_heading",
+                      incoming.group.rejected.length,
+                    )}
                   </p>
                   {incoming.group.rejected.map((r) => (
                     <div
@@ -330,9 +335,7 @@ export function ImportPreview({
                passphrase-encrypted, and it is never parsed outside
                wasm). */
             <p className="text-muted-foreground text-xs">
-              An OpenSSH private key, used with age. Its fingerprint is read
-              from the key itself when you import it. It can't sign - age has no
-              signatures - and it can't be exported in the clear.
+              {t("import_ssh_private_note")}
             </p>
           )}
           {incoming.kind === "crx" && (
@@ -340,8 +343,7 @@ export function ImportPreview({
                say in words what was detected -- otherwise this preview is
                a name and a chip. */
             <p className="text-muted-foreground text-xs">
-              An RSA signing key for a Chrome extension (.crx). Its extension ID
-              is worked out from the key itself when you import it.
+              {t("import_crx_note")}
             </p>
           )}
         </KeyPreviewBody>
@@ -357,7 +359,7 @@ export function ImportPreview({
                 is unusable ("expired on ...", "revoked"). It was carried
                 on IncomingKey and never read, so every refusal read as
                 the same generic sentence. */}
-            {error ?? incoming.rejection ?? "This key can't be imported."}
+            {error ?? incoming.rejection ?? t("import_rejected_generic")}
           </p>
         )}
         {canConfirm ? (
@@ -375,11 +377,11 @@ export function ImportPreview({
           >
             <span className="flex w-full items-center justify-center gap-2">
               {busy
-                ? "Importing..."
+                ? t("import_importing")
                 : grouping
                   ? grouping.name.trim()
-                    ? "Import as one contact"
-                    : `Import ${grouping.separateCount} contacts`
+                    ? t("import_as_one_contact")
+                    : tn("import_n_contacts", grouping.separateCount)
                   : actionLabel(incoming)}
               {!busy && (
                 <Kbd shortcut={{ key: "Enter" }} className="opacity-70" />
@@ -391,12 +393,12 @@ export function ImportPreview({
           // showing the user where the key they just handed us already
           // lives.
           <Button className="w-full" onClick={onReveal} autoFocus>
-            Show it in your keys
+            {t("import_reveal")}
           </Button>
         ) : (
           // Unusable: there is genuinely nothing to do but leave.
           <Button variant="outline" className="w-full" onClick={onDone}>
-            Done
+            {t("common_done")}
           </Button>
         )}
       </div>
@@ -419,11 +421,15 @@ export function ImportPreviewPage({
   return (
     <SlideOverPanel
       entered={entered}
-      ariaLabel={`Import ${incoming.keyId}`}
+      ariaLabel={t("import_panel_aria_with_id", { keyid: incoming.keyId })}
       onDismiss={close}
     >
       <SlideOverHeader
-        title={incoming.status === "update" ? "Update key" : "Import key"}
+        title={
+          incoming.status === "update"
+            ? t("import_title_update")
+            : t("import_title")
+        }
         onBack={close}
       />
       <ImportPreview incoming={incoming} onConfirm={onConfirm} onDone={close} />

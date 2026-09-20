@@ -10,6 +10,7 @@ import type { SubPageAction } from "../shared/SubPage";
 import { splitArmoredKeyBlocks } from "../../lib/armor-blocks";
 import { parseCrxKeyBlocks } from "../../lib/crx/backup";
 import { crxBlobIdentityMatches } from "../../lib/crx/types";
+import { t, tn } from "../../lib/i18n";
 import { importPublicKeyBlocks } from "../../lib/import-public-keys";
 import { importKey } from "../../lib/pgp/key-management";
 import { importAndProtect } from "../../lib/protection/protect-flow";
@@ -99,23 +100,24 @@ export function ImportAllKeysPage({
     // Stable ids: re-running the import with the same backup must update
     // the previous toasts, not stack duplicates.
     if (added > 0)
-      toast.success(`Added ${added} contact${added > 1 ? "s" : ""}`, {
+      toast.success(tn("settings_import_contacts_added", added), {
         id: "contacts-added",
       });
     if (flagged > 0)
-      toast.warning(
-        `${flagged} imported key${flagged > 1 ? "s" : ""} flagged for weak crypto (SHA-1)`,
-        { id: "contacts-flagged" },
-      );
+      toast.warning(tn("settings_import_contacts_flagged", flagged), {
+        id: "contacts-flagged",
+      });
     if (updated > 0)
-      toast.info(`${updated} contact${updated > 1 ? "s" : ""} updated`, {
+      toast.info(tn("settings_import_contacts_updated", updated), {
         id: "contacts-updated",
       });
     if (failed > 0)
       toast.error(
-        `${failed} public key${failed > 1 ? "s" : ""} rejected${
-          rejectionReasons[0] ? `: ${rejectionReasons[0]}` : ""
-        }`,
+        rejectionReasons[0]
+          ? tn("settings_import_contacts_rejected_reason", failed, {
+              reason: rejectionReasons[0],
+            })
+          : tn("settings_import_contacts_rejected", failed),
         { id: "contacts-rejected" },
       );
   };
@@ -133,22 +135,25 @@ export function ImportAllKeysPage({
         added++;
       } catch (e) {
         failures.push(
-          `${blob.label ?? blob.extensionId.slice(0, 8)}: ${
-            e instanceof Error ? e.message : "unknown error"
-          }`,
+          t("settings_import_crx_failure_detail", {
+            name: blob.label ?? blob.extensionId.slice(0, 8),
+            error:
+              e instanceof Error
+                ? e.message
+                : t("settings_import_unknown_error"),
+          }),
         );
       }
     }
     if (failures.length > 0)
-      toast.error(
-        `${failures.length} CRX key${failures.length > 1 ? "s" : ""} failed to restore`,
-        { id: "crx-restore-failed", description: failures[0] },
-      );
+      toast.error(tn("settings_import_crx_failed", failures.length), {
+        id: "crx-restore-failed",
+        description: failures[0],
+      });
     if (added > 0)
-      toast.success(
-        `Restored ${added} CRX signing key${added > 1 ? "s" : ""}`,
-        { id: "crx-restored" },
-      );
+      toast.success(tn("settings_import_crx_restored", added), {
+        id: "crx-restored",
+      });
   };
 
   const handlePasteNext = async (close: () => void) => {
@@ -160,7 +165,7 @@ export function ImportAllKeysPage({
       privateKeys.length === 0 &&
       crxBlocks.length === 0
     ) {
-      setError("No keys found in the input.");
+      setError(t("settings_import_no_keys"));
       return;
     }
 
@@ -185,15 +190,13 @@ export function ImportAllKeysPage({
         }
       }
       if (skippedCrx > 0)
-        toast.info(
-          `${skippedCrx} CRX signing key${skippedCrx > 1 ? "s" : ""} already imported`,
-          { id: "crx-skipped" },
-        );
+        toast.info(tn("settings_import_crx_skipped", skippedCrx), {
+          id: "crx-skipped",
+        });
       if (invalidCrx > 0)
-        toast.error(
-          `${invalidCrx} CRX signing key${invalidCrx > 1 ? "s" : ""} rejected: public key does not match its extension id`,
-          { id: "crx-rejected" },
-        );
+        toast.error(tn("settings_import_crx_rejected", invalidCrx), {
+          id: "crx-rejected",
+        });
 
       const existing = new Set(myKeys.map((k) => k.keyId));
       const privates: ParsedPrivate[] = [];
@@ -221,9 +224,7 @@ export function ImportAllKeysPage({
       }
 
       if (unparseable > 0) {
-        setError(
-          `${unparseable} private key${unparseable > 1 ? "s" : ""} could not be parsed.`,
-        );
+        setError(tn("settings_import_private_unparseable", unparseable));
       }
 
       if (privates.length === 0) {
@@ -231,10 +232,9 @@ export function ImportAllKeysPage({
         await importCrxBlobs(crxBlobs);
         await importPublics(publicKeys);
         if (skipped > 0)
-          toast.info(
-            `${skipped} private key${skipped > 1 ? "s" : ""} already imported`,
-            { id: "private-keys-skipped" },
-          );
+          toast.info(tn("settings_import_private_skipped", skipped), {
+            id: "private-keys-skipped",
+          });
         if (unparseable === 0) close();
         return;
       }
@@ -279,13 +279,11 @@ export function ImportAllKeysPage({
         const sealSalt = credentialId ? masterSealSalt : undefined;
         if (!credentialId) {
           const reg = await registerPasskey(
-            "PGP Tools Import",
-            "PGP Tools Import",
+            t("settings_import_passkey_name"),
+            t("settings_import_passkey_name"),
           );
           if (!reg.prfEnabled) {
-            throw new Error(
-              "Your authenticator doesn't support PRF. Try a different passkey or use a password instead.",
-            );
+            throw new Error(t("settings_import_prf_unsupported"));
           }
           credentialId = reg.credentialId;
         }
@@ -310,7 +308,10 @@ export function ImportAllKeysPage({
                   },
                 }
               : { method: "password", password },
-            { userIdHint: key.keyInfo.userIds[0] ?? "Imported PGP Key" },
+            {
+              userIdHint:
+                key.keyInfo.userIds[0] ?? t("settings_import_default_user_id"),
+            },
           );
           await onAddKey(blob);
           imported++;
@@ -318,36 +319,37 @@ export function ImportAllKeysPage({
           // A wrong source passphrase fails every encrypted key the same
           // way -- stop at the first failure instead of piling up errors.
           if (imported > 0)
-            toast.success(
-              `Imported ${imported} private key${imported > 1 ? "s" : ""}`,
-              { id: "private-keys-imported" },
-            );
+            toast.success(tn("settings_import_private_imported", imported), {
+              id: "private-keys-imported",
+            });
           const name = key.keyInfo.userIds[0] ?? key.keyInfo.keyId.slice(-8);
           setError(
-            `Failed to import "${name}": ${
-              e instanceof Error ? e.message : "unknown error"
-            }`,
+            t("settings_import_failed_named", {
+              name,
+              error:
+                e instanceof Error
+                  ? e.message
+                  : t("settings_import_unknown_error"),
+            }),
           );
           if (key.secretEncrypted) setStep("unlock");
           return;
         }
       }
 
-      toast.success(
-        `Imported ${imported} private key${imported > 1 ? "s" : ""}`,
-        { id: "private-keys-imported" },
-      );
+      toast.success(tn("settings_import_private_imported", imported), {
+        id: "private-keys-imported",
+      });
       if (skippedPrivates > 0)
-        toast.info(
-          `${skippedPrivates} private key${skippedPrivates > 1 ? "s" : ""} already imported`,
-          { id: "private-keys-skipped" },
-        );
+        toast.info(tn("settings_import_private_skipped", skippedPrivates), {
+          id: "private-keys-skipped",
+        });
       await importCrxBlobs(parsedCrx);
       await importPublics(publicBlocks);
       close();
     } catch (e) {
       if (!isWebAuthnCancel(e)) {
-        setError(e instanceof Error ? e.message : "Import failed");
+        setError(e instanceof Error ? e.message : t("settings_import_failed"));
       }
     } finally {
       prfOutput?.fill(0);
@@ -363,17 +365,17 @@ export function ImportAllKeysPage({
     step === "paste"
       ? [
           {
-            text: "Next",
-            busyText: "Importing...",
+            text: t("settings_import_next"),
+            busyText: t("settings_import_importing"),
             disabled: !text.trim(),
             onClick: (api) => handlePasteNext(api.close),
           },
-          { type: "outline", text: "Cancel" },
+          { type: "outline", text: t("common_cancel") },
         ]
       : step === "unlock"
         ? [
             {
-              text: "Next",
+              text: t("settings_import_next"),
               disabled: !sourcePassphrase,
               onClick: () => {
                 setError(null);
@@ -382,7 +384,7 @@ export function ImportAllKeysPage({
             },
             {
               type: "outline",
-              text: "Back",
+              text: t("common_back"),
               onClick: () => {
                 setStep("paste");
                 setError(null);
@@ -393,18 +395,20 @@ export function ImportAllKeysPage({
         : undefined;
 
   return (
-    <SubPage title="Import keys" onClose={onClose} actions={actions}>
+    <SubPage
+      title={t("settings_import_keys_title")}
+      onClose={onClose}
+      actions={actions}
+    >
       {(api) => (
         <>
           {step === "paste" && (
             <div className="space-y-3">
               <p className="text-muted-foreground text-xs">
-                Paste or browse for a key file -- for example one from "Export
-                all keys". Private keys are re-protected with your chosen
-                method; public keys become contacts.
+                {t("settings_import_paste_intro")}
               </p>
               <textarea
-                placeholder="Paste keys here, or browse for a file..."
+                placeholder={t("settings_import_paste_placeholder")}
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 className="border-border bg-background placeholder:text-muted-foreground focus:ring-ring w-full rounded-md border p-3 font-mono text-xs focus:ring-2 focus:outline-none"
@@ -426,7 +430,7 @@ export function ImportAllKeysPage({
                 size="sm"
                 onClick={() => fileInputRef.current?.click()}
               >
-                Browse for key file
+                {t("settings_import_browse")}
               </Button>
 
               {error && (
@@ -440,10 +444,9 @@ export function ImportAllKeysPage({
           {step === "unlock" && (
             <div className="space-y-3">
               <p className="text-muted-foreground text-xs">
-                {encryptedCount} of the {parsedPrivates.length} private key
-                {parsedPrivates.length > 1 ? "s are" : " is"} protected with a
-                passphrase. Enter it to unlock them -- you'll then re-protect
-                every key with your chosen method on the next step.
+                {tn("settings_import_unlock_intro", parsedPrivates.length, {
+                  encrypted: encryptedCount,
+                })}
               </p>
               <input
                 type="password"
@@ -454,7 +457,7 @@ export function ImportAllKeysPage({
                 onKeyDown={(e) => {
                   if (e.key === "Enter") api.runAction(0);
                 }}
-                placeholder="Key passphrase"
+                placeholder={t("settings_import_passphrase_placeholder")}
                 className="border-border bg-background placeholder:text-muted-foreground focus:ring-ring w-full rounded-md border p-2 font-mono text-xs focus:ring-2 focus:outline-none"
               />
               {error && (
@@ -468,8 +471,7 @@ export function ImportAllKeysPage({
           {step === "protect" && (
             <div className="space-y-3">
               <p className="text-muted-foreground text-xs">
-                Choose how to protect the {parsedPrivates.length} imported
-                private key{parsedPrivates.length > 1 ? "s" : ""}.
+                {tn("settings_import_protect_intro", parsedPrivates.length)}
               </p>
               <ProtectionMethodPicker
                 method={method}
@@ -485,7 +487,10 @@ export function ImportAllKeysPage({
                   setError(null);
                 }}
                 submitting={importing}
-                submitLabel={`Import ${parsedPrivates.length} key${parsedPrivates.length > 1 ? "s" : ""}`}
+                submitLabel={tn(
+                  "settings_import_submit",
+                  parsedPrivates.length,
+                )}
                 reusePasskeyCredentialId={reusePasskeyCredentialId}
                 reusePasskey={reusePasskey}
                 onReusePasskeyChange={setReusePasskey}

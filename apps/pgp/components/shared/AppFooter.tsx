@@ -2,6 +2,7 @@ import { Kbd } from "@amibeingpwned/ui/kbd";
 import { ariaKeyShortcuts, isMacPlatform } from "@amibeingpwned/ui/kbd-helpers";
 
 import { PALETTE_SHORTCUT } from "../../lib/actions/definitions";
+import { t } from "../../lib/i18n";
 
 /**
  * Sticky footer used on every top-level shell (onboarding, master
@@ -14,13 +15,14 @@ export function AppFooter({ onOpenPalette }: { onOpenPalette?: () => void }) {
   return (
     <footer className="border-border flex shrink-0 items-center justify-center gap-3 border-t px-4 py-3.5">
       <p className="text-muted-foreground text-xs">
-        A privacy tool by{" "}
+        {t("shared_byline_before")}{" "}
         <a
           href="https://amibeingpwned.com"
           target="_blank"
           rel="noopener noreferrer"
           className="text-primary underline underline-offset-2 hover:opacity-80"
         >
+          {/* i18n-ignore */}
           Am I Being Pwned
         </a>
       </p>
@@ -28,11 +30,14 @@ export function AppFooter({ onOpenPalette }: { onOpenPalette?: () => void }) {
         <button
           type="button"
           onClick={onOpenPalette}
-          aria-keyshortcuts={ariaKeyShortcuts(PALETTE_SHORTCUT, isMacPlatform())}
+          aria-keyshortcuts={ariaKeyShortcuts(
+            PALETTE_SHORTCUT,
+            isMacPlatform(),
+          )}
           className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-xs transition-colors"
         >
           <Kbd shortcut={PALETTE_SHORTCUT} />
-          Commands
+          {t("shared_commands")}
         </button>
       )}
     </footer>

@@ -14,28 +14,75 @@
 import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
 
 import type { InlineStyle } from "../compose/text-format";
+import type { MessageKey } from "../i18n";
 import type { ActionCtx, PgpAction, PgpMode } from "./types";
-import { languageLabel, TRANSLATION_LANGUAGES } from "../ai/languages";
-import {
-  FIND_SHORTCUT,
-  STYLE_LABELS,
-  STYLE_SHORTCUTS,
-} from "../compose/shortcuts";
+import { languageLabel, translationLanguages } from "../ai/languages";
+import { FIND_SHORTCUT, STYLE_SHORTCUTS } from "../compose/shortcuts";
+import { t } from "../i18n";
 
-/** What "no input" means per mode, for Run's disabled reason. */
-const NO_INPUT_REASON: Record<PgpMode, string> = {
-  encrypt: "Nothing to encrypt - add text or drop a file",
-  decrypt: "Nothing to decrypt - paste an encrypted message or drop a file",
-  sign: "Nothing to sign - add text or drop a file",
-  verify: "Nothing to verify - paste a signed message or drop a file",
+/** What "no input" means per mode, for Run's disabled reason. (A
+ *  switch, not a key table: the i18n checker counts only literal keys.) */
+function noInputReason(mode: PgpMode): string {
+  switch (mode) {
+    case "encrypt":
+      return t("actions_no_input_encrypt");
+    case "decrypt":
+      return t("actions_no_input_decrypt");
+    case "sign":
+      return t("actions_no_input_sign");
+    case "verify":
+      return t("actions_no_input_verify");
+  }
+}
+
+const MODE_NAME: Record<PgpMode, MessageKey> = {
+  encrypt: "common_encrypt",
+  decrypt: "common_decrypt",
+  sign: "common_sign",
+  verify: "common_verify",
 };
 
-const MODES: { mode: PgpMode; name: string }[] = [
-  { mode: "encrypt", name: "Encrypt" },
-  { mode: "decrypt", name: "Decrypt" },
-  { mode: "sign", name: "Sign" },
-  { mode: "verify", name: "Verify" },
-];
+const MODES: PgpMode[] = ["encrypt", "decrypt", "sign", "verify"];
+
+/** Palette group headings. `PgpAction.group` is a stable English id
+ *  (it doubles as the grouping key and a search term); this is the
+ *  label the palette shows for it. Unknown groups render as-is. */
+export function groupLabel(group: string): string {
+  switch (group) {
+    case "Mode":
+      return t("actions_group_mode");
+    case "Workspace":
+      return t("actions_group_workspace");
+    case "Keys":
+      return t("actions_group_keys");
+    case "Navigation":
+      return t("actions_group_navigation");
+    case "Settings":
+      return t("actions_group_settings");
+    case "Session":
+      return t("actions_group_session");
+    case "Message":
+      return t("actions_group_message");
+    case "Result":
+      return t("actions_group_result");
+    default:
+      return group;
+  }
+}
+
+/** Palette names of the inline style actions. */
+function styleActionName(style: InlineStyle): string {
+  switch (style) {
+    case "bold":
+      return t("actions_style_bold");
+    case "italic":
+      return t("actions_style_italic");
+    case "strike":
+      return t("actions_style_strike");
+    case "code":
+      return t("actions_style_code");
+  }
+}
 
 /** mod+K opens the command palette. Lives here (not in the palette
  *  component) so the footer hint and the shortcuts reference can render
@@ -68,9 +115,9 @@ export const MODE_SHORTCUTS: Record<PgpMode, ShortcutSpec> = {
 };
 
 /** Switch the workspace to a mode (jumping to the tab if needed). */
-const modeActions: PgpAction[] = MODES.map(({ mode, name }) => ({
+const modeActions: PgpAction[] = MODES.map((mode) => ({
   id: `mode.${mode}`,
-  name,
+  name: () => t(MODE_NAME[mode]),
   group: "Mode",
   keywords: ["mode", "switch"],
   shortcut: MODE_SHORTCUTS[mode],
@@ -95,7 +142,7 @@ const styleActions: PgpAction[] = (
   Object.keys(STYLE_SHORTCUTS) as InlineStyle[]
 ).map((style) => ({
   id: `compose.${style}`,
-  name: `${STYLE_LABELS[style]} selection`,
+  name: () => styleActionName(style),
   group: "Message",
   keywords: ["format", "style", "text", style],
   shortcut: STYLE_SHORTCUTS[style],
@@ -108,8 +155,7 @@ export const ACTIONS: readonly PgpAction[] = [
 
   {
     id: "workspace.run",
-    name: (ctx) =>
-      `Run ${MODES.find((m) => m.mode === ctx.mode)?.name ?? ctx.mode}`,
+    name: (ctx) => t("actions_run_mode", { mode: t(MODE_NAME[ctx.mode]) }),
     group: "Workspace",
     keywords: ["go", "execute", "submit"],
     shortcut: { mod: true, key: "Enter" },
@@ -117,52 +163,58 @@ export const ACTIONS: readonly PgpAction[] = [
     // hidden via `applicable`): a dimmed "Switch to Workspace first" is
     // discoverable; a vanished action looks like it doesn't exist.
     disabledReason: (ctx) => {
-      if (ctx.tab !== "workspace") return "Switch to Workspace first";
-      if (!ctx.hasInput) return NO_INPUT_REASON[ctx.mode];
+      if (ctx.tab !== "workspace")
+        return t("actions_switch_to_workspace_first");
+      if (!ctx.hasInput) return noInputReason(ctx.mode);
       if (ctx.mode === "encrypt" && !ctx.canEncrypt)
-        return "Select at least one recipient, or set a password";
+        return t("actions_need_recipient_or_password");
       return undefined;
     },
     execute: (ctx) => ctx.ops.execute(),
   },
   {
     id: "workspace.copy-output",
-    name: "Copy output",
+    name: () => t("actions_copy_output"),
     group: "Workspace",
     keywords: ["clipboard", "result"],
     shortcut: COPY_SHORTCUT,
     disabledReason: (ctx) => {
-      if (ctx.tab !== "workspace") return "Switch to Workspace first";
-      return ctx.hasOutput ? undefined : "No output to copy yet";
+      if (ctx.tab !== "workspace")
+        return t("actions_switch_to_workspace_first");
+      return ctx.hasOutput ? undefined : t("actions_no_output_to_copy");
     },
     execute: (ctx) => ctx.ops.copyOutput(),
   },
   {
     id: "workspace.download",
-    name: "Download output",
+    name: () => t("actions_download_output"),
     group: "Workspace",
     keywords: ["save", "file", "export"],
     shortcut: DOWNLOAD_SHORTCUT,
     disabledReason: (ctx) => {
-      if (ctx.tab !== "workspace") return "Switch to Workspace first";
-      return ctx.hasDownload ? undefined : "Nothing to download yet";
+      if (ctx.tab !== "workspace")
+        return t("actions_switch_to_workspace_first");
+      return ctx.hasDownload ? undefined : t("actions_nothing_to_download");
     },
     execute: (ctx) => ctx.ops.downloadOutput(),
   },
   {
     id: "workspace.clear",
-    name: "Clear input",
+    name: () => t("actions_clear_input"),
     group: "Workspace",
     keywords: ["reset", "empty"],
     disabledReason: (ctx) => {
-      if (ctx.tab !== "workspace") return "Switch to Workspace first";
-      return ctx.hasInput || ctx.hasOutput ? undefined : "Nothing to clear";
+      if (ctx.tab !== "workspace")
+        return t("actions_switch_to_workspace_first");
+      return ctx.hasInput || ctx.hasOutput
+        ? undefined
+        : t("actions_nothing_to_clear");
     },
     execute: (ctx) => ctx.ops.clearInput(),
   },
   {
     id: "history.open",
-    name: "Open history",
+    name: () => t("actions_open_history"),
     group: "Workspace",
     keywords: ["log", "past", "operations"],
     disabledReason: (ctx) => {
@@ -170,8 +222,8 @@ export const ACTIONS: readonly PgpAction[] = [
       // Under never-cache the checkbox itself is unavailable, so
       // "enable it next to Sign" would point at nothing.
       return ctx.neverCacheKeys
-        ? "History is off while keys never cache"
-        : "History is off - enable it next to Sign";
+        ? t("actions_history_off_never_cache")
+        : t("actions_history_off_reason");
     },
     execute: (ctx) => ctx.navigation.openHistory(),
   },
@@ -184,17 +236,21 @@ export const ACTIONS: readonly PgpAction[] = [
   {
     id: "workspace.toggle-encrypt-to-self",
     name: (ctx) =>
-      `${ctx.encryptToSelf ? "Turn off" : "Turn on"}: Also encrypt to me`,
+      ctx.encryptToSelf
+        ? t("actions_encrypt_to_self_off")
+        : t("actions_encrypt_to_self_on"),
     group: "Workspace",
     keywords: ["toggle", "self", "own key", "preference"],
     disabledReason: (ctx) =>
-      ctx.counts.ownKeys === 0 ? "Add one of your own keys first" : undefined,
+      ctx.counts.ownKeys === 0 ? t("actions_add_own_key_first") : undefined,
     execute: (ctx) => ctx.ops.toggleEncryptToSelf(),
   },
   {
     id: "workspace.toggle-sign",
     name: (ctx) =>
-      `${ctx.alsoSign ? "Turn off" : "Turn on"}: Sign when encrypting`,
+      ctx.alsoSign
+        ? t("actions_sign_when_encrypting_off")
+        : t("actions_sign_when_encrypting_on"),
     group: "Workspace",
     keywords: ["toggle", "signature", "preference"],
     disabledReason: (ctx) => {
@@ -202,10 +258,10 @@ export const ACTIONS: readonly PgpAction[] = [
       // "add one of your own keys first" would be the wrong advice --
       // no key of any kind makes an age message signable.
       if (ctx.encryptEngine === "ssh") {
-        return "age messages can't be signed";
+        return t("actions_age_cannot_sign");
       }
       return ctx.counts.ownKeys === 0
-        ? "Add one of your own keys first"
+        ? t("actions_add_own_key_first")
         : undefined;
     },
     execute: (ctx) => ctx.ops.toggleAlsoSign(),
@@ -213,24 +269,26 @@ export const ACTIONS: readonly PgpAction[] = [
   {
     id: "workspace.toggle-history",
     name: (ctx) =>
-      `${ctx.historyEnabled ? "Turn off" : "Turn on"}: Save to history`,
+      ctx.historyEnabled
+        ? t("actions_save_to_history_off")
+        : t("actions_save_to_history_on"),
     group: "Workspace",
     keywords: ["toggle", "log", "preference"],
     disabledReason: (ctx) =>
-      ctx.neverCacheKeys ? "History is off while keys never cache" : undefined,
+      ctx.neverCacheKeys ? t("actions_history_off_never_cache") : undefined,
     execute: (ctx) => ctx.ops.toggleSaveToHistory(),
   },
 
   {
     id: "keys.generate",
-    name: "Generate key",
+    name: () => t("actions_generate_key"),
     group: "Keys",
     keywords: ["new", "create", "keypair"],
     execute: (ctx) => ctx.navigation.openGenerate(),
   },
   {
     id: "keys.import",
-    name: "Import key",
+    name: () => t("actions_import_key"),
     group: "Keys",
     keywords: ["add", "paste", "armored"],
     execute: (ctx) => ctx.navigation.openImport(),
@@ -238,7 +296,7 @@ export const ACTIONS: readonly PgpAction[] = [
 
   {
     id: "nav.workspace",
-    name: "Go to Workspace",
+    name: () => t("actions_go_to_workspace"),
     group: "Navigation",
     keywords: ["tab", "main"],
     applicable: (ctx) => ctx.tab !== "workspace",
@@ -246,7 +304,7 @@ export const ACTIONS: readonly PgpAction[] = [
   },
   {
     id: "nav.keys",
-    name: "Go to Keys",
+    name: () => t("actions_go_to_keys"),
     group: "Navigation",
     keywords: ["tab", "contacts"],
     applicable: (ctx) => ctx.tab !== "keys",
@@ -254,7 +312,7 @@ export const ACTIONS: readonly PgpAction[] = [
   },
   {
     id: "nav.settings",
-    name: "Go to Settings",
+    name: () => t("actions_go_to_settings"),
     group: "Navigation",
     keywords: ["tab", "preferences"],
     applicable: (ctx) => ctx.tab !== "settings",
@@ -263,7 +321,7 @@ export const ACTIONS: readonly PgpAction[] = [
 
   {
     id: "settings.security-presets",
-    name: "Open security presets",
+    name: () => t("actions_open_security_presets"),
     group: "Settings",
     keywords: ["preset", "paranoid", "convenient", "balanced", "security"],
     execute: (ctx) => ctx.navigation.openSecurityPresets(),
@@ -271,7 +329,7 @@ export const ACTIONS: readonly PgpAction[] = [
 
   {
     id: "session.lock",
-    name: "Lock now",
+    name: () => t("actions_lock_now"),
     group: "Session",
     keywords: ["logout", "secure", "close"],
     execute: (ctx) => ctx.ops.lockNow(),
@@ -280,7 +338,7 @@ export const ACTIONS: readonly PgpAction[] = [
   ...styleActions,
   {
     id: "compose.find",
-    name: "Find and replace in message",
+    name: () => t("actions_find_replace"),
     group: "Message",
     keywords: ["search", "replace", "find"],
     shortcut: FIND_SHORTCUT,
@@ -291,26 +349,28 @@ export const ACTIONS: readonly PgpAction[] = [
     // Two steps: pick the action, then the language. The last-picked
     // language is listed first so a repeat is Enter, Enter.
     id: "compose.translate",
-    name: "Translate message...",
+    name: () => t("actions_translate_message"),
     group: "Message",
     keywords: ["translate", "translation", "language"],
     applicable: composing,
     disabledReason: (ctx) => {
-      if (!ctx.compose.translateEnabled)
-        return "Translation is off in Settings";
-      if (!ctx.hasInput) return "Nothing to translate yet";
+      if (!ctx.compose.translateEnabled) return t("actions_translation_off");
+      if (!ctx.hasInput) return t("actions_nothing_to_translate");
       return undefined;
     },
     pick: (ctx) => {
       const last = ctx.compose.translateTarget;
-      const options = TRANSLATION_LANGUAGES.map((l) => ({
+      const options = translationLanguages().map((l) => ({
         id: l.code,
-        label: l.code === last ? `${l.label} (last used)` : l.label,
+        label:
+          l.code === last
+            ? t("actions_language_last_used", { label: l.label })
+            : l.label,
         keywords: [l.code],
       }));
       return {
-        title: "Translate the message to",
-        placeholder: "Pick a language...",
+        title: t("actions_translate_to_title"),
+        placeholder: t("actions_pick_language_placeholder"),
         options: last
           ? [
               ...options.filter((o) => o.id === last),
@@ -328,7 +388,10 @@ export const ACTIONS: readonly PgpAction[] = [
     // user reads -- so it is one entry, no picker, present only while a
     // decrypted or verified message is on screen.
     id: "result.translate",
-    name: (ctx) => `Translate to ${languageLabel(ctx.result.readingLanguage)}`,
+    name: (ctx) =>
+      t("actions_translate_result_to", {
+        language: languageLabel(ctx.result.readingLanguage),
+      }),
     group: "Result",
     keywords: ["translate", "translation", "language", "decrypted"],
     applicable: (ctx) => ctx.tab === "workspace" && ctx.result.canTranslate,

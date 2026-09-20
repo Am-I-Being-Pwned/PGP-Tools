@@ -38,6 +38,7 @@ import {
 import { normalizeCrxPadding } from "../../lib/crx/storage";
 import { looksLikeKey, readAllFilesText } from "../../lib/drop-routing";
 import { fromBase64 } from "../../lib/encoding";
+import { t, tn } from "../../lib/i18n";
 import * as wasmApi from "../../lib/pgp/wasm";
 import {
   masterPasskeyOf,
@@ -770,17 +771,15 @@ export default function App() {
       <div className="flex h-screen flex-col">
         <main className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 overflow-y-auto p-6 text-center">
           <p className="text-destructive text-sm font-medium">
-            Your vault could not be read.
+            {t("app_vault_unreadable_title")}
           </p>
           <p className="text-muted-foreground max-w-xs text-xs leading-relaxed">
-            Your keys are still stored on this device. Locking and trying again
-            is the first thing to try
             {masterProtection.method === "passkey"
-              ? " -- make sure you use the same passkey you set up."
-              : "."}
+              ? t("app_vault_unreadable_body_passkey")
+              : t("app_vault_unreadable_body")}
           </p>
           <Button variant="outline" onClick={() => void doMasterLock()}>
-            Lock and try again
+            {t("app_vault_lock_retry")}
           </Button>
         </main>
         <AppFooter />
@@ -839,16 +838,13 @@ export default function App() {
                 setHighlightKeyIds(keyIds);
                 return;
               }
-              toast.success(
-                keyIds.length > 1 ? `Added ${keyIds.length} keys` : "Key added",
-                {
-                  id: "import-added",
-                  action: {
-                    label: keyIds.length > 1 ? "View keys" : "View key",
-                    onClick: () => revealKeys(keyIds),
-                  },
+              toast.success(tn("app_import_added", keyIds.length), {
+                id: "import-added",
+                action: {
+                  label: tn("app_import_view_key", keyIds.length),
+                  onClick: () => revealKeys(keyIds),
                 },
-              );
+              });
             }}
           />
         )}
@@ -1015,10 +1011,11 @@ export default function App() {
 
 // ── Tab bar with WAI-ARIA keyboard navigation ────────────────────────
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: "workspace", label: "Main" },
-  { id: "keys", label: "Keys" },
-  { id: "settings", label: "Settings" },
+// Labels are resolved at render time (never at module load).
+const TABS: { id: Tab; label: () => string }[] = [
+  { id: "workspace", label: () => t("app_tab_main") },
+  { id: "keys", label: () => t("common_keys") },
+  { id: "settings", label: () => t("common_settings") },
 ];
 
 function TabBar({
@@ -1060,7 +1057,7 @@ function TabBar({
   );
 
   return (
-    <nav className="border-border border-b" aria-label="Main navigation">
+    <nav className="border-border border-b" aria-label={t("app_nav_label")}>
       <div
         className="flex items-center"
         role="tablist"
@@ -1078,7 +1075,7 @@ function TabBar({
               role="tab"
               aria-selected={isActive}
               aria-controls={`tabpanel-${tab.id}`}
-              aria-label={isSettings ? "Settings" : undefined}
+              aria-label={isSettings ? t("common_settings") : undefined}
               id={`tab-${tab.id}`}
               tabIndex={isActive ? 0 : -1}
               onClick={() => onTabChange(tab.id)}
@@ -1096,7 +1093,7 @@ function TabBar({
                     }`
               }
             >
-              {isSettings ? <SettingsIcon className="h-4 w-4" /> : tab.label}
+              {isSettings ? <SettingsIcon className="h-4 w-4" /> : tab.label()}
             </button>
           );
         })}

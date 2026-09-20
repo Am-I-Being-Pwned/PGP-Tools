@@ -32,6 +32,7 @@
  * about plaintext lifetime. Slower, and correct.
  */
 
+import { t } from "../i18n";
 import {
   detectorSupported,
   translationAvailability,
@@ -294,7 +295,7 @@ export async function downloadLanguagePack(
   signal?: AbortSignal,
 ): Promise<void> {
   if (!translatorSupported()) {
-    throw new Error("Translation is not available on this device.");
+    throw new Error(t("settings_translation_unavailable_device"));
   }
 
   let translator: TranslatorInstance | undefined;

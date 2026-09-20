@@ -1,3 +1,4 @@
+/* i18n-ignore-file */
 import type { IncomingKey } from "../import/types";
 import type { KeyDetails, KeyInfo } from "../pgp/types";
 

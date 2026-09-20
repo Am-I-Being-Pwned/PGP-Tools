@@ -10,6 +10,7 @@
  * with them; everything that touches a model is here, once.
  */
 
+import { t } from "../i18n";
 import { baseLanguage, languageLabel } from "./languages";
 import {
   detectLanguage,
@@ -87,7 +88,10 @@ export async function runTranslation({
       (loaded) =>
         onStatus({
           kind: "downloading",
-          what: `${languageLabel(from)} to ${languageLabel(to)}`,
+          what: t("settings_translation_pack_pair", {
+            from: languageLabel(from),
+            to: languageLabel(to),
+          }),
           progress: loaded,
         }),
       signal,
@@ -115,7 +119,7 @@ export async function runTranslation({
       case "needs-pack":
         onStatus({
           kind: "error",
-          message: "The language pack went away. Try again.",
+          message: t("settings_translation_pack_gone"),
         });
         return null;
       case "unsupported-pair":
@@ -127,7 +131,8 @@ export async function runTranslation({
     if (aborted()) return null;
     onStatus({
       kind: "error",
-      message: e instanceof Error ? e.message : "Translation failed.",
+      message:
+        e instanceof Error ? e.message : t("settings_translation_failed"),
     });
     return null;
   }
@@ -152,7 +157,7 @@ async function detectSource(
     (loaded) =>
       onStatus({
         kind: "downloading",
-        what: "language detector",
+        what: t("settings_translation_detector"),
         progress: loaded,
       }),
     signal,

@@ -18,11 +18,12 @@ import { signZipWithCrxKey, verifyCrxFile } from "../../lib/crx/operations";
 import {
   buildEncryptRecipients,
   resolveSelectedRecipients,
-  SSH_PASSWORD_REASON,
+  sshPasswordReason,
   toSelectedRecipient,
 } from "../../lib/encrypt-recipients";
 import { AppError } from "../../lib/errors/app-error";
 import { presentError } from "../../lib/errors/present";
+import { t, tn } from "../../lib/i18n";
 import * as pgpOps from "../../lib/pgp/operations";
 import { isWebAuthnCancel } from "../../lib/protection/webauthn-prf";
 import { updateRecentRecipients } from "../../lib/recipient-ordering";
@@ -316,7 +317,7 @@ export function useWorkspaceOperations({
   function captureHistory(entry: NewHistoryEntry): void {
     void recordHistory(entry).then((result) => {
       if (result === "failed") {
-        toast.error("Couldn't save to history - storage may be full", {
+        toast.error(t("workspace_history_save_failed"), {
           id: "history-save-failed",
         });
       }
@@ -350,7 +351,7 @@ export function useWorkspaceOperations({
           break;
       }
     } catch (e) {
-      s.setError(presentError(e, "The operation failed. Try again."));
+      s.setError(presentError(e, t("workspace_operation_failed")));
     } finally {
       s.setLoading(false);
       onOperationComplete?.();
@@ -366,9 +367,7 @@ export function useWorkspaceOperations({
     // independently, so a message nobody can open cannot be produced
     // even if this check is wrong.
     if (recipients.length === 0 && !s.encryptPasswordReady) {
-      s.setError({
-        message: "Select at least one recipient key, or set a password.",
-      });
+      s.setError({ message: t("workspace_error_need_recipient_or_password") });
       return;
     }
 
@@ -388,7 +387,7 @@ export function useWorkspaceOperations({
     // the backstop for a state the UI should not allow, not the main
     // defence.
     if (isAge && s.encryptPasswordReady) {
-      s.setError({ message: SSH_PASSWORD_REASON });
+      s.setError({ message: sshPasswordReason() });
       return;
     }
 
@@ -427,7 +426,7 @@ export function useWorkspaceOperations({
     // assembly; if the two ever disagreed, the assembly's is the one the
     // ciphertext follows.
     if (engine !== null && (engine === "ssh") !== isAge) {
-      s.setError({ message: "Couldn't work out which format to encrypt in." });
+      s.setError({ message: t("workspace_error_engine_mismatch") });
       return;
     }
 
@@ -444,7 +443,7 @@ export function useWorkspaceOperations({
     }
 
     if (isAge) {
-      s.setStatusText("age message - encrypted to SSH recipients");
+      s.setStatusText(t("workspace_status_age_encrypted"));
     }
 
     // The message password, when the badge is armed. `undefined` -- not
@@ -506,7 +505,9 @@ export function useWorkspaceOperations({
       s.setFileResults(results);
       const totalSize = results.reduce((sum, r) => sum + r.data.length, 0);
       s.setStatusText(
-        `${results.length} files encrypted (${formatFileSize(totalSize)} total)`,
+        tn("workspace_files_encrypted", results.length, {
+          size: formatFileSize(totalSize),
+        }),
       );
       s.setOperationDone(true);
       maybeAutoDownload(true, { results });
@@ -523,7 +524,7 @@ export function useWorkspaceOperations({
         s.setBinaryOutput(result);
       }
       if (s.files.length > 1 && s.zipFiles) {
-        s.setStatusText(`${s.files.length} files zipped and encrypted`);
+        s.setStatusText(tn("workspace_files_zipped_encrypted", s.files.length));
       }
       s.setOperationDone(true);
       maybeAutoDownload(true, {
@@ -619,7 +620,9 @@ export function useWorkspaceOperations({
         s.setFileResults(results);
         const totalSize = results.reduce((sum, r) => sum + r.data.length, 0);
         s.setStatusText(
-          `${results.length} files decrypted (${formatFileSize(totalSize)} total)`,
+          tn("workspace_files_decrypted", results.length, {
+            size: formatFileSize(totalSize),
+          }),
         );
         s.setOperationDone(true);
         maybeAutoDownload(true, { results });
@@ -639,7 +642,7 @@ export function useWorkspaceOperations({
         s.setOutput(data);
       } else if (isZipArchive(data)) {
         s.setBinaryOutput(data);
-        s.setStatusText("Decrypted archive containing multiple files");
+        s.setStatusText(t("workspace_status_decrypted_archive"));
       } else {
         s.setBinaryOutput(data);
       }
@@ -654,12 +657,7 @@ export function useWorkspaceOperations({
       s.setFileResults([]);
       s.setOperationDone(false);
       s.setVerifiedSigner(null);
-      s.setError(
-        presentError(
-          err,
-          "Decryption failed. The message may be corrupted, or it isn't encrypted to any of your SSH keys.",
-        ),
-      );
+      s.setError(presentError(err, t("workspace_error_decrypt_failed_ssh")));
     }
   }
 
@@ -694,7 +692,7 @@ export function useWorkspaceOperations({
     if (s.inputIsAge) {
       // age has no password mode at all; it needs an SSH identity.
       if (!s.selectedKeyId) {
-        s.setError({ message: "Select a decryption key." });
+        s.setError({ message: t("workspace_error_select_decryption_key") });
         return;
       }
       const ageHandle = await ensureUnlocked(s.selectedKeyId);
@@ -732,7 +730,7 @@ export function useWorkspaceOperations({
     }
 
     if (!s.selectedKeyId) {
-      s.setError({ message: "Select a decryption key." });
+      s.setError({ message: t("workspace_error_select_decryption_key") });
       return;
     }
     const keyHandle = await ensureUnlocked(s.selectedKeyId);
@@ -777,7 +775,7 @@ export function useWorkspaceOperations({
       switch (result.signatureStatus) {
         case "valid": {
           s.setSignatureTone("success");
-          s.setStatusText("Signature verified");
+          s.setStatusText(t("workspace_signature_verified"));
           const signer = findSigner(result.signerKeyId);
           if (signer) s.setVerifiedSigner(signer);
           break;
@@ -789,15 +787,13 @@ export function useWorkspaceOperations({
           s.setSignatureTone("warning");
           s.setVerifiedSigner({
             keyId: result.signerKeyId ?? "",
-            userIds: ["Unknown signer"],
+            userIds: [t("workspace_unknown_signer")],
             algorithm: "",
             armoredPublicKey: "",
             addedAt: 0,
             lastUsedAt: 0,
           });
-          s.setStatusText(
-            "This message is signed, but the signer's public key isn't in your keys or contacts, so the signature could not be verified.",
-          );
+          s.setStatusText(t("workspace_status_signer_unknown"));
           break;
         }
         case "invalid":
@@ -832,7 +828,9 @@ export function useWorkspaceOperations({
         s.setFileResults(results);
         const totalSize = results.reduce((sum, r) => sum + r.data.length, 0);
         s.setStatusText(
-          `${results.length} files decrypted (${formatFileSize(totalSize)} total)`,
+          tn("workspace_files_decrypted", results.length, {
+            size: formatFileSize(totalSize),
+          }),
         );
         s.setOperationDone(true);
         maybeAutoDownload(true, { results });
@@ -845,7 +843,7 @@ export function useWorkspaceOperations({
         if (result.data instanceof Uint8Array) {
           if (isZipArchive(result.data)) {
             s.setBinaryOutput(result.data);
-            s.setStatusText("Decrypted archive containing multiple files");
+            s.setStatusText(t("workspace_status_decrypted_archive"));
           } else {
             try {
               const decoded = new TextDecoder("utf-8", {
@@ -907,10 +905,7 @@ export function useWorkspaceOperations({
       // message was being opened. The key path puts it in the page-level
       // error slot; the password path puts it under the prompt, which
       // stays up so the user can just retype.
-      return presentError(
-        err,
-        "Decryption failed. The message may be corrupted, or it isn't encrypted to any of your keys.",
-      );
+      return presentError(err, t("workspace_error_decrypt_failed"));
     }
   }
 
@@ -920,8 +915,8 @@ export function useWorkspaceOperations({
       s.setError({
         message:
           myKeys.length > 0
-            ? "No signing key available. SSH keys can't sign - add an OpenPGP key first."
-            : "No signing key available. Add a key first.",
+            ? t("workspace_error_no_signing_key_ssh")
+            : t("workspace_error_no_signing_key"),
       });
       return;
     }
@@ -940,7 +935,7 @@ export function useWorkspaceOperations({
       }
       s.setFileResults(results);
       if (results.length > 1) {
-        s.setStatusText(`${results.length} files signed`);
+        s.setStatusText(tn("workspace_files_signed", results.length));
       }
       s.setOperationDone(true);
       maybeAutoDownload(true, { results });
@@ -976,7 +971,7 @@ export function useWorkspaceOperations({
           const isFileInput = s.files.length > 0;
           s.setOperationDone(true);
           s.setSignatureTone("success");
-          s.setStatusText("Signature verified");
+          s.setStatusText(t("workspace_signature_verified"));
           const signer = findSigner(result.signerKeyId);
           if (signer) s.setVerifiedSigner(signer);
           maybeAutoDownload(isFileInput, { text: result.text });
@@ -991,24 +986,19 @@ export function useWorkspaceOperations({
           s.setSignatureTone("warning");
           s.setVerifiedSigner({
             keyId: result.signerKeyId ?? "",
-            userIds: ["Unknown signer"],
+            userIds: [t("workspace_unknown_signer")],
             algorithm: "",
             armoredPublicKey: "",
             addedAt: 0,
             lastUsedAt: 0,
           });
-          s.setStatusText(
-            "This message is signed, but the signer's public key isn't in your keys or contacts, so the signature could not be verified.",
-          );
+          s.setStatusText(t("workspace_status_signer_unknown"));
           break;
         case "invalid":
-          s.setError({
-            message:
-              "Signature verification FAILED - this message may have been tampered with",
-          });
+          s.setError({ message: t("workspace_error_signature_invalid") });
           break;
         case "unsigned":
-          s.setError({ message: "This message is not signed." });
+          s.setError({ message: t("workspace_error_not_signed") });
           break;
       }
       if (
@@ -1019,12 +1009,7 @@ export function useWorkspaceOperations({
         // content-free "verify, <time>" row carries no recall value.
       }
     } catch (e) {
-      s.setError(
-        presentError(
-          e,
-          "Verification failed. The input doesn't look like a signed PGP message.",
-        ),
-      );
+      s.setError(presentError(e, t("workspace_error_verify_failed")));
     }
   }
 
@@ -1062,7 +1047,7 @@ export function useWorkspaceOperations({
       );
       const name = crxOutputName();
       s.setFileResults([{ name, data: crx }]);
-      s.setStatusText(`Signed ${name} - saving...`);
+      s.setStatusText(t("workspace_status_crx_signed", { name }));
       s.setOperationDone(true);
       // WorkspaceView auto-fires the "Save As" prompt for this result (the one
       // download path Chrome won't route to the extension installer -- see
@@ -1072,9 +1057,9 @@ export function useWorkspaceOperations({
       // Backing out of the passkey prompt is a decision, not a failure.
       if (isWebAuthnCancel(e)) return false;
       if (password) {
-        s.setPasswordError("Wrong password or signing failed.");
+        s.setPasswordError(t("workspace_error_crx_wrong_password"));
       } else {
-        s.setError(presentError(e, "CRX signing failed. Try again."));
+        s.setError(presentError(e, t("workspace_error_crx_sign_failed")));
       }
       return false;
     } finally {
@@ -1087,7 +1072,7 @@ export function useWorkspaceOperations({
     if (s.mode !== "sign" || s.files.length !== 1) return;
     const crxKey = pickCrxKey();
     if (!crxKey) {
-      s.setError({ message: "Select a CRX signing key first." });
+      s.setError({ message: t("workspace_error_select_crx_key") });
       return;
     }
     s.setError(null);
@@ -1112,19 +1097,16 @@ export function useWorkspaceOperations({
       if (r.valid) {
         s.setOperationDone(true);
         s.setSignatureTone("success");
-        s.setStatusText(`Valid CRX - extension ${r.extensionId}`);
-      } else {
-        s.setError(
-          presentError(
-            r.error,
-            "This file's CRX signature could not be verified.",
-          ),
+        s.setStatusText(
+          t("workspace_status_crx_valid", { id: r.extensionId ?? "" }),
         );
+      } else {
+        s.setError(presentError(r.error, t("workspace_error_crx_invalid")));
       }
     } catch (e) {
       // verifyCrxFile reports malformed input via `valid:false`; anything
       // thrown is unexpected (e.g. the file read failed) -- still surface it.
-      s.setError(presentError(e, "Could not read this file. Try again."));
+      s.setError(presentError(e, t("workspace_error_read_file")));
     } finally {
       s.setLoading(false);
     }
@@ -1196,7 +1178,7 @@ export function useWorkspaceOperations({
     try {
       const ok = await onUnlockWithPassword(blob, s.passwordInput);
       if (!ok) {
-        s.setPasswordError("Wrong password. Check it and try again.");
+        s.setPasswordError(t("workspace_error_wrong_key_password"));
         s.setLoading(false);
         return;
       }
@@ -1206,7 +1188,9 @@ export function useWorkspaceOperations({
     } catch (e) {
       // The prompt is a single password field, so surface just the
       // curated message inline (no room for the detail line here).
-      s.setPasswordError(presentError(e, "Unlock failed. Try again.").message);
+      s.setPasswordError(
+        presentError(e, t("workspace_error_unlock_failed")).message,
+      );
       s.setLoading(false);
     }
   };

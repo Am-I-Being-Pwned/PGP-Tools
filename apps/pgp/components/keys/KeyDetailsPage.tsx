@@ -20,6 +20,7 @@ import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { ComponentKeyRow } from "./key-facts";
 import type { KeyPreviewChip } from "./KeyPreviewBody";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
+import { t } from "../../lib/i18n";
 import { downloadPublicKey } from "../../lib/keys/export-bundle";
 import { parseKey, parseKeyDetails } from "../../lib/pgp/wasm";
 import {
@@ -125,7 +126,7 @@ function RevocationSection({
     // exported private key (sensitive = pref-driven wipe).
     void copy(certificate, {
       sensitive: true,
-      label: "Revocation certificate",
+      label: t("keys_revocation_certificate"),
     });
   };
 
@@ -135,13 +136,11 @@ function RevocationSection({
     setGenError(null);
     try {
       setCertificate(await onGenerate());
-      toast.success("Revocation certificate created", {
+      toast.success(t("keys_revocation_created"), {
         id: "revocation-created",
       });
     } catch (e) {
-      setGenError(
-        errorMessage(e, "Could not create a revocation certificate."),
-      );
+      setGenError(errorMessage(e, t("keys_revocation_create_failed")));
     } finally {
       setGenerating(false);
     }
@@ -149,24 +148,22 @@ function RevocationSection({
 
   return (
     <div>
-      <h3 className="mb-2 text-xs font-semibold">Revocation certificate</h3>
+      <h3 className="mb-2 text-xs font-semibold">
+        {t("keys_revocation_certificate")}
+      </h3>
       <div className="border-border space-y-2 rounded-md border p-2.5">
         <p className="text-muted-foreground text-xs">
           {certificate
-            ? "If this key is ever lost or compromised, publishing this " +
-              "certificate tells your contacts to stop using the key. Back " +
-              "it up somewhere safe - anyone who holds it can revoke your key."
-            : "This key was imported without a revocation certificate. " +
-              "Create one now and back it up, so you can revoke the key " +
-              "later even if you lose access to it."}
+            ? t("keys_revocation_have_body")
+            : t("keys_revocation_missing_body")}
         </p>
         {certificate ? (
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={handleDownload}>
-              Download
+              {t("common_download")}
             </Button>
             <Button variant="outline" size="sm" onClick={handleCopy}>
-              Copy
+              {t("common_copy")}
             </Button>
           </div>
         ) : (
@@ -177,7 +174,9 @@ function RevocationSection({
               onClick={() => void handleGenerate()}
               disabled={generating || !onGenerate}
             >
-              {generating ? "Creating..." : "Create revocation certificate"}
+              {generating
+                ? t("keys_revocation_creating")
+                : t("keys_revocation_create")}
             </Button>
             {genError && (
               <p className="text-destructive text-xs" role="alert">
@@ -239,7 +238,7 @@ export function KeyDetailsPage({
     : target.contact.lastUsedAt;
   const addedAt = isOwn ? target.keyBlob.createdAt : target.contact.addedAt;
 
-  const primaryUserId = userIds[0] ?? "Unknown";
+  const primaryUserId = userIds[0] ?? t("keys_unknown_name");
   const { name: rawName, email, comment } = parseUserId(primaryUserId);
   const realName = comment ? `${rawName} (${comment})` : rawName;
   // Local alias wins as the headline; the real identity moves to a
@@ -263,26 +262,27 @@ export function KeyDetailsPage({
   const chips: KeyPreviewChip[] = [];
   if (isDefault) {
     chips.push({
-      label: "Default",
-      title: "Used by default for signing, decrypting, and encrypt-to-self",
+      label: t("keys_default_badge"),
+      title: t("keys_default_title"),
     });
   }
   chips.push({
-    label: isOwn ? "Your key" : "Contact",
-    title: isOwn ? "You hold the private key" : "You hold their public key",
+    label: isOwn ? t("keys_chip_your_key") : t("keys_chip_contact"),
+    title: isOwn ? t("keys_chip_your_key_title") : t("keys_chip_contact_title"),
   });
   if (isSsh) {
     chips.push({
       label: "SSH",
-      title:
-        "An SSH key, used with age. It can't be combined with PGP recipients in one message.",
+      title: t("keys_ssh_chip_title"),
     });
   }
   if (isOwn) {
     chips.push({
       label:
-        target.keyBlob.protection.method === "passkey" ? "Passkey" : "Password",
-      title: "How the private key is protected at rest",
+        target.keyBlob.protection.method === "passkey"
+          ? t("keys_protection_passkey")
+          : t("keys_protection_password"),
+      title: t("keys_chip_protection_title"),
     });
   }
 
@@ -302,7 +302,7 @@ export function KeyDetailsPage({
         setDetails(keyDetails);
       })
       .catch(() => {
-        if (!cancelled) setError("Could not parse this key.");
+        if (!cancelled) setError(t("keys_parse_failed"));
       });
     return () => {
       cancelled = true;
@@ -361,7 +361,7 @@ export function KeyDetailsPage({
       await setContactRecipientDisabled(target.contact.keyId, keyId, disable);
     } catch (e) {
       setRecipients(previous);
-      toast.error(errorMessage(e, "Could not save this change."));
+      toast.error(errorMessage(e, t("keys_save_failed")));
     } finally {
       setSavingKeyId(null);
     }
@@ -385,10 +385,10 @@ export function KeyDetailsPage({
       <span className="flex items-center gap-1.5">
         {off && (
           <span
-            title="Messages to this contact are not encrypted to this key."
+            title={t("keys_recipient_off_title")}
             className="rounded-full border border-amber-500/40 bg-amber-500/10 px-1.5 py-px text-[10px] font-medium text-amber-400"
           >
-            Not used
+            {t("keys_recipient_not_used")}
           </span>
         )}
         <button
@@ -396,22 +396,22 @@ export function KeyDetailsPage({
           disabled={busy || lastActive}
           title={
             lastActive
-              ? "This is the only key left in use. Turning it off too would encrypt messages to nobody."
+              ? t("keys_recipient_last_active_title")
               : off
-                ? "Encrypt to this key again."
-                : "Stop encrypting to this key. It stays listed here."
+                ? t("keys_recipient_enable_title")
+                : t("keys_recipient_disable_title")
           }
           onClick={() => void handleToggleRecipient(recipient.keyId, !off)}
           className="text-muted-foreground hover:text-foreground rounded border px-1.5 py-px text-[10px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {off ? "Use" : "Don't use"}
+          {off ? t("keys_recipient_use") : t("keys_recipient_dont_use")}
         </button>
       </span>
     );
   };
 
   const handleCopyPublicKey = () => {
-    void copy(armored, { label: "Public key" });
+    void copy(armored, { label: t("common_public_key") });
   };
 
   const handleDownloadPublicKey = () => {
@@ -429,17 +429,17 @@ export function KeyDetailsPage({
   return (
     <SlideOverPanel
       entered={entered}
-      ariaLabel={`Key details for ${name}`}
+      ariaLabel={t("keys_details_aria", { name })}
       onDismiss={close}
     >
-      <SlideOverHeader title="Key details" onBack={close}>
+      <SlideOverHeader title={t("keys_key_details")} onBack={close}>
         {onEncryptTo && (
-          <IconAction label="Encrypt to" onClick={onEncryptTo}>
+          <IconAction label={t("keys_encrypt_to")} onClick={onEncryptTo}>
             <LockIcon className="h-4 w-4" />
           </IconAction>
         )}
         {onRename && (
-          <IconAction label="Rename" onClick={onRename}>
+          <IconAction label={t("keys_rename")} onClick={onRename}>
             <PencilIcon className="h-4 w-4" />
           </IconAction>
         )}
@@ -450,11 +450,11 @@ export function KeyDetailsPage({
             of this action that does something useful for an SSH key. */}
         {onSetDefault && !isSsh && (
           <IconAction
-            label={isDefault ? "Remove default" : "Set as default key"}
+            label={isDefault ? t("keys_remove_default") : t("keys_set_default")}
             onClick={() => {
               onSetDefault(!isDefault);
               toast.success(
-                isDefault ? "Default key removed" : "Default key set",
+                isDefault ? t("keys_default_removed") : t("keys_default_set"),
                 { id: "default-key-toggled" },
               );
             }}
@@ -466,18 +466,21 @@ export function KeyDetailsPage({
             )}
           </IconAction>
         )}
-        <IconAction label="Copy public key" onClick={handleCopyPublicKey}>
+        <IconAction
+          label={t("keys_copy_public_key")}
+          onClick={handleCopyPublicKey}
+        >
           <CopyIcon className="h-4 w-4" />
         </IconAction>
         <IconAction
-          label="Download public key"
+          label={t("keys_download_public_key")}
           onClick={handleDownloadPublicKey}
         >
           <DownloadIcon className="h-4 w-4" />
         </IconAction>
         {onDelete && (
           <IconAction
-            label={isOwn ? "Delete key" : "Remove contact"}
+            label={isOwn ? t("keys_delete_key") : t("keys_remove_contact")}
             onClick={onDelete}
           >
             <Trash2Icon className="h-4 w-4" />

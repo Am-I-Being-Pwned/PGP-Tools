@@ -1,12 +1,8 @@
 import { CheckIcon } from "lucide-react";
 
 import type { PresetId } from "../../lib/presets";
+import { t } from "../../lib/i18n";
 import { describeBundle, PRESET_IDS, PRESETS } from "../../lib/presets";
-
-/** Extra transparency line on the strictest preset's card: even it
- *  keeps encrypt-to-self on, and where to turn that off. */
-const PARANOID_ENCRYPT_TO_SELF_NOTE =
-  "Your messages stay readable by you - turn off 'Also encrypt to me' later if even that is a risk.";
 
 interface PresetPickerProps {
   /** Currently selected preset, or null when none is. */
@@ -30,7 +26,11 @@ export function PresetPicker({
   onSelect,
 }: PresetPickerProps) {
   return (
-    <div className="space-y-2" role="radiogroup" aria-label="Security preset">
+    <div
+      className="space-y-2"
+      role="radiogroup"
+      aria-label={t("shared_security_preset")}
+    >
       {PRESET_IDS.map((id) => {
         const preset = PRESETS[id];
         const isSelected = selected === id;
@@ -51,12 +51,12 @@ export function PresetPicker({
               <span className="text-sm font-medium">{preset.title}</span>
               {activeId === id && (
                 <span className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-[10px] font-medium">
-                  Current
+                  {t("shared_preset_current")}
                 </span>
               )}
               {preset.recommended && (
                 <span className="bg-primary/10 text-primary rounded px-1.5 py-0.5 text-[10px] font-medium">
-                  Recommended
+                  {t("shared_preset_recommended")}
                 </span>
               )}
             </div>
@@ -70,10 +70,13 @@ export function PresetPicker({
                   <span>{line}</span>
                 </li>
               ))}
+              {/* Extra transparency line on the strictest preset's card:
+                  even it keeps encrypt-to-self on, and where to turn that
+                  off. */}
               {id === "paranoid" && (
                 <li className="flex items-start gap-1.5">
                   <CheckIcon className="mt-0.5 h-3 w-3 shrink-0" />
-                  <span>{PARANOID_ENCRYPT_TO_SELF_NOTE}</span>
+                  <span>{t("shared_preset_paranoid_note")}</span>
                 </li>
               )}
             </ul>

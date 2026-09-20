@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import type { PublicContactKey } from "../../lib/storage/contacts";
+import { t } from "../../lib/i18n";
 import { parseKeys } from "../../lib/pgp/wasm";
 import { parseUserId } from "../../lib/utils/key-naming";
 
@@ -78,13 +79,13 @@ export function DetectedKeyBanner({
     // nothing: it implies we don't have it.
     return (
       <div className="rounded-md bg-green-500/10 px-3 py-2 text-xs text-green-400">
-        You already have {key.name}&apos;s key.{" "}
+        {t("workspace_detected_key_known", { name: key.name })}{" "}
         <button
           type="button"
           onClick={() => onReveal?.(key.keyId)}
           className="underline"
         >
-          Show it in your keys
+          {t("workspace_detected_key_show")}
         </button>
       </div>
     );
@@ -93,16 +94,18 @@ export function DetectedKeyBanner({
   return (
     <div className="rounded-md bg-blue-500/10 px-3 py-2 text-xs text-blue-400">
       {key
-        ? `${source === "message" ? "This message contains" : "This is"} ${key.name}'s public key. `
+        ? source === "message"
+          ? t("workspace_detected_key_in_message", { name: key.name })
+          : t("workspace_detected_key_pasted", { name: key.name })
         : source === "message"
-          ? "This message contains someone's public key. "
-          : "This looks like someone's public key. "}
+          ? t("workspace_detected_key_in_message_anon")
+          : t("workspace_detected_key_pasted_anon")}{" "}
       <button
         type="button"
         onClick={() => onImport(getText())}
         className="underline"
       >
-        Import it as a contact
+        {t("workspace_detected_key_import")}
       </button>
     </div>
   );

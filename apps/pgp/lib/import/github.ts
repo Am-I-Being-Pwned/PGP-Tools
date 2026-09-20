@@ -3,6 +3,7 @@ import type { ContactRecipient, PublicContactKey } from "../storage/contacts";
 import type { PreparedImport } from "./prepare";
 import type { ContactGroup, IncomingKey, RejectedLine } from "./types";
 import { MAX_KEYS } from "../github/response";
+import { t, tn } from "../i18n";
 import { parseSshRecipient } from "../pgp/wasm";
 import { contactRecipients, sameSource } from "../storage/contacts";
 import { engineRejection } from "./prepare";
@@ -38,6 +39,8 @@ export interface GithubStoredContacts {
  *  the name, marked with where it came from. It goes in `userIds[0]`,
  *  the one field every consumer reads for "who is this". */
 export function githubLabel(username: string): string {
+  // Provenance tag, not prose: it is persisted in the contact record and
+  // asserted on by tests, so it stays locale-independent.
   return `${username} (GitHub)`;
 }
 
@@ -57,11 +60,6 @@ export function githubGroup(
     members,
     rejected,
   };
-}
-
-/** "1 key added" / "2 keys removed". */
-function keyCount(n: number, verb: string): string {
-  return `${n} key${n === 1 ? "" : "s"} ${verb}`;
 }
 
 /**
@@ -116,7 +114,9 @@ export function classifyGithubGroup(
     publicArmored: head.armored,
   };
 
-  const existing = contacts.find((c) => sameSource(c, { source: group.source }));
+  const existing = contacts.find((c) =>
+    sameSource(c, { source: group.source }),
+  );
   if (!existing) return { ...withHead, status: "new", changes: [] };
 
   const stored = new Set(contactRecipients(existing).map((r) => r.keyId));
@@ -137,8 +137,8 @@ export function classifyGithubGroup(
     ...withHead,
     status: "update",
     changes: [
-      ...(added > 0 ? [keyCount(added, "added")] : []),
-      ...(removed > 0 ? [keyCount(removed, "removed")] : []),
+      ...(added > 0 ? [tn("import_change_keys_added", added)] : []),
+      ...(removed > 0 ? [tn("import_change_keys_removed", removed)] : []),
     ],
     existingAddedAt: existing.addedAt,
   };
@@ -151,7 +151,7 @@ export function classifyGithubGroup(
 function groupRejection(group: ContactGroup): string {
   const reasons = new Set(group.rejected.map((r) => r.reason));
   if (reasons.size === 1) return [...reasons][0];
-  return "None of the published keys can be used for encryption.";
+  return t("import_github_none_usable");
 }
 
 export interface PrepareGithubOptions {
@@ -193,8 +193,12 @@ export async function prepareGithubImport(
   // level up.
   if (omitted > 0) {
     rejected.push({
-      line: `+${omitted} more published key${omitted === 1 ? "" : "s"}`,
-      reason: `This import takes at most ${MAX_KEYS} keys per account, and skips any single key that is implausibly long. ${omitted} of ${username}'s published keys weren't fetched - paste one here if you need it.`,
+      line: tn("import_github_omitted_line", omitted),
+      reason: t("import_github_omitted_reason", {
+        max: MAX_KEYS,
+        count: omitted,
+        username,
+      }),
     });
   }
 
@@ -257,10 +261,10 @@ export interface GithubFailureCopy {
  *  countdown would just be wrong a second later. */
 function resetHint(resetAt: number, now: number): string {
   const minutes = Math.ceil((resetAt - now) / 60_000);
-  if (minutes <= 1) return "Try again in a minute.";
-  if (minutes < 60) return `Try again in about ${minutes} minutes.`;
+  if (minutes <= 1) return t("import_retry_minute");
+  if (minutes < 60) return tn("import_retry_minutes", minutes);
   const hours = Math.ceil(minutes / 60);
-  return `Try again in about ${hours} hour${hours === 1 ? "" : "s"}.`;
+  return tn("import_retry_hours", hours);
 }
 
 export function githubFailureCopy(
@@ -273,25 +277,23 @@ export function githubFailureCopy(
     case "invalid-username":
       return {
         tone: "error",
-        message:
-          "That isn't a GitHub username. Use the account name from the profile URL, e.g. “octocat” for github.com/octocat.",
+        message: t("import_github_invalid_username"),
       };
     case "not-found":
       return {
         tone: "error",
-        message: `There's no GitHub account called “${username}”. Check the spelling - the name in the profile URL is the one to use.`,
+        message: t("import_github_not_found", { username }),
       };
     case "no-keys":
       // Not an error: nothing failed, and the user has nothing to fix.
       return {
         tone: "notice",
-        message: `${username} hasn't published any SSH keys on GitHub. Ask them to add one at github.com/settings/keys, or paste their key here instead.`,
+        message: t("import_github_no_keys", { username }),
       };
     case "offline":
       return {
         tone: "error",
-        message:
-          "Couldn't reach github.com. Check your connection and try again.",
+        message: t("import_github_offline"),
       };
     case "rate-limited":
       return {
@@ -301,7 +303,7 @@ export function githubFailureCopy(
           // too many requests" -- is usually wrong. The lookup is
           // unauthenticated, so GitHub counts per IP address: an office,
           // a VPN or a campus network shares one budget.
-          "GitHub is rate-limiting this network. The limit is counted per IP address, so it can be used up by other people on the same connection.",
+          t("import_github_rate_limited"),
           resetAt !== undefined ? resetHint(resetAt, now) : "",
         ]
           .filter(Boolean)
@@ -310,7 +312,7 @@ export function githubFailureCopy(
     case "server-error":
       return {
         tone: "error",
-        message: "GitHub couldn't answer just now. Try again in a moment.",
+        message: t("import_github_server_error"),
       };
   }
 }

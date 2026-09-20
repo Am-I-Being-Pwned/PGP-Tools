@@ -151,7 +151,7 @@ export default defineConfig({
       128: "icon-128.png",
     },
     action: {
-      default_title: "PGP Tools",
+      default_title: "__MSG_app_action_title__",
       default_icon: {
         16: "icon-16.png",
         32: "icon-32.png",
@@ -170,31 +170,31 @@ export default defineConfig({
           default: "Alt+Shift+G",
           mac: "Alt+Shift+G",
         },
-        description: "Open PGP Tools",
+        description: "__MSG_app_cmd_open__",
       },
       "open-encrypt": {
         suggested_key: {
           default: "Alt+Shift+E",
           mac: "Alt+Shift+E",
         },
-        description: "Open PGP Tools in Encrypt mode",
+        description: "__MSG_app_cmd_open_encrypt__",
       },
       "open-decrypt": {
         suggested_key: {
           default: "Alt+Shift+D",
           mac: "Alt+Shift+D",
         },
-        description: "Open PGP Tools in Decrypt mode",
+        description: "__MSG_app_cmd_open_decrypt__",
       },
       "open-sign": {
         suggested_key: {
           default: "Alt+Shift+S",
           mac: "Alt+Shift+S",
         },
-        description: "Open PGP Tools in Sign mode",
+        description: "__MSG_app_cmd_open_sign__",
       },
       "open-verify": {
-        description: "Open PGP Tools in Verify mode",
+        description: "__MSG_app_cmd_open_verify__",
       },
     },
     side_panel: {

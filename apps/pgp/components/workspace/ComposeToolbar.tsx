@@ -27,12 +27,13 @@ import {
 
 import type { TranslationStatus } from "../../lib/ai/run-translation";
 import type { InlineStyle } from "../../lib/compose/text-format";
-import { languageLabel, TRANSLATION_LANGUAGES } from "../../lib/ai/languages";
+import { languageLabel, translationLanguages } from "../../lib/ai/languages";
 import {
   FIND_SHORTCUT,
   STYLE_LABELS,
   STYLE_SHORTCUTS,
 } from "../../lib/compose/shortcuts";
+import { t } from "../../lib/i18n";
 import { HoverLabel } from "./TranslationPanel";
 
 export interface ComposeTranslateProps {
@@ -85,7 +86,7 @@ export function ComposeToolbar({
   return (
     <div
       role="toolbar"
-      aria-label="Message tools"
+      aria-label={t("workspace_message_tools")}
       className="border-border bg-background/90 pointer-events-auto flex items-center gap-0.5 rounded-md border p-0.5 shadow-sm backdrop-blur"
     >
       {STYLE_ORDER.map((style) => {
@@ -113,10 +114,10 @@ export function ComposeToolbar({
 
       <span aria-hidden className="bg-border mx-0.5 h-4 w-px" />
 
-      <HoverLabel label="Find and replace">
+      <HoverLabel label={t("workspace_find_replace")}>
         <button
           type="button"
-          aria-label="Find and replace"
+          aria-label={t("workspace_find_replace")}
           aria-keyshortcuts={ariaKeyShortcuts(FIND_SHORTCUT, mac)}
           onClick={onFind}
           tabIndex={-1}
@@ -145,10 +146,10 @@ function TranslateMenu({
   // "Translate" until a language has been picked: a guessed default
   // would put a language the user never asked for on the button.
   const label = busy
-    ? "Translating..."
+    ? t("workspace_translating")
     : targetLanguage
-      ? `Translate to ${languageLabel(targetLanguage)}`
-      : "Translate";
+      ? t("workspace_translate_to", { language: languageLabel(targetLanguage) })
+      : t("workspace_translate");
 
   return (
     <>
@@ -179,12 +180,15 @@ function TranslateMenu({
         <PopoverContent align="end" side="top" className="w-56 p-0">
           {/* cmdk does the filtering: the search box IS the language
             picker, so a long list costs nothing to use. */}
-          <Command label="Translate the message to">
-            <CommandInput placeholder="Search languages" autoFocus />
+          <Command label={t("workspace_translate_menu_heading")}>
+            <CommandInput
+              placeholder={t("workspace_search_languages")}
+              autoFocus
+            />
             <CommandList className="max-h-60">
-              <CommandEmpty>No such language.</CommandEmpty>
-              <CommandGroup heading="Translate the message to">
-                {TRANSLATION_LANGUAGES.map((l) => (
+              <CommandEmpty>{t("workspace_no_such_language")}</CommandEmpty>
+              <CommandGroup heading={t("workspace_translate_menu_heading")}>
+                {translationLanguages().map((l) => (
                   <CommandItem
                     key={l.code}
                     value={`${l.label} ${l.code}`}
@@ -209,7 +213,7 @@ function TranslateMenu({
                       onUndo();
                     }}
                   >
-                    Restore the original
+                    {t("workspace_restore_original")}
                   </CommandItem>
                 </CommandGroup>
               )}

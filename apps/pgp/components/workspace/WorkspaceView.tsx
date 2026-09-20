@@ -49,9 +49,10 @@ import { applyTextareaEdit } from "../../lib/compose/apply-edit";
 import {
   buildEncryptRecipients,
   resolveSelectedRecipients,
-  SSH_PASSWORD_REASON,
+  sshPasswordReason,
   toSelectedRecipient,
 } from "../../lib/encrypt-recipients";
+import { t } from "../../lib/i18n";
 import { requestUnlimitedHistoryStorage } from "../../lib/storage/history";
 import { isPgpRecord, isSshRecord } from "../../lib/storage/key-kind";
 import { savePreferences } from "../../lib/storage/preferences";
@@ -68,7 +69,7 @@ import { RecipientPicker } from "./RecipientPicker";
 import { TranslateToggle, TranslationNote } from "./TranslationPanel";
 import { useWorkspaceOperations } from "./useWorkspaceOperations";
 import { useWorkspaceState } from "./useWorkspaceState";
-import { WorkspaceInput } from "./WorkspaceInput";
+import { modeLabel, WorkspaceInput } from "./WorkspaceInput";
 import { WorkspaceResults } from "./WorkspaceResults";
 
 /** mod+Enter mirrors the main action button (Encrypt/Decrypt/Sign/...). */
@@ -257,11 +258,17 @@ export function WorkspaceView({
     readingLanguage: translationTargetLanguage,
     onTranslated: (from, to) =>
       toast.message(
-        `Translated from ${languageLabel(from)} to ${languageLabel(to)}`,
+        t("workspace_compose_translated", {
+          from: languageLabel(from),
+          to: languageLabel(to),
+        }),
         {
           id: "compose-translated",
           duration: 6000,
-          action: { label: "Undo", onClick: () => composeTranslation.undo() },
+          action: {
+            label: t("workspace_undo"),
+            onClick: () => composeTranslation.undo(),
+          },
         },
       ),
   });
@@ -309,12 +316,14 @@ export function WorkspaceView({
     switch (composeStatus.kind) {
       case "same-language":
         toast.message(
-          `That is already your language (${languageLabel(composeStatus.language)}).`,
+          t("workspace_compose_same_language", {
+            language: languageLabel(composeStatus.language),
+          }),
           { id: "compose-translate" },
         );
         break;
       case "unavailable":
-        toast.message("Translation is not available for that language here.", {
+        toast.message(t("workspace_compose_translate_unavailable"), {
           id: "compose-translate",
         });
         break;
@@ -425,14 +434,14 @@ export function WorkspaceView({
     if (!crxResult) return;
     const result = await saveCrxViaPrompt(crxResult.data, crxFilename);
     if (result === "saved") {
-      s.setStatusText(`Saved ${crxFilename}.`);
+      s.setStatusText(t("workspace_crx_saved", { name: crxFilename }));
     } else if (result === "cancelled") {
       s.setStatusText(null);
     } else {
       // Permission refused / unsupported / write blocked. The Save button
       // stays on screen so the user can retry from a fresh user gesture (the
       // first-time `downloads` permission grant needs one).
-      s.setStatusText("Couldn't save automatically - hit Save to try again.");
+      s.setStatusText(t("workspace_crx_save_failed"));
     }
   };
 
@@ -477,9 +486,9 @@ export function WorkspaceView({
   // neither can it if none of the user's own keys is a PGP key.
   const signBlockedReason =
     encryptEngine === "ssh"
-      ? "age messages can't be signed - SSH keys have no signature format here."
+      ? t("workspace_sign_blocked_age")
       : signKeyChoices.length === 0
-        ? "signing needs an OpenPGP key of your own - SSH keys can't sign."
+        ? t("workspace_sign_blocked_no_pgp_key")
         : undefined;
   // Asked of the same function the encrypt runs through, rather than
   // re-derived: whether the user's own key rides along depends on the
@@ -531,13 +540,13 @@ export function WorkspaceView({
     toast.message(message, {
       id: "workspace-text-cleared",
       duration: 4000,
-      action: { label: "Undo", onClick: restoreCleared },
+      action: { label: t("workspace_undo"), onClick: restoreCleared },
     });
   };
 
   const clearBoxUndoable = () => {
     if (!s.hasInput && s.files.length === 0) return;
-    clearWithUndo("Workspace cleared");
+    clearWithUndo(t("workspace_cleared_toast"));
     // A cleared box invites retyping: focus it (next tick -- resetAll may
     // have just remounted the textarea in place of the file list).
     setTimeout(() => document.getElementById("pgp-input")?.focus(), 0);
@@ -551,7 +560,7 @@ export function WorkspaceView({
       s.resetAll();
       return;
     }
-    clearWithUndo("Text cleared");
+    clearWithUndo(t("workspace_text_cleared_toast"));
   };
 
   useShortcut({ mod: true, key: "z" }, restoreCleared, {
@@ -869,7 +878,7 @@ export function WorkspaceView({
             onClick={s.resetOutput}
           >
             <ArrowLeftIcon className="h-4 w-4" />
-            Back
+            {t("common_back")}
           </Button>
         </div>
         <WorkspaceResults
@@ -910,7 +919,7 @@ export function WorkspaceView({
                 )}
               >
                 <DownloadIcon className="h-4 w-4" />
-                Download
+                {t("common_download")}
               </Button>
             </ShortcutHint>
             <ShortcutHint shortcut={COPY_SHORTCUT}>
@@ -929,7 +938,7 @@ export function WorkspaceView({
                 ) : (
                   <ClipboardIcon className="h-4 w-4" />
                 )}
-                {copied ? "Copied" : "Copy"}
+                {copied ? t("common_copied") : t("common_copy")}
               </Button>
             </ShortcutHint>
           </div>
@@ -937,8 +946,8 @@ export function WorkspaceView({
             variant="outline"
             size="icon"
             onClick={s.resetAll}
-            title="Clear input and output"
-            aria-label="Clear input and output"
+            title={t("workspace_clear_input_output")}
+            aria-label={t("workspace_clear_input_output")}
           >
             <RotateCcwIcon className="h-4 w-4" />
           </Button>
@@ -998,7 +1007,7 @@ export function WorkspaceView({
             // with their own reason rather than being silently
             // unpickable.
             passwordArmed={s.encryptPasswordReady}
-            label="Recipients"
+            label={t("workspace_recipients_label")}
             // Only offer contacts you can actually encrypt to. Sign-only
             // keys are valid contacts (for verification) but have no
             // encryption key. Legacy records (undefined) are assumed
@@ -1014,9 +1023,9 @@ export function WorkspaceView({
               s.setSelectedRecipientIds(ids);
               s.resetOutput();
             }}
-            emptyText="No contacts yet"
+            emptyText={t("workspace_no_contacts_yet")}
             emptyAction={onNavigateToKeys}
-            emptyActionLabel="Add a contact"
+            emptyActionLabel={t("workspace_add_a_contact")}
           />
         )}
 
@@ -1025,7 +1034,7 @@ export function WorkspaceView({
             mixing impossible -- just the name of the thing being made. */}
         {needsRecipient && encryptEngine === "ssh" && (
           <p className="text-muted-foreground pl-2 text-xs">
-            age message - SSH recipients can't be mixed with PGP
+            {t("workspace_age_message_note")}
           </p>
         )}
 
@@ -1040,7 +1049,7 @@ export function WorkspaceView({
               className="flex-1"
               onClick={() => s.setSignKind("crx")}
             >
-              Chrome extension (.crx)
+              {t("workspace_sign_kind_crx")}
             </Button>
             <Button
               variant={s.signKind === "pgp" ? "default" : "outline"}
@@ -1048,14 +1057,18 @@ export function WorkspaceView({
               className="flex-1"
               onClick={() => s.setSignKind("pgp")}
             >
-              PGP signature
+              {t("workspace_sign_kind_pgp")}
             </Button>
           </div>
         )}
 
         {needsPrivateKey && !showCrxSign && (
           <KeySelector
-            label={s.mode === "sign" ? "Sign with" : "Decrypt with"}
+            label={
+              s.mode === "sign"
+                ? t("workspace_sign_with")
+                : t("workspace_decrypt_with")
+            }
             // An age message can only be opened by an SSH identity, so
             // offering the PGP keys here would be offering keys that
             // cannot work. Narrowed rather than dimmed: this is a "which
@@ -1064,9 +1077,9 @@ export function WorkspaceView({
             keys={s.mode === "sign" ? signKeyChoices : decryptKeyChoices}
             selectedKeyId={s.selectedKeyId}
             onSelect={ops.selectPrivateKey}
-            emptyText="No keys yet"
+            emptyText={t("workspace_no_keys_yet")}
             emptyAction={onNavigateToKeys}
-            emptyActionLabel="Create one"
+            emptyActionLabel={t("workspace_create_one")}
           />
         )}
 
@@ -1074,14 +1087,14 @@ export function WorkspaceView({
         {showCrxSign && crxKeys && crxKeys.length > 0 && (
           <div>
             <label className="text-muted-foreground mb-1 block text-xs font-medium">
-              Sign with
+              {t("workspace_sign_with")}
             </label>
             <Select
               value={s.selectedCrxKeyId ?? ""}
               onValueChange={(v) => s.setSelectedCrxKeyId(v)}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select a signing key" />
+                <SelectValue placeholder={t("workspace_select_signing_key")} />
               </SelectTrigger>
               <SelectContent>
                 {crxKeys.map((k) => (
@@ -1112,7 +1125,7 @@ export function WorkspaceView({
                   pressed={s.encryptToSelf}
                   onPressedChange={setEncryptToSelfPref}
                 >
-                  Also encrypt to me
+                  {t("workspace_toggle_encrypt_to_self")}
                 </ToggleBadge>
               )}
               {/* Symmetric encryption, and ADDITIVE: it adds a password
@@ -1137,7 +1150,7 @@ export function WorkspaceView({
                   // hidden, the rule this app states for every other
                   // unavailable control.
                   disabledReason={
-                    encryptEngine === "ssh" ? SSH_PASSWORD_REASON : undefined
+                    encryptEngine === "ssh" ? sshPasswordReason() : undefined
                   }
                   onPressedChange={(v) => {
                     // Un-pressing drops the password rather than parking
@@ -1148,7 +1161,7 @@ export function WorkspaceView({
                     s.resetOutput();
                   }}
                 >
-                  Password
+                  {t("workspace_toggle_password")}
                 </ToggleBadge>
               }
               {myKeys.length > 0 && (
@@ -1157,7 +1170,7 @@ export function WorkspaceView({
                   onPressedChange={setAlsoSignPref}
                   disabledReason={signBlockedReason}
                 >
-                  Sign
+                  {t("common_sign")}
                 </ToggleBadge>
               )}
               {s.files.length > 1 && (
@@ -1168,7 +1181,7 @@ export function WorkspaceView({
                     s.resetOutput();
                   }}
                 >
-                  Zip files
+                  {t("workspace_toggle_zip_files")}
                 </ToggleBadge>
               )}
               {/* Never-cache means no history, ever: the toggle and the
@@ -1179,7 +1192,7 @@ export function WorkspaceView({
                     pressed={s.saveToHistory}
                     onPressedChange={setSaveToHistoryPref}
                   >
-                    Save to history
+                    {t("workspace_toggle_save_to_history")}
                   </ToggleBadge>
                   <HistoryButton enabled={s.saveToHistory} />
                 </>
@@ -1190,7 +1203,7 @@ export function WorkspaceView({
                 dimmed with its reason, and this selector goes. */}
             {s.alsoSign && !signBlockedReason && signKeyChoices.length > 1 && (
               <KeySelector
-                label="Sign with"
+                label={t("workspace_sign_with")}
                 keys={signKeyChoices}
                 selectedKeyId={s.selectedKeyId}
                 onSelect={ops.selectPrivateKey}
@@ -1198,17 +1211,17 @@ export function WorkspaceView({
             )}
             {s.encryptToSelf && selfExcluded && (
               <p className="text-muted-foreground pl-2 text-xs">
-                You won't be able to read this one:{" "}
+                {t("workspace_self_excluded_intro")}{" "}
                 {encryptEngine === "ssh"
-                  ? "you have no SSH key of your own, and an age message can't include a PGP one."
-                  : "none of your own keys can be added to this message."}{" "}
+                  ? t("workspace_self_excluded_age")
+                  : t("workspace_self_excluded_pgp")}{" "}
                 {onNavigateToKeys && (
                   <button
                     type="button"
                     onClick={() => onNavigateToKeys()}
                     className="text-primary underline"
                   >
-                    Import one
+                    {t("workspace_import_one")}
                   </button>
                 )}
               </p>
@@ -1228,8 +1241,8 @@ export function WorkspaceView({
               // is carrying the whole distinction.
               placeholder={
                 s.pendingPasswordDecrypt
-                  ? "Enter message password"
-                  : "Enter key password"
+                  ? t("workspace_enter_message_password")
+                  : t("workspace_enter_key_password")
               }
               value={s.passwordInput}
               onChange={(e) => s.setPasswordInput(e.target.value)}
@@ -1247,15 +1260,15 @@ export function WorkspaceView({
             >
               {showLoadingLabel
                 ? s.pendingPasswordDecrypt
-                  ? "Decrypting..."
-                  : "Unlocking..."
+                  ? t("workspace_decrypting")
+                  : t("workspace_unlocking")
                 : s.pendingCrxSign
-                  ? "Sign"
+                  ? t("common_sign")
                   : s.mode === "decrypt"
-                    ? "Decrypt"
+                    ? t("common_decrypt")
                     : s.mode === "sign"
-                      ? "Sign"
-                      : "Go"}
+                      ? t("common_sign")
+                      : t("workspace_go")}
             </Button>
           </div>
         )}
@@ -1290,15 +1303,15 @@ export function WorkspaceView({
                 <Button className="flex-1" onClick={() => void handleSaveCrx()}>
                   <span className="flex items-center gap-2">
                     <DownloadIcon className="h-4 w-4" />
-                    Save {crxFilename}
+                    {t("workspace_save_file", { name: crxFilename })}
                   </span>
                 </Button>
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={s.resetAll}
-                  title="Clear input and output"
-                  aria-label="Clear input and output"
+                  title={t("workspace_clear_input_output")}
+                  aria-label={t("workspace_clear_input_output")}
                 >
                   <RotateCcwIcon className="h-4 w-4" />
                 </Button>
@@ -1311,10 +1324,10 @@ export function WorkspaceView({
                 disabled={s.loading}
               >
                 {showLoadingLabel
-                  ? "Verifying..."
+                  ? t("workspace_verifying")
                   : s.operationDone
-                    ? "Reset"
-                    : "Verify signature"}
+                    ? t("workspace_reset")
+                    : t("workspace_verify_signature")}
               </Button>
             ) : showCrxSign ? (
               <Button
@@ -1322,7 +1335,9 @@ export function WorkspaceView({
                 onClick={ops.executeCrxSign}
                 disabled={s.loading}
               >
-                {showLoadingLabel ? "Processing..." : "Sign for Web Store"}
+                {showLoadingLabel
+                  ? t("workspace_processing")
+                  : t("workspace_sign_for_web_store")}
               </Button>
             ) : (
               <div className="flex gap-2">
@@ -1343,7 +1358,7 @@ export function WorkspaceView({
                         )}
                       >
                         <DownloadIcon className="h-4 w-4" />
-                        Download
+                        {t("common_download")}
                       </Button>
                     </ShortcutHint>
                     {s.hasOutput && (
@@ -1363,7 +1378,7 @@ export function WorkspaceView({
                           ) : (
                             <ClipboardIcon className="h-4 w-4" />
                           )}
-                          {copied ? "Copied" : "Copy"}
+                          {copied ? t("common_copied") : t("common_copy")}
                         </Button>
                       </ShortcutHint>
                     )}
@@ -1383,16 +1398,16 @@ export function WorkspaceView({
                     }
                     title={
                       s.mode === "encrypt" && !canEncrypt
-                        ? "Select at least one recipient, or set a password"
+                        ? t("workspace_need_recipient_or_password")
                         : undefined
                     }
                     shortcut={RUN_SHORTCUT}
                   >
                     {showLoadingLabel
-                      ? "Processing..."
+                      ? t("workspace_processing")
                       : s.operationDone && s.mode === "verify"
-                        ? "Reset"
-                        : s.mode}
+                        ? t("workspace_reset")
+                        : modeLabel(s.mode)}
                   </Button>
                 )}
                 {/* Anything clearable (pasted input lingering after a nav
@@ -1404,8 +1419,8 @@ export function WorkspaceView({
                       variant="outline"
                       size="icon"
                       onClick={s.resetAll}
-                      title="Clear input and output"
-                      aria-label="Clear input and output"
+                      title={t("workspace_clear_input_output")}
+                      aria-label={t("workspace_clear_input_output")}
                     >
                       <RotateCcwIcon className="h-4 w-4" />
                     </Button>

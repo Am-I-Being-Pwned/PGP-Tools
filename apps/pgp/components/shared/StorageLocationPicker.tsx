@@ -1,4 +1,6 @@
+import type { MessageKey } from "../../lib/i18n";
 import type { StorageLocation } from "../../lib/storage/preferences";
+import { t } from "../../lib/i18n";
 
 interface StorageLocationPickerProps {
   value: StorageLocation;
@@ -11,20 +13,18 @@ interface StorageLocationPickerProps {
 
 const OPTIONS: {
   id: StorageLocation;
-  label: string;
-  description: string;
+  label: MessageKey;
+  description: MessageKey;
 }[] = [
   {
     id: "local",
-    label: "This device only",
-    description:
-      "Your data stays on this computer. If you switch devices or reinstall, you'll need to set up again.",
+    label: "shared_storage_local_label",
+    description: "shared_storage_local_desc",
   },
   {
     id: "sync",
-    label: "Sync across devices",
-    description:
-      "Your data is synced via your Chrome account. Available anywhere you're signed in.",
+    label: "shared_storage_sync_label",
+    description: "shared_storage_sync_desc",
   },
 ];
 
@@ -45,8 +45,10 @@ export function StorageLocationPicker({
           } ${disabled ? "pointer-events-none" : ""}`}
         >
           <div>
-            <p className="text-sm font-medium">{opt.label}</p>
-            <p className="text-muted-foreground text-xs">{opt.description}</p>
+            <p className="text-sm font-medium">{t(opt.label)}</p>
+            <p className="text-muted-foreground text-xs">
+              {t(opt.description)}
+            </p>
           </div>
           <input
             type="radio"

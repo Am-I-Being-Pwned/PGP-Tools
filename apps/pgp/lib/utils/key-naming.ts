@@ -1,10 +1,12 @@
+import { t } from "../i18n";
+
 /** Parse "Name (comment) <email>" into parts. */
 export function parseUserId(userId: string | undefined): {
   name: string;
   email: string;
   comment?: string;
 } {
-  if (!userId) return { name: "Unknown", email: "" };
+  if (!userId) return { name: t("keys_unknown_name"), email: "" };
   const match = /^(.+?)\s*(?:\((.+?)\)\s*)?<(.+?)>$/.exec(userId);
   if (!match) return { name: userId, email: "" };
   const name = match[1].trim();

@@ -9,6 +9,7 @@ import {
 
 import type { TranslationStatus } from "../../hooks/useTranslation";
 import { languageLabel } from "../../lib/ai/languages";
+import { t } from "../../lib/i18n";
 
 /**
  * The two halves of the result box's footer bar: a status line and the
@@ -91,12 +92,14 @@ export function TranslateToggle({
 
   const label = hasTranslation
     ? showing
-      ? "Show original"
-      : `Show ${languageLabel(targetLanguage)} translation`
-    : `Translate to ${languageLabel(targetLanguage)}`;
+      ? t("workspace_show_original")
+      : t("workspace_show_translation", {
+          language: languageLabel(targetLanguage),
+        })
+    : t("workspace_translate_to", { language: languageLabel(targetLanguage) });
 
   return (
-    <HoverLabel label={busy ? "Working..." : label}>
+    <HoverLabel label={busy ? t("workspace_working") : label}>
       <button
         type="button"
         aria-label={label}
@@ -135,10 +138,12 @@ export function TranslationNote({
 
   switch (status.kind) {
     case "same-language":
-      text = `This message is already in ${languageLabel(status.language)}.`;
+      text = t("workspace_note_same_language", {
+        language: languageLabel(status.language),
+      });
       break;
     case "uncertain":
-      text = "Not sure what language this message is in.";
+      text = t("workspace_note_uncertain");
       break;
     case "downloading":
       // Named and progress-bearing on purpose: this is the one moment
@@ -147,8 +152,11 @@ export function TranslationNote({
       // is one line high and truncates.
       text =
         status.progress > 0
-          ? `Downloading ${status.what}, ${Math.round(status.progress * 100)}%`
-          : `Downloading ${status.what}...`;
+          ? t("workspace_note_downloading_progress", {
+              what: status.what,
+              percent: Math.round(status.progress * 100),
+            })
+          : t("workspace_note_downloading", { what: status.what });
       break;
     case "error":
       text = status.message;
@@ -158,7 +166,9 @@ export function TranslationNote({
       // read. Flipping back to the original must not keep claiming the
       // text on screen was translated.
       text = showing
-        ? `Translated on this device from ${languageLabel(status.from)}.`
+        ? t("workspace_note_translated_from", {
+            language: languageLabel(status.from),
+          })
         : null;
       break;
     default:

@@ -2,6 +2,7 @@ import { CheckIcon, LockIcon } from "lucide-react";
 
 import { Button } from "@amibeingpwned/ui/button";
 
+import { t } from "../../lib/i18n";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 
 interface KeyUnlockRowProps {
@@ -62,7 +63,7 @@ export function KeyUnlockRow({
             disabled={busy}
             onClick={onUnlockPasskey}
           >
-            {busy ? "..." : "Unlock"}
+            {busy ? "..." : t("common_unlock")}
           </Button>
         )}
       </div>
@@ -72,7 +73,7 @@ export function KeyUnlockRow({
           <input
             type="password"
             autoComplete="current-password"
-            placeholder="Key password"
+            placeholder={t("keygen_key_password_placeholder")}
             value={password}
             onChange={(e) => onPasswordChange(e.target.value)}
             onKeyDown={(e) => {
@@ -97,7 +98,7 @@ export function KeyUnlockRow({
             disabled={busy || !password}
             onClick={onUnlockPassword}
           >
-            {busy ? "..." : "Unlock"}
+            {busy ? "..." : t("common_unlock")}
           </Button>
         </div>
       )}

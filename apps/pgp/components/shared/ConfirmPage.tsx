@@ -2,6 +2,7 @@ import { useState } from "react";
 import { TriangleAlertIcon } from "lucide-react";
 
 import { confirmTextMatches } from "../../lib/confirm-text";
+import { t } from "../../lib/i18n";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 import { SubPage } from "./SubPage";
 
@@ -59,7 +60,7 @@ export function ConfirmPage({
           closeOnSuccess: true,
           disabled: confirmBlocked,
         },
-        { type: "outline", text: "Cancel" },
+        { type: "outline", text: t("common_cancel") },
       ]}
     >
       {(api) => (
@@ -78,7 +79,8 @@ export function ConfirmPage({
                 </p>
               )}
               <p className="text-xs">
-                To confirm, type <b>{confirmPromptText}</b> below
+                {t("shared_confirm_type_before")} <b>{confirmPromptText}</b>{" "}
+                {t("shared_confirm_type_after")}
               </p>
               <input
                 type="text"
@@ -90,7 +92,9 @@ export function ConfirmPage({
                   // mismatch is a no-op; Escape still closes via SlideOver.
                   if (e.key === "Enter") api.runAction(0);
                 }}
-                aria-label={`Type "${confirmPromptText}" to confirm`}
+                aria-label={t("shared_confirm_type_aria", {
+                  text: confirmPromptText,
+                })}
                 className={INPUT_CLASS}
               />
             </div>

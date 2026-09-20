@@ -11,6 +11,7 @@ import {
   openCrxKey,
   resealCrxKeyUnderPassword,
 } from "../../lib/crx/operations";
+import { t, tn } from "../../lib/i18n";
 import { backupFileName } from "../../lib/keys/export-bundle";
 import {
   encryptKeyForExportWithHandle,
@@ -20,6 +21,7 @@ import { isWebAuthnCancel } from "../../lib/protection/webauthn-prf";
 import { toast } from "../../lib/toast";
 import { downloadText } from "../../lib/utils/download";
 import { INPUT_CLASS } from "../../lib/utils/styles";
+import { Emphasised } from "../shared/Emphasised";
 import { SubPage } from "../shared/SubPage";
 import { KeyUnlockRow } from "./KeyUnlockRow";
 
@@ -160,7 +162,10 @@ function useExportKeysFlow({
     try {
       const ok = await onUnlockWithPassword(blob, passwords[blob.keyId] ?? "");
       if (!ok) {
-        setUnlockErrors((e) => ({ ...e, [blob.keyId]: "Wrong password." }));
+        setUnlockErrors((e) => ({
+          ...e,
+          [blob.keyId]: t("keygen_error_wrong_password"),
+        }));
       } else {
         setPasswords((p) => ({ ...p, [blob.keyId]: "" }));
       }
@@ -180,7 +185,7 @@ function useExportKeysFlow({
       if (res !== true && res !== "cancelled") {
         setUnlockErrors((e) => ({
           ...e,
-          [blob.keyId]: "Passkey authentication failed.",
+          [blob.keyId]: t("keygen_error_passkey_failed"),
         }));
       }
     } finally {
@@ -209,7 +214,10 @@ function useExportKeysFlow({
       setCrxHandles((h) => ({ ...h, [blob.extensionId]: handle }));
       setCrxPasswords((p) => ({ ...p, [blob.extensionId]: "" }));
     } catch {
-      setCrxErrors((e) => ({ ...e, [blob.extensionId]: "Wrong password." }));
+      setCrxErrors((e) => ({
+        ...e,
+        [blob.extensionId]: t("keygen_error_wrong_password"),
+      }));
     } finally {
       unlockInFlight.current = false;
       setUnlockingId(null);
@@ -234,7 +242,7 @@ function useExportKeysFlow({
       if (!isWebAuthnCancel(e)) {
         setCrxErrors((errs) => ({
           ...errs,
-          [blob.extensionId]: "Passkey authentication failed.",
+          [blob.extensionId]: t("keygen_error_passkey_failed"),
         }));
       }
     } finally {
@@ -275,11 +283,11 @@ function useExportKeysFlow({
     setError(null);
     if (needsPassphrase) {
       if (passphrase.length < 8) {
-        setError("Passphrase must be at least 8 characters.");
+        setError(t("keygen_error_passphrase_short"));
         return;
       }
       if (passphrase !== confirmPassphrase) {
-        setError("Passphrases do not match.");
+        setError(t("keygen_error_passphrase_mismatch"));
         return;
       }
     }
@@ -299,7 +307,7 @@ function useExportKeysFlow({
       );
       if (onExported) onExported(count, false);
       else
-        toast.success(`Exported ${count} key${count === 1 ? "" : "s"}`, {
+        toast.success(tn("keygen_export_toast_exported", count), {
           id: "keys-exported",
         });
       resetAndClose();
@@ -307,7 +315,9 @@ function useExportKeysFlow({
       // No console.* here (SECURITY.md §9): the message may carry unlock /
       // WASM context, and the extension console outlives the session.
       setError(
-        e instanceof Error ? `Export failed: ${e.message}` : "Export failed.",
+        e instanceof Error
+          ? t("keygen_export_failed_detail", { message: e.message })
+          : t("keygen_export_failed"),
       );
     } finally {
       passphraseBytes.fill(0);
@@ -323,14 +333,15 @@ function useExportKeysFlow({
       const count = await buildAndDownload(getKeyArmored, null);
       if (onExported) onExported(count, true);
       else
-        toast.success(
-          `Exported ${count} key${count === 1 ? "" : "s"} (private keys UNENCRYPTED)`,
-          { id: "keys-exported" },
-        );
+        toast.success(tn("keygen_export_toast_exported_unsafe", count), {
+          id: "keys-exported",
+        });
       resetAndClose();
     } catch (e) {
       setError(
-        e instanceof Error ? `Export failed: ${e.message}` : "Export failed.",
+        e instanceof Error
+          ? t("keygen_export_failed_detail", { message: e.message })
+          : t("keygen_export_failed"),
       );
     } finally {
       setExporting(false);
@@ -421,8 +432,7 @@ function ExportKeysBody({ f }: { f: ExportKeysFlow }) {
   return step === "unlock" ? (
     <div className="space-y-3">
       <p className="text-muted-foreground text-xs">
-        Exporting a private key requires unlocking it first. Unlock the keys
-        below to include them in the backup.
+        {t("keygen_export_unlock_intro")}
       </p>
 
       <div className="space-y-2">
@@ -464,8 +474,7 @@ function ExportKeysBody({ f }: { f: ExportKeysFlow }) {
 
       {contacts.length > 0 && (
         <p className="text-muted-foreground text-xs">
-          {contacts.length} contact{contacts.length === 1 ? "" : "s"} will also
-          be included (public keys, no unlock needed).
+          {tn("keygen_export_contacts_included", contacts.length)}
         </p>
       )}
 
@@ -475,56 +484,65 @@ function ExportKeysBody({ f }: { f: ExportKeysFlow }) {
         onClick={() => setStep("export")}
       >
         {myKeys.length === 0 && crxCount === 0
-          ? "Continue"
-          : "Skip locked keys and continue"}
+          ? t("common_continue")
+          : t("keygen_export_skip_locked")}
       </Button>
     </div>
   ) : (
     <div className="space-y-3">
       <p className="text-muted-foreground text-xs">
-        Downloads one <span className="font-mono">.asc</span> file (standard
-        ASCII-armored OpenPGP): your {unlockedKeys.length} unlocked private key
-        {unlockedKeys.length === 1 ? "" : "s"} as{" "}
-        <span className="font-mono">PGP PRIVATE KEY BLOCK</span>s and your{" "}
-        {contacts.length} contact{contacts.length === 1 ? "" : "s"} as{" "}
-        <span className="font-mono">PGP PUBLIC KEY BLOCK</span>s.
+        <Emphasised
+          text={t("keygen_export_summary", {
+            ext: ".asc",
+            private_keys: tn(
+              "keygen_export_summary_private_keys",
+              unlockedKeys.length,
+            ),
+            contacts: tn("keygen_export_summary_contacts", contacts.length),
+            private_block: "PGP PRIVATE KEY BLOCK",
+            public_block: "PGP PUBLIC KEY BLOCK",
+          })}
+          terms={[".asc", "PGP PRIVATE KEY BLOCK", "PGP PUBLIC KEY BLOCK"]}
+          wrap={(term, key) => (
+            <span key={key} className="font-mono">
+              {term}
+            </span>
+          )}
+        />
       </p>
 
       {unlockedCrxKeys.length > 0 && (
         <p className="text-muted-foreground text-xs">
-          Plus {unlockedCrxKeys.length} CRX signing key
-          {unlockedCrxKeys.length === 1 ? "" : "s"}, re-encrypted under this
-          passphrase so they restore on any device.
+          {tn("keygen_export_crx_included", unlockedCrxKeys.length)}
         </p>
       )}
 
       {lockedKeys.length + lockedCrxKeys.length > 0 && (
         <p className="rounded border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-400">
-          {lockedKeys.length + lockedCrxKeys.length} key
-          {lockedKeys.length + lockedCrxKeys.length === 1 ? "" : "s"} still
-          locked and will be left out.{" "}
+          {tn(
+            "keygen_export_still_locked",
+            lockedKeys.length + lockedCrxKeys.length,
+          )}{" "}
           <button
             type="button"
             className="underline"
             onClick={() => setStep("unlock")}
           >
-            Go back to unlock
+            {t("keygen_export_go_back_unlock")}
           </button>
-          .
+          {t("keygen_export_still_locked_after")}
         </p>
       )}
 
       {needsPassphrase ? (
         <>
           <p className="text-muted-foreground text-xs">
-            Set a passphrase to encrypt the exported private keys (OpenPGP S2K
-            -- imports into GnuPG and other tools). Anyone with this passphrase
-            and the file can decrypt your messages and sign as you.
+            {t("keygen_export_passphrase_intro")}
           </p>
           <input
             type="password"
             autoComplete="new-password"
-            placeholder="Passphrase (min 8 characters)"
+            placeholder={t("keygen_passphrase_placeholder")}
             value={passphrase}
             onChange={(e) => setPassphrase(e.target.value)}
             className={INPUT_CLASS}
@@ -533,7 +551,7 @@ function ExportKeysBody({ f }: { f: ExportKeysFlow }) {
           <input
             type="password"
             autoComplete="new-password"
-            placeholder="Confirm passphrase"
+            placeholder={t("keygen_confirm_passphrase_placeholder")}
             value={confirmPassphrase}
             onChange={(e) => setConfirmPassphrase(e.target.value)}
             onKeyDown={(e) => {
@@ -547,19 +565,23 @@ function ExportKeysBody({ f }: { f: ExportKeysFlow }) {
             onClick={() => void handleEncryptedExport()}
             disabled={exporting || !passphrase}
           >
-            {exporting ? "Exporting..." : "Export with passphrase"}
+            {exporting
+              ? t("keygen_exporting")
+              : t("keygen_export_with_passphrase")}
           </Button>
 
           {hasPgpPrivate && (
             <div className="border-border space-y-2 border-t pt-3">
               <p className="text-destructive text-[11px]">
-                Plaintext export. Anyone who reads the downloaded file gets full
-                control of every PGP key in it.
+                {t("keygen_export_plaintext_warning_file")}
                 {crxCount > 0
-                  ? " CRX signing keys are left out of a plaintext export -- use a passphrase to include them."
+                  ? " " + t("keygen_export_plaintext_crx_left_out")
                   : ""}{" "}
-                Type <span className="font-mono font-bold">EXPORT</span> to
-                confirm:
+                {t("keygen_type_to_confirm_before")}{" "}
+                <span className="font-mono font-bold">
+                  {t("keygen_confirm_word")}
+                </span>{" "}
+                {t("keygen_type_to_confirm_after")}
               </p>
               <input
                 type="text"
@@ -567,17 +589,19 @@ function ExportKeysBody({ f }: { f: ExportKeysFlow }) {
                 spellCheck={false}
                 value={unsafeConfirm}
                 onChange={(e) => setUnsafeConfirm(e.target.value)}
-                placeholder="EXPORT"
+                placeholder={t("keygen_confirm_word")}
                 className={INPUT_CLASS}
               />
               <Button
                 variant="destructive"
                 size="sm"
                 className="w-full"
-                disabled={exporting || unsafeConfirm !== "EXPORT"}
+                disabled={
+                  exporting || unsafeConfirm !== t("keygen_confirm_word")
+                }
                 onClick={() => void handleUnsafeExport()}
               >
-                Export without passphrase (unsafe)
+                {t("keygen_export_without_passphrase")}
               </Button>
             </div>
           )}
@@ -590,11 +614,13 @@ function ExportKeysBody({ f }: { f: ExportKeysFlow }) {
             onClick={() => void handleEncryptedExport()}
             disabled={exporting}
           >
-            {exporting ? "Exporting..." : "Export"}
+            {exporting ? t("keygen_exporting") : t("keygen_export")}
           </Button>
         </>
       ) : (
-        <p className="text-muted-foreground text-xs">Nothing to export</p>
+        <p className="text-muted-foreground text-xs">
+          {t("keygen_export_nothing")}
+        </p>
       )}
     </div>
   );
@@ -625,7 +651,7 @@ interface ExportKeysPageProps extends ExportKeysProps {
  */
 export function ExportKeysPage({
   onClose,
-  title = "Export keys",
+  title = t("keygen_export_title"),
   ...props
 }: ExportKeysPageProps) {
   return (

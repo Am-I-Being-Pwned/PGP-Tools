@@ -35,6 +35,7 @@
 
 import type { PasswordBlobParts, PrfBlobParts } from "./protected-blob";
 import { AppError } from "../errors/app-error";
+import { t } from "../i18n";
 import { unpackPasswordBlob, unpackPrfBlob } from "./protected-blob";
 import {
   authenticateAndGetPrf,
@@ -159,9 +160,7 @@ export function assertStrongPassword(password: string): void {
 async function registerPasskeyWithPrf(userIdHint: string): Promise<string> {
   const reg = await registerPasskey(userIdHint, userIdHint);
   if (!reg.prfEnabled) {
-    throw new Error(
-      "Your authenticator doesn't support PRF. Try a different passkey or use a password instead.",
-    );
+    throw new Error(t("keygen_error_prf_unsupported_authenticator"));
   }
   return reg.credentialId;
 }

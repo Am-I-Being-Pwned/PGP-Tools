@@ -7,6 +7,7 @@ import type { PresentedError, RemedyAction } from "../../lib/errors/present";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { FileResult } from "../../lib/utils/download";
+import { t } from "../../lib/i18n";
 import { ContactCard } from "../keys/ContactCard";
 import { DetectedKeyBanner } from "./DetectedKeyBanner";
 import { OutputArea } from "./OutputArea";
@@ -53,8 +54,8 @@ function ErrorAlert({
                 onClick={() => setShowDetail((v) => !v)}
               >
                 {showDetail
-                  ? "Hide technical details"
-                  : "Show technical details"}
+                  ? t("workspace_hide_technical_details")
+                  : t("workspace_show_technical_details")}
               </button>
             )}
           </div>
@@ -157,7 +158,9 @@ export function WorkspaceResults({
           readOnly
           verifiedTone={signatureTone}
           verifiedLabel={
-            isUnverified ? "Unverified" : (statusText ?? "Signature verified")
+            isUnverified
+              ? t("workspace_unverified")
+              : (statusText ?? t("workspace_signature_verified"))
           }
           note={isUnverified ? statusText : undefined}
           contact={
