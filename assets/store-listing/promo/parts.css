@@ -88,7 +88,7 @@ body {
 }
 
 h1 {
-  font-family: "Space Grotesk";
+  font-family: "Space Grotesk", system-ui, sans-serif;
   font-weight: 600;
   letter-spacing: -0.035em;
   line-height: 1.03;
@@ -247,6 +247,32 @@ h1 {
   color: var(--muted-foreground);
   margin-top: 5px;
   line-height: 1.4;
+}
+
+/* ---- per-language type adjustments ----------------------------------
+   The headline columns were drawn for English word lengths. German and
+   Russian run ~30% longer and CJK glyphs are square, so those languages
+   take a smaller headline rather than a third line. Body copy wraps and
+   needs no adjustment. `lang` is set on <html> by build.py.
+   -------------------------------------------------------------------- */
+:lang(de) h1,
+:lang(ru) h1 {
+  font-size: 54px;
+}
+:lang(fr) h1 {
+  font-size: 58px;
+}
+:lang(ja) h1,
+:lang(zh-CN) h1 {
+  font-size: 58px;
+  line-height: 1.15;
+  letter-spacing: 0;
+}
+:lang(hi) h1 {
+  line-height: 1.2;
+}
+.srow .stag {
+  white-space: nowrap;
 }
 
 /* ---- verdict rows (decrypt + verify results) ---- */

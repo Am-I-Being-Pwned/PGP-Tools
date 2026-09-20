@@ -14,13 +14,34 @@ the main repo) so the two listings read as one brand.
 ## Build
 
 ```sh
-python3 build.py --render     # everything, into exports/
-python3 build.py a --render   # one tile
-open build/lab.html           # every tile side by side, with download buttons
+python3 build.py --render               # every tile, every locale, into exports/<locale>/
+python3 build.py --locale de a --render # one tile, one locale
+python3 sheet.py                        # exports/<locale>/sheet.png: the five tiles at store size
+open build/en/lab.html                  # every tile side by side, with download buttons
 ```
 
-Slide `a` embeds a real screenshot of the side panel, not a mock. It lives in
-`../ui/` and is produced by Playwright driving the built extension.
+## Languages
+
+The tiles carry no copy of their own: every string is a `__T:key__` token
+resolved from `i18n/<locale>.json` (`en.json` is the source; a missing key
+falls back to it). The five 1280x800 tiles are rendered for every locale the
+extension's UI is translated into (`apps/pgp/i18n/`); the marquee `m1` is
+English only because the store does not localise marquee tiles.
+
+Per-language type sizes live at the top of `parts.css` (`:lang(de) h1` and
+friends): German and Russian headlines run ~30% longer than English and CJK
+glyphs are square, so those take a smaller headline rather than a third
+line. When a translated headline still wraps badly, shorten the copy in
+`i18n/<locale>.json` rather than shrinking type further.
+
+Upload per language in the Developer Dashboard's localized-listing section.
+Locales without a translated UI get no artwork here and show the default
+(English) set on the store.
+
+Slide `a` embeds a real screenshot of the side panel, not a mock, captured in
+the tile's language. It lives in `../ui/<locale>/` and is produced by
+Playwright driving the built extension (`__UI:panel-encrypt.png__` picks the
+locale's capture, falling back to `en`).
 
 It is captured NARROW (400px, about a real side panel) and rendered WIDE (486px
 in the tile), so the UI comes out ~1.2x larger than life. That is deliberate: at
@@ -35,7 +56,8 @@ composer collides with the Recipients label.
 ```sh
 cd ../../../apps/pgp
 pnpm build                                                  # .output/chrome-mv3
-npx playwright test --config=playwright.capture.config.ts   # -> ../../assets/store-listing/ui/
+npx playwright test --config=playwright.capture.config.ts   # -> ../../assets/store-listing/ui/<locale>/
+LOCALES=de,ja npx playwright test --config=playwright.capture.config.ts   # a subset
 ```
 
 Re-run that whenever the workspace UI changes, then re-render the tiles. The

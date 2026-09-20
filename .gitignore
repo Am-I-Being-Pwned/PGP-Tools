@@ -43,3 +43,13 @@ apps/pgp/public/gpg_wasm_bg.wasm
 messy
 apps/pgp/test-results/.playwright-artifacts-0/
 apps/pgp/STORE-LISTING.md
+
+# Store-listing artwork: only the English renders and panel capture are
+# tracked. Every other locale is regenerated from i18n/<locale>.json by
+# `python3 build.py --render` and the e2e-capture run, and the contact
+# sheets are review aids.
+assets/store-listing/promo/exports/*
+!assets/store-listing/promo/exports/en/
+assets/store-listing/promo/exports/en/sheet.png
+assets/store-listing/ui/*
+!assets/store-listing/ui/en/
