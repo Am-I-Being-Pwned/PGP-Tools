@@ -6,6 +6,12 @@ import {
   XIcon,
 } from "lucide-react";
 
+import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
+import {
+  formatShortcutTitle,
+  isMacPlatform,
+} from "@amibeingpwned/ui/kbd-helpers";
+
 import type { Edit } from "../../lib/compose/text-format";
 import {
   findAll,
@@ -14,7 +20,14 @@ import {
   replaceAll,
   replaceAt,
 } from "../../lib/compose/text-format";
+import { matchesShortcut } from "../../lib/shortcuts";
 import { INPUT_CLASS } from "../../lib/utils/styles";
+
+/** mod+Enter anywhere in the bar replaces every match. The same combo
+ *  is the workspace's "run" shortcut, so the bar must swallow it
+ *  whether or not the replace row is open: Encrypting the message from
+ *  inside a find field is never what was meant. */
+const REPLACE_ALL_SHORTCUT: ShortcutSpec = { mod: true, key: "Enter" };
 
 interface FindReplaceBarProps {
   /** What the field starts with: the box's selection when opened. */
@@ -50,7 +63,9 @@ interface FindReplaceBarProps {
  * SELECTING it -- the same thing every plain-text editor's find does --
  * and the count inside the field ("2 of 5") carries the rest. Enter
  * steps forward, Shift+Enter back, Escape closes. Replace is a second
- * row behind a chevron: finding is what people open this for. The bar
+ * row behind a chevron: finding is what people open this for; once it
+ * is open, Tab goes field to field (Find, Replace, then the replace
+ * buttons) and mod+Enter replaces all. The bar
  * floats over the top-right of the box, slightly translucent, so opening
  * it never reflows the message and the text stays readable beneath it.
  */
@@ -146,6 +161,12 @@ export function FindReplaceBar({
     }
   };
   const onBarKey = (e: React.KeyboardEvent) => {
+    if (matchesShortcut(e.nativeEvent, REPLACE_ALL_SHORTCUT, isMacPlatform())) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (showReplace) replaceEvery();
+      return;
+    }
     if (e.key === "Escape") {
       // Ours, not the workspace's Escape layers (which read
       // `defaultPrevented`).
@@ -167,10 +188,12 @@ export function FindReplaceBar({
       role="search"
       aria-label="Find and replace"
       onKeyDown={onBarKey}
-      // Two rows on one grid so the two fields are the same width: a
-      // narrow toggle column, the field, and a fixed-width column for
-      // the row's buttons.
-      className="border-border bg-background/80 grid grid-cols-[1.5rem_minmax(0,1fr)_7.5rem] items-center gap-x-1 gap-y-1.5 rounded-md border p-1.5 shadow-md backdrop-blur"
+      // Three columns, each stacking its own rows (toggle | fields |
+      // buttons) rather than one row-major grid, so the two text fields
+      // are adjacent in the DOM and Tab moves Find -> Replace -> replace
+      // buttons instead of detouring through the find row's icons.
+      // Every cell is h-8 with the same gap, so the rows line up.
+      className="border-border bg-background/80 flex items-start gap-x-1 rounded-md border p-1.5 shadow-md backdrop-blur"
     >
       <button
         type="button"
@@ -178,7 +201,7 @@ export function FindReplaceBar({
         aria-expanded={showReplace}
         title={showReplace ? "Hide replace" : "Replace"}
         onClick={() => setShowReplace((v) => !v)}
-        className="text-muted-foreground hover:text-foreground hover:bg-border/70 flex h-8 w-6 items-center justify-center rounded transition-colors"
+        className="text-muted-foreground hover:text-foreground hover:bg-border/70 flex h-8 w-6 shrink-0 items-center justify-center rounded transition-colors"
       >
         {showReplace ? (
           <ChevronDownIcon className="h-4 w-4" />
@@ -186,53 +209,26 @@ export function FindReplaceBar({
           <ChevronRightIcon className="h-4 w-4" />
         )}
       </button>
-      <div className="relative min-w-0">
-        <input
-          ref={findRef}
-          type="text"
-          aria-label="Find"
-          placeholder="Find"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={onFindKey}
-          className={`${INPUT_CLASS} h-8 w-full py-0 pr-16 text-xs`}
-        />
-        <span
-          className="text-muted-foreground pointer-events-none absolute inset-y-0 right-2 flex items-center text-[11px] tabular-nums"
-          aria-live="polite"
-        >
-          {count}
-        </span>
-      </div>
-      <div className="flex items-center justify-end gap-0.5">
-        <button
-          type="button"
-          aria-pressed={caseSensitive}
-          aria-label="Match case"
-          title="Match case"
-          onClick={() => setCaseSensitive((v) => !v)}
-          className={`hover:text-foreground h-8 w-7 shrink-0 rounded font-mono text-[11px] transition-colors ${
-            caseSensitive
-              ? "bg-border/70 text-foreground"
-              : "text-muted-foreground"
-          }`}
-        >
-          Aa
-        </button>
-        <IconButton label="Previous match" onClick={() => step(-1)}>
-          <ChevronUpIcon className="h-4 w-4" />
-        </IconButton>
-        <IconButton label="Next match" onClick={() => step(1)}>
-          <ChevronDownIcon className="h-4 w-4" />
-        </IconButton>
-        <IconButton label="Close find" onClick={onClose}>
-          <XIcon className="h-4 w-4" />
-        </IconButton>
-      </div>
-
-      {showReplace && (
-        <>
-          <span aria-hidden />
+      <div className="flex min-w-0 flex-1 flex-col gap-y-1.5">
+        <div className="relative min-w-0">
+          <input
+            ref={findRef}
+            type="text"
+            aria-label="Find"
+            placeholder="Find"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={onFindKey}
+            className={`${INPUT_CLASS} h-8 w-full py-0 pr-16 text-xs`}
+          />
+          <span
+            className="text-muted-foreground pointer-events-none absolute inset-y-0 right-2 flex items-center text-[11px] tabular-nums"
+            aria-live="polite"
+          >
+            {count}
+          </span>
+        </div>
+        {showReplace && (
           <input
             type="text"
             aria-label="Replace with"
@@ -240,13 +236,20 @@ export function FindReplaceBar({
             value={replacement}
             onChange={(e) => setReplacement(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") {
+              if (e.key === "Enter" && !e.metaKey && !e.ctrlKey) {
                 e.preventDefault();
                 replaceCurrent();
               }
             }}
             className={`${INPUT_CLASS} h-8 min-w-0 py-0 text-xs`}
           />
+        )}
+      </div>
+      {/* Rendered bottom-up (flex-col-reverse): the replace buttons come
+          FIRST in the DOM, so Tab from the Replace field reaches them
+          before the find row's icons, while they still draw beneath. */}
+      <div className="flex w-30 shrink-0 flex-col-reverse gap-y-1.5">
+        {showReplace && (
           <div className="flex items-center justify-end gap-1">
             <TextButton
               label="Replace"
@@ -256,12 +259,38 @@ export function FindReplaceBar({
             <TextButton
               label="All"
               ariaLabel="Replace all"
+              title={`Replace all (${formatShortcutTitle(REPLACE_ALL_SHORTCUT, isMacPlatform())})`}
               disabled={matches.length === 0}
               onClick={replaceEvery}
             />
           </div>
-        </>
-      )}
+        )}
+        <div className="flex items-center justify-end gap-0.5">
+          <button
+            type="button"
+            aria-pressed={caseSensitive}
+            aria-label="Match case"
+            title="Match case"
+            onClick={() => setCaseSensitive((v) => !v)}
+            className={`hover:text-foreground h-8 w-7 shrink-0 rounded font-mono text-[11px] transition-colors ${
+              caseSensitive
+                ? "bg-border/70 text-foreground"
+                : "text-muted-foreground"
+            }`}
+          >
+            Aa
+          </button>
+          <IconButton label="Previous match" onClick={() => step(-1)}>
+            <ChevronUpIcon className="h-4 w-4" />
+          </IconButton>
+          <IconButton label="Next match" onClick={() => step(1)}>
+            <ChevronDownIcon className="h-4 w-4" />
+          </IconButton>
+          <IconButton label="Close find" onClick={onClose}>
+            <XIcon className="h-4 w-4" />
+          </IconButton>
+        </div>
+      </div>
     </div>
   );
 }
@@ -291,11 +320,13 @@ function IconButton({
 function TextButton({
   label,
   ariaLabel,
+  title,
   disabled,
   onClick,
 }: {
   label: string;
   ariaLabel?: string;
+  title?: string;
   disabled?: boolean;
   onClick: () => void;
 }) {
@@ -303,6 +334,7 @@ function TextButton({
     <button
       type="button"
       aria-label={ariaLabel ?? label}
+      title={title}
       disabled={disabled}
       onClick={onClick}
       className="border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground/40 h-8 shrink-0 rounded-md border px-1.5 text-xs transition-colors disabled:opacity-50 disabled:hover:text-current"

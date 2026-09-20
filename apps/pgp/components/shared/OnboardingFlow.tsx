@@ -275,10 +275,6 @@ export function OnboardingFlow({
       setError("Name is required.");
       return;
     }
-    if (!email.trim()) {
-      setError("Email is required.");
-      return;
-    }
 
     setStep("generating");
 
@@ -287,7 +283,7 @@ export function OnboardingFlow({
       const { blob, handle } = await generateAndProtect(
         {
           name: name.trim(),
-          email: email.trim(),
+          email: email.trim() || undefined,
           comment: comment.trim() || undefined,
           type: keyAlgorithm,
           expiresIn: expiresIn || undefined,
@@ -407,7 +403,8 @@ export function OnboardingFlow({
               </div>
               <div>
                 <label className="text-muted-foreground mb-1 block text-xs">
-                  Email *
+                  Email{" "}
+                  <span className="text-muted-foreground/60">optional</span>
                 </label>
                 <input
                   type="email"

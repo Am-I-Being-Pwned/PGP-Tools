@@ -124,12 +124,31 @@ test("find & replace steps through matches and replaces one or all", async ({
     await expect(bar.getByText("0", { exact: true })).toBeVisible();
   });
 
+  await test.step("Tab goes Find -> Replace, and mod+Enter replaces all", async () => {
+    await find.fill("dog");
+    await find.press("Tab");
+    const replace = bar.getByLabel("Replace with");
+    await expect(replace).toBeFocused();
+    await replace.fill("cat");
+    // Tab from Replace lands on the replace-row buttons, not the icons.
+    await replace.press("Tab");
+    await expect(
+      bar.getByRole("button", { name: "Replace", exact: true }),
+    ).toBeFocused();
+    await replace.focus();
+    // The workspace's run shortcut is the same combo; the bar owns it
+    // while focus is inside, so this must replace, not Encrypt.
+    await replace.press("ControlOrMeta+Enter");
+    await expect(box(panel)).toHaveValue("cat cat sat on cat mat with cat Cat");
+    await expect(bar).toBeVisible();
+  });
+
   await test.step("Escape closes the bar and returns focus to the message", async () => {
     await find.press("Escape");
     await expect(bar).toHaveCount(0);
     await expect(box(panel)).toBeFocused();
     // The workspace's own double-Escape clear must not have fired.
-    await expect(box(panel)).toHaveValue("dog dog sat on dog mat with dog Cat");
+    await expect(box(panel)).toHaveValue("cat cat sat on cat mat with cat Cat");
   });
 });
 

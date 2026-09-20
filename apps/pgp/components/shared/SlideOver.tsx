@@ -146,10 +146,14 @@ function unregisterTrap(trap: FocusTrap): void {
 export function SlideOverPanel({
   entered,
   ariaLabel,
+  onDismiss,
   children,
 }: {
   entered: boolean;
   ariaLabel: string;
+  /** Called when the dimmed backdrop (the strip left of the panel) is
+   *  clicked. Pass the hook's `close` so it slides out like Back does. */
+  onDismiss?: () => void;
   children: React.ReactNode;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -225,15 +229,43 @@ export function SlideOverPanel({
     return () => unregisterTrap(trap);
   }, [entered]);
 
+  // Layout: a full-viewport layer holding a dimmed backdrop and the
+  // panel, which covers the right three quarters. The exposed quarter
+  // shows what's underneath, so opening a subpage reads as "over" the
+  // current view rather than replacing it, and a click there dismisses.
+  //
+  // Stacking: each nested panel mounts its own layer as a later sibling,
+  // so it sits above its parent. Its panel is the same width (hiding the
+  // parent's panel entirely, so the user never sees two headers), while
+  // its backdrop lands on top of the parent's, darkening the exposed
+  // strip a step further per level -- the depth cue. A backdrop click or
+  // Escape peels off only the topmost layer.
+  //
+  // Edge: in dark mode the page is near-black, so a 40% dim alone leaves
+  // the panel's left edge invisible. A border-l plus a surface lifted a
+  // notch above --background (but still under --card, so cards inside
+  // the panel keep their contrast) draws the edge in both themes.
   return (
-    <div
-      ref={panelRef}
-      tabIndex={-1}
-      className={`bg-background fixed inset-0 z-50 flex flex-col transition-transform duration-300 ease-out ${entered ? "translate-x-0" : "translate-x-full"}`}
-      role="region"
-      aria-label={ariaLabel}
-    >
-      {children}
+    <div className="pointer-events-none fixed inset-0 z-50">
+      {/* The layer is click-through; only the panel and the ENTERED
+          backdrop take pointer events. The layer stays mounted for the
+          300ms slide-out, and an invisible full-viewport element that
+          still swallowed clicks would dead-zone the whole view (and
+          re-fire onDismiss) right after every close. */}
+      <div
+        aria-hidden="true"
+        onClick={onDismiss}
+        className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ease-out ${entered ? "pointer-events-auto opacity-100" : "opacity-0"}`}
+      />
+      <div
+        ref={panelRef}
+        tabIndex={-1}
+        className={`bg-background border-border pointer-events-auto absolute inset-y-0 right-0 flex w-3/4 flex-col border-l shadow-xl transition-transform duration-300 ease-out dark:bg-[oklch(0.11_0_0)] ${entered ? "translate-x-0" : "translate-x-full"}`}
+        role="region"
+        aria-label={ariaLabel}
+      >
+        {children}
+      </div>
     </div>
   );
 }

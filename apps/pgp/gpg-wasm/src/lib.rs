@@ -272,7 +272,10 @@ pub struct VerifyResult {
 #[derive(Deserialize)]
 pub struct GenerateKeyOptions {
     pub name: String,
-    pub email: String,
+    /// Optional: a UID may be a bare name (`Alice`) or name + comment
+    /// with no address. Empty is treated as absent.
+    #[serde(default)]
+    pub email: Option<String>,
     pub comment: Option<String>,
     #[serde(rename = "type")]
     pub key_type: Option<String>,
@@ -1231,7 +1234,14 @@ fn build_cert_from_options(
     if let Some(ref comment) = opts.comment {
         userid = format!("{} ({})", userid, comment);
     }
-    userid = format!("{} <{}>", userid, opts.email);
+    if let Some(email) = opts
+        .email
+        .as_deref()
+        .map(str::trim)
+        .filter(|e| !e.is_empty())
+    {
+        userid = format!("{} <{}>", userid, email);
+    }
 
     let mut builder = CertBuilder::new()
         .add_userid(userid)

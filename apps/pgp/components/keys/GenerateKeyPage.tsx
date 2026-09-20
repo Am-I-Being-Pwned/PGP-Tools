@@ -152,10 +152,6 @@ export function GenerateKeyPage({
       setError("Name is required.");
       return;
     }
-    if (!email.trim()) {
-      setError("Email is required.");
-      return;
-    }
     if (expiryOption === "custom") {
       openExpiryStep();
     } else if (canSkipProtection) {
@@ -222,7 +218,7 @@ export function GenerateKeyPage({
       const { blob, handle } = await generateAndProtect(
         {
           name: name.trim(),
-          email: email.trim(),
+          email: email.trim() || undefined,
           comment: comment.trim() || undefined,
           type: keyAlgorithm,
           expiresIn: expiresIn || undefined,
@@ -251,7 +247,11 @@ export function GenerateKeyPage({
   };
 
   return (
-    <SlideOverPanel entered={entered} ariaLabel="Generate key">
+    <SlideOverPanel
+      entered={entered}
+      ariaLabel="Generate key"
+      onDismiss={close}
+    >
       <SlideOverHeader title="Generate key" onBack={handleBack} />
 
       <div className="flex flex-1 flex-col overflow-hidden">
@@ -319,7 +319,10 @@ export function GenerateKeyPage({
                     </div>
                     <div>
                       <label className="text-muted-foreground mb-1 block text-xs">
-                        Email *
+                        Email{" "}
+                        <span className="text-muted-foreground/60">
+                          optional
+                        </span>
                       </label>
                       <input
                         type="email"

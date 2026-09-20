@@ -65,6 +65,25 @@ fn test_generate_key_with_comment_and_expiry() {
 }
 
 #[test]
+fn test_generate_key_without_email() {
+    // Email is optional: a missing, empty or whitespace-only address
+    // yields a bare-name UID with no angle brackets.
+    for opts in [
+        r#"{"name":"Nomail","type":"ecc"}"#,
+        r#"{"name":"Nomail","email":"","type":"ecc"}"#,
+        r#"{"name":"Nomail","email":"  ","type":"ecc"}"#,
+    ] {
+        let json = generate_key(opts).unwrap();
+        let result: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(result["keyInfo"]["userIds"][0], "Nomail", "{opts}");
+    }
+    let opts = r#"{"name":"Nomail","comment":"work","type":"ecc"}"#;
+    let json = generate_key(opts).unwrap();
+    let result: serde_json::Value = serde_json::from_str(&json).unwrap();
+    assert_eq!(result["keyInfo"]["userIds"][0], "Nomail (work)");
+}
+
+#[test]
 fn test_parse_public_key() {
     let gen_json = gen_test_key();
     let gen: serde_json::Value = serde_json::from_str(&gen_json).unwrap();

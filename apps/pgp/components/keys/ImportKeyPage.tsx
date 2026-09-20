@@ -884,7 +884,7 @@ export function ImportKeyPage({
       : "Import key";
 
   return (
-    <SlideOverPanel entered={entered} ariaLabel="Import key">
+    <SlideOverPanel entered={entered} ariaLabel="Import key" onDismiss={close}>
       <SlideOverHeader title={title} onBack={handleBack} />
       <div className="flex flex-1 flex-col overflow-hidden">
         {step === "source" && (

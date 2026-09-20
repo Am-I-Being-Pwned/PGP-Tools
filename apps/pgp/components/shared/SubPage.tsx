@@ -130,7 +130,7 @@ export function SubPage({
   );
 
   return (
-    <SlideOverPanel entered={entered} ariaLabel={title}>
+    <SlideOverPanel entered={entered} ariaLabel={title} onDismiss={close}>
       <SlideOverHeader title={title} onBack={close}>
         {headerActions}
       </SlideOverHeader>

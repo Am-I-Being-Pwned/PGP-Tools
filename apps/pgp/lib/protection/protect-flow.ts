@@ -176,7 +176,8 @@ export async function generateAndProtect(
   return runProtect(
     protection,
     keySpec(
-      common.userIdHint ?? `${keyOpts.name} <${keyOpts.email}>`,
+      common.userIdHint ??
+        (keyOpts.email ? `${keyOpts.name} <${keyOpts.email}>` : keyOpts.name),
       (password) =>
         generateProtectedWithPassword(
           keyOpts,
