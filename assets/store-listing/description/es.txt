@@ -1,0 +1,9 @@
+¿Siempre le ha parecido que PGP es un engorro? Por eso existe esta extensión.
+
+PGP Tools le permite cifrar, descifrar, firmar y verificar mensajes directamente desde el navegador. Gestione sus claves, contactos y operaciones desde el panel lateral. Sin terminal.
+
+Sus claves privadas están protegidas con llaves de acceso (Touch ID, Face ID, YubiKey) o contraseñas Argon2id, y toda la criptografía se ejecuta en Rust/WebAssembly, no en JavaScript.
+
+Código abierto, gratis y sin cuentas.
+
+Código fuente: https://github.com/Am-I-Being-Pwned/PGP-Tools

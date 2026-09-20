@@ -1,0 +1,9 @@
+Ever thought PGP is a pain to use? That's why this exists.
+
+PGP Tools lets you encrypt, decrypt, sign, and verify messages right from your browser. Manage your keys, contacts, and operations from the side panel. No terminal required.
+
+Your private keys are protected by passkeys (Touch ID, Face ID, YubiKey) or Argon2id passwords, and all crypto runs in Rust/WebAssembly, not in JavaScript.
+
+Open source, free, no accounts required.
+
+Source: https://github.com/Am-I-Being-Pwned/PGP-Tools

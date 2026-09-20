@@ -1,0 +1,9 @@
+PGP は使いにくいと思ったことはありませんか。この拡張機能はそのために作られました。
+
+PGP Tools を使えば、ブラウザからそのままメッセージの暗号化、復号、署名、検証ができます。鍵、連絡先、操作はサイドパネルで管理。ターミナルは不要です。
+
+秘密鍵はパスキー (Touch ID、Face ID、YubiKey) または Argon2id パスワードで保護され、暗号処理はすべて JavaScript ではなく Rust/WebAssembly で実行されます。
+
+オープンソース、無料、アカウント登録不要。
+
+ソースコード: https://github.com/Am-I-Being-Pwned/PGP-Tools

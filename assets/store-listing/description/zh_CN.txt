@@ -1,0 +1,9 @@
+觉得 PGP 用起来很麻烦？这个扩展就是为此而生。
+
+PGP Tools 让你直接在浏览器中加密、解密、签名和验证消息。在侧边栏管理密钥、联系人和操作。无需终端。
+
+你的私钥由通行密钥（Touch ID、Face ID、YubiKey）或 Argon2id 密码保护，所有加密运算都在 Rust/WebAssembly 中运行，而非 JavaScript。
+
+开源、免费、无需账户。
+
+源代码：https://github.com/Am-I-Being-Pwned/PGP-Tools
