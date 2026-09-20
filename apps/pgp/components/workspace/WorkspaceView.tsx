@@ -33,6 +33,8 @@ import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { WorkspaceDraftSource } from "../../lib/workspace-draft";
 import type { WorkspaceIntake } from "./useWorkspaceState";
+import type { ComposeTools } from "./WorkspaceInput";
+import { useComposeTranslation } from "../../hooks/useComposeTranslation";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import { useDelayedFlag } from "../../hooks/useDelayedFlag";
 import { useShortcut } from "../../hooks/useShortcut";
@@ -41,7 +43,9 @@ import {
   COPY_SHORTCUT,
   DOWNLOAD_SHORTCUT,
 } from "../../lib/actions/definitions";
+import { languageLabel } from "../../lib/ai/languages";
 import { recoverArmorIfNeeded } from "../../lib/armor-recovery";
+import { applyTextareaEdit } from "../../lib/compose/apply-edit";
 import {
   buildEncryptRecipients,
   resolveSelectedRecipients,
@@ -228,6 +232,99 @@ export function WorkspaceView({
     setTranslation: s.setTranslation,
     targetLanguage: translationTargetLanguage,
   });
+
+  // Translate-before-sending, the composer's counterpart. Replaces the
+  // box's text; the toast's Undo (and the menu's "Restore") put the
+  // original back. Problems surface as toasts rather than a status
+  // strip: the composer has no result bar to carry one.
+  // Written through the textarea's own editing path when it is mounted,
+  // so Cmd/Ctrl+Z reverts a translation like any other edit.
+  const { inputElRef, handleInputChange } = s;
+  const setComposedText = useCallback(
+    (text: string) => {
+      const el = inputElRef.current;
+      if (el) {
+        const edit = { text, start: text.length, end: text.length };
+        if (applyTextareaEdit(el, edit)) return;
+      }
+      handleInputChange(text);
+    },
+    [inputElRef, handleInputChange],
+  );
+  const composeTranslation = useComposeTranslation({
+    getInput: s.getInput,
+    setInput: setComposedText,
+    readingLanguage: translationTargetLanguage,
+    onTranslated: (from, to) =>
+      toast.message(
+        `Translated from ${languageLabel(from)} to ${languageLabel(to)}`,
+        {
+          id: "compose-translated",
+          duration: 6000,
+          action: { label: "Undo", onClick: () => composeTranslation.undo() },
+        },
+      ),
+  });
+  const composeStatus = composeTranslation.status;
+  // The undo original is plaintext the workspace's own refs do not
+  // hold: wiped with them at master lock (§8.11), dropped once the user
+  // edits past the translation, and any in-flight translation is
+  // cancelled the moment the box stops being a composer.
+  const { addWiper, inputVersion: composedVersion, getInput: readInput } = s;
+  const { forget, noteInputChanged, cancel } = composeTranslation;
+  useEffect(() => addWiper(forget), [addWiper, forget]);
+  useEffect(() => {
+    noteInputChanged(readInput());
+  }, [composedVersion, noteInputChanged, readInput]);
+  // The message box's tools, published for the palette and shortcuts.
+  const composeToolsRef = useRef<ComposeTools | null>(null);
+  const onToolsReady = useCallback((tools: ComposeTools | null) => {
+    composeToolsRef.current = tools;
+  }, []);
+  const composeCanEdit =
+    (s.mode === "encrypt" || s.mode === "sign") &&
+    s.files.length === 0 &&
+    !s.privateKeyDetected;
+  useEffect(() => {
+    if (!composeCanEdit) cancel();
+  }, [composeCanEdit, cancel]);
+  // The find bar's highlight mirror holds a copy of the text in the
+  // element tree; close it before the lock flip so it is gone too.
+  useEffect(
+    () => addWiper(() => composeToolsRef.current?.closeFind()),
+    [addWiper],
+  );
+  const translateEnabled =
+    !!aiTranslateEnabled && composeStatus.kind !== "unavailable";
+  // The result side: a decrypted or verified message is readable on
+  // screen and the feature can act on it.
+  const resultCanTranslate =
+    !!aiTranslateEnabled &&
+    s.operationDone &&
+    s.hasOutput &&
+    (s.mode === "decrypt" || s.mode === "verify") &&
+    translation.status.kind !== "unavailable" &&
+    translation.status.kind !== "same-language";
+  useEffect(() => {
+    switch (composeStatus.kind) {
+      case "same-language":
+        toast.message(
+          `That is already your language (${languageLabel(composeStatus.language)}).`,
+          { id: "compose-translate" },
+        );
+        break;
+      case "unavailable":
+        toast.message("Translation is not available for that language here.", {
+          id: "compose-translate",
+        });
+        break;
+      case "error":
+        toast.error(composeStatus.message, { id: "compose-translate" });
+        break;
+      default:
+        break;
+    }
+  }, [composeStatus]);
 
   // Rendered only under the full-height decrypt result, which is the one
   // place a readable plaintext is on screen. Built here (rather than
@@ -619,6 +716,8 @@ export function WorkspaceView({
     setEncryptToSelfPref,
     setAlsoSignPref,
     setSaveToHistoryPref,
+    composeTranslation,
+    translation,
   });
   useEffect(() => {
     paletteRef.current = {
@@ -631,6 +730,8 @@ export function WorkspaceView({
       setEncryptToSelfPref,
       setAlsoSignPref,
       setSaveToHistoryPref,
+      composeTranslation,
+      translation,
     };
   });
   useEffect(() => {
@@ -667,6 +768,24 @@ export function WorkspaceView({
         const p = paletteRef.current;
         if (p.hasDownload) p.ops.triggerDownload();
       },
+      resultCanTranslate,
+      readingLanguage: translationTargetLanguage,
+      translateOutput: () => {
+        const p = paletteRef.current;
+        // A translation already made is shown, not remade.
+        if (p.s.hasTranslation) {
+          if (!p.translation.showing) p.translation.toggle();
+        } else {
+          void p.translation.translate();
+        }
+      },
+      composeCanEdit,
+      translateEnabled,
+      translateTarget: composeTranslation.targetLanguage,
+      applyStyle: (style) => composeToolsRef.current?.applyStyle(style),
+      openFind: () => composeToolsRef.current?.openFind(),
+      translateTo: (language) =>
+        void paletteRef.current.composeTranslation.translate(language),
       toggleEncryptToSelf: () => {
         const p = paletteRef.current;
         p.setEncryptToSelfPref(!p.s.encryptToSelf);
@@ -697,6 +816,11 @@ export function WorkspaceView({
     s.saveToHistory,
     s.encryptToSelf,
     s.alsoSign,
+    composeCanEdit,
+    translateEnabled,
+    composeTranslation.targetLanguage,
+    resultCanTranslate,
+    translationTargetLanguage,
   ]);
   useEffect(() => () => onPaletteOps?.(null), [onPaletteOps]);
 
@@ -847,6 +971,19 @@ export function WorkspaceView({
         operationDone={s.operationDone}
         onReset={s.resetAll}
         onResetOutput={s.resetOutput}
+        onToolsReady={onToolsReady}
+        composeTranslate={
+          aiTranslateEnabled
+            ? {
+                status: composeTranslation.status,
+                targetLanguage: composeTranslation.targetLanguage,
+                onTranslate: (language) =>
+                  void composeTranslation.translate(language),
+                onUndo: composeTranslation.undo,
+                canUndo: composeTranslation.canUndo,
+              }
+            : undefined
+        }
       />
 
       <div className="space-y-3">

@@ -71,6 +71,9 @@ interface ImportKeyPageProps {
   existingContacts?: PublicContactKey[];
   /** Pass the primary key's passkey credential ID to allow reuse. */
   reusePasskeyCredentialId?: string;
+  /** With reuse, seal under the master's PRF salt so the vault ceremony
+   *  opens the key ("unlock keys when the vault unlocks"). */
+  masterSealSalt?: ArrayBuffer;
   /** When provided, skip the source step and preview this armored key
    *  (e.g. from a global drop). Read once at mount. */
   initialArmored?: string | null;
@@ -106,6 +109,7 @@ export function ImportKeyPage({
   existingKeys = [],
   existingContacts = [],
   reusePasskeyCredentialId,
+  masterSealSalt,
   initialArmored,
   crxSigningEnabled,
   keyDiscoveryEnabled = true,
@@ -733,6 +737,7 @@ export function ImportKeyPage({
               reusePasskeyCredentialId: reusePasskey
                 ? reusePasskeyCredentialId
                 : undefined,
+              prfSalt: reusePasskey ? masterSealSalt : undefined,
             },
         { userIdHint: incoming.userIds[0] ?? "Imported PGP Key" },
       );
@@ -826,6 +831,7 @@ export function ImportKeyPage({
               reusePasskeyCredentialId: reusePasskey
                 ? reusePasskeyCredentialId
                 : undefined,
+              prfSalt: reusePasskey ? masterSealSalt : undefined,
             },
         { userIdHint: incoming.userIds[0] ?? "Imported SSH key" },
       );
@@ -878,7 +884,7 @@ export function ImportKeyPage({
       : "Import key";
 
   return (
-    <SlideOverPanel entered={entered} ariaLabel="Import key">
+    <SlideOverPanel entered={entered} ariaLabel="Import key" onDismiss={close}>
       <SlideOverHeader title={title} onBack={handleBack} />
       <div className="flex flex-1 flex-col overflow-hidden">
         {step === "source" && (

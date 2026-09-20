@@ -14,9 +14,9 @@
   <a href="https://github.com/Am-I-Being-Pwned/PGP-Tools/actions/workflows/ci.yml"><img src="https://github.com/Am-I-Being-Pwned/PGP-Tools/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" /></a>
   <a href="https://chromewebstore.google.com/detail/pgp-tools-encrypt-decrypt/pgpcdgggohpbombhkffjoiiafdlfcpgp"><img src="https://img.shields.io/chrome-web-store/users/pgpcdgggohpbombhkffjoiiafdlfcpgp" alt="Chrome Web Store users" /></a>
   <a href="https://chromewebstore.google.com/detail/pgp-tools-encrypt-decrypt/pgpcdgggohpbombhkffjoiiafdlfcpgp"><img src="https://img.shields.io/chrome-web-store/rating/pgpcdgggohpbombhkffjoiiafdlfcpgp" alt="Chrome Web Store rating" /></a>
-  <img src="https://img.shields.io/badge/lib_coverage-83.9%25-green" alt="lib coverage: 83.9%" />
-  <img src="https://img.shields.io/badge/unit_tests-1584-blue" alt="unit tests: 1584" />
-  <img src="https://img.shields.io/badge/e2e_tests-134-blue" alt="e2e tests: 134" />
+  <img src="https://img.shields.io/badge/lib_coverage-82.1%25-green" alt="lib coverage: 82.1%" />
+  <img src="https://img.shields.io/badge/unit_tests-1655-blue" alt="unit tests: 1655" />
+  <img src="https://img.shields.io/badge/e2e_tests-140-blue" alt="e2e tests: 140" />
 </p>
 <!-- badges:end -->
 
@@ -69,6 +69,7 @@
 - age encryption with an SSH key you already have - import an `ssh-ed25519` or `ssh-rsa` key and encrypt/decrypt [age](https://age-encryption.org/) files (binary or armored), cross-checked against the Go `age` CLI. Import only (the app never generates SSH keys); encrypt/decrypt only (age has no signing). Native `age1…` keys are out of scope, and ECDSA, DSA and FIDO `sk-*` keys are rejected
 - Right-click context menu on selected text
 - Auto-lock on inactivity, panel close, or per-operation (never-cache mode)
+- Optional: unlock keys with the vault - the one passkey prompt that opens the vault also unlocks every key protected by it (off by default)
 - Optional Chrome sync or local-only storage
 
 ## Security model

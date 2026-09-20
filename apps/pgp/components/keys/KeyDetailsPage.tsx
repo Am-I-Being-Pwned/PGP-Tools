@@ -427,7 +427,11 @@ export function KeyDetailsPage({
   };
 
   return (
-    <SlideOverPanel entered={entered} ariaLabel={`Key details for ${name}`}>
+    <SlideOverPanel
+      entered={entered}
+      ariaLabel={`Key details for ${name}`}
+      onDismiss={close}
+    >
       <SlideOverHeader title="Key details" onBack={close}>
         {onEncryptTo && (
           <IconAction label="Encrypt to" onClick={onEncryptTo}>

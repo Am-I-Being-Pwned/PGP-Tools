@@ -5,6 +5,7 @@
 
 import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
 
+import type { InlineStyle } from "../compose/text-format";
 import type { StoredKeyKind } from "../storage/key-kind";
 
 /** The workspace operation modes (mirrors WorkspaceAction). */
@@ -59,6 +60,24 @@ export interface ActionCtx {
     ownKeys: number;
     contacts: number;
   };
+  /** The result box (a decrypted or verified message on screen). */
+  result: {
+    /** A readable decrypted/verified message is showing and translation
+     *  is on and usable for it. */
+    canTranslate: boolean;
+    /** BCP 47 tag of the language the user reads (Settings). */
+    readingLanguage: string;
+  };
+  /** The message box's editing tools. */
+  compose: {
+    /** Prose is being written: workspace tab, encrypt or sign mode, the
+     *  text box mounted (no files staged) and no private key pasted. */
+    canEdit: boolean;
+    /** Translation is on in Settings and this device can do it. */
+    translateEnabled: boolean;
+    /** The language the user last translated a message into, or null. */
+    translateTarget: string | null;
+  };
   navigation: {
     setTab: (tab: AppTab) => void;
     openHistory: () => void;
@@ -86,6 +105,15 @@ export interface ActionCtx {
     toggleAlsoSign: () => void;
     /** Flip "Save to history" (same handler as the checkbox). */
     toggleSaveToHistory: () => void;
+    /** Toggle an inline style on the message box's selection. */
+    applyStyle: (style: InlineStyle) => void;
+    /** Open the message box's find bar. */
+    openFind: () => void;
+    /** Translate the message into `language` (BCP 47), replacing it. */
+    translateTo: (language: string) => void;
+    /** Translate the result into the reading language (or show the
+     *  translation already made). */
+    translateOutput: () => void;
   };
 }
 
@@ -115,7 +143,18 @@ export interface PgpAction {
    * palette, and toasted when the action's shortcut fires.
    */
   disabledReason?: (ctx: ActionCtx) => string | undefined;
-  execute: (ctx: ActionCtx) => void | Promise<void>;
+  /**
+   * A second step: selecting the action shows these options (searchable,
+   * like the top level) and `execute` runs with the picked option's id.
+   * The palette's one way to ask "which one?" -- used by translate, where
+   * "which language" is the whole question.
+   */
+  pick?: (ctx: ActionCtx) => {
+    title: string;
+    placeholder: string;
+    options: { id: string; label: string; keywords?: string[] }[];
+  };
+  execute: (ctx: ActionCtx, picked?: string) => void | Promise<void>;
 }
 
 /** Resolve an action's display name against a ctx. */

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@amibeingpwned/ui/button";
 import { ariaKeyShortcuts, isMacPlatform, Kbd } from "@amibeingpwned/ui/kbd";
@@ -10,11 +10,17 @@ import {
   SelectValue,
 } from "@amibeingpwned/ui/select";
 
+import type { Edit, InlineStyle } from "../../lib/compose/text-format";
 import type { WorkspaceAction } from "../../lib/messages";
 import type { PublicContactKey } from "../../lib/storage/contacts";
+import type { ComposeTranslateProps } from "./ComposeToolbar";
 import { MODE_SHORTCUTS } from "../../lib/actions/definitions";
+import { applyTextareaEdit } from "../../lib/compose/apply-edit";
+import { toggleInlineStyle } from "../../lib/compose/text-format";
+import { ComposeToolbar } from "./ComposeToolbar";
 import { DetectedKeyBanner } from "./DetectedKeyBanner";
 import { DropZone } from "./DropZone";
+import { FindReplaceBar } from "./FindReplaceBar";
 
 type Mode = WorkspaceAction;
 
@@ -62,6 +68,18 @@ interface WorkspaceInputProps {
    *  input unchanged when there is nothing to fix, which is the signal
    *  this component uses to leave the browser's own paste alone. */
   onRepairPastedText: (text: string) => string;
+  /** Translate-before-sending, when the feature is on and usable. */
+  composeTranslate?: ComposeTranslateProps;
+  /** The editing tools, for the action registry (palette + shortcuts).
+   *  Called with null on unmount. */
+  onToolsReady?: (tools: ComposeTools | null) => void;
+}
+
+export interface ComposeTools {
+  applyStyle: (style: InlineStyle) => void;
+  openFind: () => void;
+  /** Close the find bar and drop its highlight mirror (master lock). */
+  closeFind: () => void;
 }
 
 export function WorkspaceInput({
@@ -86,6 +104,8 @@ export function WorkspaceInput({
   onReset,
   onResetOutput,
   onRepairPastedText,
+  composeTranslate,
+  onToolsReady,
 }: WorkspaceInputProps) {
   // Per-detection mask override. Re-arms whenever a fresh private-key
   // paste is detected so the user can't accidentally leave the mask off
@@ -107,6 +127,123 @@ export function WorkspaceInput({
     },
     [inputElRef, getInput],
   );
+
+  // ── editing tools (formatting, find & replace, translate) ────────────
+  // Prose is composed in encrypt and sign; decrypt and verify take pasted
+  // armor, where a bold button is noise. Find still works everywhere.
+  const composing = mode === "encrypt" || mode === "sign";
+  const textareaMounted = files.length === 0;
+  // `find` is null when closed; when open it carries the query to start
+  // from (the selection at the time of the press) and a nonce so a
+  // second press while open refocuses the field, as editors do.
+  const [find, setFind] = useState<{ query: string; nonce: number } | null>(
+    null,
+  );
+  useEffect(() => {
+    if (!textareaMounted) setFind(null);
+  }, [textareaMounted]);
+  // The matches the bar wants painted, drawn on a mirror layer under the
+  // (transparent) textarea -- see the backdrop below.
+  const [highlights, setHighlights] = useState<{
+    ranges: { start: number; end: number }[];
+    current: number;
+  } | null>(null);
+  const onHighlight = useCallback(
+    (ranges: { start: number; end: number }[], current: number) =>
+      setHighlights({ ranges, current }),
+    [],
+  );
+  const backdropRef = useRef<HTMLDivElement>(null);
+  const syncBackdropScroll = useCallback(() => {
+    const el = inputElRef.current;
+    const bd = backdropRef.current;
+    if (el && bd) {
+      bd.scrollTop = el.scrollTop;
+      bd.scrollLeft = el.scrollLeft;
+    }
+  }, [inputElRef]);
+  // Only while the text is not masked: the mirror would show the
+  // private key the mask is hiding.
+  const painting = find !== null && highlights !== null && !privateKeyDetected;
+  useEffect(() => {
+    if (painting) syncBackdropScroll();
+  }, [painting, highlights, syncBackdropScroll]);
+
+  const openFind = useCallback(() => {
+    const el = inputElRef.current;
+    const selected = el
+      ? el.value.slice(el.selectionStart, el.selectionEnd)
+      : "";
+    // A multi-line selection is not a search term.
+    const query = selected.includes("\n") ? "" : selected;
+    setFind((prev) => ({
+      query: query || (prev?.query ?? ""),
+      nonce: (prev?.nonce ?? 0) + 1,
+    }));
+  }, [inputElRef]);
+
+  /** Write an edit into the box through the native editing path, so it
+   *  sits on the same undo stack as typing (see `applyTextareaEdit`). */
+  const applyEdit = useCallback(
+    (edit: Edit, focus = true) => {
+      const el = inputElRef.current;
+      if (!el) return;
+      if (!applyTextareaEdit(el, edit, focus)) onInputChange(edit.text);
+    },
+    [inputElRef, onInputChange],
+  );
+
+  const applyStyle = useCallback(
+    (style: InlineStyle) => {
+      const el = inputElRef.current;
+      if (!el) return;
+      applyEdit(
+        toggleInlineStyle(
+          el.value,
+          { start: el.selectionStart, end: el.selectionEnd },
+          style,
+        ),
+      );
+    },
+    [inputElRef, applyEdit],
+  );
+
+  const getSelection = useCallback(() => {
+    const el = inputElRef.current;
+    return el
+      ? { start: el.selectionStart, end: el.selectionEnd }
+      : { start: 0, end: 0 };
+  }, [inputElRef]);
+
+  /** Select a match and scroll it into view. A textarea has no
+   *  scrollIntoView for a range, so the line is estimated from the
+   *  text before it and the box's line height. */
+  const selectRange = useCallback(
+    (start: number, end: number) => {
+      const el = inputElRef.current;
+      if (!el) return;
+      el.setSelectionRange(start, end);
+      const line = el.value.slice(0, start).split("\n").length - 1;
+      const lineHeight = parseFloat(getComputedStyle(el).lineHeight) || 20;
+      const target = line * lineHeight;
+      if (target < el.scrollTop || target > el.scrollTop + el.clientHeight) {
+        el.scrollTop = Math.max(0, target - el.clientHeight / 2);
+      }
+    },
+    [inputElRef],
+  );
+
+  // Shortcuts (mod+B/I/E, mod+shift+X, mod+F) are dispatched by the action
+  // registry, which also lists them in the command palette; the tools are
+  // published to it through `onToolsReady`.
+  const closeFind = useCallback(() => {
+    setFind(null);
+    setHighlights(null);
+  }, []);
+  useEffect(() => {
+    onToolsReady?.({ applyStyle, openFind, closeFind });
+    return () => onToolsReady?.(null);
+  }, [onToolsReady, applyStyle, openFind, closeFind]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
@@ -163,60 +300,101 @@ export function WorkspaceInput({
         />
       )}
 
-      {files.length === 0 && (
-        <textarea
-          id="pgp-input"
-          aria-label="Message input"
-          ref={attachInput}
-          onChange={(e) => onInputChange(e.target.value)}
-          onPaste={(e) => {
-            // The ONE place workspace armor repair happens. A paste is
-            // the only way mangled armor reaches this box -- nobody
-            // hand-types a `\n`-escaped key -- so the repair rides on
-            // the paste rather than on `onChange`, which also fires for
-            // every keystroke of someone composing a message.
-            //
-            // Only intercepts when the text actually changed. Otherwise
-            // it falls through to the browser's own paste, which knows
-            // how to handle undo, IME and multi-range selections better
-            // than this handler could.
-            const pasted = e.clipboardData.getData("text/plain");
-            const repaired = onRepairPastedText(pasted);
-            if (repaired === pasted) return;
-            e.preventDefault();
-            // Splice at the caret rather than replacing the box: a paste
-            // into a selection replaces that selection, and a paste with
-            // the caret mid-text inserts there. Clobbering the whole
-            // value would silently discard whatever else was staged.
-            const el = e.currentTarget;
-            // Non-null on a textarea (the `?? length` fallback the DOM
-            // types once needed is gone), so read them straight.
-            const { selectionStart: start, selectionEnd: end } = el;
-            const next =
-              el.value.slice(0, start) + repaired + el.value.slice(end);
-            el.value = next;
-            const caret = start + repaired.length;
-            el.setSelectionRange(caret, caret);
-            onInputChange(next);
-          }}
-          className="border-border bg-background placeholder:text-muted-foreground focus:ring-ring min-h-20 w-full flex-1 resize-none rounded-md border p-3 text-sm focus:ring-2 focus:outline-none"
-          // Visually mask armored private-key material. NOTE: this is
-          // shoulder-surfing protection only; the string still lives in
-          // V8's heap until GC. The privateKeyDetected flag elsewhere
-          // also blocks draft-snapshotting this content.
-          style={
-            privateKeyDetected && !maskIgnored
-              ? ({ WebkitTextSecurity: "disc" } as React.CSSProperties)
-              : undefined
-          }
-          placeholder={
-            mode === "decrypt"
-              ? "Paste the encrypted message you received..."
-              : mode === "verify"
-                ? "Paste the signed message to check..."
-                : "Type or paste your message..."
-          }
-        />
+      {textareaMounted && (
+        <div className="relative flex min-h-0 flex-1">
+          {painting && (
+            <FindBackdrop
+              ref={backdropRef}
+              text={getInput()}
+              ranges={highlights.ranges}
+              current={highlights.current}
+            />
+          )}
+          <textarea
+            id="pgp-input"
+            aria-label="Message input"
+            ref={attachInput}
+            onChange={(e) => onInputChange(e.target.value)}
+            onScroll={painting ? syncBackdropScroll : undefined}
+            onPaste={(e) => {
+              // The ONE place workspace armor repair happens. A paste is
+              // the only way mangled armor reaches this box -- nobody
+              // hand-types a `\n`-escaped key -- so the repair rides on
+              // the paste rather than on `onChange`, which also fires for
+              // every keystroke of someone composing a message.
+              //
+              // Only intercepts when the text actually changed. Otherwise
+              // it falls through to the browser's own paste, which knows
+              // how to handle undo, IME and multi-range selections better
+              // than this handler could.
+              const pasted = e.clipboardData.getData("text/plain");
+              const repaired = onRepairPastedText(pasted);
+              if (repaired === pasted) return;
+              e.preventDefault();
+              // Splice at the caret rather than replacing the box: a paste
+              // into a selection replaces that selection, and a paste with
+              // the caret mid-text inserts there. Clobbering the whole
+              // value would silently discard whatever else was staged.
+              const el = e.currentTarget;
+              // Non-null on a textarea (the `?? length` fallback the DOM
+              // types once needed is gone), so read them straight.
+              const { selectionStart: start, selectionEnd: end } = el;
+              const next =
+                el.value.slice(0, start) + repaired + el.value.slice(end);
+              el.value = next;
+              const caret = start + repaired.length;
+              el.setSelectionRange(caret, caret);
+              onInputChange(next);
+            }}
+            className={`border-border placeholder:text-muted-foreground focus:ring-ring relative z-10 min-h-20 w-full flex-1 resize-none rounded-md border p-3 text-sm focus:ring-2 focus:outline-none ${
+              painting ? "bg-transparent" : "bg-background"
+            } ${composing && !privateKeyDetected ? "pb-12" : ""}`}
+            // Visually mask armored private-key material. NOTE: this is
+            // shoulder-surfing protection only; the string still lives in
+            // V8's heap until GC. The privateKeyDetected flag elsewhere
+            // also blocks draft-snapshotting this content.
+            style={
+              privateKeyDetected && !maskIgnored
+                ? ({ WebkitTextSecurity: "disc" } as React.CSSProperties)
+                : undefined
+            }
+            placeholder={
+              mode === "decrypt"
+                ? "Paste the encrypted message you received..."
+                : mode === "verify"
+                  ? "Paste the signed message to check..."
+                  : "Type or paste your message..."
+            }
+          />
+          {find && (
+            <div className="absolute top-2 right-2 z-20 w-[min(100%-1rem,22rem)]">
+              <FindReplaceBar
+                initialQuery={find.query}
+                focusNonce={find.nonce}
+                getText={() => inputElRef.current?.value ?? getInput()}
+                getSelection={getSelection}
+                select={selectRange}
+                apply={(edit) => applyEdit(edit, false)}
+                textVersion={inputVersion}
+                onHighlight={onHighlight}
+                onClose={() => {
+                  setFind(null);
+                  setHighlights(null);
+                  inputElRef.current?.focus();
+                }}
+              />
+            </div>
+          )}
+          {composing && !privateKeyDetected && (
+            <div className="pointer-events-none absolute right-2 bottom-2 z-20">
+              <ComposeToolbar
+                onStyle={applyStyle}
+                onFind={openFind}
+                translate={composeTranslate}
+              />
+            </div>
+          )}
+        </div>
       )}
 
       {privateKeyDetected && (
@@ -273,3 +451,45 @@ export function WorkspaceInput({
     </div>
   );
 }
+
+/**
+ * The mirror layer that paints find matches. Same box, padding, font and
+ * wrapping as the textarea so every character lands in the same place;
+ * the text itself is transparent and only the marks show through the
+ * textarea above (which goes transparent while this is mounted). Scroll
+ * is mirrored by the owner on the textarea's scroll events.
+ */
+const FindBackdrop = forwardRef<
+  HTMLDivElement,
+  { text: string; ranges: { start: number; end: number }[]; current: number }
+>(function FindBackdrop({ text, ranges, current }, ref) {
+  const parts: React.ReactNode[] = [];
+  let at = 0;
+  ranges.forEach((r, i) => {
+    if (r.start > at) parts.push(text.slice(at, r.start));
+    parts.push(
+      <mark
+        key={i}
+        className={`rounded-sm text-transparent ${
+          i === current ? "bg-ring/70" : "bg-ring/30"
+        }`}
+      >
+        {text.slice(r.start, r.end)}
+      </mark>,
+    );
+    at = r.end;
+  });
+  parts.push(text.slice(at));
+  // A trailing newline needs a character after it to take up a line,
+  // exactly as the textarea's caret does.
+  if (text.endsWith("\n")) parts.push("\u200b");
+  return (
+    <div
+      ref={ref}
+      aria-hidden
+      className="bg-background pointer-events-none absolute inset-0 overflow-hidden rounded-md border border-transparent p-3 text-sm break-words whitespace-pre-wrap text-transparent"
+    >
+      {parts}
+    </div>
+  );
+});

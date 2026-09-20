@@ -85,6 +85,24 @@ export interface PgpPreferences {
    *  used as the encrypt-to-self key. Null means no explicit choice
    *  (the first key acts as the implicit default). */
   defaultKeyId: string | null;
+  /** Unlock every key sealed under the master passkey the moment the
+   *  vault unlocks, off the SAME WebAuthn ceremony -- no per-key prompt.
+   *
+   *  OFF by default, and an existing install reads back `false` (the
+   *  stored blob is a partial overlay on these defaults). Only meaningful
+   *  with a passkey master; a password master has no PRF output to
+   *  reuse, so the toggle is not offered. Mutually exclusive with
+   *  `neverCacheKeys`: one says "keys are live from the first prompt",
+   *  the other "keys are never live between operations".
+   *
+   *  What it costs: the one ceremony that opens the vault now opens every
+   *  key sealed under it too (T-VAULT-UNLOCK-OPENS-KEYS). Keys sealed
+   *  under their own PRF salt, another passkey, or a password are NOT
+   *  touched by the vault ceremony. A key on the master credential moves
+   *  over by itself the next time its own prompt is answered (the same
+   *  ceremony evaluates the master salt too); the others keep their
+   *  prompt (`lib/protection/vault-unlock.ts`). */
+  unlockKeysOnOpen: boolean;
 }
 
 /** Shipped defaults. Stored blobs are partial overlays on top of these,
@@ -114,6 +132,7 @@ export const DEFAULT_PREFERENCES: PgpPreferences = {
   aiTranslateEnabled: true,
   translationTargetLanguage: "en",
   defaultKeyId: null,
+  unlockKeysOnOpen: false,
 };
 
 // ── bootstrap vs settings split ──────────────────────────────────────

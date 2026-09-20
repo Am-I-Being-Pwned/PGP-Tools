@@ -417,7 +417,11 @@ export function ImportPreviewPage({
 }) {
   const { entered, close } = useSlideOver(onBack);
   return (
-    <SlideOverPanel entered={entered} ariaLabel={`Import ${incoming.keyId}`}>
+    <SlideOverPanel
+      entered={entered}
+      ariaLabel={`Import ${incoming.keyId}`}
+      onDismiss={close}
+    >
       <SlideOverHeader
         title={incoming.status === "update" ? "Update key" : "Import key"}
         onBack={close}

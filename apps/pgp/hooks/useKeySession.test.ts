@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { KeyHandleEntry, KeySessionStoreDeps } from "./useKeySession";
+import { createKeySessionStore, dropHandle } from "./useKeySession";
+
 const wasm = vi.hoisted(() => ({ dropKey: vi.fn(() => Promise.resolve()) }));
 const age = vi.hoisted(() => ({
   closeSshIdentity: vi.fn(() => Promise.resolve()),
@@ -7,9 +10,6 @@ const age = vi.hoisted(() => ({
 }));
 vi.mock("../lib/pgp/wasm", () => wasm);
 vi.mock("../lib/age/protect-flow", () => age);
-
-import type { KeyHandleEntry, KeySessionStoreDeps } from "./useKeySession";
-import { createKeySessionStore, dropHandle } from "./useKeySession";
 
 /** A store wired to spies, plus the spies. */
 function makeStore() {
@@ -67,9 +67,7 @@ describe("createKeySessionStore: an unlock cannot survive a lock", () => {
     expect(store.getHandle("KEY1")).toBeNull();
     // Nothing may claim the key is unlocked, and nothing may re-arm the
     // inactivity timer on behalf of a handle that no longer exists.
-    expect(deps.onUnlockedChanged).not.toHaveBeenCalledWith(
-      new Set(["KEY1"]),
-    );
+    expect(deps.onUnlockedChanged).not.toHaveBeenCalledWith(new Set(["KEY1"]));
     expect(deps.updateLastUsed).not.toHaveBeenCalled();
   });
 
@@ -211,9 +209,9 @@ describe("createKeySessionStore: preserved behaviour", () => {
   it("publishes unlocked ids, stamps last-used and re-arms the timer on unlock", async () => {
     const { store, deps } = makeStore();
 
-    await expect(store.unlock("KEY1", "pgp", () => Promise.resolve(1))).resolves.toBe(
-      true,
-    );
+    await expect(
+      store.unlock("KEY1", "pgp", () => Promise.resolve(1)),
+    ).resolves.toBe(true);
 
     expect(deps.onUnlockedChanged).toHaveBeenLastCalledWith(new Set(["KEY1"]));
     expect(deps.updateLastUsed).toHaveBeenCalledExactlyOnceWith("KEY1");
@@ -269,6 +267,188 @@ describe("createKeySessionStore: preserved behaviour", () => {
   it("locking an unlocked-but-unknown key is a no-op drop", () => {
     const { store, deps } = makeStore();
     store.lock("NOPE");
+    expect(deps.dropHandle).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * `unlockMany` is the "unlock keys when the vault unlocks" batch: several
+ * unlocks off ONE PRF output (SECURITY.md §14). Each entry still goes
+ * through `unlock`, so the per-entry generation check above applies --
+ * but that check only cancels the unlock IN FLIGHT. Without the batch
+ * rule, the next iteration would capture the NEW generation and insert
+ * a live key behind the lock screen. The mid-batch lock tests are that
+ * counterexample.
+ */
+describe("createKeySessionStore: a lock mid-batch stops the batch", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("stores every entry and resolves to the count", async () => {
+    const { store, deps } = makeStore();
+
+    await expect(
+      store.unlockMany([
+        { keyId: "KEY1", kind: "pgp", open: () => Promise.resolve(1) },
+        { keyId: "SSH1", kind: "ssh", open: () => Promise.resolve(2) },
+        { keyId: "KEY2", kind: "pgp", open: () => Promise.resolve(3) },
+      ]),
+    ).resolves.toBe(3);
+
+    expect(store.size()).toBe(3);
+    expect(store.getHandle("KEY1")).toBe(1);
+    expect(store.getHandle("SSH1")).toBe(2);
+    expect(store.getHandle("KEY2")).toBe(3);
+    expect(deps.onUnlockedChanged).toHaveBeenLastCalledWith(
+      new Set(["KEY1", "SSH1", "KEY2"]),
+    );
+    expect(deps.updateLastUsed).toHaveBeenCalledTimes(3);
+    expect(deps.updateLastUsed).toHaveBeenCalledWith("KEY1");
+    expect(deps.updateLastUsed).toHaveBeenCalledWith("SSH1");
+    expect(deps.updateLastUsed).toHaveBeenCalledWith("KEY2");
+    expect(deps.dropHandle).not.toHaveBeenCalled();
+  });
+
+  it("captures the generation BEFORE awaiting a loader, so a lock during the read cancels the batch", async () => {
+    // App hands the batch a loader (preference + keyring reads, both
+    // IndexedDB round trips) rather than a list. A lock that lands
+    // while the loader is pending must cancel everything: otherwise
+    // that window sits outside the rule and only the store read
+    // failing without a session keeps keys from going live behind the
+    // lock screen.
+    const { store, deps } = makeStore();
+    const open1 = vi.fn(() => Promise.resolve(1));
+    const open2 = vi.fn(() => Promise.resolve(2));
+    let release!: () => void;
+    const loader = () =>
+      new Promise<
+        { keyId: string; kind: "pgp" | "ssh"; open: () => Promise<number> }[]
+      >((res) => {
+        release = () =>
+          res([
+            { keyId: "KEY1", kind: "pgp", open: open1 },
+            { keyId: "KEY2", kind: "pgp", open: open2 },
+          ]);
+      });
+
+    const batch = store.unlockMany(loader);
+    // The vault locks while the keyring is still being read.
+    store.lockAll();
+    release();
+
+    await expect(batch).resolves.toBe(0);
+    expect(open1).not.toHaveBeenCalled();
+    expect(open2).not.toHaveBeenCalled();
+    expect(store.size()).toBe(0);
+    expect(deps.dropHandle).not.toHaveBeenCalled();
+  });
+
+  it("a loader with no lock in between runs like a list", async () => {
+    const { store } = makeStore();
+    await expect(
+      store.unlockMany(() =>
+        Promise.resolve([
+          { keyId: "KEY1", kind: "pgp", open: () => Promise.resolve(1) },
+        ]),
+      ),
+    ).resolves.toBe(1);
+    expect(store.getHandle("KEY1")).toBe(1);
+  });
+
+  it("a lockAll mid-batch drops the in-flight handle AND never opens the rest", async () => {
+    const { store, deps } = makeStore();
+    const first = deferredOpen();
+    const second = vi.fn(() => Promise.resolve(2));
+    const third = vi.fn(() => Promise.resolve(3));
+
+    const batch = store.unlockMany([
+      { keyId: "KEY1", kind: "pgp", open: first.open },
+      { keyId: "KEY2", kind: "pgp", open: second },
+      { keyId: "KEY3", kind: "ssh", open: third },
+    ]);
+
+    // The machine locks while the first open is still pending.
+    store.lockAll();
+    first.resolve(1);
+
+    await expect(batch).resolves.toBe(0);
+    // The one in flight is dropped by the per-entry check...
+    expect(deps.dropHandle).toHaveBeenCalledExactlyOnceWith({
+      handle: 1,
+      kind: "pgp",
+    });
+    // ...and the rest are never even started: an open under the new
+    // generation would have been STORED, behind the lock screen.
+    expect(second).not.toHaveBeenCalled();
+    expect(third).not.toHaveBeenCalled();
+    expect(store.size()).toBe(0);
+    expect(deps.updateLastUsed).not.toHaveBeenCalled();
+  });
+
+  it("a per-key lock of an UNRELATED key mid-batch also stops the batch", async () => {
+    // Per-key locks bump the global generation; the batch rule keys off
+    // that same counter, so it is just as conservative here.
+    const { store, deps } = makeStore();
+    const first = deferredOpen();
+    const second = vi.fn(() => Promise.resolve(2));
+
+    const batch = store.unlockMany([
+      { keyId: "KEY1", kind: "pgp", open: first.open },
+      { keyId: "KEY2", kind: "pgp", open: second },
+    ]);
+
+    store.lock("OTHER");
+    first.resolve(1);
+
+    await expect(batch).resolves.toBe(0);
+    expect(deps.dropHandle).toHaveBeenCalledExactlyOnceWith({
+      handle: 1,
+      kind: "pgp",
+    });
+    expect(second).not.toHaveBeenCalled();
+    expect(store.size()).toBe(0);
+  });
+
+  it("skips an entry whose open rejects and still stores the rest", async () => {
+    // A blob that turns out not to open off this output (tampered, or
+    // sealed differently after all) must not cost the user the others.
+    const { store, deps } = makeStore();
+
+    await expect(
+      store.unlockMany([
+        { keyId: "KEY1", kind: "pgp", open: () => Promise.resolve(1) },
+        {
+          keyId: "BAD",
+          kind: "pgp",
+          open: () => Promise.reject(new Error("aead failure")),
+        },
+        { keyId: "KEY3", kind: "pgp", open: () => Promise.resolve(3) },
+      ]),
+    ).resolves.toBe(2);
+
+    expect(store.size()).toBe(2);
+    expect(store.getHandle("KEY1")).toBe(1);
+    expect(store.getHandle("BAD")).toBeNull();
+    expect(store.getHandle("KEY3")).toBe(3);
+    expect(deps.dropHandle).not.toHaveBeenCalled();
+    expect(deps.updateLastUsed).not.toHaveBeenCalledWith("BAD");
+  });
+
+  it("a batch started AFTER a lock runs normally", async () => {
+    // The generation captured at batch start is the one that counts;
+    // an earlier lock is history, not a mid-batch event.
+    const { store, deps } = makeStore();
+
+    store.lockAll();
+    store.lock("KEY1");
+
+    await expect(
+      store.unlockMany([
+        { keyId: "KEY1", kind: "pgp", open: () => Promise.resolve(1) },
+        { keyId: "KEY2", kind: "pgp", open: () => Promise.resolve(2) },
+      ]),
+    ).resolves.toBe(2);
+
+    expect(store.size()).toBe(2);
     expect(deps.dropHandle).not.toHaveBeenCalled();
   });
 });

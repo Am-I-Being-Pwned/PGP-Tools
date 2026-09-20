@@ -62,6 +62,12 @@ interface OnboardingFlowProps {
   cacheKey?: boolean;
 }
 
+/** Whether picking `preset` turns never-cache on (Paranoid does), which
+ *  rules out unlock-on-open. `undefined` is "Keep the defaults". */
+function presetPinsNeverCache(preset: PresetId | undefined): boolean {
+  return preset !== undefined && PRESETS[preset].bundle.neverCacheKeys === true;
+}
+
 export function OnboardingFlow({
   onComplete,
   addKey,
@@ -126,6 +132,11 @@ export function OnboardingFlow({
   const [keyAlgorithm, setKeyAlgorithm] = useState<KeyAlgorithm>("ecc");
   const [expiryOption, setExpiryOption] = useState<ExpiryOption>("2y");
   const [presetChoice, setPresetChoice] = useState<PresetId>("careful");
+  // "Unlock keys with the vault": off by default, offered only on the
+  // passkey path (a password master has no PRF output to reuse). The
+  // first key was sealed under the master salt by `prfReuse` above, so
+  // opting in here needs no migration.
+  const [unlockKeysOnOpen, setUnlockKeysOnOpen] = useState(false);
 
   /** Final onboarding step: optionally apply a preset bundle, then
    *  persist completion and hand off to the app. */
@@ -141,6 +152,12 @@ export function OnboardingFlow({
     await savePreferences({
       storageLocation: location,
       onboardingComplete: true,
+      // After the bundle, so the tick wins over a preset that leaves the
+      // field alone. The checkbox is hidden (and its state ignored) for
+      // a preset that turns never-cache on -- the two are opposites.
+      ...(unlockKeysOnOpen && !presetPinsNeverCache(preset)
+        ? { unlockKeysOnOpen: true }
+        : {}),
     });
     onComplete(location);
   };
@@ -258,10 +275,6 @@ export function OnboardingFlow({
       setError("Name is required.");
       return;
     }
-    if (!email.trim()) {
-      setError("Email is required.");
-      return;
-    }
 
     setStep("generating");
 
@@ -270,7 +283,7 @@ export function OnboardingFlow({
       const { blob, handle } = await generateAndProtect(
         {
           name: name.trim(),
-          email: email.trim(),
+          email: email.trim() || undefined,
           comment: comment.trim() || undefined,
           type: keyAlgorithm,
           expiresIn: expiresIn || undefined,
@@ -390,7 +403,8 @@ export function OnboardingFlow({
               </div>
               <div>
                 <label className="text-muted-foreground mb-1 block text-xs">
-                  Email *
+                  Email{" "}
+                  <span className="text-muted-foreground/60">optional</span>
                 </label>
                 <input
                   type="email"
@@ -522,6 +536,25 @@ export function OnboardingFlow({
             </div>
 
             <PresetPicker selected={presetChoice} onSelect={setPresetChoice} />
+
+            {masterCredentialId && !presetPinsNeverCache(presetChoice) && (
+              <label className="flex cursor-pointer items-start gap-3 text-sm">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={unlockKeysOnOpen}
+                  onChange={(e) => setUnlockKeysOnOpen(e.target.checked)}
+                />
+                <span>
+                  Unlock keys with the vault
+                  <span className="text-muted-foreground block text-xs">
+                    The passkey prompt that opens the vault also unlocks your
+                    keys. No separate prompt per key. You can change this in
+                    Settings.
+                  </span>
+                </span>
+              </label>
+            )}
           </div>
 
           <div className="space-y-2 pt-4">

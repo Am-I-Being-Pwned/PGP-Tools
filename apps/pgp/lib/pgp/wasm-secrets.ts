@@ -340,6 +340,40 @@ export async function unlockWithPrf(
   return wasm.unlockWithPrf(ciphertext, iv, prfOutput, storedSecret, keyId);
 }
 
+/** What a re-seal hands back: the identity the blob's AAD was derived
+ *  from (so the caller can refuse to write it over a different keyring
+ *  entry) and the bare `[12 iv][ct]` blob. */
+export interface ResealResult {
+  meta: { keyId: string };
+  blob: Uint8Array;
+}
+const unpackResealResult = unpackMetaBlob<ResealResult["meta"]>;
+
+/**
+ * @secret-handling
+ *   in:  an already-unlocked KEY_STORE handle; prfOutput bytes;
+ *        storedSecret is the (fresh, per-blob) HKDF salt -- not secret
+ *   out: the re-sealed `[12 iv][ct]` blob plus the sealed-under
+ *        fingerprint (NOT secret)
+ *   contract: caller MUST `.fill(0)` `prfOutput`.
+ *
+ * Re-seals a live key under a different PRF output WITHOUT the plaintext
+ * cert crossing to JS. Used by "unlock keys when the vault unlocks" to
+ * move a key from its own per-blob PRF salt onto the master passkey's
+ * salt (`lib/protection/vault-unlock.ts`). The handle is read, not
+ * consumed, and nothing is inserted into KEY_STORE.
+ */
+export async function reprotectKeyWithPrf(
+  handle: number,
+  prfOutput: Uint8Array,
+  storedSecret: Uint8Array,
+): Promise<ResealResult> {
+  const wasm = await loadWasm();
+  return unpackResealResult(
+    wasm.reprotectKeyWithPrf(handle, prfOutput, storedSecret),
+  );
+}
+
 // ── contacts session bootstrap (derives the in-WASM session key) ─────
 
 /**
@@ -840,6 +874,28 @@ export async function unlockSshIdentityWithPrf(
     prfOutput,
     storedSecret,
     fingerprint,
+  );
+}
+
+/**
+ * @secret-handling
+ *   in:  an already-unlocked SSH_KEY_STORE handle; prfOutput bytes;
+ *        storedSecret is the (fresh, per-blob) HKDF salt -- not secret
+ *   out: the re-sealed `[12 iv][ct]` blob plus the sealed-under
+ *        fingerprint (NOT secret)
+ *   contract: caller MUST `.fill(0)` `prfOutput`.
+ *
+ * The SSH twin of {@link reprotectKeyWithPrf}. The AAD fingerprint is
+ * re-derived in wasm from the stored plaintext, never taken from JS.
+ */
+export async function reprotectSshIdentityWithPrf(
+  handle: number,
+  prfOutput: Uint8Array,
+  storedSecret: Uint8Array,
+): Promise<ResealResult> {
+  const wasm = await loadWasm();
+  return unpackResealResult(
+    wasm.reprotectSshIdentityWithPrf(handle, prfOutput, storedSecret),
   );
 }
 

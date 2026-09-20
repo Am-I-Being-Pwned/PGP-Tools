@@ -1034,6 +1034,48 @@ pub fn unlock_ssh_identity_with_prf(
     store_normalized_identity(plaintext, fingerprint)
 }
 
+/// Re-seal an already-unlocked SSH identity (by handle) under a NEW PRF
+/// output + stored secret, WITHOUT the plaintext leaving WASM. The SSH
+/// twin of `lib.rs::reprotect_key_with_prf`; see that doc-comment for why
+/// it exists. The handle is read, not consumed, and `SSH_KEY_STORE` is not
+/// touched. Returns `[12 iv][ct]`.
+///
+/// The AAD identity is re-derived from the stored plaintext rather than
+/// taken from JS, so a caller cannot re-seal a key under someone else's
+/// fingerprint -- and it is reported back in the packed metadata
+/// (`{"keyId": <SHA256:... fingerprint>}`, then `[12 iv][ct]`) so the JS
+/// side can refuse to write the result over a different keyring entry.
+///
+/// @secret-handling
+///   in:  `prf_output`; `stored_secret` is the persisted HKDF salt
+///   out: ciphertext + public fingerprint (not secret)
+#[wasm_bindgen(js_name = "reprotectSshIdentityWithPrf")]
+pub fn reprotect_ssh_identity_with_prf(
+    handle: u32,
+    prf_output: Vec<u8>,
+    stored_secret: Vec<u8>,
+) -> Result<Vec<u8>, String> {
+    let prf_output = Zeroizing::new(prf_output);
+    let stored_secret = Zeroizing::new(stored_secret);
+    SSH_KEY_STORE
+        .with(|store| {
+            store.with(handle, |plaintext| {
+                let public = public_key_of_normalized(plaintext)?;
+                let blob = protected::seal_with_prf(
+                    plaintext,
+                    &public.fingerprint,
+                    SSH_PASSKEY_AAD_PREFIX,
+                    SSH_PRF_HKDF_INFO,
+                    &prf_output,
+                    &stored_secret,
+                )?;
+                let meta = serde_json::json!({ "keyId": public.fingerprint });
+                Ok(protected::pack_meta_blob(&meta.to_string(), &blob))
+            })
+        })
+        .ok_or("SSH key handle not found - key may have been locked")?
+}
+
 /// Decrypt an age file (binary or armored) with an unlocked handle.
 ///
 /// @secret-handling
@@ -1709,6 +1751,77 @@ const FIDO_PUB: &str = "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZ
             .unwrap();
         assert_eq!(decrypt_age_with_handle(&ct, handle).unwrap(), PLAINTEXT);
         drop_ssh_identity(handle).unwrap();
+    }
+
+    #[test]
+    fn reprotect_with_prf_reseals_the_same_identity_under_new_material() {
+        let prf = vec![7u8; 32];
+        let stored_secret = vec![9u8; 32];
+        let packed = protect_ssh_identity_with_prf(
+            ED25519_KEY.as_bytes().to_vec(),
+            vec![],
+            prf.clone(),
+            stored_secret.clone(),
+        )
+        .unwrap();
+        let (meta, blob) = unpack(&packed);
+        let fpr = meta["fingerprint"].as_str().unwrap();
+        let handle =
+            unlock_ssh_identity_with_prf(&blob[12..], &blob[..12], prf, stored_secret, fpr)
+                .unwrap();
+
+        // Re-seal under the "master" PRF + a fresh stored secret.
+        let master_prf = vec![42u8; 32];
+        let fresh_secret = vec![3u8; 32];
+        let (meta2, resealed) = unpack(
+            &reprotect_ssh_identity_with_prf(handle, master_prf.clone(), fresh_secret.clone())
+                .unwrap(),
+        );
+        assert_eq!(
+            meta2["keyId"].as_str().unwrap(),
+            fpr,
+            "reports the AAD identity"
+        );
+        // The original handle is untouched by a reprotect.
+        let ct =
+            encrypt_age_to_recipients(PLAINTEXT, &recipients_json(&[ED25519_PUB]), false).unwrap();
+        assert_eq!(decrypt_age_with_handle(&ct, handle).unwrap(), PLAINTEXT);
+
+        // The new blob opens under the new material, and only under it.
+        let h2 = unlock_ssh_identity_with_prf(
+            &resealed[12..],
+            &resealed[..12],
+            master_prf.clone(),
+            fresh_secret.clone(),
+            fpr,
+        )
+        .unwrap();
+        assert_eq!(decrypt_age_with_handle(&ct, h2).unwrap(), PLAINTEXT);
+        assert!(
+            unlock_ssh_identity_with_prf(
+                &resealed[12..],
+                &resealed[..12],
+                vec![7u8; 32],
+                fresh_secret.clone(),
+                fpr,
+            )
+            .is_err(),
+            "old PRF must not open the re-sealed blob"
+        );
+        assert!(
+            unlock_ssh_identity_with_prf(
+                &resealed[12..],
+                &resealed[..12],
+                master_prf,
+                fresh_secret,
+                "SHA256:not-the-fingerprint",
+            )
+            .is_err(),
+            "AAD still binds the re-sealed blob to its fingerprint"
+        );
+        drop_ssh_identity(handle).unwrap();
+        drop_ssh_identity(h2).unwrap();
+        assert!(reprotect_ssh_identity_with_prf(handle, vec![1u8; 32], vec![2u8; 32]).is_err());
     }
 
     #[test]

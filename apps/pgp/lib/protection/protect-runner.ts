@@ -73,6 +73,15 @@ export type ProtectionInput =
         prfOutput: Uint8Array;
         prfSalt: ArrayBuffer;
       };
+      /** Run the ceremony under THIS salt instead of a fresh random one.
+       *  Set by callers when `unlockKeysOnOpen` is on and the credential
+       *  is the master passkey's, so the blob is sealed under the master
+       *  salt and the vault's own unlock ceremony can open it
+       *  (`lib/protection/vault-unlock.ts`). Ignored when `prfReuse` is
+       *  given (that carries its own salt). Deliberately NOT the default
+       *  for every master-credential reuse: sharing the salt is what lets
+       *  one PRF output open many blobs, and that is opt-in. */
+      prfSalt?: ArrayBuffer;
     };
 
 /** The shape every wasm protect export returns: metadata plus the packed
@@ -200,7 +209,7 @@ export async function runProtect<R extends PackedProtectResult, B>(
     prfOutput = protection.prfReuse.prfOutput;
     ownsPrfOutput = false; // caller zeros it
   } else {
-    prfSalt = generatePrfSalt();
+    prfSalt = protection.prfSalt ?? generatePrfSalt();
     ({ prfOutput } = await authenticateAndGetPrf(credentialId, prfSalt));
     ownsPrfOutput = true;
   }

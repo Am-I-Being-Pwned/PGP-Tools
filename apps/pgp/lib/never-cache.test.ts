@@ -29,12 +29,15 @@ describe("enterNeverCacheMode", () => {
     mocks.order = [];
   });
 
-  it("turns never-cache on and history capture off in one save", async () => {
+  it("turns never-cache on, history capture off and unlock-on-open off in one save", async () => {
     await enterNeverCacheMode();
     expect(mocks.savePreferences).toHaveBeenCalledTimes(1);
     expect(mocks.savePreferences).toHaveBeenCalledWith({
       neverCacheKeys: true,
       historyEnabled: false,
+      // Persisted, not just mirrored into state: the next vault unlock
+      // reads the stored value to decide whether to open every key.
+      unlockKeysOnOpen: false,
     });
   });
 

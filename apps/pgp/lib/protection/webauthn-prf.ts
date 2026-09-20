@@ -1,7 +1,7 @@
 import type {} from "./prf-types";
 
-import { AppError } from "../errors/app-error";
 import { fromBase64url, toBase64url } from "../encoding.ts";
+import { AppError } from "../errors/app-error";
 
 // ── helpers ──────────────────────────────────────────────────────────
 
@@ -91,6 +91,9 @@ export async function registerPasskey(
 
 export interface PasskeyAuthResult {
   prfOutput: Uint8Array;
+  /** PRF output for `secondSalt`, present iff one was requested and the
+   *  authenticator evaluated it. Caller-owned; `.fill(0)` it too. */
+  secondOutput?: Uint8Array;
 }
 
 /**
@@ -98,11 +101,19 @@ export interface PasskeyAuthResult {
  * from the PRF output.
  *
  * The same (credentialId, salt) pair always produces the same key.
+ *
+ * `secondSalt` asks the authenticator to evaluate a second salt in the
+ * SAME ceremony (the PRF extension allows exactly two). "Unlock keys
+ * with the vault" uses it to re-seal a key under the master salt off
+ * the one prompt the user was already answering for that key -- the
+ * only way to get a second salt's output without a second prompt, since
+ * one salt's output says nothing about another's.
  */
 export async function authenticateAndGetPrf(
   credentialId: string,
   prfSalt: BufferSource,
   signal?: AbortSignal,
+  secondSalt?: BufferSource,
 ): Promise<PasskeyAuthResult> {
   const credential = await navigator.credentials.get({
     publicKey: {
@@ -118,7 +129,11 @@ export async function authenticateAndGetPrf(
         },
       ],
       extensions: {
-        prf: { eval: { first: prfSalt } },
+        prf: {
+          eval: secondSalt
+            ? { first: prfSalt, second: secondSalt }
+            : { first: prfSalt },
+        },
       },
     },
     signal,
@@ -137,7 +152,13 @@ export async function authenticateAndGetPrf(
 
   // Return raw PRF bytes - HKDF happens in WASM so the derived key
   // never enters the JS heap.
-  return { prfOutput: new Uint8Array(prfOutput as ArrayBuffer) };
+  const second = ext.prf?.results?.second;
+  return {
+    prfOutput: new Uint8Array(prfOutput as ArrayBuffer),
+    ...(secondSalt && second
+      ? { secondOutput: new Uint8Array(second as ArrayBuffer) }
+      : {}),
+  };
 }
 
 /**

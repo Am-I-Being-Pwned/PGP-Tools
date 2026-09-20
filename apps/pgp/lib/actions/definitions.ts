@@ -13,7 +13,14 @@
 
 import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
 
+import type { InlineStyle } from "../compose/text-format";
 import type { ActionCtx, PgpAction, PgpMode } from "./types";
+import { languageLabel, TRANSLATION_LANGUAGES } from "../ai/languages";
+import {
+  FIND_SHORTCUT,
+  STYLE_LABELS,
+  STYLE_SHORTCUTS,
+} from "../compose/shortcuts";
 
 /** What "no input" means per mode, for Run's disabled reason. */
 const NO_INPUT_REASON: Record<PgpMode, string> = {
@@ -71,6 +78,29 @@ const modeActions: PgpAction[] = MODES.map(({ mode, name }) => ({
     ctx.navigation.setTab("workspace");
     ctx.navigation.setMode(mode);
   },
+}));
+
+/** The message-box tools exist only while prose is being written:
+ *  workspace tab, Encrypt or Sign, text box mounted. Elsewhere they are
+ *  absent rather than dimmed -- "Bold selection" on the Keys tab is not
+ *  a thing the user might want next. */
+function composing(ctx: ActionCtx): boolean {
+  return ctx.tab === "workspace" && ctx.compose.canEdit;
+}
+
+/** Bold / italic / strikethrough / code on the message selection. The
+ *  shortcuts are dispatched from here (the registry), so the toolbar
+ *  binds none of its own. */
+const styleActions: PgpAction[] = (
+  Object.keys(STYLE_SHORTCUTS) as InlineStyle[]
+).map((style) => ({
+  id: `compose.${style}`,
+  name: `${STYLE_LABELS[style]} selection`,
+  group: "Message",
+  keywords: ["format", "style", "text", style],
+  shortcut: STYLE_SHORTCUTS[style],
+  applicable: composing,
+  execute: (ctx) => ctx.ops.applyStyle(style),
 }));
 
 export const ACTIONS: readonly PgpAction[] = [
@@ -245,5 +275,63 @@ export const ACTIONS: readonly PgpAction[] = [
     group: "Session",
     keywords: ["logout", "secure", "close"],
     execute: (ctx) => ctx.ops.lockNow(),
+  },
+
+  ...styleActions,
+  {
+    id: "compose.find",
+    name: "Find and replace in message",
+    group: "Message",
+    keywords: ["search", "replace", "find"],
+    shortcut: FIND_SHORTCUT,
+    applicable: composing,
+    execute: (ctx) => ctx.ops.openFind(),
+  },
+  {
+    // Two steps: pick the action, then the language. The last-picked
+    // language is listed first so a repeat is Enter, Enter.
+    id: "compose.translate",
+    name: "Translate message...",
+    group: "Message",
+    keywords: ["translate", "translation", "language"],
+    applicable: composing,
+    disabledReason: (ctx) => {
+      if (!ctx.compose.translateEnabled)
+        return "Translation is off in Settings";
+      if (!ctx.hasInput) return "Nothing to translate yet";
+      return undefined;
+    },
+    pick: (ctx) => {
+      const last = ctx.compose.translateTarget;
+      const options = TRANSLATION_LANGUAGES.map((l) => ({
+        id: l.code,
+        label: l.code === last ? `${l.label} (last used)` : l.label,
+        keywords: [l.code],
+      }));
+      return {
+        title: "Translate the message to",
+        placeholder: "Pick a language...",
+        options: last
+          ? [
+              ...options.filter((o) => o.id === last),
+              ...options.filter((o) => o.id !== last),
+            ]
+          : options,
+      };
+    },
+    execute: (ctx, picked) => {
+      if (picked) ctx.ops.translateTo(picked);
+    },
+  },
+  {
+    // The result side has one direction only -- into the language the
+    // user reads -- so it is one entry, no picker, present only while a
+    // decrypted or verified message is on screen.
+    id: "result.translate",
+    name: (ctx) => `Translate to ${languageLabel(ctx.result.readingLanguage)}`,
+    group: "Result",
+    keywords: ["translate", "translation", "language", "decrypted"],
+    applicable: (ctx) => ctx.tab === "workspace" && ctx.result.canTranslate,
+    execute: (ctx) => ctx.ops.translateOutput(),
   },
 ];

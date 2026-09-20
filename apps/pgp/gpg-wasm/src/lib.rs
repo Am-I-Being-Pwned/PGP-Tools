@@ -272,7 +272,10 @@ pub struct VerifyResult {
 #[derive(Deserialize)]
 pub struct GenerateKeyOptions {
     pub name: String,
-    pub email: String,
+    /// Optional: a UID may be a bare name (`Alice`) or name + comment
+    /// with no address. Empty is treated as absent.
+    #[serde(default)]
+    pub email: Option<String>,
     pub comment: Option<String>,
     #[serde(rename = "type")]
     pub key_type: Option<String>,
@@ -1231,7 +1234,14 @@ fn build_cert_from_options(
     if let Some(ref comment) = opts.comment {
         userid = format!("{} ({})", userid, comment);
     }
-    userid = format!("{} <{}>", userid, opts.email);
+    if let Some(email) = opts
+        .email
+        .as_deref()
+        .map(str::trim)
+        .filter(|e| !e.is_empty())
+    {
+        userid = format!("{} <{}>", userid, email);
+    }
 
     let mut builder = CertBuilder::new()
         .add_userid(userid)
@@ -2324,6 +2334,44 @@ pub fn unlock_with_prf(
         &stored_secret,
     )?;
     parse_and_store_private_key(plaintext)
+}
+
+/// Re-seal an already-unlocked OpenPGP key (by handle) under a NEW PRF
+/// output + stored secret, WITHOUT the plaintext cert ever leaving WASM.
+///
+/// Used by "unlock keys when the vault unlocks": a key sealed under its own
+/// per-blob PRF salt is re-sealed under the master passkey's salt so the one
+/// ceremony that opens the vault can open it too. The stored secret is fresh
+/// per blob (JS generates it), so the derived AES key is still unique to this
+/// blob even though the PRF output is shared with the vault and every other
+/// migrated key.
+///
+/// Mirrors `crx.rs::reprotect_crx_key_with_password`: the handle is read, not
+/// consumed -- the key stays unlocked, and nothing is inserted into
+/// `KEY_STORE` (SECURITY.md §4 still holds: only `unlock_with_*` inserts).
+///
+/// Returns packed `[u32_le json_len][json][blob]` where the JSON is
+/// `{"keyId": <fingerprint hex>}` and `blob` is `[12 iv][ct]`. The identity
+/// is reported back deliberately: it is the AAD the blob was sealed under,
+/// derived from the key the HANDLE holds, and the JS side refuses to write
+/// the result over a keyring entry whose id differs. A handle/keyId mix-up
+/// would otherwise store key Y's ciphertext under key X's id and destroy X.
+///
+/// @secret-handling
+///   in:  `prf_output`; `stored_secret` is the persisted HKDF salt
+///   out: ciphertext + public fingerprint (not secret)
+#[wasm_bindgen(js_name = "reprotectKeyWithPrf")]
+pub fn reprotect_key_with_prf(
+    handle: u32,
+    prf_output: Vec<u8>,
+    stored_secret: Vec<u8>,
+) -> Result<Vec<u8>, String> {
+    let prf_output = Zeroizing::new(prf_output);
+    let stored_secret = Zeroizing::new(stored_secret);
+    let cert = get_cert_from_handle(handle)?;
+    let blob = encrypt_cert_with_prf(&cert, &prf_output, &stored_secret)?;
+    let meta = serde_json::json!({ "keyId": cert.fingerprint().to_hex() });
+    Ok(protected::pack_meta_blob(&meta.to_string(), &blob))
 }
 
 // =====================================================================

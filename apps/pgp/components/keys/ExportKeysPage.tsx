@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { CheckIcon, LockIcon } from "lucide-react";
 
 import { Button } from "@amibeingpwned/ui/button";
 
@@ -22,6 +21,7 @@ import { toast } from "../../lib/toast";
 import { downloadText } from "../../lib/utils/download";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 import { SubPage } from "../shared/SubPage";
+import { KeyUnlockRow } from "./KeyUnlockRow";
 
 type Step = "unlock" | "export";
 
@@ -426,156 +426,40 @@ function ExportKeysBody({ f }: { f: ExportKeysFlow }) {
       </p>
 
       <div className="space-y-2">
-        {myKeys.map((blob) => {
-          const unlocked = isUnlocked(blob.keyId);
-          const name = blob.userIds[0] ?? blob.keyId.slice(-16);
-          const isPasskey = blob.protection.method === "passkey";
-          const busy = unlockingId === blob.keyId;
-          return (
-            <div
-              key={blob.keyId}
-              className="border-border rounded-md border p-2"
-            >
-              <div className="flex items-center gap-2">
-                <span
-                  className={
-                    unlocked ? "text-green-400" : "text-muted-foreground"
-                  }
-                >
-                  {unlocked ? (
-                    <CheckIcon className="h-4 w-4" />
-                  ) : (
-                    <LockIcon className="h-4 w-4" />
-                  )}
-                </span>
-                <span className="min-w-0 flex-1 truncate text-sm">{name}</span>
-                {!unlocked && isPasskey && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={busy}
-                    onClick={() => void handleUnlockPasskey(blob)}
-                  >
-                    {busy ? "..." : "Unlock"}
-                  </Button>
-                )}
-              </div>
+        {myKeys.map((blob) => (
+          <KeyUnlockRow
+            key={blob.keyId}
+            name={blob.userIds[0] ?? blob.keyId.slice(-16)}
+            unlocked={isUnlocked(blob.keyId)}
+            isPasskey={blob.protection.method === "passkey"}
+            busy={unlockingId === blob.keyId}
+            password={passwords[blob.keyId] ?? ""}
+            error={unlockErrors[blob.keyId]}
+            onPasswordChange={(v) =>
+              setPasswords((p) => ({ ...p, [blob.keyId]: v }))
+            }
+            onUnlockPassword={() => void handleUnlockPassword(blob)}
+            onUnlockPasskey={() => void handleUnlockPasskey(blob)}
+          />
+        ))}
 
-              {!unlocked && !isPasskey && (
-                <div className="mt-2 flex items-stretch gap-2">
-                  <input
-                    type="password"
-                    autoComplete="current-password"
-                    placeholder="Key password"
-                    value={passwords[blob.keyId] ?? ""}
-                    onChange={(e) =>
-                      setPasswords((p) => ({
-                        ...p,
-                        [blob.keyId]: e.target.value,
-                      }))
-                    }
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") void handleUnlockPassword(blob);
-                    }}
-                    className={`${INPUT_CLASS} h-9 flex-1 py-0`}
-                  />
-                  <Button
-                    size="sm"
-                    className="h-9 shrink-0"
-                    disabled={busy || !(passwords[blob.keyId] ?? "")}
-                    onClick={() => void handleUnlockPassword(blob)}
-                  >
-                    {busy ? "..." : "Unlock"}
-                  </Button>
-                </div>
-              )}
-
-              {unlockErrors[blob.keyId] && (
-                <p className="text-destructive mt-1 text-xs">
-                  {unlockErrors[blob.keyId]}
-                </p>
-              )}
-            </div>
-          );
-        })}
-
-        {allCrxKeys.map((blob) => {
-          const unlocked = blob.extensionId in crxHandles;
-          const name = blob.label ?? blob.extensionId.slice(0, 16);
-          const isPasskey = blob.protection.method === "passkey";
-          const busy = unlockingId === blob.extensionId;
-          return (
-            <div
-              key={blob.extensionId}
-              className="border-border rounded-md border p-2"
-            >
-              <div className="flex items-center gap-2">
-                <span
-                  className={
-                    unlocked ? "text-green-400" : "text-muted-foreground"
-                  }
-                >
-                  {unlocked ? (
-                    <CheckIcon className="h-4 w-4" />
-                  ) : (
-                    <LockIcon className="h-4 w-4" />
-                  )}
-                </span>
-                <span className="min-w-0 flex-1 truncate text-sm">
-                  {name}
-                  <span className="text-muted-foreground ml-1.5 text-[11px]">
-                    CRX
-                  </span>
-                </span>
-                {!unlocked && isPasskey && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={busy}
-                    onClick={() => void handleUnlockCrxPasskey(blob)}
-                  >
-                    {busy ? "..." : "Unlock"}
-                  </Button>
-                )}
-              </div>
-
-              {!unlocked && !isPasskey && (
-                <div className="mt-2 flex items-stretch gap-2">
-                  <input
-                    type="password"
-                    autoComplete="current-password"
-                    placeholder="Key password"
-                    value={crxPasswords[blob.extensionId] ?? ""}
-                    onChange={(e) =>
-                      setCrxPasswords((p) => ({
-                        ...p,
-                        [blob.extensionId]: e.target.value,
-                      }))
-                    }
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") void handleUnlockCrxPassword(blob);
-                    }}
-                    className={`${INPUT_CLASS} h-9 flex-1 py-0`}
-                  />
-                  <Button
-                    size="sm"
-                    className="h-9 shrink-0"
-                    disabled={busy || !(crxPasswords[blob.extensionId] ?? "")}
-                    onClick={() => void handleUnlockCrxPassword(blob)}
-                  >
-                    {busy ? "..." : "Unlock"}
-                  </Button>
-                </div>
-              )}
-
-              {crxErrors[blob.extensionId] && (
-                <p className="text-destructive mt-1 text-xs">
-                  {crxErrors[blob.extensionId]}
-                </p>
-              )}
-            </div>
-          );
-        })}
+        {allCrxKeys.map((blob) => (
+          <KeyUnlockRow
+            key={blob.extensionId}
+            name={blob.label ?? blob.extensionId.slice(0, 16)}
+            badge="CRX"
+            unlocked={blob.extensionId in crxHandles}
+            isPasskey={blob.protection.method === "passkey"}
+            busy={unlockingId === blob.extensionId}
+            password={crxPasswords[blob.extensionId] ?? ""}
+            error={crxErrors[blob.extensionId]}
+            onPasswordChange={(v) =>
+              setCrxPasswords((p) => ({ ...p, [blob.extensionId]: v }))
+            }
+            onUnlockPassword={() => void handleUnlockCrxPassword(blob)}
+            onUnlockPasskey={() => void handleUnlockCrxPasskey(blob)}
+          />
+        ))}
       </div>
 
       {contacts.length > 0 && (

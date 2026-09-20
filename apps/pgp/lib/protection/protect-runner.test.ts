@@ -28,7 +28,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { GenerateKeyOptions } from "../pgp/types";
 import type { CrxProtectFlowResult, ProtectFlowResult } from "../pgp/wasm";
+import { generateCrxKey } from "../crx/operations";
 import { fromBase64 } from "../encoding";
+import { generateAndProtect, importAndProtect } from "./protect-flow";
 
 const wasm = vi.hoisted(() => ({
   generateProtectedWithPassword: vi.fn(),
@@ -64,9 +66,6 @@ const webauthn = vi.hoisted(() => ({
 
 vi.mock("./webauthn-prf", () => webauthn);
 vi.mock("../protection/webauthn-prf", () => webauthn);
-
-import { generateCrxKey } from "../crx/operations";
-import { generateAndProtect, importAndProtect } from "./protect-flow";
 
 // ── fixtures ─────────────────────────────────────────────────────────
 
@@ -212,15 +211,16 @@ describe("runProtect zeroization", () => {
         // Snapshot proves the bytes were LIVE at the wasm call and only
         // scrubbed afterwards -- a `.fill(0)` before the call would
         // "pass" a plain zero check while breaking every unlock.
-        expect([...password]).toEqual([
-          ...new TextEncoder().encode(PASSWORD),
-        ]);
+        expect([...password]).toEqual([...new TextEncoder().encode(PASSWORD)]);
         captured = password;
         return Promise.resolve(pgpResult(passwordPacked()));
       },
     );
 
-    await generateAndProtect(KEY_OPTS, { method: "password", password: PASSWORD });
+    await generateAndProtect(KEY_OPTS, {
+      method: "password",
+      password: PASSWORD,
+    });
 
     expectScrubbed(captured);
   });
@@ -311,7 +311,10 @@ describe("runProtect zeroization", () => {
     await generateAndProtect(KEY_OPTS, {
       method: "passkey",
       reusePasskeyCredentialId: CREDENTIAL_ID,
-      prfReuse: { prfOutput: output, prfSalt: new Uint8Array(32).fill(9).buffer },
+      prfReuse: {
+        prfOutput: output,
+        prfSalt: new Uint8Array(32).fill(9).buffer,
+      },
     });
 
     expect([...output]).toEqual(new Array(32).fill(0x77));
@@ -356,6 +359,77 @@ describe("runProtect zeroization", () => {
       }),
     ).rejects.toThrow("unlock failed");
     expectScrubbed(captured);
+  });
+});
+
+// ── sealing under the master salt ────────────────────────────────────
+
+/**
+ * `prfSalt` is how "unlock keys when the vault unlocks" gets a NEW key
+ * sealed under the master salt without a re-seal afterwards. It changes
+ * which salt the ceremony runs under and nothing else: the output is
+ * still ours to zero, and `prfReuse` (which carries its own salt and
+ * skips the ceremony) still wins over it.
+ */
+describe("runProtect with a caller-supplied prfSalt", () => {
+  const MASTER_SALT = new Uint8Array(32).fill(0x0c).buffer;
+
+  it("runs the ceremony under that exact salt and persists it", async () => {
+    wasm.generateProtectedWithPrf.mockResolvedValue(pgpResult(prfPacked()));
+
+    const { blob } = await generateAndProtect(KEY_OPTS, {
+      method: "passkey",
+      reusePasskeyCredentialId: CREDENTIAL_ID,
+      prfSalt: MASTER_SALT,
+    });
+
+    expect(webauthn.authenticateAndGetPrf).toHaveBeenCalledExactlyOnceWith(
+      CREDENTIAL_ID,
+      MASTER_SALT,
+    );
+    // A random salt here would seal the key under an output the vault
+    // ceremony never produces -- eligible-looking, but never openable.
+    expect(webauthn.generatePrfSalt).not.toHaveBeenCalled();
+    if (blob.protection.method !== "passkey") throw new Error("wrong method");
+    expect([...fromBase64(blob.protection.prfSalt)]).toEqual(
+      new Array(32).fill(0x0c),
+    );
+    expect(blob.protection.credentialId).toBe(CREDENTIAL_ID);
+  });
+
+  it("is ignored when prfReuse is also given -- that carries its own salt", async () => {
+    wasm.generateProtectedWithPrf.mockResolvedValue(pgpResult(prfPacked()));
+    const reuseSalt = new Uint8Array(32).fill(0x0d).buffer;
+
+    const { blob } = await generateAndProtect(KEY_OPTS, {
+      method: "passkey",
+      reusePasskeyCredentialId: CREDENTIAL_ID,
+      prfReuse: { prfOutput: prfOutput(), prfSalt: reuseSalt },
+      prfSalt: MASTER_SALT,
+    });
+
+    expect(webauthn.authenticateAndGetPrf).not.toHaveBeenCalled();
+    expect(webauthn.generatePrfSalt).not.toHaveBeenCalled();
+    if (blob.protection.method !== "passkey") throw new Error("wrong method");
+    expect([...fromBase64(blob.protection.prfSalt)]).toEqual(
+      new Array(32).fill(0x0d),
+    );
+  });
+
+  it("still scrubs the PRF output it obtained under the supplied salt", async () => {
+    // Same guarantee as the random-salt path: the salt is the caller's,
+    // the output is ours.
+    const output = prfOutput();
+    webauthn.authenticateAndGetPrf.mockResolvedValue({ prfOutput: output });
+    wasm.generateProtectedWithPrf.mockResolvedValue(pgpResult(prfPacked()));
+
+    await generateAndProtect(KEY_OPTS, {
+      method: "passkey",
+      reusePasskeyCredentialId: CREDENTIAL_ID,
+      prfSalt: MASTER_SALT,
+    });
+
+    expect([...output]).toEqual(new Array(32).fill(0));
   });
 });
 

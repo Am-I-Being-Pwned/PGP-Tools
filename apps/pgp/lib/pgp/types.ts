@@ -98,7 +98,8 @@ export interface VerifyResult {
 
 export interface GenerateKeyOptions {
   name: string;
-  email: string;
+  /** Omit for a UID with no address (`Name` or `Name (comment)`). */
+  email?: string;
   comment?: string;
   type?: "ecc" | "rsa";
   expiresIn?: number;

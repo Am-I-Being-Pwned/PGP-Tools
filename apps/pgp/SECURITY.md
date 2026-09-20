@@ -153,6 +153,13 @@ Cached generation (`cache: true`) chains an `unlockWith*` against the
 new blob using the credentials the user just provided, so the
 KEY_STORE entry still comes from an unlock path.
 
+"Unlock keys with the vault" (§14) is the same story from the other
+side: the master passkey ceremony is a user-initiated unlock, and the
+keys it opens go through `unlock_with_prf` exactly like a per-key
+prompt would. `reprotect_key_with_prf` (the re-seal primitive)
+reads a live handle and **inserts nothing**; the re-sealed blob only
+ever enters KEY_STORE through a later unlock.
+
 CRX signing keys (§10) and imported SSH identities (§13) live in
 **separate** stores — `CRX_KEY_STORE` and `SSH_KEY_STORE` — and never
 touch `KEY_STORE`, so this invariant is unaffected: `insert_key` still
@@ -1416,3 +1423,90 @@ carry. If that matters to you, paste.
 **Scope of this section.** It documents the Rust engine and the trust
 boundary around it. The JS side (`lib/age/`) carries recipient lines and
 opaque handles only, and is described here no further than that.
+
+---
+
+## 14. Unlock keys with the vault (`unlockKeysOnOpen`)
+
+Off by default. When on, and the master protection is a passkey, the
+one WebAuthn ceremony that opens the vault also opens every key
+**sealed under the master's credential and PRF salt**, with no per-key
+prompt. Nothing else changes: every lock trigger in §6 still drops
+every handle, and the at-rest format is untouched.
+
+**Why it works without new crypto.** A PRF-sealed blob is
+`AES-GCM(HKDF(prfOutput, storedSecret), cert, aad=fingerprint)`. Two
+blobs sealed under the same `(credentialId, prfSalt)` share
+`prfOutput` but not `storedSecret`, so they have distinct AES keys and
+distinct AAD. Onboarding's first key has always been sealed this way
+(`prfReuse`); the feature extends that to any key the user chooses.
+
+**Eligibility is exact** (`lib/protection/vault-unlock.ts`,
+`isSealedUnderMaster`): credential _and_ salt must match. A key on its
+own salt (every single-key import before this feature), on a different
+passkey, or on a password is skipped and keeps its own prompt.
+
+**There is no migration step.** A key on the master credential but
+its own salt cannot be opened by the master's output (one salt's PRF
+says nothing about another's), and the keyring where those salts live
+is only readable after the master ceremony -- so nothing can be done
+at vault-unlock time. What CAN be done is at the key's own prompt: the
+PRF extension evaluates up to two salts per ceremony, so when the user
+unlocks such a key the way they always have, `unlockWithPasskey` asks
+for the master salt as the `second` evaluation, unlocks the key with
+the first output, and re-seals it under the master with the second
+(`needsMasterReseal`, `resealUnderMaster`, `replaceKeyProtection`) --
+same prompt, zero extra interaction. From the next vault unlock on
+that key opens with the vault. A key on a DIFFERENT passkey cannot be
+carried this way (wrong authenticator secret) and a password key has
+no ceremony at all; both simply keep their own prompt.
+`reprotect_key_with_prf` / `reprotect_ssh_identity_with_prf` do the
+re-seal from the live handle in wasm under a fresh stored secret; the
+plaintext never crosses to JS and the handle is read rather than
+consumed. Two guards on the write: wasm reports back the fingerprint the new blob's
+AAD was derived from (from the key the HANDLE holds), and
+`resealUnderMaster` refuses to proceed unless it equals the keyring
+entry's id -- so a handle/id mix-up can never overwrite key X with
+key Y's ciphertext; and the write goes through the store's `update`
+(`replaceKeyProtection`), which swaps only the three sealing fields
+under the store lock rather than putting back a stale snapshot. While the
+option is on, new keys that reuse the master credential are sealed
+under the master salt directly (`ProtectionInput.prfSalt`); while it is
+off they get a random salt as before. Two honest caveats about "off":
+onboarding's first key has always been master-sealed (`prfReuse`),
+and a key re-sealed while the option was on STAYS master-sealed after
+it is turned off -- off means the extension will not open them off the
+vault ceremony, not that no such blob exists. The at-rest exposure is
+the same either way (a vault dump without the authenticator opens
+nothing); a user who wants per-key salts back re-imports the key.
+
+**The unlock path.** `MasterUnlockScreen` loans its `prfOutput` to
+`onUnlocked` for the duration of that call and `.fill(0)`s it in a
+`finally`. That loan spans one settings read even when the option is
+off (the preference is encrypted, so it cannot be known sooner); the
+cost is one IndexedDB round trip of extra PRF lifetime, bounded and
+accepted. App reads the preference (an encrypted setting, so readable
+only once the session is live), reads the keyring, partitions it, and
+hands the eligible blobs to `KeySessionStore.unlockMany` -- as a
+LOADER, so the batch's lock generation is captured before the
+preference and keyring reads, and a lock landing during either cancels
+the batch. Each unlock then goes through the same generation-checked
+funnel as a manual unlock, and the loop **stops** if a lock landed
+since the batch started -- otherwise the iteration after a mid-batch
+lock would begin under the new generation and insert a live key behind
+the lock screen.
+
+**What it costs**, recorded as T-VAULT-UNLOCK-OPENS-KEYS: an attacker
+who can obtain one ceremony now gets the migrated keys as well as the
+vault. That is the trade the option exists to make, and the reason it
+is off by default, mutually exclusive with `neverCacheKeys`, pinned
+off by the Paranoid preset, and never auto-prompted after a system
+lock (§6).
+
+**Verified by:** `lib/protection/vault-unlock.test.ts` (eligibility,
+re-seal blob shape), `hooks/useKeySession.test.ts` (a lock mid-batch
+stops the batch), `gpg-wasm/src/tests.rs` and `age.rs` (re-seal round
+trip, wrong material and wrong AAD both fail, handle survives), and
+`e2e/unlock-on-open.spec.ts`, which asserts the virtual authenticator's
+sign count rose by **exactly one** across an unlock that left the key
+live.

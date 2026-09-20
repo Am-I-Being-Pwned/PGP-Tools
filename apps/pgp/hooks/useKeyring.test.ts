@@ -1,15 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { readKeyring } from "./useKeyring";
+
 const storage = vi.hoisted(() => ({
   getKeyring: vi.fn(),
   addKey: vi.fn(),
   removeKey: vi.fn(),
   updateAlias: vi.fn(),
+  replaceKeyProtection: vi.fn(),
   updateRevocationCertificate: vi.fn(),
 }));
 vi.mock("../lib/storage/keyring", () => storage);
-
-import { readKeyring } from "./useKeyring";
 
 /**
  * The distinction under test is the one a user reads as catastrophe: an

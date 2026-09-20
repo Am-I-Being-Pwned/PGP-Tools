@@ -33,6 +33,10 @@ export const PRESETS: Record<PresetId, SecurityPreset> = {
       autoLockMinutes: 30,
       lockOnTabAway: false,
       neverCacheKeys: false,
+      // Convenience first: the vault prompt opens the keys too. Only
+      // takes effect with a passkey master (a password master has no
+      // PRF output to reuse); the app ignores it otherwise.
+      unlockKeysOnOpen: true,
       historyEnabled: true,
       keyDiscoveryEnabled: true,
       encryptToSelf: true,
@@ -64,6 +68,10 @@ export const PRESETS: Record<PresetId, SecurityPreset> = {
       autoLockMinutes: 2,
       lockOnTabAway: true,
       neverCacheKeys: true,
+      // The only preset that touches this. Never-cache and unlock-on-open
+      // are opposites (see `preferences.ts`), and this preset picks the
+      // former; the other two leave the user's opt-in alone.
+      unlockKeysOnOpen: false,
       historyEnabled: false,
       // The only preset that turns key discovery off. Looking someone up
       // tells GitHub or keys.openpgp.org that this network is about to
@@ -152,6 +160,12 @@ const LINE_BUILDERS: BundleLine[] = [
     return b.neverCacheKeys
       ? "Keys drop from memory after every use"
       : "Unlocked keys stay cached until you lock";
+  },
+  (b) => {
+    if (b.unlockKeysOnOpen === undefined) return null;
+    return b.unlockKeysOnOpen
+      ? "One passkey prompt unlocks the vault and your keys"
+      : "Every key asks for its own unlock";
   },
   (b) => {
     if (b.historyEnabled === undefined) return null;

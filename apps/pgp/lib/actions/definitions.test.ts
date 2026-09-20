@@ -21,6 +21,8 @@ function fakeCtx(overrides: Partial<ActionCtx> = {}): ActionCtx {
     alsoSign: false,
     neverCacheKeys: false,
     counts: { ownKeys: 0, contacts: 0 },
+    result: { canTranslate: false, readingLanguage: "en" },
+    compose: { canEdit: true, translateEnabled: true, translateTarget: null },
     navigation: {
       setTab: noop,
       openHistory: noop,
@@ -38,6 +40,10 @@ function fakeCtx(overrides: Partial<ActionCtx> = {}): ActionCtx {
       toggleEncryptToSelf: noop,
       toggleAlsoSign: noop,
       toggleSaveToHistory: noop,
+      applyStyle: noop,
+      openFind: noop,
+      translateTo: noop,
+      translateOutput: noop,
     },
     ...overrides,
   };
@@ -434,14 +440,32 @@ describe("action wiring", () => {
       toggleEncryptToSelf: vi.fn(),
       toggleAlsoSign: vi.fn(),
       toggleSaveToHistory: vi.fn(),
+      applyStyle: vi.fn(),
+      openFind: vi.fn(),
+      translateTo: vi.fn(),
+      translateOutput: vi.fn(),
     };
-    return { ctx: fakeCtx({ navigation, ops }), navigation, ops };
+    return {
+      ctx: fakeCtx({
+        navigation,
+        ops,
+        hasInput: true,
+        result: { canTranslate: true, readingLanguage: "en" },
+        compose: {
+          canEdit: true,
+          translateEnabled: true,
+          translateTarget: "de",
+        },
+      }),
+      navigation,
+      ops,
+    };
   }
 
-  function run(id: string, ctx: ActionCtx) {
+  function run(id: string, ctx: ActionCtx, picked?: string) {
     const action = ACTIONS.find((a) => a.id === id);
     if (!action) throw new Error(`no action with id ${id}`);
-    void action.execute(ctx);
+    void action.execute(ctx, picked);
   }
 
   it.each([
@@ -470,10 +494,17 @@ describe("action wiring", () => {
       undefined,
     ],
     ["session.lock", "ops", "lockNow", undefined],
+    ["compose.bold", "ops", "applyStyle", "bold"],
+    ["compose.italic", "ops", "applyStyle", "italic"],
+    ["compose.strike", "ops", "applyStyle", "strike"],
+    ["compose.code", "ops", "applyStyle", "code"],
+    ["compose.find", "ops", "openFind", undefined],
+    ["compose.translate", "ops", "translateTo", "es"],
+    ["result.translate", "ops", "translateOutput", undefined],
   ] as const)("%s calls %s.%s", (id, group, method, arg) => {
     const { ctx, navigation, ops } = spyCtx();
 
-    run(id, ctx);
+    run(id, ctx, id === "compose.translate" ? "es" : undefined);
 
     const target = (group === "ops" ? ops : navigation) as Record<
       string,
@@ -510,6 +541,13 @@ describe("action wiring", () => {
       "nav.settings",
       "settings.security-presets",
       "session.lock",
+      "compose.bold",
+      "compose.italic",
+      "compose.strike",
+      "compose.code",
+      "compose.find",
+      "compose.translate",
+      "result.translate",
     ]);
     const modeActions = ACTIONS.filter((a) => a.id.startsWith("mode."));
     const unwired = ACTIONS.filter(
@@ -528,5 +566,105 @@ describe("action wiring", () => {
         action.id.slice("mode.".length) as PgpMode,
       );
     }
+  });
+});
+
+describe("message box actions", () => {
+  it("bold applies the style through ctx.ops.applyStyle", () => {
+    const applyStyle = vi.fn();
+    const ctx = fakeCtx();
+    ctx.ops.applyStyle = applyStyle;
+    void byId(ctx, "compose.bold")?.action.execute(ctx);
+    expect(applyStyle).toHaveBeenCalledWith("bold");
+  });
+
+  it("are absent, not dimmed, outside a composable message", () => {
+    const notComposing = fakeCtx({
+      compose: {
+        canEdit: false,
+        translateEnabled: true,
+        translateTarget: null,
+      },
+    });
+    expect(byId(notComposing, "compose.italic")).toBeUndefined();
+    expect(byId(fakeCtx({ tab: "keys" }), "compose.find")).toBeUndefined();
+    expect(byId(fakeCtx({ tab: "keys" }), "compose.translate")).toBeUndefined();
+  });
+
+  it("mod+B dispatches bold from the registry", () => {
+    const hit = findByShortcut(
+      ACTIONS,
+      keydown({ key: "b", metaKey: true }),
+      fakeCtx(),
+      true,
+    );
+    expect(hit?.action.id).toBe("compose.bold");
+  });
+
+  it("translate is one action with a language picker step", () => {
+    const translateTo = vi.fn();
+    const ctx = fakeCtx({ hasInput: true });
+    ctx.ops.translateTo = translateTo;
+    const t = byId(ctx, "compose.translate");
+    expect(t?.name).toBe("Translate message...");
+    const step = t?.action.pick?.(ctx);
+    expect(step?.options.map((o) => o.id)).toContain("es");
+    void t?.action.execute(ctx, "es");
+    expect(translateTo).toHaveBeenCalledWith("es");
+    // No per-language actions cluttering the registry.
+    expect(
+      ACTIONS.filter((a) => a.id.startsWith("compose.translate.")),
+    ).toEqual([]);
+  });
+
+  it("lists the last-used language first in the picker", () => {
+    const ctx = fakeCtx({
+      hasInput: true,
+      compose: { canEdit: true, translateEnabled: true, translateTarget: "de" },
+    });
+    const step = byId(ctx, "compose.translate")?.action.pick?.(ctx);
+    expect(step?.options[0]).toMatchObject({
+      id: "de",
+      label: "German (last used)",
+    });
+  });
+
+  it("translate is dimmed when the feature is off or the box is empty", () => {
+    expect(
+      byId(
+        fakeCtx({
+          hasInput: true,
+          compose: {
+            canEdit: true,
+            translateEnabled: false,
+            translateTarget: null,
+          },
+        }),
+        "compose.translate",
+      )?.disabledReason,
+    ).toBe("Translation is off in Settings");
+    expect(byId(fakeCtx(), "compose.translate")?.disabledReason).toBe(
+      "Nothing to translate yet",
+    );
+  });
+});
+
+describe("result.translate", () => {
+  it("is one entry, named for the reading language, only while a result can be translated", () => {
+    expect(byId(fakeCtx(), "result.translate")).toBeUndefined();
+    const ctx = fakeCtx({
+      result: { canTranslate: true, readingLanguage: "fr" },
+    });
+    expect(byId(ctx, "result.translate")?.name).toBe("Translate to French");
+    expect(byId(ctx, "result.translate")?.action.pick).toBeUndefined();
+    expect(
+      byId(
+        fakeCtx({
+          tab: "keys",
+          result: { canTranslate: true, readingLanguage: "fr" },
+        }),
+        "result.translate",
+      ),
+    ).toBeUndefined();
   });
 });

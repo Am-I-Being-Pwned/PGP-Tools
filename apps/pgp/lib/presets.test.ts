@@ -35,6 +35,7 @@ function fullPrefs(overrides: Partial<PgpPreferences> = {}): PgpPreferences {
     aiTranslateEnabled: true,
     translationTargetLanguage: "en",
     defaultKeyId: null,
+    unlockKeysOnOpen: false,
     ...overrides,
   };
 }
@@ -46,6 +47,7 @@ describe("PRESETS", () => {
       autoLockMinutes: 30,
       lockOnTabAway: false,
       neverCacheKeys: false,
+      unlockKeysOnOpen: true,
       historyEnabled: true,
       keyDiscoveryEnabled: true,
       encryptToSelf: true,
@@ -80,6 +82,7 @@ describe("PRESETS", () => {
       storageLocation: "local",
       clipboardWipeSeconds: 15,
       aiTranslateEnabled: false,
+      unlockKeysOnOpen: false,
     });
   });
 
@@ -195,6 +198,7 @@ describe("describeBundle", () => {
     expect(describeBundle(PRESETS.casual.bundle)).toEqual([
       "Auto-lock after 30 minutes",
       "Unlocked keys stay cached until you lock",
+      "One passkey prompt unlocks the vault and your keys",
       "Keeps an encrypted history of what you do",
       "Keys can be looked up on GitHub and keys.openpgp.org",
       "Copied secrets clear from the clipboard after 60 seconds",
@@ -216,6 +220,7 @@ describe("describeBundle", () => {
     expect(describeBundle(PRESETS.paranoid.bundle)).toEqual([
       "Auto-lock after 2 minutes and when you switch tabs",
       "Keys drop from memory after every use",
+      "Every key asks for its own unlock",
       "No history is kept",
       "No key lookups - nothing leaves this device to find a key",
       "Keys stay on this device",
@@ -253,6 +258,7 @@ describe("snapshotBundleFields", () => {
       // the point of the snapshot is the CURRENT value, not the
       // bundle's.
       keyDiscoveryEnabled: true,
+      unlockKeysOnOpen: false,
       encryptToSelf: false,
       clipboardWipeSeconds: 15,
     });

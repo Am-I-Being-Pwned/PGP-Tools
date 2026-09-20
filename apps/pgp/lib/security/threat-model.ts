@@ -393,11 +393,12 @@ export const THREAT_MODEL: Threat[] = [
   // ---------------------------------------------------------------------
   {
     id: "T-AI-PLAINTEXT-DISCLOSURE",
-    title: "Decrypted plaintext is handed to Chrome's built-in model",
+    title:
+      "Decrypted (or composed) plaintext is handed to Chrome's built-in model",
     attacker:
       "Google, or anyone who can compel or compromise them. Not an attacker inside the browser: this is the browser vendor being trusted with the message body itself, on a path the user opted into.",
     defence:
-      "Never invoked without a click: no translation and no language DETECTION runs on decrypt, on mount, or on output change, so the feature being enabled is not the same as the feature being used. Disabled outright by the strictest security preset. Sessions are created per call and destroyed in a `finally`, so no model session outlives the translation it was asked for, and the plaintext is aborted out of flight at master lock.",
+      "Never invoked without a click: no translation and no language DETECTION runs on decrypt, on mount, on output change, or as the user types -- the composer's translate-before-sending (`useComposeTranslation`, same pipeline) is also click-only, so the feature being enabled is not the same as the feature being used. Disabled outright by the strictest security preset. Sessions are created per call and destroyed in a `finally`, so no model session outlives the translation it was asked for, and the plaintext is aborted out of flight at master lock.",
     status: "accepted",
     rationale:
       "There is no way to verify this one and it should not be presented as though there were. Chrome's Translator is documented as on-device, but in May 2026 Google REMOVED the sentence from Chrome's settings stating that on-device AI operates without sending user data to Google servers, and did not replace it with an equivalent promise or explain the change. There is also no API-level attestation: nothing lets a caller prove a given inference stayed local, so this cannot be closed by writing better code at this layer. What that leaves is scope control, which is what the defence field describes -- the feature is click-triggered, disabled by the paranoid preset, and touches ONLY the decrypt output, never a private key, a passphrase, or the composed input. NOTE THE DEFAULT CHANGED: `aiTranslateEnabled` now ships TRUE, and this entry is no longer allowed to lean on 'off by default' as mitigation. What carries the weight instead is that the preference gates whether the BUTTON is offered, not whether anything is sent: a user who never presses it is in exactly the position they were in before the feature existed, and that is the property that keeps shipping it acceptable. If a future change ever makes translation or detection fire without a press, this entry stops being honest and the change is wrong. Note this is a strictly WIDER disclosure than T-GITHUB-LOOKUP-DISCLOSURE: that one discloses a username, this one discloses the message.",
@@ -691,6 +692,25 @@ export const THREAT_MODEL: Threat[] = [
     rationale:
       "Unfixable in software while the export feature exists, and it must exist -- key portability is a requirement. §8.9 calls this the deliberate trapdoor.",
     section: "§8.9",
+  },
+  {
+    id: "T-VAULT-UNLOCK-OPENS-KEYS",
+    title:
+      "One vault ceremony unlocks every key sealed under the master passkey",
+    attacker:
+      "Anyone who can obtain ONE WebAuthn ceremony from the user -- a coerced or shoulder-surfed biometric, or a passkey dialog the user approves reflexively -- while `unlockKeysOnOpen` is on.",
+    defence:
+      "Opt-in, off by default, and an existing install reads back off (the settings blob is a partial overlay on defaults). Only keys sealed under the master's EXACT credential AND PRF salt are opened (`isSealedUnderMaster`); a key on the master credential but its own salt is re-sealed under the master off ITS OWN next prompt (the PRF extension's second evaluation, `needsMasterReseal`) -- no extra ceremony, no migration step; a key on another passkey or a password keeps its per-key prompt. The batch unlock runs through `KeySessionStore.unlockMany`, so a lock landing mid-batch drops the in-flight handle AND stops the loop; nothing is inserted behind the lock screen. The PRF output is on loan to the unlock handler for the duration of that call and zeroed by the unlock screen's `finally`. Mutually exclusive with `neverCacheKeys`; the Paranoid preset pins it off. System-initiated locks still suppress the auto-prompt (§6), so a re-lock never pre-launches the ceremony that would now open everything.",
+    status: "accepted",
+    rationale:
+      "This is the feature: the user has said one prompt is the trade they want. Before it, the same attacker got the vault (keyring metadata, contacts, settings) off that one ceremony and needed a second ceremony per key; now the keys come too. What is NOT weakened: the at-rest sealing (each blob still has its own stored secret and fingerprint AAD, and a vault dump without the authenticator opens nothing), the lock invariants (every handle still dies on every lock trigger in §6), and the KEY_STORE insert paths (`unlock_with_prf` is still the only PGP insert site; `reprotect_key_with_prf` reads a handle and inserts nothing).",
+    verifiedBy: [
+      "apps/pgp/lib/protection/vault-unlock.test.ts",
+      "apps/pgp/hooks/useKeySession.test.ts",
+      "apps/pgp/e2e/unlock-on-open.spec.ts",
+      "apps/pgp/gpg-wasm/src/tests.rs",
+    ],
+    section: "§4, §6, §14",
   },
   {
     id: "T-DEVTOOLS",
