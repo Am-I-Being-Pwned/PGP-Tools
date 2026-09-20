@@ -124,6 +124,125 @@ fn test_encrypt_decrypt_text() {
     );
 }
 
+/// A cert whose validity period ended yesterday: created two days ago,
+/// valid for one. Returns (public armor, private armor). Goes through
+/// `CertBuilder` directly because `generate_key` only takes a validity
+/// period measured from now, so it can never produce an already-expired
+/// key without the test sleeping through it.
+fn gen_expired_key() -> (String, String) {
+    let (cert, _rev) = CertBuilder::new()
+        .add_userid("Expired <expired@example.com>")
+        .add_signing_subkey()
+        .add_transport_encryption_subkey()
+        .add_storage_encryption_subkey()
+        .set_cipher_suite(CipherSuite::Cv25519)
+        .set_creation_time(SystemTime::now() - Duration::from_secs(2 * 86_400))
+        .set_validity_period(Duration::from_secs(86_400))
+        .generate()
+        .unwrap();
+    (
+        armor_cert(&cert, false).unwrap(),
+        armor_cert(&cert, true).unwrap(),
+    )
+}
+
+/// Encrypt-to-self: the user's own key is the only recipient, and the
+/// same key signs. The ciphertext must open with that key and carry a
+/// good signature from it. This is the path "Also encrypt to me" takes
+/// when nothing else is selected.
+#[test]
+fn test_encrypt_to_myself_round_trip() {
+    let gen: serde_json::Value = serde_json::from_str(&gen_test_key()).unwrap();
+    let pub_armor = gen["publicKeyArmored"].as_str().unwrap();
+    let priv_armor = gen["privateKeyArmored"].as_str().unwrap();
+
+    let recipients = serde_json::to_string(&vec![pub_armor]).unwrap();
+    let ciphertext = encrypt(
+        b"note to self",
+        &recipients,
+        Some(priv_armor.to_string()),
+        None,
+    )
+    .unwrap();
+
+    let (plaintext, sig) = test_decrypt(&ciphertext, priv_armor, Some(recipients));
+    assert_eq!(plaintext, b"note to self");
+    assert_eq!(
+        sig["signatureStatus"], "valid",
+        "own signature should verify: {sig}"
+    );
+}
+
+/// An expired key is not a recipient. Encrypting to it alone must fail
+/// rather than produce a ciphertext nothing can open.
+#[test]
+fn test_encrypt_to_expired_key_alone_fails() {
+    let (expired_pub, _expired_priv) = gen_expired_key();
+    let info: serde_json::Value =
+        serde_json::from_str(&parse_key(&expired_pub).unwrap()).unwrap();
+    assert_eq!(
+        info["usableForEncryption"], false,
+        "fixture should read as unusable: {info}"
+    );
+
+    let recipients = serde_json::to_string(&vec![expired_pub.as_str()]).unwrap();
+    let err = encrypt(b"secret", &recipients, None, None)
+        .expect_err("encrypting to only an expired key must not succeed");
+    assert!(
+        err.to_lowercase().contains("expired"),
+        "error should say why the key was refused, got: {err}"
+    );
+}
+
+/// The dangerous case: an expired key next to a live one. Dropping the
+/// expired key silently would "succeed" while encrypting to fewer people
+/// than the user asked for -- the expired key's owner gets a message
+/// they cannot read and the sender is never told. The whole operation
+/// must be refused instead, and the ciphertext must not exist.
+#[test]
+fn test_encrypt_to_expired_and_live_key_is_refused() {
+    let live: serde_json::Value = serde_json::from_str(&gen_test_key()).unwrap();
+    let live_pub = live["publicKeyArmored"].as_str().unwrap();
+    let (expired_pub, _) = gen_expired_key();
+
+    for order in [
+        vec![live_pub, expired_pub.as_str()],
+        vec![expired_pub.as_str(), live_pub],
+    ] {
+        let recipients = serde_json::to_string(&order).unwrap();
+        let result = encrypt(b"secret", &recipients, None, None);
+        let err = result.expect_err("expired recipient must be refused, not silently dropped");
+        assert!(
+            err.to_lowercase().contains("expired"),
+            "error should name the expiry, got: {err}"
+        );
+    }
+}
+
+/// Encrypt-to-self with an expired OWN key is refused the same way: the
+/// user selected a live contact, the app appended their own (expired)
+/// key, and nothing about "it is mine" makes the expired key any more
+/// able to decrypt. This is the shape the UI produces when the default
+/// own key has lapsed.
+#[test]
+fn test_encrypt_to_self_with_expired_own_key_is_refused() {
+    let contact: serde_json::Value = serde_json::from_str(&gen_test_key()).unwrap();
+    let contact_pub = contact["publicKeyArmored"].as_str().unwrap();
+    let (own_expired_pub, _own_expired_priv) = gen_expired_key();
+
+    // Unsigned on purpose: signing with an expired key is refused by the
+    // signer path already, and that would mask what this test is about.
+    // The refusal has to come from the RECIPIENT check.
+    let recipients =
+        serde_json::to_string(&vec![contact_pub, own_expired_pub.as_str()]).unwrap();
+    let err = encrypt(b"secret", &recipients, None, None)
+        .expect_err("own expired key must not be silently dropped");
+    assert!(
+        err.contains("expired") && err.contains("Expired <expired@example.com>"),
+        "error should name the key and the expiry, got: {err}"
+    );
+}
+
 #[test]
 fn test_encrypt_decrypt_with_signature() {
     let gen_json = gen_test_key();

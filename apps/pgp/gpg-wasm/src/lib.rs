@@ -575,6 +575,7 @@ fn encrypt_impl(
     let mut recipient_keys = Vec::new();
     for cert in &recipients {
         let vc = cert.with_policy(policy(), None).str_err()?;
+        let before = recipient_keys.len();
         for key in vc
             .keys()
             .supported()
@@ -590,6 +591,24 @@ fn encrypt_impl(
             )
         {
             recipient_keys.push(key);
+        }
+        // EVERY recipient must contribute a key, or the whole operation
+        // is refused. The `.alive().revoked(false)` filters above are
+        // Sequoia's way of not encrypting to a dead key, but on their
+        // own they FAIL SILENTLY: an expired cert next to a live one
+        // simply drops out, and the result is a perfectly valid message
+        // that the expired key's owner cannot read -- while the sender
+        // sees an ordinary success. That includes the user's own key
+        // riding along via encrypt-to-self: nothing about "it is mine"
+        // lets an expired key decrypt.
+        //
+        // A whole-cert revocation is checked separately because Sequoia
+        // does not propagate it to the per-key status (see
+        // `usable_keys`), so the filters above would happily keep the
+        // subkeys of a revoked cert.
+        let cert_revoked = verified_revocation_reason(&vc.revocation_status());
+        if cert_revoked.is_some() || recipient_keys.len() == before {
+            return Err(unusable_recipient_reason(&vc, cert_revoked));
         }
     }
 
@@ -634,6 +653,54 @@ fn encrypt_impl(
     literal.finalize().str_err()?;
 
     Ok(sink)
+}
+
+/// Why a recipient cert contributed no encryption key to `encrypt_impl`,
+/// worded for the user. Names the key by its first User ID (sanitized:
+/// it is attacker-controlled text headed for the UI) so the sender knows
+/// WHICH recipient to chase, then says what is wrong in the order a user
+/// can act on: revoked (get a new key), expired (ask for a renewal), or
+/// simply no encryption subkey (a sign-only key was picked).
+fn unusable_recipient_reason(
+    vc: &openpgp::cert::ValidCert,
+    cert_revoked: Option<String>,
+) -> String {
+    let label = vc
+        .userids()
+        .next()
+        .map(|u| sanitize_untrusted(&String::from_utf8_lossy(u.userid().value()), 120))
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| vc.fingerprint().to_hex());
+
+    if let Some(reason) = cert_revoked {
+        return format!(
+            "Can't encrypt to {label}: the key has been revoked by its owner ({reason}). \
+             Ask them for their current key."
+        );
+    }
+    // Primary key past its expiry: nothing under it is alive.
+    if vc.alive().is_err() {
+        return format!(
+            "Can't encrypt to {label}: the key has expired. Ask them for a renewed key."
+        );
+    }
+    let any_encryption_capable = vc
+        .keys()
+        .for_transport_encryption()
+        .chain(vc.keys().for_storage_encryption())
+        .next()
+        .is_some();
+    if any_encryption_capable {
+        // Live primary, but every encryption subkey is expired, revoked,
+        // or uses an algorithm this build cannot encrypt with.
+        return format!(
+            "Can't encrypt to {label}: its encryption subkey has expired, been revoked, \
+             or uses an unsupported algorithm. Ask them for a renewed key."
+        );
+    }
+    format!(
+        "Can't encrypt to {label}: the key has no encryption subkey (it can only sign)."
+    )
 }
 
 /// Extract the first valid signing keypair from a cert.
