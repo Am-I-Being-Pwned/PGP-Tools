@@ -27,7 +27,7 @@
 </p>
 
 <p align="center">
-  <img src="assets/store-listing/promo/exports/a-1280x800.png" alt="PGP Tools side panel: encrypting a message to a recipient, with the sign option checked" width="820" />
+  <img src="assets/store-listing/promo/exports/en/a-1280x800.png" alt="PGP Tools side panel: encrypting a message to a recipient, with the sign option checked" width="820" />
 </p>
 
 ## Why PGP Tools?
