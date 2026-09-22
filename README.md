@@ -48,12 +48,12 @@
 
 <table>
   <tr>
-    <td width="50%"><img src="assets/store-listing/promo/exports/b-1280x800.png" alt="Encrypted at rest: keyring, contacts, settings and history are each a sealed blob on disk" /></td>
-    <td width="50%"><img src="assets/store-listing/promo/exports/c-1280x800.png" alt="Passkey unlock: a Touch ID prompt derives the key that decrypts the vault" /></td>
+    <td width="50%"><img src="assets/store-listing/promo/exports/en/b-1280x800.png" alt="Encrypted at rest: keyring, contacts, settings and history are each a sealed blob on disk" /></td>
+    <td width="50%"><img src="assets/store-listing/promo/exports/en/c-1280x800.png" alt="Passkey unlock: a Touch ID prompt derives the key that decrypts the vault" /></td>
   </tr>
   <tr>
-    <td width="50%"><img src="assets/store-listing/promo/exports/d-1280x800.png" alt="Atomic decrypt and verify: a verified signature returns the message, a failed one returns nothing" /></td>
-    <td width="50%"><img src="assets/store-listing/promo/exports/e-1280x800.png" alt="Open source: crypto runs in Rust, every store is encrypted at rest, bring the keys you already have" /></td>
+    <td width="50%"><img src="assets/store-listing/promo/exports/en/d-1280x800.png" alt="Atomic decrypt and verify: a verified signature returns the message, a failed one returns nothing" /></td>
+    <td width="50%"><img src="assets/store-listing/promo/exports/en/e-1280x800.png" alt="Open source: crypto runs in Rust, every store is encrypted at rest, bring the keys you already have" /></td>
   </tr>
 </table>
 
