@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   BoldIcon,
   CheckIcon,
@@ -65,6 +65,52 @@ const STYLE_ICONS: Record<
 
 const STYLE_ORDER: InlineStyle[] = ["bold", "italic", "strike", "code"];
 
+/** How close (px, from the strip's edge) the pointer has to come before
+ *  the strip fades back in. Far enough that it is showing by the time
+ *  the pointer lands on a chip, near enough that writing in the rest of
+ *  the box leaves it hidden. */
+const REVEAL_DISTANCE = 72;
+
+/**
+ * Whether the pointer is within `REVEAL_DISTANCE` of `ref`'s box.
+ * Tracked on the document rather than the message box so approaching
+ * from below or beside the box counts too; one rect read per frame at
+ * most, and a state change only when the answer flips.
+ */
+function usePointerNear(ref: React.RefObject<HTMLElement | null>): boolean {
+  const [near, setNear] = useState(false);
+  useEffect(() => {
+    let frame = 0;
+    let x = 0;
+    let y = 0;
+    const check = () => {
+      frame = 0;
+      const el = ref.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const dx = Math.max(r.left - x, 0, x - r.right);
+      const dy = Math.max(r.top - y, 0, y - r.bottom);
+      setNear(Math.hypot(dx, dy) <= REVEAL_DISTANCE);
+    };
+    const onMove = (e: PointerEvent) => {
+      x = e.clientX;
+      y = e.clientY;
+      if (!frame) frame = requestAnimationFrame(check);
+    };
+    // Leaving the panel altogether hides it, rather than freezing it at
+    // whatever the last in-panel position said.
+    const onLeave = () => setNear(false);
+    document.addEventListener("pointermove", onMove, { passive: true });
+    document.documentElement.addEventListener("pointerleave", onLeave);
+    return () => {
+      document.removeEventListener("pointermove", onMove);
+      document.documentElement.removeEventListener("pointerleave", onLeave);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, [ref]);
+  return near;
+}
+
 /** One button in the strip: borderless, a soft fill on hover, the
  *  strip itself carries the border and the translucent background. */
 const CHIP =
@@ -76,6 +122,13 @@ const CHIP =
  * with hover labels, mirroring the translate toggle on the result box;
  * `pointer-events-none` on the strip (set by the parent) keeps it from
  * eating selection drags, and each chip re-enables them for itself.
+ *
+ * Faded out while it is not in use, so it doesn't sit over the words
+ * being written; it comes back as the pointer nears the corner, and
+ * stays while its language menu is open or a translation is running.
+ * Only opacity changes: the chips stay clickable and in the
+ * accessibility tree (and the shortcuts cover them anyway), and on a
+ * device with no hover it never fades at all.
  */
 export function ComposeToolbar({
   onStyle,
@@ -83,11 +136,24 @@ export function ComposeToolbar({
   translate,
 }: ComposeToolbarProps) {
   const mac = isMacPlatform();
+  const stripRef = useRef<HTMLDivElement>(null);
+  const near = usePointerNear(stripRef);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const translating =
+    translate?.status.kind === "working" ||
+    translate?.status.kind === "downloading";
+  const shown = near || menuOpen || translating;
   return (
     <div
+      ref={stripRef}
       role="toolbar"
       aria-label={t("workspace_message_tools")}
-      className="border-border bg-background/90 pointer-events-auto flex items-center gap-0.5 rounded-md border p-0.5 shadow-sm backdrop-blur"
+      data-shown={shown}
+      // In quickly; out slowly and after a beat, so skimming past the
+      // corner doesn't make it flicker.
+      className={`border-border bg-background/90 pointer-events-auto flex items-center gap-0.5 rounded-md border p-0.5 shadow-sm backdrop-blur transition-opacity ease-out focus-within:opacity-100 hover:opacity-100 motion-reduce:transition-none [@media(hover:none)]:opacity-100 ${
+        shown ? "opacity-100 duration-150" : "opacity-0 delay-300 duration-300"
+      }`}
     >
       {STYLE_ORDER.map((style) => {
         const Icon = STYLE_ICONS[style];
@@ -127,7 +193,13 @@ export function ComposeToolbar({
         </button>
       </HoverLabel>
 
-      {translate && <TranslateMenu {...translate} />}
+      {translate && (
+        <TranslateMenu
+          {...translate}
+          open={menuOpen}
+          onOpenChange={setMenuOpen}
+        />
+      )}
     </div>
   );
 }
@@ -138,8 +210,13 @@ function TranslateMenu({
   onTranslate,
   onUndo,
   canUndo,
-}: ComposeTranslateProps) {
-  const [open, setOpen] = useState(false);
+  open,
+  onOpenChange: setOpen,
+}: ComposeTranslateProps & {
+  /** Owned by the strip, which stays visible while the menu is open. */
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const busy = status.kind === "working" || status.kind === "downloading";
   if (status.kind === "unavailable") return null;
@@ -162,7 +239,7 @@ function TranslateMenu({
           aria-expanded={open}
           disabled={busy}
           tabIndex={-1}
-          onClick={() => setOpen((v) => !v)}
+          onClick={() => setOpen(!open)}
           className={CHIP}
         >
           {busy ? (

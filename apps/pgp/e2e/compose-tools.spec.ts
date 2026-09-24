@@ -251,3 +251,30 @@ test("the command palette lists the formatting tools and runs them on the select
     await expect(palette.getByText("Translate message...")).toHaveCount(0);
   });
 });
+
+test("the tool strip fades out while idle and comes back as the pointer nears it", async ({
+  panel,
+}) => {
+  await onboardWithPassword(panel, PASSWORD);
+  await panel.getByRole("tab", { name: "Main" }).click();
+  await box(panel).fill("hello");
+  const strip = panel.getByRole("toolbar", { name: "Message tools" });
+  const at = await strip.boundingBox();
+  if (!at) throw new Error("tool strip has no bounding box");
+
+  // Far corner of the box: writing there leaves the strip hidden.
+  const boxAt = await box(panel).boundingBox();
+  if (!boxAt) throw new Error("message box has no bounding box");
+  await panel.mouse.move(boxAt.x + 4, boxAt.y + 4);
+  await expect(strip).toHaveAttribute("data-shown", "false");
+  await expect(strip).toHaveCSS("opacity", "0");
+
+  // Just short of the strip: already back, before a chip is reached.
+  await panel.mouse.move(at.x - 30, at.y + at.height / 2);
+  await expect(strip).toHaveAttribute("data-shown", "true");
+  await expect(strip).toHaveCSS("opacity", "1");
+
+  // Still clickable the moment it is reached.
+  await panel.getByRole("button", { name: "Bold" }).click();
+  await expect(strip).toHaveAttribute("data-shown", "true");
+});
