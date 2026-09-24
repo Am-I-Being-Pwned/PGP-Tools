@@ -158,7 +158,11 @@ export function ComposeToolbar({
       {STYLE_ORDER.map((style) => {
         const Icon = STYLE_ICONS[style];
         return (
-          <HoverLabel key={style} label={STYLE_LABELS[style]}>
+          <HoverLabel
+            key={style}
+            label={STYLE_LABELS[style]}
+            shortcut={STYLE_SHORTCUTS[style]}
+          >
             <button
               type="button"
               aria-label={STYLE_LABELS[style]}
@@ -180,7 +184,7 @@ export function ComposeToolbar({
 
       <span aria-hidden className="bg-border mx-0.5 h-4 w-px" />
 
-      <HoverLabel label={t("workspace_find_replace")}>
+      <HoverLabel label={t("workspace_find_replace")} shortcut={FIND_SHORTCUT}>
         <button
           type="button"
           aria-label={t("workspace_find_replace")}

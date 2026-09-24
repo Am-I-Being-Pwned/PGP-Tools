@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { LanguagesIcon, LoaderCircleIcon } from "lucide-react";
 
+import type { ShortcutSpec } from "@amibeingpwned/ui/kbd";
+import { Kbd } from "@amibeingpwned/ui/kbd";
 import {
   Popover,
   PopoverAnchor,
@@ -41,12 +43,15 @@ interface TranslateToggleProps {
 
 /** Hover/focus label, matching `ShortcutHint`'s pattern in WorkspaceView
  *  (the UI kit has no tooltip, so a Popover anchored to the trigger is
- *  the house idiom). */
+ *  the house idiom). With a `shortcut`, its keycaps sit under the label
+ *  so the hover teaches the key as well as the name. */
 export function HoverLabel({
   label,
+  shortcut,
   children,
 }: {
   label: string;
+  shortcut?: ShortcutSpec;
   children: React.ReactElement;
 }) {
   const [open, setOpen] = useState(false);
@@ -64,10 +69,13 @@ export function HoverLabel({
       <PopoverContent
         side="top"
         align="end"
-        className="pointer-events-none w-auto px-2 py-1.5 text-xs"
+        className="pointer-events-none flex w-auto flex-col items-center gap-2 px-2 py-1.5 text-xs"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         {label}
+        {shortcut && (
+          <Kbd shortcut={shortcut} className="text-muted-foreground" />
+        )}
       </PopoverContent>
     </Popover>
   );

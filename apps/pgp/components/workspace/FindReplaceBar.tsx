@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 
 import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
+import { cn } from "@amibeingpwned/ui";
 import {
   formatShortcutTitle,
   isMacPlatform,
@@ -23,6 +24,12 @@ import {
 import { t } from "../../lib/i18n";
 import { matchesShortcut } from "../../lib/shortcuts";
 import { INPUT_CLASS } from "../../lib/utils/styles";
+
+/** The shared input, fitted to the bar's h-7 rows: no border of its own
+ *  (a soft fill instead) so the bar's outline is the only line, and a
+ *  thinner focus ring so the field doesn't dwarf the icons beside it. */
+const FIELD_CLASS =
+  "bg-border/40 h-7 rounded border-transparent px-2 py-0 text-sm focus:ring-1";
 
 /** mod+Enter anywhere in the bar replaces every match. The same combo
  *  is the workspace's "run" shortcut, so the bar must swallow it
@@ -193,8 +200,10 @@ export function FindReplaceBar({
       // buttons) rather than one row-major grid, so the two text fields
       // are adjacent in the DOM and Tab moves Find -> Replace -> replace
       // buttons instead of detouring through the find row's icons.
-      // Every cell is h-8 with the same gap, so the rows line up.
-      className="border-border bg-background/80 flex items-start gap-x-1 rounded-md border p-1.5 shadow-md backdrop-blur"
+      // Every cell is h-7 with the same gap, so the rows line up.
+      // Dimmed while focus is back in the message, so it reads as parked
+      // rather than in the way; full strength on hover or focus.
+      className="border-border bg-background/80 flex items-start gap-x-0.5 rounded-md border p-0.5 opacity-50 shadow-md backdrop-blur transition-opacity focus-within:opacity-100 hover:opacity-100 motion-reduce:transition-none"
     >
       <button
         type="button"
@@ -210,15 +219,15 @@ export function FindReplaceBar({
             : t("workspace_replace")
         }
         onClick={() => setShowReplace((v) => !v)}
-        className="text-muted-foreground hover:text-foreground hover:bg-border/70 flex h-8 w-6 shrink-0 items-center justify-center rounded transition-colors"
+        className="text-muted-foreground hover:text-foreground hover:bg-border/70 flex h-7 w-6 shrink-0 items-center justify-center rounded transition-colors"
       >
         {showReplace ? (
-          <ChevronDownIcon className="h-4 w-4" />
+          <ChevronDownIcon className="h-3.5 w-3.5" />
         ) : (
-          <ChevronRightIcon className="h-4 w-4" />
+          <ChevronRightIcon className="h-3.5 w-3.5" />
         )}
       </button>
-      <div className="flex min-w-0 flex-1 flex-col gap-y-1.5">
+      <div className="flex min-w-0 flex-1 flex-col gap-y-0.5">
         <div className="relative min-w-0">
           <input
             ref={findRef}
@@ -228,10 +237,10 @@ export function FindReplaceBar({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onFindKey}
-            className={`${INPUT_CLASS} h-8 w-full py-0 pr-16 text-xs`}
+            className={cn(INPUT_CLASS, FIELD_CLASS, "w-full pr-14")}
           />
           <span
-            className="text-muted-foreground pointer-events-none absolute inset-y-0 right-2 flex items-center text-[11px] tabular-nums"
+            className="text-muted-foreground pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs tabular-nums"
             aria-live="polite"
           >
             {count}
@@ -250,14 +259,14 @@ export function FindReplaceBar({
                 replaceCurrent();
               }
             }}
-            className={`${INPUT_CLASS} h-8 min-w-0 py-0 text-xs`}
+            className={cn(INPUT_CLASS, FIELD_CLASS, "min-w-0")}
           />
         )}
       </div>
       {/* Rendered bottom-up (flex-col-reverse): the replace buttons come
           FIRST in the DOM, so Tab from the Replace field reaches them
           before the find row's icons, while they still draw beneath. */}
-      <div className="flex w-30 shrink-0 flex-col-reverse gap-y-1.5">
+      <div className="flex w-30 shrink-0 flex-col-reverse gap-y-0.5">
         {showReplace && (
           <div className="flex items-center justify-end gap-1">
             <TextButton
@@ -286,7 +295,7 @@ export function FindReplaceBar({
             aria-label={t("workspace_match_case")}
             title={t("workspace_match_case")}
             onClick={() => setCaseSensitive((v) => !v)}
-            className={`hover:text-foreground h-8 w-7 shrink-0 rounded font-mono text-[11px] transition-colors ${
+            className={`hover:text-foreground h-7 w-7 shrink-0 rounded font-mono text-xs transition-colors ${
               caseSensitive
                 ? "bg-border/70 text-foreground"
                 : "text-muted-foreground"
@@ -299,13 +308,13 @@ export function FindReplaceBar({
             label={t("workspace_previous_match")}
             onClick={() => step(-1)}
           >
-            <ChevronUpIcon className="h-4 w-4" />
+            <ChevronUpIcon className="h-3.5 w-3.5" />
           </IconButton>
           <IconButton label={t("workspace_next_match")} onClick={() => step(1)}>
-            <ChevronDownIcon className="h-4 w-4" />
+            <ChevronDownIcon className="h-3.5 w-3.5" />
           </IconButton>
           <IconButton label={t("workspace_close_find")} onClick={onClose}>
-            <XIcon className="h-4 w-4" />
+            <XIcon className="h-3.5 w-3.5" />
           </IconButton>
         </div>
       </div>
@@ -328,7 +337,7 @@ function IconButton({
       aria-label={label}
       title={label}
       onClick={onClick}
-      className="text-muted-foreground hover:text-foreground hover:bg-border/70 h-8 w-7 shrink-0 rounded transition-colors"
+      className="text-muted-foreground hover:text-foreground hover:bg-border/70 h-7 w-7 shrink-0 rounded transition-colors"
     >
       <span className="flex items-center justify-center">{children}</span>
     </button>
@@ -355,7 +364,7 @@ function TextButton({
       title={title}
       disabled={disabled}
       onClick={onClick}
-      className="border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground/40 h-8 shrink-0 rounded-md border px-1.5 text-xs transition-colors disabled:opacity-50 disabled:hover:text-current"
+      className="text-muted-foreground hover:text-foreground hover:bg-border/70 h-7 shrink-0 rounded px-1.5 text-sm transition-colors disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-current"
     >
       {label}
     </button>
