@@ -151,6 +151,32 @@ export async function decryptInWorkspace(
   await expect(panel.getByText(expectedPlaintext).first()).toBeVisible();
 }
 
+/** Simulate the background's context-menu write. The panel and the
+ *  worker share `chrome.storage.session`, so writing it from the panel
+ *  realm drives `usePendingOperation`'s `onChanged` listener down exactly
+ *  the path `openPanelWithOperation` does. Survives a reload, like the
+ *  real one, so it can be delivered before the vault is unlocked. */
+export async function deliverPendingOp(
+  panel: Page,
+  action: "encrypt" | "decrypt" | "sign" | "verify",
+  text: string,
+): Promise<void> {
+  await panel.evaluate(
+    ([key, op, value]) =>
+      chrome.storage.session.set({
+        [key]: {
+          type: "PENDING_OPERATION",
+          id: crypto.randomUUID(),
+          action: op,
+          text: value,
+          sourceTabId: 1,
+          createdAt: Date.now(),
+        },
+      }),
+    ["pgp_pending_operation", action, text] as const,
+  );
+}
+
 /** Unlock the vault from the master lock screen with a password. */
 export async function unlockWithPassword(
   panel: Page,

@@ -38,10 +38,18 @@ import { isPendingOperation, isPendingOpFresh } from "../lib/pending-op";
  */
 export function usePendingOperation(ready: boolean) {
   const [pending, setPending] = useState<PendingOperation | null>(null);
+  // False until the first read after `ready` has answered, so the panel
+  // can hold the workspace back rather than paint an empty form for the
+  // frames before a context-menu selection lands in it. Carries nothing
+  // from the op itself.
+  const [checked, setChecked] = useState(false);
 
   useEffect(() => {
     // Leave it in storage until the App is in a state that can route it.
-    if (!ready) return;
+    if (!ready) {
+      setChecked(false);
+      return;
+    }
 
     // AbortController gives us a properly-typed mutable `aborted`
     // boolean for cross-async cancellation. (A plain `let` or ref
@@ -51,12 +59,18 @@ export function usePendingOperation(ready: boolean) {
     const consume = async (): Promise<boolean> => {
       const result = await chrome.storage.session.get(SESSION_PENDING_OP);
       const op = result[SESSION_PENDING_OP];
-      if (!isPendingOperation(op)) return false;
+      if (!isPendingOperation(op)) {
+        if (!ac.signal.aborted) setChecked(true);
+        return false;
+      }
       // Always remove first, regardless of freshness -- a stale op
       // shouldn't keep sitting in storage even if we don't apply it.
       await chrome.storage.session.remove(SESSION_PENDING_OP);
-      if (!isPendingOpFresh(op)) return false;
       if (ac.signal.aborted) return true;
+      // Set together with the op, in the same batch, so there is no
+      // render between "checked" and "here it is".
+      setChecked(true);
+      if (!isPendingOpFresh(op)) return false;
       setPending(op);
       return true;
     };
@@ -100,5 +114,5 @@ export function usePendingOperation(ready: boolean) {
   // don't re-fire on every render.
   const clearPending = useCallback(() => setPending(null), []);
 
-  return { pending, clearPending };
+  return { pending, clearPending, checked };
 }

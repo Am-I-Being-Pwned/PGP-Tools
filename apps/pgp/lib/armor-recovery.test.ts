@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   looksLikeCollapsedArmor,
   reconstructArmor,
+  reconstructCleartextSigned,
   recoverArmorIfNeeded,
   repairArmorEscapes,
 } from "./armor-recovery";
@@ -416,5 +417,59 @@ describe("Kleopatra-style armor", () => {
     expect(rebuilt).toContain(
       "Fingerprint: 07DF8027AAFCFA3A349E96CB1AC6ADD598DFB505",
     );
+  });
+});
+
+describe("reconstructCleartextSigned", () => {
+  const signedMessage = (hash: string[], body: string) =>
+    [
+      "-----BEGIN PGP SIGNED MESSAGE-----",
+      ...hash,
+      "",
+      body,
+      "-----BEGIN PGP SIGNATURE-----",
+      "",
+      LINE_A,
+      "CCCC",
+      "=AbCd",
+      "-----END PGP SIGNATURE-----",
+    ].join("\n");
+
+  it("restores a one-line message exactly, header and signature included", () => {
+    const signed = signedMessage(["Hash: SHA512"], "Hi this is a msg");
+    expect(reconstructCleartextSigned(collapse(signed))).toBe(signed);
+    // ...and the context-menu path takes it.
+    expect(recoverArmorIfNeeded(collapse(signed))).toBe(signed);
+  });
+
+  it("keeps a multi-algorithm Hash header on its line", () => {
+    const signed = signedMessage(["Hash: SHA256, SHA512"], "one line");
+    expect(reconstructCleartextSigned(collapse(signed))).toBe(signed);
+  });
+
+  it("handles a message with no Hash header", () => {
+    const signed = signedMessage([], "no header here");
+    expect(reconstructCleartextSigned(collapse(signed))).toBe(signed);
+  });
+
+  it("joins a multi-line body rather than guessing its line breaks", () => {
+    const signed = signedMessage(["Hash: SHA256"], "first line\nsecond line");
+    expect(reconstructCleartextSigned(collapse(signed))).toBe(
+      signedMessage(["Hash: SHA256"], "first line second line"),
+    );
+  });
+
+  it("keeps the text around the message byte for byte", () => {
+    const signed = signedMessage(["Hash: SHA512"], "hello");
+    expect(reconstructCleartextSigned(`before ${collapse(signed)} after`)).toBe(
+      `before ${signed} after`,
+    );
+  });
+
+  it("leaves intact and non-signed text alone", () => {
+    const signed = signedMessage(["Hash: SHA512"], "hello");
+    expect(reconstructCleartextSigned(signed)).toBeNull();
+    expect(recoverArmorIfNeeded(signed)).toBe(signed);
+    expect(reconstructCleartextSigned(collapse(ARMOR_NO_HEADERS))).toBeNull();
   });
 });

@@ -1503,6 +1503,10 @@ is off by default, mutually exclusive with `neverCacheKeys`, pinned
 off by the Paranoid preset, and never auto-prompted after a system
 lock (§6).
 
+It also widens what an open key does without a click: a message opened
+from the context menu decrypts by itself when its key is already open
+(§15), and this option is the usual way a key is open on first launch.
+
 **Verified by:** `lib/protection/vault-unlock.test.ts` (eligibility,
 re-seal blob shape), `hooks/useKeySession.test.ts` (a lock mid-batch
 stops the batch), `gpg-wasm/src/tests.rs` and `age.rs` (re-seal round
@@ -1510,3 +1514,46 @@ trip, wrong material and wrong AAD both fail, handle survives), and
 `e2e/unlock-on-open.spec.ts`, which asserts the virtual authenticator's
 sign count rose by **exactly one** across an unlock that left the key
 live.
+
+## 15. Context-menu auto-run
+
+A selection opened with "Open in PGP Tools" that classifies as decrypt
+or verify runs without a click (`WorkspaceView`, the auto-run effect;
+`useWorkspaceOperations.executeUnattended`). Verify always -- it needs
+nothing secret. Decrypt **only when the key the message is addressed to
+already has an open handle**; a locked key, a password-only message, or
+no matching key falls back to the Decrypt button exactly as before.
+
+**Unattended means no secret is asked for and nothing reaches disk.**
+The flag is checked at the point of each prompt, not decided up front,
+because a key can close (idle timer, OS lock, master lock) between the
+auto-run's handle check and the decrypt: `ensureUnlocked` returns null
+instead of starting a passkey ceremony or showing the password row, the
+message-password prompt is skipped, and `maybeAutoDownload` does nothing
+-- the "Auto-download text results" preference is for results the user
+asked for, and this input is whatever a web page put in the selection.
+History never records decrypts (§11), and translation only runs on a
+click, so neither changes.
+
+**Ordering.** The run waits while the vault is settling (`vaultSettling`:
+contacts and keyring being read back, keys opening off the unlock
+ceremony) so a verdict is not reached against an empty contact list. A
+generation counter bumped by every unlock and every lock stops a stale
+unlock from clearing that flag. The user editing the input, clearing it,
+or changing mode cancels the run; waiting for the default key selection
+to land is bounded at 2s.
+
+**What it costs**, recorded as T-AUTORUN-UNATTENDED-DECRYPT: with a key
+open, one right-click on attacker-chosen text puts its plaintext on
+screen with no further confirmation. Nothing leaves the panel -- the page
+cannot read it, and the download is suppressed -- so this is not an
+oracle; the exposure is shoulder-surfing and heap residue (a decrypt
+already running when a lock lands, the existing T-OUTPUT-HEAP-RESIDUE
+window, is now more likely because nobody need be at the panel). With
+`neverCacheKeys` on, handles are dropped after each operation, so
+decrypt never qualifies.
+
+**Verified by:** `e2e/context-menu-autorun.spec.ts` (runs when the key
+is open; with it locked, no prompt and no plaintext until the click;
+a verify delivered to a locked panel runs on unlock; first open off one passkey
+ceremony with exactly one assertion; no download with auto-download on).

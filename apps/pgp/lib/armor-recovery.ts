@@ -188,6 +188,67 @@ export function reconstructArmor(text: string): string {
   );
 }
 
+/** A collapsed cleartext-signed message: the part up to the signature,
+ *  and the signature block itself. */
+const COLLAPSED_CLEARTEXT =
+  /-----BEGIN PGP SIGNED MESSAGE-----([^\n]*?)(-----BEGIN PGP SIGNATURE-----[^\n]*?-----END PGP SIGNATURE-----)/;
+/** A hash algorithm name in a `Hash:` header value, optionally with the
+ *  comma that says another follows (`Hash: SHA256, SHA512`). */
+const HASH_NAME = /^[A-Za-z0-9-]+,?$/;
+
+/**
+ * Rebuild a cleartext-signed message from a context-menu selection.
+ *
+ * Two of its three parts come back exactly: the `Hash:` header and the
+ * blank line after it, and the signature, which is ordinary armor and
+ * goes through {@link reconstructArmor}. The signed text in between
+ * CANNOT -- it is free text, and where its line breaks were is gone --
+ * so it is kept as ONE line. That is right for a one-line message and
+ * wrong for any other: a multi-line body comes back joined and its
+ * signature fails to verify, which is the honest outcome for text we
+ * can't restore (never a false "valid"; the signature covers the exact
+ * lines, and we only ever remove line breaks, never invent them).
+ *
+ * Returns null when the text isn't a fully collapsed cleartext-signed
+ * message, so the caller falls through to the other repairs. Anything
+ * around the message is kept byte for byte.
+ */
+export function reconstructCleartextSigned(text: string): string | null {
+  const m = COLLAPSED_CLEARTEXT.exec(text);
+  if (!m) return null;
+  const [whole, head, signatureBlock] = m;
+
+  const tokens = head
+    .trim()
+    .split(/\s+/)
+    .filter((t) => t.length > 0);
+  const headerLines: string[] = [];
+  let i = 0;
+  while (tokens[i] === "Hash:" && i + 1 < tokens.length) {
+    const names = [tokens[i + 1]];
+    i += 2;
+    if (!HASH_NAME.test(names[0])) return null;
+    while (names[names.length - 1].endsWith(",") && i < tokens.length) {
+      if (!HASH_NAME.test(tokens[i])) return null;
+      names.push(tokens[i]);
+      i++;
+    }
+    headerLines.push(`Hash: ${names.join(" ")}`);
+  }
+  const body = tokens.slice(i).join(" ");
+
+  const signature = reconstructArmor(signatureBlock);
+  if (signature === signatureBlock) return null; // couldn't rebuild it
+
+  const rebuilt =
+    "-----BEGIN PGP SIGNED MESSAGE-----\n" +
+    headerLines.map((l) => `${l}\n`).join("") +
+    "\n" +
+    `${body}\n` +
+    signature;
+  return text.slice(0, m.index) + rebuilt + text.slice(m.index + whole.length);
+}
+
 // ── Escape repair ────────────────────────────────────────────────────
 
 /**
@@ -331,7 +392,6 @@ export function repairArmorEscapes(text: string): string {
  */
 export function recoverArmorIfNeeded(text: string): string {
   const unescaped = repairArmorEscapes(text);
-  return looksLikeCollapsedArmor(unescaped)
-    ? reconstructArmor(unescaped)
-    : unescaped;
+  if (!looksLikeCollapsedArmor(unescaped)) return unescaped;
+  return reconstructCleartextSigned(unescaped) ?? reconstructArmor(unescaped);
 }

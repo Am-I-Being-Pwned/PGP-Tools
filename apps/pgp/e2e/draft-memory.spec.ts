@@ -6,6 +6,7 @@ import { scanJsHeap } from "./heap";
 import { strongRetainers } from "./heap-retainers";
 import {
   decryptInWorkspace,
+  deliverPendingOp,
   encryptToSelfInWorkspace,
   lockMasterViaPalette,
   seedVault,
@@ -630,27 +631,6 @@ test("decrypted multi-file results do not survive a master lock in the JS heap",
 const PENDING_CANARY = "PENDING-CANARY-7f2a91c4-do-not-leak";
 const PENDING_TEXT = `${PENDING_CANARY} selection to encrypt`;
 
-/** Simulate the background's context-menu write. The panel and the
- *  worker share `chrome.storage.session`, so writing it from the panel
- *  realm drives `usePendingOperation`'s `onChanged` listener down exactly
- *  the path `openPanelWithOperation` does. */
-async function deliverPendingOp(panel: Page, text: string): Promise<void> {
-  await panel.evaluate(
-    ([key, value]) =>
-      chrome.storage.session.set({
-        [key]: {
-          type: "PENDING_OPERATION",
-          id: "e2e-pending-op",
-          action: "encrypt",
-          text: value,
-          sourceTabId: 1,
-          createdAt: Date.now(),
-        },
-      }),
-    ["pgp_pending_operation", text] as const,
-  );
-}
-
 test("a context-menu selection is not held in the JS heap while the vault is locked", async ({
   panel,
 }) => {
@@ -659,7 +639,7 @@ test("a context-menu selection is not held in the JS heap while the vault is loc
 
   // The context menu fires against the locked panel. Nothing on screen
   // can route this.
-  await deliverPendingOp(panel, PENDING_TEXT);
+  await deliverPendingOp(panel, "encrypt", PENDING_TEXT);
   // Long enough to cover the hook's mount read AND its 400ms defensive
   // re-poll, so a zero below is not just "we measured too early".
   await panel.waitForTimeout(1_500);

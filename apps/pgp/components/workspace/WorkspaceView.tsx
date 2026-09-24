@@ -124,6 +124,13 @@ interface WorkspaceViewProps {
   ) => Promise<boolean | "cancelled">;
   pendingAction?: { action: WorkspaceAction; text: string } | null;
   onClearPending?: () => void;
+  /** The vault's stores (keys, contacts) are still being read, or keys
+   *  are still opening off the unlock ceremony. A context-menu auto-run
+   *  waits for this to settle so it decides on the full picture. */
+  vaultSettling?: boolean;
+  /** The first look for a context-menu selection hasn't answered yet;
+   *  the form is held back so it doesn't flash up ahead of one. */
+  awaitingPendingOp?: boolean;
   encryptToKeyId?: string | null;
   onClearEncryptTo?: () => void;
   onNavigateToKeys?: (importPrefill?: string) => void;
@@ -169,6 +176,8 @@ export function WorkspaceView({
   onUnlockWithPasskey,
   pendingAction,
   onClearPending,
+  vaultSettling = false,
+  awaitingPendingOp = false,
   encryptToKeyId,
   onClearEncryptTo,
   onNavigateToKeys,
@@ -743,6 +752,72 @@ export function WorkspaceView({
       translation,
     };
   });
+  // A message opened from the context menu runs by itself: verify always
+  // (it needs nothing secret), decrypt only when the key it is addressed
+  // to is ALREADY unlocked -- typically opened alongside the vault. It
+  // never starts a passkey ceremony or asks for a password on its own;
+  // a locked key or a password-only message falls back to the button,
+  // exactly as before. Waits while the vault is still settling so a
+  // verdict isn't reached against a contact list that hasn't loaded, and
+  // for the default-selection effect to land on the matching key, since
+  // `execute` decrypts with whatever key is selected.
+  const autoRun = s.autoRunAction;
+  // From arming until the unattended run returns, the idle form (message
+  // box, mode picker, Decrypt button) is held invisible: it would only
+  // flash up for the frames between the selection landing and the result
+  // replacing it. Layout is kept, so a run that falls back to the button
+  // just appears in place.
+  const [autoRunning, setAutoRunning] = useState(false);
+  // Also for the render the op arrives in, before the effect in
+  // useWorkspaceState has armed it, and while the panel is still looking
+  // for one at all: otherwise a fresh open paints the empty form first.
+  const arriving =
+    !!pendingAction?.text &&
+    (pendingAction.action === "decrypt" || pendingAction.action === "verify");
+  const hideForAutoRun =
+    awaitingPendingOp || arriving || autoRun !== null || autoRunning;
+  useEffect(() => {
+    if (!autoRun || vaultSettling || s.loading) return;
+    const give = () => s.clearAutoRun();
+    if (s.mode !== autoRun || s.operationDone) return give();
+    const run = { cancelled: false };
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    void (async () => {
+      if (autoRun === "decrypt") {
+        const match = await ops.matchDecryptionKey().catch(() => null);
+        if (run.cancelled) return;
+        if (!match || getKeyHandle(match) === null) return give();
+        // The selection effect is about to land on it; this re-runs when
+        // it does. Bounded, so a key picked by hand in the meantime can't
+        // leave the run armed to fire whenever it is picked back.
+        if (s.selectedKeyId !== match) {
+          timer = setTimeout(give, 2_000);
+          return;
+        }
+      }
+      const p = paletteRef.current;
+      give();
+      if (!p.canRun) return;
+      setAutoRunning(true);
+      void p.ops.executeUnattended().finally(() => setAutoRunning(false));
+    })();
+    return () => {
+      run.cancelled = true;
+      clearTimeout(timer);
+    };
+    // `inputVersion` stands in for the text, as in the selection effect.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    autoRun,
+    vaultSettling,
+    s.loading,
+    s.mode,
+    s.operationDone,
+    s.inputVersion,
+    s.selectedKeyId,
+    myKeys,
+  ]);
+
   useEffect(() => {
     onPaletteOps?.({
       mode: s.mode,
@@ -957,7 +1032,10 @@ export function WorkspaceView({
   }
 
   return (
-    <div className="flex h-full flex-col gap-3">
+    <div
+      className={`flex h-full flex-col gap-3 ${hideForAutoRun ? "invisible" : ""}`}
+      aria-busy={hideForAutoRun || undefined}
+    >
       <WorkspaceInput
         mode={s.mode}
         onModeChange={s.setMode}

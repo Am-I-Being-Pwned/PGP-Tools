@@ -211,6 +211,12 @@ export interface WorkspaceState {
    *  it rather than racing this. */
   messageEncryption: MessageEncryption | null;
   setMessageEncryption: (v: MessageEncryption | null) => void;
+  /** Set when a context-menu selection arrives in decrypt or verify
+   *  mode: the workspace runs it without a click once it safely can (see
+   *  the auto-run effect in WorkspaceView). Anything the user does to
+   *  the input first cancels it. */
+  autoRunAction: "decrypt" | "verify" | null;
+  clearAutoRun: () => void;
   setNeedsPassword: (b: boolean) => void;
   passwordInput: string;
   setPasswordInput: (s: string) => void;
@@ -511,6 +517,10 @@ export function useWorkspaceState(opts: {
   const [pendingPasswordDecrypt, setPendingPasswordDecrypt] = useState(false);
   const [messageEncryption, setMessageEncryption] =
     useState<MessageEncryption | null>(null);
+  const [autoRunAction, setAutoRunAction] = useState<
+    "decrypt" | "verify" | null
+  >(null);
+  const clearAutoRun = useCallback(() => setAutoRunAction(null), []);
   const [passwordInput, setPasswordInput] = useState("");
   const [passwordError, setPasswordError] = useState<string | null>(null);
   // Which engine the staged input is in, as a BOOLEAN derived from the
@@ -547,6 +557,7 @@ export function useWorkspaceState(opts: {
   }, [setOutput, setBinaryOutput, setFileResults]);
 
   const resetAll = useCallback(() => {
+    setAutoRunAction(null);
     setInput("");
     setFiles([]);
     setPublicKeyDetected(false);
@@ -803,6 +814,15 @@ export function useWorkspaceState(opts: {
         setInput(pendingAction.text);
         setFiles([]);
         resetOutput();
+        // Right-clicking a message and choosing to open it IS the
+        // request to read it; decrypt and verify follow on their own.
+        // Encrypt and sign are left for the user to address and send.
+        setAutoRunAction(
+          pendingAction.action === "decrypt" ||
+            pendingAction.action === "verify"
+            ? pendingAction.action
+            : null,
+        );
       }
       onClearPending?.();
     }
@@ -829,6 +849,7 @@ export function useWorkspaceState(opts: {
    */
   const handleInputChange = useCallback(
     (text: string) => {
+      setAutoRunAction(null);
       setInput(text);
       setFiles([]);
       resetOutput();
@@ -995,6 +1016,8 @@ export function useWorkspaceState(opts: {
     setPendingPasswordDecrypt,
     messageEncryption,
     setMessageEncryption,
+    autoRunAction,
+    clearAutoRun,
     setNeedsPassword,
     passwordInput,
     setPasswordInput,

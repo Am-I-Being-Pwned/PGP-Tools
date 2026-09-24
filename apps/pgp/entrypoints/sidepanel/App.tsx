@@ -119,6 +119,17 @@ export default function App() {
   // state set by the context-menu prefill flow).
   const [masterProtectionLoaded, setMasterProtectionLoaded] = useState(false);
   const [masterUnlocked, setMasterUnlocked] = useState(false);
+  // True from the moment the unlock screen goes until the stores it
+  // opened have been read back (contacts, keyring) and any keys opened
+  // off the same ceremony are open. The workspace is already mounted in
+  // that window, so a context-menu op can land in it; auto-run waits on
+  // this rather than verifying against a contact list that is still
+  // empty or giving up on a key that is a moment from unlocking.
+  const [vaultOpening, setVaultOpening] = useState(false);
+  // Bumped by every unlock and every lock, so an unlock that finishes
+  // opening after the vault was locked (and maybe opened again) can't
+  // clear the flag for the one that is still going.
+  const vaultOpenGenRef = useRef(0);
   const masterLockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const keyring = useKeyring();
@@ -152,7 +163,11 @@ export default function App() {
     onboardingComplete === true &&
     masterProtectionLoaded &&
     !(masterProtection && !masterUnlocked);
-  const { pending, clearPending } = usePendingOperation(canRoutePendingOp);
+  const {
+    pending,
+    clearPending,
+    checked: pendingChecked,
+  } = usePendingOperation(canRoutePendingOp);
 
   // True when the most recent master-lock was system-initiated (idle
   // timer, visibility hidden, OS idle). Used to suppress the
@@ -267,6 +282,8 @@ export default function App() {
       void wasmApi.dropContactsSession();
       setMasterAutoLocked(auto);
       setMasterUnlocked(false);
+      vaultOpenGenRef.current++;
+      setVaultOpening(false);
       // UNCONDITIONAL, and it must stay that way. `lockAll` does two
       // things: it drops the handles currently in the map, AND it bumps
       // the lock generation that `useKeySession` re-checks when an
@@ -704,10 +721,12 @@ export default function App() {
             masterProtection={masterProtection}
             autoLocked={masterAutoLocked}
             onUnlocked={async (prf) => {
+              const openGen = ++vaultOpenGenRef.current;
               setMasterUnlocked(true);
+              setVaultOpening(true);
               setMasterAutoLocked(false);
               resetMasterLockTimer();
-              void contacts.refresh();
+              const contactsRead = contacts.refresh();
               void crxKeys.refresh();
               // "Unlock keys when the vault unlocks": off the SAME
               // ceremony, open every key sealed under the master salt.
@@ -735,7 +754,8 @@ export default function App() {
                   // Best-effort: the vault is open; keys just stay locked.
                 }
               }
-              void keyring.refresh();
+              await Promise.allSettled([contactsRead, keyring.refresh()]);
+              if (openGen === vaultOpenGenRef.current) setVaultOpening(false);
             }}
           />
         </main>
@@ -870,6 +890,10 @@ export default function App() {
               getKeyHandle={session.getKeyHandle}
               onUnlockWithPassword={session.unlockWithPassword}
               onUnlockWithPasskey={session.unlockWithPasskey}
+              vaultSettling={
+                vaultOpening || keyring.loading || contacts.loading
+              }
+              awaitingPendingOp={!pendingChecked}
               pendingAction={
                 pending &&
                 (pending.action === "encrypt" ||

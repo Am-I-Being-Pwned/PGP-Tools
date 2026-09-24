@@ -1,8 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
 import type { PresentedError } from "../../lib/errors/present";
-import type {
+import type { 
   DecryptOptions,
   DecryptResult,
   EncryptInput,
@@ -249,6 +249,9 @@ export function useWorkspaceOperations({
   async function ensureUnlocked(keyId: string): Promise<number | null> {
     const cached = getKeyHandle(keyId);
     if (cached !== null) return cached;
+    // Nobody pressed anything: a key that closed since the auto-run
+    // checked it stays closed rather than raising a ceremony or a prompt.
+    if (unattendedRef.current) return null;
 
     const blob = myKeys.find((k) => k.keyId === keyId);
     if (!blob) return null;
@@ -292,6 +295,10 @@ export function useWorkspaceOperations({
     data?: { text?: string; binary?: Uint8Array } | { results: FileResult[] },
   ) {
     if (!(isFileInput ? autoDownloadFiles : autoDownloadText)) return;
+    // The preference is for results the user asked for. An auto-run's
+    // input is whatever a web page put in the selection, so its output
+    // goes to disk only when they press Download.
+    if (unattendedRef.current) return;
     if (data && "results" in data) {
       downloadResults(data.results);
     } else if (data) {
@@ -323,6 +330,24 @@ export function useWorkspaceOperations({
       }
     });
   }
+
+  /**
+   * True while an operation runs without a click (a context-menu
+   * auto-run). It never asks for a secret -- no ceremony, no password
+   * prompt -- and never writes to disk; everything else is the same run.
+   * Checked at the point of each prompt rather than decided up front,
+   * because a key can close between the auto-run's check and the decrypt.
+   */
+  const unattendedRef = useRef(false);
+
+  const executeUnattended = async () => {
+    unattendedRef.current = true;
+    try {
+      await execute();
+    } finally {
+      unattendedRef.current = false;
+    }
+  };
 
   const execute = async () => {
     s.setError(null);
@@ -662,6 +687,33 @@ export function useWorkspaceOperations({
   }
 
   /** The staged message, in the shape the PGP ops take. */
+  /**
+   * The user's key the staged message is addressed to, or null when none
+   * of theirs is (or it is not a message either engine can read). The
+   * same question the default-selection effect above asks, for callers
+   * that need the answer rather than the side effect.
+   */
+  async function matchDecryptionKey(): Promise<string | null> {
+    if (s.inputIsAge) {
+      const sshKeys = myKeys.filter(isSshRecord);
+      if (sshKeys.length === 0) return null;
+      const bytes =
+        s.files.length > 0
+          ? new Uint8Array(await s.files[0].arrayBuffer())
+          : new TextEncoder().encode(s.getInput());
+      const index = await ageOps.selectDecryptionKey(
+        bytes,
+        sshKeys.map((k) => k.publicKeyArmored),
+      );
+      return index === null ? null : (sshKeys[index]?.keyId ?? null);
+    }
+    if (myKeys.length === 0) return null;
+    return pgpOps.selectDecryptionKey(
+      await stagedPgpInput(),
+      myKeys.map((k) => k.publicKeyArmored),
+    );
+  }
+
   async function stagedPgpInput(): Promise<DecryptOptions["input"]> {
     return s.files.length > 0
       ? {
@@ -717,6 +769,7 @@ export function useWorkspaceOperations({
             .catch(() => null)
         : null;
       if (!keyMatch) {
+        if (unattendedRef.current) return;
         // Ask for the MESSAGE password. Same inline row the key-unlock
         // prompt uses -- one password affordance in this workspace, not
         // two that look alike and mean different things; the placeholder
@@ -1197,11 +1250,13 @@ export function useWorkspaceOperations({
 
   return {
     execute,
+    executeUnattended,
     executeCrxSign,
     verifyCrxInput,
     handlePasswordSubmit,
     triggerDownload,
     selectPrivateKey,
+    matchDecryptionKey,
     outputFileName: currentOutputName,
   };
 }
