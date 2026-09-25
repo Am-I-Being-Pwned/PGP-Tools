@@ -235,5 +235,8 @@
   "settings_translation_detector": { "message": "语言检测器" },
   "settings_translation_pack_gone": { "message": "语言包已不可用。请重试。" },
   "settings_translation_failed": { "message": "翻译失败。" },
-  "settings_translation_unavailable_device": { "message": "此设备不支持翻译。" }
+  "settings_translation_unavailable_device": {
+    "message": "此设备不支持翻译。"
+  },
+  "settings_shortcuts_reply": { "message": "回复已解密消息的发件人" }
 }

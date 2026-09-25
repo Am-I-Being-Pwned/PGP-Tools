@@ -42,6 +42,8 @@ export interface WorkspaceOpsBridge {
   resultCanTranslate: boolean;
   readingLanguage: string;
   translateOutput: () => void;
+  resultCanReply: boolean;
+  reply: () => void;
   /** See ActionCtx.compose. */
   composeCanEdit: boolean;
   translateEnabled: boolean;
@@ -92,6 +94,7 @@ export function useActionContext(args: UseActionContextArgs): ActionCtx {
   const alsoSign = workspace?.alsoSign ?? false;
   const resultCanTranslate = workspace?.resultCanTranslate ?? false;
   const readingLanguage = workspace?.readingLanguage ?? "en";
+  const resultCanReply = workspace?.resultCanReply ?? false;
   const composeCanEdit = workspace?.composeCanEdit ?? false;
   const translateEnabled = workspace?.translateEnabled ?? false;
   const translateTarget = workspace?.translateTarget ?? null;
@@ -112,7 +115,11 @@ export function useActionContext(args: UseActionContextArgs): ActionCtx {
       alsoSign,
       neverCacheKeys,
       counts: { ownKeys, contacts },
-      result: { canTranslate: resultCanTranslate, readingLanguage },
+      result: {
+        canTranslate: resultCanTranslate,
+        readingLanguage,
+        canReply: resultCanReply,
+      },
       compose: {
         canEdit: composeCanEdit,
         translateEnabled,
@@ -146,6 +153,7 @@ export function useActionContext(args: UseActionContextArgs): ActionCtx {
           (argsRef.current.workspace?.translateTo ?? noop)(language),
         translateOutput: () =>
           (argsRef.current.workspace?.translateOutput ?? noop)(),
+        reply: () => (argsRef.current.workspace?.reply ?? noop)(),
       },
     }),
     [
@@ -167,6 +175,7 @@ export function useActionContext(args: UseActionContextArgs): ActionCtx {
       translateTarget,
       resultCanTranslate,
       readingLanguage,
+      resultCanReply,
     ],
   );
 }

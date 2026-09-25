@@ -361,5 +361,8 @@
   },
   "settings_translation_unavailable_device": {
     "message": "La traducción no está disponible en este dispositivo."
+  },
+  "settings_shortcuts_reply": {
+    "message": "Responder al remitente de un mensaje descifrado"
   }
 }

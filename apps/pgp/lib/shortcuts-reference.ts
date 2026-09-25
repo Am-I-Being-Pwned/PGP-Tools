@@ -15,6 +15,7 @@ import {
   DOWNLOAD_SHORTCUT,
   MODE_SHORTCUTS,
   PALETTE_SHORTCUT,
+  REPLY_SHORTCUT,
 } from "./actions/definitions";
 import {
   FIND_SHORTCUT,
@@ -100,6 +101,10 @@ export function shortcutReference(): readonly ShortcutRefSection[] {
         {
           label: t("settings_shortcuts_download_output"),
           shortcut: DOWNLOAD_SHORTCUT,
+        },
+        {
+          label: t("settings_shortcuts_reply"),
+          shortcut: REPLY_SHORTCUT,
         },
         {
           label: t("settings_shortcuts_pick_recipient"),

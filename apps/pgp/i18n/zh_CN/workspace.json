@@ -433,5 +433,20 @@
   },
   "workspace_error_unlock_failed": {
     "message": "解锁失败。请重试。"
+  },
+  "workspace_reply": {
+    "message": "回复"
+  },
+  "workspace_reply_failed": {
+    "message": "无法打开回复标签页"
+  },
+  "workspace_reader_title": {
+    "message": "消息 - PGP Tools"
+  },
+  "workspace_reader_locked": {
+    "message": "解锁以解密"
+  },
+  "workspace_reader_unavailable": {
+    "message": "此消息已不可用。"
   }
 }

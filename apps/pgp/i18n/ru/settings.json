@@ -351,5 +351,8 @@
   "settings_translation_failed": { "message": "Не удалось перевести." },
   "settings_translation_unavailable_device": {
     "message": "Перевод недоступен на этом устройстве."
+  },
+  "settings_shortcuts_reply": {
+    "message": "Ответить отправителю расшифрованного сообщения"
   }
 }

@@ -160,5 +160,6 @@
   "actions_language_last_used": { "message": "$label$ (zuletzt verwendet)" },
   "actions_translate_to_title": { "message": "Nachricht übersetzen in" },
   "actions_pick_language_placeholder": { "message": "Sprache wählen..." },
-  "actions_translate_result_to": { "message": "In $language$ übersetzen" }
+  "actions_translate_result_to": { "message": "In $language$ übersetzen" },
+  "actions_reply_to_signer": { "message": "Dem Absender antworten" }
 }

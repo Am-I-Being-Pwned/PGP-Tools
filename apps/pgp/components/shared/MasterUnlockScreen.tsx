@@ -50,11 +50,32 @@ export function MasterUnlockScreen({
   const [showDevTools, setShowDevTools] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
+  // Auto-prompt, but only once the panel HAS focus. Chrome gives a side
+  // panel focus when it is shown (crbug 486495151), a moment after the
+  // page loads; prompting before that anchors the WebAuthn dialog to
+  // whatever was focused before -- the web page -- and Chrome hands focus
+  // back THERE when the dialog closes, so the user unlocks and still has
+  // to click into the panel. Browsers without that fix never focus the
+  // panel on their own, so after a short wait it prompts regardless, as
+  // it always did.
   useEffect(() => {
     if (autoLocked) return;
-    if (masterProtection.method === "passkey") {
+    if (masterProtection.method !== "passkey") return;
+    let started = false;
+    const start = () => {
+      if (started) return;
+      started = true;
+      window.removeEventListener("focus", start);
+      clearTimeout(fallback);
       void handlePasskeyUnlock();
-    }
+    };
+    const fallback = setTimeout(start, 1_000);
+    if (document.hasFocus()) start();
+    else window.addEventListener("focus", start);
+    return () => {
+      window.removeEventListener("focus", start);
+      clearTimeout(fallback);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

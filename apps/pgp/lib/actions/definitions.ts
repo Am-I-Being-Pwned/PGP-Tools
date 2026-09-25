@@ -104,6 +104,16 @@ export const DOWNLOAD_SHORTCUT: ShortcutSpec = {
   key: "d",
 };
 
+/** mod+shift+R replies to a decrypted message's signer. In Chrome this
+ *  combo is a hard reload -- intercepted only while the panel has focus,
+ *  the same trade DOWNLOAD_SHORTCUT makes. Exported for the Reply
+ *  button's hover label and the shortcuts reference. */
+export const REPLY_SHORTCUT: ShortcutSpec = {
+  mod: true,
+  shift: true,
+  key: "r",
+};
+
 /** The mod+digit shortcut for each workspace mode. Single source of
  *  truth shared by the registry's mode actions (below) and the mode
  *  dropdown's Kbd hints, so the two can never drift. */
@@ -396,5 +406,14 @@ export const ACTIONS: readonly PgpAction[] = [
     keywords: ["translate", "translation", "language", "decrypted"],
     applicable: (ctx) => ctx.tab === "workspace" && ctx.result.canTranslate,
     execute: (ctx) => ctx.ops.translateOutput(),
+  },
+  {
+    id: "result.reply",
+    name: () => t("actions_reply_to_signer"),
+    group: "Result",
+    keywords: ["reply", "respond", "answer", "write back"],
+    shortcut: REPLY_SHORTCUT,
+    applicable: (ctx) => ctx.tab === "workspace" && ctx.result.canReply,
+    execute: (ctx) => ctx.ops.reply(),
   },
 ];

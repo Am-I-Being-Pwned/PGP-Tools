@@ -433,5 +433,20 @@
   },
   "workspace_error_unlock_failed": {
     "message": "Entsperren fehlgeschlagen. Versuchen Sie es erneut."
+  },
+  "workspace_reply": {
+    "message": "Antworten"
+  },
+  "workspace_reply_failed": {
+    "message": "Antwort-Tab konnte nicht geöffnet werden"
+  },
+  "workspace_reader_title": {
+    "message": "Nachricht - PGP Tools"
+  },
+  "workspace_reader_locked": {
+    "message": "Zum Entschlüsseln entsperren"
+  },
+  "workspace_reader_unavailable": {
+    "message": "Diese Nachricht ist nicht mehr verfügbar."
   }
 }

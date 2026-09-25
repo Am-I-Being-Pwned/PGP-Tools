@@ -368,6 +368,9 @@
       }
     }
   },
+  "actions_reply_to_signer": {
+    "message": "Répondre à l'expéditeur"
+  },
   "actions_run_mode": {
     "message": "Exécuter : $mode$",
     "placeholders": {
@@ -3207,6 +3210,9 @@
   "settings_shortcuts_remove_recipient_note": {
     "message": "Dans le champ de recherche vide de la liste des destinataires."
   },
+  "settings_shortcuts_reply": {
+    "message": "Répondre à l'expéditeur d'un message déchiffré"
+  },
   "settings_shortcuts_run_mode": {
     "message": "Exécuter le mode actuel"
   },
@@ -4074,6 +4080,15 @@
   "workspace_processing": {
     "message": "Traitement..."
   },
+  "workspace_reader_locked": {
+    "message": "Déverrouillez pour déchiffrer"
+  },
+  "workspace_reader_title": {
+    "message": "Message - PGP Tools"
+  },
+  "workspace_reader_unavailable": {
+    "message": "Ce message n'est plus disponible."
+  },
   "workspace_recipients_label": {
     "message": "Destinataires"
   },
@@ -4096,6 +4111,12 @@
   },
   "workspace_replace_with": {
     "message": "Remplacer par"
+  },
+  "workspace_reply": {
+    "message": "Répondre"
+  },
+  "workspace_reply_failed": {
+    "message": "Impossible d'ouvrir l'onglet de réponse"
   },
   "workspace_reset": {
     "message": "Réinitialiser"

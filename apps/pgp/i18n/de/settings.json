@@ -273,5 +273,8 @@
   "settings_translation_failed": { "message": "Übersetzung fehlgeschlagen." },
   "settings_translation_unavailable_device": {
     "message": "Übersetzung ist auf diesem Gerät nicht verfügbar."
+  },
+  "settings_shortcuts_reply": {
+    "message": "Dem Absender einer entschlüsselten Nachricht antworten"
   }
 }

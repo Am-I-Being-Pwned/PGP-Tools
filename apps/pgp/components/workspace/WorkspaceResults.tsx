@@ -98,6 +98,8 @@ interface WorkspaceResultsProps {
    *  workspace's translation state and threading that through here would
    *  only pass it straight back out. */
   translationFooter?: React.ReactNode;
+  /** A control for the result box's top-right corner (Reply). */
+  resultCorner?: React.ReactNode;
   /** Show the translation in place of the message. */
   showTranslation?: boolean;
   translationElRef?: React.MutableRefObject<HTMLPreElement | null>;
@@ -124,6 +126,7 @@ export function WorkspaceResults({
   fullHeight,
   contacts,
   translationFooter,
+  resultCorner,
   showTranslation,
   translationElRef,
   getTranslation,
@@ -163,18 +166,7 @@ export function WorkspaceResults({
               : (statusText ?? t("workspace_signature_verified"))
           }
           note={isUnverified ? statusText : undefined}
-          contact={
-            "armoredPublicKey" in verifiedSigner
-              ? verifiedSigner
-              : {
-                  keyId: verifiedSigner.keyId,
-                  userIds: verifiedSigner.userIds,
-                  algorithm: verifiedSigner.algorithm,
-                  armoredPublicKey: verifiedSigner.publicKeyArmored,
-                  addedAt: 0,
-                  lastUsedAt: 0,
-                }
-          }
+          contact={signerAsContact(verifiedSigner)}
         />
       )}
 
@@ -192,6 +184,7 @@ export function WorkspaceResults({
         translationElRef={translationElRef}
         getTranslation={getTranslation}
         footer={translationFooter}
+        corner={resultCorner}
       />
 
       {/* A key inside a message the user just read: keys travel this way
@@ -209,4 +202,22 @@ export function WorkspaceResults({
       )}
     </div>
   );
+}
+
+/** A signer as the contact record `ContactCard` renders: a contact as
+ *  is, an own key reshaped. Shared with Reply's reader tab so the signer
+ *  looks the same in both places. */
+export function signerAsContact(
+  signer: PublicContactKey | ProtectedKeyBlob,
+): PublicContactKey {
+  return "armoredPublicKey" in signer
+    ? signer
+    : {
+        keyId: signer.keyId,
+        userIds: signer.userIds,
+        algorithm: signer.algorithm,
+        armoredPublicKey: signer.publicKeyArmored,
+        addedAt: 0,
+        lastUsedAt: 0,
+      };
 }

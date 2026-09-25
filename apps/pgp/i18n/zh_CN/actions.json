@@ -126,5 +126,6 @@
   "actions_language_last_used": { "message": "$label$（上次使用）" },
   "actions_translate_to_title": { "message": "将消息翻译为" },
   "actions_pick_language_placeholder": { "message": "选择语言…" },
-  "actions_translate_result_to": { "message": "翻译为$language$" }
+  "actions_translate_result_to": { "message": "翻译为$language$" },
+  "actions_reply_to_signer": { "message": "回复发件人" }
 }

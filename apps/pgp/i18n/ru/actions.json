@@ -162,5 +162,6 @@
   "actions_language_last_used": { "message": "$label$ (последний)" },
   "actions_translate_to_title": { "message": "Перевести сообщение на" },
   "actions_pick_language_placeholder": { "message": "Выберите язык..." },
-  "actions_translate_result_to": { "message": "Перевести на $language$" }
+  "actions_translate_result_to": { "message": "Перевести на $language$" },
+  "actions_reply_to_signer": { "message": "Ответить отправителю" }
 }

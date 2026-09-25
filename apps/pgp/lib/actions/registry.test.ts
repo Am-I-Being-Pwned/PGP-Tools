@@ -27,7 +27,7 @@ function fakeCtx(overrides: Partial<ActionCtx> = {}): ActionCtx {
     alsoSign: false,
     neverCacheKeys: false,
     counts: { ownKeys: 0, contacts: 0 },
-    result: { canTranslate: false, readingLanguage: "en" },
+    result: { canTranslate: false, readingLanguage: "en", canReply: false },
     compose: { canEdit: true, translateEnabled: true, translateTarget: null },
     navigation: {
       setTab: noop,
@@ -50,6 +50,7 @@ function fakeCtx(overrides: Partial<ActionCtx> = {}): ActionCtx {
       openFind: noop,
       translateTo: noop,
       translateOutput: noop,
+      reply: noop,
     },
     ...overrides,
   };

@@ -433,5 +433,20 @@
   },
   "workspace_error_unlock_failed": {
     "message": "ロックを解除できませんでした。もう一度お試しください。"
+  },
+  "workspace_reply": {
+    "message": "返信"
+  },
+  "workspace_reply_failed": {
+    "message": "返信タブを開けませんでした"
+  },
+  "workspace_reader_title": {
+    "message": "メッセージ - PGP Tools"
+  },
+  "workspace_reader_locked": {
+    "message": "ロックを解除して復号"
+  },
+  "workspace_reader_unavailable": {
+    "message": "このメッセージは利用できなくなりました。"
   }
 }

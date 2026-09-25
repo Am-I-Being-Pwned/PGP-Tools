@@ -432,6 +432,9 @@
       }
     }
   },
+  "actions_reply_to_signer": {
+    "message": "Ответить отправителю"
+  },
   "actions_run_mode": {
     "message": "Выполнить: $mode$",
     "placeholders": {
@@ -4159,6 +4162,9 @@
   "settings_shortcuts_remove_recipient_note": {
     "message": "В пустом поле поиска списка получателей."
   },
+  "settings_shortcuts_reply": {
+    "message": "Ответить отправителю расшифрованного сообщения"
+  },
   "settings_shortcuts_run_mode": {
     "message": "Выполнить текущий режим"
   },
@@ -5166,6 +5172,15 @@
   "workspace_processing": {
     "message": "Обработка..."
   },
+  "workspace_reader_locked": {
+    "message": "Разблокируйте для расшифровки"
+  },
+  "workspace_reader_title": {
+    "message": "Сообщение - PGP Tools"
+  },
+  "workspace_reader_unavailable": {
+    "message": "Это сообщение больше недоступно."
+  },
   "workspace_recipients_label": {
     "message": "Получатели"
   },
@@ -5188,6 +5203,12 @@
   },
   "workspace_replace_with": {
     "message": "Заменить на"
+  },
+  "workspace_reply": {
+    "message": "Ответить"
+  },
+  "workspace_reply_failed": {
+    "message": "Не удалось открыть вкладку ответа"
   },
   "workspace_reset": {
     "message": "Сбросить"

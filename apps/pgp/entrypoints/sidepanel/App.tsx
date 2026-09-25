@@ -30,6 +30,7 @@ import { useCrxKeys } from "../../hooks/useCrxKeys";
 import { readKeyring, useKeyring } from "../../hooks/useKeyring";
 import { useKeySession } from "../../hooks/useKeySession";
 import { usePendingOperation } from "../../hooks/usePendingOperation";
+import { useReaderTabs } from "../../hooks/useReaderTabs";
 import {
   SESSION_PENDING_OP,
   STORAGE_PREFERENCES,
@@ -168,6 +169,9 @@ export default function App() {
     clearPending,
     checked: pendingChecked,
   } = usePendingOperation(canRoutePendingOp);
+  // Reply's reader tabs. They may hold the message only while the vault
+  // is open -- the same condition that gates routing a pending op.
+  const readerTabs = useReaderTabs(canRoutePendingOp);
 
   // True when the most recent master-lock was system-initiated (idle
   // timer, visibility hidden, OS idle). Used to suppress the
@@ -894,6 +898,7 @@ export default function App() {
                 vaultOpening || keyring.loading || contacts.loading
               }
               awaitingPendingOp={!pendingChecked}
+              onOpenReply={readerTabs.open}
               pendingAction={
                 pending &&
                 (pending.action === "encrypt" ||

@@ -5,6 +5,7 @@ import {
   CheckIcon,
   ClipboardIcon,
   DownloadIcon,
+  ReplyIcon,
   RotateCcwIcon,
 } from "lucide-react";
 
@@ -29,6 +30,7 @@ import type { WorkspaceOpsBridge } from "../../hooks/useActionContext";
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
 import type { RemedyAction } from "../../lib/errors/present";
 import type { WorkspaceAction } from "../../lib/messages";
+import type { ReaderSigner } from "../../lib/reader-protocol";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { WorkspaceDraftSource } from "../../lib/workspace-draft";
@@ -42,6 +44,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import {
   COPY_SHORTCUT,
   DOWNLOAD_SHORTCUT,
+  REPLY_SHORTCUT,
 } from "../../lib/actions/definitions";
 import { languageLabel } from "../../lib/ai/languages";
 import { recoverArmorIfNeeded } from "../../lib/armor-recovery";
@@ -66,11 +69,15 @@ import { KeySelector } from "./KeySelector";
 import { MessagePasswordPage } from "./MessagePasswordPage";
 import { selectionEngine } from "./recipient-engine";
 import { RecipientPicker } from "./RecipientPicker";
-import { TranslateToggle, TranslationNote } from "./TranslationPanel";
+import {
+  HoverLabel,
+  TranslateToggle,
+  TranslationNote,
+} from "./TranslationPanel";
 import { useWorkspaceOperations } from "./useWorkspaceOperations";
 import { useWorkspaceState } from "./useWorkspaceState";
 import { modeLabel, WorkspaceInput } from "./WorkspaceInput";
-import { WorkspaceResults } from "./WorkspaceResults";
+import { signerAsContact, WorkspaceResults } from "./WorkspaceResults";
 
 /** mod+Enter mirrors the main action button (Encrypt/Decrypt/Sign/...). */
 const RUN_SHORTCUT: ShortcutSpec = { mod: true, key: "Enter" };
@@ -131,6 +138,9 @@ interface WorkspaceViewProps {
   /** The first look for a context-menu selection hasn't answered yet;
    *  the form is held back so it doesn't flash up ahead of one. */
   awaitingPendingOp?: boolean;
+  /** Open `text` in a reader tab (App's useReaderTabs). Resolves once
+   *  the tab is opening; absent where Reply isn't offered. */
+  onOpenReply?: (text: string, signer: ReaderSigner) => Promise<void>;
   encryptToKeyId?: string | null;
   onClearEncryptTo?: () => void;
   onNavigateToKeys?: (importPrefill?: string) => void;
@@ -178,6 +188,7 @@ export function WorkspaceView({
   onClearPending,
   vaultSettling = false,
   awaitingPendingOp = false,
+  onOpenReply,
   encryptToKeyId,
   onClearEncryptTo,
   onNavigateToKeys,
@@ -474,6 +485,36 @@ export function WorkspaceView({
   // After decrypting to readable text, give the plaintext the whole panel with
   // a Back button, instead of cramming it into a small fixed-height preview.
   const showFullOutput = s.operationDone && s.mode === "decrypt" && s.hasOutput;
+  // Reply needs someone to address: a signer whose key we hold. An
+  // unknown signer is a placeholder record with no key, and an unsigned
+  // or failed message has none, so neither gets the button.
+  const replyTo =
+    showFullOutput && s.signatureTone === "success" ? s.verifiedSigner : null;
+  const canReply = replyTo !== null;
+  /** Move the message into a reader tab (App seals it and serves it,
+   *  see hooks/useReaderTabs) and turn this workspace into the reply:
+   *  empty, encrypt mode, addressed to the signer. The reset wipes the
+   *  output here, so the panel keeps no plaintext copy of its own. */
+  const openReply = useCallback(() => {
+    if (!replyTo || !onOpenReply) return;
+    // The panel's own signer card, minus the public key: the tab only
+    // displays it.
+    const signer = { ...signerAsContact(replyTo), armoredPublicKey: "" };
+    void onOpenReply(s.getOutput(), signer)
+      .then(() => {
+        s.resetAll();
+        s.setMode("encrypt");
+        s.setSelectedRecipientIds([signer.keyId]);
+        // The new tab takes focus; hand it back so the reply can be typed
+        // straight away. Best effort -- the browser may keep it on the
+        // tab -- and after the reset has swapped the message box back in.
+        requestAnimationFrame(() => {
+          window.focus();
+          s.inputElRef.current?.focus();
+        });
+      })
+      .catch(() => toast.error(t("workspace_reply_failed")));
+  }, [replyTo, onOpenReply, s]);
 
   // Which engine the current recipient selection commits this message to
   // ("ssh" = age, "pgp" = OpenPGP, null = nothing selected yet), and what
@@ -736,6 +777,7 @@ export function WorkspaceView({
     setSaveToHistoryPref,
     composeTranslation,
     translation,
+    openReply,
   });
   useEffect(() => {
     paletteRef.current = {
@@ -750,6 +792,7 @@ export function WorkspaceView({
       setSaveToHistoryPref,
       composeTranslation,
       translation,
+      openReply,
     };
   });
   // A message opened from the context menu runs by itself: verify always
@@ -766,7 +809,9 @@ export function WorkspaceView({
   // box, mode picker, Decrypt button) is held invisible: it would only
   // flash up for the frames between the selection landing and the result
   // replacing it. Layout is kept, so a run that falls back to the button
-  // just appears in place.
+  // just appears in place. Transparent rather than `visibility: hidden`:
+  // the panel focuses the message box as it opens, which is inside this
+  // window, and a hidden element can't take focus.
   const [autoRunning, setAutoRunning] = useState(false);
   // Also for the render the op arrives in, before the effect in
   // useWorkspaceState has armed it, and while the panel is still looking
@@ -853,6 +898,8 @@ export function WorkspaceView({
         if (p.hasDownload) p.ops.triggerDownload();
       },
       resultCanTranslate,
+      resultCanReply: canReply,
+      reply: () => paletteRef.current.openReply(),
       readingLanguage: translationTargetLanguage,
       translateOutput: () => {
         const p = paletteRef.current;
@@ -905,6 +952,7 @@ export function WorkspaceView({
     composeTranslation.targetLanguage,
     resultCanTranslate,
     translationTargetLanguage,
+    canReply,
   ]);
   useEffect(() => () => onPaletteOps?.(null), [onPaletteOps]);
 
@@ -970,6 +1018,27 @@ export function WorkspaceView({
           signatureTone={s.signatureTone}
           contacts={contacts}
           translationFooter={translationFooter}
+          resultCorner={
+            canReply ? (
+              <HoverLabel
+                label={t("workspace_reply")}
+                shortcut={REPLY_SHORTCUT}
+              >
+                <button
+                  type="button"
+                  aria-label={t("workspace_reply")}
+                  aria-keyshortcuts={ariaKeyShortcuts(
+                    REPLY_SHORTCUT,
+                    isMacPlatform(),
+                  )}
+                  onClick={openReply}
+                  className="border-border bg-background/90 text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground pointer-events-auto shrink-0 rounded-md border p-2 shadow-sm backdrop-blur transition-colors"
+                >
+                  <ReplyIcon className="h-4 w-4" />
+                </button>
+              </HoverLabel>
+            ) : undefined
+          }
           showTranslation={translation.showing}
           translationElRef={s.translationElRef}
           getTranslation={s.getTranslation}
@@ -1033,7 +1102,7 @@ export function WorkspaceView({
 
   return (
     <div
-      className={`flex h-full flex-col gap-3 ${hideForAutoRun ? "invisible" : ""}`}
+      className={`flex h-full flex-col gap-3 ${hideForAutoRun ? "pointer-events-none opacity-0" : ""}`}
       aria-busy={hideForAutoRun || undefined}
     >
       <WorkspaceInput

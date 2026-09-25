@@ -76,6 +76,7 @@ export interface MessageArgs {
   "actions_recipient_input_hint": undefined;
   "actions_remove_recipient": { name: string | number };
   "actions_remove_recipient_detail": { name: string | number; detail: string | number };
+  "actions_reply_to_signer": undefined;
   "actions_run_mode": { mode: string | number };
   "actions_save_to_history_off": undefined;
   "actions_save_to_history_on": undefined;
@@ -604,6 +605,7 @@ export interface MessageArgs {
   "settings_shortcuts_pick_recipient_note": undefined;
   "settings_shortcuts_remove_recipient": undefined;
   "settings_shortcuts_remove_recipient_note": undefined;
+  "settings_shortcuts_reply": undefined;
   "settings_shortcuts_run_mode": undefined;
   "settings_shortcuts_style_note": undefined;
   "settings_shortcuts_switch_mode": { mode: string | number };
@@ -809,12 +811,17 @@ export interface MessageArgs {
   "workspace_private_key_pasted_title": undefined;
   "workspace_private_key_show_cleartext": undefined;
   "workspace_processing": undefined;
+  "workspace_reader_locked": undefined;
+  "workspace_reader_title": undefined;
+  "workspace_reader_unavailable": undefined;
   "workspace_recipients_label": undefined;
   "workspace_replace": undefined;
   "workspace_replace_all": undefined;
   "workspace_replace_all_short": undefined;
   "workspace_replace_all_shortcut": { shortcut: string | number };
   "workspace_replace_with": undefined;
+  "workspace_reply": undefined;
+  "workspace_reply_failed": undefined;
   "workspace_reset": undefined;
   "workspace_restore_original": undefined;
   "workspace_save_file": { name: string | number };

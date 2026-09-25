@@ -67,6 +67,9 @@ export interface ActionCtx {
     canTranslate: boolean;
     /** BCP 47 tag of the language the user reads (Settings). */
     readingLanguage: string;
+    /** A decrypted message from a verified signer is on screen, so
+     *  there is someone to reply to. */
+    canReply: boolean;
   };
   /** The message box's editing tools. */
   compose: {
@@ -114,6 +117,8 @@ export interface ActionCtx {
     /** Translate the result into the reading language (or show the
      *  translation already made). */
     translateOutput: () => void;
+    /** Open a reply to the message's signer in its own browser tab. */
+    reply: () => void;
   };
 }
 

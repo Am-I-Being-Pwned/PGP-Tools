@@ -298,5 +298,8 @@
   },
   "actions_translate_result_to": {
     "message": "Traduci in $language$"
+  },
+  "actions_reply_to_signer": {
+    "message": "Rispondi al mittente"
   }
 }

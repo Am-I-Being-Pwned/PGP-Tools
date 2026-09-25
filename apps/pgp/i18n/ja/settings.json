@@ -361,5 +361,6 @@
   },
   "settings_translation_unavailable_device": {
     "message": "このデバイスでは翻訳を利用できません。"
-  }
+  },
+  "settings_shortcuts_reply": { "message": "復号したメッセージの送信者に返信" }
 }

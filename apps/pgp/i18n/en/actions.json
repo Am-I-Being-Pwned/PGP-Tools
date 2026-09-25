@@ -398,5 +398,9 @@
   "actions_translate_result_to": {
     "message": "Translate to $language$",
     "description": "Command palette: translate the decrypted/verified result into the user's reading language. $language$ is the language name."
+  },
+  "actions_reply_to_signer": {
+    "message": "Reply to sender",
+    "description": "Command palette entry, shown while a decrypted message from a verified signer is on screen. Opens an encrypted reply to them in a new tab."
   }
 }

@@ -449,6 +449,10 @@
       }
     }
   },
+  "actions_reply_to_signer": {
+    "message": "Reply to sender",
+    "description": "Command palette entry, shown while a decrypted message from a verified signer is on screen. Opens an encrypted reply to them in a new tab."
+  },
   "actions_run_mode": {
     "message": "Run $mode$",
     "description": "Command palette name of the Run command. $mode$ is the current mode name (Encrypt, Decrypt, Sign, Verify).",
@@ -3926,6 +3930,10 @@
     "message": "In the recipient dropdown's empty search box.",
     "description": "Fine print under the 'Remove the last recipient' row."
   },
+  "settings_shortcuts_reply": {
+    "message": "Reply to the sender of a decrypted message",
+    "description": "Settings > Keyboard shortcuts row: opens the decrypted message in a tab and addresses a reply to its verified signer."
+  },
   "settings_shortcuts_run_mode": {
     "message": "Run the current mode",
     "description": "Shortcut row label: runs the encrypt/decrypt/sign/verify action."
@@ -5014,6 +5022,18 @@
     "message": "Processing...",
     "description": "Main button label while an operation is running."
   },
+  "workspace_reader_locked": {
+    "message": "Unlock to decrypt",
+    "description": "Shown under the logo, centred, in the message tab while the side panel is locked."
+  },
+  "workspace_reader_title": {
+    "message": "Message - PGP Tools",
+    "description": "Browser tab title of the tab that shows a decrypted message while you reply to it. Keep \"PGP Tools\" as is. Use a hyphen, not a dash."
+  },
+  "workspace_reader_unavailable": {
+    "message": "This message is no longer available.",
+    "description": "Shown in a message tab that has nothing to show (for example it was reopened after the side panel closed)."
+  },
   "workspace_recipients_label": {
     "message": "Recipients",
     "description": "Label of the recipient picker in encrypt mode."
@@ -5042,6 +5062,14 @@
   "workspace_replace_with": {
     "message": "Replace with",
     "description": "Label and placeholder of the replacement field in the find bar."
+  },
+  "workspace_reply": {
+    "message": "Reply",
+    "description": "Button under a decrypted message from a verified signer. Opens a new browser tab with an encrypted reply addressed to them. Short: shares a row with Download and Copy."
+  },
+  "workspace_reply_failed": {
+    "message": "Couldn't open the reply tab",
+    "description": "Error toast when opening the reply tab fails."
   },
   "workspace_reset": {
     "message": "Reset",

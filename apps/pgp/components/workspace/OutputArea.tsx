@@ -35,6 +35,9 @@ interface OutputAreaProps {
    *  whatever it holds can appear and clear without ever resizing the
    *  text above it. Omit it entirely and the box renders as before. */
   footer?: React.ReactNode;
+  /** A control pinned to the box's top-right corner (Reply). Floats like
+   *  the footer, and the text is inset on the right to clear it. */
+  corner?: React.ReactNode;
 }
 
 export function OutputArea({
@@ -51,6 +54,7 @@ export function OutputArea({
   translationElRef,
   getTranslation,
   footer,
+  corner,
 }: OutputAreaProps) {
   // Callback ref: publish the node to the owning hook and seed its text
   // from the ref on every (re)mount. The node genuinely unmounts (the
@@ -116,6 +120,7 @@ export function OutputArea({
   // the whole panel. Download/Copy live in the panel's bottom action bar, to
   // match the encrypt/sign flow.
   const borderColor = success ? "border-green-500/50" : "border-border";
+  const cornerInset = corner ? "pr-14" : "";
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2">
@@ -130,7 +135,7 @@ export function OutputArea({
               key="translation"
               ref={attachTranslation}
               tabIndex={0}
-              className={`bg-muted/50 h-full overflow-auto rounded-md border p-3 pb-11 font-mono text-xs break-all whitespace-pre-wrap focus:outline-none ${borderColor}`}
+              className={`bg-muted/50 h-full overflow-auto rounded-md border p-3 pb-11 font-mono text-xs break-all whitespace-pre-wrap focus:outline-none ${borderColor} ${cornerInset}`}
             />
           ) : (
             <pre
@@ -138,7 +143,7 @@ export function OutputArea({
               ref={attachOutput}
               tabIndex={0}
               onKeyDown={selectAllOnCtrlA}
-              className={`bg-muted/50 h-full overflow-auto rounded-md border p-3 pb-11 font-mono text-xs break-all whitespace-pre-wrap focus:outline-none ${borderColor}`}
+              className={`bg-muted/50 h-full overflow-auto rounded-md border p-3 pb-11 font-mono text-xs break-all whitespace-pre-wrap focus:outline-none ${borderColor} ${cornerInset}`}
             />
           )}
           {/* Floats over the bottom of the box rather than sitting in a
@@ -148,6 +153,11 @@ export function OutputArea({
               above keeps the last line of the message clear of it.
               `pointer-events-none` so the strip does not eat selection
               drags; the button re-enables them for itself. */}
+          {corner && (
+            <div className="pointer-events-none absolute top-2 right-2 flex items-center gap-2">
+              {corner}
+            </div>
+          )}
           {footer && (
             <div className="pointer-events-none absolute inset-x-2 bottom-2 flex items-center justify-end gap-2">
               {footer}

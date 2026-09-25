@@ -482,5 +482,9 @@
   "settings_translation_unavailable_device": {
     "message": "Translation is not available on this device.",
     "description": "Error when a pack download is attempted but Chrome has no built-in translator."
+  },
+  "settings_shortcuts_reply": {
+    "message": "Reply to the sender of a decrypted message",
+    "description": "Settings > Keyboard shortcuts row: opens the decrypted message in a tab and addresses a reply to its verified signer."
   }
 }

@@ -368,6 +368,9 @@
       }
     }
   },
+  "actions_reply_to_signer": {
+    "message": "Responder ao remetente"
+  },
   "actions_run_mode": {
     "message": "Executar $mode$",
     "placeholders": {
@@ -3207,6 +3210,9 @@
   "settings_shortcuts_remove_recipient_note": {
     "message": "Na caixa de pesquisa vazia da lista de destinatários."
   },
+  "settings_shortcuts_reply": {
+    "message": "Responder ao remetente de uma mensagem descriptografada"
+  },
   "settings_shortcuts_run_mode": {
     "message": "Executar o modo atual"
   },
@@ -4074,6 +4080,15 @@
   "workspace_processing": {
     "message": "Processando..."
   },
+  "workspace_reader_locked": {
+    "message": "Desbloqueie para descriptografar"
+  },
+  "workspace_reader_title": {
+    "message": "Mensagem - PGP Tools"
+  },
+  "workspace_reader_unavailable": {
+    "message": "Esta mensagem não está mais disponível."
+  },
   "workspace_recipients_label": {
     "message": "Destinatários"
   },
@@ -4096,6 +4111,12 @@
   },
   "workspace_replace_with": {
     "message": "Substituir por"
+  },
+  "workspace_reply": {
+    "message": "Responder"
+  },
+  "workspace_reply_failed": {
+    "message": "Não foi possível abrir a aba de resposta"
   },
   "workspace_reset": {
     "message": "Redefinir"

@@ -433,5 +433,20 @@
   },
   "workspace_error_unlock_failed": {
     "message": "Échec du déverrouillage. Réessayez."
+  },
+  "workspace_reply": {
+    "message": "Répondre"
+  },
+  "workspace_reply_failed": {
+    "message": "Impossible d'ouvrir l'onglet de réponse"
+  },
+  "workspace_reader_title": {
+    "message": "Message - PGP Tools"
+  },
+  "workspace_reader_locked": {
+    "message": "Déverrouillez pour déchiffrer"
+  },
+  "workspace_reader_unavailable": {
+    "message": "Ce message n'est plus disponible."
   }
 }

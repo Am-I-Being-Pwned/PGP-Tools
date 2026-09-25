@@ -469,5 +469,20 @@
   },
   "workspace_error_unlock_failed": {
     "message": "Не удалось разблокировать. Повторите попытку."
+  },
+  "workspace_reply": {
+    "message": "Ответить"
+  },
+  "workspace_reply_failed": {
+    "message": "Не удалось открыть вкладку ответа"
+  },
+  "workspace_reader_title": {
+    "message": "Сообщение - PGP Tools"
+  },
+  "workspace_reader_locked": {
+    "message": "Разблокируйте для расшифровки"
+  },
+  "workspace_reader_unavailable": {
+    "message": "Это сообщение больше недоступно."
   }
 }

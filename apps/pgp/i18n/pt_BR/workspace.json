@@ -433,5 +433,20 @@
   },
   "workspace_error_unlock_failed": {
     "message": "Falha ao desbloquear. Tente de novo."
+  },
+  "workspace_reply": {
+    "message": "Responder"
+  },
+  "workspace_reply_failed": {
+    "message": "Não foi possível abrir a aba de resposta"
+  },
+  "workspace_reader_title": {
+    "message": "Mensagem - PGP Tools"
+  },
+  "workspace_reader_locked": {
+    "message": "Desbloqueie para descriptografar"
+  },
+  "workspace_reader_unavailable": {
+    "message": "Esta mensagem não está mais disponível."
   }
 }

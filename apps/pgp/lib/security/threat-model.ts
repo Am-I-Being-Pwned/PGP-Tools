@@ -713,6 +713,37 @@ export const THREAT_MODEL: Threat[] = [
     section: "§4, §6, §14",
   },
   {
+    id: "T-AUTORUN-UNATTENDED-DECRYPT",
+    title:
+      "A context-menu selection decrypts without a click when its key is already open",
+    attacker:
+      'A web page that puts armored ciphertext (captured elsewhere, encrypted to the user) into text the user selects and opens with "Open in PGP Tools".',
+    defence:
+      "Decrypt auto-runs only when the key the message is addressed to ALREADY has an open handle; it runs through `executeUnattended`, which never starts a passkey ceremony or password prompt (`ensureUnlocked` returns null, the message-password prompt is skipped) and never auto-downloads, checked at each prompt rather than up front because a key can close between the check and the decrypt. Waits for the vault to settle; editing, clearing or changing mode cancels it; the wait for key selection is bounded at 2s.",
+    status: "accepted",
+    rationale:
+      "Right-clicking a message and choosing to open it is the request to read it. Nothing leaves the panel -- the page cannot read the panel or Downloads -- so this is not a decryption oracle; decrypts are never written to history and translation needs a click. The residual is on-screen exposure and heap residue for a decrypt running when a lock lands (T-OUTPUT-HEAP-RESIDUE's window, more likely now nobody need be at the panel). With `neverCacheKeys` on no handle survives an operation, so decrypt never qualifies.",
+    verifiedBy: ["apps/pgp/e2e/context-menu-autorun.spec.ts"],
+    section: "§15",
+  },
+  {
+    id: "T-READER-TAB-PLAINTEXT",
+    title:
+      "Reply shows the decrypted message in a second page (the reader tab)",
+    attacker:
+      "Anyone who can read another extension page's DOM or heap: the extension's own realms under T-SUPPLY-CHAIN, or DevTools / chrome.debugger (T-DEVTOOLS); and a shoulder-surfer, since the message is on screen in an ordinary tab.",
+    defence:
+      "The tab is a dumb view with no vault, keys, wasm, storage or network. The panel keeps the message sealed under its in-WASM draft key and posts it over a nonce-named runtime port only while the vault is open; a master lock posts `locked` and the tab clears its text, unlock resends it. Closing the tab drops the sealed copy; closing the panel disconnects the port (the tab clears its text and closes) and destroys the draft key. Only a nonce is in the URL and nothing is written to storage.",
+    status: "accepted",
+    rationale:
+      "Reading the message while writing the reply is the feature; before it, users pasted the plaintext into other apps, which is strictly worse. The residual is the same as the panel's own output view -- plaintext on screen and in one page's heap while unlocked -- in a second page that follows the panel's lock state rather than having its own, so there is no second session, key store or lock policy to get wrong.",
+    verifiedBy: [
+      "apps/pgp/lib/reader-protocol.test.ts",
+      "apps/pgp/e2e/reply-tab.spec.ts",
+    ],
+    section: "§16",
+  },
+  {
     id: "T-DEVTOOLS",
     title: "DevTools attached to the side panel",
     attacker:

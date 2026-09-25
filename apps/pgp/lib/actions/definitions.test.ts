@@ -21,7 +21,7 @@ function fakeCtx(overrides: Partial<ActionCtx> = {}): ActionCtx {
     alsoSign: false,
     neverCacheKeys: false,
     counts: { ownKeys: 0, contacts: 0 },
-    result: { canTranslate: false, readingLanguage: "en" },
+    result: { canTranslate: false, readingLanguage: "en", canReply: false },
     compose: { canEdit: true, translateEnabled: true, translateTarget: null },
     navigation: {
       setTab: noop,
@@ -44,6 +44,7 @@ function fakeCtx(overrides: Partial<ActionCtx> = {}): ActionCtx {
       openFind: noop,
       translateTo: noop,
       translateOutput: noop,
+      reply: noop,
     },
     ...overrides,
   };
@@ -444,13 +445,14 @@ describe("action wiring", () => {
       openFind: vi.fn(),
       translateTo: vi.fn(),
       translateOutput: vi.fn(),
+      reply: vi.fn(),
     };
     return {
       ctx: fakeCtx({
         navigation,
         ops,
         hasInput: true,
-        result: { canTranslate: true, readingLanguage: "en" },
+        result: { canTranslate: true, readingLanguage: "en", canReply: true },
         compose: {
           canEdit: true,
           translateEnabled: true,
@@ -501,6 +503,7 @@ describe("action wiring", () => {
     ["compose.find", "ops", "openFind", undefined],
     ["compose.translate", "ops", "translateTo", "es"],
     ["result.translate", "ops", "translateOutput", undefined],
+    ["result.reply", "ops", "reply", undefined],
   ] as const)("%s calls %s.%s", (id, group, method, arg) => {
     const { ctx, navigation, ops } = spyCtx();
 
@@ -548,6 +551,7 @@ describe("action wiring", () => {
       "compose.find",
       "compose.translate",
       "result.translate",
+      "result.reply",
     ]);
     const modeActions = ACTIONS.filter((a) => a.id.startsWith("mode."));
     const unwired = ACTIONS.filter(
@@ -653,7 +657,7 @@ describe("result.translate", () => {
   it("is one entry, named for the reading language, only while a result can be translated", () => {
     expect(byId(fakeCtx(), "result.translate")).toBeUndefined();
     const ctx = fakeCtx({
-      result: { canTranslate: true, readingLanguage: "fr" },
+      result: { canTranslate: true, readingLanguage: "fr", canReply: false },
     });
     expect(byId(ctx, "result.translate")?.name).toBe("Translate to French");
     expect(byId(ctx, "result.translate")?.action.pick).toBeUndefined();
@@ -661,10 +665,29 @@ describe("result.translate", () => {
       byId(
         fakeCtx({
           tab: "keys",
-          result: { canTranslate: true, readingLanguage: "fr" },
+          result: {
+            canTranslate: true,
+            readingLanguage: "fr",
+            canReply: false,
+          },
         }),
         "result.translate",
       ),
+    ).toBeUndefined();
+  });
+});
+
+describe("result.reply", () => {
+  it("is offered only while there is a verified sender to reply to", () => {
+    expect(byId(fakeCtx(), "result.reply")).toBeUndefined();
+    const canReply = {
+      result: { canTranslate: false, readingLanguage: "en", canReply: true },
+    };
+    expect(byId(fakeCtx(canReply), "result.reply")?.name).toBe(
+      "Reply to sender",
+    );
+    expect(
+      byId(fakeCtx({ ...canReply, tab: "keys" }), "result.reply"),
     ).toBeUndefined();
   });
 });

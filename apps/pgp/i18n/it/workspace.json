@@ -433,5 +433,20 @@
   },
   "workspace_error_unlock_failed": {
     "message": "Sblocco non riuscito. Riprova."
+  },
+  "workspace_reply": {
+    "message": "Rispondi"
+  },
+  "workspace_reply_failed": {
+    "message": "Impossibile aprire la scheda di risposta"
+  },
+  "workspace_reader_title": {
+    "message": "Messaggio - PGP Tools"
+  },
+  "workspace_reader_locked": {
+    "message": "Sblocca per decifrare"
+  },
+  "workspace_reader_unavailable": {
+    "message": "Questo messaggio non è più disponibile."
   }
 }

@@ -1557,3 +1557,37 @@ decrypt never qualifies.
 is open; with it locked, no prompt and no plaintext until the click;
 a verify delivered to a locked panel runs on unlock; first open off one passkey
 ceremony with exactly one assertion; no download with auto-download on).
+
+## 16. Reply: the reader tab
+
+Reply, on a decrypted message from a verified signer, moves the message
+into a **reader tab** (`reader.html#<nonce>`) and turns the panel into
+the reply: empty, encrypt mode, addressed to the signer.
+
+**The tab is a view, not a second app.** No vault, no keys, no wasm, no
+storage and no network: it connects one runtime port named for its
+128-bit nonce and writes whatever the panel sends into a `<pre>`'s
+`textContent`, never into React state (`entrypoints/reader/Reader.tsx`,
+`lib/reader-protocol.ts`). The signer is shown with the panel's own
+read-only `ContactCard` (public data only, the public key itself left
+out); its pure record helpers live in `lib/storage/contact-recipients.ts`
+so the page's import graph contains no store and no wasm.
+The URL holds only the nonce; nothing about the message or its sender is
+written to any storage area.
+
+**The panel owns the message** (`hooks/useReaderTabs.ts`). It is sealed
+under the in-WASM draft key the moment Reply is pressed, the workspace
+output is wiped by the reset that follows, and it is unsealed only to
+post it to a connected tab while the vault is open. A master lock posts
+`locked` to every tab, which clears its text; unlocking sends it again.
+Closing the tab drops the sealed copy; closing or reloading the panel
+disconnects every port -- each tab clears its text and closes itself --
+and destroys the draft key, so nothing survives. An unknown or forged nonce gets no answer and
+the tab shows nothing. Recorded as T-READER-TAB-PLAINTEXT.
+
+**Verified by:** `lib/reader-protocol.test.ts` and
+`e2e/reply-tab.spec.ts` (reader shows the message and the panel becomes
+the reply; no Reply without a verified signer; lock clears the reader
+and the panel retains no copy, unlock restores it; closing the panel
+closes the reader tab; an unopened nonce shows nothing; no storage area
+holds the canary).

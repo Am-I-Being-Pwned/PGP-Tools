@@ -368,6 +368,9 @@
       }
     }
   },
+  "actions_reply_to_signer": {
+    "message": "Dem Absender antworten"
+  },
   "actions_run_mode": {
     "message": "$mode$ ausführen",
     "placeholders": {
@@ -3207,6 +3210,9 @@
   "settings_shortcuts_remove_recipient_note": {
     "message": "Im leeren Suchfeld der Empfängerliste."
   },
+  "settings_shortcuts_reply": {
+    "message": "Dem Absender einer entschlüsselten Nachricht antworten"
+  },
   "settings_shortcuts_run_mode": {
     "message": "Aktuellen Modus ausführen"
   },
@@ -4074,6 +4080,15 @@
   "workspace_processing": {
     "message": "Wird verarbeitet..."
   },
+  "workspace_reader_locked": {
+    "message": "Zum Entschlüsseln entsperren"
+  },
+  "workspace_reader_title": {
+    "message": "Nachricht - PGP Tools"
+  },
+  "workspace_reader_unavailable": {
+    "message": "Diese Nachricht ist nicht mehr verfügbar."
+  },
   "workspace_recipients_label": {
     "message": "Empfänger"
   },
@@ -4096,6 +4111,12 @@
   },
   "workspace_replace_with": {
     "message": "Ersetzen durch"
+  },
+  "workspace_reply": {
+    "message": "Antworten"
+  },
+  "workspace_reply_failed": {
+    "message": "Antwort-Tab konnte nicht geöffnet werden"
   },
   "workspace_reset": {
     "message": "Zurücksetzen"

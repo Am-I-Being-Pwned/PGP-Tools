@@ -578,5 +578,25 @@
   "workspace_error_unlock_failed": {
     "message": "Unlock failed. Try again.",
     "description": "Error under the inline password field when unlocking the key threw."
+  },
+  "workspace_reply": {
+    "message": "Reply",
+    "description": "Button under a decrypted message from a verified signer. Opens a new browser tab with an encrypted reply addressed to them. Short: shares a row with Download and Copy."
+  },
+  "workspace_reply_failed": {
+    "message": "Couldn't open the reply tab",
+    "description": "Error toast when opening the reply tab fails."
+  },
+  "workspace_reader_title": {
+    "message": "Message - PGP Tools",
+    "description": "Browser tab title of the tab that shows a decrypted message while you reply to it. Keep \"PGP Tools\" as is. Use a hyphen, not a dash."
+  },
+  "workspace_reader_locked": {
+    "message": "Unlock to decrypt",
+    "description": "Shown under the logo, centred, in the message tab while the side panel is locked."
+  },
+  "workspace_reader_unavailable": {
+    "message": "This message is no longer available.",
+    "description": "Shown in a message tab that has nothing to show (for example it was reopened after the side panel closed)."
   }
 }

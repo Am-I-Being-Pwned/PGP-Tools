@@ -29,7 +29,7 @@ import {
   activeRecipients,
   contactRecipients,
   contactSource,
-} from "../../lib/storage/contacts";
+} from "../../lib/storage/contact-recipients";
 import { isSshRecord } from "../../lib/storage/key-kind";
 import { formatAlgorithm, formatFingerprint } from "../../lib/utils/formatting";
 import { displayUserId, parseUserId } from "../../lib/utils/key-naming";

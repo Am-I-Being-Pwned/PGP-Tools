@@ -298,5 +298,8 @@
   },
   "actions_translate_result_to": {
     "message": "$language$に翻訳"
+  },
+  "actions_reply_to_signer": {
+    "message": "送信者に返信"
   }
 }
