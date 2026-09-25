@@ -171,7 +171,8 @@ export default function App() {
   } = usePendingOperation(canRoutePendingOp);
   // Reply's reader tabs. They may hold the message only while the vault
   // is open -- the same condition that gates routing a pending op.
-  const readerTabs = useReaderTabs(canRoutePendingOp);
+  const { open: openReader, lockNow: lockReaders } =
+    useReaderTabs(canRoutePendingOp);
 
   // True when the most recent master-lock was system-initiated (idle
   // timer, visibility hidden, OS idle). Used to suppress the
@@ -206,6 +207,9 @@ export default function App() {
 
   const doMasterLock = useCallback(
     async (auto = false) => {
+      // Reply's reader tabs clear first, synchronously: nothing awaited
+      // below can let a reader keep (or be sent) the message.
+      lockReaders();
       // Encrypt + stash the workspace draft before flipping
       // masterUnlocked (which unmounts the workspace). On error, lock
       // anyway -- a lost draft is preferable to a failed lock.
@@ -301,7 +305,7 @@ export default function App() {
       // `size > 0` guard here to match them reopens it.
       session.lockAll();
     },
-    [session, clearPending],
+    [session, clearPending, lockReaders],
   );
 
   const resetMasterLockTimer = useCallback(() => {
@@ -898,7 +902,7 @@ export default function App() {
                 vaultOpening || keyring.loading || contacts.loading
               }
               awaitingPendingOp={!pendingChecked}
-              onOpenReply={readerTabs.open}
+              onOpenReply={openReader}
               pendingAction={
                 pending &&
                 (pending.action === "encrypt" ||

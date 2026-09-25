@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import type { BrowserContext, Page } from "@playwright/test";
 
 import { expect, readStorage, test } from "./fixtures";
+import { scanJsHeap } from "./heap";
 import { strongRetainers } from "./heap-retainers";
 import {
   lockMasterViaPalette,
@@ -162,4 +163,68 @@ test("a reader nobody opened shows nothing", async ({
   );
   await expect(page.getByText(/no longer available/)).toBeVisible();
   await expect(readerText(page)).toHaveText("");
+});
+
+/** The reader's text, read in the page's own context. The heap test
+ *  must NOT use `toHaveText`/`getByText` on the canary: Playwright
+ *  matches text with regexes in its injected context, and V8 then holds
+ *  the matched string as that context's last RegExp match -- in the same
+ *  process heap as both pages, so it reads as a leak that isn't ours. */
+const readerTextNow = (reader: Page) =>
+  readerText(reader).evaluate((el) => el.textContent);
+
+test("the message leaves memory on lock: nothing in either page holds it", async ({
+  context,
+  panel,
+}) => {
+  const NEEDLE = "READER-CANARY-2f81";
+  await onboardWithPassword(panel, PASSWORD);
+  const armored = await encryptToSelf(panel, true);
+  await box(panel).fill(armored);
+  await panel.getByRole("button", { name: /^decrypt$/i }).click();
+  const opened = context.waitForEvent("page");
+  await panel.getByRole("button", { name: "Reply", exact: true }).click();
+  const reader = await opened;
+  await expect.poll(() => readerTextNow(reader)).toBe(PLAINTEXT);
+
+  // Positive control: while shown, the scanner finds it. (The panel and
+  // the reader share one renderer process, so a snapshot of either page
+  // covers both.)
+  expect(
+    (await scanJsHeap(reader, [NEEDLE]))[NEEDLE],
+    "control: the message is in the heap while the reader shows it",
+  ).toBeGreaterThan(0);
+
+  await lockMasterViaPalette(panel);
+  await expect(reader.getByText("Unlock to decrypt")).toBeVisible();
+
+  const locked = await strongRetainers(reader, NEEDLE);
+  expect(
+    locked.count,
+    `nothing may hold the message once locked${locked.report}`,
+  ).toBe(0);
+  expect(
+    (await scanJsHeap(reader, [NEEDLE]))[NEEDLE],
+    "the message must be gone from the heap snapshot once locked",
+  ).toBe(0);
+
+  // And it comes back on unlock (same scanner, same needle).
+  await unlockWithPassword(panel, PASSWORD);
+  await expect.poll(() => readerTextNow(reader)).toBe(PLAINTEXT);
+  expect((await scanJsHeap(reader, [NEEDLE]))[NEEDLE]).toBeGreaterThan(0);
+});
+
+test("a duplicated reader tab is locked too", async ({ context, panel }) => {
+  const reader = await openReader(context, panel);
+  await expect(readerText(reader)).toHaveText(PLAINTEXT);
+  const copy = await context.newPage();
+  await copy.goto(reader.url());
+  await expect(readerText(copy)).toHaveText(PLAINTEXT);
+
+  await lockMasterViaPalette(panel);
+  for (const tab of [reader, copy]) {
+    await expect(tab.getByText("Unlock to decrypt")).toBeVisible();
+    await expect(readerText(tab)).toHaveText("");
+    await expect(tab.getByText("Signature verified")).toHaveCount(0);
+  }
 });

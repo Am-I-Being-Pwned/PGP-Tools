@@ -18,6 +18,7 @@ import { resolveSelfKey } from "../../lib/encrypt-recipients";
 import { oversizedFilesMessage, splitOversizedFiles } from "../../lib/limits";
 import { isPgpRecord, isSshRecord } from "../../lib/storage/key-kind";
 import { getPreferences } from "../../lib/storage/preferences";
+import { forgetLastRegExpMatch } from "../../lib/utils/regexp-residue";
 import { zipHasManifest } from "../../lib/utils/zip";
 import { decryptWorkspaceDraft } from "../../lib/workspace-draft";
 
@@ -473,6 +474,9 @@ export function useWorkspaceState(opts: {
     // password).
     setEncryptPassword("");
     setPasswordDialogOpen(false);
+    // Last: V8 still holds the subject of the last regex match, which
+    // is often the plaintext just wiped (see forgetLastRegExpMatch).
+    forgetLastRegExpMatch();
   }, []);
 
   const [operationDone, setOperationDone] = useState(false);
@@ -544,6 +548,7 @@ export function useWorkspaceState(opts: {
 
   const resetOutput = useCallback(() => {
     setOutput("");
+    forgetLastRegExpMatch();
     setBinaryOutput(undefined);
     setFileResults([]);
     setError(null);

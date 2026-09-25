@@ -1569,25 +1569,48 @@ storage and no network: it connects one runtime port named for its
 128-bit nonce and writes whatever the panel sends into a `<pre>`'s
 `textContent`, never into React state (`entrypoints/reader/Reader.tsx`,
 `lib/reader-protocol.ts`). The signer is shown with the panel's own
-read-only `ContactCard` (public data only, the public key itself left
-out); its pure record helpers live in `lib/storage/contact-recipients.ts`
-so the page's import graph contains no store and no wasm.
+read-only `ContactCard`, sent only the fields that card displays (no
+public key, top-level or per-key `recipients`) and dropped from the
+tab's state on lock with the text, since contact data is lock-protected
+too. The card's pure record helpers live in
+`lib/storage/contact-recipients.ts`, so the page's import graph contains
+no store and no wasm.
 The URL holds only the nonce; nothing about the message or its sender is
 written to any storage area.
 
 **The panel owns the message** (`hooks/useReaderTabs.ts`). It is sealed
 under the in-WASM draft key the moment Reply is pressed, the workspace
 output is wiped by the reset that follows, and it is unsealed only to
-post it to a connected tab while the vault is open. A master lock posts
-`locked` to every tab, which clears its text; unlocking sends it again.
-Closing the tab drops the sealed copy; closing or reloading the panel
-disconnects every port -- each tab clears its text and closes itself --
-and destroys the draft key, so nothing survives. An unknown or forged nonce gets no answer and
+post it to every connected tab while the vault is open -- every tab, since
+a duplicated reader connects with the same nonce. `doMasterLock` calls
+`lockNow` first, synchronously, which posts `locked` to all of them and
+stops any in-flight `show` from posting after it; unlocking sends the
+message again. When the last tab for a message closes, the sealed bytes
+are zeroed and dropped (also if opening the tab fails, and on panel
+unmount). Closing or reloading the panel disconnects every port -- each
+tab clears its text and closes itself -- and the draft key dies with the
+page (nothing calls `dropDraftSession`; the WASM instance is torn down),
+so nothing survives. Without a master password there is no master lock,
+so nothing ever sends `locked` -- the same as the panel's own output view
+in that setup.
+
+**Measuring it.** The panel and its reader tabs run in one renderer
+process, so a heap snapshot of either page covers both. The heap test
+reads the reader's text in the page's own context rather than with
+Playwright's `toHaveText`/`getByText` on the canary: those match text in
+Playwright's injected context, which then holds it as its last RegExp
+match (and caches it on the DOM node it inspected) -- retainers that are
+the test's, not ours. The app-side counterpart of that mechanism is real,
+though: every successful regex match records its subject in the realm,
+and the app runs regexes over plaintext, so every wipe path also calls
+`forgetLastRegExpMatch` (`lib/utils/regexp-residue.ts`). An unknown or forged nonce gets no answer and
 the tab shows nothing. Recorded as T-READER-TAB-PLAINTEXT.
 
 **Verified by:** `lib/reader-protocol.test.ts` and
 `e2e/reply-tab.spec.ts` (reader shows the message and the panel becomes
-the reply; no Reply without a verified signer; lock clears the reader
-and the panel retains no copy, unlock restores it; closing the panel
-closes the reader tab; an unopened nonce shows nothing; no storage area
-holds the canary).
+the reply; Reply by shortcut and palette; no Reply without a verified
+signer; lock clears the reader and nothing in either page's heap holds
+the message, with a positive control while shown, and unlock restores
+it; a duplicated reader is locked too; closing the panel closes the
+reader tab; an unopened nonce shows nothing; no storage area holds the
+canary).

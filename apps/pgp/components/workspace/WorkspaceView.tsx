@@ -497,9 +497,22 @@ export function WorkspaceView({
    *  output here, so the panel keeps no plaintext copy of its own. */
   const openReply = useCallback(() => {
     if (!replyTo || !onOpenReply) return;
-    // The panel's own signer card, minus the public key: the tab only
-    // displays it.
-    const signer = { ...signerAsContact(replyTo), armoredPublicKey: "" };
+    // Only what the signer card displays: no public key (neither the
+    // top-level one nor any per-key `recipients`), since the tab only
+    // shows who it is from.
+    const contact = signerAsContact(replyTo);
+    const signer = {
+      keyId: contact.keyId,
+      userIds: contact.userIds,
+      algorithm: contact.algorithm,
+      alias: contact.alias,
+      kind: contact.kind,
+      expiresAt: contact.expiresAt,
+      source: contact.source,
+      armoredPublicKey: "",
+      addedAt: 0,
+      lastUsedAt: 0,
+    };
     void onOpenReply(s.getOutput(), signer)
       .then(() => {
         s.resetAll();

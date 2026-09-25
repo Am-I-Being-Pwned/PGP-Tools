@@ -13,42 +13,65 @@ interface Reader {
    *  workspace draft crosses a master lock under. Never plaintext here. */
   sealed: Uint8Array;
   signer: ReaderSigner;
-  port: chrome.runtime.Port | null;
+  /** Every tab showing this message. Usually one, but a duplicated tab
+   *  connects with the same nonce, and each copy must be locked too. */
+  ports: Set<chrome.runtime.Port>;
 }
+
+const LOCKED: ReaderMessage = { type: "locked" };
 
 /**
  * The panel's side of Reply's reader tabs (see lib/reader-protocol).
  *
  * The panel owns every message a reader shows. It is sealed the moment
- * Reply is pressed and opened again only to post it to a connected tab
+ * Reply is pressed and opened again only to post it to connected tabs
  * while the vault is `unlocked`; locking tells every tab to drop it, and
- * unlocking sends it again. Closing the tab drops the sealed copy;
- * closing the panel disconnects every port (the tabs clear themselves)
- * and takes the draft key with it, so nothing survives either.
+ * unlocking sends it again. When the last tab for a message closes, the
+ * sealed copy is zeroed and dropped. Closing the panel disconnects every
+ * port (the tabs clear and close themselves) and the draft key dies with
+ * the page, so nothing survives either.
  */
 export function useReaderTabs(unlocked: boolean) {
   const readers = useRef(new Map<string, Reader>());
   const unlockedRef = useRef(unlocked);
 
-  /** Unseal and post. The plaintext exists here only for the call. */
+  const drop = useCallback((nonce: string) => {
+    const reader = readers.current.get(nonce);
+    if (!reader) return;
+    reader.sealed.fill(0);
+    readers.current.delete(nonce);
+  }, []);
+
+  /** Unseal and post to every connected tab. The plaintext exists here
+   *  only for the call. */
   const show = useCallback(async (reader: Reader) => {
-    const port = reader.port;
-    if (!port) return;
+    if (reader.ports.size === 0) return;
     let bytes: Uint8Array | null = null;
     try {
       bytes = await wasmApi.decryptDraft(reader.sealed);
-      // Re-check after the await: a lock may have landed meanwhile.
-      if (!unlockedRef.current || reader.port !== port) return;
+      // Re-check after the await: a lock may have landed meanwhile
+      // (`lockNow` flips this synchronously, before the lock's own awaits).
+      if (!unlockedRef.current) return;
       const message: ReaderMessage = {
         type: "show",
         signer: reader.signer,
         text: new TextDecoder().decode(bytes),
       };
-      port.postMessage(message);
+      for (const port of reader.ports) port.postMessage(message);
     } catch {
-      /* tab gone, or the draft key went with a panel reload */
+      /* a tab went away mid-post, or the draft key went with a reload */
     } finally {
       bytes?.fill(0);
+    }
+  }, []);
+
+  /** Clear every reader now. Called first thing in the master lock, so
+   *  the tabs clear with the panel rather than a render later, and no
+   *  `show` in flight can post after it. */
+  const lockNow = useCallback(() => {
+    unlockedRef.current = false;
+    for (const reader of readers.current.values()) {
+      for (const port of reader.ports) port.postMessage(LOCKED);
     }
   }, []);
 
@@ -60,47 +83,65 @@ export function useReaderTabs(unlocked: boolean) {
       // leave it alone, so the panel that does own it can answer.
       const reader = isReaderNonce(nonce) ? readers.current.get(nonce) : null;
       if (!reader) return;
-      reader.port = port;
+      reader.ports.add(port);
       port.onDisconnect.addListener(() => {
-        // The tab closed: the message has nowhere left to go.
-        if (reader.port !== port) return;
-        reader.sealed.fill(0);
-        readers.current.delete(nonce);
+        reader.ports.delete(port);
+        // The last tab closed: the message has nowhere left to go.
+        if (reader.ports.size === 0) drop(nonce);
       });
-      if (unlockedRef.current) void show(reader);
-      else port.postMessage({ type: "locked" } satisfies ReaderMessage);
+      if (unlockedRef.current) void show({ ...reader, ports: new Set([port]) });
+      else port.postMessage(LOCKED);
     };
     chrome.runtime.onConnect.addListener(onConnect);
     return () => chrome.runtime.onConnect.removeListener(onConnect);
-  }, [show]);
+  }, [show, drop]);
 
-  // Lock: every tab drops its text. Unlock: every tab gets it back.
+  // Unlock: every tab gets the message back. (Lock is `lockNow`, and
+  // this repeats it for any path that locks without calling it.)
   useEffect(() => {
-    unlockedRef.current = unlocked;
-    for (const reader of readers.current.values()) {
-      if (!reader.port) continue;
-      if (unlocked) void show(reader);
-      else reader.port.postMessage({ type: "locked" } satisfies ReaderMessage);
+    if (!unlocked) {
+      lockNow();
+      return;
     }
-  }, [unlocked, show]);
+    unlockedRef.current = true;
+    for (const reader of readers.current.values()) void show(reader);
+  }, [unlocked, show, lockNow]);
+
+  // The panel going away takes the draft key with it; zero the sealed
+  // bytes anyway rather than leave them to the collector.
+  useEffect(() => {
+    const all = readers.current;
+    return () => {
+      for (const reader of all.values()) reader.sealed.fill(0);
+      all.clear();
+    };
+  }, []);
 
   /** Seal `text` and open a reader tab for it. The caller drops its own
    *  copy; from here the panel holds only the sealed bytes. */
-  const open = useCallback(async (text: string, signer: ReaderSigner) => {
-    await wasmApi.initDraftSessionIfUnset();
-    const bytes = new TextEncoder().encode(text);
-    let sealed: Uint8Array;
-    try {
-      sealed = await wasmApi.encryptDraft(bytes);
-    } finally {
-      bytes.fill(0);
-    }
-    const nonce = newReaderNonce();
-    readers.current.set(nonce, { sealed, signer, port: null });
-    await chrome.tabs.create({
-      url: chrome.runtime.getURL(`reader.html#${nonce}`),
-    });
-  }, []);
+  const open = useCallback(
+    async (text: string, signer: ReaderSigner) => {
+      await wasmApi.initDraftSessionIfUnset();
+      const bytes = new TextEncoder().encode(text);
+      let sealed: Uint8Array;
+      try {
+        sealed = await wasmApi.encryptDraft(bytes);
+      } finally {
+        bytes.fill(0);
+      }
+      const nonce = newReaderNonce();
+      readers.current.set(nonce, { sealed, signer, ports: new Set() });
+      try {
+        await chrome.tabs.create({
+          url: chrome.runtime.getURL(`reader.html#${nonce}`),
+        });
+      } catch (e) {
+        drop(nonce);
+        throw e;
+      }
+    },
+    [drop],
+  );
 
-  return { open };
+  return { open, lockNow };
 }

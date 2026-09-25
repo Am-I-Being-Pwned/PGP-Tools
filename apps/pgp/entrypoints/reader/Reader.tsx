@@ -8,6 +8,7 @@ import {
   isReaderNonce,
   READER_PORT_PREFIX,
 } from "../../lib/reader-protocol";
+import { forgetLastRegExpMatch } from "../../lib/utils/regexp-residue";
 
 type View = "waiting" | "shown" | "locked" | "unavailable";
 
@@ -44,6 +45,7 @@ export function Reader() {
     }
     const clearText = () => {
       if (textRef.current) textRef.current.textContent = "";
+      forgetLastRegExpMatch();
     };
     const port = chrome.runtime.connect({ name: READER_PORT_PREFIX + nonce });
     // Nobody answered: the panel that opened this is gone.
@@ -58,6 +60,8 @@ export function Reader() {
       clearTimeout(noAnswer);
       if (msg.type === "locked") {
         clearText();
+        // The signer is contact data, which the lock protects too.
+        setSigner(null);
         setView("locked");
         return;
       }
@@ -69,6 +73,7 @@ export function Reader() {
     port.onDisconnect.addListener(() => {
       clearTimeout(noAnswer);
       clearText();
+      setSigner(null);
       if (answered) closeSelf();
       else setView("unavailable");
     });
