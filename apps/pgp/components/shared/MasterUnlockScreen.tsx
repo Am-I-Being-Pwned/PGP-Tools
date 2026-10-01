@@ -15,6 +15,7 @@ import {
 import {
   authenticateAndGetPrf,
   cancelPasskeyPrompt,
+  isPasskeyPromptOpen,
   isWebAuthnCancel,
 } from "../../lib/protection/webauthn-prf";
 import { INPUT_CLASS } from "../../lib/utils/styles";
@@ -62,8 +63,10 @@ export function MasterUnlockScreen({
   // whatever was focused before -- the web page -- and Chrome hands focus
   // back THERE when the dialog closes, so the user unlocks and still has
   // to click into the panel. Browsers without that fix never focus the
-  // panel on their own, so after a short wait it prompts regardless, as
-  // it always did.
+  // panel on their own; there it waits for the user's first click into
+  // the panel instead of prompting unfocused. An unfocused prompt is the
+  // one Windows Hello opens BEHIND the browser (a long-standing Chrome
+  // extension complaint) and the one Chrome may refuse outright.
   useEffect(() => {
     if (autoLocked) return;
     if (masterProtection.method !== "passkey") return;
@@ -72,17 +75,14 @@ export function MasterUnlockScreen({
       if (started) return;
       started = true;
       window.removeEventListener("focus", start);
-      clearTimeout(fallback);
       // Unprompted, so a browser refusing to show the dialog (no focus
       // yet) is not an error: the user just clicks the button.
       void handlePasskeyUnlock({ quietIfBlocked: true });
     };
-    const fallback = setTimeout(start, 1_000);
     if (document.hasFocus()) start();
     else window.addEventListener("focus", start);
     return () => {
       window.removeEventListener("focus", start);
-      clearTimeout(fallback);
       // Leaving this screen (e.g. it was locked again) closes our prompt.
       cancelPasskeyPrompt();
     };
@@ -93,6 +93,10 @@ export function MasterUnlockScreen({
   // reference it without a use-before-declaration error.
   async function handlePasskeyUnlock({ quietIfBlocked = false } = {}) {
     if (masterProtection.method !== "passkey") return;
+    // A click that focuses the panel also fires the auto-prompt (above)
+    // before React has swapped the button for the waiting state; that
+    // click must not supersede the prompt it just opened.
+    if (isPasskeyPromptOpen()) return;
 
     setError(null);
 

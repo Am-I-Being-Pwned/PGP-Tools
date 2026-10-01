@@ -4366,7 +4366,7 @@
     "description": "Status shown in place of a passkey button while the browser's passkey dialog is open. Three dots, not an ellipsis character."
   },
   "shared_passkey_waiting_hint": {
-    "message": "Don't see it? Look for a passkey or Windows Security window. It may be behind your browser.",
+    "message": "Don't see it? It may have opened behind your browser. Check your taskbar or dock for Windows Security or a passkey window.",
     "description": "Hint shown a few seconds after the passkey dialog opened, for when the system dialog appeared behind the browser window. 'Windows Security' is the title of the Windows dialog; use the name Windows shows in this language."
   },
   "shared_preset_applied": {

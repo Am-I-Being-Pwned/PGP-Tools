@@ -7,7 +7,7 @@ import {
 
 /** After this long with the prompt still open, assume the user may not
  *  be able to see it (Windows Hello likes to open behind the browser). */
-const SLOW_AFTER_MS = 4_000;
+const SLOW_AFTER_MS = 3_000;
 
 /**
  * Whether a passkey prompt is open anywhere in this page, and whether it
