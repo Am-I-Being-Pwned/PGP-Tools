@@ -34,7 +34,9 @@ async function installCeremonyGate(panel: Page): Promise<void> {
 })();`);
 }
 
-type Gate = { __ceremonyGate: { hold: boolean; entered: number } };
+interface Gate {
+  __ceremonyGate: { hold: boolean; entered: number };
+}
 
 const holdCeremonies = (panel: Page, hold: boolean) =>
   panel.evaluate((h) => {
