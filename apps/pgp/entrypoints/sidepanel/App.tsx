@@ -45,6 +45,7 @@ import {
   masterPasskeyOf,
   partitionByMasterSeal,
 } from "../../lib/protection/vault-unlock";
+import { isPasskeyPromptOpen } from "../../lib/protection/webauthn-prf";
 import { normalizeContactsPadding } from "../../lib/storage/contacts";
 import { normalizeKeyringPadding } from "../../lib/storage/keyring";
 import { getMasterProtection } from "../../lib/storage/master-protection";
@@ -364,10 +365,15 @@ export default function App() {
   }, []);
 
   // Tab-away lock via `chrome.windows.onFocusChanged`. Fires on real
-  // window/app focus changes only -- not on system overlays like the
-  // WebAuthn dialog -- so it avoids the visibilitychange flicker that
-  // was re-locking the user mid-unlock. Locks when focus leaves
-  // Chrome entirely OR moves to a different Chrome window.
+  // window/app focus changes only, so it avoids the visibilitychange
+  // flicker that was re-locking the user mid-unlock. Locks when focus
+  // leaves Chrome entirely OR moves to a different Chrome window.
+  //
+  // A passkey prompt is NOT always an in-Chrome overlay: macOS's Touch ID
+  // sheet is, but Windows Hello is a separate system window, so opening
+  // it moves focus out of Chrome (WINDOW_ID_NONE) and would lock the
+  // vault mid-ceremony -- every passkey prompt under the Paranoid preset.
+  // Focus changes while our own prompt is open are therefore ignored.
   const ownWindowIdRef = useRef<number | null>(null);
   useEffect(() => {
     let cancelled = false;
@@ -380,6 +386,7 @@ export default function App() {
       if (!lockOnTabAwayRef.current) return;
       if (ownWindowIdRef.current === null) return;
       if (windowId === ownWindowIdRef.current) return;
+      if (isPasskeyPromptOpen()) return;
       const s = sessionRef.current;
       if (s.unlockedKeyIds.size > 0) s.lockAll();
       if (masterUnlockedRef.current) void doMasterLockRef.current(true);
