@@ -774,9 +774,6 @@
   "app_onboarding_preset_title": {
     "message": "Выберите профиль безопасности"
   },
-  "app_onboarding_prf_unsupported": {
-    "message": "Ваш аутентификатор не поддерживает PRF. Попробуйте другой ключ доступа или используйте пароль."
-  },
   "app_onboarding_protection_body": {
     "message": "Выберите, как защитить контакты и ключи. Это потребуется при каждом открытии PGP Tools."
   },
@@ -1880,9 +1877,6 @@
   "keygen_error_password_short": {
     "message": "Пароль должен содержать не менее 8 символов."
   },
-  "keygen_error_prf_unsupported_authenticator": {
-    "message": "Ваш аутентификатор не поддерживает PRF. Попробуйте другой ключ доступа или используйте пароль."
-  },
   "keygen_error_wrong_password": {
     "message": "Неверный пароль."
   },
@@ -2298,9 +2292,6 @@
   },
   "keygen_prf_unsupported_mac": {
     "message": "Для macOS требуется версия 15 или новее со Связкой ключей iCloud."
-  },
-  "keygen_prf_unsupported_windows": {
-    "message": "Windows Hello не поддерживает PRF - используйте аппаратный ключ безопасности (например, YubiKey)."
   },
   "keygen_protect_heading": {
     "message": "Защитите свой ключ"
@@ -3839,9 +3830,6 @@
   },
   "settings_import_paste_placeholder": {
     "message": "Вставьте ключи сюда или выберите файл..."
-  },
-  "settings_import_prf_unsupported": {
-    "message": "Ваш аутентификатор не поддерживает PRF. Попробуйте другой ключ доступа или используйте пароль."
   },
   "settings_import_private_imported_few": {
     "message": "Импортировано $count$ закрытых ключа",

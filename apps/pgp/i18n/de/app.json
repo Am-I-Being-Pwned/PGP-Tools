@@ -41,9 +41,6 @@
   "app_welcome_start": { "message": "Hier klicken, um loszulegen" },
   "app_welcome_credit_before": { "message": "Ein Datenschutz-Tool von" },
   "app_welcome_credit_after": { "message": "." },
-  "app_onboarding_prf_unsupported": {
-    "message": "Ihr Authenticator unterstützt PRF nicht. Versuchen Sie einen anderen Passkey oder verwenden Sie stattdessen ein Passwort."
-  },
   "app_onboarding_setup_failed": { "message": "Einrichtung fehlgeschlagen" },
   "app_onboarding_name_required": { "message": "Name ist erforderlich." },
   "app_onboarding_generate_failed": {

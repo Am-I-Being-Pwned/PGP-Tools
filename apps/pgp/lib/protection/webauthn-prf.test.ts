@@ -31,12 +31,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { toBase64url } from "../encoding.ts";
 import {
   authenticateAndGetPrf,
+  cancelPasskeyPrompt,
   checkPrfSupport,
   generatePrfSalt,
   generateStoredSecret,
+  isPasskeyPromptOpen,
   isWebAuthnCancel,
+  PasskeyPromptBlockedError,
   PrfNotSupportedError,
   registerPasskey,
+  subscribePasskeyPrompt,
 } from "./webauthn-prf";
 
 // ── stubs ────────────────────────────────────────────────────────────
@@ -298,10 +302,59 @@ describe("registerPasskey", () => {
   });
 
   it("forwards an abort signal", async () => {
+    // The ceremony gate hands the browser its own signal; aborting the
+    // caller's must abort that one.
     const controller = new AbortController();
+    stubCredentials();
+    create.mockImplementation(
+      (o) =>
+        new Promise((_resolve, reject) =>
+          o.signal?.addEventListener("abort", () =>
+            reject(new DOMException("aborted", "AbortError")),
+          ),
+        ),
+    );
+    const pending = registerPasskey(undefined, undefined, controller.signal);
+    await vi.waitFor(() => expect(create).toHaveBeenCalled());
+    const forwarded = create.mock.calls[0][0].signal;
+    expect(forwarded?.aborted).toBe(false);
+    controller.abort();
+    expect(forwarded?.aborted).toBe(true);
+    await expect(pending).rejects.toBeDefined();
+  });
+
+  it("requires user verification, matching authentication", async () => {
+    // "preferred" lets a PIN-less security key register, then forces
+    // PIN setup at its first unlock.
     stubCredentials({ create: credential() });
-    await registerPasskey(undefined, undefined, controller.signal);
-    expect(create.mock.calls[0][0].signal).toBe(controller.signal);
+    await registerPasskey();
+    expect(createArgs().authenticatorSelection?.userVerification).toBe(
+      "required",
+    );
+  });
+
+  it("asks for PRF output at registration when given a salt", async () => {
+    const salt = new Uint8Array(32).fill(3);
+    const first = new Uint8Array([5, 6, 7]).buffer;
+    stubCredentials({
+      create: credential({ prf: { enabled: true, results: { first } } }),
+    });
+    const reg = await registerPasskey(undefined, undefined, undefined, salt);
+    expect(createArgs().extensions).toEqual({
+      prf: { eval: { first: salt } },
+    });
+    expect(reg.prfOutput).toEqual(new Uint8Array([5, 6, 7]));
+  });
+
+  it("returns no PRF output when the authenticator only evaluates it later", async () => {
+    stubCredentials({ create: credential({ prf: { enabled: false } }) });
+    const reg = await registerPasskey(
+      undefined,
+      undefined,
+      undefined,
+      new Uint8Array(32),
+    );
+    expect(reg.prfOutput).toBeUndefined();
   });
 
   it("throws when the ceremony returns nothing", async () => {
@@ -366,9 +419,26 @@ describe("authenticateAndGetPrf", () => {
 
   it("forwards an abort signal", async () => {
     const controller = new AbortController();
-    stubCredentials({ get: credential() });
-    await authenticateAndGetPrf(toBase64url(RAW_ID), SALT, controller.signal);
-    expect(get.mock.calls[0][0].signal).toBe(controller.signal);
+    stubCredentials();
+    get.mockImplementation(
+      (o) =>
+        new Promise((_resolve, reject) =>
+          o.signal?.addEventListener("abort", () =>
+            reject(new DOMException("aborted", "AbortError")),
+          ),
+        ),
+    );
+    const pending = authenticateAndGetPrf(
+      toBase64url(RAW_ID),
+      SALT,
+      controller.signal,
+    );
+    await vi.waitFor(() => expect(get).toHaveBeenCalled());
+    const forwarded = get.mock.calls[0][0].signal;
+    expect(forwarded?.aborted).toBe(false);
+    controller.abort();
+    expect(forwarded?.aborted).toBe(true);
+    await expect(pending).rejects.toBeDefined();
   });
 
   it.each([
@@ -455,5 +525,169 @@ describe("PrfNotSupportedError", () => {
   it("carries its own name so callers can branch on it", () => {
     stubUserAgent("Mozilla/5.0 Chrome/120");
     expect(new PrfNotSupportedError().name).toBe("PrfNotSupportedError");
+  });
+});
+
+// ── ceremony gate ────────────────────────────────────────────────────
+
+describe("the passkey ceremony gate", () => {
+  // Browsers allow one pending WebAuthn request, and Windows Hello /
+  // Chrome's Linux UI release it asynchronously after an abort. These
+  // pin the behaviour that keeps a re-click or a second flow from
+  // landing on "A request is already pending" and silently doing nothing.
+  const SALT = new Uint8Array(32).fill(7);
+  const PRF = new Uint8Array([1, 1, 1]).buffer;
+  const ok = () =>
+    new FakeCredential(RAW_ID, { prf: { results: { first: PRF } } });
+
+  function named(name: string, message = "x") {
+    const e = new Error(message);
+    e.name = name;
+    return e;
+  }
+
+  /** A `get` that stays pending until its signal aborts. */
+  function hangingGet() {
+    return (o: CredentialRequestOptions) =>
+      new Promise<unknown>((_resolve, reject) => {
+        o.signal?.addEventListener("abort", () => reject(named("AbortError")));
+      });
+  }
+
+  /** Make every ceremony look like it took `ms` of wall time. */
+  function elapse(ms: number) {
+    let now = 0;
+    vi.spyOn(performance, "now").mockImplementation(() => {
+      const t = now;
+      now += ms;
+      return t;
+    });
+  }
+
+  it("reports a prompt as open until it settles", async () => {
+    let finish!: (v: unknown) => void;
+    stubCredentials();
+    get.mockImplementation(() => new Promise((r) => (finish = r)));
+
+    expect(isPasskeyPromptOpen()).toBe(false);
+    const listener = vi.fn();
+    const unsubscribe = subscribePasskeyPrompt(listener);
+    const p = authenticateAndGetPrf(toBase64url(RAW_ID), SALT);
+    expect(isPasskeyPromptOpen()).toBe(true);
+    await vi.waitFor(() => expect(get).toHaveBeenCalled());
+    finish(ok());
+    await p;
+    expect(isPasskeyPromptOpen()).toBe(false);
+    expect(listener).toHaveBeenCalled();
+    unsubscribe();
+  });
+
+  it("cancelPasskeyPrompt aborts the open ceremony as a cancel", async () => {
+    stubCredentials();
+    get.mockImplementation(hangingGet());
+    const p = authenticateAndGetPrf(toBase64url(RAW_ID), SALT);
+    await vi.waitFor(() => expect(get).toHaveBeenCalled());
+    cancelPasskeyPrompt();
+    const err = await p.catch((e: unknown) => e);
+    expect(isWebAuthnCancel(err)).toBe(true);
+    expect(isPasskeyPromptOpen()).toBe(false);
+  });
+
+  it("a new ceremony waits for the one it supersedes to settle", async () => {
+    stubCredentials();
+    get.mockImplementationOnce(hangingGet()).mockResolvedValueOnce(ok());
+
+    const first = authenticateAndGetPrf(toBase64url(RAW_ID), SALT);
+    await vi.waitFor(() => expect(get).toHaveBeenCalledTimes(1));
+    const second = authenticateAndGetPrf(toBase64url(RAW_ID), SALT);
+
+    const firstErr = await first.catch((e: unknown) => e);
+    expect(isWebAuthnCancel(firstErr)).toBe(true);
+    await expect(second).resolves.toMatchObject({
+      prfOutput: new Uint8Array([1, 1, 1]),
+    });
+    // The second request was issued only after the first had settled.
+    expect(get).toHaveBeenCalledTimes(2);
+    expect(isPasskeyPromptOpen()).toBe(false);
+  });
+
+  it.each([
+    ["InvalidStateError", "A request is already pending."],
+    ["OperationError", "A request is already pending."],
+  ])(
+    "retries a %s 'already pending' until the browser lets go",
+    async (name, msg) => {
+      vi.useFakeTimers();
+      try {
+        stubCredentials();
+        get.mockRejectedValueOnce(named(name, msg)).mockResolvedValueOnce(ok());
+        const p = authenticateAndGetPrf(toBase64url(RAW_ID), SALT);
+        await vi.advanceTimersByTimeAsync(1_000);
+        await expect(p).resolves.toMatchObject({
+          prfOutput: new Uint8Array([1, 1, 1]),
+        });
+        expect(get).toHaveBeenCalledTimes(2);
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
+  it("gives up on a request that stays pending with a visible error", async () => {
+    vi.useFakeTimers();
+    try {
+      stubCredentials({ get: named("InvalidStateError", "pending") });
+      const p = authenticateAndGetPrf(toBase64url(RAW_ID), SALT).catch(
+        (e: unknown) => e,
+      );
+      await vi.advanceTimersByTimeAsync(5_000);
+      const err = await p;
+      expect(err).toBeInstanceOf(PasskeyPromptBlockedError);
+      // Not a cancel: the user did nothing, so it must be shown.
+      expect(isWebAuthnCancel(err)).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not retry an OperationError that isn't about a pending request", async () => {
+    stubCredentials({ get: named("OperationError", "authenticator error") });
+    await expect(
+      authenticateAndGetPrf(toBase64url(RAW_ID), SALT),
+    ).rejects.toMatchObject({ name: "OperationError" });
+    expect(get).toHaveBeenCalledTimes(1);
+  });
+
+  it("an instant NotAllowedError means the prompt never showed", async () => {
+    // e.g. the side panel did not have focus. Swallowing this as a
+    // cancel is what made the unlock button look dead.
+    elapse(10);
+    stubCredentials({ get: named("NotAllowedError") });
+    await expect(
+      authenticateAndGetPrf(toBase64url(RAW_ID), SALT),
+    ).rejects.toBeInstanceOf(PasskeyPromptBlockedError);
+  });
+
+  it("a NotAllowedError after the prompt was up is the user cancelling", async () => {
+    elapse(3_000);
+    stubCredentials({ get: named("NotAllowedError") });
+    const err = await authenticateAndGetPrf(toBase64url(RAW_ID), SALT).catch(
+      (e: unknown) => e,
+    );
+    expect(err).toMatchObject({ name: "NotAllowedError" });
+    expect(isWebAuthnCancel(err)).toBe(true);
+  });
+
+  it("registration goes through the same gate", async () => {
+    stubCredentials();
+    get.mockImplementation(hangingGet());
+    create.mockResolvedValue(new FakeCredential(RAW_ID, {}));
+    const auth = authenticateAndGetPrf(toBase64url(RAW_ID), SALT);
+    await vi.waitFor(() => expect(get).toHaveBeenCalled());
+    const reg = registerPasskey();
+    expect(isWebAuthnCancel(await auth.catch((e: unknown) => e))).toBe(true);
+    await expect(reg).resolves.toMatchObject({
+      credentialId: toBase64url(RAW_ID),
+    });
   });
 });

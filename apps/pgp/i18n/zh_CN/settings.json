@@ -79,9 +79,6 @@
   "settings_import_submit_one": { "message": "导入 $count$ 个密钥" },
   "settings_import_submit_other": { "message": "导入 $count$ 个密钥" },
   "settings_import_passkey_name": { "message": "PGP Tools 导入" },
-  "settings_import_prf_unsupported": {
-    "message": "你的身份验证器不支持 PRF。请换一个通行密钥，或改用密码。"
-  },
   "settings_import_default_user_id": { "message": "导入的 PGP 密钥" },
   "settings_import_failed": { "message": "导入失败" },
   "settings_import_unknown_error": { "message": "未知错误" },

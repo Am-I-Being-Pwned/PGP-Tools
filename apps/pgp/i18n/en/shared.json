@@ -422,5 +422,17 @@
   "shared_bundle_no_encrypt_to_self": {
     "message": "Messages you encrypt are not readable by you afterwards",
     "description": "Preset card bullet, only when a preset turns encrypt-to-self off"
+  },
+  "shared_passkey_prompt_blocked": {
+    "message": "The passkey prompt didn't open. Click inside PGP Tools and try again. If another passkey window is open, close it first.",
+    "description": "Error when the browser refused to show the passkey (WebAuthn) prompt at all, e.g. because the panel did not have focus or another passkey request was still open. Not shown when the user cancels."
+  },
+  "shared_passkey_waiting": {
+    "message": "Waiting for your passkey...",
+    "description": "Status shown in place of a passkey button while the browser's passkey dialog is open. Three dots, not an ellipsis character."
+  },
+  "shared_passkey_waiting_hint": {
+    "message": "Don't see it? Look for a passkey or Windows Security window. It may be behind your browser.",
+    "description": "Hint shown a few seconds after the passkey dialog opened, for when the system dialog appeared behind the browser window. 'Windows Security' is the title of the Windows dialog; use the name Windows shows in this language."
   }
 }

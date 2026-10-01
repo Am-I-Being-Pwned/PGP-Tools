@@ -672,9 +672,6 @@
   "app_onboarding_preset_title": {
     "message": "Wählen Sie eine Sicherheitsvoreinstellung"
   },
-  "app_onboarding_prf_unsupported": {
-    "message": "Ihr Authenticator unterstützt PRF nicht. Versuchen Sie einen anderen Passkey oder verwenden Sie stattdessen ein Passwort."
-  },
   "app_onboarding_protection_body": {
     "message": "Wählen Sie, wie Ihre Kontakte und Schlüssel geschützt werden sollen. Sie benötigen dies jedes Mal, wenn Sie PGP Tools öffnen."
   },
@@ -1516,9 +1513,6 @@
   "keygen_error_password_short": {
     "message": "Das Passwort muss mindestens 8 Zeichen lang sein."
   },
-  "keygen_error_prf_unsupported_authenticator": {
-    "message": "Ihr Authenticator unterstützt PRF nicht. Versuchen Sie einen anderen Passkey oder verwenden Sie stattdessen ein Passwort."
-  },
   "keygen_error_wrong_password": {
     "message": "Falsches Passwort."
   },
@@ -1822,9 +1816,6 @@
   },
   "keygen_prf_unsupported_mac": {
     "message": "macOS erfordert Version 15 oder neuer mit iCloud-Schlüsselbund."
-  },
-  "keygen_prf_unsupported_windows": {
-    "message": "Windows Hello unterstützt PRF nicht - verwenden Sie einen Sicherheitsschlüssel (z. B. YubiKey)."
   },
   "keygen_protect_heading": {
     "message": "Schützen Sie Ihren Schlüssel"
@@ -2989,9 +2980,6 @@
   },
   "settings_import_paste_placeholder": {
     "message": "Schlüssel hier einfügen oder Datei auswählen..."
-  },
-  "settings_import_prf_unsupported": {
-    "message": "Ihr Authenticator unterstützt PRF nicht. Versuchen Sie einen anderen Passkey oder verwenden Sie stattdessen ein Passwort."
   },
   "settings_import_private_imported_one": {
     "message": "$count$ privater Schlüssel importiert",

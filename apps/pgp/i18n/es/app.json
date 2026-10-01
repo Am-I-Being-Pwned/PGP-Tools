@@ -71,9 +71,6 @@
   "app_welcome_credit_after": {
     "message": "."
   },
-  "app_onboarding_prf_unsupported": {
-    "message": "Su autenticador no admite PRF. Pruebe con otra llave de acceso o use una contraseña."
-  },
   "app_onboarding_setup_failed": {
     "message": "Error en la configuración"
   },

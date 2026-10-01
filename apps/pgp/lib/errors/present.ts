@@ -281,6 +281,15 @@ export function presentError(e: unknown, fallback: string): PresentedError {
 
   if (e instanceof AppError) return fromAppError(e);
 
+  // The browser never showed the prompt (no focus / a stuck request).
+  // Unlike a cancel, the user did nothing -- say so, and offer a retry.
+  if (e instanceof Error && e.name === "PasskeyPromptBlockedError") {
+    return {
+      message: e.message,
+      remedy: { label: t("app_error_remedy_try_again"), action: "retry" },
+    };
+  }
+
   // PrfNotSupportedError already carries curated, platform-specific copy.
   if (e instanceof Error && e.name === "PrfNotSupportedError") {
     return { message: e.message };

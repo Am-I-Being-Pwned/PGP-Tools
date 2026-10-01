@@ -157,7 +157,6 @@ export interface MessageArgs {
   "app_onboarding_passkey_prompt": undefined;
   "app_onboarding_preset_body": undefined;
   "app_onboarding_preset_title": undefined;
-  "app_onboarding_prf_unsupported": undefined;
   "app_onboarding_protection_body": undefined;
   "app_onboarding_protection_title": undefined;
   "app_onboarding_rsa_slow": undefined;
@@ -316,7 +315,6 @@ export interface MessageArgs {
   "keygen_error_passphrase_short": undefined;
   "keygen_error_password_mismatch": undefined;
   "keygen_error_password_short": undefined;
-  "keygen_error_prf_unsupported_authenticator": undefined;
   "keygen_error_wrong_password": undefined;
   "keygen_expires_on": { date: string | number };
   "keygen_expiry_1y": undefined;
@@ -574,7 +572,6 @@ export interface MessageArgs {
   "settings_import_passphrase_placeholder": undefined;
   "settings_import_paste_intro": undefined;
   "settings_import_paste_placeholder": undefined;
-  "settings_import_prf_unsupported": undefined;
   "settings_import_unknown_error": undefined;
   "settings_preset_apply": undefined;
   "settings_preset_apply_delete_history": undefined;
@@ -695,6 +692,9 @@ export interface MessageArgs {
   "shared_one_hour": undefined;
   "shared_open_dev_tools": undefined;
   "shared_passkey_failed": undefined;
+  "shared_passkey_prompt_blocked": undefined;
+  "shared_passkey_waiting": undefined;
+  "shared_passkey_waiting_hint": undefined;
   "shared_preset_applied": { title: string | number };
   "shared_preset_applied_history_deleted": undefined;
   "shared_preset_bundled_changed": undefined;

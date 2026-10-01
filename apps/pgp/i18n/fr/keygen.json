@@ -326,17 +326,11 @@
   "keygen_passkey_imported_user": {
     "message": "Clé PGP importée"
   },
-  "keygen_error_prf_unsupported_authenticator": {
-    "message": "Votre authentificateur ne prend pas en charge PRF. Essayez une autre clé d'accès ou utilisez plutôt un mot de passe."
-  },
   "keygen_prf_unsupported_intro": {
     "message": "PRF n'est pas pris en charge par cet authentificateur."
   },
   "keygen_prf_unsupported_mac": {
     "message": "macOS requiert la version 15 ou ultérieure avec le trousseau iCloud."
-  },
-  "keygen_prf_unsupported_windows": {
-    "message": "Windows Hello ne prend pas en charge PRF - utilisez une clé de sécurité (ex. YubiKey)."
   },
   "keygen_prf_unsupported_chrome": {
     "message": "Les clés d'accès du profil Chrome peuvent ne pas prendre en charge PRF - essayez le Gestionnaire de mots de passe Google ou une clé externe."

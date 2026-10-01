@@ -71,9 +71,6 @@
   "app_welcome_credit_after": {
     "message": "."
   },
-  "app_onboarding_prf_unsupported": {
-    "message": "Seu autenticador não oferece suporte a PRF. Tente outra chave de acesso ou use uma senha."
-  },
   "app_onboarding_setup_failed": {
     "message": "Falha na configuração"
   },

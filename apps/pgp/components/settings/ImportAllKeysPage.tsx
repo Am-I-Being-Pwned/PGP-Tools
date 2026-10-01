@@ -282,9 +282,8 @@ export function ImportAllKeysPage({
             t("settings_import_passkey_name"),
             t("settings_import_passkey_name"),
           );
-          if (!reg.prfEnabled) {
-            throw new Error(t("settings_import_prf_unsupported"));
-          }
+          // `reg.prfEnabled` is advisory (Chrome <= 146 under-reports
+          // Windows Hello); the ceremony below throws if PRF is absent.
           credentialId = reg.credentialId;
         }
         const prfSalt = sealSalt ?? generatePrfSalt();

@@ -25,6 +25,7 @@ import {
 } from "@amibeingpwned/ui/dropdown-menu";
 
 import type { PrivateKeyExporter } from "./ExportPrivateKeyPage";
+import { usePasskeyPrompt } from "../../hooks/usePasskeyPrompt";
 import { t } from "../../lib/i18n";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 import { ExportPrivateKeyPage } from "./ExportPrivateKeyPage";
@@ -118,6 +119,8 @@ export function KeyCard({
   const { session, exporter } = model;
   const isUnlocked = session?.isUnlocked ?? false;
   const isPasskey = model.protectionMethod === "passkey";
+  // Any passkey dialog open in the panel: don't let a click replace it.
+  const passkeyOpen = usePasskeyPrompt().open;
   // CRX exports unlock inside the dialog; PGP requires the session unlocked.
   const canExportPrivate = exporter !== null && (!session || isUnlocked);
 
@@ -403,12 +406,13 @@ export function KeyCard({
               <Button
                 size="sm"
                 variant="outline"
+                disabled={passkeyOpen}
                 onClick={(e) => {
                   e.stopPropagation();
                   void handlePasskeyUnlock();
                 }}
               >
-                {t("common_unlock")}
+                {passkeyOpen ? "..." : t("common_unlock")}
               </Button>
             ) : (
               <Button

@@ -35,9 +35,6 @@
   "app_welcome_start": { "message": "शुरू करने के लिए यहां क्लिक करें" },
   "app_welcome_credit_before": { "message": "एक निजता टूल, निर्माता:" },
   "app_welcome_credit_after": { "message": "।" },
-  "app_onboarding_prf_unsupported": {
-    "message": "आपका ऑथेंटिकेटर PRF का समर्थन नहीं करता। कोई दूसरी पासकी आज़माएं या इसके बजाय पासवर्ड इस्तेमाल करें।"
-  },
   "app_onboarding_setup_failed": { "message": "सेटअप विफल रहा" },
   "app_onboarding_name_required": { "message": "नाम ज़रूरी है।" },
   "app_onboarding_generate_failed": { "message": "कुंजी बनाना विफल रहा" },

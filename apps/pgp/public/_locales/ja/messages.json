@@ -672,9 +672,6 @@
   "app_onboarding_preset_title": {
     "message": "セキュリティ プリセットを選択"
   },
-  "app_onboarding_prf_unsupported": {
-    "message": "お使いの認証器は PRF に対応していません。別のパスキーを試すか、代わりにパスワードを使用してください。"
-  },
   "app_onboarding_protection_body": {
     "message": "連絡先と鍵の保護方法を選択してください。PGP Tools を開くたびにこれを使用します。"
   },
@@ -1516,9 +1513,6 @@
   "keygen_error_password_short": {
     "message": "パスワードは 8 文字以上にしてください。"
   },
-  "keygen_error_prf_unsupported_authenticator": {
-    "message": "お使いの認証器は PRF に対応していません。別のパスキーを試すか、代わりにパスワードを使用してください。"
-  },
   "keygen_error_wrong_password": {
     "message": "パスワードが違います。"
   },
@@ -1822,9 +1816,6 @@
   },
   "keygen_prf_unsupported_mac": {
     "message": "macOS では 15 以降と iCloud キーチェーンが必要です。"
-  },
-  "keygen_prf_unsupported_windows": {
-    "message": "Windows Hello は PRF に対応していません。セキュリティ キー (YubiKey など) を使用してください。"
   },
   "keygen_protect_heading": {
     "message": "鍵を保護する"
@@ -2989,9 +2980,6 @@
   },
   "settings_import_paste_placeholder": {
     "message": "ここに鍵を貼り付けるか、ファイルを選択..."
-  },
-  "settings_import_prf_unsupported": {
-    "message": "お使いの認証器は PRF に対応していません。別のパスキーを試すか、代わりにパスワードを使用してください。"
   },
   "settings_import_private_imported_one": {
     "message": "$count$ 個の秘密鍵をインポートしました",

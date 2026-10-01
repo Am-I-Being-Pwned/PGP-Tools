@@ -332,17 +332,11 @@
   "keygen_passkey_imported_user": {
     "message": "Chiave PGP importata"
   },
-  "keygen_error_prf_unsupported_authenticator": {
-    "message": "Il tuo autenticatore non supporta PRF. Prova con un'altra passkey oppure usa una password."
-  },
   "keygen_prf_unsupported_intro": {
     "message": "PRF non supportato da questo autenticatore."
   },
   "keygen_prf_unsupported_mac": {
     "message": "Su macOS serve la versione 15 o successiva con il Portachiavi iCloud."
-  },
-  "keygen_prf_unsupported_windows": {
-    "message": "Windows Hello non supporta PRF - usa una chiave di sicurezza (es. YubiKey)."
   },
   "keygen_prf_unsupported_chrome": {
     "message": "Le passkey del profilo Chrome potrebbero non supportare PRF - prova Google Password Manager o una chiave esterna."

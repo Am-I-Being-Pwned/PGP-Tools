@@ -71,9 +71,6 @@
   "app_welcome_credit_after": {
     "message": "です。"
   },
-  "app_onboarding_prf_unsupported": {
-    "message": "お使いの認証器は PRF に対応していません。別のパスキーを試すか、代わりにパスワードを使用してください。"
-  },
   "app_onboarding_setup_failed": {
     "message": "セットアップに失敗しました"
   },

@@ -672,9 +672,6 @@
   "app_onboarding_preset_title": {
     "message": "选择一个安全预设"
   },
-  "app_onboarding_prf_unsupported": {
-    "message": "你的身份验证器不支持 PRF。请换一个通行密钥，或改用密码。"
-  },
   "app_onboarding_protection_body": {
     "message": "选择如何保护你的联系人和密钥。每次打开 PGP Tools 时都会用到。"
   },
@@ -1516,9 +1513,6 @@
   "keygen_error_password_short": {
     "message": "密码至少需要 8 个字符。"
   },
-  "keygen_error_prf_unsupported_authenticator": {
-    "message": "你的身份验证器不支持 PRF。请换一个通行密钥，或改用密码。"
-  },
   "keygen_error_wrong_password": {
     "message": "密码错误。"
   },
@@ -1822,9 +1816,6 @@
   },
   "keygen_prf_unsupported_mac": {
     "message": "macOS 需要 15 或更高版本并启用 iCloud 钥匙串。"
-  },
-  "keygen_prf_unsupported_windows": {
-    "message": "Windows Hello 不支持 PRF，请使用安全密钥（例如 YubiKey）。"
   },
   "keygen_protect_heading": {
     "message": "保护你的密钥"
@@ -2989,9 +2980,6 @@
   },
   "settings_import_paste_placeholder": {
     "message": "在此粘贴密钥，或浏览选择文件…"
-  },
-  "settings_import_prf_unsupported": {
-    "message": "你的身份验证器不支持 PRF。请换一个通行密钥，或改用密码。"
   },
   "settings_import_private_imported_one": {
     "message": "已导入 $count$ 个私钥",

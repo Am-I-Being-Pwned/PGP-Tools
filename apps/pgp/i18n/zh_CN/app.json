@@ -31,9 +31,6 @@
   "app_welcome_start": { "message": "点击此处开始" },
   "app_welcome_credit_before": { "message": "隐私工具，出品方：" },
   "app_welcome_credit_after": { "message": "。" },
-  "app_onboarding_prf_unsupported": {
-    "message": "你的身份验证器不支持 PRF。请换一个通行密钥，或改用密码。"
-  },
   "app_onboarding_setup_failed": { "message": "设置失败" },
   "app_onboarding_name_required": { "message": "姓名为必填项。" },
   "app_onboarding_generate_failed": { "message": "密钥生成失败" },

@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@amibeingpwned/ui/button";
 
 import type { MasterProtection } from "../../lib/storage/master-protection";
+import { usePasskeyPrompt } from "../../hooks/usePasskeyPrompt";
 import { fromBase64 } from "../../lib/encoding";
 import { t } from "../../lib/i18n";
 import * as wasmApi from "../../lib/pgp/wasm";
@@ -11,9 +12,14 @@ import {
   ARGON2_MEMORY_KIB,
   ARGON2_PARALLELISM,
 } from "../../lib/protection/password-kdf";
-import { authenticateAndGetPrf } from "../../lib/protection/webauthn-prf";
+import {
+  authenticateAndGetPrf,
+  cancelPasskeyPrompt,
+  isWebAuthnCancel,
+} from "../../lib/protection/webauthn-prf";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 import { DevToolsPage } from "../settings/DevToolsPage";
+import { PasskeyWaiting } from "./PasskeyWaiting";
 
 /** The passkey ceremony's PRF output, on loan to `onUnlocked` for the
  *  duration of that call so "unlock keys when the vault unlocks" can open
@@ -48,7 +54,7 @@ export function MasterUnlockScreen({
   const [error, setError] = useState<string | null>(null);
   const [unlocking, setUnlocking] = useState(false);
   const [showDevTools, setShowDevTools] = useState(false);
-  const abortRef = useRef<AbortController | null>(null);
+  const passkeyPrompt = usePasskeyPrompt();
 
   // Auto-prompt, but only once the panel HAS focus. Chrome gives a side
   // panel focus when it is shown (crbug 486495151), a moment after the
@@ -67,7 +73,9 @@ export function MasterUnlockScreen({
       started = true;
       window.removeEventListener("focus", start);
       clearTimeout(fallback);
-      void handlePasskeyUnlock();
+      // Unprompted, so a browser refusing to show the dialog (no focus
+      // yet) is not an error: the user just clicks the button.
+      void handlePasskeyUnlock({ quietIfBlocked: true });
     };
     const fallback = setTimeout(start, 1_000);
     if (document.hasFocus()) start();
@@ -75,28 +83,26 @@ export function MasterUnlockScreen({
     return () => {
       window.removeEventListener("focus", start);
       clearTimeout(fallback);
+      // Leaving this screen (e.g. it was locked again) closes our prompt.
+      cancelPasskeyPrompt();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Function declaration (hoisted) so the auto-unlock effect above can
   // reference it without a use-before-declaration error.
-  async function handlePasskeyUnlock() {
+  async function handlePasskeyUnlock({ quietIfBlocked = false } = {}) {
     if (masterProtection.method !== "passkey") return;
-
-    // Abort any in-flight ceremony so we don't get InvalidStateError
-    abortRef.current?.abort();
-    const ac = new AbortController();
-    abortRef.current = ac;
 
     setError(null);
 
     let prfOutput: Uint8Array | undefined;
     try {
+      // The ceremony gate in webauthn-prf serialises prompts; the button
+      // is hidden while one is open, so there is nothing to abort here.
       ({ prfOutput } = await authenticateAndGetPrf(
         masterProtection.credentialId,
         fromBase64(masterProtection.prfSalt),
-        ac.signal,
       ));
 
       await wasmApi.initContactsSessionWithPrf(
@@ -110,13 +116,12 @@ export function MasterUnlockScreen({
       // throw for a key that will not open.
       await onUnlocked({ prfOutput });
     } catch (e) {
-      if (ac.signal.aborted) return;
-      const name = e instanceof Error ? e.name : "";
-      if (name === "NotAllowedError" || name === "AbortError") {
-        // User dismissed the passkey dialog.
-      } else {
-        setError(t("shared_passkey_failed"));
+      if (isWebAuthnCancel(e)) return; // user dismissed the dialog
+      if (e instanceof Error && e.name === "PasskeyPromptBlockedError") {
+        if (!quietIfBlocked) setError(e.message);
+        return;
       }
+      setError(t("shared_passkey_failed"));
     } finally {
       prfOutput?.fill(0);
     }
@@ -181,11 +186,18 @@ export function MasterUnlockScreen({
           </p>
         </div>
 
-        {masterProtection.method === "passkey" && (
-          <Button className="w-full" onClick={handlePasskeyUnlock} autoFocus>
-            {t("shared_unlock_with_passkey")}
-          </Button>
-        )}
+        {masterProtection.method === "passkey" &&
+          (passkeyPrompt.open ? (
+            <PasskeyWaiting />
+          ) : (
+            <Button
+              className="w-full"
+              onClick={() => void handlePasskeyUnlock()}
+              autoFocus
+            >
+              {t("shared_unlock_with_passkey")}
+            </Button>
+          ))}
 
         {masterProtection.method === "password" && (
           <form

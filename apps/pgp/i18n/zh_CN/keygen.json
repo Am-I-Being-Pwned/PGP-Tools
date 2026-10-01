@@ -332,17 +332,11 @@
   "keygen_passkey_imported_user": {
     "message": "导入的 PGP 密钥"
   },
-  "keygen_error_prf_unsupported_authenticator": {
-    "message": "你的身份验证器不支持 PRF。请换一个通行密钥，或改用密码。"
-  },
   "keygen_prf_unsupported_intro": {
     "message": "此身份验证器不支持 PRF。"
   },
   "keygen_prf_unsupported_mac": {
     "message": "macOS 需要 15 或更高版本并启用 iCloud 钥匙串。"
-  },
-  "keygen_prf_unsupported_windows": {
-    "message": "Windows Hello 不支持 PRF，请使用安全密钥（例如 YubiKey）。"
   },
   "keygen_prf_unsupported_chrome": {
     "message": "Chrome 个人资料中的通行密钥可能不支持 PRF，请尝试 Google 密码管理器或外部安全密钥。"

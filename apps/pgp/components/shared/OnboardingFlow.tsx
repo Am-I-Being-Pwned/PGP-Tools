@@ -174,10 +174,9 @@ export function OnboardingFlow({
       }
     }
 
+    // Held until the ceremony settles. The passkey dialog can't strand
+    // the button: PasskeyWaiting offers Cancel, which settles it.
     setSubmitting(true);
-    // The button re-enables after 2s independent of the WebAuthn
-    // promise so a still-open system dialog can't strand it.
-    setTimeout(() => setSubmitting(false), 2000);
 
     passkeyAbortRef.current?.abort();
     const abort = new AbortController();
@@ -187,24 +186,26 @@ export function OnboardingFlow({
       let mp: MasterProtection;
 
       if (method === "passkey") {
+        // Ask for the PRF output during registration too: where the
+        // browser/authenticator can evaluate it there, that is the only
+        // prompt. `reg.prfEnabled` is NOT checked -- Chrome <= 146
+        // reports false for Windows Hello passkeys that do evaluate PRF
+        // at authentication. The follow-up ceremony is the real test.
+        const prfSalt = generatePrfSalt();
         const reg = await registerPasskey(
           "PGP Tools Master",
           "PGP Tools Master",
           abort.signal,
-        );
-        if (!reg.prfEnabled) {
-          setError(t("app_onboarding_prf_unsupported"));
-          setSubmitting(false);
-          return;
-        }
-
-        const prfSalt = generatePrfSalt();
-        const storedSecret = generateStoredSecret();
-        const { prfOutput } = await authenticateAndGetPrf(
-          reg.credentialId,
           prfSalt,
-          abort.signal,
         );
+
+        const storedSecret = generateStoredSecret();
+        // No PRF here throws PrfNotSupportedError, whose platform-specific
+        // message the catch below shows.
+        const prfOutput =
+          reg.prfOutput ??
+          (await authenticateAndGetPrf(reg.credentialId, prfSalt, abort.signal))
+            .prfOutput;
         await wasmApi.initContactsSessionWithPrf(
           prfOutput,
           new Uint8Array(storedSecret),
@@ -258,14 +259,19 @@ export function OnboardingFlow({
     } catch (e) {
       if (isWebAuthnCancel(e)) {
         setError(null);
+      } else if (e instanceof Error && e.name === "PasskeyPromptBlockedError") {
+        setError(e.message);
       } else {
         setError(
           e instanceof Error ? e.message : t("app_onboarding_setup_failed"),
         );
       }
     } finally {
-      passkeyAbortRef.current = null;
-      // setSubmitting(false) is owned by the 2s timeout above.
+      // A newer submit (or a method switch) owns the state from here.
+      if (passkeyAbortRef.current === abort) {
+        passkeyAbortRef.current = null;
+        setSubmitting(false);
+      }
     }
   };
 

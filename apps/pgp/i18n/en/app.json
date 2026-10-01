@@ -95,10 +95,6 @@
     "message": ".",
     "description": "Welcome page footer, punctuation right after the linked brand name 'Am I Being Pwned' (no leading space). Use the locale's sentence terminator or leave empty if none is wanted."
   },
-  "app_onboarding_prf_unsupported": {
-    "message": "Your authenticator does not support PRF. Try a different passkey or use a password instead.",
-    "description": "Onboarding, protection step: error shown when the passkey the user created cannot derive an encryption key (WebAuthn PRF extension). 'PRF' is a technical name; keep it."
-  },
   "app_onboarding_setup_failed": {
     "message": "Setup failed",
     "description": "Onboarding, protection step: fallback error shown when setting up the vault protection fails for an unknown reason."

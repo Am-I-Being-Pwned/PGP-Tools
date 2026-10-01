@@ -2,6 +2,7 @@ import { CheckIcon, LockIcon } from "lucide-react";
 
 import { Button } from "@amibeingpwned/ui/button";
 
+import { usePasskeyPrompt } from "../../hooks/usePasskeyPrompt";
 import { t } from "../../lib/i18n";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 
@@ -38,6 +39,8 @@ export function KeyUnlockRow({
   onUnlockPassword,
   onUnlockPasskey,
 }: KeyUnlockRowProps) {
+  // Another row's passkey dialog is open: a click here would replace it.
+  const passkeyOpen = usePasskeyPrompt().open;
   return (
     <div className="border-border rounded-md border p-2">
       <div className="flex items-center gap-2">
@@ -60,10 +63,10 @@ export function KeyUnlockRow({
           <Button
             size="sm"
             variant="outline"
-            disabled={busy}
+            disabled={busy || passkeyOpen}
             onClick={onUnlockPasskey}
           >
-            {busy ? "..." : t("common_unlock")}
+            {busy || passkeyOpen ? "..." : t("common_unlock")}
           </Button>
         )}
       </div>

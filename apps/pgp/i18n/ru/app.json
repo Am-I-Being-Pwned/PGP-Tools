@@ -45,9 +45,6 @@
     "message": "Инструмент для защиты приватности от"
   },
   "app_welcome_credit_after": { "message": "." },
-  "app_onboarding_prf_unsupported": {
-    "message": "Ваш аутентификатор не поддерживает PRF. Попробуйте другой ключ доступа или используйте пароль."
-  },
   "app_onboarding_setup_failed": {
     "message": "Не удалось выполнить настройку"
   },

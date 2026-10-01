@@ -435,10 +435,6 @@
     "message": "Imported PGP Key",
     "description": "Account name shown in the browser's passkey dialog when protecting an imported key that has no user ID."
   },
-  "keygen_error_prf_unsupported_authenticator": {
-    "message": "Your authenticator doesn't support PRF. Try a different passkey or use a password instead.",
-    "description": "Error shown on the protection step when the passkey just registered cannot derive a key (no WebAuthn PRF). 'PRF' is a technical name; keep."
-  },
   "keygen_prf_unsupported_intro": {
     "message": "PRF not supported by this authenticator.",
     "description": "First sentence of the error when a passkey cannot derive a key. Followed, separated by spaces, by the platform hints keygen_prf_unsupported_mac / _windows / _chrome as applicable."
@@ -448,7 +444,7 @@
     "description": "Platform hint appended to keygen_prf_unsupported_intro on macOS."
   },
   "keygen_prf_unsupported_windows": {
-    "message": "Windows Hello doesn't support PRF - use a security key (e.g. YubiKey).",
+    "message": "On Windows Hello, install the latest Windows 11 updates and update your browser, or use a security key (e.g. YubiKey).",
     "description": "Platform hint appended to keygen_prf_unsupported_intro on Windows. Plain hyphen, not a dash."
   },
   "keygen_prf_unsupported_chrome": {

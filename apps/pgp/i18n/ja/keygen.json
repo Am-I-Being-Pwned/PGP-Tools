@@ -341,17 +341,11 @@
   "keygen_passkey_imported_user": {
     "message": "インポートした PGP 鍵"
   },
-  "keygen_error_prf_unsupported_authenticator": {
-    "message": "お使いの認証器は PRF に対応していません。別のパスキーを試すか、代わりにパスワードを使用してください。"
-  },
   "keygen_prf_unsupported_intro": {
     "message": "この認証器は PRF に対応していません。"
   },
   "keygen_prf_unsupported_mac": {
     "message": "macOS では 15 以降と iCloud キーチェーンが必要です。"
-  },
-  "keygen_prf_unsupported_windows": {
-    "message": "Windows Hello は PRF に対応していません。セキュリティ キー (YubiKey など) を使用してください。"
   },
   "keygen_prf_unsupported_chrome": {
     "message": "Chrome プロファイルのパスキーは PRF に対応していない場合があります。Google パスワード マネージャーまたは外部のキーをお試しください。"

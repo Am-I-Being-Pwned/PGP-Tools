@@ -672,9 +672,6 @@
   "app_onboarding_preset_title": {
     "message": "Scegli un profilo di sicurezza"
   },
-  "app_onboarding_prf_unsupported": {
-    "message": "Il tuo autenticatore non supporta PRF. Prova con un'altra passkey oppure usa una password."
-  },
   "app_onboarding_protection_body": {
     "message": "Scegli come proteggere i tuoi contatti e le tue chiavi. Ti servirà ogni volta che apri PGP Tools."
   },
@@ -1516,9 +1513,6 @@
   "keygen_error_password_short": {
     "message": "La password deve avere almeno 8 caratteri."
   },
-  "keygen_error_prf_unsupported_authenticator": {
-    "message": "Il tuo autenticatore non supporta PRF. Prova con un'altra passkey oppure usa una password."
-  },
   "keygen_error_wrong_password": {
     "message": "Password errata."
   },
@@ -1822,9 +1816,6 @@
   },
   "keygen_prf_unsupported_mac": {
     "message": "Su macOS serve la versione 15 o successiva con il Portachiavi iCloud."
-  },
-  "keygen_prf_unsupported_windows": {
-    "message": "Windows Hello non supporta PRF - usa una chiave di sicurezza (es. YubiKey)."
   },
   "keygen_protect_heading": {
     "message": "Proteggi la tua chiave"
@@ -2989,9 +2980,6 @@
   },
   "settings_import_paste_placeholder": {
     "message": "Incolla qui le chiavi, oppure sfoglia per scegliere un file..."
-  },
-  "settings_import_prf_unsupported": {
-    "message": "Il tuo autenticatore non supporta PRF. Prova con un'altra passkey oppure usa una password."
   },
   "settings_import_private_imported_one": {
     "message": "$count$ chiave privata importata",

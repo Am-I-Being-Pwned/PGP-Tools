@@ -383,17 +383,11 @@
   "keygen_passkey_imported_user": {
     "message": "Импортированный PGP-ключ"
   },
-  "keygen_error_prf_unsupported_authenticator": {
-    "message": "Ваш аутентификатор не поддерживает PRF. Попробуйте другой ключ доступа или используйте пароль."
-  },
   "keygen_prf_unsupported_intro": {
     "message": "Этот аутентификатор не поддерживает PRF."
   },
   "keygen_prf_unsupported_mac": {
     "message": "Для macOS требуется версия 15 или новее со Связкой ключей iCloud."
-  },
-  "keygen_prf_unsupported_windows": {
-    "message": "Windows Hello не поддерживает PRF - используйте аппаратный ключ безопасности (например, YubiKey)."
   },
   "keygen_prf_unsupported_chrome": {
     "message": "Ключи доступа профиля Chrome могут не поддерживать PRF - попробуйте Google Менеджер паролей или внешний ключ."

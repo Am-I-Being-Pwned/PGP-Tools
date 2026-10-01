@@ -1,9 +1,11 @@
 import { Button } from "@amibeingpwned/ui/button";
 import { Kbd } from "@amibeingpwned/ui/kbd";
 
+import { usePasskeyPrompt } from "../../hooks/usePasskeyPrompt";
 import { t } from "../../lib/i18n";
 import { checkPrfSupport } from "../../lib/protection/webauthn-prf";
 import { INPUT_CLASS } from "../../lib/utils/styles";
+import { PasskeyWaiting } from "../shared/PasskeyWaiting";
 
 export type ProtectionMethod = "passkey" | "password";
 
@@ -46,6 +48,11 @@ export function ProtectionMethodPicker({
   onReusePasskeyChange,
 }: ProtectionMethodPickerProps) {
   const prfAvailable = checkPrfSupport();
+  // While the browser's passkey dialog is open, the submit button stays
+  // disabled: a second click would only replace the dialog the user is
+  // already looking for (and on Windows, collide with it).
+  const passkeyOpen = usePasskeyPrompt().open && method === "passkey";
+  const busy = submitting || passkeyOpen;
 
   return (
     <div className="space-y-3">
@@ -159,11 +166,13 @@ export function ProtectionMethodPicker({
         </>
       )}
 
-      {error && (
+      {error && !passkeyOpen && (
         <p className="text-destructive text-xs" role="alert">
           {error}
         </p>
       )}
+
+      {method === "passkey" && <PasskeyWaiting />}
 
       <div className="flex gap-2">
         <Button
@@ -179,11 +188,11 @@ export function ProtectionMethodPicker({
           size="sm"
           className="flex-1"
           onClick={onSubmit}
-          disabled={submitting}
+          disabled={busy}
           aria-keyshortcuts="Enter"
         >
           <span className="flex w-full items-center justify-center gap-2">
-            {submitting
+            {busy
               ? "..."
               : (submitLabel ??
                 (method === "passkey"

@@ -202,17 +202,11 @@
   },
   "keygen_passkey_default_user": { "message": "PGP कुंजी सुरक्षा" },
   "keygen_passkey_imported_user": { "message": "आयात की गई PGP कुंजी" },
-  "keygen_error_prf_unsupported_authenticator": {
-    "message": "आपका ऑथेंटिकेटर PRF का समर्थन नहीं करता। कोई दूसरी पासकी आज़माएं या इसके बजाय पासवर्ड इस्तेमाल करें।"
-  },
   "keygen_prf_unsupported_intro": {
     "message": "यह ऑथेंटिकेटर PRF का समर्थन नहीं करता।"
   },
   "keygen_prf_unsupported_mac": {
     "message": "macOS पर 15 या नया संस्करण और iCloud Keychain ज़रूरी है।"
-  },
-  "keygen_prf_unsupported_windows": {
-    "message": "Windows Hello PRF का समर्थन नहीं करता - कोई सुरक्षा कुंजी (जैसे YubiKey) इस्तेमाल करें।"
   },
   "keygen_prf_unsupported_chrome": {
     "message": "हो सकता है कि Chrome प्रोफ़ाइल की पासकी PRF का समर्थन न करे - Google Password Manager या कोई बाहरी कुंजी आज़माएं।"

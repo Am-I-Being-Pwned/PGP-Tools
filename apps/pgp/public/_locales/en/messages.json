@@ -840,10 +840,6 @@
     "message": "Pick a security preset",
     "description": "Onboarding, final step heading: choose a bundle of security settings."
   },
-  "app_onboarding_prf_unsupported": {
-    "message": "Your authenticator does not support PRF. Try a different passkey or use a password instead.",
-    "description": "Onboarding, protection step: error shown when the passkey the user created cannot derive an encryption key (WebAuthn PRF extension). 'PRF' is a technical name; keep it."
-  },
   "app_onboarding_protection_body": {
     "message": "Choose how to protect your contacts and keys. You will use this each time you open PGP Tools.",
     "description": "Onboarding, protection step: paragraph under the heading. 'PGP Tools' is the brand name."
@@ -1875,10 +1871,6 @@
     "message": "Password must be at least 8 characters.",
     "description": "Validation error when the new key password is under 8 characters."
   },
-  "keygen_error_prf_unsupported_authenticator": {
-    "message": "Your authenticator doesn't support PRF. Try a different passkey or use a password instead.",
-    "description": "Error shown on the protection step when the passkey just registered cannot derive a key (no WebAuthn PRF). 'PRF' is a technical name; keep."
-  },
   "keygen_error_wrong_password": {
     "message": "Wrong password.",
     "description": "Error under a key's unlock field when the entered password does not open it."
@@ -2253,7 +2245,7 @@
     "description": "Platform hint appended to keygen_prf_unsupported_intro on macOS."
   },
   "keygen_prf_unsupported_windows": {
-    "message": "Windows Hello doesn't support PRF - use a security key (e.g. YubiKey).",
+    "message": "On Windows Hello, install the latest Windows 11 updates and update your browser, or use a security key (e.g. YubiKey).",
     "description": "Platform hint appended to keygen_prf_unsupported_intro on Windows. Plain hyphen, not a dash."
   },
   "keygen_protect_heading": {
@@ -3667,10 +3659,6 @@
     "message": "Paste keys here, or browse for a file...",
     "description": "Placeholder of the textarea on the paste step of the bulk import page."
   },
-  "settings_import_prf_unsupported": {
-    "message": "Your authenticator doesn't support PRF. Try a different passkey or use a password instead.",
-    "description": "Error on the protect step when the chosen passkey cannot derive a key (WebAuthn PRF extension missing)."
-  },
   "settings_import_private_imported_one": {
     "message": "Imported $count$ private key",
     "description": "Success toast after the bulk import. $count$ is the number of private keys imported.",
@@ -4368,6 +4356,18 @@
   "shared_passkey_failed": {
     "message": "Passkey authentication failed. Try again.",
     "description": "Vault unlock screen error"
+  },
+  "shared_passkey_prompt_blocked": {
+    "message": "The passkey prompt didn't open. Click inside PGP Tools and try again. If another passkey window is open, close it first.",
+    "description": "Error when the browser refused to show the passkey (WebAuthn) prompt at all, e.g. because the panel did not have focus or another passkey request was still open. Not shown when the user cancels."
+  },
+  "shared_passkey_waiting": {
+    "message": "Waiting for your passkey...",
+    "description": "Status shown in place of a passkey button while the browser's passkey dialog is open. Three dots, not an ellipsis character."
+  },
+  "shared_passkey_waiting_hint": {
+    "message": "Don't see it? Look for a passkey or Windows Security window. It may be behind your browser.",
+    "description": "Hint shown a few seconds after the passkey dialog opened, for when the system dialog appeared behind the browser window. 'Windows Security' is the title of the Windows dialog; use the name Windows shows in this language."
   },
   "shared_preset_applied": {
     "message": "Preset applied: $title$",

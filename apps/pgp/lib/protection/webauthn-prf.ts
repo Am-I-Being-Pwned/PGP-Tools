@@ -10,6 +10,150 @@ function generateChallenge(): ArrayBuffer {
   return crypto.getRandomValues(new Uint8Array(32)).buffer;
 }
 
+// ── ceremony gate ────────────────────────────────────────────────────
+//
+// Browsers allow ONE pending WebAuthn request at a time, and the OS
+// dialog behind it does not go away the instant its promise rejects.
+// macOS tears its sheet down fast enough that "abort the old one, start
+// a new one" looks fine there; Windows Hello and Chrome's own Linux UI
+// close asynchronously, so a request issued straight after an abort
+// trips "A request is already pending" (InvalidStateError, or
+// OperationError in newer Chrome) -- which used to be swallowed as a
+// cancel, so the user clicked and nothing happened.
+//
+// Every ceremony therefore goes through this gate: a new one supersedes
+// the open one, waits for it to settle, and retries briefly if the
+// browser still holds the old request. UI reads `isPasskeyPromptOpen`
+// (via `subscribePasskeyPrompt`) to show a waiting state instead of
+// re-enabling a button the user will click again.
+
+/** How long to wait before retrying a "request already pending". */
+const PENDING_RETRY_DELAY_MS = 300;
+const PENDING_RETRIES = 3;
+/** A NotAllowedError faster than this never reached the user: the
+ *  browser refused to show a prompt (most often: the page lacked focus). */
+const PROMPT_BLOCKED_WITHIN_MS = 500;
+
+interface OpenCeremony {
+  controller: AbortController;
+  settled: Promise<void>;
+}
+
+let openCeremony: OpenCeremony | null = null;
+const listeners = new Set<() => void>();
+
+function notify(): void {
+  for (const l of listeners) l();
+}
+
+/** True while a passkey prompt is (or is about to be) on screen. */
+export function isPasskeyPromptOpen(): boolean {
+  return openCeremony !== null;
+}
+
+/** Subscribe to `isPasskeyPromptOpen` changes (useSyncExternalStore). */
+export function subscribePasskeyPrompt(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+/** Cancel whatever passkey prompt is open, if any. The ceremony's
+ *  caller sees an AbortError, which `isWebAuthnCancel` treats as a
+ *  cancel. */
+export function cancelPasskeyPrompt(): void {
+  openCeremony?.controller.abort();
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+function errorName(e: unknown): string {
+  return e instanceof Object && "name" in e ? String(e.name) : "";
+}
+
+/** "A request is already pending": InvalidStateError in older Chrome,
+ *  OperationError in newer. Only the message tells the latter apart
+ *  from a genuine authenticator error. */
+function isPendingError(e: unknown): boolean {
+  const name = errorName(e);
+  if (name === "InvalidStateError") return true;
+  return (
+    name === "OperationError" &&
+    e instanceof Error &&
+    /pending/i.test(e.message)
+  );
+}
+
+/** The browser would not show a passkey prompt at all -- it refused
+ *  instantly (no focus), or another request never let go. Distinct from
+ *  a cancel: the user did nothing, so silence would read as a dead
+ *  button. */
+export class PasskeyPromptBlockedError extends Error {
+  constructor() {
+    super(t("shared_passkey_prompt_blocked"));
+    this.name = "PasskeyPromptBlockedError";
+  }
+}
+
+async function runCeremony<T>(
+  start: (signal: AbortSignal) => Promise<T>,
+  signal?: AbortSignal,
+): Promise<T> {
+  const controller = new AbortController();
+  let markSettled!: () => void;
+  const entry: OpenCeremony = {
+    controller,
+    settled: new Promise<void>((r) => (markSettled = r)),
+  };
+  // Claim the slot synchronously so two callers racing in the same tick
+  // queue behind each other rather than both starting.
+  const previous = openCeremony;
+  openCeremony = entry;
+  notify();
+
+  const forwardAbort = () => controller.abort(signal?.reason);
+  if (signal?.aborted) forwardAbort();
+  else signal?.addEventListener("abort", forwardAbort, { once: true });
+
+  try {
+    if (previous) {
+      previous.controller.abort();
+      await previous.settled;
+    }
+    for (let attempt = 0; ; attempt++) {
+      controller.signal.throwIfAborted();
+      const startedAt = performance.now();
+      try {
+        return await start(controller.signal);
+      } catch (e) {
+        if (controller.signal.aborted) throw e;
+        if (isPendingError(e)) {
+          if (attempt < PENDING_RETRIES) {
+            await delay(PENDING_RETRY_DELAY_MS);
+            continue;
+          }
+          throw new PasskeyPromptBlockedError();
+        }
+        if (
+          errorName(e) === "NotAllowedError" &&
+          performance.now() - startedAt < PROMPT_BLOCKED_WITHIN_MS
+        ) {
+          throw new PasskeyPromptBlockedError();
+        }
+        throw e;
+      }
+    }
+  } finally {
+    signal?.removeEventListener("abort", forwardAbort);
+    if (openCeremony === entry) {
+      openCeremony = null;
+      notify();
+    }
+    markSettled();
+  }
+}
+
 // ── public API ───────────────────────────────────────────────────────
 
 /** Generate a random 32-byte salt for PRF evaluation. */
@@ -35,21 +179,59 @@ export function checkPrfSupport(): boolean {
 
 export interface PasskeyRegistrationResult {
   credentialId: string; // base64url
+  /** What the browser REPORTED. Advisory only: Chrome/Edge up to 146
+   *  report false for Windows Hello passkeys that do evaluate PRF at
+   *  authentication, so never refuse a credential on this alone --
+   *  `authenticateAndGetPrf` throwing PrfNotSupportedError is the
+   *  authoritative "no". */
   prfEnabled: boolean;
+  /** PRF output for `prfSalt`, when one was passed and the authenticator
+   *  evaluated it during registration (newer browsers/authenticators
+   *  do). Saves the follow-up prompt. Caller-owned; `.fill(0)` it. */
+  prfOutput?: Uint8Array;
 }
 
 /**
  * Register a new passkey with the PRF extension enabled.
  *
- * PRF output is NOT available at registration time — only at authentication.
- * We store the credential ID so we can request PRF later.
+ * Pass `prfSalt` to also ask for the PRF output in the same ceremony.
+ * Many authenticators only evaluate PRF at authentication, so a caller
+ * must still fall back to `authenticateAndGetPrf` when `prfOutput` is
+ * absent.
  */
 export async function registerPasskey(
   userName?: string,
   displayName?: string,
   signal?: AbortSignal,
+  prfSalt?: BufferSource,
 ): Promise<PasskeyRegistrationResult> {
-  const credential = await navigator.credentials.create({
+  const credential = await runCeremony(
+    (s) => createCredential(userName, displayName, s, prfSalt),
+    signal,
+  );
+
+  if (!credential || !(credential instanceof PublicKeyCredential)) {
+    throw new AppError("passkey-failed", "Passkey registration failed");
+  }
+
+  const ext = credential.getClientExtensionResults();
+  const prfEnabled = ext.prf?.enabled === true;
+  const first = prfSalt ? ext.prf?.results?.first : undefined;
+
+  return {
+    credentialId: toBase64url(credential.rawId),
+    prfEnabled,
+    ...(first ? { prfOutput: new Uint8Array(first as ArrayBuffer) } : {}),
+  };
+}
+
+function createCredential(
+  userName: string | undefined,
+  displayName: string | undefined,
+  signal: AbortSignal,
+  prfSalt: BufferSource | undefined,
+): Promise<Credential | null> {
+  return navigator.credentials.create({
     publicKey: {
       challenge: generateChallenge(),
       rp: {
@@ -69,26 +251,17 @@ export async function registerPasskey(
       authenticatorSelection: {
         requireResidentKey: true,
         residentKey: "required",
-        userVerification: "preferred",
+        // Matches authentication's "required": with "preferred", a
+        // PIN-less security key registers fine and is then forced into
+        // PIN setup at its first unlock.
+        userVerification: "required",
       },
       attestation: "none",
-      timeout: 60_000,
-      extensions: { prf: {} },
+      timeout: 120_000,
+      extensions: { prf: prfSalt ? { eval: { first: prfSalt } } : {} },
     },
     signal,
   });
-
-  if (!credential || !(credential instanceof PublicKeyCredential)) {
-    throw new AppError("passkey-failed", "Passkey registration failed");
-  }
-
-  const ext = credential.getClientExtensionResults();
-  const prfEnabled = ext.prf?.enabled === true;
-
-  return {
-    credentialId: toBase64url(credential.rawId),
-    prfEnabled,
-  };
 }
 
 export interface PasskeyAuthResult {
@@ -117,29 +290,33 @@ export async function authenticateAndGetPrf(
   signal?: AbortSignal,
   secondSalt?: BufferSource,
 ): Promise<PasskeyAuthResult> {
-  const credential = await navigator.credentials.get({
-    publicKey: {
-      challenge: generateChallenge(),
-      rpId: window.location.hostname,
-      timeout: 60_000,
-      userVerification: "required",
-      allowCredentials: [
-        {
-          id: fromBase64url(credentialId),
-          type: "public-key",
-          transports: ["usb", "nfc", "ble", "hybrid", "internal"],
+  const credential = await runCeremony(
+    (s) =>
+      navigator.credentials.get({
+        publicKey: {
+          challenge: generateChallenge(),
+          rpId: window.location.hostname,
+          timeout: 120_000,
+          userVerification: "required",
+          allowCredentials: [
+            {
+              id: fromBase64url(credentialId),
+              type: "public-key",
+              transports: ["usb", "nfc", "ble", "hybrid", "internal"],
+            },
+          ],
+          extensions: {
+            prf: {
+              eval: secondSalt
+                ? { first: prfSalt, second: secondSalt }
+                : { first: prfSalt },
+            },
+          },
         },
-      ],
-      extensions: {
-        prf: {
-          eval: secondSalt
-            ? { first: prfSalt, second: secondSalt }
-            : { first: prfSalt },
-        },
-      },
-    },
+        signal: s,
+      }),
     signal,
-  });
+  );
 
   if (!credential || !(credential instanceof PublicKeyCredential)) {
     throw new AppError("passkey-failed", "Passkey authentication failed");

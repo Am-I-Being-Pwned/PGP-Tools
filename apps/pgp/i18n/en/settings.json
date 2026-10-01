@@ -159,10 +159,6 @@
     "message": "PGP Tools Import",
     "description": "Name shown by the OS passkey dialog when registering a new passkey for a bulk import. 'PGP Tools' is the product name."
   },
-  "settings_import_prf_unsupported": {
-    "message": "Your authenticator doesn't support PRF. Try a different passkey or use a password instead.",
-    "description": "Error on the protect step when the chosen passkey cannot derive a key (WebAuthn PRF extension missing)."
-  },
   "settings_import_default_user_id": {
     "message": "Imported PGP Key",
     "description": "Fallback display name for an imported private key that carries no user ID; shown by the OS passkey dialog."

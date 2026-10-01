@@ -669,9 +669,6 @@
   "app_onboarding_preset_title": {
     "message": "एक सुरक्षा प्रीसेट चुनें"
   },
-  "app_onboarding_prf_unsupported": {
-    "message": "आपका ऑथेंटिकेटर PRF का समर्थन नहीं करता। कोई दूसरी पासकी आज़माएं या इसके बजाय पासवर्ड इस्तेमाल करें।"
-  },
   "app_onboarding_protection_body": {
     "message": "चुनें कि अपने संपर्कों और कुंजियों को कैसे सुरक्षित रखना है। PGP Tools खोलने पर हर बार आप इसी का इस्तेमाल करेंगे।"
   },
@@ -1513,9 +1510,6 @@
   "keygen_error_password_short": {
     "message": "पासवर्ड कम से कम 8 वर्णों का होना चाहिए।"
   },
-  "keygen_error_prf_unsupported_authenticator": {
-    "message": "आपका ऑथेंटिकेटर PRF का समर्थन नहीं करता। कोई दूसरी पासकी आज़माएं या इसके बजाय पासवर्ड इस्तेमाल करें।"
-  },
   "keygen_error_wrong_password": {
     "message": "पासवर्ड गलत है।"
   },
@@ -1819,9 +1813,6 @@
   },
   "keygen_prf_unsupported_mac": {
     "message": "macOS पर 15 या नया संस्करण और iCloud Keychain ज़रूरी है।"
-  },
-  "keygen_prf_unsupported_windows": {
-    "message": "Windows Hello PRF का समर्थन नहीं करता - कोई सुरक्षा कुंजी (जैसे YubiKey) इस्तेमाल करें।"
   },
   "keygen_protect_heading": {
     "message": "अपनी कुंजी सुरक्षित करें"
@@ -2986,9 +2977,6 @@
   },
   "settings_import_paste_placeholder": {
     "message": "कुंजियां यहां पेस्ट करें, या कोई फ़ाइल ब्राउज़ करें..."
-  },
-  "settings_import_prf_unsupported": {
-    "message": "आपका ऑथेंटिकेटर PRF का समर्थन नहीं करता। कोई दूसरी पासकी आज़माएं या इसके बजाय पासवर्ड इस्तेमाल करें।"
   },
   "settings_import_private_imported_one": {
     "message": "$count$ निजी कुंजी आयात की गई",
