@@ -115,6 +115,10 @@ export async function signInWorkspace(
 export async function encryptToSelfInWorkspace(
   panel: Page,
   plaintext: string,
+  /** "shortcut" takes the file with mod+shift+D instead of the button --
+   *  for builds where the Gmail add-on is on, whose "Add to Gmail" takes
+   *  the Download button's place. */
+  opts: { download?: "button" | "shortcut" } = {},
 ): Promise<string> {
   await panel.getByRole("tab", { name: "Main" }).click();
   await panel.getByRole("combobox").first().click();
@@ -131,7 +135,12 @@ export async function encryptToSelfInWorkspace(
   // Ciphertext is never displayed; Download is the interface. Capture
   // the download and read the armor back out of the file.
   const downloadEvent = panel.waitForEvent("download");
-  await panel.getByRole("button", { name: "Download" }).click();
+  if (opts.download === "shortcut") {
+    await expect(panel.getByRole("button", { name: "Copy" })).toBeVisible();
+    await panel.keyboard.press("ControlOrMeta+Shift+D");
+  } else {
+    await panel.getByRole("button", { name: "Download" }).click();
+  }
   const file = await downloadEvent;
   const path = await file.path();
   const armored = await readFile(path, "utf8");

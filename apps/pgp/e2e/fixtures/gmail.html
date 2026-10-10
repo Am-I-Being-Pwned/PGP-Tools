@@ -1,0 +1,425 @@
+<!doctype html>
+<!--
+  A stand-in for mail.google.com, served by Playwright's router at the real
+  origin so the add-on's runtime-registered content script injects into it.
+  The markup copies the Gmail hooks lib/gmail/dom.ts targets (and that the
+  FlowCrypt / Mailvelope integrations target): `.adn[data-message-id]` >
+  `.a3s` message bodies, the "[Message clipped]" `.iX` link, attachment
+  chips carrying Gmail's `download_url` attribute, and a compose window
+  `.M9 > .I5` with `[email]` recipient chips, a `g_editable` body and a
+  `.dC > .T-I.aoO` Send button. The compose body records files dropped on
+  it (as Gmail's does, by uploading them) so a test can see them land. The styling only exists so a
+  screenshot reads like Gmail; nothing under test depends on it.
+
+  The double-brace slots below are filled in by e2e/gmail-fixture.ts.
+-->
+<html lang="en" data-theme="{{THEME}}">
+  <head>
+    <meta charset="utf-8" />
+    <!-- Real Gmail enforces Trusted Types; so does the stand-in, so an
+         innerHTML write from the add-on fails here as it would there. -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="require-trusted-types-for 'script'"
+    />
+    <title>Inbox - e2e@test.local - Gmail</title>
+    <style>
+      :root {
+        --bg: #f6f8fc;
+        --surface: #fff;
+        --text: #1f1f1f;
+        --muted: #444746;
+        --line: #e0e3e7;
+        --chip: #e8eaed;
+      }
+      [data-theme="dark"] {
+        --bg: #111;
+        --surface: #1f1f1f;
+        --text: #e3e3e3;
+        --muted: #a8abaf;
+        --line: #3c4043;
+        --chip: #3c4043;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font:
+          14px/20px Roboto,
+          Arial,
+          sans-serif;
+      }
+      header {
+        height: 64px;
+        display: flex;
+        align-items: center;
+        padding: 0 16px;
+        gap: 12px;
+      }
+      header b {
+        font:
+          22px "Google Sans",
+          Roboto,
+          sans-serif;
+        color: var(--muted);
+      }
+      .search {
+        flex: 1;
+        max-width: 720px;
+        height: 48px;
+        border-radius: 24px;
+        background: var(--surface);
+        margin-left: 80px;
+      }
+      main {
+        display: flex;
+      }
+      nav {
+        width: 240px;
+        padding: 8px 16px;
+        color: var(--muted);
+      }
+      nav div {
+        padding: 6px 12px;
+        border-radius: 16px;
+      }
+      nav .on {
+        background: #d3e3fd;
+        color: #001d35;
+        font-weight: 600;
+      }
+      .thread {
+        flex: 1;
+        background: var(--surface);
+        border-radius: 16px;
+        margin-right: 16px;
+        padding: 20px 24px 120px 72px;
+        min-height: 640px;
+      }
+      h2 {
+        font:
+          22px/28px "Google Sans",
+          Roboto,
+          sans-serif;
+        margin: 0 0 20px;
+      }
+      .gs .from {
+        font-weight: 600;
+      }
+      .gs .addr {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .a3s {
+        margin-top: 12px;
+        font-family: Arial, sans-serif;
+      }
+      .adn + .adn {
+        border-top: 1px solid var(--line);
+        margin-top: 24px;
+        padding-top: 24px;
+      }
+      .iX {
+        margin-top: 8px;
+        font-size: 12px;
+      }
+      .aQH {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-top: 12px;
+      }
+      .aZo {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 6px 12px;
+        font-size: 13px;
+      }
+      .dropped {
+        display: inline-block;
+        margin-left: 8px;
+        padding: 2px 8px;
+        border-radius: 8px;
+        background: var(--chip);
+        font-size: 12px;
+      }
+      .iX a {
+        color: #0b57d0;
+      }
+      .M9 {
+        position: fixed;
+        right: 24px;
+        bottom: 0;
+        width: 560px;
+        background: var(--surface);
+        border-radius: 8px 8px 0 0;
+        box-shadow:
+          0 4px 8px 3px rgba(0, 0, 0, 0.15),
+          0 1px 3px rgba(0, 0, 0, 0.3);
+      }
+      .M9 .hd {
+        background: #f2f6fc;
+        color: #041e49;
+        padding: 10px 16px;
+        border-radius: 8px 8px 0 0;
+        font-weight: 500;
+      }
+      [data-theme="dark"] .M9 .hd {
+        background: #333;
+        color: var(--text);
+      }
+      .aoD {
+        border-bottom: 1px solid var(--line);
+        padding: 8px 16px;
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        color: var(--muted);
+      }
+      .agP {
+        border: 0;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        flex: 1;
+        outline: none;
+      }
+      .vR {
+        background: var(--chip);
+        border-radius: 12px;
+        padding: 0 10px;
+        color: var(--text);
+      }
+      .aoT {
+        border: 0;
+        border-bottom: 1px solid var(--line);
+        padding: 8px 16px;
+        width: 100%;
+        box-sizing: border-box;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+      }
+      .Am {
+        min-height: 140px;
+        padding: 12px 16px;
+        outline: none;
+        font-family: Arial, sans-serif;
+      }
+      .btC td {
+        padding: 12px 16px;
+      }
+      .dC {
+        display: inline-flex;
+      }
+      .aoO {
+        background: #0b57d0;
+        color: #fff;
+        border-radius: 18px 0 0 18px;
+        padding: 0 16px 0 24px;
+        height: 36px;
+        line-height: 36px;
+        font-weight: 500;
+        font-family: "Google Sans", Roboto, sans-serif;
+      }
+      .hG {
+        background: #0b57d0;
+        color: #fff;
+        border-left: 1px solid #fff4;
+        border-radius: 0 18px 18px 0;
+        width: 28px;
+        height: 36px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <b>Gmail</b>
+      <div class="search"></div>
+    </header>
+    <main>
+      <nav>
+        <div class="on">Inbox</div>
+        <div>Starred</div>
+        <div>Sent</div>
+        <div>Drafts</div>
+      </nav>
+      <section class="thread">
+        <h2>Q3 numbers (encrypted)</h2>
+        <div class="adn" data-message-id="#msg-a">
+          <div class="gs">
+            <span class="from"
+              ><span email="alice@example.com">Alice Example</span></span
+            >
+            <span class="addr">&lt;alice@example.com&gt;</span>
+            <span
+              class="ams bkH"
+              role="link"
+              data-tooltip="Reply"
+              style="margin-left: 12px; color: #0b57d0; cursor: pointer"
+              >Reply</span
+            >
+          </div>
+          <div class="ii gt">
+            <div class="a3s aiL">
+              <div dir="ltr">Hi, here are the numbers.</div>
+              <div><br /></div>
+              {{ARMOR_LINES}}
+            </div>
+          </div>
+          <div class="hq gt">
+            <div class="aQH">{{ATTACHMENTS}}</div>
+          </div>
+        </div>
+        <div class="adn" data-message-id="#msg-b">
+          <div class="gs">
+            <span class="from"
+              ><span email="alice@example.com">Alice Example</span></span
+            >
+            <span class="addr">&lt;alice@example.com&gt;</span>
+          </div>
+          <div class="ii gt">
+            <div class="a3s aiL">
+              <div dir="ltr">And the long one:</div>
+              {{CLIPPED_LINES}}
+            </div>
+          </div>
+          <div class="iX">
+            [Message clipped]&nbsp;
+            <a
+              href="https://mail.google.com/mail/u/0?ui=2&amp;view=lg&amp;permmsgid=msg-b"
+              >View entire message</a
+            >
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div class="M9">
+      <div class="hd">New Message</div>
+      <div class="I5">
+        <form>
+          <div class="aoD">
+            To {{RECIPIENTS}}<input
+              class="agP aFw"
+              aria-label="To recipients"
+            />
+          </div>
+          <input class="aoT" name="subjectbox" value="Re: Q3 numbers" />
+        </form>
+        <div
+          class="Am Al editable"
+          contenteditable="true"
+          g_editable="true"
+          role="textbox"
+          aria-multiline="true"
+          aria-label="Message Body"
+        >
+          {{DRAFT_LINES}}
+        </div>
+        <table>
+          <tr class="btC">
+            <td class="gU Up">
+              <div class="dC">
+                <div class="T-I J-J5-Ji aoO" role="button">Send</div>
+                <div class="T-I J-J5-Ji hG" role="button"></div>
+              </div>
+              <div
+                class="a1 aaA aMZ"
+                role="button"
+                command="Files"
+                aria-label="Attach files"
+                style="
+                  display: inline-block;
+                  margin-left: 12px;
+                  padding: 0 8px;
+                  line-height: 36px;
+                "
+              >
+                📎
+              </div>
+            </td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <script>
+      // What Gmail does with typed addresses: on blur, each becomes a
+      // recipient chip carrying the `email` hook the add-on reads.
+      // Gmail's compose URL (?view=cm&to=...) addresses the new message.
+      const to = new URLSearchParams(location.search).get("to");
+      if (to) {
+        const box = document.querySelector("input.agP");
+        for (const address of to.split(",")) {
+          const chip = document.createElement("span");
+          chip.className = "vR";
+          chip.setAttribute("email", address);
+          chip.textContent = address;
+          box.before(chip);
+        }
+      }
+      // What Gmail does with Send: the window goes away. The body it had
+      // is kept on a hidden node so a test can see what was sent, and the
+      // Reply control opens a fresh window as Gmail's would.
+      const compose = document.querySelector(".M9");
+      const send = document.querySelector(".aoO");
+      send.addEventListener("click", () => {
+        const sent = document.createElement("div");
+        sent.id = "sent";
+        sent.hidden = true;
+        sent.textContent = document.querySelector("[g_editable]").innerText;
+        document.body.appendChild(sent);
+        compose.remove();
+      });
+      for (const reply of document.querySelectorAll('[data-tooltip="Reply"]')) {
+        reply.addEventListener("click", () => {
+          if (document.querySelector(".M9")) return;
+          const win = compose.cloneNode(true);
+          win.querySelector(".hd").textContent = "Reply";
+          document.body.appendChild(win);
+          win.querySelector(".aoO").addEventListener("click", () => {
+            const sent = document.createElement("div");
+            sent.id = "sent";
+            sent.hidden = true;
+            sent.textContent = win.querySelector("[g_editable]").innerText;
+            document.body.appendChild(sent);
+            win.remove();
+          });
+        });
+      }
+      // What Gmail does with files dropped on the compose body: uploads
+      // them and shows a chip. Here the chip is all there is.
+      for (const body of document.querySelectorAll("[g_editable]")) {
+        body.addEventListener("drop", (e) => {
+          e.preventDefault();
+          for (const file of e.dataTransfer?.files ?? []) {
+            const chip = document.createElement("span");
+            chip.className = "dropped";
+            chip.setAttribute("data-name", file.name);
+            chip.setAttribute("data-size", String(file.size));
+            chip.textContent = file.name;
+            document.querySelector(".btC td").appendChild(chip);
+          }
+        });
+      }
+      for (const box of document.querySelectorAll("input.agP")) {
+        box.addEventListener("blur", () => {
+          for (const part of box.value.split(",")) {
+            const address = part.trim();
+            if (!address) continue;
+            const chip = document.createElement("span");
+            chip.className = "vR";
+            chip.setAttribute("email", address);
+            chip.textContent = address;
+            box.before(chip);
+          }
+          box.value = "";
+        });
+      }
+    </script>
+  </body>
+</html>

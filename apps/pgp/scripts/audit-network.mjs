@@ -18,6 +18,19 @@
 //     (SECURITY.md §7, §13; T-GITHUB-LOOKUP-DISCLOSURE,
 //     T-KEYSERVER-LOOKUP-DISCLOSURE).
 //
+//   content (content-scripts/*.js — the Gmail add-on, SECURITY.md §17)
+//     Exactly ONE `fetch` call site -- the attachment fetch, which runs
+//     only when the side panel asks for a chip the user pressed, with an
+//     init pinned to a plain same-origin GET -- and no reference to any
+//     other network primitive, and no absolute URL literal but the SVG
+//     namespace. Its destination is a URL Gmail wrote into the page
+//     (`download_url`), checked at runtime to be this origin under
+//     `/mail/`; it cannot resolve statically, and the pin requires that
+//     it does NOT resolve to any remote origin. Stronger than the page
+//     promise on purpose: this code runs inside mail.google.com, and its
+//     other channels are chrome.runtime messaging to our own worker and
+//     the reader frame it embeds.
+//
 //   page (every other script — side panel, welcome, shared chunks)
 //     No `fetch` beyond the two wasm loaders, and neither may have a
 //     destination that resolves to a remote origin; no XHR / WebSocket /
@@ -181,6 +194,12 @@ const CONNECT_SRC_PATHS = {
 // held to the panel's promise by default rather than by being listed.
 const EXPECTED_WORKER_FILE = "background.js";
 
+// Content scripts live here. Every file under it is the `content` context;
+// the one the worker registers must exist (checked below), because a
+// rename would otherwise leave the add-on registering a missing file.
+const CONTENT_DIR = "content-scripts/";
+const EXPECTED_CONTENT_FILE = "content-scripts/gmail.js";
+
 // ── Expected primitive census — EXACT counts ────────────────────────
 // Keys are `${kind}:${name}` from the AST scan. Anything observed that is
 // not listed, or listed with a different count, fails the build.
@@ -217,6 +236,13 @@ const EXPECTED_CENSUS = {
     "ref:fetch": 1,
     "call:fetch": 2,
     "dynamic-import:import()": 1,
+  },
+  // The Gmail content script: the attachment fetch and nothing else. Not
+  // even the lockdown's `globalThis.fetch` reference (it does not import
+  // the lockdown -- see the header of entrypoints/gmail.content.ts for
+  // why it cannot).
+  content: {
+    "call:fetch": 1,
   },
 };
 
@@ -314,6 +340,34 @@ const PINNED_CALL_SITES = {
       reason: "code-split import of the local gpg_wasm chunk",
     },
   ],
+  // The Gmail content script's attachment fetch (SECURITY.md §17). The
+  // destination is the `download_url` Gmail stamped on the chip the user
+  // pressed, re-read at fetch time and refused unless it is this origin
+  // under `/mail/`; statically it is a variable, and the pin requires it
+  // NOT to resolve to a remote origin. The init is pinned exactly: a
+  // plain GET as the page (so Gmail's own session applies -- the only
+  // way to an attachment without an API), no cache entry. `redirect:
+  // "follow"` because Gmail serves some attachments off a redirect to
+  // another Google host: the request URL is the only hop the script
+  // chooses, `same-origin` keeps cookies off a cross-origin hop, and the
+  // response body is only ever handed to the panel as ciphertext
+  // (SECURITY.md §17 says so in as many words; this pin is about the
+  // first hop, not the last).
+  content: [
+    {
+      kind: "call",
+      name: "fetch",
+      destinationOrigin: null,
+      init: {
+        method: "GET",
+        credentials: "same-origin",
+        redirect: "follow",
+        cache: "no-store",
+      },
+      reason:
+        "entrypoints/gmail.content.ts -- the attachment fetch, on the panel's request",
+    },
+  ],
 };
 
 // ── Expected absolute URL literals — EXACT sets ─────────────────────
@@ -367,6 +421,11 @@ const EXPECTED_URL_LITERALS = {
     // format string uses a Unicode token. Never fetched; never rendered.
     "https://github.com/date-fns/date-fns/blob/master/docs/unicodeTokens.md",
   ],
+  // No URL beyond the SVG namespace its icons are built in (an XML
+  // namespace identifier, never fetched -- see the page list above), and
+  // no Gmail URL: the add-on's origin is read from the manifest at
+  // runtime (lib/gmail/protocol.ts).
+  content: ["http://www.w3.org/2000/svg"],
 };
 
 // ── Manifest policy — EXACT ─────────────────────────────────────────
@@ -382,13 +441,29 @@ const EXPECTED_URL_LITERALS = {
 //   downloads      (optional) "save decrypted file", requested on demand;
 //                  the FSA save picker crashes the side panel, so this is
 //                  the only way to hand a user a file
+//   scripting      registers the Gmail add-on's content script at runtime.
+//                  It confers no host access by itself: injection needs a
+//                  host permission, and the only one this manifest can
+//                  hold is the optional Gmail origin pinned below.
 //
 // NOTE the network-capable ones that are therefore forbidden by
 // construction: declarativeNetRequest (rewrite/redirect any request),
 // webRequest, nativeMessaging (a pipe to a local binary, outside every
-// CSP), proxy, debugger, scripting/tabs/cookies (read other origins).
-const EXPECTED_PERMISSIONS = ["sidePanel", "contextMenus", "storage", "idle"];
+// CSP), proxy, debugger, tabs/cookies (read other origins).
+const EXPECTED_PERMISSIONS = [
+  "sidePanel",
+  "contextMenus",
+  "storage",
+  "idle",
+  "scripting",
+];
 const EXPECTED_OPTIONAL_PERMISSIONS = ["downloads"];
+// The Gmail add-on: requested only when the user turns it on in Settings,
+// and the ONLY host access this extension can ever hold. Exact, so a
+// widened pattern (`*://*.google.com/*`, `<all_urls>`) fails the build.
+// Note it is OPTIONAL: `host_permissions` stays forbidden below, so no
+// host is ever granted at install.
+const EXPECTED_OPTIONAL_HOST_PERMISSIONS = ["https://mail.google.com/*"];
 
 // Manifest keys that must be ABSENT, with the reason each one matters.
 // "Absent", not "empty": a build step that adds one of these is close to
@@ -396,19 +471,125 @@ const EXPECTED_OPTIONAL_PERMISSIONS = ["downloads"];
 const FORBIDDEN_MANIFEST_KEYS = {
   host_permissions:
     "the GitHub lookup is unauthenticated CORS and needs no host permission; a host permission attaches the user's cookies-and-all origin privileges to a request we deliberately make anonymous",
-  optional_host_permissions:
-    "same as host_permissions -- an optional one is still one prompt away from being granted",
   sandbox:
     "a sandboxed page is exempt from the extension_pages CSP ENTIRELY, so a single sandbox.pages entry is a complete bypass of connect-src",
   content_scripts:
-    "this extension injects nothing into web pages; a content script runs in a page's realm where our CSP does not apply",
+    "nothing is injected at install; the one content script (the Gmail add-on) is registered at runtime, and only while its optional host permission is granted",
   declarative_net_request:
     "DNR rules can redirect or rewrite requests without any code in the bundle",
   externally_connectable:
     "nothing outside the extension may open a message port into the worker",
-  web_accessible_resources:
-    "no extension resource is exposed to web origins; a WAR page is loadable (and framable) by any site that matches",
 };
+
+// ── Web-accessible resources — EXACT ────────────────────────────────
+// A WAR entry makes an extension page loadable (and framable) by every
+// site its `matches` names. Exactly one is allowed: the Gmail add-on's
+// inline reader frame (SECURITY.md §17), framable by the Gmail origin
+// and nothing else -- the same single pattern the optional host
+// permission names, so the two cannot drift apart. The side panel, the
+// reader tab and the welcome page are NOT web-accessible. Any other
+// resource, match, or key (`extension_ids` would open it to other
+// extensions) fails the build.
+const EXPECTED_WEB_ACCESSIBLE_RESOURCES = [
+  {
+    resources: ["gmail-frame.html"],
+    matches: EXPECTED_OPTIONAL_HOST_PERMISSIONS,
+  },
+];
+const EXPECTED_FRAME_FILE = "gmail-frame.html";
+
+// ── Privileged extension APIs — EXACT, per context ──────────────────
+// Not network primitives, but with the Gmail grant held they are a
+// channel out all the same: `scripting.executeScript({world: "MAIN",
+// func, args: [plaintext]})` would run our code inside mail.google.com,
+// under Gmail's CSP and with Gmail's cookies, and `tabs.sendMessage`
+// reaches the content script. The census above cannot see either, so
+// they are pinned here: who may call them, how often, and -- for the
+// scripting calls -- with exactly which option keys. A `func`, `world`,
+// `args` or `css` key fails the build.
+const PRIVILEGED_API_NAMES = new Set([
+  "executeScript",
+  "registerContentScripts",
+  "updateContentScripts",
+  "insertCSS",
+  "removeCSS",
+]);
+const EXPECTED_PRIVILEGED = {
+  worker: {
+    // syncGmailScript: register the one content script; inject the same
+    // file into already-open Gmail tabs.
+    "scripting.registerContentScripts": {
+      count: 1,
+      keys: [
+        "id",
+        "matches",
+        "js",
+        "runAt",
+        "allFrames",
+        "persistAcrossSessions",
+      ],
+    },
+    "scripting.executeScript": { count: 1, keys: ["target", "files"] },
+  },
+  page: {
+    // useGmailCompose's GMAIL_INSERT (one armored block, re-validated by
+    // the content script) and useGmailAccess's GMAIL_TEARDOWN.
+    "tabs.sendMessage": { count: 2 },
+  },
+  content: {},
+};
+
+/** `x.scripting.<api>(...)` / `x.tabs.sendMessage(...)` call sites. */
+function privilegedCallsIn(source, rel, context) {
+  const out = [];
+  let ast;
+  try {
+    ast = parse(source, {
+      sourceType: "unambiguous",
+      plugins: ["dynamicImport"],
+      errorRecovery: true,
+    });
+  } catch {
+    return out;
+  }
+  traverse(ast, {
+    CallExpression(path) {
+      const callee = path.node.callee;
+      if (callee.type !== "MemberExpression" || callee.computed) return;
+      const name = callee.property.name;
+      let sig = null;
+      if (PRIVILEGED_API_NAMES.has(name)) sig = `scripting.${name}`;
+      else if (
+        name === "sendMessage" &&
+        callee.object.type === "MemberExpression" &&
+        !callee.object.computed &&
+        callee.object.property.name === "tabs"
+      ) {
+        sig = "tabs.sendMessage";
+      }
+      if (!sig) return;
+      // Option keys of the first argument (or of each object in an
+      // array first argument, for registerContentScripts).
+      const arg = path.node.arguments[0];
+      const objs =
+        arg?.type === "ArrayExpression" ? arg.elements : arg ? [arg] : [];
+      const keys = new Set();
+      let opaque = false;
+      for (const o of objs) {
+        if (o?.type !== "ObjectExpression") {
+          opaque = true;
+          continue;
+        }
+        for (const p of o.properties) {
+          if (p.type !== "ObjectProperty" || p.computed) opaque = true;
+          else keys.add(p.key.name ?? p.key.value);
+        }
+      }
+      out.push({ file: rel, context, sig, keys: [...keys], opaque });
+    },
+  });
+  return out;
+}
 
 // ── Collect files ───────────────────────────────────────────────────
 // Everything in the output, relative and posix-normalised so it can be
@@ -1130,6 +1311,23 @@ function validateManifest(outputDir, manifest) {
     }
   }
 
+  // web_accessible_resources: exactly the reader frame, framable by
+  // exactly the Gmail pattern. Compared as canonical JSON so a second
+  // entry, a second resource, a widened match or an extra key (such as
+  // `extension_ids`) all fail.
+  const war = manifest.web_accessible_resources;
+  const canon = (v) =>
+    JSON.stringify(
+      (Array.isArray(v) ? v : []).map((e) =>
+        Object.fromEntries(Object.entries(e ?? {}).sort()),
+      ),
+    );
+  if (canon(war) !== canon(EXPECTED_WEB_ACCESSIBLE_RESOURCES)) {
+    errors.push(
+      `web_accessible_resources must be exactly ${JSON.stringify(EXPECTED_WEB_ACCESSIBLE_RESOURCES)} (the Gmail reader frame, framable by the Gmail origin only), got ${JSON.stringify(war)} -- a WAR page is loadable and framable by every site its matches name, and nothing but the frame may be`,
+    );
+  }
+
   // The permission arrays, as exact sets. The CSP is not the only way to
   // reach the network from an extension: `declarativeNetRequest` rewrites
   // requests the page never made, `nativeMessaging` opens a pipe to a
@@ -1139,6 +1337,7 @@ function validateManifest(outputDir, manifest) {
   for (const [key, expected] of [
     ["permissions", EXPECTED_PERMISSIONS],
     ["optional_permissions", EXPECTED_OPTIONAL_PERMISSIONS],
+    ["optional_host_permissions", EXPECTED_OPTIONAL_HOST_PERMISSIONS],
   ]) {
     const got = manifest[key] ?? [];
     if (!Array.isArray(got)) {
@@ -1171,20 +1370,25 @@ function validateManifest(outputDir, manifest) {
 // WORKER fetch returned 200 while the same fetch from the PANEL failed.
 function validatePanelHtml(outputDir) {
   const errors = [];
-  try {
-    const html = readFileSync(join(outputDir, "sidepanel.html"), "utf-8");
-    const normalized = html.replace(/\s+/g, " ");
-    const hasMeta =
-      /<meta\s+http-equiv="Content-Security-Policy"\s+content="[^"]*connect-src 'self'[^"]*"/.test(
-        normalized,
-      );
-    if (!hasMeta) {
-      errors.push(
-        'sidepanel.html must carry <meta http-equiv="Content-Security-Policy" content="connect-src \'self\'"> -- without it the panel inherits the worker\'s remote-origin allowances',
-      );
+  // The panel, and every other page that may hold plaintext or keys:
+  // Reply's reader tab and the Gmail reader frame (which Gmail embeds,
+  // so it in particular must not be able to name a remote host).
+  for (const file of ["sidepanel.html", "reader.html", EXPECTED_FRAME_FILE]) {
+    try {
+      const html = readFileSync(join(outputDir, file), "utf-8");
+      const normalized = html.replace(/\s+/g, " ");
+      const hasMeta =
+        /<meta\s+http-equiv="Content-Security-Policy"\s+content="[^"]*connect-src 'self'[^"]*"/.test(
+          normalized,
+        );
+      if (!hasMeta) {
+        errors.push(
+          `${file} must carry <meta http-equiv="Content-Security-Policy" content="connect-src 'self'"> -- without it the page inherits the worker's remote-origin allowances`,
+        );
+      }
+    } catch {
+      errors.push(`${file} not found in build output`);
     }
-  } catch {
-    errors.push("sidepanel.html not found in build output");
   }
   return errors;
 }
@@ -1218,7 +1422,12 @@ if (workerFile !== EXPECTED_WORKER_FILE) {
     `manifest background.service_worker is "${workerFile}", not "${EXPECTED_WORKER_FILE}" -- the worker context moved, so EXPECTED_CENSUS and the single-file origin-literal checks must be re-derived before this audit means anything.`,
   );
 }
-const contextOf = (rel) => (rel === workerFile ? "worker" : "page");
+const contextOf = (rel) =>
+  rel === workerFile
+    ? "worker"
+    : rel.startsWith(CONTENT_DIR)
+      ? "content"
+      : "page";
 
 // ── Decide what to scan, from the output and the manifest ───────────
 const allFiles = collectFiles(OUTPUT_DIR);
@@ -1265,11 +1474,12 @@ if (scripts.length === 0) {
 }
 
 const allFindings = [];
-const urlLiterals = { worker: new Map(), page: new Map() };
+const urlLiterals = { worker: new Map(), page: new Map(), content: new Map() };
 /** Which built files name each permitted origin. Exactly one apiece,
  *  and it must be the worker — checked after the scan. */
 const originFiles = Object.fromEntries(WORKER_ORIGINS.map((o) => [o, []]));
 let workerFileSeen = false;
+const privilegedCalls = [];
 
 for (const rel of scripts) {
   const ctx = contextOf(rel);
@@ -1283,6 +1493,7 @@ for (const rel of scripts) {
     continue;
   }
   allFindings.push(...findings);
+  privilegedCalls.push(...privilegedCallsIn(source, rel, ctx));
 
   for (const url of urlLiteralsIn(source)) {
     const seen = urlLiterals[ctx];
@@ -1321,6 +1532,21 @@ for (const rel of css) {
   allFindings.push(...scanCssFile(source, rel, contextOf));
 }
 
+// The worker registers the add-on by path; that path must be a built,
+// scanned content script, and the worker must name exactly it.
+if (!scripts.includes(EXPECTED_CONTENT_FILE)) {
+  structureErrors.push(
+    `${EXPECTED_CONTENT_FILE} is missing from the build output -- the worker registers it by that path, so the Gmail add-on would register a file that does not exist.`,
+  );
+}
+for (const rel of scripts) {
+  if (rel.startsWith(CONTENT_DIR) && rel !== EXPECTED_CONTENT_FILE) {
+    structureErrors.push(
+      `${rel} is an unexpected content script -- only ${EXPECTED_CONTENT_FILE} is audited as one. A second page-injected bundle needs its own SECURITY.md entry first.`,
+    );
+  }
+}
+
 if (!workerFileSeen) {
   structureErrors.push(
     `${workerFile} not found in the build output -- the worker context could not be audited at all.`,
@@ -1329,7 +1555,7 @@ if (!workerFileSeen) {
 
 // ── Census mode: dump, don't judge ──────────────────────────────────
 if (CENSUS_MODE) {
-  for (const ctx of ["worker", "page"]) {
+  for (const ctx of ["worker", "page", "content"]) {
     console.log(`\n── ${ctx} ──`);
     const counts = {};
     for (const f of allFindings.filter((f) => f.context === ctx)) {
@@ -1437,7 +1663,7 @@ function matchesPin(f, p) {
   return true;
 }
 
-for (const ctx of ["worker", "page"]) {
+for (const ctx of ["worker", "page", "content"]) {
   const expected = EXPECTED_CENSUS[ctx];
   const observed = {};
   for (const f of allFindings.filter((f) => f.context === ctx)) {
@@ -1498,7 +1724,7 @@ for (const ctx of ["worker", "page"]) {
 
 // ── Check the URL literal sets, exactly ─────────────────────────────
 const urlErrors = [];
-for (const ctx of ["worker", "page"]) {
+for (const ctx of ["worker", "page", "content"]) {
   const expected = new Set(EXPECTED_URL_LITERALS[ctx]);
   const observed = urlLiterals[ctx];
 
@@ -1546,6 +1772,34 @@ for (const origin of WORKER_ORIGINS) {
     urlErrors.push(
       `${origin} must appear in exactly one built file (${workerFile}); found in ${JSON.stringify(files)}`,
     );
+  }
+}
+
+// ── Check the privileged API sites, exactly ─────────────────────────
+const privilegedErrors = [];
+for (const ctx of ["worker", "page", "content"]) {
+  const expected = EXPECTED_PRIVILEGED[ctx];
+  const calls = privilegedCalls.filter((c) => c.context === ctx);
+  const sigs = new Set([...Object.keys(expected), ...calls.map((c) => c.sig)]);
+  for (const sig of sigs) {
+    const got = calls.filter((c) => c.sig === sig);
+    const want = expected[sig]?.count ?? 0;
+    if (got.length !== want) {
+      privilegedErrors.push(
+        `[${ctx}] expected exactly ${want} × ${sig}, found ${got.length} (${got.map((c) => c.file).join(", ") || "none"})`,
+      );
+    }
+    const allowed = expected[sig]?.keys;
+    if (!allowed) continue;
+    for (const c of got) {
+      const extra = c.keys.filter((k) => !allowed.includes(k));
+      const missing = allowed.filter((k) => !c.keys.includes(k));
+      if (c.opaque || extra.length > 0 || missing.length > 0) {
+        privilegedErrors.push(
+          `[${ctx}] ${sig} in ${c.file} must take a literal options object with exactly ${JSON.stringify(allowed)}; got ${JSON.stringify(c.keys)}${c.opaque ? " (non-literal)" : ""}`,
+        );
+      }
+    }
   }
 }
 
@@ -1599,10 +1853,19 @@ if (structureErrors.length > 0) {
   console.log("");
 }
 
+if (privilegedErrors.length > 0) {
+  console.log("❌ PRIVILEGED EXTENSION API MISMATCH");
+  console.log(
+    "   scripting.* and tabs.sendMessage reach into Gmail once it is granted; their sites are pinned.\n",
+  );
+  for (const err of privilegedErrors) console.log(`   • ${err}`);
+  console.log("");
+}
+
 if (cspErrors.length > 0) {
   console.log("❌ MANIFEST / PANEL POLICY VALIDATION FAILED");
   console.log(
-    "   The built manifest.json or sidepanel.html has been weakened.\n",
+    "   The built manifest.json, sidepanel.html, reader.html or gmail-frame.html has been weakened.\n",
   );
   for (const err of cspErrors) console.log(`   • ${err}`);
   console.log("");
@@ -1610,6 +1873,9 @@ if (cspErrors.length > 0) {
 
 const workerFindings = allFindings.filter((f) => f.context === "worker").length;
 const pageFindings = allFindings.filter((f) => f.context === "page").length;
+const contentFindings = allFindings.filter(
+  (f) => f.context === "content",
+).length;
 
 console.log("── Summary ──────────────────────────────────");
 console.log(`   Script files scanned:  ${scripts.length}`);
@@ -1617,12 +1883,15 @@ console.log(`   CSS files scanned:     ${css.length}`);
 console.log(`   Inert files skipped:   ${inert.length}`);
 console.log(`   worker findings:       ${workerFindings}`);
 console.log(`   page findings:         ${pageFindings}`);
+console.log(`   content findings:      ${contentFindings}`);
 console.log(`   worker URL sites:      ${urlLiterals.worker.size}`);
 console.log(`   page URL sites:        ${urlLiterals.page.size}`);
+console.log(`   content URL sites:     ${urlLiterals.content.size}`);
 console.log(`   Unexpected:            ${unexpected.length}`);
 console.log(`   Census errors:         ${censusErrors.length}`);
 console.log(`   URL errors:            ${urlErrors.length}`);
 console.log(`   Structure errors:      ${structureErrors.length}`);
+console.log(`   Privileged API errors: ${privilegedErrors.length}`);
 console.log(`   CSP errors:            ${cspErrors.length}`);
 console.log("");
 
@@ -1631,6 +1900,7 @@ const failed =
   censusErrors.length +
   urlErrors.length +
   structureErrors.length +
+  privilegedErrors.length +
   cspErrors.length;
 
 if (failed > 0) {
@@ -1657,5 +1927,8 @@ console.log(
   "✅ page:   no code that can name a remote destination; 2 wasm loaders only.",
 );
 console.log(
-  "✅ manifest: connect-src exact, permissions pinned, no host/sandbox keys, panel meta CSP present.",
+  "✅ content: the Gmail add-on names one fetch (the attachment fetch, same-origin GET, pinned) and no URL but the SVG namespace.",
+);
+console.log(
+  "✅ manifest: connect-src exact, permissions pinned, one optional host (Gmail), one web-accessible page (the Gmail reader frame, Gmail only), no host/sandbox keys, panel/reader/frame meta CSP present.",
 );

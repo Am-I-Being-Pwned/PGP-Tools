@@ -80,6 +80,49 @@ describe("isPendingOperation", () => {
     const { text: _text, ...noText } = op();
     expect(isPendingOperation(noText)).toBe(false);
   });
+
+  it("accepts a Gmail draft target on an encrypt, and only there", () => {
+    const gmail = {
+      composeId: "0123456789abcdef0123456789abcdef",
+      recipients: ["alice@example.com"],
+    };
+    expect(isPendingOperation(op({ action: "encrypt", gmail }))).toBe(true);
+    expect(isPendingOperation(op({ action: "decrypt", gmail }))).toBe(false);
+    expect(
+      isPendingOperation({
+        ...op({ action: "encrypt" }),
+        gmail: { composeId: "x", recipients: [] },
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("isPendingOperation: Gmail attachment", () => {
+  const gmailAttachment = {
+    attachmentId: "0123456789abcdef0123456789abcdef",
+    name: "report.pdf.gpg",
+  };
+
+  it("accepts an attachment ref on an empty-text decrypt, and only there", () => {
+    expect(
+      isPendingOperation(op({ action: "decrypt", text: "", gmailAttachment })),
+    ).toBe(true);
+    expect(
+      isPendingOperation(op({ action: "decrypt", text: "x", gmailAttachment })),
+    ).toBe(false);
+    expect(
+      isPendingOperation(op({ action: "verify", text: "", gmailAttachment })),
+    ).toBe(false);
+    expect(
+      isPendingOperation(
+        op({
+          action: "decrypt",
+          text: "",
+          gmailAttachment: { ...gmailAttachment, name: "../x" },
+        }),
+      ),
+    ).toBe(false);
+  });
 });
 
 describe("isPendingOpFresh", () => {

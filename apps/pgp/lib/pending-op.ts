@@ -18,6 +18,7 @@
 
 import type { OperationAction, PendingOperation } from "./messages";
 import { SESSION_PENDING_OP } from "./constants";
+import { isGmailAttachmentRef, isGmailComposeRef } from "./gmail/protocol";
 
 const VALID_ACTIONS = new Set<OperationAction>([
   "encrypt",
@@ -44,7 +45,18 @@ export function isPendingOperation(msg: unknown): msg is PendingOperation {
     VALID_ACTIONS.has(obj.action as OperationAction) &&
     typeof obj.text === "string" &&
     typeof obj.sourceTabId === "number" &&
-    typeof obj.createdAt === "number"
+    typeof obj.createdAt === "number" &&
+    // A Gmail target only makes sense on an encrypt: it is where the
+    // ciphertext goes back to.
+    (obj.gmail === undefined ||
+      (obj.action === "encrypt" && isGmailComposeRef(obj.gmail))) &&
+    // An attachment only makes sense on a decrypt with no text: the
+    // bytes are fetched afterwards, and they decide what it really is.
+    (obj.gmailAttachment === undefined ||
+      (obj.action === "decrypt" &&
+        obj.text === "" &&
+        obj.gmail === undefined &&
+        isGmailAttachmentRef(obj.gmailAttachment)))
   );
 }
 

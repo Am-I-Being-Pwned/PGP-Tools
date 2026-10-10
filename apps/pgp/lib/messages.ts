@@ -1,3 +1,4 @@
+import type { GmailAttachmentRef, GmailComposeRef } from "./gmail/protocol";
 import type { KeyserverQuery } from "./keyserver/query";
 
 /** Workspace operations triggered from the context menu. These map to
@@ -20,6 +21,15 @@ export interface PendingOperation {
   /** ms since epoch. Consumers drop ops older than ~60s to avoid
    *  resurrecting stale selections that were never picked up. */
   createdAt: number;
+  /** Set when the op came from a Gmail compose window's Encrypt button:
+   *  which draft the ciphertext goes back to (in `sourceTabId`), and
+   *  who it is addressed to. Absent for every other source. */
+  gmail?: GmailComposeRef;
+  /** Set when the op came from an encrypted attachment's button in
+   *  Gmail: which chip (in `sourceTabId`) the panel should fetch the
+   *  bytes of. `text` is empty; the action is `decrypt` until the bytes
+   *  say otherwise. Absent for every other source. */
+  gmailAttachment?: GmailAttachmentRef;
 }
 
 /** Ask the background worker to fetch a GitHub user's public SSH keys.
@@ -82,11 +92,7 @@ export interface KeyserverKeyRequest {
  * attacker-influenced string this rule exists to keep out of a render.
  */
 export type KeyserverKeyFailure =
-  | "invalid-query"
-  | "not-found"
-  | "offline"
-  | "rate-limited"
-  | "server-error";
+  "invalid-query" | "not-found" | "offline" | "rate-limited" | "server-error";
 
 export type KeyserverKeyResponse =
   | {

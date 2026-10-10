@@ -1,0 +1,382 @@
+{
+  "gmail_banner_message_title": {
+    "message": "Encrypted message",
+    "description": "Gmail add-on: title of the banner PGP Tools shows above an encrypted message inside Gmail."
+  },
+  "gmail_banner_message_action": {
+    "message": "Decrypt",
+    "description": "Gmail add-on: button on the encrypted-message banner. Opens the PGP Tools side panel and decrypts there. Keep short (one word)."
+  },
+  "gmail_banner_signed_title": {
+    "message": "Signed message",
+    "description": "Gmail add-on: title of the banner above a PGP cleartext-signed message in Gmail."
+  },
+  "gmail_banner_signed_action": {
+    "message": "Verify",
+    "description": "Gmail add-on: button on the signed-message banner. Keep short (one word)."
+  },
+  "gmail_banner_key_title": {
+    "message": "PGP public key",
+    "description": "Gmail add-on: title of the banner above a PGP public key someone pasted into an email."
+  },
+  "gmail_banner_key_action": {
+    "message": "Import",
+    "description": "Gmail add-on: button on the public-key banner. Opens the import screen in the side panel. Keep short."
+  },
+  "gmail_banner_clipped_title": {
+    "message": "Encrypted message, cut short by Gmail",
+    "description": "Gmail add-on: banner title when Gmail clipped a long email so only part of the encrypted block is on screen."
+  },
+  "gmail_banner_clipped_action": {
+    "message": "View entire message",
+    "description": "Gmail add-on: button that opens Gmail's own full view of a clipped message in a new tab. Gmail's English UI uses the same words."
+  },
+  "gmail_opening": {
+    "message": "Opening…",
+    "description": "Gmail add-on: button label while the side panel is being opened."
+  },
+  "gmail_notice_opened": {
+    "message": "Opened in the PGP Tools side panel.",
+    "description": "Gmail add-on: banner note after a successful click. Fades after a few seconds."
+  },
+  "gmail_notice_panel_failed": {
+    "message": "The side panel didn't open. Click the PGP Tools icon in your toolbar to see it.",
+    "description": "Gmail add-on: note when Chrome refused to open the side panel."
+  },
+  "gmail_notice_not_enabled": {
+    "message": "Gmail access is turned off. Turn it on in PGP Tools settings.",
+    "description": "Gmail add-on: note when the user revoked Gmail access while this Gmail tab was still open."
+  },
+  "gmail_notice_invalid": {
+    "message": "This doesn't look like a complete PGP block.",
+    "description": "Gmail add-on: note when the text in the email could not be read as a whole armored block."
+  },
+  "gmail_notice_orphaned": {
+    "message": "PGP Tools was updated. Reload Gmail to keep using it here.",
+    "description": "Gmail add-on: note when the extension was updated or reloaded and this Gmail tab still runs the old copy."
+  },
+  "gmail_compose_action": {
+    "message": "Encrypt",
+    "description": "Gmail add-on: button next to Gmail's Send button in a compose window. Keep short (one word)."
+  },
+  "gmail_compose_writing": {
+    "message": "Writing in PGP Tools",
+    "description": "Gmail add-on: compose button label while the user writes the message in the side panel."
+  },
+  "gmail_compose_done": {
+    "message": "Encrypted",
+    "description": "Gmail add-on: compose button label once the encrypted message has been put into the draft."
+  },
+  "gmail_compose_tooltip": {
+    "message": "Turn encryption on: write the email in the PGP Tools side panel, and only the encrypted version goes into Gmail.",
+    "description": "Gmail add-on: tooltip on the compose Encrypt button."
+  },
+  "gmail_compose_opened": {
+    "message": "Write your message in the side panel. Encrypt & send puts it here encrypted.",
+    "description": "Gmail add-on: bubble above the compose Encrypt button after the side panel opened. 'Add to Gmail' is the panel button label (gmail_insert)."
+  },
+  "gmail_strip_title": {
+    "message": "Writing a Gmail draft",
+    "description": "Side panel: title of the strip above the message box when the user is writing an email that will go back into a Gmail compose window."
+  },
+  "gmail_strip_to": {
+    "message": "To $addresses$",
+    "description": "Side panel: who the Gmail draft is addressed to. $addresses$ is a comma-separated list of email addresses."
+  },
+  "gmail_strip_no_recipients": {
+    "message": "No recipients yet. Add them here or in Gmail.",
+    "description": "Side panel: shown in the Gmail draft strip when the Gmail compose window had no recipients."
+  },
+  "gmail_strip_dismiss": {
+    "message": "Stop writing for Gmail",
+    "description": "Side panel: accessible label of the close button on the Gmail draft strip."
+  },
+  "gmail_strip_missing_one": {
+    "message": "This recipient can't read it yet:",
+    "description": "Side panel: heading of the warning in the Gmail draft strip, above one email address that has no matching key. Followed by the address and a Search for key button."
+  },
+  "gmail_strip_missing_other": {
+    "message": "$count$ recipients can't read it yet:",
+    "description": "Side panel: heading of the warning in the Gmail draft strip. $count$ is how many addresses have no key; the addresses follow, one per line, each with a Search for key button."
+  },
+  "gmail_insert": {
+    "message": "Add to Gmail",
+    "description": "Side panel: primary button after encrypting a message when the Gmail add-on is on. Replaces Download. Puts the encrypted message into the Gmail draft the user came from, or opens a new Gmail message addressed to the recipients with it in the body."
+  },
+  "gmail_inserted_desc": {
+    "message": "Check it over in Gmail, then press Send.",
+    "description": "Side panel toast description under gmail_inserted and gmail_opened_compose."
+  },
+  "gmail_insert_gone": {
+    "message": "That Gmail draft is closed",
+    "description": "Side panel toast when the Gmail compose window was closed before the encrypted message could be inserted."
+  },
+  "gmail_insert_gone_desc": {
+    "message": "Copy the encrypted message and paste it into a new draft.",
+    "description": "Side panel toast description under gmail_insert_gone."
+  },
+  "gmail_settings_row": {
+    "message": "Gmail",
+    "description": "Settings: label of the row that opens the Gmail add-on page. Product name."
+  },
+  "gmail_settings_title": {
+    "message": "Gmail add-on",
+    "description": "Settings: title of the Gmail add-on subpage."
+  },
+  "gmail_settings_pitch": {
+    "message": "Read, write and send encrypted email without leaving Gmail. Messages are decrypted in place, in a PGP Tools panel inside the email that Gmail can't read; you write in the side panel, and only encrypted text and files ever go into Gmail.",
+    "description": "Settings: intro paragraph on the Gmail add-on page."
+  },
+  "gmail_settings_toggle_title": {
+    "message": "Work in Gmail",
+    "description": "Settings: label of the switch that turns the Gmail add-on on (asks Chrome for access to mail.google.com)."
+  },
+  "gmail_settings_toggle_desc": {
+    "message": "Chrome will ask to let PGP Tools read and change mail.google.com. Turning this off removes that access.",
+    "description": "Settings: description under the Gmail add-on switch."
+  },
+  "gmail_settings_denied": {
+    "message": "Chrome didn't grant access, so the add-on is still off.",
+    "description": "Settings: shown when the user declined Chrome's permission prompt."
+  },
+  "gmail_settings_does_title": {
+    "message": "What it does",
+    "description": "Settings: heading of the list of what the Gmail add-on does."
+  },
+  "gmail_settings_does_read": {
+    "message": "Shows encrypted and signed messages decrypted in place, in the email, once your key is unlocked in the side panel.",
+    "description": "Settings: Gmail add-on capability, first bullet."
+  },
+  "gmail_settings_does_compose": {
+    "message": "Adds a lock beside Send. When it's on, you write in the side panel and Encrypt & send puts only the encrypted version into Gmail and sends it. It turns itself on when you reply to an encrypted email.",
+    "description": "Settings: Gmail add-on capability, second bullet."
+  },
+  "gmail_settings_does_recipients": {
+    "message": "Picks the right keys from the draft's To and Cc addresses.",
+    "description": "Settings: Gmail add-on capability, third bullet."
+  },
+  "gmail_settings_does_attachments": {
+    "message": "Adds a Decrypt button to encrypted attachments, and attaches files you encrypt here to the draft.",
+    "description": "Settings, Gmail page: bullet in the 'What it does' list about attachments."
+  },
+  "gmail_settings_never_title": {
+    "message": "What it never does",
+    "description": "Settings: heading of the list of guarantees for the Gmail add-on."
+  },
+  "gmail_settings_never_plaintext": {
+    "message": "Decrypted text is shown only inside PGP Tools' own panel in the email. It is never written into Gmail's page, and Gmail's scripts can't read it.",
+    "description": "Settings: Gmail add-on guarantee, first bullet."
+  },
+  "gmail_settings_never_account": {
+    "message": "No Google sign-in, no Gmail API, and no servers. It only works with what is on your screen.",
+    "description": "Settings: Gmail add-on guarantee, second bullet."
+  },
+  "gmail_settings_never_keys": {
+    "message": "Your keys never leave the side panel, and Gmail's page can't reach them.",
+    "description": "Settings: Gmail add-on guarantee, third bullet."
+  },
+  "gmail_settings_draft_note": {
+    "message": "With the lock on, Gmail's own text box is covered: nothing you type into Gmail can be the message, so Google never saves a plaintext draft. Anything typed before turning the lock on is carried over, and Google has already seen it.",
+    "description": "Settings: caveat paragraph at the bottom of the Gmail add-on page."
+  },
+  "gmail_settings_limits": {
+    "message": "Encrypted attachments (.pgp, .gpg, .asc, .age) get a Decrypt button. PGP/MIME messages open as raw text.",
+    "description": "Settings: limitation note on the Gmail add-on page."
+  },
+  "gmail_strip_search_key": {
+    "message": "Search for key",
+    "description": "Side panel: small button next to an email address with no key. Looks the address up on keys.openpgp.org in the import screen. Keep short."
+  },
+  "gmail_strip_add_key": {
+    "message": "Add a key",
+    "description": "Side panel: small button next to an email address with no key, shown when online key lookups are turned off. Opens the import screen. Keep short."
+  },
+  "gmail_opened_compose": {
+    "message": "Opened in Gmail",
+    "description": "Side panel toast after Add to Gmail opened a new Gmail message with the recipients and the encrypted message filled in."
+  },
+  "gmail_frame_title": {
+    "message": "PGP Tools",
+    "description": "Gmail: title of the inline reader panel embedded in an email (also its iframe title for screen readers)."
+  },
+  "gmail_frame_decrypting": {
+    "message": "Decrypting…",
+    "description": "Gmail inline reader: heading while the side panel is decrypting the message."
+  },
+  "gmail_frame_verifying": {
+    "message": "Verifying signature…",
+    "description": "Gmail inline reader: heading while the side panel is checking a signed message."
+  },
+  "gmail_frame_decrypted": {
+    "message": "Decrypted by PGP Tools",
+    "description": "Gmail inline reader: heading above a decrypted message shown in place in the email."
+  },
+  "gmail_frame_signed": {
+    "message": "Signed message",
+    "description": "Gmail inline reader: heading above a signed message whose signature has been checked."
+  },
+  "gmail_frame_locked": {
+    "message": "Encrypted message",
+    "description": "Gmail inline reader: heading when the message can't be read yet because PGP Tools is closed or locked."
+  },
+  "gmail_frame_locked_sub": {
+    "message": "Unlock PGP Tools to read it here.",
+    "description": "Gmail inline reader: line under the heading when PGP Tools is closed or locked."
+  },
+  "gmail_frame_unlock": {
+    "message": "Unlock to read",
+    "description": "Gmail inline reader: button that opens the PGP Tools side panel so the user can unlock their key; the message then appears in place."
+  },
+  "gmail_frame_open": {
+    "message": "Open in PGP Tools",
+    "description": "Gmail inline reader: secondary button that opens the message in the side panel (to reply, save or translate it)."
+  },
+  "gmail_frame_open_tooltip": {
+    "message": "Reply, save or translate it in the side panel.",
+    "description": "Gmail inline reader: tooltip of the Open in PGP Tools button."
+  },
+  "gmail_frame_failed": {
+    "message": "Can't be read here",
+    "description": "Gmail inline reader: heading when the side panel could not decrypt the message; a reason follows."
+  },
+  "gmail_frame_fail_no_key": {
+    "message": "None of your keys can open this message.",
+    "description": "Gmail inline reader: reason line when the message is not encrypted to any key in the vault."
+  },
+  "gmail_frame_fail_password": {
+    "message": "This message needs a password. Open it in PGP Tools to enter one.",
+    "description": "Gmail inline reader: reason line when the message is encrypted to a password rather than a key."
+  },
+  "gmail_frame_fail_bad_signature": {
+    "message": "The signature doesn't match. This message may have been tampered with.",
+    "description": "Gmail inline reader: reason line when a signature failed to verify."
+  },
+  "gmail_frame_fail_error": {
+    "message": "Open it in PGP Tools to see why.",
+    "description": "Gmail inline reader: reason line for any other failure (binary payload, unreadable block)."
+  },
+  "gmail_frame_unsigned": {
+    "message": "Not signed",
+    "description": "Gmail inline reader: line under the heading of a decrypted message that carries no signature."
+  },
+  "gmail_frame_signer_unknown": {
+    "message": "Signed by a key you don't have",
+    "description": "Gmail inline reader: line under the heading when the message is signed but the signer's key is not in the vault."
+  },
+  "gmail_frame_signed_by": {
+    "message": "Signed by $name$ · verified",
+    "description": "Gmail inline reader: line under the heading when the signature verified. $name$ is the signer's name from their key."
+  },
+  "gmail_frame_show_original": {
+    "message": "Show original",
+    "description": "Gmail inline reader: link that reveals the raw encrypted text Gmail rendered, folded away under the panel."
+  },
+  "gmail_frame_hide_original": {
+    "message": "Hide original",
+    "description": "Gmail inline reader: link that folds the raw encrypted text away again."
+  },
+  "gmail_frame_text_label": {
+    "message": "Decrypted message",
+    "description": "Gmail inline reader: accessible label of the box holding the decrypted text."
+  },
+  "gmail_frame_unavailable": {
+    "message": "This page only works inside Gmail.",
+    "description": "Gmail inline reader: shown when the reader page is opened on its own rather than embedded in an email."
+  },
+  "gmail_attachment_decrypt": {
+    "message": "Decrypt",
+    "description": "Gmail: button next to an encrypted attachment (.pgp, .gpg, .age) that opens it in PGP Tools."
+  },
+  "gmail_attachment_open": {
+    "message": "Open in PGP Tools",
+    "description": "Gmail: button next to an .asc attachment, which may be a message, a key or a signature."
+  },
+  "gmail_attachment_tooltip": {
+    "message": "Open $name$ in PGP Tools",
+    "description": "Gmail: tooltip of the attachment button. $name$ is the attachment's file name."
+  },
+  "gmail_attachment_failed": {
+    "message": "Couldn't get that attachment from Gmail",
+    "description": "Side panel: error toast when fetching an attachment the user clicked in Gmail failed."
+  },
+  "gmail_attachment_failed_desc": {
+    "message": "Download it and drop it into PGP Tools instead.",
+    "description": "Side panel: description under the attachment error toast."
+  },
+  "gmail_attachment_too_large": {
+    "message": "That attachment is too large to open here",
+    "description": "Side panel: error toast when a Gmail attachment is over the size limit."
+  },
+  "gmail_attachment_not_pgp": {
+    "message": "That attachment isn't a PGP or age file",
+    "description": "Side panel: error toast when a fetched Gmail attachment is neither ciphertext nor a key."
+  },
+  "gmail_attach": {
+    "message": "Attach to Gmail",
+    "description": "Side panel: primary button after encrypting files when the Gmail add-on is on. Replaces Download. Attaches the encrypted files to the Gmail draft the user came from, or to a new Gmail message."
+  },
+  "gmail_attached": {
+    "message": "Attached to your Gmail draft",
+    "description": "Side panel: success toast after encrypted files were attached to the Gmail draft."
+  },
+  "gmail_attached_desc": {
+    "message": "Check it over in Gmail, then press Send.",
+    "description": "Side panel: description under the attached toast."
+  },
+  "gmail_encrypt_and_attach": {
+    "message": "Encrypt & attach to Gmail",
+    "description": "Side panel: run button label while writing a Gmail draft with files staged: encrypts them and attaches the result to the draft in one go."
+  },
+  "gmail_compose_on": {
+    "message": "Encrypted · PGP Tools",
+    "description": "Gmail: the lock pill beside Send while encryption is on for this compose window. Clicking it turns encryption off."
+  },
+  "gmail_compose_tooltip_on": {
+    "message": "Encryption is on. The message is written in the PGP Tools side panel. Click to turn it off.",
+    "description": "Gmail: tooltip of the lock pill while on."
+  },
+  "gmail_compose_tooltip_off": {
+    "message": "Turn encryption on: write the email in the PGP Tools side panel, and only the encrypted version goes into Gmail.",
+    "description": "Gmail: tooltip of the lock pill while off."
+  },
+  "gmail_cover_title": {
+    "message": "This email is encrypted",
+    "description": "Gmail: title of the card that stands in for the compose box while encryption is on."
+  },
+  "gmail_cover_sub": {
+    "message": "Write it in the PGP Tools side panel. Nothing typed into Gmail can be the message. Files go in the panel too.",
+    "description": "Gmail: line under the cover card's title."
+  },
+  "gmail_cover_action": {
+    "message": "Open PGP Tools",
+    "description": "Gmail: button on the cover card that brings the side panel up."
+  },
+  "gmail_cover_dropped": {
+    "message": "Drop files on the PGP Tools side panel instead, so they're encrypted too.",
+    "description": "Gmail: cover card note after a file was dropped on it (the drop was blocked)."
+  },
+  "gmail_encrypt_and_send": {
+    "message": "Encrypt & send",
+    "description": "Side panel: run button label while writing a Gmail draft. Encrypts the message, puts it in the draft, and presses Gmail's Send."
+  },
+  "gmail_sent": {
+    "message": "Sent",
+    "description": "Side panel: success toast after Encrypt & send pressed Gmail's Send and the compose window closed."
+  },
+  "gmail_sent_desc": {
+    "message": "Gmail sent the encrypted message.",
+    "description": "Side panel: description under the sent toast."
+  },
+  "gmail_inserted_press_send": {
+    "message": "Added to your Gmail draft. Press Send in Gmail.",
+    "description": "Side panel: toast when the ciphertext went into the draft but Gmail did not take the Send press (it may be asking about an empty subject)."
+  },
+  "gmail_frame_reply": {
+    "message": "Reply",
+    "description": "Gmail inline reader: button that opens Gmail's own reply window for this message, encrypted."
+  },
+  "gmail_frame_reply_tooltip": {
+    "message": "Opens Gmail's reply, encrypted. You write it in the side panel.",
+    "description": "Gmail inline reader: tooltip of the Reply button."
+  }
+}

@@ -14,6 +14,7 @@ import type {
   PgpPreferences,
   StorageLocation,
 } from "../../lib/storage/preferences";
+import { useGmailAccess } from "../../hooks/useGmailAccess";
 import {
   STORAGE_CONTACTS,
   STORAGE_CRX_KEYS,
@@ -42,6 +43,7 @@ import { formatFileSize } from "../../lib/utils/formatting";
 import { ExportKeysPage } from "../keys/ExportKeysPage";
 import { CrxSigningInfoPage } from "../settings/CrxSigningInfoPage";
 import { DevToolsPage } from "../settings/DevToolsPage";
+import { GmailIntegrationPage } from "../settings/GmailIntegrationPage";
 import { ImportAllKeysPage } from "../settings/ImportAllKeysPage";
 import { ImportFlowPreviewPage } from "../settings/ImportFlowPreviewPage";
 import { KeyboardShortcutsPage } from "../settings/KeyboardShortcutsPage";
@@ -169,6 +171,8 @@ export function SettingsView({
   const [showPresets, setShowPresets] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showTranslation, setShowTranslation] = useState(false);
+  const [showGmail, setShowGmail] = useState(false);
+  const gmail = useGmailAccess();
   // Stored-history byte size at the moment the user tried to turn
   // never-cache on; non-null renders the delete-history confirm page.
   const [neverCacheConfirmBytes, setNeverCacheConfirmBytes] = useState<
@@ -473,6 +477,26 @@ export function SettingsView({
           <span className="flex items-center gap-2">
             <span className="text-muted-foreground text-xs">
               {aiTranslateEnabled ? t("common_on") : t("common_off")}
+            </span>
+            <ChevronRightIcon className="text-muted-foreground h-4 w-4 shrink-0" />
+          </span>
+        </button>
+      </div>
+
+      <div>
+        <button
+          type="button"
+          onClick={() => setShowGmail(true)}
+          className="border-border hover:border-muted-foreground/40 flex w-full items-center justify-between gap-4 rounded-md border p-4 text-left transition-colors"
+        >
+          <span className="text-sm">{t("gmail_settings_row")}</span>
+          <span className="flex items-center gap-2">
+            <span className="text-muted-foreground text-xs">
+              {gmail.enabled === null
+                ? ""
+                : gmail.enabled
+                  ? t("common_on")
+                  : t("common_off")}
             </span>
             <ChevronRightIcon className="text-muted-foreground h-4 w-4 shrink-0" />
           </span>
@@ -849,6 +873,15 @@ export function SettingsView({
             onTranslationTargetLanguageChange(code);
             void savePreferences({ translationTargetLanguage: code });
           }}
+        />
+      )}
+
+      {showGmail && (
+        <GmailIntegrationPage
+          onClose={() => setShowGmail(false)}
+          enabled={gmail.enabled}
+          onEnable={gmail.enable}
+          onDisable={gmail.disable}
         />
       )}
 

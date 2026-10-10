@@ -135,7 +135,11 @@ export default defineConfig({
     name: "__MSG_extName__",
     short_name: "PGP Tools",
     description: "__MSG_extDescription__",
-    permissions: ["sidePanel", "contextMenus", "storage", "idle"],
+    // `scripting` registers the Gmail add-on's content script at runtime.
+    // On its own it reaches no page: Chrome only lets it inject where the
+    // extension holds host access, and the only host access this manifest
+    // can ever hold is the optional one below. No install-time warning.
+    permissions: ["sidePanel", "contextMenus", "storage", "idle", "scripting"],
     // Requested at runtime the first time a user saves a signed .crx. Saving
     // goes through chrome.downloads with a "Save As" prompt, the one path that
     // writes a .crx to disk without Chrome trying to install it. (The File
@@ -144,6 +148,24 @@ export default defineConfig({
     // `unlimitedStorage` is requested when the user enables the history
     // feature; a denial just keeps history on its conservative byte budget.
     optional_permissions: ["downloads"],
+    // The Gmail add-on (Settings -> Gmail), OFF by default. Requested only
+    // when the user flips that switch; revoking it unregisters the content
+    // script. This entry is also the single place the Gmail origin is
+    // spelled out: lib/gmail/protocol.ts reads it back from the manifest,
+    // so no bundle carries a mail.google.com literal. See SECURITY.md §17.
+    optional_host_permissions: ["https://mail.google.com/*"],
+    // The Gmail add-on's inline reader frame: an extension page the
+    // content script embeds in Gmail where an encrypted block was, so
+    // the message can be read in place. Framable by Gmail's origin and
+    // nothing else; the audit pins this entry to exactly that one file
+    // and that one match. The side panel is NOT web-accessible. See
+    // SECURITY.md §17.
+    web_accessible_resources: [
+      {
+        resources: ["gmail-frame.html"],
+        matches: ["https://mail.google.com/*"],
+      },
+    ],
     icons: {
       16: "icon-16.png",
       32: "icon-32.png",

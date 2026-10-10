@@ -744,6 +744,57 @@ export const THREAT_MODEL: Threat[] = [
     section: "§16",
   },
   {
+    id: "T-GMAIL-PAGE-BOUNDARY",
+    title:
+      "The Gmail add-on lets mail.google.com's page reach the panel or read what it decrypts",
+    attacker:
+      "Gmail's own scripts, or anything able to run in Gmail's main world (a compromised Google script, a hostile email Gmail failed to sanitize): it can read and rewrite Gmail's DOM, including the add-on's hosts and the armored text, and dispatch synthetic events.",
+    defence:
+      "Opt-in only: the sole host access is the OPTIONAL https://mail.google.com/* pattern, granted from Settings, and the content script is registered only while it is held; the audit pins the manifest entry and pins the content bundle's network census to exactly one fetch (the attachment fetch: same-origin GET, init pinned, destination never a remote origin). The page cannot message the worker (no externally_connectable); the content script's UI is in closed shadow roots, built without innerHTML, and ignores untrusted clicks. The worker accepts GMAIL_OPEN only from our extension, a tab's top frame and the manifest-derived Gmail origin, re-derives the action from the text (decrypt / verify / public-key import; compose is always encrypt; an attachment ref is always decrypt, with no text, and the panel refuses a private key found in the fetched bytes the same way) and re-checks the permission. Nothing ever flows back but ciphertext: armored PGP MESSAGE blocks -- line-by-line radix-64, at most four allowlisted headers, first packet a session-key packet -- and files whose header is binary OpenPGP opening with a session-key packet, such armor, or age; each validated by the panel before sending and by the content script before writing or dropping, accepted only from an extension page and pinned to the documentId the worker recorded for the click. No message type can carry decrypted text to the tab; decrypted text is shown only in the reader frame (T-GMAIL-FRAME), an extension page the tab cannot read into. An attachment is fetched only for a chip the user's click stamped, from Gmail's own download_url re-read (name and URL re-validated) at fetch time and refused off this origin or outside /mail/, capped before the body is read; redirects are followed without credentials, and the reply is validated by the panel as a GmailFile before it is decoded. The clipped-message link is followed only from Gmail's footer, on Gmail's origin. Bcc is never read. scripting.* and tabs.sendMessage call sites are pinned by the audit (exact counts and option shapes) so no realm can quietly run code in Gmail's main world.",
+    status: "partial",
+    rationale:
+      "The page can still put any ciphertext it likes in front of the add-on -- in a message body, in an attachment it serves, or by framing the reader page itself (as it can for the context menu, T-AUTORUN-UNATTENDED-DECRYPT) -- and can see the compose and attachment ids stamped on its elements; none of that reaches plaintext or keys. It can also hide, cover or fake the frame, the banner or the buttons, which costs the user the convenience, not a secret: results are only ever shown in the side panel or in the frame, neither of which the page can read.",
+    verifiedBy: [
+      "apps/pgp/lib/gmail/protocol.test.ts",
+      "apps/pgp/lib/gmail/frame-protocol.test.ts",
+      "apps/pgp/lib/gmail/dom.test.ts",
+      "apps/pgp/lib/pending-op.test.ts",
+      "apps/pgp/scripts/audit-network.mjs",
+      "apps/pgp/e2e/gmail.spec.ts",
+    ],
+    section: "§17",
+  },
+  {
+    id: "T-GMAIL-FRAME",
+    title: "The inline reader frame shows plaintext inside a page Gmail embeds",
+    attacker:
+      "Gmail's own scripts, or anything in Gmail's main world, trying to read what the frame shows or to make it show something; and anyone who can read the frame page's heap.",
+    defence:
+      "The frame (gmail-frame.html) is an extension page: cross-origin to mail.google.com, so its document is opaque to the page around it -- Gmail can place, size, hide or remove it, never read it. It is the ONLY web_accessible_resources entry, framable by the manifest's Gmail pattern alone (the audit pins the entry exactly, and that the panel, reader tab and welcome page are not web-accessible); it carries the panel's connect-src 'self' meta CSP (pinned); it refuses to run unless framed by a Gmail origin; and it delegates no permissions (empty allow), so no ceremony can be run in it. It holds no vault, keys, wasm or storage: it keeps the armored block the content script posted (ciphertext the page had) and shows what the panel answers over a runtime port the panel accepts only from this extension, at the frame page's URL as Chrome reports it, inside a tab's subframe (isGmailFramePort). The panel decrypts for it under §15's unattended rules -- an open handle or nothing, never a prompt, never a write -- keeps no plaintext (it exists for the postMessage call only), tells every frame `locked` first and synchronously in doMasterLock, and re-answers on unlock. The text goes into the frame's <pre> imperatively, never into React state, and is cleared (plus the RegExp residue) on lock, disconnect and failure. Both postMessage directions check event.source, event.origin and the nonce; a GMAIL_FRAME_OPEN is accepted by the worker only from the frame page inside a tab's subframe and takes exactly the banner click's path.",
+    status: "accepted",
+    rationale:
+      "Reading the message where it arrived is the feature; before it, every encrypted email meant opening the side panel, and users who found that too slow pasted plaintext elsewhere. The residual is the reader tab's (T-READER-TAB-PLAINTEXT): plaintext on screen and in one more page's heap while the panel is unlocked, in a page that follows the panel's lock state rather than having its own. What Gmail gains is one bit -- the frame is showing the message or it is not -- and, while showing, its height (message length, roughly): the frame reports no size and keeps one fixed height in every other state, and its finer states (locked / no key / failed) never cross to the page, since 'locked for K' versus 'no key K' would disclose which private keys the user holds and when the vault is open. The theme it accepts is two validated colours, never a value that could name a host. A page that frames the reader itself with ciphertext of its choosing, or overlays a real button on the frame's 'Unlock to read' to catch a trusted click, gets the T-AUTORUN-UNATTENDED-DECRYPT exposure -- plaintext on the user's screen, with no prompt beyond the normal ones -- and nothing more; the result stays in the frame or the panel, so it is not an oracle. With neverCacheKeys on, frames are never decrypted for at all.",
+    verifiedBy: [
+      "apps/pgp/lib/gmail/frame-protocol.test.ts",
+      "apps/pgp/scripts/audit-network.mjs",
+      "apps/pgp/e2e/gmail.spec.ts",
+    ],
+    section: "§17",
+  },
+  {
+    id: "T-GMAIL-DRAFT-PLAINTEXT",
+    title:
+      "Text typed into Gmail's own compose box is already Gmail's before it is encrypted",
+    attacker:
+      "Google, or anyone with access to the user's Gmail account: Gmail autosaves drafts to the server as they are typed.",
+    defence:
+      "With the lock on, Gmail's box is hidden under a card that takes no input and its attach control is inert, so nothing typed or dropped in the page can be the message and Google autosaves no plaintext draft; the panel is the composer and Encrypt & send puts only ciphertext in. The window arms itself when replying in a thread that holds PGP (and a panel is up), so the encrypted reply path needs no click. Input is never taken in an in-page frame, because a swapped frame would take the real plaintext and nothing in the page can be trusted by sight; the side panel is browser chrome. The Settings page says plainly that anything typed into Gmail's box BEFORE the lock is on is saved by Google first and is carried over.",
+    status: "accepted",
+    rationale:
+      "The add-on cannot unsee what the user typed into Google's page before turning the lock on, and refusing to carry an existing draft over would only make users copy it by hand. A page that fakes the card or the pill can only put a real Gmail box in front of the user, which is this same exposure and nothing more. The protection is for text written in the panel, and with the lock on that is the only place it can be written.",
+    section: "§17",
+  },
+  {
     id: "T-DEVTOOLS",
     title: "DevTools attached to the side panel",
     attacker:

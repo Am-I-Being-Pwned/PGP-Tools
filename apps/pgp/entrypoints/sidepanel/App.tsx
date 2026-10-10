@@ -27,6 +27,7 @@ import { WorkspaceView } from "../../components/workspace/WorkspaceView";
 import { useActionContext } from "../../hooks/useActionContext";
 import { useContacts } from "../../hooks/useContacts";
 import { useCrxKeys } from "../../hooks/useCrxKeys";
+import { useGmailFrames } from "../../hooks/useGmailFrames";
 import { readKeyring, useKeyring } from "../../hooks/useKeyring";
 import { useKeySession } from "../../hooks/useKeySession";
 import { usePendingOperation } from "../../hooks/usePendingOperation";
@@ -94,6 +95,8 @@ export default function App() {
   // to the Keys tab first meant Back dumped them on a tab they never
   // asked for, and the panel's slide-out flashed it on the way past.
   const [importPrefill, setImportPrefill] = useState<string | null>(null);
+  /** An address to look up on open (the Gmail strip's "Search for key"). */
+  const [importLookup, setImportLookup] = useState<string | null>(null);
   // Keys to scroll to and pulse on the Keys tab: a "show it in your
   // keys" action, or the View key button on an import's toast.
   const [highlightKeyIds, setHighlightKeyIds] = useState<string[] | null>(null);
@@ -173,6 +176,18 @@ export default function App() {
   // is open -- the same condition that gates routing a pending op.
   const { open: openReader, lockNow: lockReaders } =
     useReaderTabs(canRoutePendingOp);
+  // The Gmail add-on's inline reader frames: answered only while the
+  // vault is open, under the same unattended rules as a context-menu
+  // auto-run (an open handle or nothing).
+  const { lockNow: lockGmailFrames } = useGmailFrames({
+    unlocked: canRoutePendingOp,
+    settling: vaultOpening || keyring.loading || contacts.loading,
+    myKeys: keyring.keys,
+    contacts: contacts.contacts,
+    getKeyHandle: session.getKeyHandle,
+    unlockedKeyIds: session.unlockedKeyIds,
+    neverCacheKeys,
+  });
 
   // True when the most recent master-lock was system-initiated (idle
   // timer, visibility hidden, OS idle). Used to suppress the
@@ -207,9 +222,11 @@ export default function App() {
 
   const doMasterLock = useCallback(
     async (auto = false) => {
-      // Reply's reader tabs clear first, synchronously: nothing awaited
-      // below can let a reader keep (or be sent) the message.
+      // Reply's reader tabs and Gmail's inline frames clear first,
+      // synchronously: nothing awaited below can let either keep (or be
+      // sent) the message.
       lockReaders();
+      lockGmailFrames();
       // Encrypt + stash the workspace draft before flipping
       // masterUnlocked (which unmounts the workspace). On error, lock
       // anyway -- a lost draft is preferable to a failed lock.
@@ -305,7 +322,7 @@ export default function App() {
       // `size > 0` guard here to match them reopens it.
       session.lockAll();
     },
-    [session, clearPending, lockReaders],
+    [session, clearPending, lockReaders, lockGmailFrames],
   );
 
   const resetMasterLockTimer = useCallback(() => {
@@ -838,9 +855,12 @@ export default function App() {
         {/* A key that arrived from outside the Keys tab. The panel covers
             the whole side panel, so it opens in place -- no tab switch to
             flash past on the way in or out. */}
-        {importPrefill !== null && (
+        {(importPrefill !== null || importLookup !== null) && (
           <ImportKeyPage
-            onClose={() => setImportPrefill(null)}
+            onClose={() => {
+              setImportPrefill(null);
+              setImportLookup(null);
+            }}
             onImportPrivate={handleAddKey}
             onImportPublic={contacts.add}
             existingKeys={keyring.keys}
@@ -848,6 +868,8 @@ export default function App() {
             reusePasskeyCredentialId={masterPasskeyCredentialId}
             masterSealSalt={masterSealSalt}
             initialArmored={importPrefill}
+            initialLookup={importLookup}
+            keyDiscoveryEnabled={keyDiscoveryEnabled}
             crxSigningEnabled={crxSigningEnabled}
             onImportCrx={crxKeys.add}
             onImported={(keyIds, opts) => {
@@ -909,13 +931,28 @@ export default function App() {
                   pending.action === "decrypt" ||
                   pending.action === "sign" ||
                   pending.action === "verify")
-                  ? { action: pending.action, text: pending.text }
+                  ? {
+                      id: pending.id,
+                      action: pending.action,
+                      text: pending.text,
+                      gmail: pending.gmail
+                        ? { ...pending.gmail, tabId: pending.sourceTabId }
+                        : null,
+                      gmailAttachment: pending.gmailAttachment
+                        ? {
+                            ...pending.gmailAttachment,
+                            tabId: pending.sourceTabId,
+                          }
+                        : null,
+                    }
                   : null
               }
               onClearPending={clearPending}
               encryptToKeyId={encryptToKeyId}
               onClearEncryptTo={() => setEncryptToKeyId(null)}
               onRevealKey={(keyId) => revealKeys([keyId])}
+              onSearchKey={setImportLookup}
+              keyDiscoveryEnabled={keyDiscoveryEnabled}
               onNavigateToKeys={(prefill) => {
                 if (prefill) {
                   routeToImport(prefill);

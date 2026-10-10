@@ -97,30 +97,33 @@ call either export directly. See §8.10.
 
 ## 3. File map
 
-| #   | File                                       | What's in it                                                                                                                                                                                                             |
-| --- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1   | `apps/pgp/SECURITY.md` (this file)         | The contract                                                                                                                                                                                                             |
-| 2   | `apps/pgp/gpg-wasm/src/lib.rs`             | The WASM crate. The actual sandbox.                                                                                                                                                                                      |
-| 2a  | `apps/pgp/gpg-wasm/src/crx.rs`             | RSA-2048 CRX (Chrome extension) signer/verifier. Separate `CRX_KEY_STORE`; see §10.                                                                                                                                      |
-| 2b  | `apps/pgp/gpg-wasm/src/age.rs`             | age encrypt/decrypt to imported SSH keys (`ssh-ed25519`, `ssh-rsa`). Separate `SSH_KEY_STORE`; see §13.                                                                                                                  |
-| 2c  | `apps/pgp/gpg-wasm/src/protected.rs`       | The at-rest envelope every key type is sealed by (`seal_with_*` / `open_*`), plus the generic `HandleStore`. See §5, §13.                                                                                                |
-| 5b  | `apps/pgp/lib/age/`                        | JS-side age coordinator and SSH-identity import/unlock/drop. Holds recipient lines and `u32` handles; no key material.                                                                                                   |
-| 5a  | `apps/pgp/lib/crx/`                        | JS-side CRX key storage, sign/verify coordinator, and backup (de)serialization.                                                                                                                                          |
-| 3   | `apps/pgp/lib/pgp/wasm.ts`                 | JS-side barrel.                                                                                                                                                                                                          |
-| 4   | `apps/pgp/lib/pgp/wasm-public.ts`          | Wasm wrappers that don't carry secrets.                                                                                                                                                                                  |
-| 5   | `apps/pgp/lib/pgp/wasm-secrets.ts`         | Wasm wrappers that do, each with a `@secret-handling` block.                                                                                                                                                             |
-| 6   | `apps/pgp/lib/protection/protect-flow.ts`  | Generate/import/protect. Owns the `Uint8Array.fill(0)` calls.                                                                                                                                                            |
-| 7   | `apps/pgp/hooks/useKeySession.ts`          | KEY_STORE lifetime in JS (handle map, idle-/visibility-/OS-idle locks).                                                                                                                                                  |
-| 8   | `apps/pgp/entrypoints/sidepanel/App.tsx`   | Auto-lock wiring + workspace-draft persistence.                                                                                                                                                                          |
-| 8a  | `apps/pgp/entrypoints/welcome/Welcome.tsx` | First-install welcome page; only does `chrome.sidePanel.open` from a user-gesture click. No secret material.                                                                                                             |
-| 8b  | `apps/pgp/entrypoints/background.ts`       | Service worker. Context menus + welcome tab, the two key-discovery lookups (§7, §7.1), and the pending-op channel. No wasm, no keys -- but it writes the user's raw selection to `chrome.storage.session` unsealed (§7). |
-| 9   | `apps/pgp/lib/network-lockdown.ts`         | Frozen `globalThis.fetch`; blocks XHR/WS/EventSource/RTC/sendBeacon.                                                                                                                                                     |
-| 10  | `apps/pgp/scripts/audit-network.mjs`       | Build-time per-context census: worker = 2 fetches, pinned apart to api.github.com and keys.openpgp.org; pages = no code that can name a remote destination.                                                              |
-| 11  | `apps/pgp/lib/storage/history.ts`          | Opt-in operation history. Segmented AES-256-GCM blobs under the contacts session key; holds message content. See §11.                                                                                                    |
-| 12  | `apps/pgp/lib/workspace-draft.ts`          | In-progress composer text, encrypted under a separate in-WASM draft session key (§6).                                                                                                                                    |
-| 13  | `apps/pgp/lib/security/threat-model.ts`    | This document's attack model as typed data. `threat-model.test.ts` fails if a claimed defence names no live test.                                                                                                        |
-| 14  | `apps/pgp/scripts/audit-invariants.mjs`    | Build-time enforcement of §9. Replaces running those greps by hand.                                                                                                                                                      |
-| 15  | `apps/pgp/gpg-wasm/src/rng.rs`             | ChaCha20 CSPRNG between us and `crypto.getRandomValues`. See §12 for what it does and does not cover.                                                                                                                    |
+| #   | File                                       | What's in it                                                                                                                                                                                                                                                          |
+| --- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `apps/pgp/SECURITY.md` (this file)         | The contract                                                                                                                                                                                                                                                          |
+| 2   | `apps/pgp/gpg-wasm/src/lib.rs`             | The WASM crate. The actual sandbox.                                                                                                                                                                                                                                   |
+| 2a  | `apps/pgp/gpg-wasm/src/crx.rs`             | RSA-2048 CRX (Chrome extension) signer/verifier. Separate `CRX_KEY_STORE`; see §10.                                                                                                                                                                                   |
+| 2b  | `apps/pgp/gpg-wasm/src/age.rs`             | age encrypt/decrypt to imported SSH keys (`ssh-ed25519`, `ssh-rsa`). Separate `SSH_KEY_STORE`; see §13.                                                                                                                                                               |
+| 2c  | `apps/pgp/gpg-wasm/src/protected.rs`       | The at-rest envelope every key type is sealed by (`seal_with_*` / `open_*`), plus the generic `HandleStore`. See §5, §13.                                                                                                                                             |
+| 5b  | `apps/pgp/lib/age/`                        | JS-side age coordinator and SSH-identity import/unlock/drop. Holds recipient lines and `u32` handles; no key material.                                                                                                                                                |
+| 5a  | `apps/pgp/lib/crx/`                        | JS-side CRX key storage, sign/verify coordinator, and backup (de)serialization.                                                                                                                                                                                       |
+| 3   | `apps/pgp/lib/pgp/wasm.ts`                 | JS-side barrel.                                                                                                                                                                                                                                                       |
+| 4   | `apps/pgp/lib/pgp/wasm-public.ts`          | Wasm wrappers that don't carry secrets.                                                                                                                                                                                                                               |
+| 5   | `apps/pgp/lib/pgp/wasm-secrets.ts`         | Wasm wrappers that do, each with a `@secret-handling` block.                                                                                                                                                                                                          |
+| 6   | `apps/pgp/lib/protection/protect-flow.ts`  | Generate/import/protect. Owns the `Uint8Array.fill(0)` calls.                                                                                                                                                                                                         |
+| 7   | `apps/pgp/hooks/useKeySession.ts`          | KEY_STORE lifetime in JS (handle map, idle-/visibility-/OS-idle locks).                                                                                                                                                                                               |
+| 8   | `apps/pgp/entrypoints/sidepanel/App.tsx`   | Auto-lock wiring + workspace-draft persistence.                                                                                                                                                                                                                       |
+| 8a  | `apps/pgp/entrypoints/welcome/Welcome.tsx` | First-install welcome page; only does `chrome.sidePanel.open` from a user-gesture click. No secret material.                                                                                                                                                          |
+| 8b  | `apps/pgp/entrypoints/background.ts`       | Service worker. Context menus + welcome tab, the two key-discovery lookups (§7, §7.1), and the pending-op channel. No wasm, no keys -- but it writes the user's raw selection to `chrome.storage.session` unsealed (§7).                                              |
+| 8c  | `apps/pgp/entrypoints/gmail.content.ts`    | The opt-in Gmail add-on's content script, registered at runtime only while the optional mail.google.com permission is held. No keys, wasm or storage; one pinned same-origin fetch (attachments, on the panel's request); writes only ciphertext into Gmail. See §17. |
+| 8d  | `apps/pgp/entrypoints/gmail-frame/`        | The add-on's inline reader frame: an extension page Gmail embeds where an encrypted block was. A dumb view fed by the panel over a runtime port, like the reader tab (§16). The only web-accessible resource. See §17.                                                |
+| 8e  | `apps/pgp/hooks/useGmailFrames.ts`         | The panel's side of the frames: decrypts/verifies for them under §15's unattended rules (an open handle or nothing), posts plaintext over the port and keeps none.                                                                                                    |
+| 9   | `apps/pgp/lib/network-lockdown.ts`         | Frozen `globalThis.fetch`; blocks XHR/WS/EventSource/RTC/sendBeacon.                                                                                                                                                                                                  |
+| 10  | `apps/pgp/scripts/audit-network.mjs`       | Build-time per-context census: worker = 2 fetches, pinned apart to api.github.com and keys.openpgp.org; pages = no code that can name a remote destination.                                                                                                           |
+| 11  | `apps/pgp/lib/storage/history.ts`          | Opt-in operation history. Segmented AES-256-GCM blobs under the contacts session key; holds message content. See §11.                                                                                                                                                 |
+| 12  | `apps/pgp/lib/workspace-draft.ts`          | In-progress composer text, encrypted under a separate in-WASM draft session key (§6).                                                                                                                                                                                 |
+| 13  | `apps/pgp/lib/security/threat-model.ts`    | This document's attack model as typed data. `threat-model.test.ts` fails if a claimed defence names no live test.                                                                                                                                                     |
+| 14  | `apps/pgp/scripts/audit-invariants.mjs`    | Build-time enforcement of §9. Replaces running those greps by hand.                                                                                                                                                                                                   |
+| 15  | `apps/pgp/gpg-wasm/src/rng.rs`             | ChaCha20 CSPRNG between us and `crypto.getRandomValues`. See §12 for what it does and does not cover.                                                                                                                                                                 |
 
 ---
 
@@ -284,9 +287,11 @@ and this section says so before it says anything else.
      and `X-Api-Key`, and the extension holds **no host permission** for
      `api.github.com` — the endpoint answers unauthenticated with
      `access-control-allow-origin: *`, so none is needed and none is
-     requested. `host_permissions` and `optional_host_permissions` are
-     both absent from the manifest, and the build audit fails if either
-     appears.
+     requested. `host_permissions` is absent from the manifest, and the
+     build audit fails if it appears. `optional_host_permissions` holds
+     exactly one pattern, `https://mail.google.com/*`, for the opt-in
+     Gmail add-on (§17); the audit pins it, and it can never cover
+     either lookup host.
    - **What it does not buy.** Omitting the cookie means the request is
      not joinable to the user's GitHub account _from the request alone_.
      It is not anonymity. GitHub still learns the username looked up,
@@ -399,9 +404,19 @@ allowlist:
   no XHR / WebSocket / EventSource / RTCPeerConnection / sendBeacon /
   `new Worker` / `new Function` / `eval` at all, and no absolute URL
   literal outside a pinned set of XML namespaces and href targets.
+- **content script** (`content-scripts/gmail.js`, the Gmail add-on, §17)
+  — exactly one `fetch` call site, the attachment fetch: a same-origin GET
+  as the page (init pinned exactly), made only when the panel asks for a
+  chip the user pressed, whose destination is Gmail's own `download_url`
+  re-checked at runtime to be this origin under `/mail/`. No reference to
+  any other network primitive, and no absolute URL literal but the SVG
+  namespace its icons are built in.
 - **manifest** — `connect-src` exactly as written above (not a substring
-  match), no host permissions of either kind, and the panel's meta tag
-  present in the built HTML.
+  match), no `host_permissions`, `optional_host_permissions` exactly
+  `["https://mail.google.com/*"]`, `web_accessible_resources` exactly the
+  reader frame page framable by that one pattern, `scripting` the only
+  addition to the permission set, and the meta tag present in the built
+  HTML of the panel, the reader tab and the frame.
 
 Counts are exact, not upper bounds, so deleting a guard fails as loudly
 as adding a leak. Both directions were confirmed with negative controls:
@@ -694,7 +709,8 @@ say honestly what it would cost us if it happened, rather than to claim a
 new or probable attack.
 
 The preconditions are not trivial. The extension ships seven runtime
-dependencies plus transitives, runs no content scripts, loads no remote
+dependencies plus transitives, runs no content scripts unless the user
+turns on the Gmail add-on (§17, which carries no keys or wasm), loads no remote
 code, and the CSP forbids fetching any. So the realistic path is a
 poisoned package or a poisoned release, not something a website or another
 tab can reach.
@@ -1614,3 +1630,328 @@ the message, with a positive control while shown, and unlock restores
 it; a duplicated reader is locked too; closing the panel closes the
 reader tab; an unopened nonce shows nothing; no storage area holds the
 canary).
+
+## 17. The Gmail add-on
+
+Settings → Gmail turns on an integration with mail.google.com: encrypted
+and signed blocks in opened emails are read IN PLACE, in a reader frame
+the add-on embeds where the block was; public keys and clipped blocks
+get a banner (Import / View entire message); encrypted attachments get a
+Decrypt button; and compose windows get a lock pill beside Send that,
+when on, covers Gmail's text box and makes the side panel the composer,
+with "Encrypt & send" putting the ciphertext in and pressing Gmail's
+Send. It was designed
+against the two established integrations (FlowCrypt, Mailvelope; notes
+in `lib/gmail/dom.ts` and `entrypoints/gmail.content.ts`), keeping their
+reach into Gmail and dropping what this extension's model cannot accept.
+
+**Off by default, and the switch is the permission.** The only host
+access the manifest can ever hold is the OPTIONAL
+`https://mail.google.com/*`, requested from that Settings switch inside
+the user's click. The content script is not in the manifest: WXT's
+`registration: "runtime"` keeps it out, and the worker registers it with
+`chrome.scripting` while the permission is held and unregisters it when it
+is not (on every worker start and on `permissions.onAdded/onRemoved`). No
+preference mirrors it, so revoking access in `chrome://extensions` turns
+the add-on off with nothing left to disagree. There is no OAuth, no Gmail
+API and no server: it works with what Gmail has already rendered.
+
+**What the content script is.** No keys, no wasm, no storage, and one
+network call (the attachment fetch below; the audit's `content` census is
+exactly that one `fetch`, init pinned, and it cannot import
+`network-lockdown.ts`, whose non-configurable hooks would throw on a
+second injection). It reads armored text
+out of message bodies with `innerText` (layout-aware, so armor keeps its
+line breaks, unlike the context menu's `selectionText`), and the draft the
+user typed into Gmail's own box. Its UI lives in CLOSED shadow roots built
+with `createElementNS`/`textContent` only (Gmail enforces Trusted Types;
+the test stand-in does too), shows only fixed locale copy, and ignores
+untrusted (`isTrusted === false`) clicks.
+
+**Reading in place: the frame.** A `PGP MESSAGE` or `PGP SIGNED MESSAGE`
+block is not shown through a banner but through `gmail-frame.html`, an
+extension page the content script embeds (an `<iframe>` in a closed
+shadow host) where the block was rendered. The frame's document is
+cross-origin to Gmail: the page can place and size it and that is all;
+it cannot read into it, so plaintext may be shown there where it never
+may be in Gmail's DOM. The frame is the one `web_accessible_resources`
+entry, framable by the Gmail pattern and nothing else (pinned by the
+audit, alongside the rule that the panel, reader tab and welcome page
+are NOT web-accessible); it carries the panel's `connect-src 'self'`
+meta CSP (also pinned); it refuses to run unless it is framed, by a
+Gmail origin (`ancestorOrigins`); and it delegates no permissions (an
+empty `allow`, so no WebAuthn in particular -- a passkey ceremony cannot
+run in a frame Gmail embeds, and is not asked to). Like Reply's reader
+tab (§16) it is a DUMB VIEW: no vault, keys, wasm or storage.
+
+Two channels, both in `lib/gmail/frame-protocol.ts`. (1) Frame ↔ page by
+`postMessage`: the content script hands the frame the armored block
+(ciphertext the page already had) and the message's sampled colours; the
+frame reports its height, its state and a "show original" toggle. Each
+side checks `event.source` (the one window it expects), `event.origin`
+(the extension origin / a manifest-derived Gmail origin) and the nonce
+the frame was created with; Gmail's scripts can post the same shapes,
+which is the accepted "the page chooses the ciphertext" case, and
+nothing in this channel carries plaintext. (2) Frame ↔ panel by a runtime
+port named for the nonce: the frame asks the panel to read the block; the
+panel accepts the port only from our extension, at the frame page's URL
+as Chrome reports it, inside a tab and not its top frame
+(`isGmailFramePort`), and answers with the message or with why not.
+Plaintext travels panel → frame over this port and nowhere else.
+
+**The §15 rules, unchanged.** `useGmailFrames` decrypts for a frame
+UNATTENDED: only when the key the message is addressed to already has an
+open handle. A locked vault, a closed key, or a password-only message is
+answered `locked` or `failed` -- never a ceremony, never a prompt, never
+a write to disk. With `neverCacheKeys` on, a decrypt is never answered
+at all (the hook is told, and treats every handle as closed), so a frame
+cannot ride on a key the user opened for something else. Verify needs
+no secret and runs whenever the vault is open (contacts are behind the
+lock too). The plaintext exists in the panel only for the call
+that posts it (not kept, not sealed, not in React state; the armor is
+kept per port so an unlock can answer again). `doMasterLock` tells every
+frame `locked` first and synchronously; an unlock, or any key opening
+(`unlockedKeyIds`), answers the waiting frames again. A frame with no
+panel to talk to (the port disconnects with nobody listening) waits for
+the panel's `GMAIL_PANEL_READY` broadcast and reconnects.
+
+**"Unlock to read".** When the frame is told `locked` it shows one
+button. The click is a user gesture inside an extension page; it sends
+`GMAIL_FRAME_OPEN` to the worker, which accepts it only from our own
+extension at the frame page's URL inside a tab's subframe, derives the
+action from the text (decrypt or verify only), opens the side panel
+inside the gesture, re-checks the permission and writes the block to the
+pending-op channel -- exactly a banner click's path. The panel then runs
+the normal flow with its prompts (password row, passkey ceremony), and
+when the key opens the frame fills in. So the open side panel is, by
+construction, the "unlocked" indicator: keys live in it (§6), and closing
+it clears every frame.
+
+**What the frame costs**, recorded as T-GMAIL-FRAME: plaintext in a
+second page's heap and on screen, the same class as the reader tab
+(T-READER-TAB-PLAINTEXT) and the panel's own output box, in a page that
+follows the panel's lock state rather than having its own. What the
+page learns from the frame is ONE BIT -- showing the message or not --
+plus, while showing, its height (so roughly how long the message is):
+the frame reports no size and sits at one fixed height in every other
+state, and its finer states (locked, no key, failed) never cross to the
+page, because "locked for key K" versus "no key K" versus "shown" would
+be an oracle for which keys the user holds and when the vault is open.
+The page can hide, cover or remove the frame (costing the user the
+convenience, not a secret), can lay a real button of its own over the
+frame's "Unlock to read" so a trusted click lands on it (which opens the
+panel on ciphertext of the page's choosing, with the normal prompts --
+the banner's exposure), and can frame the page itself with such
+ciphertext, which is T-AUTORUN-UNATTENDED-DECRYPT's accepted exposure
+again (shoulder-surfing, not an oracle: the result stays in the frame).
+The frame's theme is two CSS colours, validated as colours (hex, rgb(),
+a name) so the value cannot name a host.
+
+**Compose: the panel is the composer, Gmail keeps the envelope.** While
+a compose window is ON, its body is hidden under a card (an attribute
+the add-on's one stylesheet rule turns into `display: none`) and its
+attach control is inert; To, Cc, Subject and Send stay Gmail's. The card
+takes no input: it says the message is written in the side panel and
+has one button that brings the panel up (`GMAIL_OPEN` with `focus`,
+which opens the panel and writes nothing). Drops on a covered window
+are stopped at the document, in the capture phase, before Gmail's own
+handler could attach the file in the clear; the add-on's own synthetic
+drops of encrypted files are let through under a flag that is set only
+for the synchronous dispatch. "Encrypt & send" in the panel is
+`GMAIL_INSERT` with `send`: the ciphertext goes in (same checks as
+before), the cover comes off so Gmail shows what it will send, and
+Gmail's Send is pressed as a pointer would; "sent" is the window going
+away within four seconds, otherwise the panel tells the user to press
+Send. A window turns itself ON when the thread on screen holds PGP (a
+reader frame, an encrypted attachment or a clipped encrypted block) AND
+a side panel answers `GMAIL_PANEL_PING` (a pong from an extension page;
+the worker never answers, so no panel means no pong): it sends
+`GMAIL_OPEN` with `silent`, which writes the op without trying to open
+a panel (there is no gesture), and covers the box. The pill is the
+switch either way. A `view=cm` tab the panel opened for "Add to Gmail"
+is never armed: it is the panel's to fill. The reader frame's Reply
+presses Gmail's own Reply control (`pgp-frame:reply`, nothing else
+crosses) and the window that opens arms itself.
+
+WHY INPUT NEVER GOES IN AN IN-PAGE FRAME. Showing plaintext in a frame
+is safe because a swapped frame can only show something false; taking
+input in one is not, because a swapped frame takes the real plaintext,
+and nothing inside mail.google.com is a surface the user can trust by
+looking at it -- Gmail's own scripts, or another extension holding the
+same host permission, can replace any element. The side panel is
+browser chrome: nothing in the page can draw over it or imitate it. So
+the design never asks the user to type into the page; a text box
+appearing where the card should be is itself the tell, and the panel's
+own "Writing a Gmail draft to …" header (unspoofable) says which side is
+real. A page that fakes the card or the pill costs the user the cover,
+not a secret: text typed into a real Gmail box is Gmail's, which is
+T-GMAIL-DRAFT-PLAINTEXT exactly as before.
+
+**Gmail → panel.** A click sends `GMAIL_OPEN` to the worker, which drops
+it unless it comes from our own extension, a tab's top frame, and an
+origin derived from the manifest's optional host pattern (no Gmail
+literal is in any bundle). The worker then DERIVES the action from the
+text (`classifyAction`) and acts only on decrypt, verify or public-key
+import; a compose request is always encrypt. `sidePanel.open` runs
+synchronously inside the relayed gesture, the permission is re-checked,
+and the text lands in the existing pending-op channel (T-PENDING-OP-AT-REST
+applies unchanged). A decrypt then follows §15's unattended rules. The
+worker's key-lookup messages now also refuse any sender that is not an
+extension page.
+
+**Panel → Gmail: ciphertext only, checked twice.** After encrypting for a
+compose window, "Add to Gmail" sends `GMAIL_INSERT` with one armored
+block. `isArmoredMessageOnly` (`lib/gmail/protocol.ts`) is run by the
+panel before sending and by the content script before writing; it accepts
+only a lone `PGP MESSAGE` block whose body is, line by line, at most four
+allowlisted armor headers and radix-64, and whose FIRST PACKET is a
+session-key packet (PKESK or SKESK). That last check is what rules out
+plaintext in base64: a signed-only message (compressed, one-pass
+signature) or a bare literal packet is armored as `PGP MESSAGE` too.
+Shape is not proof of encryption, but no plaintext the panel can produce
+passes. The content script accepts the message only from an extension
+page (`sender.tab` unset) and writes it with `textContent`; the panel
+sends it only while the permission is still held, and pinned to the
+`documentId` the worker recorded for the Encrypt click (taken from
+`sender.documentId`, never from the page), so a tab that navigated or
+reloaded receives nothing. Decrypted text has no message type that could
+carry it into Gmail. After a successful insert the panel resets, keeping
+neither plaintext nor ciphertext.
+
+**Files, both ways, ciphertext only.** An attachment chip whose name ends
+in `.pgp`, `.gpg`, `.asc` or `.age` gets a Decrypt button. The click
+sends `GMAIL_OPEN` with the chip's id (stamped on it by the click, like a
+compose id) and name -- no bytes; the worker writes a `decrypt` pending op
+carrying that ref (`gmailAttachment`, accepted only on an empty-text
+decrypt). The panel then asks the tab for the bytes
+(`GMAIL_FETCH_ATTACHMENT`, through the single `sendToGmailTab` site,
+pinned to the click's `documentId`), and the content script fetches the
+chip's `download_url` -- re-read from Gmail's attribute at fetch time
+(name and URL both re-validated), refused unless the URL is this origin
+under `/mail/`, capped at 25 MB before the body is read in full -- as
+the page, with Gmail's own session, which is the only way to an
+attachment without an API. This is the one network call in the content
+bundle; the audit pins its count, its init (a plain `GET`,
+`same-origin`, `no-store`, `redirect: "follow"`) and that its
+destination resolves statically to no remote origin. Redirects ARE
+followed, stated plainly: Gmail serves some attachments off a redirect
+to another Google host, and the request URL is the only hop the content
+script chooses. `same-origin` credentials mean no cookie goes on a
+cross-origin hop, and whatever comes back is treated as what the page
+could have handed over anyway -- attacker-chosen ciphertext, the
+accepted case. The bytes reach the panel as base64 in the message
+reply, are checked there as a `GmailFile` (name and base64 shape) like
+any message from a tab, and are staged as a dropped file would be, then
+run unattended under §15 (an armored `.asc` is routed by what it is: a
+message, a signed message, or a public key → import; a PRIVATE key is
+refused, as the worker refuses it from a banner). The panel cannot name
+a chip the user did not press, and nothing is fetched on scan.
+
+Outbound, encrypted files are handed to the draft as a user dropping them
+would: `GMAIL_ATTACH` (or `GMAIL_FILL` with `files`) carries base64 bytes,
+each checked by `isEncryptedFileBytes` -- binary OpenPGP whose FIRST
+PACKET is a session-key packet, an armored `PGP MESSAGE` under the same
+rule, or an age file by its magic -- in the panel before sending and
+again in the content script before a `DataTransfer` of `File`s is
+dropped on the compose body. Any file failing the check means NONE is
+dropped. A signed-only file, a decrypt result or a zip is refused by
+shape, the same discipline as `isArmoredMessageOnly`. Not yet verified
+against live Gmail's drop handler (the stand-in's records what lands);
+if Gmail ignores synthetic drops the fallback is Download.
+
+**"Add to Gmail" with no draft.** With the add-on on, "Add to Gmail"
+replaces Download for any encrypted text result, including one written
+entirely in the panel (and "Attach to Gmail" for encrypted files). Without a draft to return to, the panel opens
+Gmail's own compose URL (`/mail/?view=cm`, To line from the picked
+contacts' addresses, built from the manifest's origin) in a new tab, and
+sends `GMAIL_FILL` to that tab once it has loaded on Gmail's origin. The
+body is NOT put in the URL (it would sit in history and can exceed what
+Google's front end accepts). The content script writes it only into a
+single compose window whose body is empty, waiting at most 15 seconds;
+more than one compose window, or one with text in it, is refused rather
+than guessed at. Same armor check, same single send path.
+
+**Which draft, which people.** An empty Gmail draft joins what is in the
+panel only in the Reply flow (Reply on a decrypted message, then Encrypt
+on Gmail's reply window); anything else starts the panel clean, so a
+half-written note to someone else cannot be carried into this draft.
+Recipients are To and Cc only. **Bcc is never read**: every OpenPGP
+message lists the key id of each recipient, so encrypting to a Bcc'd key
+would show it to everyone on the To line. Gmail's Bcc row is skipped
+wherever it is recognisable (`SEL.bccArea`); a Bcc chip Gmail marks some
+other way would be read as To/Cc, which is why the strip shows every
+address it took. The worker filters the addresses again before storing
+them.
+
+**"Search for key" is the existing lookup, on a click.** An address with
+no key gets a button that opens the import page with that address typed
+into the lookup and runs it: the same worker request to keys.openpgp.org
+as typing it by hand (§7.1, T-KEYSERVER-LOOKUP-DISCLOSURE), one press per
+address, and absent (replaced by "Add a key") when `keyDiscoveryEnabled`
+is off. Nothing is looked up automatically when a draft opens. A key
+imported while the draft is open is matched against its addresses and
+selected; the warning is computed from the current selection, so it
+always says who cannot read the message as it stands.
+
+**Recipients go back to Gmail too.** A contact picked in the panel who is
+not on the draft yet is added to its To line (`GMAIL_ADD_RECIPIENTS`):
+the key's first address that passes `isEmailAddress`, typed into Gmail's
+own To box so Gmail makes the chip. Addresses only, validated by the
+panel and again by the content script, sent through the same single
+panel send path as an insert (so the audit's pinned `tabs.sendMessage`
+count did not change) with the same permission and `documentId` checks.
+The user's own keys are never added, and removing a recipient in the
+panel does not remove anyone from Gmail.
+
+**Turning it off.** Revoking the permission only stops future injections,
+so Settings first sends `GMAIL_TEARDOWN` to every open Gmail tab (while the
+permission still lets it find them), and each running copy removes its UI
+and stops answering. The worker also remembers the last known grant and
+refuses a `GMAIL_OPEN` without opening the panel when it knows access is
+off. A newer copy of the script takes over from an older one in the same
+page.
+
+**`scripting` is a channel, so it is pinned.** With the Gmail grant held,
+`chrome.scripting.executeScript({world: "MAIN", func, args})` from any
+extension realm would run code inside mail.google.com, outside the
+panel's `connect-src` and the worker's pinned fetches. The network census
+cannot see that, so `audit-network.mjs` pins the privileged calls
+separately: exactly one `registerContentScripts` and one `executeScript`
+in the worker, each with an exact literal options shape (`files` only; a
+`func`, `world`, `args` or `css` key fails the build), none anywhere else,
+and exactly two `tabs.sendMessage` sites in the panel (`sendToGmailTab`,
+which insert, add-recipients, fill, attach and fetch-attachment all go
+through, and teardown). A compromised dependency in the panel or worker realm (§8.10)
+that used `scripting` would have to change these counts.
+
+**What Gmail still sees, stated rather than hidden.** Gmail necessarily
+sees what the add-on reads (it rendered it), the ciphertext and files it
+writes, and the reader frame's size and state (never its contents).
+If the user types into Gmail's own compose box before pressing Encrypt,
+Gmail has that text and has probably saved it as a server-side draft; the
+Settings page says so and the flow invites writing in the panel instead.
+Compose ids and banners are visible to Gmail's scripts; neither carries
+anything secret, and the insert path cannot be driven from the page.
+Recorded as T-GMAIL-PAGE-BOUNDARY and T-GMAIL-DRAFT-PLAINTEXT.
+
+**Not yet handled.** PGP/MIME (`encrypted.asc` wrapping a MIME body)
+decrypts to raw MIME text in the panel; no MIME parsing is attempted.
+Clipped messages get a
+banner that opens Gmail's own "View entire message" page, where the add-on
+runs again. The banner follows ONLY an anchor in Gmail's `.iX` footer,
+never one inside the email body, and only to the current origin under
+`/mail/` with `view=lg`, rebuilt from its parts; a hostile email cannot
+make a PGP Tools-branded button open a page of its choosing. A verified
+signature from a forwarded message shows its real signer, which may not
+be the Gmail sender; the panel names the signer, not the sender.
+
+**Verified by:** `lib/gmail/protocol.test.ts`, `lib/gmail/dom.test.ts`,
+`lib/gmail/recipients.test.ts`, `lib/pending-op.test.ts`,
+`scripts/audit-network.mjs` (content census, manifest pins), and
+the privileged-API pins in the same audit, and
+`e2e/gmail.spec.ts` (banner → panel decrypt with no plaintext anywhere in
+Gmail's page; compose → draft + recipients into the panel → only
+ciphertext back; a non-armor `GMAIL_INSERT` refused; a `GMAIL_OPEN` from a
+non-Gmail sender refused with no pending op written). The e2e grants the
+host permission at load, because Chrome's prompt cannot be driven
+headless (`e2e/gmail-fixture.ts`).

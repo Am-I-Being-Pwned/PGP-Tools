@@ -84,7 +84,7 @@
 | Signatures | Atomic decrypt+verify (no TOCTOU) |
 | Sessions | Auto-lock on inactivity, panel close, or per-op |
 | Brute-force | Argon2id 64 MB / 3 iterations - the cost sits in the KDF, which also holds against an offline attack on a stolen blob |
-| Scope | No content scripts - extension sandbox only |
+| Scope | No content scripts by default - the opt-in Gmail add-on adds one, with no keys or wasm and a single pinned same-origin fetch for attachments, plus a reader frame Gmail cannot read into (SECURITY.md §17) |
 
 ## Stack
 

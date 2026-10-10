@@ -217,6 +217,9 @@ export interface WorkspaceState {
    *  the auto-run effect in WorkspaceView). Anything the user does to
    *  the input first cancels it. */
   autoRunAction: "decrypt" | "verify" | null;
+  /** Arm an unattended run of the staged message, as a context-menu op
+   *  does (a Gmail attachment the panel just fetched). */
+  armAutoRun: (action: "decrypt" | "verify") => void;
   clearAutoRun: () => void;
   setNeedsPassword: (b: boolean) => void;
   passwordInput: string;
@@ -525,6 +528,10 @@ export function useWorkspaceState(opts: {
     "decrypt" | "verify" | null
   >(null);
   const clearAutoRun = useCallback(() => setAutoRunAction(null), []);
+  const armAutoRun = useCallback(
+    (action: "decrypt" | "verify") => setAutoRunAction(action),
+    [],
+  );
   const [passwordInput, setPasswordInput] = useState("");
   const [passwordError, setPasswordError] = useState<string | null>(null);
   // Which engine the staged input is in, as a BOOLEAN derived from the
@@ -1023,6 +1030,7 @@ export function useWorkspaceState(opts: {
     setMessageEncryption,
     autoRunAction,
     clearAutoRun,
+    armAutoRun,
     setNeedsPassword,
     passwordInput,
     setPasswordInput,

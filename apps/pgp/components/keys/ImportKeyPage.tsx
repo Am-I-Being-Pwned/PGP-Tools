@@ -78,6 +78,11 @@ interface ImportKeyPageProps {
   /** When provided, skip the source step and preview this armored key
    *  (e.g. from a global drop). Read once at mount. */
   initialArmored?: string | null;
+  /** Open on the lookup with this already typed in, and run it: the
+   *  Gmail draft strip's "Search for key", where clicking IS the request
+   *  to look the address up. Read once at mount; ignored when
+   *  `keyDiscoveryEnabled` is off (the field is then just not offered). */
+  initialLookup?: string | null;
   /** When true, also accept a raw RSA private key PEM as a CRX signing key. */
   crxSigningEnabled?: boolean;
   /** Master enable for the network lookups on the source step. DEFAULTS
@@ -112,6 +117,7 @@ export function ImportKeyPage({
   reusePasskeyCredentialId,
   masterSealSalt,
   initialArmored,
+  initialLookup,
   crxSigningEnabled,
   keyDiscoveryEnabled = true,
   onImportCrx,
@@ -133,7 +139,7 @@ export function ImportKeyPage({
   /** What is typed in the one lookup box. It is ONE box because getting
    *  a key is one question -- `classifyLookup` decides whether the
    *  answer comes from GitHub or from keys.openpgp.org. */
-  const [lookupInput, setLookupInput] = useState("");
+  const [lookupInput, setLookupInput] = useState(initialLookup ?? "");
   /** A failure the user didn't cause and can't fix by retrying -- "this
    *  person has published no SSH keys", or "the keyserver has no key for
    *  that address". Rendered in its own amber callout under the lookup
@@ -550,7 +556,7 @@ export function ImportKeyPage({
    * string is a valid GitHub username AND a fingerprint), so it is pure
    * and tested rather than inline in a handler.
    */
-  const runLookup = async () => {
+  const runLookup = async (input = lookupInput) => {
     setError(null);
     setNotice(null);
     // Same guard as the paste path, and deliberately the same ref: a
@@ -558,7 +564,7 @@ export function ImportKeyPage({
     // start a second lookup whose response overwrites the first's.
     if (parsingRef.current) return;
 
-    const routed = classifyLookup(lookupInput);
+    const routed = classifyLookup(input);
     if (!routed) {
       setError(t("import_lookup_invalid"));
       return;
@@ -612,6 +618,20 @@ export function ImportKeyPage({
     const text = prefill.current;
     prefill.current = null;
     if (text) void handleSourceRef.current(text);
+  }, []);
+
+  // "Search for key" from a Gmail draft: run the lookup it opened with.
+  const autoLookup = useRef(
+    keyDiscoveryEnabled ? (initialLookup ?? null) : null,
+  );
+  const runLookupRef = useRef(runLookup);
+  useEffect(() => {
+    runLookupRef.current = runLookup;
+  });
+  useEffect(() => {
+    const q = autoLookup.current;
+    autoLookup.current = null;
+    if (q) void runLookupRef.current(q);
   }, []);
 
   // Paste anywhere on the source step -- there's no textarea to aim at.

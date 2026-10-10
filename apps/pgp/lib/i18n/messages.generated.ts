@@ -205,6 +205,99 @@ export interface MessageArgs {
   "common_verify": undefined;
   "extDescription": undefined;
   "extName": undefined;
+  "gmail_attach": undefined;
+  "gmail_attached": undefined;
+  "gmail_attached_desc": undefined;
+  "gmail_attachment_decrypt": undefined;
+  "gmail_attachment_failed": undefined;
+  "gmail_attachment_failed_desc": undefined;
+  "gmail_attachment_not_pgp": undefined;
+  "gmail_attachment_open": undefined;
+  "gmail_attachment_too_large": undefined;
+  "gmail_attachment_tooltip": { name: string | number };
+  "gmail_banner_clipped_action": undefined;
+  "gmail_banner_clipped_title": undefined;
+  "gmail_banner_key_action": undefined;
+  "gmail_banner_key_title": undefined;
+  "gmail_banner_message_action": undefined;
+  "gmail_banner_message_title": undefined;
+  "gmail_banner_signed_action": undefined;
+  "gmail_banner_signed_title": undefined;
+  "gmail_compose_action": undefined;
+  "gmail_compose_done": undefined;
+  "gmail_compose_on": undefined;
+  "gmail_compose_opened": undefined;
+  "gmail_compose_tooltip": undefined;
+  "gmail_compose_tooltip_off": undefined;
+  "gmail_compose_tooltip_on": undefined;
+  "gmail_compose_writing": undefined;
+  "gmail_cover_action": undefined;
+  "gmail_cover_dropped": undefined;
+  "gmail_cover_sub": undefined;
+  "gmail_cover_title": undefined;
+  "gmail_encrypt_and_attach": undefined;
+  "gmail_encrypt_and_send": undefined;
+  "gmail_frame_decrypted": undefined;
+  "gmail_frame_decrypting": undefined;
+  "gmail_frame_fail_bad_signature": undefined;
+  "gmail_frame_fail_error": undefined;
+  "gmail_frame_fail_no_key": undefined;
+  "gmail_frame_fail_password": undefined;
+  "gmail_frame_failed": undefined;
+  "gmail_frame_hide_original": undefined;
+  "gmail_frame_locked": undefined;
+  "gmail_frame_locked_sub": undefined;
+  "gmail_frame_open": undefined;
+  "gmail_frame_open_tooltip": undefined;
+  "gmail_frame_reply": undefined;
+  "gmail_frame_reply_tooltip": undefined;
+  "gmail_frame_show_original": undefined;
+  "gmail_frame_signed": undefined;
+  "gmail_frame_signed_by": { name: string | number };
+  "gmail_frame_signer_unknown": undefined;
+  "gmail_frame_text_label": undefined;
+  "gmail_frame_title": undefined;
+  "gmail_frame_unavailable": undefined;
+  "gmail_frame_unlock": undefined;
+  "gmail_frame_unsigned": undefined;
+  "gmail_frame_verifying": undefined;
+  "gmail_insert": undefined;
+  "gmail_insert_gone": undefined;
+  "gmail_insert_gone_desc": undefined;
+  "gmail_inserted_desc": undefined;
+  "gmail_inserted_press_send": undefined;
+  "gmail_notice_invalid": undefined;
+  "gmail_notice_not_enabled": undefined;
+  "gmail_notice_opened": undefined;
+  "gmail_notice_orphaned": undefined;
+  "gmail_notice_panel_failed": undefined;
+  "gmail_opened_compose": undefined;
+  "gmail_opening": undefined;
+  "gmail_sent": undefined;
+  "gmail_sent_desc": undefined;
+  "gmail_settings_denied": undefined;
+  "gmail_settings_does_attachments": undefined;
+  "gmail_settings_does_compose": undefined;
+  "gmail_settings_does_read": undefined;
+  "gmail_settings_does_recipients": undefined;
+  "gmail_settings_does_title": undefined;
+  "gmail_settings_draft_note": undefined;
+  "gmail_settings_limits": undefined;
+  "gmail_settings_never_account": undefined;
+  "gmail_settings_never_keys": undefined;
+  "gmail_settings_never_plaintext": undefined;
+  "gmail_settings_never_title": undefined;
+  "gmail_settings_pitch": undefined;
+  "gmail_settings_row": undefined;
+  "gmail_settings_title": undefined;
+  "gmail_settings_toggle_desc": undefined;
+  "gmail_settings_toggle_title": undefined;
+  "gmail_strip_add_key": undefined;
+  "gmail_strip_dismiss": undefined;
+  "gmail_strip_no_recipients": undefined;
+  "gmail_strip_search_key": undefined;
+  "gmail_strip_title": undefined;
+  "gmail_strip_to": { addresses: string | number };
   "import_action_import_contact": undefined;
   "import_action_replace_stored": undefined;
   "import_action_update_contact": undefined;
@@ -880,6 +973,7 @@ export interface PluralArgs {
   "app_import_view_key": undefined;
   "app_onboarding_expiry_years": undefined;
   "app_oversized_files": { files: string | number; limit: string | number };
+  "gmail_strip_missing": undefined;
   "import_added_contacts": undefined;
   "import_change_keys_added": undefined;
   "import_change_keys_removed": undefined;
@@ -975,6 +1069,10 @@ export const PLACEHOLDER_ORDER: Readonly<Partial<Record<string, readonly string[
   "app_oversized_files_one": ["files","limit"],
   "app_oversized_files_other": ["files","limit"],
   "app_oversized_more": ["names","count"],
+  "gmail_attachment_tooltip": ["name"],
+  "gmail_frame_signed_by": ["name"],
+  "gmail_strip_missing_other": ["count"],
+  "gmail_strip_to": ["addresses"],
   "import_added_contacts_one": ["count"],
   "import_added_contacts_other": ["count"],
   "import_change_keys_added_one": ["count"],

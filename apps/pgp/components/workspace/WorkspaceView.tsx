@@ -1,10 +1,11 @@
 import type { ReactElement } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeftIcon,
   CheckIcon,
   ClipboardIcon,
   DownloadIcon,
+  MailIcon,
   ReplyIcon,
   RotateCcwIcon,
 } from "lucide-react";
@@ -29,16 +30,23 @@ import {
 import type { WorkspaceOpsBridge } from "../../hooks/useActionContext";
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
 import type { RemedyAction } from "../../lib/errors/present";
+import type {
+  GmailAttachmentTarget,
+  GmailComposeTarget,
+  GmailFetchAttachmentResponse,
+} from "../../lib/gmail/protocol";
 import type { WorkspaceAction } from "../../lib/messages";
 import type { ReaderSigner } from "../../lib/reader-protocol";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
+import type { FileResult } from "../../lib/utils/download";
 import type { WorkspaceDraftSource } from "../../lib/workspace-draft";
 import type { WorkspaceIntake } from "./useWorkspaceState";
 import type { ComposeTools } from "./WorkspaceInput";
 import { useComposeTranslation } from "../../hooks/useComposeTranslation";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import { useDelayedFlag } from "../../hooks/useDelayedFlag";
+import { useGmailAccess } from "../../hooks/useGmailAccess";
 import { useShortcut } from "../../hooks/useShortcut";
 import { useTranslation } from "../../hooks/useTranslation";
 import {
@@ -48,6 +56,7 @@ import {
 } from "../../lib/actions/definitions";
 import { languageLabel } from "../../lib/ai/languages";
 import { recoverArmorIfNeeded } from "../../lib/armor-recovery";
+import { classifyAction } from "../../lib/classify-action";
 import { applyTextareaEdit } from "../../lib/compose/apply-edit";
 import {
   buildEncryptRecipients,
@@ -55,6 +64,14 @@ import {
   sshPasswordReason,
   toSelectedRecipient,
 } from "../../lib/encrypt-recipients";
+import {
+  base64ToBytes,
+  isArmoredMessageOnly,
+  isEncryptedFileBytes,
+  isGmailFile,
+} from "../../lib/gmail/protocol";
+import { addressesToAdd } from "../../lib/gmail/recipients";
+import { sendToGmailTab } from "../../lib/gmail/send-to-tab";
 import { t } from "../../lib/i18n";
 import { requestUnlimitedHistoryStorage } from "../../lib/storage/history";
 import { isPgpRecord, isSshRecord } from "../../lib/storage/key-kind";
@@ -64,6 +81,7 @@ import { saveCrxViaPrompt } from "../../lib/utils/download";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 import { hasOpenSlideOver } from "../shared/SlideOver";
 import { ToggleBadge } from "../shared/ToggleBadge";
+import { GmailComposeStrip } from "./GmailComposeStrip";
 import { HistoryButton } from "./HistoryPage";
 import { KeySelector } from "./KeySelector";
 import { MessagePasswordPage } from "./MessagePasswordPage";
@@ -74,6 +92,7 @@ import {
   TranslateToggle,
   TranslationNote,
 } from "./TranslationPanel";
+import { useGmailCompose } from "./useGmailCompose";
 import { useWorkspaceOperations } from "./useWorkspaceOperations";
 import { useWorkspaceState } from "./useWorkspaceState";
 import { modeLabel, WorkspaceInput } from "./WorkspaceInput";
@@ -129,7 +148,17 @@ interface WorkspaceViewProps {
   onUnlockWithPasskey: (
     blob: ProtectedKeyBlob,
   ) => Promise<boolean | "cancelled">;
-  pendingAction?: { action: WorkspaceAction; text: string } | null;
+  pendingAction?: {
+    /** The pending op's id, so it is acted on once. */
+    id?: string;
+    action: WorkspaceAction;
+    text: string;
+    /** Set when the op came from a Gmail compose window. */
+    gmail?: GmailComposeTarget | null;
+    /** Set when the op came from an encrypted attachment's button in
+     *  Gmail: the panel fetches its bytes from that tab and stages them. */
+    gmailAttachment?: GmailAttachmentTarget | null;
+  } | null;
   onClearPending?: () => void;
   /** The vault's stores (keys, contacts) are still being read, or keys
    *  are still opening off the unlock ceremony. A context-menu auto-run
@@ -144,6 +173,11 @@ interface WorkspaceViewProps {
   encryptToKeyId?: string | null;
   onClearEncryptTo?: () => void;
   onNavigateToKeys?: (importPrefill?: string) => void;
+  /** Open the import page looking this address up (Gmail strip). */
+  onSearchKey?: (address: string) => void;
+  /** Whether online key lookups are on; without them "Search for key"
+   *  becomes "Add a key" (the import page, no lookup). */
+  keyDiscoveryEnabled?: boolean;
   /** Take the user to a key they already hold, highlighted in the list. */
   onRevealKey?: (keyId: string) => void;
   autoDownloadFiles?: boolean;
@@ -192,6 +226,8 @@ export function WorkspaceView({
   encryptToKeyId,
   onClearEncryptTo,
   onNavigateToKeys,
+  onSearchKey,
+  keyDiscoveryEnabled = true,
   onRevealKey,
   autoDownloadFiles,
   autoDownloadText,
@@ -229,6 +265,19 @@ export function WorkspaceView({
     onIntakeConsumed,
     prefsVersion,
     defaultKeyId,
+  });
+
+  const replyFlowRef = useRef(false);
+  const gmailCompose = useGmailCompose({
+    pendingAction,
+    contacts,
+    myKeys,
+    vaultSettling,
+    selectedRecipientIds: s.selectedRecipientIds,
+    setSelectedRecipientIds: s.setSelectedRecipientIds,
+    resetOutput: s.resetOutput,
+    resetAll: s.resetAll,
+    replyFlowRef,
   });
 
   const ops = useWorkspaceOperations({
@@ -421,6 +470,215 @@ export function WorkspaceView({
     clearTimeout(copyTimer.current);
     copyTimer.current = setTimeout(() => setCopied(false), 2000);
   };
+  // An encrypted attachment the user pressed Decrypt on in Gmail. The op
+  // carries only the chip's id: the bytes are pulled from the Gmail tab
+  // here (the content script fetches them as the page -- the one network
+  // call it can make), then staged exactly as a dropped file would be and
+  // run unattended under the §15 rules. An armored `.asc` is read as text
+  // and routed by what it is: a message, a signed message, or a key.
+  const attachmentHandledRef = useRef<string | undefined>(undefined);
+  const [fetchingAttachment, setFetchingAttachment] = useState(false);
+  // The op is cleared (and this effect re-run) the moment it is routed,
+  // so the fetch must outlive the effect: only an unmount cancels it.
+  const unmountedRef = useRef(false);
+  useEffect(() => {
+    unmountedRef.current = false;
+    return () => {
+      unmountedRef.current = true;
+    };
+  }, []);
+  const {
+    setMode: stateSetMode,
+    setInput: stateSetInput,
+    resetOutput: stateResetOutput,
+    handleFileDrop: stateHandleFileDrop,
+    armAutoRun,
+  } = s;
+  useEffect(() => {
+    const att = pendingAction?.gmailAttachment;
+    const id = pendingAction?.id;
+    if (!att || id === undefined || attachmentHandledRef.current === id) {
+      return;
+    }
+    attachmentHandledRef.current = id;
+    setFetchingAttachment(true);
+    void sendToGmailTab<GmailFetchAttachmentResponse>(
+      att.tabId,
+      { type: "GMAIL_FETCH_ATTACHMENT", attachmentId: att.attachmentId },
+      att.documentId,
+    ).then((res) => {
+      if (unmountedRef.current) return;
+      setFetchingAttachment(false);
+      // The reply is the content script's word for it; the file is
+      // checked as any other message from a tab would be.
+      if (res?.ok && !isGmailFile(res.file)) {
+        toast.error(t("gmail_attachment_failed"), { id: "gmail-attachment" });
+        return;
+      }
+      if (!res?.ok) {
+        toast.error(
+          res?.error === "too-large"
+            ? t("gmail_attachment_too_large")
+            : t("gmail_attachment_failed"),
+          {
+            id: "gmail-attachment",
+            description: t("gmail_attachment_failed_desc"),
+          },
+        );
+        return;
+      }
+      const bytes = base64ToBytes(res.file.data);
+      const head = new TextDecoder().decode(bytes.subarray(0, 40));
+      if (
+        head.startsWith("-----BEGIN PGP ") ||
+        head.startsWith("-----BEGIN AGE")
+      ) {
+        const text = new TextDecoder().decode(bytes);
+        const action = classifyAction(text);
+        // A public key is an import. A PRIVATE key in an email is not
+        // something to route anywhere from a click in Gmail -- the same
+        // rule the worker applies to a banner.
+        if (action === "import-public") {
+          onNavigateToKeys?.(text);
+          return;
+        }
+        if (action !== "decrypt" && action !== "verify") {
+          toast.error(t("gmail_attachment_not_pgp"), {
+            id: "gmail-attachment",
+          });
+          return;
+        }
+        stateSetMode(action);
+        stateSetInput(text);
+        stateResetOutput();
+        armAutoRun(action);
+        return;
+      }
+      if (!isEncryptedFileBytes(bytes)) {
+        toast.error(t("gmail_attachment_not_pgp"), { id: "gmail-attachment" });
+        return;
+      }
+      stateHandleFileDrop([new File([bytes as BlobPart], res.file.name)]);
+      stateSetMode("decrypt");
+      armAutoRun("decrypt");
+    });
+  }, [
+    pendingAction,
+    onNavigateToKeys,
+    stateSetMode,
+    stateSetInput,
+    stateResetOutput,
+    stateHandleFileDrop,
+    armAutoRun,
+  ]);
+
+  // "Add to Gmail" takes Download's place whenever the Gmail add-on is on
+  // and the result is a lone encrypted PGP MESSAGE block: an encrypted
+  // message is for SENDING, and with the add-on on, Gmail is where it is
+  // sent. With a draft open (the user came from Gmail's Encrypt button)
+  // it goes back into that draft; otherwise Gmail opens a new message
+  // addressed to the recipients picked here, with the ciphertext in the
+  // body. Anything else (an age file, binary output, a signed-only
+  // message) is not something to mail as text, so Download stays.
+  const gmail = useGmailAccess();
+  const gmailOn = gmailCompose.target !== null || gmail.enabled === true;
+  const gmailTextReady =
+    gmailOn &&
+    s.mode === "encrypt" &&
+    s.operationDone &&
+    s.hasOutput &&
+    isArmoredMessageOnly(s.getOutput());
+  // Encrypted FILES go to Gmail as attachments, the same way: every
+  // result must be ciphertext by its header (a zip of them is not), or
+  // Download stays.
+  const gmailFileResults: FileResult[] | null = useMemo(() => {
+    if (!gmailOn || s.mode !== "encrypt" || !s.operationDone) return null;
+    const results =
+      s.fileResults.length > 0
+        ? s.fileResults
+        : s.binaryOutput
+          ? [{ name: ops.outputFileName(), data: s.binaryOutput }]
+          : [];
+    if (results.length === 0) return null;
+    return results.every((r) => isEncryptedFileBytes(r.data)) ? results : null;
+    // `ops` is recreated every render; the name it produces depends only
+    // on the state listed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gmailOn, s.mode, s.operationDone, s.fileResults, s.binaryOutput]);
+  const gmailReady = gmailTextReady || gmailFileResults !== null;
+  const [sendingToGmail, setSendingToGmail] = useState(false);
+  // Writing a Gmail draft: the run button (and mod+Enter, its shortcut)
+  // encrypts AND puts the result in the draft, one action. The ref marks
+  // a run started that way, so the add follows only that run's result.
+  const gmailDraftMode = gmailCompose.target !== null && s.mode === "encrypt";
+  const autoAddToGmailRef = useRef(false);
+  const handleAddToGmail = async () => {
+    setSendingToGmail(true);
+    const drafted = gmailCompose.target !== null;
+    const to = addressesToAdd(
+      [],
+      contacts.filter((c) => s.selectedRecipientIds.includes(c.keyId)),
+    );
+    const files = gmailTextReady ? null : gmailFileResults;
+    // Writing a draft: the ciphertext goes in and Gmail's Send is
+    // pressed for it. "Sent" is Gmail's compose window going away; if it
+    // stayed (an empty-subject prompt, say), the user presses Send.
+    const res = files
+      ? drafted
+        ? await gmailCompose.attach(files)
+        : await gmailCompose.openNew({ files }, to)
+      : drafted
+        ? await gmailCompose.insert(s.getOutput(), { send: true })
+        : await gmailCompose.openNew({ armored: s.getOutput() }, to);
+    setSendingToGmail(false);
+    if (res.ok) {
+      const sent = "sent" in res && res.sent === true;
+      toast.success(
+        !drafted
+          ? t("gmail_opened_compose")
+          : files
+            ? t("gmail_attached")
+            : sent
+              ? t("gmail_sent")
+              : t("gmail_inserted_press_send"),
+        {
+          id: "gmail-added",
+          description: files
+            ? t("gmail_attached_desc")
+            : sent
+              ? t("gmail_sent_desc")
+              : t("gmail_inserted_desc"),
+        },
+      );
+      // The message now lives in Gmail; the panel keeps no copy of
+      // either the plaintext or the ciphertext.
+      s.resetAll();
+      return;
+    }
+    if (res.error === "compose-gone") {
+      gmailCompose.dismiss();
+      toast.error(t("gmail_insert_gone"), {
+        id: "gmail-insert-gone",
+        description: t("gmail_insert_gone_desc"),
+      });
+      return;
+    }
+    toast.error(t("gmail_notice_invalid"), { id: "gmail-insert-invalid" });
+  };
+  const handleAddToGmailRef = useRef(handleAddToGmail);
+  useEffect(() => {
+    handleAddToGmailRef.current = handleAddToGmail;
+  });
+  useEffect(() => {
+    if (!autoAddToGmailRef.current) return;
+    if (s.error) {
+      autoAddToGmailRef.current = false;
+      return;
+    }
+    if (!gmailReady) return;
+    autoAddToGmailRef.current = false;
+    void handleAddToGmailRef.current();
+  }, [gmailReady, s.error]);
   const canCrxSign = !!crxSigningEnabled && (crxKeys?.length ?? 0) > 0;
   const singleCrxFile = s.files.length === 1 && /\.crx$/i.test(s.files[0].name);
   // CRX signs a packed extension: offer it only for a single .zip that
@@ -518,6 +776,8 @@ export function WorkspaceView({
         s.resetAll();
         s.setMode("encrypt");
         s.setSelectedRecipientIds([signer.keyId]);
+        // Encrypt on Gmail's reply window now joins this reply.
+        replyFlowRef.current = true;
         // The new tab takes focus; hand it back so the reply can be typed
         // straight away. Best effort -- the browser may keep it on the
         // tab -- and after the reset has swapped the message box back in.
@@ -791,6 +1051,9 @@ export function WorkspaceView({
     composeTranslation,
     translation,
     openReply,
+    gmailDraftMode,
+    gmailReady,
+    handleAddToGmail,
   });
   useEffect(() => {
     paletteRef.current = {
@@ -806,6 +1069,9 @@ export function WorkspaceView({
       composeTranslation,
       translation,
       openReply,
+      gmailDraftMode,
+      gmailReady,
+      handleAddToGmail,
     };
   });
   // A message opened from the context menu runs by itself: verify always
@@ -833,7 +1099,11 @@ export function WorkspaceView({
     !!pendingAction?.text &&
     (pendingAction.action === "decrypt" || pendingAction.action === "verify");
   const hideForAutoRun =
-    awaitingPendingOp || arriving || autoRun !== null || autoRunning;
+    awaitingPendingOp ||
+    arriving ||
+    fetchingAttachment ||
+    autoRun !== null ||
+    autoRunning;
   useEffect(() => {
     if (!autoRun || vaultSettling || s.loading) return;
     const give = () => s.clearAutoRun();
@@ -898,9 +1168,19 @@ export function WorkspaceView({
       // In verify-done state Run resets, like the button it mirrors.
       execute: () => {
         const p = paletteRef.current;
+        // A finished encrypt for Gmail: mod+Enter sends it on, like the
+        // "Add to Gmail" button it stands in for.
+        if (p.gmailReady) {
+          void p.handleAddToGmail();
+          return;
+        }
         if (!p.canRun) return;
         if (p.s.operationDone && p.s.mode === "verify") p.s.resetAll();
-        else void p.ops.execute();
+        else {
+          // Writing a Gmail draft: encrypt, then straight into the draft.
+          if (p.gmailDraftMode) autoAddToGmailRef.current = true;
+          void p.ops.execute();
+        }
       },
       clearInput: () => paletteRef.current.s.resetAll(),
       copyOutput: () => {
@@ -1118,6 +1398,18 @@ export function WorkspaceView({
       className={`flex h-full flex-col gap-3 ${hideForAutoRun ? "pointer-events-none opacity-0" : ""}`}
       aria-busy={hideForAutoRun || undefined}
     >
+      {gmailCompose.target && s.mode === "encrypt" && (
+        <GmailComposeStrip
+          target={gmailCompose.target}
+          missing={gmailCompose.missing}
+          onDismiss={gmailCompose.dismiss}
+          onSearchKey={
+            keyDiscoveryEnabled && onSearchKey ? onSearchKey : undefined
+          }
+          onAddKey={onNavigateToKeys ? () => onNavigateToKeys() : undefined}
+        />
+      )}
+
       <WorkspaceInput
         mode={s.mode}
         onModeChange={s.setMode}
@@ -1507,20 +1799,32 @@ export function WorkspaceView({
                   <div className="flex flex-1 gap-2">
                     {/* Icon + label; the shortcut lives in a hover
                         popover so it doesn't crowd the buttons. */}
-                    <ShortcutHint shortcut={DOWNLOAD_SHORTCUT}>
+                    {gmailReady ? (
                       <Button
                         className="flex-1"
-                        onClick={() => ops.triggerDownload()}
-                        disabled={s.loading}
-                        aria-keyshortcuts={ariaKeyShortcuts(
-                          DOWNLOAD_SHORTCUT,
-                          isMacPlatform(),
-                        )}
+                        onClick={() => void handleAddToGmail()}
+                        disabled={s.loading || sendingToGmail}
+                        shortcut={RUN_SHORTCUT}
                       >
-                        <DownloadIcon className="h-4 w-4" />
-                        {t("common_download")}
+                        <MailIcon className="h-4 w-4" />
+                        {gmailTextReady ? t("gmail_insert") : t("gmail_attach")}
                       </Button>
-                    </ShortcutHint>
+                    ) : (
+                      <ShortcutHint shortcut={DOWNLOAD_SHORTCUT}>
+                        <Button
+                          className="flex-1"
+                          onClick={() => ops.triggerDownload()}
+                          disabled={s.loading}
+                          aria-keyshortcuts={ariaKeyShortcuts(
+                            DOWNLOAD_SHORTCUT,
+                            isMacPlatform(),
+                          )}
+                        >
+                          <DownloadIcon className="h-4 w-4" />
+                          {t("common_download")}
+                        </Button>
+                      </ShortcutHint>
+                    )}
                     {s.hasOutput && (
                       <ShortcutHint shortcut={COPY_SHORTCUT}>
                         <Button
@@ -1545,11 +1849,16 @@ export function WorkspaceView({
                   </div>
                 ) : (
                   <Button
-                    className="flex-1 capitalize"
+                    className={`flex-1 ${gmailDraftMode ? "" : "capitalize"}`}
                     onClick={
                       s.operationDone && s.mode === "verify"
                         ? s.resetAll
-                        : ops.execute
+                        : gmailDraftMode
+                          ? () => {
+                              autoAddToGmailRef.current = true;
+                              void ops.execute();
+                            }
+                          : ops.execute
                     }
                     disabled={
                       s.loading ||
@@ -1567,7 +1876,11 @@ export function WorkspaceView({
                       ? t("workspace_processing")
                       : s.operationDone && s.mode === "verify"
                         ? t("workspace_reset")
-                        : modeLabel(s.mode)}
+                        : gmailDraftMode
+                          ? s.files.length > 0
+                            ? t("gmail_encrypt_and_attach")
+                            : t("gmail_encrypt_and_send")
+                          : modeLabel(s.mode)}
                   </Button>
                 )}
                 {/* Anything clearable (pasted input lingering after a nav
