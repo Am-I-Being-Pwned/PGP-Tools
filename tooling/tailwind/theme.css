@@ -1,7 +1,7 @@
 /* ────────────────────────────────────────────────────────────────────────────
  * AIBP - Deep theme
- * Green-tinted darks with Pip-Boy phosphor green primary.
- * Source palette: Pip-Boy #2BF08A on #080F0B darks
+ * Dark: flat neutral greys with a green "go" (the shipped look).
+ * Light: green-tinted variant.
  * ──────────────────────────────────────────────────────────────────────────── */
 
 :root {
@@ -54,50 +54,71 @@
   --shadow-2xl: 0px 2px 10px 0px hsl(0 0% 0% / 0.13);
   --tracking-normal: 0rem;
   --spacing: 0.25rem;
+  --chrome: oklch(0.985 0.004 160);
+  --track: oklch(0.92 0.008 160);
+  --raised: oklch(1 0 0);
+  --on: oklch(0.93 0.04 155);
+  --on-foreground: oklch(0.45 0.13 154);
+  --good: oklch(0.5 0.14 154);
+  --warn: oklch(0.6 0.13 75);
+  --bad: oklch(0.55 0.2 25);
 
-  /* Dark mode - pure black base, green accents only */
+  /* Dark mode - the AIBP family look: flat neutral greys, surfaces split
+     by gaps rather than lines, green only for "on" and "go". */
   @variant dark {
-    --background: oklch(0.07 0 0); /* near-black */
-    --foreground: oklch(0.93 0 0); /* clean white */
-    --card: oklch(0.17 0 0); /* dark grey */
-    --card-foreground: oklch(0.93 0 0);
-    --popover: oklch(0.17 0 0);
-    --popover-foreground: oklch(0.93 0 0);
-    --primary: oklch(0.72 0.14 155); /* green accent */
-    --primary-foreground: oklch(0.13 0 0); /* black */
-    --secondary: oklch(0.15 0 0);
-    --secondary-foreground: oklch(0.93 0 0);
-    --muted: oklch(0.15 0 0);
-    --muted-foreground: oklch(0.55 0 0); /* mid grey */
-    --accent: oklch(0.18 0 0);
-    --accent-foreground: oklch(0.93 0 0);
-    --destructive: oklch(0.65 0.2 25); /* red */
-    --destructive-foreground: oklch(0.98 0 0);
-    --border: oklch(0.28 0 0); /* grey border */
-    --input: oklch(0.17 0 0);
-    --ring: oklch(0.72 0.14 155); /* green focus ring */
-    --chart-1: oklch(0.72 0.14 155);
+    --background: #0a0a0a; /* page */
+    --foreground: #ededed;
+    --card: #151515; /* a block in a card stack */
+    --card-foreground: #ededed;
+    --popover: #1c1c1c; /* floats over the page, so a step lighter */
+    --popover-foreground: #ededed;
+    --primary: #4fc185; /* go */
+    --primary-foreground: #04140b;
+    --secondary: #242424; /* raised chip / secondary button */
+    --secondary-foreground: #ededed;
+    --muted: #151515;
+    --muted-foreground: #8a8a8a;
+    --accent: #262626; /* hover */
+    --accent-foreground: #ededed;
+    --destructive: #e5484d;
+    --destructive-foreground: #fafafa;
+    --border: #262626;
+    --input: #121212;
+    --ring: #4fc185;
+    --chart-1: #4fc185;
     --chart-2: oklch(0.6 0.12 155);
-    --chart-3: oklch(0.75 0.17 84);
+    --chart-3: #d9b23f;
     --chart-4: oklch(0.5 0.08 155);
     --chart-5: oklch(0.35 0.04 155);
-    --sidebar: oklch(0.09 0 0);
-    --sidebar-foreground: oklch(0.93 0 0);
-    --sidebar-primary: oklch(0.72 0.14 155);
-    --sidebar-primary-foreground: oklch(0.98 0 0);
-    --sidebar-accent: oklch(0.15 0 0);
-    --sidebar-accent-foreground: oklch(0.93 0 0);
-    --sidebar-border: oklch(0.18 0 0);
-    --sidebar-ring: oklch(0.72 0.14 155);
-    --radius: 0.375rem;
-    --shadow-2xs: 0 1px 4px oklch(0 0 0 / 0.4);
-    --shadow-xs: 0 1px 8px oklch(0 0 0 / 0.5);
-    --shadow-sm: 0 2px 12px oklch(0 0 0 / 0.5), 0 1px 3px oklch(0 0 0 / 0.4);
-    --shadow: 0 2px 12px oklch(0 0 0 / 0.5), 0 1px 3px oklch(0 0 0 / 0.4);
+    --sidebar: #101010;
+    --sidebar-foreground: #ededed;
+    --sidebar-primary: #4fc185;
+    --sidebar-primary-foreground: #04140b;
+    --sidebar-accent: #151515;
+    --sidebar-accent-foreground: #ededed;
+    --sidebar-border: #1c1c1c;
+    --sidebar-ring: #4fc185;
+    /* Design-language extras */
+    --chrome: #101010; /* tab bar / footer strip */
+    --track: #151515; /* segmented control well */
+    --raised: #262626; /* selected segment */
+    --on: #1f2a23; /* an option bar segment that is on */
+    --on-foreground: #6dbd8a;
+    --good: #6dbd8a;
+    --warn: #d9b23f;
+    --bad: #ff7a7e;
+    --radius: 0.5rem;
+    --shadow-2xs: 0 1px 2px oklch(0 0 0 / 0.4);
+    --shadow-xs: 0 1px 2px oklch(0 0 0 / 0.5);
+    --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.5);
+    --shadow: 0 1px 2px oklch(0 0 0 / 0.5);
     --shadow-md: 0 4px 16px oklch(0 0 0 / 0.5), 0 2px 4px oklch(0 0 0 / 0.4);
-    --shadow-lg: 0 8px 24px oklch(0 0 0 / 0.5), 0 4px 6px oklch(0 0 0 / 0.4);
-    --shadow-xl: 0 12px 32px oklch(0 0 0 / 0.5), 0 8px 10px oklch(0 0 0 / 0.4);
-    --shadow-2xl: 0 16px 48px oklch(0 0 0 / 0.6);
+    --shadow-lg:
+      0 0 0 1px oklch(1 0 0 / 0.07), 0 24px 48px -12px oklch(0 0 0 / 0.9);
+    --shadow-xl:
+      0 0 0 1px oklch(1 0 0 / 0.07), 0 24px 48px -12px oklch(0 0 0 / 0.9);
+    --shadow-2xl:
+      0 0 0 1px oklch(1 0 0 / 0.07), 0 30px 60px -16px oklch(0 0 0 / 0.95);
   }
 }
 
@@ -134,6 +155,14 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-chrome: var(--chrome);
+  --color-track: var(--track);
+  --color-raised: var(--raised);
+  --color-on: var(--on);
+  --color-on-foreground: var(--on-foreground);
+  --color-good: var(--good);
+  --color-warn: var(--warn);
+  --color-bad: var(--bad);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -158,4 +187,24 @@
   --tracking-wide: calc(var(--tracking-normal) + 0.025em);
   --tracking-wider: calc(var(--tracking-normal) + 0.05em);
   --tracking-widest: calc(var(--tracking-normal) + 0.1em);
+}
+
+/* A recessed input well: field background, a hair of inner shadow and a
+   faint ring instead of a drawn border. */
+@utility surface-field {
+  background-color: var(--input);
+  box-shadow:
+    inset 0 1px 2px oklch(0 0 0 / 0.5),
+    0 0 0 1px oklch(1 0 0 / 0.06);
+}
+
+/* Something that floats over the page (menus, popovers, the palette):
+   a step lighter, a hairline ring and a real drop shadow. Only things
+   that float get a shadow. */
+@utility surface-float {
+  background-color: var(--popover);
+  box-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.08),
+    0 0 0 1px oklch(1 0 0 / 0.07),
+    0 24px 48px -12px oklch(0 0 0 / 0.9);
 }
