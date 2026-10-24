@@ -2834,3 +2834,6 @@ mod rng;
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod kat_tests;
