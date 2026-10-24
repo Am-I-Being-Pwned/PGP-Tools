@@ -4,22 +4,22 @@ packages:
   - tooling/*
 
 catalog:
-  '@eslint/js': ^9.39.5
+  '@eslint/js': ^10.0.1
   '@tailwindcss/postcss': ^4.3.3
-  '@tailwindcss/vite': 4.3.2
-  '@types/node': ^22.20.1
-  eslint: ^9.39.5
-  prettier: ^3.9.6
-  tailwindcss: 4.3.2
-  typescript: ^5.9.3
+  '@tailwindcss/vite': 4.3.3
+  '@types/node': ^26.6.5
+  eslint: ^10.13.0
+  prettier: ^3.9.10
+  tailwindcss: 4.3.3
+  typescript: ^6.0.3
   zod: ^4.4.3
 
 catalogs:
   react19:
-    '@types/react': ^19.2.18
-    '@types/react-dom': ^19.2.5
-    react: ^19.2.8
-    react-dom: ^19.2.8
+    '@types/react': ^19.3.0
+    '@types/react-dom': ^19.3.0
+    react: ^19.3.1
+    react-dom: ^19.3.1
 
 linkWorkspacePackages: true
 

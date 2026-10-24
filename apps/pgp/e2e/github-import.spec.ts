@@ -363,7 +363,6 @@ test("an account with no SSH keys says so where the answer is expected", async (
   const github = await stubGithubKeys(context, []);
   await onboardWithPasswordSkipKey(panel, PASSWORD);
   await lookUpGithubUser(panel, GITHUB_USER);
-  expect(github.count()).toBe(1);
 
   // It is the ANSWER to the lookup, so it has to be noticed: its own
   // callout attached to the field, not a fourth muted line among the
@@ -373,6 +372,9 @@ test("an account with no SSH keys says so where the answer is expected", async (
   await expect(status).toContainText(
     new RegExp(`${GITHUB_USER} hasn't published any SSH keys`, "i"),
   );
+  // Counted only once the answer is on screen: right after the click the
+  // fetch may not have gone out yet.
+  expect(github.count()).toBe(1);
   // Not the destructive slot: nothing failed and there is nothing to
   // retry, and painting a correct answer red teaches people to distrust
   // it (see githubFailureCopy).

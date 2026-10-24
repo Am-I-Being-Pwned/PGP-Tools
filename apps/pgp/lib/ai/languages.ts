@@ -66,7 +66,7 @@ function localisedName(code: string): string | null {
   // An English UI keeps the curated table verbatim.
   if (tag === "en" || tag.startsWith("en-")) return null;
   if (displayNames?.tag !== tag) {
-    let names: Intl.DisplayNames | null = null;
+    let names: Intl.DisplayNames | null;
     try {
       names = new Intl.DisplayNames(tag, { type: "language" });
     } catch {

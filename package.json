@@ -2,7 +2,7 @@
   "name": "pgp-tools",
   "private": true,
   "engines": {
-    "node": "^22.21.0",
+    "node": "^26.8.0",
     "pnpm": "^10.19.0"
   },
   "packageManager": "pnpm@10.19.0",
@@ -27,9 +27,9 @@
   },
   "devDependencies": {
     "@amibeingpwned/prettier-config": "workspace:*",
-    "@turbo/gen": "^2.10.11",
+    "@turbo/gen": "^2.11.10",
     "prettier": "catalog:",
-    "turbo": "^2.10.11",
+    "turbo": "^2.11.10",
     "typescript": "catalog:"
   },
   "prettier": "@amibeingpwned/prettier-config"

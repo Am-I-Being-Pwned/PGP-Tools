@@ -94,8 +94,8 @@ unsafe impl GlobalAlloc for ZeroizeOnFree {
 #[global_allocator]
 static GLOBAL: ZeroizeOnFree = ZeroizeOnFree;
 
-use aes_gcm::aead::{Aead, Payload};
-use aes_gcm::{Aes256Gcm, KeyInit, Nonce};
+use aes_gcm::aead::{Aead, Nonce, Payload};
+use aes_gcm::{Aes256Gcm, KeyInit};
 use argon2::{Algorithm, Argon2, Params, Version};
 use hkdf::Hkdf;
 use sha2::Sha256;
@@ -492,9 +492,14 @@ fn parse_armored_certs(json: &str) -> Result<Vec<openpgp::Cert>, String> {
         .collect())
 }
 
-/// Zeroize an `Aes256Gcm` cipher's expanded key schedule on drop.
-/// The `aes-gcm` crate does not implement `Zeroize`/`ZeroizeOnDrop`,
-/// so we must manually clear the backing memory.
+/// Zeroize an `Aes256Gcm` cipher's expanded key schedule before drop.
+///
+/// With its `zeroize` feature (enabled in Cargo.toml) aes-gcm 0.11 wipes
+/// its AES key schedule and GHASH key on drop, but `Aes256Gcm` itself does
+/// not implement `Zeroize`, so there is no explicit call that clears the
+/// whole struct. This explicit wipe is kept as belt-and-braces: it does
+/// not depend on a feature flag staying on, and it runs before any
+/// `Result` is propagated.
 fn zeroize_cipher(cipher: &mut Aes256Gcm) {
     let ptr = cipher as *mut Aes256Gcm as *mut u8;
     let len = std::mem::size_of::<Aes256Gcm>();
@@ -512,10 +517,15 @@ fn aes_gcm_decrypt(
     ciphertext: &[u8],
     aad: &[u8],
 ) -> Result<Vec<u8>, String> {
+    // A wrong-length IV is an `Err`, not a panic (`from_slice` used to
+    // assert, and a panic aborts the whole wasm module). Checked before
+    // the cipher exists so there is no key schedule to scrub on this path.
+    let nonce = Nonce::<Aes256Gcm>::try_from(iv)
+        .map_err(|_| "Decryption failed - malformed IV".to_string())?;
     let mut cipher =
         Aes256Gcm::new_from_slice(key).map_err(|e| format!("AES key init failed: {e}"))?;
     let result = cipher
-        .decrypt(Nonce::from_slice(iv), Payload { msg: ciphertext, aad })
+        .decrypt(&nonce, Payload { msg: ciphertext, aad })
         .map_err(|_| "Decryption failed - wrong credentials or corrupted data".to_string());
     zeroize_cipher(&mut cipher);
     result
@@ -536,7 +546,7 @@ fn aes_gcm_encrypt(
     rng::fill(&mut iv)?;
 
     let ciphertext = cipher
-        .encrypt(Nonce::from_slice(&iv), Payload { msg: plaintext, aad })
+        .encrypt(&Nonce::<Aes256Gcm>::from(iv), Payload { msg: plaintext, aad })
         .map_err(|_| "Encryption failed".to_string());
     zeroize_cipher(&mut cipher);
 
@@ -2080,11 +2090,11 @@ fn cfb_decrypt(
     iv: &[u8],
     ciphertext: &[u8],
 ) -> Result<Vec<u8>, String> {
-    use cfb_mode::cipher::{AsyncStreamCipher, BlockCipher, BlockEncryptMut, KeyIvInit};
+    use cfb_mode::cipher::{BlockCipherEncrypt, KeyInit, KeyIvInit};
 
     fn run<C>(key: &[u8], iv: &[u8], ciphertext: &[u8]) -> Result<Vec<u8>, String>
     where
-        C: BlockEncryptMut + BlockCipher + aes::cipher::KeyInit,
+        C: BlockCipherEncrypt + KeyInit,
     {
         let mut buf = ciphertext.to_vec();
         cfb_mode::Decryptor::<C>::new_from_slices(key, iv)
@@ -2834,3 +2844,6 @@ mod rng;
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod kat_tests;

@@ -142,7 +142,7 @@ export function TranslationNote({
   status: TranslationStatus;
   showing: boolean;
 }) {
-  let text: string | null = null;
+  let text: string | null;
 
   switch (status.kind) {
     case "same-language":

@@ -214,7 +214,7 @@ export async function importSshIdentity(
       // Tagging is an improvement on the error, never a replacement for
       // it -- swallowing a real failure to report a lookup failure would
       // be strictly worse than not tagging at all.
-      let needsPassphrase: string | null = null;
+      let needsPassphrase: string | null;
       try {
         needsPassphrase = await sshPassphraseRequiredMessage();
       } catch {

@@ -58,7 +58,7 @@ use crate::{aes_gcm_decrypt, aes_gcm_encrypt, argon2_derive, next_handle, rng};
 /// The stored secret is the per-key random salt kept next to the blob; the
 /// PRF output is what the authenticator returns. Neither alone yields the
 /// key. `info` is the caller's domain separator -- see the module header.
-fn hkdf_derive(prf_output: &[u8], stored_secret: &[u8], info: &[u8]) -> Result<Vec<u8>, String> {
+pub(crate) fn hkdf_derive(prf_output: &[u8], stored_secret: &[u8], info: &[u8]) -> Result<Vec<u8>, String> {
     let hk = Hkdf::<Sha256>::new(Some(stored_secret), prf_output);
     let mut derived = vec![0u8; 32];
     hk.expand(info, &mut derived)

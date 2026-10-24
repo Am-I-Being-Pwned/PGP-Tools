@@ -449,11 +449,11 @@ fn test_unlock_with_password() {
     let derived = argon2_derive(password, salt, 4096, 3, 1).unwrap();
 
     // Encrypt with AES-GCM
-    use aes_gcm::{Aes256Gcm, KeyInit, aead::Aead, Nonce};
+    use aes_gcm::{Aes256Gcm, KeyInit, aead::{Aead, Nonce}};
     use aes_gcm::aead::Payload;
-    let cipher = aes_gcm::Aes256Gcm::new_from_slice(&derived).unwrap();
+    let cipher = Aes256Gcm::new_from_slice(&derived).unwrap();
     let iv = [0u8; 12]; // fixed IV for test
-    let nonce = Nonce::from_slice(&iv);
+    let nonce = &Nonce::<Aes256Gcm>::from(iv);
     let aad = format!("gpg-tools:password:{}", key_id);
     let ciphertext = cipher.encrypt(nonce, Payload {
         msg: priv_armor.as_bytes(),
@@ -492,11 +492,11 @@ fn test_unlock_with_prf() {
     hk.expand(b"gpg-tools-prf-v1", &mut derived).unwrap();
 
     // Encrypt with AES-GCM
-    use aes_gcm::{Aes256Gcm, KeyInit, aead::Aead, Nonce};
+    use aes_gcm::{Aes256Gcm, KeyInit, aead::{Aead, Nonce}};
     use aes_gcm::aead::Payload;
     let cipher = Aes256Gcm::new_from_slice(&derived).unwrap();
     let iv = [1u8; 12];
-    let nonce = Nonce::from_slice(&iv);
+    let nonce = &Nonce::<Aes256Gcm>::from(iv);
     let aad = format!("gpg-tools:passkey:{}", key_id);
     let ciphertext = cipher.encrypt(nonce, Payload {
         msg: priv_armor.as_bytes(),
@@ -1296,6 +1296,18 @@ fn cfb_decrypt_rejects_bad_sizes_instead_of_panicking() {
             &vec![0u8; len],
         )
         .is_ok());
+    }
+}
+
+/// Same rule for the vault AEAD: the IV arrives from JS (split out of a
+/// stored blob), so a wrong length must be an `Err`. aes-gcm 0.10's
+/// `Nonce::from_slice` asserted the length -- i.e. aborted the module.
+#[test]
+fn aes_gcm_decrypt_rejects_bad_iv_length_instead_of_panicking() {
+    let ct = [0u8; 32];
+    for iv_len in [0usize, 8, 11, 13, 16] {
+        let err = crate::aes_gcm_decrypt(&[0u8; 32], &vec![0u8; iv_len], &ct, b"").unwrap_err();
+        assert!(err.contains("malformed IV"), "{iv_len}: {err}");
     }
 }
 

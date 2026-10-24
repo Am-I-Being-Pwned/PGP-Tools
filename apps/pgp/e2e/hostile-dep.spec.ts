@@ -283,7 +283,7 @@ test("a compromised side-panel dependency: what it can and cannot reach", async 
       // `initSync` on an already-initialised wasm-bindgen module is the
       // tell: a *fresh* module record would still be uninitialised and
       // `ping()` would throw "must be initialized first".
-      let pinged: string | null = null;
+      let pinged: string | null;
       try {
         pinged = (mod.ping as () => string)();
       } catch (e) {

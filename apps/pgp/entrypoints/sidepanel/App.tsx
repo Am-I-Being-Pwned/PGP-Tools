@@ -226,6 +226,9 @@ export default function App() {
           /* lock anyway */
         }
       }
+      // Dead to ESLint, not to the GC: releases this frame's reference to
+      // the plaintext snapshot (see the `let` above; T-OUTPUT-HEAP-RESIDUE).
+      // eslint-disable-next-line no-useless-assignment
       draft = null;
       // The unmount alone does NOT release the workspace's plaintext: React
       // keeps the previous fiber on `alternate`, and effect closures hanging
@@ -1063,7 +1066,7 @@ function TabBar({
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       const idx = TABS.findIndex((t) => t.id === activeTab);
-      let next = idx;
+      let next: number;
 
       switch (e.key) {
         case "ArrowRight":

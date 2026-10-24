@@ -10,6 +10,14 @@ export default defineConfig({
     // Installs an en-backed `chrome.i18n` so `t()` resolves in node.
     setupFiles: ["lib/i18n/fake-chrome-i18n.ts"],
     exclude: ["node_modules/**", ".output/**", ".wxt/**", "gpg-wasm/**"],
+    // The JSON report is what the README's unit-test badge counts
+    // (scripts/update-badges.mjs). `vitest list` can't be used for that:
+    // since vitest 5 it prints one unexpanded line per `it.each`. It
+    // lives under coverage/ so turbo caches it with the coverage summary.
+    reporters: [
+      "default",
+      ["json", { outputFile: "coverage/test-results.json" }],
+    ],
     coverage: {
       provider: "v8",
       // `lib/` ONLY, and the badge says "lib coverage" for the same
