@@ -286,7 +286,7 @@ base.describe("upgrade from the shipped 1.4.4 build", () => {
       /** Armored ciphertext produced BY 1.4.4 -- the whole point. */
       let armoredFrom144 = "";
       let idBefore = "";
-      let idAfter = "";
+      let idAfter: string;
 
       try {
         await base.step("install the shipped 1.4.4 build", async () => {

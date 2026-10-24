@@ -42,7 +42,7 @@ export function applyTextareaEdit(
     }
     const insert = after.slice(p, after.length - s);
     el.setSelectionRange(p, before.length - s);
-    let ok = false;
+    let ok: boolean;
     try {
       // Deprecated but the only way onto the native undo stack; every
       // browser this extension runs in still implements it for textareas.
