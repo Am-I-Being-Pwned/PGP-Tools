@@ -98,7 +98,7 @@
 
 ### Requirements
 
-- Node ^22.21.0, pnpm ^10.19.0
+- Node ^26.8.0, pnpm ^10.19.0
 - [Rust](https://rustup.rs/) + [wasm-pack](https://rustwasm.github.io/wasm-pack/installer/)
 
 ### Setup
