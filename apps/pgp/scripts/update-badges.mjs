@@ -88,9 +88,20 @@ function libCoveragePct() {
 }
 
 function unitTestCount() {
-  // `vitest list` collects without executing -- a count, not a re-run.
-  const lines = run("npx", ["vitest", "list"]).split("\n");
-  return lines.filter((line) => line.includes(" > ")).length;
+  // Read from the JSON report `pnpm test` writes beside the coverage
+  // summary -- a count, not a re-run. Not `vitest list`: since vitest 5
+  // it collapses each `it.each` to one unexpanded template line, which
+  // undercounts by hundreds.
+  const resultsPath = path.join(appDir, "coverage/test-results.json");
+  let raw;
+  try {
+    raw = readFileSync(resultsPath, "utf8");
+  } catch {
+    throw new Error(
+      `No test results at ${resultsPath}. Run \`pnpm test\` first.`,
+    );
+  }
+  return JSON.parse(raw).numTotalTests;
 }
 
 function e2eTestCount() {
