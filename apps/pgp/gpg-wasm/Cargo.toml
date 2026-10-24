@@ -22,7 +22,14 @@ serde_json = "1"
 getrandom_02 = { package = "getrandom", version = "0.2", features = ["js"] }
 getrandom = { version = "0.3", features = ["wasm_js"] }
 anyhow = "1"
-argon2 = "0.5"
+# Argon2id for the vault KDF (`argon2_derive`). Only `hash_password_into`
+# is used, so the PHC-string / password-hash / getrandom defaults are off;
+# `alloc` provides that method and `zeroize` wipes argon2's internal hash
+# state. SECOND COPY: sequoia still pulls argon2 0.5 for OpenPGP's Argon2
+# S2K, so 0.5.x stays in Cargo.lock; this 0.6 copy is used only by our
+# standalone vault code. Output is pinned by `kat_argon2id_*` in
+# `src/kat_tests.rs` -- a byte of drift would lock users out of vaults.
+argon2 = { version = "0.6", default-features = false, features = ["alloc", "zeroize"] }
 # `aes` also comes in via aes-gcm; declared direct for the CFB fallback
 # that decrypts GnuPG's zero-padded ECC secret keys (see cfb_decrypt).
 aes = "0.8"
