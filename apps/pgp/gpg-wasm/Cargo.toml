@@ -43,20 +43,38 @@ aes = { version = "0.9", features = ["zeroize"] }
 cfb-mode = { version = "0.9", features = ["zeroize"] }
 # Constant-time equality for the secret-key checksum and SHA-1 digest,
 # which are what decide "was the passphrase correct". Already in
-# Cargo.lock at 2.6.1 (sequoia, aes-gcm, rsa and curve25519 all pull it).
+# Cargo.lock at 2.6.1 (sequoia, aes-gcm 0.10, rsa and curve25519 all pull it).
 subtle = "2.6"
-aes-gcm = "0.10"
-hkdf = "0.12"
-sha2 = { version = "0.10", features = ["oid"] }
+# Vault envelope: AES-256-GCM (`aes_gcm_encrypt`/`aes_gcm_decrypt`) and
+# HKDF-SHA256 (PRF unlock, contacts key, store subkeys). Standalone code --
+# no trait crosses into sequoia/rsa/ssh-key -- so these track the newest
+# RustCrypto generation (aead 0.6 / cipher 0.5 / digest 0.11). SECOND COPY:
+# sequoia, age and ssh-key still pull aes-gcm 0.10, hkdf 0.12, hmac 0.12
+# and sha2 0.10, which stay in Cargo.lock. aes-gcm defaults are off so it
+# never pulls `getrandom` (we draw nonces from `src/rng.rs`); `zeroize`
+# makes `Aes256Gcm` ZeroizeOnDrop (AES key schedule + GHASH key), on top
+# of the explicit `zeroize_cipher` wipe. sha2 0.11 was already compiled
+# into the wasm via age's rust-embed, so it adds no crate. All of it is
+# pinned byte-for-byte by `src/kat_tests.rs`.
+aes-gcm = { version = "0.11", default-features = false, features = ["aes", "alloc", "zeroize"] }
+hkdf = "0.13"
+sha2 = { version = "0.11", default-features = false }
 zeroize = { version = "1", features = ["derive"] }
 # CRX (Chrome extension) signing. All already resolved transitively via
 # sequoia's crypto-rust backend -- declaring them direct adds no new build.
-rsa = { version = "0.9", features = ["std", "pem"] }
+# The CRX SHA-256 must implement rsa 0.9's digest-0.10 traits
+# (`Pkcs1v15Sign::new::<Sha256>` needs `AssociatedOid`), so `src/crx.rs`
+# takes it from `rsa::sha2` (the `sha2` feature: sha2 0.10 + `oid`, the copy
+# sequoia already builds) rather than the 0.11 `sha2` above.
+rsa = { version = "0.9", features = ["std", "pem", "sha2"] }
 rand_core = "0.6"
 # NEW DIRECT DEPENDENCY: ChaCha20 CSPRNG for `src/rng.rs`. Already in
 # Cargo.lock at 0.3.1 via sequoia's `rand 0.8`, so this adds no crate to
 # the build graph -- it makes an existing transitive dep direct. Pinned to
 # the rand_core 0.6 line, matching `rand_core` and `rsa` above.
+# Deliberately NOT bumped to rand_core 0.10 / rand_chacha 0.10: `VaultRng`
+# is handed to rsa 0.9's keygen, which takes a rand_core 0.6 `RngCore +
+# CryptoRng`; a newer line would need an adapter shim. Revisit with rsa 0.10.
 rand_chacha = "0.3"
 base64 = "0.22"
 

@@ -34,7 +34,7 @@ use base64::Engine as _;
 use rsa::pkcs1::DecodeRsaPrivateKey;
 use rsa::pkcs8::{DecodePrivateKey, DecodePublicKey, EncodePrivateKey, EncodePublicKey};
 use rsa::{Pkcs1v15Sign, RsaPrivateKey, RsaPublicKey};
-use sha2::{Digest, Sha256};
+use rsa::sha2::{Digest, Sha256};
 use zeroize::Zeroizing;
 
 use wasm_bindgen::prelude::*;
