@@ -30,14 +30,17 @@ anyhow = "1"
 # standalone vault code. Output is pinned by `kat_argon2id_*` in
 # `src/kat_tests.rs` -- a byte of drift would lock users out of vaults.
 argon2 = { version = "0.6", default-features = false, features = ["alloc", "zeroize"] }
-# `aes` also comes in via aes-gcm; declared direct for the CFB fallback
-# that decrypts GnuPG's zero-padded ECC secret keys (see cfb_decrypt).
-aes = "0.8"
-# CFB-128 for that same fallback. The mode is a library implementation,
-# never hand-rolled here. Already in Cargo.lock at 0.8.2 via sequoia's
-# crypto-rust backend, so declaring it direct adds no crate to the build
-# graph -- the same precedent as `aes`/`rsa`/`rand_chacha` above.
-cfb-mode = "0.8"
+# `aes` + `cfb-mode` (cipher 0.5 generation) for the CFB fallback that
+# decrypts GnuPG's zero-padded ECC secret keys (see cfb_decrypt). The mode
+# is a library implementation, never hand-rolled here. SECOND COPY: sequoia
+# (and age / ssh-key via aes-gcm 0.10) still pull aes 0.8 + cfb-mode 0.8 +
+# cipher 0.4, which stay in Cargo.lock; these newer copies are used only by
+# cfb_decrypt (and aes by the vault's aes-gcm below). `zeroize` is on for
+# both: it wipes the AES key schedule and the CFB register on drop (aes 0.8
+# already had it, enabled by another crate; 0.9 needs it asked for).
+# Pinned by `kat_cfb128_*` in `src/kat_tests.rs` (NIST SP 800-38A).
+aes = { version = "0.9", features = ["zeroize"] }
+cfb-mode = { version = "0.9", features = ["zeroize"] }
 # Constant-time equality for the secret-key checksum and SHA-1 digest,
 # which are what decide "was the passphrase correct". Already in
 # Cargo.lock at 2.6.1 (sequoia, aes-gcm, rsa and curve25519 all pull it).

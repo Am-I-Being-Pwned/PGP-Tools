@@ -2080,11 +2080,11 @@ fn cfb_decrypt(
     iv: &[u8],
     ciphertext: &[u8],
 ) -> Result<Vec<u8>, String> {
-    use cfb_mode::cipher::{AsyncStreamCipher, BlockCipher, BlockEncryptMut, KeyIvInit};
+    use cfb_mode::cipher::{BlockCipherEncrypt, KeyInit, KeyIvInit};
 
     fn run<C>(key: &[u8], iv: &[u8], ciphertext: &[u8]) -> Result<Vec<u8>, String>
     where
-        C: BlockEncryptMut + BlockCipher + aes::cipher::KeyInit,
+        C: BlockCipherEncrypt + KeyInit,
     {
         let mut buf = ciphertext.to_vec();
         cfb_mode::Decryptor::<C>::new_from_slices(key, iv)
