@@ -37,6 +37,12 @@ export async function launchExtensionContext(
       ...(headless ? ["--headless=new"] : []),
       `--disable-extensions-except=${extensionDir}`,
       `--load-extension=${extensionDir}`,
+      // A desktop with a mouse, everywhere. Headless Chromium on a Linux
+      // runner sees no pointing device and reports `(hover: none)`, which
+      // flips touch-only styles on (the compose tool strip stays pinned
+      // visible) -- so CI rendered a different UI from macOS. Values are
+      // Blink's bitmasks: hover 2 = can hover, pointer 4 = fine.
+      "--blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4",
     ],
   });
 }
