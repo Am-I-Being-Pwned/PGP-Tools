@@ -16,7 +16,10 @@ export function BlockStack({
     <div
       data-slot="block-stack"
       className={cn(
-        "flex flex-col gap-0.5 overflow-hidden rounded-xl",
+        // The end blocks take the stack's corners themselves (not just
+        // the clip), so anything drawn on them -- a focus ring, an inset
+        // outline -- follows the 12px curve instead of being cut off by it.
+        "flex flex-col gap-0.5 overflow-hidden rounded-xl [&>:first-child]:rounded-t-xl [&>:last-child]:rounded-b-xl",
         className,
       )}
       {...props}

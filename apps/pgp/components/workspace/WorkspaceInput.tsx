@@ -361,7 +361,7 @@ export function WorkspaceInput({
               }}
               // The border is transparent, not absent: the find mirror
               // below draws the same 1px so every character lines up.
-              className={`placeholder:text-muted-foreground relative z-10 min-h-20 w-full flex-1 resize-none rounded-[3px] border border-transparent p-3 text-sm focus:border-[rgb(79_193_133/0.35)] focus:outline-none ${
+              className={`placeholder:text-muted-foreground relative z-10 min-h-20 w-full flex-1 resize-none rounded-[inherit] border border-transparent p-3 text-sm focus:border-[rgb(79_193_133/0.35)] focus:outline-none ${
                 painting ? "bg-transparent" : "bg-card"
               } ${composing && !privateKeyDetected ? "pb-12" : ""}`}
               // Visually mask armored private-key material. NOTE: this is
@@ -499,7 +499,7 @@ const FindBackdrop = forwardRef<
     <div
       ref={ref}
       aria-hidden
-      className="bg-card pointer-events-none absolute inset-0 overflow-hidden rounded-[3px] border border-transparent p-3 text-sm break-words whitespace-pre-wrap text-transparent"
+      className="bg-card pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit] border border-transparent p-3 text-sm break-words whitespace-pre-wrap text-transparent"
     >
       {parts}
     </div>

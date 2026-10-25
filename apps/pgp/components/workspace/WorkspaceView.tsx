@@ -1162,7 +1162,7 @@ export function WorkspaceView({
         cardHeader={
           needsRecipient ? (
             <>
-              <Block className="focus-within:shadow-[inset_0_0_0_1px_rgb(79_193_133/0.35)]">
+              <Block className="rounded-t-xl focus-within:shadow-[inset_0_0_0_1px_rgb(79_193_133/0.35)]">
                 <RecipientPicker
                   inline
                   // Escape in the recipient box peels its own layers first
