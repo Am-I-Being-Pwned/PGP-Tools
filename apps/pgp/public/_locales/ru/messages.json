@@ -5320,9 +5320,6 @@
   "workspace_text_cleared_toast": {
     "message": "Текст очищен"
   },
-  "workspace_text_entered_below": {
-    "message": "Текст введён ниже"
-  },
   "workspace_toggle_encrypt_to_self": {
     "message": "Шифровать и для меня"
   },

@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { ChevronRightIcon, LoaderIcon } from "lucide-react";
 
+import { cn } from "@amibeingpwned/ui";
+import { Block, BlockLabel, BlockStack } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
 import { Calendar } from "@amibeingpwned/ui/calendar";
+import { Segmented } from "@amibeingpwned/ui/segmented";
 import {
   Select,
   SelectContent,
@@ -18,7 +21,6 @@ import { generateCrxKey } from "../../lib/crx/operations";
 import { t } from "../../lib/i18n";
 import { formatDate } from "../../lib/i18n/format";
 import { generateAndProtect } from "../../lib/protection/protect-flow";
-import { INPUT_CLASS } from "../../lib/utils/styles";
 import {
   SlideOverHeader,
   SlideOverPanel,
@@ -54,6 +56,15 @@ function expiryToSeconds(
   }
   return EXPIRY_SECONDS[option as Exclude<ExpiryOption, "custom">];
 }
+
+/** A text field drawn as a block row: its label on top, a bare input
+ *  under it, and the block itself is the field (it carries the focus
+ *  ring, inset so the stack's clipping can't cut it off). */
+const FIELD_BLOCK =
+  "focus-within:ring-ring/60 px-3.5 pt-2 pb-1.5 focus-within:ring-1 focus-within:ring-inset";
+const FIELD_LABEL = "text-muted-foreground block text-[11px]";
+const FIELD_INPUT =
+  "placeholder:text-muted-foreground h-7 w-full bg-transparent text-sm outline-none";
 
 interface GenerateKeyPageProps {
   /** Called after the slide-out finishes (cancel or success). */
@@ -273,47 +284,58 @@ export function GenerateKeyPage({
               </div>
 
               {crxSigningEnabled && (
-                <div className="flex gap-2">
-                  <Button
-                    variant={keyType === "pgp" ? "default" : "outline"}
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => setKeyType("pgp")}
-                  >
-                    {t("keygen_type_pgp")}
-                  </Button>
-                  <Button
-                    variant={keyType === "crx" ? "default" : "outline"}
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => setKeyType("crx")}
-                  >
-                    {t("keygen_type_crx")}
-                  </Button>
+                // Drawn as a segmented track, but still two plain buttons
+                // (now marked pressed): the names are what callers find
+                // them by.
+                <div className="bg-track grid grid-cols-2 gap-0.5 rounded-lg p-[3px]">
+                  {(
+                    [
+                      ["pgp", t("keygen_type_pgp")],
+                      ["crx", t("keygen_type_crx")],
+                    ] as const
+                  ).map(([type, text]) => (
+                    <button
+                      key={type}
+                      type="button"
+                      aria-pressed={keyType === type}
+                      onClick={() => setKeyType(type)}
+                      className={cn(
+                        "focus-visible:ring-ring/50 h-7 truncate rounded-md px-3 text-[13px] font-medium transition-colors outline-none focus-visible:ring-[3px]",
+                        keyType === type
+                          ? "bg-raised text-foreground shadow-[inset_0_1px_0_rgb(255_255_255/0.1),0_1px_2px_rgb(0_0_0/0.5)]"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {text}
+                    </button>
+                  ))}
                 </div>
               )}
 
               {keyType === "crx" ? (
-                <div>
-                  <label className="text-muted-foreground mb-1 block text-xs">
-                    {t("keygen_label_label")}{" "}
-                    <span className="text-muted-foreground/60">
-                      {t("keygen_optional")}
-                    </span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder={t("keygen_label_placeholder")}
-                    value={label}
-                    onChange={(e) => setLabel(e.target.value)}
-                    className={INPUT_CLASS}
-                  />
-                </div>
+                <BlockStack>
+                  <Block className={FIELD_BLOCK}>
+                    <label className={FIELD_LABEL}>
+                      {t("keygen_label_label")}{" "}
+                      <span className="text-muted-foreground/60">
+                        {t("keygen_optional")}
+                      </span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder={t("keygen_label_placeholder")}
+                      value={label}
+                      onChange={(e) => setLabel(e.target.value)}
+                      className={FIELD_INPUT}
+                    />
+                  </Block>
+                </BlockStack>
               ) : (
                 <>
-                  <div className="space-y-2">
-                    <div>
-                      <label className="text-muted-foreground mb-1 block text-xs">
+                  {/* Who the key is for: one card, a block per field. */}
+                  <BlockStack>
+                    <Block className={FIELD_BLOCK}>
+                      <label className={FIELD_LABEL}>
                         {t("keygen_name_label")}
                       </label>
                       <input
@@ -321,11 +343,11 @@ export function GenerateKeyPage({
                         placeholder={t("keygen_name_placeholder")}
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        className={INPUT_CLASS}
+                        className={FIELD_INPUT}
                       />
-                    </div>
-                    <div>
-                      <label className="text-muted-foreground mb-1 block text-xs">
+                    </Block>
+                    <Block className={FIELD_BLOCK}>
+                      <label className={FIELD_LABEL}>
                         {t("keygen_email_label")}{" "}
                         <span className="text-muted-foreground/60">
                           {t("keygen_optional")}
@@ -336,11 +358,11 @@ export function GenerateKeyPage({
                         placeholder={t("keygen_email_placeholder")}
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className={INPUT_CLASS}
+                        className={FIELD_INPUT}
                       />
-                    </div>
-                    <div>
-                      <label className="text-muted-foreground mb-1 block text-xs">
+                    </Block>
+                    <Block className={FIELD_BLOCK}>
+                      <label className={FIELD_LABEL}>
                         {t("keygen_comment_label")}{" "}
                         <span className="text-muted-foreground/60">
                           {t("keygen_optional")}
@@ -351,15 +373,15 @@ export function GenerateKeyPage({
                         placeholder={t("keygen_comment_placeholder")}
                         value={comment}
                         onChange={(e) => setComment(e.target.value)}
-                        className={INPUT_CLASS}
+                        className={FIELD_INPUT}
                       />
-                    </div>
-                  </div>
+                    </Block>
+                  </BlockStack>
 
                   <button
                     type="button"
                     onClick={() => setShowAdvanced(!showAdvanced)}
-                    className="text-muted-foreground hover:text-foreground flex w-full items-center gap-1.5 text-xs transition-colors"
+                    className="bg-card text-muted-foreground hover:text-foreground flex w-full items-center gap-1.5 rounded-xl px-3.5 py-3 text-xs font-medium transition-colors"
                   >
                     <ChevronRightIcon
                       className={`h-3 w-3 transition-transform ${showAdvanced ? "rotate-90" : ""}`}
@@ -368,28 +390,24 @@ export function GenerateKeyPage({
                   </button>
 
                   {showAdvanced && (
-                    <div className="border-border space-y-3 rounded-md border p-3">
-                      <div>
-                        <label className="text-muted-foreground mb-1.5 block text-xs">
-                          {t("keygen_algorithm_label")}
-                        </label>
-                        <Select
+                    <div className="space-y-3">
+                      {/* Two short, untranslated options: a segmented
+                          control shows both at once without truncating. */}
+                      <div className="space-y-1.5">
+                        <BlockLabel>{t("keygen_algorithm_label")}</BlockLabel>
+                        <Segmented
+                          fill
+                          ariaLabel={t("keygen_algorithm_label")}
                           value={keyAlgorithm}
-                          onValueChange={(v) =>
-                            setKeyAlgorithm(v as KeyAlgorithm)
-                          }
-                        >
-                          <SelectTrigger className="h-8 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {/* i18n-ignore */}
-                            <SelectItem value="ecc">ECC (Ed25519)</SelectItem>
-                            {/* i18n-ignore */}
-                            <SelectItem value="rsa">RSA</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <p className="text-muted-foreground/60 mt-1 text-[10px]">
+                          onValueChange={setKeyAlgorithm}
+                          options={[
+                            // i18n-ignore
+                            { value: "ecc", label: "ECC (Ed25519)" },
+                            // i18n-ignore
+                            { value: "rsa", label: "RSA" },
+                          ]}
+                        />
+                        <p className="text-muted-foreground/60 px-1 text-[10px]">
                           {keyAlgorithm === "ecc"
                             ? t("keygen_algorithm_hint_ecc")
                             : t("keygen_algorithm_hint_rsa")}
@@ -397,10 +415,8 @@ export function GenerateKeyPage({
                       </div>
 
                       {keyAlgorithm === "rsa" && (
-                        <div>
-                          <label className="text-muted-foreground mb-1.5 block text-xs">
-                            {t("keygen_key_size_label")}
-                          </label>
+                        <div className="space-y-1.5">
+                          <BlockLabel>{t("keygen_key_size_label")}</BlockLabel>
                           {/* RSA-4096 is the only size the WASM engine generates. */}
                           <Select value="4096">
                             <SelectTrigger className="h-8 text-xs">
@@ -415,10 +431,12 @@ export function GenerateKeyPage({
                         </div>
                       )}
 
-                      <div>
-                        <label className="text-muted-foreground mb-1.5 block text-xs">
-                          {t("keygen_expiry_label")}
-                        </label>
+                      <div className="space-y-1.5">
+                        <BlockLabel>{t("keygen_expiry_label")}</BlockLabel>
+                        {/* A dropdown, not a segmented row: five options
+                            in a narrow panel would truncate, and in some
+                            languages "Custom date" is too long to survive
+                            -- the label is the only name that option has. */}
                         <Select
                           value={expiryOption}
                           onValueChange={(v) =>
@@ -453,7 +471,7 @@ export function GenerateKeyPage({
               )}
             </div>
 
-            <div className="border-border space-y-2 border-t p-4">
+            <div className="space-y-2 p-4">
               {error && (
                 <p className="text-destructive text-xs" role="alert">
                   {error}
@@ -495,7 +513,7 @@ export function GenerateKeyPage({
               )}
             </div>
 
-            <div className="border-border space-y-2 border-t p-4">
+            <div className="space-y-2 p-4">
               {error && (
                 <p className="text-destructive text-xs" role="alert">
                   {error}

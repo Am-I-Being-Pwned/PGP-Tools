@@ -33,6 +33,10 @@ import { hasOpenSlideOver, holdFocusTraps } from "./shared/SlideOver";
  *  -- show a plain list instead. */
 const MIN_ACTIONS_FOR_SEARCH = 4;
 
+/** Palette rows: a touch taller than the primitive's default, with the
+ *  selected row lifted onto the hover tone. */
+const ITEM_CLASS = "h-9 rounded-md px-2.5";
+
 /**
  * Dispatch registry shortcuts globally: an enabled action executes; a
  * disabled one toasts its reason ("<name> is disabled: <reason>")
@@ -164,7 +168,7 @@ export function CommandPalette({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 px-4 pt-14"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 px-3 pt-14"
       onClick={close}
       onKeyDown={(e) => {
         // The palette owns the keyboard: nothing leaks to the global
@@ -190,11 +194,17 @@ export function CommandPalette({
       aria-modal="true"
       aria-label={t("actions_palette_label")}
     >
+      {/* The one floating panel over a dimmed page: the float surface
+          carries the ring and the drop shadow, so no drawn border. */}
       <div
-        className="border-border w-full max-w-md overflow-hidden rounded-lg border shadow-lg"
+        className="surface-float w-full max-w-md overflow-hidden rounded-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <Command shouldFilter={false} label={t("actions_palette_label")}>
+        <Command
+          shouldFilter={false}
+          label={t("actions_palette_label")}
+          className="bg-transparent"
+        >
           {/* With very few actions the search box is noise -- but
               cmdk's keyboard handling
               lives on the focused input, so hide it visually instead
@@ -224,6 +234,7 @@ export function CommandPalette({
                   <CommandItem
                     key={o.id}
                     value={o.id}
+                    className={ITEM_CLASS}
                     onSelect={() => {
                       const action = picking.action;
                       close();
@@ -250,6 +261,7 @@ export function CommandPalette({
                     <CommandItem
                       key={action.id}
                       value={action.id}
+                      className={ITEM_CLASS}
                       disabled={disabledReason !== undefined}
                       onSelect={() => {
                         // An action with a second step stays open on

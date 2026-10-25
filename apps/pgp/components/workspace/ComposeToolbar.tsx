@@ -112,9 +112,9 @@ function usePointerNear(ref: React.RefObject<HTMLElement | null>): boolean {
 }
 
 /** One button in the strip: borderless, a soft fill on hover, the
- *  strip itself carries the border and the translucent background. */
+ *  strip itself carries the floating surface. */
 const CHIP =
-  "text-muted-foreground hover:text-foreground hover:bg-border/70 pointer-events-auto flex h-7 w-7 shrink-0 items-center justify-center rounded transition-colors disabled:opacity-60";
+  "text-muted-foreground hover:text-foreground hover:bg-accent pointer-events-auto flex h-7 w-7 shrink-0 items-center justify-center rounded transition-colors disabled:opacity-60";
 
 /**
  * Editing controls floating in the bottom-right corner of the message
@@ -151,7 +151,7 @@ export function ComposeToolbar({
       data-shown={shown}
       // In quickly; out slowly and after a beat, so skimming past the
       // corner doesn't make it flicker.
-      className={`border-border bg-background/90 pointer-events-auto flex items-center gap-0.5 rounded-md border p-0.5 shadow-sm backdrop-blur transition-opacity ease-out focus-within:opacity-100 hover:opacity-100 motion-reduce:transition-none [@media(hover:none)]:opacity-100 ${
+      className={`surface-float pointer-events-auto flex items-center gap-0.5 rounded-lg p-0.5 transition-opacity ease-out focus-within:opacity-100 hover:opacity-100 motion-reduce:transition-none [@media(hover:none)]:opacity-100 ${
         shown ? "opacity-100 duration-150" : "opacity-0 delay-300 duration-300"
       }`}
     >
@@ -182,7 +182,7 @@ export function ComposeToolbar({
         );
       })}
 
-      <span aria-hidden className="bg-border mx-0.5 h-4 w-px" />
+      <span aria-hidden className="mx-1" />
 
       <HoverLabel label={t("workspace_find_replace")} shortcut={FIND_SHORTCUT}>
         <button

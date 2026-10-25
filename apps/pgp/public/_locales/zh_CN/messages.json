@@ -4228,9 +4228,6 @@
   "workspace_text_cleared_toast": {
     "message": "已清除文本"
   },
-  "workspace_text_entered_below": {
-    "message": "已在下方输入文本"
-  },
   "workspace_toggle_encrypt_to_self": {
     "message": "同时加密给我"
   },

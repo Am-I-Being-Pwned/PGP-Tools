@@ -1,8 +1,8 @@
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { useState } from "react";
 import {
-  ArrowRightIcon,
   CheckCircleIcon,
+  ChevronRightIcon,
   CopyIcon,
   DownloadIcon,
   EllipsisVerticalIcon,
@@ -33,6 +33,8 @@ import {
 import { isSshRecord } from "../../lib/storage/key-kind";
 import { formatAlgorithm, formatFingerprint } from "../../lib/utils/formatting";
 import { displayUserId, parseUserId } from "../../lib/utils/key-naming";
+import { KeyAvatar } from "../shared/KeyAvatar";
+import { HEX_FINGERPRINT, longIdLines } from "./fingerprint-lines";
 import { useJustImported } from "./useJustImported";
 import { useLongPress } from "./useLongPress";
 
@@ -67,6 +69,10 @@ interface ContactCardProps {
   justImported?: boolean;
 }
 
+/** The design language's status pill; the tone classes are added per use. */
+const PILL =
+  "shrink-0 items-center rounded px-1.5 py-px text-[10.5px] font-medium whitespace-nowrap";
+
 export function ContactCard({
   contact,
   onRemove,
@@ -88,8 +94,10 @@ export function ContactCard({
 }: ContactCardProps) {
   const [importedRef, importedClass] = useJustImported(justImported);
   const isWarning = verifiedTone === "warning";
-  const toneBorder = isWarning ? "border-orange-500/50" : "border-green-500/50";
-  const toneText = isWarning ? "text-orange-400" : "text-green-400";
+  // A verified signer reads as a status band: the whole block tinted,
+  // green for a good signature, amber for one that could not be checked.
+  const toneBand = isWarning ? "bg-[#252012]" : "bg-[#15231b]";
+  const toneText = isWarning ? "text-warn" : "text-good";
   const ToneIcon = isWarning ? TriangleAlertIcon : CheckCircleIcon;
   // Captured once at mount; cards are short-lived so drift is moot.
   const [now] = useState(() => Date.now());
@@ -139,159 +147,186 @@ export function ContactCard({
   // wouldn't stop the highlight.
   const dimmed = "pointer-events-none opacity-40";
 
+  // The long key id at the right of the row: the fingerprint's last 16
+  // hex digits, as two stacked lines. An SSH hash has no meaningful tail,
+  // so it shows on its own line in full instead (see below).
+  const longId =
+    !isSsh && HEX_FINGERPRINT.test(contact.keyId)
+      ? longIdLines(contact.keyId)
+      : null;
+  // The long key line -- the 16-digit key id and the algorithm. Always on
+  // a read-only card (the signer card: "the signer's key ID is surfaced
+  // so the user can locate the key") and in advanced mode; a list row
+  // otherwise folds the algorithm into its small detail line.
+  const showKeyLine = !!readOnly || !!advancedMode || !longId;
+  const algorithm = contact.algorithm ? formatAlgorithm(contact.algorithm) : "";
+  const expired = !!contact.expiresAt && contact.expiresAt < now;
+  const hasPills =
+    expired || !!contact.securityWarning || isSsh || recipients.length > 1;
+  // Algorithm, expiry and provenance, as one small muted line.
+  const details: string[] = [];
+  if (algorithm && !showKeyLine) details.push(algorithm);
+  if (contact.expiresAt && !expired) {
+    details.push(
+      t("keys_contact_expires", { date: formatDate(contact.expiresAt) }),
+    );
+  }
+  if (source) {
+    /* Where this contact came from, which is also its upsert identity:
+       looking the same user (or address) up again updates THIS record
+       rather than adding a second one.
+
+       A PROVENANCE LABEL, NOT A TRUST CLAIM. It says who told us this
+       key is theirs; it does not say anyone checked. See
+       T-GITHUB-KEY-SUBSTITUTION and T-KEYSERVER-KEY-SUBSTITUTION. */
+    details.push(
+      source.type === "github"
+        ? t("keys_source_github", { user: source.user })
+        : t("keys_source_keyserver", { user: source.user }),
+    );
+  }
+
   return (
     <div
       ref={importedRef}
       onClick={handleClick}
       {...longPress.handlers}
       className={cn(
-        // A floor, not a fixed height: a one-line contact (SSH keys carry no
-        // email) would otherwise sit noticeably shorter than its neighbours.
-        // Cards with more to say still grow past it. The slack the floor adds
-        // is split BETWEEN the two text groups (see justify-between below), so
-        // the name stays pinned to the top edge and the fingerprint line stays
-        // level with the details arrow pinned at bottom-right.
+        // One compact row. In the keys list it is a block of a stack
+        // (KeysView rounds the stack's outer corners); read-only, it stands
+        // alone (the verified-signer card) and carries the card radius
+        // itself.
         // select-none: the whole card is a click target, and a shift-click
         // to extend a selection would otherwise drag a text range across it
         // instead. The fingerprint is still copyable from the card's menu.
-        "group relative flex min-h-19 flex-col rounded-md p-3 select-none",
+        "group relative py-2.5 pr-2 pl-3.5 select-none",
+        readOnly ? "rounded-xl pr-3.5" : "rounded-[3px]",
+        verifiedLabel ? toneBand : "bg-card",
         importedClass,
-        // Keep the border width constant (1px) and add thickness with a ring
-        // (box-shadow, no layout impact) so selecting doesn't shift the card.
-        selected
-          ? "border border-green-500/80 ring-2 ring-green-500/40"
-          : verifiedLabel
-            ? `border ${toneBorder}`
-            : "border-border border",
-        clickable && "hover:bg-muted/40 cursor-pointer transition-colors",
+        // The import pulse is an outward ring: lift the card over its
+        // neighbours so the 2px gap doesn't hide half of it.
+        importedClass && "z-10",
+        // An inset ring (box-shadow, no layout impact) so selecting neither
+        // shifts the row nor spills into the gap between blocks.
+        selected && "ring-primary/70 ring-2 ring-inset",
+        clickable && "hover:bg-accent/50 cursor-pointer transition-colors",
       )}
     >
-      <div className="flex flex-1 items-start gap-2">
-        <div className="flex min-w-0 flex-1 flex-col justify-between self-stretch">
-          {/* Two groups, not one run of lines: the slack a short card gets
-              from min-h-19 falls between them, so the name sits on the top
-              edge and the key line on the bottom one. */}
-          <div>
-            <div className="flex items-center justify-between gap-2">
-              <p className="flex min-w-0 items-center gap-1.5 truncate text-sm font-medium">
-                <span className="truncate">{name}</span>
-                {isSsh && (
-                  <span
-                    title={t("keys_ssh_chip_title")}
-                    className="bg-secondary text-muted-foreground shrink-0 rounded border px-1 text-[10px] leading-4 font-normal"
-                  >
-                    SSH
-                  </span>
-                )}
-                {recipients.length > 1 && (
-                  /* One person, several machines. Said on the card because
-                   the fingerprint line below shows only the first: a
-                   3-stanza file is otherwise a surprise at decrypt time. */
-                  <span
-                    title={
-                      activeKeys < recipients.length
-                        ? t("keys_contact_keys_partial_title", {
-                            active: activeKeys,
-                            total: recipients.length,
-                          })
-                        : t("keys_contact_keys_all_title")
-                    }
-                    className="bg-secondary text-muted-foreground shrink-0 rounded border px-1 text-[10px] leading-4 font-normal"
-                  >
-                    {activeKeys < recipients.length
-                      ? t("keys_contact_keys_partial", {
-                          active: activeKeys,
-                          total: recipients.length,
-                        })
-                      : tn("keys_contact_keys_count", recipients.length)}
-                  </span>
-                )}
-              </p>
-              {verifiedLabel && (
-                <span
-                  className={`flex shrink-0 items-center gap-1 text-xs ${toneText}`}
-                >
-                  <ToneIcon className="h-3.5 w-3.5" />
-                  {verifiedLabel}
-                </span>
-              )}
-            </div>
-            {email && (
-              <p className="text-muted-foreground truncate text-xs">{email}</p>
+      <div className="flex items-center gap-2.5">
+        <KeyAvatar fingerprint={contact.keyId} size={32} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            {/* Line 1 is the name and nothing else, so no pill can
+                ever squeeze it out of the row. */}
+            <p className="min-w-0 truncate text-sm font-medium">{name}</p>
+            {verifiedLabel && (
+              <span
+                className={`ml-auto flex shrink-0 items-center gap-1 text-xs ${toneText}`}
+              >
+                <ToneIcon className="h-3.5 w-3.5" />
+                {verifiedLabel}
+              </span>
             )}
           </div>
-
-          <div>
-            <p className="text-muted-foreground mt-0.5 font-mono text-xs break-all">
+          {email && (
+            <p className="text-muted-foreground truncate text-xs">{email}</p>
+          )}
+          {showKeyLine && (
+            <p className="text-muted-foreground font-mono text-[11px] break-all">
               {/* An OpenSSH fingerprint is a base64 hash: its last 16
                 characters identify nothing, so it shows in full. */}
               {isSsh ? contact.keyId : contact.keyId.slice(-16)}
-              {contact.algorithm
-                ? ` - ${formatAlgorithm(contact.algorithm)}`
-                : ""}
+              {algorithm ? ` - ${algorithm}` : ""}
             </p>
-            {source && (
-              /* Where this contact came from, which is also its upsert
-               identity: looking the same user (or address) up again
-               updates THIS record rather than adding a second one.
-
-               A PROVENANCE LABEL, NOT A TRUST CLAIM. It says who told us
-               this key is theirs; it does not say anyone checked. See
-               T-GITHUB-KEY-SUBSTITUTION and
-               T-KEYSERVER-KEY-SUBSTITUTION. */
-              <p className="text-muted-foreground mt-0.5 text-xs">
-                {source.type === "github"
-                  ? t("keys_source_github", { user: source.user })
-                  : t("keys_source_keyserver", { user: source.user })}
-              </p>
-            )}
-            {note && (
-              <p className="text-muted-foreground mt-1 text-xs">{note}</p>
-            )}
-            {/* Advanced mode regroups a hex fingerprint into 4-character
-              blocks; doing that to a base64 hash would only chop it into
-              meaningless quarters, and the line above already shows it in
-              full. */}
-            {advancedMode && !isSsh && (
-              <p className="text-muted-foreground mt-0.5 font-mono text-[10px] leading-relaxed">
-                {formatFingerprint(contact.keyId)}
-              </p>
-            )}
-            {contact.expiresAt &&
-              (contact.expiresAt < now ? (
-                <div className="mt-1">
-                  <span
-                    title={t("keys_contact_expired_title", {
-                      date: formatDate(contact.expiresAt),
-                    })}
-                    className="inline-flex items-center gap-1 rounded-full border border-red-500/40 bg-red-500/10 px-2 py-0.5 text-[10px] font-medium text-red-400"
-                  >
-                    <TriangleAlertIcon className="h-3 w-3" />
-                    {t("keys_contact_expired", {
-                      date: formatDateShort(contact.expiresAt),
-                    })}
-                  </span>
-                </div>
-              ) : (
-                <p className="text-muted-foreground mt-0.5 text-xs">
-                  {t("keys_contact_expires", {
+          )}
+          {/* The meta line: pills first, warnings leading (an expired or
+              weak key must never be the part that gets cut off), then
+              algorithm, expiry and provenance as truncating text. */}
+          {(hasPills || details.length > 0) && (
+            <div className="mt-0.5 flex min-w-0 items-center gap-1">
+              {expired && contact.expiresAt && (
+                <span
+                  title={t("keys_contact_expired_title", {
                     date: formatDate(contact.expiresAt),
                   })}
-                </p>
-              ))}
-            {contact.securityWarning && (
-              <div className="mt-1">
+                  className={cn(
+                    PILL,
+                    "bg-destructive/12 text-bad inline-flex gap-1",
+                  )}
+                >
+                  <TriangleAlertIcon className="h-2.5 w-2.5" />
+                  {t("keys_contact_expired", {
+                    date: formatDateShort(contact.expiresAt),
+                  })}
+                </span>
+              )}
+              {contact.securityWarning && (
                 <span
                   title={contact.securityWarning}
-                  className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-400"
+                  className={cn(PILL, "bg-warn/12 text-warn inline-flex gap-1")}
                 >
-                  <TriangleAlertIcon className="h-3 w-3" />
+                  <TriangleAlertIcon className="h-2.5 w-2.5" />
                   {t("keys_weak_sha1")}
                 </span>
-              </div>
-            )}
-          </div>
+              )}
+              {isSsh && (
+                <span
+                  title={t("keys_ssh_chip_title")}
+                  className={cn(PILL, "bg-secondary text-muted-foreground")}
+                >
+                  SSH
+                </span>
+              )}
+              {recipients.length > 1 && (
+                /* One person, several machines. Said on the card because
+                 the key id it shows is only the first key's: a 3-stanza
+                 file is otherwise a surprise at decrypt time. */
+                <span
+                  title={
+                    activeKeys < recipients.length
+                      ? t("keys_contact_keys_partial_title", {
+                          active: activeKeys,
+                          total: recipients.length,
+                        })
+                      : t("keys_contact_keys_all_title")
+                  }
+                  className={cn(PILL, "bg-secondary text-muted-foreground")}
+                >
+                  {activeKeys < recipients.length
+                    ? t("keys_contact_keys_partial", {
+                        active: activeKeys,
+                        total: recipients.length,
+                      })
+                    : tn("keys_contact_keys_count", recipients.length)}
+                </span>
+              )}
+              {details.length > 0 && (
+                <span className="text-muted-foreground min-w-0 truncate text-[11px]">
+                  {details.join(" \u00b7 ")}
+                </span>
+              )}
+            </div>
+          )}
+          {note && (
+            <p className="text-muted-foreground mt-0.5 text-xs">{note}</p>
+          )}
+          {/* Advanced mode regroups a hex fingerprint into 4-character
+            blocks; doing that to a base64 hash would only chop it into
+            meaningless quarters, and the line above already shows it in
+            full. */}
+          {advancedMode && !isSsh && (
+            <p className="text-muted-foreground mt-0.5 font-mono text-[10px] leading-relaxed">
+              {formatFingerprint(contact.keyId)}
+            </p>
+          )}
         </div>
+
+        {longId && !showKeyLine && (
+          <span className="text-muted-foreground shrink-0 font-mono text-[11px] leading-tight whitespace-nowrap">
+            <span className="block">{longId[0]}</span>
+            <span className="block">{longId[1]}</span>
+          </span>
+        )}
 
         {!readOnly && (
           <DropdownMenu>
@@ -357,24 +392,26 @@ export function ContactCard({
             </DropdownMenuContent>
           </DropdownMenu>
         )}
-      </div>
 
-      {onShowDetails && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onShowDetails();
-          }}
-          aria-label={t("keys_key_details")}
-          className={cn(
-            "text-muted-foreground absolute right-3 bottom-2 rounded p-1 transition-colors",
-            selectionMode ? dimmed : "group-hover:text-foreground",
-          )}
-        >
-          <ArrowRightIcon className="h-4 w-4" />
-        </button>
-      )}
+        {/* The row itself opens details too; this is the same action as a
+            visible, keyboard-reachable target. */}
+        {onShowDetails && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onShowDetails();
+            }}
+            aria-label={t("keys_key_details")}
+            className={cn(
+              "text-muted-foreground -ml-1 shrink-0 rounded p-0.5 transition-colors",
+              selectionMode ? dimmed : "group-hover:text-foreground",
+            )}
+          >
+            <ChevronRightIcon className="h-4 w-4" />
+          </button>
+        )}
+      </div>
     </div>
   );
 }

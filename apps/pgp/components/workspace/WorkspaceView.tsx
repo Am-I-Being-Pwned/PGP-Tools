@@ -13,6 +13,7 @@ import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
 import { Button } from "@amibeingpwned/ui/button";
 import { Kbd } from "@amibeingpwned/ui/kbd";
 import { ariaKeyShortcuts, isMacPlatform } from "@amibeingpwned/ui/kbd-helpers";
+import { OptionBar } from "@amibeingpwned/ui/option-bar";
 import {
   Popover,
   PopoverAnchor,
@@ -646,7 +647,7 @@ export function WorkspaceView({
     const handler = (e: KeyboardEvent) => {
       if (e.key !== "Escape" || e.defaultPrevented) return;
       if (hasOpenSlideOver()) return;
-      // Escapes that are closing a dropdown (mode select, pickers)
+      // Escapes that are closing a dropdown (key and recipient pickers)
       // belong to the dropdown, not to us.
       const target = e.target as HTMLElement | null;
       if (target?.closest("[data-radix-popper-content-wrapper]")) return;
@@ -1045,7 +1046,7 @@ export function WorkspaceView({
                     isMacPlatform(),
                   )}
                   onClick={openReply}
-                  className="border-border bg-background/90 text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground pointer-events-auto shrink-0 rounded-md border p-2 shadow-sm backdrop-blur transition-colors"
+                  className="surface-float text-muted-foreground hover:text-foreground pointer-events-auto shrink-0 rounded-lg p-2 transition-colors"
                 >
                   <ReplyIcon className="h-4 w-4" />
                 </button>
@@ -1091,7 +1092,7 @@ export function WorkspaceView({
                 )}
               >
                 {copied ? (
-                  <CheckIcon className="h-4 w-4 text-green-400" />
+                  <CheckIcon className="text-good h-4 w-4" />
                 ) : (
                   <ClipboardIcon className="h-4 w-4" />
                 )}
@@ -1141,6 +1142,43 @@ export function WorkspaceView({
         onReset={s.resetAll}
         onResetOutput={s.resetOutput}
         onToolsReady={onToolsReady}
+        // Recipients are the card's To row, as on an envelope: what the
+        // message is, and who it is for, read as one thing.
+        cardHeader={
+          needsRecipient ? (
+            <RecipientPicker
+              inline
+              // Escape in the recipient box peels its own layers first
+              // (list, then query); when there are none left it lands the
+              // user back in the message, the same thing Escape does
+              // everywhere else in this panel.
+              onEscapeExhausted={focusMessageBox}
+              // A message password rules out age entirely, so SSH rows dim
+              // with their own reason rather than being silently
+              // unpickable.
+              passwordArmed={s.encryptPasswordReady}
+              label={t("workspace_recipients_label")}
+              // Only offer contacts you can actually encrypt to. Sign-only
+              // keys are valid contacts (for verification) but have no
+              // encryption key. Legacy records (undefined) are assumed
+              // encryptable until the contacts backfill fills the flag in.
+              contacts={contacts.filter((c) => c.usableForEncryption !== false)}
+              myKeys={myKeys}
+              selectedKeyIds={s.selectedRecipientIds}
+              recentKeyIds={s.recentRecipients}
+              // Changing the recipient set (adding OR removing) invalidates
+              // any completed ciphertext — clear it so the user re-encrypts
+              // to the new set rather than downloading stale output.
+              onChange={(ids) => {
+                s.setSelectedRecipientIds(ids);
+                s.resetOutput();
+              }}
+              emptyText={t("workspace_no_contacts_yet")}
+              emptyAction={onNavigateToKeys}
+              emptyActionLabel={t("workspace_add_a_contact")}
+            />
+          ) : undefined
+        }
         composeTranslate={
           aiTranslateEnabled
             ? {
@@ -1156,39 +1194,6 @@ export function WorkspaceView({
       />
 
       <div className="space-y-3">
-        {needsRecipient && (
-          <RecipientPicker
-            // Escape in the recipient box peels its own layers first
-            // (list, then query); when there are none left it lands the
-            // user back in the message, the same thing Escape does
-            // everywhere else in this panel.
-            onEscapeExhausted={focusMessageBox}
-            // A message password rules out age entirely, so SSH rows dim
-            // with their own reason rather than being silently
-            // unpickable.
-            passwordArmed={s.encryptPasswordReady}
-            label={t("workspace_recipients_label")}
-            // Only offer contacts you can actually encrypt to. Sign-only
-            // keys are valid contacts (for verification) but have no
-            // encryption key. Legacy records (undefined) are assumed
-            // encryptable until the contacts backfill fills the flag in.
-            contacts={contacts.filter((c) => c.usableForEncryption !== false)}
-            myKeys={myKeys}
-            selectedKeyIds={s.selectedRecipientIds}
-            recentKeyIds={s.recentRecipients}
-            // Changing the recipient set (adding OR removing) invalidates
-            // any completed ciphertext — clear it so the user re-encrypts
-            // to the new set rather than downloading stale output.
-            onChange={(ids) => {
-              s.setSelectedRecipientIds(ids);
-              s.resetOutput();
-            }}
-            emptyText={t("workspace_no_contacts_yet")}
-            emptyAction={onNavigateToKeys}
-            emptyActionLabel={t("workspace_add_a_contact")}
-          />
-        )}
-
         {/* Say which format is about to come out, once the recipients
             have decided it. Not a warning -- the picker has already made
             mixing impossible -- just the name of the thing being made. */}
@@ -1269,26 +1274,29 @@ export function WorkspaceView({
 
         {s.mode === "encrypt" && (
           <div className="space-y-2">
-            {/* pl-2 tucks the badges in line with the inner text column of
-                the input boxes above (their borders sit at the container
-                edge; their content is inset by the same 8px). */}
-            <div className="flex flex-wrap items-center gap-2 pl-2">
-              {myKeys.length > 0 && (
-                // Deliberately left pressed AND enabled even when this
-                // particular message can't include the user (no own key
-                // of the chosen engine): it is a persisted global
-                // preference, and silently flipping it off from a
-                // transient recipient choice would leave the next
-                // message unreadable to them for reasons they never saw.
-                // The line below says what happens this time instead.
-                <ToggleBadge
-                  pressed={s.encryptToSelf}
-                  onPressedChange={setEncryptToSelfPref}
-                >
-                  {t("workspace_toggle_encrypt_to_self")}
-                </ToggleBadge>
-              )}
-              {/* Symmetric encryption, and ADDITIVE: it adds a password
+            {/* One option bar, each toggle a segment of it, two to a row
+                (an odd last one spans both) rather than squeezing four or
+                five labels into one row of a 400px panel. The
+                history viewer sits beside it, not in it: it opens a page,
+                it is not an option. */}
+            <div className="flex items-center gap-2">
+              <OptionBar className="min-w-0 flex-1 grid-flow-row grid-cols-2 [&>*:last-child:nth-child(odd)]:col-span-2">
+                {myKeys.length > 0 && (
+                  // Deliberately left pressed AND enabled even when this
+                  // particular message can't include the user (no own key
+                  // of the chosen engine): it is a persisted global
+                  // preference, and silently flipping it off from a
+                  // transient recipient choice would leave the next
+                  // message unreadable to them for reasons they never saw.
+                  // The line below says what happens this time instead.
+                  <ToggleBadge
+                    pressed={s.encryptToSelf}
+                    onPressedChange={setEncryptToSelfPref}
+                  >
+                    {t("workspace_toggle_encrypt_to_self")}
+                  </ToggleBadge>
+                )}
+                {/* Symmetric encryption, and ADDITIVE: it adds a password
                   the message can also be opened with, on top of whatever
                   recipients are selected. It does not replace them and it
                   does not touch "Also encrypt to me" -- a badge, not a
@@ -1299,64 +1307,64 @@ export function WorkspaceView({
                   a control that vanishes looks like a feature that does
                   not exist, and the user is left with no way to learn
                   that age simply has no password mode. */}
-              {
-                <ToggleBadge
-                  // Pressed means A PASSWORD IS SET, not "the dialog was
-                  // opened" -- so cancelling out of the dialog leaves the
-                  // badge off, which is the honest reading of it.
-                  pressed={s.encryptPasswordReady}
-                  // The mirror of the picker dimming SSH rows once a
-                  // password is set. Dimmed with a reason rather than
-                  // hidden, the rule this app states for every other
-                  // unavailable control.
-                  disabledReason={
-                    encryptEngine === "ssh" ? sshPasswordReason() : undefined
-                  }
-                  onPressedChange={(v) => {
-                    // Un-pressing drops the password rather than parking
-                    // it: one kept out of sight would re-arm on the next
-                    // press against a message it was never meant for.
-                    if (v) s.setPasswordDialogOpen(true);
-                    else s.setEncryptPassword("");
-                    s.resetOutput();
-                  }}
-                >
-                  {t("workspace_toggle_password")}
-                </ToggleBadge>
-              }
-              {myKeys.length > 0 && (
-                <ToggleBadge
-                  pressed={s.alsoSign}
-                  onPressedChange={setAlsoSignPref}
-                  disabledReason={signBlockedReason}
-                >
-                  {t("common_sign")}
-                </ToggleBadge>
-              )}
-              {s.files.length > 1 && (
-                <ToggleBadge
-                  pressed={s.zipFiles}
-                  onPressedChange={(v) => {
-                    s.setZipFiles(v);
-                    s.resetOutput();
-                  }}
-                >
-                  {t("workspace_toggle_zip_files")}
-                </ToggleBadge>
-              )}
-              {/* Never-cache means no history, ever: the toggle and the
-                  viewer disappear rather than offering a dead switch. */}
-              {!neverCacheKeys && (
-                <>
+                {
+                  <ToggleBadge
+                    // Pressed means A PASSWORD IS SET, not "the dialog was
+                    // opened" -- so cancelling out of the dialog leaves the
+                    // badge off, which is the honest reading of it.
+                    pressed={s.encryptPasswordReady}
+                    // The mirror of the picker dimming SSH rows once a
+                    // password is set. Dimmed with a reason rather than
+                    // hidden, the rule this app states for every other
+                    // unavailable control.
+                    disabledReason={
+                      encryptEngine === "ssh" ? sshPasswordReason() : undefined
+                    }
+                    onPressedChange={(v) => {
+                      // Un-pressing drops the password rather than parking
+                      // it: one kept out of sight would re-arm on the next
+                      // press against a message it was never meant for.
+                      if (v) s.setPasswordDialogOpen(true);
+                      else s.setEncryptPassword("");
+                      s.resetOutput();
+                    }}
+                  >
+                    {t("workspace_toggle_password")}
+                  </ToggleBadge>
+                }
+                {myKeys.length > 0 && (
+                  <ToggleBadge
+                    pressed={s.alsoSign}
+                    onPressedChange={setAlsoSignPref}
+                    disabledReason={signBlockedReason}
+                  >
+                    {t("common_sign")}
+                  </ToggleBadge>
+                )}
+                {s.files.length > 1 && (
+                  <ToggleBadge
+                    pressed={s.zipFiles}
+                    onPressedChange={(v) => {
+                      s.setZipFiles(v);
+                      s.resetOutput();
+                    }}
+                  >
+                    {t("workspace_toggle_zip_files")}
+                  </ToggleBadge>
+                )}
+                {/* Never-cache means no history, ever: the toggle and the
+                  viewer (beside the bar) disappear rather than offering a
+                  dead switch. */}
+                {!neverCacheKeys && (
                   <ToggleBadge
                     pressed={s.saveToHistory}
                     onPressedChange={setSaveToHistoryPref}
                   >
                     {t("workspace_toggle_save_to_history")}
                   </ToggleBadge>
-                  <HistoryButton enabled={s.saveToHistory} />
-                </>
-              )}
+                )}
+              </OptionBar>
+              {!neverCacheKeys && <HistoryButton enabled={s.saveToHistory} />}
             </div>
             {/* Nothing will be signed on the age path, so the "which key
                 signs" question doesn't arise -- the toggle above stays,
@@ -1433,7 +1441,7 @@ export function WorkspaceView({
           </div>
         )}
         {s.passwordError && (
-          <p className="text-destructive text-xs">{s.passwordError}</p>
+          <p className="text-bad text-xs">{s.passwordError}</p>
         )}
 
         <WorkspaceResults
@@ -1534,7 +1542,7 @@ export function WorkspaceView({
                           )}
                         >
                           {copied ? (
-                            <CheckIcon className="h-4 w-4 text-green-400" />
+                            <CheckIcon className="text-good h-4 w-4" />
                           ) : (
                             <ClipboardIcon className="h-4 w-4" />
                           )}

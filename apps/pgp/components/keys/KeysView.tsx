@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { ImportIcon, PlusIcon } from "lucide-react";
 
+import { cn } from "@amibeingpwned/ui";
+import { Block } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
 
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
@@ -136,6 +138,20 @@ type KeysRoute =
   | { page: "bulk-delete" }
   | { page: "bulk-export" }
   | { page: "rename"; target: RenameTarget };
+
+/**
+ * A keyring list drawn as one card: flat blocks with 2px of page between
+ * them. Not `BlockStack`, which clips its children to round the outer
+ * corners -- that would also clip the outward ring a just-imported row
+ * pulses with. Instead the first and last rows pick up the 12px corners
+ * themselves. Every child is a plain wrapper (the `data-select-id` one,
+ * for cards) around exactly one block, hence the `>*>*` reach.
+ */
+const LIST_STACK =
+  "flex flex-col gap-0.5 [&>*:first-child>*]:rounded-t-xl [&>*:last-child>*]:rounded-b-xl";
+
+/** The small muted label that sits above a stack. */
+const LIST_LABEL = "text-muted-foreground mb-1.5 px-1 text-xs font-medium";
 
 /** Composite selection id, namespaced so PGP keys, CRX keys, and contacts can
  *  coexist in one selection set. */
@@ -516,13 +532,37 @@ export function KeysView({
 
       <div className="space-y-4">
         <div>
-          <h2 className="mb-2 text-sm font-semibold">
-            {t("keys_my_keys_heading")}
-          </h2>
+          {/* The label, with the two ways to add a key as small chips on
+              the same line. */}
+          <div className="mb-1.5 flex items-center gap-2">
+            <h2 className={cn(LIST_LABEL, "mb-0 flex-1")}>
+              {t("keys_my_keys_heading")}
+            </h2>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2.5 text-xs"
+              onClick={() => nav.push({ page: "generate" })}
+            >
+              <PlusIcon className="h-3.5 w-3.5" />
+              {t("keys_generate_button")}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2.5 text-xs"
+              onClick={() => nav.push({ page: "import" })}
+            >
+              <ImportIcon className="h-3.5 w-3.5" />
+              {t("keys_import_button")}
+            </Button>
+          </div>
           {keyModels.length === 0 ? (
-            <p className="text-muted-foreground text-sm">{t("keys_empty")}</p>
+            <p className="text-muted-foreground px-1 text-sm">
+              {t("keys_empty")}
+            </p>
           ) : (
-            <div className="space-y-2">
+            <div className={LIST_STACK}>
               {keyModels.map((model) => {
                 const id = selId(model.kind, model.id);
                 return (
@@ -541,27 +581,6 @@ export function KeysView({
               })}
             </div>
           )}
-        </div>
-
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="bg-border/90 hover:bg-border flex-1"
-            onClick={() => nav.push({ page: "generate" })}
-          >
-            <PlusIcon className="h-4 w-4" />
-            {t("keys_generate_button")}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="bg-border/90 hover:bg-border flex-1"
-            onClick={() => nav.push({ page: "import" })}
-          >
-            <ImportIcon className="h-4 w-4" />
-            {t("keys_import_button")}
-          </Button>
         </div>
 
         <ContactsList
@@ -994,7 +1013,7 @@ function ContactsList({
 
   return (
     <div>
-      <h2 className="mb-2 text-sm font-semibold">
+      <h2 className={LIST_LABEL}>
         {contactsLocked
           ? t("keys_contacts_heading_encrypted")
           : contacts.length > 0
@@ -1002,62 +1021,68 @@ function ContactsList({
             : t("keys_contacts_heading")}
       </h2>
       {contactsLocked ? (
-        <div className="border-border bg-muted/30 rounded-lg border p-4 text-center">
+        <Block className="rounded-xl p-4 text-center">
           <p className="text-muted-foreground text-sm">
             {t("keys_contacts_locked")}
           </p>
-        </div>
+        </Block>
       ) : (
         <>
-          <ContactDropZone onKeyText={onImportText} />
-          {contacts.length > 5 && (
-            <input
-              type="text"
-              placeholder={t("keys_search_contacts_placeholder")}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className={`${INPUT_CLASS} mt-2`}
-            />
-          )}
-          {filtered.length > 0 && (
-            <div className="mt-2 space-y-2">
-              {filtered.map((c) => {
-                const id = selId("contact", c.keyId);
-                return (
-                  <div key={c.keyId} data-select-id={id}>
-                    <ContactCard
-                      contact={c}
-                      justImported={justImported.has(c.keyId)}
-                      onRemove={() => onRequestRemove(c)}
-                      onEncryptTo={
-                        onEncryptTo ? () => onEncryptTo(c.keyId) : undefined
-                      }
-                      onCopyPublicKey={() =>
-                        void copy(c.armoredPublicKey, {
-                          label: t("common_public_key"),
-                        })
-                      }
-                      onDownloadPublicKey={() =>
-                        downloadPublicKey(
-                          c.armoredPublicKey,
-                          parseUserId(displayUserId(c) ?? "").name || c.keyId,
-                        )
-                      }
-                      onRename={
-                        onRequestRename ? () => onRequestRename(c) : undefined
-                      }
-                      onShowDetails={() => onShowDetails(c)}
-                      advancedMode={advancedMode}
-                      selectionMode={selectionMode}
-                      selected={selected.has(id)}
-                      onToggleSelect={(extend) => onToggleSelect(id, extend)}
-                      onStartSelect={() => onStartSelect(id)}
-                    />
-                  </div>
-                );
-              })}
+          {/* One card for the whole job: the drop row, the search (once
+              the list is long enough to need one), then the contacts. */}
+          <div className={LIST_STACK}>
+            <div>
+              <ContactDropZone onKeyText={onImportText} />
             </div>
-          )}
+            {contacts.length > 5 && (
+              <div>
+                <Block className="p-2">
+                  <input
+                    type="text"
+                    placeholder={t("keys_search_contacts_placeholder")}
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className={INPUT_CLASS}
+                  />
+                </Block>
+              </div>
+            )}
+            {filtered.map((c) => {
+              const id = selId("contact", c.keyId);
+              return (
+                <div key={c.keyId} data-select-id={id}>
+                  <ContactCard
+                    contact={c}
+                    justImported={justImported.has(c.keyId)}
+                    onRemove={() => onRequestRemove(c)}
+                    onEncryptTo={
+                      onEncryptTo ? () => onEncryptTo(c.keyId) : undefined
+                    }
+                    onCopyPublicKey={() =>
+                      void copy(c.armoredPublicKey, {
+                        label: t("common_public_key"),
+                      })
+                    }
+                    onDownloadPublicKey={() =>
+                      downloadPublicKey(
+                        c.armoredPublicKey,
+                        parseUserId(displayUserId(c) ?? "").name || c.keyId,
+                      )
+                    }
+                    onRename={
+                      onRequestRename ? () => onRequestRename(c) : undefined
+                    }
+                    onShowDetails={() => onShowDetails(c)}
+                    advancedMode={advancedMode}
+                    selectionMode={selectionMode}
+                    selected={selected.has(id)}
+                    onToggleSelect={(extend) => onToggleSelect(id, extend)}
+                    onStartSelect={() => onStartSelect(id)}
+                  />
+                </div>
+              );
+            })}
+          </div>
           {search && filtered.length === 0 && (
             <p className="text-muted-foreground mt-2 text-center text-xs">
               {t("keys_no_contacts_match", { query: search })}

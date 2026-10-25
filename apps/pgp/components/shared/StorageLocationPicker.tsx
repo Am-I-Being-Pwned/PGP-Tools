@@ -1,3 +1,5 @@
+import { BlockStack } from "@amibeingpwned/ui/block";
+
 import type { MessageKey } from "../../lib/i18n";
 import type { StorageLocation } from "../../lib/storage/preferences";
 import { t } from "../../lib/i18n";
@@ -28,24 +30,27 @@ const OPTIONS: {
   },
 ];
 
+/** Two radio rows in one block stack; the chosen one takes the "on" tint. */
 export function StorageLocationPicker({
   value,
   onChange,
   disabled,
 }: StorageLocationPickerProps) {
   return (
-    <div className="space-y-2">
+    <BlockStack>
       {OPTIONS.map((opt) => (
         <label
           key={opt.id}
-          className={`flex cursor-pointer items-center justify-between gap-4 rounded-md border p-3 transition-colors ${
-            value === opt.id
-              ? "border-primary bg-primary/5"
-              : "border-border hover:border-muted-foreground/50"
+          className={`flex cursor-pointer items-center justify-between gap-4 rounded-[3px] px-3.5 py-3 transition-colors ${
+            value === opt.id ? "bg-on" : "bg-card hover:bg-accent"
           } ${disabled ? "pointer-events-none" : ""}`}
         >
           <div>
-            <p className="text-sm font-medium">{t(opt.label)}</p>
+            <p
+              className={`text-sm font-medium ${value === opt.id ? "text-on-foreground" : ""}`}
+            >
+              {t(opt.label)}
+            </p>
             <p className="text-muted-foreground text-xs">
               {t(opt.description)}
             </p>
@@ -60,6 +65,6 @@ export function StorageLocationPicker({
           />
         </label>
       ))}
-    </div>
+    </BlockStack>
   );
 }

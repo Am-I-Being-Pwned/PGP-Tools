@@ -1,5 +1,7 @@
 import { CheckIcon } from "lucide-react";
 
+import { BlockStack } from "@amibeingpwned/ui/block";
+
 import type { PresetId } from "../../lib/presets";
 import { t } from "../../lib/i18n";
 import { describeBundle, PRESET_IDS, PRESETS } from "../../lib/presets";
@@ -19,6 +21,10 @@ interface PresetPickerProps {
  * Radio-style cards for the three security presets, each listing
  * exactly what its bundle sets (via describeBundle). Used by both the
  * onboarding preset step and the settings security-preset subpage.
+ *
+ * Drawn as one block stack, a block per preset; the chosen one takes
+ * the "on" tint. Too much per option (tagline plus the bundle lines)
+ * for a one-line option bar, so it stays a stack of radio cards.
  */
 export function PresetPicker({
   selected,
@@ -26,11 +32,7 @@ export function PresetPicker({
   onSelect,
 }: PresetPickerProps) {
   return (
-    <div
-      className="space-y-2"
-      role="radiogroup"
-      aria-label={t("shared_security_preset")}
-    >
+    <BlockStack role="radiogroup" aria-label={t("shared_security_preset")}>
       {PRESET_IDS.map((id) => {
         const preset = PRESETS[id];
         const isSelected = selected === id;
@@ -41,21 +43,23 @@ export function PresetPicker({
             role="radio"
             aria-checked={isSelected}
             onClick={() => onSelect(id)}
-            className={`w-full rounded-md border p-3 text-left transition-colors ${
-              isSelected
-                ? "border-primary bg-primary/5"
-                : "border-border hover:border-muted-foreground/40"
+            className={`focus-visible:ring-ring/50 w-full rounded-[3px] px-3.5 py-3 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset ${
+              isSelected ? "bg-on" : "bg-card hover:bg-accent"
             }`}
           >
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">{preset.title}</span>
+              <span
+                className={`text-sm font-medium ${isSelected ? "text-on-foreground" : ""}`}
+              >
+                {preset.title}
+              </span>
               {activeId === id && (
-                <span className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-[10px] font-medium">
+                <span className="bg-secondary text-muted-foreground rounded px-1.5 py-px text-[10.5px] font-medium">
                   {t("shared_preset_current")}
                 </span>
               )}
               {preset.recommended && (
-                <span className="bg-primary/10 text-primary rounded px-1.5 py-0.5 text-[10px] font-medium">
+                <span className="bg-good/12 text-good rounded px-1.5 py-px text-[10.5px] font-medium">
                   {t("shared_preset_recommended")}
                 </span>
               )}
@@ -83,6 +87,6 @@ export function PresetPicker({
           </button>
         );
       })}
-    </div>
+    </BlockStack>
   );
 }

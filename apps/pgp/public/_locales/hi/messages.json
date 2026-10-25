@@ -4207,9 +4207,6 @@
   "workspace_text_cleared_toast": {
     "message": "टेक्स्ट साफ़ किया गया"
   },
-  "workspace_text_entered_below": {
-    "message": "टेक्स्ट नीचे लिखा गया है"
-  },
   "workspace_toggle_encrypt_to_self": {
     "message": "मेरे लिए भी एन्क्रिप्ट करें"
   },

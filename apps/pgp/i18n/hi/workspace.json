@@ -65,7 +65,6 @@
   "workspace_need_recipient_or_password": {
     "message": "कम से कम एक प्राप्तकर्ता चुनें, या पासवर्ड सेट करें"
   },
-  "workspace_text_entered_below": { "message": "टेक्स्ट नीचे लिखा गया है" },
   "workspace_clear_text": { "message": "टेक्स्ट साफ़ करें" },
   "workspace_message_input_aria": { "message": "संदेश इनपुट" },
   "workspace_placeholder_decrypt": {

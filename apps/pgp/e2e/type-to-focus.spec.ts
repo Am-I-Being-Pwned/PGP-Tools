@@ -84,11 +84,19 @@ test.describe("type-to-focus (encrypt and sign modes)", () => {
     panel,
   }) => {
     await onboardWithPassword(panel, PASSWORD);
-    // The mode combobox owns its own type-ahead; keystrokes on it must
-    // not be stolen into the message box.
-    const trigger = panel.getByRole("combobox").first();
-    await trigger.focus();
+    // The find field is a real text field on the Main tab that exists
+    // with an empty keyring; keystrokes in it must not be stolen into the
+    // message box. (The mode picker used to be the probe here, back when
+    // it was a combobox with type-ahead; it is a radio group now, and a
+    // letter on a radio is stolen like on any other button.)
+    const input = panel.locator("#pgp-input");
+    await input.press("ControlOrMeta+f");
+    const find = panel
+      .getByRole("search", { name: "Find and replace" })
+      .getByRole("textbox", { name: "Find", exact: true });
+    await expect(find).toBeFocused();
     await panel.keyboard.type("x");
-    await expect(panel.locator("#pgp-input")).not.toBeFocused();
+    await expect(find).toHaveValue("x");
+    await expect(input).not.toBeFocused();
   });
 });

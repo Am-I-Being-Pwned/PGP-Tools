@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { CheckIcon, DownloadIcon } from "lucide-react";
 
+import { Block } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
 import {
   Select,
@@ -133,8 +134,8 @@ export function TranslationPage({
 
   return (
     <SubPage title={t("settings_translation_title")} onClose={onClose}>
-      <div className="space-y-5">
-        <div className="flex items-start justify-between gap-4">
+      <div className="space-y-4">
+        <Block className="flex items-start justify-between gap-4 rounded-xl px-3.5 py-3">
           <div className="space-y-1">
             <p className="text-sm font-medium">
               {t("settings_translation_enable")}
@@ -149,18 +150,18 @@ export function TranslationPage({
             onCheckedChange={onEnabledChange}
             disabled={supported === false}
           />
-        </div>
+        </Block>
 
         {supported === false && (
-          <p className="text-muted-foreground text-xs">
+          <p className="text-muted-foreground px-1 text-xs">
             {t("settings_translation_unsupported")}
           </p>
         )}
 
         {supported && (
           <>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">
+            <div className="space-y-1.5">
+              <p className="text-muted-foreground px-1 text-xs font-medium">
                 {t("settings_translation_target")}
               </p>
               <Select
@@ -180,17 +181,18 @@ export function TranslationPage({
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <p className="text-sm font-medium">
+            <div className="space-y-1.5">
+              <p className="text-muted-foreground px-1 text-xs font-medium">
                 {t("settings_translation_packs")}
               </p>
-              <p className="text-muted-foreground text-xs">
+              <p className="text-muted-foreground px-1 text-xs">
                 {t("settings_translation_packs_desc", {
                   size: LANGUAGE_PACK_SIZE_HINT,
                 })}
               </p>
 
-              <ul className="divide-border divide-y">
+              {/* A block stack, kept a real list: one block per language. */}
+              <ul className="flex flex-col gap-0.5 overflow-hidden rounded-xl">
                 {translationLanguages()
                   .filter((l) => l.code !== targetLanguage)
                   .map((l) => {
@@ -198,11 +200,11 @@ export function TranslationPage({
                     return (
                       <li
                         key={l.code}
-                        className="flex items-center justify-between gap-3 py-2"
+                        className="bg-card flex min-h-11 items-center justify-between gap-3 rounded-[3px] px-3.5 py-2"
                       >
                         <span className="text-sm">{l.label}</span>
                         {state?.kind === "ready" && (
-                          <span className="flex items-center gap-1 text-xs text-green-400">
+                          <span className="text-good flex items-center gap-1 text-xs">
                             <CheckIcon className="h-3.5 w-3.5" />
                             {t("settings_translation_pack_ready")}
                           </span>
@@ -230,7 +232,7 @@ export function TranslationPage({
                           </span>
                         )}
                         {state?.kind === "error" && (
-                          <span className="text-destructive text-xs">
+                          <span className="text-bad text-xs">
                             {state.message}
                           </span>
                         )}

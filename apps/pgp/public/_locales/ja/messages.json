@@ -4228,9 +4228,6 @@
   "workspace_text_cleared_toast": {
     "message": "テキストを消去しました"
   },
-  "workspace_text_entered_below": {
-    "message": "下にテキストが入力されています"
-  },
   "workspace_toggle_encrypt_to_self": {
     "message": "自分にも暗号化"
   },

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { LockIcon } from "lucide-react";
 
 import { Button } from "@amibeingpwned/ui/button";
 
@@ -12,8 +13,11 @@ import {
   ARGON2_PARALLELISM,
 } from "../../lib/protection/password-kdf";
 import { authenticateAndGetPrf } from "../../lib/protection/webauthn-prf";
-import { INPUT_CLASS } from "../../lib/utils/styles";
 import { DevToolsPage } from "../settings/DevToolsPage";
+
+/** A recessed input well (design language): no drawn border. */
+const FIELD_CLASS =
+  "surface-field placeholder:text-muted-foreground focus-visible:ring-ring h-10 w-full rounded-lg px-3 text-sm focus-visible:ring-2 focus:outline-none";
 
 /** The passkey ceremony's PRF output, on loan to `onUnlocked` for the
  *  duration of that call so "unlock keys when the vault unlocks" can open
@@ -161,35 +165,41 @@ export function MasterUnlockScreen({
 
   return (
     <div
-      className="flex h-full flex-col items-center justify-center p-6"
+      className="flex h-full flex-col p-6"
       role="main"
       aria-label={t("shared_unlock_aria")}
     >
-      <div className="w-full max-w-xs space-y-6 text-center">
-        <img
-          src="/icon-128.png"
-          alt=""
-          className="mx-auto h-14 w-14"
-          draggable={false}
-        />
+      {/* The hero sits centred in the leftover space; the controls are a
+          fixed strip at the bottom, where the thumb and the eye land. */}
+      <div className="flex flex-1 flex-col items-center justify-center gap-5 text-center">
+        <div className="bg-card text-good flex size-[72px] items-center justify-center rounded-[18px]">
+          <LockIcon className="size-7" aria-hidden="true" />
+        </div>
 
-        <div>
+        <div className="max-w-xs space-y-1.5">
           {/* i18n-ignore */}
-          <h1 className="text-lg font-semibold">PGP Tools</h1>
-          <p className="text-muted-foreground mt-1 text-sm">
+          <h1 className="text-xl font-semibold tracking-tight">PGP Tools</h1>
+          <p className="text-muted-foreground text-sm">
             {t("shared_unlock_intro")}
           </p>
         </div>
+      </div>
 
+      <div className="mx-auto w-full max-w-xs space-y-3 text-center">
         {masterProtection.method === "passkey" && (
-          <Button className="w-full" onClick={handlePasskeyUnlock} autoFocus>
+          <Button
+            size="lg"
+            className="w-full"
+            onClick={handlePasskeyUnlock}
+            autoFocus
+          >
             {t("shared_unlock_with_passkey")}
           </Button>
         )}
 
         {masterProtection.method === "password" && (
           <form
-            className="space-y-3"
+            className="space-y-2"
             onSubmit={(e) => {
               e.preventDefault();
               void handlePasswordUnlock();
@@ -201,12 +211,13 @@ export function MasterUnlockScreen({
               placeholder={t("shared_master_password")}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className={INPUT_CLASS}
+              className={FIELD_CLASS}
               aria-label={t("shared_master_password")}
               autoFocus
             />
             <Button
               type="submit"
+              size="lg"
               className="w-full"
               disabled={unlocking || !password}
             >
@@ -216,7 +227,7 @@ export function MasterUnlockScreen({
         )}
 
         {error && (
-          <p className="text-destructive text-xs" role="alert">
+          <p className="text-bad text-xs" role="alert">
             {error}
           </p>
         )}

@@ -109,7 +109,7 @@ export function CrxSigningInfoPage({ onClose }: CrxSigningInfoPageProps) {
       <div className="text-foreground/75 space-y-5 text-sm">
         {/* The pitch, given the weight of a card: it is the one thing to
             read if the user reads nothing else on the page. */}
-        <section className="border-border flex gap-2.5 rounded-md border p-3">
+        <section className="bg-card flex gap-2.5 rounded-xl p-3.5">
           <ShieldCheckIcon className="text-primary mt-0.5 size-4 shrink-0" />
           <div className="space-y-2">
             <p className="text-foreground font-semibold">
@@ -153,7 +153,7 @@ export function CrxSigningInfoPage({ onClose }: CrxSigningInfoPageProps) {
           href="https://developer.chrome.com/docs/webstore/update#protect-package-updates"
           target="_blank"
           rel="noopener noreferrer"
-          className="border-border hover:border-muted-foreground/40 flex items-center justify-between gap-2 rounded-md border px-3 py-2.5 transition-colors"
+          className="bg-card hover:bg-accent flex items-center justify-between gap-2 rounded-xl px-3.5 py-3 transition-colors"
         >
           <span>{t("settings_crx_info_link")}</span>
           <ExternalLinkIcon className="text-muted-foreground size-4 shrink-0" />

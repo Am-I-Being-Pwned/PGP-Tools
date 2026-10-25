@@ -1,14 +1,19 @@
+import { OptionBarItem } from "@amibeingpwned/ui/option-bar";
+
 /**
- * A boolean toggle chip. OFF is a borderless chip with muted text, ON is a
- * filled chip with a constant neutral border and brighter text. No
- * checkmarks and no colored chrome - fill + text weight carry the state.
- * The border is transparent (not absent) when off, so toggling never
- * shifts layout.
+ * A boolean toggle: one segment of an `OptionBar`. OFF is a flat block
+ * with muted text, ON is tinted green (green means on). The segment
+ * keeps its size in both states, so toggling never shifts layout.
+ *
+ * Kept as its own name rather than calling `OptionBarItem` directly so
+ * the workspace's toggles keep one place that says what a toggle is in
+ * this app; the bar itself (`OptionBar`) is the caller's to lay out.
  */
 export function ToggleBadge({
   pressed,
   onPressedChange,
   disabledReason,
+  className,
   children,
 }: {
   pressed: boolean;
@@ -18,30 +23,17 @@ export function ToggleBadge({
    *  vanishes when it stops applying looks like a feature that isn't
    *  there (the same rule lib/actions states for disabled actions). */
   disabledReason?: string;
+  className?: string;
   children: React.ReactNode;
 }) {
-  const disabled = disabledReason !== undefined;
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={pressed}
-      disabled={disabled}
-      aria-disabled={disabled || undefined}
-      title={disabledReason}
-      onClick={() => {
-        if (disabled) return;
-        onPressedChange(!pressed);
-      }}
-      className={`inline-flex h-6 items-center rounded-[5px] border px-2 text-xs font-medium transition-colors duration-150 ${
-        disabled ? "cursor-not-allowed opacity-50" : ""
-      } ${
-        pressed
-          ? "bg-secondary text-foreground hover:bg-secondary/70 border-green-500/40"
-          : "text-muted-foreground hover:bg-accent/50 hover:text-foreground border-transparent bg-transparent"
-      }`}
+    <OptionBarItem
+      pressed={pressed}
+      onPressedChange={onPressedChange}
+      disabledReason={disabledReason}
+      className={className}
     >
       {children}
-    </button>
+    </OptionBarItem>
   );
 }

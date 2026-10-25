@@ -16,7 +16,7 @@ test("sign-only contacts are not offered as encryption recipients", async ({
 
   // Encrypt mode (default) shows the recipient picker; its label is
   // wired to the inline combobox input, so getByLabel targets it
-  // directly (the mode Select is the panel's other combobox).
+  // directly.
   await panel.getByRole("tab", { name: "Main" }).click();
   await panel.getByLabel("Recipients").click();
 

@@ -71,7 +71,9 @@ export function SelectionBar({
         role="toolbar"
         aria-label={t("keys_selection_actions_aria")}
         className={cn(
-          "bg-background/95 border-border pointer-events-auto flex items-center gap-1.5 rounded-full border px-2.5 py-2 shadow-xl backdrop-blur",
+          // It floats over the list, so it is the one thing here that gets
+          // the floating surface (a step lighter, hairline ring, shadow).
+          "surface-float pointer-events-auto flex items-center gap-1.5 rounded-full px-2.5 py-2",
           // Dynamic-island feel, matching the reference's computed styles: the
           // content sharpens from a soft 2px blur + fade while springing down
           // out of the top edge, overshooting past size and settling (the iOS
@@ -86,7 +88,7 @@ export function SelectionBar({
           type="button"
           onClick={onExit}
           aria-label={t("keys_cancel_selection_aria")}
-          className="text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-full p-2 transition-colors"
+          className="text-muted-foreground hover:text-foreground hover:bg-accent rounded-full p-2 transition-colors"
         >
           <XIcon className="h-4 w-4" />
         </button>
@@ -103,8 +105,8 @@ export function SelectionBar({
           className={cn(
             "rounded-full p-2 transition-colors",
             allSelected
-              ? "text-green-500 hover:bg-green-500/10"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted/60",
+              ? "text-good hover:bg-on"
+              : "text-muted-foreground hover:text-foreground hover:bg-accent",
           )}
         >
           <CheckCheckIcon className="h-4 w-4" />
@@ -113,7 +115,7 @@ export function SelectionBar({
           type="button"
           onClick={onExport}
           disabled={shownCount === 0}
-          className="hover:bg-muted/60 flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50"
+          className="hover:bg-accent flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50"
         >
           <DownloadIcon className="h-4 w-4" />
           {t("keys_export")}
@@ -122,7 +124,7 @@ export function SelectionBar({
           type="button"
           onClick={onDelete}
           disabled={shownCount === 0}
-          className="text-destructive hover:bg-destructive/10 flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50"
+          className="text-bad hover:bg-destructive/12 flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50"
         >
           <Trash2Icon className="h-4 w-4" />
           {t("common_delete")}

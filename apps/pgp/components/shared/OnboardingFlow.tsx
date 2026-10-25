@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronRightIcon, LoaderIcon } from "lucide-react";
 
+import { Block, BlockStack } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
 import {
   Select,
@@ -34,7 +35,6 @@ import {
 } from "../../lib/protection/webauthn-prf";
 import { saveMasterProtection } from "../../lib/storage/master-protection";
 import { savePreferences } from "../../lib/storage/preferences";
-import { INPUT_CLASS } from "../../lib/utils/styles";
 import {
   getDefaultProtectionMethod,
   ProtectionMethodPicker,
@@ -42,6 +42,10 @@ import {
 } from "../keys/ProtectionMethodPicker";
 import { PresetPicker } from "./PresetPicker";
 import { StorageLocationPicker } from "./StorageLocationPicker";
+
+/** A recessed input well (design language): no drawn border. */
+const FIELD_CLASS =
+  "surface-field placeholder:text-muted-foreground focus-visible:ring-ring h-9 w-full rounded-lg px-3 text-sm focus-visible:ring-2 focus:outline-none";
 
 type Step = "storage" | "protection" | "identity" | "generating" | "preset";
 type KeyAlgorithm = "ecc" | "rsa";
@@ -395,9 +399,9 @@ export function OnboardingFlow({
               </p>
             </div>
 
-            <div className="space-y-2">
-              <div>
-                <label className="text-muted-foreground mb-1 block text-xs">
+            <BlockStack>
+              <Block className="p-3">
+                <label className="text-muted-foreground mb-1.5 block text-xs">
                   {t("app_onboarding_name_label")}
                 </label>
                 <input
@@ -405,11 +409,11 @@ export function OnboardingFlow({
                   placeholder={t("app_onboarding_name_placeholder")}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className={INPUT_CLASS}
+                  className={FIELD_CLASS}
                 />
-              </div>
-              <div>
-                <label className="text-muted-foreground mb-1 block text-xs">
+              </Block>
+              <Block className="p-3">
+                <label className="text-muted-foreground mb-1.5 block text-xs">
                   {t("app_onboarding_email_label")}{" "}
                   <span className="text-muted-foreground/60">
                     {t("app_onboarding_optional")}
@@ -420,11 +424,11 @@ export function OnboardingFlow({
                   placeholder={t("app_onboarding_email_placeholder")}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className={INPUT_CLASS}
+                  className={FIELD_CLASS}
                 />
-              </div>
-              <div>
-                <label className="text-muted-foreground mb-1 block text-xs">
+              </Block>
+              <Block className="p-3">
+                <label className="text-muted-foreground mb-1.5 block text-xs">
                   {t("app_onboarding_comment_label")}{" "}
                   <span className="text-muted-foreground/60">
                     {t("app_onboarding_optional")}
@@ -435,10 +439,10 @@ export function OnboardingFlow({
                   placeholder={t("app_onboarding_comment_placeholder")}
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
-                  className={INPUT_CLASS}
+                  className={FIELD_CLASS}
                 />
-              </div>
-            </div>
+              </Block>
+            </BlockStack>
 
             <button
               type="button"
@@ -452,8 +456,8 @@ export function OnboardingFlow({
             </button>
 
             {showAdvanced && (
-              <div className="border-border space-y-3 rounded-md border p-3">
-                <div>
+              <BlockStack>
+                <Block className="p-3">
                   <label className="text-muted-foreground mb-1.5 block text-xs">
                     {t("app_onboarding_algorithm_label")}
                   </label>
@@ -475,9 +479,9 @@ export function OnboardingFlow({
                       ? t("app_onboarding_algo_ecc_hint")
                       : t("app_onboarding_algo_rsa_hint")}
                   </p>
-                </div>
+                </Block>
 
-                <div>
+                <Block className="p-3">
                   <label className="text-muted-foreground mb-1.5 block text-xs">
                     {t("app_onboarding_expiry_label")}
                   </label>
@@ -503,12 +507,12 @@ export function OnboardingFlow({
                       </SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-              </div>
+                </Block>
+              </BlockStack>
             )}
 
             {error && (
-              <p className="text-destructive text-xs" role="alert">
+              <p className="text-bad text-xs" role="alert">
                 {error}
               </p>
             )}
@@ -527,8 +531,8 @@ export function OnboardingFlow({
 
       {step === "generating" && (
         <div className="flex flex-1 flex-col items-center justify-center py-6">
-          <div className="bg-primary/10 mb-3 flex h-10 w-10 items-center justify-center rounded-full">
-            <LoaderIcon className="text-primary h-5 w-5 animate-spin" />
+          <div className="bg-card text-good mb-3 flex size-12 items-center justify-center rounded-xl">
+            <LoaderIcon className="size-5 animate-spin" />
           </div>
           <p className="text-muted-foreground text-sm">
             {masterCredentialId
@@ -558,7 +562,7 @@ export function OnboardingFlow({
             <PresetPicker selected={presetChoice} onSelect={setPresetChoice} />
 
             {masterCredentialId && !presetPinsNeverCache(presetChoice) && (
-              <label className="flex cursor-pointer items-start gap-3 text-sm">
+              <label className="bg-card flex cursor-pointer items-start gap-3 rounded-xl p-3 text-sm">
                 <input
                   type="checkbox"
                   className="mt-0.5"

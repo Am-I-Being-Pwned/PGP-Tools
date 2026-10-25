@@ -4228,9 +4228,6 @@
   "workspace_text_cleared_toast": {
     "message": "Texto limpo"
   },
-  "workspace_text_entered_below": {
-    "message": "Texto digitado abaixo"
-  },
   "workspace_toggle_encrypt_to_self": {
     "message": "Criptografar para mim também"
   },

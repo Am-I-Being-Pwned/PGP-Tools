@@ -4228,9 +4228,6 @@
   "workspace_text_cleared_toast": {
     "message": "Testo cancellato"
   },
-  "workspace_text_entered_below": {
-    "message": "Testo inserito qui sotto"
-  },
   "workspace_toggle_encrypt_to_self": {
     "message": "Cifra anche per me"
   },

@@ -25,11 +25,10 @@ import { t } from "../../lib/i18n";
 import { matchesShortcut } from "../../lib/shortcuts";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 
-/** The shared input, fitted to the bar's h-7 rows: no border of its own
- *  (a soft fill instead) so the bar's outline is the only line, and a
- *  thinner focus ring so the field doesn't dwarf the icons beside it. */
-const FIELD_CLASS =
-  "bg-border/40 h-7 rounded border-transparent px-2 py-0 text-sm focus:ring-1";
+/** The shared input (a recessed well), fitted to the bar's h-7 rows,
+ *  with a thinner focus ring so the field doesn't dwarf the icons
+ *  beside it. */
+const FIELD_CLASS = "h-7 rounded-md px-2 py-0 text-sm focus:ring-1";
 
 /** mod+Enter anywhere in the bar replaces every match. The same combo
  *  is the workspace's "run" shortcut, so the bar must swallow it
@@ -203,7 +202,7 @@ export function FindReplaceBar({
       // Every cell is h-7 with the same gap, so the rows line up.
       // Dimmed while focus is back in the message, so it reads as parked
       // rather than in the way; full strength on hover or focus.
-      className="border-border bg-background/80 flex items-start gap-x-0.5 rounded-md border p-0.5 opacity-50 shadow-md backdrop-blur transition-opacity focus-within:opacity-100 hover:opacity-100 motion-reduce:transition-none"
+      className="surface-float flex items-start gap-x-0.5 rounded-lg p-0.5 opacity-50 transition-opacity focus-within:opacity-100 hover:opacity-100 motion-reduce:transition-none"
     >
       <button
         type="button"
@@ -219,7 +218,7 @@ export function FindReplaceBar({
             : t("workspace_replace")
         }
         onClick={() => setShowReplace((v) => !v)}
-        className="text-muted-foreground hover:text-foreground hover:bg-border/70 flex h-7 w-6 shrink-0 items-center justify-center rounded transition-colors"
+        className="text-muted-foreground hover:text-foreground hover:bg-accent flex h-7 w-6 shrink-0 items-center justify-center rounded transition-colors"
       >
         {showReplace ? (
           <ChevronDownIcon className="h-3.5 w-3.5" />
@@ -297,7 +296,7 @@ export function FindReplaceBar({
             onClick={() => setCaseSensitive((v) => !v)}
             className={`hover:text-foreground h-7 w-7 shrink-0 rounded font-mono text-xs transition-colors ${
               caseSensitive
-                ? "bg-border/70 text-foreground"
+                ? "bg-on text-on-foreground"
                 : "text-muted-foreground"
             }`}
           >
@@ -337,7 +336,7 @@ function IconButton({
       aria-label={label}
       title={label}
       onClick={onClick}
-      className="text-muted-foreground hover:text-foreground hover:bg-border/70 h-7 w-7 shrink-0 rounded transition-colors"
+      className="text-muted-foreground hover:text-foreground hover:bg-accent h-7 w-7 shrink-0 rounded transition-colors"
     >
       <span className="flex items-center justify-center">{children}</span>
     </button>
@@ -364,7 +363,7 @@ function TextButton({
       title={title}
       disabled={disabled}
       onClick={onClick}
-      className="text-muted-foreground hover:text-foreground hover:bg-border/70 h-7 shrink-0 rounded px-1.5 text-sm transition-colors disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-current"
+      className="text-muted-foreground hover:text-foreground hover:bg-accent h-7 shrink-0 rounded px-1.5 text-sm transition-colors disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-current"
     >
       {label}
     </button>

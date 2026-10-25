@@ -167,13 +167,9 @@
     "message": "Select at least one recipient, or set a password",
     "description": "Tooltip on the disabled Encrypt button when nothing can open the message yet."
   },
-  "workspace_text_entered_below": {
-    "message": "Text entered below",
-    "description": "Replaces the drop zone once the message box has text."
-  },
   "workspace_clear_text": {
     "message": "Clear text",
-    "description": "Button under 'Text entered below' that empties the message box (undoable)."
+    "description": "Button in the strip under the message box that empties it (undoable)."
   },
   "workspace_message_input_aria": {
     "message": "Message input",

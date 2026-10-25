@@ -153,6 +153,21 @@ export function fingerprintBytes(fingerprint: string): number[] {
   return out;
 }
 
+/**
+ * Whether `id` is a whole fingerprint the face can be drawn from. A bare
+ * 64-bit key id (what a signature names when we don't hold the key) is
+ * not: a face hashed from it would not match the face the same key gets
+ * once imported, and would look just as confident. Those get no face.
+ */
+export function hasKeyFace(id: string): boolean {
+  const raw = id.trim();
+  if (raw.startsWith("SHA256:")) return raw.length > 7;
+  const hex = raw.replace(/[\s:]/g, "");
+  if (/^[0-9a-fA-F]+$/.test(hex)) return hex.length >= 40;
+  // Anything else that names a key whole (a CRX extension id) is stable.
+  return raw.length >= 32;
+}
+
 export function keyAvatar(fingerprint: string): KeyAvatar {
   const b = fingerprintBytes(fingerprint);
   const at = (i: number) => b[i % b.length] ?? 0;
@@ -171,8 +186,7 @@ export function keyAvatar(fingerprint: string): KeyAvatar {
     }),
   );
   const set = (r: number, c: number, col: string) => {
-    const row = g[r];
-    if (row && c >= 0 && c < N) row[c] = col;
+    if (r >= 0 && r < N && c >= 0 && c < N) g[r][c] = col;
   };
   const row = (r: number, a: number, z: number, col: string) => {
     for (let c = a; c <= z; c++) set(r, c, col);

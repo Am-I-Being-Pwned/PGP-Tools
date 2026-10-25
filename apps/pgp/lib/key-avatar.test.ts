@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { AVATAR_SIZE, fingerprintBytes, keyAvatar } from "./key-avatar";
+import {
+  AVATAR_SIZE,
+  fingerprintBytes,
+  hasKeyFace,
+  keyAvatar,
+} from "./key-avatar";
 
 const ALICE = "1D2DFAC2C18051E9C11037A6E3AA99801E250E69";
 const BOB = "6E98DB9F375D81CD0C0A2F4B1E3D5A7C9B8E6F10";
@@ -51,5 +56,19 @@ describe("keyAvatar", () => {
 
   it("gives a two-word nickname", () => {
     expect(keyAvatar(ALICE).nickname).toMatch(/^[A-Z][a-z]+ [A-Z][a-z]+$/);
+  });
+});
+
+describe("hasKeyFace", () => {
+  it("draws whole fingerprints", () => {
+    expect(hasKeyFace(ALICE)).toBe(true);
+    expect(
+      hasKeyFace("SHA256:47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU"),
+    ).toBe(true);
+  });
+
+  it("refuses a bare key id or nothing", () => {
+    expect(hasKeyFace("E3AA99801E250E69")).toBe(false);
+    expect(hasKeyFace("")).toBe(false);
   });
 });

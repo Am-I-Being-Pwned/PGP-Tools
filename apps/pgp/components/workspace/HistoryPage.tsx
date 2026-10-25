@@ -11,6 +11,7 @@ import {
   Trash2Icon,
 } from "lucide-react";
 
+import { Block, BlockStack } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
 
 import type { MessageKey } from "../../lib/i18n";
@@ -31,8 +32,8 @@ import {
   resolveBudget,
 } from "../../lib/storage/history";
 import { formatFileSize } from "../../lib/utils/formatting";
-import { INPUT_CLASS } from "../../lib/utils/styles";
 import { ConfirmPage } from "../shared/ConfirmPage";
+import { KeyAvatar } from "../shared/KeyAvatar";
 import { SubPage } from "../shared/SubPage";
 
 const OP_ICON: Record<HistoryOp, typeof LockIcon> = {
@@ -55,6 +56,37 @@ function opLabel(entry: HistoryEntry): string {
   return entry.signed && entry.op === "encrypt"
     ? t("actions_history_op_signed", { op })
     : op;
+}
+
+/** The search well (design language): recessed, no drawn border. */
+const FIELD_CLASS =
+  "surface-field placeholder:text-muted-foreground focus-visible:ring-ring h-9 w-full rounded-lg px-3 text-sm focus-visible:ring-2 focus:outline-none";
+
+/** How many recipient faces a row shows before the names carry the rest. */
+const MAX_AVATARS = 4;
+
+/** The recipients' faces, overlapped like a stack of chips. Decorative:
+ *  the names are in the title text next to them. */
+function RecipientAvatars({
+  recipients,
+}: {
+  recipients: HistoryEntry["recipients"];
+}) {
+  if (recipients.length === 0) return null;
+  return (
+    <span className="flex shrink-0 -space-x-1">
+      {recipients.slice(0, MAX_AVATARS).map((r, i) => (
+        <KeyAvatar
+          // Index keys: the same key can legally appear twice and the
+          // list never reorders.
+          key={i}
+          fingerprint={r.fingerprint}
+          size={16}
+          className="ring-card ring-2"
+        />
+      ))}
+    </span>
+  );
 }
 
 /** Small icon button that opens the history page. Self-contained so the
@@ -177,53 +209,61 @@ function HistoryEntryPage({
       onClose={onClose}
       bodyClassName="flex h-full flex-col gap-3 p-3"
     >
-      <div className="text-muted-foreground space-y-1 text-xs">
-        <p className="flex items-center gap-1.5 capitalize">
-          <Icon className="h-3.5 w-3.5" />
-          {opLabel(entry)}
-          <span className="normal-case">
-            {" · "}
-            {t("actions_history_when", {
-              date: formatDateTime(entry.ts),
-              relative: formatRelative(entry.ts),
-            })}
-          </span>
-        </p>
-        {entry.recipients.length > 0 && (
-          <p className="break-words">
-            {t("actions_history_to", {
-              names: entry.recipients
-                .map((r) =>
-                  r.name
-                    ? t("actions_history_recipient_with_id", {
-                        name: r.name,
-                        id: r.fingerprint.slice(-8).toUpperCase(),
-                      })
-                    : r.fingerprint.slice(-8).toUpperCase(),
-                )
-                .join(", "),
-            })}
+      {/* One card: the metadata block on top, the content block filling
+          the rest. Only stretched when there is content to fill it, so a
+          metadata-only stack keeps its rounded bottom corners. */}
+      <BlockStack
+        className={entry.content !== undefined ? "min-h-0 flex-1" : undefined}
+      >
+        <Block className="text-muted-foreground shrink-0 space-y-1.5 p-3 text-xs">
+          <p className="flex items-center gap-1.5 capitalize">
+            <Icon className="h-3.5 w-3.5" />
+            {opLabel(entry)}
+            <span className="normal-case">
+              {" · "}
+              {t("actions_history_when", {
+                date: formatDateTime(entry.ts),
+                relative: formatRelative(entry.ts),
+              })}
+            </span>
           </p>
-        )}
-        {entry.files && entry.files.length > 0 && (
-          <ul>
-            {/* Index keys: duplicate filenames are legal and the list
-                never reorders. */}
-            {entry.files.map((f, i) => (
-              <li key={i} className="truncate">
-                {t("actions_history_file_with_size", {
-                  name: f.name,
-                  size: formatFileSize(f.size),
+          {entry.recipients.length > 0 && (
+            <p className="flex items-start gap-2 break-words">
+              <RecipientAvatars recipients={entry.recipients} />
+              <span className="min-w-0">
+                {t("actions_history_to", {
+                  names: entry.recipients
+                    .map((r) =>
+                      r.name
+                        ? t("actions_history_recipient_with_id", {
+                            name: r.name,
+                            id: r.fingerprint.slice(-8).toUpperCase(),
+                          })
+                        : r.fingerprint.slice(-8).toUpperCase(),
+                    )
+                    .join(", "),
                 })}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+              </span>
+            </p>
+          )}
+          {entry.files && entry.files.length > 0 && (
+            <ul>
+              {/* Index keys: duplicate filenames are legal and the list
+                  never reorders. */}
+              {entry.files.map((f, i) => (
+                <li key={i} className="truncate">
+                  {t("actions_history_file_with_size", {
+                    name: f.name,
+                    size: formatFileSize(f.size),
+                  })}
+                </li>
+              ))}
+            </ul>
+          )}
+        </Block>
 
-      {entry.content !== undefined ? (
-        <>
-          <pre className="bg-muted/30 min-h-0 flex-1 overflow-auto rounded p-2 text-xs whitespace-pre-wrap">
+        {entry.content !== undefined ? (
+          <pre className="bg-card min-h-0 flex-1 overflow-auto rounded-[3px] p-3 text-xs whitespace-pre-wrap">
             {search ? (
               <HighlightedContent text={entry.content} query={search} />
             ) : (
@@ -231,21 +271,24 @@ function HistoryEntryPage({
             )}
             {entry.truncated ? `\n${t("actions_history_truncated")}` : ""}
           </pre>
-          <Button variant="outline" size="sm" onClick={() => void handleCopy()}>
-            <span className="flex items-center gap-2">
-              {copied ? (
-                <CheckIcon className="h-4 w-4 text-green-400" />
-              ) : (
-                <ClipboardIcon className="h-4 w-4" />
-              )}
-              {copied ? t("common_copied") : t("common_copy")}
-            </span>
-          </Button>
-        </>
-      ) : (
-        <p className="text-muted-foreground text-xs">
-          {t("actions_history_metadata_only")}
-        </p>
+        ) : (
+          <Block className="text-muted-foreground p-3 text-xs">
+            {t("actions_history_metadata_only")}
+          </Block>
+        )}
+      </BlockStack>
+
+      {entry.content !== undefined && (
+        <Button variant="outline" size="sm" onClick={() => void handleCopy()}>
+          <span className="flex items-center gap-2">
+            {copied ? (
+              <CheckIcon className="text-good h-4 w-4" />
+            ) : (
+              <ClipboardIcon className="h-4 w-4" />
+            )}
+            {copied ? t("common_copied") : t("common_copy")}
+          </span>
+        </Button>
       )}
     </SubPage>
   );
@@ -313,7 +356,7 @@ export function HistoryPage({
               onClick={() => setConfirmClear(true)}
               title={t("actions_history_clear")}
               aria-label={t("actions_history_clear")}
-              className="text-muted-foreground hover:text-destructive rounded p-1 transition-colors"
+              className="text-muted-foreground hover:text-bad rounded p-1 transition-colors"
             >
               <Trash2Icon className="h-4 w-4" />
             </button>
@@ -340,12 +383,12 @@ export function HistoryPage({
                 setSearch("");
               }
             }}
-            className={`${INPUT_CLASS} mb-2`}
+            className={`${FIELD_CLASS} mb-3 shrink-0`}
           />
         )}
 
         {loaded && entries.length === 0 && (
-          <div className="border-border bg-muted/30 rounded-lg border p-4 text-center">
+          <div className="bg-card rounded-xl p-4 text-center">
             <p className="text-muted-foreground text-sm">
               {enabled
                 ? t("actions_history_empty")
@@ -360,79 +403,96 @@ export function HistoryPage({
           </p>
         )}
 
-        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto">
-          {filtered.map((entry) => {
-            const Icon = OP_ICON[entry.op];
-            // Show WHY a row matched: a content hit renders a snippet
-            // under the header. Recipient/file-name hits are already
-            // visible, highlighted, in the title.
-            const snippet =
-              search && entry.content !== undefined
-                ? buildSnippet(entry.content, search)
-                : undefined;
-            // decrypt/verify rows never store content (see history.ts);
-            // mark them at a glance so users don't open expecting text.
-            const metadataOnly =
-              entry.content === undefined &&
-              (!entry.files || entry.files.length === 0);
-            return (
-              <button
-                key={entry.id}
-                type="button"
-                onClick={() => setDetailEntry(entry)}
-                aria-label={t("actions_history_open_entry", {
-                  title: entryTitle(entry),
-                })}
-                className="border-border hover:bg-muted/40 block w-full rounded-lg border p-2.5 text-left transition-colors"
-              >
-                <span className="flex w-full items-center gap-2">
-                  <Icon className="text-muted-foreground h-4 w-4 shrink-0" />
-                  <span className="min-w-0 flex-1 truncate text-sm">
-                    {metadataOnly ? (
-                      <span className="text-muted-foreground italic">
-                        {t("actions_history_no_content")}
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <BlockStack>
+            {filtered.map((entry) => {
+              const Icon = OP_ICON[entry.op];
+              // Show WHY a row matched: a content hit renders a snippet
+              // under the header. Recipient/file-name hits are already
+              // visible, highlighted, in the title.
+              const snippet =
+                search && entry.content !== undefined
+                  ? buildSnippet(entry.content, search)
+                  : undefined;
+              // decrypt/verify rows never store content (see history.ts);
+              // mark them at a glance so users don't open expecting text.
+              const metadataOnly =
+                entry.content === undefined &&
+                (!entry.files || entry.files.length === 0);
+              return (
+                <button
+                  key={entry.id}
+                  type="button"
+                  onClick={() => setDetailEntry(entry)}
+                  aria-label={t("actions_history_open_entry", {
+                    title: entryTitle(entry),
+                  })}
+                  className="bg-card hover:bg-accent focus-visible:ring-ring/60 flex w-full items-start gap-3 rounded-[3px] px-3 py-2.5 text-left transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset"
+                >
+                  {/* The operation's icon on a raised tile. Neutral for
+                      every op: a history row records that something was
+                      done, not whether it came out well. */}
+                  <span className="bg-secondary text-muted-foreground flex size-7 shrink-0 items-center justify-center rounded-[7px] shadow-[inset_0_1px_0_rgb(255_255_255/0.07)]">
+                    <Icon className="size-3.5" />
+                  </span>
+                  <span className="block min-w-0 flex-1">
+                    <span className="flex w-full items-center gap-2">
+                      <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                        {metadataOnly ? (
+                          <span className="text-muted-foreground font-normal italic">
+                            {t("actions_history_no_content")}
+                          </span>
+                        ) : (
+                          <Highlighted
+                            text={entryTitle(entry)}
+                            query={search}
+                          />
+                        )}
                       </span>
-                    ) : (
-                      <Highlighted text={entryTitle(entry)} query={search} />
+                      <RecipientAvatars recipients={entry.recipients} />
+                      <span className="text-muted-foreground shrink-0 text-xs whitespace-nowrap">
+                        {formatRelative(entry.ts)}
+                      </span>
+                      <ChevronRightIcon className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
+                    </span>
+                    <span className="text-muted-foreground block text-xs whitespace-nowrap capitalize">
+                      {opLabel(entry)}
+                    </span>
+                    {/* Content is the point of history: preview it by
+                        default rather than hiding everything behind a
+                        click. The search snippet replaces this while a
+                        query is active. */}
+                    {!search && entry.content !== undefined && (
+                      <span className="text-muted-foreground mt-1 line-clamp-2 block text-xs">
+                        {entry.content
+                          .replace(/\s+/g, " ")
+                          .trim()
+                          .slice(0, 240)}
+                      </span>
                     )}
-                  </span>
-                  <span className="text-muted-foreground shrink-0 text-xs whitespace-nowrap capitalize">
-                    {opLabel(entry)}
-                  </span>
-                  <span className="text-muted-foreground shrink-0 text-xs whitespace-nowrap">
-                    {formatRelative(entry.ts)}
-                  </span>
-                  <ChevronRightIcon className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
-                </span>
-                {/* Content is the point of history: preview it by default
-                    rather than hiding everything behind a click. The
-                    search snippet replaces this while a query is active. */}
-                {!search && entry.content !== undefined && (
-                  <span className="text-muted-foreground mt-1 line-clamp-2 block pl-6 text-xs">
-                    {entry.content.replace(/\s+/g, " ").trim().slice(0, 240)}
-                  </span>
-                )}
-                {snippet && (
-                  <span className="text-muted-foreground mt-1 line-clamp-2 block pl-6 text-xs">
-                    {snippet.truncatedStart && "…"}
-                    {snippet.before}
-                    <mark className={MARK_CLASS}>{snippet.match}</mark>
-                    {snippet.after}
-                    {snippet.truncatedEnd && "…"}
-                    {snippet.moreMatches > 0 && (
-                      <span className="text-muted-foreground/70">
-                        {" "}
-                        {tn(
-                          "actions_history_more_matches",
-                          snippet.moreMatches,
+                    {snippet && (
+                      <span className="text-muted-foreground mt-1 line-clamp-2 block text-xs">
+                        {snippet.truncatedStart && "…"}
+                        {snippet.before}
+                        <mark className={MARK_CLASS}>{snippet.match}</mark>
+                        {snippet.after}
+                        {snippet.truncatedEnd && "…"}
+                        {snippet.moreMatches > 0 && (
+                          <span className="text-muted-foreground/70">
+                            {" "}
+                            {tn(
+                              "actions_history_more_matches",
+                              snippet.moreMatches,
+                            )}
+                          </span>
                         )}
                       </span>
                     )}
                   </span>
-                )}
-              </button>
-            );
-          })}
+                </button>
+              );
+            })}
+          </BlockStack>
         </div>
 
         {usage && entries.length > 0 && (

@@ -141,10 +141,12 @@ export function SubPage({
         {typeof children === "function" ? children(api) : children}
       </div>
       {actions && actions.length > 0 && (
-        <div className="border-border space-y-2 border-t p-4">
+        // The footer is a fixed strip like the header: chrome shade and a
+        // hairline, so the body above reads as the one card on the page.
+        <div className="bg-chrome space-y-2 border-t border-white/[0.06] p-3">
           {error && (
             <div className="space-y-1" role="alert">
-              <p className="text-destructive text-xs">{error.message}</p>
+              <p className="text-bad text-xs">{error.message}</p>
               {error.detail && (
                 <button
                   type="button"

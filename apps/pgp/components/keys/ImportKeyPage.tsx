@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { InfoIcon, LoaderIcon, UploadCloudIcon } from "lucide-react";
 
+import { cn } from "@amibeingpwned/ui";
 import { Button } from "@amibeingpwned/ui/button";
 
 import type { CrxProtectionInput } from "../../lib/crx/operations";
@@ -941,11 +942,12 @@ export function ImportKeyPage({
                   }
                   void handleTextSource(e.dataTransfer.getData("text/plain"));
                 }}
-                className={`flex flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed p-6 text-center transition-colors ${
-                  dragOver
-                    ? "border-primary bg-primary/10"
-                    : "border-border hover:border-muted-foreground/50"
-                }`}
+                // A flat block, not a dashed box; a drag over it tints it
+                // the "on" green.
+                className={cn(
+                  "flex flex-col items-center justify-center gap-2 rounded-xl p-6 text-center transition-colors",
+                  dragOver ? "bg-on" : "bg-card",
+                )}
               >
                 {parsing ? (
                   <>
@@ -1034,7 +1036,7 @@ export function ImportKeyPage({
                        answer to the lookup the user just ran, and set in
                        the same muted style as the standing help text
                        below it read as more boilerplate and got missed.
-                       Amber, bordered and attached to the field it
+                       Amber, tinted and attached to the field it
                        answers, so it is legible as a RESULT;
                        deliberately not `text-destructive`, because
                        nothing failed and nothing needs fixing (see
@@ -1043,7 +1045,7 @@ export function ImportKeyPage({
                        interrupting. */
                     <div
                       role="status"
-                      className="mt-2 flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-300"
+                      className="text-warn mt-2 flex items-start gap-2 rounded-lg bg-[#252012] px-3 py-2.5 text-xs"
                     >
                       <InfoIcon className="mt-px h-3.5 w-3.5 shrink-0" />
                       <span>{notice}</span>

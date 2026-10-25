@@ -70,8 +70,7 @@ test("formatting swaps the selection for Unicode letter forms, from the toolbar 
   });
 
   await test.step("the tools are not offered on pasted armor (decrypt mode)", async () => {
-    await panel.getByRole("combobox").first().click();
-    await panel.getByRole("option", { name: "Decrypt" }).click();
+    await panel.getByRole("radio", { name: "Decrypt" }).click();
     await expect(panel.getByRole("button", { name: "Bold" })).toHaveCount(0);
   });
 });

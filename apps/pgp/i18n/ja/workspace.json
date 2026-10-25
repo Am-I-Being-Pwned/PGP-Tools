@@ -125,9 +125,6 @@
   "workspace_need_recipient_or_password": {
     "message": "宛先を 1 つ以上選択するか、パスワードを設定してください"
   },
-  "workspace_text_entered_below": {
-    "message": "下にテキストが入力されています"
-  },
   "workspace_clear_text": {
     "message": "テキストを消去"
   },

@@ -34,8 +34,7 @@ async function goToEncrypt(
   panel: import("@playwright/test").Page,
 ): Promise<void> {
   await panel.getByRole("tab", { name: "Main" }).click();
-  await panel.getByRole("combobox").first().click();
-  await panel.getByRole("option", { name: "Encrypt", exact: true }).click();
+  await panel.getByRole("radio", { name: "Encrypt", exact: true }).click();
 }
 
 /** Press the badge, type a password in the dialog, confirm. */
@@ -190,8 +189,7 @@ test("what it encrypts can be decrypted again with the same password", async ({
   // Back in as a fresh decrypt. The box is refilled directly rather than
   // hunting for a reset control -- what is being tested is the round
   // trip, not the clear button.
-  await panel.getByRole("combobox").first().click();
-  await panel.getByRole("option", { name: "Decrypt", exact: true }).click();
+  await panel.getByRole("radio", { name: "Decrypt", exact: true }).click();
   await panel.locator("textarea").first().fill(armored);
   await panel.getByRole("button", { name: /^decrypt$/i }).click();
   const field = panel.getByPlaceholder("Enter message password");

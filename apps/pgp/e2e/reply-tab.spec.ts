@@ -77,7 +77,9 @@ test("Reply shows the message in a reader tab and turns the panel into the reply
 
   // The panel is the reply: encrypt, addressed to the signer, empty --
   // and it no longer shows the message itself.
-  await expect(panel.getByRole("combobox").first()).toHaveText(/Encrypt/);
+  await expect(
+    panel.getByRole("radio", { name: "Encrypt", exact: true }),
+  ).toBeChecked();
   await expect(panel.getByRole("button", { name: /^Remove / })).toBeVisible();
   await expect(box(panel)).toHaveValue("");
   await expect(panel.getByText(PLAINTEXT)).toHaveCount(0);

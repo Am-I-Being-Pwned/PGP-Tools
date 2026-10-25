@@ -125,9 +125,6 @@
   "workspace_need_recipient_or_password": {
     "message": "Seleccione al menos un destinatario o establezca una contraseña"
   },
-  "workspace_text_entered_below": {
-    "message": "Texto introducido abajo"
-  },
   "workspace_clear_text": {
     "message": "Borrar texto"
   },

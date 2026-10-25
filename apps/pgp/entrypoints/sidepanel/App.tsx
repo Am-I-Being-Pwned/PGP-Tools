@@ -1092,47 +1092,65 @@ function TabBar({
     [activeTab, onTabChange],
   );
 
+  // One button per tab, so the ref slots line up with TABS for the
+  // arrow-key handler regardless of which group a tab is drawn in.
+  const renderTab = (tab: (typeof TABS)[number], i: number) => {
+    const isSettings = tab.id === "settings";
+    const isActive = activeTab === tab.id;
+    return (
+      <button
+        key={tab.id}
+        ref={(el) => {
+          tabRefs.current[i] = el;
+        }}
+        role="tab"
+        aria-selected={isActive}
+        aria-controls={`tabpanel-${tab.id}`}
+        aria-label={isSettings ? t("common_settings") : undefined}
+        id={`tab-${tab.id}`}
+        tabIndex={isActive ? 0 : -1}
+        onClick={() => onTabChange(tab.id)}
+        className={
+          isSettings
+            ? `ml-auto flex size-[30px] items-center justify-center rounded-md transition-colors ${
+                isActive
+                  ? "bg-raised text-foreground"
+                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
+              }`
+            : `h-[26px] rounded-md px-3 text-sm font-medium transition-colors ${
+                isActive
+                  ? "bg-raised text-foreground shadow-[inset_0_1px_0_rgb(255_255_255/0.1),0_1px_2px_rgb(0_0_0/0.5)]"
+                  : "text-muted-foreground hover:text-foreground"
+              }`
+        }
+      >
+        {isSettings ? <SettingsIcon className="h-4 w-4" /> : tab.label()}
+      </button>
+    );
+  };
+
+  // Main and Keys sit as a segmented pair in a recessed well on the
+  // left; Settings is an icon on the right. All three stay tabs in ONE
+  // tablist (the well is a plain wrapper), so the roving tabindex and
+  // arrow/Home/End handling cover them as a single row.
   return (
-    <nav className="border-border border-b" aria-label={t("app_nav_label")}>
+    <nav
+      className="bg-chrome shrink-0 border-b border-white/[0.06]"
+      aria-label={t("app_nav_label")}
+    >
       <div
-        className="flex items-center"
+        className="flex items-center gap-1 py-2 pr-2.5 pl-3"
         role="tablist"
         onKeyDown={handleKeyDown}
       >
-        {TABS.map((tab, i) => {
-          const isSettings = tab.id === "settings";
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              ref={(el) => {
-                tabRefs.current[i] = el;
-              }}
-              role="tab"
-              aria-selected={isActive}
-              aria-controls={`tabpanel-${tab.id}`}
-              aria-label={isSettings ? t("common_settings") : undefined}
-              id={`tab-${tab.id}`}
-              tabIndex={isActive ? 0 : -1}
-              onClick={() => onTabChange(tab.id)}
-              className={
-                isSettings
-                  ? `ml-auto px-3 py-2.5 transition-colors ${
-                      isActive
-                        ? "text-primary border-primary border-b-2"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`
-                  : `flex-1 px-3 py-2.5 text-sm font-medium transition-colors ${
-                      isActive
-                        ? "border-primary text-primary border-b-2"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`
-              }
-            >
-              {isSettings ? <SettingsIcon className="h-4 w-4" /> : tab.label()}
-            </button>
-          );
-        })}
+        <div className="bg-track flex gap-0.5 rounded-lg p-[3px]">
+          {TABS.map((tab, i) =>
+            tab.id === "settings" ? null : renderTab(tab, i),
+          )}
+        </div>
+        {TABS.map((tab, i) =>
+          tab.id === "settings" ? renderTab(tab, i) : null,
+        )}
       </div>
     </nav>
   );

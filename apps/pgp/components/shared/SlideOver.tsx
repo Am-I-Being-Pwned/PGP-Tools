@@ -1,7 +1,7 @@
 import type { FocusTrap } from "focus-trap";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createFocusTrap } from "focus-trap";
-import { ArrowLeftIcon } from "lucide-react";
+import { ChevronLeftIcon } from "lucide-react";
 import { tabbable } from "tabbable";
 
 import { t } from "../../lib/i18n";
@@ -244,9 +244,10 @@ export function SlideOverPanel({
   // Escape peels off only the topmost layer.
   //
   // Edge: in dark mode the page is near-black, so a 40% dim alone leaves
-  // the panel's left edge invisible. A border-l plus a surface lifted a
-  // notch above --background (but still under --card, so cards inside
-  // the panel keep their contrast) draws the edge in both themes.
+  // the panel's left edge invisible. The panel floats, so it gets the
+  // floating treatment -- a faint hairline ring plus a real drop shadow
+  // (shadow-xl) -- instead of a drawn border, while its body stays on
+  // the page background so the card stacks inside keep their contrast.
   return (
     <div className="pointer-events-none fixed inset-0 z-50">
       {/* The layer is click-through; only the panel and the ENTERED
@@ -262,7 +263,7 @@ export function SlideOverPanel({
       <div
         ref={panelRef}
         tabIndex={-1}
-        className={`bg-background border-border pointer-events-auto absolute inset-y-0 right-0 flex w-3/4 flex-col border-l shadow-xl transition-transform duration-300 ease-out dark:bg-[oklch(0.11_0_0)] ${entered ? "translate-x-0" : "translate-x-full"}`}
+        className={`bg-background pointer-events-auto absolute inset-y-0 right-0 flex w-3/4 flex-col shadow-xl transition-transform duration-300 ease-out ${entered ? "translate-x-0" : "translate-x-full"}`}
         role="region"
         aria-label={ariaLabel}
       >
@@ -283,16 +284,22 @@ export function SlideOverHeader({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="border-border flex items-center gap-2 border-b px-3 py-2.5">
+    // The same quiet chrome strip as the tab bar: a ghost Back (chevron
+    // plus its label) and the page title. The panel is only 3/4 of the
+    // side panel wide, so a header that also carries actions (key
+    // details has up to six) drops Back to its chevron to leave the
+    // title room; the accessible name is "Back" either way.
+    <div className="bg-chrome flex min-h-[46px] items-center gap-1.5 border-b border-white/[0.06] py-2 pr-2.5 pl-2">
       <button
         type="button"
         onClick={onBack}
         aria-label={t("common_back")}
-        className="text-muted-foreground hover:text-foreground rounded p-1 transition-colors"
+        className={`text-muted-foreground hover:bg-accent hover:text-foreground flex h-[30px] shrink-0 items-center gap-1 rounded-lg text-sm font-medium transition-colors ${children ? "w-[30px] justify-center" : "pr-2.5 pl-1"}`}
       >
-        <ArrowLeftIcon className="h-4 w-4" />
+        <ChevronLeftIcon className="h-4 w-4" />
+        {!children && t("common_back")}
       </button>
-      <h2 className="truncate text-sm font-semibold">{title}</h2>
+      <h2 className="ml-1 min-w-0 truncate text-sm font-semibold">{title}</h2>
       <span className="flex-1" />
       {children}
     </div>

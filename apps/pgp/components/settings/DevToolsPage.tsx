@@ -141,7 +141,7 @@ export function DevToolsPage({ onClose }: { onClose: () => void }) {
               {loading ? "..." : "Refresh"}
             </Button>
           </div>
-          <div className="border-border space-y-1 rounded-md border p-2.5 text-xs">
+          <div className="bg-card space-y-1 rounded-xl p-3 text-xs">
             <Row label="ping" value={wasm?.pong ?? "-"} />
             <Row
               label="vault session"
@@ -173,7 +173,7 @@ export function DevToolsPage({ onClose }: { onClose: () => void }) {
 
         <div>
           <h3 className="mb-1.5 text-xs font-semibold">chrome.storage</h3>
-          <pre className="border-border bg-muted/30 max-h-64 overflow-auto rounded-md border p-2 font-mono text-[10px] leading-relaxed">
+          <pre className="surface-field max-h-64 overflow-auto rounded-lg p-2 font-mono text-[10px] leading-relaxed">
             {storageJson ?? (loading ? "Loading…" : "-")}
           </pre>
           <div className="mt-2 flex gap-2">
@@ -207,7 +207,7 @@ export function DevToolsPage({ onClose }: { onClose: () => void }) {
             snapshot), then reload and unlock to exercise the migration. Both
             actions replace current storage.
           </p>
-          <label className="border-border hover:bg-muted/40 flex cursor-pointer items-center justify-between gap-2 rounded-md border p-2 text-xs transition-colors">
+          <label className="bg-card hover:bg-accent flex cursor-pointer items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-xs transition-colors">
             <span className="text-muted-foreground truncate">
               {restoreName ?? "Choose a dump .json to restore…"}
             </span>

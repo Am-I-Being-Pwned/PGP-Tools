@@ -227,9 +227,8 @@ for (const locale of LOCALES) {
    *  recipient chosen, a message typed, signing on. */
   async function composeEncrypt(panel: Page): Promise<void> {
     await panel.getByRole("tab", { name: t("app_tab_main") }).click();
-    await panel.getByRole("combobox").first().click();
     await panel
-      .getByRole("option", { name: t("common_encrypt"), exact: true })
+      .getByRole("radio", { name: t("common_encrypt"), exact: true })
       .click();
 
     await panel

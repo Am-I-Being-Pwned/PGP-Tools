@@ -852,7 +852,6 @@ export interface MessageArgs {
   "workspace_style_italic": undefined;
   "workspace_style_strike": undefined;
   "workspace_text_cleared_toast": undefined;
-  "workspace_text_entered_below": undefined;
   "workspace_toggle_encrypt_to_self": undefined;
   "workspace_toggle_password": undefined;
   "workspace_toggle_save_to_history": undefined;

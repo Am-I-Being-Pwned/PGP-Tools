@@ -145,6 +145,30 @@ export function WorkspaceResults({
     fileResults.length > 0;
   if (!fullHeight && !hasContent) return null;
 
+  // The signature outcome as a status band (ContactCard's verified
+  // tone). Over a readable message it is the top block of the message's
+  // own card; anywhere else (a verify verdict, a file result) it stands
+  // alone. In the card its corners go square: the stack rounds the
+  // outer ones.
+  const signerInCard = !!fullHeight && hasOutput;
+  const signerCard = verifiedSigner ? (
+    <div
+      className={signerInCard ? "shrink-0 [&>div]:rounded-[3px]" : undefined}
+    >
+      <ContactCard
+        readOnly
+        verifiedTone={signatureTone}
+        verifiedLabel={
+          isUnverified
+            ? t("workspace_unverified")
+            : (statusText ?? t("workspace_signature_verified"))
+        }
+        note={isUnverified ? statusText : undefined}
+        contact={signerAsContact(verifiedSigner)}
+      />
+    </div>
+  ) : null;
+
   return (
     <div
       className={
@@ -156,19 +180,7 @@ export function WorkspaceResults({
         <ErrorAlert key={error.message} error={error} onRemedy={onRemedy} />
       )}
 
-      {verifiedSigner && (
-        <ContactCard
-          readOnly
-          verifiedTone={signatureTone}
-          verifiedLabel={
-            isUnverified
-              ? t("workspace_unverified")
-              : (statusText ?? t("workspace_signature_verified"))
-          }
-          note={isUnverified ? statusText : undefined}
-          contact={signerAsContact(verifiedSigner)}
-        />
-      )}
+      {verifiedSigner && !signerInCard && signerCard}
 
       <OutputArea
         outputElRef={outputElRef}
@@ -185,6 +197,7 @@ export function WorkspaceResults({
         getTranslation={getTranslation}
         footer={translationFooter}
         corner={resultCorner}
+        header={signerInCard ? signerCard : undefined}
       />
 
       {/* A key inside a message the user just read: keys travel this way

@@ -1,8 +1,9 @@
 import { useMemo } from "react";
+import { UserIcon } from "lucide-react";
 
 import { cn } from "@amibeingpwned/ui";
 
-import { AVATAR_SIZE, keyAvatar } from "../../lib/key-avatar";
+import { AVATAR_SIZE, hasKeyFace, keyAvatar } from "../../lib/key-avatar";
 
 /**
  * A key's pixel-person face (see lib/key-avatar). Decorative: the
@@ -12,6 +13,10 @@ import { AVATAR_SIZE, keyAvatar } from "../../lib/key-avatar";
  *
  * Sizes from the design language: 16 in a chip, 32 in a list row, 64+
  * as the hero on key details.
+ *
+ * Only a whole fingerprint gets a face (see `hasKeyFace`). A signer we
+ * know by key id alone gets a plain silhouette: an invented face there
+ * would not match the one the key shows once imported.
  */
 export function KeyAvatar({
   fingerprint,
@@ -22,7 +27,9 @@ export function KeyAvatar({
   size?: number;
   className?: string;
 }) {
+  const face = hasKeyFace(fingerprint);
   const runs = useMemo(() => {
+    if (!hasKeyFace(fingerprint)) return [];
     const { cells } = keyAvatar(fingerprint);
     const out: { x: number; y: number; w: number; fill: string }[] = [];
     for (let y = 0; y < AVATAR_SIZE; y++) {
@@ -39,6 +46,25 @@ export function KeyAvatar({
     return out;
   }, [fingerprint]);
 
+  const radius =
+    size <= 16 ? "rounded-[3px]" : size <= 40 ? "rounded-md" : "rounded-xl";
+
+  if (!face) {
+    return (
+      <span
+        aria-hidden="true"
+        style={{ width: size, height: size }}
+        className={cn(
+          "bg-secondary text-muted-foreground inline-flex shrink-0 items-center justify-center",
+          radius,
+          className,
+        )}
+      >
+        <UserIcon style={{ width: size * 0.55, height: size * 0.55 }} />
+      </span>
+    );
+  }
+
   return (
     <svg
       aria-hidden="true"
@@ -47,11 +73,7 @@ export function KeyAvatar({
       height={size}
       viewBox={`0 0 ${AVATAR_SIZE} ${AVATAR_SIZE}`}
       shapeRendering="crispEdges"
-      className={cn(
-        "shrink-0",
-        size <= 16 ? "rounded-[3px]" : size <= 40 ? "rounded-md" : "rounded-xl",
-        className,
-      )}
+      className={cn("shrink-0", radius, className)}
     >
       {runs.map((r) => (
         <rect

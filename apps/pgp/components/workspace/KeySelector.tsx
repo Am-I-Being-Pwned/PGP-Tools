@@ -26,6 +26,7 @@ import {
   formatKeyDisplayName,
 } from "../../lib/utils/key-naming";
 import { KeyDetailsButton } from "../keys/KeyDetailsButton";
+import { KeyAvatar } from "../shared/KeyAvatar";
 
 type AnyKey = ProtectedKeyBlob | PublicContactKey;
 
@@ -109,19 +110,22 @@ export function KeySelector({
               variant="outline"
               role="combobox"
               aria-expanded={open}
-              className="h-auto min-w-0 flex-1 justify-between py-1.5 font-normal"
+              className="h-auto min-w-0 flex-1 justify-between py-1.5 pl-2 font-normal"
             >
-              {selectedDisplay ? (
-                <div className="min-w-0 text-left">
-                  <p className="truncate text-sm">{selectedDisplay.name}</p>
-                  {selectedDisplay.detail && (
-                    <p className="text-muted-foreground truncate text-xs">
-                      {selectedDisplay.detail}
-                    </p>
-                  )}
+              {selectedKey && selectedDisplay ? (
+                <div className="flex min-w-0 items-center gap-2.5 text-left">
+                  <KeyAvatar fingerprint={selectedKey.keyId} size={32} />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm">{selectedDisplay.name}</p>
+                    {selectedDisplay.detail && (
+                      <p className="text-muted-foreground truncate text-xs">
+                        {selectedDisplay.detail}
+                      </p>
+                    )}
+                  </div>
                 </div>
               ) : (
-                <span className="text-muted-foreground text-sm">
+                <span className="text-muted-foreground pl-1 text-sm">
                   {t("actions_select_key_placeholder")}
                 </span>
               )}
@@ -230,20 +234,23 @@ function KeyOption({
     <CommandItem
       value={detail ? `${name} ${detail}` : name}
       onSelect={onSelect}
-      className="gap-2"
+      className="gap-2.5"
     >
-      <CheckIcon
-        className={cn(
-          "h-4 w-4 shrink-0",
-          selected ? "opacity-100" : "opacity-0",
-        )}
-      />
+      <KeyAvatar fingerprint={keyData.keyId} size={32} />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm">{name}</p>
         {detail && (
           <p className="text-muted-foreground truncate text-xs">{detail}</p>
         )}
       </div>
+      {/* After the name, so the face leads the row like everywhere else;
+          green because a selected key is one that is on. */}
+      <CheckIcon
+        className={cn(
+          "text-good h-4 w-4 shrink-0",
+          selected ? "opacity-100" : "opacity-0",
+        )}
+      />
     </CommandItem>
   );
 }

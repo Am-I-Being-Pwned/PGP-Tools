@@ -1,3 +1,5 @@
+import { cn } from "@amibeingpwned/ui";
+import { BlockStack } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
 import { Kbd } from "@amibeingpwned/ui/kbd";
 
@@ -29,6 +31,12 @@ interface ProtectionMethodPickerProps {
   onReusePasskeyChange?: (reuse: boolean) => void;
 }
 
+/** One protection choice: a flat block in the picker's stack. */
+const OPTION =
+  "flex cursor-pointer items-start gap-3 rounded-[3px] p-3 transition-colors";
+const OPTION_ON = "bg-on";
+const OPTION_OFF = "bg-card hover:bg-accent/50";
+
 export function ProtectionMethodPicker({
   method,
   onMethodChange,
@@ -53,77 +61,78 @@ export function ProtectionMethodPicker({
         {t("keygen_protection_intro")}
       </p>
 
-      <label
-        className={`flex cursor-pointer items-start gap-3 rounded-md border p-3 transition-colors ${
-          method === "passkey"
-            ? "border-primary bg-primary/5"
-            : "border-border hover:border-muted-foreground/50"
-        } ${!prfAvailable ? "pointer-events-none opacity-50" : ""}`}
-      >
-        <input
-          type="radio"
-          name="protection"
-          checked={method === "passkey"}
-          onChange={() => onMethodChange("passkey")}
-          disabled={!prfAvailable}
-          className="accent-primary mt-0.5"
-        />
-        <div>
-          <p className="flex items-center justify-between text-sm font-medium">
-            {t("keygen_protection_passkey")}
-            <span className="text-primary text-xs font-normal">
-              {t("keygen_protection_recommended")}
-            </span>
-          </p>
-          <p className="text-muted-foreground text-xs">
-            {t("keygen_protection_passkey_desc")}
-          </p>
-          {!prfAvailable && (
-            <p className="text-destructive mt-1 text-xs">
-              {t("keygen_protection_passkey_unavailable")}
-            </p>
+      {/* The two choices are one card of two blocks; the chosen one is
+          tinted "on". Native radios stay underneath (and visible): they
+          carry the keyboard behaviour and the group semantics for free. */}
+      <BlockStack>
+        <label
+          className={cn(
+            OPTION,
+            method === "passkey" ? OPTION_ON : OPTION_OFF,
+            !prfAvailable && "pointer-events-none opacity-50",
           )}
-          {method === "passkey" &&
-            reusePasskeyCredentialId &&
-            onReusePasskeyChange && (
-              <label className="mt-2 flex cursor-pointer items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={reusePasskey ?? true}
-                  onChange={(e) => onReusePasskeyChange(e.target.checked)}
-                  className="accent-primary"
-                />
-                <span className="text-muted-foreground text-xs">
-                  {t("keygen_protection_reuse_passkey")}
-                </span>
-              </label>
+        >
+          <input
+            type="radio"
+            name="protection"
+            checked={method === "passkey"}
+            onChange={() => onMethodChange("passkey")}
+            disabled={!prfAvailable}
+            className="accent-primary mt-0.5"
+          />
+          <div>
+            <p className="flex items-center justify-between text-sm font-medium">
+              {t("keygen_protection_passkey")}
+              <span className="text-good text-xs font-normal">
+                {t("keygen_protection_recommended")}
+              </span>
+            </p>
+            <p className="text-muted-foreground text-xs">
+              {t("keygen_protection_passkey_desc")}
+            </p>
+            {!prfAvailable && (
+              <p className="text-destructive mt-1 text-xs">
+                {t("keygen_protection_passkey_unavailable")}
+              </p>
             )}
-        </div>
-      </label>
+            {method === "passkey" &&
+              reusePasskeyCredentialId &&
+              onReusePasskeyChange && (
+                <label className="mt-2 flex cursor-pointer items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={reusePasskey ?? true}
+                    onChange={(e) => onReusePasskeyChange(e.target.checked)}
+                    className="accent-primary"
+                  />
+                  <span className="text-muted-foreground text-xs">
+                    {t("keygen_protection_reuse_passkey")}
+                  </span>
+                </label>
+              )}
+          </div>
+        </label>
 
-      <label
-        className={`flex cursor-pointer items-start gap-3 rounded-md border p-3 transition-colors ${
-          method === "password"
-            ? "border-primary bg-primary/5"
-            : "border-border hover:border-muted-foreground/50"
-        }`}
-      >
-        <input
-          type="radio"
-          name="protection"
-          checked={method === "password"}
-          onChange={() => onMethodChange("password")}
-          className="accent-primary mt-0.5"
-        />
-        <div>
-          <p className="text-sm font-medium">
-            {t("keygen_protection_password")}
-          </p>
-          <p className="text-muted-foreground text-xs">
-            {t("keygen_protection_password_desc")}
-          </p>
-        </div>
-      </label>
+        <label
+          className={cn(OPTION, method === "password" ? OPTION_ON : OPTION_OFF)}
+        >
+          <input
+            type="radio"
+            name="protection"
+            checked={method === "password"}
+            onChange={() => onMethodChange("password")}
+            className="accent-primary mt-0.5"
+          />
+          <div>
+            <p className="text-sm font-medium">
+              {t("keygen_protection_password")}
+            </p>
+            <p className="text-muted-foreground text-xs">
+              {t("keygen_protection_password_desc")}
+            </p>
+          </div>
+        </label>
+      </BlockStack>
 
       {method === "password" && (
         <>

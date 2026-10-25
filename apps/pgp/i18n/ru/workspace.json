@@ -125,9 +125,6 @@
   "workspace_need_recipient_or_password": {
     "message": "Выберите хотя бы одного получателя или задайте пароль"
   },
-  "workspace_text_entered_below": {
-    "message": "Текст введён ниже"
-  },
   "workspace_clear_text": {
     "message": "Очистить текст"
   },

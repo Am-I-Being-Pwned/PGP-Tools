@@ -125,9 +125,6 @@
   "workspace_need_recipient_or_password": {
     "message": "请至少选择一个收件人，或设置密码"
   },
-  "workspace_text_entered_below": {
-    "message": "已在下方输入文本"
-  },
   "workspace_clear_text": {
     "message": "清除文本"
   },
