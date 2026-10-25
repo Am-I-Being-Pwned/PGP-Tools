@@ -38,6 +38,7 @@ export function Segmented<T extends string>({
   fill = false,
   size = "default",
   activation = "automatic",
+  hintSide = "bottom",
   className,
 }: {
   value: T;
@@ -48,6 +49,9 @@ export function Segmented<T extends string>({
   fill?: boolean;
   size?: "default" | "sm";
   activation?: "automatic" | "manual";
+  /** Where option hints appear. Below by default: above, they collide
+   *  with whatever header the control sits under. */
+  hintSide?: "top" | "bottom";
   className?: string;
 }) {
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -138,7 +142,10 @@ export function Segmented<T extends string>({
             {button}
             <span
               aria-hidden="true"
-              className="surface-float text-muted-foreground pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 rounded-md px-1.5 py-1 opacity-0 transition-opacity delay-0 duration-150 group-hover/seg:opacity-100 group-hover/seg:delay-300 group-has-[:focus-visible]/seg:opacity-100"
+              className={cn(
+                "surface-float text-muted-foreground pointer-events-none absolute left-1/2 z-50 -translate-x-1/2 rounded-md px-1.5 py-1 whitespace-nowrap opacity-0 transition-opacity delay-0 duration-150 group-hover/seg:opacity-100 group-hover/seg:delay-300 group-has-[:focus-visible]/seg:opacity-100",
+                hintSide === "top" ? "bottom-full mb-2" : "top-full mt-2",
+              )}
             >
               {o.hint}
             </span>
