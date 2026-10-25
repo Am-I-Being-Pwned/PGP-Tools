@@ -51,6 +51,21 @@ test.describe("a message with attachments (encrypt)", () => {
     await expect(panel.getByText(/2 files encrypted/)).toBeVisible();
   });
 
+  test("typing after attaching keeps the file", async ({ panel }) => {
+    await onboardWithPassword(panel, PASSWORD);
+    // Attached elsewhere first, then brought to Encrypt: the reported
+    // path. Typing the message must not drop the attachment.
+    await setWorkspaceMode(panel, "Sign");
+    await attach(panel, "notes.txt", "attached");
+    await setWorkspaceMode(panel, "Encrypt");
+    const box = panel.locator("#pgp-input");
+    await box.click();
+    await panel.keyboard.type("hello");
+
+    await expect(box).toHaveValue("hello");
+    await expect(panel.getByText("notes.txt", { exact: true })).toBeVisible();
+  });
+
   test("outside encrypt, staged files still take the box's place", async ({
     panel,
   }) => {

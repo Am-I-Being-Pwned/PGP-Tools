@@ -856,11 +856,14 @@ export function useWorkspaceState(opts: {
     (text: string) => {
       setAutoRunAction(null);
       setInput(text);
-      setFiles([]);
+      // Encrypt carries the message alongside any attachments (it goes
+      // out as msg.txt), so writing it must not drop them. Elsewhere the
+      // box and the files are alternatives: text in replaces files.
+      if (mode !== "encrypt") setFiles([]);
       resetOutput();
       applyDetection(text);
     },
-    [resetOutput, setInput, applyDetection],
+    [mode, resetOutput, setInput, applyDetection],
   );
 
   /**
