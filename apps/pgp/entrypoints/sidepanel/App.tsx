@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { SettingsIcon } from "lucide-react";
+import { HistoryIcon, SettingsIcon } from "lucide-react";
 
 import { Button } from "@amibeingpwned/ui/button";
 
@@ -834,7 +834,29 @@ export default function App() {
   return (
     <GlobalDropZone rules={dropRules}>
       <div className="flex h-screen flex-col">
-        <TabBar activeTab={activeTab} onTabChange={changeTab} />
+        <TabBar
+          activeTab={activeTab}
+          onTabChange={changeTab}
+          trailing={
+            // History belongs to the workspace, and to a workspace that
+            // can have any: never-cache means no history, ever, so the
+            // viewer disappears rather than opening onto nothing.
+            activeTab === "workspace" && !neverCacheKeys ? (
+              <button
+                type="button"
+                onClick={openHistory}
+                title={t("actions_history")}
+                aria-label={t("actions_history")}
+                // Out of the Tab order, as it was beside the toggles:
+                // keyboard users reach history via the palette.
+                tabIndex={-1}
+                className="text-muted-foreground hover:bg-accent hover:text-foreground flex size-[30px] items-center justify-center rounded-md transition-colors"
+              >
+                <HistoryIcon className="h-4 w-4" />
+              </button>
+            ) : undefined
+          }
+        />
 
         <CommandPalette ctx={actionCtx} bindOpen={bindPaletteOpen} />
 
@@ -1057,9 +1079,13 @@ const TABS: { id: Tab; label: () => string }[] = [
 function TabBar({
   activeTab,
   onTabChange,
+  trailing,
 }: {
   activeTab: Tab;
   onTabChange: (tab: Tab) => void;
+  /** Header actions drawn between the tabs and Settings (History). Not
+   *  tabs, so they sit outside the tablist and its arrow handling. */
+  trailing?: React.ReactNode;
 }) {
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
@@ -1112,7 +1138,7 @@ function TabBar({
         onClick={() => onTabChange(tab.id)}
         className={
           isSettings
-            ? `ml-auto flex size-[30px] items-center justify-center rounded-md transition-colors ${
+            ? `${trailing ? "" : "ml-auto"} order-2 flex size-[30px] items-center justify-center rounded-md transition-colors ${
                 isActive
                   ? "bg-raised text-foreground"
                   : "text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -1135,14 +1161,13 @@ function TabBar({
   // arrow/Home/End handling cover them as a single row.
   return (
     <nav
-      className="bg-chrome shrink-0 border-b border-white/[0.06]"
+      className="bg-chrome flex shrink-0 items-center gap-1 border-b border-white/[0.06] py-2 pr-2.5 pl-3"
       aria-label={t("app_nav_label")}
     >
-      <div
-        className="flex items-center gap-1 py-2 pr-2.5 pl-3"
-        role="tablist"
-        onKeyDown={handleKeyDown}
-      >
+      {/* `contents`: the tablist keeps its role and keyboard handling
+          but lays its tabs out in the nav's row, so the header actions
+          can sit between the Main/Keys pair and Settings. */}
+      <div className="contents" role="tablist" onKeyDown={handleKeyDown}>
         <div className="bg-track flex gap-0.5 rounded-lg p-[3px]">
           {TABS.map((tab, i) =>
             tab.id === "settings" ? null : renderTab(tab, i),
@@ -1152,6 +1177,9 @@ function TabBar({
           tab.id === "settings" ? renderTab(tab, i) : null,
         )}
       </div>
+      {trailing && (
+        <div className="order-1 ml-auto flex items-center">{trailing}</div>
+      )}
     </nav>
   );
 }

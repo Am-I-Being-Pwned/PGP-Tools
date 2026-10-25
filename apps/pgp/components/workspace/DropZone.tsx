@@ -22,11 +22,10 @@ interface DropZoneProps {
   children?: React.ReactNode;
   /** The right end of the bottom strip (the "Clear text" button). */
   trailing?: React.ReactNode;
-  /** The card's top block (the To row). It is not part of the drop
-   *  target -- a drop aimed at the recipient box is not a message -- and
-   *  it comes AFTER the message in the DOM while drawing first, so Tab
-   *  still goes message -> recipients, the order the keyboard flow was
-   *  built around, ahead of the strip's Browse button. */
+  /** The card's top block(s) -- the To and From rows, each a `Block`
+   *  the caller supplies. Not part of the drop target: a drop aimed at
+   *  the recipient box is not a message. It comes first in the DOM as
+   *  on screen, so Tab walks the card top to bottom. */
   header?: React.ReactNode;
   className?: string;
 }
@@ -116,15 +115,12 @@ export function DropZone({
         className,
       )}
     >
-      {children}
       {header && (
-        <Block
-          data-drop-pass=""
-          className="order-first shrink-0 focus-within:shadow-[inset_0_0_0_1px_rgb(79_193_133/0.35)]"
-        >
+        <div data-drop-pass="" className="flex shrink-0 flex-col gap-0.5">
           {header}
-        </Block>
+        </div>
       )}
+      {children}
 
       {showFiles && (
         <Block className="min-h-0 flex-1 space-y-0.5 overflow-y-auto p-1.5">

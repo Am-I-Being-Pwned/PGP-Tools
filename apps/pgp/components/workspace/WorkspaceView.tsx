@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
+import { Block } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
 import { Kbd } from "@amibeingpwned/ui/kbd";
 import { ariaKeyShortcuts, isMacPlatform } from "@amibeingpwned/ui/kbd-helpers";
@@ -26,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@amibeingpwned/ui/select";
+import { Switch } from "@amibeingpwned/ui/switch";
 
 import type { WorkspaceOpsBridge } from "../../hooks/useActionContext";
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
@@ -62,10 +64,14 @@ import { isPgpRecord, isSshRecord } from "../../lib/storage/key-kind";
 import { savePreferences } from "../../lib/storage/preferences";
 import { toast } from "../../lib/toast";
 import { saveCrxViaPrompt } from "../../lib/utils/download";
+import {
+  displayUserId,
+  formatKeyDisplayName,
+} from "../../lib/utils/key-naming";
 import { INPUT_CLASS } from "../../lib/utils/styles";
+import { KeyAvatar } from "../shared/KeyAvatar";
 import { hasOpenSlideOver } from "../shared/SlideOver";
 import { ToggleBadge } from "../shared/ToggleBadge";
-import { HistoryButton } from "./HistoryPage";
 import { KeySelector } from "./KeySelector";
 import { MessagePasswordPage } from "./MessagePasswordPage";
 import { selectionEngine } from "./recipient-engine";
@@ -554,6 +560,15 @@ export function WorkspaceView({
       : signKeyChoices.length === 0
         ? t("workspace_sign_blocked_no_pgp_key")
         : undefined;
+  // Who the From line names: the same pick the encrypt makes
+  // (`resolvePgpSignerId`) -- the selected key if it can sign, else the
+  // first PGP key.
+  const signer =
+    signKeyChoices.find((k) => k.keyId === s.selectedKeyId) ??
+    signKeyChoices.at(0);
+  const signerName = signer
+    ? formatKeyDisplayName(displayUserId(signer))
+    : { name: "", detail: "" };
   // Asked of the same function the encrypt runs through, rather than
   // re-derived: whether the user's own key rides along depends on the
   // engine, the default key and whether a selected recipient already is
@@ -1146,37 +1161,80 @@ export function WorkspaceView({
         // message is, and who it is for, read as one thing.
         cardHeader={
           needsRecipient ? (
-            <RecipientPicker
-              inline
-              // Escape in the recipient box peels its own layers first
-              // (list, then query); when there are none left it lands the
-              // user back in the message, the same thing Escape does
-              // everywhere else in this panel.
-              onEscapeExhausted={focusMessageBox}
-              // A message password rules out age entirely, so SSH rows dim
-              // with their own reason rather than being silently
-              // unpickable.
-              passwordArmed={s.encryptPasswordReady}
-              label={t("workspace_recipients_label")}
-              // Only offer contacts you can actually encrypt to. Sign-only
-              // keys are valid contacts (for verification) but have no
-              // encryption key. Legacy records (undefined) are assumed
-              // encryptable until the contacts backfill fills the flag in.
-              contacts={contacts.filter((c) => c.usableForEncryption !== false)}
-              myKeys={myKeys}
-              selectedKeyIds={s.selectedRecipientIds}
-              recentKeyIds={s.recentRecipients}
-              // Changing the recipient set (adding OR removing) invalidates
-              // any completed ciphertext — clear it so the user re-encrypts
-              // to the new set rather than downloading stale output.
-              onChange={(ids) => {
-                s.setSelectedRecipientIds(ids);
-                s.resetOutput();
-              }}
-              emptyText={t("workspace_no_contacts_yet")}
-              emptyAction={onNavigateToKeys}
-              emptyActionLabel={t("workspace_add_a_contact")}
-            />
+            <>
+              <Block className="focus-within:shadow-[inset_0_0_0_1px_rgb(79_193_133/0.35)]">
+                <RecipientPicker
+                  inline
+                  // Escape in the recipient box peels its own layers first
+                  // (list, then query); when there are none left it lands the
+                  // user back in the message, the same thing Escape does
+                  // everywhere else in this panel.
+                  onEscapeExhausted={focusMessageBox}
+                  // A message password rules out age entirely, so SSH rows dim
+                  // with their own reason rather than being silently
+                  // unpickable.
+                  passwordArmed={s.encryptPasswordReady}
+                  label={t("workspace_recipients_label")}
+                  // Only offer contacts you can actually encrypt to. Sign-only
+                  // keys are valid contacts (for verification) but have no
+                  // encryption key. Legacy records (undefined) are assumed
+                  // encryptable until the contacts backfill fills the flag in.
+                  contacts={contacts.filter(
+                    (c) => c.usableForEncryption !== false,
+                  )}
+                  myKeys={myKeys}
+                  selectedKeyIds={s.selectedRecipientIds}
+                  recentKeyIds={s.recentRecipients}
+                  // Changing the recipient set (adding OR removing) invalidates
+                  // any completed ciphertext — clear it so the user re-encrypts
+                  // to the new set rather than downloading stale output.
+                  onChange={(ids) => {
+                    s.setSelectedRecipientIds(ids);
+                    s.resetOutput();
+                  }}
+                  emptyText={t("workspace_no_contacts_yet")}
+                  emptyAction={onNavigateToKeys}
+                  emptyActionLabel={t("workspace_add_a_contact")}
+                />
+              </Block>
+              {/* The From line: who signs, and whether they do. It is the
+                same "Sign" switch that sat in the option bar -- same
+                name, same preference, same dimmed-with-a-reason when
+                signing can't apply -- moved to where the signer is. */}
+              {myKeys.length > 0 && (
+                <Block
+                  className="flex min-h-9 items-center gap-2.5 py-1 pr-2.5 pl-3"
+                  title={signBlockedReason}
+                >
+                  {signer && !signBlockedReason ? (
+                    <>
+                      <KeyAvatar fingerprint={signer.keyId} size={16} />
+                      <span className="min-w-0 flex-1 truncate text-sm">
+                        {signerName.name}
+                        {signerName.detail && (
+                          <span className="text-muted-foreground ml-1.5 text-xs">
+                            {signerName.detail}
+                          </span>
+                        )}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-muted-foreground min-w-0 flex-1 truncate text-xs">
+                      {signBlockedReason}
+                    </span>
+                  )}
+                  <label className="text-muted-foreground flex shrink-0 items-center gap-2 text-xs font-medium">
+                    {t("common_sign")}
+                    <Switch
+                      size="sm"
+                      checked={s.alsoSign}
+                      onCheckedChange={setAlsoSignPref}
+                      disabled={signBlockedReason !== undefined}
+                    />
+                  </label>
+                </Block>
+              )}
+            </>
           ) : undefined
         }
         composeTranslate={
@@ -1274,13 +1332,13 @@ export function WorkspaceView({
 
         {s.mode === "encrypt" && (
           <div className="space-y-2">
-            {/* One option bar, each toggle a segment of it, two to a row
-                (an odd last one spans both) rather than squeezing four or
-                five labels into one row of a 400px panel. The
-                history viewer sits beside it, not in it: it opens a page,
-                it is not an option. */}
+            {/* One option bar, each toggle a segment of it, three to the
+                row (Sign lives on the card's From line; a fourth, the zip
+                toggle, takes a row of its own). The history viewer is in
+                the header, not in it: it opens a page, it is not an
+                option. */}
             <div className="flex items-center gap-2">
-              <OptionBar className="min-w-0 flex-1 grid-flow-row grid-cols-2 [&>*:last-child:nth-child(odd)]:col-span-2">
+              <OptionBar className="flex-1 grid-flow-row grid-cols-3 [&>*]:px-1 [&>*]:text-xs [&>*:nth-child(4)]:col-span-3">
                 {myKeys.length > 0 && (
                   // Deliberately left pressed AND enabled even when this
                   // particular message can't include the user (no own key
@@ -1332,15 +1390,6 @@ export function WorkspaceView({
                     {t("workspace_toggle_password")}
                   </ToggleBadge>
                 }
-                {myKeys.length > 0 && (
-                  <ToggleBadge
-                    pressed={s.alsoSign}
-                    onPressedChange={setAlsoSignPref}
-                    disabledReason={signBlockedReason}
-                  >
-                    {t("common_sign")}
-                  </ToggleBadge>
-                )}
                 {s.files.length > 1 && (
                   <ToggleBadge
                     pressed={s.zipFiles}
@@ -1353,7 +1402,7 @@ export function WorkspaceView({
                   </ToggleBadge>
                 )}
                 {/* Never-cache means no history, ever: the toggle and the
-                  viewer (beside the bar) disappear rather than offering a
+                  viewer (in the header) disappear rather than offering a
                   dead switch. */}
                 {!neverCacheKeys && (
                   <ToggleBadge
@@ -1364,7 +1413,6 @@ export function WorkspaceView({
                   </ToggleBadge>
                 )}
               </OptionBar>
-              {!neverCacheKeys && <HistoryButton enabled={s.saveToHistory} />}
             </div>
             {/* Nothing will be signed on the age path, so the "which key
                 signs" question doesn't arise -- the toggle above stays,

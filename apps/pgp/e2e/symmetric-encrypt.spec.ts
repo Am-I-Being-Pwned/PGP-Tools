@@ -296,10 +296,12 @@ test("tabbing into Recipients opens the list", async ({ panel }) => {
   const box = panel.getByRole("combobox", { name: "Recipients" });
   await expect(box).toHaveAttribute("aria-expanded", "false");
 
-  // Focus the message box, then Tab -- the recipient input is the next
-  // stop, and arriving there by keyboard should show what can be picked.
-  await panel.locator("textarea").first().click();
-  await panel.locator("textarea").first().press("Tab");
+  // Focus the mode switch, then Tab -- the recipient input (the card's
+  // To row) is the next stop, and arriving there by keyboard should show
+  // what can be picked.
+  const encrypt = panel.getByRole("radio", { name: "Encrypt", exact: true });
+  await encrypt.focus();
+  await encrypt.press("Tab");
 
   await expect(box).toBeFocused();
   await expect(box).toHaveAttribute("aria-expanded", "true");
