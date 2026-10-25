@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import tailwindcss from "@tailwindcss/vite";
 import wasm from "vite-plugin-wasm";
 import { defineConfig } from "wxt";
@@ -119,9 +120,25 @@ function panelCspMeta(enabled: boolean) {
  * CI only ever runs the Chrome build (`.github/workflows/ci.yml`), which
  * is consistent with the above and deliberate.
  */
+/**
+ * The Edge build (`build:edge` / `zip:edge`) ships ONE store title and
+ * summary, in English. Edge Partner Center treats every `_locales` folder
+ * in the package as a listing language and wants a listing for each, and
+ * the localized `extName`s that earn their keep on the Chrome Web Store
+ * (see the manifest comment below) are just 43 listings to fill in there.
+ * So for Edge the manifest carries the `en` strings literally, the
+ * listing keys are stripped from every bundle, and the locales that
+ * existed only for the listing are dropped. The panel's UI translations
+ * stay. Chrome builds are untouched.
+ */
+const LISTING_KEYS = ["extName", "extDescription"];
+const enListing = JSON.parse(
+  readFileSync(new URL("./i18n/en/listing.json", import.meta.url), "utf8"),
+) as Record<"extName" | "extDescription", { message: string }>;
+
 export default defineConfig({
   modules: ["@wxt-dev/module-react"],
-  manifest: () => ({
+  manifest: ({ browser }) => ({
     // Name and summary come from public/_locales. The store keeps one shared
     // index and treats each locale's name as its own matchable string, and
     // those strings do not dilute one another, so the vocabulary we cannot fit
@@ -132,9 +149,12 @@ export default defineConfig({
     // relevance at even odds rather than adding it. There is nothing to gain by
     // gambling a ranking that already works.
     default_locale: "en",
-    name: "__MSG_extName__",
+    name: browser === "edge" ? enListing.extName.message : "__MSG_extName__",
     short_name: "PGP Tools",
-    description: "__MSG_extDescription__",
+    description:
+      browser === "edge"
+        ? enListing.extDescription.message
+        : "__MSG_extDescription__",
     permissions: ["sidePanel", "contextMenus", "storage", "idle"],
     // Requested at runtime the first time a user saves a signed .crx. Saving
     // goes through chrome.downloads with a "Save As" prompt, the one path that
@@ -227,5 +247,30 @@ export default defineConfig({
   },
   webExt: {
     disabled: true,
+  },
+  hooks: {
+    "build:publicAssets": (wxt, files) => {
+      if (wxt.config.browser !== "edge") return;
+      for (let i = files.length - 1; i >= 0; i--) {
+        const file = files[i];
+        if (
+          !file ||
+          !/^_locales\/[^/]+\/messages\.json$/.test(file.relativeDest)
+        )
+          continue;
+        const messages = JSON.parse(
+          "contents" in file
+            ? file.contents
+            : readFileSync(file.absoluteSrc, "utf8"),
+        ) as Record<string, unknown>;
+        for (const key of LISTING_KEYS) delete messages[key];
+        if (Object.keys(messages).length === 0) files.splice(i, 1);
+        else
+          files[i] = {
+            relativeDest: file.relativeDest,
+            contents: JSON.stringify(messages),
+          };
+      }
+    },
   },
 });

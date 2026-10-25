@@ -12,6 +12,8 @@
     "build:firefox": "wxt build -b firefox",
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
+    "build:edge": "pnpm build:wasm && pnpm i18n:check && wxt build -b edge && node scripts/audit-invariants.mjs && node scripts/audit-network.mjs .output/edge-mv3",
+    "zip:edge": "pnpm build:edge && wxt zip -b edge",
     "format": "prettier --check . --ignore-path ../../.gitignore --ignore-path .prettierignore",
     "lint": "eslint --flag unstable_native_nodejs_ts_config && node scripts/i18n-check.mjs",
     "test": "vitest run --coverage",
