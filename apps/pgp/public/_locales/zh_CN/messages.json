@@ -3949,6 +3949,14 @@
   "workspace_import_one": {
     "message": "导入一个"
   },
+  "workspace_lookup_signer": {
+    "message": "在 $host$ 上搜索",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_match_case": {
     "message": "区分大小写"
   },

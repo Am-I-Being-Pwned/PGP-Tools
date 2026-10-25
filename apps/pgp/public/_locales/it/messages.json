@@ -3949,6 +3949,14 @@
   "workspace_import_one": {
     "message": "Importane una"
   },
+  "workspace_lookup_signer": {
+    "message": "Cerca su $host$",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_match_case": {
     "message": "Maiuscole/minuscole"
   },

@@ -386,6 +386,9 @@
   "workspace_unknown_signer": {
     "message": "Signatário desconhecido"
   },
+  "workspace_lookup_signer": {
+    "message": "Pesquisar em $host$"
+  },
   "workspace_status_signer_unknown": {
     "message": "Esta mensagem está assinada, mas a chave pública do signatário não está nas suas chaves nem nos seus contatos, então a assinatura não pôde ser verificada."
   },

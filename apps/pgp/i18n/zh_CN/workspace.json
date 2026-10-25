@@ -386,6 +386,9 @@
   "workspace_unknown_signer": {
     "message": "未知签名者"
   },
+  "workspace_lookup_signer": {
+    "message": "在 $host$ 上搜索"
+  },
   "workspace_status_signer_unknown": {
     "message": "此消息已签名，但签名者的公钥不在你的密钥或联系人中，因此无法验证签名。"
   },

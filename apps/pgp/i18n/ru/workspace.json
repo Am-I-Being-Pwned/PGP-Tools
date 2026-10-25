@@ -422,6 +422,9 @@
   "workspace_unknown_signer": {
     "message": "Неизвестный подписант"
   },
+  "workspace_lookup_signer": {
+    "message": "Искать на $host$"
+  },
   "workspace_status_signer_unknown": {
     "message": "Это сообщение подписано, но открытого ключа подписанта нет среди ваших ключей и контактов, поэтому проверить подпись не удалось."
   },

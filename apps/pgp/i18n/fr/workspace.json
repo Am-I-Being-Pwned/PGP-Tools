@@ -386,6 +386,9 @@
   "workspace_unknown_signer": {
     "message": "Signataire inconnu"
   },
+  "workspace_lookup_signer": {
+    "message": "Rechercher sur $host$"
+  },
   "workspace_status_signer_unknown": {
     "message": "Ce message est signé, mais la clé publique du signataire n'est ni dans vos clés ni dans vos contacts ; la signature n'a donc pas pu être vérifiée."
   },

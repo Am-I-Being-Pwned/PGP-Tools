@@ -5025,6 +5025,14 @@
   "workspace_import_one": {
     "message": "Импортировать ключ"
   },
+  "workspace_lookup_signer": {
+    "message": "Искать на $host$",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_match_case": {
     "message": "Учитывать регистр"
   },

@@ -3949,6 +3949,14 @@
   "workspace_import_one": {
     "message": "鍵をインポート"
   },
+  "workspace_lookup_signer": {
+    "message": "$host$ で検索",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_match_case": {
     "message": "大文字と小文字を区別"
   },

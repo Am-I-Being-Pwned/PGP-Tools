@@ -3943,6 +3943,14 @@
   "workspace_import_one": {
     "message": "एक आयात करें"
   },
+  "workspace_lookup_signer": {
+    "message": "$host$ पर खोजें",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_match_case": {
     "message": "केस मिलाएं"
   },

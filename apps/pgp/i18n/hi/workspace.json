@@ -232,6 +232,7 @@
     "message": "डिक्रिप्शन कुंजी चुनें।"
   },
   "workspace_unknown_signer": { "message": "अज्ञात हस्ताक्षरकर्ता" },
+  "workspace_lookup_signer": { "message": "$host$ पर खोजें" },
   "workspace_status_signer_unknown": {
     "message": "इस संदेश पर हस्ताक्षर हैं, लेकिन हस्ताक्षरकर्ता की सार्वजनिक कुंजी आपकी कुंजियों या संपर्कों में नहीं है, इसलिए हस्ताक्षर सत्यापित नहीं किया जा सका।"
   },

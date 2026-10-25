@@ -154,6 +154,9 @@ interface WorkspaceViewProps {
   onNavigateToKeys?: (importPrefill?: string) => void;
   /** Take the user to a key they already hold, highlighted in the list. */
   onRevealKey?: (keyId: string) => void;
+  /** Look an unknown signer's key id up on the keyserver (the import
+   *  panel, lookup already running). Absent when key discovery is off. */
+  onLookupSigner?: (keyId: string) => void;
   autoDownloadFiles?: boolean;
   autoDownloadText?: boolean;
   onOperationComplete?: () => void;
@@ -201,6 +204,7 @@ export function WorkspaceView({
   onClearEncryptTo,
   onNavigateToKeys,
   onRevealKey,
+  onLookupSigner,
   autoDownloadFiles,
   autoDownloadText,
   onOperationComplete,
@@ -897,6 +901,46 @@ export function WorkspaceView({
     myKeys,
   ]);
 
+  // An unknown signer the user went to look up: once a key has been
+  // imported, check the signature again, so the amber card turns into
+  // the real verdict without a second press. Only for the lookup the
+  // user started -- an import from anywhere else leaves results alone --
+  // and never at the cost of a prompt: decrypt re-runs only while its
+  // key is still open (a re-run clears the output before it unlocks).
+  const lookedUpSigner = useRef<string | null>(null);
+  const contactsAtLookup = useRef(contacts);
+  const lookupSigner = onLookupSigner
+    ? (keyId: string) => {
+        lookedUpSigner.current = keyId;
+        contactsAtLookup.current = contacts;
+        onLookupSigner(keyId);
+      }
+    : undefined;
+  useEffect(() => {
+    const keyId = lookedUpSigner.current;
+    if (keyId === null || contacts === contactsAtLookup.current) return;
+    lookedUpSigner.current = null;
+    if (
+      s.loading ||
+      s.signatureTone !== "warning" ||
+      s.verifiedSigner?.keyId !== keyId
+    ) {
+      return;
+    }
+    if (s.mode === "verify") {
+      void ops.execute();
+    } else if (
+      s.mode === "decrypt" &&
+      !passwordOnlyMessage &&
+      s.selectedKeyId !== null &&
+      getKeyHandle(s.selectedKeyId) !== null
+    ) {
+      void ops.executeUnattended();
+    }
+    // Contacts are the trigger; the rest is read at that moment.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contacts]);
+
   useEffect(() => {
     onPaletteOps?.({
       mode: s.mode,
@@ -1080,6 +1124,7 @@ export function WorkspaceView({
           outputVersion={s.outputVersion}
           onImportKey={(armored) => onNavigateToKeys?.(armored)}
           onRevealKey={onRevealKey}
+          onLookupSigner={lookupSigner}
           fullHeight
         />
         <div className="flex gap-2">
@@ -1548,6 +1593,7 @@ export function WorkspaceView({
           outputVersion={s.outputVersion}
           onImportKey={(armored) => onNavigateToKeys?.(armored)}
           onRevealKey={onRevealKey}
+          onLookupSigner={lookupSigner}
         />
 
         {!s.needsPassword && (

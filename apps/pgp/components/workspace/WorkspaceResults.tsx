@@ -1,13 +1,15 @@
 import { useState } from "react";
-import { TriangleAlertIcon } from "lucide-react";
+import { SearchIcon, TriangleAlertIcon } from "lucide-react";
 
 import { Alert, AlertDescription } from "@amibeingpwned/ui/alert";
+import { Button } from "@amibeingpwned/ui/button";
 
 import type { PresentedError, RemedyAction } from "../../lib/errors/present";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { FileResult } from "../../lib/utils/download";
 import { t } from "../../lib/i18n";
+import { KEYSERVER_HOST } from "../../lib/import/keyserver";
 import { ContactCard } from "../keys/ContactCard";
 import { DetectedKeyBanner } from "./DetectedKeyBanner";
 import { OutputArea } from "./OutputArea";
@@ -108,6 +110,8 @@ interface WorkspaceResultsProps {
   outputVersion: number;
   onImportKey: (armored: string) => void;
   onRevealKey?: (keyId: string) => void;
+  /** Search the keyserver for an unknown signer's key. */
+  onLookupSigner?: (keyId: string) => void;
 }
 
 export function WorkspaceResults({
@@ -134,6 +138,7 @@ export function WorkspaceResults({
   outputVersion,
   onImportKey,
   onRevealKey,
+  onLookupSigner,
 }: WorkspaceResultsProps) {
   const isUnverified = signatureTone === "warning";
 
@@ -164,6 +169,18 @@ export function WorkspaceResults({
             : (statusText ?? t("workspace_signature_verified"))
         }
         note={isUnverified ? statusText : undefined}
+        noteAction={
+          isUnverified && onLookupSigner && verifiedSigner.keyId ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onLookupSigner(verifiedSigner.keyId)}
+            >
+              <SearchIcon />
+              {t("workspace_lookup_signer", { host: KEYSERVER_HOST })}
+            </Button>
+          ) : undefined
+        }
         contact={signerAsContact(verifiedSigner)}
       />
     </div>

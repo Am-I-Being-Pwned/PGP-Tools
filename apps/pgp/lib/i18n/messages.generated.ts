@@ -783,6 +783,7 @@ export interface MessageArgs {
   "workspace_hide_technical_details": undefined;
   "workspace_history_save_failed": undefined;
   "workspace_import_one": undefined;
+  "workspace_lookup_signer": { host: string | number };
   "workspace_match_case": undefined;
   "workspace_message_input_aria": undefined;
   "workspace_message_password_help": undefined;
@@ -1164,6 +1165,7 @@ export const PLACEHOLDER_ORDER: Readonly<Partial<Record<string, readonly string[
   "workspace_files_signed_other": ["count"],
   "workspace_files_zipped_encrypted_one": ["count"],
   "workspace_files_zipped_encrypted_other": ["count"],
+  "workspace_lookup_signer": ["host"],
   "workspace_note_downloading": ["what"],
   "workspace_note_downloading_progress": ["what","percent"],
   "workspace_note_same_language": ["language"],

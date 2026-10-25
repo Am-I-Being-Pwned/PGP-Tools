@@ -386,6 +386,9 @@
   "workspace_unknown_signer": {
     "message": "Firmatario sconosciuto"
   },
+  "workspace_lookup_signer": {
+    "message": "Cerca su $host$"
+  },
   "workspace_status_signer_unknown": {
     "message": "Questo messaggio è firmato, ma la chiave pubblica del firmatario non è tra le tue chiavi o i tuoi contatti, quindi la firma non ha potuto essere verificata."
   },

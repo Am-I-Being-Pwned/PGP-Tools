@@ -94,6 +94,8 @@ export default function App() {
   // to the Keys tab first meant Back dumped them on a tab they never
   // asked for, and the panel's slide-out flashed it on the way past.
   const [importPrefill, setImportPrefill] = useState<string | null>(null);
+  /** A key lookup to open the import panel on (an unknown signer's id). */
+  const [importLookup, setImportLookup] = useState<string | null>(null);
   // Keys to scroll to and pulse on the Keys tab: a "show it in your
   // keys" action, or the View key button on an import's toast.
   const [highlightKeyIds, setHighlightKeyIds] = useState<string[] | null>(null);
@@ -863,9 +865,12 @@ export default function App() {
         {/* A key that arrived from outside the Keys tab. The panel covers
             the whole side panel, so it opens in place -- no tab switch to
             flash past on the way in or out. */}
-        {importPrefill !== null && (
+        {(importPrefill !== null || importLookup !== null) && (
           <ImportKeyPage
-            onClose={() => setImportPrefill(null)}
+            onClose={() => {
+              setImportPrefill(null);
+              setImportLookup(null);
+            }}
             onImportPrivate={handleAddKey}
             onImportPublic={contacts.add}
             existingKeys={keyring.keys}
@@ -873,6 +878,8 @@ export default function App() {
             reusePasskeyCredentialId={masterPasskeyCredentialId}
             masterSealSalt={masterSealSalt}
             initialArmored={importPrefill}
+            initialLookup={importLookup}
+            keyDiscoveryEnabled={keyDiscoveryEnabled}
             crxSigningEnabled={crxSigningEnabled}
             onImportCrx={crxKeys.add}
             onImported={(keyIds, opts) => {
@@ -941,6 +948,7 @@ export default function App() {
               encryptToKeyId={encryptToKeyId}
               onClearEncryptTo={() => setEncryptToKeyId(null)}
               onRevealKey={(keyId) => revealKeys([keyId])}
+              onLookupSigner={keyDiscoveryEnabled ? setImportLookup : undefined}
               onNavigateToKeys={(prefill) => {
                 if (prefill) {
                   routeToImport(prefill);

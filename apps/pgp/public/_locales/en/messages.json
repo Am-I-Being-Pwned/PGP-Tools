@@ -4861,6 +4861,15 @@
     "message": "Import one",
     "description": "Link after the self-excluded warning; goes to the Keys tab to import a key. 'one' = a key."
   },
+  "workspace_lookup_signer": {
+    "message": "Search $host$",
+    "description": "Button on the unknown-signer card: look the signer's key id up on the keyserver to import their key. $host$ is the keyserver hostname (keys.openpgp.org).",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_match_case": {
     "message": "Match case",
     "description": "Tooltip and accessible label of the case-sensitivity toggle in the find bar."

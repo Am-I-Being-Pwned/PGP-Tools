@@ -515,6 +515,10 @@
     "message": "Unknown signer",
     "description": "Name shown on the signer card when the message is signed by a key the user does not hold."
   },
+  "workspace_lookup_signer": {
+    "message": "Search $host$",
+    "description": "Button on the unknown-signer card: look the signer's key id up on the keyserver to import their key. $host$ is the keyserver hostname (keys.openpgp.org)."
+  },
   "workspace_status_signer_unknown": {
     "message": "This message is signed, but the signer's public key isn't in your keys or contacts, so the signature could not be verified.",
     "description": "Note on the signer card when the signature could not be checked because the signer's key is not held."

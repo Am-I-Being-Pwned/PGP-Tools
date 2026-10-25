@@ -1,4 +1,4 @@
-import type { MouseEvent as ReactMouseEvent } from "react";
+import type { ReactNode, MouseEvent as ReactMouseEvent } from "react";
 import { useState } from "react";
 import {
   CheckCircleIcon,
@@ -56,6 +56,8 @@ interface ContactCardProps {
   verifiedTone?: "success" | "warning";
   /** Optional muted explanation shown under the key line. */
   note?: string;
+  /** A control under the note (the unknown signer's keyserver lookup). */
+  noteAction?: ReactNode;
   /** Bulk-selection: when true, a tap toggles selection instead of navigating
    *  and the card's own controls are dimmed/click-through. */
   selectionMode?: boolean;
@@ -86,6 +88,7 @@ export function ContactCard({
   verifiedLabel,
   verifiedTone = "success",
   note,
+  noteAction,
   selectionMode = false,
   selected = false,
   onToggleSelect,
@@ -310,6 +313,7 @@ export function ContactCard({
           {note && (
             <p className="text-muted-foreground mt-0.5 text-xs">{note}</p>
           )}
+          {noteAction && <div className="mt-2">{noteAction}</div>}
           {/* Advanced mode regroups a hex fingerprint into 4-character
             blocks; doing that to a base64 hash would only chop it into
             meaningless quarters, and the line above already shows it in

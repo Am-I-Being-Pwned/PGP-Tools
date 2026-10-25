@@ -386,6 +386,9 @@
   "workspace_unknown_signer": {
     "message": "Unbekannter Unterzeichner"
   },
+  "workspace_lookup_signer": {
+    "message": "Auf $host$ suchen"
+  },
   "workspace_status_signer_unknown": {
     "message": "Diese Nachricht ist signiert, aber der öffentliche Schlüssel des Unterzeichners ist weder in Ihren Schlüsseln noch in Ihren Kontakten, daher konnte die Signatur nicht verifiziert werden."
   },

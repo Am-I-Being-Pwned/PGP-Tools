@@ -386,6 +386,9 @@
   "workspace_unknown_signer": {
     "message": "不明な署名者"
   },
+  "workspace_lookup_signer": {
+    "message": "$host$ で検索"
+  },
   "workspace_status_signer_unknown": {
     "message": "このメッセージは署名されていますが、署名者の公開鍵が鍵にも連絡先にもないため、署名を検証できませんでした。"
   },
