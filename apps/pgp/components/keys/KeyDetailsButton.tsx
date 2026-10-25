@@ -36,6 +36,11 @@ export function KeyDetailsButton({
     <>
       <Button
         type="button"
+        // Out of the Tab order: it sits between the key picker and the
+        // message, and tabbing through it on the way to typing is a stop
+        // nobody wants. The same details are a click away, and on the
+        // Keys tab for the keyboard.
+        tabIndex={-1}
         variant={subtle ? "ghost" : "outline"}
         aria-label={t("keys_key_details")}
         title={t("keys_key_details")}
