@@ -11,6 +11,7 @@ import type { FileResult } from "../../lib/utils/download";
 import { t } from "../../lib/i18n";
 import { KEYSERVER_HOST } from "../../lib/import/keyserver";
 import { ContactCard } from "../keys/ContactCard";
+import { KeyDetailsButton } from "../keys/KeyDetailsButton";
 import { DetectedKeyBanner } from "./DetectedKeyBanner";
 import { OutputArea } from "./OutputArea";
 
@@ -169,6 +170,13 @@ export function WorkspaceResults({
             : (statusText ?? t("workspace_signature_verified"))
         }
         note={isUnverified ? statusText : undefined}
+        // The key that made the signature, a click away. Only for one we
+        // hold: an unknown signer is a bare key id with nothing to show.
+        labelAction={
+          isUnverified ? undefined : (
+            <KeyDetailsButton keyData={verifiedSigner} subtle />
+          )
+        }
         noteAction={
           isUnverified && onLookupSigner && verifiedSigner.keyId ? (
             <Button

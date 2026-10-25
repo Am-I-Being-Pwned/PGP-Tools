@@ -58,6 +58,8 @@ interface ContactCardProps {
   note?: string;
   /** A control under the note (the unknown signer's keyserver lookup). */
   noteAction?: ReactNode;
+  /** A control after the verified label (the signer's key details). */
+  labelAction?: ReactNode;
   /** Bulk-selection: when true, a tap toggles selection instead of navigating
    *  and the card's own controls are dimmed/click-through. */
   selectionMode?: boolean;
@@ -89,6 +91,7 @@ export function ContactCard({
   verifiedTone = "success",
   note,
   noteAction,
+  labelAction,
   selectionMode = false,
   selected = false,
   onToggleSelect,
@@ -230,6 +233,7 @@ export function ContactCard({
                 {verifiedLabel}
               </span>
             )}
+            {labelAction && <div className="-my-1.5 -mr-1.5">{labelAction}</div>}
           </div>
           {email && (
             <p className="text-muted-foreground truncate text-xs">{email}</p>

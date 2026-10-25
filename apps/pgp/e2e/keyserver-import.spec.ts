@@ -253,6 +253,13 @@ test("an unknown signer can be looked up, and the signature re-checks once impor
   // No second press: the amber card becomes the real verdict.
   await expect(panel.getByText("Signature verified").first()).toBeVisible();
   await expect(panel.getByText("Unknown signer")).toHaveCount(0);
+
+  // The verified card opens the signer's key details.
+  await panel.getByRole("button", { name: "Key details" }).click();
+  const details = panel.getByRole("region", { name: /^Key details for/ });
+  await expect(details).toContainText(ALICE.name);
+  await panel.getByRole("button", { name: "Back" }).click();
+  await expect(details).toBeHidden();
 });
 
 test("with key discovery off, an unknown signer offers no lookup", async ({
