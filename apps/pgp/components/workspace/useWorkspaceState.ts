@@ -37,9 +37,19 @@ export interface WorkspaceIntake {
 }
 
 /** What the double-Escape / "Clear text" undo affordances restore. */
+/** The mode a box value's armor calls for, if any. Both engines'
+ *  ciphertext means the same thing to the user: something to decrypt. */
+function armorMode(text: string): "decrypt" | "verify" | null {
+  if (text.includes("-----BEGIN PGP MESSAGE-----") || looksLikeAgeMessage(text))
+    return "decrypt";
+  if (text.includes("-----BEGIN PGP SIGNED MESSAGE-----")) return "verify";
+  return null;
+}
+
 interface ClearUndoSnapshot {
   input: string;
   files: File[];
+  recipientIds: string[];
 }
 
 /**
@@ -565,6 +575,9 @@ export function useWorkspaceState(opts: {
     setAutoRunAction(null);
     setInput("");
     setFiles([]);
+    // A cleared workspace is a fresh message: who it was addressed to
+    // goes with it.
+    setSelectedRecipientIds([]);
     setPublicKeyDetected(false);
     setPrivateKeyDetected(false);
     setInputIsAgeText(false);
@@ -576,7 +589,13 @@ export function useWorkspaceState(opts: {
   // new box value. Split out of `handleInputChange` so the clear-undo path
   // can re-arm the private-key warning + mask: undoing a clear must not
   // silently drop the "don't paste private keys here" banner.
-  const applyDetection = useCallback((text: string) => {
+  //
+  // The mode nudge fires only when the armor ARRIVES (`prev` did not
+  // already call for that mode). Once it has, the choice is the user's:
+  // switching back to Encrypt with a signed message still in the box
+  // must not be undone by the next keystroke.
+  const applyDetection = useCallback((text: string, prev = "") => {
+    const nudge = armorMode(text);
     setPublicKeyDetected(false);
     setPrivateKeyDetected(false);
     setInputIsAgeText(looksLikeAgeMessage(text));
@@ -594,20 +613,22 @@ export function useWorkspaceState(opts: {
       text.includes("-----BEGIN PGP MESSAGE-----") ||
       looksLikeAgeMessage(text)
     ) {
-      // Both engines' ciphertext means the same thing to the user: this
-      // is something to decrypt.
-      setMode("decrypt");
+      if (nudge !== armorMode(prev)) setMode("decrypt");
     } else if (text.includes("-----BEGIN PGP SIGNED MESSAGE-----")) {
-      setMode("verify");
+      if (nudge !== armorMode(prev)) setMode("verify");
     } else if (text.includes("-----BEGIN PGP PUBLIC KEY BLOCK-----")) {
       setPublicKeyDetected(true);
     }
   }, []);
 
   const stashClearUndo = useCallback(() => {
-    clearUndoRef.current = { input: inputRef.current, files };
+    clearUndoRef.current = {
+      input: inputRef.current,
+      files,
+      recipientIds: selectedRecipientIds,
+    };
     setClearUndoAvailable(true);
-  }, [files]);
+  }, [files, selectedRecipientIds]);
 
   const restoreClearUndo = useCallback(() => {
     const snap = clearUndoRef.current;
@@ -616,6 +637,7 @@ export function useWorkspaceState(opts: {
     if (!snap) return;
     setInput(snap.input);
     setFiles(snap.files);
+    setSelectedRecipientIds(snap.recipientIds);
     applyDetection(snap.input);
   }, [setInput, applyDetection]);
 
@@ -855,13 +877,14 @@ export function useWorkspaceState(opts: {
   const handleInputChange = useCallback(
     (text: string) => {
       setAutoRunAction(null);
+      const prev = inputRef.current;
       setInput(text);
       // Encrypt carries the message alongside any attachments (it goes
       // out as msg.txt), so writing it must not drop them. Elsewhere the
       // box and the files are alternatives: text in replaces files.
       if (mode !== "encrypt") setFiles([]);
       resetOutput();
-      applyDetection(text);
+      applyDetection(text, prev);
     },
     [mode, resetOutput, setInput, applyDetection],
   );

@@ -16,7 +16,7 @@
   <a href="https://chromewebstore.google.com/detail/pgp-tools-encrypt-decrypt/pgpcdgggohpbombhkffjoiiafdlfcpgp"><img src="https://img.shields.io/chrome-web-store/rating/pgpcdgggohpbombhkffjoiiafdlfcpgp" alt="Chrome Web Store rating" /></a>
   <img src="https://img.shields.io/badge/lib_coverage-81.5%25-green" alt="lib coverage: 81.5%" />
   <img src="https://img.shields.io/badge/unit_tests-1694-blue" alt="unit tests: 1694" />
-  <img src="https://img.shields.io/badge/e2e_tests-161-blue" alt="e2e tests: 161" />
+  <img src="https://img.shields.io/badge/e2e_tests-166-blue" alt="e2e tests: 166" />
 </p>
 <!-- badges:end -->
 

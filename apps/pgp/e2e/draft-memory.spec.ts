@@ -429,7 +429,7 @@ async function clearWorkspace(panel: Page): Promise<void> {
   await panel.getByRole("button", { name: "Clear input and output" }).click();
 }
 
-/** Encrypt a FILE to the already-selected recipient and return the
+/** Encrypt a FILE to the single own key and return the
  *  ciphertext bytes the app produced. File input + `armor: false` means
  *  the ciphertext is binary, which is what makes the decrypt of it come
  *  back as bytes rather than text. */
@@ -441,6 +441,7 @@ async function encryptFileToSelf(
   await stageWorkspaceFiles(panel, [
     { name, mimeType: "application/octet-stream", buffer: content },
   ]);
+  await selectSelf(panel);
   await panel.getByRole("button", { name: /^encrypt$/i }).click();
   const download = panel.getByRole("button", { name: "Download" });
   await expect(download).toBeVisible({ timeout: 15_000 });
@@ -453,14 +454,17 @@ async function encryptFileToSelf(
   return bytes;
 }
 
-/** Onboard, pick the single own key as recipient, and leave the
- *  workspace in encrypt mode ready to take files. */
-async function seedAndSelectSelf(panel: Page): Promise<void> {
+/** Onboard and leave the workspace in encrypt mode ready to take files. */
+async function seedForEncrypt(panel: Page): Promise<void> {
   await seedVault(panel, MASTER);
   await setWorkspaceMode(panel, "Encrypt");
-  // The recipient box starts empty by design; the only option is the key
-  // onboarding generated. The selection survives "Clear input and
-  // output", so this is done once per test.
+}
+
+/** Pick the single own key as recipient. The recipient box starts empty
+ *  by design, and "Clear input and output" empties it again, so every
+ *  encrypt picks it afresh; the only option is the key onboarding
+ *  generated. */
+async function selectSelf(panel: Page): Promise<void> {
   await panel.getByRole("combobox", { name: "Recipients" }).click();
   await panel.getByRole("option").first().click();
   await expect(
@@ -483,7 +487,7 @@ async function seedAndSelectSelf(panel: Page): Promise<void> {
 test("decrypted binary output does not survive a master lock in the JS heap", async ({
   panel,
 }) => {
-  await seedAndSelectSelf(panel);
+  await seedForEncrypt(panel);
 
   // A real round trip through the app: encrypt a file whose plaintext is
   // not valid UTF-8, then decrypt the app's own ciphertext, so the bytes
@@ -537,7 +541,7 @@ test("decrypted binary output does not survive a master lock in the JS heap", as
 test("decrypted multi-file results do not survive a master lock in the JS heap", async ({
   panel,
 }) => {
-  await seedAndSelectSelf(panel);
+  await seedForEncrypt(panel);
 
   const ctA = await encryptFileToSelf(
     panel,

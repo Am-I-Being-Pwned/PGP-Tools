@@ -103,6 +103,9 @@ interface WorkspaceInputProps {
    *  drop target on purpose: a drop aimed at the recipient box is not a
    *  message. */
   cardHeader?: React.ReactNode;
+  /** Shown between the mode switch and the card (the verify result, so
+   *  the verdict reads before the message it is about). */
+  aboveCard?: React.ReactNode;
   /** The editing tools, for the action registry (palette + shortcuts).
    *  Called with null on unmount. */
   onToolsReady?: (tools: ComposeTools | null) => void;
@@ -140,6 +143,7 @@ export function WorkspaceInput({
   composeTranslate,
   onToolsReady,
   cardHeader,
+  aboveCard,
 }: WorkspaceInputProps) {
   // Per-detection mask override. Re-arms whenever a fresh private-key
   // paste is detected so the user can't accidentally leave the mask off
@@ -371,6 +375,8 @@ export function WorkspaceInput({
           })}
         />
       </div>
+
+      {aboveCard}
 
       {/* The message card is the drop target: the drop zone wraps the
           message block and adds the file list and the bottom strip

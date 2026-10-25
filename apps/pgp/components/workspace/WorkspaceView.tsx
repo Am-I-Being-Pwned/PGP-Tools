@@ -632,6 +632,18 @@ export function WorkspaceView({
     setTimeout(() => document.getElementById("pgp-input")?.focus(), 0);
   };
 
+  // Switching mode is moving on, as switching tab is (`changeTab` in the
+  // panel does the same): a toast about the last mode's message, Undo
+  // included, no longer has anything on screen to be about. Watches the
+  // mode itself rather than the switch, so the automatic changes (pasted
+  // or dropped ciphertext, a context-menu open, Encrypt to) count too.
+  const lastMode = useRef(s.mode);
+  useEffect(() => {
+    if (s.mode === lastMode.current) return;
+    lastMode.current = s.mode;
+    toast.dismiss();
+  }, [s.mode]);
+
   const clearWithUndo = (message: string, textOnly = false) => {
     s.stashClearUndo();
     // Emptying the box the way deleting its text would: attachments
@@ -645,8 +657,13 @@ export function WorkspaceView({
     });
   };
 
+  // Anything the double-Escape clear would remove. Recipients count on
+  // their own: a message addressed but not yet written is still staged.
+  const hasStaged =
+    s.hasInput || s.files.length > 0 || s.selectedRecipientIds.length > 0;
+
   const clearBoxUndoable = () => {
-    if (!s.hasInput && s.files.length === 0) return;
+    if (!hasStaged) return;
     clearWithUndo(t("workspace_cleared_toast"));
     // A cleared box invites retyping: focus it (next tick -- resetAll may
     // have just remounted the textarea in place of the file list).
@@ -700,9 +717,10 @@ export function WorkspaceView({
         return;
       }
       // Nothing staged: there is no clear to arm, so Escape means focus.
-      // Gated on `files` too -- with files staged the textarea is not
-      // rendered at all, and the double-tap clear is the useful layer.
-      if (!s.hasInput && s.files.length === 0) {
+      // Gated on files and recipients too -- with files staged the
+      // textarea is not rendered at all, and with only recipients picked
+      // the double-tap clear is still the useful layer.
+      if (!hasStaged) {
         lastEscapeAt.current = 0;
         focusMessageBox();
         return;
@@ -1197,6 +1215,33 @@ export function WorkspaceView({
     );
   }
 
+  // A verify result is a verdict on the message, not output that follows
+  // it: it reads first, above the box, instead of under a tall signed
+  // message where it can sit below the fold.
+  const resultsOnTop = s.mode === "verify";
+  const results = (
+    <WorkspaceResults
+      error={s.error}
+      onRemedy={handleRemedy}
+      outputElRef={s.outputElRef}
+      getOutput={s.getOutput}
+      hasOutput={s.hasOutput}
+      binaryOutput={s.binaryOutput}
+      fileResults={s.fileResults}
+      fileName={ops.outputFileName()}
+      operationDone={s.operationDone}
+      statusText={s.statusText ?? undefined}
+      verifiedSigner={s.verifiedSigner}
+      signatureTone={s.signatureTone}
+      contacts={contacts}
+      outputPublicKeyDetected={s.outputPublicKeyDetected}
+      outputVersion={s.outputVersion}
+      onImportKey={(armored) => onNavigateToKeys?.(armored)}
+      onRevealKey={onRevealKey}
+      onLookupSigner={lookupSigner}
+    />
+  );
+
   return (
     <div
       className={`flex h-full flex-col gap-3 ${hideForAutoRun ? "pointer-events-none opacity-0" : ""}`}
@@ -1205,6 +1250,7 @@ export function WorkspaceView({
       <WorkspaceInput
         mode={s.mode}
         onModeChange={s.setMode}
+        aboveCard={resultsOnTop ? results : undefined}
         inputElRef={s.inputElRef}
         getInput={s.getInput}
         hasInput={s.hasInput}
@@ -1592,26 +1638,7 @@ export function WorkspaceView({
           <p className="text-bad text-xs">{s.passwordError}</p>
         )}
 
-        <WorkspaceResults
-          error={s.error}
-          onRemedy={handleRemedy}
-          outputElRef={s.outputElRef}
-          getOutput={s.getOutput}
-          hasOutput={s.hasOutput}
-          binaryOutput={s.binaryOutput}
-          fileResults={s.fileResults}
-          fileName={ops.outputFileName()}
-          operationDone={s.operationDone}
-          statusText={s.statusText ?? undefined}
-          verifiedSigner={s.verifiedSigner}
-          signatureTone={s.signatureTone}
-          contacts={contacts}
-          outputPublicKeyDetected={s.outputPublicKeyDetected}
-          outputVersion={s.outputVersion}
-          onImportKey={(armored) => onNavigateToKeys?.(armored)}
-          onRevealKey={onRevealKey}
-          onLookupSigner={lookupSigner}
-        />
+        {!resultsOnTop && results}
 
         {!s.needsPassword && (
           <div className="space-y-2">

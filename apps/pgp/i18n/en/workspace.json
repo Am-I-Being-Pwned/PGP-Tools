@@ -33,7 +33,7 @@
   },
   "workspace_cleared_toast": {
     "message": "Workspace cleared",
-    "description": "Toast after the whole workspace (text and files) was cleared with a double Escape; has an Undo action."
+    "description": "Toast after the whole workspace (text, files and recipients) was cleared with a double Escape; has an Undo action."
   },
   "workspace_text_cleared_toast": {
     "message": "Text cleared",
