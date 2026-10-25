@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
 import type { PresentedError } from "../../lib/errors/present";
-import type { 
+import type {
   DecryptOptions,
   DecryptResult,
   EncryptInput,
@@ -569,6 +569,13 @@ export function useWorkspaceOperations({
         binary: typeof result !== "string" ? result : undefined,
       });
     }
+
+    // The message password was for THIS message. Holding on to it would
+    // quietly arm the next one with the same secret, so it goes the
+    // moment it has been used; the badge drops with it and the next
+    // message asks again. (On failure it stays, so a retry needs no
+    // retyping.)
+    if (messagePassword !== undefined) s.setEncryptPassword("");
 
     // Record the FINAL recipient set: when encrypt-to-self rode the
     // user's own key along, history shows it too.

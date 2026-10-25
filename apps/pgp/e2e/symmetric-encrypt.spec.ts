@@ -71,6 +71,23 @@ test("a password alone encrypts, with no keys and no recipients", async ({
   await expect(panel.getByRole("button", { name: "Download" })).toBeVisible();
 });
 
+test("the password is dropped once the message is encrypted", async ({
+  panel,
+}) => {
+  // A password set for one message must not quietly ride along on the
+  // next: once used, it is gone and the badge is off again.
+  await onboardWithPasswordSkipKey(panel, VAULT_PASSWORD);
+  await goToEncrypt(panel);
+  await panel.locator("textarea").first().fill(MESSAGE);
+  await setMessagePassword(panel, MESSAGE_PASSWORD);
+
+  const badge = panel.getByRole("switch", { name: "Password", exact: true });
+  await expect(badge).toHaveAttribute("aria-checked", "true");
+  await panel.getByRole("button", { name: /^encrypt$/i }).click();
+  await expect(panel.getByRole("button", { name: "Download" })).toBeVisible();
+  await expect(badge).toHaveAttribute("aria-checked", "false");
+});
+
 test("a too-short password cannot be set, and cancelling arms nothing", async ({
   panel,
 }) => {
