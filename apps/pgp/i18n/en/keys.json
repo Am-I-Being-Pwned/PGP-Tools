@@ -682,5 +682,9 @@
   "keys_size_mb": {
     "message": "$size$ MB",
     "description": "File size in megabytes, e.g. '3.4 MB'. $size$ is a number with one decimal."
+  },
+  "keys_contact_long_id_title": {
+    "message": "Key ID: the last 16 characters of this key's fingerprint. It tells keys apart at a glance; to check a key is genuine, compare the full fingerprint.",
+    "description": "Tooltip on the 16-character key ID shown at the right of a key or contact row (the last 16 hex digits of the fingerprint). Says what it is, and that it identifies but does not verify a key."
   }
 }

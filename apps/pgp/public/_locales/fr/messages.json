@@ -2097,6 +2097,9 @@
       }
     }
   },
+  "keys_contact_long_id_title": {
+    "message": "Identifiant de clé : les 16 derniers caractères de l'empreinte de cette clé. Il distingue les clés d'un coup d'œil ; pour vérifier qu'une clé est authentique, comparez l'empreinte complète."
+  },
   "keys_contact_options_aria": {
     "message": "Options du contact"
   },

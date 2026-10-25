@@ -2097,6 +2097,9 @@
       }
     }
   },
+  "keys_contact_long_id_title": {
+    "message": "ID da chave: os últimos 16 caracteres da impressão digital desta chave. Serve para diferenciar chaves rapidamente; para confirmar que uma chave é autêntica, compare a impressão digital completa."
+  },
   "keys_contact_options_aria": {
     "message": "Opções do contato"
   },

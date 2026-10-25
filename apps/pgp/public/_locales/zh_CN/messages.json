@@ -2097,6 +2097,9 @@
       }
     }
   },
+  "keys_contact_long_id_title": {
+    "message": "密钥 ID：此密钥指纹的最后 16 个字符。用于快速区分密钥；要确认密钥是否真实，请比对完整指纹。"
+  },
   "keys_contact_options_aria": {
     "message": "联系人选项"
   },

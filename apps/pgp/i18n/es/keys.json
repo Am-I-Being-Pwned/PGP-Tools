@@ -511,5 +511,8 @@
   },
   "keys_size_mb": {
     "message": "$size$ MB"
+  },
+  "keys_contact_long_id_title": {
+    "message": "ID de clave: los últimos 16 caracteres de la huella de esta clave. Sirve para distinguir claves de un vistazo; para comprobar que una clave es auténtica, compara la huella completa."
   }
 }

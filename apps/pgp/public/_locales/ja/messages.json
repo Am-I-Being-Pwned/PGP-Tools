@@ -2097,6 +2097,9 @@
       }
     }
   },
+  "keys_contact_long_id_title": {
+    "message": "鍵 ID: この鍵のフィンガープリントの末尾 16 文字です。鍵をひと目で見分けるためのもので、本物かどうか確認するにはフィンガープリント全体を照合してください。"
+  },
   "keys_contact_options_aria": {
     "message": "連絡先のオプション"
   },

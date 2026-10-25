@@ -23,6 +23,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@amibeingpwned/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@amibeingpwned/ui/tooltip";
 
 import type { PrivateKeyExporter } from "./ExportPrivateKeyPage";
 import { t } from "../../lib/i18n";
@@ -282,10 +287,15 @@ export function KeyCard({
         </div>
 
         {longId && !advancedMode && (
-          <span className="text-muted-foreground shrink-0 font-mono text-[11px] leading-tight whitespace-nowrap">
-            <span className="block">{longId[0]}</span>
-            <span className="block">{longId[1]}</span>
-          </span>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="text-muted-foreground shrink-0 font-mono text-[11px] leading-tight whitespace-nowrap">
+                <span className="block">{longId[0]}</span>
+                <span className="block">{longId[1]}</span>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>{t("keys_contact_long_id_title")}</TooltipContent>
+          </Tooltip>
         )}
 
         {/* Unlock/lock lifecycle, inline. Dimmed while selecting, hidden

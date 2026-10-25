@@ -2097,6 +2097,9 @@
       }
     }
   },
+  "keys_contact_long_id_title": {
+    "message": "Schlüssel-ID: die letzten 16 Zeichen des Fingerabdrucks dieses Schlüssels. Damit unterscheiden Sie Schlüssel auf einen Blick; ob ein Schlüssel echt ist, prüfen Sie am vollständigen Fingerabdruck."
+  },
   "keys_contact_options_aria": {
     "message": "Kontaktoptionen"
   },

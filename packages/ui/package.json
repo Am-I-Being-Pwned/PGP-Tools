@@ -17,7 +17,8 @@
     "./popover": "./src/popover.tsx",
     "./segmented": "./src/segmented.tsx",
     "./select": "./src/select.tsx",
-    "./switch": "./src/switch.tsx"
+    "./switch": "./src/switch.tsx",
+    "./tooltip": "./src/tooltip.tsx"
   },
   "license": "MIT",
   "scripts": {
