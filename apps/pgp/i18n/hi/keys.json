@@ -263,5 +263,8 @@
   "keys_export": { "message": "निर्यात करें" },
   "keys_size_bytes": { "message": "$size$ B" },
   "keys_size_kb": { "message": "$size$ KB" },
-  "keys_size_mb": { "message": "$size$ MB" }
+  "keys_size_mb": { "message": "$size$ MB" },
+  "keys_contact_long_id_title": {
+    "message": "कुंजी ID: इस कुंजी के फ़िंगरप्रिंट के आख़िरी 16 अक्षर। इससे कुंजियाँ एक नज़र में अलग पहचानी जा सकती हैं; कुंजी असली है या नहीं, यह जाँचने के लिए पूरा फ़िंगरप्रिंट मिलाएँ।"
+  }
 }

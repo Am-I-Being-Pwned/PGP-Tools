@@ -3,7 +3,7 @@
 Artwork for the Chrome Web Store and Edge Add-ons listings.
 
 The tiles are plain HTML rendered headless at exact pixel sizes, using the same
-dark tokens the side panel renders with (`packages/tailwind-config`, mirrored
+dark tokens the side panel renders with (`tooling/tailwind/theme.css`, mirrored
 into `parts.css`) and the extension's own shipped icon. Nothing lives in a
 design tool, so the artwork is reviewable in a diff and a token change is a
 one-line change here.
@@ -25,8 +25,8 @@ open build/en/lab.html                  # every tile side by side, with download
 The tiles carry no copy of their own: every string is a `__T:key__` token
 resolved from `i18n/<locale>.json` (`en.json` is the source; a missing key
 falls back to it). The five 1280x800 tiles are rendered for every locale the
-extension's UI is translated into (`apps/pgp/i18n/`); the marquee `m1` is
-English only because the store does not localise marquee tiles.
+extension's UI is translated into (`apps/pgp/i18n/`); the promo tiles `m1`
+and `s1` are English only because the store does not localise them.
 
 Per-language type sizes live at the top of `parts.css` (`:lang(de) h1` and
 friends): German and Russian headlines run ~30% longer than English and CJK
@@ -79,10 +79,12 @@ before uploading: the stores reject anything off by a pixel.
 | ----------------------- | -------- | ---------------------- |
 | `a`, `b`, `c`, `d`, `e` | 1280x800 | CWS / Edge screenshot  |
 | `m1`                    | 1400x560 | CWS marquee promo tile |
+| `s1`                    | 440x280  | CWS small promo tile   |
 
-The 440x280 small promo tile is not cut yet. It is required, along with the
-marquee, to be eligible for store featuring; `assets/pgptools-tile-static.png`
-is the closest thing that exists today.
+The small promo tile and the marquee together are what make the listing
+eligible for store featuring. `s1` replaces `assets/pgptools-tile-static.png`,
+the old glow-ring artwork from before the design language. Like `m1` it is
+English only.
 
 ## The rules
 
@@ -108,6 +110,16 @@ this file.
 on their own, and a stale number on a store listing is the one claim here that
 can quietly become false. Everything the tiles assert is structural - it is
 true of the architecture, so it stays true between releases.
+
+**Same design language as the app.** One flat `#0a0a0a` page: no grid, no
+glow, no gradient. Anything card-shaped is a BlockStack (flat `#151515` blocks
+with 2px of page between them, `packages/ui/src/block.tsx`), with its label
+above the stack, never an outlined box with dividers. Green only for go, on
+and good; red only for a stop. Pills are flat, not outlined, and footnotes are
+plain muted text, not a green left rule. Only things that float get a shadow:
+the panel frame and the OS passkey sheet. The sheet keeps macOS's own look,
+because it is the operating system's and not ours. If the app's look moves,
+move `parts.css` with it.
 
 ## Slides
 
@@ -136,12 +148,17 @@ whatever the width.
 
 ## Layout
 
-- `parts/*.html` - one tile each, plus the shared `i-*` icon fragments. A tile
+- `parts/*.html` - one tile each, plus the shared `i-*` icon fragments and
+  `avatar-*` faces. A tile
   carries its own scoped `<style>`; only genuinely shared rules go in
   `parts.css`.
 - `parts.css` - dark tokens, the 1280x800 canvas, the type scale, and the
-  shared components (card shell, icon rows, verdict rows, the sealed-store
+  shared components (block stack, icon rows, signer bands, the sealed-store
   list, the side panel frame, the OS passkey sheet).
+- `avatar.ts` - writes `parts/avatar-*.html`, a key's KeyAvatar face drawn by
+  the extension's own `lib/key-avatar.ts`, so a tile shows the face the app
+  shows for that key. `npx tsx assets/store-listing/promo/avatar.ts` from the
+  repo root; re-run if the avatar drawing changes.
 - `../ui/` - screenshots of the real extension, inlined by `__DATA:`. Generated,
   not hand-made; see the capture command above.
 - `<name>.html` - thin wrapper that drops one part on a page.
@@ -179,6 +196,10 @@ Store reviewers read these, so everything on a tile traces to the repo:
 - Slide `c`: WebAuthn PRF unlock, Argon2id at 64 MB, and the three auto-lock
   modes. Source: `README.md` security model table.
 - Slide `d`: atomic decrypt+verify with no TOCTOU window. Source: `README.md`.
+  The verified signer is the `standard` e2e fixture, Alice Example, with its
+  real face and real 16-hex long key id, so it matches the Alice chip in slide
+  `a`'s capture. The failed signer gets the silhouette, as the app draws a
+  signer it knows by key id alone (`hasKeyFace`).
 - Slide `e`: Sequoia-PGP in WASM, AES-256-GCM with per-key AAD, SSH-key import
   for age. "No content scripts" is true of the manifest.
 
@@ -186,6 +207,6 @@ Slide `e` says "nothing here is a black box" without naming a competitor. That
 is deliberate: a CWS asset that names another live listing invites a complaint,
 and the claim is just as strong without it.
 
-The sample identity across the tiles is `James Arnott
-<james@amibeingpwned.com>`. Keep it - a real-looking personal address in a
+The sample identity (the user's own key) across the tiles is `James Arnott
+<james@amibeingpwned.com>`; contacts are the `example.com` fixtures. Keep it - a real-looking personal address in a
 screenshot invites someone to mail it.

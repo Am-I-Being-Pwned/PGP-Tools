@@ -126,7 +126,7 @@
     "message": "请至少选择一个收件人，或设置密码"
   },
   "workspace_clear_text": {
-    "message": "清除文本"
+    "message": "清除"
   },
   "workspace_message_input_aria": {
     "message": "消息输入"

@@ -15,8 +15,8 @@ Copy is not in the parts: every user-facing string is a __T:key__ token
 resolved from i18n/<locale>.json, so the same tiles render in every UI
 language the extension ships. __UI:<file>__ inlines ../ui/<locale>/<file>,
 the real panel captured in that language by apps/pgp/e2e-capture, and
-__LANG__ is the page's lang attribute. The marquee (m1) is not localised
-because the store does not localise marquee tiles.
+__LANG__ is the page's lang attribute. The promo tiles (m1, s1) are not
+localised because the store does not localise them.
 
 Usage:
     python3 build.py                     # every tile + lab page, every locale
@@ -40,7 +40,7 @@ I18N = os.path.join(HERE, "i18n")
 UI = os.path.abspath(os.path.join(HERE, "..", "ui"))
 
 # Tiles that carry no copy of their own, so one render serves every locale.
-UNLOCALISED = {"m1"}
+UNLOCALISED = {"m1", "s1"}
 
 # Asset roots, searched in order. Unlike the AIBP listing (which reads straight
 # out of apps/marketing/public), this repo has no marketing app, so the two
@@ -50,7 +50,7 @@ ROOTS = [
 ]
 
 # name -> (width, height). 1280x800 is the CWS / Edge screenshot size;
-# 1400x560 is the marquee promo tile.
+# 1400x560 is the marquee promo tile; 440x280 the small promo tile.
 TILES = {
     "a": (1280, 800),
     "b": (1280, 800),
@@ -58,6 +58,7 @@ TILES = {
     "d": (1280, 800),
     "e": (1280, 800),
     "m1": (1400, 560),
+    "s1": (440, 280),
 }
 
 CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"

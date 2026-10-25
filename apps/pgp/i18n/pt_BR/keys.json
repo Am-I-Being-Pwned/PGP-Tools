@@ -511,5 +511,8 @@
   },
   "keys_size_mb": {
     "message": "$size$ MB"
+  },
+  "keys_contact_long_id_title": {
+    "message": "ID da chave: os últimos 16 caracteres da impressão digital desta chave. Serve para diferenciar chaves rapidamente; para confirmar que uma chave é autêntica, compare a impressão digital completa."
   }
 }

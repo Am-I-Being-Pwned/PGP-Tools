@@ -323,5 +323,8 @@
   "keys_export": { "message": "Экспорт" },
   "keys_size_bytes": { "message": "$size$ Б" },
   "keys_size_kb": { "message": "$size$ КБ" },
-  "keys_size_mb": { "message": "$size$ МБ" }
+  "keys_size_mb": { "message": "$size$ МБ" },
+  "keys_contact_long_id_title": {
+    "message": "ID ключа: последние 16 символов отпечатка этого ключа. Помогает быстро отличать ключи; чтобы убедиться в подлинности ключа, сравните полный отпечаток."
+  }
 }

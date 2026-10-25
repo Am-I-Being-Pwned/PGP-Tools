@@ -66,7 +66,7 @@
     "message": "Sélectionner une clé de signature"
   },
   "workspace_toggle_encrypt_to_self": {
-    "message": "Chiffrer aussi pour moi"
+    "message": "Aussi pour moi"
   },
   "workspace_toggle_password": {
     "message": "Mot de passe"
@@ -75,7 +75,7 @@
     "message": "ZIP"
   },
   "workspace_toggle_save_to_history": {
-    "message": "Enregistrer dans l'historique"
+    "message": "Historique"
   },
   "workspace_self_excluded_intro": {
     "message": "Vous ne pourrez pas lire celui-ci :"
@@ -126,7 +126,7 @@
     "message": "Sélectionnez au moins un destinataire, ou définissez un mot de passe"
   },
   "workspace_clear_text": {
-    "message": "Effacer le texte"
+    "message": "Effacer"
   },
   "workspace_message_input_aria": {
     "message": "Saisie du message"

@@ -16,6 +16,10 @@ export interface SegmentedOption<T extends string> {
    *  merely rests on the control. Decorative -- put anything a screen
    *  reader needs in `ariaLabel` / `ariaKeyShortcuts`. */
   hint?: React.ReactNode;
+  /** Centred under the segment by default. "start" / "end" line it up
+   *  with the segment's outer edge instead, for an end segment narrower
+   *  than its hint (it would otherwise hang off the container). */
+  hintAlign?: "center" | "start" | "end";
   disabled?: boolean;
 }
 
@@ -143,8 +147,13 @@ export function Segmented<T extends string>({
             <span
               aria-hidden="true"
               className={cn(
-                "surface-float text-muted-foreground pointer-events-none absolute left-1/2 z-50 -translate-x-1/2 rounded-md px-1.5 py-1 whitespace-nowrap opacity-0 transition-opacity delay-0 duration-150 group-hover/seg:opacity-100 group-hover/seg:delay-[800ms] group-has-[:focus-visible]/seg:opacity-100",
+                "surface-float text-muted-foreground pointer-events-none absolute z-50 rounded-md px-1.5 py-1 whitespace-nowrap opacity-0 transition-opacity delay-0 duration-150 group-hover/seg:opacity-100 group-hover/seg:delay-[800ms] group-has-[:focus-visible]/seg:opacity-100",
                 hintSide === "top" ? "bottom-full mb-2" : "top-full mt-2",
+                o.hintAlign === "start"
+                  ? "left-0"
+                  : o.hintAlign === "end"
+                    ? "right-0"
+                    : "left-1/2 -translate-x-1/2",
               )}
             >
               {o.hint}

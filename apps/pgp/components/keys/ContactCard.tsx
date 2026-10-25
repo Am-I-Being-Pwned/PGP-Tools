@@ -1,4 +1,4 @@
-import type { ReactNode, MouseEvent as ReactMouseEvent } from "react";
+import type { MouseEvent as ReactMouseEvent, ReactNode } from "react";
 import { useState } from "react";
 import {
   CheckCircleIcon,
@@ -21,6 +21,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@amibeingpwned/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@amibeingpwned/ui/tooltip";
 
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import { t, tn } from "../../lib/i18n";
@@ -233,7 +238,9 @@ export function ContactCard({
                 {verifiedLabel}
               </span>
             )}
-            {labelAction && <div className="-my-1.5 -mr-1.5">{labelAction}</div>}
+            {labelAction && (
+              <div className="-my-1.5 -mr-1.5">{labelAction}</div>
+            )}
           </div>
           {email && (
             <p className="text-muted-foreground truncate text-xs">{email}</p>
@@ -330,10 +337,15 @@ export function ContactCard({
         </div>
 
         {longId && !showKeyLine && (
-          <span className="text-muted-foreground shrink-0 font-mono text-[11px] leading-tight whitespace-nowrap">
-            <span className="block">{longId[0]}</span>
-            <span className="block">{longId[1]}</span>
-          </span>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="text-muted-foreground shrink-0 font-mono text-[11px] leading-tight whitespace-nowrap">
+                <span className="block">{longId[0]}</span>
+                <span className="block">{longId[1]}</span>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>{t("keys_contact_long_id_title")}</TooltipContent>
+          </Tooltip>
         )}
 
         {!readOnly && (

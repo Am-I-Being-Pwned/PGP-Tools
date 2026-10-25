@@ -36,7 +36,7 @@
   "workspace_create_one": { "message": "एक बनाएं" },
   "workspace_select_signing_key": { "message": "हस्ताक्षर कुंजी चुनें" },
   "workspace_toggle_encrypt_to_self": {
-    "message": "मेरे लिए भी एन्क्रिप्ट करें"
+    "message": "मेरे लिए भी"
   },
   "workspace_toggle_password": { "message": "पासवर्ड" },
   "workspace_toggle_zip_files": { "message": "ज़िप" },
@@ -65,7 +65,7 @@
   "workspace_need_recipient_or_password": {
     "message": "कम से कम एक प्राप्तकर्ता चुनें, या पासवर्ड सेट करें"
   },
-  "workspace_clear_text": { "message": "टेक्स्ट साफ़ करें" },
+  "workspace_clear_text": { "message": "साफ़ करें" },
   "workspace_message_input_aria": { "message": "संदेश इनपुट" },
   "workspace_placeholder_decrypt": {
     "message": "आपको मिला एन्क्रिप्टेड संदेश यहां पेस्ट करें..."

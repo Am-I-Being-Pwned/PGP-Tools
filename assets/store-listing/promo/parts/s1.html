@@ -1,0 +1,58 @@
+<!-- The 440x280 small promo tile: the one the store shows in its grids
+     and featured rows, often at half this size. So it carries only the
+     name and the app's own mode switch, drawn the way the panel draws it
+     (a track with the selected segment raised), and nothing smaller. -->
+<div class="tile tile-sm tile-s1">
+  <div class="s-wrap">
+    <div class="brand s-brand">
+      <img src="__DATA:icon/128.png__" /><span>PGP Tools</span>
+    </div>
+    <div class="s-seg" aria-hidden="true">
+      <span class="on">Encrypt</span><span>Decrypt</span><span>Sign</span>
+    </div>
+  </div>
+</div>
+<style>
+  .tile-s1 .s-wrap {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 30px;
+  }
+  .tile-s1 .s-brand {
+    gap: 16px;
+  }
+  .tile-s1 .s-brand img {
+    width: 68px;
+    height: 68px;
+    border-radius: 14px;
+  }
+  .tile-s1 .s-brand span {
+    font-size: 50px;
+    letter-spacing: -0.03em;
+  }
+  .tile-s1 .s-seg {
+    display: flex;
+    gap: 3px;
+    padding: 5px;
+    border-radius: 13px;
+    background: var(--card);
+  }
+  .tile-s1 .s-seg span {
+    padding: 9px 18px;
+    border-radius: 9px;
+    font-size: 19px;
+    font-weight: 500;
+    color: var(--ink-2);
+  }
+  .tile-s1 .s-seg .on {
+    background: #262626;
+    color: var(--foreground);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      0 1px 2px rgba(0, 0, 0, 0.5);
+  }
+</style>

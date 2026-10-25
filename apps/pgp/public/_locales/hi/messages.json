@@ -2094,6 +2094,9 @@
       }
     }
   },
+  "keys_contact_long_id_title": {
+    "message": "कुंजी ID: इस कुंजी के फ़िंगरप्रिंट के आख़िरी 16 अक्षर। इससे कुंजियाँ एक नज़र में अलग पहचानी जा सकती हैं; कुंजी असली है या नहीं, यह जाँचने के लिए पूरा फ़िंगरप्रिंट मिलाएँ।"
+  },
   "keys_contact_options_aria": {
     "message": "संपर्क के विकल्प"
   },
@@ -3694,7 +3697,7 @@
     "message": "इनपुट और आउटपुट साफ़ करें"
   },
   "workspace_clear_text": {
-    "message": "टेक्स्ट साफ़ करें"
+    "message": "साफ़ करें"
   },
   "workspace_cleared_toast": {
     "message": "वर्कस्पेस साफ़ किया गया"
@@ -4235,7 +4238,7 @@
     "message": "टेक्स्ट साफ़ किया गया"
   },
   "workspace_toggle_encrypt_to_self": {
-    "message": "मेरे लिए भी एन्क्रिप्ट करें"
+    "message": "मेरे लिए भी"
   },
   "workspace_toggle_password": {
     "message": "पासवर्ड"

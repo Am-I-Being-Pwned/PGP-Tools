@@ -279,5 +279,8 @@
   "keys_export": { "message": "Exportieren" },
   "keys_size_bytes": { "message": "$size$ B" },
   "keys_size_kb": { "message": "$size$ KB" },
-  "keys_size_mb": { "message": "$size$ MB" }
+  "keys_size_mb": { "message": "$size$ MB" },
+  "keys_contact_long_id_title": {
+    "message": "Schlüssel-ID: die letzten 16 Zeichen des Fingerabdrucks dieses Schlüssels. Damit unterscheiden Sie Schlüssel auf einen Blick; ob ein Schlüssel echt ist, prüfen Sie am vollständigen Fingerabdruck."
+  }
 }

@@ -511,5 +511,8 @@
   },
   "keys_size_mb": {
     "message": "$size$ MB"
+  },
+  "keys_contact_long_id_title": {
+    "message": "ID chiave: gli ultimi 16 caratteri dell'impronta di questa chiave. Serve a distinguere le chiavi a colpo d'occhio; per verificare che una chiave sia autentica, confronta l'impronta completa."
   }
 }

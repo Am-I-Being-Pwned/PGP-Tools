@@ -432,6 +432,7 @@ export interface MessageArgs {
   "keys_contact_keys_all_title": undefined;
   "keys_contact_keys_partial": { active: string | number; total: string | number };
   "keys_contact_keys_partial_title": { active: string | number; total: string | number };
+  "keys_contact_long_id_title": undefined;
   "keys_contact_options_aria": undefined;
   "keys_contacts_heading": undefined;
   "keys_contacts_heading_count": { count: string | number };

@@ -2097,6 +2097,9 @@
       }
     }
   },
+  "keys_contact_long_id_title": {
+    "message": "Schlüssel-ID: die letzten 16 Zeichen des Fingerabdrucks dieses Schlüssels. Damit unterscheiden Sie Schlüssel auf einen Blick; ob ein Schlüssel echt ist, prüfen Sie am vollständigen Fingerabdruck."
+  },
   "keys_contact_options_aria": {
     "message": "Kontaktoptionen"
   },
@@ -3700,7 +3703,7 @@
     "message": "Eingabe und Ausgabe leeren"
   },
   "workspace_clear_text": {
-    "message": "Text löschen"
+    "message": "Löschen"
   },
   "workspace_cleared_toast": {
     "message": "Arbeitsbereich geleert"
@@ -4256,13 +4259,13 @@
     "message": "Text gelöscht"
   },
   "workspace_toggle_encrypt_to_self": {
-    "message": "Auch für mich verschlüsseln"
+    "message": "Auch an mich"
   },
   "workspace_toggle_password": {
     "message": "Passwort"
   },
   "workspace_toggle_save_to_history": {
-    "message": "Im Verlauf speichern"
+    "message": "Verlauf"
   },
   "workspace_toggle_zip_files": {
     "message": "ZIP"
