@@ -273,6 +273,8 @@ export function WorkspaceView({
   // Written through the textarea's own editing path when it is mounted,
   // so Cmd/Ctrl+Z reverts a translation like any other edit.
   const { inputElRef, handleInputChange } = s;
+  const translatedToastRef = useRef<string | number | null>(null);
+  const translatedToastSeq = useRef(0);
   const setComposedText = useCallback(
     (text: string) => {
       const el = inputElRef.current;
@@ -288,21 +290,29 @@ export function WorkspaceView({
     getInput: s.getInput,
     setInput: setComposedText,
     readingLanguage: translationTargetLanguage,
-    onTranslated: (from, to) =>
-      toast.message(
+    onTranslated: (from, to) => {
+      // A fresh id per translation, with the previous toast dismissed,
+      // rather than one fixed id: a toast reusing the id of one that is
+      // still animating out (its Undo was just pressed) is merged into
+      // it and leaves with it, so a quick second translation showed no
+      // toast and no Undo.
+      if (translatedToastRef.current !== null)
+        toast.dismiss(translatedToastRef.current);
+      translatedToastRef.current = toast.message(
         t("workspace_compose_translated", {
           from: languageLabel(from),
           to: languageLabel(to),
         }),
         {
-          id: "compose-translated",
+          id: `compose-translated-${++translatedToastSeq.current}`,
           duration: 6000,
           action: {
             label: t("workspace_undo"),
             onClick: () => composeTranslation.undo(),
           },
         },
-      ),
+      );
+    },
   });
   const composeStatus = composeTranslation.status;
   // The undo original is plaintext the workspace's own refs do not
