@@ -96,8 +96,8 @@
     "description": "Toggle badge in encrypt mode that adds a message password (symmetric encryption). Short."
   },
   "workspace_toggle_zip_files": {
-    "message": "Zip files",
-    "description": "Toggle badge in encrypt mode: bundle several files into one zip before encrypting. Short."
+    "message": "Zip",
+    "description": "Toggle badge in encrypt mode: bundle several files into one zip before encrypting. One short word: it shares a single row with three other toggles."
   },
   "workspace_toggle_save_to_history": {
     "message": "Save to history",

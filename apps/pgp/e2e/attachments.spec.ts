@@ -46,7 +46,7 @@ test.describe("a message with attachments (encrypt)", () => {
     await expect(panel.getByText(/2 files zipped and encrypted/)).toBeVisible();
 
     // Unzipped, each is its own output (the message's is msg.txt.gpg).
-    await panel.getByRole("switch", { name: "Zip files" }).click();
+    await panel.getByRole("switch", { name: "Zip", exact: true }).click();
     await panel.getByRole("button", { name: /^encrypt$/i }).click();
     await expect(panel.getByText(/2 files encrypted/)).toBeVisible();
   });

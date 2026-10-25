@@ -5255,8 +5255,8 @@
     "description": "Toggle badge in encrypt mode: record the operation in the history list. Short."
   },
   "workspace_toggle_zip_files": {
-    "message": "Zip files",
-    "description": "Toggle badge in encrypt mode: bundle several files into one zip before encrypting. Short."
+    "message": "Zip",
+    "description": "Toggle badge in encrypt mode: bundle several files into one zip before encrypting. One short word: it shares a single row with three other toggles."
   },
   "workspace_translate": {
     "message": "Translate",

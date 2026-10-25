@@ -4265,7 +4265,7 @@
     "message": "保存到历史记录"
   },
   "workspace_toggle_zip_files": {
-    "message": "打包为 zip"
+    "message": "ZIP"
   },
   "workspace_translate": {
     "message": "翻译"

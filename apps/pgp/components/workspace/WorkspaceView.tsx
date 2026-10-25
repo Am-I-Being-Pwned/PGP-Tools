@@ -1422,13 +1422,12 @@ export function WorkspaceView({
 
         {s.mode === "encrypt" && (
           <div className="space-y-2">
-            {/* One option bar, each toggle a segment of it, three to the
-                row (Sign lives on the card's From line; a fourth, the zip
-                toggle, takes a row of its own). The history viewer is in
-                the header, not in it: it opens a page, it is not an
-                option. */}
+            {/* One option bar on one line, each toggle a segment sized
+                to its label (Sign lives on the card's From line). The
+                history viewer is in the header, not in it: it opens a
+                page, it is not an option. */}
             <div className="flex items-center gap-2">
-              <OptionBar className="flex-1 grid-flow-row grid-cols-3 [&>*]:px-1 [&>*]:text-xs [&>*:nth-child(4)]:col-span-3">
+              <OptionBar className="flex flex-1 [&>*]:flex-auto [&>*]:px-2 [&>*]:text-xs">
                 {myKeys.length > 0 && (
                   // Deliberately left pressed AND enabled even when this
                   // particular message can't include the user (no own key

@@ -39,7 +39,7 @@
     "message": "मेरे लिए भी एन्क्रिप्ट करें"
   },
   "workspace_toggle_password": { "message": "पासवर्ड" },
-  "workspace_toggle_zip_files": { "message": "फ़ाइलें ज़िप करें" },
+  "workspace_toggle_zip_files": { "message": "ज़िप" },
   "workspace_toggle_save_to_history": { "message": "इतिहास में सहेजें" },
   "workspace_self_excluded_intro": { "message": "आप इसे नहीं पढ़ पाएंगे:" },
   "workspace_self_excluded_age": {

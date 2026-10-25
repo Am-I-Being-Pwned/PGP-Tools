@@ -72,7 +72,7 @@
     "message": "パスワード"
   },
   "workspace_toggle_zip_files": {
-    "message": "ファイルを zip 化"
+    "message": "ZIP"
   },
   "workspace_toggle_save_to_history": {
     "message": "履歴に保存"
