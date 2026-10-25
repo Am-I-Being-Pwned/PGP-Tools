@@ -5,6 +5,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./alert": "./src/alert.tsx",
+    "./block": "./src/block.tsx",
     "./button": "./src/button.tsx",
     "./calendar": "./src/calendar.tsx",
     "./checkbox": "./src/checkbox.tsx",
@@ -12,7 +13,9 @@
     "./dropdown-menu": "./src/dropdown-menu.tsx",
     "./kbd": "./src/kbd.tsx",
     "./kbd-helpers": "./src/kbd-helpers.ts",
+    "./option-bar": "./src/option-bar.tsx",
     "./popover": "./src/popover.tsx",
+    "./segmented": "./src/segmented.tsx",
     "./select": "./src/select.tsx",
     "./switch": "./src/switch.tsx"
   },

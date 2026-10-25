@@ -2125,6 +2125,9 @@
       }
     }
   },
+  "keys_copy_email_aria": {
+    "message": "ईमेल कॉपी करें"
+  },
   "keys_copy_fingerprint_aria": {
     "message": "फ़िंगरप्रिंट कॉपी करें"
   },
@@ -3668,6 +3671,22 @@
   "workspace_browse_files": {
     "message": "फ़ाइलें ब्राउज़ करें"
   },
+  "workspace_char_count_one": {
+    "message": "$count$ अक्षर",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_char_count_other": {
+    "message": "$count$ अक्षर",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_clear_all_files": {
     "message": "सभी हटाएं"
   },
@@ -3923,6 +3942,14 @@
   },
   "workspace_import_one": {
     "message": "एक आयात करें"
+  },
+  "workspace_lookup_signer": {
+    "message": "$host$ पर खोजें",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
   },
   "workspace_match_case": {
     "message": "केस मिलाएं"
@@ -4207,9 +4234,6 @@
   "workspace_text_cleared_toast": {
     "message": "टेक्स्ट साफ़ किया गया"
   },
-  "workspace_text_entered_below": {
-    "message": "टेक्स्ट नीचे लिखा गया है"
-  },
   "workspace_toggle_encrypt_to_self": {
     "message": "मेरे लिए भी एन्क्रिप्ट करें"
   },
@@ -4220,7 +4244,7 @@
     "message": "इतिहास में सहेजें"
   },
   "workspace_toggle_zip_files": {
-    "message": "फ़ाइलें ज़िप करें"
+    "message": "ज़िप"
   },
   "workspace_translate": {
     "message": "अनुवाद करें"

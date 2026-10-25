@@ -1,14 +1,17 @@
 import { useState } from "react";
-import { TriangleAlertIcon } from "lucide-react";
+import { SearchIcon, TriangleAlertIcon } from "lucide-react";
 
 import { Alert, AlertDescription } from "@amibeingpwned/ui/alert";
+import { Button } from "@amibeingpwned/ui/button";
 
 import type { PresentedError, RemedyAction } from "../../lib/errors/present";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { FileResult } from "../../lib/utils/download";
 import { t } from "../../lib/i18n";
+import { KEYSERVER_HOST } from "../../lib/import/keyserver";
 import { ContactCard } from "../keys/ContactCard";
+import { KeyDetailsButton } from "../keys/KeyDetailsButton";
 import { DetectedKeyBanner } from "./DetectedKeyBanner";
 import { OutputArea } from "./OutputArea";
 
@@ -108,6 +111,8 @@ interface WorkspaceResultsProps {
   outputVersion: number;
   onImportKey: (armored: string) => void;
   onRevealKey?: (keyId: string) => void;
+  /** Search the keyserver for an unknown signer's key. */
+  onLookupSigner?: (keyId: string) => void;
 }
 
 export function WorkspaceResults({
@@ -134,6 +139,7 @@ export function WorkspaceResults({
   outputVersion,
   onImportKey,
   onRevealKey,
+  onLookupSigner,
 }: WorkspaceResultsProps) {
   const isUnverified = signatureTone === "warning";
 
@@ -144,6 +150,49 @@ export function WorkspaceResults({
     !!binaryOutput ||
     fileResults.length > 0;
   if (!fullHeight && !hasContent) return null;
+
+  // The signature outcome as a status band (ContactCard's verified
+  // tone). Over a readable message it is the top block of the message's
+  // own card; anywhere else (a verify verdict, a file result) it stands
+  // alone. In the card its corners go square: the stack rounds the
+  // outer ones.
+  const signerInCard = !!fullHeight && hasOutput;
+  const signerCard = verifiedSigner ? (
+    <div
+      className={signerInCard ? "shrink-0 [&>div]:rounded-[3px]" : undefined}
+    >
+      <ContactCard
+        readOnly
+        verifiedTone={signatureTone}
+        verifiedLabel={
+          isUnverified
+            ? t("workspace_unverified")
+            : (statusText ?? t("workspace_signature_verified"))
+        }
+        note={isUnverified ? statusText : undefined}
+        // The key that made the signature, a click away. Only for one we
+        // hold: an unknown signer is a bare key id with nothing to show.
+        labelAction={
+          isUnverified ? undefined : (
+            <KeyDetailsButton keyData={verifiedSigner} subtle />
+          )
+        }
+        noteAction={
+          isUnverified && onLookupSigner && verifiedSigner.keyId ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onLookupSigner(verifiedSigner.keyId)}
+            >
+              <SearchIcon />
+              {t("workspace_lookup_signer", { host: KEYSERVER_HOST })}
+            </Button>
+          ) : undefined
+        }
+        contact={signerAsContact(verifiedSigner)}
+      />
+    </div>
+  ) : null;
 
   return (
     <div
@@ -156,19 +205,7 @@ export function WorkspaceResults({
         <ErrorAlert key={error.message} error={error} onRemedy={onRemedy} />
       )}
 
-      {verifiedSigner && (
-        <ContactCard
-          readOnly
-          verifiedTone={signatureTone}
-          verifiedLabel={
-            isUnverified
-              ? t("workspace_unverified")
-              : (statusText ?? t("workspace_signature_verified"))
-          }
-          note={isUnverified ? statusText : undefined}
-          contact={signerAsContact(verifiedSigner)}
-        />
-      )}
+      {verifiedSigner && !signerInCard && signerCard}
 
       <OutputArea
         outputElRef={outputElRef}
@@ -185,6 +222,7 @@ export function WorkspaceResults({
         getTranslation={getTranslation}
         footer={translationFooter}
         corner={resultCorner}
+        header={signerInCard ? signerCard : undefined}
       />
 
       {/* A key inside a message the user just read: keys travel this way

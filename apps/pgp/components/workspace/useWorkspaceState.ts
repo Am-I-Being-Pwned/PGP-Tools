@@ -856,11 +856,14 @@ export function useWorkspaceState(opts: {
     (text: string) => {
       setAutoRunAction(null);
       setInput(text);
-      setFiles([]);
+      // Encrypt carries the message alongside any attachments (it goes
+      // out as msg.txt), so writing it must not drop them. Elsewhere the
+      // box and the files are alternatives: text in replaces files.
+      if (mode !== "encrypt") setFiles([]);
       resetOutput();
       applyDetection(text);
     },
-    [resetOutput, setInput, applyDetection],
+    [mode, resetOutput, setInput, applyDetection],
   );
 
   /**
@@ -902,12 +905,18 @@ export function useWorkspaceState(opts: {
         const deduped = newFiles.filter((f) => !existing.has(f.name));
         return [...prev, ...deduped];
       });
-      setInput("");
+      const encrypted = newFiles.some((f) =>
+        /\.(gpg|pgp|asc|age)$/i.test(f.name),
+      );
+      // Encrypting, the files are attachments: the message being written
+      // stays, and goes along as msg.txt (see `stagedFiles` in the
+      // operations). Anywhere else -- or when what arrived is ciphertext,
+      // which flips the workspace to decrypt -- files replace the text,
+      // as they always have.
+      if (mode !== "encrypt" || encrypted) setInput("");
       setMode((current) => {
         if (current !== "encrypt" && current !== "decrypt") return current;
-        if (newFiles.some((f) => /\.(gpg|pgp|asc|age)$/i.test(f.name))) {
-          return "decrypt";
-        }
+        if (encrypted) return "decrypt";
         return current;
       });
       // Cleared wherever the STAGED MESSAGE changes -- here, in
@@ -921,7 +930,7 @@ export function useWorkspaceState(opts: {
       // stages the files it can AND still reports the ones it skipped.
       if (oversized) setError({ message: oversized });
     },
-    [resetOutput, setInput],
+    [mode, resetOutput, setInput],
   );
 
   const removeFile = useCallback((index: number) => {
@@ -930,11 +939,13 @@ export function useWorkspaceState(opts: {
   }, []);
 
   const clearFiles = useCallback(() => {
+    // The files only: a message written alongside them (encrypt) is not
+    // part of "clear all files". Anywhere else the box is empty while
+    // files are staged, so there is nothing else to clear.
     setFiles([]);
-    setInput("");
     setMessageEncryption(null);
     resetOutput();
-  }, [resetOutput, setInput]);
+  }, [resetOutput]);
 
   // Apply a drop routed here by the global dropzone. Reuses the same
   // file/text handlers as an in-panel drop (so mode auto-detection still

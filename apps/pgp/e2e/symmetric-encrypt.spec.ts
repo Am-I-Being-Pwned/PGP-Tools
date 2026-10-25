@@ -34,8 +34,7 @@ async function goToEncrypt(
   panel: import("@playwright/test").Page,
 ): Promise<void> {
   await panel.getByRole("tab", { name: "Main" }).click();
-  await panel.getByRole("combobox").first().click();
-  await panel.getByRole("option", { name: "Encrypt", exact: true }).click();
+  await panel.getByRole("radio", { name: "Encrypt", exact: true }).click();
 }
 
 /** Press the badge, type a password in the dialog, confirm. */
@@ -70,6 +69,23 @@ test("a password alone encrypts, with no keys and no recipients", async ({
   await expect(encrypt).toBeEnabled();
   await encrypt.click();
   await expect(panel.getByRole("button", { name: "Download" })).toBeVisible();
+});
+
+test("the password is dropped once the message is encrypted", async ({
+  panel,
+}) => {
+  // A password set for one message must not quietly ride along on the
+  // next: once used, it is gone and the badge is off again.
+  await onboardWithPasswordSkipKey(panel, VAULT_PASSWORD);
+  await goToEncrypt(panel);
+  await panel.locator("textarea").first().fill(MESSAGE);
+  await setMessagePassword(panel, MESSAGE_PASSWORD);
+
+  const badge = panel.getByRole("switch", { name: "Password", exact: true });
+  await expect(badge).toHaveAttribute("aria-checked", "true");
+  await panel.getByRole("button", { name: /^encrypt$/i }).click();
+  await expect(panel.getByRole("button", { name: "Download" })).toBeVisible();
+  await expect(badge).toHaveAttribute("aria-checked", "false");
 });
 
 test("a too-short password cannot be set, and cancelling arms nothing", async ({
@@ -190,8 +206,7 @@ test("what it encrypts can be decrypted again with the same password", async ({
   // Back in as a fresh decrypt. The box is refilled directly rather than
   // hunting for a reset control -- what is being tested is the round
   // trip, not the clear button.
-  await panel.getByRole("combobox").first().click();
-  await panel.getByRole("option", { name: "Decrypt", exact: true }).click();
+  await panel.getByRole("radio", { name: "Decrypt", exact: true }).click();
   await panel.locator("textarea").first().fill(armored);
   await panel.getByRole("button", { name: /^decrypt$/i }).click();
   const field = panel.getByPlaceholder("Enter message password");
@@ -298,10 +313,12 @@ test("tabbing into Recipients opens the list", async ({ panel }) => {
   const box = panel.getByRole("combobox", { name: "Recipients" });
   await expect(box).toHaveAttribute("aria-expanded", "false");
 
-  // Focus the message box, then Tab -- the recipient input is the next
-  // stop, and arriving there by keyboard should show what can be picked.
-  await panel.locator("textarea").first().click();
-  await panel.locator("textarea").first().press("Tab");
+  // Focus the mode switch, then Tab -- the recipient input (the card's
+  // To row) is the next stop, and arriving there by keyboard should show
+  // what can be picked.
+  const encrypt = panel.getByRole("radio", { name: "Encrypt", exact: true });
+  await encrypt.focus();
+  await encrypt.press("Tab");
 
   await expect(box).toBeFocused();
   await expect(box).toHaveAttribute("aria-expanded", "true");

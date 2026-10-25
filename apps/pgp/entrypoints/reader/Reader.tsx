@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { LockIcon } from "lucide-react";
 
 import type { ReaderSigner } from "../../lib/reader-protocol";
 import { ContactCard } from "../../components/keys/ContactCard";
@@ -102,18 +103,15 @@ export function Reader() {
         id="message"
         ref={textRef}
         tabIndex={0}
-        className={`bg-muted/50 rounded-md border border-green-500/50 p-3 font-mono text-xs break-all whitespace-pre-wrap focus:outline-none ${
+        className={`bg-card rounded-xl p-4 font-mono text-xs break-all whitespace-pre-wrap focus:outline-none ${
           shown ? "" : "hidden"
         }`}
       />
       {(view === "locked" || view === "unavailable") && (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
-          <img
-            src="/icon-128.png"
-            alt=""
-            className="h-14 w-14"
-            draggable={false}
-          />
+          <div className="bg-card text-muted-foreground flex size-[72px] items-center justify-center rounded-[18px]">
+            <LockIcon className="size-7" aria-hidden="true" />
+          </div>
           <p className="text-muted-foreground text-sm">
             {view === "locked"
               ? t("workspace_reader_locked")

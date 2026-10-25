@@ -33,7 +33,7 @@ export function Welcome() {
           <p className="text-2xl leading-snug font-medium">
             {t("app_welcome_opened")}
           </p>
-          <ArrowRightIcon className="text-primary h-16 w-16 shrink-0" />
+          <ArrowRightIcon className="text-good h-16 w-16 shrink-0" />
         </div>
       </div>
     );
@@ -42,23 +42,25 @@ export function Welcome() {
   return (
     <div className="flex min-h-screen items-center justify-center p-6">
       <div className="w-full max-w-sm space-y-6 text-center">
-        <div className="bg-primary/10 mx-auto flex h-16 w-16 items-center justify-center rounded-full">
-          <LockKeyholeIcon className="text-primary h-8 w-8" />
+        <div className="bg-card text-good mx-auto flex size-[72px] items-center justify-center rounded-[18px]">
+          <LockKeyholeIcon className="size-7" aria-hidden="true" />
         </div>
 
         <div>
-          <h1 className="text-xl font-semibold">{t("app_welcome_title")}</h1>
+          <h1 className="text-xl font-semibold tracking-tight">
+            {t("app_welcome_title")}
+          </h1>
           <p className="text-muted-foreground mt-2 text-sm">
             {t("app_welcome_body")}
           </p>
         </div>
 
-        <Button className="w-full" onClick={() => void handleStart()}>
+        <Button size="lg" className="w-full" onClick={() => void handleStart()}>
           {t("app_welcome_start")}
         </Button>
 
         {error && (
-          <p className="text-destructive text-xs" role="alert">
+          <p className="text-bad text-xs" role="alert">
             {error}
           </p>
         )}
@@ -69,7 +71,7 @@ export function Welcome() {
             href="https://amibeingpwned.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-primary underline"
+            className="text-good underline underline-offset-2"
           >
             {/* i18n-ignore */}
             Am I Being Pwned

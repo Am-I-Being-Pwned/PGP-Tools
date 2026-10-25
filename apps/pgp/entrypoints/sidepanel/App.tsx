@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { SettingsIcon } from "lucide-react";
+import { HistoryIcon, SettingsIcon } from "lucide-react";
 
 import { Button } from "@amibeingpwned/ui/button";
 
@@ -94,6 +94,8 @@ export default function App() {
   // to the Keys tab first meant Back dumped them on a tab they never
   // asked for, and the panel's slide-out flashed it on the way past.
   const [importPrefill, setImportPrefill] = useState<string | null>(null);
+  /** A key lookup to open the import panel on (an unknown signer's id). */
+  const [importLookup, setImportLookup] = useState<string | null>(null);
   // Keys to scroll to and pulse on the Keys tab: a "show it in your
   // keys" action, or the View key button on an import's toast.
   const [highlightKeyIds, setHighlightKeyIds] = useState<string[] | null>(null);
@@ -834,16 +836,41 @@ export default function App() {
   return (
     <GlobalDropZone rules={dropRules}>
       <div className="flex h-screen flex-col">
-        <TabBar activeTab={activeTab} onTabChange={changeTab} />
+        <TabBar
+          activeTab={activeTab}
+          onTabChange={changeTab}
+          trailing={
+            // History belongs to the workspace, and to a workspace that
+            // can have any: never-cache means no history, ever, so the
+            // viewer disappears rather than opening onto nothing.
+            activeTab === "workspace" && !neverCacheKeys ? (
+              <button
+                type="button"
+                onClick={openHistory}
+                title={t("actions_history")}
+                aria-label={t("actions_history")}
+                // Out of the Tab order, as it was beside the toggles:
+                // keyboard users reach history via the palette.
+                tabIndex={-1}
+                className="text-muted-foreground hover:bg-accent hover:text-foreground flex size-[30px] items-center justify-center rounded-md transition-colors"
+              >
+                <HistoryIcon className="h-4 w-4" />
+              </button>
+            ) : undefined
+          }
+        />
 
         <CommandPalette ctx={actionCtx} bindOpen={bindPaletteOpen} />
 
         {/* A key that arrived from outside the Keys tab. The panel covers
             the whole side panel, so it opens in place -- no tab switch to
             flash past on the way in or out. */}
-        {importPrefill !== null && (
+        {(importPrefill !== null || importLookup !== null) && (
           <ImportKeyPage
-            onClose={() => setImportPrefill(null)}
+            onClose={() => {
+              setImportPrefill(null);
+              setImportLookup(null);
+            }}
             onImportPrivate={handleAddKey}
             onImportPublic={contacts.add}
             existingKeys={keyring.keys}
@@ -851,6 +878,8 @@ export default function App() {
             reusePasskeyCredentialId={masterPasskeyCredentialId}
             masterSealSalt={masterSealSalt}
             initialArmored={importPrefill}
+            initialLookup={importLookup}
+            keyDiscoveryEnabled={keyDiscoveryEnabled}
             crxSigningEnabled={crxSigningEnabled}
             onImportCrx={crxKeys.add}
             onImported={(keyIds, opts) => {
@@ -919,6 +948,7 @@ export default function App() {
               encryptToKeyId={encryptToKeyId}
               onClearEncryptTo={() => setEncryptToKeyId(null)}
               onRevealKey={(keyId) => revealKeys([keyId])}
+              onLookupSigner={keyDiscoveryEnabled ? setImportLookup : undefined}
               onNavigateToKeys={(prefill) => {
                 if (prefill) {
                   routeToImport(prefill);
@@ -1057,9 +1087,13 @@ const TABS: { id: Tab; label: () => string }[] = [
 function TabBar({
   activeTab,
   onTabChange,
+  trailing,
 }: {
   activeTab: Tab;
   onTabChange: (tab: Tab) => void;
+  /** Header actions drawn between the tabs and Settings (History). Not
+   *  tabs, so they sit outside the tablist and its arrow handling. */
+  trailing?: React.ReactNode;
 }) {
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
@@ -1092,48 +1126,68 @@ function TabBar({
     [activeTab, onTabChange],
   );
 
-  return (
-    <nav className="border-border border-b" aria-label={t("app_nav_label")}>
-      <div
-        className="flex items-center"
-        role="tablist"
-        onKeyDown={handleKeyDown}
+  // One button per tab, so the ref slots line up with TABS for the
+  // arrow-key handler regardless of which group a tab is drawn in.
+  const renderTab = (tab: (typeof TABS)[number], i: number) => {
+    const isSettings = tab.id === "settings";
+    const isActive = activeTab === tab.id;
+    return (
+      <button
+        key={tab.id}
+        ref={(el) => {
+          tabRefs.current[i] = el;
+        }}
+        role="tab"
+        aria-selected={isActive}
+        aria-controls={`tabpanel-${tab.id}`}
+        aria-label={isSettings ? t("common_settings") : undefined}
+        id={`tab-${tab.id}`}
+        tabIndex={isActive ? 0 : -1}
+        onClick={() => onTabChange(tab.id)}
+        className={
+          isSettings
+            ? `${trailing ? "" : "ml-auto"} order-2 flex size-[30px] items-center justify-center rounded-md transition-colors ${
+                isActive
+                  ? "bg-raised text-foreground"
+                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
+              }`
+            : `h-[26px] rounded-md px-3 text-sm font-medium transition-colors ${
+                isActive
+                  ? "bg-raised text-foreground shadow-[inset_0_1px_0_rgb(255_255_255/0.1),0_1px_2px_rgb(0_0_0/0.5)]"
+                  : "text-muted-foreground hover:text-foreground"
+              }`
+        }
       >
-        {TABS.map((tab, i) => {
-          const isSettings = tab.id === "settings";
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              ref={(el) => {
-                tabRefs.current[i] = el;
-              }}
-              role="tab"
-              aria-selected={isActive}
-              aria-controls={`tabpanel-${tab.id}`}
-              aria-label={isSettings ? t("common_settings") : undefined}
-              id={`tab-${tab.id}`}
-              tabIndex={isActive ? 0 : -1}
-              onClick={() => onTabChange(tab.id)}
-              className={
-                isSettings
-                  ? `ml-auto px-3 py-2.5 transition-colors ${
-                      isActive
-                        ? "text-primary border-primary border-b-2"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`
-                  : `flex-1 px-3 py-2.5 text-sm font-medium transition-colors ${
-                      isActive
-                        ? "border-primary text-primary border-b-2"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`
-              }
-            >
-              {isSettings ? <SettingsIcon className="h-4 w-4" /> : tab.label()}
-            </button>
-          );
-        })}
+        {isSettings ? <SettingsIcon className="h-4 w-4" /> : tab.label()}
+      </button>
+    );
+  };
+
+  // Main and Keys sit as a segmented pair in a recessed well on the
+  // left; Settings is an icon on the right. All three stay tabs in ONE
+  // tablist (the well is a plain wrapper), so the roving tabindex and
+  // arrow/Home/End handling cover them as a single row.
+  return (
+    <nav
+      className="bg-chrome flex shrink-0 items-center gap-1 border-b border-white/[0.06] py-2 pr-2.5 pl-3"
+      aria-label={t("app_nav_label")}
+    >
+      {/* `contents`: the tablist keeps its role and keyboard handling
+          but lays its tabs out in the nav's row, so the header actions
+          can sit between the Main/Keys pair and Settings. */}
+      <div className="contents" role="tablist" onKeyDown={handleKeyDown}>
+        <div className="bg-track flex gap-0.5 rounded-lg p-[3px]">
+          {TABS.map((tab, i) =>
+            tab.id === "settings" ? null : renderTab(tab, i),
+          )}
+        </div>
+        {TABS.map((tab, i) =>
+          tab.id === "settings" ? renderTab(tab, i) : null,
+        )}
       </div>
+      {trailing && (
+        <div className="order-1 ml-auto flex items-center">{trailing}</div>
+      )}
     </nav>
   );
 }

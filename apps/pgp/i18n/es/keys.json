@@ -308,6 +308,9 @@
   "keys_copy_fingerprint_aria": {
     "message": "Copiar huella digital"
   },
+  "keys_copy_email_aria": {
+    "message": "Copiar correo electrónico"
+  },
   "keys_fact_fingerprint": {
     "message": "Huella"
   },

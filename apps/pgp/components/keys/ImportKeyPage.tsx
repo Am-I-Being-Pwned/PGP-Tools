@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { InfoIcon, LoaderIcon, UploadCloudIcon } from "lucide-react";
 
+import { cn } from "@amibeingpwned/ui";
 import { Button } from "@amibeingpwned/ui/button";
 
 import type { CrxProtectionInput } from "../../lib/crx/operations";
@@ -78,6 +79,11 @@ interface ImportKeyPageProps {
   /** When provided, skip the source step and preview this armored key
    *  (e.g. from a global drop). Read once at mount. */
   initialArmored?: string | null;
+  /** When provided, open on the source step with this typed into the
+   *  lookup field and the lookup already running (an unknown signer's
+   *  key id, from the workspace). Read once at mount; ignored when key
+   *  discovery is off. */
+  initialLookup?: string | null;
   /** When true, also accept a raw RSA private key PEM as a CRX signing key. */
   crxSigningEnabled?: boolean;
   /** Master enable for the network lookups on the source step. DEFAULTS
@@ -112,6 +118,7 @@ export function ImportKeyPage({
   reusePasskeyCredentialId,
   masterSealSalt,
   initialArmored,
+  initialLookup,
   crxSigningEnabled,
   keyDiscoveryEnabled = true,
   onImportCrx,
@@ -133,7 +140,7 @@ export function ImportKeyPage({
   /** What is typed in the one lookup box. It is ONE box because getting
    *  a key is one question -- `classifyLookup` decides whether the
    *  answer comes from GitHub or from keys.openpgp.org. */
-  const [lookupInput, setLookupInput] = useState("");
+  const [lookupInput, setLookupInput] = useState(initialLookup ?? "");
   /** A failure the user didn't cause and can't fix by retrying -- "this
    *  person has published no SSH keys", or "the keyserver has no key for
    *  that address". Rendered in its own amber callout under the lookup
@@ -550,7 +557,7 @@ export function ImportKeyPage({
    * string is a valid GitHub username AND a fingerprint), so it is pure
    * and tested rather than inline in a handler.
    */
-  const runLookup = async () => {
+  const runLookup = async (input = lookupInput) => {
     setError(null);
     setNotice(null);
     // Same guard as the paste path, and deliberately the same ref: a
@@ -558,7 +565,7 @@ export function ImportKeyPage({
     // start a second lookup whose response overwrites the first's.
     if (parsingRef.current) return;
 
-    const routed = classifyLookup(lookupInput);
+    const routed = classifyLookup(input);
     if (!routed) {
       setError(t("import_lookup_invalid"));
       return;
@@ -612,6 +619,20 @@ export function ImportKeyPage({
     const text = prefill.current;
     prefill.current = null;
     if (text) void handleSourceRef.current(text);
+  }, []);
+
+  // Same once-at-mount rule for a lookup handed over by the caller. The
+  // field shows what was asked, so a "no key for that id" lands under
+  // the query it answers.
+  const lookupPrefill = useRef(keyDiscoveryEnabled ? initialLookup : null);
+  const runLookupRef = useRef(runLookup);
+  useEffect(() => {
+    runLookupRef.current = runLookup;
+  });
+  useEffect(() => {
+    const query = lookupPrefill.current;
+    lookupPrefill.current = null;
+    if (query) void runLookupRef.current(query);
   }, []);
 
   // Paste anywhere on the source step -- there's no textarea to aim at.
@@ -941,11 +962,12 @@ export function ImportKeyPage({
                   }
                   void handleTextSource(e.dataTransfer.getData("text/plain"));
                 }}
-                className={`flex flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed p-6 text-center transition-colors ${
-                  dragOver
-                    ? "border-primary bg-primary/10"
-                    : "border-border hover:border-muted-foreground/50"
-                }`}
+                // A flat block, not a dashed box; a drag over it tints it
+                // the "on" green.
+                className={cn(
+                  "flex flex-col items-center justify-center gap-2 rounded-xl p-6 text-center transition-colors",
+                  dragOver ? "bg-on" : "bg-card",
+                )}
               >
                 {parsing ? (
                   <>
@@ -1034,7 +1056,7 @@ export function ImportKeyPage({
                        answer to the lookup the user just ran, and set in
                        the same muted style as the standing help text
                        below it read as more boilerplate and got missed.
-                       Amber, bordered and attached to the field it
+                       Amber, tinted and attached to the field it
                        answers, so it is legible as a RESULT;
                        deliberately not `text-destructive`, because
                        nothing failed and nothing needs fixing (see
@@ -1043,7 +1065,7 @@ export function ImportKeyPage({
                        interrupting. */
                     <div
                       role="status"
-                      className="mt-2 flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-300"
+                      className="text-warn mt-2 flex items-start gap-2 rounded-lg bg-[#252012] px-3 py-2.5 text-xs"
                     >
                       <InfoIcon className="mt-px h-3.5 w-3.5 shrink-0" />
                       <span>{notice}</span>

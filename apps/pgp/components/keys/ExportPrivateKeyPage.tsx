@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
+import { Block } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
 
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
@@ -281,7 +282,7 @@ export function ExportPrivateKeyPage({
           {exportError && (
             <p className="text-destructive text-xs">{exportError}</p>
           )}
-          {feedback && <p className="text-xs text-green-400">{feedback}</p>}
+          {feedback && <p className="text-good text-xs">{feedback}</p>}
           <Button
             className="w-full"
             onClick={() => void handleEncryptedExport()}
@@ -290,7 +291,9 @@ export function ExportPrivateKeyPage({
             {exporting ? t("keygen_encrypting") : exporter.encryptedButton}
           </Button>
 
-          <div className="border-border space-y-2 border-t pt-3">
+          {/* The plaintext escape hatch sits in a block of its own, apart
+              from the safe path above, rather than behind a divider line. */}
+          <Block className="mt-1 space-y-2 rounded-xl p-3">
             <p className="text-destructive text-[11px]">
               {exporter.plaintextBlurb} {t("keygen_type_to_confirm_before")}{" "}
               <span className="font-mono font-bold">
@@ -316,7 +319,7 @@ export function ExportPrivateKeyPage({
             >
               {exporter.plaintextButton}
             </Button>
-          </div>
+          </Block>
         </div>
       )}
     </SubPage>

@@ -1,6 +1,7 @@
 /* i18n-ignore-file */
 import { useState } from "react";
 
+import { BlockStack } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
 
 import type { PublicContactKey } from "../../lib/storage/contacts";
@@ -55,19 +56,19 @@ export function ImportFlowPreviewPage({ onClose }: { onClose: () => void }) {
             opens the preview panel in that state.
           </p>
 
-          <div className="space-y-2">
+          <BlockStack>
             {IMPORT_SCENARIOS.map((s) => (
               <button
                 key={s.id}
                 type="button"
                 onClick={() => setScenario(s.id)}
-                className="border-border hover:bg-muted/40 w-full rounded-md border p-3 text-left transition-colors"
+                className="bg-card hover:bg-accent focus-visible:ring-ring/50 w-full rounded-[3px] px-3.5 py-3 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
               >
                 <p className="text-sm font-medium">{s.label}</p>
                 <p className="text-muted-foreground mt-0.5 text-xs">{s.hint}</p>
               </button>
             ))}
-          </div>
+          </BlockStack>
 
           <div>
             <h3 className="mb-2 text-xs font-semibold">

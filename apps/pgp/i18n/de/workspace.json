@@ -72,7 +72,7 @@
     "message": "Passwort"
   },
   "workspace_toggle_zip_files": {
-    "message": "Dateien zippen"
+    "message": "ZIP"
   },
   "workspace_toggle_save_to_history": {
     "message": "Im Verlauf speichern"
@@ -124,9 +124,6 @@
   },
   "workspace_need_recipient_or_password": {
     "message": "Wählen Sie mindestens einen Empfänger oder legen Sie ein Passwort fest"
-  },
-  "workspace_text_entered_below": {
-    "message": "Text unten eingegeben"
   },
   "workspace_clear_text": {
     "message": "Text löschen"
@@ -389,6 +386,9 @@
   "workspace_unknown_signer": {
     "message": "Unbekannter Unterzeichner"
   },
+  "workspace_lookup_signer": {
+    "message": "Auf $host$ suchen"
+  },
   "workspace_status_signer_unknown": {
     "message": "Diese Nachricht ist signiert, aber der öffentliche Schlüssel des Unterzeichners ist weder in Ihren Schlüsseln noch in Ihren Kontakten, daher konnte die Signatur nicht verifiziert werden."
   },
@@ -448,5 +448,11 @@
   },
   "workspace_reader_unavailable": {
     "message": "Diese Nachricht ist nicht mehr verfügbar."
+  },
+  "workspace_char_count_one": {
+    "message": "$count$ Zeichen"
+  },
+  "workspace_char_count_other": {
+    "message": "$count$ Zeichen"
   }
 }

@@ -96,8 +96,8 @@
     "description": "Toggle badge in encrypt mode that adds a message password (symmetric encryption). Short."
   },
   "workspace_toggle_zip_files": {
-    "message": "Zip files",
-    "description": "Toggle badge in encrypt mode: bundle several files into one zip before encrypting. Short."
+    "message": "Zip",
+    "description": "Toggle badge in encrypt mode: bundle several files into one zip before encrypting. One short word: it shares a single row with three other toggles."
   },
   "workspace_toggle_save_to_history": {
     "message": "Save to history",
@@ -167,13 +167,9 @@
     "message": "Select at least one recipient, or set a password",
     "description": "Tooltip on the disabled Encrypt button when nothing can open the message yet."
   },
-  "workspace_text_entered_below": {
-    "message": "Text entered below",
-    "description": "Replaces the drop zone once the message box has text."
-  },
   "workspace_clear_text": {
     "message": "Clear text",
-    "description": "Button under 'Text entered below' that empties the message box (undoable)."
+    "description": "Button in the strip under the message box that empties it (undoable)."
   },
   "workspace_message_input_aria": {
     "message": "Message input",
@@ -519,6 +515,10 @@
     "message": "Unknown signer",
     "description": "Name shown on the signer card when the message is signed by a key the user does not hold."
   },
+  "workspace_lookup_signer": {
+    "message": "Search $host$",
+    "description": "Button on the unknown-signer card: look the signer's key id up on the keyserver to import their key. $host$ is the keyserver hostname (keys.openpgp.org)."
+  },
   "workspace_status_signer_unknown": {
     "message": "This message is signed, but the signer's public key isn't in your keys or contacts, so the signature could not be verified.",
     "description": "Note on the signer card when the signature could not be checked because the signer's key is not held."
@@ -598,5 +598,13 @@
   "workspace_reader_unavailable": {
     "message": "This message is no longer available.",
     "description": "Shown in a message tab that has nothing to show (for example it was reopened after the side panel closed)."
+  },
+  "workspace_char_count_one": {
+    "message": "$count$ char",
+    "description": "Character count of the message, at the right end of the toolbar under the message box. $count$ is the number of characters."
+  },
+  "workspace_char_count_other": {
+    "message": "$count$ chars",
+    "description": "Character count of the message, at the right end of the toolbar under the message box. $count$ is the number of characters."
   }
 }

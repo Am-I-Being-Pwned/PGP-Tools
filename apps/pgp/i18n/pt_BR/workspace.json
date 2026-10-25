@@ -72,7 +72,7 @@
     "message": "Senha"
   },
   "workspace_toggle_zip_files": {
-    "message": "Compactar arquivos"
+    "message": "ZIP"
   },
   "workspace_toggle_save_to_history": {
     "message": "Salvar no histórico"
@@ -124,9 +124,6 @@
   },
   "workspace_need_recipient_or_password": {
     "message": "Selecione pelo menos um destinatário ou defina uma senha"
-  },
-  "workspace_text_entered_below": {
-    "message": "Texto digitado abaixo"
   },
   "workspace_clear_text": {
     "message": "Limpar texto"
@@ -389,6 +386,9 @@
   "workspace_unknown_signer": {
     "message": "Signatário desconhecido"
   },
+  "workspace_lookup_signer": {
+    "message": "Pesquisar em $host$"
+  },
   "workspace_status_signer_unknown": {
     "message": "Esta mensagem está assinada, mas a chave pública do signatário não está nas suas chaves nem nos seus contatos, então a assinatura não pôde ser verificada."
   },
@@ -448,5 +448,11 @@
   },
   "workspace_reader_unavailable": {
     "message": "Esta mensagem não está mais disponível."
+  },
+  "workspace_char_count_one": {
+    "message": "$count$ caractere"
+  },
+  "workspace_char_count_other": {
+    "message": "$count$ caracteres"
   }
 }

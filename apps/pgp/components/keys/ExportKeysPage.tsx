@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
+import { Block, BlockStack } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
 
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
@@ -435,11 +436,12 @@ function ExportKeysBody({ f }: { f: ExportKeysFlow }) {
         {t("keygen_export_unlock_intro")}
       </p>
 
-      <div className="space-y-2">
+      <BlockStack>
         {myKeys.map((blob) => (
           <KeyUnlockRow
             key={blob.keyId}
             name={blob.userIds[0] ?? blob.keyId.slice(-16)}
+            fingerprint={blob.keyId}
             unlocked={isUnlocked(blob.keyId)}
             isPasskey={blob.protection.method === "passkey"}
             busy={unlockingId === blob.keyId}
@@ -457,6 +459,7 @@ function ExportKeysBody({ f }: { f: ExportKeysFlow }) {
           <KeyUnlockRow
             key={blob.extensionId}
             name={blob.label ?? blob.extensionId.slice(0, 16)}
+            fingerprint={blob.extensionId}
             badge="CRX"
             unlocked={blob.extensionId in crxHandles}
             isPasskey={blob.protection.method === "passkey"}
@@ -470,7 +473,7 @@ function ExportKeysBody({ f }: { f: ExportKeysFlow }) {
             onUnlockPasskey={() => void handleUnlockCrxPasskey(blob)}
           />
         ))}
-      </div>
+      </BlockStack>
 
       {contacts.length > 0 && (
         <p className="text-muted-foreground text-xs">
@@ -518,7 +521,7 @@ function ExportKeysBody({ f }: { f: ExportKeysFlow }) {
       )}
 
       {lockedKeys.length + lockedCrxKeys.length > 0 && (
-        <p className="rounded border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-400">
+        <p className="text-warn rounded-lg bg-[#252012] px-3 py-2.5 text-xs">
           {tn(
             "keygen_export_still_locked",
             lockedKeys.length + lockedCrxKeys.length,
@@ -571,7 +574,9 @@ function ExportKeysBody({ f }: { f: ExportKeysFlow }) {
           </Button>
 
           {hasPgpPrivate && (
-            <div className="border-border space-y-2 border-t pt-3">
+            // The plaintext escape hatch sits in a block of its own, apart
+            // from the safe path above, rather than behind a divider line.
+            <Block className="mt-1 space-y-2 rounded-xl p-3">
               <p className="text-destructive text-[11px]">
                 {t("keygen_export_plaintext_warning_file")}
                 {crxCount > 0
@@ -603,7 +608,7 @@ function ExportKeysBody({ f }: { f: ExportKeysFlow }) {
               >
                 {t("keygen_export_without_passphrase")}
               </Button>
-            </div>
+            </Block>
           )}
         </>
       ) : contacts.length > 0 ? (

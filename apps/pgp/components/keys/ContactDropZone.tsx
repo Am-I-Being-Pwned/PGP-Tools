@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 
+import { cn } from "@amibeingpwned/ui";
 import { Button } from "@amibeingpwned/ui/button";
 
 import { readKeyFile } from "../../lib/binary-armor";
@@ -75,13 +76,22 @@ export function ContactDropZone({ onKeyText }: ContactDropZoneProps) {
       onDrop={handleDrop}
       onPaste={handlePaste}
       tabIndex={0}
-      className={`rounded-md border-2 border-dashed p-3 text-center text-xs transition-colors focus:outline-none ${
-        dragOver
-          ? "border-primary bg-primary/10"
-          : "border-border hover:border-muted-foreground/50"
-      }`}
+      // A flat block, not a dashed box: the first row of the contacts
+      // stack (KeysView rounds its corners). A drag over it tints it the
+      // "on" green, which is the only cue a drop target needs.
+      className={cn(
+        "flex items-center gap-3 rounded-[3px] py-2 pr-2 pl-3.5 text-xs transition-colors focus:outline-none",
+        dragOver ? "bg-on text-on-foreground" : "bg-card",
+      )}
     >
-      <p className="text-muted-foreground">{t("import_dropzone_text")}</p>
+      <p
+        className={cn(
+          "min-w-0 flex-1",
+          dragOver ? "text-on-foreground" : "text-muted-foreground",
+        )}
+      >
+        {t("import_dropzone_text")}
+      </p>
       <input
         ref={fileInputRef}
         type="file"
@@ -93,7 +103,7 @@ export function ContactDropZone({ onKeyText }: ContactDropZoneProps) {
       <Button
         variant="outline"
         size="sm"
-        className="mt-2"
+        className="shrink-0"
         onClick={() => fileInputRef.current?.click()}
       >
         {t("import_dropzone_browse")}

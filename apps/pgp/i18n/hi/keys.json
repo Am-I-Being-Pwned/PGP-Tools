@@ -158,6 +158,7 @@
   "keys_also_known_as": { "message": "अन्य पहचान" },
   "keys_loading": { "message": "लोड हो रहा है…" },
   "keys_copy_fingerprint_aria": { "message": "फ़िंगरप्रिंट कॉपी करें" },
+  "keys_copy_email_aria": { "message": "ईमेल कॉपी करें" },
   "keys_fact_fingerprint": { "message": "फ़िंगरप्रिंट" },
   "keys_fact_algorithm": { "message": "एल्गोरिदम" },
   "keys_fact_used_for": { "message": "उपयोग" },

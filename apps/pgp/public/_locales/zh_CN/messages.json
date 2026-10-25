@@ -2128,6 +2128,9 @@
       }
     }
   },
+  "keys_copy_email_aria": {
+    "message": "复制邮箱地址"
+  },
   "keys_copy_fingerprint_aria": {
     "message": "复制指纹"
   },
@@ -3674,6 +3677,22 @@
   "workspace_browse_files": {
     "message": "浏览文件"
   },
+  "workspace_char_count_one": {
+    "message": "$count$ 个字符",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_char_count_other": {
+    "message": "$count$ 个字符",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_clear_all_files": {
     "message": "全部清除"
   },
@@ -3929,6 +3948,14 @@
   },
   "workspace_import_one": {
     "message": "导入一个"
+  },
+  "workspace_lookup_signer": {
+    "message": "在 $host$ 上搜索",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
   },
   "workspace_match_case": {
     "message": "区分大小写"
@@ -4228,9 +4255,6 @@
   "workspace_text_cleared_toast": {
     "message": "已清除文本"
   },
-  "workspace_text_entered_below": {
-    "message": "已在下方输入文本"
-  },
   "workspace_toggle_encrypt_to_self": {
     "message": "同时加密给我"
   },
@@ -4241,7 +4265,7 @@
     "message": "保存到历史记录"
   },
   "workspace_toggle_zip_files": {
-    "message": "打包为 zip"
+    "message": "ZIP"
   },
   "workspace_translate": {
     "message": "翻译"

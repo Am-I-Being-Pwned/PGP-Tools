@@ -1,7 +1,7 @@
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
-  ArrowRightIcon,
+  ChevronRightIcon,
   CopyIcon,
   DownloadIcon,
   EllipsisVerticalIcon,
@@ -27,7 +27,9 @@ import {
 import type { PrivateKeyExporter } from "./ExportPrivateKeyPage";
 import { t } from "../../lib/i18n";
 import { INPUT_CLASS } from "../../lib/utils/styles";
+import { KeyAvatar } from "../shared/KeyAvatar";
 import { ExportPrivateKeyPage } from "./ExportPrivateKeyPage";
+import { HEX_FINGERPRINT, longIdLines } from "./fingerprint-lines";
 import { useJustImported } from "./useJustImported";
 import { useLongPress } from "./useLongPress";
 
@@ -90,6 +92,10 @@ interface KeyCardProps {
   /** Just arrived from an import: scroll to it and pulse it once. */
   justImported?: boolean;
 }
+
+/** The design language's status pill; the tone classes are added per use. */
+const PILL =
+  "shrink-0 items-center rounded px-1.5 py-px text-[10.5px] font-medium whitespace-nowrap";
 
 export function KeyCard({
   model,
@@ -165,72 +171,167 @@ export function KeyCard({
   // wouldn't stop the highlight.
   const dimmed = "pointer-events-none opacity-40";
 
+  // The long key id at the right of the row: the fingerprint's last 16
+  // hex digits, as two stacked lines of two groups. Only for a hex fingerprint -- an SSH hash's
+  // tail, or a CRX extension id's, identifies nothing (see KeysView), so
+  // those keep their full id on the second line instead.
+  const longId = HEX_FINGERPRINT.test(model.id) ? longIdLines(model.id) : null;
+
   return (
     <div
       ref={importedRef}
       onClick={handleCardClick}
       {...longPress.handlers}
       className={cn(
-        // Same floor as ContactCard: the two render into one list, so a
-        // sealed-at-rest key (no unlock row, no details arrow) must not
-        // read as a shorter species of card than the contacts above it.
+        // One compact row of the keyring's stack (KeysView rounds the outer
+        // corners), laid out exactly like a ContactCard row so the two
+        // read as one list.
         // select-none: the whole card is a click target, and a shift-click
         // to extend a selection would otherwise drag a text range across it
         // instead. The key line is still copyable from the card's menu.
-        "group relative min-h-19 rounded-md p-3 transition-colors select-none",
+        "group bg-card relative rounded-[3px] py-2.5 pr-2 pl-3.5 transition-colors select-none",
         importedClass,
-        // Keep the border width constant (1px) and add thickness with a ring
-        // (box-shadow, no layout impact) so selecting doesn't shift the card.
-        selected
-          ? "border border-green-500/80 ring-2 ring-green-500/40"
-          : "border-border border",
-        clickable && "hover:bg-muted/40 cursor-pointer",
+        // The import pulse is an outward ring: lift the card over its
+        // neighbours so the 2px gap doesn't hide half of it.
+        importedClass && "z-10",
+        // An inset ring (box-shadow, no layout impact) so selecting neither
+        // shifts the row nor spills into the gap between blocks.
+        selected && "ring-primary/70 ring-2 ring-inset",
+        clickable && "hover:bg-accent/50 cursor-pointer",
       )}
     >
-      <div className="flex items-center gap-2">
-        <span
-          className={`shrink-0 text-sm ${isUnlocked ? "text-green-400" : "text-muted-foreground"}`}
-          title={
-            session
-              ? isUnlocked
-                ? t("keys_status_unlocked")
-                : t("keys_status_locked")
-              : t("keys_status_sealed")
-          }
-        >
-          {isUnlocked ? (
-            <LockOpenIcon className="h-4 w-4" />
-          ) : (
-            <LockIcon className="h-4 w-4" />
-          )}
-        </span>
+      <div className="flex items-center gap-2.5">
+        <KeyAvatar fingerprint={model.id} size={32} />
 
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">
-            {model.displayName}
+          {/* Line 1 is the name and nothing else, so no pill can ever
+              squeeze it out of the row. */}
+          <p className="truncate text-sm font-medium">{model.displayName}</p>
+          {/* The meta line: pills first (warnings leading, so they are
+              never the part that gets cut off), then the algorithm -- or,
+              for a key without a hex fingerprint, its id in full, since
+              that is the only form it has. Advanced mode always gets the
+              full id line. */}
+          <div className="mt-0.5 flex min-w-0 items-center gap-1">
+            {model.securityWarning && (
+              <span
+                title={model.securityWarning}
+                className={cn(PILL, "bg-warn/12 text-warn inline-flex gap-1")}
+              >
+                <TriangleAlertIcon className="h-2.5 w-2.5" />
+                {t("keys_weak_sha1")}
+              </span>
+            )}
             {model.badge && (
-              <span className="text-muted-foreground ml-1.5 text-[11px]">
+              <span className={cn(PILL, "bg-secondary text-muted-foreground")}>
                 {model.badge}
               </span>
             )}
             {model.isDefault && (
               <span
                 title={t("keys_default_title")}
-                className="border-border text-muted-foreground ml-1.5 rounded-full border px-1.5 py-px text-[10px] font-medium whitespace-nowrap"
+                className={cn(PILL, "bg-secondary text-muted-foreground")}
               >
                 {t("keys_default_badge")}
               </span>
             )}
-          </p>
-          <p className="text-muted-foreground truncate font-mono text-xs">
-            {model.shortId} · {model.algorithm}
-          </p>
+            {/* How the key is protected, with the session state said by
+                the lock in it (its title names it: unlocked / locked /
+                sealed at rest). Green means on: a key live in this
+                session. */}
+            <span
+              title={
+                session
+                  ? isUnlocked
+                    ? t("keys_status_unlocked")
+                    : t("keys_status_locked")
+                  : t("keys_status_sealed")
+              }
+              className={cn(
+                PILL,
+                "inline-flex gap-1",
+                isUnlocked
+                  ? "bg-good/12 text-good"
+                  : "bg-secondary text-muted-foreground",
+              )}
+            >
+              {isUnlocked ? (
+                <LockOpenIcon className="h-2.5 w-2.5" />
+              ) : (
+                <LockIcon className="h-2.5 w-2.5" />
+              )}
+              {isPasskey
+                ? t("keys_protection_passkey")
+                : t("keys_protection_password")}
+            </span>
+            {advancedMode || !longId ? (
+              <span className="text-muted-foreground min-w-0 truncate font-mono text-[11px]">
+                {model.shortId} · {model.algorithm}
+              </span>
+            ) : (
+              <span className="text-muted-foreground min-w-0 truncate text-xs">
+                {model.algorithm}
+              </span>
+            )}
+          </div>
           {advancedMode && model.fingerprint && (
             <p className="text-muted-foreground mt-0.5 font-mono text-[10px] leading-relaxed">
               {model.fingerprint}
             </p>
           )}
         </div>
+
+        {longId && !advancedMode && (
+          <span className="text-muted-foreground shrink-0 font-mono text-[11px] leading-tight whitespace-nowrap">
+            <span className="block">{longId[0]}</span>
+            <span className="block">{longId[1]}</span>
+          </span>
+        )}
+
+        {/* Unlock/lock lifecycle, inline. Dimmed while selecting, hidden
+            while the password field below is open (it has its own
+            Cancel/Unlock), and absent for sealed-at-rest keys (CRX). */}
+        {session && !showPasswordUnlock && (
+          <span className={cn("shrink-0", selectionMode && dimmed)}>
+            {isUnlocked ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-2.5 text-xs"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  session.lock();
+                }}
+              >
+                {t("common_lock")}
+              </Button>
+            ) : isPasskey ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-2.5 text-xs"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void handlePasskeyUnlock();
+                }}
+              >
+                {t("common_unlock")}
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-2.5 text-xs"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowPasswordUnlock(true);
+                }}
+              >
+                {t("common_unlock")}
+              </Button>
+            )}
+          </span>
+        )}
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -292,28 +393,29 @@ export function KeyCard({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* The row itself opens details too; this is the same action as a
+            visible, keyboard-reachable target. */}
+        {model.onShowDetails && !showPasswordUnlock && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              model.onShowDetails?.();
+            }}
+            aria-label={t("keys_key_details")}
+            className={cn(
+              "text-muted-foreground -ml-1 shrink-0 rounded p-0.5 transition-colors",
+              selectionMode ? dimmed : "group-hover:text-foreground",
+            )}
+          >
+            <ChevronRightIcon className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
-      <p className="text-muted-foreground mt-0.5 ml-6 text-xs">
-        {isPasskey
-          ? t("keys_protection_passkey")
-          : t("keys_protection_password")}
-      </p>
-
-      {model.securityWarning && (
-        <div className="mt-1 ml-6">
-          <span
-            title={model.securityWarning}
-            className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-400"
-          >
-            <TriangleAlertIcon className="h-3 w-3" />
-            {t("keys_weak_sha1")}
-          </span>
-        </div>
-      )}
-
       {feedback && (
-        <p className="mt-1 ml-6 text-xs text-green-400">{feedback}</p>
+        <p className="text-good mt-1 ml-[42px] text-xs">{feedback}</p>
       )}
 
       {/* Inline password unlock -- session keys only, and not while selecting. */}
@@ -322,7 +424,10 @@ export function KeyCard({
         !isUnlocked &&
         !isPasskey &&
         !selectionMode && (
-          <div className="mt-2 space-y-2" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="mt-2 ml-[42px] space-y-2"
+            onClick={(e) => e.stopPropagation()}
+          >
             <input
               type="password"
               autoComplete="current-password"
@@ -359,7 +464,7 @@ export function KeyCard({
         )}
 
       {session && error && isPasskey && !isUnlocked && (
-        <p className="text-destructive mt-2 text-xs">{error}</p>
+        <p className="text-destructive mt-2 ml-[42px] text-xs">{error}</p>
       )}
 
       {exporter && showExportPrivate && (
@@ -374,70 +479,6 @@ export function KeyCard({
             onClose={() => setShowExportPrivate(false)}
             exporter={exporter}
           />
-        </div>
-      )}
-
-      {/* Bottom action row: unlock/lock lifecycle + details arrow. Dimmed while
-          selecting, and absent entirely for sealed-at-rest keys with no
-          details page (CRX). */}
-      {!showPasswordUnlock && (!!session || !!model.onShowDetails) && (
-        <div
-          className={cn(
-            "mt-2 flex items-center justify-end gap-1",
-            selectionMode && dimmed,
-          )}
-        >
-          {session &&
-            (isUnlocked ? (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  session.lock();
-                }}
-              >
-                {t("common_lock")}
-              </Button>
-            ) : isPasskey ? (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  void handlePasskeyUnlock();
-                }}
-              >
-                {t("common_unlock")}
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowPasswordUnlock(true);
-                }}
-              >
-                {t("common_unlock")}
-              </Button>
-            ))}
-          {model.onShowDetails && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                model.onShowDetails?.();
-              }}
-              aria-label={t("keys_key_details")}
-              className={cn(
-                "text-muted-foreground rounded p-1.5 transition-colors",
-                !selectionMode && "group-hover:text-foreground",
-              )}
-            >
-              <ArrowRightIcon className="h-4 w-4" />
-            </button>
-          )}
         </div>
       )}
     </div>

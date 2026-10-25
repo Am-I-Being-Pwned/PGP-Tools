@@ -1,14 +1,10 @@
 import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
 
+import { Block } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
-import { ariaKeyShortcuts, isMacPlatform, Kbd } from "@amibeingpwned/ui/kbd";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@amibeingpwned/ui/select";
+import { Kbd } from "@amibeingpwned/ui/kbd";
+import { ariaKeyShortcuts, isMacPlatform } from "@amibeingpwned/ui/kbd-helpers";
+import { Segmented } from "@amibeingpwned/ui/segmented";
 
 import type { Edit, InlineStyle } from "../../lib/compose/text-format";
 import type { WorkspaceAction } from "../../lib/messages";
@@ -17,7 +13,7 @@ import type { ComposeTranslateProps } from "./ComposeToolbar";
 import { MODE_SHORTCUTS } from "../../lib/actions/definitions";
 import { applyTextareaEdit } from "../../lib/compose/apply-edit";
 import { toggleInlineStyle } from "../../lib/compose/text-format";
-import { t } from "../../lib/i18n";
+import { t, tn } from "../../lib/i18n";
 import { ComposeToolbar } from "./ComposeToolbar";
 import { DetectedKeyBanner } from "./DetectedKeyBanner";
 import { DropZone } from "./DropZone";
@@ -80,6 +76,10 @@ interface WorkspaceInputProps {
   onRepairPastedText: (text: string) => string;
   /** Translate-before-sending, when the feature is on and usable. */
   composeTranslate?: ComposeTranslateProps;
+  /** The card's top block (the To row, while encrypting). Outside the
+   *  drop target on purpose: a drop aimed at the recipient box is not a
+   *  message. */
+  cardHeader?: React.ReactNode;
   /** The editing tools, for the action registry (palette + shortcuts).
    *  Called with null on unmount. */
   onToolsReady?: (tools: ComposeTools | null) => void;
@@ -116,6 +116,7 @@ export function WorkspaceInput({
   onRepairPastedText,
   composeTranslate,
   onToolsReady,
+  cardHeader,
 }: WorkspaceInputProps) {
   // Per-detection mask override. Re-arms whenever a fresh private-key
   // paste is detected so the user can't accidentally leave the mask off
@@ -142,7 +143,17 @@ export function WorkspaceInput({
   // Prose is composed in encrypt and sign; decrypt and verify take pasted
   // armor, where a bold button is noise. Find still works everywhere.
   const composing = mode === "encrypt" || mode === "sign";
-  const textareaMounted = files.length === 0;
+  // Encrypting, files are attachments and the message box stays (the
+  // message goes along as msg.txt); anywhere else staged files replace
+  // the text.
+  const textareaMounted = files.length === 0 || mode === "encrypt";
+  const showTools = composing && !privateKeyDetected && textareaMounted;
+  // A number for the strip, not the text: re-read from the box on every
+  // edit (typed, or set from outside -- `inputVersion` moves then).
+  const [charCount, setCharCount] = useState(0);
+  useEffect(() => {
+    setCharCount(getInput().length);
+  }, [getInput, inputVersion, hasInput]);
   // `find` is null when closed; when open it carries the query to start
   // from (the selection at the time of the press) and a nonce so a
   // second press while open refocuses the field, as editors do.
@@ -257,160 +268,180 @@ export function WorkspaceInput({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <Select
+      {/* Four modes, all visible: one press (or mod+1..4, dispatched by
+          the action registry) switches. The hover hint teaches the
+          shortcut the old dropdown listed beside each mode -- just the
+          shortcut, since the segment already says the mode. Manual
+          activation: arrowing across the switch must not act on every
+          mode it passes, each of which would reset the workspace. */}
+      <Segmented
+        fill
+        activation="manual"
+        ariaLabel={t("settings_shortcuts_group_modes")}
         value={mode}
         onValueChange={(v) => {
-          onModeChange(v as Mode);
+          // A press on the mode already showing is not a change: the
+          // dropdown this replaced never fired for it, and the resets
+          // below would throw away a finished result.
+          if (v === mode) return;
+          onModeChange(v);
           if (operationDone) onReset();
           else onResetOutput();
         }}
-      >
-        <SelectTrigger>
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {MODE_ORDER.map((value) => (
-            <SelectItem
-              key={value}
-              className="focus:bg-border/70 cursor-pointer"
-              value={value}
-              aria-keyshortcuts={ariaKeyShortcuts(
-                MODE_SHORTCUTS[value],
-                isMacPlatform(),
-              )}
-              trailing={
-                <Kbd
-                  shortcut={MODE_SHORTCUTS[value]}
-                  className="text-muted-foreground ml-auto pl-4"
-                />
-              }
-            >
-              {modeLabel(value)}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        options={MODE_ORDER.map((value) => ({
+          value,
+          ariaKeyShortcuts: ariaKeyShortcuts(
+            MODE_SHORTCUTS[value],
+            isMacPlatform(),
+          ),
+          hint: <Kbd shortcut={MODE_SHORTCUTS[value]} />,
+          label: <span className="truncate">{modeLabel(value)}</span>,
+        }))}
+      />
 
-      {hasInput ? (
-        <div className="border-border shrink-0 rounded-lg border-2 border-dashed p-5 text-center">
-          <p className="text-muted-foreground mb-2 text-sm">
-            {t("workspace_text_entered_below")}
-          </p>
-          <Button variant="outline" size="sm" onClick={onClearText}>
-            {t("workspace_clear_text")}
-          </Button>
-        </div>
-      ) : (
-        <DropZone
-          onTextDrop={onInputChange}
-          onFileDrop={onFileDrop}
-          activeFiles={files}
-          onRemoveFile={onRemoveFile}
-          onClearFiles={onClearFiles}
-        />
-      )}
-
-      {textareaMounted && (
-        <div className="relative flex min-h-0 flex-1">
-          {painting && (
-            <FindBackdrop
-              ref={backdropRef}
-              text={getInput()}
-              ranges={highlights.ranges}
-              current={highlights.current}
+      {/* The message card is the drop target: the drop zone wraps the
+          message block and adds the file list and the bottom strip
+          (Browse, or Clear text once there is text). */}
+      <DropZone
+        header={cardHeader}
+        enabled={!hasInput || mode === "encrypt"}
+        acceptTextDrop={!hasInput}
+        onTextDrop={onInputChange}
+        onFileDrop={onFileDrop}
+        activeFiles={files}
+        onRemoveFile={onRemoveFile}
+        onClearFiles={onClearFiles}
+        // While composing, the strip is the toolbar: tools on the left,
+        // the length on the right. Clear text stays, beside the count.
+        leading={
+          showTools ? (
+            <ComposeToolbar
+              onStyle={applyStyle}
+              onFind={openFind}
+              translate={composeTranslate}
             />
-          )}
-          <textarea
-            id="pgp-input"
-            aria-label={t("workspace_message_input_aria")}
-            ref={attachInput}
-            onChange={(e) => onInputChange(e.target.value)}
-            onScroll={painting ? syncBackdropScroll : undefined}
-            onPaste={(e) => {
-              // The ONE place workspace armor repair happens. A paste is
-              // the only way mangled armor reaches this box -- nobody
-              // hand-types a `\n`-escaped key -- so the repair rides on
-              // the paste rather than on `onChange`, which also fires for
-              // every keystroke of someone composing a message.
-              //
-              // Only intercepts when the text actually changed. Otherwise
-              // it falls through to the browser's own paste, which knows
-              // how to handle undo, IME and multi-range selections better
-              // than this handler could.
-              const pasted = e.clipboardData.getData("text/plain");
-              const repaired = onRepairPastedText(pasted);
-              if (repaired === pasted) return;
-              e.preventDefault();
-              // Splice at the caret rather than replacing the box: a paste
-              // into a selection replaces that selection, and a paste with
-              // the caret mid-text inserts there. Clobbering the whole
-              // value would silently discard whatever else was staged.
-              const el = e.currentTarget;
-              // Non-null on a textarea (the `?? length` fallback the DOM
-              // types once needed is gone), so read them straight.
-              const { selectionStart: start, selectionEnd: end } = el;
-              const next =
-                el.value.slice(0, start) + repaired + el.value.slice(end);
-              el.value = next;
-              const caret = start + repaired.length;
-              el.setSelectionRange(caret, caret);
-              onInputChange(next);
-            }}
-            className={`border-border placeholder:text-muted-foreground focus:ring-ring relative z-10 min-h-20 w-full flex-1 resize-none rounded-md border p-3 text-sm focus:ring-2 focus:outline-none ${
-              painting ? "bg-transparent" : "bg-background"
-            } ${composing && !privateKeyDetected ? "pb-12" : ""}`}
-            // Visually mask armored private-key material. NOTE: this is
-            // shoulder-surfing protection only; the string still lives in
-            // V8's heap until GC. The privateKeyDetected flag elsewhere
-            // also blocks draft-snapshotting this content.
-            style={
-              privateKeyDetected && !maskIgnored
-                ? ({ WebkitTextSecurity: "disc" } as React.CSSProperties)
-                : undefined
-            }
-            placeholder={
-              mode === "decrypt"
-                ? t("workspace_placeholder_decrypt")
-                : mode === "verify"
-                  ? t("workspace_placeholder_verify")
-                  : t("workspace_placeholder_compose")
-            }
-          />
-          {find && (
-            <div className="absolute top-2 right-2 z-20 w-[min(100%-1rem,22rem)]">
-              <FindReplaceBar
-                initialQuery={find.query}
-                focusNonce={find.nonce}
-                getText={() => inputElRef.current?.value ?? getInput()}
-                getSelection={getSelection}
-                select={selectRange}
-                apply={(edit) => applyEdit(edit, false)}
-                textVersion={inputVersion}
-                onHighlight={onHighlight}
-                onClose={() => {
-                  setFind(null);
-                  setHighlights(null);
-                  inputElRef.current?.focus();
-                }}
-              />
+          ) : undefined
+        }
+        trailing={
+          showTools || hasInput ? (
+            <div className="flex items-center gap-1">
+              {showTools && (
+                <span className="text-muted-foreground px-1.5 font-mono text-[11px] tabular-nums">
+                  {tn("workspace_char_count", charCount)}
+                </span>
+              )}
+              {hasInput && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground hover:text-foreground h-7 px-2 text-xs"
+                  onClick={onClearText}
+                >
+                  {t("workspace_clear_text")}
+                </Button>
+              )}
             </div>
-          )}
-          {composing && !privateKeyDetected && (
-            <div className="pointer-events-none absolute right-2 bottom-2 z-20">
-              <ComposeToolbar
-                onStyle={applyStyle}
-                onFind={openFind}
-                translate={composeTranslate}
+          ) : undefined
+        }
+      >
+        {textareaMounted && (
+          <Block className="relative flex min-h-0 flex-1">
+            {painting && (
+              <FindBackdrop
+                ref={backdropRef}
+                text={getInput()}
+                ranges={highlights.ranges}
+                current={highlights.current}
               />
-            </div>
-          )}
-        </div>
-      )}
+            )}
+            <textarea
+              id="pgp-input"
+              aria-label={t("workspace_message_input_aria")}
+              ref={attachInput}
+              onChange={(e) => {
+                onInputChange(e.target.value);
+                setCharCount(e.target.value.length);
+              }}
+              onScroll={painting ? syncBackdropScroll : undefined}
+              onPaste={(e) => {
+                // The ONE place workspace armor repair happens. A paste is
+                // the only way mangled armor reaches this box -- nobody
+                // hand-types a `\n`-escaped key -- so the repair rides on
+                // the paste rather than on `onChange`, which also fires for
+                // every keystroke of someone composing a message.
+                //
+                // Only intercepts when the text actually changed. Otherwise
+                // it falls through to the browser's own paste, which knows
+                // how to handle undo, IME and multi-range selections better
+                // than this handler could.
+                const pasted = e.clipboardData.getData("text/plain");
+                const repaired = onRepairPastedText(pasted);
+                if (repaired === pasted) return;
+                e.preventDefault();
+                // Splice at the caret rather than replacing the box: a paste
+                // into a selection replaces that selection, and a paste with
+                // the caret mid-text inserts there. Clobbering the whole
+                // value would silently discard whatever else was staged.
+                const el = e.currentTarget;
+                // Non-null on a textarea (the `?? length` fallback the DOM
+                // types once needed is gone), so read them straight.
+                const { selectionStart: start, selectionEnd: end } = el;
+                const next =
+                  el.value.slice(0, start) + repaired + el.value.slice(end);
+                el.value = next;
+                const caret = start + repaired.length;
+                el.setSelectionRange(caret, caret);
+                onInputChange(next);
+              }}
+              // The border is transparent, not absent: the find mirror
+              // below draws the same 1px so every character lines up.
+              className={`placeholder:text-muted-foreground relative z-10 min-h-20 w-full flex-1 resize-none rounded-[inherit] border border-transparent p-3 text-sm focus:border-[rgb(79_193_133/0.35)] focus:outline-none ${
+                painting ? "bg-transparent" : "bg-card"
+              }`}
+              // Visually mask armored private-key material. NOTE: this is
+              // shoulder-surfing protection only; the string still lives in
+              // V8's heap until GC. The privateKeyDetected flag elsewhere
+              // also blocks draft-snapshotting this content.
+              style={
+                privateKeyDetected && !maskIgnored
+                  ? ({ WebkitTextSecurity: "disc" } as React.CSSProperties)
+                  : undefined
+              }
+              placeholder={
+                mode === "decrypt"
+                  ? t("workspace_placeholder_decrypt")
+                  : mode === "verify"
+                    ? t("workspace_placeholder_verify")
+                    : t("workspace_placeholder_compose")
+              }
+            />
+            {find && (
+              <div className="absolute top-2 right-2 z-20 w-[min(100%-1rem,22rem)]">
+                <FindReplaceBar
+                  initialQuery={find.query}
+                  focusNonce={find.nonce}
+                  getText={() => inputElRef.current?.value ?? getInput()}
+                  getSelection={getSelection}
+                  select={selectRange}
+                  apply={(edit) => applyEdit(edit, false)}
+                  textVersion={inputVersion}
+                  onHighlight={onHighlight}
+                  onClose={() => {
+                    setFind(null);
+                    setHighlights(null);
+                    inputElRef.current?.focus();
+                  }}
+                />
+              </div>
+            )}
+          </Block>
+        )}
+      </DropZone>
 
       {privateKeyDetected && (
         <div
           role="alert"
-          className="border-destructive bg-destructive/10 text-destructive space-y-2 rounded-md border px-3 py-2 text-xs"
+          className="text-bad space-y-2 rounded-xl bg-[#2a1517] px-3 py-2.5 text-xs"
         >
           <div className="flex items-start justify-between gap-2">
             <p className="font-semibold">
@@ -419,7 +450,7 @@ export function WorkspaceInput({
             {!maskIgnored && (
               <button
                 onClick={() => setMaskIgnored(true)}
-                className="border-destructive/40 hover:bg-destructive/20 shrink-0 rounded border px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase"
+                className="bg-destructive/12 hover:bg-destructive/20 shrink-0 rounded-md px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase transition-colors"
                 title={t("workspace_private_key_show_cleartext")}
               >
                 {t("workspace_private_key_ignore")}
@@ -430,13 +461,13 @@ export function WorkspaceInput({
           <div className="flex gap-2 pt-1">
             <button
               onClick={() => onNavigateToKeys?.(getInput())}
-              className="border-destructive/40 hover:bg-destructive/20 rounded border px-2 py-1 font-medium"
+              className="bg-destructive/12 hover:bg-destructive/20 rounded-md px-2 py-1 font-medium transition-colors"
             >
               {t("workspace_private_key_import_safely")}
             </button>
             <button
               onClick={() => onInputChange("")}
-              className="border-destructive/40 hover:bg-destructive/20 rounded border px-2 py-1 font-medium"
+              className="bg-destructive/12 hover:bg-destructive/20 rounded-md px-2 py-1 font-medium transition-colors"
             >
               {t("workspace_private_key_clear_input")}
             </button>
@@ -493,7 +524,7 @@ const FindBackdrop = forwardRef<
     <div
       ref={ref}
       aria-hidden
-      className="bg-background pointer-events-none absolute inset-0 overflow-hidden rounded-md border border-transparent p-3 text-sm break-words whitespace-pre-wrap text-transparent"
+      className="bg-card pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit] border border-transparent p-3 text-sm break-words whitespace-pre-wrap text-transparent"
     >
       {parts}
     </div>

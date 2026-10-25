@@ -1,6 +1,7 @@
 import { useId, useRef, useState } from "react";
-import { ChevronsUpDownIcon, XIcon } from "lucide-react";
+import { ChevronsUpDownIcon, InfoIcon, XIcon } from "lucide-react";
 
+import { cn } from "@amibeingpwned/ui";
 import {
   Command,
   CommandEmpty,
@@ -32,6 +33,9 @@ import {
   displayUserId,
   formatKeyDisplayName,
 } from "../../lib/utils/key-naming";
+import { keyDetailsTarget } from "../keys/KeyDetailsButton";
+import { KeyDetailsPage } from "../keys/KeyDetailsPage";
+import { KeyAvatar } from "../shared/KeyAvatar";
 import {
   pickableKeys,
   recipientBlockReason,
@@ -63,6 +67,11 @@ interface RecipientPickerProps {
    *  workspace's own Escape handling is therefore unreachable from here
    *  and has to be invoked by hand. */
   onEscapeExhausted?: () => void;
+  /** Drawn as the "To" row at the top of the message card: label to the
+   *  left of the box, no well of its own (the card block is the well),
+   *  and the list drops down over the message rather than up over the
+   *  mode switch. Behaviour is identical. */
+  inline?: boolean;
 }
 
 function getKeyDisplay(key: AnyKey): { name: string; detail: string } {
@@ -100,6 +109,7 @@ export function RecipientPicker({
   emptyActionLabel,
   passwordArmed = false,
   onEscapeExhausted,
+  inline = false,
 }: RecipientPickerProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -112,6 +122,8 @@ export function RecipientPicker({
   // (otherwise cmdk keeps pointing at the just-picked, now-absent item
   // and Enter silently does nothing on reopen).
   const [highlighted, setHighlighted] = useState("");
+  /** The key whose details page is open, from a row's (i). */
+  const [detailsKey, setDetailsKey] = useState<AnyKey | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const inputId = useId();
@@ -183,8 +195,8 @@ export function RecipientPicker({
 
   if (allKeys.length === 0) {
     return (
-      <div>
-        <span className="text-muted-foreground text-xs font-medium">
+      <div className={inline ? "flex items-baseline gap-3 px-3 py-2.5" : ""}>
+        <span className="text-muted-foreground shrink-0 text-xs font-medium">
           {label}
         </span>
         <p className="text-muted-foreground text-xs">
@@ -414,19 +426,20 @@ export function RecipientPicker({
           if (blocked) return;
           addRecipient(key.keyId);
         }}
-        className={`gap-2 ${blocked ? "opacity-50" : ""}`}
+        className={`gap-2.5 ${blocked ? "opacity-50" : ""}`}
         aria-keyshortcuts={digit !== null ? String(digit) : undefined}
       >
+        <KeyAvatar fingerprint={key.keyId} size={32} />
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-1.5 truncate text-sm">
             <span className="truncate">{name}</span>
             {isOwn && (
-              <span className="bg-secondary text-muted-foreground shrink-0 rounded border px-1 text-[10px] leading-4">
+              <span className="bg-secondary text-muted-foreground shrink-0 rounded px-1.5 py-px text-[10.5px] font-medium">
                 {t("actions_badge_you")}
               </span>
             )}
             {isSsh && (
-              <span className="bg-secondary text-muted-foreground shrink-0 rounded border px-1 text-[10px] leading-4">
+              <span className="bg-secondary text-muted-foreground shrink-0 rounded px-1.5 py-px text-[10.5px] font-medium">
                 {/* i18n-ignore */}
                 SSH
               </span>
@@ -458,16 +471,39 @@ export function RecipientPicker({
             </p>
           )}
         </div>
+        {/* Look before you pick: the same details page as the Keys tab.
+            Its own target inside the row, so a click here never adds the
+            key; not a Tab stop or a list stop -- the arrows and digits
+            stay about choosing. */}
+        <button
+          type="button"
+          tabIndex={-1}
+          aria-label={t("keys_key_details")}
+          title={t("keys_key_details")}
+          className="text-muted-foreground hover:text-foreground hover:bg-raised -my-1 grid size-7 shrink-0 place-items-center rounded-md"
+          // Keep focus (and the typed filter) in the input.
+          onPointerDown={(e) => e.preventDefault()}
+          onClick={(e) => {
+            e.stopPropagation();
+            setDetailsKey(key);
+          }}
+        >
+          <InfoIcon className="h-4 w-4" />
+        </button>
         {digit !== null && <CommandShortcut>{digit}</CommandShortcut>}
       </CommandItem>
     );
   };
 
   return (
-    <div>
+    <div className={inline ? "flex items-start gap-2 py-1 pr-1.5 pl-3" : ""}>
       <label
         htmlFor={inputId}
-        className="text-muted-foreground mb-1 block text-xs font-medium"
+        className={
+          inline
+            ? "text-muted-foreground shrink-0 pt-2 text-xs font-medium"
+            : "text-muted-foreground mb-1 block text-xs font-medium"
+        }
       >
         {label}
       </label>
@@ -480,10 +516,17 @@ export function RecipientPicker({
         shouldFilter={false}
         value={highlighted}
         onValueChange={setHighlighted}
-        className="overflow-visible bg-transparent"
+        className={cn(
+          "overflow-visible bg-transparent",
+          inline && "min-w-0 flex-1",
+        )}
       >
+        {/* Stepped out of, not closed, while a row's details page is up:
+            the page covers the panel and would sit under the portaled
+            list. Back finds the list as it was left -- same filter,
+            same highlighted row. */}
         <Popover
-          open={open}
+          open={open && detailsKey === null}
           onOpenChange={(next) => (next ? setOpen(true) : closeDropdown())}
         >
           <PopoverAnchor asChild>
@@ -513,7 +556,14 @@ export function RecipientPicker({
                 // whose onChange opens the dropdown with the new filter.
                 input.focus();
               }}
-              className="border-input focus-within:ring-ring flex min-h-9 w-full cursor-text flex-wrap items-center gap-1 rounded-md border bg-transparent px-2 py-1.5 text-sm focus-within:ring-1"
+              className={cn(
+                "flex min-h-9 w-full cursor-text flex-wrap items-center gap-1 rounded-lg px-2 py-1.5 text-sm",
+                // Inline, the card block is already the well (and draws
+                // the focus cue); a second recessed field inside it would
+                // read as a box in a box.
+                !inline &&
+                  "surface-field focus-within:ring-ring focus-within:ring-1",
+              )}
             >
               {selectedKeys.map((key) => {
                 const { name, detail } = getKeyDisplay(key);
@@ -537,7 +587,7 @@ export function RecipientPicker({
                     // wraps first, so truncation stays a last resort.
                     // Hover tints destructive (the HistoryPage-delete
                     // idiom) so the click reads as removal, not selection.
-                    className="bg-secondary text-secondary-foreground hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive inline-flex max-w-full cursor-pointer items-center gap-1 rounded-md border px-2 py-0.5 text-xs transition-colors"
+                    className="bg-secondary text-secondary-foreground hover:bg-destructive/12 hover:text-bad inline-flex max-w-full cursor-pointer items-center gap-1.5 rounded-md py-0.5 pr-1.5 pl-1 text-xs shadow-[inset_0_1px_0_rgb(255_255_255/0.07)] transition-colors"
                     onClick={(e) => {
                       // Removing a chip must not toggle the dropdown
                       // (the container's own click handler opens it).
@@ -560,16 +610,13 @@ export function RecipientPicker({
                       }
                     }}
                   >
+                    <KeyAvatar fingerprint={key.keyId} size={16} />
                     <span className="min-w-0 truncate">{name}</span>
                     {isSshRecord(key) && (
-                      // `mx-0.5` on top of the chip's `gap-1`: the badge
-                      // is a bordered box sitting between two pieces of
-                      // bare text, so the 4px gap that reads fine either
-                      // side of a glyph reads cramped either side of a
-                      // border. Nudged here rather than on the chip's
-                      // gap so chips WITHOUT the badge keep their
-                      // spacing.
-                      <span className="text-muted-foreground mx-0.5 shrink-0 rounded border px-1 text-[10px] leading-4">
+                      // A status pill, a step darker than the chip it
+                      // sits on so it reads as a tag rather than more of
+                      // the name.
+                      <span className="bg-background/60 text-muted-foreground shrink-0 rounded px-1.5 py-px text-[10px] font-medium">
                         {/* i18n-ignore */}
                         SSH
                       </span>
@@ -649,11 +696,13 @@ export function RecipientPicker({
               </button>
             </div>
           </PopoverAnchor>
-          {/* Pin the list ABOVE the trigger and disable collision flipping
-              so it doesn't jump between top/bottom as the result count
-              changes while searching. */}
+          {/* Pin the list to one side of the trigger and disable
+              collision flipping so it doesn't jump between top/bottom as
+              the result count changes while searching. Above when the box
+              sits under the message; below when it is the card's To row,
+              where above would cover the mode switch. */}
           <PopoverContent
-            side="top"
+            side={inline ? "bottom" : "top"}
             avoidCollisions={false}
             className="w-(--radix-popover-trigger-width) p-0"
             // Focus stays in the inline input; the popover is display-only.
@@ -710,6 +759,15 @@ export function RecipientPicker({
           </PopoverContent>
         </Popover>
       </Command>
+      {detailsKey && (
+        <KeyDetailsPage
+          target={keyDetailsTarget(detailsKey)}
+          onBack={() => {
+            setDetailsKey(null);
+            refocusInput();
+          }}
+        />
+      )}
     </div>
   );
 }

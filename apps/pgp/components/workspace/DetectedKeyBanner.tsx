@@ -4,6 +4,7 @@ import type { PublicContactKey } from "../../lib/storage/contacts";
 import { t } from "../../lib/i18n";
 import { parseKeys } from "../../lib/pgp/wasm";
 import { parseUserId } from "../../lib/utils/key-naming";
+import { KeyAvatar } from "../shared/KeyAvatar";
 
 /**
  * "There's a public key in here" -- offered wherever one turns up: pasted
@@ -78,35 +79,41 @@ export function DetectedKeyBanner({
     // Offering to import a key we already hold is worse than saying
     // nothing: it implies we don't have it.
     return (
-      <div className="rounded-md bg-green-500/10 px-3 py-2 text-xs text-green-400">
-        {t("workspace_detected_key_known", { name: key.name })}{" "}
-        <button
-          type="button"
-          onClick={() => onReveal?.(key.keyId)}
-          className="underline"
-        >
-          {t("workspace_detected_key_show")}
-        </button>
+      <div className="text-good flex items-start gap-2 rounded-xl bg-[#15231b] px-3.5 py-2.5 text-xs">
+        <KeyAvatar fingerprint={key.keyId} size={16} />
+        <p className="min-w-0 flex-1">
+          {t("workspace_detected_key_known", { name: key.name })}{" "}
+          <button
+            type="button"
+            onClick={() => onReveal?.(key.keyId)}
+            className="underline underline-offset-2"
+          >
+            {t("workspace_detected_key_show")}
+          </button>
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-md bg-blue-500/10 px-3 py-2 text-xs text-blue-400">
-      {key
-        ? source === "message"
-          ? t("workspace_detected_key_in_message", { name: key.name })
-          : t("workspace_detected_key_pasted", { name: key.name })
-        : source === "message"
-          ? t("workspace_detected_key_in_message_anon")
-          : t("workspace_detected_key_pasted_anon")}{" "}
-      <button
-        type="button"
-        onClick={() => onImport(getText())}
-        className="underline"
-      >
-        {t("workspace_detected_key_import")}
-      </button>
+    <div className="bg-card text-muted-foreground flex items-start gap-2 rounded-xl px-3.5 py-2.5 text-xs">
+      {key && <KeyAvatar fingerprint={key.keyId} size={16} />}
+      <p className="min-w-0 flex-1">
+        {key
+          ? source === "message"
+            ? t("workspace_detected_key_in_message", { name: key.name })
+            : t("workspace_detected_key_pasted", { name: key.name })
+          : source === "message"
+            ? t("workspace_detected_key_in_message_anon")
+            : t("workspace_detected_key_pasted_anon")}{" "}
+        <button
+          type="button"
+          onClick={() => onImport(getText())}
+          className="text-foreground underline underline-offset-2"
+        >
+          {t("workspace_detected_key_import")}
+        </button>
+      </p>
     </div>
   );
 }

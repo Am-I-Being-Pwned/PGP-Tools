@@ -98,8 +98,7 @@ export async function signInWorkspace(
   message: string,
 ): Promise<void> {
   await panel.getByRole("tab", { name: "Main" }).click();
-  await panel.getByRole("combobox").first().click();
-  await panel.getByRole("option", { name: "Sign", exact: true }).click();
+  await panel.getByRole("radio", { name: "Sign", exact: true }).click();
   await panel.locator("textarea").first().fill(message);
   await panel.getByRole("button", { name: /^sign$/i }).click();
   // Armored output is never displayed anymore; completion swaps the
@@ -117,8 +116,7 @@ export async function encryptToSelfInWorkspace(
   plaintext: string,
 ): Promise<string> {
   await panel.getByRole("tab", { name: "Main" }).click();
-  await panel.getByRole("combobox").first().click();
-  await panel.getByRole("option", { name: "Encrypt", exact: true }).click();
+  await panel.getByRole("radio", { name: "Encrypt", exact: true }).click();
   // Recipient: the box starts empty by design; pick the single own
   // (encryption-capable) key from the dropdown.
   await panel.getByRole("combobox", { name: "Recipients" }).click();
@@ -347,8 +345,7 @@ export async function setWorkspaceMode(
   mode: "Encrypt" | "Decrypt" | "Sign" | "Verify",
 ): Promise<void> {
   await panel.getByRole("tab", { name: "Main" }).click();
-  await panel.getByRole("combobox").first().click();
-  await panel.getByRole("option", { name: mode, exact: true }).click();
+  await panel.getByRole("radio", { name: mode, exact: true }).click();
 }
 
 /** Import many contacts in a single file drop -- the drop zone splits a

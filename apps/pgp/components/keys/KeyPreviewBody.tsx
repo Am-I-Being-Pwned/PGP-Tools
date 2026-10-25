@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import {
   CheckIcon,
   ChevronDownIcon,
@@ -7,6 +7,9 @@ import {
   TriangleAlertIcon,
   XCircleIcon,
 } from "lucide-react";
+
+import { cn } from "@amibeingpwned/ui";
+import { Block, BlockStack } from "@amibeingpwned/ui/block";
 
 import type { ComponentKeyRow, KeyFacts, KeyHealth } from "./key-facts";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
@@ -17,10 +20,13 @@ import {
   formatRelative,
 } from "../../lib/i18n/format";
 import { formatAlgorithm } from "../../lib/utils/formatting";
+import { KeyAvatar } from "../shared/KeyAvatar";
+import { fingerprintLines } from "./fingerprint-lines";
 
 /**
- * The read-only body of a key: identity header, health banner, the facts
- * card (fingerprint, algorithm, dates) and the subkey list.
+ * The read-only body of a key: identity card (face, names, health
+ * banner), the fingerprint, the facts card (algorithm, dates) and the
+ * subkey list.
  *
  * Deliberately presentational -- it takes already-derived `KeyFacts`
  * (see ./key-facts) rather than armor or any one engine's parse result,
@@ -48,21 +54,29 @@ function statusText(status: ComponentKeyRow["status"]): string {
   }
 }
 
+/** The design language's status pill; the tone classes are added per use. */
+const PILL = "rounded px-1.5 py-px text-[10.5px] font-medium whitespace-nowrap";
+
 const STATUS_STYLES: Record<ComponentKeyRow["status"], string> = {
-  active: "border-green-500/40 bg-green-500/10 text-green-400",
-  expired: "border-amber-500/40 bg-amber-500/10 text-amber-400",
-  revoked: "border-red-500/40 bg-red-500/10 text-red-400",
-  invalid: "border-red-500/40 bg-red-500/10 text-red-400",
+  active: "bg-good/12 text-good",
+  expired: "bg-warn/12 text-warn",
+  revoked: "bg-destructive/12 text-bad",
+  invalid: "bg-destructive/12 text-bad",
 };
 
-/** What this component key is used for, in plain words. */
-function capabilityText(row: ComponentKeyRow): string {
+/** What this component key is used for, one plain word per capability. */
+function capabilities(row: ComponentKeyRow): string[] {
   const parts: string[] = [];
   if (row.canSign) parts.push(t("keys_cap_sign"));
   if (row.canEncrypt) parts.push(t("keys_cap_encrypt"));
   if (row.canAuthenticate) parts.push(t("keys_cap_auth"));
   if (row.canCertify) parts.push(t("keys_cap_certify"));
-  return parts.join(" · ");
+  return parts;
+}
+
+/** The same, as one line ("Sign · Encrypt"). */
+function capabilityText(row: ComponentKeyRow): string {
+  return capabilities(row).join(" · ");
 }
 
 // ── status banner ────────────────────────────────────────────────────
@@ -143,22 +157,17 @@ function deriveBanner(
   return null;
 }
 
+// A status band: the block under the key's face, tinted for the outcome.
 const BANNER_STYLES: Record<Banner["tone"], { box: string; title: string }> = {
-  warn: {
-    box: "border-amber-500/40 bg-amber-500/10",
-    title: "text-amber-400",
-  },
-  bad: {
-    box: "border-red-500/40 bg-red-500/10",
-    title: "text-red-400",
-  },
+  warn: { box: "bg-[#252012]", title: "text-warn" },
+  bad: { box: "bg-[#2a1517]", title: "text-bad" },
 };
 
 function StatusBanner({ banner }: { banner: Banner }) {
   const styles = BANNER_STYLES[banner.tone];
   const Icon = banner.tone === "warn" ? TriangleAlertIcon : XCircleIcon;
   return (
-    <div className={`rounded-md border p-2.5 ${styles.box}`}>
+    <Block className={cn("px-3.5 py-2.5", styles.box)}>
       <p
         className={`flex items-center gap-1.5 text-xs font-medium ${styles.title}`}
       >
@@ -174,47 +183,13 @@ function StatusBanner({ banner }: { banner: Banner }) {
           ))}
         </div>
       )}
-    </div>
+    </Block>
   );
 }
 
 // ── building blocks ──────────────────────────────────────────────────
 
-/** A fingerprint that is nothing but hex digits -- an OpenPGP one. The
- *  shape, not the prefix: an OpenSSH fingerprint happens to start
- *  `SHA256:`, but testing for that literal would mangle the next non-hex
- *  format just as badly, and this predicate keeps working without being
- *  told about it. */
-const HEX_FINGERPRINT = /^[0-9a-fA-F]+$/;
-
-/**
- * Fingerprint as aligned rows of five 4-char groups (the way GnuPG
- * prints it), so two fingerprints can be compared block by block.
- *
- * ONLY for a hex fingerprint. An OpenSSH one is `SHA256:` followed by
- * unpadded base64, where the grouping is not a convention but damage:
- * it split the prefix itself (`SHA2 56:I oCz+ ...`) and chopped the
- * base64 at offsets that mean nothing. That reached the clipboard too
- * (see `handleCopyFingerprint`), and comparing a fingerprint out of band
- * is the ONLY check a user has that GitHub served the key its owner
- * published -- `T-GITHUB-KEY-SUBSTITUTION` in
- * `lib/security/threat-model.ts`. A mangled copy defeats that silently:
- * it neither matches nor visibly fails.
- *
- * So a non-hex fingerprint is returned as ONE unbroken line -- rendered
- * whole, and copied byte-for-byte as `ssh-keygen -lf` prints it.
- */
-export function fingerprintLines(fp: string): string[] {
-  if (!HEX_FINGERPRINT.test(fp)) return [fp];
-  const groups = fp.match(/.{1,4}/g) ?? [fp];
-  const lines: string[] = [];
-  for (let i = 0; i < groups.length; i += 5) {
-    lines.push(groups.slice(i, i + 5).join(" "));
-  }
-  return lines;
-}
-
-/** One row of the bordered facts card; parent supplies divide-y. */
+/** One block of the facts card; the parent stacks them. */
 function InfoRow({
   label,
   children,
@@ -223,10 +198,10 @@ function InfoRow({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex gap-3 px-3 py-2 text-xs">
+    <Block className="flex gap-3 px-3.5 py-2.5 text-xs">
       <span className="text-muted-foreground w-20 shrink-0">{label}</span>
       <span className="min-w-0 flex-1">{children}</span>
-    </div>
+    </Block>
   );
 }
 
@@ -241,9 +216,70 @@ export function Chip({
   return (
     <span
       title={title}
-      className="border-border text-muted-foreground rounded-full border px-2 py-0.5 text-[10px] font-medium whitespace-nowrap"
+      className={cn(PILL, "bg-secondary text-muted-foreground")}
     >
       {children}
+    </span>
+  );
+}
+
+/**
+ * A fingerprint for reading: exactly the lines `fingerprintLines` gives
+ * (a hex one as rows of five 4-character groups, GnuPG's layout, so two
+ * can be compared block by block; anything else as one unbroken line),
+ * each as plain spaced text in mono -- the monospace face lines the
+ * groups up into columns on its own. Plain text on purpose: selecting
+ * and copying it by hand yields the same text the copy button does,
+ * row by row, rather than one group per line.
+ */
+function FingerprintText({
+  fingerprint,
+  className,
+}: {
+  fingerprint: string;
+  className?: string;
+}) {
+  const lines = fingerprintLines(fingerprint);
+  // Hex groups alternate bright and dim, counted across BOTH lines, so
+  // reading along a row or down a column the eye can hold its place --
+  // the grid you read aloud on a call. Each line stays one run of text
+  // with real spaces (justified out to full width, which monospace
+  // turns into even columns), so a manual select-and-copy gives the
+  // same "3C71 E09A ..." the copy button does. A non-hex fingerprint
+  // (OpenSSH `SHA256:...`) is one unbroken line and is left as it is.
+  let group = 0;
+  return (
+    <span className={cn("block font-mono break-all", className)}>
+      {lines.map((line) => {
+        const groups = line.split(" ");
+        if (groups.length < 2)
+          return (
+            <span key={line} className="block">
+              {line}
+            </span>
+          );
+        return (
+          <span
+            key={line}
+            className="block text-justify [text-align-last:justify]"
+          >
+            {groups.map((g, i) => (
+              <Fragment key={i}>
+                {i > 0 && " "}
+                <span
+                  className={
+                    group++ % 2 === 0
+                      ? "text-foreground"
+                      : "text-muted-foreground"
+                  }
+                >
+                  {g}
+                </span>
+              </Fragment>
+            ))}
+          </span>
+        );
+      })}
     </span>
   );
 }
@@ -261,7 +297,7 @@ function SubkeyRow({
    *  one component instead of forking. */
   action?: React.ReactNode;
 }) {
-  const caps = capabilityText(row);
+  const caps = capabilities(row);
   // An engine whose keys carry no dates (SSH) supplies neither, and the
   // whole clause is dropped rather than printed as the epoch.
   const dateParts: string[] = [];
@@ -280,19 +316,24 @@ function SubkeyRow({
     dateParts.push(t("keys_row_never_expires"));
   const dates = dateParts.map((p) => ` \u00b7 ${p}`).join("");
   return (
-    <div className="border-border rounded-md border p-2.5">
+    <Block className="px-3.5 py-2.5">
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="text-xs font-medium">{label}</span>
         {row.status !== "active" && (
-          <span
-            className={`rounded-full border px-1.5 py-px text-[10px] font-medium ${STATUS_STYLES[row.status]}`}
-          >
+          <span className={cn(PILL, STATUS_STYLES[row.status])}>
             {statusText(row.status)}
           </span>
         )}
+        {caps.map((cap) => (
+          <span
+            key={cap}
+            className={cn(PILL, "bg-secondary text-muted-foreground")}
+          >
+            {cap}
+          </span>
+        ))}
         {action && <span className="ml-auto">{action}</span>}
       </div>
-      {caps && <p className="text-muted-foreground mt-0.5 text-xs">{caps}</p>}
       <p className="text-muted-foreground mt-1.5 font-mono text-[10px] leading-relaxed">
         {fingerprintLines(row.fingerprint).map((line) => (
           <span key={line} className="block">
@@ -306,14 +347,14 @@ function SubkeyRow({
         {dates}
       </p>
       {row.revocationReason && (
-        <p className="mt-1 text-[11px] text-red-400">
+        <p className="text-bad mt-1 text-[11px]">
           {t("keys_revoked_reason", { reason: row.revocationReason })}
         </p>
       )}
       {row.policyError && (
-        <p className="mt-1 text-[11px] text-amber-400">{row.policyError}</p>
+        <p className="text-warn mt-1 text-[11px]">{row.policyError}</p>
       )}
-    </div>
+    </Block>
   );
 }
 
@@ -327,6 +368,9 @@ export interface KeyPreviewChip {
 export interface KeyPreviewBodyProps {
   /** Headline identity (a local alias wins over the cert's own name). */
   name: string;
+  /** What the key's face is drawn from: the stored or
+   *  incoming record's fingerprint. Absent ⇒ no face. */
+  avatarFingerprint?: string;
   /** The cert's real name, when an alias took the headline. */
   subtitle?: string;
   email?: string;
@@ -363,6 +407,7 @@ export interface KeyPreviewBodyProps {
 
 export function KeyPreviewBody({
   name,
+  avatarFingerprint,
   subtitle,
   email,
   akaEmails = [],
@@ -381,10 +426,15 @@ export function KeyPreviewBody({
   const [showInactive, setShowInactive] = useState(false);
   const [copiedFp, setCopiedFp] = useState(false);
   const copyTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const [copiedEmail, setCopiedEmail] = useState(false);
+  const emailTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const { copy } = useCopyToClipboard();
 
   useEffect(() => {
-    return () => clearTimeout(copyTimer.current);
+    return () => {
+      clearTimeout(copyTimer.current);
+      clearTimeout(emailTimer.current);
+    };
   }, []);
 
   const rows = facts?.components?.rows ?? null;
@@ -407,6 +457,28 @@ export function KeyPreviewBody({
   const keyExpired = expiresAt !== null && expiresAt < now;
   const keyExpiringSoon =
     expiresAt !== null && !keyExpired && expiresAt - now < EXPIRING_SOON_MS;
+  // How far through its validity the key is (created -> expires), only
+  // when the facts carry both ends -- never guessed. Toned by the same
+  // expired / expiring-soon / revoked states the text above already uses.
+  const createdAt = facts?.createdAt;
+  const validity =
+    createdAt !== undefined && expiresAt !== null && expiresAt > createdAt
+      ? Math.min(1, Math.max(0, (now - createdAt) / (expiresAt - createdAt)))
+      : null;
+  const validityTone =
+    keyExpired || primaryRow?.status === "revoked"
+      ? "bg-destructive"
+      : keyExpiringSoon
+        ? "bg-warn"
+        : "bg-muted-foreground/60";
+  const handleCopyEmail = (address: string) => {
+    void copy(address).then((ok) => {
+      if (!ok) return;
+      setCopiedEmail(true);
+      clearTimeout(emailTimer.current);
+      emailTimer.current = setTimeout(() => setCopiedEmail(false), 2000);
+    });
+  };
 
   const handleCopyFingerprint = (fp: string) => {
     // Joins the DISPLAYED lines, so what lands on the clipboard is what
@@ -425,9 +497,14 @@ export function KeyPreviewBody({
 
   return (
     <>
-      <div>
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
+      {/* The identity card: the key's face and names, then -- as bands
+          under it -- whatever this screen has to say about the key. */}
+      <BlockStack>
+        <Block className="flex items-center gap-4 p-4">
+          {avatarFingerprint && (
+            <KeyAvatar fingerprint={avatarFingerprint} size={64} />
+          )}
+          <div className="min-w-0 flex-1">
             <p className="truncate text-base leading-tight font-semibold">
               {name}
             </p>
@@ -437,23 +514,36 @@ export function KeyPreviewBody({
               </p>
             )}
             {email && (
-              <p className="text-muted-foreground mt-0.5 truncate text-xs">
-                {email}
+              <p className="text-muted-foreground mt-0.5 flex min-w-0 items-center gap-1 text-xs">
+                <span className="truncate">{email}</span>
+                <button
+                  type="button"
+                  onClick={() => handleCopyEmail(email)}
+                  aria-label={t("keys_copy_email_aria")}
+                  title={t("keys_copy_email_aria")}
+                  className="hover:text-foreground shrink-0 rounded p-0.5 transition-colors"
+                >
+                  {copiedEmail ? (
+                    <CheckIcon className="text-good h-3 w-3" />
+                  ) : (
+                    <CopyIcon className="h-3 w-3" />
+                  )}
+                </button>
               </p>
             )}
+            {chips.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {chips.map((chip) => (
+                  <Chip key={chip.label} title={chip.title}>
+                    {chip.label}
+                  </Chip>
+                ))}
+              </div>
+            )}
           </div>
-          {chips.length > 0 && (
-            <div className="flex shrink-0 gap-1 pt-0.5">
-              {chips.map((chip) => (
-                <Chip key={chip.label} title={chip.title}>
-                  {chip.label}
-                </Chip>
-              ))}
-            </div>
-          )}
-        </div>
+        </Block>
         {akaEmails.length > 0 && (
-          <div className="mt-1.5">
+          <Block className="px-3.5 py-2.5">
             <p className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
               {t("keys_also_known_as")}
             </p>
@@ -462,55 +552,57 @@ export function KeyPreviewBody({
                 {aka}
               </p>
             ))}
-          </div>
+          </Block>
         )}
-      </div>
 
-      {statusStrip}
+        {statusStrip}
 
-      {error && <p className="text-destructive text-xs">{error}</p>}
+        {banner && <StatusBanner banner={banner} />}
+
+        {securityWarning && (
+          <Block className="flex items-start gap-1.5 bg-[#252012] px-3.5 py-2.5">
+            <TriangleAlertIcon className="text-warn mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <p className="text-warn text-xs leading-relaxed">
+              {securityWarning}
+            </p>
+          </Block>
+        )}
+      </BlockStack>
+
+      {error && <p className="text-destructive px-1 text-xs">{error}</p>}
       {!error && loading && (
-        <p className="text-muted-foreground text-xs">{t("keys_loading")}</p>
+        <p className="text-muted-foreground px-1 text-xs">
+          {t("keys_loading")}
+        </p>
       )}
 
-      {banner && <StatusBanner banner={banner} />}
-
-      {securityWarning && (
-        <div className="flex items-start gap-1.5 border-l-2 border-amber-500/60 py-0.5 pl-2.5">
-          <TriangleAlertIcon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" />
-          <p className="text-xs leading-relaxed text-amber-400">
-            {securityWarning}
-          </p>
+      {facts?.fingerprint !== undefined && (
+        <div>
+          <div className="mb-1.5 flex items-center justify-between px-1">
+            <span className="text-muted-foreground text-xs font-medium">
+              {t("keys_fact_fingerprint")}
+            </span>
+            <button
+              type="button"
+              onClick={() => handleCopyFingerprint(facts.fingerprint ?? "")}
+              aria-label={t("keys_copy_fingerprint_aria")}
+              className="text-muted-foreground hover:text-foreground -my-0.5 flex items-center gap-1 rounded px-1 py-0.5 text-xs font-medium transition-colors"
+            >
+              {copiedFp && <CheckIcon className="text-good h-3 w-3" />}
+              {t("common_copy")}
+            </button>
+          </div>
+          <Block className="rounded-xl px-3.5 py-3">
+            <FingerprintText
+              fingerprint={facts.fingerprint}
+              className="text-[13px] leading-relaxed tracking-wide"
+            />
+          </Block>
         </div>
       )}
 
       {facts && (
-        <div className="border-border divide-border divide-y rounded-md border">
-          {facts.fingerprint !== undefined && (
-            <InfoRow label={t("keys_fact_fingerprint")}>
-              <span className="flex items-start gap-1.5">
-                <span className="font-mono text-[11px] leading-relaxed">
-                  {fingerprintLines(facts.fingerprint).map((line) => (
-                    <span key={line} className="block">
-                      {line}
-                    </span>
-                  ))}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleCopyFingerprint(facts.fingerprint ?? "")}
-                  aria-label={t("keys_copy_fingerprint_aria")}
-                  className="text-muted-foreground hover:text-foreground rounded p-0.5 transition-colors"
-                >
-                  {copiedFp ? (
-                    <CheckIcon className="h-3 w-3 text-green-500" />
-                  ) : (
-                    <CopyIcon className="h-3 w-3" />
-                  )}
-                </button>
-              </span>
-            </InfoRow>
-          )}
+        <BlockStack>
           <InfoRow label={t("keys_fact_algorithm")}>
             {formatAlgorithm(facts.algorithm)}
             {primaryRow?.bits
@@ -535,9 +627,9 @@ export function KeyPreviewBody({
                 <span
                   className={
                     keyExpired
-                      ? "text-red-400"
+                      ? "text-bad"
                       : keyExpiringSoon
-                        ? "text-amber-400"
+                        ? "text-warn"
                         : undefined
                   }
                 >
@@ -545,6 +637,17 @@ export function KeyPreviewBody({
                     date: formatDate(expiresAt),
                     when: formatRelative(expiresAt),
                   })}
+                </span>
+              )}
+              {validity !== null && (
+                <span
+                  aria-hidden="true"
+                  className="bg-accent mt-2 block h-[3px] overflow-hidden rounded-full"
+                >
+                  <span
+                    className={cn("block h-full rounded-full", validityTone)}
+                    style={{ width: `${validity * 100}%` }}
+                  />
                 </span>
               )}
             </InfoRow>
@@ -562,46 +665,46 @@ export function KeyPreviewBody({
               {formatDate(lastUsedAt)}
             </InfoRow>
           )}
-        </div>
+        </BlockStack>
       )}
 
       {facts?.components && (
         <div>
-          <h3 className="mb-2 text-xs font-semibold">
+          <h3 className="text-muted-foreground mb-1.5 px-1 text-xs font-medium">
             {facts.components.title ?? t("keys_subkeys_title")}{" "}
-            <span className="text-muted-foreground font-normal">
-              ({subkeys.length})
-            </span>
+            <span className="font-normal">({subkeys.length})</span>
           </h3>
           {facts.components.truncated && (
-            <p className="mb-2 text-xs text-amber-400">
+            <p className="text-warn mb-1.5 px-1 text-xs">
               {t("keys_subkeys_truncated", {
                 count: facts.components.rows.length,
               })}
             </p>
           )}
           {subkeys.length === 0 && (
-            <p className="text-muted-foreground text-xs">
+            <p className="text-muted-foreground px-1 text-xs">
               {t("keys_no_subkeys")}
             </p>
           )}
-          <div className="space-y-2">
-            {activeSubkeys.map((row) => (
-              <SubkeyRow
-                key={row.fingerprint}
-                row={row}
-                label={facts.components?.rowLabel}
-                action={rowAction?.(row)}
-              />
-            ))}
-          </div>
+          {activeSubkeys.length > 0 && (
+            <BlockStack>
+              {activeSubkeys.map((row) => (
+                <SubkeyRow
+                  key={row.fingerprint}
+                  row={row}
+                  label={facts.components?.rowLabel}
+                  action={rowAction?.(row)}
+                />
+              ))}
+            </BlockStack>
+          )}
           {inactiveSubkeys.length > 0 && (
             <div className="mt-2">
               <button
                 type="button"
                 onClick={() => setShowInactive((v) => !v)}
                 aria-expanded={showInactive}
-                className="text-muted-foreground hover:text-foreground flex items-center gap-1 py-1 text-xs transition-colors"
+                className="text-muted-foreground hover:text-foreground flex items-center gap-1 px-1 py-1 text-xs transition-colors"
               >
                 {showInactive ? (
                   <ChevronDownIcon className="h-3.5 w-3.5" />
@@ -611,7 +714,7 @@ export function KeyPreviewBody({
                 {inactiveLabel}
               </button>
               {showInactive && (
-                <div className="mt-1 space-y-2">
+                <BlockStack className="mt-1">
                   {inactiveSubkeys.map((row) => (
                     <SubkeyRow
                       key={row.fingerprint}
@@ -620,7 +723,7 @@ export function KeyPreviewBody({
                       action={rowAction?.(row)}
                     />
                   ))}
-                </div>
+                </BlockStack>
               )}
             </div>
           )}

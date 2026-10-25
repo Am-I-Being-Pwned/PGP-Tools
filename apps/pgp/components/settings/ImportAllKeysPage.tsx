@@ -411,7 +411,7 @@ export function ImportAllKeysPage({
                 placeholder={t("settings_import_paste_placeholder")}
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                className="border-border bg-background placeholder:text-muted-foreground focus:ring-ring w-full rounded-md border p-3 font-mono text-xs focus:ring-2 focus:outline-none"
+                className="surface-field placeholder:text-muted-foreground focus:ring-ring w-full rounded-lg p-3 font-mono text-xs focus:ring-2 focus:outline-none"
                 rows={6}
               />
               <input
@@ -434,7 +434,7 @@ export function ImportAllKeysPage({
               </Button>
 
               {error && (
-                <p className="text-destructive text-xs" role="alert">
+                <p className="text-bad text-xs" role="alert">
                   {error}
                 </p>
               )}
@@ -458,10 +458,10 @@ export function ImportAllKeysPage({
                   if (e.key === "Enter") api.runAction(0);
                 }}
                 placeholder={t("settings_import_passphrase_placeholder")}
-                className="border-border bg-background placeholder:text-muted-foreground focus:ring-ring w-full rounded-md border p-2 font-mono text-xs focus:ring-2 focus:outline-none"
+                className="surface-field placeholder:text-muted-foreground focus:ring-ring w-full rounded-lg p-2 font-mono text-xs focus:ring-2 focus:outline-none"
               />
               {error && (
-                <p className="text-destructive text-xs" role="alert">
+                <p className="text-bad text-xs" role="alert">
                   {error}
                 </p>
               )}

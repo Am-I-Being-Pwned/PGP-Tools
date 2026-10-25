@@ -113,10 +113,8 @@ export function TranslateToggle({
         aria-label={label}
         disabled={busy}
         onClick={hasTranslation ? onToggle : onTranslate}
-        className={`border-border bg-background/90 hover:border-muted-foreground/40 hover:text-foreground pointer-events-auto shrink-0 rounded-md border p-2 shadow-sm backdrop-blur transition-colors disabled:opacity-60 ${
-          showing
-            ? "text-foreground border-muted-foreground/40"
-            : "text-muted-foreground"
+        className={`surface-float hover:text-foreground pointer-events-auto shrink-0 rounded-lg p-2 transition-colors disabled:opacity-60 ${
+          showing ? "text-on-foreground bg-on" : "text-muted-foreground"
         }`}
       >
         {busy ? (
@@ -189,7 +187,7 @@ export function TranslationNote({
   // Chrome, whose length we do not control.
   return (
     <p
-      className="text-muted-foreground border-border bg-background/90 min-w-0 truncate rounded-md border px-2 py-1 text-xs shadow-sm backdrop-blur"
+      className="surface-float text-muted-foreground min-w-0 truncate rounded-lg px-2 py-1 text-xs"
       title={text}
     >
       {text}

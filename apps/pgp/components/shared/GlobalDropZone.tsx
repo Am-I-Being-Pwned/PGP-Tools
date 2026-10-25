@@ -111,8 +111,10 @@ export function GlobalDropZone({ rules, children }: GlobalDropZoneProps) {
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleDrop}
         >
-          <div className="border-primary bg-primary/5 text-primary flex h-full w-full flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed p-6 text-center">
-            <UploadCloudIcon className="h-10 w-10" />
+          {/* A floating sheet rather than a dashed outline: the overlay
+              sits over the whole panel, so it gets the float surface. */}
+          <div className="surface-float flex h-full w-full flex-col items-center justify-center gap-3 rounded-xl p-6 text-center">
+            <UploadCloudIcon className="text-good h-10 w-10" />
             <p className="text-base font-semibold">
               {t("shared_drop_to_import")}
             </p>

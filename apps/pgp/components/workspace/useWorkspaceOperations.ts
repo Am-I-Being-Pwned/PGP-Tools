@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
 import type { PresentedError } from "../../lib/errors/present";
-import type { 
+import type {
   DecryptOptions,
   DecryptResult,
   EncryptInput,
@@ -235,7 +235,7 @@ export function useWorkspaceOperations({
     // folder of ciphertext stays identifiable weeks later.
     return outputFileName(
       s.mode,
-      s.files.map((f) => f.name),
+      stagedFiles().map((f) => f.name),
       s.zipFiles,
       { recipients: selectedRecipientNames(), engine: selectedEngine() },
     );
@@ -271,11 +271,29 @@ export function useWorkspaceOperations({
     return null;
   }
 
-  async function resolveFileBytes(): Promise<Uint8Array> {
-    if (s.files.length > 1 && s.zipFiles) {
-      return zipFilesToArchive(s.files);
+  /**
+   * What an encrypt actually takes in: the staged files, plus -- when a
+   * message was written alongside them -- that message as `msg.txt`.
+   * Built at the moment of the operation, never kept: the text stays in
+   * the message box as the one copy, and this blob goes with the run.
+   */
+  function stagedFiles(): File[] {
+    if (s.mode !== "encrypt" || s.files.length === 0 || !s.hasTrimmedInput) {
+      return s.files;
     }
-    return new Uint8Array(await s.files[0].arrayBuffer());
+    const taken = new Set(s.files.map((f) => f.name));
+    let name = "msg.txt";
+    for (let n = 2; taken.has(name); n++) name = `msg-${n}.txt`;
+    return [...s.files, new File([s.getInput()], name, { type: "text/plain" })];
+  }
+
+  async function resolveFileBytes(
+    files: File[] = s.files,
+  ): Promise<Uint8Array> {
+    if (files.length > 1 && s.zipFiles) {
+      return zipFilesToArchive(files);
+    }
+    return new Uint8Array(await files[0].arrayBuffer());
   }
 
   function triggerDownload() {
@@ -313,8 +331,8 @@ export function useWorkspaceOperations({
   }
 
   /** File metadata for history capture -- names and sizes only. */
-  function historyFileMeta() {
-    return s.files.map((f) => ({ name: f.name, size: f.size }));
+  function historyFileMeta(files: File[] = s.files) {
+    return files.map((f) => ({ name: f.name, size: f.size }));
   }
 
   /** Fire-and-forget history capture: never delays the operation, but a
@@ -504,11 +522,14 @@ export function useWorkspaceOperations({
       });
     };
 
-    const isFileInput = s.files.length > 0;
+    // Attachments plus a written message: the message rides along as a
+    // file of its own (`stagedFiles`).
+    const files = stagedFiles();
+    const isFileInput = files.length > 0;
 
-    if (isFileInput && s.files.length > 1 && !s.zipFiles) {
+    if (isFileInput && files.length > 1 && !s.zipFiles) {
       const results: FileResult[] = [];
-      for (const file of s.files) {
+      for (const file of files) {
         const bytes = new Uint8Array(await file.arrayBuffer());
         const result = await doEncrypt({
           kind: "binary",
@@ -537,7 +558,7 @@ export function useWorkspaceOperations({
       s.setOperationDone(true);
       maybeAutoDownload(true, { results });
     } else if (isFileInput) {
-      const bytes = await resolveFileBytes();
+      const bytes = await resolveFileBytes(files);
       const result = await doEncrypt({
         kind: "binary",
         binary: bytes,
@@ -548,8 +569,8 @@ export function useWorkspaceOperations({
       } else {
         s.setBinaryOutput(result);
       }
-      if (s.files.length > 1 && s.zipFiles) {
-        s.setStatusText(tn("workspace_files_zipped_encrypted", s.files.length));
+      if (files.length > 1 && s.zipFiles) {
+        s.setStatusText(tn("workspace_files_zipped_encrypted", files.length));
       }
       s.setOperationDone(true);
       maybeAutoDownload(true, {
@@ -569,6 +590,13 @@ export function useWorkspaceOperations({
         binary: typeof result !== "string" ? result : undefined,
       });
     }
+
+    // The message password was for THIS message. Holding on to it would
+    // quietly arm the next one with the same secret, so it goes the
+    // moment it has been used; the badge drops with it and the next
+    // message asks again. (On failure it stays, so a retry needs no
+    // retyping.)
+    if (messagePassword !== undefined) s.setEncryptPassword("");
 
     // Record the FINAL recipient set: when encrypt-to-self rode the
     // user's own key along, history shows it too.
@@ -601,7 +629,7 @@ export function useWorkspaceOperations({
       // different reasons.
       signed: !isAge && signingHandle !== null,
       ...(isFileInput
-        ? { files: historyFileMeta() }
+        ? { files: historyFileMeta(files) }
         : { content: s.getInput() }),
     });
 

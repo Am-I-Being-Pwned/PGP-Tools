@@ -4,9 +4,13 @@ import { Button } from "@amibeingpwned/ui/button";
 
 import { t } from "../../lib/i18n";
 import { INPUT_CLASS } from "../../lib/utils/styles";
+import { KeyAvatar } from "../shared/KeyAvatar";
 
 interface KeyUnlockRowProps {
   name: string;
+  /** The key's fingerprint (or a CRX key's extension id), for its face.
+   *  Absent ⇒ no avatar. */
+  fingerprint?: string;
   /** Small trailing tag after the name (e.g. "CRX", "SSH"). */
   badge?: string;
   unlocked: boolean;
@@ -25,9 +29,12 @@ interface KeyUnlockRowProps {
  * passkey, a password field otherwise). Shared by every flow that needs
  * several keys live before it can proceed -- bulk export, and re-sealing
  * keys under the vault passkey -- so they all look and behave the same.
+ *
+ * A flat block: callers stack the rows in a `BlockStack`.
  */
 export function KeyUnlockRow({
   name,
+  fingerprint,
   badge,
   unlocked,
   isPasskey,
@@ -39,9 +46,10 @@ export function KeyUnlockRow({
   onUnlockPasskey,
 }: KeyUnlockRowProps) {
   return (
-    <div className="border-border rounded-md border p-2">
-      <div className="flex items-center gap-2">
-        <span className={unlocked ? "text-green-400" : "text-muted-foreground"}>
+    <div className="bg-card rounded-[3px] px-3 py-2.5">
+      <div className="flex items-center gap-2.5">
+        {fingerprint && <KeyAvatar fingerprint={fingerprint} size={32} />}
+        <span className={unlocked ? "text-good" : "text-muted-foreground"}>
           {unlocked ? (
             <CheckIcon className="h-4 w-4" />
           ) : (
@@ -51,7 +59,7 @@ export function KeyUnlockRow({
         <span className="min-w-0 flex-1 truncate text-sm">
           {name}
           {badge && (
-            <span className="text-muted-foreground ml-1.5 text-[11px]">
+            <span className="bg-secondary text-muted-foreground ml-1.5 rounded px-1.5 py-px text-[10.5px] font-medium">
               {badge}
             </span>
           )}

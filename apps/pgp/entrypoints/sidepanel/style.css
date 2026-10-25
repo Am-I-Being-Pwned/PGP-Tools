@@ -14,9 +14,13 @@
     @apply bg-background text-foreground;
   }
 
-  /* Theme-aware scrollbars */
+  /* Theme-aware scrollbars: a faint foreground-tinted thumb on no track,
+     so it reads on the page and on card blocks alike, in either theme.
+     Chrome honours the standard `scrollbar-color` over the -webkit rules
+     below; those remain for the hover state on older builds. */
   * {
-    scrollbar-color: var(--border) transparent;
+    --scrollbar-thumb: color-mix(in oklab, var(--foreground) 16%, transparent);
+    scrollbar-color: var(--scrollbar-thumb) transparent;
     scrollbar-width: thin;
   }
   *::-webkit-scrollbar {
@@ -27,7 +31,7 @@
     background: transparent;
   }
   *::-webkit-scrollbar-thumb {
-    background-color: var(--border);
+    background-color: var(--scrollbar-thumb);
     border: 2px solid transparent;
     background-clip: padding-box;
     border-radius: 9999px;

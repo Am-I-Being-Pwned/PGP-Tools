@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronRightIcon } from "lucide-react";
 
+import { Block, BlockStack } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
 import { Switch } from "@amibeingpwned/ui/switch";
 
@@ -51,6 +52,90 @@ import { ConfirmPage } from "./ConfirmPage";
 import { StorageLocationPicker } from "./StorageLocationPicker";
 
 const AUTO_LOCK_OPTIONS: AutoLockTimeout[] = [2, 5, 10, 15, 30, 60];
+
+/** The muted underline links in the About block: green is kept for
+ *  "on" and "go", so a plain link reads as text, not as an action. */
+const ABOUT_LINK_CLASS =
+  "text-foreground/80 hover:text-foreground underline decoration-white/20 underline-offset-2 transition-colors";
+
+/** A group's label. A real h2 -- screen readers (and the e2e helpers)
+ *  navigate Settings by these headings -- drawn as the small muted
+ *  label that sits above a block stack. */
+function GroupLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="text-muted-foreground px-1 text-xs font-medium">
+      {children}
+    </h2>
+  );
+}
+
+/** A setting that is a plain on/off: title and description on the left,
+ *  the switch on the right. The whole row is the switch's <label>, so
+ *  its accessible name is the title plus the description, and a click
+ *  anywhere on the row flips it. */
+function SwitchRow({
+  title,
+  description,
+  checked,
+  onCheckedChange,
+}: {
+  title: string;
+  description?: string;
+  checked: boolean;
+  onCheckedChange: (v: boolean) => void;
+}) {
+  return (
+    <Block>
+      <label className="flex cursor-pointer items-center justify-between gap-4 px-3.5 py-3">
+        <div>
+          <span className="text-sm font-medium">{title}</span>
+          {description && (
+            <p className="text-muted-foreground text-xs">{description}</p>
+          )}
+        </div>
+        <Switch checked={checked} onCheckedChange={onCheckedChange} />
+      </label>
+    </Block>
+  );
+}
+
+/** A row that opens a subpage: title (plus an optional line under it),
+ *  the current value muted on the right, and a chevron. The focus ring
+ *  is inset because the stack clips anything drawn outside its blocks. */
+function NavRow({
+  title,
+  description,
+  value,
+  onClick,
+}: {
+  title: string;
+  description?: React.ReactNode;
+  value?: string;
+  onClick: () => void;
+}) {
+  return (
+    <Block>
+      <button
+        type="button"
+        onClick={onClick}
+        className="hover:bg-accent focus-visible:ring-ring/50 flex w-full items-center justify-between gap-4 rounded-[3px] px-3.5 py-3 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
+      >
+        <div className="min-w-0">
+          <span className="text-sm font-medium">{title}</span>
+          {description}
+        </div>
+        <span className="flex min-w-0 items-center gap-1">
+          {value && (
+            <span className="text-muted-foreground truncate text-sm">
+              {value}
+            </span>
+          )}
+          <ChevronRightIcon className="text-muted-foreground h-4 w-4 shrink-0" />
+        </span>
+      </button>
+    </Block>
+  );
+}
 
 function autoLockLabel(minutes: AutoLockTimeout): string {
   return minutes === 60 ? t("shared_one_hour") : tn("shared_minutes", minutes);
@@ -433,101 +518,67 @@ export function SettingsView({
   };
 
   return (
-    <div className="space-y-5">
-      <div>
-        <button
-          type="button"
-          onClick={() => setShowPresets(true)}
-          className="border-border hover:border-muted-foreground/40 flex w-full items-center justify-between gap-4 rounded-md border p-4 text-left transition-colors"
-        >
-          <div className="min-w-0">
-            <span className="text-sm">{t("shared_security_preset")}</span>
-            {prefs && currentPreset === "custom" && (
+    <div className="space-y-4">
+      <BlockStack>
+        <NavRow
+          title={t("shared_security_preset")}
+          description={
+            prefs &&
+            currentPreset === "custom" && (
               <p className="text-muted-foreground text-xs">
                 {bundledSettingsCustomized(prefs)
                   ? t("shared_preset_bundled_changed")
                   : t("shared_preset_none_selected")}
               </p>
-            )}
-          </div>
-          <span className="flex min-w-0 items-center gap-1">
-            <span className="text-muted-foreground truncate text-sm">
-              {currentPreset === null
-                ? ""
-                : currentPreset === "custom"
-                  ? t("shared_preset_custom")
-                  : PRESETS[currentPreset].title}
-            </span>
-            <ChevronRightIcon className="text-muted-foreground h-4 w-4 shrink-0" />
-          </span>
-        </button>
-      </div>
-
-      <div>
-        <button
-          type="button"
+            )
+          }
+          value={
+            currentPreset === null
+              ? ""
+              : currentPreset === "custom"
+                ? t("shared_preset_custom")
+                : PRESETS[currentPreset].title
+          }
+          onClick={() => setShowPresets(true)}
+        />
+        <NavRow
+          title={t("shared_translation")}
+          value={aiTranslateEnabled ? t("common_on") : t("common_off")}
           onClick={() => setShowTranslation(true)}
-          className="border-border hover:border-muted-foreground/40 flex w-full items-center justify-between gap-4 rounded-md border p-4 text-left transition-colors"
-        >
-          <span className="text-sm">{t("shared_translation")}</span>
-          <span className="flex items-center gap-2">
-            <span className="text-muted-foreground text-xs">
-              {aiTranslateEnabled ? t("common_on") : t("common_off")}
-            </span>
-            <ChevronRightIcon className="text-muted-foreground h-4 w-4 shrink-0" />
-          </span>
-        </button>
-      </div>
-
-      <div>
-        <button
-          type="button"
+        />
+        <NavRow
+          title={t("shared_keyboard_shortcuts")}
           onClick={() => setShowShortcuts(true)}
-          className="border-border hover:border-muted-foreground/40 flex w-full items-center justify-between gap-4 rounded-md border p-4 text-left transition-colors"
-        >
-          <span className="text-sm">{t("shared_keyboard_shortcuts")}</span>
-          <ChevronRightIcon className="text-muted-foreground h-4 w-4 shrink-0" />
-        </button>
-      </div>
+        />
+      </BlockStack>
 
-      <div>
-        <h2 className="mb-2 text-sm font-semibold">
-          {t("shared_key_storage")}
-        </h2>
+      <div className="space-y-1.5">
+        <GroupLabel>{t("shared_key_storage")}</GroupLabel>
         <StorageLocationPicker
           value={storageLocation}
           onChange={handleStorageChange}
           disabled={migratingTo !== null}
         />
-        {error && <p className="text-destructive mt-1 text-xs">{error}</p>}
+        {error && <p className="text-bad px-1 text-xs">{error}</p>}
       </div>
 
-      <div>
-        <h2 className="mb-2 text-sm font-semibold">
-          {t("shared_key_security")}
-        </h2>
-
-        <div className="border-border rounded-md border p-4">
-          <label className="flex items-center justify-between gap-4">
-            <div>
-              <span className="text-sm">{t("shared_auto_lock_title")}</span>
-              <p className="text-muted-foreground text-xs">
-                {t("shared_auto_lock_desc")}
-              </p>
-            </div>
-            <Switch
-              checked={autoLockEnabled}
-              onCheckedChange={(v) => {
-                onAutoLockEnabledChange(v);
-                void savePreferences({ autoLockEnabled: v });
-              }}
-            />
-          </label>
+      <div className="space-y-1.5">
+        <GroupLabel>{t("shared_key_security")}</GroupLabel>
+        <BlockStack>
+          <SwitchRow
+            title={t("shared_auto_lock_title")}
+            description={t("shared_auto_lock_desc")}
+            checked={autoLockEnabled}
+            onCheckedChange={(v) => {
+              onAutoLockEnabledChange(v);
+              void savePreferences({ autoLockEnabled: v });
+            }}
+          />
           {autoLockEnabled && (
-            <div className="mt-3">
+            <Block className="flex items-center justify-between gap-4 px-3.5 py-2.5">
               <label
                 htmlFor="auto-lock-after"
-                className="text-muted-foreground mb-1 block text-xs"
+                className="text-muted-foreground text-xs"
               >
                 {t("shared_lock_after")}
               </label>
@@ -539,7 +590,7 @@ export function SettingsView({
                     Number(e.target.value) as AutoLockTimeout,
                   )
                 }
-                className="border-border bg-background focus:ring-ring w-full rounded-md border px-2 py-1.5 text-sm focus:ring-2 focus:outline-none"
+                className="surface-field focus:ring-ring rounded-md px-2 py-1.5 text-sm focus:ring-2 focus:outline-none"
               >
                 {AUTO_LOCK_OPTIONS.map((minutes) => (
                   <option key={minutes} value={minutes}>
@@ -547,229 +598,162 @@ export function SettingsView({
                   </option>
                 ))}
               </select>
-            </div>
+            </Block>
           )}
-        </div>
-
-        <label className="border-border mt-2 flex items-center justify-between gap-4 rounded-md border p-4">
-          <div>
-            <span className="text-sm">{t("shared_lock_tab_away_title")}</span>
-            <p className="text-muted-foreground text-xs">
-              {t("shared_lock_tab_away_desc")}
-            </p>
-          </div>
-          <Switch
+          <SwitchRow
+            title={t("shared_lock_tab_away_title")}
+            description={t("shared_lock_tab_away_desc")}
             checked={lockOnTabAway}
             onCheckedChange={(v) => {
               onLockOnTabAwayChange(v);
               void savePreferences({ lockOnTabAway: v });
             }}
           />
-        </label>
-
-        <label className="border-border mt-2 flex items-center justify-between gap-4 rounded-md border p-4">
-          <div>
-            <span className="text-sm">{t("shared_never_cache_title")}</span>
-            <p className="text-muted-foreground text-xs">
-              {t("shared_never_cache_desc")}
-            </p>
-          </div>
-          <Switch
+          <SwitchRow
+            title={t("shared_never_cache_title")}
+            description={t("shared_never_cache_desc")}
             checked={neverCacheKeys}
             onCheckedChange={(v) => void handleNeverCacheToggle(v)}
           />
-        </label>
-
-        {masterPasskey && (
-          <label className="border-border mt-2 flex items-center justify-between gap-4 rounded-md border p-4">
-            <div>
-              <span className="text-sm">
-                {t("shared_unlock_with_vault_title")}
-              </span>
-              <p className="text-muted-foreground text-xs">
-                {t("shared_unlock_with_vault_desc")}
-              </p>
-            </div>
-            <Switch
+          {masterPasskey && (
+            <SwitchRow
+              title={t("shared_unlock_with_vault_title")}
+              description={t("shared_unlock_with_vault_desc")}
               checked={unlockKeysOnOpen}
               onCheckedChange={(v) => void handleUnlockOnOpenToggle(v)}
             />
-          </label>
-        )}
+          )}
+        </BlockStack>
       </div>
 
-      <div>
-        <h2 className="mb-2 text-sm font-semibold">{t("shared_downloads")}</h2>
-        <label className="border-border flex items-center justify-between gap-4 rounded-md border p-4">
-          <div>
-            <span className="text-sm">
-              {t("shared_auto_download_files_title")}
-            </span>
-            <p className="text-muted-foreground text-xs">
-              {t("shared_auto_download_files_desc")}
-            </p>
-          </div>
-          <Switch
+      <div className="space-y-1.5">
+        <GroupLabel>{t("shared_downloads")}</GroupLabel>
+        <BlockStack>
+          <SwitchRow
+            title={t("shared_auto_download_files_title")}
+            description={t("shared_auto_download_files_desc")}
             checked={autoDownloadFiles}
             onCheckedChange={(v) => {
               onAutoDownloadFilesChange(v);
               void savePreferences({ autoDownloadFiles: v });
             }}
           />
-        </label>
-
-        <label className="border-border mt-2 flex items-center justify-between gap-4 rounded-md border p-4">
-          <div>
-            <span className="text-sm">
-              {t("shared_auto_download_text_title")}
-            </span>
-            <p className="text-muted-foreground text-xs">
-              {t("shared_auto_download_text_desc")}
-            </p>
-          </div>
-          <Switch
+          <SwitchRow
+            title={t("shared_auto_download_text_title")}
+            description={t("shared_auto_download_text_desc")}
             checked={autoDownloadText}
             onCheckedChange={(v) => {
               onAutoDownloadTextChange(v);
               void savePreferences({ autoDownloadText: v });
             }}
           />
-        </label>
+        </BlockStack>
       </div>
 
-      <div>
-        <h2 className="mb-2 text-sm font-semibold">
-          {t("shared_key_discovery")}
-        </h2>
-        <label className="border-border flex items-center justify-between gap-4 rounded-md border p-4">
-          <div>
-            <span className="text-sm">{t("shared_lookup_online_title")}</span>
-            {/* Says exactly which hosts and exactly what they learn.
-                This is the only preference that lets the extension talk
-                to anyone, so a vague "enable lookups" would be hiding
-                the thing worth deciding about. */}
-            <p className="text-muted-foreground text-xs">
-              {t("shared_lookup_online_desc")}
-            </p>
-          </div>
-          <Switch
+      <div className="space-y-1.5">
+        <GroupLabel>{t("shared_key_discovery")}</GroupLabel>
+        <BlockStack>
+          {/* The description says exactly which hosts and exactly what
+              they learn. This is the only preference that lets the
+              extension talk to anyone, so a vague "enable lookups" would
+              be hiding the thing worth deciding about. */}
+          <SwitchRow
+            title={t("shared_lookup_online_title")}
+            description={t("shared_lookup_online_desc")}
             checked={keyDiscoveryEnabled}
             onCheckedChange={(v) => {
               onKeyDiscoveryEnabledChange(v);
               void savePreferences({ keyDiscoveryEnabled: v });
             }}
           />
-        </label>
+        </BlockStack>
       </div>
 
-      <div>
-        <h2 className="mb-2 text-sm font-semibold">
-          {t("shared_crx_signing")}
-        </h2>
-        <label className="border-border flex items-center justify-between gap-4 rounded-md border p-4">
-          <div>
-            <span className="text-sm">{t("shared_crx_enable_title")}</span>
-            <p className="text-muted-foreground text-xs">
-              {t("shared_crx_enable_desc")}
-            </p>
-          </div>
-          <Switch
+      <div className="space-y-1.5">
+        <GroupLabel>{t("shared_crx_signing")}</GroupLabel>
+        <BlockStack>
+          <SwitchRow
+            title={t("shared_crx_enable_title")}
+            description={t("shared_crx_enable_desc")}
             checked={crxSigningEnabled}
             onCheckedChange={(v) => {
               onCrxSigningEnabledChange(v);
               void savePreferences({ crxSigningEnabled: v });
             }}
           />
-        </label>
-        <Button
-          variant="outline"
-          size="sm"
-          className="mt-2 w-full"
-          onClick={() => setShowCrxInfo(true)}
-        >
-          {t("shared_crx_how")}
-        </Button>
+          <NavRow
+            title={t("shared_crx_how")}
+            onClick={() => setShowCrxInfo(true)}
+          />
+        </BlockStack>
       </div>
 
-      <div>
-        <h2 className="mb-2 text-sm font-semibold">{t("shared_backup")}</h2>
-        <div className="border-border rounded-md border p-4">
-          <p className="text-muted-foreground text-xs">
-            {t("shared_backup_desc")}
-          </p>
-          <div className="mt-2 flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1"
-              onClick={() => setShowExportAll(true)}
-            >
-              {t("shared_export_all_keys")}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1"
-              onClick={() => setShowImportAll(true)}
-            >
-              {t("shared_import_keys")}
-            </Button>
-          </div>
-        </div>
+      <div className="space-y-1.5">
+        <GroupLabel>{t("shared_backup")}</GroupLabel>
+        <BlockStack>
+          <Block className="px-3.5 py-3">
+            <p className="text-muted-foreground text-xs">
+              {t("shared_backup_desc")}
+            </p>
+          </Block>
+          <NavRow
+            title={t("shared_export_all_keys")}
+            onClick={() => setShowExportAll(true)}
+          />
+          <NavRow
+            title={t("shared_import_keys")}
+            onClick={() => setShowImportAll(true)}
+          />
+        </BlockStack>
       </div>
 
-      <div>
-        <h2 className="mb-2 text-sm font-semibold">{t("shared_display")}</h2>
-        <label className="border-border flex items-center justify-between gap-4 rounded-md border p-4">
-          <span className="text-sm">{t("shared_advanced_mode")}</span>
-          <Switch checked={advancedMode} onCheckedChange={toggleAdvanced} />
-        </label>
-        <p className="text-muted-foreground mt-1 text-xs">
+      <div className="space-y-1.5">
+        <GroupLabel>{t("shared_display")}</GroupLabel>
+        <BlockStack>
+          <SwitchRow
+            title={t("shared_advanced_mode")}
+            checked={advancedMode}
+            onCheckedChange={toggleAdvanced}
+          />
+        </BlockStack>
+        <p className="text-muted-foreground px-1 text-xs">
           {t("shared_advanced_mode_desc")}
         </p>
       </div>
 
       {import.meta.env.DEV && (
-        <div>
-          <h2 className="mb-2 text-sm font-semibold">
-            {t("shared_developer")}
-          </h2>
-          <div className="border-border rounded-md border p-4">
-            <p className="text-muted-foreground text-xs">
-              {t("shared_developer_desc")}
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-2 w-full"
+        <div className="space-y-1.5">
+          <GroupLabel>{t("shared_developer")}</GroupLabel>
+          <BlockStack>
+            <Block className="px-3.5 py-3">
+              <p className="text-muted-foreground text-xs">
+                {t("shared_developer_desc")}
+              </p>
+            </Block>
+            <NavRow
+              title={t("shared_open_dev_tools")}
               onClick={() => setShowDevTools(true)}
-            >
-              {t("shared_open_dev_tools")}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-2 w-full"
+            />
+            <NavRow
+              title={t("shared_import_flow_states")}
               onClick={() => setShowImportFlow(true)}
-            >
-              {t("shared_import_flow_states")}
-            </Button>
-          </div>
+            />
+          </BlockStack>
         </div>
       )}
 
-      <div>
-        <h2 className="mb-2 text-sm font-semibold">{t("shared_about")}</h2>
-        <div className="border-border rounded-md border p-4">
+      <div className="space-y-1.5">
+        <GroupLabel>{t("shared_about")}</GroupLabel>
+        <Block className="rounded-xl px-3.5 py-3">
           {/* i18n-ignore */}
-          <p className="text-sm">PGP Tools</p>
+          <p className="text-sm font-medium">PGP Tools</p>
           <p className="text-muted-foreground mt-1 text-xs">
             {t("shared_byline_before")}{" "}
             <a
               href="https://amibeingpwned.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-primary underline"
+              className={ABOUT_LINK_CLASS}
             >
               {/* i18n-ignore */}
               Am I Being Pwned
@@ -779,7 +763,7 @@ export function SettingsView({
               href="https://github.com/Am-I-Being-Pwned/PGP-Tools"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-primary underline"
+              className={ABOUT_LINK_CLASS}
             >
               {t("shared_source_on_github")}
             </a>
@@ -797,7 +781,7 @@ export function SettingsView({
               {t("shared_check_extensions")}
             </Button>
           </a>
-        </div>
+        </Block>
       </div>
 
       {showExportAll && (

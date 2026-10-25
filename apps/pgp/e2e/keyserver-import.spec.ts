@@ -6,6 +6,7 @@ import {
   onboardWithPasswordSkipKey,
   readContacts,
   setKeyDiscovery,
+  verifySignedMessage,
 } from "./helpers";
 import { keyBySlug } from "./keys";
 
@@ -221,4 +222,58 @@ test("with key discovery off, no lookup exists to make", async ({
     ALICE.name,
   );
   expect(keyserver.paths()).toHaveLength(1);
+});
+
+test("an unknown signer can be looked up, and the signature re-checks once imported", async ({
+  context,
+  panel,
+}) => {
+  const keyserver = await stubKeyserver(context);
+  await onboardWithPasswordSkipKey(panel, PASSWORD);
+
+  await verifySignedMessage(panel, ALICE.signedMessage);
+  await expect(panel.getByText("Unknown signer").first()).toBeVisible();
+
+  // The card offers the lookup; it opens the import panel with the
+  // signer's key id already asked about -- the same preview as any
+  // other import, so nothing is added without the user seeing whose it is.
+  await panel.getByRole("button", { name: "Search keys.openpgp.org" }).click();
+  const importPanel = panel.getByRole("region", { name: "Import key" });
+  await expect(importPanel).toContainText(ALICE.name);
+  expect(keyserver.paths()).toHaveLength(1);
+  // By fingerprint when the signature names one (v4 issuer-fingerprint
+  // subpacket), by key id when it only carries the 16-hex issuer.
+  expect(keyserver.paths()[0]).toMatch(
+    /^\/vks\/v1\/by-(fingerprint|keyid)\/[0-9A-F]{16,40}$/,
+  );
+
+  await panel.getByRole("button", { name: "Import contact" }).click();
+  await expect(importPanel).toBeHidden();
+
+  // No second press: the amber card becomes the real verdict.
+  await expect(panel.getByText("Signature verified").first()).toBeVisible();
+  await expect(panel.getByText("Unknown signer")).toHaveCount(0);
+
+  // The verified card opens the signer's key details.
+  await panel.getByRole("button", { name: "Key details" }).click();
+  const details = panel.getByRole("region", { name: /^Key details for/ });
+  await expect(details).toContainText(ALICE.name);
+  await panel.getByRole("button", { name: "Back" }).click();
+  await expect(details).toBeHidden();
+});
+
+test("with key discovery off, an unknown signer offers no lookup", async ({
+  context,
+  panel,
+}) => {
+  const keyserver = await stubKeyserver(context);
+  await onboardWithPasswordSkipKey(panel, PASSWORD);
+  await setKeyDiscovery(panel, false);
+
+  await verifySignedMessage(panel, ALICE.signedMessage);
+  await expect(panel.getByText("Unknown signer").first()).toBeVisible();
+  await expect(
+    panel.getByRole("button", { name: "Search keys.openpgp.org" }),
+  ).toHaveCount(0);
+  expect(keyserver.paths()).toHaveLength(0);
 });

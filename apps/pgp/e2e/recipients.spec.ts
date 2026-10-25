@@ -16,7 +16,7 @@ test("sign-only contacts are not offered as encryption recipients", async ({
 
   // Encrypt mode (default) shows the recipient picker; its label is
   // wired to the inline combobox input, so getByLabel targets it
-  // directly (the mode Select is the panel's other combobox).
+  // directly.
   await panel.getByRole("tab", { name: "Main" }).click();
   await panel.getByLabel("Recipients").click();
 
@@ -162,4 +162,32 @@ test("focus alone never opens the recipient dropdown", async ({ panel }) => {
   await expect(panel.getByRole("option")).toHaveCount(0);
   await input.click();
   await expect(panel.getByRole("option").first()).toBeVisible();
+});
+
+test("a row's (i) opens the key's details without picking it or closing the list", async ({
+  panel,
+}) => {
+  await onboardWithPassword(panel, PASSWORD);
+  await importContact(panel, encryptable.publicKey);
+
+  await panel.getByRole("tab", { name: "Main" }).click();
+  const input = panel.getByRole("combobox", { name: "Recipients" });
+  await input.fill("alice");
+  const row = panel.getByRole("option", {
+    name: new RegExp(encryptable.label),
+  });
+  await row.getByRole("button", { name: "Key details" }).click();
+
+  const details = panel.getByRole("region", { name: /^Key details for/ });
+  await expect(details).toBeVisible();
+  await expect(details).toContainText(encryptable.name);
+  await panel.getByRole("button", { name: "Back" }).click();
+  await expect(details).toBeHidden();
+
+  // Back lands on the list as it was left: still open, still filtered.
+  await expect(row).toBeVisible();
+  await expect(input).toHaveValue("alice");
+
+  // Looking was not choosing: no chip.
+  await expect(panel.getByTitle(new RegExp(encryptable.label))).toHaveCount(0);
 });

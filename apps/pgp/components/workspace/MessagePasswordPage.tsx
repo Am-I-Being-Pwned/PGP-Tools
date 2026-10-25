@@ -104,7 +104,7 @@ export function MessagePasswordPage({
                     ? t("workspace_hide_password")
                     : t("workspace_show_password")
                 }
-                className="border-border text-muted-foreground hover:text-foreground hover:bg-accent/50 focus:ring-ring inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border focus:ring-2 focus:outline-none"
+                className="bg-secondary text-muted-foreground hover:text-foreground hover:bg-accent focus:ring-ring inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg shadow-[inset_0_1px_0_rgb(255_255_255/0.07)] focus:ring-2 focus:outline-none"
               >
                 {revealed ? (
                   <EyeOffIcon className="h-4 w-4" />
@@ -120,9 +120,7 @@ export function MessagePasswordPage({
               an error. */}
           <p
             className={
-              tooShort
-                ? "text-destructive text-xs"
-                : "text-muted-foreground text-xs"
+              tooShort ? "text-bad text-xs" : "text-muted-foreground text-xs"
             }
             role={tooShort ? "alert" : undefined}
           >

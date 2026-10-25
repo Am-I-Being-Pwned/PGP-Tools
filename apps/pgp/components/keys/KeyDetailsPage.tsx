@@ -9,6 +9,7 @@ import {
   Trash2Icon,
 } from "lucide-react";
 
+import { Block } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
 
 import type { KeyDetails, KeyInfo } from "../../lib/pgp/types";
@@ -88,7 +89,7 @@ function IconAction({
       >
         {children}
       </button>
-      <span className="border-border bg-background text-foreground pointer-events-none absolute top-full right-0 z-10 mt-1 hidden rounded border px-1.5 py-0.5 text-[10px] whitespace-nowrap shadow-sm peer-hover:block">
+      <span className="surface-float text-foreground pointer-events-none absolute top-full right-0 z-10 mt-1 hidden rounded-md px-1.5 py-0.5 text-[10px] whitespace-nowrap peer-hover:block">
         {label}
       </span>
     </span>
@@ -148,10 +149,10 @@ function RevocationSection({
 
   return (
     <div>
-      <h3 className="mb-2 text-xs font-semibold">
+      <h3 className="text-muted-foreground mb-1.5 px-1 text-xs font-medium">
         {t("keys_revocation_certificate")}
       </h3>
-      <div className="border-border space-y-2 rounded-md border p-2.5">
+      <Block className="space-y-2 rounded-xl px-3.5 py-3">
         <p className="text-muted-foreground text-xs">
           {certificate
             ? t("keys_revocation_have_body")
@@ -185,7 +186,7 @@ function RevocationSection({
             )}
           </>
         )}
-      </div>
+      </Block>
     </div>
   );
 }
@@ -386,7 +387,7 @@ export function KeyDetailsPage({
         {off && (
           <span
             title={t("keys_recipient_off_title")}
-            className="rounded-full border border-amber-500/40 bg-amber-500/10 px-1.5 py-px text-[10px] font-medium text-amber-400"
+            className="bg-warn/12 text-warn rounded px-1.5 py-px text-[10.5px] font-medium"
           >
             {t("keys_recipient_not_used")}
           </span>
@@ -402,7 +403,7 @@ export function KeyDetailsPage({
                 : t("keys_recipient_disable_title")
           }
           onClick={() => void handleToggleRecipient(recipient.keyId, !off)}
-          className="text-muted-foreground hover:text-foreground rounded border px-1.5 py-px text-[10px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+          className="bg-secondary text-muted-foreground hover:text-foreground hover:bg-accent rounded px-1.5 py-px text-[10.5px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
         >
           {off ? t("keys_recipient_use") : t("keys_recipient_dont_use")}
         </button>
@@ -488,9 +489,15 @@ export function KeyDetailsPage({
         )}
       </SlideOverHeader>
 
-      <div className="flex-1 space-y-4 overflow-y-auto p-3">
+      <div className="flex-1 space-y-3 overflow-y-auto p-3">
         <KeyPreviewBody
           name={name}
+          // The record's own id: the hex fingerprint, or an SSH key's
+          // `SHA256:` hash -- for a multi-key contact, its first key's,
+          // which is the record's identity (see `recipientsField`).
+          avatarFingerprint={
+            isOwn ? target.keyBlob.keyId : target.contact.keyId
+          }
           subtitle={alias ? realName : undefined}
           email={email}
           akaEmails={akaEmails}

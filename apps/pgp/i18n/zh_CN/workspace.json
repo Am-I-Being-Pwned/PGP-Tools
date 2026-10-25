@@ -72,7 +72,7 @@
     "message": "密码"
   },
   "workspace_toggle_zip_files": {
-    "message": "打包为 zip"
+    "message": "ZIP"
   },
   "workspace_toggle_save_to_history": {
     "message": "保存到历史记录"
@@ -124,9 +124,6 @@
   },
   "workspace_need_recipient_or_password": {
     "message": "请至少选择一个收件人，或设置密码"
-  },
-  "workspace_text_entered_below": {
-    "message": "已在下方输入文本"
   },
   "workspace_clear_text": {
     "message": "清除文本"
@@ -389,6 +386,9 @@
   "workspace_unknown_signer": {
     "message": "未知签名者"
   },
+  "workspace_lookup_signer": {
+    "message": "在 $host$ 上搜索"
+  },
   "workspace_status_signer_unknown": {
     "message": "此消息已签名，但签名者的公钥不在你的密钥或联系人中，因此无法验证签名。"
   },
@@ -448,5 +448,11 @@
   },
   "workspace_reader_unavailable": {
     "message": "此消息已不可用。"
+  },
+  "workspace_char_count_one": {
+    "message": "$count$ 个字符"
+  },
+  "workspace_char_count_other": {
+    "message": "$count$ 个字符"
   }
 }

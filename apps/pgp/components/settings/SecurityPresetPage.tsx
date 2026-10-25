@@ -138,7 +138,8 @@ export function SecurityPresetPage({
           }}
         />
         {confirming && selected !== null && (
-          <div className="border-border bg-muted/40 rounded-md border p-3">
+          // A "warn" status band: applying overwrites or deletes something.
+          <div className="rounded-xl bg-[#252012] p-3">
             {isCustom && (
               <p className="text-xs">
                 <Bolded

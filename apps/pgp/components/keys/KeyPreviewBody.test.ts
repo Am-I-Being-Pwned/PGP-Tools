@@ -15,7 +15,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { fingerprintLines } from "./KeyPreviewBody";
+import { fingerprintLines } from "./fingerprint-lines";
 
 const PGP_FP = "3A9E1F5C7B2D48E6A0C1938574FD62B0E4A75C11";
 const SSH_FP = "SHA256:IoCz+8Ykvdvfq1sQ2pQm5oYtxK3n0uWJZ9hVbGfR7Ac";

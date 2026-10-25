@@ -1,5 +1,7 @@
 import { useCallback } from "react";
 
+import { Block, BlockStack } from "@amibeingpwned/ui/block";
+
 import type { FileResult } from "../../lib/utils/download";
 import { t } from "../../lib/i18n";
 import { formatFileSize } from "../../lib/utils/formatting";
@@ -17,6 +19,8 @@ interface OutputAreaProps {
   binaryOutput?: Uint8Array;
   fileResults?: FileResult[];
   fileName?: string;
+  /** The operation completed. Kept for callers; the full-height box no
+   *  longer tints its border on it (the status band carries the outcome). */
   success?: boolean;
   statusText?: string;
   /** Fill the available height instead of the compact fixed-height output. */
@@ -38,6 +42,10 @@ interface OutputAreaProps {
   /** A control pinned to the box's top-right corner (Reply). Floats like
    *  the footer, and the text is inset on the right to clear it. */
   corner?: React.ReactNode;
+  /** A block for the top of the result card (full-height path only):
+   *  the signature's status band, so the outcome sits on the card it is
+   *  about rather than in a box of its own above it. */
+  header?: React.ReactNode;
 }
 
 export function OutputArea({
@@ -47,7 +55,6 @@ export function OutputArea({
   binaryOutput,
   fileResults,
   fileName,
-  success,
   statusText,
   fullHeight,
   showTranslation,
@@ -55,6 +62,7 @@ export function OutputArea({
   getTranslation,
   footer,
   corner,
+  header,
 }: OutputAreaProps) {
   // Callback ref: publish the node to the owning hook and seed its text
   // from the ref on every (re)mount. The node genuinely unmounts (the
@@ -103,7 +111,7 @@ export function OutputArea({
   if (!fullHeight) {
     return (
       <div className="space-y-2">
-        {statusText && <p className="text-xs text-green-400">{statusText}</p>}
+        {statusText && <p className="text-good text-xs">{statusText}</p>}
         {binaryOutput && !hasOutput && !hasFileResults && !statusText && (
           <p className="text-muted-foreground text-sm">
             {t("workspace_output_size_line", {
@@ -118,52 +126,65 @@ export function OutputArea({
 
   // Full-height path (decrypt): the plaintext is meant to be read, so give it
   // the whole panel. Download/Copy live in the panel's bottom action bar, to
-  // match the encrypt/sign flow.
-  const borderColor = success ? "border-green-500/50" : "border-border";
+  // match the encrypt/sign flow. One card: the outcome (the signer's band,
+  // or the status line as a band of its own) on top, the message under it.
+  // `success` no longer draws a green border -- the band says it.
   const cornerInset = corner ? "pr-14" : "";
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2">
-      {statusText && <p className="text-xs text-green-400">{statusText}</p>}
-      {hasOutput && (
-        <div className="relative min-h-0 flex-1">
-          {/* No React children on purpose: the attach callbacks write the
-              text imperatively so the plaintext never enters the element
-              tree. Exactly one of the two is mounted at a time. */}
-          {showTranslation ? (
-            <pre
-              key="translation"
-              ref={attachTranslation}
-              tabIndex={0}
-              className={`bg-muted/50 h-full overflow-auto rounded-md border p-3 pb-11 font-mono text-xs break-all whitespace-pre-wrap focus:outline-none ${borderColor} ${cornerInset}`}
-            />
-          ) : (
-            <pre
-              key="output"
-              ref={attachOutput}
-              tabIndex={0}
-              onKeyDown={selectAllOnCtrlA}
-              className={`bg-muted/50 h-full overflow-auto rounded-md border p-3 pb-11 font-mono text-xs break-all whitespace-pre-wrap focus:outline-none ${borderColor} ${cornerInset}`}
-            />
+      {hasOutput ? (
+        <BlockStack className="min-h-0 flex-1">
+          {header}
+          {statusText && (
+            <Block className="text-good shrink-0 bg-[#15231b] px-3.5 py-2.5 text-xs">
+              {statusText}
+            </Block>
           )}
-          {/* Floats over the bottom of the box rather than sitting in a
-              bar of its own: a permanent bar is chrome for a control
-              most messages never need, and anything in normal flow here
-              resizes the text every time a status appears. The `pb-11`
-              above keeps the last line of the message clear of it.
-              `pointer-events-none` so the strip does not eat selection
-              drags; the button re-enables them for itself. */}
-          {corner && (
-            <div className="pointer-events-none absolute top-2 right-2 flex items-center gap-2">
-              {corner}
-            </div>
-          )}
-          {footer && (
-            <div className="pointer-events-none absolute inset-x-2 bottom-2 flex items-center justify-end gap-2">
-              {footer}
-            </div>
-          )}
-        </div>
+          <Block className="relative min-h-0 flex-1">
+            {/* No React children on purpose: the attach callbacks write the
+                text imperatively so the plaintext never enters the element
+                tree. Exactly one of the two is mounted at a time. */}
+            {showTranslation ? (
+              <pre
+                key="translation"
+                ref={attachTranslation}
+                tabIndex={0}
+                className={`h-full overflow-auto p-3 pb-11 font-mono text-xs break-all whitespace-pre-wrap focus:outline-none ${cornerInset}`}
+              />
+            ) : (
+              <pre
+                key="output"
+                ref={attachOutput}
+                tabIndex={0}
+                onKeyDown={selectAllOnCtrlA}
+                className={`h-full overflow-auto p-3 pb-11 font-mono text-xs break-all whitespace-pre-wrap focus:outline-none ${cornerInset}`}
+              />
+            )}
+            {/* Floats over the bottom of the box rather than sitting in a
+                bar of its own: a permanent bar is chrome for a control
+                most messages never need, and anything in normal flow here
+                resizes the text every time a status appears. The `pb-11`
+                above keeps the last line of the message clear of it.
+                `pointer-events-none` so the strip does not eat selection
+                drags; the button re-enables them for itself. */}
+            {corner && (
+              <div className="pointer-events-none absolute top-2 right-2 flex items-center gap-2">
+                {corner}
+              </div>
+            )}
+            {footer && (
+              <div className="pointer-events-none absolute inset-x-2 bottom-2 flex items-center justify-end gap-2">
+                {footer}
+              </div>
+            )}
+          </Block>
+        </BlockStack>
+      ) : (
+        <>
+          {header}
+          {statusText && <p className="text-good text-xs">{statusText}</p>}
+        </>
       )}
       {binaryOutput && !hasOutput && !hasFileResults && !statusText && (
         <p className="text-muted-foreground text-sm">

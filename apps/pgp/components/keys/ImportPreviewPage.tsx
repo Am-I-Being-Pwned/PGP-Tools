@@ -1,5 +1,6 @@
 import { CheckCircleIcon, RefreshCwIcon } from "lucide-react";
 
+import { Block, BlockStack } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
 import { Kbd } from "@amibeingpwned/ui/kbd";
 
@@ -36,7 +37,11 @@ import { KeyPreviewBody } from "./KeyPreviewBody";
  *  A rejected key gets no strip either: KeyPreviewBody's health banner
  *  already explains, in the same words, why the key is unusable, and the
  *  reason repeats above the footer where the missing Import button is.
- *  Two identical red boxes read as two different problems. */
+ *  Two identical red boxes read as two different problems.
+ *
+ *  Rendered as a block inside the identity card (KeyPreviewBody puts it
+ *  right under the key's face), so it is the band that says what this
+ *  import will do to that key. */
 function ImportStatusStrip({ incoming }: { incoming: IncomingKey }) {
   const { status, changes, existingAddedAt } = incoming;
   if (status === "new" || status === "rejected") return null;
@@ -45,8 +50,8 @@ function ImportStatusStrip({ incoming }: { incoming: IncomingKey }) {
 
   if (status === "duplicate") {
     return (
-      <div className="rounded-md border border-green-500/40 bg-green-500/10 p-2.5">
-        <p className="flex items-center gap-1.5 text-xs font-medium text-green-400">
+      <Block className="bg-[#15231b] px-3.5 py-2.5">
+        <p className="text-good flex items-center gap-1.5 text-xs font-medium">
           <CheckCircleIcon className="h-3.5 w-3.5 shrink-0" />
           {t("import_status_duplicate")}
         </p>
@@ -55,15 +60,17 @@ function ImportStatusStrip({ incoming }: { incoming: IncomingKey }) {
             {t("import_status_duplicate_added", { date: added })}
           </p>
         )}
-      </div>
+      </Block>
     );
   }
 
   // Only "update" reaches here: "new"/"rejected" returned above, and
   // "duplicate" is handled by the branch before this one.
   return (
-    <div className="rounded-md border border-blue-500/40 bg-blue-500/10 p-2.5">
-      <p className="flex items-center gap-1.5 text-xs font-medium text-blue-400">
+    // Neutral, not a status tint: an update is neither a warning nor a
+    // result yet -- the lines under it say what will change.
+    <Block className="px-3.5 py-2.5">
+      <p className="text-foreground flex items-center gap-1.5 text-xs font-medium">
         <RefreshCwIcon className="h-3.5 w-3.5 shrink-0" />
         {t("import_status_update")}
       </p>
@@ -79,7 +86,7 @@ function ImportStatusStrip({ incoming }: { incoming: IncomingKey }) {
           </p>
         ))}
       </div>
-    </div>
+    </Block>
   );
 }
 
@@ -237,9 +244,10 @@ export function ImportPreview({
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      <div className="flex-1 space-y-4 overflow-y-auto p-3">
+      <div className="flex-1 space-y-3 overflow-y-auto p-3">
         <KeyPreviewBody
           name={name}
+          avatarFingerprint={incoming.keyId}
           email={email}
           akaEmails={akaEmails}
           chips={chips}
@@ -260,7 +268,7 @@ export function ImportPreview({
                a skipped step, so the footer button says which one it is
                rather than making the user infer it. */
             <div>
-              <label className="text-muted-foreground mb-1 block text-xs">
+              <label className="text-muted-foreground mb-1.5 block px-1 text-xs font-medium">
                 {t("import_group_label")}{" "}
                 <span className="text-muted-foreground/60">
                   {t("import_optional")}
@@ -286,7 +294,7 @@ export function ImportPreview({
                 }}
                 className={INPUT_CLASS}
               />
-              <p className="text-muted-foreground mt-1 text-[11px]">
+              <p className="text-muted-foreground mt-1.5 px-1 text-[11px]">
                 {tn("import_group_help", grouping.separateCount)}
               </p>
             </div>
@@ -305,25 +313,24 @@ export function ImportPreview({
               </p>
               {incoming.group.rejected.length > 0 && (
                 <div className="space-y-1.5">
-                  <p className="text-xs font-medium text-amber-400">
+                  <p className="text-warn px-1 text-xs font-medium">
                     {tn(
                       "import_github_rejected_heading",
                       incoming.group.rejected.length,
                     )}
                   </p>
-                  {incoming.group.rejected.map((r) => (
-                    <div
-                      key={r.line}
-                      className="border-l-2 border-amber-500/60 pl-2.5"
-                    >
-                      <p className="text-muted-foreground text-xs leading-relaxed">
-                        {r.reason}
-                      </p>
-                      <p className="text-muted-foreground/70 truncate font-mono text-[10px]">
-                        {r.line}
-                      </p>
-                    </div>
-                  ))}
+                  <BlockStack>
+                    {incoming.group.rejected.map((r) => (
+                      <Block key={r.line} className="px-3.5 py-2.5">
+                        <p className="text-muted-foreground text-xs leading-relaxed">
+                          {r.reason}
+                        </p>
+                        <p className="text-muted-foreground/70 truncate font-mono text-[10px]">
+                          {r.line}
+                        </p>
+                      </Block>
+                    ))}
+                  </BlockStack>
                 </div>
               )}
             </div>
@@ -349,7 +356,7 @@ export function ImportPreview({
         </KeyPreviewBody>
       </div>
 
-      <div className="border-border space-y-2 border-t p-3">
+      <div className="space-y-2 p-3">
         {/* Says why there's no Import button. The reason itself is
               already spelled out by the banner above, so don't repeat it
               here -- two red paragraphs read as two problems. */}

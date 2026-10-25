@@ -437,6 +437,7 @@ export interface MessageArgs {
   "keys_contacts_heading_count": { count: string | number };
   "keys_contacts_heading_encrypted": undefined;
   "keys_contacts_locked": undefined;
+  "keys_copy_email_aria": undefined;
   "keys_copy_fingerprint_aria": undefined;
   "keys_copy_private_key": undefined;
   "keys_copy_public_key": undefined;
@@ -782,6 +783,7 @@ export interface MessageArgs {
   "workspace_hide_technical_details": undefined;
   "workspace_history_save_failed": undefined;
   "workspace_import_one": undefined;
+  "workspace_lookup_signer": { host: string | number };
   "workspace_match_case": undefined;
   "workspace_message_input_aria": undefined;
   "workspace_message_password_help": undefined;
@@ -852,7 +854,6 @@ export interface MessageArgs {
   "workspace_style_italic": undefined;
   "workspace_style_strike": undefined;
   "workspace_text_cleared_toast": undefined;
-  "workspace_text_entered_below": undefined;
   "workspace_toggle_encrypt_to_self": undefined;
   "workspace_toggle_password": undefined;
   "workspace_toggle_save_to_history": undefined;
@@ -933,6 +934,7 @@ export interface PluralArgs {
   "settings_import_unlock_intro": { encrypted: string | number };
   "shared_bundle_clipboard": undefined;
   "shared_minutes": undefined;
+  "workspace_char_count": undefined;
   "workspace_files_decrypted": { size: string | number };
   "workspace_files_encrypted": { size: string | number };
   "workspace_files_signed": undefined;
@@ -1147,6 +1149,8 @@ export const PLACEHOLDER_ORDER: Readonly<Partial<Record<string, readonly string[
   "shared_minutes_one": ["count"],
   "shared_minutes_other": ["count"],
   "shared_preset_applied": ["title"],
+  "workspace_char_count_one": ["count"],
+  "workspace_char_count_other": ["count"],
   "workspace_compose_same_language": ["language"],
   "workspace_compose_translated": ["from","to"],
   "workspace_crx_saved": ["name"],
@@ -1161,6 +1165,7 @@ export const PLACEHOLDER_ORDER: Readonly<Partial<Record<string, readonly string[
   "workspace_files_signed_other": ["count"],
   "workspace_files_zipped_encrypted_one": ["count"],
   "workspace_files_zipped_encrypted_other": ["count"],
+  "workspace_lookup_signer": ["host"],
   "workspace_note_downloading": ["what"],
   "workspace_note_downloading_progress": ["what","percent"],
   "workspace_note_same_language": ["language"],

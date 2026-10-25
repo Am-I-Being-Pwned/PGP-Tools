@@ -67,8 +67,9 @@ export function ConfirmPage({
         // m-auto centers the decision block vertically when it fits,
         // and degrades to normal scrolling when it doesn't.
         <div className="m-auto w-full space-y-3">
-          <div className="border-destructive/30 bg-destructive/5 flex items-start gap-2 rounded-md border p-3">
-            <TriangleAlertIcon className="text-destructive mt-0.5 h-4 w-4 shrink-0" />
+          {/* A "stop" status band: red tint, no outline. */}
+          <div className="flex items-start gap-2 rounded-xl bg-[#2a1517] p-3">
+            <TriangleAlertIcon className="text-bad mt-0.5 h-4 w-4 shrink-0" />
             <div className="min-w-0 flex-1 text-xs">{children}</div>
           </div>
           {confirmPromptText !== undefined && (

@@ -2128,6 +2128,9 @@
       }
     }
   },
+  "keys_copy_email_aria": {
+    "message": "Copier l'adresse e-mail"
+  },
   "keys_copy_fingerprint_aria": {
     "message": "Copier l'empreinte"
   },
@@ -3674,6 +3677,22 @@
   "workspace_browse_files": {
     "message": "Parcourir"
   },
+  "workspace_char_count_one": {
+    "message": "$count$ caractère",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_char_count_other": {
+    "message": "$count$ caractères",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_clear_all_files": {
     "message": "Tout retirer"
   },
@@ -3929,6 +3948,14 @@
   },
   "workspace_import_one": {
     "message": "En importer une"
+  },
+  "workspace_lookup_signer": {
+    "message": "Rechercher sur $host$",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
   },
   "workspace_match_case": {
     "message": "Respecter la casse"
@@ -4228,9 +4255,6 @@
   "workspace_text_cleared_toast": {
     "message": "Texte effacé"
   },
-  "workspace_text_entered_below": {
-    "message": "Texte saisi ci-dessous"
-  },
   "workspace_toggle_encrypt_to_self": {
     "message": "Chiffrer aussi pour moi"
   },
@@ -4241,7 +4265,7 @@
     "message": "Enregistrer dans l'historique"
   },
   "workspace_toggle_zip_files": {
-    "message": "Zipper les fichiers"
+    "message": "ZIP"
   },
   "workspace_translate": {
     "message": "Traduire"

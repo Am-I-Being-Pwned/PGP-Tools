@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import { LockIcon } from "lucide-react";
 
+import { Block, BlockStack } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
 
 import type { MasterProtection } from "../../lib/storage/master-protection";
@@ -12,7 +14,6 @@ import {
   ARGON2_PARALLELISM,
 } from "../../lib/protection/password-kdf";
 import { authenticateAndGetPrf } from "../../lib/protection/webauthn-prf";
-import { INPUT_CLASS } from "../../lib/utils/styles";
 import { DevToolsPage } from "../settings/DevToolsPage";
 
 /** The passkey ceremony's PRF output, on loan to `onUnlocked` for the
@@ -161,52 +162,68 @@ export function MasterUnlockScreen({
 
   return (
     <div
-      className="flex h-full flex-col items-center justify-center p-6"
+      className="flex h-full flex-col items-center justify-center px-4 py-6"
       role="main"
       aria-label={t("shared_unlock_aria")}
     >
-      <div className="w-full max-w-xs space-y-6 text-center">
-        <img
-          src="/icon-128.png"
-          alt=""
-          className="mx-auto h-14 w-14"
-          draggable={false}
-        />
-
-        <div>
-          {/* i18n-ignore */}
-          <h1 className="text-lg font-semibold">PGP Tools</h1>
-          <p className="text-muted-foreground mt-1 text-sm">
-            {t("shared_unlock_intro")}
-          </p>
+      {/* One column, centred as a group: who this is, the one field, the
+          one action -- the card language of the rest of the panel rather
+          than a hero floating far above a strip of controls. */}
+      <div className="w-full max-w-sm space-y-5">
+        <div className="flex items-center gap-3">
+          <div className="bg-card text-good flex size-11 shrink-0 items-center justify-center rounded-xl">
+            <LockIcon className="size-5" aria-hidden="true" />
+          </div>
+          <div className="min-w-0">
+            {/* i18n-ignore */}
+            <h1 className="text-base font-semibold tracking-tight">PGP Tools</h1>
+            <p className="text-muted-foreground text-xs">
+              {t("shared_unlock_intro")}
+            </p>
+          </div>
         </div>
 
         {masterProtection.method === "passkey" && (
-          <Button className="w-full" onClick={handlePasskeyUnlock} autoFocus>
+          <Button
+            size="lg"
+            className="w-full"
+            onClick={handlePasskeyUnlock}
+            autoFocus
+          >
             {t("shared_unlock_with_passkey")}
           </Button>
         )}
 
         {masterProtection.method === "password" && (
           <form
-            className="space-y-3"
+            className="space-y-2"
             onSubmit={(e) => {
               e.preventDefault();
               void handlePasswordUnlock();
             }}
           >
-            <input
-              type="password"
-              autoComplete="current-password"
-              placeholder={t("shared_master_password")}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className={INPUT_CLASS}
-              aria-label={t("shared_master_password")}
-              autoFocus
-            />
+            <BlockStack>
+              <Block className="flex items-center gap-3 pl-3 focus-within:shadow-[inset_0_0_0_1px_rgb(79_193_133/0.35)]">
+                <label
+                  htmlFor="master-password"
+                  className="text-muted-foreground shrink-0 text-xs font-medium"
+                >
+                  {t("shared_master_password")}
+                </label>
+                <input
+                  id="master-password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-11 min-w-0 flex-1 bg-transparent pr-3 text-sm outline-none"
+                  autoFocus
+                />
+              </Block>
+            </BlockStack>
             <Button
               type="submit"
+              size="lg"
               className="w-full"
               disabled={unlocking || !password}
             >
@@ -216,12 +233,12 @@ export function MasterUnlockScreen({
         )}
 
         {error && (
-          <p className="text-destructive text-xs" role="alert">
+          <p className="text-bad px-1 text-xs" role="alert">
             {error}
           </p>
         )}
 
-        <p className="text-muted-foreground text-xs">
+        <p className="text-muted-foreground px-1 text-xs">
           {t("shared_unlock_lost_password")}
         </p>
 
@@ -229,7 +246,7 @@ export function MasterUnlockScreen({
           <button
             type="button"
             onClick={() => setShowDevTools(true)}
-            className="text-muted-foreground hover:text-foreground text-[10px] underline transition-colors"
+            className="text-muted-foreground hover:text-foreground px-1 text-[10px] underline transition-colors"
           >
             {t("shared_dev_tools")}
           </button>

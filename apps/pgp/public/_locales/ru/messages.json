@@ -2668,6 +2668,9 @@
       }
     }
   },
+  "keys_copy_email_aria": {
+    "message": "Копировать адрес эл. почты"
+  },
   "keys_copy_fingerprint_aria": {
     "message": "Копировать отпечаток"
   },
@@ -4658,6 +4661,38 @@
   "workspace_browse_files": {
     "message": "Выбрать файлы"
   },
+  "workspace_char_count_few": {
+    "message": "$count$ символа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_char_count_many": {
+    "message": "$count$ символов",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_char_count_one": {
+    "message": "$count$ символ",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_char_count_other": {
+    "message": "$count$ символа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_clear_all_files": {
     "message": "Очистить все"
   },
@@ -4990,6 +5025,14 @@
   "workspace_import_one": {
     "message": "Импортировать ключ"
   },
+  "workspace_lookup_signer": {
+    "message": "Искать на $host$",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_match_case": {
     "message": "Учитывать регистр"
   },
@@ -5320,9 +5363,6 @@
   "workspace_text_cleared_toast": {
     "message": "Текст очищен"
   },
-  "workspace_text_entered_below": {
-    "message": "Текст введён ниже"
-  },
   "workspace_toggle_encrypt_to_self": {
     "message": "Шифровать и для меня"
   },
@@ -5333,7 +5373,7 @@
     "message": "Сохранять в историю"
   },
   "workspace_toggle_zip_files": {
-    "message": "Упаковать в ZIP"
+    "message": "ZIP"
   },
   "workspace_translate": {
     "message": "Перевести"
