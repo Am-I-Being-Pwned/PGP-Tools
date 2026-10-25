@@ -411,6 +411,10 @@
     "message": "Copy fingerprint",
     "description": "Accessible label of the copy button next to the fingerprint."
   },
+  "keys_copy_email_aria": {
+    "message": "Copy email",
+    "description": "Accessible label of the copy button next to the email on the key details card."
+  },
   "keys_fact_fingerprint": {
     "message": "Fingerprint",
     "description": "Key facts card row label. Fits a narrow (5rem) column."

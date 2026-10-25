@@ -2128,6 +2128,9 @@
       }
     }
   },
+  "keys_copy_email_aria": {
+    "message": "E-Mail-Adresse kopieren"
+  },
   "keys_copy_fingerprint_aria": {
     "message": "Fingerabdruck kopieren"
   },

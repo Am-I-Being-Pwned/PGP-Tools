@@ -2125,6 +2125,9 @@
       }
     }
   },
+  "keys_copy_email_aria": {
+    "message": "ईमेल कॉपी करें"
+  },
   "keys_copy_fingerprint_aria": {
     "message": "फ़िंगरप्रिंट कॉपी करें"
   },

@@ -437,6 +437,7 @@ export interface MessageArgs {
   "keys_contacts_heading_count": { count: string | number };
   "keys_contacts_heading_encrypted": undefined;
   "keys_contacts_locked": undefined;
+  "keys_copy_email_aria": undefined;
   "keys_copy_fingerprint_aria": undefined;
   "keys_copy_private_key": undefined;
   "keys_copy_public_key": undefined;

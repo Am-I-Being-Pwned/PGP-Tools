@@ -164,6 +164,7 @@
   "keys_also_known_as": { "message": "Auch bekannt als" },
   "keys_loading": { "message": "Wird geladen…" },
   "keys_copy_fingerprint_aria": { "message": "Fingerabdruck kopieren" },
+  "keys_copy_email_aria": { "message": "E-Mail-Adresse kopieren" },
   "keys_fact_fingerprint": { "message": "Fingerabdruck" },
   "keys_fact_algorithm": { "message": "Algorithmus" },
   "keys_fact_used_for": { "message": "Verwendung" },

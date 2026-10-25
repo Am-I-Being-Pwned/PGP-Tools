@@ -1,13 +1,12 @@
 /**
- * A key's face: a 16×16 pixel person drawn from its fingerprint, plus a
- * two-word nickname ("Lucky Otter").
+ * A key's face: a 16×16 pixel person drawn from its fingerprint.
  *
  * Each byte of the fingerprint picks one trait (backdrop, skin, hair
  * style and colour, eyes, mouth, facial hair, accessory, shirt), so the
  * same key always draws the same person and a swapped key looks like a
- * different one. It is a recognition aid only: ~a few million faces and
- * 1,024 nicknames are far too few to stand in for comparing the
- * fingerprint itself, and the UI must never present them as a check.
+ * different one. It is a recognition aid only: a few million faces are
+ * far too few to stand in for comparing the fingerprint itself, and the
+ * UI must never present them as a check.
  *
  * Pure and synchronous so it can run during render; no network, no
  * secrets (fingerprints are public).
@@ -18,8 +17,6 @@ export const AVATAR_SIZE = 16;
 export interface KeyAvatar {
   /** Row-major, AVATAR_SIZE × AVATAR_SIZE CSS colours. */
   cells: string[];
-  /** Two words to say out loud, e.g. "Lucky Otter". */
-  nickname: string;
 }
 
 const BGH = [20, 60, 100, 150, 200, 240, 285, 330];
@@ -47,74 +44,6 @@ const HAIR = [
   "#3fae84",
 ];
 const EYE = ["#2b1d14", "#3b6fb6", "#3f8a55", "#8a6a2a", "#6b6b6b"];
-const ADJ = [
-  "Amber",
-  "Brave",
-  "Calm",
-  "Clever",
-  "Coral",
-  "Cosmic",
-  "Dusty",
-  "Eager",
-  "Fuzzy",
-  "Gentle",
-  "Golden",
-  "Happy",
-  "Hidden",
-  "Icy",
-  "Jolly",
-  "Lucky",
-  "Lunar",
-  "Misty",
-  "Noble",
-  "Olive",
-  "Quiet",
-  "Rapid",
-  "Rusty",
-  "Silver",
-  "Sleepy",
-  "Solar",
-  "Swift",
-  "Tidy",
-  "Velvet",
-  "Wild",
-  "Witty",
-  "Zesty",
-];
-const NOUN = [
-  "Otter",
-  "Falcon",
-  "Badger",
-  "Heron",
-  "Lynx",
-  "Panda",
-  "Raven",
-  "Walrus",
-  "Gecko",
-  "Bison",
-  "Koala",
-  "Moose",
-  "Puffin",
-  "Tapir",
-  "Yak",
-  "Fox",
-  "Owl",
-  "Seal",
-  "Crane",
-  "Hare",
-  "Ibis",
-  "Lemur",
-  "Marten",
-  "Newt",
-  "Orca",
-  "Quail",
-  "Robin",
-  "Shrew",
-  "Toad",
-  "Viper",
-  "Wombat",
-  "Zebra",
-];
 
 const ok = (l: number, c: number, h: number) => `oklch(${l} ${c} ${h})`;
 
@@ -614,8 +543,5 @@ export function keyAvatar(fingerprint: string): KeyAvatar {
   if (a === 8) set(8, 3, "#e7c64b");
   if (a === 9) row(4, 4, 11, ac);
 
-  return {
-    cells: g.flat(),
-    nickname: `${ADJ[at(12) % 32] ?? ""} ${NOUN[at(13) % 32] ?? ""}`,
-  };
+  return { cells: g.flat() };
 }

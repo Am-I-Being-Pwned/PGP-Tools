@@ -194,6 +194,7 @@
   "keys_also_known_as": { "message": "Также известен как" },
   "keys_loading": { "message": "Загрузка…" },
   "keys_copy_fingerprint_aria": { "message": "Копировать отпечаток" },
+  "keys_copy_email_aria": { "message": "Копировать адрес эл. почты" },
   "keys_fact_fingerprint": { "message": "Отпечаток" },
   "keys_fact_algorithm": { "message": "Алгоритм" },
   "keys_fact_used_for": { "message": "Назначение" },

@@ -308,6 +308,9 @@
   "keys_copy_fingerprint_aria": {
     "message": "フィンガープリントをコピー"
   },
+  "keys_copy_email_aria": {
+    "message": "メールアドレスをコピー"
+  },
   "keys_fact_fingerprint": {
     "message": "フィンガープリント"
   },

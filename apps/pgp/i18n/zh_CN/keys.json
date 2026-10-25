@@ -134,6 +134,7 @@
   "keys_also_known_as": { "message": "其他身份" },
   "keys_loading": { "message": "正在加载…" },
   "keys_copy_fingerprint_aria": { "message": "复制指纹" },
+  "keys_copy_email_aria": { "message": "复制邮箱地址" },
   "keys_fact_fingerprint": { "message": "指纹" },
   "keys_fact_algorithm": { "message": "算法" },
   "keys_fact_used_for": { "message": "用途" },

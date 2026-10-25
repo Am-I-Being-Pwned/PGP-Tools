@@ -2668,6 +2668,9 @@
       }
     }
   },
+  "keys_copy_email_aria": {
+    "message": "Копировать адрес эл. почты"
+  },
   "keys_copy_fingerprint_aria": {
     "message": "Копировать отпечаток"
   },

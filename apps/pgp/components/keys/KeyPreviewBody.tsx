@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   CheckIcon,
   ChevronDownIcon,
@@ -19,7 +19,6 @@ import {
   formatDateShort,
   formatRelative,
 } from "../../lib/i18n/format";
-import { keyAvatar } from "../../lib/key-avatar";
 import { formatAlgorithm } from "../../lib/utils/formatting";
 import { KeyAvatar } from "../shared/KeyAvatar";
 import { fingerprintLines } from "./fingerprint-lines";
@@ -335,7 +334,7 @@ export interface KeyPreviewChip {
 export interface KeyPreviewBodyProps {
   /** Headline identity (a local alias wins over the cert's own name). */
   name: string;
-  /** What the key's face (and nickname) is drawn from: the stored or
+  /** What the key's face is drawn from: the stored or
    *  incoming record's fingerprint. Absent ⇒ no face. */
   avatarFingerprint?: string;
   /** The cert's real name, when an alias took the headline. */
@@ -393,10 +392,15 @@ export function KeyPreviewBody({
   const [showInactive, setShowInactive] = useState(false);
   const [copiedFp, setCopiedFp] = useState(false);
   const copyTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const [copiedEmail, setCopiedEmail] = useState(false);
+  const emailTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const { copy } = useCopyToClipboard();
 
   useEffect(() => {
-    return () => clearTimeout(copyTimer.current);
+    return () => {
+      clearTimeout(copyTimer.current);
+      clearTimeout(emailTimer.current);
+    };
   }, []);
 
   const rows = facts?.components?.rows ?? null;
@@ -433,12 +437,14 @@ export function KeyPreviewBody({
       : keyExpiringSoon
         ? "bg-warn"
         : "bg-muted-foreground/60";
-  // A recognition aid that goes with the face: two words to say out loud.
-  // Never a check -- far too few of them to stand in for the fingerprint.
-  const nickname = useMemo(
-    () => (avatarFingerprint ? keyAvatar(avatarFingerprint).nickname : null),
-    [avatarFingerprint],
-  );
+  const handleCopyEmail = (address: string) => {
+    void copy(address).then((ok) => {
+      if (!ok) return;
+      setCopiedEmail(true);
+      clearTimeout(emailTimer.current);
+      emailTimer.current = setTimeout(() => setCopiedEmail(false), 2000);
+    });
+  };
 
   const handleCopyFingerprint = (fp: string) => {
     // Joins the DISPLAYED lines, so what lands on the clipboard is what
@@ -468,21 +474,27 @@ export function KeyPreviewBody({
             <p className="truncate text-base leading-tight font-semibold">
               {name}
             </p>
-            {nickname && (
-              // A friendly name, so it reads as one: sans, quoted, never
-              // mono -- nothing here may look like an identifier.
-              <p className="text-muted-foreground mt-0.5 truncate text-xs">
-                {`\u201c${nickname}\u201d`}
-              </p>
-            )}
             {subtitle && (
               <p className="text-muted-foreground mt-0.5 truncate text-xs">
                 {subtitle}
               </p>
             )}
             {email && (
-              <p className="text-muted-foreground mt-0.5 truncate text-xs">
-                {email}
+              <p className="text-muted-foreground mt-0.5 flex min-w-0 items-center gap-1 text-xs">
+                <span className="truncate">{email}</span>
+                <button
+                  type="button"
+                  onClick={() => handleCopyEmail(email)}
+                  aria-label={t("keys_copy_email_aria")}
+                  title={t("keys_copy_email_aria")}
+                  className="hover:text-foreground shrink-0 rounded p-0.5 transition-colors"
+                >
+                  {copiedEmail ? (
+                    <CheckIcon className="text-good h-3 w-3" />
+                  ) : (
+                    <CopyIcon className="h-3 w-3" />
+                  )}
+                </button>
               </p>
             )}
             {chips.length > 0 && (

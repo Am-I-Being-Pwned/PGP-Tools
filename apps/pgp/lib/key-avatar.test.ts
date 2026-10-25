@@ -53,10 +53,6 @@ describe("keyAvatar", () => {
   it("differs between keys", () => {
     expect(keyAvatar(ALICE).cells).not.toEqual(keyAvatar(BOB).cells);
   });
-
-  it("gives a two-word nickname", () => {
-    expect(keyAvatar(ALICE).nickname).toMatch(/^[A-Z][a-z]+ [A-Z][a-z]+$/);
-  });
 });
 
 describe("hasKeyFace", () => {
