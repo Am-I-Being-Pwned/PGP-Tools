@@ -594,5 +594,13 @@
   "workspace_reader_unavailable": {
     "message": "This message is no longer available.",
     "description": "Shown in a message tab that has nothing to show (for example it was reopened after the side panel closed)."
+  },
+  "workspace_char_count_one": {
+    "message": "$count$ char",
+    "description": "Character count of the message, at the right end of the toolbar under the message box. $count$ is the number of characters."
+  },
+  "workspace_char_count_other": {
+    "message": "$count$ chars",
+    "description": "Character count of the message, at the right end of the toolbar under the message box. $count$ is the number of characters."
   }
 }

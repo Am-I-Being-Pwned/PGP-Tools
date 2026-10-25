@@ -445,5 +445,11 @@
   },
   "workspace_reader_unavailable": {
     "message": "Este mensaje ya no está disponible."
+  },
+  "workspace_char_count_one": {
+    "message": "$count$ carácter"
+  },
+  "workspace_char_count_other": {
+    "message": "$count$ caracteres"
   }
 }

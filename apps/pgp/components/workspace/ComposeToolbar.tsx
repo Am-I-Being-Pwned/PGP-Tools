@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   BoldIcon,
   CheckIcon,
@@ -65,70 +65,16 @@ const STYLE_ICONS: Record<
 
 const STYLE_ORDER: InlineStyle[] = ["bold", "italic", "strike", "code"];
 
-/** How close (px, from the strip's edge) the pointer has to come before
- *  the strip fades back in. Far enough that it is showing by the time
- *  the pointer lands on a chip, near enough that writing in the rest of
- *  the box leaves it hidden. */
-const REVEAL_DISTANCE = 72;
-
-/**
- * Whether the pointer is within `REVEAL_DISTANCE` of `ref`'s box.
- * Tracked on the document rather than the message box so approaching
- * from below or beside the box counts too; one rect read per frame at
- * most, and a state change only when the answer flips.
- */
-function usePointerNear(ref: React.RefObject<HTMLElement | null>): boolean {
-  const [near, setNear] = useState(false);
-  useEffect(() => {
-    let frame = 0;
-    let x = 0;
-    let y = 0;
-    const check = () => {
-      frame = 0;
-      const el = ref.current;
-      if (!el) return;
-      const r = el.getBoundingClientRect();
-      const dx = Math.max(r.left - x, 0, x - r.right);
-      const dy = Math.max(r.top - y, 0, y - r.bottom);
-      setNear(Math.hypot(dx, dy) <= REVEAL_DISTANCE);
-    };
-    const onMove = (e: PointerEvent) => {
-      x = e.clientX;
-      y = e.clientY;
-      if (!frame) frame = requestAnimationFrame(check);
-    };
-    // Leaving the panel altogether hides it, rather than freezing it at
-    // whatever the last in-panel position said.
-    const onLeave = () => setNear(false);
-    document.addEventListener("pointermove", onMove, { passive: true });
-    document.documentElement.addEventListener("pointerleave", onLeave);
-    return () => {
-      document.removeEventListener("pointermove", onMove);
-      document.documentElement.removeEventListener("pointerleave", onLeave);
-      if (frame) cancelAnimationFrame(frame);
-    };
-  }, [ref]);
-  return near;
-}
-
-/** One button in the strip: borderless, a soft fill on hover, the
- *  strip itself carries the floating surface. */
+/** One button in the strip: borderless, a soft fill on hover. */
 const CHIP =
-  "text-muted-foreground hover:text-foreground hover:bg-accent pointer-events-auto flex h-7 w-7 shrink-0 items-center justify-center rounded transition-colors disabled:opacity-60";
+  "text-muted-foreground hover:text-foreground hover:bg-accent flex h-7 w-7 shrink-0 items-center justify-center rounded transition-colors disabled:opacity-60";
 
 /**
- * Editing controls floating in the bottom-right corner of the message
- * box: inline formatting, find, and translate-before-sending. Icon-only
- * with hover labels, mirroring the translate toggle on the result box;
- * `pointer-events-none` on the strip (set by the parent) keeps it from
- * eating selection drags, and each chip re-enables them for itself.
- *
- * Faded out while it is not in use, so it doesn't sit over the words
- * being written; it comes back as the pointer nears the corner, and
- * stays while its language menu is open or a translation is running.
- * Only opacity changes: the chips stay clickable and in the
- * accessibility tree (and the shortcuts cover them anyway), and on a
- * device with no hover it never fades at all.
+ * Editing controls docked in the message card's bottom strip: inline
+ * formatting, find, and translate-before-sending. Icon-only with hover
+ * labels, mirroring the translate toggle on the result box. Always
+ * there -- it sits under the text rather than over it, so there is
+ * nothing to fade out of the writer's way.
  */
 export function ComposeToolbar({
   onStyle,
@@ -136,24 +82,12 @@ export function ComposeToolbar({
   translate,
 }: ComposeToolbarProps) {
   const mac = isMacPlatform();
-  const stripRef = useRef<HTMLDivElement>(null);
-  const near = usePointerNear(stripRef);
   const [menuOpen, setMenuOpen] = useState(false);
-  const translating =
-    translate?.status.kind === "working" ||
-    translate?.status.kind === "downloading";
-  const shown = near || menuOpen || translating;
   return (
     <div
-      ref={stripRef}
       role="toolbar"
       aria-label={t("workspace_message_tools")}
-      data-shown={shown}
-      // In quickly; out slowly and after a beat, so skimming past the
-      // corner doesn't make it flicker.
-      className={`surface-float pointer-events-auto flex items-center gap-0.5 rounded-lg p-0.5 transition-opacity ease-out focus-within:opacity-100 hover:opacity-100 motion-reduce:transition-none [@media(hover:none)]:opacity-100 ${
-        shown ? "opacity-100 duration-150" : "opacity-0 delay-300 duration-300"
-      }`}
+      className="flex items-center gap-0.5"
     >
       {STYLE_ORDER.map((style) => {
         const Icon = STYLE_ICONS[style];
@@ -182,7 +116,7 @@ export function ComposeToolbar({
         );
       })}
 
-      <span aria-hidden className="mx-1" />
+      <span aria-hidden className="bg-border mx-1 h-4 w-px" />
 
       <HoverLabel label={t("workspace_find_replace")} shortcut={FIND_SHORTCUT}>
         <button
@@ -217,7 +151,7 @@ function TranslateMenu({
   open,
   onOpenChange: setOpen,
 }: ComposeTranslateProps & {
-  /** Owned by the strip, which stays visible while the menu is open. */
+  /** Owned by the strip. */
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {

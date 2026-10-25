@@ -933,6 +933,7 @@ export interface PluralArgs {
   "settings_import_unlock_intro": { encrypted: string | number };
   "shared_bundle_clipboard": undefined;
   "shared_minutes": undefined;
+  "workspace_char_count": undefined;
   "workspace_files_decrypted": { size: string | number };
   "workspace_files_encrypted": { size: string | number };
   "workspace_files_signed": undefined;
@@ -1147,6 +1148,8 @@ export const PLACEHOLDER_ORDER: Readonly<Partial<Record<string, readonly string[
   "shared_minutes_one": ["count"],
   "shared_minutes_other": ["count"],
   "shared_preset_applied": ["title"],
+  "workspace_char_count_one": ["count"],
+  "workspace_char_count_other": ["count"],
   "workspace_compose_same_language": ["language"],
   "workspace_compose_translated": ["from","to"],
   "workspace_crx_saved": ["name"],

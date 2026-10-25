@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { FileIcon } from "lucide-react";
+import { FileIcon, PaperclipIcon } from "lucide-react";
 
 import { cn } from "@amibeingpwned/ui";
 import { Block, BlockStack } from "@amibeingpwned/ui/block";
@@ -22,6 +22,10 @@ interface DropZoneProps {
   children?: React.ReactNode;
   /** The right end of the bottom strip (the "Clear text" button). */
   trailing?: React.ReactNode;
+  /** The left end of the strip (the compose tools). With it, Browse
+   *  shrinks to a paperclip beside it and the drop hint is dropped --
+   *  the strip is a toolbar, not a caption. */
+  leading?: React.ReactNode;
   /** The card's top block(s) -- the To and From rows, each a `Block`
    *  the caller supplies. Not part of the drop target: a drop aimed at
    *  the recipient box is not a message. It comes first in the DOM as
@@ -50,6 +54,7 @@ export function DropZone({
   enabled,
   children,
   trailing,
+  leading,
   header,
   className,
 }: DropZoneProps) {
@@ -152,6 +157,7 @@ export function DropZone({
       )}
 
       <Block className="flex shrink-0 items-center gap-1 px-1.5 py-1">
+        {leading}
         {enabled && (
           <>
             <input
@@ -161,22 +167,36 @@ export function DropZone({
               multiple
               onChange={handleFileSelect}
             />
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground hover:text-foreground h-7 px-2"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              {t("workspace_browse_files")}
-            </Button>
-            <p
-              className={cn(
-                "min-w-0 flex-1 truncate px-1 text-xs transition-colors",
-                dragOver ? "text-primary" : "text-muted-foreground",
-              )}
-            >
-              {t("workspace_drop_files_or_text")}
-            </p>
+            {leading ? (
+              <button
+                type="button"
+                aria-label={t("workspace_browse_files")}
+                title={t("workspace_browse_files")}
+                onClick={() => fileInputRef.current?.click()}
+                className="text-muted-foreground hover:text-foreground hover:bg-accent flex h-7 w-7 shrink-0 items-center justify-center rounded transition-colors"
+              >
+                <PaperclipIcon className="h-3.5 w-3.5" />
+              </button>
+            ) : (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground hover:text-foreground h-7 px-2"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {t("workspace_browse_files")}
+                </Button>
+                <p
+                  className={cn(
+                    "min-w-0 flex-1 truncate px-1 text-xs transition-colors",
+                    dragOver ? "text-primary" : "text-muted-foreground",
+                  )}
+                >
+                  {t("workspace_drop_files_or_text")}
+                </p>
+              </>
+            )}
             {activeFiles.length > 1 && (
               <Button
                 variant="ghost"

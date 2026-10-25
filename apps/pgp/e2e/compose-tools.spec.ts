@@ -251,29 +251,26 @@ test("the command palette lists the formatting tools and runs them on the select
   });
 });
 
-test("the tool strip fades out while idle and comes back as the pointer nears it", async ({
+test("the tool strip is docked under the message and always showing", async ({
   panel,
 }) => {
   await onboardWithPassword(panel, PASSWORD);
   await panel.getByRole("tab", { name: "Main" }).click();
   await box(panel).fill("hello");
   const strip = panel.getByRole("toolbar", { name: "Message tools" });
-  const at = await strip.boundingBox();
-  if (!at) throw new Error("tool strip has no bounding box");
 
-  // Far corner of the box: writing there leaves the strip hidden.
+  // Pointer far away, in the box's top corner: the strip is still there.
   const boxAt = await box(panel).boundingBox();
   if (!boxAt) throw new Error("message box has no bounding box");
   await panel.mouse.move(boxAt.x + 4, boxAt.y + 4);
-  await expect(strip).toHaveAttribute("data-shown", "false");
-  await expect(strip).toHaveCSS("opacity", "0");
-
-  // Just short of the strip: already back, before a chip is reached.
-  await panel.mouse.move(at.x - 30, at.y + at.height / 2);
-  await expect(strip).toHaveAttribute("data-shown", "true");
+  await expect(strip).toBeVisible();
   await expect(strip).toHaveCSS("opacity", "1");
 
-  // Still clickable the moment it is reached.
+  // Under the text, not over it.
+  const stripAt = await strip.boundingBox();
+  if (!stripAt) throw new Error("tool strip has no bounding box");
+  expect(stripAt.y).toBeGreaterThanOrEqual(boxAt.y + boxAt.height);
+
   await panel.getByRole("button", { name: "Bold" }).click();
-  await expect(strip).toHaveAttribute("data-shown", "true");
+  await expect(panel.getByText("5 chars")).toBeVisible();
 });

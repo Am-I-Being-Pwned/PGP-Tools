@@ -445,5 +445,11 @@
   },
   "workspace_reader_unavailable": {
     "message": "このメッセージは利用できなくなりました。"
+  },
+  "workspace_char_count_one": {
+    "message": "$count$ 文字"
+  },
+  "workspace_char_count_other": {
+    "message": "$count$ 文字"
   }
 }

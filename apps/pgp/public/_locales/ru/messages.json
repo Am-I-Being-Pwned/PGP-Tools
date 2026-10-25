@@ -4661,6 +4661,38 @@
   "workspace_browse_files": {
     "message": "Выбрать файлы"
   },
+  "workspace_char_count_few": {
+    "message": "$count$ символа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_char_count_many": {
+    "message": "$count$ символов",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_char_count_one": {
+    "message": "$count$ символ",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_char_count_other": {
+    "message": "$count$ символа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_clear_all_files": {
     "message": "Очистить все"
   },

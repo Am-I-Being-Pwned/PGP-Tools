@@ -3677,6 +3677,22 @@
   "workspace_browse_files": {
     "message": "ファイルを選択"
   },
+  "workspace_char_count_one": {
+    "message": "$count$ 文字",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_char_count_other": {
+    "message": "$count$ 文字",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_clear_all_files": {
     "message": "すべて消去"
   },

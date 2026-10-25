@@ -481,5 +481,17 @@
   },
   "workspace_reader_unavailable": {
     "message": "Это сообщение больше недоступно."
+  },
+  "workspace_char_count_one": {
+    "message": "$count$ символ"
+  },
+  "workspace_char_count_few": {
+    "message": "$count$ символа"
+  },
+  "workspace_char_count_many": {
+    "message": "$count$ символов"
+  },
+  "workspace_char_count_other": {
+    "message": "$count$ символа"
   }
 }

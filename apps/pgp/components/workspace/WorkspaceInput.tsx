@@ -13,7 +13,7 @@ import type { ComposeTranslateProps } from "./ComposeToolbar";
 import { MODE_SHORTCUTS } from "../../lib/actions/definitions";
 import { applyTextareaEdit } from "../../lib/compose/apply-edit";
 import { toggleInlineStyle } from "../../lib/compose/text-format";
-import { t } from "../../lib/i18n";
+import { t, tn } from "../../lib/i18n";
 import { ComposeToolbar } from "./ComposeToolbar";
 import { DetectedKeyBanner } from "./DetectedKeyBanner";
 import { DropZone } from "./DropZone";
@@ -144,6 +144,13 @@ export function WorkspaceInput({
   // armor, where a bold button is noise. Find still works everywhere.
   const composing = mode === "encrypt" || mode === "sign";
   const textareaMounted = files.length === 0;
+  const showTools = composing && !privateKeyDetected && textareaMounted;
+  // A number for the strip, not the text: re-read from the box on every
+  // edit (typed, or set from outside -- `inputVersion` moves then).
+  const [charCount, setCharCount] = useState(0);
+  useEffect(() => {
+    setCharCount(getInput().length);
+  }, [getInput, inputVersion, hasInput]);
   // `find` is null when closed; when open it carries the query to start
   // from (the selection at the time of the press) and a nonce so a
   // second press while open refocuses the field, as editors do.
@@ -300,16 +307,36 @@ export function WorkspaceInput({
         activeFiles={files}
         onRemoveFile={onRemoveFile}
         onClearFiles={onClearFiles}
+        // While composing, the strip is the toolbar: tools on the left,
+        // the length on the right. Clear text stays, beside the count.
+        leading={
+          showTools ? (
+            <ComposeToolbar
+              onStyle={applyStyle}
+              onFind={openFind}
+              translate={composeTranslate}
+            />
+          ) : undefined
+        }
         trailing={
-          hasInput ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground hover:text-foreground h-7 px-2"
-              onClick={onClearText}
-            >
-              {t("workspace_clear_text")}
-            </Button>
+          showTools || hasInput ? (
+            <div className="flex items-center gap-1">
+              {showTools && (
+                <span className="text-muted-foreground px-1.5 font-mono text-[11px] tabular-nums">
+                  {tn("workspace_char_count", charCount)}
+                </span>
+              )}
+              {hasInput && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground hover:text-foreground h-7 px-2 text-xs"
+                  onClick={onClearText}
+                >
+                  {t("workspace_clear_text")}
+                </Button>
+              )}
+            </div>
           ) : undefined
         }
       >
@@ -327,7 +354,10 @@ export function WorkspaceInput({
               id="pgp-input"
               aria-label={t("workspace_message_input_aria")}
               ref={attachInput}
-              onChange={(e) => onInputChange(e.target.value)}
+              onChange={(e) => {
+                onInputChange(e.target.value);
+                setCharCount(e.target.value.length);
+              }}
               onScroll={painting ? syncBackdropScroll : undefined}
               onPaste={(e) => {
                 // The ONE place workspace armor repair happens. A paste is
@@ -363,7 +393,7 @@ export function WorkspaceInput({
               // below draws the same 1px so every character lines up.
               className={`placeholder:text-muted-foreground relative z-10 min-h-20 w-full flex-1 resize-none rounded-[inherit] border border-transparent p-3 text-sm focus:border-[rgb(79_193_133/0.35)] focus:outline-none ${
                 painting ? "bg-transparent" : "bg-card"
-              } ${composing && !privateKeyDetected ? "pb-12" : ""}`}
+              }`}
               // Visually mask armored private-key material. NOTE: this is
               // shoulder-surfing protection only; the string still lives in
               // V8's heap until GC. The privateKeyDetected flag elsewhere
@@ -397,15 +427,6 @@ export function WorkspaceInput({
                     setHighlights(null);
                     inputElRef.current?.focus();
                   }}
-                />
-              </div>
-            )}
-            {composing && !privateKeyDetected && (
-              <div className="pointer-events-none absolute right-2 bottom-2 z-20">
-                <ComposeToolbar
-                  onStyle={applyStyle}
-                  onFind={openFind}
-                  translate={composeTranslate}
                 />
               </div>
             )}

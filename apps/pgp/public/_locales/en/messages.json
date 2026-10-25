@@ -4530,6 +4530,24 @@
     "message": "Browse files",
     "description": "Button in the drop zone that opens the file picker."
   },
+  "workspace_char_count_one": {
+    "message": "$count$ char",
+    "description": "Character count of the message, at the right end of the toolbar under the message box. $count$ is the number of characters.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_char_count_other": {
+    "message": "$count$ chars",
+    "description": "Character count of the message, at the right end of the toolbar under the message box. $count$ is the number of characters.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_clear_all_files": {
     "message": "Clear all",
     "description": "Button under the staged file list that removes every file."
