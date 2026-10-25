@@ -4,7 +4,6 @@ import {
   CheckIcon,
   ChevronRightIcon,
   ClipboardIcon,
-  HistoryIcon,
   LockIcon,
   LockOpenIcon,
   PenLineIcon,
@@ -86,30 +85,6 @@ function RecipientAvatars({
         />
       ))}
     </span>
-  );
-}
-
-/** Small icon button that opens the history page. Self-contained so the
- *  WorkspaceView diff stays a single element. */
-export function HistoryButton({ enabled }: { enabled: boolean }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        title={t("actions_history")}
-        aria-label={t("actions_history")}
-        // Deliberately out of the Tab order: it sits between the toggle
-        // badges and the main action, and keyboard users reach history
-        // via the palette ("Open history") instead.
-        tabIndex={-1}
-        className="text-muted-foreground hover:text-foreground ml-auto rounded p-1 transition-colors"
-      >
-        <HistoryIcon className="h-4 w-4" />
-      </button>
-      {open && <HistoryPage enabled={enabled} onClose={() => setOpen(false)} />}
-    </>
   );
 }
 
