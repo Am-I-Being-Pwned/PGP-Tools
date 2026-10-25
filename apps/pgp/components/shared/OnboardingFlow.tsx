@@ -35,6 +35,7 @@ import {
 } from "../../lib/protection/webauthn-prf";
 import { saveMasterProtection } from "../../lib/storage/master-protection";
 import { savePreferences } from "../../lib/storage/preferences";
+import { afterNextPaint } from "../../lib/utils/paint";
 import {
   getDefaultProtectionMethod,
   ProtectionMethodPicker,
@@ -282,6 +283,8 @@ export function OnboardingFlow({
     }
 
     setStep("generating");
+    // Let "Generating…" paint before the wasm call holds the thread.
+    await afterNextPaint();
 
     try {
       const expiresIn = EXPIRY_SECONDS[expiryOption];

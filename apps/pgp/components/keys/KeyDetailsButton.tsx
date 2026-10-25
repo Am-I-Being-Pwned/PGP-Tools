@@ -15,7 +15,14 @@ type AnyKey = ProtectedKeyBlob | PublicContactKey;
  *  -- the exact same overview shown from the Keys tab -- so a selected key
  *  (e.g. an encrypt recipient) can be inspected without leaving the flow.
  *  Rendered read-only: no rename/delete/encrypt-to actions are wired in. */
-export function KeyDetailsButton({ keyData }: { keyData: AnyKey }) {
+export function KeyDetailsButton({
+  keyData,
+  subtle = false,
+}: {
+  keyData: AnyKey;
+  /** A bare icon, for use inside a row that is already a surface. */
+  subtle?: boolean;
+}) {
   const [open, setOpen] = useState(false);
 
   // Contacts store the armor under `armoredPublicKey`; own-key blobs don't
@@ -29,10 +36,14 @@ export function KeyDetailsButton({ keyData }: { keyData: AnyKey }) {
     <>
       <Button
         type="button"
-        variant="outline"
+        variant={subtle ? "ghost" : "outline"}
         aria-label={t("keys_key_details")}
         title={t("keys_key_details")}
-        className="text-muted-foreground hover:text-foreground h-auto shrink-0 px-2"
+        className={
+          subtle
+            ? "text-muted-foreground hover:text-foreground size-7 shrink-0"
+            : "text-muted-foreground hover:text-foreground h-auto shrink-0 px-2"
+        }
         onClick={() => setOpen(true)}
       >
         <InfoIcon className="h-4 w-4" />

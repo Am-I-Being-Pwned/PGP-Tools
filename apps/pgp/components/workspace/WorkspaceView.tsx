@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
+import { cn } from "@amibeingpwned/ui";
 import { Block } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
 import { Kbd } from "@amibeingpwned/ui/kbd";
@@ -1206,7 +1207,23 @@ export function WorkspaceView({
                   className="flex min-h-9 items-center gap-2.5 py-1 pr-2.5 pl-3"
                   title={signBlockedReason}
                 >
-                  {signer && !signBlockedReason ? (
+                  {/* Who signs only matters once signing is on: off, the
+                      row is just the switch. With more than one key that
+                      can sign, the name IS the "Sign with" picker. Nothing
+                      will be signed on the age path, so there the question
+                      doesn't arise: the switch stays, dimmed, and the reason
+                      takes the name's place. */}
+                  {!signBlockedReason && !s.alsoSign ? null : signer &&
+                    !signBlockedReason &&
+                    signKeyChoices.length > 1 ? (
+                    <KeySelector
+                      inline
+                      label={t("workspace_sign_with")}
+                      keys={signKeyChoices}
+                      selectedKeyId={signer.keyId}
+                      onSelect={ops.selectPrivateKey}
+                    />
+                  ) : signer && !signBlockedReason ? (
                     <>
                       <KeyAvatar fingerprint={signer.keyId} size={16} />
                       <span className="min-w-0 flex-1 truncate text-sm">
@@ -1223,7 +1240,15 @@ export function WorkspaceView({
                       {signBlockedReason}
                     </span>
                   )}
-                  <label className="text-muted-foreground flex shrink-0 items-center gap-2 text-xs font-medium">
+                  <label
+                    className={cn(
+                      "text-muted-foreground flex items-center gap-2 text-xs font-medium",
+                      // Alone on the row: label left, switch right.
+                      !signBlockedReason && !s.alsoSign
+                        ? "flex-1 justify-between"
+                        : "shrink-0",
+                    )}
+                  >
                     {t("common_sign")}
                     <Switch
                       size="sm"
@@ -1414,17 +1439,6 @@ export function WorkspaceView({
                 )}
               </OptionBar>
             </div>
-            {/* Nothing will be signed on the age path, so the "which key
-                signs" question doesn't arise -- the toggle above stays,
-                dimmed with its reason, and this selector goes. */}
-            {s.alsoSign && !signBlockedReason && signKeyChoices.length > 1 && (
-              <KeySelector
-                label={t("workspace_sign_with")}
-                keys={signKeyChoices}
-                selectedKeyId={s.selectedKeyId}
-                onSelect={ops.selectPrivateKey}
-              />
-            )}
             {s.encryptToSelf && selfExcluded && (
               <p className="text-muted-foreground pl-2 text-xs">
                 {t("workspace_self_excluded_intro")}{" "}

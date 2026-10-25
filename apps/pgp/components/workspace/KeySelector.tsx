@@ -40,6 +40,10 @@ interface KeySelectorProps {
   emptyText?: string;
   emptyAction?: () => void;
   emptyActionLabel?: string;
+  /** Drawn inside a card row (the composer's From line): no label above
+   *  (it becomes the trigger's accessible name), a slim trigger, the list
+   *  dropping down rather than up. Same list, same picks. */
+  inline?: boolean;
 }
 
 function getKeyDisplay(key: AnyKey): { name: string; detail: string } {
@@ -60,6 +64,7 @@ export function KeySelector({
   emptyText,
   emptyAction,
   emptyActionLabel,
+  inline = false,
 }: KeySelectorProps) {
   const [open, setOpen] = useState(false);
 
@@ -98,6 +103,131 @@ export function KeySelector({
   const selectedKey = flatKeys.find((k) => k.keyId === selectedKeyId);
   const selectedDisplay = selectedKey ? getKeyDisplay(selectedKey) : null;
 
+  const list = (
+    <>
+      {/* Pin the list to one side of the trigger (above it in the panel,
+            below it on the card's From line) and disable collision flipping
+            so it doesn't jump between top/bottom as the result count
+            changes while searching. */}
+      <PopoverContent
+        side={inline ? "bottom" : "top"}
+        avoidCollisions={false}
+        className="w-(--radix-popover-trigger-width) p-0"
+      >
+        <Command
+          onKeyDown={(e) => {
+            // mod+Enter is the global Run shortcut, never a pick:
+            // preventDefault so cmdk skips its own Enter handler (it
+            // bails on defaultPrevented), close the popover, and let
+            // the event bubble to the window-level shortcut listener.
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey || e.altKey)) {
+              e.preventDefault();
+              setOpen(false);
+            }
+          }}
+        >
+          <CommandInput placeholder={t("actions_search_placeholder")} />
+          {/* Fixed height (not just max-h) so the list stays a constant
+                size and doesn't grow/shrink as search filters the results. */}
+          <CommandList className="h-[300px]">
+            <CommandEmpty>{t("actions_no_keys_found")}</CommandEmpty>
+            {hasGroups ? (
+              <>
+                {contacts && contacts.length > 0 && (
+                  <CommandGroup heading={t("actions_group_contacts")}>
+                    {contacts.map((key) => (
+                      <KeyOption
+                        key={key.keyId}
+                        keyData={key}
+                        selected={key.keyId === selectedKeyId}
+                        onSelect={() => {
+                          onSelect(key.keyId);
+                          setOpen(false);
+                        }}
+                      />
+                    ))}
+                  </CommandGroup>
+                )}
+                {contacts &&
+                  contacts.length > 0 &&
+                  myKeys &&
+                  myKeys.length > 0 && <CommandSeparator />}
+                {myKeys && myKeys.length > 0 && (
+                  <CommandGroup heading={t("actions_group_my_keys")}>
+                    {myKeys.map((key) => (
+                      <KeyOption
+                        key={key.keyId}
+                        keyData={key}
+                        selected={key.keyId === selectedKeyId}
+                        onSelect={() => {
+                          onSelect(key.keyId);
+                          setOpen(false);
+                        }}
+                      />
+                    ))}
+                  </CommandGroup>
+                )}
+              </>
+            ) : (
+              <CommandGroup>
+                {flatKeys.map((key) => (
+                  <KeyOption
+                    key={key.keyId}
+                    keyData={key}
+                    selected={key.keyId === selectedKeyId}
+                    onSelect={() => {
+                      onSelect(key.keyId);
+                      setOpen(false);
+                    }}
+                  />
+                ))}
+              </CommandGroup>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </>
+  );
+
+  if (inline) {
+    return (
+      <div className="flex min-w-0 flex-1 items-center gap-0.5">
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              role="combobox"
+              aria-expanded={open}
+              aria-label={label}
+              className="hover:bg-accent focus-visible:ring-ring/50 flex min-w-0 flex-1 items-center gap-2.5 rounded-md py-1 pr-1.5 pl-1 text-left text-sm outline-none focus-visible:ring-2"
+            >
+              {selectedKey && selectedDisplay ? (
+                <>
+                  <KeyAvatar fingerprint={selectedKey.keyId} size={16} />
+                  <span className="min-w-0 flex-1 truncate">
+                    {selectedDisplay.name}
+                    {selectedDisplay.detail && (
+                      <span className="text-muted-foreground ml-1.5 text-xs">
+                        {selectedDisplay.detail}
+                      </span>
+                    )}
+                  </span>
+                </>
+              ) : (
+                <span className="text-muted-foreground min-w-0 flex-1 truncate">
+                  {t("actions_select_key_placeholder")}
+                </span>
+              )}
+              <ChevronsUpDownIcon className="h-3.5 w-3.5 shrink-0 opacity-50" />
+            </button>
+          </PopoverTrigger>
+          {list}
+        </Popover>
+        {selectedKey && <KeyDetailsButton keyData={selectedKey} subtle />}
+      </div>
+    );
+  }
+
   return (
     <div>
       <label className="text-muted-foreground mb-1 block text-xs font-medium">
@@ -132,86 +262,7 @@ export function KeySelector({
               <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
-          {/* Pin the list ABOVE the trigger and disable collision flipping so
-            it doesn't jump between top/bottom as the result count changes
-            while searching. */}
-          <PopoverContent
-            side="top"
-            avoidCollisions={false}
-            className="w-(--radix-popover-trigger-width) p-0"
-          >
-            <Command
-              onKeyDown={(e) => {
-                // mod+Enter is the global Run shortcut, never a pick:
-                // preventDefault so cmdk skips its own Enter handler (it
-                // bails on defaultPrevented), close the popover, and let
-                // the event bubble to the window-level shortcut listener.
-                if (e.key === "Enter" && (e.metaKey || e.ctrlKey || e.altKey)) {
-                  e.preventDefault();
-                  setOpen(false);
-                }
-              }}
-            >
-              <CommandInput placeholder={t("actions_search_placeholder")} />
-              {/* Fixed height (not just max-h) so the list stays a constant
-                size and doesn't grow/shrink as search filters the results. */}
-              <CommandList className="h-[300px]">
-                <CommandEmpty>{t("actions_no_keys_found")}</CommandEmpty>
-                {hasGroups ? (
-                  <>
-                    {contacts && contacts.length > 0 && (
-                      <CommandGroup heading={t("actions_group_contacts")}>
-                        {contacts.map((key) => (
-                          <KeyOption
-                            key={key.keyId}
-                            keyData={key}
-                            selected={key.keyId === selectedKeyId}
-                            onSelect={() => {
-                              onSelect(key.keyId);
-                              setOpen(false);
-                            }}
-                          />
-                        ))}
-                      </CommandGroup>
-                    )}
-                    {contacts &&
-                      contacts.length > 0 &&
-                      myKeys &&
-                      myKeys.length > 0 && <CommandSeparator />}
-                    {myKeys && myKeys.length > 0 && (
-                      <CommandGroup heading={t("actions_group_my_keys")}>
-                        {myKeys.map((key) => (
-                          <KeyOption
-                            key={key.keyId}
-                            keyData={key}
-                            selected={key.keyId === selectedKeyId}
-                            onSelect={() => {
-                              onSelect(key.keyId);
-                              setOpen(false);
-                            }}
-                          />
-                        ))}
-                      </CommandGroup>
-                    )}
-                  </>
-                ) : (
-                  <CommandGroup>
-                    {flatKeys.map((key) => (
-                      <KeyOption
-                        key={key.keyId}
-                        keyData={key}
-                        selected={key.keyId === selectedKeyId}
-                        onSelect={() => {
-                          onSelect(key.keyId);
-                          setOpen(false);
-                        }}
-                      />
-                    ))}
-                  </CommandGroup>
-                )}
-              </CommandList>
-            </Command>
-          </PopoverContent>
+          {list}
         </Popover>
         {selectedKey && <KeyDetailsButton keyData={selectedKey} />}
       </div>

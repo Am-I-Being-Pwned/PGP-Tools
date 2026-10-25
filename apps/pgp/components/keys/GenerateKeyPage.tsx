@@ -21,6 +21,7 @@ import { generateCrxKey } from "../../lib/crx/operations";
 import { t } from "../../lib/i18n";
 import { formatDate } from "../../lib/i18n/format";
 import { generateAndProtect } from "../../lib/protection/protect-flow";
+import { afterNextPaint } from "../../lib/utils/paint";
 import {
   SlideOverHeader,
   SlideOverPanel,
@@ -205,6 +206,8 @@ export function GenerateKeyPage({
 
     setGenerating(true);
     setStep("generating");
+    // Let "Generating…" paint before the wasm call holds the thread.
+    await afterNextPaint();
 
     try {
       if (keyType === "crx") {
