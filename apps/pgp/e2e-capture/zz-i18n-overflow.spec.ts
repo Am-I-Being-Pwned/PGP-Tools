@@ -3,7 +3,7 @@
 // every string that is truncated with an ellipsis or clipped by its box,
 // mapped back to its message key. Run:
 //   npx playwright test --config=playwright.capture.config.ts zz-i18n-overflow
-//   LOCALES=de,fr WIDTHS=360 npx playwright test ... zz-i18n-overflow
+//   LOCALES=de,fr npx playwright test ... zz-i18n-overflow
 import {
   cpSync,
   mkdirSync,
@@ -21,17 +21,20 @@ import { keyBySlug } from "../e2e/keys";
 
 const APP = path.resolve(import.meta.dirname, "..");
 const EXTENSION_PATH = path.join(APP, ".output", "chrome-mv3");
-const OUT = process.env.OUT ?? path.join(APP, "test-results", "i18n-overflow");
+const OUT = path.join(APP, "test-results", "i18n-overflow");
 const LOCALES = (
   process.env.LOCALES ?? "en,de,es,fr,hi,it,ja,pt_BR,ru,zh_CN"
 ).split(",");
-const WIDTHS = (process.env.WIDTHS ?? "360,400").split(",").map(Number);
+const WIDTHS = [360, 400];
 const PASSWORD = "correct horse battery staple";
 
-type Messages = Record<string, { message: string }>;
+type Messages = Partial<Record<string, { message: string }>>;
 const readMessages = (l: string): Messages =>
   JSON.parse(
-    readFileSync(path.join(APP, "public", "_locales", l, "messages.json"), "utf8"),
+    readFileSync(
+      path.join(APP, "public", "_locales", l, "messages.json"),
+      "utf8",
+    ),
   ) as Messages;
 
 function forcedLocaleBuild(locale: string): string {
@@ -48,7 +51,10 @@ function forcedLocaleBuild(locale: string): string {
   writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
   for (const entry of readdirSync(path.join(dir, "_locales")))
     if (entry !== locale)
-      rmSync(path.join(dir, "_locales", entry), { recursive: true, force: true });
+      rmSync(path.join(dir, "_locales", entry), {
+        recursive: true,
+        force: true,
+      });
   return dir;
 }
 
@@ -61,7 +67,11 @@ interface Hit {
 /** Everything on screen whose text doesn't fit. */
 async function measure(page: Page): Promise<Hit[]> {
   return page.evaluate(() => {
-    const hits: { kind: "ellipsis" | "clipped" | "scrolled" | "cut"; text: string; overBy: number }[] = [];
+    const hits: {
+      kind: "ellipsis" | "clipped" | "scrolled" | "cut";
+      text: string;
+      overBy: number;
+    }[] = [];
     // A leaf whose box pokes out of the nearest ancestor that clips: the
     // ancestor hides part of it (the card cutting "Text löschen" in half).
     function clipper(el: HTMLElement) {
@@ -73,23 +83,35 @@ async function measure(page: Page): Promise<Hit[]> {
       const r = el.getBoundingClientRect();
       return r.width > 0 && r.height > 0;
     };
-    for (const el of Array.from(document.querySelectorAll<HTMLElement>("body *"))) {
-      if (!visible(el) || el.closest("textarea,pre,[contenteditable]")) continue;
+    for (const el of Array.from(
+      document.querySelectorAll<HTMLElement>("body *"),
+    )) {
+      if (!visible(el) || el.closest("textarea,pre,[contenteditable]"))
+        continue;
       if (el.matches("textarea,pre,input,svg,svg *")) continue;
       const cs = getComputedStyle(el);
       const text = (el.innerText || "").trim().replace(/\s+/g, " ");
       const over = el.scrollWidth - el.clientWidth;
       // A container that has been scrolled sideways though it can't be
       // scrolled by the user: content wider than the box shoved it over.
-      if (el.scrollLeft > 0 && cs.overflowX !== "auto" && cs.overflowX !== "scroll")
-        hits.push({ kind: "scrolled", text: text.slice(0, 80), overBy: el.scrollLeft });
+      if (
+        el.scrollLeft > 0 &&
+        cs.overflowX !== "auto" &&
+        cs.overflowX !== "scroll"
+      )
+        hits.push({
+          kind: "scrolled",
+          text: text.slice(0, 80),
+          overBy: el.scrollLeft,
+        });
       if (text && el.children.length === 0) {
         const anc = clipper(el);
         if (anc) {
           const r = el.getBoundingClientRect();
           const a = anc.getBoundingClientRect();
           const cut = Math.max(r.right - a.right, a.left - r.left);
-          if (cut > 1) hits.push({ kind: "cut", text, overBy: Math.round(cut) });
+          if (cut > 1)
+            hits.push({ kind: "cut", text, overBy: Math.round(cut) });
         }
       }
       if (!text || over <= 1) continue;
@@ -125,6 +147,7 @@ for (const locale of LOCALES) {
   // dropped to their literal prefix so "63 Zeichen" still finds its key.
   const byText = new Map<string, string[]>();
   for (const [k, v] of Object.entries(msgs)) {
+    if (!v) continue;
     const s = v.message.replace(/\s+/g, " ").trim();
     byText.set(s, [...(byText.get(s) ?? []), k]);
   }
@@ -133,6 +156,7 @@ for (const locale of LOCALES) {
     if (exact) return exact;
     const out: string[] = [];
     for (const [k, v] of Object.entries(msgs)) {
+      if (!v) continue;
       const fixed = v.message.split(/\$[A-Za-z_]+\$|\{[^}]*\}/)[0]?.trim();
       if (fixed && fixed.length >= 3 && text.includes(fixed)) out.push(k);
     }
@@ -166,7 +190,9 @@ for (const locale of LOCALES) {
         const hits = await measure(panel);
         const dir = path.join(OUT, locale);
         mkdirSync(dir, { recursive: true });
-        await panel.screenshot({ path: path.join(dir, `${screen}-${width}.png`) });
+        await panel.screenshot({
+          path: path.join(dir, `${screen}-${width}.png`),
+        });
         for (const h of hits)
           report.push({ locale, screen, width, ...h, keys: keysFor(h.text) });
       }
@@ -176,7 +202,11 @@ for (const locale of LOCALES) {
       try {
         await fn();
       } catch (e) {
-        report.push({ locale, screen: name, error: (e as Error).message.split("\n")[0] });
+        report.push({
+          locale,
+          screen: name,
+          error: (e as Error).message.split("\n")[0],
+        });
       }
     };
 
@@ -184,15 +214,29 @@ for (const locale of LOCALES) {
     await panel.getByRole("button", { name: t("app_onboarding_next") }).click();
     await panel.locator('input[name="protection"]').nth(1).check();
     await snap("onboarding-protection");
-    await panel.getByLabel(t("keygen_protection_password"), { exact: true }).fill(PASSWORD);
+    await panel
+      .getByLabel(t("keygen_protection_password"), { exact: true })
+      .fill(PASSWORD);
     await panel.getByLabel(t("keygen_confirm_password")).fill(PASSWORD);
-    await panel.getByRole("button", { name: t("app_onboarding_set_password") }).click();
-    await panel.getByPlaceholder(t("app_onboarding_name_placeholder")).fill("James Arnott");
-    await panel.getByPlaceholder(t("app_onboarding_email_placeholder")).fill("james@amibeingpwned.com");
+    await panel
+      .getByRole("button", { name: t("app_onboarding_set_password") })
+      .click();
+    await panel
+      .getByPlaceholder(t("app_onboarding_name_placeholder"))
+      .fill("James Arnott");
+    await panel
+      .getByPlaceholder(t("app_onboarding_email_placeholder"))
+      .fill("james@amibeingpwned.com");
     await snap("onboarding-key");
-    await panel.getByRole("button", { name: t("app_onboarding_create_key") }).click();
-    await panel.getByRole("button", { name: t("app_onboarding_keep_defaults") }).click({ timeout: 30_000 });
-    await expect(panel.getByRole("tab", { name: t("common_keys") })).toBeVisible({ timeout: 30_000 });
+    await panel
+      .getByRole("button", { name: t("app_onboarding_create_key") })
+      .click();
+    await panel
+      .getByRole("button", { name: t("app_onboarding_keep_defaults") })
+      .click({ timeout: 30_000 });
+    await expect(
+      panel.getByRole("tab", { name: t("common_keys") }),
+    ).toBeVisible({ timeout: 30_000 });
 
     await step("main-empty", () => snap("main-empty"));
 
@@ -206,13 +250,17 @@ for (const locale of LOCALES) {
           buffer: Buffer.from(keyBySlug("standard").publicKey, "utf8"),
         });
       await snap("import-preview");
-      await panel.getByRole("button", { name: t("import_action_import_contact") }).click();
+      await panel
+        .getByRole("button", { name: t("import_action_import_contact") })
+        .click();
       await panel.waitForTimeout(500);
       await snap("keys");
     });
 
     await step("generate", async () => {
-      await panel.getByRole("button", { name: t("keys_generate_button") }).click();
+      await panel
+        .getByRole("button", { name: t("keys_generate_button") })
+        .click();
       await panel.waitForTimeout(600);
       await snap("generate");
       await panel.keyboard.press("Escape");
@@ -220,10 +268,18 @@ for (const locale of LOCALES) {
 
     await step("compose", async () => {
       await panel.getByRole("tab", { name: t("app_tab_main") }).click();
-      await panel.getByRole("combobox", { name: t("workspace_recipients_label") }).click();
-      await panel.getByRole("option", { name: /Alice Example/ }).first().click();
+      await panel
+        .getByRole("combobox", { name: t("workspace_recipients_label") })
+        .click();
+      await panel
+        .getByRole("option", { name: /Alice Example/ })
+        .first()
+        .click();
       await panel.keyboard.press("Escape");
-      await panel.locator("textarea").first().fill("Meet me at the usual place at 8.");
+      await panel
+        .locator("textarea")
+        .first()
+        .fill("Meet me at the usual place at 8.");
       await panel.locator("body").click({ position: { x: 5, y: 5 } });
       await snap("compose");
     });
