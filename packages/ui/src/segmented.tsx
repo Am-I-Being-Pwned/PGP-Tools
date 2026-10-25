@@ -143,7 +143,7 @@ export function Segmented<T extends string>({
             <span
               aria-hidden="true"
               className={cn(
-                "surface-float text-muted-foreground pointer-events-none absolute left-1/2 z-50 -translate-x-1/2 rounded-md px-1.5 py-1 whitespace-nowrap opacity-0 transition-opacity delay-0 duration-150 group-hover/seg:opacity-100 group-hover/seg:delay-300 group-has-[:focus-visible]/seg:opacity-100",
+                "surface-float text-muted-foreground pointer-events-none absolute left-1/2 z-50 -translate-x-1/2 rounded-md px-1.5 py-1 whitespace-nowrap opacity-0 transition-opacity delay-0 duration-150 group-hover/seg:opacity-100 group-hover/seg:delay-[800ms] group-has-[:focus-visible]/seg:opacity-100",
                 hintSide === "top" ? "bottom-full mb-2" : "top-full mt-2",
               )}
             >
