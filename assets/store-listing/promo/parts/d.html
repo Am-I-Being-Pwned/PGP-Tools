@@ -1,14 +1,4 @@
 <div class="tile tile-d">
-  <div
-    class="glow"
-    style="width: 860px; height: 860px; left: -280px; top: -320px"
-  ></div>
-  <div
-    class="glow red"
-    style="width: 720px; height: 720px; right: -240px; bottom: -320px"
-  ></div>
-  <div class="grid"></div>
-
   <div class="d-wrap">
     <div class="d-left">
       <div class="brand">
@@ -21,21 +11,29 @@
       <p class="sub">__T:d.sub__</p>
     </div>
 
-    <div class="fcard d-card">
-      <div class="d-case">
-        <div class="verdict">
-          __PART:i-key__
-          <span class="vname">James Arnott <i>D5DB 9296 8391 A64B</i></span>
-          <span class="vtag pass">__PART:i-check__ __T:d.verified__</span>
+    <!-- Two decrypt results, each drawn the way the panel draws one: a
+         stack whose first block is the signer's band (ContactCard in its
+         verified-signer form), the message under it. The signer is the
+         `standard` e2e fixture, so its face is the real KeyAvatar for
+         that fingerprint (parts/avatar-alice.html, from avatar.ts) and
+         the id is its real 16-hex long key id. -->
+    <div class="d-card">
+      <div class="stack">
+        <div class="verdict good">
+          __PART:avatar-alice__
+          <span class="vname"
+            >Alice Example <i class="mono">E3AA 9980 1E25 0E69</i></span
+          >
+          <span class="vtag">__PART:i-check__ __T:d.verified__</span>
         </div>
         <div class="outcome">__T:d.message__</div>
       </div>
 
-      <div class="d-case">
-        <div class="verdict">
-          __PART:i-key__
+      <div class="stack">
+        <div class="verdict bad">
+          <span class="noface">__PART:i-user__</span>
           <span class="vname">__T:d.unknown__ <i>__T:d.altered__</i></span>
-          <span class="vtag fail">__PART:i-x__ __T:d.failed__</span>
+          <span class="vtag">__PART:i-x__ __T:d.failed__</span>
         </div>
         <div class="outcome withheld">__T:d.nothing__</div>
       </div>
@@ -48,8 +46,8 @@
     inset: 0;
     display: flex;
     align-items: center;
-    gap: 48px;
-    padding: 0 64px 0 84px;
+    gap: 64px;
+    padding: 0 76px 0 84px;
   }
   .tile-d .d-left {
     width: 470px;
@@ -65,48 +63,47 @@
     font-size: 30px;
     color: #c4c4c4;
   }
-  /* The mock result cards are the "screenshot" here, so they are drawn
-     at ~1.5x the size the panel renders them: readable at half size. */
+  /* The mock results are the "screenshot" here, so they are drawn at
+     ~1.6x the size the panel renders them: readable at half size. */
   .tile-d .d-card {
     flex: 1;
-    padding: 34px;
-    gap: 30px;
-  }
-  .tile-d .d-case {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 36px;
   }
   .tile-d .verdict {
-    padding: 22px 24px;
+    padding: 22px 26px;
     gap: 18px;
   }
-  .tile-d .verdict > svg {
+  .tile-d .avatar,
+  .tile-d .noface {
+    width: 60px;
+    height: 60px;
+    border-radius: 11px;
+  }
+  .tile-d .noface svg {
     width: 32px;
     height: 32px;
   }
   /* Signer names run long in translation: wrap instead of truncating. */
   .tile-d .vname {
     font-size: 26px;
-    white-space: normal;
     line-height: 1.2;
-    text-overflow: clip;
   }
   .tile-d .vname i {
-    font-size: 22px;
+    font-size: 20px;
     margin-top: 6px;
   }
   .tile-d .vtag {
-    font-size: 19px;
-    padding: 9px 16px;
+    font-size: 22px;
     gap: 8px;
   }
   .tile-d .vtag svg {
-    width: 22px;
-    height: 22px;
+    width: 24px;
+    height: 24px;
   }
   .tile-d .outcome {
     font-size: 29px;
-    padding: 24px 26px;
+    padding: 26px 28px;
   }
 </style>

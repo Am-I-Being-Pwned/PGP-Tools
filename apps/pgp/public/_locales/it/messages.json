@@ -3700,7 +3700,7 @@
     "message": "Cancella input e risultato"
   },
   "workspace_clear_text": {
-    "message": "Cancella il testo"
+    "message": "Cancella"
   },
   "workspace_cleared_toast": {
     "message": "Area di lavoro svuotata"
@@ -4256,13 +4256,13 @@
     "message": "Testo cancellato"
   },
   "workspace_toggle_encrypt_to_self": {
-    "message": "Cifra anche per me"
+    "message": "Anche a me"
   },
   "workspace_toggle_password": {
     "message": "Password"
   },
   "workspace_toggle_save_to_history": {
-    "message": "Salva nella cronologia"
+    "message": "Cronologia"
   },
   "workspace_toggle_zip_files": {
     "message": "ZIP"

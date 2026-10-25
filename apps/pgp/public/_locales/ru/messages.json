@@ -4700,7 +4700,7 @@
     "message": "Очистить ввод и результат"
   },
   "workspace_clear_text": {
-    "message": "Очистить текст"
+    "message": "Очистить"
   },
   "workspace_cleared_toast": {
     "message": "Рабочая область очищена"
@@ -5364,13 +5364,13 @@
     "message": "Текст очищен"
   },
   "workspace_toggle_encrypt_to_self": {
-    "message": "Шифровать и для меня"
+    "message": "И для меня"
   },
   "workspace_toggle_password": {
     "message": "Пароль"
   },
   "workspace_toggle_save_to_history": {
-    "message": "Сохранять в историю"
+    "message": "В историю"
   },
   "workspace_toggle_zip_files": {
     "message": "ZIP"

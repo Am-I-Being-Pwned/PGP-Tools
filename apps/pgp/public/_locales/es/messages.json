@@ -3700,7 +3700,7 @@
     "message": "Borrar entrada y resultado"
   },
   "workspace_clear_text": {
-    "message": "Borrar texto"
+    "message": "Borrar"
   },
   "workspace_cleared_toast": {
     "message": "Espacio de trabajo borrado"
@@ -4256,13 +4256,13 @@
     "message": "Texto borrado"
   },
   "workspace_toggle_encrypt_to_self": {
-    "message": "Cifrar también para mí"
+    "message": "También a mí"
   },
   "workspace_toggle_password": {
     "message": "Contraseña"
   },
   "workspace_toggle_save_to_history": {
-    "message": "Guardar en el historial"
+    "message": "Historial"
   },
   "workspace_toggle_zip_files": {
     "message": "ZIP"

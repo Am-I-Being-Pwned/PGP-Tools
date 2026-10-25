@@ -3700,7 +3700,7 @@
     "message": "Effacer l'entrée et le résultat"
   },
   "workspace_clear_text": {
-    "message": "Effacer le texte"
+    "message": "Effacer"
   },
   "workspace_cleared_toast": {
     "message": "Espace de travail effacé"
@@ -4256,13 +4256,13 @@
     "message": "Texte effacé"
   },
   "workspace_toggle_encrypt_to_self": {
-    "message": "Chiffrer aussi pour moi"
+    "message": "Aussi pour moi"
   },
   "workspace_toggle_password": {
     "message": "Mot de passe"
   },
   "workspace_toggle_save_to_history": {
-    "message": "Enregistrer dans l'historique"
+    "message": "Historique"
   },
   "workspace_toggle_zip_files": {
     "message": "ZIP"

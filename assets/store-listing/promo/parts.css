@@ -12,18 +12,27 @@
   src: url(__DATA:font/inter-latin.woff2__) format("woff2");
 }
 
-/* ---- dark tokens from packages/tailwind-config theme, i.e. the same
-       values the side panel renders with ---- */
+/* ---- dark tokens from tooling/tailwind/theme.css, i.e. the same values
+       the side panel renders with. The design language in one line: flat
+       neutral greys, surfaces split by gaps rather than lines, green only
+       for "go", "on" and "good", amber warns, red stops. ---- */
 :root {
-  --background: #121212;
-  --foreground: #fafafa;
-  --card: #1f1f1f;
-  --muted: #242424;
-  --muted-foreground: #898989;
-  --border: #2e2e2e;
-  --primary: #3ecf8e;
-  --red: #ef4444;
-  --amber: #f59e0b;
+  --background: #0a0a0a; /* page */
+  --foreground: #ededed;
+  --card: #151515; /* a block in a card stack */
+  --raised: #242424; /* chip / secondary button */
+  --muted-foreground: #8a8a8a;
+  --ink-2: #a3a3a3;
+  --primary: #4fc185; /* go */
+  --on: #1f2a23; /* something that is on */
+  --good: #6dbd8a;
+  --bad: #ff7a7e;
+  --band-good: #15231b;
+  --band-bad: #2a1517;
+  /* Only things that float get a shadow: the panel and the OS sheet. */
+  --float:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.07),
+    0 40px 80px -24px rgba(0, 0, 0, 0.95);
 }
 
 /* ---- TYPE SCALE ------------------------------------------------------
@@ -40,12 +49,12 @@
   box-sizing: border-box;
 }
 body {
-  background: #0c0c0c;
+  background: #050505;
   font-family: "Inter", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
-/* ---- the 1280x800 canvas ---- */
+/* ---- the 1280x800 canvas: one flat page, no grid, no glow ---- */
 .tile {
   position: relative;
   width: 1280px;
@@ -53,38 +62,6 @@ body {
   overflow: hidden;
   background: var(--background);
   color: var(--foreground);
-}
-.tile .grid {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
-  background-size: 64px 64px;
-  -webkit-mask-image: radial-gradient(
-    120% 100% at 50% 0%,
-    #000 18%,
-    transparent 76%
-  );
-}
-.tile .glow {
-  position: absolute;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle,
-    rgba(62, 207, 142, 0.15),
-    transparent 62%
-  );
-}
-.tile .glow.dim {
-  background: radial-gradient(
-    circle,
-    rgba(62, 207, 142, 0.07),
-    transparent 62%
-  );
-}
-.tile .glow.red {
-  background: radial-gradient(circle, rgba(239, 68, 68, 0.1), transparent 62%);
 }
 
 h1 {
@@ -100,15 +77,11 @@ h1 {
 .sub {
   font-size: 26px;
   line-height: 1.45;
-  color: var(--muted-foreground);
+  color: var(--ink-2);
 }
 .sub strong {
   color: var(--foreground);
   font-weight: 500;
-}
-.sub em {
-  font-style: italic;
-  color: #c4c4c4;
 }
 
 .brand {
@@ -133,22 +106,19 @@ h1 {
   font-weight: 400;
   letter-spacing: 0;
   color: var(--muted-foreground);
-  border-left: 1px solid var(--border);
-  padding-left: 14px;
-  margin-left: 3px;
+  margin-left: 4px;
 }
 
-/* ---- pill above the headline ---- */
+/* ---- pill above the headline: the app's "on" pill, flat ---- */
 .chip {
   display: inline-flex;
   align-items: center;
   gap: 11px;
   align-self: flex-start;
-  border: 1px solid rgba(62, 207, 142, 0.35);
-  background: rgba(62, 207, 142, 0.1);
-  color: var(--primary);
-  border-radius: 999px;
-  padding: 10px 20px;
+  background: var(--on);
+  color: var(--good);
+  border-radius: 9px;
+  padding: 10px 18px;
   font-size: 17px;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -157,78 +127,68 @@ h1 {
 .chip svg {
   width: 21px;
   height: 21px;
-  stroke: var(--primary);
+  stroke: var(--good);
   fill: none;
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
-/* ---- card shell, same geometry as the FeatureCard on the site ---- */
-.fcard {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
-  background: color-mix(in srgb, var(--card) 40%, transparent);
-  border-radius: 16px;
-  padding: 32px;
-}
-.fcard .fhead {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-.fcard .fhead svg {
-  width: 28px;
-  height: 28px;
-  stroke: var(--primary);
-  fill: none;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  flex: none;
-}
-.fcard h3 {
-  font-family: "Space Grotesk";
-  font-size: 27px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-}
-.fcard .fsub {
-  font-size: 19px;
-  line-height: 1.45;
+/* ---- a footnote under the sub: quieter, no rule ---- */
+.foot {
+  font-size: 20px;
   color: var(--muted-foreground);
+  line-height: 1.45;
 }
-.fcard .fsub strong {
-  color: var(--foreground);
+.foot strong {
+  color: var(--ink-2);
   font-weight: 500;
 }
 
-/* ---- icon rows: a claim per line, no numbers to go stale ---- */
-.rows {
+/* ---- BlockStack, as packages/ui/src/block.tsx draws it --------------
+   A card is a stack of flat #151515 blocks with 2px of page showing
+   between them: no outline, no dividers, no gradient. The end blocks
+   carry the outer corners, inner corners stay tight. Drawn at ~1.5x the
+   panel's 12px radius, like everything else on a tile.
+   -------------------------------------------------------------------- */
+.stack {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
+.stack > * {
+  background: var(--card);
+  border-radius: 5px;
+}
+.stack > :first-child {
+  border-top-left-radius: 18px;
+  border-top-right-radius: 18px;
+}
+.stack > :last-child {
+  border-bottom-left-radius: 18px;
+  border-bottom-right-radius: 18px;
+}
+/* The small label that sits above a stack (BlockLabel). */
+.slabel {
+  font-size: 19px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  padding: 0 6px 12px;
+}
+
+/* ---- icon rows: a claim per block, no numbers to go stale ---- */
 .row {
   display: flex;
   align-items: flex-start;
   gap: 16px;
-  padding: 17px 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
-}
-.row:last-child {
-  border-bottom: 0;
+  padding: 22px 26px;
 }
 .row > svg {
   width: 26px;
   height: 26px;
   flex: none;
   margin-top: 2px;
-  stroke: var(--primary);
+  stroke: var(--good);
   fill: none;
   stroke-width: 2;
   stroke-linecap: round;
@@ -237,7 +197,7 @@ h1 {
 .row div {
   font-size: 21px;
   line-height: 1.35;
-  color: rgba(250, 250, 250, 0.92);
+  color: var(--foreground);
   font-weight: 500;
 }
 .row div small {
@@ -275,34 +235,52 @@ h1 {
   white-space: nowrap;
 }
 
-/* ---- verdict rows (decrypt + verify results) ---- */
+/* ---- signer bands (decrypt + verify results) ------------------------
+   The app's ContactCard in its verified-signer form: the outcome is a
+   tinted band at the top of the card it is about, never a badge floating
+   on a grey row. Green band = good, red band = stop.
+   -------------------------------------------------------------------- */
 .verdict {
   display: flex;
   align-items: center;
-  gap: 14px;
-  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
-  background: rgba(18, 18, 18, 0.7);
-  border-radius: 10px;
-  padding: 16px 18px;
+  gap: 16px;
 }
-.verdict > svg {
-  width: 24px;
-  height: 24px;
+.verdict.good {
+  background: var(--band-good);
+}
+.verdict.bad {
+  background: var(--band-bad);
+}
+.avatar,
+.noface {
+  width: 52px;
+  height: 52px;
   flex: none;
+  border-radius: 9px;
+}
+/* A signer known by key id alone gets a silhouette, never an invented
+   face (hasKeyFace in lib/key-avatar.ts). */
+.noface {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--raised);
+}
+.noface svg {
+  width: 28px;
+  height: 28px;
+  stroke: var(--muted-foreground);
   fill: none;
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke: rgba(137, 137, 137, 0.7);
 }
 .verdict .vname {
   flex: 1;
+  min-width: 0;
   font-size: 20px;
-  color: rgba(250, 250, 250, 0.9);
+  color: var(--foreground);
   font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .verdict .vname i {
   display: block;
@@ -312,71 +290,50 @@ h1 {
   color: var(--muted-foreground);
   margin-top: 4px;
 }
+.verdict .vname i.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
 .verdict .vtag {
   display: flex;
   align-items: center;
-  gap: 6px;
-  border-radius: 999px;
-  padding: 6px 13px;
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  gap: 7px;
+  font-size: 18px;
+  font-weight: 500;
   white-space: nowrap;
 }
 .verdict .vtag svg {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   fill: none;
-  stroke-width: 2.6;
+  stroke-width: 2.4;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-.verdict .vtag.fail {
-  background: rgba(239, 68, 68, 0.16);
-  color: #f87171;
+.verdict.good .vtag {
+  color: var(--good);
 }
-.verdict .vtag.fail svg {
-  stroke: #f87171;
+.verdict.good .vtag svg {
+  stroke: var(--good);
 }
-.verdict .vtag.pass {
-  background: rgba(62, 207, 142, 0.16);
-  color: var(--primary);
+.verdict.bad .vtag {
+  color: var(--bad);
 }
-.verdict .vtag.pass svg {
-  stroke: var(--primary);
+.verdict.bad .vtag svg {
+  stroke: var(--bad);
 }
 
-/* ---- an outcome panel under a verdict row ---- */
+/* ---- the message block under a band ---- */
 .outcome {
-  border: 1px solid var(--border);
-  background: var(--background);
-  border-radius: 10px;
-  padding: 18px 20px;
   font-size: 20px;
   line-height: 1.45;
-  color: rgba(250, 250, 250, 0.85);
+  color: var(--foreground);
 }
 .outcome.withheld {
   color: #6f6f6f;
   font-style: italic;
-  border-style: dashed;
 }
 
-/* ---- footnote with a green rule ---- */
-.foot {
-  font-size: 19px;
-  color: var(--muted-foreground);
-  border-left: 3px solid rgba(62, 207, 142, 0.45);
-  padding-left: 18px;
-  line-height: 1.45;
-}
-.foot strong {
-  color: #c4c4c4;
-  font-weight: 500;
-}
-
-/* ---- keyboard shortcut rows ---- */
+/* ---- keyboard shortcut rows: flat raised keycaps ---- */
 .keys {
   display: flex;
   flex-direction: column;
@@ -391,11 +348,12 @@ h1 {
   font-family: "Inter";
   font-size: 17px;
   font-weight: 500;
-  color: rgba(250, 250, 250, 0.9);
-  border: 1px solid var(--border);
-  border-bottom-width: 3px;
-  background: #1c1c1c;
-  border-radius: 7px;
+  color: var(--foreground);
+  background: var(--raised);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.45);
+  border-radius: 8px;
   padding: 7px 12px;
   min-width: 40px;
   text-align: center;
@@ -412,7 +370,9 @@ h1 {
    every side panel. Everything below it is a screenshot of the real UI
    (assets/store-listing/ui/, produced by apps/pgp/e2e-capture), so the
    tile cannot quietly drift from the shipped product the way a hand-built
-   mock does.
+   mock does. The panel's page is the tile's page colour, so it takes the
+   design language's float treatment (hairline ring + shadow) to read as
+   a separate surface, not an outline.
    -------------------------------------------------------------------- */
 /* 486 is derived, not chosen: the capture is 400x560, so the rendered
    height is 1.4x the rendered width, and 1.4*486 + the header strip is
@@ -421,21 +381,19 @@ h1 {
 .panel {
   width: 486px;
   flex: none;
-  border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 18px;
   background: var(--background);
   overflow: hidden;
-  box-shadow: 0 40px 90px -35px #000;
+  box-shadow: var(--float);
 }
 .panel .ptop {
   display: flex;
   align-items: center;
   gap: 11px;
   padding: 16px 20px;
-  background: #181818;
-  border-bottom: 1px solid var(--border);
+  background: #161616;
   font-size: 18px;
-  color: rgba(250, 250, 250, 0.8);
+  color: rgba(237, 237, 237, 0.8);
 }
 .panel .ptop img {
   width: 22px;
@@ -457,7 +415,10 @@ h1 {
   height: auto;
 }
 
-/* ---- OS-native passkey sheet ---- */
+/* ---- OS-native passkey sheet ----------------------------------------
+   This one is the operating system's, not ours, so it keeps macOS's own
+   look (grey sheet, hairline header) rather than the design language.
+   -------------------------------------------------------------------- */
 .sheet {
   width: 430px;
   border-radius: 16px;
@@ -517,19 +478,11 @@ h1 {
 }
 
 /* ---- sealed-store list: what chrome.storage actually holds ---- */
-.store {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
 .srow {
   display: flex;
   align-items: center;
   gap: 14px;
-  border: 1px solid var(--border);
-  background: var(--background);
-  border-radius: 10px;
-  padding: 15px 18px;
+  padding: 20px 24px;
 }
 .srow > svg {
   width: 22px;
@@ -544,24 +497,33 @@ h1 {
 .srow .sname {
   font-size: 19px;
   font-weight: 500;
-  color: rgba(250, 250, 250, 0.9);
+  color: var(--foreground);
   min-width: 128px;
 }
 .srow .sblob {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 17px;
-  color: var(--primary);
+  color: var(--good);
   letter-spacing: -0.01em;
 }
 /* History is off by default, so the row has to say so -- an unqualified
-   entry would claim a store that most installs never create. */
+   entry would claim a store that most installs never create. A neutral
+   pill, the app's "Contact" pill. */
 .srow .stag {
   margin-left: auto;
   font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-2);
+  background: #262626;
+  border-radius: 6px;
+  padding: 3px 9px;
+}
+/* A plain-text block at the foot of a stack. */
+.snote {
+  padding: 20px 24px 22px;
+  font-size: 18px;
+  line-height: 1.45;
   color: var(--muted-foreground);
-  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
-  border-radius: 999px;
-  padding: 3px 10px;
 }
 
 /* ---- marquee canvas: 1400x560 (CWS promo tile) ---- */
@@ -569,31 +531,35 @@ h1 {
   width: 1400px;
   height: 560px;
 }
+/* ---- small promo canvas: 440x280 ---- */
+.tile-sm {
+  width: 440px;
+  height: 280px;
+}
 
 /* ---- a cropped window onto the real UI ------------------------------
    The marquee is 560px tall and the panel capture is 1.4x as tall as it
    is wide, so the whole panel cannot fit at a size worth looking at. This
-   frames a window onto it instead, from the mode selector down to the
+   frames a window onto it instead, from the mode switch down to the
    Encrypt button, which is the part that says what the product does. The
    offset and height are in rendered pixels: change `width` and both have
    to be rescaled by the same factor. The height stops just under the
-   Encrypt button, deliberately short of the footer rule -- a stray
+   Encrypt button, deliberately short of the footer strip -- a stray
    horizontal line at the bottom edge reads as a rendering seam.
    -------------------------------------------------------------------- */
 .uicrop {
   position: relative;
   width: 420px;
-  height: 476px;
+  height: 486px;
   flex: none;
   overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: 16px;
   background: var(--background);
-  box-shadow: 0 40px 90px -35px #000;
+  box-shadow: var(--float);
 }
 .uicrop img {
   position: absolute;
-  top: -55px;
+  top: -56px;
   left: 0;
   width: 420px;
   height: auto;
@@ -694,8 +660,8 @@ h1 {
   color: #d4d4d4;
 }
 .lab .pick {
-  background: rgba(62, 207, 142, 0.14);
-  color: #3ecf8e;
+  background: #1f2a23;
+  color: #6dbd8a;
   border-radius: 999px;
   padding: 3px 9px;
   font-size: 11px;

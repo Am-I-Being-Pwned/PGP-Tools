@@ -4558,7 +4558,7 @@
   },
   "workspace_clear_text": {
     "message": "Clear text",
-    "description": "Button in the strip under the message box that empties it (undoable)."
+    "description": "Button in the strip under the message box that empties it (undoable). The strip is already full of tools: use the shortest natural word for 'Clear' (about 10 characters at most), since 'text' is clear from where it sits. Becomes an icon with this as its label when it still doesn't fit."
   },
   "workspace_cleared_toast": {
     "message": "Workspace cleared",
@@ -5244,15 +5244,15 @@
   },
   "workspace_toggle_encrypt_to_self": {
     "message": "Also encrypt to me",
-    "description": "Toggle badge in encrypt mode: also encrypt the message to the user's own key so they can read it later. Short."
+    "description": "Toggle in encrypt mode: also encrypt the message to the user's own key so they can read it later. One of 3-4 toggles sharing a single row in a ~380px panel: about 14 characters at most. A short phrase ('Also to me') beats a full sentence; never abbreviate with a full stop."
   },
   "workspace_toggle_password": {
     "message": "Password",
-    "description": "Toggle badge in encrypt mode that adds a message password (symmetric encryption). Short."
+    "description": "Toggle in encrypt mode that adds a message password (symmetric encryption). Shares a single row with 2-3 other toggles: one word, about 12 characters at most."
   },
   "workspace_toggle_save_to_history": {
     "message": "Save to history",
-    "description": "Toggle badge in encrypt mode: record the operation in the history list. Short."
+    "description": "Toggle in encrypt mode: record the operation in the history list. Shares a single row with 2-3 other toggles: about 12 characters at most. The toggle's on/off state carries the verb, so the word for 'History' alone is right where the full phrase is long."
   },
   "workspace_toggle_zip_files": {
     "message": "Zip",

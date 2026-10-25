@@ -143,8 +143,16 @@ export function Segmented<T extends string>({
             <span
               aria-hidden="true"
               className={cn(
-                "surface-float text-muted-foreground pointer-events-none absolute left-1/2 z-50 -translate-x-1/2 rounded-md px-1.5 py-1 whitespace-nowrap opacity-0 transition-opacity delay-0 duration-150 group-hover/seg:opacity-100 group-hover/seg:delay-[800ms] group-has-[:focus-visible]/seg:opacity-100",
+                "surface-float text-muted-foreground pointer-events-none absolute z-50 rounded-md px-1.5 py-1 whitespace-nowrap opacity-0 transition-opacity delay-0 duration-150 group-hover/seg:opacity-100 group-hover/seg:delay-[800ms] group-has-[:focus-visible]/seg:opacity-100",
                 hintSide === "top" ? "bottom-full mb-2" : "top-full mt-2",
+                // Centred under its segment, except at the ends, where a
+                // hint wider than a narrow segment would hang off the
+                // panel's edge: those line up with the outer edge.
+                i === 0
+                  ? "left-0"
+                  : i === options.length - 1
+                    ? "right-0"
+                    : "left-1/2 -translate-x-1/2",
               )}
             >
               {o.hint}

@@ -3700,7 +3700,7 @@
     "message": "清除输入和输出"
   },
   "workspace_clear_text": {
-    "message": "清除文本"
+    "message": "清除"
   },
   "workspace_cleared_toast": {
     "message": "已清空工作区"

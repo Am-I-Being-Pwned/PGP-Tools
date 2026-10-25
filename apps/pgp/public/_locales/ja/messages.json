@@ -3700,7 +3700,7 @@
     "message": "入力と出力を消去"
   },
   "workspace_clear_text": {
-    "message": "テキストを消去"
+    "message": "消去"
   },
   "workspace_cleared_toast": {
     "message": "ワークスペースを消去しました"

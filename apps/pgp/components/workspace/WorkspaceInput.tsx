@@ -1,4 +1,11 @@
 import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
+import {
+  EraserIcon,
+  LockIcon,
+  LockOpenIcon,
+  PenLineIcon,
+  ShieldCheckIcon,
+} from "lucide-react";
 
 import { Block } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
@@ -10,6 +17,7 @@ import type { Edit, InlineStyle } from "../../lib/compose/text-format";
 import type { WorkspaceAction } from "../../lib/messages";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ComposeTranslateProps } from "./ComposeToolbar";
+import { useFitLevel } from "../../hooks/useFitLevel";
 import { MODE_SHORTCUTS } from "../../lib/actions/definitions";
 import { applyTextareaEdit } from "../../lib/compose/apply-edit";
 import { toggleInlineStyle } from "../../lib/compose/text-format";
@@ -22,6 +30,21 @@ import { FindReplaceBar } from "./FindReplaceBar";
 type Mode = WorkspaceAction;
 
 const MODE_ORDER: Mode[] = ["encrypt", "decrypt", "sign", "verify"];
+
+/** Stand-ins for the mode names when the switch is too narrow for them. */
+const MODE_ICONS: Record<Mode, typeof LockIcon> = {
+  encrypt: LockIcon,
+  decrypt: LockOpenIcon,
+  sign: PenLineIcon,
+  verify: ShieldCheckIcon,
+};
+
+/** A mode segment clipping its name. */
+function modeLabelClipped(row: HTMLElement): boolean {
+  return Array.from(
+    row.querySelectorAll<HTMLElement>('[role="radio"], [role="radio"] > *'),
+  ).some((el) => el.scrollWidth > el.clientWidth + 1);
+}
 
 /** Localised mode name; read at render time, never at module load. */
 export function modeLabel(mode: Mode): string {
@@ -154,6 +177,20 @@ export function WorkspaceInput({
   useEffect(() => {
     setCharCount(getInput().length);
   }, [getInput, inputVersion, hasInput]);
+  const modeSwitchRef = useRef<HTMLDivElement>(null);
+  const modeFit = useFitLevel(modeSwitchRef, 2, [mode], {
+    self: true,
+    overflows: modeLabelClipped,
+  });
+  const stripEndRef = useRef<HTMLDivElement>(null);
+  // Only the count's digit count moves the strip's width, not every
+  // keystroke.
+  const stripLevel = useFitLevel(stripEndRef, 2, [
+    showTools,
+    hasInput,
+    files.length,
+    String(charCount).length,
+  ]);
   // `find` is null when closed; when open it carries the query to start
   // from (the selection at the time of the press) and a nonce so a
   // second press while open refocuses the field, as editors do.
@@ -273,31 +310,58 @@ export function WorkspaceInput({
           shortcut the old dropdown listed beside each mode -- just the
           shortcut, since the segment already says the mode. Manual
           activation: arrowing across the switch must not act on every
-          mode it passes, each of which would reset the workspace. */}
-      <Segmented
-        fill
-        activation="manual"
-        ariaLabel={t("settings_shortcuts_group_modes")}
-        value={mode}
-        onValueChange={(v) => {
-          // A press on the mode already showing is not a change: the
-          // dropdown this replaced never fired for it, and the resets
-          // below would throw away a finished result.
-          if (v === mode) return;
-          onModeChange(v);
-          if (operationDone) onReset();
-          else onResetOutput();
-        }}
-        options={MODE_ORDER.map((value) => ({
-          value,
-          ariaKeyShortcuts: ariaKeyShortcuts(
-            MODE_SHORTCUTS[value],
-            isMacPlatform(),
-          ),
-          hint: <Kbd shortcut={MODE_SHORTCUTS[value]} />,
-          label: <span className="truncate">{modeLabel(value)}</span>,
-        }))}
-      />
+          mode it passes, each of which would reset the workspace.
+
+          Equal segments when the four names fit; segments sized to
+          their names when they don't (French, Spanish); and when even
+          that clips (German, Russian), the modes you're not on become
+          icons and the one you're on keeps its whole word. The hint
+          then names the mode as well as its shortcut. */}
+      <div ref={modeSwitchRef}>
+        <Segmented
+          fill={modeFit === 0}
+          className={
+            modeFit > 0 ? "[&_[role=radio]]:px-2 [&>*]:flex-auto" : undefined
+          }
+          activation="manual"
+          ariaLabel={t("settings_shortcuts_group_modes")}
+          value={mode}
+          onValueChange={(v) => {
+            // A press on the mode already showing is not a change: the
+            // dropdown this replaced never fired for it, and the resets
+            // below would throw away a finished result.
+            if (v === mode) return;
+            onModeChange(v);
+            if (operationDone) onReset();
+            else onResetOutput();
+          }}
+          options={MODE_ORDER.map((value) => {
+            const iconOnly = modeFit === 2 && value !== mode;
+            const Icon = MODE_ICONS[value];
+            return {
+              value,
+              ariaLabel: iconOnly ? modeLabel(value) : undefined,
+              ariaKeyShortcuts: ariaKeyShortcuts(
+                MODE_SHORTCUTS[value],
+                isMacPlatform(),
+              ),
+              hint: iconOnly ? (
+                <span className="flex items-center gap-1.5">
+                  {modeLabel(value)}
+                  <Kbd shortcut={MODE_SHORTCUTS[value]} />
+                </span>
+              ) : (
+                <Kbd shortcut={MODE_SHORTCUTS[value]} />
+              ),
+              label: iconOnly ? (
+                <Icon className="h-3.5 w-3.5 shrink-0" />
+              ) : (
+                <span className="truncate">{modeLabel(value)}</span>
+              ),
+            };
+          })}
+        />
+      </div>
 
       {/* The message card is the drop target: the drop zone wraps the
           message block and adds the file list and the bottom strip
@@ -324,22 +388,39 @@ export function WorkspaceInput({
         }
         trailing={
           showTools || hasInput ? (
-            <div className="flex items-center gap-1">
-              {showTools && (
-                <span className="text-muted-foreground px-1.5 font-mono text-[11px] tabular-nums">
+            // When the strip can't hold everything (a long translation,
+            // a narrow panel), the count goes first, then Clear text
+            // keeps its job as an icon. Never overflowing the card: the
+            // stack clips, and an overflowing strip shoved the whole
+            // card sideways.
+            <div ref={stripEndRef} className="flex items-center gap-1">
+              {showTools && stripLevel < 1 && (
+                <span className="text-muted-foreground px-1.5 font-mono text-[11px] whitespace-nowrap tabular-nums">
                   {tn("workspace_char_count", charCount)}
                 </span>
               )}
-              {hasInput && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-muted-foreground hover:text-foreground h-7 px-2 text-xs"
-                  onClick={onClearText}
-                >
-                  {t("workspace_clear_text")}
-                </Button>
-              )}
+              {hasInput &&
+                (stripLevel < 2 ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-muted-foreground hover:text-foreground h-7 px-2 text-xs whitespace-nowrap"
+                    onClick={onClearText}
+                  >
+                    {t("workspace_clear_text")}
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    aria-label={t("workspace_clear_text")}
+                    title={t("workspace_clear_text")}
+                    className="text-muted-foreground hover:text-foreground h-7 w-7 px-0"
+                    onClick={onClearText}
+                  >
+                    <EraserIcon className="h-3.5 w-3.5" />
+                  </Button>
+                ))}
             </div>
           ) : undefined
         }

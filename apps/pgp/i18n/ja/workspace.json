@@ -126,7 +126,7 @@
     "message": "宛先を 1 つ以上選択するか、パスワードを設定してください"
   },
   "workspace_clear_text": {
-    "message": "テキストを消去"
+    "message": "消去"
   },
   "workspace_message_input_aria": {
     "message": "メッセージ入力"
