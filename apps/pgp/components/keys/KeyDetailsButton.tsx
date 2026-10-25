@@ -11,6 +11,15 @@ import { KeyDetailsPage } from "./KeyDetailsPage";
 
 type AnyKey = ProtectedKeyBlob | PublicContactKey;
 
+/** What the details page shows for `key`. Contacts store the armor under
+ *  `armoredPublicKey`; own-key blobs don't -- that field's presence
+ *  discriminates the two. */
+export function keyDetailsTarget(key: AnyKey): KeyDetailsTarget {
+  return "armoredPublicKey" in key
+    ? { kind: "contact", contact: key }
+    : { kind: "own", keyBlob: key };
+}
+
 /** A small info icon that opens the full key-details subpage for `keyData`
  *  -- the exact same overview shown from the Keys tab -- so a selected key
  *  (e.g. an encrypt recipient) can be inspected without leaving the flow.
@@ -24,13 +33,6 @@ export function KeyDetailsButton({
   subtle?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-
-  // Contacts store the armor under `armoredPublicKey`; own-key blobs don't
-  // -- that field's presence discriminates the two for the details target.
-  const target: KeyDetailsTarget =
-    "armoredPublicKey" in keyData
-      ? { kind: "contact", contact: keyData }
-      : { kind: "own", keyBlob: keyData };
 
   return (
     <>
@@ -53,7 +55,12 @@ export function KeyDetailsButton({
       >
         <InfoIcon className="h-4 w-4" />
       </Button>
-      {open && <KeyDetailsPage target={target} onBack={() => setOpen(false)} />}
+      {open && (
+        <KeyDetailsPage
+          target={keyDetailsTarget(keyData)}
+          onBack={() => setOpen(false)}
+        />
+      )}
     </>
   );
 }

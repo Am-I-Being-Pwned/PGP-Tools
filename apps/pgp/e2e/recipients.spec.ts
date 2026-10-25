@@ -163,3 +163,27 @@ test("focus alone never opens the recipient dropdown", async ({ panel }) => {
   await input.click();
   await expect(panel.getByRole("option").first()).toBeVisible();
 });
+
+test("a row's (i) opens the key's details without picking it", async ({
+  panel,
+}) => {
+  await onboardWithPassword(panel, PASSWORD);
+  await importContact(panel, encryptable.publicKey);
+
+  await panel.getByRole("tab", { name: "Main" }).click();
+  const input = panel.getByRole("combobox", { name: "Recipients" });
+  await input.fill("alice");
+  const row = panel.getByRole("option", {
+    name: new RegExp(encryptable.label),
+  });
+  await row.getByRole("button", { name: "Key details" }).click();
+
+  const details = panel.getByRole("region", { name: /^Key details for/ });
+  await expect(details).toBeVisible();
+  await expect(details).toContainText(encryptable.name);
+  await panel.getByRole("button", { name: "Back" }).click();
+  await expect(details).toBeHidden();
+
+  // Looking was not choosing: no chip.
+  await expect(panel.getByTitle(new RegExp(encryptable.label))).toHaveCount(0);
+});

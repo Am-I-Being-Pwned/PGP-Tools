@@ -1,5 +1,5 @@
 import { useId, useRef, useState } from "react";
-import { ChevronsUpDownIcon, XIcon } from "lucide-react";
+import { ChevronsUpDownIcon, InfoIcon, XIcon } from "lucide-react";
 
 import { cn } from "@amibeingpwned/ui";
 import {
@@ -33,6 +33,8 @@ import {
   displayUserId,
   formatKeyDisplayName,
 } from "../../lib/utils/key-naming";
+import { keyDetailsTarget } from "../keys/KeyDetailsButton";
+import { KeyDetailsPage } from "../keys/KeyDetailsPage";
 import { KeyAvatar } from "../shared/KeyAvatar";
 import {
   pickableKeys,
@@ -120,6 +122,8 @@ export function RecipientPicker({
   // (otherwise cmdk keeps pointing at the just-picked, now-absent item
   // and Enter silently does nothing on reopen).
   const [highlighted, setHighlighted] = useState("");
+  /** The key whose details page is open, from a row's (i). */
+  const [detailsKey, setDetailsKey] = useState<AnyKey | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const inputId = useId();
@@ -467,6 +471,26 @@ export function RecipientPicker({
             </p>
           )}
         </div>
+        {/* Look before you pick: the same details page as the Keys tab.
+            Its own target inside the row, so a click here never adds the
+            key; not a Tab stop or a list stop -- the arrows and digits
+            stay about choosing. */}
+        <button
+          type="button"
+          tabIndex={-1}
+          aria-label={t("keys_key_details")}
+          title={t("keys_key_details")}
+          className="text-muted-foreground hover:text-foreground hover:bg-raised -my-1 grid size-7 shrink-0 place-items-center rounded-md"
+          // Keep focus (and the typed filter) in the input.
+          onPointerDown={(e) => e.preventDefault()}
+          onClick={(e) => {
+            e.stopPropagation();
+            closeDropdown();
+            setDetailsKey(key);
+          }}
+        >
+          <InfoIcon className="h-4 w-4" />
+        </button>
         {digit !== null && <CommandShortcut>{digit}</CommandShortcut>}
       </CommandItem>
     );
@@ -732,6 +756,15 @@ export function RecipientPicker({
           </PopoverContent>
         </Popover>
       </Command>
+      {detailsKey && (
+        <KeyDetailsPage
+          target={keyDetailsTarget(detailsKey)}
+          onBack={() => {
+            setDetailsKey(null);
+            refocusInput();
+          }}
+        />
+      )}
     </div>
   );
 }
