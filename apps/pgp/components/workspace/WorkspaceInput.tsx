@@ -335,12 +335,21 @@ export function WorkspaceInput({
             if (operationDone) onReset();
             else onResetOutput();
           }}
-          options={MODE_ORDER.map((value) => {
+          options={MODE_ORDER.map((value, i) => {
             const iconOnly = modeFit === 2 && value !== mode;
             const Icon = MODE_ICONS[value];
             return {
               value,
               ariaLabel: iconOnly ? modeLabel(value) : undefined,
+              // An icon segment is narrower than its hint (name and
+              // shortcut): at either end, keep the hint inside the panel.
+              hintAlign: !iconOnly
+                ? undefined
+                : i === 0
+                  ? "start"
+                  : i === MODE_ORDER.length - 1
+                    ? "end"
+                    : undefined,
               ariaKeyShortcuts: ariaKeyShortcuts(
                 MODE_SHORTCUTS[value],
                 isMacPlatform(),
