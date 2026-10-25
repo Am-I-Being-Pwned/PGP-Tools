@@ -143,7 +143,10 @@ export function WorkspaceInput({
   // Prose is composed in encrypt and sign; decrypt and verify take pasted
   // armor, where a bold button is noise. Find still works everywhere.
   const composing = mode === "encrypt" || mode === "sign";
-  const textareaMounted = files.length === 0;
+  // Encrypting, files are attachments and the message box stays (the
+  // message goes along as msg.txt); anywhere else staged files replace
+  // the text.
+  const textareaMounted = files.length === 0 || mode === "encrypt";
   const showTools = composing && !privateKeyDetected && textareaMounted;
   // A number for the strip, not the text: re-read from the box on every
   // edit (typed, or set from outside -- `inputVersion` moves then).
@@ -301,7 +304,8 @@ export function WorkspaceInput({
           (Browse, or Clear text once there is text). */}
       <DropZone
         header={cardHeader}
-        enabled={!hasInput}
+        enabled={!hasInput || mode === "encrypt"}
+        acceptTextDrop={!hasInput}
         onTextDrop={onInputChange}
         onFileDrop={onFileDrop}
         activeFiles={files}

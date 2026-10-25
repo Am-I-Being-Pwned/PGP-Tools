@@ -1415,7 +1415,11 @@ export function WorkspaceView({
                     {t("workspace_toggle_password")}
                   </ToggleBadge>
                 }
-                {s.files.length > 1 && (
+                {/* Counted as the encrypt will: a message written
+                    alongside the files goes too, as msg.txt. */}
+                {s.files.length +
+                  (s.files.length > 0 && s.hasTrimmedInput ? 1 : 0) >
+                  1 && (
                   <ToggleBadge
                     pressed={s.zipFiles}
                     onPressedChange={(v) => {

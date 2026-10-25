@@ -18,6 +18,10 @@ interface DropZoneProps {
    *  and offers neither Browse nor the file list -- exactly what it did
    *  when it was a separate box swapped out for "Clear text". */
   enabled: boolean;
+  /** Whether a dropped run of TEXT may fill the box. Off once the box has
+   *  text (encrypting, files can still be added then): a text drop
+   *  replaces the message, and over a written one that is a clobber. */
+  acceptTextDrop?: boolean;
   /** The message block(s), stacked above the file list and the strip. */
   children?: React.ReactNode;
   /** The right end of the bottom strip (the "Clear text" button). */
@@ -52,6 +56,7 @@ export function DropZone({
   onRemoveFile,
   onClearFiles,
   enabled,
+  acceptTextDrop = true,
   children,
   trailing,
   leading,
@@ -90,11 +95,11 @@ export function DropZone({
       }
 
       const text = e.dataTransfer.getData("text/plain");
-      if (text) {
+      if (text && acceptTextDrop) {
         onTextDrop(text);
       }
     },
-    [onTextDrop, onFileDrop],
+    [onTextDrop, onFileDrop, acceptTextDrop],
   );
 
   const handleFileSelect = useCallback(
@@ -108,6 +113,9 @@ export function DropZone({
   );
 
   const showFiles = enabled && activeFiles.length > 0;
+  // Beside a message the file list is a fixed-height strip; alone it
+  // fills the card as it always has.
+  const filesBeside = children !== undefined && children !== false;
 
   return (
     <BlockStack
@@ -128,7 +136,12 @@ export function DropZone({
       {children}
 
       {showFiles && (
-        <Block className="min-h-0 flex-1 space-y-0.5 overflow-y-auto p-1.5">
+        <Block
+          className={cn(
+            "min-h-0 space-y-0.5 overflow-y-auto p-1.5",
+            filesBeside ? "max-h-36 shrink-0" : "flex-1",
+          )}
+        >
           {activeFiles.map((file, index) => (
             <div
               key={`${file.name}-${index}`}
