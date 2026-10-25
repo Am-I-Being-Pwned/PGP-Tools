@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import {
   CheckIcon,
   ChevronDownIcon,
@@ -239,13 +239,47 @@ function FingerprintText({
   fingerprint: string;
   className?: string;
 }) {
+  const lines = fingerprintLines(fingerprint);
+  // Hex groups alternate bright and dim, counted across BOTH lines, so
+  // reading along a row or down a column the eye can hold its place --
+  // the grid you read aloud on a call. Each line stays one run of text
+  // with real spaces (justified out to full width, which monospace
+  // turns into even columns), so a manual select-and-copy gives the
+  // same "3C71 E09A ..." the copy button does. A non-hex fingerprint
+  // (OpenSSH `SHA256:...`) is one unbroken line and is left as it is.
+  let group = 0;
   return (
     <span className={cn("block font-mono break-all", className)}>
-      {fingerprintLines(fingerprint).map((line) => (
-        <span key={line} className="block">
-          {line}
-        </span>
-      ))}
+      {lines.map((line) => {
+        const groups = line.split(" ");
+        if (groups.length < 2)
+          return (
+            <span key={line} className="block">
+              {line}
+            </span>
+          );
+        return (
+          <span
+            key={line}
+            className="block text-justify [text-align-last:justify]"
+          >
+            {groups.map((g, i) => (
+              <Fragment key={i}>
+                {i > 0 && " "}
+                <span
+                  className={
+                    group++ % 2 === 0
+                      ? "text-foreground"
+                      : "text-muted-foreground"
+                  }
+                >
+                  {g}
+                </span>
+              </Fragment>
+            ))}
+          </span>
+        );
+      })}
     </span>
   );
 }
@@ -552,19 +586,16 @@ export function KeyPreviewBody({
               type="button"
               onClick={() => handleCopyFingerprint(facts.fingerprint ?? "")}
               aria-label={t("keys_copy_fingerprint_aria")}
-              className="text-muted-foreground hover:text-foreground rounded p-0.5 transition-colors"
+              className="text-muted-foreground hover:text-foreground -my-0.5 flex items-center gap-1 rounded px-1 py-0.5 text-xs font-medium transition-colors"
             >
-              {copiedFp ? (
-                <CheckIcon className="text-good h-3 w-3" />
-              ) : (
-                <CopyIcon className="h-3 w-3" />
-              )}
+              {copiedFp && <CheckIcon className="text-good h-3 w-3" />}
+              {t("common_copy")}
             </button>
           </div>
           <Block className="rounded-xl px-3.5 py-3">
             <FingerprintText
               fingerprint={facts.fingerprint}
-              className="text-[13px] leading-relaxed"
+              className="text-[13px] leading-relaxed tracking-wide"
             />
           </Block>
         </div>
