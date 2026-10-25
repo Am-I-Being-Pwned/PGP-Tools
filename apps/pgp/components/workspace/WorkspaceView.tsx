@@ -622,9 +622,12 @@ export function WorkspaceView({
     setTimeout(() => document.getElementById("pgp-input")?.focus(), 0);
   };
 
-  const clearWithUndo = (message: string) => {
+  const clearWithUndo = (message: string, textOnly = false) => {
     s.stashClearUndo();
-    s.resetAll();
+    // Emptying the box the way deleting its text would: attachments
+    // staged beside the message stay staged.
+    if (textOnly) s.handleInputChange("");
+    else s.resetAll();
     toast.message(message, {
       id: "workspace-text-cleared",
       duration: 4000,
@@ -642,13 +645,18 @@ export function WorkspaceView({
 
   // The in-box "Clear text" button. Same mechanism; it stays silent once an
   // operation has completed (the result panel is its own feedback).
+  //
+  // It clears the TEXT. Files only share the box with it in Encrypt (the
+  // message goes alongside them); they have their own Clear all.
   const clearTextUndoable = () => {
+    const textOnly = s.files.length > 0;
     if (s.operationDone) {
       s.stashClearUndo();
-      s.resetAll();
+      if (textOnly) s.handleInputChange("");
+      else s.resetAll();
       return;
     }
-    clearWithUndo(t("workspace_text_cleared_toast"));
+    clearWithUndo(t("workspace_text_cleared_toast"), textOnly);
   };
 
   useShortcut({ mod: true, key: "z" }, restoreCleared, {

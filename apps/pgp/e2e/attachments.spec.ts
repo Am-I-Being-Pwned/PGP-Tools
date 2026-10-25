@@ -66,6 +66,20 @@ test.describe("a message with attachments (encrypt)", () => {
     await expect(panel.getByText("notes.txt", { exact: true })).toBeVisible();
   });
 
+  test("Clear text clears the message and keeps the files", async ({
+    panel,
+  }) => {
+    await onboardWithPassword(panel, PASSWORD);
+    await setWorkspaceMode(panel, "Encrypt");
+    const box = panel.locator("#pgp-input");
+    await box.fill(MESSAGE);
+    await attach(panel, "notes.txt", "attached");
+
+    await panel.getByRole("button", { name: "Clear text" }).click();
+    await expect(box).toHaveValue("");
+    await expect(panel.getByText("notes.txt", { exact: true })).toBeVisible();
+  });
+
   test("outside encrypt, staged files still take the box's place", async ({
     panel,
   }) => {
