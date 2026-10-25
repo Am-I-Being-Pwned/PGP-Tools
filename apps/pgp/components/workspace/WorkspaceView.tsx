@@ -553,6 +553,10 @@ export function WorkspaceView({
   // with" list on the sign tab nor in the one next to the Sign toggle.
   // Narrowed rather than dimmed, same as the age-decrypt list below.
   const signKeyChoices = myKeys.filter(isPgpRecord);
+  // PGP signing picks its key on the card's top line; with no key to
+  // pick, the picker's "create one" prompt stays under the card.
+  const signerInHeader =
+    s.mode === "sign" && !showCrxSign && signKeyChoices.length > 0;
   // age has no signing operation at all, so the Sign toggle can't apply;
   // neither can it if none of the user's own keys is a PGP key.
   const signBlockedReason =
@@ -1260,6 +1264,22 @@ export function WorkspaceView({
                 </Block>
               )}
             </>
+          ) : signerInHeader ? (
+            // Sign mode's From line: the same top-of-card place the
+            // encrypt card names its signer, so the key sits above the
+            // message it signs rather than trailing under the toolbar.
+            <Block className="flex min-h-9 items-center gap-2 py-1 pr-1.5 pl-3">
+              <span className="text-muted-foreground shrink-0 text-xs font-medium">
+                {t("workspace_sign_with")}
+              </span>
+              <KeySelector
+                inline
+                label={t("workspace_sign_with")}
+                keys={signKeyChoices}
+                selectedKeyId={s.selectedKeyId}
+                onSelect={ops.selectPrivateKey}
+              />
+            </Block>
           ) : undefined
         }
         composeTranslate={
@@ -1310,7 +1330,7 @@ export function WorkspaceView({
           </div>
         )}
 
-        {needsPrivateKey && !showCrxSign && (
+        {needsPrivateKey && !showCrxSign && !signerInHeader && (
           <KeySelector
             label={
               s.mode === "sign"
