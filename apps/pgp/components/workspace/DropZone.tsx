@@ -137,6 +137,10 @@ export function DropZone({
 
       {showFiles && (
         <Block
+          // Toasts rise from the top of the card's bottom edge: these
+          // files when they sit under the message, else the strip below.
+          // (See ToastHost; the first anchor in the page wins.)
+          data-toast-anchor={filesBeside ? "" : undefined}
           className={cn(
             "min-h-0 space-y-0.5 overflow-y-auto p-1.5",
             filesBeside ? "max-h-36 shrink-0" : "flex-1",
@@ -169,7 +173,10 @@ export function DropZone({
         </Block>
       )}
 
-      <Block className="flex shrink-0 items-center gap-1 px-1.5 py-1">
+      <Block
+        data-toast-anchor=""
+        className="flex shrink-0 items-center gap-1 px-1.5 py-1"
+      >
         {leading}
         {enabled && (
           <>
