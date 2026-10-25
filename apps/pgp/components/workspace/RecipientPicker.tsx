@@ -485,7 +485,6 @@ export function RecipientPicker({
           onPointerDown={(e) => e.preventDefault()}
           onClick={(e) => {
             e.stopPropagation();
-            closeDropdown();
             setDetailsKey(key);
           }}
         >
@@ -522,8 +521,12 @@ export function RecipientPicker({
           inline && "min-w-0 flex-1",
         )}
       >
+        {/* Stepped out of, not closed, while a row's details page is up:
+            the page covers the panel and would sit under the portaled
+            list. Back finds the list as it was left -- same filter,
+            same highlighted row. */}
         <Popover
-          open={open}
+          open={open && detailsKey === null}
           onOpenChange={(next) => (next ? setOpen(true) : closeDropdown())}
         >
           <PopoverAnchor asChild>

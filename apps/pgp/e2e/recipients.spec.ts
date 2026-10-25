@@ -164,7 +164,7 @@ test("focus alone never opens the recipient dropdown", async ({ panel }) => {
   await expect(panel.getByRole("option").first()).toBeVisible();
 });
 
-test("a row's (i) opens the key's details without picking it", async ({
+test("a row's (i) opens the key's details without picking it or closing the list", async ({
   panel,
 }) => {
   await onboardWithPassword(panel, PASSWORD);
@@ -183,6 +183,10 @@ test("a row's (i) opens the key's details without picking it", async ({
   await expect(details).toContainText(encryptable.name);
   await panel.getByRole("button", { name: "Back" }).click();
   await expect(details).toBeHidden();
+
+  // Back lands on the list as it was left: still open, still filtered.
+  await expect(row).toBeVisible();
+  await expect(input).toHaveValue("alice");
 
   // Looking was not choosing: no chip.
   await expect(panel.getByTitle(new RegExp(encryptable.label))).toHaveCount(0);
