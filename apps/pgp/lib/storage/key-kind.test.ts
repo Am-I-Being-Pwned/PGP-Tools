@@ -16,15 +16,10 @@
  * older build (or a restored backup) reads as a foreign engine.
  */
 
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { KindDiscriminated } from "./key-kind";
-import {
-  isPgpRecord,
-  isSshRecord,
-  kindField,
-  storedKeyKind,
-} from "./key-kind";
+import { isPgpRecord, isSshRecord, kindField, storedKeyKind } from "./key-kind";
 import { blobFromEncrypted } from "./keyring";
 
 const SEAL = {
@@ -59,7 +54,11 @@ describe("storedKeyKind (the read rule)", () => {
   });
 
   it("partitions every record into exactly one engine", () => {
-    for (const record of [{}, { kind: "pgp" as const }, { kind: "ssh" as const }]) {
+    for (const record of [
+      {},
+      { kind: "pgp" as const },
+      { kind: "ssh" as const },
+    ]) {
       expect(isPgpRecord(record)).toBe(!isSshRecord(record));
     }
   });
@@ -79,6 +78,16 @@ describe("kindField (the write rule)", () => {
 });
 
 describe("blobFromEncrypted", () => {
+  // Each blob is stamped with Date.now(): two built a millisecond apart
+  // would differ in their timestamps, not their kind.
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("omits kind entirely from a PGP blob, including by default", () => {
     const implicit = blobFromEncrypted("FP", ["a@b"], "ed25519", "ARMOR", SEAL);
     const explicit = blobFromEncrypted(
