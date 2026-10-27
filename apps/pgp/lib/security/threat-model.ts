@@ -671,6 +671,18 @@ export const THREAT_MODEL: Threat[] = [
     section: "§8.3",
   },
   {
+    id: "T-RSA-MARVIN",
+    title: "RSA private-key operations leak timing (Marvin)",
+    attacker:
+      "Someone who can make the user's RSA key decrypt or sign many chosen inputs and time each operation precisely: a same-realm attacker, or a remote one whose crafted messages the user decrypts in bulk.",
+    defence:
+      "None in code. The key generator's RSA option warns and recommends ECC; ECC (Ed25519/X25519) is the default.",
+    status: "accepted",
+    rationale:
+      "OpenPGP RSA keys (Sequoia crypto-rust), ssh-rsa age identities and CRX signing all use RustCrypto's `rsa` crate, whose private-key arithmetic is not constant-time; RustCrypto has accepted the Marvin attack (RUSTSEC-2023-0071) with no fixed release. There is no constant-time RSA available to a wasm32 build we could swap in. Imported RSA keys keep working because refusing them would break existing correspondents. Revisit when `rsa` ships a constant-time release. Related: T-VARIABLE-TIME-CRYPTO, T-ACTIVE-WASM-CALL.",
+    section: "§8.3",
+  },
+  {
     id: "T-SUPPLY-CHAIN",
     title: "Malicious code ships via dependency or Web Store update",
     attacker:

@@ -580,7 +580,7 @@
     "message": "Moderne, rapide, clés compactes. Recommandé dans la plupart des cas."
   },
   "app_onboarding_algo_rsa_hint": {
-    "message": "Largement compatible. Génération de clé plus lente."
+    "message": "Très compatible, mais plus lent, et son code RSA a un canal auxiliaire temporel connu (Marvin). Préférez ECC sauf si vous avez besoin de RSA."
   },
   "app_onboarding_algorithm_label": {
     "message": "Algorithme"
@@ -1615,7 +1615,7 @@
     "message": "Moderne, rapide, clés compactes. Recommandé dans la plupart des cas."
   },
   "keygen_algorithm_hint_rsa": {
-    "message": "Largement compatible. Génération de clé plus lente."
+    "message": "Très compatible, mais plus lent, et son code RSA a un canal auxiliaire temporel connu (Marvin). Préférez ECC sauf si vous avez besoin de RSA."
   },
   "keygen_algorithm_label": {
     "message": "Algorithme"

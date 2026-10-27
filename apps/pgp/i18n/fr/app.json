@@ -141,7 +141,7 @@
     "message": "Moderne, rapide, clés compactes. Recommandé dans la plupart des cas."
   },
   "app_onboarding_algo_rsa_hint": {
-    "message": "Largement compatible. Génération de clé plus lente."
+    "message": "Très compatible, mais plus lent, et son code RSA a un canal auxiliaire temporel connu (Marvin). Préférez ECC sauf si vous avez besoin de RSA."
   },
   "app_onboarding_expiry_label": {
     "message": "Expiration de la clé"

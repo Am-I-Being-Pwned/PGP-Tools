@@ -141,7 +141,7 @@
     "message": "Chiavi moderne, veloci e compatte. Consigliato nella maggior parte dei casi."
   },
   "app_onboarding_algo_rsa_hint": {
-    "message": "Ampiamente compatibile. Generazione della chiave più lenta."
+    "message": "Molto compatibile, ma più lento, e il suo codice RSA ha un noto canale laterale temporale (Marvin). Preferisci ECC se non ti serve RSA."
   },
   "app_onboarding_expiry_label": {
     "message": "Scadenza della chiave"

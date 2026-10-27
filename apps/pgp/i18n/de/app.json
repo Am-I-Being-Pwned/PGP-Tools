@@ -81,7 +81,7 @@
     "message": "Modern, schnell, kleine Schlüssel. Für die meisten Zwecke empfohlen."
   },
   "app_onboarding_algo_rsa_hint": {
-    "message": "Breit kompatibel. Langsamere Schlüsselerzeugung."
+    "message": "Weit kompatibel, aber langsamer, und der RSA-Code hat einen bekannten Timing-Seitenkanal (Marvin). Nimm ECC, wenn du RSA nicht brauchst."
   },
   "app_onboarding_expiry_label": { "message": "Schlüsselablauf" },
   "app_onboarding_expiry_never": { "message": "Nie" },

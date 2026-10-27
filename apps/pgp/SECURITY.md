@@ -530,6 +530,21 @@ and crash reports`).
   constant-time on `wasm32-unknown-unknown`. A same-origin attacker
   who can time crypto operations could in principle extract bits.
   Documented in `gpg-wasm/Cargo.toml`.
+- **RSA: a known, unfixed timing side channel.** Every RSA private-key
+  operation here goes through RustCrypto's `rsa` crate: OpenPGP RSA
+  keys (Sequoia's `crypto-rust` backend) for decrypting and signing,
+  `ssh-rsa` age identities for decrypting, and CRX signing (§10). That
+  crate's big-integer arithmetic is not constant-time, and RustCrypto
+  has accepted the Marvin attack against it (RUSTSEC-2023-0071) with no
+  fixed release. An attacker who can time many private-key operations
+  on chosen inputs may recover the key. Here that takes either a
+  same-realm attacker (T-ACTIVE-WASM-CALL already loses) or a remote
+  one who gets the user to decrypt very many crafted messages and can
+  time each one, which no flow in this app does unprompted. Accepted,
+  and said where it matters: the key generator's RSA option says so and
+  recommends ECC (Ed25519/X25519: no published attack of this kind,
+  though §8.3's variable-time caveat still applies). Revisit
+  when `rsa` ships a constant-time release (0.10 is the stated target).
 - **Sequoia internals.** We rely on Sequoia's `Protected<T>` for
   zero-on-drop. Sequoia is not line-by-line audited; if it clones a
   secret into a non-`Protected` intermediate, that gap is unaudited.

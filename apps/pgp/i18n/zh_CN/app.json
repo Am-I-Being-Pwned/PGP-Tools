@@ -64,7 +64,9 @@
   "app_onboarding_algo_ecc_hint": {
     "message": "现代、快速、密钥体积小。推荐大多数用途使用。"
   },
-  "app_onboarding_algo_rsa_hint": { "message": "兼容性广。密钥生成较慢。" },
+  "app_onboarding_algo_rsa_hint": {
+    "message": "兼容性好，但速度较慢，且其 RSA 实现存在已知的时序侧信道 (Marvin)。除非需要 RSA，否则请选择 ECC。"
+  },
   "app_onboarding_expiry_label": { "message": "密钥有效期" },
   "app_onboarding_expiry_never": { "message": "永不过期" },
   "app_onboarding_expiry_years_one": { "message": "$count$ 年" },

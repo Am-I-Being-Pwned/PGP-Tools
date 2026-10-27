@@ -188,7 +188,7 @@
     "description": "Onboarding, advanced options: tiny hint under the algorithm dropdown when ECC is selected."
   },
   "app_onboarding_algo_rsa_hint": {
-    "message": "Widely compatible. Slower key generation.",
+    "message": "Widely compatible, but slower, and its RSA code has a known timing side channel (Marvin). Prefer ECC unless you need RSA.",
     "description": "Onboarding, advanced options: tiny hint under the algorithm dropdown when RSA is selected."
   },
   "app_onboarding_expiry_label": {

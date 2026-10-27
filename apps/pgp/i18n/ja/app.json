@@ -141,7 +141,7 @@
     "message": "最新の方式で高速、鍵も小さめです。ほとんどの用途におすすめです。"
   },
   "app_onboarding_algo_rsa_hint": {
-    "message": "幅広い互換性があります。鍵の生成に時間がかかります。"
+    "message": "互換性は高いものの低速で、RSA の実装には既知のタイミングサイドチャネル (Marvin) があります。RSA が必要でなければ ECC を選んでください。"
   },
   "app_onboarding_expiry_label": {
     "message": "鍵の有効期限"
