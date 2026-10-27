@@ -185,4 +185,17 @@ describe("splitRecipientSections: each key is offered once", () => {
       own: [mine],
     });
   });
+
+  it("never hides a row because of a contact the search filtered out", () => {
+    const github = contact("SSH-A", ["SSH-A", "SSH-B"]);
+    const pasted = contact("SSH-B");
+    const mine = own("SSH-A");
+    // Only the pasted contact and my key matched the search.
+    const result = splitRecipientSections<Contact, Own>(
+      [pasted, mine],
+      [github, pasted],
+      (c) => c.keys,
+    );
+    expect(result).toEqual({ contacts: [pasted], own: [mine] });
+  });
 });

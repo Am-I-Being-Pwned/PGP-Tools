@@ -113,12 +113,14 @@ export function splitRecipientSections<
   keysOf: (contact: C) => readonly string[],
 ): { contacts: C[]; own: O[] } {
   const contactRecords = new Set<unknown>(contacts);
+  const isContact = (k: C | O): k is C => contactRecords.has(k);
+  // Only contacts IN these results can cover a key: hiding a row because
+  // of a contact the search filtered out would make it unfindable.
   const held = new Map<string, number>(); // fingerprint -> most keys holding it
-  for (const c of contacts) {
+  for (const c of available.filter(isContact)) {
     const ids = keysOf(c);
     for (const id of ids) held.set(id, Math.max(held.get(id) ?? 0, ids.length));
   }
-  const isContact = (k: C | O): k is C => contactRecords.has(k);
 
   return {
     contacts: available.filter(isContact).filter((c) => {
