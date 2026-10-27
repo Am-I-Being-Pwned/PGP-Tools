@@ -27,6 +27,15 @@ export function useNavStack<R>() {
     setStack((s) => s.slice(0, -1));
   }, []);
 
+  /** Drop ONE entry, by id -- what a panel's own close must use. A
+   *  slide-over closes after its slide-out (`useSlideOver.close` defers
+   *  `onClosed` by SLIDE_MS), and a `pop` at that moment removes whatever
+   *  is on top THEN: open Import within 300ms of leaving a details page
+   *  and the details page's late pop took the import panel with it. */
+  const remove = useCallback((id: number) => {
+    setStack((s) => s.filter((e) => e.id !== id));
+  }, []);
+
   const clear = useCallback(() => {
     setStack([]);
   }, []);
@@ -35,5 +44,5 @@ export function useNavStack<R>() {
     setStack((s) => s.slice(-1));
   }, []);
 
-  return { stack, push, pop, clear, collapseToTop };
+  return { stack, push, pop, remove, clear, collapseToTop };
 }

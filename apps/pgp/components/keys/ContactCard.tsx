@@ -33,7 +33,7 @@ import type { IdentityConflict } from "../../lib/identity/binding";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import { t, tn } from "../../lib/i18n";
 import { formatDate, formatDateShort } from "../../lib/i18n/format";
-import { displayKeyId } from "../../lib/identity/binding";
+import { clashPillLabel, clashSentence } from "../../lib/identity/clash-copy";
 import {
   activeRecipients,
   contactRecipients,
@@ -88,14 +88,6 @@ interface ContactCardProps {
 }
 
 /** Who else holds the identity, for the clash pill's tooltip. */
-function clashArgs(clash: IdentityConflict) {
-  const holder = clash.holders[0];
-  return {
-    name: parseUserId(holder.userIds[0] ?? "").name,
-    keyid: displayKeyId(holder.keyId),
-  };
-}
-
 /** The design language's status pill; the tone classes are added per use. */
 const PILL =
   "shrink-0 items-center rounded px-1.5 py-px text-[10.5px] font-medium whitespace-nowrap";
@@ -320,24 +312,11 @@ export function ContactCard({
               )}
               {clash && (
                 <span
-                  title={
-                    clash.kind === "address"
-                      ? clash.lookalike
-                        ? t(
-                            "keys_contact_lookalike_address_title",
-                            clashArgs(clash),
-                          )
-                        : t("keys_contact_same_address_title", clashArgs(clash))
-                      : t("keys_contact_same_name_title", clashArgs(clash))
-                  }
+                  title={clashSentence(clash)}
                   className={cn(PILL, "bg-warn/12 text-warn inline-flex gap-1")}
                 >
                   <TriangleAlertIcon className="h-2.5 w-2.5" />
-                  {clash.kind === "address"
-                    ? clash.lookalike
-                      ? t("keys_contact_lookalike_address")
-                      : t("keys_contact_same_address")
-                    : t("keys_contact_same_name")}
+                  {clashPillLabel(clash)}
                 </span>
               )}
               {contact.verified && (
@@ -349,17 +328,23 @@ export function ContactCard({
                   {t("keys_verified_chip")}
                 </span>
               )}
-              {contact.securityWarning && (
-                <span
-                  title={contact.securityWarning}
-                  className={cn(PILL, "bg-warn/12 text-warn inline-flex gap-1")}
-                >
-                  <TriangleAlertIcon className="h-2.5 w-2.5" />
-                  {contact.lookalike
-                    ? t("keys_lookalike_name")
-                    : t("keys_weak_sha1")}
-                </span>
-              )}
+              {contact.securityWarning &&
+                // A name clash already says "Lookalike name", and its
+                // hover names whose name it imitates: one pill, not two.
+                !(contact.lookalike && clash?.kind === "name") && (
+                  <span
+                    title={contact.securityWarning}
+                    className={cn(
+                      PILL,
+                      "bg-warn/12 text-warn inline-flex gap-1",
+                    )}
+                  >
+                    <TriangleAlertIcon className="h-2.5 w-2.5" />
+                    {contact.lookalike
+                      ? t("keys_lookalike_name")
+                      : t("keys_weak_sha1")}
+                  </span>
+                )}
               {isSsh && (
                 <span
                   title={t("keys_ssh_chip_title")}

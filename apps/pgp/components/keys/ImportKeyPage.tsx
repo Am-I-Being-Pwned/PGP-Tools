@@ -33,11 +33,14 @@ import {
   prepareKeyserverImport,
 } from "../../lib/import/keyserver";
 import { classifyLookup } from "../../lib/import/lookup";
-import { importable, prepareImport } from "../../lib/import/prepare";
-import { applyReview } from "../../lib/import/review";
+import {
+  importable,
+  prepareImport,
+  storedKeysFrom,
+} from "../../lib/import/prepare";
+import { applyReview, defaultDecision } from "../../lib/import/review";
 import { isPublicKind, isSecretKind } from "../../lib/import/types";
 import { importAndProtect } from "../../lib/protection/protect-flow";
-import { contactRecipients } from "../../lib/storage/contact-recipients";
 import { toast } from "../../lib/toast";
 import { errorMessage } from "../../lib/utils/errors";
 import { INPUT_CLASS } from "../../lib/utils/styles";
@@ -308,29 +311,7 @@ export function ImportKeyPage({
   /** Stored keys in the shape every `prepare*` entry point takes. Built
    *  once here so the paste path and both lookups classify against the
    *  same list. */
-  const storedForImport = () => ({
-    own: existingKeys.map((k) => ({
-      keyId: k.keyId,
-      userIds: k.userIds,
-      armored: k.publicKeyArmored,
-      createdAt: k.createdAt,
-    })),
-    contacts: existingContacts.map((c) => ({
-      keyId: c.keyId,
-      userIds: c.userIds,
-      armored: c.armoredPublicKey,
-      addedAt: c.addedAt,
-      expiresAt: c.expiresAt,
-      ...(c.source ? { source: c.source } : {}),
-      ...(c.revoked ? { revoked: true } : {}),
-      // Every key on the record, not just its head: an SSH import is
-      // checked against all of them (see `sshKeyHolders`).
-      ...(c.recipients
-        ? { recipientIds: contactRecipients(c).map((r) => r.keyId) }
-        : {}),
-      ...(c.alias ? { alias: c.alias } : {}),
-    })),
-  });
+  const storedForImport = () => storedKeysFrom(existingKeys, existingContacts);
 
   const handleSource = async (text: string) => {
     setError(null);
@@ -1112,9 +1093,23 @@ export function ImportKeyPage({
             busy={importing}
             error={error}
             allowImportAll={reviewKeys.length > 1}
-            onImport={(decisions) =>
-              void importPublicKeys(reviewKeys, decisions)
-            }
+            onImport={(decisions) => {
+              // A private key held here because it claims someone's
+              // identity: chosen, it goes on to the protect step like
+              // any private key -- it is never a contact to save.
+              const secret = reviewKeys.find((k) => isSecretKind(k.kind));
+              if (secret) {
+                if (
+                  (decisions.get(secret.keyId) ?? defaultDecision(secret)) !==
+                  "skip"
+                ) {
+                  setIncoming(secret);
+                  setStep("protect");
+                }
+                return;
+              }
+              void importPublicKeys(reviewKeys, decisions);
+            }}
           />
         )}
 

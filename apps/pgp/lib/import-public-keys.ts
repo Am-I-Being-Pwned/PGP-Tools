@@ -36,26 +36,76 @@ export async function mergeIntoStored(
  * older copy -- a keyserver check that took a while -- so nothing changed
  * meanwhile (an imported revocation, a rename, a delete) is undone.
  * Resolves undefined, writing nothing, when the contact is gone.
+ *
+ * This is the revocation check's write, and it never changes WHO the
+ * contact is. Every other way a key gains a User ID goes through the
+ * import Review, which checks it against everyone else and asks; this
+ * one ran with no Review, so a keyserver copy carrying a new User ID
+ * bound it to the contact silently, and kept "verified" on it. So:
+ *
+ *  - nothing new about who it is: saved as before (a revocation, a new
+ *    expiry, a new subkey);
+ *  - new User IDs, and revoked: the revocation is saved (it must
+ *    stick), under the contact's OLD User IDs, and "verified" is dropped
+ *    -- the cert the user compared is no longer the one stored;
+ *  - new User IDs, not revoked: NOTHING is written, and `needsReview`
+ *    says so, for the caller to send the copy through the import Review
+ *    like any other update.
  */
 export async function mergeIntoContact(
   keyId: string,
   incomingArmored: string,
-): Promise<{ contact: PublicContactKey; keyInfo: KeyInfo } | undefined> {
+): Promise<
+  | { contact: PublicContactKey; keyInfo: KeyInfo; needsReview?: true }
+  | undefined
+> {
   let keyInfo: KeyInfo | undefined;
+  // Widened: it is set inside the callback below, which narrowing from a
+  // plain `false` cannot see.
+  let needsReview = false as boolean;
   const contact = await updateContactAsync(keyId, async (current) => {
     const merged = await mergeIntoStored(
       { keyId: current.keyId, armored: current.armoredPublicKey },
       incomingArmored,
     );
     keyInfo = merged.keyInfo;
-    const { revoked: _revoked, lookalike: _lookalike, ...rest } = current;
+    const before = new Set(current.userIds);
+    const grows = merged.keyInfo.userIds.some((u) => !before.has(u));
+    if (grows && !merged.keyInfo.revoked) {
+      needsReview = true;
+      return current;
+    }
+    const {
+      revoked: _revoked,
+      lookalike: _lookalike,
+      verified: _verified,
+      verifiedAt: _verifiedAt,
+      ...rest
+    } = current;
+    const { lookalike, ...fields } = contactFieldsFrom(merged.keyInfo);
     return {
       ...rest,
       armoredPublicKey: merged.armored,
-      ...contactFieldsFrom(merged.keyInfo),
+      ...fields,
+      ...(grows
+        ? {
+            // Who it is stays who the user saved: the old User IDs, and
+            // the lookalike flag they were derived with.
+            userIds: current.userIds,
+            ...(current.lookalike ? { lookalike: true as const } : {}),
+          }
+        : {
+            ...(lookalike ? { lookalike } : {}),
+            ...(current.verified
+              ? { verified: true as const, verifiedAt: current.verifiedAt }
+              : {}),
+          }),
     };
   });
-  return contact && keyInfo ? { contact, keyInfo } : undefined;
+  if (!contact || !keyInfo) return undefined;
+  return needsReview
+    ? { contact, keyInfo, needsReview: true }
+    : { contact, keyInfo };
 }
 
 /**

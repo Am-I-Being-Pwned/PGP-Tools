@@ -7,6 +7,11 @@
  * return someone else's key), and folds whatever comes back into the
  * stored cert through the same merge every import uses -- so the answer
  * can only ever add what the owner signed, never roll the contact back.
+ *
+ * It never changes WHO the contact is, though: that is the import
+ * Review's to ask. A copy that adds a User ID is not saved here (unless
+ * it is revoked -- see `mergeIntoContact`); it comes back as
+ * `needs-review`, for the caller to hand to the import like any update.
  */
 
 import type { StoredCert } from "../import-public-keys";
@@ -26,6 +31,10 @@ export type RevocationCheck =
   /** Not revoked as far as the keyserver knows. The merge may still have
    *  brought news -- a new expiry, a new subkey -- and was saved. */
   | { kind: "current" }
+  /** Not revoked, but the keyserver's copy adds User IDs: nothing was
+   *  written, and `armored` goes through the import Review, where the
+   *  new names and addresses are checked and asked about. */
+  | { kind: "needs-review"; armored: string }
   /** The contact was removed while the check ran: nothing was written. */
   | { kind: "gone" }
   /** The keyserver doesn't publish this key: nothing to check against. */
@@ -40,11 +49,13 @@ export type RevocationCheck =
     };
 
 /** Merge a fetched copy into the stored contact as it is NOW (not as it
- *  was when the check started) and report what came of it. */
+ *  was when the check started) and report what came of it --
+ *  `needsReview` when it wrote nothing because the copy adds User IDs
+ *  (see `mergeIntoContact`). */
 export type MergeIntoContact = (
   keyId: string,
   armored: string,
-) => Promise<{ keyInfo: KeyInfo } | undefined>;
+) => Promise<{ keyInfo: KeyInfo; needsReview?: true } | undefined>;
 
 export type KeyserverSend = (
   request: KeyserverKeyRequest,
@@ -94,5 +105,7 @@ export async function checkRevocation(
 
   const merged = await merge(contact.keyId, same.armored);
   if (!merged) return { kind: "gone" };
+  if (merged.needsReview)
+    return { kind: "needs-review", armored: same.armored };
   return merged.keyInfo.revoked ? { kind: "revoked" } : { kind: "current" };
 }

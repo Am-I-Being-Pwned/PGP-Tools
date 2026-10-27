@@ -330,10 +330,12 @@ describe("prepareGithubImport - checked like a paste", () => {
   });
 
   it("checks the account name against the contacts' names", async () => {
+    // A lookalike of a contact's name: "carol" with a Cyrillic а. The
+    // very same name is someone else who shares it, and is not asked.
     const carol: PublicContactKey = {
       ...stored("x", [FP_C]),
       source: undefined,
-      userIds: ["Carol <carol@example.com>"],
+      userIds: ["C\u0430rol <carol@example.com>"],
     };
     const prepared = await prepareGithubImport(
       "carol",

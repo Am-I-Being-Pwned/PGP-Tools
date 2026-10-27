@@ -115,28 +115,48 @@ export async function prepareKeyserverImport(
  * Is this the key the lookup asked for?
  *
  * The threat model names the keyserver and anything on the path to it as
- * attackers, so its answer is checked, not assumed: a fingerprint query
- * must return that fingerprint, a key-ID query a cert holding that key,
- * and an address query a cert whose OWNER bound that address (the
- * engine's `userIds` are bound, unrevoked User IDs only).
+ * attackers, so its answer is checked, not assumed: a fingerprint or
+ * key-ID query must return a cert whose primary key, or one of whose
+ * back-signed signing subkeys, is that key; an address query a cert
+ * whose OWNER bound that address (the engine's `userIds` are bound,
+ * unrevoked User IDs only).
+ *
+ * Why only SIGNING subkeys. Binding a subkey takes the primary key's
+ * signature alone, so anyone can bind Alice's public key to their own
+ * cert as a flagless (or encryption) subkey -- the engine reports that
+ * row as a perfectly good "active" subkey, and a lookup for Alice's key
+ * ID would be "answered" by Mallory's cert. A signing subkey is the one
+ * kind the SUBKEY must agree to: the engine only reports `canSign` when
+ * the binding carries a valid primary-key back-signature made BY the
+ * subkey (Sequoia refuses the binding otherwise, and the row comes back
+ * "invalid" with every flag false). Mallory cannot make that without
+ * Alice's secret key. That is also the case that matters: "Look up
+ * signer" asks for the issuer of a signature, which is usually a
+ * signing subkey.
  */
 export function answersQuery(key: IncomingKey, query: KeyserverQuery): boolean {
   const want = asciiUpper(query.value);
+  const candidates = [key.keyId, ...backSignedSubkeys(key)].map(asciiUpper);
   switch (query.kind) {
     case "fingerprint":
-      return asciiUpper(key.keyId) === want;
+      return candidates.some((fpr) => fpr === want);
     case "keyid":
-      // The primary, or a subkey the owner bound -- an appended, unbound
-      // subkey is listed (as "invalid") but is not the cert's.
-      return [
-        key.keyId,
-        ...(key.details?.keys
-          .filter((k) => k.status !== "invalid")
-          .map((k) => k.fingerprint) ?? []),
-      ].some((fpr) => asciiUpper(fpr).endsWith(want));
+      return candidates.some((fpr) => fpr.endsWith(want));
     case "email":
       return key.userIds.some((uid) => asciiUpper(emailIn(uid)) === want);
   }
+}
+
+/** Fingerprints of the subkeys that consented to this cert: signing
+ *  subkeys whose binding the engine accepted (see {@link answersQuery}).
+ *  A revoked or expired one still counts -- it signed messages while it
+ *  was live, and those are what get looked up. */
+function backSignedSubkeys(key: IncomingKey): string[] {
+  return (
+    key.details?.keys
+      .filter((k) => !k.isPrimary && k.status !== "invalid" && k.canSign)
+      .map((k) => k.fingerprint) ?? []
+  );
 }
 
 /** ASCII-only case folding. `toUpperCase` maps "ı" and "ſ" onto "I" and

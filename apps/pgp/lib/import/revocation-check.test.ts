@@ -57,13 +57,22 @@ describe("checkRevocation", () => {
     expect(result).toEqual({ kind: "current" });
   });
 
+  it("sends a copy that adds User IDs to the Review instead of saving it", async () => {
+    // The store's merge wrote nothing (it never binds a new User ID
+    // without the Review); the check hands back the keyserver's copy.
+    vi.mocked(parseKeys).mockResolvedValue([
+      { keyInfo: info(), armored: "FETCHED" },
+    ]);
+    const merge = vi.fn<MergeIntoContact>(() =>
+      Promise.resolve({ keyInfo: info(), needsReview: true as const }),
+    );
+    const result = await checkRevocation(contact, merge, found("FETCHED"));
+    expect(result).toEqual({ kind: "needs-review", armored: "FETCHED" });
+  });
+
   it("writes nothing for a contact deleted while it ran", async () => {
     vi.mocked(parseKeys).mockResolvedValue([{ keyInfo: info(), armored: "X" }]);
-    const result = await checkRevocation(
-      contact,
-      mergeTo(null),
-      found("X"),
-    );
+    const result = await checkRevocation(contact, mergeTo(null), found("X"));
     expect(result).toEqual({ kind: "gone" });
   });
 

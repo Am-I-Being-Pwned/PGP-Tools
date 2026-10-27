@@ -625,3 +625,60 @@ test("the last key in use on a contact cannot be turned off", async ({
   const [contact] = await readContacts(panel);
   expect(contact.recipients?.filter((r) => r.disabled)).toHaveLength(1);
 });
+
+test("a refresh down to the keys the user turned off asks first, and the card says 0 of 1", async ({
+  context,
+  panel,
+}) => {
+  const keys = generateSshKeys(2);
+  await stubGithubKeys(
+    context,
+    keys.map((k) => k.publicLine),
+  );
+  await onboardWithPasswordSkipKey(panel, PASSWORD);
+  await lookUpGithubUser(panel, GITHUB_USER);
+  const importPanel = panel.getByRole("region", { name: "Import key" });
+  await importPanel.getByRole("button", { name: "Import contact" }).click();
+  await expect(importPanel).toBeHidden();
+
+  // Turn the second key off, and go straight back -- no reload. The
+  // toggle writes from the details page, past the list the panel holds,
+  // so the card is the first place a stale list shows.
+  const label = `${GITHUB_USER} (GitHub)`;
+  await openContactDetails(panel, label);
+  await recipientRow(panel, keys[1].fingerprint)
+    .getByRole("button", { name: "Don't use", exact: true })
+    .click();
+  await expect(recipientRow(panel, keys[1].fingerprint)).toContainText(
+    "Not used",
+  );
+  await panel.getByRole("button", { name: "Back" }).click();
+  await expect(panel.getByText("1 of 2 keys")).toBeVisible();
+
+  // GitHub now lists only the key the user turned off. The refresh is
+  // classified against the list on screen, so with that list stale this
+  // was the one-click "Update contact" preview and never asked.
+  await context.unroute("https://api.github.com/users/*/keys");
+  await stubGithubKeys(context, [keys[1].publicLine]);
+  await lookUpGithubUser(panel, GITHUB_USER);
+  await expect(importPanel.getByText("Review keys")).toBeVisible();
+  await expect(importPanel).toContainText(
+    "Every key this account still lists is one you turned off.",
+  );
+  await expect(
+    importPanel.getByRole("button", { name: "Update contact" }),
+  ).toHaveCount(0);
+  await expect(
+    importPanel.getByRole("radio", { name: "Skip", exact: true }),
+  ).toHaveAttribute("aria-checked", "true");
+
+  // Saved anyway: the card shows what the store holds, without a reload.
+  await importPanel.getByRole("radio", { name: "Import", exact: true }).click();
+  await importPanel.getByRole("button", { name: "Import 1 key" }).click();
+  await expect(importPanel).toBeHidden();
+  await expect(panel.getByText("0 of 1 keys")).toBeVisible();
+  const [contact] = await readContacts(panel);
+  expect(contact.recipients?.map((r) => [r.keyId, r.disabled])).toEqual([
+    [keys[1].fingerprint, true],
+  ]);
+});

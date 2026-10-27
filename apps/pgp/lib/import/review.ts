@@ -3,6 +3,7 @@ import type { IncomingKey } from "./types";
 import { parseRecipient } from "../age/operations";
 import { groupContact, sshContact } from "../age/protect-flow";
 import { IDENTITY_VERSION } from "../storage/contacts";
+import { claimedIds } from "./prepare";
 
 /**
  * The one way a contact gets written: through the import Review.
@@ -58,8 +59,16 @@ export async function contactFromIncoming(
     // `sshContact` decides an SSH contact's shape; `expiresAt: null`
     // because SSH keys have no expiry and `undefined` would send the
     // contacts backfill off to parse a recipient line as PGP armor.
+    //
+    // The comment is the one the Review showed and the identity check
+    // compared (sanitized and capped by `cleanSshComment`), not the
+    // re-parsed line's: the stored recipient is the canonical line, which
+    // has none, so rebuilding from it saved the key with no name -- and a
+    // nameless contact is one no later import can be checked against.
+    // A group keeps its label the same way (`groupContact`).
     const info = await parseRecipient(key.publicArmored);
-    return { ...sshContact(info), expiresAt: null };
+    const [comment = ""] = claimedIds(key);
+    return { ...sshContact({ ...info, comment }), expiresAt: null };
   }
   return {
     keyId: key.keyId,
@@ -119,17 +128,26 @@ export async function applyReview(
     if (decision === "skip") continue;
     const contact = await contactFromIncoming(key);
 
-    const old =
+    // Only ever ONE contact replaced, and only when exactly one stored
+    // contact holds the address: with several, which one the key takes
+    // over is not something to guess, and replacing them all would
+    // delete people the Review never named. The Review offers Replace
+    // only then (`canReplace`); anything else is saved beside them.
+    const replaced =
       decision === "replace" &&
       key.status === "new" &&
+      (key.kind === "pgp-public" || key.kind === "ssh-public") &&
       key.conflict?.kind === "address" &&
       // A lookalike address is never the holder's to hand over (see
       // `canReplace` in ImportReview): saved beside it, not over it.
       !key.conflict.lookalike
-        ? store.contacts.find((c) =>
-            key.conflict?.holders.some((h) => h.keyId === c.keyId),
+        ? store.contacts.filter((c) =>
+            key.conflict?.holders.some(
+              (h) => !h.own && !h.incoming && h.keyId === c.keyId,
+            ),
           )
-        : undefined;
+        : [];
+    const old = replaced.length === 1 ? replaced[0] : undefined;
     if (old) {
       await store.add(
         reviewed({

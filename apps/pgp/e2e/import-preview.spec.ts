@@ -325,10 +325,15 @@ test("a pasted group adding a key to a contact asks first, and Skip saves nothin
   const row = review.locator(`[data-review-key="${alice.fingerprint}"]`);
   await expect(row).toContainText("Update");
   await expect(row).toContainText("1 key added");
-  // Named by her key id: a contact pasted from a bare line keeps no
-  // comment, so the id is what tells the user whose keys these are.
-  await expect(row).toContainText(
-    `This adds keys to SSH key (${alice.fingerprint})`,
+  // Named by the comment her pasted line carried (kept as her name), and
+  // by her key id -- shortened inside the sentence so the warning is not
+  // pushed out of the row, whole under the name and on hover.
+  const shortId = `${alice.fingerprint.slice(0, "SHA256:".length + 12)}\u2026`;
+  await expect(row).toContainText(`This adds keys to alice@corp (${shortId})`);
+  await expect(row.getByText(alice.fingerprint, { exact: true })).toBeVisible();
+  await expect(row.locator("p[title]")).toHaveAttribute(
+    "title",
+    alice.fingerprint,
   );
   // Starts on Skip, so nothing is selected until the user says so.
   await expect(

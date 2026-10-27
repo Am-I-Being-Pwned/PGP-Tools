@@ -16,13 +16,19 @@ import {
   addressSkeletons,
   displayKeyId,
   emailsOf,
+  noteKeyId,
 } from "../../lib/identity/binding";
 import { defaultDecision, needsDecision } from "../../lib/import/review";
+import { isPublicKind, isSecretKind } from "../../lib/import/types";
 import { parseUserId } from "../../lib/utils/key-naming";
 import { KeyAvatar } from "../shared/KeyAvatar";
 import { MarkedText } from "../shared/MarkedText";
 
 function statusLabel(key: IncomingKey): string {
+  // A private or CRX key from a backup: the user's own, whatever its
+  // status against the keyring (only new ones are listed).
+  if (isSecretKind(key.kind) && key.status === "new")
+    return t("import_review_status_your_key");
   if (key.status === "duplicate") return t("import_review_status_duplicate");
   if (key.status === "rejected") return t("import_review_status_rejected");
   if (key.info?.revoked) return t("import_review_status_revoked");
@@ -31,16 +37,24 @@ function statusLabel(key: IncomingKey): string {
     : t("import_review_status_new");
 }
 
+/** The id under a row's name: a CRX key by its extension id as Chrome
+ *  prints it, anything else as the panel shows a key id. */
+function rowKeyId(key: IncomingKey): string {
+  return key.kind === "crx" ? key.keyId : displayKeyId(key.keyId);
+}
+
 /** Who already holds the identity, as one readable line. */
 function holderLine(holder: IdentityHolder): { name: string; keyid: string } {
   return {
-    // An SSH key with no comment has no name of its own; it is shown
-    // the way the rest of the panel shows one.
+    // By the name the user gave it, when they did. An SSH key with no
+    // comment and no alias has no name of its own; it is shown the way
+    // the rest of the panel shows one.
     name:
-      holder.userIds.length === 0 && holder.keyId.startsWith("SHA256:")
+      holder.alias ??
+      (holder.userIds.length === 0 && holder.keyId.startsWith("SHA256:")
         ? t("import_ssh_headline")
-        : parseUserId(holder.userIds[0]).name,
-    keyid: displayKeyId(holder.keyId),
+        : parseUserId(holder.userIds[0]).name),
+    keyid: noteKeyId(holder.keyId),
   };
 }
 
@@ -55,14 +69,25 @@ function ConflictNote({ keyData }: { keyData: IncomingKey }) {
   const email =
     keyData.userIds.flatMap(emailsOf).find((e) => theirs.has(e)) ?? "";
   const revoked = conflict.holders.every((h) => h.revoked);
+  // The ids the note shortens, whole, on hover.
+  const shortened = conflict.holders
+    .map((h) => displayKeyId(h.keyId))
+    .filter((id) => noteKeyId(id) !== id);
   return (
-    <p className="text-bad flex gap-1.5 text-xs">
+    <p
+      className="text-bad flex gap-1.5 text-xs"
+      title={shortened.length > 0 ? shortened.join("\n") : undefined}
+    >
       <TriangleAlertIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-      <span>
+      <span className="min-w-0 [overflow-wrap:anywhere]">
         {conflict.kind === "key" ? (
           keyConflictText(keyData)
         ) : conflict.kind === "name" ? (
-          t("import_review_conflict_name", holder)
+          conflict.sameName ? (
+            t("import_review_conflict_same_name", holder)
+          ) : (
+            t("import_review_conflict_name", holder)
+          )
         ) : conflict.lookalike ? (
           // Marked, so the letter that makes it a different address is
           // pointed at rather than left to be spotted.
@@ -119,7 +144,7 @@ function keyConflictText(keyData: IncomingKey): string {
   const own = holders.find((h) => h.own);
   if (own) {
     return t("import_review_conflict_key_own", {
-      keyid: displayKeyId(own.keyId),
+      keyid: noteKeyId(own.keyId),
     });
   }
   const holder = holderLine(holders[0]);
@@ -136,12 +161,21 @@ function keyConflictText(keyData: IncomingKey): string {
  *  address that only looks the same: a new key for someone's address is
  *  how a rotation looks, a new key for a lookalike of it never is. */
 function canReplace(key: IncomingKey): boolean {
-  return (
+  return replaceableHolders(key) === 1;
+}
+
+/** How many stored contacts Replace would take the place of. Offered
+ *  only for exactly one: with several holding the address, which of
+ *  them the key replaces is not something to guess, and replacing them
+ *  all would delete people the note never named. Only a contact's
+ *  public key replaces a contact. */
+function replaceableHolders(key: IncomingKey): number {
+  return isPublicKind(key.kind) &&
     key.status === "new" &&
     key.conflict?.kind === "address" &&
-    !key.conflict.lookalike &&
-    key.conflict.holders.some((h) => !h.own && !h.incoming)
-  );
+    !key.conflict.lookalike
+    ? key.conflict.holders.filter((h) => !h.own && !h.incoming).length
+    : 0;
 }
 
 /**
@@ -175,7 +209,11 @@ export function ImportReview({
     setDecisions((prev) => new Map(prev).set(keyId, d));
 
   const chosen = [...decisions.values()].filter((d) => d !== "skip").length;
-  const conflicts = keys.filter((k) => k.conflict && needsDecision(k)).length;
+  // Every row that starts on Skip for a reason: overriding any of them
+  // is what makes "Import all" risky.
+  const conflicts = keys.filter(
+    (k) => (k.conflict ?? k.allKeysOff) && needsDecision(k),
+  ).length;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -205,8 +243,8 @@ export function ImportReview({
                         <MarkedText text={email} />
                       </p>
                     )}
-                    <p className="text-muted-foreground font-mono text-[11px]">
-                      {displayKeyId(key.keyId)}
+                    <p className="text-muted-foreground font-mono text-[11px] break-all">
+                      {rowKeyId(key)}
                     </p>
                   </div>
                   <span className="bg-secondary text-muted-foreground shrink-0 rounded px-1.5 py-px text-[10.5px] font-medium">
@@ -217,13 +255,18 @@ export function ImportReview({
                   // What the update changes -- for an SSH group, how many
                   // keys it adds to the person, which is the thing to
                   // check before saying yes.
-                  <ul className="text-muted-foreground space-y-0.5 text-xs">
+                  <ul className="text-muted-foreground space-y-0.5 text-xs [overflow-wrap:anywhere]">
                     {key.changes.map((change) => (
                       <li key={change}>{change}</li>
                     ))}
                   </ul>
                 )}
                 <ConflictNote keyData={key} />
+                {replaceableHolders(key) > 1 && !key.replaces && (
+                  <p className="text-muted-foreground text-xs">
+                    {t("import_review_replace_many")}
+                  </p>
+                )}
                 {key.allKeysOff && (
                   <p className="text-bad flex gap-1.5 text-xs">
                     <TriangleAlertIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
@@ -255,7 +298,8 @@ export function ImportReview({
                           ? t("import_review_choice_replace")
                           : key.conflict &&
                               key.conflict.kind !== "key" &&
-                              key.status === "new"
+                              key.status === "new" &&
+                              isPublicKind(key.kind)
                             ? t("import_review_choice_keep_both")
                             : t("import_review_choice_import"),
                       },

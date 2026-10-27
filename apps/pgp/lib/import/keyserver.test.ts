@@ -169,53 +169,102 @@ describe("answersQuery: the keyserver's answer is checked, not assumed", () => {
     expect(answersQuery(key({ keyId: "0".repeat(40) }), FP)).toBe(false);
   });
 
-  it("accepts a key-ID query naming the primary key or a subkey", () => {
-    const keyid: KeyserverQuery = { kind: "keyid", value: "1234567890ABCDEF" };
-    expect(answersQuery(key({ keyId: `${"0".repeat(24)}1234567890ABCDEF` }), keyid)).toBe(true);
+  const SUB = `${"F".repeat(24)}1234567890ABCDEF`;
+  const sub = (over: Record<string, unknown>) =>
+    key({
+      details: {
+        truncated: false,
+        keys: [
+          {
+            fingerprint: SUB,
+            isPrimary: false,
+            status: "active",
+            canSign: false,
+            ...over,
+          } as never,
+        ],
+      },
+    });
+  const KEYID: KeyserverQuery = { kind: "keyid", value: "1234567890ABCDEF" };
+
+  it("accepts a key-ID query naming the primary key or a back-signed signing subkey", () => {
     expect(
-      answersQuery(
-        key({
-          details: {
-            truncated: false,
-            keys: [{ fingerprint: `${"F".repeat(24)}1234567890ABCDEF` } as never],
-          },
-        }),
-        keyid,
-      ),
+      answersQuery(key({ keyId: `${"0".repeat(24)}1234567890ABCDEF` }), KEYID),
     ).toBe(true);
-    expect(answersQuery(key({}), keyid)).toBe(false);
+    expect(answersQuery(sub({ canSign: true }), KEYID)).toBe(true);
+    // Retired signing subkeys still answer: old messages were signed by them.
+    expect(answersQuery(sub({ canSign: true, status: "expired" }), KEYID)).toBe(
+      true,
+    );
+    expect(answersQuery(sub({ canSign: true, status: "revoked" }), KEYID)).toBe(
+      true,
+    );
+    expect(answersQuery(key({}), KEYID)).toBe(false);
   });
 
   it("does not count an unbound subkey appended to someone else's cert", () => {
     // The engine lists it (status "invalid"), but it is not the cert's.
-    const keyid: KeyserverQuery = { kind: "keyid", value: "1234567890ABCDEF" };
+    expect(answersQuery(sub({ status: "invalid" }), KEYID)).toBe(false);
+    expect(answersQuery(sub({ status: "invalid", canSign: true }), KEYID)).toBe(
+      false,
+    );
+  });
+
+  it("does not count someone's key grafted on as a flagless or encryption subkey", () => {
+    // Binding a non-signing subkey needs no back-signature, so Mallory can
+    // bind Alice's public key to his own cert and the engine calls the
+    // row "active". Only a signing subkey proves the subkey agreed.
+    expect(answersQuery(sub({}), KEYID)).toBe(false);
+    expect(answersQuery(sub({ canEncrypt: true }), KEYID)).toBe(false);
+    expect(answersQuery(sub({ canAuthenticate: true }), KEYID)).toBe(false);
+    expect(answersQuery(sub({}), { kind: "fingerprint", value: SUB })).toBe(
+      false,
+    );
+  });
+
+  it("accepts a fingerprint query naming a back-signed signing subkey exactly", () => {
+    // "Look up signer" pre-fills the issuer fingerprint, which is the
+    // signing SUBKEY's for most modern certs.
+    const query: KeyserverQuery = { kind: "fingerprint", value: SUB };
+    expect(answersQuery(sub({ canSign: true }), query)).toBe(true);
     expect(
       answersQuery(
-        key({
-          details: {
-            truncated: false,
-            keys: [
-              {
-                fingerprint: `${"F".repeat(24)}1234567890ABCDEF`,
-                status: "invalid",
-              } as never,
-            ],
-          },
-        }),
-        keyid,
+        sub({ canSign: true, fingerprint: SUB.toLowerCase() }),
+        query,
+      ),
+    ).toBe(true);
+    // Exact match, not a suffix.
+    expect(
+      answersQuery(
+        sub({ canSign: true, fingerprint: `0${SUB.slice(1)}` }),
+        query,
       ),
     ).toBe(false);
+    // A primary row in the details does not count twice, and a primary
+    // that is not the cert's own fingerprint is not a subkey.
+    expect(answersQuery(sub({ canSign: true, isPrimary: true }), query)).toBe(
+      false,
+    );
   });
 
   it("needs a User ID carrying the address for an address query", () => {
     expect(answersQuery(key({}), EMAIL)).toBe(true);
-    expect(answersQuery(key({ userIds: ["ALICE@EXAMPLE.COM"] }), EMAIL)).toBe(true);
-    expect(answersQuery(key({ userIds: ["Mallory <mallory@evil.test>"] }), EMAIL)).toBe(false);
+    expect(answersQuery(key({ userIds: ["ALICE@EXAMPLE.COM"] }), EMAIL)).toBe(
+      true,
+    );
+    expect(
+      answersQuery(key({ userIds: ["Mallory <mallory@evil.test>"] }), EMAIL),
+    ).toBe(false);
     // Not fooled by Unicode case folding: "ı".toUpperCase() is "I".
-    expect(answersQuery(key({ userIds: ["Al <al\u0131ce@example.com>"] }), EMAIL)).toBe(false);
+    expect(
+      answersQuery(key({ userIds: ["Al <al\u0131ce@example.com>"] }), EMAIL),
+    ).toBe(false);
     // Not fooled by the address appearing as a name.
     expect(
-      answersQuery(key({ userIds: ["alice@example.com <mallory@evil.test>"] }), EMAIL),
+      answersQuery(
+        key({ userIds: ["alice@example.com <mallory@evil.test>"] }),
+        EMAIL,
+      ),
     ).toBe(false);
   });
 });
@@ -262,7 +311,11 @@ describe("prepareKeyserverImport: what the preview is told", () => {
           keyId: "OLDFPR",
           userIds: ["Alice Old <alice@example.com>"],
           armored: "old",
-          source: { type: "keyserver", user: "alice@example.com", fetchedAt: 1 },
+          source: {
+            type: "keyserver",
+            user: "alice@example.com",
+            fetchedAt: 1,
+          },
         },
       ],
     });

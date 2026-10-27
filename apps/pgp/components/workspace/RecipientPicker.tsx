@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { ChevronsUpDownIcon, InfoIcon, XIcon } from "lucide-react";
 
 import { cn } from "@amibeingpwned/ui";
@@ -20,7 +20,12 @@ import {
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import { t, tn } from "../../lib/i18n";
-import { contactClashes, displayKeyId } from "../../lib/identity/binding";
+import {
+  contactClashes,
+  displayKeyId,
+  noteKeyId,
+} from "../../lib/identity/binding";
+import { clashPillLabel, clashSentence } from "../../lib/identity/clash-copy";
 import {
   matchesRecipientSearch,
   orderRecipients,
@@ -33,7 +38,6 @@ import { isSshRecord } from "../../lib/storage/key-kind";
 import {
   displayUserId,
   formatKeyDisplayName,
-  parseUserId,
 } from "../../lib/utils/key-naming";
 import { keyDetailsTarget } from "../keys/KeyDetailsButton";
 import { KeyDetailsPage } from "../keys/KeyDetailsPage";
@@ -195,6 +199,15 @@ export function RecipientPicker({
     };
   }, []);
 
+  // Two contacts claiming one person: each row says so, so the pick is
+  // made on the key id, not on a name both of them wear. SSH keys too:
+  // a key comment is the contact's name, and it is whatever the file
+  // said. Worked out once per contact list, not on every keystroke.
+  const clashes = useMemo(
+    () => contactClashes(contacts, myKeys),
+    [contacts, myKeys],
+  );
+
   const allKeys: AnyKey[] = [...contacts, ...myKeys];
 
   if (allKeys.length === 0) {
@@ -245,11 +258,6 @@ export function RecipientPicker({
   // Which list a row came from, by record rather than fingerprint: the
   // same key can be both your own and a contact's.
   const contactRecords = new Set<AnyKey>(contacts);
-  // Two contacts claiming one person: each row says so, so the pick is
-  // made on the key id, not on a name both of them wear. SSH keys too:
-  // a key comment is the contact's name, and it is whatever the file
-  // said.
-  const clashes = contactClashes(contacts, myKeys);
   // Own keys always sort BELOW contacts: they never join the Recent group
   // (you rarely encrypt to yourself explicitly), so recency ordering only
   // applies to actual recipients. Each key is offered once -- see
@@ -439,10 +447,10 @@ export function RecipientPicker({
     const blocked = blockReason !== null;
     const verified = !isOwn && "verified" in key && key.verified === true;
     const clash = isOwn ? undefined : clashes.get(key.keyId);
-    // Always shown for a PGP key: the 16-hex id is what tells two keys
-    // with one name apart (an SSH key's id is its hash; the sub-line
-    // stays as it was).
-    const shortKeyId = isSsh ? "" : displayKeyId(key.keyId);
+    // Always shown: the id is what tells two keys with one name apart --
+    // the 16-hex id for a PGP key, the start of the SHA256 hash for an
+    // SSH key (whole on hover), as a conflict note shortens it.
+    const shortKeyId = isSsh ? noteKeyId(key.keyId) : displayKeyId(key.keyId);
     return (
       <CommandItem
         key={key.keyId}
@@ -459,64 +467,51 @@ export function RecipientPicker({
       >
         <KeyAvatar fingerprint={key.keyId} size={32} />
         <div className="min-w-0 flex-1">
-          <p className="flex items-center gap-1.5 truncate text-sm">
-            <span className="truncate">
-              <MarkedText text={name} />
-            </span>
-            {isOwn && (
-              <span className="bg-secondary text-muted-foreground shrink-0 rounded px-1.5 py-px text-[10.5px] font-medium">
-                {t("actions_badge_you")}
-              </span>
-            )}
-            {isSsh && (
-              <span className="bg-secondary text-muted-foreground shrink-0 rounded px-1.5 py-px text-[10.5px] font-medium">
-                {/* i18n-ignore */}
-                SSH
-              </span>
-            )}
-            {verified && (
-              <span
-                title={t("keys_verified_chip_title")}
-                className="bg-good/12 text-good shrink-0 rounded px-1.5 py-px text-[10.5px] font-medium"
-              >
-                {t("keys_verified_chip")}
-              </span>
-            )}
-            {clash && (
-              <span
-                title={
-                  clash.kind === "address" && clash.lookalike
-                    ? t("keys_contact_lookalike_address_title", {
-                        name: parseUserId(clash.holders[0].userIds[0] ?? "")
-                          .name,
-                        keyid: displayKeyId(clash.holders[0].keyId),
-                      })
-                    : clash.kind === "address"
-                      ? t("keys_contact_same_address_title", {
-                          name: parseUserId(clash.holders[0].userIds[0] ?? "")
-                            .name,
-                          keyid: displayKeyId(clash.holders[0].keyId),
-                        })
-                      : t("keys_contact_same_name_title", {
-                          name: parseUserId(clash.holders[0].userIds[0] ?? "")
-                            .name,
-                          keyid: displayKeyId(clash.holders[0].keyId),
-                        })
-                }
-                className="bg-warn/12 text-warn shrink-0 rounded px-1.5 py-px text-[10.5px] font-medium"
-              >
-                {clash.kind === "address"
-                  ? clash.lookalike
-                    ? t("keys_contact_lookalike_address")
-                    : t("keys_contact_same_address")
-                  : t("keys_contact_same_name")}
-              </span>
-            )}
+          {/* The name is the identity being judged, so it gets the whole
+              row: the badges wrap on a line of their own beneath it
+              rather than squeezing it to "Ali..." beside them. */}
+          <p className="truncate text-sm">
+            <MarkedText text={name} />
           </p>
+          {(isOwn || isSsh || verified || clash) && (
+            <div className="my-0.5 flex flex-wrap items-center gap-1">
+              {isOwn && (
+                <span className="bg-secondary text-muted-foreground shrink-0 rounded px-1.5 py-px text-[10.5px] font-medium">
+                  {t("actions_badge_you")}
+                </span>
+              )}
+              {isSsh && (
+                <span className="bg-secondary text-muted-foreground shrink-0 rounded px-1.5 py-px text-[10.5px] font-medium">
+                  {/* i18n-ignore */}
+                  SSH
+                </span>
+              )}
+              {verified && (
+                <span
+                  title={t("keys_verified_chip_title")}
+                  className="bg-good/12 text-good shrink-0 rounded px-1.5 py-px text-[10.5px] font-medium"
+                >
+                  {t("keys_verified_chip")}
+                </span>
+              )}
+              {clash && (
+                <span
+                  title={clashSentence(clash)}
+                  className="bg-warn/12 text-warn shrink-0 rounded px-1.5 py-px text-[10.5px] font-medium"
+                >
+                  {clashPillLabel(clash)}
+                </span>
+              )}
+            </div>
+          )}
           {(detail || keyCount > 1 || shortKeyId) && (
             <p className="text-muted-foreground truncate text-xs">
               {shortKeyId && (
-                <span className="font-mono text-[11px]" data-key-id="">
+                <span
+                  className="font-mono text-[11px]"
+                  data-key-id=""
+                  title={isSsh ? displayKeyId(key.keyId) : undefined}
+                >
                   {shortKeyId}
                   {detail || keyCount > 1 ? " · " : ""}
                 </span>
@@ -848,6 +843,8 @@ export function RecipientPicker({
             setDetailsKey(null);
             refocusInput();
           }}
+          contacts={contacts}
+          ownKeys={myKeys}
         />
       )}
     </div>

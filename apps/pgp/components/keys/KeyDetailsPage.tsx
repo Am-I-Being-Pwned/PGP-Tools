@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   CheckIcon,
   ChevronRightIcon,
@@ -31,13 +31,15 @@ import type { KeyPreviewChip } from "./KeyPreviewBody";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import { t } from "../../lib/i18n";
 import { formatDate } from "../../lib/i18n/format";
-import { displayKeyId } from "../../lib/identity/binding";
+import { contactClashes } from "../../lib/identity/binding";
+import { clashSentence } from "../../lib/identity/clash-copy";
 import { downloadPublicKey } from "../../lib/keys/export-bundle";
 import { parseKey, parseKeyDetails } from "../../lib/pgp/wasm";
 import {
   contactRecipients,
   isRecipientDisabled,
   setContactRecipientDisabled,
+  setContactVerified,
   withRecipientDisabled,
 } from "../../lib/storage/contacts";
 import { isSshRecord } from "../../lib/storage/key-kind";
@@ -76,6 +78,15 @@ interface KeyDetailsPageProps {
   clash?: IdentityConflict;
   /** Open the details of one of the `clash` holders. */
   onShowHolder?: (holder: IdentityHolder) => void;
+  /** The user's contacts and own keys, from an entry point that has no
+   *  wiring of its own for the three above (the signer card, the
+   *  recipient picker). Given these, the page works them out itself: it
+   *  reads the contact live from `contacts` (so a change shows here),
+   *  computes the clash with `contactClashes`, offers Mark as verified
+   *  through the store, and opens a holder's details on top of this
+   *  page. An explicit `clash` / `onShowHolder` / `onSetVerified` wins. */
+  contacts?: readonly PublicContactKey[];
+  ownKeys?: readonly ProtectedKeyBlob[];
   /** True when this is the user's configured default key. */
   isDefault?: boolean;
   /** Own keys only: set (true) or clear (false) this key as the
@@ -227,39 +238,25 @@ function ClashBand({
 }) {
   return (
     <Block className="space-y-1.5 bg-[#252012] px-3.5 py-2.5">
-      {clash.holders.map((holder) => {
-        const args = {
-          name: parseUserId(holder.userIds[0] ?? "").name,
-          keyid: displayKeyId(holder.keyId),
-        };
-        return (
-          <div key={holder.keyId} className="flex items-start gap-1.5">
-            <TriangleAlertIcon className="text-warn mt-0.5 h-3.5 w-3.5 shrink-0" />
-            <p className="text-warn min-w-0 flex-1 text-xs leading-relaxed">
-              <MarkedText
-                text={
-                  clash.kind === "address"
-                    ? clash.lookalike
-                      ? t("keys_contact_lookalike_address_title", args)
-                      : t("keys_contact_same_address_title", args)
-                    : t("keys_contact_same_name_title", args)
-                }
-              />
-            </p>
-            {onShowHolder && (
-              <button
-                type="button"
-                aria-label={t("keys_key_details")}
-                title={t("keys_key_details")}
-                onClick={() => onShowHolder(holder)}
-                className="text-warn hover:bg-warn/12 -my-0.5 shrink-0 rounded p-0.5 transition-colors"
-              >
-                <ChevronRightIcon className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-        );
-      })}
+      {clash.holders.map((holder) => (
+        <div key={holder.keyId} className="flex items-start gap-1.5">
+          <TriangleAlertIcon className="text-warn mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <p className="text-warn min-w-0 flex-1 text-xs leading-relaxed">
+            <MarkedText text={clashSentence(clash, holder)} />
+          </p>
+          {onShowHolder && (
+            <button
+              type="button"
+              aria-label={t("keys_key_details")}
+              title={t("keys_key_details")}
+              onClick={() => onShowHolder(holder)}
+              className="text-warn hover:bg-warn/12 -my-0.5 shrink-0 rounded p-0.5 transition-colors"
+            >
+              <ChevronRightIcon className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      ))}
       <p className="text-muted-foreground pl-5 text-xs leading-relaxed">
         {t("keys_clash_check")}
       </p>
@@ -336,20 +333,65 @@ function VerifySection({
 // ── page ─────────────────────────────────────────────────────────────
 
 export function KeyDetailsPage({
-  target,
+  target: targetProp,
   onBack,
   onEncryptTo,
   onRename,
   onCheckRevocation,
-  onSetVerified,
-  clash,
-  onShowHolder,
+  onSetVerified: onSetVerifiedProp,
+  clash: clashProp,
+  onShowHolder: onShowHolderProp,
+  contacts,
+  ownKeys,
   isDefault,
   onSetDefault,
   onDelete,
   onGenerateRevocation,
 }: KeyDetailsPageProps) {
   const { entered, close } = useSlideOver(onBack);
+  // The contact as it is in the live list when one was handed in: the
+  // target is a snapshot from when the page opened, and Mark as verified
+  // has to show its answer here.
+  const liveContact =
+    targetProp.kind === "contact"
+      ? contacts?.find((c) => c.keyId === targetProp.contact.keyId)
+      : undefined;
+  const target: KeyDetailsTarget = liveContact
+    ? { kind: "contact", contact: liveContact }
+    : targetProp;
+  const contactKeyId = target.kind === "contact" ? target.contact.keyId : null;
+  const derivedClash = useMemo(
+    () =>
+      contactKeyId !== null && contacts && ownKeys
+        ? contactClashes(contacts, ownKeys).get(contactKeyId)
+        : undefined,
+    [contactKeyId, contacts, ownKeys],
+  );
+  const clash = clashProp ?? derivedClash;
+  // A clash holder opened on top of this page, for an entry point with
+  // no navigation stack of its own.
+  const [holderTarget, setHolderTarget] = useState<KeyDetailsTarget | null>(
+    null,
+  );
+  const onShowHolder =
+    onShowHolderProp ??
+    (contacts && ownKeys
+      ? (holder: IdentityHolder) => {
+          const contact = contacts.find((c) => c.keyId === holder.keyId);
+          const own = ownKeys.find((k) => k.keyId === holder.keyId);
+          if (contact) setHolderTarget({ kind: "contact", contact });
+          else if (own) setHolderTarget({ kind: "own", keyBlob: own });
+        }
+      : undefined);
+  // Only for a contact actually in the store (`liveContact`), and not a
+  // revoked one -- the same rule the Keys tab applies. Through the store's
+  // in-place writer, like the recipient toggle below: it re-reads the
+  // record inside the lock, and `useContacts` hears of it.
+  const onSetVerified =
+    onSetVerifiedProp ??
+    (liveContact && !liveContact.revoked
+      ? (verified: boolean) => setContactVerified(liveContact.keyId, verified)
+      : undefined);
   const [info, setInfo] = useState<KeyInfo | null>(null);
   const [details, setDetails] = useState<KeyDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -589,129 +631,141 @@ export function KeyDetailsPage({
   };
 
   return (
-    <SlideOverPanel
-      entered={entered}
-      ariaLabel={t("keys_details_aria", { name })}
-      onDismiss={close}
-    >
-      {/* No visible title: the identity card right under it says whose
+    <>
+      <SlideOverPanel
+        entered={entered}
+        ariaLabel={t("keys_details_aria", { name })}
+        onDismiss={close}
+      >
+        {/* No visible title: the identity card right under it says whose
           key this is, and the header's actions need the width. */}
-      <SlideOverHeader title={t("keys_key_details")} hideTitle onBack={close}>
-        {onEncryptTo && (
-          <IconAction label={t("keys_encrypt_to")} onClick={onEncryptTo}>
-            <LockIcon className="h-4 w-4" />
-          </IconAction>
-        )}
-        {onRename && (
-          <IconAction label={t("keys_rename")} onClick={onRename}>
-            <PencilIcon className="h-4 w-4" />
-          </IconAction>
-        )}
-        {onCheckRevocation && (
-          <IconAction
-            label={t("keys_check_revocation")}
-            onClick={onCheckRevocation}
-          >
-            <ShieldQuestionIcon className="h-4 w-4" />
-          </IconAction>
-        )}
-        {/* The default key feeds `resolveSelfKey`, which is engine-blind:
+        <SlideOverHeader title={t("keys_key_details")} hideTitle onBack={close}>
+          {onEncryptTo && (
+            <IconAction label={t("keys_encrypt_to")} onClick={onEncryptTo}>
+              <LockIcon className="h-4 w-4" />
+            </IconAction>
+          )}
+          {onRename && (
+            <IconAction label={t("keys_rename")} onClick={onRename}>
+              <PencilIcon className="h-4 w-4" />
+            </IconAction>
+          )}
+          {onCheckRevocation && (
+            <IconAction
+              label={t("keys_check_revocation")}
+              onClick={onCheckRevocation}
+            >
+              <ShieldQuestionIcon className="h-4 w-4" />
+            </IconAction>
+          )}
+          {/* The default key feeds `resolveSelfKey`, which is engine-blind:
             pointing it at an SSH key would make it the preferred
             encrypt-to-self key for PGP messages too, where it can't be
             used. Suppressed rather than disabled -- there is no version
             of this action that does something useful for an SSH key. */}
-        {onSetDefault && !isSsh && (
+          {onSetDefault && !isSsh && (
+            <IconAction
+              label={
+                isDefault ? t("keys_remove_default") : t("keys_set_default")
+              }
+              onClick={() => {
+                onSetDefault(!isDefault);
+                toast.success(
+                  isDefault ? t("keys_default_removed") : t("keys_default_set"),
+                  { id: "default-key-toggled" },
+                );
+              }}
+            >
+              {isDefault ? (
+                <StarOffIcon className="h-4 w-4" />
+              ) : (
+                <StarIcon className="h-4 w-4" />
+              )}
+            </IconAction>
+          )}
           <IconAction
-            label={isDefault ? t("keys_remove_default") : t("keys_set_default")}
-            onClick={() => {
-              onSetDefault(!isDefault);
-              toast.success(
-                isDefault ? t("keys_default_removed") : t("keys_default_set"),
-                { id: "default-key-toggled" },
-              );
-            }}
+            label={t("keys_copy_public_key")}
+            onClick={handleCopyPublicKey}
           >
-            {isDefault ? (
-              <StarOffIcon className="h-4 w-4" />
-            ) : (
-              <StarIcon className="h-4 w-4" />
-            )}
+            <CopyIcon className="h-4 w-4" />
           </IconAction>
-        )}
-        <IconAction
-          label={t("keys_copy_public_key")}
-          onClick={handleCopyPublicKey}
-        >
-          <CopyIcon className="h-4 w-4" />
-        </IconAction>
-        <IconAction
-          label={t("keys_download_public_key")}
-          onClick={handleDownloadPublicKey}
-        >
-          <DownloadIcon className="h-4 w-4" />
-        </IconAction>
-        {onDelete && (
           <IconAction
-            label={isOwn ? t("keys_delete_key") : t("keys_remove_contact")}
-            onClick={onDelete}
+            label={t("keys_download_public_key")}
+            onClick={handleDownloadPublicKey}
           >
-            <Trash2Icon className="h-4 w-4" />
+            <DownloadIcon className="h-4 w-4" />
           </IconAction>
-        )}
-      </SlideOverHeader>
+          {onDelete && (
+            <IconAction
+              label={isOwn ? t("keys_delete_key") : t("keys_remove_contact")}
+              onClick={onDelete}
+            >
+              <Trash2Icon className="h-4 w-4" />
+            </IconAction>
+          )}
+        </SlideOverHeader>
 
-      <div className="flex-1 space-y-3 overflow-y-auto p-3">
-        <KeyPreviewBody
-          name={name}
-          // The record's own id: the hex fingerprint, or an SSH key's
-          // `SHA256:` hash -- for a multi-key contact, its first key's,
-          // which is the record's identity (see `recipientsField`).
-          avatarFingerprint={
-            isOwn ? target.keyBlob.keyId : target.contact.keyId
-          }
-          subtitle={alias ? realName : undefined}
-          email={email}
-          akaEmails={akaEmails}
-          chips={chips}
-          facts={facts}
-          // The armor is parsed in an effect, so there genuinely is a
-          // gap here where the facts are on their way (unlike the import
-          // preview, which is handed a finished classification). An SSH
-          // key never parses, so it never waits either.
-          loading={!isSsh && !multiRecipient && !info && !error}
-          error={error}
-          isOwn={isOwn}
-          securityWarning={securityWarning}
-          statusStrip={
-            clash && <ClashBand clash={clash} onShowHolder={onShowHolder} />
-          }
-          addedAt={addedAt}
-          lastUsedAt={isOwn ? lastUsedAt : undefined}
-          rowAction={multiRecipient ? renderRecipientAction : undefined}
-          fingerprintFooter={
-            onSetVerified && (
-              <VerifySection
-                name={name}
-                verified={verified}
-                verifiedAt={verifiedAt}
-                onSetVerified={onSetVerified}
-              />
-            )
-          }
-        >
-          {/* age has no revocation concept at all -- there is no
+        <div className="flex-1 space-y-3 overflow-y-auto p-3">
+          <KeyPreviewBody
+            name={name}
+            // The record's own id: the hex fingerprint, or an SSH key's
+            // `SHA256:` hash -- for a multi-key contact, its first key's,
+            // which is the record's identity (see `recipientsField`).
+            avatarFingerprint={
+              isOwn ? target.keyBlob.keyId : target.contact.keyId
+            }
+            subtitle={alias ? realName : undefined}
+            email={email}
+            akaEmails={akaEmails}
+            chips={chips}
+            facts={facts}
+            // The armor is parsed in an effect, so there genuinely is a
+            // gap here where the facts are on their way (unlike the import
+            // preview, which is handed a finished classification). An SSH
+            // key never parses, so it never waits either.
+            loading={!isSsh && !multiRecipient && !info && !error}
+            error={error}
+            isOwn={isOwn}
+            securityWarning={securityWarning}
+            statusStrip={
+              clash && <ClashBand clash={clash} onShowHolder={onShowHolder} />
+            }
+            addedAt={addedAt}
+            lastUsedAt={isOwn ? lastUsedAt : undefined}
+            rowAction={multiRecipient ? renderRecipientAction : undefined}
+            fingerprintFooter={
+              onSetVerified && (
+                <VerifySection
+                  name={name}
+                  verified={verified}
+                  verifiedAt={verifiedAt}
+                  onSetVerified={onSetVerified}
+                />
+              )
+            }
+          >
+            {/* age has no revocation concept at all -- there is no
               certificate to publish and nobody to publish it to -- so
               the section is absent for an SSH key rather than offering
               a button that cannot work. */}
-          {isOwn && !isSsh && (
-            <RevocationSection
-              keyId={target.keyBlob.keyId}
-              initialCertificate={target.keyBlob.revocationCertificate}
-              onGenerate={onGenerateRevocation}
-            />
-          )}
-        </KeyPreviewBody>
-      </div>
-    </SlideOverPanel>
+            {isOwn && !isSsh && (
+              <RevocationSection
+                keyId={target.keyBlob.keyId}
+                initialCertificate={target.keyBlob.revocationCertificate}
+                onGenerate={onGenerateRevocation}
+              />
+            )}
+          </KeyPreviewBody>
+        </div>
+      </SlideOverPanel>
+      {holderTarget && (
+        <KeyDetailsPage
+          target={holderTarget}
+          onBack={() => setHolderTarget(null)}
+          contacts={contacts}
+          ownKeys={ownKeys}
+        />
+      )}
+    </>
   );
 }

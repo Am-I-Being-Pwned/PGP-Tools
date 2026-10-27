@@ -35,6 +35,7 @@ import {
   hasActiveRecipient,
   isRecipientDisabled,
   loadContacts,
+  onContactUpdated,
   recipientsField,
   removeContact,
   sameSource,
@@ -751,6 +752,81 @@ describe("saveContact - a refresh keeps the user's decisions", () => {
     expect(JSON.stringify(stored)).toBe(
       JSON.stringify(legacyContact({ lastUsedAt: 9 })),
     );
+  });
+});
+
+/**
+ * The list on screen is not the store. The recipient toggle writes
+ * straight to the store from the details page, so the panel's list
+ * (`useContacts`) only learns of it through `onContactUpdated`. Before
+ * that existed, a GitHub refresh after a toggle was classified against
+ * the list as it was BEFORE the toggle (so "every key left is one you
+ * turned off" was never asked), and the refreshed record put on screen
+ * had no `disabled` flag -- the card read "1 key" while the store held
+ * "0 of 1" until the panel reloaded.
+ */
+describe("onContactUpdated - the list on screen follows the toggle", () => {
+  it("hands every listener the record as it is on disk", async () => {
+    await saveContact(multiContact(2));
+    const heard: PublicContactKey[] = [];
+    const stop = onContactUpdated((c) => heard.push(c));
+
+    await setContactRecipientDisabled("SHA256:key0", "SHA256:key1", true);
+    const [onDisk] = await loadContacts();
+    stop();
+    await setContactRecipientDisabled("SHA256:key0", "SHA256:key1", false);
+
+    expect(heard).toHaveLength(1);
+    expect(heard[0]).toEqual(onDisk);
+    expect(contactRecipients(heard[0]).map(isRecipientDisabled)).toEqual([
+      false,
+      true,
+    ]);
+  });
+
+  it("says nothing when the write did not happen", async () => {
+    await saveContact(multiContact(2));
+    const heard = vi.fn();
+    const stop = onContactUpdated(heard);
+
+    await updateContact("nobody", (c) => c);
+    wasmMock.session = false;
+    await expect(
+      setContactRecipientDisabled("SHA256:key0", "SHA256:key1", true),
+    ).rejects.toThrow(/vault is locked/);
+    stop();
+
+    expect(heard).not.toHaveBeenCalled();
+  });
+
+  it("keeps a refresh down to turned-off keys at 0 of 1 on screen", async () => {
+    // The panel's list, kept the way `useContacts` keeps it.
+    await saveContact(multiContact(2));
+    let onScreen = await loadContacts();
+    const stop = onContactUpdated((updated) => {
+      onScreen = onScreen.map((c) => (c.keyId === updated.keyId ? updated : c));
+    });
+
+    await setContactRecipientDisabled("SHA256:key0", "SHA256:key1", true);
+    stop();
+
+    // GitHub now lists only the key the user turned off.
+    const refreshed: PublicContactKey = {
+      ...multiContact(2),
+      keyId: "SHA256:key1",
+      armoredPublicKey: sshRecipient(1).armored,
+      recipients: undefined,
+    };
+    onScreen = upsertContacts(onScreen, refreshed);
+    await saveContact(refreshed);
+
+    const [stored] = await loadContacts();
+    expect(activeRecipients(stored)).toEqual([]);
+    expect(onScreen).toHaveLength(1);
+    expect(contactRecipients(onScreen[0]).map(isRecipientDisabled)).toEqual([
+      true,
+    ]);
+    expect(activeRecipients(onScreen[0])).toEqual([]);
   });
 });
 

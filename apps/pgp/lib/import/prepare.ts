@@ -1,7 +1,12 @@
 import type { IdentityHolder } from "../identity/binding";
 import type { KeyDetails, KeyInfo } from "../pgp/types";
 import type { SshRecipientInfo } from "../pgp/wasm";
-import type { ContactRecipient, ContactSource } from "../storage/contacts";
+import type {
+  ContactRecipient,
+  ContactSource,
+  PublicContactKey,
+} from "../storage/contacts";
+import type { ProtectedKeyBlob } from "../storage/keyring";
 import type { IncomingKey } from "./types";
 import {
   LEGACY_PEM_ENCRYPTED,
@@ -20,14 +25,16 @@ import {
 } from "../import-public-keys";
 import {
   extractPublicKey,
+  mergePublicKey,
   parseKeyDetails,
   parseKeys,
   parseSshRecipient,
   sshPrivateKeyFormatRejection,
 } from "../pgp/wasm";
+import { contactRecipients } from "../storage/contact-recipients";
 import { sameSource } from "../storage/contacts";
 import { stripInvisible } from "../utils/lookalike";
-import { PENDING_KEY_ID } from "./types";
+import { isSecretKind, PENDING_KEY_ID } from "./types";
 
 /**
  * Turn pasted/dropped text into the objects the import UI renders.
@@ -59,9 +66,10 @@ export interface StoredKey {
    *  against every one of them -- a key already saved inside someone's
    *  group is a key the user already holds. */
   recipientIds?: string[];
-  /** The contact's local name (`PublicContactKey.alias`), when the user
-   *  gave it one: how a conflict names the person whose keys an import
-   *  would change. Display only -- never compared. */
+  /** The local name the user gave it (`PublicContactKey.alias`, a
+   *  key's alias): how a conflict names the person whose keys an import
+   *  would change, and one more name an import is compared against --
+   *  a comment-less SSH contact the user called "Alice" has no other. */
   alias?: string;
 }
 
@@ -70,6 +78,43 @@ export interface StoredKeys {
   own: StoredKey[];
   /** Contacts, matched against public imports. */
   contacts: StoredKey[];
+}
+
+/**
+ * The keyring and contacts in the shape every `prepare*` entry point
+ * takes. One builder, so the import panel and the backup restore
+ * classify against the same facts -- the restore used to pass no own
+ * keys at all, so a backup key wearing the user's own name or address
+ * was never flagged.
+ */
+export function storedKeysFrom(
+  own: readonly ProtectedKeyBlob[],
+  contacts: readonly PublicContactKey[],
+): StoredKeys {
+  return {
+    own: own.map((k) => ({
+      keyId: k.keyId,
+      userIds: k.userIds,
+      armored: k.publicKeyArmored,
+      createdAt: k.createdAt,
+      ...(k.alias ? { alias: k.alias } : {}),
+    })),
+    contacts: contacts.map((c) => ({
+      keyId: c.keyId,
+      userIds: c.userIds,
+      armored: c.armoredPublicKey,
+      addedAt: c.addedAt,
+      expiresAt: c.expiresAt,
+      ...(c.source ? { source: c.source } : {}),
+      ...(c.revoked ? { revoked: true } : {}),
+      // Every key on the record, not just its head: an SSH import is
+      // checked against all of them (see `sshKeyHolders`).
+      ...(c.recipients
+        ? { recipientIds: contactRecipients(c).map((r) => r.keyId) }
+        : {}),
+      ...(c.alias ? { alias: c.alias } : {}),
+    })),
+  };
 }
 
 /** Normalized armor, for the byte-identical comparison that separates a
@@ -662,6 +707,13 @@ export async function prepareImport(
  * User ID does. And first, an SSH key or group that carries a key the
  * user ALREADY holds is marked `kind: "key"` (see `sshGroupKey` for why
  * that is how a contact used to be taken over).
+ *
+ * A private key (and a backup's CRX key, by its label) is checked too:
+ * saved, it becomes one of the user's OWN keys, and a key named as a
+ * contact -- or as a lookalike of the user -- went in silently. It is
+ * checked against contacts and the other keys in the import like any
+ * key, and against the user's own keys only for a LOOKALIKE: a new key
+ * of theirs sharing their name and address is how a rotation looks.
  */
 export function withIdentityConflicts(
   keys: IncomingKey[],
@@ -670,13 +722,21 @@ export function withIdentityConflicts(
   const holder = (k: StoredKey, own: boolean): IdentityHolder => ({
     keyId: k.keyId,
     userIds: k.userIds,
+    ...(k.alias ? { alias: k.alias } : {}),
     ...(k.revoked ? { revoked: true } : {}),
     ...(own ? { own: true } : {}),
   });
   const isNew = (k: IncomingKey) =>
     (k.kind === "pgp-public" || k.kind === "ssh-public") && k.status === "new";
+  const isNewSecret = (k: IncomingKey) =>
+    isSecretKind(k.kind) &&
+    k.status === "new" &&
+    k.keyId !== PENDING_KEY_ID &&
+    claimedIds(k).length > 0;
   // An update or a duplicate is already here as its stored record, and a
-  // rejected key will not be saved: only new keys join the holders.
+  // rejected key will not be saved: only new keys join the holders. A
+  // new private key joins as one of the user's own (a CRX key's label
+  // names an extension, not a person, so it holds nothing).
   const holders: IdentityHolder[] = [
     ...stored.contacts.map((k) => holder(k, false)),
     ...stored.own.map((k) => holder(k, true)),
@@ -686,8 +746,17 @@ export function withIdentityConflicts(
       incoming: true as const,
       ...(k.info?.revoked ? { revoked: true } : {}),
     })),
+    ...keys
+      .filter((k) => isNewSecret(k) && k.kind !== "crx")
+      .map((k) => ({
+        keyId: k.keyId,
+        userIds: claimedIds(k),
+        incoming: true as const,
+        own: true as const,
+      })),
   ];
   return keys.map((key) => {
+    if (isNewSecret(key)) return withSecretConflict(key, holders);
     if (key.kind !== "pgp-public" && key.kind !== "ssh-public") return key;
     if (key.status !== "new" && key.status !== "update") return key;
 
@@ -711,16 +780,13 @@ export function withIdentityConflicts(
       // A paste that adds keys to a contact names that contact: the
       // update IS the claim. A refresh of a fetched person does not, for
       // the keys its own lookup returned. Holders are named as the user
-      // knows them: by the alias they gave, when there is one (a pasted
-      // single SSH key keeps no comment at all).
+      // knows them: by the alias they gave, when there is one (a single
+      // SSH key saved before it kept its comment has no name at all).
       const rivals = [
         ...held.own.map((k) => holder(k, true)),
         ...held.contacts
           .filter((c) => !(source && sameSource(c, { source })))
-          .map((c) => ({
-            ...holder(c, false),
-            ...(c.alias ? { userIds: [c.alias] } : {}),
-          })),
+          .map((c) => holder(c, false)),
       ];
       if (rivals.length > 0) {
         return { ...key, conflict: { kind: "key", holders: rivals } };
@@ -750,12 +816,40 @@ export function withIdentityConflicts(
 }
 
 /**
+ * A private or CRX key's conflict (see `withIdentityConflicts`): with a
+ * contact or another key in the import, as any key; with the user's own
+ * keys only when it LOOKS like theirs without being it -- the same
+ * address or name as one of theirs is their next key.
+ */
+function withSecretConflict(
+  key: IncomingKey,
+  holders: readonly IdentityHolder[],
+): IncomingKey {
+  const claim = { keyId: key.keyId, userIds: claimedIds(key) };
+  const others = holders.filter((h) => !h.own);
+  const own = holders.filter((h) => h.own);
+  const theirs = identityConflict(claim, others, { includeRevoked: true });
+  if (theirs) return { ...key, conflict: theirs };
+  const mine = identityConflict(claim, own);
+  const lookalike =
+    mine &&
+    (mine.kind === "address" ? mine.lookalike === true : !mine.sameName);
+  return lookalike ? { ...key, conflict: mine } : key;
+}
+
+/**
  * The identity an incoming key claims: its User IDs, or an SSH key's
  * comment / a group's label. Not the "SSH key" headline a comment-less
  * line is shown under -- that is the app's placeholder, not a claim, and
- * every such key would otherwise "share" it.
+ * every such key would otherwise "share" it. Nor the headline a key
+ * with no identity of its own is shown under (a CRX key, an OpenSSH
+ * private key before it is read).
  */
-function claimedIds(key: IncomingKey): string[] {
+export function claimedIds(key: IncomingKey): string[] {
+  if (key.kind === "crx")
+    return key.userIds.filter((u) => u !== t("import_crx_headline"));
+  if (key.kind === "ssh-private")
+    return key.userIds.filter((u) => u !== t("import_ssh_private_headline"));
   if (key.kind !== "ssh-public" || key.group) return key.userIds;
   return key.userIds.filter((u) => u !== t("import_ssh_headline"));
 }
@@ -970,7 +1064,10 @@ async function classifyImport(
         // rather than risk private armor reaching the preview.
         continue;
       }
-      secrets.set(cert.keyInfo.keyId, cert.armored);
+      // The first copy's secret half: a second private copy of the same
+      // key is dropped below, and must not swap in its secret unseen.
+      if (!secrets.has(cert.keyInfo.keyId))
+        secrets.set(cert.keyInfo.keyId, cert.armored);
     }
     classified.push(
       await classifyCert(
@@ -985,14 +1082,92 @@ async function classifyImport(
     return { keys: [], secrets, unparseable: true };
   }
 
-  const usable = classified.filter((k) => k.status !== "rejected");
+  const merged = await mergeSameKey(classified, stored);
+  const usable = merged.filter((k) => k.status !== "rejected");
   return {
     // Rejects are kept only when there's nothing usable to show instead:
     // that's the case where the user needs to be told why.
-    keys: usable.length > 0 ? usable : classified,
+    keys: usable.length > 0 ? usable : merged,
     secrets,
     unparseable: false,
   };
+}
+
+/**
+ * Several copies of ONE key (same fingerprint) in one import, as one.
+ *
+ * The Review keys its decisions by fingerprint, so two rows for one key
+ * shared one Skip/Import switch -- and the identity check looked at each
+ * copy's User IDs apart, so a copy that added a User ID claiming someone
+ * else's address could sit behind a harmless one. Public copies are
+ * MERGED through the engine, exactly as an update is merged into the
+ * stored contact (it only keeps what the owner signed), and the merge is
+ * classified once, so the row shows -- and the identity check sees --
+ * every User ID any copy carries. A private copy keeps only the first:
+ * its secret half is what gets protected, and there is nothing to merge
+ * a secret half with. A public copy and a private copy of the same key
+ * stay apart (one is a contact, the other the user's own key).
+ *
+ * Exported for the backup restore, which classifies its file a block at
+ * a time and so meets copies this function's caller never sees together.
+ */
+export async function mergeSameKey(
+  keys: IncomingKey[],
+  stored: StoredKeys,
+): Promise<IncomingKey[]> {
+  const groupOf = (k: IncomingKey) =>
+    k.kind === "pgp-public" || k.kind === "pgp-private"
+      ? `${k.kind}:${k.keyId.toUpperCase()}`
+      : null;
+  const copies = new Map<string, IncomingKey[]>();
+  for (const key of keys) {
+    const group = groupOf(key);
+    if (group === null || key.keyId === PENDING_KEY_ID) continue;
+    copies.set(group, [...(copies.get(group) ?? []), key]);
+  }
+  const out: IncomingKey[] = [];
+  const done = new Set<string>();
+  for (const key of keys) {
+    const group = groupOf(key);
+    const same = group === null ? undefined : copies.get(group);
+    if (group === null || !same || same.length < 2) {
+      out.push(key);
+      continue;
+    }
+    if (done.has(group)) continue;
+    done.add(group);
+    if (key.kind === "pgp-private") {
+      out.push(key);
+      continue;
+    }
+    out.push(await mergeCopies(same, stored));
+  }
+  return out;
+}
+
+/** One public key's copies, merged and classified as a single cert.
+ *  A copy the engine will not merge (it never parsed as this key) is
+ *  left out of the merge rather than failing the import. */
+async function mergeCopies(
+  copies: IncomingKey[],
+  stored: StoredKeys,
+): Promise<IncomingKey> {
+  let armored = copies[0].publicArmored;
+  for (const copy of copies.slice(1)) {
+    try {
+      armored = await mergePublicKey(armored, copy.publicArmored);
+    } catch {
+      // Keep what is merged so far.
+    }
+  }
+  try {
+    const cert = (await parseKeys(armored)).at(0);
+    if (cert)
+      return await classifyCert(cert.keyInfo, cert.armored, stored.contacts);
+  } catch {
+    // Fall through to the first copy as it was classified.
+  }
+  return copies[0];
 }
 
 /** Nothing to do -- every key found is already stored, byte for byte.

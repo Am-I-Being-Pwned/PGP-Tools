@@ -156,4 +156,92 @@ describe("mergeIntoContact", () => {
     expect(await mergeIntoContact("FPR1", "FETCHED")).toBeUndefined();
     expect(merge).not.toHaveBeenCalled();
   });
+
+  describe("never changes who the contact is", () => {
+    // The revocation check's write has no Review behind it: a keyserver
+    // copy carrying a new User ID used to bind it to the contact
+    // silently, and keep "verified" on it.
+    const verifiedAlice = (): PublicContactKey => ({
+      keyId: "FPR1",
+      userIds: ["Alice <a@b.test>"],
+      algorithm: "ed25519",
+      armoredPublicKey: "ON-DISK",
+      addedAt: 1,
+      lastUsedAt: 1,
+      expiresAt: null,
+      verified: true,
+      verifiedAt: 5,
+    });
+    const written: PublicContactKey[] = [];
+    const onDisk = (contact: PublicContactKey) =>
+      store.updateContactAsync.mockImplementation(
+        async (
+          _id: string,
+          apply: (c: PublicContactKey) => Promise<PublicContactKey>,
+        ) => {
+          const next = await apply(contact);
+          written.push(next);
+          return next;
+        },
+      );
+    afterEach(() => {
+      written.length = 0;
+    });
+
+    it("keeps a new expiry, and 'verified', when the User IDs are unchanged", async () => {
+      onDisk(verifiedAlice());
+      merge.mockResolvedValue("MERGED");
+      parse.mockResolvedValue([cert({ expiresAt: 99 }, "MERGED")]);
+      const result = await mergeIntoContact("FPR1", "FETCHED");
+      expect(result?.needsReview).toBeUndefined();
+      expect(written[0]).toMatchObject({
+        armoredPublicKey: "MERGED",
+        expiresAt: 99,
+        userIds: ["Alice <a@b.test>"],
+        verified: true,
+        verifiedAt: 5,
+      });
+    });
+
+    it("writes nothing and asks for the Review when the copy adds a User ID", async () => {
+      const alice = verifiedAlice();
+      onDisk(alice);
+      merge.mockResolvedValue("MERGED");
+      parse.mockResolvedValue([
+        cert(
+          { userIds: ["Alice <a@b.test>", "Carol <carol@corp.test>"] },
+          "MERGED",
+        ),
+      ]);
+      const result = await mergeIntoContact("FPR1", "FETCHED");
+      expect(result?.needsReview).toBe(true);
+      expect(written).toEqual([alice]);
+    });
+
+    it("saves a revocation that adds a User ID under the old ones, unverified", async () => {
+      onDisk({ ...verifiedAlice(), lookalike: undefined });
+      merge.mockResolvedValue("MERGED");
+      parse.mockResolvedValue([
+        cert(
+          {
+            revoked: true,
+            lookalike: true,
+            userIds: ["Alice <a@b.test>", "Аlice <a@evil.test>"],
+          },
+          "MERGED",
+        ),
+      ]);
+      const result = await mergeIntoContact("FPR1", "FETCHED");
+      expect(result?.needsReview).toBeUndefined();
+      expect(result?.keyInfo.revoked).toBe(true);
+      expect(written[0]).toMatchObject({
+        armoredPublicKey: "MERGED",
+        revoked: true,
+        userIds: ["Alice <a@b.test>"],
+      });
+      expect("verified" in written[0]).toBe(false);
+      expect("verifiedAt" in written[0]).toBe(false);
+      expect("lookalike" in written[0]).toBe(false);
+    });
+  });
 });

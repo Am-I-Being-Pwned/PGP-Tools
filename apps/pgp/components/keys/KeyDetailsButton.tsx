@@ -23,14 +23,20 @@ export function keyDetailsTarget(key: AnyKey): KeyDetailsTarget {
 /** A small info icon that opens the full key-details subpage for `keyData`
  *  -- the exact same overview shown from the Keys tab -- so a selected key
  *  (e.g. an encrypt recipient) can be inspected without leaving the flow.
- *  Rendered read-only: no rename/delete/encrypt-to actions are wired in. */
+ *  No rename/delete/encrypt-to actions are wired in. Given `contacts` and
+ *  `ownKeys`, the page still shows the identity clash and offers Mark as
+ *  verified (see `KeyDetailsPage`). */
 export function KeyDetailsButton({
   keyData,
   subtle = false,
+  contacts,
+  ownKeys,
 }: {
   keyData: AnyKey;
   /** A bare icon, for use inside a row that is already a surface. */
   subtle?: boolean;
+  contacts?: readonly PublicContactKey[];
+  ownKeys?: readonly ProtectedKeyBlob[];
 }) {
   const [open, setOpen] = useState(false);
 
@@ -59,6 +65,8 @@ export function KeyDetailsButton({
         <KeyDetailsPage
           target={keyDetailsTarget(keyData)}
           onBack={() => setOpen(false)}
+          contacts={contacts}
+          ownKeys={ownKeys}
         />
       )}
     </>

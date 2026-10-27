@@ -22,9 +22,10 @@ import {
   needsDecision,
 } from "./review";
 
-// The WASM engine is not available under vitest; nothing here parses a
-// key, so the module only has to load.
-vi.mock("../pgp/wasm", () => ({}));
+// The WASM engine is not available under vitest. Only the SSH case
+// parses anything (the recipient line), and says what the engine returns.
+const wasm = vi.hoisted(() => ({ parseSshRecipient: vi.fn() }));
+vi.mock("../pgp/wasm", () => wasm);
 
 const CAROL = "CA70CA70CA70CA70CA70CA70CA70CA70CA70CA70";
 const IMPOSTOR = "BAD0BAD0BAD0BAD0BAD0BAD0BAD0BAD0BAD0BAD0";
@@ -279,6 +280,53 @@ describe("applyReview", () => {
     expect(outcome.replaced).toBe(0);
   });
 
+  it('"replace" with several contacts holding the address removes none', async () => {
+    // Which of them the key takes over is not something to guess, and
+    // replacing them all deletes people the Review never named. The
+    // Review does not offer Replace then; a stale decision only adds.
+    const other = { ...carolContact(), keyId: DAVE, alias: "Carol (home)" };
+    const store = fakeStore([carolContact(), other]);
+    const outcome = await applyReview(
+      [
+        impostor({
+          conflict: {
+            kind: "address",
+            holders: [
+              { keyId: CAROL, userIds: carolContact().userIds },
+              { keyId: DAVE, userIds: other.userIds },
+            ],
+          },
+        }),
+      ],
+      decide([IMPOSTOR, "replace"]),
+      store,
+    );
+    expect(store.calls).toEqual([`add ${IMPOSTOR}`]);
+    expect(store.remove).not.toHaveBeenCalled();
+    expect(outcome.replaced).toBe(0);
+    expect("alias" in store.added[0]).toBe(false);
+  });
+
+  it('"replace" never removes the user\'s own key or another incoming one', async () => {
+    const store = fakeStore();
+    const outcome = await applyReview(
+      [
+        impostor({
+          conflict: {
+            kind: "address",
+            holders: [
+              { keyId: CAROL, userIds: carolContact().userIds, own: true },
+            ],
+          },
+        }),
+      ],
+      decide([IMPOSTOR, "replace"]),
+      store,
+    );
+    expect(store.calls).toEqual([`add ${IMPOSTOR}`]);
+    expect(outcome.replaced).toBe(0);
+  });
+
   it('"replace" on a lookalike address only adds, too', async () => {
     // "al\u0131ce@" only READS as the holder's address. A new key for a
     // lookalike of someone's address is never their rotation.
@@ -330,5 +378,37 @@ describe("applyReview", () => {
       replaced: 0,
       keyIds: [CAROL, DAVE],
     });
+  });
+});
+
+describe("contactFromIncoming: a single pasted SSH key", () => {
+  const FP = "SHA256:abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG";
+  const LINE = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExample";
+
+  beforeEach(() => {
+    // The stored recipient is the canonical line, which has no comment:
+    // the engine's parse of it reports none.
+    wasm.parseSshRecipient.mockResolvedValue({
+      fingerprint: FP,
+      recipient: LINE,
+      comment: "",
+      algorithm: "ssh-ed25519",
+    });
+  });
+
+  const ssh = (userIds: string[]) =>
+    incoming({ keyId: FP, kind: "ssh-public", userIds, publicArmored: LINE });
+
+  it("keeps the comment the Review showed as the contact's name", async () => {
+    const contact = await contactFromIncoming(ssh(["alice@laptop"]));
+    expect(contact.userIds).toEqual(["alice@laptop"]);
+    expect(contact.keyId).toBe(FP);
+    expect(contact.armoredPublicKey).toBe(LINE);
+    expect(contact.expiresAt).toBeNull();
+  });
+
+  it("stores no name, not the placeholder, for a key with no comment", async () => {
+    const contact = await contactFromIncoming(ssh(["SSH key"]));
+    expect(contact.userIds).toEqual([]);
   });
 });

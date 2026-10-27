@@ -1,7 +1,12 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-import { codePointLabel, INVISIBLE, markLookalikes } from "./lookalike";
+import {
+  codePointLabel,
+  CONFUSABLE,
+  INVISIBLE,
+  markLookalikes,
+} from "./lookalike";
 
 /** The marked letters, in order. */
 const odd = (s: string) =>
@@ -176,5 +181,78 @@ describe("INVISIBLE and the engine's INVISIBLE_RANGES", () => {
       }
     }
     expect(mismatched).toEqual([]);
+  });
+});
+
+describe("CONFUSABLE", () => {
+  it("maps every letter to one lower-case ASCII letter, or to the capital-I reading", () => {
+    // The skeleton appends the value as it is: an upper-case value would
+    // never equal the lower-cased letter it imitates.
+    for (const [from, to] of CONFUSABLE) {
+      expect(to, `U+${from.codePointAt(0)?.toString(16)}`).toMatch(
+        /^([a-z]|I)$/,
+      );
+    }
+  });
+
+  it("lists nothing NFKC folds into a letter that reads differently", () => {
+    // The skeleton consults the table after NFKC, so an entry NFKC folds
+    // away is only kept (for the highlighter, which sees the raw letter)
+    // when its folded form still reads as the same letter: the Kelvin
+    // sign is a K by then, Cyrillic \u0400 an \u0415 with a grave.
+    const reads = (c: string) => {
+      const base = [...c.normalize("NFKD")][0];
+      const to = CONFUSABLE.get(base) ?? CONFUSABLE.get(base.toLowerCase());
+      return to ?? base.toLowerCase();
+    };
+    const dead = [...CONFUSABLE].filter(
+      ([c, to]) =>
+        c.normalize("NFKC") !== c && reads(c.normalize("NFKC")) !== to,
+    );
+    expect(dead).toEqual([]);
+  });
+
+  it.each([
+    ["Cherokee", "\u13AA", "\uAB7A"],
+    ["Lisu", "\uA4E2"],
+    ["Armenian", "\u054F", "\u0585"],
+    ["Coptic", "\u2C9E", "\u2C9F"],
+    ["stroked Latin", "\u0142", "\u0167", "\u0111", "\u0127", "\u00f8"],
+    ["dotless and IPA Latin", "\u0131", "\u0237", "\u0251"],
+  ])("covers %s", (_label, ...letters) => {
+    for (const c of letters) expect(CONFUSABLE.has(c), c).toBe(true);
+  });
+
+  it("is what the highlighter marks in a Latin address", () => {
+    expect(odd("\u0142ukasz@corp.com")).toEqual(["\u0142"]);
+    expect(odd("tim@\u13AAcme.com")).toEqual(["\u13AA"]);
+  });
+});
+
+describe("markLookalikes - any script, by its Unicode property", () => {
+  it("marks a digit or letter from a script no table lists", () => {
+    // Devanagari, Thai, Telugu and Kannada zeros, the Malayalam ttha, a
+    // Georgian letter, a Tifinagh letter: each drawn as a Latin letter
+    // in most faces, and none of them in the old list of scripts.
+    for (const c of [
+      "\u0966",
+      "\u0e50",
+      "\u0c66",
+      "\u0ce6",
+      "\u0d20",
+      "\u10e7",
+      "\u2d30",
+    ]) {
+      expect(odd(`Dan C${c}le`), JSON.stringify(c)).toEqual([c]);
+    }
+    expect(odd("dan@corp.c\u0966m")).toEqual(["\u0966"]);
+  });
+
+  it("leaves a word written in one script alone, whatever the script", () => {
+    expect(odd("\u0928\u092e\u0938\u094d\u0924\u0947")).toEqual([]);
+    expect(odd("\u0e2a\u0e27\u0e31\u0e2a\u0e14\u0e35")).toEqual([]);
+    // Japanese mixes kanji and kana in one word as a matter of course.
+    expect(odd("\u5c71\u7530\u305f\u308d\u3046")).toEqual([]);
+    expect(odd("Bob1 bob1@corp.com")).toEqual([]);
   });
 });

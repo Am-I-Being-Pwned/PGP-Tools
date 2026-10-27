@@ -13,6 +13,7 @@ import {
   verifySignedMessage,
 } from "./helpers";
 import { IDENTITY_KEYS } from "./identity-keys";
+import { PRIVATE_KEY_FIXTURE } from "./private-key";
 
 // Binding a name and an address to a key is the user's call, never the
 // app's. A key file is attacker-supplied text: a bundle can carry a
@@ -326,7 +327,7 @@ test("two new keys in one bundle sharing an address are both held back, with no 
 
 // ── 3. names that read the same ────────────────────────────────────────
 
-test("the same name under another address, or a Cyrillic look-alike, is a name conflict with no Replace", async ({
+test("a Cyrillic look-alike of a name is a name conflict with no Replace; the very same name under another address is not", async ({
   panel,
 }) => {
   // The look-alike fixture's first letter really is Cyrillic, not Latin.
@@ -336,35 +337,58 @@ test("the same name under another address, or a Cyrillic look-alike, is a name c
 
   await seedVault(panel, PASSWORD, [ALICE.publicKey]);
 
-  for (const key of [OTHER_EMAIL, LOOKALIKE]) {
-    await dropContactsFile(panel, [key.publicKey]);
-    const page = importPage(panel);
-    await expect(page.getByText("Review keys")).toBeVisible();
-    const row = reviewRow(panel, key.fingerprint);
-    await expect(row).toContainText(
-      `Same name as Alice (${shortId(ALICE.fingerprint)}), but a different key.`,
-    );
-    await expect(choice(row, "Skip")).toHaveAttribute("aria-checked", "true");
-    await expect(choice(row, "Keep both")).toBeVisible();
-    // Replace is for an address: a name match is not the same person.
-    await expect(choice(row, "Replace")).toHaveCount(0);
-    expect(await storedFingerprints(panel)).toEqual([ALICE.fingerprint]);
+  await dropContactsFile(panel, [LOOKALIKE.publicKey]);
+  const page = importPage(panel);
+  await expect(page.getByText("Review keys")).toBeVisible();
+  const row = reviewRow(panel, LOOKALIKE.fingerprint);
+  await expect(row).toContainText(
+    `Looks like Alice's name (${shortId(ALICE.fingerprint)}) but uses different letters.`,
+  );
+  await expect(choice(row, "Skip")).toHaveAttribute("aria-checked", "true");
+  await expect(choice(row, "Keep both")).toBeVisible();
+  // Replace is for an address: a name match is not the same person.
+  await expect(choice(row, "Replace")).toHaveCount(0);
+  expect(await storedFingerprints(panel)).toEqual([ALICE.fingerprint]);
 
-    // Back out: still nothing saved.
-    await page.getByRole("button", { name: "Back", exact: true }).click();
-    await expect(page).toBeHidden();
-    expect(await storedFingerprints(panel)).toEqual([ALICE.fingerprint]);
+  // Back out: still nothing saved.
+  await page.getByRole("button", { name: "Back", exact: true }).click();
+  await expect(page).toBeHidden();
+  expect(await storedFingerprints(panel)).toEqual([ALICE.fingerprint]);
+
+  // Another Alice, at another address: two people can share a name, and
+  // the address tells them apart. No warning, and no pill once saved.
+  await dropContactsFile(panel, [OTHER_EMAIL.publicKey]);
+  await expect(importPage(panel)).toBeVisible();
+  await expect(importPage(panel).getByText(/Looks like .* name/)).toHaveCount(
+    0,
+  );
+  await importPage(panel)
+    .getByRole("button", { name: /^Import contact$|^Import 1 key$/ })
+    .click();
+  await expect(importPage(panel)).toBeHidden();
+  await goToKeys(panel);
+  for (const fpr of [ALICE.fingerprint, OTHER_EMAIL.fingerprint]) {
+    await expect(contactCard(panel, fpr)).toBeVisible();
+    await expect(
+      contactCard(panel, fpr).getByText("Lookalike name", { exact: true }),
+    ).toHaveCount(0);
   }
 
-  // Kept deliberately, both cards say "Same name".
+  // The look-alike, kept deliberately: it reads as both Alices, so all
+  // three cards say so -- once each (the clash pill stands in for the
+  // generic mixed-alphabet one).
   await dropContactsFile(panel, [LOOKALIKE.publicKey]);
   await choice(reviewRow(panel, LOOKALIKE.fingerprint), "Keep both").click();
   await reviewImportButton(panel, 1).click();
   await expect(importPage(panel)).toBeHidden();
   await goToKeys(panel);
-  for (const fpr of [ALICE.fingerprint, LOOKALIKE.fingerprint]) {
+  for (const fpr of [
+    ALICE.fingerprint,
+    OTHER_EMAIL.fingerprint,
+    LOOKALIKE.fingerprint,
+  ]) {
     await expect(
-      contactCard(panel, fpr).getByText("Same name", { exact: true }),
+      contactCard(panel, fpr).getByText("Lookalike name", { exact: true }),
     ).toBeVisible();
   }
 });
@@ -481,11 +505,13 @@ test("restoring a backup with conflicting keys opens the Review, and Import all 
     panel.getByText("4 keys found. Nothing is saved until you choose."),
   ).toBeVisible();
   await expectAddressConflict(panel);
+  // Only a namesake at another address: not a conflict, so it starts on
+  // Import like any new key.
   await expect(
-    choice(reviewRow(panel, OTHER_EMAIL.fingerprint), "Skip"),
+    choice(reviewRow(panel, OTHER_EMAIL.fingerprint), "Import"),
   ).toHaveAttribute("aria-checked", "true");
   await expect(
-    panel.getByText("Includes 2 keys that claim someone you already have."),
+    panel.getByText("Includes 1 key that claims someone you already have."),
   ).toBeVisible();
   expect(await storedFingerprints(panel)).toEqual([ALICE.fingerprint]);
 
@@ -498,6 +524,37 @@ test("restoring a backup with conflicting keys opens the Review, and Import all 
       OTHER_EMAIL.fingerprint,
       BOB.fingerprint,
     ].sort(),
+  );
+});
+
+test("a backup's private key is listed on the Review too, as the user's own, and Skip leaves it out", async ({
+  panel,
+}) => {
+  await seedVault(panel, PASSWORD, [ALICE.publicKey]);
+
+  await panel.getByRole("tab", { name: "Settings" }).click();
+  await panel.getByRole("button", { name: "Import keys" }).click();
+  await panel
+    .getByPlaceholder("Paste keys here, or browse for a file...")
+    .fill([PRIVATE_KEY_FIXTURE.privateKey, BOB.publicKey].join("\n"));
+  await panel.getByRole("button", { name: "Next" }).click();
+
+  // Listed BEFORE any passphrase is asked for, with nothing saved yet.
+  await expect(
+    panel.getByText("2 keys found. Nothing is saved until you choose."),
+  ).toBeVisible();
+  const own = panel
+    .locator("[data-review-key]")
+    .filter({ hasText: PRIVATE_KEY_FIXTURE.name });
+  await expect(own).toContainText("Your key");
+  await expect(choice(own, "Import")).toHaveAttribute("aria-checked", "true");
+  await choice(own, "Skip").click();
+
+  // Only Bob is chosen: no unlock or protect step in between.
+  await reviewImportButton(panel, 1).click();
+  await expect(panel.getByText("Added 1 contact").first()).toBeVisible();
+  expect(await storedFingerprints(panel)).toEqual(
+    [ALICE.fingerprint, BOB.fingerprint].sort(),
   );
 });
 
