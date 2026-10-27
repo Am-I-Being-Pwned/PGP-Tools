@@ -1208,56 +1208,171 @@ const REVIEWED_CALLERS = new Map([
     "undo of the user's own delete: restores the record they had",
   ],
 ]);
+// Every exported function of lib/storage/contacts.ts that writes the
+// store. `updateContact*` hand the caller the whole record and save what
+// comes back, so they can write anything `saveContact` can; the rest are
+// built on them (or, `removeContact`, drop a record). `upsertContacts`
+// is pure, but it is the merge `saveContact` writes, so it stays here.
+const CONTACT_WRITE_FNS = [
+  "saveContact",
+  "upsertContacts",
+  "updateContact",
+  "updateContactAsync",
+  "setContactRecipientDisabled",
+  "setContactVerified",
+  "updateContactAlias",
+  "removeContact",
+];
 const CONTACT_WRITERS = new Map([
   ["apps/pgp/lib/storage/contacts.ts", "the store itself"],
-  ["apps/pgp/hooks/useContacts.ts", "the store's add, typed ReviewedContact"],
+  [
+    "apps/pgp/hooks/useContacts.ts",
+    "the store's add (typed ReviewedContact), remove, rename, verify and the legacy backfills",
+  ],
+  [
+    "apps/pgp/lib/import-public-keys.ts",
+    "mergeIntoContact: a newer copy of the SAME key merged into an existing record (only what its owner signed)",
+  ],
+  [
+    "apps/pgp/components/keys/KeyDetailsPage.tsx",
+    "the user's own toggle of one key / Mark as verified, on a record already in the store",
+  ],
 ]);
+
+/** The argument text of every call `name(` in a masked source, with the
+ *  line the call starts on. Parens are matched, so a call that prettier
+ *  spread over several lines is still read whole. */
+function callArguments(masked, nameRe) {
+  const out = [];
+  const re = new RegExp(`\\b(?:${nameRe})\\s*\\(`, "g");
+  let m;
+  while ((m = re.exec(masked)) !== null) {
+    let depth = 1;
+    let j = m.index + m[0].length;
+    while (j < masked.length && depth > 0) {
+      if (masked[j] === "(") depth++;
+      else if (masked[j] === ")") depth--;
+      j++;
+    }
+    out.push({
+      line: masked.slice(0, m.index).split("\n").length,
+      call: m[0],
+      args: masked.slice(m.index + m[0].length, j - 1),
+    });
+  }
+  return out;
+}
+
+// A cast that turns any value into whatever the parameter wants. On a
+// contact-adding call it mints the brand without naming it.
+const ESCAPE_CAST_RE =
+  /\bas\s+(?:never|any)\b|\bas\s+unknown\s+as\b|<\s*(?:never|any)\s*>/;
+// The calls that add a contact: the store's `add`, the `onAddContact`
+// props it is handed down as, and any `addContact`. `add(` is broad (a
+// Set's add matches too); a cast to never/any inside ANY such call is
+// worth a look, and there is none in shipping code today.
+const CONTACT_ADD_CALL = "onAddContact|addContact|add";
 
 const invariantReviewedContacts = {
   id: "contacts-only-after-review",
   name: "contacts are written only from the import Review (or an undo)",
   expectation:
-    "reviewed() called only in REVIEWED_CALLERS; saveContact()/upsertContacts()/CONTACTS_STORE only in CONTACT_WRITERS (tests exempt)",
+    "the identifier reviewed only in REVIEWED_CALLERS (import, alias or call); no as never/any/unknown-as in a contact add; contact-store writers and CONTACTS_STORE only in CONTACT_WRITERS (tests exempt)",
   why: "A contact binds a key to a person. A write that skips the Review is how a bundle slipped in a second key with someone's name and address: the user never saw it, and it then sat in the encrypt picker as that person.",
   run() {
-    const notDefinition = (h) =>
-      !isTestFile(h.file) && !/\bfunction\s+\w+\s*\(/.test(h.text);
+    const notTest = (h) => !isTestFile(h.file);
+    // ANY use of the name in code, not just a call: comments and strings
+    // are masked away, so what is left is an import (aliased or not), a
+    // `const f = reviewed`, a call or the one definition. Matching only
+    // `reviewed(` let `import { reviewed as ok }` and `const f = reviewed`
+    // walk past.
     const brand = [
-      ...scanTs(/\breviewed\s*\(/, notDefinition),
+      // A namespace import (`ns.reviewed`) is caught by the same match.
+      ...scanTs(/\breviewed\b/, notTest),
       // A cast mints the brand just the same.
-      ...scanTs(
-        /\bas\s+ReviewedContact\b|<ReviewedContact>\s*[\w({]/,
-        (h) => !isTestFile(h.file),
-      ),
+      ...scanTs(/\bas\s+ReviewedContact\b|<ReviewedContact>\s*[\w({]/, notTest),
     ];
+    // A namespace or dynamic import of the review module reaches it as
+    // `ns["reviewed"]`, which the mask (strings blanked) hides. Read off
+    // the raw line, since the module path is itself a string.
+    const REVIEW_MODULE_IMPORT =
+      /\*\s*as\s+[\w$]+\s+from\s+["'][^"']*\/review["']|\bimport\s*\(\s*["'][^"']*\/review["']/;
+    for (const { rel: relPath, raw } of tsSources()) {
+      if (isTestFile(relPath) || REVIEWED_CALLERS.has(relPath)) continue;
+      raw.forEach((text, i) => {
+        const m = REVIEW_MODULE_IMPORT.exec(text);
+        if (m)
+          brand.push({
+            file: relPath,
+            line: i + 1,
+            match: m[0],
+            text: text.trim(),
+            noExempt: true,
+          });
+      });
+    }
+    // ...and so does a cast to never/any on the way into an add.
+    for (const { rel: relPath, masked, raw } of tsSources()) {
+      if (isTestFile(relPath)) continue;
+      for (const c of callArguments(masked, CONTACT_ADD_CALL)) {
+        const cast = ESCAPE_CAST_RE.exec(c.args);
+        if (!cast) continue;
+        brand.push({
+          file: relPath,
+          line: c.line,
+          match: `${c.call}... ${cast[0]}`,
+          text: (raw[c.line - 1] ?? "").trim(),
+          noExempt: true,
+        });
+      }
+    }
+    // `noExempt` hits (a namespace/dynamic import, an escape cast) are
+    // violations in every file, the allowed callers included: none of
+    // them needs either. The definition exemption is the one line
+    // `function reviewed(` in review.ts -- not any line that happens to
+    // declare a function, which used to hide a call sharing that line.
+    const isDefinition = (h) =>
+      h.file === "apps/pgp/lib/import/review.ts" &&
+      /\bfunction\s+reviewed\s*\(/.test(h.text);
     const writes = [
-      ...scanTs(/\b(?:saveContact|upsertContacts)\s*\(/, notDefinition),
-      ...scanTs(/\bCONTACTS_STORE\b/, (h) => !isTestFile(h.file)),
+      ...scanTs(
+        new RegExp(`\\b(?:${CONTACT_WRITE_FNS.join("|")})\\b`),
+        notTest,
+      ),
+      ...scanTs(/\bCONTACTS_STORE\b/, notTest),
     ];
-    const badBrand = brand.filter((h) => !REVIEWED_CALLERS.has(h.file));
+    const badBrand = brand.filter(
+      (h) => h.noExempt || (!REVIEWED_CALLERS.has(h.file) && !isDefinition(h)),
+    );
     const badWrites = writes.filter((h) => !CONTACT_WRITERS.has(h.file));
     const violations = [];
     if (badBrand.length)
       violations.push({
-        summary: `${badBrand.length} reviewed() call(s) outside the Review`,
+        summary: `${badBrand.length} use(s) of reviewed / the brand outside the Review`,
         hits: badBrand,
       });
     if (badWrites.length)
       violations.push({
-        summary: `${badWrites.length} contact-store write(s) outside the store`,
+        summary: `${badWrites.length} contact-store write(s) outside the allowed writers`,
         hits: badWrites,
       });
     return {
       violations,
       exempt: [
         ...brand
-          .filter((h) => REVIEWED_CALLERS.has(h.file))
+          .filter((h) => !h.noExempt && isDefinition(h))
+          .map((h) => ({ ...h, reason: "the definition" })),
+        ...brand
+          .filter(
+            (h) =>
+              !h.noExempt && !isDefinition(h) && REVIEWED_CALLERS.has(h.file),
+          )
           .map((h) => ({ ...h, reason: REVIEWED_CALLERS.get(h.file) })),
         ...writes
           .filter((h) => CONTACT_WRITERS.has(h.file))
           .map((h) => ({ ...h, reason: CONTACT_WRITERS.get(h.file) })),
       ],
-      detail: `${brand.length} reviewed() call(s), ${writes.length} store write site(s)`,
+      detail: `${brand.length} use(s) of reviewed / the brand, ${writes.length} contact-store writer reference(s)`,
     };
   },
 };
