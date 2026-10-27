@@ -961,10 +961,15 @@ export function useWorkspaceState(opts: {
         return;
       }
 
+      // A file with the name of one already staged REPLACES it. Ignoring
+      // it, as this used to, meant re-downloading release.asc (now a
+      // different file) and pressing Verify checked the OLD one -- and
+      // said so in green.
       setFiles((prev) => {
-        const existing = new Set(prev.map((f) => f.name));
-        const deduped = newFiles.filter((f) => !existing.has(f.name));
-        return [...prev, ...deduped];
+        const incoming = new Map(newFiles.map((f) => [f.name, f]));
+        const kept = prev.map((f) => incoming.get(f.name) ?? f);
+        const added = [...incoming.values()].filter((f) => !kept.includes(f));
+        return [...kept, ...added];
       });
       const encrypted = newFiles.some((f) =>
         /\.(gpg|pgp|asc|age)$/i.test(f.name),
@@ -994,10 +999,15 @@ export function useWorkspaceState(opts: {
     [mode, resetOutput, setInput],
   );
 
-  const removeFile = useCallback((index: number) => {
-    setFiles((prev) => prev.filter((_, i) => i !== index));
-    setMessageEncryption(null);
-  }, []);
+  const removeFile = useCallback(
+    (index: number) => {
+      setFiles((prev) => prev.filter((_, i) => i !== index));
+      setMessageEncryption(null);
+      // A verdict (or decrypted output) listed the removed file too.
+      resetOutput();
+    },
+    [resetOutput],
+  );
 
   const clearFiles = useCallback(() => {
     // The files only: a message written alongside them (encrypt) is not

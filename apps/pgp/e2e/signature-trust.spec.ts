@@ -178,3 +178,43 @@ test("a file added while Verify runs is never shown under its verdict", async ({
   await expect(panel.getByText("Signature verified")).toHaveCount(0);
   await expect(panel.getByText("payload.asc")).toBeVisible();
 });
+
+test("a new file with a staged file's name replaces it", async ({ panel }) => {
+  // Re-downloading release.asc and dropping it in used to be ignored, so
+  // Verify checked the OLD file and said so in green.
+  await onboardWithPassword(panel, PASSWORD);
+  await importContact(panel, rachel.publicKey);
+  await panel.getByRole("tab", { name: "Main" }).click();
+
+  await stageFiles(panel, [
+    { name: "release.asc", text: rachel.signedMessage ?? "" },
+  ]);
+  await verifyStaged(panel);
+  await expect(panel.getByText("Signature verified").first()).toBeVisible();
+
+  const tampered = (rachel.signedMessage ?? "").replace(
+    MESSAGE,
+    MESSAGE.replace("quick", "sneaky"),
+  );
+  await stageFiles(panel, [{ name: "release.asc", text: tampered }]);
+  await expect(panel.getByText("Signature verified")).toHaveCount(0);
+  await panel.getByRole("button", { name: /^verify/i }).click();
+  await expect(panel.getByText(/tampered/).first()).toBeVisible();
+  await expect(panel.getByText("release.asc")).toHaveCount(1);
+});
+
+test("removing a file clears the verdict that listed it", async ({ panel }) => {
+  await onboardWithPassword(panel, PASSWORD);
+  await importContact(panel, rachel.publicKey);
+  await panel.getByRole("tab", { name: "Main" }).click();
+
+  await stageFiles(panel, [
+    { name: "rachel.asc", text: rachel.signedMessage ?? "" },
+    { name: "rita.asc", text: rita.signedMessage ?? "" },
+  ]);
+  await verifyStaged(panel);
+  await expect(panel.getByText("Mixed signers")).toBeVisible();
+
+  await panel.getByRole("button", { name: "Remove" }).last().click();
+  await expect(panel.getByText("Mixed signers")).toHaveCount(0);
+});
