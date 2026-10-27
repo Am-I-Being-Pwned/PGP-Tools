@@ -1,6 +1,7 @@
 import type { SignatureDetails, SignatureStatus } from "../../lib/pgp/types";
 import { t, tn } from "../../lib/i18n";
 import { formatDate } from "../../lib/i18n/format";
+import { displayFileName } from "../../lib/utils/file-name";
 
 /** The signature half of a verify or decrypt result. */
 export type SignedResult = SignatureDetails & {
@@ -114,7 +115,14 @@ export function summariseBatch(
   };
 }
 
-/** The mixed card's note: each file and what signed it. */
+/**
+ * The mixed card's note: each file and what signed it, one per line.
+ *
+ * The names are attacker-chosen, so each is cleaned (no bidi overrides,
+ * invisible or control characters), shortened from the middle, and
+ * quoted: a file named "payroll.asc: Rachel · notes.asc" must read as
+ * one name on its own line, not as a verdict for another file.
+ */
 export function mixedBatchNote(
   files: { name: string; result: SignedResult }[],
   signerName: SignerName,
@@ -122,7 +130,7 @@ export function mixedBatchNote(
   return files
     .map(({ name, result }) =>
       t("workspace_file_signature", {
-        name,
+        name: `“${displayFileName(name)}”`,
         outcome:
           result.signatureStatus === "valid" && result.signerKeyId
             ? signerName(result.signerKeyId)
@@ -131,5 +139,5 @@ export function mixedBatchNote(
               : t("workspace_file_not_signed"),
       }),
     )
-    .join(" · ");
+    .join("\n");
 }

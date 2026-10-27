@@ -108,9 +108,9 @@ test("several files are each verified, and a mixed batch says who signed which",
   await verifyStaged(panel);
 
   await expect(panel.getByText("Mixed signers")).toBeVisible();
-  await expect(
-    panel.getByText(/rachel\.asc: Rachel Rsa4096 · rita\.asc: Unknown signer/),
-  ).toBeVisible();
+  // One file per line, each name quoted: a name can't pose as a verdict.
+  await expect(panel.getByText(/.rachel\.asc.: Rachel Rsa4096/)).toBeVisible();
+  await expect(panel.getByText(/.rita\.asc.: Unknown signer/)).toBeVisible();
   await expect(panel.getByText("Signature verified")).toHaveCount(0);
 });
 

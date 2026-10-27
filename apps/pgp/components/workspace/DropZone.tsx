@@ -6,7 +6,9 @@ import { Block, BlockStack } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
 
 import { t } from "../../lib/i18n";
+import { displayFileName } from "../../lib/utils/file-name";
 import { formatFileSize } from "../../lib/utils/formatting";
+import { MarkedText } from "../shared/MarkedText";
 
 interface DropZoneProps {
   onTextDrop: (text: string) => void;
@@ -155,7 +157,9 @@ export function DropZone({
                 <FileIcon size={16} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{file.name}</p>
+                <p className="truncate text-sm font-medium">
+                  <MarkedText text={displayFileName(file.name)} />
+                </p>
                 <p className="text-muted-foreground text-xs">
                   {formatFileSize(file.size)}
                 </p>

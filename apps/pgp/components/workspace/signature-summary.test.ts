@@ -196,7 +196,41 @@ describe("mixedBatchNote", () => {
         names,
       ),
     ).toBe(
-      "notes.gpg: Alice · invoice.gpg: not signed · x.gpg: Unknown signer",
+      [
+        "“notes.gpg”: Alice",
+        "“invoice.gpg”: not signed",
+        "“x.gpg”: Unknown signer",
+      ].join("\n"),
     );
+  });
+
+  it("keeps a file name from posing as another file's verdict", () => {
+    // Named to read as "payroll.asc: Rachel" followed by another entry.
+    const note = mixedBatchNote(
+      [
+        {
+          name: "payroll.asc: Alice · notes.asc",
+          result: sig({ signatureStatus: "unknown_key" }),
+        },
+        { name: "b.asc", result: sig() },
+      ],
+      names,
+    );
+    const [first] = note.split("\n");
+    // One quoted name, then the real outcome, on its own line.
+    expect(first).toBe("“payroll.asc: Alice · notes.asc”: Unknown signer");
+  });
+
+  it("strips bidi and invisible characters from file names", () => {
+    const note = mixedBatchNote(
+      [
+        {
+          name: "inv\u202ecsa.exe",
+          result: sig({ signatureStatus: "unsigned", signerKeyId: null }),
+        },
+      ],
+      names,
+    );
+    expect(note).toBe("“invcsa.exe”: not signed");
   });
 });

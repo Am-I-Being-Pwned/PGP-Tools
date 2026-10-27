@@ -350,7 +350,9 @@ export function ContactCard({
             </div>
           )}
           {note && (
-            <p className="text-muted-foreground mt-0.5 text-xs">{note}</p>
+            <p className="text-muted-foreground mt-0.5 text-xs whitespace-pre-line">
+              {note}
+            </p>
           )}
           {noteAction && <div className="mt-2">{noteAction}</div>}
           {/* Advanced mode regroups a hex fingerprint into 4-character
