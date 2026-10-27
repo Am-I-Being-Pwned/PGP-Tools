@@ -47,17 +47,32 @@ function scriptOf(c: string): Script | null {
   )
     return Script.Cyrillic;
   if (cp >= 0x530 && cp <= 0x58f) return Script.Armenian;
-  if ((cp >= 0xff21 && cp <= 0xff3a) || (cp >= 0xff41 && cp <= 0xff5a))
+  if (
+    (cp >= 0xff21 && cp <= 0xff3a) ||
+    (cp >= 0xff41 && cp <= 0xff5a) ||
+    (cp >= 0x2100 && cp <= 0x214f) ||
+    (cp >= 0x1d400 && cp <= 0x1d7ff)
+  )
     return Script.Fullwidth;
-  if ((cp >= 0x250 && cp <= 0x2af) || (cp >= 0xa720 && cp <= 0xa7ff))
+  if (
+    (cp >= 0x250 && cp <= 0x2af) ||
+    (cp >= 0x1d00 && cp <= 0x1dbf) ||
+    (cp >= 0xa720 && cp <= 0xa7ff)
+  )
     return Script.ExtendedLatin;
-  if ((cp >= 0x13a0 && cp <= 0x13ff) || (cp >= 0xab70 && cp <= 0xabbf))
+  if (
+    (cp >= 0x13a0 && cp <= 0x13ff) ||
+    (cp >= 0xab70 && cp <= 0xabbf) ||
+    (cp >= 0xa4d0 && cp <= 0xa4ff)
+  )
     return Script.Cherokee;
   return null;
 }
 
-/** Word separators, as `mixes_scripts` splits on them. */
-const SEPARATOR = /[\s<>@.()"',;:]/u;
+/** Word separators, as `mixes_scripts` splits on them. An email address
+ *  is ONE word, so a domain label in another script next to a Latin one
+ *  ("tim@аррӏе.com") counts as mixing. */
+const SEPARATOR = /[\s<>()"',;:]/u;
 
 /** Mark one word: the letters outside its main script, if it mixes. */
 function markWord(word: string): TextRun[] {

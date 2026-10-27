@@ -482,21 +482,24 @@ fn bound_user_ids(cert: &openpgp::Cert) -> Vec<String> {
 /// A WORD whose letters come from more than one of the scripts that
 /// imitate each other: "Аlice" with a Cyrillic А renders exactly like the
 /// real Alice. Judged per word, not per User ID -- "Иван <ivan@example.ru>"
-/// is a Cyrillic name with a Latin address, which is ordinary.
+/// is a Cyrillic name with a Latin address, which is ordinary. An email
+/// address is ONE word, so a domain label in another script next to a
+/// Latin one ("tim@аррӏе.com") counts as mixing.
 fn mixes_scripts(s: &str) -> bool {
     let script = |c: char| match c as u32 {
         0x41..=0x5a | 0x61..=0x7a | 0xc0..=0x24f | 0x1e00..=0x1eff => Some(0),
         0x370..=0x3ff | 0x1f00..=0x1fff => Some(1),
         0x400..=0x52f | 0x1c80..=0x1c8f | 0x2de0..=0x2dff | 0xa640..=0xa69f => Some(2),
         0x530..=0x58f => Some(3),
-        // Letters that pass for Latin ones without being them: fullwidth
-        // forms, IPA (ɑ for a), Latin Extended-D, Cherokee (Ꭺ for A).
-        0xff21..=0xff3a | 0xff41..=0xff5a => Some(4),
-        0x250..=0x2af | 0xa720..=0xa7ff => Some(5),
-        0x13a0..=0x13ff | 0xab70..=0xabbf => Some(6),
+        // Letters that pass for Latin ones without being them: fullwidth,
+        // letterlike and mathematical forms (Ａ, K Kelvin, 𝐀); IPA, phonetic
+        // and extended Latin (ɑ, ᴀ); Cherokee and Lisu (Ꭺ, ꓮ).
+        0xff21..=0xff3a | 0xff41..=0xff5a | 0x2100..=0x214f | 0x1d400..=0x1d7ff => Some(4),
+        0x250..=0x2af | 0x1d00..=0x1dbf | 0xa720..=0xa7ff => Some(5),
+        0x13a0..=0x13ff | 0xab70..=0xabbf | 0xa4d0..=0xa4ff => Some(6),
         _ => None,
     };
-    s.split(|c: char| c.is_whitespace() || "<>@.()\"',;:".contains(c))
+    s.split(|c: char| c.is_whitespace() || "<>()\"',;:".contains(c))
         .any(|word| {
             let mut seen = None;
             for k in word.chars().filter_map(script) {
@@ -1519,7 +1522,10 @@ fn strip_third_party(cert: openpgp::Cert) -> openpgp::Result<openpgp::Cert> {
         .revocation_keys(policy())
         .map(|rk| rk.revoker().1.clone().into())
         .collect();
-    let bad: Vec<openpgp::packet::Signature> = cert.bad_signatures().cloned().collect();
+    // A set: a hostile key file can carry thousands of bad signatures, and
+    // a list lookup per packet made stripping quadratic.
+    let bad: std::collections::HashSet<openpgp::packet::Signature> =
+        cert.bad_signatures().cloned().collect();
 
     let packets: Vec<Packet> = cert
         .into_packets()

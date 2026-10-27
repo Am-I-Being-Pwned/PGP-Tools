@@ -135,10 +135,24 @@ fn a_lookalike_user_id_is_flagged() {
     ] {
         assert!(!mixes_scripts(honest), "{honest} flagged");
     }
-    // Letters that pass for Latin ones: fullwidth, IPA, Cherokee.
-    for fake in ["\u{ff21}lice", "\u{0251}lice", "\u{13aa}lice", "Bob <\u{0430}lice@example.com>"] {
+    // Letters that pass for Latin ones: fullwidth, IPA, Cherokee, small
+    // capitals, math bold, the Kelvin sign, Lisu.
+    for fake in [
+        "\u{ff21}lice",
+        "\u{0251}lice",
+        "\u{13aa}lice",
+        "Bob <\u{0430}lice@example.com>",
+        "\u{1d00}lice",
+        "\u{1d400}lice",
+        "\u{212a}evin",
+        "\u{a4ee}lice",
+        // A domain label in another script next to a Latin one.
+        "Tim <tim@\u{0430}\u{0440}\u{0440}\u{04cf}\u{0435}.com>",
+    ] {
         assert!(mixes_scripts(fake), "{fake:?} missed");
     }
+    // ...while an all-Cyrillic address is a Cyrillic address.
+    assert!(!mixes_scripts("Иван <иван@пример.рф>"));
 }
 
 #[test]
@@ -526,4 +540,29 @@ fn a_signature_names_who_it_was_signed_for() {
     let v = verdict(&verify_message(std::str::from_utf8(&sink).unwrap(), &keys_json(&[&alice])).unwrap());
     assert_eq!(v["signatureStatus"], "valid");
     assert_eq!(v["intendedRecipients"], serde_json::json!([bob.fingerprint().to_hex()]));
+}
+
+#[test]
+fn stripping_a_key_flooded_with_forged_signatures_stays_fast() {
+    // A local key file has no size cap. Thousands of bad signatures used
+    // to make the strip quadratic (a list lookup per packet).
+    let alice = aged_cert("Alice", DAY);
+    let mallory = aged_cert("Mallory", DAY);
+    let mut mkp = primary_keypair(&mallory);
+    let forged: Vec<openpgp::Packet> = (0..3000)
+        .map(|i| {
+            SignatureBuilder::new(SignatureType::DirectKey)
+                .set_notation("n@example.com", format!("{i}").as_bytes(), None, false)
+                .unwrap()
+                .sign_direct_key(&mut mkp, alice.primary_key().key())
+                .unwrap()
+                .into()
+        })
+        .collect();
+    let (flooded, _) = alice.clone().insert_packets(forged).unwrap();
+    // Signed by Mallory's key over Alice's: bad signatures, not certifications.
+    let started = std::time::Instant::now();
+    let stripped = strip_third_party(flooded).unwrap();
+    assert!(started.elapsed() < Duration::from_secs(2), "{:?}", started.elapsed());
+    assert_eq!(stripped.bad_signatures().count(), 0);
 }

@@ -23,6 +23,20 @@ describe("markLookalikes", () => {
     expect(odd("Ꭺlice")).toEqual(["Ꭺ"]);
   });
 
+  it("marks small capitals, math bold, the Kelvin sign and Lisu", () => {
+    expect(odd("\u1d00lice")).toEqual(["\u1d00"]);
+    expect(odd("\u{1d400}lice")).toEqual(["\u{1d400}"]);
+    expect(odd("\u212aevin")).toEqual(["\u212a"]);
+    expect(odd("\ua4eelice")).toEqual(["\ua4ee"]);
+  });
+
+  it("marks a domain label in another script next to a Latin one", () => {
+    // "apple" spelled in Cyrillic, under a Latin TLD.
+    expect(odd("Tim <tim@\u0430\u0440\u0440\u04cf\u0435.com>").join("")).toBe(
+      "\u0430\u0440\u0440\u04cf\u0435",
+    );
+  });
+
   it("marks a Latin letter slipped into a Cyrillic word", () => {
     // "Ивaн" with a Latin a: the Cyrillic letters are the majority.
     expect(odd("Ивaн")).toEqual(["a"]);
@@ -32,6 +46,7 @@ describe("markLookalikes", () => {
     for (const honest of [
       "Alice Smith <alice@example.com>",
       "Иван Петров <ivan@example.ru>",
+      "Иван <иван@пример.рф>",
       "Νίκος Παπάς <nikos@example.gr>",
       "José Müller",
       "李雷 <li@example.cn>",
