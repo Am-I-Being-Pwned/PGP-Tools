@@ -464,16 +464,8 @@
       }
     }
   },
-  "app_copied_wipe": {
-    "message": "$label$をコピーしました。クリップボードは $seconds$ 秒後に消去されます",
-    "placeholders": {
-      "label": {
-        "content": "$1"
-      },
-      "seconds": {
-        "content": "$2"
-      }
-    }
+  "app_copied_sensitive_note": {
+    "message": "別のものをコピーするまで、クリップボードとクリップボード履歴に残ります。"
   },
   "app_copy_failed": {
     "message": "コピーに失敗しました。拡張機能のパネルをクリックしてから、もう一度お試しください。"
@@ -1494,10 +1486,10 @@
     "message": "EXPORT"
   },
   "keygen_copied_encrypted": {
-    "message": "暗号化した鍵をコピーしました (60 秒後に消去されます)"
+    "message": "暗号化された鍵をコピーしました。別のものをコピーするまで、クリップボードとクリップボード履歴に残ります。"
   },
   "keygen_copied_plaintext": {
-    "message": "保護されていない鍵をコピーしました (30 秒後に消去されます)"
+    "message": "保護されていない鍵をコピーしました。別のものをコピーするまで、クリップボードとクリップボード履歴に残ります。"
   },
   "keygen_create_heading": {
     "message": "新しい鍵を作成"
@@ -3451,22 +3443,6 @@
     "message": "$duration$の無操作、およびタブの切り替え時に自動ロック",
     "placeholders": {
       "duration": {
-        "content": "$1"
-      }
-    }
-  },
-  "shared_bundle_clipboard_one": {
-    "message": "コピーした秘密情報は $count$ 秒後にクリップボードから消去",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
-  },
-  "shared_bundle_clipboard_other": {
-    "message": "コピーした秘密情報は $count$ 秒後にクリップボードから消去",
-    "placeholders": {
-      "count": {
         "content": "$1"
       }
     }

@@ -194,18 +194,6 @@
   "shared_bundle_storage_sync": {
     "message": "Ключи синхронизируются в вашем профиле Chrome"
   },
-  "shared_bundle_clipboard_one": {
-    "message": "Скопированные секреты стираются из буфера обмена через $count$ секунду"
-  },
-  "shared_bundle_clipboard_few": {
-    "message": "Скопированные секреты стираются из буфера обмена через $count$ секунды"
-  },
-  "shared_bundle_clipboard_many": {
-    "message": "Скопированные секреты стираются из буфера обмена через $count$ секунд"
-  },
-  "shared_bundle_clipboard_other": {
-    "message": "Скопированные секреты стираются из буфера обмена через $count$ секунды"
-  },
   "shared_bundle_no_encrypt_to_self": {
     "message": "Зашифрованные вами сообщения вы сами потом прочитать не сможете"
   }

@@ -194,9 +194,6 @@
   "app_copied": {
     "message": "Copiado: $label$"
   },
-  "app_copied_wipe": {
-    "message": "Copiado: $label$ - el portapapeles se borrará en $seconds$ s"
-  },
   "app_oversized_more": {
     "message": "$names$ y $count$ más"
   },
@@ -280,5 +277,8 @@
   },
   "app_error_storage_full": {
     "message": "El almacenamiento del navegador está lleno, así que no se ha podido guardar. Quite las claves o los contactos que ya no necesite e inténtelo de nuevo."
+  },
+  "app_copied_sensitive_note": {
+    "message": "Se queda en tu portapapeles, y en cualquier historial del portapapeles, hasta que copies otra cosa."
   }
 }

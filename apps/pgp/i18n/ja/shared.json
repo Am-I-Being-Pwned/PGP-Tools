@@ -308,12 +308,6 @@
   "shared_bundle_storage_sync": {
     "message": "鍵は Chrome プロファイル間で同期"
   },
-  "shared_bundle_clipboard_one": {
-    "message": "コピーした秘密情報は $count$ 秒後にクリップボードから消去"
-  },
-  "shared_bundle_clipboard_other": {
-    "message": "コピーした秘密情報は $count$ 秒後にクリップボードから消去"
-  },
   "shared_bundle_no_encrypt_to_self": {
     "message": "暗号化したメッセージは後から自分でも読めない"
   }

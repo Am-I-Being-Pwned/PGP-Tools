@@ -259,10 +259,6 @@
     "message": "$label$ copied",
     "description": "Success toast after copying to the clipboard. $label$ names what was copied, e.g. 'Public key', 'Fingerprint'."
   },
-  "app_copied_wipe": {
-    "message": "$label$ copied - clipboard clears in $seconds$s",
-    "description": "Success toast after copying sensitive material (a private key, a revocation certificate). $label$ names what was copied; $seconds$ is the number of seconds until the clipboard is wiped, followed by the seconds abbreviation."
-  },
   "app_oversized_more": {
     "message": "$names$ and $count$ more",
     "description": "Part of app_oversized_files: when more than three files were too large, the first three names ($names$, already comma separated) followed by how many others ($count$)."
@@ -374,5 +370,9 @@
   "app_error_storage_full": {
     "message": "Browser storage is full, so this couldn't be saved. Remove keys or contacts you no longer need, then try again.",
     "description": "User-facing error: the browser's extension storage quota is exhausted."
+  },
+  "app_copied_sensitive_note": {
+    "message": "It stays on your clipboard, and in any clipboard history, until you copy something else.",
+    "description": "Second line of the toast after copying a private key or revocation certificate: it is not wiped, and clipboard history keeps a copy."
   }
 }

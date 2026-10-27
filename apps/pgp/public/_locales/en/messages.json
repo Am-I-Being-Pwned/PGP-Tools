@@ -572,17 +572,9 @@
       }
     }
   },
-  "app_copied_wipe": {
-    "message": "$label$ copied - clipboard clears in $seconds$s",
-    "description": "Success toast after copying sensitive material (a private key, a revocation certificate). $label$ names what was copied; $seconds$ is the number of seconds until the clipboard is wiped, followed by the seconds abbreviation.",
-    "placeholders": {
-      "label": {
-        "content": "$1"
-      },
-      "seconds": {
-        "content": "$2"
-      }
-    }
+  "app_copied_sensitive_note": {
+    "message": "It stays on your clipboard, and in any clipboard history, until you copy something else.",
+    "description": "Second line of the toast after copying a private key or revocation certificate: it is not wiped, and clipboard history keeps a copy."
   },
   "app_copy_failed": {
     "message": "Copy failed - click the extension panel first, then try again.",
@@ -1841,12 +1833,12 @@
     "description": "The word the user must type exactly to allow an unencrypted export. Shown in bold and as the field placeholder, and compared against the input; keep it a single uppercase word."
   },
   "keygen_copied_encrypted": {
-    "message": "Encrypted key copied (clears in 60s)",
-    "description": "Green feedback after copying a passphrase-encrypted private key to the clipboard; the clipboard is wiped after 60 seconds."
+    "message": "Encrypted key copied. It stays on your clipboard, and in any clipboard history, until you copy something else.",
+    "description": "Green feedback after copying a passphrase-encrypted private key to the clipboard. It is not wiped, and clipboard history keeps a copy."
   },
   "keygen_copied_plaintext": {
-    "message": "Unprotected key copied (clears in 30s)",
-    "description": "Green feedback after copying an unencrypted private key to the clipboard; the clipboard is wiped after 30 seconds."
+    "message": "Unprotected key copied. It stays on your clipboard, and in any clipboard history, until you copy something else.",
+    "description": "Green feedback after copying an unencrypted private key to the clipboard. It is not wiped, and clipboard history keeps a copy."
   },
   "keygen_create_heading": {
     "message": "Create a new key",
@@ -4227,24 +4219,6 @@
     "description": "Preset card bullet when the preset also locks on tab-away. $duration$ is a localised duration such as '2 minutes'",
     "placeholders": {
       "duration": {
-        "content": "$1"
-      }
-    }
-  },
-  "shared_bundle_clipboard_one": {
-    "message": "Copied secrets clear from the clipboard after $count$ second",
-    "description": "Preset card bullet. $count$ is the number of seconds",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
-  },
-  "shared_bundle_clipboard_other": {
-    "message": "Copied secrets clear from the clipboard after $count$ seconds",
-    "description": "Preset card bullet. $count$ is the number of seconds",
-    "placeholders": {
-      "count": {
         "content": "$1"
       }
     }

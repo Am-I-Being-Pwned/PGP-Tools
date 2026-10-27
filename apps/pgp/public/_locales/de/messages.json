@@ -464,16 +464,8 @@
       }
     }
   },
-  "app_copied_wipe": {
-    "message": "$label$ kopiert - Zwischenablage wird in $seconds$ s geleert",
-    "placeholders": {
-      "label": {
-        "content": "$1"
-      },
-      "seconds": {
-        "content": "$2"
-      }
-    }
+  "app_copied_sensitive_note": {
+    "message": "Er bleibt in Ihrer Zwischenablage und in jedem Zwischenablage-Verlauf, bis Sie etwas anderes kopieren."
   },
   "app_copy_failed": {
     "message": "Kopieren fehlgeschlagen - klicken Sie zuerst in die Seitenleiste der Erweiterung und versuchen Sie es erneut."
@@ -1494,10 +1486,10 @@
     "message": "EXPORT"
   },
   "keygen_copied_encrypted": {
-    "message": "Verschlüsselter Schlüssel kopiert (wird in 60 s geleert)"
+    "message": "Verschlüsselter Schlüssel kopiert. Er bleibt in Ihrer Zwischenablage und in jedem Zwischenablage-Verlauf, bis Sie etwas anderes kopieren."
   },
   "keygen_copied_plaintext": {
-    "message": "Ungeschützter Schlüssel kopiert (wird in 30 s geleert)"
+    "message": "Ungeschützter Schlüssel kopiert. Er bleibt in Ihrer Zwischenablage und in jedem Zwischenablage-Verlauf, bis Sie etwas anderes kopieren."
   },
   "keygen_create_heading": {
     "message": "Neuen Schlüssel erstellen"
@@ -3451,22 +3443,6 @@
     "message": "Automatisch sperren nach $duration$ und beim Tab-Wechsel",
     "placeholders": {
       "duration": {
-        "content": "$1"
-      }
-    }
-  },
-  "shared_bundle_clipboard_one": {
-    "message": "Kopierte Geheimnisse werden nach $count$ Sekunde aus der Zwischenablage entfernt",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
-  },
-  "shared_bundle_clipboard_other": {
-    "message": "Kopierte Geheimnisse werden nach $count$ Sekunden aus der Zwischenablage entfernt",
-    "placeholders": {
-      "count": {
         "content": "$1"
       }
     }

@@ -1,22 +1,17 @@
 import { t } from "../lib/i18n";
 import { toast } from "../lib/toast";
-import {
-  clipboardWipeDelayMs,
-  scheduleClipboardClear,
-} from "../lib/utils/clipboard";
 
 /** Options for {@link copyToClipboard}. */
 export interface CopyOptions {
-  /** Success toast reads "<label> copied" (plus the wipe countdown for
-   *  sensitive copies). Omit when the caller renders its own success
-   *  feedback (inline check icon etc.) -- failures always toast. */
+  /** Success toast reads "<label> copied". Omit when the caller renders
+   *  its own success feedback (inline check icon etc.) -- failures
+   *  always toast. */
   label?: string;
-  /** Sensitive material (private keys, revocation certificates):
-   *  schedule the pref-driven clipboard wipe after the copy. */
+  /** Sensitive material (private keys, revocation certificates): the
+   *  toast says it stays on the clipboard and in any clipboard history.
+   *  Nothing is wiped -- see T-CLIPBOARD-EXFIL for why that is said
+   *  rather than attempted. */
   sensitive?: boolean;
-  /** Override the wipe delay; defaults to the `clipboardWipeSeconds`
-   *  preference. Only meaningful with `sensitive`. */
-  wipeDelayMs?: number;
 }
 
 /** One toast slot for all clipboard feedback: rapid successive copies
@@ -25,9 +20,9 @@ const COPY_TOAST_ID = "clipboard-copy";
 
 /**
  * Shared clipboard write with uniform feedback: dedups the success
- * toast, schedules the preference-driven wipe for sensitive material
- * (announcing the actual countdown), and surfaces the panel-not-focused
- * rejection as a visible error toast instead of swallowing it. Returns
+ * toast, says where sensitive material now lives (the clipboard and any
+ * clipboard history), and surfaces the panel-not-focused rejection as a
+ * visible error toast instead of swallowing it. Returns
  * whether the write landed, so callers with their own success UI (2s
  * check icons) can key off it.
  */
@@ -43,18 +38,12 @@ export async function copyToClipboard(
     toast.error(t("app_copy_failed"), { id: COPY_TOAST_ID });
     return false;
   }
-  const { label, sensitive, wipeDelayMs } = options;
-  if (sensitive) {
-    const delayMs = wipeDelayMs ?? (await clipboardWipeDelayMs());
-    scheduleClipboardClear(delayMs);
-    if (label) {
-      toast.success(
-        t("app_copied_wipe", { label, seconds: Math.round(delayMs / 1000) }),
-        { id: COPY_TOAST_ID },
-      );
-    }
-  } else if (label) {
-    toast.success(t("app_copied", { label }), { id: COPY_TOAST_ID });
+  const { label, sensitive } = options;
+  if (label) {
+    toast.success(t("app_copied", { label }), {
+      id: COPY_TOAST_ID,
+      ...(sensitive ? { description: t("app_copied_sensitive_note") } : {}),
+    });
   }
   return true;
 }

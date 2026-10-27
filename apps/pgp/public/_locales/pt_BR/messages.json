@@ -464,16 +464,8 @@
       }
     }
   },
-  "app_copied_wipe": {
-    "message": "Copiado: $label$ - a área de transferência será limpa em $seconds$s",
-    "placeholders": {
-      "label": {
-        "content": "$1"
-      },
-      "seconds": {
-        "content": "$2"
-      }
-    }
+  "app_copied_sensitive_note": {
+    "message": "Fica na sua área de transferência, e em qualquer histórico dela, até você copiar outra coisa."
   },
   "app_copy_failed": {
     "message": "Falha ao copiar - clique no painel da extensão primeiro e tente de novo."
@@ -1494,10 +1486,10 @@
     "message": "EXPORTAR"
   },
   "keygen_copied_encrypted": {
-    "message": "Chave criptografada copiada (será limpa em 60s)"
+    "message": "Chave criptografada copiada. Ela fica na sua área de transferência, e em qualquer histórico dela, até você copiar outra coisa."
   },
   "keygen_copied_plaintext": {
-    "message": "Chave sem proteção copiada (será limpa em 30s)"
+    "message": "Chave desprotegida copiada. Ela fica na sua área de transferência, e em qualquer histórico dela, até você copiar outra coisa."
   },
   "keygen_create_heading": {
     "message": "Criar uma nova chave"
@@ -3451,22 +3443,6 @@
     "message": "Bloqueio automático após $duration$ e ao trocar de aba",
     "placeholders": {
       "duration": {
-        "content": "$1"
-      }
-    }
-  },
-  "shared_bundle_clipboard_one": {
-    "message": "Segredos copiados são limpos da área de transferência após $count$ segundo",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
-  },
-  "shared_bundle_clipboard_other": {
-    "message": "Segredos copiados são limpos da área de transferência após $count$ segundos",
-    "placeholders": {
-      "count": {
         "content": "$1"
       }
     }

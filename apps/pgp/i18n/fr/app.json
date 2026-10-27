@@ -194,9 +194,6 @@
   "app_copied": {
     "message": "Copié : $label$"
   },
-  "app_copied_wipe": {
-    "message": "Copié : $label$ - le presse-papiers sera effacé dans $seconds$ s"
-  },
   "app_oversized_more": {
     "message": "$names$ et $count$ autres"
   },
@@ -280,5 +277,8 @@
   },
   "app_error_storage_full": {
     "message": "Le stockage du navigateur est plein, l'enregistrement a donc échoué. Retirez des clés ou des contacts dont vous n'avez plus besoin, puis réessayez."
+  },
+  "app_copied_sensitive_note": {
+    "message": "Il reste dans votre presse-papiers, et dans tout historique du presse-papiers, jusqu'à ce que vous copiiez autre chose."
   }
 }

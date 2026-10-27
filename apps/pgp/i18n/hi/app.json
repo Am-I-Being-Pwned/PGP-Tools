@@ -100,9 +100,6 @@
     "message": "कॉपी नहीं हो सका - पहले एक्सटेंशन पैनल पर क्लिक करें, फिर से कोशिश करें।"
   },
   "app_copied": { "message": "$label$ कॉपी हो गया" },
-  "app_copied_wipe": {
-    "message": "$label$ कॉपी हो गया - क्लिपबोर्ड $seconds$ सेकंड में साफ़ हो जाएगा"
-  },
   "app_oversized_more": { "message": "$names$ और $count$ अन्य" },
   "app_oversized_files_one": {
     "message": "$files$: फ़ाइल $limit$ से बड़ी है और पैनल में प्रोसेस नहीं की जा सकती।"

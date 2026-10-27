@@ -160,12 +160,6 @@
   "shared_bundle_storage_sync": {
     "message": "密钥在你的 Chrome 个人资料中跨设备同步"
   },
-  "shared_bundle_clipboard_one": {
-    "message": "复制的机密内容在 $count$ 秒后从剪贴板清除"
-  },
-  "shared_bundle_clipboard_other": {
-    "message": "复制的机密内容在 $count$ 秒后从剪贴板清除"
-  },
   "shared_bundle_no_encrypt_to_self": {
     "message": "你加密的消息事后自己也无法读取"
   }

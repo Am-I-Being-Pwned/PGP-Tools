@@ -308,12 +308,6 @@
   "shared_bundle_storage_sync": {
     "message": "Las claves se sincronizan en su perfil de Chrome"
   },
-  "shared_bundle_clipboard_one": {
-    "message": "Los secretos copiados se borran del portapapeles tras $count$ segundo"
-  },
-  "shared_bundle_clipboard_other": {
-    "message": "Los secretos copiados se borran del portapapeles tras $count$ segundos"
-  },
   "shared_bundle_no_encrypt_to_self": {
     "message": "Los mensajes que cifre no podrá leerlos después"
   }

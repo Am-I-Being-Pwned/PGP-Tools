@@ -194,9 +194,6 @@
   "app_copied": {
     "message": "Copiado: $label$"
   },
-  "app_copied_wipe": {
-    "message": "Copiado: $label$ - a área de transferência será limpa em $seconds$s"
-  },
   "app_oversized_more": {
     "message": "$names$ e mais $count$"
   },
@@ -280,5 +277,8 @@
   },
   "app_error_storage_full": {
     "message": "O armazenamento do navegador está cheio, então isto não pôde ser salvo. Remova chaves ou contatos de que você não precisa mais e tente de novo."
+  },
+  "app_copied_sensitive_note": {
+    "message": "Fica na sua área de transferência, e em qualquer histórico dela, até você copiar outra coisa."
   }
 }

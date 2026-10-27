@@ -279,10 +279,10 @@
     "message": "没有可导出的内容"
   },
   "keygen_copied_encrypted": {
-    "message": "已复制加密后的密钥（60 秒后清空）"
+    "message": "已复制加密的密钥。在你复制其他内容之前，它会一直留在剪贴板以及任何剪贴板历史中。"
   },
   "keygen_copied_plaintext": {
-    "message": "已复制未受保护的密钥（30 秒后清空）"
+    "message": "已复制未受保护的密钥。在你复制其他内容之前，它会一直留在剪贴板以及任何剪贴板历史中。"
   },
   "keygen_unlock_gate_passkey": {
     "message": "使用通行密钥验证身份以复制此密钥。"

@@ -461,17 +461,6 @@
       }
     }
   },
-  "app_copied_wipe": {
-    "message": "$label$ कॉपी हो गया - क्लिपबोर्ड $seconds$ सेकंड में साफ़ हो जाएगा",
-    "placeholders": {
-      "label": {
-        "content": "$1"
-      },
-      "seconds": {
-        "content": "$2"
-      }
-    }
-  },
   "app_copy_failed": {
     "message": "कॉपी नहीं हो सका - पहले एक्सटेंशन पैनल पर क्लिक करें, फिर से कोशिश करें।"
   },
@@ -1463,10 +1452,10 @@
     "message": "EXPORT"
   },
   "keygen_copied_encrypted": {
-    "message": "एन्क्रिप्टेड कुंजी कॉपी हो गई (60 सेकंड में साफ़ होगी)"
+    "message": "एन्क्रिप्ट की गई कुंजी कॉपी हो गई। जब तक आप कुछ और कॉपी नहीं करते, यह आपके क्लिपबोर्ड और किसी भी क्लिपबोर्ड इतिहास में रहती है।"
   },
   "keygen_copied_plaintext": {
-    "message": "असुरक्षित कुंजी कॉपी हो गई (30 सेकंड में साफ़ होगी)"
+    "message": "असुरक्षित कुंजी कॉपी हो गई। जब तक आप कुछ और कॉपी नहीं करते, यह आपके क्लिपबोर्ड और किसी भी क्लिपबोर्ड इतिहास में रहती है।"
   },
   "keygen_create_heading": {
     "message": "नई कुंजी बनाएं"
@@ -3356,22 +3345,6 @@
     "message": "$duration$ बाद और टैब बदलने पर अपने आप लॉक",
     "placeholders": {
       "duration": {
-        "content": "$1"
-      }
-    }
-  },
-  "shared_bundle_clipboard_one": {
-    "message": "कॉपी किए गए राज़ $count$ सेकंड बाद क्लिपबोर्ड से साफ़ हो जाते हैं",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
-  },
-  "shared_bundle_clipboard_other": {
-    "message": "कॉपी किए गए राज़ $count$ सेकंड बाद क्लिपबोर्ड से साफ़ हो जाते हैं",
-    "placeholders": {
-      "count": {
         "content": "$1"
       }
     }

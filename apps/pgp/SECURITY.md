@@ -17,7 +17,6 @@ If a claim here disagrees with the code, the code wins.
   WASM exports directly. See §8.10.
 - Forensic recovery of plaintext key material after the user is done
   with a key (drop / lock / idle).
-- Clipboard exfiltration after key export (auto-clear after 30s/60s).
 - Surprise passkey ceremonies after a system-initiated lock — the
   user must click Unlock first.
 - Cross-blob substitution: ciphertext AAD is bound to the key's identity
@@ -194,7 +193,7 @@ the same `u32`.
 | Encrypted workspace draft                      | App-level `draftCiphertext`                                                | Cleared once `WorkspaceView` rehydrates on unlock                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | `App.tsx`, `useWorkspaceState.ts`                                                             |
 | Symmetric message password (`Uint8Array`)      | `TextEncoder.encode(password)` in `lib/pgp/operations.ts`                  | `.fill(0)` in `finally` on the JS side; `Zeroizing::new(...)` on entry in Rust — `decrypt_with_password` takes the param **owned**, so unlike the `unlock_*` fns there is no un-scrubbed marshalled copy (`T-UNLOCK-PARAM-NOT-OWNED`). The React `<input>` string behind it is immutable and is bounded by the panel's lifetime, as every typed password is                                                                                                                                                                                                                                                 | `lib/pgp/operations.ts`, `lib.rs` `decrypt_with_password`                                     |
 | Decrypted message text (user data, not key)    | `decryptWithHandle` / `decryptWithPassword`                                | UI-controlled; cleared on view dismiss / panel close                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | `WorkspaceView.tsx`                                                                           |
-| Clipboard contents after key export            | `clipboard.writeText`                                                      | `setTimeout` overwrites with `""` (60s encrypted, 30s plaintext)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | `KeyCard.tsx` `scheduleClipboardClear`                                                        |
+| Clipboard contents after key export            | `clipboard.writeText`                                                      | **Never cleared.** Stays on the clipboard, and in any clipboard history, until the user copies something else; the copy toast says so. `T-CLIPBOARD-EXFIL`                                                                                                                                                                                                                                                                                                                                                                                                                                                  | `useCopyToClipboard` `sensitive`                                                              |
 | Workspace input plaintext (ref + DOM node)     | `useWorkspaceState` `inputRef` / textarea `#pgp-input`                     | `wipe()` in `doMasterLock` clears the ref, the DOM value and the clear-undo buffer. Uncontrolled on purpose — never in render state. §8.11                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | `useWorkspaceState.ts`, `App.tsx` `doMasterLock`                                              |
 | Decrypted output plaintext (ref + DOM node)    | `useWorkspaceState` `outputRef` / the result `<pre>`                       | `wipe()` in `doMasterLock` clears the ref and the node's text. Written via `textContent`, never a React child, so it never enters render state. §8.11                                                                                                                                                                                                                                                                                                                                                                                                                                                       | `useWorkspaceState.ts`, `OutputArea.tsx`                                                      |
 | History segment plaintext JSON (JS)            | `JSON.stringify` → `TextEncoder.encode` in `writeSegment`                  | **NOT zeroized** — the `Uint8Array` is never `.fill(0)`'d and the intermediate JSON string is unzeroizable. See §11.2                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | `lib/storage/history.ts`                                                                      |
@@ -573,9 +572,14 @@ that makes the gap legible, it does not close it.
 
 ### 8.5 Browser features the user controls
 
-- **Clipboard managers.** Windows Clipboard History, macOS Universal
-  Clipboard, KDE Klipper, Alfred, Raycast etc may retain copies our
-  `clipboard.writeText("")` cannot reach.
+- **The clipboard.** Anything copied -- an exported private key, a
+  revocation certificate, decrypted text -- stays on the clipboard until
+  the user copies something else, and clipboard history (Windows
+  Clipboard History, macOS Universal Clipboard, KDE Klipper, Alfred,
+  Raycast) keeps its own copy. Nothing is wiped: a timed wipe cannot
+  reach history, and anything reading the clipboard reads it at once.
+  Copying secret material says so; downloading is the safer export.
+  `T-CLIPBOARD-EXFIL`.
 - **Browser sync.** Chrome Sync syncs extension storage if the user
   has it enabled. Encrypted blobs stay encrypted; protection is the
   master password / passkey.
@@ -732,8 +736,9 @@ of which are looked up per call:
   key predictable. `getrandom`'s wasm backend caches the `Crypto`
   **object** and looks the method up on that instance per call, so the
   own slot on `globalThis.crypto` is pinned as well as the prototype.
-- `navigator.clipboard.writeText` — read at write time, so the 30s/60s
-  auto-clear (a defence against clipboard _managers_) does not apply.
+- `navigator.clipboard.writeText` — sees exported key material the
+  moment it is written. (Nothing on the clipboard is wiped afterwards
+  anyway; see §8.5.)
 
 Two layers are needed for these, and they block different routes: freezing
 the prototype defeats plain assignment (`[[Set]]` walks the prototype chain

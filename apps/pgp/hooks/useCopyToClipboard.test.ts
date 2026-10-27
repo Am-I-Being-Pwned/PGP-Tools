@@ -9,12 +9,7 @@ const toastMock = vi.hoisted(() => ({
   error: vi.fn(),
 }));
 
-const prefsMock = vi.hoisted(() => ({
-  getPreferences: vi.fn(),
-}));
-
 vi.mock("../lib/toast", () => ({ toast: toastMock }));
-vi.mock("../lib/storage/preferences", () => prefsMock);
 
 const writeText = vi.fn<(text: string) => Promise<void>>();
 
@@ -24,7 +19,6 @@ describe("copyToClipboard", () => {
     vi.clearAllMocks();
     vi.stubGlobal("navigator", { clipboard: { writeText } });
     writeText.mockResolvedValue(undefined);
-    prefsMock.getPreferences.mockResolvedValue({ clipboardWipeSeconds: 30 });
   });
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -48,38 +42,25 @@ describe("copyToClipboard", () => {
     expect(toastMock.error).not.toHaveBeenCalled();
   });
 
-  it("sensitive copies arm the wipe with the preference delay", async () => {
-    await copyToClipboard("SECRET", { sensitive: true });
-    writeText.mockClear();
-
-    vi.advanceTimersByTime(29_999);
-    expect(writeText).not.toHaveBeenCalled();
-    vi.advanceTimersByTime(1);
-    expect(writeText).toHaveBeenCalledExactlyOnceWith("");
-  });
-
-  it("sensitive copies announce the actual countdown in the toast", async () => {
+  it("sensitive copies say the secret stays on the clipboard and in its history", async () => {
     await copyToClipboard("SECRET", {
       sensitive: true,
       label: "Revocation certificate",
     });
     expect(toastMock.success).toHaveBeenCalledExactlyOnceWith(
-      "Revocation certificate copied - clipboard clears in 30s",
-      { id: "clipboard-copy" },
+      "Revocation certificate copied",
+      {
+        id: "clipboard-copy",
+        description:
+          "It stays on your clipboard, and in any clipboard history, until you copy something else.",
+      },
     );
   });
 
-  it("wipeDelayMs overrides the preference", async () => {
-    await copyToClipboard("SECRET", { sensitive: true, wipeDelayMs: 10_000 });
-    writeText.mockClear();
-
-    vi.advanceTimersByTime(10_000);
-    expect(writeText).toHaveBeenCalledExactlyOnceWith("");
-    expect(prefsMock.getPreferences).not.toHaveBeenCalled();
-  });
-
-  it("non-sensitive copies never arm a wipe", async () => {
-    await copyToClipboard("PLAIN");
+  it("never wipes the clipboard behind the user's back", async () => {
+    // A timed wipe could not reach clipboard history and usually failed
+    // anyway (T-CLIPBOARD-EXFIL); the copy is the user's to manage.
+    await copyToClipboard("SECRET", { sensitive: true });
     writeText.mockClear();
     vi.advanceTimersByTime(600_000);
     expect(writeText).not.toHaveBeenCalled();

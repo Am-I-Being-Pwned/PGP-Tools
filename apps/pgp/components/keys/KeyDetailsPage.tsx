@@ -126,8 +126,8 @@ function RevocationSection({
   const handleCopy = () => {
     if (!certificate) return;
     // A revocation cert is an irreversible instrument (anyone holding it
-    // can revoke the key), so it gets the same clipboard hygiene as an
-    // exported private key (sensitive = pref-driven wipe).
+    // can revoke the key), so the toast says it now sits on the clipboard
+    // and in any clipboard history, as for an exported private key.
     void copy(certificate, {
       sensitive: true,
       label: t("keys_revocation_certificate"),

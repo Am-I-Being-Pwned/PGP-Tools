@@ -464,16 +464,8 @@
       }
     }
   },
-  "app_copied_wipe": {
-    "message": "Copiato: $label$ - gli appunti verranno svuotati tra $seconds$ s",
-    "placeholders": {
-      "label": {
-        "content": "$1"
-      },
-      "seconds": {
-        "content": "$2"
-      }
-    }
+  "app_copied_sensitive_note": {
+    "message": "Resta negli appunti, e in qualsiasi cronologia degli appunti, finché non copi qualcos'altro."
   },
   "app_copy_failed": {
     "message": "Copia non riuscita - fai prima clic sul pannello dell'estensione, poi riprova."
@@ -1494,10 +1486,10 @@
     "message": "ESPORTA"
   },
   "keygen_copied_encrypted": {
-    "message": "Chiave cifrata copiata (gli appunti si svuotano tra 60 s)"
+    "message": "Chiave cifrata copiata. Resta negli appunti, e in qualsiasi cronologia degli appunti, finché non copi qualcos'altro."
   },
   "keygen_copied_plaintext": {
-    "message": "Chiave non protetta copiata (gli appunti si svuotano tra 30 s)"
+    "message": "Chiave non protetta copiata. Resta negli appunti, e in qualsiasi cronologia degli appunti, finché non copi qualcos'altro."
   },
   "keygen_create_heading": {
     "message": "Crea una nuova chiave"
@@ -3451,22 +3443,6 @@
     "message": "Blocco automatico dopo $duration$ e quando cambi scheda",
     "placeholders": {
       "duration": {
-        "content": "$1"
-      }
-    }
-  },
-  "shared_bundle_clipboard_one": {
-    "message": "I segreti copiati vengono rimossi dagli appunti dopo $count$ secondo",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
-  },
-  "shared_bundle_clipboard_other": {
-    "message": "I segreti copiati vengono rimossi dagli appunti dopo $count$ secondi",
-    "placeholders": {
-      "count": {
         "content": "$1"
       }
     }

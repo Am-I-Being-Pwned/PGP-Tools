@@ -308,12 +308,6 @@
   "shared_bundle_storage_sync": {
     "message": "As chaves são sincronizadas no seu perfil do Chrome"
   },
-  "shared_bundle_clipboard_one": {
-    "message": "Segredos copiados são limpos da área de transferência após $count$ segundo"
-  },
-  "shared_bundle_clipboard_other": {
-    "message": "Segredos copiados são limpos da área de transferência após $count$ segundos"
-  },
   "shared_bundle_no_encrypt_to_self": {
     "message": "As mensagens que você criptografa não ficam legíveis para você depois"
   }

@@ -90,9 +90,6 @@
     "message": "复制失败，请先点击扩展程序面板，然后重试。"
   },
   "app_copied": { "message": "已复制$label$" },
-  "app_copied_wipe": {
-    "message": "已复制$label$，剪贴板将在 $seconds$ 秒后清空"
-  },
   "app_oversized_more": { "message": "$names$ 及另外 $count$ 个" },
   "app_oversized_files_one": {
     "message": "$files$：文件大于 $limit$，无法在面板中处理。"
@@ -164,5 +161,8 @@
   },
   "app_error_storage_full": {
     "message": "浏览器存储空间已满，无法保存。请移除不再需要的密钥或联系人，然后重试。"
+  },
+  "app_copied_sensitive_note": {
+    "message": "在你复制其他内容之前，它会一直留在剪贴板以及任何剪贴板历史中。"
   }
 }

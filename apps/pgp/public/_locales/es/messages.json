@@ -464,16 +464,8 @@
       }
     }
   },
-  "app_copied_wipe": {
-    "message": "Copiado: $label$ - el portapapeles se borrará en $seconds$ s",
-    "placeholders": {
-      "label": {
-        "content": "$1"
-      },
-      "seconds": {
-        "content": "$2"
-      }
-    }
+  "app_copied_sensitive_note": {
+    "message": "Se queda en tu portapapeles, y en cualquier historial del portapapeles, hasta que copies otra cosa."
   },
   "app_copy_failed": {
     "message": "No se ha podido copiar - haga clic primero en el panel de la extensión y vuelva a intentarlo."
@@ -1494,10 +1486,10 @@
     "message": "EXPORTAR"
   },
   "keygen_copied_encrypted": {
-    "message": "Clave cifrada copiada (se borra en 60 s)"
+    "message": "Clave cifrada copiada. Se queda en tu portapapeles, y en cualquier historial del portapapeles, hasta que copies otra cosa."
   },
   "keygen_copied_plaintext": {
-    "message": "Clave sin proteger copiada (se borra en 30 s)"
+    "message": "Clave sin protección copiada. Se queda en tu portapapeles, y en cualquier historial del portapapeles, hasta que copies otra cosa."
   },
   "keygen_create_heading": {
     "message": "Crear una clave nueva"
@@ -3451,22 +3443,6 @@
     "message": "Bloqueo automático tras $duration$ y al cambiar de pestaña",
     "placeholders": {
       "duration": {
-        "content": "$1"
-      }
-    }
-  },
-  "shared_bundle_clipboard_one": {
-    "message": "Los secretos copiados se borran del portapapeles tras $count$ segundo",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
-  },
-  "shared_bundle_clipboard_other": {
-    "message": "Los secretos copiados se borran del portapapeles tras $count$ segundos",
-    "placeholders": {
-      "count": {
         "content": "$1"
       }
     }

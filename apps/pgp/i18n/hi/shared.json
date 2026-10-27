@@ -186,12 +186,6 @@
   "shared_bundle_storage_sync": {
     "message": "कुंजियां आपकी Chrome प्रोफ़ाइल में सिंक होती हैं"
   },
-  "shared_bundle_clipboard_one": {
-    "message": "कॉपी किए गए राज़ $count$ सेकंड बाद क्लिपबोर्ड से साफ़ हो जाते हैं"
-  },
-  "shared_bundle_clipboard_other": {
-    "message": "कॉपी किए गए राज़ $count$ सेकंड बाद क्लिपबोर्ड से साफ़ हो जाते हैं"
-  },
   "shared_bundle_no_encrypt_to_self": {
     "message": "आपके एन्क्रिप्ट किए गए संदेश बाद में आप खुद नहीं पढ़ सकते"
   }

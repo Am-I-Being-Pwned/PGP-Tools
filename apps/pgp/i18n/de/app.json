@@ -114,9 +114,6 @@
     "message": "Kopieren fehlgeschlagen - klicken Sie zuerst in die Seitenleiste der Erweiterung und versuchen Sie es erneut."
   },
   "app_copied": { "message": "$label$ kopiert" },
-  "app_copied_wipe": {
-    "message": "$label$ kopiert - Zwischenablage wird in $seconds$ s geleert"
-  },
   "app_oversized_more": { "message": "$names$ und $count$ weitere" },
   "app_oversized_files_one": {
     "message": "$files$: Die Datei ist größer als $limit$ und kann in der Seitenleiste nicht verarbeitet werden."
@@ -192,5 +189,8 @@
   },
   "app_error_storage_full": {
     "message": "Der Browserspeicher ist voll, daher konnte dies nicht gespeichert werden. Entfernen Sie Schlüssel oder Kontakte, die Sie nicht mehr benötigen, und versuchen Sie es erneut."
+  },
+  "app_copied_sensitive_note": {
+    "message": "Er bleibt in Ihrer Zwischenablage und in jedem Zwischenablage-Verlauf, bis Sie etwas anderes kopieren."
   }
 }

@@ -279,10 +279,10 @@
     "message": "Niente da esportare"
   },
   "keygen_copied_encrypted": {
-    "message": "Chiave cifrata copiata (gli appunti si svuotano tra 60 s)"
+    "message": "Chiave cifrata copiata. Resta negli appunti, e in qualsiasi cronologia degli appunti, finché non copi qualcos'altro."
   },
   "keygen_copied_plaintext": {
-    "message": "Chiave non protetta copiata (gli appunti si svuotano tra 30 s)"
+    "message": "Chiave non protetta copiata. Resta negli appunti, e in qualsiasi cronologia degli appunti, finché non copi qualcos'altro."
   },
   "keygen_unlock_gate_passkey": {
     "message": "Autenticati con la tua passkey per copiare questa chiave."

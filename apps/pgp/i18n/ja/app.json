@@ -194,9 +194,6 @@
   "app_copied": {
     "message": "$label$をコピーしました"
   },
-  "app_copied_wipe": {
-    "message": "$label$をコピーしました。クリップボードは $seconds$ 秒後に消去されます"
-  },
   "app_oversized_more": {
     "message": "$names$、他 $count$ 件"
   },
@@ -280,5 +277,8 @@
   },
   "app_error_storage_full": {
     "message": "ブラウザのストレージがいっぱいのため、保存できませんでした。不要になった鍵や連絡先を削除してから、やり直してください。"
+  },
+  "app_copied_sensitive_note": {
+    "message": "別のものをコピーするまで、クリップボードとクリップボード履歴に残ります。"
   }
 }

@@ -464,16 +464,8 @@
       }
     }
   },
-  "app_copied_wipe": {
-    "message": "Copié : $label$ - le presse-papiers sera effacé dans $seconds$ s",
-    "placeholders": {
-      "label": {
-        "content": "$1"
-      },
-      "seconds": {
-        "content": "$2"
-      }
-    }
+  "app_copied_sensitive_note": {
+    "message": "Il reste dans votre presse-papiers, et dans tout historique du presse-papiers, jusqu'à ce que vous copiiez autre chose."
   },
   "app_copy_failed": {
     "message": "Échec de la copie - cliquez d'abord sur le panneau de l'extension, puis réessayez."
@@ -1494,10 +1486,10 @@
     "message": "EXPORTER"
   },
   "keygen_copied_encrypted": {
-    "message": "Clé chiffrée copiée (effacée dans 60 s)"
+    "message": "Clé chiffrée copiée. Elle reste dans votre presse-papiers, et dans tout historique du presse-papiers, jusqu'à ce que vous copiiez autre chose."
   },
   "keygen_copied_plaintext": {
-    "message": "Clé non protégée copiée (effacée dans 30 s)"
+    "message": "Clé non protégée copiée. Elle reste dans votre presse-papiers, et dans tout historique du presse-papiers, jusqu'à ce que vous copiiez autre chose."
   },
   "keygen_create_heading": {
     "message": "Créer une nouvelle clé"
@@ -3451,22 +3443,6 @@
     "message": "Verrouillage automatique après $duration$ et quand vous changez d'onglet",
     "placeholders": {
       "duration": {
-        "content": "$1"
-      }
-    }
-  },
-  "shared_bundle_clipboard_one": {
-    "message": "Les secrets copiés sont effacés du presse-papiers après $count$ seconde",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
-  },
-  "shared_bundle_clipboard_other": {
-    "message": "Les secrets copiés sont effacés du presse-papiers après $count$ secondes",
-    "placeholders": {
-      "count": {
         "content": "$1"
       }
     }

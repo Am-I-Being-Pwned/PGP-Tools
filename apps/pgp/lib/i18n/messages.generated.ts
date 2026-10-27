@@ -103,7 +103,7 @@ export interface MessageArgs {
   "app_cmd_open_sign": undefined;
   "app_cmd_open_verify": undefined;
   "app_copied": { label: string | number };
-  "app_copied_wipe": { label: string | number; seconds: string | number };
+  "app_copied_sensitive_note": undefined;
   "app_copy_failed": undefined;
   "app_error_corrupted": undefined;
   "app_error_crx_unsigned": undefined;
@@ -961,7 +961,6 @@ export interface PluralArgs {
   "settings_import_protect_intro": undefined;
   "settings_import_submit": undefined;
   "settings_import_unlock_intro": { encrypted: string | number };
-  "shared_bundle_clipboard": undefined;
   "shared_minutes": undefined;
   "workspace_char_count": undefined;
   "workspace_files_decrypted": { size: string | number };
@@ -999,7 +998,6 @@ export const PLACEHOLDER_ORDER: Readonly<Partial<Record<string, readonly string[
   "actions_run_mode": ["mode"],
   "actions_translate_result_to": ["language"],
   "app_copied": ["label"],
-  "app_copied_wipe": ["label","seconds"],
   "app_error_no_decryption_key_with_id": ["key_id"],
   "app_import_added_other": ["count"],
   "app_onboarding_expiry_years_one": ["count"],
@@ -1179,8 +1177,6 @@ export const PLACEHOLDER_ORDER: Readonly<Partial<Record<string, readonly string[
   "settings_translation_packs_desc": ["size"],
   "shared_bundle_auto_lock": ["duration"],
   "shared_bundle_auto_lock_tabs": ["duration"],
-  "shared_bundle_clipboard_one": ["count"],
-  "shared_bundle_clipboard_other": ["count"],
   "shared_confirm_type_aria": ["text"],
   "shared_delete_history_body": ["size"],
   "shared_minutes_one": ["count"],

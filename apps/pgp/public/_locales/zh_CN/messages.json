@@ -464,16 +464,8 @@
       }
     }
   },
-  "app_copied_wipe": {
-    "message": "已复制$label$，剪贴板将在 $seconds$ 秒后清空",
-    "placeholders": {
-      "label": {
-        "content": "$1"
-      },
-      "seconds": {
-        "content": "$2"
-      }
-    }
+  "app_copied_sensitive_note": {
+    "message": "在你复制其他内容之前，它会一直留在剪贴板以及任何剪贴板历史中。"
   },
   "app_copy_failed": {
     "message": "复制失败，请先点击扩展程序面板，然后重试。"
@@ -1494,10 +1486,10 @@
     "message": "导出"
   },
   "keygen_copied_encrypted": {
-    "message": "已复制加密后的密钥（60 秒后清空）"
+    "message": "已复制加密的密钥。在你复制其他内容之前，它会一直留在剪贴板以及任何剪贴板历史中。"
   },
   "keygen_copied_plaintext": {
-    "message": "已复制未受保护的密钥（30 秒后清空）"
+    "message": "已复制未受保护的密钥。在你复制其他内容之前，它会一直留在剪贴板以及任何剪贴板历史中。"
   },
   "keygen_create_heading": {
     "message": "创建新密钥"
@@ -3451,22 +3443,6 @@
     "message": "$duration$后以及切换标签页时自动锁定",
     "placeholders": {
       "duration": {
-        "content": "$1"
-      }
-    }
-  },
-  "shared_bundle_clipboard_one": {
-    "message": "复制的机密内容在 $count$ 秒后从剪贴板清除",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
-  },
-  "shared_bundle_clipboard_other": {
-    "message": "复制的机密内容在 $count$ 秒后从剪贴板清除",
-    "placeholders": {
-      "count": {
         "content": "$1"
       }
     }

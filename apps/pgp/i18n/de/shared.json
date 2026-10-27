@@ -202,12 +202,6 @@
   "shared_bundle_storage_sync": {
     "message": "Schlüssel werden über Ihr Chrome-Profil synchronisiert"
   },
-  "shared_bundle_clipboard_one": {
-    "message": "Kopierte Geheimnisse werden nach $count$ Sekunde aus der Zwischenablage entfernt"
-  },
-  "shared_bundle_clipboard_other": {
-    "message": "Kopierte Geheimnisse werden nach $count$ Sekunden aus der Zwischenablage entfernt"
-  },
   "shared_bundle_no_encrypt_to_self": {
     "message": "Von Ihnen verschlüsselte Nachrichten sind für Sie danach nicht mehr lesbar"
   }
