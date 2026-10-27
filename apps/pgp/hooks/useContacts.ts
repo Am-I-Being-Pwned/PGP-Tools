@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { PublicContactKey } from "../lib/storage/contacts";
+import { mergeIntoContact } from "../lib/import-public-keys";
 import { parseKey } from "../lib/pgp/wasm";
 import {
   IDENTITY_VERSION,
@@ -83,7 +84,9 @@ export async function backfillIdentity(
   const patched: PublicContactKey[] = [];
   for (const c of contacts) {
     if ((c.identityVersion ?? 0) >= IDENTITY_VERSION) continue;
-    let patch: Partial<PublicContactKey> = { identityVersion: IDENTITY_VERSION };
+    let patch: Partial<PublicContactKey> = {
+      identityVersion: IDENTITY_VERSION,
+    };
     if (!isSshRecord(c)) {
       try {
         const info = await parseKey(c.armoredPublicKey);
@@ -236,5 +239,24 @@ export function useContacts() {
     [refresh],
   );
 
-  return { contacts, loading, error, refresh, add, remove, rename };
+  /** Merge a newer copy of a contact's key into the record as it is on
+   *  disk (see `mergeIntoContact`), then show what was written. Resolves
+   *  undefined when the contact no longer exists. */
+  const mergeKey = useCallback(
+    async (keyId: string, armored: string) => {
+      const op = mutexRef.current.then(() => mergeIntoContact(keyId, armored));
+      mutexRef.current = op.then(
+        // eslint-disable-next-line @typescript-eslint/no-empty-function
+        () => {},
+        // eslint-disable-next-line @typescript-eslint/no-empty-function
+        () => {},
+      );
+      const result = await op;
+      await refresh();
+      return result;
+    },
+    [refresh],
+  );
+
+  return { contacts, loading, error, refresh, add, remove, rename, mergeKey };
 }

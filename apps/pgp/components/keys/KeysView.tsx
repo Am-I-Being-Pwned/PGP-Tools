@@ -6,6 +6,7 @@ import { Block } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
 
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
+import type { KeyInfo } from "../../lib/pgp/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { KeyCardModel } from "./KeyCard";
@@ -14,7 +15,6 @@ import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import { publicKeyDerToPem } from "../../lib/crx/types";
 import { presentError } from "../../lib/errors/present";
 import { t, tn } from "../../lib/i18n";
-import { contactFieldsFrom } from "../../lib/import-public-keys";
 import {
   KEYSERVER_HOST,
   keyserverFailureCopy,
@@ -62,6 +62,13 @@ interface KeysViewProps {
   onDeleteKey: (keyId: string) => Promise<void>;
   onAddKey: (blob: ProtectedKeyBlob) => Promise<void>;
   onAddContact: (contact: PublicContactKey) => Promise<void>;
+  /** Merge a newer copy of a contact's key into the record as it is on
+   *  disk; undefined when the contact no longer exists. Enables the
+   *  revocation check. */
+  onMergeContactKey?: (
+    keyId: string,
+    armored: string,
+  ) => Promise<{ keyInfo: KeyInfo } | undefined>;
   onDeleteContact: (keyId: string) => Promise<void>;
   getKeyHandle: (keyId: string) => number | null;
   /** Persist a revocation certificate minted for an imported key. */
@@ -178,6 +185,7 @@ export function KeysView({
   onDeleteKey,
   onAddKey,
   onAddContact,
+  onMergeContactKey,
   onDeleteContact,
   getKeyHandle,
   onSaveRevocationCertificate,
@@ -442,6 +450,7 @@ export function KeysView({
    * One toast, updated in place from "checking" to the answer.
    */
   const checkContactRevocation = async (contact: PublicContactKey) => {
+    if (!onMergeContactKey) return;
     const name =
       parseUserId(displayUserId(contact) ?? "").name ||
       contact.keyId.slice(-16);
@@ -453,18 +462,19 @@ export function KeysView({
       },
     );
     try {
-      const result = await checkRevocation({
-        keyId: contact.keyId,
-        armored: contact.armoredPublicKey,
-      });
+      // Merged into the contact as it is when the answer arrives, never
+      // the copy captured on click: a revocation imported, a rename or a
+      // delete during the fetch must survive it.
+      const result = await checkRevocation(
+        { keyId: contact.keyId, armored: contact.armoredPublicKey },
+        onMergeContactKey,
+      );
       switch (result.kind) {
+        case "gone":
+          toast.dismiss(id);
+          break;
         case "revoked":
         case "current":
-          await onAddContact({
-            ...contact,
-            armoredPublicKey: result.merged.armored,
-            ...contactFieldsFrom(result.merged.keyInfo),
-          });
           if (result.kind === "revoked") {
             toast.error(t("keys_check_revocation_revoked", { name }), {
               id,
@@ -680,7 +690,7 @@ export function KeysView({
           contactsLocked={contactsLocked}
           justImported={justImported}
           onCheckRevocation={
-            keyDiscoveryEnabled
+            keyDiscoveryEnabled && onMergeContactKey
               ? (contact) => void checkContactRevocation(contact)
               : undefined
           }
@@ -826,6 +836,7 @@ export function KeysView({
                 onBack={nav.pop}
                 onCheckRevocation={
                   keyDiscoveryEnabled &&
+                  onMergeContactKey &&
                   target.kind === "contact" &&
                   !isSshRecord(target.contact) &&
                   !target.contact.revoked

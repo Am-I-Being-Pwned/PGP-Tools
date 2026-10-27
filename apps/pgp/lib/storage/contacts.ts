@@ -14,7 +14,7 @@ import {
   saveEncryptedArray,
 } from "./encrypted-store";
 import { removeItem, withLock } from "./engine";
-import { storedKeyKind } from "./key-kind";
+import { isSshRecord, storedKeyKind } from "./key-kind";
 
 // Pure readers of a contact record, kept in a module with no store (and
 // so no wasm) behind it: the reader tab renders ContactCard, and must not
@@ -496,6 +496,35 @@ async function mutateContacts<T>(
  *    which is merely cosmetic -- "known since" should not restart
  *    because the contact was refreshed.
  */
+/** `record` with the key material and the fields derived from it taken
+ *  from `incoming`; its identity (source, alias, recipients) kept. */
+function withKeyFrom(
+  record: PublicContactKey,
+  incoming: PublicContactKey,
+): PublicContactKey {
+  const {
+    revoked: _revoked,
+    lookalike: _lookalike,
+    securityWarning: _warning,
+    ...rest
+  } = record;
+  return {
+    ...rest,
+    armoredPublicKey: incoming.armoredPublicKey,
+    userIds: incoming.userIds,
+    expiresAt: incoming.expiresAt,
+    usableForEncryption: incoming.usableForEncryption,
+    ...(incoming.securityWarning
+      ? { securityWarning: incoming.securityWarning }
+      : {}),
+    ...(incoming.revoked ? { revoked: true } : {}),
+    ...(incoming.lookalike ? { lookalike: true } : {}),
+    ...(incoming.identityVersion !== undefined
+      ? { identityVersion: incoming.identityVersion }
+      : {}),
+  };
+}
+
 export function upsertContacts(
   existing: readonly PublicContactKey[],
   incoming: PublicContactKey,
@@ -505,12 +534,26 @@ export function upsertContacts(
   );
 
   // A hand-pasted key that happens to be a fetched contact's head: keep
-  // the person intact, write nothing.
+  // the person intact. But a newer copy of that SAME PGP key -- its
+  // owner's revocation, an extended expiry -- still lands on the record:
+  // callers hand in the merge of the stored and the incoming copy, so
+  // this only ever adds what the owner signed. Without it, a revocation
+  // sent by email could never reach a contact found on a keyserver.
   if (
     contactSource(incoming) === null &&
     superseded.some((c) => contactSource(c) !== null)
   ) {
-    return [...existing];
+    const fetched = superseded.find(
+      (c) =>
+        c.keyId === incoming.keyId &&
+        contactSource(c) !== null &&
+        !isSshRecord(c) &&
+        !isSshRecord(incoming),
+    );
+    if (!fetched) return [...existing];
+    return existing.map((c) =>
+      c === fetched ? withKeyFrom(fetched, incoming) : c,
+    );
   }
 
   const record =
@@ -581,6 +624,28 @@ export async function updateContact(
     const index = existing.findIndex((c) => c.keyId === keyId);
     if (index === -1) return undefined;
     const updated = apply(existing[index]);
+    const next = [...existing];
+    next[index] = updated;
+    await saveAll(next);
+    return updated;
+  });
+}
+
+/**
+ * {@link updateContact} for a change that has to await -- a merge in the
+ * engine. Still applied INSIDE the lock to the record as it is on disk,
+ * so a write that started from an older copy (a keyserver check that
+ * took a while) can never put that copy back. Resolves undefined, and
+ * writes nothing, when the contact no longer exists.
+ */
+export async function updateContactAsync(
+  keyId: string,
+  apply: (contact: PublicContactKey) => Promise<PublicContactKey>,
+): Promise<PublicContactKey | undefined> {
+  return mutateContacts(async (existing) => {
+    const index = existing.findIndex((c) => c.keyId === keyId);
+    if (index === -1) return undefined;
+    const updated = await apply(existing[index]);
     const next = [...existing];
     next[index] = updated;
     await saveAll(next);

@@ -25,13 +25,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ContactRecipient, PublicContactKey } from "./contacts";
 import { STORAGE_CONTACTS } from "../constants";
+import { displayUserId } from "../utils/key-naming";
 import {
   activeRecipients,
+  aliasField,
   contactRecipients,
   contactSource,
   disabledField,
   isRecipientDisabled,
-  aliasField,
   loadContacts,
   recipientsField,
   removeContact,
@@ -40,12 +41,12 @@ import {
   setContactRecipientDisabled,
   updateContact,
   updateContactAlias,
+  updateContactAsync,
   upsertContacts,
   withAlias,
   withRecipientDisabled,
   withRecipients,
 } from "./contacts";
-import { displayUserId } from "../utils/key-naming";
 import { invalidateLocationCache } from "./engine";
 import {
   fakeDecryptContacts,
@@ -754,6 +755,29 @@ describe("upsertContacts - a pasted key never replaces a fetched person", () => 
     expect(contactRecipients(all[0])).toHaveLength(3);
   });
 
+  it("still lets a newer copy of a fetched PGP key land, keeping the source", async () => {
+    // The owner's revocation, sent by email, for a contact found on
+    // keys.openpgp.org. Callers hand in the merge of both copies.
+    const source = { type: "keyserver", user: "carol@d.test", fetchedAt: 1 };
+    await saveContact(
+      legacyContact({ source, alias: "Caz" } as Partial<PublicContactKey>),
+    );
+    await saveContact(
+      legacyContact({
+        armoredPublicKey: "-----BEGIN PGP PUBLIC KEY BLOCK----- carol MERGED",
+        usableForEncryption: false,
+        revoked: true,
+      }),
+    );
+
+    const [stored] = await loadContacts();
+    expect(stored.armoredPublicKey).toContain("MERGED");
+    expect(stored.revoked).toBe(true);
+    expect(stored.usableForEncryption).toBe(false);
+    expect(contactSource(stored)?.user).toBe("carol@d.test");
+    expect(stored.alias).toBe("Caz");
+  });
+
   it("is the same function the UI's optimistic list uses", () => {
     // Pure, so the hook can reach exactly the answer storage will.
     const existing = [multiContact(3)];
@@ -782,6 +806,34 @@ describe("serialised writes", () => {
       "DDDD",
       "EEEE",
     ]);
+  });
+
+  it("applies an awaited change to the record on disk, not a snapshot", async () => {
+    await saveContact(legacyContact());
+    // A slow change (a keyserver merge) starts...
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const slow = updateContactAsync("CCCC", async (current) => {
+      await gate;
+      return { ...current, expiresAt: 42 };
+    });
+    // ...and must not be able to undo what happened meanwhile. (Queued
+    // behind the lock, the rename lands after the slow change.)
+    const rename = updateContact("CCCC", (c) => ({ ...c, alias: "Caz" }));
+    release();
+    await Promise.all([slow, rename]);
+    const [stored] = await loadContacts();
+    expect(stored).toMatchObject({ expiresAt: 42, alias: "Caz" });
+  });
+
+  it("writes nothing for a contact deleted before an awaited change", async () => {
+    await saveContact(legacyContact());
+    await removeContact("CCCC");
+    const result = await updateContactAsync("CCCC", (c) =>
+      Promise.resolve({ ...c, expiresAt: 42 }),
+    );
+    expect(result).toBeUndefined();
+    expect(await loadContacts()).toEqual([]);
   });
 
   it("toggles a key without republishing a stale snapshot", async () => {
@@ -850,7 +902,9 @@ describe("withRecipients - a shrinking list clears the field", () => {
     const c = multiContact(3);
     const two = withRecipients(c, [sshRecipient(0), sshRecipient(1)]);
     expect(two.recipients).toHaveLength(2);
-    expect(JSON.stringify(Object.keys(two))).toBe(JSON.stringify(Object.keys(c)));
+    expect(JSON.stringify(Object.keys(two))).toBe(
+      JSON.stringify(Object.keys(c)),
+    );
   });
 });
 

@@ -1,10 +1,10 @@
 import type { KeyInfo } from "./pgp/types";
 import type { ParsedCert } from "./pgp/wasm";
 import type { PublicContactKey } from "./storage/contacts";
-import { IDENTITY_VERSION } from "./storage/contacts";
 import { t } from "./i18n";
 import { formatDate } from "./i18n/format";
 import { mergePublicKey, parseKeys, revocationIssuers } from "./pgp/wasm";
+import { IDENTITY_VERSION, updateContactAsync } from "./storage/contacts";
 
 /** A stored public cert an import can land on. */
 export interface StoredCert {
@@ -28,6 +28,34 @@ export async function mergeIntoStored(
   const merged = await mergePublicKey(stored.armored, incomingArmored);
   const [cert] = await parseKeys(merged);
   return cert;
+}
+
+/**
+ * Merge `incomingArmored` into the stored contact `keyId` AS IT IS NOW,
+ * inside the contacts lock, and save it. For a write that starts from an
+ * older copy -- a keyserver check that took a while -- so nothing changed
+ * meanwhile (an imported revocation, a rename, a delete) is undone.
+ * Resolves undefined, writing nothing, when the contact is gone.
+ */
+export async function mergeIntoContact(
+  keyId: string,
+  incomingArmored: string,
+): Promise<{ contact: PublicContactKey; keyInfo: KeyInfo } | undefined> {
+  let keyInfo: KeyInfo | undefined;
+  const contact = await updateContactAsync(keyId, async (current) => {
+    const merged = await mergeIntoStored(
+      { keyId: current.keyId, armored: current.armoredPublicKey },
+      incomingArmored,
+    );
+    keyInfo = merged.keyInfo;
+    const { revoked: _revoked, lookalike: _lookalike, ...rest } = current;
+    return {
+      ...rest,
+      armoredPublicKey: merged.armored,
+      ...contactFieldsFrom(merged.keyInfo),
+    };
+  });
+  return contact && keyInfo ? { contact, keyInfo } : undefined;
 }
 
 /**

@@ -17,16 +17,17 @@ import type {
   KeyserverKeyResponse,
 } from "../messages";
 import type { KeyInfo } from "../pgp/types";
-import { mergeIntoStored } from "../import-public-keys";
 import { parseKeyserverQuery } from "../keyserver/query";
 import { parseKeys } from "../pgp/wasm";
 
 export type RevocationCheck =
-  /** The keyserver's copy (merged with ours) is revoked. */
-  | { kind: "revoked"; merged: { keyInfo: KeyInfo; armored: string } }
+  /** The keyserver's copy, merged into the stored contact, is revoked. */
+  | { kind: "revoked" }
   /** Not revoked as far as the keyserver knows. The merge may still have
-   *  brought news -- a new expiry, a new subkey -- so it is returned. */
-  | { kind: "current"; merged: { keyInfo: KeyInfo; armored: string } }
+   *  brought news -- a new expiry, a new subkey -- and was saved. */
+  | { kind: "current" }
+  /** The contact was removed while the check ran: nothing was written. */
+  | { kind: "gone" }
   /** The keyserver doesn't publish this key: nothing to check against. */
   | { kind: "not-published" }
   /** It answered with a different key than the one asked for. */
@@ -37,6 +38,13 @@ export type RevocationCheck =
       error: KeyserverKeyFailure | "unreachable";
       retryAt?: number;
     };
+
+/** Merge a fetched copy into the stored contact as it is NOW (not as it
+ *  was when the check started) and report what came of it. */
+export type MergeIntoContact = (
+  keyId: string,
+  armored: string,
+) => Promise<{ keyInfo: KeyInfo } | undefined>;
 
 export type KeyserverSend = (
   request: KeyserverKeyRequest,
@@ -57,6 +65,7 @@ export function fingerprintQuery(keyId: string): KeyserverQuery | null {
 
 export async function checkRevocation(
   contact: StoredCert,
+  merge: MergeIntoContact,
   send: KeyserverSend = sendToWorker,
 ): Promise<RevocationCheck> {
   const query = fingerprintQuery(contact.keyId);
@@ -83,8 +92,7 @@ export async function checkRevocation(
   );
   if (!same) return { kind: "wrong-key" };
 
-  const merged = await mergeIntoStored(contact, same.armored);
-  return merged.keyInfo.revoked
-    ? { kind: "revoked", merged }
-    : { kind: "current", merged };
+  const merged = await merge(contact.keyId, same.armored);
+  if (!merged) return { kind: "gone" };
+  return merged.keyInfo.revoked ? { kind: "revoked" } : { kind: "current" };
 }

@@ -27,6 +27,7 @@ import {
   importPublicKeyBlocks,
   importRejectionMessage,
   isUsableContact,
+  mergeIntoContact,
 } from "./import-public-keys";
 import { mergePublicKey, parseKeys, revocationIssuers } from "./pgp/wasm";
 
@@ -34,6 +35,12 @@ vi.mock("./pgp/wasm", () => ({
   parseKeys: vi.fn(),
   mergePublicKey: vi.fn(),
   revocationIssuers: vi.fn(),
+}));
+
+const store = vi.hoisted(() => ({ updateContactAsync: vi.fn() }));
+vi.mock("./storage/contacts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./storage/contacts")>()),
+  updateContactAsync: store.updateContactAsync,
 }));
 
 const parse = vi.mocked(parseKeys);
@@ -389,7 +396,11 @@ describe("importPublicKeyBlocks", () => {
 
   it("still rejects a revoked key nobody holds", async () => {
     parse.mockResolvedValue([
-      cert({ usableForEncryption: false, usableForSigning: false, revoked: true }),
+      cert({
+        usableForEncryption: false,
+        usableForSigning: false,
+        revoked: true,
+      }),
     ]);
     const { written, onImport } = collector();
 
@@ -414,7 +425,10 @@ describe("importPublicKeyBlocks", () => {
       onImport,
     );
 
-    expect(merge).toHaveBeenCalledWith("STORED-AAAA0123456789ABCDEF", "REVOCATION");
+    expect(merge).toHaveBeenCalledWith(
+      "STORED-AAAA0123456789ABCDEF",
+      "REVOCATION",
+    );
     expect(summary).toMatchObject({ updated: 1, failed: 0 });
     expect(written[0].revoked).toBe(true);
   });
@@ -429,5 +443,45 @@ describe("importPublicKeyBlocks", () => {
     expect(summary.failed).toBe(1);
     expect(summary.rejectionReasons[0]).toMatch(/key you don't have/);
     expect(written).toEqual([]);
+  });
+});
+
+describe("mergeIntoContact", () => {
+  it("merges into the record as the store hands it over, not a caller's copy", async () => {
+    // The store's version already holds a revocation imported while a
+    // keyserver check was in flight, and a rename.
+    const onDisk: PublicContactKey = {
+      keyId: "FPR1",
+      userIds: ["Alice <a@b.test>"],
+      algorithm: "ed25519",
+      armoredPublicKey: "ON-DISK-REVOKED",
+      addedAt: 1,
+      lastUsedAt: 1,
+      alias: "Ali",
+      revoked: true,
+    };
+    store.updateContactAsync.mockImplementation(
+      async (
+        _id: string,
+        apply: (c: PublicContactKey) => Promise<PublicContactKey>,
+      ) => apply(onDisk),
+    );
+    merge.mockResolvedValue("MERGED");
+    parse.mockResolvedValue([cert({ revoked: true }, "MERGED")]);
+
+    const result = await mergeIntoContact("FPR1", "FETCHED");
+
+    expect(merge).toHaveBeenCalledWith("ON-DISK-REVOKED", "FETCHED");
+    expect(result?.contact).toMatchObject({
+      armoredPublicKey: "MERGED",
+      alias: "Ali",
+      revoked: true,
+    });
+  });
+
+  it("writes nothing and says so when the contact is gone", async () => {
+    store.updateContactAsync.mockResolvedValue(undefined);
+    expect(await mergeIntoContact("FPR1", "FETCHED")).toBeUndefined();
+    expect(merge).not.toHaveBeenCalled();
   });
 });
