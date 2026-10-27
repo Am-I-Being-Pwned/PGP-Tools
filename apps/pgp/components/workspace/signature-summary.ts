@@ -78,6 +78,7 @@ export type BatchSummary =
  */
 export function summariseBatch(
   batch: { name: string; result: SignedResult }[],
+  myFingerprints: readonly string[] = [],
 ): BatchSummary {
   const first = batch.at(0)?.result;
   if (!first || batch.every((b) => b.result.signatureStatus === "unsigned")) {
@@ -103,9 +104,12 @@ export function summariseBatch(
       unverifiedSignatures: Math.max(
         ...batch.map((b) => b.result.unverifiedSignatures),
       ),
-      intendedRecipients: [
-        ...new Set(batch.flatMap((b) => b.result.intendedRecipients)),
-      ],
+      // Judged per file: a union of the lists would let one file signed
+      // for {you, Bob} vouch for another signed for Bob alone. If any
+      // file was signed for others, the batch says so.
+      intendedRecipients:
+        batch.find((b) => signedForOthers(b.result, myFingerprints))?.result
+          .intendedRecipients ?? [],
     },
   };
 }

@@ -61,13 +61,17 @@ describe("signedForOthers", () => {
 
   it("is false when one of the named recipients is the user", () => {
     expect(
-      signedForOthers(sig({ intendedRecipients: [BOB, ALICE.toLowerCase()] }), [ALICE]),
+      signedForOthers(sig({ intendedRecipients: [BOB, ALICE.toLowerCase()] }), [
+        ALICE,
+      ]),
     ).toBe(false);
   });
 
   it("is true for a message signed for someone else and passed on", () => {
     // Alice signed for Bob; Bob re-wrapped it under a password for us.
-    expect(signedForOthers(sig({ intendedRecipients: [BOB] }), [ALICE])).toBe(true);
+    expect(signedForOthers(sig({ intendedRecipients: [BOB] }), [ALICE])).toBe(
+      true,
+    );
   });
 
   it("says who it was for in the note", () => {
@@ -81,8 +85,14 @@ describe("summariseBatch", () => {
   it("shows no card when nothing in the batch is signed", () => {
     expect(
       summariseBatch([
-        { name: "a", result: sig({ signatureStatus: "unsigned", signerKeyId: null }) },
-        { name: "b", result: sig({ signatureStatus: "unsigned", signerKeyId: null }) },
+        {
+          name: "a",
+          result: sig({ signatureStatus: "unsigned", signerKeyId: null }),
+        },
+        {
+          name: "b",
+          result: sig({ signatureStatus: "unsigned", signerKeyId: null }),
+        },
       ]),
     ).toEqual({ kind: "unsigned" });
   });
@@ -92,7 +102,10 @@ describe("summariseBatch", () => {
       { name: "a", result: sig() },
       { name: "b", result: sig() },
     ]);
-    expect(summary).toMatchObject({ kind: "same", result: { signerKeyId: ALICE } });
+    expect(summary).toMatchObject({
+      kind: "same",
+      result: { signerKeyId: ALICE },
+    });
   });
 
   it("does not let one signed file vouch for an unsigned one beside it", () => {
@@ -137,6 +150,25 @@ describe("summariseBatch", () => {
     });
   });
 
+  it("judges 'signed for someone else' per file, not over a merged list", () => {
+    // File A was signed for {me, Bob}; file B for Bob alone. Merged, the
+    // list contains me and B would read as addressed to me.
+    const summary = summariseBatch(
+      [
+        {
+          name: "group.gpg",
+          result: sig({ intendedRecipients: [ALICE, BOB] }),
+        },
+        { name: "private.gpg", result: sig({ intendedRecipients: [BOB] }) },
+      ],
+      [ALICE],
+    );
+    expect(summary.kind).toBe("same");
+    if (summary.kind === "same") {
+      expect(signedForOthers(summary.result, [ALICE])).toBe(true);
+    }
+  });
+
   it("keeps co-signers from every file", () => {
     const summary = summariseBatch([
       { name: "a", result: sig({ otherSignerKeyIds: [BOB] }) },
@@ -163,6 +195,8 @@ describe("mixedBatchNote", () => {
         ],
         names,
       ),
-    ).toBe("notes.gpg: Alice · invoice.gpg: not signed · x.gpg: Unknown signer");
+    ).toBe(
+      "notes.gpg: Alice · invoice.gpg: not signed · x.gpg: Unknown signer",
+    );
   });
 });

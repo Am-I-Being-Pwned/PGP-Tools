@@ -48,13 +48,13 @@ import {
   zipFiles as zipFilesToArchive,
 } from "../../lib/utils/zip";
 import { outputFileName } from "./output-name";
+import { selectionEngine } from "./recipient-engine";
 import {
   mixedBatchNote,
   signatureNote,
   signedForOthers,
   summariseBatch,
 } from "./signature-summary";
-import { selectionEngine } from "./recipient-engine";
 
 interface WorkspaceOperationsOptions {
   s: WorkspaceState;
@@ -247,7 +247,10 @@ export function useWorkspaceOperations({
       // the signature says it was made -- and a message signed for
       // someone else verifies too, forwarded or not. Both are amber,
       // never green.
-      const forOthers = signedForOthers(result, myKeys.map((k) => k.keyId));
+      const forOthers = signedForOthers(
+        result,
+        myKeys.map((k) => k.keyId),
+      );
       const caveat = forOthers
         ? t("workspace_signature_verified_not_for_you")
         : !result.signerKeyCurrent
@@ -275,7 +278,10 @@ export function useWorkspaceOperations({
   function showBatchSignatures(
     batch: { name: string; result: SignedResult }[],
   ) {
-    const summary = summariseBatch(batch);
+    const summary = summariseBatch(
+      batch,
+      myKeys.map((k) => k.keyId),
+    );
     if (summary.kind === "unsigned") return;
     if (summary.kind === "same") {
       showSignature(summary.result);
@@ -1116,7 +1122,10 @@ export function useWorkspaceOperations({
       const inputs =
         s.files.length > 0
           ? await Promise.all(
-              s.files.map(async (f) => ({ name: f.name, text: await f.text() })),
+              s.files.map(async (f) => ({
+                name: f.name,
+                text: await f.text(),
+              })),
             )
           : [{ name: "", text: s.getInput() }];
       const results = [];
