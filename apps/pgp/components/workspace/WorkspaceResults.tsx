@@ -11,7 +11,6 @@ import type { FileResult } from "../../lib/utils/download";
 import { t } from "../../lib/i18n";
 import { contactClashes } from "../../lib/identity/binding";
 import { KEYSERVER_HOST } from "../../lib/import/keyserver";
-import { isSshRecord } from "../../lib/storage/key-kind";
 import { ContactCard } from "../keys/ContactCard";
 import { KeyDetailsButton } from "../keys/KeyDetailsButton";
 import { DetectedKeyBanner } from "./DetectedKeyBanner";
@@ -217,10 +216,7 @@ export function WorkspaceResults({
         // the same pill as on the card, so the two read apart here too.
         clash={
           "armoredPublicKey" in verifiedSigner && !isUnverified
-            ? contactClashes(
-                contacts.filter((c) => !isSshRecord(c)),
-                myKeys.filter((k) => !isSshRecord(k)),
-              ).get(verifiedSigner.keyId)
+            ? contactClashes(contacts, myKeys).get(verifiedSigner.keyId)
             : undefined
         }
       />

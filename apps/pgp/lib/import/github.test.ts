@@ -23,7 +23,7 @@
  * unreachable.
  */
 
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PublicContactKey } from "../storage/contacts";
 import type { ContactGroup } from "./types";
@@ -36,6 +36,7 @@ import {
   githubLabel,
   prepareGithubImport,
 } from "./github";
+import { defaultDecision } from "./review";
 
 // The engine, stubbed to say exactly what the real one says: a
 // fingerprint for a supported type, and one of its eight curated
@@ -114,14 +115,232 @@ describe("classifyGithubGroup - identity", () => {
       source: undefined,
       userIds: ["alice@example.com"],
     };
-    expect(classifyGithubGroup(group([FP_A]), [pasted]).status).toBe("new");
+    // ...and since its only key is already saved there, nothing is new:
+    // headed by that key, the save used to replace the hand-added
+    // contact with this account.
+    expect(classifyGithubGroup(group([FP_A]), [pasted]).status).toBe(
+      "duplicate",
+    );
   });
 
   it("does not match a different github user with the same keys", () => {
     const key = classifyGithubGroup(group([FP_A], [], "hubot"), [
       stored("octocat", [FP_A]),
     ]);
+    // Not an update of octocat -- and not a record that would land on
+    // octocat's id either.
+    expect(key.status).toBe("duplicate");
+  });
+});
+
+describe("classifyGithubGroup - keys the user already holds", () => {
+  const pasted: PublicContactKey = {
+    ...stored("octocat", [FP_A]),
+    source: undefined,
+    userIds: ["Alice"],
+    alias: "Alice",
+  };
+
+  it("never heads the record with a hand-added contact's key", () => {
+    // Attack (d): an account listing Alice's key first. Headed by it, the
+    // save upserted over Alice.
+    const key = classifyGithubGroup(group([FP_A, FP_B]), [pasted]);
     expect(key.status).toBe("new");
+    expect(key.keyId).toBe(FP_B);
+    expect(key.group?.members.map((m) => m.keyId)).toEqual([FP_B, FP_A]);
+  });
+
+  it("never heads the record with one of the user's own keys", () => {
+    const key = classifyGithubGroup(
+      group([FP_A, FP_B]),
+      [],
+      [{ keyId: FP_A, userIds: ["me"] }],
+    );
+    expect(key.keyId).toBe(FP_B);
+  });
+
+  it("moves a refreshed record's head off an own key too", () => {
+    const key = classifyGithubGroup(
+      group([FP_A, FP_B, FP_C]),
+      [stored("octocat", [FP_A, FP_B])],
+      [{ keyId: FP_A, userIds: ["me"] }],
+    );
+    expect(key.status).toBe("update");
+    expect(key.keyId).toBe(FP_B);
+  });
+});
+
+describe("classifyGithubGroup - a refresh that drops a key", () => {
+  // The account's record holds [A, X]; the account removed X. A is also
+  // held elsewhere -- by a hand-added contact, or as the user's own key
+  // -- so there is no key "nobody else holds" to head the record with.
+  // That used to read as "nothing new to save": `duplicate`, and X went
+  // on being encrypted to.
+  const account = stored("octocat", [FP_A, FP_C]);
+  const alice: PublicContactKey = {
+    ...stored("x", [FP_B, FP_A]),
+    source: undefined,
+    userIds: ["Alice"],
+  };
+
+  it("is an update, kept on its own id, when a contact also holds the key", () => {
+    const key = classifyGithubGroup(group([FP_A]), [account, alice]);
+    expect(key.status).toBe("update");
+    expect(key.keyId).toBe(FP_A);
+    expect(key.changes).toEqual(["1 key removed"]);
+  });
+
+  it("is an update when the key left is the user's own", () => {
+    const key = classifyGithubGroup(
+      group([FP_A]),
+      [account],
+      [{ keyId: FP_A, userIds: ["me"] }],
+    );
+    expect(key.status).toBe("update");
+    expect(key.changes).toEqual(["1 key removed"]);
+  });
+
+  it("asks first: the key held elsewhere still marks it", async () => {
+    vi.mocked(parseSshRecipient).mockReset();
+    vi.mocked(parseSshRecipient).mockImplementation((line: string) =>
+      Promise.resolve({
+        fingerprint: line.split(" ")[1],
+        recipient: line,
+        algorithm: "ssh-ed25519",
+        comment: "",
+      }),
+    );
+    const prepared = await prepareGithubImport(
+      "octocat",
+      [`ssh-ed25519 ${FP_A}`],
+      { contacts: [account, alice] },
+    );
+    const [key] = prepared.keys;
+    expect(key.status).toBe("update");
+    expect(key.conflict?.kind).toBe("key");
+    expect(defaultDecision(key)).toBe("skip");
+  });
+
+  it("is refused, never `duplicate`, when its only id is another contact's", () => {
+    // The record's head is gone and the key left is ANOTHER contact's id:
+    // saving would land on that contact. It cannot be saved -- but it is
+    // not "nothing changed" either.
+    const bob: PublicContactKey = {
+      ...stored("x", [FP_B]),
+      source: undefined,
+      userIds: ["Bob"],
+    };
+    const key = classifyGithubGroup(group([FP_B]), [account, bob]);
+    expect(key.status).toBe("rejected");
+    expect(key.changes).toEqual(["1 key added", "2 keys removed"]);
+    expect(key.rejection).toContain("octocat");
+  });
+
+  it("is still `duplicate` when nothing changed", () => {
+    const key = classifyGithubGroup(group([FP_C, FP_A]), [account, alice]);
+    expect(key.status).toBe("duplicate");
+  });
+});
+
+describe("classifyGithubGroup - keys the user turned off", () => {
+  const off = (keyId: string) => ({
+    ...member(keyId),
+    disabled: true as const,
+  });
+  const withOff = (list: ReturnType<typeof member>[]): PublicContactKey => ({
+    ...stored("octocat", [list[0].keyId]),
+    recipients: list,
+  });
+
+  it("asks when every key the account still lists is one the user turned off", () => {
+    // [A, B, C(off)] -> the account deleted A and B.
+    const record = withOff([member(FP_A), member(FP_B), off(FP_C)]);
+    const key = classifyGithubGroup(group([FP_C]), [record]);
+    expect(key.status).toBe("update");
+    expect(key.allKeysOff).toBe(true);
+    expect(defaultDecision(key)).toBe("skip");
+  });
+
+  it("asks for two such keys as for one", () => {
+    const record = withOff([member(FP_A), off(FP_B), off(FP_C)]);
+    const key = classifyGithubGroup(group([FP_B, FP_C]), [record]);
+    expect(key.allKeysOff).toBe(true);
+  });
+
+  it("does not ask while a key the user kept, or a new one, is listed", () => {
+    const record = withOff([member(FP_A), member(FP_B), off(FP_C)]);
+    expect(
+      classifyGithubGroup(group([FP_B, FP_C]), [record]).allKeysOff,
+    ).toBeUndefined();
+    const fresh = "SHA256:DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD";
+    const key = classifyGithubGroup(group([FP_C, fresh]), [record]);
+    expect(key.allKeysOff).toBeUndefined();
+    expect(defaultDecision(key)).toBe("import");
+  });
+});
+
+describe("prepareGithubImport - checked like a paste", () => {
+  beforeEach(() => {
+    vi.mocked(parseSshRecipient).mockReset();
+    vi.mocked(parseSshRecipient).mockImplementation((line: string) => {
+      const keyId = line.split(" ")[1];
+      return Promise.resolve({
+        fingerprint: keyId,
+        recipient: line,
+        algorithm: "ssh-ed25519",
+        comment: "",
+      });
+    });
+  });
+
+  it("marks an account carrying a contact's key, and starts it on Skip", async () => {
+    const pasted: PublicContactKey = {
+      ...stored("octocat", [FP_A]),
+      source: undefined,
+      userIds: ["alice@laptop"],
+    };
+    const prepared = await prepareGithubImport(
+      "mallory",
+      [`ssh-ed25519 ${FP_A}`, `ssh-ed25519 ${FP_B}`],
+      { contacts: [pasted] },
+    );
+    const [key] = prepared.keys;
+    expect(key.conflict?.kind).toBe("key");
+    expect(key.conflict?.holders.map((h) => h.keyId)).toEqual([FP_A]);
+    expect(defaultDecision(key)).toBe("skip");
+  });
+
+  it("marks an account carrying the user's own key", async () => {
+    const prepared = await prepareGithubImport(
+      "octocat",
+      [`ssh-ed25519 ${FP_A}`, `ssh-ed25519 ${FP_B}`],
+      { contacts: [], own: [{ keyId: FP_A, userIds: ["me"] }] },
+    );
+    expect(prepared.keys[0].conflict?.holders[0].own).toBe(true);
+  });
+
+  it("does not mark a refresh for the keys its own account returned", async () => {
+    const prepared = await prepareGithubImport(
+      "octocat",
+      [`ssh-ed25519 ${FP_A}`, `ssh-ed25519 ${FP_B}`, `ssh-ed25519 ${FP_C}`],
+      { contacts: [stored("octocat", [FP_A, FP_B])] },
+    );
+    expect(prepared.keys[0].status).toBe("update");
+    expect(prepared.keys[0].conflict).toBeUndefined();
+  });
+
+  it("checks the account name against the contacts' names", async () => {
+    const carol: PublicContactKey = {
+      ...stored("x", [FP_C]),
+      source: undefined,
+      userIds: ["Carol <carol@example.com>"],
+    };
+    const prepared = await prepareGithubImport(
+      "carol",
+      [`ssh-ed25519 ${FP_A}`],
+      { contacts: [carol] },
+    );
+    expect(prepared.keys[0].conflict?.kind).toBe("name");
   });
 });
 

@@ -39,9 +39,10 @@ export function needsDecision(key: IncomingKey): boolean {
   return key.status === "new" || key.status === "update";
 }
 
-/** A key claiming someone else's identity starts unticked. */
+/** A key claiming someone else's identity starts unticked -- and so
+ *  does an update that would leave only keys the user turned off. */
 export function defaultDecision(key: IncomingKey): ReviewDecision {
-  return key.conflict ? "skip" : "import";
+  return key.conflict || key.allKeysOff ? "skip" : "import";
 }
 
 /** The contact record an incoming key becomes. */
@@ -121,7 +122,10 @@ export async function applyReview(
     const old =
       decision === "replace" &&
       key.status === "new" &&
-      key.conflict?.kind === "address"
+      key.conflict?.kind === "address" &&
+      // A lookalike address is never the holder's to hand over (see
+      // `canReplace` in ImportReview): saved beside it, not over it.
+      !key.conflict.lookalike
         ? store.contacts.find((c) =>
             key.conflict?.holders.some((h) => h.keyId === c.keyId),
           )

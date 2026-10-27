@@ -304,6 +304,44 @@ test("SSH keys that agree on a comment are grouped without asking", async ({
   );
 });
 
+test("a pasted group adding a key to a contact asks first, and Skip saves nothing", async ({
+  panel,
+  context,
+}) => {
+  // Alice's real key, then a file pairing it with Mallory's under her
+  // comment. That used to be a "new" contact with Alice's id: the save
+  // landed on her record, kept her name, and "Alice" encrypted to Mallory
+  // as well -- with no question asked, because the comments agreed.
+  const [alice, mallory] = generateSshKeys(2, () => "alice@corp");
+  await onboardWithPasswordSkipKey(panel, PASSWORD);
+  await importContact(panel, alice.publicLineWithComment);
+
+  await pasteIntoImport(
+    panel,
+    context,
+    [mallory.publicLineWithComment, alice.publicLineWithComment].join("\n"),
+  );
+  const review = panel.getByRole("region", { name: "Import key" });
+  const row = review.locator(`[data-review-key="${alice.fingerprint}"]`);
+  await expect(row).toContainText("Update");
+  await expect(row).toContainText("1 key added");
+  // Named by her key id: a contact pasted from a bare line keeps no
+  // comment, so the id is what tells the user whose keys these are.
+  await expect(row).toContainText(
+    `This adds keys to SSH key (${alice.fingerprint})`,
+  );
+  // Starts on Skip, so nothing is selected until the user says so.
+  await expect(
+    review.getByRole("button", { name: "Nothing selected" }),
+  ).toBeDisabled();
+  await review.getByRole("button", { name: "Back" }).click();
+
+  const stored = await readContacts(panel);
+  expect(stored).toHaveLength(1);
+  expect(stored[0].keyId).toBe(alice.fingerprint);
+  expect(stored[0].recipients).toBeUndefined();
+});
+
 test("declining the grouping offer files the keys separately", async ({
   panel,
   context,

@@ -5,20 +5,22 @@ import { Block, BlockStack } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
 import { Segmented } from "@amibeingpwned/ui/segmented";
 
-import type { IdentityHolder } from "../../lib/identity/binding";
+import type {
+  IdentityConflict,
+  IdentityHolder,
+} from "../../lib/identity/binding";
 import type { ReviewDecision } from "../../lib/import/review";
 import type { IncomingKey } from "../../lib/import/types";
 import { t, tn } from "../../lib/i18n";
-import { emailsOf } from "../../lib/identity/binding";
+import {
+  addressSkeletons,
+  displayKeyId,
+  emailsOf,
+} from "../../lib/identity/binding";
 import { defaultDecision, needsDecision } from "../../lib/import/review";
 import { parseUserId } from "../../lib/utils/key-naming";
 import { KeyAvatar } from "../shared/KeyAvatar";
 import { MarkedText } from "../shared/MarkedText";
-
-/** The 16-hex key id, the form the rest of the panel shows. */
-function shortId(keyId: string): string {
-  return keyId.slice(-16).toUpperCase();
-}
 
 function statusLabel(key: IncomingKey): string {
   if (key.status === "duplicate") return t("import_review_status_duplicate");
@@ -32,8 +34,13 @@ function statusLabel(key: IncomingKey): string {
 /** Who already holds the identity, as one readable line. */
 function holderLine(holder: IdentityHolder): { name: string; keyid: string } {
   return {
-    name: parseUserId(holder.userIds[0]).name,
-    keyid: shortId(holder.keyId),
+    // An SSH key with no comment has no name of its own; it is shown
+    // the way the rest of the panel shows one.
+    name:
+      holder.userIds.length === 0 && holder.keyId.startsWith("SHA256:")
+        ? t("import_ssh_headline")
+        : parseUserId(holder.userIds[0]).name,
+    keyid: displayKeyId(holder.keyId),
   };
 }
 
@@ -52,23 +59,87 @@ function ConflictNote({ keyData }: { keyData: IncomingKey }) {
     <p className="text-bad flex gap-1.5 text-xs">
       <TriangleAlertIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
       <span>
-        {conflict.kind === "name"
-          ? t("import_review_conflict_name", holder)
-          : revoked
-            ? t("import_review_conflict_address_revoked", { email, ...holder })
-            : t("import_review_conflict_address", { email, ...holder })}
+        {conflict.kind === "key" ? (
+          keyConflictText(keyData)
+        ) : conflict.kind === "name" ? (
+          t("import_review_conflict_name", holder)
+        ) : conflict.lookalike ? (
+          // Marked, so the letter that makes it a different address is
+          // pointed at rather than left to be spotted.
+          <MarkedText text={lookalikeAddressText(keyData, conflict, holder)} />
+        ) : revoked ? (
+          t("import_review_conflict_address_revoked", {
+            email,
+            ...holder,
+          })
+        ) : (
+          t("import_review_conflict_address", { email, ...holder })
+        )}
       </span>
     </p>
   );
 }
 
+/** An address that only READS like the holder's: both are named, since
+ *  neither alone shows the difference. */
+function lookalikeAddressText(
+  keyData: IncomingKey,
+  conflict: IdentityConflict,
+  holder: { name: string; keyid: string },
+): string {
+  const theirs = conflict.holders[0].userIds.flatMap(emailsOf);
+  const ours = keyData.userIds.flatMap(emailsOf);
+  const pair = ours
+    .map((e) => {
+      const looks = new Set(addressSkeletons(e));
+      return {
+        email: e,
+        theirs: theirs.find((a) =>
+          addressSkeletons(a).some((k) => looks.has(k)),
+        ),
+      };
+    })
+    .find((p) => p.theirs !== undefined);
+  return t("import_review_conflict_address_lookalike", {
+    email: pair?.email ?? ours.at(0) ?? "",
+    theirs: pair?.theirs ?? theirs.at(0) ?? "",
+    ...holder,
+  });
+}
+
+/**
+ * An SSH import carrying a key the user already holds, in the words of
+ * what saving it would do: give that contact keys it did not have, or
+ * put their key (or the user's own) beside keys that are not theirs.
+ * Either way it is how a paste took a contact over, so it is said, and
+ * the row starts on Skip.
+ */
+function keyConflictText(keyData: IncomingKey): string {
+  const holders = keyData.conflict?.holders ?? [];
+  const own = holders.find((h) => h.own);
+  if (own) {
+    return t("import_review_conflict_key_own", {
+      keyid: displayKeyId(own.keyId),
+    });
+  }
+  const holder = holderLine(holders[0]);
+  // An update lands on the contact it shares its id with.
+  return keyData.status === "update" &&
+    holders.some((h) => h.keyId === keyData.keyId)
+    ? t("import_review_conflict_key_update", holder)
+    : t("import_review_conflict_key_contact", holder);
+}
+
 /** Whether Replace means anything: a NEW key whose address a stored
  *  contact holds (not the user's own key, not another key in this
- *  import -- there is nothing to replace those with). */
+ *  import -- there is nothing to replace those with). Never for an
+ *  address that only looks the same: a new key for someone's address is
+ *  how a rotation looks, a new key for a lookalike of it never is. */
 function canReplace(key: IncomingKey): boolean {
   return (
     key.status === "new" &&
     key.conflict?.kind === "address" &&
+    !key.conflict.lookalike &&
     key.conflict.holders.some((h) => !h.own && !h.incoming)
   );
 }
@@ -135,14 +206,30 @@ export function ImportReview({
                       </p>
                     )}
                     <p className="text-muted-foreground font-mono text-[11px]">
-                      {shortId(key.keyId)}
+                      {displayKeyId(key.keyId)}
                     </p>
                   </div>
                   <span className="bg-secondary text-muted-foreground shrink-0 rounded px-1.5 py-px text-[10.5px] font-medium">
                     {statusLabel(key)}
                   </span>
                 </div>
+                {key.status === "update" && key.changes.length > 0 && (
+                  // What the update changes -- for an SSH group, how many
+                  // keys it adds to the person, which is the thing to
+                  // check before saying yes.
+                  <ul className="text-muted-foreground space-y-0.5 text-xs">
+                    {key.changes.map((change) => (
+                      <li key={change}>{change}</li>
+                    ))}
+                  </ul>
+                )}
                 <ConflictNote keyData={key} />
+                {key.allKeysOff && (
+                  <p className="text-bad flex gap-1.5 text-xs">
+                    <TriangleAlertIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    <span>{t("import_review_all_keys_off")}</span>
+                  </p>
+                )}
                 {key.status === "new" && key.replaces && (
                   // A re-fetch for the same lookup that came back with a
                   // different key: saving it supersedes the old one.
@@ -166,7 +253,9 @@ export function ImportReview({
                         // offers to keep both.
                         label: key.replaces
                           ? t("import_review_choice_replace")
-                          : key.conflict && key.status === "new"
+                          : key.conflict &&
+                              key.conflict.kind !== "key" &&
+                              key.status === "new"
                             ? t("import_review_choice_keep_both")
                             : t("import_review_choice_import"),
                       },

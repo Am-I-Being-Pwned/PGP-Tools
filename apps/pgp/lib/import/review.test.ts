@@ -113,6 +113,12 @@ describe("needsDecision / defaultDecision", () => {
     ).toBe("skip");
     expect(defaultDecision(incoming())).toBe("import");
   });
+
+  it("starts an update that leaves only turned-off keys unticked", () => {
+    expect(
+      defaultDecision(incoming({ status: "update", allKeysOff: true })),
+    ).toBe("skip");
+  });
 });
 
 describe("contactFromIncoming", () => {
@@ -270,6 +276,27 @@ describe("applyReview", () => {
     );
     expect(store.calls).toEqual([`add ${IMPOSTOR}`]);
     expect(outcome.added).toBe(1);
+    expect(outcome.replaced).toBe(0);
+  });
+
+  it('"replace" on a lookalike address only adds, too', async () => {
+    // "al\u0131ce@" only READS as the holder's address. A new key for a
+    // lookalike of someone's address is never their rotation.
+    const store = fakeStore();
+    const outcome = await applyReview(
+      [
+        impostor({
+          conflict: {
+            kind: "address",
+            lookalike: true,
+            holders: [{ keyId: CAROL, userIds: carolContact().userIds }],
+          },
+        }),
+      ],
+      decide([IMPOSTOR, "replace"]),
+      store,
+    );
+    expect(store.calls).toEqual([`add ${IMPOSTOR}`]);
     expect(outcome.replaced).toBe(0);
   });
 

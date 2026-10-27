@@ -33,6 +33,7 @@ import type { IdentityConflict } from "../../lib/identity/binding";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import { t, tn } from "../../lib/i18n";
 import { formatDate, formatDateShort } from "../../lib/i18n/format";
+import { displayKeyId } from "../../lib/identity/binding";
 import {
   activeRecipients,
   contactRecipients,
@@ -91,7 +92,7 @@ function clashArgs(clash: IdentityConflict) {
   const holder = clash.holders[0];
   return {
     name: parseUserId(holder.userIds[0] ?? "").name,
-    keyid: holder.keyId.slice(-16).toUpperCase(),
+    keyid: displayKeyId(holder.keyId),
   };
 }
 
@@ -198,7 +199,8 @@ export function ContactCard({
     !!contact.revoked ||
     !!contact.securityWarning ||
     isSsh ||
-    recipients.length > 1;
+    recipients.length > 1 ||
+    activeKeys < recipients.length;
   // Algorithm, expiry and provenance, as one small muted line.
   const details: string[] = [];
   if (algorithm && !showKeyLine) details.push(algorithm);
@@ -320,14 +322,21 @@ export function ContactCard({
                 <span
                   title={
                     clash.kind === "address"
-                      ? t("keys_contact_same_address_title", clashArgs(clash))
+                      ? clash.lookalike
+                        ? t(
+                            "keys_contact_lookalike_address_title",
+                            clashArgs(clash),
+                          )
+                        : t("keys_contact_same_address_title", clashArgs(clash))
                       : t("keys_contact_same_name_title", clashArgs(clash))
                   }
                   className={cn(PILL, "bg-warn/12 text-warn inline-flex gap-1")}
                 >
                   <TriangleAlertIcon className="h-2.5 w-2.5" />
                   {clash.kind === "address"
-                    ? t("keys_contact_same_address")
+                    ? clash.lookalike
+                      ? t("keys_contact_lookalike_address")
+                      : t("keys_contact_same_address")
                     : t("keys_contact_same_name")}
                 </span>
               )}
@@ -359,7 +368,7 @@ export function ContactCard({
                   SSH
                 </span>
               )}
-              {recipients.length > 1 && (
+              {(recipients.length > 1 || activeKeys < recipients.length) && (
                 /* One person, several machines. Said on the card because
                  the key id it shows is only the first key's: a 3-stanza
                  file is otherwise a surprise at decrypt time. */

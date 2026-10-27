@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  addressSkeletons,
   contactClashes,
   emailOf,
   emailsOf,
@@ -31,6 +32,67 @@ describe("emailOf / nameOf", () => {
     expect(nameOf("Carol Lane <carol@example.com> (work)")).toBe("Carol Lane");
     expect(nameOf("Carol Lane carol@example.com")).toBe("Carol Lane");
     expect(nameOf("Carol Lane <carol@example.com")).toBe("Carol Lane");
+  });
+});
+
+describe("invisible characters in addresses", () => {
+  // Each draws nothing, so each makes a different string read as
+  // alice@corp.com: a variation selector, a tag character, a zero-width
+  // space, a soft hyphen, a bidi isolate, a combining grapheme joiner,
+  // a Hangul filler, a Mongolian vowel separator, an Arabic letter mark,
+  // and the symbols that draw as an empty cell without being ignorable:
+  // the Braille blank, the object replacement character, the musical
+  // null notehead, and a line separator.
+  const hidden = [
+    "\ufe0f",
+    "\u{e0020}",
+    "\u200b",
+    "\u00ad",
+    "\u2066",
+    "\u034f",
+    "\u3164",
+    "\u180e",
+    "\u061c",
+    "\u2800",
+    "\ufffc",
+    "\u{1d159}",
+    "\u2028",
+  ];
+
+  it("reads every one of them as the address it looks like", () => {
+    for (const h of hidden) {
+      expect(emailsOf(`<alice@corp.com${h}>`), JSON.stringify(h)).toEqual([
+        "alice@corp.com",
+      ]);
+      expect(emailsOf(`Al <ali${h}ce@corp.com>`), JSON.stringify(h)).toEqual([
+        "alice@corp.com",
+      ]);
+    }
+  });
+
+  it("folds compatibility forms and a trailing dot", () => {
+    expect(emailsOf("\uff41lice\uff20corp.com.")).toEqual(["alice@corp.com"]);
+  });
+
+  it("flags an address-only User ID hiding one, by its address", () => {
+    // The name part is empty (or only the invisible character), so the
+    // address check is the one that has to catch it.
+    const alice = { keyId: "ALICE", userIds: ["Alice Smith <alice@corp.com>"] };
+    for (const h of hidden) {
+      const evil = { keyId: "EVIL", userIds: [`<alice@corp.com${h}>`] };
+      expect(identityConflict(evil, [alice])?.kind, JSON.stringify(h)).toBe(
+        "address",
+      );
+      expect(contactClashes([alice, evil], []).size, JSON.stringify(h)).toBe(2);
+    }
+  });
+
+  it("reads a name the same way", () => {
+    expect(nameOf("Alice\ufe0f Smith <a@b.test>")).toBe("Alice Smith");
+    expect(nameSkeleton("Alice Smith\u3164")).toBe(nameSkeleton("Alice Smith"));
+    expect(nameSkeleton("Al\u{e0041}ice Smith")).toBe(
+      nameSkeleton("Alice Smith"),
+    );
   });
 });
 
@@ -148,5 +210,68 @@ describe("contactClashes", () => {
   it("does not mark the user's own key held as a contact too", () => {
     const mine = { keyId: "AAAA", userIds: carol.userIds };
     expect(contactClashes([carol], [mine]).size).toBe(0);
+  });
+});
+
+describe("look-alike addresses", () => {
+  const alice = { keyId: "ALICE", userIds: ["alice@corp.com"] };
+  const named = { keyId: "ALICE", userIds: ["Alice <alice@corp.com>"] };
+  // A dotless i, a Greek omicron in the domain, a Cyrillic а, a digit one
+  // and a capital I passing for l, and rn passing for m.
+  const lookalikes = [
+    "al\u0131ce@corp.com",
+    "alice@c\u03bfrp.com",
+    "\u0430lice@corp.com",
+    "a1ice@corp.com",
+    "AIice@corp.com",
+    "al\u00edce@corp.com",
+    "alice@corp\uff65com",
+    "alice@corp\u00b7com",
+  ];
+
+  it("reads each as the address it imitates", () => {
+    for (const a of lookalikes) {
+      expect(addressSkeletons(a), a).toContain(
+        addressSkeletons("alice@corp.com")[0],
+      );
+    }
+    expect(addressSkeletons("rnallory@corp.com")).toEqual(
+      addressSkeletons("mallory@corp.com"),
+    );
+  });
+
+  it("flags one against an address-only User ID, and a named one", () => {
+    for (const a of lookalikes) {
+      const evil = { keyId: "EVIL", userIds: [a] };
+      for (const holder of [alice, named]) {
+        expect(identityConflict(evil, [holder]), a).toEqual({
+          kind: "address",
+          lookalike: true,
+          holders: [holder],
+        });
+      }
+      expect(contactClashes([named, evil], []).get("EVIL")?.lookalike, a).toBe(
+        true,
+      );
+    }
+  });
+
+  it("still calls the very same address an address conflict", () => {
+    expect(
+      identityConflict({ keyId: "EVIL", userIds: ["ALICE@corp.com"] }, [alice]),
+    ).toEqual({ kind: "address", holders: [alice] });
+  });
+
+  it("keeps addresses that only share their letters apart", () => {
+    for (const a of [
+      "a.lice@corp.com",
+      "alice@corp.co",
+      "alice@corp-com.test",
+    ]) {
+      expect(
+        identityConflict({ keyId: "EVIL", userIds: [a] }, [alice]),
+        a,
+      ).toBeNull();
+    }
   });
 });

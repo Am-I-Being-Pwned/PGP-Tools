@@ -1,11 +1,14 @@
+import type { PublicContactKey } from "../../lib/storage/contacts";
 import type {
   KindDiscriminated,
   StoredKeyKind,
 } from "../../lib/storage/key-kind";
 import {
   mixedEngineReason,
+  noActiveKeyReason,
   sshPasswordReason,
 } from "../../lib/encrypt-recipients";
+import { hasActiveRecipient } from "../../lib/storage/contact-recipients";
 import { storedKeyKind } from "../../lib/storage/key-kind";
 
 /**
@@ -55,12 +58,22 @@ export function blockedByEngine(
  * The password rule is checked FIRST: with a password set, an SSH key is
  * out whatever else is selected, and "you can't mix engines" would be
  * the less useful of two true statements.
+ *
+ * A third, before either: a contact whose every key is turned off (a
+ * refresh can leave one so -- see `activeRecipients`) has nothing to
+ * encrypt to at all, whatever else is selected.
  */
 export function recipientBlockReason(
   key: KindDiscriminated,
   engine: StoredKeyKind | null,
   passwordArmed: boolean,
 ): string | null {
+  if (
+    "armoredPublicKey" in key &&
+    !hasActiveRecipient(key as unknown as PublicContactKey)
+  ) {
+    return noActiveKeyReason();
+  }
   if (passwordArmed && storedKeyKind(key) === "ssh") {
     return sshPasswordReason();
   }
@@ -98,9 +111,23 @@ export function pickableKeys<T extends KindDiscriminated>(
  *  - Contacts are the contact RECORDS. An own key is never placed there
  *    just because its fingerprint matches a contact's -- that is how it
  *    used to show up a second time under Contacts.
- *  - An own key a contact already holds is left out of My Keys.
- *  - A single-key contact whose key is already one of a bigger contact's
- *    keys is left out: picking the bigger one covers it.
+ *  - Your own keys are ALWAYS offered, under My Keys. A contact that
+ *    holds one of them used to hide it -- and a contact is whatever a
+ *    pasted file or a lookup said: grouping the user's own key with an
+ *    attacker's took "You" off the list and put a contact in its place
+ *    that encrypted to both.
+ *  - A contact whose id IS one of your keys is left out instead. The
+ *    selection is by id, and an id that is yours means your key (see
+ *    `resolveSelectedRecipients`), so the row would be a second "You"
+ *    under somebody else's name. (The import no longer creates such a
+ *    record: a group is never headed by a key the user holds.)
+ *  - Every other contact is offered, even one whose single key is also
+ *    one of a bigger contact's keys. Hiding it behind the bigger one used
+ *    to dedupe a key pasted by hand and later fetched with its owner's
+ *    account -- but "bigger contact holding the same key" is exactly what
+ *    a file pairing Alice's key with Mallory's under her name looks
+ *    like, and then the real Alice disappeared from the list. Two rows
+ *    for one key is a duplicate; one hidden row is a takeover.
  *
  * `keysOf` lists a contact's key fingerprints (`contactRecipients`).
  */
@@ -110,23 +137,14 @@ export function splitRecipientSections<
 >(
   available: readonly (C | O)[],
   contacts: readonly C[],
-  keysOf: (contact: C) => readonly string[],
+  ownKeyIds: ReadonlySet<string>,
 ): { contacts: C[]; own: O[] } {
   const contactRecords = new Set<unknown>(contacts);
   const isContact = (k: C | O): k is C => contactRecords.has(k);
-  // Only contacts IN these results can cover a key: hiding a row because
-  // of a contact the search filtered out would make it unfindable.
-  const held = new Map<string, number>(); // fingerprint -> most keys holding it
-  for (const c of available.filter(isContact)) {
-    const ids = keysOf(c);
-    for (const id of ids) held.set(id, Math.max(held.get(id) ?? 0, ids.length));
-  }
-
   return {
-    contacts: available.filter(isContact).filter((c) => {
-      const ids = keysOf(c);
-      return !(ids.length === 1 && (held.get(ids[0]) ?? 0) > 1);
-    }),
-    own: available.filter((k): k is O => !isContact(k) && !held.has(k.keyId)),
+    contacts: available
+      .filter(isContact)
+      .filter((c) => !ownKeyIds.has(c.keyId)),
+    own: available.filter((k): k is O => !isContact(k)),
   };
 }

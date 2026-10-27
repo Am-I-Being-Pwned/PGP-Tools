@@ -37,6 +37,7 @@ import { importable, prepareImport } from "../../lib/import/prepare";
 import { applyReview } from "../../lib/import/review";
 import { isPublicKind, isSecretKind } from "../../lib/import/types";
 import { importAndProtect } from "../../lib/protection/protect-flow";
+import { contactRecipients } from "../../lib/storage/contact-recipients";
 import { toast } from "../../lib/toast";
 import { errorMessage } from "../../lib/utils/errors";
 import { INPUT_CLASS } from "../../lib/utils/styles";
@@ -133,9 +134,13 @@ export function ImportKeyPage({
   // claims an identity another contact holds.
   const [reviewKeys, setReviewKeys] = useState<IncomingKey[] | null>(null);
   /** Show the Review instead of the single-key preview when there is more
-   *  than one key, or the key collides with someone's identity. */
+   *  than one key, the key collides with someone's identity, or an update
+   *  would leave only keys the user turned off. */
   const showKeys = (keys: IncomingKey[]): boolean => {
-    if (keys.length > 1 || keys.some((k) => k.conflict)) {
+    if (
+      keys.length > 1 ||
+      keys.some((k) => k.conflict !== undefined || k.allKeysOff === true)
+    ) {
       setReviewKeys(keys);
       setStep("review");
       return true;
@@ -318,6 +323,12 @@ export function ImportKeyPage({
       expiresAt: c.expiresAt,
       ...(c.source ? { source: c.source } : {}),
       ...(c.revoked ? { revoked: true } : {}),
+      // Every key on the record, not just its head: an SSH import is
+      // checked against all of them (see `sshKeyHolders`).
+      ...(c.recipients
+        ? { recipientIds: contactRecipients(c).map((r) => r.keyId) }
+        : {}),
+      ...(c.alias ? { alias: c.alias } : {}),
     })),
   });
 
@@ -351,7 +362,11 @@ export function ImportKeyPage({
       // nothing in the text says which -- so the preview asks, instead
       // of the bulk import below quietly filing three contacts the user
       // then cannot label or merge.
-      if (prepared.groupProposal) {
+      //
+      // Not when one of them claims someone's identity: that key has to
+      // be decided on its own row of the Review, and the offer's "blank
+      // name imports them separately" would save it without asking.
+      if (prepared.groupProposal && !worthImporting.some((k) => k.conflict)) {
         setGroupSeparates(worthImporting);
         setGroupName("");
         setIncoming(prepared.groupProposal);
@@ -454,12 +469,15 @@ export function ImportKeyPage({
       // name the request was actually made for.
       response.username,
       response.lines,
-      { contacts: existingContacts },
+      { contacts: existingContacts, own: existingKeys },
       // Keys the worker's caps held back. Passed through so the
       // preview can say the list is partial instead of asserting
       // "every key listed above" over a truncated one.
       { omitted: response.omitted },
     );
+    // An account carrying a key someone already holds, or a name that
+    // reads as a contact's, is decided on the Review like a paste.
+    if (showKeys(prepared.keys)) return;
     setIncoming(prepared.keys[0]);
     setStep("preview");
   };

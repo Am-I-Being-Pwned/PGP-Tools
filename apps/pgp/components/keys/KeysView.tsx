@@ -842,6 +842,27 @@ export function KeysView({
                 key={entry.id}
                 target={target}
                 onBack={nav.pop}
+                clash={
+                  target.kind === "contact"
+                    ? contactClashes(contacts, myKeys).get(target.contact.keyId)
+                    : undefined
+                }
+                onShowHolder={(holder) => {
+                  const contact = contacts.find(
+                    (c) => c.keyId === holder.keyId,
+                  );
+                  const own = myKeys.find((k) => k.keyId === holder.keyId);
+                  if (contact)
+                    nav.push({
+                      page: "details",
+                      target: { kind: "contact", contact },
+                    });
+                  else if (own)
+                    nav.push({
+                      page: "details",
+                      target: { kind: "own", keyBlob: own },
+                    });
+                }}
                 onSetVerified={
                   target.kind === "contact" &&
                   onSetContactVerified &&
@@ -1153,13 +1174,11 @@ function ContactsList({
 }) {
   const [search, setSearch] = useState("");
   const { copy } = useCopyToClipboard();
-  // PGP contacts only: an SSH key's "name" is a machine comment.
+  // SSH contacts too: an SSH key's comment is the contact's name, it is
+  // whatever the `.pub` file said, and `alice@corp.com` as a comment
+  // claims that address as plainly as a User ID does.
   const clashes = useMemo(
-    () =>
-      contactClashes(
-        contacts.filter((c) => isPgpRecord(c)),
-        ownKeys.filter((k) => isPgpRecord(k)),
-      ),
+    () => contactClashes(contacts, ownKeys),
     [contacts, ownKeys],
   );
 

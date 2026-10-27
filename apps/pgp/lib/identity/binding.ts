@@ -10,23 +10,44 @@
  * the import screen asks before anything that collides is saved.
  */
 
+import { CONFUSABLE, DOT_LOOKALIKES, stripInvisible } from "../utils/lookalike";
+
 /** Anything shaped like an address, wherever it sits in a User ID. */
 const ADDRESS = /[^\s<>()[\]"',;:]+@[^\s<>()[\]"',;:]+/g;
 
 /**
- * Every address a User ID shows, lower-cased. Not just the canonical
- * trailing "<a@b>": "Alice alice@x", "Alice <alice@x> (work)" and
- * "Alice <alice@x" display that address just as plainly, so they claim
- * it just as much.
+ * A User ID as it READS, which is what two of them are compared on:
+ * compatibility forms folded (NFKC: fullwidth "ａｌｉｃｅ＠" is "alice@")
+ * and every character that draws nothing taken out (`INVISIBLE`: zero-
+ * width and format characters, variation selectors, tag characters, the
+ * Hangul fillers). "alice@corp.com" followed by U+FE0F is not a
+ * different address to anyone looking at it, so it must not be a
+ * different address to the conflict check either -- the engine strips
+ * these from new keys, and this catches what it did not (records stored
+ * before it did, text from anywhere else).
+ */
+export function readableForm(text: string): string {
+  return stripInvisible(text.normalize("NFKC"));
+}
+
+/**
+ * Every address a User ID shows, in its readable form (see
+ * `readableForm`), lower-cased, trailing dots dropped. Not just the
+ * canonical trailing "<a@b>": "Alice alice@x", "Alice <alice@x> (work)"
+ * and "Alice <alice@x" display that address just as plainly, so they
+ * claim it just as much. An address-only User ID whose name is nothing
+ * but an invisible character is caught here, by its address.
  */
 export function emailsOf(userId: string): string[] {
-  return [
-    ...new Set(
-      (userId.match(ADDRESS) ?? []).map((a) =>
-        a.replace(/\.+$/, "").toLowerCase(),
-      ),
-    ),
-  ];
+  return [...new Set(addressesOf(userId).map((a) => a.toLowerCase()))];
+}
+
+/** `emailsOf` before lower-casing: an address skeleton needs to know
+ *  which letters were a capital I (see `addressSkeletons`). */
+function addressesOf(userId: string): string[] {
+  return (readableForm(userId).match(ADDRESS) ?? []).map((a) =>
+    a.replace(/\.+$/, ""),
+  );
 }
 
 /** The first address in a User ID (see `emailsOf`), or null. */
@@ -36,118 +57,17 @@ export function emailOf(userId: string): string | null {
 
 /** The name part of a User ID: "Carol Lane" from "Carol Lane <c@d>",
  *  "Carol Lane c@d" or "Carol Lane (work) <c@d>" -- every bracketed
- *  group and address taken out, wherever it is. */
+ *  group and address taken out, wherever it is, in its readable form
+ *  (see `readableForm`), so an address hidden behind an invisible
+ *  character is taken out like any other. */
 export function nameOf(userId: string): string {
-  return userId
+  return readableForm(userId)
     .replace(/<[^<>]*>?/g, " ")
     .replace(/\([^()]*\)?/g, " ")
     .replace(ADDRESS, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
-
-/**
- * Letters that render like a Latin letter without being one, mapped to
- * it -- a hand-picked subset of the Unicode confusables data (UTS #39)
- * covering the scripts that imitate Latin names in practice: Cyrillic,
- * Greek, and the Latin look-alikes. Digits and pipes that pass for
- * letters ("Car0l", "|ane") are folded the same way.
- */
-const CONFUSABLE = new Map<string, string>([
-  ["\u0030", "o"],
-  ["\u0031", "l"],
-  ["\u007c", "l"],
-  ["\u0131", "i"],
-  ["\u01c0", "l"],
-  ["\u0251", "a"],
-  ["\u0261", "g"],
-  ["\u0269", "i"],
-  ["\u0391", "a"],
-  ["\u0392", "b"],
-  ["\u0395", "e"],
-  ["\u0396", "z"],
-  ["\u0397", "h"],
-  ["\u0399", "i"],
-  ["\u039a", "k"],
-  ["\u039c", "m"],
-  ["\u039d", "n"],
-  ["\u039f", "o"],
-  ["\u03a1", "p"],
-  ["\u03a4", "t"],
-  ["\u03a5", "y"],
-  ["\u03a7", "x"],
-  ["\u03b1", "a"],
-  ["\u03b9", "i"],
-  ["\u03ba", "k"],
-  ["\u03bd", "v"],
-  ["\u03bf", "o"],
-  ["\u03c1", "p"],
-  ["\u03c4", "t"],
-  ["\u03c5", "u"],
-  ["\u03c7", "x"],
-  ["\u0405", "s"],
-  ["\u0406", "i"],
-  ["\u0408", "j"],
-  ["\u0410", "a"],
-  ["\u0412", "b"],
-  ["\u0415", "e"],
-  ["\u041a", "k"],
-  ["\u041c", "m"],
-  ["\u041d", "h"],
-  ["\u041e", "o"],
-  ["\u0420", "p"],
-  ["\u0421", "c"],
-  ["\u0422", "t"],
-  ["\u0423", "y"],
-  ["\u0425", "x"],
-  ["\u0430", "a"],
-  ["\u0432", "b"],
-  ["\u0435", "e"],
-  ["\u043a", "k"],
-  ["\u043c", "m"],
-  ["\u043d", "h"],
-  ["\u043e", "o"],
-  ["\u0440", "p"],
-  ["\u0441", "c"],
-  ["\u0442", "t"],
-  ["\u0443", "y"],
-  ["\u0445", "x"],
-  ["\u0455", "s"],
-  ["\u0456", "i"],
-  ["\u0457", "i"],
-  ["\u0458", "j"],
-  ["\u0491", "r"],
-  ["\u04c0", "l"],
-  ["\u04cf", "l"],
-  ["\u0501", "d"],
-  ["\u051b", "q"],
-  ["\u051d", "w"],
-  ["\u1d00", "a"],
-  ["\u0262", "g"],
-  ["\u0274", "n"],
-  ["\u0280", "r"],
-  ["\u028f", "y"],
-  ["\u0299", "b"],
-  ["\u029c", "h"],
-  ["\u029f", "l"],
-  ["\u026a", "i"],
-  ["\u1d04", "c"],
-  ["\u1d05", "d"],
-  ["\u1d07", "e"],
-  ["\u1d0a", "j"],
-  ["\u1d0b", "k"],
-  ["\u1d0d", "m"],
-  ["\u1d0f", "o"],
-  ["\u1d18", "p"],
-  ["\u1d1b", "t"],
-  ["\u1d1c", "u"],
-  ["\u1d20", "v"],
-  ["\u1d21", "w"],
-  ["\u1d22", "z"],
-  ["\ua731", "s"],
-  ["\u212a", "k"],
-  ["\u212b", "a"],
-]);
 
 /** Letter pairs that read as one letter at a glance ("rn" as "m"). */
 const PAIRS: [RegExp, string][] = [
@@ -168,22 +88,62 @@ const PAIRS: [RegExp, string][] = [
  * names clash when any pair matches (see `nameSkeletons`).
  */
 export function nameSkeleton(name: string, capitalI: "i" | "l" = "i"): string {
+  return skeleton(name, capitalI, NAME_DROPS);
+}
+
+/** What a name skeleton leaves out: accents (as marks, once decomposed),
+ *  invisible characters, punctuation, symbols and spaces. */
+const NAME_DROPS =
+  /[\p{M}\p{Cf}\p{Default_Ignorable_Code_Point}\p{P}\p{S}\p{Z}\s]/u;
+
+/** What an address skeleton leaves out: accents and invisible characters
+ *  only. Its punctuation is part of what it says -- "a.lice" and "alice"
+ *  are two addresses that do not read the same. */
+const ADDRESS_DROPS = /[\p{M}\p{Cf}\p{Default_Ignorable_Code_Point}\s]/u;
+
+function skeleton(
+  text: string,
+  capitalI: "i" | "l",
+  drops: RegExp,
+  dots = false,
+): string {
   let out = "";
-  for (const ch of name.normalize("NFKD")) {
-    const mapped = CONFUSABLE.get(ch) ?? (ch === "I" ? capitalI : undefined);
+  // The same readable form addresses are compared in, then decomposed so
+  // accents fall away as marks.
+  for (const ch of readableForm(text).normalize("NFKD")) {
+    const mapped =
+      (dots && DOT_LOOKALIKES.has(ch) ? "." : undefined) ??
+      CONFUSABLE.get(ch) ??
+      (ch === "I" ? capitalI : undefined);
     if (mapped !== undefined) {
       out += mapped;
       continue;
     }
-    if (
-      /[\p{M}\p{Cf}\p{Default_Ignorable_Code_Point}\p{P}\p{S}\p{Z}\s]/u.test(ch)
-    )
-      continue;
+    if (drops.test(ch)) continue;
     const lower = ch.toLowerCase();
     out += CONFUSABLE.get(lower) ?? lower;
   }
   for (const [pair, letter] of PAIRS) out = out.replace(pair, letter);
   return out;
+}
+
+/**
+ * What an address LOOKS like, the way `nameSkeletons` is for a name:
+ * look-alike letters mapped to Latin (and look-alike dots to a dot),
+ * accents dropped, case ignored, and
+ * both readings of a capital I -- local part and domain alike, so
+ * "alıce@corp.com" (dotless ı) and "alice@cοrp.com" (Greek ο) both read
+ * as alice@corp.com. Addresses used to be compared only exactly, and an
+ * address-only User ID has no name to fall back on, so a lookalike of
+ * one passed every check.
+ */
+export function addressSkeletons(address: string): string[] {
+  return [
+    ...new Set([
+      skeleton(address, "i", ADDRESS_DROPS, true),
+      skeleton(address, "l", ADDRESS_DROPS, true),
+    ]),
+  ].filter(Boolean);
 }
 
 /** Both readings of a name's capital I (see `nameSkeleton`). */
@@ -208,11 +168,19 @@ export interface IdentityHolder {
 
 export interface IdentityConflict {
   /** "address": the same email as another key. "name": a different
-   *  address under a name that reads the same. */
-  kind: "address" | "name";
+   *  address under a name that reads the same. "key": an SSH import
+   *  carries a key that a contact (or the user) already holds -- it
+   *  would add keys to that person, or group theirs with others. Only
+   *  the import sets it (`withIdentityConflicts`); the contact list and
+   *  the picker compare names and addresses. */
+  kind: "address" | "name" | "key";
   /** Who already holds it -- revoked keys only when nobody live does
    *  (see `includeRevoked`). */
   holders: IdentityHolder[];
+  /** For "address": the two addresses only READ the same (the same
+   *  `addressSkeletons`) -- they are not one address. Never a rotation,
+   *  so nothing offers to replace the holder with it. */
+  lookalike?: true;
 }
 
 function claims(
@@ -224,6 +192,18 @@ function claims(
     o.userIds.some((u) => emailsOf(u).some((e) => emails.has(e))),
   );
   if (byAddress.length > 0) return { kind: "address", holders: byAddress };
+
+  const looks = new Set(
+    incoming.userIds.flatMap((u) => addressesOf(u).flatMap(addressSkeletons)),
+  );
+  const byLookalike = rivals.filter((o) =>
+    o.userIds.some((u) =>
+      addressesOf(u).some((a) => addressSkeletons(a).some((k) => looks.has(k))),
+    ),
+  );
+  if (byLookalike.length > 0) {
+    return { kind: "address", lookalike: true, holders: byLookalike };
+  }
 
   const skeletons = new Set(
     incoming.userIds.flatMap((u) => nameSkeletons(nameOf(u))),
@@ -238,8 +218,9 @@ function claims(
 
 /**
  * Whether `incoming` claims an identity another key already holds: an
- * address (case-insensitive, anywhere in a User ID) first, else a name
- * with the same skeleton. The same fingerprint is never a conflict --
+ * address (case-insensitive, anywhere in a User ID) first, then an
+ * address that reads the same (`addressSkeletons`), else a name with the
+ * same skeleton. The same fingerprint is never a conflict --
  * that is an update of the same key.
  *
  * Revoked keys don't hold an identity -- unless `includeRevoked`, where
@@ -305,4 +286,12 @@ export function contactClashes(
     ],
     (h) => !h.own,
   );
+}
+
+/** A key id as the panel shows it beside a name: the 16-hex OpenPGP key
+ *  id, or an SSH fingerprint (`SHA256:` + base64) whole -- it is
+ *  case-sensitive, and its tail alone is not what `ssh-keygen -l`
+ *  prints. */
+export function displayKeyId(keyId: string): string {
+  return keyId.startsWith("SHA256:") ? keyId : keyId.slice(-16).toUpperCase();
 }

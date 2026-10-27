@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   CheckIcon,
+  ChevronRightIcon,
   CopyIcon,
   DownloadIcon,
   LockIcon,
@@ -9,11 +10,16 @@ import {
   StarIcon,
   StarOffIcon,
   Trash2Icon,
+  TriangleAlertIcon,
 } from "lucide-react";
 
 import { Block } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
 
+import type {
+  IdentityConflict,
+  IdentityHolder,
+} from "../../lib/identity/binding";
 import type { KeyDetails, KeyInfo } from "../../lib/pgp/types";
 import type {
   ContactRecipient,
@@ -25,6 +31,7 @@ import type { KeyPreviewChip } from "./KeyPreviewBody";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import { t } from "../../lib/i18n";
 import { formatDate } from "../../lib/i18n/format";
+import { displayKeyId } from "../../lib/identity/binding";
 import { downloadPublicKey } from "../../lib/keys/export-bundle";
 import { parseKey, parseKeyDetails } from "../../lib/pgp/wasm";
 import {
@@ -38,6 +45,7 @@ import { toast } from "../../lib/toast";
 import { downloadText } from "../../lib/utils/download";
 import { errorMessage } from "../../lib/utils/errors";
 import { parseUserId } from "../../lib/utils/key-naming";
+import { MarkedText } from "../shared/MarkedText";
 import {
   SlideOverHeader,
   SlideOverPanel,
@@ -63,6 +71,11 @@ interface KeyDetailsPageProps {
   /** Contacts only: record (or withdraw) that the user compared this
    *  key's fingerprint with its owner. */
   onSetVerified?: (verified: boolean) => Promise<void>;
+  /** Contacts only: another key claims this one's address or name --
+   *  the pill on the card, spelled out here with who. */
+  clash?: IdentityConflict;
+  /** Open the details of one of the `clash` holders. */
+  onShowHolder?: (holder: IdentityHolder) => void;
   /** True when this is the user's configured default key. */
   isDefault?: boolean;
   /** Own keys only: set (true) or clear (false) this key as the
@@ -199,6 +212,61 @@ function RevocationSection({
   );
 }
 
+// ── identity clash (contacts) ────────────────────────────────────────
+
+/** Who else claims this contact's address or name, one line per key,
+ *  each a click from its own details: the card's "Same address" pill
+ *  says THAT there is another key; this says which, so the user can
+ *  compare the two fingerprints with the person. */
+function ClashBand({
+  clash,
+  onShowHolder,
+}: {
+  clash: IdentityConflict;
+  onShowHolder?: (holder: IdentityHolder) => void;
+}) {
+  return (
+    <Block className="space-y-1.5 bg-[#252012] px-3.5 py-2.5">
+      {clash.holders.map((holder) => {
+        const args = {
+          name: parseUserId(holder.userIds[0] ?? "").name,
+          keyid: displayKeyId(holder.keyId),
+        };
+        return (
+          <div key={holder.keyId} className="flex items-start gap-1.5">
+            <TriangleAlertIcon className="text-warn mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <p className="text-warn min-w-0 flex-1 text-xs leading-relaxed">
+              <MarkedText
+                text={
+                  clash.kind === "address"
+                    ? clash.lookalike
+                      ? t("keys_contact_lookalike_address_title", args)
+                      : t("keys_contact_same_address_title", args)
+                    : t("keys_contact_same_name_title", args)
+                }
+              />
+            </p>
+            {onShowHolder && (
+              <button
+                type="button"
+                aria-label={t("keys_key_details")}
+                title={t("keys_key_details")}
+                onClick={() => onShowHolder(holder)}
+                className="text-warn hover:bg-warn/12 -my-0.5 shrink-0 rounded p-0.5 transition-colors"
+              >
+                <ChevronRightIcon className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+        );
+      })}
+      <p className="text-muted-foreground pl-5 text-xs leading-relaxed">
+        {t("keys_clash_check")}
+      </p>
+    </Block>
+  );
+}
+
 // ── verification (contacts) ──────────────────────────────────────────
 
 /** "Mark as verified": the user's own record that they compared this
@@ -274,6 +342,8 @@ export function KeyDetailsPage({
   onRename,
   onCheckRevocation,
   onSetVerified,
+  clash,
+  onShowHolder,
   isDefault,
   onSetDefault,
   onDelete,
@@ -297,7 +367,11 @@ export function KeyDetailsPage({
   // More than one key means this contact is a PERSON with several
   // machines, not a certificate: every key gets a row (see
   // `sshGroupKeyFacts`) and every row gets an include/exclude control.
-  const multiRecipient = !isOwn && recipients.length > 1;
+  // So does a single key the user turned off (a refresh can leave a
+  // contact so): without its row control it could never be turned back
+  // on.
+  const multiRecipient =
+    !isOwn && (recipients.length > 1 || recipients.some(isRecipientDisabled));
   const activeCount = recipients.filter((r) => !isRecipientDisabled(r)).length;
   // Which engine this key belongs to. Everything below that reaches for
   // an OpenPGP concept -- the certificate parse, the revocation
@@ -608,6 +682,9 @@ export function KeyDetailsPage({
           error={error}
           isOwn={isOwn}
           securityWarning={securityWarning}
+          statusStrip={
+            clash && <ClashBand clash={clash} onShowHolder={onShowHolder} />
+          }
           addedAt={addedAt}
           lastUsedAt={isOwn ? lastUsedAt : undefined}
           rowAction={multiRecipient ? renderRecipientAction : undefined}

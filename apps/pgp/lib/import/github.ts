@@ -5,8 +5,12 @@ import type { ContactGroup, IncomingKey, RejectedLine } from "./types";
 import { MAX_KEYS } from "../github/response";
 import { t, tn } from "../i18n";
 import { parseSshRecipient } from "../pgp/wasm";
-import { contactRecipients, sameSource } from "../storage/contacts";
-import { engineRejection } from "./prepare";
+import {
+  contactRecipients,
+  isRecipientDisabled,
+  sameSource,
+} from "../storage/contacts";
+import { engineRejection, withIdentityConflicts } from "./prepare";
 import { PENDING_KEY_ID } from "./types";
 
 /**
@@ -31,6 +35,16 @@ import { PENDING_KEY_ID } from "./types";
  *  recipient list -- neither of which survives that flattening. */
 export interface GithubStoredContacts {
   contacts: readonly PublicContactKey[];
+  /** The user's own keys. An account listing one of them is checked
+   *  like any other key the user already holds (see
+   *  `classifyGithubGroup`). */
+  own?: readonly OwnKeyRef[];
+}
+
+/** What a lookup needs of one of the user's own keys. */
+export interface OwnKeyRef {
+  keyId: string;
+  userIds: string[];
 }
 
 /** The auto-label. GitHub accounts have no display name in this
@@ -79,6 +93,7 @@ export function githubGroup(
 export function classifyGithubGroup(
   group: ContactGroup,
   contacts: readonly PublicContactKey[],
+  own: readonly OwnKeyRef[] = [],
 ): IncomingKey {
   const base = {
     kind: "ssh-public" as const,
@@ -103,28 +118,95 @@ export function classifyGithubGroup(
     };
   }
 
-  const head = group.members[0];
+  const existing = contacts.find((c) =>
+    sameSource(c, { source: group.source }),
+  );
+
+  // Keys somebody else already holds: one of the user's own, or one on a
+  // contact that is not this account's record. The head -- the stored
+  // record's id -- is never one of them. Headed by a contact's key, the
+  // save upserted over that contact (an account listing Alice's key
+  // first replaced the hand-added Alice); headed by an own key, the
+  // record shared an id with "You" and the picker resolved one as the
+  // other. So the head is the first key nobody else holds.
+  const ownIds = new Set(own.map((k) => k.keyId));
+  const others = contacts.filter((c) => c !== existing);
+  const elsewhere = new Set([
+    ...ownIds,
+    ...others.flatMap((c) => contactRecipients(c).map((r) => r.keyId)),
+  ]);
+  const fetched = new Set(group.members.map((r) => r.keyId));
+  const stored = existing
+    ? new Set(contactRecipients(existing).map((r) => r.keyId))
+    : null;
+  const added = stored
+    ? [...fetched].filter((fp) => !stored.has(fp)).length
+    : 0;
+  const removed = stored
+    ? [...stored].filter((fp) => !fetched.has(fp)).length
+    : 0;
+  const changed = added > 0 || removed > 0;
+
+  // An account whose every key is held elsewhere has nothing new to save
+  // -- unless it is a REFRESH of this account's record and the set moved.
+  // Then the record must change (a key the account no longer lists has
+  // to stop being encrypted to), so it keeps its own id while that is
+  // still listed and no other contact has taken it; the keys held
+  // elsewhere still mark it (`withIdentityConflicts`), so the Review
+  // asks first.
+  const head =
+    group.members.find((m) => !elsewhere.has(m.keyId)) ??
+    (existing && changed
+      ? group.members.find(
+          (m) =>
+            m.keyId === existing.keyId &&
+            !others.some((c) => c.keyId === m.keyId),
+        )
+      : undefined);
+  const members = head
+    ? [head, ...group.members.filter((m) => m !== head)]
+    : group.members;
   const withHead = {
     ...base,
+    group: { ...group, members },
     // The head member's, so every path that reads an IncomingKey's
     // identity -- the preview, the highlight-after-import, the map key --
     // works on a group without knowing it is one. It is also what the
     // stored record's `keyId`/`armoredPublicKey` will be.
-    keyId: head.keyId,
-    publicArmored: head.armored,
+    keyId: members[0].keyId,
+    publicArmored: members[0].armored,
   };
+  const changes = [
+    ...(added > 0 ? [tn("import_change_keys_added", added)] : []),
+    ...(removed > 0 ? [tn("import_change_keys_removed", removed)] : []),
+  ];
 
-  const existing = contacts.find((c) =>
-    sameSource(c, { source: group.source }),
-  );
+  if (!head && existing && changed) {
+    // The account's record has to change and there is no id it can take
+    // that is not somebody else's: saving would land on that contact.
+    // Never "nothing has changed" -- the keys it dropped are still being
+    // encrypted to -- so it is refused, saying so.
+    return {
+      ...withHead,
+      status: "rejected",
+      changes,
+      rejection: t("import_github_refresh_all_held", {
+        username: group.source?.user ?? "",
+      }),
+      existingAddedAt: existing.addedAt,
+    };
+  }
+  if (!head) {
+    return {
+      ...withHead,
+      status: "duplicate",
+      changes: [],
+      existingAddedAt: existing?.addedAt ?? null,
+    };
+  }
   if (!existing) return { ...withHead, status: "new", changes: [] };
 
-  const stored = new Set(contactRecipients(existing).map((r) => r.keyId));
-  const fetched = new Set(group.members.map((r) => r.keyId));
-  const added = [...fetched].filter((fp) => !stored.has(fp)).length;
-  const removed = [...stored].filter((fp) => !fetched.has(fp)).length;
-
-  if (added === 0 && removed === 0) {
+  if (!changed) {
     return {
       ...withHead,
       status: "duplicate",
@@ -133,14 +215,24 @@ export function classifyGithubGroup(
     };
   }
 
+  // Every key the account still lists is one the user turned off on this
+  // record. Saved, the record would hold only keys they said not to use,
+  // and nothing would be left to encrypt to; that is asked about, not
+  // done quietly (and the record is unusable for encryption until a key
+  // is turned back on -- see `activeRecipients`).
+  const off = new Set(
+    contactRecipients(existing)
+      .filter(isRecipientDisabled)
+      .map((r) => r.keyId),
+  );
+  const allOff = [...fetched].every((fp) => off.has(fp));
+
   return {
     ...withHead,
     status: "update",
-    changes: [
-      ...(added > 0 ? [tn("import_change_keys_added", added)] : []),
-      ...(removed > 0 ? [tn("import_change_keys_removed", removed)] : []),
-    ],
+    changes,
     existingAddedAt: existing.addedAt,
+    ...(allOff ? { allKeysOff: true as const } : {}),
   };
 }
 
@@ -222,13 +314,36 @@ export async function prepareGithubImport(
     }
   }
 
+  // Then the same checks a paste gets: a key someone already holds, and
+  // the account's label against every contact's name (a GitHub account
+  // called "alice" is not the Alice in the contact list just by saying
+  // so).
   return {
-    keys: [
-      classifyGithubGroup(
-        githubGroup(username, members, rejected, now),
-        stored.contacts,
-      ),
-    ],
+    keys: withIdentityConflicts(
+      [
+        classifyGithubGroup(
+          githubGroup(username, members, rejected, now),
+          stored.contacts,
+          stored.own,
+        ),
+      ],
+      {
+        own: (stored.own ?? []).map((k) => ({
+          keyId: k.keyId,
+          userIds: k.userIds,
+          armored: "",
+        })),
+        contacts: stored.contacts.map((c) => ({
+          keyId: c.keyId,
+          userIds: c.userIds,
+          armored: c.armoredPublicKey,
+          recipientIds: contactRecipients(c).map((r) => r.keyId),
+          ...(c.alias ? { alias: c.alias } : {}),
+          ...(c.source ? { source: c.source } : {}),
+          ...(c.revoked ? { revoked: true } : {}),
+        })),
+      },
+    ),
     // No secret material can arrive this way: a `.pub` line is a public
     // half, and the panel never reaches the protect step for one.
     secrets: new Map(),

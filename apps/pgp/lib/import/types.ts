@@ -155,6 +155,11 @@ export interface IncomingKey {
    *  this import) already holds -- see `identity/binding`. Never saved
    *  without the user choosing what to do. */
   conflict?: IdentityConflict;
+  /** For an `update` of a fetched person: every key the source still
+   *  lists is one the user turned off on the stored record, so saving it
+   *  leaves nothing to encrypt to. Asked about like a conflict, and starts
+   *  on Skip (see `review.ts`). */
+  allKeysOff?: true;
   /** Present when this "key" is really a person with several keys (a
    *  GitHub lookup). `keyId`/`publicArmored` stay the FIRST member's, so
    *  nothing that reads them needs to know. */

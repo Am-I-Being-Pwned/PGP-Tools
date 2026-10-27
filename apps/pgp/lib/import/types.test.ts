@@ -122,6 +122,8 @@ describe("IncomingKey", () => {
       // type tag, the query it was fetched for, and a timestamp. No key
       // material of either half.
       source: true,
+      // A flag: every key a refresh keeps is one the user turned off.
+      allKeysOff: true,
     };
     const names = Object.keys(FIELDS);
 
