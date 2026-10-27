@@ -367,6 +367,10 @@
     "message": "This doesn't look like PGP data. Make sure you pasted the full armored block, including the BEGIN and END lines.",
     "description": "User-facing error: the input could not be parsed as PGP at all. 'BEGIN' and 'END' refer to the literal armor header lines."
   },
+  "app_error_unsigned_text_around_signature": {
+    "message": "This contains text outside the signed message, which the signature doesn't cover. Paste only the signed message, from the BEGIN line to the END line.",
+    "description": "User-facing error in verify mode: the pasted text has words before or after the cleartext-signed block (or more than one block), so it is refused rather than shown as verified. 'BEGIN' and 'END' refer to the literal armor lines."
+  },
   "app_error_storage_full": {
     "message": "Browser storage is full, so this couldn't be saved. Remove keys or contacts you no longer need, then try again.",
     "description": "User-facing error: the browser's extension storage quota is exhausted."

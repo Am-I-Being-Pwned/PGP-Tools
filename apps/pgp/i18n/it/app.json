@@ -275,6 +275,9 @@
   "app_error_not_pgp_data": {
     "message": "Questi non sembrano dati PGP. Assicurati di aver incollato l'intero blocco armored, comprese le righe BEGIN ed END."
   },
+  "app_error_unsigned_text_around_signature": {
+    "message": "Contiene testo al di fuori del messaggio firmato, che la firma non copre. Incolla solo il messaggio firmato, dalla riga BEGIN alla riga END."
+  },
   "app_error_storage_full": {
     "message": "Lo spazio di archiviazione del browser è pieno, quindi non è stato possibile salvare. Rimuovi le chiavi o i contatti che non ti servono più, poi riprova."
   }

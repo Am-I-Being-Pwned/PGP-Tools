@@ -1393,12 +1393,170 @@ pub fn sign_message(text: &str, signing_key_armored: &str) -> Result<String, Str
     cleartext_sign(text, &cert)
 }
 
+const CLEARTEXT_BEGIN: &str = "-----BEGIN PGP SIGNED MESSAGE-----";
+const CLEARTEXT_SIG_BEGIN: &str = "-----BEGIN PGP SIGNATURE-----";
+const CLEARTEXT_SIG_END: &str = "-----END PGP SIGNATURE-----";
+const MESSAGE_BEGIN: &str = "-----BEGIN PGP MESSAGE-----";
+const MESSAGE_END: &str = "-----END PGP MESSAGE-----";
+
+const OUTSIDE_SIGNED: &str =
+    "This message has text outside the signed part, which the signature does not cover";
+
+/// What `check_signed_framing` found: for cleartext, the body as the user
+/// sees it (dash-escaping undone), to hold against what Sequoia verified.
+enum SignedFraming {
+    Cleartext(String),
+    Inline,
+}
+
+/// Refuse a signed message that shows the user anything the signature
+/// does not cover. Sequoia's verdict is right about the part it hashed,
+/// but it tolerates a lot around that part -- text before BEGIN and
+/// after END, prose in armor headers, a whitespace "quote prefix" that
+/// it strips from every body line -- and the user reads the paste, not
+/// what was hashed. A "verified" card above any of that lends the
+/// signer's name to words they never signed.
+///
+/// So this does not try to predict Sequoia's tolerances. It accepts one
+/// strict shape -- BEGIN at column 0, `Hash:` naming real algorithms,
+/// a closed set of armor headers, base64 lines, END last, only blank
+/// lines around -- and `check_cleartext_body` then requires the body on
+/// screen to equal the text Sequoia actually verified.
+fn check_signed_framing(signed_message: &str) -> Result<SignedFraming, String> {
+    const HASHES: &[&str] = &[
+        "MD5", "SHA1", "RIPEMD160", "SHA224", "SHA256", "SHA384", "SHA512", "SHA3-256",
+        "SHA3-512",
+    ];
+
+    if !signed_message.contains(CLEARTEXT_BEGIN) && !signed_message.contains(MESSAGE_BEGIN) {
+        // No block at all is a different mistake from text around one.
+        return Err("No armored data found".into());
+    }
+
+    // Anything another reader might break a line at, but `\n`-splitting
+    // would not, could hide a line from the checks below.
+    let msg = signed_message;
+    if msg.contains(['\u{2028}', '\u{2029}', '\u{85}', '\u{b}', '\u{c}']) {
+        return Err(OUTSIDE_SIGNED.into());
+    }
+    let mut lines: Vec<&str> = Vec::new();
+    for line in msg.split('\n') {
+        let line = line.strip_suffix('\r').unwrap_or(line);
+        if line.contains('\r') {
+            return Err(OUTSIDE_SIGNED.into());
+        }
+        lines.push(line);
+    }
+    let blank = |l: &&str| l.trim().is_empty();
+    let first = lines.iter().position(|l| !blank(l)).unwrap_or(lines.len());
+    let last = lines.iter().rposition(|l| !blank(l)).map_or(first, |i| i + 1);
+    let lines = &lines[first..last];
+
+    // Structural lines may carry trailing spaces, never leading ones.
+    let tidy = |l: &str| l.trim_end_matches([' ', '\t']).to_owned();
+    let hash_ok = |l: &str| {
+        l.strip_prefix("Hash: ")
+            .is_some_and(|v| v.split(',').all(|h| HASHES.contains(&h.trim())))
+    };
+    // Armor header values are unsigned text inside the block. `Charset`
+    // names a charset -- one token, no prose; `Version` and `Comment`
+    // carry tool names and URLs (GnuPG, GPGTools, OpenPGP.js) and stay
+    // free -- the UI shows the signed text on its own, apart from the
+    // paste, for exactly this.
+    let header_ok = |l: &str| {
+        let printable = |v: &str| v.chars().all(|c| c.is_ascii_graphic() || c == ' ');
+        let token = |v: &str| {
+            !v.is_empty()
+                && v.len() <= 40
+                && v.bytes().all(|b| b.is_ascii_alphanumeric() || b"-_.:".contains(&b))
+        };
+        l.strip_prefix("Charset: ")
+            .map(token)
+            .or_else(|| l.strip_prefix("Version: ").map(printable))
+            .or_else(|| l.strip_prefix("Comment: ").map(printable))
+            .unwrap_or(false)
+    };
+    let base64_ok = |l: &str| {
+        !l.is_empty()
+            && l.bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b == b'+' || b == b'/' || b == b'=')
+    };
+    // BEGIN line, optional armor headers, blank line, base64, END last.
+    let armored_ok = |rest: &[&str], end: &str| {
+        let Some((last, body)) = rest.split_last() else { return false };
+        let n = body.iter().take_while(|l| header_ok(&tidy(l))).count();
+        let body = &body[n..];
+        let body = match body.split_first() {
+            Some((sep, rest)) if tidy(sep).is_empty() => rest,
+            _ if n == 0 => body,
+            _ => return false,
+        };
+        tidy(last) == end && !body.is_empty() && body.iter().all(|l| base64_ok(&tidy(l)))
+    };
+
+    match lines.split_first() {
+        Some((begin, rest)) if tidy(begin) == MESSAGE_BEGIN => {
+            if armored_ok(rest, MESSAGE_END) {
+                Ok(SignedFraming::Inline)
+            } else {
+                Err(OUTSIDE_SIGNED.into())
+            }
+        }
+        Some((begin, rest)) if tidy(begin) == CLEARTEXT_BEGIN => {
+            let n = rest.iter().take_while(|l| hash_ok(&tidy(l))).count();
+            let Some((sep, rest)) = rest[n..].split_first() else {
+                return Err(OUTSIDE_SIGNED.into());
+            };
+            let Some(sig) = rest.iter().position(|l| tidy(l) == CLEARTEXT_SIG_BEGIN) else {
+                return Err(OUTSIDE_SIGNED.into());
+            };
+            if !tidy(sep).is_empty() || !armored_ok(&rest[sig + 1..], CLEARTEXT_SIG_END) {
+                return Err(OUTSIDE_SIGNED.into());
+            }
+            // A signed line starting with a dash is always escaped as "- ";
+            // a bare one is something a parser may read as a marker.
+            let mut body = Vec::with_capacity(sig);
+            for line in &rest[..sig] {
+                match line.strip_prefix("- ") {
+                    Some(unescaped) => body.push(unescaped),
+                    None if line.starts_with('-') => return Err(OUTSIDE_SIGNED.into()),
+                    None => body.push(line),
+                }
+            }
+            Ok(SignedFraming::Cleartext(body.join("\n")))
+        }
+        _ => Err(OUTSIDE_SIGNED.into()),
+    }
+}
+
+/// The cleartext body on screen must be the text that was verified.
+/// Trailing whitespace and final newlines are excluded from the cleartext
+/// hash (RFC 9580 7.2) and invisible, so neither side keeps them.
+fn check_cleartext_body(shown: &str, verified: &str) -> Result<(), String> {
+    let normal = |s: &str| {
+        s.split('\n')
+            .map(|l| l.strip_suffix('\r').unwrap_or(l).trim_end_matches([' ', '\t']))
+            .collect::<Vec<_>>()
+            .join("\n")
+            .trim_end_matches('\n')
+            .to_owned()
+    };
+    if normal(shown) == normal(verified) {
+        Ok(())
+    } else {
+        Err(OUTSIDE_SIGNED.into())
+    }
+}
+
 /// Verify a cleartext-signed message. Returns JSON `VerifyResult`.
 #[wasm_bindgen(js_name = "verify")]
 pub fn verify_message(
     signed_message: &str,
     verification_keys_json: &str,
 ) -> Result<String, String> {
+    // A file saved on Windows can lead with a BOM, which Sequoia refuses.
+    let signed_message = signed_message.strip_prefix('\u{feff}').unwrap_or(signed_message);
+    let framing = check_signed_framing(signed_message)?;
     let certs = parse_armored_certs(verification_keys_json)?;
 
     let helper = VerifyHelper {
@@ -1413,10 +1571,14 @@ pub fn verify_message(
         .str_err()?;
 
     let content = read_capped(&mut verifier, MAX_VERIFIED_BYTES, "signed message")?;
+    let text = String::from_utf8(content).str_err()?;
+    if let SignedFraming::Cleartext(shown) = &framing {
+        check_cleartext_body(shown, &text)?;
+    }
     let helper = verifier.into_helper();
 
     serde_json::to_string(&VerifyResult {
-        text: String::from_utf8(content).str_err()?,
+        text,
         signature_valid: helper.signature_status == "valid",
         signature_status: helper.signature_status.to_string(),
         signer_key_id: helper.signer_key_id,

@@ -543,6 +543,9 @@
   "app_error_tampered": {
     "message": "Error al verificar la firma - puede que este mensaje haya sido manipulado. No confíe en el contenido; pida al remitente que lo vuelva a enviar."
   },
+  "app_error_unsigned_text_around_signature": {
+    "message": "Contiene texto fuera del mensaje firmado, que la firma no cubre. Pega solo el mensaje firmado, desde la línea BEGIN hasta la línea END."
+  },
   "app_error_vault_locked": {
     "message": "Su bóveda está bloqueada, así que no se ha cambiado nada. Desbloquéela y vuelva a ejecutar la operación."
   },

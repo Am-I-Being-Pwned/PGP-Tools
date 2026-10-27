@@ -2130,6 +2130,117 @@ fn cleartext_signature_rejects_a_single_character_edit() {
     }
 }
 
+/// `gpg --sign --armor`: an armored inline-signed (not encrypted) message.
+fn inline_signed(text: &str, priv_armor: &str) -> String {
+    use openpgp::serialize::stream::{Armorer, LiteralWriter, Message, Signer};
+
+    let cert = openpgp::Cert::from_bytes(priv_armor.as_bytes()).unwrap();
+    let keypair = signing_keypair(&cert).unwrap();
+    let mut sink = Vec::new();
+    {
+        let message = Armorer::new(Message::new(&mut sink)).build().unwrap();
+        let message = Signer::new(message, keypair).unwrap().build().unwrap();
+        let mut message = LiteralWriter::new(message).build().unwrap();
+        std::io::Write::write_all(&mut message, text.as_bytes()).unwrap();
+        message.finalize().unwrap();
+    }
+    String::from_utf8(sink).unwrap()
+}
+
+#[test]
+fn cleartext_text_outside_the_signed_block_is_refused() {
+    // The signature only covers what sits between the markers, but the
+    // user reads the whole paste. A reused public signed post wrapped in
+    // an attacker's words must not come back with the signer's name on
+    // it -- not as valid, not as anything.
+    let (pub_armor, priv_armor) = adv_keypair();
+    let signed = sign_message("The quick brown fox.", &priv_armor).unwrap();
+    let keys = serde_json::to_string(&vec![&pub_armor]).unwrap();
+    let other = sign_message("A second notice.", &priv_armor).unwrap();
+    let with_comment = signed.replacen(
+        "-----BEGIN PGP SIGNED MESSAGE-----\n",
+        "-----BEGIN PGP SIGNED MESSAGE-----\nComment: pay account 12345678\n",
+        1,
+    );
+    assert_ne!(with_comment, signed, "test did not insert the header");
+
+    let hash_line = signed.lines().nth(1).unwrap().to_string();
+    let sig_begin = "-----BEGIN PGP SIGNATURE-----\n";
+    let sig_at = signed.find(sig_begin).unwrap();
+    let body_at = signed.find("\n\n").unwrap() + 2;
+    let end_at = signed.find("-----END PGP SIGNATURE-----").unwrap();
+    let inline = inline_signed("A notice.", &priv_armor);
+    let in_hash = |extra: &str| signed.replacen(&format!("{hash_line}\n"), &format!("{hash_line}{extra}\n"), 1);
+    let in_sig = |extra: &str| signed.replacen(sig_begin, &format!("{sig_begin}{extra}"), 1);
+
+    let wrapped = [
+        // Around the block.
+        format!("Pay invoices to account 12345678.\n\n{signed}"),
+        format!("{signed}\nP.S. Ignore the old account.\n"),
+        format!("Pay 12345678.\n{signed}\nP.S. Ignore the old account."),
+        format!("{signed}\n{other}"),
+        format!("Pay 12345678.\n{inline}"),
+        format!("{inline}\nP.S. Ignore the old account."),
+        // Inside the cleartext header.
+        with_comment,
+        in_hash("\nHash: Pay account 12345678 from now on"),
+        in_hash("\u{2028}Pay account 12345678\u{2028}"),
+        in_hash("\rPay account 12345678"),
+        in_hash("\u{85}Pay account 12345678"),
+        // Sequoia skips every line after a `Key: value` armor header.
+        in_sig("Note: Bob's account changed.\nPay account 12345678 from now on.\n\n"),
+        inline.replacen(
+            "-----BEGIN PGP MESSAGE-----\n",
+            "-----BEGIN PGP MESSAGE-----\nNote: from Alice\nPay account 12345678.\n\n",
+            1,
+        ),
+        // A whitespace "quote prefix" Sequoia strips from every body line:
+        // "10The quick..." verifies as "The quick...".
+        format!("  -----BEGIN PGP SIGNED MESSAGE-----\n  \n10{}", &signed[body_at..]),
+        format!("\t\t-----BEGIN PGP SIGNED MESSAGE-----\n\t\t\n10{}", &signed[body_at..]),
+        // Sequoia ends the signed text at any dash run + BEGIN PGP SIGNATURE.
+        format!(
+            "{}---BEGIN PGP SIGNATURE ends here\nNote: x\nPay 12345678.\n{}",
+            &signed[..sig_at],
+            &signed[sig_at..],
+        ),
+        format!("{}Pay 12345678.\n{}", &signed[..end_at], &signed[end_at..]),
+    ];
+
+    for input in wrapped {
+        let err = verify_message(&input, &keys).expect_err("wrapped message was not refused");
+        assert!(err.contains("outside the signed part"), "unexpected error: {err}");
+    }
+}
+
+#[test]
+fn cleartext_whitespace_and_line_endings_around_the_block_still_verify() {
+    // The guard must not turn ordinary copy-paste into a failure: blank
+    // lines around the block, CRLF, a BOM from a file saved on Windows,
+    // no `Hash:` header and a GPGTools `Comment:` all occur in the wild.
+    let (pub_armor, priv_armor) = adv_keypair();
+    let signed = sign_message("line one\n- dashed line\n-----BEGIN PGP SIGNATURE-----", &priv_armor)
+        .unwrap();
+    let keys = serde_json::to_string(&vec![&pub_armor]).unwrap();
+    let hash_line = signed.lines().nth(1).unwrap().to_string();
+    // Line-anchored: the body carries a dash-escaped copy of the marker.
+    let sig_begin = "\n-----BEGIN PGP SIGNATURE-----\n";
+
+    for input in [
+        signed.clone(),
+        format!("\n\n{signed}\n\n   \n"),
+        signed.replace('\n', "\r\n"),
+        format!("\u{feff}{signed}"),
+        signed.replacen(&format!("{hash_line}\n"), "", 1),
+        signed.replacen(sig_begin, &format!("{sig_begin}Comment: GPGTools - https://gpgtools.org\n"), 1),
+        inline_signed("A notice.", &priv_armor),
+    ] {
+        let json = verify_message(&input, &keys).unwrap_or_else(|e| panic!("{e}: {input:?}"));
+        let v: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(v["signatureStatus"], "valid", "input: {input:?}");
+    }
+}
+
 #[test]
 fn verification_against_an_attacker_chosen_key_is_never_valid() {
     // `valid` must mean "this key signed this", so supplying a DIFFERENT

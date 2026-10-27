@@ -673,6 +673,10 @@
     "message": "Signature verification failed - this message may have been tampered with. Don't trust the contents; ask the sender to re-send it.",
     "description": "User-facing error: the signature on a decrypted message did not verify."
   },
+  "app_error_unsigned_text_around_signature": {
+    "message": "This contains text outside the signed message, which the signature doesn't cover. Paste only the signed message, from the BEGIN line to the END line.",
+    "description": "User-facing error in verify mode: the pasted text has words before or after the cleartext-signed block (or more than one block), so it is refused rather than shown as verified. 'BEGIN' and 'END' refer to the literal armor lines."
+  },
   "app_error_vault_locked": {
     "message": "Your vault is locked, so nothing was changed. Unlock it and run this again.",
     "description": "User-facing error: the encrypted vault (keys and contacts store) is locked so the write was refused."

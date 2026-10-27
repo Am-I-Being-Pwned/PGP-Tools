@@ -543,6 +543,9 @@
   "app_error_tampered": {
     "message": "Échec de la vérification de la signature - ce message a peut-être été altéré. Ne faites pas confiance à son contenu ; demandez à l'expéditeur de le renvoyer."
   },
+  "app_error_unsigned_text_around_signature": {
+    "message": "Ceci contient du texte en dehors du message signé, que la signature ne couvre pas. Collez uniquement le message signé, de la ligne BEGIN à la ligne END."
+  },
   "app_error_vault_locked": {
     "message": "Votre coffre est verrouillé, rien n'a donc été modifié. Déverrouillez-le et relancez l'opération."
   },

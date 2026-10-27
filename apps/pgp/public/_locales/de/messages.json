@@ -543,6 +543,9 @@
   "app_error_tampered": {
     "message": "Signaturprüfung fehlgeschlagen - diese Nachricht wurde möglicherweise manipuliert. Vertrauen Sie dem Inhalt nicht; bitten Sie den Absender, sie erneut zu senden."
   },
+  "app_error_unsigned_text_around_signature": {
+    "message": "Dies enthält Text außerhalb der signierten Nachricht, den die Signatur nicht abdeckt. Fügen Sie nur die signierte Nachricht ein, von der BEGIN- bis zur END-Zeile."
+  },
   "app_error_vault_locked": {
     "message": "Ihr Tresor ist gesperrt, daher wurde nichts geändert. Entsperren Sie ihn und führen Sie den Vorgang erneut aus."
   },

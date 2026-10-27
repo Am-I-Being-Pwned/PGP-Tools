@@ -543,6 +543,9 @@
   "app_error_tampered": {
     "message": "Verifica della firma non riuscita - questo messaggio potrebbe essere stato manomesso. Non fidarti del contenuto; chiedi al mittente di inviarlo di nuovo."
   },
+  "app_error_unsigned_text_around_signature": {
+    "message": "Contiene testo al di fuori del messaggio firmato, che la firma non copre. Incolla solo il messaggio firmato, dalla riga BEGIN alla riga END."
+  },
   "app_error_vault_locked": {
     "message": "La tua cassaforte è bloccata, quindi non è stato modificato nulla. Sbloccala ed esegui di nuovo l'operazione."
   },

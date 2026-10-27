@@ -543,6 +543,9 @@
   "app_error_tampered": {
     "message": "签名验证失败，此消息可能已被篡改。请勿信任其内容；让发送者重新发送。"
   },
+  "app_error_unsigned_text_around_signature": {
+    "message": "其中包含签名消息之外的文本，签名并不涵盖这些内容。请只粘贴签名消息，从 BEGIN 行到 END 行。"
+  },
   "app_error_vault_locked": {
     "message": "你的保险库已锁定，因此未作任何更改。请解锁后再运行一次。"
   },

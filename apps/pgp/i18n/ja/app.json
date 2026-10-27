@@ -275,6 +275,9 @@
   "app_error_not_pgp_data": {
     "message": "これは PGP データではないようです。BEGIN 行と END 行を含む、アーマー形式のブロック全体を貼り付けたか確認してください。"
   },
+  "app_error_unsigned_text_around_signature": {
+    "message": "署名されたメッセージの外側に、署名の対象外のテキストが含まれています。BEGIN 行から END 行までの署名されたメッセージだけを貼り付けてください。"
+  },
   "app_error_storage_full": {
     "message": "ブラウザのストレージがいっぱいのため、保存できませんでした。不要になった鍵や連絡先を削除してから、やり直してください。"
   }

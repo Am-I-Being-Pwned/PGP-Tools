@@ -275,6 +275,9 @@
   "app_error_not_pgp_data": {
     "message": "Esto no parecen datos PGP. Asegúrese de pegar el bloque con armadura completo, incluidas las líneas BEGIN y END."
   },
+  "app_error_unsigned_text_around_signature": {
+    "message": "Contiene texto fuera del mensaje firmado, que la firma no cubre. Pega solo el mensaje firmado, desde la línea BEGIN hasta la línea END."
+  },
   "app_error_storage_full": {
     "message": "El almacenamiento del navegador está lleno, así que no se ha podido guardar. Quite las claves o los contactos que ya no necesite e inténtelo de nuevo."
   }

@@ -125,6 +125,7 @@ export interface MessageArgs {
   "app_error_storage_full": undefined;
   "app_error_symmetric_wrong_password": undefined;
   "app_error_tampered": undefined;
+  "app_error_unsigned_text_around_signature": undefined;
   "app_error_vault_locked": undefined;
   "app_error_weak_algorithm": undefined;
   "app_error_weak_password": undefined;

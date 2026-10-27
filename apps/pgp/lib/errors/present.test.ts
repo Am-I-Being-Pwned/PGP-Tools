@@ -45,6 +45,11 @@ describe("presentError", () => {
       expectMessage: /doesn't look like PGP data/i,
     },
     {
+      name: "text around a cleartext-signed block",
+      raw: "This message has text outside the signed part, which the signature does not cover",
+      expectMessage: /only the signed message/i,
+    },
+    {
       name: "corrupted packet data",
       raw: "Malformed packet: Truncated packet body",
       expectMessage: /corrupted or was cut off/i,

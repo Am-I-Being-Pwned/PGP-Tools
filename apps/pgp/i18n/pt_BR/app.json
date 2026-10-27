@@ -275,6 +275,9 @@
   "app_error_not_pgp_data": {
     "message": "Isto não parece ser dados PGP. Confira se você colou o bloco blindado completo, incluindo as linhas BEGIN e END."
   },
+  "app_error_unsigned_text_around_signature": {
+    "message": "Isto contém texto fora da mensagem assinada, que a assinatura não cobre. Cole apenas a mensagem assinada, da linha BEGIN até a linha END."
+  },
   "app_error_storage_full": {
     "message": "O armazenamento do navegador está cheio, então isto não pôde ser salvo. Remova chaves ou contatos de que você não precisa mais e tente de novo."
   }
