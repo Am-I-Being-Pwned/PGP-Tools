@@ -27,7 +27,7 @@ import {
 
 import type { TranslationStatus } from "../../lib/ai/run-translation";
 import type { InlineStyle } from "../../lib/compose/text-format";
-import { languageLabel, translationLanguages } from "../../lib/ai/languages";
+import { translationLanguages } from "../../lib/ai/languages";
 import {
   FIND_SHORTCUT,
   STYLE_LABELS,
@@ -158,13 +158,10 @@ function TranslateMenu({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const busy = status.kind === "working" || status.kind === "downloading";
   if (status.kind === "unavailable") return null;
-  // "Translate" until a language has been picked: a guessed default
-  // would put a language the user never asked for on the button.
-  const label = busy
-    ? t("workspace_translating")
-    : targetLanguage
-      ? t("workspace_translate_to", { language: languageLabel(targetLanguage) })
-      : t("workspace_translate");
+  // Always just "Translate": the button opens the language list rather
+  // than translating, so naming the last pick would promise a one-click
+  // translation it doesn't do. The list marks the last pick instead.
+  const label = busy ? t("workspace_translating") : t("workspace_translate");
 
   return (
     <>

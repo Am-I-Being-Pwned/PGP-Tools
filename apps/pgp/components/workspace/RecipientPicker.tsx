@@ -41,6 +41,7 @@ import {
   pickableKeys,
   recipientBlockReason,
   selectionEngine,
+  splitRecipientSections,
 } from "./recipient-engine";
 
 type AnyKey = ProtectedKeyBlob | PublicContactKey;
@@ -233,12 +234,19 @@ export function RecipientPicker({
   const available = allKeys.filter(
     (k) => !selectedSet.has(k.keyId) && matchesRecipientSearch(k, search),
   );
-  const contactIds = new Set(contacts.map((c) => c.keyId));
+  // Which list a row came from, by record rather than fingerprint: the
+  // same key can be both your own and a contact's.
+  const contactRecords = new Set<AnyKey>(contacts);
   // Own keys always sort BELOW contacts: they never join the Recent group
   // (you rarely encrypt to yourself explicitly), so recency ordering only
-  // applies to actual recipients.
-  const availableContacts = available.filter((k) => contactIds.has(k.keyId));
-  const availableOwn = available.filter((k) => !contactIds.has(k.keyId));
+  // applies to actual recipients. Each key is offered once -- see
+  // `splitRecipientSections`.
+  const { contacts: availableContacts, own: availableOwn } =
+    splitRecipientSections<PublicContactKey, ProtectedKeyBlob>(
+      available,
+      contacts,
+      (c) => contactRecipients(c).map((r) => r.keyId),
+    );
   const { recent, rest: restContacts } = orderRecipients(
     availableContacts,
     recentKeyIds,
@@ -399,7 +407,7 @@ export function RecipientPicker({
     // groups (Recent, search results) where the group heading can't help.
     // An "SSH" badge does the same job for the engine, which otherwise
     // shows up only once the mixing is already refused.
-    const isOwn = !contactIds.has(key.keyId);
+    const isOwn = !contactRecords.has(key);
     const isSsh = isSshRecord(key);
     // A contact can hold several keys (a fetched person's laptop,
     // desktop, phone), and picking it encrypts to all of them. Nothing

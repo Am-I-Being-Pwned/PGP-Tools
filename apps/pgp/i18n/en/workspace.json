@@ -313,7 +313,7 @@
   },
   "workspace_translate": {
     "message": "Translate",
-    "description": "Label of the compose translate button before any language has been picked."
+    "description": "Label of the compose translate button, which opens the language list."
   },
   "workspace_translate_menu_heading": {
     "message": "Translate the message to",

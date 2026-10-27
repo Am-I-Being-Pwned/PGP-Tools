@@ -200,10 +200,14 @@ test("translate-before-sending replaces the message off one click, with undo", a
     await expect(box(panel)).toHaveValue(original);
   });
 
-  await test.step("the picked language sticks for the next translation", async () => {
+  await test.step("the button stays 'Translate'; the picked language sticks in the list", async () => {
+    const button = panel.getByRole("button", { name: "Translate", exact: true });
+    await expect(button).toBeVisible();
+    await button.click();
     await expect(
-      panel.getByRole("button", { name: "Translate to Spanish" }),
+      panel.getByRole("option", { name: "Spanish" }).locator("svg"),
     ).toBeVisible();
+    await panel.keyboard.press("Escape");
   });
 
   await test.step("the command palette: Translate message... then pick a language", async () => {
