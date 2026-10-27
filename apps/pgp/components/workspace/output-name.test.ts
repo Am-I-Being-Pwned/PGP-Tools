@@ -13,7 +13,13 @@ describe("outputFileName", () => {
     expect(
       outputFileName("encrypt", [], true, { ...AT, recipients: ["Alice"] }),
     ).toBe(`message.to-alice.${TS}.gpg`);
-    expect(outputFileName("decrypt", [], true)).toBe("output.gpg");
+    // Pasted text: named for what it is, never like ciphertext.
+    expect(outputFileName("decrypt", [], true)).toBe("decrypted.txt");
+    expect(outputFileName("decrypt", [], true, { binary: true })).toBe(
+      "decrypted.bin",
+    );
+    expect(outputFileName("verify", [], true)).toBe("verified.txt");
+    expect(outputFileName("sign", [], true)).toBe("signed.asc");
   });
 
   it("tags a single-file encrypt with recipient and timestamp", () => {
@@ -62,8 +68,16 @@ describe("outputFileName", () => {
     expect(outputFileName("decrypt", ["report.bin"], true)).toBe("report.bin");
   });
 
-  it("keeps the name when stripping would leave nothing", () => {
-    expect(outputFileName("decrypt", [".gpg"], true)).toBe(".gpg");
+  it("never names a plaintext like ciphertext when stripping leaves nothing", () => {
+    expect(outputFileName("decrypt", [".gpg"], true)).toBe("decrypted");
+  });
+
+  it("removes a right-to-left override from a name it saves under", () => {
+    // "inv<RLO>csa.exe" is shown as "invexe.asc"; saved raw, the file
+    // lands as an .exe the user believed was a signature.
+    expect(outputFileName("decrypt", ["inv\u202ecsa.exe.gpg"], true)).toBe(
+      "invcsa.exe",
+    );
   });
 
   it("names the combined archive for zipped multi-file input", () => {

@@ -329,7 +329,11 @@ export function useWorkspaceOperations({
       s.mode,
       stagedFiles().map((f) => f.name),
       s.zipFiles,
-      { recipients: selectedRecipientNames(), engine: selectedEngine() },
+      {
+        recipients: selectedRecipientNames(),
+        engine: selectedEngine(),
+        binary: !!s.binaryOutput && !s.hasOutput,
+      },
     );
   }
 
@@ -775,7 +779,7 @@ export function useWorkspaceOperations({
             keyHandle,
           });
           results.push({
-            name: file.name.replace(/\.age$/i, "") || file.name,
+            name: outputFileName("decrypt", [file.name], false),
             data:
               typeof data === "string" ? new TextEncoder().encode(data) : data,
           });
@@ -991,8 +995,9 @@ export function useWorkspaceOperations({
             result.data instanceof Uint8Array
               ? result.data
               : new TextEncoder().encode(result.data);
-          const outName =
-            file.name.replace(/\.(gpg|pgp|asc)$/i, "") || file.name;
+          // Same naming as a single file: cleaned, ciphertext extension
+          // off, and never left looking like ciphertext.
+          const outName = outputFileName("decrypt", [file.name], false);
           results.push({ name: outName, data });
           refuseInvalid(result);
           signatures.push({ name: file.name, result });
@@ -1104,7 +1109,7 @@ export function useWorkspaceOperations({
         const text = await file.text();
         const signed = await pgpOps.signWithHandle(text, keyHandle);
         results.push({
-          name: `${file.name}.asc`,
+          name: outputFileName("sign", [file.name], false),
           data: new TextEncoder().encode(signed),
         });
       }
