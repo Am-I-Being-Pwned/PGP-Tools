@@ -2042,6 +2042,50 @@
   "keys_cap_sign": {
     "message": "Assina mensagens"
   },
+  "keys_check_revocation": {
+    "message": "Verificar revogação"
+  },
+  "keys_check_revocation_current": {
+    "message": "A chave de $name$ não está revogada em $host$.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "host": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_check_revocation_failed": {
+    "message": "Não foi possível verificar a revogação. Tente novamente."
+  },
+  "keys_check_revocation_not_published": {
+    "message": "$host$ não publica a chave de $name$, então não é possível verificá-la lá.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_check_revocation_revoked": {
+    "message": "$name$ revogou esta chave. Agora ela está marcada como revogada e não será usada para criptografar.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_check_revocation_running": {
+    "message": "Consultando $host$...",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
   "keys_chip_contact": {
     "message": "Contato"
   },

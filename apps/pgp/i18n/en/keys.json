@@ -702,5 +702,29 @@
   "keys_lookalike_char": {
     "message": "$code$ is from a different alphabet than the rest of this word",
     "description": "Hover text on a highlighted letter in a name or email that comes from a different alphabet than the rest of its word (a lookalike, e.g. a Cyrillic А in Alice). $code$ is the Unicode code point, e.g. U+0410."
+  },
+  "keys_check_revocation": {
+    "message": "Check for revocation",
+    "description": "Contact card menu item: asks the keyserver whether the owner has revoked this key."
+  },
+  "keys_check_revocation_running": {
+    "message": "Checking $host$...",
+    "description": "Toast while the revocation check runs. $host$ is the keyserver host."
+  },
+  "keys_check_revocation_revoked": {
+    "message": "$name$ has revoked this key. It is now marked revoked and won't be used for encryption.",
+    "description": "Toast after the check: the keyserver's copy is revoked, and the stored contact was updated. $name$ is the contact's name."
+  },
+  "keys_check_revocation_current": {
+    "message": "$name$'s key is not revoked on $host$.",
+    "description": "Toast after the check: the keyserver shows no revocation. $name$ is the contact's name, $host$ the keyserver."
+  },
+  "keys_check_revocation_not_published": {
+    "message": "$host$ doesn't publish $name$'s key, so it can't be checked there.",
+    "description": "Toast after the check: the keyserver has no copy of this key. $name$ is the contact's name, $host$ the keyserver."
+  },
+  "keys_check_revocation_failed": {
+    "message": "Couldn't check for a revocation. Try again.",
+    "description": "Toast when the revocation check fails for an unexpected reason."
   }
 }

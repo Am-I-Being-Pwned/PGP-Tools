@@ -2042,6 +2042,50 @@
   "keys_cap_sign": {
     "message": "メッセージに署名"
   },
+  "keys_check_revocation": {
+    "message": "失効を確認"
+  },
+  "keys_check_revocation_current": {
+    "message": "$host$ では $name$ の鍵は失効していません。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "host": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_check_revocation_failed": {
+    "message": "失効を確認できませんでした。もう一度お試しください。"
+  },
+  "keys_check_revocation_not_published": {
+    "message": "$host$ は $name$ の鍵を公開していないため、そこでは確認できません。",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_check_revocation_revoked": {
+    "message": "$name$ はこの鍵を失効させました。失効済みとして記録され、暗号化には使われません。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_check_revocation_running": {
+    "message": "$host$ を確認しています...",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
   "keys_chip_contact": {
     "message": "連絡先"
   },

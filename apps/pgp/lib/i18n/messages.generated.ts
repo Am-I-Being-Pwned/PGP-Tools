@@ -425,6 +425,12 @@ export interface MessageArgs {
   "keys_cap_certify": undefined;
   "keys_cap_encrypt": undefined;
   "keys_cap_sign": undefined;
+  "keys_check_revocation": undefined;
+  "keys_check_revocation_current": { name: string | number; host: string | number };
+  "keys_check_revocation_failed": undefined;
+  "keys_check_revocation_not_published": { host: string | number; name: string | number };
+  "keys_check_revocation_revoked": { name: string | number };
+  "keys_check_revocation_running": { host: string | number };
   "keys_chip_contact": undefined;
   "keys_chip_contact_title": undefined;
   "keys_chip_protection_title": undefined;
@@ -1074,6 +1080,10 @@ export const PLACEHOLDER_ORDER: Readonly<Partial<Record<string, readonly string[
   "keys_bulk_delete_confirm_other": ["count"],
   "keys_bulk_delete_prompt_one": ["count"],
   "keys_bulk_delete_prompt_other": ["count"],
+  "keys_check_revocation_current": ["name","host"],
+  "keys_check_revocation_not_published": ["host","name"],
+  "keys_check_revocation_revoked": ["name"],
+  "keys_check_revocation_running": ["host"],
   "keys_contact_expired": ["date"],
   "keys_contact_expired_title": ["date"],
   "keys_contact_expires": ["date"],

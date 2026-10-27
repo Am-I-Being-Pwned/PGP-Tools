@@ -4,6 +4,7 @@ import {
   DownloadIcon,
   LockIcon,
   PencilIcon,
+  ShieldQuestionIcon,
   StarIcon,
   StarOffIcon,
   Trash2Icon,
@@ -55,6 +56,8 @@ interface KeyDetailsPageProps {
   /** Open the rename page for this key or contact (local display name
    *  only -- the certificate is never touched). */
   onRename?: () => void;
+  /** Contacts only: ask the keyserver whether the owner revoked it. */
+  onCheckRevocation?: () => void;
   /** True when this is the user's configured default key. */
   isDefault?: boolean;
   /** Own keys only: set (true) or clear (false) this key as the
@@ -198,6 +201,7 @@ export function KeyDetailsPage({
   onBack,
   onEncryptTo,
   onRename,
+  onCheckRevocation,
   isDefault,
   onSetDefault,
   onDelete,
@@ -442,6 +446,14 @@ export function KeyDetailsPage({
         {onRename && (
           <IconAction label={t("keys_rename")} onClick={onRename}>
             <PencilIcon className="h-4 w-4" />
+          </IconAction>
+        )}
+        {onCheckRevocation && (
+          <IconAction
+            label={t("keys_check_revocation")}
+            onClick={onCheckRevocation}
+          >
+            <ShieldQuestionIcon className="h-4 w-4" />
           </IconAction>
         )}
         {/* The default key feeds `resolveSelfKey`, which is engine-blind:

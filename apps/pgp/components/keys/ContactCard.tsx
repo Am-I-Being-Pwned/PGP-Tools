@@ -9,6 +9,7 @@ import {
   ListChecksIcon,
   LockIcon,
   PencilIcon,
+  ShieldQuestionIcon,
   Trash2Icon,
   TriangleAlertIcon,
 } from "lucide-react";
@@ -52,6 +53,8 @@ interface ContactCardProps {
   onDownloadPublicKey?: () => void;
   /** Open the rename page for this contact (local display name only). */
   onRename?: () => void;
+  /** Ask the keyserver whether the owner has revoked this key. */
+  onCheckRevocation?: () => void;
   /** When set, shows a bottom-right arrow opening the key-details page. */
   onShowDetails?: () => void;
   advancedMode?: boolean;
@@ -90,6 +93,7 @@ export function ContactCard({
   onCopyPublicKey,
   onDownloadPublicKey,
   onRename,
+  onCheckRevocation,
   onShowDetails,
   advancedMode,
   readOnly,
@@ -411,6 +415,12 @@ export function ContactCard({
                 <DropdownMenuItem onClick={onDownloadPublicKey}>
                   <DownloadIcon />
                   {t("keys_download_public_key")}
+                </DropdownMenuItem>
+              )}
+              {onCheckRevocation && (
+                <DropdownMenuItem onClick={onCheckRevocation}>
+                  <ShieldQuestionIcon />
+                  {t("keys_check_revocation")}
                 </DropdownMenuItem>
               )}
               {onRename && (

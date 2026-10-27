@@ -294,5 +294,23 @@
   },
   "keys_lookalike_char": {
     "message": "$code$ stammt aus einem anderen Alphabet als der Rest dieses Wortes"
+  },
+  "keys_check_revocation": {
+    "message": "Auf Widerruf prüfen"
+  },
+  "keys_check_revocation_running": {
+    "message": "$host$ wird geprüft..."
+  },
+  "keys_check_revocation_revoked": {
+    "message": "$name$ hat diesen Schlüssel widerrufen. Er ist jetzt als widerrufen markiert und wird nicht mehr zum Verschlüsseln verwendet."
+  },
+  "keys_check_revocation_current": {
+    "message": "Der Schlüssel von $name$ ist auf $host$ nicht widerrufen."
+  },
+  "keys_check_revocation_not_published": {
+    "message": "$host$ veröffentlicht den Schlüssel von $name$ nicht, daher kann er dort nicht geprüft werden."
+  },
+  "keys_check_revocation_failed": {
+    "message": "Der Widerruf konnte nicht geprüft werden. Versuchen Sie es erneut."
   }
 }

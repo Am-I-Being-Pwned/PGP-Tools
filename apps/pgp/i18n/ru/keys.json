@@ -338,5 +338,23 @@
   },
   "keys_lookalike_char": {
     "message": "$code$ из другого алфавита, чем остальная часть этого слова"
+  },
+  "keys_check_revocation": {
+    "message": "Проверить отзыв"
+  },
+  "keys_check_revocation_running": {
+    "message": "Проверка на $host$..."
+  },
+  "keys_check_revocation_revoked": {
+    "message": "$name$ отозвал этот ключ. Теперь он отмечен как отозванный и не будет использоваться для шифрования."
+  },
+  "keys_check_revocation_current": {
+    "message": "Ключ $name$ на $host$ не отозван."
+  },
+  "keys_check_revocation_not_published": {
+    "message": "$host$ не публикует ключ $name$, поэтому проверить его там нельзя."
+  },
+  "keys_check_revocation_failed": {
+    "message": "Не удалось проверить отзыв. Попробуйте ещё раз."
   }
 }

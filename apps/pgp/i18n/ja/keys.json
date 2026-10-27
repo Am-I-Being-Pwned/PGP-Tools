@@ -526,5 +526,23 @@
   },
   "keys_lookalike_char": {
     "message": "$code$ はこの単語のほかの文字と異なる文字体系のものです"
+  },
+  "keys_check_revocation": {
+    "message": "失効を確認"
+  },
+  "keys_check_revocation_running": {
+    "message": "$host$ を確認しています..."
+  },
+  "keys_check_revocation_revoked": {
+    "message": "$name$ はこの鍵を失効させました。失効済みとして記録され、暗号化には使われません。"
+  },
+  "keys_check_revocation_current": {
+    "message": "$host$ では $name$ の鍵は失効していません。"
+  },
+  "keys_check_revocation_not_published": {
+    "message": "$host$ は $name$ の鍵を公開していないため、そこでは確認できません。"
+  },
+  "keys_check_revocation_failed": {
+    "message": "失効を確認できませんでした。もう一度お試しください。"
   }
 }
