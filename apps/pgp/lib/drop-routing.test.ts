@@ -23,6 +23,20 @@ function sample(text: string): DropSample {
 }
 
 describe("looksLikeKey", () => {
+  it("leaves a signed message to the workspace, whatever its text quotes", () => {
+    // A "verify this" file whose signed body carries a key or an SSH line
+    // used to be routed to Import, putting that key in front of the user.
+    const signed = (body: string) =>
+      `-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA256\n\n${body}\n-----BEGIN PGP SIGNATURE-----\n\niQ==\n-----END PGP SIGNATURE-----\n`;
+    expect(looksLikeKey(signed(ED25519_PUB))).toBe(false);
+    expect(
+      looksLikeKey(signed("- -----BEGIN PGP PUBLIC KEY BLOCK-----\n...")),
+    ).toBe(false);
+    expect(
+      looksLikeKey(`-----BEGIN PGP MESSAGE-----\n\n${ED25519_PUB}\n`),
+    ).toBe(false);
+  });
+
   it("detects a PGP public key block", () => {
     expect(looksLikeKey("-----BEGIN PGP PUBLIC KEY BLOCK-----\n...")).toBe(
       true,

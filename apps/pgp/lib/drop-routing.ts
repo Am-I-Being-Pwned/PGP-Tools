@@ -74,6 +74,17 @@ export function looksLikeSshPublicKey(text: string): boolean {
 /** True when the text carries an importable key of any kind -- either
  *  engine, either half. */
 export function looksLikeKey(text: string): boolean {
+  // A signed or encrypted message is a message, whatever its signed text
+  // quotes: a "verify this" file whose body carries a key block or an
+  // SSH line must reach the workspace, not put that key in front of the
+  // user as an import.
+  const start = text.trimStart();
+  if (
+    start.startsWith("-----BEGIN PGP SIGNED MESSAGE-----") ||
+    start.startsWith("-----BEGIN PGP MESSAGE-----")
+  ) {
+    return false;
+  }
   return (
     PRIVATE_KEY_HEADER_RE.test(text) ||
     text.includes(PUBLIC_KEY_HEADER) ||
