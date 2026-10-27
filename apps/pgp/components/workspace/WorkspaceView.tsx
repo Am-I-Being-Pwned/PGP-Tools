@@ -1167,6 +1167,7 @@ export function WorkspaceView({
           signatureNote={s.signatureNote}
           signerCaveat={s.signerCaveat}
           contacts={contacts}
+          myKeys={myKeys}
           translationFooter={translationFooter}
           resultCorner={
             canReply ? (
@@ -1272,6 +1273,7 @@ export function WorkspaceView({
       signatureNote={s.signatureNote}
       signerCaveat={s.signerCaveat}
       contacts={contacts}
+      myKeys={myKeys}
       outputPublicKeyDetected={s.outputPublicKeyDetected}
       outputVersion={s.outputVersion}
       onImportKey={(armored) => onNavigateToKeys?.(armored)}

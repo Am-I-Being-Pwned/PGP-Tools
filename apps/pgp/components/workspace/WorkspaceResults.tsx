@@ -104,6 +104,9 @@ interface WorkspaceResultsProps {
   /** For the "there's a key in this message" offer: who we already have,
    *  and what to do about the one that just arrived. */
   contacts: PublicContactKey[];
+  /** The user's own keys: a signer wearing the user's identity is
+   *  marked like one wearing another contact's. */
+  myKeys?: ProtectedKeyBlob[];
   /** Contents of the result box's footer bar: the translation status and
    *  its toggle. A slot rather than a prop bundle, because it needs the
    *  workspace's translation state and threading that through here would
@@ -140,6 +143,7 @@ export function WorkspaceResults({
   signerCaveat = null,
   fullHeight,
   contacts,
+  myKeys = [],
   translationFooter,
   resultCorner,
   showTranslation,
@@ -215,7 +219,7 @@ export function WorkspaceResults({
           "armoredPublicKey" in verifiedSigner && !isUnverified
             ? contactClashes(
                 contacts.filter((c) => !isSshRecord(c)),
-                [],
+                myKeys.filter((k) => !isSshRecord(k)),
               ).get(verifiedSigner.keyId)
             : undefined
         }
