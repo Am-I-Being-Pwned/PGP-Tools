@@ -242,7 +242,7 @@
     "message": "Ihre eigenen Einstellungen durch die Voreinstellung $preset$ ersetzen? Nur die auf ihrer Karte aufgeführten Einstellungen ändern sich, und Sie können jede davon anschließend wieder anpassen."
   },
   "settings_preset_confirm_history": {
-    "message": "Diese Voreinstellung schaltet „Nie zwischenspeichern“ ein, wodurch auch Ihr gespeicherter Verlauf ($size$) gelöscht wird. Er kann nicht wiederhergestellt werden."
+    "message": "Diese Voreinstellung schaltet „Nie zwischenspeichern“ ein, wodurch auch Ihr gespeicherter Verlauf ($size$) gelöscht wird. Das kann nicht rückgängig gemacht werden."
   },
   "settings_translation_title": { "message": "Übersetzung" },
   "settings_translation_enable": {

@@ -69,7 +69,7 @@
     "message": "Elimina tutte le $count$ voci della cronologia"
   },
   "actions_history_delete_warning": {
-    "message": "Questa azione elimina definitivamente da questo dispositivo la cronologia cifrata delle tue operazioni. Non può essere recuperata."
+    "message": "Questa azione rimuove la cronologia cifrata delle tue operazioni dalla cassaforte di questo dispositivo. Non può essere annullata. Una copia cifrata può restare sul disco finché il browser non compatta il suo spazio di archiviazione."
   },
   "actions_no_keys_available": {
     "message": "Nessuna chiave disponibile"

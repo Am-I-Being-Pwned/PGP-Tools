@@ -81,7 +81,7 @@
     "message": "Modern, schnell, kleine Schlüssel. Für die meisten Zwecke empfohlen."
   },
   "app_onboarding_algo_rsa_hint": {
-    "message": "Weit kompatibel, aber langsamer, und der RSA-Code hat einen bekannten Timing-Seitenkanal (Marvin). Nimm ECC, wenn du RSA nicht brauchst."
+    "message": "Weit kompatibel, aber langsamer, und der RSA-Code hat einen bekannten Timing-Seitenkanal (Marvin). Nehmen Sie ECC, wenn Sie RSA nicht brauchen."
   },
   "app_onboarding_expiry_label": { "message": "Schlüsselablauf" },
   "app_onboarding_expiry_never": { "message": "Nie" },
@@ -227,7 +227,7 @@
     "message": "Löschen und neu beginnen"
   },
   "app_vault_erase_body": {
-    "message": "Dadurch werden die gespeicherten Schlüssel, Kontakte, Einstellungen und der Verlauf in diesem Browser und in seinem synchronisierten Speicher dauerhaft gelöscht, damit Sie einen neuen Tresor einrichten können. Das kann nicht rückgängig gemacht werden."
+    "message": "Dadurch werden die gespeicherten Schlüssel, Kontakte, Einstellungen und der Verlauf in diesem Browser und in seinem synchronisierten Speicher gelöscht, damit Sie einen neuen Tresor einrichten können. Das kann nicht rückgängig gemacht werden. Eine verschlüsselte Kopie kann auf dem Datenträger bleiben, bis der Browser seinen Speicher komprimiert."
   },
   "app_vault_erase_confirm": {
     "message": "Tresor löschen"
@@ -258,5 +258,17 @@
   },
   "app_vault_alternate_use": {
     "message": "Diesen versuchen"
+  },
+  "app_integrity_no_generation": {
+    "message": "Einige Ihrer Schlüssel, Kontakte oder Einstellungen wurden ohne die Markierung gespeichert, mit der dieses Gerät ältere Kopien erkennt. Eine ältere Version von PGP Tools auf einem anderen Gerät speichert Daten auf diese Weise, ebenso jemand, der sie auf einen früheren Stand zurücksetzt. Wenn alle Ihre Geräte aktualisiert sind und Sie dies trotzdem sehen, behandeln Sie es als Manipulation und prüfen Sie Ihre Schlüssel und Kontakte."
+  },
+  "app_integrity_missing_sync": {
+    "message": "Ihr Tresor wird zwischen Geräten synchronisiert, und eine ältere Version von PGP Tools auf einem anderen Gerät kann Daten auf diese Weise auch entfernen, wenn sie eine Liste leert. Wenn alle Ihre Geräte aktualisiert sind, behandeln Sie es als Manipulation."
+  },
+  "app_integrity_settings_held": {
+    "message": "Ihre Einstellungen sind möglicherweise eine ältere Kopie, daher gilt die strengste Sicherheitsvoreinstellung, bis Sie diesen Hinweis schließen."
+  },
+  "app_error_too_large_to_open": {
+    "message": "Diese Nachricht ist zu groß, um sie hier zu öffnen. Ihr Passwort oder Schlüssel kann durchaus richtig sein - es liegt an der Größe. Öffnen Sie sie mit einem OpenPGP-Programm für den Desktop, etwa GnuPG."
   }
 }

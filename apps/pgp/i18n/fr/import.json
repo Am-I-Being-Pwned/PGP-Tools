@@ -384,7 +384,7 @@
     "message": "$email$ appartient déjà à $name$ ($keyid$). C'est une autre clé - vérifiez auprès de cette personne avant de lui faire confiance."
   },
   "import_review_conflict_name": {
-    "message": "Même nom que $name$ ($keyid$), mais une autre clé. Vérifiez auprès de cette personne avant de lui faire confiance."
+    "message": "Ressemble au nom de $name$ ($keyid$), mais avec d'autres lettres. Vérifiez auprès de cette personne avant de lui faire confiance."
   },
   "import_review_choice_aria": {
     "message": "Que faire de $name$"
@@ -448,5 +448,14 @@
   },
   "import_github_refresh_all_held": {
     "message": "$username$ ne publie plus certaines des clés enregistrées pour ce contact, et toutes celles qu'il publie encore appartiennent à un autre de vos contacts ou à vous : il ne peut donc pas être mis à jour. Supprimez ce contact si vous ne voulez plus chiffrer vers ses anciennes clés."
+  },
+  "import_review_status_your_key": {
+    "message": "Votre clé"
+  },
+  "import_review_conflict_same_name": {
+    "message": "$name$ ($keyid$) porte aussi ce nom, et aucune adresse e-mail ne permet de les distinguer. Vérifiez auprès de cette personne avant de lui faire confiance."
+  },
+  "import_review_replace_many": {
+    "message": "Remplacer n'est pas proposé : plusieurs contacts ont cette adresse."
   }
 }

@@ -384,7 +384,7 @@
     "message": "$email$ appartiene già a $name$ ($keyid$). Questa è un'altra chiave - verifica con questa persona prima di fidarti."
   },
   "import_review_conflict_name": {
-    "message": "Stesso nome di $name$ ($keyid$), ma un'altra chiave. Verifica con questa persona prima di fidarti."
+    "message": "Sembra il nome di $name$ ($keyid$), ma usa lettere diverse. Verifica con questa persona prima di fidarti."
   },
   "import_review_choice_aria": {
     "message": "Cosa fare con $name$"
@@ -448,5 +448,14 @@
   },
   "import_github_refresh_all_held": {
     "message": "$username$ non elenca più alcune delle chiavi salvate per questo contatto, e tutte quelle che elenca ancora appartengono a un altro tuo contatto o a te, quindi non può essere aggiornato. Elimina questo contatto se non vuoi più cifrare alle sue vecchie chiavi."
+  },
+  "import_review_status_your_key": {
+    "message": "La tua chiave"
+  },
+  "import_review_conflict_same_name": {
+    "message": "Anche $name$ ($keyid$) ha questo nome, e nessun indirizzo email distingue i due. Verifica con questa persona prima di fidarti."
+  },
+  "import_review_replace_many": {
+    "message": "Sostituisci non è disponibile: più di un contatto ha questo indirizzo."
   }
 }

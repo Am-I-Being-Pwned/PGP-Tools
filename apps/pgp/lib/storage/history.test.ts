@@ -148,13 +148,14 @@ describe("append / load", () => {
   });
 
   it("seals the head segment at ~64KB and keeps newest-first across segments", async () => {
-    // ~30KB per entry: seg 0 seals after 3 entries (>= 64KB), so the 4th
-    // starts seg 1.
+    // ~30KB per entry: two fit seg 0's 64 KB bucket, a third would pad it
+    // to 128 KB, so the 3rd starts seg 1 and the 4th joins it.
     for (let i = 0; i < 4; i++) {
       await appendHistoryEntry(entry(`${i}:${"x".repeat(30_000)}`));
     }
     expect(local.store.has("pgp_history_seg_0")).toBe(true);
     expect(local.store.has("pgp_history_seg_1")).toBe(true);
+    expect(local.store.has("pgp_history_seg_2")).toBe(false);
 
     const h = await loadHistory();
     expect(h).toHaveLength(4);
@@ -332,9 +333,9 @@ describe("quota exhaustion mid-append", () => {
   });
 
   it("removes the orphaned new segment when the manifest write fails", async () => {
-    // Seal segment 0 (>= 64KB after 3 x ~30KB entries) so the next
-    // append must create segment 1.
-    for (let i = 0; i < 3; i++) {
+    // Fill segment 0 (2 x ~30KB entries is all its 64 KB bucket holds)
+    // so the next append must create segment 1.
+    for (let i = 0; i < 2; i++) {
       await appendHistoryEntry(entry(`${i}:${"x".repeat(30_000)}`));
     }
     expect(local.store.has("pgp_history_seg_1")).toBe(false);
@@ -342,14 +343,16 @@ describe("quota exhaustion mid-append", () => {
     // Within the next append: set #1 = segment 1 write (succeeds),
     // set #2 = manifest write (quota-fails).
     failSetFrom(local, 2);
-    await expect(appendHistoryEntry(entry("lost"))).rejects.toThrow(/quota/i);
+    await expect(
+      appendHistoryEntry(entry(`lost:${"x".repeat(30_000)}`)),
+    ).rejects.toThrow(/quota/i);
 
     // The freshly written segment was cleaned up, so the store matches
     // the manifest that is actually persisted.
     expect(local.store.has("pgp_history_seg_1")).toBe(false);
     const h = await loadHistory();
-    expect(h).toHaveLength(3);
-    expect(h.some((e) => e.content === "lost")).toBe(false);
+    expect(h).toHaveLength(2);
+    expect(h.some((e) => e.content?.startsWith("lost:"))).toBe(false);
   });
 
   it("keeps an existing head readable when only the manifest write fails", async () => {
@@ -616,6 +619,66 @@ describe("plaintext zeroization", () => {
   });
 });
 
+// The manifest is cleartext and the blob length tracks its plaintext, so
+// an unpadded segment told anyone with disk access the exact length of
+// every captured message. Both must now move in buckets only.
+describe("length-hiding padding", () => {
+  interface Manifest {
+    segs: { n: number; bytes: number }[];
+  }
+  const manifest = () => local.store.get("pgp_history") as Manifest;
+  const seg0 = () => local.store.get("pgp_history_seg_0") as StoredEnvelope;
+
+  it("pads the segment and records only the bucket in the manifest", async () => {
+    await appendHistoryEntry(entry("short"));
+
+    expect(manifest().segs[0].bytes).toBe(2048);
+    expect(storedPlaintext(seg0())).toHaveLength(2048);
+    expect((await loadHistory()).map((e) => e.content)).toEqual(["short"]);
+  });
+
+  it("messages of different lengths in one bucket leave the same sizes", async () => {
+    await appendHistoryEntry(entry("a"));
+    const sizeA = manifest().segs[0].bytes;
+    const blobA = storedPlaintext(seg0()).length;
+    await clearHistory();
+
+    await appendHistoryEntry(entry("b".repeat(1500)));
+    expect(manifest().segs[0].bytes).toBe(sizeA);
+    expect(storedPlaintext(seg0()).length).toBe(blobA);
+  });
+
+  it("reads an unpadded segment from an older build, then re-pads it", async () => {
+    const json = new TextEncoder().encode(
+      JSON.stringify([
+        { id: "old", ts: 1, op: "encrypt", recipients: [], content: "kept" },
+      ]),
+    );
+    local.store.set(
+      "pgp_history_seg_0",
+      domainEnvelope("pgp_history_seg_0", json),
+    );
+    local.store.set("pgp_history", { segs: [{ n: 0, bytes: json.length }] });
+
+    expect((await loadHistory()).map((e) => e.content)).toEqual(["kept"]);
+
+    expect(storedPlaintext(seg0())).toHaveLength(2048);
+    expect(manifest().segs[0].bytes).toBe(2048);
+    expect((await loadHistory()).map((e) => e.content)).toEqual(["kept"]);
+  });
+
+  it("does not rewrite an already padded segment on read", async () => {
+    await appendHistoryEntry(entry("steady"));
+    const before = seg0();
+    const encrypts = wasmMock.encryptCalls;
+
+    await loadHistory();
+
+    expect(seg0()).toBe(before);
+    expect(wasmMock.encryptCalls).toBe(encrypts);
+  });
+});
+
 describe("file metadata edge cases", () => {
   it("caps a huge files[] list at FILES_CAP and flags truncation", async () => {
     const files = Array.from({ length: 1000 }, (_, i) => ({
@@ -704,5 +767,90 @@ describe("requestUnlimitedHistoryStorage", () => {
     // The budget also falls back to the conservative tier.
     await appendHistoryEntry(entry("still works"));
     expect(await loadHistory()).toHaveLength(1);
+  });
+});
+
+// A 2.x build sealed a segment once its JSON passed 64 KB and budgeted the
+// exact sizes, so a full history was ~2 MB of 64-96 KB segments. Re-padding
+// each into a 128 KB bucket used to look like growth: the next load pruned
+// close to half of it, and new segments (sealed the same way, then padded)
+// only ever fit half as much.
+describe("padding upgrade keeps a full history", () => {
+  interface Manifest {
+    segs: { n: number; bytes: number }[];
+  }
+  const manifest = () => local.store.get("pgp_history") as Manifest;
+
+  /** A full pre-padding history: 28 segments of 3 x ~24 KB entries
+   *  (~72 KB of JSON each, sealed by the old "past 64 KB" rule), the
+   *  manifest holding their exact sizes, just under the 2 MB budget. */
+  function seedFullPrePaddingHistory(): number {
+    const segs: { n: number; bytes: number }[] = [];
+    let id = 0;
+    for (let n = 0; n < 28; n++) {
+      const entries = [0, 1, 2].map(() => ({
+        id: `old-${id}`,
+        ts: 1_000 + id++,
+        op: "encrypt",
+        recipients: [],
+        signed: false,
+        content: "x".repeat(24_000),
+      }));
+      const json = new TextEncoder().encode(JSON.stringify(entries));
+      local.store.set(
+        `pgp_history_seg_${n}`,
+        domainEnvelope(`pgp_history_seg_${n}`, json),
+      );
+      segs.push({ n, bytes: json.length });
+    }
+    expect(segs.reduce((a, s) => a + s.bytes, 0)).toBeLessThanOrEqual(
+      2 * 1024 * 1024,
+    );
+    local.store.set("pgp_history", { segs });
+    return id;
+  }
+
+  it("keeps every entry across the re-padding load and the loads after it", async () => {
+    const total = seedFullPrePaddingHistory();
+
+    expect(await loadHistory()).toHaveLength(total);
+    // The re-pad really happened (old segments now sit in 128 KB buckets)...
+    expect(manifest().segs.every((s) => s.bytes === 128 * 1024)).toBe(true);
+    // ...and neither it nor later loads pruned anything.
+    expect(await loadHistory()).toHaveLength(total);
+    expect(await loadHistory()).toHaveLength(total);
+    expect(manifest().segs).toHaveLength(28);
+    expect(await historyByteSize()).toBeLessThanOrEqual(2 * 1024 * 1024);
+  });
+
+  it("keeps every old entry when new ones are appended after the upgrade", async () => {
+    const total = seedFullPrePaddingHistory();
+    await loadHistory();
+
+    for (let i = 0; i < 10; i++) {
+      await appendHistoryEntry(entry(`new-${i}`));
+    }
+
+    const h = await loadHistory();
+    expect(h).toHaveLength(total + 10);
+    expect(h[0].content).toBe("new-9");
+    expect(h.at(-1)?.id).toBe("old-0");
+    // A pre-padding segment past the seal size is never reopened.
+    expect(manifest().segs).toHaveLength(29);
+  });
+
+  it("holds as much real content as the pre-padding budget did", async () => {
+    // 4 KB entries until well past the budget: what survives pruning
+    // must still be about 2 MB of real content, not half of it.
+    const size = 4_000;
+    for (let i = 0; i < 700; i++) {
+      await appendHistoryEntry(entry(`${i}:${"y".repeat(size)}`));
+    }
+    const kept = await loadHistory();
+    const realBytes = kept.reduce((a, e) => a + (e.content?.length ?? 0), 0);
+    expect(realBytes).toBeGreaterThan(0.9 * 2 * 1024 * 1024);
+    expect(await historyByteSize()).toBeLessThanOrEqual(2 * 1024 * 1024);
+    // Every multi-entry segment stays inside the 64 KB bucket.
+    expect(manifest().segs.every((s) => s.bytes <= 64 * 1024)).toBe(true);
   });
 });

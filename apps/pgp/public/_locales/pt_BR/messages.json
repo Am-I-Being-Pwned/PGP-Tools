@@ -111,7 +111,7 @@
     }
   },
   "actions_history_delete_warning": {
-    "message": "Isso exclui permanentemente seu histórico criptografado de operações deste dispositivo. Não é possível recuperá-lo."
+    "message": "Isso remove seu histórico criptografado de operações do cofre deste dispositivo. Não é possível desfazer. Uma cópia criptografada pode ficar no disco até o navegador compactar o armazenamento."
   },
   "actions_history_empty": {
     "message": "Sem histórico"
@@ -538,6 +538,9 @@
   "app_error_tampered": {
     "message": "Falha na verificação da assinatura - esta mensagem pode ter sido adulterada. Não confie no conteúdo; peça ao remetente que a envie de novo."
   },
+  "app_error_too_large_to_open": {
+    "message": "Esta mensagem é grande demais para ser aberta aqui. Sua senha ou chave pode estar correta: o que impede é o tamanho. Abra-a com uma ferramenta OpenPGP para desktop, como o GnuPG."
+  },
   "app_error_unsigned_text_around_signature": {
     "message": "Isto contém texto fora da mensagem assinada, que a assinatura não cobre. Cole apenas a mensagem assinada, da linha BEGIN até a linha END."
   },
@@ -575,6 +578,15 @@
   },
   "app_integrity_ledger_lost": {
     "message": "O registro deste dispositivo sobre o que viu por último foi apagado ou não pôde ser lido, então desta vez não é possível detectar cópias antigas dos seus dados. A predefinição de segurança mais rígida fica em vigor até você dispensar este aviso. Confira se os contatos que você sabe que foram revogados continuam aparecendo como revogados."
+  },
+  "app_integrity_missing_sync": {
+    "message": "Seu cofre é sincronizado entre dispositivos, e uma versão antiga do PGP Tools em outro dispositivo também pode remover dados assim quando esvazia uma lista. Se todos os seus dispositivos estão atualizados, trate como adulteração."
+  },
+  "app_integrity_no_generation": {
+    "message": "Algumas das suas chaves, contatos ou configurações foram salvos sem a marca que este dispositivo usa para identificar cópias antigas. Uma versão antiga do PGP Tools em outro dispositivo salva os dados assim, e alguém que os revertesse também. Se todos os seus dispositivos estão atualizados e você ainda vê isto, trate como adulteração e confira suas chaves e contatos."
+  },
+  "app_integrity_settings_held": {
+    "message": "Suas configurações podem ser uma cópia antiga, então a predefinição de segurança mais rígida fica em vigor até você dispensar este aviso."
   },
   "app_integrity_settings_strict": {
     "message": "Suas configurações estavam faltando, então a predefinição de segurança mais rígida está em vigor até você alterá-las."
@@ -791,7 +803,7 @@
     "message": "Usar o cofre onde ele está"
   },
   "app_vault_erase_body": {
-    "message": "Isso exclui permanentemente as chaves, contatos, configurações e o histórico salvos neste navegador e no armazenamento sincronizado dele, para que você possa criar um novo cofre. Não é possível desfazer."
+    "message": "Isso exclui as chaves, contatos, configurações e o histórico salvos neste navegador e no armazenamento sincronizado dele, para que você possa criar um novo cofre. Não é possível desfazer. Uma cópia criptografada pode ficar no disco até o navegador compactar o armazenamento."
   },
   "app_vault_erase_confirm": {
     "message": "Apagar cofre"
@@ -1571,7 +1583,18 @@
     }
   },
   "import_review_conflict_name": {
-    "message": "Mesmo nome de $name$ ($keyid$), mas outra chave. Confirme com a pessoa antes de confiar nela.",
+    "message": "Parece o nome de $name$ ($keyid$), mas usa outras letras. Confirme com a pessoa antes de confiar nela.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
+  "import_review_conflict_same_name": {
+    "message": "$name$ ($keyid$) também tem este nome, e nenhum endereço de email distingue os dois. Confirme com a pessoa antes de confiar nela.",
     "placeholders": {
       "name": {
         "content": "$1"
@@ -1638,6 +1661,9 @@
       }
     }
   },
+  "import_review_replace_many": {
+    "message": "Substituir não está disponível: mais de um contato tem este endereço."
+  },
   "import_review_status_duplicate": {
     "message": "Já salva"
   },
@@ -1652,6 +1678,9 @@
   },
   "import_review_status_update": {
     "message": "Atualização"
+  },
+  "import_review_status_your_key": {
+    "message": "Sua chave"
   },
   "import_review_title": {
     "message": "Revisar chaves"
@@ -2275,7 +2304,7 @@
     "message": "Você não poderá mais criptografar para estes contatos nem verificar as assinaturas deles. Você pode importar as chaves públicas deles de novo mais tarde."
   },
   "keys_bulk_delete_private_body": {
-    "message": "Isso exclui permanentemente as chaves privadas selecionadas deste dispositivo. Tudo o que foi criptografado somente para uma chave excluída se torna irrecuperável. Confira se você tem um backup caso venha a precisar delas."
+    "message": "Isso remove as chaves privadas selecionadas do cofre deste dispositivo. O que foi criptografado somente para uma chave excluída não poderá ser descriptografado sem um backup, então guarde um caso venha a precisar delas. Uma cópia criptografada pode ficar no disco até o navegador compactar o armazenamento."
   },
   "keys_bulk_delete_prompt_one": {
     "message": "excluir $count$ chave",
@@ -2327,6 +2356,14 @@
   },
   "keys_check_revocation_failed": {
     "message": "Não foi possível verificar a revogação. Tente novamente."
+  },
+  "keys_check_revocation_needs_review": {
+    "message": "A chave de $name$ no servidor de chaves tem novos nomes ou endereços. Revise-os antes de salvar.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
   },
   "keys_check_revocation_not_published": {
     "message": "$host$ não publica a chave de $name$, então não é possível verificá-la lá.",
@@ -2493,10 +2530,24 @@
     }
   },
   "keys_contact_same_name": {
+    "message": "Nome parecido"
+  },
+  "keys_contact_same_name_plain": {
     "message": "Mesmo nome"
   },
+  "keys_contact_same_name_plain_title": {
+    "message": "Tem o mesmo nome que $name$ ($keyid$), e nenhum endereço de email distingue os dois.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
   "keys_contact_same_name_title": {
-    "message": "$name$ ($keyid$) também tem este nome, com outra chave.",
+    "message": "Parece o nome de $name$ ($keyid$), mas usa outras letras.",
     "placeholders": {
       "name": {
         "content": "$1"
@@ -2607,13 +2658,13 @@
     "message": "Usada por padrão para assinar, descriptografar e criptografar para você"
   },
   "keys_delete_crx_body": {
-    "message": "Você não poderá mais assinar atualizações desta extensão, e a chave não pode ser recuperada a menos que você tenha um backup."
+    "message": "Você não poderá mais assinar atualizações desta extensão, e sem um backup não é possível desfazer. Uma cópia criptografada pode ficar no disco até o navegador compactar o armazenamento."
   },
   "keys_delete_key": {
     "message": "Excluir chave"
   },
   "keys_delete_key_body": {
-    "message": "Isso exclui permanentemente a chave privada deste dispositivo. Tudo o que foi criptografado somente para esta chave se torna irrecuperável. Confira se você tem um backup caso venha a precisar dela."
+    "message": "Isso remove a chave privada do cofre deste dispositivo. O que foi criptografado somente para esta chave não poderá ser descriptografado sem um backup, então guarde um caso venha a precisar dela. Uma cópia criptografada pode ficar no disco até o navegador compactar o armazenamento."
   },
   "keys_delete_key_permanently": {
     "message": "Excluir chave permanentemente"
@@ -3567,7 +3618,7 @@
     "message": "Aplicando..."
   },
   "settings_preset_confirm_history": {
-    "message": "Este perfil ativa “Nunca manter chaves em cache”, o que também exclui seu histórico salvo ($size$). Não é possível recuperá-lo.",
+    "message": "Este perfil ativa “Nunca manter chaves em cache”, o que também exclui seu histórico salvo ($size$). Não é possível desfazer.",
     "placeholders": {
       "size": {
         "content": "$1"
@@ -3888,7 +3939,7 @@
     "message": "Assinatura CRX"
   },
   "shared_delete_history_body": {
-    "message": "“Nunca manter chaves em cache” também exclui seu histórico salvo ($size$). Não é possível recuperá-lo.",
+    "message": "“Nunca manter chaves em cache” também exclui seu histórico salvo ($size$). Não é possível desfazer.",
     "placeholders": {
       "size": {
         "content": "$1"
@@ -4051,6 +4102,9 @@
   "shared_security_preset": {
     "message": "Perfil de segurança"
   },
+  "shared_settings_save_failed": {
+    "message": "Não foi possível salvar essa alteração porque as configurações salvas não puderam ser lidas."
+  },
   "shared_show_technical_details": {
     "message": "Mostrar detalhes técnicos"
   },
@@ -4121,6 +4175,9 @@
         "content": "$1"
       }
     }
+  },
+  "workspace_auto_run_too_large": {
+    "message": "Esta mensagem é grande demais para abrir automaticamente. Abra-a com o botão abaixo."
   },
   "workspace_browse_files": {
     "message": "Procurar arquivos"
@@ -4233,6 +4290,30 @@
   },
   "workspace_detected_key_show": {
     "message": "Mostrar nas suas chaves"
+  },
+  "workspace_detected_keys_in_message": {
+    "message": "Esta mensagem contém chaves públicas de $names$.",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_detected_keys_known": {
+    "message": "Você já tem as chaves de $names$.",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_detected_keys_pasted": {
+    "message": "Estas são chaves públicas de $names$.",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
   },
   "workspace_drop_files_or_text": {
     "message": "Solte arquivos ou texto aqui"
@@ -4700,6 +4781,20 @@
   },
   "workspace_sign_for_web_store": {
     "message": "Assinar para a Web Store"
+  },
+  "workspace_sign_hidden_chars": {
+    "message": "Este texto tem caracteres que você não vê ($chars$). Eles podem reordenar ou ocultar o que ele diz e seriam assinados como estão.",
+    "placeholders": {
+      "chars": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_sign_hidden_chars_anyway": {
+    "message": "Assinar mesmo assim"
+  },
+  "workspace_sign_hidden_chars_remove": {
+    "message": "Removê-los"
   },
   "workspace_sign_kind_crx": {
     "message": "Extensão do Chrome (.crx)"

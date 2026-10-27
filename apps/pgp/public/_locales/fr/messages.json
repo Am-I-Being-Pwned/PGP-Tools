@@ -111,7 +111,7 @@
     }
   },
   "actions_history_delete_warning": {
-    "message": "Cette action supprime définitivement de cet appareil votre historique chiffré des opérations. Il ne pourra pas être récupéré."
+    "message": "Cette action retire votre historique chiffré des opérations du coffre de cet appareil. Elle est irréversible. Une copie chiffrée peut rester sur le disque jusqu'à ce que le navigateur compacte son stockage."
   },
   "actions_history_empty": {
     "message": "Aucun historique"
@@ -538,6 +538,9 @@
   "app_error_tampered": {
     "message": "Échec de la vérification de la signature - ce message a peut-être été altéré. Ne faites pas confiance à son contenu ; demandez à l'expéditeur de le renvoyer."
   },
+  "app_error_too_large_to_open": {
+    "message": "Ce message est trop volumineux pour être ouvert ici. Votre mot de passe ou votre clé est peut-être correct : c'est la taille qui bloque. Ouvrez-le avec un outil OpenPGP de bureau, comme GnuPG."
+  },
   "app_error_unsigned_text_around_signature": {
     "message": "Ceci contient du texte en dehors du message signé, que la signature ne couvre pas. Collez uniquement le message signé, de la ligne BEGIN à la ligne END."
   },
@@ -575,6 +578,15 @@
   },
   "app_integrity_ledger_lost": {
     "message": "L'enregistrement de cet appareil sur ce qu'il a vu en dernier a été supprimé ou n'a pas pu être lu : les copies plus anciennes de vos données ne peuvent pas être détectées cette fois. Le préréglage de sécurité le plus strict s'applique jusqu'à ce que vous fermiez cet avertissement. Vérifiez que les contacts que vous savez révoqués apparaissent toujours comme révoqués."
+  },
+  "app_integrity_missing_sync": {
+    "message": "Votre coffre est synchronisé entre vos appareils, et une ancienne version de PGP Tools sur un autre appareil peut aussi supprimer des données ainsi lorsqu'elle vide une liste. Si tous vos appareils sont à jour, considérez-le comme une falsification."
+  },
+  "app_integrity_no_generation": {
+    "message": "Certaines de vos clés, contacts ou paramètres ont été enregistrés sans le marqueur que cet appareil utilise pour repérer les copies plus anciennes. Une ancienne version de PGP Tools sur un autre appareil enregistre les données ainsi, tout comme une personne qui les restaurerait à une version antérieure. Si tous vos appareils sont à jour et que vous voyez encore ceci, considérez-le comme une falsification et vérifiez vos clés et vos contacts."
+  },
+  "app_integrity_settings_held": {
+    "message": "Vos paramètres sont peut-être une copie plus ancienne : le préréglage de sécurité le plus strict s'applique jusqu'à ce que vous fermiez cet avertissement."
   },
   "app_integrity_settings_strict": {
     "message": "Vos paramètres étaient manquants : le préréglage de sécurité le plus strict s'applique jusqu'à ce que vous les modifiiez."
@@ -791,7 +803,7 @@
     "message": "Utiliser le coffre là où il est"
   },
   "app_vault_erase_body": {
-    "message": "Cette action supprime définitivement les clés, contacts, paramètres et l'historique enregistrés dans ce navigateur et dans son stockage synchronisé, afin que vous puissiez créer un nouveau coffre. Elle est irréversible."
+    "message": "Cette action supprime les clés, contacts, paramètres et l'historique enregistrés dans ce navigateur et dans son stockage synchronisé, afin que vous puissiez créer un nouveau coffre. Elle est irréversible. Une copie chiffrée peut rester sur le disque jusqu'à ce que le navigateur compacte son stockage."
   },
   "app_vault_erase_confirm": {
     "message": "Effacer le coffre"
@@ -1571,7 +1583,18 @@
     }
   },
   "import_review_conflict_name": {
-    "message": "Même nom que $name$ ($keyid$), mais une autre clé. Vérifiez auprès de cette personne avant de lui faire confiance.",
+    "message": "Ressemble au nom de $name$ ($keyid$), mais avec d'autres lettres. Vérifiez auprès de cette personne avant de lui faire confiance.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
+  "import_review_conflict_same_name": {
+    "message": "$name$ ($keyid$) porte aussi ce nom, et aucune adresse e-mail ne permet de les distinguer. Vérifiez auprès de cette personne avant de lui faire confiance.",
     "placeholders": {
       "name": {
         "content": "$1"
@@ -1638,6 +1661,9 @@
       }
     }
   },
+  "import_review_replace_many": {
+    "message": "Remplacer n'est pas proposé : plusieurs contacts ont cette adresse."
+  },
   "import_review_status_duplicate": {
     "message": "Déjà enregistrée"
   },
@@ -1652,6 +1678,9 @@
   },
   "import_review_status_update": {
     "message": "Mise à jour"
+  },
+  "import_review_status_your_key": {
+    "message": "Votre clé"
   },
   "import_review_title": {
     "message": "Vérifier les clés"
@@ -2275,7 +2304,7 @@
     "message": "Vous ne pourrez plus chiffrer pour ces contacts ni vérifier leurs signatures. Vous pourrez réimporter leurs clés publiques plus tard."
   },
   "keys_bulk_delete_private_body": {
-    "message": "Cette action supprime définitivement de cet appareil les clés privées sélectionnées. Tout ce qui est chiffré uniquement pour une clé supprimée devient irrécupérable. Assurez-vous d'avoir une sauvegarde si vous pourriez un jour en avoir besoin."
+    "message": "Cette action retire les clés privées sélectionnées du coffre de cet appareil. Ce qui est chiffré uniquement pour une clé supprimée ne pourra plus être déchiffré sans sauvegarde : gardez-en une si vous pourriez un jour en avoir besoin. Une copie chiffrée peut rester sur le disque jusqu'à ce que le navigateur compacte son stockage."
   },
   "keys_bulk_delete_prompt_one": {
     "message": "supprimer $count$ clé",
@@ -2327,6 +2356,14 @@
   },
   "keys_check_revocation_failed": {
     "message": "Impossible de vérifier la révocation. Réessayez."
+  },
+  "keys_check_revocation_needs_review": {
+    "message": "La clé de $name$ sur le serveur de clés a de nouveaux noms ou adresses. Vérifiez-les avant leur enregistrement.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
   },
   "keys_check_revocation_not_published": {
     "message": "$host$ ne publie pas la clé de $name$, elle ne peut donc pas y être vérifiée.",
@@ -2493,10 +2530,24 @@
     }
   },
   "keys_contact_same_name": {
+    "message": "Nom ressemblant"
+  },
+  "keys_contact_same_name_plain": {
     "message": "Même nom"
   },
+  "keys_contact_same_name_plain_title": {
+    "message": "Porte le même nom que $name$ ($keyid$), et aucune adresse e-mail ne permet de les distinguer.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
   "keys_contact_same_name_title": {
-    "message": "$name$ ($keyid$) porte aussi ce nom, avec une autre clé.",
+    "message": "Ressemble au nom de $name$ ($keyid$), mais avec d'autres lettres.",
     "placeholders": {
       "name": {
         "content": "$1"
@@ -2607,13 +2658,13 @@
     "message": "Utilisée par défaut pour signer, déchiffrer et chiffrer pour vous-même"
   },
   "keys_delete_crx_body": {
-    "message": "Vous ne pourrez plus signer de mises à jour pour cette extension, et la clé ne pourra pas être récupérée sans sauvegarde."
+    "message": "Vous ne pourrez plus signer de mises à jour pour cette extension, et sans sauvegarde, c'est irréversible. Une copie chiffrée peut rester sur le disque jusqu'à ce que le navigateur compacte son stockage."
   },
   "keys_delete_key": {
     "message": "Supprimer la clé"
   },
   "keys_delete_key_body": {
-    "message": "Cette action supprime définitivement la clé privée de cet appareil. Tout ce qui est chiffré uniquement pour cette clé devient irrécupérable. Assurez-vous d'avoir une sauvegarde si vous pourriez un jour en avoir besoin."
+    "message": "Cette action retire la clé privée du coffre de cet appareil. Ce qui est chiffré uniquement pour cette clé ne pourra plus être déchiffré sans sauvegarde : gardez-en une si vous pourriez un jour en avoir besoin. Une copie chiffrée peut rester sur le disque jusqu'à ce que le navigateur compacte son stockage."
   },
   "keys_delete_key_permanently": {
     "message": "Supprimer définitivement la clé"
@@ -3567,7 +3618,7 @@
     "message": "Application..."
   },
   "settings_preset_confirm_history": {
-    "message": "Ce profil active « Ne jamais garder les clés en mémoire », ce qui supprime aussi votre historique enregistré ($size$). Il ne pourra pas être récupéré.",
+    "message": "Ce profil active « Ne jamais garder les clés en mémoire », ce qui supprime aussi votre historique enregistré ($size$). Cette action est irréversible.",
     "placeholders": {
       "size": {
         "content": "$1"
@@ -3888,7 +3939,7 @@
     "message": "Signature CRX"
   },
   "shared_delete_history_body": {
-    "message": "Ne jamais garder les clés en mémoire supprime aussi votre historique enregistré ($size$). Il ne pourra pas être récupéré.",
+    "message": "Ne jamais garder les clés en mémoire supprime aussi votre historique enregistré ($size$). Cette action est irréversible.",
     "placeholders": {
       "size": {
         "content": "$1"
@@ -4051,6 +4102,9 @@
   "shared_security_preset": {
     "message": "Profil de sécurité"
   },
+  "shared_settings_save_failed": {
+    "message": "Cette modification n'a pas pu être enregistrée, car les paramètres enregistrés n'ont pas pu être lus."
+  },
   "shared_show_technical_details": {
     "message": "Afficher les détails techniques"
   },
@@ -4121,6 +4175,9 @@
         "content": "$1"
       }
     }
+  },
+  "workspace_auto_run_too_large": {
+    "message": "Ce message est trop volumineux pour être ouvert automatiquement. Ouvrez-le avec le bouton ci-dessous."
   },
   "workspace_browse_files": {
     "message": "Parcourir"
@@ -4233,6 +4290,30 @@
   },
   "workspace_detected_key_show": {
     "message": "Afficher dans vos clés"
+  },
+  "workspace_detected_keys_in_message": {
+    "message": "Ce message contient les clés publiques de $names$.",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_detected_keys_known": {
+    "message": "Vous avez déjà les clés de $names$.",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_detected_keys_pasted": {
+    "message": "Ce sont les clés publiques de $names$.",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
   },
   "workspace_drop_files_or_text": {
     "message": "Déposez des fichiers ou du texte ici"
@@ -4700,6 +4781,20 @@
   },
   "workspace_sign_for_web_store": {
     "message": "Signer pour le Web Store"
+  },
+  "workspace_sign_hidden_chars": {
+    "message": "Ce texte contient des caractères invisibles ($chars$). Ils peuvent réordonner ou masquer ce qu'il dit, et seraient signés tels quels.",
+    "placeholders": {
+      "chars": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_sign_hidden_chars_anyway": {
+    "message": "Signer quand même"
+  },
+  "workspace_sign_hidden_chars_remove": {
+    "message": "Les supprimer"
   },
   "workspace_sign_kind_crx": {
     "message": "Extension Chrome (.crx)"

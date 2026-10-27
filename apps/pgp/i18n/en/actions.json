@@ -92,7 +92,7 @@
     "description": "Bold headline of the clear-history confirmation page."
   },
   "actions_history_delete_warning": {
-    "message": "This permanently deletes your encrypted operation history from this device. It can't be recovered.",
+    "message": "This removes your encrypted operation history from this device's vault. It can't be undone. An encrypted copy may remain on disk until the browser compacts its storage.",
     "description": "Body text of the clear-history confirmation page."
   },
   "actions_no_keys_available": {

@@ -111,7 +111,7 @@
     }
   },
   "actions_history_delete_warning": {
-    "message": "这将永久删除此设备上已加密的操作历史记录，且无法恢复。"
+    "message": "这会将已加密的操作历史记录从此设备的保险库中移除，此操作无法撤销。在浏览器压缩其存储之前，磁盘上可能仍留有一份加密副本。"
   },
   "actions_history_empty": {
     "message": "暂无历史记录"
@@ -538,6 +538,9 @@
   "app_error_tampered": {
     "message": "签名验证失败，此消息可能已被篡改。请勿信任其内容；让发送者重新发送。"
   },
+  "app_error_too_large_to_open": {
+    "message": "此消息太大，无法在此打开。你的密码或密钥可能是正确的，问题在于大小。请使用 GnuPG 等桌面 OpenPGP 工具打开它。"
+  },
   "app_error_unsigned_text_around_signature": {
     "message": "其中包含签名消息之外的文本，签名并不涵盖这些内容。请只粘贴签名消息，从 BEGIN 行到 END 行。"
   },
@@ -575,6 +578,15 @@
   },
   "app_integrity_ledger_lost": {
     "message": "此设备关于上次所见内容的记录已被删除或无法读取，因此这次无法检测到你数据的旧副本。在你关闭此提示之前，将使用最严格的安全预设。请检查你知道已被吊销的联系人是否仍显示为已吊销。"
+  },
+  "app_integrity_missing_sync": {
+    "message": "你的保管库会在设备之间同步，其他设备上的旧版 PGP Tools 在清空列表时也可能这样删除数据。如果你的所有设备都已更新，请将其视为篡改。"
+  },
+  "app_integrity_no_generation": {
+    "message": "部分密钥、联系人或设置在保存时缺少此设备用来识别旧副本的标记。其他设备上的旧版 PGP Tools 会这样保存数据，有人回滚数据时也会如此。如果你的所有设备都已更新但仍看到此提示，请将其视为篡改，并检查你的密钥和联系人。"
+  },
+  "app_integrity_settings_held": {
+    "message": "你的设置可能是旧副本，因此在你关闭此提示之前，将使用最严格的安全预设。"
   },
   "app_integrity_settings_strict": {
     "message": "你的设置已丢失，因此在你更改之前将使用最严格的安全预设。"
@@ -791,7 +803,7 @@
     "message": "使用保险库当前所在的位置"
   },
   "app_vault_erase_body": {
-    "message": "这会永久删除此浏览器及其同步存储中保存的密钥、联系人、设置和历史记录，以便你创建新的保险库。此操作无法撤销。"
+    "message": "这会删除此浏览器及其同步存储中保存的密钥、联系人、设置和历史记录，以便你创建新的保险库。此操作无法撤销。在浏览器压缩其存储之前，磁盘上可能仍留有一份加密副本。"
   },
   "app_vault_erase_confirm": {
     "message": "清除保险库"
@@ -1571,7 +1583,18 @@
     }
   },
   "import_review_conflict_name": {
-    "message": "与 $name$ ($keyid$) 同名，但密钥不同。信任之前请先与对方确认。",
+    "message": "看起来像 $name$ ($keyid$) 的名字，但用的是不同的字母。信任之前请先与对方确认。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
+  "import_review_conflict_same_name": {
+    "message": "$name$ ($keyid$) 也叫这个名字，而且没有电子邮件地址可以区分两者。信任之前请先与对方确认。",
     "placeholders": {
       "name": {
         "content": "$1"
@@ -1638,6 +1661,9 @@
       }
     }
   },
+  "import_review_replace_many": {
+    "message": "无法替换：有多个联系人使用此地址。"
+  },
   "import_review_status_duplicate": {
     "message": "已保存"
   },
@@ -1652,6 +1678,9 @@
   },
   "import_review_status_update": {
     "message": "更新"
+  },
+  "import_review_status_your_key": {
+    "message": "你的密钥"
   },
   "import_review_title": {
     "message": "检查密钥"
@@ -2275,7 +2304,7 @@
     "message": "你将无法再加密给这些联系人或验证其签名。之后可以重新导入他们的公钥。"
   },
   "keys_bulk_delete_private_body": {
-    "message": "这将从此设备永久删除所选私钥。仅加密给已删除密钥的任何内容都将无法恢复。如果将来可能还需要它们，请确保已有备份。"
+    "message": "这会将所选私钥从此设备的保险库中移除。仅加密给已删除密钥的内容，没有备份将无法解密；如果将来可能还需要它们，请保留备份。在浏览器压缩其存储之前，磁盘上可能仍留有一份加密副本。"
   },
   "keys_bulk_delete_prompt_one": {
     "message": "删除$count$个密钥",
@@ -2327,6 +2356,14 @@
   },
   "keys_check_revocation_failed": {
     "message": "无法检查吊销状态。请重试。"
+  },
+  "keys_check_revocation_needs_review": {
+    "message": "密钥服务器上 $name$ 的密钥有新的名字或地址。请在保存前检查。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
   },
   "keys_check_revocation_not_published": {
     "message": "$host$ 未发布 $name$ 的密钥，因此无法在那里检查。",
@@ -2493,10 +2530,24 @@
     }
   },
   "keys_contact_same_name": {
-    "message": "名字相同"
+    "message": "相似名字"
+  },
+  "keys_contact_same_name_plain": {
+    "message": "同名"
+  },
+  "keys_contact_same_name_plain_title": {
+    "message": "与 $name$ ($keyid$) 同名，而且没有电子邮件地址可以区分两者。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
   },
   "keys_contact_same_name_title": {
-    "message": "$name$ ($keyid$) 也用这个名字，但密钥不同。",
+    "message": "看起来像 $name$ ($keyid$) 的名字，但用的是不同的字母。",
     "placeholders": {
       "name": {
         "content": "$1"
@@ -2607,13 +2658,13 @@
     "message": "默认用于签名、解密和“同时加密给我”"
   },
   "keys_delete_crx_body": {
-    "message": "你将无法再为此扩展程序签名更新，且除非有备份，否则该密钥无法恢复。"
+    "message": "你将无法再为此扩展程序签名更新，且除非有备份，否则此操作无法撤销。在浏览器压缩其存储之前，磁盘上可能仍留有一份加密副本。"
   },
   "keys_delete_key": {
     "message": "删除密钥"
   },
   "keys_delete_key_body": {
-    "message": "这将从此设备永久删除该私钥。仅加密给此密钥的任何内容都将无法恢复。如果将来可能还需要它，请确保已有备份。"
+    "message": "这会将该私钥从此设备的保险库中移除。仅加密给此密钥的内容，没有备份将无法解密；如果将来可能还需要它，请保留备份。在浏览器压缩其存储之前，磁盘上可能仍留有一份加密副本。"
   },
   "keys_delete_key_permanently": {
     "message": "永久删除密钥"
@@ -3567,7 +3618,7 @@
     "message": "正在应用…"
   },
   "settings_preset_confirm_history": {
-    "message": "此预设会开启“从不缓存”，这也会删除你已保存的历史记录（$size$），且无法恢复。",
+    "message": "此预设会开启“从不缓存”，这也会删除你已保存的历史记录（$size$），且无法撤销。",
     "placeholders": {
       "size": {
         "content": "$1"
@@ -3888,7 +3939,7 @@
     "message": "CRX 签名"
   },
   "shared_delete_history_body": {
-    "message": "从不缓存也会删除你已保存的历史记录（$size$），且无法恢复。",
+    "message": "从不缓存也会删除你已保存的历史记录（$size$），且无法撤销。",
     "placeholders": {
       "size": {
         "content": "$1"
@@ -4051,6 +4102,9 @@
   "shared_security_preset": {
     "message": "安全预设"
   },
+  "shared_settings_save_failed": {
+    "message": "无法保存此更改，因为无法读取已保存的设置。"
+  },
   "shared_show_technical_details": {
     "message": "显示技术详情"
   },
@@ -4121,6 +4175,9 @@
         "content": "$1"
       }
     }
+  },
+  "workspace_auto_run_too_large": {
+    "message": "此消息太大，无法自动打开。请使用下方按钮打开。"
   },
   "workspace_browse_files": {
     "message": "浏览文件"
@@ -4233,6 +4290,30 @@
   },
   "workspace_detected_key_show": {
     "message": "在密钥中显示"
+  },
+  "workspace_detected_keys_in_message": {
+    "message": "此消息包含 $names$ 的公钥。",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_detected_keys_known": {
+    "message": "你已经有 $names$ 的密钥。",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_detected_keys_pasted": {
+    "message": "这些是 $names$ 的公钥。",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
   },
   "workspace_drop_files_or_text": {
     "message": "将文件或文本拖放到此处"
@@ -4700,6 +4781,20 @@
   },
   "workspace_sign_for_web_store": {
     "message": "为应用商店签名"
+  },
+  "workspace_sign_hidden_chars": {
+    "message": "此文本含有看不见的字符 ($chars$)。它们可能改变文字顺序或隐藏内容，并会原样被签名。",
+    "placeholders": {
+      "chars": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_sign_hidden_chars_anyway": {
+    "message": "仍然签名"
+  },
+  "workspace_sign_hidden_chars_remove": {
+    "message": "删除它们"
   },
   "workspace_sign_kind_crx": {
     "message": "Chrome 扩展程序 (.crx)"

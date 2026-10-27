@@ -69,7 +69,7 @@
     "message": "Eliminar las $count$ entradas del historial"
   },
   "actions_history_delete_warning": {
-    "message": "Esto elimina de forma permanente el historial cifrado de operaciones de este dispositivo. No se puede recuperar."
+    "message": "Esto quita el historial cifrado de operaciones de la bóveda de este dispositivo. No se puede deshacer. Puede quedar una copia cifrada en el disco hasta que el navegador compacte su almacenamiento."
   },
   "actions_no_keys_available": {
     "message": "No hay claves disponibles"

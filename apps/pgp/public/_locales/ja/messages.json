@@ -111,7 +111,7 @@
     }
   },
   "actions_history_delete_warning": {
-    "message": "このデバイス上の暗号化された操作履歴が完全に削除されます。復元することはできません。"
+    "message": "このデバイスの保管庫から暗号化された操作履歴を削除します。元に戻すことはできません。ブラウザがストレージを圧縮するまで、暗号化されたコピーがディスクに残る場合があります。"
   },
   "actions_history_empty": {
     "message": "履歴はありません"
@@ -538,6 +538,9 @@
   "app_error_tampered": {
     "message": "署名の検証に失敗しました。このメッセージは改ざんされている可能性があります。内容を信用せず、送信者に再送を依頼してください。"
   },
+  "app_error_too_large_to_open": {
+    "message": "このメッセージは大きすぎるため、ここでは開けません。パスワードや鍵は正しい可能性があります。妨げているのはサイズです。GnuPG などのデスクトップ用 OpenPGP ツールで開いてください。"
+  },
   "app_error_unsigned_text_around_signature": {
     "message": "署名されたメッセージの外側に、署名の対象外のテキストが含まれています。BEGIN 行から END 行までの署名されたメッセージだけを貼り付けてください。"
   },
@@ -575,6 +578,15 @@
   },
   "app_integrity_ledger_lost": {
     "message": "このデバイスが最後に確認した内容の記録が削除されたか読み取れなかったため、今回はデータの古いコピーを検出できません。この警告を閉じるまで、最も厳しいセキュリティプリセットが適用されます。失効したと分かっている連絡先が、引き続き失効と表示されているか確認してください。"
+  },
+  "app_integrity_missing_sync": {
+    "message": "保管庫はデバイス間で同期されており、別のデバイス上の古いバージョンの PGP Tools は、リストを空にしたときにもこのようにデータを削除することがあります。すべてのデバイスを更新済みの場合は、改ざんとみなしてください。"
+  },
+  "app_integrity_no_generation": {
+    "message": "鍵、連絡先、または設定の一部が、このデバイスが古いコピーを見分けるための印なしで保存されています。別のデバイス上の古いバージョンの PGP Tools はこの形式で保存します。データを以前の状態に戻した場合も同じになります。すべてのデバイスを更新してもこの表示が出る場合は改ざんとみなし、鍵と連絡先を確認してください。"
+  },
+  "app_integrity_settings_held": {
+    "message": "設定が古いコピーである可能性があるため、この警告を閉じるまで最も厳しいセキュリティプリセットが適用されます。"
   },
   "app_integrity_settings_strict": {
     "message": "設定が見つからなかったため、変更するまで最も厳しいセキュリティプリセットが適用されます。"
@@ -791,7 +803,7 @@
     "message": "保管庫を現在の場所で使う"
   },
   "app_vault_erase_body": {
-    "message": "このブラウザとその同期ストレージに保存されている鍵、連絡先、設定、履歴を完全に削除し、新しい保管庫を作成できるようにします。元に戻すことはできません。"
+    "message": "このブラウザとその同期ストレージに保存されている鍵、連絡先、設定、履歴を削除し、新しい保管庫を作成できるようにします。元に戻すことはできません。ブラウザがストレージを圧縮するまで、暗号化されたコピーがディスクに残る場合があります。"
   },
   "app_vault_erase_confirm": {
     "message": "保管庫を消去"
@@ -1571,7 +1583,18 @@
     }
   },
   "import_review_conflict_name": {
-    "message": "$name$ ($keyid$) と同じ名前ですが、別の鍵です。信頼する前に本人に確認してください。",
+    "message": "$name$ ($keyid$) の名前に見えますが、別の文字が使われています。信頼する前に本人に確認してください。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
+  "import_review_conflict_same_name": {
+    "message": "$name$ ($keyid$) も同じ名前で、両者を見分けるメールアドレスがありません。信頼する前に本人に確認してください。",
     "placeholders": {
       "name": {
         "content": "$1"
@@ -1638,6 +1661,9 @@
       }
     }
   },
+  "import_review_replace_many": {
+    "message": "このアドレスを持つ連絡先が複数あるため、置き換えは選べません。"
+  },
   "import_review_status_duplicate": {
     "message": "保存済み"
   },
@@ -1652,6 +1678,9 @@
   },
   "import_review_status_update": {
     "message": "更新"
+  },
+  "import_review_status_your_key": {
+    "message": "自分の鍵"
   },
   "import_review_title": {
     "message": "鍵を確認"
@@ -2275,7 +2304,7 @@
     "message": "これらの連絡先に対する暗号化や、その署名の検証はできなくなります。公開鍵は後で再度インポートできます。"
   },
   "keys_bulk_delete_private_body": {
-    "message": "選択した秘密鍵がこのデバイスから完全に削除されます。削除した鍵だけに対して暗号化されたものは復元できなくなります。今後必要になる可能性があるなら、バックアップがあることを確認してください。"
+    "message": "選択した秘密鍵をこのデバイスの保管庫から削除します。削除した鍵だけに対して暗号化されたものは、バックアップがなければ復号できなくなります。今後必要になる可能性があるなら、バックアップを保管してください。ブラウザがストレージを圧縮するまで、暗号化されたコピーがディスクに残る場合があります。"
   },
   "keys_bulk_delete_prompt_one": {
     "message": "delete $count$ key",
@@ -2327,6 +2356,14 @@
   },
   "keys_check_revocation_failed": {
     "message": "失効を確認できませんでした。もう一度お試しください。"
+  },
+  "keys_check_revocation_needs_review": {
+    "message": "キーサーバー上の $name$ の鍵に新しい名前またはアドレスがあります。保存する前に確認してください。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
   },
   "keys_check_revocation_not_published": {
     "message": "$host$ は $name$ の鍵を公開していないため、そこでは確認できません。",
@@ -2493,10 +2530,24 @@
     }
   },
   "keys_contact_same_name": {
+    "message": "紛らわしい名前"
+  },
+  "keys_contact_same_name_plain": {
     "message": "同じ名前"
   },
+  "keys_contact_same_name_plain_title": {
+    "message": "$name$ ($keyid$) と同じ名前で、見分けるメールアドレスがありません。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
   "keys_contact_same_name_title": {
-    "message": "$name$ ($keyid$) も別の鍵でこの名前を使っています。",
+    "message": "$name$ ($keyid$) の名前に見えますが、別の文字が使われています。",
     "placeholders": {
       "name": {
         "content": "$1"
@@ -2607,13 +2658,13 @@
     "message": "署名、復号、自分への暗号化にデフォルトで使用されます"
   },
   "keys_delete_crx_body": {
-    "message": "この拡張機能の更新に署名できなくなります。バックアップがない限り、鍵は復元できません。"
+    "message": "この拡張機能の更新に署名できなくなります。バックアップがない限り、元に戻すことはできません。ブラウザがストレージを圧縮するまで、暗号化されたコピーがディスクに残る場合があります。"
   },
   "keys_delete_key": {
     "message": "鍵を削除"
   },
   "keys_delete_key_body": {
-    "message": "この秘密鍵がこのデバイスから完全に削除されます。この鍵だけに対して暗号化されたものは復元できなくなります。今後必要になる可能性があるなら、バックアップがあることを確認してください。"
+    "message": "この秘密鍵をこのデバイスの保管庫から削除します。この鍵だけに対して暗号化されたものは、バックアップがなければ復号できなくなります。今後必要になる可能性があるなら、バックアップを保管してください。ブラウザがストレージを圧縮するまで、暗号化されたコピーがディスクに残る場合があります。"
   },
   "keys_delete_key_permanently": {
     "message": "鍵を完全に削除"
@@ -3567,7 +3618,7 @@
     "message": "適用しています..."
   },
   "settings_preset_confirm_history": {
-    "message": "このプリセットは鍵をキャッシュしない設定をオンにするため、保存済みの履歴 ($size$) も削除されます。復元することはできません。",
+    "message": "このプリセットは鍵をキャッシュしない設定をオンにするため、保存済みの履歴 ($size$) も削除されます。元に戻すことはできません。",
     "placeholders": {
       "size": {
         "content": "$1"
@@ -3888,7 +3939,7 @@
     "message": "CRX 署名"
   },
   "shared_delete_history_body": {
-    "message": "鍵をキャッシュしない設定にすると、保存済みの履歴 ($size$) も削除されます。復元することはできません。",
+    "message": "鍵をキャッシュしない設定にすると、保存済みの履歴 ($size$) も削除されます。元に戻すことはできません。",
     "placeholders": {
       "size": {
         "content": "$1"
@@ -4051,6 +4102,9 @@
   "shared_security_preset": {
     "message": "セキュリティ プリセット"
   },
+  "shared_settings_save_failed": {
+    "message": "保存されている設定を読み取れなかったため、この変更を保存できませんでした。"
+  },
   "shared_show_technical_details": {
     "message": "技術的な詳細を表示"
   },
@@ -4121,6 +4175,9 @@
         "content": "$1"
       }
     }
+  },
+  "workspace_auto_run_too_large": {
+    "message": "このメッセージは大きすぎるため自動では開きません。下のボタンで開いてください。"
   },
   "workspace_browse_files": {
     "message": "ファイルを選択"
@@ -4233,6 +4290,30 @@
   },
   "workspace_detected_key_show": {
     "message": "鍵一覧で表示"
+  },
+  "workspace_detected_keys_in_message": {
+    "message": "このメッセージには $names$ の公開鍵が含まれています。",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_detected_keys_known": {
+    "message": "$names$ の鍵はすでに持っています。",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_detected_keys_pasted": {
+    "message": "$names$ の公開鍵です。",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
   },
   "workspace_drop_files_or_text": {
     "message": "ここにファイルまたはテキストをドロップ"
@@ -4700,6 +4781,20 @@
   },
   "workspace_sign_for_web_store": {
     "message": "Web Store 用に署名"
+  },
+  "workspace_sign_hidden_chars": {
+    "message": "このテキストには見えない文字 ($chars$) が含まれています。表示の順序を変えたり内容を隠したりでき、そのまま署名されます。",
+    "placeholders": {
+      "chars": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_sign_hidden_chars_anyway": {
+    "message": "このまま署名"
+  },
+  "workspace_sign_hidden_chars_remove": {
+    "message": "削除する"
   },
   "workspace_sign_kind_crx": {
     "message": "Chrome 拡張機能 (.crx)"

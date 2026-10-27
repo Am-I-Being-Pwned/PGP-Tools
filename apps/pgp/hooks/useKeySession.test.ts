@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { KeyHandleEntry, KeySessionStoreDeps } from "./useKeySession";
-import { createKeySessionStore, dropHandle } from "./useKeySession";
+import {
+  createKeySessionStore,
+  dropHandle,
+  openThenReseal,
+} from "./useKeySession";
 
 const wasm = vi.hoisted(() => ({ dropKey: vi.fn(() => Promise.resolve()) }));
 const age = vi.hoisted(() => ({
@@ -466,5 +470,82 @@ describe("dropHandle routes to the store the handle came from", () => {
     await dropHandle({ handle: 4, kind: "ssh" });
     expect(age.closeSshIdentity).toHaveBeenCalledExactlyOnceWith(4);
     expect(wasm.dropKey).not.toHaveBeenCalled();
+  });
+});
+
+// Regression: the re-seal used to run AFTER `unlock` resolved, so the key
+// showed as unlocked ("Lock") while its migration under the master was
+// still unwritten -- and a reload in that window (e2e unlock-on-open,
+// "both keys now open off the single vault ceremony") kept the old salt.
+describe("openThenReseal: the migration is on disk before the key shows unlocked", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("persists the re-seal before the handle is published", async () => {
+    const { store, deps } = makeStore();
+    const order: string[] = [];
+    deps.onUnlockedChanged.mockImplementation(() => {
+      order.push("published");
+    });
+    const reseal = vi.fn(async (handle: number) => {
+      await Promise.resolve();
+      order.push(`resealed:${handle}`);
+    });
+
+    await expect(
+      store.unlock("KEY1", "pgp", () =>
+        openThenReseal(() => Promise.resolve(7), reseal),
+      ),
+    ).resolves.toBe(true);
+
+    expect(reseal).toHaveBeenCalledExactlyOnceWith(7);
+    expect(order).toEqual(["resealed:7", "published"]);
+    expect(store.getHandle("KEY1")).toBe(7);
+  });
+
+  it("a failed re-seal still unlocks the key", async () => {
+    const { store } = makeStore();
+    await expect(
+      store.unlock("KEY1", "pgp", () =>
+        openThenReseal(
+          () => Promise.resolve(3),
+          () => Promise.reject(new Error("write failed")),
+        ),
+      ),
+    ).resolves.toBe(true);
+    expect(store.getHandle("KEY1")).toBe(3);
+  });
+
+  it("no re-seal: just the open", async () => {
+    await expect(openThenReseal(() => Promise.resolve(5), null)).resolves.toBe(
+      5,
+    );
+  });
+
+  it("does not re-seal when the open fails", async () => {
+    const reseal = vi.fn(() => Promise.resolve());
+    await expect(
+      openThenReseal(() => Promise.reject(new Error("wrong key")), reseal),
+    ).rejects.toThrow("wrong key");
+    expect(reseal).not.toHaveBeenCalled();
+  });
+
+  it("a lock during the re-seal still drops the handle", async () => {
+    const { store, deps } = makeStore();
+    let finish!: () => void;
+    const pending = store.unlock("KEY1", "pgp", () =>
+      openThenReseal(
+        () => Promise.resolve(9),
+        () =>
+          new Promise<void>((res) => {
+            finish = res;
+          }),
+      ),
+    );
+    await vi.waitFor(() => expect(finish).toBeTypeOf("function"));
+    store.lockAll();
+    finish();
+    await expect(pending).resolves.toBe(false);
+    expect(store.getHandle("KEY1")).toBeNull();
+    expect(deps.dropHandle).toHaveBeenCalledWith({ handle: 9, kind: "pgp" });
   });
 });

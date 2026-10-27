@@ -153,7 +153,7 @@
     "message": "Attiva ed elimina la cronologia"
   },
   "shared_delete_history_body": {
-    "message": "L'opzione “Non memorizzare mai le chiavi nella cache” elimina anche la cronologia salvata ($size$). Non può essere recuperata."
+    "message": "L'opzione “Non memorizzare mai le chiavi nella cache” elimina anche la cronologia salvata ($size$). Non può essere annullata."
   },
   "shared_sync_quota_error": {
     "message": "Spazio di sincronizzazione insufficiente. Chrome limita i dati sincronizzati a circa 100 KB in totale, quindi questa cassaforte è troppo grande per essere sincronizzata tra dispositivi. Tienila su questo dispositivo, oppure rimuovi alcune chiavi e riprova."
@@ -310,5 +310,8 @@
   },
   "shared_bundle_no_encrypt_to_self": {
     "message": "I messaggi che cifri non sono più leggibili da te in seguito"
+  },
+  "shared_settings_save_failed": {
+    "message": "Non è stato possibile salvare questa modifica perché non è stato possibile leggere le impostazioni salvate."
   }
 }

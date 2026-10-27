@@ -47,16 +47,16 @@
   "keys_count_contacts_one": { "message": "$count$ 个联系人" },
   "keys_count_contacts_other": { "message": "$count$ 个联系人" },
   "keys_bulk_delete_private_body": {
-    "message": "这将从此设备永久删除所选私钥。仅加密给已删除密钥的任何内容都将无法恢复。如果将来可能还需要它们，请确保已有备份。"
+    "message": "这会将所选私钥从此设备的保险库中移除。仅加密给已删除密钥的内容，没有备份将无法解密；如果将来可能还需要它们，请保留备份。在浏览器压缩其存储之前，磁盘上可能仍留有一份加密副本。"
   },
   "keys_bulk_delete_contacts_body": {
     "message": "你将无法再加密给这些联系人或验证其签名。之后可以重新导入他们的公钥。"
   },
   "keys_delete_crx_body": {
-    "message": "你将无法再为此扩展程序签名更新，且除非有备份，否则该密钥无法恢复。"
+    "message": "你将无法再为此扩展程序签名更新，且除非有备份，否则此操作无法撤销。在浏览器压缩其存储之前，磁盘上可能仍留有一份加密副本。"
   },
   "keys_delete_key_body": {
-    "message": "这将从此设备永久删除该私钥。仅加密给此密钥的任何内容都将无法恢复。如果将来可能还需要它，请确保已有备份。"
+    "message": "这会将该私钥从此设备的保险库中移除。仅加密给此密钥的内容，没有备份将无法解密；如果将来可能还需要它，请保留备份。在浏览器压缩其存储之前，磁盘上可能仍留有一份加密副本。"
   },
   "keys_remove_contact_body": {
     "message": "你将无法再向此联系人加密消息或验证其签名。之后可以重新导入其公钥。"
@@ -284,9 +284,9 @@
   "keys_contact_same_address_title": {
     "message": "$name$ ($keyid$) 也用这个地址，但密钥不同。"
   },
-  "keys_contact_same_name": { "message": "名字相同" },
+  "keys_contact_same_name": { "message": "相似名字" },
   "keys_contact_same_name_title": {
-    "message": "$name$ ($keyid$) 也用这个名字，但密钥不同。"
+    "message": "看起来像 $name$ ($keyid$) 的名字，但用的是不同的字母。"
   },
   "keys_invisible_char": {
     "message": "此处有一个不可见字符 ($code$)"
@@ -302,5 +302,14 @@
   },
   "keys_contact_lookalike_address_title": {
     "message": "$name$ ($keyid$) 的地址看起来与此地址相同，但密钥不同。"
+  },
+  "keys_contact_same_name_plain": {
+    "message": "同名"
+  },
+  "keys_contact_same_name_plain_title": {
+    "message": "与 $name$ ($keyid$) 同名，而且没有电子邮件地址可以区分两者。"
+  },
+  "keys_check_revocation_needs_review": {
+    "message": "密钥服务器上 $name$ 的密钥有新的名字或地址。请在保存前检查。"
   }
 }

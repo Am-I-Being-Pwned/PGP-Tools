@@ -111,7 +111,7 @@
     }
   },
   "actions_history_delete_warning": {
-    "message": "Questa azione elimina definitivamente da questo dispositivo la cronologia cifrata delle tue operazioni. Non può essere recuperata."
+    "message": "Questa azione rimuove la cronologia cifrata delle tue operazioni dalla cassaforte di questo dispositivo. Non può essere annullata. Una copia cifrata può restare sul disco finché il browser non compatta il suo spazio di archiviazione."
   },
   "actions_history_empty": {
     "message": "Nessuna cronologia"
@@ -538,6 +538,9 @@
   "app_error_tampered": {
     "message": "Verifica della firma non riuscita - questo messaggio potrebbe essere stato manomesso. Non fidarti del contenuto; chiedi al mittente di inviarlo di nuovo."
   },
+  "app_error_too_large_to_open": {
+    "message": "Questo messaggio è troppo grande per essere aperto qui. La password o la chiave potrebbero essere corrette: è la dimensione a impedirlo. Aprilo con uno strumento OpenPGP per desktop, come GnuPG."
+  },
   "app_error_unsigned_text_around_signature": {
     "message": "Contiene testo al di fuori del messaggio firmato, che la firma non copre. Incolla solo il messaggio firmato, dalla riga BEGIN alla riga END."
   },
@@ -575,6 +578,15 @@
   },
   "app_integrity_ledger_lost": {
     "message": "La registrazione di questo dispositivo su ciò che ha visto per ultimo è stata eliminata o non è leggibile, quindi questa volta non è possibile rilevare copie più vecchie dei tuoi dati. Il preset di sicurezza più rigoroso resta attivo finché non chiudi questo avviso. Controlla che i contatti che sai essere revocati risultino ancora revocati."
+  },
+  "app_integrity_missing_sync": {
+    "message": "La tua cassaforte si sincronizza tra i dispositivi, e una versione precedente di PGP Tools su un altro dispositivo può anche rimuovere dati così quando svuota un elenco. Se tutti i tuoi dispositivi sono aggiornati, consideralo una manomissione."
+  },
+  "app_integrity_no_generation": {
+    "message": "Alcune delle tue chiavi, dei contatti o delle impostazioni sono state salvate senza il contrassegno che questo dispositivo usa per riconoscere le copie più vecchie. Una versione precedente di PGP Tools su un altro dispositivo salva i dati così, e lo farebbe anche chi li riportasse a una versione precedente. Se tutti i tuoi dispositivi sono aggiornati e vedi ancora questo avviso, consideralo una manomissione e controlla chiavi e contatti."
+  },
+  "app_integrity_settings_held": {
+    "message": "Le tue impostazioni potrebbero essere una copia più vecchia, quindi il preset di sicurezza più rigoroso resta attivo finché non chiudi questo avviso."
   },
   "app_integrity_settings_strict": {
     "message": "Le tue impostazioni mancavano, quindi è attivo il preset di sicurezza più rigoroso finché non le modifichi."
@@ -791,7 +803,7 @@
     "message": "Usa la cassaforte dove si trova"
   },
   "app_vault_erase_body": {
-    "message": "Questa operazione elimina definitivamente chiavi, contatti, impostazioni e cronologia salvati in questo browser e nella sua memoria sincronizzata, così puoi creare una nuova cassaforte. Non può essere annullata."
+    "message": "Questa operazione elimina chiavi, contatti, impostazioni e cronologia salvati in questo browser e nella sua memoria sincronizzata, così puoi creare una nuova cassaforte. Non può essere annullata. Una copia cifrata può restare sul disco finché il browser non compatta il suo spazio di archiviazione."
   },
   "app_vault_erase_confirm": {
     "message": "Cancella cassaforte"
@@ -1571,7 +1583,18 @@
     }
   },
   "import_review_conflict_name": {
-    "message": "Stesso nome di $name$ ($keyid$), ma un'altra chiave. Verifica con questa persona prima di fidarti.",
+    "message": "Sembra il nome di $name$ ($keyid$), ma usa lettere diverse. Verifica con questa persona prima di fidarti.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
+  "import_review_conflict_same_name": {
+    "message": "Anche $name$ ($keyid$) ha questo nome, e nessun indirizzo email distingue i due. Verifica con questa persona prima di fidarti.",
     "placeholders": {
       "name": {
         "content": "$1"
@@ -1638,6 +1661,9 @@
       }
     }
   },
+  "import_review_replace_many": {
+    "message": "Sostituisci non è disponibile: più di un contatto ha questo indirizzo."
+  },
   "import_review_status_duplicate": {
     "message": "Già salvata"
   },
@@ -1652,6 +1678,9 @@
   },
   "import_review_status_update": {
     "message": "Aggiornamento"
+  },
+  "import_review_status_your_key": {
+    "message": "La tua chiave"
   },
   "import_review_title": {
     "message": "Controlla le chiavi"
@@ -2275,7 +2304,7 @@
     "message": "Non potrai più cifrare per questi contatti né verificare le loro firme. Potrai reimportare le loro chiavi pubbliche in seguito."
   },
   "keys_bulk_delete_private_body": {
-    "message": "Questa azione elimina definitivamente da questo dispositivo le chiavi private selezionate. Tutto ciò che è cifrato solo per una chiave eliminata diventa irrecuperabile. Assicurati di avere un backup se potresti averne bisogno in futuro."
+    "message": "Questa azione rimuove le chiavi private selezionate dalla cassaforte di questo dispositivo. Ciò che è cifrato solo per una chiave eliminata non potrà più essere decifrato senza un backup, quindi conservane uno se potresti averne bisogno in futuro. Una copia cifrata può restare sul disco finché il browser non compatta il suo spazio di archiviazione."
   },
   "keys_bulk_delete_prompt_one": {
     "message": "elimina $count$ chiave",
@@ -2327,6 +2356,14 @@
   },
   "keys_check_revocation_failed": {
     "message": "Impossibile verificare la revoca. Riprova."
+  },
+  "keys_check_revocation_needs_review": {
+    "message": "La chiave di $name$ sul server delle chiavi ha nuovi nomi o indirizzi. Controllali prima che vengano salvati.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
   },
   "keys_check_revocation_not_published": {
     "message": "$host$ non pubblica la chiave di $name$, quindi non può essere verificata lì.",
@@ -2493,10 +2530,24 @@
     }
   },
   "keys_contact_same_name": {
+    "message": "Nome somigliante"
+  },
+  "keys_contact_same_name_plain": {
     "message": "Stesso nome"
   },
+  "keys_contact_same_name_plain_title": {
+    "message": "Ha lo stesso nome di $name$ ($keyid$), e nessun indirizzo email li distingue.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
   "keys_contact_same_name_title": {
-    "message": "Anche $name$ ($keyid$) ha questo nome, con un'altra chiave.",
+    "message": "Sembra il nome di $name$ ($keyid$), ma usa lettere diverse.",
     "placeholders": {
       "name": {
         "content": "$1"
@@ -2607,13 +2658,13 @@
     "message": "Usata per impostazione predefinita per firmare, decifrare e cifrare per te stesso"
   },
   "keys_delete_crx_body": {
-    "message": "Non potrai più firmare aggiornamenti per questa estensione, e la chiave non può essere recuperata a meno che tu non abbia un backup."
+    "message": "Non potrai più firmare aggiornamenti per questa estensione, e senza un backup non si può annullare. Una copia cifrata può restare sul disco finché il browser non compatta il suo spazio di archiviazione."
   },
   "keys_delete_key": {
     "message": "Elimina chiave"
   },
   "keys_delete_key_body": {
-    "message": "Questa azione elimina definitivamente la chiave privata da questo dispositivo. Tutto ciò che è cifrato solo per questa chiave diventa irrecuperabile. Assicurati di avere un backup se potresti averne bisogno in futuro."
+    "message": "Questa azione rimuove la chiave privata dalla cassaforte di questo dispositivo. Ciò che è cifrato solo per questa chiave non potrà più essere decifrato senza un backup, quindi conservane uno se potresti averne bisogno in futuro. Una copia cifrata può restare sul disco finché il browser non compatta il suo spazio di archiviazione."
   },
   "keys_delete_key_permanently": {
     "message": "Elimina definitivamente la chiave"
@@ -3567,7 +3618,7 @@
     "message": "Applicazione..."
   },
   "settings_preset_confirm_history": {
-    "message": "Questo profilo attiva “Non memorizzare mai le chiavi nella cache”, che elimina anche la cronologia salvata ($size$). Non può essere recuperata.",
+    "message": "Questo profilo attiva “Non memorizzare mai le chiavi nella cache”, che elimina anche la cronologia salvata ($size$). Non può essere annullata.",
     "placeholders": {
       "size": {
         "content": "$1"
@@ -3888,7 +3939,7 @@
     "message": "Firma CRX"
   },
   "shared_delete_history_body": {
-    "message": "L'opzione “Non memorizzare mai le chiavi nella cache” elimina anche la cronologia salvata ($size$). Non può essere recuperata.",
+    "message": "L'opzione “Non memorizzare mai le chiavi nella cache” elimina anche la cronologia salvata ($size$). Non può essere annullata.",
     "placeholders": {
       "size": {
         "content": "$1"
@@ -4051,6 +4102,9 @@
   "shared_security_preset": {
     "message": "Profilo di sicurezza"
   },
+  "shared_settings_save_failed": {
+    "message": "Non è stato possibile salvare questa modifica perché non è stato possibile leggere le impostazioni salvate."
+  },
   "shared_show_technical_details": {
     "message": "Mostra i dettagli tecnici"
   },
@@ -4121,6 +4175,9 @@
         "content": "$1"
       }
     }
+  },
+  "workspace_auto_run_too_large": {
+    "message": "Questo messaggio è troppo grande per essere aperto automaticamente. Aprilo con il pulsante qui sotto."
   },
   "workspace_browse_files": {
     "message": "Sfoglia file"
@@ -4233,6 +4290,30 @@
   },
   "workspace_detected_key_show": {
     "message": "Mostrala tra le tue chiavi"
+  },
+  "workspace_detected_keys_in_message": {
+    "message": "Questo messaggio contiene le chiavi pubbliche di $names$.",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_detected_keys_known": {
+    "message": "Hai già le chiavi di $names$.",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_detected_keys_pasted": {
+    "message": "Queste sono le chiavi pubbliche di $names$.",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
   },
   "workspace_drop_files_or_text": {
     "message": "Trascina qui file o testo"
@@ -4700,6 +4781,20 @@
   },
   "workspace_sign_for_web_store": {
     "message": "Firma per il Web Store"
+  },
+  "workspace_sign_hidden_chars": {
+    "message": "Questo testo contiene caratteri invisibili ($chars$). Possono riordinare o nascondere ciò che dice e verrebbero firmati così come sono.",
+    "placeholders": {
+      "chars": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_sign_hidden_chars_anyway": {
+    "message": "Firma comunque"
+  },
+  "workspace_sign_hidden_chars_remove": {
+    "message": "Rimuovili"
   },
   "workspace_sign_kind_crx": {
     "message": "Estensione Chrome (.crx)"

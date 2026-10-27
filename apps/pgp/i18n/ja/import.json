@@ -384,7 +384,7 @@
     "message": "$email$ はすでに $name$ ($keyid$) のものです。これは別の鍵です。信頼する前に本人に確認してください。"
   },
   "import_review_conflict_name": {
-    "message": "$name$ ($keyid$) と同じ名前ですが、別の鍵です。信頼する前に本人に確認してください。"
+    "message": "$name$ ($keyid$) の名前に見えますが、別の文字が使われています。信頼する前に本人に確認してください。"
   },
   "import_review_choice_aria": {
     "message": "$name$ の扱い"
@@ -448,5 +448,14 @@
   },
   "import_github_refresh_all_held": {
     "message": "$username$ はこの連絡先に保存された鍵の一部を公開しなくなり、残りはすべて別の連絡先かあなた自身の鍵なので、更新できません。古い鍵への暗号化をやめたい場合は、この連絡先を削除してください。"
+  },
+  "import_review_status_your_key": {
+    "message": "自分の鍵"
+  },
+  "import_review_conflict_same_name": {
+    "message": "$name$ ($keyid$) も同じ名前で、両者を見分けるメールアドレスがありません。信頼する前に本人に確認してください。"
+  },
+  "import_review_replace_many": {
+    "message": "このアドレスを持つ連絡先が複数あるため、置き換えは選べません。"
   }
 }

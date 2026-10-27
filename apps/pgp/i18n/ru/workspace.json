@@ -568,5 +568,26 @@
   },
   "workspace_signature_not_addressed": {
     "message": "в подписи не указано, что сообщение предназначено вам, поэтому его могли переслать"
+  },
+  "workspace_detected_keys_known": {
+    "message": "У вас уже есть ключи $names$."
+  },
+  "workspace_detected_keys_in_message": {
+    "message": "Это сообщение содержит открытые ключи $names$."
+  },
+  "workspace_detected_keys_pasted": {
+    "message": "Это открытые ключи $names$."
+  },
+  "workspace_sign_hidden_chars": {
+    "message": "В этом тексте есть невидимые символы ($chars$). Они могут менять порядок или скрывать часть текста и будут подписаны как есть."
+  },
+  "workspace_sign_hidden_chars_anyway": {
+    "message": "Всё равно подписать"
+  },
+  "workspace_sign_hidden_chars_remove": {
+    "message": "Удалить их"
+  },
+  "workspace_auto_run_too_large": {
+    "message": "Это сообщение слишком большое, чтобы открыть его автоматически. Откройте его кнопкой ниже."
   }
 }

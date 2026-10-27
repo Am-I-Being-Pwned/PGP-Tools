@@ -2,7 +2,7 @@ import type { StorageLocation } from "./preferences";
 import { STORAGE_MASTER_PROTECTION } from "../constants";
 import { getChunked, setChunked } from "./chunked";
 import { currentStorageLocation, getItem, withSharedLock } from "./engine";
-import { resetIntegrityLedger } from "./integrity";
+import { resetIntegrityLedger, startIntegrityLedger } from "./integrity";
 
 //
 // Security note: For the passkey path, `storedSecret` and `prfSalt` are
@@ -95,7 +95,11 @@ export class VaultExistsError extends Error {
  * confirmation.
  *
  * A new vault starts a new integrity ledger: one left by an earlier vault
- * would not open under this one's key and would read as tampering.
+ * would not open under this one's key and would read as tampering. It is
+ * started HERE, under this lock and before the master protection itself
+ * is written, so it exists before any store write (`startIntegrityLedger`
+ * says why that matters). The session for the new vault is already
+ * installed when onboarding calls this.
  *
  * `location` is the area to create the vault in (default: wherever the
  * engine routes now). Onboarding passes the user's choice and records the
@@ -118,6 +122,7 @@ export async function saveMasterProtection(
     }
     const loc = location ?? (await currentStorageLocation());
     await resetIntegrityLedger();
+    await startIntegrityLedger(mp);
     await setChunked(
       loc === "sync" ? chrome.storage.sync : chrome.storage.local,
       STORAGE_MASTER_PROTECTION,

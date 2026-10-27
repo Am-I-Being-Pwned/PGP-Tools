@@ -315,7 +315,7 @@
     "message": "Effacer et recommencer"
   },
   "app_vault_erase_body": {
-    "message": "Cette action supprime définitivement les clés, contacts, paramètres et l'historique enregistrés dans ce navigateur et dans son stockage synchronisé, afin que vous puissiez créer un nouveau coffre. Elle est irréversible."
+    "message": "Cette action supprime les clés, contacts, paramètres et l'historique enregistrés dans ce navigateur et dans son stockage synchronisé, afin que vous puissiez créer un nouveau coffre. Elle est irréversible. Une copie chiffrée peut rester sur le disque jusqu'à ce que le navigateur compacte son stockage."
   },
   "app_vault_erase_confirm": {
     "message": "Effacer le coffre"
@@ -346,5 +346,17 @@
   },
   "app_vault_alternate_use": {
     "message": "Essayer celui-là"
+  },
+  "app_integrity_no_generation": {
+    "message": "Certaines de vos clés, contacts ou paramètres ont été enregistrés sans le marqueur que cet appareil utilise pour repérer les copies plus anciennes. Une ancienne version de PGP Tools sur un autre appareil enregistre les données ainsi, tout comme une personne qui les restaurerait à une version antérieure. Si tous vos appareils sont à jour et que vous voyez encore ceci, considérez-le comme une falsification et vérifiez vos clés et vos contacts."
+  },
+  "app_integrity_missing_sync": {
+    "message": "Votre coffre est synchronisé entre vos appareils, et une ancienne version de PGP Tools sur un autre appareil peut aussi supprimer des données ainsi lorsqu'elle vide une liste. Si tous vos appareils sont à jour, considérez-le comme une falsification."
+  },
+  "app_integrity_settings_held": {
+    "message": "Vos paramètres sont peut-être une copie plus ancienne : le préréglage de sécurité le plus strict s'applique jusqu'à ce que vous fermiez cet avertissement."
+  },
+  "app_error_too_large_to_open": {
+    "message": "Ce message est trop volumineux pour être ouvert ici. Votre mot de passe ou votre clé est peut-être correct : c'est la taille qui bloque. Ouvrez-le avec un outil OpenPGP de bureau, comme GnuPG."
   }
 }

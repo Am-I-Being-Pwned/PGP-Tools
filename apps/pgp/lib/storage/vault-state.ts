@@ -43,6 +43,10 @@ import {
 } from "../constants";
 import { getChunked, removeChunked } from "./chunked";
 import {
+  copyEncryptedBlobRepacked,
+  purgeEncryptedBlob,
+} from "./encrypted-store";
+import {
   currentStorageLocation,
   invalidateLocationCache,
   pinnedStorageLocation,
@@ -97,7 +101,24 @@ async function holdsVaultData(loc: StorageLocation): Promise<boolean> {
   return false;
 }
 
+/** How long an apparently orphaned vault must stay that way before it is
+ *  called one. A storage switch on another device of a sync vault copies
+ *  the master protection first and deletes it last, but sync delivers the
+ *  writes one by one, so a second device can briefly see sealed stores
+ *  with no master protection; offering Erase on that glimpse would be the
+ *  worst possible false positive. Overridable for tests. */
+export const ORPHAN_RECHECK_MS = { value: 1500 };
+
 export async function resolveVaultState(): Promise<VaultState> {
+  const first = await resolveOnce();
+  if (first.kind !== "orphaned") return first;
+  await new Promise((r) => setTimeout(r, ORPHAN_RECHECK_MS.value));
+  // Still orphaned after the wait is an orphan; anything else (the master
+  // protection arrived) is that state instead.
+  return resolveOnce();
+}
+
+async function resolveOnce(): Promise<VaultState> {
   const pinned = await pinnedStorageLocation();
   const here = await currentStorageLocation();
   const other: StorageLocation = here === "local" ? "sync" : "local";
@@ -146,4 +167,71 @@ export async function eraseVault(): Promise<void> {
   await clearHistory();
   await resetIntegrityLedger();
   await unpinStorageLocation();
+}
+
+/**
+ * Move the vault from one storage area to the other (Settings' storage
+ * switch). Every engine-routed blob moves, or it strands in the old area:
+ * the master protection especially -- leave it behind and the switched
+ * vault has keys it can never unlock.
+ *
+ * Order, and why:
+ *  1. Copy, MASTER PROTECTION FIRST, then the stores (each re-packed for
+ *     the destination: padding differs by area). Originals untouched.
+ *  2. Commit: record the new location (bootstrap, then this device's own
+ *     record -- see `writeBoot`). Reads now resolve to the destination.
+ *  3. Purge the old area's copies, MASTER PROTECTION LAST. Best-effort:
+ *     the move is committed, so a failure only leaves duplicates.
+ *
+ * The master protection brackets the stores so that no moment exists at
+ * which an area holds sealed stores without one: another device of a
+ * sync vault seeing that state mid-switch would call the vault orphaned
+ * and offer to erase it (`resolveVaultState` also waits for a re-check).
+ *
+ * A failure before the commit rolls back: the destination copies are
+ * removed (master protection last again), and this device's location is
+ * put back where it was, so it can never be left routed to the area the
+ * rollback just emptied. Throws the original error.
+ */
+export async function moveVault(
+  from: StorageLocation,
+  to: StorageLocation,
+): Promise<void> {
+  if (from === to) return;
+  const copyOrder = [STORAGE_MASTER_PROTECTION, ...VAULT_STORES];
+  const purgeOrder = [...VAULT_STORES, STORAGE_MASTER_PROTECTION];
+  const pinnedBefore = await pinnedStorageLocation();
+  let committed = false;
+  try {
+    for (const key of copyOrder) {
+      await copyEncryptedBlobRepacked(key, from, to);
+    }
+    await savePreferences({ storageLocation: to });
+    committed = true;
+    invalidateLocationCache();
+  } catch (e) {
+    if (!committed) {
+      for (const key of purgeOrder) {
+        try {
+          await purgeEncryptedBlob(key, to);
+        } catch {
+          /* best-effort cleanup */
+        }
+      }
+      try {
+        await pinStorageLocation(pinnedBefore ?? from);
+      } catch {
+        /* the write that failed is the likelier one; nothing more to do */
+      }
+      invalidateLocationCache();
+    }
+    throw e;
+  }
+  for (const key of purgeOrder) {
+    try {
+      await purgeEncryptedBlob(key, from);
+    } catch {
+      /* stale originals are harmless; leave them */
+    }
+  }
 }

@@ -702,5 +702,33 @@
   "workspace_signature_not_addressed": {
     "message": "the signature doesn't say it was meant for you, so it may have been forwarded",
     "description": "Lower-case fragment in the note under a good signature on a DECRYPTED message, joined with ' · ': the signer did not record who the message was for, so someone may have re-encrypted a message the signer wrote to someone else."
+  },
+  "workspace_detected_keys_known": {
+    "message": "You already have the keys of $names$.",
+    "description": "Banner when every public key found in a pasted or received text is already a contact. $names$ is a comma-separated list of the owners' names."
+  },
+  "workspace_detected_keys_in_message": {
+    "message": "This message contains public keys for $names$.",
+    "description": "Banner under a decrypted/verified message that carries several public keys. $names$ is a comma-separated list of the owners' names."
+  },
+  "workspace_detected_keys_pasted": {
+    "message": "These are public keys for $names$.",
+    "description": "Banner when several public keys are pasted into the message box. $names$ is a comma-separated list of the owners' names."
+  },
+  "workspace_sign_hidden_chars": {
+    "message": "This text has characters you can't see ($chars$). They can reorder or hide what it says, and they would be signed as they are.",
+    "description": "Amber note shown instead of signing when the text to sign holds invisible characters (direction overrides, zero-width or tag characters, a lone carriage return). $chars$ lists their Unicode code points, e.g. U+202E."
+  },
+  "workspace_sign_hidden_chars_anyway": {
+    "message": "Sign anyway",
+    "description": "Button on the hidden-characters note: sign the text exactly as it is. Short."
+  },
+  "workspace_sign_hidden_chars_remove": {
+    "message": "Remove them",
+    "description": "Button on the hidden-characters note: delete the invisible characters from the message box (a lone carriage return becomes a line break). Short."
+  },
+  "workspace_auto_run_too_large": {
+    "message": "This message is too large to open automatically. Open it with the button below.",
+    "description": "Note when a message opened from the right-click menu was not decrypted on its own because its content is large. The button below is Decrypt (or Verify)."
   }
 }

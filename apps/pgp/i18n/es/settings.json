@@ -312,7 +312,7 @@
     "message": "¿Reemplazar sus ajustes personalizados por el perfil $preset$? Solo cambian los ajustes indicados en su tarjeta, y después puede volver a modificar cualquiera de ellos."
   },
   "settings_preset_confirm_history": {
-    "message": "Este perfil activa «Nunca guardar claves en caché», lo que también elimina su historial guardado ($size$). No se puede recuperar."
+    "message": "Este perfil activa «Nunca guardar claves en caché», lo que también elimina su historial guardado ($size$). No se puede deshacer."
   },
   "settings_translation_title": {
     "message": "Traducción"

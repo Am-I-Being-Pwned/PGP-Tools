@@ -315,7 +315,7 @@
     "message": "Borrar y empezar de nuevo"
   },
   "app_vault_erase_body": {
-    "message": "Esto elimina de forma permanente las claves, contactos, ajustes e historial guardados en este navegador y en su almacenamiento sincronizado, para que puedas crear una bóveda nueva. No se puede deshacer."
+    "message": "Esto elimina las claves, contactos, ajustes e historial guardados en este navegador y en su almacenamiento sincronizado, para que puedas crear una bóveda nueva. No se puede deshacer. Puede quedar una copia cifrada en el disco hasta que el navegador compacte su almacenamiento."
   },
   "app_vault_erase_confirm": {
     "message": "Borrar bóveda"
@@ -346,5 +346,17 @@
   },
   "app_vault_alternate_use": {
     "message": "Probar esa"
+  },
+  "app_integrity_no_generation": {
+    "message": "Algunas de tus claves, contactos o ajustes se guardaron sin la marca que este dispositivo usa para detectar copias antiguas. Una versión antigua de PGP Tools en otro dispositivo guarda los datos así, y también lo haría alguien que los revirtiera. Si todos tus dispositivos están actualizados y sigues viendo esto, trátalo como una manipulación y revisa tus claves y contactos."
+  },
+  "app_integrity_missing_sync": {
+    "message": "Tu bóveda se sincroniza entre dispositivos, y una versión antigua de PGP Tools en otro dispositivo también puede eliminar datos así cuando vacía una lista. Si todos tus dispositivos están actualizados, trátalo como una manipulación."
+  },
+  "app_integrity_settings_held": {
+    "message": "Tus ajustes podrían ser una copia antigua, así que se aplica el ajuste de seguridad más estricto hasta que cierres este aviso."
+  },
+  "app_error_too_large_to_open": {
+    "message": "Este mensaje es demasiado grande para abrirlo aquí. Tu contraseña o clave puede ser correcta: lo que lo impide es el tamaño. Ábrelo con una herramienta OpenPGP de escritorio, como GnuPG."
   }
 }

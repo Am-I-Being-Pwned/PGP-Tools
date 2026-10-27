@@ -69,7 +69,7 @@
     "message": "Excluir todo o histórico ($count$ entradas)"
   },
   "actions_history_delete_warning": {
-    "message": "Isso exclui permanentemente seu histórico criptografado de operações deste dispositivo. Não é possível recuperá-lo."
+    "message": "Isso remove seu histórico criptografado de operações do cofre deste dispositivo. Não é possível desfazer. Uma cópia criptografada pode ficar no disco até o navegador compactar o armazenamento."
   },
   "actions_no_keys_available": {
     "message": "Nenhuma chave disponível"

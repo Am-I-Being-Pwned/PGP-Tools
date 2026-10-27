@@ -384,7 +384,7 @@
     "message": "$email$ 已属于 $name$ ($keyid$)。这是另一个密钥 - 信任之前请先与对方确认。"
   },
   "import_review_conflict_name": {
-    "message": "与 $name$ ($keyid$) 同名，但密钥不同。信任之前请先与对方确认。"
+    "message": "看起来像 $name$ ($keyid$) 的名字，但用的是不同的字母。信任之前请先与对方确认。"
   },
   "import_review_choice_aria": {
     "message": "如何处理 $name$"
@@ -448,5 +448,14 @@
   },
   "import_github_refresh_all_held": {
     "message": "$username$ 已不再列出为此联系人保存的部分密钥，而它仍列出的每个密钥都属于你的其他联系人或你自己，因此无法更新。如果不再想加密给它的旧密钥，请删除此联系人。"
+  },
+  "import_review_status_your_key": {
+    "message": "你的密钥"
+  },
+  "import_review_conflict_same_name": {
+    "message": "$name$ ($keyid$) 也叫这个名字，而且没有电子邮件地址可以区分两者。信任之前请先与对方确认。"
+  },
+  "import_review_replace_many": {
+    "message": "无法替换：有多个联系人使用此地址。"
   }
 }

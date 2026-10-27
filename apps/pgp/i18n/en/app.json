@@ -420,7 +420,7 @@
     "description": "Button under app_vault_orphaned_body, and the title of the confirmation page it opens. Destructive."
   },
   "app_vault_erase_body": {
-    "message": "This permanently deletes the stored keys, contacts, settings and history in this browser and in its synced storage, so you can set up a new vault. It cannot be undone.",
+    "message": "This deletes the stored keys, contacts, settings and history in this browser and in its synced storage, so you can set up a new vault. It cannot be undone. An encrypted copy may remain on disk until the browser compacts its storage.",
     "description": "Confirmation page body for app_vault_erase_title."
   },
   "app_vault_erase_confirm": {
@@ -462,5 +462,21 @@
   "app_vault_alternate_use": {
     "message": "Try that one",
     "description": "Link after app_vault_alternate_sync / app_vault_alternate_local. Switches the unlock screen to the vault in the other storage area; nothing is copied or deleted."
+  },
+  "app_integrity_no_generation": {
+    "message": "Some of your keys, contacts or settings were saved without the marker this device uses to spot older copies. An older version of PGP Tools on another device saves data this way, and so would someone rolling it back. If all your devices are updated and you still see this, treat it as tampering, and check your keys and contacts.",
+    "description": "Line of the amber app_integrity_warning band, shown instead of its main line when a stored keyring, contacts list or settings blob has no freshness marker although this device recorded one. Usual cause: an un-updated copy of the extension on another synced device. Revoked contacts stay revoked regardless."
+  },
+  "app_integrity_missing_sync": {
+    "message": "Your vault syncs between devices, and an older version of PGP Tools on another device can also remove data this way when it empties a list. If all your devices are updated, treat it as tampering.",
+    "description": "Extra line of the app_integrity_warning band, shown only for a vault in synced storage when a stored keyring, contacts list or settings blob has disappeared."
+  },
+  "app_integrity_settings_held": {
+    "message": "Your settings may be an older copy, so the strictest security preset is in effect until you dismiss this.",
+    "description": "Extra line of the app_integrity_warning band, shown when the stored settings are older than this device last saw. The strictest preset is the one called Paranoid in the preset picker."
+  },
+  "app_error_too_large_to_open": {
+    "message": "This message is too large to open here. Your password or key may well be right - it's the size that stops it. Open it with a desktop OpenPGP tool such as GnuPG.",
+    "description": "User-facing error: a decrypt or verify stopped because the message is past this app's size limit. Shown instead of a wrong-password error, because the password or key may have been correct. 'OpenPGP' and 'GnuPG' are names; keep them."
   }
 }

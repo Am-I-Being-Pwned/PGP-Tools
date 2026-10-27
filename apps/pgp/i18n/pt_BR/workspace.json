@@ -526,5 +526,26 @@
   },
   "workspace_signature_not_addressed": {
     "message": "a assinatura não diz que era para você, então pode ter sido encaminhada"
+  },
+  "workspace_detected_keys_known": {
+    "message": "Você já tem as chaves de $names$."
+  },
+  "workspace_detected_keys_in_message": {
+    "message": "Esta mensagem contém chaves públicas de $names$."
+  },
+  "workspace_detected_keys_pasted": {
+    "message": "Estas são chaves públicas de $names$."
+  },
+  "workspace_sign_hidden_chars": {
+    "message": "Este texto tem caracteres que você não vê ($chars$). Eles podem reordenar ou ocultar o que ele diz e seriam assinados como estão."
+  },
+  "workspace_sign_hidden_chars_anyway": {
+    "message": "Assinar mesmo assim"
+  },
+  "workspace_sign_hidden_chars_remove": {
+    "message": "Removê-los"
+  },
+  "workspace_auto_run_too_large": {
+    "message": "Esta mensagem é grande demais para abrir automaticamente. Abra-a com o botão abaixo."
   }
 }

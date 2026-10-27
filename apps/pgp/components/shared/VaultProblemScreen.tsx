@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { Button } from "@amibeingpwned/ui/button";
 
 import type { StorageLocation } from "../../lib/storage/preferences";
+import { presentError } from "../../lib/errors/present";
 import { t } from "../../lib/i18n";
 import { ConfirmPage } from "./ConfirmPage";
 
@@ -41,13 +42,26 @@ export function VaultProblemScreen({
 }: VaultProblemScreenProps) {
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // A ref, not the state: two clicks in one frame both see `busy` false.
+  const runningRef = useRef(false);
 
   if (confirming) {
     return (
       <ConfirmPage
         title={t("app_vault_erase_title")}
         confirmLabel={t("app_vault_erase_confirm")}
-        onConfirm={onErase}
+        // ConfirmPage shows a rejection and disables its buttons while
+        // this runs; the ref also stops a second erase from starting.
+        onConfirm={async () => {
+          if (runningRef.current) return;
+          runningRef.current = true;
+          try {
+            await onErase();
+          } finally {
+            runningRef.current = false;
+          }
+        }}
         onCancel={() => setConfirming(false)}
       >
         <p>{t("app_vault_erase_body")}</p>
@@ -56,9 +70,25 @@ export function VaultProblemScreen({
   }
 
   const use = (loc: StorageLocation) => {
+    if (runningRef.current) return;
+    runningRef.current = true;
     setBusy(true);
-    void onUseLocation(loc).finally(() => setBusy(false));
+    setError(null);
+    onUseLocation(loc)
+      .catch((e: unknown) => {
+        setError(presentError(e, t("shared_something_went_wrong")).message);
+      })
+      .finally(() => {
+        runningRef.current = false;
+        setBusy(false);
+      });
   };
+
+  const errorLine = error ? (
+    <p role="alert" className="text-bad max-w-xs text-xs">
+      {error}
+    </p>
+  ) : null;
 
   if (problem.kind === "ambiguous") {
     return (
@@ -75,6 +105,7 @@ export function VaultProblemScreen({
         <Button variant="outline" disabled={busy} onClick={() => use("sync")}>
           {t("app_vault_ambiguous_use_sync")}
         </Button>
+        {errorLine}
       </div>
     );
   }
@@ -107,6 +138,7 @@ export function VaultProblemScreen({
           {t("app_vault_erase_title")}
         </Button>
       )}
+      {errorLine}
     </div>
   );
 }

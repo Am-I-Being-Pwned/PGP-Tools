@@ -384,7 +384,7 @@
     "message": "$email$ ya pertenece a $name$ ($keyid$). Esta es otra clave: confírmalo con esa persona antes de confiar en ella."
   },
   "import_review_conflict_name": {
-    "message": "Mismo nombre que $name$ ($keyid$), pero otra clave. Confírmalo con esa persona antes de confiar en ella."
+    "message": "Parece el nombre de $name$ ($keyid$), pero usa otras letras. Confírmalo con esa persona antes de confiar en ella."
   },
   "import_review_choice_aria": {
     "message": "Qué hacer con $name$"
@@ -448,5 +448,14 @@
   },
   "import_github_refresh_all_held": {
     "message": "$username$ ya no publica algunas de las claves guardadas para este contacto, y todas las que sigue publicando pertenecen a otra persona que tienes o a ti, así que no se puede actualizar. Elimina este contacto si ya no quieres cifrar a sus claves antiguas."
+  },
+  "import_review_status_your_key": {
+    "message": "Tu clave"
+  },
+  "import_review_conflict_same_name": {
+    "message": "$name$ ($keyid$) también tiene este nombre, y ninguna dirección de correo distingue a los dos. Confírmalo con esa persona antes de confiar en ella."
+  },
+  "import_review_replace_many": {
+    "message": "No se ofrece Reemplazar: más de un contacto tiene esta dirección."
   }
 }

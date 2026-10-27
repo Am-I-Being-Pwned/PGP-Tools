@@ -91,7 +91,7 @@
     "message": "Einschalten und Verlauf löschen"
   },
   "shared_delete_history_body": {
-    "message": "„Nie zwischenspeichern“ löscht auch Ihren gespeicherten Verlauf ($size$). Er kann nicht wiederhergestellt werden."
+    "message": "„Nie zwischenspeichern“ löscht auch Ihren gespeicherten Verlauf ($size$). Das kann nicht rückgängig gemacht werden."
   },
   "shared_sync_quota_error": {
     "message": "Nicht genügend Synchronisierungsspeicher. Chrome begrenzt synchronisierte Daten auf etwa 100 KB insgesamt, daher ist dieser Tresor zu groß, um ihn geräteübergreifend zu synchronisieren. Behalten Sie ihn auf diesem Gerät oder entfernen Sie einige Schlüssel und versuchen Sie es erneut."
@@ -204,5 +204,8 @@
   },
   "shared_bundle_no_encrypt_to_self": {
     "message": "Von Ihnen verschlüsselte Nachrichten sind für Sie danach nicht mehr lesbar"
+  },
+  "shared_settings_save_failed": {
+    "message": "Diese Änderung konnte nicht gespeichert werden, weil die gespeicherten Einstellungen nicht gelesen werden konnten."
   }
 }

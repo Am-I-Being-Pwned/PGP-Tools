@@ -526,5 +526,26 @@
   },
   "workspace_signature_not_addressed": {
     "message": "签名未表明是发给你的，因此可能是被转发的"
+  },
+  "workspace_detected_keys_known": {
+    "message": "你已经有 $names$ 的密钥。"
+  },
+  "workspace_detected_keys_in_message": {
+    "message": "此消息包含 $names$ 的公钥。"
+  },
+  "workspace_detected_keys_pasted": {
+    "message": "这些是 $names$ 的公钥。"
+  },
+  "workspace_sign_hidden_chars": {
+    "message": "此文本含有看不见的字符 ($chars$)。它们可能改变文字顺序或隐藏内容，并会原样被签名。"
+  },
+  "workspace_sign_hidden_chars_anyway": {
+    "message": "仍然签名"
+  },
+  "workspace_sign_hidden_chars_remove": {
+    "message": "删除它们"
+  },
+  "workspace_auto_run_too_large": {
+    "message": "此消息太大，无法自动打开。请使用下方按钮打开。"
   }
 }

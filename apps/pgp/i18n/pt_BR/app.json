@@ -315,7 +315,7 @@
     "message": "Apagar e começar de novo"
   },
   "app_vault_erase_body": {
-    "message": "Isso exclui permanentemente as chaves, contatos, configurações e o histórico salvos neste navegador e no armazenamento sincronizado dele, para que você possa criar um novo cofre. Não é possível desfazer."
+    "message": "Isso exclui as chaves, contatos, configurações e o histórico salvos neste navegador e no armazenamento sincronizado dele, para que você possa criar um novo cofre. Não é possível desfazer. Uma cópia criptografada pode ficar no disco até o navegador compactar o armazenamento."
   },
   "app_vault_erase_confirm": {
     "message": "Apagar cofre"
@@ -346,5 +346,17 @@
   },
   "app_vault_alternate_use": {
     "message": "Tentar esse"
+  },
+  "app_integrity_no_generation": {
+    "message": "Algumas das suas chaves, contatos ou configurações foram salvos sem a marca que este dispositivo usa para identificar cópias antigas. Uma versão antiga do PGP Tools em outro dispositivo salva os dados assim, e alguém que os revertesse também. Se todos os seus dispositivos estão atualizados e você ainda vê isto, trate como adulteração e confira suas chaves e contatos."
+  },
+  "app_integrity_missing_sync": {
+    "message": "Seu cofre é sincronizado entre dispositivos, e uma versão antiga do PGP Tools em outro dispositivo também pode remover dados assim quando esvazia uma lista. Se todos os seus dispositivos estão atualizados, trate como adulteração."
+  },
+  "app_integrity_settings_held": {
+    "message": "Suas configurações podem ser uma cópia antiga, então a predefinição de segurança mais rígida fica em vigor até você dispensar este aviso."
+  },
+  "app_error_too_large_to_open": {
+    "message": "Esta mensagem é grande demais para ser aberta aqui. Sua senha ou chave pode estar correta: o que impede é o tamanho. Abra-a com uma ferramenta OpenPGP para desktop, como o GnuPG."
   }
 }

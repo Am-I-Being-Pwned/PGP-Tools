@@ -312,7 +312,7 @@
     "message": "Substituir suas configurações personalizadas pelo perfil $preset$? Só as configurações listadas no cartão dele mudam, e você pode ajustar qualquer uma delas de novo depois."
   },
   "settings_preset_confirm_history": {
-    "message": "Este perfil ativa “Nunca manter chaves em cache”, o que também exclui seu histórico salvo ($size$). Não é possível recuperá-lo."
+    "message": "Este perfil ativa “Nunca manter chaves em cache”, o que também exclui seu histórico salvo ($size$). Não é possível desfazer."
   },
   "settings_translation_title": {
     "message": "Tradução"

@@ -38,7 +38,10 @@ import {
   saveContact,
   updateContact,
 } from "./contacts";
-import { copyEncryptedBlobRepacked } from "./encrypted-store";
+import {
+  copyEncryptedBlobRepacked,
+  saveEncryptedArray,
+} from "./encrypted-store";
 import { asStorageLocation, invalidateLocationCache } from "./engine";
 import { fakeArea } from "./fake-area";
 import {
@@ -53,6 +56,7 @@ import {
   acknowledgeIntegrityIssues,
   clearIntegrityIssues,
   integrityIssues,
+  masterProtectionDigest,
   splitGeneration,
 } from "./integrity";
 import { getKeyring } from "./keyring";
@@ -66,7 +70,12 @@ import {
   sanitizeSettings,
   savePreferences,
 } from "./preferences";
-import { adoptVaultLocation, resolveVaultState } from "./vault-state";
+import {
+  adoptVaultLocation,
+  moveVault,
+  ORPHAN_RECHECK_MS,
+  resolveVaultState,
+} from "./vault-state";
 
 const wasmMock = vi.hoisted(() => ({ session: true }));
 
@@ -96,6 +105,7 @@ beforeEach(() => {
   stub(local, sync);
   wasmMock.session = true;
   clearIntegrityIssues();
+  ORPHAN_RECHECK_MS.value = 0;
 });
 
 afterEach(() => {
@@ -802,5 +812,373 @@ describe("E5: onboarding writes the vault before the location", () => {
     ).rejects.toBeInstanceOf(VaultExistsError);
     expect(local.store.get(STORAGE_DEVICE_LOCATION)).toBe("local");
     expect(sync.store.has(STORAGE_MASTER_PROTECTION)).toBe(false);
+  });
+});
+
+// ── F: the follow-up review ──────────────────────────────────────────
+
+/** A sealed array exactly as a 2.0.x build writes it: its validators
+ *  drop the `$gen` element, so the store goes back with no generation. */
+function sealedWithoutGeneration(key: string, items: unknown[]) {
+  return domainEnvelope(key, new TextEncoder().encode(JSON.stringify(items)));
+}
+
+describe("F1: a 2.0.x device sharing a sync vault", () => {
+  it("reads a store re-saved without a generation as the softer kind, floor kept", async () => {
+    useSync();
+    await saveContact(contact("SAM", { usableForEncryption: true }));
+    await updateContact("SAM", (c) => ({
+      ...c,
+      revoked: true,
+      usableForEncryption: false,
+    }));
+    // The old build reads, drops the generation, adds a contact, and
+    // writes back -- from its own (pre-revocation) view of SAM.
+    sync.store.set(
+      STORAGE_CONTACTS,
+      sealedWithoutGeneration(STORAGE_CONTACTS, [
+        contact("SAM", { usableForEncryption: true }),
+        contact("BBB"),
+      ]),
+    );
+    clearIntegrityIssues();
+
+    const list = await loadContacts();
+    expect(list.map((c) => c.keyId).sort()).toEqual(["BBB", "SAM"]);
+    expect(kinds()).toEqual([`${STORAGE_CONTACTS}:no-generation`]);
+    const sam = list.find((c) => c.keyId === "SAM");
+    expect(sam?.revoked).toBe(true);
+    expect(sam?.usableForEncryption).toBe(false);
+  });
+
+  it("still calls a real rollback (an older generation) rolled-back", async () => {
+    useSync();
+    await saveContact(contact("A"));
+    const before = sync.store.get(STORAGE_CONTACTS);
+    await saveContact(contact("B"));
+    sync.store.set(STORAGE_CONTACTS, before);
+    clearIntegrityIssues();
+    await loadContacts();
+    expect(kinds()).toEqual([`${STORAGE_CONTACTS}:rolled-back`]);
+  });
+
+  it("still reports a store the old build removed when it emptied it", async () => {
+    useSync();
+    await saveContact(contact("AAA"));
+    sync.store.delete(STORAGE_CONTACTS);
+    clearIntegrityIssues();
+    await loadContacts();
+    expect(kinds()).toEqual([`${STORAGE_CONTACTS}:missing`]);
+  });
+});
+
+describe("F2: the strict overlay is never saved", () => {
+  const REAL = {
+    autoLockMinutes: 60,
+    keyDiscoveryEnabled: true,
+    aiTranslateEnabled: true,
+    neverCacheKeys: false,
+  } as const;
+
+  it("a routine save while the ledger is lost does not make the strictest preset permanent", async () => {
+    await savePreferences(REAL);
+    await saveContact(contact("AAA"));
+    local.store.delete(STORAGE_INTEGRITY);
+    clearIntegrityIssues();
+
+    expect(await getPreferences()).toMatchObject(STRICT);
+    // What every encrypt does.
+    await savePreferences({ recentRecipients: ["AAA"] });
+    expect(await getPreferences()).toMatchObject(STRICT);
+
+    await acknowledgeIntegrityIssues();
+    expect(await getPreferences()).toMatchObject({
+      ...REAL,
+      recentRecipients: ["AAA"],
+    });
+  });
+
+  it("keeps a change the user did make while held", async () => {
+    await savePreferences(REAL);
+    await saveContact(contact("AAA"));
+    local.store.delete(STORAGE_INTEGRITY);
+    await getPreferences();
+
+    await savePreferences({ autoLockMinutes: 30 });
+    await acknowledgeIntegrityIssues();
+    expect(await getPreferences()).toMatchObject({
+      ...REAL,
+      autoLockMinutes: 30,
+    });
+  });
+});
+
+describe("F3: an older settings blob is held like a lost ledger", () => {
+  async function rolledBackSettings() {
+    await savePreferences({ autoLockMinutes: 60, keyDiscoveryEnabled: true });
+    const weak = local.store.get(STORAGE_SETTINGS);
+    // The user hardens their settings; the attacker writes the old blob back.
+    await savePreferences({ autoLockMinutes: 2, keyDiscoveryEnabled: false });
+    local.store.set(STORAGE_SETTINGS, weak);
+    clearIntegrityIssues();
+  }
+
+  it("reads as the strictest preset, even after a routine save, until acknowledged", async () => {
+    await rolledBackSettings();
+    expect(await getPreferences()).toMatchObject(STRICT);
+    expect(kinds()).toContain(`${STORAGE_SETTINGS}:rolled-back`);
+
+    // A routine save stamps a newer generation over the old values: that
+    // must not launder them.
+    await savePreferences({ recentRecipients: ["AAA"] });
+    clearIntegrityIssues(); // the panel closes and reopens
+    expect(await getPreferences()).toMatchObject(STRICT);
+    expect(kinds()).toContain(`${STORAGE_SETTINGS}:rolled-back`);
+
+    expect(await acknowledgeIntegrityIssues()).toBe(true);
+    expect(await getPreferences()).toMatchObject({
+      autoLockMinutes: 60,
+      keyDiscoveryEnabled: true,
+      recentRecipients: ["AAA"],
+    });
+    clearIntegrityIssues();
+    await getPreferences();
+    expect(kinds()).toEqual([]);
+  });
+
+  it("accepts the copy on acknowledge, so its next read does not hold it again", async () => {
+    await rolledBackSettings();
+    await getPreferences();
+    await acknowledgeIntegrityIssues();
+    clearIntegrityIssues();
+    expect(await getPreferences()).toMatchObject({ autoLockMinutes: 60 });
+    expect(kinds()).toEqual([]);
+  });
+
+  it("holds settings saved with no generation (an older device) the same way", async () => {
+    useSync();
+    await savePreferences({ autoLockMinutes: 2 });
+    sync.store.set(
+      STORAGE_SETTINGS,
+      domainEnvelope(
+        STORAGE_SETTINGS,
+        new TextEncoder().encode(JSON.stringify({ autoLockMinutes: 60 })),
+      ),
+    );
+    clearIntegrityIssues();
+    expect(await getPreferences()).toMatchObject(STRICT);
+    expect(kinds()).toEqual([`${STORAGE_SETTINGS}:no-generation`]);
+    await acknowledgeIntegrityIssues();
+    expect(await getPreferences()).toMatchObject({ autoLockMinutes: 60 });
+  });
+});
+
+describe("F4: a new vault's ledger starts with its master protection", () => {
+  const anyItem = (v: unknown): v is unknown => v !== undefined;
+
+  it("two stores' first writes racing do not read as a lost ledger", async () => {
+    await saveMasterProtection(PASSWORD_MP, "local");
+    await Promise.all([
+      saveEncryptedArray(
+        { storageKey: STORAGE_KEYRING, isValid: anyItem, label: "k" },
+        [{ keyId: "X" }],
+      ),
+      savePreferences({ autoLockMinutes: 30 }),
+    ]);
+    clearIntegrityIssues();
+    const prefs = await getPreferences();
+    expect(kinds()).toEqual([]);
+    expect(prefs.autoLockMinutes).toBe(30);
+  });
+
+  it("a panel closed between the first store write and its ledger write does not either", async () => {
+    await saveMasterProtection(PASSWORD_MP, "local");
+    local.store.set(
+      STORAGE_SETTINGS,
+      domainEnvelope(
+        STORAGE_SETTINGS,
+        new TextEncoder().encode(
+          JSON.stringify({ autoLockMinutes: 30, $gen: Date.now() }),
+        ),
+      ),
+    );
+    const prefs = await getPreferences();
+    expect(kinds()).toEqual([]);
+    expect(prefs.autoLockMinutes).toBe(30);
+  });
+
+  it("replaces a ledger left by a vault recreated elsewhere quietly", async () => {
+    // Device B's ledger was sealed under the old vault's key; the vault
+    // was erased and recreated on device A.
+    local.store.set(STORAGE_MASTER_PROTECTION, PASSWORD_MP);
+    local.store.set(STORAGE_INTEGRITY, { iv: "AAAA", ciphertext: "AAAA" });
+    local.store.set(
+      `${STORAGE_INTEGRITY}_vault`,
+      await masterProtectionDigest({ ...PASSWORD_MP, kdfSalt: "b2xk" }),
+    );
+    await saveContact(contact("A"));
+    await loadContacts();
+    await getPreferences();
+    expect(kinds()).toEqual([]);
+    expect(local.store.get(`${STORAGE_INTEGRITY}_vault`)).toBe(
+      await masterProtectionDigest(PASSWORD_MP),
+    );
+  });
+
+  it("deleted ledger after onboarding is reported", async () => {
+    // Fresh modules: the panel that onboards has never run the legacy
+    // migration (its settled flag is per module instance).
+    vi.resetModules();
+    const mp = await import("./master-protection");
+    const prefs = await import("./preferences");
+    const store = await import("./encrypted-store");
+
+    // Onboarding's own writes, in its order.
+    await mp.saveMasterProtection(PASSWORD_MP, "local");
+    await prefs.savePreferences({ storageLocation: "local" });
+    await store.saveEncryptedArray(
+      { storageKey: STORAGE_KEYRING, isValid: anyItem, label: "k" },
+      [{ keyId: "X" }],
+    );
+    await prefs.savePreferences({ defaultKeyId: "X" });
+    await prefs.savePreferences({
+      storageLocation: "local",
+      onboardingComplete: true,
+    });
+
+    // Onboarding is done, so the main UI's first reads must not write
+    // the ledger: a write landing then (the legacy migration settling,
+    // as it used to) read the ledger before a deletion and put it back
+    // after, without its `lost` flag, and the deletion went unseen.
+    const ledger = local.store.get(STORAGE_INTEGRITY);
+    expect(ledger).toBeDefined();
+    await prefs.getPreferences();
+    expect(local.store.get(STORAGE_INTEGRITY)).toEqual(ledger);
+
+    // The attacker deletes it; the next panel to unlock reports it.
+    local.store.delete(STORAGE_INTEGRITY);
+    vi.resetModules();
+    const unlocked = await import("./preferences");
+    const integrity = await import("./integrity");
+    await unlocked.migrateLegacyPreferences();
+    expect(await unlocked.getPreferences()).toMatchObject(STRICT);
+    expect(
+      integrity.integrityIssues().map((i) => `${i.store}:${i.kind}`),
+    ).toContain(`${STORAGE_INTEGRITY}:missing`);
+  });
+
+  it("still warns about an unreadable ledger of the SAME vault", async () => {
+    await saveMasterProtection(PASSWORD_MP, "local");
+    await saveContact(contact("A"));
+    local.store.set(STORAGE_INTEGRITY, { iv: "AAAA", ciphertext: "AAAA" });
+    await loadContacts();
+    expect(kinds()).toEqual([`${STORAGE_INTEGRITY}:ledger-unreadable`]);
+  });
+});
+
+describe("F5: the storage switch", () => {
+  async function localVault() {
+    await saveMasterProtection(PASSWORD_MP, "local");
+    await savePreferences({ storageLocation: "local" });
+    await saveContact(contact("A"));
+  }
+
+  it("a failed bootstrap write leaves the device on the area that still holds the vault", async () => {
+    await localVault();
+    const realSet = sync.set.bind(sync);
+    sync.set = (items: Record<string, unknown>) =>
+      STORAGE_PREFERENCES in items
+        ? Promise.reject(new Error("Resource::kQuotaBytes quota exceeded"))
+        : realSet(items);
+
+    await expect(moveVault("local", "sync")).rejects.toThrow(/quota/i);
+
+    expect(local.store.get(STORAGE_DEVICE_LOCATION)).toBe("local");
+    expect(sync.store.has(STORAGE_MASTER_PROTECTION)).toBe(false);
+    expect(sync.store.has(STORAGE_CONTACTS)).toBe(false);
+    invalidateLocationCache();
+    expect(await resolveVaultState()).toMatchObject({ kind: "ready" });
+    expect((await loadContacts()).map((c) => c.keyId)).toEqual(["A"]);
+  });
+
+  it("copies the master protection first and deletes it last", async () => {
+    await localVault();
+    const events: string[] = [];
+    const base = (k: string) => k.split("::")[0];
+    const realSet = sync.set.bind(sync);
+    sync.set = (items: Record<string, unknown>) => {
+      for (const k of Object.keys(items)) events.push(`copy:${base(k)}`);
+      return realSet(items);
+    };
+    const realRemove = local.remove.bind(local);
+    local.remove = (keys: string | string[]) => {
+      for (const k of [keys].flat()) events.push(`purge:${base(k)}`);
+      return realRemove(keys);
+    };
+
+    await moveVault("local", "sync");
+
+    const copies = events.filter(
+      (e) => e.startsWith("copy:") && e !== `copy:${STORAGE_PREFERENCES}`,
+    );
+    const purges = events.filter((e) => e.startsWith("purge:"));
+    expect(copies[0]).toBe(`copy:${STORAGE_MASTER_PROTECTION}`);
+    expect(purges.at(-1)).toBe(`purge:${STORAGE_MASTER_PROTECTION}`);
+    expect(local.store.get(STORAGE_DEVICE_LOCATION)).toBe("sync");
+    expect(await resolveVaultState()).toMatchObject({ kind: "ready" });
+    expect((await loadContacts()).map((c) => c.keyId)).toEqual(["A"]);
+  });
+
+  it("does not call a vault orphaned on a glimpse mid-switch", async () => {
+    ORPHAN_RECHECK_MS.value = 30;
+    await saveContact(contact("REAL"));
+    const state = resolveVaultState();
+    // The master protection lands while the first look waits to re-check.
+    setTimeout(
+      () => local.store.set(STORAGE_MASTER_PROTECTION, PASSWORD_MP),
+      5,
+    );
+    expect(await state).toMatchObject({ kind: "ready" });
+  });
+});
+
+describe("F6: the legacy-settings migration runs before any store write", () => {
+  function seedPreGenerationInstall() {
+    local.store.set(
+      STORAGE_CONTACTS,
+      sealedWithoutGeneration(STORAGE_CONTACTS, [contact("OLD")]),
+    );
+    local.store.set(STORAGE_PREFERENCES, {
+      advancedMode: true,
+      autoLockMinutes: 5,
+    });
+  }
+
+  it("migrates a genuine pre-generation install when the unlock runs it first", async () => {
+    seedPreGenerationInstall();
+    vi.resetModules();
+    const prefs = await import("./preferences");
+    const contacts = await import("./contacts");
+
+    // App's onUnlocked: migration, then the contacts backfill's write.
+    await prefs.migrateLegacyPreferences();
+    await contacts.updateContact("OLD", (c) => ({ ...c, lastUsedAt: 2 }));
+
+    expect(await prefs.getPreferences()).toMatchObject({
+      advancedMode: true,
+      autoLockMinutes: 5,
+    });
+  });
+
+  it("(why the order matters) a store write first refuses it", async () => {
+    seedPreGenerationInstall();
+    vi.resetModules();
+    const prefs = await import("./preferences");
+    const contacts = await import("./contacts");
+
+    await contacts.updateContact("OLD", (c) => ({ ...c, lastUsedAt: 2 }));
+    const read = await prefs.getPreferences();
+    expect(read.advancedMode).toBe(false);
+    expect(local.store.has(STORAGE_PREFERENCES)).toBe(false);
   });
 });

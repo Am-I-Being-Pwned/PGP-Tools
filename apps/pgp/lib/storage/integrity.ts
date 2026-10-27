@@ -100,11 +100,12 @@ import {
   STORAGE_CRX_KEYS,
   STORAGE_INTEGRITY,
   STORAGE_KEYRING,
+  STORAGE_MASTER_PROTECTION,
   STORAGE_SETTINGS,
 } from "../constants";
 import { hasContactsSession } from "../pgp/wasm";
 import { getChunked, removeChunked, setChunked } from "./chunked";
-import { withSharedLock } from "./engine";
+import { getItem, withSharedLock } from "./engine";
 import { isStoredEnvelope, openEnvelope, sealEnvelope } from "./envelope";
 import { padPlaintext, unpadPlaintext } from "./padding";
 
@@ -131,6 +132,30 @@ interface Ledger {
    *  would not open ("ledger-unreadable"): reported on every proven read
    *  until the user dismisses the warning. */
   lost?: "missing" | "ledger-unreadable";
+  /** Stores (only the settings, see {@link HELD_UNTIL_ACKNOWLEDGED}) last
+   *  read older than their mark: reported on every proven read, and the
+   *  settings held at the strictest preset, until the user dismisses the
+   *  warning -- even after a routine save has stamped a newer generation
+   *  over the old values. `gen` is what was read and `mark` what this
+   *  device had seen then; dismissing accepts `gen` if nothing was
+   *  written since. */
+  suspect?: Partial<Record<string, SuspectRead>>;
+}
+
+interface SuspectRead {
+  kind: "rolled-back" | "no-generation";
+  gen: number;
+  mark: number;
+}
+
+function isSuspectRead(v: unknown): v is SuspectRead {
+  if (typeof v !== "object" || v === null) return false;
+  const o = v as Record<string, unknown>;
+  return (
+    (o.kind === "rolled-back" || o.kind === "no-generation") &&
+    typeof o.gen === "number" &&
+    typeof o.mark === "number"
+  );
 }
 
 function emptyLedger(): Ledger {
@@ -152,7 +177,12 @@ function isLedger(v: unknown): v is Ledger {
     o.settled.every((s) => typeof s === "string") &&
     (o.lost === undefined ||
       o.lost === "missing" ||
-      o.lost === "ledger-unreadable")
+      o.lost === "ledger-unreadable") &&
+    (o.suspect === undefined ||
+      (typeof o.suspect === "object" &&
+        o.suspect !== null &&
+        !Array.isArray(o.suspect) &&
+        Object.values(o.suspect).every(isSuspectRead)))
   );
 }
 
@@ -161,6 +191,13 @@ function isLedger(v: unknown): v is Ledger {
 export type IntegrityIssueKind =
   /** The store loaded with a generation below this device's mark. */
   | "rolled-back"
+  /** The store loaded with NO generation although this device has
+   *  recorded one for it. The softer case of "rolled-back": a 2.0.x build
+   *  on another device of a sync vault drops the generation element when
+   *  it rewrites a store, so this is what an un-updated device looks like
+   *  -- and also what a rollback to a pre-generation blob looks like. The
+   *  banner words it as both. */
+  | "no-generation"
   /** The store is gone (or replaced by something that is not a sealed
    *  envelope) although this device has seen it. */
   | "missing"
@@ -206,18 +243,26 @@ export function clearIntegrityIssues(): void {
   for (const fn of listeners) fn();
 }
 
-/** The user dismissed the warning: clear a lost ledger's flag so it
- *  stops repeating (and the settings read as stored again), then forget
- *  the reports. In that order, so the warning only goes away once the
- *  dismissal is stored. Unproven, so it only amends a ledger that opens.
- *  Resolves true when a lost flag was cleared (the settings now read
+/** The user dismissed the warning: clear a lost ledger's flag and any
+ *  held store so they stop repeating (and the settings read as stored
+ *  again), then forget the reports. In that order, so the warning only
+ *  goes away once the dismissal is stored. A held store whose mark has not
+ *  moved since has that mark lowered to the generation it was read at:
+ *  the user has accepted that copy, and without this its next read would
+ *  hold it again straight away. Unproven, so it only amends a ledger that
+ *  opens. Resolves true when anything was cleared (the settings now read
  *  differently, so the panel should re-read them). */
 export async function acknowledgeIntegrityIssues(): Promise<boolean> {
   let cleared = false;
   await bestEffort(undefined, () =>
     updateLedger((l) => {
-      if (!l.lost) return false;
+      const held = Object.entries(l.suspect ?? {});
+      if (!l.lost && held.length === 0) return false;
       delete l.lost;
+      for (const [store, s] of held) {
+        if (s && l.marks[store] === s.mark) l.marks[store] = s.gen;
+      }
+      delete l.suspect;
       cleared = true;
       return true;
     }, false),
@@ -263,6 +308,62 @@ export function objectGeneration(parsed: object): number {
 // ── the ledger ──────────────────────────────────────────────────────
 
 const local = () => chrome.storage.local;
+
+/** Plaintext, local-only record of WHICH vault the ledger was started
+ *  for: a digest of that vault's master protection. Kept outside the
+ *  seal because its one job is the case where the seal will not open: a
+ *  ledger sealed under a vault that has since been erased and recreated
+ *  (on another device of a sync vault, say) is stale, not tampered with,
+ *  and is replaced quietly. It only ever decides between "replace
+ *  quietly" and "replace and warn" for a ledger that ALREADY fails to
+ *  open under a session the stores have proven, so writing it gains a
+ *  sync attacker nothing (it is local, out of their reach anyway). */
+const LEDGER_VAULT = `${STORAGE_INTEGRITY}_vault`;
+
+/** A short, stable digest of a master protection (field order fixed, so
+ *  it does not depend on how the record was serialised). Null for
+ *  anything that is not a master protection. */
+export async function masterProtectionDigest(
+  mp: unknown,
+): Promise<string | null> {
+  if (typeof mp !== "object" || mp === null) return null;
+  const o = mp as Record<string, unknown>;
+  const fields =
+    o.method === "passkey"
+      ? [o.method, o.credentialId, o.prfSalt, o.storedSecret]
+      : o.method === "password"
+        ? [o.method, o.kdfSalt, o.encryptedCanary, o.canaryIv]
+        : null;
+  if (!fields?.every((f) => typeof f === "string")) return null;
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(JSON.stringify(fields)),
+  );
+  return Array.from(new Uint8Array(digest).subarray(0, 16), (b) =>
+    b.toString(16).padStart(2, "0"),
+  ).join("");
+}
+
+async function recordedLedgerVault(): Promise<string | null> {
+  const v: unknown = (await local().get(LEDGER_VAULT))[LEDGER_VAULT];
+  return typeof v === "string" ? v : null;
+}
+
+async function currentVaultDigest(): Promise<string | null> {
+  return masterProtectionDigest(
+    await getItem<unknown>(STORAGE_MASTER_PROTECTION),
+  );
+}
+
+/** A ledger that will not open, recorded as started for a DIFFERENT
+ *  vault than the one whose master protection is stored now: left over
+ *  from an erased vault, so it is replaced without a warning. */
+async function ledgerIsFromAnotherVault(): Promise<boolean> {
+  const recorded = await recordedLedgerVault();
+  if (!recorded) return false;
+  const current = await currentVaultDigest();
+  return current !== null && current !== recorded;
+}
 
 interface LedgerRead {
   ledger: Ledger | null;
@@ -383,23 +484,63 @@ async function updateLedger(
     let l = ledger;
     if (!l) {
       l = emptyLedger();
-      if (unreadable) l.lost = "ledger-unreadable";
-      else if (await localStoresCarryGenerations({ skip: justWrote })) {
+      if (unreadable) {
+        if (!(await ledgerIsFromAnotherVault())) l.lost = "ledger-unreadable";
+      } else if (await localStoresCarryGenerations({ skip: justWrote })) {
         l.lost = "missing";
       }
     }
     if (proven && l.lost) {
       reportIntegrityIssue({ store: STORAGE_INTEGRITY, kind: l.lost });
     }
+    if (proven) {
+      for (const [store, s] of Object.entries(l.suspect ?? {})) {
+        if (s) reportIntegrityIssue({ store, kind: s.kind });
+      }
+    }
+    // A fresh ledger, or one from before the vault was recorded: note
+    // which vault it is for (see LEDGER_VAULT).
+    if (!ledger || (proven && !(await recordedLedgerVault()))) {
+      const digest = await currentVaultDigest();
+      if (digest) await local().set({ [LEDGER_VAULT]: digest });
+    }
     if (!fn(l) && ledger) return l;
-    const json = new TextEncoder().encode(JSON.stringify(l));
-    await setChunked(
-      local(),
-      STORAGE_INTEGRITY,
-      await sealEnvelope(STORAGE_INTEGRITY, padPlaintext(json, true)),
-      false,
-    );
+    await writeLedger(l);
     return l;
+  });
+}
+
+async function writeLedger(l: Ledger): Promise<void> {
+  const json = new TextEncoder().encode(JSON.stringify(l));
+  await setChunked(
+    local(),
+    STORAGE_INTEGRITY,
+    await sealEnvelope(STORAGE_INTEGRITY, padPlaintext(json, true)),
+    false,
+  );
+}
+
+/**
+ * Start the ledger of a vault being created, together with its master
+ * protection and before any store is written: called inside
+ * `saveMasterProtection`'s lock, with the new vault's session installed.
+ *
+ * Without it the ledger was created by the first store write's
+ * `recordWrite`, after that write. A panel closed in between, or two
+ * stores' first writes racing, left a sealed store with a generation and
+ * no ledger -- which is exactly what a deleted ledger looks like, so the
+ * brand-new vault warned "ledger lost" and ran on the strictest preset.
+ * Best-effort like the rest of this module: without a session (it cannot
+ * seal) or on a failed write, the first proven write creates it as before.
+ */
+export async function startIntegrityLedger(mp: unknown): Promise<void> {
+  await bestEffort(undefined, async () => {
+    if (!(await hasContactsSession())) return;
+    await withSharedLock(STORAGE_INTEGRITY, async () => {
+      await writeLedger(emptyLedger());
+      const digest = await masterProtectionDigest(mp);
+      if (digest) await local().set({ [LEDGER_VAULT]: digest });
+    });
   });
 }
 
@@ -454,16 +595,33 @@ export function observeGeneration(
     const l = await updateLedger((l) => {
       const mark = l.marks[store];
       if (mark !== undefined && gen < mark) {
-        reportIntegrityIssue({ store, kind: "rolled-back" });
-        return false;
+        // No generation at all, where one was recorded: the softer kind
+        // (an older build on another device drops it; see the kind).
+        const kind = gen === 0 ? "no-generation" : "rolled-back";
+        reportIntegrityIssue({ store, kind });
+        if (!HELD_UNTIL_ACKNOWLEDGED.has(store)) return false;
+        const held = l.suspect?.[store];
+        if (held?.kind === kind && held.gen === gen && held.mark === mark) {
+          return false;
+        }
+        l.suspect = { ...l.suspect, [store]: { kind, gen, mark } };
+        return true;
       }
       if (mark === gen) return false;
       l.marks[store] = gen;
       return true;
     });
-    return !l?.lost;
+    return !l?.lost && !l?.suspect?.[store];
   });
 }
+
+/** Stores whose rolled-back (or generation-less) copy is not just
+ *  reported but held until the user dismisses the warning. Only the
+ *  settings: a rolled-back settings blob is a way to turn a Paranoid
+ *  user's auto-lock back up, so it reads as the strictest preset
+ *  meanwhile, the same as a lost ledger. The other stores have their own
+ *  defence (the revocation floor) and keep warning until rewritten. */
+const HELD_UNTIL_ACKNOWLEDGED = new Set<string>([STORAGE_SETTINGS]);
 
 /** Whether the current session opens this device's ledger: proof the
  *  session key is the vault's, for a caller about to overwrite a blob
@@ -491,7 +649,7 @@ export function noteAbsent(store: string): Promise<boolean> {
       if (seen) reportIntegrityIssue({ store, kind: "missing" });
       return seen || ledger.lost !== undefined;
     }
-    if (unreadable) return true;
+    if (unreadable) return !(await ledgerIsFromAnotherVault());
     if (await localStoresCarryGenerations({ skip: store })) {
       // The stores that carried a generation opened under this session,
       // which proves the key: the deleted ledger can be reported here.
@@ -549,5 +707,6 @@ export function markSettled(name: string): Promise<void> {
  *  under the new one's key, and would read as tampering. */
 export async function resetIntegrityLedger(): Promise<void> {
   await removeChunked(local(), STORAGE_INTEGRITY);
+  await local().remove(LEDGER_VAULT);
   clearIntegrityIssues();
 }

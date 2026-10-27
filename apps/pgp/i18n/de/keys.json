@@ -57,16 +57,16 @@
   "keys_count_contacts_one": { "message": "$count$ Kontakt" },
   "keys_count_contacts_other": { "message": "$count$ Kontakte" },
   "keys_bulk_delete_private_body": {
-    "message": "Dadurch werden die ausgewählten privaten Schlüssel dauerhaft von diesem Gerät gelöscht. Alles, was nur für einen gelöschten Schlüssel verschlüsselt wurde, ist danach unwiederbringlich verloren. Stellen Sie sicher, dass Sie eine Sicherung haben, falls Sie die Schlüssel jemals brauchen könnten."
+    "message": "Dadurch werden die ausgewählten privaten Schlüssel aus dem Tresor auf diesem Gerät entfernt. Alles, was nur für einen gelöschten Schlüssel verschlüsselt wurde, lässt sich ohne Sicherung nicht mehr entschlüsseln. Bewahren Sie also eine auf, falls Sie die Schlüssel jemals brauchen könnten. Eine verschlüsselte Kopie kann auf dem Datenträger bleiben, bis der Browser seinen Speicher komprimiert."
   },
   "keys_bulk_delete_contacts_body": {
     "message": "Sie können dann nicht mehr für diese Kontakte verschlüsseln oder ihre Signaturen verifizieren. Sie können ihre öffentlichen Schlüssel später erneut importieren."
   },
   "keys_delete_crx_body": {
-    "message": "Sie können dann keine Updates für diese Erweiterung mehr signieren, und der Schlüssel kann ohne Sicherung nicht wiederhergestellt werden."
+    "message": "Sie können dann keine Updates für diese Erweiterung mehr signieren, und ohne Sicherung lässt sich das nicht rückgängig machen. Eine verschlüsselte Kopie kann auf dem Datenträger bleiben, bis der Browser seinen Speicher komprimiert."
   },
   "keys_delete_key_body": {
-    "message": "Dadurch wird der private Schlüssel dauerhaft von diesem Gerät gelöscht. Alles, was nur für diesen Schlüssel verschlüsselt wurde, ist danach unwiederbringlich verloren. Stellen Sie sicher, dass Sie eine Sicherung haben, falls Sie ihn jemals brauchen könnten."
+    "message": "Dadurch wird der private Schlüssel aus dem Tresor auf diesem Gerät entfernt. Alles, was nur für diesen Schlüssel verschlüsselt wurde, lässt sich ohne Sicherung nicht mehr entschlüsseln. Bewahren Sie also eine auf, falls Sie ihn jemals brauchen könnten. Eine verschlüsselte Kopie kann auf dem Datenträger bleiben, bis der Browser seinen Speicher komprimiert."
   },
   "keys_remove_contact_body": {
     "message": "Sie können dann keine Nachrichten mehr für diesen Kontakt verschlüsseln oder seine Signaturen verifizieren. Sie können seinen öffentlichen Schlüssel später erneut importieren."
@@ -315,28 +315,28 @@
   },
   "keys_verified_chip": { "message": "Verifiziert" },
   "keys_verified_chip_title": {
-    "message": "Du hast diesen Schlüssel als verifiziert markiert, nachdem du seinen Fingerabdruck mit dem Inhaber verglichen hast."
+    "message": "Sie haben diesen Schlüssel als verifiziert markiert, nachdem Sie seinen Fingerabdruck mit dem Inhaber verglichen haben."
   },
-  "keys_verified_on": { "message": "Von dir verifiziert am $date$" },
-  "keys_verified_by_you": { "message": "Von dir verifiziert" },
+  "keys_verified_on": { "message": "Von Ihnen verifiziert am $date$" },
+  "keys_verified_by_you": { "message": "Von Ihnen verifiziert" },
   "keys_verified_unmark": { "message": "Aufheben" },
   "keys_verify_hint": {
-    "message": "Vergleiche diesen Fingerabdruck mit $name$ persönlich oder in einem Anruf, dem du vertraust. Wenn er übereinstimmt, markiere ihn als verifiziert."
+    "message": "Vergleichen Sie diesen Fingerabdruck mit $name$ persönlich oder in einem Anruf, dem Sie vertrauen. Wenn er übereinstimmt, markieren Sie ihn als verifiziert."
   },
   "keys_verify_mark": { "message": "Als verifiziert markieren" },
   "keys_contact_same_address": { "message": "Gleiche Adresse" },
   "keys_contact_same_address_title": {
     "message": "$name$ ($keyid$) nutzt diese Adresse auch, mit einem anderen Schlüssel."
   },
-  "keys_contact_same_name": { "message": "Gleicher Name" },
+  "keys_contact_same_name": { "message": "Ähnlicher Name" },
   "keys_contact_same_name_title": {
-    "message": "$name$ ($keyid$) hat diesen Namen auch, mit einem anderen Schlüssel."
+    "message": "Sieht aus wie der Name von $name$ ($keyid$), verwendet aber andere Buchstaben."
   },
   "keys_invisible_char": {
     "message": "Hier steht ein unsichtbares Zeichen ($code$)"
   },
   "keys_clash_check": {
-    "message": "Frag nach, welcher Schlüssel wirklich von der Person ist, bevor du dich auf einen verlässt."
+    "message": "Fragen Sie nach, welcher Schlüssel wirklich von der Person ist, bevor Sie sich auf einen verlassen."
   },
   "keys_confusable_char": {
     "message": "$code$ sieht aus wie ein lateinischer Buchstabe, ist aber ein anderer"
@@ -346,5 +346,14 @@
   },
   "keys_contact_lookalike_address_title": {
     "message": "$name$ ($keyid$) hat eine Adresse, die genauso aussieht wie diese, mit einem anderen Schlüssel."
+  },
+  "keys_contact_same_name_plain": {
+    "message": "Gleicher Name"
+  },
+  "keys_contact_same_name_plain_title": {
+    "message": "Hat denselben Namen wie $name$ ($keyid$), und keine E-Mail-Adresse unterscheidet die beiden."
+  },
+  "keys_check_revocation_needs_review": {
+    "message": "Der Schlüssel von $name$ auf dem Schlüsselserver hat neue Namen oder Adressen. Prüfen Sie diese, bevor sie gespeichert werden."
   }
 }

@@ -16,13 +16,6 @@ import type {
   PgpPreferences,
   StorageLocation,
 } from "../../lib/storage/preferences";
-import {
-  STORAGE_CONTACTS,
-  STORAGE_CRX_KEYS,
-  STORAGE_KEYRING,
-  STORAGE_MASTER_PROTECTION,
-  STORAGE_SETTINGS,
-} from "../../lib/constants";
 import { t, tn } from "../../lib/i18n";
 import { enterNeverCacheMode } from "../../lib/never-cache";
 import {
@@ -32,13 +25,9 @@ import {
   snapshotBundleFields,
 } from "../../lib/presets";
 import { isQuotaExceeded } from "../../lib/storage/chunked";
-import {
-  copyEncryptedBlobRepacked,
-  purgeEncryptedBlob,
-} from "../../lib/storage/encrypted-store";
-import { invalidateLocationCache } from "../../lib/storage/engine";
 import { historyByteSize } from "../../lib/storage/history";
 import { getPreferences, savePreferences } from "../../lib/storage/preferences";
+import { moveVault } from "../../lib/storage/vault-state";
 import { toast } from "../../lib/toast";
 import { formatFileSize } from "../../lib/utils/formatting";
 import { ExportKeysPage } from "../keys/ExportKeysPage";
@@ -290,76 +279,34 @@ export function SettingsView({
 
   const currentPreset = prefs ? activePreset(prefs) : null;
 
+  /** Save a toggle's change. The toggle has already moved, so a save
+   *  that rejects (the stored settings would not open, and nothing
+   *  proves this session may replace them) must say so rather than be
+   *  dropped: the next unlock would read the old value back. */
+  const persist = (patch: Partial<PgpPreferences>) => {
+    savePreferences(patch).catch(() => {
+      toast.error(t("shared_settings_save_failed"), {
+        id: "settings-save-failed",
+      });
+    });
+  };
+
   const toggleAdvanced = () => {
     const next = !advancedMode;
     onAdvancedModeChange(next);
-    void savePreferences({ advancedMode: next });
+    persist({ advancedMode: next });
   };
 
   const handleStorageChange = async (next: StorageLocation) => {
     if (next === storageLocation) return;
     setMigratingTo(next);
     setError(null);
-    // Re-pack each blob for the destination rather than a raw byte-copy:
-    // padding differs by area (local pads to hide item counts; sync can't,
-    // due to its 8 KB/item cap), so moving a padded local blob to sync
-    // verbatim could blow the quota. Large blobs are chunked across items
-    // on sync (see storage/chunked.ts). The settings blob lives in the
-    // user area too, so it moves alongside the keyring/contacts.
-    //
-    // Every engine-routed blob must move, or it strands in the old area:
-    // the master protection especially -- leave it behind and the switched
-    // vault (here after reload, or on another synced device) has keys it
-    // can never unlock. CRX keys are the same encrypted store as the
-    // keyring. Non-{iv,ciphertext} blobs (master protection) copy verbatim.
-    const keys = [
-      STORAGE_KEYRING,
-      STORAGE_CONTACTS,
-      STORAGE_SETTINGS,
-      STORAGE_MASTER_PROTECTION,
-      STORAGE_CRX_KEYS,
-    ];
-    // Once the location is committed (step 2), the destination is the ONLY
-    // authoritative copy -- a later failure must never roll it back.
-    let committed = false;
+    // The copy / commit / purge sequence, its ordering and its rollback
+    // live in `moveVault` (lib/storage/vault-state.ts).
     try {
-      // 1. Copy everything to the destination (originals untouched).
-      for (const key of keys) {
-        await copyEncryptedBlobRepacked(key, storageLocation, next);
-      }
-      // 2. Commit: switch the active location. Reads now resolve to the
-      //    destination, which holds every blob. A crash before here left
-      //    the originals authoritative; after, only stale dups remain.
-      await savePreferences({ storageLocation: next });
-      committed = true;
-      invalidateLocationCache();
-      // 3. Drop the now-stale originals from the old area. Best-effort: the
-      //    move is already committed, so a purge failure (e.g. sync's write
-      //    rate limit mid-loop) only leaves harmless duplicates -- it must
-      //    NOT bubble to the rollback below and delete the live copy.
-      for (const key of keys) {
-        try {
-          await purgeEncryptedBlob(key, storageLocation);
-        } catch {
-          /* stale originals are harmless; leave them */
-        }
-      }
+      await moveVault(storageLocation, next);
       onStorageLocationChange(next);
     } catch (e) {
-      // Pre-commit failure only (step 1 copy, or step 2 persist): the
-      // active location is still the origin, so the originals remain
-      // authoritative. Roll back any partial copies written to the
-      // destination -- e.g. sync's ~100 KB total quota exhausted mid-copy.
-      // Guarded by `committed` so a committed move is never unwound.
-      if (!committed) {
-        for (const key of keys) {
-          try {
-            await purgeEncryptedBlob(key, next);
-          } catch {
-            /* best-effort cleanup */
-          }
-        }
-      }
       setError(
         isQuotaExceeded(e)
           ? t("shared_sync_quota_error")
@@ -374,7 +321,7 @@ export function SettingsView({
 
   const handleAutoLockChange = (v: AutoLockTimeout) => {
     onAutoLockChange(v);
-    void savePreferences({ autoLockMinutes: v });
+    persist({ autoLockMinutes: v });
   };
 
   // Enter never-cache via the shared transition (flip prefs + wipe
@@ -412,7 +359,7 @@ export function SettingsView({
       // Turning never-cache OFF never re-enables history; the user
       // opted out of retention and must opt back in explicitly.
       onNeverCacheKeysChange(false);
-      void savePreferences({ neverCacheKeys: false });
+      persist({ neverCacheKeys: false });
       return;
     }
     const bytes = await historyByteSize();
@@ -574,7 +521,7 @@ export function SettingsView({
             checked={autoLockEnabled}
             onCheckedChange={(v) => {
               onAutoLockEnabledChange(v);
-              void savePreferences({ autoLockEnabled: v });
+              persist({ autoLockEnabled: v });
             }}
           />
           {autoLockEnabled && (
@@ -609,7 +556,7 @@ export function SettingsView({
             checked={lockOnTabAway}
             onCheckedChange={(v) => {
               onLockOnTabAwayChange(v);
-              void savePreferences({ lockOnTabAway: v });
+              persist({ lockOnTabAway: v });
             }}
           />
           <SwitchRow
@@ -638,7 +585,7 @@ export function SettingsView({
             checked={autoDownloadFiles}
             onCheckedChange={(v) => {
               onAutoDownloadFilesChange(v);
-              void savePreferences({ autoDownloadFiles: v });
+              persist({ autoDownloadFiles: v });
             }}
           />
           <SwitchRow
@@ -647,7 +594,7 @@ export function SettingsView({
             checked={autoDownloadText}
             onCheckedChange={(v) => {
               onAutoDownloadTextChange(v);
-              void savePreferences({ autoDownloadText: v });
+              persist({ autoDownloadText: v });
             }}
           />
         </BlockStack>
@@ -666,7 +613,7 @@ export function SettingsView({
             checked={keyDiscoveryEnabled}
             onCheckedChange={(v) => {
               onKeyDiscoveryEnabledChange(v);
-              void savePreferences({ keyDiscoveryEnabled: v });
+              persist({ keyDiscoveryEnabled: v });
             }}
           />
         </BlockStack>
@@ -681,7 +628,7 @@ export function SettingsView({
             checked={crxSigningEnabled}
             onCheckedChange={(v) => {
               onCrxSigningEnabledChange(v);
-              void savePreferences({ crxSigningEnabled: v });
+              persist({ crxSigningEnabled: v });
             }}
           />
           <NavRow
@@ -830,12 +777,12 @@ export function SettingsView({
           enabled={aiTranslateEnabled}
           onEnabledChange={(v) => {
             onAiTranslateEnabledChange(v);
-            void savePreferences({ aiTranslateEnabled: v });
+            persist({ aiTranslateEnabled: v });
           }}
           targetLanguage={translationTargetLanguage}
           onTargetLanguageChange={(code) => {
             onTranslationTargetLanguageChange(code);
-            void savePreferences({ translationTargetLanguage: code });
+            persist({ translationTargetLanguage: code });
           }}
         />
       )}

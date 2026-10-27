@@ -512,8 +512,8 @@
     "description": "Red warning on an import review row: the key claims an address a saved contact already has. $email$ is the address, $name$ the saved contact, $keyid$ its 16-hex key id."
   },
   "import_review_conflict_name": {
-    "message": "Same name as $name$ ($keyid$), but a different key. Check with them before you trust it.",
-    "description": "Red warning on an import review row: the key's name looks the same as a saved contact's. $name$ is the saved contact, $keyid$ its 16-hex key id."
+    "message": "Looks like $name$'s name ($keyid$) but uses different letters. Check with them before you trust it.",
+    "description": "Red warning on an import review row: the key's name reads like a saved contact's but is written with different letters (a lookalike). Not shown when the names are simply the same. $name$ is the saved contact, $keyid$ its 16-hex key id."
   },
   "import_review_choice_aria": {
     "message": "What to do with $name$",
@@ -598,5 +598,17 @@
   "import_github_refresh_all_held": {
     "message": "$username$ no longer lists some of the keys saved for this contact, and every key it still lists belongs to someone else you have, or to you, so it can't be updated. Delete this contact if you no longer want to encrypt to its old keys.",
     "description": "Why a GitHub refresh can't be saved: the account dropped some keys, and the rest are all held by other contacts or the user. $username$ is the GitHub account name."
+  },
+  "import_review_status_your_key": {
+    "message": "Your key",
+    "description": "Small chip on an import review row for a private key or a CRX signing key from a backup: it is one of the user's own keys, not a contact. Short."
+  },
+  "import_review_conflict_same_name": {
+    "message": "$name$ ($keyid$) has this name too, and no email address tells the two apart. Check with them before you trust it.",
+    "description": "Red warning on an import review row: the key has exactly the same name as a saved contact (or one of the user's keys), and one of the two has no email address, so nothing on screen tells them apart. $name$ is the saved contact, $keyid$ its key id."
+  },
+  "import_review_replace_many": {
+    "message": "Replace is not offered: more than one contact has this address.",
+    "description": "Muted note on an import review row whose address several saved contacts share: the app will not guess which one the new key replaces, so only Skip and Keep both are offered."
   }
 }

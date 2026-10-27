@@ -82,3 +82,66 @@ describe("withSharedLock", () => {
     expect(order).toEqual(["first:start", "first:end", "second"]);
   });
 });
+
+// A storage switch in one panel window used to leave every other window
+// (and the reader tab) routed to the OLD area by its cached location,
+// reading and writing copies the switch was about to purge.
+describe("cached location across windows", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("drops the cache when another page changes the device record or the bootstrap", async () => {
+    const { fakeArea } = await import("./fake-area");
+    const {
+      currentStorageLocation,
+      invalidateLocationCache,
+      pinStorageLocation,
+    } = await import("./engine");
+    const { STORAGE_DEVICE_LOCATION, STORAGE_PREFERENCES } =
+      await import("../constants");
+    type Listener = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      area: string,
+    ) => void;
+    const listeners: Listener[] = [];
+    const local = fakeArea();
+    const sync = fakeArea();
+    vi.stubGlobal("chrome", {
+      storage: {
+        local,
+        sync,
+        onChanged: { addListener: (fn: Listener) => listeners.push(fn) },
+      },
+    });
+    invalidateLocationCache();
+    await pinStorageLocation("local");
+    expect(await currentStorageLocation()).toBe("local");
+    expect(listeners).toHaveLength(1);
+
+    // Another window commits a switch: its record lands in storage.
+    local.store.set(STORAGE_DEVICE_LOCATION, "sync");
+    // Without the event this window still routes to the old area...
+    expect(await currentStorageLocation()).toBe("local");
+    // ...and with it, to the new one.
+    for (const fn of listeners) {
+      fn({ [STORAGE_DEVICE_LOCATION]: { newValue: "sync" } }, "local");
+    }
+    expect(await currentStorageLocation()).toBe("sync");
+
+    // A device with no record follows the bootstrap the same way.
+    local.store.delete(STORAGE_DEVICE_LOCATION);
+    sync.store.set(STORAGE_PREFERENCES, { storageLocation: "local" });
+    for (const fn of listeners) {
+      fn({ [STORAGE_PREFERENCES]: { newValue: {} } }, "sync");
+    }
+    expect(await currentStorageLocation()).toBe("local");
+
+    // Unrelated changes leave the cache alone (no extra reads).
+    sync.store.set(STORAGE_PREFERENCES, { storageLocation: "sync" });
+    for (const fn of listeners) fn({ pgp_settings: {} }, "local");
+    expect(await currentStorageLocation()).toBe("local");
+    // Registered once per chrome.storage, not per resolve.
+    expect(listeners).toHaveLength(1);
+  });
+});

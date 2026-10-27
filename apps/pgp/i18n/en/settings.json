@@ -416,7 +416,7 @@
     "description": "Confirm text when applying a preset over custom settings. $preset$ is the preset's title, rendered in bold."
   },
   "settings_preset_confirm_history": {
-    "message": "This preset turns on never-cache, which also deletes your saved history ($size$). It can't be recovered.",
+    "message": "This preset turns on never-cache, which also deletes your saved history ($size$). It can't be undone.",
     "description": "Confirm text when the preset wipes saved history. $size$ is a formatted byte size such as '12 KB'."
   },
   "settings_translation_title": {

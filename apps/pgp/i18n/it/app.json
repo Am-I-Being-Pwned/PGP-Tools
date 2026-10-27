@@ -315,7 +315,7 @@
     "message": "Cancella e ricomincia"
   },
   "app_vault_erase_body": {
-    "message": "Questa operazione elimina definitivamente chiavi, contatti, impostazioni e cronologia salvati in questo browser e nella sua memoria sincronizzata, così puoi creare una nuova cassaforte. Non può essere annullata."
+    "message": "Questa operazione elimina chiavi, contatti, impostazioni e cronologia salvati in questo browser e nella sua memoria sincronizzata, così puoi creare una nuova cassaforte. Non può essere annullata. Una copia cifrata può restare sul disco finché il browser non compatta il suo spazio di archiviazione."
   },
   "app_vault_erase_confirm": {
     "message": "Cancella cassaforte"
@@ -346,5 +346,17 @@
   },
   "app_vault_alternate_use": {
     "message": "Prova quella"
+  },
+  "app_integrity_no_generation": {
+    "message": "Alcune delle tue chiavi, dei contatti o delle impostazioni sono state salvate senza il contrassegno che questo dispositivo usa per riconoscere le copie più vecchie. Una versione precedente di PGP Tools su un altro dispositivo salva i dati così, e lo farebbe anche chi li riportasse a una versione precedente. Se tutti i tuoi dispositivi sono aggiornati e vedi ancora questo avviso, consideralo una manomissione e controlla chiavi e contatti."
+  },
+  "app_integrity_missing_sync": {
+    "message": "La tua cassaforte si sincronizza tra i dispositivi, e una versione precedente di PGP Tools su un altro dispositivo può anche rimuovere dati così quando svuota un elenco. Se tutti i tuoi dispositivi sono aggiornati, consideralo una manomissione."
+  },
+  "app_integrity_settings_held": {
+    "message": "Le tue impostazioni potrebbero essere una copia più vecchia, quindi il preset di sicurezza più rigoroso resta attivo finché non chiudi questo avviso."
+  },
+  "app_error_too_large_to_open": {
+    "message": "Questo messaggio è troppo grande per essere aperto qui. La password o la chiave potrebbero essere corrette: è la dimensione a impedirlo. Aprilo con uno strumento OpenPGP per desktop, come GnuPG."
   }
 }

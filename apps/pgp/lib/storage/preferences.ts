@@ -321,15 +321,18 @@ async function readBoot(): Promise<Partial<BootPrefs>> {
 
 async function writeBoot(patch: Partial<BootPrefs>): Promise<void> {
   const current = await readBoot();
-  // A location choice is this device's own fact first (`engine.ts`): the
-  // local record is what routes; the synced copy is only the default a
-  // new device starts from.
-  if (patch.storageLocation !== undefined) {
-    await pinStorageLocation(asStorageLocation(patch.storageLocation));
-  }
   await chrome.storage.sync.set({
     [STORAGE_PREFERENCES]: { ...current, ...patch },
   });
+  // A location choice is this device's own fact first (`engine.ts`): the
+  // local record is what routes; the synced copy is only the default a
+  // new device starts from. Recorded LAST, once the bootstrap write has
+  // landed: recording it first meant a rejected sync write (sync's quota
+  // or rate limit, mid storage switch) left this device routed to the
+  // destination area -- which the switch's rollback then emptied.
+  if (patch.storageLocation !== undefined) {
+    await pinStorageLocation(asStorageLocation(patch.storageLocation));
+  }
 }
 
 // ── settings (encrypted, user area, padded) ──────────────────────────
@@ -358,7 +361,17 @@ async function saveSettings(settings: SettingsPrefs): Promise<void> {
 }
 
 interface SettingsRead {
+  /** What the panel runs on: `stored`, with the strictest preset over it
+   *  while the stored copy cannot be shown current. */
   settings: Partial<SettingsPrefs>;
+  /** What is actually stored (validated), and what a save merges onto.
+   *  Never carries the strict overlay: persisting it would make a lost
+   *  ledger, or a rolled-back blob, turn into permanent strictest
+   *  settings with the first routine save (every encrypt saves
+   *  `recentRecipients`), long after the warning was dismissed. Where
+   *  nothing real is stored (missing although seen, or unreadable) it IS
+   *  the strictest preset: there is nothing better to keep. */
+  stored: Partial<SettingsPrefs>;
   /** A sealed envelope was there but would not open or parse. */
   unreadable: boolean;
 }
@@ -372,13 +385,15 @@ interface SettingsRead {
  *  reported. It used to throw, and every caller let it go: the panel kept
  *  the DEFAULTS (a Paranoid user silently back on a 15-minute auto-lock)
  *  and every later save threw the same way. So does a blob that opens
- *  while the ledger is lost (`observeGeneration`), with the security
- *  fields forced strict but the rest kept. */
+ *  while the ledger is lost, or that is older than this device's mark
+ *  (`observeGeneration`), with the security fields forced strict but the
+ *  rest kept -- in `settings` only, never in `stored`. */
 async function readSettings(): Promise<SettingsRead> {
   const blob = await getItem<unknown>(STORAGE_SETTINGS);
   if (!isStoredEnvelope(blob)) {
     const seen = await noteAbsent(STORAGE_SETTINGS);
-    return { settings: seen ? strictestSettings() : {}, unreadable: false };
+    const settings = seen ? strictestSettings() : {};
+    return { settings, stored: settings, unreadable: false };
   }
   let parsed: unknown;
   try {
@@ -389,15 +404,20 @@ async function readSettings(): Promise<SettingsRead> {
   }
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
     reportIntegrityIssue({ store: STORAGE_SETTINGS, kind: "unreadable" });
-    return { settings: strictestSettings(), unreadable: true };
+    const settings = strictestSettings();
+    return { settings, stored: settings, unreadable: true };
   }
+  // False while the ledger is lost, or while this blob is held as an
+  // older copy (rolled back, or saved with no generation after one was
+  // recorded) -- both until the user dismisses the warning.
   const current = await observeGeneration(
     STORAGE_SETTINGS,
     objectGeneration(parsed),
   );
-  const settings = sanitizeSettings(parsed, { keepUnknown: true });
+  const stored = sanitizeSettings(parsed, { keepUnknown: true });
   return {
-    settings: current ? settings : { ...settings, ...strictestSettings() },
+    settings: current ? stored : { ...stored, ...strictestSettings() },
+    stored,
     unreadable: false,
   };
 }
@@ -443,6 +463,19 @@ async function loadSettings(): Promise<Partial<SettingsPrefs>> {
 let migrationSettled = false;
 
 const LEGACY_PREFS_MIGRATION = "legacy-prefs";
+
+/**
+ * Run the legacy-preferences migration now. The panel calls this on
+ * unlock BEFORE anything can write a store: the gate above refuses once a
+ * local store carries a generation, so a store write landing first -- the
+ * contacts backfill that the unlock kicks off, on exactly the old installs
+ * that still have a legacy object -- would refuse a genuine install's
+ * migration and delete its plaintext settings unmigrated. Idempotent, and
+ * a no-op without a session.
+ */
+export function migrateLegacyPreferences(): Promise<void> {
+  return migrateLegacyIfNeeded();
+}
 
 async function migrateLegacyIfNeeded(): Promise<void> {
   if (migrationSettled) return;
@@ -494,7 +527,12 @@ async function migrateLegacyIfNeeded(): Promise<void> {
       await removeChunked(local, STORAGE_PREFERENCES);
     }
     await markSettled(LEGACY_PREFS_MIGRATION);
-    migrationSettled = true;
+    // Only once the marker is actually stored: with no ledger yet,
+    // markSettled cannot create one, and skipping every later run in this
+    // worker would leave the device unsettled -- open to a legacy object
+    // planted after the settings are deleted. Re-run (cheaply: nothing
+    // left to migrate) until a ledger exists to hold the marker.
+    migrationSettled = await isSettled(LEGACY_PREFS_MIGRATION);
   });
 }
 
@@ -576,6 +614,15 @@ export async function savePreferences(
     // present. If somehow locked, skip rather than throw -- losing a
     // toggle is better than a crash, and this path shouldn't occur.
     if (!(await hasContactsSession())) return;
+    // The legacy migration first, for the same reason the panel runs it
+    // first on unlock: its gate refuses once a local store carries a
+    // generation, and this very write stamps one. It also settles the
+    // migration (a ledger write) HERE, inside onboarding's own saves,
+    // rather than from the first getPreferences after the main UI has
+    // mounted -- an unproven read-modify-write landing then could put
+    // back a ledger deleted in the meantime, without its `lost` flag.
+    // Outside the lock below: the migration takes the same one.
+    await migrateLegacyIfNeeded();
     // Serialize read-merge-write so rapid toggles can't clobber fields.
     await withLock(STORAGE_SETTINGS, async () => {
       // A blob that will not open is replaced -- strictest preset plus
@@ -583,7 +630,9 @@ export async function savePreferences(
       // Only when the session provably holds the vault key (it opens the
       // ledger): a session minted from the wrong passkey would otherwise
       // replace the real settings with a blob only it can read.
-      const { settings: current, unreadable } = await readSettings();
+      // Merge onto what is STORED, not onto the strict overlay the panel
+      // may be running on: only the fields this save names change.
+      const { stored: current, unreadable } = await readSettings();
       if (unreadable && !(await sessionOpensLedger())) {
         throw new Error(
           "Cannot save settings: the stored settings will not open",

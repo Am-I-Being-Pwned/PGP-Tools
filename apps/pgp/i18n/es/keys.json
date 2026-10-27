@@ -117,16 +117,16 @@
     "message": "$count$ contactos"
   },
   "keys_bulk_delete_private_body": {
-    "message": "Esto elimina de forma permanente las claves privadas seleccionadas de este dispositivo. Todo lo que esté cifrado únicamente para una clave eliminada quedará irrecuperable. Asegúrese de tener una copia de seguridad si alguna vez pudiera necesitarlas."
+    "message": "Esto quita las claves privadas seleccionadas de la bóveda de este dispositivo. Lo que esté cifrado únicamente para una clave eliminada no se podrá descifrar sin una copia de seguridad, así que guarde una si alguna vez pudiera necesitarlas. Puede quedar una copia cifrada en el disco hasta que el navegador compacte su almacenamiento."
   },
   "keys_bulk_delete_contacts_body": {
     "message": "Ya no podrá cifrar para estos contactos ni verificar sus firmas. Puede volver a importar sus claves públicas más adelante."
   },
   "keys_delete_crx_body": {
-    "message": "Ya no podrá firmar actualizaciones de esta extensión, y la clave no se puede recuperar a menos que tenga una copia de seguridad."
+    "message": "Ya no podrá firmar actualizaciones de esta extensión, y sin una copia de seguridad no se puede deshacer. Puede quedar una copia cifrada en el disco hasta que el navegador compacte su almacenamiento."
   },
   "keys_delete_key_body": {
-    "message": "Esto elimina de forma permanente la clave privada de este dispositivo. Todo lo que esté cifrado únicamente para esta clave quedará irrecuperable. Asegúrese de tener una copia de seguridad si alguna vez pudiera necesitarla."
+    "message": "Esto quita la clave privada de la bóveda de este dispositivo. Lo que esté cifrado únicamente para esta clave no se podrá descifrar sin una copia de seguridad, así que guarde una si alguna vez pudiera necesitarla. Puede quedar una copia cifrada en el disco hasta que el navegador compacte su almacenamiento."
   },
   "keys_remove_contact_body": {
     "message": "Ya no podrá cifrar mensajes para este contacto ni verificar sus firmas. Puede volver a importar su clave pública más adelante."
@@ -573,10 +573,10 @@
     "message": "$name$ ($keyid$) también usa esta dirección, con otra clave."
   },
   "keys_contact_same_name": {
-    "message": "Mismo nombre"
+    "message": "Nombre parecido"
   },
   "keys_contact_same_name_title": {
-    "message": "$name$ ($keyid$) también tiene este nombre, con otra clave."
+    "message": "Parece el nombre de $name$ ($keyid$), pero usa otras letras."
   },
   "keys_invisible_char": {
     "message": "Aquí hay un carácter invisible ($code$)"
@@ -592,5 +592,14 @@
   },
   "keys_contact_lookalike_address_title": {
     "message": "$name$ ($keyid$) tiene una dirección que se ve igual que esta, con otra clave."
+  },
+  "keys_contact_same_name_plain": {
+    "message": "Mismo nombre"
+  },
+  "keys_contact_same_name_plain_title": {
+    "message": "Tiene el mismo nombre que $name$ ($keyid$), y ninguna dirección de correo los distingue."
+  },
+  "keys_check_revocation_needs_review": {
+    "message": "La clave de $name$ en el servidor de claves tiene nombres o direcciones nuevos. Revísalos antes de guardarlos."
   }
 }

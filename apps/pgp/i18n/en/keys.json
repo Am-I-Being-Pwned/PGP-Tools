@@ -156,7 +156,7 @@
     "description": "Bulk delete summary: part of a comma-separated list of what is selected. $count$ is a number."
   },
   "keys_bulk_delete_private_body": {
-    "message": "This permanently deletes the selected private keys from this device. Anything encrypted only to a deleted key becomes unrecoverable. Make sure you have a backup if you might ever need them.",
+    "message": "This removes the selected private keys from this device's vault. Anything encrypted only to a deleted key can't be decrypted without a backup, so keep one if you might ever need them. An encrypted copy may remain on disk until the browser compacts its storage.",
     "description": "Bulk delete page: warning body when the selection includes private keys."
   },
   "keys_bulk_delete_contacts_body": {
@@ -164,11 +164,11 @@
     "description": "Bulk delete page: body when only contacts are selected."
   },
   "keys_delete_crx_body": {
-    "message": "You can no longer sign updates for this extension, and the key can't be recovered unless you have a backup.",
+    "message": "You can no longer sign updates for this extension, and without a backup this can't be undone. An encrypted copy may remain on disk until the browser compacts its storage.",
     "description": "Delete page body for a CRX extension signing key."
   },
   "keys_delete_key_body": {
-    "message": "This permanently deletes the private key from this device. Anything encrypted only to this key becomes unrecoverable. Make sure you have a backup if you might ever need it.",
+    "message": "This removes the private key from this device's vault. Anything encrypted only to this key can't be decrypted without a backup, so keep one if you might ever need it. An encrypted copy may remain on disk until the browser compacts its storage.",
     "description": "Delete page body for one of the user's own keys."
   },
   "keys_remove_contact_body": {
@@ -764,12 +764,12 @@
     "description": "Tooltip of the Same address pill. $name$ is the other contact, $keyid$ its 16-hex key id."
   },
   "keys_contact_same_name": {
-    "message": "Same name",
-    "description": "Amber pill on a contact whose name looks the same as another contact's. Short."
+    "message": "Lookalike name",
+    "description": "Amber pill on a contact whose name only LOOKS like another contact's: it reads the same but is written with different letters (a Cyrillic or Cherokee letter, a capital I for an l). Never shown for two contacts who simply share a name. Short."
   },
   "keys_contact_same_name_title": {
-    "message": "$name$ ($keyid$) has this name too, with a different key.",
-    "description": "Tooltip of the Same name pill. $name$ is the other contact, $keyid$ its 16-hex key id."
+    "message": "Looks like the name of $name$ ($keyid$), but uses different letters.",
+    "description": "Tooltip of the Lookalike name pill. $name$ is the other contact, $keyid$ its 16-hex key id."
   },
   "keys_invisible_char": {
     "message": "An invisible character ($code$) is here",
@@ -777,7 +777,7 @@
   },
   "keys_clash_check": {
     "message": "Check with them which key is really theirs before you rely on either.",
-    "description": "Muted line under the Same address / Same name warnings on a contact's key details: compare fingerprints with the person."
+    "description": "Muted line under the Same address / Lookalike name warnings on a contact's key details: compare fingerprints with the person."
   },
   "keys_confusable_char": {
     "message": "$code$ looks like a Latin letter but is a different one",
@@ -790,5 +790,17 @@
   "keys_contact_lookalike_address_title": {
     "message": "$name$ ($keyid$) has an address that looks the same as this one, with a different key.",
     "description": "Tooltip of the Lookalike address pill, and the warning on a contact's key details. $name$ is the other contact, $keyid$ its key id."
+  },
+  "keys_contact_same_name_plain": {
+    "message": "Same name",
+    "description": "Amber pill on a contact that has exactly the same name as another contact (or one of the user's keys) where one of the two has no email address, so nothing tells them apart. Short."
+  },
+  "keys_contact_same_name_plain_title": {
+    "message": "Has the same name as $name$ ($keyid$), and no email address tells them apart.",
+    "description": "Tooltip of the Same name pill. $name$ is the other contact, $keyid$ its key id."
+  },
+  "keys_check_revocation_needs_review": {
+    "message": "$name$'s key on the keyserver has new names or addresses. Review them before they are saved.",
+    "description": "Toast after the revocation check when the keyserver's copy of the key adds User IDs: nothing was saved, and the import review opens so the user can check them. $name$ is the contact's name."
   }
 }

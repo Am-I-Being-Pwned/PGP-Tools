@@ -53,6 +53,7 @@ import { normalizeKeyringPadding } from "../../lib/storage/keyring";
 import { getMasterProtection } from "../../lib/storage/master-protection";
 import {
   getPreferences,
+  migrateLegacyPreferences,
   savePreferences,
   strictestPreferences,
 } from "../../lib/storage/preferences";
@@ -686,7 +687,11 @@ export default function App() {
   // Persist (or clear, with null) the default-key choice.
   const handleSetDefaultKey = useCallback((keyId: string | null) => {
     setDefaultKeyId(keyId);
-    void savePreferences({ defaultKeyId: keyId });
+    savePreferences({ defaultKeyId: keyId }).catch(() => {
+      toast.error(t("shared_settings_save_failed"), {
+        id: "settings-save-failed",
+      });
+    });
   }, []);
 
   // The user's first own key becomes the explicit default: with one key the
@@ -823,6 +828,12 @@ export default function App() {
             }}
             onUnlocked={async (prf) => {
               const openGen = ++vaultOpenGenRef.current;
+              // The legacy-settings migration first, before anything
+              // below can write a store: its gate refuses once a local
+              // store carries a generation, and the contacts backfill
+              // this unlock starts would otherwise stamp one first on
+              // exactly the old installs that still need migrating.
+              await migrateLegacyPreferences().catch(() => undefined);
               setMasterUnlocked(true);
               setVaultOpening(true);
               setMasterAutoLocked(false);
@@ -951,9 +962,11 @@ export default function App() {
         {/* A sealed store came back older than this device last saw it,
             or went missing (lib/storage/integrity.ts). */}
         <IntegrityBanner
+          syncVault={storageLocation === "sync"}
           onAcknowledged={() => {
-            // A lost ledger held the settings at the strictest preset
-            // until now; read them as stored again.
+            // A lost ledger, or a held older settings copy, kept the
+            // settings at the strictest preset until now; read them as
+            // stored again.
             void reapplyPrefs().then(() =>
               setWorkspacePrefsVersion((v) => v + 1),
             );

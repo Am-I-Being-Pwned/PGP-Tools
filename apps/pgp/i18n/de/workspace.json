@@ -501,22 +501,22 @@
     "message": "der signierte Text enthält unsichtbare oder Schreibrichtungszeichen und wird auf dem Bildschirm daher womöglich anders angezeigt, als er geschrieben wurde"
   },
   "workspace_signer_not_verified": {
-    "message": "Schlüssel nicht von dir als verifiziert markiert"
+    "message": "Schlüssel nicht von Ihnen als verifiziert markiert"
   },
   "workspace_not_encrypted": {
     "message": "Nicht verschlüsselt"
   },
   "workspace_signed_not_encrypted": {
-    "message": "signiert, aber nicht verschlüsselt: diese Kopie kann dir jeder geschickt haben"
+    "message": "signiert, aber nicht verschlüsselt: diese Kopie kann Ihnen jeder geschickt haben"
   },
   "workspace_status_not_encrypted": {
-    "message": "Diese Nachricht war nicht verschlüsselt. Jeder kann dir diese Kopie geschickt und sie unterwegs gelesen haben."
+    "message": "Diese Nachricht war nicht verschlüsselt. Jeder kann Ihnen diese Kopie geschickt und sie unterwegs gelesen haben."
   },
   "workspace_not_encrypted_not_signed": {
     "message": "Weder verschlüsselt noch signiert"
   },
   "workspace_error_batch_not_encrypted": {
-    "message": "$name$ ist nicht verschlüsselt. Entschlüssle die Datei einzeln, um ihren Inhalt zu sehen."
+    "message": "$name$ ist nicht verschlüsselt. Entschlüsseln Sie die Datei einzeln, um ihren Inhalt zu sehen."
   },
   "workspace_signature_verified_line_breaks": {
     "message": "Zeilenumbrüche prüfen"
@@ -525,6 +525,27 @@
     "message": "der signierte Text enthält einen Wagenrücklauf ohne Zeilenvorschub (angezeigt als ␍), daher werden seine Zeilenumbrüche womöglich nicht so angezeigt, wie der Unterzeichner sie geschrieben hat"
   },
   "workspace_signature_not_addressed": {
-    "message": "die Signatur sagt nicht, dass sie für dich bestimmt war, sie könnte also weitergeleitet worden sein"
+    "message": "die Signatur sagt nicht, dass sie für Sie bestimmt war, sie könnte also weitergeleitet worden sein"
+  },
+  "workspace_detected_keys_known": {
+    "message": "Sie haben die Schlüssel von $names$ bereits."
+  },
+  "workspace_detected_keys_in_message": {
+    "message": "Diese Nachricht enthält öffentliche Schlüssel von $names$."
+  },
+  "workspace_detected_keys_pasted": {
+    "message": "Das sind öffentliche Schlüssel von $names$."
+  },
+  "workspace_sign_hidden_chars": {
+    "message": "Dieser Text enthält unsichtbare Zeichen ($chars$). Sie können die Reihenfolge ändern oder Inhalte verbergen und würden unverändert mitsigniert."
+  },
+  "workspace_sign_hidden_chars_anyway": {
+    "message": "Trotzdem signieren"
+  },
+  "workspace_sign_hidden_chars_remove": {
+    "message": "Entfernen"
+  },
+  "workspace_auto_run_too_large": {
+    "message": "Diese Nachricht ist zu groß, um sie automatisch zu öffnen. Öffnen Sie sie mit der Schaltfläche unten."
   }
 }

@@ -526,5 +526,26 @@
   },
   "workspace_signature_not_addressed": {
     "message": "la signature n'indique pas qu'elle vous était destinée, elle a donc pu être transférée"
+  },
+  "workspace_detected_keys_known": {
+    "message": "Vous avez déjà les clés de $names$."
+  },
+  "workspace_detected_keys_in_message": {
+    "message": "Ce message contient les clés publiques de $names$."
+  },
+  "workspace_detected_keys_pasted": {
+    "message": "Ce sont les clés publiques de $names$."
+  },
+  "workspace_sign_hidden_chars": {
+    "message": "Ce texte contient des caractères invisibles ($chars$). Ils peuvent réordonner ou masquer ce qu'il dit, et seraient signés tels quels."
+  },
+  "workspace_sign_hidden_chars_anyway": {
+    "message": "Signer quand même"
+  },
+  "workspace_sign_hidden_chars_remove": {
+    "message": "Les supprimer"
+  },
+  "workspace_auto_run_too_large": {
+    "message": "Ce message est trop volumineux pour être ouvert automatiquement. Ouvrez-le avec le bouton ci-dessous."
   }
 }

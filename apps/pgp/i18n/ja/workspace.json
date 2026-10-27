@@ -526,5 +526,26 @@
   },
   "workspace_signature_not_addressed": {
     "message": "署名にはあなた宛てであることが示されていないため、転送された可能性があります"
+  },
+  "workspace_detected_keys_known": {
+    "message": "$names$ の鍵はすでに持っています。"
+  },
+  "workspace_detected_keys_in_message": {
+    "message": "このメッセージには $names$ の公開鍵が含まれています。"
+  },
+  "workspace_detected_keys_pasted": {
+    "message": "$names$ の公開鍵です。"
+  },
+  "workspace_sign_hidden_chars": {
+    "message": "このテキストには見えない文字 ($chars$) が含まれています。表示の順序を変えたり内容を隠したりでき、そのまま署名されます。"
+  },
+  "workspace_sign_hidden_chars_anyway": {
+    "message": "このまま署名"
+  },
+  "workspace_sign_hidden_chars_remove": {
+    "message": "削除する"
+  },
+  "workspace_auto_run_too_large": {
+    "message": "このメッセージは大きすぎるため自動では開きません。下のボタンで開いてください。"
   }
 }

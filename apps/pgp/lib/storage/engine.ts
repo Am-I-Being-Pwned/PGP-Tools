@@ -103,7 +103,36 @@ export async function unpinStorageLocation(): Promise<void> {
   cachedLocation = null;
 }
 
+/** The `chrome.storage` the change listener below is registered on (the
+ *  global is swapped per test, so this is tracked rather than a flag). */
+let watching: unknown = null;
+
+/**
+ * Drop the cached location whenever another page changes what it is
+ * resolved from: this device's record, or the sync bootstrap. Each panel
+ * window, and the reader tab, has its own copy of this module, so a
+ * storage switch in one window used to leave the others reading and
+ * writing the OLD area -- whose copies the switch then purges -- until
+ * they were closed. Registered lazily (the first resolve), once per
+ * `chrome.storage`.
+ */
+function watchLocationChanges(): void {
+  const storage = (globalThis as { chrome?: typeof chrome }).chrome?.storage;
+  if (!storage || watching === storage) return;
+  watching = storage;
+  const onChanged = (storage as Partial<typeof chrome.storage>).onChanged;
+  onChanged?.addListener((changes, areaName) => {
+    if (
+      (areaName === "local" && STORAGE_DEVICE_LOCATION in changes) ||
+      (areaName === "sync" && STORAGE_PREFERENCES in changes)
+    ) {
+      cachedLocation = null;
+    }
+  });
+}
+
 async function resolveLocation(): Promise<StorageLocation> {
+  watchLocationChanges();
   if (cachedLocation) return cachedLocation;
   const pinned = await pinnedStorageLocation();
   if (pinned) {

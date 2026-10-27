@@ -142,7 +142,7 @@
     }
   },
   "actions_history_delete_warning": {
-    "message": "This permanently deletes your encrypted operation history from this device. It can't be recovered.",
+    "message": "This removes your encrypted operation history from this device's vault. It can't be undone. An encrypted copy may remain on disk until the browser compacts its storage.",
     "description": "Body text of the clear-history confirmation page."
   },
   "actions_history_empty": {
@@ -669,6 +669,10 @@
     "message": "Signature verification failed - this message may have been tampered with. Don't trust the contents; ask the sender to re-send it.",
     "description": "User-facing error: the signature on a decrypted message did not verify."
   },
+  "app_error_too_large_to_open": {
+    "message": "This message is too large to open here. Your password or key may well be right - it's the size that stops it. Open it with a desktop OpenPGP tool such as GnuPG.",
+    "description": "User-facing error: a decrypt or verify stopped because the message is past this app's size limit. Shown instead of a wrong-password error, because the password or key may have been correct. 'OpenPGP' and 'GnuPG' are names; keep them."
+  },
   "app_error_unsigned_text_around_signature": {
     "message": "This contains text outside the signed message, which the signature doesn't cover. Paste only the signed message, from the BEGIN line to the END line.",
     "description": "User-facing error in verify mode: the pasted text has words before or after the cleartext-signed block (or more than one block), so it is refused rather than shown as verified. 'BEGIN' and 'END' refer to the literal armor lines."
@@ -717,6 +721,18 @@
   "app_integrity_ledger_lost": {
     "message": "This device's record of what it last saw was deleted or could not be read, so older copies of your data cannot be detected this time. The strictest security preset is in effect until you dismiss this. Check that contacts you know were revoked still show as revoked.",
     "description": "Extra line of the app_integrity_warning band, shown when this device's tamper-detection record was deleted or is unreadable. It keeps showing on every unlock until the user dismisses the band."
+  },
+  "app_integrity_missing_sync": {
+    "message": "Your vault syncs between devices, and an older version of PGP Tools on another device can also remove data this way when it empties a list. If all your devices are updated, treat it as tampering.",
+    "description": "Extra line of the app_integrity_warning band, shown only for a vault in synced storage when a stored keyring, contacts list or settings blob has disappeared."
+  },
+  "app_integrity_no_generation": {
+    "message": "Some of your keys, contacts or settings were saved without the marker this device uses to spot older copies. An older version of PGP Tools on another device saves data this way, and so would someone rolling it back. If all your devices are updated and you still see this, treat it as tampering, and check your keys and contacts.",
+    "description": "Line of the amber app_integrity_warning band, shown instead of its main line when a stored keyring, contacts list or settings blob has no freshness marker although this device recorded one. Usual cause: an un-updated copy of the extension on another synced device. Revoked contacts stay revoked regardless."
+  },
+  "app_integrity_settings_held": {
+    "message": "Your settings may be an older copy, so the strictest security preset is in effect until you dismiss this.",
+    "description": "Extra line of the app_integrity_warning band, shown when the stored settings are older than this device last saw. The strictest preset is the one called Paranoid in the preset picker."
   },
   "app_integrity_settings_strict": {
     "message": "Your settings were missing, so the strictest security preset is in effect until you change them.",
@@ -993,7 +1009,7 @@
     "description": "Button under app_vault_elsewhere_title. Points the storage-location setting back at the area the vault is in; nothing is copied or deleted."
   },
   "app_vault_erase_body": {
-    "message": "This permanently deletes the stored keys, contacts, settings and history in this browser and in its synced storage, so you can set up a new vault. It cannot be undone.",
+    "message": "This deletes the stored keys, contacts, settings and history in this browser and in its synced storage, so you can set up a new vault. It cannot be undone. An encrypted copy may remain on disk until the browser compacts its storage.",
     "description": "Confirmation page body for app_vault_erase_title."
   },
   "app_vault_erase_confirm": {
@@ -1929,8 +1945,20 @@
     }
   },
   "import_review_conflict_name": {
-    "message": "Same name as $name$ ($keyid$), but a different key. Check with them before you trust it.",
-    "description": "Red warning on an import review row: the key's name looks the same as a saved contact's. $name$ is the saved contact, $keyid$ its 16-hex key id.",
+    "message": "Looks like $name$'s name ($keyid$) but uses different letters. Check with them before you trust it.",
+    "description": "Red warning on an import review row: the key's name reads like a saved contact's but is written with different letters (a lookalike). Not shown when the names are simply the same. $name$ is the saved contact, $keyid$ its 16-hex key id.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
+  "import_review_conflict_same_name": {
+    "message": "$name$ ($keyid$) has this name too, and no email address tells the two apart. Check with them before you trust it.",
+    "description": "Red warning on an import review row: the key has exactly the same name as a saved contact (or one of the user's keys), and one of the two has no email address, so nothing on screen tells them apart. $name$ is the saved contact, $keyid$ its key id.",
     "placeholders": {
       "name": {
         "content": "$1"
@@ -2006,6 +2034,10 @@
       }
     }
   },
+  "import_review_replace_many": {
+    "message": "Replace is not offered: more than one contact has this address.",
+    "description": "Muted note on an import review row whose address several saved contacts share: the app will not guess which one the new key replaces, so only Skip and Keep both are offered."
+  },
   "import_review_status_duplicate": {
     "message": "Already saved",
     "description": "Small chip on an import review row: nothing new in this copy. Short."
@@ -2025,6 +2057,10 @@
   "import_review_status_update": {
     "message": "Update",
     "description": "Small chip on an import review row: a newer copy of a saved key. One word."
+  },
+  "import_review_status_your_key": {
+    "message": "Your key",
+    "description": "Small chip on an import review row for a private key or a CRX signing key from a backup: it is one of the user's own keys, not a contact. Short."
   },
   "import_review_title": {
     "message": "Review keys",
@@ -2806,7 +2842,7 @@
     "description": "Bulk delete page: body when only contacts are selected."
   },
   "keys_bulk_delete_private_body": {
-    "message": "This permanently deletes the selected private keys from this device. Anything encrypted only to a deleted key becomes unrecoverable. Make sure you have a backup if you might ever need them.",
+    "message": "This removes the selected private keys from this device's vault. Anything encrypted only to a deleted key can't be decrypted without a backup, so keep one if you might ever need them. An encrypted copy may remain on disk until the browser compacts its storage.",
     "description": "Bulk delete page: warning body when the selection includes private keys."
   },
   "keys_bulk_delete_prompt_one": {
@@ -2871,6 +2907,15 @@
     "message": "Couldn't check for a revocation. Try again.",
     "description": "Toast when the revocation check fails for an unexpected reason."
   },
+  "keys_check_revocation_needs_review": {
+    "message": "$name$'s key on the keyserver has new names or addresses. Review them before they are saved.",
+    "description": "Toast after the revocation check when the keyserver's copy of the key adds User IDs: nothing was saved, and the import review opens so the user can check them. $name$ is the contact's name.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
   "keys_check_revocation_not_published": {
     "message": "$host$ doesn't publish $name$'s key, so it can't be checked there.",
     "description": "Toast after the check: the keyserver has no copy of this key. $name$ is the contact's name, $host$ the keyserver.",
@@ -2923,7 +2968,7 @@
   },
   "keys_clash_check": {
     "message": "Check with them which key is really theirs before you rely on either.",
-    "description": "Muted line under the Same address / Same name warnings on a contact's key details: compare fingerprints with the person."
+    "description": "Muted line under the Same address / Lookalike name warnings on a contact's key details: compare fingerprints with the person."
   },
   "keys_confirm_delete_key_title": {
     "message": "Delete key?",
@@ -3064,12 +3109,28 @@
     }
   },
   "keys_contact_same_name": {
+    "message": "Lookalike name",
+    "description": "Amber pill on a contact whose name only LOOKS like another contact's: it reads the same but is written with different letters (a Cyrillic or Cherokee letter, a capital I for an l). Never shown for two contacts who simply share a name. Short."
+  },
+  "keys_contact_same_name_plain": {
     "message": "Same name",
-    "description": "Amber pill on a contact whose name looks the same as another contact's. Short."
+    "description": "Amber pill on a contact that has exactly the same name as another contact (or one of the user's keys) where one of the two has no email address, so nothing tells them apart. Short."
+  },
+  "keys_contact_same_name_plain_title": {
+    "message": "Has the same name as $name$ ($keyid$), and no email address tells them apart.",
+    "description": "Tooltip of the Same name pill. $name$ is the other contact, $keyid$ its key id.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
   },
   "keys_contact_same_name_title": {
-    "message": "$name$ ($keyid$) has this name too, with a different key.",
-    "description": "Tooltip of the Same name pill. $name$ is the other contact, $keyid$ its 16-hex key id.",
+    "message": "Looks like the name of $name$ ($keyid$), but uses different letters.",
+    "description": "Tooltip of the Lookalike name pill. $name$ is the other contact, $keyid$ its 16-hex key id.",
     "placeholders": {
       "name": {
         "content": "$1"
@@ -3200,7 +3261,7 @@
     "description": "Tooltip on the Default pill."
   },
   "keys_delete_crx_body": {
-    "message": "You can no longer sign updates for this extension, and the key can't be recovered unless you have a backup.",
+    "message": "You can no longer sign updates for this extension, and without a backup this can't be undone. An encrypted copy may remain on disk until the browser compacts its storage.",
     "description": "Delete page body for a CRX extension signing key."
   },
   "keys_delete_key": {
@@ -3208,7 +3269,7 @@
     "description": "Key card menu item and details page action: delete one of the user's own keys."
   },
   "keys_delete_key_body": {
-    "message": "This permanently deletes the private key from this device. Anything encrypted only to this key becomes unrecoverable. Make sure you have a backup if you might ever need it.",
+    "message": "This removes the private key from this device's vault. Anything encrypted only to this key can't be decrypted without a backup, so keep one if you might ever need it. An encrypted copy may remain on disk until the browser compacts its storage.",
     "description": "Delete page body for one of the user's own keys."
   },
   "keys_delete_key_permanently": {
@@ -4349,7 +4410,7 @@
     "description": "Busy label while a preset is being applied."
   },
   "settings_preset_confirm_history": {
-    "message": "This preset turns on never-cache, which also deletes your saved history ($size$). It can't be recovered.",
+    "message": "This preset turns on never-cache, which also deletes your saved history ($size$). It can't be undone.",
     "description": "Confirm text when the preset wipes saved history. $size$ is a formatted byte size such as '12 KB'.",
     "placeholders": {
       "size": {
@@ -4756,7 +4817,7 @@
     "description": "Settings section heading. CRX is the Chrome extension package format"
   },
   "shared_delete_history_body": {
-    "message": "Never-cache also deletes your saved history ($size$). It can't be recovered.",
+    "message": "Never-cache also deletes your saved history ($size$). It can't be undone.",
     "description": "Body of the delete-history confirmation page. $size$ is a formatted byte size such as '12 KB'",
     "placeholders": {
       "size": {
@@ -4967,6 +5028,10 @@
     "message": "Security preset",
     "description": "Settings row label that opens the security presets subpage; also the aria-label of the preset radio group"
   },
+  "shared_settings_save_failed": {
+    "message": "That change could not be saved, because the stored settings could not be read.",
+    "description": "Error toast when a settings toggle could not be saved because the stored settings blob will not open."
+  },
   "shared_show_technical_details": {
     "message": "Show technical details",
     "description": "Toggle link under an error that reveals the raw error text"
@@ -5059,6 +5124,10 @@
         "content": "$1"
       }
     }
+  },
+  "workspace_auto_run_too_large": {
+    "message": "This message is too large to open automatically. Open it with the button below.",
+    "description": "Note when a message opened from the right-click menu was not decrypted on its own because its content is large. The button below is Decrypt (or Verify)."
   },
   "workspace_browse_files": {
     "message": "Browse files",
@@ -5194,6 +5263,33 @@
   "workspace_detected_key_show": {
     "message": "Show it in your keys",
     "description": "Link in the banner for an already-held key; highlights it in the Keys tab."
+  },
+  "workspace_detected_keys_in_message": {
+    "message": "This message contains public keys for $names$.",
+    "description": "Banner under a decrypted/verified message that carries several public keys. $names$ is a comma-separated list of the owners' names.",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_detected_keys_known": {
+    "message": "You already have the keys of $names$.",
+    "description": "Banner when every public key found in a pasted or received text is already a contact. $names$ is a comma-separated list of the owners' names.",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_detected_keys_pasted": {
+    "message": "These are public keys for $names$.",
+    "description": "Banner when several public keys are pasted into the message box. $names$ is a comma-separated list of the owners' names.",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
   },
   "workspace_drop_files_or_text": {
     "message": "Drop files or text here",
@@ -5767,6 +5863,23 @@
   "workspace_sign_for_web_store": {
     "message": "Sign for Web Store",
     "description": "Main button label when signing a zipped extension as a Chrome .crx package. 'Web Store' = the Chrome Web Store."
+  },
+  "workspace_sign_hidden_chars": {
+    "message": "This text has characters you can't see ($chars$). They can reorder or hide what it says, and they would be signed as they are.",
+    "description": "Amber note shown instead of signing when the text to sign holds invisible characters (direction overrides, zero-width or tag characters, a lone carriage return). $chars$ lists their Unicode code points, e.g. U+202E.",
+    "placeholders": {
+      "chars": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_sign_hidden_chars_anyway": {
+    "message": "Sign anyway",
+    "description": "Button on the hidden-characters note: sign the text exactly as it is. Short."
+  },
+  "workspace_sign_hidden_chars_remove": {
+    "message": "Remove them",
+    "description": "Button on the hidden-characters note: delete the invisible characters from the message box (a lone carriage return becomes a line break). Short."
   },
   "workspace_sign_kind_crx": {
     "message": "Chrome extension (.crx)",
