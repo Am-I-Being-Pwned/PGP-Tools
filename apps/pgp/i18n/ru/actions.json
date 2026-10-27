@@ -45,7 +45,7 @@
     "message": "Удалить все $count$ записи истории"
   },
   "actions_history_delete_warning": {
-    "message": "Это навсегда удалит вашу зашифрованную историю операций с этого устройства. Восстановить её будет невозможно."
+    "message": "Это удалит вашу зашифрованную историю операций из хранилища на этом устройстве. Это нельзя отменить. Зашифрованная копия может оставаться на диске, пока браузер не выполнит сжатие своих данных."
   },
   "actions_no_keys_available": { "message": "Нет доступных ключей" },
   "actions_set_up": { "message": "Настроить" },
@@ -163,5 +163,8 @@
   "actions_translate_to_title": { "message": "Перевести сообщение на" },
   "actions_pick_language_placeholder": { "message": "Выберите язык..." },
   "actions_translate_result_to": { "message": "Перевести на $language$" },
-  "actions_reply_to_signer": { "message": "Ответить отправителю" }
+  "actions_reply_to_signer": { "message": "Ответить отправителю" },
+  "actions_no_active_key_reason": {
+    "message": "Все ключи этого контакта отключены. Включите один из них в сведениях о контакте, чтобы шифровать для него."
+  }
 }

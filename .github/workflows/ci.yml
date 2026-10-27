@@ -6,31 +6,50 @@ on:
   pull_request:
     branches: [main]
 
+# Read-only token for every job: nothing here pushes, comments or
+# publishes. Widen per job, never here, if a step ever needs more.
+permissions:
+  contents: read
+
+# Third-party actions are pinned to full commit SHAs (a tag can be moved
+# to new code; a SHA cannot), with the version they resolved to alongside.
+
 jobs:
   ci:
     name: Lint, Typecheck, Build & E2E
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        # Don't leave the token in .git/config for every later step (and
+        # every dependency's install script) to read. Nothing below
+        # talks to the remote.
         with:
+          persist-credentials: false
+
+      # Pinned by SHA, so the toolchain can no longer come from the ref
+      # name (`@stable`) and is named explicitly instead.
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable, 2026-10-16
+        with:
+          toolchain: stable
           targets: wasm32-unknown-unknown
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           workspaces: apps/pgp/gpg-wasm
 
+      # Built from crates.io against its lockfile rather than piping a
+      # downloaded script into sh. 0.13.1 is the version that installer
+      # pinned. rust-cache keeps ~/.cargo/bin, so this is a no-op on a hit.
       - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+        run: cargo install wasm-pack --locked --version 0.13.1
 
       - name: Build WASM module
         working-directory: apps/pgp/gpg-wasm
         run: wasm-pack build --target web --release
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version-file: package.json
           cache: pnpm
@@ -43,7 +62,7 @@ jobs:
       # run writes its own entry, with a branch-then-global fallback so a
       # run still starts from the most recent cache it can find.
       - name: Restore turbo cache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: .turbo/cache
           key: turbo-${{ runner.os }}-${{ github.sha }}
@@ -67,7 +86,7 @@ jobs:
       - run: pnpm build
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: pgp-tools-chrome-mv3
           path: apps/pgp/.output/chrome-mv3
@@ -98,7 +117,7 @@ jobs:
 
       - name: Upload Playwright traces
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: playwright-traces
           path: apps/pgp/test-results

@@ -80,16 +80,55 @@ struct ZeroizeOnFree;
 
 unsafe impl GlobalAlloc for ZeroizeOnFree {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        #[cfg(test)]
+        alloc_meter::track(layout.size() as isize);
         System.alloc(layout)
     }
 
     unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 {
+        #[cfg(test)]
+        alloc_meter::track(layout.size() as isize);
         System.alloc_zeroed(layout)
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        #[cfg(test)]
+        alloc_meter::track(-(layout.size() as isize));
         std::ptr::write_bytes(ptr, 0, layout.size());
         System.dealloc(ptr, layout);
+    }
+}
+
+/// Test-only: the peak of what THIS thread has live on the heap, so a
+/// test can say "never held more than about N bytes" -- the only way to
+/// see Sequoia's internal read-ahead from outside. Per thread, because
+/// the test harness runs tests in parallel. Const-initialised cells with
+/// no destructor, so touching them never allocates (which, inside the
+/// allocator, would recurse).
+#[cfg(test)]
+mod alloc_meter {
+    use std::cell::Cell;
+
+    thread_local! {
+        static LIVE: Cell<isize> = const { Cell::new(0) };
+        static PEAK: Cell<isize> = const { Cell::new(0) };
+    }
+
+    pub(crate) fn track(delta: isize) {
+        let _ = LIVE.try_with(|live| {
+            let now = live.get() + delta;
+            live.set(now);
+            let _ = PEAK.try_with(|peak| peak.set(peak.get().max(now)));
+        });
+    }
+
+    /// Run `f`, returning its result and the most it held live at once
+    /// above what was live when it started.
+    pub(crate) fn peak_during<T>(f: impl FnOnce() -> T) -> (T, usize) {
+        let base = LIVE.with(Cell::get);
+        PEAK.with(|peak| peak.set(base));
+        let out = f();
+        (out, (PEAK.with(Cell::get) - base).max(0) as usize)
     }
 }
 
@@ -1136,22 +1175,88 @@ fn decrypt_limit(ciphertext_len: usize) -> u64 {
         .min(MAX_DECRYPTED_BYTES)
 }
 
-fn read_capped<R: std::io::Read>(
-    reader: R,
-    limit: u64,
-    what: &str,
-) -> Result<Vec<u8>, String> {
+/// What a read past the engine's own ceiling returns. ONE fixed string,
+/// for the same reason as [`OUTPUT_CAP_REACHED`]: a caller that wraps
+/// errors (`decrypt_with_password` folds its parse failures into "Wrong
+/// password") must be able to recognise it by value and let it through,
+/// or a correct password on a big file reads as a wrong one.
+const TOO_LARGE_TO_OPEN: &str = "This message is too large to open here.";
+
+fn read_capped<R: std::io::Read>(reader: R, limit: u64) -> Result<Vec<u8>, String> {
     let mut out = Vec::new();
     std::io::copy(&mut reader.take(limit + 1), &mut out).str_err()?;
 
     if out.len() as u64 > limit {
         out.zeroize();
-        return Err(format!(
-            "This {what} is too large to open here (limit {} MiB).",
-            limit / (1024 * 1024),
-        ));
+        return Err(TOO_LARGE_TO_OPEN.into());
     }
     Ok(out)
+}
+
+/// What a read stopped by the caller's `max_output` returns. Not a
+/// failure of the message: an UNATTENDED run (the context menu's
+/// auto-decrypt) asks for at most this much, and a message bigger than
+/// that waits for the user's click instead. The JS side recognises it by
+/// comparing against [`output_cap_reached_message`], so it is never shown
+/// as an error.
+const OUTPUT_CAP_REACHED: &str =
+    "This message is too large to open automatically. Press the button to open it.";
+
+/// The exact error a capped read returns, so JS can tell "held back for
+/// size" apart from a real failure by value rather than by matching
+/// prose (same reasoning as `sshPassphraseRequiredMessage`). No secret.
+#[wasm_bindgen(js_name = "outputCapReachedMessage")]
+pub fn output_cap_reached_message() -> String {
+    OUTPUT_CAP_REACHED.to_string()
+}
+
+/// [`read_capped`] with the caller's own, tighter ceiling on top.
+///
+/// `max_output` is for unattended runs. When it is set and below `limit`,
+/// this read takes at most one byte past it, wipes what it did take, and
+/// returns [`OUTPUT_CAP_REACHED`]. Unset (every run a person started),
+/// this is exactly `read_capped`.
+///
+/// This bounds only what THIS loop pulls. Sequoia's Decryptor/Verifier
+/// reads ahead on its own -- up to its `buffer_size` (25 MiB by default)
+/// before the first byte is handed out, so it can check signatures first
+/// -- and that read-ahead is not ours to stop from here. Every entry
+/// point that takes `max_output` therefore also builds its reader with
+/// [`stream_buffer`], which shrinks the read-ahead to the cap.
+fn read_within<R: std::io::Read>(
+    reader: R,
+    limit: u64,
+    max_output: Option<u32>,
+) -> Result<Vec<u8>, String> {
+    let cap = match max_output.map(u64::from) {
+        Some(cap) if cap < limit => cap,
+        _ => return read_capped(reader, limit),
+    };
+    let mut out = Vec::new();
+    std::io::copy(&mut reader.take(cap + 1), &mut out).str_err()?;
+    if out.len() as u64 > cap {
+        out.zeroize();
+        return Err(OUTPUT_CAP_REACHED.into());
+    }
+    Ok(out)
+}
+
+/// The `buffer_size` to build a Decryptor/Verifier with, so its own
+/// read-ahead stays inside an unattended run's `max_output`.
+///
+/// Sequoia buffers a message up to `buffer_size` (default 25 MiB) at
+/// construction, to verify its signatures before releasing anything, and
+/// keeps up to twice that while streaming. For a compressed message that
+/// is 25 MiB INFLATED before `read_within` sees a byte, whatever the cap.
+/// `cap + 1` keeps the useful half of that behaviour -- a message within
+/// the cap is still verified before it is returned -- and bounds the rest
+/// to about twice the cap. `None` (a run a person started, or a cap at or
+/// above `limit`, which `read_within` ignores) keeps Sequoia's default.
+fn stream_buffer(max_output: Option<u32>, limit: u64) -> Option<usize> {
+    match max_output.map(u64::from) {
+        Some(cap) if cap < limit => Some(cap as usize + 1),
+        _ => None,
+    }
 }
 
 // =====================================================================
@@ -1162,6 +1267,46 @@ struct DecryptHelper {
     decryption_cert: openpgp::Cert,
     verification_certs: Vec<openpgp::Cert>,
     signatures: SignatureReport,
+    /// The message had an encryption layer -- see [`was_encrypted`].
+    encrypted: bool,
+}
+
+/// Did this message actually come through an encryption layer?
+///
+/// Sequoia's `Decryptor` is also a verifier: handed a message with no
+/// encryption at all -- an inline-signed `OPS, Literal, Sig`, or a bare
+/// Literal -- it reads it out without ever calling `decrypt`, and the
+/// caller gets plaintext and a good signature back exactly as if it had
+/// been decrypted. That is the "Johnny, you are fired" spoof: anything
+/// Alice ever signed in public, re-sent as a PGP MESSAGE, "decrypts" as
+/// a private, verified message from Alice. So the decrypt entry points
+/// ask the structure itself, and refuse a message without the layer.
+///
+/// That closes the UNENCRYPTED variant only. Encrypting Alice's public
+/// signed message to the victim needs no key of hers and passes here;
+/// what tells it apart is an Intended Recipient Fingerprint in her
+/// signature, which many senders don't write. The panel says so on the
+/// card (`workspace_signature_not_addressed`); see T-SIG-FORWARDED.
+fn was_encrypted(structure: &MessageStructure) -> bool {
+    structure
+        .iter()
+        .any(|layer| matches!(layer, MessageLayer::Encryption { .. }))
+}
+
+/// What a decrypt entry point says about a message with no encryption
+/// layer. The UI checks first (`messageEncryption`) and opens such a
+/// message with `openUnencrypted` instead, without asking for a key;
+/// this is the backstop for a caller that did not.
+const NOT_ENCRYPTED: &str =
+    "This message is not encrypted. It may be signed, but it was readable on the way and anyone could have sent this copy.";
+
+/// Refuse, before any key or password is used, a message that carries
+/// no encrypted container and no session-key packet at all.
+fn refuse_unencrypted(ciphertext: &[u8]) -> Result<(), String> {
+    match scan_session_packets(ciphertext)? {
+        (false, false, Container::None) => Err(NOT_ENCRYPTED.into()),
+        _ => Ok(()),
+    }
 }
 
 impl VerificationHelper for DecryptHelper {
@@ -1173,6 +1318,7 @@ impl VerificationHelper for DecryptHelper {
         // NOTE: signature classification must never abort decryption. A
         // missing signer key or a bad signature is reported as status, not
         // returned as an error, so the plaintext is always delivered.
+        self.encrypted = was_encrypted(&structure);
         self.signatures = process_signatures(structure);
         Ok(())
     }
@@ -1229,6 +1375,8 @@ struct PasswordDecryptHelper {
     password: openpgp::crypto::Password,
     verification_certs: Vec<openpgp::Cert>,
     signatures: SignatureReport,
+    /// The message had an encryption layer -- see [`was_encrypted`].
+    encrypted: bool,
 }
 
 impl VerificationHelper for PasswordDecryptHelper {
@@ -1240,6 +1388,7 @@ impl VerificationHelper for PasswordDecryptHelper {
         // Same rule as the key path: signature classification must never
         // abort decryption. A symmetric message CAN be signed, and the
         // signer is then someone whose key we may or may not hold.
+        self.encrypted = was_encrypted(&structure);
         self.signatures = process_signatures(structure);
         Ok(())
     }
@@ -1325,28 +1474,71 @@ pub fn parse_key(armored: &str) -> Result<String, String> {
 /// panel. Excess rows are dropped and flagged via `truncated`.
 const MAX_DETAIL_ROWS: usize = 100;
 
+/// Characters that change how a string displays without showing
+/// themselves, as inclusive ranges: every `Default_Ignorable_Code_Point`
+/// (Unicode 16 DerivedCoreProperties) and every general-category `Cf`
+/// (format) character, plus the line and paragraph separators and the
+/// few visible-category characters that draw as blank space (BLANKS
+/// below: the Braille blank, the object replacement character, the
+/// musical null notehead). Spelled out rather than pulled from a crate
+/// because none of ours carries the tables, and a list this short is
+/// easier to audit than a dependency. `lib/utils/lookalike.ts` is the
+/// same set on the TypeScript side, and `lookalike.test.ts` reads this
+/// table to hold the two to it.
+///
+/// Among them: bidi controls (which reorder the text around them), the
+/// zero-width space/joiners, variation selectors (U+FE00..FE0F and the
+/// supplementary U+E0100..E01EF), the tag characters (U+E0000..E007F,
+/// which can carry a whole hidden ASCII string), the deprecated format
+/// controls U+206A..206F, the combining grapheme joiner U+034F, the
+/// Mongolian selectors, and the Hangul fillers that render as blank
+/// letters. Each lets two different User IDs look identical.
+///
+/// ZWJ and the emoji variation selectors go too, which unjoins an emoji
+/// sequence into its parts. A User ID is a name and an address; that cost
+/// is cosmetic, and keeping a joiner that can hide inside "alice" is not.
+const INVISIBLE_RANGES: &[(u32, u32)] = &[
+    (0x00AD, 0x00AD),   // soft hyphen
+    (0x034F, 0x034F),   // combining grapheme joiner
+    (0x0600, 0x0605),   // Arabic number signs (Cf)
+    (0x061C, 0x061C),   // Arabic letter mark
+    (0x06DD, 0x06DD),   // Arabic end of ayah (Cf)
+    (0x070F, 0x070F),   // Syriac abbreviation mark (Cf)
+    (0x0890, 0x0891),   // Arabic pound/piastre marks above (Cf)
+    (0x08E2, 0x08E2),   // Arabic disputed end of ayah (Cf)
+    (0x115F, 0x1160),   // Hangul choseong/jungseong fillers
+    (0x17B4, 0x17B5),   // Khmer inherent vowels
+    (0x180B, 0x180F),   // Mongolian variation selectors, vowel separator
+    (0x200B, 0x200F),   // zero-width space/non-joiner/joiner, LRM, RLM
+    (0x2028, 0x202E),   // line/paragraph separators, bidi embeddings and overrides
+    (0x2060, 0x206F),   // word joiner, invisible operators, isolates, deprecated controls
+    (0x2800, 0x2800),   // BLANK: Braille pattern blank (So)
+    (0x3164, 0x3164),   // Hangul filler
+    (0xFE00, 0xFE0F),   // variation selectors
+    (0xFEFF, 0xFEFF),   // zero-width no-break space (BOM)
+    (0xFFA0, 0xFFA0),   // halfwidth Hangul filler
+    (0xFFF0, 0xFFFB),   // unassigned ignorables, interlinear annotation controls
+    (0xFFFC, 0xFFFC),   // BLANK: object replacement character (So)
+    (0x110BD, 0x110BD), // Kaithi number sign (Cf)
+    (0x110CD, 0x110CD), // Kaithi number sign above (Cf)
+    (0x13430, 0x1343F), // Egyptian hieroglyph format controls (Cf)
+    (0x1BCA0, 0x1BCA3), // shorthand format controls
+    (0x1D159, 0x1D159), // BLANK: musical symbol null notehead (So)
+    (0x1D173, 0x1D17A), // musical symbol format controls
+    (0xE0000, 0xE0FFF), // tags, variation selectors supplement, reserved ignorables
+];
+
+fn is_invisible(c: char) -> bool {
+    let c = c as u32;
+    INVISIBLE_RANGES.iter().any(|&(lo, hi)| (lo..=hi).contains(&c))
+}
+
 /// Cap and clean an attacker-controlled string before it crosses to the
-/// UI: drop control characters and Unicode bidi overrides (which could
-/// visually reorder surrounding UI text), then truncate to `max` chars.
+/// UI: drop control characters and every invisible or bidi character
+/// (`INVISIBLE_RANGES`), then truncate to `max` chars.
 fn sanitize_untrusted(s: &str, max: usize) -> String {
     let mut out = String::new();
-    // Bidi controls (embeddings, overrides, isolates, marks) visually
-    // reorder text; zero-width and other format characters make two
-    // different User IDs render identically.
-    let cleaned = s.chars().filter(|c| {
-        !c.is_control()
-            && !matches!(
-                *c,
-                '\u{202a}'..='\u{202e}'
-                    | '\u{2066}'..='\u{2069}'
-                    | '\u{200b}'..='\u{200f}'
-                    | '\u{2060}'..='\u{2064}'
-                    | '\u{061c}'
-                    | '\u{00ad}'
-                    | '\u{180e}'
-                    | '\u{feff}'
-            )
-    });
+    let cleaned = s.chars().filter(|&c| !c.is_control() && !is_invisible(c));
     for (i, c) in cleaned.enumerate() {
         if i == max {
             out.push('…');
@@ -1877,10 +2069,14 @@ fn check_cleartext_body(shown: &str, verified: &str) -> Result<(), String> {
 }
 
 /// Verify a cleartext-signed message. Returns JSON `VerifyResult`.
+///
+/// `max_output`: an unattended run's ceiling on the signed content, in
+/// bytes -- see [`read_within`]. `None` for a run the user started.
 #[wasm_bindgen(js_name = "verify")]
 pub fn verify_message(
     signed_message: &str,
     verification_keys_json: &str,
+    max_output: Option<u32>,
 ) -> Result<String, String> {
     // A file saved on Windows can lead with a BOM, which Sequoia refuses.
     let signed_message = signed_message.strip_prefix('\u{feff}').unwrap_or(signed_message);
@@ -1898,12 +2094,13 @@ pub fn verify_message(
         signatures: SignatureReport::unsigned(),
     };
 
-    let mut verifier = VerifierBuilder::from_bytes(signed_message.as_bytes())
-        .str_err()?
-        .with_policy(policy(), None, helper)
-        .str_err()?;
+    let mut builder = VerifierBuilder::from_bytes(signed_message.as_bytes()).str_err()?;
+    if let Some(size) = stream_buffer(max_output, MAX_VERIFIED_BYTES) {
+        builder = builder.buffer_size(size);
+    }
+    let mut verifier = builder.with_policy(policy(), None, helper).str_err()?;
 
-    let content = read_capped(&mut verifier, MAX_VERIFIED_BYTES, "signed message")?;
+    let content = read_within(&mut verifier, MAX_VERIFIED_BYTES, max_output)?;
     let text = String::from_utf8(content).str_err()?;
     if let SignedFraming::Cleartext(shown) = &framing {
         check_cleartext_body(shown, &text)?;
@@ -1960,7 +2157,11 @@ pub fn decrypt_with_handle(
     ciphertext: &[u8],
     key_handle: u32,
     verification_keys_json: Option<String>,
+    // An unattended run's ceiling on the plaintext, in bytes -- see
+    // `read_within`. `None` (a run the user started) keeps `decrypt_limit`.
+    max_output: Option<u32>,
 ) -> Result<Vec<u8>, String> {
+    refuse_unencrypted(ciphertext)?;
     let decryption_cert = get_cert_from_handle(key_handle)?;
 
     let verification_certs = match verification_keys_json {
@@ -1972,15 +2173,24 @@ pub fn decrypt_with_handle(
         decryption_cert,
         verification_certs,
         signatures: SignatureReport::unsigned(),
+        encrypted: false,
     };
 
-    let mut decryptor = DecryptorBuilder::from_bytes(ciphertext)
-        .str_err()?
-        .with_policy(policy(), None, helper)
-        .str_err()?;
+    let limit = decrypt_limit(ciphertext.len());
+    let mut builder = DecryptorBuilder::from_bytes(ciphertext).str_err()?;
+    if let Some(size) = stream_buffer(max_output, limit) {
+        builder = builder.buffer_size(size);
+    }
+    let mut decryptor = builder.with_policy(policy(), None, helper).str_err()?;
 
-    let plaintext = read_capped(&mut decryptor, decrypt_limit(ciphertext.len()), "message")?;
+    let mut plaintext = read_within(&mut decryptor, limit, max_output)?;
     let helper = decryptor.into_helper();
+    // The header scan above only sees what precedes the first container;
+    // this is the answer from the parse that produced the plaintext.
+    if !helper.encrypted {
+        plaintext.zeroize();
+        return Err(NOT_ENCRYPTED.into());
+    }
 
     Ok(pack_decrypt_result(&helper.signatures, plaintext))
 }
@@ -2043,6 +2253,8 @@ pub fn decrypt_with_password(
     // `scripts/audit-invariants.mjs`.
     password: Vec<u8>,
     verification_keys_json: Option<String>,
+    // Same ceiling as `decrypt_with_handle`'s.
+    max_output: Option<u32>,
 ) -> Result<Vec<u8>, String> {
     // Wrapped FIRST, before anything can return early: the `Drop` is what
     // scrubs the marshalled copy, and an error path that returns above
@@ -2053,10 +2265,16 @@ pub fn decrypt_with_password(
         None => Vec::new(),
     };
 
+    // Before the password is used, and outside the "wrong password"
+    // wrapping below: a message with nothing to decrypt is not a password
+    // problem.
+    refuse_unencrypted(ciphertext)?;
+
     let helper = PasswordDecryptHelper {
         password: password.as_slice().into(),
         verification_certs,
         signatures: SignatureReport::unsigned(),
+        encrypted: false,
     };
 
     // The unreadable-FORMAT case, separated from the wrong-PASSWORD case
@@ -2072,8 +2290,25 @@ pub fn decrypt_with_password(
         );
     }
 
-    decrypt_with_password_inner(ciphertext, helper)
-        .map_err(|e| format!("Wrong password, or this message is damaged: {e}"))
+    let (helper, mut plaintext) = decrypt_with_password_inner(ciphertext, helper, max_output)
+        .map_err(|e| {
+            // Held back for size, or past the engine's own size limit:
+            // neither is a password problem (the password may well have
+            // been right -- the read only stops once the plaintext is
+            // flowing), and both are matched by value, so they cross
+            // unwrapped.
+            if e == OUTPUT_CAP_REACHED || e == TOO_LARGE_TO_OPEN {
+                e
+            } else {
+                format!("Wrong password, or this message is damaged: {e}")
+            }
+        })?;
+    // See `decrypt_with_handle`: the parse, not the header scan, decides.
+    if !helper.encrypted {
+        plaintext.zeroize();
+        return Err(NOT_ENCRYPTED.into());
+    }
+    Ok(pack_decrypt_result(&helper.signatures, plaintext))
 }
 
 /// The fallible half, split out so ONE `map_err` covers the whole parse
@@ -2083,16 +2318,17 @@ pub fn decrypt_with_password(
 fn decrypt_with_password_inner(
     ciphertext: &[u8],
     helper: PasswordDecryptHelper,
-) -> Result<Vec<u8>, String> {
-    let mut decryptor = DecryptorBuilder::from_bytes(ciphertext)
-        .str_err()?
-        .with_policy(policy(), None, helper)
-        .str_err()?;
+    max_output: Option<u32>,
+) -> Result<(PasswordDecryptHelper, Vec<u8>), String> {
+    let limit = decrypt_limit(ciphertext.len());
+    let mut builder = DecryptorBuilder::from_bytes(ciphertext).str_err()?;
+    if let Some(size) = stream_buffer(max_output, limit) {
+        builder = builder.buffer_size(size);
+    }
+    let mut decryptor = builder.with_policy(policy(), None, helper).str_err()?;
 
-    let plaintext = read_capped(&mut decryptor, decrypt_limit(ciphertext.len()), "message")?;
-    let helper = decryptor.into_helper();
-
-    Ok(pack_decrypt_result(&helper.signatures, plaintext))
+    let plaintext = read_within(&mut decryptor, limit, max_output)?;
+    Ok((decryptor.into_helper(), plaintext))
 }
 
 /// The encrypted container a message uses, which decides whether we can
@@ -2123,14 +2359,12 @@ enum Container {
 /// guarantees; the variant is what our parser happened to manage.
 fn scan_session_packets(ciphertext: &[u8]) -> Result<(bool, bool, Container), String> {
     use openpgp::packet::Tag;
-    use openpgp::parse::{PacketParser, PacketParserResult};
 
     let mut password = false;
     let mut public_key = false;
     let mut container = Container::None;
-    let mut ppr = PacketParser::from_bytes(ciphertext).str_err()?;
-    while let PacketParserResult::Some(pp) = ppr {
-        match pp.packet.tag() {
+    walk_message_header(ciphertext, |packet| {
+        match packet.tag() {
             Tag::SKESK => password = true,
             Tag::PKESK => public_key = true,
             // The session-key packets all precede the encrypted
@@ -2138,21 +2372,69 @@ fn scan_session_packets(ciphertext: &[u8]) -> Result<(bool, bool, Container), St
             // learn, and descending into it would mean decrypting.
             Tag::SEIP => {
                 container = Container::Seip;
-                break;
+                return false;
             }
             Tag::AED => {
                 container = Container::Aed;
-                break;
+                return false;
             }
             _ => {}
         }
-        let (_packet, next) = pp.next().str_err()?;
-        ppr = next;
-    }
+        true
+    })?;
     Ok((password, public_key, container))
 }
 
-/// How a message can be opened, as JSON: `{"password":bool,"publicKey":bool}`.
+/// Walk the packets a message opens with, calling `visit` on each until
+/// it returns false, and looking INSIDE a Compressed packet.
+///
+/// RFC 9580's grammar lets a compressed message hold an encrypted one,
+/// `Compressed{ PKESK, SEIPD }`, and Sequoia's decryptor opens it. A
+/// walk that stepped over the Compressed packet saw no session key and
+/// no container: `messageEncryption` called the message unencrypted, the
+/// UI took it to `openUnencrypted` (which cannot decrypt), and the
+/// decrypt backstop refused it as "not encrypted". So Compressed is
+/// descended into.
+///
+/// Inside one, the walk stops at the first packet that is not a session
+/// key or a further container. Stepping over a packet there means
+/// INFLATING it, and a Literal's body is where a compression bomb lives;
+/// nothing after it can be a header anyway. At the top level a skipped
+/// packet is only bytes already in hand, so the walk goes on as before.
+fn walk_message_header(
+    message: &[u8],
+    mut visit: impl FnMut(&openpgp::Packet) -> bool,
+) -> Result<(), String> {
+    use openpgp::packet::Tag;
+    use openpgp::parse::{PacketParser, PacketParserResult};
+
+    let mut ppr = PacketParser::from_bytes(message).str_err()?;
+    while let PacketParserResult::Some(pp) = ppr {
+        if !visit(&pp.packet) {
+            break;
+        }
+        let tag = pp.packet.tag();
+        let inside = pp.recursion_depth() > 0;
+        if inside && !matches!(tag, Tag::SKESK | Tag::PKESK | Tag::Marker | Tag::CompressedData) {
+            break;
+        }
+        let (_packet, next) = if tag == Tag::CompressedData {
+            pp.recurse().str_err()?
+        } else {
+            pp.next().str_err()?
+        };
+        ppr = next;
+    }
+    Ok(())
+}
+
+/// How a message can be opened, as JSON:
+/// `{"password":bool,"publicKey":bool,"encrypted":bool}`.
+///
+/// `encrypted` is false for a message with no session-key packet and no
+/// encrypted container -- signed only, or not even that. Such a message
+/// needs no key, and must not be presented as decrypted: the UI opens it
+/// with `openUnencrypted` and says it was not encrypted.
 ///
 /// Shape only -- it reads the session-key packets that precede the
 /// encrypted container and says which KINDS are present. It does not and
@@ -2167,32 +2449,135 @@ fn scan_session_packets(ciphertext: &[u8]) -> Result<(bool, bool, Container), St
 /// user's own matches.
 #[wasm_bindgen(js_name = "messageEncryption")]
 pub fn message_encryption(ciphertext: &[u8]) -> Result<String, String> {
-    let (password, public_key, _container) = scan_session_packets(ciphertext)?;
-    Ok(serde_json::json!({ "password": password, "publicKey": public_key }).to_string())
+    let (password, public_key, container) = scan_session_packets(ciphertext)?;
+    let encrypted = password || public_key || container != Container::None;
+    Ok(serde_json::json!({
+        "password": password,
+        "publicKey": public_key,
+        "encrypted": encrypted,
+    })
+    .to_string())
+}
+
+/// Read a message that is NOT encrypted -- inline-signed, or a bare
+/// literal -- and return the same packed `[len][sig_json][content]` as
+/// the decrypt entry points, without asking for any key or password.
+///
+/// This is the decrypt tab's answer to a "PGP MESSAGE" that turns out to
+/// have no encryption layer (see [`was_encrypted`]): the content is shown
+/// with its signature verdict, as Verify would show it, and the UI says
+/// plainly that it was not encrypted. It refuses an encrypted message,
+/// so it can never stand in for a decrypt.
+///
+/// Text input passes the same strict framing check as `verify` -- one
+/// armored block, nothing around it -- since Sequoia's armor reader will
+/// otherwise find a block inside any amount of prose. "Text" is decided
+/// by content, not by the first byte: any valid UTF-8 holding an armor
+/// line is checked. (Testing the lead byte's top bit -- a packet header
+/// always has it -- let prose that merely STARTS with a non-ASCII
+/// character, a curly quote, skip the check and show around a valid
+/// verdict.) Binary packets are, in practice, never valid UTF-8.
+#[wasm_bindgen(js_name = "openUnencrypted")]
+pub fn open_unencrypted(
+    message: &[u8],
+    verification_keys_json: Option<String>,
+    // The auto-run reaches this too; same ceiling as the decrypts.
+    max_output: Option<u32>,
+) -> Result<Vec<u8>, String> {
+    let message = message.strip_prefix(b"\xef\xbb\xbf").unwrap_or(message);
+    if !matches!(scan_session_packets(message)?, (false, false, Container::None)) {
+        return Err("This message is encrypted; decrypt it instead.".into());
+    }
+    const ARMOR_LINE: &str = "-----BEGIN PGP";
+    let framing = match std::str::from_utf8(message) {
+        Ok(text) if text.contains(ARMOR_LINE) => {
+            if message.len() > MAX_SIGNED_INPUT_BYTES {
+                return Err(format!(
+                    "This signed message is too large to verify here (limit {} MiB).",
+                    MAX_SIGNED_INPUT_BYTES / (1024 * 1024),
+                ));
+            }
+            Some(check_signed_framing(text)?)
+        }
+        // Not UTF-8, yet holding an armor line: Latin-1 prose around a
+        // block, say. Sequoia's reader always looks for armor, so this
+        // would open with the prose unchecked. Only real binary passes.
+        Err(_)
+            if message.windows(ARMOR_LINE.len()).any(|w| w == ARMOR_LINE.as_bytes())
+                && !reads_as_binary(message) =>
+        {
+            return Err(OUTSIDE_SIGNED.into());
+        }
+        _ => None,
+    };
+    let certs = match verification_keys_json {
+        Some(ref json) => parse_armored_certs(json)?,
+        None => Vec::new(),
+    };
+
+    let helper = VerifyHelper {
+        certs,
+        signatures: SignatureReport::unsigned(),
+    };
+    let limit = decrypt_limit(message.len());
+    let mut builder = VerifierBuilder::from_bytes(message).str_err()?;
+    if let Some(size) = stream_buffer(max_output, limit) {
+        builder = builder.buffer_size(size);
+    }
+    let mut verifier = builder.with_policy(policy(), None, helper).str_err()?;
+    let content = read_within(&mut verifier, limit, max_output)?;
+    if let Some(SignedFraming::Cleartext(shown)) = &framing {
+        check_cleartext_body(shown, std::str::from_utf8(&content).str_err()?)?;
+    }
+    let helper = verifier.into_helper();
+
+    Ok(pack_decrypt_result(&helper.signatures, content))
+}
+
+/// Whether `message` is, top to bottom, a sequence of binary packets
+/// this parser knows -- read with armor detection OFF. Containers are
+/// stepped over, not opened, so this costs a walk over the bytes.
+fn reads_as_binary(message: &[u8]) -> bool {
+    use openpgp::parse::{Dearmor, PacketParserBuilder, PacketParserResult};
+    let Ok(builder) = PacketParserBuilder::from_bytes(message) else { return false };
+    let Ok(mut ppr) = builder.dearmor(Dearmor::Disabled).build() else { return false };
+    let mut packets = 0;
+    loop {
+        match ppr {
+            PacketParserResult::Some(pp) => {
+                if matches!(pp.packet, openpgp::Packet::Unknown(_)) {
+                    return false;
+                }
+                packets += 1;
+                match pp.next() {
+                    Ok((_, next)) => ppr = next,
+                    Err(_) => return false,
+                }
+            }
+            PacketParserResult::EOF(_) => return packets > 0,
+        }
+    }
 }
 
 /// Collect the recipient key handles referenced by a message's public-key
 /// encrypted session-key (PKESK) packets. Anonymous/wildcard recipients carry
 /// no key handle and are skipped (they can't be matched to a specific key).
 fn recipient_handles(ciphertext: &[u8]) -> Result<Vec<openpgp::KeyHandle>, String> {
-    use openpgp::parse::{PacketParser, PacketParserResult};
     let mut handles = Vec::new();
-    let mut ppr = PacketParser::from_bytes(ciphertext).str_err()?;
-    while let PacketParserResult::Some(pp) = ppr {
-        match &pp.packet {
-            openpgp::Packet::PKESK(pkesk) => {
-                if let Some(handle) = pkesk.recipient() {
-                    handles.push(handle);
-                }
+    // Same walk as `scan_session_packets`, so a `Compressed{PKESK, SEIPD}`
+    // message gets its key picked too.
+    walk_message_header(ciphertext, |packet| match packet {
+        openpgp::Packet::PKESK(pkesk) => {
+            if let Some(handle) = pkesk.recipient() {
+                handles.push(handle);
             }
-            // Session-key packets precede the encrypted container; once we
-            // reach it there are no further recipients to discover.
-            openpgp::Packet::SEIP(_) => break,
-            _ => {}
+            true
         }
-        let (_packet, next) = pp.next().str_err()?;
-        ppr = next;
-    }
+        // Session-key packets precede the encrypted container; once we
+        // reach it there are no further recipients to discover.
+        openpgp::Packet::SEIP(_) => false,
+        _ => true,
+    })?;
     Ok(handles)
 }
 
@@ -2964,6 +3349,14 @@ fn parse_and_store_private_key(plaintext: Zeroizing<Vec<u8>>) -> Result<u32, Str
 const CONTACTS_AAD: &[u8] = b"gpg-tools:contacts:master";
 const CONTACTS_HKDF_INFO: &[u8] = b"gpg-tools-contacts-v1";
 const CANARY_PLAINTEXT: &[u8] = b"pgp-tools-master-v1";
+/// The canary's own AAD. Canaries used to be sealed under `CONTACTS_AAD`,
+/// the label the legacy store envelope opens with, so every password
+/// vault published (in its cleartext master protection) a blob that
+/// `decrypt_contacts` accepts: planted in any store slot, the legacy
+/// fallback opened it and the store read as garbage. A separate label puts
+/// new canaries outside that envelope. Old canaries still verify (see
+/// `verify_canary_and_init_session`).
+const CANARY_AAD: &[u8] = b"gpg-tools:master-canary:v1";
 
 thread_local! {
     static CONTACTS_KEY: RefCell<Option<Vec<u8>>> = RefCell::new(None);
@@ -3248,7 +3641,7 @@ pub fn encrypt_canary_and_init_session(
     let password = Zeroizing::new(password);
     let mut key =
         derive_contacts_key_from_password(&password, salt, memory_kib, iterations, parallelism)?;
-    let result = aes_gcm_encrypt(&key, CANARY_PLAINTEXT, CONTACTS_AAD);
+    let result = aes_gcm_encrypt(&key, CANARY_PLAINTEXT, CANARY_AAD);
     if result.is_ok() {
         set_contacts_key(Some(key));
     } else {
@@ -3260,6 +3653,15 @@ pub fn encrypt_canary_and_init_session(
 /// Verify a password and init the contacts session in one Argon2id pass.
 /// Returns true if the password is correct and the session is now active.
 /// Returns false (without initialising the session) if the password is wrong.
+///
+/// Tries the canary's own label first, then the legacy `CONTACTS_AAD`, so
+/// vaults created before `CANARY_AAD` still unlock. Both are AEAD opens
+/// under the same derived key, so the fallback adds no way in: it only
+/// accepts a blob sealed under the right key. Old canaries are NOT re-sealed
+/// on unlock: the master protection is the one record whose loss makes the
+/// vault unopenable, and on a synced vault an older build on another device
+/// could not verify a re-sealed canary and would report the right password
+/// as wrong.
 #[wasm_bindgen(js_name = "verifyCanaryAndInitSession")]
 pub fn verify_canary_and_init_session(
     canary_ciphertext: &[u8],
@@ -3279,7 +3681,9 @@ pub fn verify_canary_and_init_session(
     let password = Zeroizing::new(password);
     let mut key =
         derive_contacts_key_from_password(&password, salt, memory_kib, iterations, parallelism)?;
-    match aes_gcm_decrypt(&key, canary_iv, canary_ciphertext, CONTACTS_AAD) {
+    let opened = aes_gcm_decrypt(&key, canary_iv, canary_ciphertext, CANARY_AAD)
+        .or_else(|_| aes_gcm_decrypt(&key, canary_iv, canary_ciphertext, CONTACTS_AAD));
+    match opened {
         Ok(_) => {
             // AES-GCM is AEAD: successful decryption guarantees correct key.
             set_contacts_key(Some(key));

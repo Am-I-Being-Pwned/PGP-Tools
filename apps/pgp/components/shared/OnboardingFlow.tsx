@@ -33,7 +33,11 @@ import {
   isWebAuthnCancel,
   registerPasskey,
 } from "../../lib/protection/webauthn-prf";
-import { saveMasterProtection } from "../../lib/storage/master-protection";
+import {
+  masterProtectionIn,
+  saveMasterProtection,
+  VaultExistsError,
+} from "../../lib/storage/master-protection";
 import { savePreferences } from "../../lib/storage/preferences";
 import { afterNextPaint } from "../../lib/utils/paint";
 import {
@@ -179,6 +183,20 @@ export function OnboardingFlow({
       }
     }
 
+    // Never set up over an existing vault. App only shows onboarding when
+    // nothing is stored (`resolveVaultState`), but this screen can sit
+    // open while another window or device creates one -- and replacing a
+    // master protection makes every key sealed under it unopenable.
+    // Checked BEFORE a session key or passkey is minted, so nothing is
+    // half-created; `saveMasterProtection` refuses again as a backstop.
+    if (
+      (await masterProtectionIn("local")) ||
+      (await masterProtectionIn("sync"))
+    ) {
+      setError(t("app_onboarding_vault_exists"));
+      return;
+    }
+
     setSubmitting(true);
     // The button re-enables after 2s independent of the WebAuthn
     // promise so a still-open system dialog can't strand it.
@@ -256,13 +274,22 @@ export function OnboardingFlow({
         }
       }
 
+      // The vault first, in the chosen area, and only then the location:
+      // a refusal (another window won the race) must leave this device's
+      // location pointing where it did, at the vault that does exist.
+      await saveMasterProtection(mp, location);
       await savePreferences({ storageLocation: location });
-      await saveMasterProtection(mp);
 
       setStep("identity");
     } catch (e) {
       if (isWebAuthnCancel(e)) {
         setError(null);
+      } else if (e instanceof VaultExistsError) {
+        // Lost the race with another window: the session minted above
+        // belongs to no stored vault, so drop it rather than leave a key
+        // that opens nothing installed as the vault session.
+        void wasmApi.dropContactsSession().catch(() => undefined);
+        setError(t("app_onboarding_vault_exists"));
       } else {
         setError(
           e instanceof Error ? e.message : t("app_onboarding_setup_failed"),

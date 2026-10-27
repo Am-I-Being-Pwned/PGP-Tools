@@ -666,5 +666,69 @@
   "workspace_signed_text_hidden_chars": {
     "message": "the signed text contains invisible or text-direction characters, so it may not read on screen the way it was written",
     "description": "Part of the note under a verified signer: the signed text itself contains bidi/zero-width/control characters that can make it display in a different order. Lowercase: it follows other parts after a dot separator."
+  },
+  "workspace_signer_not_verified": {
+    "message": "key not marked verified by you",
+    "description": "Lower-case fragment in the note under a good signature, joined with ' · ': the signer is a contact the user has not marked verified."
+  },
+  "workspace_not_encrypted": {
+    "message": "Not encrypted",
+    "description": "Short amber label on a signer card in decrypt mode: the message was signed but never encrypted, so it is not private mail. Keep it to a couple of words; the note under the card explains."
+  },
+  "workspace_signed_not_encrypted": {
+    "message": "signed, but not encrypted: anyone could have sent you this copy",
+    "description": "Part of the note under a signer card in decrypt mode: the signature is good, but the message was never encrypted, so the person who sent it need not be the signer. Lowercase: it is joined with other parts by ' · '."
+  },
+  "workspace_status_not_encrypted": {
+    "message": "This message was not encrypted, so anyone could have sent you this copy and read it on the way.",
+    "description": "Note on the amber card (and error text) when a message opened in decrypt mode has no encryption at all. A full sentence."
+  },
+  "workspace_not_encrypted_not_signed": {
+    "message": "Not encrypted or signed",
+    "description": "Name on the amber card when a message opened in decrypt mode was neither encrypted nor signed. Keep it short; the note under it explains."
+  },
+  "workspace_error_batch_not_encrypted": {
+    "message": "$name$ is not encrypted. Decrypt it on its own to see what it contains.",
+    "description": "Decrypt error when several files are staged and one of them has no encryption layer. $name$ is the file name."
+  },
+  "workspace_signature_verified_line_breaks": {
+    "message": "Check line breaks",
+    "description": "Short amber label on a signer card: the signature checks out, but the signed text contains a carriage return without a line feed, which may display differently from how it was signed. Keep it to a couple of words; the note under the card explains."
+  },
+  "workspace_signed_text_lone_cr": {
+    "message": "the signed text has a carriage return without a line feed (shown as ␍), so its line breaks may not display the way the signer wrote them",
+    "description": "Part of the note under a verified signer: the signed text contains a lone CR character, which some programs treat as a line break and others hide. The symbol in brackets is the one the result box draws for it; keep it. Lowercase: it is joined with other parts by ' · '."
+  },
+  "workspace_signature_not_addressed": {
+    "message": "the signature doesn't say it was meant for you, so it may have been forwarded",
+    "description": "Lower-case fragment in the note under a good signature on a DECRYPTED message, joined with ' · ': the signer did not record who the message was for, so someone may have re-encrypted a message the signer wrote to someone else."
+  },
+  "workspace_detected_keys_known": {
+    "message": "You already have the keys of $names$.",
+    "description": "Banner when every public key found in a pasted or received text is already a contact. $names$ is a comma-separated list of the owners' names."
+  },
+  "workspace_detected_keys_in_message": {
+    "message": "This message contains public keys for $names$.",
+    "description": "Banner under a decrypted/verified message that carries several public keys. $names$ is a comma-separated list of the owners' names."
+  },
+  "workspace_detected_keys_pasted": {
+    "message": "These are public keys for $names$.",
+    "description": "Banner when several public keys are pasted into the message box. $names$ is a comma-separated list of the owners' names."
+  },
+  "workspace_sign_hidden_chars": {
+    "message": "This text has characters you can't see ($chars$). They can reorder or hide what it says, and they would be signed as they are.",
+    "description": "Amber note shown instead of signing when the text to sign holds invisible characters (direction overrides, zero-width or tag characters, a lone carriage return). $chars$ lists their Unicode code points, e.g. U+202E."
+  },
+  "workspace_sign_hidden_chars_anyway": {
+    "message": "Sign anyway",
+    "description": "Button on the hidden-characters note: sign the text exactly as it is. Short."
+  },
+  "workspace_sign_hidden_chars_remove": {
+    "message": "Remove them",
+    "description": "Button on the hidden-characters note: delete the invisible characters from the message box (a lone carriage return becomes a line break). Short."
+  },
+  "workspace_auto_run_too_large": {
+    "message": "This message is too large to open automatically. Open it with the button below.",
+    "description": "Note when a message opened from the right-click menu was not decrypted on its own because its content is large. The button below is Decrypt (or Verify)."
   }
 }

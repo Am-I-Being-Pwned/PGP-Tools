@@ -24,6 +24,7 @@ import type {
   SignatureDetails,
   SignatureStatus,
 } from "./types";
+import type { WasmModule } from "./wasm-loader";
 import { loadWasm } from "./wasm-loader";
 
 // ── status / metadata ────────────────────────────────────────────────
@@ -169,14 +170,52 @@ export async function revocationIssuers(
   }
 }
 
+// ── an unattended run's output ceiling ───────────────────────────────
+
+/**
+ * The engine stopped reading because the result would be bigger than
+ * the `maxOutputBytes` an unattended run asked for. Not a failure: the
+ * message waits for the user's click (which runs uncapped). The engine
+ * wiped what it had read.
+ */
+export class OutputCapReached extends Error {
+  constructor() {
+    super("Output cap reached");
+    this.name = "OutputCapReached";
+  }
+}
+
+/**
+ * Run a capped engine call, turning its "too large to open
+ * automatically" error into {@link OutputCapReached}. Matched by VALUE
+ * against `outputCapReachedMessage()`, never by transcribed prose (the
+ * `sshPassphraseRequiredMessage` rule).
+ */
+export function withOutputCap<T>(wasm: WasmModule, run: () => T): T {
+  try {
+    return run();
+  } catch (e) {
+    if (typeof e === "string" && e === wasm.outputCapReachedMessage()) {
+      throw new OutputCapReached();
+    }
+    throw e;
+  }
+}
+
+/** `maxOutputBytes`: an unattended run's ceiling on the signed content
+ *  (see {@link OutputCapReached}). Omitted for a run the user started. */
 export async function verify(
   signedMessage: string,
   verificationPublicKeys: string[],
+  maxOutputBytes?: number,
 ): Promise<VerifyResultWasm> {
   const wasm = await loadWasm();
-  const json = wasm.verify(
-    signedMessage,
-    JSON.stringify(verificationPublicKeys),
+  const json = withOutputCap(wasm, () =>
+    wasm.verify(
+      signedMessage,
+      JSON.stringify(verificationPublicKeys),
+      maxOutputBytes,
+    ),
   );
   return JSON.parse(json) as VerifyResultWasm;
 }
@@ -233,16 +272,21 @@ export function unpackDecryptResult(
   return { plaintext, signatureInfo };
 }
 
+/** `maxOutputBytes`: see {@link verify}. */
 export async function decryptWithHandle(
   ciphertext: Uint8Array,
   keyHandle: number,
   verificationPublicKeys?: string[],
+  maxOutputBytes?: number,
 ): Promise<DecryptWithHandleResult> {
   const wasm = await loadWasm();
-  const packed = wasm.decryptWithHandle(
-    ciphertext,
-    keyHandle,
-    verificationPublicKeys ? JSON.stringify(verificationPublicKeys) : null,
+  const packed = withOutputCap(wasm, () =>
+    wasm.decryptWithHandle(
+      ciphertext,
+      keyHandle,
+      verificationPublicKeys ? JSON.stringify(verificationPublicKeys) : null,
+      maxOutputBytes,
+    ),
   );
   return unpackDecryptResult(packed);
 }
@@ -280,6 +324,10 @@ export interface MessageEncryption {
   password: boolean;
   /** A PKESK is present -- the message can be opened with a private key. */
   publicKey: boolean;
+  /** Any session-key packet or encrypted container is present. False for
+   *  a "PGP MESSAGE" that is only signed (or not even that): it needs no
+   *  key, and must never be shown as decrypted -- see `openUnencrypted`. */
+  encrypted: boolean;
 }
 
 /**
@@ -298,6 +346,29 @@ export async function messageEncryption(
 ): Promise<MessageEncryption> {
   const wasm = await loadWasm();
   return JSON.parse(wasm.messageEncryption(ciphertext)) as MessageEncryption;
+}
+
+/**
+ * Read a message that has no encryption layer -- inline-signed, or a
+ * bare literal -- with its signature verdict, and no key. Same packed
+ * result as `decryptWithHandle`. The engine refuses an encrypted message
+ * here, and refuses an unencrypted one in both decrypt calls, so the two
+ * cannot stand in for each other.
+ */
+export async function openUnencrypted(
+  message: Uint8Array,
+  verificationPublicKeys?: string[],
+  maxOutputBytes?: number,
+): Promise<DecryptWithHandleResult> {
+  const wasm = await loadWasm();
+  const packed = withOutputCap(wasm, () =>
+    wasm.openUnencrypted(
+      message,
+      verificationPublicKeys ? JSON.stringify(verificationPublicKeys) : null,
+      maxOutputBytes,
+    ),
+  );
+  return unpackDecryptResult(packed);
 }
 
 /** Mint an armored revocation certificate for an unlocked key --

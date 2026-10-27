@@ -29,10 +29,16 @@ describe("classifyAction", () => {
     expect(classifyAction("hello world")).toBe("encrypt");
   });
 
-  it("prefers key import when a selection contains both key and message", () => {
+  it("prefers key import when the key comes before the message", () => {
     const both =
-      "-----BEGIN PGP MESSAGE-----\n...\n-----BEGIN PGP PUBLIC KEY BLOCK-----\n...";
+      "-----BEGIN PGP PUBLIC KEY BLOCK-----\n...\n-----END PGP PUBLIC KEY BLOCK-----\n-----BEGIN PGP MESSAGE-----\n...";
     expect(classifyAction(both)).toBe("import-public");
+  });
+
+  it("keeps a message a message when a key follows it", () => {
+    const both =
+      "-----BEGIN PGP MESSAGE-----\n...\n-----END PGP MESSAGE-----\n-----BEGIN PGP PUBLIC KEY BLOCK-----\n...";
+    expect(classifyAction(both)).toBe("decrypt");
   });
 
   it("works on surrounding-text selections", () => {
@@ -49,9 +55,9 @@ describe("classifyAction - age / SSH", () => {
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIALwHu/03Nd9eyyrPgxjkFu80Fe1EgN06J8iaY8B+wf6 alice@example.com";
 
   it("classifies an armored age file as a decrypt", () => {
-    expect(
-      classifyAction("-----BEGIN AGE ENCRYPTED FILE-----\nYWdl\n"),
-    ).toBe("decrypt");
+    expect(classifyAction("-----BEGIN AGE ENCRYPTED FILE-----\nYWdl\n")).toBe(
+      "decrypt",
+    );
   });
 
   it("classifies a binary age file by its magic line", () => {
@@ -96,7 +102,6 @@ describe("classifyAction - age / SSH", () => {
   });
 });
 
-
 /**
  * Routing must recognise every `.pub` the import flow can explain.
  *
@@ -111,10 +116,7 @@ describe("classifyAction - age / SSH", () => {
 describe("classifyAction - SSH public keys of any algorithm", () => {
   it.each([
     ["ECDSA", "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTY= a@host"],
-    [
-      "FIDO",
-      "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9w a@host",
-    ],
+    ["FIDO", "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9w a@host"],
     ["DSA", "ssh-dss AAAAB3NzaC1kc3MAAACBAO0= a@host"],
   ])("routes a %s .pub line to the import flow", (_name, line) => {
     expect(classifyAction(line)).toBe("import-public");
@@ -147,5 +149,61 @@ describe("classifyAction - SSH public keys of any algorithm", () => {
         "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEA\n-----END OPENSSH PRIVATE KEY-----",
       ),
     ).toBe("import-private");
+  });
+});
+
+/**
+ * A signed message is a message, whatever its signed text carries. A
+ * forged one quoting a key used to open the import screen, so the user
+ * never saw its signature fail.
+ */
+describe("classifyAction - a message that quotes a key", () => {
+  const ED25519_PUB =
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIALwHu/03Nd9eyyrPgxjkFu80Fe1EgN06J8iaY8B+wf6 alice@example.com";
+  const signed = (body: string) =>
+    `-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA256\n\n${body}\n-----BEGIN PGP SIGNATURE-----\nwsBc\n-----END PGP SIGNATURE-----\n`;
+
+  it("verifies a signed message whose text holds a public key block", () => {
+    expect(
+      classifyAction(
+        signed(
+          "My new key:\n-----BEGIN PGP PUBLIC KEY BLOCK-----\nmQINB\n-----END PGP PUBLIC KEY BLOCK-----",
+        ),
+      ),
+    ).toBe("verify");
+  });
+
+  it("verifies a signed message whose text holds an SSH line", () => {
+    expect(classifyAction(signed(ED25519_PUB))).toBe("verify");
+  });
+
+  it("verifies a signed message whose text holds a private key block", () => {
+    expect(
+      classifyAction(
+        signed(
+          "-----BEGIN PGP PRIVATE KEY BLOCK-----\nlQ\n-----END PGP PRIVATE KEY BLOCK-----",
+        ),
+      ),
+    ).toBe("verify");
+  });
+
+  it("still verifies when words were selected ahead of the header", () => {
+    expect(classifyAction(`Forwarded:\n${signed(ED25519_PUB)}`)).toBe("verify");
+  });
+
+  it("verifies a signed message that quotes an encrypted one", () => {
+    expect(
+      classifyAction(
+        signed("-----BEGIN PGP MESSAGE-----\nhQ\n-----END PGP MESSAGE-----"),
+      ),
+    ).toBe("verify");
+  });
+
+  it("decrypts an encrypted message followed by an SSH line", () => {
+    expect(
+      classifyAction(
+        `-----BEGIN PGP MESSAGE-----\nhQIMA\n-----END PGP MESSAGE-----\n${ED25519_PUB}`,
+      ),
+    ).toBe("decrypt");
   });
 });

@@ -127,7 +127,7 @@
     }
   },
   "actions_history_delete_warning": {
-    "message": "Это навсегда удалит вашу зашифрованную историю операций с этого устройства. Восстановить её будет невозможно."
+    "message": "Это удалит вашу зашифрованную историю операций из хранилища на этом устройстве. Это нельзя отменить. Зашифрованная копия может оставаться на диске, пока браузер не выполнит сжатие своих данных."
   },
   "actions_history_empty": {
     "message": "История пуста"
@@ -355,6 +355,9 @@
   },
   "actions_need_recipient_or_password": {
     "message": "Выберите хотя бы одного получателя или задайте пароль"
+  },
+  "actions_no_active_key_reason": {
+    "message": "Все ключи этого контакта отключены. Включите один из них в сведениях о контакте, чтобы шифровать для него."
   },
   "actions_no_input_decrypt": {
     "message": "Нечего расшифровывать - вставьте зашифрованное сообщение или перетащите файл"
@@ -599,6 +602,9 @@
   "app_error_tampered": {
     "message": "Проверка подписи не пройдена - сообщение могло быть изменено. Не доверяйте его содержимому; попросите отправителя отправить его заново."
   },
+  "app_error_too_large_to_open": {
+    "message": "Это сообщение слишком большое, чтобы открыть его здесь. Ваш пароль или ключ вполне может быть верным: мешает размер. Откройте его в настольной программе OpenPGP, например GnuPG."
+  },
   "app_error_unsigned_text_around_signature": {
     "message": "Здесь есть текст за пределами подписанного сообщения, который подпись не охватывает. Вставьте только подписанное сообщение, от строки BEGIN до строки END."
   },
@@ -653,6 +659,30 @@
   "app_import_view_key_other": {
     "message": "Показать ключи"
   },
+  "app_integrity_dismiss": {
+    "message": "Закрыть"
+  },
+  "app_integrity_ledger_lost": {
+    "message": "Запись этого устройства о том, что оно видело последним, была удалена или не читается, поэтому на этот раз старые копии ваших данных обнаружить нельзя. Пока вы не закроете это предупреждение, действует самый строгий набор настроек безопасности. Проверьте, что контакты, которые, как вы знаете, были отозваны, по-прежнему отображаются как отозванные."
+  },
+  "app_integrity_missing_sync": {
+    "message": "Ваше хранилище синхронизируется между устройствами, и старая версия PGP Tools на другом устройстве тоже может так удалить данные, когда очищает список. Если все ваши устройства обновлены, считайте это вмешательством."
+  },
+  "app_integrity_no_generation": {
+    "message": "Некоторые ключи, контакты или настройки сохранены без метки, по которой это устройство распознаёт старые копии. Так сохраняет данные старая версия PGP Tools на другом устройстве, и так же выглядел бы их откат. Если все ваши устройства обновлены, а это сообщение всё равно появляется, считайте это вмешательством и проверьте ключи и контакты."
+  },
+  "app_integrity_settings_held": {
+    "message": "Ваши настройки могут быть старой копией, поэтому, пока вы не закроете это предупреждение, действует самый строгий набор настроек безопасности."
+  },
+  "app_integrity_settings_strict": {
+    "message": "Ваши настройки отсутствовали, поэтому до их изменения действует самый строгий набор настроек безопасности."
+  },
+  "app_integrity_settings_unreadable": {
+    "message": "Не удалось прочитать ваши настройки, поэтому до их изменения действует самый строгий набор настроек безопасности."
+  },
+  "app_integrity_warning": {
+    "message": "Некоторые сохранённые ключи, контакты или настройки старше копии, которую это устройство видело в последний раз, или отсутствуют. Кто-то с доступом к хранилищу браузера или к вашему аккаунту Google мог откатить их. Это также бывает, когда два устройства одновременно меняют одни и те же данные. Проверьте ключи и контакты, прежде чем на них полагаться."
+  },
   "app_menu_open_in_pgp_tools": {
     "message": "Открыть в PGP Tools"
   },
@@ -666,7 +696,7 @@
     "message": "Современные, быстрые, компактные ключи. Рекомендуется для большинства случаев."
   },
   "app_onboarding_algo_rsa_hint": {
-    "message": "Широкая совместимость. Ключ создаётся медленнее."
+    "message": "Широко совместим, но медленнее, и в его реализации RSA есть известный канал утечки по времени (Marvin). Выбирайте ECC, если RSA не нужен."
   },
   "app_onboarding_algorithm_label": {
     "message": "Алгоритм"
@@ -802,6 +832,9 @@
   "app_onboarding_use_preset": {
     "message": "Использовать этот профиль"
   },
+  "app_onboarding_vault_exists": {
+    "message": "В этом браузере уже есть хранилище, поэтому новое не создано. Закройте и снова откройте панель, чтобы разблокировать его."
+  },
   "app_oversized_files_few": {
     "message": "$files$: файлы больше $limit$, и их нельзя обработать в панели.",
     "placeholders": {
@@ -860,8 +893,56 @@
   "app_tab_main": {
     "message": "Главная"
   },
+  "app_vault_alternate_local": {
+    "message": "Хранилище есть и в памяти этого устройства."
+  },
+  "app_vault_alternate_sync": {
+    "message": "Хранилище есть и в синхронизируемом хранилище."
+  },
+  "app_vault_alternate_use": {
+    "message": "Попробовать его"
+  },
+  "app_vault_ambiguous_body": {
+    "message": "Одно находится в памяти этого устройства, другое в синхронизируемом хранилище, и это устройство не знает, какое из них ваше. Синхронизируемое хранилище может изменить другое устройство или кто-то, вошедший в ваш аккаунт Google. Выберите то, которым вы пользуетесь здесь. Ничего не копируется и не удаляется."
+  },
+  "app_vault_ambiguous_title": {
+    "message": "В этом браузере сохранены два хранилища"
+  },
+  "app_vault_ambiguous_use_local": {
+    "message": "Использовать хранилище на этом устройстве"
+  },
+  "app_vault_ambiguous_use_sync": {
+    "message": "Использовать синхронизируемое хранилище"
+  },
+  "app_vault_elsewhere_body_local": {
+    "message": "В этом браузере указано хранить хранилище в синхронизируемом хранилище, но ваше хранилище находится в памяти этого устройства. Этот параметр синхронизируется между устройствами, поэтому его могло изменить другое устройство или кто-то, вошедший в ваш аккаунт Google."
+  },
+  "app_vault_elsewhere_body_sync": {
+    "message": "В этом браузере указано хранить хранилище только на этом устройстве, но ваше хранилище находится в синхронизируемом хранилище. Этот параметр синхронизируется между устройствами, поэтому его могло изменить другое устройство или кто-то, вошедший в ваш аккаунт Google."
+  },
+  "app_vault_elsewhere_title": {
+    "message": "Ваше хранилище находится в другом месте"
+  },
+  "app_vault_elsewhere_use": {
+    "message": "Использовать хранилище там, где оно есть"
+  },
+  "app_vault_erase_body": {
+    "message": "Это удалит сохранённые ключи, контакты, настройки и историю в этом браузере и в его синхронизируемом хранилище, чтобы вы могли создать новое хранилище. Это нельзя отменить. Зашифрованная копия может оставаться на диске, пока браузер не выполнит сжатие своих данных."
+  },
+  "app_vault_erase_confirm": {
+    "message": "Стереть хранилище"
+  },
+  "app_vault_erase_title": {
+    "message": "Стереть и начать заново"
+  },
   "app_vault_lock_retry": {
     "message": "Заблокировать и повторить"
+  },
+  "app_vault_orphaned_body": {
+    "message": "Ваши ключи и контакты по-прежнему сохранены, но запись, нужная для их разблокировки, отсутствует в хранилище этого браузера, и без неё никто не сможет их открыть. Если вы можете восстановить эту запись из резервной копии профиля браузера, сделайте это."
+  },
+  "app_vault_orphaned_title": {
+    "message": "Ваше хранилище больше нельзя разблокировать"
   },
   "app_vault_unreadable_body": {
     "message": "Ваши ключи по-прежнему хранятся на этом устройстве. Для начала заблокируйте хранилище и попробуйте снова."
@@ -1322,6 +1403,14 @@
   "import_github_rate_limited": {
     "message": "GitHub ограничивает число запросов из этой сети. Лимит считается по IP-адресу, поэтому его могут исчерпать другие люди на том же подключении."
   },
+  "import_github_refresh_all_held": {
+    "message": "$username$ больше не публикует часть ключей, сохранённых для этого контакта, а все остальные принадлежат другому вашему контакту или вам, поэтому обновить его нельзя. Удалите этот контакт, если больше не хотите шифровать для его старых ключей.",
+    "placeholders": {
+      "username": {
+        "content": "$1"
+      }
+    }
+  },
   "import_github_rejected_heading_few": {
     "message": "$count$ опубликованных ключа нельзя использовать",
     "placeholders": {
@@ -1657,6 +1746,38 @@
   "import_rejected_generic": {
     "message": "Этот ключ нельзя импортировать."
   },
+  "import_replaced_contacts_few": {
+    "message": "Заменены ключи у $count$ контактов",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_replaced_contacts_many": {
+    "message": "Заменены ключи у $count$ контактов",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_replaced_contacts_one": {
+    "message": "Заменён ключ у $count$ контакта",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_replaced_contacts_other": {
+    "message": "Заменены ключи у $count$ контакта",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
   "import_retry_hours_few": {
     "message": "Повторите попытку примерно через $count$ часа.",
     "placeholders": {
@@ -1726,6 +1847,255 @@
   },
   "import_reveal": {
     "message": "Показать в ваших ключах"
+  },
+  "import_review_all_keys_off": {
+    "message": "Все ключи, которые этот аккаунт ещё публикует, вы отключили. После сохранения у этого контакта не будет ключа для шифрования, пока вы не включите один из них."
+  },
+  "import_review_choice_aria": {
+    "message": "Что сделать с $name$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_choice_import": {
+    "message": "Импортировать"
+  },
+  "import_review_choice_keep_both": {
+    "message": "Оставить оба"
+  },
+  "import_review_choice_replace": {
+    "message": "Заменить"
+  },
+  "import_review_choice_skip": {
+    "message": "Пропустить"
+  },
+  "import_review_conflict_address": {
+    "message": "$email$ уже принадлежит $name$ ($keyid$). Это другой ключ - уточните у владельца, прежде чем доверять ему.",
+    "placeholders": {
+      "email": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      },
+      "keyid": {
+        "content": "$3"
+      }
+    }
+  },
+  "import_review_conflict_address_lookalike": {
+    "message": "$email$ похож на $theirs$, адрес $name$ ($keyid$), но это другой адрес. Уточните у владельца, прежде чем доверять ему.",
+    "placeholders": {
+      "email": {
+        "content": "$1"
+      },
+      "theirs": {
+        "content": "$2"
+      },
+      "name": {
+        "content": "$3"
+      },
+      "keyid": {
+        "content": "$4"
+      }
+    }
+  },
+  "import_review_conflict_address_revoked": {
+    "message": "$email$ принадлежал $name$ ($keyid$), но этот ключ отозван. Уточните у владельца, что новый ключ действительно его.",
+    "placeholders": {
+      "email": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      },
+      "keyid": {
+        "content": "$3"
+      }
+    }
+  },
+  "import_review_conflict_key_contact": {
+    "message": "Содержит ваш ключ контакта $name$ ($keyid$) вместе с другими ключами. Уточните у владельца, прежде чем сохранять.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
+  "import_review_conflict_key_own": {
+    "message": "Содержит ваш собственный ключ ($keyid$) вместе с другими ключами. Убедитесь, что все они ваши, прежде чем сохранять.",
+    "placeholders": {
+      "keyid": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_conflict_key_update": {
+    "message": "Это добавит ключи к контакту $name$ ($keyid$), и сообщения ему будут доступны и новым ключам. Уточните у владельца, прежде чем сохранять.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
+  "import_review_conflict_name": {
+    "message": "Выглядит как имя $name$ ($keyid$), но написано другими буквами. Уточните у владельца, прежде чем доверять ему.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
+  "import_review_conflict_same_name": {
+    "message": "У $name$ ($keyid$) такое же имя, и нет адреса электронной почты, который бы их различал. Уточните у владельца, прежде чем доверять ему.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
+  "import_review_import_all": {
+    "message": "Импортировать все"
+  },
+  "import_review_import_all_note_few": {
+    "message": "Включает $count$ ключа, выдающих себя за уже сохранённые контакты.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_import_all_note_many": {
+    "message": "Включает $count$ ключей, выдающих себя за уже сохранённые контакты.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_import_all_note_one": {
+    "message": "Включает $count$ ключ, выдающий себя за уже сохранённый контакт.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_import_all_note_other": {
+    "message": "Включает $count$ ключа, выдающих себя за уже сохранённые контакты.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_import_all_risky": {
+    "message": "Всё равно импортировать все"
+  },
+  "import_review_import_n_few": {
+    "message": "Импортировать $count$ ключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_import_n_many": {
+    "message": "Импортировать $count$ ключей",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_import_n_one": {
+    "message": "Импортировать $count$ ключ",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_import_n_other": {
+    "message": "Импортировать $count$ ключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_import_none": {
+    "message": "Ничего не выбрано"
+  },
+  "import_review_intro_few": {
+    "message": "Найдено $count$ ключа. Ничего не сохранится, пока вы не выберете.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_intro_many": {
+    "message": "Найдено $count$ ключей. Ничего не сохранится, пока вы не выберете.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_intro_one": {
+    "message": "Найден $count$ ключ. Ничего не сохранится, пока вы не выберете.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_intro_other": {
+    "message": "Найдено $count$ ключа. Ничего не сохранится, пока вы не выберете.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_replace_many": {
+    "message": "Замена недоступна: этот адрес есть у нескольких контактов."
+  },
+  "import_review_status_duplicate": {
+    "message": "Уже сохранён"
+  },
+  "import_review_status_new": {
+    "message": "Новый"
+  },
+  "import_review_status_rejected": {
+    "message": "Нельзя импортировать"
+  },
+  "import_review_status_revoked": {
+    "message": "Отозван"
+  },
+  "import_review_status_update": {
+    "message": "Обновление"
+  },
+  "import_review_status_your_key": {
+    "message": "Ваш ключ"
+  },
+  "import_review_title": {
+    "message": "Проверка ключей"
   },
   "import_revocation_headline": {
     "message": "Сертификат отзыва"
@@ -1829,7 +2199,7 @@
     "message": "Современные, быстрые, компактные ключи. Рекомендуется для большинства случаев."
   },
   "keygen_algorithm_hint_rsa": {
-    "message": "Широкая совместимость. Ключ создаётся медленнее."
+    "message": "Широко совместим, но медленнее, и в его реализации RSA есть известный канал утечки по времени (Marvin). Выбирайте ECC, если RSA не нужен."
   },
   "keygen_algorithm_label": {
     "message": "Алгоритм"
@@ -2490,7 +2860,7 @@
     "message": "Вы больше не сможете шифровать сообщения для этих контактов и проверять их подписи. Позже можно снова импортировать их открытые ключи."
   },
   "keys_bulk_delete_private_body": {
-    "message": "Это навсегда удалит выбранные закрытые ключи с этого устройства. Всё, что зашифровано только для удалённого ключа, станет невозможно восстановить. Убедитесь, что у вас есть резервная копия, если ключи могут понадобиться."
+    "message": "Это удалит выбранные закрытые ключи из хранилища на этом устройстве. Всё, что зашифровано только для удалённого ключа, нельзя будет расшифровать без резервной копии, поэтому сохраните её, если ключи могут понадобиться. Зашифрованная копия может оставаться на диске, пока браузер не выполнит сжатие своих данных."
   },
   "keys_bulk_delete_prompt_few": {
     "message": "удалить $count$ ключа",
@@ -2559,6 +2929,14 @@
   "keys_check_revocation_failed": {
     "message": "Не удалось проверить отзыв. Попробуйте ещё раз."
   },
+  "keys_check_revocation_needs_review": {
+    "message": "У ключа $name$ на сервере ключей есть новые имена или адреса. Проверьте их, прежде чем они будут сохранены.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
   "keys_check_revocation_not_published": {
     "message": "$host$ не публикует ключ $name$, поэтому проверить его там нельзя.",
     "placeholders": {
@@ -2601,11 +2979,22 @@
   "keys_chip_your_key_title": {
     "message": "У вас есть закрытый ключ"
   },
+  "keys_clash_check": {
+    "message": "Прежде чем полагаться на любой из ключей, уточните у владельца, какой из них действительно его."
+  },
   "keys_confirm_delete_key_title": {
     "message": "Удалить ключ?"
   },
   "keys_confirm_remove_contact_title": {
     "message": "Удалить контакт?"
+  },
+  "keys_confusable_char": {
+    "message": "$code$ похожа на латинскую букву, но это другая буква",
+    "placeholders": {
+      "code": {
+        "content": "$1"
+      }
+    }
   },
   "keys_contact_expired": {
     "message": "Истёк $date$",
@@ -2691,6 +3080,20 @@
   "keys_contact_long_id_title": {
     "message": "ID ключа: последние 16 символов отпечатка этого ключа. Помогает быстро отличать ключи; чтобы убедиться в подлинности ключа, сравните полный отпечаток."
   },
+  "keys_contact_lookalike_address": {
+    "message": "Похожий адрес"
+  },
+  "keys_contact_lookalike_address_title": {
+    "message": "У $name$ ($keyid$) адрес, который выглядит так же, но с другим ключом.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
   "keys_contact_options_aria": {
     "message": "Параметры контакта"
   },
@@ -2699,6 +3102,48 @@
   },
   "keys_contact_revoked_title": {
     "message": "Владелец отозвал этот ключ. Он сохранён, чтобы отзыв оставался в силе, но шифровать для него нельзя. После компрометации ни одна его подпись не проходит проверку; после плановой замены более ранние подписи проверяются и показываются жёлтым."
+  },
+  "keys_contact_same_address": {
+    "message": "Тот же адрес"
+  },
+  "keys_contact_same_address_title": {
+    "message": "$name$ ($keyid$) тоже использует этот адрес, с другим ключом.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_contact_same_name": {
+    "message": "Похожее имя"
+  },
+  "keys_contact_same_name_plain": {
+    "message": "То же имя"
+  },
+  "keys_contact_same_name_plain_title": {
+    "message": "То же имя, что у $name$ ($keyid$), и нет адреса электронной почты, который бы их различал.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_contact_same_name_title": {
+    "message": "Выглядит как имя $name$ ($keyid$), но написано другими буквами.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
   },
   "keys_contacts_heading": {
     "message": "Контакты"
@@ -2865,13 +3310,13 @@
     "message": "Используется по умолчанию для подписи, расшифровки и шифрования для себя"
   },
   "keys_delete_crx_body": {
-    "message": "Вы больше не сможете подписывать обновления этого расширения, а ключ нельзя будет восстановить без резервной копии."
+    "message": "Вы больше не сможете подписывать обновления этого расширения, а без резервной копии это нельзя отменить. Зашифрованная копия может оставаться на диске, пока браузер не выполнит сжатие своих данных."
   },
   "keys_delete_key": {
     "message": "Удалить ключ"
   },
   "keys_delete_key_body": {
-    "message": "Это навсегда удалит закрытый ключ с этого устройства. Всё, что зашифровано только для этого ключа, станет невозможно восстановить. Убедитесь, что у вас есть резервная копия, если ключ может понадобиться."
+    "message": "Это удалит закрытый ключ из хранилища на этом устройстве. Всё, что зашифровано только для этого ключа, нельзя будет расшифровать без резервной копии, поэтому сохраните её, если ключ может понадобиться. Зашифрованная копия может оставаться на диске, пока браузер не выполнит сжатие своих данных."
   },
   "keys_delete_key_permanently": {
     "message": "Удалить ключ навсегда"
@@ -3099,6 +3544,14 @@
     "message": "$count$ непригодных подключа",
     "placeholders": {
       "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_invisible_char": {
+    "message": "Здесь невидимый символ ($code$)",
+    "placeholders": {
+      "code": {
         "content": "$1"
       }
     }
@@ -3441,6 +3894,37 @@
   },
   "keys_unknown_name": {
     "message": "Неизвестно"
+  },
+  "keys_verified_by_you": {
+    "message": "Проверен вами"
+  },
+  "keys_verified_chip": {
+    "message": "Проверен"
+  },
+  "keys_verified_chip_title": {
+    "message": "Вы отметили этот ключ как проверенный, сверив отпечаток с владельцем."
+  },
+  "keys_verified_on": {
+    "message": "Проверен вами $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_verified_unmark": {
+    "message": "Снять"
+  },
+  "keys_verify_hint": {
+    "message": "Сверьте этот отпечаток с $name$ лично или в звонке, которому доверяете. Если совпадает, отметьте ключ как проверенный.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_verify_mark": {
+    "message": "Отметить как проверенный"
   },
   "keys_weak_sha1": {
     "message": "Слабый (SHA-1)"
@@ -4150,7 +4634,7 @@
     "message": "Применение..."
   },
   "settings_preset_confirm_history": {
-    "message": "Этот профиль включает режим «не кешировать», который также удаляет сохранённую историю ($size$). Восстановить её будет невозможно.",
+    "message": "Этот профиль включает режим «не кешировать», который также удаляет сохранённую историю ($size$). Это нельзя отменить.",
     "placeholders": {
       "size": {
         "content": "$1"
@@ -4471,7 +4955,7 @@
     "message": "Подпись CRX"
   },
   "shared_delete_history_body": {
-    "message": "Режим «не кешировать» также удаляет сохранённую историю ($size$). Восстановить её будет невозможно.",
+    "message": "Режим «не кешировать» также удаляет сохранённую историю ($size$). Это нельзя отменить.",
     "placeholders": {
       "size": {
         "content": "$1"
@@ -4650,6 +5134,9 @@
   "shared_security_preset": {
     "message": "Профиль безопасности"
   },
+  "shared_settings_save_failed": {
+    "message": "Не удалось сохранить это изменение: сохранённые настройки не читаются."
+  },
   "shared_show_technical_details": {
     "message": "Показать технические подробности"
   },
@@ -4720,6 +5207,9 @@
         "content": "$1"
       }
     }
+  },
+  "workspace_auto_run_too_large": {
+    "message": "Это сообщение слишком большое, чтобы открыть его автоматически. Откройте его кнопкой ниже."
   },
   "workspace_browse_files": {
     "message": "Выбрать файлы"
@@ -4849,6 +5339,30 @@
   "workspace_detected_key_show": {
     "message": "Показать в ваших ключах"
   },
+  "workspace_detected_keys_in_message": {
+    "message": "Это сообщение содержит открытые ключи $names$.",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_detected_keys_known": {
+    "message": "У вас уже есть ключи $names$.",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_detected_keys_pasted": {
+    "message": "Это открытые ключи $names$.",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_drop_files_or_text": {
     "message": "Перетащите сюда файлы или текст"
   },
@@ -4857,6 +5371,14 @@
   },
   "workspace_enter_message_password": {
     "message": "Введите пароль сообщения"
+  },
+  "workspace_error_batch_not_encrypted": {
+    "message": "$name$ не зашифрован. Расшифруйте его отдельно, чтобы увидеть содержимое.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
   },
   "workspace_error_crx_invalid": {
     "message": "Не удалось проверить подпись CRX этого файла."
@@ -5165,6 +5687,12 @@
   "workspace_no_such_language": {
     "message": "Такого языка нет."
   },
+  "workspace_not_encrypted": {
+    "message": "Не зашифровано"
+  },
+  "workspace_not_encrypted_not_signed": {
+    "message": "Не зашифровано и не подписано"
+  },
   "workspace_note_downloading": {
     "message": "Скачивание: $what$...",
     "placeholders": {
@@ -5410,6 +5938,20 @@
   "workspace_sign_for_web_store": {
     "message": "Подписать для Web Store"
   },
+  "workspace_sign_hidden_chars": {
+    "message": "В этом тексте есть невидимые символы ($chars$). Они могут менять порядок или скрывать часть текста и будут подписаны как есть.",
+    "placeholders": {
+      "chars": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_sign_hidden_chars_anyway": {
+    "message": "Всё равно подписать"
+  },
+  "workspace_sign_hidden_chars_remove": {
+    "message": "Удалить их"
+  },
   "workspace_sign_kind_crx": {
     "message": "Расширение Chrome (.crx)"
   },
@@ -5422,8 +5964,14 @@
   "workspace_signature_covers_original": {
     "message": "подпись относится к оригиналу, а не к этому переводу"
   },
+  "workspace_signature_not_addressed": {
+    "message": "в подписи не указано, что сообщение предназначено вам, поэтому его могли переслать"
+  },
   "workspace_signature_verified": {
     "message": "Подпись проверена"
+  },
+  "workspace_signature_verified_line_breaks": {
+    "message": "Проверьте переносы строк"
   },
   "workspace_signature_verified_not_for_you": {
     "message": "Не вам"
@@ -5439,6 +5987,9 @@
       }
     }
   },
+  "workspace_signed_not_encrypted": {
+    "message": "подписано, но не зашифровано: эту копию мог прислать кто угодно"
+  },
   "workspace_signed_on": {
     "message": "Подписано $date$",
     "placeholders": {
@@ -5450,8 +6001,14 @@
   "workspace_signed_text_hidden_chars": {
     "message": "подписанный текст содержит невидимые символы или символы направления текста, поэтому на экране он может выглядеть не так, как был написан"
   },
+  "workspace_signed_text_lone_cr": {
+    "message": "подписанный текст содержит возврат каретки без перевода строки (показан как ␍), поэтому переносы строк могут отображаться не так, как их написал подписавший"
+  },
   "workspace_signer_key_retired": {
     "message": "ключ, которым она сделана, с тех пор истёк или отозван"
+  },
+  "workspace_signer_not_verified": {
+    "message": "ключ не отмечен вами как проверенный"
   },
   "workspace_status_age_encrypted": {
     "message": "Сообщение age - зашифровано для получателей SSH"
@@ -5474,6 +6031,9 @@
   },
   "workspace_status_decrypted_archive": {
     "message": "Расшифрован архив с несколькими файлами"
+  },
+  "workspace_status_not_encrypted": {
+    "message": "Это сообщение не было зашифровано, поэтому эту копию мог прислать кто угодно и прочитать её по пути."
   },
   "workspace_status_signer_unknown": {
     "message": "Это сообщение подписано, но открытого ключа подписанта нет среди ваших ключей и контактов, поэтому проверить подпись не удалось."

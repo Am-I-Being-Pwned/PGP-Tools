@@ -66,7 +66,7 @@
     "message": "现代、快速、密钥体积小。推荐大多数用途使用。"
   },
   "keygen_algorithm_hint_rsa": {
-    "message": "兼容性广。密钥生成较慢。"
+    "message": "兼容性好，但速度较慢，且其 RSA 实现存在已知的时序侧信道 (Marvin)。除非需要 RSA，否则请选择 ECC。"
   },
   "keygen_key_size_label": {
     "message": "密钥长度"

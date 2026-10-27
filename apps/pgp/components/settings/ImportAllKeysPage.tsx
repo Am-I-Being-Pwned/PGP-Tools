@@ -3,6 +3,8 @@ import { useRef, useState } from "react";
 import { Button } from "@amibeingpwned/ui/button";
 
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
+import type { ReviewDecision, ReviewedContact } from "../../lib/import/review";
+import type { IncomingKey } from "../../lib/import/types";
 import type { KeyInfo } from "../../lib/pgp/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
@@ -11,7 +13,18 @@ import { splitArmoredKeyBlocks } from "../../lib/armor-blocks";
 import { parseCrxKeyBlocks } from "../../lib/crx/backup";
 import { crxBlobIdentityMatches } from "../../lib/crx/types";
 import { t, tn } from "../../lib/i18n";
-import { importPublicKeyBlocks } from "../../lib/import-public-keys";
+import {
+  mergeSameKey,
+  prepareImport,
+  storedKeysFrom,
+  withIdentityConflicts,
+} from "../../lib/import/prepare";
+import {
+  applyReview,
+  defaultDecision,
+  needsDecision,
+} from "../../lib/import/review";
+import { isPublicKind } from "../../lib/import/types";
 import { importKey } from "../../lib/pgp/key-management";
 import { importAndProtect } from "../../lib/protection/protect-flow";
 import {
@@ -21,6 +34,7 @@ import {
   registerPasskey,
 } from "../../lib/protection/webauthn-prf";
 import { toast } from "../../lib/toast";
+import { ImportReview } from "../keys/ImportReview";
 import {
   getDefaultProtectionMethod,
   ProtectionMethodPicker,
@@ -28,7 +42,7 @@ import {
 } from "../keys/ProtectionMethodPicker";
 import { SubPage } from "../shared/SubPage";
 
-type Step = "paste" | "unlock" | "protect";
+type Step = "paste" | "unlock" | "protect" | "review";
 
 interface ParsedPrivate {
   armored: string;
@@ -42,7 +56,10 @@ interface ImportAllKeysPageProps {
   myKeys: ProtectedKeyBlob[];
   contacts: PublicContactKey[];
   onAddKey: (blob: ProtectedKeyBlob) => Promise<void>;
-  onAddContact: (contact: PublicContactKey) => Promise<void>;
+  /** Save a contact the user has reviewed (see `lib/import/review`). */
+  onAddContact: (contact: ReviewedContact) => Promise<void>;
+  /** Remove a contact -- the old one, when a key replaces it. */
+  onRemoveContact: (keyId: string) => Promise<void>;
   /** Restore CRX signing keys found in the backup (self-protected blobs). */
   onAddCrxKey?: (blob: CrxSigningKeyBlob) => Promise<void>;
   /** Currently stored CRX keys, for skip-if-present dedupe (mirrors the
@@ -55,13 +72,44 @@ interface ImportAllKeysPageProps {
   masterSealSalt?: ArrayBuffer;
 }
 
+/** A backup's private key as a Review row: who it says it is and its
+ *  key id, nothing secret (the armor stays in `parsedPrivates`). */
+function privateRow(key: ParsedPrivate): IncomingKey {
+  return {
+    keyId: key.keyInfo.keyId,
+    kind: "pgp-private",
+    status: "new",
+    info: key.keyInfo,
+    details: null,
+    userIds: key.keyInfo.userIds,
+    changes: [],
+    publicArmored: "",
+  };
+}
+
+/** A backup's CRX signing key as a Review row, by its extension id. */
+function crxRow(blob: CrxSigningKeyBlob): IncomingKey {
+  return {
+    keyId: blob.extensionId,
+    kind: "crx",
+    status: "new",
+    info: null,
+    details: null,
+    userIds: [blob.label ?? t("import_crx_headline")],
+    changes: [],
+    publicArmored: "",
+  };
+}
+
 /**
  * Bulk import subpage: accepts a pasted/browsed dump with any mix of
  * armored private and public keys (e.g. a file from "Export all keys").
  * Private keys share one source passphrase (the export wrote them under
  * a single passphrase) and are re-protected under one chosen method --
  * for passkeys, a single WebAuthn ceremony covers every key via PRF
- * reuse. Public keys become contacts.
+ * reuse. Public keys become contacts. Every key, of every kind, is
+ * listed on the Review before a passphrase is asked for or anything is
+ * saved.
  */
 export function ImportAllKeysPage({
   onClose,
@@ -69,6 +117,7 @@ export function ImportAllKeysPage({
   contacts,
   onAddKey,
   onAddContact,
+  onRemoveContact,
   onAddCrxKey,
   crxKeys,
   reusePasskeyCredentialId,
@@ -79,7 +128,6 @@ export function ImportAllKeysPage({
   const [error, setError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [parsedPrivates, setParsedPrivates] = useState<ParsedPrivate[]>([]);
-  const [publicBlocks, setPublicBlocks] = useState<string[]>([]);
   const [parsedCrx, setParsedCrx] = useState<CrxSigningKeyBlob[]>([]);
   const [skippedPrivates, setSkippedPrivates] = useState(0);
   const [sourcePassphrase, setSourcePassphrase] = useState("");
@@ -89,37 +137,141 @@ export function ImportAllKeysPage({
   const [reusePasskey, setReusePasskey] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const importPublics = async (blocks: string[]) => {
-    if (blocks.length === 0) return;
-    const { added, updated, failed, flagged, rejectionReasons } =
-      await importPublicKeyBlocks(
-        blocks,
-        contacts.map((c) => ({ keyId: c.keyId, armored: c.armoredPublicKey })),
-        onAddContact,
+  // Every key in the backup, on the Review step, before anything is
+  // saved: a backup file can come from anyone, so its contacts AND its
+  // private and CRX keys are listed first -- with "Import all" one click
+  // away for the user's own backup. The private keys chosen there go on
+  // to the unlock / protect steps; the contacts and CRX keys chosen are
+  // written at the very end, with them.
+  const [reviewKeys, setReviewKeys] = useState<IncomingKey[] | null>(null);
+  const [publicKeys, setPublicKeys] = useState<IncomingKey[]>([]);
+  const [decisions, setDecisions] = useState<
+    ReadonlyMap<string, ReviewDecision>
+  >(new Map());
+
+  /** Classify the backup's public keys against the keyring and contacts.
+   *  `privateIds` are the backup's own private keys: a public copy of
+   *  one is that key's public half, not a contact to add. */
+  const classifyPublics = async (
+    blocks: string[],
+    privateIds: ReadonlySet<string>,
+  ): Promise<IncomingKey[]> => {
+    if (blocks.length === 0) return [];
+    const stored = storedKeysFrom(myKeys, contacts);
+    const keys: IncomingKey[] = [];
+    for (const block of blocks) {
+      const prepared = await prepareImport(block, stored);
+      keys.push(...prepared.keys.filter((k) => isPublicKind(k.kind)));
+    }
+    // Copies of one key in different blocks are one row (decisions are
+    // keyed by fingerprint), merged so every User ID is checked. Their
+    // conflicts are worked out again across the whole backup (see
+    // `withConflicts`): two blocks can claim one address.
+    return (await mergeSameKey(keys, stored))
+      .filter((k) => !privateIds.has(k.keyId.toUpperCase()))
+      .map(({ conflict: _c, ...k }) => k);
+  };
+
+  /** Every row of the Review checked against the keyring, the contacts
+   *  and each other: the contacts, and the private and CRX keys too --
+   *  saved, those are the user's own, and a private key named as one of
+   *  their contacts went in silently. A row that clashes starts on Skip
+   *  and says why, like a contact's. */
+  const withConflicts = (rows: IncomingKey[]) =>
+    withIdentityConflicts(rows, storedKeysFrom(myKeys, contacts));
+
+  /** Say why any refused contacts were refused, when no Review lists
+   *  them (often a backup's expired rotations, beside the live key). */
+  const toastRejected = (checked: IncomingKey[]) => {
+    const rejected = checked.filter((k) => k.status === "rejected");
+    if (rejected.length > 0)
+      toast.error(
+        rejected[0].rejection
+          ? tn("settings_import_contacts_rejected_reason", rejected.length, {
+              reason: rejected[0].rejection,
+            })
+          : tn("settings_import_contacts_rejected", rejected.length),
+        { id: "contacts-rejected" },
       );
+  };
+
+  /** Save the contacts chosen on the Review. Called last, after any
+   *  private keys have been protected and saved. */
+  const commitPublics = async (
+    keys: IncomingKey[],
+    chosen: ReadonlyMap<string, ReviewDecision>,
+  ) => {
+    if (!keys.some(needsDecision)) {
+      toastRejected(keys);
+      return;
+    }
+    const { added, updated, replaced, keyIds } = await applyReview(
+      keys,
+      chosen,
+      { contacts, add: onAddContact, remove: onRemoveContact },
+    );
     // Stable ids: re-running the import with the same backup must update
     // the previous toasts, not stack duplicates.
     if (added > 0)
       toast.success(tn("settings_import_contacts_added", added), {
         id: "contacts-added",
       });
+    const saved = new Set(keyIds);
+    const flagged = keys.filter(
+      (k) => saved.has(k.keyId) && k.securityWarning?.includes("SHA-1"),
+    ).length;
     if (flagged > 0)
       toast.warning(tn("settings_import_contacts_flagged", flagged), {
         id: "contacts-flagged",
       });
-    if (updated > 0)
-      toast.info(tn("settings_import_contacts_updated", updated), {
+    if (updated + replaced > 0)
+      toast.info(tn("settings_import_contacts_updated", updated + replaced), {
         id: "contacts-updated",
       });
-    if (failed > 0)
-      toast.error(
-        rejectionReasons[0]
-          ? tn("settings_import_contacts_rejected_reason", failed, {
-              reason: rejectionReasons[0],
-            })
-          : tn("settings_import_contacts_rejected", failed),
-        { id: "contacts-rejected" },
-      );
+  };
+
+  /** The Review's answer: what to keep of each kind. A row with no entry
+   *  takes its default, as `applyReview` reads it. */
+  const isChosen = (
+    chosen: ReadonlyMap<string, ReviewDecision>,
+    key: IncomingKey,
+  ) => (chosen.get(key.keyId) ?? defaultDecision(key)) !== "skip";
+
+  const finishReview = async (
+    chosen: ReadonlyMap<string, ReviewDecision>,
+    close: () => void,
+  ) => {
+    if (!reviewKeys) return;
+    setError(null);
+    const chosenIds = new Set(
+      reviewKeys.filter((k) => isChosen(chosen, k)).map((k) => k.keyId),
+    );
+    const privates = parsedPrivates.filter((p) =>
+      chosenIds.has(p.keyInfo.keyId),
+    );
+    const crx = parsedCrx.filter((b) => chosenIds.has(b.extensionId));
+    setDecisions(chosen);
+    if (privates.length > 0) {
+      // On to the passphrase steps; the rest is written after them.
+      setParsedPrivates(privates);
+      setParsedCrx(crx);
+      setStep(privates.some((p) => p.secretEncrypted) ? "unlock" : "protect");
+      return;
+    }
+    setImporting(true);
+    try {
+      if (skippedPrivates > 0)
+        toast.info(tn("settings_import_private_skipped", skippedPrivates), {
+          id: "private-keys-skipped",
+        });
+      await importCrxBlobs(crx);
+      await commitPublics(publicKeys, chosen);
+      close();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("settings_import_failed"));
+    } finally {
+      setImporting(false);
+    }
   };
 
   /** Commit the parsed CRX blobs (already identity-checked and deduped at
@@ -159,9 +311,10 @@ export function ImportAllKeysPage({
   const handlePasteNext = async (close: () => void) => {
     setError(null);
     const crxBlocks = onAddCrxKey ? parseCrxKeyBlocks(text) : [];
-    const { publicKeys, privateKeys } = splitArmoredKeyBlocks(text);
+    const { publicKeys: publicBlocks, privateKeys } =
+      splitArmoredKeyBlocks(text);
     if (
-      publicKeys.length === 0 &&
+      publicBlocks.length === 0 &&
       privateKeys.length === 0 &&
       crxBlocks.length === 0
     ) {
@@ -227,23 +380,33 @@ export function ImportAllKeysPage({
         setError(tn("settings_import_private_unparseable", unparseable));
       }
 
-      if (privates.length === 0) {
-        // Nothing to protect -- import the CRX/public keys and finish.
-        await importCrxBlobs(crxBlobs);
-        await importPublics(publicKeys);
+      const checked = withConflicts([
+        ...privates.map(privateRow),
+        ...crxBlobs.map(crxRow),
+        ...(await classifyPublics(
+          publicBlocks,
+          new Set(privates.map((p) => p.keyInfo.keyId.toUpperCase())),
+        )),
+      ]);
+      const publics = checked.filter((k) => isPublicKind(k.kind));
+      const secretRows = checked.filter((k) => !isPublicKind(k.kind));
+      setParsedPrivates(privates);
+      setParsedCrx(crxBlobs);
+      setSkippedPrivates(skipped);
+      setPublicKeys(publics);
+
+      if (secretRows.length === 0 && !publics.some(needsDecision)) {
+        // Nothing to decide: finish now.
         if (skipped > 0)
           toast.info(tn("settings_import_private_skipped", skipped), {
             id: "private-keys-skipped",
           });
+        toastRejected(publics);
         if (unparseable === 0) close();
         return;
       }
-
-      setParsedPrivates(privates);
-      setPublicBlocks(publicKeys);
-      setParsedCrx(crxBlobs);
-      setSkippedPrivates(skipped);
-      setStep(privates.some((p) => p.secretEncrypted) ? "unlock" : "protect");
+      setReviewKeys([...secretRows, ...publics]);
+      setStep("review");
     } finally {
       setImporting(false);
     }
@@ -345,7 +508,7 @@ export function ImportAllKeysPage({
           id: "private-keys-skipped",
         });
       await importCrxBlobs(parsedCrx);
-      await importPublics(publicBlocks);
+      await commitPublics(publicKeys, decisions);
       close();
     } catch (e) {
       if (!isWebAuthnCancel(e)) {
@@ -466,6 +629,16 @@ export function ImportAllKeysPage({
                 </p>
               )}
             </div>
+          )}
+
+          {step === "review" && reviewKeys && (
+            <ImportReview
+              keys={reviewKeys}
+              busy={importing}
+              error={error}
+              allowImportAll
+              onImport={(decisions) => void finishReview(decisions, api.close)}
+            />
           )}
 
           {step === "protect" && (

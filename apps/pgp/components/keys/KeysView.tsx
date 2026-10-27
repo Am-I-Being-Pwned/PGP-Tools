@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ImportIcon, PlusIcon } from "lucide-react";
 
 import { cn } from "@amibeingpwned/ui";
@@ -6,6 +6,7 @@ import { Block } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
 
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
+import type { ReviewedContact } from "../../lib/import/review";
 import type { KeyInfo } from "../../lib/pgp/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
@@ -15,10 +16,12 @@ import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import { publicKeyDerToPem } from "../../lib/crx/types";
 import { presentError } from "../../lib/errors/present";
 import { t, tn } from "../../lib/i18n";
+import { contactClash, contactClashes } from "../../lib/identity/binding";
 import {
   KEYSERVER_HOST,
   keyserverFailureCopy,
 } from "../../lib/import/keyserver";
+import { reviewed } from "../../lib/import/review";
 import {
   checkRevocation,
   fingerprintQuery,
@@ -61,14 +64,17 @@ interface KeysViewProps {
   onLock: (keyId: string) => void;
   onDeleteKey: (keyId: string) => Promise<void>;
   onAddKey: (blob: ProtectedKeyBlob) => Promise<void>;
-  onAddContact: (contact: PublicContactKey) => Promise<void>;
+  onAddContact: (contact: ReviewedContact) => Promise<void>;
+  /** Mark (or unmark) a contact's key as verified. */
+  onSetContactVerified?: (keyId: string, verified: boolean) => Promise<void>;
   /** Merge a newer copy of a contact's key into the record as it is on
-   *  disk; undefined when the contact no longer exists. Enables the
+   *  disk; undefined when the contact no longer exists, `needsReview`
+   *  when the copy adds User IDs and nothing was written. Enables the
    *  revocation check. */
   onMergeContactKey?: (
     keyId: string,
     armored: string,
-  ) => Promise<{ keyInfo: KeyInfo } | undefined>;
+  ) => Promise<{ keyInfo: KeyInfo; needsReview?: true } | undefined>;
   onDeleteContact: (keyId: string) => Promise<void>;
   getKeyHandle: (keyId: string) => number | null;
   /** Persist a revocation certificate minted for an imported key. */
@@ -185,6 +191,7 @@ export function KeysView({
   onDeleteKey,
   onAddKey,
   onAddContact,
+  onSetContactVerified,
   onMergeContactKey,
   onDeleteContact,
   getKeyHandle,
@@ -473,6 +480,14 @@ export function KeysView({
         case "gone":
           toast.dismiss(id);
           break;
+        case "needs-review":
+          // New names or addresses on the key: never bound here, without
+          // the Review that checks them against everyone else and asks.
+          toast.info(t("keys_check_revocation_needs_review", { name }), {
+            id,
+          });
+          nav.push({ page: "import", initialArmored: result.armored });
+          break;
         case "revoked":
         case "current":
           if (result.kind === "revoked") {
@@ -687,6 +702,7 @@ export function KeysView({
 
         <ContactsList
           contacts={contacts}
+          ownKeys={myKeys}
           contactsLocked={contactsLocked}
           justImported={justImported}
           onCheckRevocation={
@@ -729,7 +745,7 @@ export function KeysView({
             return (
               <GenerateKeyPage
                 key={entry.id}
-                onClose={nav.pop}
+                onClose={() => nav.remove(entry.id)}
                 onKeyGenerated={(keyId, keyHandle) => {
                   if (keyHandle !== undefined && onKeyCached) {
                     onKeyCached(keyId, keyHandle);
@@ -748,9 +764,10 @@ export function KeysView({
             return (
               <ImportKeyPage
                 key={entry.id}
-                onClose={nav.pop}
+                onClose={() => nav.remove(entry.id)}
                 onImportPrivate={onAddKey}
                 onImportPublic={onAddContact}
+                onRemoveContact={onDeleteContact}
                 existingKeys={myKeys}
                 existingContacts={contacts}
                 reusePasskeyCredentialId={primaryPasskeyCredentialId}
@@ -798,7 +815,7 @@ export function KeysView({
                       ? t("keys_rename_placeholder_crx")
                       : t("keys_rename_placeholder_contact")
                 }
-                onCancel={nav.pop}
+                onCancel={() => nav.remove(entry.id)}
                 onSave={async (value) => {
                   if (target.kind === "own") {
                     await onRenameKey?.(target.keyBlob.keyId, value);
@@ -833,7 +850,35 @@ export function KeysView({
               <KeyDetailsPage
                 key={entry.id}
                 target={target}
-                onBack={nav.pop}
+                onBack={() => nav.remove(entry.id)}
+                clash={
+                  target.kind === "contact"
+                    ? contactClash(target.contact.keyId, contacts, myKeys)
+                    : undefined
+                }
+                onShowHolder={(holder) => {
+                  const contact = contacts.find(
+                    (c) => c.keyId === holder.keyId,
+                  );
+                  const own = myKeys.find((k) => k.keyId === holder.keyId);
+                  if (contact)
+                    nav.push({
+                      page: "details",
+                      target: { kind: "contact", contact },
+                    });
+                  else if (own)
+                    nav.push({
+                      page: "details",
+                      target: { kind: "own", keyBlob: own },
+                    });
+                }}
+                onSetVerified={
+                  target.kind === "contact" &&
+                  onSetContactVerified &&
+                  !target.contact.revoked
+                    ? (v) => onSetContactVerified(target.contact.keyId, v)
+                    : undefined
+                }
                 onCheckRevocation={
                   keyDiscoveryEnabled &&
                   onMergeContactKey &&
@@ -917,7 +962,7 @@ export function KeysView({
                     ? tn("keys_bulk_delete_prompt", selected.size)
                     : undefined
                 }
-                onCancel={nav.pop}
+                onCancel={() => nav.remove(entry.id)}
                 onConfirm={async () => {
                   // Contacts-only bulk deletes are reversible: keep the
                   // removed blobs in memory and offer Undo. Mixed
@@ -937,7 +982,9 @@ export function KeysView({
                           onClick: () =>
                             void (async () => {
                               for (const c of removedContacts) {
-                                await onAddContact(c);
+                                // Undoing the user's own delete: putting
+                                // back what they had, not a new binding.
+                                await onAddContact(reviewed(c));
                               }
                             })(),
                         },
@@ -958,7 +1005,7 @@ export function KeysView({
             return (
               <ExportKeysPage
                 key={entry.id}
-                onClose={nav.pop}
+                onClose={() => nav.remove(entry.id)}
                 myKeys={exportableMyKeys}
                 contacts={selectedContacts}
                 crxKeys={selectedCrxKeys}
@@ -994,7 +1041,7 @@ export function KeysView({
                     ? (target.keyBlob.label ?? target.keyBlob.extensionId)
                     : undefined
               }
-              onCancel={nav.pop}
+              onCancel={() => nav.remove(entry.id)}
               onConfirm={async () => {
                 if (target.kind === "own") {
                   await onDeleteKey(target.keyBlob.keyId);
@@ -1008,7 +1055,7 @@ export function KeysView({
                     id: "contact-removed",
                     action: {
                       label: t("keys_undo"),
-                      onClick: () => void onAddContact(removed),
+                      onClick: () => void onAddContact(reviewed(removed)),
                     },
                   });
                 } else {
@@ -1096,6 +1143,7 @@ function DeleteSummary({ target }: { target: DeleteTarget }) {
 
 function ContactsList({
   contacts,
+  ownKeys,
   contactsLocked,
   onRequestRemove,
   onRequestRename,
@@ -1111,6 +1159,8 @@ function ContactsList({
   onImportText,
 }: {
   contacts: PublicContactKey[];
+  /** The user's own keys: a contact claiming their identity is marked. */
+  ownKeys: ProtectedKeyBlob[];
   contactsLocked: boolean;
   onRequestRemove: (contact: PublicContactKey) => void;
   /** Absent when the host cannot persist a rename, which hides the
@@ -1133,6 +1183,13 @@ function ContactsList({
 }) {
   const [search, setSearch] = useState("");
   const { copy } = useCopyToClipboard();
+  // SSH contacts too: an SSH key's comment is the contact's name, it is
+  // whatever the `.pub` file said, and `alice@corp.com` as a comment
+  // claims that address as plainly as a User ID does.
+  const clashes = useMemo(
+    () => contactClashes(contacts, ownKeys),
+    [contacts, ownKeys],
+  );
 
   const filtered = search
     ? contacts.filter((c) => {
@@ -1189,6 +1246,7 @@ function ContactsList({
                 <div key={c.keyId} data-select-id={id}>
                   <ContactCard
                     contact={c}
+                    clash={clashes.get(c.keyId)}
                     justImported={justImported.has(c.keyId)}
                     onRemove={() => onRequestRemove(c)}
                     onEncryptTo={

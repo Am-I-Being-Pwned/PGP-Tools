@@ -5,9 +5,11 @@ import { expect, test } from "./fixtures";
 import {
   importContact,
   onboardWithPassword,
+  onboardWithPasswordSkipKey,
   setWorkspaceMode,
   verifySignedMessage,
 } from "./helpers";
+import { SAM } from "./message-trust";
 
 // A green "Signature verified" card vouches for something. What these
 // pin is WHAT: exactly the text that was signed, shown beside the
@@ -246,4 +248,209 @@ test("a file that isn't UTF-8 is refused rather than misread", async ({
   });
   await verifyStaged(panel);
   await expect(panel.getByText(/isn't UTF-8 text/)).toBeVisible();
+});
+
+// ── a "PGP MESSAGE" that was never encrypted ─────────────────────────
+//
+// Anything Sam ever signed in public can be re-sent by anyone as a PGP
+// MESSAGE. It used to "decrypt" -- after unlocking a key -- into the
+// same green card and Reply button as private mail from Sam.
+
+/** Paste into the message box and press Decrypt (the mode the armor
+ *  picks on its own). */
+async function pasteAndDecrypt(panel: Page, armored: string): Promise<void> {
+  await panel.getByRole("tab", { name: "Main" }).click();
+  await panel.locator("textarea").first().fill(armored);
+  await expect(panel.getByRole("button", { name: /^decrypt$/i })).toBeVisible();
+  await panel.getByRole("button", { name: /^decrypt$/i }).click();
+}
+
+test("a signed message that was never encrypted opens as not encrypted, with no key and no Reply", async ({
+  panel,
+}) => {
+  // No key of our own at all: nothing here needs one, and nothing asks.
+  await onboardWithPasswordSkipKey(panel, PASSWORD);
+  await importContact(panel, SAM.publicKey);
+
+  await pasteAndDecrypt(panel, SAM.signedOnly);
+
+  await expect(panel.getByText("Not encrypted", { exact: true })).toBeVisible();
+  await expect(
+    panel.getByText(/signed, but not encrypted: anyone could have sent you/),
+  ).toBeVisible();
+  await expect(
+    panel.locator("pre").filter({ hasText: SAM.publicStatement }),
+  ).toBeVisible();
+  await expect(panel.getByText("Signature verified")).toHaveCount(0);
+  await expect(
+    panel.getByRole("button", { name: "Reply", exact: true }),
+  ).toHaveCount(0);
+  await expect(panel.locator('input[type="password"]')).toHaveCount(0);
+});
+
+test("a bare PGP MESSAGE says it was neither encrypted nor signed", async ({
+  panel,
+}) => {
+  await onboardWithPasswordSkipKey(panel, PASSWORD);
+
+  await pasteAndDecrypt(panel, SAM.storedOnly);
+
+  await expect(panel.getByText("Not encrypted or signed")).toBeVisible();
+  await expect(
+    panel.getByText(/This message was not encrypted, so anyone could/),
+  ).toBeVisible();
+  await expect(
+    panel.getByRole("button", { name: "Reply", exact: true }),
+  ).toHaveCount(0);
+});
+
+test("a .gpg file that is only signed is not shown as decrypted", async ({
+  panel,
+}) => {
+  await onboardWithPassword(panel, PASSWORD);
+  await importContact(panel, SAM.publicKey);
+  await panel.getByRole("tab", { name: "Main" }).click();
+
+  await panel.locator('input[type="file"]:not([accept])').setInputFiles({
+    name: "statement.txt.gpg",
+    mimeType: "application/octet-stream",
+    buffer: Buffer.from(SAM.signedOnlyBinaryB64, "base64"),
+  });
+  await setWorkspaceMode(panel, "Decrypt");
+  await panel.getByRole("button", { name: /^decrypt$/i }).click();
+
+  await expect(panel.getByText("Not encrypted", { exact: true })).toBeVisible();
+  await expect(panel.getByText("Signature verified")).toHaveCount(0);
+  await expect(panel.locator('input[type="password"]')).toHaveCount(0);
+});
+
+test("a batch with an unencrypted file is refused by that file's name", async ({
+  panel,
+}) => {
+  await onboardWithPassword(panel, PASSWORD);
+  await panel.getByRole("tab", { name: "Main" }).click();
+
+  await stageFiles(panel, [
+    { name: "one.asc", text: SAM.storedOnly },
+    { name: "statement.asc", text: SAM.signedOnly },
+  ]);
+  await setWorkspaceMode(panel, "Decrypt");
+  await panel.getByRole("button", { name: /^decrypt$/i }).click();
+
+  await expect(
+    panel.getByText(/one\.asc is not encrypted\. Decrypt it on its own/),
+  ).toBeVisible();
+  await expect(panel.getByText(/files? decrypted/)).toHaveCount(0);
+});
+
+// ── a lone CR under a text-mode signature ────────────────────────────
+//
+// Sequoia reads \r, \n and \r\n alike as a line break when hashing a
+// text signature, so Sam's signature over "Approved:\nNO" also covers
+// "Approved:\rNO" -- which a browser draws as "Approved:NO".
+
+test("a lone CR under a good signature is amber, said, and drawn", async ({
+  panel,
+}) => {
+  await onboardWithPasswordSkipKey(panel, PASSWORD);
+  await importContact(panel, SAM.publicKey);
+
+  await panel.getByRole("tab", { name: "Main" }).click();
+  await panel.locator("textarea").first().fill(SAM.loneCr);
+  await setWorkspaceMode(panel, "Verify");
+  await panel.getByRole("button", { name: /^verify$/i }).click();
+
+  await expect(panel.getByText("Check line breaks")).toBeVisible();
+  await expect(
+    panel.getByText(/carriage return without a line feed/),
+  ).toBeVisible();
+  // Drawn as a symbol and a break, never folded into "Approved:NO".
+  await expect(panel.locator("pre").first()).toHaveText("Approved:\u240d\nNO");
+});
+
+test("a lone CR in an unencrypted message gets both warnings", async ({
+  panel,
+}) => {
+  await onboardWithPasswordSkipKey(panel, PASSWORD);
+  await importContact(panel, SAM.publicKey);
+
+  await pasteAndDecrypt(panel, SAM.loneCr);
+
+  await expect(panel.getByText("Not encrypted", { exact: true })).toBeVisible();
+  await expect(
+    panel.getByText(/carriage return without a line feed/),
+  ).toBeVisible();
+});
+
+// Text about to be SIGNED that holds characters the box does not draw
+// (a page's selection, a paste) is held back until the user says so:
+// a right-to-left override makes a signed "1000" read as "0001".
+test.describe("hidden characters before a signature", () => {
+  const RLO = String.fromCodePoint(0x202e);
+  const PDF = String.fromCodePoint(0x202c);
+  const TRICK = `Pay ${RLO}0001${PDF} EUR`;
+  const box = (panel: Page) => panel.locator("#pgp-input");
+  const strip = (panel: Page) => panel.getByTestId("hidden-chars-strip");
+  const signButton = (panel: Page) =>
+    panel.getByRole("button", { name: /^sign$/i });
+
+  test("Sign waits for 'Sign anyway', and then signs the text as it is", async ({
+    panel,
+  }) => {
+    await onboardWithPassword(panel, PASSWORD);
+    await setWorkspaceMode(panel, "Sign");
+    await box(panel).fill(TRICK);
+    await signButton(panel).click();
+
+    await expect(strip(panel)).toBeVisible();
+    await expect(strip(panel)).toContainText("U+202E");
+    await expect(panel.getByRole("button", { name: "Download" })).toHaveCount(
+      0,
+    );
+
+    await strip(panel).getByRole("button", { name: "Sign anyway" }).click();
+    await expect(panel.getByRole("button", { name: "Download" })).toBeVisible();
+    await expect(strip(panel)).toHaveCount(0);
+  });
+
+  test("'Remove them' cleans the box, and the clean text signs without asking", async ({
+    panel,
+  }) => {
+    await onboardWithPassword(panel, PASSWORD);
+    await setWorkspaceMode(panel, "Sign");
+    await box(panel).fill(`${TRICK}\rthanks`);
+    await signButton(panel).click();
+    await strip(panel).getByRole("button", { name: "Remove them" }).click();
+    await expect(box(panel)).toHaveValue("Pay 0001 EUR\nthanks");
+    await expect(strip(panel)).toHaveCount(0);
+
+    await signButton(panel).click();
+    await expect(panel.getByRole("button", { name: "Download" })).toBeVisible();
+  });
+
+  test("Encrypt with Sign on asks too; ordinary text never does", async ({
+    panel,
+  }) => {
+    await onboardWithPassword(panel, PASSWORD);
+    await setWorkspaceMode(panel, "Encrypt");
+    await panel.getByRole("combobox", { name: "Recipients" }).click();
+    await panel.getByRole("option").first().click();
+    await panel.keyboard.press("Escape");
+    const sign = panel.getByRole("switch", { name: "Sign", exact: true });
+    if ((await sign.getAttribute("aria-checked")) !== "true")
+      await sign.click();
+
+    await box(panel).fill(TRICK);
+    await panel.getByRole("button", { name: /^encrypt$/i }).click();
+    await expect(strip(panel)).toBeVisible();
+
+    // Emoji (VS16, ZWJ) and CRLF are text, not tricks.
+    const heart = String.fromCodePoint(0x2764, 0xfe0f);
+    const coder = String.fromCodePoint(0x1f469, 0x200d, 0x1f4bb);
+    await box(panel).fill(`Thanks ${heart} ${coder}\r\nSee you`);
+    await expect(strip(panel)).toHaveCount(0);
+    await panel.getByRole("button", { name: /^encrypt$/i }).click();
+    await expect(panel.getByRole("button", { name: "Download" })).toBeVisible();
+    await expect(strip(panel)).toHaveCount(0);
+  });
 });

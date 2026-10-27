@@ -66,7 +66,7 @@
     "message": "Modern, schnell, kleine Schlüssel. Für die meisten Zwecke empfohlen."
   },
   "keygen_algorithm_hint_rsa": {
-    "message": "Breit kompatibel. Langsamere Schlüsselerzeugung."
+    "message": "Weit kompatibel, aber langsamer, und der RSA-Code hat einen bekannten Timing-Seitenkanal (Marvin). Nehmen Sie ECC, wenn Sie RSA nicht brauchen."
   },
   "keygen_key_size_label": {
     "message": "Schlüssellänge"

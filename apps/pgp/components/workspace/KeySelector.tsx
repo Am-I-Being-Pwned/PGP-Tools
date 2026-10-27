@@ -45,6 +45,12 @@ interface KeySelectorProps {
    *  (it becomes the trigger's accessible name), a slim trigger, the list
    *  dropping down rather than up. Same list, same picks. */
   inline?: boolean;
+  /** The user's contacts and own keys, for the selected key's details
+   *  page (Mark as verified, the identity clash band), as the signer card
+   *  and recipient picker pass them. Separate from `contacts` / `myKeys`,
+   *  which choose what the LIST shows and are ignored when `keys` is set. */
+  detailsContacts?: readonly PublicContactKey[];
+  detailsOwnKeys?: readonly ProtectedKeyBlob[];
 }
 
 function getKeyDisplay(key: AnyKey): { name: string; detail: string } {
@@ -66,6 +72,8 @@ export function KeySelector({
   emptyAction,
   emptyActionLabel,
   inline = false,
+  detailsContacts = contacts,
+  detailsOwnKeys = myKeys,
 }: KeySelectorProps) {
   const [open, setOpen] = useState(false);
 
@@ -224,7 +232,14 @@ export function KeySelector({
           </PopoverTrigger>
           {list}
         </Popover>
-        {selectedKey && <KeyDetailsButton keyData={selectedKey} subtle />}
+        {selectedKey && (
+          <KeyDetailsButton
+            keyData={selectedKey}
+            subtle
+            contacts={detailsContacts}
+            ownKeys={detailsOwnKeys}
+          />
+        )}
       </div>
     );
   }
@@ -267,7 +282,13 @@ export function KeySelector({
           </PopoverTrigger>
           {list}
         </Popover>
-        {selectedKey && <KeyDetailsButton keyData={selectedKey} />}
+        {selectedKey && (
+          <KeyDetailsButton
+            keyData={selectedKey}
+            contacts={detailsContacts}
+            ownKeys={detailsOwnKeys}
+          />
+        )}
       </div>
     </div>
   );

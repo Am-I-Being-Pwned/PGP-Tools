@@ -312,7 +312,7 @@
     "message": "Sostituire le tue impostazioni personalizzate con il profilo $preset$? Cambiano solo le impostazioni elencate nella sua scheda, e potrai regolarle di nuovo in seguito."
   },
   "settings_preset_confirm_history": {
-    "message": "Questo profilo attiva “Non memorizzare mai le chiavi nella cache”, che elimina anche la cronologia salvata ($size$). Non può essere recuperata."
+    "message": "Questo profilo attiva “Non memorizzare mai le chiavi nella cache”, che elimina anche la cronologia salvata ($size$). Non può essere annullata."
   },
   "settings_translation_title": {
     "message": "Traduzione"

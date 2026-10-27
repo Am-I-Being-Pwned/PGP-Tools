@@ -355,5 +355,107 @@
   },
   "import_status_replaces": {
     "message": "Remplace la clé que vous aviez pour $name$"
+  },
+  "import_review_title": {
+    "message": "Vérifier les clés"
+  },
+  "import_review_intro_one": {
+    "message": "$count$ clé trouvée. Rien n'est enregistré tant que vous n'avez pas choisi."
+  },
+  "import_review_intro_other": {
+    "message": "$count$ clés trouvées. Rien n'est enregistré tant que vous n'avez pas choisi."
+  },
+  "import_review_status_new": {
+    "message": "Nouvelle"
+  },
+  "import_review_status_update": {
+    "message": "Mise à jour"
+  },
+  "import_review_status_revoked": {
+    "message": "Révoquée"
+  },
+  "import_review_status_duplicate": {
+    "message": "Déjà enregistrée"
+  },
+  "import_review_status_rejected": {
+    "message": "Import impossible"
+  },
+  "import_review_conflict_address": {
+    "message": "$email$ appartient déjà à $name$ ($keyid$). C'est une autre clé - vérifiez auprès de cette personne avant de lui faire confiance."
+  },
+  "import_review_conflict_name": {
+    "message": "Ressemble au nom de $name$ ($keyid$), mais avec d'autres lettres. Vérifiez auprès de cette personne avant de lui faire confiance."
+  },
+  "import_review_choice_aria": {
+    "message": "Que faire de $name$"
+  },
+  "import_review_choice_skip": {
+    "message": "Ignorer"
+  },
+  "import_review_choice_keep_both": {
+    "message": "Garder les deux"
+  },
+  "import_review_choice_import": {
+    "message": "Importer"
+  },
+  "import_review_choice_replace": {
+    "message": "Remplacer"
+  },
+  "import_review_import_none": {
+    "message": "Rien de sélectionné"
+  },
+  "import_review_import_n_one": {
+    "message": "Importer $count$ clé"
+  },
+  "import_review_import_n_other": {
+    "message": "Importer $count$ clés"
+  },
+  "import_review_import_all": {
+    "message": "Tout importer"
+  },
+  "import_review_import_all_risky": {
+    "message": "Tout importer quand même"
+  },
+  "import_review_import_all_note_one": {
+    "message": "Inclut $count$ clé qui se fait passer pour quelqu'un que vous avez déjà."
+  },
+  "import_review_import_all_note_other": {
+    "message": "Inclut $count$ clés qui se font passer pour quelqu'un que vous avez déjà."
+  },
+  "import_replaced_contacts_one": {
+    "message": "Clé de $count$ contact remplacée"
+  },
+  "import_replaced_contacts_other": {
+    "message": "Clés de $count$ contacts remplacées"
+  },
+  "import_review_conflict_address_revoked": {
+    "message": "$email$ appartenait à $name$ ($keyid$), une clé désormais révoquée. Vérifiez auprès de cette personne que cette nouvelle clé est bien la sienne."
+  },
+  "import_review_conflict_key_update": {
+    "message": "Cela ajoute des clés à $name$ ($keyid$) : les messages qui lui sont destinés atteindraient aussi les nouvelles clés. Vérifiez auprès de cette personne avant d'enregistrer."
+  },
+  "import_review_conflict_key_contact": {
+    "message": "Contient la clé que vous avez pour $name$ ($keyid$), regroupée avec d'autres clés. Vérifiez auprès de cette personne avant d'enregistrer."
+  },
+  "import_review_conflict_key_own": {
+    "message": "Contient votre propre clé ($keyid$), regroupée avec d'autres clés. Vérifiez qu'elles sont toutes à vous avant d'enregistrer."
+  },
+  "import_review_conflict_address_lookalike": {
+    "message": "$email$ ressemble à $theirs$, l'adresse de $name$ ($keyid$), mais c'est une autre adresse. Vérifiez auprès de cette personne avant de lui faire confiance."
+  },
+  "import_review_all_keys_off": {
+    "message": "Chaque clé que ce compte publie encore est une clé que vous avez désactivée. Enregistré, ce contact n'a aucune clé vers laquelle chiffrer tant que vous n'en réactivez pas une."
+  },
+  "import_github_refresh_all_held": {
+    "message": "$username$ ne publie plus certaines des clés enregistrées pour ce contact, et toutes celles qu'il publie encore appartiennent à un autre de vos contacts ou à vous : il ne peut donc pas être mis à jour. Supprimez ce contact si vous ne voulez plus chiffrer vers ses anciennes clés."
+  },
+  "import_review_status_your_key": {
+    "message": "Votre clé"
+  },
+  "import_review_conflict_same_name": {
+    "message": "$name$ ($keyid$) porte aussi ce nom, et aucune adresse e-mail ne permet de les distinguer. Vérifiez auprès de cette personne avant de lui faire confiance."
+  },
+  "import_review_replace_many": {
+    "message": "Remplacer n'est pas proposé : plusieurs contacts ont cette adresse."
   }
 }

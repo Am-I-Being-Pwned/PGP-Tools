@@ -83,3 +83,41 @@ export function outputFileName(
   }
   return "decrypted-files.zip";
 }
+
+/**
+ * Give every output of one batch its own name, in input order.
+ *
+ * Stripping the ciphertext extension turns "report.txt.gpg" and
+ * "report.txt.asc" into the same "report.txt". Left to the browser, the
+ * second save becomes "report (1).txt" on disk while the panel (and the
+ * file-by-file signer note) still call both "report.txt", so the user
+ * cannot tell which copy is whose. Renaming here, deterministically,
+ * means the name in the note is the name on disk. Compared ignoring
+ * case: the default filesystems on macOS and Windows do.
+ */
+export function uniqueOutputNames(names: readonly string[]): string[] {
+  const taken = new Set(names.map((n) => n.toLowerCase()));
+  const used = new Set<string>();
+  return names.map((name) => {
+    if (!used.has(name.toLowerCase())) {
+      used.add(name.toLowerCase());
+      return name;
+    }
+    // "report (2).txt": the counter goes before the last extension, the
+    // way a file manager would number it. A leading dot is not one.
+    const dot = name.lastIndexOf(".");
+    const [stem, ext] =
+      dot > 0 ? [name.slice(0, dot), name.slice(dot)] : [name, ""];
+    // Skip a number another input already owns outright, so renaming a
+    // duplicate never creates a new clash further down the batch.
+    const free = (n: number) => {
+      const key = `${stem} (${n})${ext}`.toLowerCase();
+      return !used.has(key) && !taken.has(key);
+    };
+    let n = 2;
+    while (!free(n)) n++;
+    const candidate = `${stem} (${n})${ext}`;
+    used.add(candidate.toLowerCase());
+    return candidate;
+  });
+}

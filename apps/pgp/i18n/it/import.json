@@ -355,5 +355,107 @@
   },
   "import_status_replaces": {
     "message": "Sostituisce la chiave che avevi per $name$"
+  },
+  "import_review_title": {
+    "message": "Controlla le chiavi"
+  },
+  "import_review_intro_one": {
+    "message": "Trovata $count$ chiave. Non viene salvato nulla finché non scegli."
+  },
+  "import_review_intro_other": {
+    "message": "Trovate $count$ chiavi. Non viene salvato nulla finché non scegli."
+  },
+  "import_review_status_new": {
+    "message": "Nuova"
+  },
+  "import_review_status_update": {
+    "message": "Aggiornamento"
+  },
+  "import_review_status_revoked": {
+    "message": "Revocata"
+  },
+  "import_review_status_duplicate": {
+    "message": "Già salvata"
+  },
+  "import_review_status_rejected": {
+    "message": "Non importabile"
+  },
+  "import_review_conflict_address": {
+    "message": "$email$ appartiene già a $name$ ($keyid$). Questa è un'altra chiave - verifica con questa persona prima di fidarti."
+  },
+  "import_review_conflict_name": {
+    "message": "Sembra il nome di $name$ ($keyid$), ma usa lettere diverse. Verifica con questa persona prima di fidarti."
+  },
+  "import_review_choice_aria": {
+    "message": "Cosa fare con $name$"
+  },
+  "import_review_choice_skip": {
+    "message": "Salta"
+  },
+  "import_review_choice_keep_both": {
+    "message": "Tieni entrambe"
+  },
+  "import_review_choice_import": {
+    "message": "Importa"
+  },
+  "import_review_choice_replace": {
+    "message": "Sostituisci"
+  },
+  "import_review_import_none": {
+    "message": "Nessuna selezione"
+  },
+  "import_review_import_n_one": {
+    "message": "Importa $count$ chiave"
+  },
+  "import_review_import_n_other": {
+    "message": "Importa $count$ chiavi"
+  },
+  "import_review_import_all": {
+    "message": "Importa tutte"
+  },
+  "import_review_import_all_risky": {
+    "message": "Importa tutte comunque"
+  },
+  "import_review_import_all_note_one": {
+    "message": "Include $count$ chiave che dichiara di essere qualcuno che hai già."
+  },
+  "import_review_import_all_note_other": {
+    "message": "Include $count$ chiavi che dichiarano di essere qualcuno che hai già."
+  },
+  "import_replaced_contacts_one": {
+    "message": "Sostituita la chiave di $count$ contatto"
+  },
+  "import_replaced_contacts_other": {
+    "message": "Sostituite le chiavi di $count$ contatti"
+  },
+  "import_review_conflict_address_revoked": {
+    "message": "$email$ apparteneva a $name$ ($keyid$), una chiave ora revocata. Verifica con questa persona che la nuova chiave sia sua."
+  },
+  "import_review_conflict_key_update": {
+    "message": "Così $name$ ($keyid$) riceve nuove chiavi e i messaggi per questa persona raggiungerebbero anche quelle. Verifica con lei prima di salvare."
+  },
+  "import_review_conflict_key_contact": {
+    "message": "Contiene la chiave che hai per $name$ ($keyid$), insieme ad altre chiavi. Verifica con questa persona prima di salvare."
+  },
+  "import_review_conflict_key_own": {
+    "message": "Contiene la tua chiave ($keyid$), insieme ad altre chiavi. Assicurati che siano tutte tue prima di salvare."
+  },
+  "import_review_conflict_address_lookalike": {
+    "message": "$email$ sembra $theirs$, l'indirizzo di $name$ ($keyid$), ma è un indirizzo diverso. Verifica con questa persona prima di fidarti."
+  },
+  "import_review_all_keys_off": {
+    "message": "Ogni chiave che questo account elenca ancora è una che hai disattivato. Se lo salvi, questo contatto non ha chiavi a cui cifrare finché non ne riattivi una."
+  },
+  "import_github_refresh_all_held": {
+    "message": "$username$ non elenca più alcune delle chiavi salvate per questo contatto, e tutte quelle che elenca ancora appartengono a un altro tuo contatto o a te, quindi non può essere aggiornato. Elimina questo contatto se non vuoi più cifrare alle sue vecchie chiavi."
+  },
+  "import_review_status_your_key": {
+    "message": "La tua chiave"
+  },
+  "import_review_conflict_same_name": {
+    "message": "Anche $name$ ($keyid$) ha questo nome, e nessun indirizzo email distingue i due. Verifica con questa persona prima di fidarti."
+  },
+  "import_review_replace_many": {
+    "message": "Sostituisci non è disponibile: più di un contatto ha questo indirizzo."
   }
 }

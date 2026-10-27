@@ -212,7 +212,7 @@
     "message": "要用“$preset$”预设替换你的自定义设置吗？只有其卡片上列出的设置会更改，之后你仍可以逐项调整。"
   },
   "settings_preset_confirm_history": {
-    "message": "此预设会开启“从不缓存”，这也会删除你已保存的历史记录（$size$），且无法恢复。"
+    "message": "此预设会开启“从不缓存”，这也会删除你已保存的历史记录（$size$），且无法撤销。"
   },
   "settings_translation_title": { "message": "翻译" },
   "settings_translation_enable": { "message": "翻译已解密的消息" },

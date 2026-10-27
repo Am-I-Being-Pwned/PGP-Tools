@@ -312,7 +312,7 @@
     "message": "Remplacer vos réglages personnalisés par le profil $preset$ ? Seuls les réglages listés sur sa carte changent, et vous pourrez de nouveau ajuster chacun d'eux ensuite."
   },
   "settings_preset_confirm_history": {
-    "message": "Ce profil active « Ne jamais garder les clés en mémoire », ce qui supprime aussi votre historique enregistré ($size$). Il ne pourra pas être récupéré."
+    "message": "Ce profil active « Ne jamais garder les clés en mémoire », ce qui supprime aussi votre historique enregistré ($size$). Cette action est irréversible."
   },
   "settings_translation_title": {
     "message": "Traduction"

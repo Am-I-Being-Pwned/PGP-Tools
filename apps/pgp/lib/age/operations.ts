@@ -113,7 +113,14 @@ export async function decryptWithHandle(
   );
   let text: string;
   try {
-    text = new TextDecoder("utf-8", { fatal: true }).decode(plaintext);
+    // `ignoreBOM: true` keeps a leading BOM in the text, as the PGP
+    // path's `asTextIfUtf8` does: the decoder strips it by default, and
+    // Copy and Download would then hand back a different file from the
+    // one that was encrypted. (Not that helper itself: this branch has to
+    // know which way it went, to scrub the buffer only when decoded.)
+    text = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(
+      plaintext,
+    );
   } catch {
     // Not UTF-8: the bytes themselves are the result and the caller owns
     // them from here. Deliberately not scrubbed -- see above.
@@ -126,9 +133,7 @@ export async function decryptWithHandle(
 /** Parse one SSH public key line into its canonical recipient form plus
  *  the public facts about it. Throws on anything unusable as an age
  *  recipient. */
-export async function parseRecipient(
-  line: string,
-): Promise<SshRecipientInfo> {
+export async function parseRecipient(line: string): Promise<SshRecipientInfo> {
   return parseSshRecipient(line);
 }
 

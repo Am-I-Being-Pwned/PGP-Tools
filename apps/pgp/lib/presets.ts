@@ -18,6 +18,11 @@ export interface SecurityPreset {
   bundle: Partial<PgpPreferences>;
 }
 
+/** The most restrictive preset. What the settings fall back to when their
+ *  sealed blob has gone missing on a device that has seen it -- tampering
+ *  must not be a way to loosen them (`storage/preferences.ts`). */
+export const STRICTEST_PRESET: PresetId = "paranoid";
+
 /** Picker display order (also the match order for activePreset). */
 export const PRESET_IDS: readonly PresetId[] = [
   "casual",

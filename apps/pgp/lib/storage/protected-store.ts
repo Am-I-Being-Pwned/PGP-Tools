@@ -26,7 +26,7 @@ import {
   normalizePadding,
   saveEncryptedArray,
 } from "./encrypted-store";
-import { removeItem, withLock } from "./engine";
+import { withLock } from "./engine";
 
 export interface ProtectedStoreDescriptor<T> extends EncryptedStore<T> {
   /** Stable identity of an item — the field callers address it by
@@ -66,8 +66,10 @@ export interface ProtectedStore<T> {
   normalize(): Promise<void>;
   /** Insert `item`, replacing any existing item with the same id. */
   put(item: T, opts?: MutateOptions): Promise<void>;
-  /** Delete by id. Removes the storage entry entirely once empty, rather
-   *  than leaving a sealed empty array behind. */
+  /** Delete by id. An emptied store is saved as a sealed EMPTY array,
+   *  never removed: a store that is simply gone is what a deletion attack
+   *  looks like (`integrity.ts`), and on a second synced device a removal
+   *  would be indistinguishable from one. */
   remove(id: string, opts?: MutateOptions): Promise<void>;
   /** Mutate one item in place and save. `apply` runs under the lock on
    *  the freshly-loaded item, so it never writes back stale metadata. */
@@ -107,14 +109,7 @@ export function createProtectedStore<T>(
       ),
 
     remove: (id, opts) =>
-      mutate(opts, async (items) => {
-        const updated = items.filter((i) => idOf(i) !== id);
-        if (updated.length === 0) {
-          await removeItem(storageKey);
-        } else {
-          await save(updated);
-        }
-      }),
+      mutate(opts, (items) => save(items.filter((i) => idOf(i) !== id))),
 
     update: (id, apply, opts) =>
       mutate(opts, async (items) => {

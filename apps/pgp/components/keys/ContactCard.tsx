@@ -2,6 +2,7 @@ import type { MouseEvent as ReactMouseEvent, ReactNode } from "react";
 import { useState } from "react";
 import {
   CheckCircleIcon,
+  CheckIcon,
   ChevronRightIcon,
   CopyIcon,
   DownloadIcon,
@@ -28,9 +29,11 @@ import {
   TooltipTrigger,
 } from "@amibeingpwned/ui/tooltip";
 
+import type { IdentityConflict } from "../../lib/identity/binding";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import { t, tn } from "../../lib/i18n";
 import { formatDate, formatDateShort } from "../../lib/i18n/format";
+import { clashPillLabel, clashSentence } from "../../lib/identity/clash-copy";
 import {
   activeRecipients,
   contactRecipients,
@@ -47,6 +50,8 @@ import { useLongPress } from "./useLongPress";
 
 interface ContactCardProps {
   contact: PublicContactKey;
+  /** Another contact claims this one's address or name. */
+  clash?: IdentityConflict;
   onRemove?: () => void;
   onEncryptTo?: () => void;
   onCopyPublicKey?: () => void;
@@ -82,12 +87,14 @@ interface ContactCardProps {
   justImported?: boolean;
 }
 
+/** Who else holds the identity, for the clash pill's tooltip. */
 /** The design language's status pill; the tone classes are added per use. */
 const PILL =
   "shrink-0 items-center rounded px-1.5 py-px text-[10.5px] font-medium whitespace-nowrap";
 
 export function ContactCard({
   contact,
+  clash,
   onRemove,
   onEncryptTo,
   onCopyPublicKey,
@@ -178,11 +185,14 @@ export function ContactCard({
   const algorithm = contact.algorithm ? formatAlgorithm(contact.algorithm) : "";
   const expired = !!contact.expiresAt && contact.expiresAt < now;
   const hasPills =
+    !!contact.verified ||
+    !!clash ||
     expired ||
     !!contact.revoked ||
     !!contact.securityWarning ||
     isSsh ||
-    recipients.length > 1;
+    recipients.length > 1 ||
+    activeKeys < recipients.length;
   // Algorithm, expiry and provenance, as one small muted line.
   const details: string[] = [];
   if (algorithm && !showKeyLine) details.push(algorithm);
@@ -300,17 +310,41 @@ export function ContactCard({
                   {t("keys_contact_revoked")}
                 </span>
               )}
-              {contact.securityWarning && (
+              {clash && (
                 <span
-                  title={contact.securityWarning}
+                  title={clashSentence(clash)}
                   className={cn(PILL, "bg-warn/12 text-warn inline-flex gap-1")}
                 >
                   <TriangleAlertIcon className="h-2.5 w-2.5" />
-                  {contact.lookalike
-                    ? t("keys_lookalike_name")
-                    : t("keys_weak_sha1")}
+                  {clashPillLabel(clash)}
                 </span>
               )}
+              {contact.verified && (
+                <span
+                  title={t("keys_verified_chip_title")}
+                  className={cn(PILL, "bg-good/12 text-good inline-flex gap-1")}
+                >
+                  <CheckIcon className="h-2.5 w-2.5" />
+                  {t("keys_verified_chip")}
+                </span>
+              )}
+              {contact.securityWarning &&
+                // A name clash already says "Lookalike name", and its
+                // hover names whose name it imitates: one pill, not two.
+                !(contact.lookalike && clash?.kind === "name") && (
+                  <span
+                    title={contact.securityWarning}
+                    className={cn(
+                      PILL,
+                      "bg-warn/12 text-warn inline-flex gap-1",
+                    )}
+                  >
+                    <TriangleAlertIcon className="h-2.5 w-2.5" />
+                    {contact.lookalike
+                      ? t("keys_lookalike_name")
+                      : t("keys_weak_sha1")}
+                  </span>
+                )}
               {isSsh && (
                 <span
                   title={t("keys_ssh_chip_title")}
@@ -319,7 +353,7 @@ export function ContactCard({
                   SSH
                 </span>
               )}
-              {recipients.length > 1 && (
+              {(recipients.length > 1 || activeKeys < recipients.length) && (
                 /* One person, several machines. Said on the card because
                  the key id it shows is only the first key's: a 3-stanza
                  file is otherwise a surprise at decrypt time. */

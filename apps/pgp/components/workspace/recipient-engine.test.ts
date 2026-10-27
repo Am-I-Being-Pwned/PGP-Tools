@@ -17,6 +17,7 @@ import { describe, expect, it } from "vitest";
 import type { KindDiscriminated } from "../../lib/storage/key-kind";
 import {
   mixedEngineReason,
+  noActiveKeyReason,
   sshPasswordReason,
 } from "../../lib/encrypt-recipients";
 import {
@@ -121,6 +122,32 @@ describe("recipientBlockReason", () => {
     expect(recipientBlockReason(ssh, "pgp", false)).toBe(mixedEngineReason());
     expect(recipientBlockReason(pgp, "ssh", false)).toBe(mixedEngineReason());
   });
+
+  it("blocks a contact with every key turned off, and says why", () => {
+    // A refresh can leave a contact holding only keys the user turned
+    // off; it has nothing to encrypt to, whatever else is selected.
+    const key = (keyId: string, disabled: boolean) => ({
+      keyId,
+      armored: `ssh-ed25519 ${keyId}`,
+      algorithm: "ssh-ed25519",
+      ...(disabled ? { disabled: true as const } : {}),
+    });
+    const contact = (offs: boolean[]) => ({
+      kind: "ssh" as const,
+      keyId: "SHA256:k0",
+      armoredPublicKey: "ssh-ed25519 SHA256:k0",
+      recipients: offs.map((off, i) => key(`SHA256:k${i}`, off)),
+    });
+    expect(recipientBlockReason(contact([true]), null, false)).toBe(
+      noActiveKeyReason(),
+    );
+    expect(recipientBlockReason(contact([true, true]), "ssh", false)).toBe(
+      noActiveKeyReason(),
+    );
+    expect(
+      recipientBlockReason(contact([true, false]), null, false),
+    ).toBeNull();
+  });
 });
 
 describe("pickableKeys with a password set", () => {
@@ -147,33 +174,57 @@ describe("splitRecipientSections: each key is offered once", () => {
   }
   const contact = (keyId: string, keys = [keyId]): Contact => ({ keyId, keys });
   const own = (keyId: string): Own => ({ keyId, own: true });
-  const split = (contacts: Contact[], mine: Own[]) =>
+  const split = (contacts: Contact[], mine: Own[], allMine = mine) =>
     splitRecipientSections<Contact, Own>(
       [...contacts, ...mine],
       contacts,
-      (c) => c.keys,
+      new Set(allMine.map((k) => k.keyId)),
     );
 
-  it("keeps an own PGP key imported again as a contact out of both lists twice", () => {
-    // The same fingerprint as a contact record and as an own key: it used
-    // to appear under Contacts twice (the own record matched by id).
+  it("offers an own PGP key imported again as a contact once, as yours", () => {
+    // The same fingerprint as a contact record and as an own key. The id
+    // means your key (see `resolveSelectedRecipients`), so the contact
+    // copy is the row left out.
     const me = contact("PGP-ME");
-    const result = split([me], [own("PGP-ME")]);
-    expect(result.contacts).toEqual([me]);
-    expect(result.own).toEqual([]);
+    const mine = own("PGP-ME");
+    const result = split([me], [mine]);
+    expect(result.contacts).toEqual([]);
+    expect(result.own).toEqual([mine]);
   });
 
-  it("does not repeat an own SSH key that a GitHub contact already holds", () => {
-    const github = contact("SSH-ME", ["SSH-ME", "SSH-LAPTOP", "SSH-WORK"]);
-    const result = split([github], [own("SSH-ME")]);
-    expect(result.contacts).toEqual([github]);
-    expect(result.own).toEqual([]);
+  it("never hides your own key because a contact holds it", () => {
+    // A GitHub copy of your own account -- or a pasted file pairing your
+    // key with an attacker's under one comment. "You" stays on the list
+    // either way, and the contact is offered as itself.
+    const github = contact("SSH-LAPTOP", ["SSH-LAPTOP", "SSH-ME", "SSH-WORK"]);
+    const mine = own("SSH-ME");
+    expect(split([github], [mine])).toEqual({
+      contacts: [github],
+      own: [mine],
+    });
   });
 
-  it("hides a single-key contact whose key is part of a bigger contact", () => {
-    const github = contact("SSH-A", ["SSH-A", "SSH-B"]);
-    const pasted = contact("SSH-B");
-    expect(split([github, pasted], []).contacts).toEqual([github]);
+  it("leaves out a contact whose id is one of your keys", () => {
+    // Attack (c): the group's id equalled the user's own key, hid "You",
+    // and won the id lookup -- encrypting to every key in it.
+    const takeover = contact("SSH-ME", ["SSH-ME", "SSH-MALLORY"]);
+    const mine = own("SSH-ME");
+    expect(split([takeover], [mine])).toEqual({ contacts: [], own: [mine] });
+  });
+
+  it("leaves it out even when the search filtered your key out", () => {
+    // The id still resolves to your key, whatever matched the search.
+    const takeover = contact("SSH-ME", ["SSH-ME", "SSH-MALLORY"]);
+    expect(split([takeover], [], [own("SSH-ME")]).contacts).toEqual([]);
+  });
+
+  it("never hides a single-key contact behind a bigger one holding its key", () => {
+    // Attack (b): a file pairing Mallory's key (first) with Alice's under
+    // `alice@laptop` became a second contact holding Alice's key, and the
+    // real Alice was hidden behind it. Both are offered.
+    const group = contact("SSH-MALLORY", ["SSH-MALLORY", "SSH-ALICE"]);
+    const alice = contact("SSH-ALICE");
+    expect(split([group, alice], []).contacts).toEqual([group, alice]);
   });
 
   it("leaves unrelated keys alone", () => {
@@ -184,18 +235,5 @@ describe("splitRecipientSections: each key is offered once", () => {
       contacts: [alice, bob],
       own: [mine],
     });
-  });
-
-  it("never hides a row because of a contact the search filtered out", () => {
-    const github = contact("SSH-A", ["SSH-A", "SSH-B"]);
-    const pasted = contact("SSH-B");
-    const mine = own("SSH-A");
-    // Only the pasted contact and my key matched the search.
-    const result = splitRecipientSections<Contact, Own>(
-      [pasted, mine],
-      [github, pasted],
-      (c) => c.keys,
-    );
-    expect(result).toEqual({ contacts: [pasted], own: [mine] });
   });
 });

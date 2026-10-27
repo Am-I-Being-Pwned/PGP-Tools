@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { KeyDetails, KeyInfo } from "../pgp/types";
 import type { ImportEngines, StoredKey, StoredKeys } from "./prepare";
+import type { IncomingKey } from "./types";
 import {
   extractPublicKey,
   mergePublicKey,
@@ -14,7 +15,15 @@ import {
   revocationIssuers,
   sshPrivateKeyFormatRejection,
 } from "../pgp/wasm";
-import { classifyCert, importable, isNoOp, prepareImport } from "./prepare";
+import {
+  classifyCert,
+  importable,
+  isNoOp,
+  mergeSameKey,
+  prepareImport,
+  withIdentityConflicts,
+} from "./prepare";
+import { defaultDecision } from "./review";
 import { PENDING_KEY_ID } from "./types";
 
 const AGE_RS = join(
@@ -595,7 +604,8 @@ describe("prepareImport - SSH / age", () => {
       fingerprint: SSH_FP,
       comment: "",
     });
-    const [key] = (await prepareImport(CANONICAL, noStores, { ssh: true })).keys;
+    const [key] = (await prepareImport(CANONICAL, noStores, { ssh: true }))
+      .keys;
     expect(key.userIds).toEqual(["SSH key"]);
   });
 
@@ -668,6 +678,47 @@ describe("prepareImport - SSH / age", () => {
       expect(prepared.groupProposal).toBeUndefined();
     });
 
+    it("counts a line pasted twice as one key", async () => {
+      // Two copies of key0 between key1: one member each, so the group
+      // holds no duplicate stanza and "N keys added" counts keys.
+      const mock = vi.mocked(parseSshRecipient);
+      mock.mockReset();
+      for (const i of [0, 1, 0]) {
+        mock.mockResolvedValueOnce({
+          recipient: `ssh-ed25519 AAAAkey${i}`,
+          algorithm: "ssh-ed25519",
+          fingerprint: `SHA256:key${i}`,
+          comment: "alice@laptop",
+        });
+      }
+      const text = [0, 1, 0]
+        .map((i) => `ssh-ed25519 AAAAkey${i} alice@laptop`)
+        .join("\n");
+      const prepared = await prepareImport(text, noStores, { ssh: true });
+      expect(prepared.keys).toHaveLength(1);
+      expect(prepared.keys[0].group?.members.map((m) => m.keyId)).toEqual([
+        "SHA256:key0",
+        "SHA256:key1",
+      ]);
+
+      // The same key twice and nothing else is one key, not a group.
+      mock.mockReset();
+      mock.mockResolvedValue({
+        recipient: "ssh-ed25519 AAAAkey0",
+        algorithm: "ssh-ed25519",
+        fingerprint: "SHA256:key0",
+        comment: "",
+      });
+      const twice = await prepareImport(
+        "ssh-ed25519 AAAAkey0\nssh-ed25519 AAAAkey0",
+        noStores,
+        { ssh: true },
+      );
+      expect(twice.keys).toHaveLength(1);
+      expect(twice.keys[0].group).toBeUndefined();
+      expect(twice.groupProposal).toBeUndefined();
+    });
+
     it("never groups keys whose comments disagree", async () => {
       const text = stubLines(["alice@laptop", "alice@desktop", ""]);
       const prepared = await prepareImport(text, noStores, { ssh: true });
@@ -698,9 +749,13 @@ describe("prepareImport - SSH / age", () => {
     });
 
     it("offers nothing for a single key", async () => {
-      const prepared = await prepareImport(stubLines(["alice@laptop"]), noStores, {
-        ssh: true,
-      });
+      const prepared = await prepareImport(
+        stubLines(["alice@laptop"]),
+        noStores,
+        {
+          ssh: true,
+        },
+      );
       expect(prepared.keys).toHaveLength(1);
       expect(prepared.keys[0].group).toBeUndefined();
       expect(prepared.groupProposal).toBeUndefined();
@@ -715,13 +770,159 @@ describe("prepareImport - SSH / age", () => {
         {
           own: [],
           contacts: [
-            storedKey({ keyId: "SHA256:key1", armored: "ssh-ed25519 AAAAkey1" }),
+            storedKey({
+              keyId: "SHA256:key1",
+              armored: "ssh-ed25519 AAAAkey1",
+            }),
           ],
         },
         { ssh: true },
       );
       expect(prepared.groupProposal).toBeUndefined();
       expect(prepared.keys.map((k) => k.status)).toEqual(["new", "duplicate"]);
+    });
+
+    /** Alice's real key, saved as a hand-added contact the user named. */
+    const alice = (over: Partial<StoredKey> = {}): StoredKey =>
+      storedKey({
+        keyId: "SHA256:key0",
+        userIds: ["alice@laptop"],
+        armored: "ssh-ed25519 AAAAkey0",
+        ...over,
+      });
+
+    it("never files a group holding a contact's key as new over that contact", async () => {
+      // Attack (a): Alice's real key plus Mallory's, both commented
+      // `alice@laptop`. It used to be "new" with Alice's id -- and the
+      // save landed on Alice, keeping her name, encrypting to Mallory.
+      const text = stubLines(["alice@laptop", "alice@laptop"]);
+      const prepared = await prepareImport(
+        text,
+        { own: [], contacts: [alice()] },
+        { ssh: true },
+      );
+      const [key] = prepared.keys;
+      expect(key.status).toBe("update");
+      expect(key.keyId).toBe("SHA256:key0");
+      expect(key.changes).toEqual(["1 key added"]);
+      expect(key.conflict?.kind).toBe("key");
+      expect(key.conflict?.holders.map((h) => h.keyId)).toEqual([
+        "SHA256:key0",
+      ]);
+      expect(defaultDecision(key)).toBe("skip");
+    });
+
+    it("heads it with the contact's key whichever line came first", async () => {
+      // Mallory's line first: the update still lands on Alice's record
+      // (so no second record holds her key), and still asks.
+      const text = stubLines(["alice@laptop", "alice@laptop"]);
+      const prepared = await prepareImport(
+        text,
+        { own: [], contacts: [alice({ keyId: "SHA256:key1" })] },
+        { ssh: true },
+      );
+      const [key] = prepared.keys;
+      expect(key.status).toBe("update");
+      expect(key.group?.members.map((m) => m.keyId)).toEqual([
+        "SHA256:key1",
+        "SHA256:key0",
+      ]);
+      expect(key.keyId).toBe("SHA256:key1");
+      expect(defaultDecision(key)).toBe("skip");
+    });
+
+    it("never heads a group with the user's own key, and asks", async () => {
+      // Attack (c): the user's own key plus an attacker's under one
+      // comment. The record's id was the user's own key: it hid "You" in
+      // the picker and won the id lookup.
+      const text = stubLines(["me@laptop", "me@laptop"]);
+      const prepared = await prepareImport(
+        text,
+        {
+          own: [storedKey({ keyId: "SHA256:key0", userIds: ["me@laptop"] })],
+          contacts: [],
+        },
+        { ssh: true },
+      );
+      const [key] = prepared.keys;
+      expect(key.status).toBe("new");
+      expect(key.keyId).toBe("SHA256:key1");
+      expect(key.conflict?.kind).toBe("key");
+      expect(key.conflict?.holders[0].own).toBe(true);
+      expect(defaultDecision(key)).toBe("skip");
+    });
+
+    it("saves nothing for a group made only of keys the user holds", async () => {
+      const text = stubLines(["me@laptop", "me@laptop"]);
+      const prepared = await prepareImport(
+        text,
+        {
+          own: [storedKey({ keyId: "SHA256:key0" })],
+          contacts: [alice({ keyId: "SHA256:key1" })],
+        },
+        { ssh: true },
+      );
+      expect(prepared.keys[0].status).toBe("duplicate");
+      expect(importable(prepared.keys)).toEqual([]);
+    });
+
+    it("never heads a group with a key from a fetched contact", async () => {
+      // A paste never lands on a fetched person (see `upsertContacts`),
+      // so this is a new record -- headed by the key nobody holds.
+      const text = stubLines(["alice@laptop", "alice@laptop"]);
+      const prepared = await prepareImport(
+        text,
+        {
+          own: [],
+          contacts: [
+            alice({
+              source: { type: "github", user: "alice", fetchedAt: 1 },
+            }),
+          ],
+        },
+        { ssh: true },
+      );
+      const [key] = prepared.keys;
+      expect(key.status).toBe("new");
+      expect(key.keyId).toBe("SHA256:key1");
+      expect(key.conflict?.kind).toBe("key");
+    });
+
+    it("sees a key held inside a contact's group, not only its head", async () => {
+      const text = stubLines(["bob@laptop"]);
+      const prepared = await prepareImport(
+        text,
+        {
+          own: [],
+          contacts: [
+            storedKey({
+              keyId: "SHA256:other",
+              recipientIds: ["SHA256:other", "SHA256:key0"],
+            }),
+          ],
+        },
+        { ssh: true },
+      );
+      expect(prepared.keys[0].status).toBe("duplicate");
+    });
+
+    it("calls the user's own key pasted back in a duplicate", async () => {
+      const prepared = await prepareImport(
+        stubLines(["me@laptop"]),
+        { own: [storedKey({ keyId: "SHA256:key0" })], contacts: [] },
+        { ssh: true },
+      );
+      expect(prepared.keys[0].status).toBe("duplicate");
+    });
+
+    it("strips invisible characters from a comment before it names anyone", async () => {
+      // The engine does this too; the comment is the contact's name.
+      const prepared = await prepareImport(
+        stubLines(["alice@corp\u200b.com\u202e"]),
+        noStores,
+        { ssh: true },
+      );
+      expect(prepared.keys[0].userIds).toEqual(["alice@corp.com"]);
     });
 
     it("calls a group of already-stored keys a duplicate, not an import", async () => {
@@ -731,8 +932,14 @@ describe("prepareImport - SSH / age", () => {
         {
           own: [],
           contacts: [
-            storedKey({ keyId: "SHA256:key0", armored: "ssh-ed25519 AAAAkey0" }),
-            storedKey({ keyId: "SHA256:key1", armored: "ssh-ed25519 AAAAkey1" }),
+            storedKey({
+              keyId: "SHA256:key0",
+              armored: "ssh-ed25519 AAAAkey0",
+            }),
+            storedKey({
+              keyId: "SHA256:key1",
+              armored: "ssh-ed25519 AAAAkey1",
+            }),
           ],
         },
         { ssh: true },
@@ -900,8 +1107,14 @@ describe("prepareImport - SSH / age", () => {
     );
 
     it.each([
-      ["PKCS#1", "-----BEGIN RSA PRIVATE KEY-----\nMIIEow==\n-----END RSA PRIVATE KEY-----\n"],
-      ["PKCS#8", "-----BEGIN PRIVATE KEY-----\nMIIEvQ==\n-----END PRIVATE KEY-----\n"],
+      [
+        "PKCS#1",
+        "-----BEGIN RSA PRIVATE KEY-----\nMIIEow==\n-----END RSA PRIVATE KEY-----\n",
+      ],
+      [
+        "PKCS#8",
+        "-----BEGIN PRIVATE KEY-----\nMIIEvQ==\n-----END PRIVATE KEY-----\n",
+      ],
       // Its own label, but the same `AAAA`-prefixed base64 body shape --
       // it must not be mistaken for either the CRX or SSH signing key.
       ["a PGP block", "-----BEGIN PGP PRIVATE KEY BLOCK-----\nlQ==\n"],
@@ -1025,7 +1238,6 @@ describe("prepareImport - SSH / age", () => {
     expect(parseSshRecipient).not.toHaveBeenCalled();
   });
 });
-
 
 /**
  * The three refusals that could not reach the user at all on the paste
@@ -1161,5 +1373,536 @@ describe("prepareImport - refused SSH algorithms reach the user", () => {
     expect(parseSshRecipient).not.toHaveBeenCalled();
     expect(prepared.keys[0].kind).toBe("ssh-private");
     expect(prepared.keys[0].status).toBe("new");
+  });
+});
+
+/**
+ * The advisory: a "key bundle" carrying a stripped copy of a contact
+ * beside a NEW key with the same name and email was saved without a
+ * word. Every new public key is now checked against the contacts held
+ * and the keys before it in the same import, and a match is marked so
+ * the Review asks before saving it.
+ */
+describe("prepareImport: a new key claiming someone's identity", () => {
+  const NEW_FP = "B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0";
+
+  /** `parseKeys` answering the pasted blob with `bundle`, and any stored
+   *  or merged armor with the stored contact's own cert. */
+  function bundle(...certs: { keyInfo: KeyInfo; armored: string }[]) {
+    vi.mocked(parseKeys).mockImplementation((armored) =>
+      Promise.resolve(
+        armored === "blob" ? certs : [{ keyInfo: info(), armored }],
+      ),
+    );
+  }
+
+  const withAlice: StoredKeys = { own: [], contacts: [storedKey()] };
+
+  it("marks the new key in the advisory's bundle, never the update", async () => {
+    bundle(
+      // The contact's own key, re-issued: an update of the same person.
+      { keyInfo: info(), armored: "ARMOR-STRIPPED" },
+      // A different key under the contact's exact User ID.
+      { keyInfo: info({ keyId: NEW_FP }), armored: "ARMOR-IMPOSTOR" },
+    );
+
+    const prepared = await prepareImport("blob", withAlice);
+
+    const [update, impostor] = prepared.keys;
+    expect(update.status).toBe("update");
+    expect(update.conflict).toBeUndefined();
+    expect(impostor.status).toBe("new");
+    expect(impostor.conflict?.kind).toBe("address");
+    // Held by the contact -- listed once from storage and once more as
+    // the bundle's own copy of it; the Review names `holders[0]`.
+    expect(impostor.conflict?.holders[0].keyId).toBe(FP);
+    expect(impostor.conflict?.holders.every((h) => h.keyId === FP)).toBe(true);
+  });
+
+  it("leaves the same name under a different address alone", async () => {
+    // Two people can share a name; the address is what tells them apart,
+    // and it is checked above. Only a name that LOOKS the same is asked.
+    bundle({
+      keyInfo: info({
+        keyId: NEW_FP,
+        userIds: ["Alice <alice@elsewhere.example>"],
+      }),
+      armored: "ARMOR-B",
+    });
+    const prepared = await prepareImport("blob", withAlice);
+    expect(prepared.keys[0].conflict).toBeUndefined();
+  });
+
+  it("marks a look-alike name (Cyrillic \u0410) as a name clash", async () => {
+    bundle({
+      keyInfo: info({
+        keyId: NEW_FP,
+        userIds: ["\u0410lice <alice@elsewhere.example>"],
+      }),
+      armored: "ARMOR-B",
+    });
+    const prepared = await prepareImport("blob", withAlice);
+    expect(prepared.keys[0].conflict?.kind).toBe("name");
+  });
+
+  it("marks BOTH new keys in one bundle claiming one address", async () => {
+    // Neither is the real one for coming first: an attacker picks the
+    // order, so the first must not default to Import.
+    const OTHER_FP = "C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0";
+    bundle(
+      { keyInfo: info({ keyId: NEW_FP }), armored: "ARMOR-B" },
+      { keyInfo: info({ keyId: OTHER_FP }), armored: "ARMOR-C" },
+    );
+    const prepared = await prepareImport("blob", noStores);
+    expect(prepared.keys[0].conflict).toMatchObject({
+      kind: "address",
+      holders: [{ keyId: OTHER_FP, incoming: true }],
+    });
+    expect(prepared.keys[1].conflict).toMatchObject({
+      kind: "address",
+      holders: [{ keyId: NEW_FP, incoming: true }],
+    });
+  });
+
+  it("still asks about the address of a revoked contact, naming it", async () => {
+    // A rotation after a revocation looks like this -- and so does an
+    // impostor timing it.
+    bundle({ keyInfo: info({ keyId: NEW_FP }), armored: "ARMOR-B" });
+    const prepared = await prepareImport("blob", {
+      own: [],
+      contacts: [storedKey({ revoked: true })],
+    });
+    expect(prepared.keys[0].status).toBe("new");
+    expect(prepared.keys[0].conflict).toMatchObject({
+      kind: "address",
+      holders: [{ keyId: FP, revoked: true }],
+    });
+  });
+
+  it("leaves an unrelated new key alone", async () => {
+    bundle({
+      keyInfo: info({ keyId: NEW_FP, userIds: ["Bob <bob@example.com>"] }),
+      armored: "ARMOR-B",
+    });
+    const prepared = await prepareImport("blob", withAlice);
+    expect(prepared.keys[0].conflict).toBeUndefined();
+  });
+});
+
+describe("withIdentityConflicts", () => {
+  function incoming(over: Partial<IncomingKey> = {}): IncomingKey {
+    return {
+      keyId: "NEW",
+      kind: "pgp-public",
+      status: "new",
+      info: null,
+      details: null,
+      userIds: ["Alice <alice@example.com>"],
+      changes: [],
+      publicArmored: "ARMOR-NEW",
+      ...over,
+    };
+  }
+
+  const withAlice: StoredKeys = { own: [], contacts: [storedKey()] };
+
+  it("never marks a key that will not be saved, or one with no identity yet", () => {
+    // A rejected key is not saved; an OpenSSH private key and a pasted
+    // CRX PEM have no identity until the protect step reads them -- only
+    // the headline the preview shows them under.
+    const keys = [
+      incoming({ keyId: "REJ", status: "rejected" }),
+      incoming({
+        keyId: PENDING_KEY_ID,
+        kind: "ssh-private",
+        userIds: ["SSH private key"],
+      }),
+      incoming({
+        keyId: PENDING_KEY_ID,
+        kind: "crx",
+        userIds: ["Chrome extension signing key"],
+      }),
+      incoming({ keyId: "PRIV", kind: "pgp-private", status: "duplicate" }),
+    ];
+    const out = withIdentityConflicts(keys, withAlice);
+    expect(out.map((k) => k.conflict)).toEqual(keys.map(() => undefined));
+  });
+
+  describe("private and CRX keys", () => {
+    // Saved, they become the user's OWN keys: a key named as a contact
+    // went in silently as one of them.
+    it("marks a private key claiming a contact's address, and starts it on Skip", () => {
+      const [key] = withIdentityConflicts(
+        [incoming({ keyId: "PRIV", kind: "pgp-private" })],
+        withAlice,
+      );
+      expect(key.conflict).toMatchObject({
+        kind: "address",
+        holders: [{ keyId: FP }],
+      });
+      expect(defaultDecision(key)).toBe("skip");
+    });
+
+    it("marks a private key with a contact's name and no address", () => {
+      const [key] = withIdentityConflicts(
+        [incoming({ keyId: "PRIV", kind: "pgp-private", userIds: ["Alice"] })],
+        { own: [], contacts: [storedKey({ userIds: ["Alice <a@x.test>"] })] },
+      );
+      expect(key.conflict).toMatchObject({ kind: "name", sameName: true });
+    });
+
+    it("marks a backup's CRX key whose label is a contact's lookalike", () => {
+      const [key] = withIdentityConflicts(
+        [incoming({ keyId: "ext", kind: "crx", userIds: ["Аlice"] })],
+        { own: [], contacts: [storedKey({ userIds: ["Alice <a@x.test>"] })] },
+      );
+      expect(key.conflict?.kind).toBe("name");
+    });
+
+    it("lets the user's next key share their own name and address", () => {
+      // A rotation: the same name and address as a key they hold.
+      const mine: StoredKeys = { own: [storedKey()], contacts: [] };
+      const keys = [
+        incoming({ keyId: "PRIV", kind: "pgp-private" }),
+        incoming({ keyId: "PRIV2", kind: "pgp-private" }),
+      ];
+      expect(withIdentityConflicts(keys, mine).map((k) => k.conflict)).toEqual([
+        undefined,
+        undefined,
+      ]);
+    });
+
+    it("still marks one that only LOOKS like the user's own", () => {
+      const mine: StoredKeys = { own: [storedKey()], contacts: [] };
+      const [key] = withIdentityConflicts(
+        [
+          incoming({
+            keyId: "PRIV",
+            kind: "pgp-private",
+            userIds: ["Alice <alıce@example.com>"],
+          }),
+        ],
+        mine,
+      );
+      expect(key.conflict).toMatchObject({
+        kind: "address",
+        lookalike: true,
+        holders: [{ own: true }],
+      });
+    });
+
+    it("holds a backup's private key against its contacts, too", () => {
+      // A contact in the same file wearing the private key's address.
+      const out = withIdentityConflicts(
+        [
+          incoming({ keyId: "PRIV", kind: "pgp-private" }),
+          incoming({ keyId: "PUB" }),
+        ],
+        noStores,
+      );
+      expect(out[1].conflict).toMatchObject({
+        kind: "address",
+        holders: [{ keyId: "PRIV", own: true }],
+      });
+    });
+  });
+
+  it("compares a contact's alias as one of its names", () => {
+    // A comment-less SSH contact the user renamed "Alice" has no other
+    // name; a `.pub` commented with a lookalike of it is claiming her.
+    const stored: StoredKeys = {
+      own: [],
+      contacts: [
+        storedKey({ keyId: "SHA256:alice", userIds: [], alias: "Alice" }),
+      ],
+    };
+    for (const comment of ["Alice", "Аlice"]) {
+      const [key] = withIdentityConflicts(
+        [
+          incoming({
+            keyId: "SHA256:x",
+            kind: "ssh-public",
+            userIds: [comment],
+          }),
+        ],
+        stored,
+      );
+      expect(key.conflict?.kind, comment).toBe("name");
+      expect(key.conflict?.holders[0].alias).toBe("Alice");
+    }
+  });
+
+  it("checks an SSH key's comment like a User ID", () => {
+    // The comment is the contact's name, and it is whatever the file
+    // says: `alice@example.com` claims that address as plainly.
+    const [key] = withIdentityConflicts(
+      [
+        incoming({
+          keyId: "SHA256:x",
+          kind: "ssh-public",
+          userIds: ["alice@example.com"],
+        }),
+      ],
+      withAlice,
+    );
+    expect(key.conflict?.kind).toBe("address");
+    expect(key.conflict?.holders[0].keyId).toBe(FP);
+  });
+
+  it("checks an SSH comment against SSH contacts and own keys too", () => {
+    const stored: StoredKeys = {
+      own: [storedKey({ keyId: "SHA256:me", userIds: ["Alice Smith"] })],
+      contacts: [],
+    };
+    const [key] = withIdentityConflicts(
+      [
+        incoming({
+          keyId: "SHA256:x",
+          kind: "ssh-public",
+          userIds: ["Аlice Smith"],
+        }),
+      ],
+      stored,
+    );
+    expect(key.conflict?.kind).toBe("name");
+    expect(key.conflict?.holders[0].own).toBe(true);
+  });
+
+  it("still marks a NEW key from the same lookup as the contact it would replace", () => {
+    // A keyserver re-fetch that came back with a different key for the
+    // same address: the same source, but not the same key.
+    const source = {
+      type: "keyserver" as const,
+      user: "alice@example.com",
+      fetchedAt: 1,
+    };
+    const [key] = withIdentityConflicts([incoming({ source })], {
+      own: [],
+      contacts: [storedKey({ source })],
+    });
+    expect(key.conflict?.kind).toBe("address");
+  });
+
+  it("does not treat the 'SSH key' headline as a name two keys share", () => {
+    const keys = [
+      incoming({ keyId: "SHA256:a", kind: "ssh-public", userIds: ["SSH key"] }),
+      incoming({ keyId: "SHA256:b", kind: "ssh-public", userIds: ["SSH key"] }),
+    ];
+    const out = withIdentityConflicts(keys, noStores);
+    expect(out.map((k) => k.conflict)).toEqual([undefined, undefined]);
+  });
+
+  it("catches an address hidden behind an invisible character", () => {
+    // `<alice@example.com` + U+FE0F + `>`: the name is empty and the
+    // address reads the same, so it is the address check that must hold.
+    const [key] = withIdentityConflicts(
+      [incoming({ userIds: ["<alice@example.com\ufe0f>"] })],
+      withAlice,
+    );
+    expect(key.conflict?.kind).toBe("address");
+  });
+
+  it("marks a key claiming the user's OWN address, as an own holder", () => {
+    const mine: StoredKeys = { own: [storedKey()], contacts: [] };
+    const [key] = withIdentityConflicts([incoming()], mine);
+    expect(key.conflict?.kind).toBe("address");
+    expect(key.conflict?.holders[0].own).toBe(true);
+  });
+
+  it("holds against new keys only, not a rejected or updated one in the bundle", () => {
+    const keys = [
+      incoming({ keyId: "REJ", status: "rejected" }),
+      incoming({ keyId: "UPD", status: "update" }),
+      incoming(),
+    ];
+    const out = withIdentityConflicts(keys, { own: [], contacts: [] });
+    expect(out[2].conflict).toBeUndefined();
+  });
+
+  it("marks an update only for the User IDs it adds", () => {
+    // A contact's key that picks up someone else's name and address.
+    const mallory: StoredKeys = {
+      own: [],
+      contacts: [
+        storedKey(),
+        storedKey({ keyId: "MAL", userIds: ["Mallory <m@example.com>"] }),
+      ],
+    };
+    const [same] = withIdentityConflicts(
+      [
+        incoming({
+          keyId: "MAL",
+          status: "update",
+          userIds: ["Mallory <m@example.com>"],
+        }),
+      ],
+      mallory,
+    );
+    expect(same.conflict).toBeUndefined();
+    const [grown] = withIdentityConflicts(
+      [
+        incoming({
+          keyId: "MAL",
+          status: "update",
+          userIds: ["Mallory <m@example.com>", "Alice <alice@example.com>"],
+        }),
+      ],
+      mallory,
+    );
+    expect(grown.conflict?.kind).toBe("address");
+  });
+
+  it.each([
+    ["an address outside the brackets", "Alice alice@example.com"],
+    ["a comment after the address", "Alice <alice@example.com> (work)"],
+    ["an unclosed bracket", "Alice <alice@example.com"],
+    ["a trailing dot", "Alice <alice@example.com.>"],
+  ])("sees the address through %s", (_label, uid) => {
+    const [key] = withIdentityConflicts(
+      [incoming({ userIds: [uid] })],
+      withAlice,
+    );
+    expect(key.conflict?.kind).toBe("address");
+  });
+
+  it.each([
+    ["a capital I for an l", "Alice", "AIice"],
+    ["a Hangul filler for a space", "Alice Lane", "Alice\u3164Lane"],
+    ["a small capital L", "Alice", "A\u029Fice"],
+    ["rn for m", "Mary", "Rnary"],
+    ["a Cherokee capital A", "Alice", "\u13AAlice"],
+    ["a stroked l", "Alice", "A\u0142ice"],
+  ])("sees the name through %s", (_label, theirs, claimed) => {
+    const stored: StoredKeys = {
+      own: [],
+      contacts: [storedKey({ userIds: [`${theirs} <them@example.com>`] })],
+    };
+    const [key] = withIdentityConflicts(
+      [incoming({ userIds: [`${claimed} <x@evil.test>`] })],
+      stored,
+    );
+    expect(key.conflict?.kind).toBe("name");
+  });
+
+  it.each([
+    ["the very same name", "Alice Lane", "Alice Lane"],
+    ["case", "Alice Lane", "ALICE lane"],
+    ["spacing", "Alice Lane", "Alice   Lane"],
+    ["quotes and a trailing dot", "Alice", '"Alice."'],
+    ["accents", "Zoe Lane", "Zo\u00eb Lane"],
+  ])(
+    "lets two people share a name that differs only in %s",
+    (_label, theirs, claimed) => {
+      // Their addresses tell them apart; a warning on every shared name
+      // would teach the user to click past the one that matters.
+      const stored: StoredKeys = {
+        own: [],
+        contacts: [storedKey({ userIds: [`${theirs} <them@example.com>`] })],
+      };
+      const [key] = withIdentityConflicts(
+        [incoming({ userIds: [`${claimed} <x@elsewhere.test>`] })],
+        stored,
+      );
+      expect(key.conflict).toBeUndefined();
+    },
+  );
+
+  it("returns an unmarked key unchanged", () => {
+    const key = incoming({ userIds: ["Bob <bob@example.com>"] });
+    expect(withIdentityConflicts([key], withAlice)[0]).toBe(key);
+  });
+
+  it("does not mutate the keys it is given", () => {
+    const key = incoming();
+    const [marked] = withIdentityConflicts([key], withAlice);
+    expect(marked.conflict?.kind).toBe("address");
+    expect(key.conflict).toBeUndefined();
+  });
+});
+
+describe("prepareImport: two copies of one key", () => {
+  const plain = { keyInfo: info(), armored: "COPY-1" };
+  const grown = {
+    keyInfo: info({
+      userIds: ["Alice <alice@example.com>", "Bob <bob@example.com>"],
+    }),
+    armored: "COPY-2",
+  };
+
+  /** The paste parses as `certs`; the engine's merge of the copies as
+   *  `merged`. */
+  function copies(
+    certs: { keyInfo: KeyInfo; armored: string }[],
+    merged: KeyInfo,
+  ) {
+    vi.mocked(mergePublicKey).mockResolvedValue("MERGED");
+    vi.mocked(parseKeys).mockImplementation((armored) =>
+      Promise.resolve(
+        armored === "blob" ? certs : [{ keyInfo: merged, armored }],
+      ),
+    );
+  }
+
+  it("is ONE row, the merge of both, so one decision covers one key", async () => {
+    copies([plain, grown], grown.keyInfo);
+    const prepared = await prepareImport("blob", noStores);
+    expect(prepared.keys).toHaveLength(1);
+    expect(prepared.keys[0].publicArmored).toBe("MERGED");
+    expect(prepared.keys[0].userIds).toEqual(grown.keyInfo.userIds);
+    expect(vi.mocked(mergePublicKey)).toHaveBeenCalledWith("COPY-1", "COPY-2");
+  });
+
+  it("checks every User ID any copy carries against the contacts", async () => {
+    // The first copy is harmless; the second adds Bob's address.
+    copies([plain, grown], grown.keyInfo);
+    const withBob: StoredKeys = {
+      own: [],
+      contacts: [
+        storedKey({
+          keyId: "B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0",
+          userIds: ["Bob <bob@example.com>"],
+        }),
+      ],
+    };
+    const prepared = await prepareImport("blob", withBob);
+    expect(prepared.keys).toHaveLength(1);
+    expect(prepared.keys[0].conflict?.kind).toBe("address");
+  });
+
+  it("keeps the first copy when the engine will not merge them", async () => {
+    copies([plain, grown], plain.keyInfo);
+    vi.mocked(mergePublicKey).mockRejectedValue(new Error("different key"));
+    const prepared = await prepareImport("blob", noStores);
+    expect(prepared.keys).toHaveLength(1);
+    expect(prepared.keys[0].publicArmored).toBe("COPY-1");
+  });
+
+  it("keeps one private copy, and the first one's secret", async () => {
+    const priv = (armored: string) => ({
+      keyInfo: info({ isPrivate: true }),
+      armored,
+    });
+    vi.mocked(parseKeys).mockResolvedValue([
+      priv("SECRET-1"),
+      priv("SECRET-2"),
+    ]);
+    vi.mocked(extractPublicKey).mockResolvedValue("PUBLIC");
+    const prepared = await prepareImport("blob", noStores);
+    expect(prepared.keys).toHaveLength(1);
+    expect(prepared.secrets.get(FP)).toBe("SECRET-1");
+  });
+
+  it("leaves different keys alone", async () => {
+    const other = {
+      keyInfo: info({ keyId: "C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0" }),
+      armored: "OTHER",
+    };
+    copies([plain, other], plain.keyInfo);
+    const keys = await mergeSameKey(
+      (await prepareImport("blob", noStores)).keys,
+      noStores,
+    );
+    expect(keys).toHaveLength(2);
+    expect(vi.mocked(mergePublicKey)).not.toHaveBeenCalled();
   });
 });

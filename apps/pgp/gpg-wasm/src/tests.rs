@@ -12,7 +12,7 @@ fn test_decrypt(
     verification_keys: Option<String>,
 ) -> (Vec<u8>, serde_json::Value) {
     let handle = store_key(priv_armor).unwrap();
-    let packed = decrypt_with_handle(ciphertext, handle, verification_keys).unwrap();
+    let packed = decrypt_with_handle(ciphertext, handle, verification_keys, None).unwrap();
     drop_key(handle).unwrap();
 
     let sig_len = u32::from_le_bytes([packed[0], packed[1], packed[2], packed[3]]) as usize;
@@ -334,7 +334,7 @@ fn test_sign_verify() {
     assert!(signed.contains("BEGIN PGP SIGNED MESSAGE"));
 
     let verification_keys = serde_json::to_string(&vec![pub_armor]).unwrap();
-    let result_json = verify_message(&signed, &verification_keys).unwrap();
+    let result_json = verify_message(&signed, &verification_keys, None).unwrap();
     let result: serde_json::Value = serde_json::from_str(&result_json).unwrap();
     assert_eq!(result["text"].as_str().unwrap(), "Test message");
     assert_eq!(result["signatureValid"], true);
@@ -405,7 +405,7 @@ fn test_ed25519_full_round_trip() {
     let signed = sign_message("Ed25519 signing", priv_armor).unwrap();
     assert!(signed.contains("BEGIN PGP SIGNED MESSAGE"));
 
-    let verify_json = verify_message(&signed, &verification_keys).unwrap();
+    let verify_json = verify_message(&signed, &verification_keys, None).unwrap();
     let verify_result: serde_json::Value = serde_json::from_str(&verify_json).unwrap();
     assert_eq!(verify_result["text"].as_str().unwrap(), "Ed25519 signing");
     assert_eq!(verify_result["signatureValid"], true);
@@ -1512,6 +1512,65 @@ fn test_pre_change_canary_still_verifies() {
     reset_contacts_session();
 }
 
+// ── Canary domain label ─────────────────────────────────────────────
+//
+// The canary sits in the cleartext master protection. Sealed under the
+// legacy `CONTACTS_AAD`, it was a blob the legacy store fallback
+// (`decrypt_contacts`) opens, so planting it in any store slot read as a
+// corrupt store. New canaries carry their own label; the frozen
+// pre-change fixture above (legacy label) proves old vaults still unlock.
+
+#[test]
+fn test_new_canary_is_not_a_legacy_store_blob() {
+    reset_contacts_session();
+
+    let password = b"canary-label-password";
+    let salt = b"16-byte-salt!!!!";
+    let packed = encrypt_canary_and_init_session(password.to_vec(), salt, 4096, 3, 1).unwrap();
+
+    // Same session key the canary was sealed under, yet neither store
+    // envelope opens it.
+    assert!(has_contacts_session());
+    assert!(
+        decrypt_contacts(&packed[12..], &packed[..12]).is_err(),
+        "a new canary must not open as a legacy shared-envelope store blob"
+    );
+    assert!(decrypt_store("pgp_keyring", &packed[12..], &packed[..12]).is_err());
+
+    // ...and it still verifies.
+    drop_contacts_session();
+    assert!(
+        verify_canary_and_init_session(&packed[12..], &packed[..12], password.to_vec(), salt, 4096, 3, 1)
+            .unwrap()
+    );
+    reset_contacts_session();
+}
+
+#[test]
+fn test_legacy_label_canary_still_verifies_and_wrong_password_fails() {
+    reset_contacts_session();
+
+    let password = b"legacy-label-password";
+    let salt = b"16-byte-salt!!!!";
+    // Exactly what a pre-label build wrote: the derived key, CONTACTS_AAD.
+    let key = derive_contacts_key_from_password(password, salt, 4096, 3, 1).unwrap();
+    let packed = aes_gcm_encrypt(&key, CANARY_PLAINTEXT, CONTACTS_AAD).unwrap();
+
+    assert!(
+        verify_canary_and_init_session(&packed[12..], &packed[..12], password.to_vec(), salt, 4096, 3, 1)
+            .unwrap()
+    );
+    assert!(has_contacts_session());
+
+    drop_contacts_session();
+    assert!(
+        !verify_canary_and_init_session(&packed[12..], &packed[..12], b"wrong".to_vec(), salt, 4096, 3, 1)
+            .unwrap()
+    );
+    assert!(!has_contacts_session());
+    reset_contacts_session();
+}
+
 #[test]
 fn test_argon2_derive_owned_matches_borrowed_helper() {
     let password = b"argon2-owned-vs-borrowed";
@@ -1609,7 +1668,7 @@ fn unpack(packed: &[u8]) -> (Vec<u8>, serde_json::Value) {
 #[test]
 fn test_decrypt_password_gpg_v4() {
     let packed =
-        decrypt_with_password(GPG_SYMMETRIC_V4.as_bytes(), symmetric_password(), None).unwrap();
+        decrypt_with_password(GPG_SYMMETRIC_V4.as_bytes(), symmetric_password(), None, None).unwrap();
     let (plaintext, sig) = unpack(&packed);
     assert_eq!(plaintext, SYMMETRIC_PLAINTEXT);
     assert_eq!(sig["signatureStatus"], "unsigned");
@@ -1626,7 +1685,7 @@ fn test_decrypt_password_names_the_unreadable_aead_format() {
     // The RIGHT password is used here on purpose -- the point is that the
     // answer does not depend on it.
     let err =
-        decrypt_with_password(GPG_SYMMETRIC_OCB.as_bytes(), symmetric_password(), None).unwrap_err();
+        decrypt_with_password(GPG_SYMMETRIC_OCB.as_bytes(), symmetric_password(), None, None).unwrap_err();
     assert!(err.contains("AEAD (OCB)"), "unexpected error: {err}");
     assert!(!err.contains("Wrong password"), "unexpected error: {err}");
 }
@@ -1641,6 +1700,7 @@ fn test_decrypt_password_verifies_a_signature() {
         GPG_SYMMETRIC_SIGNED.as_bytes(),
         symmetric_password(),
         Some(certs),
+        None,
     )
     .unwrap();
     let (plaintext, sig) = unpack(&packed);
@@ -1657,6 +1717,7 @@ fn test_decrypt_password_signed_without_the_signer_key() {
     let packed = decrypt_with_password(
         GPG_SYMMETRIC_SIGNED.as_bytes(),
         symmetric_password(),
+        None,
         None,
     )
     .unwrap();
@@ -1675,7 +1736,7 @@ fn test_decrypt_password_wrong_password_is_one_message() {
     // letting a raw "Malformed MDC packet" reach the user as "the data is
     // corrupted" when the data is fine and the password is not.
     let err =
-        decrypt_with_password(GPG_SYMMETRIC_V4.as_bytes(), b"not the password".to_vec(), None).unwrap_err();
+        decrypt_with_password(GPG_SYMMETRIC_V4.as_bytes(), b"not the password".to_vec(), None, None).unwrap_err();
     assert!(
         err.starts_with("Wrong password, or this message is damaged:"),
         "unexpected error: {err}"
@@ -1692,7 +1753,7 @@ fn test_decrypt_password_refuses_a_key_encrypted_message() {
     let recipients = serde_json::to_string(&vec![public]).unwrap();
     let ciphertext = encrypt(b"hello", &recipients, None, None).unwrap();
 
-    let err = decrypt_with_password(&ciphertext, symmetric_password(), None).unwrap_err();
+    let err = decrypt_with_password(&ciphertext, symmetric_password(), None, None).unwrap_err();
     assert!(err.contains("Wrong password, or this message is damaged"));
 }
 
@@ -1752,7 +1813,7 @@ fn test_encrypt_with_password_round_trips() {
         Some(symmetric_password()),
     )
     .unwrap();
-    let packed = decrypt_with_password(&ct, symmetric_password(), None).unwrap();
+    let packed = decrypt_with_password(&ct, symmetric_password(), None, None).unwrap();
     let (plaintext, sig) = unpack(&packed);
     assert_eq!(plaintext, b"symmetric hello");
     assert_eq!(sig["signatureStatus"], "unsigned");
@@ -1790,7 +1851,7 @@ fn test_encrypt_with_password_is_additive_not_a_mode() {
 
     // ...by password,
     let (by_password, _) =
-        unpack(&decrypt_with_password(&ct, symmetric_password(), None).unwrap());
+        unpack(&decrypt_with_password(&ct, symmetric_password(), None, None).unwrap());
     assert_eq!(by_password, b"both ways");
 
     // ...and by key.
@@ -1817,7 +1878,7 @@ fn test_encrypt_with_password_and_a_signature() {
 
     let certs = serde_json::to_string(&vec![pub_armor]).unwrap();
     let (plaintext, sig) =
-        unpack(&decrypt_with_password(&ct, symmetric_password(), Some(certs)).unwrap());
+        unpack(&decrypt_with_password(&ct, symmetric_password(), Some(certs), None).unwrap());
     assert_eq!(plaintext, b"signed and sealed");
     assert_eq!(sig["signatureStatus"], "valid");
 }
@@ -1834,7 +1895,7 @@ fn test_encrypt_refuses_a_message_nobody_could_open() {
 #[test]
 fn test_encrypt_with_password_rejects_the_wrong_password() {
     let ct = encrypt(b"x", "[]", None, Some(symmetric_password())).unwrap();
-    let err = decrypt_with_password(&ct, b"not it".to_vec(), None).unwrap_err();
+    let err = decrypt_with_password(&ct, b"not it".to_vec(), None, None).unwrap_err();
     assert!(err.starts_with("Wrong password, or this message is damaged:"), "{err}");
 }
 
@@ -2001,7 +2062,7 @@ fn no_single_bit_corruption_ever_yields_altered_plaintext() {
             let mut corrupted = raw.clone();
             corrupted[offset] ^= 1 << bit;
 
-            match decrypt_with_handle(&corrupted, handle, None) {
+            match decrypt_with_handle(&corrupted, handle, None, None) {
                 Err(_) => detected += 1,
                 Ok(packed) => {
                     let sig_len =
@@ -2054,7 +2115,7 @@ fn truncating_the_ciphertext_never_yields_plaintext() {
     for cut in [1usize, 2, 8, 32, 128, 512, raw.len() / 2] {
         let truncated = &raw[..raw.len() - cut];
         assert!(
-            decrypt_with_handle(truncated, handle, None).is_err(),
+            decrypt_with_handle(truncated, handle, None, None).is_err(),
             "truncating {cut} bytes still produced output",
         );
     }
@@ -2079,7 +2140,7 @@ fn decrypt_with_a_non_recipient_handle_fails() {
     .unwrap();
 
     let wrong_handle = store_key(&other_priv).unwrap();
-    let result = decrypt_with_handle(&ciphertext, wrong_handle, None);
+    let result = decrypt_with_handle(&ciphertext, wrong_handle, None, None);
     drop_key(wrong_handle).unwrap();
 
     assert!(result.is_err(), "a non-recipient key decrypted the message");
@@ -2101,7 +2162,7 @@ fn cleartext_signature_does_not_transfer_to_other_text() {
 
     // Either the parse rejects it outright or it verifies as invalid --
     // both are safe. What must never happen is `valid`.
-    match verify_message(&swapped, &keys) {
+    match verify_message(&swapped, &keys, None) {
         Ok(json) => {
             let v: serde_json::Value = serde_json::from_str(&json).unwrap();
             assert_ne!(v["signatureStatus"], "valid", "swapped body verified");
@@ -2121,7 +2182,7 @@ fn cleartext_signature_rejects_a_single_character_edit() {
 
     let edited = signed.replace("balance: 100", "balance: 900");
 
-    match verify_message(&edited, &keys) {
+    match verify_message(&edited, &keys, None) {
         Ok(json) => {
             let v: serde_json::Value = serde_json::from_str(&json).unwrap();
             assert_ne!(v["signatureStatus"], "valid");
@@ -2208,7 +2269,7 @@ fn cleartext_text_outside_the_signed_block_is_refused() {
     ];
 
     for input in wrapped {
-        let err = verify_message(&input, &keys).expect_err("wrapped message was not refused");
+        let err = verify_message(&input, &keys, None).expect_err("wrapped message was not refused");
         assert!(err.contains("outside the signed part"), "unexpected error: {err}");
     }
 }
@@ -2235,7 +2296,7 @@ fn cleartext_whitespace_and_line_endings_around_the_block_still_verify() {
         signed.replacen(sig_begin, &format!("{sig_begin}Comment: GPGTools - https://gpgtools.org\n"), 1),
         inline_signed("A notice.", &priv_armor),
     ] {
-        let json = verify_message(&input, &keys).unwrap_or_else(|e| panic!("{e}: {input:?}"));
+        let json = verify_message(&input, &keys, None).unwrap_or_else(|e| panic!("{e}: {input:?}"));
         let v: serde_json::Value = serde_json::from_str(&json).unwrap();
         assert_eq!(v["signatureStatus"], "valid", "input: {input:?}");
     }
@@ -2253,7 +2314,7 @@ fn verification_against_an_attacker_chosen_key_is_never_valid() {
     let signed = sign_message("authentic notice", &signer_priv).unwrap();
     let attacker_keys = serde_json::to_string(&vec![&attacker_pub]).unwrap();
 
-    let json = verify_message(&signed, &attacker_keys).unwrap();
+    let json = verify_message(&signed, &attacker_keys, None).unwrap();
     let v: serde_json::Value = serde_json::from_str(&json).unwrap();
 
     assert_ne!(v["signatureStatus"], "valid");
@@ -2283,7 +2344,7 @@ fn signed_and_encrypted_body_tamper_is_never_reported_valid() {
         let mut corrupted = ciphertext.clone();
         corrupted[offset] ^= 0x01;
 
-        if let Ok(packed) = decrypt_with_handle(&corrupted, handle, Some(keys.clone())) {
+        if let Ok(packed) = decrypt_with_handle(&corrupted, handle, Some(keys.clone()), None) {
             let sig_len =
                 u32::from_le_bytes([packed[0], packed[1], packed[2], packed[3]]) as usize;
             let sig: serde_json::Value =
@@ -2336,8 +2397,8 @@ fn hostile_bytes_return_errors_rather_than_panicking() {
 
         // Message-shaped entry points.
         let _ = message_encryption(input);
-        let _ = verify_message(&text, "[]");
-        let _ = decrypt_with_password(input, b"password".to_vec(), None);
+        let _ = verify_message(&text, "[]", None);
+        let _ = decrypt_with_password(input, b"password".to_vec(), None, None);
         let _ = select_decryption_key(input, "[]");
     }
 }
@@ -2351,12 +2412,12 @@ fn a_dropped_handle_cannot_be_reused() {
     let ciphertext = encrypt(b"secret", &adv_recipients(&pub_armor), None, None).unwrap();
 
     let handle = store_key(&priv_armor).unwrap();
-    assert!(decrypt_with_handle(&ciphertext, handle, None).is_ok());
+    assert!(decrypt_with_handle(&ciphertext, handle, None, None).is_ok());
 
     drop_key(handle).unwrap();
 
     assert!(
-        decrypt_with_handle(&ciphertext, handle, None).is_err(),
+        decrypt_with_handle(&ciphertext, handle, None, None).is_err(),
         "a dropped handle still decrypted",
     );
     assert!(get_key_armored(handle).is_err(), "a dropped handle still exported");
@@ -2366,7 +2427,7 @@ fn a_dropped_handle_cannot_be_reused() {
 fn an_unissued_handle_is_never_valid() {
     // Guessing handle numbers must not reach a key.
     for handle in [0u32, 1, 2, 42, u32::MAX] {
-        let _ = decrypt_with_handle(b"whatever", handle, None);
+        let _ = decrypt_with_handle(b"whatever", handle, None, None);
         assert!(
             get_key_armored(handle).is_err(),
             "handle {handle} resolved to a key without being issued",
@@ -2436,7 +2497,7 @@ fn decompression_bomb_is_refused_by_the_expansion_ratio() {
     assert!(ratio > 100.0, "expected large amplification, got {ratio:.0}x");
 
     let handle = store_key(&priv_armor).unwrap();
-    let outcome = decrypt_with_handle(&sink, handle, None);
+    let outcome = decrypt_with_handle(&sink, handle, None, None);
     drop_key(handle).unwrap();
 
     match outcome {
@@ -2507,7 +2568,7 @@ fn verify_bomb_is_refused_by_the_size_cap() {
     let keys = serde_json::to_string(&vec![&pub_armor]).unwrap();
     let armored = String::from_utf8_lossy(&sink).to_string();
 
-    match verify_message(&armored, &keys) {
+    match verify_message(&armored, &keys, None) {
         Ok(json) => panic!(
             "a {} byte paste produced a {} byte result ({:.0}x) with no cap",
             sink.len(),
@@ -2529,17 +2590,17 @@ fn read_capped_admits_exactly_the_limit_and_refuses_one_more() {
     // exactly rather than inferred from the end-to-end bomb tests.
     let data = vec![b'x'; 1024];
 
-    let exact = read_capped(&data[..], 1024u64, "message").unwrap();
+    let exact = read_capped(&data[..], 1024u64).unwrap();
     assert_eq!(exact.len(), 1024, "a message exactly at the limit was refused");
 
-    let under = read_capped(&data[..], 1025u64, "message").unwrap();
+    let under = read_capped(&data[..], 1025u64).unwrap();
     assert_eq!(under.len(), 1024);
 
-    let err = read_capped(&data[..], 1023u64, "message").unwrap_err();
-    assert!(err.contains("too large"), "unexpected error: {err}");
+    let err = read_capped(&data[..], 1023u64).unwrap_err();
+    assert_eq!(err, TOO_LARGE_TO_OPEN);
 
     // Empty input is not a special case.
-    assert_eq!(read_capped(&[][..], 0u64, "message").unwrap().len(), 0);
+    assert_eq!(read_capped(&[][..], 0u64).unwrap().len(), 0);
 }
 
 #[test]

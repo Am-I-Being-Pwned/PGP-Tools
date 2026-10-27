@@ -49,24 +49,18 @@ import {
  * (or fails offline) and the count assertion fails -- this spec cannot
  * quietly pass by never having intercepted anything.
  *
- * ── A KNOWN PRODUCT BUG THIS FILE CATCHES ────────────────────────────
- * "a GitHub user's three keys import as one contact, and all three can
- * decrypt" FAILS, and it is right to. The recipient chip resolves its
- * selection out of `[...myKeys, ...contacts]` by `keyId`
- * (`useWorkspaceOperations.selectedRecipientKeys`), and a contact record's
- * `keyId` is its HEAD key's fingerprint -- so when the user already holds
- * that same key as an identity of their own, the lookup finds the OWN key
- * first. An own key has no `recipients` list, `toSelectedRecipient` takes
- * its single-key branch, and the message is silently encrypted to that ONE
- * key instead of the contact's whole set. That is exactly the failure this
- * spec was written for, arrived at from an unexpected direction; it is
- * reported, not worked around here. The header of the ciphertext that test
- * produces carries a single `-> ssh-ed25519` stanza.
- *
- * The per-key tests below steer AROUND that bug on purpose (their contact's
- * head key is deliberately not one of the user's own), because they are
- * about a different property and a second test failing for the first
- * test's reason would prove nothing new.
+ * ── WHY NO CONTACT HERE IS HEADED BY ONE OF THE USER'S OWN KEYS ──────
+ * The decrypt proofs need the user to hold the contact's private keys,
+ * which makes the contact look like the user's own GitHub account. A
+ * contact record's `keyId` is its HEAD key's fingerprint, and an id that
+ * is one of the user's own keys means THAT key -- in the picker and in
+ * `resolveSelectedRecipients` -- because a contact is whatever a file or
+ * a lookup said, and a group pairing the user's key with an attacker's
+ * used to take "You" off the list and encrypt to both. The import never
+ * heads a contact with a key the user holds, and an account carrying one
+ * starts on Skip on the Review. So these tests look the account up
+ * FIRST, while none of its keys is the user's, and import the identities
+ * that prove the decrypt afterwards -- never the head key's.
  */
 
 const PASSWORD = "correct horse battery staple";
@@ -242,9 +236,9 @@ test("a GitHub user's three keys import as one contact, and all three can decryp
   );
 
   // No PGP key: the only recipients in play are age ones, so nothing
-  // here can accidentally be an OpenPGP round-trip.
+  // here can accidentally be an OpenPGP round-trip. The identities come
+  // AFTER the lookup -- see the file header.
   await onboardWithPasswordSkipKey(panel, PASSWORD);
-  for (const key of keys) await importSshIdentity(panel, key);
 
   await lookUpGithubUser(panel, GITHUB_USER);
 
@@ -266,7 +260,15 @@ test("a GitHub user's three keys import as one contact, and all three can decryp
   await expect(panel.getByText("3 keys").first()).toBeVisible();
   await expect(panel.getByText(`From github.com/${GITHUB_USER}`)).toBeVisible();
 
+  // The identities that prove the decrypt: the SECOND and THIRD keys.
+  // Not the head -- "encrypted to only the first recipient" would pass a
+  // decrypt with that one.
+  for (const key of keys.slice(1)) await importSshIdentity(panel, key);
+
   // Encrypt to the contact -- one chip, one selection, three stanzas.
+  // "Also encrypt to me" OFF, so no stanza comes from the user's own key
+  // riding along instead of from the contact's list.
+  await setEncryptToSelf(panel, false);
   await setWorkspaceMode(panel, "Encrypt");
   const recipients = panel.getByRole("combobox", { name: "Recipients" });
   await recipients.fill(GITHUB_USER);
@@ -279,10 +281,11 @@ test("a GitHub user's three keys import as one contact, and all three can decryp
   expect(ciphertext).toContain("BEGIN AGE ENCRYPTED FILE");
 
   // ── the assertion this whole spec exists for ──────────────────────
-  // Decrypting with key 1 would prove nothing: it is the contact's head
-  // key, and "encrypted to only the first recipient" passes that test.
-  // Delete it, and the only way the message opens is a second stanza.
-  await deleteOwnKey(panel, keys[0].comment);
+  // The user does not hold the head key, so the only way the message
+  // opens is the SECOND key's stanza.
+  expect(ageStanzaTags(ciphertext).sort()).toEqual(
+    keys.map((k) => k.stanzaTag).sort(),
+  );
   await decryptExpecting(panel, ciphertext, MESSAGE);
 
   // And again: with the first two gone, only the THIRD key's stanza can
@@ -485,24 +488,20 @@ test("a key turned off on a contact is left out of the message", async ({
   panel,
 }) => {
   // FOUR keys, of which the user holds the last three as identities of
-  // their own. The contact's HEAD key (keys[0]) is deliberately NOT one
-  // of them: a contact record's id is its head key's fingerprint, and the
-  // recipient chip resolves that id against the user's own keys first, so
-  // a shared head key silently collapses the whole contact to one key.
-  // That is a real (reported) bug, and not this test's subject -- see the
-  // file header.
+  // their own -- imported after the lookup, and never the HEAD key
+  // (keys[0]): see the file header.
   const keys = generateSshKeys(4);
   await stubGithubKeys(
     context,
     keys.map((k) => k.publicLine),
   );
   await onboardWithPasswordSkipKey(panel, PASSWORD);
-  for (const key of keys.slice(1)) await importSshIdentity(panel, key);
 
   await lookUpGithubUser(panel, GITHUB_USER);
   const preview = panel.getByRole("region", { name: "Import key" });
   await preview.getByRole("button", { name: "Import contact" }).click();
   await expect(preview).toBeHidden();
+  for (const key of keys.slice(1)) await importSshIdentity(panel, key);
 
   // Turn ONE key off -- one the user can also decrypt with, so "the
   // message didn't open" can only mean "there was no stanza for it".
@@ -625,4 +624,61 @@ test("the last key in use on a contact cannot be turned off", async ({
   // Nothing changed underneath it either: still exactly one key off.
   const [contact] = await readContacts(panel);
   expect(contact.recipients?.filter((r) => r.disabled)).toHaveLength(1);
+});
+
+test("a refresh down to the keys the user turned off asks first, and the card says 0 of 1", async ({
+  context,
+  panel,
+}) => {
+  const keys = generateSshKeys(2);
+  await stubGithubKeys(
+    context,
+    keys.map((k) => k.publicLine),
+  );
+  await onboardWithPasswordSkipKey(panel, PASSWORD);
+  await lookUpGithubUser(panel, GITHUB_USER);
+  const importPanel = panel.getByRole("region", { name: "Import key" });
+  await importPanel.getByRole("button", { name: "Import contact" }).click();
+  await expect(importPanel).toBeHidden();
+
+  // Turn the second key off, and go straight back -- no reload. The
+  // toggle writes from the details page, past the list the panel holds,
+  // so the card is the first place a stale list shows.
+  const label = `${GITHUB_USER} (GitHub)`;
+  await openContactDetails(panel, label);
+  await recipientRow(panel, keys[1].fingerprint)
+    .getByRole("button", { name: "Don't use", exact: true })
+    .click();
+  await expect(recipientRow(panel, keys[1].fingerprint)).toContainText(
+    "Not used",
+  );
+  await panel.getByRole("button", { name: "Back" }).click();
+  await expect(panel.getByText("1 of 2 keys")).toBeVisible();
+
+  // GitHub now lists only the key the user turned off. The refresh is
+  // classified against the list on screen, so with that list stale this
+  // was the one-click "Update contact" preview and never asked.
+  await context.unroute("https://api.github.com/users/*/keys");
+  await stubGithubKeys(context, [keys[1].publicLine]);
+  await lookUpGithubUser(panel, GITHUB_USER);
+  await expect(importPanel.getByText("Review keys")).toBeVisible();
+  await expect(importPanel).toContainText(
+    "Every key this account still lists is one you turned off.",
+  );
+  await expect(
+    importPanel.getByRole("button", { name: "Update contact" }),
+  ).toHaveCount(0);
+  await expect(
+    importPanel.getByRole("radio", { name: "Skip", exact: true }),
+  ).toHaveAttribute("aria-checked", "true");
+
+  // Saved anyway: the card shows what the store holds, without a reload.
+  await importPanel.getByRole("radio", { name: "Import", exact: true }).click();
+  await importPanel.getByRole("button", { name: "Import 1 key" }).click();
+  await expect(importPanel).toBeHidden();
+  await expect(panel.getByText("0 of 1 keys")).toBeVisible();
+  const [contact] = await readContacts(panel);
+  expect(contact.recipients?.map((r) => [r.keyId, r.disabled])).toEqual([
+    [keys[1].fingerprint, true],
+  ]);
 });

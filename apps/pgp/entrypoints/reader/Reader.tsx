@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { LockIcon } from "lucide-react";
 
 import type { ReaderSigner } from "../../lib/reader-protocol";
-import { ContactCard } from "../../components/keys/ContactCard";
+import { SignerCard } from "../../components/workspace/SignerCard";
 import { t } from "../../lib/i18n";
 import {
   isReaderMessage,
@@ -89,12 +89,9 @@ export function Reader() {
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col px-6 py-8">
       {shown && signer && (
         <div className="mb-3">
-          <ContactCard
-            readOnly
-            verifiedTone="success"
-            verifiedLabel={t("workspace_signature_verified")}
-            contact={signer}
-          />
+          {/* The panel's card state, rendered by the panel's own card:
+              the same verdict, warnings and pills in both places. */}
+          <SignerCard state={signer} />
         </div>
       )}
       {/* Always mounted, so the text has a node to go into; hidden

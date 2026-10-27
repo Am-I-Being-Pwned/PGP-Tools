@@ -6,6 +6,7 @@ import { Button } from "@amibeingpwned/ui/button";
 
 import type { CrxProtectionInput } from "../../lib/crx/operations";
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
+import type { ReviewDecision, ReviewedContact } from "../../lib/import/review";
 import type { IncomingKey } from "../../lib/import/types";
 import type { KeyserverQuery } from "../../lib/keyserver/query";
 import type {
@@ -15,14 +16,8 @@ import type {
   KeyserverKeyResponse,
 } from "../../lib/messages";
 import type { PublicContactKey } from "../../lib/storage/contacts";
-import { IDENTITY_VERSION } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
-import { parseRecipient } from "../../lib/age/operations";
-import {
-  groupContact,
-  importSshIdentity,
-  sshContact,
-} from "../../lib/age/protect-flow";
+import { importSshIdentity } from "../../lib/age/protect-flow";
 import { recoverArmorIfNeeded } from "../../lib/armor-recovery";
 import { readKeyFile } from "../../lib/binary-armor";
 import { importCrxKey } from "../../lib/crx/operations";
@@ -38,7 +33,12 @@ import {
   prepareKeyserverImport,
 } from "../../lib/import/keyserver";
 import { classifyLookup } from "../../lib/import/lookup";
-import { importable, prepareImport } from "../../lib/import/prepare";
+import {
+  importable,
+  prepareImport,
+  storedKeysFrom,
+} from "../../lib/import/prepare";
+import { applyReview, defaultDecision } from "../../lib/import/review";
 import { isPublicKind, isSecretKind } from "../../lib/import/types";
 import { importAndProtect } from "../../lib/protection/protect-flow";
 import { toast } from "../../lib/toast";
@@ -50,13 +50,14 @@ import {
   useSlideOver,
 } from "../shared/SlideOver";
 import { ImportPreview } from "./ImportPreviewPage";
+import { ImportReview } from "./ImportReview";
 import {
   getDefaultProtectionMethod,
   ProtectionMethodPicker,
   validatePassword,
 } from "./ProtectionMethodPicker";
 
-type Step = "source" | "preview" | "protect";
+type Step = "source" | "preview" | "review" | "protect";
 
 /** "⌘V" on a Mac, "Ctrl+V" everywhere else. */
 function modKeyLabel(): string {
@@ -67,7 +68,10 @@ interface ImportKeyPageProps {
   /** Called after the slide-out finishes (cancel or success). */
   onClose: () => void;
   onImportPrivate: (blob: ProtectedKeyBlob) => Promise<void>;
-  onImportPublic: (contact: PublicContactKey) => Promise<void>;
+  /** Save a contact the user has reviewed (see `lib/import/review`). */
+  onImportPublic: (contact: ReviewedContact) => Promise<void>;
+  /** Remove a contact -- the old one, when a key REPLACES it. */
+  onRemoveContact: (keyId: string) => Promise<void>;
   /** Current keyring/contacts: what an incoming key is compared against
    *  to decide new / update / already-imported. */
   existingKeys?: ProtectedKeyBlob[];
@@ -114,6 +118,7 @@ export function ImportKeyPage({
   onClose,
   onImportPrivate,
   onImportPublic,
+  onRemoveContact,
   existingKeys = [],
   existingContacts = [],
   reusePasskeyCredentialId,
@@ -128,6 +133,23 @@ export function ImportKeyPage({
   const crxEnabled = !!crxSigningEnabled && !!onImportCrx;
   const { entered, close } = useSlideOver(onClose);
   const [step, setStep] = useState<Step>("source");
+  // Every key found, on the Review step -- a bundle, or a key that
+  // claims an identity another contact holds.
+  const [reviewKeys, setReviewKeys] = useState<IncomingKey[] | null>(null);
+  /** Show the Review instead of the single-key preview when there is more
+   *  than one key, the key collides with someone's identity, or an update
+   *  would leave only keys the user turned off. */
+  const showKeys = (keys: IncomingKey[]): boolean => {
+    if (
+      keys.length > 1 ||
+      keys.some((k) => k.conflict !== undefined || k.allKeysOff === true)
+    ) {
+      setReviewKeys(keys);
+      setStep("review");
+      return true;
+    }
+    return false;
+  };
   const [label, setLabel] = useState("");
   const [method, setMethod] = useState(getDefaultProtectionMethod);
   const [password, setPassword] = useState("");
@@ -227,72 +249,38 @@ export function ImportKeyPage({
     close();
   };
 
-  const importPublicKeys = async (keys: IncomingKey[]) => {
+  const importPublicKeys = async (
+    keys: IncomingKey[],
+    decisions: ReadonlyMap<string, ReviewDecision> = new Map(),
+  ) => {
     setImporting(true);
     try {
-      for (const key of keys) {
-        if (key.group) {
-          // A person with several keys is ONE contact holding all of
-          // them (see storage/contacts). Built by the age engine's own
-          // constructor for the same reason the single-key branch below
-          // is -- and `recipientsField` inside it means a user with
-          // exactly one key produces the very same record that branch
-          // would have written.
-          await onImportPublic(groupContact(key.group));
-          continue;
-        }
-        if (key.kind === "ssh-public") {
-          // Built by the age engine's own constructor rather than
-          // assembled here: `sshContact` is what decides an SSH contact's
-          // shape (kind marker, comment-as-userIds, canonical recipient
-          // line), and a second hand-rolled copy of that shape would be
-          // free to drift from the one `importSshIdentity` writes.
-          // `expiresAt: null` is added because SSH keys have no expiry
-          // and `undefined` would mean "not computed yet" -- which sends
-          // the contacts backfill off to parse a recipient line as PGP
-          // armor on every refresh (see useContacts).
-          const info = await parseRecipient(key.publicArmored);
-          await onImportPublic({ ...sshContact(info), expiresAt: null });
-          continue;
-        }
-        await onImportPublic({
-          keyId: key.keyId,
-          userIds: key.userIds,
-          algorithm: key.info?.algorithm ?? "",
-          armoredPublicKey: key.publicArmored,
-          addedAt: Date.now(),
-          lastUsedAt: Date.now(),
-          expiresAt: key.info?.expiresAt ?? null,
-          // Spread, not `source: key.source`: an absent source must stay
-          // ABSENT on the stored record (it is what `sameSource` reads to
-          // mean "hand-supplied"), and writing `undefined` would change
-          // the bytes every pasted contact has always serialised to.
-          ...(key.source ? { source: key.source } : {}),
-          // Sign-only keys are valid contacts (for verification) but can't
-          // be offered as encryption recipients -- record which is which.
-          usableForEncryption: key.info?.usableForEncryption ?? true,
-          // Allowed, but flagged (e.g. SHA-1 binding signature).
-          securityWarning: key.securityWarning,
-          ...(key.info?.revoked ? { revoked: true } : {}),
-          ...(key.info?.lookalike ? { lookalike: true } : {}),
-          ...(key.info ? { identityVersion: IDENTITY_VERSION } : {}),
-        });
-      }
-      // The SHA-1 toast counts SHA-1 warnings only: a lookalike-name
-      // warning is said on its own card, in its own words.
-      const flagged = keys.filter((k) =>
-        k.securityWarning?.includes("SHA-1"),
+      const outcome = await applyReview(keys, decisions, {
+        contacts: existingContacts,
+        add: onImportPublic,
+        remove: onRemoveContact,
+      });
+      // The SHA-1 toast counts SHA-1 warnings only (a lookalike-name
+      // warning is said on its own card, in its own words), and only on
+      // keys that were saved.
+      const saved = new Set(outcome.keyIds);
+      const flagged = keys.filter(
+        (k) => saved.has(k.keyId) && k.securityWarning?.includes("SHA-1"),
       ).length;
       if (flagged > 0) {
         toast.warning(tn("import_flagged_toast", flagged), {
           id: "contacts-flagged",
         });
       }
-      // Only bundles get a toast: a single import is confirmed by the
-      // card lighting up in the list behind the panel.
+      // Only bundles and replacements get a toast: a single import is
+      // confirmed by the card lighting up in the list behind the panel.
+      if (outcome.replaced > 0) {
+        toast.info(tn("import_replaced_contacts", outcome.replaced), {
+          id: "contacts-replaced",
+        });
+      }
       if (keys.length > 1) {
-        const added = keys.filter((k) => k.status === "new").length;
-        const updated = keys.filter((k) => k.status === "update").length;
+        const { added, updated } = outcome;
         if (added > 0) {
           toast.success(tn("import_added_contacts", added), {
             id: "contacts-added",
@@ -304,7 +292,7 @@ export function ImportKeyPage({
           });
         }
       }
-      finish(keys.map((k) => k.keyId));
+      finish(outcome.keyIds);
     } catch (e) {
       setError(errorMessage(e, t("import_failed")));
       setImporting(false);
@@ -323,22 +311,7 @@ export function ImportKeyPage({
   /** Stored keys in the shape every `prepare*` entry point takes. Built
    *  once here so the paste path and both lookups classify against the
    *  same list. */
-  const storedForImport = () => ({
-    own: existingKeys.map((k) => ({
-      keyId: k.keyId,
-      userIds: k.userIds,
-      armored: k.publicKeyArmored,
-      createdAt: k.createdAt,
-    })),
-    contacts: existingContacts.map((c) => ({
-      keyId: c.keyId,
-      userIds: c.userIds,
-      armored: c.armoredPublicKey,
-      addedAt: c.addedAt,
-      expiresAt: c.expiresAt,
-      ...(c.source ? { source: c.source } : {}),
-    })),
-  });
+  const storedForImport = () => storedKeysFrom(existingKeys, existingContacts);
 
   const handleSource = async (text: string) => {
     setError(null);
@@ -370,7 +343,11 @@ export function ImportKeyPage({
       // nothing in the text says which -- so the preview asks, instead
       // of the bulk import below quietly filing three contacts the user
       // then cannot label or merge.
-      if (prepared.groupProposal) {
+      //
+      // Not when one of them claims someone's identity: that key has to
+      // be decided on its own row of the Review, and the offer's "blank
+      // name imports them separately" would save it without asking.
+      if (prepared.groupProposal && !worthImporting.some((k) => k.conflict)) {
         setGroupSeparates(worthImporting);
         setGroupName("");
         setIncoming(prepared.groupProposal);
@@ -378,13 +355,15 @@ export function ImportKeyPage({
         return;
       }
 
-      // A bundle of public keys: import the lot. Previewing five certs
-      // one at a time would be worse than the summary toast.
+      // A bundle of public keys: ONE Review listing every key before
+      // anything is saved. It used to import the lot with a summary
+      // toast, so a key copying a contact's name and address went in
+      // unseen (and Open in PGP Tools hands this any page's text).
       if (
         worthImporting.length > 1 &&
         worthImporting.every((k) => isPublicKind(k.kind))
       ) {
-        await importPublicKeys(worthImporting);
+        showKeys(prepared.keys.filter((k) => isPublicKind(k.kind)));
         return;
       }
 
@@ -413,6 +392,7 @@ export function ImportKeyPage({
         // Stable id: re-pasting the same key must not stack duplicates.
         toast.warning(key.securityWarning, { id: "import-key-warning" });
       }
+      if (showKeys([key])) return;
       setIncoming(key);
       setStep("preview");
     } catch (e) {
@@ -470,12 +450,15 @@ export function ImportKeyPage({
       // name the request was actually made for.
       response.username,
       response.lines,
-      { contacts: existingContacts },
+      { contacts: existingContacts, own: existingKeys },
       // Keys the worker's caps held back. Passed through so the
       // preview can say the list is partial instead of asserting
       // "every key listed above" over a truncated one.
       { omitted: response.omitted },
     );
+    // An account carrying a key someone already holds, or a name that
+    // reads as a contact's, is decided on the Review like a paste.
+    if (showKeys(prepared.keys)) return;
     setIncoming(prepared.keys[0]);
     setStep("preview");
   };
@@ -554,6 +537,7 @@ export function ImportKeyPage({
       // Stable id: re-running the same lookup must not stack duplicates.
       toast.warning(key.securityWarning, { id: "import-key-warning" });
     }
+    if (showKeys([key])) return;
     setIncoming(key);
     setStep("preview");
   };
@@ -706,6 +690,13 @@ export function ImportKeyPage({
     setNotice(null);
     if (step === "protect") {
       setStep("preview");
+    } else if (step === "review") {
+      setReviewKeys(null);
+      if (openedWithKey.current) {
+        resetAndClose();
+        return;
+      }
+      setStep("source");
     } else if (step === "preview") {
       // Opened with a key already in hand (a drop, or the workspace
       // banner): there is no source step behind this one, so Back means
@@ -901,9 +892,11 @@ export function ImportKeyPage({
   const isCrx = incoming?.kind === "crx";
 
   const title =
-    step === "preview" && incoming?.status === "update"
-      ? t("import_title_update")
-      : t("import_title");
+    step === "review"
+      ? t("import_review_title")
+      : step === "preview" && incoming?.status === "update"
+        ? t("import_title_update")
+        : t("import_title");
 
   return (
     <SlideOverPanel
@@ -1092,6 +1085,32 @@ export function ImportKeyPage({
               )}
             </div>
           </div>
+        )}
+
+        {step === "review" && reviewKeys && (
+          <ImportReview
+            keys={reviewKeys}
+            busy={importing}
+            error={error}
+            allowImportAll={reviewKeys.length > 1}
+            onImport={(decisions) => {
+              // A private key held here because it claims someone's
+              // identity: chosen, it goes on to the protect step like
+              // any private key -- it is never a contact to save.
+              const secret = reviewKeys.find((k) => isSecretKind(k.kind));
+              if (secret) {
+                if (
+                  (decisions.get(secret.keyId) ?? defaultDecision(secret)) !==
+                  "skip"
+                ) {
+                  setIncoming(secret);
+                  setStep("protect");
+                }
+                return;
+              }
+              void importPublicKeys(reviewKeys, decisions);
+            }}
+          />
         )}
 
         {step === "preview" && incoming && (

@@ -64,6 +64,22 @@ export function signedForOthers(
   return !r.intendedRecipients.some((f) => mine.has(f.toUpperCase()));
 }
 
+/**
+ * A good signature that came out of an encrypted message but names no
+ * intended recipients at all. Encrypted to us and signed by Alice is not
+ * "Alice wrote this to us": anyone can encrypt to us a message she
+ * signed for someone else, or for the world (surreptitious forwarding),
+ * and without the Intended Recipient subpacket nothing tells the two
+ * apart. Many senders don't write it, so this earns a note, not amber.
+ * (A list that names others is `signedForOthers`; one naming us is fine.)
+ */
+export function notAddressed(
+  r: SignatureDetails,
+  { decrypted, notEncrypted }: { decrypted: boolean; notEncrypted: boolean },
+): boolean {
+  return decrypted && !notEncrypted && r.intendedRecipients.length === 0;
+}
+
 export type BatchSummary =
   /** Nothing in the batch is signed: no card at all. */
   | { kind: "unsigned" }

@@ -45,7 +45,7 @@ import type { GenerateKeyOptions, ProtectResultMeta } from "./types";
 import type { DecryptWithHandleResult } from "./wasm-public";
 import { unpackMetaBlob } from "../protection/protected-blob";
 import { loadWasm } from "./wasm-loader";
-import { unpackDecryptResult } from "./wasm-public";
+import { unpackDecryptResult, withOutputCap } from "./wasm-public";
 
 // ── shared types ─────────────────────────────────────────────────────
 
@@ -278,12 +278,17 @@ export async function decryptWithPassword(
   ciphertext: Uint8Array,
   password: Uint8Array,
   verificationPublicKeys?: string[],
+  /** An unattended run's ceiling on the plaintext; see `verify`. */
+  maxOutputBytes?: number,
 ): Promise<DecryptWithHandleResult> {
   const wasm = await loadWasm();
-  const packed = wasm.decryptWithPassword(
-    ciphertext,
-    password,
-    verificationPublicKeys ? JSON.stringify(verificationPublicKeys) : null,
+  const packed = withOutputCap(wasm, () =>
+    wasm.decryptWithPassword(
+      ciphertext,
+      password,
+      verificationPublicKeys ? JSON.stringify(verificationPublicKeys) : null,
+      maxOutputBytes,
+    ),
   );
   return unpackDecryptResult(packed);
 }

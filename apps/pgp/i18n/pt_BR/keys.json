@@ -117,16 +117,16 @@
     "message": "$count$ contatos"
   },
   "keys_bulk_delete_private_body": {
-    "message": "Isso exclui permanentemente as chaves privadas selecionadas deste dispositivo. Tudo o que foi criptografado somente para uma chave excluída se torna irrecuperável. Confira se você tem um backup caso venha a precisar delas."
+    "message": "Isso remove as chaves privadas selecionadas do cofre deste dispositivo. O que foi criptografado somente para uma chave excluída não poderá ser descriptografado sem um backup, então guarde um caso venha a precisar delas. Uma cópia criptografada pode ficar no disco até o navegador compactar o armazenamento."
   },
   "keys_bulk_delete_contacts_body": {
     "message": "Você não poderá mais criptografar para estes contatos nem verificar as assinaturas deles. Você pode importar as chaves públicas deles de novo mais tarde."
   },
   "keys_delete_crx_body": {
-    "message": "Você não poderá mais assinar atualizações desta extensão, e a chave não pode ser recuperada a menos que você tenha um backup."
+    "message": "Você não poderá mais assinar atualizações desta extensão, e sem um backup não é possível desfazer. Uma cópia criptografada pode ficar no disco até o navegador compactar o armazenamento."
   },
   "keys_delete_key_body": {
-    "message": "Isso exclui permanentemente a chave privada deste dispositivo. Tudo o que foi criptografado somente para esta chave se torna irrecuperável. Confira se você tem um backup caso venha a precisar dela."
+    "message": "Isso remove a chave privada do cofre deste dispositivo. O que foi criptografado somente para esta chave não poderá ser descriptografado sem um backup, então guarde um caso venha a precisar dela. Uma cópia criptografada pode ficar no disco até o navegador compactar o armazenamento."
   },
   "keys_remove_contact_body": {
     "message": "Você não poderá mais criptografar mensagens para este contato nem verificar as assinaturas dele. Você pode importar a chave pública dele de novo mais tarde."
@@ -544,5 +544,62 @@
   },
   "keys_check_revocation_failed": {
     "message": "Não foi possível verificar a revogação. Tente novamente."
+  },
+  "keys_verified_chip": {
+    "message": "Verificada"
+  },
+  "keys_verified_chip_title": {
+    "message": "Você marcou esta chave como verificada após comparar a impressão digital com o dono."
+  },
+  "keys_verified_on": {
+    "message": "Verificada por você em $date$"
+  },
+  "keys_verified_by_you": {
+    "message": "Verificada por você"
+  },
+  "keys_verified_unmark": {
+    "message": "Desmarcar"
+  },
+  "keys_verify_hint": {
+    "message": "Compare esta impressão digital com $name$ pessoalmente ou numa ligação confiável. Se coincidir, marque como verificada."
+  },
+  "keys_verify_mark": {
+    "message": "Marcar como verificada"
+  },
+  "keys_contact_same_address": {
+    "message": "Mesmo endereço"
+  },
+  "keys_contact_same_address_title": {
+    "message": "$name$ ($keyid$) também usa este endereço, com outra chave."
+  },
+  "keys_contact_same_name": {
+    "message": "Nome parecido"
+  },
+  "keys_contact_same_name_title": {
+    "message": "Parece o nome de $name$ ($keyid$), mas usa outras letras."
+  },
+  "keys_invisible_char": {
+    "message": "Há um caractere invisível ($code$) aqui"
+  },
+  "keys_clash_check": {
+    "message": "Confirme com a pessoa qual chave é realmente dela antes de confiar em qualquer uma."
+  },
+  "keys_confusable_char": {
+    "message": "$code$ parece uma letra latina, mas é outra"
+  },
+  "keys_contact_lookalike_address": {
+    "message": "Endereço parecido"
+  },
+  "keys_contact_lookalike_address_title": {
+    "message": "$name$ ($keyid$) tem um endereço que parece igual a este, com outra chave."
+  },
+  "keys_contact_same_name_plain": {
+    "message": "Mesmo nome"
+  },
+  "keys_contact_same_name_plain_title": {
+    "message": "Tem o mesmo nome que $name$ ($keyid$), e nenhum endereço de email distingue os dois."
+  },
+  "keys_check_revocation_needs_review": {
+    "message": "A chave de $name$ no servidor de chaves tem novos nomes ou endereços. Revise-os antes de salvar."
   }
 }

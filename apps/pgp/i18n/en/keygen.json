@@ -88,8 +88,8 @@
     "description": "Tiny hint under the algorithm dropdown when ECC (Ed25519) is selected."
   },
   "keygen_algorithm_hint_rsa": {
-    "message": "Widely compatible. Slower key generation.",
-    "description": "Tiny hint under the algorithm dropdown when RSA is selected."
+    "message": "Widely compatible, but slower, and its RSA code has a known timing side channel (Marvin). Prefer ECC unless you need RSA.",
+    "description": "Tiny hint under the algorithm dropdown when RSA is selected. Marvin is the name of a published RSA timing attack; keep it as is."
   },
   "keygen_key_size_label": {
     "message": "Key size",

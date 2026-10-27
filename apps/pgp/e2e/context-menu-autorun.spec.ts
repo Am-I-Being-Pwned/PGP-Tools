@@ -118,6 +118,30 @@ test("a selection that wraps a signed message in other text is refused, not veri
   await expect(panel.getByText("Rachel Rsa4096")).toHaveCount(0);
 });
 
+test("an auto-run that would open a very large message waits for the click", async ({
+  panel,
+}) => {
+  // The engine lets any message expand to 64 MiB; a short selection must
+  // not put that on screen with no click. Over the unattended ceiling
+  // (1 MiB) the run is dropped and Decrypt is offered instead.
+  const BIG = `big-message-7d2a ${"x".repeat(1_200_000)}`;
+  await onboardWithPassword(panel, PASSWORD);
+  const armored = await encryptToSelfInWorkspace(panel, BIG);
+
+  await deliverPendingOp(panel, "decrypt", armored);
+  await expect(panel.getByTestId("auto-run-held-back")).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(panel.getByRole("button", { name: "Download" })).toHaveCount(0);
+
+  // The click opens it as usual.
+  await panel.getByRole("button", { name: /^decrypt$/i }).click();
+  await expect(panel.getByRole("button", { name: "Download" })).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(panel.getByTestId("auto-run-held-back")).toHaveCount(0);
+});
+
 async function signCount(
   auth: Awaited<ReturnType<typeof addPrfAuthenticatorWithId>>,
 ): Promise<number> {

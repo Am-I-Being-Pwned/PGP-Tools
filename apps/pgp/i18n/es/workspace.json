@@ -499,5 +499,53 @@
   },
   "workspace_signed_text_hidden_chars": {
     "message": "el texto firmado contiene caracteres invisibles o de dirección del texto, así que puede no verse en pantalla tal como se escribió"
+  },
+  "workspace_signer_not_verified": {
+    "message": "clave no marcada como verificada por ti"
+  },
+  "workspace_not_encrypted": {
+    "message": "Sin cifrar"
+  },
+  "workspace_signed_not_encrypted": {
+    "message": "firmado, pero sin cifrar: cualquiera podría haberte enviado esta copia"
+  },
+  "workspace_status_not_encrypted": {
+    "message": "Este mensaje no estaba cifrado, así que cualquiera podría haberte enviado esta copia y haberla leído por el camino."
+  },
+  "workspace_not_encrypted_not_signed": {
+    "message": "Sin cifrar ni firmar"
+  },
+  "workspace_error_batch_not_encrypted": {
+    "message": "$name$ no está cifrado. Descífralo por separado para ver lo que contiene."
+  },
+  "workspace_signature_verified_line_breaks": {
+    "message": "Revisa los saltos de línea"
+  },
+  "workspace_signed_text_lone_cr": {
+    "message": "el texto firmado tiene un retorno de carro sin salto de línea (se muestra como ␍), así que sus saltos de línea pueden no verse como los escribió el firmante"
+  },
+  "workspace_signature_not_addressed": {
+    "message": "la firma no indica que fuera para ti, así que puede haber sido reenviada"
+  },
+  "workspace_detected_keys_known": {
+    "message": "Ya tienes las claves de $names$."
+  },
+  "workspace_detected_keys_in_message": {
+    "message": "Este mensaje contiene claves públicas de $names$."
+  },
+  "workspace_detected_keys_pasted": {
+    "message": "Son claves públicas de $names$."
+  },
+  "workspace_sign_hidden_chars": {
+    "message": "Este texto tiene caracteres que no se ven ($chars$). Pueden reordenar u ocultar lo que dice, y se firmarían tal cual."
+  },
+  "workspace_sign_hidden_chars_anyway": {
+    "message": "Firmar de todos modos"
+  },
+  "workspace_sign_hidden_chars_remove": {
+    "message": "Quitarlos"
+  },
+  "workspace_auto_run_too_large": {
+    "message": "Este mensaje es demasiado grande para abrirlo automáticamente. Ábrelo con el botón de abajo."
   }
 }

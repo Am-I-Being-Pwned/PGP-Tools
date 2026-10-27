@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { ChevronsUpDownIcon, InfoIcon, XIcon } from "lucide-react";
 
 import { cn } from "@amibeingpwned/ui";
@@ -20,6 +20,12 @@ import {
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import { t, tn } from "../../lib/i18n";
+import {
+  contactClashes,
+  displayKeyId,
+  noteKeyId,
+} from "../../lib/identity/binding";
+import { clashPillLabel, clashSentence } from "../../lib/identity/clash-copy";
 import {
   matchesRecipientSearch,
   orderRecipients,
@@ -193,6 +199,15 @@ export function RecipientPicker({
     };
   }, []);
 
+  // Two contacts claiming one person: each row says so, so the pick is
+  // made on the key id, not on a name both of them wear. SSH keys too:
+  // a key comment is the contact's name, and it is whatever the file
+  // said. Worked out once per contact list, not on every keystroke.
+  const clashes = useMemo(
+    () => contactClashes(contacts, myKeys),
+    [contacts, myKeys],
+  );
+
   const allKeys: AnyKey[] = [...contacts, ...myKeys];
 
   if (allKeys.length === 0) {
@@ -223,8 +238,14 @@ export function RecipientPicker({
     );
   }
 
+  // Own keys first: an id that is one of yours means your key, the same
+  // rule `resolveSelectedRecipients` applies to what is encrypted.
   const selectedKeys = selectedKeyIds
-    .map((id) => allKeys.find((k) => k.keyId === id))
+    .map(
+      (id) =>
+        myKeys.find((k) => k.keyId === id) ??
+        contacts.find((k) => k.keyId === id),
+    )
     .filter((k): k is AnyKey => k !== undefined);
 
   // Already-selected recipients don't reappear in the dropdown. The
@@ -245,7 +266,7 @@ export function RecipientPicker({
     splitRecipientSections<PublicContactKey, ProtectedKeyBlob>(
       available,
       contacts,
-      (c) => contactRecipients(c).map((r) => r.keyId),
+      new Set(myKeys.map((k) => k.keyId)),
     );
   const { recent, rest: restContacts } = orderRecipients(
     availableContacts,
@@ -424,6 +445,12 @@ export function RecipientPicker({
       "armoredPublicKey" in key ? activeRecipients(key).length : 1;
     const blockReason = recipientBlockReason(key, engine, passwordArmed);
     const blocked = blockReason !== null;
+    const verified = !isOwn && "verified" in key && key.verified === true;
+    const clash = isOwn ? undefined : clashes.get(key.keyId);
+    // Always shown: the id is what tells two keys with one name apart --
+    // the 16-hex id for a PGP key, the start of the SHA256 hash for an
+    // SSH key (whole on hover), as a conflict note shortens it.
+    const shortKeyId = isSsh ? noteKeyId(key.keyId) : displayKeyId(key.keyId);
     return (
       <CommandItem
         key={key.keyId}
@@ -440,24 +467,55 @@ export function RecipientPicker({
       >
         <KeyAvatar fingerprint={key.keyId} size={32} />
         <div className="min-w-0 flex-1">
-          <p className="flex items-center gap-1.5 truncate text-sm">
-            <span className="truncate">
-              <MarkedText text={name} />
-            </span>
-            {isOwn && (
-              <span className="bg-secondary text-muted-foreground shrink-0 rounded px-1.5 py-px text-[10.5px] font-medium">
-                {t("actions_badge_you")}
-              </span>
-            )}
-            {isSsh && (
-              <span className="bg-secondary text-muted-foreground shrink-0 rounded px-1.5 py-px text-[10.5px] font-medium">
-                {/* i18n-ignore */}
-                SSH
-              </span>
-            )}
+          {/* The name is the identity being judged, so it gets the whole
+              row: the badges wrap on a line of their own beneath it
+              rather than squeezing it to "Ali..." beside them. */}
+          <p className="truncate text-sm">
+            <MarkedText text={name} />
           </p>
-          {(detail || keyCount > 1) && (
+          {(isOwn || isSsh || verified || clash) && (
+            <div className="my-0.5 flex flex-wrap items-center gap-1">
+              {isOwn && (
+                <span className="bg-secondary text-muted-foreground shrink-0 rounded px-1.5 py-px text-[10.5px] font-medium">
+                  {t("actions_badge_you")}
+                </span>
+              )}
+              {isSsh && (
+                <span className="bg-secondary text-muted-foreground shrink-0 rounded px-1.5 py-px text-[10.5px] font-medium">
+                  {/* i18n-ignore */}
+                  SSH
+                </span>
+              )}
+              {verified && (
+                <span
+                  title={t("keys_verified_chip_title")}
+                  className="bg-good/12 text-good shrink-0 rounded px-1.5 py-px text-[10.5px] font-medium"
+                >
+                  {t("keys_verified_chip")}
+                </span>
+              )}
+              {clash && (
+                <span
+                  title={clashSentence(clash)}
+                  className="bg-warn/12 text-warn shrink-0 rounded px-1.5 py-px text-[10.5px] font-medium"
+                >
+                  {clashPillLabel(clash)}
+                </span>
+              )}
+            </div>
+          )}
+          {(detail || keyCount > 1 || shortKeyId) && (
             <p className="text-muted-foreground truncate text-xs">
+              {shortKeyId && (
+                <span
+                  className="font-mono text-[11px]"
+                  data-key-id=""
+                  title={isSsh ? displayKeyId(key.keyId) : undefined}
+                >
+                  {shortKeyId}
+                  {detail || keyCount > 1 ? " · " : ""}
+                </span>
+              )}
               <MarkedText
                 text={[
                   detail,
@@ -678,6 +736,10 @@ export function RecipientPicker({
               {selectedKeys.length > 1 && (
                 <button
                   type="button"
+                  // Not a tab stop, like the chevron: Tab goes from the
+                  // recipients to the message, and Backspace in the
+                  // input already removes chips from the keyboard.
+                  tabIndex={-1}
                   aria-label={t("actions_clear_all_recipients")}
                   title={t("actions_clear_all_recipients")}
                   className="text-muted-foreground hover:text-foreground shrink-0 rounded-sm"
@@ -781,6 +843,8 @@ export function RecipientPicker({
             setDetailsKey(null);
             refocusInput();
           }}
+          contacts={contacts}
+          ownKeys={myKeys}
         />
       )}
     </div>

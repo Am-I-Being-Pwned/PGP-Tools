@@ -92,7 +92,7 @@
     "description": "Bold headline of the clear-history confirmation page."
   },
   "actions_history_delete_warning": {
-    "message": "This permanently deletes your encrypted operation history from this device. It can't be recovered.",
+    "message": "This removes your encrypted operation history from this device's vault. It can't be undone. An encrypted copy may remain on disk until the browser compacts its storage.",
     "description": "Body text of the clear-history confirmation page."
   },
   "actions_no_keys_available": {
@@ -402,5 +402,9 @@
   "actions_reply_to_signer": {
     "message": "Reply to sender",
     "description": "Command palette entry, shown while a decrypted message from a verified signer is on screen. Opens an encrypted reply to them in a new tab."
+  },
+  "actions_no_active_key_reason": {
+    "message": "Every key of this contact is turned off. Turn one back on in the contact's details to encrypt to them.",
+    "description": "Why a contact is dimmed in the recipient picker, and the error when encrypt is attempted with it: the user turned off all of its keys."
   }
 }

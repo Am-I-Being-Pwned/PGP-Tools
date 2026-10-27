@@ -29,13 +29,14 @@ import {
 } from "../crx/storage";
 import { contactsOfKind, loadContacts, saveContact } from "./contacts";
 import { invalidateLocationCache } from "./engine";
-import { isPgpRecord, isSshRecord, storedKeyKind } from "./key-kind";
 import {
-  fakeDecryptStore,
-  fakeEncryptStore,
-  fakeEncryptContacts,
   fakeDecryptContacts,
+  fakeDecryptStore,
+  fakeEncryptContacts,
+  fakeEncryptStore,
+  isDomainSealed,
 } from "./fake-store-crypto";
+import { isPgpRecord, isSshRecord, storedKeyKind } from "./key-kind";
 import {
   addKey,
   getKeyring,
@@ -152,15 +153,15 @@ describe("keyring CRUD", () => {
     ]);
   });
 
-  it("removes the storage entry once the last key is deleted", async () => {
+  it("keeps a sealed empty store once the last key is deleted", async () => {
+    // Never removed: a store that is simply gone is what a deletion
+    // attack looks like, and the integrity ledger reports it as one.
     await addKey(pgpKey("AAAA"));
     await addKey(pgpKey("BBBB"));
 
     await removeKey("AAAA");
-    expect(local.store.has(STORAGE_KEYRING)).toBe(true);
-
     await removeKey("BBBB");
-    expect(local.store.has(STORAGE_KEYRING)).toBe(false);
+    expect(isDomainSealed(local.store.get(STORAGE_KEYRING))).toBe(true);
     expect(await getKeyring()).toEqual([]);
   });
 
@@ -212,7 +213,8 @@ describe("CRX key store", () => {
     expect((await getCrxKeys())[0].label).toBe("My Extension");
 
     await removeCrxKey(blob.extensionId);
-    expect(local.store.has(STORAGE_CRX_KEYS)).toBe(false);
+    expect(await getCrxKeys()).toEqual([]);
+    expect(isDomainSealed(local.store.get(STORAGE_CRX_KEYS))).toBe(true);
   });
 
   it("refuses to mutate while the vault is locked", async () => {
@@ -354,4 +356,3 @@ describe("contacts - the kind discriminant", () => {
     ]);
   });
 });
-

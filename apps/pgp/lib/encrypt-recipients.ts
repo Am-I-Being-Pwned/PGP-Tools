@@ -49,45 +49,40 @@ type PickerKey = OwnKey | PublicContactKey;
 /**
  * Resolve picker selection ids to the records they stand for.
  *
- * CONTACTS ARE SEARCHED FIRST, and that ordering is the whole point.
- * A contact's `keyId` is its HEAD recipient's fingerprint, so when that
- * same key is also one of the user's own identities the id exists in
- * BOTH collections. Resolving it to the own key silently drops the
- * contact's other recipients: the message is encrypted to one key
- * instead of all of them, and the result is a perfectly valid age file
- * that the person's other machines cannot open. Nothing fails, nothing
- * warns -- the sender sees a normal encrypt and the recipient sees a
- * file they cannot read.
- *
- * Preferring the contact is safe in the other direction: an own key
- * NEVER carries `recipients`, so this can only ever resolve to the same
- * key material or to more of the intended person's keys, never fewer.
- * The user's own key still reaches the message when they want it to --
- * "Also encrypt to me" appends it through `buildEncryptRecipients`,
- * which is a separate path and unaffected by this lookup.
+ * OWN KEYS ARE SEARCHED FIRST. A contact's `keyId` is its HEAD
+ * recipient's fingerprint, so when that same key is also one of the
+ * user's own identities the id exists in BOTH collections -- and the
+ * contact is whatever a pasted `.pub` file or a lookup said it was. This
+ * used to prefer the contact, so that a fetched copy of the user's own
+ * GitHub account would encrypt to all of their machines; but a file
+ * grouping the user's own key with an attacker's under one comment made
+ * exactly such a contact, and then picking "yourself" (or encrypt-to-
+ * self riding along) encrypted to the attacker too. An id that is yours
+ * means your key. The picker never offers a contact whose id is one of
+ * your keys (see `splitRecipientSections`), and the import never creates
+ * one (a group is never headed by a key the user holds), so nothing the
+ * user can pick resolves to fewer keys than its row promised.
  *
  * Exported and shared because both callers (`WorkspaceView`'s engine
  * derivation and `useWorkspaceOperations`'s encrypt) previously
- * open-coded the same `find` over a concatenated array -- which is how
- * this went unnoticed: the two agreed with each other, and both were
- * wrong.
+ * open-coded the same `find` over a concatenated array -- two copies
+ * that agreed with each other is how the old ordering went unexamined.
  */
 export function resolveSelectedRecipients(
   selectedIds: readonly string[],
   contacts: readonly PublicContactKey[],
   ownKeys: readonly ProtectedKeyBlob[],
 ): (ProtectedKeyBlob | PublicContactKey)[] {
-  // The same record the picker showed: it only offers contacts you can
-  // encrypt to, so a contact copy of your own key that has since expired
-  // must not win over your own key. An unusable contact is the last
-  // resort, so a stale selection still fails loudly at encrypt time.
+  // Among contacts, the same record the picker showed: it only offers
+  // contacts you can encrypt to, so an unusable contact is the last
+  // resort, and a stale selection still fails loudly at encrypt time.
   return selectedIds
     .map(
       (id) =>
+        ownKeys.find((k) => k.keyId === id) ??
         contacts.find(
           (c) => c.keyId === id && c.usableForEncryption !== false,
         ) ??
-        ownKeys.find((k) => k.keyId === id) ??
         contacts.find((c) => c.keyId === id),
     )
     .filter((k) => k !== undefined);
@@ -107,9 +102,10 @@ export function toSelectedRecipient(key: PickerKey): SelectedRecipient {
       // ACTIVE, not all: this is the one place that decides what a
       // message is actually encrypted to, so a key the user turned off
       // has to drop out HERE -- the details page still lists it, and
-      // must, or it could never be turned back on. `activeRecipients`
-      // never returns an empty list (see its safety net), so this can
-      // never collapse to encrypting to nobody.
+      // must, or it could never be turned back on. EMPTY when every key
+      // is off, and `buildEncryptRecipients` refuses that selection
+      // rather than falling back to `armored` (a key the user turned
+      // off) or encrypting to nobody.
       armoredAll: activeRecipients(key).map((r) => r.armored),
       kind: storedKeyKind(key),
     };
@@ -154,6 +150,12 @@ export function mixedEngineReason(): string {
   return t("actions_mixed_engine_reason");
 }
 
+/** Why a contact whose every key is turned off is refused: there is
+ *  nothing left to encrypt to it with (see `activeRecipients`). */
+export function noActiveKeyReason(): string {
+  return t("actions_no_active_key_reason");
+}
+
 /** The single engine a recipient set implies. `engine` is null when the
  *  set is empty (nothing to imply one) or when it is mixed, and `reason`
  *  is non-null in exactly the mixed case. */
@@ -185,8 +187,8 @@ export interface EncryptRecipients {
    *  Null when the selection is empty or refused. */
   engine: StoredKeyKind | null;
   /** Non-null when the operation MUST NOT run, with the reason to show
-   *  the user. Currently only a mixed PGP/SSH selection
-   *  ({@link mixedEngineReason}). `recipientPublicKeys` is empty in
+   *  the user: a mixed PGP/SSH selection ({@link mixedEngineReason}), or
+   *  a contact with every key turned off ({@link noActiveKeyReason}). `recipientPublicKeys` is empty in
    *  that case, so a caller that forgets to check encrypts to nobody
    *  rather than to the wrong set. */
   refusal: string | null;
@@ -243,7 +245,16 @@ export function buildEncryptRecipients(options: {
 }): EncryptRecipients {
   const { recipients, encryptToSelf, ownKeys } = options;
 
-  const { engine, reason } = resolveRecipientEngine(recipients);
+  const { engine, reason: mixed } = resolveRecipientEngine(recipients);
+  // A selected contact with every key turned off. Its `armoredAll` is
+  // empty, and the old fallback to `armored` encrypted to its head -- a
+  // key the user had turned off. The picker blocks such a contact; this
+  // catches a selection made before its keys were turned off.
+  const reason =
+    mixed ??
+    (recipients.some((r) => r.armoredAll?.length === 0)
+      ? noActiveKeyReason()
+      : null);
   if (reason !== null) {
     return {
       recipientPublicKeys: [],
@@ -276,9 +287,9 @@ export function buildEncryptRecipients(options: {
   // duplicate age stanza is wasteful and odd-looking in the header.
   const recipientPublicKeys = [
     ...new Set(
-      deduped.flatMap((r) =>
-        r.armoredAll && r.armoredAll.length > 0 ? r.armoredAll : [r.armored],
-      ),
+      // `armoredAll` is never empty here (refused above); absent is a
+      // caller from before contacts held several keys.
+      deduped.flatMap((r) => r.armoredAll ?? [r.armored]),
     ),
   ];
 

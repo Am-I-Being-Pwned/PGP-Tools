@@ -499,5 +499,53 @@
   },
   "workspace_signed_text_hidden_chars": {
     "message": "le texte signé contient des caractères invisibles ou de direction du texte : il peut ne pas s'afficher comme il a été écrit"
+  },
+  "workspace_signer_not_verified": {
+    "message": "clé non marquée comme vérifiée par vous"
+  },
+  "workspace_not_encrypted": {
+    "message": "Non chiffré"
+  },
+  "workspace_signed_not_encrypted": {
+    "message": "signé, mais non chiffré : n'importe qui a pu vous envoyer cette copie"
+  },
+  "workspace_status_not_encrypted": {
+    "message": "Ce message n'était pas chiffré : n'importe qui a pu vous envoyer cette copie et la lire en chemin."
+  },
+  "workspace_not_encrypted_not_signed": {
+    "message": "Ni chiffré ni signé"
+  },
+  "workspace_error_batch_not_encrypted": {
+    "message": "$name$ n'est pas chiffré. Déchiffrez-le seul pour voir ce qu'il contient."
+  },
+  "workspace_signature_verified_line_breaks": {
+    "message": "Vérifiez les sauts de ligne"
+  },
+  "workspace_signed_text_lone_cr": {
+    "message": "le texte signé contient un retour chariot sans saut de ligne (affiché comme ␍), ses sauts de ligne peuvent donc ne pas s'afficher comme le signataire les a écrits"
+  },
+  "workspace_signature_not_addressed": {
+    "message": "la signature n'indique pas qu'elle vous était destinée, elle a donc pu être transférée"
+  },
+  "workspace_detected_keys_known": {
+    "message": "Vous avez déjà les clés de $names$."
+  },
+  "workspace_detected_keys_in_message": {
+    "message": "Ce message contient les clés publiques de $names$."
+  },
+  "workspace_detected_keys_pasted": {
+    "message": "Ce sont les clés publiques de $names$."
+  },
+  "workspace_sign_hidden_chars": {
+    "message": "Ce texte contient des caractères invisibles ($chars$). Ils peuvent réordonner ou masquer ce qu'il dit, et seraient signés tels quels."
+  },
+  "workspace_sign_hidden_chars_anyway": {
+    "message": "Signer quand même"
+  },
+  "workspace_sign_hidden_chars_remove": {
+    "message": "Les supprimer"
+  },
+  "workspace_auto_run_too_large": {
+    "message": "Ce message est trop volumineux pour être ouvert automatiquement. Ouvrez-le avec le bouton ci-dessous."
   }
 }

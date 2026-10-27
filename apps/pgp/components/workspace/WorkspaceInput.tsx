@@ -328,6 +328,9 @@ export function WorkspaceInput({
             modeFit > 0 ? "[&_[role=radio]]:px-2 [&>*]:flex-auto" : undefined
           }
           activation="manual"
+          // Out of the Tab order: Tab goes recipients -> message, and the
+          // modes have mod+digit shortcuts (and the palette).
+          skipTab
           ariaLabel={t("settings_shortcuts_group_modes")}
           value={mode}
           onValueChange={(v) => {

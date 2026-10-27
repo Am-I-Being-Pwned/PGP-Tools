@@ -117,16 +117,16 @@
     "message": "$count$ 件の連絡先"
   },
   "keys_bulk_delete_private_body": {
-    "message": "選択した秘密鍵がこのデバイスから完全に削除されます。削除した鍵だけに対して暗号化されたものは復元できなくなります。今後必要になる可能性があるなら、バックアップがあることを確認してください。"
+    "message": "選択した秘密鍵をこのデバイスの保管庫から削除します。削除した鍵だけに対して暗号化されたものは、バックアップがなければ復号できなくなります。今後必要になる可能性があるなら、バックアップを保管してください。ブラウザがストレージを圧縮するまで、暗号化されたコピーがディスクに残る場合があります。"
   },
   "keys_bulk_delete_contacts_body": {
     "message": "これらの連絡先に対する暗号化や、その署名の検証はできなくなります。公開鍵は後で再度インポートできます。"
   },
   "keys_delete_crx_body": {
-    "message": "この拡張機能の更新に署名できなくなります。バックアップがない限り、鍵は復元できません。"
+    "message": "この拡張機能の更新に署名できなくなります。バックアップがない限り、元に戻すことはできません。ブラウザがストレージを圧縮するまで、暗号化されたコピーがディスクに残る場合があります。"
   },
   "keys_delete_key_body": {
-    "message": "この秘密鍵がこのデバイスから完全に削除されます。この鍵だけに対して暗号化されたものは復元できなくなります。今後必要になる可能性があるなら、バックアップがあることを確認してください。"
+    "message": "この秘密鍵をこのデバイスの保管庫から削除します。この鍵だけに対して暗号化されたものは、バックアップがなければ復号できなくなります。今後必要になる可能性があるなら、バックアップを保管してください。ブラウザがストレージを圧縮するまで、暗号化されたコピーがディスクに残る場合があります。"
   },
   "keys_remove_contact_body": {
     "message": "この連絡先に対するメッセージの暗号化や、その署名の検証はできなくなります。公開鍵は後で再度インポートできます。"
@@ -544,5 +544,62 @@
   },
   "keys_check_revocation_failed": {
     "message": "失効を確認できませんでした。もう一度お試しください。"
+  },
+  "keys_verified_chip": {
+    "message": "確認済み"
+  },
+  "keys_verified_chip_title": {
+    "message": "フィンガープリントを持ち主と照合したうえで、この鍵を確認済みにしました。"
+  },
+  "keys_verified_on": {
+    "message": "$date$ に確認済み"
+  },
+  "keys_verified_by_you": {
+    "message": "あなたが確認済み"
+  },
+  "keys_verified_unmark": {
+    "message": "解除"
+  },
+  "keys_verify_hint": {
+    "message": "このフィンガープリントを $name$ と対面か、信頼できる通話で照合してください。一致したら確認済みにします。"
+  },
+  "keys_verify_mark": {
+    "message": "確認済みにする"
+  },
+  "keys_contact_same_address": {
+    "message": "同じアドレス"
+  },
+  "keys_contact_same_address_title": {
+    "message": "$name$ ($keyid$) も別の鍵でこのアドレスを使っています。"
+  },
+  "keys_contact_same_name": {
+    "message": "紛らわしい名前"
+  },
+  "keys_contact_same_name_title": {
+    "message": "$name$ ($keyid$) の名前に見えますが、別の文字が使われています。"
+  },
+  "keys_invisible_char": {
+    "message": "ここに見えない文字 ($code$) があります"
+  },
+  "keys_clash_check": {
+    "message": "どちらかを信頼する前に、どの鍵が本当に本人のものか確認してください。"
+  },
+  "keys_confusable_char": {
+    "message": "$code$ はラテン文字に見えますが、別の文字です"
+  },
+  "keys_contact_lookalike_address": {
+    "message": "紛らわしいアドレス"
+  },
+  "keys_contact_lookalike_address_title": {
+    "message": "$name$ ($keyid$) には、これと同じに見えるアドレスが別の鍵で登録されています。"
+  },
+  "keys_contact_same_name_plain": {
+    "message": "同じ名前"
+  },
+  "keys_contact_same_name_plain_title": {
+    "message": "$name$ ($keyid$) と同じ名前で、見分けるメールアドレスがありません。"
+  },
+  "keys_check_revocation_needs_review": {
+    "message": "キーサーバー上の $name$ の鍵に新しい名前またはアドレスがあります。保存する前に確認してください。"
   }
 }

@@ -111,7 +111,7 @@
     }
   },
   "actions_history_delete_warning": {
-    "message": "这将永久删除此设备上已加密的操作历史记录，且无法恢复。"
+    "message": "这会将已加密的操作历史记录从此设备的保险库中移除，此操作无法撤销。在浏览器压缩其存储之前，磁盘上可能仍留有一份加密副本。"
   },
   "actions_history_empty": {
     "message": "暂无历史记录"
@@ -291,6 +291,9 @@
   },
   "actions_need_recipient_or_password": {
     "message": "请至少选择一个收件人，或设置密码"
+  },
+  "actions_no_active_key_reason": {
+    "message": "此联系人的所有密钥都已关闭。请在联系人详情中重新开启一个，才能加密给对方。"
   },
   "actions_no_input_decrypt": {
     "message": "没有可解密的内容，请粘贴加密消息或拖入文件"
@@ -535,6 +538,9 @@
   "app_error_tampered": {
     "message": "签名验证失败，此消息可能已被篡改。请勿信任其内容；让发送者重新发送。"
   },
+  "app_error_too_large_to_open": {
+    "message": "此消息太大，无法在此打开。你的密码或密钥可能是正确的，问题在于大小。请使用 GnuPG 等桌面 OpenPGP 工具打开它。"
+  },
   "app_error_unsigned_text_around_signature": {
     "message": "其中包含签名消息之外的文本，签名并不涵盖这些内容。请只粘贴签名消息，从 BEGIN 行到 END 行。"
   },
@@ -567,6 +573,30 @@
   "app_import_view_key_other": {
     "message": "查看密钥"
   },
+  "app_integrity_dismiss": {
+    "message": "关闭"
+  },
+  "app_integrity_ledger_lost": {
+    "message": "此设备关于上次所见内容的记录已被删除或无法读取，因此这次无法检测到你数据的旧副本。在你关闭此提示之前，将使用最严格的安全预设。请检查你知道已被吊销的联系人是否仍显示为已吊销。"
+  },
+  "app_integrity_missing_sync": {
+    "message": "你的保管库会在设备之间同步，其他设备上的旧版 PGP Tools 在清空列表时也可能这样删除数据。如果你的所有设备都已更新，请将其视为篡改。"
+  },
+  "app_integrity_no_generation": {
+    "message": "部分密钥、联系人或设置在保存时缺少此设备用来识别旧副本的标记。其他设备上的旧版 PGP Tools 会这样保存数据，有人回滚数据时也会如此。如果你的所有设备都已更新但仍看到此提示，请将其视为篡改，并检查你的密钥和联系人。"
+  },
+  "app_integrity_settings_held": {
+    "message": "你的设置可能是旧副本，因此在你关闭此提示之前，将使用最严格的安全预设。"
+  },
+  "app_integrity_settings_strict": {
+    "message": "你的设置已丢失，因此在你更改之前将使用最严格的安全预设。"
+  },
+  "app_integrity_settings_unreadable": {
+    "message": "无法读取你的设置，因此在你更改之前将使用最严格的安全预设。"
+  },
+  "app_integrity_warning": {
+    "message": "部分已保存的密钥、联系人或设置比此设备上次看到的版本更旧，或已丢失。可能有人通过你的浏览器存储或 Google 账号将其回滚。两台设备同时修改同一数据也可能导致这种情况。在依赖它们之前，请检查你的密钥和联系人。"
+  },
   "app_menu_open_in_pgp_tools": {
     "message": "在 PGP Tools 中打开"
   },
@@ -580,7 +610,7 @@
     "message": "现代、快速、密钥体积小。推荐大多数用途使用。"
   },
   "app_onboarding_algo_rsa_hint": {
-    "message": "兼容性广。密钥生成较慢。"
+    "message": "兼容性好，但速度较慢，且其 RSA 实现存在已知的时序侧信道 (Marvin)。除非需要 RSA，否则请选择 ECC。"
   },
   "app_onboarding_algorithm_label": {
     "message": "算法"
@@ -700,6 +730,9 @@
   "app_onboarding_use_preset": {
     "message": "使用此预设"
   },
+  "app_onboarding_vault_exists": {
+    "message": "此浏览器中已存在保险库，因此没有创建新的保险库。请关闭并重新打开面板以解锁它。"
+  },
   "app_oversized_files_one": {
     "message": "$files$：文件大于 $limit$，无法在面板中处理。",
     "placeholders": {
@@ -736,8 +769,56 @@
   "app_tab_main": {
     "message": "主页"
   },
+  "app_vault_alternate_local": {
+    "message": "此设备的存储中也存有一个保险库。"
+  },
+  "app_vault_alternate_sync": {
+    "message": "同步存储中也存有一个保险库。"
+  },
+  "app_vault_alternate_use": {
+    "message": "试试那个"
+  },
+  "app_vault_ambiguous_body": {
+    "message": "一个在此设备的存储中，另一个在同步存储中，而此设备没有记录哪一个是你的。同步存储可能被另一台设备或登录你 Google 账号的人更改。请选择你在这里使用的那个。不会复制或删除任何内容。"
+  },
+  "app_vault_ambiguous_title": {
+    "message": "此浏览器中存储了两个保险库"
+  },
+  "app_vault_ambiguous_use_local": {
+    "message": "使用此设备上的保险库"
+  },
+  "app_vault_ambiguous_use_sync": {
+    "message": "使用同步的保险库"
+  },
+  "app_vault_elsewhere_body_local": {
+    "message": "此浏览器设置为将保险库保存在同步存储中，但你的保险库位于此设备的存储中。该设置会在设备之间同步，因此可能是另一台设备或登录你 Google 账号的人更改了它。"
+  },
+  "app_vault_elsewhere_body_sync": {
+    "message": "此浏览器设置为仅将保险库保存在此设备上，但你的保险库位于同步存储中。该设置会在设备之间同步，因此可能是另一台设备或登录你 Google 账号的人更改了它。"
+  },
+  "app_vault_elsewhere_title": {
+    "message": "你的保险库存储在其他位置"
+  },
+  "app_vault_elsewhere_use": {
+    "message": "使用保险库当前所在的位置"
+  },
+  "app_vault_erase_body": {
+    "message": "这会删除此浏览器及其同步存储中保存的密钥、联系人、设置和历史记录，以便你创建新的保险库。此操作无法撤销。在浏览器压缩其存储之前，磁盘上可能仍留有一份加密副本。"
+  },
+  "app_vault_erase_confirm": {
+    "message": "清除保险库"
+  },
+  "app_vault_erase_title": {
+    "message": "清除并重新开始"
+  },
   "app_vault_lock_retry": {
     "message": "锁定并重试"
+  },
+  "app_vault_orphaned_body": {
+    "message": "你的密钥和联系人仍然保存着，但此浏览器的存储中缺少解锁它们所需的记录，没有它任何人都无法打开。如果你能从此浏览器配置文件的备份中恢复该记录，请改为这样做。"
+  },
+  "app_vault_orphaned_title": {
+    "message": "你的保险库已无法解锁"
   },
   "app_vault_unreadable_body": {
     "message": "你的密钥仍保存在此设备上。请先锁定后重试。"
@@ -1086,6 +1167,14 @@
   "import_github_rate_limited": {
     "message": "GitHub 正在对此网络限流。限制按 IP 地址计算，因此同一网络上的其他人也可能用尽额度。"
   },
+  "import_github_refresh_all_held": {
+    "message": "$username$ 已不再列出为此联系人保存的部分密钥，而它仍列出的每个密钥都属于你的其他联系人或你自己，因此无法更新。如果不再想加密给它的旧密钥，请删除此联系人。",
+    "placeholders": {
+      "username": {
+        "content": "$1"
+      }
+    }
+  },
   "import_github_rejected_heading_one": {
     "message": "$count$ 个已发布的密钥无法使用",
     "placeholders": {
@@ -1341,6 +1430,22 @@
   "import_rejected_generic": {
     "message": "此密钥无法导入。"
   },
+  "import_replaced_contacts_one": {
+    "message": "已替换 $count$ 个联系人的密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_replaced_contacts_other": {
+    "message": "已替换 $count$ 个联系人的密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
   "import_retry_hours_one": {
     "message": "请在约 $count$ 小时后重试。",
     "placeholders": {
@@ -1378,6 +1483,207 @@
   },
   "import_reveal": {
     "message": "在密钥中显示"
+  },
+  "import_review_all_keys_off": {
+    "message": "此账户仍在列出的每个密钥都是你已关闭的。保存后，在你重新开启其中一个之前，此联系人没有可用于加密的密钥。"
+  },
+  "import_review_choice_aria": {
+    "message": "如何处理 $name$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_choice_import": {
+    "message": "导入"
+  },
+  "import_review_choice_keep_both": {
+    "message": "都保留"
+  },
+  "import_review_choice_replace": {
+    "message": "替换"
+  },
+  "import_review_choice_skip": {
+    "message": "跳过"
+  },
+  "import_review_conflict_address": {
+    "message": "$email$ 已属于 $name$ ($keyid$)。这是另一个密钥 - 信任之前请先与对方确认。",
+    "placeholders": {
+      "email": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      },
+      "keyid": {
+        "content": "$3"
+      }
+    }
+  },
+  "import_review_conflict_address_lookalike": {
+    "message": "$email$ 看起来像 $name$ ($keyid$) 的地址 $theirs$，但它是另一个地址。信任之前请先与对方确认。",
+    "placeholders": {
+      "email": {
+        "content": "$1"
+      },
+      "theirs": {
+        "content": "$2"
+      },
+      "name": {
+        "content": "$3"
+      },
+      "keyid": {
+        "content": "$4"
+      }
+    }
+  },
+  "import_review_conflict_address_revoked": {
+    "message": "$email$ 原属于 $name$ ($keyid$)，该密钥现已吊销。请与对方确认这个新密钥确实是其本人的。",
+    "placeholders": {
+      "email": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      },
+      "keyid": {
+        "content": "$3"
+      }
+    }
+  },
+  "import_review_conflict_key_contact": {
+    "message": "包含你为 $name$ ($keyid$) 保存的密钥，并与其他密钥放在一起。保存前请先与对方确认。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
+  "import_review_conflict_key_own": {
+    "message": "包含你自己的密钥 ($keyid$)，并与其他密钥放在一起。保存前请确认它们都是你的。",
+    "placeholders": {
+      "keyid": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_conflict_key_update": {
+    "message": "这会为 $name$ ($keyid$) 添加密钥，发给对方的消息也会发给这些新密钥。保存前请先与对方确认。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
+  "import_review_conflict_name": {
+    "message": "看起来像 $name$ ($keyid$) 的名字，但用的是不同的字母。信任之前请先与对方确认。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
+  "import_review_conflict_same_name": {
+    "message": "$name$ ($keyid$) 也叫这个名字，而且没有电子邮件地址可以区分两者。信任之前请先与对方确认。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
+  "import_review_import_all": {
+    "message": "全部导入"
+  },
+  "import_review_import_all_note_one": {
+    "message": "其中 $count$ 个密钥冒称你已有的联系人。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_import_all_note_other": {
+    "message": "其中 $count$ 个密钥冒称你已有的联系人。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_import_all_risky": {
+    "message": "仍然全部导入"
+  },
+  "import_review_import_n_one": {
+    "message": "导入 $count$ 个密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_import_n_other": {
+    "message": "导入 $count$ 个密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_import_none": {
+    "message": "未选择"
+  },
+  "import_review_intro_one": {
+    "message": "找到 $count$ 个密钥。在你选择之前不会保存任何内容。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_intro_other": {
+    "message": "找到 $count$ 个密钥。在你选择之前不会保存任何内容。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_replace_many": {
+    "message": "无法替换：有多个联系人使用此地址。"
+  },
+  "import_review_status_duplicate": {
+    "message": "已保存"
+  },
+  "import_review_status_new": {
+    "message": "新"
+  },
+  "import_review_status_rejected": {
+    "message": "无法导入"
+  },
+  "import_review_status_revoked": {
+    "message": "已吊销"
+  },
+  "import_review_status_update": {
+    "message": "更新"
+  },
+  "import_review_status_your_key": {
+    "message": "你的密钥"
+  },
+  "import_review_title": {
+    "message": "检查密钥"
   },
   "import_revocation_headline": {
     "message": "吊销证书"
@@ -1465,7 +1771,7 @@
     "message": "现代、快速、密钥体积小。推荐大多数用途使用。"
   },
   "keygen_algorithm_hint_rsa": {
-    "message": "兼容性广。密钥生成较慢。"
+    "message": "兼容性好，但速度较慢，且其 RSA 实现存在已知的时序侧信道 (Marvin)。除非需要 RSA，否则请选择 ECC。"
   },
   "keygen_algorithm_label": {
     "message": "算法"
@@ -1998,7 +2304,7 @@
     "message": "你将无法再加密给这些联系人或验证其签名。之后可以重新导入他们的公钥。"
   },
   "keys_bulk_delete_private_body": {
-    "message": "这将从此设备永久删除所选私钥。仅加密给已删除密钥的任何内容都将无法恢复。如果将来可能还需要它们，请确保已有备份。"
+    "message": "这会将所选私钥从此设备的保险库中移除。仅加密给已删除密钥的内容，没有备份将无法解密；如果将来可能还需要它们，请保留备份。在浏览器压缩其存储之前，磁盘上可能仍留有一份加密副本。"
   },
   "keys_bulk_delete_prompt_one": {
     "message": "删除$count$个密钥",
@@ -2051,6 +2357,14 @@
   "keys_check_revocation_failed": {
     "message": "无法检查吊销状态。请重试。"
   },
+  "keys_check_revocation_needs_review": {
+    "message": "密钥服务器上 $name$ 的密钥有新的名字或地址。请在保存前检查。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
   "keys_check_revocation_not_published": {
     "message": "$host$ 未发布 $name$ 的密钥，因此无法在那里检查。",
     "placeholders": {
@@ -2093,11 +2407,22 @@
   "keys_chip_your_key_title": {
     "message": "你持有私钥"
   },
+  "keys_clash_check": {
+    "message": "在信任任何一个密钥之前，请先与对方确认哪个才是其本人的。"
+  },
   "keys_confirm_delete_key_title": {
     "message": "删除密钥？"
   },
   "keys_confirm_remove_contact_title": {
     "message": "移除联系人？"
+  },
+  "keys_confusable_char": {
+    "message": "$code$ 看起来像拉丁字母，但其实是另一个字符",
+    "placeholders": {
+      "code": {
+        "content": "$1"
+      }
+    }
   },
   "keys_contact_expired": {
     "message": "已于 $date$ 过期",
@@ -2167,6 +2492,20 @@
   "keys_contact_long_id_title": {
     "message": "密钥 ID：此密钥指纹的最后 16 个字符。用于快速区分密钥；要确认密钥是否真实，请比对完整指纹。"
   },
+  "keys_contact_lookalike_address": {
+    "message": "相似地址"
+  },
+  "keys_contact_lookalike_address_title": {
+    "message": "$name$ ($keyid$) 的地址看起来与此地址相同，但密钥不同。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
   "keys_contact_options_aria": {
     "message": "联系人选项"
   },
@@ -2175,6 +2514,48 @@
   },
   "keys_contact_revoked_title": {
     "message": "所有者已吊销此密钥。保留它是为了让吊销持续有效，但你无法用它加密。若因泄露而吊销，其签名均不再通过验证；若是例行停用，此前的签名仍可验证，并以琥珀色显示。"
+  },
+  "keys_contact_same_address": {
+    "message": "地址相同"
+  },
+  "keys_contact_same_address_title": {
+    "message": "$name$ ($keyid$) 也用这个地址，但密钥不同。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_contact_same_name": {
+    "message": "相似名字"
+  },
+  "keys_contact_same_name_plain": {
+    "message": "同名"
+  },
+  "keys_contact_same_name_plain_title": {
+    "message": "与 $name$ ($keyid$) 同名，而且没有电子邮件地址可以区分两者。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_contact_same_name_title": {
+    "message": "看起来像 $name$ ($keyid$) 的名字，但用的是不同的字母。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
   },
   "keys_contacts_heading": {
     "message": "联系人"
@@ -2277,13 +2658,13 @@
     "message": "默认用于签名、解密和“同时加密给我”"
   },
   "keys_delete_crx_body": {
-    "message": "你将无法再为此扩展程序签名更新，且除非有备份，否则该密钥无法恢复。"
+    "message": "你将无法再为此扩展程序签名更新，且除非有备份，否则此操作无法撤销。在浏览器压缩其存储之前，磁盘上可能仍留有一份加密副本。"
   },
   "keys_delete_key": {
     "message": "删除密钥"
   },
   "keys_delete_key_body": {
-    "message": "这将从此设备永久删除该私钥。仅加密给此密钥的任何内容都将无法恢复。如果将来可能还需要它，请确保已有备份。"
+    "message": "这会将该私钥从此设备的保险库中移除。仅加密给此密钥的内容，没有备份将无法解密；如果将来可能还需要它，请保留备份。在浏览器压缩其存储之前，磁盘上可能仍留有一份加密副本。"
   },
   "keys_delete_key_permanently": {
     "message": "永久删除密钥"
@@ -2431,6 +2812,14 @@
     "message": "$count$ 个不可用的子密钥",
     "placeholders": {
       "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_invisible_char": {
+    "message": "此处有一个不可见字符 ($code$)",
+    "placeholders": {
+      "code": {
         "content": "$1"
       }
     }
@@ -2741,6 +3130,37 @@
   },
   "keys_unknown_name": {
     "message": "未知"
+  },
+  "keys_verified_by_you": {
+    "message": "已由你验证"
+  },
+  "keys_verified_chip": {
+    "message": "已验证"
+  },
+  "keys_verified_chip_title": {
+    "message": "你与持有人核对指纹后，将此密钥标记为已验证。"
+  },
+  "keys_verified_on": {
+    "message": "你于 $date$ 验证",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_verified_unmark": {
+    "message": "取消标记"
+  },
+  "keys_verify_hint": {
+    "message": "当面或通过你信任的通话与 $name$ 核对此指纹。一致的话，将其标记为已验证。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_verify_mark": {
+    "message": "标记为已验证"
   },
   "keys_weak_sha1": {
     "message": "弱 (SHA-1)"
@@ -3198,7 +3618,7 @@
     "message": "正在应用…"
   },
   "settings_preset_confirm_history": {
-    "message": "此预设会开启“从不缓存”，这也会删除你已保存的历史记录（$size$），且无法恢复。",
+    "message": "此预设会开启“从不缓存”，这也会删除你已保存的历史记录（$size$），且无法撤销。",
     "placeholders": {
       "size": {
         "content": "$1"
@@ -3519,7 +3939,7 @@
     "message": "CRX 签名"
   },
   "shared_delete_history_body": {
-    "message": "从不缓存也会删除你已保存的历史记录（$size$），且无法恢复。",
+    "message": "从不缓存也会删除你已保存的历史记录（$size$），且无法撤销。",
     "placeholders": {
       "size": {
         "content": "$1"
@@ -3682,6 +4102,9 @@
   "shared_security_preset": {
     "message": "安全预设"
   },
+  "shared_settings_save_failed": {
+    "message": "无法保存此更改，因为无法读取已保存的设置。"
+  },
   "shared_show_technical_details": {
     "message": "显示技术详情"
   },
@@ -3752,6 +4175,9 @@
         "content": "$1"
       }
     }
+  },
+  "workspace_auto_run_too_large": {
+    "message": "此消息太大，无法自动打开。请使用下方按钮打开。"
   },
   "workspace_browse_files": {
     "message": "浏览文件"
@@ -3865,6 +4291,30 @@
   "workspace_detected_key_show": {
     "message": "在密钥中显示"
   },
+  "workspace_detected_keys_in_message": {
+    "message": "此消息包含 $names$ 的公钥。",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_detected_keys_known": {
+    "message": "你已经有 $names$ 的密钥。",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_detected_keys_pasted": {
+    "message": "这些是 $names$ 的公钥。",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_drop_files_or_text": {
     "message": "将文件或文本拖放到此处"
   },
@@ -3873,6 +4323,14 @@
   },
   "workspace_enter_message_password": {
     "message": "输入消息密码"
+  },
+  "workspace_error_batch_not_encrypted": {
+    "message": "$name$ 未加密。请单独解密它以查看内容。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
   },
   "workspace_error_crx_invalid": {
     "message": "无法验证此文件的 CRX 签名。"
@@ -4105,6 +4563,12 @@
   "workspace_no_such_language": {
     "message": "没有这种语言。"
   },
+  "workspace_not_encrypted": {
+    "message": "未加密"
+  },
+  "workspace_not_encrypted_not_signed": {
+    "message": "未加密也未签名"
+  },
   "workspace_note_downloading": {
     "message": "正在下载$what$…",
     "placeholders": {
@@ -4318,6 +4782,20 @@
   "workspace_sign_for_web_store": {
     "message": "为应用商店签名"
   },
+  "workspace_sign_hidden_chars": {
+    "message": "此文本含有看不见的字符 ($chars$)。它们可能改变文字顺序或隐藏内容，并会原样被签名。",
+    "placeholders": {
+      "chars": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_sign_hidden_chars_anyway": {
+    "message": "仍然签名"
+  },
+  "workspace_sign_hidden_chars_remove": {
+    "message": "删除它们"
+  },
   "workspace_sign_kind_crx": {
     "message": "Chrome 扩展程序 (.crx)"
   },
@@ -4330,8 +4808,14 @@
   "workspace_signature_covers_original": {
     "message": "签名针对的是原文，而不是此译文"
   },
+  "workspace_signature_not_addressed": {
+    "message": "签名未表明是发给你的，因此可能是被转发的"
+  },
   "workspace_signature_verified": {
     "message": "签名已验证"
+  },
+  "workspace_signature_verified_line_breaks": {
+    "message": "检查换行"
   },
   "workspace_signature_verified_not_for_you": {
     "message": "不是发给你的"
@@ -4347,6 +4831,9 @@
       }
     }
   },
+  "workspace_signed_not_encrypted": {
+    "message": "已签名但未加密：任何人都可能向你发送这份副本"
+  },
   "workspace_signed_on": {
     "message": "签名于 $date$",
     "placeholders": {
@@ -4358,8 +4845,14 @@
   "workspace_signed_text_hidden_chars": {
     "message": "签名文本包含不可见字符或文字方向字符，因此屏幕上的显示可能与原文不同"
   },
+  "workspace_signed_text_lone_cr": {
+    "message": "签名文本包含不带换行符的回车符（显示为 ␍），因此其换行可能不会按签名者书写的方式显示"
+  },
   "workspace_signer_key_retired": {
     "message": "生成该签名的密钥此后已过期或被吊销"
+  },
+  "workspace_signer_not_verified": {
+    "message": "你尚未将此密钥标记为已验证"
   },
   "workspace_status_age_encrypted": {
     "message": "age 消息，已加密给 SSH 收件人"
@@ -4382,6 +4875,9 @@
   },
   "workspace_status_decrypted_archive": {
     "message": "已解密包含多个文件的压缩包"
+  },
+  "workspace_status_not_encrypted": {
+    "message": "此消息未加密，因此任何人都可能向你发送这份副本，并在传输途中读取它。"
   },
   "workspace_status_signer_unknown": {
     "message": "此消息已签名，但签名者的公钥不在你的密钥或联系人中，因此无法验证签名。"

@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import type { BrowserContext, Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 
 import { expect, test } from "./fixtures";
 import {
@@ -11,6 +11,7 @@ import {
   importFileInPanel,
   onboardWithPassword,
   onboardWithPasswordSkipKey,
+  pasteIntoImport,
   readContacts,
 } from "./helpers";
 import { keyBySlug } from "./keys";
@@ -265,26 +266,6 @@ test("key details downloads the public key", async ({ panel }) => {
 // decrypted contacts store. Counting cards in the DOM cannot tell one
 // contact from a label that matched twice.
 
-/** Paste `text` into the Import Key page's paste box with a real paste
- *  gesture -- the flow has no typable field, and this feature is reached
- *  by pasting. */
-async function pasteIntoImport(
-  panel: Page,
-  context: BrowserContext,
-  text: string,
-): Promise<void> {
-  await goToKeys(panel);
-  await panel.getByRole("button", { name: "Import Key" }).click();
-  const box = panel.getByLabel("Paste a key");
-  await expect(box).toBeFocused();
-  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
-  await panel.evaluate((t) => navigator.clipboard.writeText(t), text);
-  await box.focus();
-  await panel.keyboard.press(
-    process.platform === "darwin" ? "Meta+V" : "Control+V",
-  );
-}
-
 /** The grouping question, as it appears on the preview. */
 function groupNameField(panel: Page) {
   return panel.getByPlaceholder("e.g. Alice (all machines)");
@@ -321,6 +302,49 @@ test("SSH keys that agree on a comment are grouped without asking", async ({
   expect(stored[0].recipients?.map((r) => r.keyId)).toEqual(
     keys.map((k) => k.fingerprint),
   );
+});
+
+test("a pasted group adding a key to a contact asks first, and Skip saves nothing", async ({
+  panel,
+  context,
+}) => {
+  // Alice's real key, then a file pairing it with Mallory's under her
+  // comment. That used to be a "new" contact with Alice's id: the save
+  // landed on her record, kept her name, and "Alice" encrypted to Mallory
+  // as well -- with no question asked, because the comments agreed.
+  const [alice, mallory] = generateSshKeys(2, () => "alice@corp");
+  await onboardWithPasswordSkipKey(panel, PASSWORD);
+  await importContact(panel, alice.publicLineWithComment);
+
+  await pasteIntoImport(
+    panel,
+    context,
+    [mallory.publicLineWithComment, alice.publicLineWithComment].join("\n"),
+  );
+  const review = panel.getByRole("region", { name: "Import key" });
+  const row = review.locator(`[data-review-key="${alice.fingerprint}"]`);
+  await expect(row).toContainText("Update");
+  await expect(row).toContainText("1 key added");
+  // Named by the comment her pasted line carried (kept as her name), and
+  // by her key id -- shortened inside the sentence so the warning is not
+  // pushed out of the row, whole under the name and on hover.
+  const shortId = `${alice.fingerprint.slice(0, "SHA256:".length + 12)}\u2026`;
+  await expect(row).toContainText(`This adds keys to alice@corp (${shortId})`);
+  await expect(row.getByText(alice.fingerprint, { exact: true })).toBeVisible();
+  await expect(row.locator("p[title]")).toHaveAttribute(
+    "title",
+    alice.fingerprint,
+  );
+  // Starts on Skip, so nothing is selected until the user says so.
+  await expect(
+    review.getByRole("button", { name: "Nothing selected" }),
+  ).toBeDisabled();
+  await review.getByRole("button", { name: "Back" }).click();
+
+  const stored = await readContacts(panel);
+  expect(stored).toHaveLength(1);
+  expect(stored[0].keyId).toBe(alice.fingerprint);
+  expect(stored[0].recipients).toBeUndefined();
 });
 
 test("declining the grouping offer files the keys separately", async ({

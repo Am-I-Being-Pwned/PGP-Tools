@@ -117,16 +117,16 @@
     "message": "$count$ contactos"
   },
   "keys_bulk_delete_private_body": {
-    "message": "Esto elimina de forma permanente las claves privadas seleccionadas de este dispositivo. Todo lo que esté cifrado únicamente para una clave eliminada quedará irrecuperable. Asegúrese de tener una copia de seguridad si alguna vez pudiera necesitarlas."
+    "message": "Esto quita las claves privadas seleccionadas de la bóveda de este dispositivo. Lo que esté cifrado únicamente para una clave eliminada no se podrá descifrar sin una copia de seguridad, así que guarde una si alguna vez pudiera necesitarlas. Puede quedar una copia cifrada en el disco hasta que el navegador compacte su almacenamiento."
   },
   "keys_bulk_delete_contacts_body": {
     "message": "Ya no podrá cifrar para estos contactos ni verificar sus firmas. Puede volver a importar sus claves públicas más adelante."
   },
   "keys_delete_crx_body": {
-    "message": "Ya no podrá firmar actualizaciones de esta extensión, y la clave no se puede recuperar a menos que tenga una copia de seguridad."
+    "message": "Ya no podrá firmar actualizaciones de esta extensión, y sin una copia de seguridad no se puede deshacer. Puede quedar una copia cifrada en el disco hasta que el navegador compacte su almacenamiento."
   },
   "keys_delete_key_body": {
-    "message": "Esto elimina de forma permanente la clave privada de este dispositivo. Todo lo que esté cifrado únicamente para esta clave quedará irrecuperable. Asegúrese de tener una copia de seguridad si alguna vez pudiera necesitarla."
+    "message": "Esto quita la clave privada de la bóveda de este dispositivo. Lo que esté cifrado únicamente para esta clave no se podrá descifrar sin una copia de seguridad, así que guarde una si alguna vez pudiera necesitarla. Puede quedar una copia cifrada en el disco hasta que el navegador compacte su almacenamiento."
   },
   "keys_remove_contact_body": {
     "message": "Ya no podrá cifrar mensajes para este contacto ni verificar sus firmas. Puede volver a importar su clave pública más adelante."
@@ -544,5 +544,62 @@
   },
   "keys_check_revocation_failed": {
     "message": "No se pudo comprobar la revocación. Inténtalo de nuevo."
+  },
+  "keys_verified_chip": {
+    "message": "Verificada"
+  },
+  "keys_verified_chip_title": {
+    "message": "Marcaste esta clave como verificada tras comparar su huella con su titular."
+  },
+  "keys_verified_on": {
+    "message": "Verificada por ti el $date$"
+  },
+  "keys_verified_by_you": {
+    "message": "Verificada por ti"
+  },
+  "keys_verified_unmark": {
+    "message": "Desmarcar"
+  },
+  "keys_verify_hint": {
+    "message": "Compara esta huella con $name$ en persona o en una llamada de confianza. Si coincide, márcala como verificada."
+  },
+  "keys_verify_mark": {
+    "message": "Marcar como verificada"
+  },
+  "keys_contact_same_address": {
+    "message": "Misma dirección"
+  },
+  "keys_contact_same_address_title": {
+    "message": "$name$ ($keyid$) también usa esta dirección, con otra clave."
+  },
+  "keys_contact_same_name": {
+    "message": "Nombre parecido"
+  },
+  "keys_contact_same_name_title": {
+    "message": "Parece el nombre de $name$ ($keyid$), pero usa otras letras."
+  },
+  "keys_invisible_char": {
+    "message": "Aquí hay un carácter invisible ($code$)"
+  },
+  "keys_clash_check": {
+    "message": "Confirma con esa persona qué clave es realmente suya antes de fiarte de cualquiera de las dos."
+  },
+  "keys_confusable_char": {
+    "message": "$code$ parece una letra latina, pero es otra"
+  },
+  "keys_contact_lookalike_address": {
+    "message": "Dirección parecida"
+  },
+  "keys_contact_lookalike_address_title": {
+    "message": "$name$ ($keyid$) tiene una dirección que se ve igual que esta, con otra clave."
+  },
+  "keys_contact_same_name_plain": {
+    "message": "Mismo nombre"
+  },
+  "keys_contact_same_name_plain_title": {
+    "message": "Tiene el mismo nombre que $name$ ($keyid$), y ninguna dirección de correo los distingue."
+  },
+  "keys_check_revocation_needs_review": {
+    "message": "La clave de $name$ en el servidor de claves tiene nombres o direcciones nuevos. Revísalos antes de guardarlos."
   }
 }

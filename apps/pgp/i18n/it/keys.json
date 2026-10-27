@@ -117,16 +117,16 @@
     "message": "$count$ contatti"
   },
   "keys_bulk_delete_private_body": {
-    "message": "Questa azione elimina definitivamente da questo dispositivo le chiavi private selezionate. Tutto ciò che è cifrato solo per una chiave eliminata diventa irrecuperabile. Assicurati di avere un backup se potresti averne bisogno in futuro."
+    "message": "Questa azione rimuove le chiavi private selezionate dalla cassaforte di questo dispositivo. Ciò che è cifrato solo per una chiave eliminata non potrà più essere decifrato senza un backup, quindi conservane uno se potresti averne bisogno in futuro. Una copia cifrata può restare sul disco finché il browser non compatta il suo spazio di archiviazione."
   },
   "keys_bulk_delete_contacts_body": {
     "message": "Non potrai più cifrare per questi contatti né verificare le loro firme. Potrai reimportare le loro chiavi pubbliche in seguito."
   },
   "keys_delete_crx_body": {
-    "message": "Non potrai più firmare aggiornamenti per questa estensione, e la chiave non può essere recuperata a meno che tu non abbia un backup."
+    "message": "Non potrai più firmare aggiornamenti per questa estensione, e senza un backup non si può annullare. Una copia cifrata può restare sul disco finché il browser non compatta il suo spazio di archiviazione."
   },
   "keys_delete_key_body": {
-    "message": "Questa azione elimina definitivamente la chiave privata da questo dispositivo. Tutto ciò che è cifrato solo per questa chiave diventa irrecuperabile. Assicurati di avere un backup se potresti averne bisogno in futuro."
+    "message": "Questa azione rimuove la chiave privata dalla cassaforte di questo dispositivo. Ciò che è cifrato solo per questa chiave non potrà più essere decifrato senza un backup, quindi conservane uno se potresti averne bisogno in futuro. Una copia cifrata può restare sul disco finché il browser non compatta il suo spazio di archiviazione."
   },
   "keys_remove_contact_body": {
     "message": "Non potrai più cifrare messaggi per questo contatto né verificare le sue firme. Potrai reimportare la sua chiave pubblica in seguito."
@@ -544,5 +544,62 @@
   },
   "keys_check_revocation_failed": {
     "message": "Impossibile verificare la revoca. Riprova."
+  },
+  "keys_verified_chip": {
+    "message": "Verificata"
+  },
+  "keys_verified_chip_title": {
+    "message": "Hai segnato questa chiave come verificata dopo averne confrontato l'impronta con il titolare."
+  },
+  "keys_verified_on": {
+    "message": "Verificata da te il $date$"
+  },
+  "keys_verified_by_you": {
+    "message": "Verificata da te"
+  },
+  "keys_verified_unmark": {
+    "message": "Annulla"
+  },
+  "keys_verify_hint": {
+    "message": "Confronta questa impronta con $name$ di persona o in una chiamata affidabile. Se corrisponde, segnala come verificata."
+  },
+  "keys_verify_mark": {
+    "message": "Segna come verificata"
+  },
+  "keys_contact_same_address": {
+    "message": "Stesso indirizzo"
+  },
+  "keys_contact_same_address_title": {
+    "message": "Anche $name$ ($keyid$) usa questo indirizzo, con un'altra chiave."
+  },
+  "keys_contact_same_name": {
+    "message": "Nome somigliante"
+  },
+  "keys_contact_same_name_title": {
+    "message": "Sembra il nome di $name$ ($keyid$), ma usa lettere diverse."
+  },
+  "keys_invisible_char": {
+    "message": "Qui c'è un carattere invisibile ($code$)"
+  },
+  "keys_clash_check": {
+    "message": "Verifica con questa persona quale chiave è davvero sua prima di fidarti di una delle due."
+  },
+  "keys_confusable_char": {
+    "message": "$code$ sembra una lettera latina, ma è un'altra"
+  },
+  "keys_contact_lookalike_address": {
+    "message": "Indirizzo somigliante"
+  },
+  "keys_contact_lookalike_address_title": {
+    "message": "$name$ ($keyid$) ha un indirizzo che sembra uguale a questo, con un'altra chiave."
+  },
+  "keys_contact_same_name_plain": {
+    "message": "Stesso nome"
+  },
+  "keys_contact_same_name_plain_title": {
+    "message": "Ha lo stesso nome di $name$ ($keyid$), e nessun indirizzo email li distingue."
+  },
+  "keys_check_revocation_needs_review": {
+    "message": "La chiave di $name$ sul server delle chiavi ha nuovi nomi o indirizzi. Controllali prima che vengano salvati."
   }
 }

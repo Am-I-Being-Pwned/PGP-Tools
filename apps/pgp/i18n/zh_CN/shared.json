@@ -73,7 +73,7 @@
   "shared_delete_history_title": { "message": "删除已保存的历史记录？" },
   "shared_delete_history_confirm": { "message": "开启并删除历史记录" },
   "shared_delete_history_body": {
-    "message": "从不缓存也会删除你已保存的历史记录（$size$），且无法恢复。"
+    "message": "从不缓存也会删除你已保存的历史记录（$size$），且无法撤销。"
   },
   "shared_sync_quota_error": {
     "message": "同步空间不足。Chrome 将同步数据总量限制在约 100 KB，因此此保险库太大，无法跨设备同步。请将其保留在此设备上，或移除一些密钥后重试。"
@@ -162,5 +162,8 @@
   },
   "shared_bundle_no_encrypt_to_self": {
     "message": "你加密的消息事后自己也无法读取"
+  },
+  "shared_settings_save_failed": {
+    "message": "无法保存此更改，因为无法读取已保存的设置。"
   }
 }

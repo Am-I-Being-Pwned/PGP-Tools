@@ -116,6 +116,25 @@ const SSH_PRF_HKDF_INFO: &[u8] = b"gpg-tools-ssh-prf-v1";
 /// (`SHA256:<base64-no-pad>`), the same string `ssh-keygen -l` prints.
 const FINGERPRINT_PREFIX: &str = "SHA256:";
 
+/// Longest key comment handed to the UI, in characters. `ssh-keygen` writes
+/// `user@host`; anything near this is not a name anyone typed.
+const SSH_COMMENT_MAX: usize = 120;
+
+/// A key comment as the UI may show it.
+///
+/// The comment is free text inside an attacker-supplied file, and it
+/// becomes the contact's NAME (`userIds[0]`) -- exactly what a PGP User ID
+/// is, so it gets exactly what a User ID gets in `lib.rs`: control, bidi
+/// and invisible characters stripped (a U+202E override reverses the
+/// address it sits in; a zero-width or variation-selector character makes
+/// `alice@corp.com` and a different string look identical), and a length
+/// cap. The SAME function, not a copy, so the two can never drift apart.
+fn sanitize_comment(comment: &str) -> String {
+    crate::sanitize_untrusted(comment, SSH_COMMENT_MAX)
+        .trim()
+        .to_string()
+}
+
 /// age's binary header magic, and the first line of its armored form.
 const AGE_BINARY_MAGIC: &[u8] = b"age-encryption.org/v1";
 const AGE_ARMOR_BEGIN: &str = "-----BEGIN AGE ENCRYPTED FILE-----";
@@ -344,8 +363,9 @@ fn parse_public_key_line(line: &str) -> Result<SshPublicKey, String> {
     let key_type = parts.next().unwrap_or("");
     let encoded = parts.next().unwrap_or("").trim();
     // Everything after the base64 is the comment, which may itself contain
-    // spaces ("alice@host", but also "work laptop").
-    let comment = parts.next().unwrap_or("").trim().to_string();
+    // spaces ("alice@host", but also "work laptop"). Sanitized here, at
+    // the one place a pasted or fetched line's comment enters the app.
+    let comment = sanitize_comment(parts.next().unwrap_or(""));
 
     if key_type.is_empty() || encoded.is_empty() {
         return Err("Not an SSH public key (expected `<type> <base64> [comment]`)".to_string());
@@ -515,7 +535,9 @@ fn normalize_openssh_identity(
     // trusting the input's copy, so what we fingerprint is exactly what we
     // seal.
     let public = public_key_of_normalized(&plaintext)?;
-    let comment = key.comment().to_string();
+    // A private key file's comment names the user's own key in the list:
+    // the same untrusted text as a `.pub` line's, cleaned the same way.
+    let comment = sanitize_comment(key.comment());
 
     // Final gate: age itself must accept the normalized bytes as a usable
     // identity. If it would not, the import fails now rather than at the
@@ -1331,6 +1353,35 @@ const FIDO_PUB: &str = "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZ
         let json: serde_json::Value =
             serde_json::from_str(&parse_ssh_recipient(two_token).unwrap()).unwrap();
         assert_eq!(json["comment"], "");
+    }
+
+    #[test]
+    fn strips_invisible_and_control_characters_from_a_comment() {
+        // The comment becomes the contact's name: a bidi override, a
+        // zero-width space or a variation selector inside it makes a
+        // different string read as `alice@corp.com`.
+        let two_token = ED25519_PUB.rsplitn(2, ' ').nth(1).unwrap();
+        for hidden in [
+            "\u{202e}", "\u{200b}", "\u{200d}", "\u{2066}", "\u{fe0f}", "\u{feff}", "\u{00ad}",
+            "\u{3164}", "\u{e0041}", "\u{0007}", "\u{2800}", "\u{1d159}",
+        ] {
+            let line = format!("{two_token} alice@corp{hidden}.com");
+            let json: serde_json::Value =
+                serde_json::from_str(&parse_ssh_recipient(&line).unwrap()).unwrap();
+            assert_eq!(json["comment"], "alice@corp.com", "{hidden:?}");
+        }
+    }
+
+    #[test]
+    fn caps_the_length_of_a_comment() {
+        let two_token = ED25519_PUB.rsplitn(2, ' ').nth(1).unwrap();
+        let json: serde_json::Value = serde_json::from_str(
+            &parse_ssh_recipient(&format!("{two_token} {}", "a".repeat(5000))).unwrap(),
+        )
+        .unwrap();
+        let comment = json["comment"].as_str().unwrap();
+        assert_eq!(comment.chars().count(), SSH_COMMENT_MAX + 1);
+        assert!(comment.ends_with('…'));
     }
 
     #[test]

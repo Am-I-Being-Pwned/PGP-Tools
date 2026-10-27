@@ -158,9 +158,10 @@ export async function addKey(blob: ProtectedKeyBlob): Promise<void> {
  *
  *  Guarded on the vault session, and it must stay that way. A locked
  *  vault makes the load return `[]` -- indistinguishable from an empty
- *  keyring -- so an unguarded delete would compute "nothing left", take
- *  the empty-store shortcut, and `removeItem` the sealed blob: every key
- *  destroyed, without the vault ever being opened. The CRX store has
+ *  keyring -- so an unguarded delete would compute "nothing left" and
+ *  persist that over the sealed blob (it used to `removeItem` it; an
+ *  emptied store is now a sealed empty array): every key destroyed,
+ *  without the vault ever being opened. The CRX store has
  *  carried the same guard since it was written (see its `requireSession`
  *  and the comment above it); the keyring simply never got one. */
 export async function removeKey(keyId: string): Promise<void> {

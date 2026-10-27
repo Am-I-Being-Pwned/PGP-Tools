@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { outputFileName } from "./output-name";
+import { outputFileName, uniqueOutputNames } from "./output-name";
 
 // Fixed clock: 16 Jul 2026, 14:32 local.
 const NOW = new Date(2026, 6, 16, 14, 32);
@@ -136,5 +136,49 @@ describe("outputFileName", () => {
       "report.pdf",
     );
     expect(outputFileName("decrypt", ["data.AGE"], true)).toBe("data");
+  });
+});
+
+describe("uniqueOutputNames", () => {
+  it("numbers a second decrypt that lands on the same name", () => {
+    const names = ["report.txt.gpg", "report.txt.asc"].map((n) =>
+      outputFileName("decrypt", [n], false),
+    );
+    expect(names).toEqual(["report.txt", "report.txt"]);
+    expect(uniqueOutputNames(names)).toEqual(["report.txt", "report (2).txt"]);
+  });
+
+  it("leaves a batch with no clash alone", () => {
+    expect(uniqueOutputNames(["a.txt", "b.txt"])).toEqual(["a.txt", "b.txt"]);
+  });
+
+  it("treats names that differ only in case as the same file", () => {
+    expect(uniqueOutputNames(["Report.txt", "report.txt"])).toEqual([
+      "Report.txt",
+      "report (2).txt",
+    ]);
+  });
+
+  it("never renames onto a name another input already has", () => {
+    expect(
+      uniqueOutputNames(["report.txt", "report.txt", "report (2).txt"]),
+    ).toEqual(["report.txt", "report (3).txt", "report (2).txt"]);
+  });
+
+  it("numbers names without an extension, and dotfiles, whole", () => {
+    expect(uniqueOutputNames(["notes", "notes", ".env", ".env"])).toEqual([
+      "notes",
+      "notes (2)",
+      ".env",
+      ".env (2)",
+    ]);
+  });
+
+  it("is deterministic for three of the same", () => {
+    expect(uniqueOutputNames(["x.bin", "x.bin", "x.bin"])).toEqual([
+      "x.bin",
+      "x (2).bin",
+      "x (3).bin",
+    ]);
   });
 });

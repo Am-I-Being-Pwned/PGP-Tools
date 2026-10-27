@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PublicContactKey } from "../lib/storage/contacts";
 import { IDENTITY_VERSION } from "../lib/storage/contacts";
-import { backfillIdentity } from "./useContacts";
+import { backfillIdentity, withUpdatedContact } from "./useContacts";
 
 const wasm = vi.hoisted(() => ({ parseKey: vi.fn() }));
 vi.mock("../lib/pgp/wasm", () => wasm);
@@ -83,5 +83,28 @@ describe("backfillIdentity", () => {
     ]);
     expect(wasm.parseKey).not.toHaveBeenCalled();
     expect(patched.identityVersion).toBe(IDENTITY_VERSION);
+  });
+});
+
+/**
+ * A record changed in place outside the hook (the recipient toggle)
+ * replaces its copy in the list on screen -- see `onContactUpdated`.
+ */
+describe("withUpdatedContact", () => {
+  it("swaps in the record as written, by id, keeping the order", () => {
+    const a = contact({ keyId: "A" });
+    const b = contact({ keyId: "B" });
+    const written = contact({
+      keyId: "A",
+      recipients: [
+        { keyId: "A", armored: "ARMOR", algorithm: "ed25519", disabled: true },
+      ],
+    });
+    expect(withUpdatedContact([a, b], written)).toEqual([written, b]);
+  });
+
+  it("leaves a list without that record untouched", () => {
+    const list = [contact({ keyId: "A" })];
+    expect(withUpdatedContact(list, contact({ keyId: "Z" }))).toBe(list);
   });
 });

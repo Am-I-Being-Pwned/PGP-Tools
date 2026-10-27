@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
+import { Fragment, useEffect, useState } from "react";
 
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import { t } from "../../lib/i18n";
 import { parseKeys } from "../../lib/pgp/wasm";
 import { parseUserId } from "../../lib/utils/key-naming";
 import { KeyAvatar } from "../shared/KeyAvatar";
+import { MarkedText } from "../shared/MarkedText";
 
 /**
  * "There's a public key in here" -- offered wherever one turns up: pasted
@@ -14,6 +16,12 @@ import { KeyAvatar } from "../shared/KeyAvatar";
  *
  * It identifies the key first, so it can say whose it is and -- the part
  * that matters -- shut up about importing a key the user already holds.
+ *
+ * EVERY key is described, not just the first: Import hands the whole text
+ * over, so a banner naming one key while a second rides along would be
+ * describing a different import from the one it starts. Names are drawn
+ * with {@link MarkedText}, so a lookalike letter or an invisible character
+ * in a name the sender chose is visible here too.
  */
 
 interface DetectedKey {
@@ -47,45 +55,65 @@ export function DetectedKeyBanner({
   onReveal,
   source,
 }: DetectedKeyBannerProps) {
-  // Null while the parse is in flight, or if it failed -- the generic
+  // Empty while the parse is in flight, or if it failed -- the generic
   // wording still applies, so a failure just means less detail.
-  const [key, setKey] = useState<DetectedKey | null>(null);
+  const [keys, setKeys] = useState<DetectedKey[]>([]);
 
   useEffect(() => {
     let cancelled = false;
+    // Forget the previous text's keys at once: until this parse lands,
+    // the banner must not name whoever the LAST message carried.
+    setKeys([]);
     void parseKeys(getText())
       .then((certs) => {
-        const cert = certs.at(0);
-        if (cancelled || !cert) return;
-        const stored = contacts.find(
-          (c) => c.keyId.toUpperCase() === cert.keyInfo.keyId.toUpperCase(),
+        if (cancelled) return;
+        setKeys(
+          certs.map((cert) => {
+            const stored = contacts.find(
+              (c) => c.keyId.toUpperCase() === cert.keyInfo.keyId.toUpperCase(),
+            );
+            const uid = (stored?.userIds ?? cert.keyInfo.userIds).at(0) ?? "";
+            return {
+              keyId: cert.keyInfo.keyId,
+              name: parseUserId(uid).name || cert.keyInfo.keyId.slice(-8),
+              known: !!stored,
+            };
+          }),
         );
-        const uid = (stored?.userIds ?? cert.keyInfo.userIds).at(0) ?? "";
-        setKey({
-          keyId: cert.keyInfo.keyId,
-          name: parseUserId(uid).name || cert.keyInfo.keyId.slice(-8),
-          known: !!stored,
-        });
       })
       .catch(() => {
-        if (!cancelled) setKey(null);
+        if (!cancelled) setKeys([]);
       });
     return () => {
       cancelled = true;
     };
   }, [getText, version, contacts]);
 
-  if (key?.known) {
+  const key = keys.length === 1 ? keys[0] : null;
+  const many = keys.length > 1;
+  const allKnown = keys.length > 0 && keys.every((k) => k.known);
+
+  if (allKnown) {
     // Offering to import a key we already hold is worse than saying
     // nothing: it implies we don't have it.
     return (
       <div className="text-good flex items-start gap-2 rounded-xl bg-[#15231b] px-3.5 py-2.5 text-xs">
-        <KeyAvatar fingerprint={key.keyId} size={16} />
+        <KeyAvatar fingerprint={keys[0].keyId} size={16} />
         <p className="min-w-0 flex-1">
-          {t("workspace_detected_key_known", { name: key.name })}{" "}
+          {many ? (
+            <WithNames
+              text={t("workspace_detected_keys_known", { names: SLOT })}
+              keys={keys}
+            />
+          ) : (
+            <WithNames
+              text={t("workspace_detected_key_known", { name: SLOT })}
+              keys={keys}
+            />
+          )}{" "}
           <button
             type="button"
-            onClick={() => onReveal?.(key.keyId)}
+            onClick={() => onReveal?.(keys[0].keyId)}
             className="underline underline-offset-2"
           >
             {t("workspace_detected_key_show")}
@@ -97,15 +125,31 @@ export function DetectedKeyBanner({
 
   return (
     <div className="bg-card text-muted-foreground flex items-start gap-2 rounded-xl px-3.5 py-2.5 text-xs">
-      {key && <KeyAvatar fingerprint={key.keyId} size={16} />}
+      {keys[0] && <KeyAvatar fingerprint={keys[0].keyId} size={16} />}
       <p className="min-w-0 flex-1">
-        {key
-          ? source === "message"
-            ? t("workspace_detected_key_in_message", { name: key.name })
-            : t("workspace_detected_key_pasted", { name: key.name })
-          : source === "message"
-            ? t("workspace_detected_key_in_message_anon")
-            : t("workspace_detected_key_pasted_anon")}{" "}
+        {many ? (
+          <WithNames
+            text={
+              source === "message"
+                ? t("workspace_detected_keys_in_message", { names: SLOT })
+                : t("workspace_detected_keys_pasted", { names: SLOT })
+            }
+            keys={keys}
+          />
+        ) : key ? (
+          <WithNames
+            text={
+              source === "message"
+                ? t("workspace_detected_key_in_message", { name: SLOT })
+                : t("workspace_detected_key_pasted", { name: SLOT })
+            }
+            keys={keys}
+          />
+        ) : source === "message" ? (
+          t("workspace_detected_key_in_message_anon")
+        ) : (
+          t("workspace_detected_key_pasted_anon")
+        )}{" "}
         <button
           type="button"
           onClick={() => onImport(getText())}
@@ -115,5 +159,38 @@ export function DetectedKeyBanner({
         </button>
       </p>
     </div>
+  );
+}
+
+/** Stands in for the names in a translated sentence, so they can be
+ *  rendered as marked nodes where the translator put them. A private-use
+ *  character: it cannot occur in the message text itself. */
+const SLOT = "\ue000";
+
+/** At most this many names; the rest are counted ("+3"). */
+const MAX_NAMES = 4;
+
+/** `text` with {@link SLOT} replaced by the keys' names, each marked. */
+function WithNames({ text, keys }: { text: string; keys: DetectedKey[] }) {
+  const shown = keys.slice(0, MAX_NAMES);
+  const extra = keys.length - shown.length;
+  const names: ReactNode = (
+    <>
+      {shown.map((k, i) => (
+        <Fragment key={k.keyId + i}>
+          {i > 0 && ", "}
+          <MarkedText text={k.name} />
+        </Fragment>
+      ))}
+      {extra > 0 && ` +${extra}`}
+    </>
+  );
+  const [before, ...after] = text.split(SLOT);
+  return (
+    <>
+      {before}
+      {after.length > 0 && names}
+      {after.join("")}
+    </>
   );
 }

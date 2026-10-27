@@ -445,5 +445,131 @@
   },
   "import_status_replaces": {
     "message": "Заменяет ключ, который был у вас для $name$"
+  },
+  "import_review_title": {
+    "message": "Проверка ключей"
+  },
+  "import_review_intro_one": {
+    "message": "Найден $count$ ключ. Ничего не сохранится, пока вы не выберете."
+  },
+  "import_review_intro_few": {
+    "message": "Найдено $count$ ключа. Ничего не сохранится, пока вы не выберете."
+  },
+  "import_review_intro_many": {
+    "message": "Найдено $count$ ключей. Ничего не сохранится, пока вы не выберете."
+  },
+  "import_review_intro_other": {
+    "message": "Найдено $count$ ключа. Ничего не сохранится, пока вы не выберете."
+  },
+  "import_review_status_new": {
+    "message": "Новый"
+  },
+  "import_review_status_update": {
+    "message": "Обновление"
+  },
+  "import_review_status_revoked": {
+    "message": "Отозван"
+  },
+  "import_review_status_duplicate": {
+    "message": "Уже сохранён"
+  },
+  "import_review_status_rejected": {
+    "message": "Нельзя импортировать"
+  },
+  "import_review_conflict_address": {
+    "message": "$email$ уже принадлежит $name$ ($keyid$). Это другой ключ - уточните у владельца, прежде чем доверять ему."
+  },
+  "import_review_conflict_name": {
+    "message": "Выглядит как имя $name$ ($keyid$), но написано другими буквами. Уточните у владельца, прежде чем доверять ему."
+  },
+  "import_review_choice_aria": {
+    "message": "Что сделать с $name$"
+  },
+  "import_review_choice_skip": {
+    "message": "Пропустить"
+  },
+  "import_review_choice_keep_both": {
+    "message": "Оставить оба"
+  },
+  "import_review_choice_import": {
+    "message": "Импортировать"
+  },
+  "import_review_choice_replace": {
+    "message": "Заменить"
+  },
+  "import_review_import_none": {
+    "message": "Ничего не выбрано"
+  },
+  "import_review_import_n_one": {
+    "message": "Импортировать $count$ ключ"
+  },
+  "import_review_import_n_few": {
+    "message": "Импортировать $count$ ключа"
+  },
+  "import_review_import_n_many": {
+    "message": "Импортировать $count$ ключей"
+  },
+  "import_review_import_n_other": {
+    "message": "Импортировать $count$ ключа"
+  },
+  "import_review_import_all": {
+    "message": "Импортировать все"
+  },
+  "import_review_import_all_risky": {
+    "message": "Всё равно импортировать все"
+  },
+  "import_review_import_all_note_one": {
+    "message": "Включает $count$ ключ, выдающий себя за уже сохранённый контакт."
+  },
+  "import_review_import_all_note_few": {
+    "message": "Включает $count$ ключа, выдающих себя за уже сохранённые контакты."
+  },
+  "import_review_import_all_note_many": {
+    "message": "Включает $count$ ключей, выдающих себя за уже сохранённые контакты."
+  },
+  "import_review_import_all_note_other": {
+    "message": "Включает $count$ ключа, выдающих себя за уже сохранённые контакты."
+  },
+  "import_replaced_contacts_one": {
+    "message": "Заменён ключ у $count$ контакта"
+  },
+  "import_replaced_contacts_few": {
+    "message": "Заменены ключи у $count$ контактов"
+  },
+  "import_replaced_contacts_many": {
+    "message": "Заменены ключи у $count$ контактов"
+  },
+  "import_replaced_contacts_other": {
+    "message": "Заменены ключи у $count$ контакта"
+  },
+  "import_review_conflict_address_revoked": {
+    "message": "$email$ принадлежал $name$ ($keyid$), но этот ключ отозван. Уточните у владельца, что новый ключ действительно его."
+  },
+  "import_review_conflict_key_update": {
+    "message": "Это добавит ключи к контакту $name$ ($keyid$), и сообщения ему будут доступны и новым ключам. Уточните у владельца, прежде чем сохранять."
+  },
+  "import_review_conflict_key_contact": {
+    "message": "Содержит ваш ключ контакта $name$ ($keyid$) вместе с другими ключами. Уточните у владельца, прежде чем сохранять."
+  },
+  "import_review_conflict_key_own": {
+    "message": "Содержит ваш собственный ключ ($keyid$) вместе с другими ключами. Убедитесь, что все они ваши, прежде чем сохранять."
+  },
+  "import_review_conflict_address_lookalike": {
+    "message": "$email$ похож на $theirs$, адрес $name$ ($keyid$), но это другой адрес. Уточните у владельца, прежде чем доверять ему."
+  },
+  "import_review_all_keys_off": {
+    "message": "Все ключи, которые этот аккаунт ещё публикует, вы отключили. После сохранения у этого контакта не будет ключа для шифрования, пока вы не включите один из них."
+  },
+  "import_github_refresh_all_held": {
+    "message": "$username$ больше не публикует часть ключей, сохранённых для этого контакта, а все остальные принадлежат другому вашему контакту или вам, поэтому обновить его нельзя. Удалите этот контакт, если больше не хотите шифровать для его старых ключей."
+  },
+  "import_review_status_your_key": {
+    "message": "Ваш ключ"
+  },
+  "import_review_conflict_same_name": {
+    "message": "У $name$ ($keyid$) такое же имя, и нет адреса электронной почты, который бы их различал. Уточните у владельца, прежде чем доверять ему."
+  },
+  "import_review_replace_many": {
+    "message": "Замена недоступна: этот адрес есть у нескольких контактов."
   }
 }

@@ -66,7 +66,7 @@
     "message": "Chiavi moderne, veloci e compatte. Consigliato nella maggior parte dei casi."
   },
   "keygen_algorithm_hint_rsa": {
-    "message": "Ampiamente compatibile. Generazione della chiave più lenta."
+    "message": "Molto compatibile, ma più lento, e il suo codice RSA ha un noto canale laterale temporale (Marvin). Preferisci ECC se non ti serve RSA."
   },
   "keygen_key_size_label": {
     "message": "Dimensione della chiave"

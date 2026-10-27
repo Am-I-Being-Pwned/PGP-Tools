@@ -55,6 +55,7 @@ export interface MessageArgs {
   "actions_lock_now": undefined;
   "actions_mixed_engine_reason": undefined;
   "actions_need_recipient_or_password": undefined;
+  "actions_no_active_key_reason": undefined;
   "actions_no_input_decrypt": undefined;
   "actions_no_input_encrypt": undefined;
   "actions_no_input_sign": undefined;
@@ -125,11 +126,20 @@ export interface MessageArgs {
   "app_error_storage_full": undefined;
   "app_error_symmetric_wrong_password": undefined;
   "app_error_tampered": undefined;
+  "app_error_too_large_to_open": undefined;
   "app_error_unsigned_text_around_signature": undefined;
   "app_error_vault_locked": undefined;
   "app_error_weak_algorithm": undefined;
   "app_error_weak_password": undefined;
   "app_error_wrong_password": undefined;
+  "app_integrity_dismiss": undefined;
+  "app_integrity_ledger_lost": undefined;
+  "app_integrity_missing_sync": undefined;
+  "app_integrity_no_generation": undefined;
+  "app_integrity_settings_held": undefined;
+  "app_integrity_settings_strict": undefined;
+  "app_integrity_settings_unreadable": undefined;
+  "app_integrity_warning": undefined;
   "app_menu_open_in_pgp_tools": undefined;
   "app_nav_label": undefined;
   "app_onboarding_advanced_options": undefined;
@@ -169,9 +179,26 @@ export interface MessageArgs {
   "app_onboarding_unlock_with_vault": undefined;
   "app_onboarding_unlock_with_vault_hint": undefined;
   "app_onboarding_use_preset": undefined;
+  "app_onboarding_vault_exists": undefined;
   "app_oversized_more": { names: string | number; count: string | number };
   "app_tab_main": undefined;
+  "app_vault_alternate_local": undefined;
+  "app_vault_alternate_sync": undefined;
+  "app_vault_alternate_use": undefined;
+  "app_vault_ambiguous_body": undefined;
+  "app_vault_ambiguous_title": undefined;
+  "app_vault_ambiguous_use_local": undefined;
+  "app_vault_ambiguous_use_sync": undefined;
+  "app_vault_elsewhere_body_local": undefined;
+  "app_vault_elsewhere_body_sync": undefined;
+  "app_vault_elsewhere_title": undefined;
+  "app_vault_elsewhere_use": undefined;
+  "app_vault_erase_body": undefined;
+  "app_vault_erase_confirm": undefined;
+  "app_vault_erase_title": undefined;
   "app_vault_lock_retry": undefined;
+  "app_vault_orphaned_body": undefined;
+  "app_vault_orphaned_title": undefined;
   "app_vault_unreadable_body": undefined;
   "app_vault_unreadable_body_passkey": undefined;
   "app_vault_unreadable_title": undefined;
@@ -240,6 +267,7 @@ export interface MessageArgs {
   "import_github_offline": undefined;
   "import_github_omitted_reason": { max: string | number; count: string | number; username: string | number };
   "import_github_rate_limited": undefined;
+  "import_github_refresh_all_held": { username: string | number };
   "import_github_server_error": undefined;
   "import_group_keys_chip_title": undefined;
   "import_group_label": undefined;
@@ -279,6 +307,31 @@ export interface MessageArgs {
   "import_rejected_generic": undefined;
   "import_retry_minute": undefined;
   "import_reveal": undefined;
+  "import_review_all_keys_off": undefined;
+  "import_review_choice_aria": { name: string | number };
+  "import_review_choice_import": undefined;
+  "import_review_choice_keep_both": undefined;
+  "import_review_choice_replace": undefined;
+  "import_review_choice_skip": undefined;
+  "import_review_conflict_address": { email: string | number; name: string | number; keyid: string | number };
+  "import_review_conflict_address_lookalike": { email: string | number; theirs: string | number; name: string | number; keyid: string | number };
+  "import_review_conflict_address_revoked": { email: string | number; name: string | number; keyid: string | number };
+  "import_review_conflict_key_contact": { name: string | number; keyid: string | number };
+  "import_review_conflict_key_own": { keyid: string | number };
+  "import_review_conflict_key_update": { name: string | number; keyid: string | number };
+  "import_review_conflict_name": { name: string | number; keyid: string | number };
+  "import_review_conflict_same_name": { name: string | number; keyid: string | number };
+  "import_review_import_all": undefined;
+  "import_review_import_all_risky": undefined;
+  "import_review_import_none": undefined;
+  "import_review_replace_many": undefined;
+  "import_review_status_duplicate": undefined;
+  "import_review_status_new": undefined;
+  "import_review_status_rejected": undefined;
+  "import_review_status_revoked": undefined;
+  "import_review_status_update": undefined;
+  "import_review_status_your_key": undefined;
+  "import_review_title": undefined;
   "import_revocation_headline": undefined;
   "import_source_help": undefined;
   "import_ssh_headline": undefined;
@@ -428,6 +481,7 @@ export interface MessageArgs {
   "keys_check_revocation": undefined;
   "keys_check_revocation_current": { name: string | number; host: string | number };
   "keys_check_revocation_failed": undefined;
+  "keys_check_revocation_needs_review": { name: string | number };
   "keys_check_revocation_not_published": { host: string | number; name: string | number };
   "keys_check_revocation_revoked": { name: string | number };
   "keys_check_revocation_running": { host: string | number };
@@ -436,8 +490,10 @@ export interface MessageArgs {
   "keys_chip_protection_title": undefined;
   "keys_chip_your_key": undefined;
   "keys_chip_your_key_title": undefined;
+  "keys_clash_check": undefined;
   "keys_confirm_delete_key_title": undefined;
   "keys_confirm_remove_contact_title": undefined;
+  "keys_confusable_char": { code: string | number };
   "keys_contact_expired": { date: string | number };
   "keys_contact_expired_title": { date: string | number };
   "keys_contact_expires": { date: string | number };
@@ -445,9 +501,17 @@ export interface MessageArgs {
   "keys_contact_keys_partial": { active: string | number; total: string | number };
   "keys_contact_keys_partial_title": { active: string | number; total: string | number };
   "keys_contact_long_id_title": undefined;
+  "keys_contact_lookalike_address": undefined;
+  "keys_contact_lookalike_address_title": { name: string | number; keyid: string | number };
   "keys_contact_options_aria": undefined;
   "keys_contact_revoked": undefined;
   "keys_contact_revoked_title": undefined;
+  "keys_contact_same_address": undefined;
+  "keys_contact_same_address_title": { name: string | number; keyid: string | number };
+  "keys_contact_same_name": undefined;
+  "keys_contact_same_name_plain": undefined;
+  "keys_contact_same_name_plain_title": { name: string | number; keyid: string | number };
+  "keys_contact_same_name_title": { name: string | number; keyid: string | number };
   "keys_contacts_heading": undefined;
   "keys_contacts_heading_count": { count: string | number };
   "keys_contacts_heading_encrypted": undefined;
@@ -482,6 +546,7 @@ export interface MessageArgs {
   "keys_generate_button": undefined;
   "keys_group_row_label": undefined;
   "keys_import_button": undefined;
+  "keys_invisible_char": { code: string | number };
   "keys_key_details": undefined;
   "keys_key_options_aria": undefined;
   "keys_loading": undefined;
@@ -552,6 +617,13 @@ export interface MessageArgs {
   "keys_subkeys_truncated": { count: string | number };
   "keys_undo": undefined;
   "keys_unknown_name": undefined;
+  "keys_verified_by_you": undefined;
+  "keys_verified_chip": undefined;
+  "keys_verified_chip_title": undefined;
+  "keys_verified_on": { date: string | number };
+  "keys_verified_unmark": undefined;
+  "keys_verify_hint": { name: string | number };
+  "keys_verify_mark": undefined;
   "keys_weak_sha1": undefined;
   "keys_wrong_password": undefined;
   "settings_crx_default_key_name": undefined;
@@ -729,6 +801,7 @@ export interface MessageArgs {
   "shared_preset_recommended": undefined;
   "shared_saving": undefined;
   "shared_security_preset": undefined;
+  "shared_settings_save_failed": undefined;
   "shared_show_technical_details": undefined;
   "shared_something_went_wrong": undefined;
   "shared_source_on_github": undefined;
@@ -751,6 +824,7 @@ export interface MessageArgs {
   "workspace_add_a_contact": undefined;
   "workspace_age_message_note": undefined;
   "workspace_also_signed_by": { names: string | number };
+  "workspace_auto_run_too_large": undefined;
   "workspace_browse_files": undefined;
   "workspace_clear_all_files": undefined;
   "workspace_clear_input_output": undefined;
@@ -772,9 +846,13 @@ export interface MessageArgs {
   "workspace_detected_key_pasted": { name: string | number };
   "workspace_detected_key_pasted_anon": undefined;
   "workspace_detected_key_show": undefined;
+  "workspace_detected_keys_in_message": { names: string | number };
+  "workspace_detected_keys_known": { names: string | number };
+  "workspace_detected_keys_pasted": { names: string | number };
   "workspace_drop_files_or_text": undefined;
   "workspace_enter_key_password": undefined;
   "workspace_enter_message_password": undefined;
+  "workspace_error_batch_not_encrypted": { name: string | number };
   "workspace_error_crx_invalid": undefined;
   "workspace_error_crx_sign_failed": undefined;
   "workspace_error_crx_wrong_password": undefined;
@@ -818,6 +896,8 @@ export interface MessageArgs {
   "workspace_no_contacts_yet": undefined;
   "workspace_no_keys_yet": undefined;
   "workspace_no_such_language": undefined;
+  "workspace_not_encrypted": undefined;
+  "workspace_not_encrypted_not_signed": undefined;
   "workspace_note_downloading": { what: string | number };
   "workspace_note_downloading_progress": { what: string | number; percent: string | number };
   "workspace_note_same_language": { language: string | number };
@@ -863,21 +943,30 @@ export interface MessageArgs {
   "workspace_sign_blocked_age": undefined;
   "workspace_sign_blocked_no_pgp_key": undefined;
   "workspace_sign_for_web_store": undefined;
+  "workspace_sign_hidden_chars": { chars: string | number };
+  "workspace_sign_hidden_chars_anyway": undefined;
+  "workspace_sign_hidden_chars_remove": undefined;
   "workspace_sign_kind_crx": undefined;
   "workspace_sign_kind_pgp": undefined;
   "workspace_sign_with": undefined;
   "workspace_signature_covers_original": undefined;
+  "workspace_signature_not_addressed": undefined;
   "workspace_signature_verified": undefined;
+  "workspace_signature_verified_line_breaks": undefined;
   "workspace_signature_verified_not_for_you": undefined;
   "workspace_signature_verified_retired": undefined;
   "workspace_signed_for_others": { names: string | number };
+  "workspace_signed_not_encrypted": undefined;
   "workspace_signed_on": { date: string | number };
   "workspace_signed_text_hidden_chars": undefined;
+  "workspace_signed_text_lone_cr": undefined;
   "workspace_signer_key_retired": undefined;
+  "workspace_signer_not_verified": undefined;
   "workspace_status_age_encrypted": undefined;
   "workspace_status_crx_signed": { name: string | number };
   "workspace_status_crx_valid": { id: string | number };
   "workspace_status_decrypted_archive": undefined;
+  "workspace_status_not_encrypted": undefined;
   "workspace_status_signer_unknown": undefined;
   "workspace_style_bold": undefined;
   "workspace_style_code": undefined;
@@ -923,8 +1012,12 @@ export interface PluralArgs {
   "import_group_keys_chip": undefined;
   "import_group_proposal_label": undefined;
   "import_n_contacts": undefined;
+  "import_replaced_contacts": undefined;
   "import_retry_hours": undefined;
   "import_retry_minutes": undefined;
+  "import_review_import_all_note": undefined;
+  "import_review_import_n": undefined;
+  "import_review_intro": undefined;
   "import_updated_contacts": undefined;
   "keygen_export_contacts_included": undefined;
   "keygen_export_crx_included": undefined;
@@ -1025,6 +1118,7 @@ export const PLACEHOLDER_ORDER: Readonly<Partial<Record<string, readonly string[
   "import_github_omitted_line_one": ["count"],
   "import_github_omitted_line_other": ["count"],
   "import_github_omitted_reason": ["max","count","username"],
+  "import_github_refresh_all_held": ["username"],
   "import_github_rejected_heading_one": ["count"],
   "import_github_rejected_heading_other": ["count"],
   "import_group_help_one": ["count"],
@@ -1046,10 +1140,27 @@ export const PLACEHOLDER_ORDER: Readonly<Partial<Record<string, readonly string[
   "import_panel_aria_with_id": ["keyid"],
   "import_paste_placeholder": ["shortcut"],
   "import_reject_expired": ["date"],
+  "import_replaced_contacts_one": ["count"],
+  "import_replaced_contacts_other": ["count"],
   "import_retry_hours_one": ["count"],
   "import_retry_hours_other": ["count"],
   "import_retry_minutes_one": ["count"],
   "import_retry_minutes_other": ["count"],
+  "import_review_choice_aria": ["name"],
+  "import_review_conflict_address": ["email","name","keyid"],
+  "import_review_conflict_address_lookalike": ["email","theirs","name","keyid"],
+  "import_review_conflict_address_revoked": ["email","name","keyid"],
+  "import_review_conflict_key_contact": ["name","keyid"],
+  "import_review_conflict_key_own": ["keyid"],
+  "import_review_conflict_key_update": ["name","keyid"],
+  "import_review_conflict_name": ["name","keyid"],
+  "import_review_conflict_same_name": ["name","keyid"],
+  "import_review_import_all_note_one": ["count"],
+  "import_review_import_all_note_other": ["count"],
+  "import_review_import_n_one": ["count"],
+  "import_review_import_n_other": ["count"],
+  "import_review_intro_one": ["count"],
+  "import_review_intro_other": ["count"],
   "import_status_added_on": ["date"],
   "import_status_duplicate_added": ["date"],
   "import_status_replaces": ["name"],
@@ -1080,9 +1191,11 @@ export const PLACEHOLDER_ORDER: Readonly<Partial<Record<string, readonly string[
   "keys_bulk_delete_prompt_one": ["count"],
   "keys_bulk_delete_prompt_other": ["count"],
   "keys_check_revocation_current": ["name","host"],
+  "keys_check_revocation_needs_review": ["name"],
   "keys_check_revocation_not_published": ["host","name"],
   "keys_check_revocation_revoked": ["name"],
   "keys_check_revocation_running": ["host"],
+  "keys_confusable_char": ["code"],
   "keys_contact_expired": ["date"],
   "keys_contact_expired_title": ["date"],
   "keys_contact_expires": ["date"],
@@ -1090,6 +1203,10 @@ export const PLACEHOLDER_ORDER: Readonly<Partial<Record<string, readonly string[
   "keys_contact_keys_count_other": ["count"],
   "keys_contact_keys_partial": ["active","total"],
   "keys_contact_keys_partial_title": ["active","total"],
+  "keys_contact_lookalike_address_title": ["name","keyid"],
+  "keys_contact_same_address_title": ["name","keyid"],
+  "keys_contact_same_name_plain_title": ["name","keyid"],
+  "keys_contact_same_name_title": ["name","keyid"],
   "keys_contacts_heading_count": ["count"],
   "keys_contacts_removed_other": ["count"],
   "keys_count_contacts_one": ["count"],
@@ -1110,6 +1227,7 @@ export const PLACEHOLDER_ORDER: Readonly<Partial<Record<string, readonly string[
   "keys_inactive_subkeys_revoked_other": ["count"],
   "keys_inactive_subkeys_unusable_one": ["count"],
   "keys_inactive_subkeys_unusable_other": ["count"],
+  "keys_invisible_char": ["code"],
   "keys_lookalike_char": ["code"],
   "keys_no_contacts_match": ["query"],
   "keys_rename_hint": ["identity"],
@@ -1127,6 +1245,8 @@ export const PLACEHOLDER_ORDER: Readonly<Partial<Record<string, readonly string[
   "keys_ssh_export_skipped_one": ["count"],
   "keys_ssh_export_skipped_other": ["count"],
   "keys_subkeys_truncated": ["count"],
+  "keys_verified_on": ["date"],
+  "keys_verify_hint": ["name"],
   "settings_crx_info_get_body": ["crx","load_unpacked"],
   "settings_crx_info_ladder_ci": ["term"],
   "settings_crx_info_ladder_hardware": ["term"],
@@ -1192,6 +1312,10 @@ export const PLACEHOLDER_ORDER: Readonly<Partial<Record<string, readonly string[
   "workspace_detected_key_in_message": ["name"],
   "workspace_detected_key_known": ["name"],
   "workspace_detected_key_pasted": ["name"],
+  "workspace_detected_keys_in_message": ["names"],
+  "workspace_detected_keys_known": ["names"],
+  "workspace_detected_keys_pasted": ["names"],
+  "workspace_error_batch_not_encrypted": ["name"],
   "workspace_error_verify_file_too_large": ["name","limit"],
   "workspace_error_verify_not_utf8": ["name"],
   "workspace_file_signature": ["name","outcome"],
@@ -1216,6 +1340,7 @@ export const PLACEHOLDER_ORDER: Readonly<Partial<Record<string, readonly string[
   "workspace_replace_all_shortcut": ["shortcut"],
   "workspace_save_file": ["name"],
   "workspace_show_translation": ["language"],
+  "workspace_sign_hidden_chars": ["chars"],
   "workspace_signed_for_others": ["names"],
   "workspace_signed_on": ["date"],
   "workspace_status_crx_signed": ["name"],

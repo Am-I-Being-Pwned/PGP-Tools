@@ -135,6 +135,39 @@ export interface KeySessionStore {
 }
 
 /**
+ * The `open` for a per-key passkey unlock that also migrates the key
+ * under the master: open the blob, then -- before the handle is handed
+ * back to `KeySessionStore.unlock`, which is what makes the key show as
+ * unlocked -- persist its re-seal.
+ *
+ * The order is the point. Re-sealing after the unlock resolved meant the
+ * key showed "Lock" while the new sealing was still two keyring writes
+ * away (`updateLastUsed`, then the re-protect), so a panel closed or
+ * reloaded in that window kept the old salt with nothing to say so.
+ *
+ * Best-effort: a failed re-seal is swallowed and the handle still
+ * returned -- the key IS unlocked, and it just keeps its own prompt
+ * until the next time it is unlocked. A lock landing during the re-seal
+ * is still caught by `unlock`'s generation check, which drops the
+ * handle; the re-seal itself is a valid sealing of the same key either
+ * way.
+ */
+export async function openThenReseal(
+  open: () => Promise<number>,
+  reseal: ((handle: number) => Promise<void>) | null,
+): Promise<number> {
+  const handle = await open();
+  if (reseal) {
+    try {
+      await reseal(handle);
+    } catch {
+      /* keep the per-key prompt; nothing is lost */
+    }
+  }
+  return handle;
+}
+
+/**
  * React-free core of {@link useKeySession}: owns the handle map, the
  * lock generation, and the two invariants that keep a decrypted key
  * from outliving a lock.
@@ -440,44 +473,43 @@ export function useKeySession(opts: KeySessionOptions) {
           const ciphertext = fromBase64(encrypted.ciphertext);
           const iv = fromBase64(encrypted.iv);
           const storedSecret = fromBase64(encrypted.storedSecret);
-          return kind === "ssh"
-            ? await wasmApi.unlockSshIdentityWithPrf(
-                ciphertext,
-                iv,
-                prfOutput,
-                storedSecret,
-                blob.keyId,
-              )
-            : await wasmApi.unlockWithPrf(
-                ciphertext,
-                iv,
-                prfOutput,
-                storedSecret,
-                blob.keyId,
-              );
+          const first = prfOutput;
+          const second = secondOutput;
+          // The re-seal runs off the same ceremony, INSIDE the open: the
+          // key only shows as unlocked once its new sealing is on disk,
+          // so a panel closed (or reloaded) right after the unlock cannot
+          // lose the migration (see `openThenReseal`).
+          return openThenReseal(
+            () =>
+              kind === "ssh"
+                ? wasmApi.unlockSshIdentityWithPrf(
+                    ciphertext,
+                    iv,
+                    first,
+                    storedSecret,
+                    blob.keyId,
+                  )
+                : wasmApi.unlockWithPrf(
+                    ciphertext,
+                    iv,
+                    first,
+                    storedSecret,
+                    blob.keyId,
+                  ),
+            reseal && second
+              ? async (handle) =>
+                  reseal.replaceProtection(
+                    blob.keyId,
+                    await resealUnderMaster(
+                      blob,
+                      handle,
+                      reseal.master,
+                      second,
+                    ),
+                  )
+              : null,
+          );
         });
-
-        // Re-seal off the same ceremony. Best-effort: the key IS
-        // unlocked either way, and a failure here just means this key
-        // keeps its own prompt until the next time it is unlocked.
-        if (stored && reseal && secondOutput) {
-          const handle = store.getHandle(blob.keyId);
-          if (handle !== null) {
-            try {
-              await reseal.replaceProtection(
-                blob.keyId,
-                await resealUnderMaster(
-                  blob,
-                  handle,
-                  reseal.master,
-                  secondOutput,
-                ),
-              );
-            } catch {
-              /* keep the per-key prompt; nothing is lost */
-            }
-          }
-        }
         return stored;
       } catch (e) {
         if (ac.signal.aborted) return "cancelled";

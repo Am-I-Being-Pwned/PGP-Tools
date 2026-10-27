@@ -153,7 +153,7 @@
     "message": "Activer et supprimer l'historique"
   },
   "shared_delete_history_body": {
-    "message": "Ne jamais garder les clés en mémoire supprime aussi votre historique enregistré ($size$). Il ne pourra pas être récupéré."
+    "message": "Ne jamais garder les clés en mémoire supprime aussi votre historique enregistré ($size$). Cette action est irréversible."
   },
   "shared_sync_quota_error": {
     "message": "Espace de synchronisation insuffisant. Chrome limite les données synchronisées à environ 100 Ko au total, ce coffre est donc trop volumineux pour être synchronisé entre appareils. Gardez-le sur cet appareil, ou retirez des clés et réessayez."
@@ -310,5 +310,8 @@
   },
   "shared_bundle_no_encrypt_to_self": {
     "message": "Les messages que vous chiffrez ne sont plus lisibles par vous ensuite"
+  },
+  "shared_settings_save_failed": {
+    "message": "Cette modification n'a pas pu être enregistrée, car les paramètres enregistrés n'ont pas pu être lus."
   }
 }

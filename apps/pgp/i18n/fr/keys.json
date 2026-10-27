@@ -117,16 +117,16 @@
     "message": "$count$ contacts"
   },
   "keys_bulk_delete_private_body": {
-    "message": "Cette action supprime définitivement de cet appareil les clés privées sélectionnées. Tout ce qui est chiffré uniquement pour une clé supprimée devient irrécupérable. Assurez-vous d'avoir une sauvegarde si vous pourriez un jour en avoir besoin."
+    "message": "Cette action retire les clés privées sélectionnées du coffre de cet appareil. Ce qui est chiffré uniquement pour une clé supprimée ne pourra plus être déchiffré sans sauvegarde : gardez-en une si vous pourriez un jour en avoir besoin. Une copie chiffrée peut rester sur le disque jusqu'à ce que le navigateur compacte son stockage."
   },
   "keys_bulk_delete_contacts_body": {
     "message": "Vous ne pourrez plus chiffrer pour ces contacts ni vérifier leurs signatures. Vous pourrez réimporter leurs clés publiques plus tard."
   },
   "keys_delete_crx_body": {
-    "message": "Vous ne pourrez plus signer de mises à jour pour cette extension, et la clé ne pourra pas être récupérée sans sauvegarde."
+    "message": "Vous ne pourrez plus signer de mises à jour pour cette extension, et sans sauvegarde, c'est irréversible. Une copie chiffrée peut rester sur le disque jusqu'à ce que le navigateur compacte son stockage."
   },
   "keys_delete_key_body": {
-    "message": "Cette action supprime définitivement la clé privée de cet appareil. Tout ce qui est chiffré uniquement pour cette clé devient irrécupérable. Assurez-vous d'avoir une sauvegarde si vous pourriez un jour en avoir besoin."
+    "message": "Cette action retire la clé privée du coffre de cet appareil. Ce qui est chiffré uniquement pour cette clé ne pourra plus être déchiffré sans sauvegarde : gardez-en une si vous pourriez un jour en avoir besoin. Une copie chiffrée peut rester sur le disque jusqu'à ce que le navigateur compacte son stockage."
   },
   "keys_remove_contact_body": {
     "message": "Vous ne pourrez plus chiffrer de messages pour ce contact ni vérifier ses signatures. Vous pourrez réimporter sa clé publique plus tard."
@@ -544,5 +544,62 @@
   },
   "keys_check_revocation_failed": {
     "message": "Impossible de vérifier la révocation. Réessayez."
+  },
+  "keys_verified_chip": {
+    "message": "Vérifiée"
+  },
+  "keys_verified_chip_title": {
+    "message": "Vous avez marqué cette clé comme vérifiée après avoir comparé son empreinte avec son titulaire."
+  },
+  "keys_verified_on": {
+    "message": "Vérifiée par vous le $date$"
+  },
+  "keys_verified_by_you": {
+    "message": "Vérifiée par vous"
+  },
+  "keys_verified_unmark": {
+    "message": "Retirer"
+  },
+  "keys_verify_hint": {
+    "message": "Comparez cette empreinte avec $name$ en personne ou lors d'un appel de confiance. Si elle correspond, marquez-la comme vérifiée."
+  },
+  "keys_verify_mark": {
+    "message": "Marquer comme vérifiée"
+  },
+  "keys_contact_same_address": {
+    "message": "Même adresse"
+  },
+  "keys_contact_same_address_title": {
+    "message": "$name$ ($keyid$) utilise aussi cette adresse, avec une autre clé."
+  },
+  "keys_contact_same_name": {
+    "message": "Nom ressemblant"
+  },
+  "keys_contact_same_name_title": {
+    "message": "Ressemble au nom de $name$ ($keyid$), mais avec d'autres lettres."
+  },
+  "keys_invisible_char": {
+    "message": "Un caractère invisible ($code$) se trouve ici"
+  },
+  "keys_clash_check": {
+    "message": "Vérifiez auprès de cette personne quelle clé est vraiment la sienne avant de vous fier à l'une ou l'autre."
+  },
+  "keys_confusable_char": {
+    "message": "$code$ ressemble à une lettre latine, mais en est une autre"
+  },
+  "keys_contact_lookalike_address": {
+    "message": "Adresse ressemblante"
+  },
+  "keys_contact_lookalike_address_title": {
+    "message": "$name$ ($keyid$) a une adresse qui ressemble à celle-ci, avec une autre clé."
+  },
+  "keys_contact_same_name_plain": {
+    "message": "Même nom"
+  },
+  "keys_contact_same_name_plain_title": {
+    "message": "Porte le même nom que $name$ ($keyid$), et aucune adresse e-mail ne permet de les distinguer."
+  },
+  "keys_check_revocation_needs_review": {
+    "message": "La clé de $name$ sur le serveur de clés a de nouveaux noms ou adresses. Vérifiez-les avant leur enregistrement."
   }
 }

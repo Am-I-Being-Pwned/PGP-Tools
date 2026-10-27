@@ -69,7 +69,7 @@
     "message": "Supprimer les $count$ entrées de l'historique"
   },
   "actions_history_delete_warning": {
-    "message": "Cette action supprime définitivement de cet appareil votre historique chiffré des opérations. Il ne pourra pas être récupéré."
+    "message": "Cette action retire votre historique chiffré des opérations du coffre de cet appareil. Elle est irréversible. Une copie chiffrée peut rester sur le disque jusqu'à ce que le navigateur compacte son stockage."
   },
   "actions_no_keys_available": {
     "message": "Aucune clé disponible"
@@ -301,5 +301,8 @@
   },
   "actions_reply_to_signer": {
     "message": "Répondre à l'expéditeur"
+  },
+  "actions_no_active_key_reason": {
+    "message": "Toutes les clés de ce contact sont désactivées. Réactivez-en une dans les détails du contact pour chiffrer vers lui."
   }
 }

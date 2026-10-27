@@ -43,6 +43,7 @@ export function Segmented<T extends string>({
   size = "default",
   activation = "automatic",
   hintSide = "bottom",
+  skipTab = false,
   className,
 }: {
   value: T;
@@ -56,6 +57,10 @@ export function Segmented<T extends string>({
   /** Where option hints appear. Below by default: above, they collide
    *  with whatever header the control sits under. */
   hintSide?: "top" | "bottom";
+  /** Leave the whole control out of the Tab order (its options stay
+   *  clickable and arrow-navigable once focused). For a control with
+   *  its own keyboard shortcuts that Tab would otherwise stop on first. */
+  skipTab?: boolean;
   className?: string;
 }) {
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -125,7 +130,7 @@ export function Segmented<T extends string>({
             aria-label={o.ariaLabel}
             aria-keyshortcuts={o.ariaKeyShortcuts}
             disabled={o.disabled}
-            tabIndex={on ? 0 : -1}
+            tabIndex={on && !skipTab ? 0 : -1}
             onClick={() => onValueChange(o.value)}
             data-state={on ? "on" : "off"}
             className={cn(

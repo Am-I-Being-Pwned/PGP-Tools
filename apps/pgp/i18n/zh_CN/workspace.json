@@ -499,5 +499,53 @@
   },
   "workspace_signed_text_hidden_chars": {
     "message": "签名文本包含不可见字符或文字方向字符，因此屏幕上的显示可能与原文不同"
+  },
+  "workspace_signer_not_verified": {
+    "message": "你尚未将此密钥标记为已验证"
+  },
+  "workspace_not_encrypted": {
+    "message": "未加密"
+  },
+  "workspace_signed_not_encrypted": {
+    "message": "已签名但未加密：任何人都可能向你发送这份副本"
+  },
+  "workspace_status_not_encrypted": {
+    "message": "此消息未加密，因此任何人都可能向你发送这份副本，并在传输途中读取它。"
+  },
+  "workspace_not_encrypted_not_signed": {
+    "message": "未加密也未签名"
+  },
+  "workspace_error_batch_not_encrypted": {
+    "message": "$name$ 未加密。请单独解密它以查看内容。"
+  },
+  "workspace_signature_verified_line_breaks": {
+    "message": "检查换行"
+  },
+  "workspace_signed_text_lone_cr": {
+    "message": "签名文本包含不带换行符的回车符（显示为 ␍），因此其换行可能不会按签名者书写的方式显示"
+  },
+  "workspace_signature_not_addressed": {
+    "message": "签名未表明是发给你的，因此可能是被转发的"
+  },
+  "workspace_detected_keys_known": {
+    "message": "你已经有 $names$ 的密钥。"
+  },
+  "workspace_detected_keys_in_message": {
+    "message": "此消息包含 $names$ 的公钥。"
+  },
+  "workspace_detected_keys_pasted": {
+    "message": "这些是 $names$ 的公钥。"
+  },
+  "workspace_sign_hidden_chars": {
+    "message": "此文本含有看不见的字符 ($chars$)。它们可能改变文字顺序或隐藏内容，并会原样被签名。"
+  },
+  "workspace_sign_hidden_chars_anyway": {
+    "message": "仍然签名"
+  },
+  "workspace_sign_hidden_chars_remove": {
+    "message": "删除它们"
+  },
+  "workspace_auto_run_too_large": {
+    "message": "此消息太大，无法自动打开。请使用下方按钮打开。"
   }
 }

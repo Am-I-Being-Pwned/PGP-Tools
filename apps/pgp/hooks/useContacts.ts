@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import type { ReviewedContact } from "../lib/import/review";
 import type { PublicContactKey } from "../lib/storage/contacts";
 import { mergeIntoContact } from "../lib/import-public-keys";
 import { parseKey } from "../lib/pgp/wasm";
 import {
   IDENTITY_VERSION,
   loadContacts,
+  onContactUpdated,
   removeContact,
   saveContact,
+  setContactVerified,
   updateContact,
   updateContactAlias,
   upsertContacts,
@@ -113,6 +116,17 @@ export async function backfillIdentity(
   return patched;
 }
 
+/** The list with `updated` in place of the record it replaces, matched
+ *  by id. Untouched (same array) when that record is not on screen, so
+ *  an update for a contact this list never held does not re-render. */
+export function withUpdatedContact(
+  list: PublicContactKey[],
+  updated: PublicContactKey,
+): PublicContactKey[] {
+  if (!list.some((c) => c.keyId === updated.keyId)) return list;
+  return list.map((c) => (c.keyId === updated.keyId ? updated : c));
+}
+
 export function useContacts() {
   const [contacts, setContacts] = useState<PublicContactKey[]>([]);
   const [loading, setLoading] = useState(true);
@@ -171,7 +185,20 @@ export function useContacts() {
     void refresh();
   }, [refresh]);
 
-  const add = useCallback(async (contact: PublicContactKey) => {
+  // A record changed in place by a writer that does not go through this
+  // hook -- the recipient toggle on the details page -- lands here, so
+  // the card, the picker and the next import's classification all read
+  // what is on disk (see `onContactUpdated`).
+  useEffect(
+    () =>
+      onContactUpdated((updated) =>
+        setContacts((prev) => withUpdatedContact(prev, updated)),
+      ),
+    [],
+  );
+
+  /** Only a reviewed contact can be added -- see `lib/import/review`. */
+  const add = useCallback(async (contact: ReviewedContact) => {
     const op = mutexRef.current.then(async () => {
       // The SAME rules `saveContact` applies, from the same function --
       // source-based identity, a hand-pasted duplicate that must not
@@ -258,5 +285,29 @@ export function useContacts() {
     [refresh],
   );
 
-  return { contacts, loading, error, refresh, add, remove, rename, mergeKey };
+  /** Mark (or unmark) a contact's key as verified by the user. */
+  const setVerified = useCallback(
+    async (keyId: string, verified: boolean) => {
+      const op = mutexRef.current.then(() =>
+        setContactVerified(keyId, verified),
+      );
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
+      mutexRef.current = op.catch(() => {});
+      await op;
+      await refresh();
+    },
+    [refresh],
+  );
+
+  return {
+    contacts,
+    loading,
+    error,
+    refresh,
+    add,
+    remove,
+    rename,
+    mergeKey,
+    setVerified,
+  };
 }

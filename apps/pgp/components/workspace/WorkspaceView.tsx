@@ -37,6 +37,7 @@ import type { WorkspaceAction } from "../../lib/messages";
 import type { ReaderSigner } from "../../lib/reader-protocol";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
+import type { PgpPreferences } from "../../lib/storage/preferences";
 import type { WorkspaceDraftSource } from "../../lib/workspace-draft";
 import type { WorkspaceIntake } from "./useWorkspaceState";
 import type { ComposeTools } from "./WorkspaceInput";
@@ -73,10 +74,12 @@ import { INPUT_CLASS } from "../../lib/utils/styles";
 import { KeyAvatar } from "../shared/KeyAvatar";
 import { hasOpenSlideOver } from "../shared/SlideOver";
 import { ToggleBadge } from "../shared/ToggleBadge";
+import { withoutHiddenCharacters } from "./hidden-characters";
 import { KeySelector } from "./KeySelector";
 import { MessagePasswordPage } from "./MessagePasswordPage";
 import { selectionEngine } from "./recipient-engine";
 import { RecipientPicker } from "./RecipientPicker";
+import { displayOnlySignerCard, signerCardState } from "./signer-card";
 import {
   HoverLabel,
   TranslateToggle,
@@ -85,7 +88,7 @@ import {
 import { useWorkspaceOperations } from "./useWorkspaceOperations";
 import { useWorkspaceState } from "./useWorkspaceState";
 import { modeLabel, WorkspaceInput } from "./WorkspaceInput";
-import { signerAsContact, WorkspaceResults } from "./WorkspaceResults";
+import { WorkspaceResults } from "./WorkspaceResults";
 
 /** mod+Enter mirrors the main action button (Encrypt/Decrypt/Sign/...). */
 const RUN_SHORTCUT: ShortcutSpec = { mod: true, key: "Enter" };
@@ -425,8 +428,13 @@ export function WorkspaceView({
     s.mode === "decrypt" &&
     s.messageEncryption?.password === true &&
     !s.messageEncryption.publicKey;
+  // A "PGP MESSAGE" with no encryption layer needs no key either: it is
+  // opened as what it is, signed or plain, and said to be unencrypted.
+  const unencryptedMessage =
+    s.mode === "decrypt" && s.messageEncryption?.encrypted === false;
   const needsPrivateKey =
-    (s.mode === "decrypt" && !passwordOnlyMessage) || s.mode === "sign";
+    (s.mode === "decrypt" && !passwordOnlyMessage && !unencryptedMessage) ||
+    s.mode === "sign";
   const hasInput = s.files.length > 0 || s.hasInput;
 
   // Copy the armored output straight from the bottom action bar (the compact
@@ -514,7 +522,9 @@ export function WorkspaceView({
     s.hasOutput;
   // Reply needs someone to address: a signer whose key we hold. An
   // unknown signer is a placeholder record with no key, and an unsigned
-  // or failed message has none, so neither gets the button.
+  // or failed message has none, so neither gets the button. Nor does a
+  // message that was never encrypted (its card is amber): replying would
+  // treat a copy anyone could have sent as private mail from the signer.
   const replyTo =
     showFullOutput && s.mode === "decrypt" && s.signatureTone === "success"
       ? s.verifiedSigner
@@ -526,27 +536,26 @@ export function WorkspaceView({
    *  output here, so the panel keeps no plaintext copy of its own. */
   const openReply = useCallback(() => {
     if (!replyTo || !onOpenReply) return;
-    // Only what the signer card displays: no public key (neither the
-    // top-level one nor any per-key `recipients`), since the tab only
-    // shows who it is from.
-    const contact = signerAsContact(replyTo);
-    const signer = {
-      keyId: contact.keyId,
-      userIds: contact.userIds,
-      algorithm: contact.algorithm,
-      alias: contact.alias,
-      kind: contact.kind,
-      expiresAt: contact.expiresAt,
-      source: contact.source,
-      armoredPublicKey: "",
-      addedAt: 0,
-      lastUsedAt: 0,
-    };
+    // The card exactly as the panel shows it -- tone, label, the notes
+    // (signing date, co-signers, "not marked verified", "may have been
+    // forwarded"), the clash pill, a lookalike or SHA-1 warning -- minus
+    // anything it does not display: no public key travels to the tab.
+    const signer = displayOnlySignerCard(
+      signerCardState({
+        signer: replyTo,
+        tone: s.signatureTone,
+        note: s.signatureNote,
+        caveat: s.signerCaveat,
+        statusText: s.statusText ?? undefined,
+        contacts,
+        myKeys,
+      }),
+    );
     void onOpenReply(s.getOutput(), signer)
       .then(() => {
         s.resetAll();
         s.setMode("encrypt");
-        s.setSelectedRecipientIds([signer.keyId]);
+        s.setSelectedRecipientIds([signer.contact.keyId]);
         // The new tab takes focus; hand it back so the reply can be typed
         // straight away. Best effort -- the browser may keep it on the
         // tab -- and after the reset has swapped the message box back in.
@@ -556,13 +565,13 @@ export function WorkspaceView({
         });
       })
       .catch(() => toast.error(t("workspace_reply_failed")));
-  }, [replyTo, onOpenReply, s]);
+  }, [replyTo, onOpenReply, s, contacts, myKeys]);
 
   // Which engine the current recipient selection commits this message to
   // ("ssh" = age, "pgp" = OpenPGP, null = nothing selected yet), and what
   // that rules out. The picker prevents a mixed selection, so this is a
   // single answer rather than a conflict to resolve.
-  // Contacts before own keys -- see `resolveSelectedRecipients`.
+  // Own keys before contacts -- see `resolveSelectedRecipients`.
   const selectedRecipientKeys = resolveSelectedRecipients(
     s.selectedRecipientIds,
     contacts,
@@ -639,25 +648,32 @@ export function WorkspaceView({
     setTimeout(() => document.getElementById("pgp-input")?.focus(), 0);
   };
 
-  /** After a clear, put focus at the START of the workspace's flow --
-   *  Recipients in Encrypt, otherwise the first control on the message
-   *  card (a key picker, the message box) -- so Tab carries on from the
-   *  top rather than from wherever the control that cleared it was.
-   *  Next tick: the clear may have just remounted the card (the message
-   *  box in place of a file list, the form in place of a result). */
+  /** After a clear, put focus in the message box: a clear is "start
+   *  again", and the next thing to do is type (Shift+Tab reaches the
+   *  recipients). If the box isn't there -- a file list in its place --
+   *  the first control on the message card instead. Next tick: the clear
+   *  may have just remounted the card (the message box in place of a
+   *  file list, the form in place of a result), and Radix may still be
+   *  restoring focus to the recipient box it anchors. */
   const focusFlowStart = () => {
     setTimeout(() => {
+      const input = document.getElementById("pgp-input");
+      if (input) {
+        input.focus();
+        return;
+      }
       const card = document.querySelector<HTMLElement>("[data-workspace-card]");
-      const first = card?.querySelector<HTMLElement>(
-        [
-          '[role="combobox"]',
-          'input:not([type="file"]):not([disabled])',
-          "textarea:not([disabled])",
-          "select:not([disabled])",
-          "button:not([disabled]):not([tabindex='-1'])",
-        ].join(","),
-      );
-      (first ?? document.getElementById("pgp-input"))?.focus();
+      card
+        ?.querySelector<HTMLElement>(
+          [
+            '[role="combobox"]',
+            'input:not([type="file"]):not([disabled])',
+            "textarea:not([disabled])",
+            "select:not([disabled])",
+            "button:not([disabled]):not([tabindex='-1'])",
+          ].join(","),
+        )
+        ?.focus();
     }, 0);
   };
 
@@ -837,19 +853,29 @@ export function WorkspaceView({
   // The preference checkboxes' handlers, extracted so the palette
   // toggles (via the ops bridge below) run the EXACT same code path:
   // persistence, stale-output reset, and the history storage request.
+  // The checkbox has already moved, so a save that rejects (the stored
+  // settings would not open) is said, not dropped: the next unlock would
+  // read the old value back. Same toast and id as the Settings page.
+  const persistPref = (patch: Partial<PgpPreferences>) => {
+    savePreferences(patch).catch(() => {
+      toast.error(t("shared_settings_save_failed"), {
+        id: "settings-save-failed",
+      });
+    });
+  };
   const setEncryptToSelfPref = (checked: boolean) => {
     s.setEncryptToSelf(checked);
     s.resetOutput();
-    void savePreferences({ encryptToSelf: checked });
+    persistPref({ encryptToSelf: checked });
   };
   const setAlsoSignPref = (checked: boolean) => {
     s.setAlsoSign(checked);
     s.resetOutput();
-    void savePreferences({ signWhenEncrypting: checked });
+    persistPref({ signWhenEncrypting: checked });
   };
   const setSaveToHistoryPref = (checked: boolean) => {
     s.setSaveToHistory(checked);
-    void savePreferences({ historyEnabled: checked });
+    persistPref({ historyEnabled: checked });
     // Enabling is a user gesture: ask for unlimitedStorage so history
     // gets the generous budget. A denial is fine -- history still
     // works within the default budget.
@@ -977,6 +1003,7 @@ export function WorkspaceView({
   // user started -- an import from anywhere else leaves results alone --
   // and never at the cost of a prompt: decrypt re-runs only while its
   // key is still open (a re-run clears the output before it unlocks).
+  // Not capped like an auto-run: the user opened this message themselves.
   const lookedUpSigner = useRef<string | null>(null);
   const contactsAtLookup = useRef(contacts);
   const lookupSigner = onLookupSigner
@@ -1001,11 +1028,12 @@ export function WorkspaceView({
       void ops.execute();
     } else if (
       s.mode === "decrypt" &&
-      !passwordOnlyMessage &&
-      s.selectedKeyId !== null &&
-      getKeyHandle(s.selectedKeyId) !== null
+      (unencryptedMessage ||
+        (!passwordOnlyMessage &&
+          s.selectedKeyId !== null &&
+          getKeyHandle(s.selectedKeyId) !== null))
     ) {
-      void ops.executeUnattended();
+      void ops.executeWithoutPrompts();
     }
     // Contacts are the trigger; the rest is read at that moment.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1167,6 +1195,7 @@ export function WorkspaceView({
           signatureNote={s.signatureNote}
           signerCaveat={s.signerCaveat}
           contacts={contacts}
+          myKeys={myKeys}
           translationFooter={translationFooter}
           resultCorner={
             canReply ? (
@@ -1272,6 +1301,7 @@ export function WorkspaceView({
       signatureNote={s.signatureNote}
       signerCaveat={s.signerCaveat}
       contacts={contacts}
+      myKeys={myKeys}
       outputPublicKeyDetected={s.outputPublicKeyDetected}
       outputVersion={s.outputVersion}
       onImportKey={(armored) => onNavigateToKeys?.(armored)}
@@ -1372,6 +1402,8 @@ export function WorkspaceView({
                       label={t("workspace_sign_with")}
                       keys={signKeyChoices}
                       selectedKeyId={signer.keyId}
+                      detailsContacts={contacts}
+                      detailsOwnKeys={myKeys}
                       onSelect={ops.selectPrivateKey}
                     />
                   ) : signer && !signBlockedReason ? (
@@ -1424,6 +1456,8 @@ export function WorkspaceView({
                 label={t("workspace_sign_with")}
                 keys={signKeyChoices}
                 selectedKeyId={s.selectedKeyId}
+                detailsContacts={contacts}
+                detailsOwnKeys={myKeys}
                 onSelect={ops.selectPrivateKey}
               />
             </Block>
@@ -1491,6 +1525,8 @@ export function WorkspaceView({
             // candidate at all.
             keys={s.mode === "sign" ? signKeyChoices : decryptKeyChoices}
             selectedKeyId={s.selectedKeyId}
+            detailsContacts={contacts}
+            detailsOwnKeys={myKeys}
             onSelect={ops.selectPrivateKey}
             emptyText={t("workspace_no_keys_yet")}
             emptyAction={onNavigateToKeys}
@@ -1677,6 +1713,55 @@ export function WorkspaceView({
         )}
 
         {!resultsOnTop && results}
+
+        {ops.heldBackForSize && !s.needsPassword && (
+          <p
+            data-testid="auto-run-held-back"
+            className="text-muted-foreground text-xs"
+          >
+            {t("workspace_auto_run_too_large")}
+          </p>
+        )}
+
+        {ops.hiddenChars && !s.needsPassword && (
+          // Text about to be signed holds characters the box does not
+          // draw. Signed as they are only on an explicit "Sign anyway";
+          // "Remove them" edits the box (undoable) and asks nothing more.
+          <div
+            role="alert"
+            data-testid="hidden-chars-strip"
+            className="text-warn space-y-2 rounded-xl bg-[#252012] px-3 py-2.5 text-xs"
+          >
+            <p>
+              {t("workspace_sign_hidden_chars", {
+                chars:
+                  ops.hiddenChars.slice(0, 4).join(", ") +
+                  (ops.hiddenChars.length > 4
+                    ? ` +${ops.hiddenChars.length - 4}`
+                    : ""),
+              })}
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={ops.signWithHiddenChars}
+                className="bg-warn/12 hover:bg-warn/20 rounded-md px-2 py-1 font-medium transition-colors"
+              >
+                {t("workspace_sign_hidden_chars_anyway")}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setComposedText(withoutHiddenCharacters(s.getInput()));
+                  ops.dismissHiddenChars();
+                }}
+                className="bg-warn/12 hover:bg-warn/20 rounded-md px-2 py-1 font-medium transition-colors"
+              >
+                {t("workspace_sign_hidden_chars_remove")}
+              </button>
+            </div>
+          </div>
+        )}
 
         {!s.needsPassword && (
           <div className="space-y-2">

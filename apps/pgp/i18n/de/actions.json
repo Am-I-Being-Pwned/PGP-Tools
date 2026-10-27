@@ -37,7 +37,7 @@
     "message": "Alle $count$ Verlaufseinträge löschen"
   },
   "actions_history_delete_warning": {
-    "message": "Dadurch wird Ihr verschlüsselter Vorgangsverlauf dauerhaft von diesem Gerät gelöscht. Er kann nicht wiederhergestellt werden."
+    "message": "Dadurch wird Ihr verschlüsselter Vorgangsverlauf aus dem Tresor auf diesem Gerät entfernt. Das kann nicht rückgängig gemacht werden. Eine verschlüsselte Kopie kann auf dem Datenträger bleiben, bis der Browser seinen Speicher komprimiert."
   },
   "actions_no_keys_available": { "message": "Keine Schlüssel verfügbar" },
   "actions_set_up": { "message": "Einrichten" },
@@ -161,5 +161,8 @@
   "actions_translate_to_title": { "message": "Nachricht übersetzen in" },
   "actions_pick_language_placeholder": { "message": "Sprache wählen..." },
   "actions_translate_result_to": { "message": "In $language$ übersetzen" },
-  "actions_reply_to_signer": { "message": "Dem Absender antworten" }
+  "actions_reply_to_signer": { "message": "Dem Absender antworten" },
+  "actions_no_active_key_reason": {
+    "message": "Alle Schlüssel dieses Kontakts sind ausgeschaltet. Schalten Sie in den Kontaktdetails einen wieder ein, um an ihn zu verschlüsseln."
+  }
 }

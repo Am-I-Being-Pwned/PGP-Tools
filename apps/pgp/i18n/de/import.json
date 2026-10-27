@@ -355,5 +355,107 @@
   },
   "import_status_replaces": {
     "message": "Ersetzt den Schlüssel, den Sie für $name$ hatten"
+  },
+  "import_review_title": {
+    "message": "Schlüssel prüfen"
+  },
+  "import_review_intro_one": {
+    "message": "$count$ Schlüssel gefunden. Nichts wird gespeichert, bis Sie entscheiden."
+  },
+  "import_review_intro_other": {
+    "message": "$count$ Schlüssel gefunden. Nichts wird gespeichert, bis Sie entscheiden."
+  },
+  "import_review_status_new": {
+    "message": "Neu"
+  },
+  "import_review_status_update": {
+    "message": "Update"
+  },
+  "import_review_status_revoked": {
+    "message": "Widerrufen"
+  },
+  "import_review_status_duplicate": {
+    "message": "Schon gespeichert"
+  },
+  "import_review_status_rejected": {
+    "message": "Nicht importierbar"
+  },
+  "import_review_conflict_address": {
+    "message": "$email$ gehört bereits zu $name$ ($keyid$). Das ist ein anderer Schlüssel - fragen Sie nach, bevor Sie ihm vertrauen."
+  },
+  "import_review_conflict_name": {
+    "message": "Sieht aus wie der Name von $name$ ($keyid$), verwendet aber andere Buchstaben. Fragen Sie nach, bevor Sie ihm vertrauen."
+  },
+  "import_review_choice_aria": {
+    "message": "Was mit $name$ geschehen soll"
+  },
+  "import_review_choice_skip": {
+    "message": "Überspringen"
+  },
+  "import_review_choice_keep_both": {
+    "message": "Beide behalten"
+  },
+  "import_review_choice_import": {
+    "message": "Importieren"
+  },
+  "import_review_choice_replace": {
+    "message": "Ersetzen"
+  },
+  "import_review_import_none": {
+    "message": "Nichts ausgewählt"
+  },
+  "import_review_import_n_one": {
+    "message": "$count$ Schlüssel importieren"
+  },
+  "import_review_import_n_other": {
+    "message": "$count$ Schlüssel importieren"
+  },
+  "import_review_import_all": {
+    "message": "Alle importieren"
+  },
+  "import_review_import_all_risky": {
+    "message": "Trotzdem alle importieren"
+  },
+  "import_review_import_all_note_one": {
+    "message": "Enthält $count$ Schlüssel, der sich als jemand ausgibt, den Sie schon haben."
+  },
+  "import_review_import_all_note_other": {
+    "message": "Enthält $count$ Schlüssel, die sich als jemand ausgeben, den Sie schon haben."
+  },
+  "import_replaced_contacts_one": {
+    "message": "Schlüssel von $count$ Kontakt ersetzt"
+  },
+  "import_replaced_contacts_other": {
+    "message": "Schlüssel von $count$ Kontakten ersetzt"
+  },
+  "import_review_conflict_address_revoked": {
+    "message": "$email$ gehörte zu $name$ ($keyid$), einem inzwischen widerrufenen Schlüssel. Fragen Sie nach, ob dieser neue Schlüssel wirklich von dieser Person ist."
+  },
+  "import_review_conflict_key_update": {
+    "message": "Dadurch bekommt $name$ ($keyid$) weitere Schlüssel, und Nachrichten an diese Person erreichen auch die neuen Schlüssel. Fragen Sie nach, bevor Sie speichern."
+  },
+  "import_review_conflict_key_contact": {
+    "message": "Enthält den Schlüssel, den Sie für $name$ ($keyid$) haben, zusammen mit anderen Schlüsseln. Fragen Sie nach, bevor Sie speichern."
+  },
+  "import_review_conflict_key_own": {
+    "message": "Enthält Ihren eigenen Schlüssel ($keyid$) zusammen mit anderen Schlüsseln. Prüfen Sie, ob alle Ihnen gehören, bevor Sie speichern."
+  },
+  "import_review_conflict_address_lookalike": {
+    "message": "$email$ sieht aus wie $theirs$, die Adresse von $name$ ($keyid$), ist aber eine andere Adresse. Fragen Sie nach, bevor Sie ihm vertrauen."
+  },
+  "import_review_all_keys_off": {
+    "message": "Jeder Schlüssel, den dieses Konto noch auflistet, ist einer, den Sie ausgeschaltet haben. Gespeichert hat dieser Kontakt keinen Schlüssel zum Verschlüsseln, bis Sie einen wieder einschalten."
+  },
+  "import_github_refresh_all_held": {
+    "message": "$username$ listet einige der für diesen Kontakt gespeicherten Schlüssel nicht mehr auf, und alle übrigen gehören jemand anderem, den Sie haben, oder Ihnen. Daher kann er nicht aktualisiert werden. Löschen Sie diesen Kontakt, wenn Sie nicht mehr an seine alten Schlüssel verschlüsseln wollen."
+  },
+  "import_review_status_your_key": {
+    "message": "Ihr Schlüssel"
+  },
+  "import_review_conflict_same_name": {
+    "message": "$name$ ($keyid$) hat denselben Namen, und keine E-Mail-Adresse unterscheidet die beiden. Fragen Sie nach, bevor Sie ihm vertrauen."
+  },
+  "import_review_replace_many": {
+    "message": "Ersetzen ist nicht verfügbar: Mehrere Kontakte haben diese Adresse."
   }
 }

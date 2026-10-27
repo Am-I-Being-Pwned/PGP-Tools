@@ -109,6 +109,7 @@ describe("IncomingKey", () => {
       userIds: true,
       changes: true,
       replaces: true,
+      conflict: true,
       existingAddedAt: true,
       rejection: true,
       securityWarning: true,
@@ -121,13 +122,16 @@ describe("IncomingKey", () => {
       // type tag, the query it was fetched for, and a timestamp. No key
       // material of either half.
       source: true,
+      // A flag: every key a refresh keeps is one the user turned off.
+      allKeysOff: true,
     };
     const names = Object.keys(FIELDS);
 
     expect(names.filter((n) => /armor|pem/i.test(n))).toEqual([
       "publicArmored",
     ]);
-    expect(names.filter((n) => /secret|private|passphrase|password/i.test(n)))
-      .toEqual([]);
+    expect(
+      names.filter((n) => /secret|private|passphrase|password/i.test(n)),
+    ).toEqual([]);
   });
 });

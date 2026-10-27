@@ -164,13 +164,15 @@ describe("getPreferences", () => {
     await expect(getPreferences()).resolves.toEqual(DEFAULT_PREFERENCES);
   });
 
-  it("ignores a settings blob that decrypts to a non-object", async () => {
+  it("reads a settings blob that decrypts to a non-object as the strictest preset", async () => {
+    // A sealed blob that opens to something no build writes is tampering
+    // (or another store's blob), not "nothing stored": see integrity.test.
     local.store.set(
       STORAGE_SETTINGS,
       legacyEnvelope(new TextEncoder().encode(JSON.stringify("nope"))),
     );
-    const { getPreferences, DEFAULT_PREFERENCES } = await loadModule();
-    await expect(getPreferences()).resolves.toEqual(DEFAULT_PREFERENCES);
+    const { getPreferences, strictestPreferences } = await loadModule();
+    await expect(getPreferences()).resolves.toEqual(strictestPreferences());
   });
 
   it("reads a pre-domain-separation settings blob", async () => {

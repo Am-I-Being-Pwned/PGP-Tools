@@ -1,13 +1,19 @@
 /**
  * Segmented encrypted store for the opt-in operation history.
  *
- * Entries are appended to a "head" segment that is sealed once it grows
- * past ~64 KB, after which a fresh head starts; only the head segment is
- * ever re-encrypted on append. Each segment is an AES-256-GCM blob under
+ * Entries are appended to a "head" segment until the next entry would
+ * push its PADDED size past 64 KB, after which a fresh head starts; only
+ * the head segment is ever re-encrypted on append. Each segment is an AES-256-GCM blob under
  * the in-WASM contacts session key (same scheme as the keyring/contacts
  * stores). A small plaintext manifest at `STORAGE_HISTORY` tracks segment
  * numbers and byte sizes -- never entry data -- so pruning and usage
  * reporting work without decrypting anything.
+ *
+ * Segment plaintext is padded to a power-of-two bucket (`padding.ts`) and
+ * the manifest records only that bucket, so neither the blob nor the
+ * cleartext manifest moves by the exact length of each message the user
+ * captures. Segments written before padding still read (no delimiter, so
+ * they unpad to themselves) and are re-padded in place on the next read.
  *
  * Each segment is sealed for its own storage key as the domain (see
  * `envelope.ts`), so `pgp_history_seg_0`'s blob cannot be replayed into
@@ -30,6 +36,12 @@ import { STORAGE_HISTORY, STORAGE_HISTORY_SEGMENT_PREFIX } from "../constants";
 import { hasContactsSession } from "../pgp/wasm";
 import { withLock } from "./engine";
 import { isStoredEnvelope, openEnvelope, sealEnvelope } from "./envelope";
+import {
+  bucketFor,
+  isCanonicalPadding,
+  padPlaintext,
+  unpadPlaintext,
+} from "./padding";
 import { getPreferences } from "./preferences";
 
 export type HistoryOp = "encrypt" | "sign" | "decrypt" | "verify";
@@ -50,7 +62,12 @@ export interface HistoryEntry {
 /** What callers pass to append: id/ts are assigned here. */
 export type NewHistoryEntry = Omit<HistoryEntry, "id" | "ts">;
 
-/** Seal the head segment once its JSON grows past this. */
+/** A segment's padded size (its bucket) may not grow past this: the head
+ *  takes another entry only while the padded result still fits, so every
+ *  multi-entry segment sits in a bucket of at most 64 KB. Sealing against
+ *  the bucket rather than the raw JSON matters: a segment sealed "once its
+ *  JSON passes 64 KB" holds 64-96 KB, which pads to a 128 KB bucket and
+ *  would count double against the budget. */
 const SEGMENT_SEAL_BYTES = 64 * 1024;
 /** Per-entry content cap (UTF-16 code units) -- applies in ALL cases,
  *  independent of the total byte budget. */
@@ -68,7 +85,9 @@ const UNLIMITED_BUDGET_BYTES = 50 * 1024 * 1024;
 
 interface SegmentRef {
   n: number;
-  /** Plaintext JSON byte size of the segment (budget accounting). */
+  /** Padded plaintext size of the segment: a bucket, never the exact
+   *  JSON length (budget accounting). Pre-padding manifests hold the exact
+   *  size until that segment is next read or written. */
   bytes: number;
 }
 
@@ -165,72 +184,98 @@ async function writeManifest(manifest: HistoryManifest): Promise<void> {
   await chrome.storage.local.set({ [STORAGE_HISTORY]: manifest });
 }
 
+interface ReadSegment {
+  entries: HistoryEntry[];
+  /** Padded plaintext size as stored after this read (re-pads included),
+   *  for the manifest. 0 when the segment could not be read. */
+  bytes: number;
+}
+
 /** Decrypt one segment. Throw-safe: a segment that is missing, garbled,
  *  or undecryptable is skipped rather than failing the whole load -- and a
  *  blob sitting in the wrong slot is now exactly that, since the segment
  *  key is the sealing domain.
  *
- *  A segment written before domain separation is re-sealed in place. Safe
- *  to do from a read: every caller holds `withLock(STORAGE_HISTORY)`, and
- *  the re-seal writes the SAME plaintext bytes, so the manifest's byte
- *  accounting is unchanged. Best-effort -- a failed re-seal leaves the
- *  readable legacy blob alone and the next read retries.
+ *  A segment written before domain separation, or before padding, is
+ *  re-sealed in place, padded. Safe to do from a read: every caller holds
+ *  `withLock(STORAGE_HISTORY)`, and the re-seal keeps the SAME data bytes
+ *  (only the padding changes); the returned `bytes` is the new bucket for
+ *  the caller to put in the manifest. Best-effort -- a failed re-seal
+ *  leaves the readable old blob alone and the next read retries.
  *
  *  The decrypted bytes are zeroized on the way out: up to ~64 KB of the
  *  user's own message content per segment. (The intermediate string from
  *  `TextDecoder.decode` / `JSON.parse` is not zeroizable -- JS strings are
  *  immutable -- so this clears the buffer, not every copy. See the
  *  `JSON.stringify` note on `writeSegment`.) */
-async function readSegment(n: number): Promise<HistoryEntry[]> {
+async function readSegment(n: number): Promise<ReadSegment> {
   let plaintext: Uint8Array | null = null;
+  let repadded: Uint8Array | null = null;
   try {
     const blob = (await chrome.storage.local.get(segKey(n)))[segKey(n)];
-    if (!isStoredEnvelope(blob)) return [];
+    if (!isStoredEnvelope(blob)) return { entries: [], bytes: 0 };
     const opened = await openEnvelope(segKey(n), blob);
     plaintext = opened.plaintext;
-    const parsed: unknown = JSON.parse(new TextDecoder().decode(plaintext));
-    if (!Array.isArray(parsed)) return [];
+    const data = unpadPlaintext(plaintext);
+    const parsed: unknown = JSON.parse(new TextDecoder().decode(data));
+    if (!Array.isArray(parsed)) return { entries: [], bytes: 0 };
     const entries = parsed.filter(isValidEntry);
-    if (opened.legacy) {
-      // Re-seal the exact plaintext (not a re-serialisation of `entries`)
-      // so nothing is dropped and `bytes` stays byte-for-byte correct.
+    let bytes = plaintext.length;
+    if (opened.legacy || !isCanonicalPadding(plaintext, true)) {
+      // Re-seal the exact data bytes (not a re-serialisation of
+      // `entries`) so nothing is dropped in translation.
+      repadded = padPlaintext(data, true);
       try {
         await chrome.storage.local.set({
-          [segKey(n)]: await sealEnvelope(segKey(n), plaintext),
+          [segKey(n)]: await sealEnvelope(segKey(n), repadded),
         });
+        bytes = repadded.length;
       } catch {
-        // best-effort; the legacy blob is still there and still readable
+        // best-effort; the old blob is still there and still readable
       }
     }
-    return entries;
+    return { entries, bytes };
   } catch {
-    return [];
+    return { entries: [], bytes: 0 };
   } finally {
     plaintext?.fill(0);
+    repadded?.fill(0);
   }
 }
 
-/** Encrypt + write one segment; returns its plaintext JSON byte size.
+/** Encrypt + write one segment, padded to a bucket; returns the padded
+ *  size (the only size the manifest ever learns).
  *
  *  The encoded plaintext is zeroized in a `finally` (matching
  *  `encryptWorkspaceDraft`). The `JSON.stringify` result it is encoded
  *  from is a JS string and so cannot be cleared; avoiding that would mean
  *  hand-serialising entries straight into a byte buffer, which is a much
  *  larger change than the leak justifies -- noted rather than done. */
-async function writeSegment(
-  n: number,
-  entries: HistoryEntry[],
-): Promise<number> {
-  const json = new TextEncoder().encode(JSON.stringify(entries));
-  const bytes = json.length;
+async function writeSegment(n: number, json: Uint8Array): Promise<number> {
+  const padded = padPlaintext(json, true);
+  json.fill(0);
   try {
     await chrome.storage.local.set({
-      [segKey(n)]: await sealEnvelope(segKey(n), json),
+      [segKey(n)]: await sealEnvelope(segKey(n), padded),
     });
-    return bytes;
+    return padded.length;
   } finally {
-    json.fill(0);
+    padded.fill(0);
   }
+}
+
+/** What one segment counts against the budget: its recorded size, capped
+ *  at the seal size. A segment over the cap holds at least a seal's worth
+ *  of real content (one oversized entry, or a segment sealed by a
+ *  pre-padding build once its JSON passed 64 KB), and only its padding
+ *  pushed it into the 128 KB bucket. Counting the full bucket would make
+ *  re-padding an upgrade's old segments look like growth and prune about
+ *  half of a full history, and would halve the capacity the budget gave
+ *  before padding. Capped, the budget still measures real content: a full
+ *  pre-padding history (2 MB of JSON in segments of 64 KB and up) counts
+ *  at most 2 MB, before and after the re-pad. */
+function budgetWeight(seg: SegmentRef): number {
+  return Math.min(seg.bytes, SEGMENT_SEAL_BYTES);
 }
 
 /** Drop oldest segments until the total fits the active budget. The head
@@ -238,12 +283,12 @@ async function writeSegment(
  *  was pruned (i.e. the manifest needs rewriting). */
 async function pruneToBudget(manifest: HistoryManifest): Promise<boolean> {
   const budget = resolveBudget(await hasUnlimitedStorage());
-  let total = manifest.segs.reduce((sum, s) => sum + s.bytes, 0);
+  let total = manifest.segs.reduce((sum, s) => sum + budgetWeight(s), 0);
   let pruned = false;
   while (manifest.segs.length > 1 && total > budget) {
     const oldest = manifest.segs.shift();
     if (!oldest) break;
-    total -= oldest.bytes;
+    total -= budgetWeight(oldest);
     await chrome.storage.local.remove(segKey(oldest.n));
     pruned = true;
   }
@@ -285,9 +330,8 @@ async function adoptStraySegments(manifest: HistoryManifest): Promise<boolean> {
   let adopted = false;
   for (const n of await scanSegmentNumbers()) {
     if (known.has(n)) continue;
-    const entries = await readSegment(n);
+    const { entries, bytes } = await readSegment(n);
     if (entries.length === 0) continue;
-    const bytes = new TextEncoder().encode(JSON.stringify(entries)).length;
     manifest.segs.push({ n, bytes });
     adopted = true;
   }
@@ -313,22 +357,37 @@ export async function appendHistoryEntry(
 
     const manifest = await readManifest();
     const last = manifest.segs.at(-1);
-    let head: SegmentRef;
-    let isNewSegment = false;
-    if (last && last.bytes < SEGMENT_SEAL_BYTES) {
-      head = last;
-    } else {
+    const added = finalizeEntry(entry);
+    let head: SegmentRef | undefined;
+    let json: Uint8Array | undefined;
+    // The last segment takes the entry only while its PADDED size stays
+    // within the seal size (see SEGMENT_SEAL_BYTES). A segment from a
+    // pre-padding build that is already past it is never reopened.
+    if (last && last.bytes > 0 && last.bytes <= SEGMENT_SEAL_BYTES) {
+      const entries = (await readSegment(last.n)).entries;
+      entries.push(added);
+      const candidate = encodeEntries(entries);
+      if (
+        entries.length === 1 ||
+        bucketFor(candidate.length + 1) <= SEGMENT_SEAL_BYTES
+      ) {
+        head = last;
+        json = candidate;
+      } else {
+        candidate.fill(0);
+      }
+    }
+    const isNewSegment = head === undefined;
+    if (!head || !json) {
       head = { n: last ? last.n + 1 : 0, bytes: 0 };
       manifest.segs.push(head);
-      isNewSegment = true;
+      json = encodeEntries([added]);
     }
 
     // Segment first, manifest second: if the segment write rejects
     // (quota / device full) nothing has been persisted, so the stored
     // manifest still describes exactly what exists.
-    const entries = head.bytes > 0 ? await readSegment(head.n) : [];
-    entries.push(finalizeEntry(entry));
-    head.bytes = await writeSegment(head.n, entries);
+    head.bytes = await writeSegment(head.n, json);
 
     await pruneToBudget(manifest);
     try {
@@ -351,6 +410,12 @@ export async function appendHistoryEntry(
     }
     return true;
   });
+}
+
+/** UTF-8 JSON of a segment's entries. The caller hands it to
+ *  {@link writeSegment}, which zeroizes it. */
+function encodeEntries(entries: HistoryEntry[]): Uint8Array {
+  return new TextEncoder().encode(JSON.stringify(entries));
 }
 
 /** Cap a file-metadata list to FILES_CAP entries and FILE_NAME_CAP
@@ -410,12 +475,20 @@ export async function loadHistory(): Promise<HistoryEntry[]> {
     const manifest = await readManifest();
     const adopted = await adoptStraySegments(manifest);
     const pruned = await pruneToBudget(manifest);
-    if (adopted || pruned) await writeManifest(manifest);
 
     const all: HistoryEntry[] = [];
+    // A segment re-padded by this read reports its new bucket; fold that
+    // in so an old manifest stops holding exact sizes.
+    let resized = false;
     for (const seg of manifest.segs) {
-      all.push(...(await readSegment(seg.n)));
+      const { entries, bytes } = await readSegment(seg.n);
+      all.push(...entries);
+      if (bytes > 0 && bytes !== seg.bytes) {
+        seg.bytes = bytes;
+        resized = true;
+      }
     }
+    if (adopted || pruned || resized) await writeManifest(manifest);
     // Segments and entries within them are stored oldest-first.
     all.reverse();
     return all;
@@ -438,11 +511,13 @@ export async function clearHistory(): Promise<void> {
   });
 }
 
-/** Total plaintext byte size across all segments (manifest metadata
- *  only -- no decryption, so it also works while locked). */
+/** How much of the budget the history uses: each segment's padded size,
+ *  capped as {@link budgetWeight} counts it, so the figure is the one
+ *  pruning measures against `resolveBudget`. Manifest metadata only -- no
+ *  decryption, so it also works while locked. */
 export async function historyByteSize(): Promise<number> {
   const manifest = await readManifest();
-  return manifest.segs.reduce((sum, s) => sum + s.bytes, 0);
+  return manifest.segs.reduce((sum, s) => sum + budgetWeight(s), 0);
 }
 
 /** Outcome of a {@link recordHistory} capture attempt. `skipped` means

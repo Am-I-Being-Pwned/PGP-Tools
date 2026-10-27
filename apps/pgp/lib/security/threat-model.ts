@@ -484,7 +484,7 @@ export const THREAT_MODEL: Threat[] = [
     attacker:
       "Someone with read access to `chrome.storage.local` on a locked or unattended device.",
     defence:
-      "Opt-in, off by default. Entries are AES-256-GCM segments under the in-WASM contacts session key; the plaintext manifest holds only segment numbers and byte sizes. No plaintext cached at module level, so a master lock leaves nothing readable.",
+      "Opt-in, off by default. Entries are AES-256-GCM segments under the in-WASM contacts session key; the plaintext manifest holds only segment numbers and padded byte sizes. No plaintext cached at module level, so a master lock leaves nothing readable.",
     status: "defended",
     rationale:
       "Confirmed by canary coverage: the manifest holds only {n,bytes} with no entry data, the canary is absent from local/sync/session storage, and after an in-app master lock the JS-heap count is 0 -- including in a probe that never opens the viewer, proving nothing module-level caches decrypted entries. The entry is still readable after re-unlock, so the zero measured a live secret dropping rather than a scan that never worked.",
@@ -492,6 +492,20 @@ export const THREAT_MODEL: Threat[] = [
       "apps/pgp/lib/storage/history.test.ts",
       "apps/pgp/e2e/history-memory.spec.ts",
     ],
+    section: "§11",
+  },
+  {
+    id: "T-HISTORY-LENGTH-LEAK",
+    title:
+      "History's cleartext manifest and blob sizes give away each message's length",
+    attacker:
+      "Someone who can read `chrome.storage.local` over time (a profile backup, a synced disk image, malware with file access), with no vault key.",
+    defence:
+      "FIXED. Segments are padded to a power-of-two bucket (`padPlaintext`, 2 KB minimum) before sealing, and the manifest's `bytes` is that bucket, never the JSON length. A segment from an older build (unpadded, exact size in the manifest) still reads -- it has no NUL delimiter, so it unpads to itself -- and is re-padded in place, with its manifest size replaced by the bucket, on the next read.",
+    status: "defended",
+    rationale:
+      "Before this, each append grew the manifest by exactly the new entry's JSON length (the message plus fixed entry framing; a probe measured message length + 217 bytes), so the length of every captured message could be read off the cleartext manifest without touching any ciphertext. What is left is the bucket: an observer still sees when a segment crosses a power of two, and how many segments exist. The budget counts each segment's bucket capped at the 64 KB seal size, and the head takes an entry only while its padded size stays within 64 KB. Counting buckets in full had made the first load after the upgrade prune close to half of a full 2.x history (its segments hold 64-96 KB of JSON and re-pad to 128 KB) and halved what new history fit; capped, the 2 MB budget still measures real content, at the price of up to about twice that on disk in the worst case.",
+    verifiedBy: ["apps/pgp/lib/storage/history.test.ts"],
     section: "§11",
   },
   {
@@ -671,6 +685,35 @@ export const THREAT_MODEL: Threat[] = [
     section: "§8.3",
   },
   {
+    id: "T-SIG-FORWARDED",
+    title:
+      "A signed message re-encrypted to the victim reads as written to them",
+    attacker:
+      "Anyone holding a message Alice signed -- for someone else, or in public -- who encrypts it to the victim's public key. No key of Alice's is needed.",
+    defence:
+      'A message with no encryption layer is refused by decrypt and shown amber as "Not encrypted". A signature that names its intended recipients, none of them the user, is amber ("signed for someone else"). A decrypted message whose signature names no one gets a note on the card that it may have been forwarded.',
+    status: "partial",
+    rationale:
+      "OpenPGP signs the content, not the envelope: without the Intended Recipient Fingerprint subpacket (RFC 9580 §5.2.3.36) nothing in the message says who it was for, and many senders still omit it. Turning every such message amber would turn most real mail amber and teach users to ignore it, so the verdict stays green with a quiet note. Known in the literature as surreptitious forwarding (Davis, 2001).",
+    section: "§8.12",
+    verifiedBy: [
+      "apps/pgp/components/workspace/signature-summary.test.ts",
+      "apps/pgp/e2e/signature-trust.spec.ts",
+    ],
+  },
+  {
+    id: "T-RSA-MARVIN",
+    title: "RSA private-key operations leak timing (Marvin)",
+    attacker:
+      "Someone who can make the user's RSA key decrypt or sign many chosen inputs and time each operation precisely: a same-realm attacker, or a remote one whose crafted messages the user decrypts in bulk.",
+    defence:
+      "None in code. The key generator's RSA option warns and recommends ECC; ECC (Ed25519/X25519) is the default.",
+    status: "accepted",
+    rationale:
+      "OpenPGP RSA keys (Sequoia crypto-rust), ssh-rsa age identities and CRX signing all use RustCrypto's `rsa` crate, whose private-key arithmetic is not constant-time; RustCrypto has accepted the Marvin attack (RUSTSEC-2023-0071) with no fixed release. There is no constant-time RSA available to a wasm32 build we could swap in. Imported RSA keys keep working because refusing them would break existing correspondents. Revisit when `rsa` ships a constant-time release. Related: T-VARIABLE-TIME-CRYPTO, T-ACTIVE-WASM-CALL.",
+    section: "§8.3",
+  },
+  {
     id: "T-SUPPLY-CHAIN",
     title: "Malicious code ships via dependency or Web Store update",
     attacker:
@@ -733,15 +776,96 @@ export const THREAT_MODEL: Threat[] = [
     attacker:
       "Anyone who can read another extension page's DOM or heap: the extension's own realms under T-SUPPLY-CHAIN, or DevTools / chrome.debugger (T-DEVTOOLS); and a shoulder-surfer, since the message is on screen in an ordinary tab.",
     defence:
-      "The tab is a dumb view with no vault, keys, wasm, storage or network. The panel keeps the message sealed under its in-WASM draft key and posts it over a nonce-named runtime port, to every tab connected on that nonce (a duplicate included), only while the vault is open. `doMasterLock` calls `lockNow` first and synchronously: every tab gets `locked`, clears its text and drops the signer card, and no in-flight post can follow; unlock resends. The last tab closing zeroes and drops the sealed copy; closing the panel disconnects the ports (the tabs clear and close) and the draft key dies with the page. The signer is sent as display fields only. Only a nonce is in the URL and nothing is written to storage. Every wipe also clears V8's last-RegExp-match subject (`forgetLastRegExpMatch`).",
+      "The tab is a dumb view with no vault, keys, wasm, storage or network. The panel keeps the message sealed under its in-WASM draft key and posts it over a nonce-named runtime port, to every tab connected on that nonce (a duplicate included), only while the vault is open. `doMasterLock` calls `lockNow` first and synchronously: every tab gets `locked`, clears its text and drops the signer card, and no in-flight post can follow; unlock resends. The last tab closing zeroes and drops the sealed copy; closing the panel disconnects the ports (the tabs clear and close) and the draft key dies with the page. The signer is sent as display fields only. Only a nonce is in the URL and nothing is written to storage. The context menu has no `documentUrlPatterns`; whether it may act is checked when clicked, from the top page's URL (`menuMayActOn`: an http/https/file top page, never the extension's own origin in page or frame), so selecting the reader's text and choosing \"Open in PGP Tools\" cannot put it unsealed in chrome.storage.session. Every wipe also clears V8's last-RegExp-match subject (`forgetLastRegExpMatch`).",
     status: "accepted",
     rationale:
       "Reading the message while writing the reply is the feature; before it, users pasted the plaintext into other apps, which is strictly worse. The residual is the same as the panel's own output view -- plaintext on screen and in one page's heap while unlocked -- in a second page that follows the panel's lock state rather than having its own, so there is no second session, key store or lock policy to get wrong.",
     verifiedBy: [
       "apps/pgp/lib/reader-protocol.test.ts",
+      "apps/pgp/lib/context-menu.test.ts",
       "apps/pgp/e2e/reply-tab.spec.ts",
     ],
     section: "§16",
+  },
+  {
+    id: "T-LEGACY-PLAINTEXT-ADOPTION",
+    title:
+      "A one-time plaintext migration seals attacker-written data into the vault",
+    attacker:
+      "Anyone who can write chrome.storage with NO knowledge of the vault key -- for a sync user, anyone signed in to their Google account -- who replaces a sealed store with the retired plaintext format (an id index plus one plaintext item per id), or deletes pgp_settings and plants a pre-split plaintext preferences object.",
+    defence:
+      "FIXED. The plaintext keyring/contacts/CRX format is no longer read at all: anything at a store key that is not a sealed envelope reads as an empty store, is never sealed, and is reported as tampering on a device that has seen the store. The legacy preferences migration reads ONLY chrome.storage.local (never the sync bootstrap, never through the engine's forgeable location), runs at most once per device (a settled marker sealed in the local-only integrity ledger), never over a sealed settings blob, never on a device whose local stores carry a generation (so deleting the ledger, and the marker with it, cannot make it run again), and every preference -- legacy or sealed -- is validated field by field (type, range, enumeration; never-cache beats unlock-on-open) with invalid values read as defaults.",
+    status: "defended",
+    rationale:
+      "Demonstrated, not theorised: a planted index carrying `verified: true, identityVersion: 999` was sealed on unlock as a genuine verified contact whose identity the contacts hook then never re-derived, an 'own' key was planted into the keyring the same way, and planted preferences (autoLockEnabled false, autoLockMinutes 99999, unlockKeysOnOpen true) were sealed as the user's settings. The plaintext store format was written only by pre-release 0.x builds (contacts until 2026-04-01, keyring until v0.1.2 on 2026-04-05) and every build since has migrated it on first unlock, so it was removed rather than gated; an install that has not unlocked since April 2026 sees an empty store (the old plaintext entries are left in place, not deleted). The pre-split preferences format is newer (until 2026-07-05), so its migration is kept but gated; the cost is that a sync user who has not unlocked on any device since then gets defaults rather than their old settings.",
+    verifiedBy: [
+      "apps/pgp/lib/storage/integrity.test.ts",
+      "apps/pgp/lib/storage/encrypted-store.test.ts",
+      "apps/pgp/lib/storage/preferences.test.ts",
+    ],
+    section: "§17",
+  },
+  {
+    id: "T-BOOTSTRAP-FORGERY",
+    title:
+      "The plaintext sync bootstrap re-runs onboarding over a real vault, or hides it",
+    attacker:
+      "Anyone signed in to the user's Google account, who writes `pgp_preferences` in chrome.storage.sync -- even for a local-only vault -- setting `onboardingComplete: false` or flipping `storageLocation`.",
+    defence:
+      "FIXED. Neither bootstrap field decides anything that can destroy data. Whether a vault exists is read from the vault: a valid master protection in the configured area is a vault (lock screen); one only in the OTHER area is reported as such, with a button that points the bootstrap back (no data moves); sealed stores with no master protection anywhere are an orphaned vault, never a fresh install, and the only way on is an explicit, separately confirmed erase. `saveMasterProtection` itself refuses when a master protection exists in either area, and onboarding checks before minting a session or passkey. A storageLocation write also invalidates the engine's cached location (choosing sync during onboarding used to write the new vault to local). The location is now this device's own fact: a record in chrome.storage.local (never synced) is authoritative once written (onboarding, a location change, or the first time the vault is found in exactly one area), and the synced bootstrap is only the default for a device with none. Values are normalised strictly (exactly 'sync', else local). Both areas are always read: with no device record, a master protection in both is a choice the user makes, never a silent pick; with one, the lock screen still offers the other area after a failed unlock. Onboarding writes the master protection, in the chosen area, before recording the location, and the check-and-write holds a lock shared across panel windows (Web Locks). A storage switch copies the master protection first and purges it last, so no area ever holds sealed stores without one, and the orphaned state must persist across a short re-check before it is shown; it records the device location only after the synced bootstrap write lands, and puts it back if the switch fails (it used to be left pointing at the area the rollback had emptied). Other windows drop their cached location when the device record or the bootstrap changes.",
+    status: "partial",
+    rationale:
+      "Demonstrated: `{ storageLocation: 'local', onboardingComplete: false }` written to sync put onboarding up for a local user; setting a password replaced the real master protection and every key became unopenable. What remains is availability: an attacker who can write the area the vault lives in can still DELETE it (for a sync vault, the master protection lives in sync), and nothing stored where they can write can prevent that. The panel then says the vault can no longer be unlocked rather than offering to set one up over it. Also demonstrated, and fixed by the device record: planting any validly shaped master protection in sync with `storageLocation: 'sync'` routed a LOCAL vault's lock screen to the planted record (nothing unlocks it) and never mentioned the real one; `storageLocation: 'SYNC'` matched neither area and hid a sync vault behind onboarding. Residual: a device with no record yet (first run after upgrading) facing both is asked rather than protected, and someone with write access to this device's profile can change the record itself (the lock screen's other-area offer is the way back).",
+    verifiedBy: [
+      "apps/pgp/lib/storage/integrity.test.ts",
+      "apps/pgp/lib/storage/master-protection.test.ts",
+      "apps/pgp/e2e/storage-tamper.spec.ts",
+    ],
+    section: "§17",
+  },
+  {
+    id: "T-STORE-ROLLBACK",
+    title:
+      "An older sealed store written back, or a store deleted, is silently believed",
+    attacker:
+      "Anyone who can write chrome.storage and kept an earlier, validly sealed blob (a sync copy, a profile backup, the LevelDB log), with no knowledge of the vault key: writes it back to un-revoke a contact or resurrect deleted keys and contacts, or deletes pgp_settings to reset a hardened user to defaults.",
+    defence:
+      "Every sealed store (keyring, contacts, CRX keys, settings) carries a generation INSIDE its sealed plaintext, stamped max(last seen + 1, wall clock) on every write. A sealed ledger in chrome.storage.local -- never synced, so a sync attacker cannot reach it -- records the highest generation this device has seen per store. A store that loads below its mark, or is absent although the device has seen it, raises a dismissible warning banner (WARN, not refuse: the owner's call). Emptied stores are saved as sealed empty arrays, never removed, so a deletion is distinguishable from a legitimate empty store on every device. The ledger also holds an append-only set of revoked fingerprints, merged into contacts on every load AND save (revoked, and unusable for encryption), so a rollback of the contacts blob cannot un-revoke anyone. A missing settings blob on a device that has seen one reads as the strictest preset, and the next change persists on top of it; so does one that is present but will not open or parse (reported as unreadable; it used to throw, and the panel silently kept the defaults), and the next save replaces it once the session provably holds the vault key. A deleted or unreadable ledger is itself detected (a deleted one when a local store carries a generation): its replacement is marked lost, warns on every unlock until dismissed, holds the settings at the strictest preset until then, and keeps the legacy migration from running; the contacts blob's own revoked records go straight back into the new floor. The strict preset is an overlay on the settings the panel runs with, never saved: a save merges onto the stored settings (it used to merge onto the overlay, so the first routine save, such as the recent-recipients update every encrypt makes, made the strictest preset permanent). A settings blob older than the mark, or with no generation after one was recorded, is held at the strictest preset until the warning is dismissed, even across later saves; dismissing accepts that copy. A store with NO generation after one was recorded is reported as its own softer kind, worded for an older PGP Tools build on another device as well as a rollback. A new vault's ledger is created inside saveMasterProtection's lock before any store write, with a digest of the master protection beside it; an unopenable ledger recorded for a different master protection is replaced quietly. The ledger's read-modify-write holds a lock shared across panel windows.",
+    status: "partial",
+    rationale:
+      "Demonstrated: writing back an older pgp_public_contacts blob un-revoked a revoked contact (and its pre-revocation armor still encrypted); deleted keys and contacts came back; deleting pgp_settings reset a Paranoid user to defaults. Gaps, all deliberate: (1) a consistent rollback of EVERYTHING including the local ledger is undetectable from storage alone -- that needs write access to this device's profile, which is a stronger attacker than this entry is for; deleting the ledger AND rolling every local store back to before generations existed is that rollback, while deleting or mangling just the ledger is detected (a rollback in the same moment is warned about but not undone, as the floor that would undo it was in the ledger), and a sync vault's ledger loss is not detected this way (its stores carry generations on a new second device too); (2) a device that has never seen a store cannot know it existed, so a brand-new second device of a sync vault adopts whatever it finds on first unlock, exactly like an upgrade from a build without generations (which never warns); (3) multi-device sync: devices keep separate marks and a device reading another's newer write just raises its mark, but when two devices write the same store at once and the one whose write sync DISCARDED has a clock ahead by more than the gap between the writes, that device warns once -- the banner names this cause; (4) history segments carry no generation (local-only, out of the sync attacker's reach); (5) the master protection is plaintext and carries none (substituting it fails the canary or the passkey, it does not open anything); (6) a 2.0.x build on another device of a sync vault drops the generation when it rewrites a store and removes a store it empties, so an un-updated device causes softer no-generation warnings and missing warnings on sync vaults, and a rollback to a pre-generation blob gets that softer wording too; the revocation floor and the settings hold apply either way, and a 2.0.x point release that keeps unknown array elements would remove the false positives.",
+    verifiedBy: [
+      "apps/pgp/lib/storage/integrity.test.ts",
+      "apps/pgp/lib/storage/engine.test.ts",
+      "apps/pgp/e2e/storage-tamper.spec.ts",
+    ],
+    section: "§17",
+  },
+  {
+    id: "T-STORAGE-NOT-ERASED",
+    title:
+      "Deleted or overwritten records stay on disk in Chrome's storage files",
+    attacker:
+      "Someone with read access to the browser profile's files (`Local Extension Settings/<id>/`, a backup or disk image of it), with no vault key, after the user deleted a key, cleared history or erased the vault.",
+    defence:
+      "None at the storage layer: chrome.storage.local is LevelDB, and a delete or overwrite appends a new record while the old one stays in the log and table files until LevelDB compacts them, on its own schedule. What bounds it is that every record we store sealed was sealed when written, so the leftover is ciphertext under the vault key (Argon2id-derived from the master password, or the passkey's PRF output). The delete wording says the item is removed from the vault and that an encrypted copy may remain on disk until the browser compacts its storage, rather than claiming it is gone.",
+    status: "accepted",
+    rationale:
+      "Demonstrated: a probe recovered a deleted key's ciphertext and old history segments from `000003.log` after the delete. An extension cannot erase storage securely: it has no file access and no compaction trigger, and overwriting a key with junk first only appends another record. The leftover is no weaker than the live vault the same reader already holds (T-BRUTE-OFFLINE), with one difference worth stating: a key deleted because its passphrase or the master password was weak stays as attackable as it was, so changing the password does not protect what was deleted before. Cleartext records (the master protection, the history manifest, the bootstrap) leave old versions too, so old manifest sizes and old canaries also persist.",
+    section: "§8.13",
+  },
+  {
+    id: "T-CANARY-STORE-LABEL",
+    title: "The password canary opens as a legacy store blob",
+    attacker:
+      "Anyone who can write chrome.storage with no vault key, who copies the cleartext canary from `pgp_master_protection` into a store slot.",
+    defence:
+      "New canaries are sealed under their own AAD (`gpg-tools:master-canary:v1`), so neither store envelope (`decryptStore`, or the legacy `decryptContacts` fallback) opens them. Unlock tries that label first and then the legacy `CONTACTS_AAD`, so vaults created before the change still unlock.",
+    status: "partial",
+    rationale:
+      "The planted canary decrypted through the legacy fallback to `pgp-tools-master-v1`, which then failed to parse, so the store read as unreadable: a denial of service, not a disclosure (the attacker could already delete the store). Existing canaries are not re-sealed on unlock, which is the gap: the master protection is the one record whose loss makes a vault unopenable, it is written only at onboarding by design (`saveMasterProtection` refuses to replace it), and on a synced vault an older build on another device could not verify a re-sealed canary and would call the right password wrong. So vaults from before the change keep publishing a legacy-labelled canary until they are recreated; the frozen pre-change fixture in the Rust tests holds their unlock.",
+    verifiedBy: ["apps/pgp/gpg-wasm/src/tests.rs"],
+    section: "§11.1",
   },
   {
     id: "T-DEVTOOLS",

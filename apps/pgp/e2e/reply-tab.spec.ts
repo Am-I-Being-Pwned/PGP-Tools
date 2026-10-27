@@ -230,3 +230,25 @@ test("a duplicated reader tab is locked too", async ({ context, panel }) => {
     await expect(tab.getByText("Signature verified")).toHaveCount(0);
   }
 });
+
+test("the reader shows the panel's signer card: its note, not a bare verdict", async ({
+  context,
+  panel,
+}) => {
+  await onboardWithPassword(panel, PASSWORD);
+  await decrypt(panel, await encryptToSelf(panel, true));
+  // Whatever the panel's card says beyond "verified" (here at least the
+  // signing date) must reach the tab: it used to get a bare contact and
+  // a fixed label, dropping every note, the clash pill and warnings.
+  const note = panel.getByText(/^Signed /).first();
+  await expect(note).toBeVisible();
+  const said = (await note.textContent()) ?? "";
+  expect(said.length).toBeGreaterThan(0);
+
+  const opened = context.waitForEvent("page");
+  await panel.getByRole("button", { name: "Reply", exact: true }).click();
+  const reader = await opened;
+  await expect(readerText(reader)).toHaveText(PLAINTEXT);
+  await expect(reader.getByText(said, { exact: true })).toBeVisible();
+  await expect(reader.getByText("Signature verified")).toBeVisible();
+});

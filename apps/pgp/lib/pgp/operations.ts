@@ -60,6 +60,22 @@ async function encryptToPassword(
   }
 }
 
+/**
+ * A decrypted or opened message as text when it is valid UTF-8, else the
+ * bytes. `ignoreBOM` keeps a leading byte-order mark: TextDecoder drops
+ * it by default, and Copy and Download would then hand back a file that
+ * differs from the one that was encrypted.
+ */
+export function asTextIfUtf8(plaintext: Uint8Array): string | Uint8Array {
+  try {
+    return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(
+      plaintext,
+    );
+  } catch {
+    return plaintext;
+  }
+}
+
 /** Encrypt to one or more recipients, and/or to a password. */
 export async function encrypt(
   opts: EncryptOptions & { password?: string },
@@ -102,14 +118,10 @@ export async function decryptWithHandle(
     ciphertext,
     opts.keyHandle,
     opts.verificationPublicKeys,
+    opts.maxOutputBytes,
   );
 
-  let data: string | Uint8Array;
-  try {
-    data = new TextDecoder("utf-8", { fatal: true }).decode(plaintext);
-  } catch {
-    data = plaintext;
-  }
+  const data = asTextIfUtf8(plaintext);
 
   return {
     data,
@@ -149,14 +161,10 @@ export async function decryptWithPassword(
       ciphertext,
       passwordBytes,
       opts.verificationPublicKeys,
+      opts.maxOutputBytes,
     );
 
-    let data: string | Uint8Array;
-    try {
-      data = new TextDecoder("utf-8", { fatal: true }).decode(plaintext);
-    } catch {
-      data = plaintext;
-    }
+    const data = asTextIfUtf8(plaintext);
 
     return {
       data,
@@ -165,6 +173,33 @@ export async function decryptWithPassword(
   } finally {
     passwordBytes.fill(0);
   }
+}
+
+/**
+ * Open a message that was NOT encrypted (see `MessageEncryption.encrypted`):
+ * its content and signature verdict, with no key or password. The caller
+ * must say it was not encrypted -- this result is never a decrypt.
+ */
+export async function openUnencrypted(
+  opts: DecryptOptions,
+): Promise<DecryptResult> {
+  const message =
+    opts.input.kind === "binary"
+      ? opts.input.binaryMessage
+      : new TextEncoder().encode(opts.input.armoredMessage);
+
+  const { plaintext, signatureInfo } = await wasm.openUnencrypted(
+    message,
+    opts.verificationPublicKeys,
+    opts.maxOutputBytes,
+  );
+
+  const data = asTextIfUtf8(plaintext);
+
+  return {
+    data,
+    ...signatureInfo,
+  };
 }
 
 /**
@@ -209,5 +244,9 @@ export async function signWithHandle(
 
 /** Verify a cleartext-signed message. */
 export async function verify(opts: VerifyOptions): Promise<VerifyResult> {
-  return wasm.verify(opts.signedMessage, opts.verificationPublicKeys);
+  return wasm.verify(
+    opts.signedMessage,
+    opts.verificationPublicKeys,
+    opts.maxOutputBytes,
+  );
 }

@@ -4,7 +4,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import type { Page } from "@playwright/test";
+import type { BrowserContext, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 
 /**
@@ -156,7 +156,14 @@ export async function decryptInWorkspace(
  *  real one, so it can be delivered before the vault is unlocked. */
 export async function deliverPendingOp(
   panel: Page,
-  action: "encrypt" | "decrypt" | "sign" | "verify",
+  action:
+    | "encrypt"
+    | "decrypt"
+    | "sign"
+    | "verify"
+    // "Open in PGP Tools" on a selection holding a public key (or a
+    // bundle of them): routes to the Import page with the text in hand.
+    | "import-public",
   text: string,
 ): Promise<void> {
   await panel.evaluate(
@@ -259,6 +266,26 @@ export async function importContact(
   await expect(panel.getByRole("region", { name: "Import key" })).toBeHidden();
 }
 
+/** Paste `text` into the Import Key page's paste box with a real paste
+ *  gesture -- the flow has no typable field, and this feature is reached
+ *  by pasting. */
+export async function pasteIntoImport(
+  panel: Page,
+  context: BrowserContext,
+  text: string,
+): Promise<void> {
+  await goToKeys(panel);
+  await panel.getByRole("button", { name: "Import Key" }).click();
+  const box = panel.getByLabel("Paste a key");
+  await expect(box).toBeFocused();
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await panel.evaluate((t) => navigator.clipboard.writeText(t), text);
+  await box.focus();
+  await panel.keyboard.press(
+    process.platform === "darwin" ? "Meta+V" : "Control+V",
+  );
+}
+
 /** Import an armored, unprotected private key via the Import Key page,
  *  re-protecting it with `password`. Returns once the key card appears. */
 export async function importPrivateKey(
@@ -348,10 +375,37 @@ export async function setWorkspaceMode(
   await panel.getByRole("radio", { name: mode, exact: true }).click();
 }
 
-/** Import many contacts in a single file drop -- the drop zone splits a
- *  file into individual public-key blocks -- returning after the batch
- *  "Added N contacts" toast. Far faster than one import at a time; use it
- *  to seed a vault with a lot of key material. */
+/** Drop a file holding `armoredPublicKeys` on the Keys tab's contact drop
+ *  zone (it splits a file into individual public-key blocks). Several
+ *  keys -- or one that claims a saved contact's identity -- open the
+ *  import Review; nothing is saved until a choice is made there. */
+export async function dropContactsFile(
+  panel: Page,
+  armoredPublicKeys: string[],
+): Promise<void> {
+  await goToKeys(panel);
+  await panel
+    .locator('input[accept=".asc,.gpg,.pub,.key,.pgp,.txt"]')
+    .setInputFiles({
+      name: "contacts.asc",
+      mimeType: "application/pgp-keys",
+      buffer: Buffer.from(armoredPublicKeys.join("\n"), "utf8"),
+    });
+}
+
+/** The Review's primary button: "Import N key(s)" for `count` chosen. */
+export function reviewImportButton(panel: Page, count: number) {
+  return panel.getByRole("button", {
+    name: `Import ${count} key${count === 1 ? "" : "s"}`,
+    exact: true,
+  });
+}
+
+/** Import many contacts in a single file drop, confirming the import
+ *  Review with its "Import N keys" button (every key is new, so every key
+ *  starts on Import), returning after the batch "Added N contacts" toast.
+ *  Far faster than one import at a time; use it to seed a vault with a
+ *  lot of key material. */
 export async function importContactsBulk(
   panel: Page,
   armoredPublicKeys: string[],
@@ -361,19 +415,16 @@ export async function importContactsBulk(
     await importContact(panel, armoredPublicKeys[0]);
     return;
   }
-  await goToKeys(panel);
-  await panel
-    .locator('input[accept=".asc,.gpg,.pub,.key,.pgp,.txt"]')
-    .setInputFiles({
-      name: "contacts.asc",
-      mimeType: "application/pgp-keys",
-      buffer: Buffer.from(armoredPublicKeys.join("\n"), "utf8"),
-    });
+  await dropContactsFile(panel, armoredPublicKeys);
+  await reviewImportButton(panel, armoredPublicKeys.length).click();
   await expect(
     panel
       .getByText(new RegExp(`Added ${armoredPublicKeys.length} contact`))
       .first(),
   ).toBeVisible();
+  // The slide-over's exit fires a deferred collapse-to-top that would
+  // dismiss a page the caller opens straight after (see importPrivateKey).
+  await expect(panel.getByRole("region", { name: "Import key" })).toBeHidden();
 }
 
 /**
@@ -628,6 +679,11 @@ export interface StoredContact {
   armoredPublicKey?: string;
   usableForEncryption?: boolean;
   revoked?: boolean;
+  /** Set only by the user's "Mark as verified"; absent otherwise. */
+  verified?: true;
+  verifiedAt?: number;
+  /** Keys this contact had before a "Replace" on the import Review. */
+  previousKeyIds?: string[];
 }
 
 /**
@@ -669,7 +725,11 @@ export async function readContacts(panel: Page): Promise<StoredContact[]> {
       );
       const nul = plaintext.indexOf(0);
       const json = nul === -1 ? plaintext : plaintext.subarray(0, nul);
-      return JSON.parse(new TextDecoder().decode(json)) as StoredContact[];
+      // Drop the store's generation element (`{ "$gen": n }`, see
+      // lib/storage/integrity.ts): it is not a contact.
+      return (JSON.parse(new TextDecoder().decode(json)) as unknown[]).filter(
+        (el) => !(typeof el === "object" && el !== null && "$gen" in el),
+      ) as StoredContact[];
     },
     { u: url, key: "pgp_public_contacts" },
   );

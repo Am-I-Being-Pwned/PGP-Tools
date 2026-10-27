@@ -14,6 +14,14 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import {
+  decryptWithHandle,
+  encryptToRecipients,
+  isAgeCiphertext,
+  parseRecipient,
+  selectDecryptionKey,
+} from "./operations";
+
 const wasm = vi.hoisted(() => ({
   encryptAgeToRecipients: vi.fn(),
   decryptAgeWithHandle: vi.fn(),
@@ -24,15 +32,8 @@ const wasm = vi.hoisted(() => ({
 
 vi.mock("../pgp/wasm", () => wasm);
 
-import {
-  decryptWithHandle,
-  encryptToRecipients,
-  isAgeCiphertext,
-  parseRecipient,
-  selectDecryptionKey,
-} from "./operations";
-
-const RECIPIENT = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIALwHu alice@example.com";
+const RECIPIENT =
+  "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIALwHu alice@example.com";
 const ARMORED = "-----BEGIN AGE ENCRYPTED FILE-----\nYWdl\n";
 
 beforeEach(() => {
@@ -109,6 +110,20 @@ describe("decryptWithHandle", () => {
       7,
     );
     expect(result).toBe("secret message");
+  });
+
+  it("keeps a leading byte-order mark in the decoded text", async () => {
+    // TextDecoder drops a BOM by default; Copy and Download would then
+    // return a file one character short of the one that was encrypted.
+    const bom = String.fromCharCode(0xfeff);
+    wasm.decryptAgeWithHandle.mockResolvedValue(
+      new Uint8Array([0xef, 0xbb, 0xbf, ...new TextEncoder().encode("hi")]),
+    );
+    const result = await decryptWithHandle({
+      input: { kind: "armored", armoredMessage: ARMORED },
+      keyHandle: 7,
+    });
+    expect(result).toBe(`${bom}hi`);
   });
 
   it("hands back raw bytes when the plaintext is not UTF-8", async () => {
@@ -218,7 +233,9 @@ describe("selectDecryptionKey", () => {
 
   it("says null when none of the candidates is a recipient", async () => {
     wasm.selectAgeDecryptionKey.mockResolvedValue(null);
-    expect(await selectDecryptionKey(new Uint8Array([1]), CANDIDATES)).toBeNull();
+    expect(
+      await selectDecryptionKey(new Uint8Array([1]), CANDIDATES),
+    ).toBeNull();
   });
 
   it("says null rather than throwing on input that is not an age file", async () => {
@@ -227,6 +244,8 @@ describe("selectDecryptionKey", () => {
     wasm.selectAgeDecryptionKey.mockRejectedValue(
       new Error("Not a valid age file"),
     );
-    expect(await selectDecryptionKey(new Uint8Array([1]), CANDIDATES)).toBeNull();
+    expect(
+      await selectDecryptionKey(new Uint8Array([1]), CANDIDATES),
+    ).toBeNull();
   });
 });

@@ -31,7 +31,7 @@
     "message": "删除全部 $count$ 条历史记录"
   },
   "actions_history_delete_warning": {
-    "message": "这将永久删除此设备上已加密的操作历史记录，且无法恢复。"
+    "message": "这会将已加密的操作历史记录从此设备的保险库中移除，此操作无法撤销。在浏览器压缩其存储之前，磁盘上可能仍留有一份加密副本。"
   },
   "actions_no_keys_available": { "message": "没有可用的密钥" },
   "actions_set_up": { "message": "去设置" },
@@ -127,5 +127,8 @@
   "actions_translate_to_title": { "message": "将消息翻译为" },
   "actions_pick_language_placeholder": { "message": "选择语言…" },
   "actions_translate_result_to": { "message": "翻译为$language$" },
-  "actions_reply_to_signer": { "message": "回复发件人" }
+  "actions_reply_to_signer": { "message": "回复发件人" },
+  "actions_no_active_key_reason": {
+    "message": "此联系人的所有密钥都已关闭。请在联系人详情中重新开启一个，才能加密给对方。"
+  }
 }
