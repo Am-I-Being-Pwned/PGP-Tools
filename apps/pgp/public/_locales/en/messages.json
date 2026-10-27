@@ -1195,6 +1195,10 @@
     "message": "The key has been re-issued",
     "description": "The only line in the 'what changed' list when the certificate differs but nothing displayable changed."
   },
+  "import_change_revoked": {
+    "message": "Revoked by its owner",
+    "description": "One line in the 'what changed' list of the update preview: the incoming copy revokes the stored key."
+  },
   "import_chip_crx": {
     "message": "Extension key",
     "description": "Chip label in the import preview for a Chrome extension signing key. Very short."
@@ -1522,6 +1526,18 @@
       }
     }
   },
+  "import_keyserver_wrong_key": {
+    "message": "$host$ returned a key that doesn't match $subject$, so it was not imported.",
+    "description": "Keyserver import rejection: the returned cert is not for the fingerprint, key ID or address that was looked up. $host$ is the keyserver host, $subject$ the query.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "subject": {
+        "content": "$2"
+      }
+    }
+  },
   "import_label_field": {
     "message": "Label",
     "description": "Field label on the protect step for naming an imported Chrome extension signing key."
@@ -1631,6 +1647,10 @@
     "message": "This block contains no usable public key.",
     "description": "Reason a pasted armored block cannot be imported as a contact: it parsed to no certificate."
   },
+  "import_reject_revocation_unknown": {
+    "message": "This revocation certificate is for a key you don't have, so there is nothing to revoke.",
+    "description": "Import rejection: the pasted text is a revocation certificate, but no stored contact matches the key it revokes."
+  },
   "import_reject_ssh_generic": {
     "message": "This SSH key can't be used for encryption.",
     "description": "Fallback reason when the SSH engine refuses a key without giving a message."
@@ -1687,6 +1707,10 @@
     "message": "Show it in your keys",
     "description": "Preview button for a key that is already stored: closes the panel and highlights the key in the list."
   },
+  "import_revocation_headline": {
+    "message": "Revocation certificate",
+    "description": "Import preview headline for a pasted revocation certificate that matches no stored key."
+  },
   "import_source_help": {
     "message": "Public keys are added as contacts. A private key stays on this device - you'll choose how it's protected next.",
     "description": "Muted help text at the bottom of the import source step."
@@ -1721,6 +1745,15 @@
     "description": "Line under the 'Already in your keys' heading. $date$ is a localised long date.",
     "placeholders": {
       "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_status_replaces": {
+    "message": "Replaces the key you had for $name$",
+    "description": "Amber strip on the import preview: this fetched key has a different fingerprint from the one stored for the same lookup, and importing swaps it. $name$ is the stored contact's name.",
+    "placeholders": {
+      "name": {
         "content": "$1"
       }
     }
@@ -2604,6 +2637,14 @@
     "message": "Contact options",
     "description": "Accessible label of the three-dot menu button on a contact card."
   },
+  "keys_contact_revoked": {
+    "message": "Revoked",
+    "description": "Small red pill on a contact card whose key its owner has revoked."
+  },
+  "keys_contact_revoked_title": {
+    "message": "The owner revoked this key. It is kept so the revocation sticks, but you can't encrypt to it. After a compromise none of its signatures verify; after a routine retirement, older ones still do and show amber.",
+    "description": "Hover text on the Revoked pill of a contact card."
+  },
   "keys_contacts_heading": {
     "message": "Contacts",
     "description": "Keys tab: heading above the contact list, when the list is empty."
@@ -2926,6 +2967,10 @@
   "keys_loading": {
     "message": "Loading…",
     "description": "Key details: shown while the certificate is being parsed."
+  },
+  "keys_lookalike_name": {
+    "message": "Lookalike name",
+    "description": "Small amber pill on a contact card whose name or email mixes alphabets (e.g. a Cyrillic letter in a Latin name). The hover text explains."
   },
   "keys_my_keys_heading": {
     "message": "My Keys",

@@ -282,5 +282,14 @@
   "keys_size_mb": { "message": "$size$ MB" },
   "keys_contact_long_id_title": {
     "message": "Schlüssel-ID: die letzten 16 Zeichen des Fingerabdrucks dieses Schlüssels. Damit unterscheiden Sie Schlüssel auf einen Blick; ob ein Schlüssel echt ist, prüfen Sie am vollständigen Fingerabdruck."
+  },
+  "keys_contact_revoked": {
+    "message": "Widerrufen"
+  },
+  "keys_contact_revoked_title": {
+    "message": "Der Inhaber hat diesen Schlüssel widerrufen. Er bleibt gespeichert, damit der Widerruf bestehen bleibt, aber Sie können nicht an ihn verschlüsseln. Nach einer Kompromittierung wird keine seiner Signaturen mehr verifiziert; nach einer regulären Ablösung werden ältere weiterhin verifiziert und gelb angezeigt."
+  },
+  "keys_lookalike_name": {
+    "message": "Ähnlicher Name"
   }
 }

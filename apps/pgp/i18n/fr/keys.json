@@ -514,5 +514,14 @@
   },
   "keys_contact_long_id_title": {
     "message": "Identifiant de clé : les 16 derniers caractères de l'empreinte de cette clé. Il distingue les clés d'un coup d'œil ; pour vérifier qu'une clé est authentique, comparez l'empreinte complète."
+  },
+  "keys_contact_revoked": {
+    "message": "Révoquée"
+  },
+  "keys_contact_revoked_title": {
+    "message": "Le propriétaire a révoqué cette clé. Elle est conservée pour que la révocation reste en vigueur, mais vous ne pouvez pas chiffrer pour elle. Après une compromission, aucune de ses signatures n'est vérifiée ; après un retrait de routine, les plus anciennes le sont encore et s'affichent en orange."
+  },
+  "keys_lookalike_name": {
+    "message": "Nom trompeur"
   }
 }

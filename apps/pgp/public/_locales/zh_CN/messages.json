@@ -958,6 +958,9 @@
   "import_change_reissued": {
     "message": "该密钥已重新签发"
   },
+  "import_change_revoked": {
+    "message": "已被所有者吊销"
+  },
   "import_chip_crx": {
     "message": "扩展程序密钥"
   },
@@ -1235,6 +1238,17 @@
       }
     }
   },
+  "import_keyserver_wrong_key": {
+    "message": "$host$ 返回的密钥与 $subject$ 不匹配，因此未导入。",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "subject": {
+        "content": "$2"
+      }
+    }
+  },
   "import_label_field": {
     "message": "标签"
   },
@@ -1323,6 +1337,9 @@
   "import_reject_no_public_key": {
     "message": "此密钥块不包含可用的公钥。"
   },
+  "import_reject_revocation_unknown": {
+    "message": "此吊销证书针对的是你没有的密钥，因此没有可吊销的内容。"
+  },
   "import_reject_ssh_generic": {
     "message": "此 SSH 密钥不能用于加密。"
   },
@@ -1370,6 +1387,9 @@
   "import_reveal": {
     "message": "在密钥中显示"
   },
+  "import_revocation_headline": {
+    "message": "吊销证书"
+  },
   "import_source_help": {
     "message": "公钥会添加为联系人。私钥仅保留在此设备上，下一步你将选择如何保护它。"
   },
@@ -1397,6 +1417,14 @@
     "message": "你已于 $date$ 添加过它，且没有任何变化。",
     "placeholders": {
       "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_status_replaces": {
+    "message": "将替换你为 $name$ 保存的密钥",
+    "placeholders": {
+      "name": {
         "content": "$1"
       }
     }
@@ -2106,6 +2134,12 @@
   "keys_contact_options_aria": {
     "message": "联系人选项"
   },
+  "keys_contact_revoked": {
+    "message": "已吊销"
+  },
+  "keys_contact_revoked_title": {
+    "message": "所有者已吊销此密钥。保留它是为了让吊销持续有效，但你无法用它加密。若因泄露而吊销，其签名均不再通过验证；若是例行停用，此前的签名仍可验证，并以琥珀色显示。"
+  },
   "keys_contacts_heading": {
     "message": "联系人"
   },
@@ -2373,6 +2407,9 @@
   },
   "keys_loading": {
     "message": "正在加载…"
+  },
+  "keys_lookalike_name": {
+    "message": "仿冒名称"
   },
   "keys_my_keys_heading": {
     "message": "我的密钥"

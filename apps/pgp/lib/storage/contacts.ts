@@ -82,6 +82,13 @@ export interface ContactSource {
   fetchedAt: number;
 }
 
+/** Bumped when the engine changes what a contact's identity fields mean.
+ *  1: `userIds` are bound, unrevoked User IDs only (an unsigned User ID
+ *  appended to a real cert used to be listed, and named the contact);
+ *  `revoked` and `lookalike` are recorded. Older records are re-derived
+ *  once by the contacts hook. */
+export const IDENTITY_VERSION = 1;
+
 export interface PublicContactKey extends KindDiscriminated {
   /** Id of the contact RECORD: the picker's selection id, the store's
    *  upsert key, the fingerprint history references. It happens to equal
@@ -127,6 +134,17 @@ export interface PublicContactKey extends KindDiscriminated {
   /** Non-blocking flag from key parsing (e.g. relies on a SHA-1 binding
    *  signature). Shown as a warning badge; the key is still usable. */
   securityWarning?: string;
+  /** The owner revoked this key. Kept, so the revocation sticks against a
+   *  later stale re-import, but shown as revoked and never encrypted to.
+   *  WRITTEN ONLY WHEN TRUE. */
+  revoked?: boolean;
+  /** A User ID mixes lookalike alphabets (`securityWarning` says so).
+   *  WRITTEN ONLY WHEN TRUE. */
+  lookalike?: boolean;
+  /** Which {@link IDENTITY_VERSION} last derived
+   *  `userIds` / `revoked` / `lookalike`. Absent on older records, which
+   *  the contacts hook re-derives once. */
+  identityVersion?: number;
   /** Every key this contact holds -- WRITTEN ONLY WHEN THERE IS MORE
    *  THAN ONE. Absent means "the single key in the top-level fields",
    *  exactly the way an absent `kind` means `"pgp"` (see `key-kind.ts`).

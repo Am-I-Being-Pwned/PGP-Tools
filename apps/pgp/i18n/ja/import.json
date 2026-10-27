@@ -340,5 +340,20 @@
   },
   "import_keyserver_server_error": {
     "message": "$host$ が現在応答できません。しばらくしてからやり直してください。"
+  },
+  "import_change_revoked": {
+    "message": "所有者により失効"
+  },
+  "import_reject_revocation_unknown": {
+    "message": "この失効証明書はあなたが持っていない鍵のものなので、失効させる対象がありません。"
+  },
+  "import_revocation_headline": {
+    "message": "失効証明書"
+  },
+  "import_keyserver_wrong_key": {
+    "message": "$host$ が $subject$ と一致しない鍵を返したため、インポートしませんでした。"
+  },
+  "import_status_replaces": {
+    "message": "$name$ 用に保存していた鍵を置き換えます"
   }
 }

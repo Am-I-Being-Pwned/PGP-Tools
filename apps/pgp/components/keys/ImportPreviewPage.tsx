@@ -1,4 +1,4 @@
-import { CheckCircleIcon, RefreshCwIcon } from "lucide-react";
+import { AlertTriangleIcon, CheckCircleIcon, RefreshCwIcon } from "lucide-react";
 
 import { Block, BlockStack } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
@@ -43,7 +43,19 @@ import { KeyPreviewBody } from "./KeyPreviewBody";
  *  right under the key's face), so it is the band that says what this
  *  import will do to that key. */
 function ImportStatusStrip({ incoming }: { incoming: IncomingKey }) {
-  const { status, changes, existingAddedAt } = incoming;
+  const { status, changes, existingAddedAt, replaces } = incoming;
+  if (status === "new" && replaces) {
+    // Same lookup, different fingerprint: importing swaps the key this
+    // contact is encrypted to. Never shown as an ordinary new key.
+    return (
+      <Block className="bg-[#252012] px-3.5 py-2.5">
+        <p className="text-warn flex items-center gap-1.5 text-xs font-medium">
+          <AlertTriangleIcon className="h-3.5 w-3.5 shrink-0" />
+          {t("import_status_replaces", { name: replaces })}
+        </p>
+      </Block>
+    );
+  }
   if (status === "new" || status === "rejected") return null;
 
   const added = existingAddedAt != null ? formatDate(existingAddedAt) : null;

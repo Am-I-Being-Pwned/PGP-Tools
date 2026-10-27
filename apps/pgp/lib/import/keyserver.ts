@@ -20,6 +20,7 @@ import type { KeyserverQuery } from "../keyserver/query";
 import type { KeyserverKeyFailure } from "../messages";
 import type { ContactSource } from "../storage/contacts";
 import type { PreparedImport, StoredKeys } from "./prepare";
+import type { IncomingKey } from "./types";
 import { t, tn } from "../i18n";
 import { prepareImport } from "./prepare";
 
@@ -79,8 +80,77 @@ export async function prepareKeyserverImport(
   const source = keyserverSource(query, now);
   return {
     ...prepared,
-    keys: prepared.keys.map((key) => ({ ...key, source })),
+    keys: prepared.keys.map((key) => {
+      if (!answersQuery(key, query)) {
+        return {
+          ...key,
+          status: "rejected" as const,
+          rejection: t("import_keyserver_wrong_key", {
+            host: KEYSERVER_HOST,
+            subject: describeQuery(query),
+          }),
+        };
+      }
+      // A re-fetch updates the contact it was fetched for, and a NEW
+      // fingerprint there replaces that contact's key -- which the preview
+      // must say, not present as an unrelated new key.
+      const previous = stored.contacts.find(
+        (c) =>
+          c.source?.type === "keyserver" &&
+          c.source.user === query.value &&
+          c.keyId.toUpperCase() !== key.keyId.toUpperCase(),
+      );
+      return {
+        ...key,
+        source,
+        ...(key.status === "new" && previous
+          ? { replaces: previous.userIds[0] ?? previous.keyId }
+          : {}),
+      };
+    }),
   };
+}
+
+/**
+ * Is this the key the lookup asked for?
+ *
+ * The threat model names the keyserver and anything on the path to it as
+ * attackers, so its answer is checked, not assumed: a fingerprint query
+ * must return that fingerprint, a key-ID query a cert holding that key,
+ * and an address query a cert whose OWNER bound that address (the
+ * engine's `userIds` are bound, unrevoked User IDs only).
+ */
+export function answersQuery(key: IncomingKey, query: KeyserverQuery): boolean {
+  const want = asciiUpper(query.value);
+  switch (query.kind) {
+    case "fingerprint":
+      return asciiUpper(key.keyId) === want;
+    case "keyid":
+      // The primary, or a subkey the owner bound -- an appended, unbound
+      // subkey is listed (as "invalid") but is not the cert's.
+      return [
+        key.keyId,
+        ...(key.details?.keys
+          .filter((k) => k.status !== "invalid")
+          .map((k) => k.fingerprint) ?? []),
+      ].some((fpr) => asciiUpper(fpr).endsWith(want));
+    case "email":
+      return key.userIds.some((uid) => asciiUpper(emailIn(uid)) === want);
+  }
+}
+
+/** ASCII-only case folding. `toUpperCase` maps "ı" and "ſ" onto "I" and
+ *  "S", so "alıce@" would answer a query for "alice@". */
+function asciiUpper(s: string): string {
+  return s.replace(/[a-z]/g, (c) => c.toUpperCase());
+}
+
+/** The address in a "Name <addr>" User ID, or a bare-address User ID. */
+function emailIn(uid: string): string {
+  const bracketed = /<([^<>]+)>\s*$/.exec(uid);
+  if (bracketed) return bracketed[1].trim();
+  const bare = uid.trim();
+  return bare.includes("@") && !/\s/.test(bare) ? bare : "";
 }
 
 // ── failure copy ─────────────────────────────────────────────────────

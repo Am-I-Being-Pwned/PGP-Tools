@@ -173,7 +173,11 @@ export function ContactCard({
   const algorithm = contact.algorithm ? formatAlgorithm(contact.algorithm) : "";
   const expired = !!contact.expiresAt && contact.expiresAt < now;
   const hasPills =
-    expired || !!contact.securityWarning || isSsh || recipients.length > 1;
+    expired ||
+    !!contact.revoked ||
+    !!contact.securityWarning ||
+    isSsh ||
+    recipients.length > 1;
   // Algorithm, expiry and provenance, as one small muted line.
   const details: string[] = [];
   if (algorithm && !showKeyLine) details.push(algorithm);
@@ -274,13 +278,28 @@ export function ContactCard({
                   })}
                 </span>
               )}
+              {contact.revoked && (
+                /* Kept so the revocation sticks; never encrypted to. */
+                <span
+                  title={t("keys_contact_revoked_title")}
+                  className={cn(
+                    PILL,
+                    "bg-destructive/12 text-bad inline-flex gap-1",
+                  )}
+                >
+                  <TriangleAlertIcon className="h-2.5 w-2.5" />
+                  {t("keys_contact_revoked")}
+                </span>
+              )}
               {contact.securityWarning && (
                 <span
                   title={contact.securityWarning}
                   className={cn(PILL, "bg-warn/12 text-warn inline-flex gap-1")}
                 >
                   <TriangleAlertIcon className="h-2.5 w-2.5" />
-                  {t("keys_weak_sha1")}
+                  {contact.lookalike
+                    ? t("keys_lookalike_name")
+                    : t("keys_weak_sha1")}
                 </span>
               )}
               {isSsh && (

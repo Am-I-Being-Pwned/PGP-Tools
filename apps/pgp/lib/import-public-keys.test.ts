@@ -28,11 +28,23 @@ import {
   importRejectionMessage,
   isUsableContact,
 } from "./import-public-keys";
-import { parseKeys } from "./pgp/wasm";
+import { mergePublicKey, parseKeys, revocationIssuers } from "./pgp/wasm";
 
-vi.mock("./pgp/wasm", () => ({ parseKeys: vi.fn() }));
+vi.mock("./pgp/wasm", () => ({
+  parseKeys: vi.fn(),
+  mergePublicKey: vi.fn(),
+  revocationIssuers: vi.fn(),
+}));
 
 const parse = vi.mocked(parseKeys);
+const merge = vi.mocked(mergePublicKey);
+const issuers = vi.mocked(revocationIssuers);
+
+/** A stored contact the import can land on. */
+const stored = (keyId: string, armored = `STORED-${keyId}`) => ({
+  keyId,
+  armored,
+});
 
 function keyInfo(over: Partial<KeyInfo> = {}): KeyInfo {
   return {
@@ -155,7 +167,12 @@ describe("importPublicKeyBlocks", () => {
     parse.mockResolvedValue([cert()]);
     const { onImport } = collector();
 
-    const summary = await importPublicKeyBlocks(["BLOCK"], ["FPR1"], onImport);
+    merge.mockResolvedValue("MERGED");
+    const summary = await importPublicKeyBlocks(
+      ["BLOCK"],
+      [stored("FPR1")],
+      onImport,
+    );
 
     expect(summary).toMatchObject({ added: 0, updated: 1 });
   });
@@ -309,6 +326,8 @@ describe("importPublicKeyBlocks", () => {
     parse
       .mockResolvedValueOnce([cert({ keyId: "A" })])
       .mockResolvedValueOnce([cert({ keyId: "B" })])
+      // B is stored: the merged cert is re-parsed.
+      .mockResolvedValueOnce([cert({ keyId: "B" })])
       .mockResolvedValueOnce([
         cert({
           keyId: "C",
@@ -318,12 +337,97 @@ describe("importPublicKeyBlocks", () => {
       ]);
     const { onImport } = collector();
 
+    merge.mockResolvedValue("MERGED");
     const summary = await importPublicKeyBlocks(
       ["A", "B", "C"],
-      ["B"],
+      [stored("B")],
       onImport,
     );
 
     expect(summary).toMatchObject({ added: 1, updated: 1, failed: 1 });
+  });
+
+  it("merges a re-import into the stored cert instead of replacing it", async () => {
+    // Storing the incoming copy verbatim let an old copy roll a contact
+    // back to a subkey its owner had revoked.
+    parse.mockResolvedValue([cert({}, "INCOMING")]);
+    merge.mockResolvedValue("MERGED");
+    // The merged cert re-parses to what gets stored.
+    parse
+      .mockResolvedValueOnce([cert({}, "INCOMING")])
+      .mockResolvedValueOnce([cert({}, "MERGED")]);
+    const { written, onImport } = collector();
+
+    await importPublicKeyBlocks(["BLOCK"], [stored("FPR1")], onImport);
+
+    expect(merge).toHaveBeenCalledWith("STORED-FPR1", "INCOMING");
+    expect(written[0].armoredPublicKey).toBe("MERGED");
+  });
+
+  it("lets a revoked copy revoke the stored contact rather than turning it away", async () => {
+    const revoked = cert({
+      usableForEncryption: false,
+      usableForSigning: false,
+      revoked: true,
+    });
+    parse.mockResolvedValue([revoked]);
+    merge.mockResolvedValue("MERGED");
+    const { written, onImport } = collector();
+
+    const summary = await importPublicKeyBlocks(
+      ["BLOCK"],
+      [stored("FPR1")],
+      onImport,
+    );
+
+    expect(summary).toMatchObject({ updated: 1, failed: 0 });
+    expect(written[0]).toMatchObject({
+      revoked: true,
+      usableForEncryption: false,
+    });
+  });
+
+  it("still rejects a revoked key nobody holds", async () => {
+    parse.mockResolvedValue([
+      cert({ usableForEncryption: false, usableForSigning: false, revoked: true }),
+    ]);
+    const { written, onImport } = collector();
+
+    const summary = await importPublicKeyBlocks(["BLOCK"], [], onImport);
+
+    expect(summary).toMatchObject({ added: 0, failed: 1 });
+    expect(written).toEqual([]);
+  });
+
+  it("applies a bare revocation certificate to the contact it names", async () => {
+    // Not a key, so the parse fails -- but it revokes one we hold.
+    parse
+      .mockRejectedValueOnce(new Error("Unrecognized token Signature Packet"))
+      .mockResolvedValueOnce([cert({ revoked: true }, "MERGED")]);
+    issuers.mockResolvedValue(["0123456789ABCDEF"]);
+    merge.mockResolvedValue("MERGED");
+    const { written, onImport } = collector();
+
+    const summary = await importPublicKeyBlocks(
+      ["REVOCATION"],
+      [stored("AAAA0123456789ABCDEF")],
+      onImport,
+    );
+
+    expect(merge).toHaveBeenCalledWith("STORED-AAAA0123456789ABCDEF", "REVOCATION");
+    expect(summary).toMatchObject({ updated: 1, failed: 0 });
+    expect(written[0].revoked).toBe(true);
+  });
+
+  it("says so when a revocation certificate names a key nobody holds", async () => {
+    parse.mockRejectedValue(new Error("Unrecognized token Signature Packet"));
+    issuers.mockResolvedValue(["0123456789ABCDEF"]);
+    const { written, onImport } = collector();
+
+    const summary = await importPublicKeyBlocks(["REVOCATION"], [], onImport);
+
+    expect(summary.failed).toBe(1);
+    expect(summary.rejectionReasons[0]).toMatch(/key you don't have/);
+    expect(written).toEqual([]);
   });
 });

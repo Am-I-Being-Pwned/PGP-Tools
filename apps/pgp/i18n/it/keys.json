@@ -514,5 +514,14 @@
   },
   "keys_contact_long_id_title": {
     "message": "ID chiave: gli ultimi 16 caratteri dell'impronta di questa chiave. Serve a distinguere le chiavi a colpo d'occhio; per verificare che una chiave sia autentica, confronta l'impronta completa."
+  },
+  "keys_contact_revoked": {
+    "message": "Revocata"
+  },
+  "keys_contact_revoked_title": {
+    "message": "Il proprietario ha revocato questa chiave. Viene conservata perché la revoca resti valida, ma non puoi cifrare per essa. Dopo una compromissione nessuna delle sue firme viene verificata; dopo un ritiro di routine, quelle precedenti sì e appaiono in ambra."
+  },
+  "keys_lookalike_name": {
+    "message": "Nome ingannevole"
   }
 }

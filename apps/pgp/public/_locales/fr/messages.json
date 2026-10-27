@@ -958,6 +958,9 @@
   "import_change_reissued": {
     "message": "La clé a été réémise"
   },
+  "import_change_revoked": {
+    "message": "Révoquée par son propriétaire"
+  },
   "import_chip_crx": {
     "message": "Clé d'extension"
   },
@@ -1235,6 +1238,17 @@
       }
     }
   },
+  "import_keyserver_wrong_key": {
+    "message": "$host$ a renvoyé une clé qui ne correspond pas à $subject$, elle n'a donc pas été importée.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "subject": {
+        "content": "$2"
+      }
+    }
+  },
   "import_label_field": {
     "message": "Libellé"
   },
@@ -1323,6 +1337,9 @@
   "import_reject_no_public_key": {
     "message": "Ce bloc ne contient aucune clé publique utilisable."
   },
+  "import_reject_revocation_unknown": {
+    "message": "Ce certificat de révocation concerne une clé que vous n'avez pas, il n'y a donc rien à révoquer."
+  },
   "import_reject_ssh_generic": {
     "message": "Cette clé SSH ne peut pas servir au chiffrement."
   },
@@ -1370,6 +1387,9 @@
   "import_reveal": {
     "message": "Afficher dans vos clés"
   },
+  "import_revocation_headline": {
+    "message": "Certificat de révocation"
+  },
   "import_source_help": {
     "message": "Les clés publiques sont ajoutées comme contacts. Une clé privée reste sur cet appareil - vous choisirez ensuite comment la protéger."
   },
@@ -1397,6 +1417,14 @@
     "message": "Vous l'avez ajoutée le $date$, et rien n'a changé depuis.",
     "placeholders": {
       "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_status_replaces": {
+    "message": "Remplace la clé que vous aviez pour $name$",
+    "placeholders": {
+      "name": {
         "content": "$1"
       }
     }
@@ -2106,6 +2134,12 @@
   "keys_contact_options_aria": {
     "message": "Options du contact"
   },
+  "keys_contact_revoked": {
+    "message": "Révoquée"
+  },
+  "keys_contact_revoked_title": {
+    "message": "Le propriétaire a révoqué cette clé. Elle est conservée pour que la révocation reste en vigueur, mais vous ne pouvez pas chiffrer pour elle. Après une compromission, aucune de ses signatures n'est vérifiée ; après un retrait de routine, les plus anciennes le sont encore et s'affichent en orange."
+  },
   "keys_contacts_heading": {
     "message": "Contacts"
   },
@@ -2373,6 +2407,9 @@
   },
   "keys_loading": {
     "message": "Chargement…"
+  },
+  "keys_lookalike_name": {
+    "message": "Nom trompeur"
   },
   "keys_my_keys_heading": {
     "message": "Mes clés"

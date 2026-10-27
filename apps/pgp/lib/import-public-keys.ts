@@ -1,8 +1,81 @@
 import type { KeyInfo } from "./pgp/types";
+import type { ParsedCert } from "./pgp/wasm";
 import type { PublicContactKey } from "./storage/contacts";
+import { IDENTITY_VERSION } from "./storage/contacts";
 import { t } from "./i18n";
 import { formatDate } from "./i18n/format";
-import { parseKeys } from "./pgp/wasm";
+import { mergePublicKey, parseKeys, revocationIssuers } from "./pgp/wasm";
+
+/** A stored public cert an import can land on. */
+export interface StoredCert {
+  keyId: string;
+  armored: string;
+}
+
+/**
+ * Fold an imported copy of a key into the stored copy of the SAME key.
+ *
+ * Every re-import goes through here rather than replacing the stored
+ * cert: a merge can only add what the owner signed, so an old or
+ * stripped copy can't bring back a subkey the owner revoked, and a
+ * revoked copy revokes the contact instead of being turned away as
+ * "unusable" while the stale copy stays live.
+ */
+export async function mergeIntoStored(
+  stored: StoredCert,
+  incomingArmored: string,
+): Promise<ParsedCert> {
+  const merged = await mergePublicKey(stored.armored, incomingArmored);
+  const [cert] = await parseKeys(merged);
+  return cert;
+}
+
+/**
+ * A bare revocation certificate (`gpg --gen-revoke`, or this app's own
+ * export) carries no key, so it can only ever mean "revoke a contact I
+ * already have". Returns the merged contact, `"unknown"` when it names a
+ * key that isn't stored, or null when the text isn't a revocation.
+ */
+export async function applyRevocation(
+  text: string,
+  stored: readonly StoredCert[],
+): Promise<ParsedCert | "unknown" | null> {
+  const issuers = await revocationIssuers(text);
+  if (!issuers) return null;
+  const match = stored.find((s) =>
+    issuers.some((i) => s.keyId.toUpperCase().endsWith(i.toUpperCase())),
+  );
+  if (!match) return "unknown";
+  return mergeIntoStored(match, text);
+}
+
+/** The stored-record fields a parsed cert decides. */
+export function contactFieldsFrom(
+  keyInfo: KeyInfo,
+): Pick<
+  PublicContactKey,
+  | "userIds"
+  | "expiresAt"
+  | "usableForEncryption"
+  | "securityWarning"
+  | "revoked"
+  | "lookalike"
+  | "identityVersion"
+> {
+  return {
+    userIds: keyInfo.userIds,
+    expiresAt: keyInfo.expiresAt,
+    // Sign-only keys are valid contacts (for verification) but can't
+    // be offered as encryption recipients -- record which is which.
+    usableForEncryption: keyInfo.usableForEncryption,
+    // Allowed, but flagged (e.g. SHA-1 binding signature).
+    securityWarning: keyInfo.securityWarning,
+    // Written only when true, so an unrevoked record keeps its bytes.
+    ...(keyInfo.revoked ? { revoked: true } : {}),
+    ...(keyInfo.lookalike ? { lookalike: true } : {}),
+    identityVersion: IDENTITY_VERSION,
+  };
+}
 
 /** A contact is worth keeping if you can either encrypt to it OR verify
  *  its signatures. Sign-only keys (no encryption subkey) are perfectly
@@ -54,7 +127,7 @@ export interface PublicImportSummary {
  */
 export async function importPublicKeyBlocks(
   blocks: string[],
-  existingKeyIds: string[],
+  existing: readonly StoredCert[],
   onImport: (contact: PublicContactKey) => Promise<void>,
 ): Promise<PublicImportSummary> {
   const summary: PublicImportSummary = {
@@ -65,46 +138,66 @@ export async function importPublicKeyBlocks(
     rejectionReasons: [],
   };
 
+  const write = async (cert: ParsedCert, isRefresh: boolean) => {
+    const { keyInfo, armored } = cert;
+    await onImport({
+      keyId: keyInfo.keyId,
+      algorithm: keyInfo.algorithm,
+      armoredPublicKey: armored,
+      addedAt: Date.now(),
+      lastUsedAt: Date.now(),
+      ...contactFieldsFrom(keyInfo),
+    });
+    if (isRefresh) summary.updated++;
+    else summary.added++;
+    // Counted for the SHA-1 toast, so SHA-1 warnings only.
+    if (keyInfo.securityWarning?.includes("SHA-1")) summary.flagged++;
+  };
+
   for (const block of blocks) {
     let certs;
     try {
       certs = await parseKeys(block);
     } catch {
+      // One unreadable stored cert must not abort the rest of the batch.
+      const revoked = await applyRevocation(block, existing).catch(() => null);
+      if (revoked && revoked !== "unknown") {
+        await write(revoked, true);
+        continue;
+      }
       summary.failed++;
+      if (revoked === "unknown") {
+        summary.rejectionReasons.push(t("import_reject_revocation_unknown"));
+      }
       continue;
     }
 
-    const usable = certs.filter((c) => isUsableContact(c.keyInfo));
-    if (usable.length === 0) {
+    // Same fingerprint as an existing contact: merge into it, usable or
+    // not -- that is how a revocation reaches a stored contact.
+    let wrote = false;
+    for (const cert of certs) {
+      const match = existing.find(
+        (e) => e.keyId.toUpperCase() === cert.keyInfo.keyId.toUpperCase(),
+      );
+      if (!match) continue;
+      await write(await mergeIntoStored(match, cert.armored), true);
+      wrote = true;
+    }
+
+    const fresh = certs.filter(
+      (c) =>
+        isUsableContact(c.keyInfo) &&
+        !existing.some(
+          (e) => e.keyId.toUpperCase() === c.keyInfo.keyId.toUpperCase(),
+        ),
+    );
+    if (fresh.length === 0 && !wrote) {
       // Nothing live in this block: surface the first cert's reason.
       summary.failed++;
       summary.rejectionReasons.push(importRejectionMessage(certs[0]?.keyInfo));
       continue;
     }
-
-    for (const { keyInfo, armored } of usable) {
-      // Same fingerprint as an existing contact: refresh it (the owner
-      // may have extended the expiry or added subkeys/UIDs) -- the
-      // contacts store upserts by keyId.
-      const isRefresh = existingKeyIds.includes(keyInfo.keyId);
-      await onImport({
-        keyId: keyInfo.keyId,
-        userIds: keyInfo.userIds,
-        algorithm: keyInfo.algorithm,
-        armoredPublicKey: armored,
-        addedAt: Date.now(),
-        lastUsedAt: Date.now(),
-        expiresAt: keyInfo.expiresAt,
-        // Sign-only keys are valid contacts (for verification) but can't
-        // be offered as encryption recipients -- record which is which.
-        usableForEncryption: keyInfo.usableForEncryption,
-        // Allowed, but flagged (e.g. SHA-1 binding signature).
-        securityWarning: keyInfo.securityWarning,
-      });
-      if (isRefresh) summary.updated++;
-      else summary.added++;
-      if (keyInfo.securityWarning) summary.flagged++;
-    }
+    for (const cert of fresh) await write(cert, false);
   }
 
   return summary;

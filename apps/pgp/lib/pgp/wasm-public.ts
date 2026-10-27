@@ -137,6 +137,33 @@ export interface VerifyResultWasm {
   signerKeyId: string | null;
 }
 
+/**
+ * Merge an imported copy of a contact's cert (or a bare revocation
+ * certificate) into the stored one. An import can only ADD what the
+ * owner signed -- it never rolls a contact back. Throws when `incoming`
+ * is a different key.
+ */
+export async function mergePublicKey(
+  storedArmored: string,
+  incomingArmored: string,
+): Promise<string> {
+  const wasm = await loadWasm();
+  return wasm.mergePublicKey(storedArmored, incomingArmored);
+}
+
+/** Issuer fingerprints / key IDs of a bare revocation certificate, or
+ *  null when the input isn't one. */
+export async function revocationIssuers(
+  armored: string,
+): Promise<string[] | null> {
+  const wasm = await loadWasm();
+  try {
+    return JSON.parse(wasm.revocationIssuers(armored)) as string[];
+  } catch {
+    return null;
+  }
+}
+
 export async function verify(
   signedMessage: string,
   verificationPublicKeys: string[],

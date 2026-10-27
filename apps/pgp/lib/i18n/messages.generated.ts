@@ -214,6 +214,7 @@ export interface MessageArgs {
   "import_change_new_expiry": { date: string | number };
   "import_change_no_expiry": undefined;
   "import_change_reissued": undefined;
+  "import_change_revoked": undefined;
   "import_chip_crx": undefined;
   "import_chip_crx_title": undefined;
   "import_chip_pgp_private_title": undefined;
@@ -252,6 +253,7 @@ export interface MessageArgs {
   "import_keyserver_offline": { host: string | number };
   "import_keyserver_rate_limited": { host: string | number };
   "import_keyserver_server_error": { host: string | number };
+  "import_keyserver_wrong_key": { host: string | number; subject: string | number };
   "import_label_field": undefined;
   "import_label_placeholder": undefined;
   "import_lookup_button": undefined;
@@ -271,11 +273,13 @@ export interface MessageArgs {
   "import_reading": undefined;
   "import_reject_expired": { date: string | number };
   "import_reject_no_public_key": undefined;
+  "import_reject_revocation_unknown": undefined;
   "import_reject_ssh_generic": undefined;
   "import_reject_unusable": undefined;
   "import_rejected_generic": undefined;
   "import_retry_minute": undefined;
   "import_reveal": undefined;
+  "import_revocation_headline": undefined;
   "import_source_help": undefined;
   "import_ssh_headline": undefined;
   "import_ssh_private_headline": undefined;
@@ -283,6 +287,7 @@ export interface MessageArgs {
   "import_status_added_on": { date: string | number };
   "import_status_duplicate": undefined;
   "import_status_duplicate_added": { date: string | number };
+  "import_status_replaces": { name: string | number };
   "import_status_update": undefined;
   "import_submit": undefined;
   "import_title": undefined;
@@ -435,6 +440,8 @@ export interface MessageArgs {
   "keys_contact_keys_partial_title": { active: string | number; total: string | number };
   "keys_contact_long_id_title": undefined;
   "keys_contact_options_aria": undefined;
+  "keys_contact_revoked": undefined;
+  "keys_contact_revoked_title": undefined;
   "keys_contacts_heading": undefined;
   "keys_contacts_heading_count": { count: string | number };
   "keys_contacts_heading_encrypted": undefined;
@@ -472,6 +479,7 @@ export interface MessageArgs {
   "keys_key_details": undefined;
   "keys_key_options_aria": undefined;
   "keys_loading": undefined;
+  "keys_lookalike_name": undefined;
   "keys_my_keys_heading": undefined;
   "keys_never": undefined;
   "keys_no_contacts_match": { query: string | number };
@@ -1013,6 +1021,7 @@ export const PLACEHOLDER_ORDER: Readonly<Partial<Record<string, readonly string[
   "import_keyserver_offline": ["host"],
   "import_keyserver_rate_limited": ["host"],
   "import_keyserver_server_error": ["host"],
+  "import_keyserver_wrong_key": ["host","subject"],
   "import_n_contacts_one": ["count"],
   "import_n_contacts_other": ["count"],
   "import_panel_aria_with_id": ["keyid"],
@@ -1024,6 +1033,7 @@ export const PLACEHOLDER_ORDER: Readonly<Partial<Record<string, readonly string[
   "import_retry_minutes_other": ["count"],
   "import_status_added_on": ["date"],
   "import_status_duplicate_added": ["date"],
+  "import_status_replaces": ["name"],
   "import_updated_contacts_one": ["count"],
   "import_updated_contacts_other": ["count"],
   "keygen_expires_on": ["date"],

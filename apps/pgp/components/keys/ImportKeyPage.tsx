@@ -15,6 +15,7 @@ import type {
   KeyserverKeyResponse,
 } from "../../lib/messages";
 import type { PublicContactKey } from "../../lib/storage/contacts";
+import { IDENTITY_VERSION } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import { parseRecipient } from "../../lib/age/operations";
 import {
@@ -272,9 +273,16 @@ export function ImportKeyPage({
           usableForEncryption: key.info?.usableForEncryption ?? true,
           // Allowed, but flagged (e.g. SHA-1 binding signature).
           securityWarning: key.securityWarning,
+          ...(key.info?.revoked ? { revoked: true } : {}),
+          ...(key.info?.lookalike ? { lookalike: true } : {}),
+          ...(key.info ? { identityVersion: IDENTITY_VERSION } : {}),
         });
       }
-      const flagged = keys.filter((k) => k.securityWarning).length;
+      // The SHA-1 toast counts SHA-1 warnings only: a lookalike-name
+      // warning is said on its own card, in its own words.
+      const flagged = keys.filter((k) =>
+        k.securityWarning?.includes("SHA-1"),
+      ).length;
       if (flagged > 0) {
         toast.warning(tn("import_flagged_toast", flagged), {
           id: "contacts-flagged",
@@ -328,6 +336,7 @@ export function ImportKeyPage({
       armored: c.armoredPublicKey,
       addedAt: c.addedAt,
       expiresAt: c.expiresAt,
+      ...(c.source ? { source: c.source } : {}),
     })),
   });
 

@@ -1162,6 +1162,9 @@
   "import_change_reissued": {
     "message": "Ключ был перевыпущен"
   },
+  "import_change_revoked": {
+    "message": "Отозван владельцем"
+  },
   "import_chip_crx": {
     "message": "Ключ расширения"
   },
@@ -1535,6 +1538,17 @@
       }
     }
   },
+  "import_keyserver_wrong_key": {
+    "message": "$host$ вернул ключ, который не соответствует $subject$, поэтому он не импортирован.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "subject": {
+        "content": "$2"
+      }
+    }
+  },
   "import_label_field": {
     "message": "Метка"
   },
@@ -1639,6 +1653,9 @@
   "import_reject_no_public_key": {
     "message": "В этом блоке нет пригодного открытого ключа."
   },
+  "import_reject_revocation_unknown": {
+    "message": "Этот сертификат отзыва относится к ключу, которого у вас нет, поэтому отзывать нечего."
+  },
   "import_reject_ssh_generic": {
     "message": "Этот SSH-ключ нельзя использовать для шифрования."
   },
@@ -1718,6 +1735,9 @@
   "import_reveal": {
     "message": "Показать в ваших ключах"
   },
+  "import_revocation_headline": {
+    "message": "Сертификат отзыва"
+  },
   "import_source_help": {
     "message": "Открытые ключи добавляются как контакты. Закрытый ключ остаётся на этом устройстве - на следующем шаге вы выберете, как его защитить."
   },
@@ -1745,6 +1765,14 @@
     "message": "Вы добавили его $date$, и с тех пор он не менялся.",
     "placeholders": {
       "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_status_replaces": {
+    "message": "Заменяет ключ, который был у вас для $name$",
+    "placeholders": {
+      "name": {
         "content": "$1"
       }
     }
@@ -2630,6 +2658,12 @@
   "keys_contact_options_aria": {
     "message": "Параметры контакта"
   },
+  "keys_contact_revoked": {
+    "message": "Отозван"
+  },
+  "keys_contact_revoked_title": {
+    "message": "Владелец отозвал этот ключ. Он сохранён, чтобы отзыв оставался в силе, но шифровать для него нельзя. После компрометации ни одна его подпись не проходит проверку; после плановой замены более ранние подписи проверяются и показываются жёлтым."
+  },
   "keys_contacts_heading": {
     "message": "Контакты"
   },
@@ -3041,6 +3075,9 @@
   },
   "keys_loading": {
     "message": "Загрузка…"
+  },
+  "keys_lookalike_name": {
+    "message": "Похожее имя"
   },
   "keys_my_keys_heading": {
     "message": "Мои ключи"

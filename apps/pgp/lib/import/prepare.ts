@@ -1,6 +1,6 @@
 import type { KeyDetails, KeyInfo } from "../pgp/types";
 import type { SshRecipientInfo } from "../pgp/wasm";
-import type { ContactRecipient } from "../storage/contacts";
+import type { ContactRecipient, ContactSource } from "../storage/contacts";
 import type { IncomingKey } from "./types";
 import {
   LEGACY_PEM_ENCRYPTED,
@@ -10,7 +10,12 @@ import {
 } from "../armor-blocks";
 import { t, tn } from "../i18n";
 import { detectImportOverwrite } from "../import-overwrite";
-import { importRejectionMessage, isUsableContact } from "../import-public-keys";
+import {
+  applyRevocation,
+  importRejectionMessage,
+  isUsableContact,
+  mergeIntoStored,
+} from "../import-public-keys";
 import {
   extractPublicKey,
   parseKeyDetails,
@@ -40,6 +45,8 @@ export interface StoredKey {
   addedAt?: number;
   createdAt?: number;
   expiresAt?: number | null;
+  /** Where a fetched contact came from; absent when hand-supplied. */
+  source?: ContactSource;
 }
 
 export interface StoredKeys {
@@ -66,6 +73,15 @@ async function safeDetails(armored: string): Promise<KeyDetails | null> {
   }
 }
 
+/** The stored cert's KeyInfo, to tell what an update changes. */
+async function safeInfo(armored: string): Promise<KeyInfo | null> {
+  try {
+    return (await parseKeys(armored))[0]?.keyInfo ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /** Cheap change `detectImportOverwrite` can't see: it compares stored
  *  metadata, which records no subkeys. */
 function subkeyChanges(
@@ -87,10 +103,31 @@ function subkeyChanges(
  * rotated a subkey, and the stored record should catch up.
  */
 export async function classifyCert(
-  keyInfo: KeyInfo,
-  publicArmored: string,
+  incomingInfo: KeyInfo,
+  incomingArmored: string,
   stored: StoredKey[],
 ): Promise<IncomingKey> {
+  const match = stored.find(
+    (s) => s.keyId.toUpperCase() === incomingInfo.keyId.toUpperCase(),
+  );
+  // A contact we already hold takes the MERGE of both copies, never the
+  // incoming one verbatim: an old copy can't undo a revocation or bring
+  // back a revoked subkey, and a revoked copy revokes the contact rather
+  // than being turned away while the stale copy stays live. Own keys
+  // (private imports) are left as they were -- their secret half is the
+  // incoming cert, and the user is the one who revokes them.
+  let keyInfo = incomingInfo;
+  let publicArmored = incomingArmored;
+  if (match && !incomingInfo.isPrivate) {
+    try {
+      const merged = await mergeIntoStored(match, incomingArmored);
+      keyInfo = merged.keyInfo;
+      publicArmored = merged.armored;
+    } catch {
+      // The stored armor no longer parses; fall back to the old path.
+    }
+  }
+
   const kind: IncomingKey["kind"] = keyInfo.isPrivate
     ? "pgp-private"
     : "pgp-public";
@@ -105,7 +142,7 @@ export async function classifyCert(
     publicArmored,
   };
 
-  if (!isUsableContact(keyInfo)) {
+  if (!match && !isUsableContact(keyInfo)) {
     return {
       ...base,
       status: "rejected",
@@ -113,10 +150,6 @@ export async function classifyCert(
       rejection: importRejectionMessage(keyInfo),
     };
   }
-
-  const match = stored.find(
-    (s) => s.keyId.toUpperCase() === keyInfo.keyId.toUpperCase(),
-  );
   if (!match) return { ...base, status: "new", changes: [] };
 
   if (normalizeArmor(match.armored) === normalizeArmor(publicArmored)) {
@@ -132,7 +165,11 @@ export async function classifyCert(
     expiresAt: keyInfo.expiresAt,
     userIds: keyInfo.userIds,
   });
+  const storedInfo = await safeInfo(match.armored);
   const changes = [
+    ...(keyInfo.revoked && !storedInfo?.revoked
+      ? [t("import_change_revoked")]
+      : []),
     ...(overwrite?.changes ?? []),
     ...subkeyChanges(details, await safeDetails(match.armored)),
   ];
@@ -144,6 +181,22 @@ export async function classifyCert(
     // rather than showing an empty "what changed" list.
     changes: changes.length > 0 ? changes : [t("import_change_reissued")],
     existingAddedAt: overwrite?.addedAt ?? null,
+  };
+}
+
+/** A revocation certificate for a key the user doesn't hold: nothing to
+ *  apply it to, and worth saying so rather than "not a key". */
+function revocationForUnknownKey(): IncomingKey {
+  return {
+    keyId: PENDING_KEY_ID,
+    kind: "pgp-public",
+    status: "rejected",
+    info: null,
+    details: null,
+    userIds: [t("import_revocation_headline")],
+    changes: [],
+    rejection: t("import_reject_revocation_unknown"),
+    publicArmored: "",
   };
 }
 
@@ -595,6 +648,28 @@ export async function prepareImport(
   try {
     certs = await parseKeys(text);
   } catch {
+    // Not a key -- but a bare revocation certificate is the one thing a
+    // contact's owner hands out to say "stop trusting this key".
+    const revoked = await applyRevocation(
+      text,
+      stored.contacts.map((c) => ({ keyId: c.keyId, armored: c.armored })),
+    );
+    if (revoked === "unknown") {
+      return {
+        keys: [revocationForUnknownKey()],
+        secrets: new Map(),
+        unparseable: false,
+      };
+    }
+    if (revoked) {
+      return {
+        keys: [
+          await classifyCert(revoked.keyInfo, revoked.armored, stored.contacts),
+        ],
+        secrets: new Map(),
+        unparseable: false,
+      };
+    }
     return { keys: [], secrets: new Map(), unparseable: true };
   }
   if (certs.length === 0) {

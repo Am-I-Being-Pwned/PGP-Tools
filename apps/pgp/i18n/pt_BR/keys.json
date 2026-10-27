@@ -514,5 +514,14 @@
   },
   "keys_contact_long_id_title": {
     "message": "ID da chave: os últimos 16 caracteres da impressão digital desta chave. Serve para diferenciar chaves rapidamente; para confirmar que uma chave é autêntica, compare a impressão digital completa."
+  },
+  "keys_contact_revoked": {
+    "message": "Revogada"
+  },
+  "keys_contact_revoked_title": {
+    "message": "O proprietário revogou esta chave. Ela é mantida para que a revogação permaneça, mas você não pode criptografar para ela. Após um comprometimento, nenhuma de suas assinaturas é verificada; após uma aposentadoria de rotina, as anteriores ainda são e aparecem em âmbar."
+  },
+  "keys_lookalike_name": {
+    "message": "Nome enganoso"
   }
 }

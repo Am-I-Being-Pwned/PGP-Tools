@@ -686,5 +686,17 @@
   "keys_contact_long_id_title": {
     "message": "Key ID: the last 16 characters of this key's fingerprint. It tells keys apart at a glance; to check a key is genuine, compare the full fingerprint.",
     "description": "Tooltip on the 16-character key ID shown at the right of a key or contact row (the last 16 hex digits of the fingerprint). Says what it is, and that it identifies but does not verify a key."
+  },
+  "keys_contact_revoked": {
+    "message": "Revoked",
+    "description": "Small red pill on a contact card whose key its owner has revoked."
+  },
+  "keys_contact_revoked_title": {
+    "message": "The owner revoked this key. It is kept so the revocation sticks, but you can't encrypt to it. After a compromise none of its signatures verify; after a routine retirement, older ones still do and show amber.",
+    "description": "Hover text on the Revoked pill of a contact card."
+  },
+  "keys_lookalike_name": {
+    "message": "Lookalike name",
+    "description": "Small amber pill on a contact card whose name or email mixes alphabets (e.g. a Cyrillic letter in a Latin name). The hover text explains."
   }
 }

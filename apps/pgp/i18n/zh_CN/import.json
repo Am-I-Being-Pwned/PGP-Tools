@@ -340,5 +340,20 @@
   },
   "import_keyserver_server_error": {
     "message": "$host$ 暂时无法响应。请稍后重试。"
+  },
+  "import_change_revoked": {
+    "message": "已被所有者吊销"
+  },
+  "import_reject_revocation_unknown": {
+    "message": "此吊销证书针对的是你没有的密钥，因此没有可吊销的内容。"
+  },
+  "import_revocation_headline": {
+    "message": "吊销证书"
+  },
+  "import_keyserver_wrong_key": {
+    "message": "$host$ 返回的密钥与 $subject$ 不匹配，因此未导入。"
+  },
+  "import_status_replaces": {
+    "message": "将替换你为 $name$ 保存的密钥"
   }
 }

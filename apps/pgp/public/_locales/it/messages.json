@@ -958,6 +958,9 @@
   "import_change_reissued": {
     "message": "La chiave è stata riemessa"
   },
+  "import_change_revoked": {
+    "message": "Revocata dal proprietario"
+  },
   "import_chip_crx": {
     "message": "Chiave estensione"
   },
@@ -1235,6 +1238,17 @@
       }
     }
   },
+  "import_keyserver_wrong_key": {
+    "message": "$host$ ha restituito una chiave che non corrisponde a $subject$, quindi non è stata importata.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "subject": {
+        "content": "$2"
+      }
+    }
+  },
   "import_label_field": {
     "message": "Etichetta"
   },
@@ -1323,6 +1337,9 @@
   "import_reject_no_public_key": {
     "message": "Questo blocco non contiene una chiave pubblica utilizzabile."
   },
+  "import_reject_revocation_unknown": {
+    "message": "Questo certificato di revoca riguarda una chiave che non hai, quindi non c'è nulla da revocare."
+  },
   "import_reject_ssh_generic": {
     "message": "Questa chiave SSH non può essere usata per cifrare."
   },
@@ -1370,6 +1387,9 @@
   "import_reveal": {
     "message": "Mostrala tra le tue chiavi"
   },
+  "import_revocation_headline": {
+    "message": "Certificato di revoca"
+  },
   "import_source_help": {
     "message": "Le chiavi pubbliche vengono aggiunte come contatti. Una chiave privata resta su questo dispositivo - al passaggio successivo sceglierai come proteggerla."
   },
@@ -1397,6 +1417,14 @@
     "message": "L'hai aggiunta il $date$ e non è cambiato nulla.",
     "placeholders": {
       "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_status_replaces": {
+    "message": "Sostituisce la chiave che avevi per $name$",
+    "placeholders": {
+      "name": {
         "content": "$1"
       }
     }
@@ -2106,6 +2134,12 @@
   "keys_contact_options_aria": {
     "message": "Opzioni del contatto"
   },
+  "keys_contact_revoked": {
+    "message": "Revocata"
+  },
+  "keys_contact_revoked_title": {
+    "message": "Il proprietario ha revocato questa chiave. Viene conservata perché la revoca resti valida, ma non puoi cifrare per essa. Dopo una compromissione nessuna delle sue firme viene verificata; dopo un ritiro di routine, quelle precedenti sì e appaiono in ambra."
+  },
   "keys_contacts_heading": {
     "message": "Contatti"
   },
@@ -2373,6 +2407,9 @@
   },
   "keys_loading": {
     "message": "Caricamento…"
+  },
+  "keys_lookalike_name": {
+    "message": "Nome ingannevole"
   },
   "keys_my_keys_heading": {
     "message": "Le mie chiavi"

@@ -958,6 +958,9 @@
   "import_change_reissued": {
     "message": "A chave foi emitida de novo"
   },
+  "import_change_revoked": {
+    "message": "Revogada pelo proprietário"
+  },
   "import_chip_crx": {
     "message": "Chave de extensão"
   },
@@ -1235,6 +1238,17 @@
       }
     }
   },
+  "import_keyserver_wrong_key": {
+    "message": "$host$ retornou uma chave que não corresponde a $subject$, então ela não foi importada.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "subject": {
+        "content": "$2"
+      }
+    }
+  },
   "import_label_field": {
     "message": "Rótulo"
   },
@@ -1323,6 +1337,9 @@
   "import_reject_no_public_key": {
     "message": "Este bloco não contém nenhuma chave pública utilizável."
   },
+  "import_reject_revocation_unknown": {
+    "message": "Este certificado de revogação é de uma chave que você não tem, então não há nada para revogar."
+  },
   "import_reject_ssh_generic": {
     "message": "Esta chave SSH não pode ser usada para criptografia."
   },
@@ -1370,6 +1387,9 @@
   "import_reveal": {
     "message": "Mostrar nas suas chaves"
   },
+  "import_revocation_headline": {
+    "message": "Certificado de revogação"
+  },
   "import_source_help": {
     "message": "Chaves públicas são adicionadas como contatos. Uma chave privada fica neste dispositivo - você escolherá como protegê-la a seguir."
   },
@@ -1397,6 +1417,14 @@
     "message": "Você a adicionou em $date$, e nada nela mudou.",
     "placeholders": {
       "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_status_replaces": {
+    "message": "Substitui a chave que você tinha para $name$",
+    "placeholders": {
+      "name": {
         "content": "$1"
       }
     }
@@ -2106,6 +2134,12 @@
   "keys_contact_options_aria": {
     "message": "Opções do contato"
   },
+  "keys_contact_revoked": {
+    "message": "Revogada"
+  },
+  "keys_contact_revoked_title": {
+    "message": "O proprietário revogou esta chave. Ela é mantida para que a revogação permaneça, mas você não pode criptografar para ela. Após um comprometimento, nenhuma de suas assinaturas é verificada; após uma aposentadoria de rotina, as anteriores ainda são e aparecem em âmbar."
+  },
   "keys_contacts_heading": {
     "message": "Contatos"
   },
@@ -2373,6 +2407,9 @@
   },
   "keys_loading": {
     "message": "Carregando…"
+  },
+  "keys_lookalike_name": {
+    "message": "Nome enganoso"
   },
   "keys_my_keys_heading": {
     "message": "Minhas chaves"

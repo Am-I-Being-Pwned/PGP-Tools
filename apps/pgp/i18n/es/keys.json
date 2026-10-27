@@ -514,5 +514,14 @@
   },
   "keys_contact_long_id_title": {
     "message": "ID de clave: los últimos 16 caracteres de la huella de esta clave. Sirve para distinguir claves de un vistazo; para comprobar que una clave es auténtica, compara la huella completa."
+  },
+  "keys_contact_revoked": {
+    "message": "Revocada"
+  },
+  "keys_contact_revoked_title": {
+    "message": "El propietario revocó esta clave. Se conserva para que la revocación se mantenga, pero no puedes cifrar para ella. Tras un compromiso, ninguna de sus firmas se verifica; tras una retirada rutinaria, las anteriores sí se verifican y se muestran en ámbar."
+  },
+  "keys_lookalike_name": {
+    "message": "Nombre engañoso"
   }
 }

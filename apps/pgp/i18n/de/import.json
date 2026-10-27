@@ -340,5 +340,20 @@
   },
   "import_keyserver_server_error": {
     "message": "$host$ konnte gerade nicht antworten. Versuchen Sie es gleich noch einmal."
+  },
+  "import_change_revoked": {
+    "message": "Vom Inhaber widerrufen"
+  },
+  "import_reject_revocation_unknown": {
+    "message": "Dieses Widerrufszertifikat gehört zu einem Schlüssel, den Sie nicht haben, also gibt es nichts zu widerrufen."
+  },
+  "import_revocation_headline": {
+    "message": "Widerrufszertifikat"
+  },
+  "import_keyserver_wrong_key": {
+    "message": "$host$ hat einen Schlüssel zurückgegeben, der nicht zu $subject$ passt, daher wurde er nicht importiert."
+  },
+  "import_status_replaces": {
+    "message": "Ersetzt den Schlüssel, den Sie für $name$ hatten"
   }
 }

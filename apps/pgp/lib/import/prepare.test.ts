@@ -7,9 +7,11 @@ import type { KeyDetails, KeyInfo } from "../pgp/types";
 import type { ImportEngines, StoredKey, StoredKeys } from "./prepare";
 import {
   extractPublicKey,
+  mergePublicKey,
   parseKeyDetails,
   parseKeys,
   parseSshRecipient,
+  revocationIssuers,
   sshPrivateKeyFormatRejection,
 } from "../pgp/wasm";
 import { classifyCert, importable, isNoOp, prepareImport } from "./prepare";
@@ -63,6 +65,8 @@ vi.mock("../pgp/wasm", () => ({
   extractPublicKey: vi.fn(),
   parseSshRecipient: vi.fn(),
   sshPrivateKeyFormatRejection: vi.fn(),
+  mergePublicKey: vi.fn(),
+  revocationIssuers: vi.fn(),
 }));
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -120,6 +124,100 @@ beforeEach(() => {
   vi.mocked(extractPublicKey).mockReset();
   vi.mocked(parseKeyDetails).mockReset();
   vi.mocked(parseKeyDetails).mockResolvedValue(details([FP]));
+  // By default a merge changes nothing beyond what came in; the merge
+  // tests below say what the engine returned.
+  vi.mocked(mergePublicKey).mockReset();
+  vi.mocked(mergePublicKey).mockImplementation((_stored, incoming) =>
+    Promise.resolve(incoming),
+  );
+  vi.mocked(revocationIssuers).mockReset();
+  vi.mocked(revocationIssuers).mockResolvedValue(null);
+});
+
+/** `parseKeys` answering per input: the stored armor parses as `stored`,
+ *  the engine's merge result as `merged`. */
+function parsesAs(stored: KeyInfo, merged: KeyInfo) {
+  vi.mocked(mergePublicKey).mockResolvedValue("MERGED");
+  vi.mocked(parseKeys).mockImplementation((armored) =>
+    Promise.resolve([
+      armored === "MERGED"
+        ? { keyInfo: merged, armored: "MERGED" }
+        : { keyInfo: stored, armored },
+    ]),
+  );
+}
+
+const revokedInfo = () =>
+  info({ usableForEncryption: false, usableForSigning: false, revoked: true });
+
+describe("classifyCert: a contact we already hold", () => {
+  it("previews the MERGE of both copies, never the incoming one verbatim", async () => {
+    parsesAs(info(), info());
+    const result = await classifyCert(info(), "ARMOR-OLD-COPY", [storedKey()]);
+    expect(mergePublicKey).toHaveBeenCalledWith("ARMOR-A", "ARMOR-OLD-COPY");
+    expect(result.publicArmored).toBe("MERGED");
+  });
+
+  it("turns a revoked copy into an update that says so, not a rejection", async () => {
+    // Rejecting it as "unusable" left the stale copy live: the stolen
+    // key went on verifying green.
+    parsesAs(info(), revokedInfo());
+    const result = await classifyCert(revokedInfo(), "ARMOR-REVOKED", [
+      storedKey(),
+    ]);
+    expect(result.status).toBe("update");
+    expect(result.changes).toContain("Revoked by its owner");
+    expect(result.info?.revoked).toBe(true);
+  });
+
+  it("still rejects a revoked key nobody holds", async () => {
+    const result = await classifyCert(revokedInfo(), "ARMOR-REVOKED", []);
+    expect(result.status).toBe("rejected");
+    expect(mergePublicKey).not.toHaveBeenCalled();
+  });
+
+  it("leaves own keys (private imports) out of the merge", async () => {
+    await classifyCert(info({ isPrivate: true }), "ARMOR-PUB", [storedKey()]);
+    expect(mergePublicKey).not.toHaveBeenCalled();
+  });
+});
+
+describe("prepareImport: a bare revocation certificate", () => {
+  it("revokes the stored contact it names", async () => {
+    vi.mocked(revocationIssuers).mockResolvedValue([FP.slice(-16)]);
+    parsesAs(info(), revokedInfo());
+    vi.mocked(parseKeys).mockImplementation((armored) =>
+      armored === "REVOCATION"
+        ? Promise.reject(new Error("Unrecognized token Signature Packet"))
+        : Promise.resolve([
+            armored === "MERGED"
+              ? { keyInfo: revokedInfo(), armored: "MERGED" }
+              : { keyInfo: info(), armored },
+          ]),
+    );
+
+    const prepared = await prepareImport("REVOCATION", {
+      own: [],
+      contacts: [storedKey()],
+    });
+
+    expect(prepared.unparseable).toBe(false);
+    expect(prepared.keys[0]).toMatchObject({
+      status: "update",
+      publicArmored: "MERGED",
+    });
+    expect(prepared.keys[0].changes).toContain("Revoked by its owner");
+  });
+
+  it("says it names a key you don't have, rather than 'not a key'", async () => {
+    vi.mocked(parseKeys).mockRejectedValue(new Error("Signature Packet"));
+    vi.mocked(revocationIssuers).mockResolvedValue(["0123456789ABCDEF"]);
+
+    const prepared = await prepareImport("REVOCATION", noStores);
+
+    expect(prepared.keys[0].status).toBe("rejected");
+    expect(prepared.keys[0].rejection).toMatch(/key you don't have/);
+  });
 });
 
 describe("classifyCert", () => {

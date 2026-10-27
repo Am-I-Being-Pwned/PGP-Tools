@@ -94,7 +94,7 @@ export function ImportAllKeysPage({
     const { added, updated, failed, flagged, rejectionReasons } =
       await importPublicKeyBlocks(
         blocks,
-        contacts.map((c) => c.keyId),
+        contacts.map((c) => ({ keyId: c.keyId, armored: c.armoredPublicKey })),
         onAddContact,
       );
     // Stable ids: re-running the import with the same backup must update

@@ -958,6 +958,9 @@
   "import_change_reissued": {
     "message": "Der Schlüssel wurde neu ausgestellt"
   },
+  "import_change_revoked": {
+    "message": "Vom Inhaber widerrufen"
+  },
   "import_chip_crx": {
     "message": "Erweiterungsschlüssel"
   },
@@ -1235,6 +1238,17 @@
       }
     }
   },
+  "import_keyserver_wrong_key": {
+    "message": "$host$ hat einen Schlüssel zurückgegeben, der nicht zu $subject$ passt, daher wurde er nicht importiert.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "subject": {
+        "content": "$2"
+      }
+    }
+  },
   "import_label_field": {
     "message": "Bezeichnung"
   },
@@ -1323,6 +1337,9 @@
   "import_reject_no_public_key": {
     "message": "Dieser Block enthält keinen verwendbaren öffentlichen Schlüssel."
   },
+  "import_reject_revocation_unknown": {
+    "message": "Dieses Widerrufszertifikat gehört zu einem Schlüssel, den Sie nicht haben, also gibt es nichts zu widerrufen."
+  },
   "import_reject_ssh_generic": {
     "message": "Dieser SSH-Schlüssel kann nicht zum Verschlüsseln verwendet werden."
   },
@@ -1370,6 +1387,9 @@
   "import_reveal": {
     "message": "In Ihren Schlüsseln anzeigen"
   },
+  "import_revocation_headline": {
+    "message": "Widerrufszertifikat"
+  },
   "import_source_help": {
     "message": "Öffentliche Schlüssel werden als Kontakte hinzugefügt. Ein privater Schlüssel bleibt auf diesem Gerät - wie er geschützt wird, wählen Sie im nächsten Schritt."
   },
@@ -1397,6 +1417,14 @@
     "message": "Sie haben ihn am $date$ hinzugefügt, und nichts daran hat sich geändert.",
     "placeholders": {
       "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_status_replaces": {
+    "message": "Ersetzt den Schlüssel, den Sie für $name$ hatten",
+    "placeholders": {
+      "name": {
         "content": "$1"
       }
     }
@@ -2106,6 +2134,12 @@
   "keys_contact_options_aria": {
     "message": "Kontaktoptionen"
   },
+  "keys_contact_revoked": {
+    "message": "Widerrufen"
+  },
+  "keys_contact_revoked_title": {
+    "message": "Der Inhaber hat diesen Schlüssel widerrufen. Er bleibt gespeichert, damit der Widerruf bestehen bleibt, aber Sie können nicht an ihn verschlüsseln. Nach einer Kompromittierung wird keine seiner Signaturen mehr verifiziert; nach einer regulären Ablösung werden ältere weiterhin verifiziert und gelb angezeigt."
+  },
   "keys_contacts_heading": {
     "message": "Kontakte"
   },
@@ -2373,6 +2407,9 @@
   },
   "keys_loading": {
     "message": "Wird geladen…"
+  },
+  "keys_lookalike_name": {
+    "message": "Ähnlicher Name"
   },
   "keys_my_keys_heading": {
     "message": "Meine Schlüssel"

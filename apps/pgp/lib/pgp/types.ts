@@ -15,6 +15,11 @@ export interface KeyInfo {
    *  policy was relaxed to accept it (e.g. it relies on a SHA-1 binding
    *  signature). Surface to the user; do not block the import. */
   securityWarning?: string;
+  /** The owner revoked the whole cert. Kept as a contact so the
+   *  revocation sticks, but never encrypted to. */
+  revoked?: boolean;
+  /** A User ID mixes lookalike alphabets; `securityWarning` explains. */
+  lookalike?: boolean;
 }
 
 /** One row in the per-key breakdown of a certificate: the primary key
