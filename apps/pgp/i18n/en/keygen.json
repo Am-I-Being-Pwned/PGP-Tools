@@ -364,12 +364,12 @@
     "description": "Muted line on the export step when there are no unlocked keys and no contacts."
   },
   "keygen_copied_encrypted": {
-    "message": "Encrypted key copied (clears in 60s)",
-    "description": "Green feedback after copying a passphrase-encrypted private key to the clipboard; the clipboard is wiped after 60 seconds."
+    "message": "Encrypted key copied. It stays on your clipboard, and in any clipboard history, until you copy something else.",
+    "description": "Green feedback after copying a passphrase-encrypted private key to the clipboard. It is not wiped, and clipboard history keeps a copy."
   },
   "keygen_copied_plaintext": {
-    "message": "Unprotected key copied (clears in 30s)",
-    "description": "Green feedback after copying an unencrypted private key to the clipboard; the clipboard is wiped after 30 seconds."
+    "message": "Unprotected key copied. It stays on your clipboard, and in any clipboard history, until you copy something else.",
+    "description": "Green feedback after copying an unencrypted private key to the clipboard. It is not wiped, and clipboard history keeps a copy."
   },
   "keygen_unlock_gate_passkey": {
     "message": "Authenticate with your passkey to copy this key.",

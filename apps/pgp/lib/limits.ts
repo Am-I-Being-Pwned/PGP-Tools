@@ -83,3 +83,10 @@ export function oversizedFilesMessage(
     limit: MAX_FILE_LABEL,
   });
 }
+
+/** Largest file Verify will read. Nothing bigger can verify -- the
+ *  engine refuses input past this (`MAX_SIGNED_INPUT_BYTES`, sized so any
+ *  message whose signed text fits its 16 MiB output cap gets through) --
+ *  and reading a huge file as text first costs the panel its memory. */
+export const MAX_VERIFY_FILE_BYTES = 24 * 1024 * 1024;
+export const MAX_VERIFY_FILE_LABEL = "24 MB";

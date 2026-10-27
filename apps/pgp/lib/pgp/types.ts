@@ -15,6 +15,11 @@ export interface KeyInfo {
    *  policy was relaxed to accept it (e.g. it relies on a SHA-1 binding
    *  signature). Surface to the user; do not block the import. */
   securityWarning?: string;
+  /** The owner revoked the whole cert. Kept as a contact so the
+   *  revocation sticks, but never encrypted to. */
+  revoked?: boolean;
+  /** A User ID mixes lookalike alphabets; `securityWarning` explains. */
+  lookalike?: boolean;
 }
 
 /** One row in the per-key breakdown of a certificate: the primary key
@@ -82,14 +87,31 @@ export interface VerifyOptions {
  */
 export type SignatureStatus = "unsigned" | "valid" | "invalid" | "unknown_key";
 
-export interface DecryptResult {
+/** What the engine reports about a message's signatures, beyond the
+ *  verdict itself. Filled for "valid"; neutral otherwise. */
+export interface SignatureDetails {
+  /** When the signature says it was made (ms). Chosen by the signer:
+   *  shown, never trusted. */
+  signedAt: number | null;
+  /** The signing key is still alive and unrevoked today. False for a
+   *  key that expired or was superseded after signing. */
+  signerKeyCurrent: boolean;
+  /** Further good signers, by fingerprint. */
+  otherSignerKeyIds: string[];
+  /** Signatures from keys we don't hold, next to a good one. */
+  unverifiedSignatures: number;
+  /** Fingerprints the good signature says it was made FOR. */
+  intendedRecipients: string[];
+}
+
+export interface DecryptResult extends SignatureDetails {
   data: string | Uint8Array;
   signatureValid: boolean | null;
   signatureStatus: SignatureStatus;
   signerKeyId: string | null;
 }
 
-export interface VerifyResult {
+export interface VerifyResult extends SignatureDetails {
   text: string;
   signatureValid: boolean;
   signatureStatus: SignatureStatus;

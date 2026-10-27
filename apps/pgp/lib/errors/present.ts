@@ -168,6 +168,15 @@ function fromKnownString(raw: string): PresentedError | null {
     };
   }
 
+  // Cleartext verify refused a paste with words around the signed block:
+  // a verdict there would vouch for text the signer never signed.
+  if (lower.includes("text outside the signed part")) {
+    return {
+      message: t("app_error_unsigned_text_around_signature"),
+      detail: raw,
+    };
+  }
+
   // Tampered signature (thrown by decrypt's signature check).
   if (lower.includes("tampered")) {
     return {

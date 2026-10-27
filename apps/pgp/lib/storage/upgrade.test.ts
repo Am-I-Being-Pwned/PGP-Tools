@@ -195,7 +195,6 @@ describe("v1.3.1 preferences blob", () => {
     // Fields added since v1.3.1 come back as the shipped defaults.
     expect(prefs.encryptToSelf).toBe(true);
     expect(prefs.historyEnabled).toBe(false);
-    expect(prefs.clipboardWipeSeconds).toBe(60);
     expect(prefs.recentRecipients).toEqual([]);
     expect(prefs.defaultKeyId).toBeNull();
   });

@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { PublicContactKey } from "../lib/storage/contacts";
+import { mergeIntoContact } from "../lib/import-public-keys";
 import { parseKey } from "../lib/pgp/wasm";
 import {
+  IDENTITY_VERSION,
   loadContacts,
   removeContact,
   saveContact,
@@ -73,6 +75,44 @@ async function backfillExpiry(
   return patched;
 }
 
+/** Re-derive the identity fields of contacts stored before
+ *  {@link IDENTITY_VERSION}, once each. Same discipline as
+ *  {@link backfillExpiry}: parse here, apply inside the store's lock. */
+export async function backfillIdentity(
+  contacts: PublicContactKey[],
+): Promise<PublicContactKey[]> {
+  const patched: PublicContactKey[] = [];
+  for (const c of contacts) {
+    if ((c.identityVersion ?? 0) >= IDENTITY_VERSION) continue;
+    let patch: Partial<PublicContactKey> = {
+      identityVersion: IDENTITY_VERSION,
+    };
+    if (!isSshRecord(c)) {
+      try {
+        const info = await parseKey(c.armoredPublicKey);
+        patch = {
+          ...patch,
+          userIds: info.userIds,
+          usableForEncryption: info.usableForEncryption,
+          ...(info.revoked ? { revoked: true } : {}),
+          ...(info.lookalike ? { lookalike: true } : {}),
+          ...(info.securityWarning
+            ? { securityWarning: info.securityWarning }
+            : {}),
+        };
+      } catch {
+        // Unparseable armor: mark it checked and leave the rest alone.
+      }
+    }
+    const updated = await updateContact(c.keyId, (current) => ({
+      ...current,
+      ...patch,
+    }));
+    if (updated) patched.push(updated);
+  }
+  return patched;
+}
+
 export function useContacts() {
   const [contacts, setContacts] = useState<PublicContactKey[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,9 +140,22 @@ export function useContacts() {
 
     // Backfill legacy contacts in the background, serialized behind the
     // same mutex as add/remove so we never interleave saves.
-    if (all.some((c) => c.expiresAt === undefined)) {
+    if (
+      all.some(
+        (c) =>
+          c.expiresAt === undefined ||
+          (c.identityVersion ?? 0) < IDENTITY_VERSION,
+      )
+    ) {
       const op = mutexRef.current.then(async () => {
-        const patched = await backfillExpiry(all);
+        const expiry = await backfillExpiry(all);
+        const identity = await backfillIdentity(
+          all.map((c) => expiry.find((p) => p.keyId === c.keyId) ?? c),
+        );
+        const patched = [
+          ...expiry.filter((e) => !identity.some((i) => i.keyId === e.keyId)),
+          ...identity,
+        ];
         if (patched.length > 0) {
           setContacts((prev) =>
             prev.map((c) => patched.find((p) => p.keyId === c.keyId) ?? c),
@@ -186,5 +239,24 @@ export function useContacts() {
     [refresh],
   );
 
-  return { contacts, loading, error, refresh, add, remove, rename };
+  /** Merge a newer copy of a contact's key into the record as it is on
+   *  disk (see `mergeIntoContact`), then show what was written. Resolves
+   *  undefined when the contact no longer exists. */
+  const mergeKey = useCallback(
+    async (keyId: string, armored: string) => {
+      const op = mutexRef.current.then(() => mergeIntoContact(keyId, armored));
+      mutexRef.current = op.then(
+        // eslint-disable-next-line @typescript-eslint/no-empty-function
+        () => {},
+        // eslint-disable-next-line @typescript-eslint/no-empty-function
+        () => {},
+      );
+      const result = await op;
+      await refresh();
+      return result;
+    },
+    [refresh],
+  );
+
+  return { contacts, loading, error, refresh, add, remove, rename, mergeKey };
 }

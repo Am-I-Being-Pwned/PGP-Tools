@@ -36,10 +36,12 @@ import {
 import { keyDetailsTarget } from "../keys/KeyDetailsButton";
 import { KeyDetailsPage } from "../keys/KeyDetailsPage";
 import { KeyAvatar } from "../shared/KeyAvatar";
+import { MarkedText } from "../shared/MarkedText";
 import {
   pickableKeys,
   recipientBlockReason,
   selectionEngine,
+  splitRecipientSections,
 } from "./recipient-engine";
 
 type AnyKey = ProtectedKeyBlob | PublicContactKey;
@@ -232,12 +234,19 @@ export function RecipientPicker({
   const available = allKeys.filter(
     (k) => !selectedSet.has(k.keyId) && matchesRecipientSearch(k, search),
   );
-  const contactIds = new Set(contacts.map((c) => c.keyId));
+  // Which list a row came from, by record rather than fingerprint: the
+  // same key can be both your own and a contact's.
+  const contactRecords = new Set<AnyKey>(contacts);
   // Own keys always sort BELOW contacts: they never join the Recent group
   // (you rarely encrypt to yourself explicitly), so recency ordering only
-  // applies to actual recipients.
-  const availableContacts = available.filter((k) => contactIds.has(k.keyId));
-  const availableOwn = available.filter((k) => !contactIds.has(k.keyId));
+  // applies to actual recipients. Each key is offered once -- see
+  // `splitRecipientSections`.
+  const { contacts: availableContacts, own: availableOwn } =
+    splitRecipientSections<PublicContactKey, ProtectedKeyBlob>(
+      available,
+      contacts,
+      (c) => contactRecipients(c).map((r) => r.keyId),
+    );
   const { recent, rest: restContacts } = orderRecipients(
     availableContacts,
     recentKeyIds,
@@ -398,7 +407,7 @@ export function RecipientPicker({
     // groups (Recent, search results) where the group heading can't help.
     // An "SSH" badge does the same job for the engine, which otherwise
     // shows up only once the mixing is already refused.
-    const isOwn = !contactIds.has(key.keyId);
+    const isOwn = !contactRecords.has(key);
     const isSsh = isSshRecord(key);
     // A contact can hold several keys (a fetched person's laptop,
     // desktop, phone), and picking it encrypts to all of them. Nothing
@@ -432,7 +441,9 @@ export function RecipientPicker({
         <KeyAvatar fingerprint={key.keyId} size={32} />
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-1.5 truncate text-sm">
-            <span className="truncate">{name}</span>
+            <span className="truncate">
+              <MarkedText text={name} />
+            </span>
             {isOwn && (
               <span className="bg-secondary text-muted-foreground shrink-0 rounded px-1.5 py-px text-[10.5px] font-medium">
                 {t("actions_badge_you")}
@@ -447,19 +458,21 @@ export function RecipientPicker({
           </p>
           {(detail || keyCount > 1) && (
             <p className="text-muted-foreground truncate text-xs">
-              {[
-                detail,
-                keyCount > 1
-                  ? activeKeyCount < keyCount
-                    ? t("actions_keys_of_total", {
-                        active: activeKeyCount,
-                        count: keyCount,
-                      })
-                    : tn("actions_keys_count", keyCount)
-                  : "",
-              ]
-                .filter(Boolean)
-                .join(" · ")}
+              <MarkedText
+                text={[
+                  detail,
+                  keyCount > 1
+                    ? activeKeyCount < keyCount
+                      ? t("actions_keys_of_total", {
+                          active: activeKeyCount,
+                          count: keyCount,
+                        })
+                      : tn("actions_keys_count", keyCount)
+                    : "",
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              />
             </p>
           )}
           {/* Spelled out once, on the first dimmed row: a `title`
@@ -611,7 +624,9 @@ export function RecipientPicker({
                     }}
                   >
                     <KeyAvatar fingerprint={key.keyId} size={16} />
-                    <span className="min-w-0 truncate">{name}</span>
+                    <span className="min-w-0 truncate">
+                      <MarkedText text={name} />
+                    </span>
                     {isSshRecord(key) && (
                       // A status pill, a step darker than the chip it
                       // sits on so it reads as a tag rather than more of

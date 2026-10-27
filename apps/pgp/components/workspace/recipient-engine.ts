@@ -86,3 +86,47 @@ export function pickableKeys<T extends KindDiscriminated>(
     (k) => recipientBlockReason(k, engine, passwordArmed) === null,
   );
 }
+
+/**
+ * Split the keys a search matched into the picker's Contacts and My Keys
+ * sections, offering each key once.
+ *
+ * The same key is easy to hold twice: your own key imported again as a
+ * contact (PGP or SSH), or your SSH key that is also one of the keys a
+ * GitHub lookup fetched for you. So:
+ *
+ *  - Contacts are the contact RECORDS. An own key is never placed there
+ *    just because its fingerprint matches a contact's -- that is how it
+ *    used to show up a second time under Contacts.
+ *  - An own key a contact already holds is left out of My Keys.
+ *  - A single-key contact whose key is already one of a bigger contact's
+ *    keys is left out: picking the bigger one covers it.
+ *
+ * `keysOf` lists a contact's key fingerprints (`contactRecipients`).
+ */
+export function splitRecipientSections<
+  C extends { keyId: string },
+  O extends { keyId: string },
+>(
+  available: readonly (C | O)[],
+  contacts: readonly C[],
+  keysOf: (contact: C) => readonly string[],
+): { contacts: C[]; own: O[] } {
+  const contactRecords = new Set<unknown>(contacts);
+  const isContact = (k: C | O): k is C => contactRecords.has(k);
+  // Only contacts IN these results can cover a key: hiding a row because
+  // of a contact the search filtered out would make it unfindable.
+  const held = new Map<string, number>(); // fingerprint -> most keys holding it
+  for (const c of available.filter(isContact)) {
+    const ids = keysOf(c);
+    for (const id of ids) held.set(id, Math.max(held.get(id) ?? 0, ids.length));
+  }
+
+  return {
+    contacts: available.filter(isContact).filter((c) => {
+      const ids = keysOf(c);
+      return !(ids.length === 1 && (held.get(ids[0]) ?? 0) > 1);
+    }),
+    own: available.filter((k): k is O => !isContact(k) && !held.has(k.keyId)),
+  };
+}

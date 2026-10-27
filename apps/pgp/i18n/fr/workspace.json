@@ -454,5 +454,56 @@
   },
   "workspace_char_count_other": {
     "message": "$count$ caractères"
+  },
+  "workspace_signed_on": {
+    "message": "Signé le $date$"
+  },
+  "workspace_signer_key_retired": {
+    "message": "la clé qui l'a créée a depuis expiré ou été révoquée"
+  },
+  "workspace_also_signed_by": {
+    "message": "également signé par $names$"
+  },
+  "workspace_unverified_cosigners_one": {
+    "message": "$count$ autre signature d'une clé que vous n'avez pas"
+  },
+  "workspace_unverified_cosigners_other": {
+    "message": "$count$ autres signatures de clés que vous n'avez pas"
+  },
+  "workspace_files_mixed_signers": {
+    "message": "Signataires mixtes"
+  },
+  "workspace_file_signature": {
+    "message": "$name$ : $outcome$"
+  },
+  "workspace_file_not_signed": {
+    "message": "non signé"
+  },
+  "workspace_signature_covers_original": {
+    "message": "la signature couvre l'original, pas cette traduction"
+  },
+  "workspace_signature_verified_retired": {
+    "message": "Clé retirée"
+  },
+  "workspace_signed_text": {
+    "message": "Texte signé"
+  },
+  "workspace_signed_for_others": {
+    "message": "signé pour $names$, pas pour vous"
+  },
+  "workspace_signature_verified_not_for_you": {
+    "message": "Pas pour vous"
+  },
+  "workspace_signed_text_translated": {
+    "message": "Traduction du texte signé"
+  },
+  "workspace_error_verify_file_too_large": {
+    "message": "$name$ est trop volumineux pour être vérifié ici (limite $limit$)."
+  },
+  "workspace_error_verify_not_utf8": {
+    "message": "$name$ n'est pas du texte UTF-8 : il ne peut pas être vérifié comme message signé."
+  },
+  "workspace_signed_text_hidden_chars": {
+    "message": "le texte signé contient des caractères invisibles ou de direction du texte : il peut ne pas s'afficher comme il a été écrit"
   }
 }

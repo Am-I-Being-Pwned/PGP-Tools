@@ -464,16 +464,8 @@
       }
     }
   },
-  "app_copied_wipe": {
-    "message": "Copiado: $label$ - a área de transferência será limpa em $seconds$s",
-    "placeholders": {
-      "label": {
-        "content": "$1"
-      },
-      "seconds": {
-        "content": "$2"
-      }
-    }
+  "app_copied_sensitive_note": {
+    "message": "Fica na sua área de transferência, e em qualquer histórico dela, até você copiar outra coisa."
   },
   "app_copy_failed": {
     "message": "Falha ao copiar - clique no painel da extensão primeiro e tente de novo."
@@ -542,6 +534,9 @@
   },
   "app_error_tampered": {
     "message": "Falha na verificação da assinatura - esta mensagem pode ter sido adulterada. Não confie no conteúdo; peça ao remetente que a envie de novo."
+  },
+  "app_error_unsigned_text_around_signature": {
+    "message": "Isto contém texto fora da mensagem assinada, que a assinatura não cobre. Cole apenas a mensagem assinada, da linha BEGIN até a linha END."
   },
   "app_error_vault_locked": {
     "message": "Seu cofre está bloqueado, então nada foi alterado. Desbloqueie-o e execute isto de novo."
@@ -955,6 +950,9 @@
   "import_change_reissued": {
     "message": "A chave foi emitida de novo"
   },
+  "import_change_revoked": {
+    "message": "Revogada pelo proprietário"
+  },
   "import_chip_crx": {
     "message": "Chave de extensão"
   },
@@ -1232,6 +1230,17 @@
       }
     }
   },
+  "import_keyserver_wrong_key": {
+    "message": "$host$ retornou uma chave que não corresponde a $subject$, então ela não foi importada.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "subject": {
+        "content": "$2"
+      }
+    }
+  },
   "import_label_field": {
     "message": "Rótulo"
   },
@@ -1320,6 +1329,9 @@
   "import_reject_no_public_key": {
     "message": "Este bloco não contém nenhuma chave pública utilizável."
   },
+  "import_reject_revocation_unknown": {
+    "message": "Este certificado de revogação é de uma chave que você não tem, então não há nada para revogar."
+  },
   "import_reject_ssh_generic": {
     "message": "Esta chave SSH não pode ser usada para criptografia."
   },
@@ -1367,6 +1379,9 @@
   "import_reveal": {
     "message": "Mostrar nas suas chaves"
   },
+  "import_revocation_headline": {
+    "message": "Certificado de revogação"
+  },
   "import_source_help": {
     "message": "Chaves públicas são adicionadas como contatos. Uma chave privada fica neste dispositivo - você escolherá como protegê-la a seguir."
   },
@@ -1394,6 +1409,14 @@
     "message": "Você a adicionou em $date$, e nada nela mudou.",
     "placeholders": {
       "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_status_replaces": {
+    "message": "Substitui a chave que você tinha para $name$",
+    "placeholders": {
+      "name": {
         "content": "$1"
       }
     }
@@ -1463,10 +1486,10 @@
     "message": "EXPORTAR"
   },
   "keygen_copied_encrypted": {
-    "message": "Chave criptografada copiada (será limpa em 60s)"
+    "message": "Chave criptografada copiada. Ela fica na sua área de transferência, e em qualquer histórico dela, até você copiar outra coisa."
   },
   "keygen_copied_plaintext": {
-    "message": "Chave sem proteção copiada (será limpa em 30s)"
+    "message": "Chave desprotegida copiada. Ela fica na sua área de transferência, e em qualquer histórico dela, até você copiar outra coisa."
   },
   "keygen_create_heading": {
     "message": "Criar uma nova chave"
@@ -2011,6 +2034,50 @@
   "keys_cap_sign": {
     "message": "Assina mensagens"
   },
+  "keys_check_revocation": {
+    "message": "Verificar revogação"
+  },
+  "keys_check_revocation_current": {
+    "message": "A chave de $name$ não está revogada em $host$.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "host": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_check_revocation_failed": {
+    "message": "Não foi possível verificar a revogação. Tente novamente."
+  },
+  "keys_check_revocation_not_published": {
+    "message": "$host$ não publica a chave de $name$, então não é possível verificá-la lá.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_check_revocation_revoked": {
+    "message": "$name$ revogou esta chave. Agora ela está marcada como revogada e não será usada para criptografar.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_check_revocation_running": {
+    "message": "Consultando $host$...",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
   "keys_chip_contact": {
     "message": "Contato"
   },
@@ -2102,6 +2169,12 @@
   },
   "keys_contact_options_aria": {
     "message": "Opções do contato"
+  },
+  "keys_contact_revoked": {
+    "message": "Revogada"
+  },
+  "keys_contact_revoked_title": {
+    "message": "O proprietário revogou esta chave. Ela é mantida para que a revogação permaneça, mas você não pode criptografar para ela. Após um comprometimento, nenhuma de suas assinaturas é verificada; após uma aposentadoria de rotina, as anteriores ainda são e aparecem em âmbar."
   },
   "keys_contacts_heading": {
     "message": "Contatos"
@@ -2370,6 +2443,17 @@
   },
   "keys_loading": {
     "message": "Carregando…"
+  },
+  "keys_lookalike_char": {
+    "message": "$code$ é de um alfabeto diferente do resto desta palavra",
+    "placeholders": {
+      "code": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_lookalike_name": {
+    "message": "Nome enganoso"
   },
   "keys_my_keys_heading": {
     "message": "Minhas chaves"
@@ -3363,22 +3447,6 @@
       }
     }
   },
-  "shared_bundle_clipboard_one": {
-    "message": "Segredos copiados são limpos da área de transferência após $count$ segundo",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
-  },
-  "shared_bundle_clipboard_other": {
-    "message": "Segredos copiados são limpos da área de transferência após $count$ segundos",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
-  },
   "shared_bundle_discovery_off": {
     "message": "Sem busca de chaves - nada sai deste dispositivo para encontrar uma chave"
   },
@@ -3677,6 +3745,14 @@
   "workspace_age_message_note": {
     "message": "mensagem age - destinatários SSH não podem ser misturados com PGP"
   },
+  "workspace_also_signed_by": {
+    "message": "também assinado por $names$",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_browse_files": {
     "message": "Procurar arquivos"
   },
@@ -3846,8 +3922,41 @@
   "workspace_error_verify_failed": {
     "message": "Falha na verificação. A entrada não parece ser uma mensagem PGP assinada."
   },
+  "workspace_error_verify_file_too_large": {
+    "message": "$name$ é grande demais para verificar aqui (limite $limit$).",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "limit": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_error_verify_not_utf8": {
+    "message": "$name$ não é texto UTF-8, então não pode ser verificado como mensagem assinada.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_error_wrong_key_password": {
     "message": "Senha incorreta. Confira e tente de novo."
+  },
+  "workspace_file_not_signed": {
+    "message": "não assinado"
+  },
+  "workspace_file_signature": {
+    "message": "$name$: $outcome$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "outcome": {
+        "content": "$2"
+      }
+    }
   },
   "workspace_files_decrypted_one": {
     "message": "$count$ arquivo descriptografado ($size$ no total)",
@@ -3892,6 +4001,9 @@
         "content": "$2"
       }
     }
+  },
+  "workspace_files_mixed_signers": {
+    "message": "Signatários diferentes"
   },
   "workspace_files_signed_one": {
     "message": "$count$ arquivo assinado",
@@ -4215,8 +4327,45 @@
   "workspace_sign_with": {
     "message": "Assinar com"
   },
+  "workspace_signature_covers_original": {
+    "message": "a assinatura cobre o original, não esta tradução"
+  },
   "workspace_signature_verified": {
     "message": "Assinatura verificada"
+  },
+  "workspace_signature_verified_not_for_you": {
+    "message": "Não é para você"
+  },
+  "workspace_signature_verified_retired": {
+    "message": "Chave aposentada"
+  },
+  "workspace_signed_for_others": {
+    "message": "assinado para $names$, não para você",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_signed_on": {
+    "message": "Assinado em $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_signed_text": {
+    "message": "Texto assinado"
+  },
+  "workspace_signed_text_hidden_chars": {
+    "message": "o texto assinado contém caracteres invisíveis ou de direção de texto, então pode não aparecer na tela como foi escrito"
+  },
+  "workspace_signed_text_translated": {
+    "message": "Tradução do texto assinado"
+  },
+  "workspace_signer_key_retired": {
+    "message": "a chave que a fez expirou ou foi revogada desde então"
   },
   "workspace_status_age_encrypted": {
     "message": "mensagem age - criptografada para destinatários SSH"
@@ -4298,6 +4447,22 @@
   },
   "workspace_unverified": {
     "message": "Não verificada"
+  },
+  "workspace_unverified_cosigners_one": {
+    "message": "mais $count$ assinatura de uma chave que você não tem",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_unverified_cosigners_other": {
+    "message": "mais $count$ assinaturas de chaves que você não tem",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "workspace_verify_signature": {
     "message": "Verificar assinatura"

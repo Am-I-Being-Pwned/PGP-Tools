@@ -269,7 +269,7 @@ export function SettingsView({
 
   // Full preferences snapshot for computing the active preset: the
   // bundles cover fields this view has no props for (historyEnabled,
-  // encryptToSelf, clipboardWipeSeconds). Re-read whenever a bundled
+  // encryptToSelf). Re-read whenever a bundled
   // setting editable in this view changes, so the "Custom" state tracks
   // live edits. Toggles in other views can't change while this tab is
   // showing in the same panel.

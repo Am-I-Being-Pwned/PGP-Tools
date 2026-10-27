@@ -27,6 +27,7 @@ import {
 } from "../../lib/utils/key-naming";
 import { KeyDetailsButton } from "../keys/KeyDetailsButton";
 import { KeyAvatar } from "../shared/KeyAvatar";
+import { MarkedText } from "../shared/MarkedText";
 
 type AnyKey = ProtectedKeyBlob | PublicContactKey;
 
@@ -205,10 +206,10 @@ export function KeySelector({
                 <>
                   <KeyAvatar fingerprint={selectedKey.keyId} size={16} />
                   <span className="min-w-0 flex-1 truncate">
-                    {selectedDisplay.name}
+                    <MarkedText text={selectedDisplay.name} />
                     {selectedDisplay.detail && (
                       <span className="text-muted-foreground ml-1.5 text-xs">
-                        {selectedDisplay.detail}
+                        <MarkedText text={selectedDisplay.detail} />
                       </span>
                     )}
                   </span>
@@ -246,10 +247,12 @@ export function KeySelector({
                 <div className="flex min-w-0 items-center gap-2.5 text-left">
                   <KeyAvatar fingerprint={selectedKey.keyId} size={32} />
                   <div className="min-w-0">
-                    <p className="truncate text-sm">{selectedDisplay.name}</p>
+                    <p className="truncate text-sm">
+                      <MarkedText text={selectedDisplay.name} />
+                    </p>
                     {selectedDisplay.detail && (
                       <p className="text-muted-foreground truncate text-xs">
-                        {selectedDisplay.detail}
+                        <MarkedText text={selectedDisplay.detail} />
                       </p>
                     )}
                   </div>
@@ -289,9 +292,13 @@ function KeyOption({
     >
       <KeyAvatar fingerprint={keyData.keyId} size={32} />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm">{name}</p>
+        <p className="truncate text-sm">
+          <MarkedText text={name} />
+        </p>
         {detail && (
-          <p className="text-muted-foreground truncate text-xs">{detail}</p>
+          <p className="text-muted-foreground truncate text-xs">
+            <MarkedText text={detail} />
+          </p>
         )}
       </div>
       {/* After the name, so the face leads the row like everywhere else;

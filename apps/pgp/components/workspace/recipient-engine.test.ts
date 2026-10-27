@@ -24,6 +24,7 @@ import {
   pickableKeys,
   recipientBlockReason,
   selectionEngine,
+  splitRecipientSections,
 } from "./recipient-engine";
 
 /** Stand-ins for stored records: only the discriminant matters here. */
@@ -132,5 +133,69 @@ describe("pickableKeys with a password set", () => {
 
   it("is unchanged when no password is set", () => {
     expect(pickableKeys([ssh, pgp], null, false)).toEqual([ssh, pgp]);
+  });
+});
+
+describe("splitRecipientSections: each key is offered once", () => {
+  interface Contact {
+    keyId: string;
+    keys: string[];
+  }
+  interface Own {
+    keyId: string;
+    own: true;
+  }
+  const contact = (keyId: string, keys = [keyId]): Contact => ({ keyId, keys });
+  const own = (keyId: string): Own => ({ keyId, own: true });
+  const split = (contacts: Contact[], mine: Own[]) =>
+    splitRecipientSections<Contact, Own>(
+      [...contacts, ...mine],
+      contacts,
+      (c) => c.keys,
+    );
+
+  it("keeps an own PGP key imported again as a contact out of both lists twice", () => {
+    // The same fingerprint as a contact record and as an own key: it used
+    // to appear under Contacts twice (the own record matched by id).
+    const me = contact("PGP-ME");
+    const result = split([me], [own("PGP-ME")]);
+    expect(result.contacts).toEqual([me]);
+    expect(result.own).toEqual([]);
+  });
+
+  it("does not repeat an own SSH key that a GitHub contact already holds", () => {
+    const github = contact("SSH-ME", ["SSH-ME", "SSH-LAPTOP", "SSH-WORK"]);
+    const result = split([github], [own("SSH-ME")]);
+    expect(result.contacts).toEqual([github]);
+    expect(result.own).toEqual([]);
+  });
+
+  it("hides a single-key contact whose key is part of a bigger contact", () => {
+    const github = contact("SSH-A", ["SSH-A", "SSH-B"]);
+    const pasted = contact("SSH-B");
+    expect(split([github, pasted], []).contacts).toEqual([github]);
+  });
+
+  it("leaves unrelated keys alone", () => {
+    const alice = contact("PGP-ALICE");
+    const bob = contact("SSH-BOB");
+    const mine = own("PGP-ME");
+    expect(split([alice, bob], [mine])).toEqual({
+      contacts: [alice, bob],
+      own: [mine],
+    });
+  });
+
+  it("never hides a row because of a contact the search filtered out", () => {
+    const github = contact("SSH-A", ["SSH-A", "SSH-B"]);
+    const pasted = contact("SSH-B");
+    const mine = own("SSH-A");
+    // Only the pasted contact and my key matched the search.
+    const result = splitRecipientSections<Contact, Own>(
+      [pasted, mine],
+      [github, pasted],
+      (c) => c.keys,
+    );
+    expect(result).toEqual({ contacts: [pasted], own: [mine] });
   });
 });

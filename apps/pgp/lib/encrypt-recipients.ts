@@ -77,11 +77,18 @@ export function resolveSelectedRecipients(
   contacts: readonly PublicContactKey[],
   ownKeys: readonly ProtectedKeyBlob[],
 ): (ProtectedKeyBlob | PublicContactKey)[] {
+  // The same record the picker showed: it only offers contacts you can
+  // encrypt to, so a contact copy of your own key that has since expired
+  // must not win over your own key. An unusable contact is the last
+  // resort, so a stale selection still fails loudly at encrypt time.
   return selectedIds
     .map(
       (id) =>
-        contacts.find((c) => c.keyId === id) ??
-        ownKeys.find((k) => k.keyId === id),
+        contacts.find(
+          (c) => c.keyId === id && c.usableForEncryption !== false,
+        ) ??
+        ownKeys.find((k) => k.keyId === id) ??
+        contacts.find((c) => c.keyId === id),
     )
     .filter((k) => k !== undefined);
 }

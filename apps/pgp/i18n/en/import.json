@@ -454,5 +454,25 @@
   "import_keyserver_server_error": {
     "message": "$host$ couldn't answer just now. Try again in a moment.",
     "description": "Lookup error when the keyserver returned a server error. $host$ is the keyserver hostname."
+  },
+  "import_change_revoked": {
+    "message": "Revoked by its owner",
+    "description": "One line in the 'what changed' list of the update preview: the incoming copy revokes the stored key."
+  },
+  "import_reject_revocation_unknown": {
+    "message": "This revocation certificate is for a key you don't have, so there is nothing to revoke.",
+    "description": "Import rejection: the pasted text is a revocation certificate, but no stored contact matches the key it revokes."
+  },
+  "import_revocation_headline": {
+    "message": "Revocation certificate",
+    "description": "Import preview headline for a pasted revocation certificate that matches no stored key."
+  },
+  "import_keyserver_wrong_key": {
+    "message": "$host$ returned a key that doesn't match $subject$, so it was not imported.",
+    "description": "Keyserver import rejection: the returned cert is not for the fingerprint, key ID or address that was looked up. $host$ is the keyserver host, $subject$ the query."
+  },
+  "import_status_replaces": {
+    "message": "Replaces the key you had for $name$",
+    "description": "Amber strip on the import preview: this fetched key has a different fingerprint from the one stored for the same lookup, and importing swaps it. $name$ is the stored contact's name."
   }
 }

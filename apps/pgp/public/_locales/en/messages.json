@@ -572,17 +572,9 @@
       }
     }
   },
-  "app_copied_wipe": {
-    "message": "$label$ copied - clipboard clears in $seconds$s",
-    "description": "Success toast after copying sensitive material (a private key, a revocation certificate). $label$ names what was copied; $seconds$ is the number of seconds until the clipboard is wiped, followed by the seconds abbreviation.",
-    "placeholders": {
-      "label": {
-        "content": "$1"
-      },
-      "seconds": {
-        "content": "$2"
-      }
-    }
+  "app_copied_sensitive_note": {
+    "message": "It stays on your clipboard, and in any clipboard history, until you copy something else.",
+    "description": "Second line of the toast after copying a private key or revocation certificate: it is not wiped, and clipboard history keeps a copy."
   },
   "app_copy_failed": {
     "message": "Copy failed - click the extension panel first, then try again.",
@@ -672,6 +664,10 @@
   "app_error_tampered": {
     "message": "Signature verification failed - this message may have been tampered with. Don't trust the contents; ask the sender to re-send it.",
     "description": "User-facing error: the signature on a decrypted message did not verify."
+  },
+  "app_error_unsigned_text_around_signature": {
+    "message": "This contains text outside the signed message, which the signature doesn't cover. Paste only the signed message, from the BEGIN line to the END line.",
+    "description": "User-facing error in verify mode: the pasted text has words before or after the cleartext-signed block (or more than one block), so it is refused rather than shown as verified. 'BEGIN' and 'END' refer to the literal armor lines."
   },
   "app_error_vault_locked": {
     "message": "Your vault is locked, so nothing was changed. Unlock it and run this again.",
@@ -1191,6 +1187,10 @@
     "message": "The key has been re-issued",
     "description": "The only line in the 'what changed' list when the certificate differs but nothing displayable changed."
   },
+  "import_change_revoked": {
+    "message": "Revoked by its owner",
+    "description": "One line in the 'what changed' list of the update preview: the incoming copy revokes the stored key."
+  },
   "import_chip_crx": {
     "message": "Extension key",
     "description": "Chip label in the import preview for a Chrome extension signing key. Very short."
@@ -1518,6 +1518,18 @@
       }
     }
   },
+  "import_keyserver_wrong_key": {
+    "message": "$host$ returned a key that doesn't match $subject$, so it was not imported.",
+    "description": "Keyserver import rejection: the returned cert is not for the fingerprint, key ID or address that was looked up. $host$ is the keyserver host, $subject$ the query.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "subject": {
+        "content": "$2"
+      }
+    }
+  },
   "import_label_field": {
     "message": "Label",
     "description": "Field label on the protect step for naming an imported Chrome extension signing key."
@@ -1627,6 +1639,10 @@
     "message": "This block contains no usable public key.",
     "description": "Reason a pasted armored block cannot be imported as a contact: it parsed to no certificate."
   },
+  "import_reject_revocation_unknown": {
+    "message": "This revocation certificate is for a key you don't have, so there is nothing to revoke.",
+    "description": "Import rejection: the pasted text is a revocation certificate, but no stored contact matches the key it revokes."
+  },
   "import_reject_ssh_generic": {
     "message": "This SSH key can't be used for encryption.",
     "description": "Fallback reason when the SSH engine refuses a key without giving a message."
@@ -1683,6 +1699,10 @@
     "message": "Show it in your keys",
     "description": "Preview button for a key that is already stored: closes the panel and highlights the key in the list."
   },
+  "import_revocation_headline": {
+    "message": "Revocation certificate",
+    "description": "Import preview headline for a pasted revocation certificate that matches no stored key."
+  },
   "import_source_help": {
     "message": "Public keys are added as contacts. A private key stays on this device - you'll choose how it's protected next.",
     "description": "Muted help text at the bottom of the import source step."
@@ -1717,6 +1737,15 @@
     "description": "Line under the 'Already in your keys' heading. $date$ is a localised long date.",
     "placeholders": {
       "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_status_replaces": {
+    "message": "Replaces the key you had for $name$",
+    "description": "Amber strip on the import preview: this fetched key has a different fingerprint from the one stored for the same lookup, and importing swaps it. $name$ is the stored contact's name.",
+    "placeholders": {
+      "name": {
         "content": "$1"
       }
     }
@@ -1804,12 +1833,12 @@
     "description": "The word the user must type exactly to allow an unencrypted export. Shown in bold and as the field placeholder, and compared against the input; keep it a single uppercase word."
   },
   "keygen_copied_encrypted": {
-    "message": "Encrypted key copied (clears in 60s)",
-    "description": "Green feedback after copying a passphrase-encrypted private key to the clipboard; the clipboard is wiped after 60 seconds."
+    "message": "Encrypted key copied. It stays on your clipboard, and in any clipboard history, until you copy something else.",
+    "description": "Green feedback after copying a passphrase-encrypted private key to the clipboard. It is not wiped, and clipboard history keeps a copy."
   },
   "keygen_copied_plaintext": {
-    "message": "Unprotected key copied (clears in 30s)",
-    "description": "Green feedback after copying an unencrypted private key to the clipboard; the clipboard is wiped after 30 seconds."
+    "message": "Unprotected key copied. It stays on your clipboard, and in any clipboard history, until you copy something else.",
+    "description": "Green feedback after copying an unencrypted private key to the clipboard. It is not wiped, and clipboard history keeps a copy."
   },
   "keygen_create_heading": {
     "message": "Create a new key",
@@ -2491,6 +2520,56 @@
     "message": "Signs messages",
     "description": "What a component key can do; part of a list separated by a middle dot."
   },
+  "keys_check_revocation": {
+    "message": "Check for revocation",
+    "description": "Contact card menu item: asks the keyserver whether the owner has revoked this key."
+  },
+  "keys_check_revocation_current": {
+    "message": "$name$'s key is not revoked on $host$.",
+    "description": "Toast after the check: the keyserver shows no revocation. $name$ is the contact's name, $host$ the keyserver.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "host": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_check_revocation_failed": {
+    "message": "Couldn't check for a revocation. Try again.",
+    "description": "Toast when the revocation check fails for an unexpected reason."
+  },
+  "keys_check_revocation_not_published": {
+    "message": "$host$ doesn't publish $name$'s key, so it can't be checked there.",
+    "description": "Toast after the check: the keyserver has no copy of this key. $name$ is the contact's name, $host$ the keyserver.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_check_revocation_revoked": {
+    "message": "$name$ has revoked this key. It is now marked revoked and won't be used for encryption.",
+    "description": "Toast after the check: the keyserver's copy is revoked, and the stored contact was updated. $name$ is the contact's name.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_check_revocation_running": {
+    "message": "Checking $host$...",
+    "description": "Toast while the revocation check runs. $host$ is the keyserver host.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
   "keys_chip_contact": {
     "message": "Contact",
     "description": "Small chip on the details page of a contact's key. Short."
@@ -2599,6 +2678,14 @@
   "keys_contact_options_aria": {
     "message": "Contact options",
     "description": "Accessible label of the three-dot menu button on a contact card."
+  },
+  "keys_contact_revoked": {
+    "message": "Revoked",
+    "description": "Small red pill on a contact card whose key its owner has revoked."
+  },
+  "keys_contact_revoked_title": {
+    "message": "The owner revoked this key. It is kept so the revocation sticks, but you can't encrypt to it. After a compromise none of its signatures verify; after a routine retirement, older ones still do and show amber.",
+    "description": "Hover text on the Revoked pill of a contact card."
   },
   "keys_contacts_heading": {
     "message": "Contacts",
@@ -2922,6 +3009,19 @@
   "keys_loading": {
     "message": "Loading…",
     "description": "Key details: shown while the certificate is being parsed."
+  },
+  "keys_lookalike_char": {
+    "message": "$code$ is from a different alphabet than the rest of this word",
+    "description": "Hover text on a highlighted letter in a name or email that comes from a different alphabet than the rest of its word (a lookalike, e.g. a Cyrillic А in Alice). $code$ is the Unicode code point, e.g. U+0410.",
+    "placeholders": {
+      "code": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_lookalike_name": {
+    "message": "Lookalike name",
+    "description": "Small amber pill on a contact card whose name or email mixes alphabets (e.g. a Cyrillic letter in a Latin name). The hover text explains."
   },
   "keys_my_keys_heading": {
     "message": "My Keys",
@@ -4123,24 +4223,6 @@
       }
     }
   },
-  "shared_bundle_clipboard_one": {
-    "message": "Copied secrets clear from the clipboard after $count$ second",
-    "description": "Preset card bullet. $count$ is the number of seconds",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
-  },
-  "shared_bundle_clipboard_other": {
-    "message": "Copied secrets clear from the clipboard after $count$ seconds",
-    "description": "Preset card bullet. $count$ is the number of seconds",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
-  },
   "shared_bundle_discovery_off": {
     "message": "No key lookups - nothing leaves this device to find a key",
     "description": "Preset card bullet"
@@ -4530,6 +4612,15 @@
     "message": "age message - SSH recipients can't be mixed with PGP",
     "description": "Small note under the recipient picker once SSH recipients are selected: the output will be an age-format message. 'age' is a format name, keep lowercase."
   },
+  "workspace_also_signed_by": {
+    "message": "also signed by $names$",
+    "description": "Part of the note under a verified signer: further good signatures. $names$ is a comma-separated list.",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_browse_files": {
     "message": "Browse files",
     "description": "Button in the drop zone that opens the file picker."
@@ -4741,9 +4832,46 @@
     "message": "Verification failed. The input doesn't look like a signed PGP message.",
     "description": "Error in verify mode when the input could not be parsed."
   },
+  "workspace_error_verify_file_too_large": {
+    "message": "$name$ is too large to verify here (limit $limit$).",
+    "description": "Verify error: a staged file is larger than any signed message the engine verifies. $name$ is the file name, $limit$ the size limit, e.g. '24 MB'.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "limit": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_error_verify_not_utf8": {
+    "message": "$name$ isn't UTF-8 text, so it can't be verified as a signed message.",
+    "description": "Verify error: a staged file has bytes that aren't valid UTF-8 (e.g. a Latin-1 file or a binary file). $name$ is the file name.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_error_wrong_key_password": {
     "message": "Wrong password. Check it and try again.",
     "description": "Error under the inline password field when the key password was wrong."
+  },
+  "workspace_file_not_signed": {
+    "message": "not signed",
+    "description": "Outcome of one file in the mixed-signers note."
+  },
+  "workspace_file_signature": {
+    "message": "$name$: $outcome$",
+    "description": "One file's entry in the mixed-signers note. $name$ is the file name, $outcome$ the signer's name or a status.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "outcome": {
+        "content": "$2"
+      }
+    }
   },
   "workspace_files_decrypted_one": {
     "message": "$count$ file decrypted ($size$ total)",
@@ -4792,6 +4920,10 @@
         "content": "$2"
       }
     }
+  },
+  "workspace_files_mixed_signers": {
+    "message": "Mixed signers",
+    "description": "Name on the amber card after verifying or decrypting several files whose signatures differ. Keep it short; the note under it lists each file."
   },
   "workspace_files_signed_one": {
     "message": "$count$ file signed",
@@ -5192,9 +5324,55 @@
     "message": "Sign with",
     "description": "Label of the private-key selector in sign mode and next to the Sign toggle."
   },
+  "workspace_signature_covers_original": {
+    "message": "the signature covers the original, not this translation",
+    "description": "Note under the signer card while a machine translation is shown in place of the signed message."
+  },
   "workspace_signature_verified": {
     "message": "Signature verified",
     "description": "Status line and signer-card badge after a signature checked out."
+  },
+  "workspace_signature_verified_not_for_you": {
+    "message": "Not for you",
+    "description": "Short amber label on a signer card: the signature checks out, but it names other people as its recipients (this copy was passed on). Keep it to a couple of words; the note under the card explains."
+  },
+  "workspace_signature_verified_retired": {
+    "message": "Key retired",
+    "description": "Short amber label on a signer card: the signature checks out, but the key that made it has expired or been revoked since. Keep it to a couple of words; the note under the card explains."
+  },
+  "workspace_signed_for_others": {
+    "message": "signed for $names$, not for you",
+    "description": "Part of the note under a verified signer: the signature names its intended recipients and none of them is the user (the message was passed on). $names$ is a comma-separated list. Lowercase: it may follow other parts.",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_signed_on": {
+    "message": "Signed $date$",
+    "description": "Part of the note under a verified signer. $date$ is the date the signature claims it was made (chosen by the signer).",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_signed_text": {
+    "message": "Signed text",
+    "description": "Label over the box under a verify verdict showing exactly the text the signature covers."
+  },
+  "workspace_signed_text_hidden_chars": {
+    "message": "the signed text contains invisible or text-direction characters, so it may not read on screen the way it was written",
+    "description": "Part of the note under a verified signer: the signed text itself contains bidi/zero-width/control characters that can make it display in a different order. Lowercase: it follows other parts after a dot separator."
+  },
+  "workspace_signed_text_translated": {
+    "message": "Translation of the signed text",
+    "description": "Label over the verify result box while a machine translation is shown in place of the signed text."
+  },
+  "workspace_signer_key_retired": {
+    "message": "the key that made it has since expired or been revoked",
+    "description": "Part of the note under a signer: the signature verified, but the signing key is no longer valid today. Lowercase: it follows other parts after a dot separator."
   },
   "workspace_status_age_encrypted": {
     "message": "age message - encrypted to SSH recipients",
@@ -5264,7 +5442,7 @@
   },
   "workspace_translate": {
     "message": "Translate",
-    "description": "Label of the compose translate button before any language has been picked."
+    "description": "Label of the compose translate button, which opens the language list."
   },
   "workspace_translate_menu_heading": {
     "message": "Translate the message to",
@@ -5298,6 +5476,24 @@
   "workspace_unverified": {
     "message": "Unverified",
     "description": "Badge on the signer card when the message is signed but the signer's key is not held, so the signature could not be checked."
+  },
+  "workspace_unverified_cosigners_one": {
+    "message": "$count$ more signature from a key you don't have",
+    "description": "Part of the note under a verified signer: extra signatures that could not be checked.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_unverified_cosigners_other": {
+    "message": "$count$ more signatures from keys you don't have",
+    "description": "Part of the note under a verified signer: extra signatures that could not be checked.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "workspace_verify_signature": {
     "message": "Verify signature",

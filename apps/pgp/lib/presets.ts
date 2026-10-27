@@ -46,7 +46,6 @@ export const PRESETS: Record<PresetId, SecurityPreset> = {
       historyEnabled: true,
       keyDiscoveryEnabled: true,
       encryptToSelf: true,
-      clipboardWipeSeconds: 60,
     },
   },
   careful: {
@@ -66,7 +65,6 @@ export const PRESETS: Record<PresetId, SecurityPreset> = {
       keyDiscoveryEnabled: true,
       encryptToSelf: true,
       storageLocation: "local",
-      clipboardWipeSeconds: 60,
     },
   },
   paranoid: {
@@ -93,7 +91,6 @@ export const PRESETS: Record<PresetId, SecurityPreset> = {
       keyDiscoveryEnabled: false,
       encryptToSelf: true,
       storageLocation: "local",
-      clipboardWipeSeconds: 15,
       // The only preset that touches this. Translation is the one
       // feature that hands decrypted plaintext to a model whose
       // locality we cannot verify (T-AI-PLAINTEXT-DISCLOSURE), which is
@@ -199,10 +196,6 @@ const LINE_BUILDERS: BundleLine[] = [
     return b.storageLocation === "local"
       ? t("shared_bundle_storage_local")
       : t("shared_bundle_storage_sync");
-  },
-  (b) => {
-    if (b.clipboardWipeSeconds === undefined) return null;
-    return tn("shared_bundle_clipboard", b.clipboardWipeSeconds);
   },
   // Encrypt-to-self is on in every preset (and by default), so only an
   // explicit "off" is worth a line; pickers surface the "on" nuance

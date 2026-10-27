@@ -62,9 +62,6 @@ export interface PgpPreferences {
    *  is what the strictest preset wants, and the only reason this
    *  preference exists (see `lib/presets.ts`). */
   keyDiscoveryEnabled: boolean;
-  /** Seconds a sensitive clipboard copy (exported private key, revocation
-   *  certificate) survives before the best-effort wipe fires. */
-  clipboardWipeSeconds: number;
   /** Fingerprints of recently used encrypt recipients, most recent
    *  first (capped). Orders the recipient picker's suggestions. */
   recentRecipients: string[];
@@ -127,7 +124,6 @@ export const DEFAULT_PREFERENCES: PgpPreferences = {
   crxSigningEnabled: false,
   historyEnabled: false,
   keyDiscoveryEnabled: true,
-  clipboardWipeSeconds: 60,
   recentRecipients: [],
   aiTranslateEnabled: true,
   translationTargetLanguage: "en",

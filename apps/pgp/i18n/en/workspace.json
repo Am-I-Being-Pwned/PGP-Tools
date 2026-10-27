@@ -313,7 +313,7 @@
   },
   "workspace_translate": {
     "message": "Translate",
-    "description": "Label of the compose translate button before any language has been picked."
+    "description": "Label of the compose translate button, which opens the language list."
   },
   "workspace_translate_menu_heading": {
     "message": "Translate the message to",
@@ -606,5 +606,73 @@
   "workspace_char_count_other": {
     "message": "$count$ chars",
     "description": "Character count of the message, at the right end of the toolbar under the message box. $count$ is the number of characters."
+  },
+  "workspace_signed_on": {
+    "message": "Signed $date$",
+    "description": "Part of the note under a verified signer. $date$ is the date the signature claims it was made (chosen by the signer)."
+  },
+  "workspace_signer_key_retired": {
+    "message": "the key that made it has since expired or been revoked",
+    "description": "Part of the note under a signer: the signature verified, but the signing key is no longer valid today. Lowercase: it follows other parts after a dot separator."
+  },
+  "workspace_also_signed_by": {
+    "message": "also signed by $names$",
+    "description": "Part of the note under a verified signer: further good signatures. $names$ is a comma-separated list."
+  },
+  "workspace_unverified_cosigners_one": {
+    "message": "$count$ more signature from a key you don't have",
+    "description": "Part of the note under a verified signer: extra signatures that could not be checked."
+  },
+  "workspace_unverified_cosigners_other": {
+    "message": "$count$ more signatures from keys you don't have",
+    "description": "Part of the note under a verified signer: extra signatures that could not be checked."
+  },
+  "workspace_files_mixed_signers": {
+    "message": "Mixed signers",
+    "description": "Name on the amber card after verifying or decrypting several files whose signatures differ. Keep it short; the note under it lists each file."
+  },
+  "workspace_file_signature": {
+    "message": "$name$: $outcome$",
+    "description": "One file's entry in the mixed-signers note. $name$ is the file name, $outcome$ the signer's name or a status."
+  },
+  "workspace_file_not_signed": {
+    "message": "not signed",
+    "description": "Outcome of one file in the mixed-signers note."
+  },
+  "workspace_signature_covers_original": {
+    "message": "the signature covers the original, not this translation",
+    "description": "Note under the signer card while a machine translation is shown in place of the signed message."
+  },
+  "workspace_signature_verified_retired": {
+    "message": "Key retired",
+    "description": "Short amber label on a signer card: the signature checks out, but the key that made it has expired or been revoked since. Keep it to a couple of words; the note under the card explains."
+  },
+  "workspace_signed_text": {
+    "message": "Signed text",
+    "description": "Label over the box under a verify verdict showing exactly the text the signature covers."
+  },
+  "workspace_signed_for_others": {
+    "message": "signed for $names$, not for you",
+    "description": "Part of the note under a verified signer: the signature names its intended recipients and none of them is the user (the message was passed on). $names$ is a comma-separated list. Lowercase: it may follow other parts."
+  },
+  "workspace_signature_verified_not_for_you": {
+    "message": "Not for you",
+    "description": "Short amber label on a signer card: the signature checks out, but it names other people as its recipients (this copy was passed on). Keep it to a couple of words; the note under the card explains."
+  },
+  "workspace_signed_text_translated": {
+    "message": "Translation of the signed text",
+    "description": "Label over the verify result box while a machine translation is shown in place of the signed text."
+  },
+  "workspace_error_verify_file_too_large": {
+    "message": "$name$ is too large to verify here (limit $limit$).",
+    "description": "Verify error: a staged file is larger than any signed message the engine verifies. $name$ is the file name, $limit$ the size limit, e.g. '24 MB'."
+  },
+  "workspace_error_verify_not_utf8": {
+    "message": "$name$ isn't UTF-8 text, so it can't be verified as a signed message.",
+    "description": "Verify error: a staged file has bytes that aren't valid UTF-8 (e.g. a Latin-1 file or a binary file). $name$ is the file name."
+  },
+  "workspace_signed_text_hidden_chars": {
+    "message": "the signed text contains invisible or text-direction characters, so it may not read on screen the way it was written",
+    "description": "Part of the note under a verified signer: the signed text itself contains bidi/zero-width/control characters that can make it display in a different order. Lowercase: it follows other parts after a dot separator."
   }
 }

@@ -9,6 +9,7 @@ import {
   ListChecksIcon,
   LockIcon,
   PencilIcon,
+  ShieldQuestionIcon,
   Trash2Icon,
   TriangleAlertIcon,
 } from "lucide-react";
@@ -39,6 +40,7 @@ import { isSshRecord } from "../../lib/storage/key-kind";
 import { formatAlgorithm, formatFingerprint } from "../../lib/utils/formatting";
 import { displayUserId, parseUserId } from "../../lib/utils/key-naming";
 import { KeyAvatar } from "../shared/KeyAvatar";
+import { MarkedText } from "../shared/MarkedText";
 import { HEX_FINGERPRINT, longIdLines } from "./fingerprint-lines";
 import { useJustImported } from "./useJustImported";
 import { useLongPress } from "./useLongPress";
@@ -51,6 +53,8 @@ interface ContactCardProps {
   onDownloadPublicKey?: () => void;
   /** Open the rename page for this contact (local display name only). */
   onRename?: () => void;
+  /** Ask the keyserver whether the owner has revoked this key. */
+  onCheckRevocation?: () => void;
   /** When set, shows a bottom-right arrow opening the key-details page. */
   onShowDetails?: () => void;
   advancedMode?: boolean;
@@ -89,6 +93,7 @@ export function ContactCard({
   onCopyPublicKey,
   onDownloadPublicKey,
   onRename,
+  onCheckRevocation,
   onShowDetails,
   advancedMode,
   readOnly,
@@ -173,7 +178,11 @@ export function ContactCard({
   const algorithm = contact.algorithm ? formatAlgorithm(contact.algorithm) : "";
   const expired = !!contact.expiresAt && contact.expiresAt < now;
   const hasPills =
-    expired || !!contact.securityWarning || isSsh || recipients.length > 1;
+    expired ||
+    !!contact.revoked ||
+    !!contact.securityWarning ||
+    isSsh ||
+    recipients.length > 1;
   // Algorithm, expiry and provenance, as one small muted line.
   const details: string[] = [];
   if (algorithm && !showKeyLine) details.push(algorithm);
@@ -229,7 +238,9 @@ export function ContactCard({
           <div className="flex items-center gap-2">
             {/* Line 1 is the name and nothing else, so no pill can
                 ever squeeze it out of the row. */}
-            <p className="min-w-0 truncate text-sm font-medium">{name}</p>
+            <p className="min-w-0 truncate text-sm font-medium">
+              <MarkedText text={name} />
+            </p>
             {verifiedLabel && (
               <span
                 className={`ml-auto flex shrink-0 items-center gap-1 text-xs ${toneText}`}
@@ -243,7 +254,9 @@ export function ContactCard({
             )}
           </div>
           {email && (
-            <p className="text-muted-foreground truncate text-xs">{email}</p>
+            <p className="text-muted-foreground truncate text-xs">
+              <MarkedText text={email} />
+            </p>
           )}
           {showKeyLine && (
             <p className="text-muted-foreground font-mono text-[11px] break-all">
@@ -274,13 +287,28 @@ export function ContactCard({
                   })}
                 </span>
               )}
+              {contact.revoked && (
+                /* Kept so the revocation sticks; never encrypted to. */
+                <span
+                  title={t("keys_contact_revoked_title")}
+                  className={cn(
+                    PILL,
+                    "bg-destructive/12 text-bad inline-flex gap-1",
+                  )}
+                >
+                  <TriangleAlertIcon className="h-2.5 w-2.5" />
+                  {t("keys_contact_revoked")}
+                </span>
+              )}
               {contact.securityWarning && (
                 <span
                   title={contact.securityWarning}
                   className={cn(PILL, "bg-warn/12 text-warn inline-flex gap-1")}
                 >
                   <TriangleAlertIcon className="h-2.5 w-2.5" />
-                  {t("keys_weak_sha1")}
+                  {contact.lookalike
+                    ? t("keys_lookalike_name")
+                    : t("keys_weak_sha1")}
                 </span>
               )}
               {isSsh && (
@@ -322,7 +350,9 @@ export function ContactCard({
             </div>
           )}
           {note && (
-            <p className="text-muted-foreground mt-0.5 text-xs">{note}</p>
+            <p className="text-muted-foreground mt-0.5 text-xs whitespace-pre-line">
+              {note}
+            </p>
           )}
           {noteAction && <div className="mt-2">{noteAction}</div>}
           {/* Advanced mode regroups a hex fingerprint into 4-character
@@ -387,6 +417,12 @@ export function ContactCard({
                 <DropdownMenuItem onClick={onDownloadPublicKey}>
                   <DownloadIcon />
                   {t("keys_download_public_key")}
+                </DropdownMenuItem>
+              )}
+              {onCheckRevocation && (
+                <DropdownMenuItem onClick={onCheckRevocation}>
+                  <ShieldQuestionIcon />
+                  {t("keys_check_revocation")}
                 </DropdownMenuItem>
               )}
               {onRename && (

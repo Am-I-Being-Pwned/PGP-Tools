@@ -340,5 +340,20 @@
   },
   "import_keyserver_server_error": {
     "message": "$host$ não conseguiu responder agora. Tente de novo daqui a pouco."
+  },
+  "import_change_revoked": {
+    "message": "Revogada pelo proprietário"
+  },
+  "import_reject_revocation_unknown": {
+    "message": "Este certificado de revogação é de uma chave que você não tem, então não há nada para revogar."
+  },
+  "import_revocation_headline": {
+    "message": "Certificado de revogação"
+  },
+  "import_keyserver_wrong_key": {
+    "message": "$host$ retornou uma chave que não corresponde a $subject$, então ela não foi importada."
+  },
+  "import_status_replaces": {
+    "message": "Substitui a chave que você tinha para $name$"
   }
 }

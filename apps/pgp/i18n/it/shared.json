@@ -308,12 +308,6 @@
   "shared_bundle_storage_sync": {
     "message": "Le chiavi si sincronizzano nel tuo profilo Chrome"
   },
-  "shared_bundle_clipboard_one": {
-    "message": "I segreti copiati vengono rimossi dagli appunti dopo $count$ secondo"
-  },
-  "shared_bundle_clipboard_other": {
-    "message": "I segreti copiati vengono rimossi dagli appunti dopo $count$ secondi"
-  },
   "shared_bundle_no_encrypt_to_self": {
     "message": "I messaggi che cifri non sono più leggibili da te in seguito"
   }

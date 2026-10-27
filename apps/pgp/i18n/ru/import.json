@@ -430,5 +430,20 @@
   },
   "import_keyserver_server_error": {
     "message": "$host$ сейчас не отвечает. Повторите попытку чуть позже."
+  },
+  "import_change_revoked": {
+    "message": "Отозван владельцем"
+  },
+  "import_reject_revocation_unknown": {
+    "message": "Этот сертификат отзыва относится к ключу, которого у вас нет, поэтому отзывать нечего."
+  },
+  "import_revocation_headline": {
+    "message": "Сертификат отзыва"
+  },
+  "import_keyserver_wrong_key": {
+    "message": "$host$ вернул ключ, который не соответствует $subject$, поэтому он не импортирован."
+  },
+  "import_status_replaces": {
+    "message": "Заменяет ключ, который был у вас для $name$"
   }
 }

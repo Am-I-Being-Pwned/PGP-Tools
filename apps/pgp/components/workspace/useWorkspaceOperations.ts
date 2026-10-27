@@ -6,12 +6,12 @@ import type {
   DecryptOptions,
   DecryptResult,
   EncryptInput,
-  SignatureStatus,
 } from "../../lib/pgp/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { NewHistoryEntry } from "../../lib/storage/history";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { FileResult } from "../../lib/utils/download";
+import type { SignedResult } from "./signature-summary";
 import type { WorkspaceState } from "./useWorkspaceState";
 import * as ageOps from "../../lib/age/operations";
 import { signZipWithCrxKey, verifyCrxFile } from "../../lib/crx/operations";
@@ -24,9 +24,11 @@ import {
 import { AppError } from "../../lib/errors/app-error";
 import { presentError } from "../../lib/errors/present";
 import { t, tn } from "../../lib/i18n";
+import { MAX_VERIFY_FILE_BYTES, MAX_VERIFY_FILE_LABEL } from "../../lib/limits";
 import * as pgpOps from "../../lib/pgp/operations";
 import { isWebAuthnCancel } from "../../lib/protection/webauthn-prf";
 import { updateRecentRecipients } from "../../lib/recipient-ordering";
+import { contactRecipients } from "../../lib/storage/contact-recipients";
 import { recordHistory } from "../../lib/storage/history";
 import { isPgpRecord, isSshRecord } from "../../lib/storage/key-kind";
 import { savePreferences } from "../../lib/storage/preferences";
@@ -36,14 +38,28 @@ import {
   downloadResults,
   downloadText,
 } from "../../lib/utils/download";
+import {
+  displayFileName,
+  hasHiddenCharacters,
+} from "../../lib/utils/file-name";
 import { formatFileSize } from "../../lib/utils/formatting";
-import { formatKeyDisplayName } from "../../lib/utils/key-naming";
+import {
+  displayUserId,
+  formatKeyDisplayName,
+  parseUserId,
+} from "../../lib/utils/key-naming";
 import {
   isZipArchive,
   zipFiles as zipFilesToArchive,
 } from "../../lib/utils/zip";
 import { outputFileName } from "./output-name";
 import { selectionEngine } from "./recipient-engine";
+import {
+  mixedBatchNote,
+  signatureNote,
+  signedForOthers,
+  summariseBatch,
+} from "./signature-summary";
 
 interface WorkspaceOperationsOptions {
   s: WorkspaceState;
@@ -195,11 +211,100 @@ export function useWorkspaceOperations({
   function findSigner(signerKeyId: string | null) {
     if (!signerKeyId) return null;
     const hex = signerKeyId.toUpperCase();
+    // Any of a contact's keys, not just its first: a signature from a
+    // person's second key is still that person.
     return (
-      contacts.find((c) => c.keyId.toUpperCase().endsWith(hex)) ??
+      contacts.find((c) =>
+        contactRecipients(c).some((r) => r.keyId.toUpperCase().endsWith(hex)),
+      ) ??
       myKeys.find((k) => k.keyId.toUpperCase().endsWith(hex)) ??
       null
     );
+  }
+
+  /** A signer as a note names them: the name part of their display
+   *  name, else the 16-hex key id. */
+  function signerName(keyId: string): string {
+    const signer = findSigner(keyId);
+    const userId = signer ? displayUserId(signer) : undefined;
+    return userId ? parseUserId(userId).name : keyId.slice(-16);
+  }
+
+  /** A signer card for someone we hold no key for. */
+  function placeholderSigner(
+    keyId: string,
+    name = t("workspace_unknown_signer"),
+  ): PublicContactKey {
+    return {
+      keyId,
+      userIds: [name],
+      algorithm: "",
+      armoredPublicKey: "",
+      addedAt: 0,
+      lastUsedAt: 0,
+    };
+  }
+
+  /** The signer card for a single "valid" or "unknown_key" result.
+   *  `extraNote` is appended to what the card says about it. */
+  function showSignature(
+    result: SignedResult,
+    extraNote: string | null = null,
+  ) {
+    if (result.signatureStatus === "valid") {
+      // A key retired since signing still verifies -- it was good when
+      // the signature says it was made -- and a message signed for
+      // someone else verifies too, forwarded or not. Both are amber,
+      // never green.
+      const forOthers = signedForOthers(
+        result,
+        myKeys.map((k) => k.keyId),
+      );
+      const caveat = forOthers
+        ? t("workspace_signature_verified_not_for_you")
+        : !result.signerKeyCurrent
+          ? t("workspace_signature_verified_retired")
+          : null;
+      s.setSignatureTone(caveat ? "warning" : "success");
+      s.setStatusText(t("workspace_signature_verified"));
+      const signer = findSigner(result.signerKeyId);
+      if (signer) {
+        s.setVerifiedSigner(signer);
+        s.setSignerCaveat(caveat);
+        s.setSignatureNote(
+          [signatureNote(result, signerName, forOthers), extraNote]
+            .filter(Boolean)
+            .join(" · ") || null,
+        );
+      }
+    } else if (result.signatureStatus === "unknown_key") {
+      // Signed, but we don't hold the signer's public key. Show the same
+      // signer card as a verified signature, in an amber "can't verify"
+      // tone, with the key id so the user can go and fetch the key.
+      s.setSignatureTone("warning");
+      s.setVerifiedSigner(placeholderSigner(result.signerKeyId ?? ""));
+      s.setStatusText(t("workspace_status_signer_unknown"));
+    }
+  }
+
+  /** One verdict for a batch of files -- see `summariseBatch`. */
+  function showBatchSignatures(
+    batch: { name: string; result: SignedResult }[],
+  ) {
+    const summary = summariseBatch(
+      batch,
+      myKeys.map((k) => k.keyId),
+    );
+    if (summary.kind === "unsigned") return;
+    if (summary.kind === "same") {
+      showSignature(summary.result);
+      return;
+    }
+    s.setSignatureTone("warning");
+    s.setVerifiedSigner(
+      placeholderSigner("", t("workspace_files_mixed_signers")),
+    );
+    s.setStatusText(mixedBatchNote(summary.files, signerName));
   }
 
   /** Display names of the currently selected recipients, for encrypt
@@ -237,7 +342,11 @@ export function useWorkspaceOperations({
       s.mode,
       stagedFiles().map((f) => f.name),
       s.zipFiles,
-      { recipients: selectedRecipientNames(), engine: selectedEngine() },
+      {
+        recipients: selectedRecipientNames(),
+        engine: selectedEngine(),
+        binary: !!s.binaryOutput && !s.hasOutput,
+      },
     );
   }
 
@@ -367,7 +476,25 @@ export function useWorkspaceOperations({
     }
   };
 
-  const execute = async () => {
+  /**
+   * Run `operation`, and keep what it wrote only if the staged input is
+   * still what it read. A file dropped, removed or retyped while it ran
+   * would otherwise end up listed under a verdict -- green, even -- for
+   * input that was never checked. Writes and the reset land in the same
+   * React batch, so the stale result is never painted.
+   */
+  async function forCurrentInput<T>(operation: () => Promise<T>): Promise<T> {
+    const generation = s.stagedGeneration();
+    try {
+      return await operation();
+    } finally {
+      if (s.stagedGeneration() !== generation) s.resetOutput();
+    }
+  }
+
+  const execute = () => forCurrentInput(executeNow);
+
+  const executeNow = async () => {
     s.setError(null);
     s.setOutput("");
     s.setBinaryOutput(undefined);
@@ -665,7 +792,7 @@ export function useWorkspaceOperations({
             keyHandle,
           });
           results.push({
-            name: file.name.replace(/\.age$/i, "") || file.name,
+            name: outputFileName("decrypt", [file.name], false),
             data:
               typeof data === "string" ? new TextEncoder().encode(data) : data,
           });
@@ -827,11 +954,14 @@ export function useWorkspaceOperations({
     if (failure) s.setError(failure);
   }
 
-  /** Every public key a signature could be checked against. */
+  /** Every public key a signature could be checked against -- every key
+   *  of every PGP contact, not only each contact's first. */
   function pgpVerificationKeys(): string[] {
     return [
-      ...myKeys.map((k) => k.publicKeyArmored),
-      ...contacts.map((c) => c.armoredPublicKey),
+      ...myKeys.filter(isPgpRecord).map((k) => k.publicKeyArmored),
+      ...contacts
+        .filter((c) => !isSshRecord(c))
+        .flatMap((c) => contactRecipients(c).map((r) => r.armored)),
     ];
   }
 
@@ -849,41 +979,17 @@ export function useWorkspaceOperations({
   async function runPgpDecrypt(
     decryptOne: (input: DecryptOptions["input"]) => Promise<DecryptResult>,
   ): Promise<PresentedError | null> {
-    const handleSig = (result: {
-      signatureStatus: SignatureStatus;
-      signerKeyId: string | null;
-    }) => {
-      switch (result.signatureStatus) {
-        case "valid": {
-          s.setSignatureTone("success");
-          s.setStatusText(t("workspace_signature_verified"));
-          const signer = findSigner(result.signerKeyId);
-          if (signer) s.setVerifiedSigner(signer);
-          break;
-        }
-        case "unknown_key": {
-          // Signed, but we don't hold the signer's public key. Decryption
-          // still succeeded -- show the same signer card as a verified
-          // signature, but in an orange "can't verify" tone.
-          s.setSignatureTone("warning");
-          s.setVerifiedSigner({
-            keyId: result.signerKeyId ?? "",
-            userIds: [t("workspace_unknown_signer")],
-            algorithm: "",
-            armoredPublicKey: "",
-            addedAt: 0,
-            lastUsedAt: 0,
-          });
-          s.setStatusText(t("workspace_status_signer_unknown"));
-          break;
-        }
-        case "invalid":
-          throw new Error(
-            "Signature verification FAILED - this message may have been tampered with",
-          );
-        case "unsigned":
-          break;
+    /** A tampered signature anywhere fails the whole operation. */
+    const refuseInvalid = (result: SignedResult) => {
+      if (result.signatureStatus === "invalid") {
+        throw new Error(
+          "Signature verification FAILED - this message may have been tampered with",
+        );
       }
+    };
+    const handleSig = (result: SignedResult) => {
+      refuseInvalid(result);
+      showSignature(result);
     };
 
     const isFileInput = s.files.length > 0;
@@ -891,6 +997,7 @@ export function useWorkspaceOperations({
     try {
       if (isFileInput && s.files.length > 1) {
         const results: FileResult[] = [];
+        const signatures: { name: string; result: SignedResult }[] = [];
         for (const file of s.files) {
           const bytes = new Uint8Array(await file.arrayBuffer());
           const result = await decryptOne({
@@ -901,10 +1008,12 @@ export function useWorkspaceOperations({
             result.data instanceof Uint8Array
               ? result.data
               : new TextEncoder().encode(result.data);
-          const outName =
-            file.name.replace(/\.(gpg|pgp|asc)$/i, "") || file.name;
+          // Same naming as a single file: cleaned, ciphertext extension
+          // off, and never left looking like ciphertext.
+          const outName = outputFileName("decrypt", [file.name], false);
           results.push({ name: outName, data });
-          handleSig(result);
+          refuseInvalid(result);
+          signatures.push({ name: file.name, result });
         }
         s.setFileResults(results);
         const totalSize = results.reduce((sum, r) => sum + r.data.length, 0);
@@ -913,6 +1022,9 @@ export function useWorkspaceOperations({
             size: formatFileSize(totalSize),
           }),
         );
+        // After the size line: a mixed batch replaces it with the
+        // file-by-file account of who signed what.
+        showBatchSignatures(signatures);
         s.setOperationDone(true);
         maybeAutoDownload(true, { results });
       } else if (isFileInput) {
@@ -1010,7 +1122,7 @@ export function useWorkspaceOperations({
         const text = await file.text();
         const signed = await pgpOps.signWithHandle(text, keyHandle);
         results.push({
-          name: `${file.name}.asc`,
+          name: outputFileName("sign", [file.name], false),
           data: new TextEncoder().encode(signed),
         });
       }
@@ -1041,54 +1153,94 @@ export function useWorkspaceOperations({
     const allPubArmored = pgpVerificationKeys();
 
     try {
-      const messageText =
-        s.files.length > 0 ? await s.files[0].text() : s.getInput();
-      const result = await pgpOps.verify({
-        signedMessage: messageText,
-        verificationPublicKeys: allPubArmored,
-      });
-      switch (result.signatureStatus) {
-        case "valid": {
-          const isFileInput = s.files.length > 0;
-          s.setOperationDone(true);
-          s.setSignatureTone("success");
-          s.setStatusText(t("workspace_signature_verified"));
-          const signer = findSigner(result.signerKeyId);
-          if (signer) s.setVerifiedSigner(signer);
-          maybeAutoDownload(isFileInput, { text: result.text });
-          break;
-        }
-        case "unknown_key":
-          // Signed, but we don't hold the signer's public key. That is not
-          // a failed verification -- show the signer's key ID so the user
-          // can go fetch the right key (a rotation notice is often signed
-          // by a key you don't have yet).
-          s.setOperationDone(true);
-          s.setSignatureTone("warning");
-          s.setVerifiedSigner({
-            keyId: result.signerKeyId ?? "",
-            userIds: [t("workspace_unknown_signer")],
-            algorithm: "",
-            armoredPublicKey: "",
-            addedAt: 0,
-            lastUsedAt: 0,
+      // Every staged file, not just the first: a verdict under a list of
+      // two files must speak for both.
+      // Size first, before any file is read: nothing past the engine's
+      // input cap can verify, and reading it as text costs the panel.
+      const tooLarge = s.files.find((f) => f.size > MAX_VERIFY_FILE_BYTES);
+      if (tooLarge) {
+        s.setError({
+          message: t("workspace_error_verify_file_too_large", {
+            name: displayFileName(tooLarge.name),
+            limit: MAX_VERIFY_FILE_LABEL,
+          }),
+        });
+        return;
+      }
+      // Decoded strictly. `File.text()` swaps invalid UTF-8 for U+FFFD,
+      // so a genuine Latin-1 file read as tampered, and a crafted one
+      // could verify as text it doesn't contain.
+      const strictUtf8 = new TextDecoder("utf-8", { fatal: true });
+      const inputs: { name: string; text: string }[] = [];
+      if (s.files.length === 0) {
+        inputs.push({ name: "", text: s.getInput() });
+      }
+      for (const f of s.files) {
+        try {
+          inputs.push({
+            name: f.name,
+            text: strictUtf8.decode(await f.arrayBuffer()),
           });
-          s.setStatusText(t("workspace_status_signer_unknown"));
-          break;
-        case "invalid":
-          s.setError({ message: t("workspace_error_signature_invalid") });
-          break;
-        case "unsigned":
-          s.setError({ message: t("workspace_error_not_signed") });
-          break;
+        } catch {
+          s.setError({
+            message: t("workspace_error_verify_not_utf8", {
+              name: displayFileName(f.name),
+            }),
+          });
+          return;
+        }
       }
-      if (
-        result.signatureStatus === "valid" ||
-        result.signatureStatus === "unknown_key"
-      ) {
-        // Verify results are not captured (see the decrypt note): a
-        // content-free "verify, <time>" row carries no recall value.
+      const results = [];
+      for (const input of inputs) {
+        results.push({
+          name: input.name,
+          result: await pgpOps.verify({
+            signedMessage: input.text,
+            verificationPublicKeys: allPubArmored,
+          }),
+        });
       }
+
+      const failed = results.find(
+        ({ result }) =>
+          result.signatureStatus === "invalid" ||
+          result.signatureStatus === "unsigned",
+      );
+      if (failed) {
+        s.setError({
+          message:
+            failed.result.signatureStatus === "invalid"
+              ? t("workspace_error_signature_invalid")
+              : t("workspace_error_not_signed"),
+          ...(results.length > 1 ? { detail: failed.name } : {}),
+        });
+        return;
+      }
+
+      s.setOperationDone(true);
+      const only = results.length === 1 ? results[0].result : null;
+      if (only) {
+        // What was signed may itself hold characters that reorder or hide
+        // text on screen. They are the signer's, so they stay -- but the
+        // card says they are there.
+        showSignature(
+          only,
+          hasHiddenCharacters(only.text)
+            ? t("workspace_signed_text_hidden_chars")
+            : null,
+        );
+        // Show what was SIGNED -- the engine's text, not the paste. For an
+        // inline-signed message or a file it is the only place the user
+        // sees the content the verdict is about.
+        s.setOutput(only.text);
+        if (only.signatureStatus === "valid") {
+          maybeAutoDownload(s.files.length > 0, { text: only.text });
+        }
+      } else {
+        showBatchSignatures(results);
+      }
+      // Verify results are not captured (see the decrypt note): a
+      // content-free "verify, <time>" row carries no recall value.
     } catch (e) {
       s.setError(presentError(e, t("workspace_error_verify_failed")));
     }
@@ -1108,7 +1260,14 @@ export function useWorkspaceOperations({
     return crxKeys.find((k) => k.extensionId === s.selectedCrxKeyId) ?? null;
   }
 
-  async function doCrxSign(
+  function doCrxSign(
+    crxKey: CrxSigningKeyBlob,
+    password?: string,
+  ): Promise<boolean> {
+    return forCurrentInput(() => doCrxSignNow(crxKey, password));
+  }
+
+  async function doCrxSignNow(
     crxKey: CrxSigningKeyBlob,
     password?: string,
   ): Promise<boolean> {
@@ -1167,7 +1326,11 @@ export function useWorkspaceOperations({
     await doCrxSign(crxKey);
   }
 
-  async function verifyCrxInput() {
+  function verifyCrxInput() {
+    return forCurrentInput(verifyCrxInputNow);
+  }
+
+  async function verifyCrxInputNow() {
     if (s.files.length === 0) return;
     s.setError(null);
     s.setOperationDone(false);
@@ -1204,7 +1367,10 @@ export function useWorkspaceOperations({
    * page-level error: the user's next action is to retype the password,
    * and it should be waiting where they left it.
    */
-  const runPasswordDecrypt = async (password: string) => {
+  const runPasswordDecrypt = (password: string) =>
+    forCurrentInput(() => runPasswordDecryptNow(password));
+
+  const runPasswordDecryptNow = async (password: string) => {
     s.setLoading(true);
     s.setPasswordError(null);
     try {

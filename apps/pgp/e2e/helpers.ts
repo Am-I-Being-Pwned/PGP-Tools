@@ -625,6 +625,9 @@ export interface StoredContact {
   alias?: string;
   recipients?: { keyId: string; disabled?: true }[];
   source?: { type: string; user: string; fetchedAt?: number };
+  armoredPublicKey?: string;
+  usableForEncryption?: boolean;
+  revoked?: boolean;
 }
 
 /**

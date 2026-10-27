@@ -37,6 +37,7 @@ function openPanelWithOperation(
     action,
     text,
     sourceTabId: tab?.id ?? chrome.tabs.TAB_ID_NONE,
+    ...(tab?.windowId !== undefined ? { windowId: tab.windowId } : {}),
     createdAt: Date.now(),
   };
 

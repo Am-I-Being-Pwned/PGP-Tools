@@ -194,9 +194,6 @@
   "app_copied": {
     "message": "Copié : $label$"
   },
-  "app_copied_wipe": {
-    "message": "Copié : $label$ - le presse-papiers sera effacé dans $seconds$ s"
-  },
   "app_oversized_more": {
     "message": "$names$ et $count$ autres"
   },
@@ -275,7 +272,13 @@
   "app_error_not_pgp_data": {
     "message": "Cela ne ressemble pas à des données PGP. Vérifiez que vous avez collé le bloc armé complet, y compris les lignes BEGIN et END."
   },
+  "app_error_unsigned_text_around_signature": {
+    "message": "Ceci contient du texte en dehors du message signé, que la signature ne couvre pas. Collez uniquement le message signé, de la ligne BEGIN à la ligne END."
+  },
   "app_error_storage_full": {
     "message": "Le stockage du navigateur est plein, l'enregistrement a donc échoué. Retirez des clés ou des contacts dont vous n'avez plus besoin, puis réessayez."
+  },
+  "app_copied_sensitive_note": {
+    "message": "Il reste dans votre presse-papiers, et dans tout historique du presse-papiers, jusqu'à ce que vous copiiez autre chose."
   }
 }

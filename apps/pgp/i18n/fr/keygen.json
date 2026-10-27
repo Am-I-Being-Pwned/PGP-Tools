@@ -273,10 +273,10 @@
     "message": "Rien à exporter"
   },
   "keygen_copied_encrypted": {
-    "message": "Clé chiffrée copiée (effacée dans 60 s)"
+    "message": "Clé chiffrée copiée. Elle reste dans votre presse-papiers, et dans tout historique du presse-papiers, jusqu'à ce que vous copiiez autre chose."
   },
   "keygen_copied_plaintext": {
-    "message": "Clé non protégée copiée (effacée dans 30 s)"
+    "message": "Clé non protégée copiée. Elle reste dans votre presse-papiers, et dans tout historique du presse-papiers, jusqu'à ce que vous copiiez autre chose."
   },
   "keygen_unlock_gate_passkey": {
     "message": "Authentifiez-vous avec votre clé d'accès pour copier cette clé."

@@ -464,16 +464,8 @@
       }
     }
   },
-  "app_copied_wipe": {
-    "message": "$label$ kopiert - Zwischenablage wird in $seconds$ s geleert",
-    "placeholders": {
-      "label": {
-        "content": "$1"
-      },
-      "seconds": {
-        "content": "$2"
-      }
-    }
+  "app_copied_sensitive_note": {
+    "message": "Er bleibt in Ihrer Zwischenablage und in jedem Zwischenablage-Verlauf, bis Sie etwas anderes kopieren."
   },
   "app_copy_failed": {
     "message": "Kopieren fehlgeschlagen - klicken Sie zuerst in die Seitenleiste der Erweiterung und versuchen Sie es erneut."
@@ -542,6 +534,9 @@
   },
   "app_error_tampered": {
     "message": "Signaturprüfung fehlgeschlagen - diese Nachricht wurde möglicherweise manipuliert. Vertrauen Sie dem Inhalt nicht; bitten Sie den Absender, sie erneut zu senden."
+  },
+  "app_error_unsigned_text_around_signature": {
+    "message": "Dies enthält Text außerhalb der signierten Nachricht, den die Signatur nicht abdeckt. Fügen Sie nur die signierte Nachricht ein, von der BEGIN- bis zur END-Zeile."
   },
   "app_error_vault_locked": {
     "message": "Ihr Tresor ist gesperrt, daher wurde nichts geändert. Entsperren Sie ihn und führen Sie den Vorgang erneut aus."
@@ -955,6 +950,9 @@
   "import_change_reissued": {
     "message": "Der Schlüssel wurde neu ausgestellt"
   },
+  "import_change_revoked": {
+    "message": "Vom Inhaber widerrufen"
+  },
   "import_chip_crx": {
     "message": "Erweiterungsschlüssel"
   },
@@ -1232,6 +1230,17 @@
       }
     }
   },
+  "import_keyserver_wrong_key": {
+    "message": "$host$ hat einen Schlüssel zurückgegeben, der nicht zu $subject$ passt, daher wurde er nicht importiert.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "subject": {
+        "content": "$2"
+      }
+    }
+  },
   "import_label_field": {
     "message": "Bezeichnung"
   },
@@ -1320,6 +1329,9 @@
   "import_reject_no_public_key": {
     "message": "Dieser Block enthält keinen verwendbaren öffentlichen Schlüssel."
   },
+  "import_reject_revocation_unknown": {
+    "message": "Dieses Widerrufszertifikat gehört zu einem Schlüssel, den Sie nicht haben, also gibt es nichts zu widerrufen."
+  },
   "import_reject_ssh_generic": {
     "message": "Dieser SSH-Schlüssel kann nicht zum Verschlüsseln verwendet werden."
   },
@@ -1367,6 +1379,9 @@
   "import_reveal": {
     "message": "In Ihren Schlüsseln anzeigen"
   },
+  "import_revocation_headline": {
+    "message": "Widerrufszertifikat"
+  },
   "import_source_help": {
     "message": "Öffentliche Schlüssel werden als Kontakte hinzugefügt. Ein privater Schlüssel bleibt auf diesem Gerät - wie er geschützt wird, wählen Sie im nächsten Schritt."
   },
@@ -1394,6 +1409,14 @@
     "message": "Sie haben ihn am $date$ hinzugefügt, und nichts daran hat sich geändert.",
     "placeholders": {
       "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_status_replaces": {
+    "message": "Ersetzt den Schlüssel, den Sie für $name$ hatten",
+    "placeholders": {
+      "name": {
         "content": "$1"
       }
     }
@@ -1463,10 +1486,10 @@
     "message": "EXPORT"
   },
   "keygen_copied_encrypted": {
-    "message": "Verschlüsselter Schlüssel kopiert (wird in 60 s geleert)"
+    "message": "Verschlüsselter Schlüssel kopiert. Er bleibt in Ihrer Zwischenablage und in jedem Zwischenablage-Verlauf, bis Sie etwas anderes kopieren."
   },
   "keygen_copied_plaintext": {
-    "message": "Ungeschützter Schlüssel kopiert (wird in 30 s geleert)"
+    "message": "Ungeschützter Schlüssel kopiert. Er bleibt in Ihrer Zwischenablage und in jedem Zwischenablage-Verlauf, bis Sie etwas anderes kopieren."
   },
   "keygen_create_heading": {
     "message": "Neuen Schlüssel erstellen"
@@ -2011,6 +2034,50 @@
   "keys_cap_sign": {
     "message": "Signiert Nachrichten"
   },
+  "keys_check_revocation": {
+    "message": "Auf Widerruf prüfen"
+  },
+  "keys_check_revocation_current": {
+    "message": "Der Schlüssel von $name$ ist auf $host$ nicht widerrufen.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "host": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_check_revocation_failed": {
+    "message": "Der Widerruf konnte nicht geprüft werden. Versuchen Sie es erneut."
+  },
+  "keys_check_revocation_not_published": {
+    "message": "$host$ veröffentlicht den Schlüssel von $name$ nicht, daher kann er dort nicht geprüft werden.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_check_revocation_revoked": {
+    "message": "$name$ hat diesen Schlüssel widerrufen. Er ist jetzt als widerrufen markiert und wird nicht mehr zum Verschlüsseln verwendet.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_check_revocation_running": {
+    "message": "$host$ wird geprüft...",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
   "keys_chip_contact": {
     "message": "Kontakt"
   },
@@ -2102,6 +2169,12 @@
   },
   "keys_contact_options_aria": {
     "message": "Kontaktoptionen"
+  },
+  "keys_contact_revoked": {
+    "message": "Widerrufen"
+  },
+  "keys_contact_revoked_title": {
+    "message": "Der Inhaber hat diesen Schlüssel widerrufen. Er bleibt gespeichert, damit der Widerruf bestehen bleibt, aber Sie können nicht an ihn verschlüsseln. Nach einer Kompromittierung wird keine seiner Signaturen mehr verifiziert; nach einer regulären Ablösung werden ältere weiterhin verifiziert und gelb angezeigt."
   },
   "keys_contacts_heading": {
     "message": "Kontakte"
@@ -2370,6 +2443,17 @@
   },
   "keys_loading": {
     "message": "Wird geladen…"
+  },
+  "keys_lookalike_char": {
+    "message": "$code$ stammt aus einem anderen Alphabet als der Rest dieses Wortes",
+    "placeholders": {
+      "code": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_lookalike_name": {
+    "message": "Ähnlicher Name"
   },
   "keys_my_keys_heading": {
     "message": "Meine Schlüssel"
@@ -3363,22 +3447,6 @@
       }
     }
   },
-  "shared_bundle_clipboard_one": {
-    "message": "Kopierte Geheimnisse werden nach $count$ Sekunde aus der Zwischenablage entfernt",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
-  },
-  "shared_bundle_clipboard_other": {
-    "message": "Kopierte Geheimnisse werden nach $count$ Sekunden aus der Zwischenablage entfernt",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
-  },
   "shared_bundle_discovery_off": {
     "message": "Keine Schlüsselsuche - nichts verlässt dieses Gerät, um einen Schlüssel zu finden"
   },
@@ -3677,6 +3745,14 @@
   "workspace_age_message_note": {
     "message": "age-Nachricht - SSH-Empfänger können nicht mit PGP gemischt werden"
   },
+  "workspace_also_signed_by": {
+    "message": "auch signiert von $names$",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_browse_files": {
     "message": "Dateien auswählen"
   },
@@ -3846,8 +3922,41 @@
   "workspace_error_verify_failed": {
     "message": "Verifizierung fehlgeschlagen. Die Eingabe sieht nicht nach einer signierten PGP-Nachricht aus."
   },
+  "workspace_error_verify_file_too_large": {
+    "message": "$name$ ist zu groß, um hier verifiziert zu werden (Limit $limit$).",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "limit": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_error_verify_not_utf8": {
+    "message": "$name$ ist kein UTF-8-Text und kann daher nicht als signierte Nachricht verifiziert werden.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_error_wrong_key_password": {
     "message": "Falsches Passwort. Prüfen Sie es und versuchen Sie es erneut."
+  },
+  "workspace_file_not_signed": {
+    "message": "nicht signiert"
+  },
+  "workspace_file_signature": {
+    "message": "$name$: $outcome$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "outcome": {
+        "content": "$2"
+      }
+    }
   },
   "workspace_files_decrypted_one": {
     "message": "$count$ Datei entschlüsselt ($size$ insgesamt)",
@@ -3892,6 +4001,9 @@
         "content": "$2"
       }
     }
+  },
+  "workspace_files_mixed_signers": {
+    "message": "Gemischte Signierer"
   },
   "workspace_files_signed_one": {
     "message": "$count$ Datei signiert",
@@ -4215,8 +4327,45 @@
   "workspace_sign_with": {
     "message": "Signieren mit"
   },
+  "workspace_signature_covers_original": {
+    "message": "die Signatur gilt für das Original, nicht für diese Übersetzung"
+  },
   "workspace_signature_verified": {
     "message": "Signatur verifiziert"
+  },
+  "workspace_signature_verified_not_for_you": {
+    "message": "Nicht für Sie"
+  },
+  "workspace_signature_verified_retired": {
+    "message": "Schlüssel abgelöst"
+  },
+  "workspace_signed_for_others": {
+    "message": "signiert für $names$, nicht für Sie",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_signed_on": {
+    "message": "Signiert am $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_signed_text": {
+    "message": "Signierter Text"
+  },
+  "workspace_signed_text_hidden_chars": {
+    "message": "der signierte Text enthält unsichtbare oder Schreibrichtungszeichen und wird auf dem Bildschirm daher womöglich anders angezeigt, als er geschrieben wurde"
+  },
+  "workspace_signed_text_translated": {
+    "message": "Übersetzung des signierten Textes"
+  },
+  "workspace_signer_key_retired": {
+    "message": "der Schlüssel, der sie erstellt hat, ist inzwischen abgelaufen oder widerrufen"
   },
   "workspace_status_age_encrypted": {
     "message": "age-Nachricht - für SSH-Empfänger verschlüsselt"
@@ -4298,6 +4447,22 @@
   },
   "workspace_unverified": {
     "message": "Nicht verifiziert"
+  },
+  "workspace_unverified_cosigners_one": {
+    "message": "$count$ weitere Signatur von einem Schlüssel, den Sie nicht haben",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_unverified_cosigners_other": {
+    "message": "$count$ weitere Signaturen von Schlüsseln, die Sie nicht haben",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "workspace_verify_signature": {
     "message": "Signatur verifizieren"

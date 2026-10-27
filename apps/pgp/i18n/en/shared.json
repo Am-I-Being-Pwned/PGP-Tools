@@ -411,14 +411,6 @@
     "message": "Keys sync across your Chrome profile",
     "description": "Preset card bullet"
   },
-  "shared_bundle_clipboard_one": {
-    "message": "Copied secrets clear from the clipboard after $count$ second",
-    "description": "Preset card bullet. $count$ is the number of seconds"
-  },
-  "shared_bundle_clipboard_other": {
-    "message": "Copied secrets clear from the clipboard after $count$ seconds",
-    "description": "Preset card bullet. $count$ is the number of seconds"
-  },
   "shared_bundle_no_encrypt_to_self": {
     "message": "Messages you encrypt are not readable by you afterwards",
     "description": "Preset card bullet, only when a preset turns encrypt-to-self off"

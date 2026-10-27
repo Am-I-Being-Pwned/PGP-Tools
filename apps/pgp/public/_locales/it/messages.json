@@ -464,16 +464,8 @@
       }
     }
   },
-  "app_copied_wipe": {
-    "message": "Copiato: $label$ - gli appunti verranno svuotati tra $seconds$ s",
-    "placeholders": {
-      "label": {
-        "content": "$1"
-      },
-      "seconds": {
-        "content": "$2"
-      }
-    }
+  "app_copied_sensitive_note": {
+    "message": "Resta negli appunti, e in qualsiasi cronologia degli appunti, finché non copi qualcos'altro."
   },
   "app_copy_failed": {
     "message": "Copia non riuscita - fai prima clic sul pannello dell'estensione, poi riprova."
@@ -542,6 +534,9 @@
   },
   "app_error_tampered": {
     "message": "Verifica della firma non riuscita - questo messaggio potrebbe essere stato manomesso. Non fidarti del contenuto; chiedi al mittente di inviarlo di nuovo."
+  },
+  "app_error_unsigned_text_around_signature": {
+    "message": "Contiene testo al di fuori del messaggio firmato, che la firma non copre. Incolla solo il messaggio firmato, dalla riga BEGIN alla riga END."
   },
   "app_error_vault_locked": {
     "message": "La tua cassaforte è bloccata, quindi non è stato modificato nulla. Sbloccala ed esegui di nuovo l'operazione."
@@ -955,6 +950,9 @@
   "import_change_reissued": {
     "message": "La chiave è stata riemessa"
   },
+  "import_change_revoked": {
+    "message": "Revocata dal proprietario"
+  },
   "import_chip_crx": {
     "message": "Chiave estensione"
   },
@@ -1232,6 +1230,17 @@
       }
     }
   },
+  "import_keyserver_wrong_key": {
+    "message": "$host$ ha restituito una chiave che non corrisponde a $subject$, quindi non è stata importata.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "subject": {
+        "content": "$2"
+      }
+    }
+  },
   "import_label_field": {
     "message": "Etichetta"
   },
@@ -1320,6 +1329,9 @@
   "import_reject_no_public_key": {
     "message": "Questo blocco non contiene una chiave pubblica utilizzabile."
   },
+  "import_reject_revocation_unknown": {
+    "message": "Questo certificato di revoca riguarda una chiave che non hai, quindi non c'è nulla da revocare."
+  },
   "import_reject_ssh_generic": {
     "message": "Questa chiave SSH non può essere usata per cifrare."
   },
@@ -1367,6 +1379,9 @@
   "import_reveal": {
     "message": "Mostrala tra le tue chiavi"
   },
+  "import_revocation_headline": {
+    "message": "Certificato di revoca"
+  },
   "import_source_help": {
     "message": "Le chiavi pubbliche vengono aggiunte come contatti. Una chiave privata resta su questo dispositivo - al passaggio successivo sceglierai come proteggerla."
   },
@@ -1394,6 +1409,14 @@
     "message": "L'hai aggiunta il $date$ e non è cambiato nulla.",
     "placeholders": {
       "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_status_replaces": {
+    "message": "Sostituisce la chiave che avevi per $name$",
+    "placeholders": {
+      "name": {
         "content": "$1"
       }
     }
@@ -1463,10 +1486,10 @@
     "message": "ESPORTA"
   },
   "keygen_copied_encrypted": {
-    "message": "Chiave cifrata copiata (gli appunti si svuotano tra 60 s)"
+    "message": "Chiave cifrata copiata. Resta negli appunti, e in qualsiasi cronologia degli appunti, finché non copi qualcos'altro."
   },
   "keygen_copied_plaintext": {
-    "message": "Chiave non protetta copiata (gli appunti si svuotano tra 30 s)"
+    "message": "Chiave non protetta copiata. Resta negli appunti, e in qualsiasi cronologia degli appunti, finché non copi qualcos'altro."
   },
   "keygen_create_heading": {
     "message": "Crea una nuova chiave"
@@ -2011,6 +2034,50 @@
   "keys_cap_sign": {
     "message": "Firma i messaggi"
   },
+  "keys_check_revocation": {
+    "message": "Verifica revoca"
+  },
+  "keys_check_revocation_current": {
+    "message": "La chiave di $name$ non è revocata su $host$.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "host": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_check_revocation_failed": {
+    "message": "Impossibile verificare la revoca. Riprova."
+  },
+  "keys_check_revocation_not_published": {
+    "message": "$host$ non pubblica la chiave di $name$, quindi non può essere verificata lì.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_check_revocation_revoked": {
+    "message": "$name$ ha revocato questa chiave. Ora è contrassegnata come revocata e non verrà usata per cifrare.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_check_revocation_running": {
+    "message": "Controllo su $host$...",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
   "keys_chip_contact": {
     "message": "Contatto"
   },
@@ -2102,6 +2169,12 @@
   },
   "keys_contact_options_aria": {
     "message": "Opzioni del contatto"
+  },
+  "keys_contact_revoked": {
+    "message": "Revocata"
+  },
+  "keys_contact_revoked_title": {
+    "message": "Il proprietario ha revocato questa chiave. Viene conservata perché la revoca resti valida, ma non puoi cifrare per essa. Dopo una compromissione nessuna delle sue firme viene verificata; dopo un ritiro di routine, quelle precedenti sì e appaiono in ambra."
   },
   "keys_contacts_heading": {
     "message": "Contatti"
@@ -2370,6 +2443,17 @@
   },
   "keys_loading": {
     "message": "Caricamento…"
+  },
+  "keys_lookalike_char": {
+    "message": "$code$ appartiene a un alfabeto diverso dal resto di questa parola",
+    "placeholders": {
+      "code": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_lookalike_name": {
+    "message": "Nome ingannevole"
   },
   "keys_my_keys_heading": {
     "message": "Le mie chiavi"
@@ -3363,22 +3447,6 @@
       }
     }
   },
-  "shared_bundle_clipboard_one": {
-    "message": "I segreti copiati vengono rimossi dagli appunti dopo $count$ secondo",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
-  },
-  "shared_bundle_clipboard_other": {
-    "message": "I segreti copiati vengono rimossi dagli appunti dopo $count$ secondi",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
-  },
   "shared_bundle_discovery_off": {
     "message": "Nessuna ricerca di chiavi - nulla lascia questo dispositivo per trovare una chiave"
   },
@@ -3677,6 +3745,14 @@
   "workspace_age_message_note": {
     "message": "messaggio age - i destinatari SSH non possono essere combinati con PGP"
   },
+  "workspace_also_signed_by": {
+    "message": "firmato anche da $names$",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_browse_files": {
     "message": "Sfoglia file"
   },
@@ -3846,8 +3922,41 @@
   "workspace_error_verify_failed": {
     "message": "Verifica non riuscita. L'input non sembra un messaggio PGP firmato."
   },
+  "workspace_error_verify_file_too_large": {
+    "message": "$name$ è troppo grande per essere verificato qui (limite $limit$).",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "limit": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_error_verify_not_utf8": {
+    "message": "$name$ non è testo UTF-8, quindi non può essere verificato come messaggio firmato.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_error_wrong_key_password": {
     "message": "Password errata. Controllala e riprova."
+  },
+  "workspace_file_not_signed": {
+    "message": "non firmato"
+  },
+  "workspace_file_signature": {
+    "message": "$name$: $outcome$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "outcome": {
+        "content": "$2"
+      }
+    }
   },
   "workspace_files_decrypted_one": {
     "message": "$count$ file decifrato ($size$ in totale)",
@@ -3892,6 +4001,9 @@
         "content": "$2"
       }
     }
+  },
+  "workspace_files_mixed_signers": {
+    "message": "Firmatari diversi"
   },
   "workspace_files_signed_one": {
     "message": "$count$ file firmato",
@@ -4215,8 +4327,45 @@
   "workspace_sign_with": {
     "message": "Firma con"
   },
+  "workspace_signature_covers_original": {
+    "message": "la firma copre l'originale, non questa traduzione"
+  },
   "workspace_signature_verified": {
     "message": "Firma verificata"
+  },
+  "workspace_signature_verified_not_for_you": {
+    "message": "Non per te"
+  },
+  "workspace_signature_verified_retired": {
+    "message": "Chiave ritirata"
+  },
+  "workspace_signed_for_others": {
+    "message": "firmato per $names$, non per te",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_signed_on": {
+    "message": "Firmato il $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_signed_text": {
+    "message": "Testo firmato"
+  },
+  "workspace_signed_text_hidden_chars": {
+    "message": "il testo firmato contiene caratteri invisibili o di direzione del testo, quindi potrebbe non apparire sullo schermo come è stato scritto"
+  },
+  "workspace_signed_text_translated": {
+    "message": "Traduzione del testo firmato"
+  },
+  "workspace_signer_key_retired": {
+    "message": "la chiave che l'ha creata è nel frattempo scaduta o stata revocata"
   },
   "workspace_status_age_encrypted": {
     "message": "messaggio age - cifrato per destinatari SSH"
@@ -4298,6 +4447,22 @@
   },
   "workspace_unverified": {
     "message": "Non verificata"
+  },
+  "workspace_unverified_cosigners_one": {
+    "message": "$count$ altra firma da una chiave che non hai",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_unverified_cosigners_other": {
+    "message": "$count$ altre firme da chiavi che non hai",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "workspace_verify_signature": {
     "message": "Verifica la firma"

@@ -464,16 +464,8 @@
       }
     }
   },
-  "app_copied_wipe": {
-    "message": "$label$をコピーしました。クリップボードは $seconds$ 秒後に消去されます",
-    "placeholders": {
-      "label": {
-        "content": "$1"
-      },
-      "seconds": {
-        "content": "$2"
-      }
-    }
+  "app_copied_sensitive_note": {
+    "message": "別のものをコピーするまで、クリップボードとクリップボード履歴に残ります。"
   },
   "app_copy_failed": {
     "message": "コピーに失敗しました。拡張機能のパネルをクリックしてから、もう一度お試しください。"
@@ -542,6 +534,9 @@
   },
   "app_error_tampered": {
     "message": "署名の検証に失敗しました。このメッセージは改ざんされている可能性があります。内容を信用せず、送信者に再送を依頼してください。"
+  },
+  "app_error_unsigned_text_around_signature": {
+    "message": "署名されたメッセージの外側に、署名の対象外のテキストが含まれています。BEGIN 行から END 行までの署名されたメッセージだけを貼り付けてください。"
   },
   "app_error_vault_locked": {
     "message": "保管庫がロックされているため、何も変更されませんでした。ロックを解除してから、もう一度実行してください。"
@@ -955,6 +950,9 @@
   "import_change_reissued": {
     "message": "鍵が再発行されました"
   },
+  "import_change_revoked": {
+    "message": "所有者により失効"
+  },
   "import_chip_crx": {
     "message": "拡張機能の鍵"
   },
@@ -1232,6 +1230,17 @@
       }
     }
   },
+  "import_keyserver_wrong_key": {
+    "message": "$host$ が $subject$ と一致しない鍵を返したため、インポートしませんでした。",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "subject": {
+        "content": "$2"
+      }
+    }
+  },
   "import_label_field": {
     "message": "ラベル"
   },
@@ -1320,6 +1329,9 @@
   "import_reject_no_public_key": {
     "message": "このブロックには使用できる公開鍵が含まれていません。"
   },
+  "import_reject_revocation_unknown": {
+    "message": "この失効証明書はあなたが持っていない鍵のものなので、失効させる対象がありません。"
+  },
   "import_reject_ssh_generic": {
     "message": "この SSH 鍵は暗号化に使用できません。"
   },
@@ -1367,6 +1379,9 @@
   "import_reveal": {
     "message": "鍵一覧で表示"
   },
+  "import_revocation_headline": {
+    "message": "失効証明書"
+  },
   "import_source_help": {
     "message": "公開鍵は連絡先として追加されます。秘密鍵はこのデバイスに留まります。保護方法は次の画面で選択します。"
   },
@@ -1394,6 +1409,14 @@
     "message": "$date$ に追加済みで、内容に変更はありません。",
     "placeholders": {
       "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_status_replaces": {
+    "message": "$name$ 用に保存していた鍵を置き換えます",
+    "placeholders": {
+      "name": {
         "content": "$1"
       }
     }
@@ -1463,10 +1486,10 @@
     "message": "EXPORT"
   },
   "keygen_copied_encrypted": {
-    "message": "暗号化した鍵をコピーしました (60 秒後に消去されます)"
+    "message": "暗号化された鍵をコピーしました。別のものをコピーするまで、クリップボードとクリップボード履歴に残ります。"
   },
   "keygen_copied_plaintext": {
-    "message": "保護されていない鍵をコピーしました (30 秒後に消去されます)"
+    "message": "保護されていない鍵をコピーしました。別のものをコピーするまで、クリップボードとクリップボード履歴に残ります。"
   },
   "keygen_create_heading": {
     "message": "新しい鍵を作成"
@@ -2011,6 +2034,50 @@
   "keys_cap_sign": {
     "message": "メッセージに署名"
   },
+  "keys_check_revocation": {
+    "message": "失効を確認"
+  },
+  "keys_check_revocation_current": {
+    "message": "$host$ では $name$ の鍵は失効していません。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "host": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_check_revocation_failed": {
+    "message": "失効を確認できませんでした。もう一度お試しください。"
+  },
+  "keys_check_revocation_not_published": {
+    "message": "$host$ は $name$ の鍵を公開していないため、そこでは確認できません。",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_check_revocation_revoked": {
+    "message": "$name$ はこの鍵を失効させました。失効済みとして記録され、暗号化には使われません。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_check_revocation_running": {
+    "message": "$host$ を確認しています...",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
   "keys_chip_contact": {
     "message": "連絡先"
   },
@@ -2102,6 +2169,12 @@
   },
   "keys_contact_options_aria": {
     "message": "連絡先のオプション"
+  },
+  "keys_contact_revoked": {
+    "message": "失効"
+  },
+  "keys_contact_revoked_title": {
+    "message": "所有者がこの鍵を失効させました。失効を維持するために保存されていますが、この鍵へは暗号化できません。漏洩による失効では署名はすべて検証されず、通常の引退ではそれ以前の署名は検証され、黄色で表示されます。"
   },
   "keys_contacts_heading": {
     "message": "連絡先"
@@ -2370,6 +2443,17 @@
   },
   "keys_loading": {
     "message": "読み込んでいます…"
+  },
+  "keys_lookalike_char": {
+    "message": "$code$ はこの単語のほかの文字と異なる文字体系のものです",
+    "placeholders": {
+      "code": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_lookalike_name": {
+    "message": "紛らわしい名前"
   },
   "keys_my_keys_heading": {
     "message": "自分の鍵"
@@ -3363,22 +3447,6 @@
       }
     }
   },
-  "shared_bundle_clipboard_one": {
-    "message": "コピーした秘密情報は $count$ 秒後にクリップボードから消去",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
-  },
-  "shared_bundle_clipboard_other": {
-    "message": "コピーした秘密情報は $count$ 秒後にクリップボードから消去",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
-  },
   "shared_bundle_discovery_off": {
     "message": "鍵の検索なし。鍵を探すためにこのデバイスから外部へ送られる情報はない"
   },
@@ -3677,6 +3745,14 @@
   "workspace_age_message_note": {
     "message": "age メッセージ。SSH の宛先は PGP と混在できません"
   },
+  "workspace_also_signed_by": {
+    "message": "$names$ も署名",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_browse_files": {
     "message": "ファイルを選択"
   },
@@ -3846,8 +3922,41 @@
   "workspace_error_verify_failed": {
     "message": "検証に失敗しました。入力が署名付き PGP メッセージのようには見えません。"
   },
+  "workspace_error_verify_file_too_large": {
+    "message": "$name$ は大きすぎるため、ここでは検証できません（上限 $limit$）。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "limit": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_error_verify_not_utf8": {
+    "message": "$name$ は UTF-8 テキストではないため、署名付きメッセージとして検証できません。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_error_wrong_key_password": {
     "message": "パスワードが違います。確認してから、やり直してください。"
+  },
+  "workspace_file_not_signed": {
+    "message": "署名なし"
+  },
+  "workspace_file_signature": {
+    "message": "$name$: $outcome$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "outcome": {
+        "content": "$2"
+      }
+    }
   },
   "workspace_files_decrypted_one": {
     "message": "$count$ 個のファイルを復号しました (合計 $size$)",
@@ -3892,6 +4001,9 @@
         "content": "$2"
       }
     }
+  },
+  "workspace_files_mixed_signers": {
+    "message": "署名者が混在"
   },
   "workspace_files_signed_one": {
     "message": "$count$ 個のファイルに署名しました",
@@ -4215,8 +4327,45 @@
   "workspace_sign_with": {
     "message": "署名に使う鍵"
   },
+  "workspace_signature_covers_original": {
+    "message": "署名の対象は原文であり、この翻訳ではありません"
+  },
   "workspace_signature_verified": {
     "message": "署名を検証しました"
+  },
+  "workspace_signature_verified_not_for_you": {
+    "message": "あなた宛てではない"
+  },
+  "workspace_signature_verified_retired": {
+    "message": "鍵は無効"
+  },
+  "workspace_signed_for_others": {
+    "message": "$names$ 宛ての署名で、あなた宛てではありません",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_signed_on": {
+    "message": "署名日 $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_signed_text": {
+    "message": "署名されたテキスト"
+  },
+  "workspace_signed_text_hidden_chars": {
+    "message": "署名されたテキストに不可視文字または文字方向の制御文字が含まれているため、書かれた通りに表示されない可能性があります"
+  },
+  "workspace_signed_text_translated": {
+    "message": "署名されたテキストの翻訳"
+  },
+  "workspace_signer_key_retired": {
+    "message": "署名した鍵はその後期限切れまたは失効しています"
   },
   "workspace_status_age_encrypted": {
     "message": "age メッセージ。SSH の宛先に対して暗号化しました"
@@ -4298,6 +4447,22 @@
   },
   "workspace_unverified": {
     "message": "未検証"
+  },
+  "workspace_unverified_cosigners_one": {
+    "message": "持っていない鍵による署名がさらに $count$ 件",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_unverified_cosigners_other": {
+    "message": "持っていない鍵による署名がさらに $count$ 件",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "workspace_verify_signature": {
     "message": "署名を検証"

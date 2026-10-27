@@ -18,7 +18,12 @@
  * See `apps/pgp/SECURITY.md` §3 for the full file map.
  */
 
-import type { KeyDetails, KeyInfo, SignatureStatus } from "./types";
+import type {
+  KeyDetails,
+  KeyInfo,
+  SignatureDetails,
+  SignatureStatus,
+} from "./types";
 import { loadWasm } from "./wasm-loader";
 
 // ── status / metadata ────────────────────────────────────────────────
@@ -124,17 +129,44 @@ export async function encrypt(
   );
 }
 
-export interface SignatureInfo {
+export interface SignatureInfo extends SignatureDetails {
   signatureValid: boolean | null;
   signatureStatus: SignatureStatus;
   signerKeyId: string | null;
 }
 
-export interface VerifyResultWasm {
+export interface VerifyResultWasm extends SignatureDetails {
   text: string;
   signatureValid: boolean;
   signatureStatus: SignatureStatus;
   signerKeyId: string | null;
+}
+
+/**
+ * Merge an imported copy of a contact's cert (or a bare revocation
+ * certificate) into the stored one. An import can only ADD what the
+ * owner signed -- it never rolls a contact back. Throws when `incoming`
+ * is a different key.
+ */
+export async function mergePublicKey(
+  storedArmored: string,
+  incomingArmored: string,
+): Promise<string> {
+  const wasm = await loadWasm();
+  return wasm.mergePublicKey(storedArmored, incomingArmored);
+}
+
+/** Issuer fingerprints / key IDs of a bare revocation certificate, or
+ *  null when the input isn't one. */
+export async function revocationIssuers(
+  armored: string,
+): Promise<string[] | null> {
+  const wasm = await loadWasm();
+  try {
+    return JSON.parse(wasm.revocationIssuers(armored)) as string[];
+  } catch {
+    return null;
+  }
 }
 
 export async function verify(

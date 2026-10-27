@@ -6,13 +6,23 @@ import { Block } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
 
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
+import type { KeyInfo } from "../../lib/pgp/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { KeyCardModel } from "./KeyCard";
 import type { KeyDetailsTarget } from "./KeyDetailsPage";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import { publicKeyDerToPem } from "../../lib/crx/types";
+import { presentError } from "../../lib/errors/present";
 import { t, tn } from "../../lib/i18n";
+import {
+  KEYSERVER_HOST,
+  keyserverFailureCopy,
+} from "../../lib/import/keyserver";
+import {
+  checkRevocation,
+  fingerprintQuery,
+} from "../../lib/import/revocation-check";
 import {
   downloadPublicKey,
   downloadPublicKeysBundle,
@@ -52,6 +62,13 @@ interface KeysViewProps {
   onDeleteKey: (keyId: string) => Promise<void>;
   onAddKey: (blob: ProtectedKeyBlob) => Promise<void>;
   onAddContact: (contact: PublicContactKey) => Promise<void>;
+  /** Merge a newer copy of a contact's key into the record as it is on
+   *  disk; undefined when the contact no longer exists. Enables the
+   *  revocation check. */
+  onMergeContactKey?: (
+    keyId: string,
+    armored: string,
+  ) => Promise<{ keyInfo: KeyInfo } | undefined>;
   onDeleteContact: (keyId: string) => Promise<void>;
   getKeyHandle: (keyId: string) => number | null;
   /** Persist a revocation certificate minted for an imported key. */
@@ -168,6 +185,7 @@ export function KeysView({
   onDeleteKey,
   onAddKey,
   onAddContact,
+  onMergeContactKey,
   onDeleteContact,
   getKeyHandle,
   onSaveRevocationCertificate,
@@ -425,6 +443,90 @@ export function KeysView({
     };
   });
 
+  /**
+   * Ask keys.openpgp.org whether a contact's key has been revoked, and
+   * keep what it says: the answer is merged into the stored cert the way
+   * every import is, so a revocation sticks and nothing is rolled back.
+   * One toast, updated in place from "checking" to the answer.
+   */
+  const checkContactRevocation = async (contact: PublicContactKey) => {
+    if (!onMergeContactKey) return;
+    const name =
+      parseUserId(displayUserId(contact) ?? "").name ||
+      contact.keyId.slice(-16);
+    const id = `revocation-check-${contact.keyId}`;
+    toast.message(
+      t("keys_check_revocation_running", { host: KEYSERVER_HOST }),
+      {
+        id,
+      },
+    );
+    try {
+      // Merged into the contact as it is when the answer arrives, never
+      // the copy captured on click: a revocation imported, a rename or a
+      // delete during the fetch must survive it.
+      const result = await checkRevocation(
+        { keyId: contact.keyId, armored: contact.armoredPublicKey },
+        onMergeContactKey,
+      );
+      switch (result.kind) {
+        case "gone":
+          toast.dismiss(id);
+          break;
+        case "revoked":
+        case "current":
+          if (result.kind === "revoked") {
+            toast.error(t("keys_check_revocation_revoked", { name }), {
+              id,
+              duration: 10_000,
+            });
+          } else {
+            toast.success(
+              t("keys_check_revocation_current", {
+                name,
+                host: KEYSERVER_HOST,
+              }),
+              { id },
+            );
+          }
+          break;
+        case "not-published":
+          toast.info(
+            t("keys_check_revocation_not_published", {
+              name,
+              host: KEYSERVER_HOST,
+            }),
+            { id },
+          );
+          break;
+        case "wrong-key":
+          toast.error(
+            t("import_keyserver_wrong_key", {
+              host: KEYSERVER_HOST,
+              subject: contact.keyId.replace(/(.{4})(?=.)/g, "$1 "),
+            }),
+            { id },
+          );
+          break;
+        case "failed": {
+          const query = fingerprintQuery(contact.keyId);
+          toast.error(
+            result.error === "unreachable" || !query
+              ? t("import_worker_unreachable")
+              : keyserverFailureCopy(result.error, query, result.retryAt)
+                  .message,
+            { id },
+          );
+          break;
+        }
+      }
+    } catch (e) {
+      toast.error(presentError(e, t("keys_check_revocation_failed")).message, {
+        id,
+      });
+    }
+  };
+
   const sshModels: KeyCardModel[] = myKeys.filter(isSshRecord).map((blob) => {
     // An SSH key's name is the comment `ssh-keygen` wrote (`user@host`),
     // or nothing at all -- there are no User IDs to fall back through.
@@ -587,6 +689,11 @@ export function KeysView({
           contacts={contacts}
           contactsLocked={contactsLocked}
           justImported={justImported}
+          onCheckRevocation={
+            keyDiscoveryEnabled && onMergeContactKey
+              ? (contact) => void checkContactRevocation(contact)
+              : undefined
+          }
           onRequestRename={
             onRenameContact
               ? (contact) =>
@@ -707,14 +814,40 @@ export function KeysView({
             );
           }
           if (route.page === "details") {
-            const target = route.target;
+            // A contact is read from the live list, not the snapshot the
+            // route was pushed with: a revocation check run from this
+            // page must show its answer here, not only after leaving it.
+            const target =
+              route.target.kind === "contact"
+                ? {
+                    ...route.target,
+                    contact:
+                      contacts.find(
+                        (c) =>
+                          route.target.kind === "contact" &&
+                          c.keyId === route.target.contact.keyId,
+                      ) ?? route.target.contact,
+                  }
+                : route.target;
             return (
               <KeyDetailsPage
                 key={entry.id}
                 target={target}
                 onBack={nav.pop}
+                onCheckRevocation={
+                  keyDiscoveryEnabled &&
+                  onMergeContactKey &&
+                  target.kind === "contact" &&
+                  !isSshRecord(target.contact) &&
+                  !target.contact.revoked
+                    ? () => void checkContactRevocation(target.contact)
+                    : undefined
+                }
                 onEncryptTo={
-                  target.kind === "contact" && onEncryptTo
+                  // Never for a revoked contact: the engine refuses it.
+                  target.kind === "contact" &&
+                  !target.contact.revoked &&
+                  onEncryptTo
                     ? () => {
                         nav.clear();
                         onEncryptTo(target.contact.keyId);
@@ -966,6 +1099,7 @@ function ContactsList({
   contactsLocked,
   onRequestRemove,
   onRequestRename,
+  onCheckRevocation,
   onEncryptTo,
   onShowDetails,
   advancedMode,
@@ -982,6 +1116,8 @@ function ContactsList({
   /** Absent when the host cannot persist a rename, which hides the
    *  menu item rather than offering one that silently does nothing. */
   onRequestRename?: (contact: PublicContactKey) => void;
+  /** Absent with key discovery off: the check asks keys.openpgp.org. */
+  onCheckRevocation?: (contact: PublicContactKey) => void;
   onEncryptTo?: (keyId: string) => void;
   onShowDetails: (contact: PublicContactKey) => void;
   advancedMode?: boolean;
@@ -1056,7 +1192,9 @@ function ContactsList({
                     justImported={justImported.has(c.keyId)}
                     onRemove={() => onRequestRemove(c)}
                     onEncryptTo={
-                      onEncryptTo ? () => onEncryptTo(c.keyId) : undefined
+                      onEncryptTo && !c.revoked
+                        ? () => onEncryptTo(c.keyId)
+                        : undefined
                     }
                     onCopyPublicKey={() =>
                       void copy(c.armoredPublicKey, {
@@ -1071,6 +1209,13 @@ function ContactsList({
                     }
                     onRename={
                       onRequestRename ? () => onRequestRename(c) : undefined
+                    }
+                    onCheckRevocation={
+                      // An SSH key has nothing on the keyserver, and a
+                      // revoked one has nothing left to learn.
+                      onCheckRevocation && !isSshRecord(c) && !c.revoked
+                        ? () => onCheckRevocation(c)
+                        : undefined
                     }
                     onShowDetails={() => onShowDetails(c)}
                     advancedMode={advancedMode}

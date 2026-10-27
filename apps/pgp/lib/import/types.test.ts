@@ -108,6 +108,7 @@ describe("IncomingKey", () => {
       details: true,
       userIds: true,
       changes: true,
+      replaces: true,
       existingAddedAt: true,
       rejection: true,
       securityWarning: true,

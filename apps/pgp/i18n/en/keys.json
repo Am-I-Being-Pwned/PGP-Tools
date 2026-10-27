@@ -686,5 +686,45 @@
   "keys_contact_long_id_title": {
     "message": "Key ID: the last 16 characters of this key's fingerprint. It tells keys apart at a glance; to check a key is genuine, compare the full fingerprint.",
     "description": "Tooltip on the 16-character key ID shown at the right of a key or contact row (the last 16 hex digits of the fingerprint). Says what it is, and that it identifies but does not verify a key."
+  },
+  "keys_contact_revoked": {
+    "message": "Revoked",
+    "description": "Small red pill on a contact card whose key its owner has revoked."
+  },
+  "keys_contact_revoked_title": {
+    "message": "The owner revoked this key. It is kept so the revocation sticks, but you can't encrypt to it. After a compromise none of its signatures verify; after a routine retirement, older ones still do and show amber.",
+    "description": "Hover text on the Revoked pill of a contact card."
+  },
+  "keys_lookalike_name": {
+    "message": "Lookalike name",
+    "description": "Small amber pill on a contact card whose name or email mixes alphabets (e.g. a Cyrillic letter in a Latin name). The hover text explains."
+  },
+  "keys_lookalike_char": {
+    "message": "$code$ is from a different alphabet than the rest of this word",
+    "description": "Hover text on a highlighted letter in a name or email that comes from a different alphabet than the rest of its word (a lookalike, e.g. a Cyrillic А in Alice). $code$ is the Unicode code point, e.g. U+0410."
+  },
+  "keys_check_revocation": {
+    "message": "Check for revocation",
+    "description": "Contact card menu item: asks the keyserver whether the owner has revoked this key."
+  },
+  "keys_check_revocation_running": {
+    "message": "Checking $host$...",
+    "description": "Toast while the revocation check runs. $host$ is the keyserver host."
+  },
+  "keys_check_revocation_revoked": {
+    "message": "$name$ has revoked this key. It is now marked revoked and won't be used for encryption.",
+    "description": "Toast after the check: the keyserver's copy is revoked, and the stored contact was updated. $name$ is the contact's name."
+  },
+  "keys_check_revocation_current": {
+    "message": "$name$'s key is not revoked on $host$.",
+    "description": "Toast after the check: the keyserver shows no revocation. $name$ is the contact's name, $host$ the keyserver."
+  },
+  "keys_check_revocation_not_published": {
+    "message": "$host$ doesn't publish $name$'s key, so it can't be checked there.",
+    "description": "Toast after the check: the keyserver has no copy of this key. $name$ is the contact's name, $host$ the keyserver."
+  },
+  "keys_check_revocation_failed": {
+    "message": "Couldn't check for a revocation. Try again.",
+    "description": "Toast when the revocation check fails for an unexpected reason."
   }
 }

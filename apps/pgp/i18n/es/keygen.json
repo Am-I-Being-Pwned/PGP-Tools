@@ -279,10 +279,10 @@
     "message": "Nada que exportar"
   },
   "keygen_copied_encrypted": {
-    "message": "Clave cifrada copiada (se borra en 60 s)"
+    "message": "Clave cifrada copiada. Se queda en tu portapapeles, y en cualquier historial del portapapeles, hasta que copies otra cosa."
   },
   "keygen_copied_plaintext": {
-    "message": "Clave sin proteger copiada (se borra en 30 s)"
+    "message": "Clave sin protección copiada. Se queda en tu portapapeles, y en cualquier historial del portapapeles, hasta que copies otra cosa."
   },
   "keygen_unlock_gate_passkey": {
     "message": "Autentíquese con su llave de acceso para copiar esta clave."

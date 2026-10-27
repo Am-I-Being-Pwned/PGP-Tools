@@ -364,16 +364,16 @@ export const THREAT_MODEL: Threat[] = [
   },
   {
     id: "T-CLIPBOARD-EXFIL",
-    title: "Exported key lingers on the clipboard",
+    title: "Copied secret stays on the clipboard",
     attacker:
-      "Any local process or later paste target that reads the clipboard after a key export.",
+      "Any local process, extension or clipboard-history tool that reads the clipboard after the user copies an exported private key or a revocation certificate, and any later paste target the user pastes into by mistake.",
     defence:
-      '`scheduleClipboardClear` overwrites with `""` after 30s (plaintext) / 60s (encrypted).',
-    status: "partial",
+      "None in software, by choice. The copy itself says what happens: the success message for an exported key or a revocation certificate states that it stays on the clipboard, and in any clipboard history, until the user copies something else. Downloading avoids the clipboard altogether: a revocation certificate has its own Download button, and private keys can be saved through the passphrase-protected key backup (Export keys).",
+    status: "accepted",
     rationale:
-      "OS-level clipboard managers (Windows Clipboard History, macOS Universal Clipboard, Klipper, Raycast) retain copies our overwrite cannot reach. Documented in §8.5.",
-    verifiedBy: ["apps/pgp/e2e/keys.spec.ts"],
-    section: "§1, §8.5",
+      "A timed wipe (overwriting the clipboard with an empty string) used to be claimed here, and it did not hold up. (1) It defends almost nothing even when it runs: clipboard history and sync tools (Windows Clipboard History, macOS Universal Clipboard, KDE Klipper, Alfred, Raycast, password managers) record the copy the moment it is made, and malware or another extension watching the clipboard reads it immediately, so clearing it seconds or minutes later reaches neither. What it did stop -- pasting the secret somewhere by accident much later -- is a mistake the user can see and avoid. (2) It mostly did not run: Chrome allows a clipboard write only from the focused document, and by the time the timer fired the user had normally gone to paste elsewhere, so the write was rejected; closing the side panel cancelled it outright. Making it reliable would have needed a new manifest permission (an offscreen document) for that small benefit. So the wipe and its preference were removed rather than repaired, and the claim was replaced by telling the user where the secret now lives, at the moment it matters. The copy is the user's to manage.",
+    verifiedBy: ["apps/pgp/hooks/useCopyToClipboard.test.ts"],
+    section: "§5, §8.5",
   },
   {
     id: "T-FILENAME-METADATA",

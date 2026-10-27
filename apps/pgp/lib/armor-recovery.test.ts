@@ -473,3 +473,35 @@ describe("reconstructCleartextSigned", () => {
     expect(reconstructCleartextSigned(collapse(ARMOR_NO_HEADERS))).toBeNull();
   });
 });
+
+describe("recoverArmorIfNeeded stays fast on hostile input", () => {
+  // A context-menu selection is page-controlled and has no newlines. The
+  // collapsed-cleartext matcher used to be a backtracking regex that took
+  // minutes on ~100 KB of repeated markers, freezing the worker.
+  const SIGNED = "-----BEGIN PGP SIGNED MESSAGE-----";
+  const SIG = "-----BEGIN PGP SIGNATURE-----";
+  const shapes = {
+    "repeated markers": (SIGNED + SIG).repeat(2500),
+    "markers with spaces": `${SIGNED} ${SIG} `.repeat(2500),
+    "one start, many signature openers": SIGNED + ` ${SIG} x`.repeat(5000),
+    "many starts, no signature": `${SIGNED} a `.repeat(5000),
+    "armor-ish base64 run": `-----BEGIN PGP MESSAGE----- ${"QUJD ".repeat(40000)}`,
+  };
+
+  it.each(Object.entries(shapes))("%s", (_name, input) => {
+    expect(input.length).toBeGreaterThan(100_000);
+    const started = performance.now();
+    recoverArmorIfNeeded(input);
+    expect(performance.now() - started).toBeLessThan(500);
+  });
+
+  it("still rebuilds a real collapsed cleartext message after the rewrite", () => {
+    const collapsed =
+      "noise -----BEGIN PGP SIGNED MESSAGE----- Hash: SHA256 hello -----BEGIN PGP SIGNATURE----- iHUEARYKAB0WIQQ1O+qq08UbGNZ2zuSyaA3VZBfijwUCakrm5gAKCRCyaA3VZBfi =yShI -----END PGP SIGNATURE----- tail";
+    const rebuilt = recoverArmorIfNeeded(collapsed);
+    expect(rebuilt).toMatch(
+      /^noise -----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA256\n\nhello\n-----BEGIN PGP SIGNATURE-----\n/,
+    );
+    expect(rebuilt.endsWith(" tail")).toBe(true);
+  });
+});

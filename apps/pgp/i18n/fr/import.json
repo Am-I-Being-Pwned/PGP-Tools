@@ -340,5 +340,20 @@
   },
   "import_keyserver_server_error": {
     "message": "$host$ n'a pas pu répondre pour le moment. Réessayez dans un instant."
+  },
+  "import_change_revoked": {
+    "message": "Révoquée par son propriétaire"
+  },
+  "import_reject_revocation_unknown": {
+    "message": "Ce certificat de révocation concerne une clé que vous n'avez pas, il n'y a donc rien à révoquer."
+  },
+  "import_revocation_headline": {
+    "message": "Certificat de révocation"
+  },
+  "import_keyserver_wrong_key": {
+    "message": "$host$ a renvoyé une clé qui ne correspond pas à $subject$, elle n'a donc pas été importée."
+  },
+  "import_status_replaces": {
+    "message": "Remplace la clé que vous aviez pour $name$"
   }
 }

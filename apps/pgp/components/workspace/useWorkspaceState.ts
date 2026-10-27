@@ -168,6 +168,15 @@ export interface WorkspaceState {
   setVerifiedSigner: (s: PublicContactKey | ProtectedKeyBlob | null) => void;
   signatureTone: "success" | "warning";
   setSignatureTone: (t: "success" | "warning") => void;
+  /** What the signer card says beyond the verdict: when it was signed,
+   *  co-signers, a key retired since. Cleared with the signer. */
+  signatureNote: string | null;
+  setSignatureNote: (n: string | null) => void;
+  /** A good signature with a caveat -- its key retired since, or it was
+   *  signed for someone else: amber, but not "unknown signer". The card's
+   *  label. Cleared with the signer. */
+  signerCaveat: string | null;
+  setSignerCaveat: (c: string | null) => void;
   binaryOutput: Uint8Array | undefined;
   setBinaryOutput: (b: Uint8Array | undefined) => void;
   fileResults: FileResult[];
@@ -259,6 +268,11 @@ export interface WorkspaceState {
   removeFile: (index: number) => void;
   clearFiles: () => void;
   resetOutput: () => void;
+  /** Changes whenever what an operation would run on changes (staged
+   *  files, the text, the mode). An operation reads it when it starts
+   *  and, if it has moved by the time it finishes, discards its result:
+   *  a verdict must never sit over input it did not read. */
+  stagedGeneration: () => number;
   resetAll: () => void;
 }
 
@@ -491,9 +505,23 @@ export function useWorkspaceState(opts: {
 
   const [operationDone, setOperationDone] = useState(false);
   const [statusText, setStatusText] = useState<string | null>(null);
-  const [verifiedSigner, setVerifiedSigner] = useState<
+  const [verifiedSigner, setVerifiedSignerState] = useState<
     PublicContactKey | ProtectedKeyBlob | null
   >(null);
+  const [signatureNote, setSignatureNote] = useState<string | null>(null);
+  const [signerCaveat, setSignerCaveat] = useState<string | null>(null);
+  // Clearing the signer clears everything said about it, so no reset
+  // path can leave a stale "signed on" line under the next result.
+  const setVerifiedSigner = useCallback(
+    (signer: PublicContactKey | ProtectedKeyBlob | null) => {
+      setVerifiedSignerState(signer);
+      if (signer === null) {
+        setSignatureNote(null);
+        setSignerCaveat(null);
+      }
+    },
+    [],
+  );
   const [signatureTone, setSignatureTone] = useState<"success" | "warning">(
     "success",
   );
@@ -556,6 +584,15 @@ export function useWorkspaceState(opts: {
   const encryptPasswordReady =
     encryptPassword.length >= MIN_MESSAGE_PASSWORD_LENGTH;
 
+  // See `stagedGeneration`. Text edits bump it as they happen (below);
+  // files and mode through this effect, which runs long before any
+  // operation that started earlier can have finished.
+  const stagedGenerationRef = useRef(0);
+  const stagedGeneration = useCallback(() => stagedGenerationRef.current, []);
+  useEffect(() => {
+    stagedGenerationRef.current++;
+  }, [files, mode]);
+
   const resetOutput = useCallback(() => {
     setOutput("");
     forgetLastRegExpMatch();
@@ -569,7 +606,7 @@ export function useWorkspaceState(opts: {
     setNeedsPassword(false);
     setPendingPasswordDecrypt(false);
     setPendingCrxSign(false);
-  }, [setOutput, setBinaryOutput, setFileResults]);
+  }, [setOutput, setBinaryOutput, setFileResults, setVerifiedSigner]);
 
   const resetAll = useCallback(() => {
     setAutoRunAction(null);
@@ -876,6 +913,7 @@ export function useWorkspaceState(opts: {
    */
   const handleInputChange = useCallback(
     (text: string) => {
+      stagedGenerationRef.current++;
       setAutoRunAction(null);
       const prev = inputRef.current;
       setInput(text);
@@ -923,10 +961,15 @@ export function useWorkspaceState(opts: {
         return;
       }
 
+      // A file with the name of one already staged REPLACES it. Ignoring
+      // it, as this used to, meant re-downloading release.asc (now a
+      // different file) and pressing Verify checked the OLD one -- and
+      // said so in green.
       setFiles((prev) => {
-        const existing = new Set(prev.map((f) => f.name));
-        const deduped = newFiles.filter((f) => !existing.has(f.name));
-        return [...prev, ...deduped];
+        const incoming = new Map(newFiles.map((f) => [f.name, f]));
+        const kept = prev.map((f) => incoming.get(f.name) ?? f);
+        const added = [...incoming.values()].filter((f) => !kept.includes(f));
+        return [...kept, ...added];
       });
       const encrypted = newFiles.some((f) =>
         /\.(gpg|pgp|asc|age)$/i.test(f.name),
@@ -956,10 +999,15 @@ export function useWorkspaceState(opts: {
     [mode, resetOutput, setInput],
   );
 
-  const removeFile = useCallback((index: number) => {
-    setFiles((prev) => prev.filter((_, i) => i !== index));
-    setMessageEncryption(null);
-  }, []);
+  const removeFile = useCallback(
+    (index: number) => {
+      setFiles((prev) => prev.filter((_, i) => i !== index));
+      setMessageEncryption(null);
+      // A verdict (or decrypted output) listed the removed file too.
+      resetOutput();
+    },
+    [resetOutput],
+  );
 
   const clearFiles = useCallback(() => {
     // The files only: a message written alongside them (encrypt) is not
@@ -1017,6 +1065,11 @@ export function useWorkspaceState(opts: {
     setVerifiedSigner,
     signatureTone,
     setSignatureTone,
+    stagedGeneration,
+    signatureNote,
+    setSignatureNote,
+    signerCaveat,
+    setSignerCaveat,
     binaryOutput,
     setBinaryOutput,
     fileResults,

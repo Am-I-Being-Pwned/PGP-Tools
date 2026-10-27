@@ -282,5 +282,35 @@
   "keys_size_mb": { "message": "$size$ MB" },
   "keys_contact_long_id_title": {
     "message": "Schlüssel-ID: die letzten 16 Zeichen des Fingerabdrucks dieses Schlüssels. Damit unterscheiden Sie Schlüssel auf einen Blick; ob ein Schlüssel echt ist, prüfen Sie am vollständigen Fingerabdruck."
+  },
+  "keys_contact_revoked": {
+    "message": "Widerrufen"
+  },
+  "keys_contact_revoked_title": {
+    "message": "Der Inhaber hat diesen Schlüssel widerrufen. Er bleibt gespeichert, damit der Widerruf bestehen bleibt, aber Sie können nicht an ihn verschlüsseln. Nach einer Kompromittierung wird keine seiner Signaturen mehr verifiziert; nach einer regulären Ablösung werden ältere weiterhin verifiziert und gelb angezeigt."
+  },
+  "keys_lookalike_name": {
+    "message": "Ähnlicher Name"
+  },
+  "keys_lookalike_char": {
+    "message": "$code$ stammt aus einem anderen Alphabet als der Rest dieses Wortes"
+  },
+  "keys_check_revocation": {
+    "message": "Auf Widerruf prüfen"
+  },
+  "keys_check_revocation_running": {
+    "message": "$host$ wird geprüft..."
+  },
+  "keys_check_revocation_revoked": {
+    "message": "$name$ hat diesen Schlüssel widerrufen. Er ist jetzt als widerrufen markiert und wird nicht mehr zum Verschlüsseln verwendet."
+  },
+  "keys_check_revocation_current": {
+    "message": "Der Schlüssel von $name$ ist auf $host$ nicht widerrufen."
+  },
+  "keys_check_revocation_not_published": {
+    "message": "$host$ veröffentlicht den Schlüssel von $name$ nicht, daher kann er dort nicht geprüft werden."
+  },
+  "keys_check_revocation_failed": {
+    "message": "Der Widerruf konnte nicht geprüft werden. Versuchen Sie es erneut."
   }
 }

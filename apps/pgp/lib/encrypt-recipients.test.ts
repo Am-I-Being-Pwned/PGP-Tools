@@ -671,4 +671,29 @@ describe("resolveSelectedRecipients", () => {
   it("drops an id that matches nothing", () => {
     expect(resolveSelectedRecipients(["nope"], [contact], [])).toEqual([]);
   });
+
+  it("resolves to your own key, not an unusable contact copy of it", () => {
+    // The picker hides contacts you can't encrypt to, so it showed your
+    // key; the expired contact copy must not be what gets used.
+    const expiredCopy = {
+      ...contact,
+      usableForEncryption: false,
+    } as PublicContactKey;
+    const [resolved] = resolveSelectedRecipients(
+      [head.keyId],
+      [expiredCopy],
+      [ownKeyWithSameFingerprint],
+    );
+    expect(resolved).toBe(ownKeyWithSameFingerprint);
+  });
+
+  it("still returns an unusable contact nobody else claims, to fail loudly", () => {
+    const expired = {
+      ...contact,
+      usableForEncryption: false,
+    } as PublicContactKey;
+    expect(resolveSelectedRecipients([head.keyId], [expired], [])).toEqual([
+      expired,
+    ]);
+  });
 });

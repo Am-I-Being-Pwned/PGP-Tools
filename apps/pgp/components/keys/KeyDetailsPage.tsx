@@ -4,6 +4,7 @@ import {
   DownloadIcon,
   LockIcon,
   PencilIcon,
+  ShieldQuestionIcon,
   StarIcon,
   StarOffIcon,
   Trash2Icon,
@@ -55,6 +56,8 @@ interface KeyDetailsPageProps {
   /** Open the rename page for this key or contact (local display name
    *  only -- the certificate is never touched). */
   onRename?: () => void;
+  /** Contacts only: ask the keyserver whether the owner revoked it. */
+  onCheckRevocation?: () => void;
   /** True when this is the user's configured default key. */
   isDefault?: boolean;
   /** Own keys only: set (true) or clear (false) this key as the
@@ -123,8 +126,8 @@ function RevocationSection({
   const handleCopy = () => {
     if (!certificate) return;
     // A revocation cert is an irreversible instrument (anyone holding it
-    // can revoke the key), so it gets the same clipboard hygiene as an
-    // exported private key (sensitive = pref-driven wipe).
+    // can revoke the key), so the toast says it now sits on the clipboard
+    // and in any clipboard history, as for an exported private key.
     void copy(certificate, {
       sensitive: true,
       label: t("keys_revocation_certificate"),
@@ -198,6 +201,7 @@ export function KeyDetailsPage({
   onBack,
   onEncryptTo,
   onRename,
+  onCheckRevocation,
   isDefault,
   onSetDefault,
   onDelete,
@@ -433,7 +437,9 @@ export function KeyDetailsPage({
       ariaLabel={t("keys_details_aria", { name })}
       onDismiss={close}
     >
-      <SlideOverHeader title={t("keys_key_details")} onBack={close}>
+      {/* No visible title: the identity card right under it says whose
+          key this is, and the header's actions need the width. */}
+      <SlideOverHeader title={t("keys_key_details")} hideTitle onBack={close}>
         {onEncryptTo && (
           <IconAction label={t("keys_encrypt_to")} onClick={onEncryptTo}>
             <LockIcon className="h-4 w-4" />
@@ -442,6 +448,14 @@ export function KeyDetailsPage({
         {onRename && (
           <IconAction label={t("keys_rename")} onClick={onRename}>
             <PencilIcon className="h-4 w-4" />
+          </IconAction>
+        )}
+        {onCheckRevocation && (
+          <IconAction
+            label={t("keys_check_revocation")}
+            onClick={onCheckRevocation}
+          >
+            <ShieldQuestionIcon className="h-4 w-4" />
           </IconAction>
         )}
         {/* The default key feeds `resolveSelfKey`, which is engine-blind:

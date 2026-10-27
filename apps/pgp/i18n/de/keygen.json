@@ -288,10 +288,10 @@
     "message": "Nichts zu exportieren"
   },
   "keygen_copied_encrypted": {
-    "message": "Verschlüsselter Schlüssel kopiert (wird in 60 s geleert)"
+    "message": "Verschlüsselter Schlüssel kopiert. Er bleibt in Ihrer Zwischenablage und in jedem Zwischenablage-Verlauf, bis Sie etwas anderes kopieren."
   },
   "keygen_copied_plaintext": {
-    "message": "Ungeschützter Schlüssel kopiert (wird in 30 s geleert)"
+    "message": "Ungeschützter Schlüssel kopiert. Er bleibt in Ihrer Zwischenablage und in jedem Zwischenablage-Verlauf, bis Sie etwas anderes kopieren."
   },
   "keygen_unlock_gate_passkey": {
     "message": "Authentifizieren Sie sich mit Ihrem Passkey, um diesen Schlüssel zu kopieren."

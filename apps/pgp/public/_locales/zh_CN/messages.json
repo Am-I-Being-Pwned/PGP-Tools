@@ -464,16 +464,8 @@
       }
     }
   },
-  "app_copied_wipe": {
-    "message": "已复制$label$，剪贴板将在 $seconds$ 秒后清空",
-    "placeholders": {
-      "label": {
-        "content": "$1"
-      },
-      "seconds": {
-        "content": "$2"
-      }
-    }
+  "app_copied_sensitive_note": {
+    "message": "在你复制其他内容之前，它会一直留在剪贴板以及任何剪贴板历史中。"
   },
   "app_copy_failed": {
     "message": "复制失败，请先点击扩展程序面板，然后重试。"
@@ -542,6 +534,9 @@
   },
   "app_error_tampered": {
     "message": "签名验证失败，此消息可能已被篡改。请勿信任其内容；让发送者重新发送。"
+  },
+  "app_error_unsigned_text_around_signature": {
+    "message": "其中包含签名消息之外的文本，签名并不涵盖这些内容。请只粘贴签名消息，从 BEGIN 行到 END 行。"
   },
   "app_error_vault_locked": {
     "message": "你的保险库已锁定，因此未作任何更改。请解锁后再运行一次。"
@@ -955,6 +950,9 @@
   "import_change_reissued": {
     "message": "该密钥已重新签发"
   },
+  "import_change_revoked": {
+    "message": "已被所有者吊销"
+  },
   "import_chip_crx": {
     "message": "扩展程序密钥"
   },
@@ -1232,6 +1230,17 @@
       }
     }
   },
+  "import_keyserver_wrong_key": {
+    "message": "$host$ 返回的密钥与 $subject$ 不匹配，因此未导入。",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "subject": {
+        "content": "$2"
+      }
+    }
+  },
   "import_label_field": {
     "message": "标签"
   },
@@ -1320,6 +1329,9 @@
   "import_reject_no_public_key": {
     "message": "此密钥块不包含可用的公钥。"
   },
+  "import_reject_revocation_unknown": {
+    "message": "此吊销证书针对的是你没有的密钥，因此没有可吊销的内容。"
+  },
   "import_reject_ssh_generic": {
     "message": "此 SSH 密钥不能用于加密。"
   },
@@ -1367,6 +1379,9 @@
   "import_reveal": {
     "message": "在密钥中显示"
   },
+  "import_revocation_headline": {
+    "message": "吊销证书"
+  },
   "import_source_help": {
     "message": "公钥会添加为联系人。私钥仅保留在此设备上，下一步你将选择如何保护它。"
   },
@@ -1394,6 +1409,14 @@
     "message": "你已于 $date$ 添加过它，且没有任何变化。",
     "placeholders": {
       "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_status_replaces": {
+    "message": "将替换你为 $name$ 保存的密钥",
+    "placeholders": {
+      "name": {
         "content": "$1"
       }
     }
@@ -1463,10 +1486,10 @@
     "message": "导出"
   },
   "keygen_copied_encrypted": {
-    "message": "已复制加密后的密钥（60 秒后清空）"
+    "message": "已复制加密的密钥。在你复制其他内容之前，它会一直留在剪贴板以及任何剪贴板历史中。"
   },
   "keygen_copied_plaintext": {
-    "message": "已复制未受保护的密钥（30 秒后清空）"
+    "message": "已复制未受保护的密钥。在你复制其他内容之前，它会一直留在剪贴板以及任何剪贴板历史中。"
   },
   "keygen_create_heading": {
     "message": "创建新密钥"
@@ -2011,6 +2034,50 @@
   "keys_cap_sign": {
     "message": "签名消息"
   },
+  "keys_check_revocation": {
+    "message": "检查是否已吊销"
+  },
+  "keys_check_revocation_current": {
+    "message": "$host$ 上 $name$ 的密钥未被吊销。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "host": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_check_revocation_failed": {
+    "message": "无法检查吊销状态。请重试。"
+  },
+  "keys_check_revocation_not_published": {
+    "message": "$host$ 未发布 $name$ 的密钥，因此无法在那里检查。",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_check_revocation_revoked": {
+    "message": "$name$ 已吊销此密钥。它现已标记为已吊销，不会再用于加密。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_check_revocation_running": {
+    "message": "正在检查 $host$...",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
   "keys_chip_contact": {
     "message": "联系人"
   },
@@ -2102,6 +2169,12 @@
   },
   "keys_contact_options_aria": {
     "message": "联系人选项"
+  },
+  "keys_contact_revoked": {
+    "message": "已吊销"
+  },
+  "keys_contact_revoked_title": {
+    "message": "所有者已吊销此密钥。保留它是为了让吊销持续有效，但你无法用它加密。若因泄露而吊销，其签名均不再通过验证；若是例行停用，此前的签名仍可验证，并以琥珀色显示。"
   },
   "keys_contacts_heading": {
     "message": "联系人"
@@ -2370,6 +2443,17 @@
   },
   "keys_loading": {
     "message": "正在加载…"
+  },
+  "keys_lookalike_char": {
+    "message": "$code$ 与该单词其余部分属于不同的字母表",
+    "placeholders": {
+      "code": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_lookalike_name": {
+    "message": "仿冒名称"
   },
   "keys_my_keys_heading": {
     "message": "我的密钥"
@@ -3363,22 +3447,6 @@
       }
     }
   },
-  "shared_bundle_clipboard_one": {
-    "message": "复制的机密内容在 $count$ 秒后从剪贴板清除",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
-  },
-  "shared_bundle_clipboard_other": {
-    "message": "复制的机密内容在 $count$ 秒后从剪贴板清除",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
-  },
   "shared_bundle_discovery_off": {
     "message": "不在线查找密钥：查找密钥时没有任何数据离开此设备"
   },
@@ -3677,6 +3745,14 @@
   "workspace_age_message_note": {
     "message": "age 消息，SSH 收件人不能与 PGP 混用"
   },
+  "workspace_also_signed_by": {
+    "message": "另由 $names$ 签名",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_browse_files": {
     "message": "浏览文件"
   },
@@ -3846,8 +3922,41 @@
   "workspace_error_verify_failed": {
     "message": "验证失败。输入内容看起来不像已签名的 PGP 消息。"
   },
+  "workspace_error_verify_file_too_large": {
+    "message": "$name$ 太大，无法在此验证（上限 $limit$）。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "limit": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_error_verify_not_utf8": {
+    "message": "$name$ 不是 UTF-8 文本，因此无法作为签名消息验证。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_error_wrong_key_password": {
     "message": "密码错误。请检查后重试。"
+  },
+  "workspace_file_not_signed": {
+    "message": "未签名"
+  },
+  "workspace_file_signature": {
+    "message": "$name$：$outcome$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "outcome": {
+        "content": "$2"
+      }
+    }
   },
   "workspace_files_decrypted_one": {
     "message": "已解密 $count$ 个文件（共 $size$）",
@@ -3892,6 +4001,9 @@
         "content": "$2"
       }
     }
+  },
+  "workspace_files_mixed_signers": {
+    "message": "签名者不一致"
   },
   "workspace_files_signed_one": {
     "message": "已签名 $count$ 个文件",
@@ -4215,8 +4327,45 @@
   "workspace_sign_with": {
     "message": "签名密钥"
   },
+  "workspace_signature_covers_original": {
+    "message": "签名针对的是原文，而不是此译文"
+  },
   "workspace_signature_verified": {
     "message": "签名已验证"
+  },
+  "workspace_signature_verified_not_for_you": {
+    "message": "不是发给你的"
+  },
+  "workspace_signature_verified_retired": {
+    "message": "密钥已停用"
+  },
+  "workspace_signed_for_others": {
+    "message": "签名对象是 $names$，而不是你",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_signed_on": {
+    "message": "签名于 $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_signed_text": {
+    "message": "已签名文本"
+  },
+  "workspace_signed_text_hidden_chars": {
+    "message": "签名文本包含不可见字符或文字方向字符，因此屏幕上的显示可能与原文不同"
+  },
+  "workspace_signed_text_translated": {
+    "message": "已签名文本的译文"
+  },
+  "workspace_signer_key_retired": {
+    "message": "生成该签名的密钥此后已过期或被吊销"
   },
   "workspace_status_age_encrypted": {
     "message": "age 消息，已加密给 SSH 收件人"
@@ -4298,6 +4447,22 @@
   },
   "workspace_unverified": {
     "message": "未验证"
+  },
+  "workspace_unverified_cosigners_one": {
+    "message": "另有 $count$ 个签名来自你没有的密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_unverified_cosigners_other": {
+    "message": "另有 $count$ 个签名来自你没有的密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "workspace_verify_signature": {
     "message": "验证签名"

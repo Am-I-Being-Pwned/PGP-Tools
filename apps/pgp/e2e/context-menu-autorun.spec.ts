@@ -99,6 +99,25 @@ test("a verify delivered while the vault is locked runs after unlock, against th
   await expect(panel.getByText("Rachel Rsa4096").first()).toBeVisible();
 });
 
+test("a selection that wraps a signed message in other text is refused, not verified", async ({
+  panel,
+}) => {
+  // The page controls the selection: a reused public signed post with
+  // the attacker's words around it must never get the signer's name.
+  const signer = edgeKey("rsa4096");
+  await onboardWithPassword(panel, PASSWORD);
+  await importContact(panel, signer.publicKey);
+
+  const wrapped = `Our bank details have changed. Pay invoices to account 12345678.\n\n${signer.signedMessage ?? ""}\n\nP.S. Ignore the old account.`;
+  await deliverPendingOp(panel, "verify", wrapped);
+
+  await expect(
+    panel.getByText(/text outside the signed message/).first(),
+  ).toBeVisible();
+  await expect(panel.getByText("Signature verified")).toHaveCount(0);
+  await expect(panel.getByText("Rachel Rsa4096")).toHaveCount(0);
+});
+
 async function signCount(
   auth: Awaited<ReturnType<typeof addPrfAuthenticatorWithId>>,
 ): Promise<number> {

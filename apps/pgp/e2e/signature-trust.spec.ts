@@ -1,0 +1,247 @@
+import type { Page } from "@playwright/test";
+
+import { edgeKey, MESSAGE } from "./edge-keys";
+import { expect, test } from "./fixtures";
+import {
+  importContact,
+  onboardWithPassword,
+  setWorkspaceMode,
+  verifySignedMessage,
+} from "./helpers";
+
+// A green "Signature verified" card vouches for something. What these
+// pin is WHAT: exactly the text that was signed, shown beside the
+// verdict, and -- for several files -- every file, never just the one
+// that happened to set the card last.
+
+const PASSWORD = "correct horse battery staple";
+const rachel = edgeKey("rsa4096");
+const rita = edgeKey("revoked");
+
+/** Stage files in the workspace's own drop zone. */
+async function stageFiles(
+  panel: Page,
+  files: { name: string; text: string }[],
+): Promise<void> {
+  await panel.locator('input[type="file"]:not([accept])').setInputFiles(
+    files.map(({ name, text }) => ({
+      name,
+      mimeType: "text/plain",
+      buffer: Buffer.from(text, "utf8"),
+    })),
+  );
+}
+
+async function verifyStaged(panel: Page): Promise<void> {
+  await setWorkspaceMode(panel, "Verify");
+  await panel.getByRole("button", { name: /^verify/i }).click();
+}
+
+test("a verified message shows exactly the signed text, and when it was signed", async ({
+  panel,
+}) => {
+  await onboardWithPassword(panel, PASSWORD);
+  await importContact(panel, rachel.publicKey);
+
+  await verifySignedMessage(panel, rachel.signedMessage ?? "");
+
+  await expect(panel.getByText("Signature verified").first()).toBeVisible();
+  await expect(panel.getByText("Signed text")).toBeVisible();
+  await expect(
+    panel.locator("pre").filter({ hasText: MESSAGE }).first(),
+  ).toBeVisible();
+  await expect(panel.getByText(/^Signed \w/).first()).toBeVisible();
+});
+
+test("a signed file's content is shown under the verdict", async ({
+  panel,
+}) => {
+  await onboardWithPassword(panel, PASSWORD);
+  await importContact(panel, rachel.publicKey);
+  await panel.getByRole("tab", { name: "Main" }).click();
+
+  await stageFiles(panel, [
+    { name: "notice.asc", text: rachel.signedMessage ?? "" },
+  ]);
+  await verifyStaged(panel);
+
+  await expect(panel.getByText("Signature verified").first()).toBeVisible();
+  await expect(
+    panel.locator("pre").filter({ hasText: MESSAGE }).first(),
+  ).toBeVisible();
+});
+
+test("a signed file with text around its signed block is refused", async ({
+  panel,
+}) => {
+  await onboardWithPassword(panel, PASSWORD);
+  await importContact(panel, rachel.publicKey);
+  await panel.getByRole("tab", { name: "Main" }).click();
+
+  await stageFiles(panel, [
+    {
+      name: "notice.asc",
+      text: `Pay invoices to account 12345678.\n\n${rachel.signedMessage ?? ""}`,
+    },
+  ]);
+  await verifyStaged(panel);
+
+  await expect(
+    panel.getByText(/text outside the signed message/).first(),
+  ).toBeVisible();
+  await expect(panel.getByText("Signature verified")).toHaveCount(0);
+});
+
+test("several files are each verified, and a mixed batch says who signed which", async ({
+  panel,
+}) => {
+  await onboardWithPassword(panel, PASSWORD);
+  await importContact(panel, rachel.publicKey);
+  await panel.getByRole("tab", { name: "Main" }).click();
+
+  // Rachel's genuine notice next to one from a key we can't check: the
+  // card must not read as Rachel vouching for both.
+  await stageFiles(panel, [
+    { name: "rachel.asc", text: rachel.signedMessage ?? "" },
+    { name: "rita.asc", text: rita.signedMessage ?? "" },
+  ]);
+  await verifyStaged(panel);
+
+  await expect(panel.getByText("Mixed signers")).toBeVisible();
+  // One file per line, each name quoted: a name can't pose as a verdict.
+  await expect(panel.getByText(/.rachel\.asc.: Rachel Rsa4096/)).toBeVisible();
+  await expect(panel.getByText(/.rita\.asc.: Unknown signer/)).toBeVisible();
+  await expect(panel.getByText("Signature verified")).toHaveCount(0);
+});
+
+test("several files from the same signer get that signer's card", async ({
+  panel,
+}) => {
+  await onboardWithPassword(panel, PASSWORD);
+  await importContact(panel, rachel.publicKey);
+  await panel.getByRole("tab", { name: "Main" }).click();
+
+  await stageFiles(panel, [
+    { name: "one.asc", text: rachel.signedMessage ?? "" },
+    { name: "two.asc", text: rachel.signedMessage ?? "" },
+  ]);
+  await verifyStaged(panel);
+
+  await expect(panel.getByText("Signature verified").first()).toBeVisible();
+  await expect(panel.getByText("Rachel Rsa4096").first()).toBeVisible();
+});
+
+test("one tampered file fails the whole batch", async ({ panel }) => {
+  await onboardWithPassword(panel, PASSWORD);
+  await importContact(panel, rachel.publicKey);
+  await panel.getByRole("tab", { name: "Main" }).click();
+
+  const tampered = (rachel.signedMessage ?? "").replace(
+    MESSAGE,
+    MESSAGE.replace("quick", "sneaky"),
+  );
+  await stageFiles(panel, [
+    { name: "good.asc", text: rachel.signedMessage ?? "" },
+    { name: "bad.asc", text: tampered },
+  ]);
+  await verifyStaged(panel);
+
+  await expect(panel.getByText(/tampered/).first()).toBeVisible();
+  await expect(panel.getByText("Signature verified")).toHaveCount(0);
+});
+
+test("a file added while Verify runs is never shown under its verdict", async ({
+  panel,
+}) => {
+  await onboardWithPassword(panel, PASSWORD);
+  await importContact(panel, rachel.publicKey);
+  await panel.getByRole("tab", { name: "Main" }).click();
+  // Slow every file read, standing in for a large file or a slow disk,
+  // so a second file can land while the first is being verified.
+  await panel.evaluate(() => {
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- re-bound below
+    const read = Blob.prototype.arrayBuffer;
+    Blob.prototype.arrayBuffer = function (this: Blob) {
+      return new Promise((resolve) =>
+        setTimeout(() => resolve(read.call(this)), 1500),
+      );
+    };
+  });
+
+  await stageFiles(panel, [
+    { name: "genuine.asc", text: rachel.signedMessage ?? "" },
+  ]);
+  await verifyStaged(panel);
+  await stageFiles(panel, [{ name: "payload.asc", text: "not verified" }]);
+
+  await panel.waitForTimeout(2500);
+  await expect(panel.getByText("Signature verified")).toHaveCount(0);
+  await expect(panel.getByText("payload.asc")).toBeVisible();
+});
+
+test("a new file with a staged file's name replaces it", async ({ panel }) => {
+  // Re-downloading release.asc and dropping it in used to be ignored, so
+  // Verify checked the OLD file and said so in green.
+  await onboardWithPassword(panel, PASSWORD);
+  await importContact(panel, rachel.publicKey);
+  await panel.getByRole("tab", { name: "Main" }).click();
+
+  await stageFiles(panel, [
+    { name: "release.asc", text: rachel.signedMessage ?? "" },
+  ]);
+  await verifyStaged(panel);
+  await expect(panel.getByText("Signature verified").first()).toBeVisible();
+
+  const tampered = (rachel.signedMessage ?? "").replace(
+    MESSAGE,
+    MESSAGE.replace("quick", "sneaky"),
+  );
+  await stageFiles(panel, [{ name: "release.asc", text: tampered }]);
+  await expect(panel.getByText("Signature verified")).toHaveCount(0);
+  await panel.getByRole("button", { name: /^verify/i }).click();
+  await expect(panel.getByText(/tampered/).first()).toBeVisible();
+  await expect(panel.getByText("release.asc")).toHaveCount(1);
+});
+
+test("removing a file clears the verdict that listed it", async ({ panel }) => {
+  await onboardWithPassword(panel, PASSWORD);
+  await importContact(panel, rachel.publicKey);
+  await panel.getByRole("tab", { name: "Main" }).click();
+
+  await stageFiles(panel, [
+    { name: "rachel.asc", text: rachel.signedMessage ?? "" },
+    { name: "rita.asc", text: rita.signedMessage ?? "" },
+  ]);
+  await verifyStaged(panel);
+  await expect(panel.getByText("Mixed signers")).toBeVisible();
+
+  await panel.getByRole("button", { name: "Remove" }).last().click();
+  await expect(panel.getByText("Mixed signers")).toHaveCount(0);
+});
+
+test("a file that isn't UTF-8 is refused rather than misread", async ({
+  panel,
+}) => {
+  // File.text() would turn the Latin-1 byte into U+FFFD: a genuine file
+  // reads as tampered, and a crafted one as text it doesn't contain.
+  await onboardWithPassword(panel, PASSWORD);
+  await panel.getByRole("tab", { name: "Main" }).click();
+  const latin1 = Buffer.concat([
+    Buffer.from(
+      "-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA256\n\ncaf",
+      "utf8",
+    ),
+    Buffer.from([0xe9]),
+    Buffer.from(
+      "\n-----BEGIN PGP SIGNATURE-----\n\niQ==\n-----END PGP SIGNATURE-----\n",
+      "utf8",
+    ),
+  ]);
+  await panel.locator('input[type="file"]:not([accept])').setInputFiles({
+    name: "menu.asc",
+    mimeType: "text/plain",
+    buffer: latin1,
+  });
+  await verifyStaged(panel);
+  await expect(panel.getByText(/isn't UTF-8 text/)).toBeVisible();
+});

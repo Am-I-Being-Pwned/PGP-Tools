@@ -44,8 +44,18 @@ export function isPendingOperation(msg: unknown): msg is PendingOperation {
     VALID_ACTIONS.has(obj.action as OperationAction) &&
     typeof obj.text === "string" &&
     typeof obj.sourceTabId === "number" &&
+    (obj.windowId === undefined || typeof obj.windowId === "number") &&
     typeof obj.createdAt === "number"
   );
+}
+
+/** Whether the panel in window `here` may take `op`: only the panel of
+ *  the window the selection came from. */
+export function isPendingOpForWindow(
+  op: PendingOperation,
+  here: number | undefined,
+): boolean {
+  return op.windowId === undefined || op.windowId === here;
 }
 
 export function isPendingOpFresh(

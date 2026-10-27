@@ -308,12 +308,6 @@
   "shared_bundle_storage_sync": {
     "message": "Les clés sont synchronisées via votre profil Chrome"
   },
-  "shared_bundle_clipboard_one": {
-    "message": "Les secrets copiés sont effacés du presse-papiers après $count$ seconde"
-  },
-  "shared_bundle_clipboard_other": {
-    "message": "Les secrets copiés sont effacés du presse-papiers après $count$ secondes"
-  },
   "shared_bundle_no_encrypt_to_self": {
     "message": "Les messages que vous chiffrez ne sont plus lisibles par vous ensuite"
   }

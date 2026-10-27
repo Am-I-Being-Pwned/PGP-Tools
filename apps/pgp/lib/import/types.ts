@@ -151,6 +151,9 @@ export interface IncomingKey {
    * ImportKeyPage's secretArmorRef and SECURITY.md's zeroization table).
    */
   publicArmored: string;
+  /** For a fetched `new` key: the name of the stored contact whose key
+   *  this will REPLACE (same lookup, different fingerprint). */
+  replaces?: string;
   /** Present when this "key" is really a person with several keys (a
    *  GitHub lookup). `keyId`/`publicArmored` stay the FIRST member's, so
    *  nothing that reads them needs to know. */

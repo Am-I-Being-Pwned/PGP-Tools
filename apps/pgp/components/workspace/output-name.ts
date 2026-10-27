@@ -1,5 +1,6 @@
 import type { WorkspaceAction } from "../../lib/messages";
 import type { StoredKeyKind } from "../../lib/storage/key-kind";
+import { safeFileName } from "../../lib/utils/file-name";
 
 /** Filesystem-safe slug of a recipient display name, capped so long
  *  corporate names don't swallow the whole filename. */
@@ -44,8 +45,15 @@ export function outputFileName(
   mode: WorkspaceAction,
   fileNames: string[],
   zipFiles: boolean,
-  opts?: { recipients?: string[]; now?: Date; engine?: StoredKeyKind | null },
+  opts?: {
+    recipients?: string[];
+    now?: Date;
+    engine?: StoredKeyKind | null;
+    /** The result is binary (decrypt): name it as such. */
+    binary?: boolean;
+  },
 ): string {
+  fileNames = fileNames.map(safeFileName);
   const ext = opts?.engine === "ssh" ? "age" : "gpg";
   if (mode === "encrypt") {
     const parts = [
@@ -58,13 +66,20 @@ export function outputFileName(
       return `${fileNames[0]}.${suffix}.${ext}`;
     return `files.${suffix}.zip.${ext}`;
   }
-  if (fileNames.length === 0) return `output.${ext}`;
+  // Pasted text has no name to keep. Never "output.gpg" for a plaintext:
+  // a decrypted file named like ciphertext gets treated, and shared, as
+  // ciphertext.
+  if (fileNames.length === 0) {
+    if (mode === "sign") return "signed.asc";
+    if (mode === "verify") return "verified.txt";
+    return opts?.binary ? "decrypted.bin" : "decrypted.txt";
+  }
   if (fileNames.length === 1 || !zipFiles) {
     const name = fileNames[0];
     if (mode === "sign") return `${name}.asc`;
     // Strip whichever ciphertext extension the input carried, so
     // "report.pdf.age" decrypts back to "report.pdf".
-    return name.replace(/\.(gpg|pgp|asc|age)$/i, "") || name;
+    return name.replace(/\.(gpg|pgp|asc|age)$/i, "") || "decrypted";
   }
   return "decrypted-files.zip";
 }

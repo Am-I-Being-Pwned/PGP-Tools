@@ -19,7 +19,9 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { KeyserverQuery } from "../keyserver/query";
+import type { IncomingKey } from "./types";
 import {
+  answersQuery,
   KEYSERVER_HOST,
   keyserverFailureCopy,
   keyserverSource,
@@ -57,7 +59,13 @@ describe("keyserverSource", () => {
 describe("prepareKeyserverImport", () => {
   it("stamps the provenance on what prepareImport returned", async () => {
     vi.mocked(prepareImport).mockResolvedValue({
-      keys: [{ keyId: "AAAA", publicArmored: "armor" } as never],
+      keys: [
+        {
+          keyId: "AAAA",
+          userIds: ["Alice <alice@example.com>"],
+          publicArmored: "armor",
+        } as never,
+      ],
       secrets: new Map(),
       unparseable: false,
     });
@@ -144,5 +152,120 @@ describe("keyserverFailureCopy", () => {
     // could travel in, and this is the test that would fail if one were
     // added.
     expect(keyserverFailureCopy.length).toBeLessThanOrEqual(4);
+  });
+});
+
+describe("answersQuery: the keyserver's answer is checked, not assumed", () => {
+  const key = (over: Partial<IncomingKey>) =>
+    ({
+      keyId: FP.value,
+      userIds: ["Alice <alice@example.com>"],
+      details: null,
+      ...over,
+    }) as IncomingKey;
+
+  it("needs the exact fingerprint for a fingerprint query", () => {
+    expect(answersQuery(key({}), FP)).toBe(true);
+    expect(answersQuery(key({ keyId: "0".repeat(40) }), FP)).toBe(false);
+  });
+
+  it("accepts a key-ID query naming the primary key or a subkey", () => {
+    const keyid: KeyserverQuery = { kind: "keyid", value: "1234567890ABCDEF" };
+    expect(answersQuery(key({ keyId: `${"0".repeat(24)}1234567890ABCDEF` }), keyid)).toBe(true);
+    expect(
+      answersQuery(
+        key({
+          details: {
+            truncated: false,
+            keys: [{ fingerprint: `${"F".repeat(24)}1234567890ABCDEF` } as never],
+          },
+        }),
+        keyid,
+      ),
+    ).toBe(true);
+    expect(answersQuery(key({}), keyid)).toBe(false);
+  });
+
+  it("does not count an unbound subkey appended to someone else's cert", () => {
+    // The engine lists it (status "invalid"), but it is not the cert's.
+    const keyid: KeyserverQuery = { kind: "keyid", value: "1234567890ABCDEF" };
+    expect(
+      answersQuery(
+        key({
+          details: {
+            truncated: false,
+            keys: [
+              {
+                fingerprint: `${"F".repeat(24)}1234567890ABCDEF`,
+                status: "invalid",
+              } as never,
+            ],
+          },
+        }),
+        keyid,
+      ),
+    ).toBe(false);
+  });
+
+  it("needs a User ID carrying the address for an address query", () => {
+    expect(answersQuery(key({}), EMAIL)).toBe(true);
+    expect(answersQuery(key({ userIds: ["ALICE@EXAMPLE.COM"] }), EMAIL)).toBe(true);
+    expect(answersQuery(key({ userIds: ["Mallory <mallory@evil.test>"] }), EMAIL)).toBe(false);
+    // Not fooled by Unicode case folding: "ı".toUpperCase() is "I".
+    expect(answersQuery(key({ userIds: ["Al <al\u0131ce@example.com>"] }), EMAIL)).toBe(false);
+    // Not fooled by the address appearing as a name.
+    expect(
+      answersQuery(key({ userIds: ["alice@example.com <mallory@evil.test>"] }), EMAIL),
+    ).toBe(false);
+  });
+});
+
+describe("prepareKeyserverImport: what the preview is told", () => {
+  it("rejects a key that is not the one asked for", async () => {
+    vi.mocked(prepareImport).mockResolvedValue({
+      keys: [
+        {
+          keyId: "BBBB",
+          status: "new",
+          userIds: ["Mallory <mallory@evil.test>"],
+          publicArmored: "armor",
+        } as never,
+      ],
+      secrets: new Map(),
+      unparseable: false,
+    });
+    const prepared = await prepareKeyserverImport(EMAIL, "armor", {
+      own: [],
+      contacts: [],
+    });
+    expect(prepared.keys[0].status).toBe("rejected");
+    expect(prepared.keys[0].rejection).toContain(KEYSERVER_HOST);
+  });
+
+  it("says a re-fetch with a new fingerprint replaces the stored key", async () => {
+    vi.mocked(prepareImport).mockResolvedValue({
+      keys: [
+        {
+          keyId: "NEWFPR",
+          status: "new",
+          userIds: ["Alice <alice@example.com>"],
+          publicArmored: "armor",
+        } as never,
+      ],
+      secrets: new Map(),
+      unparseable: false,
+    });
+    const prepared = await prepareKeyserverImport(EMAIL, "armor", {
+      own: [],
+      contacts: [
+        {
+          keyId: "OLDFPR",
+          userIds: ["Alice Old <alice@example.com>"],
+          armored: "old",
+          source: { type: "keyserver", user: "alice@example.com", fetchedAt: 1 },
+        },
+      ],
+    });
+    expect(prepared.keys[0].replaces).toBe("Alice Old <alice@example.com>");
   });
 });

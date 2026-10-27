@@ -454,5 +454,56 @@
   },
   "workspace_char_count_other": {
     "message": "$count$ 个字符"
+  },
+  "workspace_signed_on": {
+    "message": "签名于 $date$"
+  },
+  "workspace_signer_key_retired": {
+    "message": "生成该签名的密钥此后已过期或被吊销"
+  },
+  "workspace_also_signed_by": {
+    "message": "另由 $names$ 签名"
+  },
+  "workspace_unverified_cosigners_one": {
+    "message": "另有 $count$ 个签名来自你没有的密钥"
+  },
+  "workspace_unverified_cosigners_other": {
+    "message": "另有 $count$ 个签名来自你没有的密钥"
+  },
+  "workspace_files_mixed_signers": {
+    "message": "签名者不一致"
+  },
+  "workspace_file_signature": {
+    "message": "$name$：$outcome$"
+  },
+  "workspace_file_not_signed": {
+    "message": "未签名"
+  },
+  "workspace_signature_covers_original": {
+    "message": "签名针对的是原文，而不是此译文"
+  },
+  "workspace_signature_verified_retired": {
+    "message": "密钥已停用"
+  },
+  "workspace_signed_text": {
+    "message": "已签名文本"
+  },
+  "workspace_signed_for_others": {
+    "message": "签名对象是 $names$，而不是你"
+  },
+  "workspace_signature_verified_not_for_you": {
+    "message": "不是发给你的"
+  },
+  "workspace_signed_text_translated": {
+    "message": "已签名文本的译文"
+  },
+  "workspace_error_verify_file_too_large": {
+    "message": "$name$ 太大，无法在此验证（上限 $limit$）。"
+  },
+  "workspace_error_verify_not_utf8": {
+    "message": "$name$ 不是 UTF-8 文本，因此无法作为签名消息验证。"
+  },
+  "workspace_signed_text_hidden_chars": {
+    "message": "签名文本包含不可见字符或文字方向字符，因此屏幕上的显示可能与原文不同"
   }
 }

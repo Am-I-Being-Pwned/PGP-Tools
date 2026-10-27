@@ -21,6 +21,7 @@ import {
 } from "../../lib/i18n/format";
 import { formatAlgorithm } from "../../lib/utils/formatting";
 import { KeyAvatar } from "../shared/KeyAvatar";
+import { MarkedText } from "../shared/MarkedText";
 import { fingerprintLines } from "./fingerprint-lines";
 
 /**
@@ -506,7 +507,7 @@ export function KeyPreviewBody({
           )}
           <div className="min-w-0 flex-1">
             <p className="truncate text-base leading-tight font-semibold">
-              {name}
+              <MarkedText text={name} />
             </p>
             {subtitle && (
               <p className="text-muted-foreground mt-0.5 truncate text-xs">
@@ -515,7 +516,9 @@ export function KeyPreviewBody({
             )}
             {email && (
               <p className="text-muted-foreground mt-0.5 flex min-w-0 items-center gap-1 text-xs">
-                <span className="truncate">{email}</span>
+                <span className="truncate">
+                  <MarkedText text={email} />
+                </span>
                 <button
                   type="button"
                   onClick={() => handleCopyEmail(email)}

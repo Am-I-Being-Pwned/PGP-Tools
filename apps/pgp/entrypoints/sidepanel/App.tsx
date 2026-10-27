@@ -996,6 +996,7 @@ export default function App() {
               onSaveRevocationCertificate={keyring.setRevocationCertificate}
               onAddKey={handleAddKey}
               onAddContact={contacts.add}
+              onMergeContactKey={contacts.mergeKey}
               onDeleteContact={contacts.remove}
               advancedMode={advancedMode}
               highlightKeyIds={highlightKeyIds}

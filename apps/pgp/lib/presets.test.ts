@@ -30,7 +30,6 @@ function fullPrefs(overrides: Partial<PgpPreferences> = {}): PgpPreferences {
     crxSigningEnabled: false,
     historyEnabled: false,
     keyDiscoveryEnabled: true,
-    clipboardWipeSeconds: 60,
     recentRecipients: [],
     aiTranslateEnabled: true,
     translationTargetLanguage: "en",
@@ -51,7 +50,6 @@ describe("PRESETS", () => {
       historyEnabled: true,
       keyDiscoveryEnabled: true,
       encryptToSelf: true,
-      clipboardWipeSeconds: 60,
     });
   });
 
@@ -65,7 +63,6 @@ describe("PRESETS", () => {
       keyDiscoveryEnabled: true,
       encryptToSelf: true,
       storageLocation: "local",
-      clipboardWipeSeconds: 60,
     });
     expect(PRESETS.careful.recommended).toBe(true);
   });
@@ -80,7 +77,6 @@ describe("PRESETS", () => {
       keyDiscoveryEnabled: false,
       encryptToSelf: true,
       storageLocation: "local",
-      clipboardWipeSeconds: 15,
       aiTranslateEnabled: false,
       unlockKeysOnOpen: false,
     });
@@ -201,7 +197,6 @@ describe("describeBundle", () => {
       "One passkey prompt unlocks the vault and your keys",
       "Keeps an encrypted history of what you do",
       "Keys can be looked up on GitHub and keys.openpgp.org",
-      "Copied secrets clear from the clipboard after 60 seconds",
     ]);
   });
 
@@ -212,7 +207,6 @@ describe("describeBundle", () => {
       "Keeps an encrypted history of what you do",
       "Keys can be looked up on GitHub and keys.openpgp.org",
       "Keys stay on this device",
-      "Copied secrets clear from the clipboard after 60 seconds",
     ]);
   });
 
@@ -224,7 +218,6 @@ describe("describeBundle", () => {
       "No history is kept",
       "No key lookups - nothing leaves this device to find a key",
       "Keys stay on this device",
-      "Copied secrets clear from the clipboard after 15 seconds",
     ]);
   });
 
@@ -246,7 +239,6 @@ describe("snapshotBundleFields", () => {
       neverCacheKeys: true,
       historyEnabled: true,
       encryptToSelf: false,
-      clipboardWipeSeconds: 15,
     });
     expect(snapshotBundleFields(prefs, PRESETS.casual.bundle)).toEqual({
       autoLockEnabled: false,
@@ -260,7 +252,6 @@ describe("snapshotBundleFields", () => {
       keyDiscoveryEnabled: true,
       unlockKeysOnOpen: false,
       encryptToSelf: false,
-      clipboardWipeSeconds: 15,
     });
   });
 

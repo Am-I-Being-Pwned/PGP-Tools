@@ -279,10 +279,10 @@
     "message": "Nada para exportar"
   },
   "keygen_copied_encrypted": {
-    "message": "Chave criptografada copiada (será limpa em 60s)"
+    "message": "Chave criptografada copiada. Ela fica na sua área de transferência, e em qualquer histórico dela, até você copiar outra coisa."
   },
   "keygen_copied_plaintext": {
-    "message": "Chave sem proteção copiada (será limpa em 30s)"
+    "message": "Chave desprotegida copiada. Ela fica na sua área de transferência, e em qualquer histórico dela, até você copiar outra coisa."
   },
   "keygen_unlock_gate_passkey": {
     "message": "Autentique-se com sua chave de acesso para copiar esta chave."

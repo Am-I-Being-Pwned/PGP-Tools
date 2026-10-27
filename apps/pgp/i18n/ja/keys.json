@@ -514,5 +514,35 @@
   },
   "keys_contact_long_id_title": {
     "message": "鍵 ID: この鍵のフィンガープリントの末尾 16 文字です。鍵をひと目で見分けるためのもので、本物かどうか確認するにはフィンガープリント全体を照合してください。"
+  },
+  "keys_contact_revoked": {
+    "message": "失効"
+  },
+  "keys_contact_revoked_title": {
+    "message": "所有者がこの鍵を失効させました。失効を維持するために保存されていますが、この鍵へは暗号化できません。漏洩による失効では署名はすべて検証されず、通常の引退ではそれ以前の署名は検証され、黄色で表示されます。"
+  },
+  "keys_lookalike_name": {
+    "message": "紛らわしい名前"
+  },
+  "keys_lookalike_char": {
+    "message": "$code$ はこの単語のほかの文字と異なる文字体系のものです"
+  },
+  "keys_check_revocation": {
+    "message": "失効を確認"
+  },
+  "keys_check_revocation_running": {
+    "message": "$host$ を確認しています..."
+  },
+  "keys_check_revocation_revoked": {
+    "message": "$name$ はこの鍵を失効させました。失効済みとして記録され、暗号化には使われません。"
+  },
+  "keys_check_revocation_current": {
+    "message": "$host$ では $name$ の鍵は失効していません。"
+  },
+  "keys_check_revocation_not_published": {
+    "message": "$host$ は $name$ の鍵を公開していないため、そこでは確認できません。"
+  },
+  "keys_check_revocation_failed": {
+    "message": "失効を確認できませんでした。もう一度お試しください。"
   }
 }

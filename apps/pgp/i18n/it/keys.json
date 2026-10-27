@@ -514,5 +514,35 @@
   },
   "keys_contact_long_id_title": {
     "message": "ID chiave: gli ultimi 16 caratteri dell'impronta di questa chiave. Serve a distinguere le chiavi a colpo d'occhio; per verificare che una chiave sia autentica, confronta l'impronta completa."
+  },
+  "keys_contact_revoked": {
+    "message": "Revocata"
+  },
+  "keys_contact_revoked_title": {
+    "message": "Il proprietario ha revocato questa chiave. Viene conservata perché la revoca resti valida, ma non puoi cifrare per essa. Dopo una compromissione nessuna delle sue firme viene verificata; dopo un ritiro di routine, quelle precedenti sì e appaiono in ambra."
+  },
+  "keys_lookalike_name": {
+    "message": "Nome ingannevole"
+  },
+  "keys_lookalike_char": {
+    "message": "$code$ appartiene a un alfabeto diverso dal resto di questa parola"
+  },
+  "keys_check_revocation": {
+    "message": "Verifica revoca"
+  },
+  "keys_check_revocation_running": {
+    "message": "Controllo su $host$..."
+  },
+  "keys_check_revocation_revoked": {
+    "message": "$name$ ha revocato questa chiave. Ora è contrassegnata come revocata e non verrà usata per cifrare."
+  },
+  "keys_check_revocation_current": {
+    "message": "La chiave di $name$ non è revocata su $host$."
+  },
+  "keys_check_revocation_not_published": {
+    "message": "$host$ non pubblica la chiave di $name$, quindi non può essere verificata lì."
+  },
+  "keys_check_revocation_failed": {
+    "message": "Impossibile verificare la revoca. Riprova."
   }
 }

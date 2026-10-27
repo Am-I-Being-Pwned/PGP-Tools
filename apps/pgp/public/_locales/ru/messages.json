@@ -528,16 +528,8 @@
       }
     }
   },
-  "app_copied_wipe": {
-    "message": "Скопировано: $label$ - буфер обмена очистится через $seconds$ с",
-    "placeholders": {
-      "label": {
-        "content": "$1"
-      },
-      "seconds": {
-        "content": "$2"
-      }
-    }
+  "app_copied_sensitive_note": {
+    "message": "Остаётся в буфере обмена и в любой истории буфера обмена, пока вы не скопируете что-то другое."
   },
   "app_copy_failed": {
     "message": "Не удалось скопировать - сначала нажмите на панель расширения, затем повторите попытку."
@@ -606,6 +598,9 @@
   },
   "app_error_tampered": {
     "message": "Проверка подписи не пройдена - сообщение могло быть изменено. Не доверяйте его содержимому; попросите отправителя отправить его заново."
+  },
+  "app_error_unsigned_text_around_signature": {
+    "message": "Здесь есть текст за пределами подписанного сообщения, который подпись не охватывает. Вставьте только подписанное сообщение, от строки BEGIN до строки END."
   },
   "app_error_vault_locked": {
     "message": "Ваше хранилище заблокировано, поэтому ничего не изменено. Разблокируйте его и повторите операцию."
@@ -1159,6 +1154,9 @@
   "import_change_reissued": {
     "message": "Ключ был перевыпущен"
   },
+  "import_change_revoked": {
+    "message": "Отозван владельцем"
+  },
   "import_chip_crx": {
     "message": "Ключ расширения"
   },
@@ -1532,6 +1530,17 @@
       }
     }
   },
+  "import_keyserver_wrong_key": {
+    "message": "$host$ вернул ключ, который не соответствует $subject$, поэтому он не импортирован.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "subject": {
+        "content": "$2"
+      }
+    }
+  },
   "import_label_field": {
     "message": "Метка"
   },
@@ -1636,6 +1645,9 @@
   "import_reject_no_public_key": {
     "message": "В этом блоке нет пригодного открытого ключа."
   },
+  "import_reject_revocation_unknown": {
+    "message": "Этот сертификат отзыва относится к ключу, которого у вас нет, поэтому отзывать нечего."
+  },
   "import_reject_ssh_generic": {
     "message": "Этот SSH-ключ нельзя использовать для шифрования."
   },
@@ -1715,6 +1727,9 @@
   "import_reveal": {
     "message": "Показать в ваших ключах"
   },
+  "import_revocation_headline": {
+    "message": "Сертификат отзыва"
+  },
   "import_source_help": {
     "message": "Открытые ключи добавляются как контакты. Закрытый ключ остаётся на этом устройстве - на следующем шаге вы выберете, как его защитить."
   },
@@ -1742,6 +1757,14 @@
     "message": "Вы добавили его $date$, и с тех пор он не менялся.",
     "placeholders": {
       "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_status_replaces": {
+    "message": "Заменяет ключ, который был у вас для $name$",
+    "placeholders": {
+      "name": {
         "content": "$1"
       }
     }
@@ -1827,10 +1850,10 @@
     "message": "ЭКСПОРТ"
   },
   "keygen_copied_encrypted": {
-    "message": "Зашифрованный ключ скопирован (очистится через 60 с)"
+    "message": "Зашифрованный ключ скопирован. Он остаётся в буфере обмена и в любой истории буфера обмена, пока вы не скопируете что-то другое."
   },
   "keygen_copied_plaintext": {
-    "message": "Незащищённый ключ скопирован (очистится через 30 с)"
+    "message": "Незащищённый ключ скопирован. Он остаётся в буфере обмена и в любой истории буфера обмена, пока вы не скопируете что-то другое."
   },
   "keygen_create_heading": {
     "message": "Создание нового ключа"
@@ -2519,6 +2542,50 @@
   "keys_cap_sign": {
     "message": "Подписывает сообщения"
   },
+  "keys_check_revocation": {
+    "message": "Проверить отзыв"
+  },
+  "keys_check_revocation_current": {
+    "message": "Ключ $name$ на $host$ не отозван.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "host": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_check_revocation_failed": {
+    "message": "Не удалось проверить отзыв. Попробуйте ещё раз."
+  },
+  "keys_check_revocation_not_published": {
+    "message": "$host$ не публикует ключ $name$, поэтому проверить его там нельзя.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_check_revocation_revoked": {
+    "message": "$name$ отозвал этот ключ. Теперь он отмечен как отозванный и не будет использоваться для шифрования.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_check_revocation_running": {
+    "message": "Проверка на $host$...",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
   "keys_chip_contact": {
     "message": "Контакт"
   },
@@ -2626,6 +2693,12 @@
   },
   "keys_contact_options_aria": {
     "message": "Параметры контакта"
+  },
+  "keys_contact_revoked": {
+    "message": "Отозван"
+  },
+  "keys_contact_revoked_title": {
+    "message": "Владелец отозвал этот ключ. Он сохранён, чтобы отзыв оставался в силе, но шифровать для него нельзя. После компрометации ни одна его подпись не проходит проверку; после плановой замены более ранние подписи проверяются и показываются жёлтым."
   },
   "keys_contacts_heading": {
     "message": "Контакты"
@@ -3038,6 +3111,17 @@
   },
   "keys_loading": {
     "message": "Загрузка…"
+  },
+  "keys_lookalike_char": {
+    "message": "$code$ из другого алфавита, чем остальная часть этого слова",
+    "placeholders": {
+      "code": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_lookalike_name": {
+    "message": "Похожее имя"
   },
   "keys_my_keys_heading": {
     "message": "Мои ключи"
@@ -4315,38 +4399,6 @@
       }
     }
   },
-  "shared_bundle_clipboard_few": {
-    "message": "Скопированные секреты стираются из буфера обмена через $count$ секунды",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
-  },
-  "shared_bundle_clipboard_many": {
-    "message": "Скопированные секреты стираются из буфера обмена через $count$ секунд",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
-  },
-  "shared_bundle_clipboard_one": {
-    "message": "Скопированные секреты стираются из буфера обмена через $count$ секунду",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
-  },
-  "shared_bundle_clipboard_other": {
-    "message": "Скопированные секреты стираются из буфера обмена через $count$ секунды",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
-  },
   "shared_bundle_discovery_off": {
     "message": "Без поиска ключей - для поиска ключа ничего не покидает это устройство"
   },
@@ -4661,6 +4713,14 @@
   "workspace_age_message_note": {
     "message": "Сообщение age - получателей SSH нельзя смешивать с PGP"
   },
+  "workspace_also_signed_by": {
+    "message": "также подписано: $names$",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_browse_files": {
     "message": "Выбрать файлы"
   },
@@ -4846,8 +4906,41 @@
   "workspace_error_verify_failed": {
     "message": "Не удалось проверить. Введённые данные не похожи на подписанное PGP-сообщение."
   },
+  "workspace_error_verify_file_too_large": {
+    "message": "$name$ слишком большой для проверки здесь (предел $limit$).",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "limit": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_error_verify_not_utf8": {
+    "message": "$name$ не является текстом UTF-8, поэтому его нельзя проверить как подписанное сообщение.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_error_wrong_key_password": {
     "message": "Неверный пароль. Проверьте его и повторите попытку."
+  },
+  "workspace_file_not_signed": {
+    "message": "не подписан"
+  },
+  "workspace_file_signature": {
+    "message": "$name$: $outcome$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "outcome": {
+        "content": "$2"
+      }
+    }
   },
   "workspace_files_decrypted_few": {
     "message": "Расшифровано $count$ файла (всего $size$)",
@@ -4936,6 +5029,9 @@
         "content": "$2"
       }
     }
+  },
+  "workspace_files_mixed_signers": {
+    "message": "Разные подписанты"
   },
   "workspace_files_signed_few": {
     "message": "Подписано $count$ файла",
@@ -5323,8 +5419,45 @@
   "workspace_sign_with": {
     "message": "Подписать ключом"
   },
+  "workspace_signature_covers_original": {
+    "message": "подпись относится к оригиналу, а не к этому переводу"
+  },
   "workspace_signature_verified": {
     "message": "Подпись проверена"
+  },
+  "workspace_signature_verified_not_for_you": {
+    "message": "Не вам"
+  },
+  "workspace_signature_verified_retired": {
+    "message": "Ключ выведен"
+  },
+  "workspace_signed_for_others": {
+    "message": "подписано для $names$, а не для вас",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_signed_on": {
+    "message": "Подписано $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_signed_text": {
+    "message": "Подписанный текст"
+  },
+  "workspace_signed_text_hidden_chars": {
+    "message": "подписанный текст содержит невидимые символы или символы направления текста, поэтому на экране он может выглядеть не так, как был написан"
+  },
+  "workspace_signed_text_translated": {
+    "message": "Перевод подписанного текста"
+  },
+  "workspace_signer_key_retired": {
+    "message": "ключ, которым она сделана, с тех пор истёк или отозван"
   },
   "workspace_status_age_encrypted": {
     "message": "Сообщение age - зашифровано для получателей SSH"
@@ -5406,6 +5539,22 @@
   },
   "workspace_unverified": {
     "message": "Не проверена"
+  },
+  "workspace_unverified_cosigners_one": {
+    "message": "ещё $count$ подпись ключом, которого у вас нет",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_unverified_cosigners_other": {
+    "message": "ещё $count$ подписи ключами, которых у вас нет",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "workspace_verify_signature": {
     "message": "Проверить подпись"

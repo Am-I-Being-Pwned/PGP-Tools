@@ -50,8 +50,8 @@ interface ExportPrivateKeyPageProps {
 /**
  * Unified "copy private key" flow for PGP and CRX keys: an optional unlock gate
  * (CRX), then a passphrase-encrypted copy or a type-`EXPORT` plaintext escape
- * hatch. Both paths write to the clipboard and schedule a best-effort wipe --
- * 60s for the encrypted blob, 30s for the higher-impact plaintext key. A CRX
+ * hatch. Both paths write to the clipboard, and say that the key stays there
+ * and in any clipboard history -- nothing is wiped (T-CLIPBOARD-EXFIL). A CRX
  * handle opened by the gate is dropped on unmount.
  */
 export function ExportPrivateKeyPage({
@@ -98,11 +98,7 @@ export function ExportPrivateKeyPage({
   // lingering in WASM untracked.
   const unmounted = useRef(false);
 
-  // Drop a held handle on unmount and cancel the feedback timer. The
-  // clipboard-wipe timer (module-level in lib/utils/clipboard.ts)
-  // deliberately survives unmount -- see that helper for why. If the
-  // side panel itself closes, the JS context -- and with it the
-  // clipboard copy's source -- dies anyway.
+  // Drop a held handle on unmount and cancel the feedback timer.
   useEffect(() => {
     return () => {
       unmounted.current = true;
@@ -142,13 +138,12 @@ export function ExportPrivateKeyPage({
     }
   };
 
-  /** Run `producer` against a handle, copy the result, and clear the clipboard
-   *  after `clearMs`. In gated mode the held handle is reused; otherwise a fresh
-   *  handle is acquired and released around this single action. */
+  /** Run `producer` against a handle and copy the result. In gated mode the
+   *  held handle is reused; otherwise a fresh handle is acquired and released
+   *  around this single action. */
   const runExport = async (
     producer: (h: number) => Promise<string>,
     successMsg: string,
-    clearMs: number,
     afterSuccess: () => void,
   ) => {
     setExportError(null);
@@ -174,10 +169,10 @@ export function ExportPrivateKeyPage({
     }
     try {
       const text = await producer(h);
-      // Explicit wipe delays here (60s encrypted / 30s plaintext) match
-      // the inline feedback strings; no label -- the inline feedback is
-      // the success UI. A rejected write already toasted its own error.
-      const ok = await copy(text, { sensitive: true, wipeDelayMs: clearMs });
+      // No label -- the inline feedback is the success UI, and it carries
+      // the clipboard-history note itself. A rejected write already
+      // toasted its own error.
+      const ok = await copy(text, { sensitive: true });
       if (ok) {
         showFeedback(successMsg);
         afterSuccess();
@@ -203,7 +198,6 @@ export function ExportPrivateKeyPage({
     await runExport(
       (h) => exporter.exportEncrypted(h, passphrase),
       t("keygen_copied_encrypted"),
-      60_000,
       () => {
         setPassphrase("");
         setConfirmPassphrase("");
@@ -215,7 +209,6 @@ export function ExportPrivateKeyPage({
     runExport(
       (h) => exporter.exportPlaintext(h),
       t("keygen_copied_plaintext"),
-      30_000,
       () => setUnsafeConfirm(""),
     );
 

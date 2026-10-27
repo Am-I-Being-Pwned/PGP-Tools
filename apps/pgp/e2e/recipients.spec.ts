@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
+
 import { expect, test } from "./fixtures";
-import { importContact, onboardWithPassword } from "./helpers";
+import { goToKeys, importContact, onboardWithPassword } from "./helpers";
 import { keyBySlug } from "./keys";
 
 const PASSWORD = "correct horse battery staple";
@@ -190,4 +192,28 @@ test("a row's (i) opens the key's details without picking it or closing the list
 
   // Looking was not choosing: no chip.
   await expect(panel.getByTitle(new RegExp(encryptable.label))).toHaveCount(0);
+});
+
+test("your own key imported again as a contact is offered once", async ({
+  panel,
+}) => {
+  // The same fingerprint as an own key and a contact used to appear
+  // under Contacts twice: the own record matched the contact's id.
+  await onboardWithPassword(panel, PASSWORD);
+  await goToKeys(panel);
+  const [download] = await Promise.all([
+    panel.waitForEvent("download"),
+    (async () => {
+      await panel.getByRole("button", { name: "Key options" }).first().click();
+      await panel
+        .getByRole("menuitem", { name: "Download public key" })
+        .click();
+    })(),
+  ]);
+  const ownPublic = readFileSync(await download.path(), "utf8");
+  await importContact(panel, ownPublic);
+
+  await panel.getByRole("tab", { name: "Main" }).click();
+  await panel.getByRole("combobox", { name: "Recipients" }).fill("e2e");
+  await expect(panel.getByRole("option")).toHaveCount(1);
 });
