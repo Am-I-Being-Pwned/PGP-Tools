@@ -23,15 +23,13 @@ async function stageFiles(
   panel: Page,
   files: { name: string; text: string }[],
 ): Promise<void> {
-  await panel
-    .locator('input[type="file"]:not([accept])')
-    .setInputFiles(
-      files.map(({ name, text }) => ({
-        name,
-        mimeType: "text/plain",
-        buffer: Buffer.from(text, "utf8"),
-      })),
-    );
+  await panel.locator('input[type="file"]:not([accept])').setInputFiles(
+    files.map(({ name, text }) => ({
+      name,
+      mimeType: "text/plain",
+      buffer: Buffer.from(text, "utf8"),
+    })),
+  );
 }
 
 async function verifyStaged(panel: Page): Promise<void> {
@@ -109,9 +107,7 @@ test("several files are each verified, and a mixed batch says who signed which",
   ]);
   await verifyStaged(panel);
 
-  await expect(
-    panel.getByText("Mixed signers"),
-  ).toBeVisible();
+  await expect(panel.getByText("Mixed signers")).toBeVisible();
   await expect(
     panel.getByText(/rachel\.asc: Rachel Rsa4096 · rita\.asc: Unknown signer/),
   ).toBeVisible();
@@ -152,4 +148,33 @@ test("one tampered file fails the whole batch", async ({ panel }) => {
 
   await expect(panel.getByText(/tampered/).first()).toBeVisible();
   await expect(panel.getByText("Signature verified")).toHaveCount(0);
+});
+
+test("a file added while Verify runs is never shown under its verdict", async ({
+  panel,
+}) => {
+  await onboardWithPassword(panel, PASSWORD);
+  await importContact(panel, rachel.publicKey);
+  await panel.getByRole("tab", { name: "Main" }).click();
+  // Slow every file read, standing in for a large file or a slow disk,
+  // so a second file can land while the first is being verified.
+  await panel.evaluate(() => {
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- re-bound below
+    const read = Blob.prototype.arrayBuffer;
+    Blob.prototype.arrayBuffer = function (this: Blob) {
+      return new Promise((resolve) =>
+        setTimeout(() => resolve(read.call(this)), 1500),
+      );
+    };
+  });
+
+  await stageFiles(panel, [
+    { name: "genuine.asc", text: rachel.signedMessage ?? "" },
+  ]);
+  await verifyStaged(panel);
+  await stageFiles(panel, [{ name: "payload.asc", text: "not verified" }]);
+
+  await panel.waitForTimeout(2500);
+  await expect(panel.getByText("Signature verified")).toHaveCount(0);
+  await expect(panel.getByText("payload.asc")).toBeVisible();
 });

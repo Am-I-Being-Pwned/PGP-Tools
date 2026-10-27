@@ -268,6 +268,11 @@ export interface WorkspaceState {
   removeFile: (index: number) => void;
   clearFiles: () => void;
   resetOutput: () => void;
+  /** Changes whenever what an operation would run on changes (staged
+   *  files, the text, the mode). An operation reads it when it starts
+   *  and, if it has moved by the time it finishes, discards its result:
+   *  a verdict must never sit over input it did not read. */
+  stagedGeneration: () => number;
   resetAll: () => void;
 }
 
@@ -578,6 +583,15 @@ export function useWorkspaceState(opts: {
    *  that makes the encrypt path independent of it. */
   const encryptPasswordReady =
     encryptPassword.length >= MIN_MESSAGE_PASSWORD_LENGTH;
+
+  // See `stagedGeneration`. Text edits bump it as they happen (below);
+  // files and mode through this effect, which runs long before any
+  // operation that started earlier can have finished.
+  const stagedGenerationRef = useRef(0);
+  const stagedGeneration = useCallback(() => stagedGenerationRef.current, []);
+  useEffect(() => {
+    stagedGenerationRef.current++;
+  }, [files, mode]);
 
   const resetOutput = useCallback(() => {
     setOutput("");
@@ -899,6 +913,7 @@ export function useWorkspaceState(opts: {
    */
   const handleInputChange = useCallback(
     (text: string) => {
+      stagedGenerationRef.current++;
       setAutoRunAction(null);
       const prev = inputRef.current;
       setInput(text);
@@ -1040,6 +1055,7 @@ export function useWorkspaceState(opts: {
     setVerifiedSigner,
     signatureTone,
     setSignatureTone,
+    stagedGeneration,
     signatureNote,
     setSignatureNote,
     signerCaveat,

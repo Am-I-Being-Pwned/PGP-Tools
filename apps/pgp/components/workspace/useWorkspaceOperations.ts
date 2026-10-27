@@ -459,7 +459,25 @@ export function useWorkspaceOperations({
     }
   };
 
-  const execute = async () => {
+  /**
+   * Run `operation`, and keep what it wrote only if the staged input is
+   * still what it read. A file dropped, removed or retyped while it ran
+   * would otherwise end up listed under a verdict -- green, even -- for
+   * input that was never checked. Writes and the reset land in the same
+   * React batch, so the stale result is never painted.
+   */
+  async function forCurrentInput<T>(operation: () => Promise<T>): Promise<T> {
+    const generation = s.stagedGeneration();
+    try {
+      return await operation();
+    } finally {
+      if (s.stagedGeneration() !== generation) s.resetOutput();
+    }
+  }
+
+  const execute = () => forCurrentInput(executeNow);
+
+  const executeNow = async () => {
     s.setError(null);
     s.setOutput("");
     s.setBinaryOutput(undefined);
@@ -1190,7 +1208,14 @@ export function useWorkspaceOperations({
     return crxKeys.find((k) => k.extensionId === s.selectedCrxKeyId) ?? null;
   }
 
-  async function doCrxSign(
+  function doCrxSign(
+    crxKey: CrxSigningKeyBlob,
+    password?: string,
+  ): Promise<boolean> {
+    return forCurrentInput(() => doCrxSignNow(crxKey, password));
+  }
+
+  async function doCrxSignNow(
     crxKey: CrxSigningKeyBlob,
     password?: string,
   ): Promise<boolean> {
@@ -1249,7 +1274,11 @@ export function useWorkspaceOperations({
     await doCrxSign(crxKey);
   }
 
-  async function verifyCrxInput() {
+  function verifyCrxInput() {
+    return forCurrentInput(verifyCrxInputNow);
+  }
+
+  async function verifyCrxInputNow() {
     if (s.files.length === 0) return;
     s.setError(null);
     s.setOperationDone(false);
@@ -1286,7 +1315,10 @@ export function useWorkspaceOperations({
    * page-level error: the user's next action is to retype the password,
    * and it should be waiting where they left it.
    */
-  const runPasswordDecrypt = async (password: string) => {
+  const runPasswordDecrypt = (password: string) =>
+    forCurrentInput(() => runPasswordDecryptNow(password));
+
+  const runPasswordDecryptNow = async (password: string) => {
     s.setLoading(true);
     s.setPasswordError(null);
     try {
