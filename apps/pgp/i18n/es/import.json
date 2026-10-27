@@ -430,5 +430,23 @@
   },
   "import_review_conflict_address_revoked": {
     "message": "$email$ pertenecía a $name$ ($keyid$), una clave ya revocada. Confirma con esa persona que esta clave nueva es suya."
+  },
+  "import_review_conflict_key_update": {
+    "message": "Esto añade claves a $name$ ($keyid$), así que los mensajes para esa persona llegarían también a las claves nuevas. Confírmalo con ella antes de guardar."
+  },
+  "import_review_conflict_key_contact": {
+    "message": "Incluye la clave que tienes de $name$ ($keyid$), agrupada con otras claves. Confírmalo con esa persona antes de guardar."
+  },
+  "import_review_conflict_key_own": {
+    "message": "Incluye tu propia clave ($keyid$), agrupada con otras claves. Asegúrate de que todas son tuyas antes de guardar."
+  },
+  "import_review_conflict_address_lookalike": {
+    "message": "$email$ se parece a $theirs$, la dirección de $name$ ($keyid$), pero es otra dirección. Confírmalo con esa persona antes de confiar en ella."
+  },
+  "import_review_all_keys_off": {
+    "message": "Todas las claves que esta cuenta sigue publicando son claves que desactivaste. Si lo guardas, este contacto no tendrá ninguna clave a la que cifrar hasta que vuelvas a activar una."
+  },
+  "import_github_refresh_all_held": {
+    "message": "$username$ ya no publica algunas de las claves guardadas para este contacto, y todas las que sigue publicando pertenecen a otra persona que tienes o a ti, así que no se puede actualizar. Elimina este contacto si ya no quieres cifrar a sus claves antiguas."
   }
 }

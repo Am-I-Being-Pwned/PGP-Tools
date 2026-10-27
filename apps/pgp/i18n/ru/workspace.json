@@ -544,5 +544,29 @@
   },
   "workspace_signer_not_verified": {
     "message": "ключ не отмечен вами как проверенный"
+  },
+  "workspace_not_encrypted": {
+    "message": "Не зашифровано"
+  },
+  "workspace_signed_not_encrypted": {
+    "message": "подписано, но не зашифровано: эту копию мог прислать кто угодно"
+  },
+  "workspace_status_not_encrypted": {
+    "message": "Это сообщение не было зашифровано, поэтому эту копию мог прислать кто угодно и прочитать её по пути."
+  },
+  "workspace_not_encrypted_not_signed": {
+    "message": "Не зашифровано и не подписано"
+  },
+  "workspace_error_batch_not_encrypted": {
+    "message": "$name$ не зашифрован. Расшифруйте его отдельно, чтобы увидеть содержимое."
+  },
+  "workspace_signature_verified_line_breaks": {
+    "message": "Проверьте переносы строк"
+  },
+  "workspace_signed_text_lone_cr": {
+    "message": "подписанный текст содержит возврат каретки без перевода строки (показан как ␍), поэтому переносы строк могут отображаться не так, как их написал подписавший"
+  },
+  "workspace_signature_not_addressed": {
+    "message": "в подписи не указано, что сообщение предназначено вам, поэтому его могли переслать"
   }
 }

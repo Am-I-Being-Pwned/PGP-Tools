@@ -280,5 +280,71 @@
   },
   "app_copied_sensitive_note": {
     "message": "Il reste dans votre presse-papiers, et dans tout historique du presse-papiers, jusqu'à ce que vous copiiez autre chose."
+  },
+  "app_integrity_warning": {
+    "message": "Certaines de vos clés, contacts ou paramètres enregistrés sont plus anciens que la copie que cet appareil a vue en dernier, ou sont manquants. Une personne ayant accès au stockage de votre navigateur ou à votre compte Google les a peut-être restaurés à une version antérieure. Cela peut aussi arriver si deux appareils modifient les mêmes données en même temps. Vérifiez vos clés et vos contacts avant de vous y fier."
+  },
+  "app_integrity_settings_strict": {
+    "message": "Vos paramètres étaient manquants : le préréglage de sécurité le plus strict s'applique jusqu'à ce que vous les modifiiez."
+  },
+  "app_integrity_dismiss": {
+    "message": "Ignorer"
+  },
+  "app_onboarding_vault_exists": {
+    "message": "Un coffre existe déjà dans ce navigateur, aucun nouveau coffre n'a donc été créé. Fermez puis rouvrez le panneau pour le déverrouiller."
+  },
+  "app_vault_elsewhere_title": {
+    "message": "Votre coffre est enregistré ailleurs"
+  },
+  "app_vault_elsewhere_body_local": {
+    "message": "Ce navigateur est configuré pour garder votre coffre dans le stockage synchronisé, mais votre coffre se trouve dans le stockage de cet appareil. Ce réglage est synchronisé entre les appareils : un autre appareil, ou une personne connectée à votre compte Google, l'a peut-être modifié."
+  },
+  "app_vault_elsewhere_body_sync": {
+    "message": "Ce navigateur est configuré pour garder votre coffre sur cet appareil uniquement, mais votre coffre se trouve dans le stockage synchronisé. Ce réglage est synchronisé entre les appareils : un autre appareil, ou une personne connectée à votre compte Google, l'a peut-être modifié."
+  },
+  "app_vault_elsewhere_use": {
+    "message": "Utiliser le coffre là où il est"
+  },
+  "app_vault_orphaned_title": {
+    "message": "Votre coffre ne peut plus être déverrouillé"
+  },
+  "app_vault_orphaned_body": {
+    "message": "Vos clés et vos contacts sont toujours enregistrés, mais l'enregistrement nécessaire pour les déverrouiller est absent du stockage de ce navigateur, et sans lui personne ne peut les ouvrir. Si vous pouvez restaurer cet enregistrement depuis une sauvegarde de ce profil de navigateur, faites-le plutôt."
+  },
+  "app_vault_erase_title": {
+    "message": "Effacer et recommencer"
+  },
+  "app_vault_erase_body": {
+    "message": "Cette action supprime définitivement les clés, contacts, paramètres et l'historique enregistrés dans ce navigateur et dans son stockage synchronisé, afin que vous puissiez créer un nouveau coffre. Elle est irréversible."
+  },
+  "app_vault_erase_confirm": {
+    "message": "Effacer le coffre"
+  },
+  "app_integrity_settings_unreadable": {
+    "message": "Vos paramètres n'ont pas pu être lus : le préréglage de sécurité le plus strict s'applique jusqu'à ce que vous les modifiiez."
+  },
+  "app_integrity_ledger_lost": {
+    "message": "L'enregistrement de cet appareil sur ce qu'il a vu en dernier a été supprimé ou n'a pas pu être lu : les copies plus anciennes de vos données ne peuvent pas être détectées cette fois. Le préréglage de sécurité le plus strict s'applique jusqu'à ce que vous fermiez cet avertissement. Vérifiez que les contacts que vous savez révoqués apparaissent toujours comme révoqués."
+  },
+  "app_vault_ambiguous_title": {
+    "message": "Deux coffres sont stockés dans ce navigateur"
+  },
+  "app_vault_ambiguous_body": {
+    "message": "L'un se trouve dans le stockage de cet appareil et l'autre dans le stockage synchronisé, et cet appareil n'a aucune trace de celui qui est le vôtre. Le stockage synchronisé peut être modifié par un autre appareil, ou par une personne connectée à votre compte Google. Choisissez celui que vous utilisez ici. Rien n'est copié ni supprimé."
+  },
+  "app_vault_ambiguous_use_local": {
+    "message": "Utiliser le coffre de cet appareil"
+  },
+  "app_vault_ambiguous_use_sync": {
+    "message": "Utiliser le coffre synchronisé"
+  },
+  "app_vault_alternate_sync": {
+    "message": "Un coffre est aussi stocké dans le stockage synchronisé."
+  },
+  "app_vault_alternate_local": {
+    "message": "Un coffre est aussi stocké dans le stockage de cet appareil."
+  },
+  "app_vault_alternate_use": {
+    "message": "Essayer celui-là"
   }
 }

@@ -287,5 +287,20 @@
   "keys_contact_same_name": { "message": "名字相同" },
   "keys_contact_same_name_title": {
     "message": "$name$ ($keyid$) 也用这个名字，但密钥不同。"
+  },
+  "keys_invisible_char": {
+    "message": "此处有一个不可见字符 ($code$)"
+  },
+  "keys_clash_check": {
+    "message": "在信任任何一个密钥之前，请先与对方确认哪个才是其本人的。"
+  },
+  "keys_confusable_char": {
+    "message": "$code$ 看起来像拉丁字母，但其实是另一个字符"
+  },
+  "keys_contact_lookalike_address": {
+    "message": "相似地址"
+  },
+  "keys_contact_lookalike_address_title": {
+    "message": "$name$ ($keyid$) 的地址看起来与此地址相同，但密钥不同。"
   }
 }

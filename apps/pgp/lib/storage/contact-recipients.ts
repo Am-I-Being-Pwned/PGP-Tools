@@ -55,21 +55,27 @@ export function isRecipientDisabled(recipient: ContactRecipient): boolean {
  * The display list stays {@link contactRecipients} -- a disabled key
  * must remain visible, or the user cannot turn it back on. This is the
  * list `toSelectedRecipient` expands, and the only place the two differ.
+ *
+ * EMPTY when every key is off, and that state is reachable: the UI
+ * refuses to turn off the last enabled key, but a refresh can take the
+ * enabled ones away (a GitHub account that deleted the keys the user
+ * kept, leaving the ones they turned off -- `carryForward` keeps those
+ * flags). This used to fall back to every key, which quietly encrypted
+ * to exactly the keys the user had said not to use. Empty means the
+ * contact cannot be encrypted to until a key is turned back on: the
+ * picker blocks it with a reason (`recipientBlockReason`), and
+ * `buildEncryptRecipients` refuses an empty key list rather than
+ * encrypting to nobody (see {@link hasActiveRecipient}).
  */
 export function activeRecipients(
   contact: PublicContactKey,
 ): ContactRecipient[] {
-  const all = contactRecipients(contact);
-  const active = all.filter((r) => !isRecipientDisabled(r));
-  // SAFETY NET, not a normal path: the UI refuses to disable the last
-  // enabled key, so this state cannot be reached through it. But a
-  // hand-edited blob, or a record from some future build, could still
-  // arrive with everything off -- and returning [] there would encrypt
-  // the message to NOBODY, silently and unrecoverably. Falling back to
-  // the full list is the failure that is merely wrong-in-the-safe-
-  // direction: the user gets the pre-feature behaviour instead of an
-  // unreadable file.
-  return active.length > 0 ? active : all;
+  return contactRecipients(contact).filter((r) => !isRecipientDisabled(r));
+}
+
+/** Whether there is anything left to encrypt to this contact with. */
+export function hasActiveRecipient(contact: PublicContactKey): boolean {
+  return activeRecipients(contact).length > 0;
 }
 
 /** Where this contact came from, or null when it was hand-supplied.

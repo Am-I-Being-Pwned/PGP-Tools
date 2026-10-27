@@ -352,6 +352,10 @@
     "message": "Select at least one recipient, or set a password",
     "description": "Disabled reason of the Run command in encrypt mode when nobody could open the result."
   },
+  "actions_no_active_key_reason": {
+    "message": "Every key of this contact is turned off. Turn one back on in the contact's details to encrypt to them.",
+    "description": "Why a contact is dimmed in the recipient picker, and the error when encrypt is attempted with it: the user turned off all of its keys."
+  },
   "actions_no_input_decrypt": {
     "message": "Nothing to decrypt - paste an encrypted message or drop a file",
     "description": "Disabled reason of the Run command in decrypt mode when the workspace has no input."
@@ -706,6 +710,26 @@
     "message": "View keys",
     "description": "Action button on the keys-added toast; jumps to the Keys tab and highlights the imported keys. $count$ is the number of keys."
   },
+  "app_integrity_dismiss": {
+    "message": "Dismiss",
+    "description": "Tooltip and screen-reader label of the close button on the app_integrity_warning band."
+  },
+  "app_integrity_ledger_lost": {
+    "message": "This device's record of what it last saw was deleted or could not be read, so older copies of your data cannot be detected this time. The strictest security preset is in effect until you dismiss this. Check that contacts you know were revoked still show as revoked.",
+    "description": "Extra line of the app_integrity_warning band, shown when this device's tamper-detection record was deleted or is unreadable. It keeps showing on every unlock until the user dismisses the band."
+  },
+  "app_integrity_settings_strict": {
+    "message": "Your settings were missing, so the strictest security preset is in effect until you change them.",
+    "description": "Second line of the app_integrity_warning band, shown only when the settings themselves went missing. The strictest preset is the one called Paranoid in the preset picker."
+  },
+  "app_integrity_settings_unreadable": {
+    "message": "Your settings could not be read, so the strictest security preset is in effect until you change them.",
+    "description": "Extra line of the app_integrity_warning band, shown when the stored settings are present but cannot be decrypted or read. The strictest preset is the one called Paranoid in the preset picker."
+  },
+  "app_integrity_warning": {
+    "message": "Some of your stored keys, contacts or settings are older than the copy this device last saw, or are missing. Someone with access to your browser storage or Google account may have rolled them back. Two devices changing the same data at once can also cause this. Check your keys and contacts before you rely on them.",
+    "description": "Amber warning band under the tab bar, shown after unlock when a stored keyring, contacts list or settings blob is older than this device last saw, or has disappeared. Revoked contacts stay revoked regardless."
+  },
   "app_menu_open_in_pgp_tools": {
     "message": "Open in PGP Tools",
     "description": "Right-click context menu item shown when text is selected on a web page. Sends the selection to the side panel. 'PGP Tools' is the brand name."
@@ -880,6 +904,10 @@
     "message": "Use this preset",
     "description": "Onboarding, final step: primary button that applies the selected security preset and finishes onboarding."
   },
+  "app_onboarding_vault_exists": {
+    "message": "A vault already exists in this browser, so a new one was not set up. Close and reopen the panel to unlock it.",
+    "description": "Onboarding, protection step: error shown instead of setting up a new vault when one already exists (setting up would make the existing keys unopenable)."
+  },
   "app_oversized_files_one": {
     "message": "$files$: file is larger than $limit$ and can't be processed in the panel.",
     "description": "Error shown when a dropped file exceeds the size ceiling. $files$ is the file name; $limit$ is the ceiling, e.g. '4 GB'; $count$ is the number of oversized files (1 here).",
@@ -920,9 +948,73 @@
     "message": "Main",
     "description": "Label of the first tab in the side panel's top tab bar (the workspace where encrypt/decrypt happens). Short: shares a narrow bar with the Keys tab."
   },
+  "app_vault_alternate_local": {
+    "message": "A vault is also stored in this device's own storage.",
+    "description": "Hint on the unlock screen after a failed unlock, when this device's own storage also holds a vault. Followed by the app_vault_alternate_use link."
+  },
+  "app_vault_alternate_sync": {
+    "message": "A vault is also stored in synced storage.",
+    "description": "Hint on the unlock screen after a failed unlock, when synced storage also holds a vault. Followed by the app_vault_alternate_use link."
+  },
+  "app_vault_alternate_use": {
+    "message": "Try that one",
+    "description": "Link after app_vault_alternate_sync / app_vault_alternate_local. Switches the unlock screen to the vault in the other storage area; nothing is copied or deleted."
+  },
+  "app_vault_ambiguous_body": {
+    "message": "One is in this device's own storage and one is in synced storage, and this device has no record of which one is yours. Synced storage can be changed by another device, or by someone signed in to your Google account. Choose the one you use here. Nothing is copied or deleted.",
+    "description": "Body under app_vault_ambiguous_title."
+  },
+  "app_vault_ambiguous_title": {
+    "message": "Two vaults are stored in this browser",
+    "description": "Heading of the full-screen notice shown when both this device's own storage and synced storage hold a vault, and the device has no record of which one is its own."
+  },
+  "app_vault_ambiguous_use_local": {
+    "message": "Use the vault on this device",
+    "description": "Button under app_vault_ambiguous_body. Uses the vault in this device's own (local, not synced) storage. Nothing is copied or deleted."
+  },
+  "app_vault_ambiguous_use_sync": {
+    "message": "Use the synced vault",
+    "description": "Button under app_vault_ambiguous_body. Uses the vault in synced storage. Nothing is copied or deleted."
+  },
+  "app_vault_elsewhere_body_local": {
+    "message": "This browser is set to keep your vault in synced storage, but your vault is in this device's own storage. That setting syncs between devices, so another device, or someone signed in to your Google account, may have changed it.",
+    "description": "Body under app_vault_elsewhere_title when the vault is in this device's local storage but the setting says sync."
+  },
+  "app_vault_elsewhere_body_sync": {
+    "message": "This browser is set to keep your vault on this device only, but your vault is in synced storage. That setting syncs between devices, so another device, or someone signed in to your Google account, may have changed it.",
+    "description": "Body under app_vault_elsewhere_title when the vault is in synced storage but the setting says this device only."
+  },
+  "app_vault_elsewhere_title": {
+    "message": "Your vault is stored somewhere else",
+    "description": "Heading of the full-screen notice shown when the storage-location setting points at one storage area but the vault is in the other."
+  },
+  "app_vault_elsewhere_use": {
+    "message": "Use the vault where it is",
+    "description": "Button under app_vault_elsewhere_title. Points the storage-location setting back at the area the vault is in; nothing is copied or deleted."
+  },
+  "app_vault_erase_body": {
+    "message": "This permanently deletes the stored keys, contacts, settings and history in this browser and in its synced storage, so you can set up a new vault. It cannot be undone.",
+    "description": "Confirmation page body for app_vault_erase_title."
+  },
+  "app_vault_erase_confirm": {
+    "message": "Erase vault",
+    "description": "Destructive confirm button on the app_vault_erase_title page."
+  },
+  "app_vault_erase_title": {
+    "message": "Erase and start over",
+    "description": "Button under app_vault_orphaned_body, and the title of the confirmation page it opens. Destructive."
+  },
   "app_vault_lock_retry": {
     "message": "Lock and try again",
     "description": "Button under the vault-unreadable error. Locks the vault so the user can unlock again."
+  },
+  "app_vault_orphaned_body": {
+    "message": "Your keys and contacts are still stored, but the record needed to unlock them is missing from this browser's storage, and without it nobody can open them. If you can restore that record from a backup of this browser profile, do that instead.",
+    "description": "Body under app_vault_orphaned_title."
+  },
+  "app_vault_orphaned_title": {
+    "message": "Your vault can no longer be unlocked",
+    "description": "Heading of the full-screen notice shown when keys and contacts are stored but the record needed to unlock them (the master protection) is missing from every storage area."
   },
   "app_vault_unreadable_body": {
     "message": "Your keys are still stored on this device. Locking and trying again is the first thing to try.",
@@ -1353,6 +1445,15 @@
     "message": "GitHub is rate-limiting this network. The limit is counted per IP address, so it can be used up by other people on the same connection.",
     "description": "Lookup error when GitHub returned a rate-limit response. A 'Try again in ...' sentence may follow it."
   },
+  "import_github_refresh_all_held": {
+    "message": "$username$ no longer lists some of the keys saved for this contact, and every key it still lists belongs to someone else you have, or to you, so it can't be updated. Delete this contact if you no longer want to encrypt to its old keys.",
+    "description": "Why a GitHub refresh can't be saved: the account dropped some keys, and the rest are all held by other contacts or the user. $username$ is the GitHub account name.",
+    "placeholders": {
+      "username": {
+        "content": "$1"
+      }
+    }
+  },
   "import_github_rejected_heading_one": {
     "message": "$count$ published key can't be used",
     "description": "Amber heading on the import preview above the list of fetched GitHub keys the engine refused.",
@@ -1717,6 +1818,10 @@
     "message": "Show it in your keys",
     "description": "Preview button for a key that is already stored: closes the panel and highlights the key in the list."
   },
+  "import_review_all_keys_off": {
+    "message": "Every key this account still lists is one you turned off. Saved, this contact has no key to encrypt to until you turn one back on.",
+    "description": "Red warning on an import review row for a GitHub refresh: the account removed every key the user kept, leaving only keys the user turned off."
+  },
   "import_review_choice_aria": {
     "message": "What to do with $name$",
     "description": "Accessible label of the Skip/Import/Replace switch on an import review row. $name$ is the key's name.",
@@ -1757,6 +1862,24 @@
       }
     }
   },
+  "import_review_conflict_address_lookalike": {
+    "message": "$email$ looks like $theirs$, the address of $name$ ($keyid$), but it is a different address. Check with them before you trust it.",
+    "description": "Red warning on an import review row: the key's address reads the same as a saved contact's but is not the same (a lookalike letter). $email$ is the key's address, $theirs$ the saved contact's, $name$ the saved contact, $keyid$ its key id.",
+    "placeholders": {
+      "email": {
+        "content": "$1"
+      },
+      "theirs": {
+        "content": "$2"
+      },
+      "name": {
+        "content": "$3"
+      },
+      "keyid": {
+        "content": "$4"
+      }
+    }
+  },
   "import_review_conflict_address_revoked": {
     "message": "$email$ belonged to $name$ ($keyid$), a key that is now revoked. Check with them that this new key is theirs.",
     "description": "Red warning on an import review row: the key claims the address of a contact whose key is revoked. $email$ is the address, $name$ the contact, $keyid$ its 16-hex key id.",
@@ -1769,6 +1892,39 @@
       },
       "keyid": {
         "content": "$3"
+      }
+    }
+  },
+  "import_review_conflict_key_contact": {
+    "message": "Includes the key you have for $name$ ($keyid$), grouped with other keys. Check with them before you save it.",
+    "description": "Red warning on an import review row: a pasted or fetched SSH group holds a saved contact's key next to other keys. $name$ is the contact, $keyid$ its key id.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
+  "import_review_conflict_key_own": {
+    "message": "Includes your own key ($keyid$), grouped with other keys. Make sure they are all yours before you save it.",
+    "description": "Red warning on an import review row: a pasted or fetched SSH group holds one of the user's own keys next to other keys. $keyid$ is the user's key id.",
+    "placeholders": {
+      "keyid": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_conflict_key_update": {
+    "message": "This adds keys to $name$ ($keyid$), so messages to them would also reach the new keys. Check with them before you save it.",
+    "description": "Red warning on an import review row: a pasted SSH group would add keys to a saved contact. $name$ is the contact, $keyid$ its key id.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
       }
     }
   },
@@ -2765,6 +2921,10 @@
     "message": "You hold the private key",
     "description": "Tooltip on the 'Your key' chip."
   },
+  "keys_clash_check": {
+    "message": "Check with them which key is really theirs before you rely on either.",
+    "description": "Muted line under the Same address / Same name warnings on a contact's key details: compare fingerprints with the person."
+  },
   "keys_confirm_delete_key_title": {
     "message": "Delete key?",
     "description": "Title of the confirmation page for deleting one of the user's own keys."
@@ -2772,6 +2932,15 @@
   "keys_confirm_remove_contact_title": {
     "message": "Remove contact?",
     "description": "Title of the confirmation page for removing a contact."
+  },
+  "keys_confusable_char": {
+    "message": "$code$ looks like a Latin letter but is a different one",
+    "description": "Hover text on a highlighted letter in an email address that passes for a Latin letter without being one (e.g. the dotless ı in alıce@corp.com). $code$ is the Unicode code point, e.g. U+0131.",
+    "placeholders": {
+      "code": {
+        "content": "$1"
+      }
+    }
   },
   "keys_contact_expired": {
     "message": "Expired $date$",
@@ -2824,7 +2993,7 @@
   },
   "keys_contact_keys_partial": {
     "message": "$active$ of $total$ keys",
-    "description": "Contact card badge when some of the contact's keys are turned off. $active$ and $total$ are numbers; $total$ is at least 2. Very short.",
+    "description": "Contact card badge when some of the contact's keys are turned off. $active$ and $total$ are numbers; $total$ is usually at least 2, and 1 when a contact's only key is turned off. Very short.",
     "placeholders": {
       "active": {
         "content": "$1"
@@ -2849,6 +3018,22 @@
   "keys_contact_long_id_title": {
     "message": "Key ID: the last 16 characters of this key's fingerprint. It tells keys apart at a glance; to check a key is genuine, compare the full fingerprint.",
     "description": "Tooltip on the 16-character key ID shown at the right of a key or contact row (the last 16 hex digits of the fingerprint). Says what it is, and that it identifies but does not verify a key."
+  },
+  "keys_contact_lookalike_address": {
+    "message": "Lookalike address",
+    "description": "Amber pill on a contact whose address reads the same as another contact's without being the same (a lookalike letter in it). Short."
+  },
+  "keys_contact_lookalike_address_title": {
+    "message": "$name$ ($keyid$) has an address that looks the same as this one, with a different key.",
+    "description": "Tooltip of the Lookalike address pill, and the warning on a contact's key details. $name$ is the other contact, $keyid$ its key id.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
   },
   "keys_contact_options_aria": {
     "message": "Contact options",
@@ -3201,6 +3386,15 @@
     "description": "Toggle button revealing hidden inactive subkeys of mixed or invalid status. $count$ is a number.",
     "placeholders": {
       "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_invisible_char": {
+    "message": "An invisible character ($code$) is here",
+    "description": "Hover text on a marker drawn where a name or email holds a character that renders as nothing (a zero-width space, a variation selector). $code$ is the Unicode code point, e.g. U+200B.",
+    "placeholders": {
+      "code": {
         "content": "$1"
       }
     }
@@ -5013,6 +5207,15 @@
     "message": "Enter message password",
     "description": "Placeholder of the inline password field when a password-protected message is being decrypted."
   },
+  "workspace_error_batch_not_encrypted": {
+    "message": "$name$ is not encrypted. Decrypt it on its own to see what it contains.",
+    "description": "Decrypt error when several files are staged and one of them has no encryption layer. $name$ is the file name.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_error_crx_invalid": {
     "message": "This file's CRX signature could not be verified.",
     "description": "Error when a .crx file's signature does not check out."
@@ -5295,6 +5498,14 @@
     "message": "No such language.",
     "description": "Empty state of the language search in the compose translate menu."
   },
+  "workspace_not_encrypted": {
+    "message": "Not encrypted",
+    "description": "Short amber label on a signer card in decrypt mode: the message was signed but never encrypted, so it is not private mail. Keep it to a couple of words; the note under the card explains."
+  },
+  "workspace_not_encrypted_not_signed": {
+    "message": "Not encrypted or signed",
+    "description": "Name on the amber card when a message opened in decrypt mode was neither encrypted nor signed. Keep it short; the note under it explains."
+  },
   "workspace_note_downloading": {
     "message": "Downloading $what$...",
     "description": "Status chip while a translation model download has not reported progress yet. $what$ names the model.",
@@ -5573,9 +5784,17 @@
     "message": "the signature covers the original, not this translation",
     "description": "Note under the signer card while a machine translation is shown in place of the signed message."
   },
+  "workspace_signature_not_addressed": {
+    "message": "the signature doesn't say it was meant for you, so it may have been forwarded",
+    "description": "Lower-case fragment in the note under a good signature on a DECRYPTED message, joined with ' · ': the signer did not record who the message was for, so someone may have re-encrypted a message the signer wrote to someone else."
+  },
   "workspace_signature_verified": {
     "message": "Signature verified",
     "description": "Status line and signer-card badge after a signature checked out."
+  },
+  "workspace_signature_verified_line_breaks": {
+    "message": "Check line breaks",
+    "description": "Short amber label on a signer card: the signature checks out, but the signed text contains a carriage return without a line feed, which may display differently from how it was signed. Keep it to a couple of words; the note under the card explains."
   },
   "workspace_signature_verified_not_for_you": {
     "message": "Not for you",
@@ -5594,6 +5813,10 @@
       }
     }
   },
+  "workspace_signed_not_encrypted": {
+    "message": "signed, but not encrypted: anyone could have sent you this copy",
+    "description": "Part of the note under a signer card in decrypt mode: the signature is good, but the message was never encrypted, so the person who sent it need not be the signer. Lowercase: it is joined with other parts by ' · '."
+  },
   "workspace_signed_on": {
     "message": "Signed $date$",
     "description": "Part of the note under a verified signer. $date$ is the date the signature claims it was made (chosen by the signer).",
@@ -5606,6 +5829,10 @@
   "workspace_signed_text_hidden_chars": {
     "message": "the signed text contains invisible or text-direction characters, so it may not read on screen the way it was written",
     "description": "Part of the note under a verified signer: the signed text itself contains bidi/zero-width/control characters that can make it display in a different order. Lowercase: it follows other parts after a dot separator."
+  },
+  "workspace_signed_text_lone_cr": {
+    "message": "the signed text has a carriage return without a line feed (shown as ␍), so its line breaks may not display the way the signer wrote them",
+    "description": "Part of the note under a verified signer: the signed text contains a lone CR character, which some programs treat as a line break and others hide. The symbol in brackets is the one the result box draws for it; keep it. Lowercase: it is joined with other parts by ' · '."
   },
   "workspace_signer_key_retired": {
     "message": "the key that made it has since expired or been revoked",
@@ -5640,6 +5867,10 @@
   "workspace_status_decrypted_archive": {
     "message": "Decrypted archive containing multiple files",
     "description": "Status line when the decrypted result is a zip archive."
+  },
+  "workspace_status_not_encrypted": {
+    "message": "This message was not encrypted, so anyone could have sent you this copy and read it on the way.",
+    "description": "Note on the amber card (and error text) when a message opened in decrypt mode has no encryption at all. A full sentence."
   },
   "workspace_status_signer_unknown": {
     "message": "This message is signed, but the signer's public key isn't in your keys or contacts, so the signature could not be verified.",

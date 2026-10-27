@@ -301,5 +301,8 @@
   },
   "actions_reply_to_signer": {
     "message": "Responder al remitente"
+  },
+  "actions_no_active_key_reason": {
+    "message": "Todas las claves de este contacto están desactivadas. Vuelve a activar una en los detalles del contacto para cifrarle."
   }
 }

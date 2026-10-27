@@ -292,6 +292,9 @@
   "actions_need_recipient_or_password": {
     "message": "宛先を 1 つ以上選択するか、パスワードを設定してください"
   },
+  "actions_no_active_key_reason": {
+    "message": "この連絡先の鍵はすべてオフです。暗号化するには、連絡先の詳細でどれかをオンに戻してください。"
+  },
   "actions_no_input_decrypt": {
     "message": "復号するものがありません。暗号化されたメッセージを貼り付けるか、ファイルをドロップしてください"
   },
@@ -567,6 +570,21 @@
   "app_import_view_key_other": {
     "message": "鍵を表示"
   },
+  "app_integrity_dismiss": {
+    "message": "閉じる"
+  },
+  "app_integrity_ledger_lost": {
+    "message": "このデバイスが最後に確認した内容の記録が削除されたか読み取れなかったため、今回はデータの古いコピーを検出できません。この警告を閉じるまで、最も厳しいセキュリティプリセットが適用されます。失効したと分かっている連絡先が、引き続き失効と表示されているか確認してください。"
+  },
+  "app_integrity_settings_strict": {
+    "message": "設定が見つからなかったため、変更するまで最も厳しいセキュリティプリセットが適用されます。"
+  },
+  "app_integrity_settings_unreadable": {
+    "message": "設定を読み取れなかったため、変更するまで最も厳しいセキュリティプリセットが適用されます。"
+  },
+  "app_integrity_warning": {
+    "message": "保存されている鍵、連絡先、または設定の一部が、このデバイスが最後に確認したものより古いか、見つかりません。ブラウザのストレージや Google アカウントにアクセスできる誰かが、以前の状態に戻した可能性があります。2 台のデバイスが同時に同じデータを変更した場合にも起こることがあります。鍵と連絡先を使う前に確認してください。"
+  },
   "app_menu_open_in_pgp_tools": {
     "message": "PGP Tools で開く"
   },
@@ -700,6 +718,9 @@
   "app_onboarding_use_preset": {
     "message": "このプリセットを使用"
   },
+  "app_onboarding_vault_exists": {
+    "message": "このブラウザにはすでに保管庫があるため、新しい保管庫は作成されませんでした。パネルを閉じて開き直し、ロックを解除してください。"
+  },
   "app_oversized_files_one": {
     "message": "$files$: ファイルが $limit$ を超えているため、パネルでは処理できません。",
     "placeholders": {
@@ -736,8 +757,56 @@
   "app_tab_main": {
     "message": "メイン"
   },
+  "app_vault_alternate_local": {
+    "message": "このデバイスのストレージにも保管庫が保存されています。"
+  },
+  "app_vault_alternate_sync": {
+    "message": "同期ストレージにも保管庫が保存されています。"
+  },
+  "app_vault_alternate_use": {
+    "message": "そちらを試す"
+  },
+  "app_vault_ambiguous_body": {
+    "message": "1 つはこのデバイスのストレージに、もう 1 つは同期ストレージにあり、このデバイスにはどちらがあなたのものかの記録がありません。同期ストレージは別のデバイスや、Google アカウントにログインしている誰かが変更できます。ここで使っている方を選んでください。何もコピーや削除はされません。"
+  },
+  "app_vault_ambiguous_title": {
+    "message": "このブラウザには保管庫が 2 つ保存されています"
+  },
+  "app_vault_ambiguous_use_local": {
+    "message": "このデバイスの保管庫を使う"
+  },
+  "app_vault_ambiguous_use_sync": {
+    "message": "同期された保管庫を使う"
+  },
+  "app_vault_elsewhere_body_local": {
+    "message": "このブラウザは保管庫を同期ストレージに保存するよう設定されていますが、保管庫はこのデバイスのストレージにあります。この設定はデバイス間で同期されるため、別のデバイス、または Google アカウントにログインしている誰かが変更した可能性があります。"
+  },
+  "app_vault_elsewhere_body_sync": {
+    "message": "このブラウザは保管庫をこのデバイスのみに保存するよう設定されていますが、保管庫は同期ストレージにあります。この設定はデバイス間で同期されるため、別のデバイス、または Google アカウントにログインしている誰かが変更した可能性があります。"
+  },
+  "app_vault_elsewhere_title": {
+    "message": "保管庫は別の場所に保存されています"
+  },
+  "app_vault_elsewhere_use": {
+    "message": "保管庫を現在の場所で使う"
+  },
+  "app_vault_erase_body": {
+    "message": "このブラウザとその同期ストレージに保存されている鍵、連絡先、設定、履歴を完全に削除し、新しい保管庫を作成できるようにします。元に戻すことはできません。"
+  },
+  "app_vault_erase_confirm": {
+    "message": "保管庫を消去"
+  },
+  "app_vault_erase_title": {
+    "message": "消去してやり直す"
+  },
   "app_vault_lock_retry": {
     "message": "ロックしてやり直す"
+  },
+  "app_vault_orphaned_body": {
+    "message": "鍵と連絡先はまだ保存されていますが、ロック解除に必要な記録がこのブラウザのストレージから失われており、それがないと誰も開けません。このブラウザプロファイルのバックアップからその記録を復元できる場合は、そちらを行ってください。"
+  },
+  "app_vault_orphaned_title": {
+    "message": "保管庫のロックを解除できなくなりました"
   },
   "app_vault_unreadable_body": {
     "message": "鍵はこのデバイスに保存されたままです。まずはロックしてから、もう一度お試しください。"
@@ -1086,6 +1155,14 @@
   "import_github_rate_limited": {
     "message": "GitHub がこのネットワークからのアクセスを制限しています。制限は IP アドレスごとに数えられるため、同じ回線を使う他の人によって上限に達することがあります。"
   },
+  "import_github_refresh_all_held": {
+    "message": "$username$ はこの連絡先に保存された鍵の一部を公開しなくなり、残りはすべて別の連絡先かあなた自身の鍵なので、更新できません。古い鍵への暗号化をやめたい場合は、この連絡先を削除してください。",
+    "placeholders": {
+      "username": {
+        "content": "$1"
+      }
+    }
+  },
   "import_github_rejected_heading_one": {
     "message": "公開されている鍵のうち $count$ 個は使用できません",
     "placeholders": {
@@ -1395,6 +1472,9 @@
   "import_reveal": {
     "message": "鍵一覧で表示"
   },
+  "import_review_all_keys_off": {
+    "message": "このアカウントがまだ公開している鍵はすべて、あなたがオフにした鍵です。保存すると、どれかをオンに戻すまでこの連絡先には暗号化できる鍵がありません。"
+  },
   "import_review_choice_aria": {
     "message": "$name$ の扱い",
     "placeholders": {
@@ -1429,6 +1509,23 @@
       }
     }
   },
+  "import_review_conflict_address_lookalike": {
+    "message": "$email$ は $name$ ($keyid$) のアドレス $theirs$ に似ていますが、別のアドレスです。信頼する前に本人に確認してください。",
+    "placeholders": {
+      "email": {
+        "content": "$1"
+      },
+      "theirs": {
+        "content": "$2"
+      },
+      "name": {
+        "content": "$3"
+      },
+      "keyid": {
+        "content": "$4"
+      }
+    }
+  },
   "import_review_conflict_address_revoked": {
     "message": "$email$ は $name$ ($keyid$) のものでしたが、その鍵は失効しています。この新しい鍵が本人のものか確認してください。",
     "placeholders": {
@@ -1440,6 +1537,36 @@
       },
       "keyid": {
         "content": "$3"
+      }
+    }
+  },
+  "import_review_conflict_key_contact": {
+    "message": "$name$ ($keyid$) の鍵がほかの鍵と一緒に含まれています。保存する前に本人に確認してください。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
+  "import_review_conflict_key_own": {
+    "message": "あなた自身の鍵 ($keyid$) がほかの鍵と一緒に含まれています。保存する前に、すべて自分の鍵か確認してください。",
+    "placeholders": {
+      "keyid": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_conflict_key_update": {
+    "message": "$name$ ($keyid$) に鍵が追加され、この相手へのメッセージは新しい鍵にも届くようになります。保存する前に本人に確認してください。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
       }
     }
   },
@@ -2243,11 +2370,22 @@
   "keys_chip_your_key_title": {
     "message": "秘密鍵を保持しています"
   },
+  "keys_clash_check": {
+    "message": "どちらかを信頼する前に、どの鍵が本当に本人のものか確認してください。"
+  },
   "keys_confirm_delete_key_title": {
     "message": "鍵を削除しますか？"
   },
   "keys_confirm_remove_contact_title": {
     "message": "連絡先を削除しますか？"
+  },
+  "keys_confusable_char": {
+    "message": "$code$ はラテン文字に見えますが、別の文字です",
+    "placeholders": {
+      "code": {
+        "content": "$1"
+      }
+    }
   },
   "keys_contact_expired": {
     "message": "$date$ に期限切れ",
@@ -2316,6 +2454,20 @@
   },
   "keys_contact_long_id_title": {
     "message": "鍵 ID: この鍵のフィンガープリントの末尾 16 文字です。鍵をひと目で見分けるためのもので、本物かどうか確認するにはフィンガープリント全体を照合してください。"
+  },
+  "keys_contact_lookalike_address": {
+    "message": "紛らわしいアドレス"
+  },
+  "keys_contact_lookalike_address_title": {
+    "message": "$name$ ($keyid$) には、これと同じに見えるアドレスが別の鍵で登録されています。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
   },
   "keys_contact_options_aria": {
     "message": "連絡先のオプション"
@@ -2609,6 +2761,14 @@
     "message": "使用できない副鍵 $count$ 個",
     "placeholders": {
       "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_invisible_char": {
+    "message": "ここに見えない文字 ($code$) があります",
+    "placeholders": {
+      "code": {
         "content": "$1"
       }
     }
@@ -4083,6 +4243,14 @@
   "workspace_enter_message_password": {
     "message": "メッセージのパスワードを入力"
   },
+  "workspace_error_batch_not_encrypted": {
+    "message": "$name$ は暗号化されていません。内容を確認するには、このファイルだけを復号してください。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_error_crx_invalid": {
     "message": "このファイルの CRX 署名を検証できませんでした。"
   },
@@ -4314,6 +4482,12 @@
   "workspace_no_such_language": {
     "message": "該当する言語はありません。"
   },
+  "workspace_not_encrypted": {
+    "message": "暗号化されていません"
+  },
+  "workspace_not_encrypted_not_signed": {
+    "message": "暗号化も署名もなし"
+  },
   "workspace_note_downloading": {
     "message": "$what$をダウンロード中...",
     "placeholders": {
@@ -4539,8 +4713,14 @@
   "workspace_signature_covers_original": {
     "message": "署名の対象は原文であり、この翻訳ではありません"
   },
+  "workspace_signature_not_addressed": {
+    "message": "署名にはあなた宛てであることが示されていないため、転送された可能性があります"
+  },
   "workspace_signature_verified": {
     "message": "署名を検証しました"
+  },
+  "workspace_signature_verified_line_breaks": {
+    "message": "改行を確認"
   },
   "workspace_signature_verified_not_for_you": {
     "message": "あなた宛てではない"
@@ -4556,6 +4736,9 @@
       }
     }
   },
+  "workspace_signed_not_encrypted": {
+    "message": "署名はありますが暗号化されていません: このコピーは誰でも送れます"
+  },
   "workspace_signed_on": {
     "message": "署名日 $date$",
     "placeholders": {
@@ -4566,6 +4749,9 @@
   },
   "workspace_signed_text_hidden_chars": {
     "message": "署名されたテキストに不可視文字または文字方向の制御文字が含まれているため、書かれた通りに表示されない可能性があります"
+  },
+  "workspace_signed_text_lone_cr": {
+    "message": "署名されたテキストに改行 (LF) を伴わない復帰 (CR) が含まれています (␍ と表示)。改行が署名者の書いたとおりに表示されない可能性があります"
   },
   "workspace_signer_key_retired": {
     "message": "署名した鍵はその後期限切れまたは失効しています"
@@ -4594,6 +4780,9 @@
   },
   "workspace_status_decrypted_archive": {
     "message": "複数のファイルを含むアーカイブを復号しました"
+  },
+  "workspace_status_not_encrypted": {
+    "message": "このメッセージは暗号化されていませんでした。このコピーは誰でも送ることができ、途中で読まれた可能性もあります。"
   },
   "workspace_status_signer_unknown": {
     "message": "このメッセージは署名されていますが、署名者の公開鍵が鍵にも連絡先にもないため、署名を検証できませんでした。"

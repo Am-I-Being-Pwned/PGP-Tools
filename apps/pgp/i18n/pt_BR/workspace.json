@@ -502,5 +502,29 @@
   },
   "workspace_signer_not_verified": {
     "message": "chave não marcada como verificada por você"
+  },
+  "workspace_not_encrypted": {
+    "message": "Não criptografada"
+  },
+  "workspace_signed_not_encrypted": {
+    "message": "assinada, mas não criptografada: qualquer pessoa pode ter enviado esta cópia"
+  },
+  "workspace_status_not_encrypted": {
+    "message": "Esta mensagem não estava criptografada, então qualquer pessoa pode ter enviado esta cópia e lido no caminho."
+  },
+  "workspace_not_encrypted_not_signed": {
+    "message": "Sem criptografia nem assinatura"
+  },
+  "workspace_error_batch_not_encrypted": {
+    "message": "$name$ não está criptografado. Descriptografe-o sozinho para ver o que contém."
+  },
+  "workspace_signature_verified_line_breaks": {
+    "message": "Verifique as quebras de linha"
+  },
+  "workspace_signed_text_lone_cr": {
+    "message": "o texto assinado tem um retorno de carro sem quebra de linha (mostrado como ␍), então as quebras de linha podem não aparecer como o signatário as escreveu"
+  },
+  "workspace_signature_not_addressed": {
+    "message": "a assinatura não diz que era para você, então pode ter sido encaminhada"
   }
 }

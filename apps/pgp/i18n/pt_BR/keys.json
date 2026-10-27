@@ -577,5 +577,20 @@
   },
   "keys_contact_same_name_title": {
     "message": "$name$ ($keyid$) também tem este nome, com outra chave."
+  },
+  "keys_invisible_char": {
+    "message": "Há um caractere invisível ($code$) aqui"
+  },
+  "keys_clash_check": {
+    "message": "Confirme com a pessoa qual chave é realmente dela antes de confiar em qualquer uma."
+  },
+  "keys_confusable_char": {
+    "message": "$code$ parece uma letra latina, mas é outra"
+  },
+  "keys_contact_lookalike_address": {
+    "message": "Endereço parecido"
+  },
+  "keys_contact_lookalike_address_title": {
+    "message": "$name$ ($keyid$) tem um endereço que parece igual a este, com outra chave."
   }
 }

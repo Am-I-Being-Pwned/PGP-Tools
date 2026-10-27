@@ -32,6 +32,7 @@ import {
   contactRecipients,
   contactSource,
   disabledField,
+  hasActiveRecipient,
   isRecipientDisabled,
   loadContacts,
   recipientsField,
@@ -188,6 +189,11 @@ describe("the write rule - recipients only above length 1", () => {
     expect(recipientsField([sshRecipient(0)])).toEqual({});
     expect("recipients" in recipientsField([sshRecipient(0)])).toBe(false);
     expect(recipientsField([])).toEqual({});
+  });
+
+  it("writes it for ONE key the user turned off, to carry the flag", () => {
+    const off = { ...sshRecipient(0), disabled: true as const };
+    expect(recipientsField([off]).recipients).toEqual([off]);
   });
 
   it("writes the field from two keys up", () => {
@@ -410,9 +416,11 @@ describe("saveContact - upsert identity", () => {
  * reads every record (it ignores the flag and encrypts to all the keys
  * -- degraded, never encrypting to nobody).
  *
- * The invariant this file guards is that `activeRecipients` NEVER
- * returns an empty list. The UI half (refusing to disable the last
- * enabled key) lives in `KeyDetailsPage`; this is the other end.
+ * `activeRecipients` returns an EMPTY list when every key is off -- a
+ * refresh can leave a contact so -- and it is the encrypt path's job to
+ * refuse that (`buildEncryptRecipients`), never to quietly encrypt to
+ * the keys the user turned off. The UI half (refusing to disable the
+ * last enabled key) lives in `KeyDetailsPage`.
  */
 describe("disabled recipients - absent means enabled", () => {
   /** `multiContact`, with the keys at `off` turned off. */
@@ -464,16 +472,13 @@ describe("disabled recipients - absent means enabled", () => {
     expect(activeRecipients(legacyContact())).toHaveLength(1);
   });
 
-  it("falls back to the full list when a record has EVERY key off", () => {
-    // Not reachable through the UI; a hand-edited blob could produce it.
-    // Empty here would mean encrypting to nobody, silently.
+  it("is empty when a record has EVERY key off", () => {
+    // It used to fall back to the full list -- encrypting to exactly the
+    // keys the user had turned off. Empty is refused at encrypt time.
     const c = withDisabled(3, [0, 1, 2]);
-    expect(activeRecipients(c).map((r) => r.keyId)).toEqual([
-      "SHA256:key0",
-      "SHA256:key1",
-      "SHA256:key2",
-    ]);
-    expect(activeRecipients(c)).not.toHaveLength(0);
+    expect(activeRecipients(c)).toEqual([]);
+    expect(hasActiveRecipient(c)).toBe(false);
+    expect(hasActiveRecipient(withDisabled(3, [0, 1]))).toBe(true);
   });
 
   it("never writes `disabled: false`", () => {
@@ -612,10 +617,13 @@ describe("mutating a locked contacts store", () => {
     expect(await loadContacts()).toHaveLength(2);
   });
 
-  it("still removes the blob when the store genuinely empties", async () => {
+  it("keeps a sealed empty store when it genuinely empties", async () => {
+    // Never removed: a missing store is what a deletion attack looks
+    // like (`integrity.ts`).
     await saveContact(legacyContact());
     await removeContact("CCCC");
-    expect(local.store.has(STORAGE_CONTACTS)).toBe(false);
+    expect(local.store.has(STORAGE_CONTACTS)).toBe(true);
+    expect(await loadContacts()).toEqual([]);
   });
 });
 
@@ -707,6 +715,33 @@ describe("saveContact - a refresh keeps the user's decisions", () => {
     const [stored] = await loadContacts();
     expect(stored.addedAt).toBe(1);
     expect(contactSource(stored)?.fetchedAt).toBe(5000);
+  });
+
+  it("never turns keys back on when the refresh keeps only disabled ones", async () => {
+    // [key0, key1(off), key2(off)]; the account deleted key0. Both keys
+    // left are ones the user turned off -- and stay off, so the contact
+    // has nothing to encrypt to rather than encrypting to both.
+    await saveContact(multiContact(3));
+    await setContactRecipientDisabled("SHA256:key0", "SHA256:key1", true);
+    await setContactRecipientDisabled("SHA256:key0", "SHA256:key2", true);
+
+    await saveContact(refetched([1, 2]));
+    const [two] = await loadContacts();
+    expect(contactRecipients(two).map(isRecipientDisabled)).toEqual([
+      true,
+      true,
+    ]);
+    expect(activeRecipients(two)).toEqual([]);
+
+    // Down to ONE such key: the flag used to have nowhere to go, and the
+    // key came back on.
+    // (`refetched` spreads a 3-key record, so the one-key fetch drops its
+    // list the way the store would build it.)
+    await saveContact(withRecipients(refetched([2]), [sshRecipient(2)]));
+    const [one] = await loadContacts();
+    expect(one.keyId).toBe("SHA256:key2");
+    expect(contactRecipients(one).map(isRecipientDisabled)).toEqual([true]);
+    expect(activeRecipients(one)).toEqual([]);
   });
 
   it("writes nothing extra when nothing was disabled", async () => {
@@ -1089,6 +1124,84 @@ describe("verified - the user's decision about one key", () => {
     const [stored] = await loadContacts();
     expect(stored.keyId).toBe("SHA256:key0");
     expect("verified" in stored).toBe(false);
+  });
+
+  it("never carries the name or verified onto a key set that grew by id", () => {
+    // Attack (a): Alice's real key plus Mallory's, pasted under her
+    // comment, lands on Alice's record by its id. The name the user gave
+    // Alice must not become a name for a contact that encrypts to
+    // Mallory as well.
+    const [aliceKey, malloryKey] = [sshRecipient(0), sshRecipient(9)];
+    const alice: PublicContactKey = {
+      kind: "ssh",
+      keyId: aliceKey.keyId,
+      userIds: ["alice@laptop"],
+      algorithm: aliceKey.algorithm,
+      armoredPublicKey: aliceKey.armored,
+      addedAt: 1,
+      lastUsedAt: 1,
+      alias: "Alice",
+      verified: true,
+      verifiedAt: 5,
+    };
+    const grown: PublicContactKey = {
+      ...alice,
+      alias: undefined,
+      verified: undefined,
+      verifiedAt: undefined,
+      addedAt: 7,
+      ...recipientsField([aliceKey, malloryKey]),
+    };
+    const [stored, ...rest] = upsertContacts([alice], grown);
+    expect(rest).toEqual([]);
+    expect(stored.alias).toBeUndefined();
+    expect(stored.verified).toBeUndefined();
+    expect(contactRecipients(stored).map((r) => r.keyId)).toEqual([
+      aliceKey.keyId,
+      malloryKey.keyId,
+    ]);
+  });
+
+  it("keeps the name when the same key set is pasted again by id", () => {
+    const list = [sshRecipient(0), sshRecipient(1)];
+    const record: PublicContactKey = {
+      ...multiContact(2),
+      source: undefined,
+      alias: "Otto",
+    };
+    const again: PublicContactKey = {
+      ...multiContact(2),
+      source: undefined,
+      ...recipientsField([...list].reverse()),
+    };
+    const [stored] = upsertContacts([record], again);
+    expect(stored.alias).toBe("Otto");
+  });
+
+  it("still carries a disabled key across a reviewed update by id", () => {
+    // Fewer recipients is never the unsafe direction: a key the user
+    // turned off stays off when the same record gains a key.
+    const two: PublicContactKey = {
+      ...multiContact(2),
+      source: undefined,
+      ...recipientsField(
+        withRecipientDisabled(
+          [sshRecipient(0), sshRecipient(1)],
+          "SHA256:key1",
+          true,
+        ),
+      ),
+    };
+    const three: PublicContactKey = {
+      ...multiContact(3),
+      source: undefined,
+    };
+    const [stored] = upsertContacts([two], three);
+    expect(
+      contactRecipients(stored)
+        .filter(isRecipientDisabled)
+        .map((r) => r.keyId),
+    ).toEqual(["SHA256:key1"]);
   });
 
   it("never carries verified to another person's record", async () => {

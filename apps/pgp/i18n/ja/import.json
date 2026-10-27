@@ -430,5 +430,23 @@
   },
   "import_review_conflict_address_revoked": {
     "message": "$email$ は $name$ ($keyid$) のものでしたが、その鍵は失効しています。この新しい鍵が本人のものか確認してください。"
+  },
+  "import_review_conflict_key_update": {
+    "message": "$name$ ($keyid$) に鍵が追加され、この相手へのメッセージは新しい鍵にも届くようになります。保存する前に本人に確認してください。"
+  },
+  "import_review_conflict_key_contact": {
+    "message": "$name$ ($keyid$) の鍵がほかの鍵と一緒に含まれています。保存する前に本人に確認してください。"
+  },
+  "import_review_conflict_key_own": {
+    "message": "あなた自身の鍵 ($keyid$) がほかの鍵と一緒に含まれています。保存する前に、すべて自分の鍵か確認してください。"
+  },
+  "import_review_conflict_address_lookalike": {
+    "message": "$email$ は $name$ ($keyid$) のアドレス $theirs$ に似ていますが、別のアドレスです。信頼する前に本人に確認してください。"
+  },
+  "import_review_all_keys_off": {
+    "message": "このアカウントがまだ公開している鍵はすべて、あなたがオフにした鍵です。保存すると、どれかをオンに戻すまでこの連絡先には暗号化できる鍵がありません。"
+  },
+  "import_github_refresh_all_held": {
+    "message": "$username$ はこの連絡先に保存された鍵の一部を公開しなくなり、残りはすべて別の連絡先かあなた自身の鍵なので、更新できません。古い鍵への暗号化をやめたい場合は、この連絡先を削除してください。"
   }
 }

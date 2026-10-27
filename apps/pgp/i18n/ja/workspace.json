@@ -502,5 +502,29 @@
   },
   "workspace_signer_not_verified": {
     "message": "あなたは鍵を確認済みにしていません"
+  },
+  "workspace_not_encrypted": {
+    "message": "暗号化されていません"
+  },
+  "workspace_signed_not_encrypted": {
+    "message": "署名はありますが暗号化されていません: このコピーは誰でも送れます"
+  },
+  "workspace_status_not_encrypted": {
+    "message": "このメッセージは暗号化されていませんでした。このコピーは誰でも送ることができ、途中で読まれた可能性もあります。"
+  },
+  "workspace_not_encrypted_not_signed": {
+    "message": "暗号化も署名もなし"
+  },
+  "workspace_error_batch_not_encrypted": {
+    "message": "$name$ は暗号化されていません。内容を確認するには、このファイルだけを復号してください。"
+  },
+  "workspace_signature_verified_line_breaks": {
+    "message": "改行を確認"
+  },
+  "workspace_signed_text_lone_cr": {
+    "message": "署名されたテキストに改行 (LF) を伴わない復帰 (CR) が含まれています (␍ と表示)。改行が署名者の書いたとおりに表示されない可能性があります"
+  },
+  "workspace_signature_not_addressed": {
+    "message": "署名にはあなた宛てであることが示されていないため、転送された可能性があります"
   }
 }

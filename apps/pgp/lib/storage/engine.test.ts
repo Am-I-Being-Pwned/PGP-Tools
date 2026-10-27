@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { withLock } from "./engine";
+import { withLock, withSharedLock } from "./engine";
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -45,5 +45,40 @@ describe("withLock", () => {
     await expect(withLock("err", () => Promise.resolve("ok"))).resolves.toBe(
       "ok",
     );
+  });
+});
+
+/**
+ * `withLock` is one Map per page, so two panel windows could both pass
+ * the master protection's "none exists" check before either wrote, or
+ * lose a ledger update. The shared variant goes through Web Locks, which
+ * every extension page of the origin shares.
+ */
+describe("withSharedLock", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("takes a Web Lock named for the key when the API exists", async () => {
+    const request = vi.fn((_name: string, fn: () => Promise<unknown>) => fn());
+    vi.stubGlobal("navigator", { locks: { request } });
+    await expect(withSharedLock("k", () => Promise.resolve(7))).resolves.toBe(
+      7,
+    );
+    expect(request).toHaveBeenCalledWith("pgp-tools:k", expect.any(Function));
+  });
+
+  it("falls back to the per-page lock without it", async () => {
+    vi.stubGlobal("navigator", {});
+    const order: string[] = [];
+    const first = withSharedLock("same", async () => {
+      order.push("first:start");
+      await wait(20);
+      order.push("first:end");
+    });
+    const second = withSharedLock("same", () => {
+      order.push("second");
+      return Promise.resolve();
+    });
+    await Promise.all([first, second]);
+    expect(order).toEqual(["first:start", "first:end", "second"]);
   });
 });

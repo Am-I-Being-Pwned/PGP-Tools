@@ -161,5 +161,8 @@
   "actions_translate_to_title": { "message": "Nachricht übersetzen in" },
   "actions_pick_language_placeholder": { "message": "Sprache wählen..." },
   "actions_translate_result_to": { "message": "In $language$ übersetzen" },
-  "actions_reply_to_signer": { "message": "Dem Absender antworten" }
+  "actions_reply_to_signer": { "message": "Dem Absender antworten" },
+  "actions_no_active_key_reason": {
+    "message": "Alle Schlüssel dieses Kontakts sind ausgeschaltet. Schalte in den Kontaktdetails einen wieder ein, um an ihn zu verschlüsseln."
+  }
 }

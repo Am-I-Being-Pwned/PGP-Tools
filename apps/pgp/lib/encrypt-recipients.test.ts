@@ -5,6 +5,7 @@ import type { ProtectedKeyBlob } from "./storage/keyring";
 import {
   buildEncryptRecipients,
   mixedEngineReason,
+  noActiveKeyReason,
   resolveRecipientEngine,
   resolveSelectedRecipients,
   resolveSelfKey,
@@ -583,16 +584,23 @@ describe("disabled recipients - what actually gets encrypted to", () => {
     expect(result.recipientPublicKeys).not.toContain("k1");
   });
 
-  it("still encrypts to SOMEBODY when a stored record has every key off", () => {
-    // The UI refuses to reach this state; a hand-edited blob could. The
-    // fallback must be "the pre-feature behaviour", never an empty
-    // recipient set -- a file encrypted to nobody is unrecoverable.
-    const result = buildEncryptRecipients({
-      recipients: [toSelectedRecipient(contact([0, 1, 2]))],
-      encryptToSelf: false,
-      ownKeys: [],
-    });
-    expect(result.recipientPublicKeys).toEqual(["k0", "k1", "k2"]);
+  it("refuses a contact with every key off, rather than encrypting to them", () => {
+    // A refresh can leave a contact holding only keys the user turned
+    // off. This used to fall back to every key (and before that to the
+    // head) -- encrypting to exactly the keys they ruled out. Refused,
+    // and never an empty recipient set either.
+    const selected = toSelectedRecipient(contact([0, 1, 2]));
+    expect(selected.armoredAll).toEqual([]);
+    const other = toSelectedRecipient(contact([1]));
+    for (const encryptToSelf of [false, true]) {
+      const result = buildEncryptRecipients({
+        recipients: [selected, { ...other, keyId: "hubot" }],
+        encryptToSelf,
+        ownKeys: [{ ...OWN_A, kind: "ssh" }],
+      });
+      expect(result.refusal).toBe(noActiveKeyReason());
+      expect(result.recipientPublicKeys).toEqual([]);
+    }
   });
 
   it("keeps the head key as `armored` even when the head is turned off", () => {
@@ -606,13 +614,14 @@ describe("disabled recipients - what actually gets encrypted to", () => {
 
 describe("resolveSelectedRecipients", () => {
   /**
-   * The regression this exists for: a contact's `keyId` IS its head
-   * recipient's fingerprint, so when that key is also one of the user's
-   * own identities the id lives in both collections. Resolving to the
-   * own key drops the contact's other recipients and the message is
-   * encrypted to ONE key instead of all of them -- a valid age file the
-   * person's other machines cannot open, with nothing failing or
-   * warning. Found by e2e (1 stanza where 3 were expected).
+   * A contact's `keyId` IS its head recipient's fingerprint, so when that
+   * key is also one of the user's own identities the id lives in both
+   * collections. It used to resolve to the contact, so a fetched copy of
+   * the user's own account reached all their machines -- but a pasted
+   * file grouping the user's own key with an attacker's made exactly that
+   * contact, and then "you" (and encrypt-to-self) encrypted to the
+   * attacker too. An id that is yours means your key; the picker no
+   * longer offers such a contact and the import no longer creates one.
    */
   const head = {
     keyId: "SHA256:head",
@@ -644,14 +653,56 @@ describe("resolveSelectedRecipients", () => {
     kind: "ssh" as const,
   } as unknown as ProtectedKeyBlob;
 
-  it("prefers the contact when an own key shares its head fingerprint", () => {
+  it("prefers the own key when a contact shares its fingerprint", () => {
+    // Attack (c): `contact` is the user's own key grouped with another
+    // (an attacker's) under one comment.
     const [resolved] = resolveSelectedRecipients(
       [head.keyId],
       [contact],
       [ownKeyWithSameFingerprint],
     );
+    expect(resolved).toBe(ownKeyWithSameFingerprint);
+    // The property that actually matters: nothing but the user's key.
+    const built = buildEncryptRecipients({
+      recipients: [toSelectedRecipient(resolved)],
+      encryptToSelf: true,
+      ownKeys: [ownKeyWithSameFingerprint],
+    });
+    expect(built.recipientPublicKeys).toEqual([head.armored]);
+  });
+
+  it("keeps encrypt-to-self to the user's own key", () => {
+    // Selecting someone else with "Also encrypt to me" on: the key that
+    // rides along is the own key, never a contact sharing its id.
+    const bob = {
+      ...contact,
+      keyId: "SHA256:bob",
+      armoredPublicKey: "ssh-ed25519 AAAAbob",
+      recipients: undefined,
+    } as unknown as PublicContactKey;
+    const selected = resolveSelectedRecipients(
+      ["SHA256:bob"],
+      [bob, contact],
+      [ownKeyWithSameFingerprint],
+    );
+    const built = buildEncryptRecipients({
+      recipients: selected.map(toSelectedRecipient),
+      encryptToSelf: true,
+      ownKeys: [ownKeyWithSameFingerprint],
+    });
+    expect(built.recipientPublicKeys).toEqual([
+      "ssh-ed25519 AAAAbob",
+      head.armored,
+    ]);
+  });
+
+  it("still encrypts to every key of a contact whose id is not yours", () => {
+    const [resolved] = resolveSelectedRecipients(
+      [head.keyId],
+      [contact],
+      [{ ...ownKeyWithSameFingerprint, keyId: "SHA256:mine" }],
+    );
     expect(resolved).toBe(contact);
-    // The property that actually matters: every recipient survives.
     expect(toSelectedRecipient(resolved).armoredAll).toEqual([
       head.armored,
       second.armored,

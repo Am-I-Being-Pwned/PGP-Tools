@@ -19,9 +19,11 @@ import { ImportKeyPage } from "../../components/keys/ImportKeyPage";
 import { KeysView } from "../../components/keys/KeysView";
 import { AppFooter } from "../../components/shared/AppFooter";
 import { GlobalDropZone } from "../../components/shared/GlobalDropZone";
+import { IntegrityBanner } from "../../components/shared/IntegrityBanner";
 import { MasterUnlockScreen } from "../../components/shared/MasterUnlockScreen";
 import { OnboardingFlow } from "../../components/shared/OnboardingFlow";
 import { SettingsView } from "../../components/shared/SettingsView";
+import { VaultProblemScreen } from "../../components/shared/VaultProblemScreen";
 import { HistoryPage } from "../../components/workspace/HistoryPage";
 import { WorkspaceView } from "../../components/workspace/WorkspaceView";
 import { useActionContext } from "../../hooks/useActionContext";
@@ -46,9 +48,19 @@ import {
   partitionByMasterSeal,
 } from "../../lib/protection/vault-unlock";
 import { normalizeContactsPadding } from "../../lib/storage/contacts";
+import { currentStorageLocation } from "../../lib/storage/engine";
 import { normalizeKeyringPadding } from "../../lib/storage/keyring";
 import { getMasterProtection } from "../../lib/storage/master-protection";
-import { getPreferences, savePreferences } from "../../lib/storage/preferences";
+import {
+  getPreferences,
+  savePreferences,
+  strictestPreferences,
+} from "../../lib/storage/preferences";
+import {
+  adoptVaultLocation,
+  eraseVault,
+  resolveVaultState,
+} from "../../lib/storage/vault-state";
 import { toast } from "../../lib/toast";
 import {
   draftHasContent,
@@ -85,7 +97,23 @@ export default function App() {
   // Owned here so Keys (badge/action) and the workspace (self-key and
   // sign/decrypt preselection) stay in sync without a prefs re-read.
   const [defaultKeyId, setDefaultKeyId] = useState<string | null>(null);
+  // Whether a vault exists -- derived from the stored master protection
+  // (`resolveVaultState`), NOT from the bootstrap's `onboardingComplete`,
+  // which anyone signed in to the Google account can set back to false.
   const [onboardingComplete, setOnboardingComplete] = useState<boolean | null>(
+    null,
+  );
+  // A vault that is stored, but not where the bootstrap points, or that
+  // has lost its master protection. Either way: not onboarding.
+  const [vaultProblem, setVaultProblem] = useState<
+    | { kind: "elsewhere"; location: StorageLocation }
+    | { kind: "ambiguous" }
+    | { kind: "orphaned" }
+    | null
+  >(null);
+  // The other storage area also holds a master protection; the lock
+  // screen offers it after a failed unlock (`resolveVaultState`).
+  const [alternateVault, setAlternateVault] = useState<StorageLocation | null>(
     null,
   );
   // A key handed to the app from outside the Keys tab (pasted in the
@@ -164,6 +192,7 @@ export default function App() {
   // doc comment for the measured retainer.
   const canRoutePendingOp =
     onboardingComplete === true &&
+    vaultProblem === null &&
     masterProtectionLoaded &&
     !(masterProtection && !masterUnlocked);
   const {
@@ -433,28 +462,63 @@ export default function App() {
     setDefaultKeyId(prefs.defaultKeyId);
   }, []);
 
-  useEffect(() => {
-    void (async () => {
+  /** Apply what `getPreferences` read, or -- if it failed outright --
+   *  the strictest preset, never the defaults left in state: a read that
+   *  rejected used to be dropped, and a Paranoid user ran on a 15-minute
+   *  auto-lock with no sign anything was wrong. */
+  const reapplyPrefs = useCallback(async () => {
+    try {
       const prefs = await getPreferences();
-      // Bootstrap fields are readable regardless of lock state.
-      setStorageLocation(prefs.storageLocation);
-      setOnboardingComplete(prefs.onboardingComplete);
       applyPrefs(prefs);
+      return prefs;
+    } catch {
+      applyPrefs(strictestPreferences());
+      return null;
+    }
+  }, [applyPrefs]);
 
-      const mp = await getMasterProtection();
-      setMasterProtection(mp);
-      setMasterProtectionLoaded(true);
-    })();
+  /** Read the bootstrap and decide, from what is actually stored, whether
+   *  there is a vault to unlock (see `lib/storage/vault-state.ts`). */
+  const loadVaultState = useCallback(async () => {
+    const prefs = await reapplyPrefs();
+    // Bootstrap fields are readable regardless of lock state.
+    if (prefs) setStorageLocation(prefs.storageLocation);
+
+    const vault = await resolveVaultState();
+    if (!prefs && vault.kind === "ready") {
+      // The location the vault was found in, when the bootstrap read
+      // failed: Settings must not offer to "move" it to where it is.
+      setStorageLocation(await currentStorageLocation());
+    }
+    setVaultProblem(
+      vault.kind === "elsewhere" ||
+        vault.kind === "ambiguous" ||
+        vault.kind === "orphaned"
+        ? vault
+        : null,
+    );
+    setAlternateVault(
+      vault.kind === "ready" ? (vault.alternate ?? null) : null,
+    );
+    // A problem state is "onboarded" as far as routing goes: onboarding
+    // must never come up over a vault that exists somewhere.
+    setOnboardingComplete(vault.kind !== "none");
+    setMasterProtection(vault.kind === "ready" ? vault.protection : null);
+    setMasterProtectionLoaded(true);
+  }, [reapplyPrefs]);
+
+  useEffect(() => {
+    void loadVaultState();
     // Pending op delivery is now via chrome.storage.session
     // (see usePendingOperation). No runtime handshake needed.
-  }, [applyPrefs]);
+  }, [loadVaultState]);
 
   // On unlock the settings blob becomes decryptable -- re-read and apply
   // the real values (they were defaults while locked). Also runs the
   // one-time legacy-prefs migration via getPreferences.
   useEffect(() => {
     if (!masterUnlocked) return;
-    void getPreferences().then(applyPrefs);
+    void reapplyPrefs();
     // Best-effort: upgrade any pre-padding blobs to canonical padding now,
     // rather than waiting for their next mutation. Each is a no-op if
     // already canonical; failures are swallowed (the data is untouched).
@@ -464,7 +528,7 @@ export default function App() {
     void normalizeKeyringPadding().catch(ignore);
     void normalizeContactsPadding().catch(ignore);
     void normalizeCrxPadding().catch(ignore);
-  }, [masterUnlocked, applyPrefs]);
+  }, [masterUnlocked, reapplyPrefs]);
 
   useEffect(() => {
     if (!pending) return;
@@ -540,14 +604,11 @@ export default function App() {
         return;
       }
       if (!masterUnlockedRef.current) return;
-      void getPreferences().then((prefs) => {
-        applyPrefs(prefs);
-        setWorkspacePrefsVersion((v) => v + 1);
-      });
+      void reapplyPrefs().then(() => setWorkspacePrefsVersion((v) => v + 1));
     };
     chrome.storage.onChanged.addListener(onPrefsStorageChanged);
     return () => chrome.storage.onChanged.removeListener(onPrefsStorageChanged);
-  }, [applyPrefs]);
+  }, [reapplyPrefs]);
 
   const [historyOpen, setHistoryOpen] = useState(false);
   const [keysRoute, setKeysRoute] = useState<"generate" | "import" | null>(
@@ -699,6 +760,27 @@ export default function App() {
   // populated by the context-menu prefill flow).
   if (onboardingComplete && !masterProtectionLoaded) return null;
 
+  if (vaultProblem) {
+    return (
+      <div className="flex h-screen flex-col">
+        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+          <VaultProblemScreen
+            problem={vaultProblem}
+            onUseLocation={async (loc) => {
+              await adoptVaultLocation(loc);
+              await loadVaultState();
+            }}
+            onErase={async () => {
+              await eraseVault();
+              await loadVaultState();
+            }}
+          />
+        </main>
+        <AppFooter />
+      </div>
+    );
+  }
+
   if (!onboardingComplete) {
     return (
       <div className="flex h-screen flex-col">
@@ -733,6 +815,12 @@ export default function App() {
           <MasterUnlockScreen
             masterProtection={masterProtection}
             autoLocked={masterAutoLocked}
+            alternate={alternateVault ?? undefined}
+            onUseAlternate={async () => {
+              if (!alternateVault) return;
+              await adoptVaultLocation(alternateVault);
+              await loadVaultState();
+            }}
             onUnlocked={async (prf) => {
               const openGen = ++vaultOpenGenRef.current;
               setMasterUnlocked(true);
@@ -858,6 +946,18 @@ export default function App() {
               </button>
             ) : undefined
           }
+        />
+
+        {/* A sealed store came back older than this device last saw it,
+            or went missing (lib/storage/integrity.ts). */}
+        <IntegrityBanner
+          onAcknowledged={() => {
+            // A lost ledger held the settings at the strictest preset
+            // until now; read them as stored again.
+            void reapplyPrefs().then(() =>
+              setWorkspacePrefsVersion((v) => v + 1),
+            );
+          }}
         />
 
         <CommandPalette ctx={actionCtx} bindOpen={bindPaletteOpen} />
@@ -1146,7 +1246,10 @@ function TabBar({
         aria-controls={`tabpanel-${tab.id}`}
         aria-label={isSettings ? t("common_settings") : undefined}
         id={`tab-${tab.id}`}
-        tabIndex={isActive ? 0 : -1}
+        // Out of the Tab order, like History beside it: Tab starts in
+        // the page itself. The tabs are a click, a palette action or
+        // (once one has focus) the arrow keys away.
+        tabIndex={-1}
         onClick={() => onTabChange(tab.id)}
         className={
           isSettings

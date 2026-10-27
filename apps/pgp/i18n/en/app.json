@@ -374,5 +374,93 @@
   "app_copied_sensitive_note": {
     "message": "It stays on your clipboard, and in any clipboard history, until you copy something else.",
     "description": "Second line of the toast after copying a private key or revocation certificate: it is not wiped, and clipboard history keeps a copy."
+  },
+  "app_integrity_warning": {
+    "message": "Some of your stored keys, contacts or settings are older than the copy this device last saw, or are missing. Someone with access to your browser storage or Google account may have rolled them back. Two devices changing the same data at once can also cause this. Check your keys and contacts before you rely on them.",
+    "description": "Amber warning band under the tab bar, shown after unlock when a stored keyring, contacts list or settings blob is older than this device last saw, or has disappeared. Revoked contacts stay revoked regardless."
+  },
+  "app_integrity_settings_strict": {
+    "message": "Your settings were missing, so the strictest security preset is in effect until you change them.",
+    "description": "Second line of the app_integrity_warning band, shown only when the settings themselves went missing. The strictest preset is the one called Paranoid in the preset picker."
+  },
+  "app_integrity_dismiss": {
+    "message": "Dismiss",
+    "description": "Tooltip and screen-reader label of the close button on the app_integrity_warning band."
+  },
+  "app_onboarding_vault_exists": {
+    "message": "A vault already exists in this browser, so a new one was not set up. Close and reopen the panel to unlock it.",
+    "description": "Onboarding, protection step: error shown instead of setting up a new vault when one already exists (setting up would make the existing keys unopenable)."
+  },
+  "app_vault_elsewhere_title": {
+    "message": "Your vault is stored somewhere else",
+    "description": "Heading of the full-screen notice shown when the storage-location setting points at one storage area but the vault is in the other."
+  },
+  "app_vault_elsewhere_body_local": {
+    "message": "This browser is set to keep your vault in synced storage, but your vault is in this device's own storage. That setting syncs between devices, so another device, or someone signed in to your Google account, may have changed it.",
+    "description": "Body under app_vault_elsewhere_title when the vault is in this device's local storage but the setting says sync."
+  },
+  "app_vault_elsewhere_body_sync": {
+    "message": "This browser is set to keep your vault on this device only, but your vault is in synced storage. That setting syncs between devices, so another device, or someone signed in to your Google account, may have changed it.",
+    "description": "Body under app_vault_elsewhere_title when the vault is in synced storage but the setting says this device only."
+  },
+  "app_vault_elsewhere_use": {
+    "message": "Use the vault where it is",
+    "description": "Button under app_vault_elsewhere_title. Points the storage-location setting back at the area the vault is in; nothing is copied or deleted."
+  },
+  "app_vault_orphaned_title": {
+    "message": "Your vault can no longer be unlocked",
+    "description": "Heading of the full-screen notice shown when keys and contacts are stored but the record needed to unlock them (the master protection) is missing from every storage area."
+  },
+  "app_vault_orphaned_body": {
+    "message": "Your keys and contacts are still stored, but the record needed to unlock them is missing from this browser's storage, and without it nobody can open them. If you can restore that record from a backup of this browser profile, do that instead.",
+    "description": "Body under app_vault_orphaned_title."
+  },
+  "app_vault_erase_title": {
+    "message": "Erase and start over",
+    "description": "Button under app_vault_orphaned_body, and the title of the confirmation page it opens. Destructive."
+  },
+  "app_vault_erase_body": {
+    "message": "This permanently deletes the stored keys, contacts, settings and history in this browser and in its synced storage, so you can set up a new vault. It cannot be undone.",
+    "description": "Confirmation page body for app_vault_erase_title."
+  },
+  "app_vault_erase_confirm": {
+    "message": "Erase vault",
+    "description": "Destructive confirm button on the app_vault_erase_title page."
+  },
+  "app_integrity_settings_unreadable": {
+    "message": "Your settings could not be read, so the strictest security preset is in effect until you change them.",
+    "description": "Extra line of the app_integrity_warning band, shown when the stored settings are present but cannot be decrypted or read. The strictest preset is the one called Paranoid in the preset picker."
+  },
+  "app_integrity_ledger_lost": {
+    "message": "This device's record of what it last saw was deleted or could not be read, so older copies of your data cannot be detected this time. The strictest security preset is in effect until you dismiss this. Check that contacts you know were revoked still show as revoked.",
+    "description": "Extra line of the app_integrity_warning band, shown when this device's tamper-detection record was deleted or is unreadable. It keeps showing on every unlock until the user dismisses the band."
+  },
+  "app_vault_ambiguous_title": {
+    "message": "Two vaults are stored in this browser",
+    "description": "Heading of the full-screen notice shown when both this device's own storage and synced storage hold a vault, and the device has no record of which one is its own."
+  },
+  "app_vault_ambiguous_body": {
+    "message": "One is in this device's own storage and one is in synced storage, and this device has no record of which one is yours. Synced storage can be changed by another device, or by someone signed in to your Google account. Choose the one you use here. Nothing is copied or deleted.",
+    "description": "Body under app_vault_ambiguous_title."
+  },
+  "app_vault_ambiguous_use_local": {
+    "message": "Use the vault on this device",
+    "description": "Button under app_vault_ambiguous_body. Uses the vault in this device's own (local, not synced) storage. Nothing is copied or deleted."
+  },
+  "app_vault_ambiguous_use_sync": {
+    "message": "Use the synced vault",
+    "description": "Button under app_vault_ambiguous_body. Uses the vault in synced storage. Nothing is copied or deleted."
+  },
+  "app_vault_alternate_sync": {
+    "message": "A vault is also stored in synced storage.",
+    "description": "Hint on the unlock screen after a failed unlock, when synced storage also holds a vault. Followed by the app_vault_alternate_use link."
+  },
+  "app_vault_alternate_local": {
+    "message": "A vault is also stored in this device's own storage.",
+    "description": "Hint on the unlock screen after a failed unlock, when this device's own storage also holds a vault. Followed by the app_vault_alternate_use link."
+  },
+  "app_vault_alternate_use": {
+    "message": "Try that one",
+    "description": "Link after app_vault_alternate_sync / app_vault_alternate_local. Switches the unlock screen to the vault in the other storage area; nothing is copied or deleted."
   }
 }

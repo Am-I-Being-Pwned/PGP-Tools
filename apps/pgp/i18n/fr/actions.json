@@ -301,5 +301,8 @@
   },
   "actions_reply_to_signer": {
     "message": "Répondre à l'expéditeur"
+  },
+  "actions_no_active_key_reason": {
+    "message": "Toutes les clés de ce contact sont désactivées. Réactivez-en une dans les détails du contact pour chiffrer vers lui."
   }
 }

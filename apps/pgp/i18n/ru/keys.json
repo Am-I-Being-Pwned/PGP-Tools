@@ -375,5 +375,20 @@
   "keys_contact_same_name": { "message": "То же имя" },
   "keys_contact_same_name_title": {
     "message": "У $name$ ($keyid$) тоже это имя, с другим ключом."
+  },
+  "keys_invisible_char": {
+    "message": "Здесь невидимый символ ($code$)"
+  },
+  "keys_clash_check": {
+    "message": "Прежде чем полагаться на любой из ключей, уточните у владельца, какой из них действительно его."
+  },
+  "keys_confusable_char": {
+    "message": "$code$ похожа на латинскую букву, но это другая буква"
+  },
+  "keys_contact_lookalike_address": {
+    "message": "Похожий адрес"
+  },
+  "keys_contact_lookalike_address_title": {
+    "message": "У $name$ ($keyid$) адрес, который выглядит так же, но с другим ключом."
   }
 }

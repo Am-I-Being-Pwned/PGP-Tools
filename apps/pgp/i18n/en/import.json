@@ -574,5 +574,29 @@
   "import_review_conflict_address_revoked": {
     "message": "$email$ belonged to $name$ ($keyid$), a key that is now revoked. Check with them that this new key is theirs.",
     "description": "Red warning on an import review row: the key claims the address of a contact whose key is revoked. $email$ is the address, $name$ the contact, $keyid$ its 16-hex key id."
+  },
+  "import_review_conflict_key_update": {
+    "message": "This adds keys to $name$ ($keyid$), so messages to them would also reach the new keys. Check with them before you save it.",
+    "description": "Red warning on an import review row: a pasted SSH group would add keys to a saved contact. $name$ is the contact, $keyid$ its key id."
+  },
+  "import_review_conflict_key_contact": {
+    "message": "Includes the key you have for $name$ ($keyid$), grouped with other keys. Check with them before you save it.",
+    "description": "Red warning on an import review row: a pasted or fetched SSH group holds a saved contact's key next to other keys. $name$ is the contact, $keyid$ its key id."
+  },
+  "import_review_conflict_key_own": {
+    "message": "Includes your own key ($keyid$), grouped with other keys. Make sure they are all yours before you save it.",
+    "description": "Red warning on an import review row: a pasted or fetched SSH group holds one of the user's own keys next to other keys. $keyid$ is the user's key id."
+  },
+  "import_review_conflict_address_lookalike": {
+    "message": "$email$ looks like $theirs$, the address of $name$ ($keyid$), but it is a different address. Check with them before you trust it.",
+    "description": "Red warning on an import review row: the key's address reads the same as a saved contact's but is not the same (a lookalike letter). $email$ is the key's address, $theirs$ the saved contact's, $name$ the saved contact, $keyid$ its key id."
+  },
+  "import_review_all_keys_off": {
+    "message": "Every key this account still lists is one you turned off. Saved, this contact has no key to encrypt to until you turn one back on.",
+    "description": "Red warning on an import review row for a GitHub refresh: the account removed every key the user kept, leaving only keys the user turned off."
+  },
+  "import_github_refresh_all_held": {
+    "message": "$username$ no longer lists some of the keys saved for this contact, and every key it still lists belongs to someone else you have, or to you, so it can't be updated. Delete this contact if you no longer want to encrypt to its old keys.",
+    "description": "Why a GitHub refresh can't be saved: the account dropped some keys, and the rest are all held by other contacts or the user. $username$ is the GitHub account name."
   }
 }

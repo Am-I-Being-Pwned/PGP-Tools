@@ -430,5 +430,23 @@
   },
   "import_review_conflict_address_revoked": {
     "message": "$email$ apparteneva a $name$ ($keyid$), una chiave ora revocata. Verifica con questa persona che la nuova chiave sia sua."
+  },
+  "import_review_conflict_key_update": {
+    "message": "Così $name$ ($keyid$) riceve nuove chiavi e i messaggi per questa persona raggiungerebbero anche quelle. Verifica con lei prima di salvare."
+  },
+  "import_review_conflict_key_contact": {
+    "message": "Contiene la chiave che hai per $name$ ($keyid$), insieme ad altre chiavi. Verifica con questa persona prima di salvare."
+  },
+  "import_review_conflict_key_own": {
+    "message": "Contiene la tua chiave ($keyid$), insieme ad altre chiavi. Assicurati che siano tutte tue prima di salvare."
+  },
+  "import_review_conflict_address_lookalike": {
+    "message": "$email$ sembra $theirs$, l'indirizzo di $name$ ($keyid$), ma è un indirizzo diverso. Verifica con questa persona prima di fidarti."
+  },
+  "import_review_all_keys_off": {
+    "message": "Ogni chiave che questo account elenca ancora è una che hai disattivato. Se lo salvi, questo contatto non ha chiavi a cui cifrare finché non ne riattivi una."
+  },
+  "import_github_refresh_all_held": {
+    "message": "$username$ non elenca più alcune delle chiavi salvate per questo contatto, e tutte quelle che elenca ancora appartengono a un altro tuo contatto o a te, quindi non può essere aggiornato. Elimina questo contatto se non vuoi più cifrare alle sue vecchie chiavi."
   }
 }

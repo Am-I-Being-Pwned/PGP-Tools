@@ -280,5 +280,71 @@
   },
   "app_copied_sensitive_note": {
     "message": "Fica na sua área de transferência, e em qualquer histórico dela, até você copiar outra coisa."
+  },
+  "app_integrity_warning": {
+    "message": "Algumas das suas chaves, contatos ou configurações salvos são mais antigos do que a cópia que este dispositivo viu por último, ou estão faltando. Alguém com acesso ao armazenamento do seu navegador ou à sua conta do Google pode tê-los revertido. Isso também pode acontecer quando dois dispositivos alteram os mesmos dados ao mesmo tempo. Confira suas chaves e contatos antes de confiar neles."
+  },
+  "app_integrity_settings_strict": {
+    "message": "Suas configurações estavam faltando, então a predefinição de segurança mais rígida está em vigor até você alterá-las."
+  },
+  "app_integrity_dismiss": {
+    "message": "Dispensar"
+  },
+  "app_onboarding_vault_exists": {
+    "message": "Já existe um cofre neste navegador, então um novo não foi criado. Feche e abra o painel de novo para desbloqueá-lo."
+  },
+  "app_vault_elsewhere_title": {
+    "message": "Seu cofre está salvo em outro lugar"
+  },
+  "app_vault_elsewhere_body_local": {
+    "message": "Este navegador está configurado para manter seu cofre no armazenamento sincronizado, mas seu cofre está no armazenamento deste dispositivo. Essa configuração é sincronizada entre dispositivos, então outro dispositivo, ou alguém conectado à sua conta do Google, pode tê-la alterado."
+  },
+  "app_vault_elsewhere_body_sync": {
+    "message": "Este navegador está configurado para manter seu cofre apenas neste dispositivo, mas seu cofre está no armazenamento sincronizado. Essa configuração é sincronizada entre dispositivos, então outro dispositivo, ou alguém conectado à sua conta do Google, pode tê-la alterado."
+  },
+  "app_vault_elsewhere_use": {
+    "message": "Usar o cofre onde ele está"
+  },
+  "app_vault_orphaned_title": {
+    "message": "Seu cofre não pode mais ser desbloqueado"
+  },
+  "app_vault_orphaned_body": {
+    "message": "Suas chaves e contatos ainda estão salvos, mas o registro necessário para desbloqueá-los está faltando no armazenamento deste navegador, e sem ele ninguém consegue abri-los. Se você puder restaurar esse registro a partir de um backup deste perfil do navegador, faça isso."
+  },
+  "app_vault_erase_title": {
+    "message": "Apagar e começar de novo"
+  },
+  "app_vault_erase_body": {
+    "message": "Isso exclui permanentemente as chaves, contatos, configurações e o histórico salvos neste navegador e no armazenamento sincronizado dele, para que você possa criar um novo cofre. Não é possível desfazer."
+  },
+  "app_vault_erase_confirm": {
+    "message": "Apagar cofre"
+  },
+  "app_integrity_settings_unreadable": {
+    "message": "Não foi possível ler suas configurações, então a predefinição de segurança mais rígida está em vigor até você alterá-las."
+  },
+  "app_integrity_ledger_lost": {
+    "message": "O registro deste dispositivo sobre o que viu por último foi apagado ou não pôde ser lido, então desta vez não é possível detectar cópias antigas dos seus dados. A predefinição de segurança mais rígida fica em vigor até você dispensar este aviso. Confira se os contatos que você sabe que foram revogados continuam aparecendo como revogados."
+  },
+  "app_vault_ambiguous_title": {
+    "message": "Há dois cofres salvos neste navegador"
+  },
+  "app_vault_ambiguous_body": {
+    "message": "Um está no armazenamento deste dispositivo e outro no armazenamento sincronizado, e este dispositivo não tem registro de qual é o seu. O armazenamento sincronizado pode ser alterado por outro dispositivo, ou por alguém conectado à sua conta do Google. Escolha o que você usa aqui. Nada é copiado nem apagado."
+  },
+  "app_vault_ambiguous_use_local": {
+    "message": "Usar o cofre deste dispositivo"
+  },
+  "app_vault_ambiguous_use_sync": {
+    "message": "Usar o cofre sincronizado"
+  },
+  "app_vault_alternate_sync": {
+    "message": "Também há um cofre salvo no armazenamento sincronizado."
+  },
+  "app_vault_alternate_local": {
+    "message": "Também há um cofre salvo no armazenamento deste dispositivo."
+  },
+  "app_vault_alternate_use": {
+    "message": "Tentar esse"
   }
 }

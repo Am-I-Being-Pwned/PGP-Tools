@@ -5,6 +5,7 @@ import { Block, BlockStack } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
 
 import type { MasterProtection } from "../../lib/storage/master-protection";
+import type { StorageLocation } from "../../lib/storage/preferences";
 import { fromBase64 } from "../../lib/encoding";
 import { t } from "../../lib/i18n";
 import * as wasmApi from "../../lib/pgp/wasm";
@@ -38,12 +39,19 @@ interface MasterUnlockScreenProps {
    *  with momentary screen access shouldn't get a passkey ceremony
    *  pre-launched for them). */
   autoLocked?: boolean;
+  /** The OTHER storage area also holds a master protection. Offered once
+   *  an unlock has failed: this device's record of where its vault lives
+   *  may be what was tampered with (`lib/storage/vault-state.ts`). */
+  alternate?: StorageLocation;
+  onUseAlternate?: () => void | Promise<void>;
 }
 
 export function MasterUnlockScreen({
   masterProtection,
   onUnlocked,
   autoLocked,
+  alternate,
+  onUseAlternate,
 }: MasterUnlockScreenProps) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -176,7 +184,9 @@ export function MasterUnlockScreen({
           </div>
           <div className="min-w-0">
             {/* i18n-ignore */}
-            <h1 className="text-base font-semibold tracking-tight">PGP Tools</h1>
+            <h1 className="text-base font-semibold tracking-tight">
+              PGP Tools
+            </h1>
             <p className="text-muted-foreground text-xs">
               {t("shared_unlock_intro")}
             </p>
@@ -235,6 +245,21 @@ export function MasterUnlockScreen({
         {error && (
           <p className="text-bad px-1 text-xs" role="alert">
             {error}
+          </p>
+        )}
+
+        {error && alternate && onUseAlternate && (
+          <p className="text-muted-foreground px-1 text-xs">
+            {alternate === "sync"
+              ? t("app_vault_alternate_sync")
+              : t("app_vault_alternate_local")}{" "}
+            <button
+              type="button"
+              onClick={() => void onUseAlternate()}
+              className="hover:text-foreground underline transition-colors"
+            >
+              {t("app_vault_alternate_use")}
+            </button>
           </p>
         )}
 

@@ -192,5 +192,71 @@
   },
   "app_copied_sensitive_note": {
     "message": "Er bleibt in Ihrer Zwischenablage und in jedem Zwischenablage-Verlauf, bis Sie etwas anderes kopieren."
+  },
+  "app_integrity_warning": {
+    "message": "Einige Ihrer gespeicherten Schlüssel, Kontakte oder Einstellungen sind älter als die Version, die dieses Gerät zuletzt gesehen hat, oder fehlen. Jemand mit Zugriff auf Ihren Browserspeicher oder Ihr Google-Konto könnte sie zurückgesetzt haben. Das kann auch passieren, wenn zwei Geräte gleichzeitig dieselben Daten ändern. Prüfen Sie Ihre Schlüssel und Kontakte, bevor Sie sich darauf verlassen."
+  },
+  "app_integrity_settings_strict": {
+    "message": "Ihre Einstellungen fehlten, daher gilt die strengste Sicherheitsvoreinstellung, bis Sie sie ändern."
+  },
+  "app_integrity_dismiss": {
+    "message": "Schließen"
+  },
+  "app_onboarding_vault_exists": {
+    "message": "In diesem Browser gibt es bereits einen Tresor, daher wurde kein neuer eingerichtet. Schließen und öffnen Sie das Panel erneut, um ihn zu entsperren."
+  },
+  "app_vault_elsewhere_title": {
+    "message": "Ihr Tresor ist an einem anderen Ort gespeichert"
+  },
+  "app_vault_elsewhere_body_local": {
+    "message": "Dieser Browser ist so eingestellt, dass Ihr Tresor im synchronisierten Speicher liegt, aber Ihr Tresor befindet sich im Speicher dieses Geräts. Diese Einstellung wird zwischen Geräten synchronisiert, daher hat sie möglicherweise ein anderes Gerät oder jemand, der in Ihrem Google-Konto angemeldet ist, geändert."
+  },
+  "app_vault_elsewhere_body_sync": {
+    "message": "Dieser Browser ist so eingestellt, dass Ihr Tresor nur auf diesem Gerät liegt, aber Ihr Tresor befindet sich im synchronisierten Speicher. Diese Einstellung wird zwischen Geräten synchronisiert, daher hat sie möglicherweise ein anderes Gerät oder jemand, der in Ihrem Google-Konto angemeldet ist, geändert."
+  },
+  "app_vault_elsewhere_use": {
+    "message": "Tresor dort verwenden, wo er ist"
+  },
+  "app_vault_orphaned_title": {
+    "message": "Ihr Tresor kann nicht mehr entsperrt werden"
+  },
+  "app_vault_orphaned_body": {
+    "message": "Ihre Schlüssel und Kontakte sind noch gespeichert, aber der Eintrag, der zum Entsperren nötig ist, fehlt im Speicher dieses Browsers, und ohne ihn kann niemand sie öffnen. Wenn Sie diesen Eintrag aus einer Sicherung dieses Browserprofils wiederherstellen können, tun Sie das stattdessen."
+  },
+  "app_vault_erase_title": {
+    "message": "Löschen und neu beginnen"
+  },
+  "app_vault_erase_body": {
+    "message": "Dadurch werden die gespeicherten Schlüssel, Kontakte, Einstellungen und der Verlauf in diesem Browser und in seinem synchronisierten Speicher dauerhaft gelöscht, damit Sie einen neuen Tresor einrichten können. Das kann nicht rückgängig gemacht werden."
+  },
+  "app_vault_erase_confirm": {
+    "message": "Tresor löschen"
+  },
+  "app_integrity_settings_unreadable": {
+    "message": "Ihre Einstellungen konnten nicht gelesen werden, daher gilt die strengste Sicherheitsvoreinstellung, bis Sie sie ändern."
+  },
+  "app_integrity_ledger_lost": {
+    "message": "Die Aufzeichnung dieses Geräts darüber, was es zuletzt gesehen hat, wurde gelöscht oder konnte nicht gelesen werden, daher lassen sich ältere Kopien Ihrer Daten diesmal nicht erkennen. Bis Sie diesen Hinweis schließen, gilt die strengste Sicherheitsvoreinstellung. Prüfen Sie, ob Kontakte, von denen Sie wissen, dass sie widerrufen wurden, weiterhin als widerrufen angezeigt werden."
+  },
+  "app_vault_ambiguous_title": {
+    "message": "In diesem Browser sind zwei Tresore gespeichert"
+  },
+  "app_vault_ambiguous_body": {
+    "message": "Einer liegt im Speicher dieses Geräts und einer im synchronisierten Speicher, und dieses Gerät hat nicht aufgezeichnet, welcher Ihrer ist. Der synchronisierte Speicher kann von einem anderen Gerät oder von jemandem, der in Ihrem Google-Konto angemeldet ist, geändert werden. Wählen Sie den, den Sie hier verwenden. Es wird nichts kopiert oder gelöscht."
+  },
+  "app_vault_ambiguous_use_local": {
+    "message": "Tresor auf diesem Gerät verwenden"
+  },
+  "app_vault_ambiguous_use_sync": {
+    "message": "Synchronisierten Tresor verwenden"
+  },
+  "app_vault_alternate_sync": {
+    "message": "Auch im synchronisierten Speicher ist ein Tresor gespeichert."
+  },
+  "app_vault_alternate_local": {
+    "message": "Auch im Speicher dieses Geräts ist ein Tresor gespeichert."
+  },
+  "app_vault_alternate_use": {
+    "message": "Diesen versuchen"
   }
 }

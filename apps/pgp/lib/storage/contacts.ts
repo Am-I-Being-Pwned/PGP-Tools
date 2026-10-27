@@ -6,6 +6,7 @@ import {
   activeRecipients,
   contactRecipients,
   contactSource,
+  hasActiveRecipient,
   isRecipientDisabled,
 } from "./contact-recipients";
 import {
@@ -13,7 +14,8 @@ import {
   normalizePadding,
   saveEncryptedArray,
 } from "./encrypted-store";
-import { removeItem, withLock } from "./engine";
+import { withLock } from "./engine";
+import { recordRevoked, revokedFloor } from "./integrity";
 import { isSshRecord, storedKeyKind } from "./key-kind";
 
 // Pure readers of a contact record, kept in a module with no store (and
@@ -24,6 +26,7 @@ export {
   activeRecipients,
   contactRecipients,
   contactSource,
+  hasActiveRecipient,
   isRecipientDisabled,
 };
 
@@ -270,11 +273,19 @@ function repairContact(contact: PublicContactKey): PublicContactKey {
  * byte-for-byte as it does today: zero migration, zero rewrite, and an
  * older build still reads every record. The caller is responsible for
  * `list[0]` matching the record's `keyId`/`armoredPublicKey`.
+ *
+ * Except a single key the user turned OFF: the top-level fields have
+ * nowhere to say so, and dropping the flag would turn the key back on
+ * (a refresh that left only that key used to do exactly this). An older
+ * build reads the one-entry list and ignores the flag, which is the
+ * pre-feature behaviour, as for every other disabled key.
  */
 export function recipientsField(list: readonly ContactRecipient[]): {
   recipients?: ContactRecipient[];
 } {
-  return list.length > 1 ? { recipients: [...list] } : {};
+  return list.length > 1 || list.some(isRecipientDisabled)
+    ? { recipients: [...list] }
+    : {};
 }
 
 /**
@@ -409,7 +420,41 @@ export async function loadContacts(): Promise<PublicContactKey[]> {
   // Repaired on the way out, never rejected -- see `repairContact`. This
   // is the ONLY read path: every mutation below re-loads through it, so
   // nothing writes back a record it has not first put in order.
-  return (await loadEncryptedArray(CONTACTS_STORE)).map(repairContact);
+  const contacts = (await loadEncryptedArray(CONTACTS_STORE)).map(
+    repairContact,
+  );
+  return applyRevocationFloor(contacts);
+}
+
+/**
+ * `contacts` with every record this device has ever seen revoked put back
+ * to revoked -- and unusable for encryption -- and any newly revoked
+ * record added to the floor.
+ *
+ * The floor lives in the integrity ledger, NOT in this blob, which is the
+ * point: writing back an older, validly sealed contacts blob (from before
+ * the revocation) used to un-revoke the contact, and the pre-revocation
+ * armor it carries still encrypts. Both flags are forced, because the
+ * encrypt path filters on `usableForEncryption` and the stale armor
+ * would otherwise still read as usable. Records already marked revoked
+ * are returned untouched, so a healthy record is never rewritten. See
+ * `integrity.ts`.
+ */
+async function applyRevocationFloor(
+  contacts: PublicContactKey[],
+): Promise<PublicContactKey[]> {
+  if (contacts.length === 0) return contacts;
+  const floor = await revokedFloor();
+  await recordRevoked(
+    contacts
+      .filter((c) => c.revoked && !floor.has(c.keyId))
+      .map((c) => c.keyId),
+  );
+  return contacts.map((c) =>
+    !c.revoked && floor.has(c.keyId)
+      ? { ...c, revoked: true, usableForEncryption: false }
+      : c,
+  );
 }
 
 /** The contacts belonging to one engine. Legacy records carry no `kind`
@@ -424,8 +469,14 @@ export function contactsOfKind(
   return contacts.filter((c) => storedKeyKind(c) === kind);
 }
 
-function saveAll(contacts: PublicContactKey[]): Promise<void> {
-  return saveEncryptedArray(CONTACTS_STORE, contacts);
+/** Seal the whole list. The revocation floor is applied on the way IN
+ *  as well as out, so a mutation that rebuilds a record from a stale copy
+ *  (a re-import of the pre-revocation cert) can't persist it unrevoked. */
+async function saveAll(contacts: PublicContactKey[]): Promise<void> {
+  await saveEncryptedArray(
+    CONTACTS_STORE,
+    await applyRevocationFloor(contacts),
+  );
 }
 
 /** One-time upgrade of a contacts blob to canonical padding and to the
@@ -569,21 +620,44 @@ export function upsertContacts(
   return [...existing.filter((c) => !superseded.includes(c)), record];
 }
 
+/** The fingerprints a record holds, as one comparable string. */
+function keySet(contact: PublicContactKey): string {
+  return contactRecipients(contact)
+    .map((r) => r.keyId)
+    .sort()
+    .join(" ");
+}
+
 /** `incoming`, with the user's decisions from the record it replaces:
  *  `disabled` for every key still present, and the original `addedAt`.
  *
- *  Only from the SAME person -- the same source, or two source-less
+ *  Only from the SAME record -- the same source, or two source-less
  *  records upserting by key. Two different GitHub accounts publishing
  *  one key collide here by keyId alone, and neither a disable decision
- *  nor a "known since" date should cross between them. */
+ *  nor a "known since" date should cross between them.
+ *
+ *  And the NAME and "verified" only from the same PERSON, which a key id
+ *  alone does not establish. A record's id is its first key, so a pasted
+ *  `.pub` file pairing Alice's key with Mallory's lands on Alice by id;
+ *  carrying her alias across made "Alice" a contact that encrypts to
+ *  Mallory as well. So, matched by id, the user's name for the record
+ *  survives only when the incoming key SET is the one they named. Matched
+ *  by source -- a re-fetch of the same account, which is what they named
+ *  -- it survives a change of keys, as it always has. "Verified" needs
+ *  the same head and the same set either way: what the user compared was
+ *  those keys. (A set that grew by id only reaches here through the
+ *  import Review, which says so and starts that row on Skip.) */
 function carryForward(
   previous: PublicContactKey,
   incoming: PublicContactKey,
 ): PublicContactKey {
-  const samePerson =
-    sameSource(previous, incoming) ||
+  const bySource = sameSource(previous, incoming);
+  const sameRecord =
+    bySource ||
     (contactSource(previous) === null && contactSource(incoming) === null);
-  if (!samePerson) return incoming;
+  if (!sameRecord) return incoming;
+  const sameKeys = keySet(previous) === keySet(incoming);
+  const samePerson = bySource || sameKeys;
 
   const off = new Set(
     contactRecipients(previous)
@@ -592,9 +666,13 @@ function carryForward(
   );
   // Untouched when nothing was off, so a refreshed contact with no
   // disable decision on it serialises exactly as the fetch built it.
-  // (A contact down to ONE key cannot carry the flag at all -- the
-  // format has nowhere to put it -- but the UI refuses to disable the
-  // last enabled key, so that state is unreachable.)
+  // Every remaining key can be one the user turned off -- the account
+  // deleted the ones they kept -- and then that is what is saved: a
+  // contact with nothing to encrypt to (see `activeRecipients`), never
+  // one quietly encrypting to the keys they ruled out. A contact down to
+  // one such key keeps a one-entry list to carry the flag
+  // (`recipientsField`). The import Review asks before it gets here
+  // (`allKeysOff`).
   const merged =
     off.size === 0
       ? incoming
@@ -611,17 +689,11 @@ function carryForward(
   // local name, and that they verified it. A different key never
   // inherits "verified" -- nor does a group that gained or lost a key:
   // what the user compared was the old set.
-  const keySet = (c: PublicContactKey) =>
-    contactRecipients(c)
-      .map((r) => r.keyId)
-      .sort()
-      .join(" ");
-  const sameKey =
-    previous.keyId === incoming.keyId && keySet(previous) === keySet(incoming);
+  const sameKey = previous.keyId === incoming.keyId && sameKeys;
   return {
     ...merged,
     addedAt: previous.addedAt,
-    ...(previous.alias && merged.alias === undefined
+    ...(samePerson && previous.alias && merged.alias === undefined
       ? { alias: previous.alias }
       : {}),
     ...(sameKey && previous.verified
@@ -740,13 +812,10 @@ export async function updateContactAlias(
 
 export async function removeContact(keyId: string): Promise<void> {
   await mutateContacts(async (existing) => {
-    const updated = existing.filter((c) => c.keyId !== keyId);
-    if (updated.length === 0) {
-      // Only reachable with a live session, so an empty result really is
-      // an empty store -- see `mutateContacts`.
-      await removeItem(STORAGE_CONTACTS);
-    } else {
-      await saveAll(updated);
-    }
+    // An emptied list is saved as a sealed empty array, never removed: a
+    // store that is simply gone is what a deletion attack looks like
+    // (`integrity.ts`). Only reachable with a live session, so an empty
+    // result really is an empty store -- see `mutateContacts`.
+    await saveAll(existing.filter((c) => c.keyId !== keyId));
   });
 }

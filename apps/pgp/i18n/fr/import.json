@@ -430,5 +430,23 @@
   },
   "import_review_conflict_address_revoked": {
     "message": "$email$ appartenait à $name$ ($keyid$), une clé désormais révoquée. Vérifiez auprès de cette personne que cette nouvelle clé est bien la sienne."
+  },
+  "import_review_conflict_key_update": {
+    "message": "Cela ajoute des clés à $name$ ($keyid$) : les messages qui lui sont destinés atteindraient aussi les nouvelles clés. Vérifiez auprès de cette personne avant d'enregistrer."
+  },
+  "import_review_conflict_key_contact": {
+    "message": "Contient la clé que vous avez pour $name$ ($keyid$), regroupée avec d'autres clés. Vérifiez auprès de cette personne avant d'enregistrer."
+  },
+  "import_review_conflict_key_own": {
+    "message": "Contient votre propre clé ($keyid$), regroupée avec d'autres clés. Vérifiez qu'elles sont toutes à vous avant d'enregistrer."
+  },
+  "import_review_conflict_address_lookalike": {
+    "message": "$email$ ressemble à $theirs$, l'adresse de $name$ ($keyid$), mais c'est une autre adresse. Vérifiez auprès de cette personne avant de lui faire confiance."
+  },
+  "import_review_all_keys_off": {
+    "message": "Chaque clé que ce compte publie encore est une clé que vous avez désactivée. Enregistré, ce contact n'a aucune clé vers laquelle chiffrer tant que vous n'en réactivez pas une."
+  },
+  "import_github_refresh_all_held": {
+    "message": "$username$ ne publie plus certaines des clés enregistrées pour ce contact, et toutes celles qu'il publie encore appartiennent à un autre de vos contacts ou à vous : il ne peut donc pas être mis à jour. Supprimez ce contact si vous ne voulez plus chiffrer vers ses anciennes clés."
   }
 }

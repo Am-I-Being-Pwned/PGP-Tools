@@ -166,5 +166,71 @@
   },
   "app_copied_sensitive_note": {
     "message": "在你复制其他内容之前，它会一直留在剪贴板以及任何剪贴板历史中。"
+  },
+  "app_integrity_warning": {
+    "message": "部分已保存的密钥、联系人或设置比此设备上次看到的版本更旧，或已丢失。可能有人通过你的浏览器存储或 Google 账号将其回滚。两台设备同时修改同一数据也可能导致这种情况。在依赖它们之前，请检查你的密钥和联系人。"
+  },
+  "app_integrity_settings_strict": {
+    "message": "你的设置已丢失，因此在你更改之前将使用最严格的安全预设。"
+  },
+  "app_integrity_dismiss": {
+    "message": "关闭"
+  },
+  "app_onboarding_vault_exists": {
+    "message": "此浏览器中已存在保险库，因此没有创建新的保险库。请关闭并重新打开面板以解锁它。"
+  },
+  "app_vault_elsewhere_title": {
+    "message": "你的保险库存储在其他位置"
+  },
+  "app_vault_elsewhere_body_local": {
+    "message": "此浏览器设置为将保险库保存在同步存储中，但你的保险库位于此设备的存储中。该设置会在设备之间同步，因此可能是另一台设备或登录你 Google 账号的人更改了它。"
+  },
+  "app_vault_elsewhere_body_sync": {
+    "message": "此浏览器设置为仅将保险库保存在此设备上，但你的保险库位于同步存储中。该设置会在设备之间同步，因此可能是另一台设备或登录你 Google 账号的人更改了它。"
+  },
+  "app_vault_elsewhere_use": {
+    "message": "使用保险库当前所在的位置"
+  },
+  "app_vault_orphaned_title": {
+    "message": "你的保险库已无法解锁"
+  },
+  "app_vault_orphaned_body": {
+    "message": "你的密钥和联系人仍然保存着，但此浏览器的存储中缺少解锁它们所需的记录，没有它任何人都无法打开。如果你能从此浏览器配置文件的备份中恢复该记录，请改为这样做。"
+  },
+  "app_vault_erase_title": {
+    "message": "清除并重新开始"
+  },
+  "app_vault_erase_body": {
+    "message": "这会永久删除此浏览器及其同步存储中保存的密钥、联系人、设置和历史记录，以便你创建新的保险库。此操作无法撤销。"
+  },
+  "app_vault_erase_confirm": {
+    "message": "清除保险库"
+  },
+  "app_integrity_settings_unreadable": {
+    "message": "无法读取你的设置，因此在你更改之前将使用最严格的安全预设。"
+  },
+  "app_integrity_ledger_lost": {
+    "message": "此设备关于上次所见内容的记录已被删除或无法读取，因此这次无法检测到你数据的旧副本。在你关闭此提示之前，将使用最严格的安全预设。请检查你知道已被吊销的联系人是否仍显示为已吊销。"
+  },
+  "app_vault_ambiguous_title": {
+    "message": "此浏览器中存储了两个保险库"
+  },
+  "app_vault_ambiguous_body": {
+    "message": "一个在此设备的存储中，另一个在同步存储中，而此设备没有记录哪一个是你的。同步存储可能被另一台设备或登录你 Google 账号的人更改。请选择你在这里使用的那个。不会复制或删除任何内容。"
+  },
+  "app_vault_ambiguous_use_local": {
+    "message": "使用此设备上的保险库"
+  },
+  "app_vault_ambiguous_use_sync": {
+    "message": "使用同步的保险库"
+  },
+  "app_vault_alternate_sync": {
+    "message": "同步存储中也存有一个保险库。"
+  },
+  "app_vault_alternate_local": {
+    "message": "此设备的存储中也存有一个保险库。"
+  },
+  "app_vault_alternate_use": {
+    "message": "试试那个"
   }
 }

@@ -402,5 +402,9 @@
   "actions_reply_to_signer": {
     "message": "Reply to sender",
     "description": "Command palette entry, shown while a decrypted message from a verified signer is on screen. Opens an encrypted reply to them in a new tab."
+  },
+  "actions_no_active_key_reason": {
+    "message": "Every key of this contact is turned off. Turn one back on in the contact's details to encrypt to them.",
+    "description": "Why a contact is dimmed in the recipient picker, and the error when encrypt is attempted with it: the user turned off all of its keys."
   }
 }

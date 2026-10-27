@@ -331,5 +331,20 @@
   "keys_contact_same_name": { "message": "Gleicher Name" },
   "keys_contact_same_name_title": {
     "message": "$name$ ($keyid$) hat diesen Namen auch, mit einem anderen Schlüssel."
+  },
+  "keys_invisible_char": {
+    "message": "Hier steht ein unsichtbares Zeichen ($code$)"
+  },
+  "keys_clash_check": {
+    "message": "Frag nach, welcher Schlüssel wirklich von der Person ist, bevor du dich auf einen verlässt."
+  },
+  "keys_confusable_char": {
+    "message": "$code$ sieht aus wie ein lateinischer Buchstabe, ist aber ein anderer"
+  },
+  "keys_contact_lookalike_address": {
+    "message": "Ähnliche Adresse"
+  },
+  "keys_contact_lookalike_address_title": {
+    "message": "$name$ ($keyid$) hat eine Adresse, die genauso aussieht wie diese, mit einem anderen Schlüssel."
   }
 }

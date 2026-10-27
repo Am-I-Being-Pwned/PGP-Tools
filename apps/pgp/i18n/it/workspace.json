@@ -502,5 +502,29 @@
   },
   "workspace_signer_not_verified": {
     "message": "chiave non segnata come verificata da te"
+  },
+  "workspace_not_encrypted": {
+    "message": "Non cifrato"
+  },
+  "workspace_signed_not_encrypted": {
+    "message": "firmato, ma non cifrato: chiunque potrebbe averti inviato questa copia"
+  },
+  "workspace_status_not_encrypted": {
+    "message": "Questo messaggio non era cifrato, quindi chiunque potrebbe averti inviato questa copia e averla letta lungo il percorso."
+  },
+  "workspace_not_encrypted_not_signed": {
+    "message": "Né cifrato né firmato"
+  },
+  "workspace_error_batch_not_encrypted": {
+    "message": "$name$ non è cifrato. Decifralo da solo per vedere cosa contiene."
+  },
+  "workspace_signature_verified_line_breaks": {
+    "message": "Controlla gli a capo"
+  },
+  "workspace_signed_text_lone_cr": {
+    "message": "il testo firmato contiene un ritorno a capo senza avanzamento di riga (mostrato come ␍), quindi gli a capo potrebbero non apparire come li ha scritti il firmatario"
+  },
+  "workspace_signature_not_addressed": {
+    "message": "la firma non indica che fosse destinata a te, quindi potrebbe essere stata inoltrata"
   }
 }

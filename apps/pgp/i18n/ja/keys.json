@@ -577,5 +577,20 @@
   },
   "keys_contact_same_name_title": {
     "message": "$name$ ($keyid$) も別の鍵でこの名前を使っています。"
+  },
+  "keys_invisible_char": {
+    "message": "ここに見えない文字 ($code$) があります"
+  },
+  "keys_clash_check": {
+    "message": "どちらかを信頼する前に、どの鍵が本当に本人のものか確認してください。"
+  },
+  "keys_confusable_char": {
+    "message": "$code$ はラテン文字に見えますが、別の文字です"
+  },
+  "keys_contact_lookalike_address": {
+    "message": "紛らわしいアドレス"
+  },
+  "keys_contact_lookalike_address_title": {
+    "message": "$name$ ($keyid$) には、これと同じに見えるアドレスが別の鍵で登録されています。"
   }
 }

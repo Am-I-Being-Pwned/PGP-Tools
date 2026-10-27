@@ -725,7 +725,11 @@ export async function readContacts(panel: Page): Promise<StoredContact[]> {
       );
       const nul = plaintext.indexOf(0);
       const json = nul === -1 ? plaintext : plaintext.subarray(0, nul);
-      return JSON.parse(new TextDecoder().decode(json)) as StoredContact[];
+      // Drop the store's generation element (`{ "$gen": n }`, see
+      // lib/storage/integrity.ts): it is not a contact.
+      return (JSON.parse(new TextDecoder().decode(json)) as unknown[]).filter(
+        (el) => !(typeof el === "object" && el !== null && "$gen" in el),
+      ) as StoredContact[];
     },
     { u: url, key: "pgp_public_contacts" },
   );

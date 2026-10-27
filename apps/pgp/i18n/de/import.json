@@ -430,5 +430,23 @@
   },
   "import_review_conflict_address_revoked": {
     "message": "$email$ gehörte zu $name$ ($keyid$), einem inzwischen widerrufenen Schlüssel. Frag nach, ob dieser neue Schlüssel wirklich von dieser Person ist."
+  },
+  "import_review_conflict_key_update": {
+    "message": "Dadurch bekommt $name$ ($keyid$) weitere Schlüssel, und Nachrichten an diese Person erreichen auch die neuen Schlüssel. Frag nach, bevor du speicherst."
+  },
+  "import_review_conflict_key_contact": {
+    "message": "Enthält den Schlüssel, den du für $name$ ($keyid$) hast, zusammen mit anderen Schlüsseln. Frag nach, bevor du speicherst."
+  },
+  "import_review_conflict_key_own": {
+    "message": "Enthält deinen eigenen Schlüssel ($keyid$) zusammen mit anderen Schlüsseln. Prüfe, ob alle dir gehören, bevor du speicherst."
+  },
+  "import_review_conflict_address_lookalike": {
+    "message": "$email$ sieht aus wie $theirs$, die Adresse von $name$ ($keyid$), ist aber eine andere Adresse. Frag nach, bevor du ihm vertraust."
+  },
+  "import_review_all_keys_off": {
+    "message": "Jeder Schlüssel, den dieses Konto noch auflistet, ist einer, den du ausgeschaltet hast. Gespeichert hat dieser Kontakt keinen Schlüssel zum Verschlüsseln, bis du einen wieder einschaltest."
+  },
+  "import_github_refresh_all_held": {
+    "message": "$username$ listet einige der für diesen Kontakt gespeicherten Schlüssel nicht mehr auf, und alle übrigen gehören jemand anderem, den du hast, oder dir. Daher kann er nicht aktualisiert werden. Lösche diesen Kontakt, wenn du nicht mehr an seine alten Schlüssel verschlüsseln willst."
   }
 }

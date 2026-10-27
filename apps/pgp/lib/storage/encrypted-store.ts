@@ -9,28 +9,46 @@
  * moving an intact blob to a different storage key, because the key is
  * what the subkey and AAD are derived from.
  *
- * Two legacy formats are read transparently:
- *  - the pre-domain-separation envelope (one shared key + one shared AAD
- *    across every store), handled by `openEnvelope`'s fallback. Mutations
- *    re-seal under the new scheme; `normalizePadding` upgrades a store
- *    that is only ever read. Reads never write, so an upgrade can't race
- *    a concurrent mutation.
- *  - the original plaintext format: a `string[]` index at the storage key
- *    plus one plaintext entry per item at `${storageKey}:${id}`.
+ * The sealed array carries a generation element (`integrity.ts`), so a
+ * blob written back from the past -- or one that has gone missing -- is
+ * reported rather than silently believed.
+ *
+ * One legacy format is read transparently: the pre-domain-separation
+ * envelope (one shared key + one shared AAD across every store), handled
+ * by `openEnvelope`'s fallback. Mutations re-seal under the new scheme;
+ * `normalizePadding` upgrades a store that is only ever read. Reads never
+ * write the store, so an upgrade can't race a concurrent mutation.
+ *
+ * The ORIGINAL plaintext format (a `string[]` index at the storage key
+ * plus one plaintext entry per item at `${storageKey}:${id}`) is NOT
+ * read any more, and that is deliberate. Its migration sealed whatever
+ * plaintext it found under the vault key, on every unlock, forever: so
+ * anyone who could write chrome.storage (for a sync user, anyone signed
+ * in to their Google account) could replace the sealed blob with an index
+ * and have a contact of their choosing -- marked verified, its identity
+ * marked already derived -- sealed into the vault as genuine, or an
+ * "own" key planted in the keyring. Only pre-release 0.x builds wrote it
+ * (contacts until 2026-04-01, the keyring until v0.1.2 on 2026-04-05),
+ * every build since has migrated it on the first unlock, and the
+ * upgrade-path suite's oldest baseline is v1.3.1. A value in that shape
+ * now reads as an absent store -- and, on a device that has seen the
+ * real one, is reported as tampering.
  */
 
 import type { StoredEnvelope } from "./envelope";
 import type { StorageLocation } from "./preferences";
 import { hasContactsSession } from "../pgp/wasm";
 import { getChunked, removeChunked, setChunked } from "./chunked";
-import {
-  currentStorageLocation,
-  getItem,
-  removeItem,
-  setItem,
-  withLock,
-} from "./engine";
+import { currentStorageLocation, getItem, setItem, withLock } from "./engine";
 import { isStoredEnvelope, openEnvelope, sealEnvelope } from "./envelope";
+import {
+  claimGeneration,
+  noteAbsent,
+  observeGeneration,
+  recordWrite,
+  splitGeneration,
+  withGeneration,
+} from "./integrity";
 import { isCanonicalPadding, padPlaintext, unpadPlaintext } from "./padding";
 
 export interface EncryptedStore<T> {
@@ -48,14 +66,13 @@ export async function loadEncryptedArray<T>(
   if (!(await hasContactsSession())) return [];
 
   const blob = await getItem<unknown>(store.storageKey);
-  if (!blob) return [];
-
-  // Migrate old plaintext format if present
   if (!isStoredEnvelope(blob)) {
-    if (Array.isArray(blob)) {
-      await migrateLegacyPlaintext(store, blob as unknown[]);
-      return loadEncryptedArray(store);
-    }
+    // Absent, or something no build of ours writes any more (including
+    // the retired plaintext index -- see the header). Either way there is
+    // nothing to read; on a device that has seen this store, it is also
+    // reported, since stores are never removed once written (an emptied
+    // one is saved as a sealed empty array).
+    await noteAbsent(store.storageKey);
     return [];
   }
 
@@ -69,7 +86,9 @@ export async function loadEncryptedArray<T>(
   const parsed: unknown = JSON.parse(new TextDecoder().decode(json));
 
   if (!Array.isArray(parsed)) return [];
-  return parsed.filter(store.isValid);
+  const { gen, items } = splitGeneration(parsed);
+  await observeGeneration(store.storageKey, gen);
+  return items.filter(store.isValid);
 }
 
 export async function saveEncryptedArray<T>(
@@ -82,7 +101,10 @@ export async function saveEncryptedArray<T>(
 
   // Pad to a coarse size bucket so the stored blob length hides the item
   // count. Skipped on `sync`, whose 8 KB/item cap can't absorb padding.
-  const json = new TextEncoder().encode(JSON.stringify(items));
+  const gen = await claimGeneration(store.storageKey);
+  const json = new TextEncoder().encode(
+    JSON.stringify(withGeneration(items, gen)),
+  );
   const pad = (await currentStorageLocation()) === "local";
   const plaintext = padPlaintext(json, pad);
 
@@ -90,6 +112,7 @@ export async function saveEncryptedArray<T>(
     store.storageKey,
     await sealEnvelope(store.storageKey, plaintext),
   );
+  await recordWrite(store.storageKey, gen);
 }
 
 function area(loc: StorageLocation) {
@@ -109,8 +132,9 @@ function area(loc: StorageLocation) {
  * old area. Sequencing it that way means a crash before the commit leaves
  * the originals in place and reads still find them; a crash after leaves
  * only harmless duplicates. Requires an active session. A value that
- * isn't an encrypted blob (absent, or a not-yet-migrated legacy format)
- * is copied verbatim so nothing is dropped.
+ * isn't an encrypted blob is copied verbatim so nothing is dropped. The
+ * generation rides inside the sealed JSON, which is carried byte for
+ * byte, so a move is not mistaken for a rollback.
  */
 export async function copyEncryptedBlobRepacked(
   storageKey: string,
@@ -180,7 +204,7 @@ export async function normalizePadding<T>(
   if (!(await hasContactsSession())) return;
   await withLock(store.storageKey, async () => {
     const blob = await getItem<unknown>(store.storageKey);
-    if (!isStoredEnvelope(blob)) return; // absent, or legacy plaintext
+    if (!isStoredEnvelope(blob)) return; // absent, or not ours
 
     const { plaintext, legacy } = await openEnvelope(store.storageKey, blob);
     const pad = (await currentStorageLocation()) === "local";
@@ -195,30 +219,4 @@ export async function normalizePadding<T>(
       await sealEnvelope(store.storageKey, padPlaintext(json, pad)),
     );
   });
-}
-
-async function migrateLegacyPlaintext<T>(
-  store: EncryptedStore<T>,
-  ids: unknown[],
-): Promise<void> {
-  const items: T[] = [];
-  const keysToRemove: string[] = [];
-
-  for (const id of ids) {
-    if (typeof id !== "string") continue;
-    const key = `${store.storageKey}:${id}`;
-    const item = await getItem<unknown>(key);
-    if (store.isValid(item)) items.push(item);
-    keysToRemove.push(key);
-  }
-
-  if (items.length > 0) {
-    await saveEncryptedArray(store, items);
-  } else {
-    await removeItem(store.storageKey);
-  }
-
-  for (const key of keysToRemove) {
-    await removeItem(key);
-  }
 }

@@ -301,5 +301,8 @@
   },
   "actions_reply_to_signer": {
     "message": "Rispondi al mittente"
+  },
+  "actions_no_active_key_reason": {
+    "message": "Tutte le chiavi di questo contatto sono disattivate. Riattivane una nei dettagli del contatto per cifrare a questa persona."
   }
 }

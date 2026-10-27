@@ -609,7 +609,7 @@
   },
   "keys_contact_keys_partial": {
     "message": "$active$ of $total$ keys",
-    "description": "Contact card badge when some of the contact's keys are turned off. $active$ and $total$ are numbers; $total$ is at least 2. Very short."
+    "description": "Contact card badge when some of the contact's keys are turned off. $active$ and $total$ are numbers; $total$ is usually at least 2, and 1 when a contact's only key is turned off. Very short."
   },
   "keys_contact_keys_count_one": {
     "message": "$count$ key",
@@ -770,5 +770,25 @@
   "keys_contact_same_name_title": {
     "message": "$name$ ($keyid$) has this name too, with a different key.",
     "description": "Tooltip of the Same name pill. $name$ is the other contact, $keyid$ its 16-hex key id."
+  },
+  "keys_invisible_char": {
+    "message": "An invisible character ($code$) is here",
+    "description": "Hover text on a marker drawn where a name or email holds a character that renders as nothing (a zero-width space, a variation selector). $code$ is the Unicode code point, e.g. U+200B."
+  },
+  "keys_clash_check": {
+    "message": "Check with them which key is really theirs before you rely on either.",
+    "description": "Muted line under the Same address / Same name warnings on a contact's key details: compare fingerprints with the person."
+  },
+  "keys_confusable_char": {
+    "message": "$code$ looks like a Latin letter but is a different one",
+    "description": "Hover text on a highlighted letter in an email address that passes for a Latin letter without being one (e.g. the dotless ı in alıce@corp.com). $code$ is the Unicode code point, e.g. U+0131."
+  },
+  "keys_contact_lookalike_address": {
+    "message": "Lookalike address",
+    "description": "Amber pill on a contact whose address reads the same as another contact's without being the same (a lookalike letter in it). Short."
+  },
+  "keys_contact_lookalike_address_title": {
+    "message": "$name$ ($keyid$) has an address that looks the same as this one, with a different key.",
+    "description": "Tooltip of the Lookalike address pill, and the warning on a contact's key details. $name$ is the other contact, $keyid$ its key id."
   }
 }

@@ -16,16 +16,26 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { MasterProtection } from "./master-protection";
-import { STORAGE_MASTER_PROTECTION } from "../constants";
+import {
+  STORAGE_INTEGRITY,
+  STORAGE_MASTER_PROTECTION,
+  STORAGE_PREFERENCES,
+} from "../constants";
 import { invalidateLocationCache } from "./engine";
 import { fakeArea } from "./fake-area";
-import { getMasterProtection, saveMasterProtection } from "./master-protection";
+import {
+  getMasterProtection,
+  saveMasterProtection,
+  VaultExistsError,
+} from "./master-protection";
 
 let local: ReturnType<typeof fakeArea>;
+let sync: ReturnType<typeof fakeArea>;
 
 beforeEach(() => {
   local = fakeArea();
-  vi.stubGlobal("chrome", { storage: { local, sync: fakeArea() } });
+  sync = fakeArea();
+  vi.stubGlobal("chrome", { storage: { local, sync } });
   invalidateLocationCache();
 });
 
@@ -57,11 +67,51 @@ describe("round trip", () => {
     await saveMasterProtection(password);
     expect(await getMasterProtection()).toEqual(password);
   });
+});
 
-  it("overwrites on re-save, so switching method leaves no trace of the old one", async () => {
+/**
+ * Replacing the master protection makes every key sealed under it
+ * unopenable, and it used to be one forged `onboardingComplete: false`
+ * away: onboarding came back up and saved over the real vault. The
+ * writer itself now refuses -- in EITHER area, because the bootstrap's
+ * `storageLocation` is just as forgeable as the flag.
+ */
+describe("never replaces an existing vault", () => {
+  it("refuses a second save in the same area", async () => {
     await saveMasterProtection(password);
-    await saveMasterProtection(passkey);
-    expect(await getMasterProtection()).toEqual(passkey);
+    await expect(saveMasterProtection(passkey)).rejects.toBeInstanceOf(
+      VaultExistsError,
+    );
+    expect(await getMasterProtection()).toEqual(password);
+  });
+
+  it("refuses when the vault is in the OTHER area", async () => {
+    // A local vault, with the bootstrap flipped to sync from another
+    // machine: the engine now looks in sync and sees nothing.
+    local.store.set(STORAGE_MASTER_PROTECTION, password);
+    sync.store.set(STORAGE_PREFERENCES, { storageLocation: "sync" });
+    invalidateLocationCache();
+
+    await expect(saveMasterProtection(passkey)).rejects.toBeInstanceOf(
+      VaultExistsError,
+    );
+    expect(local.store.get(STORAGE_MASTER_PROTECTION)).toEqual(password);
+    expect(sync.store.has(STORAGE_MASTER_PROTECTION)).toBe(false);
+  });
+
+  it("refuses over a record this build cannot even parse", async () => {
+    // Only a VALID record counts as a vault here -- an unparseable one
+    // is no vault anyone can unlock -- so this documents the boundary.
+    local.store.set(STORAGE_MASTER_PROTECTION, { method: "yubikey" });
+    await expect(saveMasterProtection(password)).resolves.toBeUndefined();
+  });
+
+  it("drops an integrity ledger left by an earlier vault", async () => {
+    // It would not open under the new vault's key and would read as
+    // tampering on the first unlock.
+    local.store.set(STORAGE_INTEGRITY, { iv: "x", ciphertext: "y" });
+    await saveMasterProtection(password);
+    expect(local.store.has(STORAGE_INTEGRITY)).toBe(false);
   });
 });
 

@@ -292,6 +292,9 @@
   "actions_need_recipient_or_password": {
     "message": "Sélectionnez au moins un destinataire, ou définissez un mot de passe"
   },
+  "actions_no_active_key_reason": {
+    "message": "Toutes les clés de ce contact sont désactivées. Réactivez-en une dans les détails du contact pour chiffrer vers lui."
+  },
   "actions_no_input_decrypt": {
     "message": "Rien à déchiffrer - collez un message chiffré ou déposez un fichier"
   },
@@ -567,6 +570,21 @@
   "app_import_view_key_other": {
     "message": "Voir les clés"
   },
+  "app_integrity_dismiss": {
+    "message": "Ignorer"
+  },
+  "app_integrity_ledger_lost": {
+    "message": "L'enregistrement de cet appareil sur ce qu'il a vu en dernier a été supprimé ou n'a pas pu être lu : les copies plus anciennes de vos données ne peuvent pas être détectées cette fois. Le préréglage de sécurité le plus strict s'applique jusqu'à ce que vous fermiez cet avertissement. Vérifiez que les contacts que vous savez révoqués apparaissent toujours comme révoqués."
+  },
+  "app_integrity_settings_strict": {
+    "message": "Vos paramètres étaient manquants : le préréglage de sécurité le plus strict s'applique jusqu'à ce que vous les modifiiez."
+  },
+  "app_integrity_settings_unreadable": {
+    "message": "Vos paramètres n'ont pas pu être lus : le préréglage de sécurité le plus strict s'applique jusqu'à ce que vous les modifiiez."
+  },
+  "app_integrity_warning": {
+    "message": "Certaines de vos clés, contacts ou paramètres enregistrés sont plus anciens que la copie que cet appareil a vue en dernier, ou sont manquants. Une personne ayant accès au stockage de votre navigateur ou à votre compte Google les a peut-être restaurés à une version antérieure. Cela peut aussi arriver si deux appareils modifient les mêmes données en même temps. Vérifiez vos clés et vos contacts avant de vous y fier."
+  },
   "app_menu_open_in_pgp_tools": {
     "message": "Ouvrir dans PGP Tools"
   },
@@ -700,6 +718,9 @@
   "app_onboarding_use_preset": {
     "message": "Utiliser ce profil"
   },
+  "app_onboarding_vault_exists": {
+    "message": "Un coffre existe déjà dans ce navigateur, aucun nouveau coffre n'a donc été créé. Fermez puis rouvrez le panneau pour le déverrouiller."
+  },
   "app_oversized_files_one": {
     "message": "$files$ : ce fichier dépasse $limit$ et ne peut pas être traité dans le panneau.",
     "placeholders": {
@@ -736,8 +757,56 @@
   "app_tab_main": {
     "message": "Principal"
   },
+  "app_vault_alternate_local": {
+    "message": "Un coffre est aussi stocké dans le stockage de cet appareil."
+  },
+  "app_vault_alternate_sync": {
+    "message": "Un coffre est aussi stocké dans le stockage synchronisé."
+  },
+  "app_vault_alternate_use": {
+    "message": "Essayer celui-là"
+  },
+  "app_vault_ambiguous_body": {
+    "message": "L'un se trouve dans le stockage de cet appareil et l'autre dans le stockage synchronisé, et cet appareil n'a aucune trace de celui qui est le vôtre. Le stockage synchronisé peut être modifié par un autre appareil, ou par une personne connectée à votre compte Google. Choisissez celui que vous utilisez ici. Rien n'est copié ni supprimé."
+  },
+  "app_vault_ambiguous_title": {
+    "message": "Deux coffres sont stockés dans ce navigateur"
+  },
+  "app_vault_ambiguous_use_local": {
+    "message": "Utiliser le coffre de cet appareil"
+  },
+  "app_vault_ambiguous_use_sync": {
+    "message": "Utiliser le coffre synchronisé"
+  },
+  "app_vault_elsewhere_body_local": {
+    "message": "Ce navigateur est configuré pour garder votre coffre dans le stockage synchronisé, mais votre coffre se trouve dans le stockage de cet appareil. Ce réglage est synchronisé entre les appareils : un autre appareil, ou une personne connectée à votre compte Google, l'a peut-être modifié."
+  },
+  "app_vault_elsewhere_body_sync": {
+    "message": "Ce navigateur est configuré pour garder votre coffre sur cet appareil uniquement, mais votre coffre se trouve dans le stockage synchronisé. Ce réglage est synchronisé entre les appareils : un autre appareil, ou une personne connectée à votre compte Google, l'a peut-être modifié."
+  },
+  "app_vault_elsewhere_title": {
+    "message": "Votre coffre est enregistré ailleurs"
+  },
+  "app_vault_elsewhere_use": {
+    "message": "Utiliser le coffre là où il est"
+  },
+  "app_vault_erase_body": {
+    "message": "Cette action supprime définitivement les clés, contacts, paramètres et l'historique enregistrés dans ce navigateur et dans son stockage synchronisé, afin que vous puissiez créer un nouveau coffre. Elle est irréversible."
+  },
+  "app_vault_erase_confirm": {
+    "message": "Effacer le coffre"
+  },
+  "app_vault_erase_title": {
+    "message": "Effacer et recommencer"
+  },
   "app_vault_lock_retry": {
     "message": "Verrouiller et réessayer"
+  },
+  "app_vault_orphaned_body": {
+    "message": "Vos clés et vos contacts sont toujours enregistrés, mais l'enregistrement nécessaire pour les déverrouiller est absent du stockage de ce navigateur, et sans lui personne ne peut les ouvrir. Si vous pouvez restaurer cet enregistrement depuis une sauvegarde de ce profil de navigateur, faites-le plutôt."
+  },
+  "app_vault_orphaned_title": {
+    "message": "Votre coffre ne peut plus être déverrouillé"
   },
   "app_vault_unreadable_body": {
     "message": "Vos clés sont toujours stockées sur cet appareil. Commencez par verrouiller puis réessayer."
@@ -1086,6 +1155,14 @@
   "import_github_rate_limited": {
     "message": "GitHub limite les requêtes de ce réseau. La limite est comptée par adresse IP, elle peut donc être épuisée par d'autres personnes sur la même connexion."
   },
+  "import_github_refresh_all_held": {
+    "message": "$username$ ne publie plus certaines des clés enregistrées pour ce contact, et toutes celles qu'il publie encore appartiennent à un autre de vos contacts ou à vous : il ne peut donc pas être mis à jour. Supprimez ce contact si vous ne voulez plus chiffrer vers ses anciennes clés.",
+    "placeholders": {
+      "username": {
+        "content": "$1"
+      }
+    }
+  },
   "import_github_rejected_heading_one": {
     "message": "$count$ clé publiée est inutilisable",
     "placeholders": {
@@ -1395,6 +1472,9 @@
   "import_reveal": {
     "message": "Afficher dans vos clés"
   },
+  "import_review_all_keys_off": {
+    "message": "Chaque clé que ce compte publie encore est une clé que vous avez désactivée. Enregistré, ce contact n'a aucune clé vers laquelle chiffrer tant que vous n'en réactivez pas une."
+  },
   "import_review_choice_aria": {
     "message": "Que faire de $name$",
     "placeholders": {
@@ -1429,6 +1509,23 @@
       }
     }
   },
+  "import_review_conflict_address_lookalike": {
+    "message": "$email$ ressemble à $theirs$, l'adresse de $name$ ($keyid$), mais c'est une autre adresse. Vérifiez auprès de cette personne avant de lui faire confiance.",
+    "placeholders": {
+      "email": {
+        "content": "$1"
+      },
+      "theirs": {
+        "content": "$2"
+      },
+      "name": {
+        "content": "$3"
+      },
+      "keyid": {
+        "content": "$4"
+      }
+    }
+  },
   "import_review_conflict_address_revoked": {
     "message": "$email$ appartenait à $name$ ($keyid$), une clé désormais révoquée. Vérifiez auprès de cette personne que cette nouvelle clé est bien la sienne.",
     "placeholders": {
@@ -1440,6 +1537,36 @@
       },
       "keyid": {
         "content": "$3"
+      }
+    }
+  },
+  "import_review_conflict_key_contact": {
+    "message": "Contient la clé que vous avez pour $name$ ($keyid$), regroupée avec d'autres clés. Vérifiez auprès de cette personne avant d'enregistrer.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
+  "import_review_conflict_key_own": {
+    "message": "Contient votre propre clé ($keyid$), regroupée avec d'autres clés. Vérifiez qu'elles sont toutes à vous avant d'enregistrer.",
+    "placeholders": {
+      "keyid": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_conflict_key_update": {
+    "message": "Cela ajoute des clés à $name$ ($keyid$) : les messages qui lui sont destinés atteindraient aussi les nouvelles clés. Vérifiez auprès de cette personne avant d'enregistrer.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
       }
     }
   },
@@ -2243,11 +2370,22 @@
   "keys_chip_your_key_title": {
     "message": "Vous détenez la clé privée"
   },
+  "keys_clash_check": {
+    "message": "Vérifiez auprès de cette personne quelle clé est vraiment la sienne avant de vous fier à l'une ou l'autre."
+  },
   "keys_confirm_delete_key_title": {
     "message": "Supprimer la clé ?"
   },
   "keys_confirm_remove_contact_title": {
     "message": "Retirer le contact ?"
+  },
+  "keys_confusable_char": {
+    "message": "$code$ ressemble à une lettre latine, mais en est une autre",
+    "placeholders": {
+      "code": {
+        "content": "$1"
+      }
+    }
   },
   "keys_contact_expired": {
     "message": "Expirée le $date$",
@@ -2316,6 +2454,20 @@
   },
   "keys_contact_long_id_title": {
     "message": "Identifiant de clé : les 16 derniers caractères de l'empreinte de cette clé. Il distingue les clés d'un coup d'œil ; pour vérifier qu'une clé est authentique, comparez l'empreinte complète."
+  },
+  "keys_contact_lookalike_address": {
+    "message": "Adresse ressemblante"
+  },
+  "keys_contact_lookalike_address_title": {
+    "message": "$name$ ($keyid$) a une adresse qui ressemble à celle-ci, avec une autre clé.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
   },
   "keys_contact_options_aria": {
     "message": "Options du contact"
@@ -2609,6 +2761,14 @@
     "message": "$count$ sous-clés inutilisables",
     "placeholders": {
       "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_invisible_char": {
+    "message": "Un caractère invisible ($code$) se trouve ici",
+    "placeholders": {
+      "code": {
         "content": "$1"
       }
     }
@@ -4083,6 +4243,14 @@
   "workspace_enter_message_password": {
     "message": "Saisir le mot de passe du message"
   },
+  "workspace_error_batch_not_encrypted": {
+    "message": "$name$ n'est pas chiffré. Déchiffrez-le seul pour voir ce qu'il contient.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_error_crx_invalid": {
     "message": "La signature CRX de ce fichier n'a pas pu être vérifiée."
   },
@@ -4314,6 +4482,12 @@
   "workspace_no_such_language": {
     "message": "Aucune langue de ce nom."
   },
+  "workspace_not_encrypted": {
+    "message": "Non chiffré"
+  },
+  "workspace_not_encrypted_not_signed": {
+    "message": "Ni chiffré ni signé"
+  },
   "workspace_note_downloading": {
     "message": "Téléchargement : $what$...",
     "placeholders": {
@@ -4539,8 +4713,14 @@
   "workspace_signature_covers_original": {
     "message": "la signature couvre l'original, pas cette traduction"
   },
+  "workspace_signature_not_addressed": {
+    "message": "la signature n'indique pas qu'elle vous était destinée, elle a donc pu être transférée"
+  },
   "workspace_signature_verified": {
     "message": "Signature vérifiée"
+  },
+  "workspace_signature_verified_line_breaks": {
+    "message": "Vérifiez les sauts de ligne"
   },
   "workspace_signature_verified_not_for_you": {
     "message": "Pas pour vous"
@@ -4556,6 +4736,9 @@
       }
     }
   },
+  "workspace_signed_not_encrypted": {
+    "message": "signé, mais non chiffré : n'importe qui a pu vous envoyer cette copie"
+  },
   "workspace_signed_on": {
     "message": "Signé le $date$",
     "placeholders": {
@@ -4566,6 +4749,9 @@
   },
   "workspace_signed_text_hidden_chars": {
     "message": "le texte signé contient des caractères invisibles ou de direction du texte : il peut ne pas s'afficher comme il a été écrit"
+  },
+  "workspace_signed_text_lone_cr": {
+    "message": "le texte signé contient un retour chariot sans saut de ligne (affiché comme ␍), ses sauts de ligne peuvent donc ne pas s'afficher comme le signataire les a écrits"
   },
   "workspace_signer_key_retired": {
     "message": "la clé qui l'a créée a depuis expiré ou été révoquée"
@@ -4594,6 +4780,9 @@
   },
   "workspace_status_decrypted_archive": {
     "message": "Archive déchiffrée contenant plusieurs fichiers"
+  },
+  "workspace_status_not_encrypted": {
+    "message": "Ce message n'était pas chiffré : n'importe qui a pu vous envoyer cette copie et la lire en chemin."
   },
   "workspace_status_signer_unknown": {
     "message": "Ce message est signé, mais la clé publique du signataire n'est ni dans vos clés ni dans vos contacts ; la signature n'a donc pas pu être vérifiée."

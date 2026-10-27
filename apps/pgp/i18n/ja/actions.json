@@ -301,5 +301,8 @@
   },
   "actions_reply_to_signer": {
     "message": "送信者に返信"
+  },
+  "actions_no_active_key_reason": {
+    "message": "この連絡先の鍵はすべてオフです。暗号化するには、連絡先の詳細でどれかをオンに戻してください。"
   }
 }

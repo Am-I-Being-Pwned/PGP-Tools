@@ -127,5 +127,8 @@
   "actions_translate_to_title": { "message": "将消息翻译为" },
   "actions_pick_language_placeholder": { "message": "选择语言…" },
   "actions_translate_result_to": { "message": "翻译为$language$" },
-  "actions_reply_to_signer": { "message": "回复发件人" }
+  "actions_reply_to_signer": { "message": "回复发件人" },
+  "actions_no_active_key_reason": {
+    "message": "此联系人的所有密钥都已关闭。请在联系人详情中重新开启一个，才能加密给对方。"
+  }
 }

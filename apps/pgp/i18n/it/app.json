@@ -280,5 +280,71 @@
   },
   "app_copied_sensitive_note": {
     "message": "Resta negli appunti, e in qualsiasi cronologia degli appunti, finché non copi qualcos'altro."
+  },
+  "app_integrity_warning": {
+    "message": "Alcune delle tue chiavi, dei contatti o delle impostazioni salvate sono più vecchie della copia che questo dispositivo ha visto per ultima, oppure mancano. Qualcuno con accesso alla memoria del browser o al tuo account Google potrebbe averle riportate a una versione precedente. Può succedere anche se due dispositivi modificano gli stessi dati nello stesso momento. Controlla chiavi e contatti prima di farci affidamento."
+  },
+  "app_integrity_settings_strict": {
+    "message": "Le tue impostazioni mancavano, quindi è attivo il preset di sicurezza più rigoroso finché non le modifichi."
+  },
+  "app_integrity_dismiss": {
+    "message": "Ignora"
+  },
+  "app_onboarding_vault_exists": {
+    "message": "In questo browser esiste già una cassaforte, quindi non ne è stata creata una nuova. Chiudi e riapri il pannello per sbloccarla."
+  },
+  "app_vault_elsewhere_title": {
+    "message": "La tua cassaforte è salvata altrove"
+  },
+  "app_vault_elsewhere_body_local": {
+    "message": "Questo browser è impostato per tenere la cassaforte nella memoria sincronizzata, ma la tua cassaforte si trova nella memoria di questo dispositivo. Questa impostazione si sincronizza tra i dispositivi, quindi potrebbe averla cambiata un altro dispositivo o qualcuno che ha effettuato l'accesso al tuo account Google."
+  },
+  "app_vault_elsewhere_body_sync": {
+    "message": "Questo browser è impostato per tenere la cassaforte solo su questo dispositivo, ma la tua cassaforte si trova nella memoria sincronizzata. Questa impostazione si sincronizza tra i dispositivi, quindi potrebbe averla cambiata un altro dispositivo o qualcuno che ha effettuato l'accesso al tuo account Google."
+  },
+  "app_vault_elsewhere_use": {
+    "message": "Usa la cassaforte dove si trova"
+  },
+  "app_vault_orphaned_title": {
+    "message": "La tua cassaforte non può più essere sbloccata"
+  },
+  "app_vault_orphaned_body": {
+    "message": "Le tue chiavi e i tuoi contatti sono ancora salvati, ma nella memoria di questo browser manca il dato necessario per sbloccarli, e senza di esso nessuno può aprirli. Se puoi ripristinare quel dato da un backup di questo profilo del browser, fallo invece."
+  },
+  "app_vault_erase_title": {
+    "message": "Cancella e ricomincia"
+  },
+  "app_vault_erase_body": {
+    "message": "Questa operazione elimina definitivamente chiavi, contatti, impostazioni e cronologia salvati in questo browser e nella sua memoria sincronizzata, così puoi creare una nuova cassaforte. Non può essere annullata."
+  },
+  "app_vault_erase_confirm": {
+    "message": "Cancella cassaforte"
+  },
+  "app_integrity_settings_unreadable": {
+    "message": "Non è stato possibile leggere le tue impostazioni, quindi è attivo il preset di sicurezza più rigoroso finché non le modifichi."
+  },
+  "app_integrity_ledger_lost": {
+    "message": "La registrazione di questo dispositivo su ciò che ha visto per ultimo è stata eliminata o non è leggibile, quindi questa volta non è possibile rilevare copie più vecchie dei tuoi dati. Il preset di sicurezza più rigoroso resta attivo finché non chiudi questo avviso. Controlla che i contatti che sai essere revocati risultino ancora revocati."
+  },
+  "app_vault_ambiguous_title": {
+    "message": "In questo browser sono salvate due casseforti"
+  },
+  "app_vault_ambiguous_body": {
+    "message": "Una si trova nella memoria di questo dispositivo e una nella memoria sincronizzata, e questo dispositivo non sa quale sia la tua. La memoria sincronizzata può essere modificata da un altro dispositivo o da qualcuno che ha effettuato l'accesso al tuo account Google. Scegli quella che usi qui. Non viene copiato né eliminato nulla."
+  },
+  "app_vault_ambiguous_use_local": {
+    "message": "Usa la cassaforte di questo dispositivo"
+  },
+  "app_vault_ambiguous_use_sync": {
+    "message": "Usa la cassaforte sincronizzata"
+  },
+  "app_vault_alternate_sync": {
+    "message": "Una cassaforte è salvata anche nella memoria sincronizzata."
+  },
+  "app_vault_alternate_local": {
+    "message": "Una cassaforte è salvata anche nella memoria di questo dispositivo."
+  },
+  "app_vault_alternate_use": {
+    "message": "Prova quella"
   }
 }

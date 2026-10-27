@@ -252,10 +252,10 @@ async function readStoreRecords(
       );
       const nul = plaintext.indexOf(0);
       const json = nul === -1 ? plaintext : plaintext.subarray(0, nul);
-      return JSON.parse(new TextDecoder().decode(json)) as Record<
-        string,
-        unknown
-      >[];
+      // Drop the generation element (lib/storage/integrity.ts).
+      return (
+        JSON.parse(new TextDecoder().decode(json)) as Record<string, unknown>[]
+      ).filter((el) => !("$gen" in el));
     },
     { u: glueUrl, key: storageKey },
   );

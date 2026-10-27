@@ -10,9 +10,10 @@
  *    locked vault must not be able to WRITE one (the asymmetry is the
  *    whole safety property: an unguarded save of `[]` over a sealed blob
  *    is indistinguishable from deleting every key);
- *  - the two legacy formats are read transparently, and the plaintext
- *    one is cleaned up as it migrates rather than left behind as a
- *    second, unencrypted copy of the same data;
+ *  - the legacy envelope is read transparently, and the retired
+ *    plaintext index is NOT: anything that is not a sealed envelope reads
+ *    as an empty store and is never sealed into the vault (it was the
+ *    way to plant a verified contact without the vault key);
  *  - a location move re-packs rather than byte-copies, because `local`
  *    padding does not fit `sync`'s 8 KB/item cap;
  *  - `normalizePadding` upgrades a legacy blob WITHOUT changing a single
@@ -42,6 +43,7 @@ import {
   legacyEnvelope,
   storedPlaintext,
 } from "./fake-store-crypto";
+import { splitGeneration } from "./integrity";
 import { unpadPlaintext } from "./padding";
 
 const wasmMock = vi.hoisted(() => ({ session: true }));
@@ -98,9 +100,11 @@ function json(items: unknown): Uint8Array {
   return new TextEncoder().encode(JSON.stringify(items));
 }
 
+/** The stored items, without the generation element. */
 function itemsIn(blob: unknown): unknown {
   const plaintext = unpadPlaintext(storedPlaintext(blob as never));
-  return JSON.parse(new TextDecoder().decode(plaintext));
+  const parsed = JSON.parse(new TextDecoder().decode(plaintext)) as unknown[];
+  return splitGeneration(parsed).items;
 }
 
 describe("loadEncryptedArray", () => {
@@ -157,8 +161,10 @@ describe("loadEncryptedArray", () => {
   });
 });
 
-describe("legacy plaintext migration", () => {
-  /** The original format: a `string[]` index plus one plaintext item per id. */
+describe("retired plaintext format", () => {
+  /** The original format: a `string[]` index plus one plaintext item per
+   *  id. Its migration sealed whatever it found on every unlock, so
+   *  anyone who could write storage could plant items without the key. */
   function seedPlaintext(ids: string[], items: Record<string, unknown>) {
     local.store.set(KEY, ids);
     for (const [id, item] of Object.entries(items)) {
@@ -166,31 +172,27 @@ describe("legacy plaintext migration", () => {
     }
   }
 
-  it("migrates plaintext items into a sealed blob and returns them", async () => {
+  it("reads as an empty store and seals nothing", async () => {
     seedPlaintext(["a", "b"], { a: { id: "a" }, b: { id: "b" } });
-    expect(await loadEncryptedArray(store)).toEqual([{ id: "a" }, { id: "b" }]);
-    expect(isDomainSealed(local.store.get(KEY))).toBe(true);
+    expect(await loadEncryptedArray(store)).toEqual([]);
+    // Nothing was adopted: the planted index is left exactly as it was,
+    // not replaced by a sealed blob of the attacker's items.
+    expect(local.store.get(KEY)).toEqual(["a", "b"]);
   });
 
-  it("removes the plaintext per-item keys it migrated", async () => {
-    // The point of the migration is that the data stops being readable
-    // without a session. Leaving the originals would defeat it entirely.
+  it("is never sealed by a later write either", async () => {
     seedPlaintext(["a"], { a: { id: "a" } });
     await loadEncryptedArray(store);
-    expect(local.store.has(`${KEY}:a`)).toBe(false);
+    await saveEncryptedArray(store, [{ id: "mine" }]);
+    expect(itemsIn(local.store.get(KEY))).toEqual([{ id: "mine" }]);
   });
 
-  it("skips non-string ids and invalid items", async () => {
-    local.store.set(KEY, ["a", 42, { bad: true }]);
-    local.store.set(`${KEY}:a`, { id: "a" });
-    expect(await loadEncryptedArray(store)).toEqual([{ id: "a" }]);
-  });
-
-  it("clears the index when nothing valid survives", async () => {
-    seedPlaintext(["a"], { a: { junk: true } });
+  it("does not run again after a sealed blob is replaced by an index", async () => {
+    // The attack: a real sealed store, swapped for a plaintext index.
+    await saveEncryptedArray(store, [{ id: "real" }]);
+    seedPlaintext(["evil"], { evil: { id: "evil" } });
     expect(await loadEncryptedArray(store)).toEqual([]);
-    expect(local.store.has(KEY)).toBe(false);
-    expect(local.store.has(`${KEY}:a`)).toBe(false);
+    expect(local.store.get(KEY)).toEqual(["evil"]);
   });
 });
 
@@ -274,8 +276,8 @@ describe("copyEncryptedBlobRepacked", () => {
   });
 
   it("copies a non-envelope value verbatim so nothing is dropped", async () => {
-    // A not-yet-migrated legacy plaintext index must survive the move,
-    // or the migration on the far side finds nothing to migrate.
+    // Whatever it is, the move is not the place to decide: it lands on
+    // the far side exactly as it was, and reads there as it read here.
     local.store.set(KEY, ["a", "b"]);
     await copyEncryptedBlobRepacked(KEY, "local", "sync");
     expect(sync.store.get(KEY)).toEqual(["a", "b"]);
@@ -328,7 +330,7 @@ describe("normalizePadding", () => {
     expect(local.store.get(KEY)).toBe(before);
   });
 
-  it("does nothing for an absent or legacy-plaintext value", async () => {
+  it("does nothing for an absent or non-envelope value", async () => {
     await normalizePadding(store);
     expect(local.store.has(KEY)).toBe(false);
 

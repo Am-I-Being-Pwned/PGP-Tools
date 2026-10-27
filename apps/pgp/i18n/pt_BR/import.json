@@ -430,5 +430,23 @@
   },
   "import_review_conflict_address_revoked": {
     "message": "$email$ pertencia a $name$ ($keyid$), uma chave agora revogada. Confirme com a pessoa que esta nova chave é dela."
+  },
+  "import_review_conflict_key_update": {
+    "message": "Isso adiciona chaves a $name$ ($keyid$), então as mensagens para essa pessoa também chegariam às chaves novas. Confirme com ela antes de salvar."
+  },
+  "import_review_conflict_key_contact": {
+    "message": "Inclui a chave que você tem de $name$ ($keyid$), agrupada com outras chaves. Confirme com essa pessoa antes de salvar."
+  },
+  "import_review_conflict_key_own": {
+    "message": "Inclui a sua própria chave ($keyid$), agrupada com outras chaves. Confirme que todas são suas antes de salvar."
+  },
+  "import_review_conflict_address_lookalike": {
+    "message": "$email$ parece $theirs$, o endereço de $name$ ($keyid$), mas é outro endereço. Confirme com a pessoa antes de confiar nela."
+  },
+  "import_review_all_keys_off": {
+    "message": "Todas as chaves que esta conta ainda lista são chaves que você desativou. Se salvar, este contato não terá nenhuma chave para criptografar até você reativar uma."
+  },
+  "import_github_refresh_all_held": {
+    "message": "$username$ não lista mais algumas das chaves salvas para este contato, e todas as que ainda lista pertencem a outra pessoa que você tem ou a você, então não dá para atualizar. Exclua este contato se não quiser mais criptografar para as chaves antigas."
   }
 }
