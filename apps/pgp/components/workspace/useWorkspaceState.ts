@@ -18,6 +18,7 @@ import { resolveSelfKey } from "../../lib/encrypt-recipients";
 import { oversizedFilesMessage, splitOversizedFiles } from "../../lib/limits";
 import { isPgpRecord, isSshRecord } from "../../lib/storage/key-kind";
 import { getPreferences } from "../../lib/storage/preferences";
+import { showLoneCarriageReturns } from "../../lib/utils/line-breaks";
 import { forgetLastRegExpMatch } from "../../lib/utils/regexp-residue";
 import { zipHasManifest } from "../../lib/utils/zip";
 import { decryptWorkspaceDraft } from "../../lib/workspace-draft";
@@ -397,9 +398,12 @@ export function useWorkspaceState(opts: {
   const setOutput = useCallback((text: string) => {
     outputRef.current = text;
     const el = outputElRef.current;
-    // The `!== text` guard keeps an unchanged re-render from blowing away
-    // the user's selection inside the result box.
-    if (el && el.textContent !== text) el.textContent = text;
+    // The `!==` guard keeps an unchanged re-render from blowing away
+    // the user's selection inside the result box. The node shows lone
+    // CRs as a symbol (see `showLoneCarriageReturns`); the ref keeps the
+    // bytes, which is what copy and download read.
+    const shown = showLoneCarriageReturns(text);
+    if (el && el.textContent !== shown) el.textContent = shown;
     setOutputInfo((prev) =>
       prev.len === text.length
         ? prev

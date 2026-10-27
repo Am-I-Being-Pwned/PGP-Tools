@@ -105,6 +105,17 @@ function fromKnownString(raw: string): PresentedError | null {
     };
   }
 
+  // A decrypt handed a message with no encryption layer. The workspace
+  // checks first and opens such a message as unencrypted; this is the
+  // engine's backstop refusal, for any path that did not. Before the
+  // password rule: nothing here is a password problem.
+  if (lower.includes("this message is not encrypted")) {
+    return {
+      message: t("workspace_status_not_encrypted"),
+      detail: raw,
+    };
+  }
+
   // Symmetric decrypt: the password did not open the message. The engine
   // folds two different failure POINTS into this one phrase on purpose --
   // a v4 SKESK unwraps the session key with no integrity check, so a

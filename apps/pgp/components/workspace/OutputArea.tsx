@@ -5,6 +5,7 @@ import { Block, BlockStack } from "@amibeingpwned/ui/block";
 import type { FileResult } from "../../lib/utils/download";
 import { t } from "../../lib/i18n";
 import { formatFileSize } from "../../lib/utils/formatting";
+import { showLoneCarriageReturns } from "../../lib/utils/line-breaks";
 
 interface OutputAreaProps {
   /** The result `<pre>`. It is UNCONTROLLED: the plaintext is written to
@@ -73,7 +74,8 @@ export function OutputArea({
   const attachOutput = useCallback(
     (el: HTMLPreElement | null) => {
       outputElRef.current = el;
-      if (el) el.textContent = getOutput();
+      // Drawn with lone CRs visible; the text itself stays exact.
+      if (el) el.textContent = showLoneCarriageReturns(getOutput());
     },
     [outputElRef, getOutput],
   );

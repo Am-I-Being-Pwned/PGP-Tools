@@ -48,6 +48,7 @@ import {
   formatKeyDisplayName,
   parseUserId,
 } from "../../lib/utils/key-naming";
+import { hasLoneCarriageReturn } from "../../lib/utils/line-breaks";
 import {
   isZipArchive,
   zipFiles as zipFilesToArchive,
@@ -56,6 +57,7 @@ import { outputFileName } from "./output-name";
 import { selectionEngine } from "./recipient-engine";
 import {
   mixedBatchNote,
+  notAddressed,
   signatureNote,
   signedForOthers,
   summariseBatch,
@@ -245,12 +247,32 @@ export function useWorkspaceOperations({
     };
   }
 
-  /** The signer card for a single "valid" or "unknown_key" result.
-   *  `extraNote` is appended to what the card says about it. */
+  /**
+   * The signer card for a single result.
+   *
+   * `text` is the signed text when it is on screen: characters in it
+   * that hide or reorder text, or a lone CR (see `line-breaks.ts`), are
+   * the signer's and stay, but the card says they are there.
+   *
+   * `notEncrypted` marks a "PGP MESSAGE" with no encryption layer. Its
+   * signature can be perfectly good -- anyone can re-send what Alice
+   * signed in public -- so the card is amber and says so, never green,
+   * and an unsigned one still gets a card: the outcome is the warning.
+   */
   function showSignature(
     result: SignedResult,
-    extraNote: string | null = null,
+    {
+      text,
+      notEncrypted = false,
+      decrypted = false,
+    }: {
+      text?: string;
+      notEncrypted?: boolean;
+      /** It came out of an encrypted message (see `unaddressed`). */
+      decrypted?: boolean;
+    } = {},
   ) {
+    const loneCr = text !== undefined && hasLoneCarriageReturn(text);
     if (result.signatureStatus === "valid") {
       // A key retired since signing still verifies -- it was good when
       // the signature says it was made -- and a message signed for
@@ -260,11 +282,25 @@ export function useWorkspaceOperations({
         result,
         myKeys.map((k) => k.keyId),
       );
-      const caveat = forOthers
-        ? t("workspace_signature_verified_not_for_you")
-        : !result.signerKeyCurrent
-          ? t("workspace_signature_verified_retired")
-          : null;
+      const caveat = notEncrypted
+        ? t("workspace_not_encrypted")
+        : forOthers
+          ? t("workspace_signature_verified_not_for_you")
+          : !result.signerKeyCurrent
+            ? t("workspace_signature_verified_retired")
+            : loneCr
+              ? t("workspace_signature_verified_line_breaks")
+              : null;
+      const textNotes = [
+        text !== undefined && hasHiddenCharacters(text)
+          ? t("workspace_signed_text_hidden_chars")
+          : null,
+        loneCr ? t("workspace_signed_text_lone_cr") : null,
+      ];
+      // A note, not amber -- see `notAddressed`.
+      const unaddressed = notAddressed(result, { decrypted, notEncrypted })
+        ? t("workspace_signature_not_addressed")
+        : null;
       s.setSignatureTone(caveat ? "warning" : "success");
       s.setStatusText(t("workspace_signature_verified"));
       const signer = findSigner(result.signerKeyId);
@@ -282,7 +318,13 @@ export function useWorkspaceOperations({
         s.setVerifiedSigner(signer);
         s.setSignerCaveat(caveat);
         s.setSignatureNote(
-          [signatureNote(result, signerName, forOthers), unvouched, extraNote]
+          [
+            notEncrypted ? t("workspace_signed_not_encrypted") : null,
+            signatureNote(result, signerName, forOthers),
+            unvouched,
+            unaddressed,
+            ...textNotes,
+          ]
             .filter(Boolean)
             .join(" · ") || null,
         );
@@ -293,13 +335,24 @@ export function useWorkspaceOperations({
       // tone, with the key id so the user can go and fetch the key.
       s.setSignatureTone("warning");
       s.setVerifiedSigner(placeholderSigner(result.signerKeyId ?? ""));
-      s.setStatusText(t("workspace_status_signer_unknown"));
+      s.setStatusText(
+        notEncrypted
+          ? `${t("workspace_status_signer_unknown")} ${t("workspace_status_not_encrypted")}`
+          : t("workspace_status_signer_unknown"),
+      );
+    } else if (notEncrypted) {
+      s.setSignatureTone("warning");
+      s.setVerifiedSigner(
+        placeholderSigner("", t("workspace_not_encrypted_not_signed")),
+      );
+      s.setStatusText(t("workspace_status_not_encrypted"));
     }
   }
 
   /** One verdict for a batch of files -- see `summariseBatch`. */
   function showBatchSignatures(
     batch: { name: string; result: SignedResult }[],
+    { decrypted = false }: { decrypted?: boolean } = {},
   ) {
     const summary = summariseBatch(
       batch,
@@ -307,7 +360,7 @@ export function useWorkspaceOperations({
     );
     if (summary.kind === "unsigned") return;
     if (summary.kind === "same") {
-      showSignature(summary.result);
+      showSignature(summary.result, { decrypted });
       return;
     }
     s.setSignatureTone("warning");
@@ -331,10 +384,9 @@ export function useWorkspaceOperations({
 
   /** The keys behind the current recipient chips. */
   function selectedRecipientKeys() {
-    // Contacts before own keys -- see `resolveSelectedRecipients`. A
-    // contact's keyId is its head recipient's fingerprint, so an own key
-    // with that fingerprint used to win the lookup and silently drop the
-    // contact's other recipients.
+    // Own keys win an id both hold -- see `resolveSelectedRecipients`:
+    // a contact sharing the id of one of the user's keys must never turn
+    // "to me" into "to me and whoever else that contact holds".
     return resolveSelectedRecipients(s.selectedRecipientIds, contacts, myKeys);
   }
 
@@ -924,6 +976,43 @@ export function useWorkspaceOperations({
     // say so properly.
     const encryption = await pgpOps.messageEncryption(input).catch(() => null);
 
+    // A "PGP MESSAGE" with no encryption layer -- signed only, or not
+    // even that. Asked BEFORE any key is unlocked: it needs none, and
+    // running it through a decrypt (which the engine refuses anyway)
+    // would dress up anything Alice ever signed in public, re-sent by
+    // anyone, as a private, verified message from her. A batch is
+    // checked file by file: one such file among real ciphertext is
+    // refused by name rather than listed as "decrypted".
+    if (s.files.length > 1) {
+      for (const file of s.files) {
+        const shape = await pgpOps
+          .messageEncryption({
+            kind: "binary",
+            binaryMessage: new Uint8Array(await file.arrayBuffer()),
+          })
+          .catch(() => null);
+        if (shape && !shape.encrypted) {
+          s.setError({
+            message: t("workspace_error_batch_not_encrypted", {
+              name: displayFileName(file.name),
+            }),
+          });
+          return;
+        }
+      }
+    } else if (encryption && !encryption.encrypted) {
+      const failure = await runPgpDecrypt(
+        (one) =>
+          pgpOps.openUnencrypted({
+            input: one,
+            verificationPublicKeys: pgpVerificationKeys(),
+          }),
+        { notEncrypted: true },
+      );
+      if (failure) s.setError(failure);
+      return;
+    }
+
     if (encryption?.password) {
       const keyMatch = encryption.publicKey
         ? await pgpOps
@@ -985,9 +1074,14 @@ export function useWorkspaceOperations({
    * the body is what stops the password path quietly drifting -- and it
    * would drift silently, because everything below this line is the part
    * a user notices and none of it is engine-specific.
+   *
+   * `notEncrypted` is the third way in: a single message with no
+   * encryption layer, read by `openUnencrypted`. Same rendering, but the
+   * signer card says it was not encrypted (see `showSignature`).
    */
   async function runPgpDecrypt(
     decryptOne: (input: DecryptOptions["input"]) => Promise<DecryptResult>,
+    { notEncrypted = false }: { notEncrypted?: boolean } = {},
   ): Promise<PresentedError | null> {
     /** A tampered signature anywhere fails the whole operation. */
     const refuseInvalid = (result: SignedResult) => {
@@ -997,9 +1091,10 @@ export function useWorkspaceOperations({
         );
       }
     };
-    const handleSig = (result: SignedResult) => {
+    /** `text`: the result as it is on screen, when it is text. */
+    const handleSig = (result: SignedResult, text?: string) => {
       refuseInvalid(result);
-      showSignature(result);
+      showSignature(result, { text, notEncrypted, decrypted: true });
     };
 
     const isFileInput = s.files.length > 0;
@@ -1034,7 +1129,7 @@ export function useWorkspaceOperations({
         );
         // After the size line: a mixed batch replaces it with the
         // file-by-file account of who signed what.
-        showBatchSignatures(signatures);
+        showBatchSignatures(signatures, { decrypted: true });
         s.setOperationDone(true);
         maybeAutoDownload(true, { results });
       } else if (isFileInput) {
@@ -1043,24 +1138,26 @@ export function useWorkspaceOperations({
           kind: "binary",
           binaryMessage: bytes,
         });
+        let shown: string | undefined;
         if (result.data instanceof Uint8Array) {
           if (isZipArchive(result.data)) {
             s.setBinaryOutput(result.data);
             s.setStatusText(t("workspace_status_decrypted_archive"));
           } else {
             try {
-              const decoded = new TextDecoder("utf-8", {
+              shown = new TextDecoder("utf-8", {
                 fatal: true,
               }).decode(result.data);
-              s.setOutput(decoded);
+              s.setOutput(shown);
             } catch {
               s.setBinaryOutput(result.data);
             }
           }
         } else {
-          s.setOutput(result.data);
+          shown = result.data;
+          s.setOutput(shown);
         }
-        handleSig(result);
+        handleSig(result, shown);
         s.setOperationDone(true);
         maybeAutoDownload(true, {
           text: typeof result.data === "string" ? result.data : undefined,
@@ -1076,7 +1173,10 @@ export function useWorkspaceOperations({
         } else {
           s.setBinaryOutput(result.data);
         }
-        handleSig(result);
+        handleSig(
+          result,
+          typeof result.data === "string" ? result.data : undefined,
+        );
         s.setOperationDone(true);
         maybeAutoDownload(false, {
           text: typeof result.data === "string" ? result.data : undefined,
@@ -1233,12 +1333,7 @@ export function useWorkspaceOperations({
         // What was signed may itself hold characters that reorder or hide
         // text on screen. They are the signer's, so they stay -- but the
         // card says they are there.
-        showSignature(
-          only,
-          hasHiddenCharacters(only.text)
-            ? t("workspace_signed_text_hidden_chars")
-            : null,
-        );
+        showSignature(only, { text: only.text });
         // Show what was SIGNED -- the engine's text, not the paste. For an
         // inline-signed message or a file it is the only place the user
         // sees the content the verdict is about.

@@ -1162,6 +1162,46 @@ struct DecryptHelper {
     decryption_cert: openpgp::Cert,
     verification_certs: Vec<openpgp::Cert>,
     signatures: SignatureReport,
+    /// The message had an encryption layer -- see [`was_encrypted`].
+    encrypted: bool,
+}
+
+/// Did this message actually come through an encryption layer?
+///
+/// Sequoia's `Decryptor` is also a verifier: handed a message with no
+/// encryption at all -- an inline-signed `OPS, Literal, Sig`, or a bare
+/// Literal -- it reads it out without ever calling `decrypt`, and the
+/// caller gets plaintext and a good signature back exactly as if it had
+/// been decrypted. That is the "Johnny, you are fired" spoof: anything
+/// Alice ever signed in public, re-sent as a PGP MESSAGE, "decrypts" as
+/// a private, verified message from Alice. So the decrypt entry points
+/// ask the structure itself, and refuse a message without the layer.
+///
+/// That closes the UNENCRYPTED variant only. Encrypting Alice's public
+/// signed message to the victim needs no key of hers and passes here;
+/// what tells it apart is an Intended Recipient Fingerprint in her
+/// signature, which many senders don't write. The panel says so on the
+/// card (`workspace_signature_not_addressed`); see T-SIG-FORWARDED.
+fn was_encrypted(structure: &MessageStructure) -> bool {
+    structure
+        .iter()
+        .any(|layer| matches!(layer, MessageLayer::Encryption { .. }))
+}
+
+/// What a decrypt entry point says about a message with no encryption
+/// layer. The UI checks first (`messageEncryption`) and opens such a
+/// message with `openUnencrypted` instead, without asking for a key;
+/// this is the backstop for a caller that did not.
+const NOT_ENCRYPTED: &str =
+    "This message is not encrypted. It may be signed, but it was readable on the way and anyone could have sent this copy.";
+
+/// Refuse, before any key or password is used, a message that carries
+/// no encrypted container and no session-key packet at all.
+fn refuse_unencrypted(ciphertext: &[u8]) -> Result<(), String> {
+    match scan_session_packets(ciphertext)? {
+        (false, false, Container::None) => Err(NOT_ENCRYPTED.into()),
+        _ => Ok(()),
+    }
 }
 
 impl VerificationHelper for DecryptHelper {
@@ -1173,6 +1213,7 @@ impl VerificationHelper for DecryptHelper {
         // NOTE: signature classification must never abort decryption. A
         // missing signer key or a bad signature is reported as status, not
         // returned as an error, so the plaintext is always delivered.
+        self.encrypted = was_encrypted(&structure);
         self.signatures = process_signatures(structure);
         Ok(())
     }
@@ -1229,6 +1270,8 @@ struct PasswordDecryptHelper {
     password: openpgp::crypto::Password,
     verification_certs: Vec<openpgp::Cert>,
     signatures: SignatureReport,
+    /// The message had an encryption layer -- see [`was_encrypted`].
+    encrypted: bool,
 }
 
 impl VerificationHelper for PasswordDecryptHelper {
@@ -1240,6 +1283,7 @@ impl VerificationHelper for PasswordDecryptHelper {
         // Same rule as the key path: signature classification must never
         // abort decryption. A symmetric message CAN be signed, and the
         // signer is then someone whose key we may or may not hold.
+        self.encrypted = was_encrypted(&structure);
         self.signatures = process_signatures(structure);
         Ok(())
     }
@@ -1325,28 +1369,71 @@ pub fn parse_key(armored: &str) -> Result<String, String> {
 /// panel. Excess rows are dropped and flagged via `truncated`.
 const MAX_DETAIL_ROWS: usize = 100;
 
+/// Characters that change how a string displays without showing
+/// themselves, as inclusive ranges: every `Default_Ignorable_Code_Point`
+/// (Unicode 16 DerivedCoreProperties) and every general-category `Cf`
+/// (format) character, plus the line and paragraph separators and the
+/// few visible-category characters that draw as blank space (BLANKS
+/// below: the Braille blank, the object replacement character, the
+/// musical null notehead). Spelled out rather than pulled from a crate
+/// because none of ours carries the tables, and a list this short is
+/// easier to audit than a dependency. `lib/utils/lookalike.ts` is the
+/// same set on the TypeScript side, and `lookalike.test.ts` reads this
+/// table to hold the two to it.
+///
+/// Among them: bidi controls (which reorder the text around them), the
+/// zero-width space/joiners, variation selectors (U+FE00..FE0F and the
+/// supplementary U+E0100..E01EF), the tag characters (U+E0000..E007F,
+/// which can carry a whole hidden ASCII string), the deprecated format
+/// controls U+206A..206F, the combining grapheme joiner U+034F, the
+/// Mongolian selectors, and the Hangul fillers that render as blank
+/// letters. Each lets two different User IDs look identical.
+///
+/// ZWJ and the emoji variation selectors go too, which unjoins an emoji
+/// sequence into its parts. A User ID is a name and an address; that cost
+/// is cosmetic, and keeping a joiner that can hide inside "alice" is not.
+const INVISIBLE_RANGES: &[(u32, u32)] = &[
+    (0x00AD, 0x00AD),   // soft hyphen
+    (0x034F, 0x034F),   // combining grapheme joiner
+    (0x0600, 0x0605),   // Arabic number signs (Cf)
+    (0x061C, 0x061C),   // Arabic letter mark
+    (0x06DD, 0x06DD),   // Arabic end of ayah (Cf)
+    (0x070F, 0x070F),   // Syriac abbreviation mark (Cf)
+    (0x0890, 0x0891),   // Arabic pound/piastre marks above (Cf)
+    (0x08E2, 0x08E2),   // Arabic disputed end of ayah (Cf)
+    (0x115F, 0x1160),   // Hangul choseong/jungseong fillers
+    (0x17B4, 0x17B5),   // Khmer inherent vowels
+    (0x180B, 0x180F),   // Mongolian variation selectors, vowel separator
+    (0x200B, 0x200F),   // zero-width space/non-joiner/joiner, LRM, RLM
+    (0x2028, 0x202E),   // line/paragraph separators, bidi embeddings and overrides
+    (0x2060, 0x206F),   // word joiner, invisible operators, isolates, deprecated controls
+    (0x2800, 0x2800),   // BLANK: Braille pattern blank (So)
+    (0x3164, 0x3164),   // Hangul filler
+    (0xFE00, 0xFE0F),   // variation selectors
+    (0xFEFF, 0xFEFF),   // zero-width no-break space (BOM)
+    (0xFFA0, 0xFFA0),   // halfwidth Hangul filler
+    (0xFFF0, 0xFFFB),   // unassigned ignorables, interlinear annotation controls
+    (0xFFFC, 0xFFFC),   // BLANK: object replacement character (So)
+    (0x110BD, 0x110BD), // Kaithi number sign (Cf)
+    (0x110CD, 0x110CD), // Kaithi number sign above (Cf)
+    (0x13430, 0x1343F), // Egyptian hieroglyph format controls (Cf)
+    (0x1BCA0, 0x1BCA3), // shorthand format controls
+    (0x1D159, 0x1D159), // BLANK: musical symbol null notehead (So)
+    (0x1D173, 0x1D17A), // musical symbol format controls
+    (0xE0000, 0xE0FFF), // tags, variation selectors supplement, reserved ignorables
+];
+
+fn is_invisible(c: char) -> bool {
+    let c = c as u32;
+    INVISIBLE_RANGES.iter().any(|&(lo, hi)| (lo..=hi).contains(&c))
+}
+
 /// Cap and clean an attacker-controlled string before it crosses to the
-/// UI: drop control characters and Unicode bidi overrides (which could
-/// visually reorder surrounding UI text), then truncate to `max` chars.
+/// UI: drop control characters and every invisible or bidi character
+/// (`INVISIBLE_RANGES`), then truncate to `max` chars.
 fn sanitize_untrusted(s: &str, max: usize) -> String {
     let mut out = String::new();
-    // Bidi controls (embeddings, overrides, isolates, marks) visually
-    // reorder text; zero-width and other format characters make two
-    // different User IDs render identically.
-    let cleaned = s.chars().filter(|c| {
-        !c.is_control()
-            && !matches!(
-                *c,
-                '\u{202a}'..='\u{202e}'
-                    | '\u{2066}'..='\u{2069}'
-                    | '\u{200b}'..='\u{200f}'
-                    | '\u{2060}'..='\u{2064}'
-                    | '\u{061c}'
-                    | '\u{00ad}'
-                    | '\u{180e}'
-                    | '\u{feff}'
-            )
-    });
+    let cleaned = s.chars().filter(|&c| !c.is_control() && !is_invisible(c));
     for (i, c) in cleaned.enumerate() {
         if i == max {
             out.push('…');
@@ -1961,6 +2048,7 @@ pub fn decrypt_with_handle(
     key_handle: u32,
     verification_keys_json: Option<String>,
 ) -> Result<Vec<u8>, String> {
+    refuse_unencrypted(ciphertext)?;
     let decryption_cert = get_cert_from_handle(key_handle)?;
 
     let verification_certs = match verification_keys_json {
@@ -1972,6 +2060,7 @@ pub fn decrypt_with_handle(
         decryption_cert,
         verification_certs,
         signatures: SignatureReport::unsigned(),
+        encrypted: false,
     };
 
     let mut decryptor = DecryptorBuilder::from_bytes(ciphertext)
@@ -1979,8 +2068,14 @@ pub fn decrypt_with_handle(
         .with_policy(policy(), None, helper)
         .str_err()?;
 
-    let plaintext = read_capped(&mut decryptor, decrypt_limit(ciphertext.len()), "message")?;
+    let mut plaintext = read_capped(&mut decryptor, decrypt_limit(ciphertext.len()), "message")?;
     let helper = decryptor.into_helper();
+    // The header scan above only sees what precedes the first container;
+    // this is the answer from the parse that produced the plaintext.
+    if !helper.encrypted {
+        plaintext.zeroize();
+        return Err(NOT_ENCRYPTED.into());
+    }
 
     Ok(pack_decrypt_result(&helper.signatures, plaintext))
 }
@@ -2053,10 +2148,16 @@ pub fn decrypt_with_password(
         None => Vec::new(),
     };
 
+    // Before the password is used, and outside the "wrong password"
+    // wrapping below: a message with nothing to decrypt is not a password
+    // problem.
+    refuse_unencrypted(ciphertext)?;
+
     let helper = PasswordDecryptHelper {
         password: password.as_slice().into(),
         verification_certs,
         signatures: SignatureReport::unsigned(),
+        encrypted: false,
     };
 
     // The unreadable-FORMAT case, separated from the wrong-PASSWORD case
@@ -2072,8 +2173,14 @@ pub fn decrypt_with_password(
         );
     }
 
-    decrypt_with_password_inner(ciphertext, helper)
-        .map_err(|e| format!("Wrong password, or this message is damaged: {e}"))
+    let (helper, mut plaintext) = decrypt_with_password_inner(ciphertext, helper)
+        .map_err(|e| format!("Wrong password, or this message is damaged: {e}"))?;
+    // See `decrypt_with_handle`: the parse, not the header scan, decides.
+    if !helper.encrypted {
+        plaintext.zeroize();
+        return Err(NOT_ENCRYPTED.into());
+    }
+    Ok(pack_decrypt_result(&helper.signatures, plaintext))
 }
 
 /// The fallible half, split out so ONE `map_err` covers the whole parse
@@ -2083,16 +2190,14 @@ pub fn decrypt_with_password(
 fn decrypt_with_password_inner(
     ciphertext: &[u8],
     helper: PasswordDecryptHelper,
-) -> Result<Vec<u8>, String> {
+) -> Result<(PasswordDecryptHelper, Vec<u8>), String> {
     let mut decryptor = DecryptorBuilder::from_bytes(ciphertext)
         .str_err()?
         .with_policy(policy(), None, helper)
         .str_err()?;
 
     let plaintext = read_capped(&mut decryptor, decrypt_limit(ciphertext.len()), "message")?;
-    let helper = decryptor.into_helper();
-
-    Ok(pack_decrypt_result(&helper.signatures, plaintext))
+    Ok((decryptor.into_helper(), plaintext))
 }
 
 /// The encrypted container a message uses, which decides whether we can
@@ -2152,7 +2257,13 @@ fn scan_session_packets(ciphertext: &[u8]) -> Result<(bool, bool, Container), St
     Ok((password, public_key, container))
 }
 
-/// How a message can be opened, as JSON: `{"password":bool,"publicKey":bool}`.
+/// How a message can be opened, as JSON:
+/// `{"password":bool,"publicKey":bool,"encrypted":bool}`.
+///
+/// `encrypted` is false for a message with no session-key packet and no
+/// encrypted container -- signed only, or not even that. Such a message
+/// needs no key, and must not be presented as decrypted: the UI opens it
+/// with `openUnencrypted` and says it was not encrypted.
 ///
 /// Shape only -- it reads the session-key packets that precede the
 /// encrypted container and says which KINDS are present. It does not and
@@ -2167,8 +2278,72 @@ fn scan_session_packets(ciphertext: &[u8]) -> Result<(bool, bool, Container), St
 /// user's own matches.
 #[wasm_bindgen(js_name = "messageEncryption")]
 pub fn message_encryption(ciphertext: &[u8]) -> Result<String, String> {
-    let (password, public_key, _container) = scan_session_packets(ciphertext)?;
-    Ok(serde_json::json!({ "password": password, "publicKey": public_key }).to_string())
+    let (password, public_key, container) = scan_session_packets(ciphertext)?;
+    let encrypted = password || public_key || container != Container::None;
+    Ok(serde_json::json!({
+        "password": password,
+        "publicKey": public_key,
+        "encrypted": encrypted,
+    })
+    .to_string())
+}
+
+/// Read a message that is NOT encrypted -- inline-signed, or a bare
+/// literal -- and return the same packed `[len][sig_json][content]` as
+/// the decrypt entry points, without asking for any key or password.
+///
+/// This is the decrypt tab's answer to a "PGP MESSAGE" that turns out to
+/// have no encryption layer (see [`was_encrypted`]): the content is shown
+/// with its signature verdict, as Verify would show it, and the UI says
+/// plainly that it was not encrypted. It refuses an encrypted message,
+/// so it can never stand in for a decrypt.
+///
+/// Text input passes the same strict framing check as `verify` -- one
+/// armored block, nothing around it -- since Sequoia's armor reader will
+/// otherwise find a block inside any amount of prose. Binary input (it
+/// starts with a packet header, whose top bit is always set) has no
+/// framing to check.
+#[wasm_bindgen(js_name = "openUnencrypted")]
+pub fn open_unencrypted(
+    message: &[u8],
+    verification_keys_json: Option<String>,
+) -> Result<Vec<u8>, String> {
+    let message = message.strip_prefix(b"\xef\xbb\xbf").unwrap_or(message);
+    if !matches!(scan_session_packets(message)?, (false, false, Container::None)) {
+        return Err("This message is encrypted; decrypt it instead.".into());
+    }
+    let framing = match message.first() {
+        Some(b) if b & 0x80 == 0 => {
+            if message.len() > MAX_SIGNED_INPUT_BYTES {
+                return Err(format!(
+                    "This signed message is too large to verify here (limit {} MiB).",
+                    MAX_SIGNED_INPUT_BYTES / (1024 * 1024),
+                ));
+            }
+            Some(check_signed_framing(std::str::from_utf8(message).str_err()?)?)
+        }
+        _ => None,
+    };
+    let certs = match verification_keys_json {
+        Some(ref json) => parse_armored_certs(json)?,
+        None => Vec::new(),
+    };
+
+    let helper = VerifyHelper {
+        certs,
+        signatures: SignatureReport::unsigned(),
+    };
+    let mut verifier = VerifierBuilder::from_bytes(message)
+        .str_err()?
+        .with_policy(policy(), None, helper)
+        .str_err()?;
+    let content = read_capped(&mut verifier, decrypt_limit(message.len()), "message")?;
+    if let Some(SignedFraming::Cleartext(shown)) = &framing {
+        check_cleartext_body(shown, std::str::from_utf8(&content).str_err()?)?;
+    }
+    let helper = verifier.into_helper();
+
+    Ok(pack_decrypt_result(&helper.signatures, content))
 }
 
 /// Collect the recipient key handles referenced by a message's public-key

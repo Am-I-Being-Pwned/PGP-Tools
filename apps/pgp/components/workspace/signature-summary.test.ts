@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { SignedResult } from "./signature-summary";
 import {
   mixedBatchNote,
+  notAddressed,
   signatureNote,
   signedForOthers,
   summariseBatch,
@@ -232,5 +233,35 @@ describe("mixedBatchNote", () => {
       names,
     );
     expect(note).toBe("“invcsa.exe”: not signed");
+  });
+});
+
+describe("notAddressed - a decrypted signature that names no one", () => {
+  const decrypted = { decrypted: true, notEncrypted: false };
+
+  it("is noted when it came out of an encrypted message", () => {
+    // Alice's public signed post, encrypted to us by someone else.
+    expect(notAddressed(sig(), decrypted)).toBe(true);
+  });
+
+  it("is not noted when the signature names its recipients", () => {
+    // Naming us is fine; naming only others is `signedForOthers`.
+    expect(notAddressed(sig({ intendedRecipients: [ALICE] }), decrypted)).toBe(
+      false,
+    );
+    expect(notAddressed(sig({ intendedRecipients: [BOB] }), decrypted)).toBe(
+      false,
+    );
+  });
+
+  it("is not noted on Verify, nor on a message that was never encrypted", () => {
+    // Verify claims nothing about a recipient; an unencrypted message
+    // already says "Not encrypted", which covers it.
+    expect(notAddressed(sig(), { decrypted: false, notEncrypted: false })).toBe(
+      false,
+    );
+    expect(notAddressed(sig(), { decrypted: true, notEncrypted: true })).toBe(
+      false,
+    );
   });
 });

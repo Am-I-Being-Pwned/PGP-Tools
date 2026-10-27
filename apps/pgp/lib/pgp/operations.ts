@@ -168,6 +168,37 @@ export async function decryptWithPassword(
 }
 
 /**
+ * Open a message that was NOT encrypted (see `MessageEncryption.encrypted`):
+ * its content and signature verdict, with no key or password. The caller
+ * must say it was not encrypted -- this result is never a decrypt.
+ */
+export async function openUnencrypted(
+  opts: DecryptOptions,
+): Promise<DecryptResult> {
+  const message =
+    opts.input.kind === "binary"
+      ? opts.input.binaryMessage
+      : new TextEncoder().encode(opts.input.armoredMessage);
+
+  const { plaintext, signatureInfo } = await wasm.openUnencrypted(
+    message,
+    opts.verificationPublicKeys,
+  );
+
+  let data: string | Uint8Array;
+  try {
+    data = new TextDecoder("utf-8", { fatal: true }).decode(plaintext);
+  } catch {
+    data = plaintext;
+  }
+
+  return {
+    data,
+    ...signatureInfo,
+  };
+}
+
+/**
  * Which kinds of session-key packet the message carries, so the caller
  * can decide what to ask the user for BEFORE asking. Needs no password
  * and no key to answer -- it reads the packets in front of the encrypted

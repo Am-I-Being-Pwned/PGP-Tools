@@ -580,3 +580,229 @@ fn a_flood_of_lines_or_bytes_is_refused_before_the_framing_check_walks_it() {
     let bytes = "a".repeat(MAX_SIGNED_INPUT_BYTES + 1);
     assert!(verify_message(&bytes, "[]").unwrap_err().contains("too large"));
 }
+
+// ── a "message" that was never encrypted ─────────────────────────────
+
+/// An inline-signed message with no encryption layer, as `gpg --sign`
+/// writes it: what anyone can make of a public statement Alice signed.
+fn signed_only(text: &[u8], signer: &openpgp::Cert, armor: bool) -> Vec<u8> {
+    let mut sink = Vec::new();
+    {
+        let m = Message::new(&mut sink);
+        let m = if armor { Armorer::new(m).build().unwrap() } else { m };
+        let s = Signer::new(m, signing_keypair(signer).unwrap()).unwrap().build().unwrap();
+        let mut l = LiteralWriter::new(s).build().unwrap();
+        l.write_all(text).unwrap();
+        l.finalize().unwrap();
+    }
+    sink
+}
+
+/// A bare literal packet, armored as a PGP MESSAGE: no signature and no
+/// encryption, yet it used to "decrypt".
+fn literal_only(text: &[u8]) -> Vec<u8> {
+    let mut sink = Vec::new();
+    {
+        let m = Armorer::new(Message::new(&mut sink)).build().unwrap();
+        let mut l = LiteralWriter::new(m).build().unwrap();
+        l.write_all(text).unwrap();
+        l.finalize().unwrap();
+    }
+    sink
+}
+
+#[test]
+fn a_message_with_no_encryption_layer_is_never_decrypted() {
+    let alice = aged_cert("Alice", DAY);
+    let victim = aged_cert("Victim", DAY);
+    let keys = keys_json(&[&alice, &victim]);
+    let h = insert_key(&victim).unwrap();
+    for msg in [
+        signed_only(b"Alice's public statement", &alice, true),
+        signed_only(b"Alice's public statement", &alice, false),
+        literal_only(b"Totally secret, only for you"),
+    ] {
+        let err = decrypt_with_handle(&msg, h, Some(keys.clone())).unwrap_err();
+        assert_eq!(err, NOT_ENCRYPTED);
+        // Not folded into "wrong password": nothing here takes one.
+        let err = decrypt_with_password(&msg, b"pw".to_vec(), Some(keys.clone())).unwrap_err();
+        assert_eq!(err, NOT_ENCRYPTED);
+        let shape: serde_json::Value =
+            serde_json::from_str(&message_encryption(&msg).unwrap()).unwrap();
+        assert_eq!(shape["encrypted"], false);
+    }
+    drop_key(h).unwrap();
+}
+
+#[test]
+fn an_encrypted_message_reports_itself_encrypted_and_still_decrypts() {
+    let alice = aged_cert("Alice", DAY);
+    let bob = aged_cert("Bob", DAY);
+    let ct = encrypt_impl(b"hi bob", &keys_json(&[&bob]), Some(&alice), None).unwrap();
+    let shape: serde_json::Value = serde_json::from_str(&message_encryption(&ct).unwrap()).unwrap();
+    assert_eq!(shape["encrypted"], true);
+    assert_eq!(shape["publicKey"], true);
+    let h = insert_key(&bob).unwrap();
+    let (sig, pt) = unpack(&decrypt_with_handle(&ct, h, Some(keys_json(&[&alice]))).unwrap());
+    drop_key(h).unwrap();
+    assert_eq!(sig["signatureStatus"], "valid");
+    assert_eq!(pt, b"hi bob");
+
+    let pw = encrypt_impl(b"by password", "[]", None, Some(Zeroizing::new(b"pw".to_vec()))).unwrap();
+    let (_, pt) = unpack(&decrypt_with_password(&pw, b"pw".to_vec(), None).unwrap());
+    assert_eq!(pt, b"by password");
+}
+
+#[test]
+fn an_unencrypted_message_opens_with_its_verdict_and_no_key() {
+    let alice = aged_cert("Alice", DAY);
+    let keys = Some(keys_json(&[&alice]));
+
+    for armor in [true, false] {
+        let msg = signed_only(b"Alice's public statement", &alice, armor);
+        let (sig, pt) = unpack(&open_unencrypted(&msg, keys.clone()).unwrap());
+        assert_eq!(sig["signatureStatus"], "valid", "armor={armor}");
+        assert_eq!(pt, b"Alice's public statement");
+    }
+
+    let (sig, pt) = unpack(&open_unencrypted(&literal_only(b"plain"), keys.clone()).unwrap());
+    assert_eq!(sig["signatureStatus"], "unsigned");
+    assert_eq!(pt, b"plain");
+
+    // Cleartext-signed text reaching the decrypt tab opens the same way,
+    // under the same framing check Verify applies.
+    let csf = cleartext_sign("Line one\nLine two", &alice).unwrap();
+    let (sig, pt) = unpack(&open_unencrypted(csf.as_bytes(), keys.clone()).unwrap());
+    assert_eq!(sig["signatureStatus"], "valid");
+    assert_eq!(pt, b"Line one\nLine two");
+}
+
+#[test]
+fn opening_unencrypted_refuses_encrypted_input_and_text_around_the_block() {
+    let alice = aged_cert("Alice", DAY);
+    let bob = aged_cert("Bob", DAY);
+    let keys = Some(keys_json(&[&alice]));
+
+    let ct = encrypt_impl(b"hi bob", &keys_json(&[&bob]), None, None).unwrap();
+    assert!(open_unencrypted(&ct, keys.clone()).unwrap_err().contains("is encrypted"));
+
+    // Prose the signer never wrote, around (or in front of) the block.
+    let signed = String::from_utf8(signed_only(b"ALICE GENUINE", &alice, true)).unwrap();
+    for wrapped in [
+        format!("Approved: wire 50k\n\n{signed}"),
+        format!("{signed}\nSee also: acct 999\n"),
+        format!("{}\n{signed}", String::from_utf8(literal_only(b"MALLORY FAKE")).unwrap()),
+    ] {
+        assert_eq!(open_unencrypted(wrapped.as_bytes(), keys.clone()).unwrap_err(), OUTSIDE_SIGNED);
+    }
+}
+
+/// Re-armor `signed` with its literal body swapped for `body`, keeping
+/// the original signature packets.
+fn with_body(signed: &[u8], body: &[u8]) -> String {
+    let pile = openpgp::PacketPile::from_bytes(signed).unwrap();
+    let mut out = Vec::new();
+    {
+        let mut w = openpgp::armor::Writer::new(&mut out, openpgp::armor::Kind::Message).unwrap();
+        for p in pile.into_children() {
+            match p {
+                openpgp::Packet::Literal(mut l) => {
+                    l.set_body(body.to_vec());
+                    openpgp::Packet::from(l).serialize(&mut w).unwrap();
+                }
+                p => p.serialize(&mut w).unwrap(),
+            }
+        }
+        w.finalize().unwrap();
+    }
+    String::from_utf8(out).unwrap()
+}
+
+#[test]
+fn a_text_signature_reads_a_lone_cr_as_a_line_break() {
+    // Pinned, not endorsed: Sequoia's text-mode hashing turns \r, \n and
+    // \r\n alike into CRLF, so a 0x01 signature over "Approved:\nNO" also
+    // covers "Approved:\rNO" -- which a browser renders as "Approved:NO".
+    // The UI marks any lone CR under a good signature (amber, with a
+    // note) and draws it visibly; if this test starts failing, Sequoia
+    // changed the canonicalisation and that caveat can be revisited.
+    let alice = aged_cert("Alice", DAY);
+    let mut sink = Vec::new();
+    {
+        let m = Armorer::new(Message::new(&mut sink)).build().unwrap();
+        let s = Signer::with_template(
+            m,
+            signing_keypair(&alice).unwrap(),
+            SignatureBuilder::new(SignatureType::Text),
+        )
+        .unwrap()
+        .build()
+        .unwrap();
+        let mut l = LiteralWriter::new(s)
+            .format(openpgp::types::DataFormat::Unicode)
+            .build()
+            .unwrap();
+        l.write_all(b"Approved:\nNO").unwrap();
+        l.finalize().unwrap();
+    }
+    let swapped = with_body(&sink, b"Approved:\rNO");
+    let v = verdict(&verify_message(&swapped, &keys_json(&[&alice])).unwrap());
+    assert_eq!(v["signatureStatus"], "valid");
+    assert_eq!(v["text"], "Approved:\rNO");
+
+    // A cleartext-signed paste never gets that far: the framing check
+    // refuses a CR anywhere but before a LF.
+    let csf = cleartext_sign("Approved:\nNO", &alice).unwrap().replace("Approved:\nNO", "Approved:\rNO");
+    assert_eq!(verify_message(&csf, &keys_json(&[&alice])).unwrap_err(), OUTSIDE_SIGNED);
+}
+
+#[test]
+fn every_default_ignorable_and_format_character_is_stripped() {
+    let hidden = [
+        '\u{00ad}', '\u{034f}', '\u{0600}', '\u{0605}', '\u{061c}', '\u{06dd}', '\u{070f}',
+        '\u{0890}', '\u{08e2}', '\u{115f}', '\u{1160}', '\u{17b4}', '\u{17b5}', '\u{180b}',
+        '\u{180d}', '\u{180e}', '\u{180f}', '\u{200b}', '\u{200c}', '\u{200d}', '\u{200e}',
+        '\u{200f}', '\u{2028}', '\u{2029}', '\u{202a}', '\u{202e}', '\u{2060}', '\u{2064}',
+        '\u{2065}', '\u{2066}', '\u{2069}', '\u{206a}', '\u{206f}', '\u{3164}', '\u{fe00}',
+        '\u{fe0f}', '\u{feff}', '\u{ffa0}', '\u{fff0}', '\u{fff9}', '\u{fffb}', '\u{110bd}',
+        '\u{110cd}', '\u{13430}', '\u{1343f}', '\u{1bca0}', '\u{1bca3}', '\u{1d173}',
+        '\u{1d17a}', '\u{e0000}', '\u{e0001}', '\u{e0041}', '\u{e007f}', '\u{e0100}',
+        '\u{e01ef}', '\u{e0fff}',
+    ];
+    for c in hidden {
+        assert_eq!(sanitize_untrusted(&format!("Al{c}ice"), 300), "Alice", "{c:?}");
+    }
+    // A whole ASCII string smuggled in tag characters vanishes with them.
+    let tags: String = "evil".chars().map(|c| char::from_u32(0xE0000 + c as u32).unwrap()).collect();
+    assert_eq!(sanitize_untrusted(&format!("alice{tags}@example.com"), 300), "alice@example.com");
+
+    // Ordinary names in any script are left as they are, and the
+    // neighbours of each range survive.
+    for name in [
+        "José Müller <jose@example.com>",
+        "Иван Петров",
+        "李小龙",
+        "김민준",
+        "محمد",
+        "Ana 😀",
+        "\u{034e}\u{0606}\u{1161}\u{fe10}\u{fffd}",
+        "\u{2801}\u{1d158}\u{1d15a}",
+    ] {
+        assert_eq!(sanitize_untrusted(name, 300), name);
+    }
+}
+
+#[test]
+fn blank_looking_symbols_are_stripped_from_names_and_addresses() {
+    // Not ignorable and not format characters, so neither property
+    // covers them -- but each draws as an empty cell, so
+    // `alice@corp.com` followed by one reads exactly like the address.
+    for c in ['\u{2800}', '\u{fffc}', '\u{1d159}'] {
+        assert_eq!(sanitize_untrusted(&format!("Al{c}ice"), 300), "Alice", "{c:?}");
+        assert_eq!(
+            sanitize_untrusted(&format!("<alice@corp.com{c}>"), 300),
+            "<alice@corp.com>",
+            "{c:?}"
+        );
+    }
+}

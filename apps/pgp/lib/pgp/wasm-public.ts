@@ -280,6 +280,10 @@ export interface MessageEncryption {
   password: boolean;
   /** A PKESK is present -- the message can be opened with a private key. */
   publicKey: boolean;
+  /** Any session-key packet or encrypted container is present. False for
+   *  a "PGP MESSAGE" that is only signed (or not even that): it needs no
+   *  key, and must never be shown as decrypted -- see `openUnencrypted`. */
+  encrypted: boolean;
 }
 
 /**
@@ -298,6 +302,25 @@ export async function messageEncryption(
 ): Promise<MessageEncryption> {
   const wasm = await loadWasm();
   return JSON.parse(wasm.messageEncryption(ciphertext)) as MessageEncryption;
+}
+
+/**
+ * Read a message that has no encryption layer -- inline-signed, or a
+ * bare literal -- with its signature verdict, and no key. Same packed
+ * result as `decryptWithHandle`. The engine refuses an encrypted message
+ * here, and refuses an unencrypted one in both decrypt calls, so the two
+ * cannot stand in for each other.
+ */
+export async function openUnencrypted(
+  message: Uint8Array,
+  verificationPublicKeys?: string[],
+): Promise<DecryptWithHandleResult> {
+  const wasm = await loadWasm();
+  const packed = wasm.openUnencrypted(
+    message,
+    verificationPublicKeys ? JSON.stringify(verificationPublicKeys) : null,
+  );
+  return unpackDecryptResult(packed);
 }
 
 /** Mint an armored revocation certificate for an unlocked key --
