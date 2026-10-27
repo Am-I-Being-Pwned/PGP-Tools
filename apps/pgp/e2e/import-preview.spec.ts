@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import type { BrowserContext, Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 
 import { expect, test } from "./fixtures";
 import {
@@ -11,6 +11,7 @@ import {
   importFileInPanel,
   onboardWithPassword,
   onboardWithPasswordSkipKey,
+  pasteIntoImport,
   readContacts,
 } from "./helpers";
 import { keyBySlug } from "./keys";
@@ -264,26 +265,6 @@ test("key details downloads the public key", async ({ panel }) => {
 // one contact holding three recipients"), so these assert on the
 // decrypted contacts store. Counting cards in the DOM cannot tell one
 // contact from a label that matched twice.
-
-/** Paste `text` into the Import Key page's paste box with a real paste
- *  gesture -- the flow has no typable field, and this feature is reached
- *  by pasting. */
-async function pasteIntoImport(
-  panel: Page,
-  context: BrowserContext,
-  text: string,
-): Promise<void> {
-  await goToKeys(panel);
-  await panel.getByRole("button", { name: "Import Key" }).click();
-  const box = panel.getByLabel("Paste a key");
-  await expect(box).toBeFocused();
-  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
-  await panel.evaluate((t) => navigator.clipboard.writeText(t), text);
-  await box.focus();
-  await panel.keyboard.press(
-    process.platform === "darwin" ? "Meta+V" : "Control+V",
-  );
-}
 
 /** The grouping question, as it appears on the preview. */
 function groupNameField(panel: Page) {
