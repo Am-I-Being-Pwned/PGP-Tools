@@ -964,6 +964,34 @@ Davis, 2001. T-SIG-FORWARDED.)
   message would be amber on most real mail -- with a note that the
   signature doesn't say it was meant for you.
 
+---
+
+### 8.13 Deleted data is not erased from disk (accepted)
+
+`chrome.storage.local` is LevelDB. Deleting or overwriting a record
+appends a new one; the old bytes stay in the profile's
+`Local Extension Settings/<id>/` log and table files until LevelDB
+compacts them, whenever it decides to. A probe read a deleted key's
+ciphertext and old history segments back out of `000003.log` after the
+delete. An extension has no file access and no way to force compaction,
+and writing junk over a key first only appends another record, so there
+is no secure erase to build.
+
+What bounds it: everything we store sealed was sealed when it was
+written, so the leftover is ciphertext under the vault key -- Argon2id
+from the master password, or the passkey's PRF output -- and is no
+weaker than the live vault the same reader already has (T-BRUTE-OFFLINE).
+Two things are worth knowing. A key deleted because its passphrase or
+the master password was weak stays exactly as attackable as it was, and
+changing the password later does not reach the old copy. And cleartext
+records (the master protection, the history manifest, the bootstrap)
+leave their old versions behind too.
+
+So the delete confirmations no longer say "permanently deleted" or
+"can't be recovered". They say the item is removed from the vault, that
+this can't be undone, and that an encrypted copy may stay on disk until
+the browser compacts its storage. Recorded as T-STORAGE-NOT-ERASED.
+
 ## 9. Verification checklist
 
 The invariants below are enforced mechanically by
@@ -1080,9 +1108,27 @@ not what they read — decrypt/verify rows are deliberately not captured.
 Each entry may carry up to 32 KB of **message content** (`CONTENT_CAP`),
 so this is the only store that persists user plaintext by design.
 
-- **At rest.** Entries are appended to a head segment, sealed at ~64 KB,
-  each an AES-256-GCM blob. A plaintext manifest at `pgp_history` tracks
-  only segment numbers and byte sizes — never entry data. Verified by
+- **At rest.** Entries are appended to a head segment until the next
+  entry would push its PADDED size past 64 KB, each segment an
+  AES-256-GCM blob. A plaintext manifest at `pgp_history` tracks
+  only segment numbers and byte sizes — never entry data. Each segment
+  is padded to a power-of-two bucket (`padPlaintext`, 2 KB minimum)
+  before sealing and the manifest records that bucket, so neither the
+  blob nor the manifest moves by the exact length of a message
+  (T-HISTORY-LENGTH-LEAK; before this, each append grew the manifest by
+  exactly the entry's JSON length). Unpadded segments from older builds
+  still read and are re-padded on the next read. The byte budget counts
+  each segment at its bucket capped at 64 KB, so the budget still
+  measures real content: a 2.x build sealed a segment once its JSON
+  passed 64 KB, so its segments hold 64-96 KB and re-pad into the
+  128 KB bucket, and counting that bucket in full made the first load
+  after the upgrade prune close to half of a full history (and new
+  segments, sealed the same way, fit half as much). Sealing against the
+  bucket keeps every multi-entry segment within 64 KB; only a single
+  oversized entry, or a pre-padding segment, sits above the cap, so on
+  disk the history can reach about twice the budget in the worst case,
+  well inside `local`'s quota. Verified by `lib/storage/history.test.ts`
+  ("padding upgrade keeps a full history") and
   `e2e/history-memory.spec.ts`, which also confirms the canary is absent
   from `local`, `sync` and `session`.
 - **Always local.** Lives in `chrome.storage.local` regardless of the
@@ -1121,7 +1167,7 @@ being a special case.
 **Migration.** Blobs written before this keep opening: `openEnvelope`
 tries the domain-bound scheme first and falls back to the legacy shared
 one. History re-seals on read (it already holds its lock, and re-seals the
-exact plaintext bytes so the manifest's `bytes` accounting stays correct);
+exact data bytes, padded, then records the new bucket in the manifest);
 the shared stores re-seal on the next mutation; and `normalizePadding` —
 which runs on unlock — upgrades a store the user only ever reads,
 including one whose padding is already canonical. Reads never write, so an
@@ -1133,6 +1179,19 @@ Verified by `e2e/history-memory.spec.ts`, `lib/storage/envelope.test.ts`,
 exercises a real v1.3.1 settings blob). The e2e pair was validated against
 a negative control: collapsing every domain to one constant makes both
 tests fail, each on its own assertion.
+
+**The password canary has its own label.** The master-password canary
+is sealed under the session key itself, and it used to carry the legacy
+`CONTACTS_AAD` -- the label `decryptContacts` opens. Since the canary is
+cleartext in `pgp_master_protection`, every password vault published a
+blob that the legacy fallback accepts in any store slot; planted there it
+opened, failed to parse, and the store read as unreadable. New canaries
+use `gpg-tools:master-canary:v1`, which neither envelope opens; unlock
+tries that label and then the legacy one, so older vaults still unlock.
+Older canaries are not re-sealed: the master protection is written only
+at onboarding by design, and on a synced vault an older build on another
+device could not verify a re-sealed canary. Recorded as
+T-CANARY-STORE-LABEL.
 
 > **This does not fix the key coupling.** The per-store subkey is derived
 > _from_ the contacts session key, so it inherits that key's lifetime
@@ -1657,8 +1716,20 @@ and the app runs regexes over plaintext, so every wipe path also calls
 `forgetLastRegExpMatch` (`lib/utils/regexp-residue.ts`). An unknown or forged nonce gets no answer and
 the tab shows nothing. Recorded as T-READER-TAB-PLAINTEXT.
 
-**Verified by:** `lib/reader-protocol.test.ts` and
-`e2e/reply-tab.spec.ts` (reader shows the message and the panel becomes
+**Not through the context menu.** "Open in PGP Tools" writes the
+selection unsealed to `chrome.storage.session` (§15), which is fine for
+a web page's text but not for the reader's. The menu is created with no
+`documentUrlPatterns` (Chrome matches those against the frame's URL, so
+they hid it in the about:blank frames webmail puts message bodies in);
+instead whether it may act is checked when clicked, from the top page's
+URL, by `menuMayActOn` (`lib/context-menu.ts`): the top page must be an
+http, https or file page, the frame one too or an about:blank /
+about:srcdoc frame inside it, and neither may be the extension's own
+origin. The item therefore still shows on the extension's own pages,
+where choosing it does nothing.
+
+**Verified by:** `lib/reader-protocol.test.ts`, `lib/context-menu.test.ts`
+and `e2e/reply-tab.spec.ts` (reader shows the message and the panel becomes
 the reply; Reply by shortcut and palette; no Reply without a verified
 signer; lock clears the reader and nothing in either page's heap holds
 the message, with a positive control while shown, and unlock restores
@@ -1772,7 +1843,33 @@ encrypted), brought deleted keys and contacts back, and deleting
   migration never runs while any local store carries a generation. The
   old floor is gone, but the contacts blob's own revoked records go
   straight back into the new one on the next load, and the warning asks
-  the user to check revocations.
+  the user to check revocations;
+- the strictest preset that a lost ledger (or an older settings copy,
+  below) puts the panel on is an OVERLAY on what the panel runs with,
+  never saved: a save merges onto the stored settings, so only the
+  fields the user changed are written. It used to merge onto the
+  overlay, and since every encrypt saves `recentRecipients`, the first
+  routine save made the strictest preset the user's settings for good,
+  long after the warning was dismissed;
+- a settings blob older than this device's mark (or with no generation
+  after one was recorded) is held like a lost ledger: the strictest
+  preset applies, and the ledger keeps saying so on every unlock, until
+  the user dismisses the warning, even after a routine save has stamped
+  a newer generation over the old values. It used to be applied as it
+  was. Dismissing accepts that copy (its mark is lowered to the copy's
+  generation if nothing was written since), so it is not held again;
+- a new vault's ledger is written inside `saveMasterProtection`'s lock,
+  before the master protection and before any store, and records a
+  digest of the master protection beside it (`pgp_integrity_vault`,
+  local, plaintext). Before, the first store write created the ledger
+  after itself, so a panel closed in between, or two first writes
+  racing, looked exactly like a deleted ledger. A ledger that will not
+  open, recorded for a DIFFERENT master protection than the stored one,
+  was left by a vault since erased and recreated (on another device of
+  a sync vault, say) and is replaced without a warning. The digest only
+  chooses between "replace quietly" and "replace and warn" for a ledger
+  that already fails to open under a session the stores have proven, and
+  it is local, so a sync writer cannot use it.
 
 **Multi-device sync.** Each device keeps its own marks; reading another
 device's newer write just raises them, so ordinary sync is silent. The
@@ -1782,6 +1879,46 @@ later write carries the larger stamp. Only when the device whose write
 sync discarded has a clock ahead by more than the gap between the two
 writes does it warn, once; the banner names "two devices changing the
 same data at once" as a cause. A test pins this trade-off.
+
+**A 2.0.x build on another device.** Its store validators drop the
+`$gen` element, so when it rewrites a store of a shared sync vault the
+store comes back with no generation, and when it empties one it removes
+it. Both look like tampering to an updated device. The design taken is
+honest rather than silent: a store with NO generation after this device
+recorded one is reported as its own, softer kind (`no-generation`),
+whose copy says an older version of PGP Tools on another device saves
+data this way, or the data was rolled back, and that if every device is
+updated it should be treated as tampering. A real rollback to a
+generation-carrying copy still reads as rolled back, and a missing store
+still reads as missing, with an extra line on sync vaults naming older
+devices as a cause. The revocation floor applies either way, and an
+older settings copy is held at the strictest preset (above) whichever
+kind it is. The cost: an attacker who rolls a sync store back to a
+pre-generation blob gets the softer wording, and a user with an
+un-updated device sees a warning on every rewrite until that device
+updates. A 2.0.x point release whose validators keep unknown array
+elements would remove the false positives; it has not been built.
+
+**The storage switch.** Settings copies every blob to the destination,
+records the location, then purges the old area (`moveVault`). The
+master protection is copied FIRST and purged LAST, so no area ever holds
+sealed stores without one: another device of a sync vault catching that
+moment would have offered to erase an "orphaned" vault, and the orphaned
+state now also has to persist across a short re-check
+(`resolveVaultState`) before it is shown. The device record of the
+location is written only after the synced bootstrap write succeeds,
+and a failed switch puts it back: it used to be recorded first, so a
+rejected sync write (quota, rate limit) left the device pointed at the
+area the rollback had just emptied. Other panel windows drop their
+cached location when either record changes (`chrome.storage.onChanged`),
+so they stop reading and writing the area the switch purges.
+
+**The legacy-settings migration and the first unlock.** Its gate refuses
+once a local store carries a generation, so the unlock runs it before
+anything can write a store; the contacts backfill that the unlock starts
+used to be able to stamp one first, on exactly the old installs that
+still had a legacy object, refusing their migration and deleting their
+plaintext settings unmigrated.
 
 **Cross-window races.** The per-key locks (`withLock`) are one map per
 page, so two panel windows could interleave. The two sequences where
@@ -1817,7 +1954,8 @@ must-not-warn cases, and the documented sync false positive),
 `lib/storage/master-protection.test.ts`,
 `lib/storage/encrypted-store.test.ts`,
 `lib/storage/preferences.test.ts`, `lib/storage/engine.test.ts` (the
-shared lock) and `e2e/storage-tamper.spec.ts` (what the panel shows).
+shared lock, and the cached location across windows) and
+`e2e/storage-tamper.spec.ts` (what the panel shows).
 
 ---
 
@@ -1832,6 +1970,20 @@ binding is never made for the user.
   on the Review (name, address, key id, what changes) before anything
   is saved. The store only takes a `ReviewedContact`, minted by
   `applyReview` (enforced by `audit-invariants.mjs`, §9 check 6).
+  One write skips the Review: "Check revocation" merges the keyserver's
+  copy into the stored contact (`mergeIntoContact`). It may only add
+  what cannot change who the key is (a revocation, an expiry, a
+  subkey). A copy that adds a User ID is not written; the panel opens
+  the Review with it instead, like any update. A revoked copy that adds
+  one is written, because the revocation must stick, but under the
+  contact's old User IDs and without "verified".
+- **Private and CRX keys are checked too.** Saved, they are the user's
+  own keys, so a backup or paste could slip in a private key named as
+  a contact. A new private key (and a backup's CRX key, by its label)
+  is checked against contacts and the other keys in the import like
+  any key. Against the user's own keys it is flagged only for a
+  lookalike, because a new key with their own name and address is how
+  a rotation looks.
 - **Identity clashes start on Skip.** A key is checked against every
   contact, the user's own keys and the other new keys in the same
   import (both ways, so order doesn't pick the "real" one):
@@ -1839,19 +1991,49 @@ binding is never made for the user.
     every invisible / format character (engine and TS keep the same
     table; a test pins them equal) and also on a confusable skeleton,
     so `alıce@corp.com` clashes with `alice@corp.com`;
-  - a name that reads the same (UTS #39-style skeleton: look-alike
-    letters, capital I, fillers, punctuation, `rn`/`m`);
+  - a name that only LOOKS like another's: the UTS #39-style skeletons
+    match (look-alike letters from Cyrillic, Greek, Armenian, Cherokee,
+    Lisu and Coptic, small capitals, stroked Latin such as `ł`/`ø`,
+    fullwidth and mathematical forms, capital I as l, `rn`/`m`,
+    invisible characters; and an out-of-script letter the table does
+    not list, taken as a wildcard) but the names as plainly written
+    (case, spacing, punctuation and accents aside) differ. An accent
+    is a canonical decomposition with a mark (`José`, `İvan`); a
+    character that NFD replaces outright (the Kelvin sign K, the Ohm
+    sign) is a different character drawn the same, so it is a lookalike.
+    A combining grapheme joiner draws nothing and is not an accent;
+  - the same name, plainly written, is two people sharing a name. The
+    policy: under DIFFERENT addresses it is not flagged, because the
+    address tells them apart. When either side has no address at all,
+    it is flagged ("Same name"), because nothing on screen tells them
+    apart;
+  - a contact's (or own key's) alias counts as one more of its names:
+    a comment-less SSH contact the user called "Alice" is checked like
+    one whose comment says so. A letter or digit from any script other
+    than its word's main one (by Unicode Script property, not a list of
+    known scripts) is marked and taken as a wildcard, in names and in
+    addresses. The ideographic full stops read as a dot, and a quoted
+    local part (`"carol"@corp.com`) as the bare address;
   - an update only on the User IDs it adds; a revoked contact's
     address still asks;
   - SSH comments and groups the same way, and any SSH line or group
     that touches a key the user already holds is an update of that
     record (or flagged), never a silent merge into a contact or over
     an own key.
-- **Shown afterwards.** "Same address", "Same name" and "Lookalike
-  address" pills on contact cards, in the recipient picker and on the
-  signer card; key details name the other key and link to it. The
-  picker always shows the key id, and an own key always wins an id it
-  shares with a contact.
+- **Shown afterwards.** "Same address", "Lookalike name", "Same name"
+  and "Lookalike address" pills on contact cards, in the recipient
+  picker and on the signer card; key details name the other key and
+  link to it. The picker always shows the key id (the start of the
+  SHA256 hash for an SSH key, whole on hover), and an own key always
+  wins an id it shares with a contact. The check is indexed, not
+  pairwise: a list of 1000 contacts is checked in well under a second
+  (a test pins it).
+- **Replace replaces one contact.** It is offered only when exactly one
+  stored contact holds the address. With several, the Review says why
+  it is not offered, and only Skip and Keep both remain.
+- **"Import all" says when it is risky.** It is labelled "Import all
+  anyway" whenever any row started on Skip for a reason: an identity
+  clash, or an update that would leave only keys the user turned off.
 - **Mark as verified** is the user's own statement that they compared
   the fingerprint. Nothing else sets it, and it never carries to a
   different key or a changed key set.
@@ -1861,9 +2043,12 @@ binding is never made for the user.
   flagged on the Review.
 
 Out of scope: a key whose owner really is someone else with the same
-name and a different, unrelated address -- the name check flags it, but
+name and a different, unrelated address -- by design not flagged (the
+address is shown on the Review and is what tells the two apart), and
 only the user can say which is the person they mean. Forwarded signed
 messages: §8.12. Tests: `lib/identity/binding.test.ts`,
+`lib/utils/lookalike.test.ts`, `lib/import-public-keys.test.ts`,
+`lib/import/revocation-check.test.ts`,
 `lib/import/prepare.test.ts`, `lib/import/review.test.ts`,
 `lib/import/github.test.ts`, `lib/storage/contacts.test.ts`,
 `lib/encrypt-recipients.test.ts`, `components/workspace/recipient-engine.test.ts`,
