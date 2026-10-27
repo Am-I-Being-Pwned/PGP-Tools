@@ -275,10 +275,14 @@ export function SlideOverPanel({
 
 export function SlideOverHeader({
   title,
+  hideTitle = false,
   onBack,
   children,
 }: {
   title: string;
+  /** Keep the title for screen readers but not on screen -- for a header
+   *  whose actions need the room (key details). */
+  hideTitle?: boolean;
   onBack: () => void;
   /** Optional action buttons, rendered right-aligned. */
   children?: React.ReactNode;
@@ -299,7 +303,13 @@ export function SlideOverHeader({
         <ChevronLeftIcon className="h-4 w-4" />
         {!children && t("common_back")}
       </button>
-      <h2 className="ml-1 min-w-0 truncate text-sm font-semibold">{title}</h2>
+      <h2
+        className={
+          hideTitle ? "sr-only" : "ml-1 min-w-0 truncate text-sm font-semibold"
+        }
+      >
+        {title}
+      </h2>
       <span className="flex-1" />
       {children}
     </div>

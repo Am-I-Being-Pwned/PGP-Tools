@@ -437,7 +437,9 @@ export function KeyDetailsPage({
       ariaLabel={t("keys_details_aria", { name })}
       onDismiss={close}
     >
-      <SlideOverHeader title={t("keys_key_details")} onBack={close}>
+      {/* No visible title: the identity card right under it says whose
+          key this is, and the header's actions need the width. */}
+      <SlideOverHeader title={t("keys_key_details")} hideTitle onBack={close}>
         {onEncryptTo && (
           <IconAction label={t("keys_encrypt_to")} onClick={onEncryptTo}>
             <LockIcon className="h-4 w-4" />
