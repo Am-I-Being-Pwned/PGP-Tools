@@ -2,7 +2,11 @@ import { useCallback, useEffect, useState } from "react";
 
 import type { PendingOperation } from "../lib/messages";
 import { SESSION_PENDING_OP } from "../lib/constants";
-import { isPendingOperation, isPendingOpFresh } from "../lib/pending-op";
+import {
+  isPendingOperation,
+  isPendingOpForWindow,
+  isPendingOpFresh,
+} from "../lib/pending-op";
 
 /**
  * Source of truth: `chrome.storage.session` under `SESSION_PENDING_OP`.
@@ -60,6 +64,13 @@ export function usePendingOperation(ready: boolean) {
       const result = await chrome.storage.session.get(SESSION_PENDING_OP);
       const op = result[SESSION_PENDING_OP];
       if (!isPendingOperation(op)) {
+        if (!ac.signal.aborted) setChecked(true);
+        return false;
+      }
+      // Another window's selection: leave it in storage for that
+      // window's panel (or the stale sweep) rather than showing it here.
+      const here = await chrome.windows.getCurrent();
+      if (!isPendingOpForWindow(op, here.id)) {
         if (!ac.signal.aborted) setChecked(true);
         return false;
       }

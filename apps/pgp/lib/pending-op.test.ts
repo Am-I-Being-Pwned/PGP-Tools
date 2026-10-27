@@ -4,6 +4,7 @@ import type { PendingOperation } from "./messages";
 import { SESSION_PENDING_OP } from "./constants";
 import {
   isPendingOperation,
+  isPendingOpForWindow,
   isPendingOpFresh,
   PENDING_OP_TTL_MS,
   sweepStalePendingOp,
@@ -139,5 +140,31 @@ describe("sweepStalePendingOp", () => {
     await sweepStalePendingOp(NOW);
     expect(s.area.remove).not.toHaveBeenCalled();
     expect(s.store.value).toBe(fresh);
+  });
+});
+
+describe("isPendingOpForWindow", () => {
+  const op = (windowId?: number): PendingOperation => ({
+    type: "PENDING_OPERATION",
+    id: "x",
+    action: "verify",
+    text: "t",
+    sourceTabId: 1,
+    ...(windowId === undefined ? {} : { windowId }),
+    createdAt: 0,
+  });
+
+  it("gives a selection only to the panel of the window it came from", () => {
+    expect(isPendingOpForWindow(op(7), 7)).toBe(true);
+    expect(isPendingOpForWindow(op(7), 8)).toBe(false);
+  });
+
+  it("lets any panel take an op written before ops carried a window", () => {
+    expect(isPendingOpForWindow(op(), 8)).toBe(true);
+  });
+
+  it("validates the window id's type", () => {
+    expect(isPendingOperation({ ...op(), windowId: "7" })).toBe(false);
+    expect(isPendingOperation(op(7))).toBe(true);
   });
 });

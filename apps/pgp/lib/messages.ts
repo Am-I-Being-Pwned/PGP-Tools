@@ -17,6 +17,12 @@ export interface PendingOperation {
   action: OperationAction;
   text: string;
   sourceTabId: number;
+  /** The browser window the selection came from. Only that window's side
+   *  panel takes the op: another window's panel, already open and
+   *  listening, would otherwise grab it first and show the selection
+   *  (and an auto-decrypt) on the wrong screen. Absent on ops written
+   *  before this field existed, which any panel may take. */
+  windowId?: number;
   /** ms since epoch. Consumers drop ops older than ~60s to avoid
    *  resurrecting stale selections that were never picked up. */
   createdAt: number;
@@ -82,11 +88,7 @@ export interface KeyserverKeyRequest {
  * attacker-influenced string this rule exists to keep out of a render.
  */
 export type KeyserverKeyFailure =
-  | "invalid-query"
-  | "not-found"
-  | "offline"
-  | "rate-limited"
-  | "server-error";
+  "invalid-query" | "not-found" | "offline" | "rate-limited" | "server-error";
 
 export type KeyserverKeyResponse =
   | {
