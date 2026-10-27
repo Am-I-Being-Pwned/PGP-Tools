@@ -425,8 +425,13 @@ export function WorkspaceView({
     s.mode === "decrypt" &&
     s.messageEncryption?.password === true &&
     !s.messageEncryption.publicKey;
+  // A "PGP MESSAGE" with no encryption layer needs no key either: it is
+  // opened as what it is, signed or plain, and said to be unencrypted.
+  const unencryptedMessage =
+    s.mode === "decrypt" && s.messageEncryption?.encrypted === false;
   const needsPrivateKey =
-    (s.mode === "decrypt" && !passwordOnlyMessage) || s.mode === "sign";
+    (s.mode === "decrypt" && !passwordOnlyMessage && !unencryptedMessage) ||
+    s.mode === "sign";
   const hasInput = s.files.length > 0 || s.hasInput;
 
   // Copy the armored output straight from the bottom action bar (the compact
@@ -514,7 +519,9 @@ export function WorkspaceView({
     s.hasOutput;
   // Reply needs someone to address: a signer whose key we hold. An
   // unknown signer is a placeholder record with no key, and an unsigned
-  // or failed message has none, so neither gets the button.
+  // or failed message has none, so neither gets the button. Nor does a
+  // message that was never encrypted (its card is amber): replying would
+  // treat a copy anyone could have sent as private mail from the signer.
   const replyTo =
     showFullOutput && s.mode === "decrypt" && s.signatureTone === "success"
       ? s.verifiedSigner
@@ -562,7 +569,7 @@ export function WorkspaceView({
   // ("ssh" = age, "pgp" = OpenPGP, null = nothing selected yet), and what
   // that rules out. The picker prevents a mixed selection, so this is a
   // single answer rather than a conflict to resolve.
-  // Contacts before own keys -- see `resolveSelectedRecipients`.
+  // Own keys before contacts -- see `resolveSelectedRecipients`.
   const selectedRecipientKeys = resolveSelectedRecipients(
     s.selectedRecipientIds,
     contacts,
@@ -639,25 +646,32 @@ export function WorkspaceView({
     setTimeout(() => document.getElementById("pgp-input")?.focus(), 0);
   };
 
-  /** After a clear, put focus at the START of the workspace's flow --
-   *  Recipients in Encrypt, otherwise the first control on the message
-   *  card (a key picker, the message box) -- so Tab carries on from the
-   *  top rather than from wherever the control that cleared it was.
-   *  Next tick: the clear may have just remounted the card (the message
-   *  box in place of a file list, the form in place of a result). */
+  /** After a clear, put focus in the message box: a clear is "start
+   *  again", and the next thing to do is type (Shift+Tab reaches the
+   *  recipients). If the box isn't there -- a file list in its place --
+   *  the first control on the message card instead. Next tick: the clear
+   *  may have just remounted the card (the message box in place of a
+   *  file list, the form in place of a result), and Radix may still be
+   *  restoring focus to the recipient box it anchors. */
   const focusFlowStart = () => {
     setTimeout(() => {
+      const input = document.getElementById("pgp-input");
+      if (input) {
+        input.focus();
+        return;
+      }
       const card = document.querySelector<HTMLElement>("[data-workspace-card]");
-      const first = card?.querySelector<HTMLElement>(
-        [
-          '[role="combobox"]',
-          'input:not([type="file"]):not([disabled])',
-          "textarea:not([disabled])",
-          "select:not([disabled])",
-          "button:not([disabled]):not([tabindex='-1'])",
-        ].join(","),
-      );
-      (first ?? document.getElementById("pgp-input"))?.focus();
+      card
+        ?.querySelector<HTMLElement>(
+          [
+            '[role="combobox"]',
+            'input:not([type="file"]):not([disabled])',
+            "textarea:not([disabled])",
+            "select:not([disabled])",
+            "button:not([disabled]):not([tabindex='-1'])",
+          ].join(","),
+        )
+        ?.focus();
     }, 0);
   };
 
@@ -1001,9 +1015,10 @@ export function WorkspaceView({
       void ops.execute();
     } else if (
       s.mode === "decrypt" &&
-      !passwordOnlyMessage &&
-      s.selectedKeyId !== null &&
-      getKeyHandle(s.selectedKeyId) !== null
+      (unencryptedMessage ||
+        (!passwordOnlyMessage &&
+          s.selectedKeyId !== null &&
+          getKeyHandle(s.selectedKeyId) !== null))
     ) {
       void ops.executeUnattended();
     }
