@@ -671,6 +671,23 @@ export const THREAT_MODEL: Threat[] = [
     section: "§8.3",
   },
   {
+    id: "T-SIG-FORWARDED",
+    title:
+      "A signed message re-encrypted to the victim reads as written to them",
+    attacker:
+      "Anyone holding a message Alice signed -- for someone else, or in public -- who encrypts it to the victim's public key. No key of Alice's is needed.",
+    defence:
+      'A message with no encryption layer is refused by decrypt and shown amber as "Not encrypted". A signature that names its intended recipients, none of them the user, is amber ("signed for someone else"). A decrypted message whose signature names no one gets a note on the card that it may have been forwarded.',
+    status: "partial",
+    rationale:
+      "OpenPGP signs the content, not the envelope: without the Intended Recipient Fingerprint subpacket (RFC 9580 §5.2.3.36) nothing in the message says who it was for, and many senders still omit it. Turning every such message amber would turn most real mail amber and teach users to ignore it, so the verdict stays green with a quiet note. Known in the literature as surreptitious forwarding (Davis, 2001).",
+    section: "§8.12",
+    verifiedBy: [
+      "apps/pgp/components/workspace/signature-summary.test.ts",
+      "apps/pgp/e2e/signature-trust.spec.ts",
+    ],
+  },
+  {
     id: "T-RSA-MARVIN",
     title: "RSA private-key operations leak timing (Marvin)",
     attacker:
@@ -754,6 +771,60 @@ export const THREAT_MODEL: Threat[] = [
       "apps/pgp/e2e/reply-tab.spec.ts",
     ],
     section: "§16",
+  },
+  {
+    id: "T-LEGACY-PLAINTEXT-ADOPTION",
+    title:
+      "A one-time plaintext migration seals attacker-written data into the vault",
+    attacker:
+      "Anyone who can write chrome.storage with NO knowledge of the vault key -- for a sync user, anyone signed in to their Google account -- who replaces a sealed store with the retired plaintext format (an id index plus one plaintext item per id), or deletes pgp_settings and plants a pre-split plaintext preferences object.",
+    defence:
+      "FIXED. The plaintext keyring/contacts/CRX format is no longer read at all: anything at a store key that is not a sealed envelope reads as an empty store, is never sealed, and is reported as tampering on a device that has seen the store. The legacy preferences migration reads ONLY chrome.storage.local (never the sync bootstrap, never through the engine's forgeable location), runs at most once per device (a settled marker sealed in the local-only integrity ledger), never over a sealed settings blob, never on a device whose local stores carry a generation (so deleting the ledger, and the marker with it, cannot make it run again), and every preference -- legacy or sealed -- is validated field by field (type, range, enumeration; never-cache beats unlock-on-open) with invalid values read as defaults.",
+    status: "defended",
+    rationale:
+      "Demonstrated, not theorised: a planted index carrying `verified: true, identityVersion: 999` was sealed on unlock as a genuine verified contact whose identity the contacts hook then never re-derived, an 'own' key was planted into the keyring the same way, and planted preferences (autoLockEnabled false, autoLockMinutes 99999, unlockKeysOnOpen true) were sealed as the user's settings. The plaintext store format was written only by pre-release 0.x builds (contacts until 2026-04-01, keyring until v0.1.2 on 2026-04-05) and every build since has migrated it on first unlock, so it was removed rather than gated; an install that has not unlocked since April 2026 sees an empty store (the old plaintext entries are left in place, not deleted). The pre-split preferences format is newer (until 2026-07-05), so its migration is kept but gated; the cost is that a sync user who has not unlocked on any device since then gets defaults rather than their old settings.",
+    verifiedBy: [
+      "apps/pgp/lib/storage/integrity.test.ts",
+      "apps/pgp/lib/storage/encrypted-store.test.ts",
+      "apps/pgp/lib/storage/preferences.test.ts",
+    ],
+    section: "§17",
+  },
+  {
+    id: "T-BOOTSTRAP-FORGERY",
+    title:
+      "The plaintext sync bootstrap re-runs onboarding over a real vault, or hides it",
+    attacker:
+      "Anyone signed in to the user's Google account, who writes `pgp_preferences` in chrome.storage.sync -- even for a local-only vault -- setting `onboardingComplete: false` or flipping `storageLocation`.",
+    defence:
+      "FIXED. Neither bootstrap field decides anything that can destroy data. Whether a vault exists is read from the vault: a valid master protection in the configured area is a vault (lock screen); one only in the OTHER area is reported as such, with a button that points the bootstrap back (no data moves); sealed stores with no master protection anywhere are an orphaned vault, never a fresh install, and the only way on is an explicit, separately confirmed erase. `saveMasterProtection` itself refuses when a master protection exists in either area, and onboarding checks before minting a session or passkey. A storageLocation write also invalidates the engine's cached location (choosing sync during onboarding used to write the new vault to local). The location is now this device's own fact: a record in chrome.storage.local (never synced) is authoritative once written (onboarding, a location change, or the first time the vault is found in exactly one area), and the synced bootstrap is only the default for a device with none. Values are normalised strictly (exactly 'sync', else local). Both areas are always read: with no device record, a master protection in both is a choice the user makes, never a silent pick; with one, the lock screen still offers the other area after a failed unlock. Onboarding writes the master protection, in the chosen area, before recording the location, and the check-and-write holds a lock shared across panel windows (Web Locks).",
+    status: "partial",
+    rationale:
+      "Demonstrated: `{ storageLocation: 'local', onboardingComplete: false }` written to sync put onboarding up for a local user; setting a password replaced the real master protection and every key became unopenable. What remains is availability: an attacker who can write the area the vault lives in can still DELETE it (for a sync vault, the master protection lives in sync), and nothing stored where they can write can prevent that. The panel then says the vault can no longer be unlocked rather than offering to set one up over it. Also demonstrated, and fixed by the device record: planting any validly shaped master protection in sync with `storageLocation: 'sync'` routed a LOCAL vault's lock screen to the planted record (nothing unlocks it) and never mentioned the real one; `storageLocation: 'SYNC'` matched neither area and hid a sync vault behind onboarding. Residual: a device with no record yet (first run after upgrading) facing both is asked rather than protected, and someone with write access to this device's profile can change the record itself (the lock screen's other-area offer is the way back).",
+    verifiedBy: [
+      "apps/pgp/lib/storage/integrity.test.ts",
+      "apps/pgp/lib/storage/master-protection.test.ts",
+      "apps/pgp/e2e/storage-tamper.spec.ts",
+    ],
+    section: "§17",
+  },
+  {
+    id: "T-STORE-ROLLBACK",
+    title:
+      "An older sealed store written back, or a store deleted, is silently believed",
+    attacker:
+      "Anyone who can write chrome.storage and kept an earlier, validly sealed blob (a sync copy, a profile backup, the LevelDB log), with no knowledge of the vault key: writes it back to un-revoke a contact or resurrect deleted keys and contacts, or deletes pgp_settings to reset a hardened user to defaults.",
+    defence:
+      "Every sealed store (keyring, contacts, CRX keys, settings) carries a generation INSIDE its sealed plaintext, stamped max(last seen + 1, wall clock) on every write. A sealed ledger in chrome.storage.local -- never synced, so a sync attacker cannot reach it -- records the highest generation this device has seen per store. A store that loads below its mark, or is absent although the device has seen it, raises a dismissible warning banner (WARN, not refuse: the owner's call). Emptied stores are saved as sealed empty arrays, never removed, so a deletion is distinguishable from a legitimate empty store on every device. The ledger also holds an append-only set of revoked fingerprints, merged into contacts on every load AND save (revoked, and unusable for encryption), so a rollback of the contacts blob cannot un-revoke anyone. A missing settings blob on a device that has seen one reads as the strictest preset, and the next change persists on top of it; so does one that is present but will not open or parse (reported as unreadable; it used to throw, and the panel silently kept the defaults), and the next save replaces it once the session provably holds the vault key. A deleted or unreadable ledger is itself detected (a deleted one when a local store carries a generation): its replacement is marked lost, warns on every unlock until dismissed, holds the settings at the strictest preset until then, and keeps the legacy migration from running; the contacts blob's own revoked records go straight back into the new floor. The ledger's read-modify-write holds a lock shared across panel windows.",
+    status: "partial",
+    rationale:
+      "Demonstrated: writing back an older pgp_public_contacts blob un-revoked a revoked contact (and its pre-revocation armor still encrypted); deleted keys and contacts came back; deleting pgp_settings reset a Paranoid user to defaults. Gaps, all deliberate: (1) a consistent rollback of EVERYTHING including the local ledger is undetectable from storage alone -- that needs write access to this device's profile, which is a stronger attacker than this entry is for; deleting the ledger AND rolling every local store back to before generations existed is that rollback, while deleting or mangling just the ledger is detected (a rollback in the same moment is warned about but not undone, as the floor that would undo it was in the ledger), and a sync vault's ledger loss is not detected this way (its stores carry generations on a new second device too); (2) a device that has never seen a store cannot know it existed, so a brand-new second device of a sync vault adopts whatever it finds on first unlock, exactly like an upgrade from a build without generations (which never warns); (3) multi-device sync: devices keep separate marks and a device reading another's newer write just raises its mark, but when two devices write the same store at once and the one whose write sync DISCARDED has a clock ahead by more than the gap between the writes, that device warns once -- the banner names this cause; (4) history segments carry no generation (local-only, out of the sync attacker's reach); (5) the master protection is plaintext and carries none (substituting it fails the canary or the passkey, it does not open anything).",
+    verifiedBy: [
+      "apps/pgp/lib/storage/integrity.test.ts",
+      "apps/pgp/lib/storage/engine.test.ts",
+      "apps/pgp/e2e/storage-tamper.spec.ts",
+    ],
+    section: "§17",
   },
   {
     id: "T-DEVTOOLS",

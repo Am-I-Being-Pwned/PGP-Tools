@@ -116,6 +116,8 @@ call either export directly. See §8.10.
 | 9   | `apps/pgp/lib/network-lockdown.ts`         | Frozen `globalThis.fetch`; blocks XHR/WS/EventSource/RTC/sendBeacon.                                                                                                                                                     |
 | 10  | `apps/pgp/scripts/audit-network.mjs`       | Build-time per-context census: worker = 2 fetches, pinned apart to api.github.com and keys.openpgp.org; pages = no code that can name a remote destination.                                                              |
 | 11  | `apps/pgp/lib/storage/history.ts`          | Opt-in operation history. Segmented AES-256-GCM blobs under the contacts session key; holds message content. See §11.                                                                                                    |
+| 11a | `apps/pgp/lib/storage/integrity.ts`        | Freshness ledger (local-only, sealed): per-store generations for rollback/deletion warnings, and the append-only revocation floor. See §17.                                                                              |
+| 11b | `apps/pgp/lib/storage/vault-state.ts`      | Whether a vault exists, read from the vault rather than the forgeable bootstrap; the only erase path. See §17.                                                                                                           |
 | 12  | `apps/pgp/lib/workspace-draft.ts`          | In-progress composer text, encrypted under a separate in-WASM draft session key (§6).                                                                                                                                    |
 | 13  | `apps/pgp/lib/security/threat-model.ts`    | This document's attack model as typed data. `threat-model.test.ts` fails if a claimed defence names no live test.                                                                                                        |
 | 14  | `apps/pgp/scripts/audit-invariants.mjs`    | Build-time enforcement of §9. Replaces running those greps by hand.                                                                                                                                                      |
@@ -943,6 +945,25 @@ This is plaintext persisting _after_ the lock, when nothing is rendered.
 
 ---
 
+### 8.12 Signed messages re-encrypted to you (partial)
+
+OpenPGP signs a message's content, not who it was sent to. Anyone who
+holds a message Alice signed -- one she sent to someone else, or posted
+publicly -- can encrypt it to your key, and it decrypts to Alice's good
+signature. No key of Alice's is needed. (Surreptitious forwarding;
+Davis, 2001. T-SIG-FORWARDED.)
+
+- **Not encrypted at all.** Decrypt refuses a message with no
+  encryption layer and shows it amber as "Not encrypted" -- in the
+  engine (`was_encrypted`, `refuse_unencrypted`), not only the panel.
+- **Signed for someone else.** A signature carrying Intended Recipient
+  Fingerprints (RFC 9580 §5.2.3.36), none of them yours, is amber.
+- **Signed for no one in particular.** Many senders don't write that
+  subpacket, so nothing in the message can tell a forwarded copy from
+  one written to you. The card stays green -- amber on every such
+  message would be amber on most real mail -- with a note that the
+  signature doesn't say it was meant for you.
+
 ## 9. Verification checklist
 
 The invariants below are enforced mechanically by
@@ -1644,3 +1665,207 @@ the message, with a positive control while shown, and unlock restores
 it; a duplicated reader is locked too; closing the panel closes the
 reader tab; an unopened nonce shows nothing; no storage area holds the
 canary).
+
+## 17. Storage you can write but not read
+
+The attacker here can WRITE `chrome.storage` but does not know the vault
+password. For a "sync across devices" user that is anyone signed in to
+their Google account: sign in to Chrome, install the extension, write
+`chrome.storage.sync` from DevTools. Domain separation (§11.1) already
+stops them moving a sealed blob to another slot. Three more things it
+did not stop, each demonstrated and now fixed; recorded as
+T-LEGACY-PLAINTEXT-ADOPTION, T-BOOTSTRAP-FORGERY and T-STORE-ROLLBACK.
+
+**Plaintext migrations that ran forever.** The keyring, contacts and CRX
+stores used to migrate the original plaintext format (an id index plus
+one plaintext item per id) whenever they found it, on every unlock:
+seal the items under the vault key, delete the plaintext. So replacing a
+sealed blob with an index planted any record the attacker liked, sealed
+as genuine -- a contact marked `verified` with `identityVersion: 999`
+(so the contacts hook never re-derived its identity from the armor), or
+an "own" key. That format was only ever written by pre-release 0.x
+builds (contacts until 2026-04-01, the keyring until v0.1.2 on
+2026-04-05), so it is no longer read at all: a non-envelope value reads
+as an empty store and is never sealed. The pre-split preferences
+migration (format written until 2026-07-05) is kept, but reads only
+`chrome.storage.local` directly (never the sync bootstrap, never through
+the engine's forgeable location), runs at most once per device behind a
+marker sealed in the local ledger below, never over a sealed settings
+blob, and every preference, legacy or sealed, is validated field by
+field (`sanitizeSettings`).
+
+**The bootstrap decided whether a vault existed.** `onboardingComplete`
+and `storageLocation` live in plaintext in sync, for local vaults too.
+`onboardingComplete: false` put onboarding back up; setting a password
+replaced the real master protection and every key became unopenable. Now
+`vault-state.ts` decides from what is stored: a master protection in the
+configured area is a vault; one only in the other area means the
+location was changed under it (the panel says so and offers to point it
+back, moving nothing); sealed stores with no master protection anywhere
+are an orphaned vault, never a fresh install, and the only way on is an
+explicit, separately confirmed erase. `saveMasterProtection` refuses when
+a master protection exists in either area, and onboarding checks before
+minting a session or passkey. What remains is availability: whoever can
+write the area a vault lives in can delete it.
+
+The location itself was the second half of that. Planting any validly
+shaped master protection in sync and setting `storageLocation: "sync"`
+routed a LOCAL vault's lock screen to the planted record, which nothing
+unlocks, and the real vault was never mentioned; an odd value such as
+`"SYNC"` matched neither area and hid a sync vault behind onboarding.
+Decision: where a device's vault lives is a fact about that device, so
+it now keeps its own record (`pgp_device_location`, in
+`chrome.storage.local`, never synced), written on onboarding, on a
+location change, and the first time the lock screen finds the vault in
+exactly one place. Once it exists it is authoritative and the synced
+bootstrap is only the default for a device that has none (a new device
+of a sync vault, the first run after an upgrade). Every stored location
+value is normalised strictly (exactly `"sync"`, else local). Both areas
+are always read: with no device record, a master protection in both is
+`ambiguous` and the user chooses, rather than the panel picking one;
+with a record, the lock screen still offers the other one after a failed
+unlock, in case it was the record that was changed. Side effect, also
+intended: one device switching to sync no longer re-routes another
+device's local vault. Onboarding now writes the master protection, in
+the chosen area, before it records the location, so a refusal (another
+window got there first) leaves the location where it was.
+
+**Rollback and deletion were silent.** A seal says where a blob belongs,
+not when it was written, so an older copy written back was believed:
+it un-revoked a revoked contact (whose pre-revocation armor still
+encrypted), brought deleted keys and contacts back, and deleting
+`pgp_settings` reset a Paranoid user to defaults. Now:
+
+- every sealed store carries a generation inside its sealed plaintext
+  (`$gen`: a field of the settings object, a lone element of an array
+  store, so an older build's validator just drops it), stamped
+  `max(last seen + 1, wall clock)`;
+- a sealed ledger (`pgp_integrity`) in `chrome.storage.local`, never
+  synced, records the highest generation this device has seen per store.
+  Lower on load, or absent although seen, raises a dismissible warning
+  banner. It warns rather than refuses, by decision: a refusal turns
+  every false positive into a locked-out user;
+- an emptied store is saved as a sealed empty array, never removed, so
+  "gone" always means something happened;
+- the ledger keeps an append-only set of revoked fingerprints, merged
+  into contacts on every load and save (revoked, and unusable for
+  encryption). A rolled-back contacts blob cannot un-revoke anyone,
+  because the floor is not in that blob;
+- missing settings on a device that has seen them read as the strictest
+  preset, and the next change persists on top of that, not the defaults.
+  So do settings that are present but will not open or parse (junk, or
+  another store's blob copied into the slot), reported as "unreadable".
+  That used to throw, the panel dropped the rejection and kept the
+  DEFAULTS (a Paranoid user silently back on a 15-minute auto-lock), and
+  every later save threw too. Now the next save replaces the blob, but
+  only when the session provably holds the vault key (it opens the
+  ledger), so a wrong passkey's session cannot overwrite real settings;
+- a deleted or unreadable ledger is itself detected. Without it nothing
+  could tell a rolled-back store from the real one: deleting
+  `pgp_integrity` quietly re-enabled every rollback, and re-ran the
+  legacy-preferences migration over planted values (auto-lock off,
+  encrypt-to-self off). A missing ledger is recognised when this
+  device's LOCAL area holds a sealed store stamped with a generation
+  (only a ledger-keeping build writes one); the replacement ledger is
+  marked lost, so the warning repeats on every unlock until dismissed,
+  the settings read as the strictest preset until then, and the legacy
+  migration never runs while any local store carries a generation. The
+  old floor is gone, but the contacts blob's own revoked records go
+  straight back into the new one on the next load, and the warning asks
+  the user to check revocations.
+
+**Multi-device sync.** Each device keeps its own marks; reading another
+device's newer write just raises them, so ordinary sync is silent. The
+generation is a timestamp rather than a counter so that two devices
+writing the same store at once agree with sync's last-write-wins: the
+later write carries the larger stamp. Only when the device whose write
+sync discarded has a clock ahead by more than the gap between the two
+writes does it warn, once; the banner names "two devices changing the
+same data at once" as a cause. A test pins this trade-off.
+
+**Cross-window races.** The per-key locks (`withLock`) are one map per
+page, so two panel windows could interleave. The two sequences where
+that does real damage now hold a lock shared by every extension page
+(Web Locks, `withSharedLock`): the master protection's "none exists"
+check and write (two windows onboarding at once could both pass it), and
+the ledger's read-modify-write (a lost update can drop a revocation from
+the floor). The store read-merge-writes (settings, contacts, keyring)
+are still per window; two windows editing the same store at the same
+moment can lose one edit, an availability issue no attacker controls.
+
+**Not covered.** A consistent rollback of everything at once, ledger
+included, is indistinguishable from the real past; it needs write access
+to this device's profile, which is a stronger attacker than this section
+is about. That includes deleting the ledger AND rolling every local
+store back to blobs from before generations existed (or deleting them):
+with no generation anywhere locally, a missing ledger reads as a first
+upgrade. Deleting just the ledger, or replacing it with junk, is
+detected (above); a rollback written in the same moment as the ledger
+loss is warned about but not undone, since the floor that would undo it
+was in the ledger. A sync vault's ledger loss is not detected the same
+way: its stores carry generations on a brand-new second device too,
+which rightly has no ledger. A device that has never seen a store
+cannot know it existed:
+a new second device of a sync vault adopts what it finds on first
+unlock, exactly as an upgrade from a build without generations does
+(which never warns). History segments carry no generation (local-only).
+The master protection is plaintext and carries none; substituting it
+fails the canary or the passkey rather than opening anything.
+
+**Verified by:** `lib/storage/integrity.test.ts` (each attack above, the
+must-not-warn cases, and the documented sync false positive),
+`lib/storage/master-protection.test.ts`,
+`lib/storage/encrypted-store.test.ts`,
+`lib/storage/preferences.test.ts`, `lib/storage/engine.test.ts` (the
+shared lock) and `e2e/storage-tamper.spec.ts` (what the panel shows).
+
+---
+
+## 18. Who a key belongs to
+
+A contact binds a key to a person; the recipient picker and the signer
+card act on that binding. Key files are attacker-supplied text, so the
+binding is never made for the user.
+
+- **Every import is reviewed.** Paste, drop, "Open in PGP Tools",
+  keyserver and GitHub lookups and backup restore all list their keys
+  on the Review (name, address, key id, what changes) before anything
+  is saved. The store only takes a `ReviewedContact`, minted by
+  `applyReview` (enforced by `audit-invariants.mjs`, §9 check 6).
+- **Identity clashes start on Skip.** A key is checked against every
+  contact, the user's own keys and the other new keys in the same
+  import (both ways, so order doesn't pick the "real" one):
+  - the same address anywhere in a User ID, compared after stripping
+    every invisible / format character (engine and TS keep the same
+    table; a test pins them equal) and also on a confusable skeleton,
+    so `alıce@corp.com` clashes with `alice@corp.com`;
+  - a name that reads the same (UTS #39-style skeleton: look-alike
+    letters, capital I, fillers, punctuation, `rn`/`m`);
+  - an update only on the User IDs it adds; a revoked contact's
+    address still asks;
+  - SSH comments and groups the same way, and any SSH line or group
+    that touches a key the user already holds is an update of that
+    record (or flagged), never a silent merge into a contact or over
+    an own key.
+- **Shown afterwards.** "Same address", "Same name" and "Lookalike
+  address" pills on contact cards, in the recipient picker and on the
+  signer card; key details name the other key and link to it. The
+  picker always shows the key id, and an own key always wins an id it
+  shares with a contact.
+- **Mark as verified** is the user's own statement that they compared
+  the fingerprint. Nothing else sets it, and it never carries to a
+  different key or a changed key set.
+- **Keys the user turned off stay off.** A contact whose remaining keys
+  are all disabled is refused for encryption rather than falling back
+  to all of them, and an update that would leave only disabled keys is
+  flagged on the Review.
+
+Out of scope: a key whose owner really is someone else with the same
+name and a different, unrelated address -- the name check flags it, but
+only the user can say which is the person they mean. Forwarded signed
+messages: §8.12. Tests: `lib/identity/binding.test.ts`,
+`lib/import/prepare.test.ts`, `lib/import/review.test.ts`,
+`lib/import/github.test.ts`, `lib/storage/contacts.test.ts`,
+`lib/encrypt-recipients.test.ts`, `components/workspace/recipient-engine.test.ts`,
+`e2e/identity-binding.spec.ts`, `e2e/import-preview.spec.ts`,
+`e2e/github-import.spec.ts`.
