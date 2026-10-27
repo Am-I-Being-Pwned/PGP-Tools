@@ -1,4 +1,4 @@
-import type { PublicContactKey } from "./storage/contacts";
+import type { SignerCardState } from "../components/workspace/signer-card";
 
 /**
  * The side panel <-> reader tab protocol.
@@ -30,10 +30,12 @@ export function newReaderNonce(): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-/** Who the message is from, as the panel verified it: the contact
- *  record the panel's own signer card renders, for the same card in the
- *  tab. Display only; the public key itself is left out. */
-export type ReaderSigner = PublicContactKey;
+/** Who the message is from, as the panel verified it: the panel's own
+ *  signer card state (tone, label, note, clash and the contact's pills),
+ *  for the same card in the tab. A bare contact used to travel here, and
+ *  the tab lost every warning the panel's card carried. Display only;
+ *  the public key is left out (`displayOnlySignerCard`). */
+export type ReaderSigner = SignerCardState;
 
 /** Panel -> tab. */
 export type ReaderMessage =
@@ -47,12 +49,31 @@ export function isReaderMessage(v: unknown): v is ReaderMessage {
   const m = v as Record<string, unknown>;
   if (m.type === "locked") return true;
   if (m.type !== "show" || typeof m.text !== "string") return false;
-  const s = m.signer as Record<string, unknown> | null | undefined;
+  const card = m.signer as Record<string, unknown> | null | undefined;
+  if (typeof card !== "object" || card === null) return false;
+  if (card.tone !== "success" && card.tone !== "warning") return false;
+  if (typeof card.label !== "string") return false;
+  if (card.note !== undefined && typeof card.note !== "string") return false;
+  if (typeof card.unverified !== "boolean") return false;
+  if (!isHolder(card.contact)) return false;
+  if (card.clash === undefined) return true;
+  const clash = card.clash as Record<string, unknown> | null;
   return (
-    typeof s === "object" &&
-    s !== null &&
-    typeof s.keyId === "string" &&
-    Array.isArray(s.userIds) &&
-    s.userIds.every((u) => typeof u === "string")
+    typeof clash === "object" &&
+    clash !== null &&
+    typeof clash.kind === "string" &&
+    Array.isArray(clash.holders) &&
+    clash.holders.every(isHolder)
+  );
+}
+
+/** A key id and its User IDs: the part of a contact every card reads. */
+function isHolder(v: unknown): boolean {
+  if (typeof v !== "object" || v === null) return false;
+  const h = v as Record<string, unknown>;
+  return (
+    typeof h.keyId === "string" &&
+    Array.isArray(h.userIds) &&
+    h.userIds.every((u) => typeof u === "string")
   );
 }

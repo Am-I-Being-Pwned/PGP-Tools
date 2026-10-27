@@ -29,6 +29,18 @@ describe("presentError", () => {
       expectRemedy: "retry",
     },
     {
+      // `TOO_LARGE_TO_OPEN`: past the size limit with the right
+      // password. Not "wrong password" -- see the engine's map_err.
+      name: "too large to open here",
+      raw: "This message is too large to open here.",
+      expectMessage: /too large to open here.*size/i,
+    },
+    {
+      name: "too large to verify here",
+      raw: "This signed message is too large to verify here (limit 24 MiB).",
+      expectMessage: /too large to open here/i,
+    },
+    {
       name: "no matching secret key",
       raw: "No suitable decryption key found",
       expectMessage: /encrypted to a key you don't hold/i,

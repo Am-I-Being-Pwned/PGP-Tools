@@ -71,11 +71,17 @@ export type DecryptInput =
 export interface DecryptOptions {
   input: DecryptInput;
   verificationPublicKeys?: string[];
+  /** An UNATTENDED run's ceiling on the result, in bytes: the engine
+   *  stops reading past it and the call throws `OutputCapReached`.
+   *  Omitted for every run a person started. */
+  maxOutputBytes?: number;
 }
 
 export interface VerifyOptions {
   signedMessage: string;
   verificationPublicKeys: string[];
+  /** See `DecryptOptions.maxOutputBytes`. */
+  maxOutputBytes?: number;
 }
 
 /**

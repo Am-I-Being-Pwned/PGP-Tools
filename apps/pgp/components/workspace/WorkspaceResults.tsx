@@ -9,12 +9,12 @@ import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { FileResult } from "../../lib/utils/download";
 import { t } from "../../lib/i18n";
-import { contactClashes } from "../../lib/identity/binding";
 import { KEYSERVER_HOST } from "../../lib/import/keyserver";
-import { ContactCard } from "../keys/ContactCard";
 import { KeyDetailsButton } from "../keys/KeyDetailsButton";
 import { DetectedKeyBanner } from "./DetectedKeyBanner";
 import { OutputArea } from "./OutputArea";
+import { signerCardState } from "./signer-card";
+import { SignerCard } from "./SignerCard";
 
 /** The curated error alert: message up front, the raw error text behind
  *  a "Show technical details" toggle, and (when the parent wires a
@@ -154,16 +154,24 @@ export function WorkspaceResults({
   onRevealKey,
   onLookupSigner,
 }: WorkspaceResultsProps) {
-  const isUnverified = signatureTone === "warning" && !signerCaveat;
-  // A machine translation is not what was signed: the card stays, but it
-  // says the verdict covers the original.
-  const translatedNote =
-    showTranslation && verifiedSigner && !isUnverified
-      ? t("workspace_signature_covers_original")
-      : null;
-  const note = isUnverified
-    ? statusText
-    : [signatureNote, translatedNote].filter(Boolean).join(" · ") || undefined;
+  // The same state Reply hands its reader tab (see `SignerCard`).
+  const card = verifiedSigner
+    ? signerCardState({
+        signer: verifiedSigner,
+        tone: signatureTone,
+        note: signatureNote,
+        caveat: signerCaveat,
+        statusText,
+        // A machine translation is not what was signed: the card stays,
+        // but it says the verdict covers the original.
+        extraNote: showTranslation
+          ? t("workspace_signature_covers_original")
+          : null,
+        contacts,
+        myKeys,
+      })
+    : null;
+  const isUnverified = !!card?.unverified;
 
   const hasContent =
     !!error ||
@@ -179,49 +187,40 @@ export function WorkspaceResults({
   // alone. In the card its corners go square: the stack rounds the
   // outer ones.
   const signerInCard = !!fullHeight && hasOutput;
-  const signerCard = verifiedSigner ? (
-    <div
-      className={signerInCard ? "shrink-0 [&>div]:rounded-[3px]" : undefined}
-    >
-      <ContactCard
-        readOnly
-        verifiedTone={signatureTone}
-        verifiedLabel={
-          isUnverified
-            ? t("workspace_unverified")
-            : (signerCaveat ?? statusText ?? t("workspace_signature_verified"))
-        }
-        note={note}
-        // The key that made the signature, a click away. Only for one we
-        // hold: an unknown signer is a bare key id with nothing to show.
-        labelAction={
-          isUnverified ? undefined : (
-            <KeyDetailsButton keyData={verifiedSigner} subtle />
-          )
-        }
-        noteAction={
-          isUnverified && onLookupSigner && verifiedSigner.keyId ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onLookupSigner(verifiedSigner.keyId)}
-            >
-              <SearchIcon />
-              {t("workspace_lookup_signer", { host: KEYSERVER_HOST })}
-            </Button>
-          ) : undefined
-        }
-        contact={signerAsContact(verifiedSigner)}
-        // Signed by a contact who shares a name or address with another:
-        // the same pill as on the card, so the two read apart here too.
-        clash={
-          "armoredPublicKey" in verifiedSigner && !isUnverified
-            ? contactClashes(contacts, myKeys).get(verifiedSigner.keyId)
-            : undefined
-        }
-      />
-    </div>
-  ) : null;
+  const signerCard =
+    verifiedSigner && card ? (
+      <div
+        className={signerInCard ? "shrink-0 [&>div]:rounded-[3px]" : undefined}
+      >
+        <SignerCard
+          state={card}
+          // The key that made the signature, a click away. Only for one we
+          // hold: an unknown signer is a bare key id with nothing to show.
+          labelAction={
+            isUnverified ? undefined : (
+              <KeyDetailsButton
+                keyData={verifiedSigner}
+                subtle
+                contacts={contacts}
+                ownKeys={myKeys}
+              />
+            )
+          }
+          noteAction={
+            isUnverified && onLookupSigner && verifiedSigner.keyId ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onLookupSigner(verifiedSigner.keyId)}
+              >
+                <SearchIcon />
+                {t("workspace_lookup_signer", { host: KEYSERVER_HOST })}
+              </Button>
+            ) : undefined
+          }
+        />
+      </div>
+    ) : null;
 
   return (
     <div
@@ -269,22 +268,4 @@ export function WorkspaceResults({
       )}
     </div>
   );
-}
-
-/** A signer as the contact record `ContactCard` renders: a contact as
- *  is, an own key reshaped. Shared with Reply's reader tab so the signer
- *  looks the same in both places. */
-export function signerAsContact(
-  signer: PublicContactKey | ProtectedKeyBlob,
-): PublicContactKey {
-  return "armoredPublicKey" in signer
-    ? signer
-    : {
-        keyId: signer.keyId,
-        userIds: signer.userIds,
-        algorithm: signer.algorithm,
-        armoredPublicKey: signer.publicKeyArmored,
-        addedAt: 0,
-        lastUsedAt: 0,
-      };
 }

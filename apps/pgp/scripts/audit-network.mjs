@@ -345,11 +345,21 @@ const PINNED_CALL_SITES = {
 // panel's `connect-src 'self'` meta CSP mean neither the page nor a
 // compromised dependency can turn one into a request. They are listed
 // because the point of this check is that the SET does not grow quietly.
+// The worker also names three Chrome match patterns:
+// `MENU_DOCUMENT_URL_PATTERNS` (lib/context-menu.ts). The menu is created
+// with no `documentUrlPatterns`; whether "Open in PGP Tools" may act is
+// checked when clicked, from the top page's URL, by `menuMayActOn`, which
+// prefix-matches these patterns. They are strings compared against a URL;
+// nothing fetches them, and their host is a wildcard, so they are not a
+// remote origin either.
+const MENU_MATCH_PATTERNS = ["http://*/*", "https://*/*", "file:///*"];
+
 const EXPECTED_URL_LITERALS = {
   worker: [
     "http://", //
     "chrome-extension://",
     ...WORKER_ORIGINS,
+    ...MENU_MATCH_PATTERNS,
   ],
   page: [
     "http://",
@@ -1521,7 +1531,7 @@ for (const ctx of ["worker", "page"]) {
 // The worker's remote origin literals must be exactly the allowed set --
 // as a SET, so neither a missing one nor an extra one passes.
 const workerRemoteLiterals = [...urlLiterals.worker.keys()]
-  .filter((u) => originOf(u) !== null)
+  .filter((u) => originOf(u) !== null && !MENU_MATCH_PATTERNS.includes(u))
   .sort();
 const expectedRemoteLiterals = [...WORKER_ORIGINS].sort();
 if (

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
 import type { PresentedError } from "../../lib/errors/present";
@@ -26,6 +26,7 @@ import { presentError } from "../../lib/errors/present";
 import { t, tn } from "../../lib/i18n";
 import { MAX_VERIFY_FILE_BYTES, MAX_VERIFY_FILE_LABEL } from "../../lib/limits";
 import * as pgpOps from "../../lib/pgp/operations";
+import { OutputCapReached } from "../../lib/pgp/wasm-public";
 import { isWebAuthnCancel } from "../../lib/protection/webauthn-prf";
 import { updateRecentRecipients } from "../../lib/recipient-ordering";
 import { contactRecipients } from "../../lib/storage/contact-recipients";
@@ -38,10 +39,7 @@ import {
   downloadResults,
   downloadText,
 } from "../../lib/utils/download";
-import {
-  displayFileName,
-  hasHiddenCharacters,
-} from "../../lib/utils/file-name";
+import { displayFileName } from "../../lib/utils/file-name";
 import { formatFileSize } from "../../lib/utils/formatting";
 import {
   displayUserId,
@@ -53,7 +51,11 @@ import {
   isZipArchive,
   zipFiles as zipFilesToArchive,
 } from "../../lib/utils/zip";
-import { outputFileName } from "./output-name";
+import {
+  hasHiddenCharacters,
+  hiddenCharactersToConfirm,
+} from "./hidden-characters";
+import { outputFileName, uniqueOutputNames } from "./output-name";
 import { selectionEngine } from "./recipient-engine";
 import {
   mixedBatchNote,
@@ -84,6 +86,43 @@ interface WorkspaceOperationsOptions {
   /** The user's configured default key: preferred as the
    *  encrypt-to-self key (see resolveSelfKey). */
   defaultKeyId?: string | null;
+}
+
+/**
+ * The most an UNATTENDED run (the context menu's auto-decrypt) puts on
+ * screen. The engine lets any message expand to 64 MiB (its flat
+ * allowance for small inputs), so a few hundred bytes from a web page's
+ * selection could otherwise land a 64 MiB result in the panel with no
+ * click, freezing it while it renders. A real message a person reads is
+ * far under this; anything bigger waits for the Decrypt button.
+ *
+ * Passed to the PGP engine as its output ceiling (`maxOutputBytes`), so
+ * it stops reading at this size rather than producing the whole result
+ * first. Also checked after every unattended run returns -- the backstop
+ * for an engine that takes no ceiling (age) and for text, where the
+ * check counts characters rather than bytes.
+ */
+export const AUTO_RUN_MAX_BYTES = 1024 * 1024;
+
+/** Thrown inside a decrypt to abandon an unattended run that came out
+ *  bigger than {@link AUTO_RUN_MAX_BYTES}. Never shown as an error. */
+class HeldBackForSize extends Error {}
+
+/** `run`, with the engine's own "over the ceiling" stop read as
+ *  {@link HeldBackForSize} -- the same outcome the after-the-fact check
+ *  gives, so one catch serves both. */
+async function heldBackIfCapped<T>(run: Promise<T>): Promise<T> {
+  try {
+    return await run;
+  } catch (e) {
+    if (e instanceof OutputCapReached) throw new HeldBackForSize();
+    throw e;
+  }
+}
+
+/** Wipe a result being thrown away. */
+function wipeData(data: string | Uint8Array): void {
+  if (data instanceof Uint8Array) data.fill(0);
 }
 
 /**
@@ -349,6 +388,14 @@ export function useWorkspaceOperations({
     }
   }
 
+  /** Rename a batch's outputs apart in place (see `uniqueOutputNames`)
+   *  and return the final names. */
+  function nameApart(results: FileResult[]): string[] {
+    const names = uniqueOutputNames(results.map((r) => r.name));
+    results.forEach((r, i) => (r.name = names[i]));
+    return names;
+  }
+
   /** One verdict for a batch of files -- see `summariseBatch`. */
   function showBatchSignatures(
     batch: { name: string; result: SignedResult }[],
@@ -521,22 +568,38 @@ export function useWorkspaceOperations({
   }
 
   /**
-   * True while an operation runs without a click (a context-menu
-   * auto-run). It never asks for a secret -- no ceremony, no password
-   * prompt -- and never writes to disk; everything else is the same run.
-   * Checked at the point of each prompt rather than decided up front,
-   * because a key can close between the auto-run's check and the decrypt.
+   * True while an operation runs without a click of its own. It never
+   * asks for a secret -- no ceremony, no password prompt -- and never
+   * writes to disk; everything else is the same run. Checked at the point
+   * of each prompt rather than decided up front, because a key can close
+   * between the caller's check and the decrypt.
    */
   const unattendedRef = useRef(false);
+  /**
+   * True while the run's OUTPUT is capped at {@link AUTO_RUN_MAX_BYTES}.
+   * A separate flag from the one above: only a context-menu auto-run,
+   * whose input is whatever a web page put in the selection, is capped.
+   * A re-run of something the user started (the signer-lookup re-check)
+   * also runs without prompts, but must not hold back a message the user
+   * already chose to open.
+   */
+  const capOutputRef = useRef(false);
 
-  const executeUnattended = async () => {
+  async function runWith(capOutput: boolean): Promise<void> {
     unattendedRef.current = true;
+    capOutputRef.current = capOutput;
     try {
       await execute();
     } finally {
       unattendedRef.current = false;
+      capOutputRef.current = false;
     }
-  };
+  }
+
+  /** A context-menu auto-run: no prompts, and capped output. */
+  const executeUnattended = () => runWith(true);
+  /** A re-run of the user's own run: no prompts, but not capped. */
+  const executeWithoutPrompts = () => runWith(false);
 
   /**
    * Run `operation`, and keep what it wrote only if the staged input is
@@ -556,7 +619,56 @@ export function useWorkspaceOperations({
 
   const execute = () => forCurrentInput(executeNow);
 
+  // ── hidden characters before a signature ────────────────────────────
+  //
+  // Text about to be signed that holds characters the box does not draw
+  // (`hidden-characters.ts`) is held back until the user says "Sign
+  // anyway" -- for THIS text: the confirmation is tied to the input
+  // version, so any edit asks again. Inline in the panel, not a dialog.
+  const [hiddenChars, setHiddenChars] = useState<string[] | null>(null);
+  const hiddenConfirmedFor = useRef<number | null>(null);
+  // An auto-run that was abandoned for size (see `AUTO_RUN_MAX_BYTES`):
+  // the form says why it is waiting for a press.
+  const [heldBackForSize, setHeldBackForSize] = useState(false);
+  useEffect(() => {
+    setHiddenChars(null);
+    setHeldBackForSize(false);
+  }, [s.inputVersion, s.mode]);
+
+  /** The engine's output ceiling for this run: the auto-run's, or none
+   *  for a run the user started. */
+  const autoRunCap = () =>
+    capOutputRef.current ? AUTO_RUN_MAX_BYTES : undefined;
+
+  /** `data` within the unattended ceiling, or throw to abandon the run. */
+  function withinAutoRunCap<T extends { data: string | Uint8Array }>(
+    result: T,
+  ): T {
+    if (capOutputRef.current && result.data.length > AUTO_RUN_MAX_BYTES) {
+      wipeData(result.data);
+      throw new HeldBackForSize();
+    }
+    return result;
+  }
+
+  /** True when signing may go ahead; otherwise raises the strip. */
+  function hiddenCharsCleared(): boolean {
+    if (hiddenConfirmedFor.current === s.inputVersion) return true;
+    const found = hiddenCharactersToConfirm(s.getInput());
+    if (found.length === 0) return true;
+    setHiddenChars(found);
+    return false;
+  }
+
+  /** "Sign anyway": sign this exact text as it is. */
+  const signWithHiddenChars = () => {
+    hiddenConfirmedFor.current = s.inputVersion;
+    setHiddenChars(null);
+    void execute();
+  };
+
   const executeNow = async () => {
+    setHeldBackForSize(false);
     s.setError(null);
     s.setOutput("");
     s.setBinaryOutput(undefined);
@@ -669,6 +781,8 @@ export function useWorkspaceOperations({
     // wrong-engine key. The toggle stays visible and dimmed with that
     // reason in WorkspaceView.
     if (signerKeyId) {
+      // The written message is signed along with the files (`msg.txt`).
+      if (s.hasTrimmedInput && !hiddenCharsCleared()) return;
       const handle = await ensureUnlocked(signerKeyId);
       if (handle === null) return;
       signingHandle = handle;
@@ -737,6 +851,7 @@ export function useWorkspaceOperations({
           data,
         });
       }
+      nameApart(results);
       s.setFileResults(results);
       const totalSize = results.reduce((sum, r) => sum + r.data.length, 0);
       s.setStatusText(
@@ -829,7 +944,13 @@ export function useWorkspaceOperations({
       recipients.map((k) => k.keyId),
     );
     s.setRecentRecipients(updatedRecents);
-    void savePreferences({ recentRecipients: updatedRecents });
+    // A background save the user never asked for: losing it only costs
+    // the picker's ordering next session, and a "settings could not be
+    // saved" toast on top of a successful encrypt would read as the
+    // encrypt failing. So a rejection is swallowed, not shown.
+    void savePreferences({ recentRecipients: updatedRecents }).catch(
+      () => undefined,
+    );
   }
 
   /**
@@ -859,6 +980,7 @@ export function useWorkspaceOperations({
               typeof data === "string" ? new TextEncoder().encode(data) : data,
           });
         }
+        nameApart(results);
         s.setFileResults(results);
         const totalSize = results.reduce((sum, r) => sum + r.data.length, 0);
         s.setStatusText(
@@ -871,14 +993,16 @@ export function useWorkspaceOperations({
         return;
       }
 
-      const data = await ageOps.decryptWithHandle({
-        input: isFileInput
-          ? {
-              kind: "binary",
-              binaryMessage: new Uint8Array(await s.files[0].arrayBuffer()),
-            }
-          : { kind: "armored", armoredMessage: s.getInput() },
-        keyHandle,
+      const { data } = withinAutoRunCap({
+        data: await ageOps.decryptWithHandle({
+          input: isFileInput
+            ? {
+                kind: "binary",
+                binaryMessage: new Uint8Array(await s.files[0].arrayBuffer()),
+              }
+            : { kind: "armored", armoredMessage: s.getInput() },
+          keyHandle,
+        }),
       });
       if (typeof data === "string") {
         s.setOutput(data);
@@ -899,6 +1023,10 @@ export function useWorkspaceOperations({
       s.setFileResults([]);
       s.setOperationDone(false);
       s.setVerifiedSigner(null);
+      if (err instanceof HeldBackForSize) {
+        setHeldBackForSize(true);
+        return;
+      }
       s.setError(presentError(err, t("workspace_error_decrypt_failed_ssh")));
     }
   }
@@ -1006,6 +1134,7 @@ export function useWorkspaceOperations({
           pgpOps.openUnencrypted({
             input: one,
             verificationPublicKeys: pgpVerificationKeys(),
+            maxOutputBytes: autoRunCap(),
           }),
         { notEncrypted: true },
       );
@@ -1048,6 +1177,7 @@ export function useWorkspaceOperations({
         input: one,
         keyHandle,
         verificationPublicKeys: pgpVerificationKeys(),
+        maxOutputBytes: autoRunCap(),
       }),
     );
     if (failure) s.setError(failure);
@@ -1080,7 +1210,7 @@ export function useWorkspaceOperations({
    * signer card says it was not encrypted (see `showSignature`).
    */
   async function runPgpDecrypt(
-    decryptOne: (input: DecryptOptions["input"]) => Promise<DecryptResult>,
+    decryptCall: (input: DecryptOptions["input"]) => Promise<DecryptResult>,
     { notEncrypted = false }: { notEncrypted?: boolean } = {},
   ): Promise<PresentedError | null> {
     /** A tampered signature anywhere fails the whole operation. */
@@ -1098,6 +1228,8 @@ export function useWorkspaceOperations({
     };
 
     const isFileInput = s.files.length > 0;
+    const decryptOne = async (input: DecryptOptions["input"]) =>
+      withinAutoRunCap(await heldBackIfCapped(decryptCall(input)));
 
     try {
       if (isFileInput && s.files.length > 1) {
@@ -1118,8 +1250,11 @@ export function useWorkspaceOperations({
           const outName = outputFileName("decrypt", [file.name], false);
           results.push({ name: outName, data });
           refuseInvalid(result);
-          signatures.push({ name: file.name, result });
+          signatures.push({ name: outName, result });
         }
+        // The note names what the user SAVES, so it has to be the output
+        // name, de-duplicated -- two inputs can decrypt to one name.
+        nameApart(results).forEach((name, i) => (signatures[i].name = name));
         s.setFileResults(results);
         const totalSize = results.reduce((sum, r) => sum + r.data.length, 0);
         s.setStatusText(
@@ -1145,8 +1280,11 @@ export function useWorkspaceOperations({
             s.setStatusText(t("workspace_status_decrypted_archive"));
           } else {
             try {
+              // ignoreBOM: a leading BOM is part of the file, and Copy
+              // and Download must give it back.
               shown = new TextDecoder("utf-8", {
                 fatal: true,
+                ignoreBOM: true,
               }).decode(result.data);
               s.setOutput(shown);
             } catch {
@@ -1199,6 +1337,12 @@ export function useWorkspaceOperations({
       s.setFileResults([]);
       s.setOperationDone(false);
       s.setVerifiedSigner(null);
+      if (err instanceof HeldBackForSize) {
+        // Not a failure: the message is there for the pressing.
+        s.setStatusText(null);
+        setHeldBackForSize(true);
+        return null;
+      }
       // Classify the underlying reason (missing key, wrong passphrase,
       // corrupted data, tampered signature, ...) into curated copy instead
       // of a one-size-fits-all message; the raw error rides along as the
@@ -1223,6 +1367,8 @@ export function useWorkspaceOperations({
       });
       return;
     }
+    // The box's text is what gets signed when no files are staged.
+    if (s.files.length === 0 && !hiddenCharsCleared()) return;
     const keyHandle = await ensureUnlocked(signKeyId);
     if (keyHandle === null) return;
 
@@ -1236,6 +1382,7 @@ export function useWorkspaceOperations({
           data: new TextEncoder().encode(signed),
         });
       }
+      nameApart(results);
       s.setFileResults(results);
       if (results.length > 1) {
         s.setStatusText(tn("workspace_files_signed", results.length));
@@ -1302,13 +1449,17 @@ export function useWorkspaceOperations({
       }
       const results = [];
       for (const input of inputs) {
-        results.push({
-          name: input.name,
-          result: await pgpOps.verify({
+        const result = await heldBackIfCapped(
+          pgpOps.verify({
             signedMessage: input.text,
             verificationPublicKeys: allPubArmored,
+            maxOutputBytes: autoRunCap(),
           }),
-        });
+        );
+        // An inline-signed message can be compressed: the same ceiling
+        // as an unattended decrypt.
+        withinAutoRunCap({ data: result.text });
+        results.push({ name: input.name, result });
       }
 
       const failed = results.find(
@@ -1347,6 +1498,10 @@ export function useWorkspaceOperations({
       // Verify results are not captured (see the decrypt note): a
       // content-free "verify, <time>" row carries no recall value.
     } catch (e) {
+      if (e instanceof HeldBackForSize) {
+        setHeldBackForSize(true);
+        return;
+      }
       s.setError(presentError(e, t("workspace_error_verify_failed")));
     }
   }
@@ -1484,6 +1639,9 @@ export function useWorkspaceOperations({
           input: one,
           password,
           verificationPublicKeys: pgpVerificationKeys(),
+          // Never set today (a password is never unattended), but the
+          // same rule as every other decrypt, so it cannot drift.
+          maxOutputBytes: autoRunCap(),
         }),
       );
       if (failure) {
@@ -1550,6 +1708,7 @@ export function useWorkspaceOperations({
   return {
     execute,
     executeUnattended,
+    executeWithoutPrompts,
     executeCrxSign,
     verifyCrxInput,
     handlePasswordSubmit,
@@ -1557,5 +1716,11 @@ export function useWorkspaceOperations({
     selectPrivateKey,
     matchDecryptionKey,
     outputFileName: currentOutputName,
+    /** Code points held back from a signature, or null (see above). */
+    hiddenChars,
+    signWithHiddenChars,
+    /** The last auto-run was abandoned for size; Decrypt opens it. */
+    heldBackForSize,
+    dismissHiddenChars: () => setHiddenChars(null),
   };
 }

@@ -26,20 +26,6 @@ export function displayFileName(name: string, max = 60): string {
   return `${clean.slice(0, max - tail - 1).join("")}…${clean.slice(-tail).join("")}`;
 }
 
-/**
- * Text holding characters that change how it displays without showing
- * themselves: bidi controls (a right-to-left override makes "0001" read
- * as "1000"), zero-width and other format characters, and control
- * characters other than tab and line breaks, and the tag characters
- * (U+E0000..E007F) that can carry a whole string nobody sees. For SIGNED
- * text these are part of what was signed, so they are reported, not
- * removed. (A lone CR is reported separately: `hasLoneCarriageReturn`.)
- */
-/* eslint-disable no-control-regex -- finding control characters is the point */
-const HIDDEN =
-  /[\u0000-\u0008\u000b-\u000c\u000e-\u001f\u007f-\u009f\u00ad\u061c\u180e\u200b-\u200f\u2028-\u202e\u2060-\u206f\ufeff\u{e0000}-\u{e007f}]/u;
-/* eslint-enable no-control-regex */
-
-export function hasHiddenCharacters(text: string): boolean {
-  return HIDDEN.test(text);
-}
+// Whether SIGNED text holds hidden characters is a different question,
+// answered by `hasHiddenCharacters` in components/workspace/
+// hidden-characters.ts -- one detector for Sign, Verify and Decrypt.

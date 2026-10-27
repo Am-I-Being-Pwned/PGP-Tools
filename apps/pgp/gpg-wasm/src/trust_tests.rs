@@ -174,7 +174,7 @@ fn a_signature_dated_before_its_key_existed_is_invalid_not_unknown() {
     let forged = signed.replace("Pay account 111.", "Pay account 999.");
 
     for input in [signed, forged] {
-        let v = verdict(&verify_message(&input, &keys_json(&[&bob])).unwrap());
+        let v = verdict(&verify_message(&input, &keys_json(&[&bob]), None).unwrap());
         assert_eq!(v["signatureStatus"], "invalid");
         assert_eq!(v["signerKeyId"], serde_json::Value::Null);
     }
@@ -186,7 +186,7 @@ fn a_good_signature_reports_when_it_was_made_and_whether_the_key_is_still_curren
     let at = SystemTime::now() - 5 * DAY;
     let signed = cleartext_at("Old notice.", &bob, at);
 
-    let v = verdict(&verify_message(&signed, &keys_json(&[&bob])).unwrap());
+    let v = verdict(&verify_message(&signed, &keys_json(&[&bob]), None).unwrap());
     assert_eq!(v["signatureStatus"], "valid");
     assert_eq!(v["signerKeyCurrent"], true);
     let signed_at = v["signedAt"].as_f64().unwrap();
@@ -195,13 +195,13 @@ fn a_good_signature_reports_when_it_was_made_and_whether_the_key_is_still_curren
     // Superseded since: the old signature still verifies (it was made
     // while the key was good) -- but the UI must be told the key is gone.
     let superseded = revoke(&bob, ReasonForRevocation::KeySuperseded);
-    let v = verdict(&verify_message(&signed, &keys_json(&[&superseded])).unwrap());
+    let v = verdict(&verify_message(&signed, &keys_json(&[&superseded]), None).unwrap());
     assert_eq!(v["signatureStatus"], "valid");
     assert_eq!(v["signerKeyCurrent"], false);
 
     // Compromised: every signature is suspect, whatever its date.
     let compromised = revoke(&bob, ReasonForRevocation::KeyCompromised);
-    let v = verdict(&verify_message(&signed, &keys_json(&[&compromised])).unwrap());
+    let v = verdict(&verify_message(&signed, &keys_json(&[&compromised]), None).unwrap());
     assert_eq!(v["signatureStatus"], "invalid");
 }
 
@@ -230,10 +230,10 @@ fn a_bad_signature_next_to_a_good_one_makes_the_message_invalid() {
     let msg = inline_multi("pay 1000", &[&alice, &mallory]);
     let compromised = revoke(&mallory, ReasonForRevocation::KeyCompromised);
 
-    let v = verdict(&verify_message(&msg, &keys_json(&[&alice, &mallory])).unwrap());
+    let v = verdict(&verify_message(&msg, &keys_json(&[&alice, &mallory]), None).unwrap());
     assert_eq!(v["signatureStatus"], "valid", "control: both good");
 
-    let v = verdict(&verify_message(&msg, &keys_json(&[&alice, &compromised])).unwrap());
+    let v = verdict(&verify_message(&msg, &keys_json(&[&alice, &compromised]), None).unwrap());
     assert_eq!(v["signatureStatus"], "invalid");
 }
 
@@ -246,7 +246,7 @@ fn every_good_signer_and_every_unchecked_signature_is_reported() {
 
     // Carol's key is not held: still valid, but the extra signature is
     // counted rather than silently dropped.
-    let v = verdict(&verify_message(&msg, &keys_json(&[&alice, &bob])).unwrap());
+    let v = verdict(&verify_message(&msg, &keys_json(&[&alice, &bob]), None).unwrap());
     assert_eq!(v["signatureStatus"], "valid");
     let mut all: Vec<String> = vec![v["signerKeyId"].as_str().unwrap().into()];
     all.extend(v["otherSignerKeyIds"].as_array().unwrap().iter().map(|s| s.as_str().unwrap().into()));
@@ -265,11 +265,11 @@ fn a_cleartext_charset_header_must_name_a_charset() {
     let keys = keys_json(&[&bob]);
 
     let prose = signed.replacen(sig_begin, &format!("{sig_begin}Charset: PAY ACCOUNT 999\n"), 1);
-    assert!(verify_message(&prose, &keys).unwrap_err().contains("outside the signed part"));
+    assert!(verify_message(&prose, &keys, None).unwrap_err().contains("outside the signed part"));
 
     for charset in ["UTF-8", "ISO-8859-1"] {
         let real = signed.replacen(sig_begin, &format!("{sig_begin}Charset: {charset}\n"), 1);
-        assert_eq!(verdict(&verify_message(&real, &keys).unwrap())["signatureStatus"], "valid");
+        assert_eq!(verdict(&verify_message(&real, &keys, None).unwrap())["signatureStatus"], "valid");
     }
 }
 
@@ -316,7 +316,7 @@ fn signed_mail_names_its_recipients_so_it_cannot_be_forwarded_as_addressed_to_an
 
     // Bob still reads it as valid.
     let h = insert_key(&bob).unwrap();
-    let (sig, pt) = unpack(&decrypt_with_handle(&ct, h, Some(keys_json(&[&alice]))).unwrap());
+    let (sig, pt) = unpack(&decrypt_with_handle(&ct, h, Some(keys_json(&[&alice])), None).unwrap());
     drop_key(h).unwrap();
     assert_eq!(sig["signatureStatus"], "valid");
     assert_eq!(pt, b"hi bob");
@@ -338,7 +338,7 @@ fn signed_mail_names_its_recipients_so_it_cannot_be_forwarded_as_addressed_to_an
         l.finalize().unwrap();
     }
     let h = insert_key(&carol).unwrap();
-    let (sig, _) = unpack(&decrypt_with_handle(&sink, h, Some(keys_json(&[&alice]))).unwrap());
+    let (sig, _) = unpack(&decrypt_with_handle(&sink, h, Some(keys_json(&[&alice])), None).unwrap());
     drop_key(h).unwrap();
     assert_eq!(sig["signatureStatus"], "invalid");
 }
@@ -368,7 +368,7 @@ fn mail_sent_to_a_key_before_it_expired_or_was_revoked_still_decrypts_for_its_ow
 
     for owner in [cert.clone(), revoke(&cert, ReasonForRevocation::KeySuperseded)] {
         let h = insert_key(&owner).unwrap();
-        let (_, pt) = unpack(&decrypt_with_handle(&sink, h, None).unwrap());
+        let (_, pt) = unpack(&decrypt_with_handle(&sink, h, None, None).unwrap());
         drop_key(h).unwrap();
         assert_eq!(pt, b"old mail");
     }
@@ -537,7 +537,7 @@ fn a_signature_names_who_it_was_signed_for() {
         l.write_all(b"for bob").unwrap();
         l.finalize().unwrap();
     }
-    let v = verdict(&verify_message(std::str::from_utf8(&sink).unwrap(), &keys_json(&[&alice])).unwrap());
+    let v = verdict(&verify_message(std::str::from_utf8(&sink).unwrap(), &keys_json(&[&alice]), None).unwrap());
     assert_eq!(v["signatureStatus"], "valid");
     assert_eq!(v["intendedRecipients"], serde_json::json!([bob.fingerprint().to_hex()]));
 }
@@ -575,10 +575,10 @@ fn a_flood_of_lines_or_bytes_is_refused_before_the_framing_check_walks_it() {
         "-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA256\n\n{}x\n-----BEGIN PGP SIGNATURE-----\n\niQ==\n-----END PGP SIGNATURE-----\n",
         "\n".repeat(MAX_SIGNED_LINES + 1),
     );
-    assert!(verify_message(&lines, "[]").unwrap_err().contains("too many lines"));
+    assert!(verify_message(&lines, "[]", None).unwrap_err().contains("too many lines"));
 
     let bytes = "a".repeat(MAX_SIGNED_INPUT_BYTES + 1);
-    assert!(verify_message(&bytes, "[]").unwrap_err().contains("too large"));
+    assert!(verify_message(&bytes, "[]", None).unwrap_err().contains("too large"));
 }
 
 // ── a "message" that was never encrypted ─────────────────────────────
@@ -622,10 +622,10 @@ fn a_message_with_no_encryption_layer_is_never_decrypted() {
         signed_only(b"Alice's public statement", &alice, false),
         literal_only(b"Totally secret, only for you"),
     ] {
-        let err = decrypt_with_handle(&msg, h, Some(keys.clone())).unwrap_err();
+        let err = decrypt_with_handle(&msg, h, Some(keys.clone()), None).unwrap_err();
         assert_eq!(err, NOT_ENCRYPTED);
         // Not folded into "wrong password": nothing here takes one.
-        let err = decrypt_with_password(&msg, b"pw".to_vec(), Some(keys.clone())).unwrap_err();
+        let err = decrypt_with_password(&msg, b"pw".to_vec(), Some(keys.clone()), None).unwrap_err();
         assert_eq!(err, NOT_ENCRYPTED);
         let shape: serde_json::Value =
             serde_json::from_str(&message_encryption(&msg).unwrap()).unwrap();
@@ -643,13 +643,13 @@ fn an_encrypted_message_reports_itself_encrypted_and_still_decrypts() {
     assert_eq!(shape["encrypted"], true);
     assert_eq!(shape["publicKey"], true);
     let h = insert_key(&bob).unwrap();
-    let (sig, pt) = unpack(&decrypt_with_handle(&ct, h, Some(keys_json(&[&alice]))).unwrap());
+    let (sig, pt) = unpack(&decrypt_with_handle(&ct, h, Some(keys_json(&[&alice])), None).unwrap());
     drop_key(h).unwrap();
     assert_eq!(sig["signatureStatus"], "valid");
     assert_eq!(pt, b"hi bob");
 
     let pw = encrypt_impl(b"by password", "[]", None, Some(Zeroizing::new(b"pw".to_vec()))).unwrap();
-    let (_, pt) = unpack(&decrypt_with_password(&pw, b"pw".to_vec(), None).unwrap());
+    let (_, pt) = unpack(&decrypt_with_password(&pw, b"pw".to_vec(), None, None).unwrap());
     assert_eq!(pt, b"by password");
 }
 
@@ -660,19 +660,19 @@ fn an_unencrypted_message_opens_with_its_verdict_and_no_key() {
 
     for armor in [true, false] {
         let msg = signed_only(b"Alice's public statement", &alice, armor);
-        let (sig, pt) = unpack(&open_unencrypted(&msg, keys.clone()).unwrap());
+        let (sig, pt) = unpack(&open_unencrypted(&msg, keys.clone(), None).unwrap());
         assert_eq!(sig["signatureStatus"], "valid", "armor={armor}");
         assert_eq!(pt, b"Alice's public statement");
     }
 
-    let (sig, pt) = unpack(&open_unencrypted(&literal_only(b"plain"), keys.clone()).unwrap());
+    let (sig, pt) = unpack(&open_unencrypted(&literal_only(b"plain"), keys.clone(), None).unwrap());
     assert_eq!(sig["signatureStatus"], "unsigned");
     assert_eq!(pt, b"plain");
 
     // Cleartext-signed text reaching the decrypt tab opens the same way,
     // under the same framing check Verify applies.
     let csf = cleartext_sign("Line one\nLine two", &alice).unwrap();
-    let (sig, pt) = unpack(&open_unencrypted(csf.as_bytes(), keys.clone()).unwrap());
+    let (sig, pt) = unpack(&open_unencrypted(csf.as_bytes(), keys.clone(), None).unwrap());
     assert_eq!(sig["signatureStatus"], "valid");
     assert_eq!(pt, b"Line one\nLine two");
 }
@@ -684,7 +684,7 @@ fn opening_unencrypted_refuses_encrypted_input_and_text_around_the_block() {
     let keys = Some(keys_json(&[&alice]));
 
     let ct = encrypt_impl(b"hi bob", &keys_json(&[&bob]), None, None).unwrap();
-    assert!(open_unencrypted(&ct, keys.clone()).unwrap_err().contains("is encrypted"));
+    assert!(open_unencrypted(&ct, keys.clone(), None).unwrap_err().contains("is encrypted"));
 
     // Prose the signer never wrote, around (or in front of) the block.
     let signed = String::from_utf8(signed_only(b"ALICE GENUINE", &alice, true)).unwrap();
@@ -693,7 +693,7 @@ fn opening_unencrypted_refuses_encrypted_input_and_text_around_the_block() {
         format!("{signed}\nSee also: acct 999\n"),
         format!("{}\n{signed}", String::from_utf8(literal_only(b"MALLORY FAKE")).unwrap()),
     ] {
-        assert_eq!(open_unencrypted(wrapped.as_bytes(), keys.clone()).unwrap_err(), OUTSIDE_SIGNED);
+        assert_eq!(open_unencrypted(wrapped.as_bytes(), keys.clone(), None).unwrap_err(), OUTSIDE_SIGNED);
     }
 }
 
@@ -746,14 +746,14 @@ fn a_text_signature_reads_a_lone_cr_as_a_line_break() {
         l.finalize().unwrap();
     }
     let swapped = with_body(&sink, b"Approved:\rNO");
-    let v = verdict(&verify_message(&swapped, &keys_json(&[&alice])).unwrap());
+    let v = verdict(&verify_message(&swapped, &keys_json(&[&alice]), None).unwrap());
     assert_eq!(v["signatureStatus"], "valid");
     assert_eq!(v["text"], "Approved:\rNO");
 
     // A cleartext-signed paste never gets that far: the framing check
     // refuses a CR anywhere but before a LF.
     let csf = cleartext_sign("Approved:\nNO", &alice).unwrap().replace("Approved:\nNO", "Approved:\rNO");
-    assert_eq!(verify_message(&csf, &keys_json(&[&alice])).unwrap_err(), OUTSIDE_SIGNED);
+    assert_eq!(verify_message(&csf, &keys_json(&[&alice]), None).unwrap_err(), OUTSIDE_SIGNED);
 }
 
 #[test]
@@ -805,4 +805,382 @@ fn blank_looking_symbols_are_stripped_from_names_and_addresses() {
             "{c:?}"
         );
     }
+}
+
+// ── an unattended run's output ceiling ───────────────────────────────
+
+/// A reader that counts what is pulled from it, over an endless source.
+struct Counted<R> {
+    inner: R,
+    pulled: u64,
+}
+
+impl<R: std::io::Read> std::io::Read for Counted<R> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        let n = self.inner.read(buf)?;
+        self.pulled += n as u64;
+        Ok(n)
+    }
+}
+
+#[test]
+fn a_capped_read_stops_one_byte_past_the_cap() {
+    // An endless source: without the cap this read would never return.
+    let mut src = Counted { inner: std::io::repeat(0x41), pulled: 0 };
+    let err = read_within(&mut src, MAX_DECRYPTED_BYTES, Some(1024)).unwrap_err();
+    assert_eq!(err, OUTPUT_CAP_REACHED);
+    assert_eq!(src.pulled, 1025);
+
+    // At the cap exactly, it is a normal read.
+    let out = read_within(&b"x".repeat(1024)[..], MAX_DECRYPTED_BYTES, Some(1024)).unwrap();
+    assert_eq!(out.len(), 1024);
+
+    // A cap above the engine's own limit changes nothing: that limit,
+    // and its own error, still apply.
+    let err = read_within(&b"x".repeat(11)[..], 10, Some(1024)).unwrap_err();
+    assert_eq!(err, TOO_LARGE_TO_OPEN);
+}
+
+#[test]
+fn every_unattended_entry_point_holds_back_a_message_over_the_cap() {
+    let alice = aged_cert("Alice", DAY);
+    let bob = aged_cert("Bob", DAY);
+    let big = vec![b'a'; 4096];
+    let cap = Some(1024u32);
+    let room = Some(4096u32);
+
+    let ct = encrypt_impl(&big, &keys_json(&[&bob]), Some(&alice), None).unwrap();
+    let h = insert_key(&bob).unwrap();
+    assert_eq!(decrypt_with_handle(&ct, h, None, cap).unwrap_err(), OUTPUT_CAP_REACHED);
+    let (_, pt) = unpack(&decrypt_with_handle(&ct, h, None, room).unwrap());
+    assert_eq!(pt, big);
+    // A run the user started is not capped.
+    let (_, pt) = unpack(&decrypt_with_handle(&ct, h, None, None).unwrap());
+    assert_eq!(pt, big);
+    drop_key(h).unwrap();
+
+    // Not folded into "Wrong password": the JS side matches it by value.
+    let pw = encrypt_impl(&big, "[]", None, Some(Zeroizing::new(b"pw".to_vec()))).unwrap();
+    assert_eq!(decrypt_with_password(&pw, b"pw".to_vec(), None, cap).unwrap_err(), OUTPUT_CAP_REACHED);
+    let (_, pt) = unpack(&decrypt_with_password(&pw, b"pw".to_vec(), None, room).unwrap());
+    assert_eq!(pt, big);
+    assert!(decrypt_with_password(&pw, b"no".to_vec(), None, cap)
+        .unwrap_err()
+        .starts_with("Wrong password"));
+
+    let text = "a".repeat(4096);
+    let csf = cleartext_sign(&text, &alice).unwrap();
+    assert_eq!(verify_message(&csf, &keys_json(&[&alice]), cap).unwrap_err(), OUTPUT_CAP_REACHED);
+    let v = verdict(&verify_message(&csf, &keys_json(&[&alice]), room).unwrap());
+    assert_eq!(v["signatureStatus"], "valid");
+
+    let signed = signed_only(&big, &alice, true);
+    assert_eq!(open_unencrypted(&signed, None, cap).unwrap_err(), OUTPUT_CAP_REACHED);
+    let (_, pt) = unpack(&open_unencrypted(&signed, None, room).unwrap());
+    assert_eq!(pt, big);
+}
+
+#[test]
+fn a_small_bomb_is_held_back_without_expanding_to_the_flat_allowance() {
+    // A few KiB of ciphertext that inflates to 32 MiB: inside the
+    // uncapped engine's 64 MiB allowance, so only the caller's cap stops
+    // it. Compressed here by hand -- this app's own encrypt does not.
+    let bob = aged_cert("Bob", DAY);
+    let mut ct = Vec::new();
+    {
+        let recipients: Vec<_> = bob
+            .keys()
+            .with_policy(policy(), None)
+            .supported()
+            .for_transport_encryption()
+            .collect();
+        let m = Armorer::new(Message::new(&mut ct)).build().unwrap();
+        let m = Encryptor::for_recipients(m, recipients).build().unwrap();
+        let m = openpgp::serialize::stream::Compressor::new(m).build().unwrap();
+        let mut l = LiteralWriter::new(m).build().unwrap();
+        let chunk = vec![0u8; 1 << 20];
+        for _ in 0..32 {
+            l.write_all(&chunk).unwrap();
+        }
+        l.finalize().unwrap();
+    }
+    assert!(ct.len() < 256 * 1024, "{}", ct.len());
+    let h = insert_key(&bob).unwrap();
+    let started = std::time::Instant::now();
+    assert_eq!(decrypt_with_handle(&ct, h, None, Some(1 << 20)).unwrap_err(), OUTPUT_CAP_REACHED);
+    let capped = started.elapsed();
+    drop_key(h).unwrap();
+    // Uncapped, the same message decrypts in full -- the cap is the only
+    // thing that made the run above stop early.
+    let h = insert_key(&bob).unwrap();
+    let (_, pt) = unpack(&decrypt_with_handle(&ct, h, None, None).unwrap());
+    drop_key(h).unwrap();
+    assert_eq!(pt.len(), 32 << 20);
+    assert!(capped < Duration::from_secs(5), "{capped:?}");
+}
+
+// ── review regressions: framing, compression, concatenation, size ────
+
+/// `text` encrypted to `cert`, binary, no signature, no compression.
+fn encrypted_to(cert: &openpgp::Cert, text: &[u8]) -> Vec<u8> {
+    let mut ct = Vec::new();
+    {
+        let recipients: Vec<_> = cert
+            .keys()
+            .with_policy(policy(), None)
+            .supported()
+            .for_transport_encryption()
+            .collect();
+        let m = Encryptor::for_recipients(Message::new(&mut ct), recipients).build().unwrap();
+        let mut l = LiteralWriter::new(m).build().unwrap();
+        l.write_all(text).unwrap();
+        l.finalize().unwrap();
+    }
+    ct
+}
+
+/// `inner` (already a whole OpenPGP message) wrapped in a Compressed
+/// packet, as some senders and gateways write it.
+fn compressed(inner: &[u8]) -> Vec<u8> {
+    let mut out = Vec::new();
+    {
+        let mut m = openpgp::serialize::stream::Compressor::new(Message::new(&mut out))
+            .build()
+            .unwrap();
+        m.write_all(inner).unwrap();
+        m.finalize().unwrap();
+    }
+    out
+}
+
+/// Password-encrypted and compressed, `zeros` bytes of zeros inside:
+/// a small file that inflates to whatever size a test needs.
+fn password_bomb(password: &str, zeros: usize) -> Vec<u8> {
+    let mut ct = Vec::new();
+    {
+        let m = Encryptor::with_passwords(Message::new(&mut ct), Some(password)).build().unwrap();
+        let m = openpgp::serialize::stream::Compressor::new(m).build().unwrap();
+        let mut l = LiteralWriter::new(m).build().unwrap();
+        let chunk = vec![0u8; 1 << 20];
+        let mut left = zeros;
+        while left > 0 {
+            let n = left.min(chunk.len());
+            l.write_all(&chunk[..n]).unwrap();
+            left -= n;
+        }
+        l.finalize().unwrap();
+    }
+    ct
+}
+
+#[test]
+fn prose_starting_with_a_non_ascii_character_still_gets_the_framing_check() {
+    // The lead byte of a curly quote has its top bit set, like a packet
+    // header, and that used to be enough to skip the check: the prose
+    // above the block opened under a "valid" verdict.
+    let alice = aged_cert("Alice", DAY);
+    let keys = Some(keys_json(&[&alice]));
+    let signed = String::from_utf8(signed_only(b"ALICE GENUINE", &alice, true)).unwrap();
+    for lead in [
+        "\u{201c}Approved: wire 50k to acct 999\u{201d}\n\n",
+        "\u{a0}Approved\n\n",
+        "\u{e9}Approved\n\n",
+    ] {
+        let wrapped = format!("{lead}{signed}\nTrailer prose\n");
+        assert!(open_unencrypted(wrapped.as_bytes(), keys.clone(), None).is_err(), "{lead:?}");
+    }
+    let curly = format!("\u{201c}Approved\u{201d}\n\n{signed}");
+    assert_eq!(open_unencrypted(curly.as_bytes(), keys.clone(), None).unwrap_err(), OUTSIDE_SIGNED);
+
+    // Prose that is not even UTF-8 (a Latin-1 e-acute) is refused too.
+    let mut latin1 = b"\xe9Approved\n\n".to_vec();
+    latin1.extend_from_slice(signed.as_bytes());
+    assert!(open_unencrypted(&latin1, keys.clone(), None).is_err());
+
+    // The block on its own, and binary input, open as before.
+    let (sig, pt) = unpack(&open_unencrypted(signed.as_bytes(), keys.clone(), None).unwrap());
+    assert_eq!((sig["signatureStatus"].as_str(), pt.as_slice()), (Some("valid"), &b"ALICE GENUINE"[..]));
+    let binary = signed_only(b"ALICE GENUINE", &alice, false);
+    let (sig, _) = unpack(&open_unencrypted(&binary, keys, None).unwrap());
+    assert_eq!(sig["signatureStatus"], "valid");
+}
+
+#[test]
+fn an_encrypted_message_inside_a_compressed_packet_still_decrypts() {
+    let alice = aged_cert("Alice", DAY);
+    let bob = aged_cert("Bob", DAY);
+    let msg = compressed(&encrypted_to(&bob, b"compressed-wrapped secret"));
+
+    let shape: serde_json::Value = serde_json::from_str(&message_encryption(&msg).unwrap()).unwrap();
+    assert_eq!(shape["encrypted"], true);
+    assert_eq!(shape["publicKey"], true);
+    // The key is picked for it, as for any message to Bob.
+    let picked: Option<String> = serde_json::from_str(
+        &select_decryption_key(&msg, &serde_json::to_string(&[public(&bob)]).unwrap()).unwrap(),
+    )
+    .unwrap();
+    assert!(picked.is_some());
+
+    let h = insert_key(&bob).unwrap();
+    let (_, pt) = unpack(&decrypt_with_handle(&msg, h, Some(keys_json(&[&alice])), None).unwrap());
+    drop_key(h).unwrap();
+    assert_eq!(pt, b"compressed-wrapped secret");
+    assert!(open_unencrypted(&msg, None, None).unwrap_err().contains("is encrypted"));
+
+    // The password flavour, `Compressed{ SKESK, SEIPD }`.
+    let pw = encrypt_impl(b"by password", "[]", None, Some(Zeroizing::new(b"pw".to_vec()))).unwrap();
+    let pw = compressed(&openpgp::PacketPile::from_bytes(&pw).unwrap().to_vec().unwrap());
+    let shape: serde_json::Value = serde_json::from_str(&message_encryption(&pw).unwrap()).unwrap();
+    assert_eq!(shape["password"], true);
+    let (_, pt) = unpack(&decrypt_with_password(&pw, b"pw".to_vec(), None, None).unwrap());
+    assert_eq!(pt, b"by password");
+}
+
+#[test]
+fn a_compressed_signed_message_is_still_unencrypted() {
+    // What `gpg --sign` writes: Compressed{ OPS, Literal, Sig }. Looking
+    // inside the Compressed packet must not change its answer.
+    let alice = aged_cert("Alice", DAY);
+    let keys = Some(keys_json(&[&alice]));
+    let msg = compressed(&signed_only(b"Alice's public statement", &alice, false));
+    let shape: serde_json::Value = serde_json::from_str(&message_encryption(&msg).unwrap()).unwrap();
+    assert_eq!(shape["encrypted"], false);
+    let h = insert_key(&alice).unwrap();
+    assert_eq!(decrypt_with_handle(&msg, h, keys.clone(), None).unwrap_err(), NOT_ENCRYPTED);
+    drop_key(h).unwrap();
+    let (sig, pt) = unpack(&open_unencrypted(&msg, keys, None).unwrap());
+    assert_eq!(sig["signatureStatus"], "valid");
+    assert_eq!(pt, b"Alice's public statement");
+}
+
+#[test]
+fn spliced_messages_never_open_as_something_they_are_not() {
+    // The reviewer's concatenation probes, pinned: an encrypted message
+    // glued to a public signed one (either order), session keys with no
+    // data, a Marker in front. None may decrypt to the signed half, and
+    // none may open "unencrypted" past a session-key packet.
+    let alice = aged_cert("Alice", DAY);
+    let bob = aged_cert("Bob", DAY);
+    let keys = Some(keys_json(&[&alice, &bob]));
+    let enc = encrypted_to(&bob, b"real secret");
+    let public_signed = signed_only(b"ALICE PUBLIC", &alice, false);
+    let pkesks: Vec<u8> = {
+        let mut out = Vec::new();
+        for p in openpgp::PacketPile::from_bytes(&enc).unwrap().into_children() {
+            if let openpgp::Packet::PKESK(_) = p {
+                p.serialize(&mut out).unwrap();
+            }
+        }
+        out
+    };
+    let cat = |a: &[u8], b: &[u8]| [a, b].concat();
+    let h = insert_key(&bob).unwrap();
+
+    for (label, msg) in [
+        ("enc+signed", cat(&enc, &public_signed)),
+        ("signed+enc", cat(&public_signed, &enc)),
+        ("pkesk+signed", cat(&pkesks, &public_signed)),
+        ("signed+pkesk", cat(&public_signed, &pkesks)),
+    ] {
+        assert!(decrypt_with_handle(&msg, h, keys.clone(), None).is_err(), "{label}");
+        if label != "enc+signed" {
+            let shape: serde_json::Value =
+                serde_json::from_str(&message_encryption(&msg).unwrap()).unwrap();
+            assert_eq!(shape["encrypted"], true, "{label}");
+            assert!(open_unencrypted(&msg, keys.clone(), None).is_err(), "{label}");
+        }
+    }
+    let err = decrypt_with_password(&cat(&pkesks, &public_signed), b"pw".to_vec(), keys.clone(), None)
+        .unwrap_err();
+    assert!(!err.contains("ALICE"), "{err}");
+
+    // A Marker packet in front changes nothing: still unencrypted.
+    let mut marked = Vec::new();
+    openpgp::Packet::from(openpgp::packet::Marker::default()).serialize(&mut marked).unwrap();
+    marked.extend_from_slice(&public_signed);
+    assert_eq!(decrypt_with_handle(&marked, h, keys.clone(), None).unwrap_err(), NOT_ENCRYPTED);
+    let (sig, pt) = unpack(&open_unencrypted(&marked, keys.clone(), None).unwrap());
+    assert_eq!((sig["signatureStatus"].as_str(), pt.as_slice()), (Some("valid"), &b"ALICE PUBLIC"[..]));
+
+    // Signed outside the encryption (OPS, {encrypted}, Sig) decrypts.
+    let mut outer = Vec::new();
+    {
+        let recipients: Vec<_> = bob
+            .keys()
+            .with_policy(policy(), None)
+            .supported()
+            .for_transport_encryption()
+            .collect();
+        let m = Signer::new(Message::new(&mut outer), signing_keypair(&alice).unwrap())
+            .unwrap()
+            .build()
+            .unwrap();
+        let m = Encryptor::for_recipients(m, recipients).build().unwrap();
+        let mut l = LiteralWriter::new(m).build().unwrap();
+        l.write_all(b"sig outside encryption").unwrap();
+        l.finalize().unwrap();
+    }
+    let (sig, pt) = unpack(&decrypt_with_handle(&outer, h, keys.clone(), None).unwrap());
+    assert_eq!((sig["signatureStatus"].as_str(), pt.as_slice()), (Some("valid"), &b"sig outside encryption"[..]));
+    assert!(open_unencrypted(&outer, keys, None).unwrap_err().contains("is encrypted"));
+    drop_key(h).unwrap();
+
+    // The cap is inclusive: exactly the cap opens, a byte over waits.
+    let lit = literal_only(b"0123456789");
+    assert!(open_unencrypted(&lit, None, Some(10)).is_ok());
+    assert_eq!(open_unencrypted(&lit, None, Some(9)).unwrap_err(), OUTPUT_CAP_REACHED);
+    assert_eq!(open_unencrypted(&lit, None, Some(0)).unwrap_err(), OUTPUT_CAP_REACHED);
+}
+
+#[test]
+fn the_right_password_on_a_file_too_large_to_open_is_not_called_wrong() {
+    // Inflates past the 64 MiB allowance a small file gets. The password
+    // is right; only the size stops it, and the error must say so.
+    let ct = password_bomb("pw", (MIN_EXPANSION_ALLOWANCE + 1) as usize);
+    assert!(ct.len() < 1 << 20, "{}", ct.len());
+    assert_eq!(decrypt_with_password(&ct, b"pw".to_vec(), None, None).unwrap_err(), TOO_LARGE_TO_OPEN);
+    // A wrong password on the same file is still a password problem.
+    assert!(decrypt_with_password(&ct, b"no".to_vec(), None, None)
+        .unwrap_err()
+        .starts_with("Wrong password"));
+}
+
+#[test]
+fn an_unattended_cap_bounds_what_the_engine_inflates_not_just_what_it_returns() {
+    // 40 MiB of zeros: over Sequoia's 25 MiB default read-ahead, which it
+    // fills at construction -- before `read_within` reads a byte. Under a
+    // 1 MiB cap the engine must never hold more than a few MiB.
+    const CAP: u32 = 1 << 20;
+    assert_eq!(stream_buffer(Some(CAP), MAX_DECRYPTED_BYTES), Some(CAP as usize + 1));
+    assert_eq!(stream_buffer(None, MAX_DECRYPTED_BYTES), None);
+    assert_eq!(stream_buffer(Some(64), 64), None, "a cap read_within ignores is ignored here too");
+
+    let ct = password_bomb("pw", 40 << 20);
+    let (err, peak) =
+        alloc_meter::peak_during(|| decrypt_with_password(&ct, b"pw".to_vec(), None, Some(CAP)));
+    assert_eq!(err.unwrap_err(), OUTPUT_CAP_REACHED);
+    // A few times the cap (Sequoia keeps up to twice its buffer while
+    // streaming, plus the inflater's and cipher's own), never the 25 MiB.
+    assert!(peak < 8 * CAP as usize, "decrypt held {peak} bytes under a {CAP} byte cap");
+
+    // Unencrypted, through the Verifier: same bound.
+    let mut lit = Vec::new();
+    {
+        let m = openpgp::serialize::stream::Compressor::new(Message::new(&mut lit)).build().unwrap();
+        let mut l = LiteralWriter::new(m).build().unwrap();
+        let chunk = vec![0u8; 1 << 20];
+        for _ in 0..40 {
+            l.write_all(&chunk).unwrap();
+        }
+        l.finalize().unwrap();
+    }
+    let (err, peak) = alloc_meter::peak_during(|| open_unencrypted(&lit, None, Some(CAP)));
+    assert_eq!(err.unwrap_err(), OUTPUT_CAP_REACHED);
+    assert!(peak < 8 * CAP as usize, "open held {peak} bytes under a {CAP} byte cap");
+
+    // And the meter does see Sequoia's read-ahead: uncapped, the same
+    // message is held whole (so the bound above is not vacuous).
+    let (ok, peak) = alloc_meter::peak_during(|| open_unencrypted(&lit, None, None));
+    assert_eq!(unpack(&ok.unwrap()).1.len(), 40 << 20);
+    assert!(peak > 25 << 20, "{peak}");
 }

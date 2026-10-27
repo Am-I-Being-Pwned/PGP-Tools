@@ -11,6 +11,7 @@ import type {
 import { recoverArmorIfNeeded } from "../lib/armor-recovery";
 import { classifyAction } from "../lib/classify-action";
 import { MENU_OPEN_IN_PGP, SESSION_PENDING_OP } from "../lib/constants";
+import { menuMayActOn } from "../lib/context-menu";
 import { fetchGithubKeys } from "../lib/github/fetch-keys";
 import { isGithubUsername } from "../lib/github/username";
 import { t } from "../lib/i18n";
@@ -148,6 +149,11 @@ export default defineBackground(() => {
 
     // Single top-level item. Action is decided at click time so Chrome
     // never has more than one item to group into a submenu.
+    // No `documentUrlPatterns`: Chrome matches them against the FRAME's
+    // URL, which hid the item in the about:blank / srcdoc frames webmail
+    // puts a message in. Web and file pages only -- never the
+    // extension's own, where a selection can be decrypted plaintext --
+    // is decided per click instead (`menuMayActOn`, lib/context-menu.ts).
     chrome.contextMenus.create({
       id: MENU_OPEN_IN_PGP,
       title: t("app_menu_open_in_pgp_tools"),
@@ -158,6 +164,7 @@ export default defineBackground(() => {
   chrome.contextMenus.onClicked.addListener((info, tab) => {
     if (!tab?.id || !info.selectionText) return;
     if (info.menuItemId !== MENU_OPEN_IN_PGP) return;
+    if (!menuMayActOn(info, chrome.runtime.getURL(""))) return;
 
     // Chrome's info.selectionText collapses all whitespace into single
     // spaces, which destroys armored PGP blocks. Reconstruct the line

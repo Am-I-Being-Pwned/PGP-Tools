@@ -13,6 +13,7 @@ import type {
 } from "../../lib/workspace-draft";
 import { looksLikeAgeMessage } from "../../lib/armor-blocks";
 import { recoverArmorIfNeeded } from "../../lib/armor-recovery";
+import { firstMessageHeader } from "../../lib/classify-action";
 import { looksLikePrivateKey } from "../../lib/drop-routing";
 import { resolveSelfKey } from "../../lib/encrypt-recipients";
 import { oversizedFilesMessage, splitOversizedFiles } from "../../lib/limits";
@@ -39,12 +40,13 @@ export interface WorkspaceIntake {
 
 /** What the double-Escape / "Clear text" undo affordances restore. */
 /** The mode a box value's armor calls for, if any. Both engines'
- *  ciphertext means the same thing to the user: something to decrypt. */
+ *  ciphertext means the same thing to the user: something to decrypt.
+ *  The EARLIEST OpenPGP header decides, as in `classifyAction`: a signed
+ *  message quoting an encrypted one is still something to verify. */
 function armorMode(text: string): "decrypt" | "verify" | null {
-  if (text.includes("-----BEGIN PGP MESSAGE-----") || looksLikeAgeMessage(text))
-    return "decrypt";
-  if (text.includes("-----BEGIN PGP SIGNED MESSAGE-----")) return "verify";
-  return null;
+  const message = firstMessageHeader(text);
+  if (message) return message.action;
+  return looksLikeAgeMessage(text) ? "decrypt" : null;
 }
 
 interface ClearUndoSnapshot {
@@ -404,15 +406,15 @@ export function useWorkspaceState(opts: {
     // bytes, which is what copy and download read.
     const shown = showLoneCarriageReturns(text);
     if (el && el.textContent !== shown) el.textContent = shown;
-    setOutputInfo((prev) =>
-      prev.len === text.length
-        ? prev
-        : {
-            len: text.length,
-            publicKey: text.includes("-----BEGIN PGP PUBLIC KEY BLOCK-----"),
-            version: prev.version + 1,
-          },
-    );
+    // A new version on EVERY write, not only when the length moves: a
+    // second decrypted message of the same length must not keep the
+    // first one's key banner (its name, its "already have") while
+    // Import hands over the new text.
+    setOutputInfo((prev) => ({
+      len: text.length,
+      publicKey: text.includes("-----BEGIN PGP PUBLIC KEY BLOCK-----"),
+      version: prev.version + 1,
+    }));
   }, []);
 
   // ── the translation, held exactly like the output and for the same
@@ -650,13 +652,10 @@ export function useWorkspaceState(opts: {
       // private-key flavour (PGP + any raw PEM), not just PGP, so a pasted
       // OpenSSH/EC/etc. key can't leak into the draft either.
       setPrivateKeyDetected(true);
-    } else if (
-      text.includes("-----BEGIN PGP MESSAGE-----") ||
-      looksLikeAgeMessage(text)
-    ) {
-      if (nudge !== armorMode(prev)) setMode("decrypt");
-    } else if (text.includes("-----BEGIN PGP SIGNED MESSAGE-----")) {
-      if (nudge !== armorMode(prev)) setMode("verify");
+    } else if (nudge) {
+      // A message is a message whatever it quotes: a signed text holding
+      // a key block nudges to Verify, never to the import banner.
+      if (nudge !== armorMode(prev)) setMode(nudge);
     } else if (text.includes("-----BEGIN PGP PUBLIC KEY BLOCK-----")) {
       setPublicKeyDetected(true);
     }

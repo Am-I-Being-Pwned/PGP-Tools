@@ -21,6 +21,41 @@ interface Reader {
 const LOCKED: ReaderMessage = { type: "locked" };
 
 /**
+ * Whether `sender` is this extension's own reader page, opened for
+ * `nonce`. The nonce is the secret that picks the message; this is the
+ * belt to its braces -- a port from anywhere else (another extension
+ * that learned a nonce, any other page of ours) gets no answer, even
+ * with the right name. `extensionId` / `readerUrl` are
+ * `chrome.runtime.id` and `chrome.runtime.getURL("reader.html")`.
+ */
+export function isOwnReaderSender(
+  sender: chrome.runtime.MessageSender | undefined,
+  nonce: string,
+  extensionId: string,
+  readerUrl: string,
+): boolean {
+  if (sender?.id !== extensionId || !sender.url) return false;
+  let url: URL;
+  let expected: URL;
+  try {
+    url = new URL(sender.url);
+    expected = new URL(readerUrl);
+  } catch {
+    return false;
+  }
+  // Protocol and host, not `origin`: for a chrome-extension: URL some
+  // URL implementations give an opaque "null" origin, equal for every
+  // extension.
+  return (
+    url.protocol === expected.protocol &&
+    url.host === expected.host &&
+    url.pathname === expected.pathname &&
+    url.search === "" &&
+    url.hash === `#${nonce}`
+  );
+}
+
+/**
  * The panel's side of Reply's reader tabs (see lib/reader-protocol).
  *
  * The panel owns every message a reader shows. It is sealed the moment
@@ -83,6 +118,13 @@ export function useReaderTabs(unlocked: boolean) {
       // leave it alone, so the panel that does own it can answer.
       const reader = isReaderNonce(nonce) ? readers.current.get(nonce) : null;
       if (!reader) return;
+      const fromReader = isOwnReaderSender(
+        port.sender,
+        nonce,
+        chrome.runtime.id,
+        chrome.runtime.getURL("reader.html"),
+      );
+      if (!fromReader) return;
       reader.ports.add(port);
       port.onDisconnect.addListener(() => {
         reader.ports.delete(port);

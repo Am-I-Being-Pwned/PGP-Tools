@@ -22,7 +22,12 @@ describe("reader protocol", () => {
   });
 
   it("validates messages from the panel", () => {
-    const signer = { keyId: "ABCD", userIds: ["Alice <a@x>"] };
+    const signer = {
+      contact: { keyId: "ABCD", userIds: ["Alice <a@x>"] },
+      tone: "success",
+      label: "Signature verified",
+      unverified: false,
+    };
     expect(isReaderMessage({ type: "locked" })).toBe(true);
     expect(isReaderMessage({ type: "show", signer, text: "hi" })).toBe(true);
     expect(isReaderMessage({ type: "show", signer })).toBe(false);
@@ -30,6 +35,35 @@ describe("reader protocol", () => {
     expect(isReaderMessage({ type: "show", signer: {}, text: "hi" })).toBe(
       false,
     );
+    // The card state, not a bare contact.
+    expect(
+      isReaderMessage({ type: "show", signer: signer.contact, text: "hi" }),
+    ).toBe(false);
+    expect(
+      isReaderMessage({
+        type: "show",
+        signer: { ...signer, tone: "danger" },
+        text: "hi",
+      }),
+    ).toBe(false);
+    const clash = {
+      kind: "address",
+      holders: [{ keyId: "EF01", userIds: ["Alice <a@x>"] }],
+    };
+    expect(
+      isReaderMessage({
+        type: "show",
+        signer: { ...signer, note: "n", clash },
+        text: "hi",
+      }),
+    ).toBe(true);
+    expect(
+      isReaderMessage({
+        type: "show",
+        signer: { ...signer, clash: { kind: "address", holders: [{}] } },
+        text: "hi",
+      }),
+    ).toBe(false);
     expect(isReaderMessage({ type: "exfiltrate" })).toBe(false);
     expect(isReaderMessage(null)).toBe(false);
   });

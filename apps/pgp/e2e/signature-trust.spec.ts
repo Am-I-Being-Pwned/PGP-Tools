@@ -381,3 +381,76 @@ test("a lone CR in an unencrypted message gets both warnings", async ({
     panel.getByText(/carriage return without a line feed/),
   ).toBeVisible();
 });
+
+// Text about to be SIGNED that holds characters the box does not draw
+// (a page's selection, a paste) is held back until the user says so:
+// a right-to-left override makes a signed "1000" read as "0001".
+test.describe("hidden characters before a signature", () => {
+  const RLO = String.fromCodePoint(0x202e);
+  const PDF = String.fromCodePoint(0x202c);
+  const TRICK = `Pay ${RLO}0001${PDF} EUR`;
+  const box = (panel: Page) => panel.locator("#pgp-input");
+  const strip = (panel: Page) => panel.getByTestId("hidden-chars-strip");
+  const signButton = (panel: Page) =>
+    panel.getByRole("button", { name: /^sign$/i });
+
+  test("Sign waits for 'Sign anyway', and then signs the text as it is", async ({
+    panel,
+  }) => {
+    await onboardWithPassword(panel, PASSWORD);
+    await setWorkspaceMode(panel, "Sign");
+    await box(panel).fill(TRICK);
+    await signButton(panel).click();
+
+    await expect(strip(panel)).toBeVisible();
+    await expect(strip(panel)).toContainText("U+202E");
+    await expect(panel.getByRole("button", { name: "Download" })).toHaveCount(
+      0,
+    );
+
+    await strip(panel).getByRole("button", { name: "Sign anyway" }).click();
+    await expect(panel.getByRole("button", { name: "Download" })).toBeVisible();
+    await expect(strip(panel)).toHaveCount(0);
+  });
+
+  test("'Remove them' cleans the box, and the clean text signs without asking", async ({
+    panel,
+  }) => {
+    await onboardWithPassword(panel, PASSWORD);
+    await setWorkspaceMode(panel, "Sign");
+    await box(panel).fill(`${TRICK}\rthanks`);
+    await signButton(panel).click();
+    await strip(panel).getByRole("button", { name: "Remove them" }).click();
+    await expect(box(panel)).toHaveValue("Pay 0001 EUR\nthanks");
+    await expect(strip(panel)).toHaveCount(0);
+
+    await signButton(panel).click();
+    await expect(panel.getByRole("button", { name: "Download" })).toBeVisible();
+  });
+
+  test("Encrypt with Sign on asks too; ordinary text never does", async ({
+    panel,
+  }) => {
+    await onboardWithPassword(panel, PASSWORD);
+    await setWorkspaceMode(panel, "Encrypt");
+    await panel.getByRole("combobox", { name: "Recipients" }).click();
+    await panel.getByRole("option").first().click();
+    await panel.keyboard.press("Escape");
+    const sign = panel.getByRole("switch", { name: "Sign", exact: true });
+    if ((await sign.getAttribute("aria-checked")) !== "true")
+      await sign.click();
+
+    await box(panel).fill(TRICK);
+    await panel.getByRole("button", { name: /^encrypt$/i }).click();
+    await expect(strip(panel)).toBeVisible();
+
+    // Emoji (VS16, ZWJ) and CRLF are text, not tricks.
+    const heart = String.fromCodePoint(0x2764, 0xfe0f);
+    const coder = String.fromCodePoint(0x1f469, 0x200d, 0x1f4bb);
+    await box(panel).fill(`Thanks ${heart} ${coder}\r\nSee you`);
+    await expect(strip(panel)).toHaveCount(0);
+    await panel.getByRole("button", { name: /^encrypt$/i }).click();
+    await expect(panel.getByRole("button", { name: "Download" })).toBeVisible();
+    await expect(strip(panel)).toHaveCount(0);
+  });
+});
