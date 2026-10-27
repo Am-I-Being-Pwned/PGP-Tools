@@ -258,7 +258,8 @@ test("an unknown signer can be looked up, and the signature re-checks once impor
   await panel.getByRole("button", { name: "Key details" }).click();
   const details = panel.getByRole("region", { name: /^Key details for/ });
   await expect(details).toContainText(ALICE.name);
-  await panel.getByRole("button", { name: "Back" }).click();
+  // The details panel's own Back: the verified message's view has one too.
+  await details.getByRole("button", { name: "Back" }).click();
   await expect(details).toBeHidden();
 });
 

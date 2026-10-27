@@ -5358,17 +5358,9 @@
       }
     }
   },
-  "workspace_signed_text": {
-    "message": "Signed text",
-    "description": "Label over the box under a verify verdict showing exactly the text the signature covers."
-  },
   "workspace_signed_text_hidden_chars": {
     "message": "the signed text contains invisible or text-direction characters, so it may not read on screen the way it was written",
     "description": "Part of the note under a verified signer: the signed text itself contains bidi/zero-width/control characters that can make it display in a different order. Lowercase: it follows other parts after a dot separator."
-  },
-  "workspace_signed_text_translated": {
-    "message": "Translation of the signed text",
-    "description": "Label over the verify result box while a machine translation is shown in place of the signed text."
   },
   "workspace_signer_key_retired": {
     "message": "the key that made it has since expired or been revoked",

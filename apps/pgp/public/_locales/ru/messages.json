@@ -5447,14 +5447,8 @@
       }
     }
   },
-  "workspace_signed_text": {
-    "message": "Подписанный текст"
-  },
   "workspace_signed_text_hidden_chars": {
     "message": "подписанный текст содержит невидимые символы или символы направления текста, поэтому на экране он может выглядеть не так, как был написан"
-  },
-  "workspace_signed_text_translated": {
-    "message": "Перевод подписанного текста"
   },
   "workspace_signer_key_retired": {
     "message": "ключ, которым она сделана, с тех пор истёк или отозван"

@@ -121,6 +121,9 @@ export function DropZone({
 
   return (
     <BlockStack
+      // The workspace's message card: where a clear puts focus back (see
+      // `focusFlowStart` in WorkspaceView).
+      data-workspace-card=""
       onDragOver={enabled ? handleDragOver : undefined}
       onDragLeave={enabled ? handleDragLeave : undefined}
       onDrop={enabled ? handleDrop : undefined}

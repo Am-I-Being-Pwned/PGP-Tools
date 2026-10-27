@@ -95,16 +95,72 @@ test("editing a signed message after leaving Verify stays in that mode", async (
   ).toBeChecked();
 });
 
-test("the verify result sits above the message it is about", async ({
+test("a verified message shows its verdict over the signed text alone", async ({
   panel,
 }) => {
+  // Like a decrypted message: the signer's card, then only the text the
+  // signature covers -- the pasted armor is gone, not under it.
   await onboardWithPassword(panel, PASSWORD);
   await importContact(panel, alice.publicKey);
   await verifySignedMessage(panel, alice.signedMessage);
 
   const verdict = panel.getByText("Signature verified");
   await expect(verdict).toBeVisible();
-  const verdictBox = await verdict.boundingBox();
-  const inputBox = await panel.locator("#pgp-input").boundingBox();
-  expect(verdictBox?.y ?? Infinity).toBeLessThan(inputBox?.y ?? -Infinity);
+  await expect(panel.locator("#pgp-input")).toHaveCount(0);
+  const text = panel.locator("pre").filter({ hasText: "BEGIN PGP" });
+  await expect(text).toHaveCount(0);
+
+  // Back returns to the message as it was pasted.
+  await panel.getByRole("button", { name: "Back" }).click();
+  await expect(panel.locator("#pgp-input")).toHaveValue(alice.signedMessage);
+});
+
+test("a double-Escape clear puts focus back on Recipients", async ({
+  panel,
+}) => {
+  // Tab should carry on from the top of the form, not from wherever the
+  // cleared control was.
+  await onboardWithPassword(panel, PASSWORD);
+  await importContact(panel, alice.publicKey);
+  await setWorkspaceMode(panel, "Encrypt");
+  await addAlice(panel);
+  const box = panel.locator("#pgp-input");
+  await box.fill("draft to clear");
+
+  await box.press("Escape");
+  await box.press("Escape");
+
+  await expect(box).toHaveValue("");
+  await expect(
+    panel.getByRole("combobox", { name: "Recipients" }),
+  ).toBeFocused();
+});
+
+test("the reset button puts focus back at the top of the form", async ({
+  panel,
+}) => {
+  await onboardWithPassword(panel, PASSWORD);
+  await setWorkspaceMode(panel, "Encrypt");
+  await panel.locator("#pgp-input").fill("something");
+
+  await panel.getByRole("button", { name: "Clear input and output" }).click();
+
+  await expect(
+    panel.getByRole("combobox", { name: "Recipients" }),
+  ).toBeFocused();
+});
+
+test("Clear text puts focus on the first control of the form", async ({
+  panel,
+}) => {
+  // Verify has no recipients: the message box is the top of its form.
+  await onboardWithPassword(panel, PASSWORD);
+  await setWorkspaceMode(panel, "Verify");
+  const box = panel.locator("#pgp-input");
+  await box.fill("not a signed message");
+
+  await panel.getByRole("button", { name: "Clear text" }).click();
+
+  await expect(box).toHaveValue("");
+  await expect(box).toBeFocused();
 });

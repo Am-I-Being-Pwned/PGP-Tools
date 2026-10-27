@@ -4355,14 +4355,8 @@
       }
     }
   },
-  "workspace_signed_text": {
-    "message": "署名されたテキスト"
-  },
   "workspace_signed_text_hidden_chars": {
     "message": "署名されたテキストに不可視文字または文字方向の制御文字が含まれているため、書かれた通りに表示されない可能性があります"
-  },
-  "workspace_signed_text_translated": {
-    "message": "署名されたテキストの翻訳"
   },
   "workspace_signer_key_retired": {
     "message": "署名した鍵はその後期限切れまたは失効しています"
