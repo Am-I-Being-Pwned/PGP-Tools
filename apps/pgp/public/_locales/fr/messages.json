@@ -3922,6 +3922,25 @@
   "workspace_error_verify_failed": {
     "message": "Échec de la vérification. L'entrée ne ressemble pas à un message PGP signé."
   },
+  "workspace_error_verify_file_too_large": {
+    "message": "$name$ est trop volumineux pour être vérifié ici (limite $limit$).",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "limit": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_error_verify_not_utf8": {
+    "message": "$name$ n'est pas du texte UTF-8 : il ne peut pas être vérifié comme message signé.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_error_wrong_key_password": {
     "message": "Mot de passe incorrect. Vérifiez-le et réessayez."
   },
@@ -4338,6 +4357,9 @@
   },
   "workspace_signed_text": {
     "message": "Texte signé"
+  },
+  "workspace_signed_text_hidden_chars": {
+    "message": "le texte signé contient des caractères invisibles ou de direction du texte : il peut ne pas s'afficher comme il a été écrit"
   },
   "workspace_signed_text_translated": {
     "message": "Traduction du texte signé"

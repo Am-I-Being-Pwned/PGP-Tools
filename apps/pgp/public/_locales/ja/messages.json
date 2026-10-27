@@ -3922,6 +3922,25 @@
   "workspace_error_verify_failed": {
     "message": "検証に失敗しました。入力が署名付き PGP メッセージのようには見えません。"
   },
+  "workspace_error_verify_file_too_large": {
+    "message": "$name$ は大きすぎるため、ここでは検証できません（上限 $limit$）。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "limit": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_error_verify_not_utf8": {
+    "message": "$name$ は UTF-8 テキストではないため、署名付きメッセージとして検証できません。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_error_wrong_key_password": {
     "message": "パスワードが違います。確認してから、やり直してください。"
   },
@@ -4338,6 +4357,9 @@
   },
   "workspace_signed_text": {
     "message": "署名されたテキスト"
+  },
+  "workspace_signed_text_hidden_chars": {
+    "message": "署名されたテキストに不可視文字または文字方向の制御文字が含まれているため、書かれた通りに表示されない可能性があります"
   },
   "workspace_signed_text_translated": {
     "message": "署名されたテキストの翻訳"

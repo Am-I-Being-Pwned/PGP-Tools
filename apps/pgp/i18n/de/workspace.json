@@ -496,5 +496,14 @@
   },
   "workspace_signed_text_translated": {
     "message": "Übersetzung des signierten Textes"
+  },
+  "workspace_error_verify_file_too_large": {
+    "message": "$name$ ist zu groß, um hier verifiziert zu werden (Limit $limit$)."
+  },
+  "workspace_error_verify_not_utf8": {
+    "message": "$name$ ist kein UTF-8-Text und kann daher nicht als signierte Nachricht verifiziert werden."
+  },
+  "workspace_signed_text_hidden_chars": {
+    "message": "der signierte Text enthält unsichtbare oder Schreibrichtungszeichen und wird auf dem Bildschirm daher womöglich anders angezeigt, als er geschrieben wurde"
   }
 }

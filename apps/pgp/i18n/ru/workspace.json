@@ -538,5 +538,14 @@
   },
   "workspace_signed_text_translated": {
     "message": "Перевод подписанного текста"
+  },
+  "workspace_error_verify_file_too_large": {
+    "message": "$name$ слишком большой для проверки здесь (предел $limit$)."
+  },
+  "workspace_error_verify_not_utf8": {
+    "message": "$name$ не является текстом UTF-8, поэтому его нельзя проверить как подписанное сообщение."
+  },
+  "workspace_signed_text_hidden_chars": {
+    "message": "подписанный текст содержит невидимые символы или символы направления текста, поэтому на экране он может выглядеть не так, как был написан"
   }
 }

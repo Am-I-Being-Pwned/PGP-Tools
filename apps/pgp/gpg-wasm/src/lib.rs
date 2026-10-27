@@ -1113,6 +1113,19 @@ const MIN_EXPANSION_ALLOWANCE: u64 = 64 * 1024 * 1024;
 /// cleartext-signed message a person reads in a side panel comes close.
 const MAX_VERIFIED_BYTES: u64 = 16 * 1024 * 1024;
 
+/// Ceiling on what `verify_message` reads at all. Anything that can come
+/// out under `MAX_VERIFIED_BYTES` fits: cleartext adds a few lines, an
+/// armored inline message base64's 16 MiB to ~22 MiB. Checked first,
+/// because the framing check walks the input line by line before the
+/// output cap can apply.
+const MAX_SIGNED_INPUT_BYTES: usize = 24 * 1024 * 1024;
+
+/// Ceiling on lines in a signed message. The framing check keeps one
+/// entry per line; a file of nothing but newlines (200 MB of them was
+/// enough) exhausted wasm memory and aborted the engine. Two million is
+/// far past any message a person reads, at eight bytes a line.
+const MAX_SIGNED_LINES: usize = 2_000_000;
+
 /// The output ceiling for a given ciphertext: generous in absolute terms
 /// so a legitimately large file is not refused, but tied to the input so
 /// amplification cannot run away.
@@ -1748,6 +1761,9 @@ fn check_signed_framing(signed_message: &str) -> Result<SignedFraming, String> {
     // Anything another reader might break a line at, but `\n`-splitting
     // would not, could hide a line from the checks below.
     let msg = signed_message;
+    if msg.bytes().filter(|&b| b == b'\n').count() > MAX_SIGNED_LINES {
+        return Err("This signed message has too many lines to verify here.".into());
+    }
     if msg.contains(['\u{2028}', '\u{2029}', '\u{85}', '\u{b}', '\u{c}']) {
         return Err(OUTSIDE_SIGNED.into());
     }
@@ -1868,6 +1884,12 @@ pub fn verify_message(
 ) -> Result<String, String> {
     // A file saved on Windows can lead with a BOM, which Sequoia refuses.
     let signed_message = signed_message.strip_prefix('\u{feff}').unwrap_or(signed_message);
+    if signed_message.len() > MAX_SIGNED_INPUT_BYTES {
+        return Err(format!(
+            "This signed message is too large to verify here (limit {} MiB).",
+            MAX_SIGNED_INPUT_BYTES / (1024 * 1024),
+        ));
+    }
     let framing = check_signed_framing(signed_message)?;
     let certs = parse_armored_certs(verification_keys_json)?;
 

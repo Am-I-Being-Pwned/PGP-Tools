@@ -496,5 +496,14 @@
   },
   "workspace_signed_text_translated": {
     "message": "署名されたテキストの翻訳"
+  },
+  "workspace_error_verify_file_too_large": {
+    "message": "$name$ は大きすぎるため、ここでは検証できません（上限 $limit$）。"
+  },
+  "workspace_error_verify_not_utf8": {
+    "message": "$name$ は UTF-8 テキストではないため、署名付きメッセージとして検証できません。"
+  },
+  "workspace_signed_text_hidden_chars": {
+    "message": "署名されたテキストに不可視文字または文字方向の制御文字が含まれているため、書かれた通りに表示されない可能性があります"
   }
 }

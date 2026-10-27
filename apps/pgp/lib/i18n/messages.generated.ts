@@ -791,6 +791,8 @@ export interface MessageArgs {
   "workspace_error_signature_invalid": undefined;
   "workspace_error_unlock_failed": undefined;
   "workspace_error_verify_failed": undefined;
+  "workspace_error_verify_file_too_large": { name: string | number; limit: string | number };
+  "workspace_error_verify_not_utf8": { name: string | number };
   "workspace_error_wrong_key_password": undefined;
   "workspace_file_not_signed": undefined;
   "workspace_file_signature": { name: string | number; outcome: string | number };
@@ -871,6 +873,7 @@ export interface MessageArgs {
   "workspace_signed_for_others": { names: string | number };
   "workspace_signed_on": { date: string | number };
   "workspace_signed_text": undefined;
+  "workspace_signed_text_hidden_chars": undefined;
   "workspace_signed_text_translated": undefined;
   "workspace_signer_key_retired": undefined;
   "workspace_status_age_encrypted": undefined;
@@ -1191,6 +1194,8 @@ export const PLACEHOLDER_ORDER: Readonly<Partial<Record<string, readonly string[
   "workspace_detected_key_in_message": ["name"],
   "workspace_detected_key_known": ["name"],
   "workspace_detected_key_pasted": ["name"],
+  "workspace_error_verify_file_too_large": ["name","limit"],
+  "workspace_error_verify_not_utf8": ["name"],
   "workspace_file_signature": ["name","outcome"],
   "workspace_files_decrypted_one": ["count","size"],
   "workspace_files_decrypted_other": ["count","size"],

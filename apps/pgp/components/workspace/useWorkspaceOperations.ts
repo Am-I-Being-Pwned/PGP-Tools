@@ -24,6 +24,7 @@ import {
 import { AppError } from "../../lib/errors/app-error";
 import { presentError } from "../../lib/errors/present";
 import { t, tn } from "../../lib/i18n";
+import { MAX_VERIFY_FILE_BYTES, MAX_VERIFY_FILE_LABEL } from "../../lib/limits";
 import * as pgpOps from "../../lib/pgp/operations";
 import { isWebAuthnCancel } from "../../lib/protection/webauthn-prf";
 import { updateRecentRecipients } from "../../lib/recipient-ordering";
@@ -37,6 +38,10 @@ import {
   downloadResults,
   downloadText,
 } from "../../lib/utils/download";
+import {
+  displayFileName,
+  hasHiddenCharacters,
+} from "../../lib/utils/file-name";
 import { formatFileSize } from "../../lib/utils/formatting";
 import {
   displayUserId,
@@ -240,8 +245,12 @@ export function useWorkspaceOperations({
     };
   }
 
-  /** The signer card for a single "valid" or "unknown_key" result. */
-  function showSignature(result: SignedResult) {
+  /** The signer card for a single "valid" or "unknown_key" result.
+   *  `extraNote` is appended to what the card says about it. */
+  function showSignature(
+    result: SignedResult,
+    extraNote: string | null = null,
+  ) {
     if (result.signatureStatus === "valid") {
       // A key retired since signing still verifies -- it was good when
       // the signature says it was made -- and a message signed for
@@ -262,7 +271,11 @@ export function useWorkspaceOperations({
       if (signer) {
         s.setVerifiedSigner(signer);
         s.setSignerCaveat(caveat);
-        s.setSignatureNote(signatureNote(result, signerName, forOthers));
+        s.setSignatureNote(
+          [signatureNote(result, signerName, forOthers), extraNote]
+            .filter(Boolean)
+            .join(" · ") || null,
+        );
       }
     } else if (result.signatureStatus === "unknown_key") {
       // Signed, but we don't hold the signer's public key. Show the same
@@ -1142,15 +1155,41 @@ export function useWorkspaceOperations({
     try {
       // Every staged file, not just the first: a verdict under a list of
       // two files must speak for both.
-      const inputs =
-        s.files.length > 0
-          ? await Promise.all(
-              s.files.map(async (f) => ({
-                name: f.name,
-                text: await f.text(),
-              })),
-            )
-          : [{ name: "", text: s.getInput() }];
+      // Size first, before any file is read: nothing past the engine's
+      // input cap can verify, and reading it as text costs the panel.
+      const tooLarge = s.files.find((f) => f.size > MAX_VERIFY_FILE_BYTES);
+      if (tooLarge) {
+        s.setError({
+          message: t("workspace_error_verify_file_too_large", {
+            name: displayFileName(tooLarge.name),
+            limit: MAX_VERIFY_FILE_LABEL,
+          }),
+        });
+        return;
+      }
+      // Decoded strictly. `File.text()` swaps invalid UTF-8 for U+FFFD,
+      // so a genuine Latin-1 file read as tampered, and a crafted one
+      // could verify as text it doesn't contain.
+      const strictUtf8 = new TextDecoder("utf-8", { fatal: true });
+      const inputs: { name: string; text: string }[] = [];
+      if (s.files.length === 0) {
+        inputs.push({ name: "", text: s.getInput() });
+      }
+      for (const f of s.files) {
+        try {
+          inputs.push({
+            name: f.name,
+            text: strictUtf8.decode(await f.arrayBuffer()),
+          });
+        } catch {
+          s.setError({
+            message: t("workspace_error_verify_not_utf8", {
+              name: displayFileName(f.name),
+            }),
+          });
+          return;
+        }
+      }
       const results = [];
       for (const input of inputs) {
         results.push({
@@ -1181,7 +1220,15 @@ export function useWorkspaceOperations({
       s.setOperationDone(true);
       const only = results.length === 1 ? results[0].result : null;
       if (only) {
-        showSignature(only);
+        // What was signed may itself hold characters that reorder or hide
+        // text on screen. They are the signer's, so they stay -- but the
+        // card says they are there.
+        showSignature(
+          only,
+          hasHiddenCharacters(only.text)
+            ? t("workspace_signed_text_hidden_chars")
+            : null,
+        );
         // Show what was SIGNED -- the engine's text, not the paste. For an
         // inline-signed message or a file it is the only place the user
         // sees the content the verdict is about.

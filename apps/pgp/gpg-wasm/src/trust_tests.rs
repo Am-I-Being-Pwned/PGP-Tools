@@ -566,3 +566,17 @@ fn stripping_a_key_flooded_with_forged_signatures_stays_fast() {
     assert!(started.elapsed() < Duration::from_secs(2), "{:?}", started.elapsed());
     assert_eq!(stripped.bad_signatures().count(), 0);
 }
+
+#[test]
+fn a_flood_of_lines_or_bytes_is_refused_before_the_framing_check_walks_it() {
+    // 200 MB of newlines inside a signed block aborted the wasm engine:
+    // the framing check kept an entry per line before any cap applied.
+    let lines = format!(
+        "-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA256\n\n{}x\n-----BEGIN PGP SIGNATURE-----\n\niQ==\n-----END PGP SIGNATURE-----\n",
+        "\n".repeat(MAX_SIGNED_LINES + 1),
+    );
+    assert!(verify_message(&lines, "[]").unwrap_err().contains("too many lines"));
+
+    let bytes = "a".repeat(MAX_SIGNED_INPUT_BYTES + 1);
+    assert!(verify_message(&bytes, "[]").unwrap_err().contains("too large"));
+}

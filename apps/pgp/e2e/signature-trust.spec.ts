@@ -218,3 +218,30 @@ test("removing a file clears the verdict that listed it", async ({ panel }) => {
   await panel.getByRole("button", { name: "Remove" }).last().click();
   await expect(panel.getByText("Mixed signers")).toHaveCount(0);
 });
+
+test("a file that isn't UTF-8 is refused rather than misread", async ({
+  panel,
+}) => {
+  // File.text() would turn the Latin-1 byte into U+FFFD: a genuine file
+  // reads as tampered, and a crafted one as text it doesn't contain.
+  await onboardWithPassword(panel, PASSWORD);
+  await panel.getByRole("tab", { name: "Main" }).click();
+  const latin1 = Buffer.concat([
+    Buffer.from(
+      "-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA256\n\ncaf",
+      "utf8",
+    ),
+    Buffer.from([0xe9]),
+    Buffer.from(
+      "\n-----BEGIN PGP SIGNATURE-----\n\niQ==\n-----END PGP SIGNATURE-----\n",
+      "utf8",
+    ),
+  ]);
+  await panel.locator('input[type="file"]:not([accept])').setInputFiles({
+    name: "menu.asc",
+    mimeType: "text/plain",
+    buffer: latin1,
+  });
+  await verifyStaged(panel);
+  await expect(panel.getByText(/isn't UTF-8 text/)).toBeVisible();
+});

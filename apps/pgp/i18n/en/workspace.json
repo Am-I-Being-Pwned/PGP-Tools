@@ -662,5 +662,17 @@
   "workspace_signed_text_translated": {
     "message": "Translation of the signed text",
     "description": "Label over the verify result box while a machine translation is shown in place of the signed text."
+  },
+  "workspace_error_verify_file_too_large": {
+    "message": "$name$ is too large to verify here (limit $limit$).",
+    "description": "Verify error: a staged file is larger than any signed message the engine verifies. $name$ is the file name, $limit$ the size limit, e.g. '24 MB'."
+  },
+  "workspace_error_verify_not_utf8": {
+    "message": "$name$ isn't UTF-8 text, so it can't be verified as a signed message.",
+    "description": "Verify error: a staged file has bytes that aren't valid UTF-8 (e.g. a Latin-1 file or a binary file). $name$ is the file name."
+  },
+  "workspace_signed_text_hidden_chars": {
+    "message": "the signed text contains invisible or text-direction characters, so it may not read on screen the way it was written",
+    "description": "Part of the note under a verified signer: the signed text itself contains bidi/zero-width/control characters that can make it display in a different order. Lowercase: it follows other parts after a dot separator."
   }
 }

@@ -4832,6 +4832,27 @@
     "message": "Verification failed. The input doesn't look like a signed PGP message.",
     "description": "Error in verify mode when the input could not be parsed."
   },
+  "workspace_error_verify_file_too_large": {
+    "message": "$name$ is too large to verify here (limit $limit$).",
+    "description": "Verify error: a staged file is larger than any signed message the engine verifies. $name$ is the file name, $limit$ the size limit, e.g. '24 MB'.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "limit": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_error_verify_not_utf8": {
+    "message": "$name$ isn't UTF-8 text, so it can't be verified as a signed message.",
+    "description": "Verify error: a staged file has bytes that aren't valid UTF-8 (e.g. a Latin-1 file or a binary file). $name$ is the file name.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_error_wrong_key_password": {
     "message": "Wrong password. Check it and try again.",
     "description": "Error under the inline password field when the key password was wrong."
@@ -5340,6 +5361,10 @@
   "workspace_signed_text": {
     "message": "Signed text",
     "description": "Label over the box under a verify verdict showing exactly the text the signature covers."
+  },
+  "workspace_signed_text_hidden_chars": {
+    "message": "the signed text contains invisible or text-direction characters, so it may not read on screen the way it was written",
+    "description": "Part of the note under a verified signer: the signed text itself contains bidi/zero-width/control characters that can make it display in a different order. Lowercase: it follows other parts after a dot separator."
   },
   "workspace_signed_text_translated": {
     "message": "Translation of the signed text",

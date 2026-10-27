@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { displayFileName, safeFileName } from "./file-name";
+import {
+  displayFileName,
+  hasHiddenCharacters,
+  safeFileName,
+} from "./file-name";
 
 describe("safeFileName", () => {
   it("removes a right-to-left override that disguises the extension", () => {
@@ -27,5 +31,17 @@ describe("displayFileName", () => {
     expect([...shown]).toHaveLength(40);
     expect(shown.endsWith(".tar.gz.asc")).toBe(true);
     expect(shown).toContain("…");
+  });
+});
+
+describe("hasHiddenCharacters", () => {
+  it("spots a right-to-left override and zero-width characters", () => {
+    expect(hasHiddenCharacters("pay \u202e0001\u202c to bob")).toBe(true);
+    expect(hasHiddenCharacters("pa\u200by")).toBe(true);
+  });
+
+  it("does not flag ordinary text, line breaks or tabs", () => {
+    expect(hasHiddenCharacters("Release 4.2\n\tsigned off\r\n")).toBe(false);
+    expect(hasHiddenCharacters("Иван Петров, 報告")).toBe(false);
   });
 });

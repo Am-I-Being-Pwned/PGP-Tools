@@ -4906,6 +4906,25 @@
   "workspace_error_verify_failed": {
     "message": "Не удалось проверить. Введённые данные не похожи на подписанное PGP-сообщение."
   },
+  "workspace_error_verify_file_too_large": {
+    "message": "$name$ слишком большой для проверки здесь (предел $limit$).",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "limit": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_error_verify_not_utf8": {
+    "message": "$name$ не является текстом UTF-8, поэтому его нельзя проверить как подписанное сообщение.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_error_wrong_key_password": {
     "message": "Неверный пароль. Проверьте его и повторите попытку."
   },
@@ -5430,6 +5449,9 @@
   },
   "workspace_signed_text": {
     "message": "Подписанный текст"
+  },
+  "workspace_signed_text_hidden_chars": {
+    "message": "подписанный текст содержит невидимые символы или символы направления текста, поэтому на экране он может выглядеть не так, как был написан"
   },
   "workspace_signed_text_translated": {
     "message": "Перевод подписанного текста"

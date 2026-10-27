@@ -3922,6 +3922,25 @@
   "workspace_error_verify_failed": {
     "message": "Falha na verificação. A entrada não parece ser uma mensagem PGP assinada."
   },
+  "workspace_error_verify_file_too_large": {
+    "message": "$name$ é grande demais para verificar aqui (limite $limit$).",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "limit": {
+        "content": "$2"
+      }
+    }
+  },
+  "workspace_error_verify_not_utf8": {
+    "message": "$name$ não é texto UTF-8, então não pode ser verificado como mensagem assinada.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_error_wrong_key_password": {
     "message": "Senha incorreta. Confira e tente de novo."
   },
@@ -4338,6 +4357,9 @@
   },
   "workspace_signed_text": {
     "message": "Texto assinado"
+  },
+  "workspace_signed_text_hidden_chars": {
+    "message": "o texto assinado contém caracteres invisíveis ou de direção de texto, então pode não aparecer na tela como foi escrito"
   },
   "workspace_signed_text_translated": {
     "message": "Tradução do texto assinado"
