@@ -114,3 +114,53 @@ test("a verified message shows its verdict over the signed text alone", async ({
   await panel.getByRole("button", { name: "Back" }).click();
   await expect(panel.locator("#pgp-input")).toHaveValue(alice.signedMessage);
 });
+
+test("a double-Escape clear puts focus back on Recipients", async ({
+  panel,
+}) => {
+  // Tab should carry on from the top of the form, not from wherever the
+  // cleared control was.
+  await onboardWithPassword(panel, PASSWORD);
+  await importContact(panel, alice.publicKey);
+  await setWorkspaceMode(panel, "Encrypt");
+  await addAlice(panel);
+  const box = panel.locator("#pgp-input");
+  await box.fill("draft to clear");
+
+  await box.press("Escape");
+  await box.press("Escape");
+
+  await expect(box).toHaveValue("");
+  await expect(
+    panel.getByRole("combobox", { name: "Recipients" }),
+  ).toBeFocused();
+});
+
+test("the reset button puts focus back at the top of the form", async ({
+  panel,
+}) => {
+  await onboardWithPassword(panel, PASSWORD);
+  await setWorkspaceMode(panel, "Encrypt");
+  await panel.locator("#pgp-input").fill("something");
+
+  await panel.getByRole("button", { name: "Clear input and output" }).click();
+
+  await expect(
+    panel.getByRole("combobox", { name: "Recipients" }),
+  ).toBeFocused();
+});
+
+test("Clear text puts focus on the first control of the form", async ({
+  panel,
+}) => {
+  // Verify has no recipients: the message box is the top of its form.
+  await onboardWithPassword(panel, PASSWORD);
+  await setWorkspaceMode(panel, "Verify");
+  const box = panel.locator("#pgp-input");
+  await box.fill("not a signed message");
+
+  await panel.getByRole("button", { name: "Clear text" }).click();
+
+  await expect(box).toHaveValue("");
+  await expect(box).toBeFocused();
+});

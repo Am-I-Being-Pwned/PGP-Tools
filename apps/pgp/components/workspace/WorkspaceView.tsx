@@ -639,6 +639,34 @@ export function WorkspaceView({
     setTimeout(() => document.getElementById("pgp-input")?.focus(), 0);
   };
 
+  /** After a clear, put focus at the START of the workspace's flow --
+   *  Recipients in Encrypt, otherwise the first control on the message
+   *  card (a key picker, the message box) -- so Tab carries on from the
+   *  top rather than from wherever the control that cleared it was.
+   *  Next tick: the clear may have just remounted the card (the message
+   *  box in place of a file list, the form in place of a result). */
+  const focusFlowStart = () => {
+    setTimeout(() => {
+      const card = document.querySelector<HTMLElement>("[data-workspace-card]");
+      const first = card?.querySelector<HTMLElement>(
+        [
+          '[role="combobox"]',
+          'input:not([type="file"]):not([disabled])',
+          "textarea:not([disabled])",
+          "select:not([disabled])",
+          "button:not([disabled]):not([tabindex='-1'])",
+        ].join(","),
+      );
+      (first ?? document.getElementById("pgp-input"))?.focus();
+    }, 0);
+  };
+
+  /** The ↺ button: clear everything, then start again from the top. */
+  const resetAndRefocus = () => {
+    s.resetAll();
+    focusFlowStart();
+  };
+
   // Switching mode is moving on, as switching tab is (`changeTab` in the
   // panel does the same): a toast about the last mode's message, Undo
   // included, no longer has anything on screen to be about. Watches the
@@ -672,9 +700,7 @@ export function WorkspaceView({
   const clearBoxUndoable = () => {
     if (!hasStaged) return;
     clearWithUndo(t("workspace_cleared_toast"));
-    // A cleared box invites retyping: focus it (next tick -- resetAll may
-    // have just remounted the textarea in place of the file list).
-    setTimeout(() => document.getElementById("pgp-input")?.focus(), 0);
+    focusFlowStart();
   };
 
   // The in-box "Clear text" button. Same mechanism; it stays silent once an
@@ -688,9 +714,10 @@ export function WorkspaceView({
       s.stashClearUndo();
       if (textOnly) s.handleInputChange("");
       else s.resetAll();
-      return;
+    } else {
+      clearWithUndo(t("workspace_text_cleared_toast"), textOnly);
     }
-    clearWithUndo(t("workspace_text_cleared_toast"), textOnly);
+    focusFlowStart();
   };
 
   useShortcut({ mod: true, key: "z" }, restoreCleared, {
@@ -1213,7 +1240,7 @@ export function WorkspaceView({
           <Button
             variant="outline"
             size="icon"
-            onClick={s.resetAll}
+            onClick={resetAndRefocus}
             title={t("workspace_clear_input_output")}
             aria-label={t("workspace_clear_input_output")}
           >
@@ -1773,7 +1800,7 @@ export function WorkspaceView({
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={s.resetAll}
+                      onClick={resetAndRefocus}
                       title={t("workspace_clear_input_output")}
                       aria-label={t("workspace_clear_input_output")}
                     >
