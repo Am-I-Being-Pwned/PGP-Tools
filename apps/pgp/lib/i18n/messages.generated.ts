@@ -872,9 +872,7 @@ export interface MessageArgs {
   "workspace_signature_verified_retired": undefined;
   "workspace_signed_for_others": { names: string | number };
   "workspace_signed_on": { date: string | number };
-  "workspace_signed_text": undefined;
   "workspace_signed_text_hidden_chars": undefined;
-  "workspace_signed_text_translated": undefined;
   "workspace_signer_key_retired": undefined;
   "workspace_status_age_encrypted": undefined;
   "workspace_status_crx_signed": { name: string | number };

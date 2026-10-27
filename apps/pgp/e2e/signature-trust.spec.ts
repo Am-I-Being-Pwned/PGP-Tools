@@ -46,7 +46,7 @@ test("a verified message shows exactly the signed text, and when it was signed",
   await verifySignedMessage(panel, rachel.signedMessage ?? "");
 
   await expect(panel.getByText("Signature verified").first()).toBeVisible();
-  await expect(panel.getByText("Signed text")).toBeVisible();
+  await expect(panel.locator("#pgp-input")).toHaveCount(0);
   await expect(
     panel.locator("pre").filter({ hasText: MESSAGE }).first(),
   ).toBeVisible();
@@ -196,6 +196,8 @@ test("a new file with a staged file's name replaces it", async ({ panel }) => {
     MESSAGE,
     MESSAGE.replace("quick", "sneaky"),
   );
+  // Out of the verified message's view, back to the staged files.
+  await panel.getByRole("button", { name: "Back" }).click();
   await stageFiles(panel, [{ name: "release.asc", text: tampered }]);
   await expect(panel.getByText("Signature verified")).toHaveCount(0);
   await panel.getByRole("button", { name: /^verify/i }).click();

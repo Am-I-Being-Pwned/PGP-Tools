@@ -4355,14 +4355,8 @@
       }
     }
   },
-  "workspace_signed_text": {
-    "message": "Texto assinado"
-  },
   "workspace_signed_text_hidden_chars": {
     "message": "o texto assinado contém caracteres invisíveis ou de direção de texto, então pode não aparecer na tela como foi escrito"
-  },
-  "workspace_signed_text_translated": {
-    "message": "Tradução do texto assinado"
   },
   "workspace_signer_key_retired": {
     "message": "a chave que a fez expirou ou foi revogada desde então"

@@ -647,10 +647,6 @@
     "message": "Key retired",
     "description": "Short amber label on a signer card: the signature checks out, but the key that made it has expired or been revoked since. Keep it to a couple of words; the note under the card explains."
   },
-  "workspace_signed_text": {
-    "message": "Signed text",
-    "description": "Label over the box under a verify verdict showing exactly the text the signature covers."
-  },
   "workspace_signed_for_others": {
     "message": "signed for $names$, not for you",
     "description": "Part of the note under a verified signer: the signature names its intended recipients and none of them is the user (the message was passed on). $names$ is a comma-separated list. Lowercase: it may follow other parts."
@@ -658,10 +654,6 @@
   "workspace_signature_verified_not_for_you": {
     "message": "Not for you",
     "description": "Short amber label on a signer card: the signature checks out, but it names other people as its recipients (this copy was passed on). Keep it to a couple of words; the note under the card explains."
-  },
-  "workspace_signed_text_translated": {
-    "message": "Translation of the signed text",
-    "description": "Label over the verify result box while a machine translation is shown in place of the signed text."
   },
   "workspace_error_verify_file_too_large": {
     "message": "$name$ is too large to verify here (limit $limit$).",

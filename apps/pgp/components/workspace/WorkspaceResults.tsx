@@ -97,9 +97,6 @@ interface WorkspaceResultsProps {
    *  someone else): the amber card's label. The signer is known -- this
    *  is not the "unknown signer" card. */
   signerCaveat?: string | null;
-  /** Show the text result under the verdict, labelled as what was signed
-   *  (verify mode). */
-  showSignedText?: boolean;
   /** Fill the available height (used by the full-screen result view). */
   fullHeight?: boolean;
   /** For the "there's a key in this message" offer: who we already have,
@@ -139,7 +136,6 @@ export function WorkspaceResults({
   signatureTone = "success",
   signatureNote,
   signerCaveat = null,
-  showSignedText = false,
   fullHeight,
   contacts,
   translationFooter,
@@ -188,9 +184,7 @@ export function WorkspaceResults({
         verifiedLabel={
           isUnverified
             ? t("workspace_unverified")
-            : (signerCaveat ??
-              statusText ??
-              t("workspace_signature_verified"))
+            : (signerCaveat ?? statusText ?? t("workspace_signature_verified"))
         }
         note={note}
         // The key that made the signature, a click away. Only for one we
@@ -246,13 +240,6 @@ export function WorkspaceResults({
         footer={translationFooter}
         corner={resultCorner}
         header={signerInCard ? signerCard : undefined}
-        readableLabel={
-          !showSignedText
-            ? undefined
-            : showTranslation
-              ? t("workspace_signed_text_translated")
-              : t("workspace_signed_text")
-        }
       />
 
       {/* A key inside a message the user just read: keys travel this way

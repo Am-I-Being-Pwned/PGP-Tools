@@ -4355,14 +4355,8 @@
       }
     }
   },
-  "workspace_signed_text": {
-    "message": "已签名文本"
-  },
   "workspace_signed_text_hidden_chars": {
     "message": "签名文本包含不可见字符或文字方向字符，因此屏幕上的显示可能与原文不同"
-  },
-  "workspace_signed_text_translated": {
-    "message": "已签名文本的译文"
   },
   "workspace_signer_key_retired": {
     "message": "生成该签名的密钥此后已过期或被吊销"

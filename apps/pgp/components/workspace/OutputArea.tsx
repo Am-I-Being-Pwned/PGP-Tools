@@ -46,9 +46,6 @@ interface OutputAreaProps {
    *  the signature's status band, so the outcome sits on the card it is
    *  about rather than in a box of its own above it. */
   header?: React.ReactNode;
-  /** Compact path only: show the text result, under a label naming it
-   *  (a verify's signed text -- what the verdict above it is about). */
-  readableLabel?: string;
 }
 
 export function OutputArea({
@@ -66,7 +63,6 @@ export function OutputArea({
   footer,
   corner,
   header,
-  readableLabel,
 }: OutputAreaProps) {
   // Callback ref: publish the node to the owning hook and seed its text
   // from the ref on every (re)mount. The node genuinely unmounts (the
@@ -116,31 +112,6 @@ export function OutputArea({
     return (
       <div className="space-y-2">
         {statusText && <p className="text-good text-xs">{statusText}</p>}
-        {readableLabel && hasOutput && (
-          <BlockStack>
-            <Block className="text-muted-foreground px-3.5 py-2 text-xs font-medium">
-              {readableLabel}
-            </Block>
-            <Block>
-              {showTranslation ? (
-                <pre
-                  key="translation"
-                  ref={attachTranslation}
-                  tabIndex={0}
-                  className="max-h-48 overflow-auto p-3 font-mono text-xs break-all whitespace-pre-wrap focus:outline-none"
-                />
-              ) : (
-                <pre
-                  key="output"
-                  ref={attachOutput}
-                  tabIndex={0}
-                  onKeyDown={selectAllOnCtrlA}
-                  className="max-h-48 overflow-auto p-3 font-mono text-xs break-all whitespace-pre-wrap focus:outline-none"
-                />
-              )}
-            </Block>
-          </BlockStack>
-        )}
         {binaryOutput && !hasOutput && !hasFileResults && !statusText && (
           <p className="text-muted-foreground text-sm">
             {t("workspace_output_size_line", {
@@ -153,7 +124,7 @@ export function OutputArea({
     );
   }
 
-  // Full-height path (decrypt): the plaintext is meant to be read, so give it
+  // Full-height path (decrypt, verify): the text is meant to be read, so give it
   // the whole panel. Download/Copy live in the panel's bottom action bar, to
   // match the encrypt/sign flow. One card: the outcome (the signer's band,
   // or the status line as a band of its own) on top, the message under it.

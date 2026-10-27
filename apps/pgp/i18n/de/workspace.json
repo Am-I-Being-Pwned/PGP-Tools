@@ -485,17 +485,11 @@
   "workspace_signature_verified_retired": {
     "message": "Schlüssel abgelöst"
   },
-  "workspace_signed_text": {
-    "message": "Signierter Text"
-  },
   "workspace_signed_for_others": {
     "message": "signiert für $names$, nicht für Sie"
   },
   "workspace_signature_verified_not_for_you": {
     "message": "Nicht für Sie"
-  },
-  "workspace_signed_text_translated": {
-    "message": "Übersetzung des signierten Textes"
   },
   "workspace_error_verify_file_too_large": {
     "message": "$name$ ist zu groß, um hier verifiziert zu werden (Limit $limit$)."

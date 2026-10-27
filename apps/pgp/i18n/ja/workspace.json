@@ -485,17 +485,11 @@
   "workspace_signature_verified_retired": {
     "message": "鍵は無効"
   },
-  "workspace_signed_text": {
-    "message": "署名されたテキスト"
-  },
   "workspace_signed_for_others": {
     "message": "$names$ 宛ての署名で、あなた宛てではありません"
   },
   "workspace_signature_verified_not_for_you": {
     "message": "あなた宛てではない"
-  },
-  "workspace_signed_text_translated": {
-    "message": "署名されたテキストの翻訳"
   },
   "workspace_error_verify_file_too_large": {
     "message": "$name$ は大きすぎるため、ここでは検証できません（上限 $limit$）。"

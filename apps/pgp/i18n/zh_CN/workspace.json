@@ -485,17 +485,11 @@
   "workspace_signature_verified_retired": {
     "message": "密钥已停用"
   },
-  "workspace_signed_text": {
-    "message": "已签名文本"
-  },
   "workspace_signed_for_others": {
     "message": "签名对象是 $names$，而不是你"
   },
   "workspace_signature_verified_not_for_you": {
     "message": "不是发给你的"
-  },
-  "workspace_signed_text_translated": {
-    "message": "已签名文本的译文"
   },
   "workspace_error_verify_file_too_large": {
     "message": "$name$ 太大，无法在此验证（上限 $limit$）。"

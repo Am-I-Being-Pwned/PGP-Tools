@@ -485,17 +485,11 @@
   "workspace_signature_verified_retired": {
     "message": "Chave aposentada"
   },
-  "workspace_signed_text": {
-    "message": "Texto assinado"
-  },
   "workspace_signed_for_others": {
     "message": "assinado para $names$, não para você"
   },
   "workspace_signature_verified_not_for_you": {
     "message": "Não é para você"
-  },
-  "workspace_signed_text_translated": {
-    "message": "Tradução do texto assinado"
   },
   "workspace_error_verify_file_too_large": {
     "message": "$name$ é grande demais para verificar aqui (limite $limit$)."

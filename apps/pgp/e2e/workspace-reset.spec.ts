@@ -95,16 +95,22 @@ test("editing a signed message after leaving Verify stays in that mode", async (
   ).toBeChecked();
 });
 
-test("the verify result sits above the message it is about", async ({
+test("a verified message shows its verdict over the signed text alone", async ({
   panel,
 }) => {
+  // Like a decrypted message: the signer's card, then only the text the
+  // signature covers -- the pasted armor is gone, not under it.
   await onboardWithPassword(panel, PASSWORD);
   await importContact(panel, alice.publicKey);
   await verifySignedMessage(panel, alice.signedMessage);
 
   const verdict = panel.getByText("Signature verified");
   await expect(verdict).toBeVisible();
-  const verdictBox = await verdict.boundingBox();
-  const inputBox = await panel.locator("#pgp-input").boundingBox();
-  expect(verdictBox?.y ?? Infinity).toBeLessThan(inputBox?.y ?? -Infinity);
+  await expect(panel.locator("#pgp-input")).toHaveCount(0);
+  const text = panel.locator("pre").filter({ hasText: "BEGIN PGP" });
+  await expect(text).toHaveCount(0);
+
+  // Back returns to the message as it was pasted.
+  await panel.getByRole("button", { name: "Back" }).click();
+  await expect(panel.locator("#pgp-input")).toHaveValue(alice.signedMessage);
 });

@@ -506,12 +506,19 @@ export function WorkspaceView({
 
   // After decrypting to readable text, give the plaintext the whole panel with
   // a Back button, instead of cramming it into a small fixed-height preview.
-  const showFullOutput = s.operationDone && s.mode === "decrypt" && s.hasOutput;
+  // A verified message reads the same way: the signer's card on top and
+  // only the text the signature covers under it -- not the paste.
+  const showFullOutput =
+    s.operationDone &&
+    (s.mode === "decrypt" || s.mode === "verify") &&
+    s.hasOutput;
   // Reply needs someone to address: a signer whose key we hold. An
   // unknown signer is a placeholder record with no key, and an unsigned
   // or failed message has none, so neither gets the button.
   const replyTo =
-    showFullOutput && s.signatureTone === "success" ? s.verifiedSigner : null;
+    showFullOutput && s.mode === "decrypt" && s.signatureTone === "success"
+      ? s.verifiedSigner
+      : null;
   const canReply = replyTo !== null;
   /** Move the message into a reader tab (App seals it and serves it,
    *  see hooks/useReaderTabs) and turn this workspace into the reply:
@@ -1237,7 +1244,6 @@ export function WorkspaceView({
       signatureTone={s.signatureTone}
       signatureNote={s.signatureNote}
       signerCaveat={s.signerCaveat}
-      showSignedText={s.mode === "verify"}
       contacts={contacts}
       outputPublicKeyDetected={s.outputPublicKeyDetected}
       outputVersion={s.outputVersion}
