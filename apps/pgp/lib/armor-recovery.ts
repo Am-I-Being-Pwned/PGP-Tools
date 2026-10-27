@@ -188,10 +188,57 @@ export function reconstructArmor(text: string): string {
   );
 }
 
-/** A collapsed cleartext-signed message: the part up to the signature,
- *  and the signature block itself. */
-const COLLAPSED_CLEARTEXT =
-  /-----BEGIN PGP SIGNED MESSAGE-----([^\n]*?)(-----BEGIN PGP SIGNATURE-----[^\n]*?-----END PGP SIGNATURE-----)/;
+const SIGNED_BEGIN = "-----BEGIN PGP SIGNED MESSAGE-----";
+const SIGNATURE_BEGIN = "-----BEGIN PGP SIGNATURE-----";
+const SIGNATURE_END = "-----END PGP SIGNATURE-----";
+
+/**
+ * Find a collapsed cleartext-signed message: a BEGIN SIGNED MESSAGE
+ * marker, then on the SAME line the first BEGIN SIGNATURE after it and
+ * the first END SIGNATURE after that. Returns the match the way
+ * `RegExp.exec` would (whole, the part up to the signature, the
+ * signature block, and where it starts).
+ *
+ * Scanned with `indexOf` rather than the regex it replaces
+ * (`BEGIN…([^\n]*?)(BEGIN SIG[^\n]*?END SIG)`), which backtracked in
+ * cubic time: a context-menu selection has no newlines, so a page could
+ * hand the worker ~100 KB of repeated markers and stall it for minutes.
+ * Linear, because a line that holds no complete signature after its
+ * first BEGIN marker holds none after a later one either -- the scan
+ * moves on to the next line.
+ */
+function findCollapsedCleartext(
+  text: string,
+): {
+  index: number;
+  whole: string;
+  head: string;
+  signatureBlock: string;
+} | null {
+  let from = 0;
+  for (;;) {
+    const start = text.indexOf(SIGNED_BEGIN, from);
+    if (start < 0) return null;
+    const afterStart = start + SIGNED_BEGIN.length;
+    const newline = text.indexOf("\n", afterStart);
+    const lineEnd = newline < 0 ? text.length : newline;
+    const sig = text.indexOf(SIGNATURE_BEGIN, afterStart);
+    if (sig >= 0 && sig + SIGNATURE_BEGIN.length <= lineEnd) {
+      const end = text.indexOf(SIGNATURE_END, sig + SIGNATURE_BEGIN.length);
+      if (end >= 0 && end + SIGNATURE_END.length <= lineEnd) {
+        const stop = end + SIGNATURE_END.length;
+        return {
+          index: start,
+          whole: text.slice(start, stop),
+          head: text.slice(afterStart, sig),
+          signatureBlock: text.slice(sig, stop),
+        };
+      }
+    }
+    if (newline < 0) return null;
+    from = newline + 1;
+  }
+}
 /** A hash algorithm name in a `Hash:` header value, optionally with the
  *  comma that says another follows (`Hash: SHA256, SHA512`). */
 const HASH_NAME = /^[A-Za-z0-9-]+,?$/;
@@ -214,9 +261,9 @@ const HASH_NAME = /^[A-Za-z0-9-]+,?$/;
  * around the message is kept byte for byte.
  */
 export function reconstructCleartextSigned(text: string): string | null {
-  const m = COLLAPSED_CLEARTEXT.exec(text);
+  const m = findCollapsedCleartext(text);
   if (!m) return null;
-  const [whole, head, signatureBlock] = m;
+  const { whole, head, signatureBlock } = m;
 
   const tokens = head
     .trim()
