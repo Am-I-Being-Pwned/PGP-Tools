@@ -3717,6 +3717,14 @@
   "workspace_age_message_note": {
     "message": "age 消息，SSH 收件人不能与 PGP 混用"
   },
+  "workspace_also_signed_by": {
+    "message": "另由 $names$ 签名",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_browse_files": {
     "message": "浏览文件"
   },
@@ -3889,6 +3897,20 @@
   "workspace_error_wrong_key_password": {
     "message": "密码错误。请检查后重试。"
   },
+  "workspace_file_not_signed": {
+    "message": "未签名"
+  },
+  "workspace_file_signature": {
+    "message": "$name$：$outcome$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "outcome": {
+        "content": "$2"
+      }
+    }
+  },
   "workspace_files_decrypted_one": {
     "message": "已解密 $count$ 个文件（共 $size$）",
     "placeholders": {
@@ -3932,6 +3954,9 @@
         "content": "$2"
       }
     }
+  },
+  "workspace_files_mixed_signers": {
+    "message": "签名者不一致"
   },
   "workspace_files_signed_one": {
     "message": "已签名 $count$ 个文件",
@@ -4255,8 +4280,42 @@
   "workspace_sign_with": {
     "message": "签名密钥"
   },
+  "workspace_signature_covers_original": {
+    "message": "签名针对的是原文，而不是此译文"
+  },
   "workspace_signature_verified": {
     "message": "签名已验证"
+  },
+  "workspace_signature_verified_not_for_you": {
+    "message": "不是发给你的"
+  },
+  "workspace_signature_verified_retired": {
+    "message": "密钥已停用"
+  },
+  "workspace_signed_for_others": {
+    "message": "签名对象是 $names$，而不是你",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_signed_on": {
+    "message": "签名于 $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_signed_text": {
+    "message": "已签名文本"
+  },
+  "workspace_signed_text_translated": {
+    "message": "已签名文本的译文"
+  },
+  "workspace_signer_key_retired": {
+    "message": "生成该签名的密钥此后已过期或被吊销"
   },
   "workspace_status_age_encrypted": {
     "message": "age 消息，已加密给 SSH 收件人"
@@ -4338,6 +4397,22 @@
   },
   "workspace_unverified": {
     "message": "未验证"
+  },
+  "workspace_unverified_cosigners_one": {
+    "message": "另有 $count$ 个签名来自你没有的密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_unverified_cosigners_other": {
+    "message": "另有 $count$ 个签名来自你没有的密钥",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "workspace_verify_signature": {
     "message": "验证签名"

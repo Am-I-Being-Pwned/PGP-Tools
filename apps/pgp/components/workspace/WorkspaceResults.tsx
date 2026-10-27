@@ -91,6 +91,15 @@ interface WorkspaceResultsProps {
   /** Tone of the signer card: green when verified, orange when signed but
    *  unverifiable (signer's key not held). */
   signatureTone?: "success" | "warning";
+  /** Said under the signer: when it was signed, co-signers, a retired key. */
+  signatureNote?: string | null;
+  /** A good signature with a caveat (key retired since, signed for
+   *  someone else): the amber card's label. The signer is known -- this
+   *  is not the "unknown signer" card. */
+  signerCaveat?: string | null;
+  /** Show the text result under the verdict, labelled as what was signed
+   *  (verify mode). */
+  showSignedText?: boolean;
   /** Fill the available height (used by the full-screen result view). */
   fullHeight?: boolean;
   /** For the "there's a key in this message" offer: who we already have,
@@ -128,6 +137,9 @@ export function WorkspaceResults({
   statusText,
   verifiedSigner,
   signatureTone = "success",
+  signatureNote,
+  signerCaveat = null,
+  showSignedText = false,
   fullHeight,
   contacts,
   translationFooter,
@@ -141,7 +153,16 @@ export function WorkspaceResults({
   onRevealKey,
   onLookupSigner,
 }: WorkspaceResultsProps) {
-  const isUnverified = signatureTone === "warning";
+  const isUnverified = signatureTone === "warning" && !signerCaveat;
+  // A machine translation is not what was signed: the card stays, but it
+  // says the verdict covers the original.
+  const translatedNote =
+    showTranslation && verifiedSigner && !isUnverified
+      ? t("workspace_signature_covers_original")
+      : null;
+  const note = isUnverified
+    ? statusText
+    : [signatureNote, translatedNote].filter(Boolean).join(" · ") || undefined;
 
   const hasContent =
     !!error ||
@@ -167,9 +188,11 @@ export function WorkspaceResults({
         verifiedLabel={
           isUnverified
             ? t("workspace_unverified")
-            : (statusText ?? t("workspace_signature_verified"))
+            : (signerCaveat ??
+              statusText ??
+              t("workspace_signature_verified"))
         }
-        note={isUnverified ? statusText : undefined}
+        note={note}
         // The key that made the signature, a click away. Only for one we
         // hold: an unknown signer is a bare key id with nothing to show.
         labelAction={
@@ -223,6 +246,13 @@ export function WorkspaceResults({
         footer={translationFooter}
         corner={resultCorner}
         header={signerInCard ? signerCard : undefined}
+        readableLabel={
+          !showSignedText
+            ? undefined
+            : showTranslation
+              ? t("workspace_signed_text_translated")
+              : t("workspace_signed_text")
+        }
       />
 
       {/* A key inside a message the user just read: keys travel this way

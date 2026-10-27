@@ -743,6 +743,7 @@ export interface MessageArgs {
   "shared_wrong_password": undefined;
   "workspace_add_a_contact": undefined;
   "workspace_age_message_note": undefined;
+  "workspace_also_signed_by": { names: string | number };
   "workspace_browse_files": undefined;
   "workspace_clear_all_files": undefined;
   "workspace_clear_input_output": undefined;
@@ -784,6 +785,9 @@ export interface MessageArgs {
   "workspace_error_unlock_failed": undefined;
   "workspace_error_verify_failed": undefined;
   "workspace_error_wrong_key_password": undefined;
+  "workspace_file_not_signed": undefined;
+  "workspace_file_signature": { name: string | number; outcome: string | number };
+  "workspace_files_mixed_signers": undefined;
   "workspace_find_hide_replace": undefined;
   "workspace_find_label": undefined;
   "workspace_find_replace": undefined;
@@ -853,7 +857,15 @@ export interface MessageArgs {
   "workspace_sign_kind_crx": undefined;
   "workspace_sign_kind_pgp": undefined;
   "workspace_sign_with": undefined;
+  "workspace_signature_covers_original": undefined;
   "workspace_signature_verified": undefined;
+  "workspace_signature_verified_not_for_you": undefined;
+  "workspace_signature_verified_retired": undefined;
+  "workspace_signed_for_others": { names: string | number };
+  "workspace_signed_on": { date: string | number };
+  "workspace_signed_text": undefined;
+  "workspace_signed_text_translated": undefined;
+  "workspace_signer_key_retired": undefined;
   "workspace_status_age_encrypted": undefined;
   "workspace_status_crx_signed": { name: string | number };
   "workspace_status_crx_valid": { id: string | number };
@@ -951,6 +963,7 @@ export interface PluralArgs {
   "workspace_files_zipped_encrypted": undefined;
   "workspace_password_min_length": undefined;
   "workspace_password_too_short": undefined;
+  "workspace_unverified_cosigners": undefined;
 }
 
 /** Substitution order for keys that have placeholders ($1, $2, ...). */
@@ -1161,6 +1174,7 @@ export const PLACEHOLDER_ORDER: Readonly<Partial<Record<string, readonly string[
   "shared_minutes_one": ["count"],
   "shared_minutes_other": ["count"],
   "shared_preset_applied": ["title"],
+  "workspace_also_signed_by": ["names"],
   "workspace_char_count_one": ["count"],
   "workspace_char_count_other": ["count"],
   "workspace_compose_same_language": ["language"],
@@ -1169,6 +1183,7 @@ export const PLACEHOLDER_ORDER: Readonly<Partial<Record<string, readonly string[
   "workspace_detected_key_in_message": ["name"],
   "workspace_detected_key_known": ["name"],
   "workspace_detected_key_pasted": ["name"],
+  "workspace_file_signature": ["name","outcome"],
   "workspace_files_decrypted_one": ["count","size"],
   "workspace_files_decrypted_other": ["count","size"],
   "workspace_files_encrypted_one": ["count","size"],
@@ -1190,7 +1205,11 @@ export const PLACEHOLDER_ORDER: Readonly<Partial<Record<string, readonly string[
   "workspace_replace_all_shortcut": ["shortcut"],
   "workspace_save_file": ["name"],
   "workspace_show_translation": ["language"],
+  "workspace_signed_for_others": ["names"],
+  "workspace_signed_on": ["date"],
   "workspace_status_crx_signed": ["name"],
   "workspace_status_crx_valid": ["id"],
   "workspace_translate_to": ["language"],
+  "workspace_unverified_cosigners_one": ["count"],
+  "workspace_unverified_cosigners_other": ["count"],
 };

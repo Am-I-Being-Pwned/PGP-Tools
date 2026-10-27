@@ -113,9 +113,7 @@ export async function decryptWithHandle(
 
   return {
     data,
-    signatureValid: signatureInfo.signatureValid,
-    signatureStatus: signatureInfo.signatureStatus,
-    signerKeyId: signatureInfo.signerKeyId,
+    ...signatureInfo,
   };
 }
 
@@ -162,9 +160,7 @@ export async function decryptWithPassword(
 
     return {
       data,
-      signatureValid: signatureInfo.signatureValid,
-      signatureStatus: signatureInfo.signatureStatus,
-      signerKeyId: signatureInfo.signerKeyId,
+      ...signatureInfo,
     };
   } finally {
     passwordBytes.fill(0);

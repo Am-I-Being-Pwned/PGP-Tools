@@ -3717,6 +3717,14 @@
   "workspace_age_message_note": {
     "message": "messaggio age - i destinatari SSH non possono essere combinati con PGP"
   },
+  "workspace_also_signed_by": {
+    "message": "firmato anche da $names$",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_browse_files": {
     "message": "Sfoglia file"
   },
@@ -3889,6 +3897,20 @@
   "workspace_error_wrong_key_password": {
     "message": "Password errata. Controllala e riprova."
   },
+  "workspace_file_not_signed": {
+    "message": "non firmato"
+  },
+  "workspace_file_signature": {
+    "message": "$name$: $outcome$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "outcome": {
+        "content": "$2"
+      }
+    }
+  },
   "workspace_files_decrypted_one": {
     "message": "$count$ file decifrato ($size$ in totale)",
     "placeholders": {
@@ -3932,6 +3954,9 @@
         "content": "$2"
       }
     }
+  },
+  "workspace_files_mixed_signers": {
+    "message": "Firmatari diversi"
   },
   "workspace_files_signed_one": {
     "message": "$count$ file firmato",
@@ -4255,8 +4280,42 @@
   "workspace_sign_with": {
     "message": "Firma con"
   },
+  "workspace_signature_covers_original": {
+    "message": "la firma copre l'originale, non questa traduzione"
+  },
   "workspace_signature_verified": {
     "message": "Firma verificata"
+  },
+  "workspace_signature_verified_not_for_you": {
+    "message": "Non per te"
+  },
+  "workspace_signature_verified_retired": {
+    "message": "Chiave ritirata"
+  },
+  "workspace_signed_for_others": {
+    "message": "firmato per $names$, non per te",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_signed_on": {
+    "message": "Firmato il $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_signed_text": {
+    "message": "Testo firmato"
+  },
+  "workspace_signed_text_translated": {
+    "message": "Traduzione del testo firmato"
+  },
+  "workspace_signer_key_retired": {
+    "message": "la chiave che l'ha creata è nel frattempo scaduta o stata revocata"
   },
   "workspace_status_age_encrypted": {
     "message": "messaggio age - cifrato per destinatari SSH"
@@ -4338,6 +4397,22 @@
   },
   "workspace_unverified": {
     "message": "Non verificata"
+  },
+  "workspace_unverified_cosigners_one": {
+    "message": "$count$ altra firma da una chiave che non hai",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_unverified_cosigners_other": {
+    "message": "$count$ altre firme da chiavi che non hai",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "workspace_verify_signature": {
     "message": "Verifica la firma"

@@ -3717,6 +3717,14 @@
   "workspace_age_message_note": {
     "message": "age メッセージ。SSH の宛先は PGP と混在できません"
   },
+  "workspace_also_signed_by": {
+    "message": "$names$ も署名",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_browse_files": {
     "message": "ファイルを選択"
   },
@@ -3889,6 +3897,20 @@
   "workspace_error_wrong_key_password": {
     "message": "パスワードが違います。確認してから、やり直してください。"
   },
+  "workspace_file_not_signed": {
+    "message": "署名なし"
+  },
+  "workspace_file_signature": {
+    "message": "$name$: $outcome$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "outcome": {
+        "content": "$2"
+      }
+    }
+  },
   "workspace_files_decrypted_one": {
     "message": "$count$ 個のファイルを復号しました (合計 $size$)",
     "placeholders": {
@@ -3932,6 +3954,9 @@
         "content": "$2"
       }
     }
+  },
+  "workspace_files_mixed_signers": {
+    "message": "署名者が混在"
   },
   "workspace_files_signed_one": {
     "message": "$count$ 個のファイルに署名しました",
@@ -4255,8 +4280,42 @@
   "workspace_sign_with": {
     "message": "署名に使う鍵"
   },
+  "workspace_signature_covers_original": {
+    "message": "署名の対象は原文であり、この翻訳ではありません"
+  },
   "workspace_signature_verified": {
     "message": "署名を検証しました"
+  },
+  "workspace_signature_verified_not_for_you": {
+    "message": "あなた宛てではない"
+  },
+  "workspace_signature_verified_retired": {
+    "message": "鍵は無効"
+  },
+  "workspace_signed_for_others": {
+    "message": "$names$ 宛ての署名で、あなた宛てではありません",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_signed_on": {
+    "message": "署名日 $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_signed_text": {
+    "message": "署名されたテキスト"
+  },
+  "workspace_signed_text_translated": {
+    "message": "署名されたテキストの翻訳"
+  },
+  "workspace_signer_key_retired": {
+    "message": "署名した鍵はその後期限切れまたは失効しています"
   },
   "workspace_status_age_encrypted": {
     "message": "age メッセージ。SSH の宛先に対して暗号化しました"
@@ -4338,6 +4397,22 @@
   },
   "workspace_unverified": {
     "message": "未検証"
+  },
+  "workspace_unverified_cosigners_one": {
+    "message": "持っていない鍵による署名がさらに $count$ 件",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_unverified_cosigners_other": {
+    "message": "持っていない鍵による署名がさらに $count$ 件",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "workspace_verify_signature": {
     "message": "署名を検証"

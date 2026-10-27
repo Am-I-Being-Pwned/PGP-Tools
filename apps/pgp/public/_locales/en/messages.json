@@ -4579,6 +4579,15 @@
     "message": "age message - SSH recipients can't be mixed with PGP",
     "description": "Small note under the recipient picker once SSH recipients are selected: the output will be an age-format message. 'age' is a format name, keep lowercase."
   },
+  "workspace_also_signed_by": {
+    "message": "also signed by $names$",
+    "description": "Part of the note under a verified signer: further good signatures. $names$ is a comma-separated list.",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_browse_files": {
     "message": "Browse files",
     "description": "Button in the drop zone that opens the file picker."
@@ -4794,6 +4803,22 @@
     "message": "Wrong password. Check it and try again.",
     "description": "Error under the inline password field when the key password was wrong."
   },
+  "workspace_file_not_signed": {
+    "message": "not signed",
+    "description": "Outcome of one file in the mixed-signers note."
+  },
+  "workspace_file_signature": {
+    "message": "$name$: $outcome$",
+    "description": "One file's entry in the mixed-signers note. $name$ is the file name, $outcome$ the signer's name or a status.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "outcome": {
+        "content": "$2"
+      }
+    }
+  },
   "workspace_files_decrypted_one": {
     "message": "$count$ file decrypted ($size$ total)",
     "description": "Status line after decrypting several files. $count$ is the file count, $size$ a formatted total size.",
@@ -4841,6 +4866,10 @@
         "content": "$2"
       }
     }
+  },
+  "workspace_files_mixed_signers": {
+    "message": "Mixed signers",
+    "description": "Name on the amber card after verifying or decrypting several files whose signatures differ. Keep it short; the note under it lists each file."
   },
   "workspace_files_signed_one": {
     "message": "$count$ file signed",
@@ -5241,9 +5270,51 @@
     "message": "Sign with",
     "description": "Label of the private-key selector in sign mode and next to the Sign toggle."
   },
+  "workspace_signature_covers_original": {
+    "message": "the signature covers the original, not this translation",
+    "description": "Note under the signer card while a machine translation is shown in place of the signed message."
+  },
   "workspace_signature_verified": {
     "message": "Signature verified",
     "description": "Status line and signer-card badge after a signature checked out."
+  },
+  "workspace_signature_verified_not_for_you": {
+    "message": "Not for you",
+    "description": "Short amber label on a signer card: the signature checks out, but it names other people as its recipients (this copy was passed on). Keep it to a couple of words; the note under the card explains."
+  },
+  "workspace_signature_verified_retired": {
+    "message": "Key retired",
+    "description": "Short amber label on a signer card: the signature checks out, but the key that made it has expired or been revoked since. Keep it to a couple of words; the note under the card explains."
+  },
+  "workspace_signed_for_others": {
+    "message": "signed for $names$, not for you",
+    "description": "Part of the note under a verified signer: the signature names its intended recipients and none of them is the user (the message was passed on). $names$ is a comma-separated list. Lowercase: it may follow other parts.",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_signed_on": {
+    "message": "Signed $date$",
+    "description": "Part of the note under a verified signer. $date$ is the date the signature claims it was made (chosen by the signer).",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_signed_text": {
+    "message": "Signed text",
+    "description": "Label over the box under a verify verdict showing exactly the text the signature covers."
+  },
+  "workspace_signed_text_translated": {
+    "message": "Translation of the signed text",
+    "description": "Label over the verify result box while a machine translation is shown in place of the signed text."
+  },
+  "workspace_signer_key_retired": {
+    "message": "the key that made it has since expired or been revoked",
+    "description": "Part of the note under a signer: the signature verified, but the signing key is no longer valid today. Lowercase: it follows other parts after a dot separator."
   },
   "workspace_status_age_encrypted": {
     "message": "age message - encrypted to SSH recipients",
@@ -5347,6 +5418,24 @@
   "workspace_unverified": {
     "message": "Unverified",
     "description": "Badge on the signer card when the message is signed but the signer's key is not held, so the signature could not be checked."
+  },
+  "workspace_unverified_cosigners_one": {
+    "message": "$count$ more signature from a key you don't have",
+    "description": "Part of the note under a verified signer: extra signatures that could not be checked.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_unverified_cosigners_other": {
+    "message": "$count$ more signatures from keys you don't have",
+    "description": "Part of the note under a verified signer: extra signatures that could not be checked.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "workspace_verify_signature": {
     "message": "Verify signature",

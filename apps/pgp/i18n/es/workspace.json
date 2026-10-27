@@ -454,5 +454,47 @@
   },
   "workspace_char_count_other": {
     "message": "$count$ caracteres"
+  },
+  "workspace_signed_on": {
+    "message": "Firmado el $date$"
+  },
+  "workspace_signer_key_retired": {
+    "message": "la clave que la hizo ha caducado o ha sido revocada desde entonces"
+  },
+  "workspace_also_signed_by": {
+    "message": "también firmado por $names$"
+  },
+  "workspace_unverified_cosigners_one": {
+    "message": "$count$ firma más de una clave que no tienes"
+  },
+  "workspace_unverified_cosigners_other": {
+    "message": "$count$ firmas más de claves que no tienes"
+  },
+  "workspace_files_mixed_signers": {
+    "message": "Firmantes distintos"
+  },
+  "workspace_file_signature": {
+    "message": "$name$: $outcome$"
+  },
+  "workspace_file_not_signed": {
+    "message": "sin firmar"
+  },
+  "workspace_signature_covers_original": {
+    "message": "la firma cubre el original, no esta traducción"
+  },
+  "workspace_signature_verified_retired": {
+    "message": "Clave retirada"
+  },
+  "workspace_signed_text": {
+    "message": "Texto firmado"
+  },
+  "workspace_signed_for_others": {
+    "message": "firmado para $names$, no para ti"
+  },
+  "workspace_signature_verified_not_for_you": {
+    "message": "No es para ti"
+  },
+  "workspace_signed_text_translated": {
+    "message": "Traducción del texto firmado"
   }
 }

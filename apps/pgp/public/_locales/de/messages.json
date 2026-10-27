@@ -3717,6 +3717,14 @@
   "workspace_age_message_note": {
     "message": "age-Nachricht - SSH-Empfänger können nicht mit PGP gemischt werden"
   },
+  "workspace_also_signed_by": {
+    "message": "auch signiert von $names$",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_browse_files": {
     "message": "Dateien auswählen"
   },
@@ -3889,6 +3897,20 @@
   "workspace_error_wrong_key_password": {
     "message": "Falsches Passwort. Prüfen Sie es und versuchen Sie es erneut."
   },
+  "workspace_file_not_signed": {
+    "message": "nicht signiert"
+  },
+  "workspace_file_signature": {
+    "message": "$name$: $outcome$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "outcome": {
+        "content": "$2"
+      }
+    }
+  },
   "workspace_files_decrypted_one": {
     "message": "$count$ Datei entschlüsselt ($size$ insgesamt)",
     "placeholders": {
@@ -3932,6 +3954,9 @@
         "content": "$2"
       }
     }
+  },
+  "workspace_files_mixed_signers": {
+    "message": "Gemischte Signierer"
   },
   "workspace_files_signed_one": {
     "message": "$count$ Datei signiert",
@@ -4255,8 +4280,42 @@
   "workspace_sign_with": {
     "message": "Signieren mit"
   },
+  "workspace_signature_covers_original": {
+    "message": "die Signatur gilt für das Original, nicht für diese Übersetzung"
+  },
   "workspace_signature_verified": {
     "message": "Signatur verifiziert"
+  },
+  "workspace_signature_verified_not_for_you": {
+    "message": "Nicht für Sie"
+  },
+  "workspace_signature_verified_retired": {
+    "message": "Schlüssel abgelöst"
+  },
+  "workspace_signed_for_others": {
+    "message": "signiert für $names$, nicht für Sie",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_signed_on": {
+    "message": "Signiert am $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_signed_text": {
+    "message": "Signierter Text"
+  },
+  "workspace_signed_text_translated": {
+    "message": "Übersetzung des signierten Textes"
+  },
+  "workspace_signer_key_retired": {
+    "message": "der Schlüssel, der sie erstellt hat, ist inzwischen abgelaufen oder widerrufen"
   },
   "workspace_status_age_encrypted": {
     "message": "age-Nachricht - für SSH-Empfänger verschlüsselt"
@@ -4338,6 +4397,22 @@
   },
   "workspace_unverified": {
     "message": "Nicht verifiziert"
+  },
+  "workspace_unverified_cosigners_one": {
+    "message": "$count$ weitere Signatur von einem Schlüssel, den Sie nicht haben",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_unverified_cosigners_other": {
+    "message": "$count$ weitere Signaturen von Schlüsseln, die Sie nicht haben",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "workspace_verify_signature": {
     "message": "Signatur verifizieren"

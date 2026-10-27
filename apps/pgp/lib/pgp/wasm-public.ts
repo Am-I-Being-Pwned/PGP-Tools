@@ -18,7 +18,12 @@
  * See `apps/pgp/SECURITY.md` §3 for the full file map.
  */
 
-import type { KeyDetails, KeyInfo, SignatureStatus } from "./types";
+import type {
+  KeyDetails,
+  KeyInfo,
+  SignatureDetails,
+  SignatureStatus,
+} from "./types";
 import { loadWasm } from "./wasm-loader";
 
 // ── status / metadata ────────────────────────────────────────────────
@@ -124,13 +129,13 @@ export async function encrypt(
   );
 }
 
-export interface SignatureInfo {
+export interface SignatureInfo extends SignatureDetails {
   signatureValid: boolean | null;
   signatureStatus: SignatureStatus;
   signerKeyId: string | null;
 }
 
-export interface VerifyResultWasm {
+export interface VerifyResultWasm extends SignatureDetails {
   text: string;
   signatureValid: boolean;
   signatureStatus: SignatureStatus;

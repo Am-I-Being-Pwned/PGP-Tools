@@ -4701,6 +4701,14 @@
   "workspace_age_message_note": {
     "message": "Сообщение age - получателей SSH нельзя смешивать с PGP"
   },
+  "workspace_also_signed_by": {
+    "message": "также подписано: $names$",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
   "workspace_browse_files": {
     "message": "Выбрать файлы"
   },
@@ -4889,6 +4897,20 @@
   "workspace_error_wrong_key_password": {
     "message": "Неверный пароль. Проверьте его и повторите попытку."
   },
+  "workspace_file_not_signed": {
+    "message": "не подписан"
+  },
+  "workspace_file_signature": {
+    "message": "$name$: $outcome$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "outcome": {
+        "content": "$2"
+      }
+    }
+  },
   "workspace_files_decrypted_few": {
     "message": "Расшифровано $count$ файла (всего $size$)",
     "placeholders": {
@@ -4976,6 +4998,9 @@
         "content": "$2"
       }
     }
+  },
+  "workspace_files_mixed_signers": {
+    "message": "Разные подписанты"
   },
   "workspace_files_signed_few": {
     "message": "Подписано $count$ файла",
@@ -5363,8 +5388,42 @@
   "workspace_sign_with": {
     "message": "Подписать ключом"
   },
+  "workspace_signature_covers_original": {
+    "message": "подпись относится к оригиналу, а не к этому переводу"
+  },
   "workspace_signature_verified": {
     "message": "Подпись проверена"
+  },
+  "workspace_signature_verified_not_for_you": {
+    "message": "Не вам"
+  },
+  "workspace_signature_verified_retired": {
+    "message": "Ключ выведен"
+  },
+  "workspace_signed_for_others": {
+    "message": "подписано для $names$, а не для вас",
+    "placeholders": {
+      "names": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_signed_on": {
+    "message": "Подписано $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_signed_text": {
+    "message": "Подписанный текст"
+  },
+  "workspace_signed_text_translated": {
+    "message": "Перевод подписанного текста"
+  },
+  "workspace_signer_key_retired": {
+    "message": "ключ, которым она сделана, с тех пор истёк или отозван"
   },
   "workspace_status_age_encrypted": {
     "message": "Сообщение age - зашифровано для получателей SSH"
@@ -5446,6 +5505,22 @@
   },
   "workspace_unverified": {
     "message": "Не проверена"
+  },
+  "workspace_unverified_cosigners_one": {
+    "message": "ещё $count$ подпись ключом, которого у вас нет",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "workspace_unverified_cosigners_other": {
+    "message": "ещё $count$ подписи ключами, которых у вас нет",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "workspace_verify_signature": {
     "message": "Проверить подпись"

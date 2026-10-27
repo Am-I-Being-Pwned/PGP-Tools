@@ -496,5 +496,47 @@
   },
   "workspace_char_count_other": {
     "message": "$count$ символа"
+  },
+  "workspace_signed_on": {
+    "message": "Подписано $date$"
+  },
+  "workspace_signer_key_retired": {
+    "message": "ключ, которым она сделана, с тех пор истёк или отозван"
+  },
+  "workspace_also_signed_by": {
+    "message": "также подписано: $names$"
+  },
+  "workspace_unverified_cosigners_one": {
+    "message": "ещё $count$ подпись ключом, которого у вас нет"
+  },
+  "workspace_unverified_cosigners_other": {
+    "message": "ещё $count$ подписи ключами, которых у вас нет"
+  },
+  "workspace_files_mixed_signers": {
+    "message": "Разные подписанты"
+  },
+  "workspace_file_signature": {
+    "message": "$name$: $outcome$"
+  },
+  "workspace_file_not_signed": {
+    "message": "не подписан"
+  },
+  "workspace_signature_covers_original": {
+    "message": "подпись относится к оригиналу, а не к этому переводу"
+  },
+  "workspace_signature_verified_retired": {
+    "message": "Ключ выведен"
+  },
+  "workspace_signed_text": {
+    "message": "Подписанный текст"
+  },
+  "workspace_signed_for_others": {
+    "message": "подписано для $names$, а не для вас"
+  },
+  "workspace_signature_verified_not_for_you": {
+    "message": "Не вам"
+  },
+  "workspace_signed_text_translated": {
+    "message": "Перевод подписанного текста"
   }
 }

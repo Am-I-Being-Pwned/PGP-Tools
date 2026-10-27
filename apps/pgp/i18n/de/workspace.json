@@ -454,5 +454,47 @@
   },
   "workspace_char_count_other": {
     "message": "$count$ Zeichen"
+  },
+  "workspace_signed_on": {
+    "message": "Signiert am $date$"
+  },
+  "workspace_signer_key_retired": {
+    "message": "der Schlüssel, der sie erstellt hat, ist inzwischen abgelaufen oder widerrufen"
+  },
+  "workspace_also_signed_by": {
+    "message": "auch signiert von $names$"
+  },
+  "workspace_unverified_cosigners_one": {
+    "message": "$count$ weitere Signatur von einem Schlüssel, den Sie nicht haben"
+  },
+  "workspace_unverified_cosigners_other": {
+    "message": "$count$ weitere Signaturen von Schlüsseln, die Sie nicht haben"
+  },
+  "workspace_files_mixed_signers": {
+    "message": "Gemischte Signierer"
+  },
+  "workspace_file_signature": {
+    "message": "$name$: $outcome$"
+  },
+  "workspace_file_not_signed": {
+    "message": "nicht signiert"
+  },
+  "workspace_signature_covers_original": {
+    "message": "die Signatur gilt für das Original, nicht für diese Übersetzung"
+  },
+  "workspace_signature_verified_retired": {
+    "message": "Schlüssel abgelöst"
+  },
+  "workspace_signed_text": {
+    "message": "Signierter Text"
+  },
+  "workspace_signed_for_others": {
+    "message": "signiert für $names$, nicht für Sie"
+  },
+  "workspace_signature_verified_not_for_you": {
+    "message": "Nicht für Sie"
+  },
+  "workspace_signed_text_translated": {
+    "message": "Übersetzung des signierten Textes"
   }
 }

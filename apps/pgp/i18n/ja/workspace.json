@@ -454,5 +454,47 @@
   },
   "workspace_char_count_other": {
     "message": "$count$ 文字"
+  },
+  "workspace_signed_on": {
+    "message": "署名日 $date$"
+  },
+  "workspace_signer_key_retired": {
+    "message": "署名した鍵はその後期限切れまたは失効しています"
+  },
+  "workspace_also_signed_by": {
+    "message": "$names$ も署名"
+  },
+  "workspace_unverified_cosigners_one": {
+    "message": "持っていない鍵による署名がさらに $count$ 件"
+  },
+  "workspace_unverified_cosigners_other": {
+    "message": "持っていない鍵による署名がさらに $count$ 件"
+  },
+  "workspace_files_mixed_signers": {
+    "message": "署名者が混在"
+  },
+  "workspace_file_signature": {
+    "message": "$name$: $outcome$"
+  },
+  "workspace_file_not_signed": {
+    "message": "署名なし"
+  },
+  "workspace_signature_covers_original": {
+    "message": "署名の対象は原文であり、この翻訳ではありません"
+  },
+  "workspace_signature_verified_retired": {
+    "message": "鍵は無効"
+  },
+  "workspace_signed_text": {
+    "message": "署名されたテキスト"
+  },
+  "workspace_signed_for_others": {
+    "message": "$names$ 宛ての署名で、あなた宛てではありません"
+  },
+  "workspace_signature_verified_not_for_you": {
+    "message": "あなた宛てではない"
+  },
+  "workspace_signed_text_translated": {
+    "message": "署名されたテキストの翻訳"
   }
 }

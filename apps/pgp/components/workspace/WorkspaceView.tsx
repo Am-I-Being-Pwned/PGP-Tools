@@ -1130,6 +1130,8 @@ export function WorkspaceView({
           statusText={s.statusText ?? undefined}
           verifiedSigner={s.verifiedSigner}
           signatureTone={s.signatureTone}
+          signatureNote={s.signatureNote}
+          signerCaveat={s.signerCaveat}
           contacts={contacts}
           translationFooter={translationFooter}
           resultCorner={
@@ -1233,6 +1235,9 @@ export function WorkspaceView({
       statusText={s.statusText ?? undefined}
       verifiedSigner={s.verifiedSigner}
       signatureTone={s.signatureTone}
+      signatureNote={s.signatureNote}
+      signerCaveat={s.signerCaveat}
+      showSignedText={s.mode === "verify"}
       contacts={contacts}
       outputPublicKeyDetected={s.outputPublicKeyDetected}
       outputVersion={s.outputVersion}

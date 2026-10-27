@@ -168,6 +168,15 @@ export interface WorkspaceState {
   setVerifiedSigner: (s: PublicContactKey | ProtectedKeyBlob | null) => void;
   signatureTone: "success" | "warning";
   setSignatureTone: (t: "success" | "warning") => void;
+  /** What the signer card says beyond the verdict: when it was signed,
+   *  co-signers, a key retired since. Cleared with the signer. */
+  signatureNote: string | null;
+  setSignatureNote: (n: string | null) => void;
+  /** A good signature with a caveat -- its key retired since, or it was
+   *  signed for someone else: amber, but not "unknown signer". The card's
+   *  label. Cleared with the signer. */
+  signerCaveat: string | null;
+  setSignerCaveat: (c: string | null) => void;
   binaryOutput: Uint8Array | undefined;
   setBinaryOutput: (b: Uint8Array | undefined) => void;
   fileResults: FileResult[];
@@ -491,9 +500,23 @@ export function useWorkspaceState(opts: {
 
   const [operationDone, setOperationDone] = useState(false);
   const [statusText, setStatusText] = useState<string | null>(null);
-  const [verifiedSigner, setVerifiedSigner] = useState<
+  const [verifiedSigner, setVerifiedSignerState] = useState<
     PublicContactKey | ProtectedKeyBlob | null
   >(null);
+  const [signatureNote, setSignatureNote] = useState<string | null>(null);
+  const [signerCaveat, setSignerCaveat] = useState<string | null>(null);
+  // Clearing the signer clears everything said about it, so no reset
+  // path can leave a stale "signed on" line under the next result.
+  const setVerifiedSigner = useCallback(
+    (signer: PublicContactKey | ProtectedKeyBlob | null) => {
+      setVerifiedSignerState(signer);
+      if (signer === null) {
+        setSignatureNote(null);
+        setSignerCaveat(null);
+      }
+    },
+    [],
+  );
   const [signatureTone, setSignatureTone] = useState<"success" | "warning">(
     "success",
   );
@@ -569,7 +592,7 @@ export function useWorkspaceState(opts: {
     setNeedsPassword(false);
     setPendingPasswordDecrypt(false);
     setPendingCrxSign(false);
-  }, [setOutput, setBinaryOutput, setFileResults]);
+  }, [setOutput, setBinaryOutput, setFileResults, setVerifiedSigner]);
 
   const resetAll = useCallback(() => {
     setAutoRunAction(null);
@@ -1017,6 +1040,10 @@ export function useWorkspaceState(opts: {
     setVerifiedSigner,
     signatureTone,
     setSignatureTone,
+    signatureNote,
+    setSignatureNote,
+    signerCaveat,
+    setSignerCaveat,
     binaryOutput,
     setBinaryOutput,
     fileResults,
