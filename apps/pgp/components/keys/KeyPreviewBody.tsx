@@ -400,6 +400,9 @@ export interface KeyPreviewBodyProps {
   statusStrip?: React.ReactNode;
   /** Trailing sections (e.g. the revocation certificate card). */
   children?: React.ReactNode;
+  /** Blocks stacked under the fingerprint: the contact's "Mark as
+   *  verified", which is about exactly that fingerprint. */
+  fingerprintFooter?: React.ReactNode;
   /** Per-row control rendered in each component-key row's header. The
    *  import preview doesn't pass it; the details page uses it to hang an
    *  include/exclude toggle off each of a contact's keys. */
@@ -422,6 +425,7 @@ export function KeyPreviewBody({
   lastUsedAt,
   statusStrip,
   children,
+  fingerprintFooter,
   rowAction,
 }: KeyPreviewBodyProps) {
   const [showInactive, setShowInactive] = useState(false);
@@ -595,12 +599,15 @@ export function KeyPreviewBody({
               {t("common_copy")}
             </button>
           </div>
-          <Block className="rounded-xl px-3.5 py-3">
-            <FingerprintText
-              fingerprint={facts.fingerprint}
-              className="text-[13px] leading-relaxed tracking-wide"
-            />
-          </Block>
+          <BlockStack>
+            <Block className="px-3.5 py-3">
+              <FingerprintText
+                fingerprint={facts.fingerprint}
+                className="text-[13px] leading-relaxed tracking-wide"
+              />
+            </Block>
+            {fingerprintFooter}
+          </BlockStack>
         </div>
       )}
 

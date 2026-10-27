@@ -268,5 +268,24 @@
   },
   "keys_check_revocation_failed": {
     "message": "无法检查吊销状态。请重试。"
+  },
+  "keys_verified_chip": { "message": "已验证" },
+  "keys_verified_chip_title": {
+    "message": "你与持有人核对指纹后，将此密钥标记为已验证。"
+  },
+  "keys_verified_on": { "message": "你于 $date$ 验证" },
+  "keys_verified_by_you": { "message": "已由你验证" },
+  "keys_verified_unmark": { "message": "取消标记" },
+  "keys_verify_hint": {
+    "message": "当面或通过你信任的通话与 $name$ 核对此指纹。一致的话，将其标记为已验证。"
+  },
+  "keys_verify_mark": { "message": "标记为已验证" },
+  "keys_contact_same_address": { "message": "地址相同" },
+  "keys_contact_same_address_title": {
+    "message": "$name$ ($keyid$) 也用这个地址，但密钥不同。"
+  },
+  "keys_contact_same_name": { "message": "名字相同" },
+  "keys_contact_same_name_title": {
+    "message": "$name$ ($keyid$) 也用这个名字，但密钥不同。"
   }
 }

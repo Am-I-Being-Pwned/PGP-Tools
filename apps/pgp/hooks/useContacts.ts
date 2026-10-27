@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import type { ReviewedContact } from "../lib/import/review";
 import type { PublicContactKey } from "../lib/storage/contacts";
 import { mergeIntoContact } from "../lib/import-public-keys";
 import { parseKey } from "../lib/pgp/wasm";
@@ -8,6 +9,7 @@ import {
   loadContacts,
   removeContact,
   saveContact,
+  setContactVerified,
   updateContact,
   updateContactAlias,
   upsertContacts,
@@ -171,7 +173,8 @@ export function useContacts() {
     void refresh();
   }, [refresh]);
 
-  const add = useCallback(async (contact: PublicContactKey) => {
+  /** Only a reviewed contact can be added -- see `lib/import/review`. */
+  const add = useCallback(async (contact: ReviewedContact) => {
     const op = mutexRef.current.then(async () => {
       // The SAME rules `saveContact` applies, from the same function --
       // source-based identity, a hand-pasted duplicate that must not
@@ -258,5 +261,29 @@ export function useContacts() {
     [refresh],
   );
 
-  return { contacts, loading, error, refresh, add, remove, rename, mergeKey };
+  /** Mark (or unmark) a contact's key as verified by the user. */
+  const setVerified = useCallback(
+    async (keyId: string, verified: boolean) => {
+      const op = mutexRef.current.then(() =>
+        setContactVerified(keyId, verified),
+      );
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
+      mutexRef.current = op.catch(() => {});
+      await op;
+      await refresh();
+    },
+    [refresh],
+  );
+
+  return {
+    contacts,
+    loading,
+    error,
+    refresh,
+    add,
+    remove,
+    rename,
+    mergeKey,
+    setVerified,
+  };
 }

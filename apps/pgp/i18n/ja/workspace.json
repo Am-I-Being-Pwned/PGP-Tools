@@ -499,5 +499,8 @@
   },
   "workspace_signed_text_hidden_chars": {
     "message": "署名されたテキストに不可視文字または文字方向の制御文字が含まれているため、書かれた通りに表示されない可能性があります"
+  },
+  "workspace_signer_not_verified": {
+    "message": "あなたは鍵を確認済みにしていません"
   }
 }

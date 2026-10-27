@@ -474,5 +474,105 @@
   "import_status_replaces": {
     "message": "Replaces the key you had for $name$",
     "description": "Amber strip on the import preview: this fetched key has a different fingerprint from the one stored for the same lookup, and importing swaps it. $name$ is the stored contact's name."
+  },
+  "import_review_title": {
+    "message": "Review keys",
+    "description": "Slide-over title of the import review: every key found is listed before anything is saved. Short."
+  },
+  "import_review_intro_one": {
+    "message": "$count$ key found. Nothing is saved until you choose.",
+    "description": "Intro line on the import review. $count$ is the number of keys found."
+  },
+  "import_review_intro_other": {
+    "message": "$count$ keys found. Nothing is saved until you choose.",
+    "description": "Intro line on the import review. $count$ is the number of keys found."
+  },
+  "import_review_status_new": {
+    "message": "New",
+    "description": "Small chip on an import review row: a key not saved yet. One word."
+  },
+  "import_review_status_update": {
+    "message": "Update",
+    "description": "Small chip on an import review row: a newer copy of a saved key. One word."
+  },
+  "import_review_status_revoked": {
+    "message": "Revoked",
+    "description": "Small chip on an import review row: the key is revoked by its owner. One word."
+  },
+  "import_review_status_duplicate": {
+    "message": "Already saved",
+    "description": "Small chip on an import review row: nothing new in this copy. Short."
+  },
+  "import_review_status_rejected": {
+    "message": "Can't import",
+    "description": "Small chip on an import review row: the key cannot be imported. Short."
+  },
+  "import_review_conflict_address": {
+    "message": "$email$ already belongs to $name$ ($keyid$). This is a different key - check with them before you trust it.",
+    "description": "Red warning on an import review row: the key claims an address a saved contact already has. $email$ is the address, $name$ the saved contact, $keyid$ its 16-hex key id."
+  },
+  "import_review_conflict_name": {
+    "message": "Same name as $name$ ($keyid$), but a different key. Check with them before you trust it.",
+    "description": "Red warning on an import review row: the key's name looks the same as a saved contact's. $name$ is the saved contact, $keyid$ its 16-hex key id."
+  },
+  "import_review_choice_aria": {
+    "message": "What to do with $name$",
+    "description": "Accessible label of the Skip/Import/Replace switch on an import review row. $name$ is the key's name."
+  },
+  "import_review_choice_skip": {
+    "message": "Skip",
+    "description": "Option on an import review row: don't save this key. One word."
+  },
+  "import_review_choice_keep_both": {
+    "message": "Keep both",
+    "description": "Option on an import review row whose key claims a saved contact's identity: save it beside the saved one. Short."
+  },
+  "import_review_choice_import": {
+    "message": "Import",
+    "description": "Option on an import review row: save this key. One word."
+  },
+  "import_review_choice_replace": {
+    "message": "Replace",
+    "description": "Option on an import review row whose key claims a saved contact's address: save it and remove the saved one. One word."
+  },
+  "import_review_import_none": {
+    "message": "Nothing selected",
+    "description": "Disabled import button on the review when every key is set to Skip. Short."
+  },
+  "import_review_import_n_one": {
+    "message": "Import $count$ key",
+    "description": "Import button on the review. $count$ is how many keys will be saved."
+  },
+  "import_review_import_n_other": {
+    "message": "Import $count$ keys",
+    "description": "Import button on the review. $count$ is how many keys will be saved."
+  },
+  "import_review_import_all": {
+    "message": "Import all",
+    "description": "Secondary button on the review of a bundle or backup: save every key as it is. Short."
+  },
+  "import_review_import_all_risky": {
+    "message": "Import all anyway",
+    "description": "Secondary button on the review when some keys claim a saved contact's identity: save every key regardless. Short."
+  },
+  "import_review_import_all_note_one": {
+    "message": "Includes $count$ key that claims someone you already have.",
+    "description": "Note under 'Import all anyway'. $count$ is how many keys clash with a saved contact."
+  },
+  "import_review_import_all_note_other": {
+    "message": "Includes $count$ keys that claim someone you already have.",
+    "description": "Note under 'Import all anyway'. $count$ is how many keys clash with a saved contact."
+  },
+  "import_replaced_contacts_one": {
+    "message": "Replaced $count$ contact's key",
+    "description": "Toast after an import in which the user chose Replace. $count$ is how many contacts got a new key."
+  },
+  "import_replaced_contacts_other": {
+    "message": "Replaced $count$ contacts' keys",
+    "description": "Toast after an import in which the user chose Replace. $count$ is how many contacts got a new key."
+  },
+  "import_review_conflict_address_revoked": {
+    "message": "$email$ belonged to $name$ ($keyid$), a key that is now revoked. Check with them that this new key is theirs.",
+    "description": "Red warning on an import review row: the key claims the address of a contact whose key is revoked. $email$ is the address, $name$ the contact, $keyid$ its 16-hex key id."
   }
 }

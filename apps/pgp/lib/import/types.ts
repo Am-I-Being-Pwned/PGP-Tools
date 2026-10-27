@@ -1,3 +1,4 @@
+import type { IdentityConflict } from "../identity/binding";
 import type { KeyDetails, KeyInfo } from "../pgp/types";
 import type { ContactRecipient, ContactSource } from "../storage/contacts";
 
@@ -34,11 +35,7 @@ export type ImportStatus =
  * only ever handed over as its RSA private key.
  */
 export type KeyKind =
-  | "pgp-public"
-  | "pgp-private"
-  | "ssh-public"
-  | "ssh-private"
-  | "crx";
+  "pgp-public" | "pgp-private" | "ssh-public" | "ssh-private" | "crx";
 
 /** The kinds that are somebody else's public half: stored as a contact,
  *  importable in bulk, and never routed through the protect step. Every
@@ -154,6 +151,10 @@ export interface IncomingKey {
   /** For a fetched `new` key: the name of the stored contact whose key
    *  this will REPLACE (same lookup, different fingerprint). */
   replaces?: string;
+  /** A NEW key claiming an identity another contact (or another key in
+   *  this import) already holds -- see `identity/binding`. Never saved
+   *  without the user choosing what to do. */
+  conflict?: IdentityConflict;
   /** Present when this "key" is really a person with several keys (a
    *  GitHub lookup). `keyId`/`publicArmored` stay the FIRST member's, so
    *  nothing that reads them needs to know. */

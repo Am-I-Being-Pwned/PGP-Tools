@@ -544,5 +544,38 @@
   },
   "keys_check_revocation_failed": {
     "message": "Impossibile verificare la revoca. Riprova."
+  },
+  "keys_verified_chip": {
+    "message": "Verificata"
+  },
+  "keys_verified_chip_title": {
+    "message": "Hai segnato questa chiave come verificata dopo averne confrontato l'impronta con il titolare."
+  },
+  "keys_verified_on": {
+    "message": "Verificata da te il $date$"
+  },
+  "keys_verified_by_you": {
+    "message": "Verificata da te"
+  },
+  "keys_verified_unmark": {
+    "message": "Annulla"
+  },
+  "keys_verify_hint": {
+    "message": "Confronta questa impronta con $name$ di persona o in una chiamata affidabile. Se corrisponde, segnala come verificata."
+  },
+  "keys_verify_mark": {
+    "message": "Segna come verificata"
+  },
+  "keys_contact_same_address": {
+    "message": "Stesso indirizzo"
+  },
+  "keys_contact_same_address_title": {
+    "message": "Anche $name$ ($keyid$) usa questo indirizzo, con un'altra chiave."
+  },
+  "keys_contact_same_name": {
+    "message": "Stesso nome"
+  },
+  "keys_contact_same_name_title": {
+    "message": "Anche $name$ ($keyid$) ha questo nome, con un'altra chiave."
   }
 }

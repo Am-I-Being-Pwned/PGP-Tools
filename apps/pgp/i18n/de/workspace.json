@@ -499,5 +499,8 @@
   },
   "workspace_signed_text_hidden_chars": {
     "message": "der signierte Text enthält unsichtbare oder Schreibrichtungszeichen und wird auf dem Bildschirm daher womöglich anders angezeigt, als er geschrieben wurde"
+  },
+  "workspace_signer_not_verified": {
+    "message": "Schlüssel nicht von dir als verifiziert markiert"
   }
 }

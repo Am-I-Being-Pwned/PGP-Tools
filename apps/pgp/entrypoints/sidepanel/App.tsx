@@ -873,6 +873,7 @@ export default function App() {
             }}
             onImportPrivate={handleAddKey}
             onImportPublic={contacts.add}
+            onRemoveContact={contacts.remove}
             existingKeys={keyring.keys}
             existingContacts={contacts.contacts}
             reusePasskeyCredentialId={masterPasskeyCredentialId}
@@ -997,6 +998,7 @@ export default function App() {
               onAddKey={handleAddKey}
               onAddContact={contacts.add}
               onMergeContactKey={contacts.mergeKey}
+              onSetContactVerified={contacts.setVerified}
               onDeleteContact={contacts.remove}
               advancedMode={advancedMode}
               highlightKeyIds={highlightKeyIds}
@@ -1061,6 +1063,7 @@ export default function App() {
               onUnlockWithPasskey={session.unlockWithPasskey}
               onAddKey={handleAddKey}
               onAddContact={contacts.add}
+              onRemoveContact={contacts.remove}
               crxKeys={crxKeys.keys}
               onAddCrxKey={crxKeys.add}
               primaryPasskeyCredentialId={masterPasskeyCredentialId}

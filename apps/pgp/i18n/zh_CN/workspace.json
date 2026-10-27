@@ -499,5 +499,8 @@
   },
   "workspace_signed_text_hidden_chars": {
     "message": "签名文本包含不可见字符或文字方向字符，因此屏幕上的显示可能与原文不同"
+  },
+  "workspace_signer_not_verified": {
+    "message": "你尚未将此密钥标记为已验证"
   }
 }

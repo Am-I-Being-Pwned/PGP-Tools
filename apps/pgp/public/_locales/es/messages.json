@@ -1341,6 +1341,22 @@
   "import_rejected_generic": {
     "message": "Esta clave no se puede importar."
   },
+  "import_replaced_contacts_one": {
+    "message": "Se reemplazó la clave de $count$ contacto",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_replaced_contacts_other": {
+    "message": "Se reemplazaron las claves de $count$ contactos",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
   "import_retry_hours_one": {
     "message": "Inténtelo de nuevo en aproximadamente $count$ hora.",
     "placeholders": {
@@ -1378,6 +1394,140 @@
   },
   "import_reveal": {
     "message": "Mostrarla en sus claves"
+  },
+  "import_review_choice_aria": {
+    "message": "Qué hacer con $name$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_choice_import": {
+    "message": "Importar"
+  },
+  "import_review_choice_keep_both": {
+    "message": "Conservar ambas"
+  },
+  "import_review_choice_replace": {
+    "message": "Reemplazar"
+  },
+  "import_review_choice_skip": {
+    "message": "Omitir"
+  },
+  "import_review_conflict_address": {
+    "message": "$email$ ya pertenece a $name$ ($keyid$). Esta es otra clave: confírmalo con esa persona antes de confiar en ella.",
+    "placeholders": {
+      "email": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      },
+      "keyid": {
+        "content": "$3"
+      }
+    }
+  },
+  "import_review_conflict_address_revoked": {
+    "message": "$email$ pertenecía a $name$ ($keyid$), una clave ya revocada. Confirma con esa persona que esta clave nueva es suya.",
+    "placeholders": {
+      "email": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      },
+      "keyid": {
+        "content": "$3"
+      }
+    }
+  },
+  "import_review_conflict_name": {
+    "message": "Mismo nombre que $name$ ($keyid$), pero otra clave. Confírmalo con esa persona antes de confiar en ella.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
+  "import_review_import_all": {
+    "message": "Importar todas"
+  },
+  "import_review_import_all_note_one": {
+    "message": "Incluye $count$ clave que dice ser alguien que ya tienes.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_import_all_note_other": {
+    "message": "Incluye $count$ claves que dicen ser alguien que ya tienes.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_import_all_risky": {
+    "message": "Importar todas de todos modos"
+  },
+  "import_review_import_n_one": {
+    "message": "Importar $count$ clave",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_import_n_other": {
+    "message": "Importar $count$ claves",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_import_none": {
+    "message": "Nada seleccionado"
+  },
+  "import_review_intro_one": {
+    "message": "Se encontró $count$ clave. No se guarda nada hasta que elijas.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_intro_other": {
+    "message": "Se encontraron $count$ claves. No se guarda nada hasta que elijas.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_status_duplicate": {
+    "message": "Ya guardada"
+  },
+  "import_review_status_new": {
+    "message": "Nueva"
+  },
+  "import_review_status_rejected": {
+    "message": "No se puede importar"
+  },
+  "import_review_status_revoked": {
+    "message": "Revocada"
+  },
+  "import_review_status_update": {
+    "message": "Actualización"
+  },
+  "import_review_title": {
+    "message": "Revisar claves"
   },
   "import_revocation_headline": {
     "message": "Certificado de revocación"
@@ -2176,6 +2326,34 @@
   "keys_contact_revoked_title": {
     "message": "El propietario revocó esta clave. Se conserva para que la revocación se mantenga, pero no puedes cifrar para ella. Tras un compromiso, ninguna de sus firmas se verifica; tras una retirada rutinaria, las anteriores sí se verifican y se muestran en ámbar."
   },
+  "keys_contact_same_address": {
+    "message": "Misma dirección"
+  },
+  "keys_contact_same_address_title": {
+    "message": "$name$ ($keyid$) también usa esta dirección, con otra clave.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_contact_same_name": {
+    "message": "Mismo nombre"
+  },
+  "keys_contact_same_name_title": {
+    "message": "$name$ ($keyid$) también tiene este nombre, con otra clave.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
   "keys_contacts_heading": {
     "message": "Contactos"
   },
@@ -2741,6 +2919,37 @@
   },
   "keys_unknown_name": {
     "message": "Desconocido"
+  },
+  "keys_verified_by_you": {
+    "message": "Verificada por ti"
+  },
+  "keys_verified_chip": {
+    "message": "Verificada"
+  },
+  "keys_verified_chip_title": {
+    "message": "Marcaste esta clave como verificada tras comparar su huella con su titular."
+  },
+  "keys_verified_on": {
+    "message": "Verificada por ti el $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_verified_unmark": {
+    "message": "Desmarcar"
+  },
+  "keys_verify_hint": {
+    "message": "Compara esta huella con $name$ en persona o en una llamada de confianza. Si coincide, márcala como verificada.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_verify_mark": {
+    "message": "Marcar como verificada"
   },
   "keys_weak_sha1": {
     "message": "Débil (SHA-1)"
@@ -4360,6 +4569,9 @@
   },
   "workspace_signer_key_retired": {
     "message": "la clave que la hizo ha caducado o ha sido revocada desde entonces"
+  },
+  "workspace_signer_not_verified": {
+    "message": "clave no marcada como verificada por ti"
   },
   "workspace_status_age_encrypted": {
     "message": "Mensaje age - cifrado para destinatarios SSH"

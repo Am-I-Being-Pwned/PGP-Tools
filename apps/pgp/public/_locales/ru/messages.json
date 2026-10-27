@@ -1657,6 +1657,38 @@
   "import_rejected_generic": {
     "message": "Этот ключ нельзя импортировать."
   },
+  "import_replaced_contacts_few": {
+    "message": "Заменены ключи у $count$ контактов",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_replaced_contacts_many": {
+    "message": "Заменены ключи у $count$ контактов",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_replaced_contacts_one": {
+    "message": "Заменён ключ у $count$ контакта",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_replaced_contacts_other": {
+    "message": "Заменены ключи у $count$ контакта",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
   "import_retry_hours_few": {
     "message": "Повторите попытку примерно через $count$ часа.",
     "placeholders": {
@@ -1726,6 +1758,188 @@
   },
   "import_reveal": {
     "message": "Показать в ваших ключах"
+  },
+  "import_review_choice_aria": {
+    "message": "Что сделать с $name$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_choice_import": {
+    "message": "Импортировать"
+  },
+  "import_review_choice_keep_both": {
+    "message": "Оставить оба"
+  },
+  "import_review_choice_replace": {
+    "message": "Заменить"
+  },
+  "import_review_choice_skip": {
+    "message": "Пропустить"
+  },
+  "import_review_conflict_address": {
+    "message": "$email$ уже принадлежит $name$ ($keyid$). Это другой ключ - уточните у владельца, прежде чем доверять ему.",
+    "placeholders": {
+      "email": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      },
+      "keyid": {
+        "content": "$3"
+      }
+    }
+  },
+  "import_review_conflict_address_revoked": {
+    "message": "$email$ принадлежал $name$ ($keyid$), но этот ключ отозван. Уточните у владельца, что новый ключ действительно его.",
+    "placeholders": {
+      "email": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      },
+      "keyid": {
+        "content": "$3"
+      }
+    }
+  },
+  "import_review_conflict_name": {
+    "message": "То же имя, что у $name$ ($keyid$), но другой ключ. Уточните у владельца, прежде чем доверять ему.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
+  "import_review_import_all": {
+    "message": "Импортировать все"
+  },
+  "import_review_import_all_note_few": {
+    "message": "Включает $count$ ключа, выдающих себя за уже сохранённые контакты.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_import_all_note_many": {
+    "message": "Включает $count$ ключей, выдающих себя за уже сохранённые контакты.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_import_all_note_one": {
+    "message": "Включает $count$ ключ, выдающий себя за уже сохранённый контакт.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_import_all_note_other": {
+    "message": "Включает $count$ ключа, выдающих себя за уже сохранённые контакты.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_import_all_risky": {
+    "message": "Всё равно импортировать все"
+  },
+  "import_review_import_n_few": {
+    "message": "Импортировать $count$ ключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_import_n_many": {
+    "message": "Импортировать $count$ ключей",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_import_n_one": {
+    "message": "Импортировать $count$ ключ",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_import_n_other": {
+    "message": "Импортировать $count$ ключа",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_import_none": {
+    "message": "Ничего не выбрано"
+  },
+  "import_review_intro_few": {
+    "message": "Найдено $count$ ключа. Ничего не сохранится, пока вы не выберете.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_intro_many": {
+    "message": "Найдено $count$ ключей. Ничего не сохранится, пока вы не выберете.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_intro_one": {
+    "message": "Найден $count$ ключ. Ничего не сохранится, пока вы не выберете.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_intro_other": {
+    "message": "Найдено $count$ ключа. Ничего не сохранится, пока вы не выберете.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_status_duplicate": {
+    "message": "Уже сохранён"
+  },
+  "import_review_status_new": {
+    "message": "Новый"
+  },
+  "import_review_status_rejected": {
+    "message": "Нельзя импортировать"
+  },
+  "import_review_status_revoked": {
+    "message": "Отозван"
+  },
+  "import_review_status_update": {
+    "message": "Обновление"
+  },
+  "import_review_title": {
+    "message": "Проверка ключей"
   },
   "import_revocation_headline": {
     "message": "Сертификат отзыва"
@@ -2700,6 +2914,34 @@
   "keys_contact_revoked_title": {
     "message": "Владелец отозвал этот ключ. Он сохранён, чтобы отзыв оставался в силе, но шифровать для него нельзя. После компрометации ни одна его подпись не проходит проверку; после плановой замены более ранние подписи проверяются и показываются жёлтым."
   },
+  "keys_contact_same_address": {
+    "message": "Тот же адрес"
+  },
+  "keys_contact_same_address_title": {
+    "message": "$name$ ($keyid$) тоже использует этот адрес, с другим ключом.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_contact_same_name": {
+    "message": "То же имя"
+  },
+  "keys_contact_same_name_title": {
+    "message": "У $name$ ($keyid$) тоже это имя, с другим ключом.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
   "keys_contacts_heading": {
     "message": "Контакты"
   },
@@ -3441,6 +3683,37 @@
   },
   "keys_unknown_name": {
     "message": "Неизвестно"
+  },
+  "keys_verified_by_you": {
+    "message": "Проверен вами"
+  },
+  "keys_verified_chip": {
+    "message": "Проверен"
+  },
+  "keys_verified_chip_title": {
+    "message": "Вы отметили этот ключ как проверенный, сверив отпечаток с владельцем."
+  },
+  "keys_verified_on": {
+    "message": "Проверен вами $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_verified_unmark": {
+    "message": "Снять"
+  },
+  "keys_verify_hint": {
+    "message": "Сверьте этот отпечаток с $name$ лично или в звонке, которому доверяете. Если совпадает, отметьте ключ как проверенный.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_verify_mark": {
+    "message": "Отметить как проверенный"
   },
   "keys_weak_sha1": {
     "message": "Слабый (SHA-1)"
@@ -5452,6 +5725,9 @@
   },
   "workspace_signer_key_retired": {
     "message": "ключ, которым она сделана, с тех пор истёк или отозван"
+  },
+  "workspace_signer_not_verified": {
+    "message": "ключ не отмечен вами как проверенный"
   },
   "workspace_status_age_encrypted": {
     "message": "Сообщение age - зашифровано для получателей SSH"

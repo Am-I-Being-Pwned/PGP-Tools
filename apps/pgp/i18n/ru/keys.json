@@ -356,5 +356,24 @@
   },
   "keys_check_revocation_failed": {
     "message": "Не удалось проверить отзыв. Попробуйте ещё раз."
+  },
+  "keys_verified_chip": { "message": "Проверен" },
+  "keys_verified_chip_title": {
+    "message": "Вы отметили этот ключ как проверенный, сверив отпечаток с владельцем."
+  },
+  "keys_verified_on": { "message": "Проверен вами $date$" },
+  "keys_verified_by_you": { "message": "Проверен вами" },
+  "keys_verified_unmark": { "message": "Снять" },
+  "keys_verify_hint": {
+    "message": "Сверьте этот отпечаток с $name$ лично или в звонке, которому доверяете. Если совпадает, отметьте ключ как проверенный."
+  },
+  "keys_verify_mark": { "message": "Отметить как проверенный" },
+  "keys_contact_same_address": { "message": "Тот же адрес" },
+  "keys_contact_same_address_title": {
+    "message": "$name$ ($keyid$) тоже использует этот адрес, с другим ключом."
+  },
+  "keys_contact_same_name": { "message": "То же имя" },
+  "keys_contact_same_name_title": {
+    "message": "У $name$ ($keyid$) тоже это имя, с другим ключом."
   }
 }

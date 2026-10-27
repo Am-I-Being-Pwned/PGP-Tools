@@ -39,6 +39,7 @@ import {
   sameSource,
   saveContact,
   setContactRecipientDisabled,
+  setContactVerified,
   updateContact,
   updateContactAlias,
   updateContactAsync,
@@ -980,5 +981,123 @@ describe("alias - absent means the derived name", () => {
     expect(contactRecipients(after)).toHaveLength(3);
     expect(contactSource(after)?.user).toBe("octocat");
     expect(JSON.stringify(withAlias(after, ""))).toBe(JSON.stringify(before));
+  });
+});
+
+/**
+ * "Verified" is the user's word that they compared THIS key's
+ * fingerprint with its owner. It belongs to the key, not the person: a
+ * refresh of the same key keeps it (and the local name), a different key
+ * under the same contact never inherits it, and -- like every optional
+ * field here -- it is absent rather than `false` when unset.
+ */
+describe("verified - the user's decision about one key", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("marks verified with the time, and clears both fields on unmark", async () => {
+    vi.useFakeTimers({ now: 4242, toFake: ["Date"] });
+    await saveContact(legacyContact());
+
+    await setContactVerified("CCCC", true);
+    const [marked] = await loadContacts();
+    expect(marked.verified).toBe(true);
+    expect(marked.verifiedAt).toBe(4242);
+
+    await setContactVerified("CCCC", false);
+    const [cleared] = await loadContacts();
+    expect("verified" in cleared).toBe(false);
+    expect("verifiedAt" in cleared).toBe(false);
+    // Never `verified: false`: the record is back to its stored shape.
+    expect(JSON.stringify(cleared)).toBe(JSON.stringify(legacyContact()));
+  });
+
+  it("touches nothing else on the record", async () => {
+    await saveContact(multiContact(3));
+    const before = (await loadContacts())[0];
+    await setContactVerified(before.keyId, true);
+    await setContactVerified(before.keyId, false);
+    const after = (await loadContacts())[0];
+    expect(JSON.stringify(after)).toBe(JSON.stringify(before));
+  });
+
+  it("writes nothing for a contact that is gone", async () => {
+    await saveContact(legacyContact());
+    await setContactVerified("NOPE", true);
+    const [stored] = await loadContacts();
+    expect("verified" in stored).toBe(false);
+  });
+
+  it("keeps verified and the alias across a re-import of the same key", async () => {
+    await saveContact(legacyContact({ alias: "Caz" }));
+    await setContactVerified("CCCC", true);
+    const { verifiedAt } = (await loadContacts())[0];
+
+    // The same key pasted again: a fresh record, no alias, no flag.
+    await saveContact(
+      legacyContact({ armoredPublicKey: "NEWER COPY", lastUsedAt: 9 }),
+    );
+
+    const [stored] = await loadContacts();
+    expect(stored.armoredPublicKey).toBe("NEWER COPY");
+    expect(stored.verified).toBe(true);
+    expect(stored.verifiedAt).toBe(verifiedAt);
+    expect(stored.alias).toBe("Caz");
+  });
+
+  it("lets an incoming alias win over the stored one", async () => {
+    await saveContact(legacyContact({ alias: "Caz" }));
+    await saveContact(legacyContact({ alias: "Carol L" }));
+    const [stored] = await loadContacts();
+    expect(stored.alias).toBe("Carol L");
+  });
+
+  it("never carries verified to a different key for the same person", async () => {
+    // A re-fetch of the same GitHub user whose head key changed upserts
+    // over the old record by source. The person's local name survives;
+    // the verification was of the old key and does not.
+    await saveContact({ ...multiContact(3), alias: "Octo" });
+    await setContactVerified("SHA256:key0", true);
+
+    const list = [sshRecipient(5), sshRecipient(6)];
+    await saveContact({
+      ...multiContact(3),
+      keyId: list[0].keyId,
+      armoredPublicKey: list[0].armored,
+      source: { type: "github", user: "octocat", fetchedAt: 5000 },
+      ...recipientsField(list),
+    });
+
+    const all = await loadContacts();
+    expect(all).toHaveLength(1);
+    expect(all[0].keyId).toBe("SHA256:key5");
+    expect(all[0].alias).toBe("Octo");
+    expect("verified" in all[0]).toBe(false);
+    expect("verifiedAt" in all[0]).toBe(false);
+  });
+
+  it("drops verified when a group gains a key under the same head", async () => {
+    // What the user compared was the old set of keys.
+    await saveContact(multiContact(2));
+    await setContactVerified("SHA256:key0", true);
+    await saveContact({
+      ...multiContact(3),
+      source: { type: "github", user: "octocat", fetchedAt: 5000 },
+    });
+
+    const [stored] = await loadContacts();
+    expect(stored.keyId).toBe("SHA256:key0");
+    expect("verified" in stored).toBe(false);
+  });
+
+  it("never carries verified to another person's record", async () => {
+    await saveContact(multiContact(3, "octocat"));
+    await setContactVerified("SHA256:key0", true);
+    // Another account publishing the same key collides by keyId alone.
+    await saveContact(multiContact(3, "hubot"));
+    const [stored] = await loadContacts();
+    expect(contactSource(stored)?.user).toBe("hubot");
+    expect("verified" in stored).toBe(false);
   });
 });

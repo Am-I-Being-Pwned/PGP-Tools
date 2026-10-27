@@ -20,6 +20,7 @@ import {
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import { t, tn } from "../../lib/i18n";
+import { contactClashes } from "../../lib/identity/binding";
 import {
   matchesRecipientSearch,
   orderRecipients,
@@ -32,6 +33,7 @@ import { isSshRecord } from "../../lib/storage/key-kind";
 import {
   displayUserId,
   formatKeyDisplayName,
+  parseUserId,
 } from "../../lib/utils/key-naming";
 import { keyDetailsTarget } from "../keys/KeyDetailsButton";
 import { KeyDetailsPage } from "../keys/KeyDetailsPage";
@@ -237,6 +239,12 @@ export function RecipientPicker({
   // Which list a row came from, by record rather than fingerprint: the
   // same key can be both your own and a contact's.
   const contactRecords = new Set<AnyKey>(contacts);
+  // Two contacts claiming one person: each row says so, so the pick is
+  // made on the key id, not on a name both of them wear.
+  const clashes = contactClashes(
+    contacts.filter((c) => !isSshRecord(c)),
+    myKeys.filter((k) => !isSshRecord(k)),
+  );
   // Own keys always sort BELOW contacts: they never join the Recent group
   // (you rarely encrypt to yourself explicitly), so recency ordering only
   // applies to actual recipients. Each key is offered once -- see
@@ -424,6 +432,12 @@ export function RecipientPicker({
       "armoredPublicKey" in key ? activeRecipients(key).length : 1;
     const blockReason = recipientBlockReason(key, engine, passwordArmed);
     const blocked = blockReason !== null;
+    const verified = !isOwn && "verified" in key && key.verified === true;
+    const clash = isOwn ? undefined : clashes.get(key.keyId);
+    // Always shown for a PGP key: the 16-hex id is what tells two keys
+    // with one name apart (an SSH key's id is its hash; the sub-line
+    // stays as it was).
+    const shortKeyId = isSsh ? "" : key.keyId.slice(-16).toUpperCase();
     return (
       <CommandItem
         key={key.keyId}
@@ -455,9 +469,45 @@ export function RecipientPicker({
                 SSH
               </span>
             )}
+            {verified && (
+              <span
+                title={t("keys_verified_chip_title")}
+                className="bg-good/12 text-good shrink-0 rounded px-1.5 py-px text-[10.5px] font-medium"
+              >
+                {t("keys_verified_chip")}
+              </span>
+            )}
+            {clash && (
+              <span
+                title={
+                  clash.kind === "address"
+                    ? t("keys_contact_same_address_title", {
+                        name: parseUserId(clash.holders[0].userIds[0] ?? "")
+                          .name,
+                        keyid: clash.holders[0].keyId.slice(-16).toUpperCase(),
+                      })
+                    : t("keys_contact_same_name_title", {
+                        name: parseUserId(clash.holders[0].userIds[0] ?? "")
+                          .name,
+                        keyid: clash.holders[0].keyId.slice(-16).toUpperCase(),
+                      })
+                }
+                className="bg-warn/12 text-warn shrink-0 rounded px-1.5 py-px text-[10.5px] font-medium"
+              >
+                {clash.kind === "address"
+                  ? t("keys_contact_same_address")
+                  : t("keys_contact_same_name")}
+              </span>
+            )}
           </p>
-          {(detail || keyCount > 1) && (
+          {(detail || keyCount > 1 || shortKeyId) && (
             <p className="text-muted-foreground truncate text-xs">
+              {shortKeyId && (
+                <span className="font-mono text-[11px]" data-key-id="">
+                  {shortKeyId}
+                  {detail || keyCount > 1 ? " · " : ""}
+                </span>
+              )}
               <MarkedText
                 text={[
                   detail,

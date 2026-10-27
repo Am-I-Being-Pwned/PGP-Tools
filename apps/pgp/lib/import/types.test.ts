@@ -109,6 +109,7 @@ describe("IncomingKey", () => {
       userIds: true,
       changes: true,
       replaces: true,
+      conflict: true,
       existingAddedAt: true,
       rejection: true,
       securityWarning: true,
@@ -127,7 +128,8 @@ describe("IncomingKey", () => {
     expect(names.filter((n) => /armor|pem/i.test(n))).toEqual([
       "publicArmored",
     ]);
-    expect(names.filter((n) => /secret|private|passphrase|password/i.test(n)))
-      .toEqual([]);
+    expect(
+      names.filter((n) => /secret|private|passphrase|password/i.test(n)),
+    ).toEqual([]);
   });
 });

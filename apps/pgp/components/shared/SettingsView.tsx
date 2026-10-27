@@ -6,6 +6,7 @@ import { Button } from "@amibeingpwned/ui/button";
 import { Switch } from "@amibeingpwned/ui/switch";
 
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
+import type { ReviewedContact } from "../../lib/import/review";
 import type { PresetId } from "../../lib/presets";
 import type { MasterPasskey } from "../../lib/protection/vault-unlock";
 import type { PublicContactKey } from "../../lib/storage/contacts";
@@ -190,7 +191,8 @@ interface SettingsViewProps {
     blob: ProtectedKeyBlob,
   ) => Promise<boolean | "cancelled">;
   onAddKey: (blob: ProtectedKeyBlob) => Promise<void>;
-  onAddContact: (contact: PublicContactKey) => Promise<void>;
+  onAddContact: (contact: ReviewedContact) => Promise<void>;
+  onRemoveContact: (keyId: string) => Promise<void>;
   crxKeys?: CrxSigningKeyBlob[];
   onAddCrxKey?: (blob: CrxSigningKeyBlob) => Promise<void>;
   primaryPasskeyCredentialId?: string;
@@ -238,6 +240,7 @@ export function SettingsView({
   onUnlockWithPasskey,
   onAddKey,
   onAddContact,
+  onRemoveContact,
   crxKeys,
   onAddCrxKey,
   primaryPasskeyCredentialId,
@@ -805,6 +808,7 @@ export function SettingsView({
           contacts={contacts}
           onAddKey={onAddKey}
           onAddContact={onAddContact}
+          onRemoveContact={onRemoveContact}
           onAddCrxKey={onAddCrxKey}
           crxKeys={crxKeys}
           reusePasskeyCredentialId={primaryPasskeyCredentialId}

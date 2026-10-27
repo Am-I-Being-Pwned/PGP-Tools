@@ -355,5 +355,80 @@
   },
   "import_status_replaces": {
     "message": "Remplace la clé que vous aviez pour $name$"
+  },
+  "import_review_title": {
+    "message": "Vérifier les clés"
+  },
+  "import_review_intro_one": {
+    "message": "$count$ clé trouvée. Rien n'est enregistré tant que vous n'avez pas choisi."
+  },
+  "import_review_intro_other": {
+    "message": "$count$ clés trouvées. Rien n'est enregistré tant que vous n'avez pas choisi."
+  },
+  "import_review_status_new": {
+    "message": "Nouvelle"
+  },
+  "import_review_status_update": {
+    "message": "Mise à jour"
+  },
+  "import_review_status_revoked": {
+    "message": "Révoquée"
+  },
+  "import_review_status_duplicate": {
+    "message": "Déjà enregistrée"
+  },
+  "import_review_status_rejected": {
+    "message": "Import impossible"
+  },
+  "import_review_conflict_address": {
+    "message": "$email$ appartient déjà à $name$ ($keyid$). C'est une autre clé - vérifiez auprès de cette personne avant de lui faire confiance."
+  },
+  "import_review_conflict_name": {
+    "message": "Même nom que $name$ ($keyid$), mais une autre clé. Vérifiez auprès de cette personne avant de lui faire confiance."
+  },
+  "import_review_choice_aria": {
+    "message": "Que faire de $name$"
+  },
+  "import_review_choice_skip": {
+    "message": "Ignorer"
+  },
+  "import_review_choice_keep_both": {
+    "message": "Garder les deux"
+  },
+  "import_review_choice_import": {
+    "message": "Importer"
+  },
+  "import_review_choice_replace": {
+    "message": "Remplacer"
+  },
+  "import_review_import_none": {
+    "message": "Rien de sélectionné"
+  },
+  "import_review_import_n_one": {
+    "message": "Importer $count$ clé"
+  },
+  "import_review_import_n_other": {
+    "message": "Importer $count$ clés"
+  },
+  "import_review_import_all": {
+    "message": "Tout importer"
+  },
+  "import_review_import_all_risky": {
+    "message": "Tout importer quand même"
+  },
+  "import_review_import_all_note_one": {
+    "message": "Inclut $count$ clé qui se fait passer pour quelqu'un que vous avez déjà."
+  },
+  "import_review_import_all_note_other": {
+    "message": "Inclut $count$ clés qui se font passer pour quelqu'un que vous avez déjà."
+  },
+  "import_replaced_contacts_one": {
+    "message": "Clé de $count$ contact remplacée"
+  },
+  "import_replaced_contacts_other": {
+    "message": "Clés de $count$ contacts remplacées"
+  },
+  "import_review_conflict_address_revoked": {
+    "message": "$email$ appartenait à $name$ ($keyid$), une clé désormais révoquée. Vérifiez auprès de cette personne que cette nouvelle clé est bien la sienne."
   }
 }

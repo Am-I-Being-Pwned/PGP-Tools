@@ -355,5 +355,80 @@
   },
   "import_status_replaces": {
     "message": "将替换你为 $name$ 保存的密钥"
+  },
+  "import_review_title": {
+    "message": "检查密钥"
+  },
+  "import_review_intro_one": {
+    "message": "找到 $count$ 个密钥。在你选择之前不会保存任何内容。"
+  },
+  "import_review_intro_other": {
+    "message": "找到 $count$ 个密钥。在你选择之前不会保存任何内容。"
+  },
+  "import_review_status_new": {
+    "message": "新"
+  },
+  "import_review_status_update": {
+    "message": "更新"
+  },
+  "import_review_status_revoked": {
+    "message": "已吊销"
+  },
+  "import_review_status_duplicate": {
+    "message": "已保存"
+  },
+  "import_review_status_rejected": {
+    "message": "无法导入"
+  },
+  "import_review_conflict_address": {
+    "message": "$email$ 已属于 $name$ ($keyid$)。这是另一个密钥 - 信任之前请先与对方确认。"
+  },
+  "import_review_conflict_name": {
+    "message": "与 $name$ ($keyid$) 同名，但密钥不同。信任之前请先与对方确认。"
+  },
+  "import_review_choice_aria": {
+    "message": "如何处理 $name$"
+  },
+  "import_review_choice_skip": {
+    "message": "跳过"
+  },
+  "import_review_choice_keep_both": {
+    "message": "都保留"
+  },
+  "import_review_choice_import": {
+    "message": "导入"
+  },
+  "import_review_choice_replace": {
+    "message": "替换"
+  },
+  "import_review_import_none": {
+    "message": "未选择"
+  },
+  "import_review_import_n_one": {
+    "message": "导入 $count$ 个密钥"
+  },
+  "import_review_import_n_other": {
+    "message": "导入 $count$ 个密钥"
+  },
+  "import_review_import_all": {
+    "message": "全部导入"
+  },
+  "import_review_import_all_risky": {
+    "message": "仍然全部导入"
+  },
+  "import_review_import_all_note_one": {
+    "message": "其中 $count$ 个密钥冒称你已有的联系人。"
+  },
+  "import_review_import_all_note_other": {
+    "message": "其中 $count$ 个密钥冒称你已有的联系人。"
+  },
+  "import_replaced_contacts_one": {
+    "message": "已替换 $count$ 个联系人的密钥"
+  },
+  "import_replaced_contacts_other": {
+    "message": "已替换 $count$ 个联系人的密钥"
+  },
+  "import_review_conflict_address_revoked": {
+    "message": "$email$ 原属于 $name$ ($keyid$)，该密钥现已吊销。请与对方确认这个新密钥确实是其本人的。"
   }
 }

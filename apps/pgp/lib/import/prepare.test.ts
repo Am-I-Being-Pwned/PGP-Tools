@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { KeyDetails, KeyInfo } from "../pgp/types";
 import type { ImportEngines, StoredKey, StoredKeys } from "./prepare";
+import type { IncomingKey } from "./types";
 import {
   extractPublicKey,
   mergePublicKey,
@@ -14,7 +15,13 @@ import {
   revocationIssuers,
   sshPrivateKeyFormatRejection,
 } from "../pgp/wasm";
-import { classifyCert, importable, isNoOp, prepareImport } from "./prepare";
+import {
+  classifyCert,
+  importable,
+  isNoOp,
+  prepareImport,
+  withIdentityConflicts,
+} from "./prepare";
 import { PENDING_KEY_ID } from "./types";
 
 const AGE_RS = join(
@@ -595,7 +602,8 @@ describe("prepareImport - SSH / age", () => {
       fingerprint: SSH_FP,
       comment: "",
     });
-    const [key] = (await prepareImport(CANONICAL, noStores, { ssh: true })).keys;
+    const [key] = (await prepareImport(CANONICAL, noStores, { ssh: true }))
+      .keys;
     expect(key.userIds).toEqual(["SSH key"]);
   });
 
@@ -698,9 +706,13 @@ describe("prepareImport - SSH / age", () => {
     });
 
     it("offers nothing for a single key", async () => {
-      const prepared = await prepareImport(stubLines(["alice@laptop"]), noStores, {
-        ssh: true,
-      });
+      const prepared = await prepareImport(
+        stubLines(["alice@laptop"]),
+        noStores,
+        {
+          ssh: true,
+        },
+      );
       expect(prepared.keys).toHaveLength(1);
       expect(prepared.keys[0].group).toBeUndefined();
       expect(prepared.groupProposal).toBeUndefined();
@@ -715,7 +727,10 @@ describe("prepareImport - SSH / age", () => {
         {
           own: [],
           contacts: [
-            storedKey({ keyId: "SHA256:key1", armored: "ssh-ed25519 AAAAkey1" }),
+            storedKey({
+              keyId: "SHA256:key1",
+              armored: "ssh-ed25519 AAAAkey1",
+            }),
           ],
         },
         { ssh: true },
@@ -731,8 +746,14 @@ describe("prepareImport - SSH / age", () => {
         {
           own: [],
           contacts: [
-            storedKey({ keyId: "SHA256:key0", armored: "ssh-ed25519 AAAAkey0" }),
-            storedKey({ keyId: "SHA256:key1", armored: "ssh-ed25519 AAAAkey1" }),
+            storedKey({
+              keyId: "SHA256:key0",
+              armored: "ssh-ed25519 AAAAkey0",
+            }),
+            storedKey({
+              keyId: "SHA256:key1",
+              armored: "ssh-ed25519 AAAAkey1",
+            }),
           ],
         },
         { ssh: true },
@@ -900,8 +921,14 @@ describe("prepareImport - SSH / age", () => {
     );
 
     it.each([
-      ["PKCS#1", "-----BEGIN RSA PRIVATE KEY-----\nMIIEow==\n-----END RSA PRIVATE KEY-----\n"],
-      ["PKCS#8", "-----BEGIN PRIVATE KEY-----\nMIIEvQ==\n-----END PRIVATE KEY-----\n"],
+      [
+        "PKCS#1",
+        "-----BEGIN RSA PRIVATE KEY-----\nMIIEow==\n-----END RSA PRIVATE KEY-----\n",
+      ],
+      [
+        "PKCS#8",
+        "-----BEGIN PRIVATE KEY-----\nMIIEvQ==\n-----END PRIVATE KEY-----\n",
+      ],
       // Its own label, but the same `AAAA`-prefixed base64 body shape --
       // it must not be mistaken for either the CRX or SSH signing key.
       ["a PGP block", "-----BEGIN PGP PRIVATE KEY BLOCK-----\nlQ==\n"],
@@ -1025,7 +1052,6 @@ describe("prepareImport - SSH / age", () => {
     expect(parseSshRecipient).not.toHaveBeenCalled();
   });
 });
-
 
 /**
  * The three refusals that could not reach the user at all on the paste
@@ -1161,5 +1187,241 @@ describe("prepareImport - refused SSH algorithms reach the user", () => {
     expect(parseSshRecipient).not.toHaveBeenCalled();
     expect(prepared.keys[0].kind).toBe("ssh-private");
     expect(prepared.keys[0].status).toBe("new");
+  });
+});
+
+/**
+ * The advisory: a "key bundle" carrying a stripped copy of a contact
+ * beside a NEW key with the same name and email was saved without a
+ * word. Every new public key is now checked against the contacts held
+ * and the keys before it in the same import, and a match is marked so
+ * the Review asks before saving it.
+ */
+describe("prepareImport: a new key claiming someone's identity", () => {
+  const NEW_FP = "B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0";
+
+  /** `parseKeys` answering the pasted blob with `bundle`, and any stored
+   *  or merged armor with the stored contact's own cert. */
+  function bundle(...certs: { keyInfo: KeyInfo; armored: string }[]) {
+    vi.mocked(parseKeys).mockImplementation((armored) =>
+      Promise.resolve(
+        armored === "blob" ? certs : [{ keyInfo: info(), armored }],
+      ),
+    );
+  }
+
+  const withAlice: StoredKeys = { own: [], contacts: [storedKey()] };
+
+  it("marks the new key in the advisory's bundle, never the update", async () => {
+    bundle(
+      // The contact's own key, re-issued: an update of the same person.
+      { keyInfo: info(), armored: "ARMOR-STRIPPED" },
+      // A different key under the contact's exact User ID.
+      { keyInfo: info({ keyId: NEW_FP }), armored: "ARMOR-IMPOSTOR" },
+    );
+
+    const prepared = await prepareImport("blob", withAlice);
+
+    const [update, impostor] = prepared.keys;
+    expect(update.status).toBe("update");
+    expect(update.conflict).toBeUndefined();
+    expect(impostor.status).toBe("new");
+    expect(impostor.conflict?.kind).toBe("address");
+    // Held by the contact -- listed once from storage and once more as
+    // the bundle's own copy of it; the Review names `holders[0]`.
+    expect(impostor.conflict?.holders[0].keyId).toBe(FP);
+    expect(impostor.conflict?.holders.every((h) => h.keyId === FP)).toBe(true);
+  });
+
+  it("marks the same name under a different address as a name clash", async () => {
+    bundle({
+      keyInfo: info({
+        keyId: NEW_FP,
+        userIds: ["Alice <alice@elsewhere.example>"],
+      }),
+      armored: "ARMOR-B",
+    });
+    const prepared = await prepareImport("blob", withAlice);
+    expect(prepared.keys[0].conflict?.kind).toBe("name");
+  });
+
+  it("marks a look-alike name (Cyrillic \u0410) as a name clash", async () => {
+    bundle({
+      keyInfo: info({
+        keyId: NEW_FP,
+        userIds: ["\u0410lice <alice@elsewhere.example>"],
+      }),
+      armored: "ARMOR-B",
+    });
+    const prepared = await prepareImport("blob", withAlice);
+    expect(prepared.keys[0].conflict?.kind).toBe("name");
+  });
+
+  it("marks BOTH new keys in one bundle claiming one address", async () => {
+    // Neither is the real one for coming first: an attacker picks the
+    // order, so the first must not default to Import.
+    const OTHER_FP = "C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0";
+    bundle(
+      { keyInfo: info({ keyId: NEW_FP }), armored: "ARMOR-B" },
+      { keyInfo: info({ keyId: OTHER_FP }), armored: "ARMOR-C" },
+    );
+    const prepared = await prepareImport("blob", noStores);
+    expect(prepared.keys[0].conflict).toMatchObject({
+      kind: "address",
+      holders: [{ keyId: OTHER_FP, incoming: true }],
+    });
+    expect(prepared.keys[1].conflict).toMatchObject({
+      kind: "address",
+      holders: [{ keyId: NEW_FP, incoming: true }],
+    });
+  });
+
+  it("still asks about the address of a revoked contact, naming it", async () => {
+    // A rotation after a revocation looks like this -- and so does an
+    // impostor timing it.
+    bundle({ keyInfo: info({ keyId: NEW_FP }), armored: "ARMOR-B" });
+    const prepared = await prepareImport("blob", {
+      own: [],
+      contacts: [storedKey({ revoked: true })],
+    });
+    expect(prepared.keys[0].status).toBe("new");
+    expect(prepared.keys[0].conflict).toMatchObject({
+      kind: "address",
+      holders: [{ keyId: FP, revoked: true }],
+    });
+  });
+
+  it("leaves an unrelated new key alone", async () => {
+    bundle({
+      keyInfo: info({ keyId: NEW_FP, userIds: ["Bob <bob@example.com>"] }),
+      armored: "ARMOR-B",
+    });
+    const prepared = await prepareImport("blob", withAlice);
+    expect(prepared.keys[0].conflict).toBeUndefined();
+  });
+});
+
+describe("withIdentityConflicts", () => {
+  function incoming(over: Partial<IncomingKey> = {}): IncomingKey {
+    return {
+      keyId: "NEW",
+      kind: "pgp-public",
+      status: "new",
+      info: null,
+      details: null,
+      userIds: ["Alice <alice@example.com>"],
+      changes: [],
+      publicArmored: "ARMOR-NEW",
+      ...over,
+    };
+  }
+
+  const withAlice: StoredKeys = { own: [], contacts: [storedKey()] };
+
+  it("only ever marks a NEW OpenPGP public key", () => {
+    // SSH keys carry a comment, not an identity; a private key is the
+    // user's own; an update or duplicate is the contact's same key.
+    const keys = [
+      incoming({ kind: "ssh-public", userIds: ["alice@example.com"] }),
+      incoming({ keyId: "PRIV", kind: "pgp-private" }),
+      incoming({ keyId: "SSHPRIV", kind: "ssh-private" }),
+      incoming({ keyId: "CRX", kind: "crx" }),
+      incoming({ keyId: "REJ", status: "rejected" }),
+    ];
+    const out = withIdentityConflicts(keys, withAlice);
+    expect(out.map((k) => k.conflict)).toEqual(keys.map(() => undefined));
+  });
+
+  it("marks a key claiming the user's OWN address, as an own holder", () => {
+    const mine: StoredKeys = { own: [storedKey()], contacts: [] };
+    const [key] = withIdentityConflicts([incoming()], mine);
+    expect(key.conflict?.kind).toBe("address");
+    expect(key.conflict?.holders[0].own).toBe(true);
+  });
+
+  it("holds against new keys only, not a rejected or updated one in the bundle", () => {
+    const keys = [
+      incoming({ keyId: "REJ", status: "rejected" }),
+      incoming({ keyId: "UPD", status: "update" }),
+      incoming(),
+    ];
+    const out = withIdentityConflicts(keys, { own: [], contacts: [] });
+    expect(out[2].conflict).toBeUndefined();
+  });
+
+  it("marks an update only for the User IDs it adds", () => {
+    // A contact's key that picks up someone else's name and address.
+    const mallory: StoredKeys = {
+      own: [],
+      contacts: [
+        storedKey(),
+        storedKey({ keyId: "MAL", userIds: ["Mallory <m@example.com>"] }),
+      ],
+    };
+    const [same] = withIdentityConflicts(
+      [
+        incoming({
+          keyId: "MAL",
+          status: "update",
+          userIds: ["Mallory <m@example.com>"],
+        }),
+      ],
+      mallory,
+    );
+    expect(same.conflict).toBeUndefined();
+    const [grown] = withIdentityConflicts(
+      [
+        incoming({
+          keyId: "MAL",
+          status: "update",
+          userIds: ["Mallory <m@example.com>", "Alice <alice@example.com>"],
+        }),
+      ],
+      mallory,
+    );
+    expect(grown.conflict?.kind).toBe("address");
+  });
+
+  it.each([
+    ["an address outside the brackets", "Alice alice@example.com"],
+    ["a comment after the address", "Alice <alice@example.com> (work)"],
+    ["an unclosed bracket", "Alice <alice@example.com"],
+    ["a trailing dot", "Alice <alice@example.com.>"],
+  ])("sees the address through %s", (_label, uid) => {
+    const [key] = withIdentityConflicts(
+      [incoming({ userIds: [uid] })],
+      withAlice,
+    );
+    expect(key.conflict?.kind).toBe("address");
+  });
+
+  it.each([
+    ["a capital I for an l", "Alice", "AIice"],
+    ["a Hangul filler for a space", "Alice Lane", "Alice\u3164Lane"],
+    ["a small capital L", "Alice", "A\u029Fice"],
+    ["quotes and a trailing dot", "Alice", '"Alice."'],
+    ["rn for m", "Mary", "Rnary"],
+  ])("sees the name through %s", (_label, theirs, claimed) => {
+    const stored: StoredKeys = {
+      own: [],
+      contacts: [storedKey({ userIds: [`${theirs} <them@example.com>`] })],
+    };
+    const [key] = withIdentityConflicts(
+      [incoming({ userIds: [`${claimed} <x@evil.test>`] })],
+      stored,
+    );
+    expect(key.conflict?.kind).toBe("name");
+  });
+
+  it("returns an unmarked key unchanged", () => {
+    const key = incoming({ userIds: ["Bob <bob@example.com>"] });
+    expect(withIdentityConflicts([key], withAlice)[0]).toBe(key);
+  });
+
+  it("does not mutate the keys it is given", () => {
+    const key = incoming();
+    const [marked] = withIdentityConflicts([key], withAlice);
+    expect(marked.conflict?.kind).toBe("address");
+    expect(key.conflict).toBeUndefined();
   });
 });

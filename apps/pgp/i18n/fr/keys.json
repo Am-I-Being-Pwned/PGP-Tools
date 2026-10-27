@@ -544,5 +544,38 @@
   },
   "keys_check_revocation_failed": {
     "message": "Impossible de vérifier la révocation. Réessayez."
+  },
+  "keys_verified_chip": {
+    "message": "Vérifiée"
+  },
+  "keys_verified_chip_title": {
+    "message": "Vous avez marqué cette clé comme vérifiée après avoir comparé son empreinte avec son titulaire."
+  },
+  "keys_verified_on": {
+    "message": "Vérifiée par vous le $date$"
+  },
+  "keys_verified_by_you": {
+    "message": "Vérifiée par vous"
+  },
+  "keys_verified_unmark": {
+    "message": "Retirer"
+  },
+  "keys_verify_hint": {
+    "message": "Comparez cette empreinte avec $name$ en personne ou lors d'un appel de confiance. Si elle correspond, marquez-la comme vérifiée."
+  },
+  "keys_verify_mark": {
+    "message": "Marquer comme vérifiée"
+  },
+  "keys_contact_same_address": {
+    "message": "Même adresse"
+  },
+  "keys_contact_same_address_title": {
+    "message": "$name$ ($keyid$) utilise aussi cette adresse, avec une autre clé."
+  },
+  "keys_contact_same_name": {
+    "message": "Même nom"
+  },
+  "keys_contact_same_name_title": {
+    "message": "$name$ ($keyid$) porte aussi ce nom, avec une autre clé."
   }
 }

@@ -312,5 +312,24 @@
   },
   "keys_check_revocation_failed": {
     "message": "Der Widerruf konnte nicht geprüft werden. Versuchen Sie es erneut."
+  },
+  "keys_verified_chip": { "message": "Verifiziert" },
+  "keys_verified_chip_title": {
+    "message": "Du hast diesen Schlüssel als verifiziert markiert, nachdem du seinen Fingerabdruck mit dem Inhaber verglichen hast."
+  },
+  "keys_verified_on": { "message": "Von dir verifiziert am $date$" },
+  "keys_verified_by_you": { "message": "Von dir verifiziert" },
+  "keys_verified_unmark": { "message": "Aufheben" },
+  "keys_verify_hint": {
+    "message": "Vergleiche diesen Fingerabdruck mit $name$ persönlich oder in einem Anruf, dem du vertraust. Wenn er übereinstimmt, markiere ihn als verifiziert."
+  },
+  "keys_verify_mark": { "message": "Als verifiziert markieren" },
+  "keys_contact_same_address": { "message": "Gleiche Adresse" },
+  "keys_contact_same_address_title": {
+    "message": "$name$ ($keyid$) nutzt diese Adresse auch, mit einem anderen Schlüssel."
+  },
+  "keys_contact_same_name": { "message": "Gleicher Name" },
+  "keys_contact_same_name_title": {
+    "message": "$name$ ($keyid$) hat diesen Namen auch, mit einem anderen Schlüssel."
   }
 }

@@ -499,5 +499,8 @@
   },
   "workspace_signed_text_hidden_chars": {
     "message": "il testo firmato contiene caratteri invisibili o di direzione del testo, quindi potrebbe non apparire sullo schermo come è stato scritto"
+  },
+  "workspace_signer_not_verified": {
+    "message": "chiave non segnata come verificata da te"
   }
 }

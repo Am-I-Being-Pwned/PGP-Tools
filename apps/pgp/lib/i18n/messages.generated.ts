@@ -279,6 +279,23 @@ export interface MessageArgs {
   "import_rejected_generic": undefined;
   "import_retry_minute": undefined;
   "import_reveal": undefined;
+  "import_review_choice_aria": { name: string | number };
+  "import_review_choice_import": undefined;
+  "import_review_choice_keep_both": undefined;
+  "import_review_choice_replace": undefined;
+  "import_review_choice_skip": undefined;
+  "import_review_conflict_address": { email: string | number; name: string | number; keyid: string | number };
+  "import_review_conflict_address_revoked": { email: string | number; name: string | number; keyid: string | number };
+  "import_review_conflict_name": { name: string | number; keyid: string | number };
+  "import_review_import_all": undefined;
+  "import_review_import_all_risky": undefined;
+  "import_review_import_none": undefined;
+  "import_review_status_duplicate": undefined;
+  "import_review_status_new": undefined;
+  "import_review_status_rejected": undefined;
+  "import_review_status_revoked": undefined;
+  "import_review_status_update": undefined;
+  "import_review_title": undefined;
   "import_revocation_headline": undefined;
   "import_source_help": undefined;
   "import_ssh_headline": undefined;
@@ -448,6 +465,10 @@ export interface MessageArgs {
   "keys_contact_options_aria": undefined;
   "keys_contact_revoked": undefined;
   "keys_contact_revoked_title": undefined;
+  "keys_contact_same_address": undefined;
+  "keys_contact_same_address_title": { name: string | number; keyid: string | number };
+  "keys_contact_same_name": undefined;
+  "keys_contact_same_name_title": { name: string | number; keyid: string | number };
   "keys_contacts_heading": undefined;
   "keys_contacts_heading_count": { count: string | number };
   "keys_contacts_heading_encrypted": undefined;
@@ -552,6 +573,13 @@ export interface MessageArgs {
   "keys_subkeys_truncated": { count: string | number };
   "keys_undo": undefined;
   "keys_unknown_name": undefined;
+  "keys_verified_by_you": undefined;
+  "keys_verified_chip": undefined;
+  "keys_verified_chip_title": undefined;
+  "keys_verified_on": { date: string | number };
+  "keys_verified_unmark": undefined;
+  "keys_verify_hint": { name: string | number };
+  "keys_verify_mark": undefined;
   "keys_weak_sha1": undefined;
   "keys_wrong_password": undefined;
   "settings_crx_default_key_name": undefined;
@@ -874,6 +902,7 @@ export interface MessageArgs {
   "workspace_signed_on": { date: string | number };
   "workspace_signed_text_hidden_chars": undefined;
   "workspace_signer_key_retired": undefined;
+  "workspace_signer_not_verified": undefined;
   "workspace_status_age_encrypted": undefined;
   "workspace_status_crx_signed": { name: string | number };
   "workspace_status_crx_valid": { id: string | number };
@@ -923,8 +952,12 @@ export interface PluralArgs {
   "import_group_keys_chip": undefined;
   "import_group_proposal_label": undefined;
   "import_n_contacts": undefined;
+  "import_replaced_contacts": undefined;
   "import_retry_hours": undefined;
   "import_retry_minutes": undefined;
+  "import_review_import_all_note": undefined;
+  "import_review_import_n": undefined;
+  "import_review_intro": undefined;
   "import_updated_contacts": undefined;
   "keygen_export_contacts_included": undefined;
   "keygen_export_crx_included": undefined;
@@ -1046,10 +1079,22 @@ export const PLACEHOLDER_ORDER: Readonly<Partial<Record<string, readonly string[
   "import_panel_aria_with_id": ["keyid"],
   "import_paste_placeholder": ["shortcut"],
   "import_reject_expired": ["date"],
+  "import_replaced_contacts_one": ["count"],
+  "import_replaced_contacts_other": ["count"],
   "import_retry_hours_one": ["count"],
   "import_retry_hours_other": ["count"],
   "import_retry_minutes_one": ["count"],
   "import_retry_minutes_other": ["count"],
+  "import_review_choice_aria": ["name"],
+  "import_review_conflict_address": ["email","name","keyid"],
+  "import_review_conflict_address_revoked": ["email","name","keyid"],
+  "import_review_conflict_name": ["name","keyid"],
+  "import_review_import_all_note_one": ["count"],
+  "import_review_import_all_note_other": ["count"],
+  "import_review_import_n_one": ["count"],
+  "import_review_import_n_other": ["count"],
+  "import_review_intro_one": ["count"],
+  "import_review_intro_other": ["count"],
   "import_status_added_on": ["date"],
   "import_status_duplicate_added": ["date"],
   "import_status_replaces": ["name"],
@@ -1090,6 +1135,8 @@ export const PLACEHOLDER_ORDER: Readonly<Partial<Record<string, readonly string[
   "keys_contact_keys_count_other": ["count"],
   "keys_contact_keys_partial": ["active","total"],
   "keys_contact_keys_partial_title": ["active","total"],
+  "keys_contact_same_address_title": ["name","keyid"],
+  "keys_contact_same_name_title": ["name","keyid"],
   "keys_contacts_heading_count": ["count"],
   "keys_contacts_removed_other": ["count"],
   "keys_count_contacts_one": ["count"],
@@ -1127,6 +1174,8 @@ export const PLACEHOLDER_ORDER: Readonly<Partial<Record<string, readonly string[
   "keys_ssh_export_skipped_one": ["count"],
   "keys_ssh_export_skipped_other": ["count"],
   "keys_subkeys_truncated": ["count"],
+  "keys_verified_on": ["date"],
+  "keys_verify_hint": ["name"],
   "settings_crx_info_get_body": ["crx","load_unpacked"],
   "settings_crx_info_ladder_ci": ["term"],
   "settings_crx_info_ladder_hardware": ["term"],

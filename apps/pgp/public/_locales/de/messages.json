@@ -1341,6 +1341,22 @@
   "import_rejected_generic": {
     "message": "Dieser Schlüssel kann nicht importiert werden."
   },
+  "import_replaced_contacts_one": {
+    "message": "Schlüssel von $count$ Kontakt ersetzt",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_replaced_contacts_other": {
+    "message": "Schlüssel von $count$ Kontakten ersetzt",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
   "import_retry_hours_one": {
     "message": "Versuchen Sie es in etwa $count$ Stunde erneut.",
     "placeholders": {
@@ -1378,6 +1394,140 @@
   },
   "import_reveal": {
     "message": "In Ihren Schlüsseln anzeigen"
+  },
+  "import_review_choice_aria": {
+    "message": "Was mit $name$ geschehen soll",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_choice_import": {
+    "message": "Importieren"
+  },
+  "import_review_choice_keep_both": {
+    "message": "Beide behalten"
+  },
+  "import_review_choice_replace": {
+    "message": "Ersetzen"
+  },
+  "import_review_choice_skip": {
+    "message": "Überspringen"
+  },
+  "import_review_conflict_address": {
+    "message": "$email$ gehört bereits zu $name$ ($keyid$). Das ist ein anderer Schlüssel - frag nach, bevor du ihm vertraust.",
+    "placeholders": {
+      "email": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      },
+      "keyid": {
+        "content": "$3"
+      }
+    }
+  },
+  "import_review_conflict_address_revoked": {
+    "message": "$email$ gehörte zu $name$ ($keyid$), einem inzwischen widerrufenen Schlüssel. Frag nach, ob dieser neue Schlüssel wirklich von dieser Person ist.",
+    "placeholders": {
+      "email": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      },
+      "keyid": {
+        "content": "$3"
+      }
+    }
+  },
+  "import_review_conflict_name": {
+    "message": "Gleicher Name wie $name$ ($keyid$), aber ein anderer Schlüssel. Frag nach, bevor du ihm vertraust.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
+  "import_review_import_all": {
+    "message": "Alle importieren"
+  },
+  "import_review_import_all_note_one": {
+    "message": "Enthält $count$ Schlüssel, der sich als jemand ausgibt, den du schon hast.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_import_all_note_other": {
+    "message": "Enthält $count$ Schlüssel, die sich als jemand ausgeben, den du schon hast.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_import_all_risky": {
+    "message": "Trotzdem alle importieren"
+  },
+  "import_review_import_n_one": {
+    "message": "$count$ Schlüssel importieren",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_import_n_other": {
+    "message": "$count$ Schlüssel importieren",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_import_none": {
+    "message": "Nichts ausgewählt"
+  },
+  "import_review_intro_one": {
+    "message": "$count$ Schlüssel gefunden. Nichts wird gespeichert, bis du entscheidest.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_intro_other": {
+    "message": "$count$ Schlüssel gefunden. Nichts wird gespeichert, bis du entscheidest.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_status_duplicate": {
+    "message": "Schon gespeichert"
+  },
+  "import_review_status_new": {
+    "message": "Neu"
+  },
+  "import_review_status_rejected": {
+    "message": "Nicht importierbar"
+  },
+  "import_review_status_revoked": {
+    "message": "Widerrufen"
+  },
+  "import_review_status_update": {
+    "message": "Update"
+  },
+  "import_review_title": {
+    "message": "Schlüssel prüfen"
   },
   "import_revocation_headline": {
     "message": "Widerrufszertifikat"
@@ -2176,6 +2326,34 @@
   "keys_contact_revoked_title": {
     "message": "Der Inhaber hat diesen Schlüssel widerrufen. Er bleibt gespeichert, damit der Widerruf bestehen bleibt, aber Sie können nicht an ihn verschlüsseln. Nach einer Kompromittierung wird keine seiner Signaturen mehr verifiziert; nach einer regulären Ablösung werden ältere weiterhin verifiziert und gelb angezeigt."
   },
+  "keys_contact_same_address": {
+    "message": "Gleiche Adresse"
+  },
+  "keys_contact_same_address_title": {
+    "message": "$name$ ($keyid$) nutzt diese Adresse auch, mit einem anderen Schlüssel.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_contact_same_name": {
+    "message": "Gleicher Name"
+  },
+  "keys_contact_same_name_title": {
+    "message": "$name$ ($keyid$) hat diesen Namen auch, mit einem anderen Schlüssel.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
   "keys_contacts_heading": {
     "message": "Kontakte"
   },
@@ -2741,6 +2919,37 @@
   },
   "keys_unknown_name": {
     "message": "Unbekannt"
+  },
+  "keys_verified_by_you": {
+    "message": "Von dir verifiziert"
+  },
+  "keys_verified_chip": {
+    "message": "Verifiziert"
+  },
+  "keys_verified_chip_title": {
+    "message": "Du hast diesen Schlüssel als verifiziert markiert, nachdem du seinen Fingerabdruck mit dem Inhaber verglichen hast."
+  },
+  "keys_verified_on": {
+    "message": "Von dir verifiziert am $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_verified_unmark": {
+    "message": "Aufheben"
+  },
+  "keys_verify_hint": {
+    "message": "Vergleiche diesen Fingerabdruck mit $name$ persönlich oder in einem Anruf, dem du vertraust. Wenn er übereinstimmt, markiere ihn als verifiziert.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_verify_mark": {
+    "message": "Als verifiziert markieren"
   },
   "keys_weak_sha1": {
     "message": "Schwach (SHA-1)"
@@ -4360,6 +4569,9 @@
   },
   "workspace_signer_key_retired": {
     "message": "der Schlüssel, der sie erstellt hat, ist inzwischen abgelaufen oder widerrufen"
+  },
+  "workspace_signer_not_verified": {
+    "message": "Schlüssel nicht von dir als verifiziert markiert"
   },
   "workspace_status_age_encrypted": {
     "message": "age-Nachricht - für SSH-Empfänger verschlüsselt"

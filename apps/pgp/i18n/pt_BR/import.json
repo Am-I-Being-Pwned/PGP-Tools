@@ -355,5 +355,80 @@
   },
   "import_status_replaces": {
     "message": "Substitui a chave que você tinha para $name$"
+  },
+  "import_review_title": {
+    "message": "Revisar chaves"
+  },
+  "import_review_intro_one": {
+    "message": "$count$ chave encontrada. Nada é salvo até você escolher."
+  },
+  "import_review_intro_other": {
+    "message": "$count$ chaves encontradas. Nada é salvo até você escolher."
+  },
+  "import_review_status_new": {
+    "message": "Nova"
+  },
+  "import_review_status_update": {
+    "message": "Atualização"
+  },
+  "import_review_status_revoked": {
+    "message": "Revogada"
+  },
+  "import_review_status_duplicate": {
+    "message": "Já salva"
+  },
+  "import_review_status_rejected": {
+    "message": "Não importável"
+  },
+  "import_review_conflict_address": {
+    "message": "$email$ já pertence a $name$ ($keyid$). Esta é outra chave - confirme com a pessoa antes de confiar nela."
+  },
+  "import_review_conflict_name": {
+    "message": "Mesmo nome de $name$ ($keyid$), mas outra chave. Confirme com a pessoa antes de confiar nela."
+  },
+  "import_review_choice_aria": {
+    "message": "O que fazer com $name$"
+  },
+  "import_review_choice_skip": {
+    "message": "Pular"
+  },
+  "import_review_choice_keep_both": {
+    "message": "Manter ambas"
+  },
+  "import_review_choice_import": {
+    "message": "Importar"
+  },
+  "import_review_choice_replace": {
+    "message": "Substituir"
+  },
+  "import_review_import_none": {
+    "message": "Nada selecionado"
+  },
+  "import_review_import_n_one": {
+    "message": "Importar $count$ chave"
+  },
+  "import_review_import_n_other": {
+    "message": "Importar $count$ chaves"
+  },
+  "import_review_import_all": {
+    "message": "Importar todas"
+  },
+  "import_review_import_all_risky": {
+    "message": "Importar todas mesmo assim"
+  },
+  "import_review_import_all_note_one": {
+    "message": "Inclui $count$ chave que diz ser alguém que você já tem."
+  },
+  "import_review_import_all_note_other": {
+    "message": "Inclui $count$ chaves que dizem ser alguém que você já tem."
+  },
+  "import_replaced_contacts_one": {
+    "message": "Chave de $count$ contato substituída"
+  },
+  "import_replaced_contacts_other": {
+    "message": "Chaves de $count$ contatos substituídas"
+  },
+  "import_review_conflict_address_revoked": {
+    "message": "$email$ pertencia a $name$ ($keyid$), uma chave agora revogada. Confirme com a pessoa que esta nova chave é dela."
   }
 }

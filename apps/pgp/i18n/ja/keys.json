@@ -544,5 +544,38 @@
   },
   "keys_check_revocation_failed": {
     "message": "失効を確認できませんでした。もう一度お試しください。"
+  },
+  "keys_verified_chip": {
+    "message": "確認済み"
+  },
+  "keys_verified_chip_title": {
+    "message": "フィンガープリントを持ち主と照合したうえで、この鍵を確認済みにしました。"
+  },
+  "keys_verified_on": {
+    "message": "$date$ に確認済み"
+  },
+  "keys_verified_by_you": {
+    "message": "あなたが確認済み"
+  },
+  "keys_verified_unmark": {
+    "message": "解除"
+  },
+  "keys_verify_hint": {
+    "message": "このフィンガープリントを $name$ と対面か、信頼できる通話で照合してください。一致したら確認済みにします。"
+  },
+  "keys_verify_mark": {
+    "message": "確認済みにする"
+  },
+  "keys_contact_same_address": {
+    "message": "同じアドレス"
+  },
+  "keys_contact_same_address_title": {
+    "message": "$name$ ($keyid$) も別の鍵でこのアドレスを使っています。"
+  },
+  "keys_contact_same_name": {
+    "message": "同じ名前"
+  },
+  "keys_contact_same_name_title": {
+    "message": "$name$ ($keyid$) も別の鍵でこの名前を使っています。"
   }
 }

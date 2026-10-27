@@ -3,6 +3,8 @@ import { useRef, useState } from "react";
 import { Button } from "@amibeingpwned/ui/button";
 
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
+import type { ReviewDecision, ReviewedContact } from "../../lib/import/review";
+import type { IncomingKey } from "../../lib/import/types";
 import type { KeyInfo } from "../../lib/pgp/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
@@ -11,7 +13,9 @@ import { splitArmoredKeyBlocks } from "../../lib/armor-blocks";
 import { parseCrxKeyBlocks } from "../../lib/crx/backup";
 import { crxBlobIdentityMatches } from "../../lib/crx/types";
 import { t, tn } from "../../lib/i18n";
-import { importPublicKeyBlocks } from "../../lib/import-public-keys";
+import { prepareImport, withIdentityConflicts } from "../../lib/import/prepare";
+import { applyReview, needsDecision } from "../../lib/import/review";
+import { isPublicKind } from "../../lib/import/types";
 import { importKey } from "../../lib/pgp/key-management";
 import { importAndProtect } from "../../lib/protection/protect-flow";
 import {
@@ -21,6 +25,7 @@ import {
   registerPasskey,
 } from "../../lib/protection/webauthn-prf";
 import { toast } from "../../lib/toast";
+import { ImportReview } from "../keys/ImportReview";
 import {
   getDefaultProtectionMethod,
   ProtectionMethodPicker,
@@ -28,7 +33,7 @@ import {
 } from "../keys/ProtectionMethodPicker";
 import { SubPage } from "../shared/SubPage";
 
-type Step = "paste" | "unlock" | "protect";
+type Step = "paste" | "unlock" | "protect" | "review";
 
 interface ParsedPrivate {
   armored: string;
@@ -42,7 +47,10 @@ interface ImportAllKeysPageProps {
   myKeys: ProtectedKeyBlob[];
   contacts: PublicContactKey[];
   onAddKey: (blob: ProtectedKeyBlob) => Promise<void>;
-  onAddContact: (contact: PublicContactKey) => Promise<void>;
+  /** Save a contact the user has reviewed (see `lib/import/review`). */
+  onAddContact: (contact: ReviewedContact) => Promise<void>;
+  /** Remove a contact -- the old one, when a key replaces it. */
+  onRemoveContact: (keyId: string) => Promise<void>;
   /** Restore CRX signing keys found in the backup (self-protected blobs). */
   onAddCrxKey?: (blob: CrxSigningKeyBlob) => Promise<void>;
   /** Currently stored CRX keys, for skip-if-present dedupe (mirrors the
@@ -69,6 +77,7 @@ export function ImportAllKeysPage({
   contacts,
   onAddKey,
   onAddContact,
+  onRemoveContact,
   onAddCrxKey,
   crxKeys,
   reusePasskeyCredentialId,
@@ -89,37 +98,92 @@ export function ImportAllKeysPage({
   const [reusePasskey, setReusePasskey] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const importPublics = async (blocks: string[]) => {
-    if (blocks.length === 0) return;
-    const { added, updated, failed, flagged, rejectionReasons } =
-      await importPublicKeyBlocks(
-        blocks,
-        contacts.map((c) => ({ keyId: c.keyId, armored: c.armoredPublicKey })),
-        onAddContact,
-      );
-    // Stable ids: re-running the import with the same backup must update
-    // the previous toasts, not stack duplicates.
-    if (added > 0)
-      toast.success(tn("settings_import_contacts_added", added), {
-        id: "contacts-added",
-      });
-    if (flagged > 0)
-      toast.warning(tn("settings_import_contacts_flagged", flagged), {
-        id: "contacts-flagged",
-      });
-    if (updated > 0)
-      toast.info(tn("settings_import_contacts_updated", updated), {
-        id: "contacts-updated",
-      });
-    if (failed > 0)
+  // The backup's public keys, on the Review step: a backup file can come
+  // from anyone, so its contacts are listed before they are saved -- with
+  // "Import all" one click away for the user's own backup.
+  const [reviewKeys, setReviewKeys] = useState<IncomingKey[] | null>(null);
+
+  /** Classify the backup's public keys and open the Review. False when
+   *  there is nothing to review (the caller just closes). */
+  const reviewPublics = async (blocks: string[]): Promise<boolean> => {
+    if (blocks.length === 0) return false;
+    const stored = {
+      own: [],
+      contacts: contacts.map((c) => ({
+        keyId: c.keyId,
+        userIds: c.userIds,
+        armored: c.armoredPublicKey,
+        ...(c.revoked ? { revoked: true } : {}),
+      })),
+    };
+    const keys: IncomingKey[] = [];
+    for (const block of blocks) {
+      const prepared = await prepareImport(block, stored);
+      keys.push(...prepared.keys.filter((k) => isPublicKind(k.kind)));
+    }
+    // Conflicts again across the whole backup: two blocks can claim one
+    // address.
+    const checked = withIdentityConflicts(
+      keys.map(({ conflict: _c, ...k }) => k),
+      stored,
+    );
+    if (checked.some(needsDecision)) {
+      setReviewKeys(checked);
+      setStep("review");
+      return true;
+    }
+    // Nothing to decide: say why any refused keys were refused (on the
+    // Review they are listed instead -- often a backup's expired
+    // rotations, beside the live key).
+    const rejected = checked.filter((k) => k.status === "rejected");
+    if (rejected.length > 0)
       toast.error(
-        rejectionReasons[0]
-          ? tn("settings_import_contacts_rejected_reason", failed, {
-              reason: rejectionReasons[0],
+        rejected[0].rejection
+          ? tn("settings_import_contacts_rejected_reason", rejected.length, {
+              reason: rejected[0].rejection,
             })
-          : tn("settings_import_contacts_rejected", failed),
+          : tn("settings_import_contacts_rejected", rejected.length),
         { id: "contacts-rejected" },
       );
+    return false;
+  };
+
+  const finishReview = async (
+    decisions: ReadonlyMap<string, ReviewDecision>,
+    close: () => void,
+  ) => {
+    if (!reviewKeys) return;
+    setImporting(true);
+    try {
+      const { added, updated, replaced, keyIds } = await applyReview(
+        reviewKeys,
+        decisions,
+        { contacts, add: onAddContact, remove: onRemoveContact },
+      );
+      // Stable ids: re-running the import with the same backup must update
+      // the previous toasts, not stack duplicates.
+      if (added > 0)
+        toast.success(tn("settings_import_contacts_added", added), {
+          id: "contacts-added",
+        });
+      const saved = new Set(keyIds);
+      const flagged = reviewKeys.filter(
+        (k) => saved.has(k.keyId) && k.securityWarning?.includes("SHA-1"),
+      ).length;
+      if (flagged > 0)
+        toast.warning(tn("settings_import_contacts_flagged", flagged), {
+          id: "contacts-flagged",
+        });
+      if (updated + replaced > 0)
+        toast.info(tn("settings_import_contacts_updated", updated + replaced), {
+          id: "contacts-updated",
+        });
+      close();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("settings_import_failed"));
+    } finally {
+      setImporting(false);
+    }
   };
 
   /** Commit the parsed CRX blobs (already identity-checked and deduped at
@@ -230,11 +294,11 @@ export function ImportAllKeysPage({
       if (privates.length === 0) {
         // Nothing to protect -- import the CRX/public keys and finish.
         await importCrxBlobs(crxBlobs);
-        await importPublics(publicKeys);
         if (skipped > 0)
           toast.info(tn("settings_import_private_skipped", skipped), {
             id: "private-keys-skipped",
           });
+        if (await reviewPublics(publicKeys)) return;
         if (unparseable === 0) close();
         return;
       }
@@ -345,7 +409,7 @@ export function ImportAllKeysPage({
           id: "private-keys-skipped",
         });
       await importCrxBlobs(parsedCrx);
-      await importPublics(publicBlocks);
+      if (await reviewPublics(publicBlocks)) return;
       close();
     } catch (e) {
       if (!isWebAuthnCancel(e)) {
@@ -466,6 +530,16 @@ export function ImportAllKeysPage({
                 </p>
               )}
             </div>
+          )}
+
+          {step === "review" && reviewKeys && (
+            <ImportReview
+              keys={reviewKeys}
+              busy={importing}
+              error={error}
+              allowImportAll
+              onImport={(decisions) => void finishReview(decisions, api.close)}
+            />
           )}
 
           {step === "protect" && (

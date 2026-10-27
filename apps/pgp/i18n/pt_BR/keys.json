@@ -544,5 +544,38 @@
   },
   "keys_check_revocation_failed": {
     "message": "Não foi possível verificar a revogação. Tente novamente."
+  },
+  "keys_verified_chip": {
+    "message": "Verificada"
+  },
+  "keys_verified_chip_title": {
+    "message": "Você marcou esta chave como verificada após comparar a impressão digital com o dono."
+  },
+  "keys_verified_on": {
+    "message": "Verificada por você em $date$"
+  },
+  "keys_verified_by_you": {
+    "message": "Verificada por você"
+  },
+  "keys_verified_unmark": {
+    "message": "Desmarcar"
+  },
+  "keys_verify_hint": {
+    "message": "Compare esta impressão digital com $name$ pessoalmente ou numa ligação confiável. Se coincidir, marque como verificada."
+  },
+  "keys_verify_mark": {
+    "message": "Marcar como verificada"
+  },
+  "keys_contact_same_address": {
+    "message": "Mesmo endereço"
+  },
+  "keys_contact_same_address_title": {
+    "message": "$name$ ($keyid$) também usa este endereço, com outra chave."
+  },
+  "keys_contact_same_name": {
+    "message": "Mesmo nome"
+  },
+  "keys_contact_same_name_title": {
+    "message": "$name$ ($keyid$) também tem este nome, com outra chave."
   }
 }

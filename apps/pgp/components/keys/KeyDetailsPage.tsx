@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {
+  CheckIcon,
   CopyIcon,
   DownloadIcon,
   LockIcon,
@@ -23,6 +24,7 @@ import type { ComponentKeyRow } from "./key-facts";
 import type { KeyPreviewChip } from "./KeyPreviewBody";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import { t } from "../../lib/i18n";
+import { formatDate } from "../../lib/i18n/format";
 import { downloadPublicKey } from "../../lib/keys/export-bundle";
 import { parseKey, parseKeyDetails } from "../../lib/pgp/wasm";
 import {
@@ -58,6 +60,9 @@ interface KeyDetailsPageProps {
   onRename?: () => void;
   /** Contacts only: ask the keyserver whether the owner revoked it. */
   onCheckRevocation?: () => void;
+  /** Contacts only: record (or withdraw) that the user compared this
+   *  key's fingerprint with its owner. */
+  onSetVerified?: (verified: boolean) => Promise<void>;
   /** True when this is the user's configured default key. */
   isDefault?: boolean;
   /** Own keys only: set (true) or clear (false) this key as the
@@ -194,6 +199,72 @@ function RevocationSection({
   );
 }
 
+// ── verification (contacts) ──────────────────────────────────────────
+
+/** "Mark as verified": the user's own record that they compared this
+ *  fingerprint with its owner. Nothing else sets it -- not an import, not
+ *  a keyserver, not a signature -- so it is the one statement about who
+ *  a key belongs to that the user made themselves. */
+function VerifySection({
+  name,
+  verified,
+  verifiedAt,
+  onSetVerified,
+}: {
+  name: string;
+  verified: boolean;
+  verifiedAt?: number;
+  onSetVerified: (verified: boolean) => Promise<void>;
+}) {
+  const [busy, setBusy] = useState(false);
+  const set = async (next: boolean) => {
+    setBusy(true);
+    try {
+      await onSetVerified(next);
+    } catch (e) {
+      toast.error(errorMessage(e, t("keys_save_failed")));
+    } finally {
+      setBusy(false);
+    }
+  };
+  if (verified) {
+    return (
+      <Block className="flex items-center gap-2 px-3.5 py-2.5">
+        <CheckIcon className="text-good h-3.5 w-3.5 shrink-0" />
+        <p className="min-w-0 flex-1 text-xs">
+          {verifiedAt !== undefined
+            ? t("keys_verified_on", { date: formatDate(verifiedAt) })
+            : t("keys_verified_by_you")}
+        </p>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-muted-foreground h-7 px-2"
+          disabled={busy}
+          onClick={() => void set(false)}
+        >
+          {t("keys_verified_unmark")}
+        </Button>
+      </Block>
+    );
+  }
+  return (
+    <Block className="space-y-2 px-3.5 py-2.5">
+      <p className="text-muted-foreground text-xs leading-relaxed">
+        {t("keys_verify_hint", { name })}
+      </p>
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={busy}
+        onClick={() => void set(true)}
+      >
+        {t("keys_verify_mark")}
+      </Button>
+    </Block>
+  );
+}
+
 // ── page ─────────────────────────────────────────────────────────────
 
 export function KeyDetailsPage({
@@ -202,6 +273,7 @@ export function KeyDetailsPage({
   onEncryptTo,
   onRename,
   onCheckRevocation,
+  onSetVerified,
   isDefault,
   onSetDefault,
   onDelete,
@@ -275,6 +347,17 @@ export function KeyDetailsPage({
     label: isOwn ? t("keys_chip_your_key") : t("keys_chip_contact"),
     title: isOwn ? t("keys_chip_your_key_title") : t("keys_chip_contact_title"),
   });
+  const verifiedAt =
+    target.kind === "contact" && target.contact.verified
+      ? target.contact.verifiedAt
+      : undefined;
+  const verified = target.kind === "contact" && !!target.contact.verified;
+  if (verified) {
+    chips.push({
+      label: t("keys_verified_chip"),
+      title: t("keys_verified_chip_title"),
+    });
+  }
   if (isSsh) {
     chips.push({
       label: "SSH",
@@ -528,6 +611,16 @@ export function KeyDetailsPage({
           addedAt={addedAt}
           lastUsedAt={isOwn ? lastUsedAt : undefined}
           rowAction={multiRecipient ? renderRecipientAction : undefined}
+          fingerprintFooter={
+            onSetVerified && (
+              <VerifySection
+                name={name}
+                verified={verified}
+                verifiedAt={verifiedAt}
+                onSetVerified={onSetVerified}
+              />
+            )
+          }
         >
           {/* age has no revocation concept at all -- there is no
               certificate to publish and nobody to publish it to -- so

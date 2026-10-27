@@ -145,6 +145,14 @@ export interface PublicContactKey extends KindDiscriminated {
    *  `userIds` / `revoked` / `lookalike`. Absent on older records, which
    *  the contacts hook re-derives once. */
   identityVersion?: number;
+  /** The user compared this key's fingerprint with its owner and marked
+   *  it verified. WRITTEN ONLY WHEN TRUE; dropped when the key changes. */
+  verified?: true;
+  /** When it was marked verified (ms since epoch). */
+  verifiedAt?: number;
+  /** Fingerprints this contact used before its key was replaced on the
+   *  import Review, newest first. */
+  previousKeyIds?: string[];
   /** Every key this contact holds -- WRITTEN ONLY WHEN THERE IS MORE
    *  THAN ONE. Absent means "the single key in the top-level fields",
    *  exactly the way an absent `kind` means `"pgp"` (see `key-kind.ts`).
@@ -599,7 +607,27 @@ function carryForward(
             ...disabledField(isRecipientDisabled(r) || off.has(r.keyId)),
           })),
         );
-  return { ...merged, addedAt: previous.addedAt };
+  // The same KEY refreshed keeps what the user decided about it: its
+  // local name, and that they verified it. A different key never
+  // inherits "verified" -- nor does a group that gained or lost a key:
+  // what the user compared was the old set.
+  const keySet = (c: PublicContactKey) =>
+    contactRecipients(c)
+      .map((r) => r.keyId)
+      .sort()
+      .join(" ");
+  const sameKey =
+    previous.keyId === incoming.keyId && keySet(previous) === keySet(incoming);
+  return {
+    ...merged,
+    addedAt: previous.addedAt,
+    ...(previous.alias && merged.alias === undefined
+      ? { alias: previous.alias }
+      : {}),
+    ...(sameKey && previous.verified
+      ? { verified: true as const, verifiedAt: previous.verifiedAt }
+      : {}),
+  };
 }
 
 export async function saveContact(contact: PublicContactKey): Promise<void> {
@@ -677,6 +705,20 @@ export async function setContactRecipientDisabled(
       ),
     ),
   );
+}
+
+/** Mark a contact's key verified (the user compared its fingerprint with
+ *  the owner), or clear that. Only the flag and its date change. */
+export async function setContactVerified(
+  keyId: string,
+  verified: boolean,
+): Promise<void> {
+  await updateContact(keyId, (contact) => {
+    const { verified: _v, verifiedAt: _at, ...rest } = contact;
+    return verified
+      ? { ...rest, verified: true, verifiedAt: Date.now() }
+      : rest;
+  });
 }
 
 /**

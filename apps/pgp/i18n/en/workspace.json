@@ -666,5 +666,9 @@
   "workspace_signed_text_hidden_chars": {
     "message": "the signed text contains invisible or text-direction characters, so it may not read on screen the way it was written",
     "description": "Part of the note under a verified signer: the signed text itself contains bidi/zero-width/control characters that can make it display in a different order. Lowercase: it follows other parts after a dot separator."
+  },
+  "workspace_signer_not_verified": {
+    "message": "key not marked verified by you",
+    "description": "Lower-case fragment in the note under a good signature, joined with ' · ': the signer is a contact the user has not marked verified."
   }
 }

@@ -9,7 +9,9 @@ import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { FileResult } from "../../lib/utils/download";
 import { t } from "../../lib/i18n";
+import { contactClashes } from "../../lib/identity/binding";
 import { KEYSERVER_HOST } from "../../lib/import/keyserver";
+import { isSshRecord } from "../../lib/storage/key-kind";
 import { ContactCard } from "../keys/ContactCard";
 import { KeyDetailsButton } from "../keys/KeyDetailsButton";
 import { DetectedKeyBanner } from "./DetectedKeyBanner";
@@ -207,6 +209,16 @@ export function WorkspaceResults({
           ) : undefined
         }
         contact={signerAsContact(verifiedSigner)}
+        // Signed by a contact who shares a name or address with another:
+        // the same pill as on the card, so the two read apart here too.
+        clash={
+          "armoredPublicKey" in verifiedSigner && !isUnverified
+            ? contactClashes(
+                contacts.filter((c) => !isSshRecord(c)),
+                [],
+              ).get(verifiedSigner.keyId)
+            : undefined
+        }
       />
     </div>
   ) : null;

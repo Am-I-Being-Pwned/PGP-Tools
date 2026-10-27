@@ -355,5 +355,80 @@
   },
   "import_status_replaces": {
     "message": "Ersetzt den Schlüssel, den Sie für $name$ hatten"
+  },
+  "import_review_title": {
+    "message": "Schlüssel prüfen"
+  },
+  "import_review_intro_one": {
+    "message": "$count$ Schlüssel gefunden. Nichts wird gespeichert, bis du entscheidest."
+  },
+  "import_review_intro_other": {
+    "message": "$count$ Schlüssel gefunden. Nichts wird gespeichert, bis du entscheidest."
+  },
+  "import_review_status_new": {
+    "message": "Neu"
+  },
+  "import_review_status_update": {
+    "message": "Update"
+  },
+  "import_review_status_revoked": {
+    "message": "Widerrufen"
+  },
+  "import_review_status_duplicate": {
+    "message": "Schon gespeichert"
+  },
+  "import_review_status_rejected": {
+    "message": "Nicht importierbar"
+  },
+  "import_review_conflict_address": {
+    "message": "$email$ gehört bereits zu $name$ ($keyid$). Das ist ein anderer Schlüssel - frag nach, bevor du ihm vertraust."
+  },
+  "import_review_conflict_name": {
+    "message": "Gleicher Name wie $name$ ($keyid$), aber ein anderer Schlüssel. Frag nach, bevor du ihm vertraust."
+  },
+  "import_review_choice_aria": {
+    "message": "Was mit $name$ geschehen soll"
+  },
+  "import_review_choice_skip": {
+    "message": "Überspringen"
+  },
+  "import_review_choice_keep_both": {
+    "message": "Beide behalten"
+  },
+  "import_review_choice_import": {
+    "message": "Importieren"
+  },
+  "import_review_choice_replace": {
+    "message": "Ersetzen"
+  },
+  "import_review_import_none": {
+    "message": "Nichts ausgewählt"
+  },
+  "import_review_import_n_one": {
+    "message": "$count$ Schlüssel importieren"
+  },
+  "import_review_import_n_other": {
+    "message": "$count$ Schlüssel importieren"
+  },
+  "import_review_import_all": {
+    "message": "Alle importieren"
+  },
+  "import_review_import_all_risky": {
+    "message": "Trotzdem alle importieren"
+  },
+  "import_review_import_all_note_one": {
+    "message": "Enthält $count$ Schlüssel, der sich als jemand ausgibt, den du schon hast."
+  },
+  "import_review_import_all_note_other": {
+    "message": "Enthält $count$ Schlüssel, die sich als jemand ausgeben, den du schon hast."
+  },
+  "import_replaced_contacts_one": {
+    "message": "Schlüssel von $count$ Kontakt ersetzt"
+  },
+  "import_replaced_contacts_other": {
+    "message": "Schlüssel von $count$ Kontakten ersetzt"
+  },
+  "import_review_conflict_address_revoked": {
+    "message": "$email$ gehörte zu $name$ ($keyid$), einem inzwischen widerrufenen Schlüssel. Frag nach, ob dieser neue Schlüssel wirklich von dieser Person ist."
   }
 }

@@ -930,7 +930,7 @@ This is plaintext persisting _after_ the lock, when nothing is rendered.
 
 ## 9. Verification checklist
 
-All five invariants below are enforced mechanically by
+The invariants below are enforced mechanically by
 `scripts/audit-invariants.mjs`, which runs as part of `pnpm build` and
 fails the build on violation. It resolves enclosing functions and
 `#[cfg(test)]` gating structurally rather than counting grep lines, and
@@ -971,6 +971,16 @@ grep -nE 'fn (encrypt|protect|generate|unlock|verify_canary|encrypt_canary|init_
 #    as a defect in review even though the gate no longer catches it.
 grep -rnE 'console\.[a-z]+\(' apps/pgp --include='*.ts' --include='*.tsx' \
   | grep -vE '\.(test|spec)\.tsx?:'
+
+# 6. A contact (a key bound to a person) is written only after the user
+#    saw it on the import Review: `reviewed()` mints the ReviewedContact
+#    brand the store's add requires, and is called only from
+#    lib/import/review.ts (applyReview) and KeysView's undo-delete. The
+#    store itself is written only from lib/storage/contacts.ts and
+#    hooks/useContacts.ts.
+grep -rnE '\breviewed\(' apps/pgp --include='*.ts' --include='*.tsx' \
+  | grep -vE '\.(test|spec)\.tsx?:|lib/import/review\.ts|keys/KeysView\.tsx'
+# → empty.
 ```
 
 ---

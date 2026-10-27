@@ -1,3 +1,4 @@
+import type { IdentityHolder } from "../identity/binding";
 import type { KeyDetails, KeyInfo } from "../pgp/types";
 import type { SshRecipientInfo } from "../pgp/wasm";
 import type { ContactRecipient, ContactSource } from "../storage/contacts";
@@ -9,6 +10,7 @@ import {
   splitSshPublicKeyCandidateLines,
 } from "../armor-blocks";
 import { t, tn } from "../i18n";
+import { identityConflict } from "../identity/binding";
 import { detectImportOverwrite } from "../import-overwrite";
 import {
   applyRevocation,
@@ -47,6 +49,8 @@ export interface StoredKey {
   expiresAt?: number | null;
   /** Where a fetched contact came from; absent when hand-supplied. */
   source?: ContactSource;
+  /** A revoked key no longer holds its address (see identity/binding). */
+  revoked?: boolean;
 }
 
 export interface StoredKeys {
@@ -479,8 +483,7 @@ export interface PreparedImport {
  *
  * A single block may bundle several certs (publishers rotate keys
  * yearly); when a block has at least one usable cert its unusable
- * siblings are stale rotations, dropped rather than reported -- the same
- * rule `importPublicKeyBlocks` already applies.
+ * siblings are stale rotations, dropped rather than reported.
  *
  * This is the ONE place that decides what pasted text is. Every engine
  * is recognised here and returns an IncomingKey, so the panel routes a
@@ -492,6 +495,70 @@ export async function prepareImport(
   text: string,
   stored: StoredKeys,
   engines: ImportEngines = {},
+): Promise<PreparedImport> {
+  const prepared = await classifyImport(text, stored, engines);
+  return { ...prepared, keys: withIdentityConflicts(prepared.keys, stored) };
+}
+
+/**
+ * Mark every public key whose import would bind it to an identity
+ * someone else holds -- a contact's or the user's own address, or a
+ * name that reads the same. A new key is checked on all its User IDs;
+ * an update only on the ones it ADDS (a key the user already has can
+ * still pick up someone else's name). Checked against the stored keys
+ * and every other new key in this import, both ways: in a bundle
+ * carrying two keys for one address, neither is the "real" one by
+ * virtue of coming first. The import screen will not save a marked key
+ * without the user choosing what to do with it.
+ */
+export function withIdentityConflicts(
+  keys: IncomingKey[],
+  stored: StoredKeys,
+): IncomingKey[] {
+  const holder = (k: StoredKey, own: boolean): IdentityHolder => ({
+    keyId: k.keyId,
+    userIds: k.userIds,
+    ...(k.revoked ? { revoked: true } : {}),
+    ...(own ? { own: true } : {}),
+  });
+  const isNew = (k: IncomingKey) =>
+    k.kind === "pgp-public" && k.status === "new";
+  // An update or a duplicate is already here as its stored record, and a
+  // rejected key will not be saved: only new keys join the holders.
+  const holders: IdentityHolder[] = [
+    ...stored.contacts.map((k) => holder(k, false)),
+    ...stored.own.map((k) => holder(k, true)),
+    ...keys.filter(isNew).map((k) => ({
+      keyId: k.keyId,
+      userIds: k.userIds,
+      incoming: true as const,
+      ...(k.info?.revoked ? { revoked: true } : {}),
+    })),
+  ];
+  return keys.map((key) => {
+    if (key.kind !== "pgp-public") return key;
+    let userIds: string[];
+    if (key.status === "new") userIds = key.userIds;
+    else if (key.status === "update") {
+      const before = new Set(
+        stored.contacts.find(
+          (c) => c.keyId.toUpperCase() === key.keyId.toUpperCase(),
+        )?.userIds ?? [],
+      );
+      userIds = key.userIds.filter((u) => !before.has(u));
+    } else return key;
+    if (userIds.length === 0) return key;
+    const conflict = identityConflict({ keyId: key.keyId, userIds }, holders, {
+      includeRevoked: true,
+    });
+    return conflict ? { ...key, conflict } : key;
+  });
+}
+
+async function classifyImport(
+  text: string,
+  stored: StoredKeys,
+  engines: ImportEngines,
 ): Promise<PreparedImport> {
   // Recognised before the OpenPGP parse, which would only fail on it.
   // The PEM is secret material, so it travels in `secrets` like any

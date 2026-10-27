@@ -1341,6 +1341,22 @@
   "import_rejected_generic": {
     "message": "この鍵はインポートできません。"
   },
+  "import_replaced_contacts_one": {
+    "message": "$count$ 件の連絡先の鍵を置き換えました",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_replaced_contacts_other": {
+    "message": "$count$ 件の連絡先の鍵を置き換えました",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
   "import_retry_hours_one": {
     "message": "約 $count$ 時間後にやり直してください。",
     "placeholders": {
@@ -1378,6 +1394,140 @@
   },
   "import_reveal": {
     "message": "鍵一覧で表示"
+  },
+  "import_review_choice_aria": {
+    "message": "$name$ の扱い",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_choice_import": {
+    "message": "インポート"
+  },
+  "import_review_choice_keep_both": {
+    "message": "両方残す"
+  },
+  "import_review_choice_replace": {
+    "message": "置き換え"
+  },
+  "import_review_choice_skip": {
+    "message": "スキップ"
+  },
+  "import_review_conflict_address": {
+    "message": "$email$ はすでに $name$ ($keyid$) のものです。これは別の鍵です。信頼する前に本人に確認してください。",
+    "placeholders": {
+      "email": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      },
+      "keyid": {
+        "content": "$3"
+      }
+    }
+  },
+  "import_review_conflict_address_revoked": {
+    "message": "$email$ は $name$ ($keyid$) のものでしたが、その鍵は失効しています。この新しい鍵が本人のものか確認してください。",
+    "placeholders": {
+      "email": {
+        "content": "$1"
+      },
+      "name": {
+        "content": "$2"
+      },
+      "keyid": {
+        "content": "$3"
+      }
+    }
+  },
+  "import_review_conflict_name": {
+    "message": "$name$ ($keyid$) と同じ名前ですが、別の鍵です。信頼する前に本人に確認してください。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
+  "import_review_import_all": {
+    "message": "すべてインポート"
+  },
+  "import_review_import_all_note_one": {
+    "message": "保存済みの相手を名乗る鍵が $count$ 件含まれます。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_import_all_note_other": {
+    "message": "保存済みの相手を名乗る鍵が $count$ 件含まれます。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_import_all_risky": {
+    "message": "それでもすべてインポート"
+  },
+  "import_review_import_n_one": {
+    "message": "$count$ 件の鍵をインポート",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_import_n_other": {
+    "message": "$count$ 件の鍵をインポート",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_import_none": {
+    "message": "選択なし"
+  },
+  "import_review_intro_one": {
+    "message": "$count$ 件の鍵が見つかりました。選ぶまで何も保存されません。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_intro_other": {
+    "message": "$count$ 件の鍵が見つかりました。選ぶまで何も保存されません。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "import_review_status_duplicate": {
+    "message": "保存済み"
+  },
+  "import_review_status_new": {
+    "message": "新規"
+  },
+  "import_review_status_rejected": {
+    "message": "インポート不可"
+  },
+  "import_review_status_revoked": {
+    "message": "失効"
+  },
+  "import_review_status_update": {
+    "message": "更新"
+  },
+  "import_review_title": {
+    "message": "鍵を確認"
   },
   "import_revocation_headline": {
     "message": "失効証明書"
@@ -2176,6 +2326,34 @@
   "keys_contact_revoked_title": {
     "message": "所有者がこの鍵を失効させました。失効を維持するために保存されていますが、この鍵へは暗号化できません。漏洩による失効では署名はすべて検証されず、通常の引退ではそれ以前の署名は検証され、黄色で表示されます。"
   },
+  "keys_contact_same_address": {
+    "message": "同じアドレス"
+  },
+  "keys_contact_same_address_title": {
+    "message": "$name$ ($keyid$) も別の鍵でこのアドレスを使っています。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
+  "keys_contact_same_name": {
+    "message": "同じ名前"
+  },
+  "keys_contact_same_name_title": {
+    "message": "$name$ ($keyid$) も別の鍵でこの名前を使っています。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "keyid": {
+        "content": "$2"
+      }
+    }
+  },
   "keys_contacts_heading": {
     "message": "連絡先"
   },
@@ -2741,6 +2919,37 @@
   },
   "keys_unknown_name": {
     "message": "不明"
+  },
+  "keys_verified_by_you": {
+    "message": "あなたが確認済み"
+  },
+  "keys_verified_chip": {
+    "message": "確認済み"
+  },
+  "keys_verified_chip_title": {
+    "message": "フィンガープリントを持ち主と照合したうえで、この鍵を確認済みにしました。"
+  },
+  "keys_verified_on": {
+    "message": "$date$ に確認済み",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_verified_unmark": {
+    "message": "解除"
+  },
+  "keys_verify_hint": {
+    "message": "このフィンガープリントを $name$ と対面か、信頼できる通話で照合してください。一致したら確認済みにします。",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "keys_verify_mark": {
+    "message": "確認済みにする"
   },
   "keys_weak_sha1": {
     "message": "脆弱 (SHA-1)"
@@ -4360,6 +4569,9 @@
   },
   "workspace_signer_key_retired": {
     "message": "署名した鍵はその後期限切れまたは失効しています"
+  },
+  "workspace_signer_not_verified": {
+    "message": "あなたは鍵を確認済みにしていません"
   },
   "workspace_status_age_encrypted": {
     "message": "age メッセージ。SSH の宛先に対して暗号化しました"

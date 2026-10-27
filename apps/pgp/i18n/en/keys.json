@@ -726,5 +726,49 @@
   "keys_check_revocation_failed": {
     "message": "Couldn't check for a revocation. Try again.",
     "description": "Toast when the revocation check fails for an unexpected reason."
+  },
+  "keys_verified_chip": {
+    "message": "Verified",
+    "description": "Small green pill on a contact the user marked verified. One word."
+  },
+  "keys_verified_chip_title": {
+    "message": "You marked this key verified after comparing its fingerprint with its owner.",
+    "description": "Tooltip of the Verified pill on a contact."
+  },
+  "keys_verified_on": {
+    "message": "Verified by you on $date$",
+    "description": "Line under the fingerprint on a contact's details. $date$ is a localised date."
+  },
+  "keys_verified_by_you": {
+    "message": "Verified by you",
+    "description": "Line under the fingerprint on a contact's details when no date is known."
+  },
+  "keys_verified_unmark": {
+    "message": "Unmark",
+    "description": "Button that withdraws the user's 'verified' mark on a contact. One word."
+  },
+  "keys_verify_hint": {
+    "message": "Compare this fingerprint with $name$ in person or on a call you trust. If it matches, mark it verified.",
+    "description": "Hint under the fingerprint on a contact's details. $name$ is the contact's name."
+  },
+  "keys_verify_mark": {
+    "message": "Mark as verified",
+    "description": "Button under the fingerprint on a contact's details. Short."
+  },
+  "keys_contact_same_address": {
+    "message": "Same address",
+    "description": "Amber pill on a contact whose address another contact also has, with a different key. Short."
+  },
+  "keys_contact_same_address_title": {
+    "message": "$name$ ($keyid$) uses this address too, with a different key.",
+    "description": "Tooltip of the Same address pill. $name$ is the other contact, $keyid$ its 16-hex key id."
+  },
+  "keys_contact_same_name": {
+    "message": "Same name",
+    "description": "Amber pill on a contact whose name looks the same as another contact's. Short."
+  },
+  "keys_contact_same_name_title": {
+    "message": "$name$ ($keyid$) has this name too, with a different key.",
+    "description": "Tooltip of the Same name pill. $name$ is the other contact, $keyid$ its 16-hex key id."
   }
 }

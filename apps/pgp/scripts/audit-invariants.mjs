@@ -1193,6 +1193,75 @@ const invariantNoConsole = {
   },
 };
 
+// ── Contacts are bound to a person only by the user ─────────────────
+// A contact record says "this key is this person"; the encrypt picker
+// and the signer card act on that. So the record may only be written
+// after the user saw it on the import Review (`applyReview`, the one
+// place that brands a contact `ReviewedContact`), or when the user
+// undoes their own delete. The store's add takes only the brand, so the
+// type system holds the rest -- provided nothing else mints the brand
+// or writes the store around it.
+const REVIEWED_CALLERS = new Map([
+  ["apps/pgp/lib/import/review.ts", "applyReview: the user's Review decisions"],
+  [
+    "apps/pgp/components/keys/KeysView.tsx",
+    "undo of the user's own delete: restores the record they had",
+  ],
+]);
+const CONTACT_WRITERS = new Map([
+  ["apps/pgp/lib/storage/contacts.ts", "the store itself"],
+  ["apps/pgp/hooks/useContacts.ts", "the store's add, typed ReviewedContact"],
+]);
+
+const invariantReviewedContacts = {
+  id: "contacts-only-after-review",
+  name: "contacts are written only from the import Review (or an undo)",
+  expectation:
+    "reviewed() called only in REVIEWED_CALLERS; saveContact()/upsertContacts()/CONTACTS_STORE only in CONTACT_WRITERS (tests exempt)",
+  why: "A contact binds a key to a person. A write that skips the Review is how a bundle slipped in a second key with someone's name and address: the user never saw it, and it then sat in the encrypt picker as that person.",
+  run() {
+    const notDefinition = (h) =>
+      !isTestFile(h.file) && !/\bfunction\s+\w+\s*\(/.test(h.text);
+    const brand = [
+      ...scanTs(/\breviewed\s*\(/, notDefinition),
+      // A cast mints the brand just the same.
+      ...scanTs(
+        /\bas\s+ReviewedContact\b|<ReviewedContact>\s*[\w({]/,
+        (h) => !isTestFile(h.file),
+      ),
+    ];
+    const writes = [
+      ...scanTs(/\b(?:saveContact|upsertContacts)\s*\(/, notDefinition),
+      ...scanTs(/\bCONTACTS_STORE\b/, (h) => !isTestFile(h.file)),
+    ];
+    const badBrand = brand.filter((h) => !REVIEWED_CALLERS.has(h.file));
+    const badWrites = writes.filter((h) => !CONTACT_WRITERS.has(h.file));
+    const violations = [];
+    if (badBrand.length)
+      violations.push({
+        summary: `${badBrand.length} reviewed() call(s) outside the Review`,
+        hits: badBrand,
+      });
+    if (badWrites.length)
+      violations.push({
+        summary: `${badWrites.length} contact-store write(s) outside the store`,
+        hits: badWrites,
+      });
+    return {
+      violations,
+      exempt: [
+        ...brand
+          .filter((h) => REVIEWED_CALLERS.has(h.file))
+          .map((h) => ({ ...h, reason: REVIEWED_CALLERS.get(h.file) })),
+        ...writes
+          .filter((h) => CONTACT_WRITERS.has(h.file))
+          .map((h) => ({ ...h, reason: CONTACT_WRITERS.get(h.file) })),
+      ],
+      detail: `${brand.length} reviewed() call(s), ${writes.length} store write site(s)`,
+    };
+  },
+};
+
 const INVARIANTS = [
   invariantKeyStoreInsert,
   invariantUnlockOnly,
@@ -1200,6 +1269,7 @@ const INVARIANTS = [
   invariantZeroizedParams,
   invariantExportsOwnCredentials,
   invariantNoConsole,
+  invariantReviewedContacts,
 ];
 
 // ── Run ─────────────────────────────────────────────────────────────

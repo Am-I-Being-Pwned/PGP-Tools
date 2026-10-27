@@ -269,10 +269,20 @@ export function useWorkspaceOperations({
       s.setStatusText(t("workspace_signature_verified"));
       const signer = findSigner(result.signerKeyId);
       if (signer) {
+        // The signature is good; whether the key is the person it names
+        // is a separate question, and only the user can answer it (Mark
+        // as verified, on the key's details). Said quietly -- most keys
+        // are never marked, and the verdict itself stays green.
+        const unvouched =
+          "armoredPublicKey" in signer &&
+          !signer.verified &&
+          !myKeys.some((k) => k.keyId === signer.keyId)
+            ? t("workspace_signer_not_verified")
+            : null;
         s.setVerifiedSigner(signer);
         s.setSignerCaveat(caveat);
         s.setSignatureNote(
-          [signatureNote(result, signerName, forOthers), extraNote]
+          [signatureNote(result, signerName, forOthers), unvouched, extraNote]
             .filter(Boolean)
             .join(" · ") || null,
         );

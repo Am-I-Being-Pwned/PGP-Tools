@@ -2,6 +2,7 @@ import type { MouseEvent as ReactMouseEvent, ReactNode } from "react";
 import { useState } from "react";
 import {
   CheckCircleIcon,
+  CheckIcon,
   ChevronRightIcon,
   CopyIcon,
   DownloadIcon,
@@ -28,6 +29,7 @@ import {
   TooltipTrigger,
 } from "@amibeingpwned/ui/tooltip";
 
+import type { IdentityConflict } from "../../lib/identity/binding";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import { t, tn } from "../../lib/i18n";
 import { formatDate, formatDateShort } from "../../lib/i18n/format";
@@ -47,6 +49,8 @@ import { useLongPress } from "./useLongPress";
 
 interface ContactCardProps {
   contact: PublicContactKey;
+  /** Another contact claims this one's address or name. */
+  clash?: IdentityConflict;
   onRemove?: () => void;
   onEncryptTo?: () => void;
   onCopyPublicKey?: () => void;
@@ -82,12 +86,22 @@ interface ContactCardProps {
   justImported?: boolean;
 }
 
+/** Who else holds the identity, for the clash pill's tooltip. */
+function clashArgs(clash: IdentityConflict) {
+  const holder = clash.holders[0];
+  return {
+    name: parseUserId(holder.userIds[0] ?? "").name,
+    keyid: holder.keyId.slice(-16).toUpperCase(),
+  };
+}
+
 /** The design language's status pill; the tone classes are added per use. */
 const PILL =
   "shrink-0 items-center rounded px-1.5 py-px text-[10.5px] font-medium whitespace-nowrap";
 
 export function ContactCard({
   contact,
+  clash,
   onRemove,
   onEncryptTo,
   onCopyPublicKey,
@@ -178,6 +192,8 @@ export function ContactCard({
   const algorithm = contact.algorithm ? formatAlgorithm(contact.algorithm) : "";
   const expired = !!contact.expiresAt && contact.expiresAt < now;
   const hasPills =
+    !!contact.verified ||
+    !!clash ||
     expired ||
     !!contact.revoked ||
     !!contact.securityWarning ||
@@ -298,6 +314,30 @@ export function ContactCard({
                 >
                   <TriangleAlertIcon className="h-2.5 w-2.5" />
                   {t("keys_contact_revoked")}
+                </span>
+              )}
+              {clash && (
+                <span
+                  title={
+                    clash.kind === "address"
+                      ? t("keys_contact_same_address_title", clashArgs(clash))
+                      : t("keys_contact_same_name_title", clashArgs(clash))
+                  }
+                  className={cn(PILL, "bg-warn/12 text-warn inline-flex gap-1")}
+                >
+                  <TriangleAlertIcon className="h-2.5 w-2.5" />
+                  {clash.kind === "address"
+                    ? t("keys_contact_same_address")
+                    : t("keys_contact_same_name")}
+                </span>
+              )}
+              {contact.verified && (
+                <span
+                  title={t("keys_verified_chip_title")}
+                  className={cn(PILL, "bg-good/12 text-good inline-flex gap-1")}
+                >
+                  <CheckIcon className="h-2.5 w-2.5" />
+                  {t("keys_verified_chip")}
                 </span>
               )}
               {contact.securityWarning && (
