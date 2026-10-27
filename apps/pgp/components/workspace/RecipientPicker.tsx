@@ -36,6 +36,7 @@ import {
 import { keyDetailsTarget } from "../keys/KeyDetailsButton";
 import { KeyDetailsPage } from "../keys/KeyDetailsPage";
 import { KeyAvatar } from "../shared/KeyAvatar";
+import { MarkedText } from "../shared/MarkedText";
 import {
   pickableKeys,
   recipientBlockReason,
@@ -432,7 +433,9 @@ export function RecipientPicker({
         <KeyAvatar fingerprint={key.keyId} size={32} />
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-1.5 truncate text-sm">
-            <span className="truncate">{name}</span>
+            <span className="truncate">
+              <MarkedText text={name} />
+            </span>
             {isOwn && (
               <span className="bg-secondary text-muted-foreground shrink-0 rounded px-1.5 py-px text-[10.5px] font-medium">
                 {t("actions_badge_you")}
@@ -447,19 +450,21 @@ export function RecipientPicker({
           </p>
           {(detail || keyCount > 1) && (
             <p className="text-muted-foreground truncate text-xs">
-              {[
-                detail,
-                keyCount > 1
-                  ? activeKeyCount < keyCount
-                    ? t("actions_keys_of_total", {
-                        active: activeKeyCount,
-                        count: keyCount,
-                      })
-                    : tn("actions_keys_count", keyCount)
-                  : "",
-              ]
-                .filter(Boolean)
-                .join(" · ")}
+              <MarkedText
+                text={[
+                  detail,
+                  keyCount > 1
+                    ? activeKeyCount < keyCount
+                      ? t("actions_keys_of_total", {
+                          active: activeKeyCount,
+                          count: keyCount,
+                        })
+                      : tn("actions_keys_count", keyCount)
+                    : "",
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              />
             </p>
           )}
           {/* Spelled out once, on the first dimmed row: a `title`
@@ -611,7 +616,9 @@ export function RecipientPicker({
                     }}
                   >
                     <KeyAvatar fingerprint={key.keyId} size={16} />
-                    <span className="min-w-0 truncate">{name}</span>
+                    <span className="min-w-0 truncate">
+                      <MarkedText text={name} />
+                    </span>
                     {isSshRecord(key) && (
                       // A status pill, a step darker than the chip it
                       // sits on so it reads as a tag rather than more of

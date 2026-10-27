@@ -2408,6 +2408,14 @@
   "keys_loading": {
     "message": "Chargement…"
   },
+  "keys_lookalike_char": {
+    "message": "$code$ provient d'un autre alphabet que le reste de ce mot",
+    "placeholders": {
+      "code": {
+        "content": "$1"
+      }
+    }
+  },
   "keys_lookalike_name": {
     "message": "Nom trompeur"
   },

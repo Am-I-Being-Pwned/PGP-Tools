@@ -2408,6 +2408,14 @@
   "keys_loading": {
     "message": "読み込んでいます…"
   },
+  "keys_lookalike_char": {
+    "message": "$code$ はこの単語のほかの文字と異なる文字体系のものです",
+    "placeholders": {
+      "code": {
+        "content": "$1"
+      }
+    }
+  },
   "keys_lookalike_name": {
     "message": "紛らわしい名前"
   },

@@ -247,5 +247,8 @@
   },
   "keys_lookalike_name": {
     "message": "仿冒名称"
+  },
+  "keys_lookalike_char": {
+    "message": "$code$ 与该单词其余部分属于不同的字母表"
   }
 }

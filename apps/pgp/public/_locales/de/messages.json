@@ -2408,6 +2408,14 @@
   "keys_loading": {
     "message": "Wird geladen…"
   },
+  "keys_lookalike_char": {
+    "message": "$code$ stammt aus einem anderen Alphabet als der Rest dieses Wortes",
+    "placeholders": {
+      "code": {
+        "content": "$1"
+      }
+    }
+  },
   "keys_lookalike_name": {
     "message": "Ähnlicher Name"
   },

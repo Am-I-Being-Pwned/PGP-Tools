@@ -523,5 +523,8 @@
   },
   "keys_lookalike_name": {
     "message": "紛らわしい名前"
+  },
+  "keys_lookalike_char": {
+    "message": "$code$ はこの単語のほかの文字と異なる文字体系のものです"
   }
 }

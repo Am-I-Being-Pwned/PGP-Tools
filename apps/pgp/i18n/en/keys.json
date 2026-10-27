@@ -698,5 +698,9 @@
   "keys_lookalike_name": {
     "message": "Lookalike name",
     "description": "Small amber pill on a contact card whose name or email mixes alphabets (e.g. a Cyrillic letter in a Latin name). The hover text explains."
+  },
+  "keys_lookalike_char": {
+    "message": "$code$ is from a different alphabet than the rest of this word",
+    "description": "Hover text on a highlighted letter in a name or email that comes from a different alphabet than the rest of its word (a lookalike, e.g. a Cyrillic А in Alice). $code$ is the Unicode code point, e.g. U+0410."
   }
 }

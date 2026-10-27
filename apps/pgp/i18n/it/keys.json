@@ -523,5 +523,8 @@
   },
   "keys_lookalike_name": {
     "message": "Nome ingannevole"
+  },
+  "keys_lookalike_char": {
+    "message": "$code$ appartiene a un alfabeto diverso dal resto di questa parola"
   }
 }

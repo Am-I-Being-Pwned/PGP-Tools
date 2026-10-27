@@ -39,6 +39,7 @@ import { isSshRecord } from "../../lib/storage/key-kind";
 import { formatAlgorithm, formatFingerprint } from "../../lib/utils/formatting";
 import { displayUserId, parseUserId } from "../../lib/utils/key-naming";
 import { KeyAvatar } from "../shared/KeyAvatar";
+import { MarkedText } from "../shared/MarkedText";
 import { HEX_FINGERPRINT, longIdLines } from "./fingerprint-lines";
 import { useJustImported } from "./useJustImported";
 import { useLongPress } from "./useLongPress";
@@ -233,7 +234,9 @@ export function ContactCard({
           <div className="flex items-center gap-2">
             {/* Line 1 is the name and nothing else, so no pill can
                 ever squeeze it out of the row. */}
-            <p className="min-w-0 truncate text-sm font-medium">{name}</p>
+            <p className="min-w-0 truncate text-sm font-medium">
+              <MarkedText text={name} />
+            </p>
             {verifiedLabel && (
               <span
                 className={`ml-auto flex shrink-0 items-center gap-1 text-xs ${toneText}`}
@@ -247,7 +250,9 @@ export function ContactCard({
             )}
           </div>
           {email && (
-            <p className="text-muted-foreground truncate text-xs">{email}</p>
+            <p className="text-muted-foreground truncate text-xs">
+              <MarkedText text={email} />
+            </p>
           )}
           {showKeyLine && (
             <p className="text-muted-foreground font-mono text-[11px] break-all">

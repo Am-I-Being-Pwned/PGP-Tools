@@ -291,5 +291,8 @@
   },
   "keys_lookalike_name": {
     "message": "Ähnlicher Name"
+  },
+  "keys_lookalike_char": {
+    "message": "$code$ stammt aus einem anderen Alphabet als der Rest dieses Wortes"
   }
 }

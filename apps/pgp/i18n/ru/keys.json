@@ -335,5 +335,8 @@
   },
   "keys_lookalike_name": {
     "message": "Похожее имя"
+  },
+  "keys_lookalike_char": {
+    "message": "$code$ из другого алфавита, чем остальная часть этого слова"
   }
 }

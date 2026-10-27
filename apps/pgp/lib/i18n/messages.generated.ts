@@ -479,6 +479,7 @@ export interface MessageArgs {
   "keys_key_details": undefined;
   "keys_key_options_aria": undefined;
   "keys_loading": undefined;
+  "keys_lookalike_char": { code: string | number };
   "keys_lookalike_name": undefined;
   "keys_my_keys_heading": undefined;
   "keys_never": undefined;
@@ -1100,6 +1101,7 @@ export const PLACEHOLDER_ORDER: Readonly<Partial<Record<string, readonly string[
   "keys_inactive_subkeys_revoked_other": ["count"],
   "keys_inactive_subkeys_unusable_one": ["count"],
   "keys_inactive_subkeys_unusable_other": ["count"],
+  "keys_lookalike_char": ["code"],
   "keys_no_contacts_match": ["query"],
   "keys_rename_hint": ["identity"],
   "keys_revoked_reason": ["reason"],
