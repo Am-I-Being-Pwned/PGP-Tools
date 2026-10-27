@@ -19,8 +19,10 @@
 //! - Key isolation: Private keys live in WASM's linear memory (KEY_STORE,
 //!   a `protected::HandleStore`), serialized bytes that are zeroized on
 //!   drop. JS holds only integer handles.
-//! - Signature verification: check() returns Err on bad signatures,
-//!   aborting the entire operation. No plaintext is surfaced for forged messages.
+//! - Signature verification: check() never aborts; it classifies every
+//!   signature (`process_signatures`) and the status crosses the boundary
+//!   packed with the plaintext. A bad signature anywhere yields "invalid",
+//!   and the UI refuses to show plaintext for it.
 //! - Argon2id KDF: Password-derived keys use Argon2id (64MB, 3 iterations),
 //!   making GPU brute-force impractical for reasonable passwords.
 //! - Constant-time caveat: The RustCrypto backend requires
@@ -201,6 +203,13 @@ pub struct KeyInfo {
     /// `policy_error`.
     #[serde(rename = "securityWarning", skip_serializing_if = "Option::is_none")]
     pub security_warning: Option<String>,
+    /// The owner revoked the whole cert (verified revocation). A revoked
+    /// contact is still stored -- so the revocation can reach it -- but
+    /// is shown as revoked and never encrypted to.
+    pub revoked: bool,
+    /// A User ID mixes lookalike alphabets ("Аlice" with a Cyrillic А).
+    /// Also explained in `security_warning`; this says which warning it is.
+    pub lookalike: bool,
 }
 
 /// One row in the per-key breakdown of a certificate: the primary key
@@ -260,13 +269,63 @@ struct ProtectResultMeta {
 #[derive(Serialize)]
 pub struct VerifyResult {
     pub text: String,
+    #[serde(flatten)]
+    signatures: SignatureReport,
+}
+
+/// What a message's signatures say, as the UI receives it alongside the
+/// plaintext (verify) or packed with it (decrypt).
+#[derive(Serialize)]
+struct SignatureReport {
     #[serde(rename = "signatureValid")]
-    pub signature_valid: bool,
-    /// Fine-grained status: "valid" | "invalid" | "unknown_key" | "unsigned".
+    signature_valid: bool,
+    /// "valid" | "invalid" | "unknown_key" | "unsigned".
     #[serde(rename = "signatureStatus")]
-    pub signature_status: String,
+    signature_status: &'static str,
     #[serde(rename = "signerKeyId")]
-    pub signer_key_id: Option<String>,
+    signer_key_id: Option<String>,
+    /// When the signature says it was made (ms since epoch). The SIGNER
+    /// chooses this, and Sequoia judges the key as of this moment -- so
+    /// it is shown to the user, never trusted.
+    #[serde(rename = "signedAt")]
+    signed_at: Option<f64>,
+    /// The signing key is still alive and unrevoked TODAY. A key that
+    /// expired or was superseded since can still produce a signature
+    /// that verifies, simply by dating it inside its old validity.
+    #[serde(rename = "signerKeyCurrent")]
+    signer_key_current: bool,
+    /// Further good signers beyond `signer_key_id`, by fingerprint.
+    #[serde(rename = "otherSignerKeyIds")]
+    other_signer_key_ids: Vec<String>,
+    /// Signatures from keys we don't hold, alongside a good one.
+    #[serde(rename = "unverifiedSignatures")]
+    unverified_signatures: u32,
+    /// Fingerprints the good signature names as its intended recipients.
+    /// Sequoia enforces the list when a message is opened with a key; a
+    /// password decrypt or a verify has no "us" to check it against, so
+    /// the UI does: a message signed for someone else is not addressed
+    /// to the user, however valid the signature.
+    #[serde(rename = "intendedRecipients")]
+    intended_recipients: Vec<String>,
+}
+
+impl SignatureReport {
+    fn unsigned() -> Self {
+        Self::with_status("unsigned", None)
+    }
+
+    fn with_status(status: &'static str, signer_key_id: Option<String>) -> Self {
+        SignatureReport {
+            signature_valid: status == "valid",
+            signature_status: status,
+            signer_key_id,
+            signed_at: None,
+            signer_key_current: false,
+            other_signer_key_ids: Vec::new(),
+            unverified_signatures: 0,
+            intended_recipients: Vec::new(),
+        }
+    }
 }
 
 #[derive(Deserialize)]
@@ -295,13 +354,7 @@ fn system_time_to_millis(t: SystemTime) -> f64 {
 
 fn extract_key_info(cert: &openpgp::Cert, is_private: bool) -> KeyInfo {
     let key_id = cert.fingerprint().to_hex();
-    // User IDs are attacker-controlled and rendered by the UI: strip
-    // control/bidi characters (a U+202E override in a UID visually
-    // reverses the displayed email -- address spoofing) and cap length.
-    let user_ids: Vec<String> = cert
-        .userids()
-        .map(|uid| sanitize_untrusted(&String::from_utf8_lossy(uid.userid().value()), 300))
-        .collect();
+    let user_ids = bound_user_ids(cert);
     let algorithm = cert.primary_key().key().pk_algo().to_string();
     let created_at = system_time_to_millis(cert.primary_key().key().creation_time());
 
@@ -342,6 +395,34 @@ fn extract_key_info(cert: &openpgp::Cert, is_private: bool) -> KeyInfo {
             }
         };
 
+    let revoked = cert
+        .with_policy(policy(), None)
+        .is_ok_and(|vc| matches!(vc.revocation_status(), RevocationStatus::Revoked(_)));
+    // A lookalike name outranks nothing that blocks use, but it is the
+    // one warning that says "this may not be who it claims to be".
+    let lookalike = user_ids.iter().any(|u| mixes_scripts(u));
+    // Both are said when both apply: the lookalike text must not hide a
+    // SHA-1 binding warning, nor the reverse.
+    let security_warning = match (lookalike, security_warning) {
+        (false, w) => w,
+        (true, w) => Some(
+            [
+                Some(
+                    "This key's name or email mixes letters from different \
+                     alphabets (for example Latin and Cyrillic) in one word, a \
+                     common way to imitate someone else's name. Check the \
+                     fingerprint with its owner."
+                        .to_string(),
+                ),
+                w,
+            ]
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>()
+            .join(" "),
+        ),
+    };
+
     KeyInfo {
         key_id,
         user_ids,
@@ -353,7 +434,80 @@ fn extract_key_info(cert: &openpgp::Cert, is_private: bool) -> KeyInfo {
         usable_for_signing,
         policy_error,
         security_warning,
+        revoked,
+        lookalike,
     }
+}
+
+/// The User IDs the owner actually bound -- self-signed under policy,
+/// not revoked -- primary first, sanitized for display.
+///
+/// `Cert::userids()` also yields User IDs with no binding signature at
+/// all: anyone can append "Alice CEO <ceo@...>" to Bob's real cert, and
+/// the UI names a contact (and every signer card) by its first User ID.
+fn bound_user_ids(cert: &openpgp::Cert) -> Vec<String> {
+    // Attacker-controlled and rendered by the UI: strip control, bidi and
+    // invisible characters (a U+202E override in a UID visually reverses
+    // the displayed email -- address spoofing) and cap length.
+    let clean =
+        |u: &openpgp::packet::UserID| sanitize_untrusted(&String::from_utf8_lossy(u.value()), 300);
+
+    let bound: Vec<openpgp::packet::UserID> = match cert.with_policy(policy(), None) {
+        Ok(vc) => {
+            let primary = vc.primary_userid().ok().map(|u| u.userid().clone());
+            let mut ids: Vec<_> = vc
+                .userids()
+                .filter(|u| !matches!(u.revocation_status(), RevocationStatus::Revoked(_)))
+                .map(|u| u.userid().clone())
+                .collect();
+            if let Some(i) = primary.and_then(|p| ids.iter().position(|u| *u == p)) {
+                let p = ids.remove(i);
+                ids.insert(0, p);
+            }
+            ids
+        }
+        Err(_) => Vec::new(),
+    };
+    if !bound.is_empty() {
+        return bound.iter().map(clean).collect();
+    }
+    // No usable binding today (expired, all revoked, policy-rejected):
+    // still name it only by what its owner once self-signed.
+    cert.userids()
+        .filter(|u| u.self_signatures().next().is_some())
+        .map(|u| clean(u.userid()))
+        .collect()
+}
+
+/// A WORD whose letters come from more than one of the scripts that
+/// imitate each other: "Аlice" with a Cyrillic А renders exactly like the
+/// real Alice. Judged per word, not per User ID -- "Иван <ivan@example.ru>"
+/// is a Cyrillic name with a Latin address, which is ordinary.
+fn mixes_scripts(s: &str) -> bool {
+    let script = |c: char| match c as u32 {
+        0x41..=0x5a | 0x61..=0x7a | 0xc0..=0x24f | 0x1e00..=0x1eff => Some(0),
+        0x370..=0x3ff | 0x1f00..=0x1fff => Some(1),
+        0x400..=0x52f | 0x1c80..=0x1c8f | 0x2de0..=0x2dff | 0xa640..=0xa69f => Some(2),
+        0x530..=0x58f => Some(3),
+        // Letters that pass for Latin ones without being them: fullwidth
+        // forms, IPA (ɑ for a), Latin Extended-D, Cherokee (Ꭺ for A).
+        0xff21..=0xff3a | 0xff41..=0xff5a => Some(4),
+        0x250..=0x2af | 0xa720..=0xa7ff => Some(5),
+        0x13a0..=0x13ff | 0xab70..=0xabbf => Some(6),
+        _ => None,
+    };
+    s.split(|c: char| c.is_whitespace() || "<>@.()\"',;:".contains(c))
+        .any(|word| {
+            let mut seen = None;
+            for k in word.chars().filter_map(script) {
+                match seen {
+                    None => seen = Some(k),
+                    Some(prev) if prev != k => return true,
+                    _ => {}
+                }
+            }
+            false
+        })
 }
 
 /// Whether a validated cert exposes an alive, non-revoked encryption
@@ -654,7 +808,15 @@ fn encrypt_impl(
 
     let inner: Message = if let Some(cert) = signer_cert {
         let keypair = signing_keypair(cert)?;
-        Signer::new(encryptor, keypair).str_err()?.build().str_err()?
+        // Name who the signature is FOR (RFC 9580 5.2.3.36). Without it a
+        // recipient can decrypt, re-encrypt the still-signed message to a
+        // third party, and it verifies there as if the signer had written
+        // to them. Sequoia enforces the list on decrypt.
+        let mut signer = Signer::new(encryptor, keypair).str_err()?;
+        for recipient in &recipients {
+            signer = signer.add_intended_recipient(recipient);
+        }
+        signer.build().str_err()?
     } else {
         encryptor
     };
@@ -754,16 +916,21 @@ fn issuer_hex(sig: &openpgp::packet::Signature) -> Option<String> {
     })
 }
 
-/// Rank of a signature status, so that across multiple signature layers we
-/// report the strongest outcome ("valid" beats a tamper signal beats
-/// "can't verify" beats "unsigned").
-fn sig_rank(status: &str) -> u8 {
-    match status {
-        "valid" => 3,
-        "invalid" => 2,
-        "unknown_key" => 1,
-        _ => 0,
-    }
+/// Is the key that made a good signature still alive and unrevoked now?
+/// Sequoia checked it as of the signature's own (signer-chosen) time.
+fn signing_key_current(cert: &openpgp::Cert, key: &openpgp::Fingerprint) -> bool {
+    let Ok(vc) = cert.with_policy(policy(), None) else {
+        return false;
+    };
+    vc.alive().is_ok()
+        && !matches!(vc.revocation_status(), RevocationStatus::Revoked(_))
+        && vc
+            .keys()
+            .key_handle(key.clone())
+            .alive()
+            .revoked(false)
+            .next()
+            .is_some()
 }
 
 /// Classify the signatures in a message structure WITHOUT ever failing.
@@ -779,37 +946,59 @@ fn sig_rank(status: &str) -> u8 {
 ///   "unknown_key" - signed, but we don't hold the signer's public key, so
 ///                   the signature could not be checked either way
 ///   "unsigned"    - no signatures present
-fn process_signatures(structure: MessageStructure) -> (&'static str, Option<String>) {
-    let mut status: &'static str = "unsigned";
-    let mut signer_key_id: Option<String> = None;
+///
+/// Every signature counts. A bad one anywhere makes the whole message
+/// "invalid", even next to a good one: GnuPG reports BAD for it too, and
+/// a verdict that silently drops the failure is a verdict on less than
+/// the user was shown. `UnboundKey` -- we hold the key, but it was not
+/// valid at the moment the signature claims, e.g. backdated before the
+/// key existed -- is a forgery signal, not an unknown signer.
+fn process_signatures(structure: MessageStructure) -> SignatureReport {
+    let mut good: Vec<(String, Option<f64>, bool, Vec<String>)> = Vec::new();
+    let mut missing: Vec<Option<String>> = Vec::new();
+    let mut bad = false;
 
     for layer in structure {
         if let MessageLayer::SignatureGroup { results } = layer {
             for result in results {
-                let (new_status, key): (&'static str, Option<String>) = match result {
-                    Ok(GoodChecksum { ka, .. }) => {
-                        ("valid", Some(ka.cert().fingerprint().to_hex()))
+                match result {
+                    Ok(GoodChecksum { sig, ka }) => {
+                        let fpr = ka.cert().fingerprint().to_hex();
+                        if !good.iter().any(|(f, ..)| *f == fpr) {
+                            good.push((
+                                fpr,
+                                sig.signature_creation_time().map(system_time_to_millis),
+                                signing_key_current(ka.cert(), &ka.key().fingerprint()),
+                                sig.intended_recipients().map(|f| f.to_hex()).collect(),
+                            ));
+                        }
                     }
                     // Signer's public key was not supplied -> cannot verify.
-                    // This is NOT a failure; the message is still authentic
-                    // as far as we can tell, we just can't confirm the signer.
-                    Err(VerificationError::MissingKey { sig }) => {
-                        ("unknown_key", issuer_hex(sig))
-                    }
-                    Err(VerificationError::UnboundKey { .. }) => ("unknown_key", None),
-                    // We had a key but verification failed: possible tamper.
-                    Err(_) => ("invalid", None),
-                };
-                if sig_rank(new_status) > sig_rank(status) {
-                    status = new_status;
-                    signer_key_id = key;
-                } else if signer_key_id.is_none() {
-                    signer_key_id = key;
+                    Err(VerificationError::MissingKey { sig }) => missing.push(issuer_hex(sig)),
+                    Err(_) => bad = true,
                 }
             }
         }
     }
-    (status, signer_key_id)
+
+    if bad {
+        return SignatureReport::with_status("invalid", None);
+    }
+    let mut good = good.into_iter();
+    match good.next() {
+        Some((fpr, signed_at, current, intended)) => SignatureReport {
+            signed_at,
+            signer_key_current: current,
+            other_signer_key_ids: good.map(|(f, ..)| f).collect(),
+            unverified_signatures: missing.len() as u32,
+            intended_recipients: intended,
+            ..SignatureReport::with_status("valid", Some(fpr))
+        },
+        None => match missing.into_iter().next() {
+            Some(issuer) => SignatureReport::with_status("unknown_key", issuer),
+            None => SignatureReport::unsigned(),
+        },
+    }
 }
 
 // =====================================================================
@@ -956,8 +1145,7 @@ fn read_capped<R: std::io::Read>(
 struct DecryptHelper {
     decryption_cert: openpgp::Cert,
     verification_certs: Vec<openpgp::Cert>,
-    signature_status: &'static str,
-    signer_key_id: Option<String>,
+    signatures: SignatureReport,
 }
 
 impl VerificationHelper for DecryptHelper {
@@ -969,9 +1157,7 @@ impl VerificationHelper for DecryptHelper {
         // NOTE: signature classification must never abort decryption. A
         // missing signer key or a bad signature is reported as status, not
         // returned as an error, so the plaintext is always delivered.
-        let (status, key_id) = process_signatures(structure);
-        self.signature_status = status;
-        self.signer_key_id = key_id;
+        self.signatures = process_signatures(structure);
         Ok(())
     }
 }
@@ -985,14 +1171,17 @@ impl DecryptionHelper for DecryptHelper {
         decrypt: &mut dyn FnMut(Option<SymmetricAlgorithm>, &SessionKey) -> bool,
     ) -> openpgp::Result<Option<openpgp::Cert>> {
         let vc = self.decryption_cert.with_policy(policy(), None)?;
+        // Expired and revoked subkeys are tried too. Expiry and revocation
+        // tell OTHERS to stop encrypting to a key; they do not make the
+        // mail already sent to it unreadable for its owner (GnuPG decrypts
+        // it as well). Policy still applies: a key the policy rejects is
+        // not offered.
         for pkesk in pkesks {
             for key in vc
                 .keys()
                 .secret()
-                .alive()
-                .revoked(false)
                 .for_transport_encryption()
-                .chain(vc.keys().secret().alive().revoked(false).for_storage_encryption())
+                .chain(vc.keys().secret().for_storage_encryption())
             {
                 let mut pair = key.key().clone().into_keypair()?;
                 if pkesk
@@ -1023,8 +1212,7 @@ struct PasswordDecryptHelper {
     /// `String` for the lifetime of the parse.
     password: openpgp::crypto::Password,
     verification_certs: Vec<openpgp::Cert>,
-    signature_status: &'static str,
-    signer_key_id: Option<String>,
+    signatures: SignatureReport,
 }
 
 impl VerificationHelper for PasswordDecryptHelper {
@@ -1036,9 +1224,7 @@ impl VerificationHelper for PasswordDecryptHelper {
         // Same rule as the key path: signature classification must never
         // abort decryption. A symmetric message CAN be signed, and the
         // signer is then someone whose key we may or may not hold.
-        let (status, key_id) = process_signatures(structure);
-        self.signature_status = status;
-        self.signer_key_id = key_id;
+        self.signatures = process_signatures(structure);
         Ok(())
     }
 }
@@ -1083,8 +1269,7 @@ impl DecryptionHelper for PasswordDecryptHelper {
 
 struct VerifyHelper {
     certs: Vec<openpgp::Cert>,
-    signature_status: &'static str,
-    signer_key_id: Option<String>,
+    signatures: SignatureReport,
 }
 
 impl VerificationHelper for VerifyHelper {
@@ -1093,9 +1278,7 @@ impl VerificationHelper for VerifyHelper {
     }
 
     fn check(&mut self, structure: MessageStructure) -> openpgp::Result<()> {
-        let (status, key_id) = process_signatures(structure);
-        self.signature_status = status;
-        self.signer_key_id = key_id;
+        self.signatures = process_signatures(structure);
         Ok(())
     }
 }
@@ -1131,8 +1314,22 @@ const MAX_DETAIL_ROWS: usize = 100;
 /// visually reorder surrounding UI text), then truncate to `max` chars.
 fn sanitize_untrusted(s: &str, max: usize) -> String {
     let mut out = String::new();
+    // Bidi controls (embeddings, overrides, isolates, marks) visually
+    // reorder text; zero-width and other format characters make two
+    // different User IDs render identically.
     let cleaned = s.chars().filter(|c| {
-        !c.is_control() && !matches!(*c, '\u{202a}'..='\u{202e}' | '\u{2066}'..='\u{2069}')
+        !c.is_control()
+            && !matches!(
+                *c,
+                '\u{202a}'..='\u{202e}'
+                    | '\u{2066}'..='\u{2069}'
+                    | '\u{200b}'..='\u{200f}'
+                    | '\u{2060}'..='\u{2064}'
+                    | '\u{061c}'
+                    | '\u{00ad}'
+                    | '\u{180e}'
+                    | '\u{feff}'
+            )
     });
     for (i, c) in cleaned.enumerate() {
         if i == max {
@@ -1290,6 +1487,7 @@ pub fn parse_keys(armored: &str) -> Result<String, String> {
     for cert in parser {
         let cert = cert.str_err()?;
         let is_private = cert.keys().secret().next().is_some();
+        let cert = if is_private { cert } else { strip_third_party(cert).str_err()? };
         let key_info = extract_key_info(&cert, is_private);
         let armored = armor_cert(&cert, is_private)?;
         out.push(ParsedCert { key_info, armored });
@@ -1298,6 +1496,114 @@ pub fn parse_keys(armored: &str) -> Result<String, String> {
         return Err("No OpenPGP certificate found".to_string());
     }
     serde_json::to_string(&out).str_err()
+}
+
+/// Drop third-party certifications from a contact's cert. There is no
+/// web of trust here, so they buy nothing -- and a keyserver-flooded cert
+/// carries tens of thousands of them, re-parsed on every verify and
+/// decrypt. Kept: signatures made by keys the owner actually BOUND (an
+/// appended, unbound subkey does not make its signatures "own"), key
+/// revocations from a designated revoker the owner named, and anything
+/// naming no issuer (Sequoia sorts those out itself). Dropped as well:
+/// signatures that do not verify at all, which only ever make a re-import
+/// look like a change.
+fn strip_third_party(cert: openpgp::Cert) -> openpgp::Result<openpgp::Cert> {
+    use openpgp::types::SignatureType;
+    use openpgp::Packet;
+
+    let own: Vec<openpgp::KeyHandle> = match cert.with_policy(policy(), None) {
+        Ok(vc) => vc.keys().map(|k| k.key().key_handle()).collect(),
+        Err(_) => vec![cert.primary_key().key().key_handle()],
+    };
+    let revokers: Vec<openpgp::KeyHandle> = cert
+        .revocation_keys(policy())
+        .map(|rk| rk.revoker().1.clone().into())
+        .collect();
+    let bad: Vec<openpgp::packet::Signature> = cert.bad_signatures().cloned().collect();
+
+    let packets: Vec<Packet> = cert
+        .into_packets()
+        .filter(|p| match p {
+            Packet::Signature(sig) => {
+                if bad.contains(sig) {
+                    return false;
+                }
+                let issuers = sig.get_issuers();
+                let by = |keys: &[openpgp::KeyHandle]| {
+                    issuers.iter().any(|i| keys.iter().any(|k| k.aliases(i)))
+                };
+                issuers.is_empty()
+                    || by(&own)
+                    || (sig.typ() == SignatureType::KeyRevocation && by(&revokers))
+            }
+            _ => true,
+        })
+        .collect();
+    openpgp::Cert::from_packets(packets.into_iter())
+}
+
+/// Merge an imported copy of a contact's cert into the stored one, so an
+/// import can only ever ADD what the owner signed -- revocations, new
+/// subkeys, extended expiry -- and never take it away. Storing the
+/// incoming copy verbatim let an old or stripped copy roll a contact
+/// back to a subkey its owner had revoked.
+///
+/// `incoming` may also be a bare revocation certificate (what
+/// `revocationCertificateWithHandle` and `gpg --gen-revoke` produce),
+/// which carries no key and so cannot be imported on its own. Its
+/// signature is checked by Sequoia when inserted: a forged one is
+/// ignored, not honoured.
+///
+/// Returns the merged public cert, armored, with third-party
+/// certifications stripped.
+#[wasm_bindgen(js_name = "mergePublicKey")]
+pub fn merge_public_key(stored_armored: &str, incoming_armored: &str) -> Result<String, String> {
+    let stored = openpgp::Cert::from_bytes(stored_armored.as_bytes()).str_err()?;
+    let merged = match openpgp::Cert::from_bytes(incoming_armored.as_bytes()) {
+        Ok(incoming) => {
+            if incoming.fingerprint() != stored.fingerprint() {
+                return Err("That key is a different key from the stored contact".into());
+            }
+            stored.merge_public(incoming).str_err()?
+        }
+        Err(_) => {
+            let sigs = revocation_signatures(incoming_armored)?;
+            stored.insert_packets(sigs).str_err()?.0
+        }
+    };
+    armor_cert(&strip_third_party(merged.strip_secret_key_material()).str_err()?, false)
+}
+
+/// The key revocations in a bare revocation certificate.
+fn revocation_signatures(armored: &str) -> Result<Vec<openpgp::packet::Signature>, String> {
+    use openpgp::types::SignatureType;
+    use openpgp::Packet;
+
+    let pile = openpgp::PacketPile::from_bytes(armored.as_bytes()).str_err()?;
+    let sigs: Vec<_> = pile
+        .into_children()
+        .filter_map(|p| match p {
+            Packet::Signature(sig) if sig.typ() == SignatureType::KeyRevocation => Some(sig),
+            _ => None,
+        })
+        .collect();
+    if sigs.is_empty() {
+        return Err("No OpenPGP certificate found".into());
+    }
+    Ok(sigs)
+}
+
+/// The fingerprints / key IDs a bare revocation certificate names as
+/// its issuer, so the caller can find the stored contact it revokes.
+/// Errs when the input is not a revocation certificate.
+#[wasm_bindgen(js_name = "revocationIssuers")]
+pub fn revocation_issuers(armored: &str) -> Result<String, String> {
+    let issuers: Vec<String> = revocation_signatures(armored)?
+        .iter()
+        .flat_map(|sig| sig.get_issuers())
+        .map(|kh| kh.to_hex())
+        .collect();
+    serde_json::to_string(&issuers).str_err()
 }
 
 /// Internal: build a new cert + its armored revocation cert from
@@ -1561,8 +1867,7 @@ pub fn verify_message(
 
     let helper = VerifyHelper {
         certs,
-        signature_status: "unsigned",
-        signer_key_id: None,
+        signatures: SignatureReport::unsigned(),
     };
 
     let mut verifier = VerifierBuilder::from_bytes(signed_message.as_bytes())
@@ -1579,9 +1884,7 @@ pub fn verify_message(
 
     serde_json::to_string(&VerifyResult {
         text,
-        signature_valid: helper.signature_status == "valid",
-        signature_status: helper.signature_status.to_string(),
-        signer_key_id: helper.signer_key_id,
+        signatures: helper.signatures,
     })
     .str_err()
 }
@@ -1640,8 +1943,7 @@ pub fn decrypt_with_handle(
     let helper = DecryptHelper {
         decryption_cert,
         verification_certs,
-        signature_status: "unsigned",
-        signer_key_id: None,
+        signatures: SignatureReport::unsigned(),
     };
 
     let mut decryptor = DecryptorBuilder::from_bytes(ciphertext)
@@ -1652,11 +1954,7 @@ pub fn decrypt_with_handle(
     let plaintext = read_capped(&mut decryptor, decrypt_limit(ciphertext.len()), "message")?;
     let helper = decryptor.into_helper();
 
-    Ok(pack_decrypt_result(
-        helper.signature_status,
-        helper.signer_key_id,
-        plaintext,
-    ))
+    Ok(pack_decrypt_result(&helper.signatures, plaintext))
 }
 
 /// `[4-byte LE sig_json_len][sig_json][plaintext]`.
@@ -1667,17 +1965,8 @@ pub fn decrypt_with_handle(
 /// render the plaintext against a signature verdict read separately (the
 /// TOCTOU the original comment names). A second hand-rolled copy of this
 /// layout would be free to disagree with `unpackDecryptResult` in JS.
-fn pack_decrypt_result(
-    signature_status: &str,
-    signer_key_id: Option<String>,
-    plaintext: Vec<u8>,
-) -> Vec<u8> {
-    let sig_json = serde_json::json!({
-        "signatureValid": signature_status == "valid",
-        "signatureStatus": signature_status,
-        "signerKeyId": signer_key_id,
-    })
-    .to_string();
+fn pack_decrypt_result(signatures: &SignatureReport, plaintext: Vec<u8>) -> Vec<u8> {
+    let sig_json = serde_json::to_string(signatures).expect("a SignatureReport serializes");
     let sig_bytes = sig_json.as_bytes();
     let sig_len = (sig_bytes.len() as u32).to_le_bytes();
 
@@ -1739,8 +2028,7 @@ pub fn decrypt_with_password(
     let helper = PasswordDecryptHelper {
         password: password.as_slice().into(),
         verification_certs,
-        signature_status: "unsigned",
-        signer_key_id: None,
+        signatures: SignatureReport::unsigned(),
     };
 
     // The unreadable-FORMAT case, separated from the wrong-PASSWORD case
@@ -1776,11 +2064,7 @@ fn decrypt_with_password_inner(
     let plaintext = read_capped(&mut decryptor, decrypt_limit(ciphertext.len()), "message")?;
     let helper = decryptor.into_helper();
 
-    Ok(pack_decrypt_result(
-        helper.signature_status,
-        helper.signer_key_id,
-        plaintext,
-    ))
+    Ok(pack_decrypt_result(&helper.signatures, plaintext))
 }
 
 /// The encrypted container a message uses, which decides whether we can
@@ -3009,3 +3293,6 @@ mod tests;
 
 #[cfg(test)]
 mod kat_tests;
+
+#[cfg(test)]
+mod trust_tests;
