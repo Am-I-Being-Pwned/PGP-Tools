@@ -41,7 +41,15 @@ jobs:
       # downloaded script into sh. 0.13.1 is the version that installer
       # pinned. rust-cache keeps ~/.cargo/bin, so this is a no-op on a hit.
       - name: Install wasm-pack
-        run: cargo install wasm-pack --locked --version 0.13.1
+        # The runner image (or the restored cargo cache) may already have a
+        # wasm-pack in ~/.cargo/bin, and `cargo install` refuses to overwrite
+        # it. Keep it only if it is the pinned version; otherwise replace it.
+        run: |
+          if wasm-pack --version 2>/dev/null | grep -qx 'wasm-pack 0.13.1'; then
+            echo "wasm-pack 0.13.1 already installed"
+          else
+            cargo install wasm-pack --locked --version 0.13.1 --force
+          fi
 
       - name: Build WASM module
         working-directory: apps/pgp/gpg-wasm
