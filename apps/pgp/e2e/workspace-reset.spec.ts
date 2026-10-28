@@ -157,3 +157,37 @@ test("Clear text puts focus back in the message box", async ({ panel }) => {
   await expect(box).toHaveValue("");
   await expect(box).toBeFocused();
 });
+
+test("a third Escape after a double-Escape clear goes back to Encrypt", async ({
+  panel,
+}) => {
+  await onboardWithPassword(panel, PASSWORD);
+  await setWorkspaceMode(panel, "Verify");
+  const box = panel.locator("#pgp-input");
+  await box.fill("not a signed message");
+
+  await box.press("Escape");
+  await box.press("Escape");
+  await expect(box).toHaveValue("");
+  await expect(
+    panel.getByRole("radio", { name: "Verify", exact: true }),
+  ).toBeChecked();
+
+  await panel.keyboard.press("Escape");
+  await expect(
+    panel.getByRole("radio", { name: "Encrypt", exact: true }),
+  ).toBeChecked();
+  await expect(box).toBeFocused();
+});
+
+test("a lone Escape on an empty workspace keeps the mode", async ({
+  panel,
+}) => {
+  // Only the press that follows a clear resets the mode.
+  await onboardWithPassword(panel, PASSWORD);
+  await setWorkspaceMode(panel, "Verify");
+  await panel.locator("#pgp-input").press("Escape");
+  await expect(
+    panel.getByRole("radio", { name: "Verify", exact: true }),
+  ).toBeChecked();
+});
