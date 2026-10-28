@@ -627,6 +627,9 @@ export function WorkspaceView({
   // toast's whole lifetime, and anything that closes over the plaintext
   // survives a master lock. `s.wipePlaintext()` clears the buffer too.
   const lastEscapeAt = useRef(0);
+  // When the double-tap last cleared: a third press soon after goes all
+  // the way back to the start, Encrypt mode.
+  const lastClearAt = useRef(0);
 
   const restoreCleared = () => s.restoreClearUndo();
 
@@ -746,6 +749,10 @@ export function WorkspaceView({
   // quick double-tap clears the box, undoably; and on an EMPTY workspace
   // a single press puts the cursor back in the message box.
   //
+  // Keep pressing: a third press shortly after a double-tap clear also
+  // switches back to Encrypt, the panel's starting mode -- "Escape spam"
+  // resets everything, not just the text.
+  //
   // That last layer is what Escape means everywhere else in this panel:
   // "put me back". With nothing to clear it was the only press that did
   // nothing at all -- it silently armed a double-tap for a clear that
@@ -770,14 +777,19 @@ export function WorkspaceView({
       // Gated on files and recipients too -- with files staged the
       // textarea is not rendered at all, and with only recipients picked
       // the double-tap clear is still the useful layer.
+      const now = Date.now();
       if (!hasStaged) {
         lastEscapeAt.current = 0;
+        if (now - lastClearAt.current < 700 && s.mode !== "encrypt") {
+          lastClearAt.current = 0;
+          s.setMode("encrypt");
+        }
         focusMessageBox();
         return;
       }
-      const now = Date.now();
       if (now - lastEscapeAt.current < 350) {
         lastEscapeAt.current = 0;
+        lastClearAt.current = now;
         clearBoxUndoable();
       } else {
         lastEscapeAt.current = now;
