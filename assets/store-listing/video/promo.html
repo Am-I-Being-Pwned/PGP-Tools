@@ -1,0 +1,1112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>PGP Tools promo</title>
+<!--
+  The promo video, as one seekable page. Nothing here animates on its own:
+  every style is a pure function of `t`, set by seek(t), so render.mjs can
+  step it frame by frame and get the same video every time. Opened directly
+  it plays in real time with a scrub bar (space = play/pause).
+
+  Motion is physical: entrances and camera moves are damped springs
+  (spr(), below), so things arrive with a little overshoot and settle,
+  rather than easing to a dead stop.
+
+  Design language: one flat #0a0a0a page, flat #151515 blocks split by 2px
+  gaps, green only for go/on/good, red only for a stop, shadow only on things
+  that float (the panel, the OS sheet). No glow, no gradient. Same tokens as
+  promo/parts.css.
+-->
+<style>
+@font-face { font-family: "Space Grotesk"; font-weight: 400 700; font-display: block; src: url(../font/SpaceGrotesk-latin.woff2) format("woff2"); }
+@font-face { font-family: "Inter"; font-weight: 400 700; font-display: block; src: url(../font/inter-latin.woff2) format("woff2"); }
+
+:root {
+  --background: #0a0a0a; --foreground: #ededed; --card: #151515; --raised: #242424;
+  --muted-foreground: #8a8a8a; --ink-2: #a3a3a3; --primary: #4fc185; --on: #1f2a23;
+  --good: #6dbd8a; --bad: #ff7a7e; --band-good: #15231b; --band-bad: #2a1517;
+  --float: inset 0 1px 0 rgba(255,255,255,.08), 0 0 0 1px rgba(255,255,255,.07), 0 60px 120px -30px rgba(0,0,0,.95);
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { background: #000; }
+body { font-family: "Inter", system-ui, sans-serif; -webkit-font-smoothing: antialiased; color: var(--foreground); }
+#stage { position: relative; width: 1920px; height: 1080px; overflow: hidden; background: var(--background); transform-origin: 0 0; }
+.layer { position: absolute; inset: 0; }
+.abs { position: absolute; }
+svg.i { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+canvas.face { image-rendering: pixelated; display: block; width: 100%; height: 100%; }
+
+/* ---- type ---- */
+.display { font-family: "Space Grotesk", system-ui, sans-serif; font-weight: 600; letter-spacing: -0.035em; line-height: 1.03; }
+.green { color: var(--primary); }
+/* A word is a mask the word rises into. The padding
+   leaves room for a spring's overshoot without clipping descenders. */
+.w { display: inline-block; overflow: hidden; vertical-align: top; padding: .06em 0 .12em; margin: -.06em 0 -.12em; }
+.w > span, .w > span > span { display: inline-block; }
+.chip { display: inline-flex; align-self: flex-start; align-items: center; gap: 10px; background: var(--on); color: var(--good); border-radius: 10px; padding: 9px 16px; font-size: 19px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; transform-origin: 0 50%; }
+.sub { font-size: 29px; line-height: 1.45; color: var(--ink-2); }
+.sub b { color: var(--foreground); font-weight: 500; }
+
+/* ---- captions (left column) ---- */
+.cap { position: absolute; left: 150px; top: 0; width: 700px; display: flex; flex-direction: column; gap: 26px; }
+.cap h2 { font-size: 84px; }
+.cap .sub { max-width: 640px; }
+
+/* ---- block stack (packages/ui/src/block.tsx, tile-sized) ---- */
+.stack { display: flex; flex-direction: column; gap: 2px; }
+.stack > * { background: var(--card); border-radius: 6px; }
+.stack > :first-child { border-top-left-radius: 20px; border-top-right-radius: 20px; }
+.stack > :last-child { border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; }
+.hstack { display: flex; gap: 2px; }
+.hstack > * { background: var(--card); border-radius: 6px; }
+.hstack > :first-child { border-top-left-radius: 20px; border-bottom-left-radius: 20px; }
+.hstack > :last-child { border-top-right-radius: 20px; border-bottom-right-radius: 20px; }
+.slabel { font-size: 21px; font-weight: 500; color: var(--muted-foreground); padding: 0 8px 14px; }
+.keys { display: flex; align-items: center; gap: 9px; }
+.keys kbd { font-family: "Inter"; font-size: 24px; font-weight: 500; color: var(--foreground); background: var(--raised); box-shadow: inset 0 1px 0 rgba(255,255,255,.07), inset 0 -2px 0 rgba(0,0,0,.45); border-radius: 10px; padding: 9px 15px; min-width: 50px; text-align: center; display: inline-block; }
+.keys span { font-size: 26px; color: var(--muted-foreground); margin-left: 12px; }
+
+/* ---- face walls (intro + end) ---- */
+.wall { position: absolute; left: 50%; top: 50%; width: 1650px; height: 822px; margin: -411px 0 0 -825px; }
+.wall .tile { position: absolute; width: 132px; height: 132px; border-radius: 14px; background: var(--card); overflow: hidden; }
+.wall .tile canvas { position: absolute; inset: 0; }
+#hero { position: absolute; width: 132px; height: 132px; border-radius: 14px; overflow: hidden; }
+#hero img, #hero canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+#hero img { transform: scaleX(-1); }
+#logo { position: absolute; left: 50%; top: 50%; display: flex; align-items: center; gap: 34px; transform: translate(-50%, -50%); }
+#logo .lmark { width: 168px; height: 168px; flex: none; }
+/* The wordmark slides out from behind the icon through a soft edge, not a
+   hard clip. The padding puts the fade in the gap, so the settled "P" is
+   fully opaque. */
+#logo .ltext { overflow: hidden; padding: 10px 0 10px 64px; margin-left: -64px; -webkit-mask-image: linear-gradient(to right, transparent 0, #000 64px); mask-image: linear-gradient(to right, transparent 0, #000 64px); }
+#logo .ltext div { font-size: 132px; white-space: nowrap; }
+#logo .ltext small { display: block; font-family: "Inter"; font-size: 30px; letter-spacing: 0; font-weight: 400; color: var(--muted-foreground); margin-top: 10px; }
+
+/* ---- headline ---- */
+#headline { position: absolute; left: 0; right: 0; top: 50%; text-align: center; font-size: 150px; transform: translateY(-50%); }
+
+/* ---- the side panel ---- */
+#view { position: absolute; top: 0; bottom: 0; overflow: hidden; }
+#cam { position: absolute; left: 0; top: 0; width: 400px; height: 674px; transform-origin: 0 0; perspective: 2600px; perspective-origin: 200px 337px; }
+#panel { position: absolute; left: 0; top: 0; width: 400px; border-radius: 14px; overflow: hidden; background: var(--background); box-shadow: var(--float); transform-origin: 200px 337px; }
+.ptop { height: 34px; display: flex; align-items: center; gap: 8px; padding: 0 14px; background: #161616; font-size: 13px; color: rgba(237,237,237,.8); }
+.ptop img { width: 16px; height: 16px; }
+.ptop span { margin-left: auto; color: var(--muted-foreground); }
+#shots { position: relative; width: 400px; height: 640px; }
+#shots img { position: absolute; inset: 0; width: 400px; height: 640px; opacity: 0; }
+#dim { position: absolute; z-index: 5; inset: 0; background: #000; opacity: 0; pointer-events: none; }
+#ring { position: absolute; z-index: 6; border: 2px solid var(--primary); opacity: 0; pointer-events: none; }
+#cursor { position: absolute; z-index: 8; left: 0; top: 0; width: 22px; height: 22px; opacity: 0; transform-origin: 0 0; }
+#ripple { position: absolute; z-index: 7; width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%; background: rgba(255,255,255,.35); opacity: 0; }
+/* Exploded view: the same capture cut into its own UI bands, so the
+   panel can arrive as layers in depth and assemble into itself. */
+#explode { position: absolute; left: 0; top: 0; width: 400px; height: 674px; transform-style: preserve-3d; transform-origin: 200px 337px; }
+/* Each layer is one real UI block cut to its own rounded rect, so a layer
+   is the control itself, never a slab of page around it. The base is the
+   page: Chrome's header, the tab row and the footer. */
+#explode > div { position: absolute; background-image: url(ui/20-empty.png); background-size: 400px 640px; background-repeat: no-repeat; }
+#explode > .base { left: 0; top: 0; width: 400px; height: 674px; border-radius: 14px; overflow: hidden; background: var(--background); box-shadow: var(--float); }
+#explode > .base > div { position: absolute; left: 0; width: 400px; background-image: url(ui/20-empty.png); background-size: 400px 640px; }
+
+/* ---- the lock: a solid body the shackle's legs run down into, so the
+   shackle can lift out, swing on its right leg, and drop back in. The
+   body is filled with whatever it sits on (--lockbg) to hide the legs. ---- */
+svg.lock { overflow: visible; }
+svg.lock .body { fill: var(--lockbg, var(--card)); }
+
+/* ---- the encryption moment ---- */
+#msg { position: absolute; left: 0; right: 0; top: 500px; text-align: center; font-family: var(--mono); font-size: 52px; white-space: nowrap; }
+#msg span { display: inline-block; width: .6em; text-align: center; }
+/* The real armored message from the capture run, as it would be sent. */
+#armorbox { position: absolute; left: 170px; top: 0; font-family: var(--mono); font-size: 24px; line-height: 1.4; white-space: pre; color: var(--good); }
+#armorbox .hd { color: var(--foreground); }
+#seal { position: absolute; left: 1220px; top: 0; width: 520px; }
+#seal > div { display: flex; align-items: center; gap: 18px; padding: 24px 28px; font-size: 28px; font-weight: 500; }
+#seal .lk { color: var(--good); background: var(--on); justify-content: center; padding: 34px 28px; }
+#seal .lk svg { width: 72px; height: 72px; }
+#seal canvas { width: 52px; height: 52px; border-radius: 10px; }
+#seal small { font-size: 22px; color: var(--muted-foreground); font-weight: 400; }
+#seal .ok { color: var(--good); display: flex; align-items: center; gap: 8px; font-size: 24px; }
+#seal .ok svg { width: 26px; height: 26px; stroke-width: 2.4; }
+
+/* ---- verdicts ---- */
+#verdicts { position: absolute; left: 1010px; top: 0; width: 780px; display: flex; flex-direction: column; gap: 40px; }
+.verdict { display: flex; align-items: center; gap: 20px; padding: 24px 28px; }
+.verdict .av { width: 64px; height: 64px; border-radius: 12px; overflow: hidden; flex: none; background: var(--raised); display: flex; align-items: center; justify-content: center; color: var(--muted-foreground); }
+.verdict .av svg { width: 34px; height: 34px; }
+.verdict .vname { flex: 1; font-size: 28px; font-weight: 500; line-height: 1.2; }
+.verdict .vname i { display: block; font-style: normal; font-weight: 400; font-size: 21px; color: var(--muted-foreground); margin-top: 6px; }
+.verdict .vname i.mono { font-family: var(--mono); }
+.verdict .vtag { display: flex; align-items: center; gap: 9px; font-size: 24px; font-weight: 500; white-space: nowrap; position: relative; min-width: 150px; justify-content: flex-end; }
+.verdict .vtag svg { width: 26px; height: 26px; stroke-width: 2.4; }
+.vstate { display: flex; align-items: center; gap: 9px; }
+.outcome { font-size: 31px; line-height: 1.45; padding: 28px 30px; position: relative; height: 104px; }
+.outcome > * { position: absolute; left: 30px; top: 28px; right: 30px; }
+.bar { height: 18px; border-radius: 6px; background: #222; margin-top: 10px; }
+.spin { width: 24px; height: 24px; border-radius: 50%; border: 3px solid #333; border-top-color: var(--ink-2); }
+
+/* ---- the OS passkey sheet: macOS's look, not ours ---- */
+.sheet { position: absolute; width: 470px; border-radius: 18px; background: #2b2b2b; border: 1px solid #3d3d3d; overflow: hidden; box-shadow: 0 40px 90px -30px #000; color: #ededed; }
+.sheet .shead { display: flex; align-items: center; padding: 16px 20px; border-bottom: 1px solid #3d3d3d; font-weight: 600; font-size: 19px; }
+.sheet .shead .cancel { margin-left: auto; font-weight: 400; font-size: 16px; background: #4a4a4a; border-radius: 7px; padding: 5px 13px; color: #d4d4d4; }
+.sheet .sbody { padding: 28px 32px 30px; text-align: center; }
+.sheet .sbody b { display: block; font-size: 21px; margin-bottom: 12px; }
+.sheet .sbody p { font-size: 17px; line-height: 1.45; color: #b4b4b4; }
+.sheet .print { margin: 24px auto 14px; width: 74px; height: 74px; position: relative; }
+.sheet .print svg { position: absolute; inset: 0; width: 74px; height: 74px; stroke-width: 1.5; }
+.sheet .pring { position: absolute; left: 50%; top: 50%; width: 74px; height: 74px; margin: -37px 0 0 -37px; border-radius: 50%; border: 2px solid var(--primary); opacity: 0; }
+.sheet .cta { font-size: 18px; }
+#biglock { position: absolute; width: 190px; height: 190px; border-radius: 44px; background: var(--on); color: var(--good); display: flex; align-items: center; justify-content: center; }
+#biglock svg { width: 104px; height: 104px; stroke-width: 1.7; }
+
+/* ---- sealed stores ---- */
+#vault { position: absolute; left: 1000px; top: 0; width: 780px; }
+.srow { display: flex; align-items: center; gap: 18px; padding: 24px 28px; transform-origin: 50% 50%; }
+.srow svg { width: 26px; height: 26px; flex: none; overflow: visible; }
+.srow .sname { font-size: 23px; font-weight: 500; min-width: 140px; }
+.srow .sval { font-family: var(--mono); font-size: 20px; white-space: nowrap; overflow: hidden; flex: 1; }
+.srow .stag { font-size: 16px; font-weight: 500; color: var(--ink-2); background: #262626; border-radius: 7px; padding: 4px 10px; }
+.snote { padding: 22px 28px 24px; font-size: 21px; line-height: 1.45; color: var(--muted-foreground); }
+
+/* ---- feature rapid-fire ---- */
+#rf { position: absolute; inset: 0; }
+#rf .one { position: absolute; left: 0; right: 0; top: 50%; display: flex; align-items: center; justify-content: center; gap: 48px; }
+#rf .ib { width: 200px; height: 200px; border-radius: 46px; background: var(--card); color: var(--good); display: flex; align-items: center; justify-content: center; flex: none; }
+#rf .ib svg { width: 100px; height: 100px; stroke-width: 1.7; }
+#rf .lb { font-size: 112px; white-space: nowrap; }
+#pips { position: absolute; left: 50%; bottom: 120px; display: flex; gap: 2px; transform: translateX(-50%); }
+#pips div { width: 54px; height: 10px; background: var(--card); border-radius: 3px; }
+#pips div:first-child { border-radius: 6px 3px 3px 6px; }
+#pips div:last-child { border-radius: 3px 6px 6px 3px; }
+
+/* ---- feature grid ---- */
+#feat { position: absolute; left: 990px; top: 0; width: 800px; }
+#feat h2 { font-size: 76px; margin-bottom: 40px; }
+#feat .cols { display: flex; gap: 20px; }
+#feat .stack { flex: 1; }
+.frow { display: flex; align-items: center; gap: 16px; padding: 0 24px; height: 92px; font-size: 24px; font-weight: 500; white-space: nowrap; }
+.frow svg { width: 26px; height: 26px; flex: none; color: var(--good); }
+
+/* ---- black box: open source, shown on the real repo page ---- */
+#bbl { position: absolute; left: 150px; top: 0; width: 690px; }
+#bbl h2 { font-size: 96px; }
+#facts { margin-top: 60px; display: flex; flex-direction: column; gap: 30px; }
+.fact { display: flex; gap: 18px; align-items: flex-start; }
+.fact svg { width: 30px; height: 30px; flex: none; color: var(--good); margin-top: 3px; }
+.fact b { display: block; font-size: 29px; font-weight: 500; }
+.fact small { display: block; font-size: 21px; color: var(--muted-foreground); margin-top: 6px; line-height: 1.4; }
+#bbpills { display: flex; gap: 10px; margin-top: 48px; flex-wrap: wrap; }
+#bbpills span { background: var(--card); border-radius: 10px; padding: 11px 18px; font-size: 21px; font-weight: 500; color: var(--ink-2); }
+#repowin { position: absolute; left: 905px; top: 0; width: 865px; }
+#repowin .rtitle { display: flex; align-items: center; gap: 12px; padding: 18px 24px; font-family: var(--mono); font-size: 18px; color: var(--foreground); }
+#repowin .rtitle svg { width: 20px; height: 20px; color: var(--good); }
+#repowin .rview { position: relative; height: 516px; overflow: hidden; }
+#repoimg { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+#repoimg img { display: block; }
+.rmark { position: absolute; border: 2px solid var(--primary); background: rgba(79, 193, 133, 0.1); border-radius: 8px; opacity: 0; }
+
+/* ---- intro: what the faces are ---- */
+#introcap { position: absolute; left: 0; right: 0; top: 720px; text-align: center; font-size: 64px; visibility: hidden; }
+
+/* ---- end card ---- */
+#endc { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 30px; }
+#endc .em { width: 150px; height: 150px; }
+#endc .em img { width: 100%; height: 100%; }
+#endc h2 { font-size: 118px; }
+#endc .sub { text-align: center; font-size: 34px; }
+#endc .badges { display: flex; gap: 22px; margin-top: 16px; }
+#endc .badges img { height: 74px; }
+#endc .by { font-size: 22px; color: var(--muted-foreground); margin-top: 8px; }
+/* Black Hat's official Europe 2026 lockup (black on transparent), shown as
+   its white reverse on the dark card. */
+#endc .bh { display: flex; align-items: center; gap: 22px; margin-top: 18px; font-size: 22px; color: var(--muted-foreground); }
+#endc .bh img { height: 64px; filter: invert(1); }
+
+/* Scene changes dip through a blur rather than a wipe. */
+#content { position: absolute; inset: 0; transform-origin: 50% 50%; }
+
+/* ---- player (never in a rendered frame) ---- */
+#player { position: fixed; left: 0; right: 0; bottom: 0; display: flex; gap: 12px; align-items: center; padding: 10px 16px; background: #111; color: #aaa; font: 13px/1 var(--mono); }
+#player input { flex: 1; }
+#player button { background: #222; color: #ddd; border: 0; border-radius: 6px; padding: 6px 12px; font: inherit; }
+body.render #player { display: none; }
+</style>
+</head>
+<body>
+<div id="stage"><div id="content">
+
+  <!-- intro: a wall of key faces -->
+  <div class="layer" id="s-intro">
+    <div class="wall" id="wall1"></div>
+    <div id="hero"></div>
+    <div id="introcap"><div class="display" data-words>Every key gets a face,</div><div class="display" data-words>drawn from its fingerprint.</div></div>
+    <div id="logo">
+      <div class="lmark"></div>
+      <div class="ltext"><div class="display">PGP Tools<small>by Am I Being Pwned</small></div></div>
+    </div>
+  </div>
+
+  <!-- headline -->
+  <div class="layer" id="s-head">
+    <div id="headline" class="display"><div data-words>Encrypt without</div><div data-words class="green">leaving the tab</div></div>
+  </div>
+
+  <!-- captions, left column; each has its own window in the timeline -->
+  <div class="layer" id="caps">
+    <div class="cap" id="c1"><span class="chip">01 · Recipient</span><h2 class="display" data-words>Pick who it's for</h2><p class="sub">Start typing a name. Your contacts are right there, each with the face drawn from its fingerprint.</p></div>
+    <div class="cap" id="c2"><span class="chip">02 · Message</span><h2 class="display" data-words>Write it here</h2><p class="sub">In a side panel that stays open next to the page you're on. No popup that vanishes on a click.</p></div>
+    <div class="cap" id="c3"><span class="chip">03 · Sign</span><h2 class="display" data-words>Sign it</h2><p class="sub">One switch, so they know it came from you.</p></div>
+    <div class="cap" id="c4"><span class="chip">04 · Encrypt</span><h2 class="display" data-words>Encrypt</h2><p class="sub">Copy it, download it, send it anywhere.</p>
+      <div class="keys"><kbd>Alt</kbd><kbd>&#8679;</kbd><kbd>E</kbd><span>opens it from any tab</span></div></div>
+    <div class="cap" id="c5"><span class="chip">05 · Decrypt</span><h2 class="display" data-words>Decrypt and verify</h2><p class="sub">Paste it in. The message and who signed it arrive <b>together</b>, in one step.</p></div>
+    <div class="cap" id="c6"><h2 class="display"><span data-words>Bad signature,</span><br /><span class="green" data-words>no plaintext</span></h2><p class="sub">Decrypt and verify are one atomic operation. If the signature fails, there is nothing to read.</p></div>
+    <div class="cap" id="c7"><h2 class="display"><span data-words>No passphrase.</span><br /><span class="green" data-words>Just Touch ID.</span></h2><p class="sub">Unlock with a passkey: Touch&nbsp;ID, Windows&nbsp;Hello or a YubiKey.</p><p class="sub" style="font-size:24px;color:var(--muted-foreground)">Prefer a password? <b>Argon2id at 64&nbsp;MB</b>, and it never leaves the sandbox either.</p></div>
+    <div class="cap" id="c8"><h2 class="display"><span data-words>Encrypted at rest.</span><br /><span class="green" data-words>All of it.</span></h2><p class="sub">Not just your keys. Contacts, settings and history are sealed under the same master key, and padded, so even their size says nothing.</p></div>
+  </div>
+
+  <!-- the real side panel: every image is a capture of the shipped build -->
+  <div class="layer" id="s-panel">
+    <div id="view"><div id="cam">
+      <div id="explode"></div>
+      <div id="panel">
+        <div class="ptop"><img src="../icon/128.png" alt="" />PGP Tools<span>&times;</span></div>
+        <div id="shots"></div>
+        <div id="dim"></div>
+        <div id="ring"></div>
+        <div id="ripple"></div>
+        <svg id="cursor" viewBox="0 0 22 22"><path d="M3 2 L3 18 L7.5 13.8 L10.4 20.2 L13.2 19 L10.4 12.7 L16.6 12.7 Z" fill="#fff" stroke="#000" stroke-width="1.3" stroke-linejoin="round"/></svg>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- the encryption moment -->
+  <div class="layer" id="s-crypt">
+    <div id="msg"></div>
+    <div id="armorbox"></div>
+    <div id="seal" class="stack">
+      <div class="lk" data-lock></div>
+      <div><canvas class="face" data-face="0"></canvas><span>Alice Example<br /><small>the only one who can read it</small></span></div>
+      <div class="ok"><svg class="i" viewBox="0 0 24 24"><path d="m20 6-11 11-5-5"/></svg>Signed by you</div>
+    </div>
+  </div>
+
+  <!-- verdict cards (decrypt results, drawn as the panel draws them) -->
+  <div class="layer" id="s-verdict">
+    <div id="verdicts">
+      <div class="stack" id="vgood">
+        <div class="verdict"><div class="av"><canvas class="face" data-face="0"></canvas></div>
+          <span class="vname">Alice Example<i class="mono">E3AA 9980 1E25 0E69</i></span>
+          <span class="vtag"><span class="vstate pend abs" style="right:0"><span class="spin"></span>Checking</span><span class="vstate done abs" style="right:0;color:var(--good)"><svg class="i" viewBox="0 0 24 24"><path d="m20 6-11 11-5-5"/></svg>Verified</span></span></div>
+        <div class="outcome"><div class="pend"><div class="bar" style="width:84%"></div><div class="bar" style="width:46%"></div></div><div class="done">Meet me at the usual place at 8.</div></div>
+      </div>
+      <div class="stack" id="vbad">
+        <div class="verdict"><div class="av"><svg class="i" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+          <span class="vname">Unknown signer<i>Altered in transit</i></span>
+          <span class="vtag"><span class="vstate pend abs" style="right:0"><span class="spin"></span>Checking</span><span class="vstate done abs" style="right:0;color:var(--bad)"><svg class="i" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>Failed</span></span></div>
+        <div class="outcome"><div class="pend"><div class="bar" style="width:78%"></div><div class="bar" style="width:52%"></div></div><div class="done" style="color:#6f6f6f;font-style:italic">Nothing returned.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- passkey sheet + the vault opening -->
+  <div class="layer" id="s-pass">
+    <div class="sheet" id="sheet">
+      <div class="shead">Sign In <span class="cancel">Cancel</span></div>
+      <div class="sbody">
+        <b>Use Touch ID to unlock PGP Tools?</b>
+        <p>Your passkey derives the key that decrypts your vault. It never leaves this device.</p>
+        <div class="print">
+          <div class="pring"></div><div class="pring"></div><div class="pring"></div>
+          <svg class="i" viewBox="0 0 24 24" style="color:#5a5a5a"><path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/><path d="M14 13.12c0 2.38 0 6.38-1 8.88"/><path d="M17.29 21.02c.12-.6.43-2.3.5-3.02"/><path d="M2 12a10 10 0 0 1 18-6"/><path d="M2 16h.01"/><path d="M21.8 16c.2-2 .131-5.354 0-6"/><path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2"/><path d="M8.65 22c.21-.66.45-1.32.57-2"/><path d="M9 6.8a6 6 0 0 1 9 5.2v2"/></svg>
+          <svg class="i" id="print" viewBox="0 0 24 24" style="color:#f2f2f2"><path pathLength="1" d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/><path pathLength="1" d="M14 13.12c0 2.38 0 6.38-1 8.88"/><path pathLength="1" d="M17.29 21.02c.12-.6.43-2.3.5-3.02"/><path pathLength="1" d="M2 12a10 10 0 0 1 18-6"/><path pathLength="1" d="M2 16h.01"/><path pathLength="1" d="M21.8 16c.2-2 .131-5.354 0-6"/><path pathLength="1" d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2"/><path pathLength="1" d="M8.65 22c.21-.66.45-1.32.57-2"/><path pathLength="1" d="M9 6.8a6 6 0 0 1 9 5.2v2"/></svg>
+        </div>
+        <div class="cta">Continue with Touch ID</div>
+      </div>
+    </div>
+    <div id="biglock" data-lock></div>
+  </div>
+
+  <!-- sealed stores -->
+  <div class="layer" id="s-vault">
+    <div id="vault"><div class="slabel">What's actually on disk</div><div class="stack" id="vrows"></div></div>
+  </div>
+
+  <!-- feature rapid-fire -->
+  <div class="layer" id="s-rapid"><div id="rf"></div><div id="pips"></div></div>
+
+  <!-- feature grid beside the real Keys view -->
+  <div class="layer" id="s-feat">
+    <div id="feat"><h2 class="display"><span data-words>Everything PGP,</span><br /><span class="green" data-words>in one panel</span></h2><div class="cols"><div class="stack" id="fa"></div><div class="stack" id="fb"></div></div></div>
+  </div>
+
+  <!-- black box -->
+  <div class="layer" id="s-bb">
+    <div id="bbl">
+      <h2 class="display"><span data-words>Nothing here is</span><br /><span class="green" data-words>a black box</span></h2>
+      <div id="facts">
+        <div class="fact"><svg class="i" viewBox="0 0 24 24"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><path d="M6 9v12"/></svg><div><b>Open source, top to bottom</b><small>The extension and its Rust crypto, in one public repo.</small></div></div>
+        <div class="fact"><svg class="i" viewBox="0 0 24 24"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg><div><b>MIT licensed</b><small>Read it, fork it, audit it.</small></div></div>
+        <div class="fact"><svg class="i" viewBox="0 0 24 24"><path d="M12 2 4 6v6c0 5 3.4 9.4 8 10 4.6-.6 8-5 8-10V6z"/></svg><div><b>A security policy, in the open</b><small>How keys are handled, and where to report a flaw.</small></div></div>
+      </div>
+      <div id="bbpills"><span>No analytics</span><span>No accounts</span><span>No content scripts</span></div>
+    </div>
+    <div id="repowin" class="stack">
+      <div class="rtitle"><svg class="i" viewBox="0 0 24 24"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><path d="M6 9v12"/></svg>github.com/Am-I-Being-Pwned/PGP-Tools</div>
+      <div class="rview"><div id="repoimg"><img src="ui/chrome-window-closed.png" alt="" /><div class="rmark"></div><div class="rmark"></div><div class="rmark"></div></div></div>
+    </div>
+  </div>
+
+  <!-- end card -->
+  <div class="layer" id="s-end">
+    <div class="wall" id="wall2"></div>
+    <div id="endc">
+      <div class="em"><img src="../icon/128.png" alt="" /></div>
+      <h2 class="display" data-words>PGP Tools</h2>
+      <p class="sub">Free and open source. <span style="color: var(--foreground)">Encrypt without leaving the tab.</span></p>
+      <div class="badges"><img src="../../../.github/chrome-web-store-badge.png" alt="" /><img src="../../../.github/microsoft-edge-addons-badge.png" alt="" /></div>
+      <div class="bh"><span>As featured in Arsenal at</span><img src="ui/blackhat-europe-2026.png" alt="Black Hat Europe 2026" /></div>
+      <div class="by">A privacy tool by Am I Being Pwned</div>
+    </div>
+  </div>
+
+</div></div>
+
+<div id="player"><button id="pp">play</button><input id="scrub" type="range" min="0" step="0.01" value="0" /><span id="tc">0.00</span></div>
+
+<script src="avatars.js"></script>
+<script src="ui/data.js" onerror="void 0"></script>
+<script>
+"use strict";
+// ───────────────────────── helpers ─────────────────────────
+const $ = (s) => document.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const P = (t, a, b) => clamp((t - a) / (b - a));
+const lerp = (a, b, x) => a + (b - a) * x;
+const E = {
+  out: (x) => 1 - (1 - x) ** 3,
+  out5: (x) => 1 - (1 - x) ** 5,
+  io: (x) => (x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2),
+  io5: (x) => (x < 0.5 ? 16 * x ** 5 : 1 - (-2 * x + 2) ** 5 / 2),
+};
+/**
+ * A damped spring released at t0: 0 before, heading to 1 after, with
+ * overshoot set by the damping ratio z (z < 1 bounces) and speed by the
+ * natural frequency f in Hz. Analytic, so it is exact at any t.
+ */
+function spr(t, t0, f = 2.2, z = 0.55) {
+  const s = t - t0;
+  if (s <= 0) return 0;
+  const w = 2 * Math.PI * f, wd = w * Math.sqrt(1 - z * z);
+  return 1 - Math.exp(-z * w * s) * (Math.cos(wd * s) + ((z * w) / wd) * Math.sin(wd * s));
+}
+const SP = {
+  snap: [2.2, 0.8],    // UI arriving: quick, barely overshoots
+  bouncy: [2.0, 0.62], // icons, pops: one visible bounce
+  soft: [1.2, 0.86],   // big things: cards, panels
+  cam: [1.0, 0.94],    // the camera: heavy, no wobble, settles still
+};
+const sp = (t, t0, k = "snap") => spr(t, t0, ...SP[k]);
+/** Spring-driven keyframes: each key is a cue that releases a spring
+ *  from the previous value to its own, so moves chain and overlap. */
+function strack(keys, t, k = "cam") {
+  const v = keys[0][1].slice();
+  for (let i = 1; i < keys.length; i++) {
+    const s = sp(t, keys[i][0], k);
+    if (s === 0) break;
+    for (let j = 0; j < v.length; j++) v[j] += (keys[i][1][j] - keys[i - 1][1][j]) * s;
+  }
+  return v;
+}
+/** Keyframes [[t, [..nums]], ...] eased between neighbours; equal values hold. */
+function track(keys, t, ease = E.io5) {
+  if (t <= keys[0][0]) return keys[0][1];
+  for (let i = 1; i < keys.length; i++) {
+    if (t <= keys[i][0]) {
+      const [t0, a] = keys[i - 1], [t1, b] = keys[i], x = ease(P(t, t0, t1));
+      return a.map((v, k) => lerp(v, b[k], x));
+    }
+  }
+  return keys[keys.length - 1][1];
+}
+/** 0→1 entering over [a, a+fi], 1→0 leaving over [b-fo, b]. */
+const win = (t, a, b, fi = 0.4, fo = 0.35) => Math.min(E.out(P(t, a, a + fi)), 1 - E.io(P(t, b - fo, b)));
+const rnd = (a, b = 0) => { let h = (a * 374761393 + b * 668265263) | 0; h = (h ^ (h >>> 13)) * 1274126177; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+const show = (el, o) => { el.style.opacity = o; el.style.visibility = o <= 0.001 ? "hidden" : "visible"; return o > 0.001; };
+const mix = (a, b, x) => (x <= 0 ? a : x >= 1 ? b : `color-mix(in srgb, ${b} ${x * 100}%, ${a})`);
+
+// Masked words.
+for (const el of $$("[data-words]"))
+  el.innerHTML = el.textContent.split(" ").map((w) => `<span class="w"><span>${w}</span></span>`).join(" ");
+/** Words rise into their masks: fast out, long settle, no overshoot. */
+const expo = (x) => (x >= 1 ? 1 : 1 - 2 ** (-10 * x));
+function words(el, t, t0, stagger = 0.06, dur = 0.7) {
+  $$(".w > span", el).forEach((s, i) => {
+    const x = expo(P(t, t0 + i * stagger, t0 + i * stagger + dur));
+    s.style.transform = `translateY(${(1 - x) * 105}%)`;
+  });
+}
+/** A text block rising into place, the same curve as the words. */
+function rise(el, t, t0, dy = 24, dur = 0.7) {
+  const x = E.out5(P(t, t0, t0 + dur));
+  el.style.opacity = x; el.style.transform = `translateY(${(1 - x) * dy}px)`;
+}
+/** A block entering: rise + scale on a spring, fade on the way in. */
+function enter(el, t, t0, { dy = 40, dx = 0, s0 = 0.96, k = "snap" } = {}) {
+  const x = sp(t, t0, k);
+  el.style.opacity = P(t, t0, t0 + 0.18);
+  el.style.transform = `translate(${(1 - x) * dx}px, ${(1 - x) * dy}px) scale(${lerp(s0, 1, x)})`;
+  return x;
+}
+
+// KeyAvatar faces from avatars.js (lib/key-avatar output).
+function drawFace(canvas, i) {
+  const f = AVATARS[i]; canvas.width = 16; canvas.height = 16;
+  const g = canvas.getContext("2d");
+  for (let k = 0; k < 256; k++) { g.fillStyle = f.p[parseInt(f.c[k], 36)]; g.fillRect(k % 16, (k / 16) | 0, 1, 1); }
+}
+const faceCanvas = (i) => { const c = document.createElement("canvas"); c.className = "face"; drawFace(c, i); return c; };
+$$("canvas[data-face]").forEach((c) => drawFace(c, +c.dataset.face));
+
+// ───────────────────────── the lock ─────────────────────────
+// Shackle drawn first and long (legs to y=13), body drawn over it.
+const LOCK = '<svg class="i lock" viewBox="0 0 24 24"><g class="sh"><path d="M7 18V7a5 5 0 0 1 10 0v6"/></g><rect class="body" width="18" height="11" x="3" y="11" rx="2"/></svg>';
+$$("[data-lock]").forEach((el) => (el.innerHTML = LOCK));
+/**
+ * Pose a lock at time t. `cues` are [time, "open" | "close"], in order;
+ * `open0` is the state before the first cue.
+ *   open:  the key turns, the shackle springs up out of the body, then
+ *          swings up on its left leg, like the open-lock icon.
+ *   close: the shackle swings back over the hole, drops in hard enough to
+ *          squash the body, and the key turns back. Returns a 0→1→0
+ *          "click" pulse for the moment it seats, for the caller to use.
+ */
+function lock(svg, t, cues, open0 = false) {
+  // A real padlock: the shackle's long left leg never leaves the body.
+  // Open: the shackle pops up, then swivels about that leg (seen face on,
+  // the free end sweeps across and out to the left). Close: it swivels back
+  // over the hole and drops in. No keyhole, no squash.
+  let lift = open0 ? 1 : 0, swing = open0 ? 1 : 0, click = 0;
+  for (const [t0, kind] of cues) {
+    if (kind === "open") {
+      lift = lerp(lift, 1, E.out(P(t, t0, t0 + 0.22)));
+      swing = lerp(swing, 1, E.io(P(t, t0 + 0.2, t0 + 0.62)));
+    } else {
+      swing = lerp(swing, 0, E.io(P(t, t0, t0 + 0.4)));
+      const d = P(t, t0 + 0.38, t0 + 0.56);
+      lift = lerp(lift, 0, d * d); // drops in under its own weight
+      click = Math.max(click, Math.sin(Math.PI * P(t, t0 + 0.56, t0 + 0.8)));
+    }
+  }
+  const c = Math.cos(Math.PI * swing);
+  svg.querySelector(".sh").setAttribute("transform", `translate(0 ${-4.5 * lift}) translate(7 0) scale(${c} 1) translate(-7 0)`);
+  return { click, open: lift };
+}
+
+// ───────────────────────── scene data ─────────────────────────
+const DURATION = 64;
+window.DURATION = DURATION;
+
+// Face walls: 12 x 6. Alice (face 0) sits a little left of centre in the
+// intro; the end wall shuffles the rest.
+const COLS = 12, ROWS = 6, TS = 132, GAP = 6, HERO_SLOT = 2 * COLS + 5;
+function makeWall(el, offset) {
+  const out = []; let face = 1 + offset;
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const tile = document.createElement("div"); tile.className = "tile";
+    const x = c * (TS + GAP), y = r * (TS + GAP), idx = r * COLS + c;
+    tile.style.left = x + "px"; tile.style.top = y + "px";
+    const cv = faceCanvas(!offset && idx === HERO_SLOT ? 0 : (face++ % (AVATARS.length - 1)) + 1);
+    tile.appendChild(cv); el.appendChild(tile);
+    const d = Math.hypot(c - 5.5, (r - 2.5) * 1.3);
+    out.push({ el: tile, cv, x, y, idx, c, r, d, delay: d * 0.075 + rnd(idx) * 0.12 });
+  }
+  return out;
+}
+const wall1 = makeWall($("#wall1"), 0), wall2 = makeWall($("#wall2"), 17);
+$("#hero").appendChild(faceCanvas(0));
+{ const img = document.createElement("img"); img.src = "../icon/128.png"; $("#hero").appendChild(img); }
+
+// Panel captures and when each is on screen. "cut" = no crossfade.
+const SHOTS = [
+  [0, "20-empty"], [10.9, "21-picker"], [11.6, "22-recipient"],
+  ...Array.from({ length: 11 }, (_, i) => [12.2 + i * 0.14, "23-type-" + String(i + 1).padStart(2, "0")]),
+  [14.5, "24-signed"], [16.35, "25-encrypted"],
+  [23.0, "30-ciphertext", "cut"], [24.0, "31-decrypted"],
+  [29.8, "50-locked", "cut"], [33.85, "10-keys"],
+  [47.0, "10-keys", "cut"], [50.3, "11-key-details"],
+];
+const shotEls = {};
+for (const [, name] of SHOTS) {
+  if (shotEls[name]) continue;
+  const img = document.createElement("img"); img.src = `ui/${name}.png`; img.alt = "";
+  $("#shots").appendChild(img); shotEls[name] = img;
+}
+
+// Exploded view: the real blocks of 20-empty, each cut to its own rect
+// (x, y, w, h in panel px, measured off the capture) and corner radius.
+const PT = 34; // Chrome's header strip above the capture
+const BLOCKS = [
+  [16, 64, 368, 36, "10px"],                 // mode switch
+  [16, 111, 368, 41, "12px 12px 4px 4px"],   // recipients
+  [16, 155, 368, 39, "4px"],                 // sign row
+  [16, 196, 368, 293, "4px 4px 12px 12px"],  // message + tools
+  [16, 501, 368, 36, "10px"],                // option bar
+  [16, 549, 368, 36, "9px"],                 // encrypt
+];
+const bandEls = [];
+{
+  const ex = $("#explode");
+  const base = document.createElement("div"); base.className = "base";
+  base.innerHTML = '<div class="ptop" style="position:relative;background:#161616"><img src="../icon/128.png" alt="" />PGP Tools<span>&times;</span></div>';
+  for (const [y0, y1] of [[0, 56], [592, 640]]) {
+    const d = document.createElement("div");
+    d.style.top = y0 + PT + "px"; d.style.height = y1 - y0 + "px"; d.style.backgroundPosition = `0 ${-y0}px`;
+    base.appendChild(d);
+  }
+  ex.appendChild(base); bandEls.push(base);
+  for (const [x, y, w, h, r] of BLOCKS) {
+    const b = document.createElement("div");
+    Object.assign(b.style, { left: x + "px", top: y + PT + "px", width: w + "px", height: h + "px", borderRadius: r, backgroundPosition: `${-x}px ${-y}px` });
+    ex.appendChild(b); bandEls.push(b);
+  }
+}
+
+// Camera: cues of [t, [focusX, focusY, zoom, screenX, screenY, rotX, rotY]]
+// in panel px (400x640 under the header). Each cue releases a spring.
+// Every zoom keeps the whole panel width inside the window, so nothing
+// the camera looks at is ever cut off. Segments carry the window the
+// panel is seen through: [left, right] in stage px.
+const CAM = [
+  // The exploded view plays big at centre stage, then the assembled panel
+  // glides right to make room for the captions.
+  [7.3, 9.95, [0, 1920], [
+    [7.3, [200, 320, 1.35, 960, 700, 0, 0]],
+    [8.55, [200, 320, 1, 1400, 560, 0, 0]],
+  ]],
+  [9.95, 23.0, [880, 1920], [
+    [9.95, [200, 320, 1, 1400, 560, 0, 0]],
+    [10.45, [200, 190, 1.6, 1420, 520, 0, 0]],
+    [11.95, [200, 250, 1.65, 1420, 540, 0, 0]],
+    [13.95, [200, 185, 1.65, 1420, 560, 0, 0]],
+    [15.55, [200, 500, 1.6, 1420, 600, 0, 0]],
+    [16.9, [200, 320, 1.0, 1400, 560, 0, 0]],
+    [19.1, [200, 320, 0.78, 1400, 560, 0, 0]],
+  ]],
+  [23.0, 29.6, [880, 1920], [
+    [23.0, [200, 320, 1, 1400, 1500, 30, 0]],
+    [23.01, [200, 320, 1, 1400, 560, 0, 0]],
+    [24.35, [200, 190, 1.6, 1420, 560, 0, 0]],
+    [26.0, [200, 190, 1.6, 1420, -2600, -20, 0]],
+  ]],
+  [29.6, 36.5, [880, 1920], [
+    [29.6, [200, 320, 0.94, 1400, 560, 0, 0]],
+    [30.2, [200, 320, 1.0, 1400, 560, 0, 0]],
+    [35.4, [200, 320, 1.0, 2700, 560, 0, 30]],
+  ]],
+  [46.5, 53.5, [0, 960], [
+    [46.5, [200, 320, 1, -500, 560, 0, -30]],
+    [47.0, [200, 320, 1, 470, 560, 0, 0]],
+    [48.5, [200, 330, 1.5, 470, 560, 0, 0]],
+    [49.5, [200, 430, 1.5, 470, 560, 0, 0]],
+    [50.35, [200, 210, 1.45, 470, 560, 0, 0]],
+    [52.4, [200, 210, 1.45, -800, 560, 0, -30]],
+  ]],
+];
+const PANEL_OP = [[9.95, 19.9, 0.12, 0.6], [23.0, 26.4, 0.15, 0.3], [29.75, 35.9, 0.45, 0.4], [47.0, 53.0, 0.2, 0.3]];
+const BASE = 1.32; // panel px → stage px at zoom 1
+
+// Highlight ring: [a, b, x, y, w, h, radius] in panel px.
+const RINGS = [
+  [10.95, 11.8, 16, 110, 368, 44, 10],
+  [14.5, 15.3, 340, 162, 46, 28, 14],
+  [15.95, 16.9, 16, 549, 324, 36, 10],
+  [24.45, 26.0, 16, 109, 368, 90, 12],
+];
+// Cursor: visibility windows, spring cues (panel px), click times.
+const CURSOR_WIN = [[10.3, 17.0], [23.3, 24.4]];
+const CURSOR = [
+  [10.0, [330, 330]], [10.35, [300, 132]], [11.0, [235, 214]], [11.75, [300, 380]],
+  [13.95, [362, 178]], [14.85, [300, 380]], [15.65, [190, 572]], [16.5, [300, 615]],
+  [23.3, [190, 572]], [24.2, [320, 420]],
+];
+const CLICKS = [10.82, 11.47, 14.45, 16.27, 23.92];
+
+const CAPS = { c1: [9.9, 11.9], c2: [11.9, 13.8], c3: [13.8, 15.4], c4: [15.4, 19.4], c5: [23.0, 26.3], c6: [26.3, 29.6], c7: [30.0, 35.8], c8: [36.2, 41.8] };
+const WIPES = [22.8, 29.6, 41.8, 53.0];
+
+// The captured armor (ui/data.js, written by render.mjs).
+const ARMOR = (window.ARMOR || "-----BEGIN PGP MESSAGE-----\n\n(run render.mjs once to load the captured ciphertext)\n-----END PGP MESSAGE-----").trim().split("\n");
+const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+const cipher = (seed, n) => Array.from({ length: n }, (_, k) => B64[(rnd(seed, k) * 64) | 0]).join("");
+
+// The encryption moment: the plaintext scrambles away and the real armored
+// message from the capture run resolves in its place, line by line.
+const MSG = "Meet me at the usual place at 8. Bring the drive.";
+const msgSpans = [...MSG].map((ch) => { const s = document.createElement("span"); s.textContent = ch === " " ? "\u00a0" : ch; $("#msg").appendChild(s); return s; });
+const armorLines = ARMOR.map((l) => { const d = document.createElement("div"); if (l.startsWith("-----")) d.className = "hd"; d.textContent = l || " "; $("#armorbox").appendChild(d); return [d, l]; });
+
+// Sealed stores.
+const VAULT = [
+  ["keyring", "James Arnott  secret key  Ed25519", ""],
+  ["contacts", "Alice, Bob, Carol, Dave, Erin ...", ""],
+  ["settings", "lock after 15 min, sign by default", ""],
+  ["history", "Meet me at the usual place at 8.", "opt-in"],
+];
+{
+  const rows = $("#vrows");
+  VAULT.forEach(([name, plain, tag], i) => {
+    const r = document.createElement("div"); r.className = "srow";
+    r.innerHTML = `${LOCK}<span class="sname">${name}</span><span class="sval"></span>${tag ? `<span class="stag">${tag}</span>` : ""}`;
+    rows.appendChild(r); VAULT[i].push(r, cipher(i + 7, plain.length));
+  });
+  const n = document.createElement("div"); n.className = "snote";
+  n.textContent = "Every store is AES-256-GCM, bound to the slot it lives in. Move a blob between slots and it refuses to open.";
+  rows.appendChild(n);
+}
+
+// Features: every one is in the README's feature list.
+const IC = {
+  key: '<circle cx="7.5" cy="15.5" r="4.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/>',
+  users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  pen: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+  term: '<path d="m4 17 6-6-6-6"/><path d="M12 19h8"/>',
+  archive: '<rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>',
+  click: '<path d="m9 9 5 12 1.8-5.2L21 14Z"/><path d="M7.2 2.2 8 5.1"/><path d="m5.1 8-2.9-.8"/><path d="M14 4.1 12 6"/><path d="m6 12-1.9 2"/>',
+  timer: '<path d="M10 2h4"/><path d="m12 14 3-3"/><circle cx="12" cy="14" r="8"/>',
+  search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  pkg: '<path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>',
+  cmd: '<path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"/>',
+};
+// [icon, grid label, rapid-fire label]
+const FEATS = [
+  ["key", "ECC or RSA-4096 keys", "ECC or RSA-4096"], ["users", "Many recipients at once", "Many recipients"],
+  ["pen", "Cleartext sign & verify", "Sign & verify"], ["term", "age with your SSH key", "age, with SSH keys"],
+  ["archive", "Encrypted one-file backup", "One-file backup"], ["click", "Right-click selected text", "Right-click to encrypt"],
+  ["timer", "Auto-lock when idle", "Auto-lock"], ["search", "Find keys online", "Find keys online"],
+  ["pkg", "Sign Chrome extensions", "Sign extensions"], ["cmd", "Command palette, ⌘K", "⌘K for everything"],
+];
+const featEls = FEATS.map(([ic, label], i) => {
+  const r = document.createElement("div"); r.className = "frow";
+  r.innerHTML = `<svg class="i" viewBox="0 0 24 24">${IC[ic]}</svg>${label}`;
+  (i < 5 ? $("#fa") : $("#fb")).appendChild(r); return r;
+});
+const rfEls = FEATS.map(([ic, , label]) => {
+  const one = document.createElement("div"); one.className = "one";
+  one.innerHTML = `<div class="ib"><svg class="i" viewBox="0 0 24 24">${IC[ic]}</svg></div><div class="lb display">${label}</div>`;
+  $("#rf").appendChild(one);
+  const pip = document.createElement("div"); $("#pips").appendChild(pip);
+  return { one, ib: one.firstElementChild, lb: one.lastElementChild, pip };
+});
+const RF0 = 42.1, RFD = 0.48;
+
+// The black-box scene shows the real repo page (the dark Chrome capture).
+// Its window crops the page area; marks sit on real elements of it, in
+// capture px: the Public badge, MIT license, Security policy.
+const REPO = { x: 340, y: 520, w: 2480, scale: 865 / 2480 };
+const REPO_MARKS = [
+  { at: 54.6, x0: 646, y0: 556, x1: 742, y1: 600 },
+  { at: 55.5, x0: 2246, y0: 1072, x1: 2468, y1: 1128 },
+  { at: 56.4, x0: 2246, y0: 1130, x1: 2516, y1: 1186 },
+];
+{
+  // The page at its own size (capture px); the window scales and pans it.
+  $("#repoimg img").style.width = "3200px";
+  $$("#repoimg .rmark").forEach((m, i) => {
+    const r = REPO_MARKS[i], pad = 12;
+    Object.assign(m.style, { left: r.x0 - pad + "px", top: r.y0 - pad + "px", width: r.x1 - r.x0 + pad * 2 + "px", height: r.y1 - r.y0 + pad * 2 + "px", borderRadius: "16px" });
+  });
+}
+/** The window's camera on the page: [t, [centreX, centreY, scale]], capture px. */
+const REPO_CAM = [
+  [53.6, [1580, 1260, 865 / 2480]],
+  [54.15, [1580, 1260, 865 / 2480]],
+  [54.6, [760, 760, 0.62]],
+  [55.15, [760, 760, 0.62]],
+  [55.55, [2230, 1130, 0.62]],
+  [56.15, [2230, 1130, 0.62]],
+  [56.45, [2260, 1180, 0.62]],
+  [56.95, [2260, 1180, 0.62]],
+  [57.45, [1580, 1260, 865 / 2480]],
+];
+
+// ?cut: the promo is cut together with the real-extension clip (assemble.sh).
+// The intro then holds on Alice's face, alone in the middle, long enough to
+// say what the faces are; the old screenshot walkthrough (replaced by the
+// clip) is kept out of frame.
+const CUT_MODE = new URLSearchParams(location.search).has("cut");
+const INTRO_HOLD = CUT_MODE ? 2.0 : 0;
+const HOLD_AT = 3.15; // Alice has lifted out of the wall and settled centre
+/** Intro time: everything (nearly) stops on the lone face, then resumes. */
+const introTime = (t) =>
+  t < HOLD_AT ? t : t < HOLD_AT + INTRO_HOLD ? HOLD_AT + ((t - HOLD_AT) * 0.06) / INTRO_HOLD : t - INTRO_HOLD + 0.06;
+
+function introCaption(t) {
+  const cap = $("#introcap");
+  const a = HOLD_AT + 0.05, b = HOLD_AT + INTRO_HOLD - 0.05;
+  const k = CUT_MODE ? win(t, a, b, 0.2, 0.35) : 0;
+  show(cap, k);
+  if (k <= 0) return;
+  $$("#introcap [data-words]").forEach((el, i) => words(el, t, a + i * 0.15, 0.06, 0.8));
+}
+
+// ───────────────────────── scenes ─────────────────────────
+function intro(t) {
+  if (!show($("#s-intro"), 1 - E.io(P(t, 4.9, 5.4)))) return;
+  const push = lerp(1, 1.14, E.io(P(t, 0, 3.4)));
+  $("#wall1").style.transform = `scale(${push})`;
+  const collapse = sp(t, 2.5, "soft");
+  for (const tl of wall1) {
+    const a = sp(t, 0.15 + tl.delay, "bouncy");
+    const hero = tl.idx === HERO_SLOT;
+    tl.cv.style.opacity = hero ? 1 : 1 - E.io(P(t, 2.0 + tl.delay * 0.4, 2.45 + tl.delay * 0.4));
+    tl.el.style.opacity = P(t, 0.15 + tl.delay, 0.3 + tl.delay) * (hero ? (t < 2.5 ? 1 : 0) : clamp(1 - collapse));
+    tl.el.style.transform = `scale(${Math.max(0, lerp(0.2, 1, a) * lerp(1, 0.5, collapse))})`;
+  }
+  // Alice lifts out of the wall, flips into the icon, and makes room for
+  // the wordmark.
+  const hcx = 960 + (wall1[HERO_SLOT].x + TS / 2 - 825) * push;
+  const hcy = 540 + (wall1[HERO_SLOT].y + TS / 2 - 411) * push;
+  const m = sp(t, 2.45, "soft");
+  const size = lerp(TS * push, 260, m);
+  const hero = $("#hero");
+  show(hero, t >= 2.5 ? 1 : 0);
+  hero.style.width = hero.style.height = size + "px";
+  hero.style.left = lerp(hcx, 960, m) - size / 2 + "px";
+  hero.style.top = lerp(hcy, 540, m) - size / 2 + "px";
+  hero.style.borderRadius = lerp(14, 58, clamp(m)) + "px";
+  const flip = 180 * spr(t, 3.25, 1.5, 0.55);
+  $("#hero canvas").style.opacity = flip < 90 ? 1 : 0;
+  $("#hero img").style.opacity = flip < 90 ? 0 : 1;
+  const toLogo = sp(t, 3.95, "soft");
+  hero.style.transform = `perspective(1400px) translateX(${lerp(0, -330, toLogo)}px) scale(${lerp(1, 168 / 260, toLogo) * (1 + 0.14 * Math.sin((clamp(flip / 180)) * Math.PI))}) rotateY(${flip}deg)`;
+  const lg = $("#logo");
+  show(lg, P(t, 4.35, 4.36));
+  lg.style.transform = `translate(-50%, -50%) translateY(${lerp(0, -50, E.io(P(t, 4.9, 5.4)))}px)`;
+  $("#logo .ltext div").style.transform = `translateX(${(1 - expo(P(t, 4.2, 5.0))) * -110}%)`;
+}
+
+function headline(t) {
+  if (!show($("#s-head"), win(t, 5.2, 7.6, 0.01, 0.45))) return;
+  $$("#headline [data-words]").forEach((el, i) => words(el, t, 5.25 + i * 0.25, 0.08, 0.8));
+  const out = E.io(P(t, 7.05, 7.6));
+  $("#headline").style.transform = `translateY(-50%) translateY(${-out * 180}px) scale(${lerp(1, 0.92, out)})`;
+  $("#headline").style.filter = out ? `blur(${out * 12}px)` : "";
+}
+
+function captions(t) {
+  for (const [id, [a, b]] of Object.entries(CAPS)) {
+    const el = $("#" + id);
+    if (!show(el, win(t, a, b, 0.12, 0.3))) continue;
+    $$("[data-words]", el).forEach((w, i) => words(w, t, a + i * 0.18));
+    [...el.children].filter((k) => !k.matches("h2")).forEach((k, i) => rise(k, t, a + 0.15 + i * 0.12));
+    el.style.transform = `translateY(${-E.io(P(t, b - 0.3, b)) * 30}px)`;
+    el.style.top = 540 - el.offsetHeight / 2 + "px";
+  }
+}
+
+function panel(t) {
+  const layer = $("#s-panel");
+  const exO = win(t, 7.3, 10.05, 0.01, 0.1);
+  let po = 0;
+  for (const [a, b, fi, fo] of PANEL_OP) po = Math.max(po, win(t, a, b, fi, fo));
+  if (!show(layer, Math.max(po, exO))) return;
+  const seg = CAM.find(([a, b]) => t >= a && t < b) || CAM[CAM.length - 1];
+  const [fx, fy, z, sx, sy, rx, ry] = strack(seg[3], t);
+  const S = BASE * z, [vl, vr] = seg[2], view = $("#view");
+  view.style.left = vl + "px"; view.style.width = vr - vl + "px";
+  view.style.webkitMaskImage = view.style.maskImage = `linear-gradient(${vl > 0 ? "to right" : "to left"}, transparent 0, #000 60px)`;
+  $("#cam").style.transform = `translate(${sx - vl - fx * S}px, ${sy - (fy + PT) * S}px) scale(${S})`;
+  // A 3D transform makes Chrome rasterize the panel once and stretch the
+  // bitmap, which is what made the UI soft. Flat whenever it is at rest.
+  $("#panel").style.transform = Math.abs(rx) + Math.abs(ry) < 0.05 ? "none" : `rotateX(${rx}deg) rotateY(${ry}deg)`;
+  show($("#panel"), po);
+
+  // Exploded view: bands fly in from depth, hang apart in an isometric
+  // stack, then the stack springs flat into the real panel.
+  const ex = $("#explode");
+  if (show(ex, exO)) {
+    const flat = spr(t, 8.75, 1.05, 0.7), close = spr(t, 8.9, 1.25, 0.66);
+    const drift = 6 * E.io(P(t, 7.3, 8.9));
+    ex.style.transform = `rotateX(${56 * (1 - flat)}deg) rotateZ(${(-34 + drift) * (1 - flat)}deg)`;
+    const n = bandEls.length;
+    // Only the UI blocks float; the page fades in under them as they land.
+    const [base, ...blocks] = bandEls;
+    base.style.opacity = E.io(P(t, 9.15, 9.55));
+    // A hair behind the blocks, or coplanar layers z-fight as they land.
+    base.style.transform = "translateZ(-4px)";
+    const m = (blocks.length - 1) / 2;
+    blocks.forEach((b, i) => {
+      const ti = 7.35 + i * 0.06, inn = sp(t, ti, "snap");
+      b.style.opacity = P(t, ti, ti + 0.12);
+      b.style.transform = `translateZ(${(i - m) * 85 * Math.max(0, 1 - close) + (1 - inn) * -900}px) translateY(${(1 - inn) * 260}px)`;
+    });
+  }
+  if (po <= 0.001) return;
+
+  // Captures, crossfaded (or cut).
+  let cur = 0;
+  for (let i = 0; i < SHOTS.length; i++) if (t >= SHOTS[i][0]) cur = i;
+  for (const img of Object.values(shotEls)) { img.style.opacity = 0; img.style.zIndex = 0; }
+  const [t0, name, cut] = SHOTS[cur];
+  if (cur > 0 && !cut) { const p = shotEls[SHOTS[cur - 1][1]]; p.style.opacity = 1; p.style.zIndex = 1; }
+  const c = shotEls[name];
+  c.style.zIndex = 2; c.style.opacity = cur === 0 || cut ? 1 : E.io(P(t, t0, t0 + (name.startsWith("23-") ? 0.07 : 0.2)));
+
+  // Highlight ring springs onto its target.
+  const ring = $("#ring"); let ro = 0;
+  for (const [a, b, x, y, w, h, r] of RINGS) {
+    const o = win(t, a, b, 0.12, 0.25);
+    if (o <= 0) continue;
+    ro = o; const g = (1 - sp(t, a, "bouncy")) * 14;
+    Object.assign(ring.style, { left: x - 3 - g + "px", top: y + PT - 3 - g + "px", width: w + 6 + g * 2 + "px", height: h + 6 + g * 2 + "px", borderRadius: r + 3 + "px", borderWidth: 2.5 / S + "px" });
+  }
+  ring.style.opacity = ro;
+
+  // Cursor: springs between cues, presses on clicks, constant on-screen size.
+  let co = 0;
+  for (const [a, b] of CURSOR_WIN) co = Math.max(co, win(t, a, b, 0.2, 0.25));
+  const cu = $("#cursor"); cu.style.opacity = co;
+  const [cx, cy] = strack(CURSOR, t, "snap");
+  let press = 1;
+  for (const k of CLICKS) press = Math.min(press, 1 - 0.2 * Math.sin(Math.PI * P(t, k - 0.07, k + 0.09)));
+  cu.style.transform = `translate(${cx}px, ${cy + PT}px) scale(${(1.5 / S) * press})`;
+  const rp = $("#ripple"); rp.style.opacity = 0;
+  for (const k of CLICKS) {
+    const x = P(t, k, k + 0.5);
+    if (x <= 0 || x >= 1) continue;
+    const [kx, ky] = strack(CURSOR, k, "snap");
+    rp.style.left = kx + 3 + "px"; rp.style.top = ky + PT + 3 + "px";
+    rp.style.opacity = 0.8 * (1 - x); rp.style.transform = `scale(${((0.3 + E.out(x) * 1.2) / S) * 1.4})`;
+  }
+  $("#dim").style.opacity = 0.6 * win(t, 30.3, 33.1, 0.3, 0.3) + 0.6 * win(t, 18.9, 19.9, 0.5, 0.01);
+}
+
+function crypt(t) {
+  if (!show($("#s-crypt"), win(t, 19.55, 22.95, 0.3, 0.01))) return;
+  const k = Math.floor(t * 40);
+  // Straight to the real armored message (no scrambled plaintext line).
+  $("#msg").style.visibility = "hidden";
+  // The armored message resolves line by line, each from noise.
+  const box = $("#armorbox");
+  box.style.top = 540 - box.offsetHeight / 2 + "px";
+  box.style.opacity = P(t, 19.6, 19.7);
+  armorLines.forEach(([d, line], li) => {
+    const a = 19.65 + li * 0.045, p = P(t, a, a + 0.3);
+    d.style.opacity = P(t, a, a + 0.06);
+    d.textContent = p >= 1 || !line ? line || " " : [...line].map((ch, j) => (j / line.length < p - 0.15 || ch === "-" ? ch : B64[(rnd(j + li * 97, k) * 64) | 0])).join("");
+  });
+  // The card it is sealed for slides in beside it; the lock shuts.
+  const seal = $("#seal");
+  seal.style.top = 540 - seal.offsetHeight / 2 + "px";
+  [...seal.children].forEach((ch, i) => enter(ch, t, 21.3 + i * 0.08, { dx: 80, dy: 0, s0: 1, k: "soft" }));
+  const lk = seal.querySelector(".lk");
+  const { click } = lock(lk.querySelector("svg"), t, [[21.7, "close"]], true);
+  const bg = mix("var(--card)", "var(--on)", P(t, 21.9, 22.1));
+  lk.style.background = bg; lk.style.setProperty("--lockbg", bg);
+  lk.style.color = mix("var(--muted-foreground)", "var(--good)", P(t, 21.9, 22.1));
+  lk.firstElementChild.style.transform = `scale(${1 + click * 0.08})`;
+}
+
+function verdicts(t) {
+  if (!show($("#s-verdict"), win(t, 26.3, 29.6, 0.2, 0.01))) return;
+  const vs = $("#verdicts"); vs.style.top = 540 - vs.offsetHeight / 2 + "px";
+  [["#vgood", 26.4, 27.2, "var(--band-good)"], ["#vbad", 26.6, 28.0, "var(--band-bad)"]].forEach(([id, a, done, band]) => {
+    const el = $(id);
+    enter(el, t, a, { dx: 160, dy: 0, s0: 0.94, k: "soft" });
+    const d = sp(t, done, "snap");
+    $$(".pend", el).forEach((p) => (p.style.opacity = clamp(1 - d * 2)));
+    $$(".done", el).forEach((p) => { p.style.opacity = clamp(d); p.style.transform = `translateY(${(1 - d) * 14}px) scale(${lerp(0.8, 1, d)})`; });
+    $$(".spin", el).forEach((s) => (s.style.transform = `rotate(${t * 540}deg)`));
+    el.firstElementChild.style.background = mix("var(--card)", band, P(t, done, done + 0.25));
+    if (id === "#vbad") {
+      // A failed verdict lands with a shake.
+      const k = P(t, done, done + 0.5);
+      el.style.transform += ` translateX(${Math.sin(k * Math.PI * 6) * 14 * (1 - k)}px)`;
+    }
+  });
+}
+
+function pass(t) {
+  if (!show($("#s-pass"), win(t, 30.3, 34.45, 0.01, 0.05))) return;
+  const sh = $("#sheet");
+  sh.style.left = 1400 - 235 + "px"; sh.style.top = 540 - sh.offsetHeight / 2 + "px";
+  const x = sp(t, 30.4, "bouncy"), out = E.io(P(t, 32.75, 33.05));
+  sh.style.opacity = P(t, 30.4, 30.55) * (1 - out);
+  sh.style.transform = `translateY(${(1 - x) * 90}px) scale(${lerp(0.85, 1, x) * lerp(1, 0.92, out)})`;
+  // The fingerprint draws like a scan, goes green, and pulses.
+  const draw = E.io(P(t, 31.1, 32.2));
+  $$("#print path").forEach((p, i) => { p.style.strokeDasharray = "1 1"; p.style.strokeDashoffset = 1 - clamp(draw * 1.6 - i * 0.07); });
+  $("#print").style.color = mix("#f2f2f2", "#4fc185", P(t, 32.2, 32.35));
+  $$(".pring").forEach((r, i) => {
+    const k = P(t, 32.25 + i * 0.12, 32.85 + i * 0.12);
+    r.style.opacity = k > 0 && k < 1 ? 0.9 * (1 - k) : 0;
+    r.style.transform = `scale(${1 + E.out(k) * 1.6})`;
+  });
+  // Then the vault: a lock springs up over the panel and opens.
+  const bl = $("#biglock");
+  const pop = sp(t, 32.95, "bouncy"), gone = E.io(P(t, 34.05, 34.4));
+  bl.style.left = 1400 - 95 + "px"; bl.style.top = 540 - 95 + "px";
+  bl.style.opacity = P(t, 32.95, 33.05) * (1 - gone);
+  bl.style.transform = `scale(${lerp(0.3, 1, pop) * lerp(1, 1.25, gone)})`;
+  bl.style.setProperty("--lockbg", "var(--on)");
+  lock(bl.querySelector("svg"), t, [[33.25, "open"]], false);
+}
+
+function vault(t) {
+  if (!show($("#s-vault"), win(t, 36.2, 41.8, 0.2, 0.01))) return;
+  const v = $("#vault"); v.style.top = 540 - v.offsetHeight / 2 + "px";
+  enter(v.firstElementChild, t, 36.3, { dy: 20 });
+  [...$("#vrows").children].forEach((r, i) => enter(r, t, 36.4 + i * 0.09, { dx: 120, dy: 0, s0: 1, k: "soft" }));
+  VAULT.forEach(([, plain, , r, ciph], i) => {
+    const s0 = 37.6 + i * 0.45, s = P(t, s0, s0 + 0.8), k = Math.floor(t * 30);
+    r.querySelector(".sval").textContent = [...plain].map((ch, j) => {
+      const edge = j / plain.length;
+      return s > edge + 0.12 ? ciph[j] : s > edge ? B64[(rnd(j, k) * 64) | 0] : ch;
+    }).join("");
+    const sealT = s0 + 0.8, sealed = P(t, sealT, sealT + 0.15);
+    r.querySelector(".sval").style.color = mix("var(--foreground)", "var(--good)", sealed);
+    r.querySelector("svg").style.color = mix("var(--muted-foreground)", "var(--good)", sealed);
+    lock(r.querySelector("svg"), t, [[sealT - 0.15, "close"]], true);
+    // The row squashes as it seals, and springs back.
+    const sq = t > sealT ? (1 - spr(t, sealT, 3, 0.35)) * 0.06 : 0;
+    r.style.transform = (r.style.transform || "") + ` scale(${1 + sq}, ${1 - sq})`;
+    const rbg = mix("var(--card)", "var(--on)", win(t, sealT, sealT + 0.7, 0.1, 0.5) * 0.9);
+    r.style.background = rbg; r.style.setProperty("--lockbg", rbg);
+  });
+}
+
+function rapid(t) {
+  if (!show($("#s-rapid"), win(t, 41.9, 47.1, 0.01, 0.25))) return;
+  rfEls.forEach(({ one, ib, lb, pip }, i) => {
+    const a = RF0 + i * RFD, b = a + RFD;
+    const inn = expo(P(t, a, a + 0.5)), out = E.io(P(t, b - 0.06, b + 0.12));
+    const last = i === rfEls.length - 1;
+    const o = last ? P(t, a, a + 0.08) : P(t, a, a + 0.08) * (1 - out);
+    show(one, o);
+    if (o > 0) {
+      one.style.transform = `translateY(-50%) translateY(${(1 - inn) * 120 - (last ? 0 : out * 120)}px)`;
+      one.style.filter = !last && out > 0 ? `blur(${out * 14}px)` : inn < 0.9 ? `blur(${(1 - inn) * 14}px)` : "";
+      const ip = sp(t, a + 0.03, "bouncy");
+      ib.style.transform = `scale(${lerp(0.4, 1, ip)}) rotate(${(1 - ip) * -14}deg)`;
+      lb.style.transform = `translateX(${(1 - expo(P(t, a + 0.04, a + 0.5))) * 50}px)`;
+    }
+    const on = t >= a;
+    pip.style.background = on ? "var(--primary)" : "var(--card)";
+    pip.style.transform = `scaleY(${on ? 1 + (1 - sp(t, a, "bouncy")) * 1.2 : 1})`;
+  });
+  const p = $("#pips"), x = sp(t, 42.0, "snap");
+  p.style.opacity = P(t, 42.0, 42.1);
+  p.style.transform = `translateX(-50%) translateY(${(1 - x) * 40}px)`;
+}
+
+function features(t) {
+  if (!show($("#s-feat"), win(t, 47.0, 53.15, 0.01, 0.01))) return;
+  const f = $("#feat"); f.style.top = 540 - f.offsetHeight / 2 + "px";
+  $$("#feat [data-words]").forEach((w, i) => words(w, t, 47.15 + i * 0.16));
+  featEls.forEach((el, i) => {
+    enter(el, t, 47.45 + (i % 5) * 0.07 + (i >= 5 ? 0.18 : 0), { dx: 80, dy: 0, s0: 1, k: "snap" });
+    const hl = win(t, 49.4 + i * 0.28, 49.4 + i * 0.28 + 0.6, 0.12, 0.35);
+    el.style.background = mix("var(--card)", "var(--on)", hl);
+    el.style.color = mix("var(--foreground)", "var(--good)", hl);
+  });
+}
+
+function blackbox(t) {
+  if (!show($("#s-bb"), win(t, 53.1, 58.4, 0.01, 0.4))) return;
+  const left = $("#bbl"), rw = $("#repowin");
+  left.style.top = 540 - left.offsetHeight / 2 + "px";
+  rw.style.top = 540 - rw.offsetHeight / 2 + "px";
+  $$("#bbl [data-words]").forEach((w, i) => words(w, t, 53.25 + i * 0.2, 0.07));
+  // The real repo page rises in its window and drifts in slowly, while
+  // marks land on the Public badge, the MIT license and the security policy,
+  // each with the fact it backs.
+  rise(rw, t, 53.55, 40, 0.8);
+  // Whole page, in close on each mark in turn, then back out.
+  const [cx, cy, sc] = track(REPO_CAM, t, E.io5);
+  $("#repoimg").style.transform = `translate(${432.5 - cx * sc}px, ${258 - cy * sc}px) scale(${sc})`;
+  $$("#repoimg .rmark").forEach((m) => (m.style.borderWidth = 2.5 / sc + "px"));
+  $$("#repoimg .rmark").forEach((m, i) => {
+    const a = REPO_MARKS[i].at, next = REPO_MARKS[i + 1]?.at ?? 58.4;
+    const inn = expo(P(t, a, a + 0.5)), dimmed = E.io(P(t, next - 0.1, next + 0.3));
+    m.style.opacity = inn * (1 - 0.65 * dimmed);
+    m.style.transform = `scale(${lerp(1.15, 1, inn)})`;
+  });
+  $$(".fact").forEach((f, i) => rise(f, t, REPO_MARKS[i].at - 0.05, 24, 0.8));
+  $$("#bbpills span").forEach((p, i) => rise(p, t, 57.15 + i * 0.1, 16, 0.7));
+  const out = E.io(P(t, 58.0, 58.4));
+  for (const el of [left, rw]) el.style.filter = out ? `blur(${out * 8}px)` : "";
+}
+
+function endcard(t) {
+  if (!show($("#s-end"), win(t, 58.2, DURATION, 0.01, 0.7))) return;
+  // The intro's wall, played backwards: faces arrive, turn to blocks and
+  // fall in towards the logo.
+  const fall = sp(t, 59.35, "soft");
+  for (const tl of wall2) {
+    const a = sp(t, 58.25 + tl.d * 0.035, "bouncy");
+    tl.cv.style.opacity = 1 - E.io(P(t, 59.0 + tl.d * 0.02, 59.3 + tl.d * 0.02));
+    const dx = (825 - (tl.x + 66)) * fall * 0.6, dy = (411 - (tl.y + 66)) * fall * 0.6;
+    tl.el.style.opacity = P(t, 58.25 + tl.d * 0.035, 58.4 + tl.d * 0.035) * clamp(1 - fall * 1.15);
+    tl.el.style.transform = `translate(${dx}px, ${dy}px) scale(${Math.max(0, lerp(0.2, 1, a) * lerp(1, 0.2, clamp(fall)))})`;
+  }
+  const em = sp(t, 59.55, "bouncy");
+  $("#endc .em").style.opacity = P(t, 59.55, 59.65);
+  $("#endc .em").style.transform = `scale(${lerp(0.3, 1, em)}) rotate(${(1 - em) * -20}deg)`;
+  words($("#endc h2"), t, 59.8, 0.08, 0.8);
+  [$("#endc .sub"), $("#endc .badges"), $("#endc .bh"), $("#endc .by")].forEach((k, i) => rise(k, t, 60.3 + i * 0.2, 20, 0.8));
+}
+
+function transitions(t) {
+  // A dip through blur at each scene change, peaking on the cut.
+  let k = 0;
+  for (const w of WIPES) { const x = P(t, w - 0.32, w + 0.44); if (x > 0 && x < 1) k = Math.max(k, Math.sin(Math.PI * x)); }
+  const c = $("#content");
+  c.style.filter = k > 0.001 ? `blur(${k * 22}px)` : "";
+  c.style.opacity = 1 - k * 0.92;
+  c.style.transform = k > 0.001 ? `scale(${1 + k * 0.035})` : "";
+}
+
+function seek(t) {
+  const it = introTime(t);
+  intro(it); headline(it); introCaption(t);
+  // In a cut, the old walkthrough's panel and captions never show.
+  if (CUT_MODE && t < 19.5) { show($("#s-panel"), 0); $$(".cap").forEach((c) => show(c, 0)); }
+  else { captions(t); panel(t); }
+  crypt(t); verdicts(t);
+  pass(t); vault(t); rapid(t); features(t); blackbox(t); endcard(t); transitions(t);
+}
+window.seek = seek;
+
+// ───────────────────────── loading + player ─────────────────────────
+window.ready = (async () => {
+  await document.fonts.ready;
+  const bg = new Image(); bg.src = "ui/20-empty.png";
+  await Promise.all([...document.images, bg].map((i) => i.decode().catch(() => {})));
+  seek(0);
+})();
+
+const render = new URLSearchParams(location.search).has("render");
+if (render) document.body.classList.add("render");
+else {
+  const fit = () => { const s = Math.min(innerWidth / 1920, (innerHeight - 44) / 1080); $("#stage").style.transform = `scale(${s})`; };
+  addEventListener("resize", fit); fit();
+  const scrub = $("#scrub"); scrub.max = DURATION;
+  const q = new URLSearchParams(location.search);
+  let t = +(q.get("t") || 0), playing = !q.has("t"), last = null;
+  const draw = () => { seek(t); scrub.value = t; $("#tc").textContent = t.toFixed(2); };
+  const loop = (now) => {
+    if (playing) { if (last != null) t = (t + (now - last) / 1000) % DURATION; last = now; draw(); } else last = null;
+    requestAnimationFrame(loop);
+  };
+  scrub.oninput = () => { t = +scrub.value; draw(); };
+  const toggle = () => { playing = !playing; $("#pp").textContent = playing ? "pause" : "play"; };
+  $("#pp").onclick = toggle;
+  addEventListener("keydown", (e) => { if (e.code === "Space") { e.preventDefault(); toggle(); } });
+  window.ready.then(() => { draw(); $("#pp").textContent = playing ? "pause" : "play"; requestAnimationFrame(loop); });
+}
+</script>
+</body>
+</html>

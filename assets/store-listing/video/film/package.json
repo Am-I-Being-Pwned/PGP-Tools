@@ -1,0 +1,28 @@
+{
+  "name": "pgp-tools-film",
+  "private": true,
+  "type": "module",
+  "description": "The PGP Tools promo video: a seekable three.js film, rendered frame by frame (see ../README.md).",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "render": "node render.mjs"
+  },
+  "dependencies": {
+    "@react-three/drei": "10.7.9",
+    "@react-three/fiber": "9.8.2",
+    "@react-three/postprocessing": "3.2.2",
+    "postprocessing": "6.39.5",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "three": "0.187.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@types/three": "0.187.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "typescript": "6.0.3",
+    "vite": "8.3.5"
+  }
+}
