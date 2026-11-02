@@ -62,11 +62,7 @@
     "message": "你将无法再向此联系人加密消息或验证其签名。之后可以重新导入其公钥。"
   },
   "keys_contacts_heading": { "message": "联系人" },
-  "keys_contacts_heading_encrypted": { "message": "联系人（已加密）" },
   "keys_contacts_heading_count": { "message": "联系人 ($count$)" },
-  "keys_contacts_locked": {
-    "message": "联系人已加密。请解锁 PGP Tools 以查看和管理。"
-  },
   "keys_search_contacts_placeholder": { "message": "搜索联系人…" },
   "keys_no_contacts_match": { "message": "没有与“$query$”匹配的联系人" },
   "keys_wrong_password": { "message": "密码错误" },

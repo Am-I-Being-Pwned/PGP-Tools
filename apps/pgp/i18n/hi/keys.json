@@ -72,11 +72,7 @@
     "message": "आप अब इस संपर्क के लिए संदेश एन्क्रिप्ट नहीं कर पाएंगे या इसके हस्ताक्षर सत्यापित नहीं कर पाएंगे। आप इसकी सार्वजनिक कुंजी बाद में फिर से आयात कर सकते हैं।"
   },
   "keys_contacts_heading": { "message": "संपर्क" },
-  "keys_contacts_heading_encrypted": { "message": "संपर्क (एन्क्रिप्टेड)" },
   "keys_contacts_heading_count": { "message": "संपर्क ($count$)" },
-  "keys_contacts_locked": {
-    "message": "संपर्क एन्क्रिप्टेड हैं। इन्हें देखने और प्रबंधित करने के लिए PGP Tools अनलॉक करें।"
-  },
   "keys_search_contacts_placeholder": { "message": "संपर्क खोजें..." },
   "keys_no_contacts_match": {
     "message": "\"$query$\" से मेल खाता कोई संपर्क नहीं"

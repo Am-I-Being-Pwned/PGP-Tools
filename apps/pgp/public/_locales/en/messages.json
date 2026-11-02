@@ -3153,14 +3153,6 @@
       }
     }
   },
-  "keys_contacts_heading_encrypted": {
-    "message": "Contacts (encrypted)",
-    "description": "Keys tab: contacts heading while the vault is locked and contacts cannot be read."
-  },
-  "keys_contacts_locked": {
-    "message": "Contacts are encrypted. Unlock PGP Tools to view and manage them.",
-    "description": "Keys tab: notice shown in place of the contact list while the vault is locked. 'PGP Tools' is the product name; keep it."
-  },
   "keys_contacts_removed_one": {
     "message": "Contact removed",
     "description": "Toast after removing contacts (public keys). Singular form has no count."

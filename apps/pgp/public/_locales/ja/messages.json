@@ -2568,12 +2568,6 @@
       }
     }
   },
-  "keys_contacts_heading_encrypted": {
-    "message": "連絡先 (暗号化済み)"
-  },
-  "keys_contacts_locked": {
-    "message": "連絡先は暗号化されています。表示や管理には PGP Tools のロックを解除してください。"
-  },
   "keys_contacts_removed_one": {
     "message": "連絡先を削除しました"
   },

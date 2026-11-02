@@ -2568,12 +2568,6 @@
       }
     }
   },
-  "keys_contacts_heading_encrypted": {
-    "message": "Kontakte (verschlüsselt)"
-  },
-  "keys_contacts_locked": {
-    "message": "Die Kontakte sind verschlüsselt. Entsperren Sie PGP Tools, um sie anzuzeigen und zu verwalten."
-  },
   "keys_contacts_removed_one": {
     "message": "Kontakt entfernt"
   },

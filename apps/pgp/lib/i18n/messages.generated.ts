@@ -514,8 +514,6 @@ export interface MessageArgs {
   "keys_contact_same_name_title": { name: string | number; keyid: string | number };
   "keys_contacts_heading": undefined;
   "keys_contacts_heading_count": { count: string | number };
-  "keys_contacts_heading_encrypted": undefined;
-  "keys_contacts_locked": undefined;
   "keys_copy_email_aria": undefined;
   "keys_copy_fingerprint_aria": undefined;
   "keys_copy_private_key": undefined;

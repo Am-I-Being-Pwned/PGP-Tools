@@ -104,11 +104,7 @@
     "message": "Вы больше не сможете шифровать сообщения для этого контакта и проверять его подписи. Позже можно снова импортировать его открытый ключ."
   },
   "keys_contacts_heading": { "message": "Контакты" },
-  "keys_contacts_heading_encrypted": { "message": "Контакты (зашифрованы)" },
   "keys_contacts_heading_count": { "message": "Контакты ($count$)" },
-  "keys_contacts_locked": {
-    "message": "Контакты зашифрованы. Разблокируйте PGP Tools, чтобы просматривать их и управлять ими."
-  },
   "keys_search_contacts_placeholder": { "message": "Поиск контактов..." },
   "keys_no_contacts_match": {
     "message": "По запросу «$query$» контакты не найдены"

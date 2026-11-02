@@ -134,14 +134,8 @@
   "keys_contacts_heading": {
     "message": "Contatti"
   },
-  "keys_contacts_heading_encrypted": {
-    "message": "Contatti (cifrati)"
-  },
   "keys_contacts_heading_count": {
     "message": "Contatti ($count$)"
-  },
-  "keys_contacts_locked": {
-    "message": "I contatti sono cifrati. Sblocca PGP Tools per vederli e gestirli."
   },
   "keys_search_contacts_placeholder": {
     "message": "Cerca nei contatti..."

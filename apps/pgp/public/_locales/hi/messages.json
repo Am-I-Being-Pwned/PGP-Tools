@@ -2103,12 +2103,6 @@
       }
     }
   },
-  "keys_contacts_heading_encrypted": {
-    "message": "संपर्क (एन्क्रिप्टेड)"
-  },
-  "keys_contacts_locked": {
-    "message": "संपर्क एन्क्रिप्टेड हैं। इन्हें देखने और प्रबंधित करने के लिए PGP Tools अनलॉक करें।"
-  },
   "keys_contacts_removed_one": {
     "message": "संपर्क हटाया गया"
   },

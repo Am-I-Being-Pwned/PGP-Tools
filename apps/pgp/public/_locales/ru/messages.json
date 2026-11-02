@@ -3156,12 +3156,6 @@
       }
     }
   },
-  "keys_contacts_heading_encrypted": {
-    "message": "Контакты (зашифрованы)"
-  },
-  "keys_contacts_locked": {
-    "message": "Контакты зашифрованы. Разблокируйте PGP Tools, чтобы просматривать их и управлять ими."
-  },
   "keys_contacts_removed_few": {
     "message": "Удалено $count$ контакта",
     "placeholders": {

@@ -2568,12 +2568,6 @@
       }
     }
   },
-  "keys_contacts_heading_encrypted": {
-    "message": "联系人（已加密）"
-  },
-  "keys_contacts_locked": {
-    "message": "联系人已加密。请解锁 PGP Tools 以查看和管理。"
-  },
   "keys_contacts_removed_one": {
     "message": "已移除联系人"
   },
