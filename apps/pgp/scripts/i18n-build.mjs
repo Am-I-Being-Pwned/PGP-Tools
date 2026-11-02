@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // i18n-build.mjs — merge i18n/<locale>/<area>.json fragments into
-// public/_locales/<locale>/messages.json and lib/i18n/messages.generated.ts.
+// public/_locales/<locale>/messages.json and src/lib/i18n/messages.generated.ts.
 // Both outputs are committed so a fresh checkout builds; i18n-check fails on drift.
 // Placeholders are written inline as `$name$`; this emits Chrome's
 // `placeholders` map ($1, $2… by first appearance in en) and records the
@@ -15,6 +15,7 @@ export const FRAGMENT_DIR = join(APP_DIR, "i18n");
 export const LOCALES_DIR = join(APP_DIR, "public", "_locales");
 export const GENERATED_TS = join(
   APP_DIR,
+  "src",
   "lib",
   "i18n",
   "messages.generated.ts",

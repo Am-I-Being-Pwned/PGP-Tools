@@ -74,17 +74,17 @@
 
 ## Security model
 
-| Layer | Mechanism |
-| --- | --- |
-| Crypto engine | Sequoia-PGP in WASM (keys in JS only during gen/import) |
+| Layer         | Mechanism                                                                                                                                                                        |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Crypto engine | Sequoia-PGP in WASM (keys in JS only during gen/import)                                                                                                                          |
 | Second engine | age in the same WASM sandbox, to imported SSH keys only - no signing, no key generation. An age file names the SSH public key it was encrypted to, so it is linkable to that key |
-| Key unlock | WebAuthn PRF (passkeys) or Argon2id 64 MB (passwords) |
-| Key storage | AES-256-GCM with per-key AAD - one shared envelope for PGP, CRX and SSH keys, with a distinct AAD prefix per key type |
-| Memory | `zeroize` crate (Rust) + manual zeroing (JS) |
-| Signatures | Atomic decrypt+verify (no TOCTOU) |
-| Sessions | Auto-lock on inactivity, panel close, or per-op |
-| Brute-force | Argon2id 64 MB / 3 iterations - the cost sits in the KDF, which also holds against an offline attack on a stolen blob |
-| Scope | No content scripts - extension sandbox only |
+| Key unlock    | WebAuthn PRF (passkeys) or Argon2id 64 MB (passwords)                                                                                                                            |
+| Key storage   | AES-256-GCM with per-key AAD - one shared envelope for PGP, CRX and SSH keys, with a distinct AAD prefix per key type                                                            |
+| Memory        | `zeroize` crate (Rust) + manual zeroing (JS)                                                                                                                                     |
+| Signatures    | Atomic decrypt+verify (no TOCTOU)                                                                                                                                                |
+| Sessions      | Auto-lock on inactivity, panel close, or per-op                                                                                                                                  |
+| Brute-force   | Argon2id 64 MB / 3 iterations - the cost sits in the KDF, which also holds against an offline attack on a stolen blob                                                            |
+| Scope         | No content scripts - extension sandbox only                                                                                                                                      |
 
 ## Stack
 
@@ -121,12 +121,12 @@ cd apps/pgp && pnpm build:wasm
 
 ```
 apps/pgp/              Extension source
-  components/           React UI
-  entrypoints/          background + sidepanel
-  hooks/                keyring, sessions, contacts
-  lib/pgp/              WASM wrapper + operations
-  lib/protection/       WebAuthn PRF, Argon2id, AES-256-GCM
-  lib/storage/          chrome.storage with mutex
+  src/components/           React UI
+  src/entrypoints/          background + sidepanel
+  src/hooks/                keyring, sessions, contacts
+  src/lib/pgp/              WASM wrapper + operations
+  src/lib/protection/       WebAuthn PRF, Argon2id, AES-256-GCM
+  src/lib/storage/          chrome.storage with mutex
   gpg-wasm/             Rust/WASM engine (sequoia-openpgp)
 packages/ui/            shadcn/ui components
 tooling/                eslint, prettier, tailwind, tsconfig

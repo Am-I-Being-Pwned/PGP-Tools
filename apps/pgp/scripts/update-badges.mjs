@@ -2,7 +2,7 @@
 // update-badges.mjs — write the README's badge row from MEASURED values.
 // Each badge is read from its suite's artifact; `--check` (run in CI) fails on
 // drift. Coverage is labelled "lib coverage" on purpose: vitest has no DOM, so
-// components/entrypoints are covered by Playwright and key material by the
+// src/components/entrypoints are covered by Playwright and key material by the
 // Rust tests — a whole-tree figure would be a smaller number making a bigger claim.
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";

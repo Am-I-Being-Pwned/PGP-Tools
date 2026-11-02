@@ -12,7 +12,7 @@
 // real change moves them, re-pin here in the same commit and say why.
 //
 // NOT proven: aliasing (`const f = fetch`) is the runtime lockdown's job
-// (lib/network-lockdown.ts); URL checks are a change detector that misses
+// (src/lib/network-lockdown.ts); URL checks are a change detector that misses
 // hosts assembled from fragments without "://"; the resolver is bounded
 // single-file constant propagation and errors rather than guesses. Chrome's
 // built-in AI APIs are browser-mediated and invisible here — see
@@ -80,7 +80,7 @@ const EXPECTED_WORKER_FILE = "background.js";
 
 // Keys are `${kind}:${name}`; anything unlisted or miscounted fails.
 // worker: ref:fetch is the lockdown reading the global; call:fetch is
-//   lib/github/fetch-keys.ts + lib/keyserver/fetch-key.ts (pinned apart below).
+//   src/lib/github/fetch-keys.ts + src/lib/keyserver/fetch-key.ts (pinned apart below).
 // page: the same lockdown ref; two wasm-loader fetches; one gpg_wasm import().
 // Minified lockdown stubs are anonymous, hence no ref:XMLHttpRequest entries.
 const EXPECTED_CENSUS = {
@@ -105,7 +105,7 @@ const PINNED_CALL_SITES = {
     {
       kind: "call",
       name: "fetch",
-      reason: "lib/github/fetch-keys.ts -- the GitHub SSH-key lookup",
+      reason: "src/lib/github/fetch-keys.ts -- the GitHub SSH-key lookup",
       // The destination is the pin that matters (a snippet would match any
       // call carrying the same options). The init shape keeps no cookies,
       // no redirect-following, no cache entry.
@@ -122,7 +122,7 @@ const PINNED_CALL_SITES = {
       kind: "call",
       name: "fetch",
       reason:
-        "lib/keyserver/fetch-key.ts -- the keys.openpgp.org certificate lookup",
+        "src/lib/keyserver/fetch-key.ts -- the keys.openpgp.org certificate lookup",
       // One pin per origin: two GitHub fetches leave this one unmatched.
       destinationOrigin: KEYSERVER_ORIGIN,
       init: {
@@ -163,7 +163,7 @@ const PINNED_CALL_SITES = {
 // Raw-text scan, so concatenation fragments are seen. Page entries are XML
 // namespaces, href targets, lockdown scheme tests and an error-message link —
 // none a connect destination (connect-src 'self', frame-src 'none'); listed so
-// the set cannot grow quietly. MENU_MATCH_PATTERNS (lib/context-menu.ts) are
+// the set cannot grow quietly. MENU_MATCH_PATTERNS (src/lib/context-menu.ts) are
 // wildcard match patterns compared against a URL, never fetched.
 const MENU_MATCH_PATTERNS = ["http://*/*", "https://*/*", "file:///*"];
 
@@ -987,7 +987,7 @@ for (const rel of scripts) {
     workerFileSeen = true;
     // Self-containment: the fetch modules are imported only by the background
     // entry. This makes the resolver's single-file scope sound and fails the
-    // day one is imported from the panel. (lib/net/capped-body.ts is shared
+    // day one is imported from the panel. (src/lib/net/capped-body.ts is shared
     // only between the two, so it lands in the same bundle.)
     const specifiers = moduleSpecifiersIn(source);
     if (specifiers.length > 0) {

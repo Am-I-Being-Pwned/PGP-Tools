@@ -6,7 +6,7 @@
 //   3. a locale translates a plural base but not every en category (Chrome
 //      falls back PER KEY, so English `_one` beside translated `_other`);
 //   4. source calls `t()` / `tn()` with a key en lacks;
-//   5. JSX in components/ or entrypoints/ carries literal English.
+//   5. JSX in src/components/ or src/entrypoints/ carries literal English.
 // Missing locale keys are not errors (Chrome shows en); coverage is printed.
 //
 // Opting a literal out (brand names, key IDs, code samples):
@@ -53,7 +53,7 @@ for (const locale of locales) {
     );
 }
 if (readFileSync(GENERATED_TS, "utf8") !== renderGeneratedTs(en, orders))
-  fail("lib/i18n/messages.generated.ts is stale: run pnpm i18n:build");
+  fail("src/lib/i18n/messages.generated.ts is stale: run pnpm i18n:build");
 
 // ── 2 + 3. per-locale consistency ───────────────────────────────────
 const enKeys = new Set(Object.keys(en));
@@ -117,7 +117,7 @@ function sameSet(a, b) {
 }
 
 // ── 4 + 5. source scan ──────────────────────────────────────────────
-const SCAN_DIRS = ["components", "entrypoints", "hooks", "lib"];
+const SCAN_DIRS = ["src"];
 const SKIP = [
   /\.test\.tsx?$/,
   /\.d\.ts$/,

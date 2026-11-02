@@ -12,7 +12,7 @@ import { defineConfig } from "@playwright/test";
  * tests run serially with one worker to keep ordering deterministic.
  */
 export default defineConfig({
-  testDir: "./e2e",
+  testDir: "./tests/e2e",
   fullyParallel: false,
   workers: 1,
   forbidOnly: !!process.env.CI,

@@ -625,7 +625,7 @@ const invariantUnlockOnly = {
 
 // ── Invariant 3 — no JS bypass of the wasm-secrets boundary ─────────
 // SECURITY.md §9 check 3.
-// Secret-bearing wasm exports must be reached only via lib/pgp/wasm-secrets.ts,
+// Secret-bearing wasm exports must be reached only via src/lib/pgp/wasm-secrets.ts,
 // which owns zeroization and the handle lifecycle.
 const SECRET_WASM_EXPORTS = [
   "generateProtectedWith",
@@ -660,12 +660,12 @@ const SECRET_WASM_EXPORTS = [
   "decryptWithPassword",
 ];
 // EXEMPTION: the boundary module itself is *supposed* to make these calls.
-const SECRETS_BOUNDARY = "apps/pgp/lib/pgp/wasm-secrets.ts";
+const SECRETS_BOUNDARY = "apps/pgp/src/lib/pgp/wasm-secrets.ts";
 // EXEMPTION: test/spec files, where `wasm` is a vi.hoisted mock — no key
 // material exists. (`isTestFile` is defined with the console invariant.)
 const invariantWasmBoundary = {
   id: "wasm-secrets-boundary",
-  name: "secret-bearing wasm calls happen only in lib/pgp/wasm-secrets.ts",
+  name: "secret-bearing wasm calls happen only in src/lib/pgp/wasm-secrets.ts",
   expectation: "must be empty outside the boundary module",
   why: "The boundary module is the only place that zeroizes inputs and tracks key handles; a direct wasm.* call elsewhere can leak plaintext key material into the JS heap or leave a handle unlocked.",
   run() {
@@ -950,9 +950,9 @@ const invariantExportsOwnCredentials = {
 // ── Invariant 6 — no console.* outside the network lockdown ──────────
 // SECURITY.md §9 check 5.
 //
-// EXEMPTION: lib/network-lockdown.ts logs a blocked request's URL so the user
+// EXEMPTION: src/lib/network-lockdown.ts logs a blocked request's URL so the user
 // can see an exfiltration attempt.
-const CONSOLE_EXEMPT_FILES = new Set(["apps/pgp/lib/network-lockdown.ts"]);
+const CONSOLE_EXEMPT_FILES = new Set(["apps/pgp/src/lib/network-lockdown.ts"]);
 
 // EXEMPTION: test/spec files are never bundled. Not free: a test printing a
 // secret still lands in CI logs — treat that as a defect in review.
@@ -961,7 +961,7 @@ const isTestFile = (file) => TEST_FILE_RE.test(file);
 
 const invariantNoConsole = {
   id: "no-console-logging",
-  name: "no console.* outside lib/network-lockdown.ts (tests exempt)",
+  name: "no console.* outside src/lib/network-lockdown.ts (tests exempt)",
   expectation: "must be empty outside the exempt file(s) and test/spec files",
   why: "Console output in this codebase runs in the same context as unlocked key material, and devtools logs persist and are trivially scraped - any accidental log of a passphrase, handle or plaintext is an exfiltration channel.",
   run() {
@@ -1008,9 +1008,12 @@ const invariantNoConsole = {
 // (`applyReview` brands it `ReviewedContact`) or on undo of their own delete.
 // The store's add takes only the brand; this holds the rest.
 const REVIEWED_CALLERS = new Map([
-  ["apps/pgp/lib/import/review.ts", "applyReview: the user's Review decisions"],
   [
-    "apps/pgp/components/keys/DeletePages.tsx",
+    "apps/pgp/src/lib/import/review.ts",
+    "applyReview: the user's Review decisions",
+  ],
+  [
+    "apps/pgp/src/components/keys/DeletePages.tsx",
     "undo of the user's own delete: restores the record they had",
   ],
 ]);
@@ -1026,21 +1029,21 @@ const CONTACT_WRITE_FNS = [
   "removeContact",
 ];
 const CONTACT_WRITERS = new Map([
-  ["apps/pgp/lib/storage/contacts.ts", "the store itself"],
+  ["apps/pgp/src/lib/storage/contacts.ts", "the store itself"],
   [
-    "apps/pgp/hooks/useContacts.ts",
+    "apps/pgp/src/hooks/useContacts.ts",
     "the store's add (typed ReviewedContact), remove, rename and verify",
   ],
   [
-    "apps/pgp/lib/storage/contact-backfill.ts",
+    "apps/pgp/src/lib/storage/contact-backfill.ts",
     "the legacy backfills: derived fields of a record already in the store",
   ],
   [
-    "apps/pgp/lib/import-public-keys.ts",
+    "apps/pgp/src/lib/import-public-keys.ts",
     "mergeIntoContact: a newer copy of the SAME key merged into an existing record (only what its owner signed)",
   ],
   [
-    "apps/pgp/components/keys/KeyDetailsPage.tsx",
+    "apps/pgp/src/components/keys/KeyDetailsPage.tsx",
     "the user's own toggle of one key / Mark as verified, on a record already in the store",
   ],
 ]);
@@ -1123,7 +1126,7 @@ const invariantReviewedContacts = {
     // `noExempt` hits fail everywhere. The definition exemption is exactly
     // `function reviewed(` in review.ts.
     const isDefinition = (h) =>
-      h.file === "apps/pgp/lib/import/review.ts" &&
+      h.file === "apps/pgp/src/lib/import/review.ts" &&
       /\bfunction\s+reviewed\s*\(/.test(h.text);
     const writes = [
       ...scanTs(

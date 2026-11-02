@@ -14,7 +14,7 @@
         "gpg-wasm/pkg/**",
         "public/gpg_wasm_bg.wasm"
       ],
-      "inputs": ["$TURBO_DEFAULT$", "!**/*.test.ts", "!e2e/**", "!shots/**"]
+      "inputs": ["$TURBO_DEFAULT$", "!tests/**", "!shots/**"]
     },
     "dev": {
       "dependsOn": ["^dev"],
@@ -41,8 +41,8 @@
       "outputs": ["coverage/**"],
       "inputs": [
         "$TURBO_DEFAULT$",
-        "!e2e/**",
-        "!e2e-capture/**",
+        "!tests/e2e/**",
+        "!tests/capture/**",
         "!playwright.config.ts",
         "!playwright.capture.config.ts",
         "!shots/**"
