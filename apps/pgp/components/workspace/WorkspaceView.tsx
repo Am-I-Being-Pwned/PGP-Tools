@@ -6,12 +6,7 @@ import {
   useRef,
   useState,
 } from "react";
-import {
-  ArrowLeftIcon,
-  DownloadIcon,
-  ReplyIcon,
-  RotateCcwIcon,
-} from "lucide-react";
+import { ArrowLeftIcon, ReplyIcon } from "lucide-react";
 
 import {
   ariaKeyShortcuts,
@@ -19,18 +14,10 @@ import {
   Button,
   cn,
   isMacPlatform,
-  OptionBar,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   Switch,
-  type ShortcutSpec,
 } from "@amibeingpwned/ui";
 
 import { KeyAvatar } from "~/components/shared/KeyAvatar";
-import { ToggleBadge } from "~/components/shared/ToggleBadge";
 import {
   WorkspaceBridgeContext,
   type WorkspaceCommands,
@@ -39,7 +26,7 @@ import {
 import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
 import { useDelayedFlag } from "~/hooks/useDelayedFlag";
 import { useNav } from "~/hooks/useNav";
-import { savePreference, usePreferences } from "~/hooks/usePreferences";
+import { usePreferences } from "~/hooks/usePreferences";
 import { useShortcut } from "~/hooks/useShortcut";
 import { useVault } from "~/hooks/useVault";
 import { REPLY_SHORTCUT } from "~/lib/actions/definitions";
@@ -47,21 +34,17 @@ import { recoverArmorIfNeeded } from "~/lib/armor-recovery";
 import {
   buildEncryptRecipients,
   resolveSelectedRecipients,
-  sshPasswordReason,
   toSelectedRecipient,
 } from "~/lib/encrypt-recipients";
 import type { RemedyAction } from "~/lib/errors/present";
 import { t } from "~/lib/i18n";
 import type { WorkspaceAction } from "~/lib/messages";
 import type { ReaderSigner } from "~/lib/reader-protocol";
-import { requestUnlimitedHistoryStorage } from "~/lib/storage/history";
 import { isPgpRecord, isSshRecord } from "~/lib/storage/key-kind";
 import { toast } from "~/lib/toast";
 import { saveCrxViaPrompt } from "~/lib/utils/download";
 import { displayUserId, formatKeyDisplayName } from "~/lib/utils/key-naming";
-import { INPUT_CLASS } from "~/lib/utils/styles";
 import type { WorkspaceDraftSource } from "~/lib/workspace-draft";
-import { withoutHiddenCharacters } from "./hidden-characters";
 import { KeySelector } from "./KeySelector";
 import { MessagePasswordPage } from "./MessagePasswordPage";
 import { selectionEngine } from "./recipient-engine";
@@ -79,10 +62,17 @@ import { useWorkspaceKeyboard } from "./useWorkspaceKeyboard";
 import { useWorkspaceTranslation } from "./useWorkspaceTranslation";
 import type { Mode } from "./workspace-state";
 import { deriveWorkspaceView } from "./workspace-view";
-import { modeLabel, WorkspaceInput } from "./WorkspaceInput";
+import { WorkspaceInput } from "./WorkspaceInput";
 import { WorkspaceResults } from "./WorkspaceResults";
-
-const RUN_SHORTCUT: ShortcutSpec = { mod: true, key: "Enter" };
+import {
+  EncryptOptions,
+  MainActions,
+  PasswordPrompt,
+  ResetButton,
+  RunNotices,
+  SignKeyPickers,
+  useEncryptToggles,
+} from "./WorkspaceSections";
 
 interface WorkspaceViewProps {
   pendingAction?: { action: WorkspaceAction; text: string } | null;
@@ -120,14 +110,13 @@ export function WorkspaceView({
     intake,
     onIntakeConsumed,
   });
-  const { state: s, dispatch, myKeys, contacts, crxKeys } = ws;
+  const { state: s, dispatch, myKeys, contacts } = ws;
   const { session } = useVault();
   const { openImport, showTab, revealKeys } = useNav();
   const {
     keyDiscoveryEnabled,
     crxSigningEnabled,
     defaultKeyId,
-    neverCacheKeys,
     aiTranslateEnabled,
     translationTargetLanguage,
     signWhenEncrypting: alsoSign,
@@ -144,6 +133,11 @@ export function WorkspaceView({
     (keyId: string) => revealKeys([keyId]),
     [revealKeys],
   );
+  const v = deriveWorkspaceView(s, {
+    canCrxSign: ws.canCrxSign,
+    passwordReady: ws.passwordReady,
+    crxSigningEnabled,
+  });
   const {
     loading,
     done,
@@ -153,10 +147,7 @@ export function WorkspaceView({
     canEncrypt,
     passwordOnlyMessage,
     unencryptedMessage,
-    needsPrivateKey,
-    crxSignAvailable,
     showCrxSign,
-    showCrxVerify,
     crxResult,
     showFullOutput,
     replyTo,
@@ -164,11 +155,7 @@ export function WorkspaceView({
     canRun,
     resultHasOutput,
     hasDownload,
-  } = deriveWorkspaceView(s, {
-    canCrxSign: ws.canCrxSign,
-    passwordReady: ws.passwordReady,
-    crxSigningEnabled,
-  });
+  } = v;
   const { prompt } = s;
   const { verdict } = s.result;
   const resetResults = () => dispatch({ type: "reset-results" });
@@ -333,18 +320,8 @@ export function WorkspaceView({
     focusMessageBox,
   });
 
-  const setEncryptToSelf = (checked: boolean) => {
-    resetResults();
-    void savePreference({ encryptToSelf: checked });
-  };
-  const setAlsoSign = (checked: boolean) => {
-    resetResults();
-    void savePreference({ signWhenEncrypting: checked });
-  };
-  const setSaveToHistory = (checked: boolean) => {
-    void savePreference({ historyEnabled: checked });
-    if (checked) void requestUnlimitedHistoryStorage();
-  };
+  const { setEncryptToSelf, setAlsoSign, setSaveToHistory } =
+    useEncryptToggles(ws);
 
   const [copied, setCopied] = useState(false);
   const copyTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -483,18 +460,6 @@ export function WorkspaceView({
     onLookupSigner: lookupSigner,
   };
 
-  const resetButton = (onClick: () => void) => (
-    <Button
-      variant="outline"
-      size="icon"
-      onClick={onClick}
-      title={t("workspace_clear_input_output")}
-      aria-label={t("workspace_clear_input_output")}
-    >
-      <RotateCcwIcon className="h-4 w-4" />
-    </Button>
-  );
-
   if (showFullOutput) {
     return (
       <div className="flex h-full flex-col gap-3">
@@ -563,7 +528,7 @@ export function WorkspaceView({
             copied={copied}
             disabled={loading}
           />
-          {resetButton(resetAndRefocus)}
+          <ResetButton onClick={resetAndRefocus} />
         </div>
       </div>
     );
@@ -712,296 +677,43 @@ export function WorkspaceView({
           </p>
         )}
 
-        {crxSignAvailable && (
-          <div className="flex gap-2">
-            {(["crx", "pgp"] as const).map((kind) => (
-              <Button
-                key={kind}
-                variant={
-                  (s.signKindPick ?? "crx") === kind ? "default" : "outline"
-                }
-                size="sm"
-                className="flex-1"
-                onClick={() => dispatch({ type: "sign-kind", kind })}
-              >
-                {kind === "crx"
-                  ? t("workspace_sign_kind_crx")
-                  : t("workspace_sign_kind_pgp")}
-              </Button>
-            ))}
-          </div>
-        )}
+        <SignKeyPickers
+          ws={ws}
+          v={v}
+          signerInHeader={signerInHeader}
+          signKeyChoices={signKeyChoices}
+          decryptKeyChoices={decryptKeyChoices}
+        />
 
-        {needsPrivateKey && !showCrxSign && !signerInHeader && (
-          <KeySelector
-            label={
-              s.mode === "sign"
-                ? t("workspace_sign_with")
-                : t("workspace_decrypt_with")
-            }
-            keys={s.mode === "sign" ? signKeyChoices : decryptKeyChoices}
-            selectedKeyId={ws.selectedKeyId}
-            detailsContacts={contacts}
-            detailsOwnKeys={myKeys}
-            onSelect={ws.selectPrivateKey}
-            emptyText={t("workspace_no_keys_yet")}
-            emptyAction={onNavigateToKeys}
-            emptyActionLabel={t("workspace_create_one")}
+        {s.mode === "encrypt" && (
+          <EncryptOptions
+            ws={ws}
+            encryptEngine={encryptEngine}
+            selfExcluded={selfExcluded}
           />
         )}
 
-        {showCrxSign && crxKeys.length > 0 && (
-          <div>
-            <label className="text-muted-foreground mb-1 block text-xs font-medium">
-              {t("workspace_sign_with")}
-            </label>
-            <Select
-              value={ws.crxKeyId ?? ""}
-              onValueChange={(id) => dispatch({ type: "crx-key-picked", id })}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder={t("workspace_select_signing_key")} />
-              </SelectTrigger>
-              <SelectContent>
-                {crxKeys.map((k) => (
-                  <SelectItem key={k.extensionId} value={k.extensionId}>
-                    {k.label ?? k.extensionId}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
-        {s.mode === "encrypt" && (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <OptionBar className="flex flex-1 [&>*]:flex-auto [&>*]:px-2 [&>*]:text-xs">
-                {myKeys.length > 0 && (
-                  <ToggleBadge
-                    pressed={encryptToSelf}
-                    onPressedChange={setEncryptToSelf}
-                  >
-                    {t("workspace_toggle_encrypt_to_self")}
-                  </ToggleBadge>
-                )}
-                <ToggleBadge
-                  pressed={ws.passwordReady}
-                  disabledReason={
-                    encryptEngine === "ssh" ? sshPasswordReason() : undefined
-                  }
-                  onPressedChange={(v) => {
-                    if (v) {
-                      dispatch({ type: "password-dialog", open: true });
-                      resetResults();
-                    } else {
-                      dispatch({ type: "password-set", password: "" });
-                    }
-                  }}
-                >
-                  {t("workspace_toggle_password")}
-                </ToggleBadge>
-                {s.files.length +
-                  (s.files.length > 0 && s.input.nonBlank ? 1 : 0) >
-                  1 && (
-                  <ToggleBadge
-                    pressed={s.zipFiles}
-                    onPressedChange={(on) =>
-                      dispatch({ type: "zip-files", on })
-                    }
-                  >
-                    {t("workspace_toggle_zip_files")}
-                  </ToggleBadge>
-                )}
-                {!neverCacheKeys && (
-                  <ToggleBadge
-                    pressed={saveToHistory}
-                    onPressedChange={setSaveToHistory}
-                  >
-                    {t("workspace_toggle_save_to_history")}
-                  </ToggleBadge>
-                )}
-              </OptionBar>
-            </div>
-            {encryptToSelf && selfExcluded && (
-              <p className="text-muted-foreground pl-2 text-xs">
-                {t("workspace_self_excluded_intro")}{" "}
-                {encryptEngine === "ssh"
-                  ? t("workspace_self_excluded_age")
-                  : t("workspace_self_excluded_pgp")}{" "}
-                <button
-                  type="button"
-                  onClick={() => onNavigateToKeys()}
-                  className="text-primary underline"
-                >
-                  {t("workspace_import_one")}
-                </button>
-              </p>
-            )}
-          </div>
-        )}
-
-        {prompt && (
-          <div className="flex items-stretch gap-2">
-            <input
-              ref={passwordInputRef}
-              type="password"
-              placeholder={
-                prompt.kind === "message"
-                  ? t("workspace_enter_message_password")
-                  : t("workspace_enter_key_password")
-              }
-              value={prompt.value}
-              onChange={(e) =>
-                dispatch({ type: "prompt-typed", value: e.target.value })
-              }
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void ws.submitPassword();
-              }}
-              className={`${INPUT_CLASS} h-9 flex-1 py-0`}
-              autoFocus
-            />
-            <Button
-              size="sm"
-              className="h-9 shrink-0"
-              onClick={() => void ws.submitPassword()}
-              disabled={loading}
-            >
-              {showLoadingLabel
-                ? prompt.kind === "message"
-                  ? t("workspace_decrypting")
-                  : t("workspace_unlocking")
-                : prompt.kind === "crx" || s.mode === "sign"
-                  ? t("common_sign")
-                  : s.mode === "decrypt"
-                    ? t("common_decrypt")
-                    : t("workspace_go")}
-            </Button>
-          </div>
-        )}
-        {prompt?.error && <p className="text-bad text-xs">{prompt.error}</p>}
+        <PasswordPrompt
+          ws={ws}
+          inputRef={passwordInputRef}
+          busy={loading}
+          busyLabel={showLoadingLabel}
+        />
 
         {!resultsOnTop && results}
 
-        {s.run.kind === "held-back" && (
-          <p
-            data-testid="auto-run-held-back"
-            className="text-muted-foreground text-xs"
-          >
-            {t("workspace_auto_run_too_large")}
-          </p>
-        )}
+        <RunNotices ws={ws} setComposedText={setComposedText} />
 
-        {s.run.kind === "hidden-chars" && (
-          // Hidden chars are signed as-is only on an explicit "Sign anyway".
-          <div
-            role="alert"
-            data-testid="hidden-chars-strip"
-            className="text-warn space-y-2 rounded-xl bg-[#252012] px-3 py-2.5 text-xs"
-          >
-            <p>
-              {t("workspace_sign_hidden_chars", {
-                chars:
-                  s.run.chars.slice(0, 4).join(", ") +
-                  (s.run.chars.length > 4 ? ` +${s.run.chars.length - 4}` : ""),
-              })}
-            </p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={ws.signWithHiddenChars}
-                className="bg-warn/12 hover:bg-warn/20 rounded-md px-2 py-1 font-medium transition-colors"
-              >
-                {t("workspace_sign_hidden_chars_anyway")}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setComposedText(withoutHiddenCharacters(ws.getInput()));
-                  resetResults();
-                }}
-                className="bg-warn/12 hover:bg-warn/20 rounded-md px-2 py-1 font-medium transition-colors"
-              >
-                {t("workspace_sign_hidden_chars_remove")}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {!prompt && (
-          <div className="space-y-2">
-            {crxResult ? (
-              <div className="flex gap-2">
-                <Button className="flex-1" onClick={() => void saveCrx()}>
-                  <span className="flex items-center gap-2">
-                    <DownloadIcon className="h-4 w-4" />
-                    {t("workspace_save_file", { name: crxResult.name })}
-                  </span>
-                </Button>
-                {resetButton(resetAll)}
-              </div>
-            ) : showCrxVerify ? (
-              <Button
-                className="w-full"
-                variant={done ? "outline" : "default"}
-                onClick={done ? resetAll : () => void ws.verifyCrxInput()}
-                disabled={loading}
-              >
-                {showLoadingLabel
-                  ? t("workspace_verifying")
-                  : done
-                    ? t("workspace_reset")
-                    : t("workspace_verify_signature")}
-              </Button>
-            ) : showCrxSign ? (
-              <Button
-                className="w-full"
-                onClick={() => void ws.executeCrxSign()}
-                disabled={loading}
-              >
-                {showLoadingLabel
-                  ? t("workspace_processing")
-                  : t("workspace_sign_for_web_store")}
-              </Button>
-            ) : (
-              <div className="flex gap-2">
-                {done && s.mode !== "verify" ? (
-                  <ResultActions
-                    onDownload={ws.triggerDownload}
-                    onCopy={hasOutputText ? () => void handleCopy() : undefined}
-                    copied={copied}
-                    disabled={loading}
-                  />
-                ) : (
-                  <Button
-                    className="flex-1 capitalize"
-                    onClick={runMain}
-                    disabled={
-                      loading ||
-                      !hasInput ||
-                      (s.mode === "encrypt" && !canEncrypt)
-                    }
-                    title={
-                      s.mode === "encrypt" && !canEncrypt
-                        ? t("workspace_need_recipient_or_password")
-                        : undefined
-                    }
-                    shortcut={RUN_SHORTCUT}
-                  >
-                    {showLoadingLabel
-                      ? t("workspace_processing")
-                      : done && s.mode === "verify"
-                        ? t("workspace_reset")
-                        : modeLabel(s.mode)}
-                  </Button>
-                )}
-                {(hasInput || done) &&
-                  !(done && s.mode === "verify") &&
-                  resetButton(resetAndRefocus)}
-              </div>
-            )}
-          </div>
-        )}
+        <MainActions
+          ws={ws}
+          v={v}
+          busyLabel={showLoadingLabel}
+          copied={copied}
+          onCopy={() => void handleCopy()}
+          onSaveCrx={() => void saveCrx()}
+          onRun={runMain}
+          onReset={resetAndRefocus}
+        />
       </div>
 
       {/* Mounted when open so `useSlideOver`'s Escape stack sees it. */}
