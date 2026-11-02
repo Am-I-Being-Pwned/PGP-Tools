@@ -14,12 +14,12 @@
 
 import { describe, expect, it } from "vitest";
 
-import type { KindDiscriminated } from "../../lib/storage/key-kind";
 import {
   mixedEngineReason,
   noActiveKeyReason,
   sshPasswordReason,
-} from "../../lib/encrypt-recipients";
+} from "~/lib/encrypt-recipients";
+import type { KindDiscriminated } from "~/lib/storage/key-kind";
 import {
   blockedByEngine,
   pickableKeys,

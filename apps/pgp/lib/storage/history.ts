@@ -16,8 +16,11 @@
  * lock) leaves nothing readable (proven in history.test.ts).
  */
 
-import { STORAGE_HISTORY, STORAGE_HISTORY_SEGMENT_PREFIX } from "../constants";
-import { hasContactsSession } from "../pgp/wasm";
+import {
+  STORAGE_HISTORY,
+  STORAGE_HISTORY_SEGMENT_PREFIX,
+} from "~/lib/constants";
+import { hasContactsSession } from "~/lib/pgp/wasm";
 import { withLock } from "./engine";
 import { isStoredEnvelope, openEnvelope, sealEnvelope } from "./envelope";
 import {

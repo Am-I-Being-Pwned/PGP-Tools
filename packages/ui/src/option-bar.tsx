@@ -1,6 +1,6 @@
 import type * as React from "react";
 
-import { cn } from "@amibeingpwned/ui";
+import { cn } from "./cn";
 
 /** Independent on/off switches drawn as one bar (any combination on). */
 export function OptionBar({

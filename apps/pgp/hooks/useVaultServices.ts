@@ -1,18 +1,18 @@
 import { useCallback, useMemo } from "react";
 
-import type { ProtectedKeyBlob } from "../lib/storage/keyring";
-import type { MasterProtection } from "../lib/storage/master-protection";
-import type { VaultServices } from "./useVault";
-import { fromBase64 } from "../lib/encoding";
-import { masterPasskeyOf } from "../lib/protection/vault-unlock";
+import { fromBase64 } from "~/lib/encoding";
+import { masterPasskeyOf } from "~/lib/protection/vault-unlock";
 import {
   addKey,
   removeKey,
   replaceKeyProtection,
-} from "../lib/storage/keyring";
-import { keyringList } from "../lib/storage/vault-lists";
+  type ProtectedKeyBlob,
+} from "~/lib/storage/keyring";
+import type { MasterProtection } from "~/lib/storage/master-protection";
+import { keyringList } from "~/lib/storage/vault-lists";
 import { useKeySession } from "./useKeySession";
 import { savePreference, usePreferences } from "./usePreferences";
+import type { VaultServices } from "./useVault";
 
 /** The key session and the key-level actions every view shares. */
 export function useVaultServices(

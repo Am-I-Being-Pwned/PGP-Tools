@@ -1,28 +1,19 @@
-import type { IdentityHolder } from "../identity/binding";
-import type { KeyDetails, KeyInfo } from "../pgp/types";
-import type { SshRecipientInfo } from "../pgp/wasm";
-import type {
-  ContactRecipient,
-  ContactSource,
-  PublicContactKey,
-} from "../storage/contacts";
-import type { ProtectedKeyBlob } from "../storage/keyring";
-import type { IncomingKey } from "./types";
 import {
   LEGACY_PEM_ENCRYPTED,
   looksLikeForeignSshPrivateKey,
   splitSshPrivateKeyBlocks,
   splitSshPublicKeyCandidateLines,
-} from "../armor-blocks";
-import { t, tn } from "../i18n";
-import { identityConflict } from "../identity/binding";
-import { detectImportOverwrite } from "../import-overwrite";
+} from "~/lib/armor-blocks";
+import { t, tn } from "~/lib/i18n";
+import { identityConflict, type IdentityHolder } from "~/lib/identity/binding";
+import { detectImportOverwrite } from "~/lib/import-overwrite";
 import {
   applyRevocation,
   importRejectionMessage,
   isUsableContact,
   mergeIntoStored,
-} from "../import-public-keys";
+} from "~/lib/import-public-keys";
+import type { KeyDetails, KeyInfo } from "~/lib/pgp/types";
 import {
   extractPublicKey,
   mergePublicKey,
@@ -30,11 +21,18 @@ import {
   parseKeys,
   parseSshRecipient,
   sshPrivateKeyFormatRejection,
-} from "../pgp/wasm";
-import { contactRecipients } from "../storage/contact-recipients";
-import { sameSource } from "../storage/contacts";
-import { stripInvisible } from "../utils/lookalike";
-import { isSecretKind, PENDING_KEY_ID } from "./types";
+  type SshRecipientInfo,
+} from "~/lib/pgp/wasm";
+import { contactRecipients } from "~/lib/storage/contact-recipients";
+import {
+  sameSource,
+  type ContactRecipient,
+  type ContactSource,
+  type PublicContactKey,
+} from "~/lib/storage/contacts";
+import type { ProtectedKeyBlob } from "~/lib/storage/keyring";
+import { stripInvisible } from "~/lib/utils/lookalike";
+import { isSecretKind, PENDING_KEY_ID, type IncomingKey } from "./types";
 
 /** Turn pasted/dropped text into the objects the import UI previews. */
 

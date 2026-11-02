@@ -11,8 +11,12 @@
  */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import type { BrowserContext, Page } from "@playwright/test";
-import { test as base, expect } from "@playwright/test";
+import {
+  test as base,
+  expect,
+  type BrowserContext,
+  type Page,
+} from "@playwright/test";
 
 import { getExtensionId, launchExtensionContext } from "../e2e/fixtures";
 import { importContactsBulk, setWorkspaceMode } from "../e2e/helpers";
@@ -20,7 +24,15 @@ import { keyBySlug, TEST_KEYS } from "../e2e/keys";
 
 const APP = path.resolve(import.meta.dirname, "..");
 const EXT = path.join(APP, ".output", "chrome-mv3");
-const OUT = path.resolve(APP, "..", "..", "assets", "store-listing", "video", "ui");
+const OUT = path.resolve(
+  APP,
+  "..",
+  "..",
+  "assets",
+  "store-listing",
+  "video",
+  "ui",
+);
 
 const PASSWORD = "correct horse battery staple";
 const MESSAGE = "Meet me at the usual place at 8. Bring the drive.";
@@ -57,7 +69,10 @@ async function shot(panel: Page, name: string, settle = 450): Promise<void> {
   );
   await panel.mouse.move(0, H - 1);
   await panel.waitForTimeout(settle);
-  await panel.screenshot({ path: path.join(OUT, `${name}.png`), scale: "device" });
+  await panel.screenshot({
+    path: path.join(OUT, `${name}.png`),
+    scale: "device",
+  });
 }
 
 async function step(name: string, fn: () => Promise<void>): Promise<void> {
@@ -162,7 +177,8 @@ test("video capture", async ({ panel }) => {
     }
 
     const sign = panel.getByRole("switch", { name: "Sign", exact: true });
-    if ((await sign.getAttribute("aria-checked")) !== "true") await sign.click();
+    if ((await sign.getAttribute("aria-checked")) !== "true")
+      await sign.click();
     await expect(sign).toHaveAttribute("aria-checked", "true");
     await shot(panel, "24-signed");
   });

@@ -1,12 +1,12 @@
-import type { PgpPreferences } from "./preferences";
-import { STORAGE_PREFERENCES, STORAGE_SETTINGS } from "../constants";
-import { hasContactsSession } from "../pgp/wasm";
+import { STORAGE_PREFERENCES, STORAGE_SETTINGS } from "~/lib/constants";
+import { hasContactsSession } from "~/lib/pgp/wasm";
 import { currentStorageLocation } from "./engine";
 import {
   DEFAULT_PREFERENCES,
   getPreferences,
   savePreferences,
   strictestPreferences,
+  type PgpPreferences,
 } from "./preferences";
 
 /**

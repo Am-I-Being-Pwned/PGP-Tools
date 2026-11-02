@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import type { GithubKeysRawResponse } from "./response";
 import {
   MAX_BODY_BYTES,
   MAX_KEY_CHARS,
   MAX_KEYS,
   parseGithubKeysResponse,
+  type GithubKeysRawResponse,
 } from "./response";
 
 const JSON_CT = "application/json; charset=utf-8";

@@ -1,12 +1,11 @@
 import { useState } from "react";
 
-import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
-import { Button } from "@amibeingpwned/ui/button";
+import { Button, type ShortcutSpec } from "@amibeingpwned/ui";
 
-import { useAsyncAction } from "../../hooks/useAsyncAction";
-import { useDelayedFlag } from "../../hooks/useDelayedFlag";
-import { useShortcut } from "../../hooks/useShortcut";
-import { t } from "../../lib/i18n";
+import { useAsyncAction } from "~/hooks/useAsyncAction";
+import { useDelayedFlag } from "~/hooks/useDelayedFlag";
+import { useShortcut } from "~/hooks/useShortcut";
+import { t } from "~/lib/i18n";
 import { SlideOverHeader, SlideOverPanel, useSlideOver } from "./SlideOver";
 
 /** mod+Enter submits the primary footer action, even from inputs. */

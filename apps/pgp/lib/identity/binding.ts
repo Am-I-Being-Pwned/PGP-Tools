@@ -10,7 +10,7 @@ import {
   DOT_LOOKALIKES,
   markLookalikes,
   stripInvisible,
-} from "../utils/lookalike";
+} from "~/lib/utils/lookalike";
 
 const ADDRESS = /[^\s<>()[\]"',;:]+@[^\s<>()[\]"',;:]+/g;
 

@@ -1,10 +1,12 @@
 import { useSyncExternalStore } from "react";
 
-import type { PgpPreferences } from "../lib/storage/preferences";
-import type { UpdateOptions } from "../lib/storage/preferences-store";
-import { t } from "../lib/i18n";
-import { preferencesStore } from "../lib/storage/preferences-store";
-import { toast } from "../lib/toast";
+import { t } from "~/lib/i18n";
+import type { PgpPreferences } from "~/lib/storage/preferences";
+import {
+  preferencesStore,
+  type UpdateOptions,
+} from "~/lib/storage/preferences-store";
+import { toast } from "~/lib/toast";
 
 /** The panel's preferences, re-rendering when any of them changes. */
 export function usePreferences(): PgpPreferences {

@@ -1,7 +1,7 @@
 import { createContext, use } from "react";
 
-import type { MasterPasskey } from "../lib/protection/vault-unlock";
-import type { ProtectedKeyBlob } from "../lib/storage/keyring";
+import type { MasterPasskey } from "~/lib/protection/vault-unlock";
+import type { ProtectedKeyBlob } from "~/lib/storage/keyring";
 import type { useKeySession } from "./useKeySession";
 
 /** What the open vault offers every view; provided by App. */

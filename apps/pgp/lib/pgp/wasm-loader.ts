@@ -4,7 +4,7 @@
  * strings are decoded).
  */
 
-import { withEngineErrors } from "../errors/engine-error";
+import { withEngineErrors } from "~/lib/errors/engine-error";
 
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- dynamic import
 export type WasmModule = typeof import("../../gpg-wasm/pkg/gpg_wasm");

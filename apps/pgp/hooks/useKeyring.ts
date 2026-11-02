@@ -6,8 +6,8 @@ import {
   replaceKeyProtection,
   updateAlias,
   updateRevocationCertificate,
-} from "../lib/storage/keyring";
-import { keyringList } from "../lib/storage/vault-lists";
+} from "~/lib/storage/keyring";
+import { keyringList } from "~/lib/storage/vault-lists";
 
 /** The keyring as stored. `error` is set when the blob would not open --
  *  never shown as an empty keyring. Writes reach `keys` on their own. */

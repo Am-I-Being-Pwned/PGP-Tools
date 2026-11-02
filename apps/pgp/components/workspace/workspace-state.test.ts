@@ -1,12 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
-import type { FileResult } from "../../lib/utils/download";
-import type {
-  Outcome,
-  WorkspaceEvent,
-  WorkspaceState,
-} from "./workspace-state";
+import type { ProtectedKeyBlob } from "~/lib/storage/keyring";
+import type { FileResult } from "~/lib/utils/download";
 import {
   initialWorkspaceState,
   inputIsAge,
@@ -14,6 +9,9 @@ import {
   textFacts,
   workspaceReducer,
   zeroizeResultBytes,
+  type Outcome,
+  type WorkspaceEvent,
+  type WorkspaceState,
 } from "./workspace-state";
 
 const reduce = (s: WorkspaceState, ...events: WorkspaceEvent[]) =>

@@ -1,10 +1,14 @@
 import { CheckIcon } from "lucide-react";
 
-import { BlockStack } from "@amibeingpwned/ui/block";
+import { BlockStack } from "@amibeingpwned/ui";
 
-import type { PresetId } from "../../lib/presets";
-import { t } from "../../lib/i18n";
-import { describeBundle, PRESET_IDS, PRESETS } from "../../lib/presets";
+import { t } from "~/lib/i18n";
+import {
+  describeBundle,
+  PRESET_IDS,
+  PRESETS,
+  type PresetId,
+} from "~/lib/presets";
 
 interface PresetPickerProps {
   selected: PresetId | null;

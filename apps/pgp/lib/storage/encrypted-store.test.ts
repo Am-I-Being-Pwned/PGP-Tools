@@ -11,18 +11,17 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { EncryptedStore } from "./encrypted-store";
-import type { FakeArea } from "./fake-area";
-import { STORAGE_PREFERENCES } from "../constants";
+import { STORAGE_PREFERENCES } from "~/lib/constants";
 import {
   copyEncryptedBlobRepacked,
   loadEncryptedArray,
   normalizePadding,
   purgeEncryptedBlob,
   saveEncryptedArray,
+  type EncryptedStore,
 } from "./encrypted-store";
 import { invalidateLocationCache } from "./engine";
-import { stubChromeStorage } from "./fake-area";
+import { stubChromeStorage, type FakeArea } from "./fake-area";
 import {
   domainEnvelope,
   isDomainSealed,

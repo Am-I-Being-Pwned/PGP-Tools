@@ -1,10 +1,9 @@
 import { useEffect, useRef } from "react";
 
-import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
-import { isMacPlatform } from "@amibeingpwned/ui/kbd-helpers";
+import { isMacPlatform, type ShortcutSpec } from "@amibeingpwned/ui";
 
-import { hasOpenSlideOver } from "../components/shared/SlideOver";
-import { isEditableTarget, matchesShortcut } from "../lib/shortcuts";
+import { hasOpenSlideOver } from "~/components/shared/SlideOver";
+import { isEditableTarget, matchesShortcut } from "~/lib/shortcuts";
 
 interface UseShortcutOptions {
   /** Defaults to true. */

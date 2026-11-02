@@ -1,7 +1,6 @@
-import type { KindDiscriminated, StoredKeyKind } from "./key-kind";
-import { STORAGE_CONTACTS } from "../constants";
-import { AppError } from "../errors/app-error";
-import { hasContactsSession } from "../pgp/wasm";
+import { STORAGE_CONTACTS } from "~/lib/constants";
+import { AppError } from "~/lib/errors/app-error";
+import { hasContactsSession } from "~/lib/pgp/wasm";
 import {
   activeRecipients,
   contactRecipients,
@@ -16,7 +15,12 @@ import {
 } from "./encrypted-store";
 import { withLock } from "./engine";
 import { recordRevoked, revokedFloor } from "./integrity";
-import { isSshRecord, storedKeyKind } from "./key-kind";
+import {
+  isSshRecord,
+  storedKeyKind,
+  type KindDiscriminated,
+  type StoredKeyKind,
+} from "./key-kind";
 
 // Pure readers live in a store-free (wasm-free) module so the reader tab
 // can render ContactCard without pulling the store in.

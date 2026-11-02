@@ -1,46 +1,46 @@
 import { useRef, useState } from "react";
 
-import { Button } from "@amibeingpwned/ui/button";
-import { Input } from "@amibeingpwned/ui/input";
+import { Button, Input } from "@amibeingpwned/ui";
 
-import type { CrxSigningKeyBlob } from "../../lib/crx/types";
-import type { ReviewDecision, ReviewedContact } from "../../lib/import/review";
-import type { IncomingKey } from "../../lib/import/types";
-import type { KeyInfo } from "../../lib/pgp/types";
-import type { PublicContactKey } from "../../lib/storage/contacts";
-import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
-import type { SubPageAction } from "../shared/SubPage";
-import { useAsyncAction } from "../../hooks/useAsyncAction";
-import { splitArmoredKeyBlocks } from "../../lib/armor-blocks";
-import { parseCrxKeyBlocks } from "../../lib/crx/backup";
-import { crxBlobIdentityMatches } from "../../lib/crx/types";
-import { t, tn } from "../../lib/i18n";
+import { ImportReview } from "~/components/keys/ImportReview";
+import { ProtectionMethodPicker } from "~/components/keys/ProtectionMethodPicker";
+import { useProtectionChoice } from "~/components/keys/useProtectionChoice";
+import { SubPage, type SubPageAction } from "~/components/shared/SubPage";
+import { useAsyncAction } from "~/hooks/useAsyncAction";
+import { splitArmoredKeyBlocks } from "~/lib/armor-blocks";
+import { parseCrxKeyBlocks } from "~/lib/crx/backup";
+import {
+  crxBlobIdentityMatches,
+  type CrxSigningKeyBlob,
+} from "~/lib/crx/types";
+import { t, tn } from "~/lib/i18n";
 import {
   mergeSameKey,
   prepareImport,
   storedKeysFrom,
   withIdentityConflicts,
-} from "../../lib/import/prepare";
+} from "~/lib/import/prepare";
 import {
   applyReview,
   defaultDecision,
   needsDecision,
-} from "../../lib/import/review";
-import { isPublicKind } from "../../lib/import/types";
-import { importKey } from "../../lib/pgp/key-management";
-import { importAndProtect } from "../../lib/protection/protect-flow";
+  type ReviewDecision,
+  type ReviewedContact,
+} from "~/lib/import/review";
+import { isPublicKind, type IncomingKey } from "~/lib/import/types";
+import { importKey } from "~/lib/pgp/key-management";
+import type { KeyInfo } from "~/lib/pgp/types";
+import { importAndProtect } from "~/lib/protection/protect-flow";
 import {
   authenticateAndGetPrf,
   generatePrfSalt,
   isWebAuthnCancel,
   registerPasskey,
-} from "../../lib/protection/webauthn-prf";
-import { toast } from "../../lib/toast";
-import { errorMessage } from "../../lib/utils/errors";
-import { ImportReview } from "../keys/ImportReview";
-import { ProtectionMethodPicker } from "../keys/ProtectionMethodPicker";
-import { useProtectionChoice } from "../keys/useProtectionChoice";
-import { SubPage } from "../shared/SubPage";
+} from "~/lib/protection/webauthn-prf";
+import type { PublicContactKey } from "~/lib/storage/contacts";
+import type { ProtectedKeyBlob } from "~/lib/storage/keyring";
+import { toast } from "~/lib/toast";
+import { errorMessage } from "~/lib/utils/errors";
 
 type Step = "paste" | "unlock" | "protect" | "review";
 

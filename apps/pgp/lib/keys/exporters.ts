@@ -1,16 +1,16 @@
-import type { PrivateKeyExporter } from "../../components/keys/ExportPrivateKeyPage";
-import type { CrxSigningKeyBlob } from "../crx/types";
-import type { ProtectedKeyBlob } from "../storage/keyring";
-import { serializeCrxKeyBlocks } from "../crx/backup";
+import type { PrivateKeyExporter } from "~/components/keys/ExportPrivateKeyPage";
+import { serializeCrxKeyBlocks } from "~/lib/crx/backup";
 import {
   closeCrxKey,
   exportCrxPrivateKeyPem,
   openCrxKey,
   resealCrxKeyUnderPassword,
-} from "../crx/operations";
-import { AppError } from "../errors/app-error";
-import { t } from "../i18n";
-import { encryptKeyForExportWithHandle, getKeyArmored } from "../pgp/wasm";
+} from "~/lib/crx/operations";
+import type { CrxSigningKeyBlob } from "~/lib/crx/types";
+import { AppError } from "~/lib/errors/app-error";
+import { t } from "~/lib/i18n";
+import { encryptKeyForExportWithHandle, getKeyArmored } from "~/lib/pgp/wasm";
+import type { ProtectedKeyBlob } from "~/lib/storage/keyring";
 
 /** PGP: uses the live session handle (null if since locked) and never
  *  releases it; the session owns it. */

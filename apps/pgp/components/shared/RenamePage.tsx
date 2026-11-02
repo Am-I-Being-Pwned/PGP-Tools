@@ -1,8 +1,8 @@
 import { useState } from "react";
 
-import { Input } from "@amibeingpwned/ui/input";
+import { Input } from "@amibeingpwned/ui";
 
-import { t } from "../../lib/i18n";
+import { t } from "~/lib/i18n";
 import { SubPage } from "./SubPage";
 
 interface RenamePageProps {

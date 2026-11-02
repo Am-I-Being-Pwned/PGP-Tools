@@ -1,60 +1,52 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ImportIcon, PlusIcon } from "lucide-react";
 
-import { Block, BlockLabel } from "@amibeingpwned/ui/block";
-import { Button } from "@amibeingpwned/ui/button";
-import { Input } from "@amibeingpwned/ui/input";
+import { Block, BlockLabel, Button, Input } from "@amibeingpwned/ui";
 
-import type { CrxSigningKeyBlob } from "../../lib/crx/types";
-import type { PublicContactKey } from "../../lib/storage/contacts";
-import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
-import type { KeyCardModel } from "./KeyCard";
-import type { KeyDetailsTarget } from "./KeyDetailsPage";
-import { useContacts } from "../../hooks/useContacts";
-import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
-import { useCrxKeys } from "../../hooks/useCrxKeys";
-import { useKeyring } from "../../hooks/useKeyring";
-import { useNav } from "../../hooks/useNav";
-import { usePreferences } from "../../hooks/usePreferences";
-import { useVault } from "../../hooks/useVault";
-import { publicKeyDerToPem } from "../../lib/crx/types";
-import { AppError } from "../../lib/errors/app-error";
-import { presentError } from "../../lib/errors/present";
-import { t, tn } from "../../lib/i18n";
-import { contactClash, contactClashes } from "../../lib/identity/binding";
-import {
-  KEYSERVER_HOST,
-  keyserverFailureCopy,
-} from "../../lib/import/keyserver";
-import { reviewed } from "../../lib/import/review";
+import { ConfirmPage } from "~/components/shared/ConfirmPage";
+import { RenamePage } from "~/components/shared/RenamePage";
+import { useNavStack } from "~/components/shared/useNavStack";
+import { useContacts } from "~/hooks/useContacts";
+import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
+import { useCrxKeys } from "~/hooks/useCrxKeys";
+import { useKeyring } from "~/hooks/useKeyring";
+import { useNav } from "~/hooks/useNav";
+import { usePreferences } from "~/hooks/usePreferences";
+import { useVault } from "~/hooks/useVault";
+import { publicKeyDerToPem, type CrxSigningKeyBlob } from "~/lib/crx/types";
+import { AppError } from "~/lib/errors/app-error";
+import { presentError } from "~/lib/errors/present";
+import { t, tn } from "~/lib/i18n";
+import { contactClash, contactClashes } from "~/lib/identity/binding";
+import { KEYSERVER_HOST, keyserverFailureCopy } from "~/lib/import/keyserver";
+import { reviewed } from "~/lib/import/review";
 import {
   checkRevocation,
   fingerprintQuery,
-} from "../../lib/import/revocation-check";
+} from "~/lib/import/revocation-check";
 import {
   downloadPublicKey,
   downloadPublicKeysBundle,
-} from "../../lib/keys/export-bundle";
-import { crxKeyExporter, pgpKeyExporter } from "../../lib/keys/exporters";
-import { revocationCertificateWithHandle } from "../../lib/pgp/wasm";
-import { isPgpRecord, isSshRecord } from "../../lib/storage/key-kind";
-import { toast } from "../../lib/toast";
-import { formatAlgorithm, formatFingerprint } from "../../lib/utils/formatting";
+} from "~/lib/keys/export-bundle";
+import { crxKeyExporter, pgpKeyExporter } from "~/lib/keys/exporters";
+import { revocationCertificateWithHandle } from "~/lib/pgp/wasm";
+import type { PublicContactKey } from "~/lib/storage/contacts";
+import { isPgpRecord, isSshRecord } from "~/lib/storage/key-kind";
+import type { ProtectedKeyBlob } from "~/lib/storage/keyring";
+import { toast } from "~/lib/toast";
+import { formatAlgorithm, formatFingerprint } from "~/lib/utils/formatting";
 import {
   displayUserId,
   parseUserId,
   realIdentity,
-} from "../../lib/utils/key-naming";
-import { ConfirmPage } from "../shared/ConfirmPage";
-import { RenamePage } from "../shared/RenamePage";
-import { useNavStack } from "../shared/useNavStack";
+} from "~/lib/utils/key-naming";
 import { ContactCard } from "./ContactCard";
 import { ContactDropZone } from "./ContactDropZone";
 import { ExportKeysPage } from "./ExportKeysPage";
 import { GenerateKeyPage } from "./GenerateKeyPage";
 import { ImportKeyPage } from "./ImportKeyPage";
-import { KeyCard } from "./KeyCard";
-import { KeyDetailsPage } from "./KeyDetailsPage";
+import { KeyCard, type KeyCardModel } from "./KeyCard";
+import { KeyDetailsPage, type KeyDetailsTarget } from "./KeyDetailsPage";
 import { SelectionBar } from "./SelectionBar";
 
 type RenameTarget =

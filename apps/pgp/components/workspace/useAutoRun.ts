@@ -1,7 +1,7 @@
 import { useEffect, useEffectEvent } from "react";
 
+import { useVault } from "~/hooks/useVault";
 import type { Workspace } from "./useWorkspace";
-import { useVault } from "../../hooks/useVault";
 
 /** How long an armed decrypt waits for the scan to land on its key. */
 const KEY_PICK_GRACE_MS = 2_000;

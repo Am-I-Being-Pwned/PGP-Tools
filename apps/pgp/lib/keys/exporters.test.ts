@@ -5,16 +5,16 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { CrxSigningKeyBlob } from "../crx/types";
-import type { ProtectedKeyBlob } from "../storage/keyring";
-import { serializeCrxKeyBlocks } from "../crx/backup";
+import { serializeCrxKeyBlocks } from "~/lib/crx/backup";
 import {
   closeCrxKey,
   exportCrxPrivateKeyPem,
   openCrxKey,
   resealCrxKeyUnderPassword,
-} from "../crx/operations";
-import { encryptKeyForExportWithHandle, getKeyArmored } from "../pgp/wasm";
+} from "~/lib/crx/operations";
+import type { CrxSigningKeyBlob } from "~/lib/crx/types";
+import { encryptKeyForExportWithHandle, getKeyArmored } from "~/lib/pgp/wasm";
+import type { ProtectedKeyBlob } from "~/lib/storage/keyring";
 import { crxKeyExporter, pgpKeyExporter } from "./exporters";
 
 vi.mock("../pgp/wasm", () => ({

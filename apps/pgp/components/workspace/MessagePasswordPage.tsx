@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 
-import { t, tn } from "../../lib/i18n";
-import { INPUT_CLASS } from "../../lib/utils/styles";
-import { SubPage } from "../shared/SubPage";
+import { SubPage } from "~/components/shared/SubPage";
+import { t, tn } from "~/lib/i18n";
+import { INPUT_CLASS } from "~/lib/utils/styles";
 import { MIN_MESSAGE_PASSWORD_LENGTH } from "./workspace-state";
 
 interface MessagePasswordPageProps {

@@ -1,7 +1,6 @@
 import { readFile } from "node:fs/promises";
 import type { BrowserContext, Page } from "@playwright/test";
 
-import type { SshKeyPair } from "./helpers";
 import { expect, test } from "./fixtures";
 import {
   ageStanzaTags,
@@ -12,6 +11,7 @@ import {
   setEncryptToSelf,
   setWorkspaceMode,
   unlockWithPassword,
+  type SshKeyPair,
 } from "./helpers";
 
 /**

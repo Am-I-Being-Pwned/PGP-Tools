@@ -1,8 +1,7 @@
-import { BlockStack } from "@amibeingpwned/ui/block";
+import { BlockStack } from "@amibeingpwned/ui";
 
-import type { MessageKey } from "../../lib/i18n";
-import type { StorageLocation } from "../../lib/storage/preferences";
-import { t } from "../../lib/i18n";
+import { t, type MessageKey } from "~/lib/i18n";
+import type { StorageLocation } from "~/lib/storage/preferences";
 
 interface StorageLocationPickerProps {
   value: StorageLocation;

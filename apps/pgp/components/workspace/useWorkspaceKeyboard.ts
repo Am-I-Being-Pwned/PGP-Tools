@@ -1,7 +1,7 @@
 import { useEffect, useEffectEvent, useRef } from "react";
 
+import { hasOpenSlideOver } from "~/components/shared/SlideOver";
 import type { Mode } from "./workspace-state";
-import { hasOpenSlideOver } from "../shared/SlideOver";
 
 /** Escape double-tap window, and how soon after a clear a third press
  *  also goes back to Encrypt. */

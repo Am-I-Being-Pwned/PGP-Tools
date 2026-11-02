@@ -15,8 +15,8 @@
  * since it is all that keeps an upgrading user's keyring readable.
  */
 
-import { fromBase64, toBase64, unpackIvCiphertext } from "../encoding";
-import { decryptContacts, decryptStore, encryptStore } from "../pgp/wasm";
+import { fromBase64, toBase64, unpackIvCiphertext } from "~/lib/encoding";
+import { decryptContacts, decryptStore, encryptStore } from "~/lib/pgp/wasm";
 
 /** The persisted shape: base64 IV + base64 AES-256-GCM ciphertext. */
 export interface StoredEnvelope {

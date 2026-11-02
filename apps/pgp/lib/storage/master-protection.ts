@@ -1,8 +1,8 @@
-import type { StorageLocation } from "./preferences";
-import { STORAGE_MASTER_PROTECTION } from "../constants";
+import { STORAGE_MASTER_PROTECTION } from "~/lib/constants";
 import { getChunked, setChunked } from "./chunked";
 import { currentStorageLocation, getItem, withSharedLock } from "./engine";
 import { resetIntegrityLedger, startIntegrityLedger } from "./integrity";
+import type { StorageLocation } from "./preferences";
 
 //
 // Security: for passkeys, `storedSecret` and `prfSalt` are plaintext in

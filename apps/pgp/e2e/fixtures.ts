@@ -1,7 +1,12 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
-import type { BrowserContext, Page } from "@playwright/test";
-import { test as base, chromium, expect } from "@playwright/test";
+import {
+  test as base,
+  chromium,
+  expect,
+  type BrowserContext,
+  type Page,
+} from "@playwright/test";
 
 function buildDir(name: string): string {
   return path.resolve(import.meta.dirname, "..", ".output", name);

@@ -4,7 +4,7 @@
  * detector's regional code is narrowed for the translator.
  */
 
-import { uiLanguage } from "../i18n";
+import { uiLanguage } from "~/lib/i18n";
 
 export interface LanguageOption {
   /** BCP 47 base tag. */

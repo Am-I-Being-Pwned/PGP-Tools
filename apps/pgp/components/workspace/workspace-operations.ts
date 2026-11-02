@@ -1,50 +1,47 @@
-import type { CrxSigningKeyBlob } from "../../lib/crx/types";
-import type {
-  DecryptOptions,
-  DecryptResult,
-  EncryptInput,
-} from "../../lib/pgp/types";
-import type { PublicContactKey } from "../../lib/storage/contacts";
-import type { NewHistoryEntry } from "../../lib/storage/history";
-import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
-import type { FileResult } from "../../lib/utils/download";
-import type { SignedResult } from "./signature-summary";
-import type { Mode, Outcome, RunResult } from "./workspace-state";
-import * as ageOps from "../../lib/age/operations";
-import { signZipWithCrxKey, verifyCrxFile } from "../../lib/crx/operations";
+import * as ageOps from "~/lib/age/operations";
+import { signZipWithCrxKey, verifyCrxFile } from "~/lib/crx/operations";
+import type { CrxSigningKeyBlob } from "~/lib/crx/types";
 import {
   buildEncryptRecipients,
   resolveSelectedRecipients,
   sshPasswordReason,
   toSelectedRecipient,
-} from "../../lib/encrypt-recipients";
-import { AppError } from "../../lib/errors/app-error";
-import { presentError } from "../../lib/errors/present";
-import { t, tn } from "../../lib/i18n";
-import { MAX_VERIFY_FILE_BYTES, MAX_VERIFY_FILE_LABEL } from "../../lib/limits";
-import * as pgpOps from "../../lib/pgp/operations";
-import { OutputCapReached } from "../../lib/pgp/wasm-public";
-import { isWebAuthnCancel } from "../../lib/protection/webauthn-prf";
-import { updateRecentRecipients } from "../../lib/recipient-ordering";
-import { contactRecipients } from "../../lib/storage/contact-recipients";
-import { recordHistory } from "../../lib/storage/history";
-import { isPgpRecord, isSshRecord } from "../../lib/storage/key-kind";
-import { preferencesStore } from "../../lib/storage/preferences-store";
-import { toast } from "../../lib/toast";
+} from "~/lib/encrypt-recipients";
+import { AppError } from "~/lib/errors/app-error";
+import { presentError } from "~/lib/errors/present";
+import { t, tn } from "~/lib/i18n";
+import { MAX_VERIFY_FILE_BYTES, MAX_VERIFY_FILE_LABEL } from "~/lib/limits";
+import * as pgpOps from "~/lib/pgp/operations";
+import type {
+  DecryptOptions,
+  DecryptResult,
+  EncryptInput,
+} from "~/lib/pgp/types";
+import { OutputCapReached } from "~/lib/pgp/wasm-public";
+import { isWebAuthnCancel } from "~/lib/protection/webauthn-prf";
+import { updateRecentRecipients } from "~/lib/recipient-ordering";
+import { contactRecipients } from "~/lib/storage/contact-recipients";
+import type { PublicContactKey } from "~/lib/storage/contacts";
+import { recordHistory, type NewHistoryEntry } from "~/lib/storage/history";
+import { isPgpRecord, isSshRecord } from "~/lib/storage/key-kind";
+import type { ProtectedKeyBlob } from "~/lib/storage/keyring";
+import { preferencesStore } from "~/lib/storage/preferences-store";
+import { toast } from "~/lib/toast";
 import {
   downloadBinary,
   downloadResults,
   downloadText,
-} from "../../lib/utils/download";
-import { displayFileName } from "../../lib/utils/file-name";
-import { formatFileSize } from "../../lib/utils/formatting";
+  type FileResult,
+} from "~/lib/utils/download";
+import { displayFileName } from "~/lib/utils/file-name";
+import { formatFileSize } from "~/lib/utils/formatting";
 import {
   displayUserId,
   formatKeyDisplayName,
   parseUserId,
-} from "../../lib/utils/key-naming";
-import { hasLoneCarriageReturn } from "../../lib/utils/line-breaks";
-import { isZipArchive, zipFiles } from "../../lib/utils/zip";
+} from "~/lib/utils/key-naming";
+import { hasLoneCarriageReturn } from "~/lib/utils/line-breaks";
+import { isZipArchive, zipFiles } from "~/lib/utils/zip";
 import {
   hasHiddenCharacters,
   hiddenCharactersToConfirm,
@@ -57,7 +54,9 @@ import {
   signatureNote,
   signedForOthers,
   summariseBatch,
+  type SignedResult,
 } from "./signature-summary";
+import type { Mode, Outcome, RunResult } from "./workspace-state";
 
 /**
  * The workspace's operations: encrypt / decrypt / sign / verify and CRX,

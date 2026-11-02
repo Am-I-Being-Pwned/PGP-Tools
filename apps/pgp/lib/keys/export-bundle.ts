@@ -1,5 +1,5 @@
-import type { PublicContactKey } from "../storage/contacts";
-import { downloadText } from "../utils/download";
+import type { PublicContactKey } from "~/lib/storage/contacts";
+import { downloadText } from "~/lib/utils/download";
 
 export function backupFileName(): string {
   return `pgp-tools-keys-${new Date().toISOString().slice(0, 10)}.asc`;

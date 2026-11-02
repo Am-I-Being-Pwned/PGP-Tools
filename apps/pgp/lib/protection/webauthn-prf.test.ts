@@ -10,7 +10,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { toBase64url } from "../encoding.ts";
+import { toBase64url } from "~/lib/encoding.ts";
 import {
   authenticateAndGetPrf,
   checkPrfSupport,

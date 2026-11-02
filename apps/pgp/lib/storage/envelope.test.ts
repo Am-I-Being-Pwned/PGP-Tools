@@ -6,17 +6,16 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { EncryptedStore } from "./encrypted-store";
-import type { FakeArea } from "./fake-area";
-import { STORAGE_CONTACTS, STORAGE_KEYRING } from "../constants";
+import { STORAGE_CONTACTS, STORAGE_KEYRING } from "~/lib/constants";
 import {
   copyEncryptedBlobRepacked,
   loadEncryptedArray,
   normalizePadding,
   saveEncryptedArray,
+  type EncryptedStore,
 } from "./encrypted-store";
 import { invalidateLocationCache } from "./engine";
-import { fakeArea, stubChromeStorage } from "./fake-area";
+import { fakeArea, stubChromeStorage, type FakeArea } from "./fake-area";
 import {
   domainEnvelope,
   isDomainSealed,

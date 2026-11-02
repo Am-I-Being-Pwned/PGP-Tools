@@ -1,4 +1,4 @@
-import { t } from "../i18n";
+import { t } from "~/lib/i18n";
 
 /** Parse "Name (comment) <email>" into parts. */
 export function parseUserId(userId: string | undefined): {

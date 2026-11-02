@@ -1,10 +1,8 @@
 import { useState } from "react";
 
-import { Block } from "@amibeingpwned/ui/block";
-import { Button } from "@amibeingpwned/ui/button";
-import { Input } from "@amibeingpwned/ui/input";
+import { Block, Button, Input } from "@amibeingpwned/ui";
 
-import { t } from "../../lib/i18n";
+import { t } from "~/lib/i18n";
 import { validateExportPassphrase } from "./protection-choice";
 
 export function useExportPassphrase() {

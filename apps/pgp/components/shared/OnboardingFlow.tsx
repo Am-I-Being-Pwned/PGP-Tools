@@ -1,49 +1,53 @@
 import { useEffect, useRef, useState } from "react";
 import { LoaderIcon } from "lucide-react";
 
-import { Button } from "@amibeingpwned/ui/button";
+import { Button } from "@amibeingpwned/ui";
 
-import type { ExpiryOption } from "../../lib/keys/expiry";
-import type { PresetId } from "../../lib/presets";
-import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
-import type { MasterProtection } from "../../lib/storage/master-protection";
-import type { StorageLocation } from "../../lib/storage/preferences";
-import type { KeyAlgorithm } from "../keys/KeyIdentityFields";
-import { useAsyncAction } from "../../hooks/useAsyncAction";
-import { toBase64, unpackIvCiphertext } from "../../lib/encoding";
-import { presentError } from "../../lib/errors/present";
-import { t } from "../../lib/i18n";
-import { DEFAULT_EXPIRY, expiryToSeconds } from "../../lib/keys/expiry";
-import * as wasmApi from "../../lib/pgp/wasm";
-import { PRESETS } from "../../lib/presets";
+import {
+  EMPTY_IDENTITY,
+  identityUserId,
+  KeyIdentityFields,
+  type KeyAlgorithm,
+} from "~/components/keys/KeyIdentityFields";
+import { ProtectionMethodPicker } from "~/components/keys/ProtectionMethodPicker";
+import { useProtectionChoice } from "~/components/keys/useProtectionChoice";
+import { useAsyncAction } from "~/hooks/useAsyncAction";
+import { toBase64, unpackIvCiphertext } from "~/lib/encoding";
+import { presentError } from "~/lib/errors/present";
+import { t } from "~/lib/i18n";
+import {
+  DEFAULT_EXPIRY,
+  expiryToSeconds,
+  type ExpiryOption,
+} from "~/lib/keys/expiry";
+import * as wasmApi from "~/lib/pgp/wasm";
+import { PRESETS, type PresetId } from "~/lib/presets";
 import {
   ARGON2_ITERATIONS,
   ARGON2_MEMORY_KIB,
   ARGON2_PARALLELISM,
   generateSalt,
-} from "../../lib/protection/password-kdf";
-import { generateAndProtect } from "../../lib/protection/protect-flow";
+} from "~/lib/protection/password-kdf";
+import { generateAndProtect } from "~/lib/protection/protect-flow";
 import {
   authenticateAndGetPrf,
   generatePrfSalt,
   generateStoredSecret,
   isWebAuthnCancel,
   registerPasskey,
-} from "../../lib/protection/webauthn-prf";
+} from "~/lib/protection/webauthn-prf";
+import type { ProtectedKeyBlob } from "~/lib/storage/keyring";
 import {
   masterProtectionIn,
   saveMasterProtection,
   VaultExistsError,
-} from "../../lib/storage/master-protection";
-import { savePreferences } from "../../lib/storage/preferences";
-import { afterNextPaint } from "../../lib/utils/paint";
+  type MasterProtection,
+} from "~/lib/storage/master-protection";
 import {
-  EMPTY_IDENTITY,
-  identityUserId,
-  KeyIdentityFields,
-} from "../keys/KeyIdentityFields";
-import { ProtectionMethodPicker } from "../keys/ProtectionMethodPicker";
-import { useProtectionChoice } from "../keys/useProtectionChoice";
+  savePreferences,
+  type StorageLocation,
+} from "~/lib/storage/preferences";
+import { afterNextPaint } from "~/lib/utils/paint";
 import { PresetPicker } from "./PresetPicker";
 import { StorageLocationPicker } from "./StorageLocationPicker";
 

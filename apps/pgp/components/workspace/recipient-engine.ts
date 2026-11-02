@@ -1,15 +1,15 @@
-import type { PublicContactKey } from "../../lib/storage/contacts";
-import type {
-  KindDiscriminated,
-  StoredKeyKind,
-} from "../../lib/storage/key-kind";
 import {
   mixedEngineReason,
   noActiveKeyReason,
   sshPasswordReason,
-} from "../../lib/encrypt-recipients";
-import { hasActiveRecipient } from "../../lib/storage/contact-recipients";
-import { storedKeyKind } from "../../lib/storage/key-kind";
+} from "~/lib/encrypt-recipients";
+import { hasActiveRecipient } from "~/lib/storage/contact-recipients";
+import type { PublicContactKey } from "~/lib/storage/contacts";
+import {
+  storedKeyKind,
+  type KindDiscriminated,
+  type StoredKeyKind,
+} from "~/lib/storage/key-kind";
 
 /**
  * Which engine the recipient picker is currently committed to, and which

@@ -6,24 +6,24 @@ import {
   XIcon,
 } from "lucide-react";
 
-import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
-import { cn } from "@amibeingpwned/ui";
 import {
+  cn,
   formatShortcutTitle,
   isMacPlatform,
-} from "@amibeingpwned/ui/kbd-helpers";
+  type ShortcutSpec,
+} from "@amibeingpwned/ui";
 
-import type { Edit } from "../../lib/compose/text-format";
 import {
   findAll,
   nextMatchIndex,
   prevMatchIndex,
   replaceAll,
   replaceAt,
-} from "../../lib/compose/text-format";
-import { t } from "../../lib/i18n";
-import { matchesShortcut } from "../../lib/shortcuts";
-import { INPUT_CLASS } from "../../lib/utils/styles";
+  type Edit,
+} from "~/lib/compose/text-format";
+import { t } from "~/lib/i18n";
+import { matchesShortcut } from "~/lib/shortcuts";
+import { INPUT_CLASS } from "~/lib/utils/styles";
 
 /** The shared input (a recessed well), fitted to the bar's h-7 rows,
  *  with a thinner focus ring so the field doesn't dwarf the icons

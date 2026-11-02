@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { PublicContactKey } from "../storage/contacts";
-import { downloadText } from "../utils/download";
+import type { PublicContactKey } from "~/lib/storage/contacts";
+import { downloadText } from "~/lib/utils/download";
 import {
   backupFileName,
   downloadPublicKey,

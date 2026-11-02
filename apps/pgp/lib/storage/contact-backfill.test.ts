@@ -1,9 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type * as ContactsModule from "./contacts";
-import type { PublicContactKey } from "./contacts";
 import { backfillIdentity } from "./contact-backfill";
-import { IDENTITY_VERSION } from "./contacts";
+import type * as ContactsModule from "./contacts";
+import { IDENTITY_VERSION, type PublicContactKey } from "./contacts";
 
 const wasm = vi.hoisted(() => ({ parseKey: vi.fn() }));
 vi.mock("../pgp/wasm", () => wasm);

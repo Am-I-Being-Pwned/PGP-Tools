@@ -8,21 +8,16 @@ import {
   XCircleIcon,
 } from "lucide-react";
 
-import { cn } from "@amibeingpwned/ui";
-import { Block, BlockLabel, BlockStack } from "@amibeingpwned/ui/block";
+import { Block, BlockLabel, BlockStack, cn } from "@amibeingpwned/ui";
 
-import type { ComponentKeyRow, KeyFacts, KeyHealth } from "./key-facts";
-import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
-import { t, tn } from "../../lib/i18n";
-import {
-  formatDate,
-  formatDateShort,
-  formatRelative,
-} from "../../lib/i18n/format";
-import { formatAlgorithm } from "../../lib/utils/formatting";
-import { KeyAvatar } from "../shared/KeyAvatar";
-import { MarkedText } from "../shared/MarkedText";
+import { KeyAvatar } from "~/components/shared/KeyAvatar";
+import { MarkedText } from "~/components/shared/MarkedText";
+import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
+import { t, tn } from "~/lib/i18n";
+import { formatDate, formatDateShort, formatRelative } from "~/lib/i18n/format";
+import { formatAlgorithm } from "~/lib/utils/formatting";
 import { fingerprintLines } from "./fingerprint-lines";
+import type { ComponentKeyRow, KeyFacts, KeyHealth } from "./key-facts";
 
 /**
  * The read-only body of a key, presentational over `KeyFacts`, so the

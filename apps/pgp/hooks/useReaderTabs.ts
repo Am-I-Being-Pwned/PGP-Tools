@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef } from "react";
 
-import type { ReaderMessage, ReaderSigner } from "../lib/reader-protocol";
-import * as wasmApi from "../lib/pgp/wasm";
+import * as wasmApi from "~/lib/pgp/wasm";
 import {
   isReaderNonce,
   newReaderNonce,
   READER_PORT_PREFIX,
-} from "../lib/reader-protocol";
+  type ReaderMessage,
+  type ReaderSigner,
+} from "~/lib/reader-protocol";
 
 interface Reader {
   /** Sealed under the in-WASM draft key. Never plaintext here. */

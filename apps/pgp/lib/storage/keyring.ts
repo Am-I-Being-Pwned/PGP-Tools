@@ -1,14 +1,17 @@
+import { STORAGE_KEYRING } from "~/lib/constants";
+import { AppError } from "~/lib/errors/app-error";
+import { hasContactsSession } from "~/lib/pgp/wasm";
 import type {
   EncryptedBlob,
   PasskeyEncryptedBlob,
   PasswordEncryptedBlob,
-} from "../protection/encrypt-private-key";
-import type { KeyProtection } from "../protection/protected-blob";
-import type { KindDiscriminated, StoredKeyKind } from "./key-kind";
-import { STORAGE_KEYRING } from "../constants";
-import { AppError } from "../errors/app-error";
-import { hasContactsSession } from "../pgp/wasm";
-import { kindField } from "./key-kind";
+} from "~/lib/protection/encrypt-private-key";
+import type { KeyProtection } from "~/lib/protection/protected-blob";
+import {
+  kindField,
+  type KindDiscriminated,
+  type StoredKeyKind,
+} from "./key-kind";
 import { createProtectedStore } from "./protected-store";
 
 // ── key blob ─────────────────────────────────────────────────────────

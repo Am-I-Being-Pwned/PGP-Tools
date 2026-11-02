@@ -1,6 +1,9 @@
-import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
-import { cn } from "@amibeingpwned/ui";
-import { formatShortcut, isMacPlatform } from "@amibeingpwned/ui/kbd-helpers";
+import { cn } from "./cn";
+import {
+  formatShortcut,
+  isMacPlatform,
+  type ShortcutSpec,
+} from "./kbd-helpers";
 
 export type { ShortcutSpec };
 export {
@@ -8,7 +11,7 @@ export {
   formatShortcut,
   formatShortcutTitle,
   isMacPlatform,
-} from "@amibeingpwned/ui/kbd-helpers";
+} from "./kbd-helpers";
 
 /** Decorative (aria-hidden): the shortcut belongs in `aria-keyshortcuts`
  *  on the interactive element. */

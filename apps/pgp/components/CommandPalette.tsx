@@ -6,27 +6,27 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@amibeingpwned/ui/command";
-import { Kbd } from "@amibeingpwned/ui/kbd";
-import { isMacPlatform } from "@amibeingpwned/ui/kbd-helpers";
+  isMacPlatform,
+  Kbd,
+} from "@amibeingpwned/ui";
 
-import type { ResolvedAction } from "../lib/actions/registry";
-import type { ActionCtx } from "../lib/actions/types";
-import { useShortcut } from "../hooks/useShortcut";
+import { useShortcut } from "~/hooks/useShortcut";
 import {
   ACTIONS,
   groupLabel,
   PALETTE_SHORTCUT,
-} from "../lib/actions/definitions";
+} from "~/lib/actions/definitions";
 import {
   filterActions,
   findByShortcut,
   groupActions,
   visibleActions,
-} from "../lib/actions/registry";
-import { t } from "../lib/i18n";
-import { isEditableTarget, matchesShortcut } from "../lib/shortcuts";
-import { toast } from "../lib/toast";
+  type ResolvedAction,
+} from "~/lib/actions/registry";
+import type { ActionCtx } from "~/lib/actions/types";
+import { t } from "~/lib/i18n";
+import { isEditableTarget, matchesShortcut } from "~/lib/shortcuts";
+import { toast } from "~/lib/toast";
 import { hasOpenSlideOver, holdFocusTraps } from "./shared/SlideOver";
 
 /** Below this many actions, a plain list instead of search. */

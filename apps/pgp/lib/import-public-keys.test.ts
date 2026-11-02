@@ -3,15 +3,15 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { KeyInfo } from "./pgp/types";
-import type * as ContactsModule from "./storage/contacts";
-import type { PublicContactKey } from "./storage/contacts";
 import {
   importRejectionMessage,
   isUsableContact,
   mergeIntoContact,
 } from "./import-public-keys";
+import type { KeyInfo } from "./pgp/types";
 import { mergePublicKey, parseKeys } from "./pgp/wasm";
+import type * as ContactsModule from "./storage/contacts";
+import type { PublicContactKey } from "./storage/contacts";
 
 vi.mock("./pgp/wasm", () => ({
   parseKeys: vi.fn(),

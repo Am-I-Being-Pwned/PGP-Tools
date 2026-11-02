@@ -18,12 +18,14 @@
  * user-initiated export, gated only in the UI.
  */
 
-import type { MetaBlob } from "../protection/protected-blob";
+import { unpackMetaBlob, type MetaBlob } from "~/lib/protection/protected-blob";
 import type { GenerateKeyOptions, ProtectResultMeta } from "./types";
-import type { DecryptWithHandleResult } from "./wasm-public";
-import { unpackMetaBlob } from "../protection/protected-blob";
 import { loadWasm } from "./wasm-loader";
-import { unpackDecryptResult, withOutputCap } from "./wasm-public";
+import {
+  unpackDecryptResult,
+  withOutputCap,
+  type DecryptWithHandleResult,
+} from "./wasm-public";
 
 // ── shared types ─────────────────────────────────────────────────────
 

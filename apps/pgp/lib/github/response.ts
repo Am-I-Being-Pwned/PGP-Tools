@@ -7,8 +7,8 @@
  * codes, never GitHub's prose.
  */
 
-import type { GithubKeysFailure } from "../messages";
-import { splitSshPublicKeyCandidateLines } from "../armor-blocks";
+import { splitSshPublicKeyCandidateLines } from "~/lib/armor-blocks";
+import type { GithubKeysFailure } from "~/lib/messages";
 
 /** DoS caps on a response we do not control. `MAX_BODY_BYTES` is checked
  *  as bytes, not UTF-16 `.length`. `MAX_KEY_CHARS` is the per-key cap

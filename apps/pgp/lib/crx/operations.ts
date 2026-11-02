@@ -6,12 +6,9 @@
  * the clear (except via the explicit plaintext export below).
  */
 
-import type { CrxProtectFlowResult, CrxVerifyResult } from "../pgp/wasm";
-import type { ProtectSpec } from "../protection/protect-runner";
-import type { CrxProtection, CrxSigningKeyBlob } from "./types";
-import { fromBase64, toBase64 } from "../encoding";
-import { AppError } from "../errors/app-error";
-import { t } from "../i18n";
+import { fromBase64, toBase64 } from "~/lib/encoding";
+import { AppError } from "~/lib/errors/app-error";
+import { t } from "~/lib/i18n";
 import {
   dropCrxKey,
   generateCrxKeyWithPassword,
@@ -23,16 +20,23 @@ import {
   unlockCrxWithPassword,
   unlockCrxWithPrf,
   verifyCrx,
-} from "../pgp/wasm";
+  type CrxProtectFlowResult,
+  type CrxVerifyResult,
+} from "~/lib/pgp/wasm";
 import {
   ARGON2_ITERATIONS,
   ARGON2_MEMORY_KIB,
   ARGON2_PARALLELISM,
-} from "../protection/password-kdf";
-import { assertStrongPassword, runProtect } from "../protection/protect-runner";
-import { unpackPasswordBlob } from "../protection/protected-blob";
-import { authenticateAndGetPrf } from "../protection/webauthn-prf";
+} from "~/lib/protection/password-kdf";
+import {
+  assertStrongPassword,
+  runProtect,
+  type ProtectSpec,
+} from "~/lib/protection/protect-runner";
+import { unpackPasswordBlob } from "~/lib/protection/protected-blob";
+import { authenticateAndGetPrf } from "~/lib/protection/webauthn-prf";
 import { updateCrxLastUsed } from "./storage";
+import type { CrxProtection, CrxSigningKeyBlob } from "./types";
 
 export type CrxProtectionInput =
   | { method: "password"; password: string }
@@ -165,7 +169,7 @@ export async function closeCrxKey(handle: number): Promise<void> {
 
 /** UNENCRYPTED PKCS#8 PEM export: the key crosses into JS, so callers
  *  MUST gate it behind explicit confirmation and drop the string promptly. */
-export { exportCrxPrivateKeyPem } from "../pgp/wasm";
+export { exportCrxPrivateKeyPem } from "~/lib/pgp/wasm";
 
 /** Re-seal an unlocked CRX key under `password` (plaintext stays in
  *  WASM), so a passkey-bound key can be exported portably. */

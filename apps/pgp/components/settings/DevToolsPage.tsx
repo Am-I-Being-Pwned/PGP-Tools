@@ -1,22 +1,22 @@
 /* i18n-ignore-file */
 import { useEffect, useState } from "react";
 
-import { Button } from "@amibeingpwned/ui/button";
+import { Button } from "@amibeingpwned/ui";
 
-import { engineMessage, useAsyncAction } from "../../hooks/useAsyncAction";
-import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
+import { SubPage } from "~/components/shared/SubPage";
+import { engineMessage, useAsyncAction } from "~/hooks/useAsyncAction";
+import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
 import {
   clearAllStorage,
   dumpAllStorage,
   isStorageDump,
   restoreAllStorage,
-} from "../../lib/dev/dump";
-import { hasContactsSession, ping } from "../../lib/pgp/wasm";
-import { dumpWasmMemoryForDev } from "../../lib/pgp/wasm-loader";
-import { toast } from "../../lib/toast";
-import { downloadBinary, downloadText } from "../../lib/utils/download";
-import { formatFileSize } from "../../lib/utils/formatting";
-import { SubPage } from "../shared/SubPage";
+} from "~/lib/dev/dump";
+import { hasContactsSession, ping } from "~/lib/pgp/wasm";
+import { dumpWasmMemoryForDev } from "~/lib/pgp/wasm-loader";
+import { toast } from "~/lib/toast";
+import { downloadBinary, downloadText } from "~/lib/utils/download";
+import { formatFileSize } from "~/lib/utils/formatting";
 
 interface WasmInfo {
   pong: string;

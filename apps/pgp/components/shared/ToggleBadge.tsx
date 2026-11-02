@@ -1,4 +1,4 @@
-import { OptionBarItem } from "@amibeingpwned/ui/option-bar";
+import { OptionBarItem } from "@amibeingpwned/ui";
 
 /** One `OptionBar` segment; same size in both states, so no layout shift. */
 export function ToggleBadge({

@@ -1,13 +1,12 @@
-import type { ReactElement } from "react";
-import { useState } from "react";
+import { useState, type ReactElement } from "react";
 
-import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
-import { Kbd } from "@amibeingpwned/ui/kbd";
 import {
+  Kbd,
   Popover,
   PopoverAnchor,
   PopoverContent,
-} from "@amibeingpwned/ui/popover";
+  type ShortcutSpec,
+} from "@amibeingpwned/ui";
 
 /** A button's keyboard shortcut as keycaps, on hover and focus. The child
  *  (one Button) is the anchor; its own onClick is untouched. */

@@ -6,16 +6,19 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { PublicContactKey } from "../storage/contacts";
-import type { ReviewDecision, ReviewedContact } from "./review";
-import type { IncomingKey } from "./types";
-import { IDENTITY_VERSION } from "../storage/contacts";
+import {
+  IDENTITY_VERSION,
+  type PublicContactKey,
+} from "~/lib/storage/contacts";
 import {
   applyReview,
   contactFromIncoming,
   defaultDecision,
   needsDecision,
+  type ReviewDecision,
+  type ReviewedContact,
 } from "./review";
+import type { IncomingKey } from "./types";
 
 // WASM isn't available under vitest; only the SSH case parses anything.
 const wasm = vi.hoisted(() => ({ parseSshRecipient: vi.fn() }));

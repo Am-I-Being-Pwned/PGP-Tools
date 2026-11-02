@@ -1,4 +1,4 @@
-import { EngineError } from "../errors/engine-error";
+import { EngineError } from "~/lib/errors/engine-error";
 
 /** wasm throws strings / `EngineError`s, not `Error`s, so an `instanceof
  *  Error` check alone would drop every engine message. */

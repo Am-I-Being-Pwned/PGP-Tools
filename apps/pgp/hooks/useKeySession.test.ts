@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { KeyHandleEntry, KeySessionStoreDeps } from "./useKeySession";
 import {
   createKeySessionStore,
   dropHandle,
   openThenReseal,
+  type KeyHandleEntry,
+  type KeySessionStoreDeps,
 } from "./useKeySession";
 
 const wasm = vi.hoisted(() => ({ dropKey: vi.fn(() => Promise.resolve()) }));

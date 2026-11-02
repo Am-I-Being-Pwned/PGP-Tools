@@ -1,9 +1,11 @@
-import type { PublicContactKey } from "../storage/contacts";
-import type { IncomingKey } from "./types";
-import { parseRecipient } from "../age/operations";
-import { groupContact, sshContact } from "../age/protect-flow";
-import { IDENTITY_VERSION } from "../storage/contacts";
+import { parseRecipient } from "~/lib/age/operations";
+import { groupContact, sshContact } from "~/lib/age/protect-flow";
+import {
+  IDENTITY_VERSION,
+  type PublicContactKey,
+} from "~/lib/storage/contacts";
 import { claimedIds } from "./prepare";
+import type { IncomingKey } from "./types";
 
 /**
  * The one way a contact gets written: binding a name/address to an

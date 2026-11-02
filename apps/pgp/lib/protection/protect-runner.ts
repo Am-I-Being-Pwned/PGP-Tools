@@ -12,10 +12,14 @@
  *  - `storedSecret` is an HKDF salt, persisted in the clear.
  */
 
-import type { PasswordBlobParts, PrfBlobParts } from "./protected-blob";
-import { AppError } from "../errors/app-error";
-import { t } from "../i18n";
-import { unpackPasswordBlob, unpackPrfBlob } from "./protected-blob";
+import { AppError } from "~/lib/errors/app-error";
+import { t } from "~/lib/i18n";
+import {
+  unpackPasswordBlob,
+  unpackPrfBlob,
+  type PasswordBlobParts,
+  type PrfBlobParts,
+} from "./protected-blob";
 import {
   authenticateAndGetPrf,
   generatePrfSalt,

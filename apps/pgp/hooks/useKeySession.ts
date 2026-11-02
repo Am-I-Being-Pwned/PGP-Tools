@@ -1,31 +1,28 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import type {
-  MasterPasskey,
-  SealedParts,
-} from "../lib/protection/vault-unlock";
-import type { StoredKeyKind } from "../lib/storage/key-kind";
-import type { ProtectedKeyBlob } from "../lib/storage/keyring";
-import type { AutoLockTimeout } from "../lib/storage/preferences";
-import { closeSshIdentity, openSshIdentity } from "../lib/age/protect-flow";
-import { fromBase64 } from "../lib/encoding";
-import * as wasmApi from "../lib/pgp/wasm";
+import { closeSshIdentity, openSshIdentity } from "~/lib/age/protect-flow";
+import { fromBase64 } from "~/lib/encoding";
+import * as wasmApi from "~/lib/pgp/wasm";
 import {
   ARGON2_ITERATIONS,
   ARGON2_MEMORY_KIB,
   ARGON2_PARALLELISM,
-} from "../lib/protection/password-kdf";
+} from "~/lib/protection/password-kdf";
 import {
   needsMasterReseal,
   openWithMasterPrf,
   resealUnderMaster,
-} from "../lib/protection/vault-unlock";
-import { authenticateAndGetPrf } from "../lib/protection/webauthn-prf";
-import { storedKeyKind } from "../lib/storage/key-kind";
+  type MasterPasskey,
+  type SealedParts,
+} from "~/lib/protection/vault-unlock";
+import { authenticateAndGetPrf } from "~/lib/protection/webauthn-prf";
+import { storedKeyKind, type StoredKeyKind } from "~/lib/storage/key-kind";
 import {
   encryptedBlobFromProtected,
   updateLastUsed,
-} from "../lib/storage/keyring";
+  type ProtectedKeyBlob,
+} from "~/lib/storage/keyring";
+import type { AutoLockTimeout } from "~/lib/storage/preferences";
 
 interface KeySessionOptions {
   autoLockMinutes: AutoLockTimeout;

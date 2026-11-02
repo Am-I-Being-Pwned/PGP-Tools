@@ -1,8 +1,8 @@
 import { ExternalLinkIcon, ShieldCheckIcon } from "lucide-react";
 
-import { t } from "../../lib/i18n";
-import { Emphasised } from "../shared/Emphasised";
-import { SubPage } from "../shared/SubPage";
+import { Emphasised } from "~/components/shared/Emphasised";
+import { SubPage } from "~/components/shared/SubPage";
+import { t } from "~/lib/i18n";
 
 /** Hyphens in their own column, so wrapped lines align under the text. */
 function DashList({ items }: { items: React.ReactNode[] }) {

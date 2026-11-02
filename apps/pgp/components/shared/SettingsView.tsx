@@ -1,48 +1,52 @@
 import { useEffect, useRef } from "react";
 import { ChevronRightIcon } from "lucide-react";
 
-import { Block, BlockLabel, BlockStack } from "@amibeingpwned/ui/block";
-import { Button } from "@amibeingpwned/ui/button";
-import { SwitchRow } from "@amibeingpwned/ui/switch-row";
+import {
+  Block,
+  BlockLabel,
+  BlockStack,
+  Button,
+  SwitchRow,
+} from "@amibeingpwned/ui";
 
-import type { PresetId } from "../../lib/presets";
-import type {
-  AutoLockTimeout,
-  PgpPreferences,
-  StorageLocation,
-} from "../../lib/storage/preferences";
-import { useAsyncAction } from "../../hooks/useAsyncAction";
-import { useContacts } from "../../hooks/useContacts";
-import { useCrxKeys } from "../../hooks/useCrxKeys";
-import { useKeyring } from "../../hooks/useKeyring";
-import { useNav } from "../../hooks/useNav";
-import { savePreference, usePreferences } from "../../hooks/usePreferences";
-import { useVault } from "../../hooks/useVault";
-import { t, tn } from "../../lib/i18n";
-import { enterNeverCacheMode } from "../../lib/never-cache";
+import { ExportKeysPage } from "~/components/keys/ExportKeysPage";
+import { CrxSigningInfoPage } from "~/components/settings/CrxSigningInfoPage";
+import { DevToolsPage } from "~/components/settings/DevToolsPage";
+import { ImportAllKeysPage } from "~/components/settings/ImportAllKeysPage";
+import { ImportFlowPreviewPage } from "~/components/settings/ImportFlowPreviewPage";
+import { KeyboardShortcutsPage } from "~/components/settings/KeyboardShortcutsPage";
+import { SecurityPresetPage } from "~/components/settings/SecurityPresetPage";
+import { TranslationPage } from "~/components/settings/TranslationPage";
+import { useAsyncAction } from "~/hooks/useAsyncAction";
+import { useContacts } from "~/hooks/useContacts";
+import { useCrxKeys } from "~/hooks/useCrxKeys";
+import { useKeyring } from "~/hooks/useKeyring";
+import { useNav } from "~/hooks/useNav";
+import { savePreference, usePreferences } from "~/hooks/usePreferences";
+import { useVault } from "~/hooks/useVault";
+import { t, tn } from "~/lib/i18n";
+import { enterNeverCacheMode } from "~/lib/never-cache";
 import {
   activePreset,
   bundledSettingsCustomized,
   PRESETS,
   snapshotBundleFields,
-} from "../../lib/presets";
-import { isQuotaExceeded } from "../../lib/storage/chunked";
-import { historyByteSize } from "../../lib/storage/history";
-import { getPreferences } from "../../lib/storage/preferences";
-import { preferencesStore } from "../../lib/storage/preferences-store";
-import { refreshVaultLists } from "../../lib/storage/vault-lists";
-import { moveVault } from "../../lib/storage/vault-state";
-import { toast } from "../../lib/toast";
-import { errorMessage } from "../../lib/utils/errors";
-import { formatFileSize } from "../../lib/utils/formatting";
-import { ExportKeysPage } from "../keys/ExportKeysPage";
-import { CrxSigningInfoPage } from "../settings/CrxSigningInfoPage";
-import { DevToolsPage } from "../settings/DevToolsPage";
-import { ImportAllKeysPage } from "../settings/ImportAllKeysPage";
-import { ImportFlowPreviewPage } from "../settings/ImportFlowPreviewPage";
-import { KeyboardShortcutsPage } from "../settings/KeyboardShortcutsPage";
-import { SecurityPresetPage } from "../settings/SecurityPresetPage";
-import { TranslationPage } from "../settings/TranslationPage";
+  type PresetId,
+} from "~/lib/presets";
+import { isQuotaExceeded } from "~/lib/storage/chunked";
+import { historyByteSize } from "~/lib/storage/history";
+import {
+  getPreferences,
+  type AutoLockTimeout,
+  type PgpPreferences,
+  type StorageLocation,
+} from "~/lib/storage/preferences";
+import { preferencesStore } from "~/lib/storage/preferences-store";
+import { refreshVaultLists } from "~/lib/storage/vault-lists";
+import { moveVault } from "~/lib/storage/vault-state";
+import { toast } from "~/lib/toast";
+import { errorMessage } from "~/lib/utils/errors";
+import { formatFileSize } from "~/lib/utils/formatting";
 import { ConfirmPage } from "./ConfirmPage";
 import { StorageLocationPicker } from "./StorageLocationPicker";
 import { useNavStack } from "./useNavStack";

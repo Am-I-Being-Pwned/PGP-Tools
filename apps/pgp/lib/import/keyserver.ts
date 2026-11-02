@@ -4,13 +4,12 @@
  * forwards armor without deciding it is a key; only the wasm engine does.
  */
 
-import type { KeyserverQuery } from "../keyserver/query";
-import type { KeyserverKeyFailure } from "../messages";
-import type { ContactSource } from "../storage/contacts";
-import type { PreparedImport, StoredKeys } from "./prepare";
+import { t, tn } from "~/lib/i18n";
+import type { KeyserverQuery } from "~/lib/keyserver/query";
+import type { KeyserverKeyFailure } from "~/lib/messages";
+import type { ContactSource } from "~/lib/storage/contacts";
+import { prepareImport, type PreparedImport, type StoredKeys } from "./prepare";
 import type { IncomingKey } from "./types";
-import { t, tn } from "../i18n";
-import { prepareImport } from "./prepare";
 
 /** Not a URL and never fetched: the only origin literal is in
  *  `lib/keyserver/fetch-key.ts`, and the build audit enforces that. */

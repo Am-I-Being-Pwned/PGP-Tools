@@ -87,9 +87,7 @@ test("switching a large vault to sync chunks it under the 8 KB/item cap", async 
 
     // Nothing chunked (or otherwise) left stranded in sync.
     const sync = await readStorage(panel, "sync");
-    const strays = Object.keys(sync).filter((k) =>
-      k.startsWith(CONTACTS_KEY),
-    );
+    const strays = Object.keys(sync).filter((k) => k.startsWith(CONTACTS_KEY));
     expect(strays).toEqual([]);
   });
 });

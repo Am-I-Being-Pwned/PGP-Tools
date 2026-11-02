@@ -7,8 +7,7 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import type { Threat } from "./threat-model";
-import { THREAT_MODEL } from "./threat-model";
+import { THREAT_MODEL, type Threat } from "./threat-model";
 
 /** apps/pgp/lib/security -> repo root */
 const REPO_ROOT = resolve(import.meta.dirname, "../../../..");

@@ -1,9 +1,12 @@
 // Clash copy in one place for the card, picker and details page.
 
-import type { IdentityConflict, IdentityHolder } from "./binding";
-import { t } from "../i18n";
-import { parseUserId } from "../utils/key-naming";
-import { displayKeyId } from "./binding";
+import { t } from "~/lib/i18n";
+import { parseUserId } from "~/lib/utils/key-naming";
+import {
+  displayKeyId,
+  type IdentityConflict,
+  type IdentityHolder,
+} from "./binding";
 
 /** By the user's name for it when set (a comment-less SSH key has no other). */
 export function clashHolderArgs(holder: IdentityHolder): {

@@ -6,7 +6,16 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { SshProtectFlowResult } from "../pgp/wasm";
+import { AppError } from "~/lib/errors/app-error";
+import type { SshProtectFlowResult } from "~/lib/pgp/wasm";
+import {
+  closeSshIdentity,
+  groupContact,
+  importSshIdentity,
+  openSshIdentity,
+  sshContact,
+  sshUserIds,
+} from "./protect-flow";
 
 const wasm = vi.hoisted(() => ({
   protectSshIdentityWithPassword: vi.fn(),
@@ -32,16 +41,6 @@ const webauthn = await vi.hoisted(async () =>
 );
 
 vi.mock("../protection/webauthn-prf", () => webauthn);
-
-import { AppError } from "../errors/app-error";
-import {
-  closeSshIdentity,
-  groupContact,
-  importSshIdentity,
-  openSshIdentity,
-  sshContact,
-  sshUserIds,
-} from "./protect-flow";
 
 const PASSWORD = "correct horse battery";
 const FINGERPRINT = "SHA256:6xN1hCbYYQnEo3sB1Wp2sTQnAo1cvxKcYLW9sQvfR0Q";
@@ -160,8 +159,8 @@ describe("importSshIdentity - the stored blob", () => {
       method: "password",
       password: PASSWORD,
     });
-    const [, sourcePassphrase, password] = wasm
-      .protectSshIdentityWithPassword.mock.calls[0] as unknown[];
+    const [, sourcePassphrase, password] = wasm.protectSshIdentityWithPassword
+      .mock.calls[0] as unknown[];
     expect(sourcePassphrase).toBeInstanceOf(Uint8Array);
     expect(password).toBeInstanceOf(Uint8Array);
   });
@@ -175,8 +174,8 @@ describe("importSshIdentity - the stored blob", () => {
     });
 
     expect(handle).toBe(42);
-    const [ct, iv, salt, fingerprint] = wasm.unlockSshIdentityWithPassword
-      .mock.calls[0] as unknown[];
+    const [ct, iv, salt, fingerprint] = wasm.unlockSshIdentityWithPassword.mock
+      .calls[0] as unknown[];
     expect([...(salt as Uint8Array)]).toEqual(Array(16).fill(0xa1));
     expect([...(iv as Uint8Array)]).toEqual(Array(12).fill(0xb2));
     expect([...(ct as Uint8Array)]).toEqual(Array(8).fill(0xc3));

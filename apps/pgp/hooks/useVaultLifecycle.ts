@@ -1,7 +1,11 @@
 import { useCallback, useRef, useState } from "react";
 
-import type { VaultEvent, VaultLifecycle } from "../lib/vault-phase";
-import { initialVaultLifecycle, vaultReducer } from "../lib/vault-phase";
+import {
+  initialVaultLifecycle,
+  vaultReducer,
+  type VaultEvent,
+  type VaultLifecycle,
+} from "~/lib/vault-phase";
 
 /** `useReducer` whose dispatch applies at once and returns the new state:
  *  an unlock needs its own generation, and a lock must take effect in the

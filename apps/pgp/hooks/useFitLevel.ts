@@ -1,5 +1,4 @@
-import type { RefObject } from "react";
-import { useLayoutEffect, useState } from "react";
+import { useLayoutEffect, useState, type RefObject } from "react";
 
 /** The row overflows its own box (content pushed past the edge). */
 function rowOverflows(row: HTMLElement): boolean {

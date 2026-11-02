@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { LockIcon } from "lucide-react";
 
-import type { ReaderSigner } from "../../lib/reader-protocol";
-import { SignerCard } from "../../components/workspace/SignerCard";
-import { t } from "../../lib/i18n";
+import { SignerCard } from "~/components/workspace/SignerCard";
+import { t } from "~/lib/i18n";
 import {
   isReaderMessage,
   isReaderNonce,
   READER_PORT_PREFIX,
-} from "../../lib/reader-protocol";
-import { forgetLastRegExpMatch } from "../../lib/utils/regexp-residue";
+  type ReaderSigner,
+} from "~/lib/reader-protocol";
+import { forgetLastRegExpMatch } from "~/lib/utils/regexp-residue";
 
 type View = "waiting" | "shown" | "locked" | "unavailable";
 

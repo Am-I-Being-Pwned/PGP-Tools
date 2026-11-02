@@ -8,8 +8,8 @@
  * case where the panel never opens.
  */
 
-import type { OperationAction, PendingOperation } from "./messages";
 import { SESSION_PENDING_OP } from "./constants";
+import type { OperationAction, PendingOperation } from "./messages";
 
 const VALID_ACTIONS = new Set<OperationAction>([
   "encrypt",

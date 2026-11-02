@@ -1,12 +1,11 @@
-import type { ReactNode } from "react";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useState, type ReactNode } from "react";
 
-import type { PublicContactKey } from "../../lib/storage/contacts";
-import { t } from "../../lib/i18n";
-import { parseKeys } from "../../lib/pgp/wasm";
-import { parseUserId } from "../../lib/utils/key-naming";
-import { KeyAvatar } from "../shared/KeyAvatar";
-import { MarkedText } from "../shared/MarkedText";
+import { KeyAvatar } from "~/components/shared/KeyAvatar";
+import { MarkedText } from "~/components/shared/MarkedText";
+import { t } from "~/lib/i18n";
+import { parseKeys } from "~/lib/pgp/wasm";
+import type { PublicContactKey } from "~/lib/storage/contacts";
+import { parseUserId } from "~/lib/utils/key-naming";
 
 /**
  * "There's a public key in here" -- offered wherever one turns up: pasted

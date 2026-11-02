@@ -1,11 +1,11 @@
 import { useCallback } from "react";
 
-import { Block, BlockStack } from "@amibeingpwned/ui/block";
+import { Block, BlockStack } from "@amibeingpwned/ui";
 
-import type { FileResult } from "../../lib/utils/download";
-import { t } from "../../lib/i18n";
-import { formatFileSize } from "../../lib/utils/formatting";
-import { showLoneCarriageReturns } from "../../lib/utils/line-breaks";
+import { t } from "~/lib/i18n";
+import type { FileResult } from "~/lib/utils/download";
+import { formatFileSize } from "~/lib/utils/formatting";
+import { showLoneCarriageReturns } from "~/lib/utils/line-breaks";
 
 interface OutputAreaProps {
   /** The result `<pre>`. It is UNCONTROLLED: the plaintext is written to

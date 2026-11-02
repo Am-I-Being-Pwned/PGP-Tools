@@ -1,9 +1,9 @@
+import { fromBase64 } from "~/lib/encoding";
 import type {
   KeyProtection,
   PasskeyProtection,
   PasswordProtection,
-} from "../protection/protected-blob";
-import { fromBase64 } from "../encoding";
+} from "~/lib/protection/protected-blob";
 
 /**
  * Stored CRX signing key. Sealed like a PGP key, AAD-bound via

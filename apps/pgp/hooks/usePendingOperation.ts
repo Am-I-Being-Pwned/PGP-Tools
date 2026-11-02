@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 
-import type { PendingOperation } from "../lib/messages";
-import { SESSION_PENDING_OP } from "../lib/constants";
+import { SESSION_PENDING_OP } from "~/lib/constants";
+import type { PendingOperation } from "~/lib/messages";
 import {
   isPendingOperation,
   isPendingOpForWindow,
   isPendingOpFresh,
-} from "../lib/pending-op";
+} from "~/lib/pending-op";
 
 /**
  * Reads the pending op the background writes to `chrome.storage.session`

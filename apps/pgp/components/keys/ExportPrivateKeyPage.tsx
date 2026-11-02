@@ -1,14 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 
-import { Button } from "@amibeingpwned/ui/button";
-import { Input } from "@amibeingpwned/ui/input";
+import { Button, Input } from "@amibeingpwned/ui";
 
-import { useAsyncAction } from "../../hooks/useAsyncAction";
-import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
-import { useFlashMessage } from "../../hooks/useFlashMessage";
-import { t } from "../../lib/i18n";
-import { isWebAuthnCancel } from "../../lib/protection/webauthn-prf";
-import { SubPage } from "../shared/SubPage";
+import { SubPage } from "~/components/shared/SubPage";
+import { useAsyncAction } from "~/hooks/useAsyncAction";
+import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
+import { useFlashMessage } from "~/hooks/useFlashMessage";
+import { t } from "~/lib/i18n";
+import { isWebAuthnCancel } from "~/lib/protection/webauthn-prf";
 import {
   ExportPassphraseFields,
   useExportPassphrase,

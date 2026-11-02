@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { TranslationStatus } from "../lib/ai/run-translation";
-import { runTranslation } from "../lib/ai/run-translation";
+import {
+  runTranslation,
+  type TranslationStatus,
+} from "~/lib/ai/run-translation";
 
 /**
  * Translate the message being WRITTEN, from the user's reading language

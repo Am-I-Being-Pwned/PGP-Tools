@@ -1,14 +1,12 @@
 import { useCallback, useRef, useState } from "react";
 import { FileIcon, PaperclipIcon } from "lucide-react";
 
-import { cn } from "@amibeingpwned/ui";
-import { Block, BlockStack } from "@amibeingpwned/ui/block";
-import { Button } from "@amibeingpwned/ui/button";
+import { Block, BlockStack, Button, cn } from "@amibeingpwned/ui";
 
-import { t } from "../../lib/i18n";
-import { displayFileName } from "../../lib/utils/file-name";
-import { formatFileSize } from "../../lib/utils/formatting";
-import { MarkedText } from "../shared/MarkedText";
+import { MarkedText } from "~/components/shared/MarkedText";
+import { t } from "~/lib/i18n";
+import { displayFileName } from "~/lib/utils/file-name";
+import { formatFileSize } from "~/lib/utils/formatting";
 
 interface DropZoneProps {
   onTextDrop: (text: string) => void;

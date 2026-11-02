@@ -1,5 +1,4 @@
 import { readFileSync } from "node:fs";
-
 import type { Page } from "@playwright/test";
 
 import { expect, readStorage, test } from "./fixtures";
@@ -48,7 +47,9 @@ test("a generated key ships with a downloadable revocation certificate", async (
     panel.waitForEvent("download"),
     panel.getByRole("button", { name: "Download", exact: true }).click(),
   ]);
-  expect(download.suggestedFilename()).toMatch(/^revocation-[0-9A-F]{16}\.asc$/);
+  expect(download.suggestedFilename()).toMatch(
+    /^revocation-[0-9A-F]{16}\.asc$/,
+  );
 
   await test.step("the stored certificate is encrypted at rest", async () => {
     const certificate = readFileSync(await download.path(), "utf8");

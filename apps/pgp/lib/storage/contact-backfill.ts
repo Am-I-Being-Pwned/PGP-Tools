@@ -1,6 +1,9 @@
-import type { PublicContactKey } from "./contacts";
-import { parseKey } from "../pgp/wasm";
-import { IDENTITY_VERSION, updateContact } from "./contacts";
+import { parseKey } from "~/lib/pgp/wasm";
+import {
+  IDENTITY_VERSION,
+  updateContact,
+  type PublicContactKey,
+} from "./contacts";
 import { isSshRecord } from "./key-kind";
 
 /** Fields older versions never stored, derived once per record, each patch

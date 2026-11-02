@@ -1,17 +1,17 @@
 import { useState } from "react";
 import { LanguagesIcon, LoaderCircleIcon } from "lucide-react";
 
-import type { ShortcutSpec } from "@amibeingpwned/ui/kbd";
-import { Kbd } from "@amibeingpwned/ui/kbd";
 import {
+  Kbd,
   Popover,
   PopoverAnchor,
   PopoverContent,
-} from "@amibeingpwned/ui/popover";
+  type ShortcutSpec,
+} from "@amibeingpwned/ui";
 
-import type { TranslationStatus } from "../../hooks/useTranslation";
-import { languageLabel } from "../../lib/ai/languages";
-import { t } from "../../lib/i18n";
+import type { TranslationStatus } from "~/hooks/useTranslation";
+import { languageLabel } from "~/lib/ai/languages";
+import { t } from "~/lib/i18n";
 
 /**
  * The two halves of the result box's footer bar: a status line and the

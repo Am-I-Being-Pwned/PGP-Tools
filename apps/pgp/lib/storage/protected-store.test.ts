@@ -8,20 +8,22 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { CrxSigningKeyBlob } from "../crx/types";
-import type { PublicContactKey } from "./contacts";
-import type { FakeArea } from "./fake-area";
-import type { ProtectedKeyBlob } from "./keyring";
-import { STORAGE_CRX_KEYS, STORAGE_KEYRING } from "../constants";
+import { STORAGE_CRX_KEYS, STORAGE_KEYRING } from "~/lib/constants";
 import {
   addCrxKey,
   getCrxKeys,
   removeCrxKey,
   updateCrxLabel,
   updateCrxLastUsed,
-} from "../crx/storage";
-import { contactsOfKind, loadContacts, saveContact } from "./contacts";
-import { stubChromeStorage } from "./fake-area";
+} from "~/lib/crx/storage";
+import type { CrxSigningKeyBlob } from "~/lib/crx/types";
+import {
+  contactsOfKind,
+  loadContacts,
+  saveContact,
+  type PublicContactKey,
+} from "./contacts";
+import { stubChromeStorage, type FakeArea } from "./fake-area";
 import { isDomainSealed } from "./fake-store-crypto";
 import { isPgpRecord, isSshRecord, storedKeyKind } from "./key-kind";
 import {
@@ -31,6 +33,7 @@ import {
   updateAlias,
   updateLastUsed,
   updateRevocationCertificate,
+  type ProtectedKeyBlob,
 } from "./keyring";
 
 const wasmMock = vi.hoisted(() => ({ session: true }));

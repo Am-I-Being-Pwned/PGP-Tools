@@ -1,8 +1,7 @@
-import type { VariantProps } from "class-variance-authority";
 import type * as React from "react";
-import { cva } from "class-variance-authority";
+import { cva, type VariantProps } from "class-variance-authority";
 
-import { cn } from "@amibeingpwned/ui";
+import { cn } from "./cn";
 
 export const inputVariants = cva(
   "placeholder:text-muted-foreground w-full text-sm",

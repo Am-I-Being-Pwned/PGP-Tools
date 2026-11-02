@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-import { isFullyVisible, verticalBounds } from "../../lib/utils/scrollport";
+import { isFullyVisible, verticalBounds } from "~/lib/utils/scrollport";
 
 /** Retry times in ms. A smooth scroll is cancelled by any competing scroll
  *  (focus restore, list reflow), so visible cards are skipped and the last

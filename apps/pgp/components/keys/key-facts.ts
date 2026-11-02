@@ -1,6 +1,6 @@
-import type { KeyDetails, KeyInfo } from "../../lib/pgp/types";
-import type { ContactRecipient } from "../../lib/storage/contacts";
-import { t } from "../../lib/i18n";
+import { t } from "~/lib/i18n";
+import type { KeyDetails, KeyInfo } from "~/lib/pgp/types";
+import type { ContactRecipient } from "~/lib/storage/contacts";
 
 /**
  * What the key body renders, engine-neutral: each engine supplies the

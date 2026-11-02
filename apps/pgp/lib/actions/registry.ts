@@ -1,9 +1,7 @@
 // Pure registry operations, parameterized on `actions` for testability.
 
-import type { ShortcutKeyEvent } from "../shortcuts";
-import type { ActionCtx, PgpAction } from "./types";
-import { matchesShortcut } from "../shortcuts";
-import { actionName } from "./types";
+import { matchesShortcut, type ShortcutKeyEvent } from "~/lib/shortcuts";
+import { actionName, type ActionCtx, type PgpAction } from "./types";
 
 export interface ResolvedAction {
   action: PgpAction;

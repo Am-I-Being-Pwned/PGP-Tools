@@ -1,7 +1,6 @@
-import type { StoredEnvelope } from "./envelope";
-import { STORAGE_PREFERENCES, STORAGE_SETTINGS } from "../constants";
-import { hasContactsSession } from "../pgp/wasm";
-import { PRESETS, STRICTEST_PRESET } from "../presets";
+import { STORAGE_PREFERENCES, STORAGE_SETTINGS } from "~/lib/constants";
+import { hasContactsSession } from "~/lib/pgp/wasm";
+import { PRESETS, STRICTEST_PRESET } from "~/lib/presets";
 import { getChunked, removeChunked } from "./chunked";
 import {
   asStorageLocation,
@@ -12,7 +11,12 @@ import {
   setItem,
   withLock,
 } from "./engine";
-import { isStoredEnvelope, openEnvelope, sealEnvelope } from "./envelope";
+import {
+  isStoredEnvelope,
+  openEnvelope,
+  sealEnvelope,
+  type StoredEnvelope,
+} from "./envelope";
 import {
   claimGeneration,
   GEN_FIELD,

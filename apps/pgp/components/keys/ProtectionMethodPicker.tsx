@@ -1,12 +1,8 @@
-import { cn } from "@amibeingpwned/ui";
-import { BlockStack } from "@amibeingpwned/ui/block";
-import { Button } from "@amibeingpwned/ui/button";
-import { Input } from "@amibeingpwned/ui/input";
-import { Kbd } from "@amibeingpwned/ui/kbd";
+import { BlockStack, Button, cn, Input, Kbd } from "@amibeingpwned/ui";
 
+import { t } from "~/lib/i18n";
+import { checkPrfSupport } from "~/lib/protection/webauthn-prf";
 import type { ProtectionMethod } from "./protection-choice";
-import { t } from "../../lib/i18n";
-import { checkPrfSupport } from "../../lib/protection/webauthn-prf";
 
 interface ProtectionMethodPickerProps {
   method: ProtectionMethod;

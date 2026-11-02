@@ -11,18 +11,17 @@ import {
   TriangleAlertIcon,
 } from "lucide-react";
 
-import { cn } from "@amibeingpwned/ui";
-import { Button } from "@amibeingpwned/ui/button";
 import {
+  Button,
+  cn,
   DropdownMenuItem,
   DropdownMenuSeparator,
-} from "@amibeingpwned/ui/dropdown-menu";
+} from "@amibeingpwned/ui";
 
-import type { PrivateKeyExporter } from "./ExportPrivateKeyPage";
-import { useAsyncAction } from "../../hooks/useAsyncAction";
-import { useFlashMessage } from "../../hooks/useFlashMessage";
-import { t } from "../../lib/i18n";
-import { KeyAvatar } from "../shared/KeyAvatar";
+import { KeyAvatar } from "~/components/shared/KeyAvatar";
+import { useAsyncAction } from "~/hooks/useAsyncAction";
+import { useFlashMessage } from "~/hooks/useFlashMessage";
+import { t } from "~/lib/i18n";
 import {
   CardMenu,
   CardRow,
@@ -31,7 +30,10 @@ import {
   LongIdColumn,
   Pill,
 } from "./CardRow";
-import { ExportPrivateKeyPage } from "./ExportPrivateKeyPage";
+import {
+  ExportPrivateKeyPage,
+  type PrivateKeyExporter,
+} from "./ExportPrivateKeyPage";
 import { HEX_FINGERPRINT, longIdLines } from "./fingerprint-lines";
 import { UnlockPasswordField } from "./KeyUnlockRow";
 

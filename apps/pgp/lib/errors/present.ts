@@ -1,6 +1,6 @@
-import { t } from "../i18n";
-import { isQuotaExceeded } from "../storage/chunked";
-import { errorMessage } from "../utils/errors";
+import { t } from "~/lib/i18n";
+import { isQuotaExceeded } from "~/lib/storage/chunked";
+import { errorMessage } from "~/lib/utils/errors";
 import { AppError } from "./app-error";
 import { EngineError } from "./engine-error";
 

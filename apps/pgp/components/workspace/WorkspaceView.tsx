@@ -13,63 +13,58 @@ import {
   RotateCcwIcon,
 } from "lucide-react";
 
-import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
-import { cn } from "@amibeingpwned/ui";
-import { Block } from "@amibeingpwned/ui/block";
-import { Button } from "@amibeingpwned/ui/button";
-import { ariaKeyShortcuts, isMacPlatform } from "@amibeingpwned/ui/kbd-helpers";
-import { OptionBar } from "@amibeingpwned/ui/option-bar";
 import {
+  ariaKeyShortcuts,
+  Block,
+  Button,
+  cn,
+  isMacPlatform,
+  OptionBar,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@amibeingpwned/ui/select";
-import { Switch } from "@amibeingpwned/ui/switch";
+  Switch,
+  type ShortcutSpec,
+} from "@amibeingpwned/ui";
 
-import type {
-  WorkspaceCommands,
-  WorkspaceSnapshot,
-} from "../../hooks/useActionContext";
-import type { RemedyAction } from "../../lib/errors/present";
-import type { WorkspaceAction } from "../../lib/messages";
-import type { ReaderSigner } from "../../lib/reader-protocol";
-import type { WorkspaceDraftSource } from "../../lib/workspace-draft";
-import type { WorkspaceIntake } from "./useWorkspace";
-import type { Mode } from "./workspace-state";
-import type { ComposeTools } from "./WorkspaceInput";
-import { WorkspaceBridgeContext } from "../../hooks/useActionContext";
-import { useComposeTranslation } from "../../hooks/useComposeTranslation";
-import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
-import { useDelayedFlag } from "../../hooks/useDelayedFlag";
-import { useNav } from "../../hooks/useNav";
-import { savePreference, usePreferences } from "../../hooks/usePreferences";
-import { useShortcut } from "../../hooks/useShortcut";
-import { useTranslation } from "../../hooks/useTranslation";
-import { useVault } from "../../hooks/useVault";
-import { REPLY_SHORTCUT } from "../../lib/actions/definitions";
-import { languageLabel } from "../../lib/ai/languages";
-import { recoverArmorIfNeeded } from "../../lib/armor-recovery";
-import { applyTextareaEdit } from "../../lib/compose/apply-edit";
+import { KeyAvatar } from "~/components/shared/KeyAvatar";
+import { ToggleBadge } from "~/components/shared/ToggleBadge";
+import {
+  WorkspaceBridgeContext,
+  type WorkspaceCommands,
+  type WorkspaceSnapshot,
+} from "~/hooks/useActionContext";
+import { useComposeTranslation } from "~/hooks/useComposeTranslation";
+import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
+import { useDelayedFlag } from "~/hooks/useDelayedFlag";
+import { useNav } from "~/hooks/useNav";
+import { savePreference, usePreferences } from "~/hooks/usePreferences";
+import { useShortcut } from "~/hooks/useShortcut";
+import { useTranslation } from "~/hooks/useTranslation";
+import { useVault } from "~/hooks/useVault";
+import { REPLY_SHORTCUT } from "~/lib/actions/definitions";
+import { languageLabel } from "~/lib/ai/languages";
+import { recoverArmorIfNeeded } from "~/lib/armor-recovery";
+import { applyTextareaEdit } from "~/lib/compose/apply-edit";
 import {
   buildEncryptRecipients,
   resolveSelectedRecipients,
   sshPasswordReason,
   toSelectedRecipient,
-} from "../../lib/encrypt-recipients";
-import { t } from "../../lib/i18n";
-import { requestUnlimitedHistoryStorage } from "../../lib/storage/history";
-import { isPgpRecord, isSshRecord } from "../../lib/storage/key-kind";
-import { toast } from "../../lib/toast";
-import { saveCrxViaPrompt } from "../../lib/utils/download";
-import {
-  displayUserId,
-  formatKeyDisplayName,
-} from "../../lib/utils/key-naming";
-import { INPUT_CLASS } from "../../lib/utils/styles";
-import { KeyAvatar } from "../shared/KeyAvatar";
-import { ToggleBadge } from "../shared/ToggleBadge";
+} from "~/lib/encrypt-recipients";
+import type { RemedyAction } from "~/lib/errors/present";
+import { t } from "~/lib/i18n";
+import type { WorkspaceAction } from "~/lib/messages";
+import type { ReaderSigner } from "~/lib/reader-protocol";
+import { requestUnlimitedHistoryStorage } from "~/lib/storage/history";
+import { isPgpRecord, isSshRecord } from "~/lib/storage/key-kind";
+import { toast } from "~/lib/toast";
+import { saveCrxViaPrompt } from "~/lib/utils/download";
+import { displayUserId, formatKeyDisplayName } from "~/lib/utils/key-naming";
+import { INPUT_CLASS } from "~/lib/utils/styles";
+import type { WorkspaceDraftSource } from "~/lib/workspace-draft";
 import { withoutHiddenCharacters } from "./hidden-characters";
 import { KeySelector } from "./KeySelector";
 import { MessagePasswordPage } from "./MessagePasswordPage";
@@ -83,9 +78,10 @@ import {
   TranslationNote,
 } from "./TranslationPanel";
 import { useAutoRun } from "./useAutoRun";
-import { useWorkspace } from "./useWorkspace";
+import { useWorkspace, type WorkspaceIntake } from "./useWorkspace";
 import { useWorkspaceKeyboard } from "./useWorkspaceKeyboard";
-import { modeLabel, WorkspaceInput } from "./WorkspaceInput";
+import type { Mode } from "./workspace-state";
+import { modeLabel, WorkspaceInput, type ComposeTools } from "./WorkspaceInput";
 import { WorkspaceResults } from "./WorkspaceResults";
 
 /** mod+Enter mirrors the main action button. */

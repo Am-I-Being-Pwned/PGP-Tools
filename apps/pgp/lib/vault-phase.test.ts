@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import type { MasterProtection } from "./storage/master-protection";
-import type { VaultEvent, VaultLifecycle } from "./vault-phase";
-import { initialVaultLifecycle, vaultReducer } from "./vault-phase";
+import {
+  initialVaultLifecycle,
+  vaultReducer,
+  type VaultEvent,
+  type VaultLifecycle,
+} from "./vault-phase";
 
 const protection = { method: "password" } as unknown as MasterProtection;
 

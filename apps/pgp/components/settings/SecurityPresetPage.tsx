@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
 
-import type { PresetId } from "../../lib/presets";
-import { t } from "../../lib/i18n";
-import { PRESETS } from "../../lib/presets";
-import { historyByteSize } from "../../lib/storage/history";
-import { formatFileSize } from "../../lib/utils/formatting";
-import { PresetPicker } from "../shared/PresetPicker";
-import { SubPage } from "../shared/SubPage";
+import { PresetPicker } from "~/components/shared/PresetPicker";
+import { SubPage } from "~/components/shared/SubPage";
+import { t } from "~/lib/i18n";
+import { PRESETS, type PresetId } from "~/lib/presets";
+import { historyByteSize } from "~/lib/storage/history";
+import { formatFileSize } from "~/lib/utils/formatting";
 
 /** The term is found by string search so the message carries no markup. */
 function Bolded({ text, term }: { text: string; term: string }) {

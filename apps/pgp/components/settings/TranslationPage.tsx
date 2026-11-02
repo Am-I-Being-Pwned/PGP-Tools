@@ -1,29 +1,29 @@
 import { useCallback, useEffect, useState } from "react";
 import { CheckIcon, DownloadIcon } from "lucide-react";
 
-import { BlockLabel } from "@amibeingpwned/ui/block";
-import { Button } from "@amibeingpwned/ui/button";
 import {
+  BlockLabel,
+  Button,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@amibeingpwned/ui/select";
-import { SwitchRow } from "@amibeingpwned/ui/switch-row";
+  SwitchRow,
+} from "@amibeingpwned/ui";
 
+import { SubPage } from "~/components/shared/SubPage";
 import {
   LANGUAGE_PACK_SIZE_HINT,
   translationAvailability,
   translationSupportedHere,
-} from "../../lib/ai/availability";
+} from "~/lib/ai/availability";
 import {
   TRANSLATION_LANGUAGES,
   translationLanguages,
-} from "../../lib/ai/languages";
-import { downloadLanguagePack } from "../../lib/ai/translate";
-import { t } from "../../lib/i18n";
-import { SubPage } from "../shared/SubPage";
+} from "~/lib/ai/languages";
+import { downloadLanguagePack } from "~/lib/ai/translate";
+import { t } from "~/lib/i18n";
 
 /**
  * Pre-download language packs. On-demand install is observable off-device

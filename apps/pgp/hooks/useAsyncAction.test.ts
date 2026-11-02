@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { ErrorMapper } from "./useAsyncAction";
-import { AppError } from "../lib/errors/app-error";
+import { AppError } from "~/lib/errors/app-error";
 import {
   createActionRunner,
   engineMessage,
   toErrorMapper,
+  type ErrorMapper,
 } from "./useAsyncAction";
 
 function setup(mapper: ErrorMapper = () => ({ message: "failed" })) {

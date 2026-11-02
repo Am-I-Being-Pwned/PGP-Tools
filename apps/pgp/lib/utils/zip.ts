@@ -50,7 +50,8 @@ export function zipHasManifest(data: Uint8Array): boolean {
     const nameStart = off + 46;
     if (nameStart + nameLen > data.length) break;
     const name = decoder.decode(data.subarray(nameStart, nameStart + nameLen));
-    if (name === "manifest.json" || name.endsWith("/manifest.json")) return true;
+    if (name === "manifest.json" || name.endsWith("/manifest.json"))
+      return true;
     off = nameStart + nameLen + extraLen + commentLen;
   }
   return false;

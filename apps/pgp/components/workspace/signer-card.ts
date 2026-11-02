@@ -1,8 +1,7 @@
-import type { IdentityConflict } from "../../lib/identity/binding";
-import type { PublicContactKey } from "../../lib/storage/contacts";
-import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
-import { t } from "../../lib/i18n";
-import { contactClash } from "../../lib/identity/binding";
+import { t } from "~/lib/i18n";
+import { contactClash, type IdentityConflict } from "~/lib/identity/binding";
+import type { PublicContactKey } from "~/lib/storage/contacts";
+import type { ProtectedKeyBlob } from "~/lib/storage/keyring";
 
 /**
  * Everything the signer card shows, worked out once.

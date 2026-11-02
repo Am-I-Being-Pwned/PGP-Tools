@@ -4,10 +4,13 @@ import { cp, mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
-import type { BrowserContext, Page } from "@playwright/test";
-import { test as base, chromium } from "@playwright/test";
+import {
+  test as base,
+  chromium,
+  type BrowserContext,
+  type Page,
+} from "@playwright/test";
 
-import type { PrfRecord } from "./webauthn-carry";
 import { expect, getExtensionId } from "./fixtures";
 import {
   decryptInWorkspace,
@@ -32,6 +35,7 @@ import {
   readPrfRequests,
   removePrfAuthenticator,
   restoreCredentials,
+  type PrfRecord,
 } from "./webauthn-carry";
 
 /**

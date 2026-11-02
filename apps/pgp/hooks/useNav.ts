@@ -1,6 +1,6 @@
 import { createContext, use, useMemo, useRef, useState } from "react";
 
-import { toast } from "../lib/toast";
+import { toast } from "~/lib/toast";
 
 export type Tab = "workspace" | "keys" | "settings";
 export type KeysRoute = "generate" | "import";

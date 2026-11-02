@@ -1,32 +1,32 @@
 import { useState } from "react";
 import { LoaderIcon } from "lucide-react";
 
-import { cn } from "@amibeingpwned/ui";
-import { BlockStack } from "@amibeingpwned/ui/block";
-import { Button } from "@amibeingpwned/ui/button";
-import { Calendar } from "@amibeingpwned/ui/calendar";
+import { BlockStack, Button, Calendar, cn } from "@amibeingpwned/ui";
 
-import type { CrxSigningKeyBlob } from "../../lib/crx/types";
-import type { ExpiryOption } from "../../lib/keys/expiry";
-import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
-import type { KeyAlgorithm } from "./KeyIdentityFields";
-import { useAsyncAction } from "../../hooks/useAsyncAction";
-import { generateCrxKey } from "../../lib/crx/operations";
-import { t } from "../../lib/i18n";
-import { formatDate } from "../../lib/i18n/format";
-import { DEFAULT_EXPIRY, expiryToSeconds } from "../../lib/keys/expiry";
-import { generateAndProtect } from "../../lib/protection/protect-flow";
-import { afterNextPaint } from "../../lib/utils/paint";
 import {
   SlideOverHeader,
   SlideOverPanel,
   useSlideOver,
-} from "../shared/SlideOver";
+} from "~/components/shared/SlideOver";
+import { useAsyncAction } from "~/hooks/useAsyncAction";
+import { generateCrxKey } from "~/lib/crx/operations";
+import type { CrxSigningKeyBlob } from "~/lib/crx/types";
+import { t } from "~/lib/i18n";
+import { formatDate } from "~/lib/i18n/format";
+import {
+  DEFAULT_EXPIRY,
+  expiryToSeconds,
+  type ExpiryOption,
+} from "~/lib/keys/expiry";
+import { generateAndProtect } from "~/lib/protection/protect-flow";
+import type { ProtectedKeyBlob } from "~/lib/storage/keyring";
+import { afterNextPaint } from "~/lib/utils/paint";
 import {
   EMPTY_IDENTITY,
   FieldBlock,
   identityUserId,
   KeyIdentityFields,
+  type KeyAlgorithm,
 } from "./KeyIdentityFields";
 import { ProtectionMethodPicker } from "./ProtectionMethodPicker";
 import { useProtectionChoice } from "./useProtectionChoice";

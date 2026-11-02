@@ -10,30 +10,29 @@ import {
   Trash2Icon,
 } from "lucide-react";
 
-import { Block, BlockStack } from "@amibeingpwned/ui/block";
-import { Button } from "@amibeingpwned/ui/button";
+import { Block, BlockStack, Button } from "@amibeingpwned/ui";
 
-import type { MessageKey } from "../../lib/i18n";
-import type { HistoryEntry, HistoryOp } from "../../lib/storage/history";
-import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
+import { ConfirmPage } from "~/components/shared/ConfirmPage";
+import { KeyAvatar } from "~/components/shared/KeyAvatar";
+import { SubPage } from "~/components/shared/SubPage";
+import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
 import {
   buildSnippet,
   entryMatchesQuery,
   splitHighlight,
-} from "../../lib/history-search";
-import { t, tn } from "../../lib/i18n";
-import { formatDateTime, formatRelative } from "../../lib/i18n/format";
+} from "~/lib/history-search";
+import { t, tn, type MessageKey } from "~/lib/i18n";
+import { formatDateTime, formatRelative } from "~/lib/i18n/format";
 import {
   clearHistory,
   hasUnlimitedStorage,
   historyByteSize,
   loadHistory,
   resolveBudget,
-} from "../../lib/storage/history";
-import { formatFileSize } from "../../lib/utils/formatting";
-import { ConfirmPage } from "../shared/ConfirmPage";
-import { KeyAvatar } from "../shared/KeyAvatar";
-import { SubPage } from "../shared/SubPage";
+  type HistoryEntry,
+  type HistoryOp,
+} from "~/lib/storage/history";
+import { formatFileSize } from "~/lib/utils/formatting";
 
 const OP_ICON: Record<HistoryOp, typeof LockIcon> = {
   encrypt: LockIcon,

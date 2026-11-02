@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { PgpAction } from "./types";
-import { keydown } from "../fake-keydown";
+import { keydown } from "~/lib/fake-keydown";
 import { fakeCtx } from "./fake-ctx";
 import {
   filterActions,
@@ -9,7 +8,7 @@ import {
   groupActions,
   visibleActions,
 } from "./registry";
-import { actionName } from "./types";
+import { actionName, type PgpAction } from "./types";
 
 const ALWAYS: PgpAction = {
   id: "test.always",

@@ -1,7 +1,7 @@
-import type { SignatureDetails, SignatureStatus } from "../../lib/pgp/types";
-import { t, tn } from "../../lib/i18n";
-import { formatDate } from "../../lib/i18n/format";
-import { displayFileName } from "../../lib/utils/file-name";
+import { t, tn } from "~/lib/i18n";
+import { formatDate } from "~/lib/i18n/format";
+import type { SignatureDetails, SignatureStatus } from "~/lib/pgp/types";
+import { displayFileName } from "~/lib/utils/file-name";
 
 /** The signature half of a verify or decrypt result. */
 export type SignedResult = SignatureDetails & {

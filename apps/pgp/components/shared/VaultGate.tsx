@@ -1,35 +1,33 @@
-import type { ReactNode } from "react";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, type ReactNode } from "react";
 
-import { Button } from "@amibeingpwned/ui/button";
+import { Button } from "@amibeingpwned/ui";
 
-import type { VaultServices } from "../../hooks/useVault";
-import type { VaultEvent, VaultLifecycle } from "../../lib/vault-phase";
-import type { MasterPrfLoan } from "./MasterUnlockScreen";
-import { useContacts } from "../../hooks/useContacts";
-import { useKeyring } from "../../hooks/useKeyring";
-import { normalizeCrxPadding } from "../../lib/crx/storage";
-import { t } from "../../lib/i18n";
+import { useContacts } from "~/hooks/useContacts";
+import { useKeyring } from "~/hooks/useKeyring";
+import type { VaultServices } from "~/hooks/useVault";
+import { normalizeCrxPadding } from "~/lib/crx/storage";
+import { t } from "~/lib/i18n";
 import {
   masterPasskeyOf,
   partitionByMasterSeal,
-} from "../../lib/protection/vault-unlock";
-import { normalizeContactsPadding } from "../../lib/storage/contacts";
-import { getKeyring, normalizeKeyringPadding } from "../../lib/storage/keyring";
-import { getMasterProtection } from "../../lib/storage/master-protection";
+} from "~/lib/protection/vault-unlock";
+import { normalizeContactsPadding } from "~/lib/storage/contacts";
+import { getKeyring, normalizeKeyringPadding } from "~/lib/storage/keyring";
+import { getMasterProtection } from "~/lib/storage/master-protection";
 import {
   getPreferences,
   migrateLegacyPreferences,
-} from "../../lib/storage/preferences";
-import { preferencesStore } from "../../lib/storage/preferences-store";
-import { refreshVaultLists } from "../../lib/storage/vault-lists";
+} from "~/lib/storage/preferences";
+import { preferencesStore } from "~/lib/storage/preferences-store";
+import { refreshVaultLists } from "~/lib/storage/vault-lists";
 import {
   adoptVaultLocation,
   eraseVault,
   resolveVaultState,
-} from "../../lib/storage/vault-state";
+} from "~/lib/storage/vault-state";
+import type { VaultEvent, VaultLifecycle } from "~/lib/vault-phase";
 import { AppFooter } from "./AppFooter";
-import { MasterUnlockScreen } from "./MasterUnlockScreen";
+import { MasterUnlockScreen, type MasterPrfLoan } from "./MasterUnlockScreen";
 import { OnboardingFlow } from "./OnboardingFlow";
 import { VaultProblemScreen } from "./VaultProblemScreen";
 

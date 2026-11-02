@@ -14,8 +14,6 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { PublicContactKey } from "./contacts";
-import type { FakeArea } from "./fake-area";
 import {
   STORAGE_CONTACTS,
   STORAGE_CRX_KEYS,
@@ -25,21 +23,22 @@ import {
   STORAGE_MASTER_PROTECTION,
   STORAGE_PREFERENCES,
   STORAGE_SETTINGS,
-} from "../constants";
-import { getCrxKeys } from "../crx/storage";
-import { PRESETS } from "../presets";
+} from "~/lib/constants";
+import { getCrxKeys } from "~/lib/crx/storage";
+import { PRESETS } from "~/lib/presets";
 import {
   loadContacts,
   removeContact,
   saveContact,
   updateContact,
+  type PublicContactKey,
 } from "./contacts";
 import {
   copyEncryptedBlobRepacked,
   saveEncryptedArray,
 } from "./encrypted-store";
 import { asStorageLocation, invalidateLocationCache } from "./engine";
-import { fakeArea, stubChromeStorage } from "./fake-area";
+import { fakeArea, stubChromeStorage, type FakeArea } from "./fake-area";
 import { domainEnvelope, isDomainSealed } from "./fake-store-crypto";
 import {
   acknowledgeIntegrityIssues,

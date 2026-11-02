@@ -22,7 +22,15 @@ import { keyBySlug } from "../e2e/keys";
 
 const APP = path.resolve(import.meta.dirname, "..");
 const EXT = path.join(APP, ".output", "chrome-mv3");
-const OUT = path.resolve(APP, "..", "..", "assets", "store-listing", "video", "ui");
+const OUT = path.resolve(
+  APP,
+  "..",
+  "..",
+  "assets",
+  "store-listing",
+  "video",
+  "ui",
+);
 const PASSWORD = "correct horse battery staple";
 const PAGE = "https://github.com/Am-I-Being-Pwned/PGP-Tools";
 const CDP_PORT = 9334;
@@ -50,8 +58,11 @@ for w in list {
   if a > area { area = a; best = w[kCGWindowNumber as String] as! Int }
 }
 print(best)`;
-  const id = Number(execFileSync("swift", ["-e", swift], { encoding: "utf8" }).trim());
-  if (!id) throw new Error(`no test-browser window titled "${title}" on screen`);
+  const id = Number(
+    execFileSync("swift", ["-e", swift], { encoding: "utf8" }).trim(),
+  );
+  if (!id)
+    throw new Error(`no test-browser window titled "${title}" on screen`);
   return id;
 }
 
@@ -60,10 +71,15 @@ print(best)`;
  * side-panel targets as pages, so the panel is driven over CDP directly:
  * find the sidepanel.html target and evaluate in it.
  */
-async function panelSession(): Promise<{ run: (expr: string) => Promise<unknown>; close: () => void }> {
+async function panelSession(): Promise<{
+  run: (expr: string) => Promise<unknown>;
+  close: () => void;
+}> {
   let target: { url: string; webSocketDebuggerUrl: string } | undefined;
   for (let i = 0; i < 40 && !target; i++) {
-    const list = (await (await fetch(`http://127.0.0.1:${CDP_PORT}/json`)).json()) as { url: string; webSocketDebuggerUrl: string }[];
+    const list = (await (
+      await fetch(`http://127.0.0.1:${CDP_PORT}/json`)
+    ).json()) as { url: string; webSocketDebuggerUrl: string }[];
     target = list.find((t) => t.url.includes("sidepanel.html"));
     if (!target) await new Promise((r) => setTimeout(r, 250));
   }
@@ -73,10 +89,17 @@ async function panelSession(): Promise<{ run: (expr: string) => Promise<unknown>
   let next = 1;
   const pending = new Map<number, (v: unknown) => void>();
   ws.addEventListener("message", (e) => {
-    const msg = JSON.parse(String(e.data)) as { id?: number; result?: { result?: { value?: unknown }; exceptionDetails?: unknown } };
+    const msg = JSON.parse(String(e.data)) as {
+      id?: number;
+      result?: { result?: { value?: unknown }; exceptionDetails?: unknown };
+    };
     const resolve = msg.id ? pending.get(msg.id) : undefined;
     if (msg.id && resolve) {
-      if (msg.result?.exceptionDetails) console.log("panel eval error:", JSON.stringify(msg.result.exceptionDetails).slice(0, 300));
+      if (msg.result?.exceptionDetails)
+        console.log(
+          "panel eval error:",
+          JSON.stringify(msg.result.exceptionDetails).slice(0, 300),
+        );
       resolve(msg.result?.result?.value);
       pending.delete(msg.id);
     }
@@ -85,7 +108,18 @@ async function panelSession(): Promise<{ run: (expr: string) => Promise<unknown>
     new Promise<unknown>((resolve) => {
       const id = next++;
       pending.set(id, resolve);
-      ws.send(JSON.stringify({ id, method: "Runtime.evaluate", params: { expression, awaitPromise: true, returnByValue: true, userGesture: true } }));
+      ws.send(
+        JSON.stringify({
+          id,
+          method: "Runtime.evaluate",
+          params: {
+            expression,
+            awaitPromise: true,
+            returnByValue: true,
+            userGesture: true,
+          },
+        }),
+      );
     });
   return { run, close: () => ws.close() };
 }
@@ -130,19 +164,33 @@ test("chrome window with the side panel open", async () => {
   await setup.getByLabel("Confirm password").fill(PASSWORD);
   await setup.getByRole("button", { name: "Set password" }).click();
   await setup.getByPlaceholder("Your full name").fill("James Arnott");
-  await setup.getByPlaceholder("you@example.com").fill("james@amibeingpwned.com");
+  await setup
+    .getByPlaceholder("you@example.com")
+    .fill("james@amibeingpwned.com");
   await setup.getByRole("button", { name: "Create my PGP key" }).click();
-  await setup.getByRole("button", { name: "Keep the defaults" }).click({ timeout: 30_000 });
-  await expect(setup.getByRole("tab", { name: "Keys" })).toBeVisible({ timeout: 30_000 });
+  await setup
+    .getByRole("button", { name: "Keep the defaults" })
+    .click({ timeout: 30_000 });
+  await expect(setup.getByRole("tab", { name: "Keys" })).toBeVisible({
+    timeout: 30_000,
+  });
   await importContact(setup, keyBySlug("standard").publicKey);
 
   // 2. Open the real side panel. sidePanel.open() needs a user gesture, so
   //    a trusted Playwright click on a button in an extension page calls it.
-  const windowIdChrome = await setup.evaluate(async () => (await chrome.windows.getCurrent()).id);
+  const windowIdChrome = await setup.evaluate(
+    async () => (await chrome.windows.getCurrent()).id,
+  );
   await setup.evaluate((wid) => {
     const b = document.createElement("button");
-    b.id = "open-panel"; b.textContent = "open";
-    Object.assign(b.style, { position: "fixed", left: "0", top: "0", zIndex: "99999" });
+    b.id = "open-panel";
+    b.textContent = "open";
+    Object.assign(b.style, {
+      position: "fixed",
+      left: "0",
+      top: "0",
+      zIndex: "99999",
+    });
     if (wid === undefined) throw new Error("no current window");
     b.onclick = () => void chrome.sidePanel.open({ windowId: wid });
     document.body.appendChild(b);
@@ -158,7 +206,9 @@ test("chrome window with the side panel open", async () => {
   // 4. Drive the real panel: unlock, show the empty Encrypt composer.
   const panel = await panelSession();
   await panel.run(PANEL_LIB);
-  await panel.run(`(async () => {
+  await panel
+    .run(
+      `(async () => {
     const pw = await __until(() => document.querySelector('input[type="password"]'));
     __fill(pw, ${JSON.stringify(PASSWORD)});
     __byText("button", "Unlock").click();
@@ -172,7 +222,9 @@ test("chrome window with the side panel open", async () => {
     await __sleep(300);
     document.activeElement?.blur();
     return "ok";
-  })()`).then((v) => console.log("panel:", v));
+  })()`,
+    )
+    .then((v) => console.log("panel:", v));
   await setup.waitForTimeout(800);
   panel.close();
 
@@ -183,7 +235,12 @@ test("chrome window with the side panel open", async () => {
   await setup.mouse.move(W / 2, H - 200);
   await setup.waitForTimeout(800);
   const wid = testWindowId("Am-I-Being-Pwned");
-  execFileSync("screencapture", ["-x", "-o", `-l${wid}`, path.join(OUT, "chrome-window.png")]);
+  execFileSync("screencapture", [
+    "-x",
+    "-o",
+    `-l${wid}`,
+    path.join(OUT, "chrome-window.png"),
+  ]);
 
   // 6. The same window with the panel closed (window.close() in a side
   //    panel closes the panel), so the video can show it opening.
@@ -191,6 +248,11 @@ test("chrome window with the side panel open", async () => {
   void again.run("window.close()");
   await setup.waitForTimeout(1200);
   again.close();
-  execFileSync("screencapture", ["-x", "-o", `-l${testWindowId("Am-I-Being-Pwned")}`, path.join(OUT, "chrome-window-closed.png")]);
+  execFileSync("screencapture", [
+    "-x",
+    "-o",
+    `-l${testWindowId("Am-I-Being-Pwned")}`,
+    path.join(OUT, "chrome-window-closed.png"),
+  ]);
   await context.close();
 });

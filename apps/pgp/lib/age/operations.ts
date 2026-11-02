@@ -5,15 +5,15 @@
  * (enforced in `lib/encrypt-recipients.ts`).
  */
 
-import type { DecryptInput, EncryptInput } from "../pgp/types";
-import type { SshRecipientInfo } from "../pgp/wasm";
+import type { DecryptInput, EncryptInput } from "~/lib/pgp/types";
 import {
   decryptAgeWithHandle,
   encryptAgeToRecipients,
   isAgeMessage,
   parseSshRecipient,
   selectAgeDecryptionKey,
-} from "../pgp/wasm";
+  type SshRecipientInfo,
+} from "~/lib/pgp/wasm";
 
 export type { SshRecipientInfo };
 

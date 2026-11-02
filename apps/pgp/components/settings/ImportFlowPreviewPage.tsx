@@ -1,14 +1,13 @@
 /* i18n-ignore-file */
 import { useState } from "react";
 
-import { BlockStack } from "@amibeingpwned/ui/block";
-import { Button } from "@amibeingpwned/ui/button";
+import { BlockStack, Button } from "@amibeingpwned/ui";
 
-import type { PublicContactKey } from "../../lib/storage/contacts";
-import { IMPORT_SCENARIOS } from "../../lib/dev/import-fixtures";
-import { ContactCard } from "../keys/ContactCard";
-import { ImportPreviewPage } from "../keys/ImportPreviewPage";
-import { SubPage } from "../shared/SubPage";
+import { ContactCard } from "~/components/keys/ContactCard";
+import { ImportPreviewPage } from "~/components/keys/ImportPreviewPage";
+import { SubPage } from "~/components/shared/SubPage";
+import { IMPORT_SCENARIOS } from "~/lib/dev/import-fixtures";
+import type { PublicContactKey } from "~/lib/storage/contacts";
 
 /** DEV-ONLY import-flow harness on placeholder data; gated behind
  *  `import.meta.env.DEV` at both call sites. */

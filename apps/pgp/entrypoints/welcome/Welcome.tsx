@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { ArrowRightIcon, LockKeyholeIcon } from "lucide-react";
 
-import { Button } from "@amibeingpwned/ui/button";
+import { Button } from "@amibeingpwned/ui";
 
-import { t } from "../../lib/i18n";
+import { t } from "~/lib/i18n";
 
 export function Welcome() {
   const [opened, setOpened] = useState(false);

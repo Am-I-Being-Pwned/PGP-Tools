@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
+import { ContactCard } from "~/components/keys/ContactCard";
 import type { SignerCardState } from "./signer-card";
-import { ContactCard } from "../keys/ContactCard";
 
 /** The signer card, from its state. `labelAction` / `noteAction` are the
  *  panel's controls (key details, keyserver lookup); the reader has none. */

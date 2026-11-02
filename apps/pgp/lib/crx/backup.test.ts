@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import type { CrxSigningKeyBlob } from "./types";
 import {
   MAX_CRX_BLOCKS,
   parseCrxKeyBlocks,
   serializeCrxKeyBlocks,
 } from "./backup";
+import type { CrxSigningKeyBlob } from "./types";
 
 function passwordBlob(id: string): CrxSigningKeyBlob {
   return {

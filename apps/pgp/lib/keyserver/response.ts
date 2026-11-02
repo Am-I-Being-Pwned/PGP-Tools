@@ -6,8 +6,8 @@
  * influenced) and must not reach a render.
  */
 
-import type { KeyserverKeyFailure } from "../messages";
-import { splitPublicKeyBlocks } from "../armor-blocks";
+import { splitPublicKeyBlocks } from "~/lib/armor-blocks";
+import type { KeyserverKeyFailure } from "~/lib/messages";
 
 /** Caps on a response we do not control. `MAX_BODY_BYTES` is checked as
  *  bytes (measured real cert ~9.5 KiB; VKS strips third-party sigs).

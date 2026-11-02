@@ -3,7 +3,7 @@ import { CheckCheckIcon, DownloadIcon, Trash2Icon, XIcon } from "lucide-react";
 
 import { cn } from "@amibeingpwned/ui";
 
-import { t, tn } from "../../lib/i18n";
+import { t, tn } from "~/lib/i18n";
 
 /** Must match the `duration-300` on the pill below. */
 const ANIM_MS = 300;

@@ -1,10 +1,9 @@
-import type { FocusTrap } from "focus-trap";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createFocusTrap } from "focus-trap";
+import { createFocusTrap, type FocusTrap } from "focus-trap";
 import { ChevronLeftIcon } from "lucide-react";
 import { tabbable } from "tabbable";
 
-import { t } from "../../lib/i18n";
+import { t } from "~/lib/i18n";
 
 /** Must match the `duration-300` class on the panel. */
 export const SLIDE_MS = 300;

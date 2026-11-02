@@ -7,22 +7,27 @@ import {
   ShieldCheckIcon,
 } from "lucide-react";
 
-import { Block } from "@amibeingpwned/ui/block";
-import { Button } from "@amibeingpwned/ui/button";
-import { Kbd } from "@amibeingpwned/ui/kbd";
-import { ariaKeyShortcuts, isMacPlatform } from "@amibeingpwned/ui/kbd-helpers";
-import { Segmented } from "@amibeingpwned/ui/segmented";
+import {
+  ariaKeyShortcuts,
+  Block,
+  Button,
+  isMacPlatform,
+  Kbd,
+  Segmented,
+} from "@amibeingpwned/ui";
 
-import type { Edit, InlineStyle } from "../../lib/compose/text-format";
-import type { WorkspaceAction } from "../../lib/messages";
-import type { PublicContactKey } from "../../lib/storage/contacts";
-import type { ComposeTranslateProps } from "./ComposeToolbar";
-import { useFitLevel } from "../../hooks/useFitLevel";
-import { MODE_SHORTCUTS } from "../../lib/actions/definitions";
-import { applyTextareaEdit } from "../../lib/compose/apply-edit";
-import { toggleInlineStyle } from "../../lib/compose/text-format";
-import { t, tn } from "../../lib/i18n";
-import { ComposeToolbar } from "./ComposeToolbar";
+import { useFitLevel } from "~/hooks/useFitLevel";
+import { MODE_SHORTCUTS } from "~/lib/actions/definitions";
+import { applyTextareaEdit } from "~/lib/compose/apply-edit";
+import {
+  toggleInlineStyle,
+  type Edit,
+  type InlineStyle,
+} from "~/lib/compose/text-format";
+import { t, tn } from "~/lib/i18n";
+import type { WorkspaceAction } from "~/lib/messages";
+import type { PublicContactKey } from "~/lib/storage/contacts";
+import { ComposeToolbar, type ComposeTranslateProps } from "./ComposeToolbar";
 import { DetectedKeyBanner } from "./DetectedKeyBanner";
 import { DropZone } from "./DropZone";
 import { FindReplaceBar } from "./FindReplaceBar";

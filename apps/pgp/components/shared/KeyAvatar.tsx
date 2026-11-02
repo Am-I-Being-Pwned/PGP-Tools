@@ -3,7 +3,7 @@ import { UserIcon } from "lucide-react";
 
 import { cn } from "@amibeingpwned/ui";
 
-import { AVATAR_SIZE, hasKeyFace, keyAvatar } from "../../lib/key-avatar";
+import { AVATAR_SIZE, hasKeyFace, keyAvatar } from "~/lib/key-avatar";
 
 /**
  * Decorative (hidden from assistive tech). Only a whole fingerprint gets a

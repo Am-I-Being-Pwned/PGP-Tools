@@ -1,11 +1,8 @@
 // Settings -> Keyboard shortcuts data. Entries with a live source of truth
 // are derived from it; the rest are drift-guarded by the test.
 
-import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
+import type { ShortcutSpec } from "@amibeingpwned/ui";
 
-import type { PgpMode } from "./actions/types";
-import type { InlineStyle } from "./compose/text-format";
-import type { MessageKey } from "./i18n";
 import {
   COPY_SHORTCUT,
   DOWNLOAD_SHORTCUT,
@@ -13,12 +10,14 @@ import {
   PALETTE_SHORTCUT,
   REPLY_SHORTCUT,
 } from "./actions/definitions";
+import type { PgpMode } from "./actions/types";
 import {
   FIND_SHORTCUT,
   STYLE_LABELS,
   STYLE_SHORTCUTS,
 } from "./compose/shortcuts";
-import { t } from "./i18n";
+import type { InlineStyle } from "./compose/text-format";
+import { t, type MessageKey } from "./i18n";
 
 export interface ShortcutRefEntry {
   label: string;

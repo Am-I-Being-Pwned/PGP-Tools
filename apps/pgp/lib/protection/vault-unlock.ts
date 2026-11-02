@@ -10,19 +10,17 @@
  * zeroed here (reused across a batch); the caller `.fill(0)`s it.
  */
 
-import type { StoredKeyKind } from "../storage/key-kind";
-import type { ProtectedKeyBlob } from "../storage/keyring";
-import type { MasterProtection } from "../storage/master-protection";
-import type { KeyProtection } from "./protected-blob";
-import { fromBase64, toBase64 } from "../encoding";
+import { fromBase64, toBase64 } from "~/lib/encoding";
 import {
   reprotectKeyWithPrf,
   reprotectSshIdentityWithPrf,
   unlockSshIdentityWithPrf,
   unlockWithPrf,
-} from "../pgp/wasm";
-import { storedKeyKind } from "../storage/key-kind";
-import { unpackPrfBlob } from "./protected-blob";
+} from "~/lib/pgp/wasm";
+import { storedKeyKind, type StoredKeyKind } from "~/lib/storage/key-kind";
+import type { ProtectedKeyBlob } from "~/lib/storage/keyring";
+import type { MasterProtection } from "~/lib/storage/master-protection";
+import { unpackPrfBlob, type KeyProtection } from "./protected-blob";
 import { generateStoredSecret } from "./webauthn-prf";
 
 /** Base64 as stored, so comparisons are plain string equality. */

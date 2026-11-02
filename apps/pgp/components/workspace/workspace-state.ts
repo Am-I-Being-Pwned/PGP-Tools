@@ -1,14 +1,14 @@
-import type { PresentedError } from "../../lib/errors/present";
-import type { WorkspaceAction } from "../../lib/messages";
-import type { MessageEncryption } from "../../lib/pgp/wasm-public";
-import type { PublicContactKey } from "../../lib/storage/contacts";
-import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
-import type { FileResult } from "../../lib/utils/download";
-import { looksLikeAgeMessage } from "../../lib/armor-blocks";
-import { firstMessageHeader } from "../../lib/classify-action";
-import { looksLikePrivateKey } from "../../lib/drop-routing";
-import { resolveSelfKey } from "../../lib/encrypt-recipients";
-import { isPgpRecord, isSshRecord } from "../../lib/storage/key-kind";
+import { looksLikeAgeMessage } from "~/lib/armor-blocks";
+import { firstMessageHeader } from "~/lib/classify-action";
+import { looksLikePrivateKey } from "~/lib/drop-routing";
+import { resolveSelfKey } from "~/lib/encrypt-recipients";
+import type { PresentedError } from "~/lib/errors/present";
+import type { WorkspaceAction } from "~/lib/messages";
+import type { MessageEncryption } from "~/lib/pgp/wasm-public";
+import type { PublicContactKey } from "~/lib/storage/contacts";
+import { isPgpRecord, isSshRecord } from "~/lib/storage/key-kind";
+import type { ProtectedKeyBlob } from "~/lib/storage/keyring";
+import type { FileResult } from "~/lib/utils/download";
 
 /**
  * The workspace's render state, as one reducer.

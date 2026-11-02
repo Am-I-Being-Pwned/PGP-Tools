@@ -5,9 +5,7 @@
  */
 import { describe, expect, it, vi } from "vitest";
 
-import type { KeyserverQuery } from "../keyserver/query";
-import type * as PrepareModule from "./prepare";
-import type { IncomingKey } from "./types";
+import type { KeyserverQuery } from "~/lib/keyserver/query";
 import {
   answersQuery,
   KEYSERVER_HOST,
@@ -15,7 +13,9 @@ import {
   keyserverSource,
   prepareKeyserverImport,
 } from "./keyserver";
+import type * as PrepareModule from "./prepare";
 import { prepareImport } from "./prepare";
+import type { IncomingKey } from "./types";
 
 vi.mock("./prepare", async (importOriginal) => ({
   ...(await importOriginal<typeof PrepareModule>()),

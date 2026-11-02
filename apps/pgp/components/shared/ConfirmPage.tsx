@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { TriangleAlertIcon } from "lucide-react";
 
-import { Input } from "@amibeingpwned/ui/input";
+import { Input } from "@amibeingpwned/ui";
 
-import { confirmTextMatches } from "../../lib/confirm-text";
-import { t } from "../../lib/i18n";
+import { confirmTextMatches } from "~/lib/confirm-text";
+import { t } from "~/lib/i18n";
 import { SubPage } from "./SubPage";
 
 interface ConfirmPageProps {

@@ -4,8 +4,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import type { BrowserContext, Page } from "@playwright/test";
-import { expect } from "@playwright/test";
+import { expect, type BrowserContext, type Page } from "@playwright/test";
 
 /**
  * Drive the onboarding flow with a password master and generate a first

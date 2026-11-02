@@ -7,10 +7,8 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { ContactRecipient, PublicContactKey } from "./contacts";
-import type { FakeArea } from "./fake-area";
-import { STORAGE_CONTACTS } from "../constants";
-import { displayUserId } from "../utils/key-naming";
+import { STORAGE_CONTACTS } from "~/lib/constants";
+import { displayUserId } from "~/lib/utils/key-naming";
 import {
   activeRecipients,
   aliasField,
@@ -32,8 +30,10 @@ import {
   withAlias,
   withRecipientDisabled,
   withRecipients,
+  type ContactRecipient,
+  type PublicContactKey,
 } from "./contacts";
-import { stubChromeStorage } from "./fake-area";
+import { stubChromeStorage, type FakeArea } from "./fake-area";
 import { createLiveList } from "./live-list";
 
 const wasmMock = vi.hoisted(() => ({ session: true }));

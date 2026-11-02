@@ -7,7 +7,7 @@ import {
 } from "@radix-ui/react-icons";
 import { Select as SelectPrimitive } from "radix-ui";
 
-import { cn } from "@amibeingpwned/ui";
+import { cn } from "./cn";
 
 const Select = SelectPrimitive.Root;
 const SelectGroup = SelectPrimitive.Group;

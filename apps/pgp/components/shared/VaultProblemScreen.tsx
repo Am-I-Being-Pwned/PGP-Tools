@@ -1,10 +1,10 @@
 import { useRef, useState } from "react";
 
-import { Button } from "@amibeingpwned/ui/button";
+import { Button } from "@amibeingpwned/ui";
 
-import type { StorageLocation } from "../../lib/storage/preferences";
-import { useAsyncAction } from "../../hooks/useAsyncAction";
-import { t } from "../../lib/i18n";
+import { useAsyncAction } from "~/hooks/useAsyncAction";
+import { t } from "~/lib/i18n";
+import type { StorageLocation } from "~/lib/storage/preferences";
 import { ConfirmPage } from "./ConfirmPage";
 
 /**

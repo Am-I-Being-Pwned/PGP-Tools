@@ -1,4 +1,4 @@
-import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
+import type { ShortcutSpec } from "@amibeingpwned/ui";
 
 /** Structural so the matcher is testable without a DOM. */
 export interface ShortcutKeyEvent {

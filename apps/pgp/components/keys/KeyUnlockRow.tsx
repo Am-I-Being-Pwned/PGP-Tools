@@ -1,11 +1,9 @@
 import { CheckIcon, LockIcon } from "lucide-react";
 
-import { cn } from "@amibeingpwned/ui";
-import { Button } from "@amibeingpwned/ui/button";
-import { Input } from "@amibeingpwned/ui/input";
+import { Button, cn, Input } from "@amibeingpwned/ui";
 
-import { t } from "../../lib/i18n";
-import { KeyAvatar } from "../shared/KeyAvatar";
+import { KeyAvatar } from "~/components/shared/KeyAvatar";
+import { t } from "~/lib/i18n";
 
 interface KeyUnlockRowProps {
   name: string;

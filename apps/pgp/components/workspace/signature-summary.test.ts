@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import type { SignedResult } from "./signature-summary";
 import {
   mixedBatchNote,
   notAddressed,
   signatureNote,
   signedForOthers,
   summariseBatch,
+  type SignedResult,
 } from "./signature-summary";
 
 const ALICE = "A".repeat(40);

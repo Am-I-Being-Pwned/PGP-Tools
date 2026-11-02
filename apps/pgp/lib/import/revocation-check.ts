@@ -5,16 +5,18 @@
  * User IDs is not saved here; it returns `needs-review`.
  */
 
-import type { StoredCert } from "../import-public-keys";
-import type { KeyserverQuery } from "../keyserver/query";
+import type { StoredCert } from "~/lib/import-public-keys";
+import {
+  parseKeyserverQuery,
+  type KeyserverQuery,
+} from "~/lib/keyserver/query";
 import type {
   KeyserverKeyFailure,
   KeyserverKeyRequest,
   KeyserverKeyResponse,
-} from "../messages";
-import type { KeyInfo } from "../pgp/types";
-import { parseKeyserverQuery } from "../keyserver/query";
-import { parseKeys } from "../pgp/wasm";
+} from "~/lib/messages";
+import type { KeyInfo } from "~/lib/pgp/types";
+import { parseKeys } from "~/lib/pgp/wasm";
 
 export type RevocationCheck =
   | { kind: "revoked" }

@@ -1,5 +1,4 @@
 import { createPrivateKey, generateKeyPairSync } from "node:crypto";
-
 import { zipSync } from "fflate";
 
 import { expect, readStorage, test } from "./fixtures";
@@ -224,9 +223,9 @@ test("an unlocked CRX key is zeroized out of WASM memory when its handle is drop
     // key's. Its row's password input disappears once unlocked.
     await inputs.last().fill(CRX_PW);
     await inputs.last().press("Enter");
-    await expect.poll(() => inputs.count(), { timeout: 30_000 }).toBe(
-      before - 1,
-    );
+    await expect
+      .poll(() => inputs.count(), { timeout: 30_000 })
+      .toBe(before - 1);
   });
 
   await test.step("positive control: the secret prime is live in WASM memory", async () => {

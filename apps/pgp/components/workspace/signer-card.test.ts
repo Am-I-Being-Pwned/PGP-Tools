@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import type { PublicContactKey } from "../../lib/storage/contacts";
-import { isReaderMessage } from "../../lib/reader-protocol";
+import { isReaderMessage } from "~/lib/reader-protocol";
+import type { PublicContactKey } from "~/lib/storage/contacts";
 import { displayOnlySignerCard, signerCardState } from "./signer-card";
 
 // Reply's reader tab used to get a bare contact and render a fixed

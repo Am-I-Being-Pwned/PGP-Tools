@@ -7,8 +7,13 @@
 
 import { describe, expect, it } from "vitest";
 
-import type { IncomingKey, KeyKind } from "./types";
-import { isPublicKind, isSecretKind, PENDING_KEY_ID } from "./types";
+import {
+  isPublicKind,
+  isSecretKind,
+  PENDING_KEY_ID,
+  type IncomingKey,
+  type KeyKind,
+} from "./types";
 
 const CLASSIFICATION: Record<KeyKind, "public" | "secret"> = {
   "pgp-public": "public",

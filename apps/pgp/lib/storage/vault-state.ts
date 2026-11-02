@@ -16,15 +16,13 @@
  * `alternate` after a failed unlock, in case the record was tampered with.
  */
 
-import type { MasterProtection } from "./master-protection";
-import type { StorageLocation } from "./preferences";
 import {
   STORAGE_CONTACTS,
   STORAGE_CRX_KEYS,
   STORAGE_KEYRING,
   STORAGE_MASTER_PROTECTION,
   STORAGE_SETTINGS,
-} from "../constants";
+} from "~/lib/constants";
 import { getChunked, removeChunked } from "./chunked";
 import {
   copyEncryptedBlobRepacked,
@@ -39,8 +37,8 @@ import {
 } from "./engine";
 import { clearHistory } from "./history";
 import { resetIntegrityLedger } from "./integrity";
-import { masterProtectionIn } from "./master-protection";
-import { savePreferences } from "./preferences";
+import { masterProtectionIn, type MasterProtection } from "./master-protection";
+import { savePreferences, type StorageLocation } from "./preferences";
 
 export type VaultState =
   | { kind: "none" }

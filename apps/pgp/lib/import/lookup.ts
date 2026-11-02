@@ -1,8 +1,10 @@
 /** The ONE place that routes a typed lookup to GitHub or keys.openpgp.org. */
 
-import type { KeyserverQuery } from "../keyserver/query";
-import { isGithubUsername } from "../github/username";
-import { parseKeyserverQuery } from "../keyserver/query";
+import { isGithubUsername } from "~/lib/github/username";
+import {
+  parseKeyserverQuery,
+  type KeyserverQuery,
+} from "~/lib/keyserver/query";
 
 export type Lookup =
   | { target: "github"; username: string }

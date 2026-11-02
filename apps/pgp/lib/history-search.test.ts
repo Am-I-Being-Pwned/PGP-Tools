@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import type { HistoryEntry } from "./storage/history";
 import {
   buildSnippet,
   countMatches,
@@ -8,6 +7,7 @@ import {
   findMatch,
   splitHighlight,
 } from "./history-search";
+import type { HistoryEntry } from "./storage/history";
 
 function entry(overrides: Partial<HistoryEntry> = {}): HistoryEntry {
   return {

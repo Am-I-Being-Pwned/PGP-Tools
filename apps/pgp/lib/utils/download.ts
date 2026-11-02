@@ -47,11 +47,7 @@ async function requestDownloadsPermission(): Promise<boolean> {
 }
 
 export type SaveResult =
-  | "saved"
-  | "cancelled"
-  | "denied"
-  | "unsupported"
-  | "blocked";
+  "saved" | "cancelled" | "denied" | "unsupported" | "blocked";
 
 /**
  * Save a signed `.crx` via `chrome.downloads` with a Save As prompt,

@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import type { DropRule, DropSample } from "./drop-routing";
 import {
   buildDropSample,
   looksLikeKey,
@@ -8,6 +7,8 @@ import {
   looksLikeSshPublicKey,
   readAllFilesText,
   resolveDropRule,
+  type DropRule,
+  type DropSample,
 } from "./drop-routing";
 
 const ED25519_PUB =

@@ -1,19 +1,17 @@
 import type { MouseEvent as ReactMouseEvent, ReactNode } from "react";
 import { ChevronRightIcon, EllipsisVerticalIcon } from "lucide-react";
 
-import { cn } from "@amibeingpwned/ui";
 import {
+  cn,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
-} from "@amibeingpwned/ui/dropdown-menu";
-import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@amibeingpwned/ui/tooltip";
+} from "@amibeingpwned/ui";
 
-import { t } from "../../lib/i18n";
+import { t } from "~/lib/i18n";
 import { useJustImported } from "./useJustImported";
 import { useLongPress } from "./useLongPress";
 

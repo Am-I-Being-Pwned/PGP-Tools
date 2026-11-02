@@ -1,12 +1,12 @@
-import { useContacts } from "../../hooks/useContacts";
-import { useCrxKeys } from "../../hooks/useCrxKeys";
-import { useKeyring } from "../../hooks/useKeyring";
-import { useNav } from "../../hooks/useNav";
-import { usePreferences } from "../../hooks/usePreferences";
-import { useVault } from "../../hooks/useVault";
-import { tn } from "../../lib/i18n";
-import { toast } from "../../lib/toast";
-import { ImportKeyPage } from "../keys/ImportKeyPage";
+import { ImportKeyPage } from "~/components/keys/ImportKeyPage";
+import { useContacts } from "~/hooks/useContacts";
+import { useCrxKeys } from "~/hooks/useCrxKeys";
+import { useKeyring } from "~/hooks/useKeyring";
+import { useNav } from "~/hooks/useNav";
+import { usePreferences } from "~/hooks/usePreferences";
+import { useVault } from "~/hooks/useVault";
+import { tn } from "~/lib/i18n";
+import { toast } from "~/lib/toast";
 
 /** A key that arrived from outside the Keys tab (paste, drop, context
  *  menu, signer lookup), imported over whatever tab is showing. */

@@ -339,9 +339,7 @@ test("a history segment is no longer accepted as the contacts blob", async ({
     // lost them. The contact being gone is NOT what this establishes --
     // the write above destroyed the real blob, so it would be gone
     // either way.
-    await expect(
-      panel.getByText("Your vault could not be read"),
-    ).toBeVisible();
+    await expect(panel.getByText("Your vault could not be read")).toBeVisible();
 
     // What DOES distinguish the fix is whether the substituted blob is
     // READ as a contacts list. Before the fix the AEAD accepted it, every

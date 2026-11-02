@@ -1,7 +1,7 @@
 import type * as React from "react";
 import { useRef } from "react";
 
-import { cn } from "@amibeingpwned/ui";
+import { cn } from "./cn";
 
 export interface SegmentedOption<T extends string> {
   value: T;

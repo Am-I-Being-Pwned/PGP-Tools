@@ -4,7 +4,6 @@
 // drift. Coverage is labelled "lib coverage" on purpose: vitest has no DOM, so
 // components/entrypoints are covered by Playwright and key material by the
 // Rust tests — a whole-tree figure would be a smaller number making a bigger claim.
-
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -83,7 +82,12 @@ function unitTestCount() {
 }
 
 function e2eTestCount() {
-  const listing = run("npx", ["playwright", "test", "--list", "--reporter=line"]);
+  const listing = run("npx", [
+    "playwright",
+    "test",
+    "--list",
+    "--reporter=line",
+  ]);
   const match = /Total:\s+(\d+)\s+tests?/.exec(listing);
   if (!match) throw new Error("Could not read a test total from Playwright.");
   return Number(match[1]);

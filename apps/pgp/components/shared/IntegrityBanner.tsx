@@ -1,13 +1,13 @@
 import { useSyncExternalStore } from "react";
 import { TriangleAlertIcon, XIcon } from "lucide-react";
 
-import { STORAGE_INTEGRITY, STORAGE_SETTINGS } from "../../lib/constants";
-import { t } from "../../lib/i18n";
+import { STORAGE_INTEGRITY, STORAGE_SETTINGS } from "~/lib/constants";
+import { t } from "~/lib/i18n";
 import {
   acknowledgeIntegrityIssues,
   integrityIssues,
   subscribeIntegrity,
-} from "../../lib/storage/integrity";
+} from "~/lib/storage/integrity";
 
 /**
  * Rollback/missing-store warning. A warning, not a stop: refusing to load

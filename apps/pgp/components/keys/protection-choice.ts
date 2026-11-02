@@ -1,6 +1,6 @@
-import type { CrxProtectionInput } from "../../lib/crx/operations";
-import type { ProtectionInput } from "../../lib/protection/protect-runner";
-import { t } from "../../lib/i18n";
+import type { CrxProtectionInput } from "~/lib/crx/operations";
+import { t } from "~/lib/i18n";
+import type { ProtectionInput } from "~/lib/protection/protect-runner";
 
 export type ProtectionMethod = "passkey" | "password";
 

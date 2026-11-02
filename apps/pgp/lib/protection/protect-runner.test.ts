@@ -7,10 +7,10 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { GenerateKeyOptions } from "../pgp/types";
-import type { CrxProtectFlowResult, ProtectFlowResult } from "../pgp/wasm";
-import { generateCrxKey } from "../crx/operations";
-import { fromBase64 } from "../encoding";
+import { generateCrxKey } from "~/lib/crx/operations";
+import { fromBase64 } from "~/lib/encoding";
+import type { GenerateKeyOptions } from "~/lib/pgp/types";
+import type { CrxProtectFlowResult, ProtectFlowResult } from "~/lib/pgp/wasm";
 import { generateAndProtect, importAndProtect } from "./protect-flow";
 
 const wasm = vi.hoisted(() => ({

@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import type { PublicContactKey } from "./storage/contacts";
-import type { ProtectedKeyBlob } from "./storage/keyring";
 import {
   buildEncryptRecipients,
   mixedEngineReason,
@@ -11,6 +9,8 @@ import {
   resolveSelfKey,
   toSelectedRecipient,
 } from "./encrypt-recipients";
+import type { PublicContactKey } from "./storage/contacts";
+import type { ProtectedKeyBlob } from "./storage/keyring";
 
 const RECIPIENT = { keyId: "AAAA", armored: "recipient-armor" };
 const RECIPIENT_2 = { keyId: "BBBB", armored: "recipient-2-armor" };

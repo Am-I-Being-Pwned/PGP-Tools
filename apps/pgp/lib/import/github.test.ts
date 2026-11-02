@@ -8,10 +8,9 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { PublicContactKey } from "../storage/contacts";
-import type { ContactGroup } from "./types";
-import { parseGithubKeysResponse } from "../github/response";
-import { parseSshRecipient } from "../pgp/wasm";
+import { parseGithubKeysResponse } from "~/lib/github/response";
+import { parseSshRecipient } from "~/lib/pgp/wasm";
+import type { PublicContactKey } from "~/lib/storage/contacts";
 import {
   classifyGithubGroup,
   githubFailureCopy,
@@ -20,6 +19,7 @@ import {
   prepareGithubImport,
 } from "./github";
 import { defaultDecision } from "./review";
+import type { ContactGroup } from "./types";
 
 // Stubbed to answer like the real engine. Only `prepareGithubImport`
 // reaches it; every other test here is pure.

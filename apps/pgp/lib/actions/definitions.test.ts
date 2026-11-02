@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { ActionCtx, PgpMode } from "./types";
-import { keydown } from "../fake-keydown";
+import { keydown } from "~/lib/fake-keydown";
 import { ACTIONS, MODE_SHORTCUTS } from "./definitions";
 import { fakeCtx } from "./fake-ctx";
 import { findByShortcut, visibleActions } from "./registry";
+import type { ActionCtx, PgpMode } from "./types";
 
 function byId(ctx: ActionCtx, id: string) {
   return visibleActions(ACTIONS, ctx).find((r) => r.action.id === id);

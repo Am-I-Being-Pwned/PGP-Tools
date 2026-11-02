@@ -8,9 +8,9 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { ProtectedKeyBlob } from "../storage/keyring";
-import type { MasterProtection } from "../storage/master-protection";
-import { fromBase64, toBase64 } from "../encoding";
+import { fromBase64, toBase64 } from "~/lib/encoding";
+import type { ProtectedKeyBlob } from "~/lib/storage/keyring";
+import type { MasterProtection } from "~/lib/storage/master-protection";
 import {
   isSealedUnderMaster,
   masterPasskeyOf,

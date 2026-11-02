@@ -10,10 +10,9 @@
  * `keyDiscoveryEnabled` and is off in the strictest preset.
  */
 
-import type { KeyserverKeyFailure } from "../messages";
-import type { KeyserverQuery } from "./query";
-import { readCappedBody } from "../net/capped-body";
-import { keyserverKeyUrl } from "./query";
+import type { KeyserverKeyFailure } from "~/lib/messages";
+import { readCappedBody } from "~/lib/net/capped-body";
+import { keyserverKeyUrl, type KeyserverQuery } from "./query";
 import { MAX_BODY_BYTES, parseKeyserverKeyResponse } from "./response";
 
 export type FetchKeyserverKeyResult =

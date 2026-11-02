@@ -1,5 +1,14 @@
-import "../lib/network-lockdown";
+import "~/lib/network-lockdown";
 
+import { recoverArmorIfNeeded } from "~/lib/armor-recovery";
+import { classifyAction } from "~/lib/classify-action";
+import { MENU_OPEN_IN_PGP, SESSION_PENDING_OP } from "~/lib/constants";
+import { menuMayActOn } from "~/lib/context-menu";
+import { fetchGithubKeys } from "~/lib/github/fetch-keys";
+import { isGithubUsername } from "~/lib/github/username";
+import { t } from "~/lib/i18n";
+import { fetchKeyserverKey } from "~/lib/keyserver/fetch-key";
+import { isKeyserverQuery } from "~/lib/keyserver/query";
 import type {
   GithubKeysRequest,
   GithubKeysResponse,
@@ -7,18 +16,9 @@ import type {
   KeyserverKeyResponse,
   OperationAction,
   PendingOperation,
-} from "../lib/messages";
-import { recoverArmorIfNeeded } from "../lib/armor-recovery";
-import { classifyAction } from "../lib/classify-action";
-import { MENU_OPEN_IN_PGP, SESSION_PENDING_OP } from "../lib/constants";
-import { menuMayActOn } from "../lib/context-menu";
-import { fetchGithubKeys } from "../lib/github/fetch-keys";
-import { isGithubUsername } from "../lib/github/username";
-import { t } from "../lib/i18n";
-import { fetchKeyserverKey } from "../lib/keyserver/fetch-key";
-import { isKeyserverQuery } from "../lib/keyserver/query";
-import { commandToMode } from "../lib/mode-commands";
-import { sweepStalePendingOp } from "../lib/pending-op";
+} from "~/lib/messages";
+import { commandToMode } from "~/lib/mode-commands";
+import { sweepStalePendingOp } from "~/lib/pending-op";
 
 /**
  * Open the side panel and hand it a pending operation. MUST be called

@@ -13,50 +13,50 @@ import {
   TriangleAlertIcon,
 } from "lucide-react";
 
-import { Block, BlockLabel } from "@amibeingpwned/ui/block";
-import { Button } from "@amibeingpwned/ui/button";
+import { Block, BlockLabel, Button } from "@amibeingpwned/ui";
 
-import type {
-  IdentityConflict,
-  IdentityHolder,
-} from "../../lib/identity/binding";
-import type { KeyDetails, KeyInfo } from "../../lib/pgp/types";
-import type {
-  ContactRecipient,
-  PublicContactKey,
-} from "../../lib/storage/contacts";
-import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
-import type { ComponentKeyRow } from "./key-facts";
-import type { KeyPreviewChip } from "./KeyPreviewBody";
-import { useAsyncAction } from "../../hooks/useAsyncAction";
-import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
-import { AppError } from "../../lib/errors/app-error";
-import { presentError } from "../../lib/errors/present";
-import { t } from "../../lib/i18n";
-import { formatDate } from "../../lib/i18n/format";
-import { contactClashes } from "../../lib/identity/binding";
-import { clashSentence } from "../../lib/identity/clash-copy";
-import { downloadPublicKey } from "../../lib/keys/export-bundle";
-import { parseKey, parseKeyDetails } from "../../lib/pgp/wasm";
+import { MarkedText } from "~/components/shared/MarkedText";
+import {
+  SlideOverHeader,
+  SlideOverPanel,
+  useSlideOver,
+} from "~/components/shared/SlideOver";
+import { useAsyncAction } from "~/hooks/useAsyncAction";
+import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
+import { AppError } from "~/lib/errors/app-error";
+import { presentError } from "~/lib/errors/present";
+import { t } from "~/lib/i18n";
+import { formatDate } from "~/lib/i18n/format";
+import {
+  contactClashes,
+  type IdentityConflict,
+  type IdentityHolder,
+} from "~/lib/identity/binding";
+import { clashSentence } from "~/lib/identity/clash-copy";
+import { downloadPublicKey } from "~/lib/keys/export-bundle";
+import type { KeyDetails, KeyInfo } from "~/lib/pgp/types";
+import { parseKey, parseKeyDetails } from "~/lib/pgp/wasm";
 import {
   contactRecipients,
   isRecipientDisabled,
   setContactRecipientDisabled,
   setContactVerified,
   withRecipientDisabled,
-} from "../../lib/storage/contacts";
-import { isSshRecord } from "../../lib/storage/key-kind";
-import { toast } from "../../lib/toast";
-import { downloadText } from "../../lib/utils/download";
-import { parseUserId, realIdentity } from "../../lib/utils/key-naming";
-import { MarkedText } from "../shared/MarkedText";
+  type ContactRecipient,
+  type PublicContactKey,
+} from "~/lib/storage/contacts";
+import { isSshRecord } from "~/lib/storage/key-kind";
+import type { ProtectedKeyBlob } from "~/lib/storage/keyring";
+import { toast } from "~/lib/toast";
+import { downloadText } from "~/lib/utils/download";
+import { parseUserId, realIdentity } from "~/lib/utils/key-naming";
 import {
-  SlideOverHeader,
-  SlideOverPanel,
-  useSlideOver,
-} from "../shared/SlideOver";
-import { pgpKeyFacts, sshGroupKeyFacts, sshKeyFacts } from "./key-facts";
-import { KeyPreviewBody } from "./KeyPreviewBody";
+  pgpKeyFacts,
+  sshGroupKeyFacts,
+  sshKeyFacts,
+  type ComponentKeyRow,
+} from "./key-facts";
+import { KeyPreviewBody, type KeyPreviewChip } from "./KeyPreviewBody";
 
 export type KeyDetailsTarget =
   | { kind: "own"; keyBlob: ProtectedKeyBlob }

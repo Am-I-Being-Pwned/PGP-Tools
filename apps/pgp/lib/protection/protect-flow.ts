@@ -5,13 +5,9 @@
  * Threat model and zeroization table: `apps/pgp/SECURITY.md`.
  */
 
-import type { GenerateKeyOptions } from "../pgp/types";
-import type { ProtectFlowResult } from "../pgp/wasm";
-import type { ProtectedKeyBlob } from "../storage/keyring";
-import type { ProtectionInput, ProtectSpec } from "./protect-runner";
-import type { PasswordBlobParts, PrfBlobParts } from "./protected-blob";
-import { toBase64 } from "../encoding";
-import { t } from "../i18n";
+import { toBase64 } from "~/lib/encoding";
+import { t } from "~/lib/i18n";
+import type { GenerateKeyOptions } from "~/lib/pgp/types";
 import {
   generateProtectedWithPassword,
   generateProtectedWithPrf,
@@ -19,14 +15,23 @@ import {
   protectImportedWithPrf,
   unlockWithPassword,
   unlockWithPrf,
-} from "../pgp/wasm";
-import { blobFromEncrypted } from "../storage/keyring";
+  type ProtectFlowResult,
+} from "~/lib/pgp/wasm";
+import {
+  blobFromEncrypted,
+  type ProtectedKeyBlob,
+} from "~/lib/storage/keyring";
 import {
   ARGON2_ITERATIONS,
   ARGON2_MEMORY_KIB,
   ARGON2_PARALLELISM,
 } from "./password-kdf";
-import { runProtect } from "./protect-runner";
+import {
+  runProtect,
+  type ProtectionInput,
+  type ProtectSpec,
+} from "./protect-runner";
+import type { PasswordBlobParts, PrfBlobParts } from "./protected-blob";
 
 const EMPTY = new Uint8Array(0);
 

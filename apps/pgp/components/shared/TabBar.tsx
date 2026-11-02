@@ -1,9 +1,8 @@
-import type { KeyboardEvent, ReactNode } from "react";
-import { useRef } from "react";
+import { useRef, type KeyboardEvent, type ReactNode } from "react";
 import { HistoryIcon, SettingsIcon } from "lucide-react";
 
-import type { Tab } from "../../hooks/useNav";
-import { t } from "../../lib/i18n";
+import type { Tab } from "~/hooks/useNav";
+import { t } from "~/lib/i18n";
 
 // Labels resolve at render time, never at module load.
 const TABS: { id: Tab; label: () => string }[] = [

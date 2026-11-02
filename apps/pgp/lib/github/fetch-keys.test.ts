@@ -2,14 +2,14 @@
  *  hold if the body is bounded as it arrives. */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { FakeResponseInit } from "../net/fake-response";
 import {
   encode,
   expectContentLengthRefusal,
   expectTimeoutOffline,
   fakeResponse,
   stubFetch,
-} from "../net/fake-response";
+  type FakeResponseInit,
+} from "~/lib/net/fake-response";
 import { fetchGithubKeys } from "./fetch-keys";
 import { MAX_BODY_BYTES } from "./response";
 

@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import type { CrxSigningKeyBlob } from "./types";
 import {
   crxBlobIdentityMatches,
   extensionIdFromPublicKeyDer,
   isCrxSigningKeyBlob,
   publicKeyDerToPem,
+  type CrxSigningKeyBlob,
 } from "./types";
 
 function validBlob(): CrxSigningKeyBlob {

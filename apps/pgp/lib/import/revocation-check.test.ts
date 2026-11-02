@@ -1,9 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { KeyserverKeyResponse } from "../messages";
-import type { MergeIntoContact } from "./revocation-check";
-import { parseKeys } from "../pgp/wasm";
-import { checkRevocation } from "./revocation-check";
+import type { KeyserverKeyResponse } from "~/lib/messages";
+import { parseKeys } from "~/lib/pgp/wasm";
+import { checkRevocation, type MergeIntoContact } from "./revocation-check";
 
 vi.mock("../pgp/wasm", () => ({ parseKeys: vi.fn() }));
 

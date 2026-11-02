@@ -1,6 +1,6 @@
-import type { WorkspaceAction } from "../../lib/messages";
-import type { StoredKeyKind } from "../../lib/storage/key-kind";
-import { safeFileName } from "../../lib/utils/file-name";
+import type { WorkspaceAction } from "~/lib/messages";
+import type { StoredKeyKind } from "~/lib/storage/key-kind";
+import { safeFileName } from "~/lib/utils/file-name";
 
 /** Filesystem-safe slug of a recipient display name, capped so long
  *  corporate names don't swallow the whole filename. */

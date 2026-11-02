@@ -7,11 +7,9 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { EncryptedBlob } from "../protection/encrypt-private-key";
-import type { FakeArea } from "./fake-area";
-import type { ProtectedKeyBlob } from "./keyring";
-import { STORAGE_KEYRING } from "../constants";
-import { stubChromeStorage } from "./fake-area";
+import { STORAGE_KEYRING } from "~/lib/constants";
+import type { EncryptedBlob } from "~/lib/protection/encrypt-private-key";
+import { stubChromeStorage, type FakeArea } from "./fake-area";
 import {
   domainEnvelope,
   isDomainSealed,
@@ -26,6 +24,7 @@ import {
   removeKey,
   replaceKeyProtection,
   updateAlias,
+  type ProtectedKeyBlob,
 } from "./keyring";
 
 const wasmMock = vi.hoisted(() => ({ session: true }));

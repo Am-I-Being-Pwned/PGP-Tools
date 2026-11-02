@@ -7,11 +7,11 @@
  * whole array is rewritten, so interleaved mutations would drop a write.
  */
 
-import type { EncryptedStore } from "./encrypted-store";
 import {
   loadEncryptedArray,
   normalizePadding,
   saveEncryptedArray,
+  type EncryptedStore,
 } from "./encrypted-store";
 import { withLock } from "./engine";
 

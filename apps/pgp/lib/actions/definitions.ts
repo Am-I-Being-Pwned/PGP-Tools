@@ -4,14 +4,13 @@
 // "Set default key" is excluded too: an implicit "current" key would
 // silently retarget "encrypt to me".
 
-import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
+import type { ShortcutSpec } from "@amibeingpwned/ui";
 
-import type { InlineStyle } from "../compose/text-format";
-import type { MessageKey } from "../i18n";
+import { languageLabel, translationLanguages } from "~/lib/ai/languages";
+import { FIND_SHORTCUT, STYLE_SHORTCUTS } from "~/lib/compose/shortcuts";
+import type { InlineStyle } from "~/lib/compose/text-format";
+import { t, type MessageKey } from "~/lib/i18n";
 import type { ActionCtx, PgpAction, PgpMode } from "./types";
-import { languageLabel, translationLanguages } from "../ai/languages";
-import { FIND_SHORTCUT, STYLE_SHORTCUTS } from "../compose/shortcuts";
-import { t } from "../i18n";
 
 /** A switch, not a key table: the i18n checker counts only literal keys. */
 function noInputReason(mode: PgpMode): string {

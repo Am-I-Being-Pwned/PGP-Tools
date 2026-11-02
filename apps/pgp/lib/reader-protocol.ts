@@ -1,4 +1,4 @@
-import type { SignerCardState } from "../components/workspace/signer-card";
+import type { SignerCardState } from "~/components/workspace/signer-card";
 
 /**
  * Side panel <-> reader tab protocol. The tab is a DUMB VIEW (no vault,

@@ -1,8 +1,8 @@
 import type {} from "./prf-types";
 
-import { fromBase64url, toBase64url } from "../encoding.ts";
-import { AppError } from "../errors/app-error";
-import { t } from "../i18n";
+import { fromBase64url, toBase64url } from "~/lib/encoding.ts";
+import { AppError } from "~/lib/errors/app-error";
+import { t } from "~/lib/i18n";
 
 function generateChallenge(): ArrayBuffer {
   return crypto.getRandomValues(new Uint8Array(32)).buffer;

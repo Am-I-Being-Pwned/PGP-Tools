@@ -1,8 +1,7 @@
-import { Kbd } from "@amibeingpwned/ui/kbd";
-import { ariaKeyShortcuts, isMacPlatform } from "@amibeingpwned/ui/kbd-helpers";
+import { ariaKeyShortcuts, isMacPlatform, Kbd } from "@amibeingpwned/ui";
 
-import { PALETTE_SHORTCUT } from "../../lib/actions/definitions";
-import { t } from "../../lib/i18n";
+import { PALETTE_SHORTCUT } from "~/lib/actions/definitions";
+import { t } from "~/lib/i18n";
 
 export function AppFooter({ onOpenPalette }: { onOpenPalette?: () => void }) {
   return (

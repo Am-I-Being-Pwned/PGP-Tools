@@ -50,7 +50,9 @@ export function binaryKeyToArmored(bytes: Uint8Array): string | null {
   const label = tag === null ? undefined : ARMOR_LABEL[tag];
   if (!label) return null;
 
-  const body = toBase64(bytes).replace(/(.{64})/g, "$1\n").trimEnd();
+  const body = toBase64(bytes)
+    .replace(/(.{64})/g, "$1\n")
+    .trimEnd();
   const crc = crc24(bytes);
   const crcB64 = toBase64(
     new Uint8Array([(crc >> 16) & 0xff, (crc >> 8) & 0xff, crc & 0xff]),

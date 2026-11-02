@@ -4,24 +4,23 @@ import {
   RefreshCwIcon,
 } from "lucide-react";
 
-import { Block, BlockStack } from "@amibeingpwned/ui/block";
-import { Button } from "@amibeingpwned/ui/button";
-import { Input } from "@amibeingpwned/ui/input";
-import { Kbd } from "@amibeingpwned/ui/kbd";
+import { Block, BlockStack, Button, Input, Kbd } from "@amibeingpwned/ui";
 
-import type { IncomingKey, KeyKind } from "../../lib/import/types";
-import type { KeyPreviewChip } from "./KeyPreviewBody";
-import { t, tn } from "../../lib/i18n";
-import { formatDate } from "../../lib/i18n/format";
-import { isPublicKind } from "../../lib/import/types";
-import { parseUserId } from "../../lib/utils/key-naming";
 import {
   SlideOverHeader,
   SlideOverPanel,
   useSlideOver,
-} from "../shared/SlideOver";
+} from "~/components/shared/SlideOver";
+import { t, tn } from "~/lib/i18n";
+import { formatDate } from "~/lib/i18n/format";
+import {
+  isPublicKind,
+  type IncomingKey,
+  type KeyKind,
+} from "~/lib/import/types";
+import { parseUserId } from "~/lib/utils/key-naming";
 import { pgpKeyFacts, sshGroupKeyFacts, sshKeyFacts } from "./key-facts";
-import { KeyPreviewBody } from "./KeyPreviewBody";
+import { KeyPreviewBody, type KeyPreviewChip } from "./KeyPreviewBody";
 
 /**
  * The key about to be imported, in the same body as the details page.

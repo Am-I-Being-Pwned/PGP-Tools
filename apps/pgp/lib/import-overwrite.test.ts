@@ -38,10 +38,9 @@ describe("detectImportOverwrite", () => {
   });
 
   it("matches fingerprints case-insensitively", () => {
-    const result = detectImportOverwrite(
-      contact.keyId.toLowerCase(),
-      [contact],
-    );
+    const result = detectImportOverwrite(contact.keyId.toLowerCase(), [
+      contact,
+    ]);
     expect(result?.userId).toBe("Alice <alice@example.com>");
   });
 

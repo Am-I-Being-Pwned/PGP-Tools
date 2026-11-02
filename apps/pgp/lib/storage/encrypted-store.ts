@@ -13,12 +13,15 @@
  * as an absent store, reported as tampering where this device has seen one.
  */
 
-import type { StoredEnvelope } from "./envelope";
-import type { StorageLocation } from "./preferences";
-import { hasContactsSession } from "../pgp/wasm";
+import { hasContactsSession } from "~/lib/pgp/wasm";
 import { getChunked, removeChunked, setChunked } from "./chunked";
 import { currentStorageLocation, getItem, setItem, withLock } from "./engine";
-import { isStoredEnvelope, openEnvelope, sealEnvelope } from "./envelope";
+import {
+  isStoredEnvelope,
+  openEnvelope,
+  sealEnvelope,
+  type StoredEnvelope,
+} from "./envelope";
 import {
   claimGeneration,
   noteAbsent,
@@ -29,6 +32,7 @@ import {
 } from "./integrity";
 import { notifyStoreChanged } from "./live-list";
 import { isCanonicalPadding, padPlaintext, unpadPlaintext } from "./padding";
+import type { StorageLocation } from "./preferences";
 
 export interface EncryptedStore<T> {
   storageKey: string;

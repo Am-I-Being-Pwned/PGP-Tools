@@ -1,16 +1,15 @@
 import { useState } from "react";
 import { SearchIcon, TriangleAlertIcon } from "lucide-react";
 
-import { Alert, AlertDescription } from "@amibeingpwned/ui/alert";
-import { Button } from "@amibeingpwned/ui/button";
+import { Alert, AlertDescription, Button } from "@amibeingpwned/ui";
 
-import type { PresentedError, RemedyAction } from "../../lib/errors/present";
-import type { PublicContactKey } from "../../lib/storage/contacts";
-import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
-import type { FileResult } from "../../lib/utils/download";
-import { t } from "../../lib/i18n";
-import { KEYSERVER_HOST } from "../../lib/import/keyserver";
-import { KeyDetailsButton } from "../keys/KeyDetailsButton";
+import { KeyDetailsButton } from "~/components/keys/KeyDetailsButton";
+import type { PresentedError, RemedyAction } from "~/lib/errors/present";
+import { t } from "~/lib/i18n";
+import { KEYSERVER_HOST } from "~/lib/import/keyserver";
+import type { PublicContactKey } from "~/lib/storage/contacts";
+import type { ProtectedKeyBlob } from "~/lib/storage/keyring";
+import type { FileResult } from "~/lib/utils/download";
 import { DetectedKeyBanner } from "./DetectedKeyBanner";
 import { OutputArea } from "./OutputArea";
 import { signerCardState } from "./signer-card";

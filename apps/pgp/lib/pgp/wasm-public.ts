@@ -5,16 +5,14 @@
  * `wasm-secrets.ts`. SECURITY.md §3.
  */
 
-import type { EngineError } from "../errors/engine-error";
+import { decodeEngineError, type EngineError } from "~/lib/errors/engine-error";
 import type {
   KeyDetails,
   KeyInfo,
   SignatureDetails,
   SignatureStatus,
 } from "./types";
-import type { WasmModule } from "./wasm-loader";
-import { decodeEngineError } from "../errors/engine-error";
-import { loadWasm } from "./wasm-loader";
+import { loadWasm, type WasmModule } from "./wasm-loader";
 
 // ── status / metadata ────────────────────────────────────────────────
 

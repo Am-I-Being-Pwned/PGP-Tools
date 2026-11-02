@@ -10,9 +10,8 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { FakeArea } from "./fake-area";
-import { STORAGE_PREFERENCES, STORAGE_SETTINGS } from "../constants";
-import { stubChromeStorage } from "./fake-area";
+import { STORAGE_PREFERENCES, STORAGE_SETTINGS } from "~/lib/constants";
+import { stubChromeStorage, type FakeArea } from "./fake-area";
 import {
   isDomainSealed,
   legacyEnvelope,

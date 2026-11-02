@@ -10,8 +10,8 @@
  *    mismatch fails at the tag check rather than a JSON parse.
  */
 
+import { fromBase64, toBase64 } from "~/lib/encoding";
 import type { StoredEnvelope } from "./envelope";
-import { fromBase64, toBase64 } from "../encoding";
 
 /** NUL-delimited: JSON.stringify always escapes NUL, so no collision. */
 const MAGIC = "\u0000gpg-store-v1\u0000";

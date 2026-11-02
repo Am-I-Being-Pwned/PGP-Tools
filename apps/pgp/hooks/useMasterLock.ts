@@ -1,11 +1,14 @@
 import { useCallback, useRef, useState } from "react";
 
-import type { VaultEvent, VaultLifecycle } from "../lib/vault-phase";
-import type { WorkspaceDraftSource } from "../lib/workspace-draft";
+import { SESSION_PENDING_OP } from "~/lib/constants";
+import * as wasmApi from "~/lib/pgp/wasm";
+import type { VaultEvent, VaultLifecycle } from "~/lib/vault-phase";
+import {
+  draftHasContent,
+  encryptWorkspaceDraft,
+  type WorkspaceDraftSource,
+} from "~/lib/workspace-draft";
 import type { useKeySession } from "./useKeySession";
-import { SESSION_PENDING_OP } from "../lib/constants";
-import * as wasmApi from "../lib/pgp/wasm";
-import { draftHasContent, encryptWorkspaceDraft } from "../lib/workspace-draft";
 
 interface MasterLockDeps {
   session: ReturnType<typeof useKeySession>;

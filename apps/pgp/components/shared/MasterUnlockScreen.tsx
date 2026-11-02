@@ -1,22 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { LockIcon } from "lucide-react";
 
-import { Block, BlockStack } from "@amibeingpwned/ui/block";
-import { Button } from "@amibeingpwned/ui/button";
-import { Input } from "@amibeingpwned/ui/input";
+import { Block, BlockStack, Button, Input } from "@amibeingpwned/ui";
 
-import type { MasterProtection } from "../../lib/storage/master-protection";
-import type { StorageLocation } from "../../lib/storage/preferences";
-import { fromBase64 } from "../../lib/encoding";
-import { t } from "../../lib/i18n";
-import * as wasmApi from "../../lib/pgp/wasm";
+import { DevToolsPage } from "~/components/settings/DevToolsPage";
+import { fromBase64 } from "~/lib/encoding";
+import { t } from "~/lib/i18n";
+import * as wasmApi from "~/lib/pgp/wasm";
 import {
   ARGON2_ITERATIONS,
   ARGON2_MEMORY_KIB,
   ARGON2_PARALLELISM,
-} from "../../lib/protection/password-kdf";
-import { authenticateAndGetPrf } from "../../lib/protection/webauthn-prf";
-import { DevToolsPage } from "../settings/DevToolsPage";
+} from "~/lib/protection/password-kdf";
+import { authenticateAndGetPrf } from "~/lib/protection/webauthn-prf";
+import type { MasterProtection } from "~/lib/storage/master-protection";
+import type { StorageLocation } from "~/lib/storage/preferences";
 
 /** PRF output on loan to `onUnlocked`, to open keys sealed under the
  *  master salt off the same ceremony. */

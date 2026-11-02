@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import type { PgpPreferences } from "./storage/preferences";
 import {
   activePreset,
   bundledSettingsCustomized,
@@ -9,6 +8,7 @@ import {
   PRESETS,
   snapshotBundleFields,
 } from "./presets";
+import type { PgpPreferences } from "./storage/preferences";
 
 function fullPrefs(overrides: Partial<PgpPreferences> = {}): PgpPreferences {
   return {

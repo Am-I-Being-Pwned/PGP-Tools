@@ -1,38 +1,37 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import type { WorkspaceIntake } from "../../components/workspace/useWorkspace";
-import type { DropPayload } from "../../lib/drop-routing";
-import type { WorkspaceAction } from "../../lib/messages";
-import { CommandPalette } from "../../components/CommandPalette";
-import { KeysView } from "../../components/keys/KeysView";
-import { AppFooter } from "../../components/shared/AppFooter";
-import { GlobalDropZone } from "../../components/shared/GlobalDropZone";
-import { ImportOverlay } from "../../components/shared/ImportOverlay";
-import { IntegrityBanner } from "../../components/shared/IntegrityBanner";
-import { SettingsView } from "../../components/shared/SettingsView";
-import { HistoryButton, TabBar } from "../../components/shared/TabBar";
-import { VaultGate } from "../../components/shared/VaultGate";
-import { HistoryPage } from "../../components/workspace/HistoryPage";
-import { WorkspaceView } from "../../components/workspace/WorkspaceView";
+import { CommandPalette } from "~/components/CommandPalette";
+import { KeysView } from "~/components/keys/KeysView";
+import { AppFooter } from "~/components/shared/AppFooter";
+import { GlobalDropZone } from "~/components/shared/GlobalDropZone";
+import { ImportOverlay } from "~/components/shared/ImportOverlay";
+import { IntegrityBanner } from "~/components/shared/IntegrityBanner";
+import { SettingsView } from "~/components/shared/SettingsView";
+import { HistoryButton, TabBar } from "~/components/shared/TabBar";
+import { VaultGate } from "~/components/shared/VaultGate";
+import { HistoryPage } from "~/components/workspace/HistoryPage";
+import type { WorkspaceIntake } from "~/components/workspace/useWorkspace";
+import { WorkspaceView } from "~/components/workspace/WorkspaceView";
 import {
   useActionContext,
   useWorkspaceBridgeStore,
   WorkspaceBridgeContext,
-} from "../../hooks/useActionContext";
-import { useAutoLock } from "../../hooks/useAutoLock";
-import { useContacts } from "../../hooks/useContacts";
-import { useKeyring } from "../../hooks/useKeyring";
-import { useMasterLock } from "../../hooks/useMasterLock";
-import { NavContext, useNavState } from "../../hooks/useNav";
-import { usePendingOperation } from "../../hooks/usePendingOperation";
-import { usePreferences } from "../../hooks/usePreferences";
-import { useReaderTabs } from "../../hooks/useReaderTabs";
-import { VaultContext } from "../../hooks/useVault";
-import { useVaultLifecycle } from "../../hooks/useVaultLifecycle";
-import { useVaultServices } from "../../hooks/useVaultServices";
-import { panelDropRules } from "../../lib/drop-routing";
-import { preferencesStore } from "../../lib/storage/preferences-store";
-import { protectionOf } from "../../lib/vault-phase";
+} from "~/hooks/useActionContext";
+import { useAutoLock } from "~/hooks/useAutoLock";
+import { useContacts } from "~/hooks/useContacts";
+import { useKeyring } from "~/hooks/useKeyring";
+import { useMasterLock } from "~/hooks/useMasterLock";
+import { NavContext, useNavState } from "~/hooks/useNav";
+import { usePendingOperation } from "~/hooks/usePendingOperation";
+import { usePreferences } from "~/hooks/usePreferences";
+import { useReaderTabs } from "~/hooks/useReaderTabs";
+import { VaultContext } from "~/hooks/useVault";
+import { useVaultLifecycle } from "~/hooks/useVaultLifecycle";
+import { useVaultServices } from "~/hooks/useVaultServices";
+import { panelDropRules, type DropPayload } from "~/lib/drop-routing";
+import type { WorkspaceAction } from "~/lib/messages";
+import { preferencesStore } from "~/lib/storage/preferences-store";
+import { protectionOf } from "~/lib/vault-phase";
 
 const WORKSPACE_ACTIONS = new Set<string>([
   "encrypt",

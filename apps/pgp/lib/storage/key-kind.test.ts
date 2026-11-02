@@ -6,8 +6,13 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { KindDiscriminated } from "./key-kind";
-import { isPgpRecord, isSshRecord, kindField, storedKeyKind } from "./key-kind";
+import {
+  isPgpRecord,
+  isSshRecord,
+  kindField,
+  storedKeyKind,
+  type KindDiscriminated,
+} from "./key-kind";
 import { blobFromEncrypted } from "./keyring";
 
 const SEAL = {

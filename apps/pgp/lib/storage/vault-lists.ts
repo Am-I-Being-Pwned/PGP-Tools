@@ -1,15 +1,13 @@
-import type { CrxSigningKeyBlob } from "../crx/types";
-import type { PublicContactKey } from "./contacts";
-import type { ProtectedKeyBlob } from "./keyring";
 import {
   STORAGE_CONTACTS,
   STORAGE_CRX_KEYS,
   STORAGE_KEYRING,
-} from "../constants";
-import { getCrxKeys } from "../crx/storage";
+} from "~/lib/constants";
+import { getCrxKeys } from "~/lib/crx/storage";
+import type { CrxSigningKeyBlob } from "~/lib/crx/types";
 import { backfillContacts } from "./contact-backfill";
-import { loadContacts } from "./contacts";
-import { getKeyring } from "./keyring";
+import { loadContacts, type PublicContactKey } from "./contacts";
+import { getKeyring, type ProtectedKeyBlob } from "./keyring";
 import { createLiveList } from "./live-list";
 
 /** The vault's sealed lists, as the panel shows them. They read `[]`

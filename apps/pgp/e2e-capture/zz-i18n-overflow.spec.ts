@@ -13,8 +13,12 @@ import {
   writeFileSync,
 } from "node:fs";
 import path from "node:path";
-import type { BrowserContext, Page } from "@playwright/test";
-import { test as base, expect } from "@playwright/test";
+import {
+  test as base,
+  expect,
+  type BrowserContext,
+  type Page,
+} from "@playwright/test";
 
 import { getExtensionId, launchExtensionContext } from "../e2e/fixtures";
 import { keyBySlug } from "../e2e/keys";

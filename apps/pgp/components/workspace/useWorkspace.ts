@@ -6,28 +6,26 @@ import {
   useState,
 } from "react";
 
-import type { WorkspaceAction } from "../../lib/messages";
-import type {
-  WorkspaceDraft,
-  WorkspaceDraftSource,
-} from "../../lib/workspace-draft";
-import type { RunContext } from "./workspace-operations";
-import type { Outcome, WorkspaceEvent } from "./workspace-state";
-import { useContacts } from "../../hooks/useContacts";
-import { useCrxKeys } from "../../hooks/useCrxKeys";
-import { useKeyring } from "../../hooks/useKeyring";
-import { useNav } from "../../hooks/useNav";
-import { usePreferences } from "../../hooks/usePreferences";
-import { useVault } from "../../hooks/useVault";
-import { recoverArmorIfNeeded } from "../../lib/armor-recovery";
-import { presentError } from "../../lib/errors/present";
-import { t } from "../../lib/i18n";
-import { oversizedFilesMessage, splitOversizedFiles } from "../../lib/limits";
-import { toast } from "../../lib/toast";
-import { showLoneCarriageReturns } from "../../lib/utils/line-breaks";
-import { forgetLastRegExpMatch } from "../../lib/utils/regexp-residue";
-import { zipHasManifest } from "../../lib/utils/zip";
-import { decryptWorkspaceDraft } from "../../lib/workspace-draft";
+import { useContacts } from "~/hooks/useContacts";
+import { useCrxKeys } from "~/hooks/useCrxKeys";
+import { useKeyring } from "~/hooks/useKeyring";
+import { useNav } from "~/hooks/useNav";
+import { usePreferences } from "~/hooks/usePreferences";
+import { useVault } from "~/hooks/useVault";
+import { recoverArmorIfNeeded } from "~/lib/armor-recovery";
+import { presentError } from "~/lib/errors/present";
+import { t } from "~/lib/i18n";
+import { oversizedFilesMessage, splitOversizedFiles } from "~/lib/limits";
+import type { WorkspaceAction } from "~/lib/messages";
+import { toast } from "~/lib/toast";
+import { showLoneCarriageReturns } from "~/lib/utils/line-breaks";
+import { forgetLastRegExpMatch } from "~/lib/utils/regexp-residue";
+import { zipHasManifest } from "~/lib/utils/zip";
+import {
+  decryptWorkspaceDraft,
+  type WorkspaceDraft,
+  type WorkspaceDraftSource,
+} from "~/lib/workspace-draft";
 import {
   AUTO_RUN_MAX_BYTES,
   decryptWithMessagePassword,
@@ -38,6 +36,7 @@ import {
   scanMessageEncryption,
   signCrx,
   verifyCrx,
+  type RunContext,
 } from "./workspace-operations";
 import {
   encryptPasswordReady,
@@ -47,6 +46,8 @@ import {
   textFacts,
   workspaceReducer,
   zeroizeResultBytes,
+  type Outcome,
+  type WorkspaceEvent,
 } from "./workspace-state";
 
 /** A drop routed here by the global dropzone; `nonce` re-triggers intake

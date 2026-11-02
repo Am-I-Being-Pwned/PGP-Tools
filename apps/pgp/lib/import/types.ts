@@ -1,6 +1,6 @@
-import type { IdentityConflict } from "../identity/binding";
-import type { KeyDetails, KeyInfo } from "../pgp/types";
-import type { ContactRecipient, ContactSource } from "../storage/contacts";
+import type { IdentityConflict } from "~/lib/identity/binding";
+import type { KeyDetails, KeyInfo } from "~/lib/pgp/types";
+import type { ContactRecipient, ContactSource } from "~/lib/storage/contacts";
 
 // What the import UI is written against: `prepareImport` produces these,
 // the preview only renders them.

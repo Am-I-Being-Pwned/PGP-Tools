@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { UploadCloudIcon } from "lucide-react";
 
-import type { DropRule } from "../../lib/drop-routing";
-import { buildDropSample, resolveDropRule } from "../../lib/drop-routing";
-import { t } from "../../lib/i18n";
+import {
+  buildDropSample,
+  resolveDropRule,
+  type DropRule,
+} from "~/lib/drop-routing";
+import { t } from "~/lib/i18n";
 
 interface GlobalDropZoneProps {
   rules: DropRule[];

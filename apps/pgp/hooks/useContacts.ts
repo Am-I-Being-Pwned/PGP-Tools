@@ -1,14 +1,14 @@
 import { useSyncExternalStore } from "react";
 
-import type { ReviewedContact } from "../lib/import/review";
-import { mergeIntoContact } from "../lib/import-public-keys";
+import { mergeIntoContact } from "~/lib/import-public-keys";
+import type { ReviewedContact } from "~/lib/import/review";
 import {
   removeContact,
   saveContact,
   setContactVerified,
   updateContactAlias,
-} from "../lib/storage/contacts";
-import { contactsList } from "../lib/storage/vault-lists";
+} from "~/lib/storage/contacts";
+import { contactsList } from "~/lib/storage/vault-lists";
 
 /** Only a reviewed contact can be added -- see `lib/import/review`. */
 const add = (contact: ReviewedContact) => saveContact(contact);

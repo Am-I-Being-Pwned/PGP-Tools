@@ -1,8 +1,7 @@
 import { useState } from "react";
 
-import type { PresentedError } from "../lib/errors/present";
-import { presentError } from "../lib/errors/present";
-import { errorMessage } from "../lib/utils/errors";
+import { presentError, type PresentedError } from "~/lib/errors/present";
+import { errorMessage } from "~/lib/utils/errors";
 
 /** Caught value -> what the UI shows. `null` means "not an error" (a
  *  dismissed passkey prompt, say): nothing is shown. */

@@ -11,29 +11,28 @@ import {
 } from "lucide-react";
 
 import {
+  ariaKeyShortcuts,
   Command,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
-} from "@amibeingpwned/ui/command";
-import { ariaKeyShortcuts, isMacPlatform } from "@amibeingpwned/ui/kbd-helpers";
-import {
+  isMacPlatform,
   Popover,
   PopoverAnchor,
   PopoverContent,
-} from "@amibeingpwned/ui/popover";
+} from "@amibeingpwned/ui";
 
-import type { TranslationStatus } from "../../lib/ai/run-translation";
-import type { InlineStyle } from "../../lib/compose/text-format";
-import { translationLanguages } from "../../lib/ai/languages";
+import { translationLanguages } from "~/lib/ai/languages";
+import type { TranslationStatus } from "~/lib/ai/run-translation";
 import {
   FIND_SHORTCUT,
   STYLE_LABELS,
   STYLE_SHORTCUTS,
-} from "../../lib/compose/shortcuts";
-import { t } from "../../lib/i18n";
+} from "~/lib/compose/shortcuts";
+import type { InlineStyle } from "~/lib/compose/text-format";
+import { t } from "~/lib/i18n";
 import { HoverLabel } from "./TranslationPanel";
 
 export interface ComposeTranslateProps {

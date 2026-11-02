@@ -1,9 +1,9 @@
-import type { OperationAction } from "./messages";
 import {
   looksLikeAgeMessage,
   OPENSSH_PRIVATE_BEGIN,
   splitSshPublicKeyCandidateLines,
 } from "./armor-blocks";
+import type { OperationAction } from "./messages";
 
 /**
  * Pick the panel action for selected text by header (no parsing; the panel

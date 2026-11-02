@@ -3,24 +3,7 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./alert": "./src/alert.tsx",
-    "./block": "./src/block.tsx",
-    "./button": "./src/button.tsx",
-    "./calendar": "./src/calendar.tsx",
-    "./checkbox": "./src/checkbox.tsx",
-    "./command": "./src/command.tsx",
-    "./dropdown-menu": "./src/dropdown-menu.tsx",
-    "./input": "./src/input.tsx",
-    "./kbd": "./src/kbd.tsx",
-    "./kbd-helpers": "./src/kbd-helpers.ts",
-    "./option-bar": "./src/option-bar.tsx",
-    "./popover": "./src/popover.tsx",
-    "./segmented": "./src/segmented.tsx",
-    "./select": "./src/select.tsx",
-    "./switch": "./src/switch.tsx",
-    "./switch-row": "./src/switch-row.tsx",
-    "./tooltip": "./src/tooltip.tsx"
+    ".": "./src/index.ts"
   },
   "license": "MIT",
   "scripts": {
@@ -61,5 +44,6 @@
   "peerDependencies": {
     "react": "catalog:react19"
   },
-  "prettier": "@amibeingpwned/prettier-config"
+  "prettier": "@amibeingpwned/prettier-config",
+  "sideEffects": false
 }

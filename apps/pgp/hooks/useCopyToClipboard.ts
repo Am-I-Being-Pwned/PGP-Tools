@@ -1,5 +1,5 @@
-import { t } from "../lib/i18n";
-import { toast } from "../lib/toast";
+import { t } from "~/lib/i18n";
+import { toast } from "~/lib/toast";
 
 export interface CopyOptions {
   /** Success toast "<label> copied"; omit if the caller shows its own. */

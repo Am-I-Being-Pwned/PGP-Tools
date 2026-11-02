@@ -1,17 +1,25 @@
-import type { GithubKeysFailure } from "../messages";
-import type { ContactRecipient, PublicContactKey } from "../storage/contacts";
-import type { PreparedImport } from "./prepare";
-import type { ContactGroup, IncomingKey, RejectedLine } from "./types";
-import { MAX_KEYS } from "../github/response";
-import { t, tn } from "../i18n";
-import { parseSshRecipient } from "../pgp/wasm";
+import { MAX_KEYS } from "~/lib/github/response";
+import { t, tn } from "~/lib/i18n";
+import type { GithubKeysFailure } from "~/lib/messages";
+import { parseSshRecipient } from "~/lib/pgp/wasm";
 import {
   contactRecipients,
   isRecipientDisabled,
   sameSource,
-} from "../storage/contacts";
-import { engineRejection, withIdentityConflicts } from "./prepare";
-import { PENDING_KEY_ID } from "./types";
+  type ContactRecipient,
+  type PublicContactKey,
+} from "~/lib/storage/contacts";
+import {
+  engineRejection,
+  withIdentityConflicts,
+  type PreparedImport,
+} from "./prepare";
+import {
+  PENDING_KEY_ID,
+  type ContactGroup,
+  type IncomingKey,
+  type RejectedLine,
+} from "./types";
 
 /**
  * A GitHub user's published SSH keys as one import-panel object.

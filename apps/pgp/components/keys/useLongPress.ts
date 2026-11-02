@@ -1,5 +1,4 @@
-import type { PointerEvent } from "react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type PointerEvent } from "react";
 
 const LONG_PRESS_MS = 500;
 // Ignore mouse jitter, but let a touch-scroll cancel the gesture.

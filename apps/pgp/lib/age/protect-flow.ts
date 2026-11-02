@@ -12,17 +12,10 @@
  * password gate and WebAuthn ceremony (both can throw before wasm).
  */
 
-import type { ContactGroup } from "../import/types";
-import type { SshProtectFlowResult, SshRecipientInfo } from "../pgp/wasm";
-import type {
-  ProtectionInput,
-  ProtectSpec,
-} from "../protection/protect-runner";
-import type { PublicContactKey } from "../storage/contacts";
-import type { ProtectedKeyBlob } from "../storage/keyring";
-import { fromBase64, toBase64 } from "../encoding";
-import { AppError } from "../errors/app-error";
-import { t } from "../i18n";
+import { fromBase64, toBase64 } from "~/lib/encoding";
+import { AppError } from "~/lib/errors/app-error";
+import { t } from "~/lib/i18n";
+import type { ContactGroup } from "~/lib/import/types";
 import {
   dropSshIdentity,
   protectSshIdentityWithPassword,
@@ -30,18 +23,27 @@ import {
   sshPassphraseRequiredMessage,
   unlockSshIdentityWithPassword,
   unlockSshIdentityWithPrf,
-} from "../pgp/wasm";
+  type SshProtectFlowResult,
+  type SshRecipientInfo,
+} from "~/lib/pgp/wasm";
 import {
   ARGON2_ITERATIONS,
   ARGON2_MEMORY_KIB,
   ARGON2_PARALLELISM,
-} from "../protection/password-kdf";
-import { runProtect } from "../protection/protect-runner";
-import { authenticateAndGetPrf } from "../protection/webauthn-prf";
-import { recipientsField } from "../storage/contacts";
-import { kindField } from "../storage/key-kind";
-import { blobFromEncrypted } from "../storage/keyring";
-import { errorMessage } from "../utils/errors";
+} from "~/lib/protection/password-kdf";
+import {
+  runProtect,
+  type ProtectionInput,
+  type ProtectSpec,
+} from "~/lib/protection/protect-runner";
+import { authenticateAndGetPrf } from "~/lib/protection/webauthn-prf";
+import { recipientsField, type PublicContactKey } from "~/lib/storage/contacts";
+import { kindField } from "~/lib/storage/key-kind";
+import {
+  blobFromEncrypted,
+  type ProtectedKeyBlob,
+} from "~/lib/storage/keyring";
+import { errorMessage } from "~/lib/utils/errors";
 
 const EMPTY = new Uint8Array(0);
 

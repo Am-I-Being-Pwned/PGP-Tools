@@ -201,7 +201,10 @@ test("translate-before-sending replaces the message off one click, with undo", a
   });
 
   await test.step("the button stays 'Translate'; the picked language sticks in the list", async () => {
-    const button = panel.getByRole("button", { name: "Translate", exact: true });
+    const button = panel.getByRole("button", {
+      name: "Translate",
+      exact: true,
+    });
     await expect(button).toBeVisible();
     await button.click();
     await expect(

@@ -1,9 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { StoredEnvelope } from "./envelope";
-import type { FakeArea } from "./fake-area";
-import type { NewHistoryEntry } from "./history";
-import { stubChromeStorage } from "./fake-area";
+import { stubChromeStorage, type FakeArea } from "./fake-area";
 import {
   domainEnvelope,
   isDomainSealed,
@@ -21,6 +19,7 @@ import {
   recordHistory,
   requestUnlimitedHistoryStorage,
   resolveBudget,
+  type NewHistoryEntry,
 } from "./history";
 
 // Fake WASM sealing (see fake-store-crypto.ts). Call counters prove there

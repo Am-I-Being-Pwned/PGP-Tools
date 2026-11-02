@@ -1,9 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { STORAGE_SETTINGS } from "~/lib/constants";
 import type * as PreferencesModule from "./preferences";
-import type { PgpPreferences } from "./preferences";
-import { STORAGE_SETTINGS } from "../constants";
-import { DEFAULT_PREFERENCES, strictestPreferences } from "./preferences";
+import {
+  DEFAULT_PREFERENCES,
+  strictestPreferences,
+  type PgpPreferences,
+} from "./preferences";
 import {
   preferencesStore,
   resetPreferencesStoreForTests,

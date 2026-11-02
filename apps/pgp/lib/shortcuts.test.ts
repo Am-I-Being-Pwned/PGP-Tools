@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
 import {
   ariaKeyShortcuts,
   formatShortcut,
   formatShortcutTitle,
-} from "@amibeingpwned/ui/kbd-helpers";
+  type ShortcutSpec,
+} from "@amibeingpwned/ui";
 
 import { keydown } from "./fake-keydown";
 import { isEditableTarget, matchesShortcut } from "./shortcuts";

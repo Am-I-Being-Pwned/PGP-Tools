@@ -8,17 +8,15 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { WorkspaceDraft } from "../workspace-draft";
-import type { StoredEnvelope } from "./envelope";
-import type { FakeArea } from "./fake-area";
-import type { PgpPreferences } from "./preferences";
-import { STORAGE_PREFERENCES, STORAGE_SETTINGS } from "../constants";
-import { toBase64 } from "../encoding";
+import { STORAGE_PREFERENCES, STORAGE_SETTINGS } from "~/lib/constants";
+import { toBase64 } from "~/lib/encoding";
 import {
   decryptWorkspaceDraft,
   encryptWorkspaceDraft,
-} from "../workspace-draft";
-import { stubChromeStorage } from "./fake-area";
+  type WorkspaceDraft,
+} from "~/lib/workspace-draft";
+import type { StoredEnvelope } from "./envelope";
+import { stubChromeStorage, type FakeArea } from "./fake-area";
 import {
   isDomainSealed,
   sealedDomain,
@@ -31,7 +29,11 @@ import {
   requestUnlimitedHistoryStorage,
 } from "./history";
 import { padPlaintext, unpadPlaintext } from "./padding";
-import { getPreferences, savePreferences } from "./preferences";
+import {
+  getPreferences,
+  savePreferences,
+  type PgpPreferences,
+} from "./preferences";
 
 // Fake WASM session (see fake-store-crypto.ts). The draft key is the
 // identity except for one marker input that throws (undecryptable blob).

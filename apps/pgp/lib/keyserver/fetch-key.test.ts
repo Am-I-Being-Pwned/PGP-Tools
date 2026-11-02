@@ -2,16 +2,16 @@
  *  capped reader is exercised on both lookups. */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { FakeResponseInit } from "../net/fake-response";
-import type { KeyserverQuery } from "./query";
 import {
   encode,
   expectContentLengthRefusal,
   expectTimeoutOffline,
   fakeResponse,
   stubFetch,
-} from "../net/fake-response";
+  type FakeResponseInit,
+} from "~/lib/net/fake-response";
 import { fetchKeyserverKey } from "./fetch-key";
+import type { KeyserverQuery } from "./query";
 import { MAX_BODY_BYTES } from "./response";
 
 const PGP_CT = "application/pgp-keys";

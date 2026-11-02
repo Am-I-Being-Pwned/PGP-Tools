@@ -5,8 +5,8 @@
  * `credentials: "omit"` is restated though network-lockdown forces it.
  */
 
-import type { GithubKeysFailure } from "../messages";
-import { readCappedBody } from "../net/capped-body";
+import type { GithubKeysFailure } from "~/lib/messages";
+import { readCappedBody } from "~/lib/net/capped-body";
 import { MAX_BODY_BYTES, parseGithubKeysResponse } from "./response";
 import { githubKeysUrl } from "./username";
 

@@ -1,11 +1,12 @@
 import { useState } from "react";
 
-import type { ProtectionContext, ProtectionMethod } from "./protection-choice";
-import { checkPrfSupport } from "../../lib/protection/webauthn-prf";
+import { checkPrfSupport } from "~/lib/protection/webauthn-prf";
 import {
   crxProtectionInput,
   protectionInput,
   validateProtection,
+  type ProtectionContext,
+  type ProtectionMethod,
 } from "./protection-choice";
 
 export function getDefaultProtectionMethod(): ProtectionMethod {

@@ -5,12 +5,15 @@
  * `addCrxKey` and the session guard.
  */
 
-import type { CrxSigningKeyBlob } from "./types";
-import { STORAGE_CRX_KEYS } from "../constants";
-import { AppError } from "../errors/app-error";
-import { hasContactsSession } from "../pgp/wasm";
-import { createProtectedStore } from "../storage/protected-store";
-import { extensionIdFromPublicKeyDer, isCrxSigningKeyBlob } from "./types";
+import { STORAGE_CRX_KEYS } from "~/lib/constants";
+import { AppError } from "~/lib/errors/app-error";
+import { hasContactsSession } from "~/lib/pgp/wasm";
+import { createProtectedStore } from "~/lib/storage/protected-store";
+import {
+  extensionIdFromPublicKeyDer,
+  isCrxSigningKeyBlob,
+  type CrxSigningKeyBlob,
+} from "./types";
 
 const crxStore = createProtectedStore<CrxSigningKeyBlob>({
   storageKey: STORAGE_CRX_KEYS,

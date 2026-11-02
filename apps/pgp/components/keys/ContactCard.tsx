@@ -1,5 +1,4 @@
-import type { ReactNode } from "react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   CheckCircleIcon,
   CheckIcon,
@@ -13,31 +12,27 @@ import {
   TriangleAlertIcon,
 } from "lucide-react";
 
-import { cn } from "@amibeingpwned/ui";
-import {
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-} from "@amibeingpwned/ui/dropdown-menu";
+import { cn, DropdownMenuItem, DropdownMenuSeparator } from "@amibeingpwned/ui";
 
-import type { IdentityConflict } from "../../lib/identity/binding";
-import type { PublicContactKey } from "../../lib/storage/contacts";
-import { t, tn } from "../../lib/i18n";
-import { formatDate, formatDateShort } from "../../lib/i18n/format";
-import { clashPillLabel, clashSentence } from "../../lib/identity/clash-copy";
+import { KeyAvatar } from "~/components/shared/KeyAvatar";
+import { MarkedText } from "~/components/shared/MarkedText";
+import { t, tn } from "~/lib/i18n";
+import { formatDate, formatDateShort } from "~/lib/i18n/format";
+import type { IdentityConflict } from "~/lib/identity/binding";
+import { clashPillLabel, clashSentence } from "~/lib/identity/clash-copy";
 import {
   activeRecipients,
   contactRecipients,
   contactSource,
-} from "../../lib/storage/contact-recipients";
-import { isSshRecord } from "../../lib/storage/key-kind";
-import { formatAlgorithm, formatFingerprint } from "../../lib/utils/formatting";
+} from "~/lib/storage/contact-recipients";
+import type { PublicContactKey } from "~/lib/storage/contacts";
+import { isSshRecord } from "~/lib/storage/key-kind";
+import { formatAlgorithm, formatFingerprint } from "~/lib/utils/formatting";
 import {
   displayUserId,
   parseUserId,
   realIdentity,
-} from "../../lib/utils/key-naming";
-import { KeyAvatar } from "../shared/KeyAvatar";
-import { MarkedText } from "../shared/MarkedText";
+} from "~/lib/utils/key-naming";
 import {
   CardMenu,
   CardRow,

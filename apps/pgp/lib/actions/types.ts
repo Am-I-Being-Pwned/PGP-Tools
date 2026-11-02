@@ -1,9 +1,9 @@
 // Framework-free action model: nothing in lib/actions imports React.
 
-import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
+import type { ShortcutSpec } from "@amibeingpwned/ui";
 
-import type { InlineStyle } from "../compose/text-format";
-import type { StoredKeyKind } from "../storage/key-kind";
+import type { InlineStyle } from "~/lib/compose/text-format";
+import type { StoredKeyKind } from "~/lib/storage/key-kind";
 
 export type PgpMode = "encrypt" | "decrypt" | "sign" | "verify";
 

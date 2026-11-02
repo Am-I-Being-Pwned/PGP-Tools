@@ -1,19 +1,21 @@
 import { useState } from "react";
 import { ChevronRightIcon } from "lucide-react";
 
-import { Block, BlockLabel, BlockStack } from "@amibeingpwned/ui/block";
-import { Input } from "@amibeingpwned/ui/input";
-import { Segmented } from "@amibeingpwned/ui/segmented";
 import {
+  Block,
+  BlockLabel,
+  BlockStack,
+  Input,
+  Segmented,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@amibeingpwned/ui/select";
+} from "@amibeingpwned/ui";
 
-import type { ExpiryOption } from "../../lib/keys/expiry";
-import { t } from "../../lib/i18n";
+import { t } from "~/lib/i18n";
+import type { ExpiryOption } from "~/lib/keys/expiry";
 
 export type KeyAlgorithm = "ecc" | "rsa";
 

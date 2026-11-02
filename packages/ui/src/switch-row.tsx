@@ -1,6 +1,6 @@
-import { cn } from "@amibeingpwned/ui";
-import { Block } from "@amibeingpwned/ui/block";
-import { Switch } from "@amibeingpwned/ui/switch";
+import { Block } from "./block";
+import { cn } from "./cn";
+import { Switch } from "./switch";
 
 /** The row is the switch's <label>: whole-row click, title+description
  *  as the accessible name. */

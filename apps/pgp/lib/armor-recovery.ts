@@ -123,9 +123,7 @@ const SIGNATURE_END = "-----END PGP SIGNATURE-----";
  * the regex backtracked cubically and a page could stall the worker with
  * ~100 KB of repeated markers. Must stay linear.
  */
-function findCollapsedCleartext(
-  text: string,
-): {
+function findCollapsedCleartext(text: string): {
   index: number;
   whole: string;
   head: string;

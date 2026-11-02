@@ -43,8 +43,8 @@ import {
   STORAGE_KEYRING,
   STORAGE_MASTER_PROTECTION,
   STORAGE_SETTINGS,
-} from "../constants";
-import { hasContactsSession } from "../pgp/wasm";
+} from "~/lib/constants";
+import { hasContactsSession } from "~/lib/pgp/wasm";
 import { getChunked, removeChunked, setChunked } from "./chunked";
 import { getItem, withSharedLock } from "./engine";
 import { isStoredEnvelope, openEnvelope, sealEnvelope } from "./envelope";

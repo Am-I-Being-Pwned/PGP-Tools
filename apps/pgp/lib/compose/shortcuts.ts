@@ -1,7 +1,7 @@
-import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
+import type { ShortcutSpec } from "@amibeingpwned/ui";
 
+import { t } from "~/lib/i18n";
 import type { InlineStyle } from "./text-format";
-import { t } from "../i18n";
 
 export const FIND_SHORTCUT: ShortcutSpec = { mod: true, key: "f" };
 

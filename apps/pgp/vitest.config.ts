@@ -4,6 +4,11 @@ import { defineConfig } from "vitest/config";
 // chrome.* APIs, no WASM). Anything that needs the WASM engine is
 // covered by the Rust tests in gpg-wasm/src/tests.rs instead.
 export default defineConfig({
+  // WXT's `~/` root alias, for the unit tests.
+  resolve: { alias: { "~": import.meta.dirname } },
+  // The UI kit is one barrel, so a test importing a helper from it also
+  // loads its components.
+  oxc: { jsx: { runtime: "automatic" } },
   test: {
     environment: "node",
     include: ["**/*.test.ts"],

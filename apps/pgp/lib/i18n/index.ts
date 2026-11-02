@@ -1,5 +1,8 @@
-import type { MessageArgs, PluralArgs } from "./messages.generated";
-import { PLACEHOLDER_ORDER } from "./messages.generated";
+import {
+  PLACEHOLDER_ORDER,
+  type MessageArgs,
+  type PluralArgs,
+} from "./messages.generated";
 
 /**
  * Typed front for `chrome.i18n`: bundled locales mean no fetches (nothing

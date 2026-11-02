@@ -1,4 +1,4 @@
-import { codePointLabel, INVISIBLE } from "../../lib/utils/lookalike";
+import { codePointLabel, INVISIBLE } from "~/lib/utils/lookalike";
 
 /**
  * The characters in a message about to be SIGNED that the message box

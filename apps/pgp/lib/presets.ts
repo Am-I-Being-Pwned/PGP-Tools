@@ -1,6 +1,8 @@
-import type { PgpPreferences } from "./storage/preferences";
 import { t, tn } from "./i18n";
-import { DEFAULT_PREFERENCES } from "./storage/preferences";
+import {
+  DEFAULT_PREFERENCES,
+  type PgpPreferences,
+} from "./storage/preferences";
 
 export type PresetId = "casual" | "careful" | "paranoid";
 

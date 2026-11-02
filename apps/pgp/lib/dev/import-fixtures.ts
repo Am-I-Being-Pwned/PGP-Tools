@@ -1,6 +1,6 @@
 /* i18n-ignore-file */
-import type { IncomingKey } from "../import/types";
-import type { KeyDetails, KeyInfo } from "../pgp/types";
+import type { IncomingKey } from "~/lib/import/types";
+import type { KeyDetails, KeyInfo } from "~/lib/pgp/types";
 
 /**
  * DEV-ONLY import-flow harness fixtures (tree-shaken from production).

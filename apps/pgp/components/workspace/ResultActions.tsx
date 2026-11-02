@@ -1,14 +1,10 @@
 import { CheckIcon, ClipboardIcon, DownloadIcon } from "lucide-react";
 
-import { Button } from "@amibeingpwned/ui/button";
-import { ariaKeyShortcuts, isMacPlatform } from "@amibeingpwned/ui/kbd-helpers";
+import { ariaKeyShortcuts, Button, isMacPlatform } from "@amibeingpwned/ui";
 
-import {
-  COPY_SHORTCUT,
-  DOWNLOAD_SHORTCUT,
-} from "../../lib/actions/definitions";
-import { t } from "../../lib/i18n";
-import { ShortcutHint } from "../shared/ShortcutHint";
+import { ShortcutHint } from "~/components/shared/ShortcutHint";
+import { COPY_SHORTCUT, DOWNLOAD_SHORTCUT } from "~/lib/actions/definitions";
+import { t } from "~/lib/i18n";
 
 /** Download (primary) and Copy for a finished result. The shortcuts live
  *  in hover popovers so they don't crowd the half-width buttons. */

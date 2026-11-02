@@ -1,6 +1,6 @@
 import type * as React from "react";
 
-import { cn } from "@amibeingpwned/ui";
+import { cn } from "./cn";
 
 /** A stack of flat blocks with 2px gaps; it clips, so end blocks take the
  *  outer corners. */

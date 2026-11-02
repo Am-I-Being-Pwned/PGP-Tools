@@ -1,13 +1,12 @@
 import { useState } from "react";
 import { InfoIcon } from "lucide-react";
 
-import { Button } from "@amibeingpwned/ui/button";
+import { Button } from "@amibeingpwned/ui";
 
-import type { PublicContactKey } from "../../lib/storage/contacts";
-import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
-import type { KeyDetailsTarget } from "./KeyDetailsPage";
-import { t } from "../../lib/i18n";
-import { KeyDetailsPage } from "./KeyDetailsPage";
+import { t } from "~/lib/i18n";
+import type { PublicContactKey } from "~/lib/storage/contacts";
+import type { ProtectedKeyBlob } from "~/lib/storage/keyring";
+import { KeyDetailsPage, type KeyDetailsTarget } from "./KeyDetailsPage";
 
 type AnyKey = ProtectedKeyBlob | PublicContactKey;
 

@@ -1,10 +1,9 @@
 import { useCallback, useRef, useState } from "react";
 
-import { cn } from "@amibeingpwned/ui";
-import { Button } from "@amibeingpwned/ui/button";
+import { Button, cn } from "@amibeingpwned/ui";
 
-import { readKeyFile } from "../../lib/binary-armor";
-import { t } from "../../lib/i18n";
+import { readKeyFile } from "~/lib/binary-armor";
+import { t } from "~/lib/i18n";
 
 interface ContactDropZoneProps {
   onKeyText: (text: string) => void;

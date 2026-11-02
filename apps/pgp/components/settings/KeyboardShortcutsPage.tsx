@@ -1,14 +1,12 @@
-import { Block, BlockLabel, BlockStack } from "@amibeingpwned/ui/block";
-import { Button } from "@amibeingpwned/ui/button";
-import { Kbd } from "@amibeingpwned/ui/kbd";
+import { Block, BlockLabel, BlockStack, Button, Kbd } from "@amibeingpwned/ui";
 
-import type { ShortcutRefEntry } from "../../lib/shortcuts-reference";
-import { t } from "../../lib/i18n";
+import { SubPage } from "~/components/shared/SubPage";
+import { t } from "~/lib/i18n";
 import {
   CHROME_SHORTCUTS_URL,
   shortcutReference,
-} from "../../lib/shortcuts-reference";
-import { SubPage } from "../shared/SubPage";
+  type ShortcutRefEntry,
+} from "~/lib/shortcuts-reference";
 
 function EntryKeys({ entry }: { entry: ShortcutRefEntry }) {
   if (entry.shortcut) return <Kbd shortcut={entry.shortcut} />;

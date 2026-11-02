@@ -1,4 +1,4 @@
-import "../../lib/network-lockdown";
+import "~/lib/network-lockdown";
 
 import ReactDOM from "react-dom/client";
 

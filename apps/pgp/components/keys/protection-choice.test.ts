@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import type { ProtectionChoiceState } from "./protection-choice";
 import {
   crxProtectionInput,
   protectionInput,
   validateExportPassphrase,
   validatePassword,
   validateProtection,
+  type ProtectionChoiceState,
 } from "./protection-choice";
 
 describe("validateExportPassphrase", () => {

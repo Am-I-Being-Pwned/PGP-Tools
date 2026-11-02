@@ -21,8 +21,14 @@
  */
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import type { BrowserContext, CDPSession, Locator, Page } from "@playwright/test";
-import { test as base, expect } from "@playwright/test";
+import {
+  test as base,
+  expect,
+  type BrowserContext,
+  type CDPSession,
+  type Locator,
+  type Page,
+} from "@playwright/test";
 
 import { getExtensionId, launchExtensionContext } from "../e2e/fixtures";
 import { importContactsBulk } from "../e2e/helpers";
@@ -30,21 +36,34 @@ import { keyBySlug, TEST_KEYS } from "../e2e/keys";
 
 const APP = path.resolve(import.meta.dirname, "..");
 const EXT = path.join(APP, ".output", "chrome-mv3");
-const OUT = path.resolve(APP, "..", "..", "assets", "store-listing", "video", "ui", "takes");
+const OUT = path.resolve(
+  APP,
+  "..",
+  "..",
+  "assets",
+  "store-listing",
+  "video",
+  "ui",
+  "takes",
+);
 const PASSWORD = "correct horse battery staple";
 const MESSAGE = "Meet me at the usual place at 8. Bring the drive.";
 const ALICE = keyBySlug("standard");
 // The side panel's page area in the Chrome-window capture is exactly 360x865
 // CSS px (720x1730 at 2x), so takes are recorded at that size and drop into
 // the real panel pixel for pixel.
-const W = 360, H = 865, DPR = 3;
+const W = 360,
+  H = 865,
+  DPR = 3;
 /** Slow-motion factor while recording: 0.5 = everything at half speed. */
 const RATE = 0.5;
 
 const test = base.extend<{ context: BrowserContext; panel: Page }>({
   // eslint-disable-next-line no-empty-pattern
   context: async ({}, use) => {
-    const context = await launchExtensionContext(EXT, { deviceScaleFactor: DPR });
+    const context = await launchExtensionContext(EXT, {
+      deviceScaleFactor: DPR,
+    });
     await use(context);
     await context.close();
   },
@@ -57,7 +76,12 @@ const test = base.extend<{ context: BrowserContext; panel: Page }>({
   },
 });
 
-interface PointerEvent { t: number; x: number; y: number; down?: boolean }
+interface PointerEvent {
+  t: number;
+  x: number;
+  y: number;
+  down?: boolean;
+}
 
 /** Records one take: every distinct frame, plus where the pointer went. */
 class Take {
@@ -67,15 +91,24 @@ class Take {
   private cdp!: CDPSession;
   private running = false;
   private loop: Promise<void> = Promise.resolve();
-  constructor(private page: Page, private name: string) {}
+  constructor(
+    private page: Page,
+    private name: string,
+  ) {}
 
   /** Film time: wall time since start, compressed by the slow-motion rate. */
-  private now() { return (Date.now() / 1000 - this.t0) * RATE; }
+  private now() {
+    return (Date.now() / 1000 - this.t0) * RATE;
+  }
 
   /** Wait `ms` of film time. */
-  pause(ms: number) { return this.page.waitForTimeout(ms / RATE); }
+  pause(ms: number) {
+    return this.page.waitForTimeout(ms / RATE);
+  }
   /** Type at `delay` ms per key of film time. */
-  type(text: string, delay: number) { return this.page.keyboard.type(text, { delay: delay / RATE }); }
+  type(text: string, delay: number) {
+    return this.page.keyboard.type(text, { delay: delay / RATE });
+  }
 
   async start() {
     this.cdp = await this.page.context().newCDPSession(this.page);
@@ -105,7 +138,8 @@ class Take {
   async click(el: Locator, opts: { settle?: number } = {}) {
     const box = await el.boundingBox();
     if (!box) throw new Error(`take ${this.name}: nothing to click`);
-    const x = box.x + box.width / 2, y = box.y + box.height / 2;
+    const x = box.x + box.width / 2,
+      y = box.y + box.height / 2;
     await this.move(x, y);
     await this.pause(opts.settle ?? 120);
     this.pointer.push({ t: this.now(), x, y, down: true });
@@ -118,8 +152,10 @@ class Take {
   async move(x: number, y: number, steps = 16) {
     const from = this.pointer.at(-1) ?? { x: W * 0.8, y: H * 0.85 };
     for (let i = 1; i <= steps; i++) {
-      const k = i / steps, e = 1 - (1 - k) ** 3;
-      const px = from.x + (x - from.x) * e, py = from.y + (y - from.y) * e;
+      const k = i / steps,
+        e = 1 - (1 - k) ** 3;
+      const px = from.x + (x - from.x) * e,
+        py = from.y + (y - from.y) * e;
       await this.page.mouse.move(px, py);
       this.pointer.push({ t: this.now(), x: px, y: py });
       await this.pause(16);
@@ -141,9 +177,14 @@ class Take {
       writeFileSync(path.join(dir, file), Buffer.from(f.data, "base64"));
       return { t: +f.t.toFixed(4), file };
     });
-    writeFileSync(path.join(dir, "frames.json"), JSON.stringify({ w: W, h: H, dpr: DPR, duration, frames: index }));
+    writeFileSync(
+      path.join(dir, "frames.json"),
+      JSON.stringify({ w: W, h: H, dpr: DPR, duration, frames: index }),
+    );
     writeFileSync(path.join(dir, "pointer.json"), JSON.stringify(this.pointer));
-    console.log(`take ${this.name}: ${index.length} frames, ${duration.toFixed(2)}s`);
+    console.log(
+      `take ${this.name}: ${index.length} frames, ${duration.toFixed(2)}s`,
+    );
   }
 }
 
@@ -158,11 +199,22 @@ test("takes", async ({ panel }) => {
   await panel.getByLabel("Confirm password").fill(PASSWORD);
   await panel.getByRole("button", { name: "Set password" }).click();
   await panel.getByPlaceholder("Your full name").fill("James Arnott");
-  await panel.getByPlaceholder("you@example.com").fill("james@amibeingpwned.com");
+  await panel
+    .getByPlaceholder("you@example.com")
+    .fill("james@amibeingpwned.com");
   await panel.getByRole("button", { name: "Create my PGP key" }).click();
-  await panel.getByRole("button", { name: "Keep the defaults" }).click({ timeout: 30_000 });
-  await expect(panel.getByRole("tab", { name: "Keys" })).toBeVisible({ timeout: 30_000 });
-  await importContactsBulk(panel, TEST_KEYS.filter((k) => k.encryptCapable).slice(0, 6).map((k) => k.publicKey));
+  await panel
+    .getByRole("button", { name: "Keep the defaults" })
+    .click({ timeout: 30_000 });
+  await expect(panel.getByRole("tab", { name: "Keys" })).toBeVisible({
+    timeout: 30_000,
+  });
+  await importContactsBulk(
+    panel,
+    TEST_KEYS.filter((k) => k.encryptCapable)
+      .slice(0, 6)
+      .map((k) => k.publicKey),
+  );
   await panel.getByRole("tab", { name: "Main" }).click();
   await panel.getByRole("radio", { name: "Encrypt", exact: true }).click();
   await panel.locator("body").click({ position: { x: 5, y: 5 } });
@@ -174,7 +226,9 @@ test("takes", async ({ panel }) => {
   await enc.click(panel.getByRole("combobox", { name: /Recipients/ }));
   await enc.type("al", 110);
   await enc.pause(350);
-  await enc.click(panel.getByRole("option", { name: new RegExp(ALICE.name) }).first());
+  await enc.click(
+    panel.getByRole("option", { name: new RegExp(ALICE.name) }).first(),
+  );
   await panel.keyboard.press("Escape");
   await enc.pause(250);
   await enc.click(panel.locator("#pgp-input"));
@@ -214,7 +268,10 @@ test("takes", async ({ panel }) => {
   await panel.locator("#pgp-input").fill("");
   await panel.locator("body").click({ position: { x: 5, y: 5 } });
   await panel.waitForTimeout(500);
-  const tampered = ALICE.signedMessage.replace("quick brown fox", "quick brown cat");
+  const tampered = ALICE.signedMessage.replace(
+    "quick brown fox",
+    "quick brown cat",
+  );
   const bad = new Take(panel, "tampered");
   await bad.start();
   await bad.click(panel.locator("#pgp-input"));
@@ -232,9 +289,17 @@ test("takes", async ({ panel }) => {
   await keys.click(panel.getByRole("tab", { name: "Keys" }));
   await keys.pause(900);
   await keys.move(W / 2, H * 0.6);
-  for (let i = 0; i < 10; i++) { await panel.mouse.wheel(0, 18); await keys.pause(30); }
+  for (let i = 0; i < 10; i++) {
+    await panel.mouse.wheel(0, 18);
+    await keys.pause(30);
+  }
   await keys.pause(500);
-  await keys.click(panel.getByText(ALICE.name, { exact: true }).filter({ visible: true }).first());
+  await keys.click(
+    panel
+      .getByText(ALICE.name, { exact: true })
+      .filter({ visible: true })
+      .first(),
+  );
   await keys.pause(1800);
   await keys.stop();
 });

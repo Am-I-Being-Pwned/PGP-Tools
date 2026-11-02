@@ -1,9 +1,7 @@
-import type { PublicContactKey } from "./storage/contacts";
-import type { StoredKeyKind } from "./storage/key-kind";
-import type { ProtectedKeyBlob } from "./storage/keyring";
 import { t } from "./i18n";
-import { activeRecipients } from "./storage/contacts";
-import { storedKeyKind } from "./storage/key-kind";
+import { activeRecipients, type PublicContactKey } from "./storage/contacts";
+import { storedKeyKind, type StoredKeyKind } from "./storage/key-kind";
+import type { ProtectedKeyBlob } from "./storage/keyring";
 
 interface OwnKey {
   keyId: string;

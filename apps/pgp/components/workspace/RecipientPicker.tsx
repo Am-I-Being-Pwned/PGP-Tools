@@ -1,8 +1,8 @@
 import { useId, useMemo, useRef, useState } from "react";
 import { ChevronsUpDownIcon, InfoIcon, XIcon } from "lucide-react";
 
-import { cn } from "@amibeingpwned/ui";
 import {
+  cn,
   Command,
   CommandEmpty,
   CommandGroup,
@@ -10,39 +10,34 @@ import {
   CommandList,
   CommandSeparator,
   CommandShortcut,
-} from "@amibeingpwned/ui/command";
-import {
   Popover,
   PopoverAnchor,
   PopoverContent,
-} from "@amibeingpwned/ui/popover";
+} from "@amibeingpwned/ui";
 
-import type { PublicContactKey } from "../../lib/storage/contacts";
-import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
-import { t, tn } from "../../lib/i18n";
+import { keyDetailsTarget } from "~/components/keys/KeyDetailsButton";
+import { KeyDetailsPage } from "~/components/keys/KeyDetailsPage";
+import { KeyAvatar } from "~/components/shared/KeyAvatar";
+import { MarkedText } from "~/components/shared/MarkedText";
+import { t, tn } from "~/lib/i18n";
 import {
   contactClashes,
   displayKeyId,
   noteKeyId,
-} from "../../lib/identity/binding";
-import { clashPillLabel, clashSentence } from "../../lib/identity/clash-copy";
+} from "~/lib/identity/binding";
+import { clashPillLabel, clashSentence } from "~/lib/identity/clash-copy";
 import {
   matchesRecipientSearch,
   orderRecipients,
-} from "../../lib/recipient-ordering";
+} from "~/lib/recipient-ordering";
 import {
   activeRecipients,
   contactRecipients,
-} from "../../lib/storage/contacts";
-import { isSshRecord } from "../../lib/storage/key-kind";
-import {
-  displayUserId,
-  formatKeyDisplayName,
-} from "../../lib/utils/key-naming";
-import { keyDetailsTarget } from "../keys/KeyDetailsButton";
-import { KeyDetailsPage } from "../keys/KeyDetailsPage";
-import { KeyAvatar } from "../shared/KeyAvatar";
-import { MarkedText } from "../shared/MarkedText";
+  type PublicContactKey,
+} from "~/lib/storage/contacts";
+import { isSshRecord } from "~/lib/storage/key-kind";
+import type { ProtectedKeyBlob } from "~/lib/storage/keyring";
+import { displayUserId, formatKeyDisplayName } from "~/lib/utils/key-naming";
 import {
   pickableKeys,
   recipientBlockReason,

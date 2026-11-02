@@ -1,5 +1,5 @@
-import { t } from "../../lib/i18n";
-import { codePointLabel, markLookalikes } from "../../lib/utils/lookalike";
+import { t } from "~/lib/i18n";
+import { codePointLabel, markLookalikes } from "~/lib/utils/lookalike";
 
 /** Lookalike letters highlighted and invisible characters drawn as marked
  *  placeholders: the difference that makes it someone else must be seen. */

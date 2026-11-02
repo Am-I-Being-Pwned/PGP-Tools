@@ -1,28 +1,30 @@
 import { useState } from "react";
 import { TriangleAlertIcon } from "lucide-react";
 
-import { Block, BlockStack } from "@amibeingpwned/ui/block";
-import { Button } from "@amibeingpwned/ui/button";
-import { Segmented } from "@amibeingpwned/ui/segmented";
+import { Block, BlockStack, Button, Segmented } from "@amibeingpwned/ui";
 
-import type {
-  IdentityConflict,
-  IdentityHolder,
-} from "../../lib/identity/binding";
-import type { ReviewDecision } from "../../lib/import/review";
-import type { IncomingKey } from "../../lib/import/types";
-import { t, tn } from "../../lib/i18n";
+import { KeyAvatar } from "~/components/shared/KeyAvatar";
+import { MarkedText } from "~/components/shared/MarkedText";
+import { t, tn } from "~/lib/i18n";
 import {
   addressSkeletons,
   displayKeyId,
   emailsOf,
   noteKeyId,
-} from "../../lib/identity/binding";
-import { defaultDecision, needsDecision } from "../../lib/import/review";
-import { isPublicKind, isSecretKind } from "../../lib/import/types";
-import { parseUserId } from "../../lib/utils/key-naming";
-import { KeyAvatar } from "../shared/KeyAvatar";
-import { MarkedText } from "../shared/MarkedText";
+  type IdentityConflict,
+  type IdentityHolder,
+} from "~/lib/identity/binding";
+import {
+  defaultDecision,
+  needsDecision,
+  type ReviewDecision,
+} from "~/lib/import/review";
+import {
+  isPublicKind,
+  isSecretKind,
+  type IncomingKey,
+} from "~/lib/import/types";
+import { parseUserId } from "~/lib/utils/key-naming";
 
 function statusLabel(key: IncomingKey): string {
   if (isSecretKind(key.kind) && key.status === "new")

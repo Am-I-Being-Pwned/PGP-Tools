@@ -1,29 +1,25 @@
 import { useEffect, useRef, useState } from "react";
 
-import { BlockStack } from "@amibeingpwned/ui/block";
-import { Button } from "@amibeingpwned/ui/button";
+import { BlockStack, Button } from "@amibeingpwned/ui";
 
-import type { CrxSigningKeyBlob } from "../../lib/crx/types";
-import type { PublicContactKey } from "../../lib/storage/contacts";
-import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
-import { useAsyncAction } from "../../hooks/useAsyncAction";
-import { serializeCrxKeyBlocks } from "../../lib/crx/backup";
+import { Emphasised } from "~/components/shared/Emphasised";
+import { SubPage } from "~/components/shared/SubPage";
+import { useAsyncAction } from "~/hooks/useAsyncAction";
+import { serializeCrxKeyBlocks } from "~/lib/crx/backup";
 import {
   closeCrxKey,
   openCrxKey,
   resealCrxKeyUnderPassword,
-} from "../../lib/crx/operations";
-import { t, tn } from "../../lib/i18n";
-import { backupFileName } from "../../lib/keys/export-bundle";
-import {
-  encryptKeyForExportWithHandle,
-  getKeyArmored,
-} from "../../lib/pgp/wasm";
-import { isWebAuthnCancel } from "../../lib/protection/webauthn-prf";
-import { toast } from "../../lib/toast";
-import { downloadText } from "../../lib/utils/download";
-import { Emphasised } from "../shared/Emphasised";
-import { SubPage } from "../shared/SubPage";
+} from "~/lib/crx/operations";
+import type { CrxSigningKeyBlob } from "~/lib/crx/types";
+import { t, tn } from "~/lib/i18n";
+import { backupFileName } from "~/lib/keys/export-bundle";
+import { encryptKeyForExportWithHandle, getKeyArmored } from "~/lib/pgp/wasm";
+import { isWebAuthnCancel } from "~/lib/protection/webauthn-prf";
+import type { PublicContactKey } from "~/lib/storage/contacts";
+import type { ProtectedKeyBlob } from "~/lib/storage/keyring";
+import { toast } from "~/lib/toast";
+import { downloadText } from "~/lib/utils/download";
 import {
   ExportPassphraseFields,
   useExportPassphrase,

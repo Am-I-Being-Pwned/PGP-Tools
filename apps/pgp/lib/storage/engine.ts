@@ -1,6 +1,6 @@
-import type { StorageLocation } from "./preferences";
-import { STORAGE_DEVICE_LOCATION, STORAGE_PREFERENCES } from "../constants";
+import { STORAGE_DEVICE_LOCATION, STORAGE_PREFERENCES } from "~/lib/constants";
 import { getChunked, removeChunked, setChunked } from "./chunked";
+import type { StorageLocation } from "./preferences";
 
 /**
  * Routes chrome.storage reads/writes to this device's vault location, with

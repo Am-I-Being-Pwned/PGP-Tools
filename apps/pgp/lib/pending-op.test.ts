@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { PendingOperation } from "./messages";
 import { SESSION_PENDING_OP } from "./constants";
+import type { PendingOperation } from "./messages";
 import {
   isPendingOperation,
   isPendingOpForWindow,

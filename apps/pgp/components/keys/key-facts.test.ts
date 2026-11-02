@@ -6,14 +6,19 @@
 
 import { describe, expect, it } from "vitest";
 
-import type { KeyDetails, KeyInfo, SubkeyDetail } from "../../lib/pgp/types";
-import type { PublicContactKey } from "../../lib/storage/contacts";
-import type { ComponentKeyRow, KeyFacts } from "./key-facts";
+import type { KeyDetails, KeyInfo, SubkeyDetail } from "~/lib/pgp/types";
 import {
   activeRecipients,
   contactRecipients,
-} from "../../lib/storage/contacts";
-import { pgpKeyFacts, sshGroupKeyFacts, sshKeyFacts } from "./key-facts";
+  type PublicContactKey,
+} from "~/lib/storage/contacts";
+import {
+  pgpKeyFacts,
+  sshGroupKeyFacts,
+  sshKeyFacts,
+  type ComponentKeyRow,
+  type KeyFacts,
+} from "./key-facts";
 
 const FP = "3A9E1F5C7B2D48E6A0C1938574FD62B0E4A75C11";
 const CREATED = Date.UTC(2024, 0, 2);
@@ -298,8 +303,8 @@ describe("a stored 3-key contact, as the details page builds it", () => {
       addedAt: 1,
       lastUsedAt: 1,
     };
-    expect(sshGroupKeyFacts(contactRecipients(legacy)).components?.rows).toEqual(
-      [expect.objectContaining({ fingerprint: FPS[0] })],
-    );
+    expect(
+      sshGroupKeyFacts(contactRecipients(legacy)).components?.rows,
+    ).toEqual([expect.objectContaining({ fingerprint: FPS[0] })]);
   });
 });

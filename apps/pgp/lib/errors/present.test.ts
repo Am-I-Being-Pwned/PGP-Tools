@@ -1,14 +1,14 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-import type { EngineErrorCode } from "./engine-error";
-import { errorMessage } from "../utils/errors";
+import { errorMessage } from "~/lib/utils/errors";
 import { AppError } from "./app-error";
 import {
   decodeEngineError,
   ENGINE_ERROR_CODES,
   EngineError,
   withEngineErrors,
+  type EngineErrorCode,
 } from "./engine-error";
 import { presentError } from "./present";
 

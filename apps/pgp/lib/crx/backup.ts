@@ -5,9 +5,8 @@
  * the blob restores on any device.
  */
 
-import type { CrxSigningKeyBlob } from "./types";
-import { fromBase64, toBase64 } from "../encoding";
-import { isCrxSigningKeyBlob } from "./types";
+import { fromBase64, toBase64 } from "~/lib/encoding";
+import { isCrxSigningKeyBlob, type CrxSigningKeyBlob } from "./types";
 
 const BEGIN = "-----BEGIN PGP TOOLS CRX SIGNING KEY-----";
 const END = "-----END PGP TOOLS CRX SIGNING KEY-----";

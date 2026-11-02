@@ -6,9 +6,9 @@ import {
   useSyncExternalStore,
 } from "react";
 
-import type { ActionCtx, AppTab, PgpMode } from "../lib/actions/types";
-import type { InlineStyle } from "../lib/compose/text-format";
-import type { StoredKeyKind } from "../lib/storage/key-kind";
+import type { ActionCtx, AppTab, PgpMode } from "~/lib/actions/types";
+import type { InlineStyle } from "~/lib/compose/text-format";
+import type { StoredKeyKind } from "~/lib/storage/key-kind";
 import type { Nav } from "./useNav";
 import { usePreferences } from "./usePreferences";
 

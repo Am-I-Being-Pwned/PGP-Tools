@@ -1,4 +1,4 @@
-import { t } from "../i18n";
+import { t } from "~/lib/i18n";
 
 /** Format algorithm names like "ed25519Legacy" -> "ed25519 Legacy" */
 export function formatAlgorithm(algo: string): string {

@@ -1,10 +1,17 @@
-import type { KeyInfo } from "./pgp/types";
-import type { ParsedCert } from "./pgp/wasm";
-import type { PublicContactKey } from "./storage/contacts";
 import { t } from "./i18n";
 import { formatDate } from "./i18n/format";
-import { mergePublicKey, parseKeys, revocationIssuers } from "./pgp/wasm";
-import { IDENTITY_VERSION, updateContact } from "./storage/contacts";
+import type { KeyInfo } from "./pgp/types";
+import {
+  mergePublicKey,
+  parseKeys,
+  revocationIssuers,
+  type ParsedCert,
+} from "./pgp/wasm";
+import {
+  IDENTITY_VERSION,
+  updateContact,
+  type PublicContactKey,
+} from "./storage/contacts";
 
 export interface StoredCert {
   keyId: string;

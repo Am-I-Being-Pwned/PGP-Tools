@@ -3,9 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { KeyDetails, KeyInfo } from "../pgp/types";
-import type { ImportEngines, StoredKey, StoredKeys } from "./prepare";
-import type { IncomingKey } from "./types";
+import type { KeyDetails, KeyInfo } from "~/lib/pgp/types";
 import {
   extractPublicKey,
   mergePublicKey,
@@ -14,7 +12,7 @@ import {
   parseSshRecipient,
   revocationIssuers,
   sshPrivateKeyFormatRejection,
-} from "../pgp/wasm";
+} from "~/lib/pgp/wasm";
 import {
   classifyCert,
   importable,
@@ -22,9 +20,12 @@ import {
   mergeSameKey,
   prepareImport,
   withIdentityConflicts,
+  type ImportEngines,
+  type StoredKey,
+  type StoredKeys,
 } from "./prepare";
 import { defaultDecision } from "./review";
-import { PENDING_KEY_ID } from "./types";
+import { PENDING_KEY_ID, type IncomingKey } from "./types";
 
 const AGE_RS = join(
   dirname(fileURLToPath(import.meta.url)),

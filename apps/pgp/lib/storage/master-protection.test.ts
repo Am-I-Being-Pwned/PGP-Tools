@@ -6,19 +6,18 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { FakeArea } from "./fake-area";
-import type { MasterProtection } from "./master-protection";
 import {
   STORAGE_INTEGRITY,
   STORAGE_MASTER_PROTECTION,
   STORAGE_PREFERENCES,
-} from "../constants";
+} from "~/lib/constants";
 import { invalidateLocationCache } from "./engine";
-import { stubChromeStorage } from "./fake-area";
+import { stubChromeStorage, type FakeArea } from "./fake-area";
 import {
   getMasterProtection,
   saveMasterProtection,
   VaultExistsError,
+  type MasterProtection,
 } from "./master-protection";
 
 let local: FakeArea;

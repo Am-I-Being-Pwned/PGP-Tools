@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { CheckIcon, ChevronsUpDownIcon } from "lucide-react";
 
-import { cn } from "@amibeingpwned/ui";
-import { Button } from "@amibeingpwned/ui/button";
 import {
+  Button,
+  cn,
   Command,
   CommandEmpty,
   CommandGroup,
@@ -11,23 +11,18 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-} from "@amibeingpwned/ui/command";
-import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@amibeingpwned/ui/popover";
+} from "@amibeingpwned/ui";
 
-import type { PublicContactKey } from "../../lib/storage/contacts";
-import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
-import { t } from "../../lib/i18n";
-import {
-  displayUserId,
-  formatKeyDisplayName,
-} from "../../lib/utils/key-naming";
-import { KeyDetailsButton } from "../keys/KeyDetailsButton";
-import { KeyAvatar } from "../shared/KeyAvatar";
-import { MarkedText } from "../shared/MarkedText";
+import { KeyDetailsButton } from "~/components/keys/KeyDetailsButton";
+import { KeyAvatar } from "~/components/shared/KeyAvatar";
+import { MarkedText } from "~/components/shared/MarkedText";
+import { t } from "~/lib/i18n";
+import type { PublicContactKey } from "~/lib/storage/contacts";
+import type { ProtectedKeyBlob } from "~/lib/storage/keyring";
+import { displayUserId, formatKeyDisplayName } from "~/lib/utils/key-naming";
 
 type AnyKey = ProtectedKeyBlob | PublicContactKey;
 

@@ -1,53 +1,55 @@
 import { useEffect, useRef, useState } from "react";
 import { InfoIcon, LoaderIcon, UploadCloudIcon } from "lucide-react";
 
-import { cn } from "@amibeingpwned/ui";
-import { Button } from "@amibeingpwned/ui/button";
-import { Input } from "@amibeingpwned/ui/input";
+import { Button, cn, Input } from "@amibeingpwned/ui";
 
-import type { CrxSigningKeyBlob } from "../../lib/crx/types";
-import type { ReviewDecision, ReviewedContact } from "../../lib/import/review";
-import type { IncomingKey } from "../../lib/import/types";
-import type { KeyserverQuery } from "../../lib/keyserver/query";
+import {
+  SlideOverHeader,
+  SlideOverPanel,
+  useSlideOver,
+} from "~/components/shared/SlideOver";
+import { engineMessage, useAsyncAction } from "~/hooks/useAsyncAction";
+import { importSshIdentity } from "~/lib/age/protect-flow";
+import { recoverArmorIfNeeded } from "~/lib/armor-recovery";
+import { readKeyFile } from "~/lib/binary-armor";
+import { importCrxKey } from "~/lib/crx/operations";
+import type { CrxSigningKeyBlob } from "~/lib/crx/types";
+import { AppError } from "~/lib/errors/app-error";
+import { t, tn } from "~/lib/i18n";
+import { githubFailureCopy, prepareGithubImport } from "~/lib/import/github";
+import {
+  KEYSERVER_HOST,
+  keyserverFailureCopy,
+  prepareKeyserverImport,
+} from "~/lib/import/keyserver";
+import { classifyLookup } from "~/lib/import/lookup";
+import {
+  importable,
+  prepareImport,
+  storedKeysFrom,
+} from "~/lib/import/prepare";
+import {
+  applyReview,
+  defaultDecision,
+  type ReviewDecision,
+  type ReviewedContact,
+} from "~/lib/import/review";
+import {
+  isPublicKind,
+  isSecretKind,
+  type IncomingKey,
+} from "~/lib/import/types";
+import type { KeyserverQuery } from "~/lib/keyserver/query";
 import type {
   GithubKeysRequest,
   GithubKeysResponse,
   KeyserverKeyRequest,
   KeyserverKeyResponse,
-} from "../../lib/messages";
-import type { PublicContactKey } from "../../lib/storage/contacts";
-import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
-import { engineMessage, useAsyncAction } from "../../hooks/useAsyncAction";
-import { importSshIdentity } from "../../lib/age/protect-flow";
-import { recoverArmorIfNeeded } from "../../lib/armor-recovery";
-import { readKeyFile } from "../../lib/binary-armor";
-import { importCrxKey } from "../../lib/crx/operations";
-import { AppError } from "../../lib/errors/app-error";
-import { t, tn } from "../../lib/i18n";
-import {
-  githubFailureCopy,
-  prepareGithubImport,
-} from "../../lib/import/github";
-import {
-  KEYSERVER_HOST,
-  keyserverFailureCopy,
-  prepareKeyserverImport,
-} from "../../lib/import/keyserver";
-import { classifyLookup } from "../../lib/import/lookup";
-import {
-  importable,
-  prepareImport,
-  storedKeysFrom,
-} from "../../lib/import/prepare";
-import { applyReview, defaultDecision } from "../../lib/import/review";
-import { isPublicKind, isSecretKind } from "../../lib/import/types";
-import { importAndProtect } from "../../lib/protection/protect-flow";
-import { toast } from "../../lib/toast";
-import {
-  SlideOverHeader,
-  SlideOverPanel,
-  useSlideOver,
-} from "../shared/SlideOver";
+} from "~/lib/messages";
+import { importAndProtect } from "~/lib/protection/protect-flow";
+import type { PublicContactKey } from "~/lib/storage/contacts";
+import type { ProtectedKeyBlob } from "~/lib/storage/keyring";
+import { toast } from "~/lib/toast";
 import { ImportPreview } from "./ImportPreviewPage";
 import { ImportReview } from "./ImportReview";
 import { ProtectionMethodPicker } from "./ProtectionMethodPicker";
