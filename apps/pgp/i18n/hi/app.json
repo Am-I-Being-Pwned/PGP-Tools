@@ -56,25 +56,6 @@
   "app_onboarding_identity_body": {
     "message": "संदेशों को एन्क्रिप्ट, डिक्रिप्ट और हस्ताक्षरित करने के लिए एक कुंजी युग्म बनाएं।"
   },
-  "app_onboarding_name_label": { "message": "नाम *" },
-  "app_onboarding_name_placeholder": { "message": "आपका पूरा नाम" },
-  "app_onboarding_email_label": { "message": "ईमेल" },
-  "app_onboarding_optional": { "message": "वैकल्पिक" },
-  "app_onboarding_email_placeholder": { "message": "you@example.com" },
-  "app_onboarding_comment_label": { "message": "टिप्पणी" },
-  "app_onboarding_comment_placeholder": { "message": "जैसे: काम, निजी" },
-  "app_onboarding_advanced_options": { "message": "उन्नत विकल्प" },
-  "app_onboarding_algorithm_label": { "message": "एल्गोरिदम" },
-  "app_onboarding_algo_ecc_hint": {
-    "message": "आधुनिक, तेज़, छोटी कुंजियां। ज़्यादातर उपयोगों के लिए अनुशंसित।"
-  },
-  "app_onboarding_algo_rsa_hint": {
-    "message": "व्यापक रूप से संगत, लेकिन धीमा, और इसके RSA कोड में एक ज्ञात टाइमिंग साइड चैनल (Marvin) है। RSA ज़रूरी न हो तो ECC चुनें।"
-  },
-  "app_onboarding_expiry_label": { "message": "कुंजी की समाप्ति" },
-  "app_onboarding_expiry_never": { "message": "कभी नहीं" },
-  "app_onboarding_expiry_years_one": { "message": "$count$ साल" },
-  "app_onboarding_expiry_years_other": { "message": "$count$ साल" },
   "app_onboarding_create_key": { "message": "मेरी PGP कुंजी बनाएं" },
   "app_onboarding_skip": { "message": "बाद में सेट अप करें" },
   "app_onboarding_passkey_prompt": {

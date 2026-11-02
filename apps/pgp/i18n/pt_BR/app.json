@@ -110,51 +110,6 @@
   "app_onboarding_identity_body": {
     "message": "Crie um par de chaves para criptografar, descriptografar e assinar mensagens."
   },
-  "app_onboarding_name_label": {
-    "message": "Nome *"
-  },
-  "app_onboarding_name_placeholder": {
-    "message": "Seu nome completo"
-  },
-  "app_onboarding_email_label": {
-    "message": "Email"
-  },
-  "app_onboarding_optional": {
-    "message": "opcional"
-  },
-  "app_onboarding_email_placeholder": {
-    "message": "voce@exemplo.com"
-  },
-  "app_onboarding_comment_label": {
-    "message": "Comentário"
-  },
-  "app_onboarding_comment_placeholder": {
-    "message": "ex.: trabalho, pessoal"
-  },
-  "app_onboarding_advanced_options": {
-    "message": "Opções avançadas"
-  },
-  "app_onboarding_algorithm_label": {
-    "message": "Algoritmo"
-  },
-  "app_onboarding_algo_ecc_hint": {
-    "message": "Chaves modernas, rápidas e pequenas. Recomendado para a maioria dos usos."
-  },
-  "app_onboarding_algo_rsa_hint": {
-    "message": "Muito compatível, mas mais lento, e o código RSA tem um canal lateral de tempo conhecido (Marvin). Prefira ECC, a menos que precise de RSA."
-  },
-  "app_onboarding_expiry_label": {
-    "message": "Validade da chave"
-  },
-  "app_onboarding_expiry_never": {
-    "message": "Nunca"
-  },
-  "app_onboarding_expiry_years_one": {
-    "message": "$count$ ano"
-  },
-  "app_onboarding_expiry_years_other": {
-    "message": "$count$ anos"
-  },
   "app_onboarding_create_key": {
     "message": "Criar minha chave PGP"
   },

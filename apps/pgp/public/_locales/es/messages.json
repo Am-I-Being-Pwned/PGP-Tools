@@ -600,57 +600,11 @@
   "app_nav_label": {
     "message": "Navegación principal"
   },
-  "app_onboarding_advanced_options": {
-    "message": "Opciones avanzadas"
-  },
-  "app_onboarding_algo_ecc_hint": {
-    "message": "Claves modernas, rápidas y pequeñas. Recomendado para la mayoría de los usos."
-  },
-  "app_onboarding_algo_rsa_hint": {
-    "message": "Muy compatible, pero más lento, y su código RSA tiene un canal lateral de tiempo conocido (Marvin). Usa ECC salvo que necesites RSA."
-  },
-  "app_onboarding_algorithm_label": {
-    "message": "Algoritmo"
-  },
-  "app_onboarding_comment_label": {
-    "message": "Comentario"
-  },
-  "app_onboarding_comment_placeholder": {
-    "message": "p. ej. trabajo, personal"
-  },
   "app_onboarding_create_key": {
     "message": "Crear mi clave PGP"
   },
   "app_onboarding_create_passkey": {
     "message": "Crear llave de acceso"
-  },
-  "app_onboarding_email_label": {
-    "message": "Correo electrónico"
-  },
-  "app_onboarding_email_placeholder": {
-    "message": "usted@example.com"
-  },
-  "app_onboarding_expiry_label": {
-    "message": "Caducidad de la clave"
-  },
-  "app_onboarding_expiry_never": {
-    "message": "Nunca"
-  },
-  "app_onboarding_expiry_years_one": {
-    "message": "$count$ año",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
-  },
-  "app_onboarding_expiry_years_other": {
-    "message": "$count$ años",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
   },
   "app_onboarding_generate_failed": {
     "message": "Error al generar la clave"
@@ -670,20 +624,11 @@
   "app_onboarding_keep_defaults": {
     "message": "Mantener los valores predeterminados"
   },
-  "app_onboarding_name_label": {
-    "message": "Nombre *"
-  },
-  "app_onboarding_name_placeholder": {
-    "message": "Su nombre completo"
-  },
   "app_onboarding_name_required": {
     "message": "El nombre es obligatorio."
   },
   "app_onboarding_next": {
     "message": "Siguiente"
-  },
-  "app_onboarding_optional": {
-    "message": "opcional"
   },
   "app_onboarding_passkey_prompt": {
     "message": "Siga las indicaciones de llave de acceso de su navegador..."

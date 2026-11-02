@@ -1,24 +1,19 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronRightIcon, LoaderIcon } from "lucide-react";
+import { LoaderIcon } from "lucide-react";
 
-import { Block, BlockStack } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@amibeingpwned/ui/select";
 
+import type { ExpiryOption } from "../../lib/keys/expiry";
 import type { PresetId } from "../../lib/presets";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { MasterProtection } from "../../lib/storage/master-protection";
 import type { StorageLocation } from "../../lib/storage/preferences";
+import type { KeyAlgorithm } from "../keys/KeyIdentityFields";
 import { useAsyncAction } from "../../hooks/useAsyncAction";
 import { toBase64, unpackIvCiphertext } from "../../lib/encoding";
 import { presentError } from "../../lib/errors/present";
-import { t, tn } from "../../lib/i18n";
+import { t } from "../../lib/i18n";
+import { DEFAULT_EXPIRY, expiryToSeconds } from "../../lib/keys/expiry";
 import * as wasmApi from "../../lib/pgp/wasm";
 import { PRESETS } from "../../lib/presets";
 import {
@@ -42,25 +37,17 @@ import {
 } from "../../lib/storage/master-protection";
 import { savePreferences } from "../../lib/storage/preferences";
 import { afterNextPaint } from "../../lib/utils/paint";
+import {
+  EMPTY_IDENTITY,
+  identityUserId,
+  KeyIdentityFields,
+} from "../keys/KeyIdentityFields";
 import { ProtectionMethodPicker } from "../keys/ProtectionMethodPicker";
 import { useProtectionChoice } from "../keys/useProtectionChoice";
 import { PresetPicker } from "./PresetPicker";
 import { StorageLocationPicker } from "./StorageLocationPicker";
 
-/** A recessed input well (design language): no drawn border. */
-const FIELD_CLASS =
-  "surface-field placeholder:text-muted-foreground focus-visible:ring-ring h-9 w-full rounded-lg px-3 text-sm focus-visible:ring-2 focus:outline-none";
-
 type Step = "storage" | "protection" | "identity" | "generating" | "preset";
-type KeyAlgorithm = "ecc" | "rsa";
-type ExpiryOption = "never" | "1y" | "2y" | "3y";
-
-const EXPIRY_SECONDS: Record<ExpiryOption, number> = {
-  never: 0,
-  "1y": 365 * 24 * 60 * 60,
-  "2y": 2 * 365 * 24 * 60 * 60,
-  "3y": 3 * 365 * 24 * 60 * 60,
-};
 
 interface OnboardingFlowProps {
   onComplete: (storageLocation: StorageLocation) => void;
@@ -135,12 +122,10 @@ export function OnboardingFlow({
     [],
   );
 
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [comment, setComment] = useState("");
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [identity, setIdentity] = useState(EMPTY_IDENTITY);
   const [keyAlgorithm, setKeyAlgorithm] = useState<KeyAlgorithm>("ecc");
-  const [expiryOption, setExpiryOption] = useState<ExpiryOption>("2y");
+  const [expiryOption, setExpiryOption] =
+    useState<ExpiryOption>(DEFAULT_EXPIRY);
   const [presetChoice, setPresetChoice] = useState<PresetId>("careful");
   // "Unlock keys with the vault": off by default, offered only on the
   // passkey path (a password master has no PRF output to reuse). The
@@ -298,7 +283,7 @@ export function OnboardingFlow({
   };
 
   const handleGenerateKey = async () => {
-    if (!name.trim()) {
+    if (!identity.name.trim()) {
       keygen.setError(t("app_onboarding_name_required"));
       return;
     }
@@ -307,12 +292,10 @@ export function OnboardingFlow({
       // Let "Generating…" paint before the wasm call holds the thread.
       await afterNextPaint();
       try {
-        const expiresIn = EXPIRY_SECONDS[expiryOption];
+        const expiresIn = expiryToSeconds(expiryOption, undefined);
         const { blob, handle } = await generateAndProtect(
           {
-            name: name.trim(),
-            email: email.trim() || undefined,
-            comment: comment.trim() || undefined,
+            ...identityUserId(identity),
             type: keyAlgorithm,
             expiresIn: expiresIn || undefined,
           },
@@ -413,117 +396,14 @@ export function OnboardingFlow({
               </p>
             </div>
 
-            <BlockStack>
-              <Block className="p-3">
-                <label className="text-muted-foreground mb-1.5 block text-xs">
-                  {t("app_onboarding_name_label")}
-                </label>
-                <input
-                  type="text"
-                  placeholder={t("app_onboarding_name_placeholder")}
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className={FIELD_CLASS}
-                />
-              </Block>
-              <Block className="p-3">
-                <label className="text-muted-foreground mb-1.5 block text-xs">
-                  {t("app_onboarding_email_label")}{" "}
-                  <span className="text-muted-foreground/60">
-                    {t("app_onboarding_optional")}
-                  </span>
-                </label>
-                <input
-                  type="email"
-                  placeholder={t("app_onboarding_email_placeholder")}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className={FIELD_CLASS}
-                />
-              </Block>
-              <Block className="p-3">
-                <label className="text-muted-foreground mb-1.5 block text-xs">
-                  {t("app_onboarding_comment_label")}{" "}
-                  <span className="text-muted-foreground/60">
-                    {t("app_onboarding_optional")}
-                  </span>
-                </label>
-                <input
-                  type="text"
-                  placeholder={t("app_onboarding_comment_placeholder")}
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                  className={FIELD_CLASS}
-                />
-              </Block>
-            </BlockStack>
-
-            <button
-              type="button"
-              onClick={() => setShowAdvanced(!showAdvanced)}
-              className="text-muted-foreground hover:text-foreground flex w-full items-center gap-1.5 text-xs transition-colors"
-            >
-              <ChevronRightIcon
-                className={`h-3 w-3 transition-transform ${showAdvanced ? "rotate-90" : ""}`}
-              />
-              {t("app_onboarding_advanced_options")}
-            </button>
-
-            {showAdvanced && (
-              <BlockStack>
-                <Block className="p-3">
-                  <label className="text-muted-foreground mb-1.5 block text-xs">
-                    {t("app_onboarding_algorithm_label")}
-                  </label>
-                  <Select
-                    value={keyAlgorithm}
-                    onValueChange={(v) => setKeyAlgorithm(v as KeyAlgorithm)}
-                  >
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {/* i18n-ignore */}
-                      <SelectItem value="ecc">ECC (Ed25519)</SelectItem>
-                      <SelectItem value="rsa">RSA</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-muted-foreground/60 mt-1 text-[10px]">
-                    {keyAlgorithm === "ecc"
-                      ? t("app_onboarding_algo_ecc_hint")
-                      : t("app_onboarding_algo_rsa_hint")}
-                  </p>
-                </Block>
-
-                <Block className="p-3">
-                  <label className="text-muted-foreground mb-1.5 block text-xs">
-                    {t("app_onboarding_expiry_label")}
-                  </label>
-                  <Select
-                    value={expiryOption}
-                    onValueChange={(v) => setExpiryOption(v as ExpiryOption)}
-                  >
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="never">
-                        {t("app_onboarding_expiry_never")}
-                      </SelectItem>
-                      <SelectItem value="1y">
-                        {tn("app_onboarding_expiry_years", 1)}
-                      </SelectItem>
-                      <SelectItem value="2y">
-                        {tn("app_onboarding_expiry_years", 2)}
-                      </SelectItem>
-                      <SelectItem value="3y">
-                        {tn("app_onboarding_expiry_years", 3)}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </Block>
-              </BlockStack>
-            )}
+            <KeyIdentityFields
+              identity={identity}
+              onIdentityChange={setIdentity}
+              algorithm={keyAlgorithm}
+              onAlgorithmChange={setKeyAlgorithm}
+              expiry={expiryOption}
+              onExpiryChange={setExpiryOption}
+            />
 
             {keygen.error && (
               <p className="text-bad text-xs" role="alert">

@@ -141,29 +141,16 @@ export interface MessageArgs {
   "app_integrity_warning": undefined;
   "app_menu_open_in_pgp_tools": undefined;
   "app_nav_label": undefined;
-  "app_onboarding_advanced_options": undefined;
-  "app_onboarding_algo_ecc_hint": undefined;
-  "app_onboarding_algo_rsa_hint": undefined;
-  "app_onboarding_algorithm_label": undefined;
-  "app_onboarding_comment_label": undefined;
-  "app_onboarding_comment_placeholder": undefined;
   "app_onboarding_create_key": undefined;
   "app_onboarding_create_passkey": undefined;
-  "app_onboarding_email_label": undefined;
-  "app_onboarding_email_placeholder": undefined;
-  "app_onboarding_expiry_label": undefined;
-  "app_onboarding_expiry_never": undefined;
   "app_onboarding_generate_failed": undefined;
   "app_onboarding_generating": undefined;
   "app_onboarding_identity_body": undefined;
   "app_onboarding_identity_title": undefined;
   "app_onboarding_intro_body": undefined;
   "app_onboarding_keep_defaults": undefined;
-  "app_onboarding_name_label": undefined;
-  "app_onboarding_name_placeholder": undefined;
   "app_onboarding_name_required": undefined;
   "app_onboarding_next": undefined;
-  "app_onboarding_optional": undefined;
   "app_onboarding_passkey_prompt": undefined;
   "app_onboarding_preset_body": undefined;
   "app_onboarding_preset_title": undefined;
@@ -995,7 +982,6 @@ export interface PluralArgs {
   "actions_keys_count": undefined;
   "app_import_added": undefined;
   "app_import_view_key": undefined;
-  "app_onboarding_expiry_years": undefined;
   "app_oversized_files": { files: string | number; limit: string | number };
   "import_added_contacts": undefined;
   "import_change_keys_added": undefined;
@@ -1091,8 +1077,6 @@ export const PLACEHOLDER_ORDER: Readonly<Partial<Record<string, readonly string[
   "app_copied": ["label"],
   "app_error_no_decryption_key_with_id": ["key_id"],
   "app_import_added_other": ["count"],
-  "app_onboarding_expiry_years_one": ["count"],
-  "app_onboarding_expiry_years_other": ["count"],
   "app_oversized_files_one": ["files","limit"],
   "app_oversized_files_other": ["files","limit"],
   "app_oversized_more": ["names","count"],

@@ -1,25 +1,20 @@
 import { useState } from "react";
-import { ChevronRightIcon, LoaderIcon } from "lucide-react";
+import { LoaderIcon } from "lucide-react";
 
 import { cn } from "@amibeingpwned/ui";
-import { Block, BlockLabel, BlockStack } from "@amibeingpwned/ui/block";
+import { BlockStack } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
 import { Calendar } from "@amibeingpwned/ui/calendar";
-import { Segmented } from "@amibeingpwned/ui/segmented";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@amibeingpwned/ui/select";
 
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
+import type { ExpiryOption } from "../../lib/keys/expiry";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
+import type { KeyAlgorithm } from "./KeyIdentityFields";
 import { useAsyncAction } from "../../hooks/useAsyncAction";
 import { generateCrxKey } from "../../lib/crx/operations";
 import { t } from "../../lib/i18n";
 import { formatDate } from "../../lib/i18n/format";
+import { DEFAULT_EXPIRY, expiryToSeconds } from "../../lib/keys/expiry";
 import { generateAndProtect } from "../../lib/protection/protect-flow";
 import { afterNextPaint } from "../../lib/utils/paint";
 import {
@@ -27,42 +22,19 @@ import {
   SlideOverPanel,
   useSlideOver,
 } from "../shared/SlideOver";
+import {
+  EMPTY_IDENTITY,
+  FieldBlock,
+  identityUserId,
+  KeyIdentityFields,
+} from "./KeyIdentityFields";
 import { ProtectionMethodPicker } from "./ProtectionMethodPicker";
 import { useProtectionChoice } from "./useProtectionChoice";
 
 type Step = "identity" | "expiry" | "protection" | "generating";
-type KeyAlgorithm = "ecc" | "rsa";
 type KeyType = "pgp" | "crx";
-type ExpiryOption = "never" | "1y" | "2y" | "3y" | "custom";
 
 const DAY_MS = 86_400_000;
-
-const EXPIRY_SECONDS: Record<Exclude<ExpiryOption, "custom">, number> = {
-  never: 0,
-  "1y": 365 * 24 * 60 * 60,
-  "2y": 2 * 365 * 24 * 60 * 60,
-  "3y": 3 * 365 * 24 * 60 * 60,
-};
-
-function expiryToSeconds(
-  option: ExpiryOption,
-  customDate: Date | undefined,
-): number {
-  if (option === "custom" && customDate) {
-    const diff = Math.floor((customDate.getTime() - Date.now()) / 1000);
-    return diff > 0 ? diff : 0;
-  }
-  return EXPIRY_SECONDS[option as Exclude<ExpiryOption, "custom">];
-}
-
-/** A text field drawn as a block row: its label on top, a bare input
- *  under it, and the block itself is the field (it carries the focus
- *  ring, inset so the stack's clipping can't cut it off). */
-const FIELD_BLOCK =
-  "focus-within:ring-ring/60 px-3.5 pt-2 pb-1.5 focus-within:ring-1 focus-within:ring-inset";
-const FIELD_LABEL = "text-muted-foreground block text-[11px]";
-const FIELD_INPUT =
-  "placeholder:text-muted-foreground h-7 w-full bg-transparent text-sm outline-none";
 
 interface GenerateKeyPageProps {
   /** Called after the slide-out finishes (cancel or success). */
@@ -82,11 +54,8 @@ interface GenerateKeyPageProps {
   addCrxKey?: (blob: CrxSigningKeyBlob) => Promise<void>;
 }
 
-/**
- * Full-page key generation, using the same slide-over pattern as key
- * details and the onboarding page style (big step heading + subtitle,
- * full-width primary action; back lives in the header).
- */
+/** Key generation as a slide-over: identity, an optional custom-expiry
+ *  date, then protection. Back lives in the header. */
 export function GenerateKeyPage({
   onClose,
   onKeyGenerated,
@@ -101,9 +70,7 @@ export function GenerateKeyPage({
   const [step, setStep] = useState<Step>("identity");
   const [keyType, setKeyType] = useState<KeyType>("pgp");
   const [label, setLabel] = useState("");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [comment, setComment] = useState("");
+  const [identity, setIdentity] = useState(EMPTY_IDENTITY);
   const choice = useProtectionChoice({
     reusePasskeyCredentialId,
     masterSealSalt,
@@ -113,13 +80,13 @@ export function GenerateKeyPage({
   const error = generation.error?.message ?? null;
   const setError = generation.setError;
 
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const [keyAlgorithm, setKeyAlgorithm] = useState<KeyAlgorithm>("ecc");
-  const [expiryOption, setExpiryOption] = useState<ExpiryOption>("2y");
+  const [expiryOption, setExpiryOption] =
+    useState<ExpiryOption>(DEFAULT_EXPIRY);
   const [customExpiry, setCustomExpiry] = useState<Date | undefined>();
 
-  // Calendar bounds, captured when the expiry step opens. Reading the
-  // clock during render would break render purity (react-hooks/purity).
+  // Captured when the expiry step opens: reading the clock in render
+  // breaks render purity.
   const [expiryBounds, setExpiryBounds] = useState<{
     tomorrow: Date;
     max: Date;
@@ -160,7 +127,7 @@ export function GenerateKeyPage({
       }
       return;
     }
-    if (!name.trim()) {
+    if (!identity.name.trim()) {
       setError(t("keygen_error_name_required"));
       return;
     }
@@ -179,8 +146,7 @@ export function GenerateKeyPage({
       setError(t("keygen_error_expiry_required"));
       return;
     }
-    // The calendar already disables anything before tomorrow; this is a
-    // belt-and-braces check against the bounds captured at step open.
+    // Belt and braces: the calendar already disables these.
     if (expiryBounds && customExpiry < expiryBounds.tomorrow) {
       setError(t("keygen_error_expiry_past"));
       return;
@@ -216,9 +182,7 @@ export function GenerateKeyPage({
       const expiresIn = expiryToSeconds(expiryOption, customExpiry);
       const { blob, handle } = await generateAndProtect(
         {
-          name: name.trim(),
-          email: email.trim() || undefined,
-          comment: comment.trim() || undefined,
+          ...identityUserId(identity),
           type: keyAlgorithm,
           expiresIn: expiresIn || undefined,
         },
@@ -255,9 +219,8 @@ export function GenerateKeyPage({
               </div>
 
               {crxSigningEnabled && (
-                // Drawn as a segmented track, but still two plain buttons
-                // (now marked pressed): the names are what callers find
-                // them by.
+                // A segmented track of two plain pressed-state buttons:
+                // e2e finds them by name.
                 <div className="bg-track grid grid-cols-2 gap-0.5 rounded-lg p-[3px]">
                   {(
                     [
@@ -285,160 +248,25 @@ export function GenerateKeyPage({
 
               {keyType === "crx" ? (
                 <BlockStack>
-                  <Block className={FIELD_BLOCK}>
-                    <label className={FIELD_LABEL}>
-                      {t("keygen_label_label")}{" "}
-                      <span className="text-muted-foreground/60">
-                        {t("keygen_optional")}
-                      </span>
-                    </label>
-                    <input
-                      type="text"
-                      placeholder={t("keygen_label_placeholder")}
-                      value={label}
-                      onChange={(e) => setLabel(e.target.value)}
-                      className={FIELD_INPUT}
-                    />
-                  </Block>
+                  <FieldBlock
+                    label={t("keygen_label_label")}
+                    optional
+                    type="text"
+                    placeholder={t("keygen_label_placeholder")}
+                    value={label}
+                    onChange={(e) => setLabel(e.target.value)}
+                  />
                 </BlockStack>
               ) : (
-                <>
-                  {/* Who the key is for: one card, a block per field. */}
-                  <BlockStack>
-                    <Block className={FIELD_BLOCK}>
-                      <label className={FIELD_LABEL}>
-                        {t("keygen_name_label")}
-                      </label>
-                      <input
-                        type="text"
-                        placeholder={t("keygen_name_placeholder")}
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        className={FIELD_INPUT}
-                      />
-                    </Block>
-                    <Block className={FIELD_BLOCK}>
-                      <label className={FIELD_LABEL}>
-                        {t("keygen_email_label")}{" "}
-                        <span className="text-muted-foreground/60">
-                          {t("keygen_optional")}
-                        </span>
-                      </label>
-                      <input
-                        type="email"
-                        placeholder={t("keygen_email_placeholder")}
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className={FIELD_INPUT}
-                      />
-                    </Block>
-                    <Block className={FIELD_BLOCK}>
-                      <label className={FIELD_LABEL}>
-                        {t("keygen_comment_label")}{" "}
-                        <span className="text-muted-foreground/60">
-                          {t("keygen_optional")}
-                        </span>
-                      </label>
-                      <input
-                        type="text"
-                        placeholder={t("keygen_comment_placeholder")}
-                        value={comment}
-                        onChange={(e) => setComment(e.target.value)}
-                        className={FIELD_INPUT}
-                      />
-                    </Block>
-                  </BlockStack>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowAdvanced(!showAdvanced)}
-                    className="bg-card text-muted-foreground hover:text-foreground flex w-full items-center gap-1.5 rounded-xl px-3.5 py-3 text-xs font-medium transition-colors"
-                  >
-                    <ChevronRightIcon
-                      className={`h-3 w-3 transition-transform ${showAdvanced ? "rotate-90" : ""}`}
-                    />
-                    {t("keygen_advanced_options")}
-                  </button>
-
-                  {showAdvanced && (
-                    <div className="space-y-3">
-                      {/* Two short, untranslated options: a segmented
-                          control shows both at once without truncating. */}
-                      <div className="space-y-1.5">
-                        <BlockLabel>{t("keygen_algorithm_label")}</BlockLabel>
-                        <Segmented
-                          fill
-                          ariaLabel={t("keygen_algorithm_label")}
-                          value={keyAlgorithm}
-                          onValueChange={setKeyAlgorithm}
-                          options={[
-                            // i18n-ignore
-                            { value: "ecc", label: "ECC (Ed25519)" },
-                            // i18n-ignore
-                            { value: "rsa", label: "RSA" },
-                          ]}
-                        />
-                        <p className="text-muted-foreground/60 px-1 text-[10px]">
-                          {keyAlgorithm === "ecc"
-                            ? t("keygen_algorithm_hint_ecc")
-                            : t("keygen_algorithm_hint_rsa")}
-                        </p>
-                      </div>
-
-                      {keyAlgorithm === "rsa" && (
-                        <div className="space-y-1.5">
-                          <BlockLabel>{t("keygen_key_size_label")}</BlockLabel>
-                          {/* RSA-4096 is the only size the WASM engine generates. */}
-                          <Select value="4096">
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="4096">
-                                {t("keygen_key_size_4096")}
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
-
-                      <div className="space-y-1.5">
-                        <BlockLabel>{t("keygen_expiry_label")}</BlockLabel>
-                        {/* A dropdown, not a segmented row: five options
-                            in a narrow panel would truncate, and in some
-                            languages "Custom date" is too long to survive
-                            -- the label is the only name that option has. */}
-                        <Select
-                          value={expiryOption}
-                          onValueChange={(v) =>
-                            setExpiryOption(v as ExpiryOption)
-                          }
-                        >
-                          <SelectTrigger className="h-8 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="never">
-                              {t("keygen_expiry_never")}
-                            </SelectItem>
-                            <SelectItem value="1y">
-                              {t("keygen_expiry_1y")}
-                            </SelectItem>
-                            <SelectItem value="2y">
-                              {t("keygen_expiry_2y")}
-                            </SelectItem>
-                            <SelectItem value="3y">
-                              {t("keygen_expiry_3y")}
-                            </SelectItem>
-                            <SelectItem value="custom">
-                              {t("keygen_expiry_custom")}
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  )}
-                </>
+                <KeyIdentityFields
+                  identity={identity}
+                  onIdentityChange={setIdentity}
+                  algorithm={keyAlgorithm}
+                  onAlgorithmChange={setKeyAlgorithm}
+                  expiry={expiryOption}
+                  onExpiryChange={setExpiryOption}
+                  allowCustomExpiry
+                />
               )}
             </div>
 

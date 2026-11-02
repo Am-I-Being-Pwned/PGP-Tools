@@ -600,57 +600,11 @@
   "app_nav_label": {
     "message": "Navigazione principale"
   },
-  "app_onboarding_advanced_options": {
-    "message": "Opzioni avanzate"
-  },
-  "app_onboarding_algo_ecc_hint": {
-    "message": "Chiavi moderne, veloci e compatte. Consigliato nella maggior parte dei casi."
-  },
-  "app_onboarding_algo_rsa_hint": {
-    "message": "Molto compatibile, ma più lento, e il suo codice RSA ha un noto canale laterale temporale (Marvin). Preferisci ECC se non ti serve RSA."
-  },
-  "app_onboarding_algorithm_label": {
-    "message": "Algoritmo"
-  },
-  "app_onboarding_comment_label": {
-    "message": "Commento"
-  },
-  "app_onboarding_comment_placeholder": {
-    "message": "es. lavoro, personale"
-  },
   "app_onboarding_create_key": {
     "message": "Crea la mia chiave PGP"
   },
   "app_onboarding_create_passkey": {
     "message": "Crea passkey"
-  },
-  "app_onboarding_email_label": {
-    "message": "Email"
-  },
-  "app_onboarding_email_placeholder": {
-    "message": "tu@example.com"
-  },
-  "app_onboarding_expiry_label": {
-    "message": "Scadenza della chiave"
-  },
-  "app_onboarding_expiry_never": {
-    "message": "Mai"
-  },
-  "app_onboarding_expiry_years_one": {
-    "message": "$count$ anno",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
-  },
-  "app_onboarding_expiry_years_other": {
-    "message": "$count$ anni",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
   },
   "app_onboarding_generate_failed": {
     "message": "Generazione della chiave non riuscita"
@@ -670,20 +624,11 @@
   "app_onboarding_keep_defaults": {
     "message": "Mantieni i valori predefiniti"
   },
-  "app_onboarding_name_label": {
-    "message": "Nome *"
-  },
-  "app_onboarding_name_placeholder": {
-    "message": "Il tuo nome completo"
-  },
   "app_onboarding_name_required": {
     "message": "Il nome è obbligatorio."
   },
   "app_onboarding_next": {
     "message": "Avanti"
-  },
-  "app_onboarding_optional": {
-    "message": "facoltativo"
   },
   "app_onboarding_passkey_prompt": {
     "message": "Segui la richiesta della passkey nel browser..."

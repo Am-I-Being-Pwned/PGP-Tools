@@ -110,51 +110,6 @@
   "app_onboarding_identity_body": {
     "message": "メッセージの暗号化、復号、署名に使う鍵ペアを作成します。"
   },
-  "app_onboarding_name_label": {
-    "message": "名前 *"
-  },
-  "app_onboarding_name_placeholder": {
-    "message": "氏名"
-  },
-  "app_onboarding_email_label": {
-    "message": "メールアドレス"
-  },
-  "app_onboarding_optional": {
-    "message": "省略可"
-  },
-  "app_onboarding_email_placeholder": {
-    "message": "you@example.com"
-  },
-  "app_onboarding_comment_label": {
-    "message": "コメント"
-  },
-  "app_onboarding_comment_placeholder": {
-    "message": "例: 仕事用、個人用"
-  },
-  "app_onboarding_advanced_options": {
-    "message": "詳細オプション"
-  },
-  "app_onboarding_algorithm_label": {
-    "message": "アルゴリズム"
-  },
-  "app_onboarding_algo_ecc_hint": {
-    "message": "最新の方式で高速、鍵も小さめです。ほとんどの用途におすすめです。"
-  },
-  "app_onboarding_algo_rsa_hint": {
-    "message": "互換性は高いものの低速で、RSA の実装には既知のタイミングサイドチャネル (Marvin) があります。RSA が必要でなければ ECC を選んでください。"
-  },
-  "app_onboarding_expiry_label": {
-    "message": "鍵の有効期限"
-  },
-  "app_onboarding_expiry_never": {
-    "message": "無期限"
-  },
-  "app_onboarding_expiry_years_one": {
-    "message": "$count$ 年"
-  },
-  "app_onboarding_expiry_years_other": {
-    "message": "$count$ 年"
-  },
   "app_onboarding_create_key": {
     "message": "PGP 鍵を作成する"
   },
