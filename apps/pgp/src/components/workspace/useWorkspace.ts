@@ -9,7 +9,7 @@ import {
 import { useContacts } from "~/hooks/useContacts";
 import { useCrxKeys } from "~/hooks/useCrxKeys";
 import { useKeyring } from "~/hooks/useKeyring";
-import { useNav } from "~/hooks/useNav";
+import { useNavIntent } from "~/hooks/useNav";
 import { usePreferences } from "~/hooks/usePreferences";
 import { useVault } from "~/hooks/useVault";
 import { recoverArmorIfNeeded } from "~/lib/armor-recovery";
@@ -77,7 +77,6 @@ export function useWorkspace(opts: {
   const { contacts } = useContacts();
   const { keys: crxKeys } = useCrxKeys();
   const { session } = useVault();
-  const nav = useNav();
   const prefs = usePreferences();
 
   const [state, setState] = useState(initialWorkspaceState);
@@ -248,12 +247,9 @@ export function useWorkspace(opts: {
     onClearPending?.();
   }, [pendingAction, onClearPending, writeInput, dispatch]);
 
-  const { encryptToKeyId, consume } = nav;
-  useEffect(() => {
-    if (!encryptToKeyId) return;
-    dispatch({ type: "encrypt-to", keyId: encryptToKeyId });
-    consume("encryptToKeyId");
-  }, [encryptToKeyId, consume, dispatch]);
+  useNavIntent("encryptToKeyId", (keyId) =>
+    dispatch({ type: "encrypt-to", keyId }),
+  );
 
   useEffect(() => {
     if (!intake) return;

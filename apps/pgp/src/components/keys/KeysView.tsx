@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { ImportIcon, PlusIcon } from "lucide-react";
 
 import { BlockLabel, Button } from "@amibeingpwned/ui";
@@ -7,7 +7,7 @@ import { useNavStack } from "~/components/shared/useNavStack";
 import { useContacts } from "~/hooks/useContacts";
 import { useCrxKeys } from "~/hooks/useCrxKeys";
 import { useKeyring } from "~/hooks/useKeyring";
-import { useNav } from "~/hooks/useNav";
+import { useNavIntent } from "~/hooks/useNav";
 import { usePreferences } from "~/hooks/usePreferences";
 import { t, tn } from "~/lib/i18n";
 import { downloadPublicKeysBundle } from "~/lib/keys/export-bundle";
@@ -26,19 +26,11 @@ export function KeysView() {
   const keyring = useKeyring();
   const contactStore = useContacts();
   const crx = useCrxKeys();
-  const appNav = useNav();
   const { crxSigningEnabled } = usePreferences();
   const nav = useNavStack<KeysSubRoute>();
   const [justImported, highlightImported] = useImportHighlight();
 
-  const navPush = nav.push;
-  const consumeIntent = appNav.consume;
-  useEffect(() => {
-    if (appNav.keysRoute) {
-      navPush({ page: appNav.keysRoute });
-      consumeIntent("keysRoute");
-    }
-  }, [appNav.keysRoute, consumeIntent, navPush]);
+  useNavIntent("keysRoute", (page) => nav.push({ page }));
 
   // CRX keys join the same list, gated on the feature being enabled.
   const shownCrxKeys = crxSigningEnabled ? crx.keys : [];
