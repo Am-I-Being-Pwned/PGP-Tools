@@ -89,34 +89,6 @@ export function KeysView() {
   const crx = useCrxKeys();
   const { session, ...vault } = useVault();
   const appNav = useNav();
-  const myKeys = keyring.keys;
-  const contacts = contactStore.contacts;
-  const isUnlocked = session.isUnlocked;
-  const onUnlockWithPassword = session.unlockWithPassword;
-  const onUnlockWithPasskey = session.unlockWithPasskey;
-  const onLock = session.lock;
-  const onDeleteKey = vault.deleteKey;
-  const onAddKey = vault.addKey;
-  const onAddContact = contactStore.add;
-  const onSetContactVerified = contactStore.setVerified;
-  const onMergeContactKey = contactStore.mergeKey;
-  const onDeleteContact = contactStore.remove;
-  const getKeyHandle = session.getKeyHandle;
-  const onSaveRevocationCertificate = keyring.setRevocationCertificate;
-  const highlightKeyIds = appNav.highlightKeyIds;
-  const autoOpenRoute = appNav.keysRoute;
-  const onEncryptTo = appNav.encryptTo;
-  const primaryPasskeyCredentialId = vault.masterPasskeyCredentialId;
-  const masterSealSalt = vault.masterSealSalt;
-  const onKeyCached = vault.onKeyCached;
-  const cacheKeys = vault.cacheKeys;
-  const crxKeys = crx.keys;
-  const onAddCrxKey = crx.add;
-  const onDeleteCrxKey = crx.remove;
-  const onSetDefaultKey = vault.setDefaultKey;
-  const onRenameKey = keyring.rename;
-  const onRenameCrxKey = crx.rename;
-  const onRenameContact = contactStore.rename;
   const { advancedMode, crxSigningEnabled, keyDiscoveryEnabled, defaultKeyId } =
     usePreferences();
   const [selectionMode, setSelectionMode] = useState(false);
@@ -144,22 +116,22 @@ export function KeysView() {
   };
 
   useEffect(() => {
-    if (!highlightKeyIds?.length) return;
-    highlightImported(highlightKeyIds);
+    if (!appNav.highlightKeyIds?.length) return;
+    highlightImported(appNav.highlightKeyIds);
     appNav.consume("highlightKeyIds");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [highlightKeyIds]);
+  }, [appNav.highlightKeyIds]);
 
   const { copy } = useCopyToClipboard();
   const navPush = nav.push;
   const consumeIntent = appNav.consume;
 
   useEffect(() => {
-    if (autoOpenRoute) {
-      navPush({ page: autoOpenRoute });
+    if (appNav.keysRoute) {
+      navPush({ page: appNav.keysRoute });
       consumeIntent("keysRoute");
     }
-  }, [autoOpenRoute, consumeIntent, navPush]);
+  }, [appNav.keysRoute, consumeIntent, navPush]);
 
   // Leaving nothing selected exits selection mode.
   useEffect(() => {
@@ -167,7 +139,7 @@ export function KeysView() {
   }, [selectionMode, selected]);
 
   // CRX keys join the same list, gated on the feature being enabled.
-  const shownCrxKeys = crxSigningEnabled ? crxKeys : [];
+  const shownCrxKeys = crxSigningEnabled ? crx.keys : [];
 
   // Where a shift-click measures its range FROM: the last card the user
   // touched without shift. Kept across renders (never rendered), and reset
@@ -223,22 +195,22 @@ export function KeysView() {
   };
 
   // Resolve the current selection back to concrete blobs for bulk actions.
-  const selectedMyKeys = myKeys.filter((k) =>
+  const selectedMyKeys = keyring.keys.filter((k) =>
     selected.has(selId("pgp", k.keyId)),
   );
   const selectedCrxKeys = shownCrxKeys.filter((k) =>
     selected.has(selId("crx", k.extensionId)),
   );
-  const selectedContacts = contacts.filter((c) =>
+  const selectedContacts = contactStore.contacts.filter((c) =>
     selected.has(selId("contact", c.keyId)),
   );
 
   // Every selectable card's id (contacts only when the vault is unlocked, so
   // "select all" matches what's actually on screen).
   const selectableIds = [
-    ...myKeys.map((k) => selId("pgp", k.keyId)),
+    ...keyring.keys.map((k) => selId("pgp", k.keyId)),
     ...shownCrxKeys.map((k) => selId("crx", k.extensionId)),
-    ...contacts.map((c) => selId("contact", c.keyId)),
+    ...contactStore.contacts.map((c) => selId("contact", c.keyId)),
   ];
   const allSelected =
     selectableIds.length > 0 && selectableIds.every((id) => selected.has(id));
@@ -297,9 +269,9 @@ export function KeysView() {
   };
 
   const bulkDelete = async () => {
-    for (const k of selectedMyKeys) await onDeleteKey(k.keyId);
-    for (const k of selectedCrxKeys) await onDeleteCrxKey(k.extensionId);
-    for (const c of selectedContacts) await onDeleteContact(c.keyId);
+    for (const k of selectedMyKeys) await vault.deleteKey(k.keyId);
+    for (const k of selectedCrxKeys) await crx.remove(k.extensionId);
+    for (const c of selectedContacts) await contactStore.remove(c.keyId);
   };
 
   // One descriptor per key so PGP, SSH and CRX all render through
@@ -328,12 +300,12 @@ export function KeysView() {
       protectionMethod: blob.protection.method,
       securityWarning: blob.securityWarning,
       session: {
-        isUnlocked: isUnlocked(blob.keyId),
-        unlockWithPassword: (pw) => onUnlockWithPassword(blob, pw),
-        unlockWithPasskey: () => onUnlockWithPasskey(blob),
-        lock: () => onLock(blob.keyId),
+        isUnlocked: session.isUnlocked(blob.keyId),
+        unlockWithPassword: (pw) => session.unlockWithPassword(blob, pw),
+        unlockWithPasskey: () => session.unlockWithPasskey(blob),
+        lock: () => session.lock(blob.keyId),
       },
-      exporter: ssh ? null : pgpKeyExporter(blob, getKeyHandle),
+      exporter: ssh ? null : pgpKeyExporter(blob, session.getKeyHandle),
       // No label: KeyCard shows its own inline "copied" note.
       onCopyPublicKey: () => void copy(blob.publicKeyArmored),
       // An SSH recipient line downloads as `.pub`, what other tools expect.
@@ -378,7 +350,7 @@ export function KeysView() {
       // delete during the fetch must survive it.
       const result = await checkRevocation(
         { keyId: contact.keyId, armored: contact.armoredPublicKey },
-        onMergeContactKey,
+        contactStore.mergeKey,
       );
       switch (result.kind) {
         case "gone":
@@ -477,8 +449,8 @@ export function KeysView() {
   // One list: a second heading would make the user know which engine
   // their own key belongs to before they could find it.
   const keyModels = [
-    ...myKeys.filter(isPgpRecord).map(ownModel),
-    ...myKeys.filter(isSshRecord).map(ownModel),
+    ...keyring.keys.filter(isPgpRecord).map(ownModel),
+    ...keyring.keys.filter(isSshRecord).map(ownModel),
     ...crxModels,
   ];
 
@@ -551,8 +523,8 @@ export function KeysView() {
         </div>
 
         <ContactsList
-          contacts={contacts}
-          ownKeys={myKeys}
+          contacts={contactStore.contacts}
+          ownKeys={keyring.keys}
           justImported={justImported}
           onCheckRevocation={
             keyDiscoveryEnabled
@@ -574,7 +546,7 @@ export function KeysView() {
               target: { kind: "contact", contact },
             })
           }
-          onEncryptTo={onEncryptTo}
+          onEncryptTo={appNav.encryptTo}
           onShowDetails={(contact) =>
             nav.push({ page: "details", target: { kind: "contact", contact } })
           }
@@ -594,15 +566,15 @@ export function KeysView() {
                 onClose={() => nav.remove(entry.id)}
                 onKeyGenerated={(keyId, keyHandle) => {
                   if (keyHandle !== undefined) {
-                    onKeyCached(keyId, keyHandle);
+                    vault.onKeyCached(keyId, keyHandle);
                   }
                 }}
-                addKey={onAddKey}
-                reusePasskeyCredentialId={primaryPasskeyCredentialId}
-                masterSealSalt={masterSealSalt}
-                cacheKey={cacheKeys}
+                addKey={vault.addKey}
+                reusePasskeyCredentialId={vault.masterPasskeyCredentialId}
+                masterSealSalt={vault.masterSealSalt}
+                cacheKey={vault.cacheKeys}
                 crxSigningEnabled={crxSigningEnabled}
-                addCrxKey={onAddCrxKey}
+                addCrxKey={crx.add}
               />
             );
           }
@@ -611,17 +583,17 @@ export function KeysView() {
               <ImportKeyPage
                 key={entry.id}
                 onClose={() => nav.remove(entry.id)}
-                onImportPrivate={onAddKey}
-                onImportPublic={onAddContact}
-                onRemoveContact={onDeleteContact}
-                existingKeys={myKeys}
-                existingContacts={contacts}
-                reusePasskeyCredentialId={primaryPasskeyCredentialId}
-                masterSealSalt={masterSealSalt}
+                onImportPrivate={vault.addKey}
+                onImportPublic={contactStore.add}
+                onRemoveContact={contactStore.remove}
+                existingKeys={keyring.keys}
+                existingContacts={contactStore.contacts}
+                reusePasskeyCredentialId={vault.masterPasskeyCredentialId}
+                masterSealSalt={vault.masterSealSalt}
                 initialArmored={route.initialArmored}
                 crxSigningEnabled={crxSigningEnabled}
                 keyDiscoveryEnabled={keyDiscoveryEnabled}
-                onImportCrx={onAddCrxKey}
+                onImportCrx={crx.add}
                 // Both an import and a "show it in your keys" land the
                 // same way here: the user is already looking at the list.
                 onImported={highlightImported}
@@ -664,11 +636,11 @@ export function KeysView() {
                 onCancel={() => nav.remove(entry.id)}
                 onSave={async (value) => {
                   if (target.kind === "own") {
-                    await onRenameKey(target.keyBlob.keyId, value);
+                    await keyring.rename(target.keyBlob.keyId, value);
                   } else if (target.kind === "crx") {
-                    await onRenameCrxKey(target.keyBlob.extensionId, value);
+                    await crx.rename(target.keyBlob.extensionId, value);
                   } else {
-                    await onRenameContact(target.contact.keyId, value);
+                    await contactStore.rename(target.contact.keyId, value);
                   }
                   // Reveal the (refreshed) list beneath as this slides out.
                   nav.collapseToTop();
@@ -685,7 +657,7 @@ export function KeysView() {
                 ? {
                     ...route.target,
                     contact:
-                      contacts.find(
+                      contactStore.contacts.find(
                         (c) =>
                           route.target.kind === "contact" &&
                           c.keyId === route.target.contact.keyId,
@@ -699,14 +671,20 @@ export function KeysView() {
                 onBack={() => nav.remove(entry.id)}
                 clash={
                   target.kind === "contact"
-                    ? contactClash(target.contact.keyId, contacts, myKeys)
+                    ? contactClash(
+                        target.contact.keyId,
+                        contactStore.contacts,
+                        keyring.keys,
+                      )
                     : undefined
                 }
                 onShowHolder={(holder) => {
-                  const contact = contacts.find(
+                  const contact = contactStore.contacts.find(
                     (c) => c.keyId === holder.keyId,
                   );
-                  const own = myKeys.find((k) => k.keyId === holder.keyId);
+                  const own = keyring.keys.find(
+                    (k) => k.keyId === holder.keyId,
+                  );
                   if (contact)
                     nav.push({
                       page: "details",
@@ -720,7 +698,7 @@ export function KeysView() {
                 }}
                 onSetVerified={
                   target.kind === "contact" && !target.contact.revoked
-                    ? (v) => onSetContactVerified(target.contact.keyId, v)
+                    ? (v) => contactStore.setVerified(target.contact.keyId, v)
                     : undefined
                 }
                 onCheckRevocation={
@@ -736,7 +714,7 @@ export function KeysView() {
                   target.kind === "contact" && !target.contact.revoked
                     ? () => {
                         nav.clear();
-                        onEncryptTo(target.contact.keyId);
+                        appNav.encryptTo(target.contact.keyId);
                       }
                     : undefined
                 }
@@ -757,7 +735,7 @@ export function KeysView() {
                 onSetDefault={
                   target.kind === "own"
                     ? (next) =>
-                        onSetDefaultKey(next ? target.keyBlob.keyId : null)
+                        vault.setDefaultKey(next ? target.keyBlob.keyId : null)
                     : undefined
                 }
                 onDelete={() => nav.push({ page: "confirm-delete", target })}
@@ -767,7 +745,9 @@ export function KeysView() {
                   // the next open would be a false assurance.
                   target.kind === "own"
                     ? async () => {
-                        const handle = getKeyHandle(target.keyBlob.keyId);
+                        const handle = session.getKeyHandle(
+                          target.keyBlob.keyId,
+                        );
                         if (handle === null) {
                           throw new AppError(
                             "key-locked",
@@ -776,7 +756,7 @@ export function KeysView() {
                         }
                         const armored =
                           await revocationCertificateWithHandle(handle);
-                        await onSaveRevocationCertificate(
+                        await keyring.setRevocationCertificate(
                           target.keyBlob.keyId,
                           armored,
                         );
@@ -825,7 +805,7 @@ export function KeysView() {
                               for (const c of removedContacts) {
                                 // Undoing the user's own delete: putting
                                 // back what they had, not a new binding.
-                                await onAddContact(reviewed(c));
+                                await contactStore.add(reviewed(c));
                               }
                             })(),
                         },
@@ -850,10 +830,10 @@ export function KeysView() {
                 myKeys={exportableMyKeys}
                 contacts={selectedContacts}
                 crxKeys={selectedCrxKeys}
-                isUnlocked={isUnlocked}
-                getKeyHandle={getKeyHandle}
-                onUnlockWithPassword={onUnlockWithPassword}
-                onUnlockWithPasskey={onUnlockWithPasskey}
+                isUnlocked={session.isUnlocked}
+                getKeyHandle={session.getKeyHandle}
+                onUnlockWithPassword={session.unlockWithPassword}
+                onUnlockWithPasskey={session.unlockWithPasskey}
                 onExported={afterExport}
               />
             );
@@ -885,9 +865,9 @@ export function KeysView() {
               onCancel={() => nav.remove(entry.id)}
               onConfirm={async () => {
                 if (target.kind === "own") {
-                  await onDeleteKey(target.keyBlob.keyId);
+                  await vault.deleteKey(target.keyBlob.keyId);
                 } else if (target.kind === "contact") {
-                  await onDeleteContact(target.contact.keyId);
+                  await contactStore.remove(target.contact.keyId);
                   // A contact is just a public key: deleting is cheap to
                   // reverse, so offer Undo. The blob only lives in this
                   // closure; once the toast expires it's gone for good.
@@ -896,11 +876,11 @@ export function KeysView() {
                     id: "contact-removed",
                     action: {
                       label: t("keys_undo"),
-                      onClick: () => void onAddContact(reviewed(removed)),
+                      onClick: () => void contactStore.add(reviewed(removed)),
                     },
                   });
                 } else {
-                  await onDeleteCrxKey(target.keyBlob.extensionId);
+                  await crx.remove(target.keyBlob.extensionId);
                 }
                 // Drop the pages underneath now, so this page's slide-out
                 // reveals the key list rather than a stale details view of

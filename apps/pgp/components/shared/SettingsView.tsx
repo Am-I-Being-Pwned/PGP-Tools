@@ -115,7 +115,6 @@ export function SettingsView() {
   const crx = useCrxKeys();
   const { session, ...vault } = useVault();
   const appNav = useNav();
-  const autoOpenPresets = appNav.presets;
   const consumeIntent = appNav.consume;
   const prefs = usePreferences();
   const {
@@ -143,10 +142,10 @@ export function SettingsView() {
 
   // The palette's "security presets" action lands here.
   useEffect(() => {
-    if (!autoOpenPresets) return;
+    if (!appNav.presets) return;
     navPush({ page: "presets" });
     consumeIntent("presets");
-  }, [autoOpenPresets, consumeIntent, navPush]);
+  }, [appNav.presets, consumeIntent, navPush]);
 
   const currentPreset = activePreset(prefs);
 
