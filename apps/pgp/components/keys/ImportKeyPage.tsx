@@ -53,7 +53,33 @@ import { ImportReview } from "./ImportReview";
 import { ProtectionMethodPicker } from "./ProtectionMethodPicker";
 import { useProtectionChoice } from "./useProtectionChoice";
 
-type Step = "source" | "preview" | "review" | "protect";
+/** Where the panel is, with exactly the data that step needs. Every key
+ *  here is public-only (see IncomingKey); a secret half lives in a ref. */
+type Step =
+  | { kind: "source" }
+  | {
+      kind: "preview";
+      incoming: IncomingKey;
+      secretEncrypted: boolean;
+      /** Several pasted SSH keys offered as one contact: `incoming` is the
+       *  grouped reading, `separates` what a blank name imports instead. */
+      grouping?: { separates: IncomingKey[]; name: string };
+    }
+  /** Every key found, before anything is saved: a bundle, or a key that
+   *  claims an identity someone else holds. */
+  | { kind: "review"; keys: IncomingKey[]; secretEncrypted: boolean }
+  | { kind: "protect"; incoming: IncomingKey; secretEncrypted: boolean };
+
+type ProtectStep = Extract<Step, { kind: "protect" }>;
+
+/** Several keys, an identity collision, or an update that would leave
+ *  only keys the user turned off: the Review, not the single preview. */
+function needsReview(keys: IncomingKey[]): boolean {
+  return (
+    keys.length > 1 ||
+    keys.some((k) => k.conflict !== undefined || k.allKeysOff === true)
+  );
+}
 
 /** "⌘V" on a Mac, "Ctrl+V" everywhere else. */
 function modKeyLabel(): string {
@@ -68,8 +94,7 @@ interface ImportKeyPageProps {
   onImportPublic: (contact: ReviewedContact) => Promise<void>;
   /** Remove a contact -- the old one, when a key REPLACES it. */
   onRemoveContact: (keyId: string) => Promise<void>;
-  /** Current keyring/contacts: what an incoming key is compared against
-   *  to decide new / update / already-imported. */
+  /** What an incoming key is compared against: new / update / stored. */
   existingKeys?: ProtectedKeyBlob[];
   existingContacts?: PublicContactKey[];
   /** Pass the primary key's passkey credential ID to allow reuse. */
@@ -77,38 +102,31 @@ interface ImportKeyPageProps {
   /** With reuse, seal under the master's PRF salt so the vault ceremony
    *  opens the key ("unlock keys when the vault unlocks"). */
   masterSealSalt?: ArrayBuffer;
-  /** When provided, skip the source step and preview this armored key
-   *  (e.g. from a global drop). Read once at mount. */
+  /** Skip the source step and preview this armored key (a global drop).
+   *  Read once at mount. */
   initialArmored?: string | null;
-  /** When provided, open on the source step with this typed into the
-   *  lookup field and the lookup already running (an unknown signer's
-   *  key id, from the workspace). Read once at mount; ignored when key
-   *  discovery is off. */
+  /** Open with this lookup typed and running (an unknown signer's key
+   *  id). Read once at mount; ignored when key discovery is off. */
   initialLookup?: string | null;
   /** When true, also accept a raw RSA private key PEM as a CRX signing key. */
   crxSigningEnabled?: boolean;
-  /** Master enable for the network lookups on the source step. DEFAULTS
-   *  TO TRUE, matching `DEFAULT_PREFERENCES`: an omitted prop must not
-   *  silently withdraw the GitHub lookup this panel has always had. */
+  /** Master enable for the network lookups. DEFAULTS TO TRUE, matching
+   *  `DEFAULT_PREFERENCES`: an omitted prop must not silently withdraw
+   *  the lookup. */
   keyDiscoveryEnabled?: boolean;
   /** Persist an imported CRX signing key. Required for the CRX path. */
   onImportCrx?: (blob: CrxSigningKeyBlob) => Promise<void>;
-  /** Fingerprints to scroll to and highlight once the panel slides away:
-   *  what was just written, or -- with `reveal` -- a key that was already
-   *  stored and the user asked to be shown. `reveal` also means "the user
-   *  wants to look at the list", so the caller should stay on it. */
+  /** Fingerprints to highlight once the panel slides away: what was
+   *  written, or -- with `reveal` -- a stored key the user asked to see
+   *  (so the caller should stay on the list). */
   onImported?: (keyIds: string[], opts?: { reveal?: boolean }) => void;
 }
 
 /**
- * Key import: get a key, look at it, import it.
- *
- * The old flow opened on a textarea full of armor and made you press
- * Next to find out whose key it was and whether you already had it. This
- * one parses first and shows the key -- identity, fingerprint, health,
- * and whether it's new, an update, or already stored -- so the armor is
- * never rendered at all. Private keys pick up one extra step to choose
- * how the secret is protected at rest.
+ * Key import: get a key, look at it, import it. The key is parsed and
+ * shown (identity, fingerprint, health, new / update / stored) so its
+ * armor is never rendered; a private key adds a step choosing how the
+ * secret is protected at rest.
  */
 export function ImportKeyPage({
   onClose,
@@ -128,25 +146,7 @@ export function ImportKeyPage({
 }: ImportKeyPageProps) {
   const crxEnabled = !!crxSigningEnabled && !!onImportCrx;
   const { entered, close } = useSlideOver(onClose);
-  const [step, setStep] = useState<Step>("source");
-  // Every key found, on the Review step -- a bundle, or a key that
-  // claims an identity another contact holds.
-  const [reviewKeys, setReviewKeys] = useState<IncomingKey[] | null>(null);
-  /** Show the Review instead of the single-key preview when there is more
-   *  than one key, the key collides with someone's identity, or an update
-   *  would leave only keys the user turned off. */
-  const showKeys = (keys: IncomingKey[]): boolean => {
-    if (
-      keys.length > 1 ||
-      keys.some((k) => k.conflict !== undefined || k.allKeysOff === true)
-    ) {
-      setReviewKeys(keys);
-      setStep("review");
-      return true;
-    }
-    return false;
-  };
-  const [label, setLabel] = useState("");
+  const [step, setStep] = useState<Step>({ kind: "source" });
   const choice = useProtectionChoice({
     reusePasskeyCredentialId,
     masterSealSalt,
@@ -162,82 +162,40 @@ export function ImportKeyPage({
     parser.reset();
     importer.setError(message);
   };
+  /** A CRX key's name: it has no User ID of its own. */
+  const [label, setLabel] = useState("");
+  /** The passphrase already on the user's key file. */
   const [sourcePassphrase, setSourcePassphrase] = useState("");
   const [dragOver, setDragOver] = useState(false);
-  /** What is typed in the one lookup box. It is ONE box because getting
-   *  a key is one question -- `classifyLookup` decides whether the
-   *  answer comes from GitHub or from keys.openpgp.org. */
+  /** One lookup box: `classifyLookup` routes it to GitHub or the
+   *  keyserver. */
   const [lookupInput, setLookupInput] = useState(initialLookup ?? "");
-  /** A failure the user didn't cause and can't fix by retrying -- "this
-   *  person has published no SSH keys", or "the keyserver has no key for
-   *  that address". Rendered in its own amber callout under the lookup
-   *  field, never in the destructive error slot: it is the ANSWER to the
-   *  lookup, so it has to be seen, but nothing went wrong. */
+  /** The lookup's ANSWER when nothing went wrong ("no SSH keys published"):
+   *  an amber callout, never the destructive error slot. */
   const [notice, setNotice] = useState<string | null>(null);
-  // The document-level paste listener below must not swallow a username
-  // or address pasted into the lookup field; it identifies it by node.
+  // The panel-wide paste listener must leave a paste into this alone.
   const lookupInputRef = useRef<HTMLInputElement>(null);
-  // The paste box swallows typing (it holds nothing); say why rather
-  // than looking broken when someone starts typing into it.
+  // The paste box holds nothing; say why when someone types into it.
   const [typedIntoPasteBox, setTypedIntoPasteBox] = useState(false);
-  /** The key being previewed/imported. Safe for React state: it carries
-   *  the PUBLIC armor only (see IncomingKey). */
-  const [incoming, setIncoming] = useState<IncomingKey | null>(null);
-  const [secretEncrypted, setSecretEncrypted] = useState(false);
-  /**
-   * The pasted SSH keys as SEPARATE contacts, held while the preview
-   * offers to file them as one.
-   *
-   * Both readings of the same paste are on screen at once (see
-   * `PreparedImport.groupProposal`): `incoming` is the grouped one, this
-   * is what a blank name still produces. Safe for React state -- public
-   * halves only, like `incoming` itself.
-   */
-  const [groupSeparates, setGroupSeparates] = useState<IncomingKey[] | null>(
-    null,
-  );
-  /** The name typed for that group. Blank means "keep them separate". */
-  const [groupName, setGroupName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Secret key material is the crown jewel, so it lives in refs rather than
-  // useState. A ref is a single mutable slot shared by both of a fiber's
-  // double-buffered copies, so clearing it on close drops the only
-  // reference -- whereas a useState value is snapshotted into the previous
-  // fiber, which React keeps alive for the whole slide-out animation,
-  // leaving the private key lingering in the GC heap (see SECURITY.md's
-  // zeroization table).
-  //
-  // Holds whatever secret half the previewed key carries -- OpenPGP
-  // private armor, or a CRX signing key's RSA PEM. One slot, because the
-  // panel only ever previews one key at a time, and one slot is one
-  // thing to remember to clear.
+  // The previewed key's secret half (OpenPGP armor, CRX PEM, OpenSSH
+  // key) lives in a ref, not state: a ref is one slot shared by both
+  // fiber copies, so clearing it drops the only reference, whereas state
+  // is snapshotted into the previous fiber for the whole slide-out
+  // (SECURITY.md, zeroization table).
   const secretArmorRef = useRef<string | null>(null);
 
   const clearSecrets = () => {
     secretArmorRef.current = null;
-    // The credentials typed on the protect step are secrets too, and
-    // unlike the armor above they are in `useState` -- they have to be,
-    // the inputs are controlled. So they get the treatment §5's first row
-    // prescribes for a typed password and `MasterUnlockScreen` applies on
-    // every path including failure: `setX("")`, and let V8 reclaim.
-    // `sourcePassphrase` in particular is the passphrase on the user's
-    // real OpenSSH key file, not one this app minted.
-    //
-    // This is weaker than what the ref above gets, and deliberately not
-    // described as equivalent: a JS string cannot be zeroized, so the
-    // old value survives until GC and the previous fiber's snapshot of
-    // it survives the slide-out animation. It bounds the lifetime rather
-    // than ending it -- which is the whole reason key material is in a
-    // ref and these are the exception.
+    // Typed credentials must be state (controlled inputs); a JS string
+    // can't be zeroized, so this bounds their lifetime, no more.
     choice.clear();
     setSourcePassphrase("");
   };
 
+  // Drop key material before the slide-out, not after it.
   const resetAndClose = () => {
-    // Drop key material before the panel slides out: because it's in refs
-    // (not double-buffered state) this releases the only reference, so the
-    // animation runs without holding secrets in the JS heap.
     clearSecrets();
     close();
   };
@@ -255,7 +213,25 @@ export function ImportKeyPage({
     close();
   };
 
-  const importPublicKeys = async (
+  const toSource = () => {
+    // The passphrase was for THAT key file; never pre-fill it for the next.
+    secretArmorRef.current = null;
+    setSourcePassphrase("");
+    setStep({ kind: "source" });
+  };
+
+  /** Preview one key, or send it to the Review if it needs deciding. */
+  const show = (keys: IncomingKey[], secretEncrypted = false) => {
+    if (keys.length === 0) {
+      parser.setError(t("import_unreadable"));
+    } else if (needsReview(keys)) {
+      setStep({ kind: "review", keys, secretEncrypted });
+    } else {
+      setStep({ kind: "preview", incoming: keys[0], secretEncrypted });
+    }
+  };
+
+  const importPublicKeys = (
     keys: IncomingKey[],
     decisions: ReadonlyMap<string, ReviewDecision> = new Map(),
   ) =>
@@ -265,9 +241,8 @@ export function ImportKeyPage({
         add: onImportPublic,
         remove: onRemoveContact,
       });
-      // The SHA-1 toast counts SHA-1 warnings only (a lookalike-name
-      // warning is said on its own card, in its own words), and only on
-      // keys that were saved.
+      // SHA-1 warnings only (a lookalike name is said on its own card),
+      // and only on keys that were saved.
       const saved = new Set(outcome.keyIds);
       const flagged = keys.filter(
         (k) => saved.has(k.keyId) && k.securityWarning?.includes("SHA-1"),
@@ -277,8 +252,8 @@ export function ImportKeyPage({
           id: "contacts-flagged",
         });
       }
-      // Only bundles and replacements get a toast: a single import is
-      // confirmed by the card lighting up in the list behind the panel.
+      // A single import is confirmed by its card lighting up; only
+      // bundles and replacements toast.
       if (outcome.replaced > 0) {
         toast.info(tn("import_replaced_contacts", outcome.replaced), {
           id: "contacts-replaced",
@@ -300,37 +275,22 @@ export function ImportKeyPage({
       finish(outcome.keyIds);
     });
 
-  /**
-   * Classify pasted/dropped/browsed text and route it: a bundle of
-   * several importable public keys imports in one go (no point previewing
-   * five certs one at a time), and anything else gets the preview.
-   *
-   * `prepareImport` recognises every engine, so there is nothing to route
-   * around it -- which is what keeps the CRX path from drifting away from
-   * the OpenPGP one.
-   */
-  /** Stored keys in the shape every `prepare*` entry point takes. Built
-   *  once here so the paste path and both lookups classify against the
-   *  same list. */
+  /** Stored keys in the shape every `prepare*` entry point takes. */
   const storedForImport = () => storedKeysFrom(existingKeys, existingContacts);
 
+  /** Classify pasted / dropped / browsed text and route it. */
   const handleSource = async (text: string) => {
     setError(null);
     setNotice(null);
-    if (!text.trim() || parser.inFlight) return;
     // One guard for parse and lookup: two handlers can fire for one paste
-    // (the box and the panel-wide listener), and a second lookup's
-    // response would overwrite the first's.
+    // (the box and the panel-wide listener).
+    if (!text.trim() || parser.inFlight) return;
     await parser.run(async () => {
-      const prepared = await prepareImport(
-        text,
-        storedForImport(),
-        // SSH is always on: unlike CRX signing it is not a setting, it
-        // is simply another kind of key the app reads. Off, an `.pub`
-        // line would come back `unparseable` -- which is what the panel
-        // did before the engine existed (see ImportEngines).
-        { crx: crxEnabled, ssh: true },
-      );
+      // SSH is not a setting: it is another kind of key the app reads.
+      const prepared = await prepareImport(text, storedForImport(), {
+        crx: crxEnabled,
+        ssh: true,
+      });
 
       if (prepared.unparseable || prepared.keys.length === 0) {
         parser.setError(t("import_unreadable"));
@@ -339,36 +299,31 @@ export function ImportKeyPage({
 
       const worthImporting = importable(prepared.keys);
 
-      // Several SSH public keys that do not agree on a name. They may be
-      // one person's three machines or three different people, and
-      // nothing in the text says which -- so the preview asks, instead
-      // of the bulk import below quietly filing three contacts the user
-      // then cannot label or merge.
-      //
-      // Not when one of them claims someone's identity: that key has to
-      // be decided on its own row of the Review, and the offer's "blank
-      // name imports them separately" would save it without asking.
+      // SSH keys that disagree on a name may be one person's machines or
+      // several people: ask, rather than file contacts nobody can merge.
+      // Not when one claims an identity -- a blank name would save it
+      // without the Review's decision.
       if (prepared.groupProposal && !worthImporting.some((k) => k.conflict)) {
-        setGroupSeparates(worthImporting);
-        setGroupName("");
-        setIncoming(prepared.groupProposal);
-        setStep("preview");
+        setStep({
+          kind: "preview",
+          incoming: prepared.groupProposal,
+          secretEncrypted: false,
+          grouping: { separates: worthImporting, name: "" },
+        });
         return;
       }
 
-      // A bundle of public keys: ONE Review listing every key before
-      // anything is saved. It used to import the lot with a summary
-      // toast, so a key copying a contact's name and address went in
-      // unseen (and Open in PGP Tools hands this any page's text).
+      // A bundle of public keys: every key on one Review before saving.
       if (
         worthImporting.length > 1 &&
         worthImporting.every((k) => isPublicKind(k.kind))
       ) {
-        showKeys(prepared.keys.filter((k) => isPublicKind(k.kind)));
+        show(prepared.keys.filter((k) => isPublicKind(k.kind)));
         return;
       }
 
       const key = worthImporting[0] ?? prepared.keys[0];
+      let secretEncrypted = false;
       if (isSecretKind(key.kind)) {
         const secret = prepared.secrets.get(key.keyId);
         if (!secret) {
@@ -376,40 +331,24 @@ export function ImportKeyPage({
           return;
         }
         secretArmorRef.current = secret;
-        // Only OpenPGP secrets are probed. A CRX PEM the user can hand
-        // us is one we can already read, and an OpenSSH container is
-        // deliberately NOT probed: the engine already answers "is this
-        // passphrase-protected" as part of importing it, so probing here
-        // would mean parsing the key twice to ask the same question --
-        // and would show a passphrase field to the majority of users
-        // whose key has none. The import is attempted optimistically and
-        // the field appears only if the engine asks for it (see
-        // handleImportSsh).
-        setSecretEncrypted(
-          key.kind === "pgp-private" ? await isSecretProtected(secret) : false,
-        );
+        // Only OpenPGP secrets are probed. An OpenSSH key is imported
+        // optimistically and the engine asks for a passphrase if it needs
+        // one (handleImportSsh); most have none.
+        secretEncrypted =
+          key.kind === "pgp-private" ? await isSecretProtected(secret) : false;
       }
       if (key.securityWarning) {
         // Stable id: re-pasting the same key must not stack duplicates.
         toast.warning(key.securityWarning, { id: "import-key-warning" });
       }
-      if (showKeys([key])) return;
-      setIncoming(key);
-      setStep("preview");
+      show([key], secretEncrypted);
     });
   };
 
   /**
-   * Look up a GitHub user's published SSH keys and preview them.
-   *
-   * Lands in the SAME preview as every other kind: the fetch produces one
-   * IncomingKey (a group -- see ContactGroup), so there is no second
-   * import flow to keep in step with this one, and no new tab.
-   *
-   * The fetch itself happens in the background worker, which owns the
-   * only `fetch` and the only api.github.com literal in the app; what
-   * comes back is a tagged code or a list of unvalidated strings, and
-   * `prepareGithubImport` is what decides any of them is a key.
+   * A GitHub user's published SSH keys, into the same preview as every
+   * other kind. The worker owns the only fetch and api.github.com
+   * literal; `prepareGithubImport` decides whether its strings are keys.
    */
   const lookupGithubUser = async (username: string) => {
     const request: GithubKeysRequest = {
@@ -427,9 +366,7 @@ export function ImportKeyPage({
       return;
     }
     if (!response.ok) {
-      // Inline copy in the slot that is already there, never a toast:
-      // every one of these tells the user something to do next, and a
-      // toast takes that away after four seconds.
+      // Inline, never a toast: each says what to do next.
       const copy = githubFailureCopy(
         response.error,
         username,
@@ -441,33 +378,20 @@ export function ImportKeyPage({
     }
 
     const prepared = await prepareGithubImport(
-      // The worker's echoed username, not the typed one: it is the
-      // name the request was actually made for.
+      // The worker's echo: the name the request was actually made for.
       response.username,
       response.lines,
       { contacts: existingContacts, own: existingKeys },
-      // Keys the worker's caps held back. Passed through so the
-      // preview can say the list is partial instead of asserting
-      // "every key listed above" over a truncated one.
+      // So the preview can say the list is partial.
       { omitted: response.omitted },
     );
-    // An account carrying a key someone already holds, or a name that
-    // reads as a contact's, is decided on the Review like a paste.
-    if (showKeys(prepared.keys)) return;
-    setIncoming(prepared.keys[0]);
-    setStep("preview");
+    show(prepared.keys);
   };
 
   /**
-   * Look up a certificate on keys.openpgp.org and preview it.
-   *
-   * Thinner than the GitHub path on purpose: what comes back is armor,
-   * which is what this panel already knows how to classify, so
-   * `prepareKeyserverImport` hands it to the very same `prepareImport`
-   * a paste goes through and only stamps the provenance on the result.
-   * The worker owns the only `fetch` and the only keys.openpgp.org
-   * literal; the armor it forwards is untrusted text until the engine
-   * behind that call says otherwise.
+   * A certificate from keys.openpgp.org: armor, classified by the same
+   * `prepareImport` a paste goes through. The worker owns the only fetch;
+   * what it forwards is untrusted until the engine says otherwise.
    */
   const lookupKeyserverKey = async (query: KeyserverQuery) => {
     const request: KeyserverKeyRequest = {
@@ -495,34 +419,23 @@ export function ImportKeyPage({
     }
 
     const prepared = await prepareKeyserverImport(
-      // The worker's echoed query, not the typed one: it is what the
-      // request was actually made for, and what the contact's source
-      // will record.
+      // The worker's echo: what the contact's source will record.
       response.query,
       response.armored,
       storedForImport(),
     );
 
     if (prepared.unparseable || prepared.keys.length === 0) {
-      // The worker checked the content type and the armor markers; it
-      // deliberately did not check that the bytes between them are a
-      // certificate, because that is the engine's call and this is
-      // where the engine gets made. So this branch is reachable.
+      // The worker checks the armor markers, not that a cert is inside.
       parser.setError(
         t("import_keyserver_not_a_key", { host: KEYSERVER_HOST }),
       );
       return;
     }
     if ((response.omitted ?? 0) > 0) {
-      // The endpoint returns exactly one key by construction, so this
-      // says the response was not the one we asked for. Shown rather
-      // than swallowed: importing the first of several blocks silently
-      // is how you end up encrypting to a key nobody chose.
-      //
-      // A TOAST, not the `notice` callout: this call ends on the preview
-      // step, and the callout lives on the source step -- setting it here
-      // would put the warning on a screen the user has just left. Same
-      // stable-id discipline as the security warning below.
+      // The endpoint returns one key by construction, so this is not the
+      // answer we asked for. A toast: the notice callout is on the step
+      // being left.
       toast.warning(
         t("import_keyserver_multiple_keys", { host: KEYSERVER_HOST }),
         { id: "keyserver-multiple-keys" },
@@ -531,22 +444,13 @@ export function ImportKeyPage({
 
     const key = prepared.keys[0];
     if (key.securityWarning) {
-      // Stable id: re-running the same lookup must not stack duplicates.
       toast.warning(key.securityWarning, { id: "import-key-warning" });
     }
-    if (showKeys([key])) return;
-    setIncoming(key);
-    setStep("preview");
+    show([key]);
   };
 
-  /**
-   * Run whichever lookup the typed text names.
-   *
-   * The routing rule lives in `classifyLookup`, not here: it is the part
-   * of this feature a user can be surprised by (a 40-character hex
-   * string is a valid GitHub username AND a fingerprint), so it is pure
-   * and tested rather than inline in a handler.
-   */
+  /** Run whichever lookup the typed text names (`classifyLookup`, pure
+   *  and tested: a 40-hex string is a GitHub name AND a fingerprint). */
   const runLookup = async (input = lookupInput) => {
     setError(null);
     setNotice(null);
@@ -565,33 +469,22 @@ export function ImportKeyPage({
     );
   };
 
-  /**
-   * A key that ARRIVED as text -- pasted, or dropped as a selection.
-   *
-   * The only route that repairs mangled armor, and deliberately NOT the
-   * file routes: a `.asc` on disk has its newlines intact (nothing
-   * escaped it on the way), so a repair pass there would be scanning
-   * megabytes to find nothing. Paste is where text that has been through
-   * a JSON blob, a web page or a chat client actually comes from.
-   */
+  /** Text that ARRIVED as text (paste, dropped selection): the only route
+   *  that repairs mangled armor -- a file on disk has its newlines. */
   const handleTextSource = (text: string) =>
     handleSource(recoverArmorIfNeeded(text));
 
-  // Keep the latest handler reachable from the document listeners below
-  // without re-binding them on every render (the useShortcut idiom).
-  // It holds the TEXT handler: both listeners below (the panel-wide
-  // paste, and the prefill from a global drop) deliver text, never a
-  // file.
+  // The latest handlers, for the document listeners and mount prefills.
   const handleSourceRef = useRef(handleTextSource);
+  const runLookupRef = useRef(runLookup);
   useEffect(() => {
     handleSourceRef.current = handleTextSource;
+    runLookupRef.current = runLookup;
   });
 
-  // A drop/paste that arrived with the panel (global drop, workspace
-  // banner) skips the source step entirely: parse it and show the key.
+  // A key that arrived with the panel skips the source step; Back from
+  // its preview then leaves.
   const prefill = useRef(initialArmored ?? null);
-  /** True when the panel opened with a key already in hand, so there is
-   *  no source step behind the preview. */
   const openedWithKey = useRef(!!initialArmored);
   useEffect(() => {
     const text = prefill.current;
@@ -599,14 +492,7 @@ export function ImportKeyPage({
     if (text) void handleSourceRef.current(text);
   }, []);
 
-  // Same once-at-mount rule for a lookup handed over by the caller. The
-  // field shows what was asked, so a "no key for that id" lands under
-  // the query it answers.
   const lookupPrefill = useRef(keyDiscoveryEnabled ? initialLookup : null);
-  const runLookupRef = useRef(runLookup);
-  useEffect(() => {
-    runLookupRef.current = runLookup;
-  });
   useEffect(() => {
     const query = lookupPrefill.current;
     lookupPrefill.current = null;
@@ -614,15 +500,11 @@ export function ImportKeyPage({
   }, []);
 
   // Paste anywhere on the source step -- there's no textarea to aim at.
+  const stepKind = step.kind;
   useEffect(() => {
-    if (step !== "source") return;
+    if (stepKind !== "source") return;
     const onPaste = (e: ClipboardEvent) => {
-      // A paste into the lookup field is a USERNAME, an address or a
-      // fingerprint, not armor. Without this the document listener
-      // claims it, calls preventDefault, and hands "octocat" to the key
-      // parser -- which reports that it doesn't look like a key, while
-      // the field the user pasted into stays empty. The step's "paste
-      // anywhere" rule holds for everywhere else on it.
+      // A paste into the lookup field is a username / address, not armor.
       const target = e.target;
       if (
         target instanceof Node &&
@@ -637,22 +519,20 @@ export function ImportKeyPage({
     };
     document.addEventListener("paste", onPaste);
     return () => document.removeEventListener("paste", onPaste);
-  }, [step]);
+  }, [stepKind]);
 
   const handleConfirm = () => {
-    if (!incoming) return;
-    // The grouping offer. A blank name is a real answer, not a skipped
-    // step: it means today's behaviour, one contact per key.
-    if (groupSeparates) {
-      const name = groupName.trim();
+    if (step.kind !== "preview") return;
+    const { incoming, grouping } = step;
+    // A blank group name is an answer: one contact per key.
+    if (grouping) {
+      const name = grouping.name.trim();
       if (!name || !incoming.group) {
-        void importPublicKeys(groupSeparates);
+        void importPublicKeys(grouping.separates);
         return;
       }
-      // The user's name replaces the preview's placeholder on the way to
-      // the ONE constructor every multi-key contact goes through
-      // (`groupContact`), so a hand-grouped contact and a fetched one are
-      // the same record.
+      // Through the one multi-key constructor (`groupContact`), so a
+      // hand-grouped contact and a fetched one are the same record.
       void importPublicKeys([
         {
           ...incoming,
@@ -666,47 +546,42 @@ export function ImportKeyPage({
       void importPublicKeys([incoming]);
       return;
     }
-    setStep("protect");
+    setStep({
+      kind: "protect",
+      incoming,
+      secretEncrypted: step.secretEncrypted,
+    });
   };
 
   const handleBack = () => {
     if (importing || parsing) return;
     setError(null);
     setNotice(null);
-    if (step === "protect") {
-      setStep("preview");
-    } else if (step === "review") {
-      setReviewKeys(null);
-      if (openedWithKey.current) {
-        resetAndClose();
+    switch (step.kind) {
+      case "protect":
+        setStep({
+          kind: "preview",
+          incoming: step.incoming,
+          secretEncrypted: step.secretEncrypted,
+        });
         return;
-      }
-      setStep("source");
-    } else if (step === "preview") {
-      // Opened with a key already in hand (a drop, or the workspace
-      // banner): there is no source step behind this one, so Back means
-      // "leave" -- not "here's an empty drop zone you never used".
-      if (openedWithKey.current) {
-        resetAndClose();
+      case "review":
+      case "preview":
+        // Opened with a key in hand: no source step behind this one.
+        if (openedWithKey.current) resetAndClose();
+        else toSource();
         return;
-      }
-      secretArmorRef.current = null;
-      // Back to the source step drops the key, so the passphrase that
-      // was for THAT key file goes with it -- leaving it would also
-      // pre-fill it against whatever key is picked next.
-      setSourcePassphrase("");
-      setIncoming(null);
-      setGroupSeparates(null);
-      setGroupName("");
-      setStep("source");
-    } else {
-      resetAndClose();
+      case "source":
+        resetAndClose();
     }
   };
 
-  const handleImportPrivate = async () => {
+  const handleImportPrivate = async ({
+    incoming,
+    secretEncrypted,
+  }: ProtectStep) => {
     const secret = secretArmorRef.current;
-    if (!incoming || !secret) {
+    if (!secret) {
       setError(t("import_no_key"));
       return;
     }
@@ -741,29 +616,23 @@ export function ImportKeyPage({
   };
 
   /**
-   * Import an OpenSSH private key under the chosen protection.
-   *
-   * The key file crosses into wasm as BYTES (`importSshIdentity`
-   * zeroizes them), so the string is encoded here, at the call site,
-   * and a fresh copy is made per attempt -- the previous copy is already
-   * wiped by the time we could retry.
-   *
-   * The source passphrase is never probed for. Most SSH keys have none,
-   * so the import is attempted optimistically and the field appears only
-   * when the engine says it needs one; the user then retries on this
-   * same step rather than being sent back through the preview.
+   * An OpenSSH private key. It crosses into wasm as BYTES, wiped there,
+   * so each attempt encodes a fresh copy. No passphrase probe: the field
+   * appears only when the engine asks, and the retry runs from this step.
    */
-  const handleImportSsh = async () => {
+  const handleImportSsh = async ({
+    incoming,
+    secretEncrypted,
+  }: ProtectStep) => {
     if (secretEncrypted && !sourcePassphrase) {
       setError(t("import_enter_passphrase"));
       return;
     }
     const keyText = secretArmorRef.current;
-    if (!incoming || !keyText) {
+    if (!keyText) {
       setError(t("import_no_key"));
       return;
     }
-
     await runImport(async () => {
       try {
         const { blob } = await importSshIdentity(
@@ -777,46 +646,42 @@ export function ImportKeyPage({
         secretArmorRef.current = null;
         finish([blob.keyId]);
       } catch (e) {
-        // Revealing the field IS the retry: the key text is still in the
-        // ref. Keyed on the tagged code, never the engine's wording.
+        // Revealing the field IS the retry. Keyed on the tagged code,
+        // never the engine's wording.
         if (e instanceof AppError && e.code === "ssh-passphrase-required") {
-          setSecretEncrypted(true);
+          setStep((s) =>
+            s.kind === "protect" ? { ...s, secretEncrypted: true } : s,
+          );
         }
         throw e;
       }
     });
   };
 
-  /**
-   * The protect step's one submit. Every engine that carries secret
-   * material lands here and is routed by kind, so a new engine adds a
-   * branch rather than another `isX ? ... : ...` at the call site (which
-   * is what the CRX flag had already grown into).
-   */
+  /** The protect step's one submit, routed by kind. */
   const handleProtectSubmit = () => {
+    if (step.kind !== "protect") return;
     const invalid = choice.validate();
     if (invalid) {
       setError(invalid);
       return;
     }
-    switch (incoming?.kind) {
+    switch (step.incoming.kind) {
       case "crx":
         void handleImportCrx();
         return;
       case "ssh-private":
-        void handleImportSsh();
+        void handleImportSsh(step);
         return;
       default:
-        void handleImportPrivate();
+        void handleImportPrivate(step);
     }
   };
 
-  const isCrx = incoming?.kind === "crx";
-
   const title =
-    step === "review"
+    step.kind === "review"
       ? t("import_review_title")
-      : step === "preview" && incoming?.status === "update"
+      : step.kind === "preview" && step.incoming.status === "update"
         ? t("import_title_update")
         : t("import_title");
 
@@ -828,22 +693,16 @@ export function ImportKeyPage({
     >
       <SlideOverHeader title={title} onBack={handleBack} />
       <div className="flex flex-1 flex-col overflow-hidden">
-        {step === "source" && (
+        {step.kind === "source" && (
           <div className="flex flex-1 flex-col overflow-hidden">
             <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-3">
-              {/* A one-line box purely as a target for the paste: it gives
-                  the gesture somewhere obvious to land (and somewhere to
-                  focus on open), but it never holds the key. The armor is
-                  taken straight off the clipboard event and parsed -- so
-                  it is never rendered, never in React state, and never in
-                  the DOM. Hence the permanently empty value. */}
+              {/* A target for the paste only: the armor is read off the
+                  clipboard event and parsed, so it is never rendered, in
+                  state, or in the DOM. Hence the permanently empty value. */}
               <Input
                 type="text"
-                // The slide-over's focus trap picks the first element
-                // marked `autofocus` -- but React consumes its own
-                // autoFocus prop rather than rendering the attribute, so
-                // mark the node itself. Without this the trap lands on
-                // the header's Back button and the paste has no home.
+                // The focus trap picks `[autofocus]`, but React consumes
+                // autoFocus instead of rendering it: mark the node.
                 ref={(el) => el?.setAttribute("autofocus", "")}
                 spellCheck={false}
                 autoComplete="off"
@@ -855,8 +714,7 @@ export function ImportKeyPage({
                 disabled={parsing}
                 onChange={() => setTypedIntoPasteBox(true)}
                 onPaste={(e) => {
-                  // Handled here, so the panel-wide listener must not
-                  // also fire for this one.
+                  // Handled here: the panel-wide listener must not fire.
                   e.preventDefault();
                   e.stopPropagation();
                   setTypedIntoPasteBox(false);
@@ -885,8 +743,6 @@ export function ImportKeyPage({
                   }
                   void handleTextSource(e.dataTransfer.getData("text/plain"));
                 }}
-                // A flat block, not a dashed box; a drag over it tints it
-                // the "on" green.
                 className={cn(
                   "flex flex-col items-center justify-center gap-2 rounded-xl p-6 text-center transition-colors",
                   dragOver ? "bg-on" : "bg-card",
@@ -927,16 +783,9 @@ export function ImportKeyPage({
                   if (file) await handleSource(await readKeyFile(file));
                 }}
               />
-              {/* A row on the SAME step, not a tab of its own: "get me a
-                  key" is one question, and a lookup is just another
-                  place a key comes from. It lands in the same preview.
-                  ONE field for both services, routed by what is typed
-                  (see classifyLookup) -- two labelled boxes would make
-                  the user answer a question about our plumbing before
-                  they could ask theirs. Absent entirely when key
-                  discovery is off: a disabled control that explains
-                  itself is still an invitation to turn it on, and the
-                  strictest preset means it. */}
+              {/* One field for both services, routed by what is typed.
+                  Absent with key discovery off: a disabled control is
+                  still an invitation to turn it on. */}
               {keyDiscoveryEnabled && (
                 <div className="space-y-1">
                   <label
@@ -972,19 +821,8 @@ export function ImportKeyPage({
                     </Button>
                   </div>
                   {notice && (
-                    /* A CALLOUT, not another muted line. What reaches
-                       here is "this account has no SSH keys" or "the
-                       keyserver has no key for that address" -- a real
-                       answer to the lookup the user just ran, and set in
-                       the same muted style as the standing help text
-                       below it read as more boilerplate and got missed.
-                       Amber, tinted and attached to the field it
-                       answers, so it is legible as a RESULT;
-                       deliberately not `text-destructive`, because
-                       nothing failed and nothing needs fixing (see
-                       githubFailureCopy / keyserverFailureCopy).
-                       `status`, not `alert`: announced without
-                       interrupting. */
+                    // A result, not a failure: amber and attached to the
+                    // field, `status` so it announces without interrupting.
                     <div
                       role="status"
                       className="text-warn mt-2 flex items-start gap-2 rounded-lg bg-[#252012] px-3 py-2.5 text-xs"
@@ -1007,60 +845,65 @@ export function ImportKeyPage({
           </div>
         )}
 
-        {step === "review" && reviewKeys && (
+        {step.kind === "review" && (
           <ImportReview
-            keys={reviewKeys}
+            keys={step.keys}
             busy={importing}
             error={error}
-            allowImportAll={reviewKeys.length > 1}
+            allowImportAll={step.keys.length > 1}
             onImport={(decisions) => {
-              // A private key held here because it claims someone's
-              // identity: chosen, it goes on to the protect step like
-              // any private key -- it is never a contact to save.
-              const secret = reviewKeys.find((k) => isSecretKind(k.kind));
+              // A private key held for claiming someone's identity goes on
+              // to the protect step if chosen -- never saved as a contact.
+              const secret = step.keys.find((k) => isSecretKind(k.kind));
               if (secret) {
                 if (
                   (decisions.get(secret.keyId) ?? defaultDecision(secret)) !==
                   "skip"
                 ) {
-                  setIncoming(secret);
-                  setStep("protect");
+                  setStep({
+                    kind: "protect",
+                    incoming: secret,
+                    secretEncrypted: step.secretEncrypted,
+                  });
                 }
                 return;
               }
-              void importPublicKeys(reviewKeys, decisions);
+              void importPublicKeys(step.keys, decisions);
             }}
           />
         )}
 
-        {step === "preview" && incoming && (
+        {step.kind === "preview" && (
           <ImportPreview
-            incoming={incoming}
+            incoming={step.incoming}
             onConfirm={handleConfirm}
             onDone={resetAndClose}
-            // Already stored: close and take the user to it in the list,
-            // highlighted, instead of writing anything.
-            onReveal={() => finish([incoming.keyId], { reveal: true })}
+            // Already stored: show it in the list instead of writing.
+            onReveal={() => finish([step.incoming.keyId], { reveal: true })}
             busy={importing}
             error={error}
             grouping={
-              groupSeparates
+              step.grouping
                 ? {
-                    name: groupName,
-                    onNameChange: setGroupName,
-                    separateCount: groupSeparates.length,
+                    name: step.grouping.name,
+                    onNameChange: (name) =>
+                      setStep((s) =>
+                        s.kind === "preview" && s.grouping
+                          ? { ...s, grouping: { ...s.grouping, name } }
+                          : s,
+                      ),
+                    separateCount: step.grouping.separates.length,
                   }
                 : undefined
             }
           />
         )}
 
-        {step === "protect" && (
+        {step.kind === "protect" && (
           <div className="flex-1 space-y-3 overflow-y-auto p-3">
-            {isCrx && (
-              // What the key IS was already said on the preview step; the
-              // only thing left to ask is what to call it, since a CRX key
-              // has no user ID to name itself with.
+            {step.incoming.kind === "crx" && (
+              // The preview said what the key is; a CRX key has no User
+              // ID, so all that is left to ask is its name.
               <div>
                 <label className="text-muted-foreground mb-1 block text-xs">
                   {t("import_label_field")}{" "}
@@ -1076,10 +919,9 @@ export function ImportKeyPage({
                 />
               </div>
             )}
-            {/* Unlocking the source key and choosing its new protection are
-                one screen: they're both "how is this secret handled", and
-                splitting them cost a Next press for no decision. */}
-            {secretEncrypted && (
+            {/* Unlocking the source key and choosing its new protection
+                are one screen: both are "how is this secret handled". */}
+            {step.secretEncrypted && (
               <div className="space-y-1">
                 <label className="text-muted-foreground block text-xs">
                   {t("import_passphrase_label")}
