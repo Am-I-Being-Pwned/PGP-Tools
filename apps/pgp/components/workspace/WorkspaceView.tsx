@@ -36,18 +36,14 @@ import {
   type WorkspaceCommands,
   type WorkspaceSnapshot,
 } from "~/hooks/useActionContext";
-import { useComposeTranslation } from "~/hooks/useComposeTranslation";
 import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
 import { useDelayedFlag } from "~/hooks/useDelayedFlag";
 import { useNav } from "~/hooks/useNav";
 import { savePreference, usePreferences } from "~/hooks/usePreferences";
 import { useShortcut } from "~/hooks/useShortcut";
-import { useTranslation } from "~/hooks/useTranslation";
 import { useVault } from "~/hooks/useVault";
 import { REPLY_SHORTCUT } from "~/lib/actions/definitions";
-import { languageLabel } from "~/lib/ai/languages";
 import { recoverArmorIfNeeded } from "~/lib/armor-recovery";
-import { applyTextareaEdit } from "~/lib/compose/apply-edit";
 import {
   buildEncryptRecipients,
   resolveSelectedRecipients,
@@ -80,8 +76,10 @@ import {
 import { useAutoRun } from "./useAutoRun";
 import { useWorkspace, type WorkspaceIntake } from "./useWorkspace";
 import { useWorkspaceKeyboard } from "./useWorkspaceKeyboard";
+import { useWorkspaceTranslation } from "./useWorkspaceTranslation";
 import type { Mode } from "./workspace-state";
-import { modeLabel, WorkspaceInput, type ComposeTools } from "./WorkspaceInput";
+import { deriveWorkspaceView } from "./workspace-view";
+import { modeLabel, WorkspaceInput } from "./WorkspaceInput";
 import { WorkspaceResults } from "./WorkspaceResults";
 
 const RUN_SHORTCUT: ShortcutSpec = { mod: true, key: "Enter" };
@@ -146,143 +144,55 @@ export function WorkspaceView({
     (keyId: string) => revealKeys([keyId]),
     [revealKeys],
   );
-
-  const loading = s.run.kind === "running";
-  const done = s.run.kind === "done";
-  const error = s.run.kind === "error" ? s.run.error : null;
+  const {
+    loading,
+    done,
+    error,
+    hasOutputText,
+    hasInput,
+    canEncrypt,
+    passwordOnlyMessage,
+    unencryptedMessage,
+    needsPrivateKey,
+    crxSignAvailable,
+    showCrxSign,
+    showCrxVerify,
+    crxResult,
+    showFullOutput,
+    replyTo,
+    canReply,
+    canRun,
+    resultHasOutput,
+    hasDownload,
+  } = deriveWorkspaceView(s, {
+    canCrxSign: ws.canCrxSign,
+    passwordReady: ws.passwordReady,
+    crxSigningEnabled,
+  });
   const { prompt } = s;
   const { verdict } = s.result;
-  const hasOutputText = s.output.len > 0;
-  const hasInput = s.files.length > 0 || s.input.len > 0;
   const resetResults = () => dispatch({ type: "reset-results" });
   const resetAll = () => dispatch({ type: "reset-all" });
   const setMode = (mode: Mode) => dispatch({ type: "mode-picked", mode });
 
-  const translation = useTranslation({
-    getOutput: ws.getOutput,
-    outputVersion: s.output.version,
-    setTranslation: ws.setTranslation,
+  const {
+    translation,
+    composeTranslation,
+    setComposedText,
+    composeToolsRef,
+    onToolsReady,
+    composeCanEdit,
+    translateEnabled,
+    resultCanTranslate,
+  } = useWorkspaceTranslation(ws, {
     targetLanguage: translationTargetLanguage,
+    aiTranslateEnabled,
+    done,
+    hasOutputText,
   });
-
-  // Through the textarea's editing path, so mod+Z reverts a translation.
   const { inputElRef, inputChanged } = ws;
-  const setComposedText = useCallback(
-    (text: string) => {
-      const el = inputElRef.current;
-      if (
-        el &&
-        applyTextareaEdit(el, { text, start: text.length, end: text.length })
-      ) {
-        return;
-      }
-      inputChanged(text);
-    },
-    [inputElRef, inputChanged],
-  );
-  const translatedToastRef = useRef<string | number | null>(null);
-  const translatedToastSeq = useRef(0);
-  const composeTranslation = useComposeTranslation({
-    getInput: ws.getInput,
-    setInput: setComposedText,
-    readingLanguage: translationTargetLanguage,
-    onTranslated: (from, to) => {
-      // Fresh id: a toast reusing a leaving one's id is merged into it and leaves with it.
-      if (translatedToastRef.current !== null) {
-        toast.dismiss(translatedToastRef.current);
-      }
-      translatedToastRef.current = toast.message(
-        t("workspace_compose_translated", {
-          from: languageLabel(from),
-          to: languageLabel(to),
-        }),
-        {
-          id: `compose-translated-${++translatedToastSeq.current}`,
-          duration: 6000,
-          action: {
-            label: t("workspace_undo"),
-            onClick: () => composeTranslation.undo(),
-          },
-        },
-      );
-    },
-    onStatus: (status) => {
-      if (status.kind === "same-language") {
-        toast.message(
-          t("workspace_compose_same_language", {
-            language: languageLabel(status.language),
-          }),
-          { id: "compose-translate" },
-        );
-      } else if (status.kind === "unavailable") {
-        toast.message(t("workspace_compose_translate_unavailable"), {
-          id: "compose-translate",
-        });
-      } else if (status.kind === "error") {
-        toast.error(status.message, { id: "compose-translate" });
-      }
-    },
-  });
-  // The undo original is plaintext: wiped at master lock (§8.11), dropped
-  // once the user edits past it, cancelled when the box stops composing.
-  const { addWiper, getInput } = ws;
-  const { forget, noteInputChanged, cancel } = composeTranslation;
-  useEffect(() => addWiper(forget), [addWiper, forget]);
-  useEffect(() => {
-    noteInputChanged(getInput());
-  }, [s.input.version, noteInputChanged, getInput]);
-  const composeToolsRef = useRef<ComposeTools | null>(null);
-  const onToolsReady = useCallback((tools: ComposeTools | null) => {
-    composeToolsRef.current = tools;
-  }, []);
-  // The find bar's highlight mirror holds a copy of the text.
-  useEffect(
-    () => addWiper(() => composeToolsRef.current?.closeFind()),
-    [addWiper],
-  );
-  const composeCanEdit =
-    (s.mode === "encrypt" || s.mode === "sign") &&
-    s.files.length === 0 &&
-    s.input.key !== "private";
-  useEffect(() => {
-    if (!composeCanEdit) cancel();
-  }, [composeCanEdit, cancel]);
-  const translateEnabled =
-    aiTranslateEnabled && composeTranslation.status.kind !== "unavailable";
-  const resultCanTranslate =
-    aiTranslateEnabled &&
-    done &&
-    hasOutputText &&
-    (s.mode === "decrypt" || s.mode === "verify") &&
-    translation.status.kind !== "unavailable" &&
-    translation.status.kind !== "same-language";
 
   const showLoadingLabel = useDelayedFlag(loading);
-
-  const canEncrypt = s.recipientIds.length > 0 || ws.passwordReady;
-  // Password-only / unencrypted messages need no key: no picker of wrong keys.
-  const passwordOnlyMessage =
-    s.mode === "decrypt" &&
-    s.messageEncryption?.password === true &&
-    !s.messageEncryption.publicKey;
-  const unencryptedMessage =
-    s.mode === "decrypt" && s.messageEncryption?.encrypted === false;
-  const needsPrivateKey =
-    (s.mode === "decrypt" && !passwordOnlyMessage && !unencryptedMessage) ||
-    s.mode === "sign";
-
-  const singleCrxFile = s.files.length === 1 && /\.crx$/i.test(s.files[0].name);
-  const crxSignAvailable =
-    ws.canCrxSign && s.mode === "sign" && s.isExtensionZip && !done;
-  const showCrxSign = crxSignAvailable && (s.signKindPick ?? "crx") === "crx";
-  const showCrxVerify =
-    crxSigningEnabled && s.mode === "verify" && singleCrxFile;
-  const crxResult =
-    done &&
-    s.result.files.length === 1 &&
-    /\.crx$/i.test(s.result.files[0].name)
-      ? s.result.files[0]
-      : null;
 
   // Save-As is the one download Chrome doesn't route to the CRX installer.
   const saveCrx = async () => {
@@ -303,15 +213,6 @@ export function WorkspaceView({
   useEffect(() => {
     if (crxData) autoSaveCrx();
   }, [crxData]);
-
-  const showFullOutput =
-    done && (s.mode === "decrypt" || s.mode === "verify") && hasOutputText;
-  // Reply needs a known signer on an encrypted message: amber is never private mail.
-  const replyTo =
-    showFullOutput && s.mode === "decrypt" && verdict?.tone === "success"
-      ? verdict
-      : null;
-  const canReply = replyTo !== null;
   /** The reset wipes the output: the panel keeps no copy. */
   const openReply = () => {
     if (!replyTo || !onOpenReply) return;
@@ -454,21 +355,6 @@ export function WorkspaceView({
     clearTimeout(copyTimer.current);
     copyTimer.current = setTimeout(() => setCopied(false), 2000);
   };
-  const mainActionShown =
-    !showFullOutput &&
-    prompt === null &&
-    !crxResult &&
-    !showCrxVerify &&
-    !showCrxSign &&
-    !(done && s.mode !== "verify");
-  const canRun =
-    mainActionShown && !loading && !(s.mode === "encrypt" && !canEncrypt);
-  const resultHasOutput = done && hasOutputText && !loading;
-  const hasDownload =
-    done &&
-    !loading &&
-    s.mode !== "verify" &&
-    (s.result.files.length > 0 || !!s.result.binary || hasOutputText);
   const runMain = () => {
     if (done && s.mode === "verify") resetAll();
     else void ws.execute();
