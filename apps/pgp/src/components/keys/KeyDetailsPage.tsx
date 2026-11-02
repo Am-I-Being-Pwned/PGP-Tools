@@ -61,6 +61,7 @@ import {
   type ComponentKeyRow,
 } from "./key-facts";
 import { KeyPreviewBody, type KeyPreviewChip } from "./KeyPreviewBody";
+import { holderDetailsTarget } from "./keys-routes";
 
 export type KeyDetailsTarget =
   | { kind: "own"; keyBlob: ProtectedKeyBlob }
@@ -346,10 +347,8 @@ export function KeyDetailsPage({
   const onShowHolder =
     onShowHolderProp ??
     ((holder: IdentityHolder) => {
-      const contact = contacts.find((c) => c.keyId === holder.keyId);
-      const own = ownKeys.find((k) => k.keyId === holder.keyId);
-      if (contact) setHolderTarget({ kind: "contact", contact });
-      else if (own) setHolderTarget({ kind: "own", keyBlob: own });
+      const next = holderDetailsTarget(holder.keyId, contacts, ownKeys);
+      if (next) setHolderTarget(next);
     });
   // Only for a contact actually in the store (`liveContact`), and not a
   // revoked one -- the same rule the Keys tab applies.

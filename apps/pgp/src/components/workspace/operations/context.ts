@@ -288,13 +288,10 @@ export function selectedRecipientKeys(c: RunContext) {
 }
 
 export function recipientNames(c: RunContext): string[] {
-  return c.recipientIds
-    .map((id) => [...c.myKeys, ...c.contacts].find((k) => k.keyId === id))
-    .filter((k) => k !== undefined)
-    .map((k) => {
-      const uid = k.userIds[0];
-      return uid ? formatKeyDisplayName(uid).name : k.keyId.slice(-8);
-    });
+  return selectedRecipientKeys(c).map((k) => {
+    const uid = k.userIds[0];
+    return uid ? formatKeyDisplayName(uid).name : k.keyId.slice(-8);
+  });
 }
 
 /** Staged files plus any written message as `msg.txt`. Built per run,

@@ -19,6 +19,7 @@ import { keyDetailsTarget } from "~/components/keys/KeyDetailsButton";
 import { KeyDetailsPage } from "~/components/keys/KeyDetailsPage";
 import { KeyAvatar } from "~/components/shared/KeyAvatar";
 import { MarkedText } from "~/components/shared/MarkedText";
+import { resolveSelectedRecipients } from "~/lib/encrypt-recipients";
 import { t, tn } from "~/lib/i18n";
 import {
   contactClashes,
@@ -187,15 +188,12 @@ export function RecipientPicker({
     );
   }
 
-  // Own keys first: an id that is yours means your key, as in
-  // `resolveSelectedRecipients`.
-  const selectedKeys = selectedKeyIds
-    .map(
-      (id) =>
-        myKeys.find((k) => k.keyId === id) ??
-        contacts.find((k) => k.keyId === id),
-    )
-    .filter((k): k is StoredKey => k !== undefined);
+  // The encrypt's own resolution, so the picker shows what it will use.
+  const selectedKeys = resolveSelectedRecipients(
+    selectedKeyIds,
+    contacts,
+    myKeys,
+  );
 
   // Filtering is manual here (Command has shouldFilter={false}).
   const selectedSet = new Set(selectedKeyIds);
