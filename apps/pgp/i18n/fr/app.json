@@ -263,9 +263,6 @@
   "app_error_key_revoked": {
     "message": "Une clé impliquée dans cette opération a été révoquée par son propriétaire. Procurez-vous sa clé de remplacement, puis importez-la."
   },
-  "app_error_weak_algorithm": {
-    "message": "Cette clé utilise un algorithme de signature qui n'est plus considéré comme sûr. Demandez à son propriétaire de la réémettre avec SHA-256 ou plus fort."
-  },
   "app_error_corrupted": {
     "message": "Les données sont corrompues ou tronquées. Procurez-vous une copie complète et réessayez."
   },

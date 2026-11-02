@@ -149,9 +149,6 @@
   "app_error_key_revoked": {
     "message": "此操作涉及的某个密钥已被其所有者吊销。请获取其替代密钥并导入。"
   },
-  "app_error_weak_algorithm": {
-    "message": "此密钥使用的签名算法已不再被认为安全。请让密钥所有者使用 SHA-256 或更强的算法重新签发。"
-  },
   "app_error_corrupted": {
     "message": "数据已损坏或被截断。请获取完整的新副本后重试。"
   },

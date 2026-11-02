@@ -547,9 +547,6 @@
   "app_error_vault_locked": {
     "message": "La tua cassaforte è bloccata, quindi non è stato modificato nulla. Sbloccala ed esegui di nuovo l'operazione."
   },
-  "app_error_weak_algorithm": {
-    "message": "Questa chiave usa un algoritmo di firma che non è più considerato sicuro. Chiedi al proprietario di riemetterla con SHA-256 o superiore."
-  },
   "app_error_weak_password": {
     "message": "Quella password è troppo corta. Usa almeno 8 caratteri."
   },

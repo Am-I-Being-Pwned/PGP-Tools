@@ -547,9 +547,6 @@
   "app_error_vault_locked": {
     "message": "Votre coffre est verrouillé, rien n'a donc été modifié. Déverrouillez-le et relancez l'opération."
   },
-  "app_error_weak_algorithm": {
-    "message": "Cette clé utilise un algorithme de signature qui n'est plus considéré comme sûr. Demandez à son propriétaire de la réémettre avec SHA-256 ou plus fort."
-  },
   "app_error_weak_password": {
     "message": "Ce mot de passe est trop court. Utilisez au moins 8 caractères."
   },

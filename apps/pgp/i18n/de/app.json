@@ -175,9 +175,6 @@
   "app_error_key_revoked": {
     "message": "Ein an diesem Vorgang beteiligter Schlüssel wurde von seinem Besitzer widerrufen. Besorgen Sie sich den Ersatzschlüssel und importieren Sie ihn."
   },
-  "app_error_weak_algorithm": {
-    "message": "Dieser Schlüssel verwendet einen Signaturalgorithmus, der nicht mehr als sicher gilt. Bitten Sie den Besitzer des Schlüssels, ihn mit SHA-256 oder stärker neu auszustellen."
-  },
   "app_error_corrupted": {
     "message": "Die Daten sind beschädigt oder abgeschnitten. Besorgen Sie sich eine neue, vollständige Kopie und versuchen Sie es erneut."
   },

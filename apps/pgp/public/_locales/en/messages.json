@@ -681,10 +681,6 @@
     "message": "Your vault is locked, so nothing was changed. Unlock it and run this again.",
     "description": "User-facing error: the encrypted vault (keys and contacts store) is locked so the write was refused."
   },
-  "app_error_weak_algorithm": {
-    "message": "This key uses a signature algorithm that is no longer considered secure. Ask the key's owner to reissue it with SHA-256 or stronger.",
-    "description": "User-facing error: the key was rejected by the security policy (SHA-1 / MD5 signatures). 'SHA-256' is a technical name."
-  },
   "app_error_weak_password": {
     "message": "That password is too short. Use at least 8 characters.",
     "description": "User-facing error: a chosen password is under the minimum length. The 8 is fixed."

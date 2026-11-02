@@ -722,7 +722,9 @@ fn aes_gcm_decrypt(
         Aes256Gcm::new_from_slice(key).map_err(|e| format!("AES key init failed: {e}"))?;
     let result = cipher
         .decrypt(&nonce, Payload { msg: ciphertext, aad })
-        .map_err(|_| "Decryption failed - wrong credentials or corrupted data".to_string());
+        .map_err(|_| {
+            coded(ErrorCode::WrongPassphrase, "Decryption failed - wrong credentials or corrupted data")
+        });
     zeroize_cipher(&mut cipher);
     result
 }
@@ -887,15 +889,19 @@ fn unusable_recipient_reason(
         .unwrap_or_else(|| vc.fingerprint().to_hex());
 
     if let Some(reason) = cert_revoked {
-        return format!(
-            "Can't encrypt to {label}: the key has been revoked by its owner ({reason}). \
-             Ask them for their current key."
+        return coded(
+            ErrorCode::KeyRevoked,
+            &format!(
+                "Can't encrypt to {label}: the key has been revoked by its owner ({reason}). \
+                 Ask them for their current key."
+            ),
         );
     }
     // Primary key past its expiry: nothing under it is alive.
     if vc.alive().is_err() {
-        return format!(
-            "Can't encrypt to {label}: the key has expired. Ask them for a renewed key."
+        return coded(
+            ErrorCode::KeyExpired,
+            &format!("Can't encrypt to {label}: the key has expired. Ask them for a renewed key."),
         );
     }
     let any_encryption_capable = vc
@@ -907,9 +913,12 @@ fn unusable_recipient_reason(
     if any_encryption_capable {
         // Live primary, but every encryption subkey is expired, revoked,
         // or uses an algorithm this build cannot encrypt with.
-        return format!(
-            "Can't encrypt to {label}: its encryption subkey has expired, been revoked, \
-             or uses an unsupported algorithm. Ask them for a renewed key."
+        return coded(
+            ErrorCode::KeyExpired,
+            &format!(
+                "Can't encrypt to {label}: its encryption subkey has expired, been revoked, \
+                 or uses an unsupported algorithm. Ask them for a renewed key."
+            ),
         );
     }
     format!(
@@ -1175,12 +1184,15 @@ fn decrypt_limit(ciphertext_len: usize) -> u64 {
         .min(MAX_DECRYPTED_BYTES)
 }
 
-/// What a read past the engine's own ceiling returns. ONE fixed string,
-/// for the same reason as [`OUTPUT_CAP_REACHED`]: a caller that wraps
-/// errors (`decrypt_with_password` folds its parse failures into "Wrong
-/// password") must be able to recognise it by value and let it through,
-/// or a correct password on a big file reads as a wrong one.
+/// What a read past the engine's own ceiling returns, coded `TooLarge`.
+/// A caller that wraps errors (`decrypt_with_password` folds its parse
+/// failures into "Wrong password") must recognise it by code and let it
+/// through, or a correct password on a big file reads as a wrong one.
 const TOO_LARGE_TO_OPEN: &str = "This message is too large to open here.";
+
+fn too_large_to_open() -> String {
+    coded(ErrorCode::TooLarge, TOO_LARGE_TO_OPEN)
+}
 
 fn read_capped<R: std::io::Read>(reader: R, limit: u64) -> Result<Vec<u8>, String> {
     let mut out = Vec::new();
@@ -1188,7 +1200,7 @@ fn read_capped<R: std::io::Read>(reader: R, limit: u64) -> Result<Vec<u8>, Strin
 
     if out.len() as u64 > limit {
         out.zeroize();
-        return Err(TOO_LARGE_TO_OPEN.into());
+        return Err(too_large_to_open());
     }
     Ok(out)
 }
@@ -1300,11 +1312,15 @@ fn was_encrypted(structure: &MessageStructure) -> bool {
 const NOT_ENCRYPTED: &str =
     "This message is not encrypted. It may be signed, but it was readable on the way and anyone could have sent this copy.";
 
+fn not_encrypted() -> String {
+    coded(ErrorCode::NotEncrypted, NOT_ENCRYPTED)
+}
+
 /// Refuse, before any key or password is used, a message that carries
 /// no encrypted container and no session-key packet at all.
 fn refuse_unencrypted(ciphertext: &[u8]) -> Result<(), String> {
     match scan_session_packets(ciphertext)? {
-        (false, false, Container::None) => Err(NOT_ENCRYPTED.into()),
+        (false, false, Container::None) => Err(not_encrypted()),
         _ => Ok(()),
     }
 }
@@ -1355,7 +1371,7 @@ impl DecryptionHelper for DecryptHelper {
                 }
             }
         }
-        Err(anyhow::anyhow!("No suitable decryption key found"))
+        Err(anyhow::anyhow!(coded(ErrorCode::NoDecryptionKey, "No suitable decryption key found")))
     }
 }
 
@@ -1701,7 +1717,7 @@ pub fn parse_keys(armored: &str) -> Result<String, String> {
         out.push(ParsedCert { key_info, armored });
     }
     if out.is_empty() {
-        return Err("No OpenPGP certificate found".to_string());
+        return Err(coded(ErrorCode::NotPgpData, "No OpenPGP certificate found"));
     }
     serde_json::to_string(&out).str_err()
 }
@@ -1799,7 +1815,7 @@ fn revocation_signatures(armored: &str) -> Result<Vec<openpgp::packet::Signature
         })
         .collect();
     if sigs.is_empty() {
-        return Err("No OpenPGP certificate found".into());
+        return Err(coded(ErrorCode::NotPgpData, "No OpenPGP certificate found"));
     }
     Ok(sigs)
 }
@@ -1919,11 +1935,25 @@ const MESSAGE_END: &str = "-----END PGP MESSAGE-----";
 const OUTSIDE_SIGNED: &str =
     "This message has text outside the signed part, which the signature does not cover";
 
+fn outside_signed() -> String {
+    coded(ErrorCode::TextOutsideSignature, OUTSIDE_SIGNED)
+}
+
 /// What `check_signed_framing` found: for cleartext, the body as the user
 /// sees it (dash-escaping undone), to hold against what Sequoia verified.
 enum SignedFraming {
     Cleartext(String),
     Inline,
+}
+
+fn too_large_to_verify() -> String {
+    coded(
+        ErrorCode::TooLarge,
+        &format!(
+            "This signed message is too large to verify here (limit {} MiB).",
+            MAX_SIGNED_INPUT_BYTES / (1024 * 1024),
+        ),
+    )
 }
 
 /// Refuse a signed message that shows the user anything the signature
@@ -1947,7 +1977,7 @@ fn check_signed_framing(signed_message: &str) -> Result<SignedFraming, String> {
 
     if !signed_message.contains(CLEARTEXT_BEGIN) && !signed_message.contains(MESSAGE_BEGIN) {
         // No block at all is a different mistake from text around one.
-        return Err("No armored data found".into());
+        return Err(coded(ErrorCode::NotPgpData, "No armored data found"));
     }
 
     // Anything another reader might break a line at, but `\n`-splitting
@@ -1957,13 +1987,13 @@ fn check_signed_framing(signed_message: &str) -> Result<SignedFraming, String> {
         return Err("This signed message has too many lines to verify here.".into());
     }
     if msg.contains(['\u{2028}', '\u{2029}', '\u{85}', '\u{b}', '\u{c}']) {
-        return Err(OUTSIDE_SIGNED.into());
+        return Err(outside_signed());
     }
     let mut lines: Vec<&str> = Vec::new();
     for line in msg.split('\n') {
         let line = line.strip_suffix('\r').unwrap_or(line);
         if line.contains('\r') {
-            return Err(OUTSIDE_SIGNED.into());
+            return Err(outside_signed());
         }
         lines.push(line);
     }
@@ -2019,19 +2049,19 @@ fn check_signed_framing(signed_message: &str) -> Result<SignedFraming, String> {
             if armored_ok(rest, MESSAGE_END) {
                 Ok(SignedFraming::Inline)
             } else {
-                Err(OUTSIDE_SIGNED.into())
+                Err(outside_signed())
             }
         }
         Some((begin, rest)) if tidy(begin) == CLEARTEXT_BEGIN => {
             let n = rest.iter().take_while(|l| hash_ok(&tidy(l))).count();
             let Some((sep, rest)) = rest[n..].split_first() else {
-                return Err(OUTSIDE_SIGNED.into());
+                return Err(outside_signed());
             };
             let Some(sig) = rest.iter().position(|l| tidy(l) == CLEARTEXT_SIG_BEGIN) else {
-                return Err(OUTSIDE_SIGNED.into());
+                return Err(outside_signed());
             };
             if !tidy(sep).is_empty() || !armored_ok(&rest[sig + 1..], CLEARTEXT_SIG_END) {
-                return Err(OUTSIDE_SIGNED.into());
+                return Err(outside_signed());
             }
             // A signed line starting with a dash is always escaped as "- ";
             // a bare one is something a parser may read as a marker.
@@ -2039,13 +2069,13 @@ fn check_signed_framing(signed_message: &str) -> Result<SignedFraming, String> {
             for line in &rest[..sig] {
                 match line.strip_prefix("- ") {
                     Some(unescaped) => body.push(unescaped),
-                    None if line.starts_with('-') => return Err(OUTSIDE_SIGNED.into()),
+                    None if line.starts_with('-') => return Err(outside_signed()),
                     None => body.push(line),
                 }
             }
             Ok(SignedFraming::Cleartext(body.join("\n")))
         }
-        _ => Err(OUTSIDE_SIGNED.into()),
+        _ => Err(outside_signed()),
     }
 }
 
@@ -2064,7 +2094,7 @@ fn check_cleartext_body(shown: &str, verified: &str) -> Result<(), String> {
     if normal(shown) == normal(verified) {
         Ok(())
     } else {
-        Err(OUTSIDE_SIGNED.into())
+        Err(outside_signed())
     }
 }
 
@@ -2081,10 +2111,7 @@ pub fn verify_message(
     // A file saved on Windows can lead with a BOM, which Sequoia refuses.
     let signed_message = signed_message.strip_prefix('\u{feff}').unwrap_or(signed_message);
     if signed_message.len() > MAX_SIGNED_INPUT_BYTES {
-        return Err(format!(
-            "This signed message is too large to verify here (limit {} MiB).",
-            MAX_SIGNED_INPUT_BYTES / (1024 * 1024),
-        ));
+        return Err(too_large_to_verify());
     }
     let framing = check_signed_framing(signed_message)?;
     let certs = parse_armored_certs(verification_keys_json)?;
@@ -2189,7 +2216,7 @@ pub fn decrypt_with_handle(
     // this is the answer from the parse that produced the plaintext.
     if !helper.encrypted {
         plaintext.zeroize();
-        return Err(NOT_ENCRYPTED.into());
+        return Err(not_encrypted());
     }
 
     Ok(pack_decrypt_result(&helper.signatures, plaintext))
@@ -2230,8 +2257,8 @@ fn pack_decrypt_result(signatures: &SignatureReport, plaintext: Vec<u8>) -> Vec<
 /// with no integrity check, so a wrong password produces a plausible
 /// session key and fails much later as an MDC mismatch inside the reader.
 /// Rather than pretend to tell "wrong password" from "corrupt message"
-/// apart, every failure in the parse comes back under one leading phrase
-/// the JS classifies on, with the underlying error kept after it for the
+/// apart, every failure in the parse comes back under one code
+/// (`SymmetricWrongPassword`), with the underlying error kept for the
 /// technical-details line.
 #[wasm_bindgen(js_name = "decryptWithPassword")]
 pub fn decrypt_with_password(
@@ -2284,10 +2311,10 @@ pub fn decrypt_with_password(
     // user with a perfectly good password to go and check their password.
     // They would never get anywhere: no password opens this.
     if scan_session_packets(ciphertext)?.2 == Container::Aed {
-        return Err(
-            "This message uses the older AEAD (OCB) encrypted-data format, which this app cannot read. Ask the sender to re-encrypt it without --force-ocb."
-                .to_string(),
-        );
+        return Err(coded(
+            ErrorCode::OcbUnsupported,
+            "This message uses the older AEAD (OCB) encrypted-data format, which this app cannot read. Ask the sender to re-encrypt it without --force-ocb.",
+        ));
     }
 
     let (helper, mut plaintext) = decrypt_with_password_inner(ciphertext, helper, max_output)
@@ -2295,18 +2322,23 @@ pub fn decrypt_with_password(
             // Held back for size, or past the engine's own size limit:
             // neither is a password problem (the password may well have
             // been right -- the read only stops once the plaintext is
-            // flowing), and both are matched by value, so they cross
-            // unwrapped.
-            if e == OUTPUT_CAP_REACHED || e == TOO_LARGE_TO_OPEN {
+            // flowing), so both cross unwrapped.
+            if e == OUTPUT_CAP_REACHED || error_code::error_code(&e) == Some(ErrorCode::TooLarge) {
                 e
             } else {
-                format!("Wrong password, or this message is damaged: {e}")
+                coded(
+                    ErrorCode::SymmetricWrongPassword,
+                    &format!(
+                        "Wrong password, or this message is damaged: {}",
+                        error_code::message(&e)
+                    ),
+                )
             }
         })?;
     // See `decrypt_with_handle`: the parse, not the header scan, decides.
     if !helper.encrypted {
         plaintext.zeroize();
-        return Err(NOT_ENCRYPTED.into());
+        return Err(not_encrypted());
     }
     Ok(pack_decrypt_result(&helper.signatures, plaintext))
 }
@@ -2492,10 +2524,7 @@ pub fn open_unencrypted(
     let framing = match std::str::from_utf8(message) {
         Ok(text) if text.contains(ARMOR_LINE) => {
             if message.len() > MAX_SIGNED_INPUT_BYTES {
-                return Err(format!(
-                    "This signed message is too large to verify here (limit {} MiB).",
-                    MAX_SIGNED_INPUT_BYTES / (1024 * 1024),
-                ));
+                return Err(too_large_to_verify());
             }
             Some(check_signed_framing(text)?)
         }
@@ -2506,7 +2535,7 @@ pub fn open_unencrypted(
             if message.windows(ARMOR_LINE.len()).any(|w| w == ARMOR_LINE.as_bytes())
                 && !reads_as_binary(message) =>
         {
-            return Err(OUTSIDE_SIGNED.into());
+            return Err(outside_signed());
         }
         _ => None,
     };
@@ -2817,7 +2846,7 @@ where
     use openpgp::crypto::S2K;
     use openpgp::types::PublicKeyAlgorithm;
 
-    const WRONG: &str = "Incorrect passphrase";
+    let wrong = || coded(ErrorCode::WrongPassphrase, "Incorrect passphrase");
 
     // Only the single-scalar ECC algorithms need this: libgcrypt encodes
     // RSA/DSA/ElGamal secrets minimally, so for those a Sequoia failure
@@ -2827,11 +2856,11 @@ where
         pk_algo,
         PublicKeyAlgorithm::EdDSA | PublicKeyAlgorithm::ECDSA | PublicKeyAlgorithm::ECDH
     ) {
-        return Err(WRONG.into());
+        return Err(wrong());
     }
 
     let openpgp::packet::key::SecretKeyMaterial::Encrypted(e) = key.secret() else {
-        return Err(WRONG.into());
+        return Err(wrong());
     };
     // `gpg --export-secret-subkeys` stubs the primary with a GNU-dummy
     // S2K (private type 101): there is no secret to decrypt at all.
@@ -2843,7 +2872,7 @@ where
         );
     }
     if e.aead_algo().is_some() {
-        return Err(WRONG.into());
+        return Err(wrong());
     }
 
     // Everything above is diagnosis, not decryption: it decides which
@@ -2854,20 +2883,20 @@ where
     // truncated packet) is not something a second, less strict attempt
     // should be given a chance at.
     if !is_padded_mpi_failure(sequoia_err) {
-        return Err(WRONG.into());
+        return Err(wrong());
     }
 
     let sym = e.algo();
-    let key_size = sym.key_size().map_err(|_| WRONG.to_string())?;
-    let block_size = sym.block_size().map_err(|_| WRONG.to_string())?;
+    let key_size = sym.key_size().map_err(|_| wrong())?;
+    let block_size = sym.block_size().map_err(|_| wrong())?;
     let derived = e
         .s2k()
         .derive_key(password, key_size)
-        .map_err(|_| WRONG.to_string())?;
+        .map_err(|_| wrong())?;
     // Sequoia stores the packet's IV prepended to the ciphertext.
-    let ct = e.ciphertext().map_err(|_| WRONG.to_string())?;
+    let ct = e.ciphertext().map_err(|_| wrong())?;
     if ct.len() < block_size + 3 {
-        return Err(WRONG.into());
+        return Err(wrong());
     }
     let (iv, data) = ct.split_at(block_size);
     let plaintext = Zeroizing::new(cfb_decrypt(sym, &derived, iv, data)?);
@@ -2876,32 +2905,32 @@ where
     // passphrase really is wrong.
     let body = match e.checksum().unwrap_or_default() {
         mpi::SecretKeyChecksum::SHA1 => {
-            let split = plaintext.len().checked_sub(20).ok_or(WRONG)?;
+            let split = plaintext.len().checked_sub(20).ok_or_else(wrong)?;
             let (body, want) = plaintext.split_at(split);
             let mut ctx = HashAlgorithm::SHA1
                 .context()
-                .map_err(|_| WRONG.to_string())?
+                .map_err(|_| wrong())?
                 .for_digest();
             ctx.update(body);
-            let got = ctx.into_digest().map_err(|_| WRONG.to_string())?;
+            let got = ctx.into_digest().map_err(|_| wrong())?;
             // Constant-time: this comparison *is* the passphrase check,
             // so a variable-time `!=` would leak how many leading bytes
             // of a guess were right. `ct_eq` on slices also yields a
             // false `Choice` (not a panic) on a length mismatch.
             if !bool::from(got.as_slice().ct_eq(want)) {
-                return Err(WRONG.into());
+                return Err(wrong());
             }
             body
         }
         mpi::SecretKeyChecksum::Sum16 => {
-            let split = plaintext.len().checked_sub(2).ok_or(WRONG)?;
+            let split = plaintext.len().checked_sub(2).ok_or_else(wrong)?;
             let (body, want) = plaintext.split_at(split);
             let got = body
                 .iter()
                 .fold(0u16, |acc, b| acc.wrapping_add(*b as u16));
             // Constant-time for the same reason as the SHA-1 arm above.
             if !bool::from(got.to_be_bytes().ct_eq(want)) {
-                return Err(WRONG.into());
+                return Err(wrong());
             }
             body
         }
@@ -2910,11 +2939,11 @@ where
     // One scalar MPI: 2-byte declared bit length + (possibly padded)
     // value. `ProtectedMPI::from` re-encodes with leading zeros trimmed.
     if body.len() < 2 {
-        return Err(WRONG.into());
+        return Err(wrong());
     }
     let declared_bits = u16::from_be_bytes([body[0], body[1]]) as usize;
     if body.len() != 2 + declared_bits.div_ceil(8) {
-        return Err(WRONG.into());
+        return Err(wrong());
     }
     let scalar: mpi::ProtectedMPI = (&body[2..]).into();
     let material = match pk_algo {
@@ -3714,6 +3743,10 @@ mod crx;
 /// module header for why `ssh-key` is needed and where age's own randomness
 /// stays out of reach.
 mod age;
+
+/// Stable codes on the errors the UI tells apart; see the module header.
+mod error_code;
+use error_code::{coded, ErrorCode};
 
 /// The crate's CSPRNG: a ChaCha20 stream seeded once from
 /// `crypto.getRandomValues`. See the module header for what it does and

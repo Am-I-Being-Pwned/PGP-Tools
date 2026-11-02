@@ -623,10 +623,10 @@ fn a_message_with_no_encryption_layer_is_never_decrypted() {
         literal_only(b"Totally secret, only for you"),
     ] {
         let err = decrypt_with_handle(&msg, h, Some(keys.clone()), None).unwrap_err();
-        assert_eq!(err, NOT_ENCRYPTED);
+        assert_eq!(err, not_encrypted());
         // Not folded into "wrong password": nothing here takes one.
         let err = decrypt_with_password(&msg, b"pw".to_vec(), Some(keys.clone()), None).unwrap_err();
-        assert_eq!(err, NOT_ENCRYPTED);
+        assert_eq!(err, not_encrypted());
         let shape: serde_json::Value =
             serde_json::from_str(&message_encryption(&msg).unwrap()).unwrap();
         assert_eq!(shape["encrypted"], false);
@@ -693,7 +693,7 @@ fn opening_unencrypted_refuses_encrypted_input_and_text_around_the_block() {
         format!("{signed}\nSee also: acct 999\n"),
         format!("{}\n{signed}", String::from_utf8(literal_only(b"MALLORY FAKE")).unwrap()),
     ] {
-        assert_eq!(open_unencrypted(wrapped.as_bytes(), keys.clone(), None).unwrap_err(), OUTSIDE_SIGNED);
+        assert_eq!(open_unencrypted(wrapped.as_bytes(), keys.clone(), None).unwrap_err(), outside_signed());
     }
 }
 
@@ -753,7 +753,7 @@ fn a_text_signature_reads_a_lone_cr_as_a_line_break() {
     // A cleartext-signed paste never gets that far: the framing check
     // refuses a CR anywhere but before a LF.
     let csf = cleartext_sign("Approved:\nNO", &alice).unwrap().replace("Approved:\nNO", "Approved:\rNO");
-    assert_eq!(verify_message(&csf, &keys_json(&[&alice]), None).unwrap_err(), OUTSIDE_SIGNED);
+    assert_eq!(verify_message(&csf, &keys_json(&[&alice]), None).unwrap_err(), outside_signed());
 }
 
 #[test]
@@ -838,7 +838,7 @@ fn a_capped_read_stops_one_byte_past_the_cap() {
     // A cap above the engine's own limit changes nothing: that limit,
     // and its own error, still apply.
     let err = read_within(&b"x".repeat(11)[..], 10, Some(1024)).unwrap_err();
-    assert_eq!(err, TOO_LARGE_TO_OPEN);
+    assert_eq!(err, too_large_to_open());
 }
 
 #[test]
@@ -864,9 +864,10 @@ fn every_unattended_entry_point_holds_back_a_message_over_the_cap() {
     assert_eq!(decrypt_with_password(&pw, b"pw".to_vec(), None, cap).unwrap_err(), OUTPUT_CAP_REACHED);
     let (_, pt) = unpack(&decrypt_with_password(&pw, b"pw".to_vec(), None, room).unwrap());
     assert_eq!(pt, big);
-    assert!(decrypt_with_password(&pw, b"no".to_vec(), None, cap)
-        .unwrap_err()
-        .starts_with("Wrong password"));
+    assert_eq!(
+        error_code::error_code(&decrypt_with_password(&pw, b"no".to_vec(), None, cap).unwrap_err()),
+        Some(ErrorCode::SymmetricWrongPassword)
+    );
 
     let text = "a".repeat(4096);
     let csf = cleartext_sign(&text, &alice).unwrap();
@@ -990,7 +991,7 @@ fn prose_starting_with_a_non_ascii_character_still_gets_the_framing_check() {
         assert!(open_unencrypted(wrapped.as_bytes(), keys.clone(), None).is_err(), "{lead:?}");
     }
     let curly = format!("\u{201c}Approved\u{201d}\n\n{signed}");
-    assert_eq!(open_unencrypted(curly.as_bytes(), keys.clone(), None).unwrap_err(), OUTSIDE_SIGNED);
+    assert_eq!(open_unencrypted(curly.as_bytes(), keys.clone(), None).unwrap_err(), outside_signed());
 
     // Prose that is not even UTF-8 (a Latin-1 e-acute) is refused too.
     let mut latin1 = b"\xe9Approved\n\n".to_vec();
@@ -1046,7 +1047,7 @@ fn a_compressed_signed_message_is_still_unencrypted() {
     let shape: serde_json::Value = serde_json::from_str(&message_encryption(&msg).unwrap()).unwrap();
     assert_eq!(shape["encrypted"], false);
     let h = insert_key(&alice).unwrap();
-    assert_eq!(decrypt_with_handle(&msg, h, keys.clone(), None).unwrap_err(), NOT_ENCRYPTED);
+    assert_eq!(decrypt_with_handle(&msg, h, keys.clone(), None).unwrap_err(), not_encrypted());
     drop_key(h).unwrap();
     let (sig, pt) = unpack(&open_unencrypted(&msg, keys, None).unwrap());
     assert_eq!(sig["signatureStatus"], "valid");
@@ -1098,7 +1099,7 @@ fn spliced_messages_never_open_as_something_they_are_not() {
     let mut marked = Vec::new();
     openpgp::Packet::from(openpgp::packet::Marker::default()).serialize(&mut marked).unwrap();
     marked.extend_from_slice(&public_signed);
-    assert_eq!(decrypt_with_handle(&marked, h, keys.clone(), None).unwrap_err(), NOT_ENCRYPTED);
+    assert_eq!(decrypt_with_handle(&marked, h, keys.clone(), None).unwrap_err(), not_encrypted());
     let (sig, pt) = unpack(&open_unencrypted(&marked, keys.clone(), None).unwrap());
     assert_eq!((sig["signatureStatus"].as_str(), pt.as_slice()), (Some("valid"), &b"ALICE PUBLIC"[..]));
 
@@ -1138,11 +1139,12 @@ fn the_right_password_on_a_file_too_large_to_open_is_not_called_wrong() {
     // is right; only the size stops it, and the error must say so.
     let ct = password_bomb("pw", (MIN_EXPANSION_ALLOWANCE + 1) as usize);
     assert!(ct.len() < 1 << 20, "{}", ct.len());
-    assert_eq!(decrypt_with_password(&ct, b"pw".to_vec(), None, None).unwrap_err(), TOO_LARGE_TO_OPEN);
+    assert_eq!(decrypt_with_password(&ct, b"pw".to_vec(), None, None).unwrap_err(), too_large_to_open());
     // A wrong password on the same file is still a password problem.
-    assert!(decrypt_with_password(&ct, b"no".to_vec(), None, None)
-        .unwrap_err()
-        .starts_with("Wrong password"));
+    assert_eq!(
+        error_code::error_code(&decrypt_with_password(&ct, b"no".to_vec(), None, None).unwrap_err()),
+        Some(ErrorCode::SymmetricWrongPassword)
+    );
 }
 
 #[test]

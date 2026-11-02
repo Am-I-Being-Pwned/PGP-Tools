@@ -129,7 +129,6 @@ export interface MessageArgs {
   "app_error_too_large_to_open": undefined;
   "app_error_unsigned_text_around_signature": undefined;
   "app_error_vault_locked": undefined;
-  "app_error_weak_algorithm": undefined;
   "app_error_weak_password": undefined;
   "app_error_wrong_password": undefined;
   "app_integrity_dismiss": undefined;

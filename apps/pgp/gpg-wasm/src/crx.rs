@@ -39,6 +39,7 @@ use zeroize::Zeroizing;
 
 use wasm_bindgen::prelude::*;
 
+use crate::error_code::{coded, ErrorCode};
 use crate::protected;
 use crate::StrErr;
 
@@ -277,12 +278,16 @@ fn verify_crx_inner(crx: &[u8]) -> VerifyOutcome {
 
 fn verify_crx_checked(crx: &[u8]) -> Result<VerifyOutcome, String> {
     if crx.get(0..4) != Some(CRX_MAGIC.as_slice()) {
-        return Ok(VerifyOutcome::failure("Not a CRX file (missing Cr24 magic)"));
+        return Ok(VerifyOutcome::failure(coded(
+            ErrorCode::NotCrx,
+            "Not a CRX file (missing Cr24 magic)",
+        )));
     }
     let version = read_u32_le(crx, 4)?;
     if version != CRX_VERSION {
-        return Ok(VerifyOutcome::failure(format!(
-            "Unsupported CRX version {version} (only CRX3 is supported)"
+        return Ok(VerifyOutcome::failure(coded(
+            ErrorCode::NotCrx,
+            &format!("Unsupported CRX version {version} (only CRX3 is supported)"),
         )));
     }
     let header_len = read_u32_le(crx, 8)? as usize;
@@ -374,7 +379,10 @@ fn verify_crx_checked(crx: &[u8]) -> Result<VerifyOutcome, String> {
         valid: false,
         extension_id: Some(extension_id(&signed_crx_id)),
         algorithm: Some("sha256_with_rsa".to_string()),
-        error: Some("No valid signature: the CRX is unsigned by this key or was tampered with".to_string()),
+        error: Some(coded(
+            ErrorCode::CrxUnsigned,
+            "No valid signature: the CRX is unsigned by this key or was tampered with",
+        )),
     })
 }
 
@@ -753,6 +761,10 @@ mod crx_tests {
         assert!(!outcome.valid);
         // Still reports which extension the CRX claims to be.
         assert!(outcome.extension_id.is_some());
+        assert_eq!(
+            crate::error_code::error_code(outcome.error.as_deref().unwrap()),
+            Some(ErrorCode::CrxUnsigned),
+        );
     }
 
     #[test]
@@ -777,7 +789,9 @@ mod crx_tests {
     fn not_a_crx_is_reported_cleanly() {
         let outcome = verify_crx_inner(b"definitely not a crx");
         assert!(!outcome.valid);
-        assert!(outcome.error.unwrap().contains("Cr24"));
+        let err = outcome.error.unwrap();
+        assert!(err.contains("Cr24"));
+        assert_eq!(crate::error_code::error_code(&err), Some(ErrorCode::NotCrx));
     }
 
     #[test]

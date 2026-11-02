@@ -4,8 +4,12 @@
  * Loads `gpg_wasm_bg.wasm` from the extension's own bundle exactly
  * once. The resulting module handle is shared by every wasm-public /
  * wasm-secrets call. No secrets cross this file -- it's a singleton
- * that hands out the wasm-bindgen module reference.
+ * that hands out the wasm-bindgen module reference, each export wrapped
+ * by `withEngineErrors` (arguments pass straight through; only a thrown
+ * error string is decoded).
  */
+
+import { withEngineErrors } from "../errors/engine-error";
 
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- dynamic import
 export type WasmModule = typeof import("../../gpg-wasm/pkg/gpg_wasm");
@@ -33,8 +37,8 @@ export async function loadWasm(): Promise<WasmModule> {
     const wasmBytes = await fetch(wasmUrl).then((r) => r.arrayBuffer());
     const output = mod.initSync({ module: wasmBytes });
     wasmMemory = output.memory;
-    wasmModule = mod;
-    return mod;
+    wasmModule = withEngineErrors(mod);
+    return wasmModule;
   })();
 
   return initPromise;

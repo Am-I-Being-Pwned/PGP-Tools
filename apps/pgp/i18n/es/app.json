@@ -263,9 +263,6 @@
   "app_error_key_revoked": {
     "message": "Una de las claves implicadas en esta operación ha sido revocada por su propietario. Consiga su clave de reemplazo e impórtela."
   },
-  "app_error_weak_algorithm": {
-    "message": "Esta clave usa un algoritmo de firma que ya no se considera seguro. Pida al propietario de la clave que la vuelva a emitir con SHA-256 o superior."
-  },
   "app_error_corrupted": {
     "message": "Los datos están dañados o incompletos. Consiga una copia nueva y completa e inténtelo de nuevo."
   },

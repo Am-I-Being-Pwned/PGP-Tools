@@ -1,7 +1,7 @@
 /** Machine-readable causes for errors thrown by our own lib code.
  *  `presentError` maps each code to curated user-facing copy, so
- *  classification never depends on string-matching our own messages
- *  (WASM/Sequoia strings still need substring matching -- see present.ts). */
+ *  classification never depends on string-matching our own messages.
+ *  The engine's equivalent is `EngineError` (`engine-error.ts`). */
 export type AppErrorCode =
   | "key-not-found"
   | "key-locked"

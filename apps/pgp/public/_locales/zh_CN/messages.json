@@ -547,9 +547,6 @@
   "app_error_vault_locked": {
     "message": "你的保险库已锁定，因此未作任何更改。请解锁后再运行一次。"
   },
-  "app_error_weak_algorithm": {
-    "message": "此密钥使用的签名算法已不再被认为安全。请让密钥所有者使用 SHA-256 或更强的算法重新签发。"
-  },
   "app_error_weak_password": {
     "message": "该密码太短。请至少使用 8 个字符。"
   },

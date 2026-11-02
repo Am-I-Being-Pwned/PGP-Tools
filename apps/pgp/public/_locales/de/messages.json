@@ -547,9 +547,6 @@
   "app_error_vault_locked": {
     "message": "Ihr Tresor ist gesperrt, daher wurde nichts geändert. Entsperren Sie ihn und führen Sie den Vorgang erneut aus."
   },
-  "app_error_weak_algorithm": {
-    "message": "Dieser Schlüssel verwendet einen Signaturalgorithmus, der nicht mehr als sicher gilt. Bitten Sie den Besitzer des Schlüssels, ihn mit SHA-256 oder stärker neu auszustellen."
-  },
   "app_error_weak_password": {
     "message": "Dieses Passwort ist zu kurz. Verwenden Sie mindestens 8 Zeichen."
   },

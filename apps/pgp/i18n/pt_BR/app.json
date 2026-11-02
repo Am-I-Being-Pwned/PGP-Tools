@@ -263,9 +263,6 @@
   "app_error_key_revoked": {
     "message": "Uma chave envolvida nesta operação foi revogada pelo dono. Obtenha a chave substituta e importe-a."
   },
-  "app_error_weak_algorithm": {
-    "message": "Esta chave usa um algoritmo de assinatura que não é mais considerado seguro. Peça ao dono da chave que a emita de novo com SHA-256 ou mais forte."
-  },
   "app_error_corrupted": {
     "message": "Os dados estão corrompidos ou foram cortados. Obtenha uma cópia nova e completa e tente de novo."
   },

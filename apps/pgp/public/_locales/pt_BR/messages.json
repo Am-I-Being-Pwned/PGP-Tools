@@ -547,9 +547,6 @@
   "app_error_vault_locked": {
     "message": "Seu cofre está bloqueado, então nada foi alterado. Desbloqueie-o e execute isto de novo."
   },
-  "app_error_weak_algorithm": {
-    "message": "Esta chave usa um algoritmo de assinatura que não é mais considerado seguro. Peça ao dono da chave que a emita de novo com SHA-256 ou mais forte."
-  },
   "app_error_weak_password": {
     "message": "Essa senha é muito curta. Use pelo menos 8 caracteres."
   },

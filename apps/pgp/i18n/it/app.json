@@ -263,9 +263,6 @@
   "app_error_key_revoked": {
     "message": "Una chiave coinvolta in questa operazione è stata revocata dal proprietario. Procurati la chiave sostitutiva, poi importala."
   },
-  "app_error_weak_algorithm": {
-    "message": "Questa chiave usa un algoritmo di firma che non è più considerato sicuro. Chiedi al proprietario di riemetterla con SHA-256 o superiore."
-  },
   "app_error_corrupted": {
     "message": "I dati sono danneggiati o troncati. Procurati una copia nuova e completa e riprova."
   },

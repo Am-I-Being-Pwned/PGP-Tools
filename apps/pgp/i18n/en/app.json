@@ -351,10 +351,6 @@
     "message": "A key involved in this operation has been revoked by its owner. Get their replacement key, then import it.",
     "description": "User-facing error: a recipient or signer key carries a revocation."
   },
-  "app_error_weak_algorithm": {
-    "message": "This key uses a signature algorithm that is no longer considered secure. Ask the key's owner to reissue it with SHA-256 or stronger.",
-    "description": "User-facing error: the key was rejected by the security policy (SHA-1 / MD5 signatures). 'SHA-256' is a technical name."
-  },
   "app_error_corrupted": {
     "message": "The data is corrupted or was cut off. Get a fresh, complete copy and try again.",
     "description": "User-facing error: the PGP data is malformed or truncated."

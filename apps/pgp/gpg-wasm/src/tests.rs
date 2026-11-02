@@ -1254,7 +1254,8 @@ OO5a/hK/DR12WoUg1lFspDebSz2rFz0A
     );
 
     let err = crate::decrypt_cert_secrets(cert, b"wrong passphrase").unwrap_err();
-    assert_eq!(err, "Incorrect passphrase");
+    assert_eq!(error_code::error_code(&err), Some(ErrorCode::WrongPassphrase));
+    assert_eq!(error_code::message(&err), "Incorrect passphrase");
 }
 
 /// The CFB fallback takes its cipher, key and IV from an untrusted key
@@ -1737,8 +1738,9 @@ fn test_decrypt_password_wrong_password_is_one_message() {
     // corrupted" when the data is fine and the password is not.
     let err =
         decrypt_with_password(GPG_SYMMETRIC_V4.as_bytes(), b"not the password".to_vec(), None, None).unwrap_err();
+    assert_eq!(error_code::error_code(&err), Some(ErrorCode::SymmetricWrongPassword), "{err}");
     assert!(
-        err.starts_with("Wrong password, or this message is damaged:"),
+        error_code::message(&err).starts_with("Wrong password, or this message is damaged:"),
         "unexpected error: {err}"
     );
 }
@@ -1754,7 +1756,7 @@ fn test_decrypt_password_refuses_a_key_encrypted_message() {
     let ciphertext = encrypt(b"hello", &recipients, None, None).unwrap();
 
     let err = decrypt_with_password(&ciphertext, symmetric_password(), None, None).unwrap_err();
-    assert!(err.contains("Wrong password, or this message is damaged"));
+    assert_eq!(error_code::error_code(&err), Some(ErrorCode::SymmetricWrongPassword), "{err}");
 }
 
 #[test]
@@ -1896,7 +1898,7 @@ fn test_encrypt_refuses_a_message_nobody_could_open() {
 fn test_encrypt_with_password_rejects_the_wrong_password() {
     let ct = encrypt(b"x", "[]", None, Some(symmetric_password())).unwrap();
     let err = decrypt_with_password(&ct, b"not it".to_vec(), None, None).unwrap_err();
-    assert!(err.starts_with("Wrong password, or this message is damaged:"), "{err}");
+    assert_eq!(error_code::error_code(&err), Some(ErrorCode::SymmetricWrongPassword), "{err}");
 }
 
 #[test]
@@ -2597,7 +2599,7 @@ fn read_capped_admits_exactly_the_limit_and_refuses_one_more() {
     assert_eq!(under.len(), 1024);
 
     let err = read_capped(&data[..], 1023u64).unwrap_err();
-    assert_eq!(err, TOO_LARGE_TO_OPEN);
+    assert_eq!(err, too_large_to_open());
 
     // Empty input is not a special case.
     assert_eq!(read_capped(&[][..], 0u64).unwrap().len(), 0);
@@ -2637,3 +2639,86 @@ fn the_output_ceiling_follows_the_input_rather_than_a_flat_number() {
     assert!(MAX_VERIFIED_BYTES < MAX_DECRYPTED_BYTES);
 }
 
+
+// ── error codes: each site the UI classifies yields its code ─────────
+
+fn code(err: &str) -> Option<ErrorCode> {
+    error_code::error_code(err)
+}
+
+#[test]
+fn vault_aead_failure_is_wrong_passphrase() {
+    let sealed = crate::aes_gcm_encrypt(&[1u8; 32], b"x", b"aad").unwrap();
+    let (iv, ct) = sealed.split_at(12);
+    let err = crate::aes_gcm_decrypt(&[2u8; 32], iv, ct, b"aad").unwrap_err();
+    assert_eq!(code(&err), Some(ErrorCode::WrongPassphrase), "{err}");
+    // A malformed IV is not a password problem.
+    let err = crate::aes_gcm_decrypt(&[1u8; 32], &[0u8; 8], ct, b"aad").unwrap_err();
+    assert_eq!(code(&err), None, "{err}");
+}
+
+#[test]
+fn ocb_message_is_ocb_unsupported() {
+    let err =
+        decrypt_with_password(GPG_SYMMETRIC_OCB.as_bytes(), symmetric_password(), None, None).unwrap_err();
+    assert_eq!(code(&err), Some(ErrorCode::OcbUnsupported), "{err}");
+}
+
+#[test]
+fn non_recipient_key_is_no_decryption_key() {
+    let (recipient_pub, _) = adv_keypair();
+    let (_, other_priv) = adv_keypair();
+    let ct = encrypt(b"x", &adv_recipients(&recipient_pub), None, None).unwrap();
+    let h = store_key(&other_priv).unwrap();
+    let err = decrypt_with_handle(&ct, h, None, None).unwrap_err();
+    drop_key(h).unwrap();
+    assert_eq!(code(&err), Some(ErrorCode::NoDecryptionKey), "{err}");
+}
+
+#[test]
+fn expired_recipient_is_key_expired() {
+    let (expired_pub, _) = gen_expired_key();
+    let err = encrypt(b"x", &adv_recipients(&expired_pub), None, None).unwrap_err();
+    assert_eq!(code(&err), Some(ErrorCode::KeyExpired), "{err}");
+}
+
+#[test]
+fn revoked_recipient_is_key_revoked() {
+    let generated: serde_json::Value = serde_json::from_str(&gen_test_key()).unwrap();
+    let private_armor = generated["privateKeyArmored"].as_str().unwrap();
+    let h = store_key(private_armor).unwrap();
+    let revocation = revocation_certificate_with_handle(h).unwrap();
+    drop_key(h).unwrap();
+    let cert = openpgp::Cert::from_bytes(private_armor.as_bytes()).unwrap();
+    let sig = openpgp::Packet::from_bytes(revocation.as_bytes()).unwrap();
+    let (revoked, _) = cert.insert_packets(vec![sig]).unwrap();
+    let revoked_pub = armor_cert(&revoked, false).unwrap();
+
+    let err = encrypt(b"x", &adv_recipients(&revoked_pub), None, None).unwrap_err();
+    assert_eq!(code(&err), Some(ErrorCode::KeyRevoked), "{err}");
+}
+
+#[test]
+fn input_without_pgp_data_is_not_pgp_data() {
+    // Packets, but no certificate / no revocation among them.
+    let mut marker = Vec::new();
+    let mut w = openpgp::armor::Writer::new(&mut marker, openpgp::armor::Kind::PublicKey).unwrap();
+    openpgp::Packet::from(openpgp::packet::Marker::default()).serialize(&mut w).unwrap();
+    w.finalize().unwrap();
+    let generated: serde_json::Value = serde_json::from_str(&gen_test_key()).unwrap();
+    let public = generated["publicKeyArmored"].as_str().unwrap();
+    for err in [
+        parse_keys(&String::from_utf8(marker).unwrap()).unwrap_err(),
+        revocation_signatures(public).unwrap_err(),
+        verify_message("hello", "[]", None).unwrap_err(),
+    ] {
+        assert_eq!(code(&err), Some(ErrorCode::NotPgpData), "{err}");
+    }
+}
+
+#[test]
+fn oversized_signed_input_is_too_large() {
+    let big = "a".repeat(MAX_SIGNED_INPUT_BYTES + 1);
+    let err = verify_message(&big, "[]", None).unwrap_err();
+    assert_eq!(code(&err), Some(ErrorCode::TooLarge), "{err}");
+}

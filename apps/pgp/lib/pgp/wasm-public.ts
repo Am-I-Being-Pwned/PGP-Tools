@@ -18,6 +18,7 @@
  * See `apps/pgp/SECURITY.md` §3 for the full file map.
  */
 
+import type { EngineError } from "../errors/engine-error";
 import type {
   KeyDetails,
   KeyInfo,
@@ -25,6 +26,7 @@ import type {
   SignatureStatus,
 } from "./types";
 import type { WasmModule } from "./wasm-loader";
+import { decodeEngineError } from "../errors/engine-error";
 import { loadWasm } from "./wasm-loader";
 
 // ── status / metadata ────────────────────────────────────────────────
@@ -46,8 +48,9 @@ export interface CrxVerifyResult {
   extensionId?: string;
   /** Signature algorithm found, e.g. `sha256_with_rsa`. */
   algorithm?: string;
-  /** Human-readable reason when `valid` is false. */
-  error?: string;
+  /** Why `valid` is false: the engine's text, coded where the UI tells
+   *  the case apart. */
+  error?: EngineError | string;
 }
 
 /**
@@ -57,7 +60,12 @@ export interface CrxVerifyResult {
  */
 export async function verifyCrx(crx: Uint8Array): Promise<CrxVerifyResult> {
   const wasm = await loadWasm();
-  return JSON.parse(wasm.verifyCrx(crx)) as CrxVerifyResult;
+  const r = JSON.parse(wasm.verifyCrx(crx)) as CrxVerifyResult & {
+    error?: string;
+  };
+  return r.error === undefined
+    ? r
+    : { ...r, error: decodeEngineError(r.error) };
 }
 
 /** Parse an armored key for metadata only. Accepts public OR private
