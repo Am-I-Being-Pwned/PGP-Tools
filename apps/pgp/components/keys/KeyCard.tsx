@@ -1,10 +1,7 @@
-import type { MouseEvent as ReactMouseEvent } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import {
-  ChevronRightIcon,
   CopyIcon,
   DownloadIcon,
-  EllipsisVerticalIcon,
   KeyIcon,
   ListChecksIcon,
   LockIcon,
@@ -17,26 +14,26 @@ import {
 import { cn } from "@amibeingpwned/ui";
 import { Button } from "@amibeingpwned/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
 } from "@amibeingpwned/ui/dropdown-menu";
-import { Input } from "@amibeingpwned/ui/input";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@amibeingpwned/ui/tooltip";
 
 import type { PrivateKeyExporter } from "./ExportPrivateKeyPage";
+import { useAsyncAction } from "../../hooks/useAsyncAction";
+import { useFlashMessage } from "../../hooks/useFlashMessage";
 import { t } from "../../lib/i18n";
 import { KeyAvatar } from "../shared/KeyAvatar";
+import {
+  CardMenu,
+  CardRow,
+  DetailsChevron,
+  DIMMED,
+  LongIdColumn,
+  Pill,
+} from "./CardRow";
 import { ExportPrivateKeyPage } from "./ExportPrivateKeyPage";
 import { HEX_FINGERPRINT, longIdLines } from "./fingerprint-lines";
-import { useJustImported } from "./useJustImported";
-import { useLongPress } from "./useLongPress";
+import { UnlockPasswordField } from "./KeyUnlockRow";
 
 /** Lock/unlock lifecycle for a key that lives in the per-session vault (PGP).
  *  Absent on a descriptor ⇒ the key is sealed at rest (CRX): no unlock UI. */
@@ -88,19 +85,13 @@ interface KeyCardProps {
   advancedMode?: boolean;
   selectionMode: boolean;
   selected: boolean;
-  /** Toggle this card's membership while already in selection mode. */
-  /** `extend` is true when Shift was held: select everything between the
-   *  last-touched card and this one, rather than toggling just this one. */
+  /** `extend`: Shift was held -- select the run from the last-touched card. */
   onToggleSelect: (extend: boolean) => void;
   /** Enter selection mode with this card selected (long-press / menu). */
   onStartSelect: () => void;
   /** Just arrived from an import: scroll to it and pulse it once. */
   justImported?: boolean;
 }
-
-/** The design language's status pill; the tone classes are added per use. */
-const PILL =
-  "shrink-0 items-center rounded px-1.5 py-px text-[10.5px] font-medium whitespace-nowrap";
 
 export function KeyCard({
   model,
@@ -111,140 +102,84 @@ export function KeyCard({
   onStartSelect,
   justImported,
 }: KeyCardProps) {
-  const [importedRef, importedClass] = useJustImported(justImported);
   const [showPasswordUnlock, setShowPasswordUnlock] = useState(false);
   const [showExportPrivate, setShowExportPrivate] = useState(false);
   const [password, setPassword] = useState("");
-  const [unlocking, setUnlocking] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<string | null>(null);
-  const feedbackTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-
-  const longPress = useLongPress(onStartSelect, !selectionMode);
-
-  useEffect(() => {
-    return () => clearTimeout(feedbackTimer.current);
-  }, []);
+  const unlock = useAsyncAction(t("keys_wrong_password"));
+  const [feedback, flash] = useFlashMessage();
 
   const { session, exporter } = model;
   const isUnlocked = session?.isUnlocked ?? false;
   const isPasskey = model.protectionMethod === "passkey";
-  // CRX exports unlock inside the dialog; PGP requires the session unlocked.
+  // CRX exports unlock inside the page; PGP needs the session unlocked.
   const canExportPrivate = exporter !== null && (!session || isUnlocked);
 
-  const showFeedback = (msg: string) => {
-    setFeedback(msg);
-    clearTimeout(feedbackTimer.current);
-    feedbackTimer.current = setTimeout(() => setFeedback(null), 2000);
+  const handlePasswordUnlock = () =>
+    unlock.run(async () => {
+      if (!session) return;
+      if (await session.unlockWithPassword(password)) {
+        setShowPasswordUnlock(false);
+        setPassword("");
+      } else {
+        unlock.setError(t("keys_wrong_password"));
+      }
+    });
+
+  const handlePasskeyUnlock = () =>
+    unlock.run(async () => {
+      if (!session) return;
+      const result = await session.unlockWithPasskey();
+      if (result === false) unlock.setError(t("keys_passkey_failed"));
+    }, t("keys_passkey_failed"));
+
+  const cancelPasswordUnlock = () => {
+    setShowPasswordUnlock(false);
+    setPassword("");
+    unlock.reset();
   };
 
-  const handlePasswordUnlock = async () => {
-    if (!session) return;
-    setError(null);
-    setUnlocking(true);
-    const success = await session.unlockWithPassword(password);
-    if (success) {
-      setShowPasswordUnlock(false);
-      setPassword("");
-    } else {
-      setError(t("keys_wrong_password"));
-    }
-    setUnlocking(false);
-  };
-
-  const handlePasskeyUnlock = async () => {
-    if (!session) return;
-    setError(null);
-    const result = await session.unlockWithPasskey();
-    if (result === "cancelled") return;
-    if (!result) setError(t("keys_passkey_failed"));
-  };
-
-  const handleCardClick = (e: ReactMouseEvent) => {
-    if (longPress.consumeClick()) return; // swallow the click ending a long-press
-    if (selectionMode) {
-      onToggleSelect(e.shiftKey);
-      return;
-    }
-    model.onShowDetails?.();
-  };
-
-  const clickable = selectionMode || !!model.onShowDetails;
-  // While selecting, the card itself is the target: its own controls are dimmed
-  // and click-through (`dimmed`), and drop their hover highlight -- `hover:` /
-  // `group-hover:` fire from hovering the CARD, so pointer-events-none alone
-  // wouldn't stop the highlight.
-  const dimmed = "pointer-events-none opacity-40";
-
-  // The long key id at the right of the row: the fingerprint's last 16
-  // hex digits, as two stacked lines of two groups. Only for a hex fingerprint -- an SSH hash's
-  // tail, or a CRX extension id's, identifies nothing (see KeysView), so
-  // those keep their full id on the second line instead.
+  // A hex fingerprint's tail is a real id; an SSH hash's or a CRX
+  // extension id's is not, so those keep the full id in the meta line.
   const longId = HEX_FINGERPRINT.test(model.id) ? longIdLines(model.id) : null;
+  const error = unlock.error?.message;
 
   return (
-    <div
-      ref={importedRef}
-      onClick={handleCardClick}
-      {...longPress.handlers}
-      className={cn(
-        // One compact row of the keyring's stack (KeysView rounds the outer
-        // corners), laid out exactly like a ContactCard row so the two
-        // read as one list.
-        // select-none: the whole card is a click target, and a shift-click
-        // to extend a selection would otherwise drag a text range across it
-        // instead. The key line is still copyable from the card's menu.
-        "group bg-card relative rounded-[3px] py-2.5 pr-2 pl-3.5 transition-colors select-none",
-        importedClass,
-        // The import pulse is an outward ring: lift the card over its
-        // neighbours so the 2px gap doesn't hide half of it.
-        importedClass && "z-10",
-        // An inset ring (box-shadow, no layout impact) so selecting neither
-        // shifts the row nor spills into the gap between blocks.
-        selected && "ring-primary/70 ring-2 ring-inset",
-        clickable && "hover:bg-accent/50 cursor-pointer",
-      )}
+    <CardRow
+      selectionMode={selectionMode}
+      selected={selected}
+      onToggleSelect={onToggleSelect}
+      onStartSelect={onStartSelect}
+      onShowDetails={model.onShowDetails}
+      justImported={justImported}
     >
       <div className="flex items-center gap-2.5">
         <KeyAvatar fingerprint={model.id} size={32} />
 
         <div className="min-w-0 flex-1">
-          {/* Line 1 is the name and nothing else, so no pill can ever
-              squeeze it out of the row. */}
+          {/* The name alone on line 1: no pill can squeeze it out. */}
           <p className="truncate text-sm font-medium">{model.displayName}</p>
-          {/* The meta line: pills first (warnings leading, so they are
-              never the part that gets cut off), then the algorithm -- or,
-              for a key without a hex fingerprint, its id in full, since
-              that is the only form it has. Advanced mode always gets the
-              full id line. */}
+          {/* Pills first, warnings leading, so they are never what gets
+              cut off; then the algorithm (or the full id, see longId). */}
           <div className="mt-0.5 flex min-w-0 items-center gap-1">
             {model.securityWarning && (
-              <span
+              <Pill
+                tone="warn"
                 title={model.securityWarning}
-                className={cn(PILL, "bg-warn/12 text-warn inline-flex gap-1")}
+                icon={<TriangleAlertIcon className="h-2.5 w-2.5" />}
               >
-                <TriangleAlertIcon className="h-2.5 w-2.5" />
                 {t("keys_weak_sha1")}
-              </span>
+              </Pill>
             )}
-            {model.badge && (
-              <span className={cn(PILL, "bg-secondary text-muted-foreground")}>
-                {model.badge}
-              </span>
-            )}
+            {model.badge && <Pill>{model.badge}</Pill>}
             {model.isDefault && (
-              <span
-                title={t("keys_default_title")}
-                className={cn(PILL, "bg-secondary text-muted-foreground")}
-              >
+              <Pill title={t("keys_default_title")}>
                 {t("keys_default_badge")}
-              </span>
+              </Pill>
             )}
-            {/* How the key is protected, with the session state said by
-                the lock in it (its title names it: unlocked / locked /
-                sealed at rest). Green means on: a key live in this
-                session. */}
-            <span
+            {/* Protection, with the session state in its lock; green is
+                a key live in this session. */}
+            <Pill
+              tone={isUnlocked ? "good" : "neutral"}
               title={
                 session
                   ? isUnlocked
@@ -252,23 +187,18 @@ export function KeyCard({
                     : t("keys_status_locked")
                   : t("keys_status_sealed")
               }
-              className={cn(
-                PILL,
-                "inline-flex gap-1",
-                isUnlocked
-                  ? "bg-good/12 text-good"
-                  : "bg-secondary text-muted-foreground",
-              )}
+              icon={
+                isUnlocked ? (
+                  <LockOpenIcon className="h-2.5 w-2.5" />
+                ) : (
+                  <LockIcon className="h-2.5 w-2.5" />
+                )
+              }
             >
-              {isUnlocked ? (
-                <LockOpenIcon className="h-2.5 w-2.5" />
-              ) : (
-                <LockIcon className="h-2.5 w-2.5" />
-              )}
               {isPasskey
                 ? t("keys_protection_passkey")
                 : t("keys_protection_password")}
-            </span>
+            </Pill>
             {advancedMode || !longId ? (
               <span className="text-muted-foreground min-w-0 truncate font-mono text-[11px]">
                 {model.shortId} · {model.algorithm}
@@ -286,141 +216,79 @@ export function KeyCard({
           )}
         </div>
 
-        {longId && !advancedMode && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="text-muted-foreground shrink-0 font-mono text-[11px] leading-tight whitespace-nowrap">
-                <span className="block">{longId[0]}</span>
-                <span className="block">{longId[1]}</span>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>{t("keys_contact_long_id_title")}</TooltipContent>
-          </Tooltip>
-        )}
+        {longId && !advancedMode && <LongIdColumn lines={longId} />}
 
-        {/* Unlock/lock lifecycle, inline. Dimmed while selecting, hidden
-            while the password field below is open (it has its own
-            Cancel/Unlock), and absent for sealed-at-rest keys (CRX). */}
+        {/* Hidden while the password field is open (it has its own
+            controls); absent for sealed-at-rest keys. */}
         {session && !showPasswordUnlock && (
-          <span className={cn("shrink-0", selectionMode && dimmed)}>
-            {isUnlocked ? (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 px-2.5 text-xs"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  session.lock();
-                }}
-              >
-                {t("common_lock")}
-              </Button>
-            ) : isPasskey ? (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 px-2.5 text-xs"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  void handlePasskeyUnlock();
-                }}
-              >
-                {t("common_unlock")}
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 px-2.5 text-xs"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowPasswordUnlock(true);
-                }}
-              >
-                {t("common_unlock")}
-              </Button>
-            )}
+          <span className={cn("shrink-0", selectionMode && DIMMED)}>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 px-2.5 text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (isUnlocked) session.lock();
+                else if (isPasskey) void handlePasskeyUnlock();
+                else setShowPasswordUnlock(true);
+              }}
+            >
+              {isUnlocked ? t("common_lock") : t("common_unlock")}
+            </Button>
           </span>
         )}
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              onClick={(e) => e.stopPropagation()}
-              onPointerDown={(e) => e.stopPropagation()}
-              className={cn(
-                "text-muted-foreground rounded p-1 transition-colors",
-                selectionMode ? dimmed : "hover:text-foreground",
-              )}
-              aria-label={t("keys_key_options_aria")}
-            >
-              <EllipsisVerticalIcon className="h-4 w-4" />
-            </button>
-          </DropdownMenuTrigger>
-          {/* Radix portals this into <body>, but React synthetic events still
-                bubble through the COMPONENT tree -- without this stop, a
-                menu-item click also fires the card's onClick. */}
-          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-            {model.onRename && (
-              <DropdownMenuItem onClick={model.onRename}>
-                <PencilIcon />
-                {t("keys_rename")}
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem
-              onClick={() => {
-                model.onCopyPublicKey();
-                showFeedback(t("keys_public_key_copied"));
-              }}
-            >
-              <CopyIcon />
-              {t("keys_copy_public_key")}
+        <CardMenu
+          ariaLabel={t("keys_key_options_aria")}
+          selectionMode={selectionMode}
+        >
+          {model.onRename && (
+            <DropdownMenuItem onClick={model.onRename}>
+              <PencilIcon />
+              {t("keys_rename")}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={model.onDownloadPublicKey}>
-              <DownloadIcon />
-              {t("keys_download_public_key")}
-            </DropdownMenuItem>
-            {canExportPrivate && (
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onClick={() => setShowExportPrivate(true)}
-              >
-                <KeyIcon className="text-destructive" />
-                {t("keys_copy_private_key")}
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onStartSelect}>
-              <ListChecksIcon />
-              {t("keys_select")}
-            </DropdownMenuItem>
+          )}
+          <DropdownMenuItem
+            onClick={() => {
+              model.onCopyPublicKey();
+              flash(t("keys_public_key_copied"));
+            }}
+          >
+            <CopyIcon />
+            {t("keys_copy_public_key")}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={model.onDownloadPublicKey}>
+            <DownloadIcon />
+            {t("keys_download_public_key")}
+          </DropdownMenuItem>
+          {canExportPrivate && (
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"
-              onClick={model.onDelete}
+              onClick={() => setShowExportPrivate(true)}
             >
-              <Trash2Icon className="text-destructive" />
-              {t("keys_delete_key")}
+              <KeyIcon className="text-destructive" />
+              {t("keys_copy_private_key")}
             </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        {/* The row itself opens details too; this is the same action as a
-            visible, keyboard-reachable target. */}
-        {model.onShowDetails && !showPasswordUnlock && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              model.onShowDetails?.();
-            }}
-            aria-label={t("keys_key_details")}
-            className={cn(
-              "text-muted-foreground -ml-1 shrink-0 rounded p-0.5 transition-colors",
-              selectionMode ? dimmed : "group-hover:text-foreground",
-            )}
+          )}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={onStartSelect}>
+            <ListChecksIcon />
+            {t("keys_select")}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className="text-destructive focus:text-destructive"
+            onClick={model.onDelete}
           >
-            <ChevronRightIcon className="h-4 w-4" />
-          </button>
+            <Trash2Icon className="text-destructive" />
+            {t("keys_delete_key")}
+          </DropdownMenuItem>
+        </CardMenu>
+
+        {model.onShowDetails && !showPasswordUnlock && (
+          <DetailsChevron
+            onClick={model.onShowDetails}
+            selectionMode={selectionMode}
+          />
         )}
       </div>
 
@@ -428,7 +296,6 @@ export function KeyCard({
         <p className="text-good mt-1 ml-[42px] text-xs">{feedback}</p>
       )}
 
-      {/* Inline password unlock -- session keys only, and not while selecting. */}
       {session &&
         showPasswordUnlock &&
         !isUnlocked &&
@@ -438,37 +305,17 @@ export function KeyCard({
             className="mt-2 ml-[42px] space-y-2"
             onClick={(e) => e.stopPropagation()}
           >
-            <Input
-              type="password"
-              autoComplete="current-password"
+            <UnlockPasswordField
+              password={password}
+              onPasswordChange={setPassword}
+              busy={unlock.busy}
+              onUnlock={() => void handlePasswordUnlock()}
               placeholder={t("keys_enter_password_placeholder")}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void handlePasswordUnlock();
-              }}
             />
             {error && <p className="text-destructive text-xs">{error}</p>}
-            <div className="flex justify-between gap-1">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setShowPasswordUnlock(false);
-                  setPassword("");
-                  setError(null);
-                }}
-              >
-                {t("common_cancel")}
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => void handlePasswordUnlock()}
-                disabled={unlocking}
-              >
-                {unlocking ? "..." : t("common_unlock")}
-              </Button>
-            </div>
+            <Button size="sm" variant="outline" onClick={cancelPasswordUnlock}>
+              {t("common_cancel")}
+            </Button>
           </div>
         )}
 
@@ -477,9 +324,8 @@ export function KeyCard({
       )}
 
       {exporter && showExportPrivate && (
-        // The page portals visually (fixed inset-0) but lives in the card's
-        // DOM subtree, so stop clicks/presses from bubbling into the card's
-        // own click + long-press handlers.
+        // The page is fixed inset-0 but lives in the card's subtree: keep
+        // its clicks and presses out of the card's handlers.
         <div
           onClick={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
@@ -490,6 +336,6 @@ export function KeyCard({
           />
         </div>
       )}
-    </div>
+    </CardRow>
   );
 }
