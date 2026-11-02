@@ -16,6 +16,8 @@ interface UseComposeTranslationOptions {
   setInput: (text: string) => void;
   readingLanguage: string;
   onTranslated?: (from: string, to: string) => void;
+  /** Each status the translation run reports, as it happens. */
+  onStatus?: (status: TranslationStatus) => void;
 }
 
 export function useComposeTranslation({
@@ -23,6 +25,7 @@ export function useComposeTranslation({
   setInput,
   readingLanguage,
   onTranslated,
+  onStatus,
 }: UseComposeTranslationOptions) {
   const [status, setStatus] = useState<TranslationStatus>({ kind: "idle" });
   // No default target: a guess would name a language the user never chose.
@@ -85,7 +88,10 @@ export function useComposeTranslation({
           sourceLanguage: readingLanguage,
           targetLanguage: language,
           signal: controller.signal,
-          onStatus: setStatus,
+          onStatus: (next) => {
+            setStatus(next);
+            onStatus?.(next);
+          },
         });
         // The box changed while the model ran: don't replace it.
         if (result && getInput() === text) {
@@ -99,7 +105,7 @@ export function useComposeTranslation({
         if (abortRef.current === controller) abortRef.current = null;
       }
     },
-    [getInput, setInput, readingLanguage, onTranslated],
+    [getInput, setInput, readingLanguage, onTranslated, onStatus],
   );
 
   return {

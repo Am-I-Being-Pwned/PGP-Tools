@@ -1,9 +1,12 @@
-import type { ReactElement } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+} from "react";
 import {
   ArrowLeftIcon,
-  CheckIcon,
-  ClipboardIcon,
   DownloadIcon,
   ReplyIcon,
   RotateCcwIcon,
@@ -13,14 +16,8 @@ import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
 import { cn } from "@amibeingpwned/ui";
 import { Block } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
-import { Kbd } from "@amibeingpwned/ui/kbd";
 import { ariaKeyShortcuts, isMacPlatform } from "@amibeingpwned/ui/kbd-helpers";
 import { OptionBar } from "@amibeingpwned/ui/option-bar";
-import {
-  Popover,
-  PopoverAnchor,
-  PopoverContent,
-} from "@amibeingpwned/ui/popover";
 import {
   Select,
   SelectContent,
@@ -34,27 +31,19 @@ import type { WorkspaceOpsBridge } from "../../hooks/useActionContext";
 import type { RemedyAction } from "../../lib/errors/present";
 import type { WorkspaceAction } from "../../lib/messages";
 import type { ReaderSigner } from "../../lib/reader-protocol";
-import type { PublicContactKey } from "../../lib/storage/contacts";
-import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { WorkspaceDraftSource } from "../../lib/workspace-draft";
-import type { WorkspaceIntake } from "./useWorkspaceState";
+import type { WorkspaceIntake } from "./useWorkspace";
+import type { Mode } from "./workspace-state";
 import type { ComposeTools } from "./WorkspaceInput";
 import { useComposeTranslation } from "../../hooks/useComposeTranslation";
-import { useContacts } from "../../hooks/useContacts";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
-import { useCrxKeys } from "../../hooks/useCrxKeys";
 import { useDelayedFlag } from "../../hooks/useDelayedFlag";
-import { useKeyring } from "../../hooks/useKeyring";
 import { useNav } from "../../hooks/useNav";
 import { savePreference, usePreferences } from "../../hooks/usePreferences";
 import { useShortcut } from "../../hooks/useShortcut";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useVault } from "../../hooks/useVault";
-import {
-  COPY_SHORTCUT,
-  DOWNLOAD_SHORTCUT,
-  REPLY_SHORTCUT,
-} from "../../lib/actions/definitions";
+import { REPLY_SHORTCUT } from "../../lib/actions/definitions";
 import { languageLabel } from "../../lib/ai/languages";
 import { recoverArmorIfNeeded } from "../../lib/armor-recovery";
 import { applyTextareaEdit } from "../../lib/compose/apply-edit";
@@ -75,85 +64,42 @@ import {
 } from "../../lib/utils/key-naming";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 import { KeyAvatar } from "../shared/KeyAvatar";
-import { hasOpenSlideOver } from "../shared/SlideOver";
 import { ToggleBadge } from "../shared/ToggleBadge";
 import { withoutHiddenCharacters } from "./hidden-characters";
 import { KeySelector } from "./KeySelector";
 import { MessagePasswordPage } from "./MessagePasswordPage";
 import { selectionEngine } from "./recipient-engine";
 import { RecipientPicker } from "./RecipientPicker";
+import { ResultActions } from "./ResultActions";
 import { displayOnlySignerCard, signerCardState } from "./signer-card";
 import {
   HoverLabel,
   TranslateToggle,
   TranslationNote,
 } from "./TranslationPanel";
-import { useWorkspaceOperations } from "./useWorkspaceOperations";
-import { useWorkspaceState } from "./useWorkspaceState";
+import { useAutoRun } from "./useAutoRun";
+import { useWorkspace } from "./useWorkspace";
+import { useWorkspaceKeyboard } from "./useWorkspaceKeyboard";
 import { modeLabel, WorkspaceInput } from "./WorkspaceInput";
 import { WorkspaceResults } from "./WorkspaceResults";
 
-/** mod+Enter mirrors the main action button (Encrypt/Decrypt/Sign/...). */
+/** mod+Enter mirrors the main action button. */
 const RUN_SHORTCUT: ShortcutSpec = { mod: true, key: "Enter" };
-
-/** Hover/focus popover showing a button's keyboard shortcut as keycap
- *  chips. The child (a single Button) is the popover anchor; open state
- *  is driven by hover and focus rather than click, so the button's own
- *  onClick is untouched. */
-function ShortcutHint({
-  shortcut,
-  children,
-}: {
-  shortcut: ShortcutSpec;
-  children: ReactElement;
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverAnchor
-        asChild
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setOpen(false)}
-      >
-        {children}
-      </PopoverAnchor>
-      <PopoverContent
-        side="top"
-        className="pointer-events-none w-auto px-2 py-1.5"
-        onOpenAutoFocus={(e) => e.preventDefault()}
-      >
-        <Kbd shortcut={shortcut} />
-      </PopoverContent>
-    </Popover>
-  );
-}
 
 interface WorkspaceViewProps {
   pendingAction?: { action: WorkspaceAction; text: string } | null;
   onClearPending?: () => void;
-  /** The vault's stores (keys, contacts) are still being read, or keys
-   *  are still opening off the unlock ceremony. A context-menu auto-run
-   *  waits for this to settle so it decides on the full picture. */
+  /** Stores still loading or keys still opening: an auto-run waits. */
   vaultSettling?: boolean;
-  /** The first look for a context-menu selection hasn't answered yet;
-   *  the form is held back so it doesn't flash up ahead of one. */
+  /** The first look for a context-menu op hasn't answered yet. */
   awaitingPendingOp?: boolean;
-  /** Open `text` in a reader tab (App's useReaderTabs). Resolves once
-   *  the tab is opening; absent where Reply isn't offered. */
+  /** Open `text` in a reader tab; absent where Reply isn't offered. */
   onOpenReply?: (text: string, signer: ReaderSigner) => Promise<void>;
-  /** Encrypted workspace draft to rehydrate on mount (from a prior auto-lock). */
   restoreDraft?: Uint8Array | null;
-  /** Fired once the draft has been decrypted + applied. */
   onDraftRestored?: () => void;
-  /** Hands the parent a pull-model draft source: it asks for the draft once,
-   *  at lock time, then tells the workspace to drop its plaintext. */
   onRegisterDraftSource?: (src: WorkspaceDraftSource | null) => void;
-  /** A drop routed to the workspace by the global dropzone. */
   intake?: WorkspaceIntake | null;
   onIntakeConsumed?: () => void;
-  /** Pushes the palette-facing state/ops slice up on every change. */
   onPaletteOps?: (bridge: WorkspaceOpsBridge | null) => void;
 }
 
@@ -170,17 +116,31 @@ export function WorkspaceView({
   onIntakeConsumed,
   onPaletteOps,
 }: WorkspaceViewProps) {
-  const { keys: myKeys } = useKeyring();
-  const { contacts } = useContacts();
-  const { keys: crxKeys } = useCrxKeys();
+  const ws = useWorkspace({
+    pendingAction,
+    onClearPending,
+    restoreDraft,
+    onDraftRestored,
+    onRegisterDraftSource,
+    intake,
+    onIntakeConsumed,
+  });
+  const { state: s, dispatch, myKeys, contacts, crxKeys } = ws;
   const { session } = useVault();
-  const appNav = useNav();
-  const { keyDiscoveryEnabled } = usePreferences();
-  const { openImport, showTab, revealKeys, consume } = appNav;
-  const onClearEncryptTo = useCallback(
-    () => consume("encryptToKeyId"),
-    [consume],
-  );
+  const { openImport, showTab, revealKeys } = useNav();
+  const {
+    keyDiscoveryEnabled,
+    crxSigningEnabled,
+    defaultKeyId,
+    neverCacheKeys,
+    aiTranslateEnabled,
+    translationTargetLanguage,
+    signWhenEncrypting: alsoSign,
+    encryptToSelf,
+    historyEnabled: saveToHistory,
+    recentRecipients,
+  } = usePreferences();
+
   const onNavigateToKeys = useCallback(
     (prefill?: string) => (prefill ? openImport({ prefill }) : showTab("keys")),
     [openImport, showTab],
@@ -189,102 +149,54 @@ export function WorkspaceView({
     (keyId: string) => revealKeys([keyId]),
     [revealKeys],
   );
-  const lookupSignerKey = useCallback(
-    (keyId: string) => openImport({ lookup: keyId }),
-    [openImport],
-  );
-  const getKeyHandle = session.getKeyHandle;
-  const onUnlockWithPassword = session.unlockWithPassword;
-  const onUnlockWithPasskey = session.unlockWithPasskey;
-  const encryptToKeyId = appNav.encryptToKeyId;
-  const onLookupSigner = keyDiscoveryEnabled ? lookupSignerKey : undefined;
-  const onOperationComplete = session.lockAllIfNoCache;
-  const {
-    crxSigningEnabled,
-    autoDownloadFiles,
-    autoDownloadText,
-    defaultKeyId,
-    neverCacheKeys,
-    aiTranslateEnabled,
-    translationTargetLanguage,
-  } = usePreferences();
-  const allPublicKeys: (ProtectedKeyBlob | PublicContactKey)[] = [
-    ...myKeys,
-    ...contacts,
-  ];
 
-  const s = useWorkspaceState({
-    myKeys,
-    crxKeys,
-    crxSigningEnabled,
-    pendingAction,
-    onClearPending,
-    allPublicKeys,
-    encryptToKeyId,
-    onClearEncryptTo,
-    restoreDraft,
-    onDraftRestored,
-    onRegisterDraftSource,
-    intake,
-    onIntakeConsumed,
-    defaultKeyId,
-  });
-
-  const ops = useWorkspaceOperations({
-    s,
-    myKeys,
-    contacts,
-    crxKeys,
-    crxSigningEnabled,
-    allPublicKeys,
-    getKeyHandle,
-    onUnlockWithPassword,
-    onUnlockWithPasskey,
-    autoDownloadFiles,
-    autoDownloadText,
-    onOperationComplete,
-    defaultKeyId,
-  });
+  const loading = s.run.kind === "running";
+  const done = s.run.kind === "done";
+  const error = s.run.kind === "error" ? s.run.error : null;
+  const { prompt } = s;
+  const { verdict } = s.result;
+  const hasOutputText = s.output.len > 0;
+  const hasInput = s.files.length > 0 || s.input.len > 0;
+  const resetResults = () => dispatch({ type: "reset-results" });
+  const resetAll = () => dispatch({ type: "reset-all" });
+  const setMode = (mode: Mode) => dispatch({ type: "mode-picked", mode });
 
   const translation = useTranslation({
-    getOutput: s.getOutput,
-    outputVersion: s.outputVersion,
-    setTranslation: s.setTranslation,
+    getOutput: ws.getOutput,
+    outputVersion: s.output.version,
+    setTranslation: ws.setTranslation,
     targetLanguage: translationTargetLanguage,
   });
 
-  // Translate-before-sending, the composer's counterpart. Replaces the
-  // box's text; the toast's Undo (and the menu's "Restore") put the
-  // original back. Problems surface as toasts rather than a status
-  // strip: the composer has no result bar to carry one.
-  // Written through the textarea's own editing path when it is mounted,
-  // so Cmd/Ctrl+Z reverts a translation like any other edit.
-  const { inputElRef, handleInputChange } = s;
-  const translatedToastRef = useRef<string | number | null>(null);
-  const translatedToastSeq = useRef(0);
+  // ── compose translation ────────────────────────────────────────────
+  // Written through the textarea's own editing path when mounted, so
+  // mod+Z reverts a translation like any other edit.
+  const { inputElRef, inputChanged } = ws;
   const setComposedText = useCallback(
     (text: string) => {
       const el = inputElRef.current;
-      if (el) {
-        const edit = { text, start: text.length, end: text.length };
-        if (applyTextareaEdit(el, edit)) return;
+      if (
+        el &&
+        applyTextareaEdit(el, { text, start: text.length, end: text.length })
+      ) {
+        return;
       }
-      handleInputChange(text);
+      inputChanged(text);
     },
-    [inputElRef, handleInputChange],
+    [inputElRef, inputChanged],
   );
+  const translatedToastRef = useRef<string | number | null>(null);
+  const translatedToastSeq = useRef(0);
   const composeTranslation = useComposeTranslation({
-    getInput: s.getInput,
+    getInput: ws.getInput,
     setInput: setComposedText,
     readingLanguage: translationTargetLanguage,
     onTranslated: (from, to) => {
-      // A fresh id per translation, with the previous toast dismissed,
-      // rather than one fixed id: a toast reusing the id of one that is
-      // still animating out (its Undo was just pressed) is merged into
-      // it and leaves with it, so a quick second translation showed no
-      // toast and no Undo.
-      if (translatedToastRef.current !== null)
+      // A fresh id per translation: a toast reusing the id of one still
+      // animating out is merged into it and leaves with it.
+      if (translatedToastRef.current !== null) {
         toast.dismiss(translatedToastRef.current);
+      }
       translatedToastRef.current = toast.message(
         t("workspace_compose_translated", {
           from: languageLabel(from),
@@ -300,357 +212,207 @@ export function WorkspaceView({
         },
       );
     },
+    onStatus: (status) => {
+      // The composer has no result bar: problems surface as toasts.
+      if (status.kind === "same-language") {
+        toast.message(
+          t("workspace_compose_same_language", {
+            language: languageLabel(status.language),
+          }),
+          { id: "compose-translate" },
+        );
+      } else if (status.kind === "unavailable") {
+        toast.message(t("workspace_compose_translate_unavailable"), {
+          id: "compose-translate",
+        });
+      } else if (status.kind === "error") {
+        toast.error(status.message, { id: "compose-translate" });
+      }
+    },
   });
-  const composeStatus = composeTranslation.status;
-  // The undo original is plaintext the workspace's own refs do not
-  // hold: wiped with them at master lock (§8.11), dropped once the user
-  // edits past the translation, and any in-flight translation is
-  // cancelled the moment the box stops being a composer.
-  const { addWiper, inputVersion: composedVersion, getInput: readInput } = s;
+  // The undo original is plaintext: wiped at master lock (§8.11), dropped
+  // once the user edits past it, cancelled when the box stops composing.
+  const { addWiper, getInput } = ws;
   const { forget, noteInputChanged, cancel } = composeTranslation;
   useEffect(() => addWiper(forget), [addWiper, forget]);
   useEffect(() => {
-    noteInputChanged(readInput());
-  }, [composedVersion, noteInputChanged, readInput]);
-  // The message box's tools, published for the palette and shortcuts.
+    noteInputChanged(getInput());
+  }, [s.input.version, noteInputChanged, getInput]);
   const composeToolsRef = useRef<ComposeTools | null>(null);
   const onToolsReady = useCallback((tools: ComposeTools | null) => {
     composeToolsRef.current = tools;
   }, []);
-  const composeCanEdit =
-    (s.mode === "encrypt" || s.mode === "sign") &&
-    s.files.length === 0 &&
-    !s.privateKeyDetected;
-  useEffect(() => {
-    if (!composeCanEdit) cancel();
-  }, [composeCanEdit, cancel]);
-  // The find bar's highlight mirror holds a copy of the text in the
-  // element tree; close it before the lock flip so it is gone too.
+  // The find bar's highlight mirror holds a copy of the text.
   useEffect(
     () => addWiper(() => composeToolsRef.current?.closeFind()),
     [addWiper],
   );
+  const composeCanEdit =
+    (s.mode === "encrypt" || s.mode === "sign") &&
+    s.files.length === 0 &&
+    s.input.key !== "private";
+  useEffect(() => {
+    if (!composeCanEdit) cancel();
+  }, [composeCanEdit, cancel]);
   const translateEnabled =
-    !!aiTranslateEnabled && composeStatus.kind !== "unavailable";
-  // The result side: a decrypted or verified message is readable on
-  // screen and the feature can act on it.
+    aiTranslateEnabled && composeTranslation.status.kind !== "unavailable";
   const resultCanTranslate =
-    !!aiTranslateEnabled &&
-    s.operationDone &&
-    s.hasOutput &&
+    aiTranslateEnabled &&
+    done &&
+    hasOutputText &&
     (s.mode === "decrypt" || s.mode === "verify") &&
     translation.status.kind !== "unavailable" &&
     translation.status.kind !== "same-language";
-  useEffect(() => {
-    switch (composeStatus.kind) {
-      case "same-language":
-        toast.message(
-          t("workspace_compose_same_language", {
-            language: languageLabel(composeStatus.language),
-          }),
-          { id: "compose-translate" },
-        );
-        break;
-      case "unavailable":
-        toast.message(t("workspace_compose_translate_unavailable"), {
-          id: "compose-translate",
-        });
-        break;
-      case "error":
-        toast.error(composeStatus.message, { id: "compose-translate" });
-        break;
-      default:
-        break;
-    }
-  }, [composeStatus]);
 
-  // Rendered only under the full-height decrypt result, which is the one
-  // place a readable plaintext is on screen. Built here (rather than
-  // inside WorkspaceResults) so the translation refs stay owned by the
-  // workspace state that wipes them at master lock.
-  // A footer bar on the result box: status text on the left, the
-  // translate toggle on the right. The bar is permanent chrome once
-  // translation is enabled, so a status appearing or clearing never
-  // resizes the message above it -- which is exactly what happened while
-  // this was a line rendered under the box.
-  const translationFooter = aiTranslateEnabled ? (
-    <>
-      <TranslationNote
-        status={translation.status}
-        showing={translation.showing}
-      />
-      <TranslateToggle
-        status={translation.status}
-        showing={translation.showing}
-        hasTranslation={s.hasTranslation}
-        onTranslate={() => void translation.translate()}
-        onToggle={translation.toggle}
-        targetLanguage={translationTargetLanguage}
-      />
-    </>
-  ) : null;
+  const showLoadingLabel = useDelayedFlag(loading);
 
-  // Deferred loading labels: buttons disable immediately off s.loading,
-  // but the label swap waits so sub-150ms crypto ops never flash
-  // "Processing..." for operations that finish near-instantly.
-  const showLoadingLabel = useDelayedFlag(s.loading);
-
-  const needsRecipient = s.mode === "encrypt";
-  // What makes an encrypt runnable: someone must be able to open the
-  // result. A recipient does that, and so does an armed password -- the
-  // latter on its own is the whole `gpg -c` case.
-  const canEncrypt =
-    s.selectedRecipientIds.length > 0 || s.encryptPasswordReady;
-
-  // A message encrypted to a PASSWORD and to nobody's key cannot be
-  // opened by any key in the vault, so offering a picker would be
-  // offering choices that are all wrong -- the same reasoning that
-  // narrows the picker to SSH identities for an age message, taken to
-  // its end. It also means the flow works with an empty keyring, which
-  // is the honest behaviour: this message needs no key.
+  // ── what applies ───────────────────────────────────────────────────
+  const canEncrypt = s.recipientIds.length > 0 || ws.passwordReady;
+  // A password-only or unencrypted message needs no key: offering a
+  // picker of keys that are all wrong is worse than none.
   const passwordOnlyMessage =
     s.mode === "decrypt" &&
     s.messageEncryption?.password === true &&
     !s.messageEncryption.publicKey;
-  // A "PGP MESSAGE" with no encryption layer needs no key either: it is
-  // opened as what it is, signed or plain, and said to be unencrypted.
   const unencryptedMessage =
     s.mode === "decrypt" && s.messageEncryption?.encrypted === false;
   const needsPrivateKey =
     (s.mode === "decrypt" && !passwordOnlyMessage && !unencryptedMessage) ||
     s.mode === "sign";
-  const hasInput = s.files.length > 0 || s.hasInput;
 
-  // Copy the armored output straight from the bottom action bar (the compact
-  // preview no longer carries its own copy button). Binary/file output has no
-  // text to copy, so the Copy half is only shown when there is output text.
-  const [copied, setCopied] = useState(false);
-  const copyTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const { copy } = useCopyToClipboard();
-  const handleCopy = async () => {
-    // No label: the button's own 2s check is the success feedback. A
-    // rejected write (panel not focused) surfaces as an error toast.
-    if (!(await copy(s.getOutput()))) return;
-    setCopied(true);
-    clearTimeout(copyTimer.current);
-    copyTimer.current = setTimeout(() => setCopied(false), 2000);
-  };
-  const canCrxSign = !!crxSigningEnabled && crxKeys.length > 0;
   const singleCrxFile = s.files.length === 1 && /\.crx$/i.test(s.files[0].name);
-  // CRX signs a packed extension: offer it only for a single .zip that
-  // actually contains a manifest.json (verified async in state), never for
-  // arbitrary files. PGP signing stays available via the "Sign as" toggle.
+  // Only for a single .zip that holds a manifest.json; PGP signing stays
+  // available through the "Sign as" toggle.
   const crxSignAvailable =
-    canCrxSign && s.mode === "sign" && s.isExtensionZip && !s.operationDone;
-  const showCrxSign = crxSignAvailable && s.signKind === "crx";
-  // A dropped .crx in verify mode: CRX signature verification replaces the
-  // (useless there) PGP verify. Other modes keep their normal actions — a
-  // .crx can still be encrypted or PGP-signed like any other file.
+    ws.canCrxSign && s.mode === "sign" && s.isExtensionZip && !done;
+  const showCrxSign = crxSignAvailable && (s.signKindPick ?? "crx") === "crx";
   const showCrxVerify =
-    !!crxSigningEnabled && s.mode === "verify" && singleCrxFile;
-  // A completed CRX sign is the only op that yields a single `.crx` file
-  // result; it auto-saves via the Save-As prompt (with a manual Save button
-  // as a fallback) instead of the usual anchor download.
+    crxSigningEnabled && s.mode === "verify" && singleCrxFile;
   const crxResult =
-    s.operationDone &&
-    s.fileResults.length === 1 &&
-    /\.crx$/i.test(s.fileResults[0].name)
-      ? s.fileResults[0]
+    done &&
+    s.result.files.length === 1 &&
+    /\.crx$/i.test(s.result.files[0].name)
+      ? s.result.files[0]
       : null;
-  const crxFilename = crxResult?.name ?? "";
 
-  // Save the signed CRX under its real `.crx` name via a "Save As" download.
-  // A Save-As download sets Chrome's TARGET_DISPOSITION_PROMPT, the one case
-  // where Chrome does NOT route a CRX (identified by its Cr24 magic) to the
-  // extension installer -- so it lands on disk as a plain file, no rename, no
-  // install. See saveCrxViaPrompt for the source-level reasoning.
-  const handleSaveCrx = async () => {
+  // A Save-As download is the one case Chrome does not route a CRX to the
+  // extension installer (see saveCrxViaPrompt).
+  const saveCrx = async () => {
     if (!crxResult) return;
-    const result = await saveCrxViaPrompt(crxResult.data, crxFilename);
-    if (result === "saved") {
-      s.setStatusText(t("workspace_crx_saved", { name: crxFilename }));
-    } else if (result === "cancelled") {
-      s.setStatusText(null);
-    } else {
-      // Permission refused / unsupported / write blocked. The Save button
-      // stays on screen so the user can retry from a fresh user gesture (the
-      // first-time `downloads` permission grant needs one).
-      s.setStatusText(t("workspace_crx_save_failed"));
-    }
+    const result = await saveCrxViaPrompt(crxResult.data, crxResult.name);
+    dispatch({
+      type: "status",
+      text:
+        result === "saved"
+          ? t("workspace_crx_saved", { name: crxResult.name })
+          : result === "cancelled"
+            ? null
+            : t("workspace_crx_save_failed"),
+    });
   };
-
-  // Auto-save the moment a signed CRX is ready, so the user doesn't have to
-  // hit Save. Keyed on the result's identity via a ref so it fires exactly
-  // once per sign (not on every re-render). If the first-ever save needs the
-  // `downloads` permission it may require a user gesture the async sign has
-  // already spent -- the Save button below covers that.
-  const autoSavedRef = useRef<Uint8Array | null>(null);
+  // Saved the moment it is signed; the Save button covers a first-time
+  // `downloads` grant that needs a fresh gesture.
+  const autoSaveCrx = useEffectEvent(() => void saveCrx());
+  const crxData = crxResult?.data;
   useEffect(() => {
-    if (!crxResult) {
-      autoSavedRef.current = null;
-      return;
-    }
-    if (autoSavedRef.current === crxResult.data) return;
-    autoSavedRef.current = crxResult.data;
-    void handleSaveCrx();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [crxResult]);
+    if (crxData) autoSaveCrx();
+  }, [crxData]);
 
-  // After decrypting to readable text, give the plaintext the whole panel with
-  // a Back button, instead of cramming it into a small fixed-height preview.
-  // A verified message reads the same way: the signer's card on top and
-  // only the text the signature covers under it -- not the paste.
+  // A decrypted or verified text gets the whole panel, with Back.
   const showFullOutput =
-    s.operationDone &&
-    (s.mode === "decrypt" || s.mode === "verify") &&
-    s.hasOutput;
-  // Reply needs someone to address: a signer whose key we hold. An
-  // unknown signer is a placeholder record with no key, and an unsigned
-  // or failed message has none, so neither gets the button. Nor does a
-  // message that was never encrypted (its card is amber): replying would
-  // treat a copy anyone could have sent as private mail from the signer.
+    done && (s.mode === "decrypt" || s.mode === "verify") && hasOutputText;
+  // Reply needs a signer whose key we hold, on a message that was
+  // encrypted: an amber card is never private mail from anyone.
   const replyTo =
-    showFullOutput && s.mode === "decrypt" && s.signatureTone === "success"
-      ? s.verifiedSigner
+    showFullOutput && s.mode === "decrypt" && verdict?.tone === "success"
+      ? verdict
       : null;
   const canReply = replyTo !== null;
-  /** Move the message into a reader tab (App seals it and serves it,
-   *  see hooks/useReaderTabs) and turn this workspace into the reply:
-   *  empty, encrypt mode, addressed to the signer. The reset wipes the
-   *  output here, so the panel keeps no plaintext copy of its own. */
-  const openReply = useCallback(() => {
+  /** Hand the message to a reader tab and turn this workspace into the
+   *  reply. The reset wipes the output: the panel keeps no copy. */
+  const openReply = () => {
     if (!replyTo || !onOpenReply) return;
-    // The card exactly as the panel shows it -- tone, label, the notes
-    // (signing date, co-signers, "not marked verified", "may have been
-    // forwarded"), the clash pill, a lookalike or SHA-1 warning -- minus
-    // anything it does not display: no public key travels to the tab.
+    // The card exactly as shown, minus anything it doesn't display: no
+    // public key travels to the tab.
     const signer = displayOnlySignerCard(
       signerCardState({
-        signer: replyTo,
-        tone: s.signatureTone,
-        note: s.signatureNote,
-        caveat: s.signerCaveat,
-        statusText: s.statusText ?? undefined,
+        signer: replyTo.signer,
+        tone: replyTo.tone,
+        note: replyTo.note,
+        caveat: replyTo.caveat,
+        statusText: s.result.status ?? undefined,
         contacts,
         myKeys,
       }),
     );
-    void onOpenReply(s.getOutput(), signer)
+    void onOpenReply(ws.getOutput(), signer)
       .then(() => {
-        s.resetAll();
-        s.setMode("encrypt");
-        s.setSelectedRecipientIds([signer.contact.keyId]);
-        // The new tab takes focus; hand it back so the reply can be typed
-        // straight away. Best effort -- the browser may keep it on the
-        // tab -- and after the reset has swapped the message box back in.
+        resetAll();
+        dispatch({ type: "encrypt-to", keyId: signer.contact.keyId });
+        // The new tab takes focus; hand it back for the reply. Best effort.
         requestAnimationFrame(() => {
           window.focus();
-          s.inputElRef.current?.focus();
+          inputElRef.current?.focus();
         });
       })
       .catch(() => toast.error(t("workspace_reply_failed")));
-  }, [replyTo, onOpenReply, s, contacts, myKeys]);
+  };
 
-  // Which engine the current recipient selection commits this message to
-  // ("ssh" = age, "pgp" = OpenPGP, null = nothing selected yet), and what
-  // that rules out. The picker prevents a mixed selection, so this is a
-  // single answer rather than a conflict to resolve.
+  // ── recipients and signer ──────────────────────────────────────────
   // Own keys before contacts -- see `resolveSelectedRecipients`.
   const selectedRecipientKeys = resolveSelectedRecipients(
-    s.selectedRecipientIds,
+    s.recipientIds,
     contacts,
     myKeys,
   );
   const encryptEngine = selectionEngine(selectedRecipientKeys);
-  // Only OpenPGP keys can sign: age has no signature format, so an SSH
-  // identity is not a candidate signer anywhere -- neither in the "Sign
-  // with" list on the sign tab nor in the one next to the Sign toggle.
-  // Narrowed rather than dimmed, same as the age-decrypt list below.
+  // Only OpenPGP keys sign: SSH identities are narrowed out, not dimmed.
   const signKeyChoices = myKeys.filter(isPgpRecord);
-  // PGP signing picks its key on the card's top line; with no key to
-  // pick, the picker's "create one" prompt stays under the card.
   const signerInHeader =
     s.mode === "sign" && !showCrxSign && signKeyChoices.length > 0;
-  // age has no signing operation at all, so the Sign toggle can't apply;
-  // neither can it if none of the user's own keys is a PGP key.
   const signBlockedReason =
     encryptEngine === "ssh"
       ? t("workspace_sign_blocked_age")
       : signKeyChoices.length === 0
         ? t("workspace_sign_blocked_no_pgp_key")
         : undefined;
-  // Who the From line names: the same pick the encrypt makes
-  // (`resolvePgpSignerId`) -- the selected key if it can sign, else the
-  // first PGP key.
+  // The same pick the encrypt makes: the key in effect if it signs, else
+  // the first PGP key.
   const signer =
-    signKeyChoices.find((k) => k.keyId === s.selectedKeyId) ??
+    signKeyChoices.find((k) => k.keyId === ws.selectedKeyId) ??
     signKeyChoices.at(0);
   const signerName = signer
     ? formatKeyDisplayName(displayUserId(signer))
     : { name: "", detail: "" };
-  // Asked of the same function the encrypt runs through, rather than
-  // re-derived: whether the user's own key rides along depends on the
-  // engine, the default key and whether a selected recipient already is
-  // one of their keys, and a second implementation of that would be free
-  // to disagree with the one that actually encrypts.
+  // Asked of the function the encrypt runs through, so the preview cannot
+  // disagree with what actually happens.
   const selfExcluded =
-    s.mode === "encrypt" && s.selectedRecipientIds.length > 0
+    s.mode === "encrypt" && s.recipientIds.length > 0
       ? buildEncryptRecipients({
           recipients: selectedRecipientKeys.map(toSelectedRecipient),
-          encryptToSelf: s.encryptToSelf,
+          encryptToSelf,
           ownKeys: myKeys,
-          signingKeyId: s.alsoSign ? s.selectedKeyId : null,
+          signingKeyId: alsoSign ? ws.selectedKeyId : null,
           defaultKeyId,
         }).selfExcluded
       : false;
 
-  // Undoable clears (toast Undo, or mod+z while the box is still empty --
-  // once the user types again, native undo owns mod+z). The snapshot itself
-  // lives in `useWorkspaceState`'s ref, not in state here and not captured
-  // in the toast's closure: sonner holds an action callback alive for the
-  // toast's whole lifetime, and anything that closes over the plaintext
-  // survives a master lock. `s.wipePlaintext()` clears the buffer too.
-  const lastEscapeAt = useRef(0);
-  // When the double-tap last cleared: a third press soon after goes all
-  // the way back to the start, Encrypt mode.
-  const lastClearAt = useRef(0);
-
-  const restoreCleared = () => s.restoreClearUndo();
-
-  /** Put the cursor back in the message box.
-   *
-   *  Reached two ways, because ONE of them cannot use the other. The
-   *  document-level Escape listener below covers most of the panel; the
-   *  recipient box cannot, because its input lives inside a cmdk
-   *  `Command` root that consumes Escape before it can bubble to
-   *  document. So the picker calls this directly when its own Escape
-   *  layers are exhausted -- see `onEscapeExhausted`. */
-  const focusMessageBox = () => {
-    // Next tick, not now. Radix restores focus to a popover's anchor
-    // after it closes, and the recipient box IS that anchor -- focusing
-    // synchronously from a keydown it is still unwinding means Radix
-    // puts focus straight back and the press looks like it did nothing.
-    // The same deferral `clearBoxUndoable` needs, for the same class of
-    // reason.
+  // ── clearing ───────────────────────────────────────────────────────
+  // The undo snapshot lives in the workspace's wipeable ref, never in a
+  // toast closure: sonner keeps action callbacks alive for the toast's
+  // lifetime, past a master lock.
+  const restoreCleared = ws.restoreClearUndo;
+  /** Next tick: Radix restores focus to a closing popover's anchor (the
+   *  recipient box), and the clear may have just remounted the card. */
+  const focusMessageBox = () =>
     setTimeout(() => document.getElementById("pgp-input")?.focus(), 0);
-  };
-
-  /** After a clear, put focus in the message box: a clear is "start
-   *  again", and the next thing to do is type (Shift+Tab reaches the
-   *  recipients). If the box isn't there -- a file list in its place --
-   *  the first control on the message card instead. Next tick: the clear
-   *  may have just remounted the card (the message box in place of a
-   *  file list, the form in place of a result), and Radix may still be
-   *  restoring focus to the recipient box it anchors. */
+  /** After a clear: the message box, else the card's first control. */
   const focusFlowStart = () => {
     setTimeout(() => {
       const input = document.getElementById("pgp-input");
-      if (input) {
-        input.focus();
-        return;
-      }
-      const card = document.querySelector<HTMLElement>("[data-workspace-card]");
-      card
+      if (input) return input.focus();
+      document
+        .querySelector<HTMLElement>("[data-workspace-card]")
         ?.querySelector<HTMLElement>(
           [
             '[role="combobox"]',
@@ -663,491 +425,277 @@ export function WorkspaceView({
         ?.focus();
     }, 0);
   };
-
-  /** The ↺ button: clear everything, then start again from the top. */
   const resetAndRefocus = () => {
-    s.resetAll();
+    resetAll();
     focusFlowStart();
   };
-
-  // Switching mode is moving on, as switching tab is (`changeTab` in the
-  // panel does the same): a toast about the last mode's message, Undo
-  // included, no longer has anything on screen to be about. Watches the
-  // mode itself rather than the switch, so the automatic changes (pasted
-  // or dropped ciphertext, a context-menu open, Encrypt to) count too.
-  const lastMode = useRef(s.mode);
-  useEffect(() => {
-    if (s.mode === lastMode.current) return;
-    lastMode.current = s.mode;
-    toast.dismiss();
-  }, [s.mode]);
-
-  const clearWithUndo = (message: string, textOnly = false) => {
-    s.stashClearUndo();
-    // Emptying the box the way deleting its text would: attachments
-    // staged beside the message stay staged.
-    if (textOnly) s.handleInputChange("");
-    else s.resetAll();
-    toast.message(message, {
-      id: "workspace-text-cleared",
-      duration: 4000,
-      action: { label: t("workspace_undo"), onClick: restoreCleared },
-    });
-  };
-
-  // Anything the double-Escape clear would remove. Recipients count on
-  // their own: a message addressed but not yet written is still staged.
-  const hasStaged =
-    s.hasInput || s.files.length > 0 || s.selectedRecipientIds.length > 0;
-
-  const clearBoxUndoable = () => {
-    if (!hasStaged) return;
-    clearWithUndo(t("workspace_cleared_toast"));
-    focusFlowStart();
-  };
-
-  // The in-box "Clear text" button. Same mechanism; it stays silent once an
-  // operation has completed (the result panel is its own feedback).
-  //
-  // It clears the TEXT. Files only share the box with it in Encrypt (the
-  // message goes alongside them); they have their own Clear all.
-  const clearTextUndoable = () => {
-    const textOnly = s.files.length > 0;
-    if (s.operationDone) {
-      s.stashClearUndo();
-      if (textOnly) s.handleInputChange("");
-      else s.resetAll();
-    } else {
-      clearWithUndo(t("workspace_text_cleared_toast"), textOnly);
+  /** `textOnly`: empty the box as deleting its text would; attachments
+   *  staged beside it stay. */
+  const clear = (toastMessage: string | null, textOnly = false) => {
+    ws.stashClearUndo();
+    if (textOnly) inputChanged("");
+    else resetAll();
+    if (toastMessage) {
+      toast.message(toastMessage, {
+        id: "workspace-text-cleared",
+        duration: 4000,
+        action: { label: t("workspace_undo"), onClick: restoreCleared },
+      });
     }
     focusFlowStart();
   };
+  // Recipients count: a message addressed but not written is staged.
+  const hasStaged =
+    s.input.len > 0 || s.files.length > 0 || s.recipientIds.length > 0;
+  /** The in-box "Clear text": silent after a run (the result is its own
+   *  feedback). Files have their own Clear all. */
+  const clearText = () =>
+    clear(done ? null : t("workspace_text_cleared_toast"), s.files.length > 0);
 
   useShortcut({ mod: true, key: "z" }, restoreCleared, {
-    enabled: s.clearUndoAvailable && !s.hasInput,
+    enabled: s.clearUndo && s.input.len === 0,
+  });
+  useWorkspaceKeyboard({
+    mode: s.mode,
+    showFullOutput,
+    hasStaged,
+    promptOpen: prompt !== null,
+    onBack: resetResults,
+    onClear: () => clear(t("workspace_cleared_toast")),
+    onResetMode: () => dispatch({ type: "mode-reset" }),
+    focusMessageBox,
   });
 
-  // Escape layers for the workspace itself (subpages and the palette
-  // own their Escapes and never let them reach this listener): in the
-  // full-output view a single press mirrors Back; in the form view a
-  // quick double-tap clears the box, undoably; and on an EMPTY workspace
-  // a single press puts the cursor back in the message box.
-  //
-  // Keep pressing: a third press shortly after a double-tap clear also
-  // switches back to Encrypt, the panel's starting mode -- "Escape spam"
-  // resets everything, not just the text.
-  //
-  // That last layer is what Escape means everywhere else in this panel:
-  // "put me back". With nothing to clear it was the only press that did
-  // nothing at all -- it silently armed a double-tap for a clear that
-  // would return early. It also completes the recipient box's own Escape
-  // chain, which peels list -> query and then, in its words, falls
-  // through: the next press now lands the user in the message.
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key !== "Escape" || e.defaultPrevented) return;
-      if (hasOpenSlideOver()) return;
-      // Escapes that are closing a dropdown (key and recipient pickers)
-      // belong to the dropdown, not to us.
-      const target = e.target as HTMLElement | null;
-      if (target?.closest("[data-radix-popper-content-wrapper]")) return;
-      if (showFullOutput) {
-        // The back-press never counts toward the clear double-tap.
-        lastEscapeAt.current = 0;
-        s.resetOutput();
-        return;
-      }
-      // Nothing staged: there is no clear to arm, so Escape means focus.
-      // Gated on files and recipients too -- with files staged the
-      // textarea is not rendered at all, and with only recipients picked
-      // the double-tap clear is still the useful layer.
-      const now = Date.now();
-      if (!hasStaged) {
-        lastEscapeAt.current = 0;
-        if (now - lastClearAt.current < 700 && s.mode !== "encrypt") {
-          lastClearAt.current = 0;
-          s.setMode("encrypt");
-        }
-        focusMessageBox();
-        return;
-      }
-      if (now - lastEscapeAt.current < 350) {
-        lastEscapeAt.current = 0;
-        lastClearAt.current = now;
-        clearBoxUndoable();
-      } else {
-        lastEscapeAt.current = now;
-      }
-    };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  });
-
-  // Type-to-focus (encrypt and sign modes): a printable key pressed
-  // while nothing typable has focus refocuses the message box so the
-  // keystroke lands there instead of vanishing. Not armed in
-  // decrypt/verify, where input is pasted armor, never typed prose.
-  // Focusing during keydown is enough — the browser inserts the
-  // character into the newly focused textarea, so IME/dead-key input
-  // stays native.
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (s.mode !== "encrypt" && s.mode !== "sign") return;
-      // While the inline key-password row is up, every keystroke is
-      // presumed passphrase — never divert it into the plaintext box
-      // (which draft-snapshots its content).
-      if (s.needsPassword) return;
-      // Printable characters only; leave shortcuts and key repeats alone.
-      if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
-      if (e.key.length !== 1) return;
-      if (hasOpenSlideOver()) return;
-      // Any open dialog (command palette, confirm dialogs) owns the
-      // keyboard even when focus has slipped to <body> — a click on
-      // non-focusable dialog chrome blurs its input, and keys must not
-      // land invisibly in the box behind the overlay.
-      if (document.querySelector('[role="dialog"]')) return;
-      const active = document.activeElement;
-      if (active instanceof HTMLElement && active !== document.body) {
-        if (active.isContentEditable) return;
-        const tag = active.tagName;
-        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
-        // Space activates focused buttons/checkboxes/links — never steal it.
-        if (e.key === " ") return;
-        // Dropdowns and comboboxes own their own type-ahead.
-        if (
-          active.closest(
-            '[data-radix-popper-content-wrapper], [role="combobox"], [role="listbox"], [role="menu"]',
-          )
-        )
-          return;
-      }
-      const box = document.getElementById("pgp-input");
-      // Absent when the textarea isn't rendered (files staged); a null
-      // offsetParent means it's hidden (another tab is active).
-      if (!(box instanceof HTMLTextAreaElement) || box.offsetParent === null)
-        return;
-      box.focus();
-      // Caret to the end so stray keystrokes append rather than clobber
-      // any auto-selected existing text.
-      box.setSelectionRange(box.value.length, box.value.length);
-    };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  });
-
-  // Whether the main action button is rendered (the trailing branch of
-  // the action bar). The Run action only fires while it would be
-  // enabled; in verify-done state it resets, like the button.
-  const mainActionShown =
-    !showFullOutput &&
-    !s.needsPassword &&
-    !crxResult &&
-    !showCrxVerify &&
-    !showCrxSign &&
-    !(s.operationDone && s.mode !== "verify");
-
-  // The preference checkboxes' handlers, extracted so the palette
-  // toggles (via the ops bridge below) run the EXACT same code path:
-  // persistence, stale-output reset, and the history storage request.
-  const setEncryptToSelfPref = (checked: boolean) => {
-    s.resetOutput();
+  // ── preferences ────────────────────────────────────────────────────
+  // Shared by the toggles and the palette: persistence plus the
+  // stale-output reset.
+  const setEncryptToSelf = (checked: boolean) => {
+    resetResults();
     void savePreference({ encryptToSelf: checked });
   };
-  const setAlsoSignPref = (checked: boolean) => {
-    s.resetOutput();
+  const setAlsoSign = (checked: boolean) => {
+    resetResults();
     void savePreference({ signWhenEncrypting: checked });
   };
-  const setSaveToHistoryPref = (checked: boolean) => {
+  const setSaveToHistory = (checked: boolean) => {
     void savePreference({ historyEnabled: checked });
-    // Enabling is a user gesture: ask for unlimitedStorage so history
-    // gets the generous budget. A denial is fine -- history still
-    // works within the default budget.
+    // A user gesture: ask for the generous budget. A denial is fine.
     if (checked) void requestUnlimitedHistoryStorage();
   };
 
-  // mod+Enter (run) and mod+shift+C (copy) are dispatched through the
-  // action registry (lib/actions), which reads the state slice pushed
-  // up here. Ops close over fresh state via a ref; the snapshot effect
-  // below re-pushes only when a palette-readable value changes.
-  const hasOutput = s.operationDone && s.hasOutput && !s.loading;
-  // Broader than hasOutput: file/binary results have no copyable text
-  // but do download. Verify is excluded -- its "result" is a verdict,
-  // not an artifact (the UI shows no Download button there either).
-  const hasDownload =
-    s.operationDone &&
-    !s.loading &&
-    s.mode !== "verify" &&
-    (s.fileResults.length > 0 || !!s.binaryOutput || s.hasOutput);
-  // Mirrors the main button's disabled logic, incl. the encrypt
-  // needs-a-recipient gate (the palette shows the reason as a toast).
+  // ── run / copy / download ──────────────────────────────────────────
+  const [copied, setCopied] = useState(false);
+  const copyTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const { copy } = useCopyToClipboard();
+  const handleCopy = async () => {
+    // The button's check is the feedback; a refused write toasts.
+    if (!(await copy(ws.getOutput()))) return;
+    setCopied(true);
+    clearTimeout(copyTimer.current);
+    copyTimer.current = setTimeout(() => setCopied(false), 2000);
+  };
+  const mainActionShown =
+    !showFullOutput &&
+    prompt === null &&
+    !crxResult &&
+    !showCrxVerify &&
+    !showCrxSign &&
+    !(done && s.mode !== "verify");
   const canRun =
-    mainActionShown && !s.loading && !(s.mode === "encrypt" && !canEncrypt);
-  const paletteRef = useRef({
-    s,
-    canRun,
-    hasOutput,
-    hasDownload,
-    handleCopy,
-    ops,
-    setEncryptToSelfPref,
-    setAlsoSignPref,
-    setSaveToHistoryPref,
-    composeTranslation,
-    translation,
-    openReply,
-  });
-  useEffect(() => {
-    paletteRef.current = {
-      s,
-      canRun,
-      hasOutput,
-      hasDownload,
-      handleCopy,
-      ops,
-      setEncryptToSelfPref,
-      setAlsoSignPref,
-      setSaveToHistoryPref,
-      composeTranslation,
-      translation,
-      openReply,
-    };
-  });
-  // A message opened from the context menu runs by itself: verify always
-  // (it needs nothing secret), decrypt only when the key it is addressed
-  // to is ALREADY unlocked -- typically opened alongside the vault. It
-  // never starts a passkey ceremony or asks for a password on its own;
-  // a locked key or a password-only message falls back to the button,
-  // exactly as before. Waits while the vault is still settling so a
-  // verdict isn't reached against a contact list that hasn't loaded, and
-  // for the default-selection effect to land on the matching key, since
-  // `execute` decrypts with whatever key is selected.
-  const autoRun = s.autoRunAction;
-  // From arming until the unattended run returns, the idle form (message
-  // box, mode picker, Decrypt button) is held invisible: it would only
-  // flash up for the frames between the selection landing and the result
-  // replacing it. Layout is kept, so a run that falls back to the button
-  // just appears in place. Transparent rather than `visibility: hidden`:
-  // the panel focuses the message box as it opens, which is inside this
-  // window, and a hidden element can't take focus.
-  const [autoRunning, setAutoRunning] = useState(false);
-  // Also for the render the op arrives in, before the effect in
-  // useWorkspaceState has armed it, and while the panel is still looking
-  // for one at all: otherwise a fresh open paints the empty form first.
-  const arriving =
-    !!pendingAction?.text &&
-    (pendingAction.action === "decrypt" || pendingAction.action === "verify");
-  const hideForAutoRun =
-    awaitingPendingOp || arriving || autoRun !== null || autoRunning;
-  useEffect(() => {
-    if (!autoRun || vaultSettling || s.loading) return;
-    const give = () => s.clearAutoRun();
-    if (s.mode !== autoRun || s.operationDone) return give();
-    const run = { cancelled: false };
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    void (async () => {
-      if (autoRun === "decrypt") {
-        const match = await ops.matchDecryptionKey().catch(() => null);
-        if (run.cancelled) return;
-        if (!match || getKeyHandle(match) === null) return give();
-        // The selection effect is about to land on it; this re-runs when
-        // it does. Bounded, so a key picked by hand in the meantime can't
-        // leave the run armed to fire whenever it is picked back.
-        if (s.selectedKeyId !== match) {
-          timer = setTimeout(give, 2_000);
-          return;
-        }
-      }
-      const p = paletteRef.current;
-      give();
-      if (!p.canRun) return;
-      setAutoRunning(true);
-      void p.ops.executeUnattended().finally(() => setAutoRunning(false));
-    })();
-    return () => {
-      run.cancelled = true;
-      clearTimeout(timer);
-    };
-    // `inputVersion` stands in for the text, as in the selection effect.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    autoRun,
-    vaultSettling,
-    s.loading,
-    s.mode,
-    s.operationDone,
-    s.inputVersion,
-    s.selectedKeyId,
-    myKeys,
-  ]);
+    mainActionShown && !loading && !(s.mode === "encrypt" && !canEncrypt);
+  const resultHasOutput = done && hasOutputText && !loading;
+  // Verify yields a verdict, not an artifact.
+  const hasDownload =
+    done &&
+    !loading &&
+    s.mode !== "verify" &&
+    (s.result.files.length > 0 || !!s.result.binary || hasOutputText);
+  // In verify-done state Run resets, like the button.
+  const runMain = () => {
+    if (done && s.mode === "verify") resetAll();
+    else void ws.execute();
+  };
 
-  // An unknown signer the user went to look up: once a key has been
-  // imported, check the signature again, so the amber card turns into
-  // the real verdict without a second press. Only for the lookup the
-  // user started -- an import from anywhere else leaves results alone --
-  // and never at the cost of a prompt: decrypt re-runs only while its
-  // key is still open (a re-run clears the output before it unlocks).
-  // Not capped like an auto-run: the user opened this message themselves.
-  const lookedUpSigner = useRef<string | null>(null);
-  const contactsAtLookup = useRef(contacts);
-  const lookupSigner = onLookupSigner
+  const hideForAutoRun = useAutoRun(ws, {
+    vaultSettling,
+    arriving:
+      awaitingPendingOp ||
+      (!!pendingAction?.text &&
+        (pendingAction.action === "decrypt" ||
+          pendingAction.action === "verify")),
+    canRun,
+  });
+
+  // An unknown signer the user went to look up: once contacts change,
+  // check again so the amber card becomes the real verdict. Never at the
+  // cost of a prompt, and not capped: the user opened this message.
+  const lookedUp = useRef<{ keyId: string; contacts: unknown } | null>(null);
+  const lookupSigner = keyDiscoveryEnabled
     ? (keyId: string) => {
-        lookedUpSigner.current = keyId;
-        contactsAtLookup.current = contacts;
-        onLookupSigner(keyId);
+        lookedUp.current = { keyId, contacts };
+        openImport({ lookup: keyId });
       }
     : undefined;
-  useEffect(() => {
-    const keyId = lookedUpSigner.current;
-    if (keyId === null || contacts === contactsAtLookup.current) return;
-    lookedUpSigner.current = null;
-    if (
-      s.loading ||
-      s.signatureTone !== "warning" ||
-      s.verifiedSigner?.keyId !== keyId
-    ) {
-      return;
-    }
+  const recheckSigner = useEffectEvent(() => {
+    const pending = lookedUp.current;
+    if (!pending || pending.contacts === contacts) return;
+    lookedUp.current = null;
+    if (loading || verdict?.tone !== "warning") return;
+    if (verdict.signer.keyId !== pending.keyId) return;
     if (s.mode === "verify") {
-      void ops.execute();
+      void ws.execute();
     } else if (
       s.mode === "decrypt" &&
       (unencryptedMessage ||
         (!passwordOnlyMessage &&
-          s.selectedKeyId !== null &&
-          getKeyHandle(s.selectedKeyId) !== null))
+          ws.selectedKeyId !== null &&
+          session.getKeyHandle(ws.selectedKeyId) !== null))
     ) {
-      void ops.executeWithoutPrompts();
+      void ws.executeWithoutPrompts();
     }
-    // Contacts are the trigger; the rest is read at that moment.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  });
+  useEffect(() => {
+    recheckSigner();
   }, [contacts]);
 
+  // ── palette bridge ─────────────────────────────────────────────────
+  const commands = {
+    setMode,
+    execute: () => {
+      if (canRun) runMain();
+    },
+    clearInput: resetAll,
+    copyOutput: () => {
+      if (resultHasOutput) void handleCopy();
+    },
+    downloadOutput: () => {
+      if (hasDownload) ws.triggerDownload();
+    },
+    reply: openReply,
+    translateOutput: () => {
+      // A translation already made is shown, not remade.
+      if (ws.hasTranslation) {
+        if (!translation.showing) translation.toggle();
+      } else {
+        void translation.translate();
+      }
+    },
+    applyStyle: (style: Parameters<ComposeTools["applyStyle"]>[0]) =>
+      composeToolsRef.current?.applyStyle(style),
+    openFind: () => composeToolsRef.current?.openFind(),
+    translateTo: (language: string) =>
+      void composeTranslation.translate(language),
+    toggleEncryptToSelf: () => setEncryptToSelf(!encryptToSelf),
+    toggleAlsoSign: () => setAlsoSign(!alsoSign),
+    toggleSaveToHistory: () => setSaveToHistory(!saveToHistory),
+  };
+  const commandsRef = useRef(commands);
   useEffect(() => {
+    commandsRef.current = commands;
+  });
+  useEffect(() => {
+    const c = commandsRef;
     onPaletteOps?.({
       mode: s.mode,
       hasInput,
       canEncrypt,
       encryptEngine,
-      hasOutput,
+      hasOutput: resultHasOutput,
       hasDownload,
-      historyEnabled: s.saveToHistory,
-      encryptToSelf: s.encryptToSelf,
-      alsoSign: s.alsoSign,
-      // Mirrors the mode Select: a completed operation resets fully,
-      // otherwise only the (now stale) output is cleared.
-      setMode: (m) => {
-        const p = paletteRef.current;
-        p.s.setMode(m);
-        if (p.s.operationDone) p.s.resetAll();
-        else p.s.resetOutput();
-      },
-      // In verify-done state Run resets, like the button it mirrors.
-      execute: () => {
-        const p = paletteRef.current;
-        if (!p.canRun) return;
-        if (p.s.operationDone && p.s.mode === "verify") p.s.resetAll();
-        else void p.ops.execute();
-      },
-      clearInput: () => paletteRef.current.s.resetAll(),
-      copyOutput: () => {
-        if (paletteRef.current.hasOutput) void paletteRef.current.handleCopy();
-      },
-      downloadOutput: () => {
-        const p = paletteRef.current;
-        if (p.hasDownload) p.ops.triggerDownload();
-      },
+      historyEnabled: saveToHistory,
+      encryptToSelf,
+      alsoSign,
       resultCanTranslate,
       resultCanReply: canReply,
-      reply: () => paletteRef.current.openReply(),
       readingLanguage: translationTargetLanguage,
-      translateOutput: () => {
-        const p = paletteRef.current;
-        // A translation already made is shown, not remade.
-        if (p.s.hasTranslation) {
-          if (!p.translation.showing) p.translation.toggle();
-        } else {
-          void p.translation.translate();
-        }
-      },
       composeCanEdit,
       translateEnabled,
       translateTarget: composeTranslation.targetLanguage,
-      applyStyle: (style) => composeToolsRef.current?.applyStyle(style),
-      openFind: () => composeToolsRef.current?.openFind(),
-      translateTo: (language) =>
-        void paletteRef.current.composeTranslation.translate(language),
-      toggleEncryptToSelf: () => {
-        const p = paletteRef.current;
-        p.setEncryptToSelfPref(!p.s.encryptToSelf);
-      },
-      toggleAlsoSign: () => {
-        const p = paletteRef.current;
-        p.setAlsoSignPref(!p.s.alsoSign);
-      },
-      toggleSaveToHistory: () => {
-        const p = paletteRef.current;
-        p.setSaveToHistoryPref(!p.s.saveToHistory);
-      },
+      setMode: (m) => c.current.setMode(m),
+      execute: () => c.current.execute(),
+      clearInput: () => c.current.clearInput(),
+      copyOutput: () => c.current.copyOutput(),
+      downloadOutput: () => c.current.downloadOutput(),
+      reply: () => c.current.reply(),
+      translateOutput: () => c.current.translateOutput(),
+      applyStyle: (style) => c.current.applyStyle(style),
+      openFind: () => c.current.openFind(),
+      translateTo: (language) => c.current.translateTo(language),
+      toggleEncryptToSelf: () => c.current.toggleEncryptToSelf(),
+      toggleAlsoSign: () => c.current.toggleAlsoSign(),
+      toggleSaveToHistory: () => c.current.toggleSaveToHistory(),
     });
   }, [
     onPaletteOps,
     s.mode,
     hasInput,
-    // `canEncrypt`, not `s.selectedRecipientIds`: the published value is
-    // now "someone can open this", which is also true when a message
-    // password is armed. Depending on the recipient list meant arming a
-    // password changed nothing this effect watched, so the palette went
-    // on serving a stale `canEncrypt: false` -- the button ran the
-    // encrypt while the palette refused it.
     canEncrypt,
     encryptEngine,
-    hasOutput,
+    resultHasOutput,
     hasDownload,
-    s.saveToHistory,
-    s.encryptToSelf,
-    s.alsoSign,
+    saveToHistory,
+    encryptToSelf,
+    alsoSign,
+    resultCanTranslate,
+    canReply,
+    translationTargetLanguage,
     composeCanEdit,
     translateEnabled,
     composeTranslation.targetLanguage,
-    resultCanTranslate,
-    translationTargetLanguage,
-    canReply,
   ]);
   useEffect(() => () => onPaletteOps?.(null), [onPaletteOps]);
 
-  // Remedy actions this view can actually perform, mapped to existing
-  // handlers. An action with no handler here (or whose handler isn't
-  // available right now) renders message-only in WorkspaceResults: no
-  // dead button. "check-recipient" stays message-only because the
-  // recipient picker has no cheap imperative open.
+  // Remedies this view can perform; any other renders message-only.
   const passwordInputRef = useRef<HTMLInputElement>(null);
-  const remedyAction = s.error?.remedy?.action;
-  const remedyHandled =
+  const remedyAction = error?.remedy?.action;
+  const handleRemedy =
     remedyAction === "retry" ||
     remedyAction === "import-key" ||
-    (remedyAction === "unlock" && s.needsPassword);
-  const handleRemedy = remedyHandled
-    ? (action: RemedyAction) => {
-        switch (action) {
-          case "import-key":
-            onNavigateToKeys();
-            break;
-          case "retry":
-            void ops.execute();
-            break;
-          case "unlock":
-            passwordInputRef.current?.focus();
-            break;
-          case "check-recipient":
-            break;
+    (remedyAction === "unlock" && prompt !== null)
+      ? (action: RemedyAction) => {
+          if (action === "import-key") onNavigateToKeys();
+          else if (action === "retry") void ws.execute();
+          else if (action === "unlock") passwordInputRef.current?.focus();
         }
-      }
-    : undefined;
+      : undefined;
 
-  // Which of the user's keys can open what is staged. Only narrowed for
-  // an age message, where the answer is categorical.
   const decryptKeyChoices =
-    s.mode === "decrypt" && s.inputIsAge ? myKeys.filter(isSshRecord) : myKeys;
+    s.mode === "decrypt" && ws.isAge ? myKeys.filter(isSshRecord) : myKeys;
+
+  const resultProps = {
+    error,
+    outputElRef: ws.outputElRef,
+    getOutput: ws.getOutput,
+    hasOutput: hasOutputText,
+    binaryOutput: s.result.binary,
+    fileResults: s.result.files,
+    fileName: ws.outputName(),
+    operationDone: done,
+    statusText: s.result.status ?? undefined,
+    verifiedSigner: verdict?.signer ?? null,
+    signatureTone: verdict?.tone,
+    signatureNote: verdict?.note,
+    signerCaveat: verdict?.caveat,
+    contacts,
+    myKeys,
+    outputPublicKeyDetected: s.output.publicKey,
+    outputVersion: s.output.version,
+    onImportKey: onNavigateToKeys,
+    onRevealKey,
+    onLookupSigner: lookupSigner,
+  };
+
+  const resetButton = (onClick: () => void) => (
+    <Button
+      variant="outline"
+      size="icon"
+      onClick={onClick}
+      title={t("workspace_clear_input_output")}
+      aria-label={t("workspace_clear_input_output")}
+    >
+      <RotateCcwIcon className="h-4 w-4" />
+    </Button>
+  );
 
   if (showFullOutput) {
     return (
@@ -1157,29 +705,36 @@ export function WorkspaceView({
             variant="ghost"
             size="sm"
             className="text-muted-foreground hover:text-foreground -ml-2 h-8 gap-1 px-2"
-            onClick={s.resetOutput}
+            onClick={resetResults}
           >
             <ArrowLeftIcon className="h-4 w-4" />
             {t("common_back")}
           </Button>
         </div>
         <WorkspaceResults
-          error={s.error}
-          outputElRef={s.outputElRef}
-          getOutput={s.getOutput}
-          hasOutput={s.hasOutput}
-          binaryOutput={s.binaryOutput}
-          fileResults={s.fileResults}
-          fileName={ops.outputFileName()}
-          operationDone={s.operationDone}
-          statusText={s.statusText ?? undefined}
-          verifiedSigner={s.verifiedSigner}
-          signatureTone={s.signatureTone}
-          signatureNote={s.signatureNote}
-          signerCaveat={s.signerCaveat}
-          contacts={contacts}
-          myKeys={myKeys}
-          translationFooter={translationFooter}
+          {...resultProps}
+          fullHeight
+          // A footer bar, permanent once translation is on, so a status
+          // appearing never resizes the message above it. Built here so
+          // the translation refs stay owned by the wiping workspace.
+          translationFooter={
+            aiTranslateEnabled ? (
+              <>
+                <TranslationNote
+                  status={translation.status}
+                  showing={translation.showing}
+                />
+                <TranslateToggle
+                  status={translation.status}
+                  showing={translation.showing}
+                  hasTranslation={ws.hasTranslation}
+                  onTranslate={() => void translation.translate()}
+                  onToggle={translation.toggle}
+                  targetLanguage={translationTargetLanguage}
+                />
+              </>
+            ) : null
+          }
           resultCorner={
             canReply ? (
               <HoverLabel
@@ -1202,96 +757,25 @@ export function WorkspaceView({
             ) : undefined
           }
           showTranslation={translation.showing}
-          translationElRef={s.translationElRef}
-          getTranslation={s.getTranslation}
-          outputPublicKeyDetected={s.outputPublicKeyDetected}
-          outputVersion={s.outputVersion}
-          onImportKey={onNavigateToKeys}
-          onRevealKey={onRevealKey}
-          onLookupSigner={lookupSigner}
-          fullHeight
+          translationElRef={ws.translationElRef}
+          getTranslation={ws.getTranslation}
         />
         <div className="flex gap-2">
-          <div className="flex flex-1 gap-2">
-            {/* Icon + label; the shortcut lives in a hover popover so it
-                doesn't crowd the half-width buttons. */}
-            <ShortcutHint shortcut={DOWNLOAD_SHORTCUT}>
-              <Button
-                className="flex-1"
-                onClick={() => ops.triggerDownload()}
-                disabled={s.loading}
-                aria-keyshortcuts={ariaKeyShortcuts(
-                  DOWNLOAD_SHORTCUT,
-                  isMacPlatform(),
-                )}
-              >
-                <DownloadIcon className="h-4 w-4" />
-                {t("common_download")}
-              </Button>
-            </ShortcutHint>
-            <ShortcutHint shortcut={COPY_SHORTCUT}>
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={handleCopy}
-                disabled={s.loading}
-                aria-keyshortcuts={ariaKeyShortcuts(
-                  COPY_SHORTCUT,
-                  isMacPlatform(),
-                )}
-              >
-                {copied ? (
-                  <CheckIcon className="text-good h-4 w-4" />
-                ) : (
-                  <ClipboardIcon className="h-4 w-4" />
-                )}
-                {copied ? t("common_copied") : t("common_copy")}
-              </Button>
-            </ShortcutHint>
-          </div>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={resetAndRefocus}
-            title={t("workspace_clear_input_output")}
-            aria-label={t("workspace_clear_input_output")}
-          >
-            <RotateCcwIcon className="h-4 w-4" />
-          </Button>
+          <ResultActions
+            onDownload={ws.triggerDownload}
+            onCopy={() => void handleCopy()}
+            copied={copied}
+            disabled={loading}
+          />
+          {resetButton(resetAndRefocus)}
         </div>
       </div>
     );
   }
 
-  // A verify result is a verdict on the message, not output that follows
-  // it: it reads first, above the box, instead of under a tall signed
-  // message where it can sit below the fold.
+  // A verify verdict reads first, above the box, not under a tall message.
   const resultsOnTop = s.mode === "verify";
-  const results = (
-    <WorkspaceResults
-      error={s.error}
-      onRemedy={handleRemedy}
-      outputElRef={s.outputElRef}
-      getOutput={s.getOutput}
-      hasOutput={s.hasOutput}
-      binaryOutput={s.binaryOutput}
-      fileResults={s.fileResults}
-      fileName={ops.outputFileName()}
-      operationDone={s.operationDone}
-      statusText={s.statusText ?? undefined}
-      verifiedSigner={s.verifiedSigner}
-      signatureTone={s.signatureTone}
-      signatureNote={s.signatureNote}
-      signerCaveat={s.signerCaveat}
-      contacts={contacts}
-      myKeys={myKeys}
-      outputPublicKeyDetected={s.outputPublicKeyDetected}
-      outputVersion={s.outputVersion}
-      onImportKey={onNavigateToKeys}
-      onRevealKey={onRevealKey}
-      onLookupSigner={lookupSigner}
-    />
-  );
+  const results = <WorkspaceResults {...resultProps} onRemedy={handleRemedy} />;
 
   return (
     <div
@@ -1300,84 +784,61 @@ export function WorkspaceView({
     >
       <WorkspaceInput
         mode={s.mode}
-        onModeChange={s.setMode}
+        onModeChange={setMode}
         aboveCard={resultsOnTop ? results : undefined}
-        inputElRef={s.inputElRef}
-        getInput={s.getInput}
-        hasInput={s.hasInput}
-        onInputChange={s.handleInputChange}
+        inputElRef={inputElRef}
+        getInput={ws.getInput}
+        hasInput={s.input.len > 0}
+        onInputChange={inputChanged}
         onRepairPastedText={recoverArmorIfNeeded}
-        onClearText={clearTextUndoable}
+        onClearText={clearText}
         files={s.files}
-        onFileDrop={s.handleFileDrop}
-        onRemoveFile={s.removeFile}
-        onClearFiles={s.clearFiles}
-        publicKeyDetected={s.publicKeyDetected}
+        onFileDrop={ws.dropFiles}
+        onRemoveFile={(index) => dispatch({ type: "file-removed", index })}
+        onClearFiles={() => dispatch({ type: "files-cleared" })}
+        publicKeyDetected={s.input.key === "public"}
         contacts={contacts}
-        inputVersion={s.inputVersion}
+        inputVersion={s.input.version}
         onRevealKey={onRevealKey}
-        privateKeyDetected={s.privateKeyDetected}
+        privateKeyDetected={s.input.key === "private"}
         onNavigateToKeys={onNavigateToKeys}
-        operationDone={s.operationDone}
-        onReset={s.resetAll}
-        onResetOutput={s.resetOutput}
         onToolsReady={onToolsReady}
-        // Recipients are the card's To row, as on an envelope: what the
-        // message is, and who it is for, read as one thing.
+        // Recipients are the card's To row, as on an envelope.
         cardHeader={
-          needsRecipient ? (
+          s.mode === "encrypt" ? (
             <>
               <Block className="rounded-t-xl focus-within:shadow-[inset_0_0_0_1px_rgb(79_193_133/0.35)]">
                 <RecipientPicker
                   inline
-                  // Escape in the recipient box peels its own layers first
-                  // (list, then query); when there are none left it lands the
-                  // user back in the message, the same thing Escape does
-                  // everywhere else in this panel.
+                  // Its Escape layers spent, Escape lands in the message
+                  // (cmdk consumes Escape before it reaches document).
                   onEscapeExhausted={focusMessageBox}
-                  // A message password rules out age entirely, so SSH rows dim
-                  // with their own reason rather than being silently
-                  // unpickable.
-                  passwordArmed={s.encryptPasswordReady}
+                  // A password rules out age: SSH rows dim with a reason.
+                  passwordArmed={ws.passwordReady}
                   label={t("workspace_recipients_label")}
-                  // Only offer contacts you can actually encrypt to. Sign-only
-                  // keys are valid contacts (for verification) but have no
-                  // encryption key. Legacy records (undefined) are assumed
-                  // encryptable until the contacts backfill fills the flag in.
+                  // Sign-only keys verify but cannot be encrypted to; legacy
+                  // records (undefined) are assumed encryptable.
                   contacts={contacts.filter(
                     (c) => c.usableForEncryption !== false,
                   )}
                   myKeys={myKeys}
-                  selectedKeyIds={s.selectedRecipientIds}
-                  recentKeyIds={s.recentRecipients}
-                  // Changing the recipient set (adding OR removing) invalidates
-                  // any completed ciphertext — clear it so the user re-encrypts
-                  // to the new set rather than downloading stale output.
-                  onChange={(ids) => {
-                    s.setSelectedRecipientIds(ids);
-                    s.resetOutput();
-                  }}
+                  selectedKeyIds={s.recipientIds}
+                  recentKeyIds={recentRecipients}
+                  onChange={(ids) => dispatch({ type: "recipients", ids })}
                   emptyText={t("workspace_no_contacts_yet")}
                   emptyAction={onNavigateToKeys}
                   emptyActionLabel={t("workspace_add_a_contact")}
                 />
               </Block>
-              {/* The From line: who signs, and whether they do. It is the
-                same "Sign" switch that sat in the option bar -- same
-                name, same preference, same dimmed-with-a-reason when
-                signing can't apply -- moved to where the signer is. */}
+              {/* The From line: who signs, and whether they do. */}
               {myKeys.length > 0 && (
                 <Block
                   className="flex min-h-9 items-center gap-2.5 py-1 pr-2.5 pl-3"
                   title={signBlockedReason}
                 >
-                  {/* Who signs only matters once signing is on: off, the
-                      row is just the switch. With more than one key that
-                      can sign, the name IS the "Sign with" picker. Nothing
-                      will be signed on the age path, so there the question
-                      doesn't arise: the switch stays, dimmed, and the reason
-                      takes the name's place. */}
-                  {!signBlockedReason && !s.alsoSign ? null : signer &&
+                  {/* Off: just the switch. On with several signing keys:
+                      the name IS the picker. Blocked: the reason. */}
+                  {!signBlockedReason && !alsoSign ? null : signer &&
                     !signBlockedReason &&
                     signKeyChoices.length > 1 ? (
                     <KeySelector
@@ -1387,7 +848,7 @@ export function WorkspaceView({
                       selectedKeyId={signer.keyId}
                       detailsContacts={contacts}
                       detailsOwnKeys={myKeys}
-                      onSelect={ops.selectPrivateKey}
+                      onSelect={ws.selectPrivateKey}
                     />
                   ) : signer && !signBlockedReason ? (
                     <>
@@ -1409,8 +870,7 @@ export function WorkspaceView({
                   <label
                     className={cn(
                       "text-muted-foreground flex items-center gap-2 text-xs font-medium",
-                      // Alone on the row: label left, switch right.
-                      !signBlockedReason && !s.alsoSign
+                      !signBlockedReason && !alsoSign
                         ? "flex-1 justify-between"
                         : "shrink-0",
                     )}
@@ -1418,8 +878,8 @@ export function WorkspaceView({
                     {t("common_sign")}
                     <Switch
                       size="sm"
-                      checked={s.alsoSign}
-                      onCheckedChange={setAlsoSignPref}
+                      checked={alsoSign}
+                      onCheckedChange={setAlsoSign}
                       disabled={signBlockedReason !== undefined}
                     />
                   </label>
@@ -1427,9 +887,6 @@ export function WorkspaceView({
               )}
             </>
           ) : signerInHeader ? (
-            // Sign mode's From line: the same top-of-card place the
-            // encrypt card names its signer, so the key sits above the
-            // message it signs rather than trailing under the toolbar.
             <Block className="flex min-h-9 items-center gap-2 py-1 pr-1.5 pl-3">
               <span className="text-muted-foreground shrink-0 text-xs font-medium">
                 {t("workspace_sign_with")}
@@ -1438,10 +895,10 @@ export function WorkspaceView({
                 inline
                 label={t("workspace_sign_with")}
                 keys={signKeyChoices}
-                selectedKeyId={s.selectedKeyId}
+                selectedKeyId={ws.selectedKeyId}
                 detailsContacts={contacts}
                 detailsOwnKeys={myKeys}
-                onSelect={ops.selectPrivateKey}
+                onSelect={ws.selectPrivateKey}
               />
             </Block>
           ) : undefined
@@ -1461,36 +918,29 @@ export function WorkspaceView({
       />
 
       <div className="space-y-3">
-        {/* Say which format is about to come out, once the recipients
-            have decided it. Not a warning -- the picker has already made
-            mixing impossible -- just the name of the thing being made. */}
-        {needsRecipient && encryptEngine === "ssh" && (
+        {s.mode === "encrypt" && encryptEngine === "ssh" && (
           <p className="text-muted-foreground pl-2 text-xs">
             {t("workspace_age_message_note")}
           </p>
         )}
 
-        {/* An extension zip can carry two signature kinds; let the user pick
-            (defaults to CRX, the overwhelmingly likely intent) instead of
-            hijacking the PGP sign flow. */}
         {crxSignAvailable && (
           <div className="flex gap-2">
-            <Button
-              variant={s.signKind === "crx" ? "default" : "outline"}
-              size="sm"
-              className="flex-1"
-              onClick={() => s.setSignKind("crx")}
-            >
-              {t("workspace_sign_kind_crx")}
-            </Button>
-            <Button
-              variant={s.signKind === "pgp" ? "default" : "outline"}
-              size="sm"
-              className="flex-1"
-              onClick={() => s.setSignKind("pgp")}
-            >
-              {t("workspace_sign_kind_pgp")}
-            </Button>
+            {(["crx", "pgp"] as const).map((kind) => (
+              <Button
+                key={kind}
+                variant={
+                  (s.signKindPick ?? "crx") === kind ? "default" : "outline"
+                }
+                size="sm"
+                className="flex-1"
+                onClick={() => dispatch({ type: "sign-kind", kind })}
+              >
+                {kind === "crx"
+                  ? t("workspace_sign_kind_crx")
+                  : t("workspace_sign_kind_pgp")}
+              </Button>
+            ))}
           </div>
         )}
 
@@ -1501,31 +951,26 @@ export function WorkspaceView({
                 ? t("workspace_sign_with")
                 : t("workspace_decrypt_with")
             }
-            // An age message can only be opened by an SSH identity, so
-            // offering the PGP keys here would be offering keys that
-            // cannot work. Narrowed rather than dimmed: this is a "which
-            // of your keys", and a key of the wrong engine is not a
-            // candidate at all.
+            // An age message opens only with an SSH identity: narrowed.
             keys={s.mode === "sign" ? signKeyChoices : decryptKeyChoices}
-            selectedKeyId={s.selectedKeyId}
+            selectedKeyId={ws.selectedKeyId}
             detailsContacts={contacts}
             detailsOwnKeys={myKeys}
-            onSelect={ops.selectPrivateKey}
+            onSelect={ws.selectPrivateKey}
             emptyText={t("workspace_no_keys_yet")}
             emptyAction={onNavigateToKeys}
             emptyActionLabel={t("workspace_create_one")}
           />
         )}
 
-        {/* Signing an extension package: pick a CRX key, not a PGP key. */}
         {showCrxSign && crxKeys.length > 0 && (
           <div>
             <label className="text-muted-foreground mb-1 block text-xs font-medium">
               {t("workspace_sign_with")}
             </label>
             <Select
-              value={s.selectedCrxKeyId ?? ""}
-              onValueChange={(v) => s.setSelectedCrxKeyId(v)}
+              value={ws.crxKeyId ?? ""}
+              onValueChange={(id) => dispatch({ type: "crx-key-picked", id })}
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder={t("workspace_select_signing_key")} />
@@ -1543,92 +988,64 @@ export function WorkspaceView({
 
         {s.mode === "encrypt" && (
           <div className="space-y-2">
-            {/* One option bar on one line, each toggle a segment sized
-                to its label (Sign lives on the card's From line). The
-                history viewer is in the header, not in it: it opens a
-                page, it is not an option. */}
             <div className="flex items-center gap-2">
               <OptionBar className="flex flex-1 [&>*]:flex-auto [&>*]:px-2 [&>*]:text-xs">
                 {myKeys.length > 0 && (
-                  // Deliberately left pressed AND enabled even when this
-                  // particular message can't include the user (no own key
-                  // of the chosen engine): it is a persisted global
-                  // preference, and silently flipping it off from a
-                  // transient recipient choice would leave the next
-                  // message unreadable to them for reasons they never saw.
-                  // The line below says what happens this time instead.
+                  // A persisted preference: left pressed even when this
+                  // message can't include the user; the line below says so.
                   <ToggleBadge
-                    pressed={s.encryptToSelf}
-                    onPressedChange={setEncryptToSelfPref}
+                    pressed={encryptToSelf}
+                    onPressedChange={setEncryptToSelf}
                   >
                     {t("workspace_toggle_encrypt_to_self")}
                   </ToggleBadge>
                 )}
-                {/* Symmetric encryption, and ADDITIVE: it adds a password
-                  the message can also be opened with, on top of whatever
-                  recipients are selected. It does not replace them and it
-                  does not touch "Also encrypt to me" -- a badge, not a
-                  mode.
-
-                  DIMMED, NOT HIDDEN, for an age selection. It was hidden
-                  first, which is the thing this codebase says not to do:
-                  a control that vanishes looks like a feature that does
-                  not exist, and the user is left with no way to learn
-                  that age simply has no password mode. */}
-                {
-                  <ToggleBadge
-                    // Pressed means A PASSWORD IS SET, not "the dialog was
-                    // opened" -- so cancelling out of the dialog leaves the
-                    // badge off, which is the honest reading of it.
-                    pressed={s.encryptPasswordReady}
-                    // The mirror of the picker dimming SSH rows once a
-                    // password is set. Dimmed with a reason rather than
-                    // hidden, the rule this app states for every other
-                    // unavailable control.
-                    disabledReason={
-                      encryptEngine === "ssh" ? sshPasswordReason() : undefined
+                {/* ADDITIVE: a password the message can also be opened
+                    with. Pressed means a password IS SET. Dimmed with a
+                    reason for age, never hidden. */}
+                <ToggleBadge
+                  pressed={ws.passwordReady}
+                  disabledReason={
+                    encryptEngine === "ssh" ? sshPasswordReason() : undefined
+                  }
+                  onPressedChange={(v) => {
+                    // Un-pressing drops the password rather than parking
+                    // it against a message it was never meant for.
+                    if (v) {
+                      dispatch({ type: "password-dialog", open: true });
+                      resetResults();
+                    } else {
+                      dispatch({ type: "password-set", password: "" });
                     }
-                    onPressedChange={(v) => {
-                      // Un-pressing drops the password rather than parking
-                      // it: one kept out of sight would re-arm on the next
-                      // press against a message it was never meant for.
-                      if (v) s.setPasswordDialogOpen(true);
-                      else s.setEncryptPassword("");
-                      s.resetOutput();
-                    }}
-                  >
-                    {t("workspace_toggle_password")}
-                  </ToggleBadge>
-                }
-                {/* Counted as the encrypt will: a message written
-                    alongside the files goes too, as msg.txt. */}
+                  }}
+                >
+                  {t("workspace_toggle_password")}
+                </ToggleBadge>
+                {/* Counted as the encrypt will: a written message goes too. */}
                 {s.files.length +
-                  (s.files.length > 0 && s.hasTrimmedInput ? 1 : 0) >
+                  (s.files.length > 0 && s.input.nonBlank ? 1 : 0) >
                   1 && (
                   <ToggleBadge
                     pressed={s.zipFiles}
-                    onPressedChange={(v) => {
-                      s.setZipFiles(v);
-                      s.resetOutput();
-                    }}
+                    onPressedChange={(on) =>
+                      dispatch({ type: "zip-files", on })
+                    }
                   >
                     {t("workspace_toggle_zip_files")}
                   </ToggleBadge>
                 )}
-                {/* Never-cache means no history, ever: the toggle and the
-                  viewer (in the header) disappear rather than offering a
-                  dead switch. */}
+                {/* Never-cache means no history, ever: no dead switch. */}
                 {!neverCacheKeys && (
                   <ToggleBadge
-                    pressed={s.saveToHistory}
-                    onPressedChange={setSaveToHistoryPref}
+                    pressed={saveToHistory}
+                    onPressedChange={setSaveToHistory}
                   >
                     {t("workspace_toggle_save_to_history")}
                   </ToggleBadge>
                 )}
               </OptionBar>
             </div>
-            {s.encryptToSelf && selfExcluded && (
+            {encryptToSelf && selfExcluded && (
               <p className="text-muted-foreground pl-2 text-xs">
                 {t("workspace_self_excluded_intro")}{" "}
                 {encryptEngine === "ssh"
@@ -1646,25 +1063,24 @@ export function WorkspaceView({
           </div>
         )}
 
-        {s.needsPassword && (
+        {prompt && (
           <div className="flex items-stretch gap-2">
             <input
               ref={passwordInputRef}
               type="password"
-              // The one thing that says WHICH password is being asked
-              // for. The row, the field and the button are deliberately
-              // the same as the key-unlock prompt's -- there is one
-              // password affordance in this workspace -- so this string
-              // is carrying the whole distinction.
+              // One password row for every question: the placeholder
+              // carries the whole distinction.
               placeholder={
-                s.pendingPasswordDecrypt
+                prompt.kind === "message"
                   ? t("workspace_enter_message_password")
                   : t("workspace_enter_key_password")
               }
-              value={s.passwordInput}
-              onChange={(e) => s.setPasswordInput(e.target.value)}
+              value={prompt.value}
+              onChange={(e) =>
+                dispatch({ type: "prompt-typed", value: e.target.value })
+              }
               onKeyDown={(e) => {
-                if (e.key === "Enter") void ops.handlePasswordSubmit();
+                if (e.key === "Enter") void ws.submitPassword();
               }}
               className={`${INPUT_CLASS} h-9 flex-1 py-0`}
               autoFocus
@@ -1672,30 +1088,26 @@ export function WorkspaceView({
             <Button
               size="sm"
               className="h-9 shrink-0"
-              onClick={ops.handlePasswordSubmit}
-              disabled={s.loading}
+              onClick={() => void ws.submitPassword()}
+              disabled={loading}
             >
               {showLoadingLabel
-                ? s.pendingPasswordDecrypt
+                ? prompt.kind === "message"
                   ? t("workspace_decrypting")
                   : t("workspace_unlocking")
-                : s.pendingCrxSign
+                : prompt.kind === "crx" || s.mode === "sign"
                   ? t("common_sign")
                   : s.mode === "decrypt"
                     ? t("common_decrypt")
-                    : s.mode === "sign"
-                      ? t("common_sign")
-                      : t("workspace_go")}
+                    : t("workspace_go")}
             </Button>
           </div>
         )}
-        {s.passwordError && (
-          <p className="text-bad text-xs">{s.passwordError}</p>
-        )}
+        {prompt?.error && <p className="text-bad text-xs">{prompt.error}</p>}
 
         {!resultsOnTop && results}
 
-        {ops.heldBackForSize && !s.needsPassword && (
+        {s.run.kind === "held-back" && (
           <p
             data-testid="auto-run-held-back"
             className="text-muted-foreground text-xs"
@@ -1704,10 +1116,9 @@ export function WorkspaceView({
           </p>
         )}
 
-        {ops.hiddenChars && !s.needsPassword && (
-          // Text about to be signed holds characters the box does not
-          // draw. Signed as they are only on an explicit "Sign anyway";
-          // "Remove them" edits the box (undoable) and asks nothing more.
+        {s.run.kind === "hidden-chars" && (
+          // Signed as they are only on an explicit "Sign anyway"; "Remove
+          // them" edits the box (undoable).
           <div
             role="alert"
             data-testid="hidden-chars-strip"
@@ -1716,16 +1127,14 @@ export function WorkspaceView({
             <p>
               {t("workspace_sign_hidden_chars", {
                 chars:
-                  ops.hiddenChars.slice(0, 4).join(", ") +
-                  (ops.hiddenChars.length > 4
-                    ? ` +${ops.hiddenChars.length - 4}`
-                    : ""),
+                  s.run.chars.slice(0, 4).join(", ") +
+                  (s.run.chars.length > 4 ? ` +${s.run.chars.length - 4}` : ""),
               })}
             </p>
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={ops.signWithHiddenChars}
+                onClick={ws.signWithHiddenChars}
                 className="bg-warn/12 hover:bg-warn/20 rounded-md px-2 py-1 font-medium transition-colors"
               >
                 {t("workspace_sign_hidden_chars_anyway")}
@@ -1733,8 +1142,8 @@ export function WorkspaceView({
               <button
                 type="button"
                 onClick={() => {
-                  setComposedText(withoutHiddenCharacters(s.getInput()));
-                  ops.dismissHiddenChars();
+                  setComposedText(withoutHiddenCharacters(ws.getInput()));
+                  resetResults();
                 }}
                 className="bg-warn/12 hover:bg-warn/20 rounded-md px-2 py-1 font-medium transition-colors"
               >
@@ -1744,44 +1153,36 @@ export function WorkspaceView({
           </div>
         )}
 
-        {!s.needsPassword && (
+        {!prompt && (
           <div className="space-y-2">
             {crxResult ? (
               <div className="flex gap-2">
-                <Button className="flex-1" onClick={() => void handleSaveCrx()}>
+                <Button className="flex-1" onClick={() => void saveCrx()}>
                   <span className="flex items-center gap-2">
                     <DownloadIcon className="h-4 w-4" />
-                    {t("workspace_save_file", { name: crxFilename })}
+                    {t("workspace_save_file", { name: crxResult.name })}
                   </span>
                 </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={s.resetAll}
-                  title={t("workspace_clear_input_output")}
-                  aria-label={t("workspace_clear_input_output")}
-                >
-                  <RotateCcwIcon className="h-4 w-4" />
-                </Button>
+                {resetButton(resetAll)}
               </div>
             ) : showCrxVerify ? (
               <Button
                 className="w-full"
-                variant={s.operationDone ? "outline" : "default"}
-                onClick={s.operationDone ? s.resetAll : ops.verifyCrxInput}
-                disabled={s.loading}
+                variant={done ? "outline" : "default"}
+                onClick={done ? resetAll : () => void ws.verifyCrxInput()}
+                disabled={loading}
               >
                 {showLoadingLabel
                   ? t("workspace_verifying")
-                  : s.operationDone
+                  : done
                     ? t("workspace_reset")
                     : t("workspace_verify_signature")}
               </Button>
             ) : showCrxSign ? (
               <Button
                 className="w-full"
-                onClick={ops.executeCrxSign}
-                disabled={s.loading}
+                onClick={() => void ws.executeCrxSign()}
+                disabled={loading}
               >
                 {showLoadingLabel
                   ? t("workspace_processing")
@@ -1789,58 +1190,19 @@ export function WorkspaceView({
               </Button>
             ) : (
               <div className="flex gap-2">
-                {s.operationDone && s.mode !== "verify" ? (
-                  // Completed encrypt/sign: the result is ready to take away.
-                  // Download is primary; Copy rides alongside for text output.
-                  <div className="flex flex-1 gap-2">
-                    {/* Icon + label; the shortcut lives in a hover
-                        popover so it doesn't crowd the buttons. */}
-                    <ShortcutHint shortcut={DOWNLOAD_SHORTCUT}>
-                      <Button
-                        className="flex-1"
-                        onClick={() => ops.triggerDownload()}
-                        disabled={s.loading}
-                        aria-keyshortcuts={ariaKeyShortcuts(
-                          DOWNLOAD_SHORTCUT,
-                          isMacPlatform(),
-                        )}
-                      >
-                        <DownloadIcon className="h-4 w-4" />
-                        {t("common_download")}
-                      </Button>
-                    </ShortcutHint>
-                    {s.hasOutput && (
-                      <ShortcutHint shortcut={COPY_SHORTCUT}>
-                        <Button
-                          variant="outline"
-                          className="flex-1"
-                          onClick={handleCopy}
-                          disabled={s.loading}
-                          aria-keyshortcuts={ariaKeyShortcuts(
-                            COPY_SHORTCUT,
-                            isMacPlatform(),
-                          )}
-                        >
-                          {copied ? (
-                            <CheckIcon className="text-good h-4 w-4" />
-                          ) : (
-                            <ClipboardIcon className="h-4 w-4" />
-                          )}
-                          {copied ? t("common_copied") : t("common_copy")}
-                        </Button>
-                      </ShortcutHint>
-                    )}
-                  </div>
+                {done && s.mode !== "verify" ? (
+                  <ResultActions
+                    onDownload={ws.triggerDownload}
+                    onCopy={hasOutputText ? () => void handleCopy() : undefined}
+                    copied={copied}
+                    disabled={loading}
+                  />
                 ) : (
                   <Button
                     className="flex-1 capitalize"
-                    onClick={
-                      s.operationDone && s.mode === "verify"
-                        ? s.resetAll
-                        : ops.execute
-                    }
+                    onClick={runMain}
                     disabled={
-                      s.loading ||
+                      loading ||
                       !hasInput ||
                       (s.mode === "encrypt" && !canEncrypt)
                     }
@@ -1853,47 +1215,26 @@ export function WorkspaceView({
                   >
                     {showLoadingLabel
                       ? t("workspace_processing")
-                      : s.operationDone && s.mode === "verify"
+                      : done && s.mode === "verify"
                         ? t("workspace_reset")
                         : modeLabel(s.mode)}
                   </Button>
                 )}
-                {/* Anything clearable (pasted input lingering after a nav
-                    round-trip, or a completed op) gets the clear button;
-                    verify-done is excluded because its main button IS Reset. */}
-                {(hasInput || s.operationDone) &&
-                  !(s.operationDone && s.mode === "verify") && (
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={resetAndRefocus}
-                      title={t("workspace_clear_input_output")}
-                      aria-label={t("workspace_clear_input_output")}
-                    >
-                      <RotateCcwIcon className="h-4 w-4" />
-                    </Button>
-                  )}
+                {/* Verify-done's main button IS Reset. */}
+                {(hasInput || done) &&
+                  !(done && s.mode === "verify") &&
+                  resetButton(resetAndRefocus)}
               </div>
             )}
           </div>
         )}
       </div>
 
-      {/* The password dialog. Mounted last so it overlays the panel, and
-          conditionally so `useSlideOver`'s Escape stack sees it appear
-          and disappear -- the same mount-when-open shape Settings and the
-          lock screen use. */}
+      {/* Mounted when open so `useSlideOver`'s Escape stack sees it. */}
       {s.passwordDialogOpen && (
         <MessagePasswordPage
-          onSet={(password) => {
-            s.setEncryptPassword(password);
-            s.setPasswordDialogOpen(false);
-            // A new password means the armored output on screen was made
-            // with the old one (or none). Drop it rather than leave a
-            // result that no longer matches the settings above it.
-            s.resetOutput();
-          }}
-          onCancel={() => s.setPasswordDialogOpen(false)}
+          onSet={(password) => dispatch({ type: "password-set", password })}
+          onCancel={() => dispatch({ type: "password-dialog", open: false })}
         />
       )}
     </div>

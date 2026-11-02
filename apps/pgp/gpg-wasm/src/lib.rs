@@ -2477,7 +2477,7 @@ fn walk_message_header(
 /// suitable decryption key found", which is true and useless -- the
 /// message never wanted a key. Both flags can be true at once (a message
 /// encrypted to a password AND to recipients); the caller decides which
-/// to use, and `useWorkspaceOperations` prefers the key when one of the
+/// to use, and `workspace-operations.ts` prefers the key when one of the
 /// user's own matches.
 #[wasm_bindgen(js_name = "messageEncryption")]
 pub fn message_encryption(ciphertext: &[u8]) -> Result<String, String> {

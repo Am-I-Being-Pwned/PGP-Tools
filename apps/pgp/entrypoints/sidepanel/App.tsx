@@ -3,7 +3,7 @@ import { HistoryIcon, SettingsIcon } from "lucide-react";
 
 import { Button } from "@amibeingpwned/ui/button";
 
-import type { WorkspaceIntake } from "../../components/workspace/useWorkspaceState";
+import type { WorkspaceIntake } from "../../components/workspace/useWorkspace";
 import type { WorkspaceOpsBridge } from "../../hooks/useActionContext";
 import type { Tab } from "../../hooks/useNav";
 import type { VaultServices } from "../../hooks/useVault";

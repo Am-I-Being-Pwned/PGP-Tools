@@ -11,7 +11,7 @@ import { codePointLabel, INVISIBLE } from "../../lib/utils/lookalike";
  * these ({@link hasHiddenCharacters}), because there the text is the
  * signer's. Here it is about to become the USER's signed statement, and
  * it can have come from a web page's selection ("Open in PGP Tools") or
- * a paste, so Sign asks first (see `useWorkspaceOperations`). The set is
+ * a paste, so Sign asks first (see `workspace-operations.ts`). The set is
  * `INVISIBLE` (lookalike.ts) -- every default-ignorable, format and
  * control character, plus the blank-looking symbols -- so a variation
  * selector, a Hangul filler or an interlinear annotation mark counts

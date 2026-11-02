@@ -4,7 +4,7 @@ import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { t, tn } from "../../lib/i18n";
 import { INPUT_CLASS } from "../../lib/utils/styles";
 import { SubPage } from "../shared/SubPage";
-import { MIN_MESSAGE_PASSWORD_LENGTH } from "./useWorkspaceState";
+import { MIN_MESSAGE_PASSWORD_LENGTH } from "./workspace-state";
 
 interface MessagePasswordPageProps {
   /** Applied on save. Never called with a password shorter than

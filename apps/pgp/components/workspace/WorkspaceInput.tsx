@@ -62,10 +62,10 @@ export function modeLabel(mode: Mode): string {
 
 interface WorkspaceInputProps {
   mode: Mode;
+  /** A different mode was picked; the workspace owns what it resets. */
   onModeChange: (mode: Mode) => void;
-  /** The message box is UNCONTROLLED: the composed plaintext lives in the
-   *  DOM node and in the owning hook's ref, never in render state. See the
-   *  input block in `useWorkspaceState` for why. */
+  /** The message box is UNCONTROLLED: the plaintext lives in the DOM node
+   *  and the workspace's ref, never in render state (`useWorkspace`). */
   inputElRef: React.MutableRefObject<HTMLTextAreaElement | null>;
   /** Read the current text at the point of use (import prefill). */
   getInput: () => string;
@@ -90,9 +90,6 @@ interface WorkspaceInputProps {
   onNavigateToKeys?: (importPrefill?: string) => void;
   /** Take the user to a key they already hold, highlighted in the list. */
   onRevealKey?: (keyId: string) => void;
-  operationDone: boolean;
-  onReset: () => void;
-  onResetOutput: () => void;
   /** Repair mangled armor in text that ARRIVED (a paste). Returns the
    *  input unchanged when there is nothing to fix, which is the signal
    *  this component uses to leave the browser's own paste alone. */
@@ -136,9 +133,6 @@ export function WorkspaceInput({
   privateKeyDetected,
   onNavigateToKeys,
   onRevealKey,
-  operationDone,
-  onReset,
-  onResetOutput,
   onRepairPastedText,
   composeTranslate,
   onToolsReady,
@@ -335,12 +329,8 @@ export function WorkspaceInput({
           value={mode}
           onValueChange={(v) => {
             // A press on the mode already showing is not a change: the
-            // dropdown this replaced never fired for it, and the resets
-            // below would throw away a finished result.
-            if (v === mode) return;
-            onModeChange(v);
-            if (operationDone) onReset();
-            else onResetOutput();
+            // reset would throw away a finished result.
+            if (v !== mode) onModeChange(v);
           }}
           options={MODE_ORDER.map((value, i) => {
             const iconOnly = modeFit === 2 && value !== mode;

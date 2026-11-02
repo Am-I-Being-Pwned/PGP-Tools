@@ -80,8 +80,8 @@ export interface RunResult {
 
 export type Run =
   | { kind: "idle" }
-  /** `unattended`: a context-menu auto-run; the form stays hidden. */
-  | { kind: "running"; unattended: boolean }
+  /** `autoRun`: a context-menu auto-run; the form stays hidden. */
+  | { kind: "running"; autoRun: boolean }
   | { kind: "done" }
   | { kind: "error"; error: PresentedError }
   /** An unattended run came out over `AUTO_RUN_MAX_BYTES`. */
@@ -218,7 +218,7 @@ export type WorkspaceEvent =
   | { type: "reset-results" }
   | { type: "reset-all" }
   /** A fresh run: the last results go. */
-  | { type: "started"; unattended?: boolean }
+  | { type: "started"; autoRun?: boolean }
   /** A prompt's secret was submitted; results stay. */
   | { type: "submitted" }
   | { type: "finished"; outcome: Outcome; staged: number }
@@ -425,12 +425,12 @@ export function workspaceReducer(
     case "started":
       return {
         ...resetResults(s),
-        run: { kind: "running", unattended: e.unattended ?? false },
+        run: { kind: "running", autoRun: e.autoRun ?? false },
       };
     case "submitted":
       return {
         ...s,
-        run: { kind: "running", unattended: false },
+        run: { kind: "running", autoRun: false },
         prompt: s.prompt && { ...s.prompt, error: null },
       };
     case "finished":
@@ -460,6 +460,7 @@ export function workspaceReducer(
     case "message-encryption":
       return { ...s, messageEncryption: e.value };
     case "extension-zip": {
+      if (e.value === s.isExtensionZip && !e.nudge) return s;
       const next = { ...s, isExtensionZip: e.value };
       // Only from encrypt/decrypt, so an explicit sign/verify is kept.
       return e.nudge && (s.mode === "encrypt" || s.mode === "decrypt")

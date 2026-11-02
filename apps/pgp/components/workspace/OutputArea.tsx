@@ -10,8 +10,7 @@ import { showLoneCarriageReturns } from "../../lib/utils/line-breaks";
 interface OutputAreaProps {
   /** The result `<pre>`. It is UNCONTROLLED: the plaintext is written to
    *  `textContent` by the owning hook, never rendered as a React child,
-   *  so it stays out of render state. See the output block in
-   *  `useWorkspaceState` for why. */
+   *  so it stays out of render state (`useWorkspace`, SECURITY.md §8.11). */
   outputElRef: React.MutableRefObject<HTMLPreElement | null>;
   /** Read the result text at the point of use. */
   getOutput: () => string;
