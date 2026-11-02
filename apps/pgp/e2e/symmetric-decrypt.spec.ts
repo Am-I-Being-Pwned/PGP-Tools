@@ -1,3 +1,5 @@
+import type { Page } from "@playwright/test";
+
 import { expect, test } from "./fixtures";
 import {
   goToKeys,
@@ -62,10 +64,7 @@ ZEoKujuEOCe/thf7tS6NbpbbXH2lOPGdUySXjA==
 `;
 
 /** Paste a message into the workspace and press Decrypt. */
-async function stageAndDecrypt(
-  panel: import("@playwright/test").Page,
-  armored: string,
-): Promise<void> {
+async function stageAndDecrypt(panel: Page, armored: string): Promise<void> {
   await panel.getByRole("tab", { name: "Main" }).click();
   await panel.locator("textarea").first().fill(armored);
   // Armored ciphertext switches the mode on its own; assert it rather
@@ -165,10 +164,7 @@ hF4Dhe4kFYYSt7ISAQdA0000000000000000000000000000000000000000000000
 /** Paste `text` into the workspace box for real -- via the clipboard and
  *  a paste keystroke, not `fill()`. The distinction is the whole point of
  *  these tests: armor repair rides on the paste, never on typing. */
-async function pasteIntoWorkspace(
-  panel: import("@playwright/test").Page,
-  text: string,
-): Promise<void> {
+async function pasteIntoWorkspace(panel: Page, text: string): Promise<void> {
   await panel.getByRole("tab", { name: "Main" }).click();
   const box = panel.locator("textarea").first();
   await box.click();

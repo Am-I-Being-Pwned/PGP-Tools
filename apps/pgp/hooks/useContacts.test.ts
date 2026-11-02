@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type * as ContactsModule from "../lib/storage/contacts";
 import type { PublicContactKey } from "../lib/storage/contacts";
 import { IDENTITY_VERSION } from "../lib/storage/contacts";
 import { backfillIdentity, withUpdatedContact } from "./useContacts";
@@ -11,7 +12,7 @@ const store = vi.hoisted(() => ({
   updateContact: vi.fn(),
 }));
 vi.mock("../lib/storage/contacts", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../lib/storage/contacts")>()),
+  ...(await importOriginal<typeof ContactsModule>()),
   updateContact: store.updateContact,
 }));
 

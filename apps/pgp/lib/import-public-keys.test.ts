@@ -13,6 +13,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { KeyInfo } from "./pgp/types";
+import type * as ContactsModule from "./storage/contacts";
 import type { PublicContactKey } from "./storage/contacts";
 import {
   importRejectionMessage,
@@ -29,7 +30,7 @@ vi.mock("./pgp/wasm", () => ({
 
 const store = vi.hoisted(() => ({ updateContactAsync: vi.fn() }));
 vi.mock("./storage/contacts", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("./storage/contacts")>()),
+  ...(await importOriginal<typeof ContactsModule>()),
   updateContactAsync: store.updateContactAsync,
 }));
 

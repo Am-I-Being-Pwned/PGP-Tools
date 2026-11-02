@@ -19,6 +19,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { KeyserverQuery } from "../keyserver/query";
+import type * as PrepareModule from "./prepare";
 import type { IncomingKey } from "./types";
 import {
   answersQuery,
@@ -30,7 +31,7 @@ import {
 import { prepareImport } from "./prepare";
 
 vi.mock("./prepare", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("./prepare")>()),
+  ...(await importOriginal<typeof PrepareModule>()),
   prepareImport: vi.fn(),
 }));
 

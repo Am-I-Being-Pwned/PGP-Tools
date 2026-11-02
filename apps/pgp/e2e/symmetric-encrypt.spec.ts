@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import type { Page } from "@playwright/test";
 
 import { expect, test } from "./fixtures";
 import {
@@ -26,20 +27,18 @@ const MESSAGE = "meet me at the usual place";
 /** The badge that turns symmetric encryption on. `ToggleBadge` renders
  *  `role="switch"`, not a button -- the same handle `setKeyDiscovery` in
  *  helpers.ts uses for the settings toggles. */
-function passwordBadge(panel: import("@playwright/test").Page) {
+function passwordBadge(panel: Page) {
   return panel.getByRole("switch", { name: "Password", exact: true });
 }
 
-async function goToEncrypt(
-  panel: import("@playwright/test").Page,
-): Promise<void> {
+async function goToEncrypt(panel: Page): Promise<void> {
   await panel.getByRole("tab", { name: "Main" }).click();
   await panel.getByRole("radio", { name: "Encrypt", exact: true }).click();
 }
 
 /** Press the badge, type a password in the dialog, confirm. */
 async function setMessagePassword(
-  panel: import("@playwright/test").Page,
+  panel: Page,
   password: string,
 ): Promise<void> {
   await passwordBadge(panel).click();

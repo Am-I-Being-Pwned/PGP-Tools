@@ -1,3 +1,5 @@
+import type { Page } from "@playwright/test";
+
 import { expect, test } from "./fixtures";
 import { generateSshKeys, goToKeys, seedVault } from "./helpers";
 import { TEST_KEYS } from "./keys";
@@ -10,7 +12,7 @@ const MASTER = "correct horse battery staple";
 const HIGHLIGHT_LIFETIME_MS = 3200;
 
 /** Where the just-imported card sits relative to what scrolls it. */
-async function revealed(panel: import("@playwright/test").Page) {
+async function revealed(panel: Page) {
   return panel.evaluate(() => {
     const main = document.querySelector("main");
     const card = document.querySelector(".just-imported");
@@ -31,7 +33,7 @@ async function revealed(panel: import("@playwright/test").Page) {
 /** Seed a list long enough that a new contact lands below the fold, then
  *  import three same-comment SSH keys -- which group into ONE contact,
  *  the shape a self-hosting correspondent's keys arrive in. */
-async function importGroupedContact(panel: import("@playwright/test").Page) {
+async function importGroupedContact(panel: Page) {
   const ssh = generateSshKeys(3, () => "otto@laptop");
   await panel
     .locator('input[accept=".asc,.gpg,.pub,.key,.pgp,.txt"]')
