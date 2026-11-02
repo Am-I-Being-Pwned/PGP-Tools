@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useRef, useState, type RefObject } from "react";
 
 import type { CrxSigningKeyBlob } from "~/lib/crx/types";
 import { t, tn } from "~/lib/i18n";
@@ -25,13 +25,9 @@ export function useKeySelection(
     contacts: PublicContactKey[];
   },
 ) {
-  const [selectionMode, setSelectionMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-
-  // Leaving nothing selected exits selection mode.
-  useEffect(() => {
-    if (selectionMode && selected.size === 0) setSelectionMode(false);
-  }, [selectionMode, selected]);
+  // Derived, so deselecting the last card is what leaves selection mode.
+  const selectionMode = selected.size > 0;
 
   // Where a shift-click measures its range FROM: the last card touched
   // without shift. Reset whenever the selection is torn down, so a stale
@@ -72,13 +68,11 @@ export function useKeySelection(
   };
   const startSelect = (id: string) => {
     anchorRef.current = id;
-    setSelectionMode(true);
     setSelected((s) => new Set(s).add(id));
   };
   const exitSelection = () => {
     anchorRef.current = null;
     setSelected(new Set());
-    setSelectionMode(false);
   };
 
   const selectedMyKeys = myKeys.filter((k) =>
@@ -107,7 +101,6 @@ export function useKeySelection(
       exitSelection();
     } else {
       anchorRef.current = null;
-      setSelectionMode(true);
       setSelected(new Set(selectableIds));
     }
   };
@@ -125,7 +118,6 @@ export function useKeySelection(
           label: t("keys_reselect"),
           onClick: () => {
             setSelected(prev);
-            setSelectionMode(true);
           },
         },
       },
