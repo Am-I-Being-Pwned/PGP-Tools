@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import type { StorageArea } from "./chunked";
 import {
   getChunked,
   IncompleteChunkedValueError,
@@ -8,45 +7,7 @@ import {
   removeChunked,
   setChunked,
 } from "./chunked";
-
-/**
- * In-memory stand-in for a chrome.storage area. `perItemCap` mirrors
- * sync's QUOTA_BYTES_PER_ITEM: set() throws the same way Chrome does when
- * an item's key + JSON(value) exceeds the cap, so a test can prove that
- * chunking keeps every item under the limit.
- */
-function fakeArea(perItemCap = Infinity) {
-  const store = new Map<string, unknown>();
-  const itemBytes = (k: string, v: unknown) =>
-    k.length + JSON.stringify(v).length;
-  const area = {
-    store,
-    get: (keys?: string | string[] | null) => {
-      if (keys == null) return Promise.resolve(Object.fromEntries(store));
-      const list = Array.isArray(keys) ? keys : [keys];
-      const out: Record<string, unknown> = {};
-      for (const k of list) if (store.has(k)) out[k] = store.get(k);
-      return Promise.resolve(out);
-    },
-    set: (items: Record<string, unknown>) => {
-      for (const [k, v] of Object.entries(items)) {
-        if (itemBytes(k, v) > perItemCap) {
-          return Promise.reject(
-            new Error("Resource::kQuotaBytesPerItem quota exceeded"),
-          );
-        }
-      }
-      for (const [k, v] of Object.entries(items)) store.set(k, v);
-      return Promise.resolve();
-    },
-    remove: (keys: string | string[]) => {
-      const list = Array.isArray(keys) ? keys : [keys];
-      for (const k of list) store.delete(k);
-      return Promise.resolve();
-    },
-  };
-  return area as typeof area & StorageArea;
-}
+import { fakeArea } from "./fake-area";
 
 const SYNC_PER_ITEM_CAP = 8192;
 const blob = (n: number) => ({ iv: "aXY=", ciphertext: "Q".repeat(n) });

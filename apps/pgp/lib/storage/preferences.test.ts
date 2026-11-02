@@ -27,14 +27,10 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { FakeArea } from "./fake-area";
 import { STORAGE_PREFERENCES, STORAGE_SETTINGS } from "../constants";
-import { invalidateLocationCache } from "./engine";
-import { fakeArea } from "./fake-area";
+import { stubChromeStorage } from "./fake-area";
 import {
-  fakeDecryptContacts,
-  fakeDecryptStore,
-  fakeEncryptContacts,
-  fakeEncryptStore,
   isDomainSealed,
   legacyEnvelope,
   storedPlaintext,
@@ -43,20 +39,12 @@ import { unpadPlaintext } from "./padding";
 
 const wasmMock = vi.hoisted(() => ({ session: true }));
 
-vi.mock("../pgp/wasm", () => ({
-  hasContactsSession: () => Promise.resolve(wasmMock.session),
-  encryptStore: (domain: string, plaintext: Uint8Array) =>
-    Promise.resolve(fakeEncryptStore(domain, plaintext)),
-  decryptStore: (domain: string, ciphertext: Uint8Array) =>
-    Promise.resolve(fakeDecryptStore(domain, ciphertext)),
-  encryptContacts: (plaintext: Uint8Array) =>
-    Promise.resolve(fakeEncryptContacts(plaintext)),
-  decryptContacts: (ciphertext: Uint8Array) =>
-    Promise.resolve(fakeDecryptContacts(ciphertext)),
-}));
+vi.mock("../pgp/wasm", async () =>
+  (await import("./fake-store-crypto")).fakeStoreWasm(() => wasmMock.session),
+);
 
-let local: ReturnType<typeof fakeArea>;
-let sync: ReturnType<typeof fakeArea>;
+let local: FakeArea;
+let sync: FakeArea;
 
 /** Fresh module instance, so `migrationSettled` starts false. */
 async function loadModule() {
@@ -65,11 +53,8 @@ async function loadModule() {
 }
 
 beforeEach(() => {
-  local = fakeArea();
-  sync = fakeArea();
-  vi.stubGlobal("chrome", { storage: { local, sync } });
+  ({ local, sync } = stubChromeStorage());
   wasmMock.session = true;
-  invalidateLocationCache();
 });
 
 afterEach(() => {
@@ -77,7 +62,7 @@ afterEach(() => {
 });
 
 /** The settings object inside the encrypted blob, whichever area holds it. */
-function storedSettings(area: ReturnType<typeof fakeArea> = local) {
+function storedSettings(area: FakeArea = local) {
   const blob = area.store.get(STORAGE_SETTINGS);
   if (!blob) return undefined;
   const plaintext = unpadPlaintext(storedPlaintext(blob as never));

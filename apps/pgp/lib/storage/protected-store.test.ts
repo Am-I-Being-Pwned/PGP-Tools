@@ -18,6 +18,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { CrxSigningKeyBlob } from "../crx/types";
 import type { PublicContactKey } from "./contacts";
+import type { FakeArea } from "./fake-area";
 import type { ProtectedKeyBlob } from "./keyring";
 import { STORAGE_CRX_KEYS, STORAGE_KEYRING } from "../constants";
 import {
@@ -28,14 +29,8 @@ import {
   updateCrxLastUsed,
 } from "../crx/storage";
 import { contactsOfKind, loadContacts, saveContact } from "./contacts";
-import { invalidateLocationCache } from "./engine";
-import {
-  fakeDecryptContacts,
-  fakeDecryptStore,
-  fakeEncryptContacts,
-  fakeEncryptStore,
-  isDomainSealed,
-} from "./fake-store-crypto";
+import { stubChromeStorage } from "./fake-area";
+import { isDomainSealed } from "./fake-store-crypto";
 import { isPgpRecord, isSshRecord, storedKeyKind } from "./key-kind";
 import {
   addKey,
@@ -48,48 +43,15 @@ import {
 
 const wasmMock = vi.hoisted(() => ({ session: true }));
 
-vi.mock("../pgp/wasm", () => ({
-  hasContactsSession: () => Promise.resolve(wasmMock.session),
-  encryptStore: (domain: string, plaintext: Uint8Array) =>
-    Promise.resolve(fakeEncryptStore(domain, plaintext)),
-  decryptStore: (domain: string, ciphertext: Uint8Array) =>
-    Promise.resolve(fakeDecryptStore(domain, ciphertext)),
-  encryptContacts: (plaintext: Uint8Array) =>
-    Promise.resolve(fakeEncryptContacts(plaintext)),
-  decryptContacts: (ciphertext: Uint8Array) =>
-    Promise.resolve(fakeDecryptContacts(ciphertext)),
-}));
+vi.mock("../pgp/wasm", async () =>
+  (await import("./fake-store-crypto")).fakeStoreWasm(() => wasmMock.session),
+);
 
-function fakeArea() {
-  const store = new Map<string, unknown>();
-  return {
-    store,
-    get: (keys?: string | string[] | null) => {
-      if (keys == null) return Promise.resolve(Object.fromEntries(store));
-      const list = Array.isArray(keys) ? keys : [keys];
-      const out: Record<string, unknown> = {};
-      for (const k of list) if (store.has(k)) out[k] = store.get(k);
-      return Promise.resolve(out);
-    },
-    set: (items: Record<string, unknown>) => {
-      for (const [k, v] of Object.entries(items)) store.set(k, v);
-      return Promise.resolve();
-    },
-    remove: (keys: string | string[]) => {
-      const list = Array.isArray(keys) ? keys : [keys];
-      for (const k of list) store.delete(k);
-      return Promise.resolve();
-    },
-  };
-}
-
-let local: ReturnType<typeof fakeArea>;
+let local: FakeArea;
 
 beforeEach(() => {
-  local = fakeArea();
-  vi.stubGlobal("chrome", { storage: { local, sync: fakeArea() } });
+  ({ local } = stubChromeStorage());
   wasmMock.session = true;
-  invalidateLocationCache();
 });
 
 afterEach(() => {

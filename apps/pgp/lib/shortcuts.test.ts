@@ -7,23 +7,11 @@ import {
   formatShortcutTitle,
 } from "@amibeingpwned/ui/kbd-helpers";
 
-import type { ShortcutKeyEvent } from "./shortcuts";
+import { keydown } from "./fake-keydown";
 import { isEditableTarget, matchesShortcut } from "./shortcuts";
 
 const MOD_ENTER: ShortcutSpec = { mod: true, key: "Enter" };
 const MOD_SHIFT_C: ShortcutSpec = { mod: true, shift: true, key: "c" };
-
-function keydown(overrides: Partial<ShortcutKeyEvent>): ShortcutKeyEvent {
-  return {
-    key: "",
-    metaKey: false,
-    ctrlKey: false,
-    shiftKey: false,
-    altKey: false,
-    repeat: false,
-    ...overrides,
-  };
-}
 
 describe("formatShortcut", () => {
   it("renders mod as ⌘ on macOS", () => {

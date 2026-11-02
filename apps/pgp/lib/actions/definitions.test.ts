@@ -1,66 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { ShortcutKeyEvent } from "../shortcuts";
 import type { ActionCtx, PgpMode } from "./types";
+import { keydown } from "../fake-keydown";
 import { ACTIONS, MODE_SHORTCUTS } from "./definitions";
+import { fakeCtx } from "./fake-ctx";
 import { findByShortcut, visibleActions } from "./registry";
-
-function fakeCtx(overrides: Partial<ActionCtx> = {}): ActionCtx {
-  const noop = () => undefined;
-  return {
-    tab: "workspace",
-    mode: "encrypt",
-    hasInput: false,
-    canEncrypt: true,
-    encryptEngine: "pgp",
-    hasOutput: false,
-    hasDownload: false,
-    masterUnlocked: true,
-    historyEnabled: false,
-    encryptToSelf: false,
-    alsoSign: false,
-    neverCacheKeys: false,
-    counts: { ownKeys: 0, contacts: 0 },
-    result: { canTranslate: false, readingLanguage: "en", canReply: false },
-    compose: { canEdit: true, translateEnabled: true, translateTarget: null },
-    navigation: {
-      setTab: noop,
-      openHistory: noop,
-      openGenerate: noop,
-      openImport: noop,
-      setMode: noop,
-      openSecurityPresets: noop,
-    },
-    ops: {
-      execute: noop,
-      clearInput: noop,
-      copyOutput: noop,
-      downloadOutput: noop,
-      lockNow: noop,
-      toggleEncryptToSelf: noop,
-      toggleAlsoSign: noop,
-      toggleSaveToHistory: noop,
-      applyStyle: noop,
-      openFind: noop,
-      translateTo: noop,
-      translateOutput: noop,
-      reply: noop,
-    },
-    ...overrides,
-  };
-}
-
-function keydown(overrides: Partial<ShortcutKeyEvent>): ShortcutKeyEvent {
-  return {
-    key: "",
-    metaKey: false,
-    ctrlKey: false,
-    shiftKey: false,
-    altKey: false,
-    repeat: false,
-    ...overrides,
-  };
-}
 
 function byId(ctx: ActionCtx, id: string) {
   return visibleActions(ACTIONS, ctx).find((r) => r.action.id === id);

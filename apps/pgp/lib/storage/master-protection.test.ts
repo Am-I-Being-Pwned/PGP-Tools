@@ -15,6 +15,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { FakeArea } from "./fake-area";
 import type { MasterProtection } from "./master-protection";
 import {
   STORAGE_INTEGRITY,
@@ -22,21 +23,18 @@ import {
   STORAGE_PREFERENCES,
 } from "../constants";
 import { invalidateLocationCache } from "./engine";
-import { fakeArea } from "./fake-area";
+import { stubChromeStorage } from "./fake-area";
 import {
   getMasterProtection,
   saveMasterProtection,
   VaultExistsError,
 } from "./master-protection";
 
-let local: ReturnType<typeof fakeArea>;
-let sync: ReturnType<typeof fakeArea>;
+let local: FakeArea;
+let sync: FakeArea;
 
 beforeEach(() => {
-  local = fakeArea();
-  sync = fakeArea();
-  vi.stubGlobal("chrome", { storage: { local, sync } });
-  invalidateLocationCache();
+  ({ local, sync } = stubChromeStorage());
 });
 
 afterEach(() => {

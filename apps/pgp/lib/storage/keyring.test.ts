@@ -23,16 +23,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { EncryptedBlob } from "../protection/encrypt-private-key";
+import type { FakeArea } from "./fake-area";
 import type { ProtectedKeyBlob } from "./keyring";
 import { STORAGE_KEYRING } from "../constants";
-import { invalidateLocationCache } from "./engine";
-import { fakeArea } from "./fake-area";
+import { stubChromeStorage } from "./fake-area";
 import {
   domainEnvelope,
-  fakeDecryptContacts,
-  fakeDecryptStore,
-  fakeEncryptContacts,
-  fakeEncryptStore,
   isDomainSealed,
   legacyEnvelope,
 } from "./fake-store-crypto";
@@ -49,25 +45,15 @@ import {
 
 const wasmMock = vi.hoisted(() => ({ session: true }));
 
-vi.mock("../pgp/wasm", () => ({
-  hasContactsSession: () => Promise.resolve(wasmMock.session),
-  encryptStore: (domain: string, plaintext: Uint8Array) =>
-    Promise.resolve(fakeEncryptStore(domain, plaintext)),
-  decryptStore: (domain: string, ciphertext: Uint8Array) =>
-    Promise.resolve(fakeDecryptStore(domain, ciphertext)),
-  encryptContacts: (plaintext: Uint8Array) =>
-    Promise.resolve(fakeEncryptContacts(plaintext)),
-  decryptContacts: (ciphertext: Uint8Array) =>
-    Promise.resolve(fakeDecryptContacts(ciphertext)),
-}));
+vi.mock("../pgp/wasm", async () =>
+  (await import("./fake-store-crypto")).fakeStoreWasm(() => wasmMock.session),
+);
 
-let local: ReturnType<typeof fakeArea>;
+let local: FakeArea;
 
 beforeEach(() => {
-  local = fakeArea();
-  vi.stubGlobal("chrome", { storage: { local, sync: fakeArea() } });
+  ({ local } = stubChromeStorage());
   wasmMock.session = true;
-  invalidateLocationCache();
 });
 
 afterEach(() => {

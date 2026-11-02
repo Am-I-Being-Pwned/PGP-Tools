@@ -21,6 +21,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { WorkspaceDraft } from "../workspace-draft";
 import type { StoredEnvelope } from "./envelope";
+import type { FakeArea } from "./fake-area";
 import type { PgpPreferences } from "./preferences";
 import { STORAGE_PREFERENCES, STORAGE_SETTINGS } from "../constants";
 import { toBase64 } from "../encoding";
@@ -28,7 +29,7 @@ import {
   decryptWorkspaceDraft,
   encryptWorkspaceDraft,
 } from "../workspace-draft";
-import { invalidateLocationCache } from "./engine";
+import { stubChromeStorage } from "./fake-area";
 import {
   isDomainSealed,
   sealedDomain,
@@ -52,68 +53,32 @@ const wasmMock = vi.hoisted(() => ({ session: true }));
 
 const UNDECRYPTABLE = new TextEncoder().encode("@@undecryptable@@");
 
-vi.mock("../pgp/wasm", async () => {
-  const fake = await import("./fake-store-crypto");
-  return {
-    hasContactsSession: () => Promise.resolve(wasmMock.session),
-    encryptStore: (domain: string, plaintext: Uint8Array) =>
-      Promise.resolve(fake.fakeEncryptStore(domain, plaintext)),
-    decryptStore: (domain: string, ciphertext: Uint8Array) =>
-      Promise.resolve(fake.fakeDecryptStore(domain, ciphertext)),
-    encryptContacts: (plaintext: Uint8Array) =>
-      Promise.resolve(fake.fakeEncryptContacts(plaintext)),
-    decryptContacts: (ciphertext: Uint8Array) =>
-      Promise.resolve(fake.fakeDecryptContacts(ciphertext)),
-    encryptDraft: (plaintext: Uint8Array) =>
-      Promise.resolve(new Uint8Array(plaintext)),
-    decryptDraft: (ciphertext: Uint8Array) => {
-      if (
-        ciphertext.length === UNDECRYPTABLE.length &&
-        ciphertext.every((b, i) => b === UNDECRYPTABLE[i])
-      ) {
-        return Promise.reject(new Error("decryption failed"));
-      }
-      return Promise.resolve(new Uint8Array(ciphertext));
-    },
-  };
-});
+vi.mock("../pgp/wasm", async () => ({
+  ...(await import("./fake-store-crypto")).fakeStoreWasm(
+    () => wasmMock.session,
+  ),
+  encryptDraft: (plaintext: Uint8Array) =>
+    Promise.resolve(new Uint8Array(plaintext)),
+  decryptDraft: (ciphertext: Uint8Array) => {
+    if (
+      ciphertext.length === UNDECRYPTABLE.length &&
+      ciphertext.every((b, i) => b === UNDECRYPTABLE[i])
+    ) {
+      return Promise.reject(new Error("decryption failed"));
+    }
+    return Promise.resolve(new Uint8Array(ciphertext));
+  },
+}));
 
-/** In-memory chrome.storage area (same shape as history.test.ts). */
-function fakeArea() {
-  const store = new Map<string, unknown>();
-  return {
-    store,
-    get: (keys?: string | string[] | null) => {
-      if (keys == null) return Promise.resolve(Object.fromEntries(store));
-      const list = Array.isArray(keys) ? keys : [keys];
-      const out: Record<string, unknown> = {};
-      for (const k of list) if (store.has(k)) out[k] = store.get(k);
-      return Promise.resolve(out);
-    },
-    set: (items: Record<string, unknown>) => {
-      for (const [k, v] of Object.entries(items)) store.set(k, v);
-      return Promise.resolve();
-    },
-    remove: (keys: string | string[]) => {
-      const list = Array.isArray(keys) ? keys : [keys];
-      for (const k of list) store.delete(k);
-      return Promise.resolve();
-    },
-  };
-}
-
-let local: ReturnType<typeof fakeArea>;
-let sync: ReturnType<typeof fakeArea>;
+let local: FakeArea;
+let sync: FakeArea;
 
 beforeEach(() => {
-  local = fakeArea();
-  sync = fakeArea();
   // Deliberately NO `permissions` key: v1.3.1 never requested
   // unlimitedStorage, and Firefox doesn't expose chrome.permissions the
   // same way -- history's budget code must tolerate its absence.
-  vi.stubGlobal("chrome", { storage: { local, sync } });
+  ({ local, sync } = stubChromeStorage());
   wasmMock.session = true;
-  invalidateLocationCache();
 });
 
 afterEach(() => {
@@ -168,9 +133,7 @@ function seedV131Profile(location: "local" | "sync" = "local"): void {
  *  mirror of loadSettings, for asserting what a write persisted).
  *  `storedPlaintext` accepts either sealing scheme, so this works on a
  *  v1.3.1 fixture and on a blob the current build rewrote. */
-function readStoredSettings(
-  area: ReturnType<typeof fakeArea>,
-): Record<string, unknown> {
+function readStoredSettings(area: FakeArea): Record<string, unknown> {
   const blob = area.store.get(STORAGE_SETTINGS) as StoredEnvelope;
   const plaintext = unpadPlaintext(storedPlaintext(blob));
   return JSON.parse(new TextDecoder().decode(plaintext)) as Record<

@@ -45,14 +45,9 @@ const PASSPHRASE_REQUIRED =
 
 vi.mock("../pgp/wasm", () => wasm);
 
-const webauthn = vi.hoisted(() => ({
-  registerPasskey: vi.fn(),
-  authenticateAndGetPrf: vi.fn(),
-  generatePrfSalt: vi.fn(),
-  generateStoredSecret: vi.fn(),
-  isWebAuthnCancel: vi.fn(() => false),
-  checkPrfSupport: vi.fn(() => true),
-}));
+const webauthn = await vi.hoisted(async () =>
+  (await import("../protection/fake-webauthn")).fakeWebauthnPrf(),
+);
 
 vi.mock("../protection/webauthn-prf", () => webauthn);
 

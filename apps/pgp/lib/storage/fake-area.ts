@@ -13,7 +13,10 @@
  * unbounded `local` area.
  */
 
+import { vi } from "vitest";
+
 import type { StorageArea } from "./chunked";
+import { invalidateLocationCache } from "./engine";
 
 export type FakeArea = StorageArea & {
   /** The backing map, for direct seeding and assertions. */
@@ -52,4 +55,21 @@ export function fakeArea(perItemCap = Infinity): FakeArea {
     },
   };
   return area as FakeArea;
+}
+
+/**
+ * Stub `chrome` with fresh (or the given) `local` and `sync` areas plus
+ * any `extra` APIs, and drop the engine's cached location -- it points
+ * at whatever areas the previous stub held. Pair with
+ * `vi.unstubAllGlobals()` in `afterEach`.
+ */
+export function stubChromeStorage(
+  areas: { local?: FakeArea; sync?: FakeArea } = {},
+  extra: Record<string, unknown> = {},
+): { local: FakeArea; sync: FakeArea } {
+  const local = areas.local ?? fakeArea();
+  const sync = areas.sync ?? fakeArea();
+  vi.stubGlobal("chrome", { storage: { local, sync }, ...extra });
+  invalidateLocationCache();
+  return { local, sync };
 }

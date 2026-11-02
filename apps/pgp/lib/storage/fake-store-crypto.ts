@@ -131,3 +131,21 @@ export function storedPlaintext(blob: StoredEnvelope): Uint8Array {
   const domain = sealedDomain(blob);
   return domain === null ? ct : fakeDecryptStore(domain, ct);
 }
+
+// ── module double ────────────────────────────────────────────────────
+
+/** The store-sealing slice of `lib/pgp/wasm`, for a `vi.mock` factory.
+ *  `hasSession` is read per call so a test can lock the vault mid-run. */
+export function fakeStoreWasm(hasSession: () => boolean) {
+  return {
+    hasContactsSession: () => Promise.resolve(hasSession()),
+    encryptStore: (domain: string, plaintext: Uint8Array) =>
+      Promise.resolve(fakeEncryptStore(domain, plaintext)),
+    decryptStore: (domain: string, ciphertext: Uint8Array) =>
+      Promise.resolve(fakeDecryptStore(domain, ciphertext)),
+    encryptContacts: (plaintext: Uint8Array) =>
+      Promise.resolve(fakeEncryptContacts(plaintext)),
+    decryptContacts: (ciphertext: Uint8Array) =>
+      Promise.resolve(fakeDecryptContacts(ciphertext)),
+  };
+}

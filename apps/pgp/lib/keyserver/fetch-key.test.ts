@@ -12,7 +12,15 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import type { FakeResponseInit } from "../net/fake-response";
 import type { KeyserverQuery } from "./query";
+import {
+  encode,
+  expectContentLengthRefusal,
+  expectTimeoutOffline,
+  fakeResponse,
+  stubFetch,
+} from "../net/fake-response";
 import { fetchKeyserverKey } from "./fetch-key";
 import { MAX_BODY_BYTES } from "./response";
 
@@ -26,65 +34,7 @@ const CERT = [
   "-----END PGP PUBLIC KEY BLOCK-----",
 ].join("\n");
 
-interface FakeResponseInit {
-  status?: number;
-  headers?: Record<string, string>;
-  chunks?: Uint8Array[];
-  /** Emit chunks forever -- the multi-GB body a bounded read must not
-   *  buffer. */
-  endless?: boolean;
-}
-
-/** Records what the code under test actually pulled. */
-interface Probe {
-  pulls: number;
-  cancelled: boolean;
-  textCalled: boolean;
-}
-
-function fakeResponse(init: FakeResponseInit = {}): {
-  response: Response;
-  probe: Probe;
-} {
-  const probe: Probe = { pulls: 0, cancelled: false, textCalled: false };
-  const headers = new Headers({ "content-type": PGP_CT, ...init.headers });
-  const chunks = init.chunks ?? [];
-  let index = 0;
-
-  const body = new ReadableStream<Uint8Array>({
-    pull(controller) {
-      probe.pulls += 1;
-      if (init.endless) {
-        controller.enqueue(new Uint8Array(16 * 1024).fill(0x20));
-        return;
-      }
-      if (index >= chunks.length) {
-        controller.close();
-        return;
-      }
-      controller.enqueue(chunks[index++]);
-    },
-    cancel() {
-      probe.cancelled = true;
-    },
-  });
-
-  const response = {
-    status: init.status ?? 200,
-    headers,
-    body,
-    text: () => {
-      probe.textCalled = true;
-      return Promise.resolve("");
-    },
-  } as unknown as Response;
-
-  return { response, probe };
-}
-
-function encode(text: string): Uint8Array[] {
-  return [new TextEncoder().encode(text)];
-}
+const respond = (init?: FakeResponseInit) => fakeResponse(PGP_CT, init);
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -93,9 +43,8 @@ afterEach(() => {
 
 describe("fetchKeyserverKey request", () => {
   it("asks the documented URL, with the pinned init", () => {
-    const { response } = fakeResponse({ chunks: encode(CERT) });
-    const stub = vi.fn().mockResolvedValue(response);
-    vi.stubGlobal("fetch", stub);
+    const { response } = respond({ chunks: encode(CERT) });
+    const stub = stubFetch(response);
 
     return fetchKeyserverKey(QUERY).then(() => {
       const [url, init] = stub.mock.calls[0] as [URL, RequestInit];
@@ -137,8 +86,8 @@ describe("fetchKeyserverKey request", () => {
 
 describe("fetchKeyserverKey body caps", () => {
   it("reads a measured response", async () => {
-    const { response } = fakeResponse({ chunks: encode(CERT) });
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response));
+    const { response } = respond({ chunks: encode(CERT) });
+    stubFetch(response);
 
     await expect(fetchKeyserverKey(QUERY)).resolves.toEqual({
       ok: true,
@@ -147,29 +96,17 @@ describe("fetchKeyserverKey body caps", () => {
     });
   });
 
-  it("refuses on Content-Length without reading the body at all", async () => {
-    const { response, probe } = fakeResponse({
-      headers: { "content-length": String(MAX_BODY_BYTES * 100) },
-      endless: true,
-    });
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response));
-
-    const result = await fetchKeyserverKey(QUERY);
-    expect(result).toEqual({ ok: false, error: "server-error" });
-    // The whole point: nothing was read, and the connection was dropped
-    // rather than drained. (One pull is the stream filling its own
-    // one-chunk queue at construction -- no reader was ever taken.)
-    expect(probe.pulls).toBeLessThanOrEqual(1);
-    expect(probe.cancelled).toBe(true);
-    expect(probe.textCalled).toBe(false);
-  });
+  it("refuses on Content-Length without reading the body at all", () =>
+    expectContentLengthRefusal(PGP_CT, MAX_BODY_BYTES, () =>
+      fetchKeyserverKey(QUERY),
+    ));
 
   it("stops reading an endless body at the cap instead of buffering it", async () => {
     // No Content-Length -- a chunked response, which is how a hostile
     // body would actually arrive. Without the bounded read this call
     // never returns.
-    const { response, probe } = fakeResponse({ endless: true });
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response));
+    const { response, probe } = respond({ endless: true });
+    stubFetch(response);
 
     const result = await fetchKeyserverKey(QUERY);
     expect(result).toEqual({ ok: false, error: "server-error" });
@@ -181,33 +118,14 @@ describe("fetchKeyserverKey body caps", () => {
   it("accepts a body that exactly fills the cap", async () => {
     const padded = `${CERT}${" ".repeat(MAX_BODY_BYTES - CERT.length)}`;
     expect(padded.length).toBe(MAX_BODY_BYTES);
-    const { response } = fakeResponse({ chunks: encode(padded) });
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response));
+    const { response } = respond({ chunks: encode(padded) });
+    stubFetch(response);
 
     await expect(fetchKeyserverKey(QUERY)).resolves.toMatchObject({ ok: true });
   });
 });
 
 describe("fetchKeyserverKey timeout", () => {
-  it("gives up on a response that never arrives", async () => {
-    vi.useFakeTimers();
-    // The slow-trickle attacker: headers, then silence. `parsingRef` in
-    // the panel gates the paste path too, so a hang here disables all
-    // key import until the panel is reopened.
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        (_url: URL, init: RequestInit) =>
-          new Promise((_resolve, reject) => {
-            init.signal?.addEventListener("abort", () => {
-              reject(new DOMException("aborted", "AbortError"));
-            });
-          }),
-      ),
-    );
-
-    const pending = fetchKeyserverKey(QUERY);
-    await vi.advanceTimersByTimeAsync(60_000);
-    await expect(pending).resolves.toEqual({ ok: false, error: "offline" });
-  });
+  it("gives up on a response that never arrives", () =>
+    expectTimeoutOffline(() => fetchKeyserverKey(QUERY)));
 });

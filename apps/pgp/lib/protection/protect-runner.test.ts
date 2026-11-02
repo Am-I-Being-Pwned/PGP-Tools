@@ -55,14 +55,9 @@ const wasm = vi.hoisted(() => ({
 
 vi.mock("../pgp/wasm", () => wasm);
 
-const webauthn = vi.hoisted(() => ({
-  registerPasskey: vi.fn(),
-  authenticateAndGetPrf: vi.fn(),
-  generatePrfSalt: vi.fn(),
-  generateStoredSecret: vi.fn(),
-  isWebAuthnCancel: vi.fn(() => false),
-  checkPrfSupport: vi.fn(() => true),
-}));
+const webauthn = await vi.hoisted(async () =>
+  (await import("./fake-webauthn")).fakeWebauthnPrf(),
+);
 
 vi.mock("./webauthn-prf", () => webauthn);
 vi.mock("../protection/webauthn-prf", () => webauthn);
