@@ -41,9 +41,6 @@ const WORKSPACE_ACTIONS = new Set<string>([
   "verify",
 ]);
 
-/** Bumped per drop so dropping the same files again re-applies them. */
-let intakeNonce = 0;
-
 export default function App() {
   const nav = useNavState();
   const prefs = usePreferences();
@@ -97,7 +94,8 @@ export default function App() {
 
   const toWorkspace = useCallback(
     ({ files, text }: DropPayload) => {
-      setIntake({ files, text, nonce: ++intakeNonce });
+      // A fresh object per drop, so the same files dropped again re-apply.
+      setIntake({ files, text });
       discardDraft();
       showTab("workspace");
     },

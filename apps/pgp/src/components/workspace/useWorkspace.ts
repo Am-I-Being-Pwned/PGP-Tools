@@ -52,11 +52,9 @@ import {
   type WorkspaceEvent,
 } from "./workspace-state";
 
-/** `nonce` re-triggers intake for the same files/text. */
 export interface WorkspaceIntake {
   files: File[];
   text: string;
-  nonce: number;
 }
 
 const PUBLIC_KEY_HEADER = "-----BEGIN PGP PUBLIC KEY BLOCK-----";
