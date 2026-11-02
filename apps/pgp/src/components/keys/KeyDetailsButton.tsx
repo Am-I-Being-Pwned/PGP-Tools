@@ -4,15 +4,12 @@ import { InfoIcon } from "lucide-react";
 import { Button } from "@amibeingpwned/ui";
 
 import { t } from "~/lib/i18n";
-import type { PublicContactKey } from "~/lib/storage/contacts";
-import type { ProtectedKeyBlob } from "~/lib/storage/keyring";
+import { isContact, type StoredKey } from "~/lib/storage/stored-key";
 import { KeyDetailsPage, type KeyDetailsTarget } from "./KeyDetailsPage";
 
-type AnyKey = ProtectedKeyBlob | PublicContactKey;
-
 /** `armoredPublicKey`'s presence discriminates contacts from own keys. */
-export function keyDetailsTarget(key: AnyKey): KeyDetailsTarget {
-  return "armoredPublicKey" in key
+export function keyDetailsTarget(key: StoredKey): KeyDetailsTarget {
+  return isContact(key)
     ? { kind: "contact", contact: key }
     : { kind: "own", keyBlob: key };
 }
@@ -23,7 +20,7 @@ export function KeyDetailsButton({
   keyData,
   subtle = false,
 }: {
-  keyData: AnyKey;
+  keyData: StoredKey;
   subtle?: boolean;
 }) {
   const [open, setOpen] = useState(false);

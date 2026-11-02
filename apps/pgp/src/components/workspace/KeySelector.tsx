@@ -22,13 +22,12 @@ import { MarkedText } from "~/components/shared/MarkedText";
 import { t } from "~/lib/i18n";
 import type { PublicContactKey } from "~/lib/storage/contacts";
 import type { ProtectedKeyBlob } from "~/lib/storage/keyring";
+import type { StoredKey } from "~/lib/storage/stored-key";
 import { displayUserId, formatKeyDisplayName } from "~/lib/utils/key-naming";
-
-type AnyKey = ProtectedKeyBlob | PublicContactKey;
 
 interface KeySelectorProps {
   label: string;
-  keys?: AnyKey[];
+  keys?: StoredKey[];
   contacts?: PublicContactKey[];
   myKeys?: ProtectedKeyBlob[];
   selectedKeyId: string | null;
@@ -40,7 +39,7 @@ interface KeySelectorProps {
   inline?: boolean;
 }
 
-function getKeyDisplay(key: AnyKey): { name: string; detail: string } {
+function getKeyDisplay(key: StoredKey): { name: string; detail: string } {
   const userId = displayUserId(key);
   if (!userId) return { name: key.keyId.slice(-8).toUpperCase(), detail: "" };
   return formatKeyDisplayName(userId);
@@ -260,7 +259,7 @@ function KeyOption({
   selected,
   onSelect,
 }: {
-  keyData: AnyKey;
+  keyData: StoredKey;
   selected: boolean;
   onSelect: () => void;
 }) {

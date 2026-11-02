@@ -5,9 +5,9 @@ import { resolveSelfKey } from "~/lib/encrypt-recipients";
 import type { PresentedError } from "~/lib/errors/present";
 import type { WorkspaceAction } from "~/lib/messages";
 import type { MessageEncryption } from "~/lib/pgp/wasm-public";
-import type { PublicContactKey } from "~/lib/storage/contacts";
 import { isPgpRecord, isSshRecord } from "~/lib/storage/key-kind";
 import type { ProtectedKeyBlob } from "~/lib/storage/keyring";
+import type { StoredKey } from "~/lib/storage/stored-key";
 import type { FileResult } from "~/lib/utils/download";
 
 /**
@@ -57,7 +57,7 @@ export function textFacts(text: string): TextFacts {
 const NO_TEXT: TextFacts = textFacts("");
 
 export interface Verdict {
-  signer: PublicContactKey | ProtectedKeyBlob;
+  signer: StoredKey;
   tone: "success" | "warning";
   note: string | null;
   /** A good signature with a caveat (retired key, signed for someone

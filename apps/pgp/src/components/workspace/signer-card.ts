@@ -2,6 +2,7 @@ import { t } from "~/lib/i18n";
 import { contactClash, type IdentityConflict } from "~/lib/identity/binding";
 import type { PublicContactKey } from "~/lib/storage/contacts";
 import type { ProtectedKeyBlob } from "~/lib/storage/keyring";
+import { isContact, type StoredKey } from "~/lib/storage/stored-key";
 
 /**
  * Everything the signer card shows, computed once so the panel and Reply's
@@ -28,7 +29,7 @@ export function signerCardState({
   contacts,
   myKeys,
 }: {
-  signer: PublicContactKey | ProtectedKeyBlob;
+  signer: StoredKey;
   tone: "success" | "warning";
   note?: string | null;
   caveat?: string | null;
@@ -49,7 +50,7 @@ export function signerCardState({
       ? statusText
       : [note, extraNote].filter(Boolean).join(" · ") || undefined,
     clash:
-      "armoredPublicKey" in signer && !unverified
+      isContact(signer) && !unverified
         ? contactClash(signer.keyId, contacts, myKeys)
         : undefined,
   };
@@ -93,10 +94,8 @@ export function displayOnlySignerCard(state: SignerCardState): SignerCardState {
   };
 }
 
-export function signerAsContact(
-  signer: PublicContactKey | ProtectedKeyBlob,
-): PublicContactKey {
-  return "armoredPublicKey" in signer
+export function signerAsContact(signer: StoredKey): PublicContactKey {
+  return isContact(signer)
     ? signer
     : {
         keyId: signer.keyId,

@@ -7,6 +7,7 @@ import type { PublicContactKey } from "~/lib/storage/contacts";
 import { recordHistory, type NewHistoryEntry } from "~/lib/storage/history";
 import { isPgpRecord, isSshRecord } from "~/lib/storage/key-kind";
 import type { ProtectedKeyBlob } from "~/lib/storage/keyring";
+import { isContact } from "~/lib/storage/stored-key";
 import { toast } from "~/lib/toast";
 import {
   downloadBinary,
@@ -188,9 +189,7 @@ export function signatureVerdict(
     if (!signer) return { status: t("workspace_signature_verified") };
     // Whether the key IS the person it names only the user can vouch for.
     const unvouched =
-      "armoredPublicKey" in signer &&
-      !signer.verified &&
-      !myIds.includes(signer.keyId);
+      isContact(signer) && !signer.verified && !myIds.includes(signer.keyId);
     const note =
       [
         notEncrypted ? t("workspace_signed_not_encrypted") : null,
