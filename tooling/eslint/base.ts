@@ -72,6 +72,11 @@ export const baseConfig = defineConfig(
         { prefer: "type-imports", fixStyle: "inline-type-imports" },
       ],
       "@typescript-eslint/no-import-type-side-effects": "error",
+      // A file past this is doing several jobs: split it.
+      "max-lines": [
+        "warn",
+        { max: 800, skipBlankLines: true, skipComments: true },
+      ],
       "import/no-duplicates": ["error", { "prefer-inline": true }],
       "@typescript-eslint/no-misused-promises": [
         2,
@@ -103,6 +108,11 @@ export const baseConfig = defineConfig(
         },
       ],
     },
+  },
+  {
+    // Long test files are a list of cases, not a design smell.
+    files: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts"],
+    rules: { "max-lines": "off" },
   },
   {
     linterOptions: { reportUnusedDisableDirectives: true },

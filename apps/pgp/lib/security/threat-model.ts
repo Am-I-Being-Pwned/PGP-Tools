@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- a data table, one entry per threat */
 /**
  * The attack model, as data: the machine-checked backbone of SECURITY.md.
  * `threat-model.test.ts` fails if a threat claims a defence without a live
