@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-import { useNavIntent } from "~/hooks/useNav";
+import { useNavIntent } from "~/hooks";
 
 /**
  * Key ids written by the most recent import (or a `highlightKeyIds`

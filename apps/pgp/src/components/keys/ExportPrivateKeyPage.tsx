@@ -3,9 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button, Input } from "@amibeingpwned/ui";
 
 import { SubPage } from "~/components/shared/SubPage";
-import { useAsyncAction } from "~/hooks/useAsyncAction";
-import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
-import { useFlashMessage } from "~/hooks/useFlashMessage";
+import { useAsyncAction, useCopyToClipboard, useFlashMessage } from "~/hooks";
 import { t } from "~/lib/i18n";
 import { isWebAuthnCancel } from "~/lib/protection/webauthn-prf";
 import {

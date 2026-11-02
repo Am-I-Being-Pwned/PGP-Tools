@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 
-import { useComposeTranslation } from "~/hooks/useComposeTranslation";
-import { useTranslation } from "~/hooks/useTranslation";
+import { useComposeTranslation, useTranslation } from "~/hooks";
 import { languageLabel } from "~/lib/ai/languages";
 import { applyTextareaEdit } from "~/lib/compose/apply-edit";
 import { t } from "~/lib/i18n";

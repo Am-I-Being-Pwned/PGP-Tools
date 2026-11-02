@@ -4,7 +4,7 @@ import { BlockStack, Button } from "@amibeingpwned/ui";
 
 import { Emphasised } from "~/components/shared/Emphasised";
 import { SubPage } from "~/components/shared/SubPage";
-import { useAsyncAction } from "~/hooks/useAsyncAction";
+import { useAsyncAction } from "~/hooks";
 import { serializeCrxKeyBlocks } from "~/lib/crx/backup";
 import {
   closeCrxKey,

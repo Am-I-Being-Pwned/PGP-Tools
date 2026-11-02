@@ -1,8 +1,10 @@
-import { useContacts } from "~/hooks/useContacts";
-import { useKeyring } from "~/hooks/useKeyring";
-import { useNav } from "~/hooks/useNav";
-import { usePreferences } from "~/hooks/usePreferences";
-import { useVault } from "~/hooks/useVault";
+import {
+  useContacts,
+  useKeyring,
+  useNav,
+  usePreferences,
+  useVault,
+} from "~/hooks";
 import { AppError } from "~/lib/errors/app-error";
 import { t } from "~/lib/i18n";
 import { contactClash } from "~/lib/identity/binding";

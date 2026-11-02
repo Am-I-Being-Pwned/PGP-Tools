@@ -8,7 +8,7 @@ import {
   SlideOverPanel,
   useSlideOver,
 } from "~/components/shared/SlideOver";
-import { engineMessage, useAsyncAction } from "~/hooks/useAsyncAction";
+import { engineMessage, useAsyncAction } from "~/hooks";
 import { importSshIdentity } from "~/lib/age/protect-flow";
 import { recoverArmorIfNeeded } from "~/lib/armor-recovery";
 import { readKeyFile } from "~/lib/binary-armor";

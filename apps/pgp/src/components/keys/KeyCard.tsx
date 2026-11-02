@@ -19,9 +19,7 @@ import {
 } from "@amibeingpwned/ui";
 
 import { KeyAvatar } from "~/components/shared/KeyAvatar";
-import { useAsyncAction } from "~/hooks/useAsyncAction";
-import { useFlashMessage } from "~/hooks/useFlashMessage";
-import { usePreferences } from "~/hooks/usePreferences";
+import { useAsyncAction, useFlashMessage, usePreferences } from "~/hooks";
 import { t } from "~/lib/i18n";
 import {
   CardMenu,

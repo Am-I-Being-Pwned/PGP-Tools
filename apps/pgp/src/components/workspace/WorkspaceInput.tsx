@@ -16,8 +16,7 @@ import {
   Segmented,
 } from "@amibeingpwned/ui";
 
-import { useFitLevel } from "~/hooks/useFitLevel";
-import { useNav } from "~/hooks/useNav";
+import { useFitLevel, useNav } from "~/hooks";
 import { MODE_SHORTCUTS } from "~/lib/actions/definitions";
 import { recoverArmorIfNeeded } from "~/lib/armor-recovery";
 import { applyTextareaEdit } from "~/lib/compose/apply-edit";

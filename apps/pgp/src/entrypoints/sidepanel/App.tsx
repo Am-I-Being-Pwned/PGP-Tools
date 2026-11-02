@@ -13,21 +13,22 @@ import { HistoryPage } from "~/components/workspace/HistoryPage";
 import type { WorkspaceIntake } from "~/components/workspace/useWorkspace";
 import { WorkspaceView } from "~/components/workspace/WorkspaceView";
 import {
+  NavContext,
   useActionContext,
+  useAutoLock,
+  useContacts,
+  useKeyring,
+  useMasterLock,
+  useNavState,
+  usePendingOperation,
+  usePreferences,
+  useReaderTabs,
+  useVaultLifecycle,
+  useVaultServices,
   useWorkspaceBridgeStore,
+  VaultContext,
   WorkspaceBridgeContext,
-} from "~/hooks/useActionContext";
-import { useAutoLock } from "~/hooks/useAutoLock";
-import { useContacts } from "~/hooks/useContacts";
-import { useKeyring } from "~/hooks/useKeyring";
-import { useMasterLock } from "~/hooks/useMasterLock";
-import { NavContext, useNavState } from "~/hooks/useNav";
-import { usePendingOperation } from "~/hooks/usePendingOperation";
-import { usePreferences } from "~/hooks/usePreferences";
-import { useReaderTabs } from "~/hooks/useReaderTabs";
-import { VaultContext } from "~/hooks/useVault";
-import { useVaultLifecycle } from "~/hooks/useVaultLifecycle";
-import { useVaultServices } from "~/hooks/useVaultServices";
+} from "~/hooks";
 import { panelDropRules, type DropPayload } from "~/lib/drop-routing";
 import type { WorkspaceAction } from "~/lib/messages";
 import { preferencesStore } from "~/lib/storage/preferences-store";

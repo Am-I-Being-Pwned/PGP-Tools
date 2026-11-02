@@ -12,7 +12,7 @@ import { Block, BlockLabel, BlockStack, cn } from "@amibeingpwned/ui";
 
 import { KeyAvatar } from "~/components/shared/KeyAvatar";
 import { MarkedText } from "~/components/shared/MarkedText";
-import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
+import { useCopyToClipboard } from "~/hooks";
 import { t, tn } from "~/lib/i18n";
 import { formatDate, formatDateShort, formatRelative } from "~/lib/i18n/format";
 import { formatAlgorithm } from "~/lib/utils/formatting";

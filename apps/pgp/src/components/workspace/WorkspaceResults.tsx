@@ -4,8 +4,7 @@ import { SearchIcon, TriangleAlertIcon } from "lucide-react";
 import { Alert, AlertDescription, Button } from "@amibeingpwned/ui";
 
 import { KeyDetailsButton } from "~/components/keys/KeyDetailsButton";
-import { useContacts } from "~/hooks/useContacts";
-import { useKeyring } from "~/hooks/useKeyring";
+import { useContacts, useKeyring } from "~/hooks";
 import type { PresentedError, RemedyAction } from "~/lib/errors/present";
 import { t } from "~/lib/i18n";
 import { KEYSERVER_HOST } from "~/lib/import/keyserver";

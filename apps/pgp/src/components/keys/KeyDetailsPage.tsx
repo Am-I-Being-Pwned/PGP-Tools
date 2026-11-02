@@ -21,10 +21,12 @@ import {
   SlideOverPanel,
   useSlideOver,
 } from "~/components/shared/SlideOver";
-import { useAsyncAction } from "~/hooks/useAsyncAction";
-import { useContacts } from "~/hooks/useContacts";
-import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
-import { useKeyring } from "~/hooks/useKeyring";
+import {
+  useAsyncAction,
+  useContacts,
+  useCopyToClipboard,
+  useKeyring,
+} from "~/hooks";
 import { AppError } from "~/lib/errors/app-error";
 import { presentError } from "~/lib/errors/present";
 import { t } from "~/lib/i18n";

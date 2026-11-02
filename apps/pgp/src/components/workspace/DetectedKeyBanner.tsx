@@ -2,8 +2,7 @@ import { Fragment, useEffect, useState, type ReactNode } from "react";
 
 import { KeyAvatar } from "~/components/shared/KeyAvatar";
 import { MarkedText } from "~/components/shared/MarkedText";
-import { useContacts } from "~/hooks/useContacts";
-import { useNav } from "~/hooks/useNav";
+import { useContacts, useNav } from "~/hooks";
 import { t } from "~/lib/i18n";
 import { parseKeys } from "~/lib/pgp/wasm";
 import { parseUserId } from "~/lib/utils/key-naming";

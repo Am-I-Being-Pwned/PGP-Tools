@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createDelayedFlag } from "~/hooks/useDelayedFlag";
+import { createDelayedFlag } from "~/hooks";
 
 describe("createDelayedFlag", () => {
   beforeEach(() => {

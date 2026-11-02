@@ -1,9 +1,11 @@
 import { RenamePage } from "~/components/shared/RenamePage";
-import { useContacts } from "~/hooks/useContacts";
-import { useCrxKeys } from "~/hooks/useCrxKeys";
-import { useKeyring } from "~/hooks/useKeyring";
-import { usePreferences } from "~/hooks/usePreferences";
-import { useVault } from "~/hooks/useVault";
+import {
+  useContacts,
+  useCrxKeys,
+  useKeyring,
+  usePreferences,
+  useVault,
+} from "~/hooks";
 import { t } from "~/lib/i18n";
 import { BulkDeletePage, ConfirmDeletePage } from "./DeletePages";
 import { ExportKeysPage } from "./ExportKeysPage";

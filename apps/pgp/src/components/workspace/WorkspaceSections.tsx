@@ -13,8 +13,7 @@ import {
 } from "@amibeingpwned/ui";
 
 import { ToggleBadge } from "~/components/shared/ToggleBadge";
-import { useNav } from "~/hooks/useNav";
-import { savePreference, usePreferences } from "~/hooks/usePreferences";
+import { savePreference, useNav, usePreferences } from "~/hooks";
 import { sshPasswordReason } from "~/lib/encrypt-recipients";
 import { t } from "~/lib/i18n";
 import { requestUnlimitedHistoryStorage } from "~/lib/storage/history";

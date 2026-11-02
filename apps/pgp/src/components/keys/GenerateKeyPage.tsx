@@ -8,7 +8,7 @@ import {
   SlideOverPanel,
   useSlideOver,
 } from "~/components/shared/SlideOver";
-import { useAsyncAction } from "~/hooks/useAsyncAction";
+import { useAsyncAction } from "~/hooks";
 import { generateCrxKey } from "~/lib/crx/operations";
 import type { CrxSigningKeyBlob } from "~/lib/crx/types";
 import { t } from "~/lib/i18n";

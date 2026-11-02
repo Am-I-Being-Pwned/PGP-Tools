@@ -4,11 +4,13 @@ import { ImportIcon, PlusIcon } from "lucide-react";
 import { BlockLabel, Button } from "@amibeingpwned/ui";
 
 import { useNavStack } from "~/components/shared/useNavStack";
-import { useContacts } from "~/hooks/useContacts";
-import { useCrxKeys } from "~/hooks/useCrxKeys";
-import { useKeyring } from "~/hooks/useKeyring";
-import { useNavIntent } from "~/hooks/useNav";
-import { usePreferences } from "~/hooks/usePreferences";
+import {
+  useContacts,
+  useCrxKeys,
+  useKeyring,
+  useNavIntent,
+  usePreferences,
+} from "~/hooks";
 import { t, tn } from "~/lib/i18n";
 import { downloadPublicKeysBundle } from "~/lib/keys/export-bundle";
 import { toast } from "~/lib/toast";

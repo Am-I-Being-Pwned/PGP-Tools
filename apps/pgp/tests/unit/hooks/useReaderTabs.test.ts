@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { isOwnReaderSender } from "~/hooks/useReaderTabs";
+import { isOwnReaderSender } from "~/hooks";
 
 vi.mock("~/lib/pgp/wasm", () => ({}));
 

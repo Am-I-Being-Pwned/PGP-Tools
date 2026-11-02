@@ -4,8 +4,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@amibeingpwned/ui";
 
 import { SubPage } from "~/components/shared/SubPage";
-import { engineMessage, useAsyncAction } from "~/hooks/useAsyncAction";
-import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
+import { engineMessage, useAsyncAction, useCopyToClipboard } from "~/hooks";
 import {
   clearAllStorage,
   dumpAllStorage,

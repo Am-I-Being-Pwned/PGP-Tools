@@ -6,12 +6,14 @@ import {
   useState,
 } from "react";
 
-import { useContacts } from "~/hooks/useContacts";
-import { useCrxKeys } from "~/hooks/useCrxKeys";
-import { useKeyring } from "~/hooks/useKeyring";
-import { useNavIntent } from "~/hooks/useNav";
-import { usePreferences } from "~/hooks/usePreferences";
-import { useVault } from "~/hooks/useVault";
+import {
+  useContacts,
+  useCrxKeys,
+  useKeyring,
+  useNavIntent,
+  usePreferences,
+  useVault,
+} from "~/hooks";
 import { recoverArmorIfNeeded } from "~/lib/armor-recovery";
 import { presentError } from "~/lib/errors/present";
 import { t } from "~/lib/i18n";

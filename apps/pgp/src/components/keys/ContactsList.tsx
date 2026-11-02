@@ -2,11 +2,13 @@ import { useMemo, useState } from "react";
 
 import { Block, BlockLabel, Input } from "@amibeingpwned/ui";
 
-import { useContacts } from "~/hooks/useContacts";
-import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
-import { useKeyring } from "~/hooks/useKeyring";
-import { useNav } from "~/hooks/useNav";
-import { usePreferences } from "~/hooks/usePreferences";
+import {
+  useContacts,
+  useCopyToClipboard,
+  useKeyring,
+  useNav,
+  usePreferences,
+} from "~/hooks";
 import { t } from "~/lib/i18n";
 import { contactClashes } from "~/lib/identity/binding";
 import { downloadPublicKey } from "~/lib/keys/export-bundle";

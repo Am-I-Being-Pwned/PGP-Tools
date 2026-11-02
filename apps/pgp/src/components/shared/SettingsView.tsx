@@ -17,13 +17,16 @@ import { ImportFlowPreviewPage } from "~/components/settings/ImportFlowPreviewPa
 import { KeyboardShortcutsPage } from "~/components/settings/KeyboardShortcutsPage";
 import { SecurityPresetPage } from "~/components/settings/SecurityPresetPage";
 import { TranslationPage } from "~/components/settings/TranslationPage";
-import { useAsyncAction } from "~/hooks/useAsyncAction";
-import { useContacts } from "~/hooks/useContacts";
-import { useCrxKeys } from "~/hooks/useCrxKeys";
-import { useKeyring } from "~/hooks/useKeyring";
-import { useNavIntent } from "~/hooks/useNav";
-import { savePreference, usePreferences } from "~/hooks/usePreferences";
-import { useVault } from "~/hooks/useVault";
+import {
+  savePreference,
+  useAsyncAction,
+  useContacts,
+  useCrxKeys,
+  useKeyring,
+  useNavIntent,
+  usePreferences,
+  useVault,
+} from "~/hooks";
 import { t, tn } from "~/lib/i18n";
 import { enterNeverCacheMode } from "~/lib/never-cache";
 import {

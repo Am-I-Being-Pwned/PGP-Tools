@@ -15,7 +15,7 @@ import { Block, BlockStack, Button } from "@amibeingpwned/ui";
 import { ConfirmPage } from "~/components/shared/ConfirmPage";
 import { KeyAvatar } from "~/components/shared/KeyAvatar";
 import { SubPage } from "~/components/shared/SubPage";
-import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
+import { useCopyToClipboard } from "~/hooks";
 import {
   buildSnippet,
   entryMatchesQuery,
