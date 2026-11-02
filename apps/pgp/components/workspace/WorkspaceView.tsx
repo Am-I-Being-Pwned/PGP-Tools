@@ -135,24 +135,6 @@ export function WorkspaceView({
     passwordReady: ws.passwordReady,
     crxSigningEnabled,
   });
-  const {
-    loading,
-    done,
-    error,
-    hasOutputText,
-    hasInput,
-    canEncrypt,
-    passwordOnlyMessage,
-    unencryptedMessage,
-    showCrxSign,
-    crxResult,
-    showFullOutput,
-    replyTo,
-    canReply,
-    canRun,
-    resultHasOutput,
-    hasDownload,
-  } = v;
   const { prompt } = s;
   const { verdict } = s.result;
   const resetResults = () => dispatch({ type: "reset-results" });
@@ -171,42 +153,42 @@ export function WorkspaceView({
   } = useWorkspaceTranslation(ws, {
     targetLanguage: translationTargetLanguage,
     aiTranslateEnabled,
-    done,
-    hasOutputText,
+    done: v.done,
+    hasOutputText: v.hasOutputText,
   });
   const { inputElRef, inputChanged } = ws;
 
-  const showLoadingLabel = useDelayedFlag(loading);
+  const showLoadingLabel = useDelayedFlag(v.loading);
 
   // Save-As is the one download Chrome doesn't route to the CRX installer.
   const saveCrx = async () => {
-    if (!crxResult) return;
-    const result = await saveCrxViaPrompt(crxResult.data, crxResult.name);
+    if (!v.crxResult) return;
+    const result = await saveCrxViaPrompt(v.crxResult.data, v.crxResult.name);
     dispatch({
       type: "status",
       text:
         result === "saved"
-          ? t("workspace_crx_saved", { name: crxResult.name })
+          ? t("workspace_crx_saved", { name: v.crxResult.name })
           : result === "cancelled"
             ? null
             : t("workspace_crx_save_failed"),
     });
   };
   const autoSaveCrx = useEffectEvent(() => void saveCrx());
-  const crxData = crxResult?.data;
+  const crxData = v.crxResult?.data;
   useEffect(() => {
     if (crxData) autoSaveCrx();
   }, [crxData]);
   /** The reset wipes the output: the panel keeps no copy. */
   const openReply = () => {
-    if (!replyTo || !onOpenReply) return;
+    if (!v.replyTo || !onOpenReply) return;
     // Display-only card: no public key travels to the tab.
     const signer = displayOnlySignerCard(
       signerCardState({
-        signer: replyTo.signer,
-        tone: replyTo.tone,
-        note: replyTo.note,
-        caveat: replyTo.caveat,
+        signer: v.replyTo.signer,
+        tone: v.replyTo.tone,
+        note: v.replyTo.note,
+        caveat: v.replyTo.caveat,
         statusText: s.result.status ?? undefined,
         contacts,
         myKeys,
@@ -232,7 +214,7 @@ export function WorkspaceView({
   const encryptEngine = selectionEngine(selectedRecipientKeys);
   const signKeyChoices = myKeys.filter(isPgpRecord);
   const signerInHeader =
-    s.mode === "sign" && !showCrxSign && signKeyChoices.length > 0;
+    s.mode === "sign" && !v.showCrxSign && signKeyChoices.length > 0;
   const signBlockedReason =
     encryptEngine === "ssh"
       ? t("workspace_sign_blocked_age")
@@ -301,14 +283,17 @@ export function WorkspaceView({
   const hasStaged =
     s.input.len > 0 || s.files.length > 0 || s.recipientIds.length > 0;
   const clearText = () =>
-    clear(done ? null : t("workspace_text_cleared_toast"), s.files.length > 0);
+    clear(
+      v.done ? null : t("workspace_text_cleared_toast"),
+      s.files.length > 0,
+    );
 
   useShortcut({ mod: true, key: "z" }, restoreCleared, {
     enabled: s.clearUndo && s.input.len === 0,
   });
   useWorkspaceKeyboard({
     mode: s.mode,
-    showFullOutput,
+    showFullOutput: v.showFullOutput,
     hasStaged,
     promptOpen: prompt !== null,
     onBack: resetResults,
@@ -330,7 +315,7 @@ export function WorkspaceView({
     copyTimer.current = setTimeout(() => setCopied(false), 2000);
   };
   const runMain = () => {
-    if (done && s.mode === "verify") resetAll();
+    if (v.done && s.mode === "verify") resetAll();
     else void ws.execute();
   };
 
@@ -341,7 +326,7 @@ export function WorkspaceView({
       (!!pendingAction?.text &&
         (pendingAction.action === "decrypt" ||
           pendingAction.action === "verify")),
-    canRun,
+    canRun: v.canRun,
   });
 
   // Re-verify a looked-up unknown signer once contacts change; never prompts.
@@ -356,14 +341,14 @@ export function WorkspaceView({
     const pending = lookedUp.current;
     if (!pending || pending.contacts === contacts) return;
     lookedUp.current = null;
-    if (loading || verdict?.tone !== "warning") return;
+    if (v.loading || verdict?.tone !== "warning") return;
     if (verdict.signer.keyId !== pending.keyId) return;
     if (s.mode === "verify") {
       void ws.execute();
     } else if (
       s.mode === "decrypt" &&
-      (unencryptedMessage ||
-        (!passwordOnlyMessage &&
+      (v.unencryptedMessage ||
+        (!v.passwordOnlyMessage &&
           ws.selectedKeyId !== null &&
           session.getKeyHandle(ws.selectedKeyId) !== null))
     ) {
@@ -378,14 +363,14 @@ export function WorkspaceView({
   const commands: WorkspaceCommands = {
     setMode,
     execute: () => {
-      if (canRun) runMain();
+      if (v.canRun) runMain();
     },
     clearInput: resetAll,
     copyOutput: () => {
-      if (resultHasOutput) void handleCopy();
+      if (v.resultHasOutput) void handleCopy();
     },
     downloadOutput: () => {
-      if (hasDownload) ws.triggerDownload();
+      if (v.hasDownload) ws.triggerDownload();
     },
     reply: openReply,
     translateOutput: () => {
@@ -404,13 +389,13 @@ export function WorkspaceView({
   };
   const snapshot: WorkspaceSnapshot = {
     mode: s.mode,
-    hasInput,
-    canEncrypt,
+    hasInput: v.hasInput,
+    canEncrypt: v.canEncrypt,
     encryptEngine,
-    hasOutput: resultHasOutput,
-    hasDownload,
+    hasOutput: v.resultHasOutput,
+    hasDownload: v.hasDownload,
     resultCanTranslate,
-    resultCanReply: canReply,
+    resultCanReply: v.canReply,
     composeCanEdit,
     translateEnabled,
     translateTarget: composeTranslation.targetLanguage,
@@ -419,7 +404,7 @@ export function WorkspaceView({
   useEffect(() => () => bridge?.publish(null, null), [bridge]);
 
   const passwordInputRef = useRef<HTMLInputElement>(null);
-  const remedyAction = error?.remedy?.action;
+  const remedyAction = v.error?.remedy?.action;
   const handleRemedy =
     remedyAction === "retry" ||
     remedyAction === "import-key" ||
@@ -435,14 +420,14 @@ export function WorkspaceView({
     s.mode === "decrypt" && ws.isAge ? myKeys.filter(isSshRecord) : myKeys;
 
   const resultProps = {
-    error,
+    error: v.error,
     outputElRef: ws.outputElRef,
     getOutput: ws.getOutput,
-    hasOutput: hasOutputText,
+    hasOutput: v.hasOutputText,
     binaryOutput: s.result.binary,
     fileResults: s.result.files,
     fileName: ws.outputName(),
-    operationDone: done,
+    operationDone: v.done,
     statusText: s.result.status ?? undefined,
     verifiedSigner: verdict?.signer ?? null,
     signatureTone: verdict?.tone,
@@ -457,7 +442,7 @@ export function WorkspaceView({
     onLookupSigner: lookupSigner,
   };
 
-  if (showFullOutput) {
+  if (v.showFullOutput) {
     return (
       <div className="flex h-full flex-col gap-3">
         <div className="flex items-center">
@@ -494,7 +479,7 @@ export function WorkspaceView({
             ) : null
           }
           resultCorner={
-            canReply ? (
+            v.canReply ? (
               <HoverHint
                 align="end"
                 label={t("workspace_reply")}
@@ -524,7 +509,7 @@ export function WorkspaceView({
             onDownload={ws.triggerDownload}
             onCopy={() => void handleCopy()}
             copied={copied}
-            disabled={loading}
+            disabled={v.loading}
           />
           <ResetButton onClick={resetAndRefocus} />
         </div>
@@ -694,7 +679,7 @@ export function WorkspaceView({
         <PasswordPrompt
           ws={ws}
           inputRef={passwordInputRef}
-          busy={loading}
+          busy={v.loading}
           busyLabel={showLoadingLabel}
         />
 
