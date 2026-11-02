@@ -5,7 +5,6 @@ import { cn } from "@amibeingpwned/ui";
 import { Button } from "@amibeingpwned/ui/button";
 import { Input } from "@amibeingpwned/ui/input";
 
-import type { CrxProtectionInput } from "../../lib/crx/operations";
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
 import type { ReviewDecision, ReviewedContact } from "../../lib/import/review";
 import type { IncomingKey } from "../../lib/import/types";
@@ -18,6 +17,7 @@ import type {
 } from "../../lib/messages";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
+import { engineMessage, useAsyncAction } from "../../hooks/useAsyncAction";
 import { importSshIdentity } from "../../lib/age/protect-flow";
 import { recoverArmorIfNeeded } from "../../lib/armor-recovery";
 import { readKeyFile } from "../../lib/binary-armor";
@@ -43,7 +43,6 @@ import { applyReview, defaultDecision } from "../../lib/import/review";
 import { isPublicKind, isSecretKind } from "../../lib/import/types";
 import { importAndProtect } from "../../lib/protection/protect-flow";
 import { toast } from "../../lib/toast";
-import { errorMessage } from "../../lib/utils/errors";
 import {
   SlideOverHeader,
   SlideOverPanel,
@@ -51,11 +50,8 @@ import {
 } from "../shared/SlideOver";
 import { ImportPreview } from "./ImportPreviewPage";
 import { ImportReview } from "./ImportReview";
-import {
-  getDefaultProtectionMethod,
-  ProtectionMethodPicker,
-  validatePassword,
-} from "./ProtectionMethodPicker";
+import { ProtectionMethodPicker } from "./ProtectionMethodPicker";
+import { useProtectionChoice } from "./useProtectionChoice";
 
 type Step = "source" | "preview" | "review" | "protect";
 
@@ -151,13 +147,21 @@ export function ImportKeyPage({
     return false;
   };
   const [label, setLabel] = useState("");
-  const [method, setMethod] = useState(getDefaultProtectionMethod);
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [importing, setImporting] = useState(false);
-  const [parsing, setParsing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [reusePasskey, setReusePasskey] = useState(true);
+  const choice = useProtectionChoice({
+    reusePasskeyCredentialId,
+    masterSealSalt,
+  });
+  // The engine's text is the message here ("Incorrect passphrase", an
+  // offline-primary key's explanation): it says what to fix.
+  const parser = useAsyncAction(engineMessage(t("import_failed")));
+  const importer = useAsyncAction(engineMessage(t("import_failed")));
+  const parsing = parser.busy;
+  const importing = importer.busy;
+  const error = (parser.error ?? importer.error)?.message ?? null;
+  const setError = (message: string | null) => {
+    parser.reset();
+    importer.setError(message);
+  };
   const [sourcePassphrase, setSourcePassphrase] = useState("");
   const [dragOver, setDragOver] = useState(false);
   /** What is typed in the one lookup box. It is ONE box because getting
@@ -173,10 +177,6 @@ export function ImportKeyPage({
   // The document-level paste listener below must not swallow a username
   // or address pasted into the lookup field; it identifies it by node.
   const lookupInputRef = useRef<HTMLInputElement>(null);
-  // Re-entrancy guard for the parse. A ref, not the `parsing` state: two
-  // handlers can fire for one gesture (the paste box and the panel-wide
-  // listener) inside a single render, before state catches up.
-  const parsingRef = useRef(false);
   // The paste box swallows typing (it holds nothing); say why rather
   // than looking broken when someone starts typing into it.
   const [typedIntoPasteBox, setTypedIntoPasteBox] = useState(false);
@@ -230,8 +230,7 @@ export function ImportKeyPage({
     // it survives the slide-out animation. It bounds the lifetime rather
     // than ending it -- which is the whole reason key material is in a
     // ref and these are the exception.
-    setPassword("");
-    setConfirmPassword("");
+    choice.clear();
     setSourcePassphrase("");
   };
 
@@ -243,7 +242,14 @@ export function ImportKeyPage({
     close();
   };
 
+  // Set once a write lands: the panel is sliding out, so nothing may
+  // start a second write from it.
+  const finishedRef = useRef(false);
+  const runImport = (task: () => Promise<void>) =>
+    finishedRef.current ? Promise.resolve(null) : importer.run(task);
+
   const finish = (keyIds: string[], opts?: { reveal?: boolean }) => {
+    finishedRef.current = true;
     clearSecrets();
     onImported?.(keyIds, opts);
     close();
@@ -252,9 +258,8 @@ export function ImportKeyPage({
   const importPublicKeys = async (
     keys: IncomingKey[],
     decisions: ReadonlyMap<string, ReviewDecision> = new Map(),
-  ) => {
-    setImporting(true);
-    try {
+  ) =>
+    runImport(async () => {
       const outcome = await applyReview(keys, decisions, {
         contacts: existingContacts,
         add: onImportPublic,
@@ -293,11 +298,7 @@ export function ImportKeyPage({
         }
       }
       finish(outcome.keyIds);
-    } catch (e) {
-      setError(errorMessage(e, t("import_failed")));
-      setImporting(false);
-    }
-  };
+    });
 
   /**
    * Classify pasted/dropped/browsed text and route it: a bundle of
@@ -316,11 +317,11 @@ export function ImportKeyPage({
   const handleSource = async (text: string) => {
     setError(null);
     setNotice(null);
-    if (!text.trim() || parsingRef.current) return;
-
-    setParsing(true);
-    parsingRef.current = true;
-    try {
+    if (!text.trim() || parser.inFlight) return;
+    // One guard for parse and lookup: two handlers can fire for one paste
+    // (the box and the panel-wide listener), and a second lookup's
+    // response would overwrite the first's.
+    await parser.run(async () => {
       const prepared = await prepareImport(
         text,
         storedForImport(),
@@ -332,7 +333,7 @@ export function ImportKeyPage({
       );
 
       if (prepared.unparseable || prepared.keys.length === 0) {
-        setError(t("import_unreadable"));
+        parser.setError(t("import_unreadable"));
         return;
       }
 
@@ -371,7 +372,7 @@ export function ImportKeyPage({
       if (isSecretKind(key.kind)) {
         const secret = prepared.secrets.get(key.keyId);
         if (!secret) {
-          setError(t("import_private_unreadable"));
+          parser.setError(t("import_private_unreadable"));
           return;
         }
         secretArmorRef.current = secret;
@@ -395,12 +396,7 @@ export function ImportKeyPage({
       if (showKeys([key])) return;
       setIncoming(key);
       setStep("preview");
-    } catch (e) {
-      setError(errorMessage(e, t("import_failed")));
-    } finally {
-      setParsing(false);
-      parsingRef.current = false;
-    }
+    });
   };
 
   /**
@@ -426,9 +422,8 @@ export function ImportKeyPage({
     >(request);
 
     if (!response) {
-      // The worker died or no listener answered: nothing came back at
-      // all, which is not one of the tagged codes.
-      setError(t("import_worker_unreachable"));
+      // The worker died or no listener answered.
+      parser.setError(t("import_worker_unreachable"));
       return;
     }
     if (!response.ok) {
@@ -441,7 +436,7 @@ export function ImportKeyPage({
         response.resetAt,
       );
       if (copy.tone === "notice") setNotice(copy.message);
-      else setError(copy.message);
+      else parser.setError(copy.message);
       return;
     }
 
@@ -485,7 +480,7 @@ export function ImportKeyPage({
     >(request);
 
     if (!response) {
-      setError(t("import_worker_unreachable"));
+      parser.setError(t("import_worker_unreachable"));
       return;
     }
     if (!response.ok) {
@@ -495,7 +490,7 @@ export function ImportKeyPage({
         response.retryAt,
       );
       if (copy.tone === "notice") setNotice(copy.message);
-      else setError(copy.message);
+      else parser.setError(copy.message);
       return;
     }
 
@@ -513,7 +508,9 @@ export function ImportKeyPage({
       // deliberately did not check that the bytes between them are a
       // certificate, because that is the engine's call and this is
       // where the engine gets made. So this branch is reachable.
-      setError(t("import_keyserver_not_a_key", { host: KEYSERVER_HOST }));
+      parser.setError(
+        t("import_keyserver_not_a_key", { host: KEYSERVER_HOST }),
+      );
       return;
     }
     if ((response.omitted ?? 0) > 0) {
@@ -553,31 +550,19 @@ export function ImportKeyPage({
   const runLookup = async (input = lookupInput) => {
     setError(null);
     setNotice(null);
-    // Same guard as the paste path, and deliberately the same ref: a
-    // double-click on Look up (or Enter racing the click) would otherwise
-    // start a second lookup whose response overwrites the first's.
-    if (parsingRef.current) return;
-
+    if (parser.inFlight) return;
     const routed = classifyLookup(input);
     if (!routed) {
-      setError(t("import_lookup_invalid"));
+      parser.setError(t("import_lookup_invalid"));
       return;
     }
-
-    setParsing(true);
-    parsingRef.current = true;
-    try {
-      if (routed.target === "github") {
-        await lookupGithubUser(routed.username);
-      } else {
-        await lookupKeyserverKey(routed.query);
-      }
-    } catch (e) {
-      setError(errorMessage(e, t("import_lookup_failed")));
-    } finally {
-      setParsing(false);
-      parsingRef.current = false;
-    }
+    await parser.run(
+      () =>
+        routed.target === "github"
+          ? lookupGithubUser(routed.username)
+          : lookupKeyserverKey(routed.query),
+      engineMessage(t("import_lookup_failed")),
+    );
   };
 
   /**
@@ -720,14 +705,6 @@ export function ImportKeyPage({
   };
 
   const handleImportPrivate = async () => {
-    setError(null);
-    if (method === "password") {
-      const pwError = validatePassword(password, confirmPassword);
-      if (pwError) {
-        setError(pwError);
-        return;
-      }
-    }
     const secret = secretArmorRef.current;
     if (!incoming || !secret) {
       setError(t("import_no_key"));
@@ -737,67 +714,30 @@ export function ImportKeyPage({
       setError(t("import_enter_passphrase"));
       return;
     }
-
-    setImporting(true);
-    try {
+    await runImport(async () => {
       const { blob } = await importAndProtect(
         secret,
         secretEncrypted ? sourcePassphrase : null,
-        method === "password"
-          ? { method: "password", password }
-          : {
-              method: "passkey",
-              reusePasskeyCredentialId: reusePasskey
-                ? reusePasskeyCredentialId
-                : undefined,
-              prfSalt: reusePasskey ? masterSealSalt : undefined,
-            },
+        choice.toInput(),
         { userIdHint: incoming.userIds[0] ?? t("import_default_pgp_name") },
       );
       await onImportPrivate(blob);
       finish([blob.keyId]);
-    } catch (e) {
-      setError(errorMessage(e, t("import_failed")));
-    } finally {
-      setImporting(false);
-    }
+    });
   };
 
   const handleImportCrx = async () => {
-    setError(null);
-    if (method === "password") {
-      const pwError = validatePassword(password, confirmPassword);
-      if (pwError) {
-        setError(pwError);
-        return;
-      }
-    }
     const pem = secretArmorRef.current;
     if (!onImportCrx || !pem) return;
-
-    setImporting(true);
-    try {
-      const protection: CrxProtectionInput =
-        method === "password"
-          ? { method: "password", password }
-          : {
-              method: "passkey",
-              reusePasskeyCredentialId: reusePasskey
-                ? reusePasskeyCredentialId
-                : undefined,
-            };
+    await runImport(async () => {
       const blob = await importCrxKey(
         pem,
-        protection,
+        choice.toCrxInput(),
         label.trim() || undefined,
       );
       await onImportCrx(blob);
       finish([blob.extensionId]);
-    } catch (e) {
-      setError(errorMessage(e, t("import_failed")));
-    } finally {
-      setImporting(false);
-    }
+    });
   };
 
   /**
@@ -814,14 +754,6 @@ export function ImportKeyPage({
    * same step rather than being sent back through the preview.
    */
   const handleImportSsh = async () => {
-    setError(null);
-    if (method === "password") {
-      const pwError = validatePassword(password, confirmPassword);
-      if (pwError) {
-        setError(pwError);
-        return;
-      }
-    }
     if (secretEncrypted && !sourcePassphrase) {
       setError(t("import_enter_passphrase"));
       return;
@@ -832,42 +764,27 @@ export function ImportKeyPage({
       return;
     }
 
-    setImporting(true);
-    try {
-      const { blob } = await importSshIdentity(
-        new TextEncoder().encode(keyText),
-        sourcePassphrase || null,
-        method === "password"
-          ? { method: "password", password }
-          : {
-              method: "passkey",
-              reusePasskeyCredentialId: reusePasskey
-                ? reusePasskeyCredentialId
-                : undefined,
-              prfSalt: reusePasskey ? masterSealSalt : undefined,
-            },
-        { userIdHint: incoming.userIds[0] ?? t("import_default_ssh_name") },
-      );
-      await onImportPrivate(blob);
-      // Success: drop the key text now rather than waiting for the
-      // panel's close, so it isn't held across the slide-out.
-      secretArmorRef.current = null;
-      finish([blob.keyId]);
-    } catch (e) {
-      const message = errorMessage(e, t("import_failed"));
-      // Revealing the field IS the retry affordance -- the key text is
-      // still in the ref, so the next attempt runs from this same step.
-      // Keyed on the tagged code, never on the engine's wording: a prose
-      // match here fails silently when the message is reworded, and the
-      // symptom is that passphrase-protected keys stop being importable
-      // at all. `lib/age/protect-flow` does the translation once.
-      if (e instanceof AppError && e.code === "ssh-passphrase-required") {
-        setSecretEncrypted(true);
+    await runImport(async () => {
+      try {
+        const { blob } = await importSshIdentity(
+          new TextEncoder().encode(keyText),
+          sourcePassphrase || null,
+          choice.toInput(),
+          { userIdHint: incoming.userIds[0] ?? t("import_default_ssh_name") },
+        );
+        await onImportPrivate(blob);
+        // Drop the key text now, not across the slide-out.
+        secretArmorRef.current = null;
+        finish([blob.keyId]);
+      } catch (e) {
+        // Revealing the field IS the retry: the key text is still in the
+        // ref. Keyed on the tagged code, never the engine's wording.
+        if (e instanceof AppError && e.code === "ssh-passphrase-required") {
+          setSecretEncrypted(true);
+        }
+        throw e;
       }
-      setError(message);
-    } finally {
-      setImporting(false);
-    }
+    });
   };
 
   /**
@@ -877,6 +794,11 @@ export function ImportKeyPage({
    * is what the CRX flag had already grown into).
    */
   const handleProtectSubmit = () => {
+    const invalid = choice.validate();
+    if (invalid) {
+      setError(invalid);
+      return;
+    }
     switch (incoming?.kind) {
       case "crx":
         void handleImportCrx();
@@ -1173,20 +1095,12 @@ export function ImportKeyPage({
               </div>
             )}
             <ProtectionMethodPicker
-              method={method}
-              onMethodChange={setMethod}
-              password={password}
-              onPasswordChange={setPassword}
-              confirmPassword={confirmPassword}
-              onConfirmPasswordChange={setConfirmPassword}
+              {...choice.pickerProps}
               error={error}
               onSubmit={handleProtectSubmit}
               onBack={handleBack}
               submitting={importing}
               submitLabel={t("import_submit")}
-              reusePasskeyCredentialId={reusePasskeyCredentialId}
-              reusePasskey={reusePasskey}
-              onReusePasskeyChange={setReusePasskey}
             />
           </div>
         )}

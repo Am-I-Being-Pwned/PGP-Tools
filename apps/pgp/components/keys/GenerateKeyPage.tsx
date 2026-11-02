@@ -14,9 +14,9 @@ import {
   SelectValue,
 } from "@amibeingpwned/ui/select";
 
-import type { CrxProtectionInput } from "../../lib/crx/operations";
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
+import { useAsyncAction } from "../../hooks/useAsyncAction";
 import { generateCrxKey } from "../../lib/crx/operations";
 import { t } from "../../lib/i18n";
 import { formatDate } from "../../lib/i18n/format";
@@ -27,11 +27,8 @@ import {
   SlideOverPanel,
   useSlideOver,
 } from "../shared/SlideOver";
-import {
-  getDefaultProtectionMethod,
-  ProtectionMethodPicker,
-  validatePassword,
-} from "./ProtectionMethodPicker";
+import { ProtectionMethodPicker } from "./ProtectionMethodPicker";
+import { useProtectionChoice } from "./useProtectionChoice";
 
 type Step = "identity" | "expiry" | "protection" | "generating";
 type KeyAlgorithm = "ecc" | "rsa";
@@ -107,13 +104,14 @@ export function GenerateKeyPage({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [comment, setComment] = useState("");
-  const [method, setMethod] = useState(getDefaultProtectionMethod);
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [generating, setGenerating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const [reusePasskey, setReusePasskey] = useState(true);
+  const choice = useProtectionChoice({
+    reusePasskeyCredentialId,
+    masterSealSalt,
+  });
+  // Engine text never reaches the message (it lands in `detail`).
+  const generation = useAsyncAction(t("keygen_error_generation_failed"));
+  const error = generation.error?.message ?? null;
+  const setError = generation.setError;
 
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [keyAlgorithm, setKeyAlgorithm] = useState<KeyAlgorithm>("ecc");
@@ -136,11 +134,12 @@ export function GenerateKeyPage({
     setStep("expiry");
   };
 
-  const canSkipProtection = !!reusePasskeyCredentialId && method === "passkey";
+  const canSkipProtection =
+    !!reusePasskeyCredentialId && choice.method === "passkey";
 
   // Header back mirrors the step order; from the first step it closes.
   const handleBack = () => {
-    if (generating) return;
+    if (step === "generating") return;
     setError(null);
     if (step === "expiry") {
       setStep("identity");
@@ -194,34 +193,19 @@ export function GenerateKeyPage({
   };
 
   const handleGenerate = async () => {
-    setError(null);
-
-    if (method === "password") {
-      const pwError = validatePassword(password, confirmPassword);
-      if (pwError) {
-        setError(pwError);
-        return;
-      }
+    const invalid = choice.validate();
+    if (invalid) {
+      setError(invalid);
+      return;
     }
+    const failed = await generation.run(async () => {
+      setStep("generating");
+      // Let "Generating…" paint before the wasm call holds the thread.
+      await afterNextPaint();
 
-    setGenerating(true);
-    setStep("generating");
-    // Let "Generating…" paint before the wasm call holds the thread.
-    await afterNextPaint();
-
-    try {
       if (keyType === "crx") {
-        const protection: CrxProtectionInput =
-          method === "password"
-            ? { method: "password", password }
-            : {
-                method: "passkey",
-                reusePasskeyCredentialId: reusePasskey
-                  ? reusePasskeyCredentialId
-                  : undefined,
-              };
         const blob = await generateCrxKey(
-          protection,
+          choice.toCrxInput(),
           label.trim() || undefined,
         );
         await addCrxKey?.(blob);
@@ -238,29 +222,13 @@ export function GenerateKeyPage({
           type: keyAlgorithm,
           expiresIn: expiresIn || undefined,
         },
-        method === "password"
-          ? { method: "password", password, cache: cacheKey }
-          : {
-              method: "passkey",
-              reusePasskeyCredentialId: reusePasskey
-                ? reusePasskeyCredentialId
-                : undefined,
-              prfSalt: reusePasskey ? masterSealSalt : undefined,
-              cache: cacheKey,
-            },
+        choice.toInput({ cache: cacheKey }),
       );
-
       await addKey(blob);
       onKeyGenerated(blob.keyId, handle);
       close();
-    } catch (e) {
-      setError(
-        e instanceof Error ? e.message : t("keygen_error_generation_failed"),
-      );
-      setStep("protection");
-    } finally {
-      setGenerating(false);
-    }
+    });
+    if (failed) setStep("protection");
   };
 
   return (
@@ -540,26 +508,18 @@ export function GenerateKeyPage({
               </p>
             </div>
             <ProtectionMethodPicker
-              method={method}
-              onMethodChange={setMethod}
-              password={password}
-              onPasswordChange={setPassword}
-              confirmPassword={confirmPassword}
-              onConfirmPasswordChange={setConfirmPassword}
+              {...choice.pickerProps}
               error={error}
-              onSubmit={handleGenerate}
+              onSubmit={() => void handleGenerate()}
               onBack={handleBack}
-              submitting={generating}
+              submitting={generation.busy}
               submitLabel={
-                method === "passkey"
-                  ? reusePasskeyCredentialId && reusePasskey
+                choice.method === "passkey"
+                  ? choice.reusing
                     ? t("keygen_submit_use_passkey")
                     : t("keygen_submit_create_passkey")
                   : t("keygen_submit_generate")
               }
-              reusePasskeyCredentialId={reusePasskeyCredentialId}
-              reusePasskey={reusePasskey}
-              onReusePasskeyChange={setReusePasskey}
             />
           </div>
         )}
@@ -570,7 +530,7 @@ export function GenerateKeyPage({
               <LoaderIcon className="text-primary h-5 w-5 animate-spin" />
             </div>
             <p className="text-muted-foreground text-sm">
-              {method === "passkey"
+              {choice.method === "passkey"
                 ? t("keygen_generating_passkey")
                 : t("keygen_generating_key")}
             </p>

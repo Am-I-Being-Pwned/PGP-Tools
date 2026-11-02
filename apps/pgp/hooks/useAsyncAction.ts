@@ -63,7 +63,8 @@ export function createActionRunner(set: {
 }
 
 export interface AsyncAction {
-  run: (task: Task) => Promise<PresentedError | null>;
+  /** `policy` overrides the hook's for this run (one guard, two copies). */
+  run: (task: Task, policy?: ErrorPolicy) => Promise<PresentedError | null>;
   readonly inFlight: boolean;
   busy: boolean;
   error: PresentedError | null;
@@ -84,7 +85,8 @@ export function useAsyncAction(policy: ErrorPolicy): AsyncAction {
     createActionRunner({ busy: setBusy, error: setErrorState }),
   );
   return {
-    run: (task) => runner.run(task, toErrorMapper(policy)),
+    run: (task, override) =>
+      runner.run(task, toErrorMapper(override ?? policy)),
     get inFlight() {
       return runner.inFlight;
     },

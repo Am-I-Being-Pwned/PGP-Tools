@@ -4,14 +4,9 @@ import { Button } from "@amibeingpwned/ui/button";
 import { Input } from "@amibeingpwned/ui/input";
 import { Kbd } from "@amibeingpwned/ui/kbd";
 
+import type { ProtectionMethod } from "./protection-choice";
 import { t } from "../../lib/i18n";
 import { checkPrfSupport } from "../../lib/protection/webauthn-prf";
-
-export type ProtectionMethod = "passkey" | "password";
-
-export function getDefaultProtectionMethod(): ProtectionMethod {
-  return checkPrfSupport() ? "passkey" : "password";
-}
 
 interface ProtectionMethodPickerProps {
   method: ProtectionMethod;
@@ -151,11 +146,8 @@ export function ProtectionMethodPicker({
             value={confirmPassword}
             onChange={(e) => onConfirmPasswordChange(e.target.value)}
             onKeyDown={(e) => {
-              // Return submits from the last field, which is where a
-              // keyboard user ends up anyway. Nothing here is a <form>,
-              // so without this the key does nothing at all -- and the
-              // chip on the button below would be advertising a
-              // behaviour that did not exist.
+              // No <form> here: without this, Return does nothing and the
+              // button's Enter chip would be advertising a lie.
               if (e.key === "Enter" && !submitting) {
                 e.preventDefault();
                 onSubmit();
@@ -197,9 +189,7 @@ export function ProtectionMethodPicker({
                   ? t("keygen_submit_create_passkey")
                   : t("common_continue")))}
             {!submitting && method === "password" && (
-              // Password only: the passkey path submits by starting a
-              // WebAuthn ceremony from a click, and there is no field to
-              // press Return in.
+              // Password only: a passkey starts from a click.
               <Kbd shortcut={{ key: "Enter" }} className="opacity-70" />
             )}
           </span>
@@ -207,13 +197,4 @@ export function ProtectionMethodPicker({
       </div>
     </div>
   );
-}
-
-export function validatePassword(
-  password: string,
-  confirmPassword: string,
-): string | null {
-  if (password.length < 8) return t("keygen_error_password_short");
-  if (password !== confirmPassword) return t("keygen_error_password_mismatch");
-  return null;
 }

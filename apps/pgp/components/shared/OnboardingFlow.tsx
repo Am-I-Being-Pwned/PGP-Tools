@@ -15,7 +15,9 @@ import type { PresetId } from "../../lib/presets";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { MasterProtection } from "../../lib/storage/master-protection";
 import type { StorageLocation } from "../../lib/storage/preferences";
+import { useAsyncAction } from "../../hooks/useAsyncAction";
 import { toBase64, unpackIvCiphertext } from "../../lib/encoding";
+import { presentError } from "../../lib/errors/present";
 import { t, tn } from "../../lib/i18n";
 import * as wasmApi from "../../lib/pgp/wasm";
 import { PRESETS } from "../../lib/presets";
@@ -40,11 +42,8 @@ import {
 } from "../../lib/storage/master-protection";
 import { savePreferences } from "../../lib/storage/preferences";
 import { afterNextPaint } from "../../lib/utils/paint";
-import {
-  getDefaultProtectionMethod,
-  ProtectionMethodPicker,
-  validatePassword,
-} from "../keys/ProtectionMethodPicker";
+import { ProtectionMethodPicker } from "../keys/ProtectionMethodPicker";
+import { useProtectionChoice } from "../keys/useProtectionChoice";
 import { PresetPicker } from "./PresetPicker";
 import { StorageLocationPicker } from "./StorageLocationPicker";
 
@@ -87,11 +86,12 @@ export function OnboardingFlow({
   const [step, setStep] = useState<Step>("storage");
   const [location, setLocation] = useState<StorageLocation>("local");
 
-  const [method, setMethod] = useState(getDefaultProtectionMethod);
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const choice = useProtectionChoice();
+  const { method, password } = choice;
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Engine text never reaches the message (it lands in `detail`).
+  const keygen = useAsyncAction(t("app_onboarding_generate_failed"));
 
   const [masterCredentialId, setMasterCredentialId] = useState<
     string | undefined
@@ -175,12 +175,10 @@ export function OnboardingFlow({
   const handleProtectionSubmit = async () => {
     setError(null);
 
-    if (method === "password") {
-      const pwError = validatePassword(password, confirmPassword);
-      if (pwError) {
-        setError(pwError);
-        return;
-      }
+    const invalid = choice.validate();
+    if (invalid) {
+      setError(invalid);
+      return;
     }
 
     // Never set up over an existing vault. App only shows onboarding when
@@ -258,7 +256,7 @@ export function OnboardingFlow({
             ARGON2_ITERATIONS,
             ARGON2_PARALLELISM,
           );
-          setConfirmPassword("");
+          choice.clearConfirmation();
 
           const { iv: canaryIv, ciphertext: canaryCtx } =
             unpackIvCiphertext(packed);
@@ -291,9 +289,7 @@ export function OnboardingFlow({
         void wasmApi.dropContactsSession().catch(() => undefined);
         setError(t("app_onboarding_vault_exists"));
       } else {
-        setError(
-          e instanceof Error ? e.message : t("app_onboarding_setup_failed"),
-        );
+        setError(presentError(e, t("app_onboarding_setup_failed")).message);
       }
     } finally {
       passkeyAbortRef.current = null;
@@ -302,52 +298,45 @@ export function OnboardingFlow({
   };
 
   const handleGenerateKey = async () => {
-    setError(null);
-
     if (!name.trim()) {
-      setError(t("app_onboarding_name_required"));
+      keygen.setError(t("app_onboarding_name_required"));
       return;
     }
-
-    setStep("generating");
-    // Let "Generating…" paint before the wasm call holds the thread.
-    await afterNextPaint();
-
-    try {
-      const expiresIn = EXPIRY_SECONDS[expiryOption];
-      const { blob, handle } = await generateAndProtect(
-        {
-          name: name.trim(),
-          email: email.trim() || undefined,
-          comment: comment.trim() || undefined,
-          type: keyAlgorithm,
-          expiresIn: expiresIn || undefined,
-        },
-        masterCredentialId
-          ? {
-              method: "passkey",
-              reusePasskeyCredentialId: masterCredentialId,
-              cache: cacheKey,
-              prfReuse: masterPrfRef.current ?? undefined,
-            }
-          : { method: "password", password, cache: cacheKey },
-      );
-
-      await addKey(blob);
-      if (handle !== undefined && onKeyCached) {
-        onKeyCached(blob.keyId, handle);
+    const failed = await keygen.run(async () => {
+      setStep("generating");
+      // Let "Generating…" paint before the wasm call holds the thread.
+      await afterNextPaint();
+      try {
+        const expiresIn = EXPIRY_SECONDS[expiryOption];
+        const { blob, handle } = await generateAndProtect(
+          {
+            name: name.trim(),
+            email: email.trim() || undefined,
+            comment: comment.trim() || undefined,
+            type: keyAlgorithm,
+            expiresIn: expiresIn || undefined,
+          },
+          masterCredentialId
+            ? {
+                method: "passkey",
+                reusePasskeyCredentialId: masterCredentialId,
+                cache: cacheKey,
+                prfReuse: masterPrfRef.current ?? undefined,
+              }
+            : { method: "password", password, cache: cacheKey },
+        );
+        await addKey(blob);
+        if (handle !== undefined && onKeyCached) {
+          onKeyCached(blob.keyId, handle);
+        }
+        choice.clear();
+        setStep("preset");
+      } finally {
+        masterPrfRef.current?.prfOutput.fill(0);
+        masterPrfRef.current = null;
       }
-      setPassword("");
-      setStep("preset");
-    } catch (e) {
-      setError(
-        e instanceof Error ? e.message : t("app_onboarding_generate_failed"),
-      );
-      setStep("identity");
-    } finally {
-      masterPrfRef.current?.prfOutput.fill(0);
-      masterPrfRef.current = null;
-    }
+    });
+    if (failed) setStep("identity");
   };
 
   const handleSkip = () => {
@@ -395,12 +384,7 @@ export function OnboardingFlow({
           </div>
 
           <ProtectionMethodPicker
-            method={method}
-            onMethodChange={setMethod}
-            password={password}
-            onPasswordChange={setPassword}
-            confirmPassword={confirmPassword}
-            onConfirmPasswordChange={setConfirmPassword}
+            {...choice.pickerProps}
             error={error}
             onSubmit={handleProtectionSubmit}
             onBack={() => {
@@ -541,15 +525,15 @@ export function OnboardingFlow({
               </BlockStack>
             )}
 
-            {error && (
+            {keygen.error && (
               <p className="text-bad text-xs" role="alert">
-                {error}
+                {keygen.error.message}
               </p>
             )}
           </div>
 
           <div className="space-y-2 pt-4">
-            <Button className="w-full" onClick={handleGenerateKey}>
+            <Button className="w-full" onClick={() => void handleGenerateKey()}>
               {t("app_onboarding_create_key")}
             </Button>
             <Button variant="outline" className="w-full" onClick={handleSkip}>

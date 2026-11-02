@@ -10,6 +10,7 @@ import type { KeyInfo } from "../../lib/pgp/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { SubPageAction } from "../shared/SubPage";
+import { useAsyncAction } from "../../hooks/useAsyncAction";
 import { splitArmoredKeyBlocks } from "../../lib/armor-blocks";
 import { parseCrxKeyBlocks } from "../../lib/crx/backup";
 import { crxBlobIdentityMatches } from "../../lib/crx/types";
@@ -35,12 +36,10 @@ import {
   registerPasskey,
 } from "../../lib/protection/webauthn-prf";
 import { toast } from "../../lib/toast";
+import { errorMessage } from "../../lib/utils/errors";
 import { ImportReview } from "../keys/ImportReview";
-import {
-  getDefaultProtectionMethod,
-  ProtectionMethodPicker,
-  validatePassword,
-} from "../keys/ProtectionMethodPicker";
+import { ProtectionMethodPicker } from "../keys/ProtectionMethodPicker";
+import { useProtectionChoice } from "../keys/useProtectionChoice";
 import { SubPage } from "../shared/SubPage";
 
 type Step = "paste" | "unlock" | "protect" | "review";
@@ -126,16 +125,23 @@ export function ImportAllKeysPage({
 }: ImportAllKeysPageProps) {
   const [step, setStep] = useState<Step>("paste");
   const [text, setText] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [importing, setImporting] = useState(false);
+  // A dismissed passkey prompt is not an error.
+  const work = useAsyncAction((e) =>
+    isWebAuthnCancel(e)
+      ? null
+      : { message: errorMessage(e, t("settings_import_failed")) },
+  );
+  const error = work.error?.message ?? null;
+  const setError = work.setError;
+  const importing = work.busy;
   const [parsedPrivates, setParsedPrivates] = useState<ParsedPrivate[]>([]);
   const [parsedCrx, setParsedCrx] = useState<CrxSigningKeyBlob[]>([]);
   const [skippedPrivates, setSkippedPrivates] = useState(0);
   const [sourcePassphrase, setSourcePassphrase] = useState("");
-  const [method, setMethod] = useState(getDefaultProtectionMethod);
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [reusePasskey, setReusePasskey] = useState(true);
+  const choice = useProtectionChoice({
+    reusePasskeyCredentialId,
+    masterSealSalt,
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Every key in the backup, on the Review step, before anything is
@@ -259,8 +265,7 @@ export function ImportAllKeysPage({
       setStep(privates.some((p) => p.secretEncrypted) ? "unlock" : "protect");
       return;
     }
-    setImporting(true);
-    try {
+    await work.run(async () => {
       if (skippedPrivates > 0)
         toast.info(tn("settings_import_private_skipped", skippedPrivates), {
           id: "private-keys-skipped",
@@ -268,11 +273,7 @@ export function ImportAllKeysPage({
       await importCrxBlobs(crx);
       await commitPublics(publicKeys, chosen);
       close();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("settings_import_failed"));
-    } finally {
-      setImporting(false);
-    }
+    });
   };
 
   /** Commit the parsed CRX blobs (already identity-checked and deduped at
@@ -290,10 +291,7 @@ export function ImportAllKeysPage({
         failures.push(
           t("settings_import_crx_failure_detail", {
             name: blob.label ?? blob.extensionId.slice(0, 8),
-            error:
-              e instanceof Error
-                ? e.message
-                : t("settings_import_unknown_error"),
+            error: errorMessage(e, t("settings_import_unknown_error")),
           }),
         );
       }
@@ -323,202 +321,190 @@ export function ImportAllKeysPage({
       return;
     }
 
-    setImporting(true);
-    try {
-      // Vet CRX blocks now, write them only at the end of the flow:
-      // - a blob whose public key doesn't hash to its extension id is
-      //   forged/corrupt (the field isn't AEAD-covered) -> reject;
-      // - an extension id we already hold is skipped, never overwritten
-      //   (an old backup must not clobber the live signing key).
-      const existingCrx = new Set((crxKeys ?? []).map((k) => k.extensionId));
-      const crxBlobs: CrxSigningKeyBlob[] = [];
-      let skippedCrx = 0;
-      let invalidCrx = 0;
-      for (const blob of crxBlocks) {
-        if (!(await crxBlobIdentityMatches(blob))) {
-          invalidCrx++;
-        } else if (existingCrx.has(blob.extensionId)) {
-          skippedCrx++;
-        } else {
-          crxBlobs.push(blob);
-        }
+    // Vet CRX blocks now, write them only at the end of the flow:
+    // - a blob whose public key doesn't hash to its extension id is
+    //   forged/corrupt (the field isn't AEAD-covered) -> reject;
+    // - an extension id we already hold is skipped, never overwritten
+    //   (an old backup must not clobber the live signing key).
+    const existingCrx = new Set((crxKeys ?? []).map((k) => k.extensionId));
+    const crxBlobs: CrxSigningKeyBlob[] = [];
+    let skippedCrx = 0;
+    let invalidCrx = 0;
+    for (const blob of crxBlocks) {
+      if (!(await crxBlobIdentityMatches(blob))) {
+        invalidCrx++;
+      } else if (existingCrx.has(blob.extensionId)) {
+        skippedCrx++;
+      } else {
+        crxBlobs.push(blob);
       }
-      if (skippedCrx > 0)
-        toast.info(tn("settings_import_crx_skipped", skippedCrx), {
-          id: "crx-skipped",
-        });
-      if (invalidCrx > 0)
-        toast.error(tn("settings_import_crx_rejected", invalidCrx), {
-          id: "crx-rejected",
-        });
-
-      const existing = new Set(myKeys.map((k) => k.keyId));
-      const privates: ParsedPrivate[] = [];
-      let skipped = 0;
-      let unparseable = 0;
-      for (const block of privateKeys) {
-        try {
-          const result = await importKey(block);
-          if (result.type !== "private") {
-            unparseable++;
-            continue;
-          }
-          if (existing.has(result.keyInfo.keyId)) {
-            skipped++;
-            continue;
-          }
-          privates.push({
-            armored: block,
-            keyInfo: result.keyInfo,
-            secretEncrypted: result.secretEncrypted,
-          });
-        } catch {
-          unparseable++;
-        }
-      }
-
-      if (unparseable > 0) {
-        setError(tn("settings_import_private_unparseable", unparseable));
-      }
-
-      const checked = withConflicts([
-        ...privates.map(privateRow),
-        ...crxBlobs.map(crxRow),
-        ...(await classifyPublics(
-          publicBlocks,
-          new Set(privates.map((p) => p.keyInfo.keyId.toUpperCase())),
-        )),
-      ]);
-      const publics = checked.filter((k) => isPublicKind(k.kind));
-      const secretRows = checked.filter((k) => !isPublicKind(k.kind));
-      setParsedPrivates(privates);
-      setParsedCrx(crxBlobs);
-      setSkippedPrivates(skipped);
-      setPublicKeys(publics);
-
-      if (secretRows.length === 0 && !publics.some(needsDecision)) {
-        // Nothing to decide: finish now.
-        if (skipped > 0)
-          toast.info(tn("settings_import_private_skipped", skipped), {
-            id: "private-keys-skipped",
-          });
-        toastRejected(publics);
-        if (unparseable === 0) close();
-        return;
-      }
-      setReviewKeys([...secretRows, ...publics]);
-      setStep("review");
-    } finally {
-      setImporting(false);
     }
+    if (skippedCrx > 0)
+      toast.info(tn("settings_import_crx_skipped", skippedCrx), {
+        id: "crx-skipped",
+      });
+    if (invalidCrx > 0)
+      toast.error(tn("settings_import_crx_rejected", invalidCrx), {
+        id: "crx-rejected",
+      });
+
+    const existing = new Set(myKeys.map((k) => k.keyId));
+    const privates: ParsedPrivate[] = [];
+    let skipped = 0;
+    let unparseable = 0;
+    for (const block of privateKeys) {
+      try {
+        const result = await importKey(block);
+        if (result.type !== "private") {
+          unparseable++;
+          continue;
+        }
+        if (existing.has(result.keyInfo.keyId)) {
+          skipped++;
+          continue;
+        }
+        privates.push({
+          armored: block,
+          keyInfo: result.keyInfo,
+          secretEncrypted: result.secretEncrypted,
+        });
+      } catch {
+        unparseable++;
+      }
+    }
+
+    if (unparseable > 0) {
+      setError(tn("settings_import_private_unparseable", unparseable));
+    }
+
+    const checked = withConflicts([
+      ...privates.map(privateRow),
+      ...crxBlobs.map(crxRow),
+      ...(await classifyPublics(
+        publicBlocks,
+        new Set(privates.map((p) => p.keyInfo.keyId.toUpperCase())),
+      )),
+    ]);
+    const publics = checked.filter((k) => isPublicKind(k.kind));
+    const secretRows = checked.filter((k) => !isPublicKind(k.kind));
+    setParsedPrivates(privates);
+    setParsedCrx(crxBlobs);
+    setSkippedPrivates(skipped);
+    setPublicKeys(publics);
+
+    if (secretRows.length === 0 && !publics.some(needsDecision)) {
+      // Nothing to decide: finish now.
+      if (skipped > 0)
+        toast.info(tn("settings_import_private_skipped", skipped), {
+          id: "private-keys-skipped",
+        });
+      toastRejected(publics);
+      if (unparseable === 0) close();
+      return;
+    }
+    setReviewKeys([...secretRows, ...publics]);
+    setStep("review");
   };
 
   const handleProtectSubmit = async (close: () => void) => {
-    setError(null);
+    const invalid = choice.validate();
+    if (invalid) {
+      setError(invalid);
+      return;
+    }
 
-    if (method === "password") {
-      const pwError = validatePassword(password, confirmPassword);
-      if (pwError) {
-        setError(pwError);
+    let prfOutput: Uint8Array | undefined;
+    await work.run(async () => {
+      try {
+        await protectAll(close, (out) => (prfOutput = out));
+      } finally {
+        prfOutput?.fill(0);
+      }
+    });
+  };
+
+  const protectAll = async (
+    close: () => void,
+    holdPrf: (prfOutput: Uint8Array) => void,
+  ) => {
+    // One WebAuthn ceremony for the whole batch: its PRF output feeds
+    // every importAndProtect below.
+    let passkeyReuse:
+      | { credentialId: string; prfOutput: Uint8Array; prfSalt: ArrayBuffer }
+      | undefined;
+    if (choice.method === "passkey") {
+      let credentialId = choice.reusing ? reusePasskeyCredentialId : undefined;
+      // Only a REUSED master credential may take the master salt; a
+      // freshly registered passkey gets its own random one below.
+      const sealSalt = credentialId ? masterSealSalt : undefined;
+      if (!credentialId) {
+        const reg = await registerPasskey(
+          t("settings_import_passkey_name"),
+          t("settings_import_passkey_name"),
+        );
+        if (!reg.prfEnabled) {
+          throw new Error(t("settings_import_prf_unsupported"));
+        }
+        credentialId = reg.credentialId;
+      }
+      const prfSalt = sealSalt ?? generatePrfSalt();
+      const { prfOutput } = await authenticateAndGetPrf(credentialId, prfSalt);
+      holdPrf(prfOutput);
+      passkeyReuse = { credentialId, prfOutput, prfSalt };
+    }
+
+    let imported = 0;
+    for (const key of parsedPrivates) {
+      try {
+        const { blob } = await importAndProtect(
+          key.armored,
+          key.secretEncrypted ? sourcePassphrase : null,
+          passkeyReuse
+            ? {
+                method: "passkey",
+                reusePasskeyCredentialId: passkeyReuse.credentialId,
+                prfReuse: {
+                  prfOutput: passkeyReuse.prfOutput,
+                  prfSalt: passkeyReuse.prfSalt,
+                },
+              }
+            : { method: "password", password: choice.password },
+          {
+            userIdHint:
+              key.keyInfo.userIds[0] ?? t("settings_import_default_user_id"),
+          },
+        );
+        await onAddKey(blob);
+        imported++;
+      } catch (e) {
+        // A wrong source passphrase fails every encrypted key the same
+        // way -- stop at the first failure instead of piling up errors.
+        if (imported > 0)
+          toast.success(tn("settings_import_private_imported", imported), {
+            id: "private-keys-imported",
+          });
+        const name = key.keyInfo.userIds[0] ?? key.keyInfo.keyId.slice(-8);
+        setError(
+          t("settings_import_failed_named", {
+            name,
+            error: errorMessage(e, t("settings_import_unknown_error")),
+          }),
+        );
+        if (key.secretEncrypted) setStep("unlock");
         return;
       }
     }
 
-    setImporting(true);
-    let prfOutput: Uint8Array | undefined;
-    try {
-      // One WebAuthn ceremony for the whole batch: resolve the
-      // credential (reuse or register), authenticate once, and hand the
-      // PRF output to every importAndProtect call below.
-      let passkeyReuse:
-        | { credentialId: string; prfOutput: Uint8Array; prfSalt: ArrayBuffer }
-        | undefined;
-      if (method === "passkey") {
-        let credentialId =
-          reusePasskey && reusePasskeyCredentialId
-            ? reusePasskeyCredentialId
-            : undefined;
-        // Only a REUSED master credential may take the master salt; a
-        // freshly registered passkey gets its own random one below.
-        const sealSalt = credentialId ? masterSealSalt : undefined;
-        if (!credentialId) {
-          const reg = await registerPasskey(
-            t("settings_import_passkey_name"),
-            t("settings_import_passkey_name"),
-          );
-          if (!reg.prfEnabled) {
-            throw new Error(t("settings_import_prf_unsupported"));
-          }
-          credentialId = reg.credentialId;
-        }
-        const prfSalt = sealSalt ?? generatePrfSalt();
-        ({ prfOutput } = await authenticateAndGetPrf(credentialId, prfSalt));
-        passkeyReuse = { credentialId, prfOutput, prfSalt };
-      }
-
-      let imported = 0;
-      for (const key of parsedPrivates) {
-        try {
-          const { blob } = await importAndProtect(
-            key.armored,
-            key.secretEncrypted ? sourcePassphrase : null,
-            passkeyReuse
-              ? {
-                  method: "passkey",
-                  reusePasskeyCredentialId: passkeyReuse.credentialId,
-                  prfReuse: {
-                    prfOutput: passkeyReuse.prfOutput,
-                    prfSalt: passkeyReuse.prfSalt,
-                  },
-                }
-              : { method: "password", password },
-            {
-              userIdHint:
-                key.keyInfo.userIds[0] ?? t("settings_import_default_user_id"),
-            },
-          );
-          await onAddKey(blob);
-          imported++;
-        } catch (e) {
-          // A wrong source passphrase fails every encrypted key the same
-          // way -- stop at the first failure instead of piling up errors.
-          if (imported > 0)
-            toast.success(tn("settings_import_private_imported", imported), {
-              id: "private-keys-imported",
-            });
-          const name = key.keyInfo.userIds[0] ?? key.keyInfo.keyId.slice(-8);
-          setError(
-            t("settings_import_failed_named", {
-              name,
-              error:
-                e instanceof Error
-                  ? e.message
-                  : t("settings_import_unknown_error"),
-            }),
-          );
-          if (key.secretEncrypted) setStep("unlock");
-          return;
-        }
-      }
-
-      toast.success(tn("settings_import_private_imported", imported), {
-        id: "private-keys-imported",
+    toast.success(tn("settings_import_private_imported", imported), {
+      id: "private-keys-imported",
+    });
+    if (skippedPrivates > 0)
+      toast.info(tn("settings_import_private_skipped", skippedPrivates), {
+        id: "private-keys-skipped",
       });
-      if (skippedPrivates > 0)
-        toast.info(tn("settings_import_private_skipped", skippedPrivates), {
-          id: "private-keys-skipped",
-        });
-      await importCrxBlobs(parsedCrx);
-      await commitPublics(publicKeys, decisions);
-      close();
-    } catch (e) {
-      if (!isWebAuthnCancel(e)) {
-        setError(e instanceof Error ? e.message : t("settings_import_failed"));
-      }
-    } finally {
-      prfOutput?.fill(0);
-      setImporting(false);
-    }
+    await importCrxBlobs(parsedCrx);
+    await commitPublics(publicKeys, decisions);
+    close();
   };
 
   const encryptedCount = parsedPrivates.filter((p) => p.secretEncrypted).length;
@@ -648,12 +634,7 @@ export function ImportAllKeysPage({
                 {tn("settings_import_protect_intro", parsedPrivates.length)}
               </p>
               <ProtectionMethodPicker
-                method={method}
-                onMethodChange={setMethod}
-                password={password}
-                onPasswordChange={setPassword}
-                confirmPassword={confirmPassword}
-                onConfirmPasswordChange={setConfirmPassword}
+                {...choice.pickerProps}
                 error={error}
                 onSubmit={() => void handleProtectSubmit(api.close)}
                 onBack={() => {
@@ -665,9 +646,6 @@ export function ImportAllKeysPage({
                   "settings_import_submit",
                   parsedPrivates.length,
                 )}
-                reusePasskeyCredentialId={reusePasskeyCredentialId}
-                reusePasskey={reusePasskey}
-                onReusePasskeyChange={setReusePasskey}
               />
             </div>
           )}
