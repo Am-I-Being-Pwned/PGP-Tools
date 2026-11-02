@@ -1,53 +1,23 @@
 //! # GPG Tools - Sequoia-PGP WASM Module
 //!
-//! ## For auditors
+//! The WASM/Rust trust boundary: every cryptographic operation lives in this
+//! crate. Auditors start at `apps/pgp/SECURITY.md`. JS reaches it only through
+//! `lib/pgp/wasm-public.ts` (no secrets) and `lib/pgp/wasm-secrets.ts` (secrets,
+//! per-function zeroize contracts).
 //!
-//! Start at `apps/pgp/SECURITY.md` for the threat model and file map.
-//! This file is the entire WASM/Rust trust boundary -- every
-//! cryptographic operation lives here. The JS side talks to this
-//! module only through `apps/pgp/lib/pgp/wasm-public.ts` (no secret
-//! material) and `apps/pgp/lib/pgp/wasm-secrets.ts` (secret material,
-//! with per-function zeroize contracts).
-//!
-//! All OpenPGP cryptographic operations run in this Rust/WASM module.
-//! Private keys are stored in WASM linear memory behind opaque integer
-//! handles - the JavaScript side never sees raw private key material
-//! during normal operations (encrypt, decrypt, sign).
-//!
-//! ## Security model
-//!
-//! - Key isolation: Private keys live in WASM's linear memory (KEY_STORE,
-//!   a `protected::HandleStore`), serialized bytes that are zeroized on
-//!   drop. JS holds only integer handles.
-//! - Signature verification: check() never aborts; it classifies every
-//!   signature (`process_signatures`) and the status crosses the boundary
-//!   packed with the plaintext. A bad signature anywhere yields "invalid",
-//!   and the UI refuses to show plaintext for it.
-//! - Argon2id KDF: Password-derived keys use Argon2id (64MB, 3 iterations),
-//!   making GPU brute-force impractical for reasonable passwords.
-//! - Constant-time caveat: The RustCrypto backend requires
-//!   allow-variable-time-crypto for WASM. Browser sandboxing mitigates
-//!   timing side-channels in practice.
-//!
-//! ## JS boundary
-//!
-//! Data crosses the WASM/JS boundary via:
-//! - JSON strings for structured data (key info, options, verify results)
-//! - Raw `Vec<u8>` / `Uint8Array` for ciphertext and plaintext
-//! - Packed binary format for decrypt results (sig info header + plaintext)
-//!
-//! Plaintext-cert lifetime invariants:
-//! - The `KEY_STORE` (handle-backed cache) is populated **only** by the
-//!   explicit unlock paths (`unlockWithPassword`, `unlockWithPrf`). A
-//!   handle in the store always corresponds to a user-initiated unlock.
-//! - Generation and import (`generateProtectedWith*`, `protectImportedWith*`)
-//!   keep the plaintext cert in WASM only for the duration of a single
-//!   call -- they encrypt under the user's chosen protection and return
-//!   the blob; the cert never enters the long-lived store.
-//! - Sign/encrypt/decrypt operations rematerialize a transient `Cert`
-//!   from the store per-call and drop it at function exit.
-//! - Plaintext armored secret material crosses the JS boundary only via
-//!   `getKeyArmored`, which is gated behind a destructive export UI.
+//! Invariants:
+//! - Private keys live in WASM memory (`KEY_STORE`, zeroized on drop); JS holds
+//!   only integer handles.
+//! - `KEY_STORE` is populated **only** by the unlock paths (`unlockWithPassword`,
+//!   `unlockWithPrf`). Generate/import hold the plaintext cert for one call and
+//!   return a protected blob; it never enters the store.
+//! - Sign/encrypt/decrypt rematerialize a transient `Cert` per call.
+//! - Armored secret material crosses to JS only via `getKeyArmored` (destructive
+//!   export UI).
+//! - Verification never aborts: every signature is classified and a bad one
+//!   anywhere yields "invalid", so the UI withholds the plaintext.
+//! - Constant-time caveat: WASM needs `allow-variable-time-crypto`; browser
+//!   sandboxing is the mitigation.
 
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::RefCell;
@@ -56,26 +26,11 @@ use std::time::{Duration, SystemTime};
 
 /// Zeroize-on-free global allocator.
 ///
-/// WASM linear memory only ever grows; freed allocations are handed back
-/// to the allocator's free list *without* being cleared, so their bytes
-/// linger until some later allocation happens to reuse the region. That
-/// let decrypted material survive in memory long after it was logically
-/// dropped -- e.g. the contacts/keyring plaintext that wasm-bindgen
-/// copies to JS and then frees (its `Vec<u8>` return is deallocated by
-/// the JS-side `__wbindgen_free`, bypassing any Rust `Drop`), and the
-/// armored private-key strings from the export paths.
-///
-/// Wrapping the system allocator so every `dealloc` wipes the block
-/// first closes that gap comprehensively: it doesn't depend on any
-/// individual call remembering to zeroize, and it covers buffers freed
-/// across the wasm-bindgen ABI where `Drop`/`Zeroizing` can't reach.
-/// `realloc` is intentionally left to the trait default (alloc + copy +
-/// dealloc), so a moved reallocation also wipes the old block via our
-/// `dealloc`.
-///
-/// Cost: a `write_bytes` over each freed block. This module's workload is
-/// occasional, user-initiated crypto (not a hot allocation loop), so the
-/// overhead is not observable in practice and the hardening is worth it.
+/// Freed WASM memory is not cleared, so plaintext freed across the
+/// wasm-bindgen ABI (where `Drop`/`Zeroizing` can't reach, e.g. a returned
+/// `Vec<u8>` freed by `__wbindgen_free`) would linger. Wiping every block on
+/// `dealloc` covers that without relying on each call site. `realloc` stays
+/// the trait default (alloc + copy + dealloc) so a moved block is wiped too.
 struct ZeroizeOnFree;
 
 unsafe impl GlobalAlloc for ZeroizeOnFree {
@@ -99,12 +54,9 @@ unsafe impl GlobalAlloc for ZeroizeOnFree {
     }
 }
 
-/// Test-only: the peak of what THIS thread has live on the heap, so a
-/// test can say "never held more than about N bytes" -- the only way to
-/// see Sequoia's internal read-ahead from outside. Per thread, because
-/// the test harness runs tests in parallel. Const-initialised cells with
-/// no destructor, so touching them never allocates (which, inside the
-/// allocator, would recurse).
+/// Test-only per-thread peak-live-heap meter, to bound Sequoia's read-ahead.
+/// Const-initialised cells with no destructor: touching them must not
+/// allocate (that would recurse into the allocator).
 #[cfg(test)]
 mod alloc_meter {
     use std::cell::Cell;
@@ -157,22 +109,11 @@ use serde::{Deserialize, Serialize};
 use std::sync::OnceLock;
 use wasm_bindgen::prelude::*;
 
-/// The policy that gates every key operation (parse, encrypt, sign,
-/// decrypt). It is Sequoia's `StandardPolicy` relaxed in exactly one
-/// way: SHA-1 is accepted in *binding-signature* contexts (primary-key
-/// self-signatures, User ID and subkey bindings), which only require
-/// second-preimage resistance.
-///
-/// Rationale: SHA-1's collision resistance is broken (Shambles), but
-/// its second-preimage resistance is still intact. Collision resistance
-/// is what matters for data signatures and third-party certifications --
-/// those keep using the hardened default and stay rejected. Binding
-/// signatures only need second-preimage resistance, so accepting SHA-1
-/// there is safe enough to keep legacy keys working. Without this, a key
-/// whose only live self-signature is SHA-1 (common for older RSA keys)
-/// hard-fails with "No binding signature at time ...". We instead import
-/// and use it, and surface a `securityWarning` on the key so the user
-/// knows it leans on weak crypto. See `strict_policy` for the flag.
+/// The policy gating every key operation: `StandardPolicy` relaxed only to
+/// accept SHA-1 in *binding* signatures, which need second-preimage
+/// resistance (still intact) rather than collision resistance (broken).
+/// Data signatures and certifications stay on the hardened default. Keys
+/// that rely on it get a `securityWarning` (see `strict_policy`).
 fn policy() -> &'static StandardPolicy<'static> {
     static POLICY: OnceLock<StandardPolicy<'static>> = OnceLock::new();
     POLICY.get_or_init(|| {
@@ -185,11 +126,8 @@ fn policy() -> &'static StandardPolicy<'static> {
     })
 }
 
-/// Sequoia's hardened defaults, unrelaxed. Used only to *detect* whether
-/// a key leans on weak crypto so we can flag it -- never to gate an
-/// operation. A key usable under `policy()` but not under this one
-/// relies on something the hardened policy rejects (in practice, a SHA-1
-/// binding signature).
+/// Sequoia's hardened defaults. Only used to *detect* weak crypto for a
+/// warning -- never to gate an operation.
 fn strict_policy() -> &'static StandardPolicy<'static> {
     static STRICT: OnceLock<StandardPolicy<'static>> = OnceLock::new();
     STRICT.get_or_init(StandardPolicy::new)
@@ -204,9 +142,7 @@ impl<T, E: std::fmt::Display> StrErr<T> for Result<T, E> {
     }
 }
 
-// =====================================================================
-// Types (serialized to/from JS via JSON)
-// =====================================================================
+// ---- Types (serialized to/from JS via JSON) ----
 
 #[derive(Serialize)]
 pub struct KeyInfo {
@@ -221,42 +157,29 @@ pub struct KeyInfo {
     pub expires_at: Option<f64>,
     #[serde(rename = "isPrivate")]
     pub is_private: bool,
-    /// True iff our `policy()` accepts at least one encryption-capable,
-    /// alive, non-revoked key on this cert.
+    /// `policy()` accepts an alive, non-revoked encryption-capable key.
     #[serde(rename = "usableForEncryption")]
     pub usable_for_encryption: bool,
-    /// True iff our `policy()` accepts at least one signing-capable,
-    /// alive, non-revoked key on this cert.
+    /// `policy()` accepts an alive, non-revoked signing-capable key.
     #[serde(rename = "usableForSigning")]
     pub usable_for_signing: bool,
-    /// Human-readable reason the cert is unusable. Present only when
-    /// `usable_for_encryption` and `usable_for_signing` are both false
-    /// because of a policy rejection (e.g. SHA-1 binding signatures,
-    /// expiry, revocation).
+    /// Why the cert is unusable; set only when neither capability is usable
+    /// because of a policy rejection.
     #[serde(rename = "policyError", skip_serializing_if = "Option::is_none")]
     pub policy_error: Option<String>,
-    /// Non-blocking flag: the key is usable, but only because we relaxed
-    /// the hardened policy to accept it (e.g. it relies on a SHA-1
-    /// binding signature). Present so the UI can warn the user while
-    /// still allowing the import. Mutually exclusive with a fatal
-    /// `policy_error`.
+    /// Non-blocking: usable only thanks to the relaxed policy (e.g. SHA-1
+    /// binding). Mutually exclusive with `policy_error`.
     #[serde(rename = "securityWarning", skip_serializing_if = "Option::is_none")]
     pub security_warning: Option<String>,
-    /// The owner revoked the whole cert (verified revocation). A revoked
-    /// contact is still stored -- so the revocation can reach it -- but
-    /// is shown as revoked and never encrypted to.
+    /// Verified whole-cert revocation. Still stored (so the revocation reaches
+    /// it) but never encrypted to.
     pub revoked: bool,
-    /// A User ID mixes lookalike alphabets ("Аlice" with a Cyrillic А).
-    /// Also explained in `security_warning`; this says which warning it is.
+    /// A User ID mixes lookalike alphabets; also explained in `security_warning`.
     pub lookalike: bool,
 }
 
-/// One row in the per-key breakdown of a certificate: the primary key
-/// or one subkey, with its capability flags and lifecycle status.
-/// Returned (as an array, primary first) by `parse_key_details`.
-/// Complements `KeyInfo`, which only answers "is this cert usable at
-/// all" -- this says *which* component key does what, and which are
-/// dead weight (expired / revoked / policy-rejected).
+/// One row of `parse_key_details` (primary first): a component key's
+/// capabilities and lifecycle status.
 #[derive(Serialize)]
 pub struct SubkeyDetail {
     pub fingerprint: String,
@@ -281,10 +204,8 @@ pub struct SubkeyDetail {
     pub can_certify: bool,
     #[serde(rename = "canAuthenticate")]
     pub can_authenticate: bool,
-    /// "active" | "expired" | "revoked" | "invalid".
-    /// "invalid" means the binding signature fails our `policy()`
-    /// (see `policy_error` for why); capability flags are then unknown
-    /// and reported as all-false.
+    /// "active" | "expired" | "revoked" | "invalid". "invalid" = binding fails
+    /// `policy()`; capability flags are then all-false.
     pub status: String,
     #[serde(rename = "revocationReason", skip_serializing_if = "Option::is_none")]
     pub revocation_reason: Option<String>,
@@ -292,9 +213,8 @@ pub struct SubkeyDetail {
     pub policy_error: Option<String>,
 }
 
-/// Metadata returned alongside an encrypted blob from the protect-flow
-/// functions. The encrypted blob itself is appended as a binary tail
-/// to keep the JS boundary tidy (`pack_protect_result`).
+/// Protect-flow metadata; the blob itself is appended as a binary tail
+/// (`pack_protect_result`).
 #[derive(Serialize)]
 struct ProtectResultMeta {
     #[serde(rename = "publicKeyArmored")]
@@ -312,8 +232,6 @@ pub struct VerifyResult {
     signatures: SignatureReport,
 }
 
-/// What a message's signatures say, as the UI receives it alongside the
-/// plaintext (verify) or packed with it (decrypt).
 #[derive(Serialize)]
 struct SignatureReport {
     #[serde(rename = "signatureValid")]
@@ -323,14 +241,12 @@ struct SignatureReport {
     signature_status: &'static str,
     #[serde(rename = "signerKeyId")]
     signer_key_id: Option<String>,
-    /// When the signature says it was made (ms since epoch). The SIGNER
-    /// chooses this, and Sequoia judges the key as of this moment -- so
-    /// it is shown to the user, never trusted.
+    /// Signer-chosen creation time (ms since epoch); Sequoia judges the key as
+    /// of this moment, so it is shown, never trusted.
     #[serde(rename = "signedAt")]
     signed_at: Option<f64>,
-    /// The signing key is still alive and unrevoked TODAY. A key that
-    /// expired or was superseded since can still produce a signature
-    /// that verifies, simply by dating it inside its old validity.
+    /// Signing key is alive and unrevoked TODAY -- an expired or superseded key
+    /// still verifies a signature dated inside its old validity.
     #[serde(rename = "signerKeyCurrent")]
     signer_key_current: bool,
     /// Further good signers beyond `signer_key_id`, by fingerprint.
@@ -339,11 +255,8 @@ struct SignatureReport {
     /// Signatures from keys we don't hold, alongside a good one.
     #[serde(rename = "unverifiedSignatures")]
     unverified_signatures: u32,
-    /// Fingerprints the good signature names as its intended recipients.
-    /// Sequoia enforces the list when a message is opened with a key; a
-    /// password decrypt or a verify has no "us" to check it against, so
-    /// the UI does: a message signed for someone else is not addressed
-    /// to the user, however valid the signature.
+    /// Intended-recipient fingerprints. Sequoia enforces these only when
+    /// decrypting with a key; for password decrypt or verify the UI checks them.
     #[serde(rename = "intendedRecipients")]
     intended_recipients: Vec<String>,
 }
@@ -370,8 +283,7 @@ impl SignatureReport {
 #[derive(Deserialize)]
 pub struct GenerateKeyOptions {
     pub name: String,
-    /// Optional: a UID may be a bare name (`Alice`) or name + comment
-    /// with no address. Empty is treated as absent.
+    /// A UID may have no address. Empty is treated as absent.
     #[serde(default)]
     pub email: Option<String>,
     pub comment: Option<String>,
@@ -381,9 +293,7 @@ pub struct GenerateKeyOptions {
     pub expires_in: Option<u64>,
 }
 
-// =====================================================================
-// Internal helpers
-// =====================================================================
+// ---- Internal helpers ----
 
 fn system_time_to_millis(t: SystemTime) -> f64 {
     t.duration_since(SystemTime::UNIX_EPOCH)
@@ -403,8 +313,7 @@ fn extract_key_info(cert: &openpgp::Cert, is_private: bool) -> KeyInfo {
                 let expires_at = vc.primary_key().key_expiration_time().map(system_time_to_millis);
                 let (has_enc, has_sig) = usable_keys(&vc);
                 let policy_error = if !has_enc && !has_sig {
-                    // Name revocation explicitly -- it's the one cause the
-                    // user can't fix by waiting or asking for a re-export.
+                    // Revocation is the one cause the user can't fix by waiting.
                     Some(match verified_revocation_reason(&vc.revocation_status()) {
                         Some(reason) => format!(
                             "This key has been revoked by its owner ({reason}) \
@@ -418,9 +327,7 @@ fn extract_key_info(cert: &openpgp::Cert, is_private: bool) -> KeyInfo {
                 } else {
                     None
                 };
-                // Usable, but only thanks to our relaxed policy? Flag it,
-                // naming the specific key (primary self-sig vs a subkey
-                // binding) that leans on weak crypto.
+                // Usable only via the relaxed policy? Name the key that leans on it.
                 let security_warning = if policy_error.is_some() {
                     None
                 } else {
@@ -437,11 +344,8 @@ fn extract_key_info(cert: &openpgp::Cert, is_private: bool) -> KeyInfo {
     let revoked = cert
         .with_policy(policy(), None)
         .is_ok_and(|vc| matches!(vc.revocation_status(), RevocationStatus::Revoked(_)));
-    // A lookalike name outranks nothing that blocks use, but it is the
-    // one warning that says "this may not be who it claims to be".
     let lookalike = user_ids.iter().any(|u| mixes_scripts(u));
-    // Both are said when both apply: the lookalike text must not hide a
-    // SHA-1 binding warning, nor the reverse.
+    // Say both when both apply: neither warning may hide the other.
     let security_warning = match (lookalike, security_warning) {
         (false, w) => w,
         (true, w) => Some(
@@ -478,16 +382,12 @@ fn extract_key_info(cert: &openpgp::Cert, is_private: bool) -> KeyInfo {
     }
 }
 
-/// The User IDs the owner actually bound -- self-signed under policy,
-/// not revoked -- primary first, sanitized for display.
-///
-/// `Cert::userids()` also yields User IDs with no binding signature at
-/// all: anyone can append "Alice CEO <ceo@...>" to Bob's real cert, and
-/// the UI names a contact (and every signer card) by its first User ID.
+/// User IDs the owner actually bound (self-signed under policy, not
+/// revoked), primary first, sanitized. `Cert::userids()` also yields
+/// unbound UIDs anyone can append, and the UI names a contact by its first.
 fn bound_user_ids(cert: &openpgp::Cert) -> Vec<String> {
-    // Attacker-controlled and rendered by the UI: strip control, bidi and
-    // invisible characters (a U+202E override in a UID visually reverses
-    // the displayed email -- address spoofing) and cap length.
+    // Attacker-controlled: strip control/bidi/invisible chars (a U+202E in a
+    // UID reverses the displayed email) and cap length.
     let clean =
         |u: &openpgp::packet::UserID| sanitize_untrusted(&String::from_utf8_lossy(u.value()), 300);
 
@@ -510,20 +410,16 @@ fn bound_user_ids(cert: &openpgp::Cert) -> Vec<String> {
     if !bound.is_empty() {
         return bound.iter().map(clean).collect();
     }
-    // No usable binding today (expired, all revoked, policy-rejected):
-    // still name it only by what its owner once self-signed.
+    // No usable binding today: still only names its owner once self-signed.
     cert.userids()
         .filter(|u| u.self_signatures().next().is_some())
         .map(|u| clean(u.userid()))
         .collect()
 }
 
-/// A WORD whose letters come from more than one of the scripts that
-/// imitate each other: "Аlice" with a Cyrillic А renders exactly like the
-/// real Alice. Judged per word, not per User ID -- "Иван <ivan@example.ru>"
-/// is a Cyrillic name with a Latin address, which is ordinary. An email
-/// address is ONE word, so a domain label in another script next to a
-/// Latin one ("tim@аррӏе.com") counts as mixing.
+/// A word whose letters mix scripts that imitate each other ("Аlice" with a
+/// Cyrillic А). Judged per word, so a Cyrillic name with a Latin address is
+/// fine; an email address is one word, so a mixed-script domain counts.
 fn mixes_scripts(s: &str) -> bool {
     let script = |c: char| match c as u32 {
         0x41..=0x5a | 0x61..=0x7a | 0xc0..=0x24f | 0x1e00..=0x1eff => Some(0),
@@ -552,14 +448,10 @@ fn mixes_scripts(s: &str) -> bool {
         })
 }
 
-/// Whether a validated cert exposes an alive, non-revoked encryption
-/// key (`.0`) and/or signing key (`.1`).
+/// (encryption usable, signing usable) for a validated cert.
 fn usable_keys(vc: &openpgp::cert::ValidCert) -> (bool, bool) {
-    // A revocation of the whole certificate does NOT mark the component
-    // keys revoked in Sequoia's per-key status, so without this check a
-    // fully revoked cert would still report usable "active" subkeys and
-    // import as a normal contact (the same cascade parse_key_details
-    // applies to its per-subkey rows).
+    // A whole-cert revocation doesn't mark component keys revoked in Sequoia,
+    // so without this a revoked cert would still report usable subkeys.
     if verified_revocation_reason(&vc.revocation_status()).is_some() {
         return (false, false);
     }
@@ -587,28 +479,17 @@ fn usable_keys(vc: &openpgp::cert::ValidCert) -> (bool, bool) {
     (has_enc, has_sig)
 }
 
-/// Build a non-blocking security warning for a cert that is already
-/// usable under our relaxed `policy()`. The *only* difference between
-/// `policy()` and `strict_policy()` is SHA-1 acceptance for binding
-/// signatures, so any capability we have that the hardened policy lacks
-/// is one that leans on a SHA-1 signature -- and we can name which.
-///
-/// `has_enc`/`has_sig` are the relaxed-policy capabilities the caller
-/// already computed. Returns `None` when the hardened policy would
-/// accept everything we use (no weak crypto in play).
+/// Warning for a cert usable under `policy()` but not `strict_policy()`.
+/// The only difference is SHA-1 binding acceptance, so name which binding
+/// leans on it. `None` when the hardened policy accepts everything we use.
 fn security_warning(cert: &openpgp::Cert, has_enc: bool, has_sig: bool) -> Option<String> {
-    // If the hardened policy rejects the cert outright, the weakness is
-    // in the primary binding itself (the direct-key / User ID
-    // self-signature), not a subkey.
+    // Hardened policy rejects the whole cert: the weak link is the primary binding.
     let (strict_enc, strict_sig) = match cert.with_policy(strict_policy(), None) {
         Ok(vc) => usable_keys(&vc),
         Err(_) => return Some(sha1_warning("primary self-signature", false)),
     };
 
-    // Primary is fine under the hardened policy; a subkey binding is the
-    // weak link. Flag exactly the capability/capabilities affected so we
-    // never silently encrypt to (or trust signatures from) a SHA-1-bound
-    // subkey.
+    // Otherwise a subkey binding is the weak link; flag exactly what it affects.
     match (has_enc && !strict_enc, has_sig && !strict_sig) {
         (true, true) => Some(sha1_warning("encryption and signing subkeys", true)),
         (true, false) => Some(sha1_warning("encryption subkey", false)),
@@ -617,8 +498,6 @@ fn security_warning(cert: &openpgp::Cert, has_enc: bool, has_sig: bool) -> Optio
     }
 }
 
-/// The shared "weak SHA-1, allowed but flagged" message for `subject`
-/// (e.g. "encryption subkey", "primary key's self-signature").
 fn sha1_warning(subject: &str, plural: bool) -> String {
     let (verb, obj, is_are) = if plural {
         ("rely", "legacy SHA-1 signatures", "are")
@@ -632,9 +511,8 @@ fn sha1_warning(subject: &str, plural: bool) -> String {
     )
 }
 
-/// Translate a raw Sequoia policy-rejection string into something a
-/// non-cryptographer can act on. The most common case in 2026 is keys
-/// self-signed with SHA-1, which Sequoia's StandardPolicy refuses.
+/// Turn a raw Sequoia policy rejection into something a non-cryptographer
+/// can act on (most often a SHA-1 self-signature).
 fn humanize_policy_error(raw: &str) -> String {
     let lower = raw.to_ascii_lowercase();
     if lower.contains("sha1") || lower.contains("sha-1") {
@@ -654,9 +532,8 @@ fn humanize_policy_error(raw: &str) -> String {
 }
 
 fn armor_cert(cert: &openpgp::Cert, is_private: bool) -> Result<String, String> {
-    // Pre-size the sink: armored = base64(payload) + framing, so payload * 1.4
-    // + a generous 256B for headers/CRC/footer comfortably fits any real cert
-    // and avoids realloc-trail-of-partial-secrets for the is_private branch.
+    // Pre-size (base64 ~1.4x + framing) so the private branch never reallocs
+    // and leaves partial-secret copies behind.
     let payload_len = if is_private {
         cert.as_tsk().serialized_len()
     } else {
@@ -678,8 +555,7 @@ fn armor_cert(cert: &openpgp::Cert, is_private: bool) -> Result<String, String> 
     String::from_utf8(buf).str_err()
 }
 
-/// Parse a JSON array of armored key strings into Certs,
-/// silently skipping any that fail to parse.
+/// Parse a JSON array of armored keys, skipping any that fail.
 fn parse_armored_certs(json: &str) -> Result<Vec<openpgp::Cert>, String> {
     let armors: Vec<String> = serde_json::from_str(json).str_err()?;
     Ok(armors
@@ -688,14 +564,9 @@ fn parse_armored_certs(json: &str) -> Result<Vec<openpgp::Cert>, String> {
         .collect())
 }
 
-/// Zeroize an `Aes256Gcm` cipher's expanded key schedule before drop.
-///
-/// With its `zeroize` feature (enabled in Cargo.toml) aes-gcm 0.11 wipes
-/// its AES key schedule and GHASH key on drop, but `Aes256Gcm` itself does
-/// not implement `Zeroize`, so there is no explicit call that clears the
-/// whole struct. This explicit wipe is kept as belt-and-braces: it does
-/// not depend on a feature flag staying on, and it runs before any
-/// `Result` is propagated.
+/// Wipe an `Aes256Gcm`'s expanded key schedule before drop. aes-gcm's
+/// `zeroize` feature already does this on drop; this explicit wipe doesn't
+/// depend on that flag and runs before any `Result` propagates.
 fn zeroize_cipher(cipher: &mut Aes256Gcm) {
     let ptr = cipher as *mut Aes256Gcm as *mut u8;
     let len = std::mem::size_of::<Aes256Gcm>();
@@ -704,18 +575,16 @@ fn zeroize_cipher(cipher: &mut Aes256Gcm) {
     unsafe { std::ptr::write_bytes(ptr, 0, len) };
 }
 
-/// AES-256-GCM decrypt with AAD. Key material is borrowed, not consumed --
-/// the caller is responsible for zeroizing. The cipher's expanded key
-/// schedule is zeroized after use.
+/// AES-256-GCM decrypt with AAD. `key` is borrowed: the caller zeroizes it;
+/// the expanded key schedule is zeroized here.
 fn aes_gcm_decrypt(
     key: &[u8],
     iv: &[u8],
     ciphertext: &[u8],
     aad: &[u8],
 ) -> Result<Vec<u8>, String> {
-    // A wrong-length IV is an `Err`, not a panic (`from_slice` used to
-    // assert, and a panic aborts the whole wasm module). Checked before
-    // the cipher exists so there is no key schedule to scrub on this path.
+    // A wrong-length IV must be an `Err`, not a panic (a panic aborts the whole
+    // wasm module). Checked before the cipher exists: no schedule to scrub.
     let nonce = Nonce::<Aes256Gcm>::try_from(iv)
         .map_err(|_| "Decryption failed - malformed IV".to_string())?;
     let mut cipher =
@@ -729,9 +598,8 @@ fn aes_gcm_decrypt(
     result
 }
 
-/// AES-256-GCM encrypt with AAD. Returns `[12-byte IV][ciphertext]`.
-/// Key material is borrowed, not consumed -- the caller is responsible for
-/// zeroizing. The cipher's expanded key schedule is zeroized after use.
+/// AES-256-GCM encrypt with AAD -> `[12-byte IV][ciphertext]`. `key` is
+/// borrowed: the caller zeroizes it; the key schedule is zeroized here.
 fn aes_gcm_encrypt(
     key: &[u8],
     plaintext: &[u8],
@@ -755,21 +623,15 @@ fn aes_gcm_encrypt(
     Ok(result)
 }
 
-// =====================================================================
-// Shared crypto operations
-// =====================================================================
+// ---- Shared crypto operations ----
 
-/// Encrypt plaintext to recipients, optionally signing with `signer_cert`.
-///
-/// Pipeline: Armorer -> Encryptor -> [Signer] -> LiteralWriter -> plaintext
+/// Encrypt to recipients (and/or a password), optionally signing.
 fn encrypt_impl(
     plaintext: &[u8],
     recipient_keys_json: &str,
     signer_cert: Option<&openpgp::Cert>,
-    // Already `Zeroizing` -- the EXPORTS wrap it, because they are where
-    // the wasm-bindgen allocation lands and where `audit-invariants.mjs`
-    // checks. Taking the wrapper here rather than re-wrapping keeps that
-    // one owner: it is moved down, never copied.
+    // Already `Zeroizing`: the exports own and wrap it (where the wasm-bindgen
+    // allocation lands and audit-invariants.mjs checks); moved, never copied.
     password: Option<Zeroizing<Vec<u8>>>,
 ) -> Result<Vec<u8>, String> {
     let recipient_armors: Vec<String> =
@@ -800,29 +662,18 @@ fn encrypt_impl(
         {
             recipient_keys.push(key);
         }
-        // EVERY recipient must contribute a key, or the whole operation
-        // is refused. The `.alive().revoked(false)` filters above are
-        // Sequoia's way of not encrypting to a dead key, but on their
-        // own they FAIL SILENTLY: an expired cert next to a live one
-        // simply drops out, and the result is a perfectly valid message
-        // that the expired key's owner cannot read -- while the sender
-        // sees an ordinary success. That includes the user's own key
-        // riding along via encrypt-to-self: nothing about "it is mine"
-        // lets an expired key decrypt.
-        //
-        // A whole-cert revocation is checked separately because Sequoia
-        // does not propagate it to the per-key status (see
-        // `usable_keys`), so the filters above would happily keep the
-        // subkeys of a revoked cert.
+        // EVERY recipient must contribute a key or the operation is refused: the
+        // `.alive().revoked(false)` filters fail silently, producing a message the
+        // expired key's owner (including self) cannot read. Whole-cert revocation
+        // is checked separately because Sequoia doesn't propagate it per key.
         let cert_revoked = verified_revocation_reason(&vc.revocation_status());
         if cert_revoked.is_some() || recipient_keys.len() == before {
             return Err(unusable_recipient_reason(&vc, cert_revoked));
         }
     }
 
-    // A message must be openable by SOMEONE. Without this, an empty
-    // recipient list and no password produce a valid OpenPGP message that
-    // nothing on earth can decrypt -- and it would look like a success.
+    // A message must be openable by SOMEONE: no recipients and no password
+    // would "succeed" with an undecryptable message.
     if recipient_keys.is_empty() && password.is_none() {
         return Err("No recipients and no password: nothing could open this message".to_string());
     }
@@ -831,19 +682,12 @@ fn encrypt_impl(
     let message = Armorer::new(Message::new(&mut sink)).build().str_err()?;
 
     let mut builder = Encryptor::for_recipients(message, recipient_keys)
-        // PINNED, not inherited. Sequoia's default happens to be AES-256
-        // today, and a default that changes underneath us is a cipher
-        // change nobody reviewed. The S2K is NOT pinned here because the
-        // stream API does not expose it -- see the note in
-        // `encrypt_with_password` about what it uses and why that is the
-        // strongest the format can express.
+        // PINNED, not inherited: a changing default would be an unreviewed cipher
+        // change. The S2K can't be pinned via the stream API (see
+        // `encrypt_with_password`).
         .symmetric_algo(SymmetricAlgorithm::AES256);
     if let Some(ref pw) = password {
-        // ADDITIVE. A password does not replace the recipients: the
-        // message gets an SKESK alongside whatever PKESKs it already had,
-        // and either opens it. That mirrors the UI, where the password is
-        // a badge next to the recipient list rather than a mode that
-        // replaces it.
+        // ADDITIVE: an SKESK alongside the PKESKs; either opens the message.
         builder = builder.add_passwords(vec![openpgp::crypto::Password::from(
             pw.as_slice(),
         )]);
@@ -852,10 +696,9 @@ fn encrypt_impl(
 
     let inner: Message = if let Some(cert) = signer_cert {
         let keypair = signing_keypair(cert)?;
-        // Name who the signature is FOR (RFC 9580 5.2.3.36). Without it a
-        // recipient can decrypt, re-encrypt the still-signed message to a
-        // third party, and it verifies there as if the signer had written
-        // to them. Sequoia enforces the list on decrypt.
+        // Intended Recipient Fingerprints (RFC 9580 5.2.3.36): stops a recipient
+        // re-encrypting the signed message to a third party where it would verify
+        // as if addressed to them. Sequoia enforces the list on decrypt.
         let mut signer = Signer::new(encryptor, keypair).str_err()?;
         for recipient in &recipients {
             signer = signer.add_intended_recipient(recipient);
@@ -871,12 +714,9 @@ fn encrypt_impl(
     Ok(sink)
 }
 
-/// Why a recipient cert contributed no encryption key to `encrypt_impl`,
-/// worded for the user. Names the key by its first User ID (sanitized:
-/// it is attacker-controlled text headed for the UI) so the sender knows
-/// WHICH recipient to chase, then says what is wrong in the order a user
-/// can act on: revoked (get a new key), expired (ask for a renewal), or
-/// simply no encryption subkey (a sign-only key was picked).
+/// User-facing reason a recipient contributed no encryption key, naming it
+/// by its (sanitized, attacker-controlled) first User ID, in actionable
+/// order: revoked, expired, no encryption subkey.
 fn unusable_recipient_reason(
     vc: &openpgp::cert::ValidCert,
     cert_revoked: Option<String>,
@@ -911,8 +751,8 @@ fn unusable_recipient_reason(
         .next()
         .is_some();
     if any_encryption_capable {
-        // Live primary, but every encryption subkey is expired, revoked,
-        // or uses an algorithm this build cannot encrypt with.
+        // Live primary, but every encryption subkey is expired, revoked, or of
+        // an algorithm this build can't encrypt with.
         return coded(
             ErrorCode::KeyExpired,
             &format!(
@@ -958,8 +798,7 @@ fn cleartext_sign(text: &str, cert: &openpgp::Cert) -> Result<String, String> {
     Ok(String::from_utf8_lossy(&sink).into_owned())
 }
 
-/// Best-effort issuer key id (hex) advertised by a signature's subpackets.
-/// Used to name the signer even when we don't hold their public key.
+/// Best-effort issuer key id (hex), to name a signer whose key we lack.
 fn issuer_hex(sig: &openpgp::packet::Signature) -> Option<String> {
     sig.get_issuers().into_iter().next().map(|kh| match kh {
         openpgp::KeyHandle::Fingerprint(fp) => fp.to_hex(),
@@ -967,8 +806,8 @@ fn issuer_hex(sig: &openpgp::packet::Signature) -> Option<String> {
     })
 }
 
-/// Is the key that made a good signature still alive and unrevoked now?
-/// Sequoia checked it as of the signature's own (signer-chosen) time.
+/// Is the good signature's key still alive and unrevoked now? Sequoia only
+/// checked it as of the signer-chosen signature time.
 fn signing_key_current(cert: &openpgp::Cert, key: &openpgp::Fingerprint) -> bool {
     let Ok(vc) = cert.with_policy(policy(), None) else {
         return false;
@@ -984,26 +823,14 @@ fn signing_key_current(cert: &openpgp::Cert, key: &openpgp::Fingerprint) -> bool
             .is_some()
 }
 
-/// Classify the signatures in a message structure WITHOUT ever failing.
+/// Classify a message's signatures WITHOUT ever failing: decryption and
+/// verification are separate, so a message still decrypts when the signer
+/// is unknown. "valid" | "invalid" (had the key, failed: tamper signal) |
+/// "unknown_key" | "unsigned".
 ///
-/// Decryption and signature verification are SEPARATE concerns: a message
-/// must still decrypt even when we cannot verify who signed it (e.g. we do
-/// not hold the signer's public key). This function therefore never returns
-/// an error for a signature outcome -- it only reports one:
-///
-///   "valid"       - a good signature we could cryptographically verify
-///   "invalid"     - a signature we had the key for but that failed to
-///                   verify (tamper / forgery signal -- callers should warn)
-///   "unknown_key" - signed, but we don't hold the signer's public key, so
-///                   the signature could not be checked either way
-///   "unsigned"    - no signatures present
-///
-/// Every signature counts. A bad one anywhere makes the whole message
-/// "invalid", even next to a good one: GnuPG reports BAD for it too, and
-/// a verdict that silently drops the failure is a verdict on less than
-/// the user was shown. `UnboundKey` -- we hold the key, but it was not
-/// valid at the moment the signature claims, e.g. backdated before the
-/// key existed -- is a forgery signal, not an unknown signer.
+/// A bad signature anywhere makes the whole message "invalid", even next to
+/// a good one (GnuPG reports BAD too). `UnboundKey` (key not valid at the
+/// claimed time, e.g. backdated) is a forgery signal, not an unknown signer.
 fn process_signatures(structure: MessageStructure) -> SignatureReport {
     let mut good: Vec<(String, Option<f64>, bool, Vec<String>)> = Vec::new();
     let mut missing: Vec<Option<String>> = Vec::new();
@@ -1052,28 +879,19 @@ fn process_signatures(structure: MessageStructure) -> SignatureReport {
     }
 }
 
-// =====================================================================
-// Private key store (keys live in WASM linear memory, never in JS)
-// =====================================================================
+// ---- Private key store (keys live in WASM linear memory, never in JS) ----
 
-// KEY_STORE: the unlocked-cert cache. Entries are the serialized secret cert
-// (`serialize_secret_cert`) in a `Zeroizing<Vec<u8>>`, so removal, overwrite
-// and teardown all wipe the bytes -- the store type is
-// `protected::HandleStore`, the same machinery `crx.rs` uses for
-// `CRX_KEY_STORE`.
-//
-// It is a *distinct instance*, not a shared one: nothing outside this module
-// can reach it, which is what keeps "populated only by the unlock paths"
-// (SECURITY.md §4) a property of `insert_key`'s call sites rather than a hope
-// about every caller in the crate.
+// KEY_STORE: unlocked certs, serialized in `Zeroizing<Vec<u8>>` so removal,
+// overwrite and teardown wipe them. A distinct `HandleStore` instance from
+// crx.rs's, reachable only from this module, so "populated only by the
+// unlock paths" (SECURITY.md §4) is a property of `insert_key`'s call sites.
 thread_local! {
     static KEY_STORE: protected::HandleStore = protected::HandleStore::new();
     static NEXT_HANDLE: RefCell<u32> = const { RefCell::new(1) };
 }
 
-/// Hand out the next handle. Monotonic and never reused across *any* store
-/// in the crate (`crx.rs` draws from this counter too), so a stale handle
-/// from a dropped key can never silently address a later one.
+/// Next handle: monotonic and shared by every store in the crate (crx.rs
+/// too), so a stale handle can never address a later key.
 fn next_handle() -> Result<u32, String> {
     NEXT_HANDLE.with(|next| {
         let mut n = next.borrow_mut();
@@ -1095,13 +913,8 @@ fn get_cert_from_handle(handle: u32) -> Result<openpgp::Cert, String> {
         .ok_or("Key handle not found - key may have been locked")?
 }
 
-/// Test-only bridges to the internal cert/handle API.
-///
-/// The old public `generateKey` / `storeKey` wasm exports were removed (keys
-/// now only enter `KEY_STORE` via the unlock paths -- see the note above the
-/// public API). The unit tests predate that change, so these thin shims give
-/// them a way to mint a cert and a handle directly without a full
-/// password/PRF protect+unlock round trip.
+/// Test-only shims to mint a cert and a handle without a full
+/// protect + unlock round trip (keys otherwise enter `KEY_STORE` only via unlock).
 #[cfg(test)]
 fn generate_key(options_json: &str) -> Result<String, String> {
     let (cert, revocation) = build_cert_from_options(options_json)?;
@@ -1121,72 +934,45 @@ fn store_key(armored: &str) -> Result<u32, String> {
 }
 
 
-// =====================================================================
-// Output size caps
-// =====================================================================
+// ---- Output size caps ----
 
-/// Absolute ceiling on any decrypted message: wasm32 cannot address more
-/// than 4 GiB in total, so nothing above this is reachable regardless of
-/// what we allow. `u64` because 4 GiB does not fit in a wasm32 `usize`
-/// (it overflows by exactly one byte).
+/// Absolute ceiling on a decrypted message: wasm32 can't address more than
+/// 4 GiB. `u64` because 4 GiB overflows a wasm32 `usize` by one byte.
 const MAX_DECRYPTED_BYTES: u64 = 4 * 1024 * 1024 * 1024;
 
-/// How much larger than its ciphertext a message may legitimately
-/// decrypt to.
-///
-/// THIS, not a flat number, is what separates a big file from a bomb.
-/// A real encrypted file decrypts to roughly its own size -- this app's
-/// own `encrypt` does not even compress (8 MiB of one repeated byte
-/// produced an 11 MiB ciphertext), and GnuPG's deflate manages single
-/// digits on ordinary data. A decompression bomb is 754x, measured.
-/// Four leaves enormous room for the former while refusing the latter,
-/// and unlike a flat ceiling it does not have to choose between allowing
-/// a 1 GiB file and refusing a 5 MiB paste that expands to 3.7 GiB.
+/// Max decrypted/ciphertext ratio. A ratio, not a flat number, is what
+/// separates a big file from a bomb: real files decrypt to ~their own size,
+/// a measured decompression bomb is 754x.
 const MAX_EXPANSION_RATIO: u64 = 4;
 
-/// Below this, the ratio is meaningless: a 200-byte message legitimately
-/// decrypts to far more than 4x its armored size once the PKESK and
-/// packet framing come off. So small messages get a flat allowance and
-/// the ratio only starts binding once there is enough size for it to
-/// mean something.
+/// Flat allowance below which the ratio doesn't bind (small messages
+/// legitimately exceed 4x once packet framing comes off).
 const MIN_EXPANSION_ALLOWANCE: u64 = 64 * 1024 * 1024;
 
-/// Ceiling on verified cleartext. Kept separate and much tighter, and
-/// not as a matter of taste: `verify_message` returns its content inside
-/// a JSON string, escaping costs 6 bytes per NUL (`\u0000`), and the
-/// whole thing then has to exist as one `String` in a 32-bit address
-/// space. 4 GiB is not merely unwise here, it is unrepresentable.
-///
-/// 16 MiB of UTF-8 is on the order of ten thousand pages -- no
-/// cleartext-signed message a person reads in a side panel comes close.
+/// Ceiling on verified cleartext. Much tighter because `verify_message`
+/// returns it JSON-escaped (6 bytes per NUL) in one `String` in a 32-bit
+/// address space; 16 MiB is ~ten thousand pages.
 const MAX_VERIFIED_BYTES: u64 = 16 * 1024 * 1024;
 
-/// Ceiling on what `verify_message` reads at all. Anything that can come
-/// out under `MAX_VERIFIED_BYTES` fits: cleartext adds a few lines, an
-/// armored inline message base64's 16 MiB to ~22 MiB. Checked first,
-/// because the framing check walks the input line by line before the
-/// output cap can apply.
+/// Ceiling on `verify_message` input (fits anything under
+/// `MAX_VERIFIED_BYTES` once armored). Checked first, because framing walks
+/// the input line by line before the output cap applies.
 const MAX_SIGNED_INPUT_BYTES: usize = 24 * 1024 * 1024;
 
-/// Ceiling on lines in a signed message. The framing check keeps one
-/// entry per line; a file of nothing but newlines (200 MB of them was
-/// enough) exhausted wasm memory and aborted the engine. Two million is
-/// far past any message a person reads, at eight bytes a line.
+/// Ceiling on lines in a signed message: the framing check keeps one entry
+/// per line, and 200 MB of newlines exhausted wasm memory.
 const MAX_SIGNED_LINES: usize = 2_000_000;
 
-/// The output ceiling for a given ciphertext: generous in absolute terms
-/// so a legitimately large file is not refused, but tied to the input so
-/// amplification cannot run away.
+/// Output ceiling for a ciphertext: generous, but tied to input size.
 fn decrypt_limit(ciphertext_len: usize) -> u64 {
     (ciphertext_len as u64)
         .saturating_mul(MAX_EXPANSION_RATIO)
         .clamp(MIN_EXPANSION_ALLOWANCE, MAX_DECRYPTED_BYTES)
 }
 
-/// What a read past the engine's own ceiling returns, coded `TooLarge`.
-/// A caller that wraps errors (`decrypt_with_password` folds its parse
-/// failures into "Wrong password") must recognise it by code and let it
-/// through, or a correct password on a big file reads as a wrong one.
+/// Error for a read past the engine ceiling, coded `TooLarge`. Callers that
+/// wrap errors (`decrypt_with_password` -> "Wrong password") must let it
+/// through by code, or a correct password on a big file reads as wrong.
 const TOO_LARGE_TO_OPEN: &str = "This message is too large to open here.";
 
 fn too_large_to_open() -> String {
@@ -1204,36 +990,23 @@ fn read_capped<R: std::io::Read>(reader: R, limit: u64) -> Result<Vec<u8>, Strin
     Ok(out)
 }
 
-/// What a read stopped by the caller's `max_output` returns. Not a
-/// failure of the message: an UNATTENDED run (the context menu's
-/// auto-decrypt) asks for at most this much, and a message bigger than
-/// that waits for the user's click instead. The JS side recognises it by
-/// comparing against [`output_cap_reached_message`], so it is never shown
-/// as an error.
+/// Error for a read stopped by the caller's `max_output` (unattended
+/// auto-decrypt). Not a failure: JS recognises it by value
+/// ([`output_cap_reached_message`]) and waits for the user's click.
 const OUTPUT_CAP_REACHED: &str =
     "This message is too large to open automatically. Press the button to open it.";
 
-/// The exact error a capped read returns, so JS can tell "held back for
-/// size" apart from a real failure by value rather than by matching
-/// prose (same reasoning as `sshPassphraseRequiredMessage`). No secret.
+/// The exact capped-read error, so JS matches by value rather than prose.
+/// No secret.
 #[wasm_bindgen(js_name = "outputCapReachedMessage")]
 pub fn output_cap_reached_message() -> String {
     OUTPUT_CAP_REACHED.to_string()
 }
 
-/// [`read_capped`] with the caller's own, tighter ceiling on top.
-///
-/// `max_output` is for unattended runs. When it is set and below `limit`,
-/// this read takes at most one byte past it, wipes what it did take, and
-/// returns [`OUTPUT_CAP_REACHED`]. Unset (every run a person started),
-/// this is exactly `read_capped`.
-///
-/// This bounds only what THIS loop pulls. Sequoia's Decryptor/Verifier
-/// reads ahead on its own -- up to its `buffer_size` (25 MiB by default)
-/// before the first byte is handed out, so it can check signatures first
-/// -- and that read-ahead is not ours to stop from here. Every entry
-/// point that takes `max_output` therefore also builds its reader with
-/// [`stream_buffer`], which shrinks the read-ahead to the cap.
+/// [`read_capped`] plus the caller's tighter `max_output` (unattended runs):
+/// reads at most one byte past it, wipes what it took, and returns
+/// [`OUTPUT_CAP_REACHED`]. Sequoia's own read-ahead isn't bounded here, so
+/// every entry point taking `max_output` also uses [`stream_buffer`].
 fn read_within<R: std::io::Read>(
     reader: R,
     limit: u64,
@@ -1252,17 +1025,9 @@ fn read_within<R: std::io::Read>(
     Ok(out)
 }
 
-/// The `buffer_size` to build a Decryptor/Verifier with, so its own
-/// read-ahead stays inside an unattended run's `max_output`.
-///
-/// Sequoia buffers a message up to `buffer_size` (default 25 MiB) at
-/// construction, to verify its signatures before releasing anything, and
-/// keeps up to twice that while streaming. For a compressed message that
-/// is 25 MiB INFLATED before `read_within` sees a byte, whatever the cap.
-/// `cap + 1` keeps the useful half of that behaviour -- a message within
-/// the cap is still verified before it is returned -- and bounds the rest
-/// to about twice the cap. `None` (a run a person started, or a cap at or
-/// above `limit`, which `read_within` ignores) keeps Sequoia's default.
+/// Decryptor/Verifier `buffer_size` keeping Sequoia's read-ahead (default
+/// 25 MiB, inflated, before we see a byte) inside `max_output`. `cap + 1`
+/// still verifies an in-cap message before release. `None` keeps the default.
 fn stream_buffer(max_output: Option<u32>, limit: u64) -> Option<usize> {
     match max_output.map(u64::from) {
         Some(cap) if cap < limit => Some(cap as usize + 1),
@@ -1270,9 +1035,7 @@ fn stream_buffer(max_output: Option<u32>, limit: u64) -> Option<usize> {
     }
 }
 
-// =====================================================================
-// Sequoia verification/decryption helpers
-// =====================================================================
+// ---- Sequoia verification/decryption helpers ----
 
 struct DecryptHelper {
     decryption_cert: openpgp::Cert,
@@ -1282,32 +1045,19 @@ struct DecryptHelper {
     encrypted: bool,
 }
 
-/// Did this message actually come through an encryption layer?
-///
-/// Sequoia's `Decryptor` is also a verifier: handed a message with no
-/// encryption at all -- an inline-signed `OPS, Literal, Sig`, or a bare
-/// Literal -- it reads it out without ever calling `decrypt`, and the
-/// caller gets plaintext and a good signature back exactly as if it had
-/// been decrypted. That is the "Johnny, you are fired" spoof: anything
-/// Alice ever signed in public, re-sent as a PGP MESSAGE, "decrypts" as
-/// a private, verified message from Alice. So the decrypt entry points
-/// ask the structure itself, and refuse a message without the layer.
-///
-/// That closes the UNENCRYPTED variant only. Encrypting Alice's public
-/// signed message to the victim needs no key of hers and passes here;
-/// what tells it apart is an Intended Recipient Fingerprint in her
-/// signature, which many senders don't write. The panel says so on the
-/// card (`workspace_signature_not_addressed`); see T-SIG-FORWARDED.
+/// Did the message actually have an encryption layer? Sequoia's `Decryptor`
+/// also reads unencrypted signed/literal messages, so without this anything
+/// Alice ever signed publicly "decrypts" as a private verified message from
+/// her. This closes only the unencrypted variant; a re-encrypted forward is
+/// caught (when present) by Intended Recipient Fingerprints -- T-SIG-FORWARDED.
 fn was_encrypted(structure: &MessageStructure) -> bool {
     structure
         .iter()
         .any(|layer| matches!(layer, MessageLayer::Encryption { .. }))
 }
 
-/// What a decrypt entry point says about a message with no encryption
-/// layer. The UI checks first (`messageEncryption`) and opens such a
-/// message with `openUnencrypted` instead, without asking for a key;
-/// this is the backstop for a caller that did not.
+/// Decrypt-path error for a message with no encryption layer. The UI checks
+/// first (`messageEncryption`/`openUnencrypted`); this is the backstop.
 const NOT_ENCRYPTED: &str =
     "This message is not encrypted. It may be signed, but it was readable on the way and anyone could have sent this copy.";
 
@@ -1315,8 +1065,8 @@ fn not_encrypted() -> String {
     coded(ErrorCode::NotEncrypted, NOT_ENCRYPTED)
 }
 
-/// Refuse, before any key or password is used, a message that carries
-/// no encrypted container and no session-key packet at all.
+/// Refuse, before any key or password is used, a message with no encrypted
+/// container and no session-key packet.
 fn refuse_unencrypted(ciphertext: &[u8]) -> Result<(), String> {
     match scan_session_packets(ciphertext)? {
         (false, false, Container::None) => Err(not_encrypted()),
@@ -1330,9 +1080,7 @@ impl VerificationHelper for DecryptHelper {
     }
 
     fn check(&mut self, structure: MessageStructure) -> openpgp::Result<()> {
-        // NOTE: signature classification must never abort decryption. A
-        // missing signer key or a bad signature is reported as status, not
-        // returned as an error, so the plaintext is always delivered.
+        // Signature classification must never abort decryption: status, not error.
         self.encrypted = was_encrypted(&structure);
         self.signatures = process_signatures(structure);
         Ok(())
@@ -1348,11 +1096,9 @@ impl DecryptionHelper for DecryptHelper {
         decrypt: &mut dyn FnMut(Option<SymmetricAlgorithm>, &SessionKey) -> bool,
     ) -> openpgp::Result<Option<openpgp::Cert>> {
         let vc = self.decryption_cert.with_policy(policy(), None)?;
-        // Expired and revoked subkeys are tried too. Expiry and revocation
-        // tell OTHERS to stop encrypting to a key; they do not make the
-        // mail already sent to it unreadable for its owner (GnuPG decrypts
-        // it as well). Policy still applies: a key the policy rejects is
-        // not offered.
+        // Expired and revoked subkeys are tried too: those tell OTHERS to stop
+        // encrypting, they don't lock the owner out of old mail (GnuPG agrees).
+        // Policy still applies.
         for pkesk in pkesks {
             for key in vc
                 .keys()
@@ -1374,19 +1120,12 @@ impl DecryptionHelper for DecryptHelper {
     }
 }
 
-/// The symmetric sibling of [`DecryptHelper`]: opens a message that was
-/// encrypted to a PASSWORD (`gpg -c`) rather than to a public key.
-///
-/// The two are separate helpers rather than one helper with an optional
-/// password, and that is the point. A message can carry both SKESK
-/// (password) and PKESK (public key) packets, and which one this app
-/// uses must be decided by the caller in the open -- not by a helper
-/// that quietly falls back to whichever happens to work. This one
-/// ignores `pkesks` entirely, and `DecryptHelper` ignores `skesks`.
+/// Opens a password-encrypted (`gpg -c`) message. Deliberately separate from
+/// [`DecryptHelper`]: a message may carry SKESKs and PKESKs, and which one is
+/// used must be the caller's explicit choice, never a silent fallback. This
+/// ignores `pkesks`; `DecryptHelper` ignores `skesks`.
 struct PasswordDecryptHelper {
-    /// Sequoia's `Password` keeps the bytes in protected memory and
-    /// zeroizes on drop, so the passphrase is not left in a plain
-    /// `String` for the lifetime of the parse.
+    /// Sequoia `Password`: protected memory, zeroized on drop.
     password: openpgp::crypto::Password,
     verification_certs: Vec<openpgp::Cert>,
     signatures: SignatureReport,
@@ -1400,9 +1139,7 @@ impl VerificationHelper for PasswordDecryptHelper {
     }
 
     fn check(&mut self, structure: MessageStructure) -> openpgp::Result<()> {
-        // Same rule as the key path: signature classification must never
-        // abort decryption. A symmetric message CAN be signed, and the
-        // signer is then someone whose key we may or may not hold.
+        // As on the key path, signature classification never aborts decryption.
         self.encrypted = was_encrypted(&structure);
         self.signatures = process_signatures(structure);
         Ok(())
@@ -1417,26 +1154,14 @@ impl DecryptionHelper for PasswordDecryptHelper {
         _sym_algo: Option<SymmetricAlgorithm>,
         decrypt: &mut dyn FnMut(Option<SymmetricAlgorithm>, &SessionKey) -> bool,
     ) -> openpgp::Result<Option<openpgp::Cert>> {
-        // Every SKESK is tried: `gpg --symmetric` writes one, but the
-        // format permits several (the same message encrypted under more
-        // than one password), and refusing the second one would be a
-        // silent "wrong password" for a message we can actually open.
-        //
-        // NOTE ON WHAT A SUCCESSFUL `skesk.decrypt` MEANS: for a v4 SKESK
-        // it means almost nothing. The password-derived key unwraps the
-        // session key with no integrity check, so a WRONG password
-        // yields a plausible-looking session key here and the failure
-        // surfaces later, as an MDC mismatch, out of the reader. That is
-        // why the wasm entry point below treats a failure anywhere in the
-        // parse as "the password did not work" rather than trying to tell
-        // the two apart. A v5/v6 SKESK is AEAD-protected and does fail
-        // here -- both paths end in the same message.
+        // Try every SKESK (the format allows several). A v4 SKESK "decrypts" under
+        // a WRONG password too (no integrity check) and fails later at the MDC, so
+        // the entry point treats any parse failure as "password did not work".
+        // v5/v6 SKESKs are AEAD and fail here; both end in the same message.
         for skesk in skesks {
             if let Ok((algo, session_key)) = skesk.decrypt(&self.password) {
                 if decrypt(algo, &session_key) {
-                    // No cert was involved: this message was not opened
-                    // with anyone's key, and saying otherwise would put a
-                    // fingerprint in the result that decrypted nothing.
+                    // No cert was involved: don't report a fingerprint that decrypted nothing.
                     return Ok(None);
                 }
             }
@@ -1463,19 +1188,15 @@ impl VerificationHelper for VerifyHelper {
     }
 }
 
-// =====================================================================
-// Public WASM API (called from JavaScript via wasm-bindgen)
-// =====================================================================
+// ---- Public WASM API (called from JavaScript via wasm-bindgen) ----
 
 #[wasm_bindgen(js_name = "ping")]
 pub fn ping() -> String {
     "gpg-wasm ok".to_string()
 }
 
-/// Parse an armored public or private key. Returns JSON `KeyInfo`.
-///
-/// Parses only the *first* certificate in the input. For blobs that may
-/// bundle several certs (see `parse_keys`), prefer `parseKeys`.
+/// Parse an armored key -> JSON `KeyInfo`. Only the *first* cert; use
+/// `parseKeys` for bundles.
 #[wasm_bindgen(js_name = "parseKey")]
 pub fn parse_key(armored: &str) -> Result<String, String> {
     let cert = openpgp::Cert::from_bytes(armored.as_bytes()).str_err()?;
@@ -1483,35 +1204,19 @@ pub fn parse_key(armored: &str) -> Result<String, String> {
     serde_json::to_string(&extract_key_info(&cert, is_private)).str_err()
 }
 
-/// Hard cap on the rows `parse_key_details` returns. Real certs carry a
-/// handful of subkeys; a crafted cert can carry thousands, and each row
-/// costs a `with_policy` evaluation here plus a DOM node in the side
-/// panel. Excess rows are dropped and flagged via `truncated`.
+/// Cap on `parse_key_details` rows: a crafted cert can carry thousands of
+/// subkeys, each a `with_policy` evaluation and a DOM node. Excess is
+/// dropped and flagged via `truncated`.
 const MAX_DETAIL_ROWS: usize = 100;
 
 /// Characters that change how a string displays without showing
-/// themselves, as inclusive ranges: every `Default_Ignorable_Code_Point`
-/// (Unicode 16 DerivedCoreProperties) and every general-category `Cf`
-/// (format) character, plus the line and paragraph separators and the
-/// few visible-category characters that draw as blank space (BLANKS
-/// below: the Braille blank, the object replacement character, the
-/// musical null notehead). Spelled out rather than pulled from a crate
-/// because none of ours carries the tables, and a list this short is
-/// easier to audit than a dependency. `lib/utils/lookalike.ts` is the
-/// same set on the TypeScript side, and `lookalike.test.ts` reads this
-/// table to hold the two to it.
-///
-/// Among them: bidi controls (which reorder the text around them), the
-/// zero-width space/joiners, variation selectors (U+FE00..FE0F and the
-/// supplementary U+E0100..E01EF), the tag characters (U+E0000..E007F,
-/// which can carry a whole hidden ASCII string), the deprecated format
-/// controls U+206A..206F, the combining grapheme joiner U+034F, the
-/// Mongolian selectors, and the Hangul fillers that render as blank
-/// letters. Each lets two different User IDs look identical.
-///
-/// ZWJ and the emoji variation selectors go too, which unjoins an emoji
-/// sequence into its parts. A User ID is a name and an address; that cost
-/// is cosmetic, and keeping a joiner that can hide inside "alice" is not.
+/// themselves (inclusive ranges): every `Default_Ignorable_Code_Point` and
+/// `Cf` character (Unicode 16), line/paragraph separators, and the visible
+/// characters that draw as blank (BLANK below). Each lets two different
+/// User IDs look identical. Spelled out rather than a dependency so it can
+/// be audited; `lib/utils/lookalike.ts` mirrors it and `lookalike.test.ts`
+/// reads this table to keep them equal. Dropping ZWJ/emoji selectors only
+/// unjoins emoji, a cosmetic cost in a User ID.
 const INVISIBLE_RANGES: &[(u32, u32)] = &[
     (0x00AD, 0x00AD),   // soft hyphen
     (0x034F, 0x034F),   // combining grapheme joiner
@@ -1548,9 +1253,8 @@ fn is_invisible(c: char) -> bool {
     INVISIBLE_RANGES.iter().any(|&(lo, hi)| (lo..=hi).contains(&c))
 }
 
-/// Cap and clean an attacker-controlled string before it crosses to the
-/// UI: drop control characters and every invisible or bidi character
-/// (`INVISIBLE_RANGES`), then truncate to `max` chars.
+/// Clean an attacker-controlled string before it reaches the UI: drop
+/// control and `INVISIBLE_RANGES` characters, truncate to `max` chars.
 fn sanitize_untrusted(s: &str, max: usize) -> String {
     let mut out = String::new();
     let cleaned = s.chars().filter(|&c| !c.is_control() && !is_invisible(c));
@@ -1564,9 +1268,8 @@ fn sanitize_untrusted(s: &str, max: usize) -> String {
     out
 }
 
-/// Human-readable reason from a *verified* revocation, or `None` when
-/// not revoked. `CouldBe` (unverifiable third-party sig) is deliberately
-/// not treated as revoked, matching sequoia/GnuPG semantics.
+/// Reason from a *verified* revocation, else `None`. `CouldBe`
+/// (unverifiable third-party sig) is deliberately not revoked (as sequoia/GnuPG).
 fn verified_revocation_reason(status: &RevocationStatus) -> Option<String> {
     let RevocationStatus::Revoked(sigs) = status else {
         return None;
@@ -1587,26 +1290,17 @@ fn verified_revocation_reason(status: &RevocationStatus) -> Option<String> {
     )
 }
 
-/// Per-component-key breakdown of a certificate: the primary key plus
-/// every subkey, each with capability flags and lifecycle status.
-/// Returns JSON `{ keys: SubkeyDetail[], truncated: bool }`, primary
-/// key first, in cert order. Accepts public or private armor (secret
-/// material is dropped at end of call, as in `parse_key`).
-///
-/// Unlike `ValidCert::keys()`, this walks `cert.keys()` so that keys
-/// whose binding signature fails our `policy()` still get a row
-/// (status "invalid") -- the whole point of the details view is to
-/// show the user the dead weight, not silently hide it.
+/// Per-component-key breakdown -> JSON `{ keys: SubkeyDetail[], truncated }`,
+/// primary first. Walks `cert.keys()` (not `ValidCert::keys()`) so
+/// policy-rejected keys still get an "invalid" row: the view exists to show
+/// dead weight, not hide it.
 #[wasm_bindgen(js_name = "parseKeyDetails")]
 pub fn parse_key_details(armored: &str) -> Result<String, String> {
     let cert = openpgp::Cert::from_bytes(armored.as_bytes()).str_err()?;
     let primary_fp = cert.fingerprint();
 
-    // Cert-level lifecycle, computed once. A subkey cannot outlive its
-    // certificate: if the primary key is revoked or expired, every
-    // subkey is dead with it, even though the subkey's own binding
-    // signature and revocation status look clean. Without this, a
-    // fully revoked cert would show green "active" encryption subkeys.
+    // A subkey can't outlive its cert: a revoked or expired primary kills every
+    // subkey even if its own binding looks clean.
     let (cert_revoked_reason, cert_expiry_if_expired) = match cert.with_policy(policy(), None) {
         Ok(vc) => {
             let revoked = verified_revocation_reason(&vc.revocation_status());
@@ -1683,9 +1377,8 @@ pub fn parse_key_details(armored: &str) -> Result<String, String> {
         .str_err()
 }
 
-/// A single cert extracted from a (possibly multi-cert) armored blob,
-/// paired with its own re-armored form so callers can store/encrypt
-/// against exactly that cert rather than the whole blob.
+/// One cert from a multi-cert blob, with its own re-armored form so callers
+/// store/encrypt against exactly that cert.
 #[derive(Serialize)]
 struct ParsedCert {
     #[serde(rename = "keyInfo")]
@@ -1693,16 +1386,9 @@ struct ParsedCert {
     armored: String,
 }
 
-/// Parse one *or more* concatenated certificates from an armored blob.
-///
-/// Some publishers ship a single `.asc` containing several
-/// yearly-rotated certificates (e.g. CTIR Gov). `Cert::from_bytes` only
-/// ever sees the first -- typically the oldest, long-expired -- cert, so
-/// the live key in the bundle is never imported and (worse) storing the
-/// whole blob would make us encrypt against the dead first cert. This
-/// splits the blob with `CertParser` and returns every cert with its own
-/// re-armored public key and `KeyInfo`, so the caller can keep the
-/// usable ones and drop the expired rotations.
+/// Parse one *or more* concatenated certs. Some publishers ship yearly
+/// rotations in one `.asc`; `Cert::from_bytes` sees only the first (often
+/// expired) cert, and storing the whole blob would encrypt to the dead one.
 #[wasm_bindgen(js_name = "parseKeys")]
 pub fn parse_keys(armored: &str) -> Result<String, String> {
     let parser = CertParser::from_bytes(armored.as_bytes()).str_err()?;
@@ -1721,15 +1407,10 @@ pub fn parse_keys(armored: &str) -> Result<String, String> {
     serde_json::to_string(&out).str_err()
 }
 
-/// Drop third-party certifications from a contact's cert. There is no
-/// web of trust here, so they buy nothing -- and a keyserver-flooded cert
-/// carries tens of thousands of them, re-parsed on every verify and
-/// decrypt. Kept: signatures made by keys the owner actually BOUND (an
-/// appended, unbound subkey does not make its signatures "own"), key
-/// revocations from a designated revoker the owner named, and anything
-/// naming no issuer (Sequoia sorts those out itself). Dropped as well:
-/// signatures that do not verify at all, which only ever make a re-import
-/// look like a change.
+/// Drop third-party certifications (no web of trust here; flooded certs
+/// carry tens of thousands, re-parsed on every verify). Kept: signatures by
+/// keys the owner actually BOUND, revocations by a designated revoker, and
+/// issuer-less ones (Sequoia handles those). Non-verifying ones are dropped.
 fn strip_third_party(cert: openpgp::Cert) -> openpgp::Result<openpgp::Cert> {
     use openpgp::types::SignatureType;
     use openpgp::Packet;
@@ -1742,8 +1423,8 @@ fn strip_third_party(cert: openpgp::Cert) -> openpgp::Result<openpgp::Cert> {
         .revocation_keys(policy())
         .map(|rk| rk.revoker().1.clone().into())
         .collect();
-    // A set: a hostile key file can carry thousands of bad signatures, and
-    // a list lookup per packet made stripping quadratic.
+    // A set: a hostile key file can carry thousands of bad signatures, and a
+    // list lookup per packet made this quadratic.
     #[allow(clippy::mutable_key_type)] // Signature's caches never change its Eq/Hash.
     let bad: std::collections::HashSet<openpgp::packet::Signature> =
         cert.bad_signatures().cloned().collect();
@@ -1769,20 +1450,11 @@ fn strip_third_party(cert: openpgp::Cert) -> openpgp::Result<openpgp::Cert> {
     openpgp::Cert::from_packets(packets.into_iter())
 }
 
-/// Merge an imported copy of a contact's cert into the stored one, so an
-/// import can only ever ADD what the owner signed -- revocations, new
-/// subkeys, extended expiry -- and never take it away. Storing the
-/// incoming copy verbatim let an old or stripped copy roll a contact
-/// back to a subkey its owner had revoked.
-///
-/// `incoming` may also be a bare revocation certificate (what
-/// `revocationCertificateWithHandle` and `gpg --gen-revoke` produce),
-/// which carries no key and so cannot be imported on its own. Its
-/// signature is checked by Sequoia when inserted: a forged one is
-/// ignored, not honoured.
-///
-/// Returns the merged public cert, armored, with third-party
-/// certifications stripped.
+/// Merge an imported copy into the stored cert, so an import can only ADD
+/// what the owner signed (revocations, subkeys, expiry), never roll a
+/// contact back. `incoming` may be a bare revocation certificate; Sequoia
+/// checks its signature on insert, so a forged one is ignored. Returns the
+/// merged public cert, armored, third-party certifications stripped.
 #[wasm_bindgen(js_name = "mergePublicKey")]
 pub fn merge_public_key(stored_armored: &str, incoming_armored: &str) -> Result<String, String> {
     let stored = openpgp::Cert::from_bytes(stored_armored.as_bytes()).str_err()?;
@@ -1820,9 +1492,8 @@ fn revocation_signatures(armored: &str) -> Result<Vec<openpgp::packet::Signature
     Ok(sigs)
 }
 
-/// The fingerprints / key IDs a bare revocation certificate names as
-/// its issuer, so the caller can find the stored contact it revokes.
-/// Errs when the input is not a revocation certificate.
+/// Fingerprints / key IDs a bare revocation certificate names as issuer, to
+/// find the contact it revokes. Errs on anything else.
 #[wasm_bindgen(js_name = "revocationIssuers")]
 pub fn revocation_issuers(armored: &str) -> Result<String, String> {
     let issuers: Vec<String> = revocation_signatures(armored)?
@@ -1833,8 +1504,7 @@ pub fn revocation_issuers(armored: &str) -> Result<String, String> {
     serde_json::to_string(&issuers).str_err()
 }
 
-/// Internal: build a new cert + its armored revocation cert from
-/// `GenerateKeyOptions` JSON.
+/// Build a new cert + its armored revocation cert from `GenerateKeyOptions` JSON.
 fn build_cert_from_options(
     options_json: &str,
 ) -> Result<(openpgp::Cert, String), String> {
@@ -1896,21 +1566,12 @@ pub fn encrypt(
     plaintext: &[u8],
     recipient_keys_json: &str,
     signing_key_armored: Option<String>,
-    // Optional, OWNED, and bytes -- the same three properties
-    // `decrypt_with_password` takes them with, for the same reasons. See
-    // `T-SYMMETRIC-ENCRYPT-PASSWORD` for what this password is and is not
-    // worth.
-    //
-    // THE S2K IS SEQUOIA'S DEFAULT and is deliberately not overridden:
-    // SHA-256 iterated at count 0x3e00000, which is the LARGEST the
-    // OpenPGP wire format can represent (~354ms to derive on a moderate
-    // CPU). There is no stronger value to choose, so this app is taking
-    // the format's maximum rather than picking a number on the user's
-    // behalf. The stream API exposes no setter for it in any case.
+    // Optional and OWNED bytes, like `decrypt_with_password`
+    // (T-SYMMETRIC-ENCRYPT-PASSWORD). The S2K is deliberately Sequoia's default:
+    // iterated SHA-256 at 0x3e00000, the largest count the format can express.
     password: Option<Vec<u8>>,
 ) -> Result<Vec<u8>, String> {
-    // Wrapped at the boundary, before anything can return early, so the
-    // marshalled copy is scrubbed on every path including the error ones.
+    // Wrapped before anything can return, so every path scrubs the copy.
     let password = password.map(Zeroizing::new);
     let signer_cert = signing_key_armored
         .as_deref()
@@ -1939,8 +1600,8 @@ fn outside_signed() -> String {
     coded(ErrorCode::TextOutsideSignature, OUTSIDE_SIGNED)
 }
 
-/// What `check_signed_framing` found: for cleartext, the body as the user
-/// sees it (dash-escaping undone), to hold against what Sequoia verified.
+/// What `check_signed_framing` found: for cleartext, the body as shown
+/// (dash-escaping undone), to compare with what Sequoia verified.
 enum SignedFraming {
     Cleartext(String),
     Inline,
@@ -1957,18 +1618,12 @@ fn too_large_to_verify() -> String {
 }
 
 /// Refuse a signed message that shows the user anything the signature
-/// does not cover. Sequoia's verdict is right about the part it hashed,
-/// but it tolerates a lot around that part -- text before BEGIN and
-/// after END, prose in armor headers, a whitespace "quote prefix" that
-/// it strips from every body line -- and the user reads the paste, not
-/// what was hashed. A "verified" card above any of that lends the
-/// signer's name to words they never signed.
-///
-/// So this does not try to predict Sequoia's tolerances. It accepts one
-/// strict shape -- BEGIN at column 0, `Hash:` naming real algorithms,
-/// a closed set of armor headers, base64 lines, END last, only blank
-/// lines around -- and `check_cleartext_body` then requires the body on
-/// screen to equal the text Sequoia actually verified.
+/// doesn't cover. Sequoia tolerates text around the block, prose in armor
+/// headers, a whitespace quote prefix -- and the user reads the paste, not
+/// the hash. So rather than predict its tolerances, accept one strict shape
+/// (BEGIN at column 0, real `Hash:` names, closed header set, base64, END
+/// last, only blank lines around); `check_cleartext_body` then requires the
+/// shown body to equal the verified text.
 fn check_signed_framing(signed_message: &str) -> Result<SignedFraming, String> {
     const HASHES: &[&str] = &[
         "MD5", "SHA1", "RIPEMD160", "SHA224", "SHA256", "SHA384", "SHA512", "SHA3-256",
@@ -1980,8 +1635,8 @@ fn check_signed_framing(signed_message: &str) -> Result<SignedFraming, String> {
         return Err(coded(ErrorCode::NotPgpData, "No armored data found"));
     }
 
-    // Anything another reader might break a line at, but `\n`-splitting
-    // would not, could hide a line from the checks below.
+    // Line breaks other readers honour but `\n`-splitting wouldn't could hide a
+    // line from the checks below.
     let msg = signed_message;
     if msg.bytes().filter(|&b| b == b'\n').count() > MAX_SIGNED_LINES {
         return Err("This signed message has too many lines to verify here.".into());
@@ -2008,11 +1663,9 @@ fn check_signed_framing(signed_message: &str) -> Result<SignedFraming, String> {
         l.strip_prefix("Hash: ")
             .is_some_and(|v| v.split(',').all(|h| HASHES.contains(&h.trim())))
     };
-    // Armor header values are unsigned text inside the block. `Charset`
-    // names a charset -- one token, no prose; `Version` and `Comment`
-    // carry tool names and URLs (GnuPG, GPGTools, OpenPGP.js) and stay
-    // free -- the UI shows the signed text on its own, apart from the
-    // paste, for exactly this.
+    // Armor header values are unsigned text. `Charset` must be one token;
+    // `Version`/`Comment` stay free (tool names, URLs) -- the UI shows the
+    // signed text apart from the paste for exactly this.
     let header_ok = |l: &str| {
         let printable = |v: &str| v.chars().all(|c| c.is_ascii_graphic() || c == ' ');
         let token = |v: &str| {
@@ -2063,8 +1716,8 @@ fn check_signed_framing(signed_message: &str) -> Result<SignedFraming, String> {
             if !tidy(sep).is_empty() || !armored_ok(&rest[sig + 1..], CLEARTEXT_SIG_END) {
                 return Err(outside_signed());
             }
-            // A signed line starting with a dash is always escaped as "- ";
-            // a bare one is something a parser may read as a marker.
+            // A signed line starting with a dash is always escaped "- "; a bare one may
+            // be read as a marker.
             let mut body = Vec::with_capacity(sig);
             for line in &rest[..sig] {
                 match line.strip_prefix("- ") {
@@ -2079,9 +1732,8 @@ fn check_signed_framing(signed_message: &str) -> Result<SignedFraming, String> {
     }
 }
 
-/// The cleartext body on screen must be the text that was verified.
-/// Trailing whitespace and final newlines are excluded from the cleartext
-/// hash (RFC 9580 7.2) and invisible, so neither side keeps them.
+/// The shown cleartext body must equal the verified text. Trailing
+/// whitespace and final newlines aren't hashed (RFC 9580 7.2), so both drop them.
 fn check_cleartext_body(shown: &str, verified: &str) -> Result<(), String> {
     let normal = |s: &str| {
         s.split('\n')
@@ -2098,10 +1750,8 @@ fn check_cleartext_body(shown: &str, verified: &str) -> Result<(), String> {
     }
 }
 
-/// Verify a cleartext-signed message. Returns JSON `VerifyResult`.
-///
-/// `max_output`: an unattended run's ceiling on the signed content, in
-/// bytes -- see [`read_within`]. `None` for a run the user started.
+/// Verify a cleartext-signed message -> JSON `VerifyResult`. `max_output`:
+/// unattended-run ceiling (see [`read_within`]); `None` when user-started.
 #[wasm_bindgen(js_name = "verify")]
 pub fn verify_message(
     signed_message: &str,
@@ -2141,14 +1791,10 @@ pub fn verify_message(
     .str_err()
 }
 
-// =====================================================================
-// Key handle API (private keys stay in WASM memory)
-// =====================================================================
+// ---- Key handle API (private keys stay in WASM memory) ----
 
-// Note: there is intentionally no public `storeKey(armored)` wasm export.
-// `KEY_STORE` is populated only by the explicit unlock paths
-// (`unlockWithPassword`, `unlockWithPrf`), so a handle in the store
-// always corresponds to a user-initiated unlock action.
+// No public `storeKey(armored)` export, intentionally: `KEY_STORE` is filled
+// only by the unlock paths, so every handle is a user-initiated unlock.
 
 /// Drop a key from WASM memory. The backing bytes are zeroized.
 #[wasm_bindgen(js_name = "dropKey")]
@@ -2175,17 +1821,13 @@ pub fn encrypt_with_signing_handle(
     )
 }
 
-/// Decrypt a message using a stored key handle.
-///
-/// Returns a packed binary: `[4-byte LE sig_json_len][sig_json][plaintext]`
-/// so signature info and plaintext are returned atomically (no TOCTOU).
+/// Decrypt with a stored key handle -> `[4-byte LE sig_json_len][sig_json][plaintext]`.
 #[wasm_bindgen(js_name = "decryptWithHandle")]
 pub fn decrypt_with_handle(
     ciphertext: &[u8],
     key_handle: u32,
     verification_keys_json: Option<String>,
-    // An unattended run's ceiling on the plaintext, in bytes -- see
-    // `read_within`. `None` (a run the user started) keeps `decrypt_limit`.
+    // Unattended-run plaintext ceiling (see `read_within`); `None` keeps `decrypt_limit`.
     max_output: Option<u32>,
 ) -> Result<Vec<u8>, String> {
     refuse_unencrypted(ciphertext)?;
@@ -2212,8 +1854,8 @@ pub fn decrypt_with_handle(
 
     let mut plaintext = read_within(&mut decryptor, limit, max_output)?;
     let helper = decryptor.into_helper();
-    // The header scan above only sees what precedes the first container;
-    // this is the answer from the parse that produced the plaintext.
+    // The header scan saw only what precedes the first container; this is the
+    // parse that produced the plaintext.
     if !helper.encrypted {
         plaintext.zeroize();
         return Err(not_encrypted());
@@ -2222,14 +1864,10 @@ pub fn decrypt_with_handle(
     Ok(pack_decrypt_result(&helper.signatures, plaintext))
 }
 
-/// `[4-byte LE sig_json_len][sig_json][plaintext]`.
-///
-/// Shared by both decrypt entry points so the packed layout is defined
-/// once. The packing is what makes the return ATOMIC: signature status
-/// and plaintext cross the wasm boundary together, so no caller can
-/// render the plaintext against a signature verdict read separately (the
-/// TOCTOU the original comment names). A second hand-rolled copy of this
-/// layout would be free to disagree with `unpackDecryptResult` in JS.
+/// `[4-byte LE sig_json_len][sig_json][plaintext]`, the one definition of
+/// the layout. Packing makes signature status and plaintext cross the
+/// boundary atomically, so no caller renders plaintext against a verdict
+/// read separately (TOCTOU).
 fn pack_decrypt_result(signatures: &SignatureReport, plaintext: Vec<u8>) -> Vec<u8> {
     let sig_json = serde_json::to_string(signatures).expect("a SignatureReport serializes");
     let sig_bytes = sig_json.as_bytes();
@@ -2242,59 +1880,31 @@ fn pack_decrypt_result(signatures: &SignatureReport, plaintext: Vec<u8>) -> Vec<
     result
 }
 
-/// Decrypt a message that was encrypted to a PASSWORD (`gpg --symmetric`).
-///
-/// Returns the same packed binary as [`decrypt_with_handle`], so the
-/// caller unpacks one shape whichever way the message was opened.
-///
-/// NO KEY IS INVOLVED, and that is the whole difference: this works with
-/// an empty keyring, and it never touches `KEY_STORE`. Signature
-/// verification still runs -- a symmetric message can be signed -- against
-/// whatever public keys the caller passes.
-///
-/// ON THE ERROR IT RETURNS: a wrong password is not reliably detectable
-/// at the point the password is used. A v4 SKESK unwraps the session key
-/// with no integrity check, so a wrong password produces a plausible
-/// session key and fails much later as an MDC mismatch inside the reader.
-/// Rather than pretend to tell "wrong password" from "corrupt message"
-/// apart, every failure in the parse comes back under one code
-/// (`SymmetricWrongPassword`), with the underlying error kept for the
-/// technical-details line.
+/// Decrypt a password-encrypted message (`gpg --symmetric`); same packed
+/// result as [`decrypt_with_handle`]. Never touches `KEY_STORE`; signatures
+/// are still checked against the passed public keys. Every parse failure is
+/// `SymmetricWrongPassword` (a v4 SKESK can't tell wrong password from
+/// corruption), with the underlying error kept for technical details.
 #[wasm_bindgen(js_name = "decryptWithPassword")]
 pub fn decrypt_with_password(
     ciphertext: &[u8],
-    // BYTES, not a `&str`, and OWNED, not borrowed.
-    //
-    // Bytes for the reason the whole of `lib/pgp/wasm-secrets.ts` exists:
-    // a JS string is immutable and unzeroizable, so a password that
-    // crosses as one is left in the JS heap for the collector to deal
-    // with whenever it feels like it. The caller hands over a
-    // `Uint8Array` and `.fill(0)`s it in a `finally`.
-    //
-    // Owned so this side can scrub too. `unlock_with_password` and its
-    // siblings borrow `&[u8]`, which means wasm-bindgen frees its
-    // marshalled copy un-scrubbed and only the DERIVED key is zeroized --
-    // the known gap `T-UNLOCK-PARAM-NOT-OWNED` records. Taking `Vec<u8>`
-    // here means there is something to wrap, so this export does not
-    // widen that gap and needs no exemption in
-    // `scripts/audit-invariants.mjs`.
+    // BYTES and OWNED: a JS string can't be zeroized (the caller passes a
+    // `Uint8Array` and `.fill(0)`s it), and owning it lets this side scrub the
+    // marshalled copy too (T-UNLOCK-PARAM-NOT-OWNED; audit-invariants.mjs).
     password: Vec<u8>,
     verification_keys_json: Option<String>,
     // Same ceiling as `decrypt_with_handle`'s.
     max_output: Option<u32>,
 ) -> Result<Vec<u8>, String> {
-    // Wrapped FIRST, before anything can return early: the `Drop` is what
-    // scrubs the marshalled copy, and an error path that returns above
-    // this line would skip it.
+    // Wrapped FIRST: an early return above this line would skip the scrub.
     let password = Zeroizing::new(password);
     let verification_certs = match verification_keys_json {
         Some(ref json) => parse_armored_certs(json)?,
         None => Vec::new(),
     };
 
-    // Before the password is used, and outside the "wrong password"
-    // wrapping below: a message with nothing to decrypt is not a password
-    // problem.
+    // Before the password is used and outside the "wrong password" wrapping:
+    // nothing-to-decrypt is not a password problem.
     refuse_unencrypted(ciphertext)?;
 
     let helper = PasswordDecryptHelper {
@@ -2304,12 +1914,8 @@ pub fn decrypt_with_password(
         encrypted: false,
     };
 
-    // The unreadable-FORMAT case, separated from the wrong-PASSWORD case
-    // before the password is even used. Sequoia's policy rejects the
-    // draft AEAD packet, and that failure arrives as "Policy rejected
-    // packet type" -- which, folded into the message below, would tell a
-    // user with a perfectly good password to go and check their password.
-    // They would never get anywhere: no password opens this.
+    // Unreadable FORMAT (draft AEAD, policy-rejected) is reported before the
+    // password is used, so a good password isn't blamed for it.
     if scan_session_packets(ciphertext)?.2 == Container::Aed {
         return Err(coded(
             ErrorCode::OcbUnsupported,
@@ -2319,10 +1925,8 @@ pub fn decrypt_with_password(
 
     let (helper, mut plaintext) = decrypt_with_password_inner(ciphertext, helper, max_output)
         .map_err(|e| {
-            // Held back for size, or past the engine's own size limit:
-            // neither is a password problem (the password may well have
-            // been right -- the read only stops once the plaintext is
-            // flowing), so both cross unwrapped.
+            // Held back for size / past the engine limit: not a password problem (the
+            // password may well be right), so both cross unwrapped.
             if e == OUTPUT_CAP_REACHED || error_code::error_code(&e) == Some(ErrorCode::TooLarge) {
                 e
             } else {
@@ -2343,10 +1947,8 @@ pub fn decrypt_with_password(
     Ok(pack_decrypt_result(&helper.signatures, plaintext))
 }
 
-/// The fallible half, split out so ONE `map_err` covers the whole parse
-/// -- builder, policy check, session-key unwrap and the reader's MDC
-/// check are all "the password did not work" from the caller's side, and
-/// a wrapper applied per-step would inevitably miss one.
+/// The fallible half, so ONE `map_err` covers the whole parse (builder,
+/// policy, session-key unwrap, MDC) -- a per-step wrapper would miss one.
 fn decrypt_with_password_inner(
     ciphertext: &[u8],
     helper: PasswordDecryptHelper,
@@ -2363,32 +1965,23 @@ fn decrypt_with_password_inner(
     Ok((decryptor.into_helper(), plaintext))
 }
 
-/// The encrypted container a message uses, which decides whether we can
-/// read it at all.
+/// The message's encrypted container, which decides whether we can read it.
 #[derive(PartialEq)]
 enum Container {
     /// `SEIP` -- v1 (CFB + MDC) or v2 (RFC 9580 AEAD). Both supported.
     Seip,
-    /// `AED`, tag 20: the pre-RFC-9580 draft AEAD packet that GnuPG
-    /// writes under `--force-ocb` and that LibrePGP kept. Sequoia's
-    /// StandardPolicy rejects it, so we cannot read it -- and the point of
-    /// naming it here is that the failure must not be reported as a wrong
-    /// password. See `decrypt_with_password`.
+    /// `AED` (tag 20): pre-RFC-9580 draft AEAD (GnuPG `--force-ocb`, LibrePGP).
+    /// Rejected by Sequoia's policy; named so the failure isn't reported as a
+    /// wrong password.
     Aed,
     /// No encrypted container found (not an encrypted message).
     None,
 }
 
 /// What the session-key packets in FRONT of the encrypted container say.
-///
-/// Matched on the packet TAG rather than on the parsed `Packet` variant,
-/// and that is load-bearing rather than stylistic: Sequoia yields
-/// `Packet::Unknown` for a packet VERSION it does not implement, while
-/// still reporting the original tag. GnuPG's `--force-ocb` SKESK is
-/// exactly such a packet, and a `Packet::SKESK(_)` match reported that
-/// message as having no password at all -- sending the UI to ask for a
-/// key for a message that never wanted one. The tag is what the format
-/// guarantees; the variant is what our parser happened to manage.
+/// Matched on TAG, not `Packet` variant (load-bearing): Sequoia yields
+/// `Packet::Unknown` for unimplemented versions such as GnuPG's
+/// `--force-ocb` SKESK, which a variant match misreported as "no password".
 fn scan_session_packets(ciphertext: &[u8]) -> Result<(bool, bool, Container), String> {
     use openpgp::packet::Tag;
 
@@ -2399,9 +1992,7 @@ fn scan_session_packets(ciphertext: &[u8]) -> Result<(bool, bool, Container), St
         match packet.tag() {
             Tag::SKESK => password = true,
             Tag::PKESK => public_key = true,
-            // The session-key packets all precede the encrypted
-            // container; once we reach it there is nothing further to
-            // learn, and descending into it would mean decrypting.
+            // Session-key packets precede the container; descending would mean decrypting.
             Tag::SEIP => {
                 container = Container::Seip;
                 return false;
@@ -2417,22 +2008,11 @@ fn scan_session_packets(ciphertext: &[u8]) -> Result<(bool, bool, Container), St
     Ok((password, public_key, container))
 }
 
-/// Walk the packets a message opens with, calling `visit` on each until
-/// it returns false, and looking INSIDE a Compressed packet.
-///
-/// RFC 9580's grammar lets a compressed message hold an encrypted one,
-/// `Compressed{ PKESK, SEIPD }`, and Sequoia's decryptor opens it. A
-/// walk that stepped over the Compressed packet saw no session key and
-/// no container: `messageEncryption` called the message unencrypted, the
-/// UI took it to `openUnencrypted` (which cannot decrypt), and the
-/// decrypt backstop refused it as "not encrypted". So Compressed is
-/// descended into.
-///
-/// Inside one, the walk stops at the first packet that is not a session
-/// key or a further container. Stepping over a packet there means
-/// INFLATING it, and a Literal's body is where a compression bomb lives;
-/// nothing after it can be a header anyway. At the top level a skipped
-/// packet is only bytes already in hand, so the walk goes on as before.
+/// Walk a message's leading packets, calling `visit` until it returns false,
+/// descending INTO Compressed packets (RFC 9580 allows `Compressed{PKESK,
+/// SEIPD}`, which Sequoia opens; skipping it misreported it as unencrypted).
+/// Inside one, stop at the first non-session-key/non-container packet:
+/// stepping over it would mean INFLATING it (compression bomb).
 fn walk_message_header(
     message: &[u8],
     mut visit: impl FnMut(&openpgp::Packet) -> bool,
@@ -2460,25 +2040,12 @@ fn walk_message_header(
     Ok(())
 }
 
-/// How a message can be opened, as JSON:
-/// `{"password":bool,"publicKey":bool,"encrypted":bool}`.
-///
-/// `encrypted` is false for a message with no session-key packet and no
-/// encrypted container -- signed only, or not even that. Such a message
-/// needs no key, and must not be presented as decrypted: the UI opens it
-/// with `openUnencrypted` and says it was not encrypted.
-///
-/// Shape only -- it reads the session-key packets that precede the
-/// encrypted container and says which KINDS are present. It does not and
-/// cannot say whether any particular password or key will work.
-///
-/// The UI needs this to decide what to ASK FOR before it asks: without
-/// it, a `gpg -c` message reaches the key path and comes back "no
-/// suitable decryption key found", which is true and useless -- the
-/// message never wanted a key. Both flags can be true at once (a message
-/// encrypted to a password AND to recipients); the caller decides which
-/// to use, and `workspace-operations.ts` prefers the key when one of the
-/// user's own matches.
+/// How a message can be opened -> `{"password","publicKey","encrypted"}`.
+/// Shape only: which KINDS of session-key packets exist, not whether any
+/// key or password works. Lets the UI ask for the right thing (a `gpg -c`
+/// message must not hit the key path). Both may be true; the caller picks
+/// (`workspace-operations.ts` prefers a matching own key). `encrypted`
+/// false -> UI uses `openUnencrypted`.
 #[wasm_bindgen(js_name = "messageEncryption")]
 pub fn message_encryption(ciphertext: &[u8]) -> Result<String, String> {
     let (password, public_key, container) = scan_session_packets(ciphertext)?;
@@ -2491,24 +2058,12 @@ pub fn message_encryption(ciphertext: &[u8]) -> Result<String, String> {
     .to_string())
 }
 
-/// Read a message that is NOT encrypted -- inline-signed, or a bare
-/// literal -- and return the same packed `[len][sig_json][content]` as
-/// the decrypt entry points, without asking for any key or password.
-///
-/// This is the decrypt tab's answer to a "PGP MESSAGE" that turns out to
-/// have no encryption layer (see [`was_encrypted`]): the content is shown
-/// with its signature verdict, as Verify would show it, and the UI says
-/// plainly that it was not encrypted. It refuses an encrypted message,
-/// so it can never stand in for a decrypt.
-///
-/// Text input passes the same strict framing check as `verify` -- one
-/// armored block, nothing around it -- since Sequoia's armor reader will
-/// otherwise find a block inside any amount of prose. "Text" is decided
-/// by content, not by the first byte: any valid UTF-8 holding an armor
-/// line is checked. (Testing the lead byte's top bit -- a packet header
-/// always has it -- let prose that merely STARTS with a non-ASCII
-/// character, a curly quote, skip the check and show around a valid
-/// verdict.) Binary packets are, in practice, never valid UTF-8.
+/// Read a message that is NOT encrypted (inline-signed or bare literal) ->
+/// same packed `[len][sig_json][content]` as decrypt, no key or password.
+/// Refuses encrypted input, so it can't stand in for a decrypt. Any valid
+/// UTF-8 containing an armor line gets `verify`'s strict framing check
+/// (decided by content, not lead byte: prose starting with a curly quote
+/// once skipped it); binary packets are in practice never valid UTF-8.
 #[wasm_bindgen(js_name = "openUnencrypted")]
 pub fn open_unencrypted(
     message: &[u8],
@@ -2528,9 +2083,8 @@ pub fn open_unencrypted(
             }
             Some(check_signed_framing(text)?)
         }
-        // Not UTF-8, yet holding an armor line: Latin-1 prose around a
-        // block, say. Sequoia's reader always looks for armor, so this
-        // would open with the prose unchecked. Only real binary passes.
+        // Not UTF-8 but holding an armor line (e.g. Latin-1 prose around a block):
+        // Sequoia would find the block and skip the prose check. Only binary passes.
         Err(_)
             if message.windows(ARMOR_LINE.len()).any(|w| w == ARMOR_LINE.as_bytes())
                 && !reads_as_binary(message) =>
@@ -2563,9 +2117,8 @@ pub fn open_unencrypted(
     Ok(pack_decrypt_result(&helper.signatures, content))
 }
 
-/// Whether `message` is, top to bottom, a sequence of binary packets
-/// this parser knows -- read with armor detection OFF. Containers are
-/// stepped over, not opened, so this costs a walk over the bytes.
+/// `message` is, top to bottom, binary packets this parser knows (armor
+/// detection OFF). Containers are stepped over, not opened.
 fn reads_as_binary(message: &[u8]) -> bool {
     use openpgp::parse::{Dearmor, PacketParserBuilder, PacketParserResult};
     let Ok(builder) = PacketParserBuilder::from_bytes(message) else { return false };
@@ -2588,13 +2141,10 @@ fn reads_as_binary(message: &[u8]) -> bool {
     }
 }
 
-/// Collect the recipient key handles referenced by a message's public-key
-/// encrypted session-key (PKESK) packets. Anonymous/wildcard recipients carry
-/// no key handle and are skipped (they can't be matched to a specific key).
+/// Recipient key handles from a message's PKESKs; anonymous recipients are skipped.
 fn recipient_handles(ciphertext: &[u8]) -> Result<Vec<openpgp::KeyHandle>, String> {
     let mut handles = Vec::new();
-    // Same walk as `scan_session_packets`, so a `Compressed{PKESK, SEIPD}`
-    // message gets its key picked too.
+    // Same walk as `scan_session_packets`, so `Compressed{PKESK, SEIPD}` works too.
     walk_message_header(ciphertext, |packet| match packet {
         openpgp::Packet::PKESK(pkesk) => {
             if let Some(handle) = pkesk.recipient() {
@@ -2602,21 +2152,15 @@ fn recipient_handles(ciphertext: &[u8]) -> Result<Vec<openpgp::KeyHandle>, Strin
             }
             true
         }
-        // Session-key packets precede the encrypted container; once we
-        // reach it there are no further recipients to discover.
         openpgp::Packet::SEIP(_) => false,
         _ => true,
     })?;
     Ok(handles)
 }
 
-/// Pick which of the caller's public keys should decrypt `ciphertext`, by
-/// matching the message's recipient key IDs against each candidate cert's
-/// (sub)keys. Returns JSON: the matching primary fingerprint hex (same form
-/// as `KeyInfo.keyId`), or `null` when nothing matches.
-///
-/// This lets the UI default-select the correct decryption key up front,
-/// without unlocking every candidate and trial-decrypting.
+/// Which of the caller's public keys decrypts `ciphertext`, by recipient
+/// key ID -> JSON primary fingerprint hex, or `null`. Lets the UI preselect
+/// without unlocking and trial-decrypting every candidate.
 #[wasm_bindgen(js_name = "selectDecryptionKey")]
 pub fn select_decryption_key(
     ciphertext: &[u8],
@@ -2631,8 +2175,7 @@ pub fn select_decryption_key(
     } else {
         candidates.iter().find_map(|armored| {
             let cert = openpgp::Cert::from_bytes(armored.as_bytes()).ok()?;
-            // `aliases` matches regardless of whether the recipient was named
-            // by fingerprint or by (shorter) key id.
+            // `aliases` matches whether the recipient is named by fingerprint or key id.
             let owns = cert.keys().any(|ka| {
                 let kh = ka.key().key_handle();
                 recipients.iter().any(|r| r.aliases(&kh))
@@ -2650,20 +2193,15 @@ pub fn sign_with_handle(text: &str, key_handle: u32) -> Result<String, String> {
     cleartext_sign(text, &get_cert_from_handle(key_handle)?)
 }
 
-/// Get the armored private key from a handle.
-///
-/// WARNING: This returns plaintext private key material to JS.
-/// Only used for explicit user-initiated "export without passphrase".
+/// Armored private key from a handle. WARNING: returns plaintext secret key
+/// material to JS; only for explicit user-initiated "export without passphrase".
 #[wasm_bindgen(js_name = "getKeyArmored")]
 pub fn get_key_armored(key_handle: u32) -> Result<String, String> {
     armor_cert(&get_cert_from_handle(key_handle)?, true)
 }
 
-/// Mint an armored revocation certificate for a stored (unlocked) key.
-/// Backfills what generation already provides: imported keys arrive
-/// without one, but we hold the primary secret, so we can self-sign a
-/// revocation on demand. Returns only a public signature packet -- no
-/// secret material crosses the boundary.
+/// Armored revocation certificate for an unlocked key (imported keys arrive
+/// without one). Returns only a public signature packet.
 #[wasm_bindgen(js_name = "revocationCertificateWithHandle")]
 pub fn revocation_certificate_with_handle(key_handle: u32) -> Result<String, String> {
     use openpgp::types::ReasonForRevocation;
@@ -2677,8 +2215,7 @@ pub fn revocation_certificate_with_handle(key_handle: u32) -> Result<String, Str
         .map_err(|_| "Primary key has no secret material".to_string())?
         .into_keypair()
         .str_err()?;
-    // "Unspecified" matches gpg's own pre-generated certificates: the
-    // cert is minted long before the reason (loss, compromise) is known.
+    // "Unspecified", as gpg's pre-generated certificates: the reason isn't known yet.
     let sig = CertRevocationBuilder::new()
         .set_reason_for_revocation(ReasonForRevocation::Unspecified, b"")
         .str_err()?
@@ -2694,8 +2231,8 @@ pub fn revocation_certificate_with_handle(key_handle: u32) -> Result<String, Str
     String::from_utf8(rev_buf).str_err()
 }
 
-/// Export a stored key encrypted with a passphrase (key never leaves WASM as plaintext).
-/// Passphrase is taken as owned bytes so we can zeroize on the wasm side.
+/// Export a stored key encrypted under a passphrase (never plaintext). The
+/// passphrase is owned so the wasm side can zeroize it.
 #[wasm_bindgen(js_name = "encryptKeyForExportWithHandle")]
 pub fn encrypt_key_for_export_with_handle(
     key_handle: u32,
@@ -2706,7 +2243,7 @@ pub fn encrypt_key_for_export_with_handle(
     encrypt_cert_for_export(&cert, &passphrase)
 }
 
-/// Returns true if the armored key contains any passphrase-protected secret material.
+/// True if the armored key has any passphrase-protected secret material.
 #[wasm_bindgen(js_name = "isSecretEncrypted")]
 pub fn is_secret_encrypted(armored: &str) -> Result<bool, String> {
     let cert = openpgp::Cert::from_bytes(armored.as_bytes()).str_err()?;
@@ -2716,28 +2253,22 @@ pub fn is_secret_encrypted(armored: &str) -> Result<bool, String> {
         .any(|ka| ka.key().secret().is_encrypted()))
 }
 
-/// Serialize a cert (with secret material) into a Zeroizing buffer for
-/// in-WASM encryption. Binary OpenPGP -- the unlock side accepts both
-/// binary and armored via `Cert::from_bytes`.
-/// `to_vec()` pre-sizes the backing buffer so it never reallocs partway,
-/// keeping the zeroize-on-drop story honest.
+/// Serialize a cert with secrets (binary) into a `Zeroizing` buffer.
+/// `to_vec()` pre-sizes, so no realloc leaves partial copies behind.
 fn serialize_secret_cert(cert: &openpgp::Cert) -> Result<Zeroizing<Vec<u8>>, String> {
     Ok(Zeroizing::new(cert.as_tsk().to_vec().str_err()?))
 }
 
-/// Serialize the metadata and pack it ahead of the protection blob as
-/// `[u32_le json_len][json][blob]` -- see `protected::pack_meta_blob`, which
-/// the CRX protect paths share.
+/// Pack as `[u32_le json_len][json][blob]` (`protected::pack_meta_blob`,
+/// shared with CRX).
 fn pack_protect_result(meta: &ProtectResultMeta, blob: &[u8]) -> Result<Vec<u8>, String> {
     let json = serde_json::to_string(meta).str_err()?;
     Ok(protected::pack_meta_blob(&json, blob))
 }
 
-/// Encrypt a cert's secret material under an Argon2id-derived AES-GCM key.
-/// Returns `[16-byte salt][12-byte iv][ciphertext]`.
-/// AAD is bound to the cert's fingerprint so the blob can't be swapped
-/// between key entries, and prefixed with `PASSWORD_AAD_PREFIX` so it can't
-/// be swapped with a CRX blob either.
+/// Encrypt a cert's secrets under an Argon2id-derived AES-GCM key ->
+/// `[16-byte salt][12-byte iv][ciphertext]`. AAD binds the fingerprint (no
+/// swapping between entries) and `PASSWORD_AAD_PREFIX` (no swapping with CRX).
 fn encrypt_cert_with_password(
     cert: &openpgp::Cert,
     password: &[u8],
@@ -2757,8 +2288,8 @@ fn encrypt_cert_with_password(
     )
 }
 
-/// Encrypt a cert's secret material under a HKDF(PRF, storedSecret)-derived
-/// AES-GCM key. Returns `[12-byte iv][ciphertext]`.
+/// Encrypt a cert's secrets under HKDF(PRF, storedSecret) AES-GCM ->
+/// `[12-byte iv][ciphertext]`.
 fn encrypt_cert_with_prf(
     cert: &openpgp::Cert,
     prf_output: &[u8],
@@ -2775,9 +2306,8 @@ fn encrypt_cert_with_prf(
     )
 }
 
-/// Decrypt one S2K-protected component key, falling back to a manual
-/// path that tolerates GnuPG's fixed-width ECC secret MPIs (see
-/// `decrypt_gpg_padded_secret`).
+/// Decrypt one S2K-protected component key, falling back to
+/// `decrypt_gpg_padded_secret` for GnuPG's fixed-width ECC MPIs.
 fn decrypt_key_secret<R>(
     key: openpgp::packet::Key<openpgp::packet::key::SecretParts, R>,
     password: &openpgp::crypto::Password,
@@ -2791,34 +2321,14 @@ where
     }
 }
 
-/// Was a `decrypt_secret` failure the one the manual fallback exists
-/// for -- Sequoia's strict secret-MPI parser refusing GnuPG's padded
-/// scalar?
-///
-/// What this *can* distinguish: `Error::MalformedMPI` from every other
-/// error kind. In particular Sequoia rejects protection schemes RFC 9580
-/// forbids (Argon2 without AEAD, implicit/simple S2K on a v6 key,
-/// malleable CFB on a v6 key) with `InvalidOperation` *before* touching
-/// the ciphertext -- and our manual path does not re-implement those
-/// checks, so routing those errors here would have been a genuine
-/// validation downgrade. They no longer reach it.
-///
-/// It also excludes the "checksum wrong" MalformedMPI: that one means
-/// the decrypted MPIs parsed cleanly and only the trailing checksum
-/// failed, i.e. the plaintext was well-formed and the passphrase is
-/// simply wrong. Matching on the message is unpleasant, but Sequoia
-/// gives both failures the same variant, so the message is the only
-/// signal there is; if it ever stops matching we fall back more often,
-/// never less safely.
-///
-/// What this *cannot* distinguish: a padded-MPI parse failure from a
-/// wrong-passphrase parse failure. Sequoia deliberately collapses every
-/// secret-MPI parse error into a single uniform
-/// `MalformedMPI("Details omitted, parsing secret")` so the error kind
-/// cannot leak anything about the secret, so both land in this arm. The
-/// manual path re-verifies the checksum itself, so a wrong passphrase
-/// still ends as "Incorrect passphrase" -- it just costs one more S2K +
-/// CFB pass to get there.
+/// Is this `decrypt_secret` failure Sequoia's strict MPI parser refusing
+/// GnuPG's padded scalar? Only `MalformedMPI` qualifies: `InvalidOperation`
+/// (schemes RFC 9580 forbids) must never reach the manual path, which
+/// doesn't re-check them -- that would be a validation downgrade. The
+/// "checksum wrong" MalformedMPI is excluded by message (the only signal;
+/// a mismatch just means falling back more, never less safely). A wrong
+/// passphrase can't be told apart here, but the manual path re-checks the
+/// checksum, so it still ends as "Incorrect passphrase".
 fn is_padded_mpi_failure(e: &anyhow::Error) -> bool {
     match e.downcast_ref::<openpgp::Error>() {
         Some(openpgp::Error::MalformedMPI(msg)) => !msg.contains("checksum"),
@@ -2826,14 +2336,10 @@ fn is_padded_mpi_failure(e: &anyhow::Error) -> bool {
     }
 }
 
-/// GnuPG (libgcrypt) serializes protected ECC secret scalars as
-/// fixed-width MPIs padded to the field size: a 253-bit Ed25519 scalar
-/// is declared as 256 bits with leading zero bits. Sequoia's strict
-/// secret-MPI parser rejects the non-minimal encoding, which makes
-/// roughly half of all `gpg --export-secret-keys` ECC keys (top scalar
-/// bit clear) fail `decrypt_secret` with "Malformed MPI". Redo the
-/// decryption by hand -- S2K, CFB, checksum -- and re-encode the scalar
-/// minimally so Sequoia accepts it.
+/// GnuPG serializes protected ECC secret scalars as fixed-width MPIs
+/// (leading zero bits), which Sequoia's strict parser rejects -- about half
+/// of exported ECC keys. Redo S2K + CFB + checksum by hand and re-encode
+/// the scalar minimally.
 fn decrypt_gpg_padded_secret<R>(
     key: openpgp::packet::Key<openpgp::packet::key::SecretParts, R>,
     password: &openpgp::crypto::Password,
@@ -2848,9 +2354,8 @@ where
 
     let wrong = || coded(ErrorCode::WrongPassphrase, "Incorrect passphrase");
 
-    // Only the single-scalar ECC algorithms need this: libgcrypt encodes
-    // RSA/DSA/ElGamal secrets minimally, so for those a Sequoia failure
-    // really does mean a wrong passphrase.
+    // Only single-scalar ECC needs this; libgcrypt encodes RSA/DSA/ElGamal
+    // minimally, so a failure there really is a wrong passphrase.
     let pk_algo = key.pk_algo();
     if !matches!(
         pk_algo,
@@ -2862,8 +2367,7 @@ where
     let openpgp::packet::key::SecretKeyMaterial::Encrypted(e) = key.secret() else {
         return Err(wrong());
     };
-    // `gpg --export-secret-subkeys` stubs the primary with a GNU-dummy
-    // S2K (private type 101): there is no secret to decrypt at all.
+    // GNU-dummy S2K (type 101) from `--export-secret-subkeys`: no secret at all.
     if let S2K::Private { tag: 101, .. } = e.s2k() {
         return Err(
             "This key's primary secret is a stub (offline primary key). \
@@ -2875,13 +2379,9 @@ where
         return Err(wrong());
     }
 
-    // Everything above is diagnosis, not decryption: it decides which
-    // message the user sees and touches no ciphertext. Only here do we
-    // commit to redoing the crypto by hand, and only for the failure
-    // this function was written for -- see `is_padded_mpi_failure`.
-    // Anything else (a protection scheme Sequoia refused outright, a
-    // truncated packet) is not something a second, less strict attempt
-    // should be given a chance at.
+    // Everything above is diagnosis only. Redo the crypto by hand ONLY for the
+    // padded-MPI failure; a scheme Sequoia refused or a truncated packet gets
+    // no second, less strict attempt.
     if !is_padded_mpi_failure(sequoia_err) {
         return Err(wrong());
     }
@@ -2901,8 +2401,7 @@ where
     let (iv, data) = ct.split_at(block_size);
     let plaintext = Zeroizing::new(cfb_decrypt(sym, &derived, iv, data)?);
 
-    // Split off and verify the trailing checksum; a mismatch means the
-    // passphrase really is wrong.
+    // Verify the trailing checksum; a mismatch means a wrong passphrase.
     let body = match e.checksum().unwrap_or_default() {
         mpi::SecretKeyChecksum::SHA1 => {
             let split = plaintext.len().checked_sub(20).ok_or_else(wrong)?;
@@ -2913,10 +2412,8 @@ where
                 .for_digest();
             ctx.update(body);
             let got = ctx.into_digest().map_err(|_| wrong())?;
-            // Constant-time: this comparison *is* the passphrase check,
-            // so a variable-time `!=` would leak how many leading bytes
-            // of a guess were right. `ct_eq` on slices also yields a
-            // false `Choice` (not a panic) on a length mismatch.
+            // Constant-time: this IS the passphrase check, so `!=` would leak how many
+            // leading bytes matched. Slice `ct_eq` is false (not a panic) on length mismatch.
             if !bool::from(got.as_slice().ct_eq(want)) {
                 return Err(wrong());
             }
@@ -2928,7 +2425,7 @@ where
             let got = body
                 .iter()
                 .fold(0u16, |acc, b| acc.wrapping_add(*b as u16));
-            // Constant-time for the same reason as the SHA-1 arm above.
+            // Constant-time, as the SHA-1 arm.
             if !bool::from(got.to_be_bytes().ct_eq(want)) {
                 return Err(wrong());
             }
@@ -2936,8 +2433,8 @@ where
         }
     };
 
-    // One scalar MPI: 2-byte declared bit length + (possibly padded)
-    // value. `ProtectedMPI::from` re-encodes with leading zeros trimmed.
+    // One scalar MPI: 2-byte bit length + (possibly padded) value;
+    // `ProtectedMPI::from` trims the leading zeros.
     if body.len() < 2 {
         return Err(wrong());
     }
@@ -2954,24 +2451,12 @@ where
     Ok(key.parts_into_public().add_secret(material.into()).0)
 }
 
-/// CFB-128 decryption (OpenPGP's secret-key protection mode) for the
-/// AES family. Used only by the gpg-padded fallback above; the checksum
-/// verified afterwards authenticates the result.
-///
-/// The mode itself comes from RustCrypto's `cfb-mode` -- crypto is never
-/// implemented in-house here. That is not just hygiene: a hostile key
-/// file chooses the cipher, the IV and the ciphertext length, and the
-/// hand-rolled feedback loop this replaced was panic-free only because
-/// its caller happened never to pass an 8-byte-block cipher or an empty
-/// IV. `new_from_slices` turns every such size mismatch into an `Err`,
-/// and a partial trailing block is the library's problem rather than
-/// ours. A panic here would not be a failed import: `panic = abort`
-/// semantics in wasm tear the whole module down, side panel and
-/// unlocked keys included.
-///
-/// The AES-only restriction stays, but it is now a policy choice about
-/// what we accept from an untrusted key file rather than the thing
-/// keeping the code memory-safe.
+/// CFB-128 decrypt (AES family only) for the padded fallback; the checksum
+/// afterwards authenticates it. The mode is RustCrypto's `cfb-mode`, never
+/// hand-rolled: a hostile key file picks cipher, IV and length, and
+/// `new_from_slices` turns every size mismatch into an `Err` -- a panic
+/// would abort the whole wasm module, unlocked keys included. AES-only is a
+/// policy choice about untrusted input.
 fn cfb_decrypt(
     sym: SymmetricAlgorithm,
     key: &[u8],
@@ -3004,9 +2489,8 @@ fn cfb_decrypt(
     }
 }
 
-/// Strip OpenPGP S2K passphrase protection from any encrypted secret
-/// packets in `cert`. Returns a new cert with plaintext secret material.
-/// If `cert` already has no encrypted secrets, returns it unchanged.
+/// Strip S2K passphrase protection from any encrypted secret packets
+/// (returns `cert` unchanged if none are encrypted).
 fn decrypt_cert_secrets(
     cert: openpgp::Cert,
     source_passphrase: &[u8],
@@ -3044,21 +2528,11 @@ fn decrypt_cert_secrets(
     Ok(decrypted_cert)
 }
 
-// ============================================================================
-// Atomic protect-flow API.
-//
-// These four functions cover every "produce a fresh encrypted-key blob"
-// case (generate or import; password or passkey). The plaintext cert
-// exists only for the duration of a single call -- it is NEVER inserted
-// into the long-lived `KEY_STORE`. The handle store is reserved
-// exclusively for the explicit `unlockWith*` paths, so cached unlocked
-// keys correspond 1:1 with user-initiated unlock actions.
-//
-// Each returns a packed `[u32_le json_len][json][blob_bytes]` Vec where
-// `json` is `ProtectResultMeta` and `blob_bytes` is the protection blob:
-//   - password variants:  `[16 salt][12 iv][ciphertext]`
-//   - prf variants:       `[12 iv][ciphertext]`
-// ============================================================================
+// ---- Atomic protect-flow API ----
+// Generate or import, under password or passkey. The plaintext cert lives
+// for one call and is NEVER inserted into `KEY_STORE` (only `unlockWith*`
+// does). Each returns `[u32_le json_len][ProtectResultMeta json][blob]`;
+// blob is `[16 salt][12 iv][ct]` (password) or `[12 iv][ct]` (prf).
 
 #[wasm_bindgen(js_name = "generateProtectedWithPassword")]
 pub fn generate_protected_with_password(
@@ -3099,9 +2573,8 @@ pub fn generate_protected_with_prf(
     pack_protect_result(&meta, &blob)
 }
 
-/// Import an armored private key, optionally strip its source-passphrase
-/// protection, and re-encrypt under a new password. Pass an empty
-/// `source_passphrase` for keys that aren't passphrase-protected.
+/// Import an armored private key, strip its source passphrase (empty if
+/// none), and re-encrypt under a new password.
 #[wasm_bindgen(js_name = "protectImportedWithPassword")]
 pub fn protect_imported_with_password(
     armored: &str,
@@ -3177,26 +2650,15 @@ fn encrypt_cert_for_export(cert: &openpgp::Cert, passphrase: &[u8]) -> Result<St
     armor_cert(&encrypted_cert, true)
 }
 
-// =====================================================================
-// Argon2id key derivation (password -> AES key)
-// =====================================================================
+// ---- Argon2id key derivation (password -> AES key) ----
 
-/// Derive a 32-byte AES key from a password using Argon2id (JS entry point).
+/// Argon2id password -> 32-byte AES key (JS entry point): 64 MB, 3
+/// iterations, parallelism 1.
 ///
-/// Parameters are chosen for browser use: 64MB memory, 3 iterations,
-/// parallelism 1 (WASM is single-threaded). This makes GPU brute-force
-/// impractical for passwords with reasonable entropy.
-///
-/// Owned, not `&[u8]`: with a borrowed param the wasm-bindgen glue frees
-/// its marshalled copy of the password without clearing it, leaving the
-/// plaintext in linear memory. Owning it lets Zeroizing scrub on exit.
-/// See SECURITY.md §8.4 and T-UNLOCK-PARAM-NOT-OWNED.
-///
-/// The derivation itself lives in `argon2_derive`, which stays borrowing:
-/// its in-crate callers (`protected`, `crx`) already hold the password in a
-/// `Zeroizing` of their own, and taking it by value there would add an
-/// un-scrubbed copy rather than remove one. Ownership is required at the
-/// ABI boundary, which is exactly here.
+/// Owned at the ABI: a borrowed param's marshalled copy is freed unscrubbed
+/// (SECURITY.md §8.4, T-UNLOCK-PARAM-NOT-OWNED). `argon2_derive` stays
+/// borrowing because its in-crate callers already hold a `Zeroizing`; by
+/// value there would add an unscrubbed copy.
 #[wasm_bindgen(js_name = "argon2Derive")]
 pub fn argon2_derive_owned(
     password: Vec<u8>,
@@ -3209,8 +2671,7 @@ pub fn argon2_derive_owned(
     argon2_derive(&password, salt, memory_kib, iterations, parallelism)
 }
 
-/// In-crate Argon2id derivation. Not a wasm export -- see
-/// `argon2_derive_owned` for the JS entry point and why the split exists.
+/// In-crate Argon2id. Not a wasm export; see `argon2_derive_owned`.
 pub fn argon2_derive(
     password: &[u8],
     salt: &[u8],
@@ -3233,15 +2694,11 @@ pub fn argon2_derive(
     Ok(output)
 }
 
-// =====================================================================
-// Unlock-and-store: decrypt protection blob + store key in one call.
-// The decrypted private key never leaves WASM.
-// =====================================================================
+// ---- Unlock-and-store: decrypt blob + store key in one call; the
+// decrypted key never leaves WASM. ----
 
-/// Unlock a password-protected key entirely in WASM. Returns a key handle.
-///
-/// Flow: Argon2id(password, salt) -> AES key -> AES-GCM decrypt -> parse Cert -> store
-/// The decrypted private key never enters the JS heap.
+/// Unlock a password-protected key in WASM -> key handle.
+/// Argon2id(password, salt) -> AES-GCM decrypt -> parse Cert -> store.
 #[wasm_bindgen(js_name = "unlockWithPassword")]
 #[allow(clippy::too_many_arguments)] // flat wasm ABI; KDF params come from the blob
 pub fn unlock_with_password(
@@ -3254,10 +2711,8 @@ pub fn unlock_with_password(
     iterations: u32,
     parallelism: u32,
 ) -> Result<u32, String> {
-    // Owned, not `&[u8]`: with a borrowed param the wasm-bindgen glue frees
-    // its marshalled copy of the password without clearing it, leaving the
-    // plaintext in linear memory. Owning it lets Zeroizing scrub on exit.
-    // See SECURITY.md §8.4 and T-UNLOCK-PARAM-NOT-OWNED.
+    // Owned, not `&[u8]`: the borrowed glue copy is freed unscrubbed
+    // (SECURITY.md §8.4, T-UNLOCK-PARAM-NOT-OWNED).
     let password = Zeroizing::new(password);
     let plaintext = protected::open_with_password(
         ciphertext,
@@ -3273,11 +2728,8 @@ pub fn unlock_with_password(
     parse_and_store_private_key(plaintext)
 }
 
-/// Unlock a passkey-protected key entirely in WASM. Returns a key handle.
-///
-/// Flow: HKDF(prfOutput, storedSecret) -> AES key -> AES-GCM decrypt -> parse Cert -> store
-/// JS calls WebAuthn to get the PRF output, passes it here as raw bytes.
-/// The decrypted private key never enters the JS heap.
+/// Unlock a passkey-protected key in WASM -> key handle.
+/// HKDF(prfOutput, storedSecret) -> AES-GCM decrypt -> parse Cert -> store.
 #[wasm_bindgen(js_name = "unlockWithPrf")]
 pub fn unlock_with_prf(
     ciphertext: &[u8],
@@ -3286,8 +2738,7 @@ pub fn unlock_with_prf(
     stored_secret: Vec<u8>,
     key_id: &str,
 ) -> Result<u32, String> {
-    // Owned + Zeroizing for the same reason as unlock_with_password, and
-    // matching generate_protected_with_prf, which already takes both owned.
+    // Owned + Zeroizing: see unlock_with_password.
     let prf_output = Zeroizing::new(prf_output);
     let stored_secret = Zeroizing::new(stored_secret);
     let plaintext = protected::open_with_prf(
@@ -3302,26 +2753,15 @@ pub fn unlock_with_prf(
     parse_and_store_private_key(plaintext)
 }
 
-/// Re-seal an already-unlocked OpenPGP key (by handle) under a NEW PRF
-/// output + stored secret, WITHOUT the plaintext cert ever leaving WASM.
+/// Re-seal an unlocked key (by handle) under a NEW PRF output + stored
+/// secret without the plaintext leaving WASM ("unlock keys when the vault
+/// unlocks"). The stored secret is fresh per blob, so the AES key stays
+/// unique. The handle is read, not consumed, and nothing is inserted into
+/// `KEY_STORE` (SECURITY.md §4).
 ///
-/// Used by "unlock keys when the vault unlocks": a key sealed under its own
-/// per-blob PRF salt is re-sealed under the master passkey's salt so the one
-/// ceremony that opens the vault can open it too. The stored secret is fresh
-/// per blob (JS generates it), so the derived AES key is still unique to this
-/// blob even though the PRF output is shared with the vault and every other
-/// migrated key.
-///
-/// Mirrors `crx.rs::reprotect_crx_key_with_password`: the handle is read, not
-/// consumed -- the key stays unlocked, and nothing is inserted into
-/// `KEY_STORE` (SECURITY.md §4 still holds: only `unlock_with_*` inserts).
-///
-/// Returns packed `[u32_le json_len][json][blob]` where the JSON is
-/// `{"keyId": <fingerprint hex>}` and `blob` is `[12 iv][ct]`. The identity
-/// is reported back deliberately: it is the AAD the blob was sealed under,
-/// derived from the key the HANDLE holds, and the JS side refuses to write
-/// the result over a keyring entry whose id differs. A handle/keyId mix-up
-/// would otherwise store key Y's ciphertext under key X's id and destroy X.
+/// Returns `[u32_le json_len][{"keyId"}][12 iv][ct]`. The keyId (the AAD,
+/// from the key the HANDLE holds) lets JS refuse to overwrite an entry with
+/// a different id -- a mix-up would store Y's ciphertext under X and destroy X.
 ///
 /// @secret-handling
 ///   in:  `prf_output`; `stored_secret` is the persisted HKDF salt
@@ -3340,26 +2780,18 @@ pub fn reprotect_key_with_prf(
     Ok(protected::pack_meta_blob(&meta.to_string(), &blob))
 }
 
-// =====================================================================
-// Shared helpers
-// =====================================================================
+// ---- Shared helpers ----
 
-/// AAD prefixes for per-key protection (also used by the JS side in
-/// `encrypt-private-key.ts` -- keep in sync). Distinct from the
-/// `gpg-tools:crx-*` prefixes in `crx.rs`, so an OpenPGP blob and a CRX blob
-/// can never be opened as each other.
+/// Per-key protection AAD prefixes (mirrored in `encrypt-private-key.ts`).
+/// Distinct from crx.rs's `gpg-tools:crx-*`, so the blobs can't be swapped.
 const PASSWORD_AAD_PREFIX: &str = "gpg-tools:password:";
 const PASSKEY_AAD_PREFIX: &str = "gpg-tools:passkey:";
-/// HKDF info string for the PRF-derived AES key protecting an OpenPGP cert.
-/// Distinct from `crx.rs`'s `CRX_PRF_HKDF_INFO`: the same authenticator PRF
-/// output must never derive the same key for two key types.
+/// HKDF info for the PRF-derived OpenPGP key. Distinct from crx.rs's: one
+/// PRF output must never derive the same key for two key types.
 const PASSKEY_HKDF_INFO: &[u8] = b"gpg-tools-prf-v1";
 
-/// Parse a decrypted private key, zeroize the plaintext, and store it.
-///
-/// The plaintext arrives in `Zeroizing` from `protected::open_*` and is
-/// dropped (wiped) as soon as the cert is parsed, before it reaches the
-/// store -- so the serialized copy exists in only one place at a time.
+/// Parse a decrypted private key and store it. The `Zeroizing` plaintext is
+/// wiped as soon as it is parsed, so the serialized copy exists in one place.
 fn parse_and_store_private_key(plaintext: Zeroizing<Vec<u8>>) -> Result<u32, String> {
     let result = openpgp::Cert::from_bytes(&plaintext).str_err();
     drop(plaintext);
@@ -3370,22 +2802,15 @@ fn parse_and_store_private_key(plaintext: Zeroizing<Vec<u8>>) -> Result<u32, Str
     insert_key(&cert)
 }
 
-// =====================================================================
-// Contacts session: derived key stored in WASM linear memory.
-// Managed independently from key handles -- initialised via the master
-// protection unlock, not tied to any individual keypair.
-// =====================================================================
+// ---- Contacts session: derived key in WASM memory, set by the master
+// unlock, independent of key handles. ----
 
 const CONTACTS_AAD: &[u8] = b"gpg-tools:contacts:master";
 const CONTACTS_HKDF_INFO: &[u8] = b"gpg-tools-contacts-v1";
 const CANARY_PLAINTEXT: &[u8] = b"pgp-tools-master-v1";
-/// The canary's own AAD. Canaries used to be sealed under `CONTACTS_AAD`,
-/// the label the legacy store envelope opens with, so every password
-/// vault published (in its cleartext master protection) a blob that
-/// `decrypt_contacts` accepts: planted in any store slot, the legacy
-/// fallback opened it and the store read as garbage. A separate label puts
-/// new canaries outside that envelope. Old canaries still verify (see
-/// `verify_canary_and_init_session`).
+/// The canary's own AAD. Canaries sealed under `CONTACTS_AAD` were blobs
+/// the legacy store fallback would accept if planted in a store slot; a
+/// separate label keeps them out. Old canaries still verify.
 const CANARY_AAD: &[u8] = b"gpg-tools:master-canary:v1";
 
 thread_local! {
@@ -3402,8 +2827,7 @@ fn set_contacts_key(new_key: Option<Vec<u8>>) {
     });
 }
 
-/// Borrow the contacts session key and run `f` with it. Avoids cloning
-/// the key onto the heap, reducing the number of copies to zeroize.
+/// Run `f` with the borrowed contacts key (no heap clone to zeroize).
 fn with_contacts_key<T>(f: impl FnOnce(&[u8]) -> T) -> Result<T, String> {
     CONTACTS_KEY.with(|slot| {
         let guard = slot.borrow();
@@ -3414,9 +2838,8 @@ fn with_contacts_key<T>(f: impl FnOnce(&[u8]) -> T) -> Result<T, String> {
     })
 }
 
-/// Derive a contacts key via HKDF. Used for both password (Argon2id output
-/// as IKM, salt as HKDF salt) and passkey (PRF output as IKM, storedSecret
-/// as HKDF salt) paths.
+/// HKDF contacts key: IKM is the Argon2id output (password) or PRF output
+/// (passkey); salt is the salt / storedSecret.
 fn derive_contacts_key(ikm: &[u8], hkdf_salt: &[u8]) -> Result<Vec<u8>, String> {
     let hk = Hkdf::<Sha256>::new(Some(hkdf_salt), ikm);
     let mut key = vec![0u8; 32];
@@ -3427,8 +2850,7 @@ fn derive_contacts_key(ikm: &[u8], hkdf_salt: &[u8]) -> Result<Vec<u8>, String> 
     Ok(key)
 }
 
-/// Derive the contacts key from a password via Argon2id + HKDF.
-/// Returns the key. Zeroizes the Argon2id output.
+/// Argon2id + HKDF contacts key; zeroizes the Argon2id output.
 fn derive_contacts_key_from_password(
     password: &[u8],
     salt: &[u8],
@@ -3442,10 +2864,9 @@ fn derive_contacts_key_from_password(
     result
 }
 
-// ── Session lifecycle ───────────────────────────────────────────────
+// ---- Session lifecycle ----
 
-/// Init the contacts session with a passkey PRF output.
-/// HKDF(prfOutput, storedSecret, "gpg-tools-contacts-v1") -> session key.
+/// HKDF(prfOutput, storedSecret, "gpg-tools-contacts-v1") -> contacts session key.
 #[wasm_bindgen(js_name = "initContactsSessionWithPrf")]
 pub fn init_contacts_session_with_prf(
     prf_output: Vec<u8>,
@@ -3459,30 +2880,20 @@ pub fn init_contacts_session_with_prf(
     Ok(())
 }
 
-/// Drop the contacts session key. The backing bytes are zeroized.
+/// Drop the contacts session key (zeroized).
 #[wasm_bindgen(js_name = "dropContactsSession")]
 pub fn drop_contacts_session() {
     set_contacts_key(None);
 }
 
-/// Check whether a contacts session is currently active.
 #[wasm_bindgen(js_name = "hasContactsSession")]
 pub fn has_contacts_session() -> bool {
     CONTACTS_KEY.with(|slot| slot.borrow().is_some())
 }
 
-// =====================================================================
-// Draft session: a separate AES key used solely for stashing the user's
-// in-progress workspace state across auto-lock cycles. The key lives in
-// WASM linear memory for the lifetime of the side-panel session and is
-// INDEPENDENT of the master/contacts session -- so an auto-lock can
-// drop KEY_STORE entries while still letting us decrypt the draft on
-// re-unlock. The key never crosses to JS.
-//
-// Plaintext drafts are sensitive (they're the user's text) but are not
-// key material; the encrypt/decrypt API just protects the JS-heap copy
-// during the locked window.
-// =====================================================================
+// ---- Draft session: an AES key for the in-progress workspace across
+// auto-lock, INDEPENDENT of the master session (auto-lock drops KEY_STORE
+// but the draft still opens on re-unlock). Never crosses to JS. ----
 
 const DRAFT_AAD: &[u8] = b"gpg-tools:workspace-draft:v1";
 
@@ -3510,8 +2921,7 @@ fn with_draft_key<T>(f: impl FnOnce(&[u8]) -> T) -> Result<T, String> {
     })
 }
 
-/// Generate a fresh 32-byte random draft key if one isn't already set.
-/// No-op if a key already exists (preserves drafts across re-init).
+/// Generate a draft key if none is set (no-op otherwise, keeping drafts).
 #[wasm_bindgen(js_name = "initDraftSessionIfUnset")]
 pub fn init_draft_session_if_unset() -> Result<(), String> {
     let exists = DRAFT_KEY.with(|slot| slot.borrow().is_some());
@@ -3524,24 +2934,21 @@ pub fn init_draft_session_if_unset() -> Result<(), String> {
     Ok(())
 }
 
-/// Drop the draft session key. Use on side-panel close (or as a
-/// belt-and-braces measure when the user wipes drafts).
+/// Drop the draft key (panel close, or when the user wipes drafts).
 #[wasm_bindgen(js_name = "dropDraftSession")]
 pub fn drop_draft_session() {
     set_draft_key(None);
 }
 
-/// Encrypt a draft buffer under the in-WASM draft key. Returns
-/// `[12-byte IV][ciphertext]`. Plaintext is wrapped in `Zeroizing` and
-/// dropped at function exit.
+/// Encrypt under the draft key -> `[12-byte IV][ciphertext]`. Plaintext is
+/// owned and `Zeroizing`.
 #[wasm_bindgen(js_name = "encryptDraft")]
 pub fn encrypt_draft(plaintext: Vec<u8>) -> Result<Vec<u8>, String> {
     let plaintext = Zeroizing::new(plaintext);
     with_draft_key(|key| aes_gcm_encrypt(key, &plaintext, DRAFT_AAD))?
 }
 
-/// Decrypt a packed `[12-byte IV][ciphertext]` produced by `encryptDraft`.
-/// The plaintext crosses back to JS so the workspace can rehydrate.
+/// Decrypt `encryptDraft` output; the plaintext returns to JS to rehydrate.
 #[wasm_bindgen(js_name = "decryptDraft")]
 pub fn decrypt_draft(packed: &[u8]) -> Result<Vec<u8>, String> {
     if packed.len() < 12 + 16 {
@@ -3551,46 +2958,25 @@ pub fn decrypt_draft(packed: &[u8]) -> Result<Vec<u8>, String> {
     with_draft_key(|key| aes_gcm_decrypt(key, iv, ct, DRAFT_AAD))?
 }
 
-// ── Per-store envelope (v1): domain-separated key AND AAD ───────────
-//
-// Every store sealed under the master session (keyring, contacts,
-// settings, CRX keys, each history segment) gets its OWN AES key and its
-// OWN AAD, both derived from a caller-supplied `domain` string. The JS
-// side always passes the chrome.storage key the blob lives under
-// (`pgp_keyring`, `pgp_public_contacts`, `pgp_settings`, `pgp_crx_keys`,
-// `pgp_history_seg_<n>`), so a sealed blob is bound to the exact slot it
-// was written to.
-//
-// Why this exists: the legacy scheme below (`encrypt_contacts` /
-// `decrypt_contacts`) sealed EVERY store under the same key and the same
-// fixed `CONTACTS_AAD`, so nothing in the sealed data named the store or
-// the segment. Anyone able to write chrome.storage -- with no knowledge
-// of the vault key -- could replay one store's blob into another slot and
-// the AEAD would accept it. Binding the domain into both the subkey and
-// the AAD makes any such move fail the tag check.
-//
-// Two independent bindings on purpose: the AAD alone would be enough for
-// a correct AEAD, but deriving a distinct key means even a future bug
-// that drops or mismatches the AAD cannot cross a domain boundary.
+// ---- Per-store envelope (v1): domain-separated key AND AAD ----
+// Each store sealed under the master session gets its own HKDF subkey and
+// AAD from `domain` (JS passes the chrome.storage key: `pgp_keyring`,
+// `pgp_history_seg_<n>`, ...), so a blob can't be replayed into another
+// slot -- the legacy envelope allowed exactly that. Two bindings on
+// purpose: a distinct key holds even if a bug drops or mismatches the AAD.
 const STORE_SUBKEY_INFO_PREFIX: &str = "gpg-tools:store-subkey:v1:";
 const STORE_AAD_PREFIX: &str = "gpg-tools:store:v1:";
 
-/// HKDF-Expand the contacts session key into a 32-byte subkey unique to
-/// `domain`. The subkey is `Zeroizing`, so it is scrubbed when the
-/// enclosing call returns.
-///
-/// NOTE on lifetimes: the subkey is derived FROM the contacts session
-/// key, so it inherits that key's lifetime exactly -- this buys domain
-/// separation, not an independent unlock window. See
-/// `T-HISTORY-KEY-COUPLING`.
+/// HKDF-Expand the contacts session key into a `Zeroizing` 32-byte subkey
+/// for `domain`. Inherits that key's lifetime: domain separation, not an
+/// independent unlock window (T-HISTORY-KEY-COUPLING).
 fn derive_store_subkey(domain: &str) -> Result<Zeroizing<Vec<u8>>, String> {
     if domain.is_empty() {
         return Err("Store domain must not be empty".to_string());
     }
     let info = format!("{STORE_SUBKEY_INFO_PREFIX}{domain}");
     with_contacts_key(|key| {
-        // The session key is already a 32-byte HKDF output, so Extract is
-        // a formality; keep it for a conventional HKDF construction.
+        // The session key is already an HKDF output; Extract is a formality.
         let hk = Hkdf::<Sha256>::new(None, key);
         let mut subkey = Zeroizing::new(vec![0u8; 32]);
         hk.expand(info.as_bytes(), subkey.as_mut_slice())
@@ -3599,10 +2985,8 @@ fn derive_store_subkey(domain: &str) -> Result<Zeroizing<Vec<u8>>, String> {
     })?
 }
 
-/// Seal `plaintext` for `domain`. Returns `[12-byte IV][ciphertext]`.
-/// Plaintext is taken by value and wrapped in `Zeroizing` so the copy
-/// wasm-bindgen marshalled in is scrubbed at function exit -- up to
-/// 64 KB of user message content per history segment write.
+/// Seal for `domain` -> `[12-byte IV][ciphertext]`. Plaintext is owned and
+/// `Zeroizing` (up to 64 KB of messages per history segment).
 #[wasm_bindgen(js_name = "encryptStore")]
 pub fn encrypt_store(domain: &str, plaintext: Vec<u8>) -> Result<Vec<u8>, String> {
     let plaintext = Zeroizing::new(plaintext);
@@ -3611,8 +2995,7 @@ pub fn encrypt_store(domain: &str, plaintext: Vec<u8>) -> Result<Vec<u8>, String
     aes_gcm_encrypt(&subkey, &plaintext, aad.as_bytes())
 }
 
-/// Open a blob sealed by `encrypt_store` for the SAME `domain`. Any other
-/// domain fails the tag check.
+/// Open an `encrypt_store` blob; only the SAME `domain` passes the tag check.
 #[wasm_bindgen(js_name = "decryptStore")]
 pub fn decrypt_store(domain: &str, ciphertext: &[u8], iv: &[u8]) -> Result<Vec<u8>, String> {
     let subkey = derive_store_subkey(domain)?;
@@ -3620,40 +3003,30 @@ pub fn decrypt_store(domain: &str, ciphertext: &[u8], iv: &[u8]) -> Result<Vec<u
     aes_gcm_decrypt(&subkey, iv, ciphertext, aad.as_bytes())
 }
 
-// ── Legacy (pre-v1) shared envelope ─────────────────────────────────
-//
-// The scheme every store used before `encrypt_store`: the raw contacts
-// session key with the shared `CONTACTS_AAD`. RETAINED, not dead:
-//   - `decrypt_contacts` is the migration read path. Blobs written by
-//     shipped versions are still on real users' disks and must keep
-//     opening; the JS side (`lib/storage/envelope.ts`) tries the
-//     domain-bound scheme first and falls back to this.
-//   - `encrypt_contacts` is how the tests (here and in
-//     `lib/storage/*.test.ts`, via the same packing contract) synthesise
-//     a legacy blob to prove that fallback works. Production code no
-//     longer writes this format.
+// ---- Legacy (pre-v1) shared envelope: raw contacts key + `CONTACTS_AAD` ----
+// RETAINED: `decrypt_contacts` is the migration read path for blobs on
+// users' disks (`lib/storage/envelope.ts` falls back to it);
+// `encrypt_contacts` exists so tests can synthesise a legacy blob.
 // Do NOT reintroduce either as a production write path.
 
-/// Encrypt under the legacy shared envelope. See the note above.
-/// Plaintext is owned + `Zeroizing` for the same reason as
-/// `encrypt_store`.
+/// Encrypt under the legacy envelope (tests only; see above). Plaintext is
+/// owned + `Zeroizing`.
 #[wasm_bindgen(js_name = "encryptContacts")]
 pub fn encrypt_contacts(plaintext: Vec<u8>) -> Result<Vec<u8>, String> {
     let plaintext = Zeroizing::new(plaintext);
     with_contacts_key(|key| aes_gcm_encrypt(key, &plaintext, CONTACTS_AAD))?
 }
 
-/// Decrypt a legacy shared-envelope blob. See the note above.
+/// Decrypt a legacy shared-envelope blob (migration read path).
 #[wasm_bindgen(js_name = "decryptContacts")]
 pub fn decrypt_contacts(ciphertext: &[u8], iv: &[u8]) -> Result<Vec<u8>, String> {
     with_contacts_key(|key| aes_gcm_decrypt(key, iv, ciphertext, CONTACTS_AAD))?
 }
 
-// ── Master protection canary ────────────────────────────────────────
+// ---- Master protection canary ----
 
-/// Encrypt a canary and init the contacts session in one Argon2id pass.
-/// Used during onboarding password setup.
-/// Returns `[12-byte IV][ciphertext]`.
+/// Onboarding: encrypt a canary and init the contacts session in one
+/// Argon2id pass -> `[12-byte IV][ciphertext]`.
 #[wasm_bindgen(js_name = "encryptCanaryAndInitSession")]
 pub fn encrypt_canary_and_init_session(
     password: Vec<u8>,
@@ -3662,12 +3035,8 @@ pub fn encrypt_canary_and_init_session(
     iterations: u32,
     parallelism: u32,
 ) -> Result<Vec<u8>, String> {
-    // Owned, not `&[u8]`: with a borrowed param the wasm-bindgen glue frees
-    // its marshalled copy of the password without clearing it, leaving the
-    // plaintext in linear memory. Owning it lets Zeroizing scrub on exit.
-    // This is the onboarding path, so the secret here is the master password
-    // that gates the whole vault. See SECURITY.md §8.4 and
-    // T-UNLOCK-PARAM-NOT-OWNED.
+    // Owned (the master password): the borrowed glue copy is freed unscrubbed
+    // (SECURITY.md §8.4, T-UNLOCK-PARAM-NOT-OWNED).
     let password = Zeroizing::new(password);
     let mut key =
         derive_contacts_key_from_password(&password, salt, memory_kib, iterations, parallelism)?;
@@ -3680,18 +3049,12 @@ pub fn encrypt_canary_and_init_session(
     result
 }
 
-/// Verify a password and init the contacts session in one Argon2id pass.
-/// Returns true if the password is correct and the session is now active.
-/// Returns false (without initialising the session) if the password is wrong.
-///
-/// Tries the canary's own label first, then the legacy `CONTACTS_AAD`, so
-/// vaults created before `CANARY_AAD` still unlock. Both are AEAD opens
-/// under the same derived key, so the fallback adds no way in: it only
-/// accepts a blob sealed under the right key. Old canaries are NOT re-sealed
-/// on unlock: the master protection is the one record whose loss makes the
-/// vault unopenable, and on a synced vault an older build on another device
-/// could not verify a re-sealed canary and would report the right password
-/// as wrong.
+/// Verify a password and init the contacts session in one Argon2id pass;
+/// false (no session) on a wrong password. Tries `CANARY_AAD` then legacy
+/// `CONTACTS_AAD`; both are AEAD opens under the same key, so the fallback
+/// adds no way in. Old canaries are NOT re-sealed: losing this record makes
+/// the vault unopenable, and an older build on a synced device couldn't
+/// verify a re-sealed one.
 #[wasm_bindgen(js_name = "verifyCanaryAndInitSession")]
 pub fn verify_canary_and_init_session(
     canary_ciphertext: &[u8],
@@ -3702,12 +3065,8 @@ pub fn verify_canary_and_init_session(
     iterations: u32,
     parallelism: u32,
 ) -> Result<bool, String> {
-    // Owned, not `&[u8]`: with a borrowed param the wasm-bindgen glue frees
-    // its marshalled copy of the password without clearing it, leaving the
-    // plaintext in linear memory. Owning it lets Zeroizing scrub on exit --
-    // including on the wrong-password branch, which is the one an attacker
-    // gets to trigger repeatedly. This is the master-unlock path. See
-    // SECURITY.md §8.4 and T-UNLOCK-PARAM-NOT-OWNED.
+    // Owned, so even the wrong-password branch (attacker-repeatable) scrubs it
+    // (SECURITY.md §8.4, T-UNLOCK-PARAM-NOT-OWNED).
     let password = Zeroizing::new(password);
     let mut key =
         derive_contacts_key_from_password(&password, salt, memory_kib, iterations, parallelism)?;
@@ -3715,7 +3074,7 @@ pub fn verify_canary_and_init_session(
         .or_else(|_| aes_gcm_decrypt(&key, canary_iv, canary_ciphertext, CONTACTS_AAD));
     match opened {
         Ok(_) => {
-            // AES-GCM is AEAD: successful decryption guarantees correct key.
+            // AEAD: a successful decrypt proves the key.
             set_contacts_key(Some(key));
             Ok(true)
         }
@@ -3726,32 +3085,20 @@ pub fn verify_canary_and_init_session(
     }
 }
 
-// =====================================================================
-
-/// The at-rest key-protection envelope (Argon2id / PRF -> AES-256-GCM, the
-/// handle store, and the packed meta+blob wire format), shared by every key
-/// type the vault holds. See the module header for what is parameterised and
-/// why it must stay that way.
+/// At-rest key-protection envelope shared by every key type (see module header).
 mod protected;
 
-/// CRX (Chrome extension) signing & verification. Reuses this module's
-/// vault/unlock/zeroize machinery for an RSA-2048 signing key; see the
-/// module header for why CRX3 is not OpenPGP.
+/// CRX signing & verification; see the module header for why CRX3 isn't OpenPGP.
 mod crx;
 
-/// age encryption to imported SSH keys (`ssh-ed25519`, `ssh-rsa`). Reuses
-/// this module's vault/unlock/zeroize machinery for the identity; see the
-/// module header for why `ssh-key` is needed and where age's own randomness
-/// stays out of reach.
+/// age encryption to imported SSH keys; see the module header.
 mod age;
 
-/// Stable codes on the errors the UI tells apart; see the module header.
+/// Stable codes on the errors the UI tells apart.
 mod error_code;
 use error_code::{coded, ErrorCode};
 
-/// The crate's CSPRNG: a ChaCha20 stream seeded once from
-/// `crypto.getRandomValues`. See the module header for what it does and
-/// does not buy against T-ENTROPY-POISON.
+/// ChaCha20 CSPRNG seeded once from `crypto.getRandomValues` (T-ENTROPY-POISON).
 mod rng;
 
 #[cfg(test)]

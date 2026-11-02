@@ -1,14 +1,9 @@
 //! Stable classes for the engine errors the UI tells apart.
 //!
-//! A coded error is `\x1f<code>\x1f<message>`: the JS side decodes the
-//! prefix once, at the wasm boundary (`lib/errors/engine-error.ts`), and
-//! classifies on the code; the message stays the engine's own text for
-//! the details line. Only a leading prefix counts, and [`coded`] strips
-//! the separator from what it wraps, so quoted text (Sequoia's, a user
-//! ID) can never pose as a code.
-//!
-//! Errors not listed here stay plain strings. Codes must match
-//! `EngineErrorCode` in `engine-error.ts`.
+//! Coded error = `\x1f<code>\x1f<message>`, decoded once at the wasm boundary
+//! (`lib/errors/engine-error.ts`). Only a leading prefix counts and [`coded`]
+//! strips the separator from what it wraps, so quoted text can never pose as
+//! a code. Codes must match `EngineErrorCode` in `engine-error.ts`.
 
 const SEP: char = '\u{1f}';
 
@@ -89,13 +84,12 @@ fn code_name(err: &str) -> Option<&str> {
     Some(&rest[..end])
 }
 
-/// The code `err` carries, if any.
 pub fn error_code(err: &str) -> Option<ErrorCode> {
     let name = code_name(err)?;
     ErrorCode::ALL.into_iter().find(|c| c.as_str() == name)
 }
 
-/// `err` without its code prefix: the human text.
+/// `err` without its code prefix.
 pub fn message(err: &str) -> &str {
     match code_name(err) {
         Some(name) => &err[name.len() + 2 * SEP.len_utf8()..],

@@ -1,82 +1,37 @@
 //! # age encryption to SSH recipients
 //!
-//! Part of the WASM/Rust trust boundary -- see the header of `lib.rs` and
-//! `apps/pgp/SECURITY.md`. This module lets a user encrypt and decrypt with
-//! an **SSH key they already have** (`ssh-ed25519`, `ssh-rsa`), using the
-//! age file format, while the key itself is held by the *same* vault
-//! machinery as their PGP and CRX keys: Argon2id or WebAuthn-PRF ->
-//! AES-256-GCM with the key's identity bound into the AAD
-//! (`protected::seal_with_*` / `protected::open_*`).
+//! Encrypt/decrypt with an SSH key the user already has (`ssh-ed25519`,
+//! `ssh-rsa`), sealed by the same vault machinery as PGP/CRX keys
+//! (`protected::seal_with_*`, identity bound into the AAD). Trust boundary:
+//! `lib.rs` header and `apps/pgp/SECURITY.md`.
 //!
-//! Scope, deliberately narrow:
+//! Scope: import only (no `generate*`), encrypt/decrypt only (age has no
+//! signing), SSH keys only -- native age keys would be new arms at the
+//! "extension point" seams.
 //!
-//! - **Import only.** The app never generates an SSH key; there is no
-//!   `generate*` export here. `ssh-keygen` is the generator.
-//! - **Encrypt and decrypt only.** age has no signing operation, so there is
-//!   nothing sign-shaped to expose.
-//! - **SSH keys only.** Native age keys (`age1…` recipients,
-//!   `AGE-SECRET-KEY-1…` identities) are *not* implemented. The seams for
-//!   them are marked "extension point" below; adding them is new arms on
-//!   existing functions, not a rewrite.
+//! ## Why `ssh-key` is a dependency
 //!
-//! ## Why `ssh-key` is a dependency (the crux of the design)
-//!
-//! age 0.12 has no way to unwrap a passphrase-protected SSH key into
-//! reusable material. `age::ssh::EncryptedKey::decrypt()` returns
-//! `age::ssh::identity::UnencryptedKey`, but that module is `pub(crate)` and
-//! the type is unexported -- it cannot be named, stored, or re-sealed. The
-//! only public path is `Identity::with_callbacks()`, whose `Callbacks`
-//! trait is `Send + Sync + 'static` with a *synchronous*
-//! `request_passphrase` -- unusable from a browser, where the prompt is an
-//! async round-trip to the UI thread.
-//!
-//! This app's model is the same one the OpenPGP path uses: **strip the
-//! source passphrase at import and reseal under our own envelope.** So the
-//! RustCrypto `ssh-key` crate parses the OpenSSH file, decrypts it with the
-//! user-supplied passphrase (bcrypt-pbkdf + the OpenSSH cipher), and
-//! re-emits an *unencrypted* OpenSSH key; those bytes are what
-//! `protected::seal_with_*` seals. At unlock, `protected::open_*` hands the
-//! plaintext straight to `age::ssh::Identity::from_buffer`, which yields an
-//! `Identity::Unencrypted` that implements `age::Identity` directly. No
-//! callback ever runs.
-//!
-//! Consequence worth stating plainly: after import, the user's original SSH
-//! passphrase protects nothing here. The vault password / passkey is the
-//! only thing standing between an attacker with the blob and the key. That
-//! is the same trade the PGP path makes, and it is why the source
-//! passphrase is zeroized the instant it has been used.
+//! age 0.12 cannot unwrap a passphrase-protected SSH key into reusable
+//! material (`UnencryptedKey` is unexported; `Callbacks::request_passphrase`
+//! is synchronous, unusable from a browser). So, as with OpenPGP, the source
+//! passphrase is stripped at import with `ssh-key` and the *unencrypted*
+//! OpenSSH key is resealed under our envelope; at unlock it goes straight to
+//! `age::ssh::Identity::from_buffer`. After import the original SSH
+//! passphrase protects nothing here, which is why it is zeroized right after use.
 //!
 //! ## Randomness
 //!
-//! Everything this module controls draws from `crate::rng` (the crate's
-//! ChaCha20 CSPRNG): the Argon2id salts and GCM nonces inside
-//! `protected::`, and the probe plaintext in [`validate_identity`].
-//!
-//! It does **not** cover the randomness age uses internally. `age::Encryptor`
-//! calls `new_file_key()` and `Nonce::random()`, and
-//! `<age::ssh::Recipient as age::Recipient>::wrap_file_key` constructs its
-//! own `OsRng` for the ephemeral X25519 secret (ssh-ed25519) and for
-//! RSA-OAEP (ssh-rsa). None of these take an RNG argument, so -- exactly as
-//! with Sequoia's key generation in `src/rng.rs` -- there is no injection
-//! point short of patching the dependency, and that is not attempted. On
-//! `wasm32-unknown-unknown` those `OsRng` draws resolve
-//! `crypto.getRandomValues` per call, so they remain exposed to
-//! `T-ENTROPY-POISON` / SECURITY.md §8.10 in full. This is an unclosable
-//! gap, recorded rather than papered over.
+//! Salts, nonces and the [`validate_identity`] probe use `crate::rng`. age's
+//! own file key, nonces and ephemeral/OAEP randomness use `OsRng` with no
+//! injection point, so they stay exposed to `T-ENTROPY-POISON` /
+//! SECURITY.md §8.10 -- an unclosable gap, recorded.
 //!
 //! ## Cross-tool compatibility
 //!
-//! The `ssh-rsa` and `ssh-ed25519` stanza types are **not** in the C2SP age
-//! specification. They are a convention shared by Go age and Rust age, so
-//! cross-tool agreement is the only specification there is. The tests at the
-//! bottom of this file therefore include ciphertexts produced by the real
-//! `age` CLI (v1.2.1, Go) and assert that we decrypt them.
-//!
-//! One divergence is real and user-visible: Rust age caps `ssh-rsa` at a
-//! 4096-bit modulus (`rsa::RsaPublicKey::MAX_SIZE`), Go age does not, and
-//! GitLab hands out 8192-bit keys. A file encrypted elsewhere to such a key
-//! cannot be decrypted here. That is surfaced as its own message rather than
-//! a generic parse error.
+//! The ssh stanzas are not in the C2SP spec; Go/Rust age agreement is the
+//! spec, so tests decrypt real `age` CLI (Go) ciphertexts. Rust age caps
+//! `ssh-rsa` at 4096 bits (Go does not; GitLab issues 8192-bit keys), which
+//! gets its own message.
 
 use std::io::{Read, Write};
 
@@ -92,43 +47,25 @@ use crate::protected;
 use crate::rng;
 use crate::StrErr;
 
-// ---------------------------------------------------------------------------
-// Domain separation constants
-//
-// New prefixes for a new key type. They are distinct from -- and, critically,
-// not a string-prefix of -- `gpg-tools:password:`, `gpg-tools:passkey:`,
-// `gpg-tools:crx-password:`, `gpg-tools:crx-passkey:` and
-// `gpg-tools:store:v1:`. The identity is *appended* to the prefix, so if one
-// prefix were a prefix of another, some (prefix, identity) pair could produce
-// the same AAD bytes as a different key type's -- the exact cross-type
-// confusion these exist to prevent. `lib/protection/aad-prefixes.test.ts`
-// asserts both properties against literals.
-// ---------------------------------------------------------------------------
+// Domain separation. Distinct from -- and never a string-prefix of -- every
+// other AAD prefix: the identity is appended, so a prefix-of-a-prefix could
+// collide across key types. Pinned by `lib/protection/aad-prefixes.test.ts`.
 
 const SSH_PASSWORD_AAD_PREFIX: &str = "gpg-tools:ssh-password:";
 const SSH_PASSKEY_AAD_PREFIX: &str = "gpg-tools:ssh-passkey:";
-/// HKDF info string for the PRF-derived AES key. Distinct from the PGP and
-/// CRX ones: the same authenticator and the same PRF output must not derive
-/// the same AES key for two different key types.
+/// Distinct per key type: one PRF output must not derive the same AES key for
+/// two key types.
 const SSH_PRF_HKDF_INFO: &[u8] = b"gpg-tools-ssh-prf-v1";
 
-/// The identity bound into the AAD is the key's SSH SHA-256 fingerprint
-/// (`SHA256:<base64-no-pad>`), the same string `ssh-keygen -l` prints.
+/// AAD identity: the `ssh-keygen -l` SHA-256 fingerprint (`SHA256:<b64>`).
 const FINGERPRINT_PREFIX: &str = "SHA256:";
 
-/// Longest key comment handed to the UI, in characters. `ssh-keygen` writes
-/// `user@host`; anything near this is not a name anyone typed.
+/// Longest key comment handed to the UI, in characters.
 const SSH_COMMENT_MAX: usize = 120;
 
-/// A key comment as the UI may show it.
-///
-/// The comment is free text inside an attacker-supplied file, and it
-/// becomes the contact's NAME (`userIds[0]`) -- exactly what a PGP User ID
-/// is, so it gets exactly what a User ID gets in `lib.rs`: control, bidi
-/// and invisible characters stripped (a U+202E override reverses the
-/// address it sits in; a zero-width or variation-selector character makes
-/// `alice@corp.com` and a different string look identical), and a length
-/// cap. The SAME function, not a copy, so the two can never drift apart.
+/// The comment is attacker-supplied text that becomes the contact's name, so
+/// it gets exactly the User ID treatment (bidi/invisible strip + cap) via the
+/// SAME function, so the two can never drift.
 fn sanitize_comment(comment: &str) -> String {
     crate::sanitize_untrusted(comment, SSH_COMMENT_MAX)
         .trim()
@@ -139,41 +76,27 @@ fn sanitize_comment(comment: &str) -> String {
 const AGE_BINARY_MAGIC: &[u8] = b"age-encryption.org/v1";
 const AGE_ARMOR_BEGIN: &str = "-----BEGIN AGE ENCRYPTED FILE-----";
 
-/// Rust age's `ssh-rsa` modulus bounds. The lower one is age's own refusal to
-/// touch weak RSA; the upper one is `rsa::RsaPublicKey::MAX_SIZE`.
+/// Lower bound is age's weak-RSA refusal; upper is `rsa::RsaPublicKey::MAX_SIZE`.
 const RSA_MIN_BITS: u32 = 2048;
 const RSA_MAX_BITS: u32 = 4096;
 
-/// age's ssh stanzas identify their recipient by the first four bytes of the
-/// SHA-256 of its public-key blob, base64 (no padding) -- six characters. It
-/// is derived from *public* material alone, which is what makes
-/// [`select_age_decryption_key`] possible without any identity.
+/// Stanza recipient tag: first 4 bytes of SHA-256(public blob), base64. Public
+/// material only, which is what makes [`select_age_decryption_key`] possible.
 const AGE_SSH_TAG_LEN: usize = 4;
 
-/// How much of a file [`age_header_stanzas`] will decode looking for the
-/// header. An age header is a version line, one stanza per recipient and a
-/// MAC line; 64 KiB is thousands of recipients, and the cap keeps the scan
-/// off the (arbitrarily large) payload.
+/// Header scan cap: thousands of recipients, but keeps off the payload.
 const AGE_HEADER_SCAN_LIMIT: u64 = 64 * 1024;
 
-// ---------------------------------------------------------------------------
-// User-facing rejection messages
-//
-// These are shown verbatim in the UI. Each names why the key cannot work and
-// what to do instead; none of them may degrade into "invalid key".
-// ---------------------------------------------------------------------------
+// Shown verbatim in the UI: each names why and what to do, never "invalid key".
 
 const MSG_ECDSA: &str = "ECDSA SSH keys can't be used for encryption — age only supports ssh-ed25519 and ssh-rsa. Generate an Ed25519 key with `ssh-keygen -t ed25519`.";
-// Deliberately says nothing about passphrases: a FIDO key is not
-// passphrase-protected material we failed to open, it is a key whose protocol
-// has no encryption operation at all. Suggesting a retry would be a dead end.
+// Says nothing about passphrases: FIDO has no encryption operation, so a
+// retry would be a dead end.
 const MSG_FIDO: &str = "FIDO/hardware-backed SSH keys can't be used for encryption — the FIDO protocol has no encryption operation. Use a software Ed25519 key.";
 const MSG_DSA: &str = "DSA keys are obsolete (removed from OpenSSH 10.0, rejected by GitHub since 2022) and unsupported. Generate an Ed25519 key.";
 const MSG_LEGACY_PEM: &str = "This key uses the insecure legacy PEM encryption format. Convert it with `ssh-keygen -p -f <key>`, then try again.";
-// Not a refusal: the key is importable, we just need the passphrase to
-// strip its protection. The UI reveals its passphrase field on this and
-// retries from the same step, so it is matched programmatically rather
-// than by prose -- see `sshPassphraseRequiredMessage` below.
+// Not a refusal: the UI matches this programmatically
+// (`sshPassphraseRequiredMessage`) to reveal its passphrase field.
 const MSG_PASSPHRASE_REQUIRED: &str =
     "This SSH key is passphrase-protected. Enter its passphrase to import it.";
 const MSG_PKCS8: &str = "PKCS#8 keys aren't supported. Convert with `ssh-keygen -p -f <key>`.";
@@ -187,18 +110,9 @@ fn msg_rsa_too_large(bits: u32) -> String {
     format!("This RSA key is {bits} bits; we support up to 4096. Note the age CLI accepts larger keys, so a file encrypted elsewhere to this key may not decrypt here.")
 }
 
-// ---------------------------------------------------------------------------
-// Minimal SSH wire-format reader (RFC 4251 §5)
-//
-// Why hand-rolled rather than `ssh-key`'s parser: the rejection messages above
-// have to name the key type, and `ssh-key` only parses types whose Cargo
-// feature is enabled (we do not enable `dsa`). A key it cannot parse comes
-// back as a generic error with the type erased, which is precisely the
-// "generic parse error" outcome the messages exist to avoid. Reading the
-// leading type string off the wire needs ~40 lines and works for every type,
-// supported or not, so the *classification* is ours and only the supported
-// types are handed on.
-// ---------------------------------------------------------------------------
+// Minimal SSH wire-format reader (RFC 4251 §5). Hand-rolled because the
+// rejection messages must name the key type, and `ssh-key` erases the type of
+// keys whose feature is off (`dsa`).
 
 struct SshReader<'a> {
     buf: &'a [u8],
@@ -217,9 +131,8 @@ impl<'a> SshReader<'a> {
         Ok(u32::from_be_bytes([b[0], b[1], b[2], b[3]]))
     }
 
-    /// A length-prefixed byte string. The declared length is checked against
-    /// the remaining input *before* the usize cast, which would truncate on
-    /// wasm32.
+    /// Length checked against the remaining input *before* the usize cast,
+    /// which would truncate on wasm32.
     fn string(&mut self) -> Result<&'a [u8], String> {
         let len = self.u32()? as u64;
         if len > self.buf.len() as u64 {
@@ -260,10 +173,7 @@ fn mpint_bits(mpint: &[u8]) -> u32 {
     }
 }
 
-/// `SHA256:<base64-no-pad>` over the public-key blob -- the fingerprint
-/// `ssh-keygen -l` prints, and the identity this module binds into every AAD.
-///
-/// It is a *public* value, which is exactly why [`validate_identity`] exists:
+/// The AAD identity. Public, which is why [`validate_identity`] exists:
 /// binding to it proves nothing on its own.
 fn fingerprint(blob: &[u8]) -> String {
     format!(
@@ -272,29 +182,18 @@ fn fingerprint(blob: &[u8]) -> String {
     )
 }
 
-/// The recipient tag age writes into an `ssh-ed25519` / `ssh-rsa` stanza for
-/// this public-key blob.
-///
-/// NOT a prefix of [`fingerprint`]'s output even though both hash the same
-/// bytes: base64 packs three bytes into four characters, so truncating the
-/// digest and truncating its base64 diverge at the fourth byte.
+/// The age stanza recipient tag for this blob. NOT a prefix of
+/// [`fingerprint`]: truncated digest and truncated base64 diverge at byte 4.
 fn age_ssh_tag(blob: &[u8]) -> String {
     B64_NO_PAD.encode(&Sha256::digest(blob)[..AGE_SSH_TAG_LEN])
 }
 
-// ---------------------------------------------------------------------------
-// Key-type classification
-// ---------------------------------------------------------------------------
+// ── Key-type classification ──
 
 /// Map an SSH key type we deliberately refuse onto its message.
-///
-/// Extension point: native age identities never reach here -- they are not
-/// SSH key types and would be classified before this call.
 fn rejection_for_key_type(key_type: &str) -> Option<&'static str> {
     if key_type.starts_with("sk-") {
-        // sk-ssh-ed25519@openssh.com, sk-ecdsa-sha2-nistp256@openssh.com.
-        // Checked before the ecdsa arm so an sk-ecdsa key is called FIDO, not
-        // ECDSA -- the FIDO reason is the one the user can act on.
+        // Before the ecdsa arm: an sk-ecdsa key is FIDO, the actionable reason.
         return Some(MSG_FIDO);
     }
     if key_type.starts_with("ecdsa-sha2-") {
@@ -306,11 +205,8 @@ fn rejection_for_key_type(key_type: &str) -> Option<&'static str> {
     None
 }
 
-/// Everything this module needs to know about a public key, all of it
-/// non-secret.
 struct SshPublicKey {
-    /// Canonical `"<type> <base64>"` recipient line, comment stripped. This
-    /// is what `age::ssh::Recipient::from_str` is fed.
+    /// Comment stripped; fed to `age::ssh::Recipient::from_str`.
     recipient: String,
     algorithm: String,
     fingerprint: String,
@@ -346,11 +242,8 @@ fn check_supported_blob(blob: &[u8]) -> Result<String, String> {
     }
 }
 
-/// Parse an `authorized_keys`-style line: `<type> <base64> [comment]`.
-///
-/// The comment is parsed here rather than taken from age, because age's
-/// `Display for ssh::Recipient` drops it -- and for an SSH key the comment is
-/// the only human-readable name there is.
+/// Parse an `authorized_keys`-style line: `<type> <base64> [comment]`. The
+/// comment is parsed here because age's `Display` drops it.
 fn parse_public_key_line(line: &str) -> Result<SshPublicKey, String> {
     let line = line.trim();
     if line.starts_with("-----BEGIN") {
@@ -362,9 +255,7 @@ fn parse_public_key_line(line: &str) -> Result<SshPublicKey, String> {
     let mut parts = line.splitn(3, char::is_whitespace);
     let key_type = parts.next().unwrap_or("");
     let encoded = parts.next().unwrap_or("").trim();
-    // Everything after the base64 is the comment, which may itself contain
-    // spaces ("alice@host", but also "work laptop"). Sanitized here, at
-    // the one place a pasted or fetched line's comment enters the app.
+    // Sanitized here, where a pasted or fetched comment enters the app.
     let comment = sanitize_comment(parts.next().unwrap_or(""));
 
     if key_type.is_empty() || encoded.is_empty() {
@@ -374,10 +265,8 @@ fn parse_public_key_line(line: &str) -> Result<SshPublicKey, String> {
         .decode(encoded)
         .map_err(|_| "Not an SSH public key (the base64 body is malformed)".to_string())?;
 
-    // The type appears twice -- as the leading token and inside the blob --
-    // and OpenSSH treats the in-blob one as authoritative. Requiring them to
-    // agree stops a key from being classified as one type and used as
-    // another.
+    // OpenSSH treats the in-blob type as authoritative; requiring agreement
+    // stops a key being classified as one type and used as another.
     let inner = blob_key_type(&blob)?;
     if inner != key_type {
         return Err(format!(
@@ -394,14 +283,9 @@ fn parse_public_key_line(line: &str) -> Result<SshPublicKey, String> {
     })
 }
 
-/// Turn a recipient line into an age recipient, keeping our messages.
-///
-/// Extension point: a native age recipient (`age1…`) would be a second arm
-/// here returning a `Box<dyn age::Recipient>`.
+/// Extension point: a native `age1…` recipient would be a second arm here.
 fn age_recipient(line: &str) -> Result<::age::ssh::Recipient, String> {
-    // Our own classification runs first so the failure modes age reports
-    // coarsely (`Unsupported`, `RsaModulusTooLarge`) arrive as the specific
-    // messages above.
+    // Ours first, so age's coarse errors arrive as our specific messages.
     let parsed = parse_public_key_line(line)?;
     parsed
         .recipient
@@ -409,32 +293,21 @@ fn age_recipient(line: &str) -> Result<::age::ssh::Recipient, String> {
         .map_err(|e| format!("age rejected this SSH recipient: {e:?}"))
 }
 
-// ---------------------------------------------------------------------------
-// Import-time normalization
-//
-// The whole point of this section: whatever OpenSSH file the user hands us,
-// what gets sealed is always an *unencrypted* OpenSSH private key. That is the
-// one form `age::ssh::Identity::from_buffer` can use without callbacks.
-// ---------------------------------------------------------------------------
+// Import-time normalization: whatever the input, what gets sealed is an
+// *unencrypted* OpenSSH key, the one form `from_buffer` uses without callbacks.
 
-/// A key that has been stripped of its source passphrase and is ready to seal.
 struct NormalizedIdentity {
     /// Unencrypted OpenSSH private key, PEM text. Secret.
     plaintext: Zeroizing<Vec<u8>>,
     public: SshPublicKey,
 }
 
-/// The OpenSSH private-key envelope's leading magic, before the base64 body.
 const OPENSSH_MAGIC: &[u8] = b"openssh-key-v1\0";
 const OPENSSH_BEGIN: &str = "-----BEGIN OPENSSH PRIVATE KEY-----";
 const OPENSSH_END: &str = "-----END OPENSSH PRIVATE KEY-----";
 
-/// Pull the cleartext public-key blob out of an OpenSSH private key *without*
-/// decrypting it, so the key type can be classified (and rejected) before the
-/// user is asked for a passphrase they may not need to supply.
-///
-/// Layout: magic, string ciphername, string kdfname, string kdfoptions,
-/// u32 nkeys, string publickey[0], ...
+/// The cleartext public blob of an OpenSSH private key, read *without*
+/// decrypting, so the type is classified before asking for a passphrase.
 fn openssh_public_blob(pem: &str) -> Result<Vec<u8>, String> {
     let body: String = pem
         .lines()
@@ -467,9 +340,7 @@ fn reject_foreign_private_key_format(text: &str) -> Option<&'static str> {
     if trimmed.starts_with("PuTTY-User-Key-File") {
         return Some(MSG_PPK);
     }
-    // A legacy PEM key encrypted with the pre-OpenSSH-v1 scheme. Checked
-    // before the PKCS#8 arm: `Proc-Type` is the load-bearing marker and can
-    // sit under several BEGIN lines.
+    // Before the PKCS#8 arm: `Proc-Type` can sit under several BEGIN lines.
     if text.contains("Proc-Type: 4,ENCRYPTED") {
         return Some(MSG_LEGACY_PEM);
     }
@@ -481,12 +352,8 @@ fn reject_foreign_private_key_format(text: &str) -> Option<&'static str> {
     None
 }
 
-/// Parse an OpenSSH private key, strip its passphrase, and re-emit it
-/// unencrypted.
-///
-/// `source_passphrase` is the passphrase on the *file*, empty when the key is
-/// unencrypted. It is consumed here and nowhere else; the caller owns it in a
-/// `Zeroizing` and it dies at the end of the wasm call.
+/// Parse an OpenSSH private key, strip its passphrase, re-emit unencrypted.
+/// `source_passphrase` (empty if none) is caller-owned in `Zeroizing`.
 fn normalize_openssh_identity(
     key_file: &[u8],
     source_passphrase: &[u8],
@@ -504,9 +371,8 @@ fn normalize_openssh_identity(
         );
     }
 
-    // Classify from the cleartext public half first: a FIDO or ECDSA key must
-    // be refused with its own message even when it is passphrase-protected,
-    // and without asking for that passphrase.
+    // Classify the cleartext public half first: FIDO/ECDSA are refused even
+    // when protected, without asking for the passphrase.
     let blob = openssh_public_blob(text)?;
     check_supported_blob(&blob)?;
 
@@ -523,25 +389,17 @@ fn normalize_openssh_identity(
         key
     };
 
-    // `to_openssh` hands back a `Zeroizing<String>`; the `Vec<u8>` copy is
-    // wrapped in `Zeroizing` too, and the `String` is dropped (and wiped) at
-    // the end of this function.
+    // Both the `Zeroizing<String>` and its `Vec<u8>` copy are wiped.
     let pem = key
         .to_openssh(ssh_key::LineEnding::LF)
         .map_err(|e| format!("Could not normalize this OpenSSH private key: {e}"))?;
     let plaintext = Zeroizing::new(pem.as_bytes().to_vec());
 
-    // Re-derive the public half from the *normalized* bytes rather than
-    // trusting the input's copy, so what we fingerprint is exactly what we
-    // seal.
+    // Re-derive from the normalized bytes so what we fingerprint is what we seal.
     let public = public_key_of_normalized(&plaintext)?;
-    // A private key file's comment names the user's own key in the list:
-    // the same untrusted text as a `.pub` line's, cleaned the same way.
     let comment = sanitize_comment(key.comment());
 
-    // Final gate: age itself must accept the normalized bytes as a usable
-    // identity. If it would not, the import fails now rather than at the
-    // user's first decrypt.
+    // Final gate: age must accept the bytes now, not at the first decrypt.
     match ::age::ssh::Identity::from_buffer(plaintext.as_slice(), None) {
         Ok(::age::ssh::Identity::Unencrypted(_)) => {}
         Ok(::age::ssh::Identity::Encrypted(_)) => {
@@ -562,8 +420,7 @@ fn normalize_openssh_identity(
     })
 }
 
-/// The public half of a normalized (unencrypted) OpenSSH private key.
-/// Comment is left empty; callers that have one fill it in.
+/// Comment is left empty; callers fill it in.
 fn public_key_of_normalized(plaintext: &[u8]) -> Result<SshPublicKey, String> {
     let text = std::str::from_utf8(plaintext)
         .map_err(|_| "Stored SSH key is not text".to_string())?;
@@ -577,40 +434,22 @@ fn public_key_of_normalized(plaintext: &[u8]) -> Result<SshPublicKey, String> {
     })
 }
 
-// ---------------------------------------------------------------------------
-// Identity store
-// ---------------------------------------------------------------------------
+// ── Identity store ──
 
-// A `protected::HandleStore` of its own -- the same machinery as `lib.rs`'s
-// `KEY_STORE` and `crx.rs`'s `CRX_KEY_STORE`, deliberately a separate
-// instance so the "KEY_STORE is OpenPGP-only and populated only by
-// unlockWith*" invariant (SECURITY.md §4) stays true. Handles come from the
-// crate-wide `next_handle`, so no two stores ever issue the same one.
+// Separate from `KEY_STORE` so "KEY_STORE is OpenPGP-only and filled only by
+// unlockWith*" (SECURITY.md §4) holds. Handles come from the crate-wide
+// `next_handle`, so no two stores issue the same one.
 thread_local! {
     static SSH_KEY_STORE: protected::HandleStore = protected::HandleStore::new();
 }
 
-/// Assert that decrypted plaintext really is the private key its AAD claims,
-/// then store it.
+/// Assert decrypted plaintext is the key its AAD claims, then store it.
 ///
-/// The AAD binds a blob to a fingerprint *string*, and fingerprints are
-/// public: an attacker can seal their own key under a victim's fingerprint,
-/// and the AEAD tag will verify. Two checks close that, and both are needed:
-///
-/// 1. The public blob carried inside the OpenSSH key must hash to the bound
-///    fingerprint. This ties identity -> public key.
-/// 2. A live round-trip -- encrypt a random probe to the recipient derived
-///    from that public blob, then decrypt it with the identity. This ties
-///    public key -> private key, and is the part a forged file cannot fake:
-///    it is the same operation a real decrypt performs.
-///
-/// Check 1 alone would accept a file whose cleartext public section was
-/// copied from the victim; check 2 alone would accept a self-consistent
-/// foreign key. Together they are self-certifying.
-///
-/// `crx.rs::store_decrypted_der` is the precedent (it re-derives the
-/// extension id from the key's public half). On rejection the payload is
-/// dropped inside `insert_validated`, which zeroizes it.
+/// Fingerprints are public, so anyone can seal their own key under a victim's
+/// and the tag verifies. Both checks are needed: (1) the embedded public blob
+/// hashes to the bound fingerprint; (2) a live round-trip to that public key
+/// decrypts with the identity. Rejected payloads are zeroized in
+/// `insert_validated`. Precedent: `crx.rs::store_decrypted_der`.
 fn store_normalized_identity(
     plaintext: Zeroizing<Vec<u8>>,
     expected_fingerprint: &str,
@@ -634,9 +473,7 @@ fn validate_identity(plaintext: &[u8], expected_fingerprint: &str) -> Result<(),
     }
     let recipient = age_recipient(&public.recipient)?;
 
-    // The probe is random so a replayed/precomputed ciphertext proves
-    // nothing; it is drawn from the crate CSPRNG like every other value this
-    // module controls.
+    // Random so a replayed/precomputed ciphertext proves nothing.
     let mut probe = Zeroizing::new(vec![0u8; 32]);
     rng::fill(probe.as_mut_slice())?;
     let sealed = age_encrypt(&probe, &[recipient], false)?;
@@ -648,9 +485,7 @@ fn validate_identity(plaintext: &[u8], expected_fingerprint: &str) -> Result<(),
     Ok(())
 }
 
-// ---------------------------------------------------------------------------
-// age encrypt / decrypt
-// ---------------------------------------------------------------------------
+// ── age encrypt / decrypt ──
 
 fn age_encrypt(
     plaintext: &[u8],
@@ -683,9 +518,7 @@ fn age_encrypt(
     Ok(out)
 }
 
-/// Decrypt an age file, binary or armored -- `ArmoredReader` sniffs the first
-/// 36 bytes for the armor marker and passes binary input straight through, so
-/// callers never have to say which they have.
+/// Decrypt an age file, binary or armored (`ArmoredReader` sniffs the marker).
 fn age_decrypt(
     ciphertext: &[u8],
     identity: &::age::ssh::Identity,
@@ -708,15 +541,11 @@ fn age_decrypt(
     Ok(plaintext)
 }
 
-// ---------------------------------------------------------------------------
-// WASM exports: public / no secret material
-// ---------------------------------------------------------------------------
+// ── WASM exports: public / no secret material ──
 
 /// Parse an SSH public key line into `{ recipient, algorithm, fingerprint,
-/// comment }`. No secret material in or out.
-///
-/// `recipient` is the canonical `<type> <base64>` form with the comment
-/// stripped -- that is what [`encrypt_age_to_recipients`] expects back.
+/// comment }`. `recipient` is the comment-stripped form
+/// [`encrypt_age_to_recipients`] expects back.
 #[wasm_bindgen(js_name = "parseSshRecipient")]
 pub fn parse_ssh_recipient(line: &str) -> Result<String, String> {
     let key = parse_public_key_line(line)?;
@@ -729,12 +558,8 @@ pub fn parse_ssh_recipient(line: &str) -> Result<String, String> {
     .to_string())
 }
 
-/// Encrypt to one or more SSH recipients. `recipients_json` is a JSON array
-/// of public-key lines. `armor` selects the
-/// `-----BEGIN AGE ENCRYPTED FILE-----` form over the binary one.
-///
-/// Every recipient must be usable: a single bad key fails the whole call
-/// rather than silently producing a file the user cannot share as intended.
+/// Encrypt to SSH recipients (`recipients_json`: array of public-key lines).
+/// One bad key fails the whole call rather than silently dropping a recipient.
 #[wasm_bindgen(js_name = "encryptAgeToRecipients")]
 pub fn encrypt_age_to_recipients(
     plaintext: &[u8],
@@ -750,14 +575,12 @@ pub fn encrypt_age_to_recipients(
     age_encrypt(plaintext, &recipients, armor)
 }
 
-/// Whether `data` looks like an age message -- binary header or armor marker.
-/// A cheap sniff for routing, not a validity check.
+/// Cheap sniff for routing (binary header or armor marker), not validation.
 #[wasm_bindgen(js_name = "isAgeMessage")]
 pub fn is_age_message(data: &[u8]) -> bool {
     if data.starts_with(AGE_BINARY_MAGIC) {
         return true;
     }
-    // Armored files may carry leading whitespace from a copy/paste.
     let head = &data[..data.len().min(256)];
     match std::str::from_utf8(head) {
         Ok(text) => text.trim_start().starts_with(AGE_ARMOR_BEGIN),
@@ -766,21 +589,11 @@ pub fn is_age_message(data: &[u8]) -> bool {
     }
 }
 
-/// The `(stanza tag, first argument)` pairs in an age file's header.
-///
-/// The header is ASCII and self-delimiting: a version line, one `-> tag args`
-/// stanza per recipient (each followed by its base64 body), then a `---` MAC
-/// line that ends it. Reading it needs no key of any kind.
-///
-/// Only the *first* argument is kept, because that is where both ssh stanza
-/// types put the recipient tag. Scanning stops at the MAC line so the binary
-/// payload after it is never treated as text; a header larger than
-/// [`AGE_HEADER_SCAN_LIMIT`] is truncated rather than followed, which can only
-/// lose stanzas (never invent one -- a match still has to reproduce the tag).
+/// The `(stanza tag, first argument)` pairs in an age file's header; needs no
+/// key. Stops at the `---` MAC line so the payload is never read as text; past
+/// [`AGE_HEADER_SCAN_LIMIT`] it truncates, which can only lose stanzas, never
+/// invent one.
 fn age_header_stanzas(ciphertext: &[u8]) -> Result<Vec<(String, String)>, String> {
-    // `ArmoredReader` sniffs the armor marker and passes binary straight
-    // through, exactly as `age_decrypt` relies on -- so callers need not say
-    // which form they hold.
     let mut head = Vec::new();
     ::age::armor::ArmoredReader::new(ciphertext)
         .take(AGE_HEADER_SCAN_LIMIT)
@@ -808,19 +621,10 @@ fn age_header_stanzas(ciphertext: &[u8]) -> Result<Vec<(String, String)>, String
     Ok(stanzas)
 }
 
-/// Pick which of the caller's SSH public keys should decrypt `ciphertext`, by
-/// matching the header's ssh stanza tags against each candidate. Returns JSON:
-/// the index into `candidates_json`, or `null` when nothing matches.
-///
-/// The age counterpart of `lib.rs`'s `selectDecryptionKey`, and the same
-/// promise: the UI can default-select the right identity up front, without
-/// unlocking any of them. Nothing secret is read or returned -- the tag is a
-/// hash of the recipient's *public* key.
-///
-/// A candidate matches only when the stanza type equals its algorithm AND the
-/// tag reproduces, so a 4-byte collision between an `ssh-rsa` and an
-/// `ssh-ed25519` key cannot cross the two. A candidate this module would
-/// refuse as a recipient is skipped rather than matched.
+/// Index into `candidates_json` of the SSH key whose stanza tag matches, or
+/// `null` -- the age twin of `selectDecryptionKey`; nothing secret involved.
+/// Stanza type must equal the algorithm too, so a 4-byte tag collision cannot
+/// cross `ssh-rsa` and `ssh-ed25519`.
 #[wasm_bindgen(js_name = "selectAgeDecryptionKey")]
 pub fn select_age_decryption_key(
     ciphertext: &[u8],
@@ -833,8 +637,7 @@ pub fn select_age_decryption_key(
         let Ok(key) = parse_public_key_line(line) else {
             return false;
         };
-        // `recipient` is canonical `<type> <base64>`, so the body is exactly
-        // the blob the tag is computed over.
+        // Canonical `<type> <base64>`: the body is exactly the tagged blob.
         let Some((_, encoded)) = key.recipient.split_once(' ') else {
             return false;
         };
@@ -850,30 +653,17 @@ pub fn select_age_decryption_key(
     serde_json::to_string(&matched).str_err()
 }
 
-/// Name the format of a private key file we will not accept, before anything
-/// is asked of the user. Returns JSON: one of the curated messages, or `null`
-/// when the file is not a format we recognise-but-refuse.
-///
-/// Recognition is not acceptance: this exists so a PuTTY `.ppk`, a PKCS#8 key
-/// or a legacy encrypted PEM is named at import time rather than reaching the
-/// protect step and failing there. It is the same classification
-/// [`normalize_openssh_identity`] performs, hoisted so the answer is available
-/// without a passphrase.
-///
-/// The file crosses the boundary but nothing secret comes back, and the copy
-/// wasm-bindgen marshalled is wiped on return -- the same `Vec<u8>` ->
-/// `Zeroizing` contract every secret parameter in this module keeps.
 /// The exact message `protectSshIdentityWith*` returns when the key needs
-/// its passphrase. Exported so the JS side can recognise that case by
-/// comparing against this value at runtime instead of matching on prose:
-/// a transcribed copy drifts the moment the wording is edited, and the
-/// failure is silent -- the passphrase field simply stops appearing and
-/// passphrase-protected keys become unimportable. Carries no secret.
+/// its passphrase. JS compares against this value rather than matching prose:
+/// a transcribed copy drifts silently and protected keys become unimportable.
 #[wasm_bindgen(js_name = "sshPassphraseRequiredMessage")]
 pub fn ssh_passphrase_required_message() -> String {
     MSG_PASSPHRASE_REQUIRED.to_string()
 }
 
+/// JSON: the curated message for a private-key format we recognise but refuse
+/// (`.ppk`, PKCS#8, legacy PEM), or `null` -- named at import, before any
+/// passphrase is asked. `key_file` is owned and wiped on return.
 #[wasm_bindgen(js_name = "sshPrivateKeyFormatRejection")]
 pub fn ssh_private_key_format_rejection(key_file: Vec<u8>) -> Result<String, String> {
     let key_file = Zeroizing::new(key_file);
@@ -883,25 +673,16 @@ pub fn ssh_private_key_format_rejection(key_file: Vec<u8>) -> Result<String, Str
     serde_json::to_string(&rejection).str_err()
 }
 
-// ---------------------------------------------------------------------------
-// WASM exports: secret-side
+// ── WASM exports: secret-side ──
 //
 // @secret-handling (mirrors the convention documented in
 // `lib/pgp/wasm-secrets.ts`)
 //
-// Every secret parameter below is taken **by value** as `Vec<u8>` and wrapped
-// in `Zeroizing` on the first line of the function, so the copy wasm-bindgen
-// marshalled across the ABI is overwritten on function exit -- including on
-// the error paths. This is deliberately stricter than `crx.rs`'s unlock
-// exports, which still take `&[u8]` and therefore leave the marshalled
-// password unzeroized (see `T-UNLOCK-PARAM-NOT-OWNED` in
-// `lib/security/threat-model.ts`).
-//
-// Plaintext key material never crosses to JS from this module: there is no
-// export here that returns a private key. The only secret that leaves is the
-// *decrypted message* from `decryptAgeWithHandle`, which is the point of the
-// call.
-// ---------------------------------------------------------------------------
+// Every secret param is taken by value and wrapped in `Zeroizing` on the first
+// line, so the marshalled copy is wiped on every exit path
+// (`T-UNLOCK-PARAM-NOT-OWNED`).
+// No export returns a private key; only `decryptAgeWithHandle`'s plaintext
+// leaves, which is the point of the call.
 
 /// Metadata packed ahead of the protection blob. Public values only.
 fn protect_meta_json(public: &SshPublicKey) -> String {
@@ -923,8 +704,8 @@ fn protect_meta_json(public: &SshPublicKey) -> String {
 ///   out: encrypted blob + public-only metadata
 ///
 /// Returns packed `[u32_le json_len][json][blob]`; `blob` is
-/// `[16 salt][12 iv][ct]`. The sealed payload is the key *normalized to
-/// unencrypted OpenSSH form* -- see the module header for why.
+/// `[16 salt][12 iv][ct]`. The sealed payload is the key normalized to
+/// unencrypted OpenSSH form.
 #[wasm_bindgen(js_name = "protectSshIdentityWithPassword")]
 pub fn protect_ssh_identity_with_password(
     key_file: Vec<u8>,
@@ -997,11 +778,6 @@ pub fn protect_ssh_identity_with_prf(
 ///   out: an opaque `u32` handle -- no key material crosses to JS
 ///   contract: the plaintext key is validated against `fingerprint` before it
 ///             becomes reachable (see [`store_normalized_identity`]).
-// The argument list is the one the JS boundary already carries for every
-// password unlock in the crate (`unlockWithPassword`, `unlockCrxWithPassword`):
-// the three slices of `[16 salt][12 iv][ct]`, the identity, the password and
-// the three Argon2 parameters. Bundling them into a struct would move the same
-// nine values one layer out, exactly as `protected::open_with_password` notes.
 #[allow(clippy::too_many_arguments)]
 #[wasm_bindgen(js_name = "unlockSshIdentityWithPassword")]
 pub fn unlock_ssh_identity_with_password(
@@ -1056,17 +832,11 @@ pub fn unlock_ssh_identity_with_prf(
     store_normalized_identity(plaintext, fingerprint)
 }
 
-/// Re-seal an already-unlocked SSH identity (by handle) under a NEW PRF
-/// output + stored secret, WITHOUT the plaintext leaving WASM. The SSH
-/// twin of `lib.rs::reprotect_key_with_prf`; see that doc-comment for why
-/// it exists. The handle is read, not consumed, and `SSH_KEY_STORE` is not
-/// touched. Returns `[12 iv][ct]`.
-///
-/// The AAD identity is re-derived from the stored plaintext rather than
-/// taken from JS, so a caller cannot re-seal a key under someone else's
-/// fingerprint -- and it is reported back in the packed metadata
-/// (`{"keyId": <SHA256:... fingerprint>}`, then `[12 iv][ct]`) so the JS
-/// side can refuse to write the result over a different keyring entry.
+/// Re-seal an unlocked SSH identity under a NEW PRF output without the
+/// plaintext leaving WASM (twin of `lib.rs::reprotect_key_with_prf`). The
+/// AAD identity is re-derived from the stored key, never taken from JS, and
+/// returned as `{"keyId": ...}` before `[12 iv][ct]` so JS can refuse to
+/// overwrite a different keyring entry.
 ///
 /// @secret-handling
 ///   in:  `prf_output`; `stored_secret` is the persisted HKDF salt
@@ -1125,9 +895,7 @@ pub fn drop_ssh_identity(handle: u32) -> Result<(), String> {
     Ok(())
 }
 
-// ---------------------------------------------------------------------------
-// Tests (run natively via `cargo test`)
-// ---------------------------------------------------------------------------
+// ── Tests (native `cargo test`) ──
 
 
 
@@ -1135,19 +903,10 @@ pub fn drop_ssh_identity(handle: u32) -> Result<(), String> {
 mod age_tests {
     use super::*;
 
-    // ── Fixtures ────────────────────────────────────────────────────
-    //
-    // Throwaway keys generated for this suite with `ssh-keygen` (OpenSSH
-    // 9.x) -- no user key material is in this repo, per SECURITY.md. The
-    // `AGE_CLI_*` ciphertexts were produced by the real Go `age` CLI
-    // v1.2.1 against these same public keys, and are the cross-tool
-    // vectors: the `ssh-rsa` / `ssh-ed25519` stanza types are not in the
-    // C2SP age spec, so agreement with Go age is the only spec there is.
-    // `age_cli_decrypts_our_ciphertext` re-checks the other direction
-    // live when the CLI is installed.
-    //
-    // Declared at column 0 on purpose: indenting them would indent the
-    // PEM and armor bodies inside the raw strings, which base64 rejects.
+    // Throwaway `ssh-keygen` fixtures, no user key material (SECURITY.md).
+    // `AGE_CLI_*` were produced by Go `age` v1.2.1 against these keys: the
+    // cross-tool vectors. At column 0 on purpose: indenting would indent the
+    // raw-string PEM/armor bodies, which base64 rejects.
 
 const ED25519_PUB: &str = r#"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIALwHu/03Nd9eyyrPgxjkFu80Fe1EgN06J8iaY8B+wf6 alice@example.com"#;
 
@@ -1253,19 +1012,16 @@ ZUZrCvPvnre8VsB2Zkcbq5QR6o4edRYz+RCsF3FG1UuE/VEvAziYUUVoA/f8FQmj
 
 const ENC_KEY_PASSPHRASE: &[u8] = b"correct horse battery staple";
 const PLAINTEXT: &[u8] = b"cross-tool vector: hello from the age CLI";
-/// A `sk-ssh-ed25519@openssh.com` public key line, hand-assembled: a real
-/// one needs a hardware token, and the rejection depends only on the key
-/// type string.
+/// Hand-assembled: a real one needs a hardware token, and the rejection
+/// depends only on the type string.
 const FIDO_PUB: &str = "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4fAAAABHNzaDo= fido@example.com";
 
-    // Deliberately weak Argon2 parameters: these tests exercise the
-    // envelope's plumbing, not its cost. Production values come from JS.
+    // Weak on purpose: tests the plumbing, not the cost.
     const TEST_MEM_KIB: u32 = 64;
     const TEST_ITERS: u32 = 1;
     const TEST_PAR: u32 = 1;
 
-    // Fingerprints as `ssh-keygen -lf` prints them. Hard-coded rather than
-    // recomputed so the test would catch us changing how we hash.
+    // Hard-coded `ssh-keygen -lf` output, so a change in how we hash is caught.
     const ED25519_FPR: &str = "SHA256:hfBcXl2f8ULI3/KX9lgL1e+zsWQSQc75zL8naYRM1rY";
     const ED25519_ENC_FPR: &str = "SHA256:yOrpBFC84MjVC8NpQZB2mAmivzrwfVrRynXtzWzq/s0";
     const RSA2048_FPR: &str = "SHA256:7TZXYGCK6AyEBeqIG4ReYtoGyg7fYPbnQIe1icaOsO0";
@@ -1317,8 +1073,6 @@ const FIDO_PUB: &str = "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZ
             serde_json::from_str(&parse_ssh_recipient(ED25519_PUB).unwrap()).unwrap();
         assert_eq!(json["algorithm"], "ssh-ed25519");
         assert_eq!(json["fingerprint"], ED25519_FPR);
-        // The comment is ours to parse: age's Display drops it, and it is
-        // the only human-readable name an SSH key has.
         assert_eq!(json["comment"], "alice@example.com");
         // Canonical recipient: type + base64, comment stripped.
         assert_eq!(
@@ -1338,8 +1092,6 @@ const FIDO_PUB: &str = "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZ
 
     #[test]
     fn keeps_a_multi_word_comment_intact() {
-        // ED25519_PUB already carries a comment, so build the line from the
-        // canonical two-token form.
         let two_token = ED25519_PUB.rsplit_once(' ').unwrap().0;
         let json: serde_json::Value =
             serde_json::from_str(&parse_ssh_recipient(&format!("{two_token} work laptop")).unwrap())
@@ -1357,9 +1109,7 @@ const FIDO_PUB: &str = "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZ
 
     #[test]
     fn strips_invisible_and_control_characters_from_a_comment() {
-        // The comment becomes the contact's name: a bidi override, a
-        // zero-width space or a variation selector inside it makes a
-        // different string read as `alice@corp.com`.
+        // Bidi / zero-width / variation selectors would spoof the name.
         let two_token = ED25519_PUB.rsplit_once(' ').unwrap().0;
         for hidden in [
             "\u{202e}", "\u{200b}", "\u{200d}", "\u{2066}", "\u{fe0f}", "\u{feff}", "\u{00ad}",
@@ -1386,8 +1136,7 @@ const FIDO_PUB: &str = "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZ
 
     #[test]
     fn rejects_a_line_whose_label_and_blob_disagree() {
-        // The blob is authoritative in OpenSSH; disagreement must not be
-        // silently resolved in either direction.
+        // The blob is authoritative; disagreement must not be resolved silently.
         let b64 = ED25519_PUB.split(' ').nth(1).unwrap();
         let err = parse_ssh_recipient(&format!("ssh-rsa {b64}")).unwrap_err();
         assert!(err.contains("inconsistent"), "{err}");
@@ -1417,8 +1166,7 @@ const FIDO_PUB: &str = "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZ
     #[test]
     fn rejects_fido_public_key() {
         assert_eq!(parse_ssh_recipient(FIDO_PUB).unwrap_err(), MSG_FIDO);
-        // Must never suggest a passphrase retry: FIDO has no encryption
-        // operation at all, so retrying is a dead end.
+        // FIDO has no encryption operation: a retry hint would be a dead end.
         assert!(!MSG_FIDO.to_lowercase().contains("passphrase"));
     }
 
@@ -1442,7 +1190,6 @@ const FIDO_PUB: &str = "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZ
             err,
             "This RSA key is 8192 bits; we support up to 4096. Note the age CLI accepts larger keys, so a file encrypted elsewhere to this key may not decrypt here."
         );
-        // The whole point of this message is that it is NOT a parse error.
         assert!(!err.contains("invalid"));
     }
 
@@ -1495,10 +1242,7 @@ const FIDO_PUB: &str = "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZ
         assert_eq!(err, MSG_PPK);
     }
 
-    /// The same three formats, named up front by the export the import
-    /// preview calls -- no passphrase, no protect step. This is what puts
-    /// MSG_PPK / MSG_LEGACY_PEM / MSG_PKCS8 in front of the user at all: the
-    /// import flow routes on the format and shows whatever comes back here.
+    /// The import preview names these formats up front, no passphrase asked.
     #[test]
     fn names_foreign_private_key_formats_without_a_passphrase() {
         for (file, expected) in [
@@ -1518,8 +1262,7 @@ const FIDO_PUB: &str = "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZ
                 "-----BEGIN ENCRYPTED PRIVATE KEY-----\nMIIB\n-----END ENCRYPTED PRIVATE KEY-----\n",
                 Some(MSG_PKCS8),
             ),
-            // Ours, and a PGP block: neither is a format we recognise-but-
-            // refuse, so neither may be claimed from the paths that own them.
+            // Formats owned by other paths must not be claimed here.
             (ED25519_KEY, None),
             ("-----BEGIN PGP PRIVATE KEY BLOCK-----\n", None),
             ("-----BEGIN RSA PRIVATE KEY-----\nZmFrZQ==\n", None),
@@ -1533,8 +1276,7 @@ const FIDO_PUB: &str = "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZ
         }
     }
 
-    /// Binary that is not UTF-8 is not a foreign *text* format -- it must come
-    /// back `null` rather than erroring, so the caller can fall through.
+    /// Non-UTF-8 comes back `null`, not an error, so the caller falls through.
     #[test]
     fn foreign_format_check_tolerates_binary() {
         let json = ssh_private_key_format_rejection(vec![0xff, 0xfe, 0x00]).unwrap();
@@ -1548,8 +1290,7 @@ const FIDO_PUB: &str = "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZ
         serde_json::from_str(&json).unwrap()
     }
 
-    /// The tag is a public value, so the match works with no identity at all
-    /// -- including against ciphertext the Go CLI produced.
+    /// The tag is public: matching needs no identity, even on Go CLI output.
     #[test]
     fn selects_the_identity_a_file_is_encrypted_to() {
         let candidates = [RSA2048_PUB, ED25519_PUB];
@@ -1566,8 +1307,7 @@ const FIDO_PUB: &str = "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZ
         }
     }
 
-    /// Both forms of our own output, and the index is into the candidate list
-    /// the caller passed -- not the recipient order in the file.
+    /// The index is into the caller's candidate list, not the file's order.
     #[test]
     fn selects_from_our_own_ciphertext_in_both_forms() {
         for armor in [false, true] {
@@ -1591,8 +1331,7 @@ const FIDO_PUB: &str = "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZ
         assert_eq!(selected(&ct, &[ECDSA_PUB, DSA_PUB, "not a key"]), None);
     }
 
-    /// The tag is only four bytes, so the stanza *type* is checked too: an
-    /// `ssh-rsa` key can never answer an `ssh-ed25519` stanza.
+    /// The tag is only four bytes, so the stanza type must agree too.
     #[test]
     fn selection_requires_the_stanza_type_to_agree() {
         let ct = B64.decode(AGE_CLI_CT_ED25519_BIN_B64).unwrap();
@@ -1600,8 +1339,7 @@ const FIDO_PUB: &str = "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZ
         assert_eq!(stanzas.len(), 1);
         assert_eq!(stanzas[0].0, "ssh-ed25519");
 
-        // Same tag, wrong stanza type -> no match. Spliced at the byte level:
-        // the header is ASCII but the payload after it is not.
+        // Spliced at the byte level: the payload after the header is not ASCII.
         let needle = b"-> ssh-ed25519 ";
         let at = ct
             .windows(needle.len())
@@ -1624,9 +1362,7 @@ const FIDO_PUB: &str = "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZ
         .is_err());
     }
 
-    /// The stanza tag is NOT a prefix of the `SHA256:` fingerprint, even
-    /// though both hash the same blob -- base64 boundaries differ. Pinned so
-    /// nobody "simplifies" one into the other.
+    /// Pinned so nobody "simplifies" the tag into a fingerprint prefix.
     #[test]
     fn stanza_tag_is_not_a_fingerprint_prefix() {
         let blob = B64.decode(ED25519_PUB.split(' ').nth(1).unwrap()).unwrap();
@@ -1697,8 +1433,7 @@ const FIDO_PUB: &str = "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZ
 
     #[test]
     fn one_bad_recipient_fails_the_whole_call() {
-        // Silently dropping an unusable recipient would hand the user a
-        // file they believe is shareable and is not.
+        // Dropping an unusable recipient would yield a file that isn't shareable.
         let err = encrypt_age_to_recipients(
             PLAINTEXT,
             &recipients_json(&[ED25519_PUB, ECDSA_PUB]),
@@ -1746,8 +1481,7 @@ const FIDO_PUB: &str = "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZ
 
     #[test]
     fn the_source_passphrase_is_stripped_not_carried() {
-        // What gets sealed must be an *unencrypted* OpenSSH key -- that is
-        // the only form `age::ssh::Identity` can use without callbacks.
+        // Sealed form must be unencrypted OpenSSH (usable without callbacks).
         let normalized =
             normalize_openssh_identity(ED25519_ENC_KEY.as_bytes(), ENC_KEY_PASSPHRASE).unwrap();
         let text = std::str::from_utf8(&normalized.plaintext).unwrap();
@@ -1877,8 +1611,7 @@ const FIDO_PUB: &str = "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZ
 
     #[test]
     fn the_ssh_prf_info_string_is_not_the_pgp_or_crx_one() {
-        // Same authenticator, same PRF output: colliding info strings would
-        // derive one AES key for two key types.
+        // Colliding info strings would derive one AES key for two key types.
         assert_ne!(SSH_PRF_HKDF_INFO, b"gpg-tools-prf-v1");
         assert_ne!(SSH_PRF_HKDF_INFO, b"gpg-tools-crx-prf-v1");
         for other in [
@@ -1897,8 +1630,7 @@ const FIDO_PUB: &str = "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZ
 
     // ── Identity validation (`insert_validated`) ────────────────────
 
-    /// Seal `plaintext` under an arbitrary fingerprint, exactly as an
-    /// attacker with a text editor and our own envelope could.
+    /// Seal under an arbitrary fingerprint, as an attacker could.
     fn forge_blob(plaintext: &[u8], claimed_fpr: &str) -> Vec<u8> {
         protected::seal_with_password(
             plaintext,
@@ -1927,9 +1659,8 @@ const FIDO_PUB: &str = "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZ
 
     #[test]
     fn rejects_a_blob_whose_key_does_not_match_its_bound_fingerprint() {
-        // AAD strings are public, so the AEAD tag verifies fine here. Only
-        // the payload itself can settle whether it is the key the
-        // fingerprint names.
+        // AAD strings are public, so the tag verifies; only the payload can
+        // prove it is the named key.
         let key = normalize_openssh_identity(ED25519_KEY.as_bytes(), b"").unwrap();
         let blob = forge_blob(&key.plaintext, ED25519_ENC_FPR);
         let err = try_unlock(&blob, ED25519_ENC_FPR).unwrap_err();
@@ -1938,9 +1669,8 @@ const FIDO_PUB: &str = "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZ
 
     #[test]
     fn rejects_a_key_wearing_someone_elses_public_half() {
-        // The nastier forgery: splice the victim's cleartext public blob
-        // into the attacker's OpenSSH key, so the *fingerprint* check
-        // passes. Only the live encrypt/decrypt probe catches this.
+        // Splice the victim's public blob into the attacker's key so the
+        // fingerprint check passes; only the live probe catches this.
         let attacker = normalize_openssh_identity(ED25519_KEY.as_bytes(), b"").unwrap();
         let victim = normalize_openssh_identity(ED25519_ENC_KEY.as_bytes(), ENC_KEY_PASSPHRASE)
             .unwrap();
@@ -1957,8 +1687,7 @@ const FIDO_PUB: &str = "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZ
         assert_eq!(err, "Decrypted key does not match this SSH key's fingerprint");
     }
 
-    /// Replace the cleartext public-key string of `host` with `donor`'s.
-    /// Both must be ed25519 keys, whose blobs are the same length.
+    /// Replace `host`'s cleartext public-key string with `donor`'s (both ed25519).
     fn splice_public_blob(host: &[u8], donor: &[u8]) -> Zeroizing<Vec<u8>> {
         fn body(pem: &str) -> Vec<u8> {
             let b64: String = pem
@@ -2085,11 +1814,8 @@ const FIDO_PUB: &str = "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZ
         }
     }
 
-    /// The other direction: our ciphertext must open in the Go `age` CLI.
-    ///
-    /// Skipped when `age` is not installed -- the captured vectors above
-    /// cover Go -> Rust unconditionally, but Rust -> Go can only be proven
-    /// against a live CLI.
+    /// Rust -> Go: our ciphertext must open in the `age` CLI. Skipped when it
+    /// is not installed (the captured vectors cover Go -> Rust).
     #[test]
     fn age_cli_decrypts_our_ciphertext() {
         use std::process::Command;
