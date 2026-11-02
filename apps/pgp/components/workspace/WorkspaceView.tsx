@@ -37,13 +37,13 @@ import type { WorkspaceAction } from "../../lib/messages";
 import type { ReaderSigner } from "../../lib/reader-protocol";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
-import type { PgpPreferences } from "../../lib/storage/preferences";
 import type { WorkspaceDraftSource } from "../../lib/workspace-draft";
 import type { WorkspaceIntake } from "./useWorkspaceState";
 import type { ComposeTools } from "./WorkspaceInput";
 import { useComposeTranslation } from "../../hooks/useComposeTranslation";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import { useDelayedFlag } from "../../hooks/useDelayedFlag";
+import { savePreference, usePreferences } from "../../hooks/usePreferences";
 import { useShortcut } from "../../hooks/useShortcut";
 import { useTranslation } from "../../hooks/useTranslation";
 import {
@@ -63,7 +63,6 @@ import {
 import { t } from "../../lib/i18n";
 import { requestUnlimitedHistoryStorage } from "../../lib/storage/history";
 import { isPgpRecord, isSshRecord } from "../../lib/storage/key-kind";
-import { savePreferences } from "../../lib/storage/preferences";
 import { toast } from "../../lib/toast";
 import { saveCrxViaPrompt } from "../../lib/utils/download";
 import {
@@ -130,7 +129,6 @@ function ShortcutHint({
 interface WorkspaceViewProps {
   myKeys: ProtectedKeyBlob[];
   contacts: PublicContactKey[];
-  crxSigningEnabled?: boolean;
   crxKeys?: CrxSigningKeyBlob[];
   getKeyHandle: (keyId: string) => number | null;
   onUnlockWithPassword: (
@@ -160,8 +158,6 @@ interface WorkspaceViewProps {
   /** Look an unknown signer's key id up on the keyserver (the import
    *  panel, lookup already running). Absent when key discovery is off. */
   onLookupSigner?: (keyId: string) => void;
-  autoDownloadFiles?: boolean;
-  autoDownloadText?: boolean;
   onOperationComplete?: () => void;
   /** Encrypted workspace draft to rehydrate on mount (from a prior auto-lock). */
   restoreDraft?: Uint8Array | null;
@@ -175,25 +171,11 @@ interface WorkspaceViewProps {
   onIntakeConsumed?: () => void;
   /** Pushes the palette-facing state/ops slice up on every change. */
   onPaletteOps?: (bridge: WorkspaceOpsBridge | null) => void;
-  /** Bumped when preference-backed toggles change outside this view
-   *  (e.g. a security preset applied in Settings); re-reads prefs. */
-  prefsVersion?: number;
-  /** The user's configured default key: preferred when auto-selecting
-   *  a private key and as the encrypt-to-self key. */
-  defaultKeyId?: string | null;
-  /** When true (never-cache mode), history is disabled and wiped, so
-   *  the "Save to history" checkbox and History button are hidden. */
-  neverCacheKeys?: boolean;
-  /** Master enable for on-device translation of decrypted messages. */
-  aiTranslateEnabled?: boolean;
-  /** BCP 47 tag translations are produced in. */
-  translationTargetLanguage?: string;
 }
 
 export function WorkspaceView({
   myKeys,
   contacts,
-  crxSigningEnabled,
   crxKeys,
   getKeyHandle,
   onUnlockWithPassword,
@@ -208,8 +190,6 @@ export function WorkspaceView({
   onNavigateToKeys,
   onRevealKey,
   onLookupSigner,
-  autoDownloadFiles,
-  autoDownloadText,
   onOperationComplete,
   restoreDraft,
   onDraftRestored,
@@ -217,12 +197,16 @@ export function WorkspaceView({
   intake,
   onIntakeConsumed,
   onPaletteOps,
-  prefsVersion,
-  defaultKeyId,
-  neverCacheKeys,
-  aiTranslateEnabled,
-  translationTargetLanguage = "en",
 }: WorkspaceViewProps) {
+  const {
+    crxSigningEnabled,
+    autoDownloadFiles,
+    autoDownloadText,
+    defaultKeyId,
+    neverCacheKeys,
+    aiTranslateEnabled,
+    translationTargetLanguage,
+  } = usePreferences();
   const allPublicKeys: (ProtectedKeyBlob | PublicContactKey)[] = [
     ...myKeys,
     ...contacts,
@@ -242,7 +226,6 @@ export function WorkspaceView({
     onRegisterDraftSource,
     intake,
     onIntakeConsumed,
-    prefsVersion,
     defaultKeyId,
   });
 
@@ -865,29 +848,16 @@ export function WorkspaceView({
   // The preference checkboxes' handlers, extracted so the palette
   // toggles (via the ops bridge below) run the EXACT same code path:
   // persistence, stale-output reset, and the history storage request.
-  // The checkbox has already moved, so a save that rejects (the stored
-  // settings would not open) is said, not dropped: the next unlock would
-  // read the old value back. Same toast and id as the Settings page.
-  const persistPref = (patch: Partial<PgpPreferences>) => {
-    savePreferences(patch).catch(() => {
-      toast.error(t("shared_settings_save_failed"), {
-        id: "settings-save-failed",
-      });
-    });
-  };
   const setEncryptToSelfPref = (checked: boolean) => {
-    s.setEncryptToSelf(checked);
     s.resetOutput();
-    persistPref({ encryptToSelf: checked });
+    void savePreference({ encryptToSelf: checked });
   };
   const setAlsoSignPref = (checked: boolean) => {
-    s.setAlsoSign(checked);
     s.resetOutput();
-    persistPref({ signWhenEncrypting: checked });
+    void savePreference({ signWhenEncrypting: checked });
   };
   const setSaveToHistoryPref = (checked: boolean) => {
-    s.setSaveToHistory(checked);
-    persistPref({ historyEnabled: checked });
+    void savePreference({ historyEnabled: checked });
     // Enabling is a user gesture: ask for unlimitedStorage so history
     // gets the generous budget. A denial is fine -- history still
     // works within the default budget.

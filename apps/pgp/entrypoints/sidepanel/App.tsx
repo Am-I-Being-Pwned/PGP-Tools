@@ -8,11 +8,7 @@ import type { WorkspaceOpsBridge } from "../../hooks/useActionContext";
 import type { DropRule } from "../../lib/drop-routing";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { MasterProtection } from "../../lib/storage/master-protection";
-import type {
-  AutoLockTimeout,
-  PgpPreferences,
-  StorageLocation,
-} from "../../lib/storage/preferences";
+import type { StorageLocation } from "../../lib/storage/preferences";
 import type { WorkspaceDraftSource } from "../../lib/workspace-draft";
 import { CommandPalette } from "../../components/CommandPalette";
 import { ImportKeyPage } from "../../components/keys/ImportKeyPage";
@@ -32,12 +28,9 @@ import { useCrxKeys } from "../../hooks/useCrxKeys";
 import { readKeyring, useKeyring } from "../../hooks/useKeyring";
 import { useKeySession } from "../../hooks/useKeySession";
 import { usePendingOperation } from "../../hooks/usePendingOperation";
+import { savePreference, usePreferences } from "../../hooks/usePreferences";
 import { useReaderTabs } from "../../hooks/useReaderTabs";
-import {
-  SESSION_PENDING_OP,
-  STORAGE_PREFERENCES,
-  STORAGE_SETTINGS,
-} from "../../lib/constants";
+import { SESSION_PENDING_OP } from "../../lib/constants";
 import { normalizeCrxPadding } from "../../lib/crx/storage";
 import { looksLikeKey, readAllFilesText } from "../../lib/drop-routing";
 import { fromBase64 } from "../../lib/encoding";
@@ -48,15 +41,13 @@ import {
   partitionByMasterSeal,
 } from "../../lib/protection/vault-unlock";
 import { normalizeContactsPadding } from "../../lib/storage/contacts";
-import { currentStorageLocation } from "../../lib/storage/engine";
 import { normalizeKeyringPadding } from "../../lib/storage/keyring";
 import { getMasterProtection } from "../../lib/storage/master-protection";
 import {
   getPreferences,
   migrateLegacyPreferences,
-  savePreferences,
-  strictestPreferences,
 } from "../../lib/storage/preferences";
+import { preferencesStore } from "../../lib/storage/preferences-store";
 import {
   adoptVaultLocation,
   eraseVault,
@@ -72,32 +63,19 @@ type Tab = "workspace" | "keys" | "settings";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>("workspace");
-  const [advancedMode, setAdvancedMode] = useState(false);
-  const [storageLocation, setStorageLocation] =
-    useState<StorageLocation>("local");
-  const [autoLockEnabled, setAutoLockEnabled] = useState(true);
-  const [autoLockMinutes, setAutoLockMinutes] = useState<AutoLockTimeout>(15);
-  const [neverCacheKeys, setNeverCacheKeys] = useState(false);
-  const [autoDownloadFiles, setAutoDownloadFiles] = useState(false);
-  const [autoDownloadText, setAutoDownloadText] = useState(false);
-  const [lockOnTabAway, setLockOnTabAway] = useState(false);
-  const [unlockKeysOnOpen, setUnlockKeysOnOpen] = useState(false);
-  const [crxSigningEnabled, setCrxSigningEnabled] = useState(false);
-  // Default TRUE, matching DEFAULT_PREFERENCES: this state is what the
-  // UI shows for the moment before the first `getPreferences` lands, and
-  // starting it false would flicker the lookup box away from every user
-  // who has it on.
-  const [keyDiscoveryEnabled, setKeyDiscoveryEnabled] = useState(true);
-  // Default TRUE for the same reason as the line above: it must match
-  // DEFAULT_PREFERENCES, or the frame before `getPreferences` lands
-  // flickers the Translate button in (or out) for everyone.
-  const [aiTranslateEnabled, setAiTranslateEnabled] = useState(true);
-  const [translationTargetLanguage, setTranslationTargetLanguage] =
-    useState("en");
-  // The user's preferred own key (null = implicit first-key default).
-  // Owned here so Keys (badge/action) and the workspace (self-key and
-  // sign/decrypt preselection) stay in sync without a prefs re-read.
-  const [defaultKeyId, setDefaultKeyId] = useState<string | null>(null);
+  const prefs = usePreferences();
+  const {
+    storageLocation,
+    autoLockEnabled,
+    autoLockMinutes,
+    neverCacheKeys,
+    lockOnTabAway,
+    unlockKeysOnOpen,
+    crxSigningEnabled,
+    keyDiscoveryEnabled,
+    // The user's preferred own key (null = implicit first-key default).
+    defaultKeyId,
+  } = prefs;
   // Whether a vault exists -- derived from the stored master protection
   // (`resolveVaultState`), NOT from the bootstrap's `onboardingComplete`,
   // which anyone signed in to the Google account can set back to false.
@@ -439,58 +417,13 @@ export default function App() {
     return () => chrome.idle.onStateChanged.removeListener(onState);
   }, []);
 
-  // Apply the encrypted (non-bootstrap) settings to UI state. These
-  // decrypt only with an active vault session, so at first mount (locked)
-  // they arrive as defaults; the unlock effect below re-reads and
-  // re-applies them once the session exists.
-  const applyPrefs = useCallback((prefs: PgpPreferences) => {
-    setAdvancedMode(prefs.advancedMode);
-    setAutoLockMinutes(prefs.autoLockMinutes);
-    // Nothing here touches the active tab. The panel always opens on the
-    // workspace (see the `activeTab` useState) and the current tab is
-    // never persisted, so re-applying preferences -- which happens on
-    // unlock and on every storage.onChanged echo -- can't move the user.
-    setNeverCacheKeys(prefs.neverCacheKeys);
-    setAutoLockEnabled(prefs.autoLockEnabled);
-    setAutoDownloadFiles(prefs.autoDownloadFiles);
-    setAutoDownloadText(prefs.autoDownloadText);
-    setLockOnTabAway(prefs.lockOnTabAway);
-    setUnlockKeysOnOpen(prefs.unlockKeysOnOpen);
-    setCrxSigningEnabled(prefs.crxSigningEnabled);
-    setKeyDiscoveryEnabled(prefs.keyDiscoveryEnabled);
-    setAiTranslateEnabled(prefs.aiTranslateEnabled);
-    setTranslationTargetLanguage(prefs.translationTargetLanguage);
-    setDefaultKeyId(prefs.defaultKeyId);
-  }, []);
-
-  /** Apply what `getPreferences` read, or -- if it failed outright --
-   *  the strictest preset, never the defaults left in state: a read that
-   *  rejected used to be dropped, and a Paranoid user ran on a 15-minute
-   *  auto-lock with no sign anything was wrong. */
-  const reapplyPrefs = useCallback(async () => {
-    try {
-      const prefs = await getPreferences();
-      applyPrefs(prefs);
-      return prefs;
-    } catch {
-      applyPrefs(strictestPreferences());
-      return null;
-    }
-  }, [applyPrefs]);
-
   /** Read the bootstrap and decide, from what is actually stored, whether
    *  there is a vault to unlock (see `lib/storage/vault-state.ts`). */
   const loadVaultState = useCallback(async () => {
-    const prefs = await reapplyPrefs();
-    // Bootstrap fields are readable regardless of lock state.
-    if (prefs) setStorageLocation(prefs.storageLocation);
-
+    // Bootstrap fields are readable regardless of lock state; the
+    // encrypted settings read as defaults until unlock re-reads them.
+    await preferencesStore.reload();
     const vault = await resolveVaultState();
-    if (!prefs && vault.kind === "ready") {
-      // The location the vault was found in, when the bootstrap read
-      // failed: Settings must not offer to "move" it to where it is.
-      setStorageLocation(await currentStorageLocation());
-    }
     setVaultProblem(
       vault.kind === "elsewhere" ||
         vault.kind === "ambiguous" ||
@@ -506,7 +439,7 @@ export default function App() {
     setOnboardingComplete(vault.kind !== "none");
     setMasterProtection(vault.kind === "ready" ? vault.protection : null);
     setMasterProtectionLoaded(true);
-  }, [reapplyPrefs]);
+  }, []);
 
   useEffect(() => {
     void loadVaultState();
@@ -519,7 +452,7 @@ export default function App() {
   // one-time legacy-prefs migration via getPreferences.
   useEffect(() => {
     if (!masterUnlocked) return;
-    void reapplyPrefs();
+    void preferencesStore.reload();
     // Best-effort: upgrade any pre-padding blobs to canonical padding now,
     // rather than waiting for their next mutation. Each is a no-op if
     // already canonical; failures are swallowed (the data is untouched).
@@ -529,7 +462,7 @@ export default function App() {
     void normalizeKeyringPadding().catch(ignore);
     void normalizeContactsPadding().catch(ignore);
     void normalizeCrxPadding().catch(ignore);
-  }, [masterUnlocked, reapplyPrefs]);
+  }, [masterUnlocked]);
 
   useEffect(() => {
     if (!pending) return;
@@ -583,33 +516,6 @@ export default function App() {
   // ActionCtx the registry evaluates against.
   const [workspaceBridge, setWorkspaceBridge] =
     useState<WorkspaceOpsBridge | null>(null);
-  // Bumped when Settings rewrites preference-backed workspace toggles
-  // (preset apply); the always-mounted WorkspaceView re-reads prefs.
-  const [workspacePrefsVersion, setWorkspacePrefsVersion] = useState(0);
-
-  // Cross-window preference sync (same storage.onChanged pattern as
-  // usePendingOperation): another window saving the encrypted settings
-  // blob or the plaintext bootstrap fires here; re-read and re-apply
-  // via the same applyPrefs path unlock uses, and bump prefsVersion so
-  // the workspace re-reads its preference-backed toggles. applyPrefs
-  // never writes, so this can't feed back into another change event.
-  // While locked, getPreferences returns defaults; skip and let the
-  // unlock effect re-read instead.
-  useEffect(() => {
-    const onPrefsStorageChanged = (
-      changes: Record<string, chrome.storage.StorageChange>,
-      area: chrome.storage.AreaName,
-    ) => {
-      if (area !== "local" && area !== "sync") return;
-      if (!(STORAGE_SETTINGS in changes) && !(STORAGE_PREFERENCES in changes)) {
-        return;
-      }
-      if (!masterUnlockedRef.current) return;
-      void reapplyPrefs().then(() => setWorkspacePrefsVersion((v) => v + 1));
-    };
-    chrome.storage.onChanged.addListener(onPrefsStorageChanged);
-    return () => chrome.storage.onChanged.removeListener(onPrefsStorageChanged);
-  }, [reapplyPrefs]);
 
   const [historyOpen, setHistoryOpen] = useState(false);
   const [keysRoute, setKeysRoute] = useState<"generate" | "import" | null>(
@@ -686,12 +592,7 @@ export default function App() {
 
   // Persist (or clear, with null) the default-key choice.
   const handleSetDefaultKey = useCallback((keyId: string | null) => {
-    setDefaultKeyId(keyId);
-    savePreferences({ defaultKeyId: keyId }).catch(() => {
-      toast.error(t("shared_settings_save_failed"), {
-        id: "settings-save-failed",
-      });
-    });
+    void savePreference({ defaultKeyId: keyId });
   }, []);
 
   // The user's first own key becomes the explicit default: with one key the
@@ -791,8 +692,8 @@ export default function App() {
       <div className="flex h-screen flex-col">
         <main className="min-h-0 flex-1 overflow-y-auto">
           <OnboardingFlow
-            onComplete={async (loc) => {
-              setStorageLocation(loc);
+            onComplete={async () => {
+              void preferencesStore.reload();
               setOnboardingComplete(true);
               setMasterUnlocked(true);
               setMasterProtection(await getMasterProtection());
@@ -967,9 +868,7 @@ export default function App() {
             // A lost ledger, or a held older settings copy, kept the
             // settings at the strictest preset until now; read them as
             // stored again.
-            void reapplyPrefs().then(() =>
-              setWorkspacePrefsVersion((v) => v + 1),
-            );
+            void preferencesStore.reload();
           }}
         />
 
@@ -1024,7 +923,7 @@ export default function App() {
         )}
         {historyOpen && (
           <HistoryPage
-            enabled={workspaceBridge?.historyEnabled ?? false}
+            enabled={prefs.historyEnabled}
             onClose={() => setHistoryOpen(false)}
           />
         )}
@@ -1039,7 +938,6 @@ export default function App() {
             <WorkspaceView
               myKeys={keyring.keys}
               contacts={contacts.contacts}
-              crxSigningEnabled={crxSigningEnabled}
               crxKeys={crxKeys.keys}
               getKeyHandle={session.getKeyHandle}
               onUnlockWithPassword={session.unlockWithPassword}
@@ -1070,10 +968,6 @@ export default function App() {
                 }
                 setActiveTab("keys");
               }}
-              autoDownloadFiles={autoDownloadFiles}
-              autoDownloadText={autoDownloadText}
-              aiTranslateEnabled={aiTranslateEnabled}
-              translationTargetLanguage={translationTargetLanguage}
               onOperationComplete={session.lockAllIfNoCache}
               restoreDraft={draftCiphertext}
               onDraftRestored={handleDraftRestored}
@@ -1081,21 +975,15 @@ export default function App() {
               intake={workspaceIntake}
               onIntakeConsumed={clearWorkspaceIntake}
               onPaletteOps={setWorkspaceBridge}
-              prefsVersion={workspacePrefsVersion}
-              defaultKeyId={defaultKeyId}
-              neverCacheKeys={neverCacheKeys}
             />
           </div>
           {activeTab === "keys" && (
             <KeysView
               myKeys={keyring.keys}
               contacts={contacts.contacts}
-              crxSigningEnabled={crxSigningEnabled}
-              keyDiscoveryEnabled={keyDiscoveryEnabled}
               crxKeys={crxKeys.keys}
               onAddCrxKey={crxKeys.add}
               onDeleteCrxKey={crxKeys.remove}
-              defaultKeyId={defaultKeyId}
               onSetDefaultKey={handleSetDefaultKey}
               onRenameKey={keyring.rename}
               onRenameContact={contacts.rename}
@@ -1113,7 +1001,6 @@ export default function App() {
               onMergeContactKey={contacts.mergeKey}
               onSetContactVerified={contacts.setVerified}
               onDeleteContact={contacts.remove}
-              advancedMode={advancedMode}
               highlightKeyIds={highlightKeyIds}
               onHighlightConsumed={() => setHighlightKeyIds(null)}
               autoOpenRoute={keysRoute}
@@ -1132,42 +1019,13 @@ export default function App() {
           )}
           {activeTab === "settings" && (
             <SettingsView
-              advancedMode={advancedMode}
-              onAdvancedModeChange={setAdvancedMode}
-              storageLocation={storageLocation}
-              onStorageLocationChange={(loc) => {
-                setStorageLocation(loc);
+              onVaultMoved={() => {
                 void keyring.refresh();
                 void contacts.refresh();
                 void crxKeys.refresh();
               }}
-              autoLockEnabled={autoLockEnabled}
-              onAutoLockEnabledChange={setAutoLockEnabled}
-              autoLockMinutes={autoLockMinutes}
-              onAutoLockChange={setAutoLockMinutes}
-              neverCacheKeys={neverCacheKeys}
-              onNeverCacheKeysChange={setNeverCacheKeys}
-              autoDownloadFiles={autoDownloadFiles}
-              onAutoDownloadFilesChange={setAutoDownloadFiles}
-              autoDownloadText={autoDownloadText}
-              onAutoDownloadTextChange={setAutoDownloadText}
-              lockOnTabAway={lockOnTabAway}
-              onLockOnTabAwayChange={setLockOnTabAway}
-              unlockKeysOnOpen={unlockKeysOnOpen}
-              onUnlockKeysOnOpenChange={setUnlockKeysOnOpen}
               masterPasskey={masterPasskey}
               masterSealSalt={masterSealSalt}
-              crxSigningEnabled={crxSigningEnabled}
-              onWorkspacePrefsChanged={() =>
-                setWorkspacePrefsVersion((v) => v + 1)
-              }
-              onCrxSigningEnabledChange={setCrxSigningEnabled}
-              keyDiscoveryEnabled={keyDiscoveryEnabled}
-              onKeyDiscoveryEnabledChange={setKeyDiscoveryEnabled}
-              aiTranslateEnabled={aiTranslateEnabled}
-              onAiTranslateEnabledChange={setAiTranslateEnabled}
-              translationTargetLanguage={translationTargetLanguage}
-              onTranslationTargetLanguageChange={setTranslationTargetLanguage}
               myKeys={keyring.keys}
               contacts={contacts.contacts}
               isUnlocked={session.isUnlocked}

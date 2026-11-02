@@ -11,6 +11,7 @@ import type {
   WorkspaceDraft,
   WorkspaceDraftSource,
 } from "../../lib/workspace-draft";
+import { usePreferences } from "../../hooks/usePreferences";
 import { looksLikeAgeMessage } from "../../lib/armor-blocks";
 import { recoverArmorIfNeeded } from "../../lib/armor-recovery";
 import { firstMessageHeader } from "../../lib/classify-action";
@@ -18,7 +19,6 @@ import { looksLikePrivateKey } from "../../lib/drop-routing";
 import { resolveSelfKey } from "../../lib/encrypt-recipients";
 import { oversizedFilesMessage, splitOversizedFiles } from "../../lib/limits";
 import { isPgpRecord, isSshRecord } from "../../lib/storage/key-kind";
-import { getPreferences } from "../../lib/storage/preferences";
 import { showLoneCarriageReturns } from "../../lib/utils/line-breaks";
 import { forgetLastRegExpMatch } from "../../lib/utils/regexp-residue";
 import { zipHasManifest } from "../../lib/utils/zip";
@@ -190,7 +190,6 @@ export interface WorkspaceState {
   /** Recently used recipient fingerprints, most recent first
    *  (preference-backed; updated after each successful encrypt). */
   recentRecipients: string[];
-  setRecentRecipients: (ids: string[]) => void;
   selectedKeyId: string | null;
   setSelectedKeyId: (s: string | null) => void;
   selectedCrxKeyId: string | null;
@@ -212,13 +211,12 @@ export interface WorkspaceState {
   setLoading: (b: boolean) => void;
   files: File[];
   setFiles: (f: File[]) => void;
+  /** The preference-backed encrypt toggles. Read-only here: they change
+   *  through `savePreference`, which every view sees at once. */
   alsoSign: boolean;
-  setAlsoSign: (b: boolean) => void;
-  /** Also encrypt to one of the user's own keys (preference-backed). */
+  /** Also encrypt to one of the user's own keys. */
   encryptToSelf: boolean;
-  setEncryptToSelf: (b: boolean) => void;
   saveToHistory: boolean;
-  setSaveToHistory: (b: boolean) => void;
   zipFiles: boolean;
   setZipFiles: (b: boolean) => void;
   needsPassword: boolean;
@@ -301,12 +299,13 @@ export function useWorkspaceState(opts: {
   /** The user's configured default key: preferred over the first key
    *  when auto-selecting a private key for sign/decrypt. */
   defaultKeyId?: string | null;
-  /** Bumped when preference-backed fields (signWhenEncrypting,
-   *  encryptToSelf, historyEnabled) change outside this view -- e.g. a
-   *  security preset applied in Settings while the workspace stays
-   *  mounted. Triggers a re-read so toggles never go stale. */
-  prefsVersion?: number;
 }): WorkspaceState {
+  const {
+    signWhenEncrypting: alsoSign,
+    encryptToSelf,
+    historyEnabled: saveToHistory,
+    recentRecipients,
+  } = usePreferences();
   const [mode, setMode] = useState<Mode>("encrypt");
 
   // ---------------------------------------------------------------------
@@ -548,7 +547,6 @@ export function useWorkspaceState(opts: {
   const [selectedRecipientIds, setSelectedRecipientIds] = useState<string[]>(
     [],
   );
-  const [recentRecipients, setRecentRecipients] = useState<string[]>([]);
   const [selectedKeyId, setSelectedKeyId] = useState<string | null>(null);
   const [selectedCrxKeyId, setSelectedCrxKeyId] = useState<string | null>(null);
   const [pendingCrxSign, setPendingCrxSign] = useState(false);
@@ -557,9 +555,6 @@ export function useWorkspaceState(opts: {
   const [error, setError] = useState<PresentedError | null>(null);
   const [loading, setLoading] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
-  const [alsoSign, setAlsoSign] = useState(false);
-  const [encryptToSelf, setEncryptToSelf] = useState(true);
-  const [saveToHistory, setSaveToHistory] = useState(false);
   const [zipFiles, setZipFiles] = useState(true);
   const [needsPassword, setNeedsPassword] = useState(false);
   const [pendingPasswordDecrypt, setPendingPasswordDecrypt] = useState(false);
@@ -680,17 +675,6 @@ export function useWorkspaceState(opts: {
     setSelectedRecipientIds(snap.recipientIds);
     applyDetection(snap.input);
   }, [setInput, applyDetection]);
-
-  useEffect(() => {
-    void getPreferences().then((p) => {
-      setAlsoSign(p.signWhenEncrypting);
-      setEncryptToSelf(p.encryptToSelf);
-      setSaveToHistory(p.historyEnabled);
-      setRecentRecipients(p.recentRecipients);
-    });
-    // Re-read on mount and whenever the parent signals an external
-    // preference change (e.g. a preset applied in Settings).
-  }, [opts.prefsVersion]);
 
   // Restore an encrypted draft (if any) on mount. Single-shot: the
   // parent clears the ciphertext via `onDraftRestored` so re-renders
@@ -1080,7 +1064,6 @@ export function useWorkspaceState(opts: {
     selectedRecipientIds,
     setSelectedRecipientIds,
     recentRecipients,
-    setRecentRecipients,
     selectedKeyId,
     setSelectedKeyId,
     selectedCrxKeyId,
@@ -1099,11 +1082,8 @@ export function useWorkspaceState(opts: {
     files,
     setFiles,
     alsoSign,
-    setAlsoSign,
     encryptToSelf,
-    setEncryptToSelf,
     saveToHistory,
-    setSaveToHistory,
     zipFiles,
     setZipFiles,
     needsPassword,

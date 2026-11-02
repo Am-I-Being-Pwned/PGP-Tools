@@ -32,7 +32,7 @@ import { updateRecentRecipients } from "../../lib/recipient-ordering";
 import { contactRecipients } from "../../lib/storage/contact-recipients";
 import { recordHistory } from "../../lib/storage/history";
 import { isPgpRecord, isSshRecord } from "../../lib/storage/key-kind";
-import { savePreferences } from "../../lib/storage/preferences";
+import { preferencesStore } from "../../lib/storage/preferences-store";
 import { toast } from "../../lib/toast";
 import {
   downloadBinary,
@@ -943,14 +943,13 @@ export function useWorkspaceOperations({
       s.recentRecipients,
       recipients.map((k) => k.keyId),
     );
-    s.setRecentRecipients(updatedRecents);
     // A background save the user never asked for: losing it only costs
     // the picker's ordering next session, and a "settings could not be
     // saved" toast on top of a successful encrypt would read as the
     // encrypt failing. So a rejection is swallowed, not shown.
-    void savePreferences({ recentRecipients: updatedRecents }).catch(
-      () => undefined,
-    );
+    void preferencesStore
+      .update({ recentRecipients: updatedRecents })
+      .catch(() => undefined);
   }
 
   /**

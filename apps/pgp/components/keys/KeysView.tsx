@@ -13,6 +13,7 @@ import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { KeyCardModel } from "./KeyCard";
 import type { KeyDetailsTarget } from "./KeyDetailsPage";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
+import { usePreferences } from "../../hooks/usePreferences";
 import { publicKeyDerToPem } from "../../lib/crx/types";
 import { presentError } from "../../lib/errors/present";
 import { t, tn } from "../../lib/i18n";
@@ -82,7 +83,6 @@ interface KeysViewProps {
     keyId: string,
     armored: string,
   ) => Promise<void>;
-  advancedMode?: boolean;
   /** Scroll to and pulse these keys: an import that happened elsewhere
    *  (the app-level import panel), or a "show it in your keys" action. */
   highlightKeyIds?: string[] | null;
@@ -99,16 +99,9 @@ interface KeysViewProps {
   onKeyCached?: (keyId: string, keyHandle: number) => void;
   /** Whether to cache decrypted keys in WASM after generation. */
   cacheKeys?: boolean;
-  /** When true, expose CRX (Chrome extension) signing keys. */
-  crxSigningEnabled?: boolean;
-  /** Master enable for the import step's network lookups (GitHub SSH
-   *  keys, keys.openpgp.org certificates). */
-  keyDiscoveryEnabled?: boolean;
   crxKeys?: CrxSigningKeyBlob[];
   onAddCrxKey?: (blob: CrxSigningKeyBlob) => Promise<void>;
   onDeleteCrxKey?: (extensionId: string) => Promise<void>;
-  /** The user's configured default key, when set (own PGP keys only). */
-  defaultKeyId?: string | null;
   /** Persist (keyId) or clear (null) the default-key choice. */
   onSetDefaultKey?: (keyId: string | null) => void;
   /** Set a local display alias on a PGP key. */
@@ -196,7 +189,6 @@ export function KeysView({
   onDeleteContact,
   getKeyHandle,
   onSaveRevocationCertificate,
-  advancedMode,
   highlightKeyIds,
   onHighlightConsumed,
   autoOpenRoute,
@@ -206,17 +198,16 @@ export function KeysView({
   masterSealSalt,
   onKeyCached,
   cacheKeys,
-  crxSigningEnabled,
-  keyDiscoveryEnabled,
   crxKeys,
   onAddCrxKey,
   onDeleteCrxKey,
-  defaultKeyId,
   onSetDefaultKey,
   onRenameKey,
   onRenameCrxKey,
   onRenameContact,
 }: KeysViewProps) {
+  const { advancedMode, crxSigningEnabled, keyDiscoveryEnabled, defaultKeyId } =
+    usePreferences();
   const [selectionMode, setSelectionMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   // The rendered card list, used to resolve shift-click ranges in the order

@@ -16,6 +16,7 @@ import type {
   PgpPreferences,
   StorageLocation,
 } from "../../lib/storage/preferences";
+import { savePreference, usePreferences } from "../../hooks/usePreferences";
 import { t, tn } from "../../lib/i18n";
 import { enterNeverCacheMode } from "../../lib/never-cache";
 import {
@@ -26,7 +27,8 @@ import {
 } from "../../lib/presets";
 import { isQuotaExceeded } from "../../lib/storage/chunked";
 import { historyByteSize } from "../../lib/storage/history";
-import { getPreferences, savePreferences } from "../../lib/storage/preferences";
+import { getPreferences } from "../../lib/storage/preferences";
+import { preferencesStore } from "../../lib/storage/preferences-store";
 import { moveVault } from "../../lib/storage/vault-state";
 import { toast } from "../../lib/toast";
 import { formatFileSize } from "../../lib/utils/formatting";
@@ -132,41 +134,13 @@ function autoLockLabel(minutes: AutoLockTimeout): string {
 }
 
 interface SettingsViewProps {
-  advancedMode: boolean;
-  onAdvancedModeChange: (v: boolean) => void;
-  storageLocation: StorageLocation;
-  onStorageLocationChange: (loc: StorageLocation) => void;
-  autoLockEnabled: boolean;
-  onAutoLockEnabledChange: (v: boolean) => void;
-  autoLockMinutes: AutoLockTimeout;
-  onAutoLockChange: (v: AutoLockTimeout) => void;
-  neverCacheKeys: boolean;
-  onNeverCacheKeysChange: (v: boolean) => void;
-  autoDownloadFiles: boolean;
-  onAutoDownloadFilesChange: (v: boolean) => void;
-  autoDownloadText: boolean;
-  onAutoDownloadTextChange: (v: boolean) => void;
-  lockOnTabAway: boolean;
-  onLockOnTabAwayChange: (v: boolean) => void;
-  unlockKeysOnOpen: boolean;
-  onUnlockKeysOnOpenChange: (v: boolean) => void;
+  /** The vault moved storage areas: its stores need reading again. */
+  onVaultMoved: () => void;
   /** The master passkey, or null for a password master -- in which case
    *  the unlock-on-open toggle is not offered (nothing to reuse). */
   masterPasskey: MasterPasskey | null;
   /** See `ImportAllKeysPage`. */
   masterSealSalt?: ArrayBuffer;
-  crxSigningEnabled: boolean;
-  onCrxSigningEnabledChange: (v: boolean) => void;
-  keyDiscoveryEnabled: boolean;
-  onKeyDiscoveryEnabledChange: (v: boolean) => void;
-  aiTranslateEnabled: boolean;
-  onAiTranslateEnabledChange: (v: boolean) => void;
-  translationTargetLanguage: string;
-  onTranslationTargetLanguageChange: (code: string) => void;
-  /** Fired after a preset bundle rewrites preference-backed toggles the
-   *  workspace also renders (historyEnabled, encryptToSelf, ...), so the
-   *  always-mounted workspace can re-read them. */
-  onWorkspacePrefsChanged?: () => void;
   // Backup (export/import all keys)
   myKeys: ProtectedKeyBlob[];
   contacts: PublicContactKey[];
@@ -192,35 +166,9 @@ interface SettingsViewProps {
 }
 
 export function SettingsView({
-  advancedMode,
-  onAdvancedModeChange,
-  storageLocation,
-  onStorageLocationChange,
-  autoLockEnabled,
-  onAutoLockEnabledChange,
-  autoLockMinutes,
-  onAutoLockChange,
-  neverCacheKeys,
-  onNeverCacheKeysChange,
-  autoDownloadFiles,
-  onAutoDownloadFilesChange,
-  autoDownloadText,
-  onAutoDownloadTextChange,
-  lockOnTabAway,
-  onLockOnTabAwayChange,
-  unlockKeysOnOpen,
-  onUnlockKeysOnOpenChange,
+  onVaultMoved,
   masterPasskey,
   masterSealSalt,
-  crxSigningEnabled,
-  onCrxSigningEnabledChange,
-  keyDiscoveryEnabled,
-  onKeyDiscoveryEnabledChange,
-  aiTranslateEnabled,
-  onAiTranslateEnabledChange,
-  translationTargetLanguage,
-  onTranslationTargetLanguageChange,
-  onWorkspacePrefsChanged,
   myKeys,
   contacts,
   isUnlocked,
@@ -236,6 +184,22 @@ export function SettingsView({
   autoOpenPresets,
   onAutoOpenPresetsConsumed,
 }: SettingsViewProps) {
+  const prefs = usePreferences();
+  const {
+    advancedMode,
+    storageLocation,
+    autoLockEnabled,
+    autoLockMinutes,
+    neverCacheKeys,
+    autoDownloadFiles,
+    autoDownloadText,
+    lockOnTabAway,
+    unlockKeysOnOpen,
+    crxSigningEnabled,
+    keyDiscoveryEnabled,
+    aiTranslateEnabled,
+    translationTargetLanguage,
+  } = prefs;
   const [migratingTo, setMigratingTo] = useState<StorageLocation | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showExportAll, setShowExportAll] = useState(false);
@@ -259,43 +223,7 @@ export function SettingsView({
     onAutoOpenPresetsConsumed?.();
   }, [autoOpenPresets, onAutoOpenPresetsConsumed]);
 
-  // Full preferences snapshot for computing the active preset: the
-  // bundles cover fields this view has no props for (historyEnabled,
-  // encryptToSelf). Re-read whenever a bundled
-  // setting editable in this view changes, so the "Custom" state tracks
-  // live edits. Toggles in other views can't change while this tab is
-  // showing in the same panel.
-  const [prefs, setPrefs] = useState<PgpPreferences | null>(null);
-  useEffect(() => {
-    void getPreferences().then(setPrefs);
-  }, [
-    autoLockEnabled,
-    autoLockMinutes,
-    lockOnTabAway,
-    neverCacheKeys,
-    unlockKeysOnOpen,
-    storageLocation,
-  ]);
-
-  const currentPreset = prefs ? activePreset(prefs) : null;
-
-  /** Save a toggle's change. The toggle has already moved, so a save
-   *  that rejects (the stored settings would not open, and nothing
-   *  proves this session may replace them) must say so rather than be
-   *  dropped: the next unlock would read the old value back. */
-  const persist = (patch: Partial<PgpPreferences>) => {
-    savePreferences(patch).catch(() => {
-      toast.error(t("shared_settings_save_failed"), {
-        id: "settings-save-failed",
-      });
-    });
-  };
-
-  const toggleAdvanced = () => {
-    const next = !advancedMode;
-    onAdvancedModeChange(next);
-    persist({ advancedMode: next });
-  };
+  const currentPreset = activePreset(prefs);
 
   const handleStorageChange = async (next: StorageLocation) => {
     if (next === storageLocation) return;
@@ -305,7 +233,8 @@ export function SettingsView({
     // live in `moveVault` (lib/storage/vault-state.ts).
     try {
       await moveVault(storageLocation, next);
-      onStorageLocationChange(next);
+      await preferencesStore.reload();
+      onVaultMoved();
     } catch (e) {
       setError(
         isQuotaExceeded(e)
@@ -319,47 +248,30 @@ export function SettingsView({
     }
   };
 
-  const handleAutoLockChange = (v: AutoLockTimeout) => {
-    onAutoLockChange(v);
-    persist({ autoLockMinutes: v });
-  };
-
   // Enter never-cache via the shared transition (flip prefs + wipe
-  // history), then sync this view's snapshot and the workspace toggles.
+  // history), which saves directly; read back what it persisted.
   const enableNeverCache = async () => {
     await enterNeverCacheMode();
-    onNeverCacheKeysChange(true);
-    // Mirror what the transition persisted (see `enterNeverCacheMode`).
-    onUnlockKeysOnOpenChange(false);
-    setPrefs(await getPreferences());
-    // The transition also turned historyEnabled off; the always-mounted
-    // workspace renders that toggle, so tell it to re-read.
-    onWorkspacePrefsChanged?.();
+    await preferencesStore.reload();
   };
 
-  const handleUnlockOnOpenToggle = async (v: boolean) => {
-    // State mirrors storage AFTER the write lands: a failed write must
-    // not leave the toggle saying "off" while the next vault unlock
-    // reads "on" from storage.
-    if (!v) {
-      await savePreferences({ unlockKeysOnOpen: false });
-      onUnlockKeysOnOpenChange(false);
-      return;
-    }
+  // Not optimistic: the next vault unlock reads the STORED value, so the
+  // toggle must not say "off" while storage still says "on".
+  const handleUnlockOnOpenToggle = (v: boolean) =>
     // Entering unlock-on-open leaves never-cache (see enableNeverCache
     // for the converse). History stays as the user had it.
-    await savePreferences({ unlockKeysOnOpen: true, neverCacheKeys: false });
-    onNeverCacheKeysChange(false);
-    onUnlockKeysOnOpenChange(true);
-    setPrefs(await getPreferences());
-  };
+    savePreference(
+      v
+        ? { unlockKeysOnOpen: true, neverCacheKeys: false }
+        : { unlockKeysOnOpen: false },
+      { optimistic: false },
+    );
 
   const handleNeverCacheToggle = async (v: boolean) => {
     if (!v) {
       // Turning never-cache OFF never re-enables history; the user
       // opted out of retention and must opt back in explicitly.
-      onNeverCacheKeysChange(false);
-      persist({ neverCacheKeys: false });
+      void savePreference({ neverCacheKeys: false });
       return;
     }
     const bytes = await historyByteSize();
@@ -372,38 +284,12 @@ export function SettingsView({
     await enableNeverCache();
   };
 
-  // Sync the parent-held state for fields this view has props for
-  // (shared by applyPreset and its Undo).
-  const syncBundledProps = (values: Partial<PgpPreferences>) => {
-    if (values.autoLockEnabled !== undefined) {
-      onAutoLockEnabledChange(values.autoLockEnabled);
-    }
-    if (values.autoLockMinutes !== undefined) {
-      onAutoLockChange(values.autoLockMinutes);
-    }
-    if (values.lockOnTabAway !== undefined) {
-      onLockOnTabAwayChange(values.lockOnTabAway);
-    }
-    if (values.neverCacheKeys !== undefined) {
-      onNeverCacheKeysChange(values.neverCacheKeys);
-    }
-    if (values.unlockKeysOnOpen !== undefined) {
-      onUnlockKeysOnOpenChange(values.unlockKeysOnOpen);
-    }
-    if (values.keyDiscoveryEnabled !== undefined) {
-      onKeyDiscoveryEnabledChange(values.keyDiscoveryEnabled);
-    }
-  };
-
   // Restore the pre-apply snapshot of the bundled fields. Cleared
   // history is gone for good; the apply toast says so. storageLocation
   // can't be restored by a plain save, it needs the full migration.
   const undoPresetApply = async (snapshot: Partial<PgpPreferences>) => {
     const { storageLocation: prevLocation, ...rest } = snapshot;
-    await savePreferences(rest);
-    syncBundledProps(rest);
-    setPrefs(await getPreferences());
-    onWorkspacePrefsChanged?.();
+    await preferencesStore.update(rest);
     if (prevLocation !== undefined && prevLocation !== storageLocation) {
       await handleStorageChange(prevLocation);
     }
@@ -437,17 +323,11 @@ export function SettingsView({
         historyEnabled: _history,
         ...rest
       } = bundle;
-      await savePreferences(rest);
-      await enterNeverCacheMode();
+      await preferencesStore.update(rest);
+      await enableNeverCache();
     } else {
-      await savePreferences(bundle);
+      await preferencesStore.update(bundle);
     }
-
-    syncBundledProps(bundle);
-    setPrefs(await getPreferences());
-    // The bundle rewrote toggles the always-mounted workspace renders
-    // (historyEnabled, encryptToSelf); tell it to re-read.
-    onWorkspacePrefsChanged?.();
 
     if (bundleLocation !== undefined && bundleLocation !== storageLocation) {
       await handleStorageChange(bundleLocation);
@@ -473,7 +353,6 @@ export function SettingsView({
         <NavRow
           title={t("shared_security_preset")}
           description={
-            prefs &&
             currentPreset === "custom" && (
               <p className="text-muted-foreground text-xs">
                 {bundledSettingsCustomized(prefs)
@@ -483,11 +362,9 @@ export function SettingsView({
             )
           }
           value={
-            currentPreset === null
-              ? ""
-              : currentPreset === "custom"
-                ? t("shared_preset_custom")
-                : PRESETS[currentPreset].title
+            currentPreset === "custom"
+              ? t("shared_preset_custom")
+              : PRESETS[currentPreset].title
           }
           onClick={() => setShowPresets(true)}
         />
@@ -520,8 +397,7 @@ export function SettingsView({
             description={t("shared_auto_lock_desc")}
             checked={autoLockEnabled}
             onCheckedChange={(v) => {
-              onAutoLockEnabledChange(v);
-              persist({ autoLockEnabled: v });
+              void savePreference({ autoLockEnabled: v });
             }}
           />
           {autoLockEnabled && (
@@ -536,9 +412,9 @@ export function SettingsView({
                 id="auto-lock-after"
                 value={autoLockMinutes}
                 onChange={(e) =>
-                  handleAutoLockChange(
-                    Number(e.target.value) as AutoLockTimeout,
-                  )
+                  void savePreference({
+                    autoLockMinutes: Number(e.target.value) as AutoLockTimeout,
+                  })
                 }
                 className="surface-field focus:ring-ring rounded-md px-2 py-1.5 text-sm focus:ring-2 focus:outline-none"
               >
@@ -555,8 +431,7 @@ export function SettingsView({
             description={t("shared_lock_tab_away_desc")}
             checked={lockOnTabAway}
             onCheckedChange={(v) => {
-              onLockOnTabAwayChange(v);
-              persist({ lockOnTabAway: v });
+              void savePreference({ lockOnTabAway: v });
             }}
           />
           <SwitchRow
@@ -584,8 +459,7 @@ export function SettingsView({
             description={t("shared_auto_download_files_desc")}
             checked={autoDownloadFiles}
             onCheckedChange={(v) => {
-              onAutoDownloadFilesChange(v);
-              persist({ autoDownloadFiles: v });
+              void savePreference({ autoDownloadFiles: v });
             }}
           />
           <SwitchRow
@@ -593,8 +467,7 @@ export function SettingsView({
             description={t("shared_auto_download_text_desc")}
             checked={autoDownloadText}
             onCheckedChange={(v) => {
-              onAutoDownloadTextChange(v);
-              persist({ autoDownloadText: v });
+              void savePreference({ autoDownloadText: v });
             }}
           />
         </BlockStack>
@@ -612,8 +485,7 @@ export function SettingsView({
             description={t("shared_lookup_online_desc")}
             checked={keyDiscoveryEnabled}
             onCheckedChange={(v) => {
-              onKeyDiscoveryEnabledChange(v);
-              persist({ keyDiscoveryEnabled: v });
+              void savePreference({ keyDiscoveryEnabled: v });
             }}
           />
         </BlockStack>
@@ -627,8 +499,7 @@ export function SettingsView({
             description={t("shared_crx_enable_desc")}
             checked={crxSigningEnabled}
             onCheckedChange={(v) => {
-              onCrxSigningEnabledChange(v);
-              persist({ crxSigningEnabled: v });
+              void savePreference({ crxSigningEnabled: v });
             }}
           />
           <NavRow
@@ -663,7 +534,7 @@ export function SettingsView({
           <SwitchRow
             title={t("shared_advanced_mode")}
             checked={advancedMode}
-            onCheckedChange={toggleAdvanced}
+            onCheckedChange={(v) => void savePreference({ advancedMode: v })}
           />
         </BlockStack>
         <p className="text-muted-foreground px-1 text-xs">
@@ -776,13 +647,11 @@ export function SettingsView({
           onClose={() => setShowTranslation(false)}
           enabled={aiTranslateEnabled}
           onEnabledChange={(v) => {
-            onAiTranslateEnabledChange(v);
-            persist({ aiTranslateEnabled: v });
+            void savePreference({ aiTranslateEnabled: v });
           }}
           targetLanguage={translationTargetLanguage}
           onTargetLanguageChange={(code) => {
-            onTranslationTargetLanguageChange(code);
-            persist({ translationTargetLanguage: code });
+            void savePreference({ translationTargetLanguage: code });
           }}
         />
       )}
