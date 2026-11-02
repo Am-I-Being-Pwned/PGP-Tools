@@ -109,3 +109,27 @@ export function resolveDropRule(
 ): DropRule | null {
   return rules.find((r) => r.match(sample)) ?? null;
 }
+
+/** The side panel's rules: keys go to import, everything else to the
+ *  workspace. */
+export function panelDropRules(to: {
+  importKey: (armored: string) => void;
+  workspace: (payload: DropPayload) => void;
+}): DropRule[] {
+  return [
+    {
+      id: "keys",
+      // Armored keys show in the text sample; raw binary exports are
+      // flagged from the bytes and armored by readAllFilesText.
+      match: (s) => looksLikeKey(s.sampleText) || s.hasBinaryKeyFile,
+      run: async ({ files, text }) => {
+        // A benign text/plain riding along must not shadow a key file.
+        const armored = looksLikeKey(text)
+          ? text
+          : await readAllFilesText(files);
+        if (armored.trim()) to.importKey(armored);
+      },
+    },
+    { id: "workspace", match: () => true, run: to.workspace },
+  ];
+}

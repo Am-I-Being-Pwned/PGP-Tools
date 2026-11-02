@@ -1,24 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { HistoryIcon, SettingsIcon } from "lucide-react";
-
-import { Button } from "@amibeingpwned/ui/button";
 
 import type { WorkspaceIntake } from "../../components/workspace/useWorkspace";
-import type { Tab } from "../../hooks/useNav";
-import type { VaultServices } from "../../hooks/useVault";
-import type { DropRule } from "../../lib/drop-routing";
-import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
-import type { WorkspaceDraftSource } from "../../lib/workspace-draft";
+import type { DropPayload } from "../../lib/drop-routing";
+import type { WorkspaceAction } from "../../lib/messages";
 import { CommandPalette } from "../../components/CommandPalette";
-import { ImportKeyPage } from "../../components/keys/ImportKeyPage";
 import { KeysView } from "../../components/keys/KeysView";
 import { AppFooter } from "../../components/shared/AppFooter";
 import { GlobalDropZone } from "../../components/shared/GlobalDropZone";
+import { ImportOverlay } from "../../components/shared/ImportOverlay";
 import { IntegrityBanner } from "../../components/shared/IntegrityBanner";
-import { MasterUnlockScreen } from "../../components/shared/MasterUnlockScreen";
-import { OnboardingFlow } from "../../components/shared/OnboardingFlow";
 import { SettingsView } from "../../components/shared/SettingsView";
-import { VaultProblemScreen } from "../../components/shared/VaultProblemScreen";
+import { HistoryButton, TabBar } from "../../components/shared/TabBar";
+import { VaultGate } from "../../components/shared/VaultGate";
 import { HistoryPage } from "../../components/workspace/HistoryPage";
 import { WorkspaceView } from "../../components/workspace/WorkspaceView";
 import {
@@ -26,368 +19,67 @@ import {
   useWorkspaceBridgeStore,
   WorkspaceBridgeContext,
 } from "../../hooks/useActionContext";
+import { useAutoLock } from "../../hooks/useAutoLock";
 import { useContacts } from "../../hooks/useContacts";
-import { useCrxKeys } from "../../hooks/useCrxKeys";
 import { useKeyring } from "../../hooks/useKeyring";
-import { useKeySession } from "../../hooks/useKeySession";
+import { useMasterLock } from "../../hooks/useMasterLock";
 import { NavContext, useNavState } from "../../hooks/useNav";
 import { usePendingOperation } from "../../hooks/usePendingOperation";
-import { savePreference, usePreferences } from "../../hooks/usePreferences";
+import { usePreferences } from "../../hooks/usePreferences";
 import { useReaderTabs } from "../../hooks/useReaderTabs";
 import { VaultContext } from "../../hooks/useVault";
 import { useVaultLifecycle } from "../../hooks/useVaultLifecycle";
-import { SESSION_PENDING_OP } from "../../lib/constants";
-import { normalizeCrxPadding } from "../../lib/crx/storage";
-import { looksLikeKey, readAllFilesText } from "../../lib/drop-routing";
-import { fromBase64 } from "../../lib/encoding";
-import { t, tn } from "../../lib/i18n";
-import * as wasmApi from "../../lib/pgp/wasm";
-import {
-  masterPasskeyOf,
-  partitionByMasterSeal,
-} from "../../lib/protection/vault-unlock";
-import { normalizeContactsPadding } from "../../lib/storage/contacts";
-import { getKeyring, normalizeKeyringPadding } from "../../lib/storage/keyring";
-import { getMasterProtection } from "../../lib/storage/master-protection";
-import {
-  getPreferences,
-  migrateLegacyPreferences,
-} from "../../lib/storage/preferences";
+import { useVaultServices } from "../../hooks/useVaultServices";
+import { panelDropRules } from "../../lib/drop-routing";
 import { preferencesStore } from "../../lib/storage/preferences-store";
-import { refreshVaultLists } from "../../lib/storage/vault-lists";
-import {
-  adoptVaultLocation,
-  eraseVault,
-  resolveVaultState,
-} from "../../lib/storage/vault-state";
-import { toast } from "../../lib/toast";
 import { protectionOf } from "../../lib/vault-phase";
-import {
-  draftHasContent,
-  encryptWorkspaceDraft,
-} from "../../lib/workspace-draft";
+
+const WORKSPACE_ACTIONS = new Set<string>([
+  "encrypt",
+  "decrypt",
+  "sign",
+  "verify",
+]);
+
+/** Bumped per drop so dropping the same files again re-applies them. */
+let intakeNonce = 0;
 
 export default function App() {
   const nav = useNavState();
-  const activeTab = nav.tab;
   const prefs = usePreferences();
-  const {
-    storageLocation,
-    autoLockEnabled,
-    autoLockMinutes,
-    neverCacheKeys,
-    lockOnTabAway,
-    unlockKeysOnOpen,
-    crxSigningEnabled,
-    keyDiscoveryEnabled,
-    // The user's preferred own key (null = implicit first-key default).
-    defaultKeyId,
-  } = prefs;
   const [vault, dispatchVault] = useVaultLifecycle();
   const { phase } = vault;
-  const masterProtection = protectionOf(phase);
-  const masterUnlocked = phase.kind === "open";
-  // A file/text drop routed to the workspace by the global dropzone. The
-  // nonce bumps on every drop so re-dropping the same files re-applies.
-  const [workspaceIntake, setWorkspaceIntake] =
-    useState<WorkspaceIntake | null>(null);
-  const workspaceIntakeNonce = useRef(0);
-
-  const masterLockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
+  const vaultOpen = phase.kind === "open";
+  const services = useVaultServices(protectionOf(phase));
   const keyring = useKeyring();
-  // "Unlock keys with the vault": lets a per-key passkey unlock re-seal
-  // the key under the master salt off its own ceremony. Memoised so the
-  // session hook's unlock callback keeps a stable identity.
-  const replaceProtection = keyring.replaceProtection;
-  const masterReseal = useMemo(() => {
-    const master = masterPasskeyOf(masterProtection);
-    return unlockKeysOnOpen && master ? { master, replaceProtection } : null;
-  }, [unlockKeysOnOpen, masterProtection, replaceProtection]);
-  const session = useKeySession({
-    autoLockEnabled,
-    autoLockMinutes,
-    neverCacheKeys,
-    masterReseal,
-  });
   const contacts = useContacts();
-  const crxKeys = useCrxKeys();
-  // Only pull the context-menu selection out of session storage once the
-  // panel is actually rendering the tree that can route it. The same
-  // condition the early returns below use to decide whether to show
-  // onboarding / the master-unlock screen instead of the main UI. While
-  // either of those is up there is no `WorkspaceView` and no import
-  // screen to hand the op to, so consuming would only move the user's
-  // plaintext from storage (bounded by `PENDING_OP_TTL_MS` and
-  // `sweepStalePendingOp`) into React state, where it would sit retained
-  // on the fiber for the whole locked window. See usePendingOperation's
-  // doc comment for the measured retainer.
-  const canRoutePendingOp = masterUnlocked;
-  const {
-    pending,
-    clearPending,
-    checked: pendingChecked,
-  } = usePendingOperation(canRoutePendingOp);
-  // Reply's reader tabs. They may hold the message only while the vault
-  // is open -- the same condition that gates routing a pending op.
-  const { open: openReader, lockNow: lockReaders } =
-    useReaderTabs(canRoutePendingOp);
 
-  // Workspace-draft persistence across lock cycles. WorkspaceView registers
-  // a pull-model source here; on master lock we ask it for a snapshot,
-  // encrypt that under the in-WASM draft key, stash the ciphertext, and then
-  // tell the workspace to drop its plaintext so the workspace can rehydrate
-  // after re-unlock without the plaintext outliving the lock.
-  //
-  // Pull rather than push on purpose: the old push contract meant this
-  // component held a live plaintext copy for the whole session, on top of
-  // the copy React was already retaining inside the workspace.
-  const draftSourceRef = useRef<WorkspaceDraftSource | null>(null);
-  const [draftCiphertext, setDraftCiphertext] = useState<Uint8Array | null>(
-    null,
-  );
+  // Pending context-menu ops and Reply's reader tabs only while the vault
+  // is open: consuming earlier would park the user's plaintext in React
+  // state for the whole locked window (see usePendingOperation).
+  const { pending, clearPending, checked } = usePendingOperation(vaultOpen);
+  const { open: openReader, lockNow: lockReaders } = useReaderTabs(vaultOpen);
 
-  // Stable callbacks so WorkspaceView's effect deps don't churn.
-  const registerDraftSource = useCallback(
-    (src: WorkspaceDraftSource | null) => {
-      draftSourceRef.current = src;
-    },
-    [],
-  );
-  const handleDraftRestored = useCallback(() => {
-    setDraftCiphertext(null);
-  }, []);
-
-  const doMasterLock = useCallback(
-    async (auto = false) => {
-      // Reply's reader tabs clear first, synchronously: nothing awaited
-      // below can let a reader keep (or be sent) the message.
-      lockReaders();
-      // Encrypt + stash the workspace draft before flipping
-      // masterUnlocked (which unmounts the workspace). On error, lock
-      // anyway -- a lost draft is preferable to a failed lock.
-      const source = draftSourceRef.current;
-      // `let` so the plaintext snapshot can be released as soon as it has
-      // been encrypted, rather than living until this frame returns.
-      let draft = source?.getDraft() ?? null;
-      if (draft && draftHasContent(draft)) {
-        try {
-          await wasmApi.initDraftSessionIfUnset();
-          const ct = await encryptWorkspaceDraft(draft);
-          setDraftCiphertext(ct);
-        } catch {
-          /* lock anyway */
-        }
-      }
-      // Dead to ESLint, not to the GC: releases this frame's reference to
-      // the plaintext snapshot (see the `let` above; T-OUTPUT-HEAP-RESIDUE).
-      // eslint-disable-next-line no-useless-assignment
-      draft = null;
-      // The unmount alone does NOT release the workspace's plaintext: React
-      // keeps the previous fiber on `alternate`, and effect closures hanging
-      // off it stay reachable from a GC root. Only clearing the refs (and the
-      // textarea's DOM value) that those closures point at actually drops it.
-      source?.wipe();
-
-      // Wipe any unconsumed context-menu pending op. Without this a
-      // selection that landed during an unlocked session could sit
-      // in storage.session and surface on the next unlock.
-      //
-      // BOTH COPIES, because there are two. The `remove` below drops the
-      // storage one; `clearPending()` drops the React-state one, which
-      // exists whenever the hook consumed an op that nothing routed yet
-      // -- and that copy is the plaintext the user was about to encrypt,
-      // retained off the fiber by the `lastRenderedState` chain of
-      // T-OUTPUT-HEAP-RESIDUE.
-      //
-      // Dropping the reference IS enough, unlike `binaryOutput` and
-      // `fileResults` (which have to be zeroized in place, see
-      // `zeroizeResultBytes`): those live in a component that unmounts on
-      // this very state flip, so their `setState` is batched with the
-      // unmount and never commits. This hook's state belongs to `App`,
-      // which stays mounted and re-renders into the lock screen, so the
-      // `null` really lands and overwrites the retained value --
-      // demonstrated by `usePendingOperation`'s own consume-then-clear
-      // path, which measures zero retainers after a lock.
-      //
-      // HONEST NOTE ON COVERAGE: no test is red without this line. The
-      // window it closes is a lock landing between the hook's
-      // `setPending` and the routing effect that clears it -- one commit
-      // wide, so it cannot be driven deterministically from Playwright.
-      // What `e2e/draft-memory.spec.ts` does cover is the reachable case,
-      // an op arriving while locked, and that is fixed at the hook's
-      // `ready` gate rather than here. This stays because it costs one
-      // synchronous call and makes the two copies symmetric: the `remove`
-      // below has always been unconditional for the same reason.
-      clearPending();
-      void chrome.storage.session.remove(SESSION_PENDING_OP);
-
-      // Password-master path leaves the contacts session key in WASM
-      // (passkey path already drops it after each decrypt).
-      //
-      // FIRE-AND-FORGET, deliberately. Do NOT "fix" this to an await --
-      // I tried, and it regresses all three of
-      // `e2e/draft-memory.spec.ts`. Everything above (stashing the
-      // encrypted draft, `wipePlaintext()`) and the state flip below
-      // have to land in ONE synchronous run. An await here leaves the
-      // workspace mounted across a microtask boundary; the draft then
-      // fails to rehydrate on unlock AND its plaintext stays reachable
-      // in the JS heap -- precisely the retention SECURITY.md §8.11 and
-      // T-DRAFT-HEAP-RESIDUE exist to prevent. Awaiting trades a real,
-      // tested guarantee for a theoretical one.
-      //
-      // The window it looks like it should close -- a store mutation
-      // completing after the UI says locked -- is covered where it
-      // belongs, at the store: every contacts and keyring mutation
-      // re-checks `hasContactsSession()` INSIDE its lock and throws,
-      // rather than reading `[]` and treating an unopenable store as
-      // empty (`mutateContacts`, `removeKey`). Ordering here is not the
-      // mechanism and must not be made to carry it.
-      void wasmApi.dropContactsSession();
-      dispatchVault({ type: "locked", auto });
-      // UNCONDITIONAL, and it must stay that way. `lockAll` does two
-      // things: it drops the handles currently in the map, AND it bumps
-      // the lock generation that `useKeySession` re-checks when an
-      // in-flight unlock resolves. An unlock that started before this
-      // lock -- a passkey ceremony is seconds long and user-interactive
-      // -- would otherwise complete afterwards and insert a live key
-      // into the store while this very function is rendering the lock
-      // screen. The idle and tab-away handlers below skip `lockAll()`
-      // when no key is currently unlocked, which is exactly the state
-      // that race starts from; this call is what covers it. Adding a
-      // `size > 0` guard here to match them reopens it.
-      session.lockAll();
-    },
-    [session, clearPending, lockReaders, dispatchVault],
-  );
-
-  const resetMasterLockTimer = useCallback(() => {
-    if (masterLockTimerRef.current) clearTimeout(masterLockTimerRef.current);
-    if (!autoLockEnabled) return;
-    masterLockTimerRef.current = setTimeout(
-      () => void doMasterLock(true),
-      autoLockMinutes * 60 * 1000,
-    );
-  }, [autoLockEnabled, autoLockMinutes, doMasterLock]);
-
-  useEffect(() => {
-    if (!masterUnlocked) return;
-    resetMasterLockTimer();
-    return () => {
-      if (masterLockTimerRef.current) clearTimeout(masterLockTimerRef.current);
-    };
-  }, [masterUnlocked, resetMasterLockTimer]);
-
-  // Auto-lock effects read fresh state via these refs so they don't
-  // re-register listeners on every App render (`useKeySession()`
-  // returns a new object identity per render). Updated after every
-  // render so event-driven callbacks see the latest values without
-  // re-binding the listeners.
-  const sessionRef = useRef(session);
-  const masterUnlockedRef = useRef(masterUnlocked);
-  const doMasterLockRef = useRef(doMasterLock);
-  const resetMasterLockTimerRef = useRef(resetMasterLockTimer);
-  const lockOnTabAwayRef = useRef(lockOnTabAway);
-  useEffect(() => {
-    sessionRef.current = session;
-    masterUnlockedRef.current = masterUnlocked;
-    doMasterLockRef.current = doMasterLock;
-    resetMasterLockTimerRef.current = resetMasterLockTimer;
-    lockOnTabAwayRef.current = lockOnTabAway;
-  });
-
-  // Reset lock timers on user activity so the extension doesn't lock
-  // while the user is actively typing or interacting.
-  const lastActivityRef = useRef(0);
-  useEffect(() => {
-    const handleActivity = () => {
-      const now = Date.now();
-      if (now - lastActivityRef.current < 30_000) return;
-      lastActivityRef.current = now;
-      if (masterUnlockedRef.current) resetMasterLockTimerRef.current();
-      const s = sessionRef.current;
-      if (s.unlockedKeyIds.size > 0) s.resetLockTimer();
-    };
-    document.addEventListener("keydown", handleActivity);
-    document.addEventListener("pointerdown", handleActivity);
-    return () => {
-      document.removeEventListener("keydown", handleActivity);
-      document.removeEventListener("pointerdown", handleActivity);
-    };
-  }, []);
-
-  // Tab-away lock via `chrome.windows.onFocusChanged`. Fires on real
-  // window/app focus changes only -- not on system overlays like the
-  // WebAuthn dialog -- so it avoids the visibilitychange flicker that
-  // was re-locking the user mid-unlock. Locks when focus leaves
-  // Chrome entirely OR moves to a different Chrome window.
-  const ownWindowIdRef = useRef<number | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    void chrome.windows.getCurrent().then((win) => {
-      if (cancelled) return;
-      ownWindowIdRef.current = win.id ?? null;
+  const { lock, draftCiphertext, discardDraft, registerDraftSource } =
+    useMasterLock({
+      session: services.session,
+      dispatchVault,
+      clearPending,
+      lockReaders,
     });
+  const resetAutoLock = useAutoLock({
+    session: services.session,
+    vaultOpen,
+    lock,
+    autoLockEnabled: prefs.autoLockEnabled,
+    autoLockMinutes: prefs.autoLockMinutes,
+    lockOnTabAway: prefs.lockOnTabAway,
+  });
+  const lockNow = useCallback(() => lock(), [lock]);
 
-    const onFocus = (windowId: number) => {
-      if (!lockOnTabAwayRef.current) return;
-      if (ownWindowIdRef.current === null) return;
-      if (windowId === ownWindowIdRef.current) return;
-      const s = sessionRef.current;
-      if (s.unlockedKeyIds.size > 0) s.lockAll();
-      if (masterUnlockedRef.current) void doMasterLockRef.current(true);
-    };
-    chrome.windows.onFocusChanged.addListener(onFocus);
-    return () => {
-      cancelled = true;
-      chrome.windows.onFocusChanged.removeListener(onFocus);
-    };
-  }, []);
-
-  // OS lockscreen → always lock. We do not subscribe to
-  // chrome.idle's `"idle"` state -- only `"locked"`.
-  useEffect(() => {
-    const onState = (state: "idle" | "active" | "locked") => {
-      if (state !== "locked") return;
-      const s = sessionRef.current;
-      if (s.unlockedKeyIds.size > 0) s.lockAll();
-      if (masterUnlockedRef.current) void doMasterLockRef.current(true);
-    };
-    chrome.idle.onStateChanged.addListener(onState);
-    return () => chrome.idle.onStateChanged.removeListener(onState);
-  }, []);
-
-  /** Read the bootstrap and decide, from what is actually stored, whether
-   *  there is a vault to unlock (see `lib/storage/vault-state.ts`). */
-  const loadVaultState = useCallback(async () => {
-    // Bootstrap fields are readable regardless of lock state; the
-    // encrypted settings read as defaults until unlock re-reads them.
-    await preferencesStore.reload();
-    dispatchVault({ type: "resolved", vault: await resolveVaultState() });
-  }, [dispatchVault]);
-
-  useEffect(() => {
-    void loadVaultState();
-    // Pending op delivery is now via chrome.storage.session
-    // (see usePendingOperation). No runtime handshake needed.
-  }, [loadVaultState]);
-
-  // On unlock the settings blob becomes decryptable -- re-read and apply
-  // the real values (they were defaults while locked). Also runs the
-  // one-time legacy-prefs migration via getPreferences.
-  useEffect(() => {
-    if (!masterUnlocked) return;
-    void preferencesStore.reload();
-    // Best-effort: upgrade any pre-padding blobs to canonical padding now,
-    // rather than waiting for their next mutation. Each is a no-op if
-    // already canonical; failures are swallowed (the data is untouched).
-    const ignore = () => {
-      /* best-effort: leave the blob as-is on any failure */
-    };
-    void normalizeKeyringPadding().catch(ignore);
-    void normalizeContactsPadding().catch(ignore);
-    void normalizeCrxPadding().catch(ignore);
-  }, [masterUnlocked]);
+  // A drop routed to the workspace.
+  const [intake, setIntake] = useState<WorkspaceIntake | null>(null);
+  const clearIntake = useCallback(() => setIntake(null), []);
 
   const { openImport, showTab } = nav;
   useEffect(() => {
@@ -400,434 +92,128 @@ export default function App() {
       clearPending();
       return;
     }
-    // A keyboard mode command carries no text: it must not discard a
-    // locked workspace draft the way a real selection does.
-    if (pending.text) setDraftCiphertext(null);
+    // A text-less keyboard mode command must not discard a locked draft.
+    if (pending.text) discardDraft();
     showTab("workspace");
-  }, [pending, clearPending, openImport, showTab]);
+  }, [pending, clearPending, openImport, showTab, discardDraft]);
 
-  // One-shot focus of the message input when the panel opens onto the
-  // Main tab (which is every launch). Waits for masterProtectionLoaded
-  // so the first ready render has happened, and for the unlock screen to
-  // be out of the way
-  // -- while it shows, its own password field owns focus. The done-ref
-  // flips on the first ready render regardless of tab so a later manual
-  // switch to the workspace doesn't steal focus mid-session.
-  const openFocusDoneRef = useRef(false);
-  useEffect(() => {
-    if (openFocusDoneRef.current || !masterUnlocked) return;
-    openFocusDoneRef.current = true;
-    if (activeTab !== "workspace") return;
-    // Deferred a tick so the workspace has mounted the textarea.
-    const t = setTimeout(
-      () => document.getElementById("pgp-input")?.focus(),
-      0,
-    );
-    return () => clearTimeout(t);
-  }, [masterUnlocked, activeTab]);
+  const toWorkspace = useCallback(
+    ({ files, text }: DropPayload) => {
+      setIntake({ files, text, nonce: ++intakeNonce });
+      discardDraft();
+      showTab("workspace");
+    },
+    [discardDraft, showTab],
+  );
+  const dropRules = useMemo(
+    () =>
+      panelDropRules({
+        importKey: (armored) => openImport({ prefill: armored }),
+        workspace: toWorkspace,
+      }),
+    [openImport, toWorkspace],
+  );
 
-  // ── Command palette ──────────────────────────────────────────────
   // The workspace publishes to this store and only the palette listens,
   // so a workspace change never re-renders the App.
   const workspaceBridge = useWorkspaceBridgeStore();
-
-  const lockNow = useCallback(() => void doMasterLock(), [doMasterLock]);
-
-  // The palette registers its imperative open() here so the footer's
-  // mod+K hint can pop it without owning the palette's state.
+  // The palette registers its open() so the footer's mod+K hint can pop it.
   const openPaletteRef = useRef<(() => void) | null>(null);
   const bindPaletteOpen = useCallback((fn: () => void) => {
     openPaletteRef.current = fn;
   }, []);
-  const openPalette = useCallback(() => openPaletteRef.current?.(), []);
-
-  // Persist (or clear, with null) the default-key choice.
-  const handleSetDefaultKey = useCallback((keyId: string | null) => {
-    void savePreference({ defaultKeyId: keyId });
-  }, []);
-
-  // The user's first own key becomes the explicit default: with one key the
-  // resolver's first-key fallback behaves identically anyway, but making it
-  // explicit means adding a second key later never silently changes which
-  // key "encrypt to me" targets.
-  const handleAddKey = useCallback(
-    async (blob: ProtectedKeyBlob) => {
-      const isFirstKey = keyring.keys.length === 0;
-      await keyring.add(blob);
-      if (isFirstKey && defaultKeyId === null) handleSetDefaultKey(blob.keyId);
-    },
-    [keyring, defaultKeyId, handleSetDefaultKey],
-  );
-
-  const handleDeleteKey = useCallback(
-    async (keyId: string) => {
-      await keyring.remove(keyId);
-      // Deleting the default key clears the preference with it, so the
-      // stored id never points at a key that no longer exists. (The
-      // resolver also skips stale ids, as a second line of defense.)
-      if (defaultKeyId === keyId) handleSetDefaultKey(null);
-    },
-    [keyring, defaultKeyId, handleSetDefaultKey],
-  );
-
-  const clearWorkspaceIntake = useCallback(() => setWorkspaceIntake(null), []);
-
-  const masterPasskey = useMemo(
-    () => masterPasskeyOf(masterProtection),
-    [masterProtection],
-  );
-  // New keys share the master SALT (not just its credential) only while
-  // "unlock keys with the vault" is on: that is what lets the vault
-  // ceremony open them.
-  const masterSealSalt = useMemo(
-    () =>
-      unlockKeysOnOpen && masterPasskey
-        ? fromBase64(masterPasskey.prfSalt).buffer
-        : undefined,
-    [unlockKeysOnOpen, masterPasskey],
-  );
-  const vaultServices = useMemo<VaultServices>(
-    () => ({
-      session,
-      masterPasskey,
-      masterPasskeyCredentialId:
-        masterProtection?.method === "passkey"
-          ? masterProtection.credentialId
-          : undefined,
-      masterSealSalt,
-      cacheKeys: !neverCacheKeys,
-      onKeyCached: (keyId, handle) =>
-        void session.cacheKeyHandle(keyId, handle),
-      addKey: handleAddKey,
-      deleteKey: handleDeleteKey,
-      setDefaultKey: handleSetDefaultKey,
-    }),
-    [
-      session,
-      masterPasskey,
-      masterProtection,
-      masterSealSalt,
-      neverCacheKeys,
-      handleAddKey,
-      handleDeleteKey,
-      handleSetDefaultKey,
-    ],
-  );
-
-  // Routing table for the global dropzone. First match wins; the final
-  // rule is the catch-all. Extend by adding a rule (see lib/drop-routing).
-  const dropRules: DropRule[] = [
-    {
-      id: "keys",
-      // Armored keys announce themselves in the text sample; raw binary
-      // exports (`gpg --export` without --armor) are flagged from the
-      // byte sample and armored during readAllFilesText.
-      match: (s) => looksLikeKey(s.sampleText) || s.hasBinaryKeyFile,
-      run: async ({ files, text }) => {
-        // Use the dragged text only when it is itself a key; otherwise the
-        // key lives in a file (a benign text/plain riding along must not
-        // shadow it). Reading files is bounded — see readAllFilesText.
-        const armored = looksLikeKey(text)
-          ? text
-          : await readAllFilesText(files);
-        if (!armored.trim()) return;
-        nav.openImport({ prefill: armored });
-      },
-    },
-    {
-      id: "workspace",
-      match: () => true,
-      run: ({ files, text }) => {
-        workspaceIntakeNonce.current += 1;
-        setWorkspaceIntake({
-          files,
-          text,
-          nonce: workspaceIntakeNonce.current,
-        });
-        setDraftCiphertext(null);
-        nav.showTab("workspace");
-      },
-    },
-  ];
-
-  // Nothing renders until what is stored is known: a main tree mounted
-  // early would be torn down by the lock screen, state and all.
-  if (phase.kind === "loading") return null;
-
-  if (phase.kind === "problem") {
-    return (
-      <div className="flex h-screen flex-col">
-        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-          <VaultProblemScreen
-            problem={phase.problem}
-            onUseLocation={async (loc) => {
-              await adoptVaultLocation(loc);
-              await loadVaultState();
-            }}
-            onErase={async () => {
-              await eraseVault();
-              await loadVaultState();
-            }}
-          />
-        </main>
-        <AppFooter />
-      </div>
-    );
-  }
-
-  if (phase.kind === "onboarding") {
-    return (
-      <div className="flex h-screen flex-col">
-        <main className="min-h-0 flex-1 overflow-y-auto">
-          <OnboardingFlow
-            onComplete={async () => {
-              dispatchVault({
-                type: "onboarded",
-                protection: await getMasterProtection(),
-              });
-              void preferencesStore.reload();
-              void refreshVaultLists();
-            }}
-            addKey={handleAddKey}
-            cacheKey={!neverCacheKeys}
-            onKeyCached={(keyId, handle) => {
-              void session.cacheKeyHandle(keyId, handle);
-            }}
-          />
-        </main>
-        <AppFooter />
-      </div>
-    );
-  }
-
-  if (phase.kind === "locked") {
-    const { alternate } = vault;
-    return (
-      <div className="flex h-screen flex-col">
-        <main className="min-h-0 flex-1 overflow-y-auto">
-          <MasterUnlockScreen
-            masterProtection={phase.protection}
-            autoLocked={phase.autoLocked}
-            alternate={alternate ?? undefined}
-            onUseAlternate={async () => {
-              if (!alternate) return;
-              await adoptVaultLocation(alternate);
-              await loadVaultState();
-            }}
-            onUnlocked={async (prf) => {
-              // The legacy-settings migration first, before anything can
-              // write a store: its gate refuses once a local store carries
-              // a generation, which the contacts backfill would stamp.
-              await migrateLegacyPreferences().catch(() => undefined);
-              const { generation } = dispatchVault({ type: "unlocking" });
-              resetMasterLockTimer();
-              const listsRead = refreshVaultLists();
-              // "Unlock keys when the vault unlocks", off the same
-              // ceremony. The preference is read from storage, not state
-              // (still the locked-time default), inside the batch so a
-              // lock landing meanwhile cancels it. `prf` is on loan until
-              // this resolves.
-              const master = masterPasskeyOf(phase.protection);
-              if (prf && master) {
-                try {
-                  await session.unlockAllWithMasterPrf(async () => {
-                    // Never-cache wins even over an inconsistent stored pair.
-                    const p = await getPreferences();
-                    if (!p.unlockKeysOnOpen || p.neverCacheKeys) return [];
-                    const keys = await getKeyring().catch(() => []);
-                    return partitionByMasterSeal(keys, master).eligible;
-                  }, prf.prfOutput);
-                } catch {
-                  // Best-effort: the vault is open; keys just stay locked.
-                }
-              }
-              await listsRead;
-              dispatchVault({ type: "settled", generation });
-            }}
-          />
-        </main>
-        <AppFooter />
-      </div>
-    );
-  }
-
-  // The vault session exists but cannot open the stores: every read
-  // throws on a failed AEAD tag. Rendering the normal UI here would show
-  // an empty keyring and an empty contacts list, which reads as "your
-  // keys are gone" -- the single most alarming thing this panel can say,
-  // and it would be false. The keys are on disk and intact; the session
-  // key is simply the wrong one.
-  //
-  // Reachable today via the passkey master path, which installs its
-  // session key without verifying it (MasterPasskeyProtection carries no
-  // canary, unlike the password variant), so a PRF output that isn't the
-  // one the vault was sealed under unlocks the screen and fails here.
-  // NOTE on the copy below: it deliberately does not tell the user WHY.
-  // We cannot know. The password path verifies a canary before it
-  // reports success, so a wrong password is named as such on the unlock
-  // screen and never reaches here. The passkey path has no canary --
-  // `MasterPasskeyProtection` stores none -- so a PRF that does not
-  // match installs a session key that simply opens nothing, and from
-  // here that is indistinguishable from a corrupted blob or a storage
-  // fault. Naming the passkey would be a guess presented as a
-  // diagnosis, and would send a user whose vault is actually corrupt
-  // off to re-try an authenticator that was never the problem.
-  const vaultReadError = keyring.error ?? contacts.error;
-  if (masterProtection && masterUnlocked && vaultReadError) {
-    return (
-      <div className="flex h-screen flex-col">
-        <main className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 overflow-y-auto p-6 text-center">
-          <p className="text-destructive text-sm font-medium">
-            {t("app_vault_unreadable_title")}
-          </p>
-          <p className="text-muted-foreground max-w-xs text-xs leading-relaxed">
-            {masterProtection.method === "passkey"
-              ? t("app_vault_unreadable_body_passkey")
-              : t("app_vault_unreadable_body")}
-          </p>
-          <Button variant="outline" onClick={() => void doMasterLock()}>
-            {t("app_vault_lock_retry")}
-          </Button>
-        </main>
-        <AppFooter />
-      </div>
-    );
-  }
 
   return (
-    <VaultContext value={vaultServices}>
+    <VaultContext value={services}>
       <NavContext value={nav}>
-        <WorkspaceBridgeContext value={workspaceBridge}>
-          <GlobalDropZone rules={dropRules}>
-            <div className="flex h-screen flex-col">
-              <TabBar
-                activeTab={activeTab}
-                onTabChange={nav.showTab}
-                trailing={
-                  // Never-cache means no history, so no viewer either.
-                  activeTab === "workspace" && !neverCacheKeys ? (
-                    <button
-                      type="button"
-                      onClick={nav.openHistory}
-                      title={t("actions_history")}
-                      aria-label={t("actions_history")}
-                      // Out of the Tab order; keyboard users have the palette.
-                      tabIndex={-1}
-                      className="text-muted-foreground hover:bg-accent hover:text-foreground flex size-[30px] items-center justify-center rounded-md transition-colors"
-                    >
-                      <HistoryIcon className="h-4 w-4" />
-                    </button>
-                  ) : undefined
-                }
-              />
-
-              {/* A sealed store came back older than this device last saw
-                it, or went missing (lib/storage/integrity.ts). */}
-              <IntegrityBanner
-                syncVault={storageLocation === "sync"}
-                // Settings sat at the strictest preset until acknowledged.
-                onAcknowledged={() => void preferencesStore.reload()}
-              />
-
-              <Palette
-                tab={activeTab}
-                counts={{
-                  ownKeys: keyring.keys.length,
-                  contacts: contacts.contacts.length,
-                }}
-                neverCacheKeys={neverCacheKeys}
-                nav={nav}
-                lockNow={lockNow}
-                bindOpen={bindPaletteOpen}
-              />
-
-              {/* Opens over the current tab: no tab switch to flash past. */}
-              {nav.importing && (
-                <ImportKeyPage
-                  onClose={nav.closeImport}
-                  onImportPrivate={handleAddKey}
-                  onImportPublic={contacts.add}
-                  onRemoveContact={contacts.remove}
-                  existingKeys={keyring.keys}
-                  existingContacts={contacts.contacts}
-                  reusePasskeyCredentialId={
-                    vaultServices.masterPasskeyCredentialId
+        <VaultGate
+          vault={vault}
+          dispatchVault={dispatchVault}
+          services={services}
+          lock={lockNow}
+          resetAutoLock={resetAutoLock}
+        >
+          <WorkspaceBridgeContext value={workspaceBridge}>
+            <GlobalDropZone rules={dropRules}>
+              <div className="flex h-screen flex-col">
+                <TabBar
+                  activeTab={nav.tab}
+                  onTabChange={showTab}
+                  trailing={
+                    // Never-cache means no history, so no viewer either.
+                    nav.tab === "workspace" && !prefs.neverCacheKeys ? (
+                      <HistoryButton onClick={nav.openHistory} />
+                    ) : undefined
                   }
-                  masterSealSalt={masterSealSalt}
-                  initialArmored={nav.importing.prefill}
-                  initialLookup={nav.importing.lookup}
-                  keyDiscoveryEnabled={keyDiscoveryEnabled}
-                  crxSigningEnabled={crxSigningEnabled}
-                  onImportCrx={crxKeys.add}
-                  onImported={(keyIds, opts) => {
-                    if (keyIds.length === 0) return;
-                    if (opts?.reveal) {
-                      nav.revealKeys(keyIds);
-                      return;
-                    }
-                    // An import never moves the user: on the Keys tab the
-                    // card pulses, elsewhere a toast offers the trip.
-                    if (activeTab === "keys") {
-                      nav.highlightKeys(keyIds);
-                      return;
-                    }
-                    toast.success(tn("app_import_added", keyIds.length), {
-                      id: "import-added",
-                      action: {
-                        label: tn("app_import_view_key", keyIds.length),
-                        onClick: () => nav.revealKeys(keyIds),
-                      },
-                    });
+                />
+                {/* A sealed store came back older than this device last
+                    saw it, or went missing (lib/storage/integrity.ts). */}
+                <IntegrityBanner
+                  syncVault={prefs.storageLocation === "sync"}
+                  // Settings sat at the strictest preset until acknowledged.
+                  onAcknowledged={() => void preferencesStore.reload()}
+                />
+                <Palette
+                  tab={nav.tab}
+                  counts={{
+                    ownKeys: keyring.keys.length,
+                    contacts: contacts.contacts.length,
                   }}
+                  neverCacheKeys={prefs.neverCacheKeys}
+                  nav={nav}
+                  lockNow={lockNow}
+                  bindOpen={bindPaletteOpen}
                 />
-              )}
-              {nav.historyOpen && (
-                <HistoryPage
-                  enabled={prefs.historyEnabled}
-                  onClose={nav.closeHistory}
-                />
-              )}
-
-              <main
-                className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4"
-                role="tabpanel"
-                id={`tabpanel-${activeTab}`}
-                aria-labelledby={`tab-${activeTab}`}
-              >
-                <div
-                  className={activeTab === "workspace" ? "h-full" : "hidden"}
-                >
-                  <WorkspaceView
-                    vaultSettling={
-                      phase.opening || keyring.loading || contacts.loading
-                    }
-                    awaitingPendingOp={!pendingChecked}
-                    onOpenReply={openReader}
-                    pendingAction={
-                      pending &&
-                      (pending.action === "encrypt" ||
-                        pending.action === "decrypt" ||
-                        pending.action === "sign" ||
-                        pending.action === "verify")
-                        ? { action: pending.action, text: pending.text }
-                        : null
-                    }
-                    onClearPending={clearPending}
-                    restoreDraft={draftCiphertext}
-                    onDraftRestored={handleDraftRestored}
-                    onRegisterDraftSource={registerDraftSource}
-                    intake={workspaceIntake}
-                    onIntakeConsumed={clearWorkspaceIntake}
+                <ImportOverlay />
+                {nav.historyOpen && (
+                  <HistoryPage
+                    enabled={prefs.historyEnabled}
+                    onClose={nav.closeHistory}
                   />
-                </div>
-                {activeTab === "keys" && <KeysView />}
-                {activeTab === "settings" && <SettingsView />}
-              </main>
+                )}
 
-              <AppFooter onOpenPalette={openPalette} />
-            </div>
-          </GlobalDropZone>
-        </WorkspaceBridgeContext>
+                <main
+                  className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4"
+                  role="tabpanel"
+                  id={`tabpanel-${nav.tab}`}
+                  aria-labelledby={`tab-${nav.tab}`}
+                >
+                  <div
+                    className={nav.tab === "workspace" ? "h-full" : "hidden"}
+                  >
+                    <WorkspaceView
+                      vaultSettling={
+                        (vaultOpen && phase.opening) ||
+                        keyring.loading ||
+                        contacts.loading
+                      }
+                      awaitingPendingOp={!checked}
+                      onOpenReply={openReader}
+                      pendingAction={
+                        pending && WORKSPACE_ACTIONS.has(pending.action)
+                          ? {
+                              action: pending.action as WorkspaceAction,
+                              text: pending.text,
+                            }
+                          : null
+                      }
+                      onClearPending={clearPending}
+                      restoreDraft={draftCiphertext}
+                      onDraftRestored={discardDraft}
+                      onRegisterDraftSource={registerDraftSource}
+                      intake={intake}
+                      onIntakeConsumed={clearIntake}
+                    />
+                  </div>
+                  {nav.tab === "keys" && <KeysView />}
+                  {nav.tab === "settings" && <SettingsView />}
+                </main>
+
+                <AppFooter onOpenPalette={() => openPaletteRef.current?.()} />
+              </div>
+            </GlobalDropZone>
+          </WorkspaceBridgeContext>
+        </VaultGate>
       </NavContext>
     </VaultContext>
   );
@@ -842,124 +228,4 @@ function Palette({
   bindOpen: (open: () => void) => void;
 }) {
   return <CommandPalette ctx={useActionContext(args)} bindOpen={bindOpen} />;
-}
-
-// ── Tab bar with WAI-ARIA keyboard navigation ────────────────────────
-
-// Labels are resolved at render time (never at module load).
-const TABS: { id: Tab; label: () => string }[] = [
-  { id: "workspace", label: () => t("app_tab_main") },
-  { id: "keys", label: () => t("common_keys") },
-  { id: "settings", label: () => t("common_settings") },
-];
-
-function TabBar({
-  activeTab,
-  onTabChange,
-  trailing,
-}: {
-  activeTab: Tab;
-  onTabChange: (tab: Tab) => void;
-  /** Header actions drawn between the tabs and Settings (History). Not
-   *  tabs, so they sit outside the tablist and its arrow handling. */
-  trailing?: React.ReactNode;
-}) {
-  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      const idx = TABS.findIndex((t) => t.id === activeTab);
-      let next: number;
-
-      switch (e.key) {
-        case "ArrowRight":
-          next = (idx + 1) % TABS.length;
-          break;
-        case "ArrowLeft":
-          next = (idx - 1 + TABS.length) % TABS.length;
-          break;
-        case "Home":
-          next = 0;
-          break;
-        case "End":
-          next = TABS.length - 1;
-          break;
-        default:
-          return;
-      }
-
-      e.preventDefault();
-      onTabChange(TABS[next].id);
-      tabRefs.current[next]?.focus();
-    },
-    [activeTab, onTabChange],
-  );
-
-  // One button per tab, so the ref slots line up with TABS for the
-  // arrow-key handler regardless of which group a tab is drawn in.
-  const renderTab = (tab: (typeof TABS)[number], i: number) => {
-    const isSettings = tab.id === "settings";
-    const isActive = activeTab === tab.id;
-    return (
-      <button
-        key={tab.id}
-        ref={(el) => {
-          tabRefs.current[i] = el;
-        }}
-        role="tab"
-        aria-selected={isActive}
-        aria-controls={`tabpanel-${tab.id}`}
-        aria-label={isSettings ? t("common_settings") : undefined}
-        id={`tab-${tab.id}`}
-        // Out of the Tab order, like History beside it: Tab starts in
-        // the page itself. The tabs are a click, a palette action or
-        // (once one has focus) the arrow keys away.
-        tabIndex={-1}
-        onClick={() => onTabChange(tab.id)}
-        className={
-          isSettings
-            ? `${trailing ? "" : "ml-auto"} order-2 flex size-[30px] items-center justify-center rounded-md transition-colors ${
-                isActive
-                  ? "bg-raised text-foreground"
-                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
-              }`
-            : `h-[26px] rounded-md px-3 text-sm font-medium transition-colors ${
-                isActive
-                  ? "bg-raised text-foreground shadow-[inset_0_1px_0_rgb(255_255_255/0.1),0_1px_2px_rgb(0_0_0/0.5)]"
-                  : "text-muted-foreground hover:text-foreground"
-              }`
-        }
-      >
-        {isSettings ? <SettingsIcon className="h-4 w-4" /> : tab.label()}
-      </button>
-    );
-  };
-
-  // Main and Keys sit as a segmented pair in a recessed well on the
-  // left; Settings is an icon on the right. All three stay tabs in ONE
-  // tablist (the well is a plain wrapper), so the roving tabindex and
-  // arrow/Home/End handling cover them as a single row.
-  return (
-    <nav
-      className="bg-chrome flex shrink-0 items-center gap-1 border-b border-white/[0.06] py-2 pr-2.5 pl-3"
-      aria-label={t("app_nav_label")}
-    >
-      {/* `contents`: the tablist keeps its role and keyboard handling
-          but lays its tabs out in the nav's row, so the header actions
-          can sit between the Main/Keys pair and Settings. */}
-      <div className="contents" role="tablist" onKeyDown={handleKeyDown}>
-        <div className="bg-track flex gap-0.5 rounded-lg p-[3px]">
-          {TABS.map((tab, i) =>
-            tab.id === "settings" ? null : renderTab(tab, i),
-          )}
-        </div>
-        {TABS.map((tab, i) =>
-          tab.id === "settings" ? renderTab(tab, i) : null,
-        )}
-      </div>
-      {trailing && (
-        <div className="order-1 ml-auto flex items-center">{trailing}</div>
-      )}
-    </nav>
-  );
 }
