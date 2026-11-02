@@ -1,29 +1,17 @@
-/**
- * Recipient picker ordering: recently-used recipients surface first
- * (most recent first), the rest follow alphabetically. The recency list
- * itself is a small capped preference of key fingerprints updated after
- * each successful encrypt.
- */
+/** Recipient picker ordering: recently-used first, the rest alphabetical. */
 
 import { displayUserId, formatKeyDisplayName } from "./utils/key-naming";
 
-/** Maximum number of fingerprints kept in the recents preference, and
- *  the maximum size of the picker's "Recent" section. */
 export const RECENT_RECIPIENTS_CAP = 10;
 
-/** The minimal shape the recipient helpers need -- both
- *  `PublicContactKey` and `ProtectedKeyBlob` satisfy it. */
 export interface RecipientLike {
   keyId: string;
   userIds: string[];
-  /** Local display name, when the user has set one. Absent means "fall
-   *  back to the first User ID" -- read through `displayUserId`, never
-   *  directly, so ordering and search agree with what the picker shows. */
+  /** Read through `displayUserId`, never directly, so ordering and search
+   *  agree with what the picker shows. */
   alias?: string;
 }
 
-/** An ordered split of the picker's options: `recent` first (in the
- *  recency list's order), then `rest` alphabetically by display name. */
 export interface OrderedRecipients<T> {
   recent: T[];
   rest: T[];
@@ -33,11 +21,6 @@ function displayName(item: RecipientLike): string {
   return formatKeyDisplayName(displayUserId(item)).name.toLowerCase();
 }
 
-/**
- * Split `items` into the recently-used ones (ordered as in `recents`,
- * most-recent-first, capped) and the rest (alphabetical by display
- * name). Fingerprints in `recents` with no matching item are ignored.
- */
 export function orderRecipients<T extends RecipientLike>(
   items: T[],
   recents: string[],
@@ -57,13 +40,8 @@ export function orderRecipients<T extends RecipientLike>(
   return { recent, rest };
 }
 
-/**
- * Whether a picker option matches a search query. Every whitespace-
- * separated token of the query must appear (case-insensitive) somewhere
- * in the option's display name, detail (comment/email) or key id, so
- * "james rno" narrows across name and address together.
- * An empty/blank query matches everything.
- */
+/** Every query token must appear somewhere in name, detail, first User ID
+ *  or key id. */
 export function matchesRecipientSearch(
   item: RecipientLike,
   query: string,
@@ -71,19 +49,12 @@ export function matchesRecipientSearch(
   const tokens = query.toLowerCase().split(/\s+/).filter(Boolean);
   if (tokens.length === 0) return true;
   const { name, detail } = formatKeyDisplayName(displayUserId(item));
-  // The real identity stays in the haystack alongside the alias: after a
-  // rename, the name on the certificate is still how someone might look
-  // for the key.
+  // Keep the certificate's name searchable after a rename.
   const haystack =
     `${name} ${detail} ${item.userIds[0] ?? ""} ${item.keyId}`.toLowerCase();
   return tokens.every((token) => haystack.includes(token));
 }
 
-/**
- * Fold the recipients of a successful encrypt into the stored recency
- * list: used fingerprints move to the front (keeping their relative
- * order), duplicates collapse, and the result is capped.
- */
 export function updateRecentRecipients(
   current: string[],
   used: string[],

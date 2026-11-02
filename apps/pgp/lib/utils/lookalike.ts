@@ -1,76 +1,42 @@
 /**
- * Mark the letters that make a word a lookalike.
- *
- * The same rule the engine uses to set `lookalike` (`mixes_scripts` in
- * gpg-wasm/src/lib.rs): a WORD whose letters come from more than one of
- * the scripts that imitate each other. Within such a word, the letters
- * outside its main script are the ones to point at -- the Cyrillic А in
- * "Аlice", the IPA ɑ in "ɑlice". A Cyrillic name with a Latin address is
- * two words in two scripts, which is ordinary, and nothing is marked.
- *
- * Computed from the text itself rather than read off the stored flag, so
- * it also marks names on contacts saved before the flag existed.
+ * Mark the letters that make a word a lookalike. Same rule as the
+ * engine's `mixes_scripts` (gpg-wasm/src/lib.rs): a word mixing scripts
+ * that imitate each other; letters outside its main script are marked.
+ * Computed from the text, not the stored flag, so older contacts are
+ * covered too.
  */
 
 export interface TextRun {
   text: string;
-  /** A letter from a different alphabet than the rest of its word -- or
-   *  an invisible character (see `invisible`). */
+  /** Different alphabet from the rest of its word, or invisible. */
   odd: boolean;
-  /** Characters that draw nothing at all (see {@link INVISIBLE}). Marked
-   *  as `odd` too, but a highlight on nothing is still nothing, so the
-   *  renderer shows a placeholder in their place. */
+  /** Draws nothing; the renderer shows a placeholder. */
   invisible?: true;
-  /** A letter of the address's own alphabet that passes for a different
-   *  one (the dotless ı in "alıce@corp.com"; see {@link markWord}).
-   *  Marked as `odd` too, with its own hover text: "from a different
-   *  alphabet" would be wrong about it. */
+  /** Same-alphabet letter passing for another in an address (dotless ı);
+   *  gets its own hover text. */
   confusable?: true;
 }
 
 /**
- * Characters that render as nothing: every Default_Ignorable_Code_Point
- * (zero-width space and joiners, soft hyphen, variation selectors, tag
- * characters, the Hangul fillers, the combining grapheme joiner), every
- * format control (Cf: bidi overrides and isolates, Arabic number signs)
- * and every C0/C1 control; the line and paragraph separators; and the
- * symbols that draw as an empty cell without being ignorable (the
- * Braille blank U+2800, the object replacement character U+FFFC, the
- * musical null notehead U+1D159), which neither property covers. The
- * engine strips these from User IDs and key comments; this is the same
- * set on the TypeScript side (`INVISIBLE_RANGES` in gpg-wasm/src/lib.rs,
- * held to it by `lookalike.test.ts`), for text stored before it did and
- * for anything that reaches the screen another way. Inside a name or an
- * address, any one of them makes two different strings look identical.
+ * Characters that render as nothing (default-ignorables, Cf, controls,
+ * line/paragraph separators, blank-cell symbols). Must match
+ * `INVISIBLE_RANGES` in gpg-wasm/src/lib.rs; `lookalike.test.ts` holds
+ * the two together.
  */
 export const INVISIBLE =
   /[\p{Default_Ignorable_Code_Point}\p{Cf}\p{Cc}\u2028\u2029\u2800\uFFFC\u{1D159}]/u;
 const INVISIBLE_ALL = new RegExp(INVISIBLE.source, "gu");
 
-/** `s` with every {@link INVISIBLE} character taken out. */
 export function stripInvisible(s: string): string {
   return s.replace(INVISIBLE_ALL, "");
 }
 
 /**
- * Letters that render like a Latin letter without being one, mapped to
- * it -- a hand-picked subset of the Unicode confusables data (UTS #39)
- * covering the scripts that imitate Latin names in practice: Cyrillic,
- * Greek, Armenian, Cherokee, Lisu, Coptic, small capitals and IPA, and
- * the Latin letters with a stroke or hook that no decomposition takes
- * apart (ł, ø, đ, ħ, ŧ). Digits and pipes that pass for letters
- * ("Car0l", "|ane") are folded the same way.
- *
- * Every value is lower-case ASCII, except "I": a letter drawn as a
- * capital I, which reads as an "i" or an "l" depending on the face. The
- * skeleton gives it both readings, exactly as it does the real one (see
- * `nameSkeleton` in identity/binding).
- *
- * Entries are looked up AFTER NFKC (`readableForm`), so a character
- * NFKC folds into another is covered by its folded form's entry: the
- * hooked upsilon ϒ is Υ by then, and the lunate sigma ϲ is ς, which is
- * why ς is listed. Small forms are listed beside their capitals: the
- * lookup lower-cases a capital, it never upper-cases a small letter.
+ * Non-Latin (and stroked Latin) letters, digits and pipes that render like
+ * a Latin letter, mapped to it: a hand-picked UTS #39 subset. Values are
+ * lower-case ASCII except "I" (reads as i or l; see `nameSkeleton`).
+ * Looked up AFTER NFKC, and the lookup only lower-cases, so small forms
+ * must be listed beside their capitals.
  */
 export const CONFUSABLE = new Map<string, string>([
   ["\u0030", "o"],
@@ -442,32 +408,22 @@ const enum Script {
   Cherokee,
 }
 
-/**
- * Every Unicode script, by its Script property name. `scriptOf` asks
- * the regex engine which one a letter belongs to, rather than keeping a
- * list of the scripts known to imitate Latin: that list missed the
- * Devanagari, Thai, Telugu and Kannada zeros, the Malayalam ttha, a
- * Georgian and two Armenian letters, so "Dan C\u0966le" mixed nothing and
- * nothing was marked. A name the runtime does not know is skipped.
- */
+/** Every Unicode script name. Ask the regex engine rather than list only
+ *  Latin-imitating scripts, which misses e.g. the Devanagari zero. Names
+ *  the runtime doesn't know are skipped. */
 const SCRIPT_NAMES =
   "Adlam Ahom Anatolian_Hieroglyphs Arabic Armenian Avestan Balinese Bamum Bassa_Vah Batak Bengali Bhaiksuki Bopomofo Brahmi Braille Buginese Buhid Canadian_Aboriginal Carian Caucasian_Albanian Chakma Cham Cherokee Chorasmian Coptic Cuneiform Cypriot Cypro_Minoan Cyrillic Deseret Devanagari Dives_Akuru Dogra Duployan Egyptian_Hieroglyphs Elbasan Elymaic Ethiopic Garay Georgian Glagolitic Gothic Grantha Greek Gujarati Gunjala_Gondi Gurmukhi Gurung_Khema Han Hangul Hanifi_Rohingya Hanunoo Hatran Hebrew Hiragana Imperial_Aramaic Inscriptional_Pahlavi Inscriptional_Parthian Javanese Kaithi Kannada Katakana Kawi Kayah_Li Kharoshthi Khitan_Small_Script Khmer Khojki Khudawadi Kirat_Rai Lao Latin Lepcha Limbu Linear_A Linear_B Lisu Lycian Lydian Mahajani Makasar Malayalam Mandaic Manichaean Marchen Masaram_Gondi Medefaidrin Meetei_Mayek Mende_Kikakui Meroitic_Cursive Meroitic_Hieroglyphs Miao Modi Mongolian Mro Multani Myanmar Nabataean Nag_Mundari Nandinagari New_Tai_Lue Newa Nko Nushu Nyiakeng_Puachue_Hmong Ogham Ol_Chiki Ol_Onal Old_Hungarian Old_Italic Old_North_Arabian Old_Permic Old_Persian Old_Sogdian Old_South_Arabian Old_Turkic Old_Uyghur Oriya Osage Osmanya Pahawh_Hmong Palmyrene Pau_Cin_Hau Phags_Pa Phoenician Psalter_Pahlavi Rejang Runic Samaritan Saurashtra Sharada Shavian Siddham SignWriting Sinhala Sogdian Sora_Sompeng Soyombo Sundanese Sunuwar Syloti_Nagri Syriac Tagalog Tagbanwa Tai_Le Tai_Tham Tai_Viet Takri Tamil Tangsa Tangut Telugu Thaana Thai Tibetan Tifinagh Tirhuta Todhri Toto Tulu_Tigalari Ugaritic Vai Vithkuqi Wancho Warang_Citi Yezidi Yi Zanabazar_Square".split(
     " ",
   );
 
-/** Scripts written together in one word: Japanese mixes kanji, hiragana
- *  and katakana, Korean hangul and hanja, Chinese han and bopomofo. */
+/** Scripts legitimately written together in one word (CJK). */
 const CJK = new Set(["Han", "Hiragana", "Katakana", "Hangul", "Bopomofo"]);
 
 let scriptTests: [string, RegExp][] | null = null;
 const scriptCache = new Map<string, string | null>();
-/** Letters and digits; Common and Inherited ones (ASCII digits, the
- *  fullwidth forms' punctuation, combining marks) belong to no script. */
 const LETTER_OR_DIGIT = /^[\p{L}\p{N}]$/u;
 const NO_SCRIPT = /^[\p{Script=Common}\p{Script=Inherited}]$/u;
 
-/** The Unicode script of a letter or digit, by its Script property;
- *  null for anything else (see {@link SCRIPT_NAMES}). */
 function unicodeScript(c: string): string | null {
   const cached = scriptCache.get(c);
   if (cached !== undefined) return cached;
@@ -487,17 +443,13 @@ function unicodeScript(c: string): string | null {
   return found;
 }
 
-/** Which script a letter counts as. The scripts that imitate Latin
- *  first, by range -- with Latin split into its plain letters, its
- *  fullwidth and mathematical forms and its IPA and small capitals,
- *  which do not belong in an ordinary Latin word either. Then any other
- *  letter or digit by its Unicode script (see {@link unicodeScript}). */
+/** Which script a letter counts as: Latin-imitating scripts by range
+ *  first (Latin split so fullwidth/math/IPA/small caps count as foreign
+ *  in a plain Latin word), then by Unicode script. */
 function scriptOf(c: string): Script | string | null {
   const known = knownScriptOf(c);
   if (known !== null) return known;
   const script = unicodeScript(c);
-  // A letter of a split-out script outside its main ranges (Latin
-  // ligatures and Latin Extended-C, say) is not a plain letter of it.
   return script === "Latin"
     ? Script.ExtendedLatin
     : script === "Lisu"
@@ -507,7 +459,6 @@ function scriptOf(c: string): Script | string | null {
         : script;
 }
 
-/** The scripts `knownScriptOf` already names, by their property name. */
 const SPLIT_OUT: Record<string, Script> = {
   Greek: Script.Greek,
   Cyrillic: Script.Cyrillic,
@@ -556,22 +507,14 @@ function knownScriptOf(c: string): Script | null {
   return null;
 }
 
-/** Word separators, as `mixes_scripts` splits on them. An email address
- *  is ONE word, so a domain label in another script next to a Latin one
- *  ("tim@аррӏе.com") counts as mixing. */
+/** Must match `mixes_scripts`. An email address is ONE word, so a
+ *  foreign-script domain label counts as mixing. */
 const SEPARATOR = /[\s<>()"',;:]/u;
 
-/** Mark one word: the letters outside its main script, if it mixes,
- *  and every invisible character whether it mixes or not.
- *
- *  In an ADDRESS (a word with an "@"), also every non-ASCII letter that
- *  stands in for a Latin one ({@link CONFUSABLE}). Mixing scripts is not
- *  needed for those to deceive: the dotless ı is Latin, so "alıce" is a
- *  one-script word, and it reads as alice. A name may well be written in
- *  such letters (Turkish, Greek, Cyrillic); an address that otherwise
- *  reads as plain ASCII is where one is a disguise -- and it is the
- *  address the conflict check compares on its skeleton (see
- *  `identity/binding`), so it is marked where that check looks. */
+/** Mark a word's letters outside its main script (if it mixes) and every
+ *  invisible character. In a Latin address also mark confusable letters
+ *  even without mixing (dotless ı in "alıce"): the address is what the
+ *  conflict check compares by skeleton (`identity/binding`). */
 function markWord(word: string): TextRun[] {
   const chars = [...word];
   const scripts = chars.map(scriptOf);
@@ -580,8 +523,7 @@ function markWord(word: string): TextRun[] {
     if (s !== null) counts.set(s, (counts.get(s) ?? 0) + 1);
   }
 
-  // The word's own script is the one most of its letters use; a tie goes
-  // to plain Latin, which is what a lookalike is usually imitating.
+  // Majority script; a tie goes to Latin.
   let main: Script | string = Script.Latin;
   let best = -1;
   for (const [s, n] of counts) {
@@ -590,8 +532,7 @@ function markWord(word: string): TextRun[] {
       best = n;
     }
   }
-  // Only an address that otherwise reads as Latin: "иван@почта.рф" is
-  // written in Cyrillic, and every one of its а and о is meant.
+  // Only Latin addresses: "иван@почта.рф" means its Cyrillic letters.
   const latinAddress = word.includes("@") && main === Script.Latin;
   const special = (c: string): TextRun | null =>
     INVISIBLE.test(c)
@@ -613,10 +554,8 @@ function markWord(word: string): TextRun[] {
   );
 }
 
-/** Characters that pass for the dot in an address ("corp・com"):
- *  middle dots, the hyphenation point, the dot operators. A name drops
- *  them with the rest of its punctuation; an address keeps its dots, so
- *  these are read as one (`addressSkeletons`) and marked inside it. */
+/** Characters that pass for the dot in an address ("corp・com"); read as
+ *  "." by `addressSkeletons` and marked. */
 export const DOT_LOOKALIKES = new Set([
   "\u00b7",
   "\u0387",
@@ -625,16 +564,13 @@ export const DOT_LOOKALIKES = new Set([
   "\u22c5",
   "\u30fb",
   "\uff65",
-  // The ideographic full stop and its halfwidth and fullwidth forms:
-  // "corp\u3002com" is how an IME types corp.com.
+  // Ideographic full stops (how an IME types corp.com).
   "\u3002",
   "\uff0e",
   "\uff61",
 ]);
 
-/** A non-ASCII letter that stands in for a Latin one. ASCII entries in
- *  {@link CONFUSABLE} (the digits and the pipe) are left alone: "bob1"
- *  is an ordinary address. */
+/** Non-ASCII only: "bob1" is an ordinary address. */
 function isConfusableLetter(c: string): boolean {
   if ((c.codePointAt(0) ?? 0) < 0x80) return false;
   return (
@@ -650,8 +586,7 @@ export function markLookalikes(s: string): TextRun[] {
   let word = "";
   const push = (run: TextRun) => {
     const last = runs.at(-1);
-    // Invisible characters stay one per run, so each gets its own
-    // placeholder and its own code point in the hover text.
+    // Invisible characters stay one per run (own placeholder + code point).
     if (
       last?.odd === run.odd &&
       !last.invisible &&
@@ -677,7 +612,7 @@ export function markLookalikes(s: string): TextRun[] {
   return runs;
 }
 
-/** "U+0410", for saying which character is marked. */
+/** "U+0410". */
 export function codePointLabel(c: string): string {
   return [...c]
     .map(

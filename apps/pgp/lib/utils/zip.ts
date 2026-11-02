@@ -1,6 +1,5 @@
 import { zipSync } from "fflate";
 
-/** Zip multiple files into a single Uint8Array archive. */
 export async function zipFiles(files: File[]): Promise<Uint8Array> {
   const entries: Record<string, Uint8Array> = {};
   for (const file of files) {
@@ -10,7 +9,6 @@ export async function zipFiles(files: File[]): Promise<Uint8Array> {
   return zipSync(entries);
 }
 
-/** Check if a Uint8Array starts with the ZIP magic bytes (PK\x03\x04). */
 export function isZipArchive(data: Uint8Array): boolean {
   return (
     data.length >= 4 &&
@@ -21,19 +19,15 @@ export function isZipArchive(data: Uint8Array): boolean {
   );
 }
 
-/**
- * Cheaply check whether a ZIP contains a `manifest.json` entry (i.e. looks
- * like a packed Chrome extension). Reads only the central directory --
- * no file data is decompressed -- so it's fast even on large archives.
- */
+/** Whether a ZIP has a `manifest.json` entry; reads only the central
+ *  directory, nothing is decompressed. */
 export function zipHasManifest(data: Uint8Array): boolean {
   if (!isZipArchive(data) || data.length < 22) return false;
   const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
   const EOCD_SIG = 0x06054b50;
   const CEN_SIG = 0x02014b50;
 
-  // Locate the End Of Central Directory, scanning back past any archive
-  // comment (max 65535 bytes).
+  // EOCD, scanning back past an archive comment (max 65535 bytes).
   const minStart = Math.max(0, data.length - 22 - 0xffff);
   let eocd = -1;
   for (let i = data.length - 22; i >= minStart; i--) {

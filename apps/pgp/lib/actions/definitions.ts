@@ -1,15 +1,8 @@
-// The action list behind the command palette and global shortcuts.
-//
-// Ids are stable forever (see PgpAction.id). Destructive/irreversible
-// operations -- key deletion, contact deletion, history clearing -- are
-// deliberately NOT palette actions in v1: they keep their dedicated
-// confirmation pages, out of reach of a stray Enter in a fuzzy matcher.
-//
-// "Set default key" is also deliberately excluded: picking WHICH key
-// needs a second-step key list, and the palette has no submenu surface
-// (one flat list, one Enter). Executing it with an implicit "current"
-// key would silently retarget "encrypt to me". It stays on the key
-// cards in the Keys tab until the palette grows a picker step.
+// Command palette + global shortcut actions. Ids are stable forever.
+// Destructive ops (key/contact deletion, history clearing) are deliberately
+// NOT actions: they keep confirmation pages, out of reach of a stray Enter.
+// "Set default key" is excluded too: an implicit "current" key would
+// silently retarget "encrypt to me".
 
 import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
 
@@ -20,8 +13,7 @@ import { languageLabel, translationLanguages } from "../ai/languages";
 import { FIND_SHORTCUT, STYLE_SHORTCUTS } from "../compose/shortcuts";
 import { t } from "../i18n";
 
-/** What "no input" means per mode, for Run's disabled reason. (A
- *  switch, not a key table: the i18n checker counts only literal keys.) */
+/** A switch, not a key table: the i18n checker counts only literal keys. */
 function noInputReason(mode: PgpMode): string {
   switch (mode) {
     case "encrypt":
@@ -44,9 +36,7 @@ const MODE_NAME: Record<PgpMode, MessageKey> = {
 
 const MODES: PgpMode[] = ["encrypt", "decrypt", "sign", "verify"];
 
-/** Palette group headings. `PgpAction.group` is a stable English id
- *  (it doubles as the grouping key and a search term); this is the
- *  label the palette shows for it. Unknown groups render as-is. */
+/** Display label for a stable English `PgpAction.group` id. */
 export function groupLabel(group: string): string {
   switch (group) {
     case "Mode":
@@ -70,7 +60,6 @@ export function groupLabel(group: string): string {
   }
 }
 
-/** Palette names of the inline style actions. */
 function styleActionName(style: InlineStyle): string {
   switch (style) {
     case "bold":
@@ -84,39 +73,26 @@ function styleActionName(style: InlineStyle): string {
   }
 }
 
-/** mod+K opens the command palette. Lives here (not in the palette
- *  component) so the footer hint and the shortcuts reference can render
- *  it without importing UI code; the palette itself binds it. */
+// Shortcut specs are exported so Kbd hints and the shortcuts reference
+// share the exact spec with the registry and can't drift.
 export const PALETTE_SHORTCUT: ShortcutSpec = { mod: true, key: "k" };
 
-/** mod+shift+C copies completed text output. Exported so the copy
- *  button's Kbd chip and the shortcuts reference share this exact
- *  spec with the registry action below. */
 export const COPY_SHORTCUT: ShortcutSpec = { mod: true, shift: true, key: "c" };
 
-/** mod+shift+D downloads the completed output. In Chrome this combo is
- *  "bookmark all tabs" -- acceptable to intercept: it only fires while
- *  the extension panel itself has focus, where bookmarking is never
- *  the intent. Exported for the same no-drift reason as COPY_SHORTCUT. */
+/** Chrome's "bookmark all tabs"; intercepted only while the panel has focus. */
 export const DOWNLOAD_SHORTCUT: ShortcutSpec = {
   mod: true,
   shift: true,
   key: "d",
 };
 
-/** mod+shift+R replies to a decrypted message's signer. In Chrome this
- *  combo is a hard reload -- intercepted only while the panel has focus,
- *  the same trade DOWNLOAD_SHORTCUT makes. Exported for the Reply
- *  button's hover label and the shortcuts reference. */
+/** Chrome's hard reload; intercepted only while the panel has focus. */
 export const REPLY_SHORTCUT: ShortcutSpec = {
   mod: true,
   shift: true,
   key: "r",
 };
 
-/** The mod+digit shortcut for each workspace mode. Single source of
- *  truth shared by the registry's mode actions (below) and the mode
- *  dropdown's Kbd hints, so the two can never drift. */
 export const MODE_SHORTCUTS: Record<PgpMode, ShortcutSpec> = {
   encrypt: { mod: true, key: "1" },
   decrypt: { mod: true, key: "2" },
@@ -124,7 +100,6 @@ export const MODE_SHORTCUTS: Record<PgpMode, ShortcutSpec> = {
   verify: { mod: true, key: "4" },
 };
 
-/** Switch the workspace to a mode (jumping to the tab if needed). */
 const modeActions: PgpAction[] = MODES.map((mode) => ({
   id: `mode.${mode}`,
   name: () => t(MODE_NAME[mode]),
@@ -137,17 +112,12 @@ const modeActions: PgpAction[] = MODES.map((mode) => ({
   },
 }));
 
-/** The message-box tools exist only while prose is being written:
- *  workspace tab, Encrypt or Sign, text box mounted. Elsewhere they are
- *  absent rather than dimmed -- "Bold selection" on the Keys tab is not
- *  a thing the user might want next. */
+/** Message-box tools are absent (not dimmed) unless prose is being written. */
 function composing(ctx: ActionCtx): boolean {
   return ctx.tab === "workspace" && ctx.compose.canEdit;
 }
 
-/** Bold / italic / strikethrough / code on the message selection. The
- *  shortcuts are dispatched from here (the registry), so the toolbar
- *  binds none of its own. */
+/** The registry dispatches these shortcuts; the toolbar binds none. */
 const styleActions: PgpAction[] = (
   Object.keys(STYLE_SHORTCUTS) as InlineStyle[]
 ).map((style) => ({
@@ -169,9 +139,7 @@ export const ACTIONS: readonly PgpAction[] = [
     group: "Workspace",
     keywords: ["go", "execute", "submit"],
     shortcut: { mod: true, key: "Enter" },
-    // Workspace actions stay visible on other tabs with a reason (not
-    // hidden via `applicable`): a dimmed "Switch to Workspace first" is
-    // discoverable; a vanished action looks like it doesn't exist.
+    // Dimmed with a reason on other tabs, not hidden, so it stays discoverable.
     disabledReason: (ctx) => {
       if (ctx.tab !== "workspace")
         return t("actions_switch_to_workspace_first");
@@ -229,8 +197,6 @@ export const ACTIONS: readonly PgpAction[] = [
     keywords: ["log", "past", "operations"],
     disabledReason: (ctx) => {
       if (ctx.historyEnabled) return undefined;
-      // Under never-cache the checkbox itself is unavailable, so
-      // "enable it next to Sign" would point at nothing.
       return ctx.neverCacheKeys
         ? t("actions_history_off_never_cache")
         : t("actions_history_off_reason");
@@ -238,11 +204,8 @@ export const ACTIONS: readonly PgpAction[] = [
     execute: (ctx) => ctx.navigation.openHistory(),
   },
 
-  // ── Preference toggles ─────────────────────────────────────────────
-  // Names show the RESULTING state ("Turn off: ..."), so the palette
-  // doubles as a readout of where the toggle currently sits. All three
-  // reuse the workspace checkboxes' exact handlers (persistence +
-  // stale-output reset included) via ctx.ops.
+  // Preference toggles: names show the RESULTING state; handlers are the
+  // checkboxes' own (persistence + stale-output reset).
   {
     id: "workspace.toggle-encrypt-to-self",
     name: (ctx) =>
@@ -264,9 +227,7 @@ export const ACTIONS: readonly PgpAction[] = [
     group: "Workspace",
     keywords: ["toggle", "signature", "preference"],
     disabledReason: (ctx) => {
-      // Checked BEFORE the own-keys count: with SSH recipients selected,
-      // "add one of your own keys first" would be the wrong advice --
-      // no key of any kind makes an age message signable.
+      // Before the own-keys check: no key makes an age message signable.
       if (ctx.encryptEngine === "ssh") {
         return t("actions_age_cannot_sign");
       }
@@ -356,8 +317,7 @@ export const ACTIONS: readonly PgpAction[] = [
     execute: (ctx) => ctx.ops.openFind(),
   },
   {
-    // Two steps: pick the action, then the language. The last-picked
-    // language is listed first so a repeat is Enter, Enter.
+    // Last-picked language first, so a repeat is Enter, Enter.
     id: "compose.translate",
     name: () => t("actions_translate_message"),
     group: "Message",
@@ -394,9 +354,7 @@ export const ACTIONS: readonly PgpAction[] = [
     },
   },
   {
-    // The result side has one direction only -- into the language the
-    // user reads -- so it is one entry, no picker, present only while a
-    // decrypted or verified message is on screen.
+    // One direction only (into the reading language), so no picker.
     id: "result.translate",
     name: (ctx) =>
       t("actions_translate_result_to", {

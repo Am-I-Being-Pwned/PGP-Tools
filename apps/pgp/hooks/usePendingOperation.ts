@@ -9,55 +9,30 @@ import {
 } from "../lib/pending-op";
 
 /**
- * Source of truth: `chrome.storage.session` under `SESSION_PENDING_OP`.
- * The background writes there on context-menu click; we read on mount
- * and subscribe to changes, removing the entry as soon as we consume
- * it so re-renders don't re-apply the same op.
+ * Reads the pending op the background writes to `chrome.storage.session`
+ * (`SESSION_PENDING_OP`), removing it as soon as it is consumed.
  *
- * This replaces the older runtime.sendMessage handshake -- that path
- * was racy against service-worker recycling and slow master-unlock,
- * causing the side panel to miss the selection text. Session storage
- * is in-memory but persists across SW restarts and is read at any
- * time by the App once the user has finished unlocking.
- *
- * `ready` GATES THE CONSUME, and it is a security control rather than a
- * convenience. Consuming means moving the payload -- the user's raw
- * selection, i.e. the plaintext they are about to encrypt -- out of
- * session storage and into React state, where `App` holds it until
- * something routes it. Nothing can route it while the panel is showing
- * onboarding or the master-unlock screen (`WorkspaceView` is not mounted
- * then), so consuming early bought nothing and left the plaintext
- * retained on the fiber for the whole locked window: measured as one
- * live retainer, `property[lastRenderedState] -> property[text]`, i.e.
- * this hook's own update queue. That is T-OUTPUT-HEAP-RESIDUE's class
- * applied to the pending op, and it is why the payload now waits where
- * `T-PENDING-OP-AT-REST` already accounts for it -- in session storage,
- * bounded by `PENDING_OP_TTL_MS` and `sweepStalePendingOp` -- until the
- * App can actually act on it.
- *
- * Consequence, stated rather than hidden: an unlock that takes longer
- * than `PENDING_OP_TTL_MS` now drops the selection instead of applying
- * it, because freshness is judged when we consume and no longer when the
- * panel merely mounted. That is what the TTL is for.
+ * `ready` GATES THE CONSUME as a security control: consuming moves the raw
+ * selection into React state, and nothing can route it while onboarding or
+ * the master-unlock screen is up. Until then it waits in session storage
+ * where T-PENDING-OP-AT-REST bounds it (TTL + sweep), not on the fiber
+ * (T-OUTPUT-HEAP-RESIDUE). Consequence: an unlock slower than
+ * `PENDING_OP_TTL_MS` drops the selection.
  */
 export function usePendingOperation(ready: boolean) {
   const [pending, setPending] = useState<PendingOperation | null>(null);
-  // False until the first read after `ready` has answered, so the panel
-  // can hold the workspace back rather than paint an empty form for the
-  // frames before a context-menu selection lands in it. Carries nothing
-  // from the op itself.
+  // False until the first read after `ready`, so the panel can hold the
+  // workspace back instead of painting an empty form first.
   const [checked, setChecked] = useState(false);
 
   useEffect(() => {
-    // Leave it in storage until the App is in a state that can route it.
     if (!ready) {
       setChecked(false);
       return;
     }
 
-    // AbortController gives us a properly-typed mutable `aborted`
-    // boolean for cross-async cancellation. (A plain `let` or ref
-    // gets narrowed to the literal `false` by typescript-eslint.)
+    // AbortController, not a `let`: typescript-eslint narrows a plain flag
+    // to the literal `false`.
     const ac = new AbortController();
 
     const consume = async (): Promise<boolean> => {
@@ -67,36 +42,26 @@ export function usePendingOperation(ready: boolean) {
         if (!ac.signal.aborted) setChecked(true);
         return false;
       }
-      // Another window's selection: leave it in storage for that
-      // window's panel (or the stale sweep) rather than showing it here.
+      // Another window's selection: leave it for that window's panel.
       const here = await chrome.windows.getCurrent();
       if (!isPendingOpForWindow(op, here.id)) {
         if (!ac.signal.aborted) setChecked(true);
         return false;
       }
-      // Always remove first, regardless of freshness -- a stale op
-      // shouldn't keep sitting in storage even if we don't apply it.
+      // Remove even if stale.
       await chrome.storage.session.remove(SESSION_PENDING_OP);
       if (ac.signal.aborted) return true;
-      // Set together with the op, in the same batch, so there is no
-      // render between "checked" and "here it is".
       setChecked(true);
       if (!isPendingOpFresh(op)) return false;
       setPending(op);
       return true;
     };
 
-    // First read on mount. If empty, the background may still be
-    // committing storage.set (close+locked case: the SW write races
-    // against the side panel mount). Re-poll once after 400ms as a
-    // safety net so we don't depend solely on the onChanged listener
-    // racing with set().
+    // The SW's set() can race the panel mount; re-poll once after 400ms in
+    // case onChanged slipped past the listener registration.
     void (async () => {
       const got = await consume();
       if (got || ac.signal.aborted) return;
-      // Defensive retry: covers the case where the background's
-      // storage.set commits after we mounted but the onChanged event
-      // somehow slipped past our listener registration.
       await new Promise((r) => setTimeout(r, 400));
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- mutated by cleanup on unmount, rule can't see it
       if (!ac.signal.aborted) void consume();
@@ -121,8 +86,6 @@ export function usePendingOperation(ready: boolean) {
     };
   }, [ready]);
 
-  // Stable identity so consumer effects with clearPending in deps
-  // don't re-fire on every render.
   const clearPending = useCallback(() => setPending(null), []);
 
   return { pending, clearPending, checked };

@@ -1,9 +1,7 @@
 /**
- * Wire-format types for the encrypted-private-key blobs that go into the
- * keyring. Both fields are AAD-bound to the key fingerprint via
- * `gpg-tools:{method}:{keyId}` -- changing the format means coordinating
- * `protect-flow.ts` (writer), `useKeySession.ts` (reader), and the
- * `unlockWith*` paths in WASM.
+ * Encrypted-private-key blob formats, AAD-bound via
+ * `gpg-tools:{method}:{keyId}`. A format change must be coordinated with
+ * the writer, reader and WASM `unlockWith*` paths.
  */
 
 export interface PasswordEncryptedBlob {

@@ -12,12 +12,8 @@ import { AppError } from "../errors/app-error";
 import { t } from "../i18n";
 import { encryptKeyForExportWithHandle, getKeyArmored } from "../pgp/wasm";
 
-/**
- * Exporter for a PGP private key. The key is already unlocked in the session,
- * so there is no unlock gate: each export fetches the live session handle via
- * `getKeyHandle` (which returns null if the key has since locked) and does not
- * release it -- the session owns its handle.
- */
+/** PGP: uses the live session handle (null if since locked) and never
+ *  releases it; the session owns it. */
 export function pgpKeyExporter(
   blob: ProtectedKeyBlob,
   getKeyHandle: (keyId: string) => number | null,
@@ -53,11 +49,7 @@ export function pgpKeyExporter(
   };
 }
 
-/**
- * Exporter for a CRX signing key. A CRX key has no persistent unlocked session
- * (sealed at rest), so the dialog's unlock gate opens a transient WASM handle
- * that the dialog holds and drops on close.
- */
+/** CRX: no session, so the dialog opens a transient handle and drops it on close. */
 export function crxKeyExporter(blob: CrxSigningKeyBlob): PrivateKeyExporter {
   const isPasskey = blob.protection.method === "passkey";
   return {

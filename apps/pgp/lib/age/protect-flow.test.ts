@@ -1,27 +1,13 @@
 /**
- * The SSH half of the shared protect flow: what lands in the stored blob,
- * and that the key file is scrubbed on every exit.
- *
- * The zeroization assertions are the reason this file exists. An OpenSSH
- * private key is secret material for the whole of its life in JS, and the
- * failure being guarded against is not a crash -- it is a plaintext key
- * left in a heap buffer that outlives the flow, invisible to every other
- * test. `importAndProtect` had exactly that bug once (it encoded the
- * passphrase before the gates that throw), so each throwing path gets its
- * own test here rather than being assumed to follow from the happy one.
- *
- * The blob's field set is asserted exactly, not with `toMatchObject`:
- * these objects go on users' disks, and a rename only the writer knows
- * about turns every stored key into a record the validator drops.
+ * SSH protect flow: the stored blob's exact field set (it goes on users'
+ * disks) and that the key file is scrubbed on every exit, each throwing
+ * path tested separately.
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { SshProtectFlowResult } from "../pgp/wasm";
 
-/** The wasm boundary, stubbed. Calls are read back as `unknown[]` -- the
- *  mock's own `mock.calls` is `any[]`, and these assertions are about the
- *  exact bytes handed over, which is worth naming a type for. */
 const wasm = vi.hoisted(() => ({
   protectSshIdentityWithPassword: vi.fn(),
   protectSshIdentityWithPrf: vi.fn(),
@@ -29,17 +15,13 @@ const wasm = vi.hoisted(() => ({
   unlockSshIdentityWithPrf: vi.fn(),
   dropSshIdentity: vi.fn(),
   hasContactsSession: vi.fn(() => Promise.resolve(true)),
-  // Must return the REAL sentence: `importSshIdentity` tags the
-  // passphrase-required case by comparing the engine's error against
-  // this value, so a placeholder here would make the tagging test pass
-  // without testing anything.
+  // Must be the REAL sentence, or the tagging test passes vacuously.
   sshPassphraseRequiredMessage: vi.fn(() =>
     Promise.resolve(PASSPHRASE_REQUIRED),
   ),
 }));
 
-/** Verbatim from `MSG_PASSPHRASE_REQUIRED` in `gpg-wasm/src/age.rs` --
- *  the value the real getter returns. */
+/** Verbatim `MSG_PASSPHRASE_REQUIRED` from `gpg-wasm/src/age.rs`. */
 const PASSPHRASE_REQUIRED =
   "This SSH key is passphrase-protected. Enter its passphrase to import it.";
 
@@ -67,8 +49,7 @@ const RECIPIENT =
   "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIALwHu/03Nd9eyyrPgxjkFu80Fe1EgN06J8iaY8B+wf6";
 const COMMENT = "alice@example.com";
 
-/** `[16 salt][12 iv][ct]`, per-section markers so a mis-sliced blob shows
- *  as the wrong bytes rather than only the wrong length. */
+/** `[16 salt][12 iv][ct]` with per-section markers. */
 function passwordPacked(): Uint8Array {
   const out = new Uint8Array(16 + 12 + 8);
   out.fill(0xa1, 0, 16);
@@ -141,8 +122,6 @@ describe("importSshIdentity - the stored blob", () => {
     ]);
     expect(blob.kind).toBe("ssh");
     expect(blob.keyId).toBe(FINGERPRINT);
-    // An SSH key has no public armor; the canonical recipient line is
-    // the whole of its public half.
     expect(blob.publicKeyArmored).toBe(RECIPIENT);
     expect(blob.algorithm).toBe("ssh-ed25519");
     expect(blob.userIds).toEqual([COMMENT]);
@@ -160,8 +139,6 @@ describe("importSshIdentity - the stored blob", () => {
       method: "password",
       password: PASSWORD,
     });
-    // Empty, not [""] -- "no name" must stay distinguishable from a key
-    // named the empty string.
     expect(blob.userIds).toEqual([]);
     expect(sshUserIds(" alice@host ")).toEqual(["alice@host"]);
   });
@@ -218,8 +195,7 @@ describe("importSshIdentity - zeroization", () => {
   });
 
   it("wipes the key file when the weak-password gate throws", async () => {
-    // The gate runs BEFORE wasm is reached; this is the ordering bug
-    // that shipped once in the PGP flow.
+    // The gate throws before wasm is reached.
     const file = keyFile();
     await expect(
       importSshIdentity(file, null, { method: "password", password: "short" }),
@@ -321,8 +297,6 @@ describe("sshContact", () => {
       armoredPublicKey: RECIPIENT,
       addedAt: 1234,
       lastUsedAt: 1234,
-      // An age recipient IS an encryption key -- there is no sign-only
-      // SSH recipient to exclude, unlike a PGP sign-only cert.
       usableForEncryption: true,
     });
   });
@@ -342,10 +316,7 @@ describe("groupContact", () => {
   const source = { type: "github" as const, user: "octocat", fetchedAt: 99 };
 
   it("writes no `recipients` field for a user with exactly one key", () => {
-    // The migration rule, and the reason `recipientsField` exists: a
-    // single-key fetched contact must serialise as the plain single-key
-    // record a pasted `.pub` line writes, so there is nothing to migrate
-    // and an older build reads it unchanged.
+    // A one-key group serialises as the plain single-key record.
     const contact = groupContact(
       { label: "octocat (GitHub)", source, members: [head], rejected: [] },
       1234,
@@ -359,14 +330,11 @@ describe("groupContact", () => {
       addedAt: 1234,
       lastUsedAt: 1234,
       usableForEncryption: true,
-      // Explicit, not absent: `undefined` means "not computed yet" and
-      // sends the contacts backfill off to parse a recipient line as PGP
-      // armor on every refresh.
+      // Explicit null: `undefined` would trigger the PGP backfill.
       expiresAt: null,
       source,
     });
     expect("recipients" in contact).toBe(false);
-    // Everything the single-key path writes, it writes identically.
     const pasted = sshContact(
       {
         recipient: RECIPIENT,
@@ -382,10 +350,7 @@ describe("groupContact", () => {
   });
 
   it("keeps the head in agreement with the record id for several keys", () => {
-    // The invariant `isValidContact` enforces: a record whose
-    // `recipients[0]` disagrees with `keyId`/`armoredPublicKey` is
-    // dropped on load, because an older build would encrypt to a key
-    // this build never lists.
+    // Head agreement, enforced by `isValidContact` on load.
     const contact = groupContact(
       {
         label: "octocat (GitHub)",
@@ -400,17 +365,8 @@ describe("groupContact", () => {
     expect(contact.recipients?.[0].armored).toBe(contact.armoredPublicKey);
   });
 
-  /**
-   * A group the USER assembled: three pasted keys whose comments did not
-   * agree, filed under a name they typed (see `prepareImport`'s
-   * `groupProposal`).
-   *
-   * It goes through this same constructor, and that is the property --
-   * two ways to build a contact is how the two shapes drift apart, and a
-   * hand-grouped contact must be indistinguishable from a fetched one
-   * except for the one thing that genuinely differs: it has no source,
-   * because a hand-supplied contact has no identity beyond its keys.
-   */
+  /** A hand-grouped contact: same constructor, indistinguishable from a
+   *  fetched one except it has no source. */
   it("builds a hand-grouped contact the same way, minus the source", () => {
     const THIRD = {
       keyId: "SHA256:thirdthirdthirdthirdthirdthirdthirdthirdth",
@@ -425,15 +381,10 @@ describe("groupContact", () => {
       },
       1234,
     );
-    // One contact, the user's name, all three keys.
     expect(contact.userIds).toEqual(["Alice (all machines)"]);
     expect(contact.recipients).toHaveLength(3);
     expect(contact.recipients?.[0].keyId).toBe(contact.keyId);
-    // Absent, never `source: undefined`: the omit-don't-emit rule the
-    // whole record follows.
     expect("source" in contact).toBe(false);
-    // Byte-identical to the fetched shape apart from that one field, so
-    // nothing downstream can tell a hand-made group from a lookup.
     const fetched = groupContact(
       {
         label: "Alice (all machines)",
@@ -460,16 +411,10 @@ describe("groupContact", () => {
 });
 
 describe("importSshIdentity - passphrase tagging", () => {
-  /** The import step reveals its passphrase field on this code alone.
-   *  Matching the engine's prose instead used to be how this worked, and
-   *  it fails silently: reword the Rust and the field simply stops
-   *  appearing, with every test still green. */
+  /** The import step reveals its passphrase field on this code alone. */
   it("tags the engine's passphrase-required error with a code", async () => {
-    // A BARE STRING, not an Error: that is what wasm-bindgen actually
-    // throws for a Rust `Err(String)`. Rejecting with `new Error(...)`
-    // here made this test pass against an `instanceof Error` gate that
-    // could never fire in production -- the mock was more forgiving
-    // than the ABI, which is the only reason the bug shipped this far.
+    // A BARE STRING, not an Error: what wasm-bindgen throws for a Rust
+    // `Err(String)`. An Error here would hide an `instanceof` gate.
     wasm.protectSshIdentityWithPassword.mockRejectedValueOnce(
       PASSPHRASE_REQUIRED,
     );

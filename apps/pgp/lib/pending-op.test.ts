@@ -24,11 +24,7 @@ function op(overrides: Partial<PendingOperation> = {}): PendingOperation {
   };
 }
 
-/**
- * A `chrome.storage.session` stand-in. `onRead` fires after each `get`
- * resolves, which is where the writer's `set` lands in the race the
- * sweep's id re-read exists to survive.
- */
+/** `onRead` fires after each `get`, where the writer's racing `set` lands. */
 function fakeSession(initial: unknown) {
   const store: { value: unknown } = { value: initial };
   let reads = 0;
@@ -90,14 +86,7 @@ describe("isPendingOpFresh", () => {
   });
 });
 
-/**
- * The security-relevant half. The stored `text` is the user's raw
- * selection, and it is stored unsealed, so the only thing bounding the
- * exposure is how long the entry lives. Before this sweep existed the
- * entry was removed ONLY by the side panel reading it, so any path where
- * the panel never mounted left the selection in `chrome.storage.session`
- * until browser shutdown.
- */
+/** Security-relevant: the unsealed selection's lifetime is its exposure. */
 describe("sweepStalePendingOp", () => {
   it("removes an op the panel never collected", async () => {
     const s = install(op({ createdAt: NOW - PENDING_OP_TTL_MS - 1 }));
@@ -126,10 +115,7 @@ describe("sweepStalePendingOp", () => {
   });
 
   it("does not eat a selection written between the read and the remove", async () => {
-    // The realistic race: this sweep runs at worker start, and the thing
-    // that woke the worker is the context-menu click, whose `set` lands
-    // right after our first read. Deleting there would drop the user's
-    // brand-new selection.
+    // The click that woke the worker writes right after our first read.
     const fresh = op({ id: "op-2", createdAt: NOW });
     const s = install(
       op({ id: "op-1", createdAt: NOW - PENDING_OP_TTL_MS - 1 }),

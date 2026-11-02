@@ -13,7 +13,6 @@ import {
 const ED25519_PUB =
   "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIALwHu/03Nd9eyyrPgxjkFu80Fe1EgN06J8iaY8B+wf6 alice@example.com";
 
-/** A text file, as the browser hands one to a drop handler. */
 function file(body: string, name = "dropped.txt"): File {
   return new File([body], name, { type: "text/plain" });
 }
@@ -24,8 +23,6 @@ function sample(text: string): DropSample {
 
 describe("looksLikeKey", () => {
   it("leaves a signed message to the workspace, whatever its text quotes", () => {
-    // A "verify this" file whose signed body carries a key or an SSH line
-    // used to be routed to Import, putting that key in front of the user.
     const signed = (body: string) =>
       `-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA256\n\n${body}\n-----BEGIN PGP SIGNATURE-----\n\niQ==\n-----END PGP SIGNATURE-----\n`;
     expect(looksLikeKey(signed(ED25519_PUB))).toBe(false);
@@ -61,9 +58,6 @@ describe("looksLikeKey", () => {
   });
 
   it("detects an SSH public key line, which carries no armor header", () => {
-    // The private-key regex is anchored to "-----BEGIN ", so a dropped
-    // `id_ed25519.pub` matches nothing there. Before this it fell
-    // through to the workspace and was treated as a message to encrypt.
     expect(looksLikeKey(ED25519_PUB)).toBe(true);
     expect(looksLikeKey("ssh-rsa AAAAB3NzaC1yc2EAAAA= bob@host")).toBe(true);
   });
@@ -93,8 +87,7 @@ describe("looksLikeSshPublicKey", () => {
   });
 
   it("does not match an OpenSSH PRIVATE key container", () => {
-    // The container embeds the public half, but only inside base64 --
-    // a private key must route to the protect step, never to contacts.
+    // A private key must route to the protect step, never to contacts.
     expect(
       looksLikeSshPublicKey(
         "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEA\n-----END OPENSSH PRIVATE KEY-----",
@@ -174,14 +167,7 @@ describe("resolveDropRule", () => {
   });
 });
 
-/**
- * The third file that has to agree: a dropped `.pub` of any algorithm is
- * a key, so the "keys" rule owns the drop and `prepareImport` gets to
- * show the engine's refusal. With the narrow matcher an ECDSA or FIDO
- * `.pub` landed in the workspace as if it were a message to encrypt.
- * The engine decides validity; every layer above it forwards and
- * displays.
- */
+/** A `.pub` of any algorithm is a key, so the engine's refusal is shown. */
 describe("looksLikeSshPublicKey - any algorithm", () => {
   const rules: DropRule[] = [
     {
@@ -218,7 +204,6 @@ describe("looksLikeSshPublicKey - any algorithm", () => {
     const openssh =
       "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEA\n-----END OPENSSH PRIVATE KEY-----";
     expect(looksLikeSshPublicKey(openssh)).toBe(false);
-    // Still a private key, and still routed as one.
     expect(looksLikePrivateKey(openssh)).toBe(true);
   });
 
@@ -230,18 +215,8 @@ describe("looksLikeSshPublicKey - any algorithm", () => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────
-// Reading the drop.
-//
-// `buildDropSample` and `readAllFilesText` are the two places a dropped
-// FILE (rather than dragged text) becomes something a rule can look at,
-// and both carry deliberate bounds: a prefix per file, a cap on how many
-// files are sampled, and a size ceiling on what the import path will
-// read whole. Those bounds are the whole point -- without them a dropped
-// disk image is slurped into memory just to decide it isn't a key -- so
-// they are what these tests pin, alongside the "one bad file must not
-// lose the rest of the drop" behaviour.
-// ─────────────────────────────────────────────────────────────────────
+// Reading the drop: pins the memory bounds (prefix, file cap, size
+// ceiling) and that one unreadable file doesn't lose the rest.
 
 describe("buildDropSample", () => {
   it("combines the dragged text with a prefix of each file", async () => {
@@ -264,8 +239,6 @@ describe("buildDropSample", () => {
   });
 
   it("reads only a bounded prefix of a large file", async () => {
-    // A 2 MB file must not arrive in the sample whole. An armored key
-    // header sits in the first bytes, so a prefix is all a rule needs.
     const big = file(
       "-----BEGIN PGP PUBLIC KEY BLOCK-----" + "A".repeat(2_000_000),
     );
@@ -286,9 +259,6 @@ describe("buildDropSample", () => {
   });
 
   it("survives a file that refuses to be read", async () => {
-    // A dragged file whose backing store has gone away (moved, unmounted,
-    // permission revoked) rejects on read. Losing the whole drop over one
-    // of them would be worse than classifying without it.
     const broken = {
       slice: () => ({ arrayBuffer: () => Promise.reject(new Error("gone")) }),
     } as unknown as File;
@@ -333,8 +303,6 @@ describe("readAllFilesText", () => {
   });
 
   it("skips a file above the size ceiling rather than slurping it", async () => {
-    // The ceiling is 1 MB: an armored key is tiny, and a huge file whose
-    // first bytes merely LOOK like a key must not be read whole.
     const huge = file("x".repeat(1024 * 1024 + 1));
     const text = await readAllFilesText([huge, file("alpha")]);
 

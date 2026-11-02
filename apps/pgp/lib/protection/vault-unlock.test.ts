@@ -1,29 +1,9 @@
 /**
- * The bookkeeping half of "unlock keys when the vault unlocks"
- * (SECURITY.md §14). The crypto is the existing PRF seal, so the things
- * that can go wrong here are all JS-side:
- *
- *  - eligibility that is LOOSER than "same credential AND same salt".
- *    A blob on the master passkey but its own salt cannot be opened by
- *    the vault's PRF output; handing it to the batch would fail the
- *    AEAD check, which the UI reports as a wrong credential. A blob on
- *    a different passkey must never even reach wasm off this output;
- *  - the SSH / PGP dispatch. An SSH identity is sealed under its own AAD
- *    prefix and lives in SSH_KEY_STORE; opening it through the PGP
- *    export fails, and re-sealing it through the PGP export would read
- *    a PGP handle at that index;
- *  - the re-sealed parts' shape. Only the three sealing fields come
- *    back (the store applies them under its lock, `replaceKeyProtection`),
- *    so the IV / ciphertext split and the master credential + salt must
- *    be exactly right -- there is no other copy to fall back on;
- *  - the identity check. Wasm reports the fingerprint the new AAD was
- *    derived from; writing a result whose fingerprint is not the
- *    keyring entry's would destroy that entry;
- *  - zeroing the PRF output. It is deliberately shared across every
- *    blob in the batch, so a `.fill(0)` here would break the second one.
- *
- * Everything below the wasm boundary is stubbed; the seal round trip is
- * covered by the Rust tests.
+ * "Unlock keys when the vault unlocks" bookkeeping (SECURITY.md §14).
+ * Pins: eligibility is exactly same credential AND salt; SSH/PGP dispatch
+ * (separate AAD prefix and store); the re-sealed parts' shape; the
+ * identity check (a mismatched fingerprint would destroy the entry); and
+ * that the shared PRF output is never zeroed here. Wasm is stubbed.
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -64,9 +44,6 @@ const OTHER_SALT = toBase64(new Uint8Array(32).fill(0x02));
 
 const MASTER = { credentialId: MASTER_CREDENTIAL, prfSalt: MASTER_SALT };
 
-/** Ciphertext, IV and stored secret with per-section markers, so an
- *  argument handed to wasm in the wrong position shows up as the wrong
- *  bytes, not just the wrong length. */
 const CIPHERTEXT = new Uint8Array(8).fill(0x33);
 const IV = new Uint8Array(12).fill(0x22);
 const STORED_SECRET = new Uint8Array(32).fill(0x08);
@@ -119,8 +96,6 @@ function prfPacked(): Uint8Array {
   return packed;
 }
 
-/** The unpacked reseal result: the identity wasm derived the AAD from,
- *  plus the bare blob. Defaults to the PGP fixture's keyId. */
 function resealed(keyId = "3A9E1F5C7B2D48E6") {
   return { meta: { keyId }, blob: prfPacked() };
 }
@@ -161,8 +136,7 @@ describe("masterPasskeyOf", () => {
       prfSalt: MASTER_SALT,
       storedSecret: "bm90LXRoaXM=",
     };
-    // The master's own storedSecret is the VAULT's HKDF salt; it has no
-    // business in a key blob and must not ride along.
+    // The master's storedSecret is the VAULT's HKDF salt; never copied.
     expect(masterPasskeyOf(mp)).toEqual(MASTER);
   });
 });
@@ -182,9 +156,7 @@ describe("isSealedUnderMaster", () => {
   });
 
   it("is false for the master passkey under its own per-key salt", () => {
-    // Every single-key import before this feature: same authenticator,
-    // but a random salt, so a different PRF output. Sharing a credential
-    // is not enough.
+    // Same credential, own salt: a different PRF output.
     const blob = passkeyBlob({}, { prfSalt: OTHER_SALT });
     expect(isSealedUnderMaster(blob, MASTER)).toBe(false);
   });
@@ -274,9 +246,6 @@ describe("openWithMasterPrf", () => {
 // ── who moves over by itself ─────────────────────────────────────────
 
 describe("needsMasterReseal", () => {
-  // The key's OWN prompt can carry the master salt as the second PRF
-  // evaluation only when it is the same authenticator secret, i.e. the
-  // same credential. Anything else is left alone.
   it("is true for the master credential with a different salt", () => {
     expect(
       needsMasterReseal(passkeyBlob({}, { prfSalt: OTHER_SALT }), MASTER),
@@ -338,9 +307,7 @@ describe("resealUnderMaster", () => {
   });
 
   it("returns exactly the three sealing fields, under the master credential + salt", async () => {
-    // Nothing else comes back on purpose: the store swaps these three in
-    // under its own lock (`replaceKeyProtection`) so a stale snapshot of
-    // alias / lastUsedAt / revocation cert is never written back.
+    // Only these three: the store applies them under its own lock.
     wasm.reprotectSshIdentityWithPrf.mockResolvedValue(resealed("SHA256:abc"));
     const input = passkeyBlob(
       { keyId: "SHA256:abc", kind: "ssh", alias: "work laptop" },
@@ -360,25 +327,18 @@ describe("resealUnderMaster", () => {
       prfSalt: MASTER_SALT,
       storedSecret: toBase64(new Uint8Array(32).fill(0x09)),
     });
-    // `[12 iv][ct]` split the same way the protect path splits it; IV
-    // and ciphertext must not be confused for one another.
     expect([...fromBase64(parts.iv)]).toEqual(new Array(12).fill(0x44));
     expect([...fromBase64(parts.encryptedPrivateKey)]).toEqual(
       new Array(8).fill(0x55),
     );
-    // The input is not mutated: the caller still holds the old blob
-    // until the store write lands.
+    // Input not mutated: the caller holds it until the write lands.
     expect(
       input.protection.method === "passkey" && input.protection.prfSalt,
     ).toBe(OTHER_SALT);
   });
 
   it("refuses a handle whose key is not the keyring entry's", async () => {
-    // Wasm derives the AAD from the key the HANDLE holds and reports
-    // that identity. Writing this result under `blob.keyId` would store
-    // key Y's ciphertext (AAD fpr(Y)) under key X: X destroyed, Y's copy
-    // unopenable. Handles are never reused, so this is not reachable
-    // today -- the refusal is what keeps that a property.
+    // Writing key Y's ciphertext under key X would destroy X.
     wasm.reprotectKeyWithPrf.mockResolvedValue(resealed("SOMEOTHERKEY"));
 
     await expect(
@@ -387,9 +347,6 @@ describe("resealUnderMaster", () => {
   });
 
   it("re-seals a password-protected key too", async () => {
-    // Migration is the one place a key's sealing changes, and a
-    // password key is the common thing to migrate. The handle is
-    // already open; the old protection is irrelevant.
     wasm.reprotectKeyWithPrf.mockResolvedValue(resealed("PASSWORD-KEY"));
 
     const parts = await resealUnderMaster(

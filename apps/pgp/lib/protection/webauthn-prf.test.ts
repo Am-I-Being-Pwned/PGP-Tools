@@ -1,29 +1,11 @@
 /**
  * @vitest-environment jsdom
  *
- * The WebAuthn PRF ceremony.
- *
- * Three things here are worth pinning, and none of them is "does it call
- * navigator.credentials":
- *
- *  1. THE PRF EXTENSION IS ACTUALLY REQUESTED. `extensions.prf` on
- *     create, and `extensions.prf.eval.first` with the stored salt on
- *     get. Drop either and the ceremony still succeeds -- it just returns
- *     no PRF output, and every key protected by that passkey becomes
- *     permanently unopenable. Nothing else in the system catches it.
- *
- *  2. A MISSING PRF RESULT THROWS RATHER THAN RETURNING EMPTY BYTES. An
- *     authenticator that ignores the extension returns a credential with
- *     no `results.first`. Deriving a key from undefined-shaped input is
- *     the one outcome worse than failing.
- *
- *  3. CANCEL IS DISTINGUISHED FROM FAILURE. `isWebAuthnCancel` decides
- *     whether the user sees an error toast; the user dismissing Touch ID
- *     is not an error.
- *
- * `navigator.credentials` and `PublicKeyCredential` don't exist in jsdom,
- * so both are stubbed. The `instanceof PublicKeyCredential` check in the
- * module means the stub has to be a real class, not a plain object.
+ * Pins: the PRF extension is actually requested on create and get
+ * (dropped, keys become unopenable silently); a missing PRF result
+ * throws rather than yielding empty bytes; cancel is not an error.
+ * `PublicKeyCredential` is stubbed as a real class (module uses
+ * `instanceof`).
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -41,8 +23,6 @@ import {
 
 // ── stubs ────────────────────────────────────────────────────────────
 
-/** Stands in for the real interface object; the module gates on
- *  `instanceof`, so a plain object would be rejected as a failure. */
 class FakeCredential {
   rawId: ArrayBuffer;
   private ext: Record<string, unknown>;
@@ -64,8 +44,6 @@ let get: ReturnType<
   typeof vi.fn<(o: CredentialRequestOptions) => Promise<unknown>>
 >;
 
-/** Byte length of a `BufferSource`, which is either an ArrayBuffer or a
- *  view over one -- both carry `byteLength`. */
 function byteLength(buf: BufferSource): number {
   return buf.byteLength;
 }
@@ -128,11 +106,8 @@ afterEach(() => {
 // ── random material ──────────────────────────────────────────────────
 
 describe("authenticateAndGetPrf with a second salt", () => {
-  // "Unlock keys with the vault" re-seals a key under the master salt
-  // off the key's OWN prompt, which is only possible because the PRF
-  // extension evaluates two salts per ceremony. Drop the `second`
-  // request and the re-seal silently never happens; return a `second`
-  // that was not asked for and a caller might zero the wrong thing.
+  // The `second` salt evaluation powers master re-seal; it must be
+  // requested when asked and absent when not.
   const FIRST = new Uint8Array(32).fill(0xa1).buffer;
   const SECOND = new Uint8Array(32).fill(0xb2).buffer;
 
@@ -199,9 +174,7 @@ describe("random material", () => {
     const a = new Uint8Array(fn());
     const b = new Uint8Array(fn());
     expect(a).toHaveLength(32);
-    // Not a randomness test -- a stubbed-out or constant generator would
-    // make every vault derive the same key, so identical draws are the
-    // failure worth catching.
+    // Catches a constant generator, not a randomness test.
     expect(a).not.toEqual(b);
   });
 });
@@ -286,7 +259,6 @@ describe("registerPasskey", () => {
       displayName: "Alice",
     });
 
-    // displayName omitted falls back to the user name, then to a default.
     await registerPasskey("alice@example.com");
     expect(createArgs(1).user.displayName).toBe("alice@example.com");
 
@@ -328,9 +300,6 @@ describe("authenticateAndGetPrf", () => {
   }
 
   it("evaluates the prf extension with the stored salt", async () => {
-    // The (credentialId, salt) pair is what makes the derived key stable
-    // across unlocks. A wrong or missing salt derives a different key and
-    // the vault will not open.
     stubCredentials({ get: credential() });
     await authenticateAndGetPrf(toBase64url(RAW_ID), SALT);
 
@@ -354,8 +323,7 @@ describe("authenticateAndGetPrf", () => {
   });
 
   it("returns the raw PRF bytes", async () => {
-    // Raw, not derived: HKDF happens in WASM so the key never enters the
-    // JS heap.
+    // Raw: HKDF happens in WASM so the key never enters the JS heap.
     stubCredentials({ get: credential() });
     const { prfOutput } = await authenticateAndGetPrf(
       toBase64url(RAW_ID),
@@ -403,8 +371,7 @@ describe("isWebAuthnCancel", () => {
   it.each([["NotAllowedError"], ["AbortError"], ["InvalidStateError"]])(
     "treats %s as a cancel",
     (name) => {
-      // These are the user dismissing the prompt, the flow aborting, and
-      // the "request already pending" race -- none deserves a toast.
+      // Dismissal, abort, and "request already pending": no toast.
       expect(isWebAuthnCancel(named(name))).toBe(true);
     },
   );

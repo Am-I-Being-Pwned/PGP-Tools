@@ -7,26 +7,18 @@ import { hasOpenSlideOver } from "../components/shared/SlideOver";
 import { isEditableTarget, matchesShortcut } from "../lib/shortcuts";
 
 interface UseShortcutOptions {
-  /** Detach the listener entirely (e.g. the button it mirrors is
-   *  disabled). Defaults to true. */
+  /** Defaults to true. */
   enabled?: boolean;
-  /** Fire even when a text field is focused. Defaults to true for
-   *  modifier combos (mod+Enter should submit from a textarea) and
-   *  false for plain keys (typing "c" must not trigger anything). */
+  /** Fire in text fields. Default: true for modifier combos, false for
+   *  plain keys. */
   allowInInput?: boolean;
-  /** By default shortcuts are suppressed while a slide-over subpage is
-   *  open, so background surfaces don't react underneath it. A binding
-   *  owned by a slide-over sets this and gates itself on `isTop()`. */
+  /** Fire while a slide-over is open (the binding gates on `isTop()`). */
   allowInSlideOver?: boolean;
 }
 
 /**
- * Bind a global keyboard shortcut for the lifetime of the component.
- * Matching keydowns are prevented (so e.g. Ctrl+Enter doesn't also
- * insert a newline) and routed to `handler`.
- *
- * Escape is deliberately not bound through this hook anywhere: the
- * slide-over stack owns Escape (topmost panel only) in SlideOver.tsx.
+ * Bind a global shortcut; matching keydowns are prevented. Escape is never
+ * bound here: the slide-over stack owns it (SlideOver.tsx).
  */
 export function useShortcut(
   spec: ShortcutSpec,
@@ -39,7 +31,6 @@ export function useShortcut(
     allowInSlideOver = false,
   } = options;
 
-  // Keep the latest handler without re-binding the listener each render.
   const handlerRef = useRef(handler);
   useEffect(() => {
     handlerRef.current = handler;

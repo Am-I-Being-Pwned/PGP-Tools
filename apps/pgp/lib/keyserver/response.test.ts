@@ -1,8 +1,3 @@
-/**
- * Every branch of the keyserver parser, with an emphasis on the ones a
- * hostile response reaches. The parser is pure by construction, so all of
- * this runs with no network and no wasm.
- */
 import { describe, expect, it } from "vitest";
 
 import { MAX_BODY_BYTES, parseKeyserverKeyResponse } from "./response";
@@ -31,9 +26,7 @@ describe("parseKeyserverKeyResponse", () => {
   });
 
   it("reports 404 as not-found, never as an error", () => {
-    // The endpoint's real 404 is `text/html` with a sentence quoting the
-    // query back. Both facts are deliberately ignored: the status is the
-    // answer, and the prose must not reach a render.
+    // The real 404 is text/html quoting the query; prose must not render.
     expect(
       parseKeyserverKeyResponse(
         raw({
@@ -62,8 +55,6 @@ describe("parseKeyserverKeyResponse", () => {
       "Wed, 21 Oct 2026 07:28:00 GMT",
       "",
     ]) {
-      // A hint we invented is worse than no hint: without the bound,
-      // `1e300` renders as "try again in about 2.7e+296 hours".
       expect(
         parseKeyserverKeyResponse(
           raw({ status: 429, retryAfter: header }),
@@ -83,8 +74,6 @@ describe("parseKeyserverKeyResponse", () => {
   });
 
   it("refuses a 200 that is not application/pgp-keys", () => {
-    // An HTML body on a 200 means something intercepted the request --
-    // a captive portal or a proxy. Refuse before parsing.
     for (const ct of [
       null,
       "text/html",
@@ -108,9 +97,7 @@ describe("parseKeyserverKeyResponse", () => {
   });
 
   it("refuses a body over the cap, measured in BYTES", () => {
-    // Astral characters are 4 UTF-8 bytes and 2 UTF-16 code units, so a
-    // `.length` check alone clears at half the real size. The cheap check
-    // runs first and the honest one decides.
+    // Astral chars: 4 bytes, 2 code units.
     const astral = "\u{1F600}".repeat(MAX_BODY_BYTES / 2);
     expect(astral.length).toBeLessThanOrEqual(MAX_BODY_BYTES);
     expect(parseKeyserverKeyResponse(raw({ body: astral }))).toEqual({
@@ -124,9 +111,7 @@ describe("parseKeyserverKeyResponse", () => {
       "",
       "not a key",
       "-----BEGIN PGP PUBLIC KEY BLOCK-----\nno end marker",
-      // A PRIVATE block cannot be forwarded as a contact. The endpoint
-      // has no reason to send one, which is exactly why being unable to
-      // accept it is worth asserting.
+      // A PRIVATE block can never be forwarded as a contact.
       "-----BEGIN PGP PRIVATE KEY BLOCK-----\nx\n-----END PGP PRIVATE KEY BLOCK-----",
     ]) {
       expect(parseKeyserverKeyResponse(raw({ body }))).toEqual({
@@ -137,9 +122,7 @@ describe("parseKeyserverKeyResponse", () => {
   });
 
   it("forwards the first block and counts the rest", () => {
-    // The endpoint returns one key by construction, so a body carrying
-    // several is not the response we asked for. Counted, not silently
-    // truncated -- the panel says so before anything is imported.
+    // Counted, not silently truncated.
     const second = CERT.replace("mDMEZ", "mDMEY");
     const result = parseKeyserverKeyResponse(
       raw({ body: `${CERT}\n\n${second}` }),
@@ -148,8 +131,6 @@ describe("parseKeyserverKeyResponse", () => {
   });
 
   it("ignores whatever surrounds the armor", () => {
-    // Only the text between a matched BEGIN/END pair crosses the message
-    // boundary; a preamble or trailer the server chose does not.
     const result = parseKeyserverKeyResponse(
       raw({ body: `junk before\n${CERT}\njunk after` }),
     );

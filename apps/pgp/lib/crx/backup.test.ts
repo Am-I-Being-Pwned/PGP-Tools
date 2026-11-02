@@ -80,8 +80,7 @@ describe("crx backup blocks", () => {
 describe("parseCrxKeyBlocks: hostile shapes stay linear", () => {
   const BEGIN = "-----BEGIN PGP TOOLS CRX SIGNING KEY-----";
   const END = "-----END PGP TOOLS CRX SIGNING KEY-----";
-  // The regex this replaced took ~28 s on the first shape: every BEGIN
-  // with no END after it retried the lazy body against the whole rest.
+  // Pins linear time on unterminated BEGINs (ReDoS shape).
   const shapes: Record<string, string> = {
     "many BEGINs with whitespace, no END":
       `${BEGIN}\n${" ".repeat(200)}\n`.repeat(2000),

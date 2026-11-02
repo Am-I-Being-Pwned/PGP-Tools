@@ -1,14 +1,5 @@
-/**
- * Merging imported public keys into contacts, and the rules that decide
- * whether a cert is worth keeping.
- *
- * (The bundle routing -- each cert against its own armor, stale
- * rotations dropped -- is `prepareImport`'s now; see prepare.test.ts.)
- *
- * `parseKeys` is mocked -- parsing certificates is the WASM engine's job
- * and is covered by the Rust tests. What is tested here is the routing
- * decision made on top of whatever it returns.
- */
+/** Merging imported public keys into contacts. `parseKeys` is mocked;
+ *  cert parsing is covered by the Rust tests. */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -49,7 +40,6 @@ function keyInfo(over: Partial<KeyInfo> = {}): KeyInfo {
   } as KeyInfo;
 }
 
-/** One parsed cert as `parseKeys` returns it. */
 function cert(over: Partial<KeyInfo> = {}, armored = "ARMOR-1") {
   return { keyInfo: keyInfo(over), armored };
 }
@@ -65,8 +55,6 @@ describe("isUsableContact", () => {
       { usableForEncryption: true, usableForSigning: false },
       true,
     ],
-    // Sign-only keys are perfectly good contacts -- you just can't
-    // encrypt to them.
     [
       "signing only",
       { usableForEncryption: false, usableForSigning: true },
@@ -121,8 +109,7 @@ describe("importRejectionMessage", () => {
 
 describe("mergeIntoContact", () => {
   it("merges into the record as the store hands it over, not a caller's copy", async () => {
-    // The store's version already holds a revocation imported while a
-    // keyserver check was in flight, and a rename.
+    // Store already holds a revocation and a rename made meanwhile.
     const onDisk: PublicContactKey = {
       keyId: "FPR1",
       userIds: ["Alice <a@b.test>"],
@@ -159,9 +146,7 @@ describe("mergeIntoContact", () => {
   });
 
   describe("never changes who the contact is", () => {
-    // The revocation check's write has no Review behind it: a keyserver
-    // copy carrying a new User ID used to bind it to the contact
-    // silently, and keep "verified" on it.
+    // No Review behind this write: a new User ID must not bind silently.
     const verifiedAlice = (): PublicContactKey => ({
       keyId: "FPR1",
       userIds: ["Alice <a@b.test>"],

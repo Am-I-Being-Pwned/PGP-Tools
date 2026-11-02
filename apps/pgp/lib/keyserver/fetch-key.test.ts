@@ -1,15 +1,5 @@
-/**
- * The transport half: what happens to a response we do not control
- * BEFORE `parseKeyserverKeyResponse` ever sees it. The twin of
- * `lib/github/fetch-keys.test.ts`, because the two lookups now share the
- * bounded reader (`lib/net/capped-body.ts`) and a cap that is only
- * exercised on one of them is a cap that can silently stop applying to
- * the other.
- *
- * `fetch` is stubbed with a hand-rolled response object rather than a
- * real one: the point of each case is exactly which of `body`, `text()`
- * and `cancel()` the code touches.
- */
+/** Transport half; twin of `lib/github/fetch-keys.test.ts` so the shared
+ *  capped reader is exercised on both lookups. */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { FakeResponseInit } from "../net/fake-response";
@@ -52,9 +42,7 @@ describe("fetchKeyserverKey request", () => {
         "https://keys.openpgp.org/vks/v1/by-email/alice%40example.com",
       );
       expect(init.credentials).toBe("omit");
-      // Not following a redirect is what keeps the destination ours: a
-      // 302 is a server-chosen origin, and the URL builder's whole job is
-      // that the origin is not server-chosen.
+      // A redirect is a server-chosen origin.
       expect(init.redirect).toBe("error");
       expect(init.cache).toBe("no-store");
       expect(init.signal).toBeInstanceOf(AbortSignal);
@@ -74,8 +62,6 @@ describe("fetchKeyserverKey request", () => {
   });
 
   it("reports a thrown fetch as offline, whatever threw", async () => {
-    // Offline, DNS, a CSP block and the redirect refusal all surface as
-    // a TypeError with no text worth forwarding.
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("nope")));
     await expect(fetchKeyserverKey(QUERY)).resolves.toEqual({
       ok: false,
@@ -102,16 +88,13 @@ describe("fetchKeyserverKey body caps", () => {
     ));
 
   it("stops reading an endless body at the cap instead of buffering it", async () => {
-    // No Content-Length -- a chunked response, which is how a hostile
-    // body would actually arrive. Without the bounded read this call
-    // never returns.
+    // Chunked, no Content-Length: how a hostile body arrives.
     const { response, probe } = respond({ endless: true });
     stubFetch(response);
 
     const result = await fetchKeyserverKey(QUERY);
     expect(result).toEqual({ ok: false, error: "server-error" });
     expect(probe.cancelled).toBe(true);
-    // 16 KiB chunks against the cap: a handful of reads, not millions.
     expect(probe.pulls).toBeLessThanOrEqual(MAX_BODY_BYTES / 1024);
   });
 

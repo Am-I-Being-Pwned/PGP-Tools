@@ -1,16 +1,7 @@
 /**
- * Workspace draft persistence across auto-lock.
- *
- * Goal: when the extension auto-locks (idle / visibility / OS idle) the
- * user's in-progress workspace text shouldn't disappear. We serialise
- * the workspace's salient state, encrypt it under an in-WASM draft key
- * (separate from the master / contacts session, so it survives a master
- * lock), and stash the ciphertext at App-level. On unlock + remount,
- * the workspace decrypts and rehydrates.
- *
- * What is NOT preserved: `File` objects (can't be re-instantiated from
- * disk), transient flags (`loading`, `error`, `needsPassword`), or
- * the password input (intentional — re-prompt on unlock).
+ * Workspace draft survives auto-lock, encrypted under an in-WASM draft key
+ * separate from the master session. Files, transient flags and the
+ * password input are deliberately NOT preserved.
  */
 
 import type { WorkspaceAction } from "./messages";
@@ -25,41 +16,22 @@ export interface WorkspaceDraft {
 }
 
 /**
- * A pull-model handle the workspace registers with the App.
- *
- * Deliberately pull, not push: a push contract ("here is my latest
- * draft") means the App holds a live plaintext copy for the whole
- * session, and every copy is one more thing that has to be released at
- * lock time. Instead the App asks for the draft exactly once — inside
- * `doMasterLock`, while the workspace is still mounted — encrypts it,
- * and then calls `wipe()` so the workspace drops its own plaintext
- * (input ref, textarea DOM node, undo buffer) before it unmounts.
- *
- * `wipe()` matters because React keeps the previous fiber alive on
- * `fiber.alternate`, and effect closures hanging off it keep reaching
- * the hook state they captured long after unmount. Refs are a single
- * mutable slot shared by both copies, so emptying the slot is what
- * actually releases the string — the unmount alone does not.
+ * Pull, not push, so the App never holds a live plaintext copy: it pulls
+ * once inside `doMasterLock`, encrypts, then calls `wipe()`. Unmount alone
+ * doesn't free the string (`fiber.alternate` closures keep it reachable);
+ * emptying the shared ref slot does.
  */
 export interface WorkspaceDraftSource {
-  /** Snapshot the salient workspace state. `null` when there is nothing
-   *  safe to persist (e.g. armored private-key material is in the box). */
+  /** `null` when nothing is safe to persist (e.g. private-key material). */
   getDraft: () => WorkspaceDraft | null;
-  /** Drop every plaintext copy the workspace owns. */
   wipe: () => void;
 }
 
-/** True iff the draft has any user-typed content worth persisting. */
 export function draftHasContent(d: WorkspaceDraft | null): boolean {
   if (!d) return false;
   return d.input.length > 0 || d.output.length > 0;
 }
 
-/**
- * Serialise → encrypt under the in-WASM draft key. Caller stashes the
- * returned bytes wherever they'll survive the React unmount (App-level
- * state). Plaintext encoding is zeroed in the `finally`.
- */
 export async function encryptWorkspaceDraft(
   draft: WorkspaceDraft,
 ): Promise<Uint8Array> {
@@ -72,10 +44,6 @@ export async function encryptWorkspaceDraft(
   }
 }
 
-/**
- * Decrypt previously-stashed ciphertext back into a `WorkspaceDraft`.
- * The decrypted plaintext buffer is zeroed after parsing.
- */
 export async function decryptWorkspaceDraft(
   ciphertext: Uint8Array,
 ): Promise<WorkspaceDraft | null> {

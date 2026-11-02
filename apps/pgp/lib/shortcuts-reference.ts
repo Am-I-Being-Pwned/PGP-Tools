@@ -1,9 +1,5 @@
-// The data behind Settings -> Keyboard shortcuts: every shortcut the
-// app answers to, in one greppable place. Anything with a live source
-// of truth is DERIVED from it (mod+K from PALETTE_SHORTCUT, the mode
-// switches from MODE_SHORTCUTS, copy/download from COPY_SHORTCUT/
-// DOWNLOAD_SHORTCUT); the rest is static and drift-guarded
-// by shortcuts-reference.test.ts where a source exists to compare.
+// Settings -> Keyboard shortcuts data. Entries with a live source of truth
+// are derived from it; the rest are drift-guarded by the test.
 
 import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
 
@@ -24,32 +20,23 @@ import {
 } from "./compose/shortcuts";
 import { t } from "./i18n";
 
-/** One row of the reference: a label plus how to render its keys. */
 export interface ShortcutRefEntry {
   label: string;
-  /** Platform-aware keycaps (mod renders as Cmd on macOS, Ctrl
-   *  elsewhere). Omit together with `chips` for an unbound entry. */
+  /** Omit together with `chips` for an unbound entry. */
   shortcut?: ShortcutSpec;
-  /** Literal keycap chips for keys a ShortcutSpec can't express
-   *  (a digit range, plain Backspace). */
+  /** For keys a ShortcutSpec can't express (a digit range, Backspace). */
   chips?: string[];
-  /** Fine print under the label ("only while the search is empty"). */
   note?: string;
 }
 
-/** A titled group of reference rows. */
 export interface ShortcutRefSection {
-  /** Stable identifier, independent of the translated title. */
   id: "palette" | "workspace" | "message" | "modes" | "global";
   title: string;
   entries: ShortcutRefEntry[];
-  /** Fine print under the whole section. */
   note?: string;
 }
 
-/** Where Chrome lets users rebind extension commands. Rendered as
- *  plain text (chrome:// links don't open from extension pages) and
- *  opened via chrome.tabs.create from the reference page's button. */
+/** Plain text: chrome:// links don't open from extension pages. */
 export const CHROME_SHORTCUTS_URL = "chrome://extensions/shortcuts";
 
 const MODE_NAMES: Record<PgpMode, MessageKey> = {
@@ -59,8 +46,7 @@ const MODE_NAMES: Record<PgpMode, MessageKey> = {
   verify: "common_verify",
 };
 
-/** Chrome's suggested bindings for the manifest `commands`; the Verify
- *  mode ships unbound (Chrome caps suggested keys at four). */
+/** Manifest `commands` defaults; Verify is unbound (Chrome caps at four). */
 const GLOBAL_MODE_SHORTCUTS: Record<PgpMode, ShortcutSpec | undefined> = {
   encrypt: { alt: true, shift: true, key: "E" },
   decrypt: { alt: true, shift: true, key: "D" },
@@ -68,11 +54,7 @@ const GLOBAL_MODE_SHORTCUTS: Record<PgpMode, ShortcutSpec | undefined> = {
   verify: undefined,
 };
 
-/**
- * The full shortcut reference, in display order. A function rather than
- * a constant so every label is looked up in the UI language at render
- * time, never at module load.
- */
+/** A function so labels are translated at render time, not module load. */
 export function shortcutReference(): readonly ShortcutRefSection[] {
   return [
     {
@@ -136,8 +118,6 @@ export function shortcutReference(): readonly ShortcutRefSection[] {
     {
       id: "modes",
       title: t("settings_shortcuts_group_modes"),
-      // Derived, never hand-listed: MODE_SHORTCUTS is the single source
-      // shared with the registry's mode actions and the mode dropdown.
       entries: (
         Object.entries(MODE_SHORTCUTS) as [PgpMode, ShortcutSpec][]
       ).map(([mode, shortcut]) => ({

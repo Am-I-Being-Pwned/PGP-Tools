@@ -7,17 +7,10 @@ function rowOverflows(row: HTMLElement): boolean {
 }
 
 /**
- * How far a row has to compact itself to fit: 0 is the full layout, and
- * each level up is a cheaper rendering the caller defines (drop a counter,
- * then swap a label for an icon). Measured, not guessed from a width
- * breakpoint, because the row's natural width depends on the language:
- * "Clear text" and "Effacer le texte" need different room, and a
- * breakpoint tuned for one is wrong for the next translation.
- *
- * The row measured is `ref`'s closest `[data-slot="block"]` (the strip a
- * Block draws), or `ref` itself with `self`. Runs in layout effects, so
- * the levels it steps through are never painted. `deps` are whatever
- * changes the row's content width.
+ * How far a row must compact to fit (0 = full layout). Measured, not a
+ * width breakpoint, because natural width depends on the language. Measures
+ * `ref`'s closest `[data-slot="block"]` (or `ref` with `self`) in layout
+ * effects, so intermediate levels are never painted.
  */
 export function useFitLevel(
   ref: RefObject<HTMLElement | null>,
@@ -29,8 +22,7 @@ export function useFitLevel(
   }: { self?: boolean; overflows?: (row: HTMLElement) => boolean } = {},
 ): number {
   const [level, setLevel] = useState(0);
-  // Width the row had when it last fitted at the current level; growing
-  // past it is the only reason to try a fuller layout again.
+  // Growing past the last-fitted width is the only reason to retry fuller.
   const [fitWidth, setFitWidth] = useState(0);
 
   const rowOf = (): HTMLElement | null => {
@@ -45,8 +37,6 @@ export function useFitLevel(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 
-  // After each level (or content) change, step down once more if the row
-  // still overflows. Bounded by `maxLevel`.
   useLayoutEffect(() => {
     const row = rowOf();
     if (!row) return;

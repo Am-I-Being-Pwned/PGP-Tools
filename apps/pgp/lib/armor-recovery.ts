@@ -1,59 +1,13 @@
 /**
- * Put PGP armor back together after something has mangled it.
+ * Put PGP armor back together after something has mangled it. Two repairs:
+ * whitespace collapse ({@link reconstructArmor}, heuristic, bails rather
+ * than guess) and escaping ({@link repairArmorEscapes}, exact: `\`, `<`,
+ * `>`, `%`, `&`, `;` are outside base64 so inside armor they can only be
+ * damage).
  *
- * TWO DIFFERENT DAMAGE MODELS, two repairs, and they are separate
- * because what makes them safe is different:
- *
- *  1. WHITESPACE COLLAPSE ({@link reconstructArmor}) -- Chrome's
- *     `info.selectionText` turns every run of whitespace into a single
- *     space, so the line structure has to be inferred from the armor's
- *     grammar. Heuristic, and it bails rather than guess.
- *
- *  2. ESCAPING ({@link repairArmorEscapes}) -- the text went through a
- *     machine that represents newlines as something else: a JSON string
- *     (`\n`), an HTML page (`<br>`), a URL (`%0A`). This one is not a
- *     heuristic. Base64 has a fixed alphabet, and none of `\`, `<`, `>`,
- *     `%`, `&` or `;` is in it, so inside an armor block those tokens
- *     cannot be data -- they can only be damage, and reversing them is
- *     exact rather than clever.
- *
- * BOTH ARE STRICTLY BLOCK-SCOPED. Only the text between a matched
- * BEGIN/END pair is ever rewritten; everything else is returned byte for
- * byte. That is what makes it safe to run this over the workspace input
- * box, which also holds messages the user is COMPOSING -- someone typing
- * `console.log("a\nb")` must get their backslash-n back unchanged, and
- * a global unescape would silently eat it.
- */
-
-/**
- * Reconstruct PGP armor from a context-menu selection.
- *
- * Chrome's `info.selectionText` collapses all whitespace (including
- * the line breaks PGP armor depends on) into single spaces. The armor
- * itself has enough structure that we can put the newlines back:
- *
- *   -----BEGIN PGP <TYPE>-----
- *   <armor headers like "Version: ...", may have multi-word values>
- *   <blank line>
- *   <base64 data, wrapped to 64 chars per line>
- *   =<4-char base64 CRC>
- *   -----END PGP <TYPE>-----
- *
- * Heuristics:
- *  - BEGIN/END markers survive collapse intact (they have no internal
- *    whitespace that would be ambiguous).
- *  - BEGIN/END types must match. This also keeps cleartext-signed
- *    messages (whose free-text body must NOT be rewrapped as base64)
- *    out of reconstruction: their first BEGIN is `PGP SIGNED MESSAGE`
- *    but the first END is `PGP SIGNATURE`.
- *  - Armor headers always start with a token ending in `:`. Header
- *    values can have multiple whitespace-separated tokens (e.g.
- *    `Version: Encryption Desktop 10.4.1`); we keep consuming value
- *    tokens until we hit either another header (token ending in `:`)
- *    or the first long pure-base64 token (the data).
- *  - The CRC line is the last token matching `=XXXX` (5 chars,
- *    leading `=`, exactly 4 base64 chars).
- *  - Data is everything between the last header line and the CRC.
+ * Both are strictly block-scoped: only text between a matched BEGIN/END
+ * pair is rewritten. The workspace input also holds messages being
+ * composed, and a global unescape would eat a typed `\n`.
  */
 
 const BEGIN_MARKER = /-----BEGIN PGP ([A-Z ]+?)-----/;
@@ -62,45 +16,21 @@ const BASE64_TOKEN = /^[A-Za-z0-9+/=]+$/;
 const CRC_TOKEN = /^=[A-Za-z0-9+/]{4}$/;
 const HEADER_KEY = /^[A-Za-z][A-Za-z0-9-]*:$/;
 const MIN_DATA_TOKEN_LEN = 40;
-/** Columns armor wraps its base64 to -- the width `reconstructArmor`
- *  re-wraps to, and the bar a token has to clear to be data rather than
- *  a header value (see {@link isDataToken}). */
 const ARMOR_LINE_LEN = 64;
 
-/** True if the text contains a BEGIN PGP marker but the line right
- *  after it has been collapsed (i.e. no line break after the marker).
- *
- *  `\r?\n`, not `\n`: armor written on Windows -- and by plenty of
- *  Windows-born tools on any platform, e.g. Gpg4win's "export to file"
- *  -- ends every line with CRLF. Matching only `\n` declared all of it
- *  collapsed and handed intact armor to {@link reconstructArmor}, which
- *  rewrote it (and, with a `Comment: Fingerprint: ...` header, folded
- *  the fingerprint into the base64) until it no longer parsed. */
+/** True if a BEGIN PGP marker has no line break after it. `\r?\n`, not
+ *  `\n`: CRLF armor is intact and must not be "reconstructed". */
 export function looksLikeCollapsedArmor(text: string): boolean {
   if (!BEGIN_MARKER.test(text)) return false;
   return !/-----BEGIN PGP [A-Z ]+-----\r?\n/.test(text);
 }
 
 /**
- * True when a token starts the base64 DATA rather than being a header's
- * value.
- *
- * The plain "long and base64-shaped" test is not enough, because header
- * values can be long and base64-shaped too. The case that broke a real
- * key: Kleopatra exports carry
- * `Comment: Fingerprint: 07DF8027AAFCFA3A349E96CB1AC6ADD598DFB505`, and
- * a 40-hex fingerprint is 40 characters drawn entirely from the base64
- * alphabet -- exactly {@link MIN_DATA_TOKEN_LEN}. Data therefore
- * "started" at the fingerprint, which was folded into the payload and
- * corrupted every byte after it.
- *
- * So a token sitting directly after a `Key:` token has to clear a higher
- * bar: a full 64-character armor line. Armor wraps its base64 at 64
- * columns, so the first data line is 64 characters whenever there is
- * more than one line of it -- and no header value is. The looser bound
- * still applies everywhere else, which keeps working the case this
- * guard could otherwise break: a header with an EMPTY value
- * (`Comment:`) sitting immediately before the data.
+ * True when a token starts the base64 data rather than being a header
+ * value. A token right after a `Key:` must be a full 64-char armor line:
+ * a 40-hex `Comment: Fingerprint: ...` value is base64-shaped and would
+ * otherwise be folded into the payload. The looser bound elsewhere keeps
+ * an empty-valued header (`Comment:`) before the data working.
  */
 function isDataToken(token: string, previous: string | undefined): boolean {
   if (!BASE64_TOKEN.test(token)) return false;
@@ -111,21 +41,21 @@ function isDataToken(token: string, previous: string | undefined): boolean {
   return token.length >= min;
 }
 
-/** Best-effort reconstruction. If anything looks off, returns the
- *  original text unchanged so the caller's parser surfaces the real
- *  error rather than something we mangled. */
+/** Rebuild armor whose whitespace was collapsed (context-menu
+ *  `selectionText`). BEGIN/END types must match, which also keeps
+ *  cleartext-signed bodies out. If anything looks off, returns the input
+ *  unchanged so the parser surfaces the real error. */
 export function reconstructArmor(text: string): string {
   const bm = BEGIN_MARKER.exec(text);
   const em = END_MARKER.exec(text);
   if (!bm || !em) return text;
-  if (bm[1] !== em[1]) return text; // BEGIN/END types don't match -- bail
+  if (bm[1] !== em[1]) return text;
 
   const blockType = bm[1];
   const middle = text.slice(bm.index + bm[0].length, em.index).trim();
   const tokens = middle.split(/\s+/).filter((t) => t.length > 0);
   if (tokens.length === 0) return text;
 
-  // Locate the first long pure-base64 token: this is the start of data.
   let dataStart = -1;
   for (let i = 0; i < tokens.length; i++) {
     if (isDataToken(tokens[i], tokens[i - 1])) {
@@ -135,7 +65,6 @@ export function reconstructArmor(text: string): string {
   }
   if (dataStart === -1) return text;
 
-  // Locate the CRC token from the end (last `=XXXX`).
   let crcIdx = -1;
   for (let i = tokens.length - 1; i >= dataStart; i--) {
     if (CRC_TOKEN.test(tokens[i])) {
@@ -149,13 +78,10 @@ export function reconstructArmor(text: string): string {
     crcIdx === -1 ? tokens.slice(dataStart) : tokens.slice(dataStart, crcIdx);
   const crc = crcIdx === -1 ? "" : tokens[crcIdx];
 
-  // Group header tokens into "Key: value..." lines.
   const headerLines: string[] = [];
   let i = 0;
   while (i < headerTokens.length) {
     if (!HEADER_KEY.test(headerTokens[i])) {
-      // Skip stray tokens that don't start a header (shouldn't happen
-      // for valid armor, but be defensive).
       i++;
       continue;
     }
@@ -169,7 +95,6 @@ export function reconstructArmor(text: string): string {
     headerLines.push(`${key} ${valueParts.join(" ")}`);
   }
 
-  // Re-wrap base64 data to 64 chars per line.
   const wrapped = dataTokens
     .join("")
     .replace(/(.{64})/g, "$1\n")
@@ -193,19 +118,10 @@ const SIGNATURE_BEGIN = "-----BEGIN PGP SIGNATURE-----";
 const SIGNATURE_END = "-----END PGP SIGNATURE-----";
 
 /**
- * Find a collapsed cleartext-signed message: a BEGIN SIGNED MESSAGE
- * marker, then on the SAME line the first BEGIN SIGNATURE after it and
- * the first END SIGNATURE after that. Returns the match the way
- * `RegExp.exec` would (whole, the part up to the signature, the
- * signature block, and where it starts).
- *
- * Scanned with `indexOf` rather than the regex it replaces
- * (`BEGIN…([^\n]*?)(BEGIN SIG[^\n]*?END SIG)`), which backtracked in
- * cubic time: a context-menu selection has no newlines, so a page could
- * hand the worker ~100 KB of repeated markers and stall it for minutes.
- * Linear, because a line that holds no complete signature after its
- * first BEGIN marker holds none after a later one either -- the scan
- * moves on to the next line.
+ * Find a collapsed cleartext-signed message (BEGIN SIGNED MESSAGE, then a
+ * full signature block on the same line). `indexOf` scan, not a regex:
+ * the regex backtracked cubically and a page could stall the worker with
+ * ~100 KB of repeated markers. Must stay linear.
  */
 function findCollapsedCleartext(
   text: string,
@@ -239,26 +155,15 @@ function findCollapsedCleartext(
     from = newline + 1;
   }
 }
-/** A hash algorithm name in a `Hash:` header value, optionally with the
- *  comma that says another follows (`Hash: SHA256, SHA512`). */
 const HASH_NAME = /^[A-Za-z0-9-]+,?$/;
 
 /**
- * Rebuild a cleartext-signed message from a context-menu selection.
- *
- * Two of its three parts come back exactly: the `Hash:` header and the
- * blank line after it, and the signature, which is ordinary armor and
- * goes through {@link reconstructArmor}. The signed text in between
- * CANNOT -- it is free text, and where its line breaks were is gone --
- * so it is kept as ONE line. That is right for a one-line message and
- * wrong for any other: a multi-line body comes back joined and its
- * signature fails to verify, which is the honest outcome for text we
- * can't restore (never a false "valid"; the signature covers the exact
- * lines, and we only ever remove line breaks, never invent them).
- *
- * Returns null when the text isn't a fully collapsed cleartext-signed
- * message, so the caller falls through to the other repairs. Anything
- * around the message is kept byte for byte.
+ * Rebuild a collapsed cleartext-signed message. The `Hash:` header and the
+ * signature come back exactly; the body's line breaks are unrecoverable so
+ * it is kept as one line. A multi-line body then fails to verify, which is
+ * the honest outcome: we only remove line breaks, never invent them, so
+ * this can never produce a false "valid". Returns null when not
+ * applicable; surrounding text is kept byte for byte.
  */
 export function reconstructCleartextSigned(text: string): string | null {
   const m = findCollapsedCleartext(text);
@@ -285,7 +190,7 @@ export function reconstructCleartextSigned(text: string): string | null {
   const body = tokens.slice(i).join(" ");
 
   const signature = reconstructArmor(signatureBlock);
-  if (signature === signatureBlock) return null; // couldn't rebuild it
+  if (signature === signatureBlock) return null;
 
   const rebuilt =
     "-----BEGIN PGP SIGNED MESSAGE-----\n" +
@@ -299,16 +204,10 @@ export function reconstructCleartextSigned(text: string): string | null {
 // ── Escape repair ────────────────────────────────────────────────────
 
 /**
- * How a newline comes back mangled, and what it was.
- *
- * Order matters: `\r\n` is tried before `\n` so a CRLF pair becomes ONE
- * newline rather than two. `%0D` maps to nothing for the same reason --
- * a lone carriage return that survived is noise, not a line.
- *
- * Every `from` here contains at least one character outside the base64
- * alphabet (`A-Z a-z 0-9 + / =`), which is what makes the substitution
- * exact inside an armor block rather than a guess. Adding an entry whose
- * `from` is pure base64 would break that property and must not be done.
+ * Mangled-newline forms. Order matters: `\r\n` before `\n` so CRLF becomes
+ * one newline. Every `from` must contain a non-base64 character -- that is
+ * what makes the substitution exact inside armor. Never add a pure-base64
+ * `from`.
  */
 const ESCAPE_FORMS: [RegExp, string][] = [
   [/\\r\\n/g, "\n"],
@@ -322,86 +221,43 @@ const ESCAPE_FORMS: [RegExp, string][] = [
   [/%0D/gi, ""],
 ];
 
-/** Any PEM-style block, with BEGIN and END types required to MATCH.
- *
- *  NOT just `BEGIN PGP`: an OpenSSH private key, a PKCS#1/PKCS#8 PEM (a
- *  CRX signing key) and an armored age file are all multi-line base64
- *  between markers, all reach this app through the same paste box, and
- *  all break in exactly the same way when a machine eats their newlines.
- *  Restricting this to PGP would have fixed one of the four kinds of key
- *  this app accepts.
- *
- *  The backreference is what keeps a cleartext-signed message out of
- *  this regex: it opens `PGP SIGNED MESSAGE` and closes `PGP SIGNATURE`,
- *  so only its inner signature block matches here -- the body is handled
- *  separately below, under a stricter rule. */
+/** Any PEM-style block (PGP, OpenSSH, PKCS PEM, age), BEGIN/END types must
+ *  match. The backreference keeps a cleartext-signed body out: only its
+ *  inner signature matches here; the body gets the stricter rule below. */
 const ARMOR_BLOCK = /-----BEGIN ([A-Z0-9 ]+?)-----([\s\S]*?)-----END \1-----/g;
 
-/** A cleartext-signed message, whole: header, free-text body and the
- *  detached signature that covers it. */
 const CLEARTEXT_BLOCK =
   /-----BEGIN PGP SIGNED MESSAGE-----[\s\S]*?-----END PGP SIGNATURE-----/g;
 
 /**
- * A source-language LINE CONTINUATION: a backslash immediately before a
- * newline, plus the next line's indentation.
- *
- * Rust, C, shell and Python all use it, and it is what turns a long
- * escaped string into a readable block in a source file -- so armor
- * copied out of a test fixture or a code sample arrives carrying BOTH
- * this and the `\n` escaping. Repairing only the escaping leaves a
- * stranded backslash on every line, which is not valid base64 and does
- * not parse. (Found by pasting this project's own Rust fixture into the
- * workspace.)
- *
- * Safe for the same reason the escape forms are: a backslash is not in
- * the base64 alphabet, so inside an armor block it cannot be data. It is
- * matched only IMMEDIATELY before a newline -- a backslash mid-line is
- * left alone, because a rule that deleted those would be guessing rather
- * than reversing a known transform.
- *
- * NOT DONE HERE: quoted-printable soft line breaks (`=` before a
- * newline), which is the same idea for email. `=` IS in the base64
- * alphabet -- it is the padding, and it ends the `wjg=` and `=AEHv`
- * lines of every armor block -- so that rule would corrupt healthy
- * armor. Left out on purpose.
+ * Backslash-newline line continuation (Rust/C/shell/Python string
+ * fixtures). Safe because `\` is not base64; matched only immediately
+ * before a newline. Quoted-printable soft breaks (`=` + newline) are
+ * deliberately NOT handled: `=` is base64 padding and that rule would
+ * corrupt healthy armor.
  */
 const LINE_CONTINUATION = /\\\n[ \t]*/g;
 
 function applyEscapeForms(text: string): string {
-  // Continuations first: they are the OUTER layer. The source file wrote
-  // `\n\` + newline, so unescaping before un-continuing would turn the
-  // `\n` into a real newline and leave the backslash behind, attached to
-  // the wrong line.
+  // Continuations first: they are the outer layer.
   let out = text.replace(LINE_CONTINUATION, "");
   for (const [from, to] of ESCAPE_FORMS) out = out.replace(from, to);
   return out;
 }
 
 /**
- * Undo escaping inside every armor block, leaving all other text alone.
+ * Undo escaping inside every armor block, leaving other text alone; the
+ * block is re-emitted with markers on their own lines (rescues armor
+ * embedded in JSON/log lines).
  *
- * The block is re-emitted with its markers on their own lines, which is
- * what rescues armor that arrives embedded in something else -- a JSON
- * value, a quoted string, a log line -- where the BEGIN marker would
- * otherwise still be stuck mid-line behind `{"msg": "`.
- *
- * CLEARTEXT-SIGNED MESSAGES GET A STRICTER RULE, because their body is
- * free text and CAN legitimately contain a backslash: the escape forms
- * are applied only when the whole block holds no real newline at all,
- * which is proof it was flattened. A cleartext message that still has
- * its line structure is left exactly as it is, even if it mentions
- * `\n` -- the alternative is corrupting the very bytes the signature is
- * computed over, turning a valid signature into a tampering warning.
+ * Cleartext-signed messages are only unescaped when the whole block has no
+ * real newline (proof it was flattened): their body may legitimately
+ * contain `\n`, and rewriting signed bytes would turn a valid signature
+ * into a tampering warning.
  */
 export function repairArmorEscapes(text: string): string {
-  // Cheap bail-out, and it is a performance guard rather than a
-  // correctness one. Every repair below needs a CLOSING marker, and the
-  // regexes' worst case is precisely the input that has none: each BEGIN
-  // is scanned to end-of-string looking for a partner that is not there.
-  // Measured at 8.6ms for 2400 unclosed markers in a 64 KB paste, versus
-  // 0.01ms with this line. `handleInputChange` runs on every keystroke,
-  // so a quadratic path in it is worth one `includes`.
+  // Perf guard: runs on every keystroke, and unclosed BEGINs are the
+  // regexes' quadratic worst case.
   if (!text.includes("-----END ")) return text;
 
   const cleartextRepaired = text.replace(CLEARTEXT_BLOCK, (block) =>
@@ -411,14 +267,10 @@ export function repairArmorEscapes(text: string): string {
   return cleartextRepaired.replace(
     ARMOR_BLOCK,
     (block, type: string, body: string) => {
-      // NO normalisation of the restored newlines. Escaping preserved
-      // the block's structure faithfully, so unescaping gives it back
-      // exactly -- including the blank line between the armor headers
-      // and the data, which is REQUIRED and which an eager
-      // `^\n+ -> \n` tidy-up silently ate.
+      // No newline normalisation: the blank line after armor headers is
+      // required.
       const repaired = applyEscapeForms(body);
-      // Nothing to do: return the ORIGINAL match so armor that was already
-      // fine is byte-identical, rather than "equivalent".
+      // Unchanged armor must stay byte-identical.
       const rebuilt = `-----BEGIN ${type}-----${repaired}-----END ${type}-----`;
       return rebuilt === block ? block : `\n${rebuilt}\n`;
     },
@@ -426,16 +278,9 @@ export function repairArmorEscapes(text: string): string {
 }
 
 /**
- * The one entry point every text intake uses: repair escaping, then
- * whitespace collapse.
- *
- * In that order, because the collapse detector looks for a real newline
- * after the BEGIN marker -- run first, it would see an escaped message
- * as collapsed and hand it to `reconstructArmor`'s base64 rewrapper,
- * which is the wrong repair for the wrong damage.
- *
- * Both halves are pass-throughs when there is nothing to fix, so text
- * that is already fine (or is not armor at all) comes back unchanged.
+ * Entry point for every text intake: repair escaping, then whitespace
+ * collapse. Order matters: the collapse detector would see escaped armor
+ * as collapsed and apply the wrong repair. No-op on text that is fine.
  */
 export function recoverArmorIfNeeded(text: string): string {
   const unescaped = repairArmorEscapes(text);

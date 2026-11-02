@@ -1,30 +1,16 @@
 /**
- * The at-rest shape shared by every protected key blob, and the wire
- * format of the packed blob the wasm protect exports hand back.
- *
- * Every key type we store — OpenPGP certs (`storage/keyring.ts`), CRX
- * RSA signing keys (`crx/types.ts`) — is sealed by the same two
- * mechanisms (Argon2id or WebAuthn-PRF -> AES-256-GCM, all inside WASM),
- * so they all describe that seal with the same fields. Defining the union
- * once means a third key type inherits the format rather than restating
- * it, and that the readers can't drift apart field by field.
- *
- * None of these fields is secret: the salts and the stored HKDF secret
- * are persisted in the clear alongside the ciphertext by design. What is
- * secret is the password / PRF output that combines with them, and that
- * never reaches a stored blob.
+ * The at-rest protection fields shared by every key type, and the packed
+ * blob format the wasm protect exports return. None of these fields is
+ * secret (salts and HKDF secret are stored in the clear by design).
  */
 
-/** Argon2id: the salt is all the reader needs to re-derive the AES key
- *  from the user's password. */
 export interface PasswordProtection {
   method: "password";
   kdfSalt: string; // base64 (Argon2id salt)
 }
 
-/** WebAuthn-PRF: `prfSalt` reproduces the same PRF output from the same
- *  authenticator; `storedSecret` is the HKDF salt mixed with it, fresh
- *  per blob so two blobs off one ceremony still get distinct AES keys. */
+/** `storedSecret` is fresh per blob so two blobs off one ceremony still
+ *  get distinct AES keys. */
 export interface PasskeyProtection {
   method: "passkey";
   credentialId: string; // base64url
@@ -34,14 +20,7 @@ export interface PasskeyProtection {
 
 export type KeyProtection = PasswordProtection | PasskeyProtection;
 
-// ── packed-blob unpacking ────────────────────────────────────────────
-// The wasm protect exports return one packed `Uint8Array` rather than a
-// struct, so the layout lives here — on the JS side there is exactly one
-// place that knows the offsets, for every key type.
-
-/** AES-GCM nonce, and the Argon2id salt that precedes it in a password
- *  seal. Restated as named constants so the three unpackers below and
- *  the length checks can't drift apart from each other. */
+// The one JS place that knows the packed-blob offsets.
 const IV_BYTES = 12;
 const SALT_BYTES = 16;
 
@@ -56,17 +35,8 @@ export interface PrfBlobParts {
   ct: Uint8Array;
 }
 
-/**
- * A blob too short to contain its own header is a FORMAT violation, and
- * must fail as one.
- *
- * `slice` past the end returns a short array rather than throwing, so a
- * truncated blob used to sail through here with a 3-byte "salt" and an
- * empty IV, and only failed several layers down at the AEAD tag check —
- * which the UI reports as a wrong password. That sends the user looking
- * for a credential problem they do not have, while the real fault (a
- * clipped backup, a half-written storage record) goes unnamed.
- */
+/** A truncated blob must fail as a format error, not later as an AEAD
+ *  failure the UI would report as a wrong password. */
 function requireLength(packed: Uint8Array, min: number, layout: string): void {
   if (packed.length <= min) {
     throw new Error(
@@ -85,29 +55,21 @@ export function unpackPasswordBlob(packed: Uint8Array): PasswordBlobParts {
   };
 }
 
-/** `[12 iv][ct]` — the PRF protect exports. No salt: the HKDF salt is
- *  `storedSecret`, which the caller already holds. */
+/** `[12 iv][ct]` — the PRF protect exports. */
 export function unpackPrfBlob(packed: Uint8Array): PrfBlobParts {
   requireLength(packed, IV_BYTES, "[12 iv][ct]");
   return { iv: packed.slice(0, IV_BYTES), ct: packed.slice(IV_BYTES) };
 }
 
-/** Metadata plus the raw protection blob, as every wasm protect export
- *  hands it back. `M` is the key type's own public-only metadata. */
 export interface MetaBlob<M> {
   meta: M;
-  /** Packed binary protection blob — `[16 salt][12 iv][ct]` for the
-   *  password variants, `[12 iv][ct]` for the PRF ones. */
   blob: Uint8Array;
 }
 
 /**
- * `[u32_le json_len][json][blob]` — the shape EVERY protect export
- * returns, for every key type (OpenPGP, CRX, SSH).
- *
- * wasm-bindgen hands back a view into linear memory, so `byteOffset` is
- * routinely non-zero: the DataView must be constructed over the view's
- * own window, never `packed.buffer` alone.
+ * `[u32_le json_len][json][blob]`, returned by every protect export.
+ * wasm-bindgen returns a view with non-zero `byteOffset`: build the
+ * DataView over the view's window, never `packed.buffer` alone.
  */
 export function unpackMetaBlob<M>(packed: Uint8Array): MetaBlob<M> {
   requireLength(packed, 4, "[u32_le json_len][json][blob]");
@@ -117,10 +79,6 @@ export function unpackMetaBlob<M>(packed: Uint8Array): MetaBlob<M> {
     packed.byteLength,
   );
   const jsonLen = view.getUint32(0, true);
-  // A length prefix that runs past the end of the buffer means the blob
-  // was truncated (or is not one of ours) — the JSON parse below would
-  // otherwise fail with a message about the metadata rather than the
-  // format.
   if (4 + jsonLen > packed.length) {
     throw new Error(
       `Malformed protected blob: metadata length ${jsonLen} exceeds the ${packed.length}-byte payload`,

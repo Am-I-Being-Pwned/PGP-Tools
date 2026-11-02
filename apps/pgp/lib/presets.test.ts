@@ -10,8 +10,6 @@ import {
   snapshotBundleFields,
 } from "./presets";
 
-/** A full preferences object with every field populated; tests overlay
- *  preset bundles on top of it. Mirrors the shipped defaults. */
 function fullPrefs(overrides: Partial<PgpPreferences> = {}): PgpPreferences {
   return {
     defaultSigningKeyId: null,
@@ -246,9 +244,7 @@ describe("snapshotBundleFields", () => {
       lockOnTabAway: true,
       neverCacheKeys: true,
       historyEnabled: true,
-      // Captured from `prefs`, which leaves it at the shipped default --
-      // the point of the snapshot is the CURRENT value, not the
-      // bundle's.
+      // The CURRENT value, not the bundle's.
       keyDiscoveryEnabled: true,
       unlockKeysOnOpen: false,
       encryptToSelf: false,

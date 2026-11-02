@@ -1,19 +1,6 @@
 /**
- * Presence and readiness checks for Chrome's built-in AI APIs.
- *
- * The property that makes this module worth having, and the one pinned
- * here, is that "the API is absent" must be a first-class ANSWER rather
- * than a crash. Neither `Translator` nor `LanguageDetector` exists in a
- * Web Worker -- and therefore not in the MV3 service worker -- so a bare
- * `Translator.availability()` in the wrong realm is a ReferenceError, not
- * a `false`. Every caller goes through here precisely so the whole
- * feature degrades to INVISIBLE instead of broken.
- *
- * Second property: NOTHING here may start a model download. `create()`
- * fetches a language pack when one is absent; `availability()` never
- * does. Keeping the two apart behind named functions is what lets the
- * decrypt path be provably download-free, so these tests assert that the
- * globals are only ever consulted, never created from.
+ * Pins: an absent API (service-worker realm) is an answer, not a crash; and
+ * nothing here ever calls `create()` (which downloads).
  */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -29,8 +16,7 @@ import {
 
 const PAIR = { sourceLanguage: "en", targetLanguage: "es" };
 
-/** Install a fake `Translator` / `LanguageDetector` global. `undefined`
- *  leaves the global absent, which is the service-worker case. */
+/** Install fake AI globals; `undefined` leaves one absent (the SW case). */
 function stubApis(opts: {
   translator?: { availability?: unknown; create?: unknown };
   detector?: { availability?: unknown; create?: unknown };
@@ -82,7 +68,6 @@ describe("translationAvailability", () => {
 
   it("treats a rejection as unavailable", async () => {
     // An unsupported pair can reject rather than resolve "unavailable".
-    // Same outcome for us either way: nothing to offer.
     stubApis({
       translator: { availability: () => Promise.reject(new Error("bad pair")) },
     });
@@ -147,17 +132,13 @@ describe("translationSupportedHere", () => {
   it.each([["available"], ["downloadable"], ["downloading"]])(
     "reports the device capable when en->es is %s",
     async (state) => {
-      // "downloadable" counts: Chrome reports every unused pair that way
-      // so a page can't enumerate which packs a user already has. It
-      // means "we have not used this pair", not "the bytes are absent".
+      // Chrome reports every unused pair "downloadable" (anti-enumeration).
       stubApis({ translator: { availability: () => Promise.resolve(state) } });
       await expect(translationSupportedHere()).resolves.toBe(true);
     },
   );
 
   it("reports the device incapable when en->es is unavailable", async () => {
-    // A machine below the hardware floor reports "unavailable" for every
-    // pair -- we never probe disk or RAM ourselves.
     stubApis({
       translator: { availability: () => Promise.resolve("unavailable") },
     });
@@ -174,8 +155,7 @@ describe("translationSupportedHere", () => {
   });
 
   it("does not require a working detector", async () => {
-    // A missing detector costs auto-detection, not translation. Requiring
-    // both would hide a working feature.
+    // A missing detector costs auto-detection, not translation.
     stubApis({
       translator: { availability: () => Promise.resolve("available") },
     });
@@ -186,7 +166,6 @@ describe("translationSupportedHere", () => {
 
 describe("LANGUAGE_PACK_SIZE_HINT", () => {
   it("stays deliberately vague, because Chrome exposes no size", () => {
-    // Better vague than precise and wrong.
     expect(LANGUAGE_PACK_SIZE_HINT).toMatch(/usually/);
     expect(LANGUAGE_PACK_SIZE_HINT).not.toMatch(/\d/);
   });

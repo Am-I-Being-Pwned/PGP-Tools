@@ -4,9 +4,7 @@ import type { MasterPasskey } from "../lib/protection/vault-unlock";
 import type { ProtectedKeyBlob } from "../lib/storage/keyring";
 import type { useKeySession } from "./useKeySession";
 
-/** What the open vault offers every view: the one key session, the
- *  master passkey's reusable parts, and the key-level actions that also
- *  touch preferences. Provided by App while the vault is open. */
+/** What the open vault offers every view; provided by App. */
 export interface VaultServices {
   session: ReturnType<typeof useKeySession>;
   /** The master passkey, or null for a password master. */

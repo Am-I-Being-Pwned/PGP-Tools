@@ -1,8 +1,6 @@
 /**
- * Argon2id parameters used everywhere a password is mixed with a salt.
- * Tuned for browser use: 64 MiB / 3 iterations / single-threaded (WASM).
- * Changing these is a breaking change for every existing protected blob;
- * the derive happens entirely in WASM (`argon2Derive`).
+ * Argon2id parameters. Changing these breaks every existing protected
+ * blob.
  */
 export const ARGON2_MEMORY_KIB = 65536; // 64 MB
 export const ARGON2_ITERATIONS = 3;

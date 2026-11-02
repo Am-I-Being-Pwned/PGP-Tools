@@ -1,27 +1,8 @@
 /**
- * The two contracts `runProtect` owes every key type: secrets are
- * `.fill(0)`'d on EVERY exit path, and the blob it assembles has exactly
- * the field names the store persists.
- *
- * Zeroization is the reason this module exists at all -- the comment at
- * the top of `protect-runner.ts` says a per-key-type copy of the
- * `.fill(0)` is a per-key-type chance to forget it. The failure it guards
- * against is not a crash: it is a plaintext passphrase left sitting in a
- * heap buffer that outlives the flow, invisible to every other test in
- * the suite. This one was a real bug -- `importAndProtect` encoded the
- * source passphrase BEFORE the weak-password gate and the WebAuthn
- * ceremony, both of which throw, so those two paths leaked it. Each
- * throwing path therefore gets its own test here rather than being
- * assumed to follow from the happy one.
- *
- * The blob shape is asserted by exact field set (not `toMatchObject`)
- * because these objects are on users' disks: a rename that only the
- * writer learns about turns every stored key into an unreadable record
- * the validator silently drops.
- *
- * Everything below the wasm boundary is stubbed -- the point is what JS
- * does with the buffers it hands over, and the real crypto is covered by
- * the Rust tests.
+ * Pins `runProtect`'s two contracts: secrets are `.fill(0)`'d on EVERY
+ * exit path (each throwing path tested separately), and the stored blob
+ * has exactly the persisted field set (exact match: these are on users'
+ * disks). Wasm is stubbed; real crypto is covered by the Rust tests.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -68,9 +49,7 @@ const PASSWORD = "correct horse battery";
 const SOURCE_PASSPHRASE = "the imported key's own passphrase";
 const CREDENTIAL_ID = "cred-id-b64url";
 
-/** `[16 salt][12 iv][ct]` and `[12 iv][ct]`, filled with per-section
- *  markers so a mis-sliced blob shows up as the wrong bytes, not just a
- *  wrong length. */
+/** `[16 salt][12 iv][ct]` / `[12 iv][ct]` with per-section markers. */
 function passwordPacked(): Uint8Array {
   const packed = new Uint8Array(16 + 12 + 8);
   packed.fill(0x11, 0, 16);
@@ -122,20 +101,12 @@ const KEY_OPTS: GenerateKeyOptions = {
   type: "ecc",
 };
 
-/**
- * Every `Uint8Array` any code under test produced from a given string.
- *
- * The leaking buffers live entirely inside the flow -- a throwing path
- * never hands them to a stub we could capture them from -- so the
- * encoder itself is the observation point.
- */
+/** Every buffer encoded during a test; the encoder is the only place a
+ *  throwing path's buffers can be observed. */
 const encoded: { text: string; bytes: Uint8Array }[] = [];
 
 const RealTextEncoder = globalThis.TextEncoder;
 
-/** Records every buffer produced, then behaves exactly as the real one.
- *  Installed as the global for the duration of each test, so the code
- *  under test keeps writing `new TextEncoder()` as it always has. */
 class RecordingTextEncoder extends RealTextEncoder {
   override encode(input?: string): Uint8Array<ArrayBuffer> {
     const bytes = super.encode(input);
@@ -148,8 +119,7 @@ function buffersFor(text: string): Uint8Array[] {
   return encoded.filter((e) => e.text === text).map((e) => e.bytes);
 }
 
-/** Asserts the buffer both existed and was scrubbed -- an assertion over
- *  an empty list would pass for a secret that was never encoded. */
+/** Non-empty check: a secret that was never encoded must not pass. */
 function expectZeroized(text: string): void {
   const buffers = buffersFor(text);
   expect(buffers.length).toBeGreaterThan(0);
@@ -158,9 +128,7 @@ function expectZeroized(text: string): void {
   }
 }
 
-/** Asserts a buffer the wasm stub captured is now all zeros. Throws
- *  rather than asserting on `undefined`, so "wasm was never called" can
- *  never read as a pass. */
+/** Throws if wasm was never called, so that can't read as a pass. */
 function expectScrubbed(bytes: Uint8Array | undefined): void {
   if (!bytes) throw new Error("the wasm stub captured no buffer");
   expect(bytes.length).toBeGreaterThan(0);
@@ -203,9 +171,7 @@ describe("runProtect zeroization", () => {
     let captured: Uint8Array | undefined;
     wasm.generateProtectedWithPassword.mockImplementation(
       (_opts: string, password: Uint8Array) => {
-        // Snapshot proves the bytes were LIVE at the wasm call and only
-        // scrubbed afterwards -- a `.fill(0)` before the call would
-        // "pass" a plain zero check while breaking every unlock.
+        // Live at the wasm call, scrubbed only afterwards.
         expect([...password]).toEqual([...new TextEncoder().encode(PASSWORD)]);
         captured = password;
         return Promise.resolve(pgpResult(passwordPacked()));
@@ -236,8 +202,6 @@ describe("runProtect zeroization", () => {
   });
 
   it("scrubs the imported key's source passphrase when the weak-password gate rejects", async () => {
-    // The regression: `importAndProtect` encodes the source passphrase
-    // first, and `assertStrongPassword` throws before wasm is reached.
     await expect(
       importAndProtect("ARMOR", SOURCE_PASSPHRASE, {
         method: "password",
@@ -250,8 +214,6 @@ describe("runProtect zeroization", () => {
   });
 
   it("scrubs the source passphrase when the WebAuthn ceremony throws", async () => {
-    // The passkey branch reaches the authenticator before wasm, and a
-    // user pressing Escape is the common case, not the rare one.
     webauthn.authenticateAndGetPrf.mockRejectedValue(
       new Error("NotAllowedError"),
     );
@@ -297,9 +259,7 @@ describe("runProtect zeroization", () => {
   });
 
   it("leaves a caller-owned (reused) PRF output alone", async () => {
-    // One ceremony protects several keys during a bulk import; zeroizing
-    // here would break every blob after the first. Ownership is the
-    // documented contract, so it is pinned in both directions.
+    // Caller-owned (shared across a bulk import): pinned both directions.
     const output = prfOutput();
     wasm.generateProtectedWithPrf.mockResolvedValue(pgpResult(prfPacked()));
 
@@ -335,8 +295,7 @@ describe("runProtect zeroization", () => {
   });
 
   it("scrubs the password even when the cached unlock throws", async () => {
-    // `cache: true` chains an unlock while the bytes are still live --
-    // the one place the `finally` has to outlast a second async call.
+    // The `finally` must outlast the chained cache unlock.
     let captured: Uint8Array | undefined;
     wasm.generateProtectedWithPassword.mockImplementation(
       (_opts: string, password: Uint8Array) => {
@@ -359,13 +318,8 @@ describe("runProtect zeroization", () => {
 
 // ── sealing under the master salt ────────────────────────────────────
 
-/**
- * `prfSalt` is how "unlock keys when the vault unlocks" gets a NEW key
- * sealed under the master salt without a re-seal afterwards. It changes
- * which salt the ceremony runs under and nothing else: the output is
- * still ours to zero, and `prfReuse` (which carries its own salt and
- * skips the ceremony) still wins over it.
- */
+/** `prfSalt` changes only the ceremony's salt: the output is still ours
+ *  to zero, and `prfReuse` still wins. */
 describe("runProtect with a caller-supplied prfSalt", () => {
   const MASTER_SALT = new Uint8Array(32).fill(0x0c).buffer;
 
@@ -382,8 +336,6 @@ describe("runProtect with a caller-supplied prfSalt", () => {
       CREDENTIAL_ID,
       MASTER_SALT,
     );
-    // A random salt here would seal the key under an output the vault
-    // ceremony never produces -- eligible-looking, but never openable.
     expect(webauthn.generatePrfSalt).not.toHaveBeenCalled();
     if (blob.protection.method !== "passkey") throw new Error("wrong method");
     expect([...fromBase64(blob.protection.prfSalt)]).toEqual(
@@ -412,8 +364,6 @@ describe("runProtect with a caller-supplied prfSalt", () => {
   });
 
   it("still scrubs the PRF output it obtained under the supplied salt", async () => {
-    // Same guarantee as the random-salt path: the salt is the caller's,
-    // the output is ours.
     const output = prfOutput();
     webauthn.authenticateAndGetPrf.mockResolvedValue({ prfOutput: output });
     wasm.generateProtectedWithPrf.mockResolvedValue(pgpResult(prfPacked()));
@@ -430,8 +380,7 @@ describe("runProtect with a caller-supplied prfSalt", () => {
 
 // ── stored blob shape ────────────────────────────────────────────────
 
-/** Decodes without throwing, and re-encodes to the same string -- a
- *  field that quietly became hex or base64url fails both halves. */
+/** Strict base64: decodes and re-encodes to the same string. */
 function isBase64(value: unknown, expectedLength?: number): boolean {
   if (typeof value !== "string") return false;
   if (!/^[A-Za-z0-9+/]*={0,2}$/.test(value)) return false;
@@ -469,12 +418,9 @@ describe("ProtectedKeyBlob shape", () => {
     expect(blob.version).toBe(1);
     if (blob.protection.method !== "password") throw new Error("wrong method");
     expect(Object.keys(blob.protection).sort()).toEqual(["kdfSalt", "method"]);
-    // 16-byte salt, 12-byte IV: the seal's own sizes, surviving the
-    // unpack and the base64 round-trip.
     expect(isBase64(blob.protection.kdfSalt, 16)).toBe(true);
     expect(isBase64(blob.iv, 12)).toBe(true);
     expect(isBase64(blob.encryptedPrivateKey, 8)).toBe(true);
-    // Salt, IV and ciphertext must not be confused for one another.
     expect([...fromBase64(blob.protection.kdfSalt)]).toEqual(
       new Array(16).fill(0x11),
     );
@@ -515,20 +461,14 @@ describe("ProtectedKeyBlob shape", () => {
     expect(isBase64(blob.protection.prfSalt, 32)).toBe(true);
     expect(isBase64(blob.protection.storedSecret, 32)).toBe(true);
     expect(isBase64(blob.iv, 12)).toBe(true);
-    // No `kdfSalt` on this branch: there is no password to derive from,
-    // and a reader that found one would derive the wrong key.
     expect(blob.protection).not.toHaveProperty("kdfSalt");
-    // The stored secret is a fresh per-blob HKDF salt, never the PRF
-    // output itself -- which would put the secret on disk.
+    // Never the PRF output itself: that would put the secret on disk.
     expect([...fromBase64(blob.protection.storedSecret)]).toEqual(
       new Array(32).fill(8),
     );
   });
 
   it("carries a generated key's revocation certificate onto the blob", async () => {
-    // Optional and only sometimes present, so it is easy to drop in a
-    // refactor -- and its absence is only noticed the day a user needs
-    // to revoke a key they can no longer unlock.
     const result = pgpResult(passwordPacked());
     result.meta.revocationCertificate = "-----BEGIN PGP PUBLIC KEY BLOCK-----";
     result.meta.keyInfo.securityWarning = "SHA-1 binding signature";
@@ -570,8 +510,6 @@ describe("CrxSigningKeyBlob shape", () => {
     expect(blob.label).toBe("My Extension");
     if (blob.protection.method !== "password") throw new Error("wrong method");
     expect(Object.keys(blob.protection).sort()).toEqual(["kdfSalt", "method"]);
-    // Same [16 salt][12 iv][ct] split as the keyring: one layout, two
-    // key types. If these diverge, the shared unpacker is wrong for one.
     expect([...fromBase64(blob.protection.kdfSalt)]).toEqual(
       new Array(16).fill(0x11),
     );
@@ -582,8 +520,7 @@ describe("CrxSigningKeyBlob shape", () => {
   });
 
   it("never caches a CRX key open -- there is no handle to leak", async () => {
-    // `crxSpec` deliberately omits the `cache*` hooks; a CRX key is
-    // unlocked for one signing act and dropped.
+    // CRX keys never cache: unlocked for one signing act and dropped.
     wasm.generateCrxKeyWithPrf.mockResolvedValue(crxResult(prfPacked()));
 
     const blob = await generateCrxKey({

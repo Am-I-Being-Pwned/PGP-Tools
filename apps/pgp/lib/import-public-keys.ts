@@ -6,20 +6,15 @@ import { formatDate } from "./i18n/format";
 import { mergePublicKey, parseKeys, revocationIssuers } from "./pgp/wasm";
 import { IDENTITY_VERSION, updateContact } from "./storage/contacts";
 
-/** A stored public cert an import can land on. */
 export interface StoredCert {
   keyId: string;
   armored: string;
 }
 
 /**
- * Fold an imported copy of a key into the stored copy of the SAME key.
- *
- * Every re-import goes through here rather than replacing the stored
- * cert: a merge can only add what the owner signed, so an old or
- * stripped copy can't bring back a subkey the owner revoked, and a
- * revoked copy revokes the contact instead of being turned away as
- * "unusable" while the stale copy stays live.
+ * Fold an imported copy of a key into the stored copy. Every re-import
+ * merges, never replaces: a stripped copy can't resurrect a revoked
+ * subkey, and a revoked copy revokes the contact.
  */
 export async function mergeIntoStored(
   stored: StoredCert,
@@ -31,26 +26,15 @@ export async function mergeIntoStored(
 }
 
 /**
- * Merge `incomingArmored` into the stored contact `keyId` AS IT IS NOW,
- * inside the contacts lock, and save it. For a write that starts from an
- * older copy -- a keyserver check that took a while -- so nothing changed
- * meanwhile (an imported revocation, a rename, a delete) is undone.
- * Resolves undefined, writing nothing, when the contact is gone.
+ * Merge into the stored contact AS IT IS NOW, inside the contacts lock,
+ * so nothing changed meanwhile is undone. Undefined if the contact is gone.
  *
- * This is the revocation check's write, and it never changes WHO the
- * contact is. Every other way a key gains a User ID goes through the
- * import Review, which checks it against everyone else and asks; this
- * one ran with no Review, so a keyserver copy carrying a new User ID
- * bound it to the contact silently, and kept "verified" on it. So:
- *
- *  - nothing new about who it is: saved as before (a revocation, a new
- *    expiry, a new subkey);
- *  - new User IDs, and revoked: the revocation is saved (it must
- *    stick), under the contact's OLD User IDs, and "verified" is dropped
- *    -- the cert the user compared is no longer the one stored;
- *  - new User IDs, not revoked: NOTHING is written, and `needsReview`
- *    says so, for the caller to send the copy through the import Review
- *    like any other update.
+ * The revocation check's write; it never changes WHO the contact is
+ * without the import Review:
+ *  - no new User IDs: saved;
+ *  - new User IDs + revoked: revocation saved under the OLD User IDs,
+ *    "verified" dropped;
+ *  - new User IDs, not revoked: nothing written, `needsReview` set.
  */
 export async function mergeIntoContact(
   keyId: string,
@@ -60,8 +44,7 @@ export async function mergeIntoContact(
   | undefined
 > {
   let keyInfo: KeyInfo | undefined;
-  // Widened: it is set inside the callback below, which narrowing from a
-  // plain `false` cannot see.
+  // Widened: set inside the callback, which narrowing can't see.
   let needsReview = false as boolean;
   const contact = await updateContact(keyId, async (current) => {
     const merged = await mergeIntoStored(
@@ -89,8 +72,7 @@ export async function mergeIntoContact(
       ...fields,
       ...(grows
         ? {
-            // Who it is stays who the user saved: the old User IDs, and
-            // the lookalike flag they were derived with.
+            // Identity stays as the user saved it.
             userIds: current.userIds,
             ...(current.lookalike ? { lookalike: true as const } : {}),
           }
@@ -108,12 +90,8 @@ export async function mergeIntoContact(
     : { contact, keyInfo };
 }
 
-/**
- * A bare revocation certificate (`gpg --gen-revoke`, or this app's own
- * export) carries no key, so it can only ever mean "revoke a contact I
- * already have". Returns the merged contact, `"unknown"` when it names a
- * key that isn't stored, or null when the text isn't a revocation.
- */
+/** Apply a bare revocation certificate to a stored contact. `"unknown"`
+ *  when it names no stored key; null when not a revocation. */
 export async function applyRevocation(
   text: string,
   stored: readonly StoredCert[],
@@ -127,7 +105,6 @@ export async function applyRevocation(
   return mergeIntoStored(match, text);
 }
 
-/** The stored-record fields a parsed cert decides. */
 export function contactFieldsFrom(
   keyInfo: KeyInfo,
 ): Pick<
@@ -143,10 +120,7 @@ export function contactFieldsFrom(
   return {
     userIds: keyInfo.userIds,
     expiresAt: keyInfo.expiresAt,
-    // Sign-only keys are valid contacts (for verification) but can't
-    // be offered as encryption recipients -- record which is which.
     usableForEncryption: keyInfo.usableForEncryption,
-    // Allowed, but flagged (e.g. SHA-1 binding signature).
     securityWarning: keyInfo.securityWarning,
     // Written only when true, so an unrevoked record keeps its bytes.
     ...(keyInfo.revoked ? { revoked: true } : {}),
@@ -155,17 +129,12 @@ export function contactFieldsFrom(
   };
 }
 
-/** A contact is worth keeping if you can either encrypt to it OR verify
- *  its signatures. Sign-only keys (no encryption subkey) are perfectly
- *  valid contacts -- you just can't encrypt to them. */
+/** Sign-only keys are valid contacts (for verification). */
 export function isUsableContact(keyInfo: KeyInfo): boolean {
   return keyInfo.usableForEncryption || keyInfo.usableForSigning;
 }
 
-/** Human-readable reason a cert can't be imported as a contact. Expiry
- *  is by far the most common cause, so call it out with the date rather
- *  than hiding it in the generic "expired, revoked, or unsupported"
- *  catch-all. */
+/** Why a cert can't be imported; expiry (the common case) names the date. */
 export function importRejectionMessage(keyInfo: KeyInfo | undefined): string {
   if (!keyInfo) {
     return t("import_reject_no_public_key");

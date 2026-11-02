@@ -1,32 +1,15 @@
 /**
- * ============================================================================
- * Import / unlock / drop for SSH identities (age engine).
- * ============================================================================
+ * Import / unlock / drop for SSH identities (age engine). Secret lifetime
+ * lives in `protection/protect-runner.ts`; this file only picks the wasm
+ * exports and shapes the blob.
  *
- * The SSH half of the shared protect machinery. Everything about secret
- * lifetime -- encode -> call wasm -> unpack -> assemble -> `.fill(0)` in
- * a `finally` -- lives once in `protection/protect-runner.ts`; what is
- * here is the same two things `protect-flow.ts` (PGP) and
- * `crx/operations.ts` (CRX) keep: which wasm export to call, and how its
- * metadata lands in a stored blob.
+ * Import-only, and no plaintext export: an SSH key leaves the app only as
+ * ciphertext it produced. Stored in the same keyring as PGP, `kind: "ssh"`,
+ * `keyId` = `SHA256:...` fingerprint, `publicKeyArmored` = recipient line.
  *
- * There is no `generate`: `ssh-keygen` is the generator, and the app only
- * ever imports a key the user already has. There is no plaintext export
- * either -- the OpenPGP trapdoor (`getKeyArmored`) has no SSH sibling, so
- * an imported SSH key can leave this app only as ciphertext it produced.
- *
- * An SSH identity is stored in the SAME keyring as PGP certs, discriminated
- * by `kind: "ssh"` (see `storage/key-kind.ts`). Its `keyId` is the OpenSSH
- * `SHA256:...` fingerprint and its `publicKeyArmored` is the canonical
- * `<type> <base64>` recipient line -- the SSH stand-ins for the two fields
- * every stored key needs.
- *
- * @secret-handling The OpenSSH private key crosses as `Uint8Array` (never
- * a JS string past the boundary) and is `.fill(0)`'d in a `finally` that
- * wraps the WHOLE flow -- including the password-strength gate and the
- * WebAuthn ceremony, both of which can throw before wasm is reached. That
- * ordering was a real bug in `importAndProtect` once; see
- * `protection/protect-runner.test.ts`.
+ * @secret-handling The OpenSSH private key crosses as `Uint8Array` and is
+ * `.fill(0)`'d in a `finally` that wraps the WHOLE flow, including the
+ * password gate and WebAuthn ceremony (both can throw before wasm).
  */
 
 import type { ContactGroup } from "../import/types";
@@ -64,15 +47,7 @@ const EMPTY = new Uint8Array(0);
 
 type SshSpec = ProtectSpec<SshProtectFlowResult, ProtectedKeyBlob>;
 
-/**
- * An SSH key's name, for the UI.
- *
- * It has no User IDs -- only the free-text comment `ssh-keygen` puts at
- * the end of the line, conventionally `user@host`. It goes into `userIds`
- * as the sole element so every consumer keeps reading one field for "who
- * is this", and the list is empty (not `[""]`) when the key has no
- * comment, so "no name" stays distinguishable from "named empty".
- */
+/** The key comment as `userIds`; `[]` (not `[""]`) when there is none. */
 export function sshUserIds(comment: string): string[] {
   const trimmed = comment.trim();
   return trimmed ? [trimmed] : [];
@@ -121,9 +96,7 @@ function sshSpec(
         storedSecret: toBase64(prf.storedSecret),
       }),
 
-    // `cache: true` chains a real unlock against the blob just written,
-    // so an SSH_KEY_STORE entry always traces back to an unlock path --
-    // the same invariant SECURITY.md §4 states for KEY_STORE.
+    // Cache via a real unlock of the blob just written (SECURITY.md §4).
     cachePassword: (result, { salt, iv, ct }, passwordBytes) =>
       unlockSshIdentityWithPassword(
         ct,
@@ -154,14 +127,11 @@ export interface SshImportOutput {
 }
 
 /**
- * Import an OpenSSH private key and re-protect it under the chosen
- * method. Returns the blob WITHOUT persisting it -- the caller stores it,
- * so there is one persist path (same rule as `generateCrxKey`).
+ * Import an OpenSSH private key and re-protect it. Returns the blob
+ * WITHOUT persisting it; the caller is the one persist path.
  *
- * @secret-handling `keyFile` and `sourcePassphrase` are both `.fill(0)`'d
- * on every exit. `keyFile` is taken as bytes rather than a string
- * precisely so it CAN be: an OpenSSH private key is secret material for
- * the whole of its life in JS.
+ * @secret-handling `keyFile` (bytes so it can be wiped) and
+ * `sourcePassphrase` are `.fill(0)`'d on every exit.
  */
 export async function importSshIdentity(
   keyFile: Uint8Array,
@@ -197,23 +167,12 @@ export async function importSshIdentity(
       ),
     );
   } catch (e) {
-    // Translate the engine's "I need the passphrase" into a tagged code
-    // ONCE, here, so no caller has to know its wording. The comparison is
-    // against the value the engine itself reports at runtime, never a
-    // transcription -- see `sshPassphraseRequiredMessage`.
-    // NOT `e instanceof Error`: wasm-bindgen surfaces a Rust `Err(String)`
-    // as a thrown JS *string*, so an instanceof gate here discards every
-    // message the engine writes -- see the note on `errorMessage`. This
-    // exact mistake made passphrase-protected SSH keys unimportable
-    // (the message rendered, the field to answer it never appeared),
-    // which is the failure this tagging exists to prevent.
+    // Tag the engine's "needs passphrase" error, compared against the
+    // engine's own runtime string. NOT `e instanceof Error`: wasm-bindgen
+    // throws a Rust `Err(String)` as a JS string.
     const raw = errorMessage(e, "");
     if (!(e instanceof AppError) && raw !== "") {
-      // Guarded end to end: if the sentinel can't be read for any
-      // reason, the ORIGINAL error must still be what propagates.
-      // Tagging is an improvement on the error, never a replacement for
-      // it -- swallowing a real failure to report a lookup failure would
-      // be strictly worse than not tagging at all.
+      // If the sentinel lookup fails, the ORIGINAL error must propagate.
       let needsPassphrase: string | null;
       try {
         needsPassphrase = await sshPassphraseRequiredMessage();
@@ -232,11 +191,10 @@ export async function importSshIdentity(
 }
 
 /**
- * Unlock a stored SSH identity into wasm and return its handle. The
- * caller OWNS the handle and MUST {@link closeSshIdentity} it.
+ * Unlock a stored SSH identity into wasm. The caller OWNS the handle and
+ * MUST {@link closeSshIdentity} it.
  *
- * @secret-handling the password / PRF output crosses as bytes and is
- * `.fill(0)`'d in a `finally`.
+ * @secret-handling password / PRF output cross as bytes, wiped in `finally`.
  */
 export async function openSshIdentity(
   blob: ProtectedKeyBlob,
@@ -292,12 +250,9 @@ export async function closeSshIdentity(handle: number): Promise<void> {
 }
 
 /**
- * A parsed SSH public key line as a stored contact.
- *
- * Same store, same envelope as a PGP contact -- only `kind: "ssh"` and
- * the meaning of `armoredPublicKey` (a recipient line, not armor) differ.
- * `usableForEncryption` is true unconditionally: an age recipient IS an
- * encryption key, there is no sign-only SSH recipient to exclude.
+ * A parsed SSH public key line as a stored contact (`armoredPublicKey` is
+ * the recipient line). Always `usableForEncryption`: an age recipient is
+ * an encryption key.
  */
 export function sshContact(
   info: SshRecipientInfo,
@@ -316,43 +271,20 @@ export function sshContact(
 }
 
 /**
- * A group of SSH public keys as ONE stored contact.
+ * A group of SSH public keys as ONE stored contact -- the only
+ * constructor for a multi-key contact, however the group was assembled.
  *
- * The sibling of {@link sshContact}, here for the same reason that one
- * is here: what an SSH contact's record looks like -- the `kind` marker,
- * the canonical recipient line as "armor", `usableForEncryption` -- is
- * this module's business, and a second hand-rolled copy in the import
- * panel would be free to drift from the one `importSshIdentity` writes.
- *
- * The ONLY constructor for a multi-key contact, whichever way the group
- * was assembled: a GitHub lookup, several pasted lines that agree on a
- * comment, or several that the user grouped and named by hand. Two ways
- * to build a contact is how the two shapes drift apart. A hand-made
- * group carries no {@link ContactSource} -- absent means hand-supplied
- * on the record too, and `sameSource` refuses to let two source-less
- * contacts collide.
- *
- * `keyId`/`armoredPublicKey` are the FIRST member's, and the full list
- * goes through `recipientsField`, which writes nothing at all for a
- * single key. So a GitHub user with exactly one key produces the same
- * record shape a pasted `.pub` line does -- no `recipients` array to
- * migrate, and an older build reads it as the plain single-key contact
- * it also is (see the head-agreement invariant in `storage/contacts`).
- *
- * `expiresAt: null` rather than absent for the same reason the pasted
- * path sets it: `undefined` means "not computed yet" and sends the
- * contacts backfill off to parse a recipient line as PGP armor on every
- * load (see `contact-backfill.ts`). SSH keys simply do not expire.
+ * `keyId`/`armoredPublicKey` are the first member's (head-agreement
+ * invariant, `storage/contacts`); a one-key group gets the plain
+ * single-key shape. `expiresAt: null`, not absent: `undefined` makes the
+ * contacts backfill parse the recipient line as PGP armor on every load.
  */
 export function groupContact(
   group: ContactGroup,
   now: number = Date.now(),
 ): PublicContactKey {
   if (group.members.length === 0) {
-    // Unreachable through the import flow -- a group with no usable
-    // member is classified `rejected` and never reaches an import -- but
-    // a contact whose head is undefined would fail `isValidContact` on
-    // the way back OUT of storage, i.e. silently vanish. Refuse here.
+    // A headless contact would fail `isValidContact` on read and vanish.
     throw new Error("groupContact: group has no usable keys");
   }
   const head = group.members[0];
@@ -366,10 +298,7 @@ export function groupContact(
     lastUsedAt: now,
     usableForEncryption: true,
     expiresAt: null,
-    // Spread conditionally, never `source: group.source`: a hand-made
-    // group has none, and the omit-don't-emit rule the whole record
-    // follows is what keeps a source-less contact serialising the way
-    // a pasted single key already does.
+    // Omit, don't emit `source: undefined`.
     ...(group.source ? { source: group.source } : {}),
     ...recipientsField(group.members),
   };

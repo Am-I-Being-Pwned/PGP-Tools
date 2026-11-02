@@ -1,16 +1,9 @@
 /**
- * ============================================================================
- * CRX signing-key coordinator (JS side).
- * ============================================================================
- *
- * Drives generate / import / sign / verify for CRX (Chrome extension)
- * signing keys, reusing the exact protection machinery the PGP keys use
- * (Argon2id / WebAuthn-PRF -> AES-256-GCM, all inside WASM). The protect
- * path itself is literally shared with `protection/protect-flow.ts` — see
- * `protection/protect-runner.ts`, which owns the secret lifetimes; every
- * password / PRF buffer is `.fill(0)`'d in a `finally`, there and in the
- * unlock/reseal paths below. The RSA private key never leaves WASM in the
- * clear.
+ * CRX signing-key coordinator: generate / import / sign / verify. Shares
+ * the protect path and secret lifetimes with PGP via
+ * `protection/protect-runner.ts`; every password / PRF buffer is
+ * `.fill(0)`'d in a `finally`. The RSA private key never leaves WASM in
+ * the clear (except via the explicit plaintext export below).
  */
 
 import type { CrxProtectFlowResult, CrxVerifyResult } from "../pgp/wasm";
@@ -45,13 +38,8 @@ export type CrxProtectionInput =
   | { method: "password"; password: string }
   | { method: "passkey"; reusePasskeyCredentialId?: string };
 
-// ── blob assembly (the CRX-specific half of the flow) ───────────────
-
 type CrxSpec = ProtectSpec<CrxProtectFlowResult, CrxSigningKeyBlob>;
 
-/** Assemble a stored blob from the wasm metadata plus the already-unpacked
- *  seal. The protection union and the packed-blob layout are shared with
- *  the PGP keyring — see `protection/protected-blob.ts`. */
 function crxBlob(
   result: CrxProtectFlowResult,
   protection: CrxProtection,
@@ -73,12 +61,7 @@ function crxBlob(
   };
 }
 
-/**
- * The CRX half of a protect flow: the two wasm exports to call and how
- * their metadata maps into a `CrxSigningKeyBlob`. No `cache*` hooks — a
- * CRX key is never held open past the act that needed it, so there is
- * nothing to chain an unlock into.
- */
+/** No `cache*` hooks: a CRX key is never held open past one act. */
 function crxSpec(
   userIdHint: string,
   runPassword: CrxSpec["runPassword"],
@@ -114,11 +97,8 @@ function crxSpec(
   };
 }
 
-// ── public API: generate / import ────────────────────────────────────
-
-/** Generate a fresh RSA-2048 CRX signing key and protect it. Returns the
- *  blob WITHOUT persisting it -- the caller stores it (e.g. `useCrxKeys.add`,
- *  which also refreshes the UI). One persist path, no double writes. */
+/** Generate an RSA-2048 CRX signing key. Returns the blob WITHOUT
+ *  persisting it; the caller is the one persist path. */
 export async function generateCrxKey(
   protection: CrxProtectionInput,
   label?: string,
@@ -142,9 +122,7 @@ export async function generateCrxKey(
   return blob;
 }
 
-/** Import an existing RSA private key (PKCS#8 or PKCS#1 PEM) and re-protect
- *  it. Use this to bring a key already registered with the Chrome Web Store.
- *  Returns the blob WITHOUT persisting it -- see {@link generateCrxKey}. */
+/** Import an RSA PEM (PKCS#8 or PKCS#1). Not persisted, as above. */
 export async function importCrxKey(
   pem: string,
   protection: CrxProtectionInput,
@@ -170,15 +148,9 @@ export async function importCrxKey(
   return blob;
 }
 
-// ── public API: unlock + sign + verify ───────────────────────────────
-
-/**
- * Unlock a CRX key into WASM and return its handle (password prompt or
- * passkey ceremony). The caller OWNS the handle and MUST {@link closeCrxKey}
- * it. Exposed for the bulk-export flow, which unlocks up-front to validate,
- * then re-seals under the export passphrase. For a one-shot sign, prefer
- * {@link signZipWithCrxKey}, which manages the handle itself.
- */
+/** Unlock a CRX key into WASM. The caller OWNS the handle and MUST
+ *  {@link closeCrxKey} it; prefer {@link signZipWithCrxKey} for one-shot
+ *  signing. */
 export async function openCrxKey(
   blob: CrxSigningKeyBlob,
   password?: string,
@@ -191,21 +163,12 @@ export async function closeCrxKey(handle: number): Promise<void> {
   await dropCrxKey(handle);
 }
 
-/**
- * Export an unlocked CRX key (by handle) as an UNENCRYPTED PKCS#8 PEM -- the
- * raw private key. This is the deliberately-unsafe path (mirrors PGP's
- * plaintext key export): the key crosses into JS, so callers MUST gate it
- * behind explicit confirmation and drop the string promptly.
- */
+/** UNENCRYPTED PKCS#8 PEM export: the key crosses into JS, so callers
+ *  MUST gate it behind explicit confirmation and drop the string promptly. */
 export { exportCrxPrivateKeyPem } from "../pgp/wasm";
 
-/**
- * Re-seal an already-unlocked CRX key (by handle) under `password`, returning
- * a fresh portable `CrxSigningKeyBlob`. The plaintext key never leaves WASM.
- * Used by "Export All Keys" to re-wrap every CRX key under the single export
- * passphrase, so a passkey-protected key (bound to one authenticator) becomes
- * a password-protected blob that restores on any device.
- */
+/** Re-seal an unlocked CRX key under `password` (plaintext stays in
+ *  WASM), so a passkey-bound key can be exported portably. */
 export async function resealCrxKeyUnderPassword(
   handle: number,
   password: string,
@@ -282,11 +245,7 @@ async function unlockCrxKey(
   }
 }
 
-/**
- * Sign a packed extension ZIP into a CRX3 `.crx`. Unlocks the key (password
- * prompt or passkey ceremony), signs in WASM, and drops the handle — a
- * self-contained signing act, never a cached key.
- */
+/** Sign a ZIP into a CRX3 `.crx`: unlock, sign, drop -- never cached. */
 export async function signZipWithCrxKey(
   blob: CrxSigningKeyBlob,
   zipBytes: Uint8Array,

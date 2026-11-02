@@ -1,10 +1,6 @@
 /**
- * Binary OpenPGP key support for the import paths. `gpg --export`
- * without `--armor` produces raw packet bytes (the `.gpg` shape our file
- * pickers already accept); reading those with `file.text()` mangles them
- * irreversibly through UTF-8 decoding. Instead, detect the binary shape
- * and armor it on the fly so the rest of the import pipeline (armor
- * splitting, Sequoia parsing) sees a normal armored block.
+ * Armor binary `gpg --export` output on the fly: `file.text()` would
+ * mangle raw packets irreversibly through UTF-8 decoding.
  */
 
 /** RFC 4880 §6.1 CRC-24 over the payload bytes. */
@@ -21,8 +17,7 @@ function crc24(bytes: Uint8Array): number {
 }
 
 function toBase64(bytes: Uint8Array): string {
-  // btoa via String.fromCharCode overflows the stack on large inputs;
-  // build the binary string in chunks (keys can be up to 1 MiB).
+  // Chunked: spreading a large array into fromCharCode overflows the stack.
   let bin = "";
   for (let i = 0; i < bytes.length; i += 0x8000) {
     bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
@@ -30,9 +25,8 @@ function toBase64(bytes: Uint8Array): string {
   return btoa(bin);
 }
 
-/** OpenPGP packet tag of the first packet, or null when `bytes` doesn't
- *  start with a packet header (armored text, BOM'd text, other files all
- *  fall through: tag values outside the key tags return null too). */
+/** First packet's tag, or null if `bytes` doesn't start with a packet
+ *  header. */
 function firstPacketTag(bytes: Uint8Array): number | null {
   if (bytes.length < 2) return null;
   const b = bytes[0];
@@ -40,23 +34,17 @@ function firstPacketTag(bytes: Uint8Array): number | null {
   return b & 0x40 ? b & 0x3f : (b >> 2) & 0x0f;
 }
 
-/** A binary key export starts with its primary key packet. */
 const ARMOR_LABEL: Record<number, string> = {
   5: "PGP PRIVATE KEY BLOCK",
   6: "PGP PUBLIC KEY BLOCK",
 };
 
-/** True when the bytes start with a binary OpenPGP key packet -- the
- *  `gpg --export` / `--export-secret-keys` default (non-armored) shapes.
- *  Used by drop routing to send such files to import instead of the
- *  workspace catch-all. */
 export function looksLikeBinaryKey(bytes: Uint8Array): boolean {
   const tag = firstPacketTag(bytes);
   return tag !== null && tag in ARMOR_LABEL;
 }
 
-/** Armor raw binary OpenPGP key bytes, or return null when the bytes
- *  don't look like a binary key export (caller falls back to text). */
+/** Null when not a binary key export (caller falls back to text). */
 export function binaryKeyToArmored(bytes: Uint8Array): string | null {
   const tag = firstPacketTag(bytes);
   const label = tag === null ? undefined : ARMOR_LABEL[tag];
@@ -70,9 +58,7 @@ export function binaryKeyToArmored(bytes: Uint8Array): string | null {
   return `-----BEGIN ${label}-----\n\n${body}\n=${crcB64}\n-----END ${label}-----\n`;
 }
 
-/** Read a key file as armored text: armored files pass through
- *  untouched, raw binary exports (the `gpg --export` default) are
- *  armored on the fly. */
+/** Read a key file as armored text, armoring binary exports. */
 export async function readKeyFile(file: File): Promise<string> {
   const bytes = new Uint8Array(await file.arrayBuffer());
   return binaryKeyToArmored(bytes) ?? new TextDecoder().decode(bytes);

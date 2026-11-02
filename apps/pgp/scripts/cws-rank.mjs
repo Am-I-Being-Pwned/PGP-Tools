@@ -1,14 +1,10 @@
 #!/usr/bin/env node
 /**
- * Where PGP Tools places in Chrome Web Store search, for a list of targets.
+ * Where PGP Tools places in Chrome Web Store search. Anonymous search is
+ * deterministic; only the server-rendered first page is read, so a miss means
+ * "not in the top ~10".
  *
- * Store search is deterministic for anonymous queries -- the same query returns
- * the same results -- so this is a baseline rather than a sample. It reads the
- * server-rendered SERP, which is the first page only, so a miss means "not in
- * the top ~10", not "not ranked at all".
- *
- *   node scripts/cws-rank.mjs                    # the tracked list
- *   node scripts/cws-rank.mjs "gpg" "openpgp"    # ad-hoc
+ *   node scripts/cws-rank.mjs ["query" ...]
  */
 const EXTENSION_ID = "pgpcdgggohpbombhkffjoiiafdlfcpgp";
 const UA =

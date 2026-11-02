@@ -1,11 +1,5 @@
-/**
- * TEST-ONLY `fetch` doubles for the lookups that share `capped-body.ts`
- * (GitHub keys, keys.openpgp.org). Imported exclusively from `*.test.ts`.
- *
- * The response is hand-rolled rather than a real `Response`: the point of
- * each case is exactly which of `body`, `text()` and `cancel()` the code
- * touches, and the probe records that.
- */
+/** TEST-ONLY `fetch` doubles for the `capped-body.ts` lookups. Hand-rolled
+ *  so the probe records which of `body`, `text()`, `cancel()` was touched. */
 
 import { expect, vi } from "vitest";
 
@@ -13,12 +7,10 @@ export interface FakeResponseInit {
   status?: number;
   headers?: Record<string, string>;
   chunks?: Uint8Array[];
-  /** Emit chunks forever -- the multi-GB body a bounded read must not
-   *  buffer. */
+  /** Emit chunks forever. */
   endless?: boolean;
 }
 
-/** Records what the code under test actually pulled. */
 export interface Probe {
   pulls: number;
   cancelled: boolean;
@@ -69,7 +61,6 @@ export function encode(text: string): Uint8Array[] {
   return [new TextEncoder().encode(text)];
 }
 
-/** Stub global `fetch` to resolve with `response`; returns the mock. */
 export function stubFetch(response: Response) {
   const stub = vi.fn().mockResolvedValue(response);
   vi.stubGlobal("fetch", stub);
@@ -92,17 +83,13 @@ export async function expectContentLengthRefusal(
 
   const result = await call();
   expect(result).toEqual({ ok: false, error: "server-error" });
-  // The whole point: nothing was read, and the connection was dropped
-  // rather than drained. (One pull is the stream filling its own
-  // one-chunk queue at construction -- no reader was ever taken.)
+  // One pull is the stream filling its own queue; no reader was taken.
   expect(probe.pulls).toBeLessThanOrEqual(1);
   expect(probe.cancelled).toBe(true);
   expect(probe.textCalled).toBe(false);
 }
 
-/** The slow-trickle attacker: headers, then silence. `parsingRef` in the
- *  panel gates the paste path too, so a hang here disables all key import
- *  until the panel is reopened. Caller restores real timers. */
+/** Slow-trickle attacker: headers, then silence. Caller restores timers. */
 export async function expectTimeoutOffline(call: () => Promise<unknown>) {
   vi.useFakeTimers();
   vi.stubGlobal(

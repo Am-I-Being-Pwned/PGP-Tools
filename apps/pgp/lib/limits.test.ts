@@ -1,20 +1,5 @@
-/**
- * The file-size ceiling.
- *
- * This is a SANITY bound, not the bomb guard -- that is a ratio, and it
- * lives in `gpg-wasm/src/lib.rs` (`decrypt_limit`). What is pinned here
- * is the handling around the bound, which is where the user-visible
- * behaviour is:
- *
- *  - it partitions rather than rejecting the whole drop, so one oversized
- *    file in a folder does not discard the rest;
- *  - a file of EXACTLY the limit is allowed, so the number in the error
- *    message means the same thing to a user as it does in the code;
- *  - the message names the offending files, because "a file was too
- *    large" in a multi-file drop leaves the user guessing;
- *  - and the bound stays a platform fact rather than drifting back to a
- *    hand-picked number that refuses files which actually work.
- */
+/** File-size ceiling: a sanity bound, not the bomb guard (that is
+ *  `decrypt_limit` in `gpg-wasm/src/lib.rs`). */
 
 import { describe, expect, it } from "vitest";
 
@@ -25,7 +10,6 @@ import {
   splitOversizedFiles,
 } from "./limits";
 
-/** Just the shape the rule reads -- no DOM, no real File. */
 function f(name: string, size: number) {
   return { name, size };
 }
@@ -40,7 +24,6 @@ describe("splitOversizedFiles", () => {
   });
 
   it("accepts a file of exactly the limit", () => {
-    // Strictly greater, so the advertised number is inclusive.
     const { accepted, rejected } = splitOversizedFiles([
       f("exact.bin", MAX_FILE_BYTES),
     ]);
@@ -57,10 +40,6 @@ describe("splitOversizedFiles", () => {
   });
 
   it("accepts a 1 GB file rather than refusing it on a guess", () => {
-    // The ceiling is a fact about wasm32's address space, not an opinion
-    // about what a user should be doing. Whether a 1 GB file actually
-    // completes depends on the machine; refusing it here would decide
-    // that in advance and be wrong on the machines where it works.
     const { accepted } = splitOversizedFiles([
       f("disk.img", 1024 * 1024 * 1024),
     ]);
@@ -68,14 +47,11 @@ describe("splitOversizedFiles", () => {
   });
 
   it("rejects what cannot possibly work", () => {
-    // Past 4 GiB there is no address space for it, on any machine.
     const { rejected } = splitOversizedFiles([f("huge.img", 5 * 1024 ** 3)]);
     expect(rejected.map((r) => r.name)).toEqual(["huge.img"]);
   });
 
   it("keeps the files it can when a drop is mixed", () => {
-    // Dragging a folder that happens to contain one huge file must not
-    // throw away everything else in it.
     const { accepted, rejected } = splitOversizedFiles([
       f("notes.txt", 100),
       f("huge.iso", MAX_FILE_BYTES * 8),
@@ -100,8 +76,6 @@ describe("splitOversizedFiles", () => {
   });
 
   it("treats a zero-byte file as acceptable", () => {
-    // Empty is a legitimate thing to encrypt, and it is certainly not a
-    // memory hazard.
     expect(splitOversizedFiles([f("empty", 0)]).accepted).toHaveLength(1);
   });
 });
@@ -136,15 +110,11 @@ describe("oversizedFilesMessage", () => {
 
 describe("MAX_FILE_BYTES", () => {
   it("is the wasm32 address space, not a judgement about file sizes", () => {
-    // Pinned as a platform fact. If this ever becomes a smaller,
-    // hand-picked number again, it needs the measurement to justify it --
-    // the last one was a guess and refused files that worked.
+    // A platform fact; a smaller number needs a measurement to justify it.
     expect(MAX_FILE_BYTES).toBe(4 * 1024 * 1024 * 1024);
   });
 
   it("advertises the limit it actually enforces", () => {
-    // The label is what the user reads; drift between the two is how a
-    // "4 GB" limit ends up rejecting a 3 GB file.
     expect(MAX_FILE_LABEL).toBe("4 GB");
   });
 });

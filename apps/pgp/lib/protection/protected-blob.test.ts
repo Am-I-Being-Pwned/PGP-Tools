@@ -1,21 +1,8 @@
 /**
- * Known-answer tests for the at-rest wire formats.
- *
- * These layouts are not an implementation detail: they describe bytes
- * that are already sitting on users' disks, written by builds we can no
- * longer change. If an offset moves, nothing throws -- the reader simply
- * hands the wrong 16 bytes to Argon2id as a salt, the AEAD tag check
- * fails, and every stored key becomes permanently unopenable. There is
- * no version marker to catch it and no migration that could fix it after
- * the fact.
- *
- * So the layouts are pinned here as literal byte fixtures rather than
- * recomputed from the constants under test: a fixture that disagrees
- * with the code is exactly the signal we want, and one derived from the
- * code would agree with any change.
- *
- * The three formats (see `gpg-wasm/src/protected.rs`, which states the
- * same table on the Rust side):
+ * Known-answer tests for the at-rest wire formats. These bytes are on
+ * users' disks with no version marker: a moved offset makes every stored
+ * key unopenable. Pinned as literal fixtures (not derived from the code)
+ * on purpose. Same table as `gpg-wasm/src/protected.rs`:
  *
  *   password seal:  [16 salt][12 iv][ct||tag]
  *   passkey  seal:  [12 iv][ct||tag]
@@ -30,10 +17,8 @@ import {
   unpackPrfBlob,
 } from "./protected-blob";
 
-// The packed-return half is unpacked inside `wasm-secrets.ts` by
-// functions that are deliberately not exported, so it is exercised
-// through the real protect exports with only the wasm module itself
-// swapped out -- the boundary the packed bytes actually cross.
+// The packed-return unpacker is private to `wasm-secrets.ts`, so it is
+// exercised through the real protect exports with only wasm swapped out.
 const wasmStub: { module: Record<string, () => Uint8Array> } = vi.hoisted(
   () => ({ module: {} }),
 );
@@ -46,8 +31,6 @@ beforeEach(() => {
   wasmStub.module = {};
 });
 
-/** `[16 salt][12 iv][5 ct]`, every byte distinct enough that a
- *  one-position slip in any boundary changes the assertion. */
 // prettier-ignore
 const PASSWORD_PACKED = new Uint8Array([
   // salt (16)
@@ -60,8 +43,6 @@ const PASSWORD_PACKED = new Uint8Array([
   0xf0, 0xf1, 0xf2, 0xf3, 0xf4,
 ]);
 
-/** `[12 iv][4 ct]` -- no salt: the HKDF salt is `storedSecret`, which
- *  lives beside the blob and never inside it. */
 // prettier-ignore
 const PRF_PACKED = new Uint8Array([
   // iv (12)
@@ -84,16 +65,12 @@ describe("password blob layout", () => {
     ]);
     expect([...ct]).toEqual([0xf0, 0xf1, 0xf2, 0xf3, 0xf4]);
 
-    // AES-GCM's own sizes, restated so a change to either constant is
-    // caught even if the fixture were regenerated.
     expect(salt).toHaveLength(16);
     expect(iv).toHaveLength(12);
   });
 
   it("hands back copies, not views onto the packed buffer", () => {
-    // The parts outlive the packed blob (they are base64'd into the
-    // stored record, and `cachePassword` reads them again after the
-    // fact). A view would alias a buffer the caller is free to reuse.
+    // Copies, not views: the parts outlive the packed blob.
     const packed = PASSWORD_PACKED.slice();
     const { salt, iv, ct } = unpackPasswordBlob(packed);
     packed.fill(0xaa);
@@ -116,15 +93,10 @@ describe("prf blob layout", () => {
   });
 
   it("does not carry a salt -- the PRF seal has none to carry", () => {
-    // Reading the PRF blob with the password layout (or vice versa) is
-    // the exact confusion this asserts against: the first 16 bytes are
-    // IV+ciphertext, not a KDF salt.
     expect(Object.keys(unpackPrfBlob(PRF_PACKED)).sort()).toEqual(["ct", "iv"]);
   });
 });
 
-/** `[u32_le json_len][json][blob]` -- built by hand so the length
- *  prefix's width, endianness and position are all pinned. */
 function packed(meta: unknown, blob: Uint8Array): Uint8Array {
   const json = new TextEncoder().encode(JSON.stringify(meta));
   const out = new Uint8Array(4 + json.length + blob.length);
@@ -146,8 +118,6 @@ const CRX_META = {
 describe("packed wasm return layout", () => {
   it("reads a little-endian u32 length, then the json, then the blob", async () => {
     const { generateCrxKeyWithPassword } = await import("../pgp/wasm");
-    // Short metadata: the length fits in the low byte. The multi-byte
-    // case is pinned by the next test.
     wasmStub.module.generateCrxKeyWithPassword = () =>
       packed(CRX_META, PASSWORD_PACKED);
 
@@ -163,10 +133,7 @@ describe("packed wasm return layout", () => {
 
   it("reads the length as u32_le, not u16 or big-endian", async () => {
     const { generateCrxKeyWithPassword } = await import("../pgp/wasm");
-    // Padding pushes the JSON past 255 bytes, so the length spills into
-    // the second byte: `[0x2c, 0x01, 0x00, 0x00]` = 300. A big-endian
-    // read would see 738197504; a u16 read would still work here, so
-    // the trailing two zero bytes are asserted separately below.
+    // 300 = `[0x2c, 0x01, 0x00, 0x00]`: pins little-endian u32.
     const meta = { ...CRX_META, label: "x".repeat(300) };
     const bytes = packed(meta, PRF_PACKED);
     const jsonLen = new TextEncoder().encode(JSON.stringify(meta)).length;
@@ -191,10 +158,7 @@ describe("packed wasm return layout", () => {
 
   it("unpacks a packed return that does not start at byte 0 of its buffer", async () => {
     const { generateProtectedWithPrf } = await import("../pgp/wasm");
-    // wasm-bindgen hands back a view into linear memory, so `byteOffset`
-    // is routinely non-zero. A `new DataView(packed.buffer)` that
-    // forgets to pass the offset reads someone else's bytes as the
-    // length -- silently, and only in the real extension.
+    // wasm-bindgen returns views with non-zero `byteOffset`.
     const meta = {
       publicKeyArmored: "PUB",
       keyInfo: {
@@ -226,8 +190,6 @@ describe("packed wasm return layout", () => {
 
   it("round-trips packed -> unpacked -> the seal parts the store persists", async () => {
     const { generateCrxKeyWithPassword } = await import("../pgp/wasm");
-    // The two layouts compose: the packed return's tail IS the seal, so
-    // a change to either offset table shows up here as wrong salt/iv.
     wasmStub.module.generateCrxKeyWithPassword = () =>
       packed(CRX_META, PASSWORD_PACKED);
     const { blob } = await generateCrxKeyWithPassword(
@@ -243,23 +205,14 @@ describe("packed wasm return layout", () => {
   });
 });
 
-/**
- * Truncation must fail AS truncation.
- *
- * `Uint8Array.slice` past the end returns a short array rather than
- * throwing, so a clipped blob used to sail through the unpackers with a
- * 3-byte "salt" and an empty IV and only fail several layers down, at the
- * AEAD tag check -- which the UI reports as a wrong password. The user
- * then goes looking for a credential problem they do not have while the
- * real fault (a half-written record, a clipped backup) goes unnamed.
- */
+/** Truncation must fail AS truncation, not as an AEAD failure the UI
+ *  reports as a wrong password. */
 describe("length validation", () => {
   it("rejects a password blob too short to hold [16 salt][12 iv]", () => {
     expect(() => unpackPasswordBlob(PASSWORD_PACKED.slice(0, 27))).toThrow(
       /Malformed protected blob/,
     );
-    // Exactly the header, with no ciphertext, is still malformed: there
-    // is nothing to decrypt and no room for the GCM tag.
+    // Header only, no room for the GCM tag: still malformed.
     expect(() => unpackPasswordBlob(PASSWORD_PACKED.slice(0, 28))).toThrow(
       /Malformed protected blob/,
     );
@@ -278,16 +231,11 @@ describe("length validation", () => {
   });
 
   it("still accepts the shortest well-formed blobs", () => {
-    // The boundary is off-by-one sensitive in the direction that matters:
-    // a real blob must not start throwing.
     expect(unpackPasswordBlob(PASSWORD_PACKED.slice(0, 29)).ct).toHaveLength(1);
     expect(unpackPrfBlob(PRF_PACKED.slice(0, 13)).ct).toHaveLength(1);
   });
 
   it("rejects a packed return whose length prefix runs past the buffer", () => {
-    // The other truncation: the metadata header survived but its body
-    // did not. Without this the TextDecoder yields a short string and
-    // the failure surfaces as a JSON parse error about the metadata.
     const bytes = packed(CRX_META, PASSWORD_PACKED).slice(0, 10);
     expect(() => unpackMetaBlob(bytes)).toThrow(/exceeds/);
   });
@@ -298,4 +246,3 @@ describe("length validation", () => {
     );
   });
 });
-

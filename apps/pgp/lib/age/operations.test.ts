@@ -1,15 +1,7 @@
 /**
- * The thin layer between the UI and `gpg-wasm/src/age.rs`: what shape the
- * bytes take on the way in and out. The crypto itself is covered by the
- * Rust tests (and cross-checked there against the real Go `age` CLI), and
- * the wasm engine is not available under vitest -- so the engine is
- * stubbed and what is asserted here is the marshalling.
- *
- * The two things worth pinning: text in means armored out (the only form
- * a user can paste back into a message), and a decrypt result falls back
- * to raw bytes when the plaintext is not UTF-8 -- the same fallback the
- * PGP path makes, so a caller can render either engine's result the same
- * way.
+ * Marshalling around `gpg-wasm/src/age.rs` (engine stubbed; crypto is
+ * covered by the Rust tests). Pins: text in means armored out, and a
+ * non-UTF-8 decrypt falls back to raw bytes, as on the PGP path.
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -113,8 +105,7 @@ describe("decryptWithHandle", () => {
   });
 
   it("keeps a leading byte-order mark in the decoded text", async () => {
-    // TextDecoder drops a BOM by default; Copy and Download would then
-    // return a file one character short of the one that was encrypted.
+    // A dropped BOM would make Copy/Download differ from the original.
     const bom = String.fromCharCode(0xfeff);
     wasm.decryptAgeWithHandle.mockResolvedValue(
       new Uint8Array([0xef, 0xbb, 0xbf, ...new TextEncoder().encode("hi")]),
@@ -127,8 +118,6 @@ describe("decryptWithHandle", () => {
   });
 
   it("hands back raw bytes when the plaintext is not UTF-8", async () => {
-    // An age file can carry an arbitrary blob (that is the point of the
-    // binary form); forcing it through a lossy decode would corrupt it.
     const bytes = new Uint8Array([0xff, 0xfe, 0x00, 0x01]);
     wasm.decryptAgeWithHandle.mockResolvedValue(bytes);
 
@@ -140,10 +129,7 @@ describe("decryptWithHandle", () => {
     expect([...(result as Uint8Array)]).toEqual([...bytes]);
   });
 
-  // The `@secret-handling` contract on `decryptAgeWithHandle` says the
-  // JS-side buffer is the caller's to scrub. This IS that caller, and
-  // these two pin the branch-dependent half of the contract: scrub the
-  // copy nobody needs, never the one being handed on.
+  // Scrub the copy nobody needs, never the one being handed on.
   it("zeroizes the plaintext buffer once it has been decoded to text", async () => {
     const buffer = new TextEncoder().encode("secret message");
     wasm.decryptAgeWithHandle.mockResolvedValue(buffer);
@@ -153,15 +139,12 @@ describe("decryptWithHandle", () => {
       keyHandle: 7,
     });
 
-    // The string still carries the plaintext (it is the result, and a JS
-    // string cannot be zeroized anyway) -- the BUFFER copy is gone.
     expect(result).toBe("secret message");
     expect([...buffer]).toEqual(Array(buffer.length).fill(0));
   });
 
   it("does NOT zeroize the buffer it hands back as the result", async () => {
-    // Scrubbing here would return zeros. This branch's buffer is wiped
-    // by the workspace (`zeroizeResultBytes` at master lock) instead.
+    // Wiped later by the workspace (`zeroizeResultBytes`).
     const original = [0xff, 0xfe, 0x00, 0x01];
     wasm.decryptAgeWithHandle.mockResolvedValue(new Uint8Array(original));
 
@@ -197,8 +180,6 @@ describe("parseRecipient / isAgeCiphertext", () => {
   });
 
   it("propagates a parse failure rather than returning a bad recipient", async () => {
-    // A line we cannot parse must not become a stored recipient the
-    // engine would later refuse to encrypt to.
     wasm.parseSshRecipient.mockRejectedValue(new Error("not an SSH key"));
     await expect(parseRecipient("nonsense")).rejects.toThrow(/not an SSH key/);
   });
@@ -209,15 +190,7 @@ describe("parseRecipient / isAgeCiphertext", () => {
   });
 });
 
-/**
- * The multi-identity answer to "which of my SSH keys opens this?".
- *
- * Before it existed the decrypt screen called the OpenPGP
- * `selectDecryptionKey`, which throws on age ciphertext; the throw was
- * swallowed and whichever PGP key happened to be selected stayed
- * selected, so the decrypt failed with a confusing message rather than
- * picking the right identity.
- */
+/** Which of my SSH keys opens this age file? */
 describe("selectDecryptionKey", () => {
   const CANDIDATES = [RECIPIENT, "ssh-rsa AAAAB3Nza bob@host"];
 
@@ -239,8 +212,6 @@ describe("selectDecryptionKey", () => {
   });
 
   it("says null rather than throwing on input that is not an age file", async () => {
-    // It is called on whatever the decrypt screen is holding, which may
-    // still be a PGP message or a half-typed paste.
     wasm.selectAgeDecryptionKey.mockRejectedValue(
       new Error("Not a valid age file"),
     );

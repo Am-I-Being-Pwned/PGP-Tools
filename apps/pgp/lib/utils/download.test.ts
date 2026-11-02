@@ -1,26 +1,10 @@
 /**
  * @vitest-environment jsdom
  *
- * Download helpers.
- *
- * The interesting half of this module is `saveCrxViaPrompt`, and what it
- * needs pinned is not "does it call chrome.downloads" but the RESULT
- * MAPPING, because each outcome drives a different UI:
- *
- *  - "cancelled" means the user said no -- stay quiet;
- *  - "blocked" means Chrome refused (disk full, AV, policy) -- offer the
- *    drag-out fallback;
- *  - "denied" means the optional permission was refused;
- *  - "unsupported" means the namespace isn't there at all.
- *
- * Collapsing any two of those loses a distinct piece of UI behaviour, and
- * the interrupted-download case is the easiest to get wrong: an AV
- * interruption and a user cancel arrive through the SAME callback and are
- * told apart only by the `USER_` prefix on the reason.
- *
- * Also pinned: the permission request swallows the "needs a user gesture"
- * throw. That path is hit on every auto-save after an async sign, and an
- * unhandled rejection there surfaces as a crash rather than a fallback.
+ * Pins saveCrxViaPrompt's result mapping (cancelled / blocked / denied /
+ * unsupported each drive different UI; AV interrupt vs user cancel differ
+ * only by the `USER_` prefix) and that a gesture-less permission request
+ * falls back instead of rejecting.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -101,9 +85,7 @@ describe("downloadText / downloadBinary", () => {
   });
 
   it("detaches from a WASM-backed view before blobbing", async () => {
-    // The .slice() in downloadBinary is what makes this safe: without
-    // it, the Blob would alias WASM linear memory that can be zeroized
-    // or grown out from under it before the write lands.
+    // .slice() stops the Blob aliasing WASM memory that can be zeroized.
     const backing = new Uint8Array([1, 2, 3, 4]);
     const view = backing.subarray(1, 3);
     downloadBinary(view, "a.bin");
@@ -143,15 +125,12 @@ interface DownloadsStub {
 }
 
 let listeners: ((delta: unknown) => void)[];
-/** Deltas to deliver as soon as `waitForDownload` attaches its listener.
- *  Firing on attach rather than after a guessed number of microtasks is
- *  what makes these tests deterministic: the number of awaits before the
- *  listener goes on is an implementation detail. */
+/** Deltas delivered when the listener attaches (deterministic, no
+ *  microtask counting). */
 let queued: Record<string, unknown>[];
 
-/** Wire up a chrome stub. `searchResult` is what `downloads.search`
- *  reports for an already-settled download; the default (`[]`) leaves the
- *  result to arrive via `onChanged`. */
+/** `searchResult`: what `downloads.search` reports for an already-settled
+ *  download. */
 function stubChrome(opts: {
   contains?: boolean;
   request?: boolean | (() => never);
@@ -200,8 +179,6 @@ function stubChrome(opts: {
   return downloads;
 }
 
-/** Queue state changes for delivery once the listener is attached.
- *  Defaults to download id 1, the id `downloads.download` resolves with. */
 function emitLater(...deltas: Record<string, unknown>[]) {
   queued.push(...deltas.map((d) => ({ id: 1, ...d })));
 }
@@ -215,9 +192,7 @@ describe("saveCrxViaPrompt permission handling", () => {
   });
 
   it("returns denied rather than throwing when there is no user gesture", async () => {
-    // chrome.permissions.request throws outright when called without a
-    // gesture -- e.g. the auto-save right after an async sign. The caller
-    // must get a fallback, not an unhandled rejection.
+    // request() throws without a user gesture; caller must get a fallback.
     stubChrome({
       contains: false,
       request: () => {
@@ -228,8 +203,6 @@ describe("saveCrxViaPrompt permission handling", () => {
   });
 
   it("skips the request when the permission is already granted", async () => {
-    // An already-granted permission needs no gesture, which is what makes
-    // auto-save work on every sign after the first.
     const downloads = stubChrome({ contains: true });
     emitLater({ state: { current: "complete" } });
     await expect(saveCrxViaPrompt(CRX, "a.crx")).resolves.toBe("saved");
@@ -237,8 +210,7 @@ describe("saveCrxViaPrompt permission handling", () => {
   });
 
   it("returns unsupported when the downloads namespace is absent", async () => {
-    // The @types claim it is always there; it only exists once the
-    // optional permission is actually granted.
+    // Only exists once the optional permission is granted.
     stubChrome({ downloads: false });
     await expect(saveCrxViaPrompt(CRX, "a.crx")).resolves.toBe("unsupported");
   });
@@ -246,9 +218,7 @@ describe("saveCrxViaPrompt permission handling", () => {
 
 describe("saveCrxViaPrompt download outcomes", () => {
   it("requests a Save As download, which is what stops Chrome installing the crx", async () => {
-    // saveAs:true => TARGET_DISPOSITION_PROMPT => IsExtensionDownload()
-    // early-returns false. Without it, Chrome treats the Cr24 magic as an
-    // extension and tries to install it.
+    // saveAs:true is what stops Chrome installing the Cr24 bytes.
     const downloads = stubChrome({});
     emitLater({ state: { current: "complete" } });
     await saveCrxViaPrompt(CRX, "signed.crx");
@@ -274,7 +244,6 @@ describe("saveCrxViaPrompt download outcomes", () => {
   });
 
   it("maps a rejected download to cancelled when the message says so", async () => {
-    // Dismissing the Save As dialog rejects with "canceled".
     stubChrome({
       download: () => Promise.reject(new Error("Download canceled")),
     });
@@ -294,9 +263,7 @@ describe("saveCrxViaPrompt download outcomes", () => {
     ["FILE_VIRUS_INFECTED", "blocked"],
     [undefined, "blocked"],
   ])("maps an interruption reason of %s to %s", async (reason, expected) => {
-    // Only a genuine user cancel is "cancelled"; everything else must
-    // surface the drag-out fallback instead of acting like the user
-    // changed their mind.
+    // Only a user cancel is "cancelled"; the rest get the drag-out fallback.
     stubChrome({});
     emitLater({
       state: { current: "interrupted" },
@@ -306,9 +273,7 @@ describe("saveCrxViaPrompt download outcomes", () => {
   });
 
   it("settles from search when the download finished before the listener attached", async () => {
-    // The race this closes: a tiny file can reach a terminal state
-    // between download() resolving and addListener() running, and no
-    // onChanged event ever arrives.
+    // Race: a tiny file can finish before addListener runs.
     stubChrome({ searchResult: [{ state: "complete" }] });
     await expect(saveCrxViaPrompt(CRX, "a.crx")).resolves.toBe("saved");
   });
@@ -334,8 +299,7 @@ describe("saveCrxViaPrompt download outcomes", () => {
   });
 
   it("revokes the object URL after the grace period", async () => {
-    // Revoking immediately can race Chrome actually reading the blob, so
-    // the revoke is deferred a minute rather than run inline.
+    // Deferred: revoking inline can race Chrome reading the blob.
     stubChrome({});
     emitLater({ state: { current: "complete" } });
     await saveCrxViaPrompt(CRX, "a.crx");

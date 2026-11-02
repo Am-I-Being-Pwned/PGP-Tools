@@ -1,22 +1,13 @@
 #!/usr/bin/env node
-// ──────────────────────────────────────────────────────────────────────
-// i18n-check.mjs — translation gate
-//
-// Fails the build when:
-//   1. the generated bundles / TS drift from i18n/<locale>/*.json
-//      (run `pnpm i18n:build`);
-//   2. a locale has a key `en` does not, or its placeholders differ from
-//      en's (Chrome substitutes positionally, so a mismatch shows `$2`
-//      or drops a value);
-//   3. a locale translates a plural base but not every category en has
-//      (Chrome falls back PER KEY, so a missing `_one` would render in
-//      English next to a translated `_other`);
-//   4. source calls `t()` / `tn()` with a key `en` lacks;
-//   5. JSX in components/ or entrypoints/ still carries literal English:
-//      JSXText with words, or a text-like string attribute.
-//
-// Missing keys in a locale are NOT an error -- Chrome shows `en` for
-// them -- but coverage is printed so nobody mistakes 40% for done.
+// i18n-check.mjs — translation gate. Fails when:
+//   1. generated bundles / TS drift from i18n/<locale>/*.json (`pnpm i18n:build`);
+//   2. a locale has a key en lacks, or different placeholders (Chrome
+//      substitutes positionally);
+//   3. a locale translates a plural base but not every en category (Chrome
+//      falls back PER KEY, so English `_one` beside translated `_other`);
+//   4. source calls `t()` / `tn()` with a key en lacks;
+//   5. JSX in components/ or entrypoints/ carries literal English.
+// Missing locale keys are not errors (Chrome shows en); coverage is printed.
 //
 // Opting a literal out (brand names, key IDs, code samples):
 //   {/* i18n-ignore */}      before a JSX text node or element
@@ -297,8 +288,7 @@ for (const file of files) {
       }
     },
     StringLiteral(path) {
-      // A lookup table of keys (`Record<Mode, MessageKey>`) references
-      // them without a literal `t("...")`; credit any literal that IS a key.
+      // Key lookup tables reference keys without `t("...")`; credit any literal key.
       const v = path.node.value;
       if (enKeys.has(v)) usedKeys.add(v);
       else if (enPluralBases.has(v))
@@ -342,9 +332,7 @@ for (const file of files) {
       )
         value = attr.value.expression.value;
       if (value === null || !looksLikeProse(value)) return;
-      // Single capitalised word in an unknown prop is probably an enum
-      // ("Default", "Primary"); demand two words or terminal punctuation
-      // unless it's a known text attribute.
+      // A single capitalised word in an unknown prop is probably an enum value.
       const knownText =
         /^(title|placeholder|alt|label|description|hint|heading|subtitle|tooltip|message|aria-label|aria-description|aria-roledescription|aria-placeholder|aria-valuetext|emptyText|helperText|confirmLabel|cancelLabel|okLabel|actionLabel|buttonLabel|caption|summary|detail|body|text|children|explainer|warning|note|question|prompt)$/;
       if (

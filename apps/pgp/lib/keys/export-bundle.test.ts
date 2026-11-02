@@ -50,14 +50,8 @@ describe("downloadPublicKey", () => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────
-// The slug is built from a contact's DISPLAY NAME, which is
-// attacker-influenced text: it comes from a User ID inside an imported
-// certificate, and it lands in a filename. So the transform has to be
-// TOTAL -- every possible display name yields a name that is safe,
-// non-empty and bounded -- rather than merely tidy for the names we have
-// happened to see.
-// ─────────────────────────────────────────────────────────────────────
+// The slug comes from an attacker-influenced User ID and lands in a
+// filename, so it must be TOTAL: safe, non-empty and bounded for any input.
 
 describe("downloadPublicKey: adversarial display names", () => {
   beforeEach(() => {
@@ -75,8 +69,7 @@ describe("downloadPublicKey: adversarial display names", () => {
   });
 
   it("emits no path separators from a name that contains them", () => {
-    // The filename reaches the download layer; a slug that kept slashes
-    // or dots would be a directory traversal waiting to happen.
+    // Slashes or dots would be a directory traversal.
     downloadPublicKey("ARMOR", "../../etc/passwd");
     const name = lastCall()[1];
     expect(name).toBe("etc-passwd-public.asc");
@@ -98,8 +91,6 @@ describe("downloadPublicKey: adversarial display names", () => {
   });
 
   it("uses the pub extension for an SSH recipient line", () => {
-    // .pub is what every other tool on the machine expects that file to
-    // be called.
     downloadPublicKey("ssh-ed25519 AAAA", "Alice", "pub");
     expect(lastCall()[1]).toBe("alice-public.pub");
   });
@@ -151,8 +142,6 @@ describe("downloadPublicKeysBundle", () => {
   });
 
   it("skips contacts holding no key material", () => {
-    // A contact whose armored half is blank would otherwise contribute a
-    // stray separator and inflate the reported count.
     const n = downloadPublicKeysBundle([
       contact("KEY-A"),
       contact("   "),

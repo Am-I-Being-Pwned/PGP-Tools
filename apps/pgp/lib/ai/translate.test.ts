@@ -12,10 +12,8 @@ import {
   translateText,
 } from "./translate";
 
-// The ambient declarations type these as `const` globals that always
-// exist, which is the right shape for app code (it never runs in a realm
-// where they are optional -- it checks first). Tests are the one place
-// that installs and removes them, hence the casts.
+// Ambient types declare these as always-present consts; tests install and
+// remove them, hence the casts.
 const realm = globalThis as unknown as {
   Translator?: unknown;
   LanguageDetector?: unknown;
@@ -135,10 +133,8 @@ describe("translateText", () => {
     expect(stub.destroy).toHaveBeenCalled();
   });
 
-  // The security property this whole module is shaped around: on the
-  // decrypt path a missing pack must NOT become a download, because which
-  // pair is fetched is observable off-device and would correlate with the
-  // message just decrypted. T-AI-TRANSLATE-METADATA.
+  // On the decrypt path a missing pack must NOT become a download
+  // (T-AI-TRANSLATE-METADATA).
   it("never calls create() when the pack is absent", async () => {
     const stub = installTranslator({ availability: "downloadable" });
     await expect(translateText("hola", EN_ES)).resolves.toEqual({
@@ -285,15 +281,12 @@ describe("ensureDetectorReady", () => {
     expect(stub.create).not.toHaveBeenCalled();
   });
 
-  // A fresh Chrome profile reports the DETECTOR as downloadable too, not
-  // just the language packs. Without this the first Translate press would
-  // report "unavailable" on a perfectly capable machine, forever.
+  // A fresh profile reports the detector "downloadable" too.
   it("downloads the detector when the profile does not have it", async () => {
     const stub = installDetector([], "downloadable");
     await expect(ensureDetectorReady()).resolves.toBe(true);
     expect(stub.create).toHaveBeenCalled();
-    // The download is the point; the session is not kept, so the
-    // plaintext never touches it.
+    // The session is not kept, so plaintext never touches it.
     expect(stub.destroy).toHaveBeenCalled();
   });
 
@@ -365,7 +358,6 @@ describe("downloadLanguagePack", () => {
 
     expect(create).toHaveBeenCalled();
     expect(progress).toEqual([0.5]);
-    // The download is the point; the session is not kept.
     expect(destroy).toHaveBeenCalled();
   });
 

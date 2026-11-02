@@ -4,20 +4,14 @@ import { fromBase64url, toBase64url } from "../encoding.ts";
 import { AppError } from "../errors/app-error";
 import { t } from "../i18n";
 
-// ── helpers ──────────────────────────────────────────────────────────
-
 function generateChallenge(): ArrayBuffer {
   return crypto.getRandomValues(new Uint8Array(32)).buffer;
 }
 
-// ── public API ───────────────────────────────────────────────────────
-
-/** Generate a random 32-byte salt for PRF evaluation. */
 export function generatePrfSalt(): ArrayBuffer {
   return crypto.getRandomValues(new Uint8Array(32)).buffer;
 }
 
-/** Generate a random 32-byte secret to mix with PRF output via HKDF. */
 export function generateStoredSecret(): ArrayBuffer {
   return crypto.getRandomValues(new Uint8Array(32)).buffer;
 }
@@ -38,12 +32,8 @@ export interface PasskeyRegistrationResult {
   prfEnabled: boolean;
 }
 
-/**
- * Register a new passkey with the PRF extension enabled.
- *
- * PRF output is NOT available at registration time — only at authentication.
- * We store the credential ID so we can request PRF later.
- */
+/** Register a passkey with PRF enabled. PRF output is only available at
+ *  authentication, not here. */
 export async function registerPasskey(
   userName?: string,
   displayName?: string,
@@ -99,17 +89,10 @@ export interface PasskeyAuthResult {
 }
 
 /**
- * Authenticate with an existing passkey and derive an AES-256-GCM key
- * from the PRF output.
- *
- * The same (credentialId, salt) pair always produces the same key.
- *
- * `secondSalt` asks the authenticator to evaluate a second salt in the
- * SAME ceremony (the PRF extension allows exactly two). "Unlock keys
- * with the vault" uses it to re-seal a key under the master salt off
- * the one prompt the user was already answering for that key -- the
- * only way to get a second salt's output without a second prompt, since
- * one salt's output says nothing about another's.
+ * Authenticate and return the raw PRF output; the same (credentialId,
+ * salt) always yields the same output. `secondSalt` evaluates a second
+ * salt in the SAME ceremony (used to re-seal under the master salt with
+ * no extra prompt).
  */
 export async function authenticateAndGetPrf(
   credentialId: string,
@@ -152,8 +135,7 @@ export async function authenticateAndGetPrf(
     throw new PrfNotSupportedError();
   }
 
-  // Return raw PRF bytes - HKDF happens in WASM so the derived key
-  // never enters the JS heap.
+  // Raw bytes: HKDF happens in WASM so the key never enters the JS heap.
   const second = ext.prf?.results?.second;
   return {
     prfOutput: new Uint8Array(prfOutput as ArrayBuffer),
@@ -163,12 +145,7 @@ export async function authenticateAndGetPrf(
   };
 }
 
-/**
- * True if `e` looks like the user cancelling / aborting a WebAuthn
- * ceremony, OR a "request already pending" race that's effectively
- * a cancel-and-retry. Use to decide whether to show an error toast
- * vs silently ignore.
- */
+/** User cancel/abort or a "request already pending" race: no toast. */
 export function isWebAuthnCancel(e: unknown): boolean {
   if (!(e instanceof Error)) return false;
   return (

@@ -61,8 +61,6 @@ describe("classifyAction - age / SSH", () => {
   });
 
   it("classifies a binary age file by its magic line", () => {
-    // The binary format has no armor header; its first line is the
-    // version string, which is plain ASCII and survives a paste.
     expect(classifyAction("age-encryption.org/v1\n-> X25519 abc\n")).toBe(
       "decrypt",
     );
@@ -82,8 +80,6 @@ describe("classifyAction - age / SSH", () => {
   });
 
   it("does not read an OpenSSH private key as a public one", () => {
-    // The container holds the public half in its body; the private
-    // check runs first so the whole file routes to the protect step.
     const text =
       "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEA\n-----END OPENSSH PRIVATE KEY-----";
     expect(classifyAction(text)).toBe("import-private");
@@ -102,17 +98,7 @@ describe("classifyAction - age / SSH", () => {
   });
 });
 
-/**
- * Routing must recognise every `.pub` the import flow can explain.
- *
- * `import/prepare.ts` forwards an SSH-shaped line of ANY algorithm to
- * `parseSshRecipient` so the engine's curated refusal is what the user
- * sees. That only helps if the right-click actually opens the import
- * flow: while this classifier used the narrow `ssh-ed25519|ssh-rsa`
- * matcher, a selected ECDSA / FIDO / `ssh-dss` `.pub` fell through to
- * `encrypt` and the message had no screen to appear on. The engine
- * decides validity; every layer above it forwards and displays.
- */
+/** Every `.pub` the import flow can explain must route to import. */
 describe("classifyAction - SSH public keys of any algorithm", () => {
   it.each([
     ["ECDSA", "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTY= a@host"],
@@ -152,11 +138,7 @@ describe("classifyAction - SSH public keys of any algorithm", () => {
   });
 });
 
-/**
- * A signed message is a message, whatever its signed text carries. A
- * forged one quoting a key used to open the import screen, so the user
- * never saw its signature fail.
- */
+/** A signed message quoting a key still opens on Verify. */
 describe("classifyAction - a message that quotes a key", () => {
   const ED25519_PUB =
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIALwHu/03Nd9eyyrPgxjkFu80Fe1EgN06J8iaY8B+wf6 alice@example.com";

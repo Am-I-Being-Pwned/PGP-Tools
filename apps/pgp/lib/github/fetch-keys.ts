@@ -1,19 +1,8 @@
 /**
- * The one and only file in this codebase that contains the string
- * `https://api.github.com`, and the one and only `fetch` behind the
- * GitHub recipient import. Keeping both to a single file is an
- * invariant the build audit asserts against `background.js`.
- *
- * No host permission is needed: the endpoint sends
- * `access-control-allow-origin: *`, so the extension origin can read it
- * cross-origin unauthenticated (measured: 200, `x-ratelimit-limit: 60`,
- * i.e. the anonymous limit). What IS needed is the manifest CSP
- * `connect-src` entry -- CSP applies to the MV3 service worker. See
- * wxt.config.ts.
- *
- * `lib/network-lockdown` already forces `credentials: "omit"` and strips
- * Authorization/Cookie on every fetch; we restate `credentials: "omit"`
- * here so the call site is honest on its own.
+ * The ONLY file containing `https://api.github.com` and the only fetch for
+ * this import (build audit asserts it against background.js). No host
+ * permission: ACAO `*`; the worker CSP `connect-src` entry admits it.
+ * `credentials: "omit"` is restated though network-lockdown forces it.
  */
 
 import type { GithubKeysFailure } from "../messages";
@@ -27,16 +16,8 @@ export type FetchGithubKeysResult =
 
 const GITHUB_API_ORIGIN = "https://api.github.com";
 
-/**
- * Wall clock for the whole request, headers and body together.
- *
- * There must be one. The panel gates BOTH import paths -- fetch and
- * paste -- on a single `parsingRef` that is only cleared in a `finally`,
- * so a response that never settles does not just hang this lookup: it
- * disables key import until the panel is closed and reopened. A body
- * that trickles a byte a second is enough, and the threat model already
- * admits an attacker who can write the response.
- */
+/** Whole-request deadline: the panel gates import on a `parsingRef`
+ *  cleared only in `finally`, so a trickling body would disable import. */
 const REQUEST_TIMEOUT_MS = 15_000;
 
 export async function fetchGithubKeys(
@@ -46,8 +27,7 @@ export async function fetchGithubKeys(
   try {
     url = githubKeysUrl(username, GITHUB_API_ORIGIN);
   } catch {
-    // Unreachable in practice -- background.ts validates first -- but a
-    // throw here means the URL was not the one we intended, so refuse.
+    // A throw means the URL is not the one we intended.
     return { ok: false, error: "invalid-username" };
   }
 
@@ -59,8 +39,6 @@ export async function fetchGithubKeys(
   try {
     return await requestKeys(url, controller.signal);
   } finally {
-    // Cleared on every exit, including the abort's own: an uncleared
-    // timer keeps the MV3 worker alive for no reason.
     clearTimeout(timer);
   }
 }
@@ -75,26 +53,19 @@ async function requestKeys(
       method: "GET",
       signal,
       credentials: "omit",
-      // Deliberate: GitHub 301-redirects renamed accounts. Following one
-      // silently would import the SSH keys of whoever owns that name
-      // NOW, under the name the user typed -- exactly the confusion this
-      // feature must not create. A rename is a hard error the user gets
-      // to resolve.
+      // GitHub redirects renamed accounts; following would import whoever
+      // owns the name now, under the name the user typed.
       redirect: "error",
       cache: "no-store",
       headers: { Accept: "application/vnd.github+json" },
     });
   } catch {
-    // Offline, DNS failure, CSP block, the redirect refusal above, or
-    // the timeout. TypeError/AbortError is all any of them surface, so
-    // they collapse into one code; none carry text we would forward
-    // anyway, and "couldn't reach github.com" is true of all of them.
+    // Offline, CSP, redirect refusal or timeout all collapse to one code.
     return { ok: false, error: "offline" };
   }
 
   let body: string;
   try {
-    // Bounded as it arrives -- never buffered whole and measured after.
     body = await readCappedBody(response, MAX_BODY_BYTES);
   } catch {
     return { ok: false, error: "server-error" };

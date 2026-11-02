@@ -6,36 +6,23 @@ import type {
 import { fromBase64 } from "../encoding";
 
 /**
- * Wire-format for a stored CRX (Chrome extension) signing key.
- *
- * Structurally a sibling of `ProtectedKeyBlob` (see `storage/keyring.ts`):
- * the RSA-2048 private key is encrypted at rest exactly like a PGP key
- * (Argon2id or PRF -> AES-256-GCM), AAD-bound via
- * `gpg-tools:crx-{password,passkey}:{extensionId}`. Only the public half
- * (`publicKeyDerB64`) and the derived `extensionId` are stored in clear.
+ * Stored CRX signing key. Sealed like a PGP key, AAD-bound via
+ * `gpg-tools:crx-{password,passkey}:{extensionId}`; only the public key
+ * and `extensionId` are in the clear.
  */
 
-/**
- * How the private half is sealed at rest. Structurally identical to the
- * keyring's, because it IS the same seal — so it is the same union,
- * defined once in `protection/protected-blob.ts`. These aliases stay so
- * CRX call sites keep reading in CRX terms.
- */
+/** The shared seal union from `protection/protected-blob.ts`. */
 export type CrxPasswordProtection = PasswordProtection;
 export type CrxPasskeyProtection = PasskeyProtection;
 export type CrxProtection = KeyProtection;
 
 export interface CrxSigningKeyBlob {
   version: 1;
-  /** 32-char `a`..`p` Chrome extension id derived from the public key.
-   *  Doubles as the stable identity used for AAD binding. */
+  /** Chrome extension id derived from the public key; the AAD identity. */
   extensionId: string;
-  /** Optional user-facing label ("My Extension"). */
   label?: string;
-  /** SubjectPublicKeyInfo DER, base64 — what the CWS dashboard wants
-   *  (as PEM) to register the key. */
+  /** SubjectPublicKeyInfo DER, base64. */
   publicKeyDerB64: string;
-  /** Signing algorithm; currently always `rsa2048`. */
   algorithm: string;
   protection: CrxProtection;
   encryptedPrivateKey: string; // base64 ciphertext (PKCS#8 DER)
@@ -59,14 +46,11 @@ export function isCrxSigningKeyBlob(v: unknown): v is CrxSigningKeyBlob {
 }
 
 /**
- * Compute the extension id implied by a SubjectPublicKeyInfo DER (base64):
- * first 16 bytes of SHA-256 over the DER, each nibble mapped to `a`..`p` —
- * exactly how Chrome derives an extension's identity and how the WASM side
- * stamps `extensionId` at generate/import time.
+ * Extension id from SPKI DER (base64), as Chrome derives it.
  *
- * `publicKeyDerB64` is NOT covered by the blob's AEAD (only `extensionId`
- * is AAD-bound), so anything accepting a blob from outside — backup import,
- * storage writes — must check the two agree before trusting the public key.
+ * `publicKeyDerB64` is NOT covered by the AEAD (only `extensionId` is
+ * AAD-bound), so anything accepting a blob from outside must check the
+ * two agree before trusting the public key.
  */
 export async function extensionIdFromPublicKeyDer(
   derB64: string,
@@ -83,8 +67,7 @@ export async function extensionIdFromPublicKeyDer(
   return id;
 }
 
-/** True iff the blob's stored public key actually hashes to its claimed
- *  extension id. Reject blobs that fail this before storing them. */
+/** Reject blobs whose public key doesn't hash to their extension id. */
 export async function crxBlobIdentityMatches(
   blob: CrxSigningKeyBlob,
 ): Promise<boolean> {
@@ -98,8 +81,7 @@ export async function crxBlobIdentityMatches(
   }
 }
 
-/** Render a SubjectPublicKeyInfo DER (base64) as a PEM block for pasting
- *  into the Chrome Web Store "Verified CRX Uploads" dashboard. */
+/** SPKI DER (base64) as PEM, for the CWS "Verified CRX Uploads" page. */
 export function publicKeyDerToPem(derB64: string): string {
   const lines = derB64.match(/.{1,64}/g) ?? [derB64];
   return `-----BEGIN PUBLIC KEY-----\n${lines.join("\n")}\n-----END PUBLIC KEY-----\n`;

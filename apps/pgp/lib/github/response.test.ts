@@ -10,13 +10,11 @@ import {
 
 const JSON_CT = "application/json; charset=utf-8";
 
-/** Measured shape: bare `ssh-ed25519 AAAA<base64>`, comments/emails
- *  already stripped by GitHub. */
 const ED25519 =
   "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGdummykeymaterialforunittests01";
 const RSA = `ssh-rsa AAAAB3NzaC1yc2E${"A".repeat(60)}`;
-/** Published, real, and unusable by the age engine. The worker must
- *  still forward all three -- `parseSshRecipient` owns the refusal. */
+/** Unusable by the age engine but must still be forwarded:
+ *  `parseSshRecipient` owns the refusal. */
 const ECDSA = `ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTY${"A".repeat(40)}`;
 const FIDO = `sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29t${"A".repeat(30)}`;
 const DSA = `ssh-dss AAAAB3NzaC1kc3MAAACB${"A".repeat(80)}`;
@@ -150,8 +148,7 @@ describe("parseGithubKeysResponse shape validation", () => {
     const result = parseGithubKeysResponse(raw({ body }));
     expect(result.ok).toBe(true);
     expect(result.ok === true && result.lines).toHaveLength(MAX_KEYS);
-    // The truncation is not allowed to be silent: the preview says
-    // "encrypted to every key listed above" over this list.
+    // Truncation must not be silent.
     expect(result.ok === true && result.omitted).toBe(40 - MAX_KEYS);
   });
 
@@ -199,10 +196,6 @@ describe("parseGithubKeysResponse shape validation", () => {
 });
 
 describe("parseGithubKeysResponse unsupported key types", () => {
-  // The regression this suite exists for: the worker used to run every
-  // key through a matcher that named `ssh-ed25519|ssh-rsa`, so a
-  // published ECDSA/FIDO/DSA key never crossed the message boundary and
-  // the engine's curated refusal for it could never be shown.
   it.each([
     ["ecdsa", ECDSA],
     ["fido sk-ssh-ed25519", FIDO],
@@ -211,8 +204,7 @@ describe("parseGithubKeysResponse unsupported key types", () => {
     const result = parseGithubKeysResponse(
       raw({ body: JSON.stringify([entry(key)]) }),
     );
-    // NOT no-keys: the account published one, and only the engine gets
-    // to say it is unusable.
+    // NOT no-keys: only the engine says it is unusable.
     expect(result).toEqual({ ok: true, lines: [key], omitted: 0 });
   });
 
@@ -278,9 +270,7 @@ describe("parseGithubKeysResponse per-key cap", () => {
 });
 
 describe("parseGithubKeysResponse body size is measured in bytes", () => {
-  // Each emoji is 2 UTF-16 code units and 4 UTF-8 bytes, so a body can
-  // sit under the cap by `.length` while being three times over it on
-  // the wire -- which is what the cap was being compared against.
+  // Each emoji: 2 code units, 4 bytes.
   const filler = "\u{1F600}".repeat(30_000);
 
   it("rejects a body under the cap in code units but over it in bytes", () => {
@@ -295,9 +285,7 @@ describe("parseGithubKeysResponse body size is measured in bytes", () => {
 
   it("still accepts a body that is under the cap in both", () => {
     const body = JSON.stringify([entry(ED25519)]);
-    expect(new TextEncoder().encode(body).length).toBeLessThan(
-      MAX_BODY_BYTES,
-    );
+    expect(new TextEncoder().encode(body).length).toBeLessThan(MAX_BODY_BYTES);
     expect(parseGithubKeysResponse(raw({ body })).ok).toBe(true);
   });
 });
@@ -322,7 +310,6 @@ describe("parseGithubKeysResponse rate limit reset bounds", () => {
       raw({ status: 403, rateLimitReset: header }),
       NOW,
     );
-    // Rendering this would produce "try again in about 2.7e+296 hours".
     expect(result.ok === false && result.resetAt).toBeUndefined();
   });
 });

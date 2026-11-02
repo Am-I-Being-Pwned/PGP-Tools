@@ -7,11 +7,9 @@ export type VaultProblem = Extract<
   { kind: "elsewhere" | "ambiguous" | "orphaned" }
 >;
 
-/** Which screen the panel is on, as one value -- so "unlocked but not
- *  loaded" and its like cannot be represented. */
+/** One value, so impossible combinations can't be represented. */
 export type VaultPhase =
-  /** Still reading what is stored; render nothing, so a tree that would
-   *  be torn down by the lock screen never mounts. */
+  /** Render nothing until storage is read. */
   | { kind: "loading" }
   | { kind: "onboarding" }
   /** A vault exists but not where the bootstrap points, or has lost its
@@ -20,25 +18,21 @@ export type VaultPhase =
   | {
       kind: "locked";
       protection: MasterProtection;
-      /** Locked by the system (idle, tab-away, OS lock), not the user:
-       *  the unlock screen must not pop a passkey prompt on its own. */
+      /** System lock: the unlock screen must not auto-prompt a passkey. */
       autoLocked: boolean;
     }
   | {
       kind: "open";
       protection: MasterProtection | null;
-      /** The stores the unlock opened are still being read, or keys
-       *  sealed under the master are still opening: auto-run waits. */
+      /** Stores or master-sealed keys still opening; auto-run waits. */
       opening: boolean;
     };
 
 export interface VaultLifecycle {
   phase: VaultPhase;
-  /** Bumped by every unlock and lock, so an unlock that finishes after
-   *  the vault was locked (and maybe reopened) cannot settle the newer one. */
+  /** Bumped on every unlock/lock so a late unlock can't settle a newer one. */
   generation: number;
-  /** The other storage area also holds a master protection; the lock
-   *  screen offers it. */
+  /** The other storage area also holds a master protection. */
   alternate: StorageLocation | null;
 }
 
@@ -118,7 +112,6 @@ export function vaultReducer(
   }
 }
 
-/** The protection of a vault that is set up, whether open or locked. */
 export function protectionOf(phase: VaultPhase): MasterProtection | null {
   return phase.kind === "open" || phase.kind === "locked"
     ? phase.protection

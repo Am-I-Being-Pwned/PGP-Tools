@@ -3,14 +3,8 @@ import type { IncomingKey } from "../import/types";
 import type { KeyDetails, KeyInfo } from "../pgp/types";
 
 /**
- * DEV-ONLY placeholder keys for the import-flow harness. Reachable only
- * from the Developer section of Settings, which is gated behind
- * `import.meta.env.DEV` and tree-shaken out of production builds.
- *
- * These are hand-written metadata objects, not real certificates: the
- * preview panel is presentational (it takes parsed KeyInfo/KeyDetails,
- * never armor), so the whole flow can be reviewed before any parsing is
- * wired up -- and no key material, real or generated, lands in the repo.
+ * DEV-ONLY import-flow harness fixtures (tree-shaken from production).
+ * Hand-written metadata, not certificates: no key material in the repo.
  */
 
 const DAY = 24 * 60 * 60 * 1000;

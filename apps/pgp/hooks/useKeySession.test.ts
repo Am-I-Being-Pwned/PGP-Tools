@@ -15,7 +15,6 @@ const age = vi.hoisted(() => ({
 vi.mock("../lib/pgp/wasm", () => wasm);
 vi.mock("../lib/age/protect-flow", () => age);
 
-/** A store wired to spies, plus the spies. */
 function makeStore() {
   const deps = {
     dropHandle: vi.fn((_e: KeyHandleEntry) => Promise.resolve()),
@@ -26,8 +25,7 @@ function makeStore() {
   return { store: createKeySessionStore(deps), deps };
 }
 
-/** An `open` that the test resolves by hand, standing in for the
- *  seconds-long user-interactive WebAuthn ceremony. */
+/** Resolved by hand; stands in for a slow WebAuthn ceremony. */
 function deferredOpen() {
   let resolve!: (handle: number) => void;
   let reject!: (e: unknown) => void;
@@ -38,12 +36,7 @@ function deferredOpen() {
   return { open: () => promise, resolve, reject };
 }
 
-/**
- * The load-bearing claim in the threat model (T-ACTIVE-WASM-CALL,
- * T-FORENSIC-AFTER-LOCK) is that no key handle survives a lock, so the
- * attack window is exactly the unlocked window. These two describes are
- * the counterexamples that used to be reachable.
- */
+/** T-ACTIVE-WASM-CALL / T-FORENSIC-AFTER-LOCK: no handle survives a lock. */
 describe("createKeySessionStore: an unlock cannot survive a lock", () => {
   beforeEach(() => vi.clearAllMocks());
 
@@ -51,15 +44,12 @@ describe("createKeySessionStore: an unlock cannot survive a lock", () => {
     const { store, deps } = makeStore();
     const ceremony = deferredOpen();
 
-    // User clicks Unlock; the OS passkey dialog is up.
     const unlocked = store.unlock("KEY1", "pgp", ceremony.open);
 
-    // The machine locks. The map is EMPTY, so lockAll drops nothing --
-    // this is exactly why the count-based check is not enough.
+    // The map is EMPTY, so lockAll alone drops nothing.
     store.lockAll();
     expect(deps.dropHandle).not.toHaveBeenCalled();
 
-    // User comes back and completes the ceremony.
     ceremony.resolve(7);
 
     await expect(unlocked).resolves.toBe(false);
@@ -69,8 +59,6 @@ describe("createKeySessionStore: an unlock cannot survive a lock", () => {
     });
     expect(store.size()).toBe(0);
     expect(store.getHandle("KEY1")).toBeNull();
-    // Nothing may claim the key is unlocked, and nothing may re-arm the
-    // inactivity timer on behalf of a handle that no longer exists.
     expect(deps.onUnlockedChanged).not.toHaveBeenCalledWith(new Set(["KEY1"]));
     expect(deps.updateLastUsed).not.toHaveBeenCalled();
   });
@@ -158,9 +146,7 @@ describe("createKeySessionStore: overwriting an entry never orphans a handle", (
     await store.unlock("KEY1", "pgp", () => Promise.resolve(1));
     expect(deps.dropHandle).not.toHaveBeenCalled();
 
-    // The `cacheKeyHandle` path: a re-import of a key that is currently
-    // unlocked hands us a second handle for the same keyId. Handle 1 is
-    // about to leave the map, so this is the last chance to drop it.
+    // `cacheKeyHandle` path: second handle for the same keyId.
     await store.unlock("KEY1", "pgp", () => Promise.resolve(2));
 
     expect(deps.dropHandle).toHaveBeenCalledExactlyOnceWith({
@@ -177,9 +163,6 @@ describe("createKeySessionStore: overwriting an entry never orphans a handle", (
     await store.unlock("KEY1", "ssh", () => Promise.resolve(5));
     await store.unlock("KEY1", "pgp", () => Promise.resolve(6));
 
-    // The entry handed to dropHandle carries `ssh`, so the SSH_KEY_STORE
-    // dropper is selected -- handing index 5 to the PGP store would
-    // either leak the identity or drop an unrelated PGP key.
     expect(deps.dropHandle).toHaveBeenCalledExactlyOnceWith({
       handle: 5,
       kind: "ssh",
@@ -275,15 +258,8 @@ describe("createKeySessionStore: preserved behaviour", () => {
   });
 });
 
-/**
- * `unlockMany` is the "unlock keys when the vault unlocks" batch: several
- * unlocks off ONE PRF output (SECURITY.md §14). Each entry still goes
- * through `unlock`, so the per-entry generation check above applies --
- * but that check only cancels the unlock IN FLIGHT. Without the batch
- * rule, the next iteration would capture the NEW generation and insert
- * a live key behind the lock screen. The mid-batch lock tests are that
- * counterexample.
- */
+/** `unlockMany` (SECURITY.md §14): the per-entry check only cancels the
+ *  unlock in flight; the batch rule stops the rest. */
 describe("createKeySessionStore: a lock mid-batch stops the batch", () => {
   beforeEach(() => vi.clearAllMocks());
 
@@ -313,12 +289,6 @@ describe("createKeySessionStore: a lock mid-batch stops the batch", () => {
   });
 
   it("captures the generation BEFORE awaiting a loader, so a lock during the read cancels the batch", async () => {
-    // App hands the batch a loader (preference + keyring reads, both
-    // IndexedDB round trips) rather than a list. A lock that lands
-    // while the loader is pending must cancel everything: otherwise
-    // that window sits outside the rule and only the store read
-    // failing without a session keeps keys from going live behind the
-    // lock screen.
     const { store, deps } = makeStore();
     const open1 = vi.fn(() => Promise.resolve(1));
     const open2 = vi.fn(() => Promise.resolve(2));
@@ -335,7 +305,6 @@ describe("createKeySessionStore: a lock mid-batch stops the batch", () => {
       });
 
     const batch = store.unlockMany(loader);
-    // The vault locks while the keyring is still being read.
     store.lockAll();
     release();
 
@@ -370,18 +339,14 @@ describe("createKeySessionStore: a lock mid-batch stops the batch", () => {
       { keyId: "KEY3", kind: "ssh", open: third },
     ]);
 
-    // The machine locks while the first open is still pending.
     store.lockAll();
     first.resolve(1);
 
     await expect(batch).resolves.toBe(0);
-    // The one in flight is dropped by the per-entry check...
     expect(deps.dropHandle).toHaveBeenCalledExactlyOnceWith({
       handle: 1,
       kind: "pgp",
     });
-    // ...and the rest are never even started: an open under the new
-    // generation would have been STORED, behind the lock screen.
     expect(second).not.toHaveBeenCalled();
     expect(third).not.toHaveBeenCalled();
     expect(store.size()).toBe(0);
@@ -389,8 +354,6 @@ describe("createKeySessionStore: a lock mid-batch stops the batch", () => {
   });
 
   it("a per-key lock of an UNRELATED key mid-batch also stops the batch", async () => {
-    // Per-key locks bump the global generation; the batch rule keys off
-    // that same counter, so it is just as conservative here.
     const { store, deps } = makeStore();
     const first = deferredOpen();
     const second = vi.fn(() => Promise.resolve(2));
@@ -413,8 +376,6 @@ describe("createKeySessionStore: a lock mid-batch stops the batch", () => {
   });
 
   it("skips an entry whose open rejects and still stores the rest", async () => {
-    // A blob that turns out not to open off this output (tampered, or
-    // sealed differently after all) must not cost the user the others.
     const { store, deps } = makeStore();
 
     await expect(
@@ -438,8 +399,6 @@ describe("createKeySessionStore: a lock mid-batch stops the batch", () => {
   });
 
   it("a batch started AFTER a lock runs normally", async () => {
-    // The generation captured at batch start is the one that counts;
-    // an earlier lock is history, not a mid-batch event.
     const { store, deps } = makeStore();
 
     store.lockAll();
@@ -473,10 +432,6 @@ describe("dropHandle routes to the store the handle came from", () => {
   });
 });
 
-// Regression: the re-seal used to run AFTER `unlock` resolved, so the key
-// showed as unlocked ("Lock") while its migration under the master was
-// still unwritten -- and a reload in that window (e2e unlock-on-open,
-// "both keys now open off the single vault ceremony") kept the old salt.
 describe("openThenReseal: the migration is on disk before the key shows unlocked", () => {
   beforeEach(() => vi.clearAllMocks());
 

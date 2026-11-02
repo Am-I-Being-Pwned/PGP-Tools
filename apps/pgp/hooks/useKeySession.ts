@@ -29,60 +29,43 @@ import {
 
 interface KeySessionOptions {
   autoLockMinutes: AutoLockTimeout;
-  /** When false, the inactivity timer never arms. Manual locks,
-   *  `neverCacheKeys`, OS-lockscreen and tab-away (App-side) still
-   *  drop handles. */
+  /** When false, only the inactivity timer is off; other lock paths still drop handles. */
   autoLockEnabled: boolean;
   neverCacheKeys: boolean;
-  /** "Unlock keys with the vault" is on and the master is a passkey:
-   *  a per-key passkey unlock of a key on the master credential (but
-   *  its own salt) also evaluates the master salt in the SAME ceremony
-   *  and re-seals the key under it, so from the next vault unlock on it
-   *  needs no prompt of its own. Null when the option is off or the
-   *  master is a password. */
+  /** Non-null when "unlock keys with the vault" is on with a passkey master:
+   *  a per-key passkey unlock also re-seals the key under the master in the
+   *  same ceremony. */
   masterReseal: {
     master: MasterPasskey;
     replaceProtection: (keyId: string, parts: SealedParts) => Promise<void>;
   } | null;
 }
 
-/** One live handle plus the store it came from. The kind is not
- *  cosmetic: PGP handles live in wasm's KEY_STORE and SSH identities in
- *  SSH_KEY_STORE, and the two are addressed by SEPARATE drop calls.
- *  Dropping an SSH handle through `dropKey` would hand an SSH_KEY_STORE
- *  index to the PGP store -- either a no-op that leaks the identity for
- *  the rest of the session, or a drop of whatever PGP key happens to sit
- *  at that index. So the kind is recorded at unlock time, next to the
- *  handle it describes, rather than re-derived later from a blob the
- *  caller may no longer have. */
+/** One live handle plus the store it came from. PGP and SSH handles live in
+ *  separate wasm stores with separate drop calls; dropping an SSH index via
+ *  `dropKey` would leak it or drop an unrelated PGP key. Recorded at unlock
+ *  time, never re-derived. */
 export interface KeyHandleEntry {
   handle: number;
   kind: StoredKeyKind;
 }
 
-/** Release one handle back to the store it came from. Exported for the
- *  unit test that pins the kind-aware dispatch: handing an SSH index to
- *  the PGP store is the failure this switch exists to prevent. */
+/** Release one handle back to the store it came from (kind-aware). */
 export function dropHandle(entry: KeyHandleEntry): Promise<void> {
   return entry.kind === "ssh"
     ? closeSshIdentity(entry.handle)
     : wasmApi.dropKey(entry.handle);
 }
 
-/** Everything {@link createKeySessionStore} needs from the outside
- *  world. Injected rather than imported so the core is unit-testable
- *  without wasm, IndexedDB or a React renderer. */
+/** Injected so the core is unit-testable without wasm, IndexedDB or React. */
 export interface KeySessionStoreDeps {
   dropHandle: (entry: KeyHandleEntry) => Promise<void>;
   updateLastUsed: (keyId: string) => Promise<void>;
-  /** The set of unlocked ids changed. Mirrors it into React state. */
   onUnlockedChanged: (unlockedKeyIds: Set<string>) => void;
   /** A key was unlocked or used: re-arm the inactivity timer. */
   onActivity: () => void;
 }
 
-/** One item of a batch unlock: which key, which engine's store, and the
- *  call that produces its handle. */
 export interface UnlockEntry {
   keyId: string;
   kind: StoredKeyKind;
@@ -91,13 +74,9 @@ export interface UnlockEntry {
 
 export interface KeySessionStore {
   /**
-   * The ONLY way a handle gets into the map. `open` is the call that
-   * actually produces the handle (a wasm unlock, a WebAuthn ceremony,
-   * or just a handle someone else already opened); the store brackets
-   * it with the lock-generation check, so no unlock path can store a
-   * handle without being generation-checked. Resolves `true` if the
-   * handle was stored, `false` if a lock intervened and it was dropped
-   * instead. Rejects if `open` rejects -- callers classify that.
+   * The ONLY way a handle gets into the map, so every path is
+   * generation-checked. `true` if stored, `false` if a lock intervened and
+   * the handle was dropped; rejects if `open` rejects.
    */
   unlock: (
     keyId: string,
@@ -105,24 +84,11 @@ export interface KeySessionStore {
     open: () => Promise<number>,
   ) => Promise<boolean>;
   /**
-   * Several unlocks off ONE credential, in sequence. Same funnel as
-   * `unlock` for each entry, plus a batch-level rule: the loop stops
-   * at the first entry whose turn comes after a lock. Without that, a
-   * lock landing mid-batch (tab-away, OS lockscreen) would cancel only
-   * the unlock in flight; the next iteration would start under the NEW
-   * generation and insert a live key behind the lock screen. The check
-   * and the capture inside `unlock` are back-to-back synchronous, so
-   * there is no gap for a lock to slip into.
-   *
-   * `entries` may be a LOADER. The batch's generation is captured before
-   * the loader is awaited, so a lock that lands while the entries are
-   * still being read (the keyring is an IndexedDB round trip) cancels
-   * the whole batch too -- otherwise that window would sit outside the
-   * check and rely on the store read failing without a session, which
-   * is true today but is not the mechanism this rule is meant to be.
-   *
-   * Per-entry failures are skipped, not fatal. Resolves to the number
-   * of handles stored.
+   * Several unlocks off ONE credential. The loop stops at the first entry
+   * after a lock, else a mid-batch lock would let later entries go live
+   * behind the lock screen. `entries` may be a loader; the generation is
+   * captured before it is awaited so a lock during the read cancels too.
+   * Per-entry failures are skipped. Resolves to the number stored.
    */
   unlockMany: (
     entries: UnlockEntry[] | (() => Promise<UnlockEntry[]>),
@@ -130,27 +96,13 @@ export interface KeySessionStore {
   lock: (keyId: string) => void;
   lockAll: () => void;
   getHandle: (keyId: string) => number | null;
-  /** Live handle count. Used to decide whether the timer needs re-arming. */
   size: () => number;
 }
 
 /**
- * The `open` for a per-key passkey unlock that also migrates the key
- * under the master: open the blob, then -- before the handle is handed
- * back to `KeySessionStore.unlock`, which is what makes the key show as
- * unlocked -- persist its re-seal.
- *
- * The order is the point. Re-sealing after the unlock resolved meant the
- * key showed "Lock" while the new sealing was still two keyring writes
- * away (`updateLastUsed`, then the re-protect), so a panel closed or
- * reloaded in that window kept the old salt with nothing to say so.
- *
- * Best-effort: a failed re-seal is swallowed and the handle still
- * returned -- the key IS unlocked, and it just keeps its own prompt
- * until the next time it is unlocked. A lock landing during the re-seal
- * is still caught by `unlock`'s generation check, which drops the
- * handle; the re-seal itself is a valid sealing of the same key either
- * way.
+ * Open, then persist the re-seal under the master BEFORE returning the
+ * handle, so the key only shows unlocked once its new sealing is on disk.
+ * Best-effort: a failed re-seal is swallowed (the key keeps its own prompt).
  */
 export async function openThenReseal(
   open: () => Promise<number>,
@@ -168,36 +120,17 @@ export async function openThenReseal(
 }
 
 /**
- * React-free core of {@link useKeySession}: owns the handle map, the
- * lock generation, and the two invariants that keep a decrypted key
- * from outliving a lock.
+ * React-free core of {@link useKeySession}.
  *
- * INVARIANT 1 -- no unlock survives a lock. Every lock bumps
- * `generation`. An unlock captures the generation before it awaits and
- * re-checks it before inserting; if it moved, the handle is dropped
- * instead of stored. This matters because an unlock can await for
- * *seconds* on a user-interactive WebAuthn ceremony, during which the
- * OS lockscreen (or the idle timer, or tab-away) can lock the panel
- * with an EMPTY map -- so `lockAll` has nothing to drop, and the
- * ceremony then completes and re-populates the store behind the lock
- * screen. With `autoLockEnabled` off nothing would ever drop it again.
- * The check lives inside `unlock` rather than at each call site
- * precisely so a future unlock path cannot forget it: getting a handle
- * into the map means going through this funnel.
- *
- * A per-key lock bumps the global generation too. That is deliberately
- * conservative -- it also cancels an in-flight unlock of a DIFFERENT
- * key -- but the failure mode is a re-prompt, versus a live key behind
- * a lock screen.
+ * INVARIANT 1 -- no unlock survives a lock. Every lock bumps `generation`;
+ * an unlock re-checks it after awaiting and drops the handle if it moved
+ * (a WebAuthn ceremony can take seconds, during which the panel may lock
+ * with an empty map). A per-key lock bumps it too: deliberately
+ * conservative, the cost is a re-prompt.
  *
  * INVARIANT 2 -- the map is the only reference to a live handle.
- * Overwriting an entry drops the one it replaces first. Without that
- * the old handle is no longer reachable from the map, so `lock`,
- * `lockAll` and every lock event are structurally incapable of ever
- * dropping it: the key stays decrypted until the panel closes.
- * Reachable through `cacheKeyHandle` -- re-importing or updating a key
- * that is currently unlocked hands us a fresh handle for a keyId
- * already in the map.
+ * Overwriting an entry drops the old handle first, else nothing could ever
+ * drop it.
  */
 export function createKeySessionStore(
   deps: KeySessionStoreDeps,
@@ -207,7 +140,6 @@ export function createKeySessionStore(
 
   const publish = (): void => deps.onUnlockedChanged(new Set(handles.keys()));
 
-  /** Invalidate every unlock currently in flight. */
   const bumpGeneration = (): void => {
     generation += 1;
   };
@@ -239,15 +171,13 @@ export function createKeySessionStore(
     const startedAt = generation;
     const handle = await open();
 
-    // INVARIANT 1. The app is showing a lock screen (or has locked this
-    // key); the handle we just opened must not become live.
+    // INVARIANT 1.
     if (startedAt !== generation) {
       void deps.dropHandle({ handle, kind });
       return false;
     }
 
-    // INVARIANT 2. `handle !== previous.handle` guard: a store that
-    // handed back the same index (a re-cache of what we already hold)
+    // INVARIANT 2. Same-index guard: a re-cache of what we already hold
     // would otherwise be dropped and then recorded as live.
     const previous = handles.get(keyId);
     if (previous !== undefined && previous.handle !== handle) {
@@ -272,8 +202,7 @@ export function createKeySessionStore(
       try {
         if (await unlock(entry.keyId, entry.kind, entry.open)) stored += 1;
       } catch {
-        // One blob that will not open (tampered, or sealed under a
-        // different output after all) must not stop the others.
+        // One blob that will not open must not stop the others.
       }
     }
     return stored;
@@ -282,9 +211,7 @@ export function createKeySessionStore(
   const getHandle = (keyId: string): number | null => {
     const entry = handles.get(keyId);
     if (entry === undefined) return null;
-    // "Idle" should mean idle since last cryptographic use, not idle
-    // since unlock. Every encrypt/decrypt/sign call goes through here,
-    // so reset the lock timer on every key access.
+    // Idle means since last cryptographic use, not since unlock.
     deps.onActivity();
     return entry.handle;
   };
@@ -300,32 +227,17 @@ export function createKeySessionStore(
 }
 
 /**
- * Manages unlocked key sessions using WASM key handles.
- *
- * Unlock happens entirely in WASM: the encrypted blob bytes are
- * passed directly to WASM which does KDF + AES-GCM decrypt + store.
- * The decrypted private key never enters the JS heap.
- *
- * Both engines unlock through here. Which one a blob belongs to is read
- * with {@link storedKeyKind} (absent `kind` means PGP -- every key
- * stored before the age engine existed), never off `blob.kind` directly.
- *
- * The handle bookkeeping itself lives in {@link createKeySessionStore};
- * this hook is the React shell around it (state mirror + auto-lock timer).
+ * Unlocked key sessions as WASM handles. Unlock (KDF + decrypt + store)
+ * happens entirely in WASM; the decrypted private key never enters the JS
+ * heap. Engine is read via {@link storedKeyKind}, never `blob.kind`.
  */
 export function useKeySession(opts: KeySessionOptions) {
   const [unlockedKeyIds, setUnlockedKeyIds] = useState<Set<string>>(new Set());
   const lockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // The store outlives every render, so it cannot close over
-  // `resetLockTimer` directly -- that callback's identity changes
-  // whenever the auto-lock preferences do. It calls through a cell the
-  // effect below keeps pointed at the current one.
-  //
-  // `useState` with a lazy initialiser, not `useRef`: both must be
-  // created exactly once for the life of the panel. A second store
-  // would hold a second map and a second generation counter, and locks
-  // routed to one would not touch the other.
+  // Created exactly once per panel: a second store would have its own map
+  // and generation, and locks routed to one would miss the other.
+  // `onActivity` goes through a cell because resetLockTimer's identity changes.
   const [{ store, setOnActivity }] = useState(() => {
     let onActivity: () => void = () => undefined;
     return {
@@ -352,9 +264,6 @@ export function useKeySession(opts: KeySessionOptions) {
     );
   }, [opts.autoLockEnabled, opts.autoLockMinutes, doLockAll]);
 
-  // Nothing calls `onActivity` before the first effects flush -- it
-  // fires from unlocks and key access, both user-driven -- so an effect
-  // is soon enough to publish the current timer callback.
   useEffect(() => {
     setOnActivity(resetLockTimer);
   }, [setOnActivity, resetLockTimer]);
@@ -369,10 +278,7 @@ export function useKeySession(opts: KeySessionOptions) {
     };
   }, []);
 
-  // If `autoLockMinutes` or `autoLockEnabled` changes while keys are
-  // unlocked, the existing setTimeout is still scheduled at the OLD
-  // duration (or running at all). Re-arm under the new settings so
-  // the change takes effect immediately.
+  // Re-arm so changed auto-lock settings apply to already-unlocked keys.
   useEffect(() => {
     if (store.size() > 0) {
       resetLockTimer();
@@ -388,16 +294,11 @@ export function useKeySession(opts: KeySessionOptions) {
       const encrypted = encryptedBlobFromProtected(blob);
       if (encrypted.method !== "password") return false;
 
-      // An SSH identity is sealed under its own AAD prefix and belongs in
-      // SSH_KEY_STORE, so it has its own unlock export. Unlocking it via
-      // `unlockWithPassword` would fail the AAD check even with the right
-      // password -- which the UI would report as "Wrong password".
+      // SSH identities use their own AAD prefix and store; the PGP unlock
+      // would fail the AAD check and report "Wrong password".
       if (storedKeyKind(blob) === "ssh") {
         unlocking.current = true;
         try {
-          // `false` here means a lock landed mid-unlock and the handle
-          // was dropped; the key is genuinely not unlocked, so reporting
-          // failure is honest (the lock screen is up by then anyway).
           return await store.unlock(blob.keyId, "ssh", () =>
             openSshIdentity(blob, password),
           );
@@ -443,19 +344,14 @@ export function useKeySession(opts: KeySessionOptions) {
       if (encrypted.method !== "passkey") return false;
       const kind = storedKeyKind(blob);
 
-      // The ceremony the user is answering for THIS key can carry the
-      // master salt as its second PRF evaluation. When it does, the key
-      // is re-sealed under the master right after it unlocks, so the
-      // next vault unlock opens it with no prompt of its own. This is
-      // the whole migration story: there is no other step.
+      // The only master-migration step: this ceremony also evaluates the
+      // master salt, and the key is re-sealed under it.
       const reseal =
         masterReseal && needsMasterReseal(blob, masterReseal.master)
           ? masterReseal
           : null;
 
-      // Both engines run the ceremony HERE (rather than SSH going
-      // through `openSshIdentity`, which runs its own) so both get the
-      // abort signal and the second-salt evaluation.
+      // Ceremony runs here for both engines so both get abort + second salt.
       passkeyAbortRef.current?.abort();
       const ac = new AbortController();
       passkeyAbortRef.current = ac;
@@ -475,10 +371,7 @@ export function useKeySession(opts: KeySessionOptions) {
           const storedSecret = fromBase64(encrypted.storedSecret);
           const first = prfOutput;
           const second = secondOutput;
-          // The re-seal runs off the same ceremony, INSIDE the open: the
-          // key only shows as unlocked once its new sealing is on disk,
-          // so a panel closed (or reloaded) right after the unlock cannot
-          // lose the migration (see `openThenReseal`).
+          // Re-seal INSIDE the open (see `openThenReseal`).
           return openThenReseal(
             () =>
               kind === "ssh"
@@ -527,12 +420,9 @@ export function useKeySession(opts: KeySessionOptions) {
   );
 
   /**
-   * "Unlock keys when the vault unlocks": open every blob `loadBlobs`
-   * yields off the master ceremony's PRF output, no per-key prompt.
-   * `loadBlobs` is awaited INSIDE the batch so the lock-generation
-   * check covers the read as well (see `unlockMany`); it must return
-   * only master-sealed blobs (`partitionByMasterSeal`). `prfOutput` is
-   * caller-owned and zeroed by the caller after this resolves.
+   * Open every master-sealed blob off the master PRF output. `loadBlobs`
+   * is awaited inside the batch so the generation check covers the read.
+   * `prfOutput` is caller-owned; the caller zeroes it.
    */
   const unlockAllWithMasterPrf = useCallback(
     (
@@ -551,11 +441,6 @@ export function useKeySession(opts: KeySessionOptions) {
 
   const lock = useCallback((keyId: string) => store.lock(keyId), [store]);
 
-  // Deliberately still `(keyId) => number | null`: a caller that needs to
-  // know WHICH engine's handle it is holds the blob it came from and can
-  // read `storedKeyKind` off that. Widening the return type here would
-  // push a second thing to unpack onto every existing call site to say
-  // something they already know.
   const getKeyHandle = useCallback(
     (keyId: string): number | null => store.getHandle(keyId),
     [store],
@@ -568,11 +453,7 @@ export function useKeySession(opts: KeySessionOptions) {
     [unlockedKeyIds],
   );
 
-  // A handle someone else already opened (a fresh import, or a key
-  // re-protected while unlocked). It goes through the same funnel as a
-  // real unlock: the generation window is degenerate here -- we hold the
-  // handle already -- but the overwrite-drops-the-old-handle rule is
-  // exactly the one this path used to violate.
+  // An already-open handle still goes through the funnel for INVARIANT 2.
   const cacheKeyHandle = useCallback(
     async (keyId: string, handle: number, kind: StoredKeyKind = "pgp") => {
       await store.unlock(keyId, kind, () => Promise.resolve(handle));

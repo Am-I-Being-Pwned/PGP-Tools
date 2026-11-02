@@ -1,20 +1,6 @@
 /**
- * The two private-key exporters behind the export dialog.
- *
- * Both satisfy the same `PrivateKeyExporter` interface, and the dialog
- * drives them identically -- which is exactly why their DIFFERENCES have
- * to be pinned. They differ in handle ownership, and getting that wrong
- * is not a cosmetic bug:
- *
- *  - a PGP key is already unlocked in the session, so its exporter must
- *    NOT release the handle on close (the session still owns it, and
- *    dropping it locks the key out from under the rest of the app);
- *  - a CRX key is sealed at rest, so the dialog opens a TRANSIENT handle
- *    and must drop it, or an unlocked signing key outlives the dialog.
- *
- * Also pinned: the passphrase is encoded to bytes and zeroed in a
- * `finally`, per the project-wide rule that key-adjacent material never
- * sits in an immutable JS string a moment longer than it must.
+ * Pins handle ownership: PGP must NOT release the session's handle; CRX
+ * must drop its transient one. Also that passphrase bytes are zeroed.
  */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -96,8 +82,6 @@ describe("pgpKeyExporter", () => {
   });
 
   it("rejects with key-locked when the key has since locked", async () => {
-    // getKeyHandle returns null once auto-lock has fired; the dialog needs
-    // a typed error, not a null handle passed on to WASM.
     await expect(
       pgpKeyExporter(pgpBlob(), () => null).acquire(),
     ).rejects.toMatchObject({ code: "key-locked" });
@@ -116,8 +100,6 @@ describe("pgpKeyExporter", () => {
   });
 
   it("does NOT drop the handle on release", () => {
-    // The session owns it. Dropping here would lock the key out from
-    // under the rest of the app the moment the dialog closes.
     const exporter = pgpKeyExporter(pgpBlob(), () => 42);
     expect(() => exporter.release(42)).not.toThrow();
     expect(closeCrxKey).not.toHaveBeenCalled();
@@ -136,8 +118,6 @@ describe("pgpKeyExporter", () => {
   });
 
   it("zeroes the passphrase bytes after use", async () => {
-    // A JS string is immutable and unzeroizable; the encoded copy is the
-    // one thing we CAN wipe, so it must be wiped.
     const exporter = pgpKeyExporter(pgpBlob(), () => 42);
     await exporter.exportEncrypted(42, "hunter2");
 
@@ -182,15 +162,12 @@ describe("crxKeyExporter", () => {
   });
 
   it("drops the handle on release", () => {
-    // The dialog owns this one; leaving it open outlives the dialog as an
-    // unlocked signing key.
     crxKeyExporter(crxBlob()).release(7);
     expect(closeCrxKey).toHaveBeenCalledWith(7);
   });
 
   it("reseals under the passphrase and serialises the result", async () => {
-    // The encrypted CRX export is re-importable via Import Keys, so it has
-    // to go out as serialised blocks, not a bare sealed object.
+    // Re-importable, so serialised blocks, not a bare sealed object.
     const exporter = crxKeyExporter(crxBlob());
     await expect(exporter.exportEncrypted(7, "hunter2")).resolves.toBe(
       "CRX-BLOCKS",

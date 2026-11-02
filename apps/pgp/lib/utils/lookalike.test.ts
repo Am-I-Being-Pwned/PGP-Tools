@@ -8,7 +8,6 @@ import {
   markLookalikes,
 } from "./lookalike";
 
-/** The marked letters, in order. */
 const odd = (s: string) =>
   markLookalikes(s)
     .filter((r) => r.odd)
@@ -151,10 +150,8 @@ describe("blank-looking characters", () => {
 });
 
 describe("INVISIBLE and the engine's INVISIBLE_RANGES", () => {
-  // The engine strips one set from User IDs and key comments, and this
-  // side strips and marks another; a character in only one of them is a
-  // way past whichever side lacks it. Read the Rust table itself, so
-  // adding a range there without adding it here (or the reverse) fails.
+  // Must match the Rust INVISIBLE_RANGES table, read from source: a
+  // character in only one set slips past the other side.
   const source = readFileSync(
     new URL("../../gpg-wasm/src/lib.rs", import.meta.url),
     "utf8",
@@ -168,8 +165,7 @@ describe("INVISIBLE and the engine's INVISIBLE_RANGES", () => {
 
   it("agree on every code point", () => {
     expect(ranges.length).toBeGreaterThan(20);
-    // Rust's `char::is_control` is general category Cc, which the
-    // engine strips before it consults the table.
+    // Rust strips Cc (`is_control`) before consulting the table.
     const control = (cp: number) => cp <= 0x1f || (cp >= 0x7f && cp <= 0x9f);
     const mismatched: string[] = [];
     for (let cp = 0; cp <= 0x10ffff; cp++) {
@@ -186,8 +182,7 @@ describe("INVISIBLE and the engine's INVISIBLE_RANGES", () => {
 
 describe("CONFUSABLE", () => {
   it("maps every letter to one lower-case ASCII letter, or to the capital-I reading", () => {
-    // The skeleton appends the value as it is: an upper-case value would
-    // never equal the lower-cased letter it imitates.
+    // Values must be lower-case or the skeleton never matches.
     for (const [from, to] of CONFUSABLE) {
       expect(to, `U+${from.codePointAt(0)?.toString(16)}`).toMatch(
         /^([a-z]|I)$/,
@@ -196,10 +191,8 @@ describe("CONFUSABLE", () => {
   });
 
   it("lists nothing NFKC folds into a letter that reads differently", () => {
-    // The skeleton consults the table after NFKC, so an entry NFKC folds
-    // away is only kept (for the highlighter, which sees the raw letter)
-    // when its folded form still reads as the same letter: the Kelvin
-    // sign is a K by then, Cyrillic \u0400 an \u0415 with a grave.
+    // Entries NFKC folds away are kept only when the folded form reads as
+    // the same letter (lookup happens after NFKC).
     const reads = (c: string) => {
       const base = [...c.normalize("NFKD")][0];
       const to = CONFUSABLE.get(base) ?? CONFUSABLE.get(base.toLowerCase());
@@ -231,9 +224,7 @@ describe("CONFUSABLE", () => {
 
 describe("markLookalikes - any script, by its Unicode property", () => {
   it("marks a digit or letter from a script no table lists", () => {
-    // Devanagari, Thai, Telugu and Kannada zeros, the Malayalam ttha, a
-    // Georgian letter, a Tifinagh letter: each drawn as a Latin letter
-    // in most faces, and none of them in the old list of scripts.
+    // Letters from scripts outside the Latin-imitating list.
     for (const c of [
       "\u0966",
       "\u0e50",

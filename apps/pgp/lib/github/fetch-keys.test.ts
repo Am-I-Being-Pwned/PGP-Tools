@@ -1,13 +1,5 @@
-/**
- * The transport half: what happens to a response we do not control
- * BEFORE `parseGithubKeysResponse` ever sees it.
- *
- * These are the tests for the caps SECURITY.md claims are "applied
- * before parsing" -- the claim is only true if the body is bounded as it
- * arrives. `fetch` is stubbed with a hand-rolled response object rather
- * than a real one: the point of each case is exactly which of `body`,
- * `text()` and `cancel()` the code touches.
- */
+/** Transport half: the caps SECURITY.md says apply before parsing only
+ *  hold if the body is bounded as it arrives. */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { FakeResponseInit } from "../net/fake-response";
@@ -49,16 +41,13 @@ describe("fetchGithubKeys body caps", () => {
     ));
 
   it("stops reading an endless body at the cap instead of buffering it", async () => {
-    // No Content-Length -- a chunked response, which is how a hostile
-    // body would actually arrive. Without the bounded read this call
-    // never returns.
+    // Chunked, no Content-Length: how a hostile body arrives.
     const { response, probe } = respond({ endless: true });
     stubFetch(response);
 
     const result = await fetchGithubKeys("octocat");
     expect(result).toEqual({ ok: false, error: "server-error" });
     expect(probe.cancelled).toBe(true);
-    // 16 KiB chunks against a 64 KiB cap: five reads, not five million.
     expect(probe.pulls).toBeLessThanOrEqual(MAX_BODY_BYTES / 1024);
   });
 

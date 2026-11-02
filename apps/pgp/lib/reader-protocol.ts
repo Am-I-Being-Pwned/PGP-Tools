@@ -1,24 +1,15 @@
 import type { SignerCardState } from "../components/workspace/signer-card";
 
 /**
- * The side panel <-> reader tab protocol.
- *
- * Reply opens the decrypted message in a browser tab so it stays
- * readable while the reply is written in the panel. The tab is a DUMB
- * VIEW: no vault, no keys, no wasm, no storage. It connects a runtime
- * port named for its nonce and shows whatever the panel sends. The panel
- * owns the message (sealed under its in-memory draft key between
- * showings, see `hooks/useReaderTabs.ts`) and decides when the tab may
- * hold plaintext: only while the panel is unlocked.
- *
- * Nothing here ever touches storage, so nothing about the message -- not
- * even who sent it -- persists anywhere; the URL carries only the nonce.
+ * Side panel <-> reader tab protocol. The tab is a DUMB VIEW (no vault,
+ * keys, wasm or storage); the panel owns the message and lets the tab hold
+ * plaintext only while unlocked. Nothing persists; the URL carries only
+ * the nonce.
  */
 
-/** Port name prefix; the rest is the reader's nonce. */
 export const READER_PORT_PREFIX = "pgp-reader:";
 
-/** 32 lowercase hex chars (128 bits). */
+/** 128 bits. */
 const NONCE = /^[0-9a-f]{32}$/;
 
 export function isReaderNonce(v: string): boolean {
@@ -30,19 +21,13 @@ export function newReaderNonce(): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-/** Who the message is from, as the panel verified it: the panel's own
- *  signer card state (tone, label, note, clash and the contact's pills),
- *  for the same card in the tab. A bare contact used to travel here, and
- *  the tab lost every warning the panel's card carried. Display only;
- *  the public key is left out (`displayOnlySignerCard`). */
+/** The panel's full signer card state, so the tab keeps every warning.
+ *  Display only; no public key (`displayOnlySignerCard`). */
 export type ReaderSigner = SignerCardState;
 
-/** Panel -> tab. */
+/** Panel -> tab. `show` is resent after every unlock. */
 export type ReaderMessage =
-  /** Show this message. Sent on connect and again after every unlock. */
-  | { type: "show"; signer: ReaderSigner; text: string }
-  /** The panel locked: drop the text and say so. */
-  | { type: "locked" };
+  { type: "show"; signer: ReaderSigner; text: string } | { type: "locked" };
 
 export function isReaderMessage(v: unknown): v is ReaderMessage {
   if (typeof v !== "object" || v === null) return false;
@@ -67,7 +52,6 @@ export function isReaderMessage(v: unknown): v is ReaderMessage {
   );
 }
 
-/** A key id and its User IDs: the part of a contact every card reads. */
 function isHolder(v: unknown): boolean {
   if (typeof v !== "object" || v === null) return false;
   const h = v as Record<string, unknown>;

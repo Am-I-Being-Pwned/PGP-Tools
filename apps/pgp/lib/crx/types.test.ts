@@ -46,7 +46,6 @@ describe("isCrxSigningKeyBlob", () => {
     expect(isCrxSigningKeyBlob(undefined)).toBe(false);
     expect(isCrxSigningKeyBlob("blob")).toBe(false);
     expect(isCrxSigningKeyBlob(42)).toBe(false);
-    // An array is a non-null object but lacks the required fields.
     expect(isCrxSigningKeyBlob([])).toBe(false);
   });
 
@@ -64,13 +63,13 @@ describe("isCrxSigningKeyBlob", () => {
   });
 
   it("rejects blobs whose required fields have the wrong type", () => {
-    expect(
-      isCrxSigningKeyBlob({ ...validBlob(), extensionId: 123 }),
-    ).toBe(false);
+    expect(isCrxSigningKeyBlob({ ...validBlob(), extensionId: 123 })).toBe(
+      false,
+    );
     expect(isCrxSigningKeyBlob({ ...validBlob(), iv: null })).toBe(false);
-    expect(
-      isCrxSigningKeyBlob({ ...validBlob(), publicKeyDerB64: {} }),
-    ).toBe(false);
+    expect(isCrxSigningKeyBlob({ ...validBlob(), publicKeyDerB64: {} })).toBe(
+      false,
+    );
   });
 
   it("rejects blobs with null protection", () => {
@@ -86,9 +85,7 @@ describe("isCrxSigningKeyBlob", () => {
   });
 
   it("rejects protection without a string method", () => {
-    expect(
-      isCrxSigningKeyBlob({ ...validBlob(), protection: {} }),
-    ).toBe(false);
+    expect(isCrxSigningKeyBlob({ ...validBlob(), protection: {} })).toBe(false);
     expect(
       isCrxSigningKeyBlob({ ...validBlob(), protection: { method: 1 } }),
     ).toBe(false);
@@ -126,8 +123,7 @@ describe("publicKeyDerToPem", () => {
   });
 
   it("round-trips the base64 body (stripping markers and newlines)", () => {
-    const body =
-      "TUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUE=";
+    const body = "TUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUE=";
     const pem = publicKeyDerToPem(body);
     const recovered = pem
       .replace(`${BEGIN}\n`, "")

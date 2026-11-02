@@ -1,20 +1,14 @@
-// Pure registry operations over a list of PgpActions. The list itself
-// lives in definitions.ts; keeping these functions parameterized on
-// `actions` makes every code path testable with fakes.
+// Pure registry operations, parameterized on `actions` for testability.
 
 import type { ShortcutKeyEvent } from "../shortcuts";
 import type { ActionCtx, PgpAction } from "./types";
 import { matchesShortcut } from "../shortcuts";
 import { actionName } from "./types";
 
-/** An action resolved against a ctx, ready for the palette to render.
- *  Disabled actions are included WITH their reason -- the palette shows
- *  them dimmed rather than hiding them. */
 export interface ResolvedAction {
   action: PgpAction;
-  /** Display name, with any dynamic name already resolved. */
   name: string;
-  /** Present iff the action cannot run right now. */
+  /** Present iff the action cannot run right now (shown dimmed). */
   disabledReason: string | undefined;
 }
 
@@ -26,8 +20,6 @@ function resolve(action: PgpAction, ctx: ActionCtx): ResolvedAction {
   };
 }
 
-/** The actions the palette should list for this ctx: everything
- *  applicable, including currently-disabled ones (with their reason). */
 export function visibleActions(
   actions: readonly PgpAction[],
   ctx: ActionCtx,
@@ -37,12 +29,7 @@ export function visibleActions(
     .map((a) => resolve(a, ctx));
 }
 
-/**
- * Match a keydown against the applicable actions' shortcuts. Returns
- * the resolved action even when disabled -- the caller decides whether
- * to execute or to toast the disabled reason (a shortcut on a
- * disabled action explains itself instead of going dead).
- */
+/** Returns disabled matches too, so the caller can toast the reason. */
 export function findByShortcut(
   actions: readonly PgpAction[],
   event: ShortcutKeyEvent,
@@ -59,8 +46,7 @@ export function findByShortcut(
   return null;
 }
 
-/** Case-insensitive palette filter over name + keywords. Substring
- *  match is enough at this action count; every query token must hit. */
+/** Every query token must substring-match name, group or keywords. */
 export function filterActions(
   resolved: readonly ResolvedAction[],
   query: string,
@@ -79,8 +65,7 @@ export function filterActions(
   });
 }
 
-/** Group resolved actions for display, preserving first-seen group
- *  order. Ungrouped actions fall under "". */
+/** First-seen group order; ungrouped under "". */
 export function groupActions(
   resolved: readonly ResolvedAction[],
 ): { group: string; items: ResolvedAction[] }[] {

@@ -13,7 +13,6 @@ import { forgetLastRegExpMatch } from "../../lib/utils/regexp-residue";
 
 type View = "waiting" | "shown" | "locked" | "unavailable";
 
-/** Close this tab: the message it held is gone for good. */
 function closeSelf(): void {
   void chrome.tabs
     .getCurrent()
@@ -25,12 +24,9 @@ function closeSelf(): void {
 }
 
 /**
- * Reply's reader tab: a view of one decrypted message, driven entirely
- * by the side panel over a nonce-named port (lib/reader-protocol). No
- * vault, keys or storage here. The message text is written into the
- * <pre> imperatively and never enters React state or the element tree,
- * as in the panel's own output box; only the signer card (public data)
- * and which view is up are state.
+ * Reply's reader tab, driven entirely by the panel over a nonce-named port
+ * (lib/reader-protocol). The text is written into the <pre> imperatively
+ * and never enters React state or the element tree.
  */
 export function Reader() {
   const [view, setView] = useState<View>("waiting");
@@ -49,11 +45,9 @@ export function Reader() {
       forgetLastRegExpMatch();
     };
     const port = chrome.runtime.connect({ name: READER_PORT_PREFIX + nonce });
-    // Nobody answered: the panel that opened this is gone.
     const noAnswer = setTimeout(() => setView("unavailable"), 3_000);
 
-    // Whether a panel ever answered: only then does a disconnect mean "the
-    // panel closed" rather than "there was never one to talk to".
+    // Only after an answer does a disconnect mean "the panel closed".
     let answered = false;
     port.onMessage.addListener((msg: unknown) => {
       if (!isReaderMessage(msg)) return;
@@ -70,7 +64,6 @@ export function Reader() {
       setSigner(msg.signer);
       setView("shown");
     });
-    // The panel closed: the message went with it, so the tab goes too.
     port.onDisconnect.addListener(() => {
       clearTimeout(noAnswer);
       clearText();
@@ -89,13 +82,11 @@ export function Reader() {
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col px-6 py-8">
       {shown && signer && (
         <div className="mb-3">
-          {/* The panel's card state, rendered by the panel's own card:
-              the same verdict, warnings and pills in both places. */}
+          {/* The panel's own card: same verdict in both places. */}
           <SignerCard state={signer} />
         </div>
       )}
-      {/* Always mounted, so the text has a node to go into; hidden
-          (and emptied) whenever there is nothing to show. */}
+      {/* Always mounted so the text has a node; hidden when empty. */}
       <pre
         id="message"
         ref={textRef}

@@ -1,27 +1,16 @@
 /**
- * Runtime lockdown — MUST be the first import in every entrypoint.
- *
- * Two jobs, and the "first import" guarantee is what makes both work:
+ * Runtime lockdown — MUST be the first import in every entrypoint; both
+ * jobs depend on running before any dependency:
  *   1. Outbound network hooks (§7) — fetch/XHR/WS/EventSource/RTC/beacon.
- *   2. Boundary primitive freeze (§8.10) — pins the encode/decode/RNG/
- *      clipboard methods the wasm boundary depends on, so a dependency
- *      loaded after us cannot patch them. See the block at the bottom.
+ *   2. Boundary primitive freeze (§8.10) — see the block at the bottom.
  *
- * (The filename still says "network" for historical reasons; scope is now
- * broader. Renaming means touching every entrypoint import plus the
- * exemption path in scripts/audit-invariants.mjs.)
- *
- * Hooks are frozen + non-configurable. CSP covers iframes (frame-src
- * 'none') and inline scripts (no 'unsafe-inline'), so no DOM hooks needed.
- *
- * In dev (Vite/WXT HMR), this whole module no-ops -- the dev server
- * uses WebSocket and various transports the production lockdown
- * blocks. Production builds (`wxt build`) always run the lockdown.
+ * The path is an exemption in scripts/audit-invariants.mjs. Hooks are
+ * frozen + non-configurable; CSP covers iframes and inline scripts.
+ * No-ops in dev (HMR needs WebSocket); production builds always lock down.
  */
 
 if (import.meta.env.DEV) {
-  // No-op in dev so HMR can use WebSocket etc. See SECURITY.md §7 --
-  // production CSP + this lockdown together pin outbound network.
+  // No-op in dev; see SECURITY.md §7.
 } else {
   const isExtensionUrl = (url: string) => url.startsWith("chrome-extension://");
   const BLOCKED_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -116,32 +105,15 @@ if (import.meta.env.DEV) {
   }
 
   // ── Boundary primitive freeze — SECURITY.md §8.10 ──────────────────
-  //
-  // The wasm-bindgen glue looks each of these up per call, so a
-  // dependency that patches one taps every secret crossing the boundary:
-  //
-  //   TextEncoder.encode      the unlock password, as React converts it
-  //   TextDecoder.decode      every string WASM returns -- so even a
-  //                           perfectly gated export path leaks while the
-  //                           user does a LEGITIMATE export
-  //   getRandomValues         the module's ONLY entropy source; a constant
-  //                           return makes every key generated afterwards
-  //                           predictable, silently and with no artefact
-  //   Clipboard.writeText     read at write time, which the 30s/60s
-  //                           auto-clear cannot reach
-  //
-  // Freezing them non-writable/non-configurable is meaningful ONLY because
-  // this module is the first import in every entrypoint, so code loaded
-  // later cannot patch them. It does NOT stop a dependency that runs
-  // earlier in the module graph, and it does nothing about a hostile
-  // realm calling the wasm exports directly (§8.10). This raises an
-  // attacker's cost; it does not close the hole.
-  //
+  // The wasm-bindgen glue looks these up per call, so patching one taps
+  // every secret crossing the boundary (password encode, every returned
+  // string, the ONLY entropy source, clipboard writes). Meaningful only
+  // because this is the first import; it does not stop earlier-loaded code
+  // or a hostile realm calling wasm directly. Raises cost, not a fix.
   // Threats: T-PRIMITIVE-HOOK, T-ENTROPY-POISON.
   function freezeMethod(obj: object | undefined, name: string) {
     if (!obj) return;
     const desc = Object.getOwnPropertyDescriptor(obj, name);
-    // Skip anything absent, non-method, or already locked down.
     if (!desc || typeof desc.value !== "function" || !desc.configurable) return;
     Object.defineProperty(obj, name, {
       value: desc.value,
@@ -155,23 +127,10 @@ if (import.meta.env.DEV) {
   freezeMethod(TextEncoder.prototype, "encodeInto");
   freezeMethod(TextDecoder.prototype, "decode");
   freezeMethod(globalThis.Crypto.prototype, "getRandomValues");
-  // Clipboard is a DOCUMENT-only API: it does not exist in a service
-  // worker, and reading `.prototype` off `undefined` throws at module
-  // scope. This module is the first import in EVERY entrypoint including
-  // `background.ts`, so an unguarded reference here does not degrade the
-  // lockdown -- it kills the whole worker before its first statement
-  // runs, taking the context menu, the keyboard commands, the
-  // install-time welcome tab and `setPanelBehavior` with it, silently.
-  // (That was live in shipped builds; see the note in SECURITY.md.)
-  //
-  // The cast is the point, not a workaround. TypeScript's DOM lib types
-  // `Clipboard` and `navigator.clipboard` as always-present, because it
-  // assumes a document realm -- which is exactly why nobody guarded
-  // them and why the worker died. `no-unnecessary-condition` calls the
-  // guard redundant for the same reason: it believes the lib. This view
-  // states what is actually true of a realm that may be a worker, so
-  // the guard type-checks as meaningful rather than being silenced with
-  // a disable comment that would leave the lie in place.
+  // Clipboard does not exist in the service worker; an unguarded access
+  // throws at module scope and silently kills the whole worker (see
+  // SECURITY.md). The cast states that the realm may be a worker, which
+  // the DOM lib types deny.
   const realm = globalThis as {
     Clipboard?: typeof Clipboard;
     navigator?: { clipboard?: Navigator["clipboard"] };
@@ -181,10 +140,8 @@ if (import.meta.env.DEV) {
     freezeMethod(realm.Clipboard.prototype, "writeText");
   }
 
-  // Freezing a prototype method is NOT enough when the object you actually
-  // call through is extensible: an own property on the instance shadows the
-  // prototype, which is exactly how a realistic tap is written. Pin the own
-  // slot on every such instance too.
+  // An own property on an extensible instance shadows the frozen
+  // prototype method, so pin the instance slot too.
   function pinOwnMethod(obj: object, name: string) {
     const current = (obj as Record<string, unknown>)[name];
     if (typeof current !== "function") return;
@@ -197,18 +154,14 @@ if (import.meta.env.DEV) {
     });
   }
 
-  // Same reason as the Clipboard guard above: no `navigator.clipboard`
-  // in a worker realm. There is nothing to pin there and nothing that
-  // could tap it, because the API the tap would target does not exist.
+  // No `navigator.clipboard` in a worker realm.
   if (realm.navigator?.clipboard !== undefined) {
     pinOwnMethod(realm.navigator.clipboard, "writeText");
   }
 
-  // `globalThis.crypto` matters more than it looks. getrandom's wasm backend
-  // caches the Crypto OBJECT in a thread-local and then does a property
-  // lookup for `getRandomValues` on that instance per call -- so pinning the
-  // prototype alone left the wasm module's only entropy source tappable via
-  // `crypto.getRandomValues = f`. That is T-ENTROPY-POISON's actual route.
+  // getrandom's wasm backend looks up `getRandomValues` on the cached
+  // Crypto instance per call, so the instance slot is T-ENTROPY-POISON's
+  // actual route.
   pinOwnMethod(globalThis.crypto, "getRandomValues");
 } // end !import.meta.env.DEV
 

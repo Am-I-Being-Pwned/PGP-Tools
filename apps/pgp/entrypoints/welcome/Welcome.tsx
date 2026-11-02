@@ -12,9 +12,7 @@ export function Welcome() {
   const handleStart = async () => {
     setError(null);
     try {
-      // Must run in this user-gesture handler -- chrome.sidePanel.open
-      // requires one. We can't do this from background's `onInstalled`,
-      // hence this welcome page.
+      // sidePanel.open needs a user gesture, hence this welcome page.
       const win = await chrome.windows.getCurrent();
       if (win.id === undefined) {
         throw new Error("No window id");

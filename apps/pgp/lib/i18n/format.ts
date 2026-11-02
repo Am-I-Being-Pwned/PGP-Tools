@@ -1,11 +1,7 @@
 import { uiLanguage } from "./index";
 
-/**
- * Locale-aware date rendering via `Intl`, replacing date-fns `format`
- * and `formatDistanceToNow` in user-facing text. date-fns' `PP`/`PPP`
- * tokens are English-only unless a locale bundle is imported per
- * language; `Intl` already knows Chrome's UI language.
- */
+/** Dates via `Intl` in Chrome's UI language (date-fns would need a
+ *  locale bundle per language). */
 
 function locale(): string {
   return uiLanguage();
@@ -37,8 +33,7 @@ export function formatDateShort(input: Date | number): string {
   );
 }
 
-/** "20 Sept 2026, 14:32" style; replaces `Date#toLocaleString()`, which
- *  follows the OS locale rather than Chrome's UI language. */
+/** Not `toLocaleString()`, which follows the OS locale. */
 export function formatDateTime(input: Date | number): string {
   const d = new Date(input);
   const opts: Intl.DateTimeFormatOptions = {
@@ -60,8 +55,7 @@ const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
   ["minute", 60],
 ];
 
-/** "in 3 days" / "2 hours ago"; date-fns `formatDistanceToNow` with
- *  `addSuffix`. Anything under a minute reads as "now". */
+/** "in 3 days" / "2 hours ago"; under a minute is "now". */
 export function formatRelative(input: Date | number, now = Date.now()): string {
   const seconds = Math.round((new Date(input).getTime() - now) / 1000);
   const make = (tag: string) => {

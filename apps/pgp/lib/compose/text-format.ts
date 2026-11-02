@@ -1,22 +1,8 @@
 /**
- * Pure text editing for the message box: Unicode inline formatting and
- * find/replace. Everything here takes the current text plus a selection
- * and returns the new text plus the selection to apply -- no DOM, so it
- * is unit-tested directly and the component only has to read
- * `selectionStart`/`selectionEnd` and write the result back.
- *
- * WHY UNICODE, NOT MARKDOWN. A PGP message is plain text and stays plain
- * text on the other side; nothing renders `**markers**`. Unicode has
- * letter forms that ARE bold, italic and monospace (the Mathematical
- * Alphanumeric Symbols block) and a combining stroke that IS
- * strikethrough, and they survive any channel that carries UTF-8: mail,
- * chat, a signed cleartext block. Sans-serif variants are used so the
- * result reads as styled prose rather than as maths.
- *
- * The cost is that only Latin letters (and digits, for bold and
- * monospace) have such forms; other characters pass through unchanged.
- * A style is a toggle: applying it to a selection that already carries
- * it takes it off.
+ * Pure (DOM-free) message-box editing: Unicode inline formatting and
+ * find/replace. Unicode letter forms, not Markdown, because a PGP message
+ * stays plain text on the other side and nothing renders `**markers**`.
+ * Only Latin letters (and digits for bold/mono) have forms.
  */
 
 export interface Selection {
@@ -30,12 +16,10 @@ export interface Edit extends Selection {
 
 export type InlineStyle = "bold" | "italic" | "strike" | "code";
 
-/** Combining long stroke overlay: one after each character strikes it. */
 const STRIKE = "\u0336";
 
-// Code point of the 'A' of each styled Latin alphabet (uppercase runs
-// straight into lowercase, 52 letters), and of its '0' where the style
-// has digits. Italic has no digit forms in Unicode.
+// Code point of 'A' per styled alphabet (52 letters, upper then lower) and
+// of '0' where the style has digits (italic has none).
 const ALPHABET: Record<"bold" | "italic" | "boldItalic" | "mono", number> = {
   bold: 0x1d5d4,
   italic: 0x1d608,
@@ -48,7 +32,6 @@ const DIGITS: Partial<Record<keyof typeof ALPHABET, number>> = {
 };
 
 interface Glyph {
-  /** The plain ASCII character, or the original when it has no forms. */
   base: string;
   bold: boolean;
   italic: boolean;
@@ -63,7 +46,6 @@ function letterIndex(ch: string): number {
   return -1;
 }
 
-/** Break a styled character down to its ASCII base and style flags. */
 function decode(ch: string): Glyph {
   const cp = ch.codePointAt(0) ?? 0;
   for (const [name, start] of Object.entries(ALPHABET) as [
@@ -95,9 +77,7 @@ function decode(ch: string): Glyph {
   return { base: ch, bold: false, italic: false, mono: false, strike: false };
 }
 
-/** Rebuild a character from its base and flags. Letters without a form
- *  for the requested combination fall back as far as needed (italic
- *  digits do not exist, so a bold-italic digit renders bold). */
+/** Missing combinations fall back (a bold-italic digit renders bold). */
 function encode(g: Glyph): string {
   let out = g.base;
   const li = letterIndex(g.base);
@@ -129,8 +109,6 @@ function encode(g: Glyph): string {
   return g.strike ? out + STRIKE : out;
 }
 
-/** Split text into glyphs, folding a following combining stroke into
- *  the character it strikes. */
 function decodeAll(text: string): Glyph[] {
   const chars = Array.from(text);
   const out: Glyph[] = [];
@@ -144,7 +122,6 @@ function decodeAll(text: string): Glyph[] {
   return out;
 }
 
-/** Whether a glyph can carry `style` at all (a space cannot be bold). */
 function styleable(g: Glyph, style: InlineStyle): boolean {
   if (style === "strike") return !/\s/.test(g.base);
   const li = letterIndex(g.base);
@@ -168,14 +145,8 @@ function setStyle(g: Glyph, style: InlineStyle, on: boolean): void {
 }
 
 /**
- * Toggle an inline style on the selection.
- *
- * If every styleable character in the selection already carries the
- * style, it is removed from all of them; otherwise it is applied to all
- * of them. The selection is returned covering the same characters (their
- * UTF-16 length changes, since the styled forms are astral code points).
- * An empty or whitespace-only selection is left alone: there is no
- * "start typing in bold" with Unicode forms, the words have to exist.
+ * Toggle a style: removed if every styleable char has it, else applied to
+ * all. Returned selection covers the same chars (UTF-16 length changes).
  */
 export function toggleInlineStyle(
   text: string,
@@ -210,20 +181,15 @@ export interface FindOptions {
   caseSensitive?: boolean;
 }
 
-/** Start offsets of every match of `query` in `text`. Empty query
- *  matches nothing (an empty needle "matches" at every offset, which is
- *  never what a find box means). Overlapping matches are not counted:
- *  the search resumes after each hit, as every editor does. */
+/** Non-overlapping match offsets; an empty query matches nothing. */
 export function findAll(
   text: string,
   query: string,
   opts: FindOptions = {},
 ): number[] {
   if (!query) return [];
-  // A case-folded regex over the ORIGINAL string, not `indexOf` over a
-  // lowercased copy: lowercasing can change UTF-16 length (İ -> i̇), which
-  // would shift every offset after it and make Replace splice the wrong
-  // span. It also avoids materialising a second copy of the plaintext.
+  // Case-folded regex over the original, not indexOf on a lowercased copy:
+  // lowercasing can change UTF-16 length (İ -> i̇) and shift every offset.
   const re = new RegExp(
     query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
     opts.caseSensitive ? "g" : "gi",
@@ -236,16 +202,14 @@ export function findAll(
   return out;
 }
 
-/** Index into `matches` of the first match at or after `from`, wrapping
- *  to the first match; -1 when there are none. */
+/** First match at/after `from`, wrapping; -1 if none. */
 export function nextMatchIndex(matches: number[], from: number): number {
   if (matches.length === 0) return -1;
   const i = matches.findIndex((m) => m >= from);
   return i === -1 ? 0 : i;
 }
 
-/** Index of the last match strictly before `from`, wrapping to the last
- *  match; -1 when there are none. */
+/** Last match before `from`, wrapping; -1 if none. */
 export function prevMatchIndex(matches: number[], from: number): number {
   if (matches.length === 0) return -1;
   for (let i = matches.length - 1; i >= 0; i--) {
@@ -254,9 +218,6 @@ export function prevMatchIndex(matches: number[], from: number): number {
   return matches.length - 1;
 }
 
-/** Replace the match starting at `at` (of length `query.length`) with
- *  `replacement`. The returned selection covers the replacement so the
- *  caller can show what changed. */
 export function replaceAt(
   text: string,
   at: number,
@@ -270,8 +231,7 @@ export function replaceAt(
   };
 }
 
-/** Replace every match. Returns the new text and how many were replaced.
- *  Built right-to-left off `findAll` so earlier offsets stay valid. */
+/** Right-to-left so earlier offsets stay valid. */
 export function replaceAll(
   text: string,
   query: string,

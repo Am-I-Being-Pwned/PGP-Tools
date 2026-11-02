@@ -11,13 +11,8 @@ export function usePreferences(): PgpPreferences {
   return useSyncExternalStore(preferencesStore.subscribe, preferencesStore.get);
 }
 
-/**
- * Save a change the user just made. A save that rejects (the stored
- * settings would not open, and nothing proves this session may replace
- * them) must say so rather than be dropped: the next unlock would read
- * the old value back. The store puts the stored value back on screen.
- * Never rejects.
- */
+/** Save a user change. A rejected save is surfaced, not dropped (the next
+ *  unlock would read the old value back). Never rejects. */
 export async function savePreference(
   patch: Partial<PgpPreferences>,
   opts?: UpdateOptions,

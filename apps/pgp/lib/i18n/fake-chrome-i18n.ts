@@ -3,17 +3,8 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 /**
- * TEST DOUBLE for `chrome.i18n`, installed by vitest (see
- * `vitest.config.ts` setupFiles). Unit tests run in node where `chrome`
- * does not exist; without this every `t()` would return its key and any
- * test asserting on user-facing text would fail.
- *
- * Backed by the BUILT `public/_locales/en/messages.json`, so a test sees
- * exactly what Chrome would show an English user. Substitution mirrors
- * Chrome: `$1`..`$9` are positional, and a `placeholders` entry maps a
- * `$name$` token onto one of them.
- *
- * Never imported by shipped code (`fake-*.ts` convention).
+ * TEST DOUBLE for `chrome.i18n` (vitest setupFiles), backed by the BUILT
+ * `public/_locales/en/messages.json`. Never imported by shipped code.
  */
 
 const HERE = dirname(fileURLToPath(import.meta.url));

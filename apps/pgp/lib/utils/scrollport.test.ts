@@ -6,10 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { isFullyVisible, scrollportOf, verticalBounds } from "./scrollport";
 
-/** The scrollport is offset from the viewport (a header sits above it),
- *  so "visible" is measured against the port's own bounds -- comparing
- *  against 0/innerHeight would call a card hidden behind the header
- *  visible and skip the scroll that would reveal it. */
+/** The port is offset from the viewport; visibility is measured against
+ *  the port, not 0/innerHeight. */
 const port = { top: 90, bottom: 500 };
 
 describe("isFullyVisible", () => {
@@ -31,25 +29,14 @@ describe("isFullyVisible", () => {
   });
 
   it("rejects a card only PARTLY in view", () => {
-    // The case a naive intersection test gets wrong: the top edge is in
-    // the port, so the card is "on screen" -- but its fingerprint line
-    // and the details arrow are not, which is what the reveal is for.
+    // Top edge in the port but the rest clipped: not fully visible.
     expect(isFullyVisible({ top: 460, bottom: 540 }, port)).toBe(false);
     expect(isFullyVisible({ top: 60, bottom: 140 }, port)).toBe(false);
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────
-// Finding the port, and measuring against it.
-//
-// The rule `scrollportOf` encodes is that a scrollport is BOTH a style
-// question and a size one. A container with `overflow-y: auto` whose
-// content fits is not scrolling anything, and stopping at it makes the
-// caller scroll the wrong element -- the card stays put and the panel
-// looks frozen. jsdom has no layout engine, so the geometry below is
-// declared outright: these tests are about the decision, not the
-// measurement.
-// ─────────────────────────────────────────────────────────────────────
+// ── Finding the port: style AND size (overflow-y:auto that fits is not a
+// scrollport). jsdom has no layout, so geometry is declared outright. ──
 
 interface Box {
   overflowY?: string;
@@ -58,13 +45,11 @@ interface Box {
   rect?: { top: number; bottom: number };
 }
 
-/** Build a chain of nested divs, outermost first; returns the innermost. */
 function chain(...boxes: Box[]): HTMLElement {
   let parent: HTMLElement = document.body;
   let node = document.body;
   for (const box of boxes) {
     node = document.createElement("div");
-    // jsdom computes neither of these, so they are defined outright.
     Object.defineProperty(node, "scrollHeight", {
       value: box.scrollHeight ?? 0,
       configurable: true,
@@ -112,8 +97,7 @@ describe("scrollportOf", () => {
   );
 
   it("skips a scrollable-styled container whose content fits", () => {
-    // The bug this rule prevents: blaming a container that has
-    // overflow-y:auto but nothing to scroll, so the card never appears.
+    // overflow-y:auto with nothing to scroll is not the port.
     const el = chain(
       { overflowY: "auto", scrollHeight: 200, clientHeight: 200 },
       {},
@@ -152,8 +136,7 @@ describe("verticalBounds", () => {
   });
 
   it("measures against the scrollport's own box when one is found", () => {
-    // The distinction the header comment above is about: a card can be
-    // inside the viewport and still clipped by the panel it lives in.
+    // Inside the viewport but clipped by the panel.
     const el = chain(
       {
         overflowY: "auto",

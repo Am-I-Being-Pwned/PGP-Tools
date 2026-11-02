@@ -1,31 +1,8 @@
 /**
- * ============================================================================
- * Generate / import + protect flows (OpenPGP keys).
- * ============================================================================
- *
- * This is the JS-side coordinator that drives every "produce a fresh
- * encrypted-key blob" path for PGP certs. The mechanics it used to own —
- * the password / PRF input lifetime (encode → call → `.fill(0)` in
- * `finally`), the optional `cache: true` chained unlock, and the
- * wire-format unpacking of the wasm packed-binary return — now live once
- * in `protect-runner.ts`, shared with the CRX signing-key flow. What
- * stays here is the PGP-specific half: which wasm export to call, and how
- * the returned cert metadata lands in a `ProtectedKeyBlob`.
- *
- * The guarantees are unchanged and still load-bearing:
- *   - password / PRF material crosses as `Uint8Array`, never a JS string,
- *     and is `.fill(0)`'d in a `finally` (`protect-runner.ts`),
- *   - `cache: true` performs a chained unlock through the standard
- *     `unlockWith*` path, so KEY_STORE insertion is always tied to the
- *     user-just-typed-credentials unlock action, never to the protect
- *     call itself,
- *   - the source passphrase of an imported key is `.fill(0)`'d here, on
- *     every exit from `importAndProtect`.
- *
- * For the threat model and per-secret zeroization audit table, see
- * `apps/pgp/SECURITY.md`. For the wasm-side guarantee that the cert
- * never enters KEY_STORE during a protect call, see the doc-comment
- * header in `apps/pgp/gpg-wasm/src/lib.rs`.
+ * Generate / import + protect flows for OpenPGP keys. Secret lifetime and
+ * the `cache: true` chained unlock live in `protect-runner.ts`; this file
+ * picks the wasm exports and maps cert metadata into a `ProtectedKeyBlob`.
+ * Threat model and zeroization table: `apps/pgp/SECURITY.md`.
  */
 
 import type { GenerateKeyOptions } from "../pgp/types";
@@ -53,11 +30,8 @@ import { runProtect } from "./protect-runner";
 
 const EMPTY = new Uint8Array(0);
 
-// ── blob assembly (the PGP-specific half of the flow) ────────────────
-
-/** Copy across the optional cert facts that live outside the encrypted
- *  half: a revocation certificate minted at generation time, and the
- *  non-blocking parse warning shown as a badge. */
+/** Copy the revocation cert and parse warning, which live outside the
+ *  encrypted half. */
 function withCertMeta(
   blob: ProtectedKeyBlob,
   result: ProtectFlowResult,
@@ -71,11 +45,6 @@ function withCertMeta(
   return blob;
 }
 
-/**
- * The PGP half of a protect flow: the two wasm exports to call, how their
- * metadata maps into a `ProtectedKeyBlob`, and the chained unlocks that
- * back `cache: true`.
- */
 function keySpec(
   userIdHint: string,
   runPassword: ProtectSpec<ProtectFlowResult, ProtectedKeyBlob>["runPassword"],
@@ -146,8 +115,6 @@ function keySpec(
   };
 }
 
-// ── public API ───────────────────────────────────────────────────────
-
 export type { ProtectionInput };
 
 interface CommonOpts {
@@ -162,12 +129,8 @@ export interface ProtectFlowOutput {
 }
 
 /**
- * Generate a new keypair and protect it under the chosen method.
- * Plaintext cert exists only inside the wasm call; it is NEVER inserted
- * into the long-lived KEY_STORE by this call. If `cache: true` is set,
- * the blob is then immediately unlocked via the standard `unlockWith*`
- * path -- KEY_STORE insertion stays tied to an explicit
- * (user-just-typed-credentials) unlock.
+ * Generate a new keypair and protect it. The plaintext cert exists only
+ * inside the wasm call and is NEVER inserted into KEY_STORE by it.
  */
 export async function generateAndProtect(
   keyOpts: GenerateKeyOptions,
@@ -194,15 +157,12 @@ export async function generateAndProtect(
 }
 
 /**
- * Import an armored private key (optionally passphrase-protected) and
- * re-protect it under the chosen method. Plaintext cert exists only
- * inside the wasm call. Same KEY_STORE invariants as
- * `generateAndProtect` w/r/t the optional `cache` flag.
+ * Import an armored private key and re-protect it; same KEY_STORE
+ * invariants as `generateAndProtect`.
  *
  * @secret-handling `sourcePassphrase` is encoded to a `Uint8Array` and
- * `.fill(0)`'d in a `finally` that wraps the whole flow -- including the
- * password-strength gate and the WebAuthn ceremony, both of which can
- * throw before wasm is ever reached.
+ * `.fill(0)`'d in a `finally` that wraps the whole flow, including the
+ * password gate and WebAuthn ceremony (both can throw before wasm).
  */
 export async function importAndProtect(
   armoredPrivateKey: string,

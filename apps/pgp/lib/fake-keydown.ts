@@ -2,7 +2,6 @@
 
 import type { ShortcutKeyEvent } from "./shortcuts";
 
-/** A bare keydown: no modifiers, not a repeat. */
 export function keydown(
   overrides: Partial<ShortcutKeyEvent>,
 ): ShortcutKeyEvent {

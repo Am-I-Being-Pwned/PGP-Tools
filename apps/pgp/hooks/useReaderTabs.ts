@@ -9,25 +9,17 @@ import {
 } from "../lib/reader-protocol";
 
 interface Reader {
-  /** The message, sealed under the in-WASM draft key -- the same key the
-   *  workspace draft crosses a master lock under. Never plaintext here. */
+  /** Sealed under the in-WASM draft key. Never plaintext here. */
   sealed: Uint8Array;
   signer: ReaderSigner;
-  /** Every tab showing this message. Usually one, but a duplicated tab
-   *  connects with the same nonce, and each copy must be locked too. */
+  /** A duplicated tab reuses the nonce; every copy must be locked too. */
   ports: Set<chrome.runtime.Port>;
 }
 
 const LOCKED: ReaderMessage = { type: "locked" };
 
-/**
- * Whether `sender` is this extension's own reader page, opened for
- * `nonce`. The nonce is the secret that picks the message; this is the
- * belt to its braces -- a port from anywhere else (another extension
- * that learned a nonce, any other page of ours) gets no answer, even
- * with the right name. `extensionId` / `readerUrl` are
- * `chrome.runtime.id` and `chrome.runtime.getURL("reader.html")`.
- */
+/** Whether `sender` is our own reader page for `nonce`. Belt to the
+ *  nonce's braces: any other sender gets no answer even with the name. */
 export function isOwnReaderSender(
   sender: chrome.runtime.MessageSender | undefined,
   nonce: string,
@@ -43,9 +35,8 @@ export function isOwnReaderSender(
   } catch {
     return false;
   }
-  // Protocol and host, not `origin`: for a chrome-extension: URL some
-  // URL implementations give an opaque "null" origin, equal for every
-  // extension.
+  // Not `origin`: some URL implementations give chrome-extension: an
+  // opaque "null" origin, equal for every extension.
   return (
     url.protocol === expected.protocol &&
     url.host === expected.host &&
@@ -56,15 +47,9 @@ export function isOwnReaderSender(
 }
 
 /**
- * The panel's side of Reply's reader tabs (see lib/reader-protocol).
- *
- * The panel owns every message a reader shows. It is sealed the moment
- * Reply is pressed and opened again only to post it to connected tabs
- * while the vault is `unlocked`; locking tells every tab to drop it, and
- * unlocking sends it again. When the last tab for a message closes, the
- * sealed copy is zeroed and dropped. Closing the panel disconnects every
- * port (the tabs clear and close themselves) and the draft key dies with
- * the page, so nothing survives either.
+ * Panel side of Reply's reader tabs (lib/reader-protocol). Messages are
+ * sealed on Reply and unsealed only to post while unlocked; lock tells
+ * every tab to drop it. The sealed copy is zeroed when its last tab closes.
  */
 export function useReaderTabs(unlocked: boolean) {
   const readers = useRef(new Map<string, Reader>());
@@ -77,15 +62,13 @@ export function useReaderTabs(unlocked: boolean) {
     readers.current.delete(nonce);
   }, []);
 
-  /** Unseal and post to every connected tab. The plaintext exists here
-   *  only for the call. */
+  /** Plaintext exists only for the duration of this call. */
   const show = useCallback(async (reader: Reader) => {
     if (reader.ports.size === 0) return;
     let bytes: Uint8Array | null = null;
     try {
       bytes = await wasmApi.decryptDraft(reader.sealed);
-      // Re-check after the await: a lock may have landed meanwhile
-      // (`lockNow` flips this synchronously, before the lock's own awaits).
+      // A lock may have landed during the await (`lockNow` is synchronous).
       if (!unlockedRef.current) return;
       const message: ReaderMessage = {
         type: "show",
@@ -100,9 +83,7 @@ export function useReaderTabs(unlocked: boolean) {
     }
   }, []);
 
-  /** Clear every reader now. Called first thing in the master lock, so
-   *  the tabs clear with the panel rather than a render later, and no
-   *  `show` in flight can post after it. */
+  /** Called first in the master lock so no in-flight `show` posts after. */
   const lockNow = useCallback(() => {
     unlockedRef.current = false;
     for (const reader of readers.current.values()) {
@@ -114,8 +95,7 @@ export function useReaderTabs(unlocked: boolean) {
     const onConnect = (port: chrome.runtime.Port) => {
       if (!port.name.startsWith(READER_PORT_PREFIX)) return;
       const nonce = port.name.slice(READER_PORT_PREFIX.length);
-      // Not ours (another panel window's reader, or a forged name):
-      // leave it alone, so the panel that does own it can answer.
+      // Not ours: leave it for the panel that owns it.
       const reader = isReaderNonce(nonce) ? readers.current.get(nonce) : null;
       if (!reader) return;
       const fromReader = isOwnReaderSender(
@@ -128,7 +108,6 @@ export function useReaderTabs(unlocked: boolean) {
       reader.ports.add(port);
       port.onDisconnect.addListener(() => {
         reader.ports.delete(port);
-        // The last tab closed: the message has nowhere left to go.
         if (reader.ports.size === 0) drop(nonce);
       });
       if (unlockedRef.current) void show({ ...reader, ports: new Set([port]) });
@@ -138,8 +117,7 @@ export function useReaderTabs(unlocked: boolean) {
     return () => chrome.runtime.onConnect.removeListener(onConnect);
   }, [show, drop]);
 
-  // Unlock: every tab gets the message back. (Lock is `lockNow`, and
-  // this repeats it for any path that locks without calling it.)
+  // Also repeats the lock for any path that locks without `lockNow`.
   useEffect(() => {
     if (!unlocked) {
       lockNow();
@@ -149,8 +127,6 @@ export function useReaderTabs(unlocked: boolean) {
     for (const reader of readers.current.values()) void show(reader);
   }, [unlocked, show, lockNow]);
 
-  // The panel going away takes the draft key with it; zero the sealed
-  // bytes anyway rather than leave them to the collector.
   useEffect(() => {
     const all = readers.current;
     return () => {
@@ -159,8 +135,7 @@ export function useReaderTabs(unlocked: boolean) {
     };
   }, []);
 
-  /** Seal `text` and open a reader tab for it. The caller drops its own
-   *  copy; from here the panel holds only the sealed bytes. */
+  /** Seal `text` and open a reader tab; the caller drops its own copy. */
   const open = useCallback(
     async (text: string, signer: ReaderSigner) => {
       await wasmApi.initDraftSessionIfUnset();

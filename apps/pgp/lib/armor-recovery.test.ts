@@ -49,10 +49,7 @@ describe("looksLikeCollapsedArmor", () => {
     expect(looksLikeCollapsedArmor("hello world")).toBe(false);
   });
 
-  // Regression: CRLF armor (Gpg4win / Kleopatra, and anything exported
-  // on Windows) is intact, not collapsed. Reading it as collapsed sent
-  // healthy armor through `reconstructArmor`, which rewrote it until it
-  // no longer parsed.
+  // CRLF armor (Gpg4win/Kleopatra) is intact, not collapsed.
   it("rejects intact armor with CRLF line endings", () => {
     expect(
       looksLikeCollapsedArmor(ARMOR_WITH_HEADERS.replace(/\n/g, "\r\n")),
@@ -103,9 +100,7 @@ describe("reconstructArmor", () => {
   });
 
   it("never rewraps a cleartext-signed message body", () => {
-    // The free-text body of a cleartext-signed message must not be
-    // reconstructed as base64. The BEGIN type (SIGNED MESSAGE) never
-    // matches the first END type (SIGNATURE), so it passes through.
+    // Cleartext body must not be rewrapped as base64.
     const signed = collapse(
       [
         "-----BEGIN PGP SIGNED MESSAGE-----",
@@ -161,7 +156,6 @@ describe("recoverArmorIfNeeded", () => {
 
 // ── Escape repair ────────────────────────────────────────────────────
 
-/** A real (short) message, the shape every case below is mangled from. */
 const MESSAGE = [
   "-----BEGIN PGP MESSAGE-----",
   "",
@@ -171,8 +165,6 @@ const MESSAGE = [
   "-----END PGP MESSAGE-----",
 ].join("\n");
 
-/** The armor block inside `text`, so a case can assert on the repaired
- *  block without caring what surrounded it. */
 function blockIn2(text: string, type: string): string {
   return (
     new RegExp(`-----BEGIN ${type}-----[\\s\\S]*?-----END ${type}-----`).exec(
@@ -203,38 +195,29 @@ describe("repairArmorEscapes", () => {
   });
 
   it("rescues a block embedded in JSON", () => {
-    // The case the block re-emit exists for: the BEGIN marker arrives
-    // stuck mid-line behind `{"msg":"`, where the armor parser will not
-    // find it however well the newlines are restored.
+    // Marker stuck mid-line behind `{"msg":"` must be re-emitted.
     const embedded = JSON.stringify({ msg: MESSAGE });
     expect(blockIn(repairArmorEscapes(embedded))).toBe(MESSAGE);
-    // And the marker now starts a line of its own.
     expect(repairArmorEscapes(embedded)).toContain(
       "\n-----BEGIN PGP MESSAGE-----",
     );
   });
 
   it("leaves armor that is already fine BYTE-IDENTICAL", () => {
-    // Not merely "equivalent". A key's armor is stored verbatim and is
-    // compared byte-for-byte to decide re-import vs. update, so a
-    // cosmetic rewrite here would show every re-imported key as changed.
+    // Byte-identical: stored armor is compared byte-for-byte on re-import.
     expect(repairArmorEscapes(MESSAGE)).toBe(MESSAGE);
     const withNoise = `hello\n${MESSAGE}\nbye`;
     expect(repairArmorEscapes(withNoise)).toBe(withNoise);
   });
 
   it("NEVER touches text outside an armor block", () => {
-    // The property that makes this safe to run over the workspace input
-    // box, which also holds messages being composed. A global unescape
-    // would eat the backslash-n in this snippet.
+    // Text outside armor blocks is never unescaped (composed messages).
     const code = 'console.log("a\\nb");\nconst x = "c\\td";';
     expect(repairArmorEscapes(code)).toBe(code);
   });
 
   it("returns unclosed armor untouched", () => {
-    // Also the shape the early bail-out exists for: many BEGIN markers
-    // with no END is the regexes' quadratic worst case, and it is exactly
-    // the input a half-finished paste produces.
+    // Unclosed BEGINs: the regexes' quadratic worst case.
     const unclosed = `-----BEGIN PGP MESSAGE-----\n\nAAAA\\nBBBB`;
     expect(repairArmorEscapes(unclosed)).toBe(unclosed);
     const many = "-----BEGIN PGP MESSAGE-----\n".repeat(50);
@@ -248,9 +231,7 @@ describe("repairArmorEscapes", () => {
     ["armored age file", "AGE ENCRYPTED FILE"],
     ["public key block", "PGP PUBLIC KEY BLOCK"],
   ])("repairs a %s too, not just PGP messages", (_name, type) => {
-    // All four kinds of key this app accepts arrive through the same
-    // paste box and break the same way. Scoping the repair to `BEGIN
-    // PGP` would have fixed one of them.
+    // Every PEM-style key kind, not just `BEGIN PGP`.
     const block = [
       `-----BEGIN ${type}-----`,
       "",
@@ -263,19 +244,8 @@ describe("repairArmorEscapes", () => {
   });
 
   it("repairs armor copied out of a SOURCE FILE, continuations and all", () => {
-    // REGRESSION, from a real paste. This is the literal in
-    // `gpg-wasm/src/tests.rs` selected in an editor and dropped into the
-    // workspace -- and it broke, because it carries TWO layers of damage
-    // at once: the `\n` escaping AND Rust's backslash-before-newline line
-    // continuations. Every other fixture in this file was built by
-    // applying ONE mechanical transformation to clean armor, which is a
-    // model of the problem rather than the problem; this one was copied.
-    //
-    // The same shape comes out of C, shell and Python source.
-    //
-    // `BS` is one literal backslash. Spelling it out beats escaping
-    // soup: `${BS}n` is the two characters a JSON escape leaves behind,
-    // and a trailing `${BS}` is the continuation.
+    // Real paste of the Rust fixture: `\n` escaping AND backslash-newline
+    // continuations at once. `BS` is one literal backslash.
     const BS = "\\";
     const pasted = [
       `-----BEGIN PGP MESSAGE-----${BS}n${BS}n${BS}`,
@@ -300,10 +270,7 @@ describe("repairArmorEscapes", () => {
   });
 
   it("keeps a backslash that is not a continuation", () => {
-    // The rule is a backslash IMMEDIATELY before a newline. One sitting
-    // mid-line is not a continuation and must not vanish -- otherwise the
-    // rule stops being the reversal of a known transform and starts
-    // deleting characters it does not understand.
+    // Only a backslash IMMEDIATELY before a newline is a continuation.
     const BS = "\\";
     const block = [
       "-----BEGIN PGP MESSAGE-----",
@@ -316,18 +283,15 @@ describe("repairArmorEscapes", () => {
   });
 
   it("does not repair across two different blocks", () => {
-    // A BEGIN whose END belongs to a different block must not swallow
-    // the text between them -- that would splice unrelated content into
-    // one armor block.
+    // A BEGIN must not swallow text up to another block's END.
     const two = `${MESSAGE}\n\nsome prose with \\n in it\n\n${MESSAGE}`;
     const out = repairArmorEscapes(two);
     expect(out).toContain("some prose with \\n in it");
   });
 
   it("leaves a cleartext-signed message alone when it still has lines", () => {
-    // Its body is FREE TEXT and can legitimately contain a backslash --
-    // and it is the exact bytes the signature covers. Rewriting them
-    // turns a valid signature into a tampering warning.
+    // Signed free text may contain a backslash; rewriting it breaks the
+    // signature.
     const signed = [
       "-----BEGIN PGP SIGNED MESSAGE-----",
       "Hash: SHA512",
@@ -342,8 +306,7 @@ describe("repairArmorEscapes", () => {
   });
 
   it("does repair a cleartext-signed message that was flattened", () => {
-    // No real newline anywhere in the block is proof it went through an
-    // escaper, so there is no ambiguity left to protect.
+    // No real newline anywhere proves it was escaped.
     const signed = [
       "-----BEGIN PGP SIGNED MESSAGE-----",
       "Hash: SHA512",
@@ -360,16 +323,13 @@ describe("repairArmorEscapes", () => {
 
 describe("recoverArmorIfNeeded", () => {
   it("handles escaping and whitespace collapse in the right order", () => {
-    // Collapse detection looks for a real newline after BEGIN. Run
-    // first, it would see an escaped message as collapsed and hand it to
-    // the base64 rewrapper -- the wrong repair for this damage.
+    // Escape repair must run before collapse detection.
     expect(blockIn(recoverArmorIfNeeded(MESSAGE.replaceAll("\n", "\\n")))).toBe(
       MESSAGE,
     );
   });
 
   it("still reconstructs a whitespace-collapsed selection", () => {
-    // The original job of this module, unaffected.
     const out = recoverArmorIfNeeded(collapse(ARMOR_WITH_HEADERS));
     expect(out).toContain("-----BEGIN PGP MESSAGE-----\n");
     expect(out).toContain("Version: Encryption Desktop 10.4.1");
@@ -382,12 +342,7 @@ describe("recoverArmorIfNeeded", () => {
   });
 });
 
-// ── Real-world regression: a Kleopatra-style export ──────────────────
-//
-// Two things about it broke the import, and they are independent:
-// CRLF line endings (which made intact armor look collapsed), and a
-// `Comment: Fingerprint: <40 hex>` header (whose value is 40 characters
-// of the base64 alphabet, so it read as the start of the data).
+// ── Kleopatra-style export: CRLF + `Comment: Fingerprint: <40 hex>` ──
 describe("Kleopatra-style armor", () => {
   const KLEOPATRA = [
     "-----BEGIN PGP PUBLIC KEY BLOCK-----",
@@ -411,8 +366,7 @@ describe("Kleopatra-style armor", () => {
 
   it("keeps the fingerprint header out of the data when collapsed", () => {
     const rebuilt = recoverArmorIfNeeded(collapse(KLEOPATRA));
-    // The payload is exactly the base64 that was there -- the 40-char
-    // fingerprint is not folded into its first line.
+    // The 40-char fingerprint is not folded into the payload.
     expect(rebuilt).toContain(`\n${LINE_A}\n${LINE_B}\nCCCC\n=AbCd`);
     expect(rebuilt).toContain(
       "Fingerprint: 07DF8027AAFCFA3A349E96CB1AC6ADD598DFB505",
@@ -438,7 +392,6 @@ describe("reconstructCleartextSigned", () => {
   it("restores a one-line message exactly, header and signature included", () => {
     const signed = signedMessage(["Hash: SHA512"], "Hi this is a msg");
     expect(reconstructCleartextSigned(collapse(signed))).toBe(signed);
-    // ...and the context-menu path takes it.
     expect(recoverArmorIfNeeded(collapse(signed))).toBe(signed);
   });
 
@@ -475,9 +428,7 @@ describe("reconstructCleartextSigned", () => {
 });
 
 describe("recoverArmorIfNeeded stays fast on hostile input", () => {
-  // A context-menu selection is page-controlled and has no newlines. The
-  // collapsed-cleartext matcher used to be a backtracking regex that took
-  // minutes on ~100 KB of repeated markers, freezing the worker.
+  // Page-controlled, newline-free input must not backtrack (worker DoS).
   const SIGNED = "-----BEGIN PGP SIGNED MESSAGE-----";
   const SIG = "-----BEGIN PGP SIGNATURE-----";
   const shapes = {

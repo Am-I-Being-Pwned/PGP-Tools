@@ -1,7 +1,4 @@
-/**
- * TEST-ONLY action context, shared by the registry and definitions
- * suites. Imported exclusively from `*.test.ts`.
- */
+/** TEST-ONLY. Imported exclusively from `*.test.ts`. */
 
 import type { ActionCtx } from "./types";
 

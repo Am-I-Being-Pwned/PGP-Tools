@@ -1,31 +1,18 @@
 import { t } from "../lib/i18n";
 import { toast } from "../lib/toast";
 
-/** Options for {@link copyToClipboard}. */
 export interface CopyOptions {
-  /** Success toast reads "<label> copied". Omit when the caller renders
-   *  its own success feedback (inline check icon etc.) -- failures
-   *  always toast. */
+  /** Success toast "<label> copied"; omit if the caller shows its own. */
   label?: string;
-  /** Sensitive material (private keys, revocation certificates): the
-   *  toast says it stays on the clipboard and in any clipboard history.
-   *  Nothing is wiped -- see T-CLIPBOARD-EXFIL for why that is said
-   *  rather than attempted. */
+  /** Toast says it stays on the clipboard/history; nothing is wiped
+   *  (T-CLIPBOARD-EXFIL). */
   sensitive?: boolean;
 }
 
-/** One toast slot for all clipboard feedback: rapid successive copies
- *  update in place instead of stacking. */
+/** One toast slot so rapid copies update in place. */
 const COPY_TOAST_ID = "clipboard-copy";
 
-/**
- * Shared clipboard write with uniform feedback: dedups the success
- * toast, says where sensitive material now lives (the clipboard and any
- * clipboard history), and surfaces the panel-not-focused rejection as a
- * visible error toast instead of swallowing it. Returns
- * whether the write landed, so callers with their own success UI (2s
- * check icons) can key off it.
- */
+/** Clipboard write with uniform feedback. Returns whether it landed. */
 export async function copyToClipboard(
   text: string,
   options: CopyOptions = {},
@@ -33,8 +20,7 @@ export async function copyToClipboard(
   try {
     await navigator.clipboard.writeText(text);
   } catch {
-    // Clipboard writes reject when the side panel isn't the focused
-    // document (Chrome gates the API on focus). Surfaced, not swallowed.
+    // Rejects when the side panel isn't focused; surfaced, not swallowed.
     toast.error(t("app_copy_failed"), { id: COPY_TOAST_ID });
     return false;
   }
@@ -50,11 +36,7 @@ export async function copyToClipboard(
 
 const api = { copy: copyToClipboard };
 
-/**
- * Hook form of {@link copyToClipboard} for components:
- * `const { copy } = useCopyToClipboard()`. The returned object is
- * stable across renders, so `copy` is safe in effect deps.
- */
+/** Hook form of {@link copyToClipboard}; `copy` is stable. */
 export function useCopyToClipboard(): { copy: typeof copyToClipboard } {
   return api;
 }

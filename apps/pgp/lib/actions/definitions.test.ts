@@ -11,8 +11,6 @@ function byId(ctx: ActionCtx, id: string) {
 }
 
 describe("action ids", () => {
-  // Ids are stable identities (see PgpAction.id): this test guards
-  // against accidental duplicates.
   it("are unique", () => {
     const ids = ACTIONS.map((a) => a.id);
     expect(new Set(ids).size).toBe(ids.length);
@@ -61,13 +59,8 @@ describe("workspace.run", () => {
   });
 
   it("runs a password-only encrypt, with no recipients at all", () => {
-    // REGRESSION. `canEncrypt` was `hasRecipients`, and symmetric
-    // encryption added a second way to satisfy the gate without this
-    // context field learning about it. The BUTTON was updated and this
-    // was not, so the palette and the mod+Enter shortcut refused a
-    // message the button beside them would happily encrypt -- reported
-    // from the running app, as a toast reading "Run Encrypt is disabled:
-    // Select at least one recipient" over an armed Password badge.
+    // A password-only encrypt must be runnable from the palette/shortcut,
+    // matching the button.
     const action = byId(
       fakeCtx({ mode: "encrypt", hasInput: true, canEncrypt: true }),
       "workspace.run",
@@ -184,9 +177,6 @@ describe("preference toggles", () => {
   });
 
   it("sign toggle explains the FORMAT before the key count for age", () => {
-    // With SSH recipients selected there is no key of any kind that
-    // would make the message signable, so "add one of your own keys
-    // first" would send the user off to do something pointless.
     const age = { encryptEngine: "ssh" as const };
     expect(byId(fakeCtx(age), "workspace.toggle-sign")?.disabledReason).toBe(
       "age messages can't be signed",
@@ -197,8 +187,7 @@ describe("preference toggles", () => {
         "workspace.toggle-sign",
       )?.disabledReason,
     ).toBe("age messages can't be signed");
-    // Encrypt-to-self is untouched: the user's own SSH key CAN ride
-    // along on an age message.
+    // The user's own SSH key CAN ride along on an age message.
     expect(
       byId(
         fakeCtx({ ...age, counts: { ownKeys: 1, contacts: 0 } }),
@@ -284,9 +273,7 @@ describe("mode shortcuts", () => {
     }
   });
 
-  // Drift guard: the mode dropdown renders its Kbd hints from
-  // MODE_SHORTCUTS, while keydown dispatch goes through each action's
-  // `shortcut`. Both must stay the same object per mode.
+  // Drift guard: dropdown hints and dispatch must share one spec object.
   it("MODE_SHORTCUTS matches the registry's mode actions", () => {
     for (const mode of ["encrypt", "decrypt", "sign", "verify"] as const) {
       const action = ACTIONS.find((a) => a.id === `mode.${mode}`);
@@ -351,22 +338,10 @@ describe("shortcut dispatch through the registry", () => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────
-// Wiring.
-//
-// Every action's `execute` is a one-liner delegating to a nav or op
-// callback, which is exactly why it is worth asserting: a copy-paste
-// slip wires "Download output" to `copyOutput`, and nothing about that
-// looks wrong on the page. The palette is also the only route to some
-// of these, so a mis-wire has no second path that would surface it.
-//
-// One table, one call each: the invariant is "this id fires that
-// callback and nothing else".
-// ─────────────────────────────────────────────────────────────────────
+// Wiring: each id fires exactly its callback and nothing else (a
+// copy-paste mis-wire looks fine on the page).
 
 describe("action wiring", () => {
-  /** A ctx whose every callback is a spy, so we can assert that exactly
-   *  one fires. */
   function spyCtx() {
     const navigation = {
       setTab: vi.fn(),
@@ -460,8 +435,6 @@ describe("action wiring", () => {
     expect(target[method]).toHaveBeenCalledTimes(1);
     if (arg !== undefined) expect(target[method]).toHaveBeenCalledWith(arg);
 
-    // Nothing else fired: this is what catches a mis-wire that happens to
-    // land on a plausible-looking neighbour.
     const others = [
       ...Object.entries(navigation),
       ...Object.entries(ops),
@@ -470,8 +443,6 @@ describe("action wiring", () => {
   });
 
   it("covers every action in the registry", () => {
-    // A new action added without a wiring test would otherwise slip
-    // through this file entirely.
     const wired = new Set([
       "workspace.run",
       "workspace.copy-output",

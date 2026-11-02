@@ -1,15 +1,8 @@
 /**
- * A key's face: a 16×16 pixel person drawn from its fingerprint.
- *
- * Each byte of the fingerprint picks one trait (backdrop, skin, hair
- * style and colour, eyes, mouth, facial hair, accessory, shirt), so the
- * same key always draws the same person and a swapped key looks like a
- * different one. It is a recognition aid only: a few million faces are
- * far too few to stand in for comparing the fingerprint itself, and the
- * UI must never present them as a check.
- *
- * Pure and synchronous so it can run during render; no network, no
- * secrets (fingerprints are public).
+ * A 16×16 pixel person drawn from a fingerprint (one byte per trait).
+ * Recognition aid ONLY: a few million faces can't replace comparing the
+ * fingerprint, and the UI must never present them as a check.
+ * Pure and synchronous so it can run during render.
  */
 
 export const AVATAR_SIZE = 16;
@@ -47,12 +40,7 @@ const EYE = ["#2b1d14", "#3b6fb6", "#3f8a55", "#8a6a2a", "#6b6b6b"];
 
 const ok = (l: number, c: number, h: number) => `oklch(${l} ${c} ${h})`;
 
-/**
- * The bytes a fingerprint stands for. OpenPGP fingerprints are hex; SSH
- * (age) recipients use OpenSSH's `SHA256:<base64>`. Anything else (or
- * too short to fill every trait) is stretched deterministically, so the
- * function is total.
- */
+/** Hex or `SHA256:<base64>`; anything else is stretched deterministically. */
 export function fingerprintBytes(fingerprint: string): number[] {
   const raw = fingerprint.trim();
   let bytes: number[] = [];
@@ -69,7 +57,6 @@ export function fingerprintBytes(fingerprint: string): number[] {
     }
   }
   if (bytes.length >= 14) return bytes;
-  // FNV-1a over the string, re-seeded per byte: total and stable.
   const out: number[] = [];
   for (let i = 0; i < 20; i++) {
     let h = 0x811c9dc5 ^ i;
@@ -82,18 +69,13 @@ export function fingerprintBytes(fingerprint: string): number[] {
   return out;
 }
 
-/**
- * Whether `id` is a whole fingerprint the face can be drawn from. A bare
- * 64-bit key id (what a signature names when we don't hold the key) is
- * not: a face hashed from it would not match the face the same key gets
- * once imported, and would look just as confident. Those get no face.
- */
+/** A bare 64-bit key id gets no face: it wouldn't match the face the same
+ *  key gets once imported, yet would look just as confident. */
 export function hasKeyFace(id: string): boolean {
   const raw = id.trim();
   if (raw.startsWith("SHA256:")) return raw.length > 7;
   const hex = raw.replace(/[\s:]/g, "");
   if (/^[0-9a-fA-F]+$/.test(hex)) return hex.length >= 40;
-  // Anything else that names a key whole (a CRX extension id) is stable.
   return raw.length >= 32;
 }
 

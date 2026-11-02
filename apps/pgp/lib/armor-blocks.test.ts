@@ -73,12 +73,8 @@ describe("splitArmoredKeyBlocks", () => {
 });
 
 // ── age / SSH ────────────────────────────────────────────────────────
-//
-// Throwaway public keys, structurally real but generated for this file:
-// `ssh-<type> AAAA<base64>[ comment]`. The `AAAA` prefix is not
-// decoration -- every SSH wire blob starts with a 4-byte big-endian
-// length, so the splitter requires it, and these fixtures must carry it
-// to exercise the same path a real key takes.
+// Generated throwaway keys; they carry the `AAAA` prefix the splitter
+// requires.
 
 const ED25519_PUB =
   "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIALwHu/03Nd9eyyrPgxjkFu80Fe1EgN06J8iaY8B+wf6 alice@example.com";
@@ -101,8 +97,7 @@ describe("splitSshPublicKeyLines", () => {
   });
 
   it("keeps the comment, which is the key's only name", () => {
-    // `sshUserIds` reads the comment off the parsed line for the display
-    // name; dropping it here would leave an SSH contact anonymous.
+    // The comment is the SSH contact's display name.
     expect(splitSshPublicKeyLines(ED25519_PUB)[0]).toMatch(
       /alice@example\.com$/,
     );
@@ -125,16 +120,13 @@ describe("splitSshPublicKeyLines", () => {
   });
 
   it("does not fire on unsupported key types", () => {
-    // age handles ssh-ed25519 and ssh-rsa only. An ssh-dss line must not
-    // be silently swallowed as a recipient the engine would then refuse.
+    // ssh-dss must not be swallowed by the narrow (supported-only) matcher.
     expect(
       splitSshPublicKeyLines("ssh-dss AAAAB3NzaC1kc3MAAACBAO body@host"),
     ).toEqual([]);
   });
 
   it("does not match inside an armored body", () => {
-    // Base64 armor lines carry no spaces, so no line inside a block can
-    // look like `<type> <base64>`.
     expect(
       splitSshPublicKeyLines(sshPrivateBlock("b3BlbnNzaC1rZXktdjEA")),
     ).toEqual([]);
@@ -164,7 +156,6 @@ describe("splitSshPrivateKeyBlocks / splitAgeBlocks", () => {
 describe("looksLikeAgeMessage", () => {
   it("recognises both the armored and the binary form", () => {
     expect(looksLikeAgeMessage(ageBlock("x"))).toBe(true);
-    // Binary age files open with the version line in plain ASCII.
     expect(looksLikeAgeMessage("age-encryption.org/v1\n-> X25519 abc")).toBe(
       true,
     );
@@ -176,12 +167,7 @@ describe("looksLikeAgeMessage", () => {
   });
 });
 
-/**
- * Recognition, deliberately not acceptance: `gpg-wasm/src/age.rs` has an
- * actionable message for each of these formats ("export it with
- * PuTTYgen", "convert it with `ssh-keygen -p -f`"), and none of them
- * could ever be shown while nothing recognised the format as SSH's.
- */
+/** Recognised (not accepted) so the engine's conversion hint is shown. */
 describe("looksLikeForeignSshPrivateKey", () => {
   it.each([
     ["a PuTTY .ppk", "PuTTY-User-Key-File-3: ssh-ed25519\nEncryption: none\n"],
@@ -203,7 +189,7 @@ describe("looksLikeForeignSshPrivateKey", () => {
   });
 
   it.each([
-    // A CRX signing key, and the age engine must not steal it.
+    // PKCS#1 is a CRX signing key; the age engine must not take it.
     [
       "an unencrypted PKCS#1 PEM",
       "-----BEGIN RSA PRIVATE KEY-----\nMIIEow==\n",
@@ -219,11 +205,8 @@ describe("looksLikeForeignSshPrivateKey", () => {
 });
 
 describe("splitSshPublicKeyCandidateLines", () => {
-  // The wide form, for the GitHub path: it forwards a line the engine
-  // will refuse, so the user gets "ECDSA keys are not supported" rather
-  // than "this account has published no keys". See the doc comment on
-  // SSH_PUBLIC_CANDIDATE_LINE -- the narrow matcher above is what caused
-  // that, twice.
+  // Wide form: forwards unsupported types so the engine's refusal is shown
+  // (see SSH_PUBLIC_CANDIDATE_LINE).
   it.each([
     ["ecdsa", "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAA"],
     ["fido", "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9w"],
@@ -249,17 +232,8 @@ describe("splitSshPublicKeyCandidateLines", () => {
   });
 
   it("does not match a real armored body", () => {
-    // Same reason as the narrow matcher: armor lines carry no spaces, so
-    // none of them can look like `<type> <base64>`, and armor HEADER
-    // lines (`Version:`, `Comment:`, `Proc-Type:`) carry a colon the
-    // algorithm token cannot contain.
-    //
-    // This form IS now applied to pasted and dropped text, not only to a
-    // GitHub `key` field -- `import/prepare.ts`, `classify-action.ts`
-    // and `drop-routing.ts` all use it, so this test guards a real path
-    // rather than a hypothetical one. That is exactly why the exclusions
-    // below matter: a paste is arbitrary user text, and mistaking part
-    // of an armored block for a key line would hand the engine garbage.
+    // Used on pasted/dropped text: armor body lines have no spaces and
+    // header lines carry a colon, so neither can match.
     expect(splitSshPublicKeyCandidateLines(publicBlock("mQINBGabc"))).toEqual(
       [],
     );

@@ -1,14 +1,8 @@
 import { useEffect, useState } from "react";
 
-/** Default hold-off before a loading label may appear. Operations that
- *  finish faster than this never flash a loading state at all. */
 export const DEFAULT_DELAY_MS = 150;
 
-/** Framework-free core of {@link useDelayedFlag}: reports `true` via
- *  `onChange` only after `update(true)` has been in effect for
- *  `delayMs` without an intervening `update(false)`; reports `false`
- *  immediately on deactivation. Extracted so the timing semantics are
- *  unit-testable without a React renderer. */
+/** Framework-free core of {@link useDelayedFlag}, for unit tests. */
 export function createDelayedFlag(
   delayMs: number,
   onChange: (value: boolean) => void,
@@ -43,12 +37,8 @@ export function createDelayedFlag(
 }
 
 /**
- * Deferred loading flag: returns `false` immediately whenever `active`
- * is false, and flips to `true` only once `active` has been
- * continuously true for `delayMs`. Use it for loading LABELS so
- * sub-{@link DEFAULT_DELAY_MS} operations never flicker a spinner or
- * "Processing..." text (the control itself should still disable
- * immediately off the raw flag).
+ * True only once `active` has held for `delayMs`; false immediately. For
+ * loading LABELS only -- controls should still disable off the raw flag.
  */
 export function useDelayedFlag(
   active: boolean,
@@ -62,7 +52,6 @@ export function useDelayedFlag(
     return () => flag.dispose();
   }, [active, delayMs]);
 
-  // `active && shown` (not just `shown`) so deactivation reads false in
-  // the very same render, before the effect has re-run.
+  // `active &&` so deactivation reads false in the same render.
   return active && shown;
 }
