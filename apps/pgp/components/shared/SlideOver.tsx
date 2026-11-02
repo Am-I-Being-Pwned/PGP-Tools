@@ -9,25 +9,15 @@ import { t } from "../../lib/i18n";
 /** Must match the `duration-300` class on the panel. */
 export const SLIDE_MS = 300;
 
-// Slide-overs can stack (e.g. a delete confirmation on top of the key
-// details page). Escape must only close the topmost one, so each open
-// panel registers here and checks it is on top before reacting.
+// Slide-overs stack; Escape closes only the topmost.
 const openStack: symbol[] = [];
 
-/** True while any slide-over is open. Global shortcuts (useShortcut)
- *  check this so workspace-level bindings don't fire underneath a
- *  subpage. */
+/** Global shortcuts check this so they don't fire underneath a subpage. */
 export function hasOpenSlideOver(): boolean {
   return openStack.length > 0;
 }
 
-/**
- * Mount/unmount choreography for a right-to-left slide-over subpage.
- * `entered` drives the transform class; `close` slides out, then calls
- * `onClosed` (where the parent unmounts the panel). Escape closes the
- * topmost open slide-over only; `isTop` lets the panel gate its own
- * shortcuts the same way.
- */
+/** `close` slides out, then calls `onClosed` (where the parent unmounts). */
 export function useSlideOver(onClosed: () => void) {
   const [entered, setEntered] = useState(false);
   const id = useRef(Symbol("slide-over"));
@@ -69,23 +59,9 @@ export function useSlideOver(onClosed: () => void) {
   return { entered, close, isTop };
 }
 
-// ── focus management ─────────────────────────────────────────────────
-//
-// Each open panel traps Tab focus within itself while it is the topmost
-// slide-over (focus-trap's shared trap stack auto-pauses a parent panel
-// when a child activates, and unpauses it when the child deactivates).
-// Two things outside the panel are allowed to own focus while a trap is
-// nominally active, and pause it:
-//
-// - Radix portalled content (Select/Popover/DropdownMenu render into a
-//   `[data-radix-popper-content-wrapper]` under <body>, outside every
-//   panel). A body MutationObserver pauses the top trap while any such
-//   wrapper exists, so Radix's own focus handling wins.
-// - The command palette, via {@link holdFocusTraps} -- it must pause the
-//   trap BEFORE its input mounts, or the trap would yank the autofocus.
+// The topmost panel traps focus, paused while Radix portal content (under
+// <body>) or the command palette ({@link holdFocusTraps}) owns it.
 
-/** Radix popper-positioned portal content lives in these wrappers,
- *  directly under <body>. */
 const RADIX_POPPER_SELECTOR = "[data-radix-popper-content-wrapper]";
 
 const activeTraps: FocusTrap[] = [];
@@ -98,8 +74,7 @@ function shouldPauseTraps(): boolean {
   );
 }
 
-/** Pause or resume the topmost trap only: traps under it are already
- *  paused by focus-trap's own stack and must stay that way. */
+/** Topmost trap only: focus-trap's stack keeps the ones below paused. */
 function syncTopTrap(): void {
   const top = activeTraps.at(-1);
   if (!top) return;
@@ -107,13 +82,8 @@ function syncTopTrap(): void {
   else top.unpause();
 }
 
-/**
- * Suspend slide-over focus traps while an overlay outside the panel
- * (the command palette) owns the keyboard. Call BEFORE mounting the
- * overlay so its autofocus isn't yanked back into the trap; call the
- * returned release exactly once when the overlay closes (extra calls
- * are no-ops). Safe to call when no slide-over is open.
- */
+/** Suspend focus traps for an outside overlay. Call BEFORE mounting it,
+ *  or the trap yanks its autofocus back. */
 export function holdFocusTraps(): () => void {
   trapHolds++;
   syncTopTrap();
@@ -127,11 +97,8 @@ export function holdFocusTraps(): () => void {
 }
 
 function registerTrap(trap: FocusTrap): void {
-  // Activation pushes onto the shared `activeTraps` stack (the trap's
-  // `trapStack` option) and auto-pauses the panel below, if any.
   trap.activate();
   if (shouldPauseTraps()) trap.pause();
-  // Popper wrappers are added/removed as direct children of <body>.
   popperObserver ??= new MutationObserver(syncTopTrap);
   if (activeTraps.length === 1) {
     popperObserver.observe(document.body, { childList: true });
@@ -139,8 +106,6 @@ function registerTrap(trap: FocusTrap): void {
 }
 
 function unregisterTrap(trap: FocusTrap): void {
-  // Deactivation pops the shared stack, returns focus (per
-  // setReturnFocus), and unpauses the parent panel's trap if one exists.
   trap.deactivate();
   if (activeTraps.length === 0) popperObserver?.disconnect();
 }
@@ -153,8 +118,7 @@ export function SlideOverPanel({
 }: {
   entered: boolean;
   ariaLabel: string;
-  /** Called when the dimmed backdrop (the strip left of the panel) is
-   *  clicked. Pass the hook's `close` so it slides out like Back does. */
+  /** Backdrop click. Pass the hook's `close` so it slides out. */
   onDismiss?: () => void;
   children: React.ReactNode;
 }) {
@@ -163,36 +127,16 @@ export function SlideOverPanel({
   useEffect(() => {
     const panel = panelRef.current;
     if (!panel) return;
-    // The trap lives only while the panel is fully open: creating it on
-    // `entered` (rather than mount) and tearing it down the moment
-    // `entered` flips false means a CLOSING panel stops enforcing focus
-    // immediately -- previously the trap survived the 300ms slide-out
-    // and yanked focus away from anything the user clicked into right
-    // after closing (e.g. a password field on the page below).
+    // Trap only while fully open, so a CLOSING panel never yanks focus
+    // from whatever the user clicked into below.
     if (!entered) return;
     const trap = createFocusTrap(panel, {
-      // The openStack keydown handler in useSlideOver owns Escape.
+      // useSlideOver's openStack handler owns Escape.
       escapeDeactivates: false,
-      // Clicks on portalled content (popovers, toasts) must keep working.
       allowOutsideClick: true,
-      // Initial focus, in order: whatever inside the panel is ALREADY
-      // focused, then a marked autofocus element, then the first
-      // tabbable, then the panel itself.
-      //
-      // THE FIRST CLAUSE IS THE ONE THAT MATTERS, and it is not
-      // belt-and-braces. React does not render `autoFocus` as an
-      // ATTRIBUTE -- it calls `.focus()` on mount instead -- so
-      // `[autofocus]` matches nothing in this app and every page that
-      // marked a field with it was falling through to `tabbable().at(0)`,
-      // which is the header's Back button. The symptom is nasty and easy
-      // to miss: the field IS focused on mount, so typing starts fine,
-      // and focus is yanked to Back a few hundred milliseconds later when
-      // the trap activates -- mid-word, with the rest of the keystrokes
-      // going nowhere. Found on the message-password dialog; it was also
-      // affecting Rename, Export, the history search and Import-all.
-      //
-      // Reading the live focus keeps React's own autofocus working
-      // without asking every page to switch to a non-standard marker.
+      // Live focus first: React's autoFocus calls .focus() and renders no
+      // [autofocus] attribute, so without this the trap steals focus to
+      // Back mid-typing.
       initialFocus: () => {
         const active = document.activeElement;
         if (active instanceof HTMLElement && panel.contains(active)) {
@@ -205,13 +149,8 @@ export function SlideOverPanel({
         );
       },
       fallbackFocus: panel,
-      // Return-focus guards. Deactivation runs AFTER the slide-out
-      // animation, so the user may have already focused something else
-      // (e.g. closed an import page and clicked straight into a key's
-      // password field) -- yanking focus back to the trigger then would
-      // hijack their typing. Only return focus when it is still inside
-      // the closing panel or parked on <body>; and only to a previous
-      // element that still exists outside this panel.
+      // Don't return focus if the user has already moved on: it would
+      // hijack their typing.
       setReturnFocus: (previous) => {
         const active = document.activeElement;
         const userMovedOn =
@@ -223,38 +162,18 @@ export function SlideOverPanel({
           ? previous
           : false;
       },
-      // All panels share one stack so nested slide-overs pause their
-      // parent's trap while open (only the topmost trap is ever live).
       trapStack: activeTraps,
     });
     registerTrap(trap);
     return () => unregisterTrap(trap);
   }, [entered]);
 
-  // Layout: a full-viewport layer holding a dimmed backdrop and the
-  // panel, which covers the right three quarters. The exposed quarter
-  // shows what's underneath, so opening a subpage reads as "over" the
-  // current view rather than replacing it, and a click there dismisses.
-  //
-  // Stacking: each nested panel mounts its own layer as a later sibling,
-  // so it sits above its parent. Its panel is the same width (hiding the
-  // parent's panel entirely, so the user never sees two headers), while
-  // its backdrop lands on top of the parent's, darkening the exposed
-  // strip a step further per level -- the depth cue. A backdrop click or
-  // Escape peels off only the topmost layer.
-  //
-  // Edge: in dark mode the page is near-black, so a 40% dim alone leaves
-  // the panel's left edge invisible. The panel floats, so it gets the
-  // floating treatment -- a faint hairline ring plus a real drop shadow
-  // (shadow-xl) -- instead of a drawn border, while its body stays on
-  // the page background so the card stacks inside keep their contrast.
+  // Nested panels stack as later siblings at the same width; each
+  // backdrop darkens the exposed strip a step further (the depth cue).
   return (
     <div className="pointer-events-none fixed inset-0 z-50">
-      {/* The layer is click-through; only the panel and the ENTERED
-          backdrop take pointer events. The layer stays mounted for the
-          300ms slide-out, and an invisible full-viewport element that
-          still swallowed clicks would dead-zone the whole view (and
-          re-fire onDismiss) right after every close. */}
+      {/* Click-through layer: it stays mounted for the slide-out, and an
+          invisible click-swallower would dead-zone the view after close. */}
       <div
         aria-hidden="true"
         onClick={onDismiss}
@@ -280,19 +199,13 @@ export function SlideOverHeader({
   children,
 }: {
   title: string;
-  /** Keep the title for screen readers but not on screen -- for a header
-   *  whose actions need the room (key details). */
+  /** Screen-reader-only title, for headers whose actions need the room. */
   hideTitle?: boolean;
   onBack: () => void;
-  /** Optional action buttons, rendered right-aligned. */
   children?: React.ReactNode;
 }) {
   return (
-    // The same quiet chrome strip as the tab bar: a ghost Back (chevron
-    // plus its label) and the page title. The panel is only 3/4 of the
-    // side panel wide, so a header that also carries actions (key
-    // details has up to six) drops Back to its chevron to leave the
-    // title room; the accessible name is "Back" either way.
+    // With actions, Back drops to its chevron to leave the title room.
     <div className="bg-chrome flex min-h-[46px] items-center gap-1.5 border-b border-white/[0.06] py-2 pr-2.5 pl-2">
       <button
         type="button"

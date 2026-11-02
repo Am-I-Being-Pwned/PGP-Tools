@@ -51,29 +51,22 @@ interface ParsedPrivate {
 }
 
 interface ImportAllKeysPageProps {
-  /** Called after the slide-out finishes (parent unmounts the page). */
   onClose: () => void;
   myKeys: ProtectedKeyBlob[];
   contacts: PublicContactKey[];
   onAddKey: (blob: ProtectedKeyBlob) => Promise<void>;
-  /** Save a contact the user has reviewed (see `lib/import/review`). */
   onAddContact: (contact: ReviewedContact) => Promise<void>;
-  /** Remove a contact -- the old one, when a key replaces it. */
   onRemoveContact: (keyId: string) => Promise<void>;
-  /** Restore CRX signing keys found in the backup (self-protected blobs). */
   onAddCrxKey?: (blob: CrxSigningKeyBlob) => Promise<void>;
-  /** Currently stored CRX keys, for skip-if-present dedupe (mirrors the
-   *  PGP path's keyId dedupe — an import must never overwrite a live key). */
+  /** For skip-if-present: an import must never overwrite a live key. */
   crxKeys?: CrxSigningKeyBlob[];
-  /** Pass the primary key's passkey credential ID to allow reuse. */
   reusePasskeyCredentialId?: string;
-  /** With reuse, run the one ceremony under the master's PRF salt so the
+  /** With reuse, the one ceremony runs under the master's PRF salt so the
    *  vault ceremony opens every imported key. */
   masterSealSalt?: ArrayBuffer;
 }
 
-/** A backup's private key as a Review row: who it says it is and its
- *  key id, nothing secret (the armor stays in `parsedPrivates`). */
+/** Review row: nothing secret (the armor stays in `parsedPrivates`). */
 function privateRow(key: ParsedPrivate): IncomingKey {
   return {
     keyId: key.keyInfo.keyId,
@@ -87,7 +80,6 @@ function privateRow(key: ParsedPrivate): IncomingKey {
   };
 }
 
-/** A backup's CRX signing key as a Review row, by its extension id. */
 function crxRow(blob: CrxSigningKeyBlob): IncomingKey {
   return {
     keyId: blob.extensionId,
@@ -102,14 +94,10 @@ function crxRow(blob: CrxSigningKeyBlob): IncomingKey {
 }
 
 /**
- * Bulk import subpage: accepts a pasted/browsed dump with any mix of
- * armored private and public keys (e.g. a file from "Export all keys").
- * Private keys share one source passphrase (the export wrote them under
- * a single passphrase) and are re-protected under one chosen method --
- * for passkeys, a single WebAuthn ceremony covers every key via PRF
- * reuse. Public keys become contacts. Every key, of every kind, is
- * listed on the Review before a passphrase is asked for or anything is
- * saved.
+ * Bulk import of an "Export all keys" dump. Private keys share one source
+ * passphrase and one protection method (one WebAuthn ceremony via PRF
+ * reuse). Every key is listed on the Review before anything is asked for
+ * or saved.
  */
 export function ImportAllKeysPage({
   onClose,
@@ -144,21 +132,16 @@ export function ImportAllKeysPage({
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Every key in the backup, on the Review step, before anything is
-  // saved: a backup file can come from anyone, so its contacts AND its
-  // private and CRX keys are listed first -- with "Import all" one click
-  // away for the user's own backup. The private keys chosen there go on
-  // to the unlock / protect steps; the contacts and CRX keys chosen are
-  // written at the very end, with them.
+  // A backup can come from anyone, so every key is reviewed first;
+  // contacts and CRX keys are written at the very end.
   const [reviewKeys, setReviewKeys] = useState<IncomingKey[] | null>(null);
   const [publicKeys, setPublicKeys] = useState<IncomingKey[]>([]);
   const [decisions, setDecisions] = useState<
     ReadonlyMap<string, ReviewDecision>
   >(new Map());
 
-  /** Classify the backup's public keys against the keyring and contacts.
-   *  `privateIds` are the backup's own private keys: a public copy of
-   *  one is that key's public half, not a contact to add. */
+  /** `privateIds`: a public copy of the backup's own private key is its
+   *  public half, not a contact. */
   const classifyPublics = async (
     blocks: string[],
     privateIds: ReadonlySet<string>,
@@ -170,25 +153,18 @@ export function ImportAllKeysPage({
       const prepared = await prepareImport(block, stored);
       keys.push(...prepared.keys.filter((k) => isPublicKind(k.kind)));
     }
-    // Copies of one key in different blocks are one row (decisions are
-    // keyed by fingerprint), merged so every User ID is checked. Their
-    // conflicts are worked out again across the whole backup (see
-    // `withConflicts`): two blocks can claim one address.
+    // Merged so every User ID is checked; conflicts are recomputed across
+    // the whole backup in `withConflicts`.
     return (await mergeSameKey(keys, stored))
       .filter((k) => !privateIds.has(k.keyId.toUpperCase()))
       .map(({ conflict: _c, ...k }) => k);
   };
 
-  /** Every row of the Review checked against the keyring, the contacts
-   *  and each other: the contacts, and the private and CRX keys too --
-   *  saved, those are the user's own, and a private key named as one of
-   *  their contacts went in silently. A row that clashes starts on Skip
-   *  and says why, like a contact's. */
+  /** Private and CRX rows are checked too: a private key named as a
+   *  contact would otherwise go in silently. */
   const withConflicts = (rows: IncomingKey[]) =>
     withIdentityConflicts(rows, storedKeysFrom(myKeys, contacts));
 
-  /** Say why any refused contacts were refused, when no Review lists
-   *  them (often a backup's expired rotations, beside the live key). */
   const toastRejected = (checked: IncomingKey[]) => {
     const rejected = checked.filter((k) => k.status === "rejected");
     if (rejected.length > 0)
@@ -202,8 +178,7 @@ export function ImportAllKeysPage({
       );
   };
 
-  /** Save the contacts chosen on the Review. Called last, after any
-   *  private keys have been protected and saved. */
+  /** Called last, after any private keys are saved. */
   const commitPublics = async (
     keys: IncomingKey[],
     chosen: ReadonlyMap<string, ReviewDecision>,
@@ -217,8 +192,7 @@ export function ImportAllKeysPage({
       chosen,
       { contacts, add: onAddContact, remove: onRemoveContact },
     );
-    // Stable ids: re-running the import with the same backup must update
-    // the previous toasts, not stack duplicates.
+    // Stable ids so a re-run updates the toasts instead of stacking.
     if (added > 0)
       toast.success(tn("settings_import_contacts_added", added), {
         id: "contacts-added",
@@ -237,8 +211,7 @@ export function ImportAllKeysPage({
       });
   };
 
-  /** The Review's answer: what to keep of each kind. A row with no entry
-   *  takes its default, as `applyReview` reads it. */
+  /** A row with no entry takes its default, as `applyReview` reads it. */
   const isChosen = (
     chosen: ReadonlyMap<string, ReviewDecision>,
     key: IncomingKey,
@@ -259,7 +232,6 @@ export function ImportAllKeysPage({
     const crx = parsedCrx.filter((b) => chosenIds.has(b.extensionId));
     setDecisions(chosen);
     if (privates.length > 0) {
-      // On to the passphrase steps; the rest is written after them.
       setParsedPrivates(privates);
       setParsedCrx(crx);
       setStep(privates.some((p) => p.secretEncrypted) ? "unlock" : "protect");
@@ -276,9 +248,7 @@ export function ImportAllKeysPage({
     });
   };
 
-  /** Commit the parsed CRX blobs (already identity-checked and deduped at
-   *  the paste step). Runs at the same point PGP keys are written — never
-   *  before the user has passed the whole flow. */
+  /** Never before the user has passed the whole flow. */
   const importCrxBlobs = async (blobs: CrxSigningKeyBlob[]) => {
     if (blobs.length === 0 || !onAddCrxKey) return;
     let added = 0;
@@ -321,11 +291,8 @@ export function ImportAllKeysPage({
       return;
     }
 
-    // Vet CRX blocks now, write them only at the end of the flow:
-    // - a blob whose public key doesn't hash to its extension id is
-    //   forged/corrupt (the field isn't AEAD-covered) -> reject;
-    // - an extension id we already hold is skipped, never overwritten
-    //   (an old backup must not clobber the live signing key).
+    // Vet CRX now, write at the end: reject a public key that doesn't hash
+    // to its extension id (not AEAD-covered); never overwrite a held id.
     const existingCrx = new Set((crxKeys ?? []).map((k) => k.extensionId));
     const crxBlobs: CrxSigningKeyBlob[] = [];
     let skippedCrx = 0;
@@ -393,7 +360,6 @@ export function ImportAllKeysPage({
     setPublicKeys(publics);
 
     if (secretRows.length === 0 && !publics.some(needsDecision)) {
-      // Nothing to decide: finish now.
       if (skipped > 0)
         toast.info(tn("settings_import_private_skipped", skipped), {
           id: "private-keys-skipped",
@@ -427,8 +393,7 @@ export function ImportAllKeysPage({
     close: () => void,
     holdPrf: (prfOutput: Uint8Array) => void,
   ) => {
-    // One WebAuthn ceremony for the whole batch: its PRF output feeds
-    // every importAndProtect below.
+    // One WebAuthn ceremony for the whole batch.
     let passkeyReuse:
       | { credentialId: string; prfOutput: Uint8Array; prfSalt: ArrayBuffer }
       | undefined;
@@ -477,8 +442,7 @@ export function ImportAllKeysPage({
         await onAddKey(blob);
         imported++;
       } catch (e) {
-        // A wrong source passphrase fails every encrypted key the same
-        // way -- stop at the first failure instead of piling up errors.
+        // A wrong passphrase fails every key alike: stop at the first.
         if (imported > 0)
           toast.success(tn("settings_import_private_imported", imported), {
             id: "private-keys-imported",
@@ -509,8 +473,7 @@ export function ImportAllKeysPage({
 
   const encryptedCount = parsedPrivates.filter((p) => p.secretEncrypted).length;
 
-  // Footer per step; the protect step's buttons live inside
-  // ProtectionMethodPicker (it owns Back/submit).
+  // The protect step's buttons live in ProtectionMethodPicker.
   const actions: SubPageAction[] | undefined =
     step === "paste"
       ? [

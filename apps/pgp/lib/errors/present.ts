@@ -4,13 +4,11 @@ import { errorMessage } from "../utils/errors";
 import { AppError } from "./app-error";
 import { EngineError } from "./engine-error";
 
-/** What the UI can offer the user to fix the error. A union, not
- *  callbacks, so this module stays decoupled from React. */
+/** A union, not callbacks, so this module stays decoupled from React. */
 export type RemedyAction =
   "import-key" | "unlock" | "retry" | "check-recipient";
 
-/** Curated, user-facing rendering of a caught error. Raw error text only
- *  ever appears in `detail` (collapsed "technical details"). */
+/** Raw error text only ever appears in `detail`. */
 export interface PresentedError {
   message: string;
   detail?: string;
@@ -28,7 +26,6 @@ function isWebAuthnCancelName(e: unknown): boolean {
   );
 }
 
-/** A recipient key ID (8 or 16 hex chars, optional 0x) in raw text. */
 function extractKeyId(raw: string): string | null {
   const m = /\b(?:0x)?([0-9A-Fa-f]{16}|[0-9A-F]{8})\b/.exec(raw);
   return m ? m[1].toUpperCase() : null;
@@ -90,8 +87,7 @@ function fromAppError(e: AppError): PresentedError {
   }
 }
 
-/** Engine errors, by the code the engine tagged them with. The engine's
- *  text is only ever the detail. */
+/** The engine's text is only ever the detail. */
 function fromEngineError(e: EngineError): PresentedError {
   const raw = e.message.trim();
   switch (e.code) {
@@ -156,9 +152,8 @@ function fromEngineError(e: EngineError): PresentedError {
   }
 }
 
-/** Substring rules for text our engine does not code: Sequoia's / std's
- *  own Display strings, and the decrypt path's tamper refusal. Order
- *  matters: more specific first. */
+/** Substring rules for uncoded text (Sequoia/std Display strings, the
+ *  tamper refusal). Order matters: more specific first. */
 function fromForeignString(raw: string): PresentedError | null {
   const lower = raw.toLowerCase();
 
@@ -204,11 +199,7 @@ function fromForeignString(raw: string): PresentedError | null {
   return null;
 }
 
-/**
- * Turn any caught value into curated, user-facing copy. The raw error
- * text is preserved in `detail`, never shown as the message. Unknown
- * errors fall back to the caller's (already curated) `fallback`.
- */
+/** Curated copy for any caught value; raw text only in `detail`. */
 export function presentError(e: unknown, fallback: string): PresentedError {
   if (isWebAuthnCancelName(e)) {
     return {
@@ -220,7 +211,6 @@ export function presentError(e: unknown, fallback: string): PresentedError {
   if (e instanceof AppError) return fromAppError(e);
   if (e instanceof EngineError) return fromEngineError(e);
 
-  // Already curated, platform-specific copy.
   if (e instanceof Error && e.name === "PrfNotSupportedError") {
     return { message: e.message };
   }

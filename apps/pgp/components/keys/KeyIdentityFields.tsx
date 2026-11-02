@@ -25,7 +25,6 @@ export interface KeyIdentity {
 
 export const EMPTY_IDENTITY: KeyIdentity = { name: "", email: "", comment: "" };
 
-/** The User ID parts `generateAndProtect` takes; blanks are omitted. */
 export function identityUserId(identity: KeyIdentity) {
   return {
     name: identity.name.trim(),
@@ -34,8 +33,7 @@ export function identityUserId(identity: KeyIdentity) {
   };
 }
 
-/** A text field drawn as a block: label on top, bare input under it; the
- *  block carries the focus ring, inset so the stack's clip can't cut it. */
+/** Focus ring is inset so the stack's clip can't cut it. */
 export function FieldBlock({
   label,
   optional,
@@ -66,12 +64,9 @@ interface KeyIdentityFieldsProps {
   onAlgorithmChange: (algorithm: KeyAlgorithm) => void;
   expiry: ExpiryOption;
   onExpiryChange: (expiry: ExpiryOption) => void;
-  /** Offer "Custom date"; the caller owns the calendar step it needs. */
   allowCustomExpiry?: boolean;
 }
 
-/** Who a new key is for, plus the collapsed algorithm / expiry options.
- *  Shared by key generation and onboarding's first key. */
 export function KeyIdentityFields({
   identity,
   onIdentityChange,

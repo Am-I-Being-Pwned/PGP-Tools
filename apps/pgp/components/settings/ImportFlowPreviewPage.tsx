@@ -10,15 +10,8 @@ import { ContactCard } from "../keys/ContactCard";
 import { ImportPreviewPage } from "../keys/ImportPreviewPage";
 import { SubPage } from "../shared/SubPage";
 
-/**
- * DEV-ONLY harness for the key-import flow: every state of the preview
- * panel, plus the just-imported card highlight, driven by placeholder
- * data (lib/dev/import-fixtures) rather than real certificates.
- *
- * It exists so the flow can be reviewed and adjusted before the parsing
- * and storage half is wired up. Gated behind `import.meta.env.DEV` at
- * both call sites, so it is tree-shaken out of production builds.
- */
+/** DEV-ONLY import-flow harness on placeholder data; gated behind
+ *  `import.meta.env.DEV` at both call sites. */
 
 const DEMO_CONTACT: PublicContactKey = {
   keyId: "3A9E1F5C7B2D48E6A0C1938574FD62B0E4A75C11",
@@ -33,7 +26,6 @@ const DEMO_CONTACT: PublicContactKey = {
 
 export function ImportFlowPreviewPage({ onClose }: { onClose: () => void }) {
   const [scenario, setScenario] = useState<string | null>(null);
-  // Toggled off and back on so the CSS animation re-runs on each press.
   const [pulse, setPulse] = useState(false);
 
   const active = IMPORT_SCENARIOS.find((s) => s.id === scenario) ?? null;

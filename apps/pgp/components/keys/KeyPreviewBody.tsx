@@ -25,23 +25,12 @@ import { MarkedText } from "../shared/MarkedText";
 import { fingerprintLines } from "./fingerprint-lines";
 
 /**
- * The read-only body of a key: identity card (face, names, health
- * banner), the fingerprint, the facts card (algorithm, dates) and the
- * subkey list.
- *
- * Deliberately presentational -- it takes already-derived `KeyFacts`
- * (see ./key-facts) rather than armor or any one engine's parse result,
- * and knows nothing about storage. That's what lets the SAME component
- * render a stored key (KeyDetailsPage) and a key that has not been
- * imported yet (the import preview): the preview is the details page, so
- * the two can't drift apart -- and what lets a non-OpenPGP key, which has
- * no user IDs, dates or subkeys, render here as the smaller set of facts
- * it actually has instead of as a half-empty certificate.
+ * The read-only body of a key, presentational over `KeyFacts`, so the
+ * details page and the import preview are the same screen and can't drift.
  */
 
 const EXPIRING_SOON_MS = 30 * 24 * 60 * 60 * 1000;
 
-/** Lowercase status word for the pill; resolved at render time. */
 function statusText(status: ComponentKeyRow["status"]): string {
   switch (status) {
     case "expired":
@@ -55,7 +44,6 @@ function statusText(status: ComponentKeyRow["status"]): string {
   }
 }
 
-/** The design language's status pill; the tone classes are added per use. */
 const PILL = "rounded px-1.5 py-px text-[10.5px] font-medium whitespace-nowrap";
 
 const STATUS_STYLES: Record<ComponentKeyRow["status"], string> = {
@@ -65,7 +53,6 @@ const STATUS_STYLES: Record<ComponentKeyRow["status"], string> = {
   invalid: "bg-destructive/12 text-bad",
 };
 
-/** What this component key is used for, one plain word per capability. */
 function capabilities(row: ComponentKeyRow): string[] {
   const parts: string[] = [];
   if (row.canSign) parts.push(t("keys_cap_sign"));
@@ -75,14 +62,9 @@ function capabilities(row: ComponentKeyRow): string[] {
   return parts;
 }
 
-/** The same, as one line ("Sign · Encrypt"). */
 function capabilityText(row: ComponentKeyRow): string {
   return capabilities(row).join(" · ");
 }
-
-// ── status banner ────────────────────────────────────────────────────
-// The one question users bring to this page is "is this key okay to
-// use, and until when?" -- answer it up top, in words, before the data.
 
 interface Banner {
   tone: "warn" | "bad";
@@ -130,8 +112,7 @@ function deriveBanner(
     };
   }
 
-  // A healthy key shows no banner at all -- silence means fine. Only
-  // limitations and problems earn screen space.
+  // A healthy key shows no banner: silence means fine.
   if (health.usableForEncryption && !health.usableForSigning) {
     return {
       tone: "warn",
@@ -158,7 +139,6 @@ function deriveBanner(
   return null;
 }
 
-// A status band: the block under the key's face, tinted for the outcome.
 const BANNER_STYLES: Record<Banner["tone"], { box: string; title: string }> = {
   warn: { box: "bg-[#252012]", title: "text-warn" },
   bad: { box: "bg-[#2a1517]", title: "text-bad" },

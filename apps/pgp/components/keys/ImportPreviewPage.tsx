@@ -24,33 +24,16 @@ import { pgpKeyFacts, sshGroupKeyFacts, sshKeyFacts } from "./key-facts";
 import { KeyPreviewBody } from "./KeyPreviewBody";
 
 /**
- * The key you're about to import, shown before anything is stored: who it
- * belongs to, its fingerprint, and -- the question the old paste box never
- * answered -- whether you already have it.
- *
- * Deliberately the same body as the key details page (KeyPreviewBody), so
- * "what I saw before importing" and "what I see afterwards" are the same
- * screen. Armor is never rendered here; a private key's secret material
- * never even reaches this component (see IncomingKey.publicArmored).
+ * The key about to be imported, in the same body as the details page.
+ * Armor is never rendered; secret material never reaches this component.
  */
 
-/** Only exceptions earn screen space -- a plain new key gets no strip at
- *  all, the same way a healthy key gets no health banner. The primary
- *  button ("Import"/"Update") carries the New case on its own.
- *
- *  A rejected key gets no strip either: KeyPreviewBody's health banner
- *  already explains, in the same words, why the key is unusable, and the
- *  reason repeats above the footer where the missing Import button is.
- *  Two identical red boxes read as two different problems.
- *
- *  Rendered as a block inside the identity card (KeyPreviewBody puts it
- *  right under the key's face), so it is the band that says what this
- *  import will do to that key. */
+/** Only exceptions get a strip. A rejected key gets none: the health
+ *  banner already says why, and two red boxes read as two problems. */
 function ImportStatusStrip({ incoming }: { incoming: IncomingKey }) {
   const { status, changes, existingAddedAt, replaces } = incoming;
   if (status === "new" && replaces) {
-    // Same lookup, different fingerprint: importing swaps the key this
-    // contact is encrypted to. Never shown as an ordinary new key.
+    // Importing swaps the key this contact is encrypted to: never shown as new.
     return (
       <Block className="bg-[#252012] px-3.5 py-2.5">
         <p className="text-warn flex items-center gap-1.5 text-xs font-medium">
@@ -80,11 +63,7 @@ function ImportStatusStrip({ incoming }: { incoming: IncomingKey }) {
     );
   }
 
-  // Only "update" reaches here: "new"/"rejected" returned above, and
-  // "duplicate" is handled by the branch before this one.
   return (
-    // Neutral, not a status tint: an update is neither a warning nor a
-    // result yet -- the lines under it say what will change.
     <Block className="px-3.5 py-2.5">
       <p className="text-foreground flex items-center gap-1.5 text-xs font-medium">
         <RefreshCwIcon className="h-3.5 w-3.5 shrink-0" />
@@ -106,15 +85,10 @@ function ImportStatusStrip({ incoming }: { incoming: IncomingKey }) {
   );
 }
 
-/** Primary button wording: it should say what will happen to YOUR keys,
- *  not what kind of object this is. */
 function actionLabel(incoming: IncomingKey): string {
-  // A secret half doesn't import from here: the protect step comes next,
-  // so the button says so rather than promising to import.
   if (!isPublicKind(incoming.kind)) {
-    // Replacing a stored private key also discards its protection (and
-    // any passkey binding), which re-dropping a public key can't undo --
-    // so this one says exactly what it does.
+    // Replacing a stored private key also discards its protection and passkey
+    // binding, so the label says so.
     return incoming.status === "update"
       ? t("import_action_replace_stored")
       : t("common_continue");
@@ -124,15 +98,7 @@ function actionLabel(incoming: IncomingKey): string {
     : t("import_action_import_contact");
 }
 
-/**
- * The one chip that says what this key IS, per kind.
- *
- * A Record rather than a ternary chain: adding a kind to
- * {@link KeyKind} is then a type error here until it says what it looks
- * like, instead of silently falling through to whatever the chain's last
- * branch happened to be ("Public key", which an OpenSSH private key
- * container very much is not).
- */
+/** A Record so a new {@link KeyKind} is a type error until labelled. */
 const KIND_CHIPS: Record<KeyKind, () => KeyPreviewChip> = {
   "pgp-private": () => ({
     label: t("common_private_key"),
@@ -156,51 +122,30 @@ const KIND_CHIPS: Record<KeyKind, () => KeyPreviewChip> = {
   }),
 };
 
-/** The algorithm of an SSH recipient line, which is simply its first
- *  token (`ssh-ed25519 AAAA...`). Read off the line rather than carried
- *  on IncomingKey: `publicArmored` IS the canonical line wasm returned,
- *  so this can't disagree with what gets stored. */
+/** Read off `publicArmored`, the canonical line wasm returned, so it
+ *  can't disagree with what gets stored. */
 function sshAlgorithm(recipientLine: string): string {
   return recipientLine.trim().split(/\s+/)[0] ?? "";
 }
 
 interface ImportPreviewProps {
   incoming: IncomingKey;
-  /** Confirm: import a public key, or step on to protection for a
-   *  private one. Absent for duplicates/rejects, which have nothing to do. */
   onConfirm?: () => void;
-  /** Dismiss the whole flow (the footer's only action for a key that
-   *  can't be imported at all). */
   onDone: () => void;
-  /** Take the user to this key where it already lives, highlighted. The
-   *  action for an already-imported key: there is nothing to write, but
-   *  "where is it, then?" is the obvious next question. */
   onReveal?: () => void;
-  /** True while the import is running. */
   busy?: boolean;
   error?: string | null;
   /**
-   * Present when this preview is OFFERING to file several pasted keys as
-   * one contact rather than several.
-   *
-   * A person's keys rarely agree about who they belong to -- three
-   * self-hosted `.pub` files can say `alice@laptop`, `alice@desktop` and
-   * nothing at all -- and nothing in the text says they are one person,
-   * so the import must not decide it (see `sharedComment`). Blank is
-   * therefore the default and means "import them separately", which is
-   * what the button then says; a name means one contact called that.
+   * Offering to file several pasted keys as one contact. Nothing in the text
+   * says they are one person, so blank (import separately) is the default.
    */
   grouping?: {
     name: string;
     onNameChange: (name: string) => void;
-    /** How many contacts a blank name produces. */
     separateCount: number;
   };
 }
 
-/** The preview's content and footer, without a panel of its own, so the
- *  import flow can show it as one step among several (source → preview →
- *  protect) rather than stacking slide-overs. */
 export function ImportPreview({
   incoming,
   onConfirm,

@@ -1,12 +1,7 @@
 /**
- * WASM module loader. Internal to the `lib/pgp/wasm-*` modules.
- *
- * Loads `gpg_wasm_bg.wasm` from the extension's own bundle exactly
- * once. The resulting module handle is shared by every wasm-public /
- * wasm-secrets call. No secrets cross this file -- it's a singleton
- * that hands out the wasm-bindgen module reference, each export wrapped
- * by `withEngineErrors` (arguments pass straight through; only a thrown
- * error string is decoded).
+ * WASM loader singleton, internal to `lib/pgp/wasm-*`. No secrets cross
+ * this file; exports are wrapped by `withEngineErrors` (only thrown error
+ * strings are decoded).
  */
 
 import { withEngineErrors } from "../errors/engine-error";
@@ -24,12 +19,8 @@ export async function loadWasm(): Promise<WasmModule> {
 
   initPromise = (async () => {
     const mod = await import("../../gpg-wasm/pkg/gpg_wasm");
-    // Same-origin chrome-extension:// fetch: loads the WASM blob from
-    // the extension's own bundle. This is the only outbound fetch the
-    // wasm subsystem ever makes. The `new URL(..., import.meta.url)`
-    // form lets the bundler emit ONE hashed asset shared with the
-    // wasm-bindgen glue's own reference -- previously a second verbatim
-    // copy shipped from public/, doubling the extension size.
+    // Same-origin bundle fetch, the wasm subsystem's only one. This
+    // `new URL` form shares ONE hashed asset with the glue's reference.
     const wasmUrl = new URL(
       "../../gpg-wasm/pkg/gpg_wasm_bg.wasm",
       import.meta.url,
@@ -45,19 +36,13 @@ export async function loadWasm(): Promise<WasmModule> {
 }
 
 /**
- * DEV-ONLY: snapshot the wasm linear memory as raw bytes.
- *
- * This deliberately breaches the "no secrets cross this file" rule: raw
- * memory can contain decrypted private keys. It exists solely as a
- * debugging aid (e.g. verifying zeroization) and is gated behind
- * `import.meta.env.DEV` -- the runtime guard returns null in any
- * production build, and the whole branch is tree-shaken out. Returns
- * null if the module hasn't been initialised yet.
+ * DEV-ONLY raw linear-memory snapshot (zeroization debugging). Deliberately
+ * breaches "no secrets cross this file"; `import.meta.env.DEV`-gated and
+ * tree-shaken from production.
  */
 export function dumpWasmMemoryForDev(): Uint8Array | null {
   if (!import.meta.env.DEV) return null;
   if (!wasmMemory) return null;
-  // .slice() copies out of live memory into a detached buffer.
   return new Uint8Array(wasmMemory.buffer).slice();
 }
 

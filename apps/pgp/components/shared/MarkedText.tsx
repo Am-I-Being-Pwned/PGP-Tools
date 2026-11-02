@@ -1,15 +1,8 @@
 import { t } from "../../lib/i18n";
 import { codePointLabel, markLookalikes } from "../../lib/utils/lookalike";
 
-/**
- * A name or address with its lookalike letters highlighted: the Cyrillic
- * А in "Аlice" is drawn in the warning colour, so the difference that
- * makes it someone else is visible rather than only flagged nearby.
- * An invisible character (a zero-width space, a variation selector, a
- * bidi control) is drawn as a marked placeholder, because it is exactly
- * the difference that would otherwise never be seen.
- * Plain text, unchanged, for every ordinary name.
- */
+/** Lookalike letters highlighted and invisible characters drawn as marked
+ *  placeholders: the difference that makes it someone else must be seen. */
 export function MarkedText({ text }: { text: string }) {
   const runs = markLookalikes(text);
   if (runs.every((r) => !r.odd)) return <>{text}</>;
@@ -17,9 +10,7 @@ export function MarkedText({ text }: { text: string }) {
     <>
       {runs.map((run, i) =>
         run.invisible ? (
-          // A character that draws nothing: a highlight around nothing is
-          // still nothing, so a dotted circle stands in for it, with the
-          // code point in the hover text.
+          // Draws nothing, so a dotted circle stands in for it.
           <mark
             key={i}
             title={t("keys_invisible_char", {
@@ -31,7 +22,6 @@ export function MarkedText({ text }: { text: string }) {
           </mark>
         ) : run.odd ? (
           <mark
-            // Runs are positional and never reorder.
             key={i}
             title={
               run.confusable

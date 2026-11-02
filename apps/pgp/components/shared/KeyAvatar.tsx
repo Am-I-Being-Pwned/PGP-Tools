@@ -6,17 +6,9 @@ import { cn } from "@amibeingpwned/ui";
 import { AVATAR_SIZE, hasKeyFace, keyAvatar } from "../../lib/key-avatar";
 
 /**
- * A key's pixel-person face (see lib/key-avatar). Decorative: the
- * name and fingerprint next to it carry the meaning, so it is hidden
- * from assistive tech. One SVG with a rect per same-colour run keeps a
- * long keyring cheap to render.
- *
- * Sizes from the design language: 16 in a chip, 32 in a list row, 64+
- * as the hero on key details.
- *
- * Only a whole fingerprint gets a face (see `hasKeyFace`). A signer we
- * know by key id alone gets a plain silhouette: an invented face there
- * would not match the one the key shows once imported.
+ * Decorative (hidden from assistive tech). Only a whole fingerprint gets a
+ * face (`hasKeyFace`): a key-id-only signer gets a silhouette, since an
+ * invented face would not match the one shown once imported.
  */
 export function KeyAvatar({
   fingerprint,

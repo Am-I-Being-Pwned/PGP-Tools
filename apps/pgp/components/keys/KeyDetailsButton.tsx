@@ -11,21 +11,15 @@ import { KeyDetailsPage } from "./KeyDetailsPage";
 
 type AnyKey = ProtectedKeyBlob | PublicContactKey;
 
-/** What the details page shows for `key`. Contacts store the armor under
- *  `armoredPublicKey`; own-key blobs don't -- that field's presence
- *  discriminates the two. */
+/** `armoredPublicKey`'s presence discriminates contacts from own keys. */
 export function keyDetailsTarget(key: AnyKey): KeyDetailsTarget {
   return "armoredPublicKey" in key
     ? { kind: "contact", contact: key }
     : { kind: "own", keyBlob: key };
 }
 
-/** A small info icon that opens the full key-details subpage for `keyData`
- *  -- the exact same overview shown from the Keys tab -- so a selected key
- *  (e.g. an encrypt recipient) can be inspected without leaving the flow.
- *  No rename/delete/encrypt-to actions are wired in. Given `contacts` and
- *  `ownKeys`, the page still shows the identity clash and offers Mark as
- *  verified (see `KeyDetailsPage`). */
+/** Opens the key-details subpage without leaving the flow; no
+ *  rename/delete/encrypt-to actions are wired in. */
 export function KeyDetailsButton({
   keyData,
   subtle = false,
@@ -33,7 +27,6 @@ export function KeyDetailsButton({
   ownKeys,
 }: {
   keyData: AnyKey;
-  /** A bare icon, for use inside a row that is already a surface. */
   subtle?: boolean;
   contacts?: readonly PublicContactKey[];
   ownKeys?: readonly ProtectedKeyBlob[];
@@ -44,10 +37,7 @@ export function KeyDetailsButton({
     <>
       <Button
         type="button"
-        // Out of the Tab order: it sits between the key picker and the
-        // message, and tabbing through it on the way to typing is a stop
-        // nobody wants. The same details are a click away, and on the
-        // Keys tab for the keyboard.
+        // Out of the Tab order: it sits between the key picker and the message.
         tabIndex={-1}
         variant={subtle ? "ghost" : "outline"}
         aria-label={t("keys_key_details")}

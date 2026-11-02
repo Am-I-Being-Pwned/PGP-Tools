@@ -9,10 +9,7 @@ import { KeyAvatar } from "../shared/KeyAvatar";
 
 interface KeyUnlockRowProps {
   name: string;
-  /** The key's fingerprint (or a CRX key's extension id), for its face.
-   *  Absent ⇒ no avatar. */
   fingerprint?: string;
-  /** Small trailing tag after the name (e.g. "CRX", "SSH"). */
   badge?: string;
   unlocked: boolean;
   isPasskey: boolean;
@@ -24,7 +21,6 @@ interface KeyUnlockRowProps {
   onUnlockPasskey: () => void;
 }
 
-/** A key's password field with its Unlock button beside it. */
 export function UnlockPasswordField({
   password,
   onPasswordChange,
@@ -50,10 +46,9 @@ export function UnlockPasswordField({
         onChange={(e) => onPasswordChange(e.target.value)}
         onKeyDown={(e) => {
           if (e.key !== "Enter") return;
-          // LOAD-BEARING. The Argon2id derive runs synchronously, so the
-          // row re-renders unlocked (removing this input) before the
-          // keypress lands; focus falls to the slide-over's Back button
-          // and the keypress closes the page (e2e/unlock-on-open.spec.ts).
+          // LOAD-BEARING. The derive runs synchronously, so the row unmounts this
+          // input before the keypress lands and Enter would close the page
+          // (e2e/unlock-on-open.spec.ts).
           e.preventDefault();
           onUnlock();
         }}
@@ -71,15 +66,7 @@ export function UnlockPasswordField({
   );
 }
 
-/**
- * One key in an "unlock these first" list: status icon, name, and the
- * inline unlock control its protection method calls for (a button for a
- * passkey, a password field otherwise). Shared by every flow that needs
- * several keys live before it can proceed -- bulk export, and re-sealing
- * keys under the vault passkey -- so they all look and behave the same.
- *
- * A flat block: callers stack the rows in a `BlockStack`.
- */
+/** One key in an "unlock these first" list, shared by every such flow. */
 export function KeyUnlockRow({
   name,
   fingerprint,

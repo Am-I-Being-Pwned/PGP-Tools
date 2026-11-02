@@ -1,27 +1,7 @@
 /**
- * ============================================================================
- * Sequoia-PGP WASM module — JS-side surface.
- * ============================================================================
- *
- * This file is intentionally a barrel re-export. The wasm-side surface
- * is split in two so the trust boundary is visible from the file tree:
- *
- *   - `wasm-public.ts`   — calls that do NOT carry secret key material
- *                          across the wasm/JS boundary (parse, verify,
- *                          encrypt to recipients, sign-with-handle,
- *                          decrypt-with-handle, drop, etc).
- *
- *   - `wasm-secrets.ts`  — calls that DO carry secret material in
- *                          either direction. Each function has a
- *                          `@secret-handling` block stating its
- *                          zeroization contract.
- *
- *   - `wasm-loader.ts`   — module init singleton (no secrets).
- *
- * For the threat model, file map, and per-secret zeroization audit
- * table, see `apps/pgp/SECURITY.md`.
- *
- * Auditors: open the two files above. The split is the audit story.
+ * Barrel. The trust boundary is the file split: `wasm-public.ts` (no
+ * secret material) vs `wasm-secrets.ts` (secret material, each with a
+ * `@secret-handling` contract). See SECURITY.md.
  */
 
 export * from "./wasm-loader";

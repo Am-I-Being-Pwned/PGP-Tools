@@ -1,8 +1,8 @@
 export interface KeyInfo {
   keyId: string; // Fingerprint (hex)
-  userIds: string[]; // "Name <email>" strings
-  algorithm: string; // e.g. "ed25519", "rsa4096"
-  createdAt: number; // Unix timestamp
+  userIds: string[];
+  algorithm: string;
+  createdAt: number;
   expiresAt: number | null;
   isPrivate: boolean;
   /** Sequoia StandardPolicy accepts ≥1 alive, non-revoked encryption key. */
@@ -11,9 +11,8 @@ export interface KeyInfo {
   usableForSigning: boolean;
   /** Human-readable rejection reason (e.g. SHA-1 self-sig, expired). */
   policyError?: string;
-  /** Non-blocking flag: the key is usable, but only because the hardened
-   *  policy was relaxed to accept it (e.g. it relies on a SHA-1 binding
-   *  signature). Surface to the user; do not block the import. */
+  /** Usable only because the hardened policy was relaxed (e.g. SHA-1
+   *  binding sig). Surface it; do not block the import. */
   securityWarning?: string;
   /** The owner revoked the whole cert. Kept as a contact so the
    *  revocation sticks, but never encrypted to. */
@@ -22,16 +21,12 @@ export interface KeyInfo {
   lookalike?: boolean;
 }
 
-/** One row in the per-key breakdown of a certificate: the primary key
- *  or one subkey, with its capability flags and lifecycle status.
- *  "invalid" means the binding signature fails policy (see policyError);
- *  capability flags are then unknown and reported as all-false. */
+/** "invalid" = binding sig fails policy; capability flags are then all-false. */
 export interface SubkeyDetail {
   fingerprint: string;
-  /** Short (64-bit) key ID, the form most other tools print. */
+  /** Short (64-bit) key ID. */
   keyId: string;
   algorithm: string;
-  /** Public-key size in bits, when the algorithm has a meaningful one. */
   bits?: number;
   createdAt: number;
   expiresAt: number | null;
@@ -45,15 +40,12 @@ export interface SubkeyDetail {
   policyError?: string;
 }
 
-/** Result of `parseKeyDetails`: primary key first, in cert order.
- *  `truncated` is set when the cert carried more component keys than
- *  the wasm-side row cap (only plausible for crafted certs). */
+/** `truncated`: more component keys than the wasm row cap (crafted certs). */
 export interface KeyDetails {
   keys: SubkeyDetail[];
   truncated: boolean;
 }
 
-// Discriminated union for encrypt input
 export type EncryptInput =
   | { kind: "text"; text: string }
   | { kind: "binary"; binary: Uint8Array; armor?: boolean };
@@ -63,7 +55,6 @@ export interface EncryptOptions {
   recipientPublicKeys: string[];
 }
 
-// Discriminated union for decrypt input
 export type DecryptInput =
   | { kind: "armored"; armoredMessage: string }
   | { kind: "binary"; binaryMessage: Uint8Array };
@@ -71,9 +62,8 @@ export type DecryptInput =
 export interface DecryptOptions {
   input: DecryptInput;
   verificationPublicKeys?: string[];
-  /** An UNATTENDED run's ceiling on the result, in bytes: the engine
-   *  stops reading past it and the call throws `OutputCapReached`.
-   *  Omitted for every run a person started. */
+  /** UNATTENDED runs only: past this many bytes the call throws
+   *  `OutputCapReached`. Omit for runs a person started. */
   maxOutputBytes?: number;
 }
 
@@ -84,25 +74,16 @@ export interface VerifyOptions {
   maxOutputBytes?: number;
 }
 
-/**
- * Signature outcome, decoupled from decryption success:
- *   "valid"       - signature cryptographically verified
- *   "invalid"     - had the signer key but verification failed (possible tamper)
- *   "unknown_key" - signed, but we don't hold the signer's public key
- *   "unsigned"    - no signature present
- */
+/** Decoupled from decryption success. "invalid" = had the signer key but
+ *  verification failed (possible tamper). */
 export type SignatureStatus = "unsigned" | "valid" | "invalid" | "unknown_key";
 
-/** What the engine reports about a message's signatures, beyond the
- *  verdict itself. Filled for "valid"; neutral otherwise. */
+/** Filled for "valid"; neutral otherwise. */
 export interface SignatureDetails {
-  /** When the signature says it was made (ms). Chosen by the signer:
-   *  shown, never trusted. */
+  /** Signer-chosen (ms): shown, never trusted. */
   signedAt: number | null;
-  /** The signing key is still alive and unrevoked today. False for a
-   *  key that expired or was superseded after signing. */
+  /** Signing key still alive and unrevoked today. */
   signerKeyCurrent: boolean;
-  /** Further good signers, by fingerprint. */
   otherSignerKeyIds: string[];
   /** Signatures from keys we don't hold, next to a good one. */
   unverifiedSignatures: number;
@@ -133,9 +114,6 @@ export interface GenerateKeyOptions {
   expiresIn?: number;
 }
 
-/** Metadata returned from a protect-flow call (generate or import + protect).
- *  The encrypted blob lives on the wasm-side packed binary and is unpacked
- *  separately by the protect-flow wrapper. */
 export interface ProtectResultMeta {
   publicKeyArmored: string;
   keyInfo: KeyInfo;

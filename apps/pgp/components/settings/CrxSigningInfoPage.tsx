@@ -4,9 +4,7 @@ import { t } from "../../lib/i18n";
 import { Emphasised } from "../shared/Emphasised";
 import { SubPage } from "../shared/SubPage";
 
-/** Inline emphasis for literals and UI labels inside the body copy. */
-/** Dash-led lines. Plain hyphens in their own column, so a wrapped line
- *  stays aligned under the text rather than under the dash. */
+/** Hyphens in their own column, so wrapped lines align under the text. */
 function DashList({ items }: { items: React.ReactNode[] }) {
   return (
     <ul className="space-y-1.5">
@@ -20,7 +18,6 @@ function DashList({ items }: { items: React.ReactNode[] }) {
   );
 }
 
-/** A titled block of explainer copy. */
 function Section({
   title,
   children,
@@ -40,13 +37,8 @@ interface CrxSigningInfoPageProps {
   onClose: () => void;
 }
 
-/**
- * Explainer subpage for CRX (Chrome extension) signing. Pure content - no
- * key material, no actions. The signing/verifying itself happens in the
- * Workspace via the normal drop-a-file flow.
- */
+/** Pure content: no key material, no actions. */
 export function CrxSigningInfoPage({ onClose }: CrxSigningInfoPageProps) {
-  // Literal file extensions and UI labels, emphasised inside the copy.
   const zip = ".zip";
   const crx = ".crx";
   const save = t("common_save");
@@ -54,7 +46,6 @@ export function CrxSigningInfoPage({ onClose }: CrxSigningInfoPageProps) {
   const publicTerm = t("settings_crx_info_term_public");
   const dashboardPath = t("settings_crx_info_term_dashboard_path");
 
-  /** The four release steps, in order. */
   const steps: React.ReactNode[] = [
     t("settings_crx_info_step_1"),
     <Emphasised
@@ -77,8 +68,7 @@ export function CrxSigningInfoPage({ onClose }: CrxSigningInfoPageProps) {
     />,
   ];
 
-  /** Where this scheme sits between the weaker and stronger alternatives,
-   *  weakest first. */
+  /** Weakest first. */
   const ci = t("settings_crx_info_ladder_ci_term");
   const vault = t("settings_crx_info_ladder_vault_term");
   const hardware = t("settings_crx_info_ladder_hardware_term");
@@ -107,8 +97,6 @@ export function CrxSigningInfoPage({ onClose }: CrxSigningInfoPageProps) {
       bodyClassName="px-5 py-4"
     >
       <div className="text-foreground/75 space-y-5 text-sm">
-        {/* The pitch, given the weight of a card: it is the one thing to
-            read if the user reads nothing else on the page. */}
         <section className="bg-card flex gap-2.5 rounded-xl p-3.5">
           <ShieldCheckIcon className="text-primary mt-0.5 size-4 shrink-0" />
           <div className="space-y-2">

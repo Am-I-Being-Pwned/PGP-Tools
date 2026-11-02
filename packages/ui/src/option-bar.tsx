@@ -2,12 +2,7 @@ import type * as React from "react";
 
 import { cn } from "@amibeingpwned/ui";
 
-/**
- * A row of independent on/off options drawn as one bar: equal segments
- * with 2px gaps, on segments tinted green. Each segment is its own
- * switch, so any combination can be on (unlike a segmented control,
- * which picks one).
- */
+/** Independent on/off switches drawn as one bar (any combination on). */
 export function OptionBar({
   className,
   ...props
@@ -35,8 +30,7 @@ export function OptionBarItem({
 }: Omit<React.ComponentProps<"button">, "onClick" | "disabled"> & {
   pressed: boolean;
   onPressedChange: (pressed: boolean) => void;
-  /** Present ⇒ the option cannot be flipped right now, and this says
-   *  why (shown as the tooltip). Dimmed-with-a-reason, never hidden. */
+  /** Dimmed with a reason (as the tooltip), never hidden. */
   disabledReason?: string;
 }) {
   const disabled = disabledReason !== undefined;

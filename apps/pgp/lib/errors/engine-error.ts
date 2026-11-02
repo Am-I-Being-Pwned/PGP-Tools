@@ -1,5 +1,4 @@
-/** Error classes the engine tags. Must match `ErrorCode` in
- *  `gpg-wasm/src/error_code.rs`. */
+/** Must match `ErrorCode` in `gpg-wasm/src/error_code.rs`. */
 export const ENGINE_ERROR_CODES = [
   "wrong-passphrase",
   "not-encrypted",
@@ -18,13 +17,9 @@ export const ENGINE_ERROR_CODES = [
 export type EngineErrorCode = (typeof ENGINE_ERROR_CODES)[number];
 
 /**
- * A coded engine error. `message` is the engine's own text (shown only as
- * the detail line); `code` is what `presentError` classifies on.
- *
  * Deliberately NOT an `Error`: it replaces a thrown string, and sites that
  * show `e instanceof Error ? e.message : <generic>` must keep showing the
- * generic copy for engine failures. `toString()` keeps `String(e)` and
- * template use identical to the bare string.
+ * generic copy. `toString()` keeps `String(e)` identical to the bare string.
  */
 export class EngineError {
   readonly name = "EngineError";
@@ -47,8 +42,7 @@ function isEngineErrorCode(s: string): s is EngineErrorCode {
   return (ENGINE_ERROR_CODES as readonly string[]).includes(s);
 }
 
-/** Decode an engine error string: an `EngineError` if it carries a known
- *  code, else the string (an unknown code stripped, never classified). */
+/** Unknown codes are stripped, never classified. */
 export function decodeEngineError(raw: string): EngineError | string {
   if (!raw.startsWith(SEP)) return raw;
   const end = raw.indexOf(SEP, SEP.length);
@@ -58,10 +52,8 @@ export function decodeEngineError(raw: string): EngineError | string {
   return isEngineErrorCode(name) ? new EngineError(name, message) : message;
 }
 
-/** `mod` with every function's thrown string decoded -- the ONE place
- *  engine error codes are read off the wire. Untagged strings are
- *  rethrown as-is (value-matched sentinels such as
- *  `outputCapReachedMessage()` depend on that). */
+/** The ONE place engine error codes are read off the wire. Untagged
+ *  strings are rethrown as-is (`outputCapReachedMessage()` depends on it). */
 export function withEngineErrors<M extends object>(mod: M): M {
   const wrapped: Record<string, unknown> = {};
   for (const [name, value] of Object.entries(mod)) {

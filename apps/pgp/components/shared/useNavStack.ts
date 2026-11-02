@@ -1,20 +1,13 @@
 import { useCallback, useRef, useState } from "react";
 
 export interface StackEntry<R> {
-  /** Stable identity for React keys — survives stack mutations, so a
-   *  panel keeps its mount (and slide state) when entries below it are
-   *  dropped. */
+  /** Stable React key, so a panel keeps its mount when entries below drop. */
   id: number;
   route: R;
 }
 
-/**
- * Minimal navigation stack for slide-over subpages. Every entry renders
- * as a panel layered over the base view; `pop` is the back button,
- * `clear` jumps home, `collapseToTop` drops everything beneath the
- * current panel (used after a destructive action succeeds, so the
- * panel's own slide-out reveals the base view rather than a stale page).
- */
+/** `collapseToTop` is for after a destructive action, so the panel's own
+ *  slide-out reveals the base view rather than a stale page. */
 export function useNavStack<R>() {
   const nextId = useRef(1);
   const [stack, setStack] = useState<StackEntry<R>[]>([]);
@@ -27,11 +20,8 @@ export function useNavStack<R>() {
     setStack((s) => s.slice(0, -1));
   }, []);
 
-  /** Drop ONE entry, by id -- what a panel's own close must use. A
-   *  slide-over closes after its slide-out (`useSlideOver.close` defers
-   *  `onClosed` by SLIDE_MS), and a `pop` at that moment removes whatever
-   *  is on top THEN: open Import within 300ms of leaving a details page
-   *  and the details page's late pop took the import panel with it. */
+  /** What a panel's own close must use: a deferred `pop` (after the
+   *  slide-out) would remove whatever is on top THEN. */
   const remove = useCallback((id: number) => {
     setStack((s) => s.filter((e) => e.id !== id));
   }, []);

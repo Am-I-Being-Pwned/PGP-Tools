@@ -7,23 +7,15 @@ import { SubPage } from "./SubPage";
 
 interface RenamePageProps {
   title: string;
-  /** Field label above the input, e.g. "Display name". */
   fieldLabel: string;
-  /** Current alias/label, empty string if unset. */
   initialValue: string;
-  /** Shown muted under the field, e.g. the real key identity. */
   hint?: string;
   placeholder?: string;
-  /** Persist the new name (already trimmed; "" means clear). Caller
-   *  closes/unmounts after the slide-out. */
+  /** Already trimmed; "" clears the alias. */
   onSave: (value: string) => void | Promise<void>;
   onCancel: () => void;
 }
 
-/**
- * Full-panel rename subpage. Sets a local display alias; submitting an
- * empty value clears it (reverts to the key's real identity).
- */
 export function RenamePage({
   title,
   fieldLabel,
@@ -66,8 +58,7 @@ export function RenamePage({
               placeholder={placeholder}
               onChange={(e) => setValue(e.target.value)}
               onKeyDown={(e) => {
-                // runAction no-ops while busy, so a second Enter during
-                // the slide-out can't re-fire onSave.
+                // runAction no-ops while busy: no double onSave.
                 if (e.key === "Enter") api.runAction(0);
               }}
             />

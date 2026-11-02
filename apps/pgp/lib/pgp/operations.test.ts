@@ -1,10 +1,5 @@
-/**
- * The marshalling around the PGP engine's decrypt results. The engine is
- * stubbed (it is not available under vitest; the Rust tests cover it);
- * what is pinned here is what becomes of the plaintext bytes on the way
- * out -- in particular that a leading byte-order mark survives, since
- * Copy and Download hand back exactly this string.
- */
+/** Decrypt-result marshalling with the engine stubbed; pins that a leading
+ *  BOM survives (Copy/Download hand back exactly this string). */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 

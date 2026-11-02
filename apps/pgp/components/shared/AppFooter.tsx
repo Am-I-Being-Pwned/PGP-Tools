@@ -4,14 +4,6 @@ import { ariaKeyShortcuts, isMacPlatform } from "@amibeingpwned/ui/kbd-helpers";
 import { PALETTE_SHORTCUT } from "../../lib/actions/definitions";
 import { t } from "../../lib/i18n";
 
-/**
- * Sticky footer used on every top-level shell (onboarding, master
- * unlock, main tabbed view). The byline is here, on the same quiet
- * chrome strip as the tab bar, set off from the page by its shade and
- * a faint hairline rather than a drawn border. When `onOpenPalette` is
- * provided (the unlocked main view), a muted mod+K hint advertises the
- * command palette; clicking it opens the palette directly.
- */
 export function AppFooter({ onOpenPalette }: { onOpenPalette?: () => void }) {
   return (
     <footer className="bg-chrome flex shrink-0 items-center justify-center gap-3 border-t border-white/[0.06] px-4 py-2.5">

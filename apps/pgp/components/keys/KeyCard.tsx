@@ -35,8 +35,7 @@ import { ExportPrivateKeyPage } from "./ExportPrivateKeyPage";
 import { HEX_FINGERPRINT, longIdLines } from "./fingerprint-lines";
 import { UnlockPasswordField } from "./KeyUnlockRow";
 
-/** Lock/unlock lifecycle for a key that lives in the per-session vault (PGP).
- *  Absent on a descriptor ⇒ the key is sealed at rest (CRX): no unlock UI. */
+/** Absent ⇒ sealed at rest (CRX): no unlock UI. */
 export interface KeyCardSession {
   isUnlocked: boolean;
   unlockWithPassword: (password: string) => Promise<boolean>;
@@ -44,39 +43,26 @@ export interface KeyCardSession {
   lock: () => void;
 }
 
-/**
- * A unified, crypto-agnostic view of a manageable private key. Both PGP private
- * keys and CRX signing keys map into this shape so one card renders both; the
- * behavioural differences (session unlock vs sealed-at-rest, action set) are
- * expressed as optional capabilities rather than separate components.
- */
+/** One card for PGP private keys and CRX signing keys; differences are
+ *  optional capabilities. */
 export interface KeyCardModel {
   kind: "pgp" | "crx";
-  /** Stable identity: keyId (PGP) or extensionId (CRX). */
   id: string;
   displayName: string;
-  /** Underlying identity (userId / extensionId) for the rename hint. */
   realName: string;
   shortId: string;
   algorithm: string;
-  /** Advanced-mode fingerprint line (PGP only). */
   fingerprint?: string;
-  /** Small tag after the name, e.g. "CRX". */
   badge?: string;
-  /** True when this is the user's configured default key (PGP only):
-   *  shows a subtle "Default" pill after the name. */
   isDefault?: boolean;
   protectionMethod: "password" | "passkey";
   securityWarning?: string;
-  /** Present ⇒ show unlock/lock lifecycle (PGP). Absent ⇒ sealed at rest (CRX). */
   session?: KeyCardSession;
-  /** Present ⇒ enable "Copy private key" (opens the unified export page). */
   exporter: PrivateKeyExporter | null;
   onCopyPublicKey: () => void;
   onDownloadPublicKey: () => void;
   onDelete: () => void;
   onRename?: () => void;
-  /** Present ⇒ card is clickable into a details page (PGP). */
   onShowDetails?: () => void;
 }
 
@@ -85,11 +71,8 @@ interface KeyCardProps {
   advancedMode?: boolean;
   selectionMode: boolean;
   selected: boolean;
-  /** `extend`: Shift was held -- select the run from the last-touched card. */
   onToggleSelect: (extend: boolean) => void;
-  /** Enter selection mode with this card selected (long-press / menu). */
   onStartSelect: () => void;
-  /** Just arrived from an import: scroll to it and pulse it once. */
   justImported?: boolean;
 }
 
@@ -111,7 +94,6 @@ export function KeyCard({
   const { session, exporter } = model;
   const isUnlocked = session?.isUnlocked ?? false;
   const isPasskey = model.protectionMethod === "passkey";
-  // CRX exports unlock inside the page; PGP needs the session unlocked.
   const canExportPrivate = exporter !== null && (!session || isUnlocked);
 
   const handlePasswordUnlock = () =>
@@ -138,8 +120,7 @@ export function KeyCard({
     unlock.reset();
   };
 
-  // A hex fingerprint's tail is a real id; an SSH hash's or a CRX
-  // extension id's is not, so those keep the full id in the meta line.
+  // Only a hex fingerprint's tail is a real id.
   const longId = HEX_FINGERPRINT.test(model.id) ? longIdLines(model.id) : null;
   const error = unlock.error?.message;
 
@@ -156,10 +137,7 @@ export function KeyCard({
         <KeyAvatar fingerprint={model.id} size={32} />
 
         <div className="min-w-0 flex-1">
-          {/* The name alone on line 1: no pill can squeeze it out. */}
           <p className="truncate text-sm font-medium">{model.displayName}</p>
-          {/* Pills first, warnings leading, so they are never what gets
-              cut off; then the algorithm (or the full id, see longId). */}
           <div className="mt-0.5 flex min-w-0 items-center gap-1">
             {model.securityWarning && (
               <Pill
@@ -176,8 +154,6 @@ export function KeyCard({
                 {t("keys_default_badge")}
               </Pill>
             )}
-            {/* Protection, with the session state in its lock; green is
-                a key live in this session. */}
             <Pill
               tone={isUnlocked ? "good" : "neutral"}
               title={
@@ -218,8 +194,6 @@ export function KeyCard({
 
         {longId && !advancedMode && <LongIdColumn lines={longId} />}
 
-        {/* Hidden while the password field is open (it has its own
-            controls); absent for sealed-at-rest keys. */}
         {session && !showPasswordUnlock && (
           <span className={cn("shrink-0", selectionMode && DIMMED)}>
             <Button
@@ -324,8 +298,7 @@ export function KeyCard({
       )}
 
       {exporter && showExportPrivate && (
-        // The page is fixed inset-0 but lives in the card's subtree: keep
-        // its clicks and presses out of the card's handlers.
+        // The page lives in the card's subtree: keep its events out of the card.
         <div
           onClick={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}

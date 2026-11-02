@@ -1,18 +1,8 @@
 /**
- * Ambient declarations for Chrome's built-in AI APIs.
- *
- * These ship in Chrome (Translator and Language Detector are stable from
- * 138) but are not in TypeScript's DOM lib, so the globals are declared
- * here rather than reached for through `any`. Only the surface this app
- * actually calls is declared: adding a member here should mean we are
- * about to use it.
- *
- * NB: neither API is available in Web Workers, and therefore not in the
- * MV3 service worker. Everything under lib/ai is side-panel-only by
- * construction -- see the realm note in `availability.ts`.
+ * Chrome built-in AI globals (stable from 138), declaring only what we
+ * call. Not available in workers, so lib/ai is side-panel-only.
  */
 
-/** The four states every built-in AI API reports. */
 type AiAvailabilityState =
   "unavailable" | "downloadable" | "downloading" | "available";
 
@@ -31,7 +21,7 @@ interface AiCreateOptions {
 interface LanguageDetectorResult {
   /** BCP 47 code, or "und" when the detector cannot decide. */
   detectedLanguage: string;
-  /** 0.0 to 1.0, descending across the returned array. */
+  /** 0..1, descending across the array. */
   confidence: number;
 }
 
@@ -55,9 +45,7 @@ interface TranslatorInstance {
 }
 
 interface TranslatorPair {
-  /** BCP 47 code. */
   sourceLanguage: string;
-  /** BCP 47 code. */
   targetLanguage: string;
 }
 

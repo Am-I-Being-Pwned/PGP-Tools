@@ -4,19 +4,16 @@ import { t } from "../../lib/i18n";
 
 export type ProtectionMethod = "passkey" | "password";
 
-/** What the protection step has collected. */
 export interface ProtectionChoiceState {
   method: ProtectionMethod;
   password: string;
   confirmPassword: string;
-  /** Reuse the vault's passkey; only meaningful with a credential to reuse. */
   reusePasskey: boolean;
 }
 
 export interface ProtectionContext {
   reusePasskeyCredentialId?: string;
-  /** Seal under the master's PRF salt so the vault ceremony opens the
-   *  key. Only ever applied together with the reused credential. */
+  /** Only ever applied together with the reused credential. */
   masterSealSalt?: ArrayBuffer;
 }
 
@@ -29,8 +26,6 @@ export function validatePassword(
   return null;
 }
 
-/** The passphrase an export is re-sealed under: the same bar as a key
- *  password, worded for the file. */
 export function validateExportPassphrase(
   passphrase: string,
   confirmPassphrase: string,
@@ -42,7 +37,6 @@ export function validateExportPassphrase(
   return null;
 }
 
-/** A passkey needs no validation here: the ceremony is the check. */
 export function validateProtection(s: ProtectionChoiceState): string | null {
   return s.method === "password"
     ? validatePassword(s.password, s.confirmPassword)
@@ -67,8 +61,7 @@ export function protectionInput(
   };
 }
 
-/** CRX keys never take the master salt: they are sealed at rest and
- *  never opened by the vault ceremony. */
+/** CRX keys never take the master salt: never opened by the vault. */
 export function crxProtectionInput(
   s: ProtectionChoiceState,
   ctx: ProtectionContext,

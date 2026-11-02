@@ -7,9 +7,7 @@ import { t } from "../../lib/i18n";
 interface StorageLocationPickerProps {
   value: StorageLocation;
   onChange: (location: StorageLocation) => void;
-  /** Blocks interaction while a migration is in flight. Intentionally has
-   *  no visual treatment -- the move is near-instant and a flash of
-   *  dimming/spinner reads as jank. */
+  /** Intentionally no visual treatment: a flash of dimming reads as jank. */
   disabled?: boolean;
 }
 
@@ -30,7 +28,6 @@ const OPTIONS: {
   },
 ];
 
-/** Two radio rows in one block stack; the chosen one takes the "on" tint. */
 export function StorageLocationPicker({
   value,
   onChange,

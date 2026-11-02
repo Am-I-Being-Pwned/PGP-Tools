@@ -2,9 +2,8 @@ import { cn } from "@amibeingpwned/ui";
 import { Block } from "@amibeingpwned/ui/block";
 import { Switch } from "@amibeingpwned/ui/switch";
 
-/** An on/off setting as a block: title and description left, switch
- *  right. The row is the switch's <label>, so its accessible name is the
- *  title plus the description and a click anywhere flips it. */
+/** The row is the switch's <label>: whole-row click, title+description
+ *  as the accessible name. */
 export function SwitchRow({
   title,
   description,

@@ -8,23 +8,15 @@ import { t } from "../../lib/i18n";
 import { ConfirmPage } from "./ConfirmPage";
 
 /**
- * The states in which the panel must NOT show onboarding, although
- * there is no vault where the bootstrap says to look (`vault-state.ts`):
- *
- *  - `elsewhere`: the vault is in the other storage area. The location
- *    pointer is plaintext in sync and was changed under it -- by another
- *    device, or by someone signed in to the Google account. Offer to point
- *    it back; nothing is copied or deleted.
- *  - `ambiguous`: a master protection in BOTH areas, and this device has
- *    no record of which is its own (first run after an upgrade, say).
- *    Picking one silently would let a planted record in sync hide a local
- *    vault, so the user chooses; nothing is copied or deleted, and the
- *    lock screen offers the other one if the choice will not open.
- *  - `orphaned`: sealed stores, but no master protection anywhere. Nothing
- *    can open them any more, and a new vault cannot be started over them
- *    (its stores would collide with blobs it cannot read), so the only way
- *    forward is to erase -- behind its own confirmation, so onboarding can
- *    never do it by itself.
+ * No vault where the bootstrap says, yet onboarding must NOT show
+ * (`vault-state.ts`):
+ *  - `elsewhere`: the plaintext sync pointer was changed; offer to point
+ *    it back.
+ *  - `ambiguous`: vaults in both areas, no local record. Picking silently
+ *    would let a planted sync record hide a local vault, so the user picks.
+ *  - `orphaned`: stores but no master protection. Only erase, behind its
+ *    own confirmation, so onboarding can never do it.
+ * Nothing is copied or deleted except by that erase.
  */
 interface VaultProblemScreenProps {
   problem:

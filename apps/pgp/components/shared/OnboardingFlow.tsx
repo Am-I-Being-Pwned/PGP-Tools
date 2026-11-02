@@ -52,14 +52,11 @@ type Step = "storage" | "protection" | "identity" | "generating" | "preset";
 interface OnboardingFlowProps {
   onComplete: (storageLocation: StorageLocation) => void;
   addKey: (blob: ProtectedKeyBlob) => Promise<void>;
-  /** Called when a newly generated key is cached in WASM. */
   onKeyCached?: (keyId: string, keyHandle: number) => void;
-  /** Whether to cache decrypted keys in WASM after generation. */
   cacheKey?: boolean;
 }
 
-/** Whether picking `preset` turns never-cache on (Paranoid does), which
- *  rules out unlock-on-open. `undefined` is "Keep the defaults". */
+/** Paranoid pins never-cache, which rules out unlock-on-open. */
 function presetPinsNeverCache(preset: PresetId | undefined): boolean {
   return preset !== undefined && PRESETS[preset].bundle.neverCacheKeys === true;
 }
@@ -84,17 +81,13 @@ export function OnboardingFlow({
     string | undefined
   >();
 
-  // Captured during master setup (passkey path) so we can hand it to
-  // `generateAndProtect` and skip a second WebAuthn ceremony when the
-  // user creates their first key. Lifetime: from master-setup success
-  // until generate-key completes (success or fail). Always zeroed.
+  // Master-setup PRF, reused for the first key to skip a second WebAuthn
+  // ceremony. Always zeroed.
   const masterPrfRef = useRef<{
     prfOutput: Uint8Array;
     prfSalt: ArrayBuffer;
   } | null>(null);
 
-  // Zero the PRF if the component unmounts before generate-key
-  // consumes it.
   useEffect(() => {
     return () => {
       masterPrfRef.current?.prfOutput.fill(0);
@@ -102,9 +95,7 @@ export function OnboardingFlow({
     };
   }, []);
 
-  // Cancels an in-flight WebAuthn ceremony before issuing a new one
-  // (or on method-switch / unmount), so re-clicks can't trip
-  // `InvalidStateError: A request is already pending.`
+  // Abort the in-flight ceremony before a new one (InvalidStateError).
   const passkeyAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -127,29 +118,21 @@ export function OnboardingFlow({
   const [expiryOption, setExpiryOption] =
     useState<ExpiryOption>(DEFAULT_EXPIRY);
   const [presetChoice, setPresetChoice] = useState<PresetId>("careful");
-  // "Unlock keys with the vault": off by default, offered only on the
-  // passkey path (a password master has no PRF output to reuse). The
-  // first key was sealed under the master salt by `prfReuse` above, so
-  // opting in here needs no migration.
+  // Passkey path only: a password master has no PRF to reuse.
   const [unlockKeysOnOpen, setUnlockKeysOnOpen] = useState(false);
 
-  /** Final onboarding step: optionally apply a preset bundle, then
-   *  persist completion and hand off to the app. */
   const finishOnboarding = async (preset?: PresetId) => {
     if (preset) {
-      // Never write the bundle's storageLocation here: the user picked
-      // theirs in step 1 and the vault blobs already live there, so
-      // flipping the pointer without a migration would strand them.
-      // The preset simply reads as "Custom" if the locations differ.
+      // Never write storageLocation: the vault already lives where the
+      // user picked, and flipping it without a migration strands it.
       const { storageLocation: _ignored, ...bundle } = PRESETS[preset].bundle;
       await savePreferences(bundle);
     }
     await savePreferences({
       storageLocation: location,
       onboardingComplete: true,
-      // After the bundle, so the tick wins over a preset that leaves the
-      // field alone. The checkbox is hidden (and its state ignored) for
-      // a preset that turns never-cache on -- the two are opposites.
+      // After the bundle so the tick wins; ignored for a preset that pins
+      // never-cache.
       ...(unlockKeysOnOpen && !presetPinsNeverCache(preset)
         ? { unlockKeysOnOpen: true }
         : {}),
@@ -166,12 +149,9 @@ export function OnboardingFlow({
       return;
     }
 
-    // Never set up over an existing vault. App only shows onboarding when
-    // nothing is stored (`resolveVaultState`), but this screen can sit
-    // open while another window or device creates one -- and replacing a
-    // master protection makes every key sealed under it unopenable.
-    // Checked BEFORE a session key or passkey is minted, so nothing is
-    // half-created; `saveMasterProtection` refuses again as a backstop.
+    // Never set up over an existing vault (another window may have made
+    // one since): every key sealed under it would become unopenable.
+    // Checked before anything is minted; `saveMasterProtection` backstops.
     if (
       (await masterProtectionIn("local")) ||
       (await masterProtectionIn("sync"))
@@ -181,8 +161,7 @@ export function OnboardingFlow({
     }
 
     setSubmitting(true);
-    // The button re-enables after 2s independent of the WebAuthn
-    // promise so a still-open system dialog can't strand it.
+    // Independent of the WebAuthn promise so an open dialog can't strand it.
     setTimeout(() => setSubmitting(false), 2000);
 
     passkeyAbortRef.current?.abort();
@@ -216,10 +195,7 @@ export function OnboardingFlow({
           new Uint8Array(storedSecret),
         );
 
-        // Keep the PRF output alive across the form-fill step so the
-        // "create your first key" call below can reuse it without a
-        // second WebAuthn dialog. Zeroed in handleGenerateKey's
-        // finally + the unmount cleanup.
+        // Kept for the first-key step; zeroed in handleGenerateKey + unmount.
         masterPrfRef.current = { prfOutput, prfSalt };
 
         mp = {
@@ -257,9 +233,8 @@ export function OnboardingFlow({
         }
       }
 
-      // The vault first, in the chosen area, and only then the location:
-      // a refusal (another window won the race) must leave this device's
-      // location pointing where it did, at the vault that does exist.
+      // Vault before location: a refusal (lost race) must leave the
+      // location pointing at the vault that exists.
       await saveMasterProtection(mp, location);
       await savePreferences({ storageLocation: location });
 
@@ -268,9 +243,7 @@ export function OnboardingFlow({
       if (isWebAuthnCancel(e)) {
         setError(null);
       } else if (e instanceof VaultExistsError) {
-        // Lost the race with another window: the session minted above
-        // belongs to no stored vault, so drop it rather than leave a key
-        // that opens nothing installed as the vault session.
+        // Lost the race: drop the session minted for no stored vault.
         void wasmApi.dropContactsSession().catch(() => undefined);
         setError(t("app_onboarding_vault_exists"));
       } else {

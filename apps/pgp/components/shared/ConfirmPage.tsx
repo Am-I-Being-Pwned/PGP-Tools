@@ -9,31 +9,16 @@ import { SubPage } from "./SubPage";
 
 interface ConfirmPageProps {
   title: string;
-  /** Destructive button label, e.g. "Delete key". */
   confirmLabel: string;
-  /** Runs the action; the caller closes/unmounts everything after. */
   onConfirm: () => void | Promise<void>;
-  /** Called after the cancel slide-out finishes. */
   onCancel: () => void;
-  /** When set, the destructive button stays disabled until the user types
-   *  this exact text into a confirmation input (whitespace-trimmed). Use
-   *  for the highest-stakes deletes, e.g. anything with a private key. */
+  /** Destructive button stays disabled until this exact text is typed. */
   confirmPromptText?: string;
-  /** Optional extra line rendered above the type-to-confirm input. */
   beforeConfirmTextMessage?: string;
-  /** What's at stake: subject summary + consequence copy. */
   children: React.ReactNode;
 }
 
-/**
- * Full-panel destructive-action confirmation, so "a decision that
- * deserves its own screen" looks the same everywhere. On success the
- * page slides back out; on failure it stays put and shows why.
- *
- * Deliberately keyboard-inert: the confirm button is destructive, so
- * SubPage binds no submit shortcut to it and shows no key chip -- the
- * only bound key is Escape, which cancels. Confirming takes a click.
- */
+/** Deliberately keyboard-inert: confirming takes a click (Escape cancels). */
 export function ConfirmPage({
   title,
   confirmLabel,
@@ -65,10 +50,7 @@ export function ConfirmPage({
       ]}
     >
       {(api) => (
-        // m-auto centers the decision block vertically when it fits,
-        // and degrades to normal scrolling when it doesn't.
         <div className="m-auto w-full space-y-3">
-          {/* A "stop" status band: red tint, no outline. */}
           <div className="flex items-start gap-2 rounded-xl bg-[#2a1517] p-3">
             <TriangleAlertIcon className="text-bad mt-0.5 h-4 w-4 shrink-0" />
             <div className="min-w-0 flex-1 text-xs">{children}</div>
@@ -90,8 +72,7 @@ export function ConfirmPage({
                 value={typed}
                 onChange={(e) => setTyped(e.target.value)}
                 onKeyDown={(e) => {
-                  // runAction respects the disabled flag, so Enter on a
-                  // mismatch is a no-op; Escape still closes via SlideOver.
+                  // runAction respects disabled, so Enter on a mismatch no-ops.
                   if (e.key === "Enter") api.runAction(0);
                 }}
                 aria-label={t("shared_confirm_type_aria", {

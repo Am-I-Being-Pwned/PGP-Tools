@@ -12,11 +12,7 @@ export function getDefaultProtectionMethod(): ProtectionMethod {
   return checkPrfSupport() ? "passkey" : "password";
 }
 
-/**
- * The protection step's state, its validation, and the input it builds,
- * for every flow that seals a new secret. `pickerProps` spreads into
- * `ProtectionMethodPicker`.
- */
+/** The protection step's state, validation, and built input. */
 export function useProtectionChoice(ctx: ProtectionContext = {}) {
   const [method, setMethod] = useState(getDefaultProtectionMethod);
   const [password, setPassword] = useState("");
@@ -27,7 +23,6 @@ export function useProtectionChoice(ctx: ProtectionContext = {}) {
   return {
     method,
     password,
-    /** The vault passkey will be reused (no new registration). */
     reusing:
       method === "passkey" && reusePasskey && !!ctx.reusePasskeyCredentialId,
     validate: () => validateProtection(state),

@@ -120,9 +120,7 @@ function SelectItem({
   trailing,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Item> & {
-  /** Decorative content rendered after the item text (e.g. a shortcut
-   *  hint). Kept outside ItemText so it never leaks into the trigger's
-   *  SelectValue. */
+  /** Outside ItemText so it never leaks into the trigger's SelectValue. */
   trailing?: React.ReactNode;
 }) {
   return (

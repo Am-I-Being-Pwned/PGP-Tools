@@ -1,8 +1,4 @@
-/**
- * WebAuthn PRF extension types.
- * Augments the built-in WebAuthn interfaces so TypeScript
- * understands the `prf` field on extension inputs/outputs.
- */
+/** WebAuthn PRF extension: augments the built-in interfaces with `prf`. */
 
 interface AuthenticationExtensionsClientInputsPRF {
   prf?: {

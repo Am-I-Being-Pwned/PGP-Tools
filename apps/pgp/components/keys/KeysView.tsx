@@ -57,29 +57,23 @@ import { KeyCard } from "./KeyCard";
 import { KeyDetailsPage } from "./KeyDetailsPage";
 import { SelectionBar } from "./SelectionBar";
 
-/** A key whose local display name is being edited. */
 type RenameTarget =
   | { kind: "own"; keyBlob: ProtectedKeyBlob }
   | { kind: "crx"; keyBlob: CrxSigningKeyBlob }
   | { kind: "contact"; contact: PublicContactKey };
 
-/** What the subject is REALLY called, under the rename field so an alias
- *  never hides it. An SSH key may have no comment: its fingerprint ends
- *  the chain. A CRX key has nothing but its extension id. */
+/** The subject's real name, under the rename field so an alias never hides it. */
 function realIdentityOf(target: RenameTarget): string {
   if (target.kind === "crx") return target.keyBlob.extensionId;
   const record = target.kind === "own" ? target.keyBlob : target.contact;
   return realIdentity(record.userIds[0] ?? record.keyId);
 }
 
-/** A pending deletion, confirmed on its own slide-over page. */
 type DeleteTarget =
   | { kind: "own"; keyBlob: ProtectedKeyBlob }
   | { kind: "contact"; contact: PublicContactKey }
   | { kind: "crx"; keyBlob: CrxSigningKeyBlob };
 
-/** Slide-over subpages of the Keys tab, managed as a nav stack: push to
- *  drill in, pop to go back. New subpages are one union member away. */
 type KeysRoute =
   | { page: "generate" }
   | { page: "import"; initialArmored?: string | null }
@@ -89,19 +83,12 @@ type KeysRoute =
   | { page: "bulk-export" }
   | { page: "rename"; target: RenameTarget };
 
-/**
- * A keyring list drawn as one card: flat blocks with 2px of page between
- * them. Not `BlockStack`, which clips its children to round the outer
- * corners -- that would also clip the outward ring a just-imported row
- * pulses with. Instead the first and last rows pick up the 12px corners
- * themselves. Every child is a plain wrapper (the `data-select-id` one,
- * for cards) around exactly one block, hence the `>*>*` reach.
- */
+/** Not `BlockStack`: its clip would cut the just-imported ring, so the
+ *  end rows take the corners themselves (hence the `>*>*` reach). */
 const LIST_STACK =
   "flex flex-col gap-0.5 [&>*:first-child>*]:rounded-t-xl [&>*:last-child>*]:rounded-b-xl";
 
-/** Composite selection id, namespaced so PGP keys, CRX keys, and contacts can
- *  coexist in one selection set. */
+/** Namespaced so PGP keys, CRX keys, and contacts share one selection set. */
 const selId = (kind: "pgp" | "crx" | "contact", id: string) => `${kind}:${id}`;
 
 export function KeysView() {

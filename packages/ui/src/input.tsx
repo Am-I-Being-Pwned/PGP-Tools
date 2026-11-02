@@ -9,10 +9,9 @@ export const inputVariants = cva(
   {
     variants: {
       variant: {
-        // A recessed well, not a drawn border.
         field:
           "surface-field focus:ring-ring rounded-lg px-3 py-2 focus:ring-2 focus:outline-none",
-        // Bare text inside a field block; the block carries the focus ring.
+        // The surrounding block carries the focus ring.
         bare: "h-7 bg-transparent outline-none",
       },
     },

@@ -18,31 +18,22 @@ import {
 import { authenticateAndGetPrf } from "../../lib/protection/webauthn-prf";
 import { DevToolsPage } from "../settings/DevToolsPage";
 
-/** The passkey ceremony's PRF output, on loan to `onUnlocked` for the
- *  duration of that call so "unlock keys when the vault unlocks" can open
- *  the keys sealed under the master salt off the same ceremony. */
+/** PRF output on loan to `onUnlocked`, to open keys sealed under the
+ *  master salt off the same ceremony. */
 export interface MasterPrfLoan {
   prfOutput: Uint8Array;
 }
 
 interface MasterUnlockScreenProps {
   masterProtection: MasterProtection;
-  /** The vault session is live. On the passkey path `prf` carries the
-   *  ceremony's PRF output; it is valid only until the returned promise
-   *  settles (this screen zeroes it in a `finally`), so a consumer must
-   *  await everything it does with it and keep no reference. Absent on
-   *  the password path. */
+  /** `prf` is valid only until the returned promise settles (zeroed in a
+   *  `finally`): await all use, keep no reference. */
   onUnlocked: (prf?: MasterPrfLoan) => void | Promise<void>;
-  /** True when the lock was system-initiated (idle timer / visibility /
-   *  OS idle). Suppresses the otherwise-automatic passkey prompt: a
-   *  re-lock should not pop a passkey dialog without explicit user
-   *  intent, both for UX (surprise dialogs) and security (an attacker
-   *  with momentary screen access shouldn't get a passkey ceremony
-   *  pre-launched for them). */
+  /** System-initiated lock: no automatic passkey prompt, so someone with
+   *  momentary screen access doesn't get a ceremony pre-launched. */
   autoLocked?: boolean;
-  /** The OTHER storage area also holds a master protection. Offered once
-   *  an unlock has failed: this device's record of where its vault lives
-   *  may be what was tampered with (`lib/storage/vault-state.ts`). */
+  /** The other area also holds a vault. Offered after a failed unlock:
+   *  the location pointer may be what was tampered with. */
   alternate?: StorageLocation;
   onUseAlternate?: () => void | Promise<void>;
 }
@@ -60,14 +51,8 @@ export function MasterUnlockScreen({
   const [showDevTools, setShowDevTools] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
-  // Auto-prompt, but only once the panel HAS focus. Chrome gives a side
-  // panel focus when it is shown (crbug 486495151), a moment after the
-  // page loads; prompting before that anchors the WebAuthn dialog to
-  // whatever was focused before -- the web page -- and Chrome hands focus
-  // back THERE when the dialog closes, so the user unlocks and still has
-  // to click into the panel. Browsers without that fix never focus the
-  // panel on their own, so after a short wait it prompts regardless, as
-  // it always did.
+  // Auto-prompt only once the panel has focus (crbug 486495151), or Chrome
+  // returns focus to the web page after the dialog; fall back after a wait.
   useEffect(() => {
     if (autoLocked) return;
     if (masterProtection.method !== "passkey") return;
@@ -89,12 +74,10 @@ export function MasterUnlockScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Function declaration (hoisted) so the auto-unlock effect above can
-  // reference it without a use-before-declaration error.
+  // Hoisted for the effect above.
   async function handlePasskeyUnlock() {
     if (masterProtection.method !== "passkey") return;
 
-    // Abort any in-flight ceremony so we don't get InvalidStateError
     abortRef.current?.abort();
     const ac = new AbortController();
     abortRef.current = ac;
@@ -113,11 +96,7 @@ export function MasterUnlockScreen({
         prfOutput,
         fromBase64(masterProtection.storedSecret),
       );
-      // Loaned, not handed over: the `finally` below zeroes it once the
-      // consumer's promise settles. A consumer that throws lands in the
-      // catch below and shows a generic error, but the session is live
-      // by then -- App's handler owns its own failure modes and does not
-      // throw for a key that will not open.
+      // Loaned: the `finally` zeroes it once the consumer settles.
       await onUnlocked({ prfOutput });
     } catch (e) {
       if (ac.signal.aborted) return;
@@ -153,8 +132,7 @@ export function MasterUnlockScreen({
 
       if (!ok) {
         setError(t("shared_wrong_password"));
-        // Drop the JS reference to the wrong-password string. Retries
-        // build a new immutable string anyway; minimising heap lifetime.
+        // Minimise the wrong password's heap lifetime.
         setPassword("");
         return;
       }
@@ -175,9 +153,6 @@ export function MasterUnlockScreen({
       role="main"
       aria-label={t("shared_unlock_aria")}
     >
-      {/* One column, centred as a group: who this is, the one field, the
-          one action -- the card language of the rest of the panel rather
-          than a hero floating far above a strip of controls. */}
       <div className="w-full max-w-sm space-y-5">
         <div className="flex items-center gap-3">
           <div className="bg-card text-good flex size-11 shrink-0 items-center justify-center rounded-xl">

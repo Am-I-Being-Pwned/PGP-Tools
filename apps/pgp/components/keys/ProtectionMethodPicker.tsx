@@ -20,13 +20,11 @@ interface ProtectionMethodPickerProps {
   onBack: () => void;
   submitting: boolean;
   submitLabel?: string;
-  /** When set, offer to reuse the existing passkey instead of registering a new one. */
   reusePasskeyCredentialId?: string;
   reusePasskey?: boolean;
   onReusePasskeyChange?: (reuse: boolean) => void;
 }
 
-/** One protection choice: a flat block in the picker's stack. */
 const OPTION =
   "flex cursor-pointer items-start gap-3 rounded-[3px] p-3 transition-colors";
 const OPTION_ON = "bg-on";
@@ -56,9 +54,7 @@ export function ProtectionMethodPicker({
         {t("keygen_protection_intro")}
       </p>
 
-      {/* The two choices are one card of two blocks; the chosen one is
-          tinted "on". Native radios stay underneath (and visible): they
-          carry the keyboard behaviour and the group semantics for free. */}
+      {/* Native radios stay underneath: they carry keyboard and group semantics. */}
       <BlockStack>
         <label
           className={cn(
@@ -146,8 +142,7 @@ export function ProtectionMethodPicker({
             value={confirmPassword}
             onChange={(e) => onConfirmPasswordChange(e.target.value)}
             onKeyDown={(e) => {
-              // No <form> here: without this, Return does nothing and the
-              // button's Enter chip would be advertising a lie.
+              // No <form> here: without this, Return does nothing.
               if (e.key === "Enter" && !submitting) {
                 e.preventDefault();
                 onSubmit();
@@ -189,7 +184,6 @@ export function ProtectionMethodPicker({
                   ? t("keygen_submit_create_passkey")
                   : t("common_continue")))}
             {!submitting && method === "password" && (
-              // Password only: a passkey starts from a click.
               <Kbd shortcut={{ key: "Enter" }} className="opacity-70" />
             )}
           </span>

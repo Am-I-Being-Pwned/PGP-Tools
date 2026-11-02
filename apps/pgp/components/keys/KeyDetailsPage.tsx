@@ -65,45 +65,24 @@ export type KeyDetailsTarget =
 interface KeyDetailsPageProps {
   target: KeyDetailsTarget;
   onBack: () => void;
-  /** Contacts only: jump to the workspace with this key preselected. */
   onEncryptTo?: () => void;
-  /** Open the rename page for this key or contact (local display name
-   *  only -- the certificate is never touched). */
+  /** Local display name only; the certificate is never touched. */
   onRename?: () => void;
-  /** Contacts only: ask the keyserver whether the owner revoked it. */
   onCheckRevocation?: () => void;
-  /** Contacts only: record (or withdraw) that the user compared this
-   *  key's fingerprint with its owner. */
   onSetVerified?: (verified: boolean) => Promise<void>;
-  /** Contacts only: another key claims this one's address or name --
-   *  the pill on the card, spelled out here with who. */
   clash?: IdentityConflict;
-  /** Open the details of one of the `clash` holders. */
   onShowHolder?: (holder: IdentityHolder) => void;
-  /** The user's contacts and own keys, from an entry point that has no
-   *  wiring of its own for the three above (the signer card, the
-   *  recipient picker). Given these, the page works them out itself: it
-   *  reads the contact live from `contacts` (so a change shows here),
-   *  computes the clash with `contactClashes`, offers Mark as verified
-   *  through the store, and opens a holder's details on top of this
-   *  page. An explicit `clash` / `onShowHolder` / `onSetVerified` wins. */
+  /** For entry points with no clash/verify wiring of their own: the page
+   *  derives them from these. Explicit props win. */
   contacts?: readonly PublicContactKey[];
   ownKeys?: readonly ProtectedKeyBlob[];
-  /** True when this is the user's configured default key. */
   isDefault?: boolean;
-  /** Own keys only: set (true) or clear (false) this key as the
-   *  default used for signing, decrypting, and encrypt-to-self. */
   onSetDefault?: (next: boolean) => void;
-  /** Open the delete/remove confirmation page for this key. */
   onDelete?: () => void;
-  /** Own keys only: mint (and persist) a revocation certificate for a
-   *  key imported without one. Should throw with a user-readable message
-   *  when the key is locked. */
+  /** Should throw a user-readable message when the key is locked. */
   onGenerateRevocation?: () => Promise<string>;
 }
 
-/** Header icon button with a small hover label underneath (the UI kit
- *  has no tooltip primitive; a peer-hover span keeps it dependency-free). */
 function IconAction({
   label,
   onClick,
@@ -130,11 +109,6 @@ function IconAction({
   );
 }
 
-// ── revocation certificate (own keys) ────────────────────────────────
-
-/** The stored revocation certificate for one of the user's own keys --
- *  generated keys carry one from creation; imported keys can mint one
- *  here on demand (requires the key to be unlocked). */
 function RevocationSection({
   keyId,
   initialCertificate,

@@ -1,22 +1,7 @@
 /**
- * The OpenPGP -> presentation adapter behind the key body.
- *
- * `KeyPreviewBody` used to take a `KeyInfo` directly, which quietly made
- * "a key" mean "an OpenPGP certificate". It now takes {@link KeyFacts},
- * and every engine supplies the facts it has. Two properties make that
- * work, and neither is enforced by the compiler:
- *
- *  1. The PGP adapter is lossless -- if it drops `expiresAt`, or turns a
- *     `null` expiry into `undefined`, the body stops rendering a row it
- *     used to render and nobody sees an error.
- *  2. Absent is a first-class state, not a missing value. An engine with
- *     no creation date, no expiry and no health verdict (SSH, CRX)
- *     supplies none of them, and the body must read that as "there is no
- *     such fact", never as "the fact hasn't loaded yet".
- *
- * `null` and `undefined` therefore mean different things here and are
- * asserted separately throughout: `expiresAt: null` renders "Never";
- * `expiresAt` absent renders nothing at all.
+ * The key-body adapters. Neither property is compiler-enforced: the PGP
+ * adapter must be lossless, and `null` ("Never") and absent (no row) are
+ * different states, asserted separately throughout.
  */
 
 import { describe, expect, it } from "vitest";
@@ -83,23 +68,19 @@ describe("pgpKeyFacts", () => {
       usableForSigning: true,
       policyError: undefined,
     });
-    // The component rows are a pass-through, not a mapping: every field
-    // the breakdown parsed has to reach the row the UI renders.
     expect(facts.components).toEqual({ rows: details.keys, truncated: true });
     expect(facts.components?.rows[0]).toEqual(details.keys[0]);
   });
 
   it("keeps the identifier the cert's fingerprint, not its short key id", () => {
-    // The facts card copies this value; a short id here would silently
-    // downgrade what the user pastes elsewhere as the key's identity.
+    // A short id here would downgrade what the user copies as the key's identity.
     expect(pgpKeyFacts(info(), null).fingerprint).toBe(FP);
     expect(pgpKeyFacts(info(), null).fingerprint).toHaveLength(40);
   });
 
   it("distinguishes a never-expiring key from one with no expiry concept", () => {
-    // null => the row renders "Never". undefined => the row is absent.
-    // Collapsing the two would tell the user a key never expires when in
-    // fact nothing was ever asserted about it.
+    // null => "Never"; undefined => no row. Collapsing them claims a key
+    // never expires.
     const never = pgpKeyFacts(info({ expiresAt: null }), null);
     expect(never.expiresAt).toBeNull();
     expect("expiresAt" in never).toBe(true);
@@ -113,8 +94,7 @@ describe("pgpKeyFacts", () => {
   });
 
   it("carries a policy rejection into the health verdict", () => {
-    // The health banner is the only place a user learns why a key was
-    // refused; a dropped `policyError` turns that into a silent refusal.
+    // A dropped `policyError` turns a refusal into a silent one.
     const facts = pgpKeyFacts(
       info({
         usableForEncryption: false,
@@ -131,9 +111,7 @@ describe("pgpKeyFacts", () => {
   });
 
   it("omits the breakdown entirely when it failed to parse", () => {
-    // NOT `{ rows: [], truncated: false }` -- an empty rows array is a
-    // cert with no component keys, which would render an empty section
-    // where the real answer is "we couldn't decompose this cert".
+    // Empty rows would mean "no component keys", not "couldn't decompose".
     const facts = pgpKeyFacts(info(), null);
     expect(facts.components).toBeUndefined();
     expect(facts.createdAt).toBe(CREATED);
@@ -143,9 +121,6 @@ describe("pgpKeyFacts", () => {
 
 describe("KeyFacts as an engine-generic shape", () => {
   it("accepts a key with a fingerprint and an algorithm and nothing else", () => {
-    // The SSH / CRX case. Only two fields are required; everything else
-    // being absent must be an ordinary, complete value -- no crash, and
-    // nothing a renderer could mistake for "still loading".
     const facts: KeyFacts = {
       fingerprint: "SHA256:2f9c1b",
       algorithm: "ssh-ed25519",
@@ -156,15 +131,11 @@ describe("KeyFacts as an engine-generic shape", () => {
     expect(facts.expiresAt).toBeUndefined();
     expect(facts.health).toBeUndefined();
     expect(facts.components).toBeUndefined();
-    // Anything reading these has to cope with `undefined` rather than
-    // waiting for a value that is never coming.
     expect(JSON.parse(JSON.stringify(facts))).toEqual(facts);
   });
 
   it("takes an OpenPGP SubkeyDetail as a component row without mapping", () => {
-    // `ComponentKeyRow` is documented as a structural subset of
-    // `SubkeyDetail` so the adapter can stay a pass-through. If the two
-    // drift, this assignment stops compiling -- which is the point.
+    // If `ComponentKeyRow` drifts from `SubkeyDetail`, this stops compiling.
     const row: ComponentKeyRow = subkey({
       status: "revoked",
       revocationReason: "superseded",
@@ -185,9 +156,6 @@ describe("sshKeyFacts", () => {
   });
 
   it("leaves every certificate fact ABSENT, not null", () => {
-    // Absent means the row doesn't render at all; `null` would render
-    // "Never" for the expiry and a blank for the rest. An SSH key is not
-    // a certificate with empty fields.
     const facts = sshKeyFacts(FINGERPRINT, "ssh-rsa");
     expect(facts).not.toHaveProperty("createdAt");
     expect(facts).not.toHaveProperty("expiresAt");
@@ -212,12 +180,8 @@ describe("sshGroupKeyFacts", () => {
   ];
 
   it("shows EVERY fingerprint, in full", () => {
-    // The fingerprints are the only out-of-band check a user has: they
-    // can read them off github.com/<user>.keys, or ask the person over
-    // another channel. Summarising three keys as "3 keys", or listing
-    // two and a "+1 more", removes the one thing that makes "did GitHub
-    // hand back a key this person never published?" a checkable
-    // question. So: a row each, and the fingerprint uncut.
+    // Full fingerprints, one row each: the only out-of-band check against
+    // GitHub handing back a key the person never published.
     const facts = sshGroupKeyFacts(members);
     expect(facts.components?.rows.map((r) => r.fingerprint)).toEqual([
       "SHA256:aaa",
@@ -225,8 +189,6 @@ describe("sshGroupKeyFacts", () => {
       "SHA256:ccc",
     ]);
     expect(facts.components?.truncated).toBe(false);
-    // Per-key algorithm, not the head's repeated three times: a contact
-    // whose phone key is ssh-rsa and laptop ed25519 is ordinary.
     expect(facts.components?.rows.map((r) => r.algorithm)).toEqual([
       "ssh-ed25519",
       "ssh-rsa",
@@ -235,12 +197,8 @@ describe("sshGroupKeyFacts", () => {
   });
 
   it("shows no head fingerprint when there are several keys", () => {
-    // The head key is still the stored record's `keyId` -- that is a
-    // STORAGE property (see `recipientsField`) and it is asserted in
-    // `lib/storage/contacts.test.ts`. It is deliberately NOT shown as
-    // the card's fingerprint: it is already one of the rows below, so a
-    // head row renders it twice, and singling it out implies a primary
-    // key that this model does not have.
+    // The head key is still the stored `keyId` (asserted in
+    // lib/storage/contacts.test.ts) but is not shown: it would imply a primary.
     const facts = sshGroupKeyFacts(members);
     expect(facts.fingerprint).toBeUndefined();
     expect(facts.algorithm).toBe("ssh-ed25519");
@@ -250,10 +208,7 @@ describe("sshGroupKeyFacts", () => {
   });
 
   it("lists every key as a peer, never as a subkey of the first", () => {
-    // The body renders exactly the non-primary rows, so a row marked
-    // primary would vanish from the list -- and these keys are not a
-    // certificate's components in any case: they are separate keys
-    // belonging to one person.
+    // The body renders only non-primary rows; a primary row would vanish.
     const facts = sshGroupKeyFacts(members);
     expect(facts.components?.rows.every((r) => !r.isPrimary)).toBe(true);
     expect(facts.components?.title).toBe("Keys");
@@ -261,14 +216,10 @@ describe("sshGroupKeyFacts", () => {
   });
 
   it("gives the rows no dates, and no verdict beyond `it parsed`", () => {
-    // Absent, not null: an SSH key records no creation date, and a row
-    // that printed one anyway would be printing the epoch.
     const facts = sshGroupKeyFacts(members);
     for (const row of facts.components?.rows ?? []) {
       expect(row).not.toHaveProperty("createdAt");
       expect(row).not.toHaveProperty("expiresAt");
-      // An age recipient that parses IS an encryption key, and can be
-      // nothing else -- age has no signatures.
       expect(row.canEncrypt).toBe(true);
       expect(row.canSign).toBe(false);
       expect(row.status).toBe("active");
@@ -283,20 +234,9 @@ describe("sshGroupKeyFacts", () => {
   });
 });
 
-/**
- * What the DETAILS page shows for a stored multi-key contact.
- *
- * The details page and the import preview share `KeyPreviewBody`
- * precisely so they cannot drift, but the details page used to call the
- * single-key builder unconditionally: the preview listed all three
- * fingerprints and the details page listed one. This pins the exact
- * expression the page now evaluates -- `sshGroupKeyFacts` over
- * `contactRecipients` -- so the two screens agree about how many keys a
- * person has.
- */
+/** The details page must list every key, like the import preview does. */
 describe("a stored 3-key contact, as the details page builds it", () => {
-  // Real-length OpenSSH fingerprints: 43 base64 characters after the
-  // prefix. Truncation only shows up at full length.
+  // Real-length fingerprints: truncation only shows up at full length.
   const FPS = [
     "SHA256:IoCz+8Ykvdvfq1sQ2pQm5oYtxK3n0uWJZ9hVbGfR7Ac",
     "SHA256:Xr4dLpQ0mNbT7yUvCeHgJk2WsZaFo9RiD3lPnQxYtB8",

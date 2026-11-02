@@ -10,8 +10,6 @@ import {
 } from "../../lib/shortcuts-reference";
 import { SubPage } from "../shared/SubPage";
 
-/** Right-hand side of a reference row: platform-aware keycaps, literal
- *  chips, or a muted "Unbound" for entries with neither. */
 function EntryKeys({ entry }: { entry: ShortcutRefEntry }) {
   if (entry.shortcut) return <Kbd shortcut={entry.shortcut} />;
   if (entry.chips) {
@@ -35,11 +33,6 @@ function EntryKeys({ entry }: { entry: ShortcutRefEntry }) {
   );
 }
 
-/**
- * Settings subpage listing every keyboard shortcut, grouped: palette,
- * workspace, modes (derived from MODE_SHORTCUTS), and the browser-wide
- * chrome.commands bindings. The data lives in lib/shortcuts-reference.
- */
 export function KeyboardShortcutsPage({ onClose }: { onClose: () => void }) {
   return (
     <SubPage title={t("settings_shortcuts_title")} onClose={onClose}>
@@ -67,8 +60,7 @@ export function KeyboardShortcutsPage({ onClose }: { onClose: () => void }) {
                 </Block>
               ))}
             </BlockStack>
-            {/* chrome:// URLs render as plain text: pages can't link to
-                them, but an extension MAY open one via chrome.tabs. */}
+            {/* Pages can't link chrome:// URLs, so they render as text. */}
             {section.note && (
               <p className="text-muted-foreground px-1 text-xs">
                 {section.note}

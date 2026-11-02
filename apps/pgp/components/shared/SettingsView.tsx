@@ -49,14 +49,11 @@ import { useNavStack } from "./useNavStack";
 
 const AUTO_LOCK_OPTIONS: AutoLockTimeout[] = [2, 5, 10, 15, 30, 60];
 
-/** The muted underline links in the About block: green is kept for
- *  "on" and "go", so a plain link reads as text, not as an action. */
+/** Muted links: green is reserved for "on" and "go". */
 const ABOUT_LINK_CLASS =
   "text-foreground/80 hover:text-foreground underline decoration-white/20 underline-offset-2 transition-colors";
 
-/** A row that opens a subpage: title (plus an optional line under it),
- *  the current value muted on the right, and a chevron. The focus ring
- *  is inset because the stack clips anything drawn outside its blocks. */
+/** Focus ring inset: the stack clips anything outside its blocks. */
 function NavRow({
   title,
   description,
@@ -92,7 +89,6 @@ function NavRow({
   );
 }
 
-/** Settings' slide-over subpages, one stack: the newest is on top. */
 type SettingsRoute =
   | { page: "presets" }
   | { page: "translation" }
@@ -160,8 +156,7 @@ export function SettingsView() {
     });
   };
 
-  // Enter never-cache via the shared transition (flip prefs + wipe
-  // history), which saves directly; read back what it persisted.
+  // Shared transition (flip prefs + wipe history).
   const enableNeverCache = async () => {
     await enterNeverCacheMode();
     await preferencesStore.reload();
@@ -170,8 +165,7 @@ export function SettingsView() {
   // Not optimistic: the next vault unlock reads the STORED value, so the
   // toggle must not say "off" while storage still says "on".
   const handleUnlockOnOpenToggle = (v: boolean) =>
-    // Entering unlock-on-open leaves never-cache (see enableNeverCache
-    // for the converse). History stays as the user had it.
+    // Entering unlock-on-open leaves never-cache.
     savePreference(
       v
         ? { unlockKeysOnOpen: true, neverCacheKeys: false }
@@ -181,24 +175,21 @@ export function SettingsView() {
 
   const handleNeverCacheToggle = async (v: boolean) => {
     if (!v) {
-      // Turning never-cache OFF never re-enables history; the user
-      // opted out of retention and must opt back in explicitly.
+      // Turning never-cache off never re-enables history.
       void savePreference({ neverCacheKeys: false });
       return;
     }
     const bytes = await historyByteSize();
     if (bytes > 0) {
-      // Stored history exists: entering never-cache deletes it, so
-      // confirm with the cost spelled out before flipping anything.
+      // Entering never-cache deletes history: confirm the cost first.
       nav.push({ page: "never-cache-confirm", historyBytes: bytes });
       return;
     }
     await enableNeverCache();
   };
 
-  // Restore the pre-apply snapshot of the bundled fields. Cleared
-  // history is gone for good; the apply toast says so. storageLocation
-  // can't be restored by a plain save, it needs the full migration.
+  // Cleared history is gone for good, and storageLocation needs the full
+  // migration, not a plain save.
   const undoPresetApply = async (snapshot: Partial<PgpPreferences>) => {
     const { storageLocation: prevLocation, ...rest } = snapshot;
     await preferencesStore.update(rest);
@@ -206,30 +197,24 @@ export function SettingsView() {
       await handleStorageChange(prevLocation);
     }
   };
-  // The undo toast can outlive this render (and a preset may have
-  // migrated storage, changing the props undoPresetApply closes over),
-  // so the toast action always calls the latest instance via a ref.
+  // Via a ref: the undo toast can outlive this render.
   const undoPresetApplyRef = useRef(undoPresetApply);
   useEffect(() => {
     undoPresetApplyRef.current = undoPresetApply;
   });
 
   const applyPreset = async (id: PresetId) => {
-    // Snapshot exactly the bundled fields first, so Undo can restore
-    // what the preset overwrote and nothing else.
+    // Exactly the bundled fields, so Undo restores only those.
     const snapshot = snapshotBundleFields(
       await getPreferences(),
       PRESETS[id].bundle,
     );
-    // storageLocation can't go through plain savePreferences: flipping
-    // it without migrating the vault blobs would strand them in the
-    // old area. Apply the rest, then run the real migration if needed.
+    // storageLocation goes through the real migration, never a plain save.
     const { storageLocation: bundleLocation, ...bundle } = PRESETS[id].bundle;
     let historyCleared = false;
     if (bundle.neverCacheKeys === true) {
       historyCleared = (await historyByteSize()) > 0;
-      // Route the never-cache flip (and its history wipe) through the
-      // shared transition so this path can't diverge from the toggle.
+      // Shared transition, so this can't diverge from the toggle.
       const {
         neverCacheKeys: _never,
         historyEnabled: _history,
@@ -247,8 +232,6 @@ export function SettingsView() {
 
     toast.success(t("shared_preset_applied", { title: PRESETS[id].title }), {
       id: "preset-applied",
-      // Undo restores the bundled preferences, but a paranoid apply
-      // wiped stored history and that is unrecoverable; say so.
       description: historyCleared
         ? t("shared_preset_applied_history_deleted")
         : undefined,
@@ -390,10 +373,8 @@ export function SettingsView() {
       <div className="space-y-1.5">
         <BlockLabel as="h2">{t("shared_key_discovery")}</BlockLabel>
         <BlockStack>
-          {/* The description says exactly which hosts and exactly what
-              they learn. This is the only preference that lets the
-              extension talk to anyone, so a vague "enable lookups" would
-              be hiding the thing worth deciding about. */}
+          {/* The only network preference: name the exact hosts and what
+              they learn. */}
           <SwitchRow
             title={t("shared_lookup_online_title")}
             description={t("shared_lookup_online_desc")}

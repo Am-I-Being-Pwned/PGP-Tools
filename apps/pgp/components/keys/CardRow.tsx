@@ -17,9 +17,8 @@ import { t } from "../../lib/i18n";
 import { useJustImported } from "./useJustImported";
 import { useLongPress } from "./useLongPress";
 
-/** While selecting, the card is the target: its own controls go dim and
- *  click-through, and drop their hover (which fires off the CARD's hover,
- *  so pointer-events-none alone wouldn't stop it). */
+/** Hover fires off the CARD's hover, so pointer-events-none alone
+ *  wouldn't stop it. */
 export const DIMMED = "pointer-events-none opacity-40";
 
 const PILL_TONE = {
@@ -29,7 +28,6 @@ const PILL_TONE = {
   bad: "bg-destructive/12 text-bad",
 } as const;
 
-/** The design language's status pill. */
 export function Pill({
   tone = "neutral",
   icon,
@@ -60,21 +58,14 @@ interface CardRowProps {
   selectionMode: boolean;
   selected: boolean;
   onToggleSelect?: (extend: boolean) => void;
-  /** Long-press / menu entry into selection mode. */
   onStartSelect?: () => void;
   onShowDetails?: () => void;
   justImported?: boolean;
-  /** Background and corner overrides (a tinted signer band, say). */
   className?: string;
   children: ReactNode;
 }
 
-/**
- * One compact row of a keys-list stack, shared by own keys and contacts
- * so the two read as one list: click opens details (or toggles while
- * selecting, shift extends), long-press starts selecting, and a fresh
- * import pulses it.
- */
+/** One keys-list row, shared by own keys and contacts. */
 export function CardRow({
   selectionMode,
   selected,
@@ -92,7 +83,7 @@ export function CardRow({
   );
 
   const handleClick = (e: ReactMouseEvent) => {
-    if (longPress.consumeClick()) return; // the click ending a long-press
+    if (longPress.consumeClick()) return;
     if (selectionMode) {
       onToggleSelect?.(e.shiftKey);
       return;
@@ -107,13 +98,10 @@ export function CardRow({
       onClick={handleClick}
       {...longPress.handlers}
       className={cn(
-        // select-none: a shift-click would otherwise drag a text range.
         "group bg-card relative rounded-[3px] py-2.5 pr-2 pl-3.5 transition-colors select-none",
         className,
         importedClass,
-        // The pulse is an outward ring: lift it over the 2px gap.
         importedClass && "z-10",
-        // Inset: selecting must not shift the row or spill into the gap.
         selected && "ring-primary/70 ring-2 ring-inset",
         clickable && "hover:bg-accent/50 cursor-pointer",
       )}
@@ -123,7 +111,6 @@ export function CardRow({
   );
 }
 
-/** The last 16 hex digits of a fingerprint, as two stacked lines. */
 export function LongIdColumn({ lines }: { lines: [string, string] }) {
   return (
     <Tooltip>
@@ -138,7 +125,6 @@ export function LongIdColumn({ lines }: { lines: [string, string] }) {
   );
 }
 
-/** The row's ⋮ menu. */
 export function CardMenu({
   ariaLabel,
   selectionMode,
@@ -163,8 +149,7 @@ export function CardMenu({
           <EllipsisVerticalIcon className="h-4 w-4" />
         </button>
       </DropdownMenuTrigger>
-      {/* Portalled, but React events still bubble through the component
-          tree: without this a menu click also fires the row's onClick. */}
+      {/* Portalled, but React events still bubble: stop the row's onClick. */}
       <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
         {children}
       </DropdownMenuContent>
@@ -172,8 +157,6 @@ export function CardMenu({
   );
 }
 
-/** The row opens details too; this is the visible, keyboard-reachable
- *  target for the same action. */
 export function DetailsChevron({
   onClick,
   selectionMode,

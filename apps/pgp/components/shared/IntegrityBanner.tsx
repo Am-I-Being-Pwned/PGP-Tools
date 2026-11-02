@@ -10,37 +10,18 @@ import {
 } from "../../lib/storage/integrity";
 
 /**
- * "Stored data was rolled back or is missing" -- one amber band under the
- * tab bar, shown while the vault is open, until dismissed.
- *
- * Deliberately a warning and not a stop: the stores still load (the
- * owner's call -- refusing would turn every false positive into a
- * locked-out user), and the two things a rollback could quietly undo are
- * held regardless: a revoked contact stays revoked, and missing settings
- * read as the strictest preset. The copy says what can cause it besides
- * an attacker, because one thing can: two synced devices changing the
- * same store at once (see `lib/storage/integrity.ts`).
- *
- * A store saved with NO generation after this device recorded one
- * (`no-generation`) gets its own, softer line instead of the main one:
- * that is what a 2.0.x build on another device of a sync vault leaves
- * behind, as well as what a rollback to a pre-generation copy looks
- * like, and the copy says both. On a sync vault the "missing" case gets
- * an extra line too, since such a build deletes a store it empties.
- *
- * Dismissing forgets this panel's reports; a store that is still behind
- * reports again the next time the panel opens. A lost ledger (deleted,
- * or unreadable) and an older settings copy are the exceptions: they
- * repeat on every unlock until dismissed here, and hold the settings at
- * the strictest preset until then, so dismissing one calls
- * `onAcknowledged` for the panel to re-read them.
+ * Rollback/missing-store warning. A warning, not a stop: refusing to load
+ * would lock users out on every false positive, and the two things a
+ * rollback could undo are held anyway (revocations stick, missing settings
+ * read as strictest). Two synced devices can trigger it too
+ * (`lib/storage/integrity.ts`). A lost ledger or older settings copy
+ * repeats every unlock until dismissed here, hence `onAcknowledged`.
  */
 export function IntegrityBanner({
   onAcknowledged,
   syncVault = false,
 }: {
   onAcknowledged?: () => void;
-  /** The vault lives in synced storage (wording only). */
   syncVault?: boolean;
 }) {
   const issues = useSyncExternalStore(subscribeIntegrity, integrityIssues);

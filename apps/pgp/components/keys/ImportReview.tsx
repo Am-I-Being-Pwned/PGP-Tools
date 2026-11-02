@@ -25,8 +25,6 @@ import { KeyAvatar } from "../shared/KeyAvatar";
 import { MarkedText } from "../shared/MarkedText";
 
 function statusLabel(key: IncomingKey): string {
-  // A private or CRX key from a backup: the user's own, whatever its
-  // status against the keyring (only new ones are listed).
   if (isSecretKind(key.kind) && key.status === "new")
     return t("import_review_status_your_key");
   if (key.status === "duplicate") return t("import_review_status_duplicate");
@@ -37,18 +35,12 @@ function statusLabel(key: IncomingKey): string {
     : t("import_review_status_new");
 }
 
-/** The id under a row's name: a CRX key by its extension id as Chrome
- *  prints it, anything else as the panel shows a key id. */
 function rowKeyId(key: IncomingKey): string {
   return key.kind === "crx" ? key.keyId : displayKeyId(key.keyId);
 }
 
-/** Who already holds the identity, as one readable line. */
 function holderLine(holder: IdentityHolder): { name: string; keyid: string } {
   return {
-    // By the name the user gave it, when they did. An SSH key with no
-    // comment and no alias has no name of its own; it is shown the way
-    // the rest of the panel shows one.
     name:
       holder.alias ??
       (holder.userIds.length === 0 && holder.keyId.startsWith("SHA256:")
@@ -62,14 +54,12 @@ function ConflictNote({ keyData }: { keyData: IncomingKey }) {
   const conflict = keyData.conflict;
   if (!conflict) return null;
   const holder = holderLine(conflict.holders[0]);
-  // The address the key shares with the holder, not just its first one.
   const theirs = new Set(
     conflict.holders.flatMap((h) => h.userIds.flatMap(emailsOf)),
   );
   const email =
     keyData.userIds.flatMap(emailsOf).find((e) => theirs.has(e)) ?? "";
   const revoked = conflict.holders.every((h) => h.revoked);
-  // The ids the note shortens, whole, on hover.
   const shortened = conflict.holders
     .map((h) => displayKeyId(h.keyId))
     .filter((id) => noteKeyId(id) !== id);
@@ -89,8 +79,6 @@ function ConflictNote({ keyData }: { keyData: IncomingKey }) {
             t("import_review_conflict_name", holder)
           )
         ) : conflict.lookalike ? (
-          // Marked, so the letter that makes it a different address is
-          // pointed at rather than left to be spotted.
           <MarkedText text={lookalikeAddressText(keyData, conflict, holder)} />
         ) : revoked ? (
           t("import_review_conflict_address_revoked", {
@@ -105,8 +93,7 @@ function ConflictNote({ keyData }: { keyData: IncomingKey }) {
   );
 }
 
-/** An address that only READS like the holder's: both are named, since
- *  neither alone shows the difference. */
+/** Both addresses are named: neither alone shows the difference. */
 function lookalikeAddressText(
   keyData: IncomingKey,
   conflict: IdentityConflict,
@@ -132,13 +119,8 @@ function lookalikeAddressText(
   });
 }
 
-/**
- * An SSH import carrying a key the user already holds, in the words of
- * what saving it would do: give that contact keys it did not have, or
- * put their key (or the user's own) beside keys that are not theirs.
- * Either way it is how a paste took a contact over, so it is said, and
- * the row starts on Skip.
- */
+/** An SSH key the user already holds: how a paste takes a contact over,
+ *  so it is said and the row starts on Skip. */
 function keyConflictText(keyData: IncomingKey): string {
   const holders = keyData.conflict?.holders ?? [];
   const own = holders.find((h) => h.own);
@@ -148,27 +130,20 @@ function keyConflictText(keyData: IncomingKey): string {
     });
   }
   const holder = holderLine(holders[0]);
-  // An update lands on the contact it shares its id with.
   return keyData.status === "update" &&
     holders.some((h) => h.keyId === keyData.keyId)
     ? t("import_review_conflict_key_update", holder)
     : t("import_review_conflict_key_contact", holder);
 }
 
-/** Whether Replace means anything: a NEW key whose address a stored
- *  contact holds (not the user's own key, not another key in this
- *  import -- there is nothing to replace those with). Never for an
- *  address that only looks the same: a new key for someone's address is
- *  how a rotation looks, a new key for a lookalike of it never is. */
+/** Never for a lookalike address: a new key for someone's address is a
+ *  rotation, a new key for a lookalike never is. */
 function canReplace(key: IncomingKey): boolean {
   return replaceableHolders(key) === 1;
 }
 
-/** How many stored contacts Replace would take the place of. Offered
- *  only for exactly one: with several holding the address, which of
- *  them the key replaces is not something to guess, and replacing them
- *  all would delete people the note never named. Only a contact's
- *  public key replaces a contact. */
+/** Offered only for exactly one holder: which of several to replace is
+ *  not something to guess. */
 function replaceableHolders(key: IncomingKey): number {
   return isPublicKind(key.kind) &&
     key.status === "new" &&
@@ -178,13 +153,8 @@ function replaceableHolders(key: IncomingKey): number {
     : 0;
 }
 
-/**
- * Every key an import found, before anything is saved: who each claims
- * to be, its key id, and what saving it would do. A key claiming an
- * identity someone else holds starts on Skip and says why; the user
- * picks Keep both or (for an address) Replace. "Import all" is the
- * deliberate, labelled way to take everything as it stands.
- */
+/** Every key an import found, before anything is saved. A key claiming
+ *  someone else's identity starts on Skip and says why. */
 export function ImportReview({
   keys,
   onImport,
@@ -196,7 +166,6 @@ export function ImportReview({
   onImport: (decisions: Map<string, ReviewDecision>) => void;
   busy: boolean;
   error: string | null;
-  /** Offer the one-click "take everything" (bundles, backups). */
   allowImportAll: boolean;
 }) {
   const [decisions, setDecisions] = useState(
@@ -209,8 +178,6 @@ export function ImportReview({
     setDecisions((prev) => new Map(prev).set(keyId, d));
 
   const chosen = [...decisions.values()].filter((d) => d !== "skip").length;
-  // Every row that starts on Skip for a reason: overriding any of them
-  // is what makes "Import all" risky.
   const conflicts = keys.filter(
     (k) => (k.conflict ?? k.allKeysOff) && needsDecision(k),
   ).length;
@@ -227,7 +194,6 @@ export function ImportReview({
             const decision = decisions.get(key.keyId);
             return (
               <Block
-                // Two copies of one key can sit in one file.
                 key={`${key.keyId}:${index}`}
                 className="space-y-2 px-3.5 py-3"
                 data-review-key={key.keyId}

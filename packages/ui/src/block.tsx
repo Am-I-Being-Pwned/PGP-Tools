@@ -2,12 +2,8 @@ import type * as React from "react";
 
 import { cn } from "@amibeingpwned/ui";
 
-/**
- * A card built the design-language way: a stack of flat blocks with 2px
- * of page showing between them, instead of one outlined box with
- * dividers. The stack clips its children, so the first and last block
- * pick up the outer 12px corners and every inner corner stays tight.
- */
+/** A stack of flat blocks with 2px gaps; it clips, so end blocks take the
+ *  outer corners. */
 export function BlockStack({
   className,
   ...props
@@ -16,9 +12,7 @@ export function BlockStack({
     <div
       data-slot="block-stack"
       className={cn(
-        // The end blocks take the stack's corners themselves (not just
-        // the clip), so anything drawn on them -- a focus ring, an inset
-        // outline -- follows the 12px curve instead of being cut off by it.
+        // End blocks take the corners themselves so focus rings follow them.
         "flex flex-col gap-0.5 overflow-hidden rounded-xl [&>:first-child]:rounded-t-xl [&>:last-child]:rounded-b-xl",
         className,
       )}
@@ -27,7 +21,6 @@ export function BlockStack({
   );
 }
 
-/** One flat block in a {@link BlockStack}, or on its own. */
 export function Block({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -38,9 +31,8 @@ export function Block({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-/** The small label that sits above a stack ("Your keys", "Key security").
- *  Render `as="h2"`/`"h3"` when it heads a section: screen readers (and
- *  the e2e helpers) navigate by those headings. */
+/** Use `as="h2"`/`"h3"` for section heads: screen readers and e2e helpers
+ *  navigate by them. */
 export function BlockLabel({
   as: Comp = "div",
   className,

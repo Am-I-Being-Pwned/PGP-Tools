@@ -29,20 +29,12 @@ import { isEditableTarget, matchesShortcut } from "../lib/shortcuts";
 import { toast } from "../lib/toast";
 import { hasOpenSlideOver, holdFocusTraps } from "./shared/SlideOver";
 
-/** Below this many visible actions the search input is pointless noise
- *  -- show a plain list instead. */
+/** Below this many actions, a plain list instead of search. */
 const MIN_ACTIONS_FOR_SEARCH = 4;
 
-/** Palette rows: a touch taller than the primitive's default, with the
- *  selected row lifted onto the hover tone. */
 const ITEM_CLASS = "h-9 rounded-md px-2.5";
 
-/**
- * Dispatch registry shortcuts globally: an enabled action executes; a
- * disabled one toasts its reason ("<name> is disabled: <reason>")
- * instead of going silently dead. Suspended while
- * the palette is open (it owns the keyboard) or a slide-over is up.
- */
+/** A disabled action's shortcut toasts its reason instead of going dead. */
 function useRegistryShortcuts(ctx: ActionCtx, suspended: boolean) {
   const ctxRef = useRef(ctx);
   const suspendedRef = useRef(suspended);
@@ -61,13 +53,11 @@ function useRegistryShortcuts(ctx: ActionCtx, suspended: boolean) {
         isMacPlatform(),
       );
       if (!hit) return;
-      // Same rule as useShortcut: plain-key shortcuts must not fire
-      // from text fields; modifier combos may.
+      // Plain-key shortcuts never fire from text fields.
       if (!hit.action.shortcut?.mod && isEditableTarget(event.target)) return;
       event.preventDefault();
       if (hit.disabledReason) {
-        // Stable id: holding the shortcut down must not stack a column
-        // of identical "disabled" toasts.
+        // Stable id so key repeat doesn't stack toasts.
         toast.message(
           t("actions_disabled_toast", {
             name: hit.name,
@@ -84,18 +74,12 @@ function useRegistryShortcuts(ctx: ActionCtx, suspended: boolean) {
   }, []);
 }
 
-/**
- * The mod+K command palette. Mounted once behind the master-unlock
- * gate (so it cannot open while locked); also owns global dispatch of
- * the actions' registered shortcuts.
- */
+/** Mounted behind the master-unlock gate, so it cannot open while locked. */
 export function CommandPalette({
   ctx,
   bindOpen,
 }: {
   ctx: ActionCtx;
-  /** Receives an imperative open() so other chrome (the footer's ⌘K
-   *  hint) can pop the palette without owning its state. */
   bindOpen?: (open: () => void) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -103,9 +87,7 @@ export function CommandPalette({
   // A second step: the action whose options are being listed.
   const [picking, setPicking] = useState<ResolvedAction | null>(null);
 
-  // While the palette is up, any slide-over focus trap must pause --
-  // and it must pause BEFORE the palette mounts, or the trap would
-  // yank focus straight back from the search input's autoFocus. Hence
+  // Traps must pause BEFORE the palette mounts or they yank its autofocus:
   // a synchronous hold in the open handler, not an effect.
   const releaseTrapHold = useRef<(() => void) | null>(null);
   const releaseHold = () => {
@@ -114,7 +96,6 @@ export function CommandPalette({
   };
   useEffect(() => releaseHold, []);
 
-  // Shared by the mod+K shortcut and the imperative `bindOpen` hook-up.
   const openPalette = () => {
     releaseTrapHold.current ??= holdFocusTraps();
     setQuery("");
@@ -145,10 +126,8 @@ export function CommandPalette({
   const showSearch = resolved.length >= MIN_ACTIONS_FOR_SEARCH || !!picking;
   const matches = filterActions(resolved, showSearch ? query : "");
   const groups = groupActions(matches);
-  // Group headers only earn their space when they separate something.
   const showHeadings = groups.length >= 2;
 
-  // The picker step's options, filtered with the same token rule.
   const step = picking?.action.pick?.(ctx);
   const tokens = query.toLowerCase().split(/\s+/).filter(Boolean);
   const options = step
@@ -171,9 +150,8 @@ export function CommandPalette({
       className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 px-3 pt-14"
       onClick={close}
       onKeyDown={(e) => {
-        // The palette owns the keyboard: nothing leaks to the global
-        // shortcut listeners underneath. Escape closes the palette
-        // only (never a slide-over below it); mod+K toggles it shut.
+        // Nothing leaks to global shortcuts; Escape never reaches a
+        // slide-over below.
         if (
           e.key === "Escape" ||
           matchesShortcut(e.nativeEvent, PALETTE_SHORTCUT, isMacPlatform())
@@ -183,7 +161,6 @@ export function CommandPalette({
           if (picking && e.key === "Escape") leaveStep();
           else close();
         }
-        // Backspace on an empty picker query backs out too.
         if (e.key === "Backspace" && picking && query === "") {
           e.preventDefault();
           leaveStep();
@@ -194,8 +171,6 @@ export function CommandPalette({
       aria-modal="true"
       aria-label={t("actions_palette_label")}
     >
-      {/* The one floating panel over a dimmed page: the float surface
-          carries the ring and the drop shadow, so no drawn border. */}
       <div
         className="surface-float w-full max-w-md overflow-hidden rounded-xl"
         onClick={(e) => e.stopPropagation()}
@@ -205,14 +180,10 @@ export function CommandPalette({
           label={t("actions_palette_label")}
           className="bg-transparent"
         >
-          {/* With very few actions the search box is noise -- but
-              cmdk's keyboard handling
-              lives on the focused input, so hide it visually instead
-              of unmounting it. Typed text is ignored while hidden. */}
+          {/* cmdk's keyboard handling lives on the input: hide, don't unmount. */}
           <div className={showSearch ? undefined : "sr-only"}>
             <CommandInput
-              // Remount on step change so cmdk's selection resets to
-              // the first option of the new list.
+              // Remount so cmdk's selection resets per step.
               key={picking ? picking.action.id : "top"}
               value={query}
               onValueChange={setQuery}
@@ -264,9 +235,7 @@ export function CommandPalette({
                       className={ITEM_CLASS}
                       disabled={disabledReason !== undefined}
                       onSelect={() => {
-                        // An action with a second step stays open on
-                        // it; otherwise close first, then run: the
-                        // action may move focus or open a slide-over.
+                        // Close before running: the action may move focus.
                         if (action.pick) {
                           enterStep({ action, name, disabledReason });
                           return;

@@ -1,7 +1,4 @@
-/** Machine-readable causes for errors thrown by our own lib code.
- *  `presentError` maps each code to curated user-facing copy, so
- *  classification never depends on string-matching our own messages.
- *  The engine's equivalent is `EngineError` (`engine-error.ts`). */
+/** Classified by code so `presentError` never string-matches our own prose. */
 export type AppErrorCode =
   | "key-not-found"
   | "key-locked"
@@ -9,16 +6,9 @@ export type AppErrorCode =
   | "weak-password"
   | "password-required"
   | "passkey-failed"
-  /** An imported SSH key is passphrase-protected and none was given.
-   *  Not a failure: the import flow reveals its passphrase field and
-   *  retries from the same step. */
+  /** Not a failure: the import flow reveals its passphrase field. */
   | "ssh-passphrase-required";
 
-/**
- * An error from code we control, tagged with a stable cause. The message
- * stays human-readable (call sites that show `e.message` directly keep
- * working); the code is what the presentation layer classifies on.
- */
 export class AppError extends Error {
   readonly code: AppErrorCode;
 

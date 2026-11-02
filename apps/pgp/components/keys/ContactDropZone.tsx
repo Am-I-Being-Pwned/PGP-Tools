@@ -7,20 +7,11 @@ import { readKeyFile } from "../../lib/binary-armor";
 import { t } from "../../lib/i18n";
 
 interface ContactDropZoneProps {
-  /** Hand the dropped/pasted/browsed text to the import flow, which
-   *  parses it, previews a single key, and bulk-imports a bundle. */
   onKeyText: (text: string) => void;
 }
 
-/**
- * Drop target for contact keys.
- *
- * It deliberately does no importing of its own any more: it used to
- * parse and store keys behind the user's back, so a drop produced a
- * toast ("Added 3 contacts") and no way to see whose key had just landed
- * in the keyring. Now every route -- this, the Import button, a global
- * file drop, the workspace banner -- goes through the same preview.
- */
+/** Drop target for contact keys. Does no importing of its own: every
+ *  route goes through the same preview. */
 export function ContactDropZone({ onKeyText }: ContactDropZoneProps) {
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -76,9 +67,6 @@ export function ContactDropZone({ onKeyText }: ContactDropZoneProps) {
       onDrop={handleDrop}
       onPaste={handlePaste}
       tabIndex={0}
-      // A flat block, not a dashed box: the first row of the contacts
-      // stack (KeysView rounds its corners). A drag over it tints it the
-      // "on" green, which is the only cue a drop target needs.
       className={cn(
         "flex items-center gap-3 rounded-[3px] py-2 pr-2 pl-3.5 text-xs transition-colors focus:outline-none",
         dragOver ? "bg-on text-on-foreground" : "bg-card",

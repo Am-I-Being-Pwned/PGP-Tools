@@ -7,8 +7,6 @@ import { Input } from "@amibeingpwned/ui/input";
 import { t } from "../../lib/i18n";
 import { validateExportPassphrase } from "./protection-choice";
 
-/** The passphrase pair an export is sealed under, plus the typed confirm
- *  word that unlocks the plaintext escape hatch. */
 export function useExportPassphrase() {
   const [passphrase, setPassphrase] = useState("");
   const [confirmPassphrase, setConfirmPassphrase] = useState("");
@@ -35,18 +33,15 @@ export type ExportPassphrase = ReturnType<typeof useExportPassphrase>;
 interface ExportPassphraseFieldsProps {
   fields: ExportPassphrase;
   error?: string | null;
-  /** Inline success line (a copy's "copied" note). */
   feedback?: string | null;
   busy: boolean;
   submitLabel: string;
   busyLabel: string;
   onSubmit: () => void;
-  /** Offer the unencrypted export, behind typing the confirm word. */
   plaintext?: { warning: string; button: string; onExport: () => void };
 }
 
-/** Passphrase + confirm, the encrypted export button, and the plaintext
- *  escape hatch in a block of its own (solid red, never the default). */
+/** The plaintext escape hatch sits in its own solid-red block, never the default. */
 export function ExportPassphraseFields({
   fields,
   error,
@@ -76,8 +71,7 @@ export function ExportPassphraseFields({
         onChange={(e) => fields.setConfirmPassphrase(e.target.value)}
         onKeyDown={(e) => {
           if (e.key !== "Enter") return;
-          // A re-render can drop focus onto the header's Back button
-          // before the keypress lands.
+          // A re-render can drop focus onto Back before the keypress lands.
           e.preventDefault();
           onSubmit();
         }}

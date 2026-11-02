@@ -9,25 +9,16 @@ import { t, tn } from "../../lib/i18n";
 const ANIM_MS = 300;
 
 interface SelectionBarProps {
-  /** Drives the enter/exit animation; the bar stays mounted until exit ends. */
   open: boolean;
   count: number;
-  /** Whether every selectable card is currently selected. */
   allSelected: boolean;
-  /** Select every card, or (when all are selected) clear the selection. */
   onToggleAll: () => void;
   onExport: () => void;
   onDelete: () => void;
   onExit: () => void;
 }
 
-/**
- * Floating "magic island" shown while bulk-selecting keys/contacts. Pinned via a
- * zero-height sticky wrapper so it follows the list as it scrolls yet floats
- * over the content without taking a layout slot. Animates both in and out:
- * `open` toggles the enter/exit transition and the bar stays mounted until the
- * exit finishes.
- */
+/** Floating island while bulk-selecting; stays mounted until its exit ends. */
 export function SelectionBar({
   open,
   count,
@@ -37,12 +28,9 @@ export function SelectionBar({
   onDelete,
   onExit,
 }: SelectionBarProps) {
-  // `rendered` keeps the node mounted across the exit animation; `entered`
-  // drives the transform/opacity.
   const [rendered, setRendered] = useState(open);
   const [entered, setEntered] = useState(false);
-  // Hold the last count so it doesn't flash "0 selected" as it animates out
-  // (exiting clears the selection at the same moment).
+  // Hold the last count so it doesn't flash "0 selected" on exit.
   const [shownCount, setShownCount] = useState(count);
 
   useEffect(() => {
@@ -63,21 +51,13 @@ export function SelectionBar({
   if (!rendered) return null;
 
   return (
-    // Zero-height sticky wrapper: pins to the top of the scroll area (following
-    // as the list scrolls) but consumes no vertical space, so the pill overlays
-    // the content instead of pushing it down.
+    // Zero-height sticky wrapper: follows the scroll, takes no layout slot.
     <div className="pointer-events-none sticky top-2 z-40 flex h-0 items-start justify-center">
       <div
         role="toolbar"
         aria-label={t("keys_selection_actions_aria")}
         className={cn(
-          // It floats over the list, so it is the one thing here that gets
-          // the floating surface (a step lighter, hairline ring, shadow).
           "surface-float pointer-events-auto flex items-center gap-1.5 rounded-full px-2.5 py-2",
-          // Dynamic-island feel, matching the reference's computed styles: the
-          // content sharpens from a soft 2px blur + fade while springing down
-          // out of the top edge, overshooting past size and settling (the iOS
-          // island's signature) rather than just sliding in.
           "origin-top transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
           entered
             ? "blur-0 translate-y-0 scale-100 opacity-100"

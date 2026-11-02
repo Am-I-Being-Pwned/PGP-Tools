@@ -26,19 +26,9 @@ import { t } from "../../lib/i18n";
 import { SubPage } from "../shared/SubPage";
 
 /**
- * Where language packs can be downloaded AHEAD of needing them.
- *
- * No longer the only place that fetches one -- a missing pack now
- * installs itself on the first Translate press, because the alternative
- * was a button that never worked on a fresh profile (see the header of
- * lib/ai/translate.ts). What this page is still for is the property that
- * on-demand install gives up: a pack download is observable off-device,
- * so fetching one at the moment a message is decrypted ties "a pack for
- * Russian was fetched" to "this user just decrypted a Russian message".
- * Pre-downloading here, unprompted by any particular message, breaks that
- * correlation. Users who care keep the original guarantee by coming here
- * first, which is why the copy below says so plainly rather than selling
- * this as a convenience. See T-AI-TRANSLATE-METADATA.
+ * Pre-download language packs. On-demand install is observable off-device
+ * and ties the pack to the message just decrypted; fetching here,
+ * unprompted, breaks that correlation. See T-AI-TRANSLATE-METADATA.
  */
 
 interface TranslationPageProps {
@@ -49,7 +39,6 @@ interface TranslationPageProps {
   onTargetLanguageChange: (code: string) => void;
 }
 
-/** Per-row download state. Absent means "not checked yet". */
 type PackState =
   | { kind: "ready" }
   | { kind: "downloadable" }
@@ -65,21 +54,14 @@ export function TranslationPage({
   onTargetLanguageChange,
 }: TranslationPageProps) {
   const [supported, setSupported] = useState<boolean | null>(null);
-  // Explicitly `| undefined` per key: rows render before the first
-  // availability sweep resolves, so a lookup genuinely can miss. The
-  // repo runs with `noUncheckedIndexedAccess: false`, which would
-  // otherwise type these as always-present and make the `state?.` guards
-  // below look redundant to the linter while still being needed at
-  // runtime.
+  // `| undefined`: rows render before the availability sweep resolves.
   const [packs, setPacks] = useState<Record<string, PackState | undefined>>({});
 
   useEffect(() => {
     void translationSupportedHere().then(setSupported);
   }, []);
 
-  // Every language except the target is a potential source. Re-read on
-  // target change, since readiness is per DIRECTION rather than per
-  // language.
+  // Re-read on target change: readiness is per direction.
   const refresh = useCallback(async () => {
     if (!(await translationSupportedHere())) return;
     const next: Record<string, PackState> = {};
@@ -179,7 +161,6 @@ export function TranslationPage({
                 })}
               </p>
 
-              {/* A block stack, kept a real list: one block per language. */}
               <ul className="flex flex-col gap-0.5 overflow-hidden rounded-xl">
                 {translationLanguages()
                   .filter((l) => l.code !== targetLanguage)

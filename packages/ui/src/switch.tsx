@@ -18,7 +18,6 @@ function Switch({
       data-size={size}
       className={cn(
         "peer group/switch inline-flex shrink-0 items-center rounded-full border border-transparent transition-all outline-none",
-        // On: green track. Off: a flat grey track; no drawn border.
         "data-[state=checked]:bg-primary",
         "data-[state=unchecked]:bg-[#3a3a3a]",
         "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
@@ -32,7 +31,6 @@ function Switch({
         data-slot="switch-thumb"
         className={cn(
           "pointer-events-none block rounded-full shadow-sm ring-0 transition-transform",
-          // White knob in both states (white-on-green when checked), light or dark theme.
           "bg-white shadow-[0_1px_2px_rgb(0_0_0/0.35)]",
           "group-data-[size=default]/switch:size-4 group-data-[size=sm]/switch:size-3",
           "data-[state=checked]:translate-x-[calc(100%+2px)] data-[state=unchecked]:translate-x-0",

@@ -8,9 +8,7 @@ import { formatFileSize } from "../../lib/utils/formatting";
 import { PresetPicker } from "../shared/PresetPicker";
 import { SubPage } from "../shared/SubPage";
 
-/** A translated sentence with one substituted term rendered in bold.
- *  The term is found by string search so the message carries no markup
- *  and the translator can place it anywhere. */
+/** The term is found by string search so the message carries no markup. */
 function Bolded({ text, term }: { text: string; term: string }) {
   const at = term === "" ? -1 : text.indexOf(term);
   if (at === -1) return <>{text}</>;
@@ -24,25 +22,14 @@ function Bolded({ text, term }: { text: string; term: string }) {
 }
 
 interface SecurityPresetPageProps {
-  /** Preset the saved preferences currently match, "custom" when none
-   *  does, or null while preferences are still loading. */
+  /** null while preferences are loading. */
   currentPreset: PresetId | "custom" | null;
-  /** Persists the preset bundle (and runs any storage migration).
-   *  Rejections surface in the SubPage footer; the page closes on
-   *  success. */
   onApply: (id: PresetId) => Promise<void>;
-  /** Called after the slide-out finishes; the parent unmounts the page. */
   onClose: () => void;
 }
 
-/**
- * Settings subpage for choosing a security preset: the three full
- * PresetPicker cards (with their describeBundle transparency lines),
- * the currently applied preset badged, and an Apply footer action.
- * Overwriting a custom setup swaps the footer into an explicit confirm
- * step first, as does applying a never-cache preset while stored
- * history exists (applying it deletes that history).
- */
+/** Overwriting a custom setup, or a never-cache preset deleting stored
+ *  history, goes through an explicit confirm step first. */
 export function SecurityPresetPage({
   currentPreset,
   onApply,
@@ -51,23 +38,15 @@ export function SecurityPresetPage({
   const activeId =
     currentPreset !== null && currentPreset !== "custom" ? currentPreset : null;
   const [selected, setSelected] = useState<PresetId | null>(activeId);
-  // Applying over a custom setup needs an explicit confirm; the footer
-  // swaps into confirm mode instead of applying straight away.
   const [confirming, setConfirming] = useState(false);
-  // Stored-history size, so a preset that enters never-cache (which
-  // wipes history) can spell that cost out before applying.
   const [historyBytes, setHistoryBytes] = useState(0);
   useEffect(() => {
     void historyByteSize().then(setHistoryBytes);
   }, []);
 
   const isCustom = currentPreset === "custom";
-  // Re-applying the preset you are already on is a no-op; keep the
-  // button disabled until the choice would change something.
   const applyDisabled = selected === null || selected === activeId;
-  // Applying this preset would delete stored history: it turns
-  // never-cache on and history exists. That's destructive, so it goes
-  // through the confirm step even from a non-custom state.
+  // Deleting history is destructive: confirm even from a non-custom state.
   const deletesHistory =
     selected !== null &&
     PRESETS[selected].bundle.neverCacheKeys === true &&
@@ -138,7 +117,6 @@ export function SecurityPresetPage({
           }}
         />
         {confirming && selected !== null && (
-          // A "warn" status band: applying overwrites or deletes something.
           <div className="rounded-xl bg-[#252012] p-3">
             {isCustom && (
               <p className="text-xs">

@@ -1,12 +1,6 @@
 import type { ReactNode } from "react";
 
-/**
- * Render a translated sentence with the given literal terms wrapped in
- * `wrap` (a medium-weight span by default). The terms are the values that
- * were substituted into the message, so they are found by plain string
- * search; this keeps markup out of the message and lets the translator
- * move the term freely. Terms are matched left to right, earliest first.
- */
+/** Terms are found by string search, keeping markup out of the message. */
 export function Emphasised({
   text,
   terms,

@@ -37,25 +37,18 @@ type KeyType = "pgp" | "crx";
 const DAY_MS = 86_400_000;
 
 interface GenerateKeyPageProps {
-  /** Called after the slide-out finishes (cancel or success). */
   onClose: () => void;
   onKeyGenerated: (keyId: string, keyHandle?: number) => void;
   addKey: (blob: ProtectedKeyBlob) => Promise<void>;
-  /** Pass the primary key's passkey credential ID to allow reuse. */
   reusePasskeyCredentialId?: string;
-  /** With reuse, seal under the master's PRF salt so the vault ceremony
-   *  opens the key ("unlock keys when the vault unlocks"). */
+  /** With reuse, seal under the master's PRF salt so the vault unlock
+   *  opens the key. */
   masterSealSalt?: ArrayBuffer;
-  /** If true, cache the decrypted key in WASM and return the handle via onKeyGenerated. */
   cacheKey?: boolean;
-  /** When true, offer generating a CRX (Chrome extension) signing key. */
   crxSigningEnabled?: boolean;
-  /** Persist a newly generated CRX signing key. Required for the CRX path. */
   addCrxKey?: (blob: CrxSigningKeyBlob) => Promise<void>;
 }
 
-/** Key generation as a slide-over: identity, an optional custom-expiry
- *  date, then protection. Back lives in the header. */
 export function GenerateKeyPage({
   onClose,
   onKeyGenerated,
@@ -85,8 +78,7 @@ export function GenerateKeyPage({
     useState<ExpiryOption>(DEFAULT_EXPIRY);
   const [customExpiry, setCustomExpiry] = useState<Date | undefined>();
 
-  // Captured when the expiry step opens: reading the clock in render
-  // breaks render purity.
+  // Reading the clock in render breaks render purity.
   const [expiryBounds, setExpiryBounds] = useState<{
     tomorrow: Date;
     max: Date;
@@ -104,7 +96,6 @@ export function GenerateKeyPage({
   const canSkipProtection =
     !!reusePasskeyCredentialId && choice.method === "passkey";
 
-  // Header back mirrors the step order; from the first step it closes.
   const handleBack = () => {
     if (step === "generating") return;
     setError(null);
@@ -146,7 +137,6 @@ export function GenerateKeyPage({
       setError(t("keygen_error_expiry_required"));
       return;
     }
-    // Belt and braces: the calendar already disables these.
     if (expiryBounds && customExpiry < expiryBounds.tomorrow) {
       setError(t("keygen_error_expiry_past"));
       return;
@@ -219,8 +209,7 @@ export function GenerateKeyPage({
               </div>
 
               {crxSigningEnabled && (
-                // A segmented track of two plain pressed-state buttons:
-                // e2e finds them by name.
+                // Plain pressed-state buttons: e2e finds them by name.
                 <div className="bg-track grid grid-cols-2 gap-0.5 rounded-lg p-[3px]">
                   {(
                     [

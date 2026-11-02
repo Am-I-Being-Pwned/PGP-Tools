@@ -7,13 +7,8 @@ import type {
   VerifyResult,
 } from "./types";
 import * as wasm from "./wasm";
-// Named import, not `wasm.decryptWithPassword`, and deliberately: the
-// `wasm.<export>` shape is what `scripts/audit-invariants.mjs` looks for
-// to find raw-glue calls escaping the wasm-secrets boundary, and every
-// other secret-listed wrapper is reached this way from an operations
-// module (`lib/age/operations.ts` does the same for
-// `decryptAgeWithHandle`). What is imported here IS the boundary
-// module's wrapper -- the barrel re-exports the wrappers, never the glue.
+// Named import on purpose: `wasm.<export>` is the shape audit-invariants
+// flags as raw-glue calls escaping the wasm-secrets boundary.
 import {
   decryptWithPassword as decryptWithPasswordWasm,
   encryptWithPassword as encryptWithPasswordWasm,
@@ -34,15 +29,8 @@ function formatOutput(
   return raw;
 }
 
-/**
- * Encrypt to a password, on top of any recipients.
- *
- * The password is taken as a STRING and encoded inside, with the buffer
- * wiped in a `finally` -- the same trade `decryptWithPassword` makes and
- * for the same reason: it comes from an `<input type="password">`, which
- * can only ever produce one, and making every caller encode would spread
- * the un-wipeable copy rather than contain it.
- */
+/** Password taken as a string (see {@link decryptWithPassword}); the
+ *  encoded buffer is wiped in a `finally`. */
 async function encryptToPassword(
   opts: EncryptOptions & { password: string; signingKeyHandle?: number },
 ): Promise<string | Uint8Array> {
@@ -60,12 +48,8 @@ async function encryptToPassword(
   }
 }
 
-/**
- * A decrypted or opened message as text when it is valid UTF-8, else the
- * bytes. `ignoreBOM` keeps a leading byte-order mark: TextDecoder drops
- * it by default, and Copy and Download would then hand back a file that
- * differs from the one that was encrypted.
- */
+/** Text if valid UTF-8, else bytes. `ignoreBOM` keeps a leading BOM so
+ *  Copy/Download round-trip byte-for-byte. */
 export function asTextIfUtf8(plaintext: Uint8Array): string | Uint8Array {
   try {
     return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(
@@ -76,7 +60,6 @@ export function asTextIfUtf8(plaintext: Uint8Array): string | Uint8Array {
   }
 }
 
-/** Encrypt to one or more recipients, and/or to a password. */
 export async function encrypt(
   opts: EncryptOptions & { password?: string },
 ): Promise<string | Uint8Array> {
@@ -90,7 +73,6 @@ export async function encrypt(
   return formatOutput(opts.input, result);
 }
 
-/** Encrypt with signing via a WASM key handle, and/or to a password. */
 export async function encryptWithSigningHandle(
   opts: EncryptOptions & { signingKeyHandle: number; password?: string },
 ): Promise<string | Uint8Array> {
@@ -105,7 +87,6 @@ export async function encryptWithSigningHandle(
   return formatOutput(opts.input, result);
 }
 
-/** Decrypt using a WASM key handle. */
 export async function decryptWithHandle(
   opts: DecryptOptions & { keyHandle: number },
 ): Promise<DecryptResult> {
@@ -130,22 +111,12 @@ export async function decryptWithHandle(
 }
 
 /**
- * Decrypt a message that was encrypted to a PASSWORD (`gpg --symmetric`).
+ * `gpg --symmetric` decrypt; same {@link DecryptResult} (incl. signature
+ * verdict) as {@link decryptWithHandle}. Needs no key.
  *
- * The symmetric sibling of {@link decryptWithHandle}, returning the very
- * same {@link DecryptResult} so a caller renders one shape whichever way
- * the message was opened -- including the signature verdict, because a
- * password-encrypted message can be signed.
- *
- * NO KEY IS NEEDED and none is used: this works with an empty keyring.
- *
- * The password is taken as a STRING here and encoded to bytes inside,
- * with the buffer wiped in a `finally`. Taking a string at this boundary
- * is deliberate -- it comes from an `<input type="password">`, which can
- * only ever produce one, and pretending otherwise by making every caller
- * encode would spread the un-wipeable copy rather than contain it. The
- * copy this function makes IS wiped; the one React holds is bounded by
- * the panel's lifetime, exactly as the key-unlock prompt's is.
+ * Takes the password as a STRING deliberately: it comes from an
+ * `<input type="password">`, so making callers encode would spread the
+ * un-wipeable copy. The encoded copy made here is wiped in a `finally`.
  */
 export async function decryptWithPassword(
   opts: DecryptOptions & { password: string },
@@ -175,11 +146,7 @@ export async function decryptWithPassword(
   }
 }
 
-/**
- * Open a message that was NOT encrypted (see `MessageEncryption.encrypted`):
- * its content and signature verdict, with no key or password. The caller
- * must say it was not encrypted -- this result is never a decrypt.
- */
+/** The caller must say it was not encrypted -- this result is never a decrypt. */
 export async function openUnencrypted(
   opts: DecryptOptions,
 ): Promise<DecryptResult> {
@@ -202,12 +169,6 @@ export async function openUnencrypted(
   };
 }
 
-/**
- * Which kinds of session-key packet the message carries, so the caller
- * can decide what to ask the user for BEFORE asking. Needs no password
- * and no key to answer -- it reads the packets in front of the encrypted
- * container.
- */
 export async function messageEncryption(
   input: DecryptOptions["input"],
 ): Promise<wasm.MessageEncryption> {
@@ -218,11 +179,7 @@ export async function messageEncryption(
   return wasm.messageEncryption(ciphertext);
 }
 
-/**
- * Return the fingerprint of the key (from `candidatePublicKeys`) that the
- * message is encrypted to, or null if none match. Accepts armored or binary
- * ciphertext (Sequoia auto-detects armor).
- */
+/** Fingerprint of the matching candidate, or null. Armored or binary input. */
 export async function selectDecryptionKey(
   input: DecryptOptions["input"],
   candidatePublicKeys: string[],
@@ -234,7 +191,6 @@ export async function selectDecryptionKey(
   return wasm.selectDecryptionKey(ciphertext, candidatePublicKeys);
 }
 
-/** Sign using a WASM key handle. */
 export async function signWithHandle(
   text: string,
   keyHandle: number,
@@ -242,7 +198,6 @@ export async function signWithHandle(
   return wasm.signWithHandle(text, keyHandle);
 }
 
-/** Verify a cleartext-signed message. */
 export async function verify(opts: VerifyOptions): Promise<VerifyResult> {
   return wasm.verify(
     opts.signedMessage,

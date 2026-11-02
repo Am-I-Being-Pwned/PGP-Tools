@@ -2,18 +2,11 @@ import type * as React from "react";
 import { useLayoutEffect, useState } from "react";
 import { Toaster, useSonner } from "sonner";
 
-/** Gap between a toast and the edge of the card it rises from. */
 const GAP = 8;
-/** The panel's side gutter, and the toasts' bottom edge with no anchor. */
 const GUTTER = 16;
 
-/**
- * Where a toast should sit: just above the first `[data-toast-anchor]`
- * on screen -- the workspace card's file list or its tool strip -- so a
- * toast about the message ("Text cleared", Undo) appears beside the
- * message rather than over the action button. No anchor in view (another
- * tab, a subpage), the usual bottom gutter.
- */
+/** Just above the first visible `[data-toast-anchor]`, so a toast about the
+ *  message sits beside it, not over the action button. */
 function anchoredBottom(): number {
   for (const el of document.querySelectorAll("[data-toast-anchor]")) {
     const rect = el.getBoundingClientRect();
@@ -23,15 +16,8 @@ function anchoredBottom(): number {
   return GUTTER;
 }
 
-/**
- * The panel's one `<Toaster />`, in the design language: a floating
- * surface with no outline, a filled chip for the action, and the tone in
- * the icon only (green go, amber warn, red stop). No corner close badge.
- *
- * The offset is measured while toasts are showing, and again whenever
- * the page reflows under them (files added or removed, the box growing),
- * so a toast stays clear of the controls it is about.
- */
+/** Re-measured whenever the page reflows, so toasts stay clear of the
+ *  controls they are about. */
 export function ToastHost() {
   const { toasts } = useSonner();
   const active = toasts.length > 0;
@@ -60,8 +46,6 @@ export function ToastHost() {
     <Toaster
       theme="dark"
       position="bottom-center"
-      // No corner close badge: it hung off the surface's edge, outside
-      // the flat-block look. Toasts here are short-lived and swipe away.
       offset={offset}
       mobileOffset={offset}
       gap={6}

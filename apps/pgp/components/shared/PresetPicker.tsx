@@ -7,25 +7,12 @@ import { t } from "../../lib/i18n";
 import { describeBundle, PRESET_IDS, PRESETS } from "../../lib/presets";
 
 interface PresetPickerProps {
-  /** Currently selected preset, or null when none is. */
   selected: PresetId | null;
-  /** Preset the user's settings currently match, marked with a
-   *  "Current" badge so pickers can distinguish "you are ON this" from
-   *  the tentative selection. Omit where there is no applied preset yet
-   *  (onboarding). */
+  /** Gets a "Current" badge, distinct from the tentative selection. */
   activeId?: PresetId | null;
   onSelect: (id: PresetId) => void;
 }
 
-/**
- * Radio-style cards for the three security presets, each listing
- * exactly what its bundle sets (via describeBundle). Used by both the
- * onboarding preset step and the settings security-preset subpage.
- *
- * Drawn as one block stack, a block per preset; the chosen one takes
- * the "on" tint. Too much per option (tagline plus the bundle lines)
- * for a one-line option bar, so it stays a stack of radio cards.
- */
 export function PresetPicker({
   selected,
   activeId,

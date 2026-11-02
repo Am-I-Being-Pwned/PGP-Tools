@@ -32,7 +32,6 @@ import { KeyUnlockRow } from "./KeyUnlockRow";
 
 type Step = "unlock" | "export";
 
-/** The keys/contacts + vault callbacks the export flow operates on. */
 export interface ExportKeysProps {
   myKeys: ProtectedKeyBlob[];
   contacts: PublicContactKey[];
@@ -46,28 +45,18 @@ export interface ExportKeysProps {
   onUnlockWithPasskey: (
     blob: ProtectedKeyBlob,
   ) => Promise<boolean | "cancelled">;
-  /** Called on a successful export in place of the default success toast, so a
-   *  caller can react (e.g. deselect and offer "Reselect"). Omitted ⇒ default
-   *  toast. `unsafe` is true for the plaintext (unencrypted) path. */
+  /** Replaces the default success toast. `unsafe` marks the plaintext path. */
   onExported?: (count: number, unsafe: boolean) => void;
 }
 
 interface ExportKeysFlowProps extends ExportKeysProps {
-  /** Slide the page out (state is dropped on unmount). */
   onClose: () => void;
 }
 
 /**
- * The whole bulk-export flow -- state, WASM-handle lifecycle, and export
- * actions. Lives for exactly one mount of {@link ExportKeysPage}.
- *
- * Bulk export of EVERYTHING passed in: every private key, every CRX signing
- * key, and every contact's public key, in one armored `.asc` file. Exporting a
- * private key needs its decrypted WASM handle, so every locked key -- PGP or
- * CRX -- must be unlocked first (password / passkey), then re-sealed under the
- * single export passphrase, which is what makes the backup portable across
- * devices. Output is standard ASCII-armored OpenPGP; CRX keys go in labelled
- * `PGP TOOLS CRX SIGNING KEY` blocks and only in the passphrase-encrypted path.
+ * Bulk export of everything passed in to one armored `.asc`. Locked keys
+ * are unlocked first, then re-sealed under one export passphrase. CRX keys
+ * go only in the passphrase-encrypted path.
  */
 function useExportKeysFlow({
   onClose,
@@ -84,18 +73,12 @@ function useExportKeysFlow({
   const [passwords, setPasswords] = useState<Record<string, string>>({});
   const [unlockErrors, setUnlockErrors] = useState<Record<string, string>>({});
   const [unlockingId, setUnlockingId] = useState<string | null>(null);
-  // Synchronous in-flight guard: `unlockingId` state lands a render late, so
-  // Enter-spam during a multi-second Argon2id derive could start a second
-  // unlock — for CRX keys that opens two WASM handles and leaks the first
-  // (only the last lands in `crxHandles`).
+  // Synchronous in-flight guard: state lands a render late, and a second CRX
+  // unlock would open two WASM handles and leak the first.
   const unlockInFlight = useRef(false);
 
-  // CRX keys unlock into WASM handles held here for the life of the flow;
-  // dropped on close. Keyed by extensionId.
   const [crxHandles, setCrxHandles] = useState<Record<string, number>>({});
-  // Mirror of `crxHandles` for the unmount cleanup below: an effect with []
-  // deps captures the initial (empty) state, so it must read from a ref to
-  // see the handles actually opened during the flow's life.
+  // Unmount cleanup reads this ref; []-deps effects see only initial state.
   const crxHandlesRef = useRef<Record<string, number>>({});
   const [crxPasswords, setCrxPasswords] = useState<Record<string, string>>({});
   const [crxErrors, setCrxErrors] = useState<Record<string, string>>({});
@@ -118,35 +101,24 @@ function useExportKeysFlow({
   );
   const unlockedCrxKeys = allCrxKeys.filter((k) => k.extensionId in crxHandles);
   const allUnlocked = lockedKeys.length === 0 && lockedCrxKeys.length === 0;
-  // A passphrase is required whenever any private key material will be
-  // written -- PGP privates OR CRX keys (which are always sealed on export).
   const needsPassphrase = unlockedKeys.length > 0 || unlockedCrxKeys.length > 0;
-  // The plaintext escape hatch only makes sense for GnuPG-interop PGP keys.
   const hasPgpPrivate = unlockedKeys.length > 0;
   const crxCount = allCrxKeys.length;
 
-  // Skip (or leave) the unlock step the moment nothing is locked -- this also
-  // covers the initial mount when every key is already unlocked.
   useEffect(() => {
     if (step === "unlock" && allUnlocked) setStep("export");
   }, [step, allUnlocked]);
 
-  // Keep the ref in sync so the unmount cleanup sees the latest handles.
   useEffect(() => {
     crxHandlesRef.current = crxHandles;
   }, [crxHandles]);
 
-  // True once the flow has unmounted, so a CRX unlock still in flight (a
-  // multi-second Argon2id derive can outlive the 300ms slide-out) can
-  // detect it resolved into a dead flow and drop its fresh handle instead
-  // of leaving it decrypted in WASM untracked.
+  // An Argon2id derive can outlive the slide-out; a late handle must be
+  // dropped, not left decrypted in WASM untracked.
   const unmounted = useRef(false);
 
-  // Drop any opened CRX handles on unmount -- whether the page slid out
-  // normally or the whole tree got swapped (a pending op switches tabs, the
-  // vault locks) -- so no signing key lingers decrypted in WASM past "Lock".
-  // dropCrxKey on an already-dropped handle is a harmless no-op, so this
-  // can't double-free.
+  // Drop CRX handles on any unmount so no signing key outlives "Lock".
+  // dropCrxKey is idempotent.
   useEffect(() => {
     return () => {
       unmounted.current = true;
@@ -157,7 +129,6 @@ function useExportKeysFlow({
   }, []);
 
   const resetAndClose = () => {
-    // Drop any CRX handles we opened so no key material lingers in WASM.
     for (const handle of Object.values(crxHandles)) void closeCrxKey(handle);
     setCrxHandles({});
     onClose();
@@ -214,8 +185,6 @@ function useExportKeysFlow({
         blob,
         crxPasswords[blob.extensionId] ?? "",
       );
-      // The flow unmounted while the unlock was in flight: the handle
-      // belongs to nobody (the unmount cleanup already ran), so drop it.
       if (unmounted.current) {
         void closeCrxKey(handle);
         return;
@@ -241,7 +210,6 @@ function useExportKeysFlow({
     setCrxErrors((e) => ({ ...e, [blob.extensionId]: "" }));
     try {
       const handle = await openCrxKey(blob);
-      // Same in-flight-past-unmount guard as the password path above.
       if (unmounted.current) {
         void closeCrxKey(handle);
         return;
@@ -260,10 +228,7 @@ function useExportKeysFlow({
     }
   };
 
-  /** Build the armored bundle from the now-unlocked keys + contacts.
-   *  `privateArmor` renders each PGP private key; `crxBlock`, when provided,
-   *  re-seals + serializes each unlocked CRX key (null skips CRX entirely,
-   *  e.g. the plaintext path). */
+  /** `crxBlock` null skips CRX entirely (the plaintext path). */
   const buildAndDownload = async (
     privateArmor: (handle: number) => Promise<string>,
     crxBlock:
@@ -272,7 +237,7 @@ function useExportKeysFlow({
     const parts: string[] = [];
     for (const key of myKeys) {
       const handle = getKeyHandle(key.keyId);
-      if (handle === null) continue; // re-locked mid-flight; shouldn't happen
+      if (handle === null) continue;
       parts.push((await privateArmor(handle)).trim());
     }
     for (const contact of contacts) {
@@ -280,7 +245,7 @@ function useExportKeysFlow({
     }
     if (crxBlock) {
       for (const crx of allCrxKeys) {
-        if (!(crx.extensionId in crxHandles)) continue; // left locked -> skipped
+        if (!(crx.extensionId in crxHandles)) continue;
         parts.push((await crxBlock(crxHandles[crx.extensionId], crx)).trim());
       }
     }
@@ -371,7 +336,6 @@ function useExportKeysFlow({
 
 type ExportKeysFlow = ReturnType<typeof useExportKeysFlow>;
 
-/** The two-step export body. Reads everything from `f`. */
 function ExportKeysBody({ f }: { f: ExportKeysFlow }) {
   const {
     step,
@@ -560,8 +524,7 @@ function ExportKeysBody({ f }: { f: ExportKeysFlow }) {
   );
 }
 
-/** Hook host: the flow's hooks must live in a component that mounts inside
- *  the SubPage (so its `close` exists), not in the page function itself. */
+/** Hooks must mount inside the SubPage so `close` exists. */
 function ExportKeysFlowBody({
   close,
   ...props
@@ -571,18 +534,10 @@ function ExportKeysFlowBody({
 }
 
 interface ExportKeysPageProps extends ExportKeysProps {
-  /** Called after the slide-out finishes (parent unmounts the page). */
   onClose: () => void;
-  /** Header title; Settings passes "Export all keys". */
   title?: string;
 }
 
-/**
- * Slide-over subpage for the bulk-export flow, shared by the selection
- * island (Keys tab) and Settings' "Export all keys". State lives for one
- * mount; closing (back / Escape / success) unmounts it, and the unmount
- * cleanup drops any CRX handles opened along the way.
- */
 export function ExportKeysPage({
   onClose,
   title = t("keygen_export_title"),

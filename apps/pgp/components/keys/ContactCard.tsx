@@ -49,40 +49,27 @@ import { HEX_FINGERPRINT, longIdLines } from "./fingerprint-lines";
 
 interface ContactCardProps {
   contact: PublicContactKey;
-  /** Another contact claims this one's address or name. */
   clash?: IdentityConflict;
   onRemove?: () => void;
   onEncryptTo?: () => void;
   onCopyPublicKey?: () => void;
   onDownloadPublicKey?: () => void;
-  /** Open the rename page for this contact (local display name only). */
   onRename?: () => void;
-  /** Ask the keyserver whether the owner has revoked this key. */
   onCheckRevocation?: () => void;
-  /** When set, shows a bottom-right arrow opening the key-details page. */
   onShowDetails?: () => void;
   advancedMode?: boolean;
   readOnly?: boolean;
   verifiedLabel?: string;
-  /** Colour of the verified badge/border. "warning" (orange) is used when a
-   *  message is signed but the signature could not be verified. */
+  /** "warning" when the signature could not be verified. */
   verifiedTone?: "success" | "warning";
-  /** Optional muted explanation shown under the key line. */
   note?: string;
-  /** A control under the note (the unknown signer's keyserver lookup). */
   noteAction?: ReactNode;
-  /** A control after the verified label (the signer's key details). */
   labelAction?: ReactNode;
-  /** Bulk-selection: when true, a tap toggles selection instead of navigating
-   *  and the card's own controls are dimmed/click-through. */
   selectionMode?: boolean;
   selected?: boolean;
-  /** `extend` is true when Shift was held: select everything between the
-   *  last-touched card and this one, rather than toggling just this one. */
+  /** `extend`: Shift was held; select the range since the last-touched card. */
   onToggleSelect?: (extend: boolean) => void;
-  /** Enter selection mode with this contact selected (long-press / menu). */
   onStartSelect?: () => void;
-  /** Just arrived from an import: scroll to it and pulse it once. */
   justImported?: boolean;
 }
 
@@ -110,34 +97,25 @@ export function ContactCard({
   justImported,
 }: ContactCardProps) {
   const isWarning = verifiedTone === "warning";
-  // A verified signer reads as a status band: the whole block tinted,
-  // green for a good signature, amber for one that could not be checked.
   const toneBand = isWarning ? "bg-[#252012]" : "bg-[#15231b]";
   const toneText = isWarning ? "text-warn" : "text-good";
   const ToneIcon = isWarning ? TriangleAlertIcon : CheckCircleIcon;
-  // Captured once at mount; cards are short-lived so drift is moot.
   const [now] = useState(() => Date.now());
   // Through the accessors, never `contact.kind` / `.recipients`: legacy
   // records lack them and are single-key PGP.
   const isSsh = isSshRecord(contact);
   const recipients = contactRecipients(contact);
-  // Displayed: every key. Encrypted to: the active subset -- the pill
-  // says "2 of 3 keys" when they differ.
   const activeKeys = activeRecipients(contact).length;
   const source = contactSource(contact);
-  // The alias wins, via the one accessor the picker and search share.
   const userId = displayUserId(contact);
   const { email } = parseUserId(userId);
   const name = realIdentity(userId);
 
-  // The fingerprint's last 16 hex digits at the right of the row. An SSH
-  // hash has no meaningful tail, so it shows in full on the key line.
+  // An SSH hash has no meaningful tail, so it shows in full on the key line.
   const longId =
     !isSsh && HEX_FINGERPRINT.test(contact.keyId)
       ? longIdLines(contact.keyId)
       : null;
-  // The key line: always on a read-only (signer) card and in advanced
-  // mode; a list row otherwise folds the algorithm into its detail line.
   const showKeyLine = !!readOnly || !!advancedMode || !longId;
   const algorithm = contact.algorithm ? formatAlgorithm(contact.algorithm) : "";
   const expired = !!contact.expiresAt && contact.expiresAt < now;
@@ -150,7 +128,6 @@ export function ContactCard({
     isSsh ||
     recipients.length > 1 ||
     activeKeys < recipients.length;
-  // Algorithm, expiry and provenance, as one small muted line.
   const details: string[] = [];
   if (algorithm && !showKeyLine) details.push(algorithm);
   if (contact.expiresAt && !expired) {
@@ -177,14 +154,12 @@ export function ContactCard({
       onStartSelect={onStartSelect}
       onShowDetails={onShowDetails}
       justImported={justImported}
-      // Read-only it stands alone (the signer card) with the card radius.
       className={cn(readOnly && "rounded-xl pr-3.5", verifiedLabel && toneBand)}
     >
       <div className="flex items-center gap-2.5">
         <KeyAvatar fingerprint={contact.keyId} size={32} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            {/* The name alone on line 1: no pill can squeeze it out. */}
             <p className="min-w-0 truncate text-sm font-medium">
               <MarkedText text={name} />
             </p>

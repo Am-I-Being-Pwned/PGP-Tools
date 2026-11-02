@@ -9,33 +9,24 @@ import { useShortcut } from "../../hooks/useShortcut";
 import { t } from "../../lib/i18n";
 import { SlideOverHeader, SlideOverPanel, useSlideOver } from "./SlideOver";
 
-/** mod+Enter submits the primary footer action from anywhere on the
- *  page, including focused inputs (plain Enter-to-submit stays opt-in
- *  per field via `runAction`). */
+/** mod+Enter submits the primary footer action, even from inputs. */
 const SUBMIT_SHORTCUT: ShortcutSpec = { mod: true, key: "Enter" };
 
-/** A footer button. Order in the array is render order (top to bottom). */
 export interface SubPageAction {
-  /** Visual weight; maps to a Button variant. Defaults to "primary". */
   type?: "primary" | "outline" | "destructive";
   text: string;
-  /** Label swapped in while an async onClick is in flight. */
   busyText?: string;
   disabled?: boolean;
-  /** Omit for a plain close button (e.g. Cancel). Reject/throw to stay
-   *  open with the error shown above the footer. */
+  /** Omit for a plain close button. Reject/throw to stay open with the
+   *  error shown. */
   onClick?: (api: SubPageApi) => void | Promise<void>;
-  /** Slide out after onClick resolves. */
   closeOnSuccess?: boolean;
 }
 
 export interface SubPageApi {
-  /** Slide out, then fire onClose (where the parent unmounts the page). */
   close: () => void;
-  /** True while any footer action's onClick is in flight. */
   busy: boolean;
-  /** Trigger a footer action by index — e.g. Enter-to-submit from an
-   *  input. No-op while busy or if that action is disabled. */
+  /** No-op while busy or if that action is disabled. */
   runAction: (index: number) => void;
 }
 
@@ -50,24 +41,16 @@ const VARIANT: Record<
 
 interface SubPageProps {
   title: string;
-  /** Called after the slide-out finishes; the parent unmounts the page. */
   onClose: () => void;
-  /** Stacked full-width footer buttons. Omit when the body owns its
-   *  actions (multi-step flows, inline unlock rows, ...). */
+  /** Omit when the body owns its actions. */
   actions?: SubPageAction[];
-  /** Right-aligned extras in the header bar. */
   headerActions?: React.ReactNode;
-  /** Classes for the scrollable body (padding etc.). Defaults to p-4. */
   bodyClassName?: string;
   children: React.ReactNode | ((api: SubPageApi) => React.ReactNode);
 }
 
-/**
- * The app's one modal surface: a full-screen slide-over with a back-arrow
- * header, a scrollable body, and an optional footer of stacked actions.
- * While one footer onClick is in flight every footer button disables;
- * a rejection shows above the footer and the page stays open.
- */
+/** The app's one modal surface. A rejected footer action shows above the
+ *  footer and the page stays open. */
 export function SubPage({
   title,
   onClose,
@@ -83,8 +66,7 @@ export function SubPage({
   const [showDetail, setShowDetail] = useState(false);
 
   const busy = busyIndex !== null;
-  // Buttons disable immediately off `busy`; the busyText label swap is
-  // deferred so sub-150ms actions never flash a loading state.
+  // Label swap deferred so sub-150ms actions never flash a loading state.
   const showBusyLabel = useDelayedFlag(busy);
 
   const runAction = (index: number) => {
@@ -108,9 +90,8 @@ export function SubPage({
 
   const api: SubPageApi = { close, busy, runAction };
 
-  // mod+Enter drives the primary footer action -- but never a
-  // destructive one (ConfirmPage et al. must be clicked deliberately),
-  // and only on the topmost slide-over when panels stack.
+  // Never a destructive action (ConfirmPage must be clicked), and only on
+  // the topmost slide-over.
   const shortcutIndex =
     actions?.findIndex((a) => (a.type ?? "primary") === "primary") ?? -1;
   useShortcut(
