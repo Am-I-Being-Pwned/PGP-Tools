@@ -433,8 +433,6 @@ export function WorkspaceView({
     signatureTone: verdict?.tone,
     signatureNote: verdict?.note,
     signerCaveat: verdict?.caveat,
-    contacts,
-    myKeys,
     outputPublicKeyDetected: s.output.publicKey,
     outputVersion: s.output.version,
     onImportKey: onNavigateToKeys,
@@ -540,7 +538,6 @@ export function WorkspaceView({
         onRemoveFile={(index) => dispatch({ type: "file-removed", index })}
         onClearFiles={() => dispatch({ type: "files-cleared" })}
         publicKeyDetected={s.input.key === "public"}
-        contacts={contacts}
         inputVersion={s.input.version}
         onRevealKey={onRevealKey}
         privateKeyDetected={s.input.key === "private"}
@@ -582,8 +579,6 @@ export function WorkspaceView({
                       label={t("workspace_sign_with")}
                       keys={signKeyChoices}
                       selectedKeyId={signer.keyId}
-                      detailsContacts={contacts}
-                      detailsOwnKeys={myKeys}
                       onSelect={ws.selectPrivateKey}
                     />
                   ) : signer && !signBlockedReason ? (
@@ -632,8 +627,6 @@ export function WorkspaceView({
                 label={t("workspace_sign_with")}
                 keys={signKeyChoices}
                 selectedKeyId={ws.selectedKeyId}
-                detailsContacts={contacts}
-                detailsOwnKeys={myKeys}
                 onSelect={ws.selectPrivateKey}
               />
             </Block>

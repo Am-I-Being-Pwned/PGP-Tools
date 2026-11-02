@@ -22,7 +22,9 @@ import {
   useSlideOver,
 } from "~/components/shared/SlideOver";
 import { useAsyncAction } from "~/hooks/useAsyncAction";
+import { useContacts } from "~/hooks/useContacts";
 import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
+import { useKeyring } from "~/hooks/useKeyring";
 import { AppError } from "~/lib/errors/app-error";
 import { presentError } from "~/lib/errors/present";
 import { t } from "~/lib/i18n";
@@ -72,10 +74,6 @@ interface KeyDetailsPageProps {
   onSetVerified?: (verified: boolean) => Promise<void>;
   clash?: IdentityConflict;
   onShowHolder?: (holder: IdentityHolder) => void;
-  /** For entry points with no clash/verify wiring of their own: the page
-   *  derives them from these. Explicit props win. */
-  contacts?: readonly PublicContactKey[];
-  ownKeys?: readonly ProtectedKeyBlob[];
   isDefault?: boolean;
   onSetDefault?: (next: boolean) => void;
   onDelete?: () => void;
@@ -309,20 +307,22 @@ export function KeyDetailsPage({
   onSetVerified: onSetVerifiedProp,
   clash: clashProp,
   onShowHolder: onShowHolderProp,
-  contacts,
-  ownKeys,
   isDefault,
   onSetDefault,
   onDelete,
   onGenerateRevocation,
 }: KeyDetailsPageProps) {
   const { entered, close } = useSlideOver(onBack);
+  // Clash, holder and verify are derived from the stores unless the caller
+  // wires its own; explicit props win.
+  const { contacts } = useContacts();
+  const { keys: ownKeys } = useKeyring();
   // The contact as it is in the live list when one was handed in: the
   // target is a snapshot from when the page opened, and Mark as verified
   // has to show its answer here.
   const liveContact =
     targetProp.kind === "contact"
-      ? contacts?.find((c) => c.keyId === targetProp.contact.keyId)
+      ? contacts.find((c) => c.keyId === targetProp.contact.keyId)
       : undefined;
   const target: KeyDetailsTarget = liveContact
     ? { kind: "contact", contact: liveContact }
@@ -330,7 +330,7 @@ export function KeyDetailsPage({
   const contactKeyId = target.kind === "contact" ? target.contact.keyId : null;
   const derivedClash = useMemo(
     () =>
-      contactKeyId !== null && contacts && ownKeys
+      contactKeyId !== null
         ? contactClashes(contacts, ownKeys).get(contactKeyId)
         : undefined,
     [contactKeyId, contacts, ownKeys],
@@ -343,14 +343,12 @@ export function KeyDetailsPage({
   );
   const onShowHolder =
     onShowHolderProp ??
-    (contacts && ownKeys
-      ? (holder: IdentityHolder) => {
-          const contact = contacts.find((c) => c.keyId === holder.keyId);
-          const own = ownKeys.find((k) => k.keyId === holder.keyId);
-          if (contact) setHolderTarget({ kind: "contact", contact });
-          else if (own) setHolderTarget({ kind: "own", keyBlob: own });
-        }
-      : undefined);
+    ((holder: IdentityHolder) => {
+      const contact = contacts.find((c) => c.keyId === holder.keyId);
+      const own = ownKeys.find((k) => k.keyId === holder.keyId);
+      if (contact) setHolderTarget({ kind: "contact", contact });
+      else if (own) setHolderTarget({ kind: "own", keyBlob: own });
+    });
   // Only for a contact actually in the store (`liveContact`), and not a
   // revoked one -- the same rule the Keys tab applies.
   const onSetVerified =
@@ -711,8 +709,6 @@ export function KeyDetailsPage({
         <KeyDetailsPage
           target={holderTarget}
           onBack={() => setHolderTarget(null)}
-          contacts={contacts}
-          ownKeys={ownKeys}
         />
       )}
     </>

@@ -38,10 +38,6 @@ interface KeySelectorProps {
   emptyActionLabel?: string;
   /** Inside a card row (the From line): label becomes the accessible name. */
   inline?: boolean;
-  /** For the details page; separate from `contacts`/`myKeys`, which pick
-   *  what the LIST shows and are ignored when `keys` is set. */
-  detailsContacts?: readonly PublicContactKey[];
-  detailsOwnKeys?: readonly ProtectedKeyBlob[];
 }
 
 function getKeyDisplay(key: AnyKey): { name: string; detail: string } {
@@ -61,8 +57,6 @@ export function KeySelector({
   emptyAction,
   emptyActionLabel,
   inline = false,
-  detailsContacts = contacts,
-  detailsOwnKeys = myKeys,
 }: KeySelectorProps) {
   const [open, setOpen] = useState(false);
 
@@ -212,14 +206,7 @@ export function KeySelector({
           </PopoverTrigger>
           {list}
         </Popover>
-        {selectedKey && (
-          <KeyDetailsButton
-            keyData={selectedKey}
-            subtle
-            contacts={detailsContacts}
-            ownKeys={detailsOwnKeys}
-          />
-        )}
+        {selectedKey && <KeyDetailsButton keyData={selectedKey} subtle />}
       </div>
     );
   }
@@ -262,13 +249,7 @@ export function KeySelector({
           </PopoverTrigger>
           {list}
         </Popover>
-        {selectedKey && (
-          <KeyDetailsButton
-            keyData={selectedKey}
-            contacts={detailsContacts}
-            ownKeys={detailsOwnKeys}
-          />
-        )}
+        {selectedKey && <KeyDetailsButton keyData={selectedKey} />}
       </div>
     </div>
   );

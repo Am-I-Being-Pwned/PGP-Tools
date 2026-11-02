@@ -669,8 +669,6 @@ export function RecipientPicker({
             setDetailsKey(null);
             refocusInput();
           }}
-          contacts={contacts}
-          ownKeys={myKeys}
         />
       )}
     </div>

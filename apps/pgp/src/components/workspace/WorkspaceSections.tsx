@@ -82,7 +82,7 @@ export function SignKeyPickers({
   signKeyChoices: ProtectedKeyBlob[];
   decryptKeyChoices: ProtectedKeyBlob[];
 }) {
-  const { state: s, dispatch, myKeys, contacts, crxKeys } = ws;
+  const { state: s, dispatch, crxKeys } = ws;
   const { showTab } = useNav();
   return (
     <>
@@ -115,8 +115,6 @@ export function SignKeyPickers({
           }
           keys={s.mode === "sign" ? signKeyChoices : decryptKeyChoices}
           selectedKeyId={ws.selectedKeyId}
-          detailsContacts={contacts}
-          detailsOwnKeys={myKeys}
           onSelect={ws.selectPrivateKey}
           emptyText={t("workspace_no_keys_yet")}
           emptyAction={() => showTab("keys")}

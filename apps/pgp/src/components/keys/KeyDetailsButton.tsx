@@ -22,13 +22,9 @@ export function keyDetailsTarget(key: AnyKey): KeyDetailsTarget {
 export function KeyDetailsButton({
   keyData,
   subtle = false,
-  contacts,
-  ownKeys,
 }: {
   keyData: AnyKey;
   subtle?: boolean;
-  contacts?: readonly PublicContactKey[];
-  ownKeys?: readonly ProtectedKeyBlob[];
 }) {
   const [open, setOpen] = useState(false);
 
@@ -54,8 +50,6 @@ export function KeyDetailsButton({
         <KeyDetailsPage
           target={keyDetailsTarget(keyData)}
           onBack={() => setOpen(false)}
-          contacts={contacts}
-          ownKeys={ownKeys}
         />
       )}
     </>

@@ -26,7 +26,6 @@ import {
 } from "~/lib/compose/text-format";
 import { t, tn } from "~/lib/i18n";
 import type { WorkspaceAction } from "~/lib/messages";
-import type { PublicContactKey } from "~/lib/storage/contacts";
 import { ComposeToolbar, type ComposeTranslateProps } from "./ComposeToolbar";
 import { DetectedKeyBanner } from "./DetectedKeyBanner";
 import { DropZone } from "./DropZone";
@@ -80,7 +79,6 @@ interface WorkspaceInputProps {
   onRemoveFile: (index: number) => void;
   onClearFiles: () => void;
   publicKeyDetected: boolean;
-  contacts: PublicContactKey[];
   inputVersion: number;
   privateKeyDetected: boolean;
   onNavigateToKeys?: (importPrefill?: string) => void;
@@ -116,7 +114,6 @@ export function WorkspaceInput({
   onRemoveFile,
   onClearFiles,
   publicKeyDetected,
-  contacts,
   inputVersion,
   privateKeyDetected,
   onNavigateToKeys,
@@ -497,7 +494,6 @@ export function WorkspaceInput({
         <DetectedKeyBanner
           getText={getInput}
           version={inputVersion}
-          contacts={contacts}
           onImport={(armored) => onNavigateToKeys?.(armored)}
           onReveal={onRevealKey}
           source="pasted"

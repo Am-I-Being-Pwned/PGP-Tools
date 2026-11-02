@@ -4,6 +4,8 @@ import { SearchIcon, TriangleAlertIcon } from "lucide-react";
 import { Alert, AlertDescription, Button } from "@amibeingpwned/ui";
 
 import { KeyDetailsButton } from "~/components/keys/KeyDetailsButton";
+import { useContacts } from "~/hooks/useContacts";
+import { useKeyring } from "~/hooks/useKeyring";
 import type { PresentedError, RemedyAction } from "~/lib/errors/present";
 import { t } from "~/lib/i18n";
 import { KEYSERVER_HOST } from "~/lib/import/keyserver";
@@ -88,9 +90,6 @@ interface WorkspaceResultsProps {
    *  the amber card's label. Not the "unknown signer" card. */
   signerCaveat?: string | null;
   fullHeight?: boolean;
-  contacts: PublicContactKey[];
-  /** A signer wearing the user's identity is marked like a contact impostor. */
-  myKeys?: ProtectedKeyBlob[];
   translationFooter?: React.ReactNode;
   resultCorner?: React.ReactNode;
   showTranslation?: boolean;
@@ -119,8 +118,6 @@ export function WorkspaceResults({
   signatureNote,
   signerCaveat = null,
   fullHeight,
-  contacts,
-  myKeys = [],
   translationFooter,
   resultCorner,
   showTranslation,
@@ -132,6 +129,8 @@ export function WorkspaceResults({
   onRevealKey,
   onLookupSigner,
 }: WorkspaceResultsProps) {
+  const { contacts } = useContacts();
+  const { keys: myKeys } = useKeyring();
   // The same state Reply hands its reader tab (see `SignerCard`).
   const card = verifiedSigner
     ? signerCardState({
@@ -171,12 +170,7 @@ export function WorkspaceResults({
           // Only for a key we hold: an unknown signer is a bare key id.
           labelAction={
             isUnverified ? undefined : (
-              <KeyDetailsButton
-                keyData={verifiedSigner}
-                subtle
-                contacts={contacts}
-                ownKeys={myKeys}
-              />
+              <KeyDetailsButton keyData={verifiedSigner} subtle />
             )
           }
           noteAction={
@@ -230,7 +224,6 @@ export function WorkspaceResults({
         <DetectedKeyBanner
           getText={getOutput}
           version={outputVersion}
-          contacts={contacts}
           onImport={onImportKey}
           onReveal={onRevealKey}
           source="message"
