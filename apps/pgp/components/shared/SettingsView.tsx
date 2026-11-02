@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { ChevronRightIcon } from "lucide-react";
 
 import { Block, BlockLabel, BlockStack } from "@amibeingpwned/ui/block";
@@ -45,6 +45,7 @@ import { SecurityPresetPage } from "../settings/SecurityPresetPage";
 import { TranslationPage } from "../settings/TranslationPage";
 import { ConfirmPage } from "./ConfirmPage";
 import { StorageLocationPicker } from "./StorageLocationPicker";
+import { useNavStack } from "./useNavStack";
 
 const AUTO_LOCK_OPTIONS: AutoLockTimeout[] = [2, 5, 10, 15, 30, 60];
 
@@ -91,6 +92,19 @@ function NavRow({
   );
 }
 
+/** Settings' slide-over subpages, one stack: the newest is on top. */
+type SettingsRoute =
+  | { page: "presets" }
+  | { page: "translation" }
+  | { page: "shortcuts" }
+  | { page: "crx-info" }
+  | { page: "export-all" }
+  | { page: "import-all" }
+  /** Turning never-cache on deletes this much stored history. */
+  | { page: "never-cache-confirm"; historyBytes: number }
+  | { page: "dev-tools" }
+  | { page: "import-flow" };
+
 function autoLockLabel(minutes: AutoLockTimeout): string {
   return minutes === 60 ? t("shared_one_hour") : tn("shared_minutes", minutes);
 }
@@ -101,21 +115,6 @@ export function SettingsView() {
   const crx = useCrxKeys();
   const { session, ...vault } = useVault();
   const appNav = useNav();
-  const onVaultMoved = refreshVaultLists;
-  const masterPasskey = vault.masterPasskey;
-  const masterSealSalt = vault.masterSealSalt;
-  const myKeys = keyring.keys;
-  const contacts = contactStore.contacts;
-  const isUnlocked = session.isUnlocked;
-  const getKeyHandle = session.getKeyHandle;
-  const onUnlockWithPassword = session.unlockWithPassword;
-  const onUnlockWithPasskey = session.unlockWithPasskey;
-  const onAddKey = vault.addKey;
-  const onAddContact = contactStore.add;
-  const onRemoveContact = contactStore.remove;
-  const crxKeys = crx.keys;
-  const onAddCrxKey = crx.add;
-  const primaryPasskeyCredentialId = vault.masterPasskeyCredentialId;
   const autoOpenPresets = appNav.presets;
   const consumeIntent = appNav.consume;
   const prefs = usePreferences();
@@ -139,26 +138,15 @@ export function SettingsView() {
       ? t("shared_sync_quota_error")
       : errorMessage(e, t("shared_migration_failed")),
   }));
-  const [showExportAll, setShowExportAll] = useState(false);
-  const [showImportAll, setShowImportAll] = useState(false);
-  const [showCrxInfo, setShowCrxInfo] = useState(false);
-  const [showDevTools, setShowDevTools] = useState(false);
-  const [showImportFlow, setShowImportFlow] = useState(false);
-  const [showPresets, setShowPresets] = useState(false);
-  const [showShortcuts, setShowShortcuts] = useState(false);
-  const [showTranslation, setShowTranslation] = useState(false);
-  // Stored-history byte size at the moment the user tried to turn
-  // never-cache on; non-null renders the delete-history confirm page.
-  const [neverCacheConfirmBytes, setNeverCacheConfirmBytes] = useState<
-    number | null
-  >(null);
+  const nav = useNavStack<SettingsRoute>();
+  const navPush = nav.push;
 
-  // Open the presets subpage when routed here by the palette action.
+  // The palette's "security presets" action lands here.
   useEffect(() => {
     if (!autoOpenPresets) return;
-    setShowPresets(true);
+    navPush({ page: "presets" });
     consumeIntent("presets");
-  }, [autoOpenPresets, consumeIntent]);
+  }, [autoOpenPresets, consumeIntent, navPush]);
 
   const currentPreset = activePreset(prefs);
 
@@ -168,7 +156,7 @@ export function SettingsView() {
     await migration.run(async () => {
       await moveVault(storageLocation, next);
       await preferencesStore.reload();
-      void onVaultMoved();
+      void refreshVaultLists();
     });
   };
 
@@ -202,7 +190,7 @@ export function SettingsView() {
     if (bytes > 0) {
       // Stored history exists: entering never-cache deletes it, so
       // confirm with the cost spelled out before flipping anything.
-      setNeverCacheConfirmBytes(bytes);
+      nav.push({ page: "never-cache-confirm", historyBytes: bytes });
       return;
     }
     await enableNeverCache();
@@ -290,16 +278,16 @@ export function SettingsView() {
               ? t("shared_preset_custom")
               : PRESETS[currentPreset].title
           }
-          onClick={() => setShowPresets(true)}
+          onClick={() => nav.push({ page: "presets" })}
         />
         <NavRow
           title={t("shared_translation")}
           value={aiTranslateEnabled ? t("common_on") : t("common_off")}
-          onClick={() => setShowTranslation(true)}
+          onClick={() => nav.push({ page: "translation" })}
         />
         <NavRow
           title={t("shared_keyboard_shortcuts")}
-          onClick={() => setShowShortcuts(true)}
+          onClick={() => nav.push({ page: "shortcuts" })}
         />
       </BlockStack>
 
@@ -366,7 +354,7 @@ export function SettingsView() {
             checked={neverCacheKeys}
             onCheckedChange={(v) => void handleNeverCacheToggle(v)}
           />
-          {masterPasskey && (
+          {vault.masterPasskey && (
             <SwitchRow
               title={t("shared_unlock_with_vault_title")}
               description={t("shared_unlock_with_vault_desc")}
@@ -430,7 +418,7 @@ export function SettingsView() {
           />
           <NavRow
             title={t("shared_crx_how")}
-            onClick={() => setShowCrxInfo(true)}
+            onClick={() => nav.push({ page: "crx-info" })}
           />
         </BlockStack>
       </div>
@@ -445,11 +433,11 @@ export function SettingsView() {
           </Block>
           <NavRow
             title={t("shared_export_all_keys")}
-            onClick={() => setShowExportAll(true)}
+            onClick={() => nav.push({ page: "export-all" })}
           />
           <NavRow
             title={t("shared_import_keys")}
-            onClick={() => setShowImportAll(true)}
+            onClick={() => nav.push({ page: "import-all" })}
           />
         </BlockStack>
       </div>
@@ -479,11 +467,11 @@ export function SettingsView() {
             </Block>
             <NavRow
               title={t("shared_open_dev_tools")}
-              onClick={() => setShowDevTools(true)}
+              onClick={() => nav.push({ page: "dev-tools" })}
             />
             <NavRow
               title={t("shared_import_flow_states")}
-              onClick={() => setShowImportFlow(true)}
+              onClick={() => nav.push({ page: "import-flow" })}
             />
           </BlockStack>
         </div>
@@ -531,87 +519,94 @@ export function SettingsView() {
         </Block>
       </div>
 
-      {showExportAll && (
-        <ExportKeysPage
-          title={t("shared_export_all_keys")}
-          onClose={() => setShowExportAll(false)}
-          myKeys={myKeys}
-          contacts={contacts}
-          crxKeys={crxKeys}
-          isUnlocked={isUnlocked}
-          getKeyHandle={getKeyHandle}
-          onUnlockWithPassword={onUnlockWithPassword}
-          onUnlockWithPasskey={onUnlockWithPasskey}
-        />
-      )}
-
-      {showImportAll && (
-        <ImportAllKeysPage
-          onClose={() => setShowImportAll(false)}
-          myKeys={myKeys}
-          contacts={contacts}
-          onAddKey={onAddKey}
-          onAddContact={onAddContact}
-          onRemoveContact={onRemoveContact}
-          onAddCrxKey={onAddCrxKey}
-          crxKeys={crxKeys}
-          reusePasskeyCredentialId={primaryPasskeyCredentialId}
-          masterSealSalt={masterSealSalt}
-        />
-      )}
-
-      {showCrxInfo && (
-        <CrxSigningInfoPage onClose={() => setShowCrxInfo(false)} />
-      )}
-
-      {showShortcuts && (
-        <KeyboardShortcutsPage onClose={() => setShowShortcuts(false)} />
-      )}
-
-      {showTranslation && (
-        <TranslationPage
-          onClose={() => setShowTranslation(false)}
-          enabled={aiTranslateEnabled}
-          onEnabledChange={(v) => {
-            void savePreference({ aiTranslateEnabled: v });
-          }}
-          targetLanguage={translationTargetLanguage}
-          onTargetLanguageChange={(code) => {
-            void savePreference({ translationTargetLanguage: code });
-          }}
-        />
-      )}
-
-      {neverCacheConfirmBytes !== null && (
-        <ConfirmPage
-          title={t("shared_delete_history_title")}
-          confirmLabel={t("shared_delete_history_confirm")}
-          onCancel={() => setNeverCacheConfirmBytes(null)}
-          onConfirm={enableNeverCache}
-        >
-          <p>
-            {t("shared_delete_history_body", {
-              size: formatFileSize(neverCacheConfirmBytes),
-            })}
-          </p>
-        </ConfirmPage>
-      )}
-
-      {showPresets && (
-        <SecurityPresetPage
-          currentPreset={currentPreset}
-          onApply={applyPreset}
-          onClose={() => setShowPresets(false)}
-        />
-      )}
-
-      {import.meta.env.DEV && showDevTools && (
-        <DevToolsPage onClose={() => setShowDevTools(false)} />
-      )}
-
-      {import.meta.env.DEV && showImportFlow && (
-        <ImportFlowPreviewPage onClose={() => setShowImportFlow(false)} />
-      )}
+      {nav.stack.map(({ id, route }) => {
+        const close = () => nav.remove(id);
+        switch (route.page) {
+          case "presets":
+            return (
+              <SecurityPresetPage
+                key={id}
+                currentPreset={currentPreset}
+                onApply={applyPreset}
+                onClose={close}
+              />
+            );
+          case "translation":
+            return (
+              <TranslationPage
+                key={id}
+                onClose={close}
+                enabled={aiTranslateEnabled}
+                onEnabledChange={(v) => {
+                  void savePreference({ aiTranslateEnabled: v });
+                }}
+                targetLanguage={translationTargetLanguage}
+                onTargetLanguageChange={(code) => {
+                  void savePreference({ translationTargetLanguage: code });
+                }}
+              />
+            );
+          case "shortcuts":
+            return <KeyboardShortcutsPage key={id} onClose={close} />;
+          case "crx-info":
+            return <CrxSigningInfoPage key={id} onClose={close} />;
+          case "export-all":
+            return (
+              <ExportKeysPage
+                key={id}
+                title={t("shared_export_all_keys")}
+                onClose={close}
+                myKeys={keyring.keys}
+                contacts={contactStore.contacts}
+                crxKeys={crx.keys}
+                isUnlocked={session.isUnlocked}
+                getKeyHandle={session.getKeyHandle}
+                onUnlockWithPassword={session.unlockWithPassword}
+                onUnlockWithPasskey={session.unlockWithPasskey}
+              />
+            );
+          case "import-all":
+            return (
+              <ImportAllKeysPage
+                key={id}
+                onClose={close}
+                myKeys={keyring.keys}
+                contacts={contactStore.contacts}
+                onAddKey={vault.addKey}
+                onAddContact={contactStore.add}
+                onRemoveContact={contactStore.remove}
+                onAddCrxKey={crx.add}
+                crxKeys={crx.keys}
+                reusePasskeyCredentialId={vault.masterPasskeyCredentialId}
+                masterSealSalt={vault.masterSealSalt}
+              />
+            );
+          case "never-cache-confirm":
+            return (
+              <ConfirmPage
+                key={id}
+                title={t("shared_delete_history_title")}
+                confirmLabel={t("shared_delete_history_confirm")}
+                onCancel={close}
+                onConfirm={enableNeverCache}
+              >
+                <p>
+                  {t("shared_delete_history_body", {
+                    size: formatFileSize(route.historyBytes),
+                  })}
+                </p>
+              </ConfirmPage>
+            );
+          case "dev-tools":
+            return import.meta.env.DEV ? (
+              <DevToolsPage key={id} onClose={close} />
+            ) : null;
+          case "import-flow":
+            return import.meta.env.DEV ? (
+              <ImportFlowPreviewPage key={id} onClose={close} />
+            ) : null;
+        }
+      })}
     </div>
   );
 }
