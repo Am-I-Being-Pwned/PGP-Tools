@@ -16,12 +16,6 @@ import { importCrxKey } from "~/lib/crx/operations";
 import type { CrxSigningKeyBlob } from "~/lib/crx/types";
 import { AppError } from "~/lib/errors/app-error";
 import { t, tn } from "~/lib/i18n";
-import { githubFailureCopy, prepareGithubImport } from "~/lib/import/github";
-import {
-  KEYSERVER_HOST,
-  keyserverFailureCopy,
-  prepareKeyserverImport,
-} from "~/lib/import/keyserver";
 import { classifyLookup } from "~/lib/import/lookup";
 import {
   importable,
@@ -34,18 +28,12 @@ import {
   type ReviewDecision,
   type ReviewedContact,
 } from "~/lib/import/review";
+import { runKeyLookup } from "~/lib/import/run-lookup";
 import {
   isPublicKind,
   isSecretKind,
   type IncomingKey,
 } from "~/lib/import/types";
-import type { KeyserverQuery } from "~/lib/keyserver/query";
-import type {
-  GithubKeysRequest,
-  GithubKeysResponse,
-  KeyserverKeyRequest,
-  KeyserverKeyResponse,
-} from "~/lib/messages";
 import { importAndProtect } from "~/lib/protection/protect-flow";
 import type { PublicContactKey } from "~/lib/storage/contacts";
 import type { ProtectedKeyBlob } from "~/lib/storage/keyring";
@@ -292,95 +280,6 @@ export function ImportKeyPage({
     });
   };
 
-  /** The worker owns the only fetch; `prepareGithubImport` decides
-   *  whether its strings are keys. */
-  const lookupGithubUser = async (username: string) => {
-    const request: GithubKeysRequest = {
-      type: "GITHUB_KEYS_REQUEST",
-      username,
-    };
-    const response = await chrome.runtime.sendMessage<
-      GithubKeysRequest,
-      GithubKeysResponse | undefined
-    >(request);
-
-    if (!response) {
-      parser.setError(t("import_worker_unreachable"));
-      return;
-    }
-    if (!response.ok) {
-      const copy = githubFailureCopy(
-        response.error,
-        username,
-        response.resetAt,
-      );
-      if (copy.tone === "notice") setNotice(copy.message);
-      else parser.setError(copy.message);
-      return;
-    }
-
-    const prepared = await prepareGithubImport(
-      response.username,
-      response.lines,
-      { contacts: existingContacts, own: existingKeys },
-      { omitted: response.omitted },
-    );
-    show(prepared.keys);
-  };
-
-  /** keys.openpgp.org: what the worker forwards is untrusted until the
-   *  engine parses it. */
-  const lookupKeyserverKey = async (query: KeyserverQuery) => {
-    const request: KeyserverKeyRequest = {
-      type: "KEYSERVER_KEY_REQUEST",
-      query,
-    };
-    const response = await chrome.runtime.sendMessage<
-      KeyserverKeyRequest,
-      KeyserverKeyResponse | undefined
-    >(request);
-
-    if (!response) {
-      parser.setError(t("import_worker_unreachable"));
-      return;
-    }
-    if (!response.ok) {
-      const copy = keyserverFailureCopy(
-        response.error,
-        query,
-        response.retryAt,
-      );
-      if (copy.tone === "notice") setNotice(copy.message);
-      else parser.setError(copy.message);
-      return;
-    }
-
-    const prepared = await prepareKeyserverImport(
-      response.query,
-      response.armored,
-      storedForImport(),
-    );
-
-    if (prepared.unparseable || prepared.keys.length === 0) {
-      parser.setError(
-        t("import_keyserver_not_a_key", { host: KEYSERVER_HOST }),
-      );
-      return;
-    }
-    if ((response.omitted ?? 0) > 0) {
-      toast.warning(
-        t("import_keyserver_multiple_keys", { host: KEYSERVER_HOST }),
-        { id: "keyserver-multiple-keys" },
-      );
-    }
-
-    const key = prepared.keys[0];
-    if (key.securityWarning) {
-      toast.warning(key.securityWarning, { id: "import-key-warning" });
-    }
-    show([key]);
-  };
-
   /** A 40-hex string is a GitHub name AND a fingerprint; see `classifyLookup`. */
   const runLookup = async (input = lookupInput) => {
     setError(null);
@@ -392,10 +291,19 @@ export function ImportKeyPage({
       return;
     }
     await parser.run(
-      () =>
-        routed.target === "github"
-          ? lookupGithubUser(routed.username)
-          : lookupKeyserverKey(routed.query),
+      async () => {
+        const outcome = await runKeyLookup(routed, {
+          own: existingKeys,
+          contacts: existingContacts,
+        });
+        if (outcome.kind === "notice") setNotice(outcome.message);
+        else if (outcome.kind === "error") parser.setError(outcome.message);
+        else {
+          for (const w of outcome.warnings)
+            toast.warning(w.message, { id: w.id });
+          show(outcome.keys);
+        }
+      },
       engineMessage(t("import_lookup_failed")),
     );
   };
