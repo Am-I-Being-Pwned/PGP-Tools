@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  CheckIcon,
-  ChevronRightIcon,
   CopyIcon,
   DownloadIcon,
   LockIcon,
@@ -10,58 +8,42 @@ import {
   StarIcon,
   StarOffIcon,
   Trash2Icon,
-  TriangleAlertIcon,
 } from "lucide-react";
 
-import { Block, BlockLabel, Button } from "@amibeingpwned/ui";
-
-import { MarkedText } from "~/components/shared/MarkedText";
 import {
   SlideOverHeader,
   SlideOverPanel,
   useSlideOver,
 } from "~/components/shared/SlideOver";
-import {
-  useAsyncAction,
-  useContacts,
-  useCopyToClipboard,
-  useKeyring,
-} from "~/hooks";
-import { AppError } from "~/lib/errors/app-error";
-import { presentError } from "~/lib/errors/present";
+import { useContacts, useCopyToClipboard, useKeyring } from "~/hooks";
 import { t } from "~/lib/i18n";
-import { formatDate } from "~/lib/i18n/format";
 import {
   contactClashes,
   type IdentityConflict,
   type IdentityHolder,
 } from "~/lib/identity/binding";
-import { clashSentence } from "~/lib/identity/clash-copy";
 import { downloadPublicKey } from "~/lib/keys/export-bundle";
 import type { KeyDetails, KeyInfo } from "~/lib/pgp/types";
 import { parseKey, parseKeyDetails } from "~/lib/pgp/wasm";
 import {
-  contactRecipients,
-  isRecipientDisabled,
   setContactRecipientDisabled,
   setContactVerified,
-  withRecipientDisabled,
-  type ContactRecipient,
   type PublicContactKey,
 } from "~/lib/storage/contacts";
 import { isSshRecord } from "~/lib/storage/key-kind";
 import type { ProtectedKeyBlob } from "~/lib/storage/keyring";
 import { toast } from "~/lib/toast";
-import { downloadText } from "~/lib/utils/download";
 import { parseUserId, realIdentity } from "~/lib/utils/key-naming";
+import { pgpKeyFacts, sshGroupKeyFacts, sshKeyFacts } from "./key-facts";
 import {
-  pgpKeyFacts,
-  sshGroupKeyFacts,
-  sshKeyFacts,
-  type ComponentKeyRow,
-} from "./key-facts";
+  ClashBand,
+  IconAction,
+  RevocationSection,
+  VerifySection,
+} from "./KeyDetailsSections";
 import { KeyPreviewBody, type KeyPreviewChip } from "./KeyPreviewBody";
 import { holderDetailsTarget } from "./keys-routes";
+import { useRecipientToggles } from "./useRecipientToggles";
 
 export type KeyDetailsTarget =
   | { kind: "own"; keyBlob: ProtectedKeyBlob }
@@ -82,221 +64,6 @@ interface KeyDetailsPageProps {
   onDelete?: () => void;
   /** Should throw a user-readable message when the key is locked. */
   onGenerateRevocation?: () => Promise<string>;
-}
-
-function IconAction({
-  label,
-  onClick,
-  children,
-}: {
-  label: string;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <span className="relative">
-      <button
-        type="button"
-        onClick={onClick}
-        aria-label={label}
-        className="peer text-muted-foreground hover:text-foreground rounded p-1 transition-colors"
-      >
-        {children}
-      </button>
-      <span className="surface-float text-foreground pointer-events-none absolute top-full right-0 z-10 mt-1 hidden rounded-md px-1.5 py-0.5 text-[10px] whitespace-nowrap peer-hover:block">
-        {label}
-      </span>
-    </span>
-  );
-}
-
-function RevocationSection({
-  keyId,
-  initialCertificate,
-  onGenerate,
-}: {
-  keyId: string;
-  initialCertificate?: string;
-  onGenerate?: () => Promise<string>;
-}) {
-  const [certificate, setCertificate] = useState(initialCertificate ?? null);
-  // A locked key's message is ours and actionable; engine failures stay
-  // generic.
-  const generate = useAsyncAction((e) =>
-    e instanceof AppError && e.code === "key-locked"
-      ? { message: e.message }
-      : presentError(e, t("keys_revocation_create_failed")),
-  );
-
-  const handleDownload = () => {
-    if (!certificate) return;
-    downloadText(certificate, `revocation-${keyId.slice(-16)}.asc`);
-  };
-
-  const { copy } = useCopyToClipboard();
-  const handleCopy = () => {
-    if (!certificate) return;
-    // A revocation cert is an irreversible instrument (anyone holding it
-    // can revoke the key), so the toast says it now sits on the clipboard
-    // and in any clipboard history, as for an exported private key.
-    void copy(certificate, {
-      sensitive: true,
-      label: t("keys_revocation_certificate"),
-    });
-  };
-
-  const handleGenerate = () =>
-    generate.run(async () => {
-      if (!onGenerate) return;
-      setCertificate(await onGenerate());
-      toast.success(t("keys_revocation_created"), {
-        id: "revocation-created",
-      });
-    });
-
-  return (
-    <div>
-      <BlockLabel as="h3" className="mb-1.5">
-        {t("keys_revocation_certificate")}
-      </BlockLabel>
-      <Block className="space-y-2 rounded-xl px-3.5 py-3">
-        <p className="text-muted-foreground text-xs">
-          {certificate
-            ? t("keys_revocation_have_body")
-            : t("keys_revocation_missing_body")}
-        </p>
-        {certificate ? (
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleDownload}>
-              {t("common_download")}
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleCopy}>
-              {t("common_copy")}
-            </Button>
-          </div>
-        ) : (
-          <>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void handleGenerate()}
-              disabled={generate.busy || !onGenerate}
-            >
-              {generate.busy
-                ? t("keys_revocation_creating")
-                : t("keys_revocation_create")}
-            </Button>
-            {generate.error && (
-              <p className="text-destructive text-xs" role="alert">
-                {generate.error.message}
-              </p>
-            )}
-          </>
-        )}
-      </Block>
-    </div>
-  );
-}
-
-// ── identity clash (contacts) ────────────────────────────────────────
-
-/** Who else claims this contact's address or name, one line per key,
- *  each a click from its own details: the card's "Same address" pill
- *  says THAT there is another key; this says which, so the user can
- *  compare the two fingerprints with the person. */
-function ClashBand({
-  clash,
-  onShowHolder,
-}: {
-  clash: IdentityConflict;
-  onShowHolder?: (holder: IdentityHolder) => void;
-}) {
-  return (
-    <Block className="space-y-1.5 bg-[#252012] px-3.5 py-2.5">
-      {clash.holders.map((holder) => (
-        <div key={holder.keyId} className="flex items-start gap-1.5">
-          <TriangleAlertIcon className="text-warn mt-0.5 h-3.5 w-3.5 shrink-0" />
-          <p className="text-warn min-w-0 flex-1 text-xs leading-relaxed">
-            <MarkedText text={clashSentence(clash, holder)} />
-          </p>
-          {onShowHolder && (
-            <button
-              type="button"
-              aria-label={t("keys_key_details")}
-              title={t("keys_key_details")}
-              onClick={() => onShowHolder(holder)}
-              className="text-warn hover:bg-warn/12 -my-0.5 shrink-0 rounded p-0.5 transition-colors"
-            >
-              <ChevronRightIcon className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
-      ))}
-      <p className="text-muted-foreground pl-5 text-xs leading-relaxed">
-        {t("keys_clash_check")}
-      </p>
-    </Block>
-  );
-}
-
-// ── verification (contacts) ──────────────────────────────────────────
-
-/** "Mark as verified": the user's own record that they compared this
- *  fingerprint with its owner. Nothing else sets it -- not an import, not
- *  a keyserver, not a signature -- so it is the one statement about who
- *  a key belongs to that the user made themselves. */
-function VerifySection({
-  name,
-  verified,
-  verifiedAt,
-  onSetVerified,
-}: {
-  name: string;
-  verified: boolean;
-  verifiedAt?: number;
-  onSetVerified: (verified: boolean) => Promise<void>;
-}) {
-  const { run, busy } = useAsyncAction(t("keys_save_failed"));
-  const set = async (next: boolean) => {
-    const error = await run(() => onSetVerified(next));
-    if (error) toast.error(error.message);
-  };
-  if (verified) {
-    return (
-      <Block className="flex items-center gap-2 px-3.5 py-2.5">
-        <CheckIcon className="text-good h-3.5 w-3.5 shrink-0" />
-        <p className="min-w-0 flex-1 text-xs">
-          {verifiedAt !== undefined
-            ? t("keys_verified_on", { date: formatDate(verifiedAt) })
-            : t("keys_verified_by_you")}
-        </p>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-muted-foreground h-7 px-2"
-          disabled={busy}
-          onClick={() => void set(false)}
-        >
-          {t("keys_verified_unmark")}
-        </Button>
-      </Block>
-    );
-  }
-  return (
-    <Block className="space-y-2 px-3.5 py-2.5">
-      <p className="text-muted-foreground text-xs leading-relaxed">
-        {t("keys_verify_hint", { name })}
-      </p>
-      <Button
-        variant="outline"
-        size="sm"
-        disabled={busy}
-        onClick={() => void set(true)}
-      >
-        {t("keys_verify_mark")}
-      </Button>
-    </Block>
-  );
 }
 
 // ── page ─────────────────────────────────────────────────────────────
@@ -363,23 +130,12 @@ export function KeyDetailsPage({
   const { copy } = useCopyToClipboard();
 
   const isOwn = target.kind === "own";
-  // A contact's key list, held locally so a toggle shows immediately and
-  // this page keeps rendering the list it just wrote. Seeded through the
-  // accessor, so a legacy single-key record yields its one synthesised
-  // entry exactly like every other call site.
-  const [recipients, setRecipients] = useState<ContactRecipient[]>(() =>
-    target.kind === "contact" ? contactRecipients(target.contact) : [],
-  );
-  const [savingKeyId, setSavingKeyId] = useState<string | null>(null);
-  // More than one key means this contact is a PERSON with several
-  // machines, not a certificate: every key gets a row (see
-  // `sshGroupKeyFacts`) and every row gets an include/exclude control.
-  // So does a single key the user turned off (a refresh can leave a
-  // contact so): without its row control it could never be turned back
-  // on.
-  const multiRecipient =
-    !isOwn && (recipients.length > 1 || recipients.some(isRecipientDisabled));
-  const activeCount = recipients.filter((r) => !isRecipientDisabled(r)).length;
+  const { recipients, multiRecipient, renderRecipientAction } =
+    useRecipientToggles(target, (keyId, disable) =>
+      target.kind === "contact"
+        ? setContactRecipientDisabled(target.contact.keyId, keyId, disable)
+        : Promise.resolve(),
+    );
   // Which engine this key belongs to. Everything below that reaches for
   // an OpenPGP concept -- the certificate parse, the revocation
   // certificate, being the default key -- is gated on this.
@@ -486,83 +242,6 @@ export function KeyDetailsPage({
       : info
         ? pgpKeyFacts(info, details)
         : null;
-
-  /** Turn one of this contact's keys on or off, and persist it.
-   *
-   *  Persisted through `setContactRecipientDisabled` rather than a
-   *  `saveContact` of `{ ...target.contact, ... }`, and that is the
-   *  whole point: `target.contact` is a snapshot captured when this page
-   *  mounted, so saving a spread of it would republish every other field
-   *  as it was then -- reverting, say, the expiry backfill that ran in
-   *  the meantime. The store re-reads the record inside its own lock and
-   *  touches `recipients` alone.
-   *
-   *  `withRecipientDisabled` drops the flag entirely when re-enabling,
-   *  so nothing ever stores `disabled: false`. Optimistic, with a
-   *  rollback: the list on screen must never claim a key is excluded
-   *  when the store still has it enabled. */
-  const handleToggleRecipient = async (keyId: string, disable: boolean) => {
-    if (target.kind !== "contact") return;
-    // The last enabled key can never be turned off -- see the disabled
-    // control below. Re-checked here because a control is not a
-    // guarantee.
-    if (disable && activeCount <= 1) return;
-    const previous = recipients;
-    const next = withRecipientDisabled(previous, keyId, disable);
-    setRecipients(next);
-    setSavingKeyId(keyId);
-    try {
-      await setContactRecipientDisabled(target.contact.keyId, keyId, disable);
-    } catch (e) {
-      setRecipients(previous);
-      toast.error(presentError(e, t("keys_save_failed")).message);
-    } finally {
-      setSavingKeyId(null);
-    }
-  };
-
-  /** The include/exclude control for one key row. Passed to
-   *  `KeyPreviewBody` only from here -- the import preview doesn't pass
-   *  it and renders the same rows without controls. */
-  const renderRecipientAction = (row: ComponentKeyRow) => {
-    const recipient = recipients.find((r) => r.keyId === row.fingerprint);
-    if (!recipient) return null;
-    const off = isRecipientDisabled(recipient);
-    // Refusing to disable the last enabled key is the UI half of the
-    // never-encrypt-to-nobody invariant (`activeRecipients` is the
-    // other). Dimmed WITH A REASON rather than hidden: a control that
-    // vanishes looks like it never existed, so the user is left guessing
-    // why this row is different (see `lib/actions/types.ts`).
-    const lastActive = !off && activeCount <= 1;
-    const busy = savingKeyId === recipient.keyId;
-    return (
-      <span className="flex items-center gap-1.5">
-        {off && (
-          <span
-            title={t("keys_recipient_off_title")}
-            className="bg-warn/12 text-warn rounded px-1.5 py-px text-[10.5px] font-medium"
-          >
-            {t("keys_recipient_not_used")}
-          </span>
-        )}
-        <button
-          type="button"
-          disabled={busy || lastActive}
-          title={
-            lastActive
-              ? t("keys_recipient_last_active_title")
-              : off
-                ? t("keys_recipient_enable_title")
-                : t("keys_recipient_disable_title")
-          }
-          onClick={() => void handleToggleRecipient(recipient.keyId, !off)}
-          className="bg-secondary text-muted-foreground hover:text-foreground hover:bg-accent rounded px-1.5 py-px text-[10.5px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {off ? t("keys_recipient_use") : t("keys_recipient_dont_use")}
-        </button>
-      </span>
-    );
-  };
 
   const handleCopyPublicKey = () => {
     void copy(armored, { label: t("common_public_key") });
