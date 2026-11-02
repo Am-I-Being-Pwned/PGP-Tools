@@ -36,6 +36,8 @@ jobs:
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           workspaces: apps/pgp/gpg-wasm
+          # A red run still compiled everything; keep it for the next push.
+          cache-on-failure: true
 
       # Built from crates.io against its lockfile rather than piping a
       # downloaded script into sh. 0.13.1 is the version that installer
@@ -51,10 +53,6 @@ jobs:
             cargo install wasm-pack --locked --version 0.13.1 --force
           fi
 
-      - name: Build WASM module
-        working-directory: apps/pgp/gpg-wasm
-        run: wasm-pack build --target web --release
-
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -69,19 +67,21 @@ jobs:
       # pipeline's caching does nothing here. Keyed on the commit so each
       # run writes its own entry, with a branch-then-global fallback so a
       # run still starts from the most recent cache it can find.
+      # Restore and save are split so the save runs on failure too (the
+      # combined action only saves on success, so a red branch re-ran
+      # everything on every push).
       - name: Restore turbo cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: .turbo/cache
           key: turbo-${{ runner.os }}-${{ github.sha }}
           restore-keys: |
             turbo-${{ runner.os }}-
 
-      - run: pnpm lint
-      - run: pnpm typecheck
-      - run: pnpm test
-
-      # The crypto core's own tests: KEY_STORE isolation, AAD domain
+      # One turbo invocation so independent tasks run in parallel; the WASM
+      # module is a cached `build:wasm` dependency of all of them.
+      #
+      # test:rust is the crypto core's own tests: KEY_STORE isolation, AAD domain
       # separation, the unlock canary, ciphertext integrity under
       # corruption, and the decompression-bomb caps. They guard the
       # properties SECURITY.md claims, so they gate a merge rather than
@@ -89,9 +89,8 @@ jobs:
       # of the debug run and a few seconds of the release one; the
       # compile is cached by rust-cache above, and turbo skips the whole
       # task when nothing under gpg-wasm/ changed.
-      - run: pnpm test:rust
-
-      - run: pnpm build
+      - name: Lint, typecheck, unit + Rust tests, build
+        run: pnpm exec turbo run lint typecheck test test:rust build --continue
 
       - name: Upload build artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -122,6 +121,13 @@ jobs:
       # still busts the cache and fails here.
       - name: Check README badges are current
         run: pnpm badges:check
+
+      - name: Save turbo cache
+        if: ${{ always() }}
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: .turbo/cache
+          key: turbo-${{ runner.os }}-${{ github.sha }}
 
       - name: Upload Playwright traces
         if: ${{ failure() }}

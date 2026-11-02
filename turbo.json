@@ -6,26 +6,30 @@
       "dependsOn": ["^topo"]
     },
     "build": {
-      "dependsOn": ["^build"],
-      "outputs": [
-        ".cache/tsbuildinfo.json",
-        "dist/**",
-        ".output/**",
-        "gpg-wasm/pkg/**",
-        "public/gpg_wasm_bg.wasm"
-      ],
+      "dependsOn": ["^build", "build:wasm"],
+      "outputs": [".cache/tsbuildinfo.json", "dist/**", ".output/**"],
       "inputs": ["$TURBO_DEFAULT$", "!tests/**", "!shots/**"]
     },
+    "build:wasm": {
+      "inputs": [
+        "gpg-wasm/src/**",
+        "gpg-wasm/Cargo.toml",
+        "gpg-wasm/Cargo.lock"
+      ],
+      "outputs": ["gpg-wasm/pkg/**"]
+    },
     "dev": {
-      "dependsOn": ["^dev"],
+      "dependsOn": ["^dev", "build:wasm"],
       "cache": false,
       "persistent": false
     },
     "@amibeingpwned/pgp#dev": {
+      "dependsOn": ["build:wasm"],
+      "cache": false,
       "persistent": true
     },
     "@amibeingpwned/pgp#typecheck": {
-      "dependsOn": ["^topo", "^build"],
+      "dependsOn": ["^topo", "^build", "build:wasm"],
       "outputs": []
     },
     "format": {
@@ -33,11 +37,15 @@
       "outputLogs": "new-only"
     },
     "lint": {
-      "dependsOn": ["^topo", "^build"],
+      "dependsOn": ["^topo", "^build", "build:wasm"],
       "outputs": [".cache/.eslintcache"]
     },
+    "lint:fix": {
+      "dependsOn": ["^topo", "^build", "build:wasm"],
+      "cache": false
+    },
     "test": {
-      "dependsOn": ["^topo", "^build"],
+      "dependsOn": ["^topo", "^build", "build:wasm"],
       "outputs": ["coverage/**"],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -68,7 +76,7 @@
       "outputs": ["test-results/**", "playwright-report/**"]
     },
     "typecheck": {
-      "dependsOn": ["^topo", "^build"],
+      "dependsOn": ["^topo", "^build", "build:wasm"],
       "outputs": [".cache/tsbuildinfo.json"]
     },
     "zip": {
