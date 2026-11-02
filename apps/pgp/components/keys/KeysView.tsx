@@ -40,7 +40,11 @@ import { revocationCertificateWithHandle } from "../../lib/pgp/wasm";
 import { isPgpRecord, isSshRecord } from "../../lib/storage/key-kind";
 import { toast } from "../../lib/toast";
 import { formatAlgorithm, formatFingerprint } from "../../lib/utils/formatting";
-import { displayUserId, parseUserId } from "../../lib/utils/key-naming";
+import {
+  displayUserId,
+  parseUserId,
+  realIdentity,
+} from "../../lib/utils/key-naming";
 import { ConfirmPage } from "../shared/ConfirmPage";
 import { RenamePage } from "../shared/RenamePage";
 import { useNavStack } from "../shared/useNavStack";
@@ -59,21 +63,13 @@ type RenameTarget =
   | { kind: "crx"; keyBlob: CrxSigningKeyBlob }
   | { kind: "contact"; contact: PublicContactKey };
 
-/**
- * What the subject is REALLY called, shown under the rename field so a
- * local name never hides the identity it stands in for.
- *
- * One function for all three targets because the fallback chain is the
- * thing that must not drift: an SSH key (own or contact) has no User IDs
- * at all, only a comment, and may not even have that -- hence the
- * fingerprint at the end of the chain. A CRX signing key has no identity
- * beyond its extension ID.
- */
+/** What the subject is REALLY called, under the rename field so an alias
+ *  never hides it. An SSH key may have no comment: its fingerprint ends
+ *  the chain. A CRX key has nothing but its extension id. */
 function realIdentityOf(target: RenameTarget): string {
   if (target.kind === "crx") return target.keyBlob.extensionId;
   const record = target.kind === "own" ? target.keyBlob : target.contact;
-  const { name, comment } = parseUserId(record.userIds[0] ?? record.keyId);
-  return comment ? `${name} (${comment})` : name;
+  return realIdentity(record.userIds[0] ?? record.keyId);
 }
 
 /** A pending deletion, confirmed on its own slide-over page. */
@@ -327,29 +323,29 @@ export function KeysView() {
     for (const c of selectedContacts) await onDeleteContact(c.keyId);
   };
 
-  // Build one unified descriptor per key so PGP + SSH + CRX render
-  // through KeyCard.
-  //
-  // The keyring holds both engines, so it is split by `isPgpRecord` /
-  // `isSshRecord` (never by reading `blob.kind`, which is absent on every
-  // key stored before the age engine existed). The split is not cosmetic:
-  // `pgpKeyExporter` is backed by `getKeyArmored`, the OpenPGP plaintext
-  // export trapdoor, and SECURITY.md says an imported SSH identity must
-  // have no such thing -- it can leave this app only as ciphertext it
-  // produced. Attaching the PGP exporter to every own key would have
-  // offered "Copy private key" on an SSH key and failed somewhere deep in
-  // wasm, or worse, not failed.
-  const pgpModels: KeyCardModel[] = myKeys.filter(isPgpRecord).map((blob) => {
-    const realName = blob.userIds[0] ?? t("keys_unknown_name");
+  // One descriptor per key so PGP, SSH and CRX all render through
+  // KeyCard. Split by `isPgpRecord` / `isSshRecord` (legacy keys carry no
+  // `kind`), and not cosmetically: `pgpKeyExporter` is the OpenPGP
+  // plaintext trapdoor, and an SSH identity must have no such export
+  // (SECURITY.md) -- it leaves only as ciphertext this app produced.
+  const ownModel = (blob: ProtectedKeyBlob): KeyCardModel => {
+    const ssh = isSshRecord(blob);
+    // An SSH key's name is its `ssh-keygen` comment, or nothing at all.
+    const realName =
+      blob.userIds[0] ?? (ssh ? blob.keyId : t("keys_unknown_name"));
     return {
+      // The id namespace names the STORE: SSH lives in the keyring too.
       kind: "pgp",
       id: blob.keyId,
       displayName: blob.alias ?? realName,
       realName,
-      shortId: blob.keyId.slice(-16),
+      // An OpenSSH fingerprint is a base64 hash: its tail identifies
+      // nothing, so it shows whole; and no 4-char-block line for it.
+      shortId: ssh ? blob.keyId : blob.keyId.slice(-16),
       algorithm: formatAlgorithm(blob.algorithm),
-      fingerprint: formatFingerprint(blob.keyId),
-      isDefault: defaultKeyId != null && blob.keyId === defaultKeyId,
+      fingerprint: ssh ? undefined : formatFingerprint(blob.keyId),
+      badge: ssh ? "SSH" : undefined,
+      isDefault: !ssh && defaultKeyId != null && blob.keyId === defaultKeyId,
       protectionMethod: blob.protection.method,
       securityWarning: blob.securityWarning,
       session: {
@@ -358,12 +354,16 @@ export function KeysView() {
         unlockWithPasskey: () => onUnlockWithPasskey(blob),
         lock: () => onLock(blob.keyId),
       },
-      exporter: pgpKeyExporter(blob, getKeyHandle),
-      // No label: KeyCard shows its own inline "Public key copied"
-      // feedback; the hook still surfaces a rejected write.
+      exporter: ssh ? null : pgpKeyExporter(blob, getKeyHandle),
+      // No label: KeyCard shows its own inline "copied" note.
       onCopyPublicKey: () => void copy(blob.publicKeyArmored),
+      // An SSH recipient line downloads as `.pub`, what other tools expect.
       onDownloadPublicKey: () =>
-        downloadPublicKey(blob.publicKeyArmored, blob.alias ?? realName),
+        downloadPublicKey(
+          blob.publicKeyArmored,
+          blob.alias ?? realName,
+          ssh ? "pub" : "asc",
+        ),
       onDelete: () =>
         nav.push({
           page: "confirm-delete",
@@ -374,7 +374,7 @@ export function KeysView() {
       onShowDetails: () =>
         nav.push({ page: "details", target: { kind: "own", keyBlob: blob } }),
     };
-  });
+  };
 
   /**
    * Ask keys.openpgp.org whether a contact's key has been revoked, and
@@ -467,59 +467,6 @@ export function KeysView() {
     }
   };
 
-  const sshModels: KeyCardModel[] = myKeys.filter(isSshRecord).map((blob) => {
-    // An SSH key's name is the comment `ssh-keygen` wrote (`user@host`),
-    // or nothing at all -- there are no User IDs to fall back through.
-    const realName = blob.userIds[0] ?? blob.keyId;
-    return {
-      // The card's id namespace names the STORE it came from, and an SSH
-      // identity lives in the same keyring as the PGP certs.
-      kind: "pgp",
-      id: blob.keyId,
-      displayName: blob.alias ?? realName,
-      realName,
-      // The WHOLE `SHA256:...` fingerprint, not a tail slice: an OpenSSH
-      // fingerprint is a base64 hash, and its last 16 characters are not
-      // an identifier anyone recognises or can look up (unlike a PGP long
-      // key id, which is a real short form).
-      shortId: blob.keyId,
-      algorithm: formatAlgorithm(blob.algorithm),
-      // No `fingerprint` line in advanced mode: that row regroups a hex
-      // fingerprint into 4-character blocks, which would chop a base64
-      // hash into meaningless quarters. `shortId` above already shows it
-      // in full, in the only form it has.
-      badge: "SSH",
-      protectionMethod: blob.protection.method,
-      securityWarning: blob.securityWarning,
-      // SSH keys really do unlock into a handle store (SSH_KEY_STORE),
-      // so the lock/unlock lifecycle is genuine here -- unlike CRX keys,
-      // which are sealed at rest and have no session.
-      session: {
-        isUnlocked: isUnlocked(blob.keyId),
-        unlockWithPassword: (pw) => onUnlockWithPassword(blob, pw),
-        unlockWithPasskey: () => onUnlockWithPasskey(blob),
-        lock: () => onLock(blob.keyId),
-      },
-      // No private-key export for an SSH identity -- see the note above
-      // pgpModels.
-      exporter: null,
-      // The "public key" of an SSH identity is its recipient line; `.pub`
-      // is the extension every other tool expects it under.
-      onCopyPublicKey: () => void copy(blob.publicKeyArmored),
-      onDownloadPublicKey: () =>
-        downloadPublicKey(blob.publicKeyArmored, blob.alias ?? realName, "pub"),
-      onDelete: () =>
-        nav.push({
-          page: "confirm-delete",
-          target: { kind: "own", keyBlob: blob },
-        }),
-      onRename: () =>
-        nav.push({ page: "rename", target: { kind: "own", keyBlob: blob } }),
-      onShowDetails: () =>
-        nav.push({ page: "details", target: { kind: "own", keyBlob: blob } }),
-    };
-  });
-
   const crxModels: KeyCardModel[] = shownCrxKeys.map((blob) => ({
     kind: "crx",
     id: blob.extensionId,
@@ -548,10 +495,13 @@ export function KeysView() {
     onShowDetails: undefined,
   }));
 
-  // One list, in one place: an SSH key is one of the user's keys, and a
-  // second heading would ask the user to know which engine they need
-  // before they can find their own key.
-  const keyModels = [...pgpModels, ...sshModels, ...crxModels];
+  // One list: a second heading would make the user know which engine
+  // their own key belongs to before they could find it.
+  const keyModels = [
+    ...myKeys.filter(isPgpRecord).map(ownModel),
+    ...myKeys.filter(isSshRecord).map(ownModel),
+    ...crxModels,
+  ];
 
   return (
     // Plain wrapper (no space-y) so mounting the sticky bar doesn't shift the

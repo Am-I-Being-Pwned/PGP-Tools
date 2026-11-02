@@ -16,6 +16,12 @@ export function parseUserId(userId: string | undefined): {
   return { name, comment, email };
 }
 
+/** What a User ID really names, comment kept: "Alice (work)". */
+export function realIdentity(userId: string | undefined): string {
+  const { name, comment } = parseUserId(userId);
+  return comment ? `${name} (${comment})` : name;
+}
+
 /** Format for display in a combobox/selector: "name detail" */
 export function formatKeyDisplayName(userId: string | undefined): {
   name: string;

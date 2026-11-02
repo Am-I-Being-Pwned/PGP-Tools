@@ -1,6 +1,23 @@
 import { describe, expect, it } from "vitest";
 
-import { formatKeyDisplayName, parseUserId } from "./key-naming";
+import { formatKeyDisplayName, parseUserId, realIdentity } from "./key-naming";
+
+describe("realIdentity", () => {
+  it("keeps the comment and drops the email", () => {
+    expect(realIdentity("Alice (work) <alice@example.com>")).toBe(
+      "Alice (work)",
+    );
+    expect(realIdentity("Bob <bob@example.com>")).toBe("Bob");
+  });
+
+  it("passes an SSH comment or bare string through", () => {
+    expect(realIdentity("alice@laptop")).toBe("alice@laptop");
+  });
+
+  it("falls back to the unknown name when there is none", () => {
+    expect(realIdentity(undefined)).toBe(parseUserId(undefined).name);
+  });
+});
 
 describe("parseUserId", () => {
   it("parses name and email", () => {

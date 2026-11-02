@@ -48,7 +48,7 @@ import {
 import { isSshRecord } from "../../lib/storage/key-kind";
 import { toast } from "../../lib/toast";
 import { downloadText } from "../../lib/utils/download";
-import { parseUserId } from "../../lib/utils/key-naming";
+import { parseUserId, realIdentity } from "../../lib/utils/key-naming";
 import { MarkedText } from "../shared/MarkedText";
 import {
   SlideOverHeader,
@@ -410,27 +410,17 @@ export function KeyDetailsPage({
   // Which engine this key belongs to. Everything below that reaches for
   // an OpenPGP concept -- the certificate parse, the revocation
   // certificate, being the default key -- is gated on this.
-  const isSsh = isSshRecord(isOwn ? target.keyBlob : target.contact);
+  const record = isOwn ? target.keyBlob : target.contact;
+  const isSsh = isSshRecord(record);
+  const { userIds, securityWarning, lastUsedAt, alias, algorithm } = record;
   const armored = isOwn
     ? target.keyBlob.publicKeyArmored
     : target.contact.armoredPublicKey;
-  const userIds = isOwn ? target.keyBlob.userIds : target.contact.userIds;
-  const securityWarning = isOwn
-    ? target.keyBlob.securityWarning
-    : target.contact.securityWarning;
-  const lastUsedAt = isOwn
-    ? target.keyBlob.lastUsedAt
-    : target.contact.lastUsedAt;
   const addedAt = isOwn ? target.keyBlob.createdAt : target.contact.addedAt;
 
-  const primaryUserId = userIds[0] ?? t("keys_unknown_name");
-  const { name: rawName, email, comment } = parseUserId(primaryUserId);
-  const realName = comment ? `${rawName} (${comment})` : rawName;
-  // Local alias wins as the headline; the real identity moves to a
-  // subtitle so it's never hidden. Contacts carry one too: an SSH
-  // contact's "identity" is a key comment, which may be `user@laptop`,
-  // may differ between one person's keys, or may not exist at all.
-  const alias = isOwn ? target.keyBlob.alias : target.contact.alias;
+  const { email } = parseUserId(userIds[0]);
+  const realName = realIdentity(userIds[0]);
+  // The alias heads the page; the real identity stays visible under it.
   const name = alias ?? realName;
 
   // Other identities on the cert, shown as deduped emails so we don't
@@ -505,7 +495,6 @@ export function KeyDetailsPage({
     };
   }, [armored, isSsh]);
 
-  const algorithm = isOwn ? target.keyBlob.algorithm : target.contact.algorithm;
   // Absent sections (health, created, expires, subkeys) simply don't
   // render -- that is the KeyFacts contract. An SSH key is not a
   // certificate with four blanks in it, so nothing explains their
@@ -520,10 +509,7 @@ export function KeyDetailsPage({
       // between) didn't hand back a key this person never published.
       sshGroupKeyFacts(recipients)
     : isSsh
-      ? sshKeyFacts(
-          isOwn ? target.keyBlob.keyId : target.contact.keyId,
-          algorithm,
-        )
+      ? sshKeyFacts(record.keyId, algorithm)
       : info
         ? pgpKeyFacts(info, details)
         : null;
@@ -702,9 +688,7 @@ export function KeyDetailsPage({
             // The record's own id: the hex fingerprint, or an SSH key's
             // `SHA256:` hash -- for a multi-key contact, its first key's,
             // which is the record's identity (see `recipientsField`).
-            avatarFingerprint={
-              isOwn ? target.keyBlob.keyId : target.contact.keyId
-            }
+            avatarFingerprint={record.keyId}
             subtitle={alias ? realName : undefined}
             email={email}
             akaEmails={akaEmails}

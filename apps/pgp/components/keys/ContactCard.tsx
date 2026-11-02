@@ -31,7 +31,11 @@ import {
 } from "../../lib/storage/contact-recipients";
 import { isSshRecord } from "../../lib/storage/key-kind";
 import { formatAlgorithm, formatFingerprint } from "../../lib/utils/formatting";
-import { displayUserId, parseUserId } from "../../lib/utils/key-naming";
+import {
+  displayUserId,
+  parseUserId,
+  realIdentity,
+} from "../../lib/utils/key-naming";
 import { KeyAvatar } from "../shared/KeyAvatar";
 import { MarkedText } from "../shared/MarkedText";
 import {
@@ -122,9 +126,9 @@ export function ContactCard({
   const activeKeys = activeRecipients(contact).length;
   const source = contactSource(contact);
   // The alias wins, via the one accessor the picker and search share.
-  const userId = displayUserId(contact) ?? t("keys_unknown_name");
-  const { name: rawName, email, comment } = parseUserId(userId);
-  const name = comment ? `${rawName} (${comment})` : rawName;
+  const userId = displayUserId(contact);
+  const { email } = parseUserId(userId);
+  const name = realIdentity(userId);
 
   // The fingerprint's last 16 hex digits at the right of the row. An SSH
   // hash has no meaningful tail, so it shows in full on the key line.
