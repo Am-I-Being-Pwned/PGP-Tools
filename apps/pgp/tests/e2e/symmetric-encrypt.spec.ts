@@ -175,6 +175,11 @@ test("Enter in the field submits, and Escape closes without arming", async ({
     .fill(MESSAGE_PASSWORD);
   await panel.keyboard.press("Escape");
   await expect(passwordBadge(panel)).toHaveAttribute("aria-checked", "false");
+  // The page unmounts after its slide-out; reopening before then targets the
+  // closing field.
+  await expect(
+    panel.getByLabel("Message password", { exact: true }),
+  ).toHaveCount(0);
 
   // Then Enter straight from the field.
   await passwordBadge(panel).click();
