@@ -7,34 +7,15 @@ import { INPUT_CLASS } from "~/lib/utils/styles";
 import { MIN_MESSAGE_PASSWORD_LENGTH } from "./workspace-state";
 
 interface MessagePasswordPageProps {
-  /** Applied on save. Never called with a password shorter than
-   *  {@link MIN_MESSAGE_PASSWORD_LENGTH}. */
+  /** Never called with fewer than {@link MIN_MESSAGE_PASSWORD_LENGTH}. */
   onSet: (password: string) => void;
   onCancel: () => void;
 }
 
 /**
- * Where the symmetric-encryption password is typed.
- *
- * A DIALOG RATHER THAN AN INLINE ROW, and that is the whole reason this
- * file exists: revealing two fields under the badge row pushed the
- * message box, the recipient picker and the action bar down the panel
- * every time the badge was pressed. `SubPage` is this app's one modal
- * surface (see its doc comment), so the password gets the same treatment
- * as every other thing that used to be a dialog.
- *
- * ONE FIELD, NOT TWO. A typo here is silent and permanent -- the message
- * encrypts cleanly and opens for nobody, including the sender -- so
- * something has to guard it. A confirm field is the usual answer; a
- * reveal toggle is the cheaper one, and unlike a confirm field it also
- * catches the case where the user typed the same wrong thing twice
- * (a stuck modifier, the wrong keyboard layout).
- *
- * KEYBOARD-ONLY THROUGHOUT. Tab reaches the field, the reveal toggle and
- * both footer buttons in that order -- the reveal is a real `<button>`,
- * not an icon with a click handler, so it is tab-reachable and
- * space/enter-activatable for free. Enter in the field runs the primary
- * action; Escape closes (both inherited from `SubPage`/`useSlideOver`).
+ * The symmetric-encryption password. One field plus a reveal toggle, not a
+ * confirm field: a typo is silent and permanent (the message opens for
+ * nobody), and reveal also catches the same mistake typed twice.
  */
 export function MessagePasswordPage({
   onSet,
@@ -73,9 +54,8 @@ export function MessagePasswordPage({
             <div className="flex items-stretch gap-2">
               <input
                 id="message-password"
-                // Toggling `type` is what the reveal does. `new-password`
-                // keeps a password manager from offering the user's own
-                // saved credentials for a field that is not a login.
+                // `new-password`: keep password managers from offering the
+                // user's saved logins here.
                 type={revealed ? "text" : "password"}
                 autoComplete="new-password"
                 spellCheck={false}
@@ -83,9 +63,7 @@ export function MessagePasswordPage({
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyDown={(e) => {
-                  // runAction no-ops while busy or disabled, so Enter on
-                  // a too-short password does nothing rather than
-                  // submitting one.
+                  // runAction no-ops while disabled (too short).
                   if (e.key === "Enter") api.runAction(0);
                 }}
                 className={`${INPUT_CLASS} h-9 flex-1 py-0`}
@@ -115,9 +93,6 @@ export function MessagePasswordPage({
             </div>
           </div>
 
-          {/* States the requirement rather than only complaining once it
-              is missed: an empty field is one waiting to be filled, not
-              an error. */}
           <p
             className={
               tooShort ? "text-bad text-xs" : "text-muted-foreground text-xs"

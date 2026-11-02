@@ -51,54 +51,33 @@ interface RecipientPickerProps {
   label: string;
   contacts: PublicContactKey[];
   myKeys: ProtectedKeyBlob[];
-  /** Selected recipient key ids, in selection order (chip order). */
   selectedKeyIds: string[];
-  /** Recently used recipient fingerprints, most recent first. */
+  /** Most recent first. */
   recentKeyIds: string[];
   onChange: (keyIds: string[]) => void;
   emptyText?: string;
   emptyAction?: () => void;
   emptyActionLabel?: string;
-  /** A message password is set. Rules out SSH recipients entirely --
-   *  age has no password mode -- so they dim with their own reason. */
+  /** Rules out SSH recipients (age has no password mode). */
   passwordArmed?: boolean;
-  /** Escape pressed with nothing left for this box to close or clear.
-   *
-   *  A CALLBACK, not bubbling, and that is the whole reason it exists:
-   *  this input lives inside a cmdk `Command` root, which consumes
-   *  Escape before it can reach a document-level listener. The
-   *  workspace's own Escape handling is therefore unreachable from here
-   *  and has to be invoked by hand. */
+  /** Escape with nothing left to close or clear. A callback because
+   *  cmdk/Radix consume Escape before any document listener sees it. */
   onEscapeExhausted?: () => void;
-  /** Drawn as the "To" row at the top of the message card: label to the
-   *  left of the box, no well of its own (the card block is the well),
-   *  and the list drops down over the message rather than up over the
-   *  mode switch. Behaviour is identical. */
+  /** The card's "To" row: no own well, list drops down. */
   inline?: boolean;
 }
 
 function getKeyDisplay(key: AnyKey): { name: string; detail: string } {
-  // The local alias when there is one -- through the shared accessor, so
-  // a key renamed in the Keys tab is renamed here too.
   const userId = displayUserId(key);
   if (!userId) return { name: key.keyId.slice(-8).toUpperCase(), detail: "" };
   return formatKeyDisplayName(userId);
 }
 
 /**
- * Multi-recipient combobox for encrypt mode: selected recipients render
- * as removable chips ahead of an inline search input (one box, one
- * affordance -- click anywhere and type), the dropdown offers the
- * remaining keys with recently-used ones first, and digits 1-9
- * quick-pick the nth visible option while the input is empty.
- *
- * The dropdown opens on a deliberate gesture -- a click in the box, the
- * chevron, typing, Arrow/Enter, or TABBING INTO IT. Focus on its own is
- * still not intent: the box also gets focused when the panel regains
- * focus, by re-renders after the mod+Enter Run shortcut, and by
- * programmatic focus, and popping the list open in those cases reads as
- * a dialog appearing out of nowhere. So the focus handler opens only
- * when a Tab keydown immediately preceded it -- see `arrivedByTab`.
+ * Multi-recipient chip combobox for encrypt mode. The dropdown opens only
+ * on a deliberate gesture; plain focus (panel refocus, post-Run re-render,
+ * programmatic) is not intent, so focus opens it only after a Tab keydown
+ * (`arrivedByTab`).
  */
 export function RecipientPicker({
   label,
@@ -116,43 +95,22 @@ export function RecipientPicker({
 }: RecipientPickerProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  // Whether the focus about to arrive came from a TAB. Focus alone is
-  // not intent (see this component's doc comment); a Tab press is. The
-  // flag is set on the keydown that will move focus and cleared the
-  // moment it is used, so a later programmatic focus cannot inherit it.
+  // Cleared the moment it is used, so a later programmatic focus cannot
+  // inherit it.
   const arrivedByTab = useRef(false);
-  // cmdk's highlighted option, controlled so it can reset between opens
-  // (otherwise cmdk keeps pointing at the just-picked, now-absent item
-  // and Enter silently does nothing on reopen).
+  // Controlled so it resets between opens; otherwise cmdk points at the
+  // just-picked, now-absent item and Enter silently no-ops.
   const [highlighted, setHighlighted] = useState("");
-  /** The key whose details page is open, from a row's (i). */
   const [detailsKey, setDetailsKey] = useState<AnyKey | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const inputId = useId();
   const listId = useId();
 
-  // Capture phase, on the keydown BEFORE the browser moves focus, so the
-  // focus handler below can tell a Tab arrival from every other way this
-  // box gets focused. Any other key (or a pointer press) clears it --
-  // otherwise a Tab somewhere else in the panel would still be "armed"
-  // when a re-render later parked focus here.
-  // Escape's LAST layer, in capture phase, because the bubble phase is
-  // not available: Radix's dismissable layer registers its own document
-  // capture listener when the popover opens and stops Escape there, so
-  // neither this component's `onKeyDown` nor the workspace's
-  // document-level listener ever sees one. (Measured: the input handler
-  // records `ArrowDown` and never `Escape`.)
-  //
-  // Registered here, before Radix's, so this runs first -- and it does
-  // nothing at all while the popover is open or a query is typed, which
-  // leaves those two layers exactly where they were.
-  // Read through a ref so the listener below can be registered ONCE.
-  // Capture-phase listeners on the same node fire in registration order,
-  // and Radix registers its own when the popover opens -- so a listener
-  // that re-subscribed on every render would keep moving to the back of
-  // the queue and land behind Radix's, which stops the event. Registered
-  // at mount, this one stays in front for good.
+  // Escape's LAST layer, in capture phase: Radix stops Escape on its own
+  // document capture listener, so no bubble handler ever sees it. Must be
+  // registered ONCE at mount (state via ref) to stay ahead of Radix's
+  // listener; capture listeners fire in registration order.
   const escapeState = useRef({ open, search, onEscapeExhausted });
   useEffect(() => {
     escapeState.current = { open, search, onEscapeExhausted };
@@ -167,8 +125,6 @@ export function RecipientPicker({
         onEscapeExhausted: exhausted,
       } = escapeState.current;
       if (!exhausted) return;
-      // Only when this box owns the focus, and only once it has nothing
-      // of its own left to peel.
       if (isOpen || query !== "") return;
       const active = document.activeElement;
       if (!(active instanceof Node) || !containerRef.current?.contains(active))
@@ -179,6 +135,8 @@ export function RecipientPicker({
     return () => document.removeEventListener("keydown", onEscape, true);
   }, []);
 
+  // Capture phase, before the browser moves focus; any other key or a
+  // pointer press disarms it.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       arrivedByTab.current = e.key === "Tab";
@@ -194,10 +152,8 @@ export function RecipientPicker({
     };
   }, []);
 
-  // Two contacts claiming one person: each row says so, so the pick is
-  // made on the key id, not on a name both of them wear. SSH keys too:
-  // a key comment is the contact's name, and it is whatever the file
-  // said. Worked out once per contact list, not on every keystroke.
+  // Two contacts claiming one name are flagged so the pick is made on the
+  // key id (SSH comments are whatever the file said).
   const clashes = useMemo(
     () => contactClashes(contacts, myKeys),
     [contacts, myKeys],
@@ -218,9 +174,8 @@ export function RecipientPicker({
               {" "}
               <button
                 type="button"
-                // Don't pass emptyAction directly: the MouseEvent would leak
-                // into callers typed (importPrefill?: string) and get treated
-                // as a truthy prefill.
+                // Not passed directly: the MouseEvent would become a truthy
+                // `importPrefill`.
                 onClick={() => emptyAction()}
                 className="text-primary underline"
               >
@@ -233,8 +188,8 @@ export function RecipientPicker({
     );
   }
 
-  // Own keys first: an id that is one of yours means your key, the same
-  // rule `resolveSelectedRecipients` applies to what is encrypted.
+  // Own keys first: an id that is yours means your key, as in
+  // `resolveSelectedRecipients`.
   const selectedKeys = selectedKeyIds
     .map(
       (id) =>
@@ -243,20 +198,13 @@ export function RecipientPicker({
     )
     .filter((k): k is AnyKey => k !== undefined);
 
-  // Already-selected recipients don't reappear in the dropdown. The
-  // inline input is the single search field, so filtering happens here
-  // (Command runs with shouldFilter={false}).
+  // Filtering is manual here (Command has shouldFilter={false}).
   const selectedSet = new Set(selectedKeyIds);
   const available = allKeys.filter(
     (k) => !selectedSet.has(k.keyId) && matchesRecipientSearch(k, search),
   );
-  // Which list a row came from, by record rather than fingerprint: the
-  // same key can be both your own and a contact's.
+  // By record, not fingerprint: one key can be both yours and a contact's.
   const contactRecords = new Set<AnyKey>(contacts);
-  // Own keys always sort BELOW contacts: they never join the Recent group
-  // (you rarely encrypt to yourself explicitly), so recency ordering only
-  // applies to actual recipients. Each key is offered once -- see
-  // `splitRecipientSections`.
   const { contacts: availableContacts, own: availableOwn } =
     splitRecipientSections<PublicContactKey, ProtectedKeyBlob>(
       available,
@@ -268,42 +216,30 @@ export function RecipientPicker({
     recentKeyIds,
   );
   const { rest: restMyKeys } = orderRecipients(availableOwn, []);
-  // Render order, flattened.
   const visibleKeys = [...recent, ...restContacts, ...restMyKeys];
-  // The engine the selection has committed to (null while nothing is
-  // selected), and the subset of the rendered list a keyboard gesture may
-  // land on. The two lists are deliberately separate: options of the
-  // other engine still RENDER -- dimmed, with the reason -- but must be
-  // invisible to the digit shortcuts and to Enter, or a disabled row
-  // sitting third would silently eat the `3` keystroke.
+  // Keyboard picks index `pickable`, never `visibleKeys` (see pickableKeys).
   const engine = selectionEngine(selectedKeys);
   const pickable = pickableKeys(visibleKeys, engine, passwordArmed);
 
   const closeDropdown = () => {
     setOpen(false);
-    // A stale filter surviving into the next open is confusing; start
-    // each open with the full list.
     setSearch("");
     setHighlighted("");
   };
 
-  /** Return focus to the inline input. Focus alone never opens the
-   *  dropdown, so this is always safe. */
+  /** Safe: focus alone never opens the dropdown. */
   const refocusInput = () => {
     const input = inputRef.current;
     if (!input || document.activeElement === input) return;
     input.focus();
   };
 
-  // Click/Enter picks close the popover (the deliberate single pick);
-  // digit quick-picks keep it open for rapid multi-add.
+  // Digit quick-picks keep the list open for rapid multi-add.
   const addRecipient = (keyId: string, opts?: { keepOpen?: boolean }) => {
     onChange([...selectedKeyIds, keyId]);
     setSearch("");
     if (!opts?.keepOpen) {
       closeDropdown();
-      // A pointer pick moved focus to the list; hand it back so the
-      // user can keep typing.
       refocusInput();
     }
   };
@@ -312,14 +248,9 @@ export function RecipientPicker({
   };
 
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Escape peels one layer per press: #1 closes the list (query kept,
-    // so reopening resumes the filter), #2 clears the typed query, #3
-    // hands back to the workspace. ONLY #2 IS HANDLED HERE -- see the
-    // capture-phase effect above for #1 and #3 and for why they cannot
-    // be: Radix's dismissable layer stops Escape on a document capture
-    // listener, so this bubble-phase handler is never called for it. It
-    // was reached only when no popover had ever been opened, which made
-    // the layering look like it worked.
+    // Escape peels: close list, clear query, hand back to the workspace.
+    // Only the query clear really lands here; Radix and the capture-phase
+    // effect above own the other two.
     if (e.key === "Escape") {
       if (open) {
         e.preventDefault();
@@ -335,17 +266,11 @@ export function RecipientPicker({
       }
       return;
     }
-    // Enter with the list closed opens it -- the box should always
-    // "show the thing" from the keyboard. When open, Enter bubbles to
-    // the Command root and picks the highlighted option -- UNLESS the
-    // filter has moved on and the highlight points at nothing visible
-    // (cmdk would silently no-op); then Enter picks the TOP match, so
-    // "type until one result, Enter" always works.
+    // Open: Enter picks the highlight, or the TOP match when the highlight
+    // is stale (cmdk would silently no-op).
     if (e.key === "Enter") {
-      // mod+Enter is the global Run shortcut, never a picker gesture:
-      // preventDefault so cmdk skips its own Enter pick (it bails on
-      // defaultPrevented), close the list, and let the event bubble on
-      // to the window-level shortcut listener that runs the action.
+      // mod+Enter is Run: preventDefault so cmdk skips its pick, but let
+      // it bubble to the window shortcut listener.
       if (e.metaKey || e.ctrlKey || e.altKey) {
         e.preventDefault();
         if (open) closeDropdown();
@@ -366,23 +291,18 @@ export function RecipientPicker({
       }
       return;
     }
-    // Backspace in the empty input pops the last chip.
     if (e.key === "Backspace" && search === "" && selectedKeyIds.length > 0) {
       e.preventDefault();
       onChange(selectedKeyIds.slice(0, -1));
       return;
     }
-    // Arrow keys open the dropdown; once open they bubble to the
-    // Command root, which moves the cmdk highlight through the list.
     if ((e.key === "ArrowDown" || e.key === "ArrowUp") && !open) {
       e.preventDefault();
       setOpen(true);
       return;
     }
-    // Digits quick-pick the nth visible option, but only while the input
-    // is EMPTY -- typing numbers into a query must never trigger picks.
-    // Plain digits only: mod+1..4 belong to the global mode shortcuts
-    // (action registry), which fire even while an input has focus.
+    // Digits pick only while the query is EMPTY, and only unmodified
+    // (mod+1..4 are the global mode shortcuts).
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (open && search === "" && /^[1-9]$/.test(e.key)) {
       const index = Number(e.key) - 1;
@@ -399,19 +319,15 @@ export function RecipientPicker({
     return detail ? `${name} ${detail} ${key.keyId}` : `${name} ${key.keyId}`;
   };
 
-  /** 1-based digit shortcut for `key`, if it has one. Numbered off the
-   *  PICKABLE list so the digits shown match the digits that work -- a
-   *  blocked option shows no number at all. */
+  /** Numbered off `pickable`, so shown digits are the ones that work. */
   const digitFor = (key: AnyKey): number | null => {
     if (search !== "") return null;
     const index = pickable.indexOf(key);
     return index >= 0 && index < 9 ? index + 1 : null;
   };
 
-  // The first blocked option in render order carries the reason as a
-  // visible sub-line. Only the first: repeating one sentence down a whole
-  // group turns the explanation into wallpaper, and hover-only (a
-  // `title`) would leave it undiscoverable on touch and to the keyboard.
+  // Only the first blocked row spells out its reason (a `title` alone is
+  // invisible to touch and keyboard).
   const firstBlockedId = visibleKeys.find(
     (k) => recipientBlockReason(k, engine, passwordArmed) !== null,
   )?.keyId;
@@ -419,32 +335,18 @@ export function RecipientPicker({
   const renderOption = (key: AnyKey) => {
     const { name, detail } = getKeyDisplay(key);
     const digit = digitFor(key);
-    // Own keys carry a "You" badge so they read at a glance in mixed
-    // groups (Recent, search results) where the group heading can't help.
-    // An "SSH" badge does the same job for the engine, which otherwise
-    // shows up only once the mixing is already refused.
     const isOwn = !contactRecords.has(key);
     const isSsh = isSshRecord(key);
-    // A contact can hold several keys (a fetched person's laptop,
-    // desktop, phone), and picking it encrypts to all of them. Nothing
-    // about the selection changes -- one contact, one chip, one keyId --
-    // but the resulting file has a stanza per key, so say so here rather
-    // than letting the size of the output be the first hint.
+    // Picking a contact encrypts to ALL its active keys; say so up front.
     const keyCount =
       "armoredPublicKey" in key ? contactRecipients(key).length : 1;
-    // ...minus any the user turned off in the contact's key details.
-    // The sub-line exists so the number of stanzas in the output is not
-    // a surprise, which only works if it counts the keys that will
-    // actually be there.
     const activeKeyCount =
       "armoredPublicKey" in key ? activeRecipients(key).length : 1;
     const blockReason = recipientBlockReason(key, engine, passwordArmed);
     const blocked = blockReason !== null;
     const verified = !isOwn && "verified" in key && key.verified === true;
     const clash = isOwn ? undefined : clashes.get(key.keyId);
-    // Always shown: the id is what tells two keys with one name apart --
-    // the 16-hex id for a PGP key, the start of the SHA256 hash for an
-    // SSH key (whole on hover), as a conflict note shortens it.
+    // Always shown: the id tells two keys with one name apart.
     const shortKeyId = isSsh ? noteKeyId(key.keyId) : displayKeyId(key.keyId);
     return (
       <CommandItem
@@ -462,9 +364,6 @@ export function RecipientPicker({
       >
         <KeyAvatar fingerprint={key.keyId} size={32} />
         <div className="min-w-0 flex-1">
-          {/* The name is the identity being judged, so it gets the whole
-              row: the badges wrap on a line of their own beneath it
-              rather than squeezing it to "Ali..." beside them. */}
           <p className="truncate text-sm">
             <MarkedText text={name} />
           </p>
@@ -528,19 +427,13 @@ export function RecipientPicker({
               />
             </p>
           )}
-          {/* Spelled out once, on the first dimmed row: a `title`
-              tooltip is invisible to touch and to the keyboard, and this
-              is the only place the refusal gets explained. */}
           {key.keyId === firstBlockedId && blockReason !== null && (
             <p className="text-muted-foreground mt-0.5 text-xs">
               {blockReason}
             </p>
           )}
         </div>
-        {/* Look before you pick: the same details page as the Keys tab.
-            Its own target inside the row, so a click here never adds the
-            key; not a Tab stop or a list stop -- the arrows and digits
-            stay about choosing. */}
+        {/* Never adds the key; not a Tab or list stop. */}
         <button
           type="button"
           tabIndex={-1}
@@ -573,11 +466,8 @@ export function RecipientPicker({
       >
         {label}
       </label>
-      {/* Command wraps BOTH the trigger box and the (portaled) list so
-          the inline input drives cmdk: its keystrokes bubble to this
-          root, which handles ArrowUp/Down/Enter over the list.
-          Filtering is manual (shouldFilter={false}) via
-          matchesRecipientSearch above. */}
+      {/* Wraps the trigger AND the portaled list so the inline input's
+          keystrokes drive cmdk. */}
       <Command
         shouldFilter={false}
         value={highlighted}
@@ -587,19 +477,12 @@ export function RecipientPicker({
           inline && "min-w-0 flex-1",
         )}
       >
-        {/* Stepped out of, not closed, while a row's details page is up:
-            the page covers the panel and would sit under the portaled
-            list. Back finds the list as it was left -- same filter,
-            same highlighted row. */}
+        {/* Hidden, not closed, under a details page; Back restores it. */}
         <Popover
           open={open && detailsKey === null}
           onOpenChange={(next) => (next ? setOpen(true) : closeDropdown())}
         >
           <PopoverAnchor asChild>
-            {/* Chips live INSIDE the selection box ahead of a real text
-                input (multiselect combobox): clicking
-                anywhere in the box focuses the input, and typing
-                filters the dropdown directly -- no second search field. */}
             <div
               ref={containerRef}
               onClick={() => {
@@ -607,26 +490,17 @@ export function RecipientPicker({
                 inputRef.current?.focus();
               }}
               onKeyDown={(e) => {
-                // Typing while focus sits elsewhere in the box (a chip,
-                // the clear-all/chevron buttons) belongs to the search
-                // input: refocus it and let the browser insert the
-                // character there. Space stays with the focused control
-                // (it activates chips/buttons), and modified keys stay
-                // shortcuts.
+                // Typing on a chip/button goes to the search input; Space
+                // and modified keys stay with the focused control.
                 if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey)
                   return;
                 if (e.key.length !== 1 || e.key === " ") return;
                 const input = inputRef.current;
                 if (!input || e.target === input) return;
-                // The browser then inserts the character into the input,
-                // whose onChange opens the dropdown with the new filter.
                 input.focus();
               }}
               className={cn(
                 "flex min-h-9 w-full cursor-text flex-wrap items-center gap-1 rounded-lg px-2 py-1.5 text-sm",
-                // Inline, the card block is already the well (and draws
-                // the focus cue); a second recessed field inside it would
-                // read as a box in a box.
                 !inline &&
                   "surface-field focus-within:ring-ring focus-within:ring-1",
               )}
@@ -634,10 +508,8 @@ export function RecipientPicker({
               {selectedKeys.map((key) => {
                 const { name, detail } = getKeyDisplay(key);
                 return (
-                  // The WHOLE chip is the remove button (the bare x was
-                  // too small a target); the x icon stays as the visual
-                  // affordance. Legal because the trigger box is a div,
-                  // not a button -- no nested-button problem.
+                  // The whole chip removes (trigger is a div, so no nested
+                  // buttons).
                   <button
                     key={key.keyId}
                     type="button"
@@ -647,27 +519,13 @@ export function RecipientPicker({
                         ? t("actions_remove_recipient_detail", { name, detail })
                         : t("actions_remove_recipient", { name })
                     }
-                    // max-w-full (not a fixed cap): a chip sizes to its
-                    // content and only truncates when the row genuinely
-                    // can't fit it. With several chips the flex-wrap row
-                    // wraps first, so truncation stays a last resort.
-                    // Hover tints destructive (the HistoryPage-delete
-                    // idiom) so the click reads as removal, not selection.
                     className="bg-secondary text-secondary-foreground hover:bg-destructive/12 hover:text-bad inline-flex max-w-full cursor-pointer items-center gap-1.5 rounded-md py-0.5 pr-1.5 pl-1 text-xs shadow-[inset_0_1px_0_rgb(255_255_255/0.07)] transition-colors"
                     onClick={(e) => {
-                      // Removing a chip must not toggle the dropdown
-                      // (the container's own click handler opens it).
                       e.stopPropagation();
                       removeRecipient(key.keyId);
-                      // The chip unmounts with focus on it; hand focus
-                      // back to the input (suppressed, so it doesn't
-                      // reopen the dropdown) so the user can keep typing.
                       refocusInput();
                     }}
                     onKeyDown={(e) => {
-                      // A Tab-focused chip should also delete on
-                      // Backspace/Delete, not only Enter/Space -- that's
-                      // what a keyboard user reaches for on a chip.
                       if (e.key === "Backspace" || e.key === "Delete") {
                         e.preventDefault();
                         e.stopPropagation();
@@ -681,9 +539,6 @@ export function RecipientPicker({
                       <MarkedText text={name} />
                     </span>
                     {isSshRecord(key) && (
-                      // A status pill, a step darker than the chip it
-                      // sits on so it reads as a tag rather than more of
-                      // the name.
                       <span className="bg-background/60 text-muted-foreground shrink-0 rounded px-1.5 py-px text-[10px] font-medium">
                         {/* i18n-ignore */}
                         SSH
@@ -715,12 +570,6 @@ export function RecipientPicker({
                   if (!open) setOpen(true);
                 }}
                 onFocus={() => {
-                  // Tab arrivals open the list; every other route into
-                  // this box does not. The three cases the component's
-                  // doc comment names -- the panel regaining focus, a
-                  // re-render after the mod+Enter Run shortcut, and a
-                  // programmatic focus -- all reach here with no Tab
-                  // keydown behind them and are left alone.
                   if (!arrivedByTab.current) return;
                   arrivedByTab.current = false;
                   setOpen(true);
@@ -731,15 +580,11 @@ export function RecipientPicker({
               {selectedKeys.length > 1 && (
                 <button
                   type="button"
-                  // Not a tab stop, like the chevron: Tab goes from the
-                  // recipients to the message, and Backspace in the
-                  // input already removes chips from the keyboard.
                   tabIndex={-1}
                   aria-label={t("actions_clear_all_recipients")}
                   title={t("actions_clear_all_recipients")}
                   className="text-muted-foreground hover:text-foreground shrink-0 rounded-sm"
                   onClick={(e) => {
-                    // Clearing must not toggle the dropdown.
                     e.stopPropagation();
                     onChange([]);
                   }}
@@ -749,8 +594,6 @@ export function RecipientPicker({
               )}
               <button
                 type="button"
-                // Not a tab stop: the input is the control, the chevron
-                // is a pointer convenience.
                 tabIndex={-1}
                 aria-label={t("actions_toggle_recipient_list")}
                 className="ml-1 shrink-0 rounded-sm"
@@ -768,24 +611,16 @@ export function RecipientPicker({
               </button>
             </div>
           </PopoverAnchor>
-          {/* Pin the list to one side of the trigger and disable
-              collision flipping so it doesn't jump between top/bottom as
-              the result count changes while searching. Above when the box
-              sits under the message; below when it is the card's To row,
-              where above would cover the mode switch. */}
+          {/* No collision flipping, so the list doesn't jump as results
+              change. */}
           <PopoverContent
             side={inline ? "bottom" : "top"}
             avoidCollisions={false}
             className="w-(--radix-popover-trigger-width) p-0"
-            // Focus stays in the inline input; the popover is display-only.
             onOpenAutoFocus={(e) => e.preventDefault()}
-            // Focus is handed off explicitly on close (refocusInput after
-            // a pick; unchanged after Escape; wherever the user clicked
-            // after an outside dismiss) -- keep Radix out of it.
             onCloseAutoFocus={(e) => e.preventDefault()}
-            // The input lives in the ANCHOR, not the content: without
-            // this guard, clicks and focus inside the trigger box count
-            // as "outside" and dismiss the dropdown mid-interaction.
+            // The input is in the ANCHOR; without this, clicks in the
+            // trigger count as "outside" and dismiss the list.
             onInteractOutside={(e) => {
               if (
                 containerRef.current &&
@@ -795,13 +630,9 @@ export function RecipientPicker({
                 e.preventDefault();
               }
             }}
-            // Radix's own Escape handling runs on a document capture
-            // listener; stop the event there too so it can't bubble on to
-            // the slide-over stack's document listener.
+            // Keep Escape from reaching the slide-over stack's listener.
             onEscapeKeyDown={(e) => e.stopPropagation()}
           >
-            {/* Fixed height (not just max-h) so the list stays a constant
-                size and doesn't grow/shrink as search filters the results. */}
             <CommandList id={listId} className="h-[300px]">
               <CommandEmpty>{t("actions_no_matches")}</CommandEmpty>
               {recent.length > 0 && (

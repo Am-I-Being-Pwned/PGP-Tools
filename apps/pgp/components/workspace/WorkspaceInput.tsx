@@ -36,7 +36,6 @@ type Mode = WorkspaceAction;
 
 const MODE_ORDER: Mode[] = ["encrypt", "decrypt", "sign", "verify"];
 
-/** Stand-ins for the mode names when the switch is too narrow for them. */
 const MODE_ICONS: Record<Mode, typeof LockIcon> = {
   encrypt: LockIcon,
   decrypt: LockOpenIcon,
@@ -44,7 +43,6 @@ const MODE_ICONS: Record<Mode, typeof LockIcon> = {
   verify: ShieldCheckIcon,
 };
 
-/** A mode segment clipping its name. */
 function modeLabelClipped(row: HTMLElement): boolean {
   return Array.from(
     row.querySelectorAll<HTMLElement>('[role="radio"], [role="radio"] > *'),
@@ -67,56 +65,41 @@ export function modeLabel(mode: Mode): string {
 
 interface WorkspaceInputProps {
   mode: Mode;
-  /** A different mode was picked; the workspace owns what it resets. */
   onModeChange: (mode: Mode) => void;
-  /** The message box is UNCONTROLLED: the plaintext lives in the DOM node
-   *  and the workspace's ref, never in render state (`useWorkspace`). */
+  /** UNCONTROLLED: plaintext lives in the DOM node and the workspace's ref,
+   *  never in render state (`useWorkspace`). */
   inputElRef: React.MutableRefObject<HTMLTextAreaElement | null>;
-  /** Read the current text at the point of use (import prefill). */
   getInput: () => string;
-  /** Derived, non-sensitive: the box has at least one character. */
   hasInput: boolean;
   onInputChange: (text: string) => void;
-  /** Clear the text with a 4s undo. Owned by the parent so the undo buffer
-   *  sits in the workspace's wipeable ref, not in a live toast closure. */
+  /** Owned by the parent so the undo buffer sits in the workspace's
+   *  wipeable ref, not in a live toast closure. */
   onClearText: () => void;
   files: File[];
   onFileDrop: (files: File[]) => void;
   onRemoveFile: (index: number) => void;
   onClearFiles: () => void;
   publicKeyDetected: boolean;
-  /** Contacts, so the banner can tell "import this" from "you already
-   *  have this". */
   contacts: PublicContactKey[];
-  /** Bumps whenever the input text changes, so a second pasted key is
-   *  identified rather than showing the first one's name. */
   inputVersion: number;
   privateKeyDetected: boolean;
   onNavigateToKeys?: (importPrefill?: string) => void;
-  /** Take the user to a key they already hold, highlighted in the list. */
   onRevealKey?: (keyId: string) => void;
-  /** Repair mangled armor in text that ARRIVED (a paste). Returns the
-   *  input unchanged when there is nothing to fix, which is the signal
-   *  this component uses to leave the browser's own paste alone. */
+  /** Returns the input unchanged when there is nothing to fix; that is the
+   *  signal to leave the browser's own paste alone. */
   onRepairPastedText: (text: string) => string;
-  /** Translate-before-sending, when the feature is on and usable. */
   composeTranslate?: ComposeTranslateProps;
-  /** The card's top block (the To row, while encrypting). Outside the
-   *  drop target on purpose: a drop aimed at the recipient box is not a
-   *  message. */
+  /** Outside the drop target on purpose: a drop on the recipients is not
+   *  a message. */
   cardHeader?: React.ReactNode;
-  /** Shown between the mode switch and the card (the verify result, so
-   *  the verdict reads before the message it is about). */
   aboveCard?: React.ReactNode;
-  /** The editing tools, for the action registry (palette + shortcuts).
-   *  Called with null on unmount. */
   onToolsReady?: (tools: ComposeTools | null) => void;
 }
 
 export interface ComposeTools {
   applyStyle: (style: InlineStyle) => void;
   openFind: () => void;
-  /** Close the find bar and drop its highlight mirror (master lock). */
+  /** Also drops the highlight mirror (master lock). */
   closeFind: () => void;
 }
 
@@ -144,19 +127,15 @@ export function WorkspaceInput({
   cardHeader,
   aboveCard,
 }: WorkspaceInputProps) {
-  // Per-detection mask override. Re-arms whenever a fresh private-key
-  // paste is detected so the user can't accidentally leave the mask off
+  // Re-arms on each fresh private-key paste, so the mask can't stay off
   // across two separate pastes.
   const [maskIgnored, setMaskIgnored] = useState(false);
   useEffect(() => {
     if (privateKeyDetected) setMaskIgnored(false);
   }, [privateKeyDetected]);
 
-  // Callback ref: publish the node to the owning hook and re-seed its value
-  // from the ref on every (re)mount. The textarea unmounts whenever files are
-  // staged or the full-output view takes over, and an uncontrolled node comes
-  // back empty -- re-seeding is what makes the text survive those swaps (the
-  // same trick ImportKeyPage uses for its paste box).
+  // Re-seed on every (re)mount: the textarea really unmounts, and an
+  // uncontrolled node comes back empty.
   const attachInput = useCallback(
     (el: HTMLTextAreaElement | null) => {
       inputElRef.current = el;
@@ -165,17 +144,12 @@ export function WorkspaceInput({
     [inputElRef, getInput],
   );
 
-  // ── editing tools (formatting, find & replace, translate) ────────────
-  // Prose is composed in encrypt and sign; decrypt and verify take pasted
-  // armor, where a bold button is noise. Find still works everywhere.
   const composing = mode === "encrypt" || mode === "sign";
-  // Encrypting, files are attachments and the message box stays (the
-  // message goes along as msg.txt); anywhere else staged files replace
-  // the text.
+  // Encrypting, files are attachments (the message rides as msg.txt);
+  // anywhere else staged files replace the text.
   const textareaMounted = files.length === 0 || mode === "encrypt";
   const showTools = composing && !privateKeyDetected && textareaMounted;
-  // A number for the strip, not the text: re-read from the box on every
-  // edit (typed, or set from outside -- `inputVersion` moves then).
+  // A number, not the text, in state.
   const [charCount, setCharCount] = useState(0);
   useEffect(() => {
     setCharCount(getInput().length);
@@ -186,25 +160,19 @@ export function WorkspaceInput({
     overflows: modeLabelClipped,
   });
   const stripEndRef = useRef<HTMLDivElement>(null);
-  // Only the count's digit count moves the strip's width, not every
-  // keystroke.
   const stripLevel = useFitLevel(stripEndRef, 2, [
     showTools,
     hasInput,
     files.length,
     String(charCount).length,
   ]);
-  // `find` is null when closed; when open it carries the query to start
-  // from (the selection at the time of the press) and a nonce so a
-  // second press while open refocuses the field, as editors do.
+  // The nonce makes a second press while open refocus the field.
   const [find, setFind] = useState<{ query: string; nonce: number } | null>(
     null,
   );
   useEffect(() => {
     if (!textareaMounted) setFind(null);
   }, [textareaMounted]);
-  // The matches the bar wants painted, drawn on a mirror layer under the
-  // (transparent) textarea -- see the backdrop below.
   const [highlights, setHighlights] = useState<{
     ranges: { start: number; end: number }[];
     current: number;
@@ -223,8 +191,7 @@ export function WorkspaceInput({
       bd.scrollLeft = el.scrollLeft;
     }
   }, [inputElRef]);
-  // Only while the text is not masked: the mirror would show the
-  // private key the mask is hiding.
+  // Never while masked: the mirror would show the hidden private key.
   const painting = find !== null && highlights !== null && !privateKeyDetected;
   useEffect(() => {
     if (painting) syncBackdropScroll();
@@ -235,7 +202,6 @@ export function WorkspaceInput({
     const selected = el
       ? el.value.slice(el.selectionStart, el.selectionEnd)
       : "";
-    // A multi-line selection is not a search term.
     const query = selected.includes("\n") ? "" : selected;
     setFind((prev) => ({
       query: query || (prev?.query ?? ""),
@@ -243,8 +209,7 @@ export function WorkspaceInput({
     }));
   }, [inputElRef]);
 
-  /** Write an edit into the box through the native editing path, so it
-   *  sits on the same undo stack as typing (see `applyTextareaEdit`). */
+  /** Native editing path, so edits share the typing undo stack. */
   const applyEdit = useCallback(
     (edit: Edit, focus = true) => {
       const el = inputElRef.current;
@@ -276,9 +241,7 @@ export function WorkspaceInput({
       : { start: 0, end: 0 };
   }, [inputElRef]);
 
-  /** Select a match and scroll it into view. A textarea has no
-   *  scrollIntoView for a range, so the line is estimated from the
-   *  text before it and the box's line height. */
+  /** A textarea has no scrollIntoView for a range: the line is estimated. */
   const selectRange = useCallback(
     (start: number, end: number) => {
       const el = inputElRef.current;
@@ -294,9 +257,7 @@ export function WorkspaceInput({
     [inputElRef],
   );
 
-  // Shortcuts (mod+B/I/E, mod+shift+X, mod+F) are dispatched by the action
-  // registry, which also lists them in the command palette; the tools are
-  // published to it through `onToolsReady`.
+  // Shortcuts are dispatched by the action registry via `onToolsReady`.
   const closeFind = useCallback(() => {
     setFind(null);
     setHighlights(null);
@@ -308,18 +269,8 @@ export function WorkspaceInput({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
-      {/* Four modes, all visible: one press (or mod+1..4, dispatched by
-          the action registry) switches. The hover hint teaches the
-          shortcut the old dropdown listed beside each mode -- just the
-          shortcut, since the segment already says the mode. Manual
-          activation: arrowing across the switch must not act on every
-          mode it passes, each of which would reset the workspace.
-
-          Equal segments when the four names fit; segments sized to
-          their names when they don't (French, Spanish); and when even
-          that clips (German, Russian), the modes you're not on become
-          icons and the one you're on keeps its whole word. The hint
-          then names the mode as well as its shortcut. */}
+      {/* Manual activation: arrowing across must not reset the workspace
+          at every mode it passes. */}
       <div ref={modeSwitchRef}>
         <Segmented
           fill={modeFit === 0}
@@ -327,14 +278,11 @@ export function WorkspaceInput({
             modeFit > 0 ? "[&_[role=radio]]:px-2 [&>*]:flex-auto" : undefined
           }
           activation="manual"
-          // Out of the Tab order: Tab goes recipients -> message, and the
-          // modes have mod+digit shortcuts (and the palette).
           skipTab
           ariaLabel={t("settings_shortcuts_group_modes")}
           value={mode}
           onValueChange={(v) => {
-            // A press on the mode already showing is not a change: the
-            // reset would throw away a finished result.
+            // Re-pressing the current mode must not reset a finished result.
             if (v !== mode) onModeChange(v);
           }}
           options={MODE_ORDER.map((value, i) => {
@@ -343,8 +291,6 @@ export function WorkspaceInput({
             return {
               value,
               ariaLabel: iconOnly ? modeLabel(value) : undefined,
-              // An icon segment is narrower than its hint (name and
-              // shortcut): at either end, keep the hint inside the panel.
               hintAlign: !iconOnly
                 ? undefined
                 : i === 0
@@ -376,9 +322,6 @@ export function WorkspaceInput({
 
       {aboveCard}
 
-      {/* The message card is the drop target: the drop zone wraps the
-          message block and adds the file list and the bottom strip
-          (Browse, or Clear text once there is text). */}
       <DropZone
         header={cardHeader}
         enabled={!hasInput || mode === "encrypt"}
@@ -388,8 +331,6 @@ export function WorkspaceInput({
         activeFiles={files}
         onRemoveFile={onRemoveFile}
         onClearFiles={onClearFiles}
-        // While composing, the strip is the toolbar: tools on the left,
-        // the length on the right. Clear text stays, beside the count.
         leading={
           showTools ? (
             <ComposeToolbar
@@ -401,11 +342,8 @@ export function WorkspaceInput({
         }
         trailing={
           showTools || hasInput ? (
-            // When the strip can't hold everything (a long translation,
-            // a narrow panel), the count goes first, then Clear text
-            // keeps its job as an icon. Never overflowing the card: the
-            // stack clips, and an overflowing strip shoved the whole
-            // card sideways.
+            // Too narrow: the count goes first, then Clear text becomes an
+            // icon. Never overflow: it shoves the whole card sideways.
             <div ref={stripEndRef} className="flex items-center gap-1">
               {showTools && stripLevel < 1 && (
                 <span className="text-muted-foreground px-1.5 font-mono text-[11px] whitespace-nowrap tabular-nums">
@@ -458,27 +396,16 @@ export function WorkspaceInput({
               }}
               onScroll={painting ? syncBackdropScroll : undefined}
               onPaste={(e) => {
-                // The ONE place workspace armor repair happens. A paste is
-                // the only way mangled armor reaches this box -- nobody
-                // hand-types a `\n`-escaped key -- so the repair rides on
-                // the paste rather than on `onChange`, which also fires for
-                // every keystroke of someone composing a message.
-                //
-                // Only intercepts when the text actually changed. Otherwise
-                // it falls through to the browser's own paste, which knows
-                // how to handle undo, IME and multi-range selections better
-                // than this handler could.
+                // The ONE place workspace armor repair happens: on paste,
+                // not onChange (which fires for every typed keystroke).
+                // Unchanged text falls through to the browser's own paste.
                 const pasted = e.clipboardData.getData("text/plain");
                 const repaired = onRepairPastedText(pasted);
                 if (repaired === pasted) return;
                 e.preventDefault();
-                // Splice at the caret rather than replacing the box: a paste
-                // into a selection replaces that selection, and a paste with
-                // the caret mid-text inserts there. Clobbering the whole
-                // value would silently discard whatever else was staged.
+                // Splice at the caret: replacing the box would silently
+                // discard whatever else was there.
                 const el = e.currentTarget;
-                // Non-null on a textarea (the `?? length` fallback the DOM
-                // types once needed is gone), so read them straight.
                 const { selectionStart: start, selectionEnd: end } = el;
                 const next =
                   el.value.slice(0, start) + repaired + el.value.slice(end);
@@ -487,15 +414,12 @@ export function WorkspaceInput({
                 el.setSelectionRange(caret, caret);
                 onInputChange(next);
               }}
-              // The border is transparent, not absent: the find mirror
-              // below draws the same 1px so every character lines up.
+              // Transparent, not absent: the find mirror draws the same 1px.
               className={`placeholder:text-muted-foreground relative z-10 min-h-20 w-full flex-1 resize-none rounded-[inherit] border border-transparent p-3 text-sm focus:border-[rgb(79_193_133/0.35)] focus:outline-none ${
                 painting ? "bg-transparent" : "bg-card"
               }`}
-              // Visually mask armored private-key material. NOTE: this is
-              // shoulder-surfing protection only; the string still lives in
-              // V8's heap until GC. The privateKeyDetected flag elsewhere
-              // also blocks draft-snapshotting this content.
+              // Shoulder-surfing protection only: the string stays in V8's
+              // heap until GC. privateKeyDetected also blocks draft snapshots.
               style={
                 privateKeyDetected && !maskIgnored
                   ? ({ WebkitTextSecurity: "disc" } as React.CSSProperties)
@@ -583,13 +507,8 @@ export function WorkspaceInput({
   );
 }
 
-/**
- * The mirror layer that paints find matches. Same box, padding, font and
- * wrapping as the textarea so every character lands in the same place;
- * the text itself is transparent and only the marks show through the
- * textarea above (which goes transparent while this is mounted). Scroll
- * is mirrored by the owner on the textarea's scroll events.
- */
+/** Paints find matches under the transparent textarea; box, padding, font
+ *  and wrapping must match it exactly. */
 const FindBackdrop = forwardRef<
   HTMLDivElement,
   { text: string; ranges: { start: number; end: number }[]; current: number }
@@ -611,8 +530,7 @@ const FindBackdrop = forwardRef<
     at = r.end;
   });
   parts.push(text.slice(at));
-  // A trailing newline needs a character after it to take up a line,
-  // exactly as the textarea's caret does.
+  // A trailing newline needs a character after it to take up a line.
   if (text.endsWith("\n")) parts.push("\u200b");
   return (
     <div

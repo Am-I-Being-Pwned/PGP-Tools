@@ -25,37 +25,24 @@ import { t } from "~/lib/i18n";
 import { matchesShortcut } from "~/lib/shortcuts";
 import { INPUT_CLASS } from "~/lib/utils/styles";
 
-/** The shared input (a recessed well), fitted to the bar's h-7 rows,
- *  with a thinner focus ring so the field doesn't dwarf the icons
- *  beside it. */
 const FIELD_CLASS = "h-7 rounded-md px-2 py-0 text-sm focus:ring-1";
 
-/** mod+Enter anywhere in the bar replaces every match. The same combo
- *  is the workspace's "run" shortcut, so the bar must swallow it
- *  whether or not the replace row is open: Encrypting the message from
- *  inside a find field is never what was meant. */
+/** Replace-all. Also the workspace's "run" combo, so the bar must swallow
+ *  it even with the replace row closed: never Encrypt from a find field. */
 const REPLACE_ALL_SHORTCUT: ShortcutSpec = { mod: true, key: "Enter" };
 
 interface FindReplaceBarProps {
-  /** What the field starts with: the box's selection when opened. */
   initialQuery: string;
-  /** Bumps when the open shortcut is pressed while already open, to
-   *  refocus (and reselect) the field. */
+  /** Bumps on a re-press of the open shortcut, to refocus the field. */
   focusNonce: number;
-  /** Read the box's current text at the point of use. */
   getText: () => string;
-  /** Where the caret / selection is right now, so "next" starts there. */
   getSelection: () => { start: number; end: number };
-  /** Select a range in the box (and scroll it into view). */
   select: (start: number, end: number) => void;
-  /** Write an edit back: text plus the selection to leave. */
   apply: (edit: Edit) => void;
-  /** Bumps whenever the text changes, so the count stays honest while
-   *  the user keeps typing with the bar open. */
+  /** Bumps on every text change so the match count stays fresh. */
   textVersion: number;
-  /** Every match as a range plus which one is current, for the owner to
-   *  paint. A textarea only paints its own selection while focused, and
-   *  focus is in this bar, so the highlighting has to be drawn outside. */
+  /** The owner paints matches: a textarea only shows its selection while
+   *  focused, and focus is in this bar. */
   onHighlight: (
     ranges: { start: number; end: number }[],
     current: number,
@@ -63,19 +50,8 @@ interface FindReplaceBarProps {
   onClose: () => void;
 }
 
-/**
- * Find & replace, floating at the top of the message box.
- *
- * A textarea cannot highlight matches, so the current match is shown by
- * SELECTING it -- the same thing every plain-text editor's find does --
- * and the count inside the field ("2 of 5") carries the rest. Enter
- * steps forward, Shift+Enter back, Escape closes. Replace is a second
- * row behind a chevron: finding is what people open this for; once it
- * is open, Tab goes field to field (Find, Replace, then the replace
- * buttons) and mod+Enter replaces all. The bar
- * floats over the top-right of the box, slightly translucent, so opening
- * it never reflows the message and the text stays readable beneath it.
- */
+/** Find & replace floating over the message box; the current match is
+ *  shown by selecting it. Floats so opening it never reflows the text. */
 export function FindReplaceBar({
   initialQuery,
   focusNonce,
@@ -90,9 +66,8 @@ export function FindReplaceBar({
   const [query, setQuery] = useState(initialQuery);
   const [replacement, setReplacement] = useState("");
   const [caseSensitive, setCaseSensitive] = useState(false);
-  // Find is what the bar is for; replace is a row the user opens.
   const [showReplace, setShowReplace] = useState(false);
-  // Index into `matches` of the one currently selected; -1 for none.
+  // -1 for none.
   const [current, setCurrent] = useState(-1);
   const findRef = useRef<HTMLInputElement>(null);
 
@@ -108,15 +83,12 @@ export function FindReplaceBar({
     findRef.current?.select();
   }, [focusNonce]);
 
-  // A re-press with a new selection replaces the query.
   useEffect(() => {
     if (initialQuery) setQuery(initialQuery);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusNonce]);
 
-  // A new query (or edited text) re-anchors on the first match at or
-  // after the caret, so typing a search lands on the nearest hit rather
-  // than jumping to the top of the message.
+  // Re-anchor on the first match at or after the caret, not the top.
   useEffect(() => {
     if (matches.length === 0) {
       setCurrent(-1);
@@ -148,7 +120,6 @@ export function FindReplaceBar({
     if (current < 0 || matches.length === 0) return;
     const edit = replaceAt(getText(), matches[current], query, replacement);
     apply(edit);
-    // The next match after the replacement is where the eye is.
     setTimeout(() => step(1), 0);
   };
 
@@ -175,8 +146,7 @@ export function FindReplaceBar({
       return;
     }
     if (e.key === "Escape") {
-      // Ours, not the workspace's Escape layers (which read
-      // `defaultPrevented`).
+      // The workspace's Escape layers read `defaultPrevented`.
       e.preventDefault();
       e.stopPropagation();
       onClose();
@@ -195,13 +165,8 @@ export function FindReplaceBar({
       role="search"
       aria-label={t("workspace_find_replace")}
       onKeyDown={onBarKey}
-      // Three columns, each stacking its own rows (toggle | fields |
-      // buttons) rather than one row-major grid, so the two text fields
-      // are adjacent in the DOM and Tab moves Find -> Replace -> replace
-      // buttons instead of detouring through the find row's icons.
-      // Every cell is h-7 with the same gap, so the rows line up.
-      // Dimmed while focus is back in the message, so it reads as parked
-      // rather than in the way; full strength on hover or focus.
+      // Column-major (not a row grid) so Tab goes Find -> Replace ->
+      // replace buttons without detouring through the find row's icons.
       className="surface-float flex items-start gap-x-0.5 rounded-lg p-0.5 opacity-50 transition-opacity focus-within:opacity-100 hover:opacity-100 motion-reduce:transition-none"
     >
       <button
@@ -262,9 +227,7 @@ export function FindReplaceBar({
           />
         )}
       </div>
-      {/* Rendered bottom-up (flex-col-reverse): the replace buttons come
-          FIRST in the DOM, so Tab from the Replace field reaches them
-          before the find row's icons, while they still draw beneath. */}
+      {/* flex-col-reverse: replace buttons first in DOM for Tab order. */}
       <div className="flex w-30 shrink-0 flex-col-reverse gap-y-0.5">
         {showReplace && (
           <div className="flex items-center justify-end gap-1">

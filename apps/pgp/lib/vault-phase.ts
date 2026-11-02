@@ -9,7 +9,6 @@ export type VaultProblem = Extract<
 
 /** One value, so impossible combinations can't be represented. */
 export type VaultPhase =
-  /** Render nothing until storage is read. */
   | { kind: "loading" }
   | { kind: "onboarding" }
   /** A vault exists but not where the bootstrap points, or has lost its

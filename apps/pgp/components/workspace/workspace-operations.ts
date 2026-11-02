@@ -59,34 +59,23 @@ import {
 import type { Mode, Outcome, RunResult } from "./workspace-state";
 
 /**
- * The workspace's operations: encrypt / decrypt / sign / verify and CRX,
- * each computing an {@link Outcome} that `useWorkspace` applies in one
- * dispatch. Nothing here touches React state.
- *
- * Plaintext is only ever read through `getInput()` at the point of use
- * and handed back as `Outcome.text`; never hoisted into anything that
- * outlives the run (SECURITY.md §8.11).
+ * Workspace operations, each returning an {@link Outcome}; no React state.
+ * Plaintext is read via `getInput()` at the point of use and never hoisted
+ * into anything that outlives the run (SECURITY.md §8.11).
  */
 
-/**
- * The most an UNATTENDED run (context-menu auto-decrypt) puts on screen.
- * Passed to the PGP engine as `maxOutputBytes` so it stops reading there,
- * and re-checked after every unattended run (age takes no ceiling; text
- * counts characters).
- */
+/** Output ceiling for UNATTENDED (context-menu) runs; age takes no engine
+ *  ceiling, so results are re-checked after the run too. */
 export const AUTO_RUN_MAX_BYTES = 1024 * 1024;
 
 export interface RunContext {
   mode: Mode;
   files: File[];
-  /** Read the composed message at the point of use, never hoisted. */
   getInput: () => string;
-  /** The box has a non-whitespace character. */
   hasText: boolean;
   isAge: boolean;
   zipFiles: boolean;
   recipientIds: string[];
-  /** The private key in effect (see `resolveKeyId`). */
   keyId: string | null;
   myKeys: ProtectedKeyBlob[];
   contacts: PublicContactKey[];
@@ -94,20 +83,17 @@ export interface RunContext {
   encryptToSelf: boolean;
   defaultKeyId: string | null;
   recentRecipients: string[];
-  /** The message password when one is armed; `undefined`, never `""`
-   *  (an empty string is a password). */
+  /** `undefined` when unarmed, never `""` (an empty string is a password). */
   password: string | undefined;
   autoDownloadFiles: boolean;
   autoDownloadText: boolean;
   getKeyHandle: (keyId: string) => number | null;
   unlockWithPasskey: (blob: ProtectedKeyBlob) => Promise<boolean | "cancelled">;
-  /** Nobody pressed anything: never ask for a secret, never write to
-   *  disk. Checked at each prompt, since a key can close mid-run. */
+  /** Never ask for a secret, never write to disk. Checked at each prompt,
+   *  since a key can close mid-run. */
   unattended: boolean;
-  /** Output ceiling (`AUTO_RUN_MAX_BYTES`) -- context-menu auto-run only.
-   *  A prompt-free re-run of the user's own run is not capped. */
+  /** Context-menu auto-run only. */
   cap: number | undefined;
-  /** "Sign anyway" was pressed for this exact text. */
   hiddenCharsConfirmed: boolean;
 }
 
@@ -120,7 +106,6 @@ const fail = (message: string): Outcome => ({
 /** Abandons an unattended run over the ceiling. Never shown as an error. */
 class HeldBackForSize extends Error {}
 
-/** The engine's own over-the-ceiling stop, read as {@link HeldBackForSize}. */
 async function heldBackIfCapped<T>(run: Promise<T>): Promise<T> {
   try {
     return await run;
@@ -145,17 +130,13 @@ const fileBytes = async (f: File) => new Uint8Array(await f.arrayBuffer());
 const totalSize = (results: FileResult[]) =>
   formatFileSize(results.reduce((sum, r) => sum + r.data.length, 0));
 
-/** Rename a batch's outputs apart in place; returns the final names. */
 function nameApart(results: FileResult[]): string[] {
   const names = uniqueOutputNames(results.map((r) => r.name));
   results.forEach((r, i) => (r.name = names[i]));
   return names;
 }
 
-// ── keys and signers ────────────────────────────────────────────────
-
-/** The signer for any PGP operation: the key in effect when it is
- *  OpenPGP, else the first one. age has no signing operation. */
+/** The key in effect when it is OpenPGP, else the first PGP key. */
 function pgpSignerId(c: RunContext): string | null {
   const pgpKeys = c.myKeys.filter(isPgpRecord);
   if (c.keyId && pgpKeys.some((k) => k.keyId === c.keyId)) return c.keyId;
@@ -165,8 +146,7 @@ function pgpSignerId(c: RunContext): string | null {
 function findSigner(c: RunContext, signerKeyId: string | null) {
   if (!signerKeyId) return null;
   const hex = signerKeyId.toUpperCase();
-  // Any of a contact's keys: a signature from a person's second key is
-  // still that person.
+  // Any of a contact's keys, not only the first.
   return (
     c.contacts.find((ct) =>
       contactRecipients(ct).some((r) => r.keyId.toUpperCase().endsWith(hex)),
@@ -182,7 +162,6 @@ function signerName(c: RunContext, keyId: string): string {
   return userId ? parseUserId(userId).name : keyId.slice(-16);
 }
 
-/** A signer card for someone we hold no key for. */
 function placeholderSigner(
   keyId: string,
   name = t("workspace_unknown_signer"),
@@ -197,8 +176,6 @@ function placeholderSigner(
   };
 }
 
-/** Every public key a signature could be checked against -- every key of
- *  every PGP contact, not only each contact's first. */
 function verificationKeys(c: RunContext): string[] {
   return [
     ...c.myKeys.filter(isPgpRecord).map((k) => k.publicKeyArmored),
@@ -208,15 +185,8 @@ function verificationKeys(c: RunContext): string[] {
   ];
 }
 
-/**
- * The verdict for a single result. Only the keys it decides are set, so
- * an unsigned result leaves the caller's status (e.g. "archive") alone.
- *
- * `text`: the signed text as shown -- hidden characters or a lone CR are
- * the signer's and stay, but the card says so. `notEncrypted`: a "PGP
- * MESSAGE" with no encryption layer is amber, never green, and gets a
- * card even unsigned.
- */
+/** Sets only the keys it decides, so an unsigned result keeps the caller's
+ *  status. `notEncrypted` is amber, never green, and gets a card unsigned. */
 function signatureVerdict(
   c: RunContext,
   result: SignedResult,
@@ -272,7 +242,6 @@ function signatureVerdict(
     verdict: { signer, tone: "warning", note: null, caveat: null } as const,
   });
   if (result.signatureStatus === "unknown_key") {
-    // Same card, amber, with the key id so the user can fetch the key.
     return amber(
       placeholderSigner(result.signerKeyId ?? ""),
       notEncrypted
@@ -289,7 +258,6 @@ function signatureVerdict(
   return {};
 }
 
-/** One verdict for a batch of files -- see `summariseBatch`. */
 function batchVerdict(
   c: RunContext,
   batch: { name: string; result: SignedResult }[],
@@ -335,14 +303,11 @@ async function ensureUnlocked(
   return { kind: "prompt", prompt: "key", keyId };
 }
 
-/** Signing may go ahead, or the hidden-characters strip goes up. */
 function hiddenCharsHold(c: RunContext): Outcome | null {
   if (c.hiddenCharsConfirmed) return null;
   const chars = hiddenCharactersToConfirm(c.getInput());
   return chars.length > 0 ? { kind: "hidden-chars", chars } : null;
 }
-
-// ── names and downloads ─────────────────────────────────────────────
 
 function selectedRecipientKeys(c: RunContext) {
   // Own keys win an id both hold (see `resolveSelectedRecipients`).
@@ -359,11 +324,8 @@ function recipientNames(c: RunContext): string[] {
     });
 }
 
-/**
- * What an encrypt takes in: the staged files plus, when a message was
- * written alongside them, that message as `msg.txt`. Built per run, never
- * kept: the box stays the one copy of the text.
- */
+/** Staged files plus any written message as `msg.txt`. Built per run,
+ *  never kept: the box stays the one copy of the text. */
 function stagedFiles(c: RunContext): File[] {
   const name = messageFileName(c);
   if (name === null) return c.files;
@@ -378,8 +340,7 @@ function messageFileName(c: RunContext): string | null {
   return name;
 }
 
-/** The download name. Encrypt names carry who-and-when, so a Downloads
- *  folder of ciphertext stays identifiable. Names only: safe in render. */
+/** The download name. Names only: safe in render. */
 export function outputName(c: RunContext, binary: boolean): string {
   const message = messageFileName(c);
   return outputFileName(
@@ -394,7 +355,6 @@ export function outputName(c: RunContext, binary: boolean): string {
   );
 }
 
-/** Save a result: per-file results, else the binary, else the text. */
 export function download(
   c: RunContext,
   r: { files?: FileResult[]; binary?: Uint8Array; text?: string },
@@ -404,8 +364,7 @@ export function download(
   else downloadText(r.text ?? "", outputName(c, false));
 }
 
-/** The auto-download preference -- for results the user asked for. An
- *  auto-run's input is whatever a web page selected, so never then. */
+/** Never for unattended runs: their input is whatever a web page selected. */
 function autoDownload(
   c: RunContext,
   fileInput: boolean,
@@ -415,8 +374,7 @@ function autoDownload(
   if (fileInput ? c.autoDownloadFiles : c.autoDownloadText) download(c, r);
 }
 
-/** Fire-and-forget; a storage failure surfaces once -- a user who
- *  believes history records may delete the original trusting the copy. */
+/** Failure must surface: a user trusting history may delete the original. */
 function captureHistory(entry: NewHistoryEntry): void {
   void recordHistory(entry).then((result) => {
     if (result === "failed") {
@@ -429,8 +387,6 @@ function captureHistory(entry: NewHistoryEntry): void {
 
 const split = (data: string | Uint8Array) =>
   typeof data === "string" ? { text: data } : { binary: data };
-
-// ── the operations ──────────────────────────────────────────────────
 
 export async function runMode(c: RunContext): Promise<Outcome> {
   try {
@@ -454,19 +410,15 @@ export async function runMode(c: RunContext): Promise<Outcome> {
 
 async function encrypt(c: RunContext): Promise<Outcome> {
   const recipients = selectedRecipientKeys(c);
-  // A password alone opens the message (`gpg -c`); the engine refuses
-  // "no recipients and no password" independently.
   if (recipients.length === 0 && c.password === undefined) {
     return fail(t("workspace_error_need_recipient_or_password"));
   }
   const isAge = selectionEngine(recipients) === "ssh";
-  // Backstop: the age path never sees the password, so this would be a
-  // SILENT .age without one. The UI disallows the combination.
+  // Backstop: age never sees the password, so this would SILENTLY drop it.
   if (isAge && c.password !== undefined) return fail(sshPasswordReason());
 
-  // Signing is OpenPGP-only: resolved against PGP keys, and the same
-  // answer for the recipient set and the handle, so the key the message
-  // says signed it is the one that did.
+  // One answer for both the recipient set and the handle, so the key the
+  // message says signed it is the one that did.
   const signerKeyId = c.alsoSign && !isAge ? pgpSignerId(c) : null;
   const { recipientPublicKeys, selfKeyId, engine, refusal } =
     buildEncryptRecipients({
@@ -484,7 +436,6 @@ async function encrypt(c: RunContext): Promise<Outcome> {
 
   let signingHandle: number | null = null;
   if (signerKeyId) {
-    // The written message is signed along with the files (`msg.txt`).
     const hold = c.hasText ? hiddenCharsHold(c) : null;
     if (hold) return hold;
     const handle = await ensureUnlocked(c, signerKeyId);
@@ -512,8 +463,7 @@ async function encrypt(c: RunContext): Promise<Outcome> {
 
   const files = stagedFiles(c);
   const fileInput = files.length > 0;
-  // The password was for THIS message: kept, it would quietly arm the
-  // next one. (On failure it stays, so a retry needs no retyping.)
+  // The password was for THIS message; kept, it would quietly arm the next.
   const spentPassword = c.password !== undefined;
   let outcome: Outcome;
   if (files.length > 1 && !c.zipFiles) {
@@ -572,9 +522,6 @@ async function encrypt(c: RunContext): Promise<Outcome> {
     };
     autoDownload(c, fileInput, out);
   }
-  // History answers "who did I send this to": one entry per selected
-  // contact (its record id is its first key's fingerprint), plus the self
-  // key when encrypt-to-self rode along.
   const historyRecipients = recipients.map((k) => ({
     fingerprint: k.keyId,
     name: k.userIds[0] ?? "",
@@ -596,9 +543,7 @@ async function encrypt(c: RunContext): Promise<Outcome> {
       : { content: c.getInput() }),
   });
 
-  // Promote the selected recipients in the picker's recency order. A
-  // failed background save only costs ordering: swallowed, since a toast
-  // over a successful encrypt would read as the encrypt failing.
+  // Swallowed: a toast over a successful encrypt would read as it failing.
   void preferencesStore
     .update({
       recentRecipients: updateRecentRecipients(
@@ -610,7 +555,6 @@ async function encrypt(c: RunContext): Promise<Outcome> {
   return outcome;
 }
 
-/** The staged message, in the shape the PGP ops take. */
 async function stagedPgpInput(c: RunContext): Promise<DecryptOptions["input"]> {
   return c.files.length > 0
     ? { kind: "binary", binaryMessage: await fileBytes(c.files[0]) }
@@ -622,7 +566,6 @@ export async function matchDecryptionKey(
   c: RunContext,
 ): Promise<string | null> {
   if (c.isAge) {
-    // An age file has no OpenPGP header: ask the engine that owns it.
     const sshKeys = c.myKeys.filter(isSshRecord);
     if (sshKeys.length === 0) return null;
     const bytes =
@@ -647,16 +590,10 @@ export async function scanMessageEncryption(c: RunContext) {
   return pgpOps.messageEncryption(await stagedPgpInput(c));
 }
 
-/**
- * Decide how this message wants to be opened, then open it.
- *
- * THE KEY WINS when one of the user's keys matches; the password is the
- * fallback (`gpg -c`). Detection is redone here rather than read off the
- * scan effect: a paste followed straight by a click would race it.
- */
+/** A matching key wins over the password. Detection is redone here, not
+ *  read off the scan effect: a paste then an instant click would race it. */
 async function decrypt(c: RunContext): Promise<Outcome> {
   if (c.isAge) {
-    // age has no password mode; it needs an SSH identity.
     if (!c.keyId) return fail(t("workspace_error_select_decryption_key"));
     const handle = await ensureUnlocked(c, c.keyId);
     if (typeof handle !== "number") return handle;
@@ -667,9 +604,8 @@ async function decrypt(c: RunContext): Promise<Outcome> {
   // Unreadable headers fall through to the key path, whose errors say so.
   const encryption = await pgpOps.messageEncryption(input).catch(() => null);
 
-  // A "PGP MESSAGE" with no encryption layer, asked BEFORE any key is
-  // unlocked: decrypting it would dress up anything ever signed in public
-  // as a private message. A batch is refused by name, file by file.
+  // Checked BEFORE any key unlocks: an unencrypted "PGP MESSAGE" would
+  // otherwise dress up anything ever signed in public as private.
   if (c.files.length > 1) {
     for (const file of c.files) {
       const shape = await pgpOps
@@ -726,8 +662,7 @@ async function decrypt(c: RunContext): Promise<Outcome> {
   );
 }
 
-/** Open the staged message with the password just typed. A wrong one is
- *  said under the prompt, which stays up for the retype. */
+/** A wrong password is `rejected`, so the prompt stays up for a retype. */
 export async function decryptWithMessagePassword(
   c: RunContext,
   password: string,
@@ -745,10 +680,6 @@ export async function decryptWithMessagePassword(
     : outcome;
 }
 
-/**
- * Decrypt an age message with an unlocked SSH identity. No signatures in
- * age, so no verdict; the failure hygiene is the PGP path's.
- */
 async function decryptAge(c: RunContext, keyHandle: number): Promise<Outcome> {
   try {
     if (c.files.length > 1) {
@@ -802,15 +733,8 @@ async function decryptAge(c: RunContext, keyHandle: number): Promise<Outcome> {
   }
 }
 
-/**
- * Run a PGP decrypt and work out everything that follows from it.
- *
- * `decryptCall` is the ONLY difference between the key, password and
- * unencrypted paths: same batch loop, text/binary sniffing, verdict,
- * auto-download and failure handling, so the paths cannot drift.
- * A tampered signature anywhere fails the whole run, and nothing it
- * decrypted is shown next to the error.
- */
+/** Shared by the key, password and unencrypted paths so they cannot drift.
+ *  A tampered signature anywhere fails the whole run and shows nothing. */
 async function runPgpDecrypt(
   c: RunContext,
   decryptCall: (input: DecryptOptions["input"]) => Promise<DecryptResult>,
@@ -852,7 +776,6 @@ async function runPgpDecrypt(
       return {
         kind: "done",
         files: results,
-        // A mixed batch replaces the size line with who signed what.
         status: tn("workspace_files_decrypted", results.length, {
           size: totalSize(results),
         }),
@@ -872,8 +795,7 @@ async function runPgpDecrypt(
       status = t("workspace_status_decrypted_archive");
     } else if (fileInput) {
       try {
-        // ignoreBOM: a leading BOM is part of the file; Copy and Download
-        // must give it back.
+        // ignoreBOM: a leading BOM is part of the file and must round-trip.
         text = new TextDecoder("utf-8", {
           fatal: true,
           ignoreBOM: true,
@@ -895,7 +817,6 @@ async function runPgpDecrypt(
     return { kind: "done", text, binary, status, ...verdict };
   } catch (err) {
     if (err instanceof HeldBackForSize) return { kind: "held-back" };
-    // Curated copy for the reason; the raw error rides along as detail.
     return {
       kind: "error",
       error: presentError(err, t("workspace_error_decrypt_failed")),
@@ -912,7 +833,6 @@ async function sign(c: RunContext): Promise<Outcome> {
         : t("workspace_error_no_signing_key"),
     );
   }
-  // The box's text is what gets signed when no files are staged.
   const hold = c.files.length === 0 ? hiddenCharsHold(c) : null;
   if (hold) return hold;
   const keyHandle = await ensureUnlocked(c, keyId);
@@ -956,8 +876,7 @@ async function sign(c: RunContext): Promise<Outcome> {
 
 async function verify(c: RunContext): Promise<Outcome> {
   try {
-    // Size first: nothing past the engine's cap can verify, and reading it
-    // costs the panel.
+    // Size first: nothing past the engine's cap can verify.
     const tooLarge = c.files.find((f) => f.size > MAX_VERIFY_FILE_BYTES);
     if (tooLarge) {
       return fail(
@@ -1040,10 +959,7 @@ async function verify(c: RunContext): Promise<Outcome> {
   }
 }
 
-// ── CRX (Chrome extension) packages ─────────────────────────────────
-
-/** Sign the single staged manifest-bearing .zip. Gated upstream on that
- *  input, so never the multi-file path. */
+/** Single staged .zip only; gated upstream. */
 export async function signCrx(
   c: RunContext,
   crxKey: CrxSigningKeyBlob,

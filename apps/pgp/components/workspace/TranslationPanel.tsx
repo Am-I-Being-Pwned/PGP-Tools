@@ -14,21 +14,9 @@ import { languageLabel } from "~/lib/ai/languages";
 import { t } from "~/lib/i18n";
 
 /**
- * The two halves of the result box's footer bar: a status line and the
- * translate toggle.
- *
- * They live in the box's own chrome rather than under it for two
- * reasons. The control is mostly noise -- a decrypted message is usually
- * already in a language the reader speaks, and we cannot know that in
- * advance without a model reading it first (T-AI-PLAINTEXT-DISCLOSURE:
- * detection is deliberately not eager), so a full-width button would
- * shout about something rarely wanted. And the status text has to be
- * able to appear and clear without resizing the message above it, which
- * a bar that is always present gives for free.
- *
- * Once a translation exists the same button toggles between it and the
- * original, so the message can always be checked against the model's
- * version.
+ * Status line + translate toggle in the result box's footer. Kept small:
+ * language detection is deliberately not eager (T-AI-PLAINTEXT-DISCLOSURE),
+ * so we can't know in advance whether translation is even wanted.
  */
 
 interface TranslateToggleProps {
@@ -41,10 +29,7 @@ interface TranslateToggleProps {
   targetLanguage: string;
 }
 
-/** Hover/focus label, matching `ShortcutHint`'s pattern in WorkspaceView
- *  (the UI kit has no tooltip, so a Popover anchored to the trigger is
- *  the house idiom). With a `shortcut`, its keycaps sit under the label
- *  so the hover teaches the key as well as the name. */
+/** Hover/focus label (the UI kit has no tooltip; Popover is the house idiom). */
 export function HoverLabel({
   label,
   shortcut,
@@ -91,9 +76,6 @@ export function TranslateToggle({
 }: TranslateToggleProps) {
   const busy = status.kind === "working" || status.kind === "downloading";
 
-  // Nothing to offer on a device without the models, and nothing to
-  // offer for a message we already know is in the target language --
-  // once the press has told us that, re-offering it is just wrong.
   if (status.kind === "unavailable" || status.kind === "same-language") {
     return null;
   }
@@ -127,12 +109,7 @@ export function TranslateToggle({
   );
 }
 
-/**
- * The status chip that floats beside the button. Renders nothing at all
- * for the states the button already communicates, so the idle box shows
- * a single icon and no chrome. It carries its own background because it
- * sits over the message text rather than in a bar of its own.
- */
+/** Status chip beside the button; renders nothing for states the button already shows. */
 export function TranslationNote({
   status,
   showing,
@@ -152,10 +129,7 @@ export function TranslationNote({
       text = t("workspace_note_uncertain");
       break;
     case "downloading":
-      // Named and progress-bearing on purpose: this is the one moment
-      // the feature touches the network, so it says what it is fetching
-      // rather than hiding behind a spinner. Kept terse because the bar
-      // is one line high and truncates.
+      // The one network touch: say what is being fetched, not just a spinner.
       text =
         status.progress > 0
           ? t("workspace_note_downloading_progress", {
@@ -168,9 +142,7 @@ export function TranslationNote({
       text = status.message;
       break;
     case "done":
-      // Provenance, and only while the translation is the thing being
-      // read. Flipping back to the original must not keep claiming the
-      // text on screen was translated.
+      // Only while the translation is on screen; the original must not claim it.
       text = showing
         ? t("workspace_note_translated_from", {
             language: languageLabel(status.from),
@@ -182,9 +154,7 @@ export function TranslationNote({
   }
 
   if (!text) return null;
-  // `truncate` keeps this one line high whatever it holds. Every string
-  // above is written to fit; this only catches an error message from
-  // Chrome, whose length we do not control.
+  // `truncate` catches Chrome error messages of unknown length.
   return (
     <p
       className="surface-float text-muted-foreground min-w-0 truncate rounded-lg px-2 py-1 text-xs"

@@ -11,14 +11,9 @@ interface AutoLockOptions {
   lockOnTabAway: boolean;
 }
 
-/** Activity resets the idle timer at most this often. */
 const ACTIVITY_THROTTLE_MS = 30_000;
 
-/**
- * The system-initiated locks: the idle timer (reset by activity), focus
- * leaving this window when tab-away lock is on, and the OS lock screen.
- * Returns the idle timer's reset, which an unlock also calls.
- */
+/** System-initiated locks (idle, tab-away, OS lock). Returns the idle reset. */
 export function useAutoLock({
   session,
   vaultOpen,

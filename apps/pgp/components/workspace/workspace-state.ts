@@ -11,29 +11,24 @@ import type { ProtectedKeyBlob } from "~/lib/storage/keyring";
 import type { FileResult } from "~/lib/utils/download";
 
 /**
- * The workspace's render state, as one reducer.
- *
- * PLAINTEXT NEVER ENTERS IT. The composed message, the result text and a
- * translation live in refs + uncontrolled DOM nodes (SECURITY.md §8.11,
- * T-DRAFT-HEAP-RESIDUE / T-OUTPUT-HEAP-RESIDUE); only facts about them
- * (`TextFacts`) are state. Binary / multi-file results must be state (a
- * row per file), so `wipePlaintext` zeroizes them in place.
+ * The workspace's render state. PLAINTEXT NEVER ENTERS IT: message, result
+ * and translation text live in refs + uncontrolled DOM (SECURITY.md §8.11,
+ * T-DRAFT-HEAP-RESIDUE / T-OUTPUT-HEAP-RESIDUE). Binary results must be
+ * state, so `wipePlaintext` zeroizes them in place.
  */
 
 export type Mode = WorkspaceAction;
 
-/** Same floor as the vault's `validatePassword`: a message password
- *  guards a file attackable offline forever. */
+/** Same floor as `validatePassword`: the file is attackable offline forever. */
 export const MIN_MESSAGE_PASSWORD_LENGTH = 8;
 
 const PUBLIC_KEY_HEADER = "-----BEGIN PGP PUBLIC KEY BLOCK-----";
 
-/** What the workspace may know about a text without holding it. */
 export interface TextFacts {
   len: number;
   nonBlank: boolean;
-  /** The mode the EARLIEST armored message calls for (as `classifyAction`):
-   *  a signed message quoting an encrypted one is still something to verify. */
+  /** The EARLIEST armored message decides: a signed message quoting an
+   *  encrypted one is still something to verify. */
   armor: "decrypt" | "verify" | null;
   /** A key block that is not part of a message. */
   key: "public" | "private" | null;
@@ -64,7 +59,6 @@ const NO_TEXT: TextFacts = textFacts("");
 export interface Verdict {
   signer: PublicContactKey | ProtectedKeyBlob;
   tone: "success" | "warning";
-  /** Said under the signer: when it was signed, co-signers, ... */
   note: string | null;
   /** A good signature with a caveat (retired key, signed for someone
    *  else): amber, but not "unknown signer". */
@@ -80,17 +74,12 @@ export interface RunResult {
 
 export type Run =
   | { kind: "idle" }
-  /** `autoRun`: a context-menu auto-run; the form stays hidden. */
   | { kind: "running"; autoRun: boolean }
   | { kind: "done" }
   | { kind: "error"; error: PresentedError }
-  /** An unattended run came out over `AUTO_RUN_MAX_BYTES`. */
   | { kind: "held-back" }
-  /** Text to be signed holds characters the box does not draw. */
   | { kind: "hidden-chars"; chars: string[] };
 
-/** Which secret the inline password row asks for. One row, three
- *  questions -- and different code on submit, so never confusable. */
 export type PromptKind = "key" | "message" | "crx";
 
 export interface Prompt {
@@ -102,7 +91,6 @@ export interface Prompt {
   error: string | null;
 }
 
-/** What a run came to. Applied in one dispatch (see `finished`). */
 export type Outcome =
   | ({
       kind: "done";
@@ -111,12 +99,9 @@ export type Outcome =
     } & Partial<RunResult>)
   | { kind: "error"; error: PresentedError }
   | { kind: "prompt"; prompt: PromptKind; keyId?: string }
-  /** The secret just typed was wrong: said under the prompt, which stays. */
   | { kind: "rejected"; message: string }
   | { kind: "held-back" }
   | { kind: "hidden-chars"; chars: string[] }
-  /** Nothing to show: a cancelled ceremony, an unattended run that would
-   *  have needed a prompt. */
   | { kind: "none" };
 
 export interface WorkspaceState {
@@ -133,15 +118,13 @@ export interface WorkspaceState {
   isExtensionZip: boolean;
   zipFiles: boolean;
   recipientIds: string[];
-  /** Explicit picks. What is in effect is derived: the pick while it is
-   *  still valid, else the default (see `resolveKeyId`). */
+  /** Explicit pick; the key in effect is derived (`resolveKeyId`). */
   keyPick: string | null;
   crxKeyPick: string | null;
   signKindPick: "pgp" | "crx" | null;
   run: Run;
   result: RunResult;
   prompt: Prompt | null;
-  /** A context-menu selection waiting to run by itself. */
   autoRun: "decrypt" | "verify" | null;
   /** The message password; never persisted, wiped at master lock. */
   encryptPassword: string;
@@ -174,12 +157,9 @@ export const initialWorkspaceState: WorkspaceState = {
 };
 
 export type WorkspaceEvent =
-  /** The box's own onChange (or a paste): armor arriving nudges the mode. */
   | { type: "edited"; text: TextFacts }
   | { type: "mode-picked"; mode: Mode }
-  /** Escape back to the start: nothing is staged, so nothing to reset. */
   | { type: "mode-reset" }
-  /** A context-menu or keyboard op. `text` absent: switch mode only. */
   | {
       type: "opened";
       mode: Mode;
@@ -203,7 +183,6 @@ export type WorkspaceEvent =
   | {
       type: "dropped";
       files: File[];
-      /** Ciphertext arrived: flips encrypt to decrypt. */
       encrypted: boolean;
       oversized: string | null;
     }
@@ -220,9 +199,7 @@ export type WorkspaceEvent =
   | { type: "prompted"; kind: PromptKind }
   | { type: "reset-results" }
   | { type: "reset-all" }
-  /** A fresh run: the last results go. */
   | { type: "started"; autoRun?: boolean }
-  /** A prompt's secret was submitted; results stay. */
   | { type: "submitted" }
   | { type: "finished"; outcome: Outcome; staged: number }
   | { type: "status"; text: string | null }
@@ -238,7 +215,6 @@ function withText(s: WorkspaceState, text: TextFacts): WorkspaceState {
     ...s,
     input: { ...text, version: s.input.version + 1 },
     staged: s.staged + 1,
-    // Stale the moment the text changes.
     messageEncryption: null,
   };
 }
@@ -270,7 +246,6 @@ function resetResults(s: WorkspaceState): WorkspaceState {
 }
 
 function resetAll(s: WorkspaceState): WorkspaceState {
-  // A cleared workspace is a fresh message: its recipients go with it.
   return resetResults({
     ...withFiles(withText(s, NO_TEXT), []),
     recipientIds: [],
@@ -333,8 +308,6 @@ export function workspaceReducer(
         e.text.armor !== s.input.armor
           ? e.text.armor
           : null;
-      // Encrypt carries the message alongside attachments (as msg.txt);
-      // elsewhere text and files are alternatives.
       const next = s.mode === "encrypt" ? s : withFiles(s, []);
       return resetResults({
         ...withMode(withText(next, e.text), nudge ?? s.mode),
@@ -374,7 +347,6 @@ export function workspaceReducer(
       return { ...withMode(s, "encrypt"), recipientIds: [e.keyId] };
     case "dropped": {
       if (e.files.length === 0) {
-        // Nothing staged: leave the workspace as it was and say why.
         return e.oversized
           ? { ...s, run: { kind: "error", error: { message: e.oversized } } }
           : s;
@@ -402,7 +374,6 @@ export function workspaceReducer(
         ),
       );
     case "files-cleared":
-      // The files only: a message written alongside them stays.
       return resetResults(withFiles(s, []));
     case "recipients":
       return resetResults({ ...s, recipientIds: e.ids });
@@ -443,7 +414,6 @@ export function workspaceReducer(
       };
     case "finished":
       if (e.staged !== s.staged) {
-        // The input moved while it ran: keep nothing it produced.
         return {
           ...resetResults(s),
           run: { kind: "idle" },
@@ -470,7 +440,6 @@ export function workspaceReducer(
     case "extension-zip": {
       if (e.value === s.isExtensionZip && !e.nudge) return s;
       const next = { ...s, isExtensionZip: e.value };
-      // Only from encrypt/decrypt, so an explicit sign/verify is kept.
       return e.nudge && (s.mode === "encrypt" || s.mode === "decrypt")
         ? withMode(next, "sign")
         : next;
@@ -484,27 +453,18 @@ export function workspaceReducer(
   }
 }
 
-// ── derived ─────────────────────────────────────────────────────────
-
 export const isRunning = (s: WorkspaceState) => s.run.kind === "running";
 export const isDone = (s: WorkspaceState) => s.run.kind === "done";
 
-/** The staged input is age: armored/binary text, or `.age` files. */
 export function inputIsAge(s: WorkspaceState): boolean {
   return s.input.age || s.files.some((f) => /\.age$/i.test(f.name));
 }
 
-/** A usable message password is set -- the only state in which one is
- *  added. Derived from the password, so no flag can arm it. */
 export function encryptPasswordReady(s: WorkspaceState): boolean {
   return s.encryptPassword.length >= MIN_MESSAGE_PASSWORD_LENGTH;
 }
 
-/**
- * The private key in effect: the user's pick while it can do the job,
- * else the default. Signing is OpenPGP-only and an age message opens only
- * with an SSH identity, so those modes narrow the pool first.
- */
+/** The user's pick while it can do the job, else the default. */
 export function resolveKeyId(
   s: Pick<WorkspaceState, "mode" | "keyPick"> & { age: boolean },
   keys: readonly ProtectedKeyBlob[],
@@ -521,13 +481,9 @@ export function resolveKeyId(
 }
 
 /**
- * Overwrite binary and multi-file result bytes with zeroes, in place.
- *
- * Dropping the reference is NOT enough: these are render state, and at
- * master lock a `setState` is batched with the unmount and never commits,
- * so the previous fiber's `lastRenderedState` keeps the buffer
- * (T-OUTPUT-HEAP-RESIDUE). Detached buffers throw on write and hold
- * nothing readable, so they are skipped.
+ * Zeroize result bytes in place. Dropping the reference is NOT enough: at
+ * master lock the setState never commits, so the old fiber keeps the buffer
+ * (T-OUTPUT-HEAP-RESIDUE). Detached buffers are skipped.
  */
 export function zeroizeResultBytes(
   binary: Uint8Array | undefined,

@@ -4,11 +4,7 @@ import { isReaderMessage } from "~/lib/reader-protocol";
 import type { PublicContactKey } from "~/lib/storage/contacts";
 import { displayOnlySignerCard, signerCardState } from "./signer-card";
 
-// Reply's reader tab used to get a bare contact and render a fixed
-// "Signature verified": every warning the panel's card carried (the
-// clash pill, "not marked verified by you", "may have been forwarded",
-// a lookalike / SHA-1 warning) was lost. It now gets the panel's own card
-// state, cut down to what the card displays.
+// The reader tab must render the panel's own verdict, warnings included.
 
 const contact = (over: Partial<PublicContactKey>): PublicContactKey => ({
   keyId: "A".repeat(40),

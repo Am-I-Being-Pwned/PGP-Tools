@@ -12,8 +12,7 @@ import type { StoredKeyKind } from "~/lib/storage/key-kind";
 import type { Nav } from "./useNav";
 import { usePreferences } from "./usePreferences";
 
-/** What the workspace shows the action system. Plain values only: no
- *  plaintext, nothing a lock needs to wipe. See ActionCtx for each. */
+/** Plain values only: no plaintext, nothing a lock needs to wipe. */
 export interface WorkspaceSnapshot {
   mode: PgpMode;
   hasInput: boolean;
@@ -28,7 +27,6 @@ export interface WorkspaceSnapshot {
   translateTarget: string | null;
 }
 
-/** What the workspace can be asked to do, run against its latest render. */
 export interface WorkspaceCommands {
   setMode: (mode: PgpMode) => void;
   execute: () => void;
@@ -46,10 +44,8 @@ export interface WorkspaceCommands {
 }
 
 /**
- * The workspace's link to the palette: an external store, so a workspace
- * change re-renders the palette and not the App around it. Listeners hear
- * only snapshot changes; commands are replaced silently each commit and
- * looked up at call time.
+ * External store so a workspace change re-renders the palette, not the App.
+ * Commands are replaced silently each commit and looked up at call time.
  */
 export interface WorkspaceBridge {
   publish: (
@@ -95,7 +91,6 @@ export const WorkspaceBridgeContext = createContext<WorkspaceBridge | null>(
   null,
 );
 
-/** The App's bridge, created once. */
 export function useWorkspaceBridgeStore(): WorkspaceBridge {
   return useState(createWorkspaceBridge)[0];
 }
@@ -103,7 +98,6 @@ export function useWorkspaceBridgeStore(): WorkspaceBridge {
 interface UseActionContextArgs {
   tab: AppTab;
   counts: { ownKeys: number; contacts: number };
-  /** Gates history availability. */
   neverCacheKeys: boolean;
   nav: Pick<Nav, "showTab" | "openHistory" | "openKeysRoute" | "openPresets">;
   lockNow: () => void;
@@ -111,11 +105,7 @@ interface UseActionContextArgs {
 
 const noop = () => undefined;
 
-/**
- * The ActionCtx the registry evaluates against. Only used behind the
- * master-unlock gate, so `masterUnlocked` is always true. Its identity
- * changes only when something an action can READ changes.
- */
+/** Only used behind the master-unlock gate, so `masterUnlocked` is always true. */
 export function useActionContext({
   tab,
   counts: { ownKeys, contacts },

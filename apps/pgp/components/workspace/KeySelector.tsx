@@ -36,21 +36,15 @@ interface KeySelectorProps {
   emptyText?: string;
   emptyAction?: () => void;
   emptyActionLabel?: string;
-  /** Drawn inside a card row (the composer's From line): no label above
-   *  (it becomes the trigger's accessible name), a slim trigger, the list
-   *  dropping down rather than up. Same list, same picks. */
+  /** Inside a card row (the From line): label becomes the accessible name. */
   inline?: boolean;
-  /** The user's contacts and own keys, for the selected key's details
-   *  page (Mark as verified, the identity clash band), as the signer card
-   *  and recipient picker pass them. Separate from `contacts` / `myKeys`,
-   *  which choose what the LIST shows and are ignored when `keys` is set. */
+  /** For the details page; separate from `contacts`/`myKeys`, which pick
+   *  what the LIST shows and are ignored when `keys` is set. */
   detailsContacts?: readonly PublicContactKey[];
   detailsOwnKeys?: readonly ProtectedKeyBlob[];
 }
 
 function getKeyDisplay(key: AnyKey): { name: string; detail: string } {
-  // The local alias when there is one -- through the shared accessor, so
-  // a key renamed in the Keys tab is renamed here too.
   const userId = displayUserId(key);
   if (!userId) return { name: key.keyId.slice(-8).toUpperCase(), detail: "" };
   return formatKeyDisplayName(userId);
@@ -89,9 +83,7 @@ export function KeySelector({
               {" "}
               <button
                 type="button"
-                // Don't pass emptyAction directly: the MouseEvent would leak
-                // into callers typed (importPrefill?: string) and get treated
-                // as a truthy prefill.
+                // Not passed directly: the MouseEvent would become a truthy importPrefill.
                 onClick={() => emptyAction()}
                 className="text-primary underline"
               >
@@ -109,10 +101,7 @@ export function KeySelector({
 
   const list = (
     <>
-      {/* Pin the list to one side of the trigger (above it in the panel,
-            below it on the card's From line) and disable collision flipping
-            so it doesn't jump between top/bottom as the result count
-            changes while searching. */}
+      {/* No collision flipping: the list must not jump as search filters it. */}
       <PopoverContent
         side={inline ? "bottom" : "top"}
         avoidCollisions={false}
@@ -120,10 +109,8 @@ export function KeySelector({
       >
         <Command
           onKeyDown={(e) => {
-            // mod+Enter is the global Run shortcut, never a pick:
-            // preventDefault so cmdk skips its own Enter handler (it
-            // bails on defaultPrevented), close the popover, and let
-            // the event bubble to the window-level shortcut listener.
+            // mod+Enter is the global Run shortcut, never a pick: cmdk bails on
+            // defaultPrevented, and the event still bubbles to the window.
             if (e.key === "Enter" && (e.metaKey || e.ctrlKey || e.altKey)) {
               e.preventDefault();
               setOpen(false);
@@ -131,8 +118,6 @@ export function KeySelector({
           }}
         >
           <CommandInput placeholder={t("actions_search_placeholder")} />
-          {/* Fixed height (not just max-h) so the list stays a constant
-                size and doesn't grow/shrink as search filters the results. */}
           <CommandList className="h-[300px]">
             <CommandEmpty>{t("actions_no_keys_found")}</CommandEmpty>
             {hasGroups ? (
@@ -317,8 +302,6 @@ function KeyOption({
           </p>
         )}
       </div>
-      {/* After the name, so the face leads the row like everywhere else;
-          green because a selected key is one that is on. */}
       <CheckIcon
         className={cn(
           "text-good h-4 w-4 shrink-0",

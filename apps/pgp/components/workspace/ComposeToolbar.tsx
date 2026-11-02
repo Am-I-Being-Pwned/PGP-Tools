@@ -37,7 +37,6 @@ import { HoverLabel } from "./TranslationPanel";
 
 export interface ComposeTranslateProps {
   status: TranslationStatus;
-  /** Last picked language, or null before the first pick. */
   targetLanguage: string | null;
   onTranslate: (language: string) => void;
   onUndo: () => void;
@@ -47,8 +46,6 @@ export interface ComposeTranslateProps {
 interface ComposeToolbarProps {
   onStyle: (style: InlineStyle) => void;
   onFind: () => void;
-  /** Absent when translation is off in Settings or the device has no
-   *  model: the button is simply not there. */
   translate?: ComposeTranslateProps;
 }
 
@@ -64,17 +61,9 @@ const STYLE_ICONS: Record<
 
 const STYLE_ORDER: InlineStyle[] = ["bold", "italic", "strike", "code"];
 
-/** One button in the strip: borderless, a soft fill on hover. */
 const CHIP =
   "text-muted-foreground hover:text-foreground hover:bg-accent flex h-7 w-7 shrink-0 items-center justify-center rounded transition-colors disabled:opacity-60";
 
-/**
- * Editing controls docked in the message card's bottom strip: inline
- * formatting, find, and translate-before-sending. Icon-only with hover
- * labels, mirroring the translate toggle on the result box. Always
- * there -- it sits under the text rather than over it, so there is
- * nothing to fade out of the writer's way.
- */
 export function ComposeToolbar({
   onStyle,
   onFind,
@@ -100,12 +89,10 @@ export function ComposeToolbar({
               type="button"
               aria-label={STYLE_LABELS[style]}
               aria-keyshortcuts={ariaKeyShortcuts(STYLE_SHORTCUTS[style], mac)}
-              // Keep focus (and the selection) in the textarea: the
-              // style applies to what is selected there.
+              // Keep focus and the selection in the textarea.
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => onStyle(style)}
-              // Out of the Tab order: Tab from the message goes to
-              // Recipients, as it always has; the shortcuts cover these.
+              // Out of the Tab order: Tab from the message goes to Recipients.
               tabIndex={-1}
               className={CHIP}
             >
@@ -150,16 +137,13 @@ function TranslateMenu({
   open,
   onOpenChange: setOpen,
 }: ComposeTranslateProps & {
-  /** Owned by the strip. */
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const busy = status.kind === "working" || status.kind === "downloading";
   if (status.kind === "unavailable") return null;
-  // Always just "Translate": the button opens the language list rather
-  // than translating, so naming the last pick would promise a one-click
-  // translation it doesn't do. The list marks the last pick instead.
+  // Never names the last pick: the button opens a list, not a one-click translate.
   const label = busy ? t("workspace_translating") : t("workspace_translate");
 
   return (
@@ -183,14 +167,11 @@ function TranslateMenu({
           )}
         </button>
       </HoverLabel>
-      {/* Anchored to the chip by ref rather than wrapping it in a
-          trigger: the chip already sits inside the hover label's own
-          popover, and a nested trigger binds to that one. */}
+      {/* Anchored by ref, not a trigger: a nested trigger would bind to the
+          hover label's own popover. */}
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverAnchor virtualRef={buttonRef} />
         <PopoverContent align="end" side="top" className="w-56 p-0">
-          {/* cmdk does the filtering: the search box IS the language
-            picker, so a long list costs nothing to use. */}
           <Command label={t("workspace_translate_menu_heading")}>
             <CommandInput
               placeholder={t("workspace_search_languages")}

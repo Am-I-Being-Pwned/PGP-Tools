@@ -5,11 +5,9 @@ import { toast } from "~/lib/toast";
 export type Tab = "workspace" | "keys" | "settings";
 export type KeysRoute = "generate" | "import";
 
-/** Where the panel is, and the one-shot requests a view acts on when it
- *  next renders (then clears with `consume`). */
+/** Where the panel is, plus one-shot requests a view clears with `consume`. */
 export interface NavState {
   tab: Tab;
-  /** The import panel, open over whatever tab is showing. */
   importing: { prefill: string | null; lookup: string | null } | null;
   historyOpen: boolean;
   highlightKeyIds: string[] | null;
@@ -29,14 +27,12 @@ const CLEARED: Pick<NavState, Intent> = {
 
 export interface Nav extends NavState {
   showTab: (tab: Tab) => void;
-  /** Open the import panel in place: no tab change to flash past. */
   openImport: (from: { prefill?: string; lookup?: string }) => void;
   closeImport: () => void;
   openHistory: () => void;
   closeHistory: () => void;
-  /** Show keys on the Keys tab, scrolled to and pulsing. */
   revealKeys: (keyIds: string[]) => void;
-  /** Pulse keys without leaving the current tab. */
+  /** Without leaving the current tab. */
   highlightKeys: (keyIds: string[]) => void;
   openKeysRoute: (route: KeysRoute) => void;
   openPresets: () => void;

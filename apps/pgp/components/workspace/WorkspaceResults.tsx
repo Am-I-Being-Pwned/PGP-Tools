@@ -15,9 +15,6 @@ import { OutputArea } from "./OutputArea";
 import { signerCardState } from "./signer-card";
 import { SignerCard } from "./SignerCard";
 
-/** The curated error alert: message up front, the raw error text behind
- *  a "Show technical details" toggle, and (when the parent wires a
- *  handler) a small remedy action button. */
 function ErrorAlert({
   error,
   onRemedy,
@@ -28,9 +25,6 @@ function ErrorAlert({
   const [showDetail, setShowDetail] = useState(false);
   const remedy = onRemedy ? error.remedy : undefined;
 
-  // Soft entry: a fast fade/slide keeps a fresh error from hard-jumping
-  // the layout. No reserved space (deliberately removed); reduced-motion
-  // users get an instant appearance instead.
   return (
     <Alert
       variant="destructive"
@@ -75,8 +69,7 @@ function ErrorAlert({
 
 interface WorkspaceResultsProps {
   error: PresentedError | null;
-  /** Maps a remedy action (e.g. "import-key") to an existing handler.
-   *  When absent, remedies render as message-only guidance. */
+  /** When absent, remedies render as message-only guidance. */
   onRemedy?: (action: RemedyAction) => void;
   /** Uncontrolled result node + reader; see `OutputArea`. */
   outputElRef: React.MutableRefObject<HTMLPreElement | null>;
@@ -88,31 +81,18 @@ interface WorkspaceResultsProps {
   operationDone: boolean;
   statusText: string | undefined;
   verifiedSigner: PublicContactKey | ProtectedKeyBlob | null;
-  /** Tone of the signer card: green when verified, orange when signed but
-   *  unverifiable (signer's key not held). */
+  /** Orange = signed but signer's key not held. */
   signatureTone?: "success" | "warning";
-  /** Said under the signer: when it was signed, co-signers, a retired key. */
   signatureNote?: string | null;
-  /** A good signature with a caveat (key retired since, signed for
-   *  someone else): the amber card's label. The signer is known -- this
-   *  is not the "unknown signer" card. */
+  /** Good signature with a caveat (retired key, signed for someone else):
+   *  the amber card's label. Not the "unknown signer" card. */
   signerCaveat?: string | null;
-  /** Fill the available height (used by the full-screen result view). */
   fullHeight?: boolean;
-  /** For the "there's a key in this message" offer: who we already have,
-   *  and what to do about the one that just arrived. */
   contacts: PublicContactKey[];
-  /** The user's own keys: a signer wearing the user's identity is
-   *  marked like one wearing another contact's. */
+  /** A signer wearing the user's identity is marked like a contact impostor. */
   myKeys?: ProtectedKeyBlob[];
-  /** Contents of the result box's footer bar: the translation status and
-   *  its toggle. A slot rather than a prop bundle, because it needs the
-   *  workspace's translation state and threading that through here would
-   *  only pass it straight back out. */
   translationFooter?: React.ReactNode;
-  /** A control for the result box's top-right corner (Reply). */
   resultCorner?: React.ReactNode;
-  /** Show the translation in place of the message. */
   showTranslation?: boolean;
   translationElRef?: React.MutableRefObject<HTMLPreElement | null>;
   getTranslation?: () => string;
@@ -120,7 +100,6 @@ interface WorkspaceResultsProps {
   outputVersion: number;
   onImportKey: (armored: string) => void;
   onRevealKey?: (keyId: string) => void;
-  /** Search the keyserver for an unknown signer's key. */
   onLookupSigner?: (keyId: string) => void;
 }
 
@@ -161,8 +140,7 @@ export function WorkspaceResults({
         note: signatureNote,
         caveat: signerCaveat,
         statusText,
-        // A machine translation is not what was signed: the card stays,
-        // but it says the verdict covers the original.
+        // A machine translation is not what was signed.
         extraNote: showTranslation
           ? t("workspace_signature_covers_original")
           : null,
@@ -180,11 +158,8 @@ export function WorkspaceResults({
     fileResults.length > 0;
   if (!fullHeight && !hasContent) return null;
 
-  // The signature outcome as a status band (ContactCard's verified
-  // tone). Over a readable message it is the top block of the message's
-  // own card; anywhere else (a verify verdict, a file result) it stands
-  // alone. In the card its corners go square: the stack rounds the
-  // outer ones.
+  // Over a readable message the signer band is the top block of its card;
+  // elsewhere it stands alone.
   const signerInCard = !!fullHeight && hasOutput;
   const signerCard =
     verifiedSigner && card ? (
@@ -193,8 +168,7 @@ export function WorkspaceResults({
       >
         <SignerCard
           state={card}
-          // The key that made the signature, a click away. Only for one we
-          // hold: an unknown signer is a bare key id with nothing to show.
+          // Only for a key we hold: an unknown signer is a bare key id.
           labelAction={
             isUnverified ? undefined : (
               <KeyDetailsButton
@@ -252,9 +226,6 @@ export function WorkspaceResults({
         header={signerInCard ? signerCard : undefined}
       />
 
-      {/* A key inside a message the user just read: keys travel this way
-          far more often than by paste, and the alternative is copying
-          armor back out into the Keys tab by hand. */}
       {outputPublicKeyDetected && (
         <DetectedKeyBanner
           getText={getOutput}

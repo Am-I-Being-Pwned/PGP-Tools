@@ -13,18 +13,14 @@ import type { useKeySession } from "./useKeySession";
 interface MasterLockDeps {
   session: ReturnType<typeof useKeySession>;
   dispatchVault: (event: VaultEvent) => VaultLifecycle;
-  /** Drop the React-state copy of an unrouted context-menu op. */
   clearPending: () => void;
-  /** Clear Reply's reader tabs. */
   lockReaders: () => void;
 }
 
 /**
- * Locking the vault, and the workspace draft that survives it as
- * ciphertext (SECURITY.md s.8.11, T-DRAFT-HEAP-RESIDUE). The workspace
- * registers a pull-model draft source; on lock it is asked for a
- * snapshot once, the snapshot is sealed under the in-WASM draft key, and
- * the workspace is told to wipe its plaintext.
+ * Master lock. The workspace draft survives it only as ciphertext under
+ * the in-WASM draft key, then the workspace wipes its plaintext
+ * (SECURITY.md s.8.11, T-DRAFT-HEAP-RESIDUE).
  */
 export function useMasterLock({
   session,
@@ -47,11 +43,9 @@ export function useMasterLock({
 
   const lock = useCallback(
     async (auto = false) => {
-      // Readers first, synchronously: nothing awaited below may let one
-      // keep (or be sent) the message.
+      // Readers first, synchronously, before any await.
       lockReaders();
-      // Seal the draft before the state flip unmounts the workspace. On
-      // error, lock anyway: a lost draft beats a failed lock.
+      // Seal before the state flip unmounts the workspace. A lost draft beats a failed lock.
       const source = draftSourceRef.current;
       let draft = source?.getDraft() ?? null;
       if (draft && draftHasContent(draft)) {
@@ -65,23 +59,18 @@ export function useMasterLock({
       // Releases this frame's reference to the plaintext (T-OUTPUT-HEAP-RESIDUE).
       // eslint-disable-next-line no-useless-assignment
       draft = null;
-      // Unmounting alone keeps the plaintext reachable via the fiber's
-      // `alternate`; only clearing the refs and DOM value drops it.
+      // Unmounting alone leaves plaintext reachable via the fiber's `alternate`.
       source?.wipe();
 
-      // An unrouted context-menu op lives in BOTH session storage and
-      // React state; drop both so it cannot surface on the next unlock.
+      // A pending context-menu op lives in session storage AND React state.
       clearPending();
       void chrome.storage.session.remove(SESSION_PENDING_OP);
 
-      // FIRE-AND-FORGET: everything above and the state flip below must
-      // land in ONE synchronous run, or the draft fails to rehydrate and
-      // its plaintext stays reachable (e2e/draft-memory.spec.ts). Store
-      // mutations re-check the session inside their own locks instead.
+      // FIRE-AND-FORGET: this and the state flip must land in ONE synchronous
+      // run, or the draft fails to rehydrate (e2e/draft-memory.spec.ts).
       void wasmApi.dropContactsSession();
       dispatchVault({ type: "locked", auto });
-      // UNCONDITIONAL (no `size > 0` guard like the auto-lock handlers):
-      // it also bumps the lock generation, so an unlock already in flight
+      // UNCONDITIONAL: also bumps the lock generation so an in-flight unlock
       // cannot insert a live key after this lock.
       session.lockAll();
     },

@@ -8,8 +8,7 @@ import { useVault } from "~/hooks/useVault";
 import { tn } from "~/lib/i18n";
 import { toast } from "~/lib/toast";
 
-/** A key that arrived from outside the Keys tab (paste, drop, context
- *  menu, signer lookup), imported over whatever tab is showing. */
+/** Imports a key arriving from outside the Keys tab, over whatever tab is showing. */
 export function ImportOverlay() {
   const nav = useNav();
   const vault = useVault();
@@ -25,8 +24,7 @@ export function ImportOverlay() {
       nav.revealKeys(keyIds);
       return;
     }
-    // An import never moves the user: on the Keys tab the card pulses,
-    // elsewhere a toast offers the trip.
+    // An import never moves the user.
     if (nav.tab === "keys") {
       nav.highlightKeys(keyIds);
       return;

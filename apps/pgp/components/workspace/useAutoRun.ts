@@ -3,25 +3,17 @@ import { useEffect, useEffectEvent } from "react";
 import { useVault } from "~/hooks/useVault";
 import type { Workspace } from "./useWorkspace";
 
-/** How long an armed decrypt waits for the scan to land on its key. */
 const KEY_PICK_GRACE_MS = 2_000;
 
 /**
- * A message opened from the context menu runs by itself: verify always,
- * decrypt only when the key it is addressed to is ALREADY unlocked. It
- * never starts a ceremony or a prompt (SECURITY.md §15); anything else
- * falls back to the button. Waits for the vault to settle so a verdict
- * isn't reached against contacts still loading.
- *
- * Returns whether the idle form should stay invisible: it would only
- * flash up between the selection landing and the result replacing it.
+ * Context-menu auto-run: verify always, decrypt only when the addressed key
+ * is ALREADY unlocked; never a ceremony or prompt (SECURITY.md §15). Waits
+ * for the vault to settle. Returns whether to hide the idle form.
  */
 export function useAutoRun(
   ws: Workspace,
   o: {
     vaultSettling: boolean;
-    /** The op is in this render's props but not yet armed, or the first
-     *  look for one hasn't answered. */
     arriving: boolean;
     canRun: boolean;
   },
@@ -39,7 +31,6 @@ export function useAutoRun(
         const match = await ws.matchDecryptionKey().catch(() => null);
         if (run.cancelled) return;
         if (!match || session.getKeyHandle(match) === null) return give();
-        // The scan is about to land on it; this re-runs when it does.
         // Bounded, so a hand-picked key can't leave the run armed.
         if (ws.selectedKeyId !== match) {
           run.timer = window.setTimeout(give, KEY_PICK_GRACE_MS);

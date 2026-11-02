@@ -53,9 +53,8 @@ export default function App() {
   const keyring = useKeyring();
   const contacts = useContacts();
 
-  // Pending context-menu ops and Reply's reader tabs only while the vault
-  // is open: consuming earlier would park the user's plaintext in React
-  // state for the whole locked window (see usePendingOperation).
+  // Only while open: consuming earlier parks plaintext in React state for
+  // the whole locked window (see usePendingOperation).
   const { pending, clearPending, checked } = usePendingOperation(vaultOpen);
   const { open: openReader, lockNow: lockReaders } = useReaderTabs(vaultOpen);
 
@@ -76,7 +75,6 @@ export default function App() {
   });
   const lockNow = useCallback(() => lock(), [lock]);
 
-  // A drop routed to the workspace.
   const [intake, setIntake] = useState<WorkspaceIntake | null>(null);
   const clearIntake = useCallback(() => setIntake(null), []);
 
@@ -113,10 +111,7 @@ export default function App() {
     [openImport, toWorkspace],
   );
 
-  // The workspace publishes to this store and only the palette listens,
-  // so a workspace change never re-renders the App.
   const workspaceBridge = useWorkspaceBridgeStore();
-  // The palette registers its open() so the footer's mod+K hint can pop it.
   const openPaletteRef = useRef<(() => void) | null>(null);
   const bindPaletteOpen = useCallback((fn: () => void) => {
     openPaletteRef.current = fn;
@@ -145,8 +140,6 @@ export default function App() {
                     ) : undefined
                   }
                 />
-                {/* A sealed store came back older than this device last
-                    saw it, or went missing (lib/storage/integrity.ts). */}
                 <IntegrityBanner
                   syncVault={prefs.storageLocation === "sync"}
                   // Settings sat at the strictest preset until acknowledged.
@@ -218,8 +211,7 @@ export default function App() {
   );
 }
 
-/** The palette over the live action context. Subscribes to the workspace
- *  bridge itself, so workspace changes re-render this, not the App. */
+/** Subscribes to the bridge itself, so workspace changes re-render this, not the App. */
 function Palette({
   bindOpen,
   ...args

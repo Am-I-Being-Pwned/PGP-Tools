@@ -84,7 +84,6 @@ import type { Mode } from "./workspace-state";
 import { modeLabel, WorkspaceInput, type ComposeTools } from "./WorkspaceInput";
 import { WorkspaceResults } from "./WorkspaceResults";
 
-/** mod+Enter mirrors the main action button. */
 const RUN_SHORTCUT: ShortcutSpec = { mod: true, key: "Enter" };
 
 interface WorkspaceViewProps {
@@ -94,7 +93,6 @@ interface WorkspaceViewProps {
   vaultSettling?: boolean;
   /** The first look for a context-menu op hasn't answered yet. */
   awaitingPendingOp?: boolean;
-  /** Open `text` in a reader tab; absent where Reply isn't offered. */
   onOpenReply?: (text: string, signer: ReaderSigner) => Promise<void>;
   restoreDraft?: Uint8Array | null;
   onDraftRestored?: () => void;
@@ -167,9 +165,7 @@ export function WorkspaceView({
     targetLanguage: translationTargetLanguage,
   });
 
-  // ── compose translation ────────────────────────────────────────────
-  // Written through the textarea's own editing path when mounted, so
-  // mod+Z reverts a translation like any other edit.
+  // Through the textarea's editing path, so mod+Z reverts a translation.
   const { inputElRef, inputChanged } = ws;
   const setComposedText = useCallback(
     (text: string) => {
@@ -191,8 +187,7 @@ export function WorkspaceView({
     setInput: setComposedText,
     readingLanguage: translationTargetLanguage,
     onTranslated: (from, to) => {
-      // A fresh id per translation: a toast reusing the id of one still
-      // animating out is merged into it and leaves with it.
+      // Fresh id: a toast reusing a leaving one's id is merged into it and leaves with it.
       if (translatedToastRef.current !== null) {
         toast.dismiss(translatedToastRef.current);
       }
@@ -212,7 +207,6 @@ export function WorkspaceView({
       );
     },
     onStatus: (status) => {
-      // The composer has no result bar: problems surface as toasts.
       if (status.kind === "same-language") {
         toast.message(
           t("workspace_compose_same_language", {
@@ -265,10 +259,8 @@ export function WorkspaceView({
 
   const showLoadingLabel = useDelayedFlag(loading);
 
-  // ── what applies ───────────────────────────────────────────────────
   const canEncrypt = s.recipientIds.length > 0 || ws.passwordReady;
-  // A password-only or unencrypted message needs no key: offering a
-  // picker of keys that are all wrong is worse than none.
+  // Password-only / unencrypted messages need no key: no picker of wrong keys.
   const passwordOnlyMessage =
     s.mode === "decrypt" &&
     s.messageEncryption?.password === true &&
@@ -280,8 +272,6 @@ export function WorkspaceView({
     s.mode === "sign";
 
   const singleCrxFile = s.files.length === 1 && /\.crx$/i.test(s.files[0].name);
-  // Only for a single .zip that holds a manifest.json; PGP signing stays
-  // available through the "Sign as" toggle.
   const crxSignAvailable =
     ws.canCrxSign && s.mode === "sign" && s.isExtensionZip && !done;
   const showCrxSign = crxSignAvailable && (s.signKindPick ?? "crx") === "crx";
@@ -294,8 +284,7 @@ export function WorkspaceView({
       ? s.result.files[0]
       : null;
 
-  // A Save-As download is the one case Chrome does not route a CRX to the
-  // extension installer (see saveCrxViaPrompt).
+  // Save-As is the one download Chrome doesn't route to the CRX installer.
   const saveCrx = async () => {
     if (!crxResult) return;
     const result = await saveCrxViaPrompt(crxResult.data, crxResult.name);
@@ -309,30 +298,24 @@ export function WorkspaceView({
             : t("workspace_crx_save_failed"),
     });
   };
-  // Saved the moment it is signed; the Save button covers a first-time
-  // `downloads` grant that needs a fresh gesture.
   const autoSaveCrx = useEffectEvent(() => void saveCrx());
   const crxData = crxResult?.data;
   useEffect(() => {
     if (crxData) autoSaveCrx();
   }, [crxData]);
 
-  // A decrypted or verified text gets the whole panel, with Back.
   const showFullOutput =
     done && (s.mode === "decrypt" || s.mode === "verify") && hasOutputText;
-  // Reply needs a signer whose key we hold, on a message that was
-  // encrypted: an amber card is never private mail from anyone.
+  // Reply needs a known signer on an encrypted message: amber is never private mail.
   const replyTo =
     showFullOutput && s.mode === "decrypt" && verdict?.tone === "success"
       ? verdict
       : null;
   const canReply = replyTo !== null;
-  /** Hand the message to a reader tab and turn this workspace into the
-   *  reply. The reset wipes the output: the panel keeps no copy. */
+  /** The reset wipes the output: the panel keeps no copy. */
   const openReply = () => {
     if (!replyTo || !onOpenReply) return;
-    // The card exactly as shown, minus anything it doesn't display: no
-    // public key travels to the tab.
+    // Display-only card: no public key travels to the tab.
     const signer = displayOnlySignerCard(
       signerCardState({
         signer: replyTo.signer,
@@ -348,7 +331,6 @@ export function WorkspaceView({
       .then(() => {
         resetAll();
         dispatch({ type: "encrypt-to", keyId: signer.contact.keyId });
-        // The new tab takes focus; hand it back for the reply. Best effort.
         requestAnimationFrame(() => {
           window.focus();
           inputElRef.current?.focus();
@@ -357,15 +339,12 @@ export function WorkspaceView({
       .catch(() => toast.error(t("workspace_reply_failed")));
   };
 
-  // ── recipients and signer ──────────────────────────────────────────
-  // Own keys before contacts -- see `resolveSelectedRecipients`.
   const selectedRecipientKeys = resolveSelectedRecipients(
     s.recipientIds,
     contacts,
     myKeys,
   );
   const encryptEngine = selectionEngine(selectedRecipientKeys);
-  // Only OpenPGP keys sign: SSH identities are narrowed out, not dimmed.
   const signKeyChoices = myKeys.filter(isPgpRecord);
   const signerInHeader =
     s.mode === "sign" && !showCrxSign && signKeyChoices.length > 0;
@@ -375,16 +354,13 @@ export function WorkspaceView({
       : signKeyChoices.length === 0
         ? t("workspace_sign_blocked_no_pgp_key")
         : undefined;
-  // The same pick the encrypt makes: the key in effect if it signs, else
-  // the first PGP key.
   const signer =
     signKeyChoices.find((k) => k.keyId === ws.selectedKeyId) ??
     signKeyChoices.at(0);
   const signerName = signer
     ? formatKeyDisplayName(displayUserId(signer))
     : { name: "", detail: "" };
-  // Asked of the function the encrypt runs through, so the preview cannot
-  // disagree with what actually happens.
+  // Asked of the encrypt's own function so the preview can't disagree.
   const selfExcluded =
     s.mode === "encrypt" && s.recipientIds.length > 0
       ? buildEncryptRecipients({
@@ -396,16 +372,12 @@ export function WorkspaceView({
         }).selfExcluded
       : false;
 
-  // ── clearing ───────────────────────────────────────────────────────
-  // The undo snapshot lives in the workspace's wipeable ref, never in a
-  // toast closure: sonner keeps action callbacks alive for the toast's
-  // lifetime, past a master lock.
+  // The undo snapshot lives in a wipeable ref, never a toast closure: sonner
+  // keeps action callbacks alive past a master lock.
   const restoreCleared = ws.restoreClearUndo;
-  /** Next tick: Radix restores focus to a closing popover's anchor (the
-   *  recipient box), and the clear may have just remounted the card. */
+  /** Next tick: Radix restores focus to a closing popover's anchor first. */
   const focusMessageBox = () =>
     setTimeout(() => document.getElementById("pgp-input")?.focus(), 0);
-  /** After a clear: the message box, else the card's first control. */
   const focusFlowStart = () => {
     setTimeout(() => {
       const input = document.getElementById("pgp-input");
@@ -428,8 +400,6 @@ export function WorkspaceView({
     resetAll();
     focusFlowStart();
   };
-  /** `textOnly`: empty the box as deleting its text would; attachments
-   *  staged beside it stay. */
   const clear = (toastMessage: string | null, textOnly = false) => {
     ws.stashClearUndo();
     if (textOnly) inputChanged("");
@@ -443,11 +413,8 @@ export function WorkspaceView({
     }
     focusFlowStart();
   };
-  // Recipients count: a message addressed but not written is staged.
   const hasStaged =
     s.input.len > 0 || s.files.length > 0 || s.recipientIds.length > 0;
-  /** The in-box "Clear text": silent after a run (the result is its own
-   *  feedback). Files have their own Clear all. */
   const clearText = () =>
     clear(done ? null : t("workspace_text_cleared_toast"), s.files.length > 0);
 
@@ -465,9 +432,6 @@ export function WorkspaceView({
     focusMessageBox,
   });
 
-  // ── preferences ────────────────────────────────────────────────────
-  // Shared by the toggles and the palette: persistence plus the
-  // stale-output reset.
   const setEncryptToSelf = (checked: boolean) => {
     resetResults();
     void savePreference({ encryptToSelf: checked });
@@ -478,16 +442,13 @@ export function WorkspaceView({
   };
   const setSaveToHistory = (checked: boolean) => {
     void savePreference({ historyEnabled: checked });
-    // A user gesture: ask for the generous budget. A denial is fine.
     if (checked) void requestUnlimitedHistoryStorage();
   };
 
-  // ── run / copy / download ──────────────────────────────────────────
   const [copied, setCopied] = useState(false);
   const copyTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const { copy } = useCopyToClipboard();
   const handleCopy = async () => {
-    // The button's check is the feedback; a refused write toasts.
     if (!(await copy(ws.getOutput()))) return;
     setCopied(true);
     clearTimeout(copyTimer.current);
@@ -503,13 +464,11 @@ export function WorkspaceView({
   const canRun =
     mainActionShown && !loading && !(s.mode === "encrypt" && !canEncrypt);
   const resultHasOutput = done && hasOutputText && !loading;
-  // Verify yields a verdict, not an artifact.
   const hasDownload =
     done &&
     !loading &&
     s.mode !== "verify" &&
     (s.result.files.length > 0 || !!s.result.binary || hasOutputText);
-  // In verify-done state Run resets, like the button.
   const runMain = () => {
     if (done && s.mode === "verify") resetAll();
     else void ws.execute();
@@ -525,9 +484,7 @@ export function WorkspaceView({
     canRun,
   });
 
-  // An unknown signer the user went to look up: once contacts change,
-  // check again so the amber card becomes the real verdict. Never at the
-  // cost of a prompt, and not capped: the user opened this message.
+  // Re-verify a looked-up unknown signer once contacts change; never prompts.
   const lookedUp = useRef<{ keyId: string; contacts: unknown } | null>(null);
   const lookupSigner = keyDiscoveryEnabled
     ? (keyId: string) => {
@@ -557,7 +514,6 @@ export function WorkspaceView({
     recheckSigner();
   }, [contacts]);
 
-  // ── palette ────────────────────────────────────────────────────────
   const bridge = use(WorkspaceBridgeContext);
   const commands: WorkspaceCommands = {
     setMode,
@@ -573,7 +529,6 @@ export function WorkspaceView({
     },
     reply: openReply,
     translateOutput: () => {
-      // A translation already made is shown, not remade.
       if (ws.hasTranslation) {
         if (!translation.showing) translation.toggle();
       } else {
@@ -600,11 +555,9 @@ export function WorkspaceView({
     translateEnabled,
     translateTarget: composeTranslation.targetLanguage,
   };
-  // Every commit; the bridge tells the palette only when the snapshot moved.
   useEffect(() => bridge?.publish(snapshot, commands));
   useEffect(() => () => bridge?.publish(null, null), [bridge]);
 
-  // Remedies this view can perform; any other renders message-only.
   const passwordInputRef = useRef<HTMLInputElement>(null);
   const remedyAction = error?.remedy?.action;
   const handleRemedy =
@@ -673,9 +626,7 @@ export function WorkspaceView({
         <WorkspaceResults
           {...resultProps}
           fullHeight
-          // A footer bar, permanent once translation is on, so a status
-          // appearing never resizes the message above it. Built here so
-          // the translation refs stay owned by the wiping workspace.
+          // Built here so the translation refs stay owned by the wiping workspace.
           translationFooter={
             aiTranslateEnabled ? (
               <>
@@ -732,7 +683,6 @@ export function WorkspaceView({
     );
   }
 
-  // A verify verdict reads first, above the box, not under a tall message.
   const resultsOnTop = s.mode === "verify";
   const results = <WorkspaceResults {...resultProps} onRemedy={handleRemedy} />;
 
@@ -762,21 +712,17 @@ export function WorkspaceView({
         privateKeyDetected={s.input.key === "private"}
         onNavigateToKeys={onNavigateToKeys}
         onToolsReady={onToolsReady}
-        // Recipients are the card's To row, as on an envelope.
         cardHeader={
           s.mode === "encrypt" ? (
             <>
               <Block className="rounded-t-xl focus-within:shadow-[inset_0_0_0_1px_rgb(79_193_133/0.35)]">
                 <RecipientPicker
                   inline
-                  // Its Escape layers spent, Escape lands in the message
-                  // (cmdk consumes Escape before it reaches document).
+                  // cmdk consumes Escape before document; hand it to the message box.
                   onEscapeExhausted={focusMessageBox}
-                  // A password rules out age: SSH rows dim with a reason.
                   passwordArmed={ws.passwordReady}
                   label={t("workspace_recipients_label")}
-                  // Sign-only keys verify but cannot be encrypted to; legacy
-                  // records (undefined) are assumed encryptable.
+                  // Sign-only keys can't be encrypted to; legacy (undefined) assumed encryptable.
                   contacts={contacts.filter(
                     (c) => c.usableForEncryption !== false,
                   )}
@@ -789,14 +735,11 @@ export function WorkspaceView({
                   emptyActionLabel={t("workspace_add_a_contact")}
                 />
               </Block>
-              {/* The From line: who signs, and whether they do. */}
               {myKeys.length > 0 && (
                 <Block
                   className="flex min-h-9 items-center gap-2.5 py-1 pr-2.5 pl-3"
                   title={signBlockedReason}
                 >
-                  {/* Off: just the switch. On with several signing keys:
-                      the name IS the picker. Blocked: the reason. */}
                   {!signBlockedReason && !alsoSign ? null : signer &&
                     !signBlockedReason &&
                     signKeyChoices.length > 1 ? (
@@ -910,7 +853,6 @@ export function WorkspaceView({
                 ? t("workspace_sign_with")
                 : t("workspace_decrypt_with")
             }
-            // An age message opens only with an SSH identity: narrowed.
             keys={s.mode === "sign" ? signKeyChoices : decryptKeyChoices}
             selectedKeyId={ws.selectedKeyId}
             detailsContacts={contacts}
@@ -950,8 +892,6 @@ export function WorkspaceView({
             <div className="flex items-center gap-2">
               <OptionBar className="flex flex-1 [&>*]:flex-auto [&>*]:px-2 [&>*]:text-xs">
                 {myKeys.length > 0 && (
-                  // A persisted preference: left pressed even when this
-                  // message can't include the user; the line below says so.
                   <ToggleBadge
                     pressed={encryptToSelf}
                     onPressedChange={setEncryptToSelf}
@@ -959,17 +899,12 @@ export function WorkspaceView({
                     {t("workspace_toggle_encrypt_to_self")}
                   </ToggleBadge>
                 )}
-                {/* ADDITIVE: a password the message can also be opened
-                    with. Pressed means a password IS SET. Dimmed with a
-                    reason for age, never hidden. */}
                 <ToggleBadge
                   pressed={ws.passwordReady}
                   disabledReason={
                     encryptEngine === "ssh" ? sshPasswordReason() : undefined
                   }
                   onPressedChange={(v) => {
-                    // Un-pressing drops the password rather than parking
-                    // it against a message it was never meant for.
                     if (v) {
                       dispatch({ type: "password-dialog", open: true });
                       resetResults();
@@ -980,7 +915,6 @@ export function WorkspaceView({
                 >
                   {t("workspace_toggle_password")}
                 </ToggleBadge>
-                {/* Counted as the encrypt will: a written message goes too. */}
                 {s.files.length +
                   (s.files.length > 0 && s.input.nonBlank ? 1 : 0) >
                   1 && (
@@ -993,7 +927,6 @@ export function WorkspaceView({
                     {t("workspace_toggle_zip_files")}
                   </ToggleBadge>
                 )}
-                {/* Never-cache means no history, ever: no dead switch. */}
                 {!neverCacheKeys && (
                   <ToggleBadge
                     pressed={saveToHistory}
@@ -1027,8 +960,6 @@ export function WorkspaceView({
             <input
               ref={passwordInputRef}
               type="password"
-              // One password row for every question: the placeholder
-              // carries the whole distinction.
               placeholder={
                 prompt.kind === "message"
                   ? t("workspace_enter_message_password")
@@ -1076,8 +1007,7 @@ export function WorkspaceView({
         )}
 
         {s.run.kind === "hidden-chars" && (
-          // Signed as they are only on an explicit "Sign anyway"; "Remove
-          // them" edits the box (undoable).
+          // Hidden chars are signed as-is only on an explicit "Sign anyway".
           <div
             role="alert"
             data-testid="hidden-chars-strip"
@@ -1179,7 +1109,6 @@ export function WorkspaceView({
                         : modeLabel(s.mode)}
                   </Button>
                 )}
-                {/* Verify-done's main button IS Reset. */}
                 {(hasInput || done) &&
                   !(done && s.mode === "verify") &&
                   resetButton(resetAndRefocus)}

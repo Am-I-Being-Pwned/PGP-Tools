@@ -2,8 +2,6 @@ import type { WorkspaceAction } from "~/lib/messages";
 import type { StoredKeyKind } from "~/lib/storage/key-kind";
 import { safeFileName } from "~/lib/utils/file-name";
 
-/** Filesystem-safe slug of a recipient display name, capped so long
- *  corporate names don't swallow the whole filename. */
 function recipientSlug(name: string): string {
   const slug = name
     .toLowerCase()
@@ -29,17 +27,10 @@ function timestampTag(now: Date): string {
 }
 
 /**
- * Default download name for the current operation's output.
- * `fileNames` is the (possibly empty) list of input file names.
- * Encrypt outputs carry a recipient tag and a timestamp so a Downloads
- * folder full of ciphertext stays identifiable
- * ("message.to-alice.2026-07-16-1432.gpg").
- *
- * `engine` names the format the ciphertext is actually in: `.gpg` for
- * OpenPGP, `.age` for age. The extension is not decoration -- it is what
- * tells the user (and every other tool they might open the file with)
- * which program can read it, so an age file must never be handed over
- * named `.gpg`.
+ * Default download name for the output. Encrypt names carry a recipient
+ * tag + timestamp ("message.to-alice.2026-07-16-1432.gpg") -- metadata
+ * leak documented in SECURITY.md. The extension follows `engine`: an age
+ * file must never be named `.gpg`.
  */
 export function outputFileName(
   mode: WorkspaceAction,
@@ -49,7 +40,6 @@ export function outputFileName(
     recipients?: string[];
     now?: Date;
     engine?: StoredKeyKind | null;
-    /** The result is binary (decrypt): name it as such. */
     binary?: boolean;
   },
 ): string {
@@ -66,9 +56,7 @@ export function outputFileName(
       return `${fileNames[0]}.${suffix}.${ext}`;
     return `files.${suffix}.zip.${ext}`;
   }
-  // Pasted text has no name to keep. Never "output.gpg" for a plaintext:
-  // a decrypted file named like ciphertext gets treated, and shared, as
-  // ciphertext.
+  // Never name plaintext like ciphertext: it gets treated, and shared, as such.
   if (fileNames.length === 0) {
     if (mode === "sign") return "signed.asc";
     if (mode === "verify") return "verified.txt";
@@ -77,23 +65,15 @@ export function outputFileName(
   if (fileNames.length === 1 || !zipFiles) {
     const name = fileNames[0];
     if (mode === "sign") return `${name}.asc`;
-    // Strip whichever ciphertext extension the input carried, so
-    // "report.pdf.age" decrypts back to "report.pdf".
     return name.replace(/\.(gpg|pgp|asc|age)$/i, "") || "decrypted";
   }
   return "decrypted-files.zip";
 }
 
 /**
- * Give every output of one batch its own name, in input order.
- *
- * Stripping the ciphertext extension turns "report.txt.gpg" and
- * "report.txt.asc" into the same "report.txt". Left to the browser, the
- * second save becomes "report (1).txt" on disk while the panel (and the
- * file-by-file signer note) still call both "report.txt", so the user
- * cannot tell which copy is whose. Renaming here, deterministically,
- * means the name in the note is the name on disk. Compared ignoring
- * case: the default filesystems on macOS and Windows do.
+ * Deduplicate a batch's output names so the name in the signer note is the
+ * name on disk (the browser's own "(1)" renaming would diverge). Compared
+ * case-insensitively, as macOS/Windows filesystems do.
  */
 export function uniqueOutputNames(names: readonly string[]): string[] {
   const taken = new Set(names.map((n) => n.toLowerCase()));
@@ -103,13 +83,10 @@ export function uniqueOutputNames(names: readonly string[]): string[] {
       used.add(name.toLowerCase());
       return name;
     }
-    // "report (2).txt": the counter goes before the last extension, the
-    // way a file manager would number it. A leading dot is not one.
     const dot = name.lastIndexOf(".");
     const [stem, ext] =
       dot > 0 ? [name.slice(0, dot), name.slice(dot)] : [name, ""];
-    // Skip a number another input already owns outright, so renaming a
-    // duplicate never creates a new clash further down the batch.
+    // Skip names another input owns, so renaming never creates a new clash.
     const free = (n: number) => {
       const key = `${stem} (${n})${ext}`.toLowerCase();
       return !used.has(key) && !taken.has(key);

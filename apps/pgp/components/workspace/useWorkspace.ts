@@ -50,8 +50,7 @@ import {
   type WorkspaceEvent,
 } from "./workspace-state";
 
-/** A drop routed here by the global dropzone; `nonce` re-triggers intake
- *  for the same files/text. */
+/** `nonce` re-triggers intake for the same files/text. */
 export interface WorkspaceIntake {
   files: File[];
   text: string;
@@ -61,19 +60,13 @@ export interface WorkspaceIntake {
 const PUBLIC_KEY_HEADER = "-----BEGIN PGP PUBLIC KEY BLOCK-----";
 
 /**
- * The workspace: one reducer for render state, refs for every copy of
- * plaintext, and the operations wired to both.
- *
- * PLAINTEXT LIVES IN REFS + UNCONTROLLED DOM NODES, never in state or a
- * long-lived closure: React retains hook state and effect closures on
- * `fiber.alternate` past unmount, so a master lock could not release it
- * (SECURITY.md §8.11). Read it with `getInput`/`getOutput` at the point
- * of use. The App pulls the draft at lock time, then calls `wipe()`.
+ * PLAINTEXT LIVES IN REFS + UNCONTROLLED DOM, never state or a long-lived
+ * closure: React keeps those on `fiber.alternate` past unmount (SECURITY.md
+ * §8.11). The App pulls the draft at lock time, then calls `wipe()`.
  */
 export function useWorkspace(opts: {
   pendingAction?: { action: WorkspaceAction; text: string } | null;
   onClearPending?: () => void;
-  /** Encrypted draft from a prior lock, applied once. */
   restoreDraft?: Uint8Array | null;
   onDraftRestored?: () => void;
   onRegisterDraftSource?: (src: WorkspaceDraftSource | null) => void;
@@ -95,8 +88,7 @@ export function useWorkspace(opts: {
   const inputElRef = useRef<HTMLTextAreaElement | null>(null);
   const outputRef = useRef("");
   const outputElRef = useRef<HTMLPreElement | null>(null);
-  // A translation is a second readable copy of the output: held the same
-  // way (T-TRANSLATION-HEAP-RESIDUE); only its length is state.
+  // A second copy of the output, held the same way (T-TRANSLATION-HEAP-RESIDUE).
   const translationRef = useRef("");
   const translationElRef = useRef<HTMLPreElement | null>(null);
   const [translationLen, setTranslationLen] = useState(0);
@@ -107,7 +99,6 @@ export function useWorkspace(opts: {
   } | null>(null);
   // Other plaintext holders (translate-undo original, find-bar mirror).
   const extraWipers = useRef(new Set<() => void>());
-  // "Sign anyway" applies to one exact text: the input version it was for.
   const hiddenConfirmedFor = useRef<number | null>(null);
 
   const getInput = useCallback(() => inputRef.current, []);
@@ -127,10 +118,8 @@ export function useWorkspace(opts: {
     const next = workspaceReducer(prev, event);
     if (next === prev) return;
     stateRef.current = next;
-    // Every mode change (picked, nudged, opened) moves on, as a tab change
-    // does: the last mode's toasts, Undo included, go.
+    // A mode change dismisses the last mode's toasts, Undo included.
     if (next.mode !== prev.mode) toast.dismiss();
-    // The reducer says when text is gone; the refs holding it follow.
     if (next.input.len === 0 && inputRef.current !== "") {
       inputRef.current = "";
       if (inputElRef.current) inputElRef.current.value = "";
@@ -146,8 +135,6 @@ export function useWorkspace(opts: {
   const writeOutput = useCallback(
     (text: string) => {
       outputRef.current = text;
-      // Lone CRs shown as a symbol; the ref keeps the bytes for copy and
-      // download.
       const shown = showLoneCarriageReturns(text);
       const el = outputElRef.current;
       if (el && el.textContent !== shown) el.textContent = shown;
@@ -175,11 +162,9 @@ export function useWorkspace(opts: {
   }, []);
 
   /**
-   * Drop every plaintext copy: input, clear-undo buffer, output,
-   * translation, the registered holders -- and zeroize the result bytes,
-   * which a `setState` cannot release here (it is batched away with the
-   * unmount; T-OUTPUT-HEAP-RESIDUE). MUST STAY SYNCHRONOUS: `doMasterLock`
-   * unmounts right after it.
+   * Drop every plaintext copy and zeroize result bytes (a setState can't:
+   * T-OUTPUT-HEAP-RESIDUE). MUST STAY SYNCHRONOUS: `doMasterLock` unmounts
+   * right after it.
    */
   const wipePlaintext = useCallback(() => {
     for (const fn of extraWipers.current) fn();
@@ -192,17 +177,13 @@ export function useWorkspace(opts: {
     if (translationElRef.current) translationElRef.current.textContent = "";
     const { result } = stateRef.current;
     zeroizeResultBytes(result.binary, result.files);
-    // The message password: a JS string cannot be overwritten, so
-    // dropping the reference is all there is.
+    // A JS string can't be overwritten: dropping the reference is all there is.
     dispatch({ type: "wiped" });
     // Last: V8 keeps the subject of the last regex match.
     forgetLastRegExpMatch();
   }, [dispatch]);
 
-  // ── input ──────────────────────────────────────────────────────────
-
-  /** The box's onChange: every keystroke. Never repairs armor -- that is
-   *  for text that ARRIVES, and would move the caret mid-sentence. */
+  /** Never repairs armor: that would move the caret mid-sentence. */
   const inputChanged = useCallback(
     (text: string) => {
       writeInput(text);
@@ -211,16 +192,14 @@ export function useWorkspace(opts: {
     [writeInput, dispatch],
   );
 
-  /** A paste or text drop: the only path that repairs armor. Detection
-   *  runs on the REPAIRED text, so an escaped private key still trips it. */
+  /** Detection runs on the REPAIRED text, so an escaped private key trips it. */
   const textArrived = useCallback(
     (text: string) => inputChanged(recoverArmorIfNeeded(text)),
     [inputChanged],
   );
 
-  /** Oversized files are refused HERE, before anything reads them: one
-   *  big enough to exhaust wasm memory takes the engine and the unlocked
-   *  keys down with it (`lib/limits.ts`). */
+  /** Oversized files are refused before anything reads them: they can take
+   *  wasm, and the unlocked keys, down (`lib/limits.ts`). */
   const dropFiles = useCallback(
     (dropped: File[]) => {
       const { accepted, rejected } = splitOversizedFiles(dropped);
@@ -254,20 +233,15 @@ export function useWorkspace(opts: {
     });
   }, [writeInput, dispatch]);
 
-  // ── one-shot deliveries from the panel ─────────────────────────────
-
   const { pendingAction, onClearPending, intake, onIntakeConsumed } = opts;
   useEffect(() => {
     if (!pendingAction) return;
     const { action, text } = pendingAction;
-    // A keyboard mode command has no text: switch, keep the workspace.
     if (text) writeInput(text);
     dispatch({
       type: "opened",
       mode: action,
       text: text ? textFacts(text) : undefined,
-      // Opening a message IS the request to read it; encrypt and sign
-      // wait for the user to address and send.
       autoRun:
         text && (action === "decrypt" || action === "verify") ? action : null,
     });
@@ -287,8 +261,6 @@ export function useWorkspace(opts: {
     else if (intake.text.trim()) textArrived(intake.text);
     onIntakeConsumed?.();
   }, [intake, onIntakeConsumed, dropFiles, textArrived]);
-
-  // ── draft ──────────────────────────────────────────────────────────
 
   const { restoreDraft, onDraftRestored, onRegisterDraftSource } = opts;
   const restoredRef = useRef(false);
@@ -332,8 +304,6 @@ export function useWorkspace(opts: {
     return () => onRegisterDraftSource(null);
   }, [onRegisterDraftSource, getDraft, wipePlaintext]);
 
-  // ── derived ────────────────────────────────────────────────────────
-
   const isAge = inputIsAge(state);
   const selectedKeyId = resolveKeyId(
     { mode: state.mode, keyPick: state.keyPick, age: isAge },
@@ -346,8 +316,7 @@ export function useWorkspace(opts: {
     null;
   const canCrxSign = prefs.crxSigningEnabled && crxKeys.length > 0;
 
-  // A decrypt made with a key since deleted no longer stands: the key in
-  // effect moves on, and its result goes with it.
+  // A decrypt made with a since-deleted key no longer stands.
   const lastKeyRef = useRef(selectedKeyId);
   useEffect(() => {
     const last = lastKeyRef.current;
@@ -393,7 +362,6 @@ export function useWorkspace(opts: {
     hiddenCharsConfirmed: false,
   });
 
-  // An extension zip (a single .zip with manifest.json) nudges to Sign.
   const { files } = state;
   useEffect(() => {
     if (files.length !== 1 || !/\.zip$/i.test(files[0].name)) {
@@ -411,9 +379,7 @@ export function useWorkspace(opts: {
     };
   }, [files, canCrxSign, dispatch]);
 
-  // Decrypt: scan how the staged message opens (a password-only message
-  // gets no key picker) and pick the key it is addressed to. A later
-  // manual pick is left alone: this re-runs only when the input changes.
+  // Re-runs only when the input changes, so a later manual pick stands.
   const scanStaged = useEffectEvent(async (run: { cancelled: boolean }) => {
     const c = runContext();
     try {
@@ -447,9 +413,6 @@ export function useWorkspace(opts: {
     myKeys,
   ]);
 
-  // ── runs ───────────────────────────────────────────────────────────
-
-  /** Apply an outcome -- unless the staged input moved since `staged`. */
   const settle = (outcome: Outcome, staged = stateRef.current.staged) => {
     if (
       outcome.kind === "done" &&
@@ -516,7 +479,6 @@ export function useWorkspace(opts: {
         rejected = t("workspace_error_wrong_key_password");
       }
     } catch (e) {
-      // One-row prompt: the curated sentence only, no detail line.
       rejected = presentError(e, t("workspace_error_unlock_failed")).message;
     }
     if (rejected !== null)
@@ -580,7 +542,6 @@ export function useWorkspace(opts: {
     executeCrxSign,
     verifyCrxInput,
     submitPassword,
-    /** "Sign anyway": sign this exact text as it is. */
     signWithHiddenChars: () => {
       hiddenConfirmedFor.current = state.input.version;
       void execute();

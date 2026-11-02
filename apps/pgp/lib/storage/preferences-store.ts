@@ -10,10 +10,8 @@ import {
 } from "./preferences";
 
 /**
- * The panel's single in-memory copy of the preferences, read via
- * `usePreferences` and changed only via {@link update}. Adds no policy over
- * `getPreferences`/`savePreferences`. Writes are optimistic; a failed save
- * re-reads storage so the UI never shows a value the next unlock won't. A
+ * The panel's single in-memory copy of the preferences. A failed save
+ * re-reads storage so the UI never shows a value the next unlock won't; a
  * read that started before a write is dropped.
  */
 
@@ -22,11 +20,9 @@ type Listener = () => void;
 let snapshot: PgpPreferences = DEFAULT_PREFERENCES;
 const listeners = new Set<Listener>();
 
-/** Bumped by every write; a read that saw a different value is stale. */
 let writeEpoch = 0;
 let writesInFlight = 0;
-/** A read was dropped for a write; re-read once writes settle, or its
- *  change (e.g. the unlock-time read) would never land. */
+/** Re-read once writes settle, or a dropped read (e.g. at unlock) never lands. */
 let reloadDropped = false;
 
 function commit(next: PgpPreferences): void {
@@ -49,7 +45,6 @@ function samePreferences(a: PgpPreferences, b: PgpPreferences): boolean {
   });
 }
 
-// One listener for the panel, held only while subscribed.
 function onStorageChanged(
   changes: Record<string, chrome.storage.StorageChange>,
   area: chrome.storage.AreaName,
@@ -61,7 +56,7 @@ function onStorageChanged(
   void reload();
 }
 
-/** The current snapshot. Stable identity until a value actually changes. */
+/** Stable identity until a value actually changes. */
 function get(): PgpPreferences {
   return snapshot;
 }
@@ -80,18 +75,15 @@ function subscribe(listener: Listener): () => void {
 }
 
 /**
- * Read storage into the snapshot. Without a session only bootstrap fields
- * are taken (settings read as defaults while locked and must not replace
- * what's held). A failed read puts the strictest preset in the snapshot,
- * never the defaults, and returns null.
+ * Without a session only bootstrap fields are taken (locked reads are
+ * defaults). A failed read yields the strictest preset, never the defaults.
  */
 async function reload(): Promise<PgpPreferences | null> {
   const epoch = writeEpoch;
   let read: PgpPreferences | null;
   let next: PgpPreferences;
   try {
-    // Session checked on both sides: a lock mid-read would let defaults
-    // through as the real settings.
+    // Checked on both sides: a lock mid-read would pass defaults as real.
     const before = await hasContactsSession();
     read = await getPreferences();
     const settingsReadable = before && (await hasContactsSession());
@@ -115,13 +107,10 @@ async function reload(): Promise<PgpPreferences | null> {
 }
 
 export interface UpdateOptions {
-  /** Move the snapshot only once the save has landed (for changes the next
-   *  unlock acts on). Default: move first. */
+  /** False for changes the next unlock acts on: commit only once saved. */
   optimistic?: boolean;
 }
 
-/** Save a change and show it. Rejects if the save does, after reading
- *  storage back into the snapshot. */
 async function update(
   patch: Partial<PgpPreferences>,
   { optimistic = true }: UpdateOptions = {},
@@ -150,7 +139,6 @@ async function update(
 
 export const preferencesStore = { get, subscribe, reload, update };
 
-/** Test-only: drop the snapshot and any listeners. */
 export function resetPreferencesStoreForTests(): void {
   snapshot = DEFAULT_PREFERENCES;
   writeEpoch = 0;

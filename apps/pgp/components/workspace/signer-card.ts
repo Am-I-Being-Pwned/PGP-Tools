@@ -4,23 +4,17 @@ import type { PublicContactKey } from "~/lib/storage/contacts";
 import type { ProtectedKeyBlob } from "~/lib/storage/keyring";
 
 /**
- * Everything the signer card shows, worked out once.
- *
- * Kept apart from the card itself so the panel and Reply's reader tab
- * render the SAME verdict: the tab is handed this state (see
- * `lib/reader-protocol`) instead of a bare contact, so it cannot drop the
- * clash pill, the "not marked verified by you" or "may have been
- * forwarded" note, the signing date or a lookalike / SHA-1 warning.
+ * Everything the signer card shows, computed once so the panel and Reply's
+ * reader tab render the SAME verdict (the tab gets this, not a bare contact,
+ * so it cannot drop the clash pill, notes or warnings).
  */
 export interface SignerCardState {
   contact: PublicContactKey;
   tone: "success" | "warning";
-  /** The band's label: "Signature verified", or its caveat. */
   label: string;
   note?: string;
-  /** Another contact (or the user) shares this signer's name or address. */
   clash?: IdentityConflict;
-  /** Signed, but by a key we do not hold: no clash, no key details. */
+  /** Signed by a key we do not hold. */
   unverified: boolean;
 }
 
@@ -39,7 +33,6 @@ export function signerCardState({
   note?: string | null;
   caveat?: string | null;
   statusText?: string;
-  /** Added after `note` (the translation's "covers the original"). */
   extraNote?: string | null;
   contacts: PublicContactKey[];
   myKeys: ProtectedKeyBlob[];
@@ -55,8 +48,6 @@ export function signerCardState({
     note: unverified
       ? statusText
       : [note, extraNote].filter(Boolean).join(" · ") || undefined,
-    // Signed by a contact who shares a name or address with another:
-    // the same pill as on the card, so the two read apart here too.
     clash:
       "armoredPublicKey" in signer && !unverified
         ? contactClash(signer.keyId, contacts, myKeys)
@@ -64,11 +55,7 @@ export function signerCardState({
   };
 }
 
-/**
- * The card state with only what it DISPLAYS, for the reader tab: no
- * public key (neither the top-level one nor any per-key `recipients`),
- * and each clash holder cut down to the name and key id its pill reads.
- */
+/** For the reader tab: only what is DISPLAYED -- no public key, clash holders cut to name + key id. */
 export function displayOnlySignerCard(state: SignerCardState): SignerCardState {
   const c = state.contact;
   const contact: PublicContactKey = {
@@ -88,7 +75,6 @@ export function displayOnlySignerCard(state: SignerCardState): SignerCardState {
     addedAt: 0,
     lastUsedAt: 0,
   };
-  // Absent stays absent, as on a stored record.
   for (const k of Object.keys(contact) as (keyof PublicContactKey)[]) {
     if (contact[k] === undefined) delete contact[k];
   }
@@ -107,8 +93,6 @@ export function displayOnlySignerCard(state: SignerCardState): SignerCardState {
   };
 }
 
-/** A signer as the contact record `ContactCard` renders: a contact as
- *  is, an own key reshaped. */
 export function signerAsContact(
   signer: PublicContactKey | ProtectedKeyBlob,
 ): PublicContactKey {

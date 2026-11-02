@@ -30,8 +30,7 @@ export function useVaultServices(
     () => masterPasskeyOf(masterProtection),
     [masterProtection],
   );
-  // "Unlock keys with the vault": a per-key passkey unlock re-seals the
-  // key under the master salt off its own ceremony.
+  // A per-key passkey unlock re-seals the key under the master salt.
   const masterReseal = useMemo(
     () =>
       unlockKeysOnOpen && masterPasskey
@@ -46,8 +45,6 @@ export function useVaultServices(
     masterReseal,
   });
 
-  // New keys share the master SALT only while that option is on: that is
-  // what lets the vault ceremony open them.
   const masterSealSalt = useMemo(
     () =>
       unlockKeysOnOpen && masterPasskey
@@ -60,8 +57,7 @@ export function useVaultServices(
     void savePreference({ defaultKeyId: keyId });
   }, []);
 
-  // The first key becomes the explicit default, so adding a second one
-  // later never silently changes which key "encrypt to me" targets.
+  // Explicit default, so a second key never silently retargets "encrypt to me".
   const addOwnKey = useCallback(
     async (blob: ProtectedKeyBlob) => {
       const isFirstKey = keyringList.get().items.length === 0;

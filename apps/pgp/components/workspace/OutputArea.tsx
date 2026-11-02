@@ -8,43 +8,25 @@ import { formatFileSize } from "~/lib/utils/formatting";
 import { showLoneCarriageReturns } from "~/lib/utils/line-breaks";
 
 interface OutputAreaProps {
-  /** The result `<pre>`. It is UNCONTROLLED: the plaintext is written to
-   *  `textContent` by the owning hook, never rendered as a React child,
-   *  so it stays out of render state (`useWorkspace`, SECURITY.md §8.11). */
+  /** UNCONTROLLED: plaintext is written to `textContent` by the owning hook,
+   *  never rendered as a React child (`useWorkspace`, SECURITY.md §8.11). */
   outputElRef: React.MutableRefObject<HTMLPreElement | null>;
-  /** Read the result text at the point of use. */
   getOutput: () => string;
-  /** Derived, non-sensitive: there is a textual result. */
   hasOutput: boolean;
   binaryOutput?: Uint8Array;
   fileResults?: FileResult[];
   fileName?: string;
-  /** The operation completed. Kept for callers; the full-height box no
-   *  longer tints its border on it (the status band carries the outcome). */
   success?: boolean;
   statusText?: string;
-  /** Fill the available height instead of the compact fixed-height output. */
   fullHeight?: boolean;
-  /** Show the translation in place of the message. The two are never on
-   *  screen together: a translation is meant to be read as the message,
-   *  and stacking them halves the space each gets in a side panel. */
+  /** Replaces the message rather than stacking under it. */
   showTranslation?: boolean;
-  /** The translation's node + reader. Held exactly like the output --
-   *  ref plus imperative `textContent`, never a React child -- because
-   *  it is a second copy of the same plaintext. */
+  /** Same ref + imperative `textContent` contract as the output: it is a
+   *  second copy of the same plaintext. */
   translationElRef?: React.MutableRefObject<HTMLPreElement | null>;
   getTranslation?: () => string;
-  /** Contents of a footer bar attached to the bottom of the text box
-   *  (full-height path only). The bar is part of the box's chrome, so
-   *  whatever it holds can appear and clear without ever resizing the
-   *  text above it. Omit it entirely and the box renders as before. */
   footer?: React.ReactNode;
-  /** A control pinned to the box's top-right corner (Reply). Floats like
-   *  the footer, and the text is inset on the right to clear it. */
   corner?: React.ReactNode;
-  /** A block for the top of the result card (full-height path only):
-   *  the signature's status band, so the outcome sits on the card it is
-   *  about rather than in a box of its own above it. */
   header?: React.ReactNode;
 }
 
@@ -64,24 +46,16 @@ export function OutputArea({
   corner,
   header,
 }: OutputAreaProps) {
-  // Callback ref: publish the node to the owning hook and seed its text
-  // from the ref on every (re)mount. The node genuinely unmounts (the
-  // compact encrypt/sign path renders no `<pre>` at all, and Back tears
-  // the full-height view down), and an imperatively-written node comes
-  // back empty -- re-seeding is what makes the result survive those
-  // swaps, exactly as `WorkspaceInput`'s `attachInput` does for the box.
+  // Re-seed on every (re)mount: the node really unmounts, and an
+  // imperatively-written node comes back empty.
   const attachOutput = useCallback(
     (el: HTMLPreElement | null) => {
       outputElRef.current = el;
-      // Drawn with lone CRs visible; the text itself stays exact.
       if (el) el.textContent = showLoneCarriageReturns(getOutput());
     },
     [outputElRef, getOutput],
   );
 
-  // Same contract for the translation's node. It genuinely unmounts on
-  // every toggle, so the re-seed is what makes the text survive flipping
-  // back and forth rather than coming back blank.
   const attachTranslation = useCallback(
     (el: HTMLPreElement | null) => {
       if (translationElRef) translationElRef.current = el;
@@ -106,9 +80,7 @@ export function OutputArea({
     }
   };
 
-  // Compact path (encrypt/sign): nobody reads armored ciphertext, so it is
-  // never displayed - a one-line success note is the only feedback, and the
-  // panel's bottom Copy/Download buttons are the interface to the output.
+  // Compact path (encrypt/sign): armored ciphertext is never displayed.
   if (!fullHeight) {
     return (
       <div className="space-y-2">
@@ -125,11 +97,6 @@ export function OutputArea({
     );
   }
 
-  // Full-height path (decrypt, verify): the text is meant to be read, so give it
-  // the whole panel. Download/Copy live in the panel's bottom action bar, to
-  // match the encrypt/sign flow. One card: the outcome (the signer's band,
-  // or the status line as a band of its own) on top, the message under it.
-  // `success` no longer draws a green border -- the band says it.
   const cornerInset = corner ? "pr-14" : "";
 
   return (
@@ -143,9 +110,8 @@ export function OutputArea({
             </Block>
           )}
           <Block className="relative min-h-0 flex-1">
-            {/* No React children on purpose: the attach callbacks write the
-                text imperatively so the plaintext never enters the element
-                tree. Exactly one of the two is mounted at a time. */}
+            {/* No React children on purpose: plaintext never enters the
+                element tree. */}
             {showTranslation ? (
               <pre
                 key="translation"
@@ -162,13 +128,6 @@ export function OutputArea({
                 className={`h-full overflow-auto p-3 pb-11 font-mono text-xs break-all whitespace-pre-wrap focus:outline-none ${cornerInset}`}
               />
             )}
-            {/* Floats over the bottom of the box rather than sitting in a
-                bar of its own: a permanent bar is chrome for a control
-                most messages never need, and anything in normal flow here
-                resizes the text every time a status appears. The `pb-11`
-                above keeps the last line of the message clear of it.
-                `pointer-events-none` so the strip does not eat selection
-                drags; the button re-enables them for itself. */}
             {corner && (
               <div className="pointer-events-none absolute top-2 right-2 flex items-center gap-2">
                 {corner}

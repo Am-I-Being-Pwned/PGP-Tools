@@ -1,15 +1,13 @@
 /**
- * Live views of the sealed list stores for React. Every
- * `saveEncryptedArray` announces here, so writes reach every screen.
- * Same-panel only: other windows' writes are picked up on explicit refresh
- * (reading mid-way through a chunked write could report it unreadable).
+ * Live views of the sealed list stores. Same-panel only: other windows'
+ * writes are picked up on explicit refresh (reading mid-way through a
+ * chunked write could report it unreadable).
  */
 
 type Listener = () => void;
 
 const changeListeners = new Map<string, Set<Listener>>();
 
-/** Announce that the sealed store at `storageKey` was written. */
 export function notifyStoreChanged(storageKey: string): void {
   for (const l of changeListeners.get(storageKey) ?? []) l();
 }
@@ -23,17 +21,14 @@ function onStoreChanged(storageKey: string, listener: Listener): () => void {
 
 export interface ListState<T> {
   items: T[];
-  /** True until the first read lands. */
   loading: boolean;
-  /** The store exists but would not open -- NOT the same as empty: an
-   *  unreadable keyring must never be shown as "you have no keys". */
+  /** NOT the same as empty: an unreadable keyring must never show as "no keys". */
   error: Error | null;
 }
 
 export interface LiveList<T> {
   get: () => ListState<T>;
   subscribe: (listener: Listener) => () => void;
-  /** Read the store now. Resolves once this read (or a newer one) is in. */
   refresh: () => Promise<void>;
 }
 
@@ -68,13 +63,10 @@ export function createLiveList<T>(
     if (gen !== generation) return;
     loaded = true;
     stale = false;
-    // Keep array identity when nothing changed, so list-keyed effects don't
-    // re-run.
     if (!state.loading && sameState(state, next)) return;
     set(next);
   }
 
-  // Unwatched lists only remember that they are behind.
   onStoreChanged(storageKey, () => {
     if (listeners.size > 0) void refresh();
     else stale = true;

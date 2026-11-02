@@ -96,9 +96,7 @@ describe("outputFileName", () => {
       }),
     ).toBe(`a.txt.to-alice.${TS}.gpg`);
   });
-  // The extension is what tells the user (and every other tool) which
-  // program can read the file, so it follows the ENGINE that produced
-  // it, not the mode.
+  // The extension follows the ENGINE, not the mode.
   it("names age ciphertext .age, not .gpg", () => {
     expect(
       outputFileName("encrypt", [], false, {
@@ -124,8 +122,7 @@ describe("outputFileName", () => {
         engine: "pgp",
       }),
     ).toBe(`message.to-alice.${TS}.gpg`);
-    // No engine passed: every existing caller predates the age engine
-    // and must keep producing exactly what it did before.
+    // No engine passed: defaults to .gpg.
     expect(
       outputFileName("encrypt", [], false, { ...AT, recipients: ["Alice"] }),
     ).toBe(`message.to-alice.${TS}.gpg`);

@@ -48,7 +48,6 @@ const OP_NAME: Record<HistoryOp, MessageKey> = {
   verify: "common_verify",
 };
 
-/** "Encrypt", or "Encrypt + sign" for a signed encrypt. */
 function opLabel(entry: HistoryEntry): string {
   const op = t(OP_NAME[entry.op]);
   return entry.signed && entry.op === "encrypt"
@@ -56,15 +55,11 @@ function opLabel(entry: HistoryEntry): string {
     : op;
 }
 
-/** The search well (design language): recessed, no drawn border. */
 const FIELD_CLASS =
   "surface-field placeholder:text-muted-foreground focus-visible:ring-ring h-9 w-full rounded-lg px-3 text-sm focus-visible:ring-2 focus:outline-none";
 
-/** How many recipient faces a row shows before the names carry the rest. */
 const MAX_AVATARS = 4;
 
-/** The recipients' faces, overlapped like a stack of chips. Decorative:
- *  the names are in the title text next to them. */
 function RecipientAvatars({
   recipients,
 }: {
@@ -75,8 +70,7 @@ function RecipientAvatars({
     <span className="flex shrink-0 -space-x-1">
       {recipients.slice(0, MAX_AVATARS).map((r, i) => (
         <KeyAvatar
-          // Index keys: the same key can legally appear twice and the
-          // list never reorders.
+          // Index keys: the same key can appear twice; the list never reorders.
           key={i}
           fingerprint={r.fingerprint}
           size={16}
@@ -103,12 +97,8 @@ function entryTitle(entry: HistoryEntry): string {
   return t(OP_NAME[entry.op]);
 }
 
-/** Shared styling for highlighted match text; primary-tinted so it
- *  reads on both the light and pure-black dark themes. */
 const MARK_CLASS = "bg-primary/25 text-foreground rounded-sm px-0.5";
 
-/** Text with every case-insensitive occurrence of `query` wrapped in a
- *  styled <mark>. Falls back to plain text when the query is empty. */
 function Highlighted({ text, query }: { text: string; query: string }) {
   return splitHighlight(text, query).map((seg, i) =>
     seg.match ? (
@@ -121,10 +111,7 @@ function Highlighted({ text, query }: { text: string; query: string }) {
   );
 }
 
-/** The first highlight inside expanded content: scrolls itself into
- *  view on mount so the evidence for the search hit is visible without
- *  manual scrolling through a long armored block. Keyed on the query by
- *  the caller so a query change re-scrolls. */
+/** Scrolls itself into view on mount; the caller keys it on the query. */
 function FirstMark({ children }: { children: React.ReactNode }) {
   const ref = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -137,8 +124,6 @@ function FirstMark({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Expanded-content body with all matches highlighted; the first match
- *  auto-scrolls into view within the <pre>. */
 function HighlightedContent({ text, query }: { text: string; query: string }) {
   let seenFirst = false;
   return splitHighlight(text, query).map((seg, i) => {
@@ -155,8 +140,6 @@ function HighlightedContent({ text, query }: { text: string; query: string }) {
   });
 }
 
-/** Full view of one history entry: metadata block, complete content
- *  (search-highlighted, first match scrolled into view), and Copy. */
 function HistoryEntryPage({
   entry,
   search,
@@ -170,7 +153,6 @@ function HistoryEntryPage({
   const { copy } = useCopyToClipboard();
   const handleCopy = async () => {
     if (!entry.content) return;
-    // No label: the button's own 2s check is the success feedback.
     if (!(await copy(entry.content))) return;
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -183,9 +165,8 @@ function HistoryEntryPage({
       onClose={onClose}
       bodyClassName="flex h-full flex-col gap-3 p-3"
     >
-      {/* One card: the metadata block on top, the content block filling
-          the rest. Only stretched when there is content to fill it, so a
-          metadata-only stack keeps its rounded bottom corners. */}
+      {/* Only stretched when there is content, so a metadata-only stack keeps
+          its rounded bottom corners. */}
       <BlockStack
         className={entry.content !== undefined ? "min-h-0 flex-1" : undefined}
       >
@@ -222,8 +203,6 @@ function HistoryEntryPage({
           )}
           {entry.files && entry.files.length > 0 && (
             <ul>
-              {/* Index keys: duplicate filenames are legal and the list
-                  never reorders. */}
               {entry.files.map((f, i) => (
                 <li key={i} className="truncate">
                   {t("actions_history_file_with_size", {
@@ -269,11 +248,9 @@ function HistoryEntryPage({
 }
 
 /**
- * Encrypted-history browser. Decrypted entries live ONLY in this
- * component's state: the page is mounted inside the masterUnlocked-gated
- * tree in App.tsx (under WorkspaceView), so a master lock unmounts it and
- * the plaintext leaves with the component -- nothing module-level holds
- * decrypted history (see lib/storage/history.ts).
+ * Decrypted entries live ONLY in this component's state, inside the
+ * masterUnlocked-gated tree in App.tsx: a master lock unmounts it and the
+ * plaintext leaves with it. Nothing module-level holds decrypted history.
  */
 export function HistoryPage({
   enabled,
@@ -292,10 +269,8 @@ export function HistoryPage({
   );
   const searchRef = useRef<HTMLInputElement>(null);
 
-  // Closing the entry preview hands focus to the search input (a frame
-  // later, so it wins over the focus trap's return-focus to the clicked
-  // row). This chains the Escape layers: Esc closes the preview, Esc
-  // clears the query, Esc closes history.
+  // A frame later, so it beats the focus trap's return-focus. Chains Escape:
+  // preview, then query, then history.
   const closeDetail = () => {
     setDetailEntry(null);
     setTimeout(() => searchRef.current?.focus(), 0);
@@ -321,7 +296,6 @@ export function HistoryPage({
       <SubPage
         title={t("actions_history")}
         onClose={onClose}
-        // Flex column: search pinned top, list scrolls, usage pinned bottom.
         bodyClassName="flex h-full flex-col p-3"
         headerActions={
           entries.length > 0 ? (
@@ -347,10 +321,7 @@ export function HistoryPage({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => {
-              // Escape clears a non-empty query ONLY -- stop it here so
-              // the surrounding slide-over (document-level listener)
-              // doesn't also close; a second Escape on the now-empty
-              // box falls through and closes the page.
+              // Stop it so the slide-over doesn't also close; a second Escape does.
               if (e.key === "Escape" && search !== "") {
                 e.preventDefault();
                 e.stopPropagation();
@@ -381,15 +352,10 @@ export function HistoryPage({
           <BlockStack>
             {filtered.map((entry) => {
               const Icon = OP_ICON[entry.op];
-              // Show WHY a row matched: a content hit renders a snippet
-              // under the header. Recipient/file-name hits are already
-              // visible, highlighted, in the title.
               const snippet =
                 search && entry.content !== undefined
                   ? buildSnippet(entry.content, search)
                   : undefined;
-              // decrypt/verify rows never store content (see history.ts);
-              // mark them at a glance so users don't open expecting text.
               const metadataOnly =
                 entry.content === undefined &&
                 (!entry.files || entry.files.length === 0);
@@ -403,9 +369,6 @@ export function HistoryPage({
                   })}
                   className="bg-card hover:bg-accent focus-visible:ring-ring/60 flex w-full items-start gap-3 rounded-[3px] px-3 py-2.5 text-left transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset"
                 >
-                  {/* The operation's icon on a raised tile. Neutral for
-                      every op: a history row records that something was
-                      done, not whether it came out well. */}
                   <span className="bg-secondary text-muted-foreground flex size-7 shrink-0 items-center justify-center rounded-[7px] shadow-[inset_0_1px_0_rgb(255_255_255/0.07)]">
                     <Icon className="size-3.5" />
                   </span>
@@ -432,10 +395,6 @@ export function HistoryPage({
                     <span className="text-muted-foreground block text-xs whitespace-nowrap capitalize">
                       {opLabel(entry)}
                     </span>
-                    {/* Content is the point of history: preview it by
-                        default rather than hiding everything behind a
-                        click. The search snippet replaces this while a
-                        query is active. */}
                     {!search && entry.content !== undefined && (
                       <span className="text-muted-foreground mt-1 line-clamp-2 block text-xs">
                         {entry.content

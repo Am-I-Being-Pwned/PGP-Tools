@@ -9,9 +9,6 @@ export interface DropPayload {
   text: string;
 }
 
-/** `sampleText` is the dragged text plus a bounded prefix of each file.
- *  `hasBinaryKeyFile` flags a raw (non-armored) key export, which has no
- *  header to sample. */
 export interface DropSample {
   files: File[];
   text: string;
@@ -36,14 +33,11 @@ export function looksLikePrivateKey(text: string): boolean {
   return PRIVATE_KEY_HEADER_RE.test(text);
 }
 
-/** SSH public key line (`.pub`, `authorized_keys`) of ANY algorithm: the
- *  engine decides validity, layers above only forward. Can't steal an
- *  armored block (its base64 body has no spaces). */
+/** SSH public key line of ANY algorithm; the engine decides validity. */
 export function looksLikeSshPublicKey(text: string): boolean {
   return splitSshPublicKeyCandidateLines(text).length > 0;
 }
 
-/** An importable key of either engine, either half. */
 export function looksLikeKey(text: string): boolean {
   // A signed/encrypted message is a message even if its text quotes a key.
   const start = text.trimStart();
@@ -60,13 +54,11 @@ export function looksLikeKey(text: string): boolean {
   );
 }
 
-// Memory bounds: classify from a prefix, cap files sampled, and never slurp
-// a "key" file larger than MAX_KEY_FILE_BYTES.
+// Memory bounds on classification and key-file reads.
 const SAMPLE_BYTES = 64 * 1024;
 const MAX_SAMPLE_FILES = 50;
 const MAX_KEY_FILE_BYTES = 1024 * 1024;
 
-/** Bounded prefix of each file plus the dragged text, for classification only. */
 export async function buildDropSample(
   payload: DropPayload,
 ): Promise<DropSample> {
@@ -90,8 +82,7 @@ export async function buildDropSample(
   };
 }
 
-/** Key-import route: read and join all files (binary keys armored);
- *  oversized files are skipped. */
+/** Oversized files are skipped; binary keys come back armored. */
 export async function readAllFilesText(files: File[]): Promise<string> {
   const texts = await Promise.all(
     files.map((f) =>
@@ -110,8 +101,6 @@ export function resolveDropRule(
   return rules.find((r) => r.match(sample)) ?? null;
 }
 
-/** The side panel's rules: keys go to import, everything else to the
- *  workspace. */
 export function panelDropRules(to: {
   importKey: (armored: string) => void;
   workspace: (payload: DropPayload) => void;
@@ -119,8 +108,6 @@ export function panelDropRules(to: {
   return [
     {
       id: "keys",
-      // Armored keys show in the text sample; raw binary exports are
-      // flagged from the bytes and armored by readAllFilesText.
       match: (s) => looksLikeKey(s.sampleText) || s.hasBinaryKeyFile,
       run: async ({ files, text }) => {
         // A benign text/plain riding along must not shadow a key file.

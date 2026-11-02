@@ -14,40 +14,22 @@ interface DropZoneProps {
   activeFiles: File[];
   onRemoveFile: (index: number) => void;
   onClearFiles: () => void;
-  /** False once the message box has text. The zone then takes no drops
-   *  and offers neither Browse nor the file list -- exactly what it did
-   *  when it was a separate box swapped out for "Clear text". */
+  /** False once the message box has text: no drops, no Browse, no file list. */
   enabled: boolean;
-  /** Whether a dropped run of TEXT may fill the box. Off once the box has
-   *  text (encrypting, files can still be added then): a text drop
-   *  replaces the message, and over a written one that is a clobber. */
+  /** Off once the box has text: a text drop would clobber the written message. */
   acceptTextDrop?: boolean;
-  /** The message block(s), stacked above the file list and the strip. */
   children?: React.ReactNode;
-  /** The right end of the bottom strip (the "Clear text" button). */
   trailing?: React.ReactNode;
-  /** The left end of the strip (the compose tools). With it, Browse
-   *  shrinks to a paperclip beside it and the drop hint is dropped --
-   *  the strip is a toolbar, not a caption. */
   leading?: React.ReactNode;
-  /** The card's top block(s) -- the To and From rows, each a `Block`
-   *  the caller supplies. Not part of the drop target: a drop aimed at
-   *  the recipient box is not a message. It comes first in the DOM as
-   *  on screen, so Tab walks the card top to bottom. */
+  /** To/From rows. Not a drop target: a drop on the recipient box is not a message. */
   header?: React.ReactNode;
   className?: string;
 }
 
 /**
- * The message card, which is also the drop target. It used to be a
- * dashed box above the message; now the card itself takes the drop, the
- * staged files sit in a block of their own above the bottom strip, and
- * Browse lives in that strip.
- *
- * A drop that lands ON the textarea is left to the browser, as it always
- * was: native insertion knows where the caret landed and how to undo.
- * (File drags never get here at all -- the app-wide overlay in
- * GlobalDropZone covers the panel while one is in progress.)
+ * The message card, which is also the drop target. Drops ON the textarea
+ * are left to the browser (native caret placement + undo); file drags are
+ * caught earlier by GlobalDropZone's overlay.
  */
 export function DropZone({
   onTextDrop,
@@ -73,8 +55,7 @@ export function DropZone({
   }, []);
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
-    // The card has children now; crossing from one to the next is not
-    // leaving it, and dropping the highlight there makes it flicker.
+    // Crossing between children is not leaving (avoids highlight flicker).
     if (
       e.relatedTarget instanceof Node &&
       e.currentTarget.contains(e.relatedTarget)
@@ -106,21 +87,17 @@ export function DropZone({
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const selected = e.target.files;
       if (selected && selected.length > 0) onFileDrop(Array.from(selected));
-      // Reset so the same file can be selected again
       e.target.value = "";
     },
     [onFileDrop],
   );
 
   const showFiles = enabled && activeFiles.length > 0;
-  // Beside a message the file list is a fixed-height strip; alone it
-  // fills the card as it always has.
   const filesBeside = children !== undefined && children !== false;
 
   return (
     <BlockStack
-      // The workspace's message card: where a clear puts focus back (see
-      // `focusFlowStart` in WorkspaceView).
+      // Focus target after a clear (`focusFlowStart` in WorkspaceView).
       data-workspace-card=""
       onDragOver={enabled ? handleDragOver : undefined}
       onDragLeave={enabled ? handleDragLeave : undefined}
@@ -140,9 +117,7 @@ export function DropZone({
 
       {showFiles && (
         <Block
-          // Toasts rise from the top of the card's bottom edge: these
-          // files when they sit under the message, else the strip below.
-          // (See ToastHost; the first anchor in the page wins.)
+          // First anchor in the page wins (see ToastHost).
           data-toast-anchor={filesBeside ? "" : undefined}
           className={cn(
             "min-h-0 space-y-0.5 overflow-y-auto p-1.5",
@@ -240,7 +215,6 @@ export function DropZone({
   );
 }
 
-/** Inside the card's header block, which takes no drops of its own. */
 function inHeader(target: EventTarget): boolean {
   return (
     target instanceof Element && target.closest("[data-drop-pass]") !== null

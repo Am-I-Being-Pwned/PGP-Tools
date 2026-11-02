@@ -3,20 +3,16 @@ import { formatDate } from "~/lib/i18n/format";
 import type { SignatureDetails, SignatureStatus } from "~/lib/pgp/types";
 import { displayFileName } from "~/lib/utils/file-name";
 
-/** The signature half of a verify or decrypt result. */
 export type SignedResult = SignatureDetails & {
   signatureStatus: SignatureStatus;
   signerKeyId: string | null;
 };
 
-/** Names a signer by key id: their display name, else the key id. */
 export type SignerName = (keyId: string) => string;
 
 /**
- * What the signer card says beyond "verified": when the signature claims
- * it was made (the signer chooses that, so it is shown, not trusted),
- * whether the key has been retired since, and every other signature on
- * the message -- none of which may be silently dropped.
+ * The signed-at time is signer-chosen: shown, not trusted. Every other
+ * signature on the message must be listed, never silently dropped.
  */
 export function signatureNote(
   r: SignatureDetails,
@@ -49,10 +45,8 @@ export function signatureNote(
 }
 
 /**
- * The signature names who it was FOR, and none of them is one of the
- * user's keys. Opening a message with a key, Sequoia enforces the list
- * itself; a password decrypt or a verify has no "us" to check against,
- * so a message Alice signed for Bob, re-wrapped and passed on, would
+ * Signed FOR others only. A key decrypt has Sequoia enforce this; a
+ * password decrypt or verify has no "us", so a forwarded message would
  * otherwise read as addressed to whoever opens it.
  */
 export function signedForOthers(
@@ -65,13 +59,8 @@ export function signedForOthers(
 }
 
 /**
- * A good signature that came out of an encrypted message but names no
- * intended recipients at all. Encrypted to us and signed by Alice is not
- * "Alice wrote this to us": anyone can encrypt to us a message she
- * signed for someone else, or for the world (surreptitious forwarding),
- * and without the Intended Recipient subpacket nothing tells the two
- * apart. Many senders don't write it, so this earns a note, not amber.
- * (A list that names others is `signedForOthers`; one naming us is fine.)
+ * Encrypted to us but naming no intended recipients: possibly surreptitious
+ * forwarding. Many senders omit the subpacket, so a note, not amber.
  */
 export function notAddressed(
   r: SignatureDetails,
@@ -81,18 +70,12 @@ export function notAddressed(
 }
 
 export type BatchSummary =
-  /** Nothing in the batch is signed: no card at all. */
   | { kind: "unsigned" }
-  /** Every file good, every one by the same key: that signer's card. */
   | { kind: "same"; result: SignedResult }
-  /** Anything else: an amber card saying, file by file, who signed what. */
   | { kind: "mixed"; files: { name: string; result: SignedResult }[] };
 
-/**
- * One verdict for a batch of files, which must never be the verdict of
- * just one of them: the card used to show whichever file set it last, so
- * one genuinely signed file vouched for an unsigned one beside it.
- */
+/** One verdict for the batch, never one file's: a signed file must not
+ *  vouch for an unsigned one beside it. */
 export function summariseBatch(
   batch: { name: string; result: SignedResult }[],
   myFingerprints: readonly string[] = [],
@@ -111,9 +94,7 @@ export function summariseBatch(
     kind: "same",
     result: {
       ...first,
-      // Amber if ANY file was signed with the key after it was retired.
       signerKeyCurrent: batch.every((b) => b.result.signerKeyCurrent),
-      // Each file has its own date; one date would describe one file.
       signedAt: batch.length === 1 ? first.signedAt : null,
       otherSignerKeyIds: [
         ...new Set(batch.flatMap((b) => b.result.otherSignerKeyIds)),
@@ -121,9 +102,8 @@ export function summariseBatch(
       unverifiedSignatures: Math.max(
         ...batch.map((b) => b.result.unverifiedSignatures),
       ),
-      // Judged per file: a union of the lists would let one file signed
-      // for {you, Bob} vouch for another signed for Bob alone. If any
-      // file was signed for others, the batch says so.
+      // Per file: a union would let a file signed for {you, Bob} vouch for one
+      // signed for Bob alone.
       intendedRecipients:
         batch.find((b) => signedForOthers(b.result, myFingerprints))?.result
           .intendedRecipients ?? [],
@@ -132,12 +112,8 @@ export function summariseBatch(
 }
 
 /**
- * The mixed card's note: each file and what signed it, one per line.
- *
- * The names are attacker-chosen, so each is cleaned (no bidi overrides,
- * invisible or control characters), shortened from the middle, and
- * quoted: a file named "payroll.asc: Rachel · notes.asc" must read as
- * one name on its own line, not as a verdict for another file.
+ * File names are attacker-chosen: cleaned (bidi/invisible/control), shortened
+ * and quoted so a name can't read as another file's verdict.
  */
 export function mixedBatchNote(
   files: { name: string; result: SignedResult }[],

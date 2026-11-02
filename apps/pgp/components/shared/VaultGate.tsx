@@ -37,16 +37,10 @@ interface VaultGateProps {
   services: VaultServices;
   lock: () => Promise<void>;
   resetAutoLock: () => void;
-  /** The open vault's UI. */
   children: ReactNode;
 }
 
-/**
- * Everything before the vault is open: reading what is stored, the
- * problem / onboarding / lock screens, the unlock sequence, and the
- * unreadable-vault stop. Renders `children` only once the vault is open
- * and its stores read.
- */
+/** Everything before the vault is open; renders `children` only once open and read. */
 export function VaultGate({
   vault,
   dispatchVault,
@@ -61,10 +55,8 @@ export function VaultGate({
   const contacts = useContacts();
   const open = phase.kind === "open";
 
-  /** Decide, from what is actually stored, whether there is a vault. */
   const load = useCallback(async () => {
-    // The bootstrap reads while locked; settings read as defaults until
-    // the unlock re-reads them.
+    // Read while locked: settings are defaults until the unlock re-reads them.
     await preferencesStore.reload();
     dispatchVault({ type: "resolved", vault: await resolveVaultState() });
   }, [dispatchVault]);
@@ -73,8 +65,7 @@ export function VaultGate({
     void load();
   }, [load]);
 
-  // Once open: settings become readable, and pre-padding blobs are
-  // upgraded now rather than on their next write (best-effort).
+  // Best-effort upgrade of pre-padding blobs.
   useEffect(() => {
     if (!open) return;
     void preferencesStore.reload();
@@ -84,8 +75,7 @@ export function VaultGate({
     void normalizeCrxPadding().catch(ignore);
   }, [open]);
 
-  // Focus the message box on the first open only (later tab switches must
-  // not steal focus), deferred a tick for the workspace to mount.
+  // First open only: later tab switches must not steal focus.
   const focusedRef = useRef(false);
   useEffect(() => {
     if (focusedRef.current || !open) return;
@@ -99,16 +89,13 @@ export function VaultGate({
 
   const onUnlocked = async (prf?: MasterPrfLoan) => {
     if (phase.kind !== "locked") return;
-    // Legacy-settings migration first: its gate refuses once a local
-    // store carries a generation, which the contacts backfill stamps.
+    // Must precede the contacts backfill, whose generation stamp blocks it.
     await migrateLegacyPreferences().catch(() => undefined);
     const { generation } = dispatchVault({ type: "unlocking" });
     resetAutoLock();
     const listsRead = refreshVaultLists();
-    // "Unlock keys with the vault", off the same ceremony. The preference
-    // is read from storage (state still holds the locked-time default),
-    // inside the batch so a lock landing meanwhile cancels it. `prf` is on
-    // loan until this resolves.
+    // Preference read from storage (state holds the locked-time default),
+    // inside the batch so a concurrent lock cancels it. `prf` is on loan.
     const master = masterPasskeyOf(phase.protection);
     if (prf && master) {
       try {
@@ -120,15 +107,14 @@ export function VaultGate({
           return partitionByMasterSeal(keys, master).eligible;
         }, prf.prfOutput);
       } catch {
-        // Best-effort: the vault is open; keys just stay locked.
+        // Best-effort: keys just stay locked.
       }
     }
     await listsRead;
     dispatchVault({ type: "settled", generation });
   };
 
-  // Nothing renders until what is stored is known: a main tree mounted
-  // early would be torn down by the lock screen, state and all.
+  // A main tree mounted early would be torn down by the lock screen.
   if (phase.kind === "loading") return null;
 
   if (phase.kind === "problem") {
@@ -187,10 +173,8 @@ export function VaultGate({
     );
   }
 
-  // The session cannot open the stores (failed AEAD tag). Showing the
-  // normal UI would say "your keys are gone", which is false. Reachable
-  // via the passkey master, which has no canary; the copy deliberately
-  // does not guess why, since a wrong PRF and a corrupt blob look alike.
+  // Failed AEAD tag (passkey master has no canary). The normal UI would
+  // falsely say "your keys are gone"; wrong PRF and corrupt blob look alike.
   const readError = keyring.error ?? contacts.error;
   if (phase.protection && readError) {
     return (
