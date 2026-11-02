@@ -1323,7 +1323,7 @@ const FIDO_PUB: &str = "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZ
         // Canonical recipient: type + base64, comment stripped.
         assert_eq!(
             json["recipient"].as_str().unwrap(),
-            ED25519_PUB.rsplitn(2, ' ').nth(1).unwrap()
+            ED25519_PUB.rsplit_once(' ').unwrap().0
         );
     }
 
@@ -1340,7 +1340,7 @@ const FIDO_PUB: &str = "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZ
     fn keeps_a_multi_word_comment_intact() {
         // ED25519_PUB already carries a comment, so build the line from the
         // canonical two-token form.
-        let two_token = ED25519_PUB.rsplitn(2, ' ').nth(1).unwrap();
+        let two_token = ED25519_PUB.rsplit_once(' ').unwrap().0;
         let json: serde_json::Value =
             serde_json::from_str(&parse_ssh_recipient(&format!("{two_token} work laptop")).unwrap())
                 .unwrap();
@@ -1349,7 +1349,7 @@ const FIDO_PUB: &str = "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZ
 
     #[test]
     fn a_key_line_with_no_comment_parses() {
-        let two_token = ED25519_PUB.rsplitn(2, ' ').nth(1).unwrap();
+        let two_token = ED25519_PUB.rsplit_once(' ').unwrap().0;
         let json: serde_json::Value =
             serde_json::from_str(&parse_ssh_recipient(two_token).unwrap()).unwrap();
         assert_eq!(json["comment"], "");
@@ -1360,7 +1360,7 @@ const FIDO_PUB: &str = "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZ
         // The comment becomes the contact's name: a bidi override, a
         // zero-width space or a variation selector inside it makes a
         // different string read as `alice@corp.com`.
-        let two_token = ED25519_PUB.rsplitn(2, ' ').nth(1).unwrap();
+        let two_token = ED25519_PUB.rsplit_once(' ').unwrap().0;
         for hidden in [
             "\u{202e}", "\u{200b}", "\u{200d}", "\u{2066}", "\u{fe0f}", "\u{feff}", "\u{00ad}",
             "\u{3164}", "\u{e0041}", "\u{0007}", "\u{2800}", "\u{1d159}",
@@ -1374,7 +1374,7 @@ const FIDO_PUB: &str = "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZ
 
     #[test]
     fn caps_the_length_of_a_comment() {
-        let two_token = ED25519_PUB.rsplitn(2, ' ').nth(1).unwrap();
+        let two_token = ED25519_PUB.rsplit_once(' ').unwrap().0;
         let json: serde_json::Value = serde_json::from_str(
             &parse_ssh_recipient(&format!("{two_token} {}", "a".repeat(5000))).unwrap(),
         )
@@ -1654,7 +1654,7 @@ const FIDO_PUB: &str = "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZ
             let ct =
                 encrypt_age_to_recipients(PLAINTEXT, &recipients_json(&[ED25519_PUB]), armor)
                     .unwrap();
-            assert_eq!(is_age_message(&ct), true);
+            assert!(is_age_message(&ct));
             assert_eq!(
                 ct.starts_with(AGE_ARMOR_BEGIN.as_bytes()),
                 armor,

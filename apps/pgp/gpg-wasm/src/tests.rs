@@ -2164,13 +2164,10 @@ fn cleartext_signature_does_not_transfer_to_other_text() {
 
     // Either the parse rejects it outright or it verifies as invalid --
     // both are safe. What must never happen is `valid`.
-    match verify_message(&swapped, &keys, None) {
-        Ok(json) => {
-            let v: serde_json::Value = serde_json::from_str(&json).unwrap();
-            assert_ne!(v["signatureStatus"], "valid", "swapped body verified");
-            assert_eq!(v["signatureValid"], false);
-        }
-        Err(_) => {}
+    if let Ok(json) = verify_message(&swapped, &keys, None) {
+        let v: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_ne!(v["signatureStatus"], "valid", "swapped body verified");
+        assert_eq!(v["signatureValid"], false);
     }
 }
 
@@ -2184,12 +2181,9 @@ fn cleartext_signature_rejects_a_single_character_edit() {
 
     let edited = signed.replace("balance: 100", "balance: 900");
 
-    match verify_message(&edited, &keys, None) {
-        Ok(json) => {
-            let v: serde_json::Value = serde_json::from_str(&json).unwrap();
-            assert_ne!(v["signatureStatus"], "valid");
-        }
-        Err(_) => {}
+    if let Ok(json) = verify_message(&edited, &keys, None) {
+        let v: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_ne!(v["signatureStatus"], "valid");
     }
 }
 
@@ -2636,7 +2630,7 @@ fn the_output_ceiling_follows_the_input_rather_than_a_flat_number() {
     assert_eq!(decrypt_limit(usize::MAX), MAX_DECRYPTED_BYTES);
 
     // Verify stays far tighter: its output becomes one JSON String.
-    assert!(MAX_VERIFIED_BYTES < MAX_DECRYPTED_BYTES);
+    const { assert!(MAX_VERIFIED_BYTES < MAX_DECRYPTED_BYTES) };
 }
 
 

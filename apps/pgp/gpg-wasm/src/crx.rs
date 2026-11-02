@@ -620,6 +620,7 @@ pub fn export_crx_private_key_pem(handle: u32) -> Result<String, String> {
 
 /// Unlock a password-protected CRX key into `CRX_KEY_STORE`; returns a handle.
 #[wasm_bindgen(js_name = "unlockCrxWithPassword")]
+#[allow(clippy::too_many_arguments)] // flat wasm ABI; KDF params come from the blob
 pub fn unlock_crx_with_password(
     ciphertext: &[u8],
     iv: &[u8],

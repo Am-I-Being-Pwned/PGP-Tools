@@ -1068,7 +1068,7 @@ fn process_signatures(structure: MessageStructure) -> SignatureReport {
 // about every caller in the crate.
 thread_local! {
     static KEY_STORE: protected::HandleStore = protected::HandleStore::new();
-    static NEXT_HANDLE: RefCell<u32> = RefCell::new(1);
+    static NEXT_HANDLE: RefCell<u32> = const { RefCell::new(1) };
 }
 
 /// Hand out the next handle. Monotonic and never reused across *any* store
@@ -1180,8 +1180,7 @@ const MAX_SIGNED_LINES: usize = 2_000_000;
 fn decrypt_limit(ciphertext_len: usize) -> u64 {
     (ciphertext_len as u64)
         .saturating_mul(MAX_EXPANSION_RATIO)
-        .max(MIN_EXPANSION_ALLOWANCE)
-        .min(MAX_DECRYPTED_BYTES)
+        .clamp(MIN_EXPANSION_ALLOWANCE, MAX_DECRYPTED_BYTES)
 }
 
 /// What a read past the engine's own ceiling returns, coded `TooLarge`.
@@ -1745,6 +1744,7 @@ fn strip_third_party(cert: openpgp::Cert) -> openpgp::Result<openpgp::Cert> {
         .collect();
     // A set: a hostile key file can carry thousands of bad signatures, and
     // a list lookup per packet made stripping quadratic.
+    #[allow(clippy::mutable_key_type)] // Signature's caches never change its Eq/Hash.
     let bad: std::collections::HashSet<openpgp::packet::Signature> =
         cert.bad_signatures().cloned().collect();
 
@@ -3243,6 +3243,7 @@ pub fn argon2_derive(
 /// Flow: Argon2id(password, salt) -> AES key -> AES-GCM decrypt -> parse Cert -> store
 /// The decrypted private key never enters the JS heap.
 #[wasm_bindgen(js_name = "unlockWithPassword")]
+#[allow(clippy::too_many_arguments)] // flat wasm ABI; KDF params come from the blob
 pub fn unlock_with_password(
     ciphertext: &[u8],
     iv: &[u8],
@@ -3388,7 +3389,7 @@ const CANARY_PLAINTEXT: &[u8] = b"pgp-tools-master-v1";
 const CANARY_AAD: &[u8] = b"gpg-tools:master-canary:v1";
 
 thread_local! {
-    static CONTACTS_KEY: RefCell<Option<Vec<u8>>> = RefCell::new(None);
+    static CONTACTS_KEY: RefCell<Option<Vec<u8>>> = const { RefCell::new(None) };
 }
 
 fn set_contacts_key(new_key: Option<Vec<u8>>) {
@@ -3486,7 +3487,7 @@ pub fn has_contacts_session() -> bool {
 const DRAFT_AAD: &[u8] = b"gpg-tools:workspace-draft:v1";
 
 thread_local! {
-    static DRAFT_KEY: RefCell<Option<Vec<u8>>> = RefCell::new(None);
+    static DRAFT_KEY: RefCell<Option<Vec<u8>>> = const { RefCell::new(None) };
 }
 
 fn set_draft_key(new_key: Option<Vec<u8>>) {
