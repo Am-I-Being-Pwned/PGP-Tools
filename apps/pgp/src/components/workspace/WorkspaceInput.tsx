@@ -17,7 +17,9 @@ import {
 } from "@amibeingpwned/ui";
 
 import { useFitLevel } from "~/hooks/useFitLevel";
+import { useNav } from "~/hooks/useNav";
 import { MODE_SHORTCUTS } from "~/lib/actions/definitions";
+import { recoverArmorIfNeeded } from "~/lib/armor-recovery";
 import { applyTextareaEdit } from "~/lib/compose/apply-edit";
 import {
   toggleInlineStyle,
@@ -30,6 +32,7 @@ import { ComposeToolbar, type ComposeTranslateProps } from "./ComposeToolbar";
 import { DetectedKeyBanner } from "./DetectedKeyBanner";
 import { DropZone } from "./DropZone";
 import { FindReplaceBar } from "./FindReplaceBar";
+import type { Workspace } from "./useWorkspace";
 
 type Mode = WorkspaceAction;
 
@@ -63,29 +66,12 @@ export function modeLabel(mode: Mode): string {
 }
 
 interface WorkspaceInputProps {
-  mode: Mode;
-  onModeChange: (mode: Mode) => void;
-  /** UNCONTROLLED: plaintext lives in the DOM node and the workspace's ref,
-   *  never in render state (`useWorkspace`). */
-  inputElRef: React.MutableRefObject<HTMLTextAreaElement | null>;
-  getInput: () => string;
-  hasInput: boolean;
-  onInputChange: (text: string) => void;
+  /** UNCONTROLLED input: plaintext lives in the DOM node and the
+   *  workspace's ref, never in render state. */
+  ws: Workspace;
   /** Owned by the parent so the undo buffer sits in the workspace's
    *  wipeable ref, not in a live toast closure. */
   onClearText: () => void;
-  files: File[];
-  onFileDrop: (files: File[]) => void;
-  onRemoveFile: (index: number) => void;
-  onClearFiles: () => void;
-  publicKeyDetected: boolean;
-  inputVersion: number;
-  privateKeyDetected: boolean;
-  onNavigateToKeys?: (importPrefill?: string) => void;
-  onRevealKey?: (keyId: string) => void;
-  /** Returns the input unchanged when there is nothing to fix; that is the
-   *  signal to leave the browser's own paste alone. */
-  onRepairPastedText: (text: string) => string;
   composeTranslate?: ComposeTranslateProps;
   /** Outside the drop target on purpose: a drop on the recipients is not
    *  a message. */
@@ -102,28 +88,28 @@ export interface ComposeTools {
 }
 
 export function WorkspaceInput({
-  mode,
-  onModeChange,
-  inputElRef,
-  getInput,
-  hasInput,
-  onInputChange,
+  ws,
   onClearText,
-  files,
-  onFileDrop,
-  onRemoveFile,
-  onClearFiles,
-  publicKeyDetected,
-  inputVersion,
-  privateKeyDetected,
-  onNavigateToKeys,
-  onRevealKey,
-  onRepairPastedText,
   composeTranslate,
   onToolsReady,
   cardHeader,
   aboveCard,
 }: WorkspaceInputProps) {
+  const {
+    state: { mode, input, files },
+    dispatch,
+    inputElRef,
+    getInput,
+    inputChanged: onInputChange,
+    dropFiles: onFileDrop,
+  } = ws;
+  const hasInput = input.len > 0;
+  const inputVersion = input.version;
+  const publicKeyDetected = input.key === "public";
+  const privateKeyDetected = input.key === "private";
+  const onModeChange = (next: Mode) =>
+    dispatch({ type: "mode-picked", mode: next });
+  const { openImport } = useNav();
   // Re-arms on each fresh private-key paste, so the mask can't stay off
   // across two separate pastes.
   const [maskIgnored, setMaskIgnored] = useState(false);
@@ -326,8 +312,8 @@ export function WorkspaceInput({
         onTextDrop={onInputChange}
         onFileDrop={onFileDrop}
         activeFiles={files}
-        onRemoveFile={onRemoveFile}
-        onClearFiles={onClearFiles}
+        onRemoveFile={(index) => dispatch({ type: "file-removed", index })}
+        onClearFiles={() => dispatch({ type: "files-cleared" })}
         leading={
           showTools ? (
             <ComposeToolbar
@@ -397,7 +383,7 @@ export function WorkspaceInput({
                 // not onChange (which fires for every typed keystroke).
                 // Unchanged text falls through to the browser's own paste.
                 const pasted = e.clipboardData.getData("text/plain");
-                const repaired = onRepairPastedText(pasted);
+                const repaired = recoverArmorIfNeeded(pasted);
                 if (repaired === pasted) return;
                 e.preventDefault();
                 // Splice at the caret: replacing the box would silently
@@ -475,7 +461,7 @@ export function WorkspaceInput({
           <p>{t("workspace_private_key_pasted_body")}</p>
           <div className="flex gap-2 pt-1">
             <button
-              onClick={() => onNavigateToKeys?.(getInput())}
+              onClick={() => openImport({ prefill: getInput() })}
               className="bg-destructive/12 hover:bg-destructive/20 rounded-md px-2 py-1 font-medium transition-colors"
             >
               {t("workspace_private_key_import_safely")}
@@ -494,8 +480,6 @@ export function WorkspaceInput({
         <DetectedKeyBanner
           getText={getInput}
           version={inputVersion}
-          onImport={(armored) => onNavigateToKeys?.(armored)}
-          onReveal={onRevealKey}
           source="pasted"
         />
       )}

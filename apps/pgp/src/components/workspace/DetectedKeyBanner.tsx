@@ -3,6 +3,7 @@ import { Fragment, useEffect, useState, type ReactNode } from "react";
 import { KeyAvatar } from "~/components/shared/KeyAvatar";
 import { MarkedText } from "~/components/shared/MarkedText";
 import { useContacts } from "~/hooks/useContacts";
+import { useNav } from "~/hooks/useNav";
 import { t } from "~/lib/i18n";
 import { parseKeys } from "~/lib/pgp/wasm";
 import { parseUserId } from "~/lib/utils/key-naming";
@@ -25,19 +26,16 @@ interface DetectedKeyBannerProps {
   getText: () => string;
   /** Bumps with the text, so a second key isn't shown as the first's identity. */
   version: number;
-  onImport: (armored: string) => void;
-  onReveal?: (keyId: string) => void;
   source: "pasted" | "message";
 }
 
 export function DetectedKeyBanner({
   getText,
   version,
-  onImport,
-  onReveal,
   source,
 }: DetectedKeyBannerProps) {
   const { contacts } = useContacts();
+  const { openImport, revealKeys } = useNav();
   const [keys, setKeys] = useState<DetectedKey[]>([]);
 
   useEffect(() => {
@@ -91,7 +89,7 @@ export function DetectedKeyBanner({
           )}{" "}
           <button
             type="button"
-            onClick={() => onReveal?.(keys[0].keyId)}
+            onClick={() => revealKeys([keys[0].keyId])}
             className="underline underline-offset-2"
           >
             {t("workspace_detected_key_show")}
@@ -130,7 +128,7 @@ export function DetectedKeyBanner({
         )}{" "}
         <button
           type="button"
-          onClick={() => onImport(getText())}
+          onClick={() => openImport({ prefill: getText() })}
           className="text-foreground underline underline-offset-2"
         >
           {t("workspace_detected_key_import")}

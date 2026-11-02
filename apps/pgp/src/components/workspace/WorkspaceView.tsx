@@ -31,7 +31,6 @@ import { usePreferences } from "~/hooks/usePreferences";
 import { useShortcut } from "~/hooks/useShortcut";
 import { useVault } from "~/hooks/useVault";
 import { REPLY_SHORTCUT } from "~/lib/actions/definitions";
-import { recoverArmorIfNeeded } from "~/lib/armor-recovery";
 import {
   buildEncryptRecipients,
   resolveSelectedRecipients,
@@ -109,7 +108,7 @@ export function WorkspaceView({
   });
   const { state: s, dispatch, myKeys, contacts } = ws;
   const { session } = useVault();
-  const { openImport, showTab, revealKeys } = useNav();
+  const { openImport, showTab } = useNav();
   const {
     keyDiscoveryEnabled,
     crxSigningEnabled,
@@ -125,10 +124,6 @@ export function WorkspaceView({
   const onNavigateToKeys = useCallback(
     (prefill?: string) => (prefill ? openImport({ prefill }) : showTab("keys")),
     [openImport, showTab],
-  );
-  const onRevealKey = useCallback(
-    (keyId: string) => revealKeys([keyId]),
-    [revealKeys],
   );
   const v = deriveWorkspaceView(s, {
     canCrxSign: ws.canCrxSign,
@@ -419,26 +414,7 @@ export function WorkspaceView({
   const decryptKeyChoices =
     s.mode === "decrypt" && ws.isAge ? myKeys.filter(isSshRecord) : myKeys;
 
-  const resultProps = {
-    error: v.error,
-    outputElRef: ws.outputElRef,
-    getOutput: ws.getOutput,
-    hasOutput: v.hasOutputText,
-    binaryOutput: s.result.binary,
-    fileResults: s.result.files,
-    fileName: ws.outputName(),
-    operationDone: v.done,
-    statusText: s.result.status ?? undefined,
-    verifiedSigner: verdict?.signer ?? null,
-    signatureTone: verdict?.tone,
-    signatureNote: verdict?.note,
-    signerCaveat: verdict?.caveat,
-    outputPublicKeyDetected: s.output.publicKey,
-    outputVersion: s.output.version,
-    onImportKey: onNavigateToKeys,
-    onRevealKey,
-    onLookupSigner: lookupSigner,
-  };
+  const resultProps = { ws, v, onLookupSigner: lookupSigner };
 
   if (v.showFullOutput) {
     return (
@@ -499,8 +475,6 @@ export function WorkspaceView({
             ) : undefined
           }
           showTranslation={translation.showing}
-          translationElRef={ws.translationElRef}
-          getTranslation={ws.getTranslation}
         />
         <div className="flex gap-2">
           <ResultActions
@@ -524,24 +498,9 @@ export function WorkspaceView({
       aria-busy={hideForAutoRun || undefined}
     >
       <WorkspaceInput
-        mode={s.mode}
-        onModeChange={setMode}
+        ws={ws}
         aboveCard={resultsOnTop ? results : undefined}
-        inputElRef={inputElRef}
-        getInput={ws.getInput}
-        hasInput={s.input.len > 0}
-        onInputChange={inputChanged}
-        onRepairPastedText={recoverArmorIfNeeded}
         onClearText={clearText}
-        files={s.files}
-        onFileDrop={ws.dropFiles}
-        onRemoveFile={(index) => dispatch({ type: "file-removed", index })}
-        onClearFiles={() => dispatch({ type: "files-cleared" })}
-        publicKeyDetected={s.input.key === "public"}
-        inputVersion={s.input.version}
-        onRevealKey={onRevealKey}
-        privateKeyDetected={s.input.key === "private"}
-        onNavigateToKeys={onNavigateToKeys}
         onToolsReady={onToolsReady}
         cardHeader={
           s.mode === "encrypt" ? (

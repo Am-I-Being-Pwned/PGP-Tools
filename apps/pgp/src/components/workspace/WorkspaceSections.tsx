@@ -24,12 +24,12 @@ import { withoutHiddenCharacters } from "./hidden-characters";
 import { KeySelector } from "./KeySelector";
 import type { selectionEngine } from "./recipient-engine";
 import { ResultActions } from "./ResultActions";
-import type { useWorkspace } from "./useWorkspace";
-import type { deriveWorkspaceView } from "./workspace-view";
+import type { Workspace } from "./useWorkspace";
+import type { WorkspaceFlags } from "./workspace-view";
 import { modeLabel } from "./WorkspaceInput";
 
-type Ws = ReturnType<typeof useWorkspace>;
-type View = ReturnType<typeof deriveWorkspaceView>;
+type Ws = Workspace;
+type View = WorkspaceFlags;
 type Engine = ReturnType<typeof selectionEngine>;
 
 /** mod+Enter mirrors the main action button. */
