@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import {
   ChevronDownIcon,
   ChevronRightIcon,
@@ -71,25 +71,25 @@ export function FindReplaceBar({
   const [current, setCurrent] = useState(-1);
   const findRef = useRef<HTMLInputElement>(null);
 
+  // Keyed on `textVersion`, never on `getText`'s identity: an inline getter
+  // would re-search every render, and the new `matches` would loop back
+  // through `onHighlight` into the owner's state.
   const matches = useMemo(
     () => findAll(getText(), query, { caseSensitive }),
-    // `textVersion` is the dependency that makes `getText()` fresh.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [getText, query, caseSensitive, textVersion],
+    [query, caseSensitive, textVersion],
   );
 
-  useEffect(() => {
+  // Each open (or re-press of the shortcut) refocuses and takes the new query.
+  const opened = useEffectEvent(() => {
     findRef.current?.focus();
     findRef.current?.select();
-  }, [focusNonce]);
-
-  useEffect(() => {
     if (initialQuery) setQuery(initialQuery);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusNonce]);
+  });
+  useEffect(() => opened(), [focusNonce]);
 
   // Re-anchor on the first match at or after the caret, not the top.
-  useEffect(() => {
+  const reanchor = useEffectEvent(() => {
     if (matches.length === 0) {
       setCurrent(-1);
       return;
@@ -97,8 +97,8 @@ export function FindReplaceBar({
     const i = nextMatchIndex(matches, getSelection().start);
     setCurrent(i);
     select(matches[i], matches[i] + query.length);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [matches]);
+  });
+  useEffect(() => reanchor(), [matches]);
 
   useEffect(() => {
     onHighlight(
