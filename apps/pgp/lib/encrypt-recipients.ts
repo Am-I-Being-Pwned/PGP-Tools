@@ -27,37 +27,13 @@ export interface SelectedRecipient {
 type PickerKey = OwnKey | PublicContactKey;
 
 /**
- * Resolve picker selection ids to records. Shared by the preview and the
- * encrypt so they cannot disagree.
+ * Resolve picker selection ids to records. Shared by the `selfExcluded`
+ * preview and the encrypt so they cannot disagree.
  *
- * This is the one place that knows a contact's armored bytes live under
- * a different field name than an own key's, and the ONE place that
- * expands a contact into its full key list -- both `WorkspaceView` (for
- * the `selfExcluded` preview) and `workspace-operations.ts` (for the
- * encrypt itself) go through it, so the preview cannot disagree with
- * what actually runs.
- */
-/**
- * Resolve picker selection ids to the records they stand for.
- *
- * OWN KEYS ARE SEARCHED FIRST. A contact's `keyId` is its HEAD
- * recipient's fingerprint, so when that same key is also one of the
- * user's own identities the id exists in BOTH collections -- and the
- * contact is whatever a pasted `.pub` file or a lookup said it was. This
- * used to prefer the contact, so that a fetched copy of the user's own
- * GitHub account would encrypt to all of their machines; but a file
- * grouping the user's own key with an attacker's under one comment made
- * exactly such a contact, and then picking "yourself" (or encrypt-to-
- * self riding along) encrypted to the attacker too. An id that is yours
- * means your key. The picker never offers a contact whose id is one of
- * your keys (see `splitRecipientSections`), and the import never creates
- * one (a group is never headed by a key the user holds), so nothing the
- * user can pick resolves to fewer keys than its row promised.
- *
- * Exported and shared because both callers (`WorkspaceView`'s engine
- * derivation and the workspace encrypt) previously
- * open-coded the same `find` over a concatenated array -- two copies
- * that agreed with each other is how the old ordering went unexamined.
+ * Own keys are searched first, never the contact: a contact's id is its
+ * head fingerprint, and a crafted `.pub` grouping the user's key with an
+ * attacker's would otherwise make "encrypt to yourself" also encrypt to
+ * the attacker. An id that is yours means your key.
  */
 export function resolveSelectedRecipients(
   selectedIds: readonly string[],
