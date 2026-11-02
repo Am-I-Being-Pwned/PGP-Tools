@@ -1010,7 +1010,7 @@ const invariantNoConsole = {
 const REVIEWED_CALLERS = new Map([
   ["apps/pgp/lib/import/review.ts", "applyReview: the user's Review decisions"],
   [
-    "apps/pgp/components/keys/KeysView.tsx",
+    "apps/pgp/components/keys/DeletePages.tsx",
     "undo of the user's own delete: restores the record they had",
   ],
 ]);
