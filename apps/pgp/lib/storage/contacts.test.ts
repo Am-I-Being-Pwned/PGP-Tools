@@ -35,7 +35,6 @@ import {
   hasActiveRecipient,
   isRecipientDisabled,
   loadContacts,
-  onContactUpdated,
   recipientsField,
   removeContact,
   sameSource,
@@ -44,7 +43,6 @@ import {
   setContactVerified,
   updateContact,
   updateContactAlias,
-  updateContactAsync,
   upsertContacts,
   withAlias,
   withRecipientDisabled,
@@ -57,6 +55,7 @@ import {
   fakeEncryptContacts,
   fakeEncryptStore,
 } from "./fake-store-crypto";
+import { createLiveList } from "./live-list";
 
 const wasmMock = vi.hoisted(() => ({ session: true }));
 
@@ -756,38 +755,37 @@ describe("saveContact - a refresh keeps the user's decisions", () => {
 });
 
 /**
- * The list on screen is not the store. The recipient toggle writes
- * straight to the store from the details page, so the panel's list
- * (`useContacts`) only learns of it through `onContactUpdated`. Before
- * that existed, a GitHub refresh after a toggle was classified against
- * the list as it was BEFORE the toggle (so "every key left is one you
- * turned off" was never asked), and the refreshed record put on screen
- * had no `disabled` flag -- the card read "1 key" while the store held
- * "0 of 1" until the panel reloaded.
+ * The recipient toggle writes straight to the store from the details
+ * page; the list on screen must follow it, or a GitHub refresh is
+ * classified against the list as it was before the toggle.
  */
-describe("onContactUpdated - the list on screen follows the toggle", () => {
-  it("hands every listener the record as it is on disk", async () => {
+describe("the live contacts list follows writes made elsewhere", () => {
+  function watched() {
+    const list = createLiveList(STORAGE_CONTACTS, loadContacts);
+    const renders = vi.fn();
+    const stop = list.subscribe(renders);
+    return { list, renders, stop };
+  }
+
+  it("reloads to the record as it is on disk", async () => {
     await saveContact(multiContact(2));
-    const heard: PublicContactKey[] = [];
-    const stop = onContactUpdated((c) => heard.push(c));
+    const { list, stop } = watched();
+    await list.refresh();
 
     await setContactRecipientDisabled("SHA256:key0", "SHA256:key1", true);
     const [onDisk] = await loadContacts();
+    await vi.waitFor(() => expect(list.get().items).toEqual([onDisk]));
     stop();
-    await setContactRecipientDisabled("SHA256:key0", "SHA256:key1", false);
-
-    expect(heard).toHaveLength(1);
-    expect(heard[0]).toEqual(onDisk);
-    expect(contactRecipients(heard[0]).map(isRecipientDisabled)).toEqual([
-      false,
-      true,
-    ]);
+    expect(
+      contactRecipients(list.get().items[0]).map(isRecipientDisabled),
+    ).toEqual([false, true]);
   });
 
-  it("says nothing when the write did not happen", async () => {
+  it("does not reload when the write did not happen", async () => {
     await saveContact(multiContact(2));
-    const heard = vi.fn();
-    const stop = onContactUpdated(heard);
+    const { list, renders, stop } = watched();
+    await list.refresh();
+    renders.mockClear();
 
     await updateContact("nobody", (c) => c);
     wasmMock.session = false;
@@ -796,20 +794,15 @@ describe("onContactUpdated - the list on screen follows the toggle", () => {
     ).rejects.toThrow(/vault is locked/);
     stop();
 
-    expect(heard).not.toHaveBeenCalled();
+    expect(renders).not.toHaveBeenCalled();
   });
 
   it("keeps a refresh down to turned-off keys at 0 of 1 on screen", async () => {
-    // The panel's list, kept the way `useContacts` keeps it.
     await saveContact(multiContact(2));
-    let onScreen = await loadContacts();
-    const stop = onContactUpdated((updated) => {
-      onScreen = onScreen.map((c) => (c.keyId === updated.keyId ? updated : c));
-    });
+    const { list, stop } = watched();
+    await list.refresh();
 
     await setContactRecipientDisabled("SHA256:key0", "SHA256:key1", true);
-    stop();
-
     // GitHub now lists only the key the user turned off.
     const refreshed: PublicContactKey = {
       ...multiContact(2),
@@ -817,11 +810,11 @@ describe("onContactUpdated - the list on screen follows the toggle", () => {
       armoredPublicKey: sshRecipient(1).armored,
       recipients: undefined,
     };
-    onScreen = upsertContacts(onScreen, refreshed);
     await saveContact(refreshed);
+    await list.refresh();
+    stop();
 
-    const [stored] = await loadContacts();
-    expect(activeRecipients(stored)).toEqual([]);
+    const onScreen = list.get().items;
     expect(onScreen).toHaveLength(1);
     expect(contactRecipients(onScreen[0]).map(isRecipientDisabled)).toEqual([
       true,
@@ -830,13 +823,6 @@ describe("onContactUpdated - the list on screen follows the toggle", () => {
   });
 });
 
-/**
- * A hand-pasted key is not a reason to lose a person.
- *
- * Upsert by keyId means a pasted key whose fingerprint equals a fetched
- * contact's HEAD would replace that whole record with a one-key,
- * source-less contact -- the person's other keys silently dropped.
- */
 describe("upsertContacts - a pasted key never replaces a fetched person", () => {
   it("leaves the fetched record intact", async () => {
     await saveContact(multiContact(3));
@@ -890,8 +876,7 @@ describe("upsertContacts - a pasted key never replaces a fetched person", () => 
     expect(stored.alias).toBe("Caz");
   });
 
-  it("is the same function the UI's optimistic list uses", () => {
-    // Pure, so the hook can reach exactly the answer storage will.
+  it("is pure: a pasted duplicate leaves the list as it was", () => {
     const existing = [multiContact(3)];
     const pasted = legacyContact({ keyId: "SHA256:key0" });
     expect(upsertContacts(existing, pasted)).toEqual(existing);
@@ -925,7 +910,7 @@ describe("serialised writes", () => {
     // A slow change (a keyserver merge) starts...
     let release!: () => void;
     const gate = new Promise<void>((r) => (release = r));
-    const slow = updateContactAsync("CCCC", async (current) => {
+    const slow = updateContact("CCCC", async (current) => {
       await gate;
       return { ...current, expiresAt: 42 };
     });
@@ -941,7 +926,7 @@ describe("serialised writes", () => {
   it("writes nothing for a contact deleted before an awaited change", async () => {
     await saveContact(legacyContact());
     await removeContact("CCCC");
-    const result = await updateContactAsync("CCCC", (c) =>
+    const result = await updateContact("CCCC", (c) =>
       Promise.resolve({ ...c, expiresAt: 42 }),
     );
     expect(result).toBeUndefined();

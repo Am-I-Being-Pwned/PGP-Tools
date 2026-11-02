@@ -28,10 +28,10 @@ vi.mock("./pgp/wasm", () => ({
   revocationIssuers: vi.fn(),
 }));
 
-const store = vi.hoisted(() => ({ updateContactAsync: vi.fn() }));
+const store = vi.hoisted(() => ({ updateContact: vi.fn() }));
 vi.mock("./storage/contacts", async (importOriginal) => ({
   ...(await importOriginal<typeof ContactsModule>()),
-  updateContactAsync: store.updateContactAsync,
+  updateContact: store.updateContact,
 }));
 
 const parse = vi.mocked(parseKeys);
@@ -133,7 +133,7 @@ describe("mergeIntoContact", () => {
       alias: "Ali",
       revoked: true,
     };
-    store.updateContactAsync.mockImplementation(
+    store.updateContact.mockImplementation(
       async (
         _id: string,
         apply: (c: PublicContactKey) => Promise<PublicContactKey>,
@@ -153,7 +153,7 @@ describe("mergeIntoContact", () => {
   });
 
   it("writes nothing and says so when the contact is gone", async () => {
-    store.updateContactAsync.mockResolvedValue(undefined);
+    store.updateContact.mockResolvedValue(undefined);
     expect(await mergeIntoContact("FPR1", "FETCHED")).toBeUndefined();
     expect(merge).not.toHaveBeenCalled();
   });
@@ -175,7 +175,7 @@ describe("mergeIntoContact", () => {
     });
     const written: PublicContactKey[] = [];
     const onDisk = (contact: PublicContactKey) =>
-      store.updateContactAsync.mockImplementation(
+      store.updateContact.mockImplementation(
         async (
           _id: string,
           apply: (c: PublicContactKey) => Promise<PublicContactKey>,

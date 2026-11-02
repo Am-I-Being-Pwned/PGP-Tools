@@ -529,10 +529,6 @@ async function mutateContacts<T>(
  * The stored list after upserting `incoming` -- pure, and the SINGLE
  * definition of the upsert rules.
  *
- * Shared with `useContacts`, whose optimistic update has to reach the
- * same answer this does: the list on screen is what the recipient picker
- * offers, so a weaker rule there does not merely look wrong.
- *
  * Three rules, each of which exists because getting it wrong loses
  * something:
  *
@@ -709,74 +705,18 @@ export async function saveContact(contact: PublicContactKey): Promise<void> {
 }
 
 /**
- * Who hears about a record changed in place.
- *
- * `useContacts` holds the list the Keys tab and the recipient picker
- * render, and most writes go through it. The recipient toggle does not:
- * it is reached from the details page, which can be opened from places
- * that have no handle on the hook (the workspace's picker, the details
- * button). Without this, the list on screen kept the record as it was
- * before the toggle -- so the card showed every key on, a GitHub refresh
- * was classified against keys that were no longer off (and never asked
- * about an account down to only those), and the refreshed record put on
- * screen dropped the flag the store had just carried forward. Fired
- * after the write commits, with the record as it is on disk.
- */
-type ContactUpdateListener = (contact: PublicContactKey) => void;
-const updateListeners = new Set<ContactUpdateListener>();
-
-/** Hear about every in-place change to one record ({@link updateContact},
- *  {@link updateContactAsync} and everything built on them). Returns the
- *  unsubscribe. */
-export function onContactUpdated(listener: ContactUpdateListener): () => void {
-  updateListeners.add(listener);
-  return () => {
-    updateListeners.delete(listener);
-  };
-}
-
-function notifyUpdated(contact: PublicContactKey | undefined): void {
-  if (!contact) return;
-  for (const listener of updateListeners) listener(contact);
-}
-
-/**
- * Mutate one stored contact in place and save.
- *
- * `apply` runs INSIDE the lock, on the record as it is on disk right
- * now, so a caller can never write back a snapshot it captured earlier
- * (and with it, whatever else has changed on that record since).
- * Returns the updated record, or undefined when no contact has that id.
+ * Mutate one stored contact in place and save. `apply` runs inside the
+ * lock on the record as it is on disk, so a caller can never write back
+ * a snapshot taken earlier. Resolves undefined, writing nothing, when no
+ * contact has that id.
  */
 export async function updateContact(
   keyId: string,
-  apply: (contact: PublicContactKey) => PublicContactKey,
+  apply: (
+    contact: PublicContactKey,
+  ) => PublicContactKey | Promise<PublicContactKey>,
 ): Promise<PublicContactKey | undefined> {
-  const updated = await mutateContacts(async (existing) => {
-    const index = existing.findIndex((c) => c.keyId === keyId);
-    if (index === -1) return undefined;
-    const updated = apply(existing[index]);
-    const next = [...existing];
-    next[index] = updated;
-    await saveAll(next);
-    return updated;
-  });
-  notifyUpdated(updated);
-  return updated;
-}
-
-/**
- * {@link updateContact} for a change that has to await -- a merge in the
- * engine. Still applied INSIDE the lock to the record as it is on disk,
- * so a write that started from an older copy (a keyserver check that
- * took a while) can never put that copy back. Resolves undefined, and
- * writes nothing, when the contact no longer exists.
- */
-export async function updateContactAsync(
-  keyId: string,
-  apply: (contact: PublicContactKey) => Promise<PublicContactKey>,
-): Promise<PublicContactKey | undefined> {
-  const updated = await mutateContacts(async (existing) => {
+  return mutateContacts(async (existing) => {
     const index = existing.findIndex((c) => c.keyId === keyId);
     if (index === -1) return undefined;
     const updated = await apply(existing[index]);
@@ -785,8 +725,6 @@ export async function updateContactAsync(
     await saveAll(next);
     return updated;
   });
-  notifyUpdated(updated);
-  return updated;
 }
 
 /**

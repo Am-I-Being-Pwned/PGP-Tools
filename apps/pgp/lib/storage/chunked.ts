@@ -20,8 +20,7 @@
  */
 
 export type StorageArea =
-  | chrome.storage.LocalStorageArea
-  | chrome.storage.SyncStorageArea;
+  chrome.storage.LocalStorageArea | chrome.storage.SyncStorageArea;
 
 /** Manifest written in place of an oversized value. `__sc` is the chunk
  *  count; `__len` is the total length of the reassembled JSON string. No

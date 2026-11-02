@@ -1,17 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type * as ContactsModule from "../lib/storage/contacts";
-import type { PublicContactKey } from "../lib/storage/contacts";
-import { IDENTITY_VERSION } from "../lib/storage/contacts";
-import { backfillIdentity, withUpdatedContact } from "./useContacts";
+import type * as ContactsModule from "./contacts";
+import type { PublicContactKey } from "./contacts";
+import { backfillIdentity } from "./contact-backfill";
+import { IDENTITY_VERSION } from "./contacts";
 
 const wasm = vi.hoisted(() => ({ parseKey: vi.fn() }));
-vi.mock("../lib/pgp/wasm", () => wasm);
+vi.mock("../pgp/wasm", () => wasm);
 
 const store = vi.hoisted(() => ({
   updateContact: vi.fn(),
 }));
-vi.mock("../lib/storage/contacts", async (importOriginal) => ({
+vi.mock("./contacts", async (importOriginal) => ({
   ...(await importOriginal<typeof ContactsModule>()),
   updateContact: store.updateContact,
 }));
@@ -34,12 +34,21 @@ function contact(over: Partial<PublicContactKey> = {}): PublicContactKey {
  * still carry them -- and the first one names the contact on every
  * signer card. The backfill re-derives the identity fields once.
  */
+let written: PublicContactKey | undefined;
+function lastWritten(): PublicContactKey {
+  if (!written) throw new Error("nothing was written");
+  return written;
+}
+
 describe("backfillIdentity", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    written = undefined;
     store.updateContact.mockImplementation(
-      (_id: string, patch: (c: PublicContactKey) => PublicContactKey) =>
-        Promise.resolve(patch(contact())),
+      (_id: string, patch: (c: PublicContactKey) => PublicContactKey) => {
+        written = patch(contact());
+        return Promise.resolve(written);
+      },
     );
   });
 
@@ -50,7 +59,8 @@ describe("backfillIdentity", () => {
       revoked: true,
     });
 
-    const [patched] = await backfillIdentity([contact()]);
+    await backfillIdentity(contact());
+    const patched = lastWritten();
 
     expect(patched.userIds).toEqual(["Bob <bob@example.com>"]);
     expect(patched.revoked).toBe(true);
@@ -66,46 +76,25 @@ describe("backfillIdentity", () => {
       securityWarning: "mixes letters from different alphabets",
     });
 
-    const [patched] = await backfillIdentity([contact()]);
+    await backfillIdentity(contact());
+    const patched = lastWritten();
 
     expect(patched.lookalike).toBe(true);
     expect(patched.securityWarning).toMatch(/alphabets/);
   });
 
   it("runs once: a contact already at the current version is left alone", async () => {
-    await backfillIdentity([contact({ identityVersion: IDENTITY_VERSION })]);
+    await backfillIdentity(contact({ identityVersion: IDENTITY_VERSION }));
     expect(wasm.parseKey).not.toHaveBeenCalled();
     expect(store.updateContact).not.toHaveBeenCalled();
   });
 
   it("marks an SSH contact checked without parsing it as PGP", async () => {
-    const [patched] = await backfillIdentity([
+    await backfillIdentity(
       contact({ kind: "ssh", armoredPublicKey: "ssh-ed25519 AAAA" }),
-    ]);
+    );
+    const patched = lastWritten();
     expect(wasm.parseKey).not.toHaveBeenCalled();
     expect(patched.identityVersion).toBe(IDENTITY_VERSION);
-  });
-});
-
-/**
- * A record changed in place outside the hook (the recipient toggle)
- * replaces its copy in the list on screen -- see `onContactUpdated`.
- */
-describe("withUpdatedContact", () => {
-  it("swaps in the record as written, by id, keeping the order", () => {
-    const a = contact({ keyId: "A" });
-    const b = contact({ keyId: "B" });
-    const written = contact({
-      keyId: "A",
-      recipients: [
-        { keyId: "A", armored: "ARMOR", algorithm: "ed25519", disabled: true },
-      ],
-    });
-    expect(withUpdatedContact([a, b], written)).toEqual([written, b]);
-  });
-
-  it("leaves a list without that record untouched", () => {
-    const list = [contact({ keyId: "A" })];
-    expect(withUpdatedContact(list, contact({ keyId: "Z" }))).toBe(list);
   });
 });

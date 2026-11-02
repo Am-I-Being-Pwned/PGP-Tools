@@ -1209,7 +1209,7 @@ const REVIEWED_CALLERS = new Map([
   ],
 ]);
 // Every exported function of lib/storage/contacts.ts that writes the
-// store. `updateContact*` hand the caller the whole record and save what
+// store. `updateContact` hands the caller the whole record and saves what
 // comes back, so they can write anything `saveContact` can; the rest are
 // built on them (or, `removeContact`, drop a record). `upsertContacts`
 // is pure, but it is the merge `saveContact` writes, so it stays here.
@@ -1217,7 +1217,6 @@ const CONTACT_WRITE_FNS = [
   "saveContact",
   "upsertContacts",
   "updateContact",
-  "updateContactAsync",
   "setContactRecipientDisabled",
   "setContactVerified",
   "updateContactAlias",
@@ -1227,7 +1226,11 @@ const CONTACT_WRITERS = new Map([
   ["apps/pgp/lib/storage/contacts.ts", "the store itself"],
   [
     "apps/pgp/hooks/useContacts.ts",
-    "the store's add (typed ReviewedContact), remove, rename, verify and the legacy backfills",
+    "the store's add (typed ReviewedContact), remove, rename and verify",
+  ],
+  [
+    "apps/pgp/lib/storage/contact-backfill.ts",
+    "the legacy backfills: derived fields of a record already in the store",
   ],
   [
     "apps/pgp/lib/import-public-keys.ts",

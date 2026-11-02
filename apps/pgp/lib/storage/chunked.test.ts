@@ -17,7 +17,8 @@ import {
  */
 function fakeArea(perItemCap = Infinity) {
   const store = new Map<string, unknown>();
-  const itemBytes = (k: string, v: unknown) => k.length + JSON.stringify(v).length;
+  const itemBytes = (k: string, v: unknown) =>
+    k.length + JSON.stringify(v).length;
   const area = {
     store,
     get: (keys?: string | string[] | null) => {

@@ -4,7 +4,7 @@ import type { PublicContactKey } from "./storage/contacts";
 import { t } from "./i18n";
 import { formatDate } from "./i18n/format";
 import { mergePublicKey, parseKeys, revocationIssuers } from "./pgp/wasm";
-import { IDENTITY_VERSION, updateContactAsync } from "./storage/contacts";
+import { IDENTITY_VERSION, updateContact } from "./storage/contacts";
 
 /** A stored public cert an import can land on. */
 export interface StoredCert {
@@ -63,7 +63,7 @@ export async function mergeIntoContact(
   // Widened: it is set inside the callback below, which narrowing from a
   // plain `false` cannot see.
   let needsReview = false as boolean;
-  const contact = await updateContactAsync(keyId, async (current) => {
+  const contact = await updateContact(keyId, async (current) => {
     const merged = await mergeIntoStored(
       { keyId: current.keyId, armored: current.armoredPublicKey },
       incomingArmored,

@@ -25,7 +25,7 @@ import { WorkspaceView } from "../../components/workspace/WorkspaceView";
 import { useActionContext } from "../../hooks/useActionContext";
 import { useContacts } from "../../hooks/useContacts";
 import { useCrxKeys } from "../../hooks/useCrxKeys";
-import { readKeyring, useKeyring } from "../../hooks/useKeyring";
+import { useKeyring } from "../../hooks/useKeyring";
 import { useKeySession } from "../../hooks/useKeySession";
 import { usePendingOperation } from "../../hooks/usePendingOperation";
 import { savePreference, usePreferences } from "../../hooks/usePreferences";
@@ -41,13 +41,14 @@ import {
   partitionByMasterSeal,
 } from "../../lib/protection/vault-unlock";
 import { normalizeContactsPadding } from "../../lib/storage/contacts";
-import { normalizeKeyringPadding } from "../../lib/storage/keyring";
+import { getKeyring, normalizeKeyringPadding } from "../../lib/storage/keyring";
 import { getMasterProtection } from "../../lib/storage/master-protection";
 import {
   getPreferences,
   migrateLegacyPreferences,
 } from "../../lib/storage/preferences";
 import { preferencesStore } from "../../lib/storage/preferences-store";
+import { refreshVaultLists } from "../../lib/storage/vault-lists";
 import {
   adoptVaultLocation,
   eraseVault,
@@ -611,13 +612,12 @@ export default function App() {
   const handleDeleteKey = useCallback(
     async (keyId: string) => {
       await keyring.remove(keyId);
-      void contacts.refresh();
       // Deleting the default key clears the preference with it, so the
       // stored id never points at a key that no longer exists. (The
       // resolver also skips stale ids, as a second line of defense.)
       if (defaultKeyId === keyId) handleSetDefaultKey(null);
     },
-    [keyring, contacts, defaultKeyId, handleSetDefaultKey],
+    [keyring, defaultKeyId, handleSetDefaultKey],
   );
 
   const clearWorkspaceIntake = useCallback(() => setWorkspaceIntake(null), []);
@@ -698,9 +698,7 @@ export default function App() {
               setMasterUnlocked(true);
               setMasterProtection(await getMasterProtection());
               setMasterProtectionLoaded(true);
-              void keyring.refresh();
-              void contacts.refresh();
-              void crxKeys.refresh();
+              void refreshVaultLists();
             }}
             addKey={handleAddKey}
             cacheKey={!neverCacheKeys}
@@ -739,8 +737,7 @@ export default function App() {
               setVaultOpening(true);
               setMasterAutoLocked(false);
               resetMasterLockTimer();
-              const contactsRead = contacts.refresh();
-              void crxKeys.refresh();
+              const listsRead = refreshVaultLists();
               // "Unlock keys when the vault unlocks": off the SAME
               // ceremony, open every key sealed under the master salt.
               // The preference is an encrypted setting, readable only
@@ -760,14 +757,14 @@ export default function App() {
                     // at the toggles that maintain it.
                     const p = await getPreferences();
                     if (!p.unlockKeysOnOpen || p.neverCacheKeys) return [];
-                    const { keys } = await readKeyring();
+                    const keys = await getKeyring().catch(() => []);
                     return partitionByMasterSeal(keys, master).eligible;
                   }, prf.prfOutput);
                 } catch {
                   // Best-effort: the vault is open; keys just stay locked.
                 }
               }
-              await Promise.allSettled([contactsRead, keyring.refresh()]);
+              await listsRead;
               if (openGen === vaultOpenGenRef.current) setVaultOpening(false);
             }}
           />
@@ -1020,9 +1017,7 @@ export default function App() {
           {activeTab === "settings" && (
             <SettingsView
               onVaultMoved={() => {
-                void keyring.refresh();
-                void contacts.refresh();
-                void crxKeys.refresh();
+                void refreshVaultLists();
               }}
               masterPasskey={masterPasskey}
               masterSealSalt={masterSealSalt}

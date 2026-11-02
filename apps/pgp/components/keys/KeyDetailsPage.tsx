@@ -384,9 +384,7 @@ export function KeyDetailsPage({
         }
       : undefined);
   // Only for a contact actually in the store (`liveContact`), and not a
-  // revoked one -- the same rule the Keys tab applies. Through the store's
-  // in-place writer, like the recipient toggle below: it re-reads the
-  // record inside the lock, and `useContacts` hears of it.
+  // revoked one -- the same rule the Keys tab applies.
   const onSetVerified =
     onSetVerifiedProp ??
     (liveContact && !liveContact.revoked
@@ -544,8 +542,7 @@ export function KeyDetailsPage({
    *  mounted, so saving a spread of it would republish every other field
    *  as it was then -- reverting, say, the expiry backfill that ran in
    *  the meantime. The store re-reads the record inside its own lock and
-   *  touches `recipients` alone, which also serialises this write with
-   *  the ones `useContacts` makes (its mutex does not reach here).
+   *  touches `recipients` alone.
    *
    *  `withRecipientDisabled` drops the flag entirely when re-enabling,
    *  so nothing ever stores `disabled: false`. Optimistic, with a

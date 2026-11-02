@@ -342,7 +342,7 @@ export function sshContact(
  * `expiresAt: null` rather than absent for the same reason the pasted
  * path sets it: `undefined` means "not computed yet" and sends the
  * contacts backfill off to parse a recipient line as PGP armor on every
- * refresh (see useContacts). SSH keys simply do not expire.
+ * load (see `contact-backfill.ts`). SSH keys simply do not expire.
  */
 export function groupContact(
   group: ContactGroup,

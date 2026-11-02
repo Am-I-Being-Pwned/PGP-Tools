@@ -49,6 +49,7 @@ import {
   splitGeneration,
   withGeneration,
 } from "./integrity";
+import { notifyStoreChanged } from "./live-list";
 import { isCanonicalPadding, padPlaintext, unpadPlaintext } from "./padding";
 
 export interface EncryptedStore<T> {
@@ -113,6 +114,7 @@ export async function saveEncryptedArray<T>(
     await sealEnvelope(store.storageKey, plaintext),
   );
   await recordWrite(store.storageKey, gen);
+  notifyStoreChanged(store.storageKey);
 }
 
 function area(loc: StorageLocation) {
