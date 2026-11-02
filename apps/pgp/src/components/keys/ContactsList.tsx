@@ -2,56 +2,31 @@ import { useMemo, useState } from "react";
 
 import { Block, BlockLabel, Input } from "@amibeingpwned/ui";
 
+import { useContacts } from "~/hooks/useContacts";
 import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
+import { useKeyring } from "~/hooks/useKeyring";
+import { useNav } from "~/hooks/useNav";
+import { usePreferences } from "~/hooks/usePreferences";
 import { t } from "~/lib/i18n";
 import { contactClashes } from "~/lib/identity/binding";
 import { downloadPublicKey } from "~/lib/keys/export-bundle";
-import type { PublicContactKey } from "~/lib/storage/contacts";
 import { isSshRecord } from "~/lib/storage/key-kind";
-import type { ProtectedKeyBlob } from "~/lib/storage/keyring";
 import { displayUserId, parseUserId } from "~/lib/utils/key-naming";
 import { ContactCard } from "./ContactCard";
 import { ContactDropZone } from "./ContactDropZone";
+import { useKeysTab } from "./keys-context";
 import { LIST_STACK, selId } from "./keys-routes";
+import { useContactRevocationCheck } from "./useContactRevocationCheck";
 
-export function ContactsList({
-  contacts,
-  ownKeys,
-  onRequestRemove,
-  onRequestRename,
-  onCheckRevocation,
-  onEncryptTo,
-  onShowDetails,
-  advancedMode,
-  selectionMode,
-  selected,
-  onToggleSelect,
-  onStartSelect,
-  justImported,
-  onImportText,
-}: {
-  contacts: PublicContactKey[];
-  /** The user's own keys: a contact claiming their identity is marked. */
-  ownKeys: ProtectedKeyBlob[];
-  onRequestRemove: (contact: PublicContactKey) => void;
-  /** Absent when the host cannot persist a rename, which hides the
-   *  menu item rather than offering one that silently does nothing. */
-  onRequestRename?: (contact: PublicContactKey) => void;
-  /** Absent with key discovery off: the check asks keys.openpgp.org. */
-  onCheckRevocation?: (contact: PublicContactKey) => void;
-  onEncryptTo?: (keyId: string) => void;
-  onShowDetails: (contact: PublicContactKey) => void;
-  advancedMode?: boolean;
-  selectionMode: boolean;
-  selected: Set<string>;
-  onToggleSelect: (id: string, extend: boolean) => void;
-  onStartSelect: (id: string) => void;
-  /** Fingerprints to scroll to and pulse after an import. */
-  justImported: Set<string>;
-  /** Hand dropped/pasted key text to the import panel, which previews a
-   *  single key and bulk-imports a bundle. */
-  onImportText: (text: string) => void;
-}) {
+export function ContactsList() {
+  const { contacts } = useContacts();
+  const { keys: ownKeys } = useKeyring();
+  const { advancedMode, keyDiscoveryEnabled } = usePreferences();
+  const { encryptTo } = useNav();
+  const { nav, selection, justImported } = useKeysTab();
+  const checkRevocation = useContactRevocationCheck((armored) =>
+    nav.push({ page: "import", initialArmored: armored }),
+  );
   const [search, setSearch] = useState("");
   const { copy } = useCopyToClipboard();
   // SSH contacts too: an SSH key's comment is the contact's name, it is
@@ -87,7 +62,11 @@ export function ContactsList({
               the list is long enough to need one), then the contacts. */}
         <div className={LIST_STACK}>
           <div>
-            <ContactDropZone onKeyText={onImportText} />
+            <ContactDropZone
+              onKeyText={(text) =>
+                nav.push({ page: "import", initialArmored: text })
+              }
+            />
           </div>
           {contacts.length > 5 && (
             <div>
@@ -109,12 +88,13 @@ export function ContactsList({
                   contact={c}
                   clash={clashes.get(c.keyId)}
                   justImported={justImported.has(c.keyId)}
-                  onRemove={() => onRequestRemove(c)}
-                  onEncryptTo={
-                    onEncryptTo && !c.revoked
-                      ? () => onEncryptTo(c.keyId)
-                      : undefined
+                  onRemove={() =>
+                    nav.push({
+                      page: "confirm-delete",
+                      target: { kind: "contact", contact: c },
+                    })
                   }
+                  onEncryptTo={c.revoked ? undefined : () => encryptTo(c.keyId)}
                   onCopyPublicKey={() =>
                     void copy(c.armoredPublicKey, {
                       label: t("common_public_key"),
@@ -126,22 +106,32 @@ export function ContactsList({
                       parseUserId(displayUserId(c) ?? "").name || c.keyId,
                     )
                   }
-                  onRename={
-                    onRequestRename ? () => onRequestRename(c) : undefined
+                  onRename={() =>
+                    nav.push({
+                      page: "rename",
+                      target: { kind: "contact", contact: c },
+                    })
                   }
                   onCheckRevocation={
                     // An SSH key has nothing on the keyserver, and a
                     // revoked one has nothing left to learn.
-                    onCheckRevocation && !isSshRecord(c) && !c.revoked
-                      ? () => onCheckRevocation(c)
+                    keyDiscoveryEnabled && !isSshRecord(c) && !c.revoked
+                      ? () => void checkRevocation(c)
                       : undefined
                   }
-                  onShowDetails={() => onShowDetails(c)}
+                  onShowDetails={() =>
+                    nav.push({
+                      page: "details",
+                      target: { kind: "contact", contact: c },
+                    })
+                  }
                   advancedMode={advancedMode}
-                  selectionMode={selectionMode}
-                  selected={selected.has(id)}
-                  onToggleSelect={(extend) => onToggleSelect(id, extend)}
-                  onStartSelect={() => onStartSelect(id)}
+                  selectionMode={selection.selectionMode}
+                  selected={selection.selected.has(id)}
+                  onToggleSelect={(extend) =>
+                    selection.toggleSelect(id, extend)
+                  }
+                  onStartSelect={() => selection.startSelect(id)}
                 />
               </div>
             );

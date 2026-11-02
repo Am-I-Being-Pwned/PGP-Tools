@@ -21,6 +21,7 @@ import {
 import { KeyAvatar } from "~/components/shared/KeyAvatar";
 import { useAsyncAction } from "~/hooks/useAsyncAction";
 import { useFlashMessage } from "~/hooks/useFlashMessage";
+import { usePreferences } from "~/hooks/usePreferences";
 import { t } from "~/lib/i18n";
 import {
   CardMenu,
@@ -35,6 +36,8 @@ import {
   type PrivateKeyExporter,
 } from "./ExportPrivateKeyPage";
 import { HEX_FINGERPRINT, longIdLines } from "./fingerprint-lines";
+import { useKeysTab } from "./keys-context";
+import { selId } from "./keys-routes";
 import { UnlockPasswordField } from "./KeyUnlockRow";
 
 /** Absent ⇒ sealed at rest (CRX): no unlock UI. */
@@ -68,25 +71,16 @@ export interface KeyCardModel {
   onShowDetails?: () => void;
 }
 
-interface KeyCardProps {
-  model: KeyCardModel;
-  advancedMode?: boolean;
-  selectionMode: boolean;
-  selected: boolean;
-  onToggleSelect: (extend: boolean) => void;
-  onStartSelect: () => void;
-  justImported?: boolean;
-}
-
-export function KeyCard({
-  model,
-  advancedMode,
-  selectionMode,
-  selected,
-  onToggleSelect,
-  onStartSelect,
-  justImported,
-}: KeyCardProps) {
+export function KeyCard({ model }: { model: KeyCardModel }) {
+  const { advancedMode } = usePreferences();
+  const { selection, justImported: pulsing } = useKeysTab();
+  const id = selId(model.kind, model.id);
+  const { selectionMode } = selection;
+  const selected = selection.selected.has(id);
+  const onToggleSelect = (extend: boolean) =>
+    selection.toggleSelect(id, extend);
+  const onStartSelect = () => selection.startSelect(id);
+  const justImported = pulsing.has(model.id);
   const [showPasswordUnlock, setShowPasswordUnlock] = useState(false);
   const [showExportPrivate, setShowExportPrivate] = useState(false);
   const [password, setPassword] = useState("");
