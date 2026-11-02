@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 
-import { Block, BlockStack } from "@amibeingpwned/ui/block";
+import { BlockStack } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
-import { Input } from "@amibeingpwned/ui/input";
 
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
+import { useAsyncAction } from "../../hooks/useAsyncAction";
 import { serializeCrxKeyBlocks } from "../../lib/crx/backup";
 import {
   closeCrxKey,
@@ -24,6 +24,10 @@ import { toast } from "../../lib/toast";
 import { downloadText } from "../../lib/utils/download";
 import { Emphasised } from "../shared/Emphasised";
 import { SubPage } from "../shared/SubPage";
+import {
+  ExportPassphraseFields,
+  useExportPassphrase,
+} from "./ExportPassphraseFields";
 import { KeyUnlockRow } from "./KeyUnlockRow";
 
 type Step = "unlock" | "export";
@@ -96,11 +100,15 @@ function useExportKeysFlow({
   const [crxPasswords, setCrxPasswords] = useState<Record<string, string>>({});
   const [crxErrors, setCrxErrors] = useState<Record<string, string>>({});
 
-  const [passphrase, setPassphrase] = useState("");
-  const [confirmPassphrase, setConfirmPassphrase] = useState("");
-  const [unsafeConfirm, setUnsafeConfirm] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [exporting, setExporting] = useState(false);
+  const fields = useExportPassphrase();
+  const exportAction = useAsyncAction((e) => ({
+    message:
+      e instanceof Error
+        ? t("keygen_export_failed_detail", { message: e.message })
+        : t("keygen_export_failed"),
+  }));
+  const error = exportAction.error?.message ?? null;
+  const exporting = exportAction.busy;
 
   const allCrxKeys = crxKeys ?? [];
   const lockedKeys = myKeys.filter((k) => !isUnlocked(k.keyId));
@@ -280,57 +288,44 @@ function useExportKeysFlow({
     return parts.length;
   };
 
+  // No console.* on failure (SECURITY.md §9): the message may carry
+  // unlock / WASM context, and the extension console outlives the session.
   const handleEncryptedExport = async () => {
-    setError(null);
-    if (needsPassphrase) {
-      if (passphrase.length < 8) {
-        setError(t("keygen_error_passphrase_short"));
-        return;
-      }
-      if (passphrase !== confirmPassphrase) {
-        setError(t("keygen_error_passphrase_mismatch"));
-        return;
-      }
+    const invalid = needsPassphrase ? fields.validate() : null;
+    if (invalid) {
+      exportAction.setError(invalid);
+      return;
     }
-    setExporting(true);
-    const passphraseBytes = new TextEncoder().encode(passphrase);
-    try {
-      const count = await buildAndDownload(
-        (handle) => encryptKeyForExportWithHandle(handle, passphraseBytes),
-        async (handle, crx) => {
-          const portable = await resealCrxKeyUnderPassword(
-            handle,
-            passphrase,
-            crx.label,
-          );
-          return serializeCrxKeyBlocks([portable]);
-        },
-      );
-      if (onExported) onExported(count, false);
-      else
-        toast.success(tn("keygen_export_toast_exported", count), {
-          id: "keys-exported",
-        });
-      resetAndClose();
-    } catch (e) {
-      // No console.* here (SECURITY.md §9): the message may carry unlock /
-      // WASM context, and the extension console outlives the session.
-      setError(
-        e instanceof Error
-          ? t("keygen_export_failed_detail", { message: e.message })
-          : t("keygen_export_failed"),
-      );
-    } finally {
-      passphraseBytes.fill(0);
-      setExporting(false);
-    }
+    const { passphrase } = fields;
+    await exportAction.run(async () => {
+      const passphraseBytes = new TextEncoder().encode(passphrase);
+      try {
+        const count = await buildAndDownload(
+          (handle) => encryptKeyForExportWithHandle(handle, passphraseBytes),
+          async (handle, crx) => {
+            const portable = await resealCrxKeyUnderPassword(
+              handle,
+              passphrase,
+              crx.label,
+            );
+            return serializeCrxKeyBlocks([portable]);
+          },
+        );
+        if (onExported) onExported(count, false);
+        else
+          toast.success(tn("keygen_export_toast_exported", count), {
+            id: "keys-exported",
+          });
+        resetAndClose();
+      } finally {
+        passphraseBytes.fill(0);
+      }
+    });
   };
 
-  const handleUnsafeExport = async () => {
-    setError(null);
-    setExporting(true);
-    try {
-      // Plaintext path is PGP-only; CRX keys are not written unencrypted.
+  // PGP only: CRX keys are never written unencrypted.
+  const handleUnsafeExport = () =>
+    exportAction.run(async () => {
       const count = await buildAndDownload(getKeyArmored, null);
       if (onExported) onExported(count, true);
       else
@@ -338,16 +333,7 @@ function useExportKeysFlow({
           id: "keys-exported",
         });
       resetAndClose();
-    } catch (e) {
-      setError(
-        e instanceof Error
-          ? t("keygen_export_failed_detail", { message: e.message })
-          : t("keygen_export_failed"),
-      );
-    } finally {
-      setExporting(false);
-    }
-  };
+    });
 
   return {
     step,
@@ -364,12 +350,7 @@ function useExportKeysFlow({
     crxPasswords,
     setCrxPasswords,
     crxErrors,
-    passphrase,
-    setPassphrase,
-    confirmPassphrase,
-    setConfirmPassphrase,
-    unsafeConfirm,
-    setUnsafeConfirm,
+    fields,
     error,
     exporting,
     lockedKeys,
@@ -407,12 +388,7 @@ function ExportKeysBody({ f }: { f: ExportKeysFlow }) {
     crxPasswords,
     setCrxPasswords,
     crxErrors,
-    passphrase,
-    setPassphrase,
-    confirmPassphrase,
-    setConfirmPassphrase,
-    unsafeConfirm,
-    setUnsafeConfirm,
+    fields,
     error,
     exporting,
     lockedKeys,
@@ -542,71 +518,27 @@ function ExportKeysBody({ f }: { f: ExportKeysFlow }) {
           <p className="text-muted-foreground text-xs">
             {t("keygen_export_passphrase_intro")}
           </p>
-          <Input
-            type="password"
-            autoComplete="new-password"
-            placeholder={t("keygen_passphrase_placeholder")}
-            value={passphrase}
-            onChange={(e) => setPassphrase(e.target.value)}
-            autoFocus
+          <ExportPassphraseFields
+            fields={fields}
+            error={error}
+            busy={exporting}
+            submitLabel={t("keygen_export_with_passphrase")}
+            busyLabel={t("keygen_exporting")}
+            onSubmit={() => void handleEncryptedExport()}
+            plaintext={
+              hasPgpPrivate
+                ? {
+                    warning:
+                      t("keygen_export_plaintext_warning_file") +
+                      (crxCount > 0
+                        ? " " + t("keygen_export_plaintext_crx_left_out")
+                        : ""),
+                    button: t("keygen_export_without_passphrase"),
+                    onExport: () => void handleUnsafeExport(),
+                  }
+                : undefined
+            }
           />
-          <Input
-            type="password"
-            autoComplete="new-password"
-            placeholder={t("keygen_confirm_passphrase_placeholder")}
-            value={confirmPassphrase}
-            onChange={(e) => setConfirmPassphrase(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") void handleEncryptedExport();
-            }}
-          />
-          {error && <p className="text-destructive text-xs">{error}</p>}
-          <Button
-            className="w-full"
-            onClick={() => void handleEncryptedExport()}
-            disabled={exporting || !passphrase}
-          >
-            {exporting
-              ? t("keygen_exporting")
-              : t("keygen_export_with_passphrase")}
-          </Button>
-
-          {hasPgpPrivate && (
-            // The plaintext escape hatch sits in a block of its own, apart
-            // from the safe path above, rather than behind a divider line.
-            <Block className="mt-1 space-y-2 rounded-xl p-3">
-              <p className="text-destructive text-[11px]">
-                {t("keygen_export_plaintext_warning_file")}
-                {crxCount > 0
-                  ? " " + t("keygen_export_plaintext_crx_left_out")
-                  : ""}{" "}
-                {t("keygen_type_to_confirm_before")}{" "}
-                <span className="font-mono font-bold">
-                  {t("keygen_confirm_word")}
-                </span>{" "}
-                {t("keygen_type_to_confirm_after")}
-              </p>
-              <Input
-                type="text"
-                autoComplete="off"
-                spellCheck={false}
-                value={unsafeConfirm}
-                onChange={(e) => setUnsafeConfirm(e.target.value)}
-                placeholder={t("keygen_confirm_word")}
-              />
-              <Button
-                variant="destructive"
-                size="sm"
-                className="w-full"
-                disabled={
-                  exporting || unsafeConfirm !== t("keygen_confirm_word")
-                }
-                onClick={() => void handleUnsafeExport()}
-              >
-                {t("keygen_export_without_passphrase")}
-              </Button>
-            </Block>
-          )}
         </>
       ) : contacts.length > 0 ? (
         <>

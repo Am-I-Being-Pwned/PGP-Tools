@@ -4,9 +4,18 @@ import type { ProtectionChoiceState } from "./protection-choice";
 import {
   crxProtectionInput,
   protectionInput,
+  validateExportPassphrase,
   validatePassword,
   validateProtection,
 } from "./protection-choice";
+
+describe("validateExportPassphrase", () => {
+  it("holds an export to the same 8-character, must-match bar", () => {
+    expect(validateExportPassphrase("1234567", "1234567")).not.toBeNull();
+    expect(validateExportPassphrase("12345678", "12345679")).not.toBeNull();
+    expect(validateExportPassphrase("12345678", "12345678")).toBeNull();
+  });
+});
 
 const salt = new ArrayBuffer(32);
 const ctx = { reusePasskeyCredentialId: "cred-1", masterSealSalt: salt };

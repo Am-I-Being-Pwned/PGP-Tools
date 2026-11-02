@@ -1,13 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 
-import { Block } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
 import { Input } from "@amibeingpwned/ui/input";
 
+import { useAsyncAction } from "../../hooks/useAsyncAction";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
+import { useFlashMessage } from "../../hooks/useFlashMessage";
 import { t } from "../../lib/i18n";
 import { isWebAuthnCancel } from "../../lib/protection/webauthn-prf";
 import { SubPage } from "../shared/SubPage";
+import {
+  ExportPassphraseFields,
+  useExportPassphrase,
+} from "./ExportPassphraseFields";
 
 /**
  * Pluggable crypto for {@link ExportPrivateKeyPage}. The page is pure UI +
@@ -48,168 +53,124 @@ interface ExportPrivateKeyPageProps {
 }
 
 /**
- * Unified "copy private key" flow for PGP and CRX keys: an optional unlock gate
- * (CRX), then a passphrase-encrypted copy or a type-`EXPORT` plaintext escape
- * hatch. Both paths write to the clipboard, and say that the key stays there
- * and in any clipboard history -- nothing is wiped (T-CLIPBOARD-EXFIL). A CRX
- * handle opened by the gate is dropped on unmount.
+ * "Copy private key" for PGP and CRX keys: an optional unlock gate (CRX),
+ * then a passphrase-encrypted copy or a type-`EXPORT` plaintext escape
+ * hatch. The key stays on the clipboard and in any clipboard history --
+ * nothing is wiped (T-CLIPBOARD-EXFIL). A gate-opened handle is dropped
+ * on unmount.
  */
 export function ExportPrivateKeyPage({
   onClose,
   exporter,
 }: ExportPrivateKeyPageProps) {
-  // Handle held for the page's life in gated (CRX) mode. In un-gated (PGP)
-  // mode this stays null and a fresh handle is acquired per export action.
+  // Gated (CRX) mode holds one handle for the page's life; un-gated (PGP)
+  // acquires per export.
   const [handle, setHandle] = useState<number | null>(null);
   const handleRef = useRef<number | null>(null);
   useEffect(() => {
     handleRef.current = handle;
   }, [handle]);
 
+  const { isPasskey, needsUnlock } = exporter;
   const [password, setPassword] = useState("");
-  const [unlocking, setUnlocking] = useState(false);
-  const [unlockError, setUnlockError] = useState<string | null>(null);
-  // Synchronous in-flight guard: `unlocking` lands a render late, so rapid
-  // clicks / Enter-spam could open two handles and leak the first (setHandle
-  // keeps only the second). This ref blocks the second call now.
-  const unlockInFlight = useRef(false);
-
-  const [passphrase, setPassphrase] = useState("");
-  const [confirmPassphrase, setConfirmPassphrase] = useState("");
-  const [unsafeConfirm, setUnsafeConfirm] = useState("");
-  const [exportError, setExportError] = useState<string | null>(null);
-  const [exporting, setExporting] = useState(false);
-  const [feedback, setFeedback] = useState<string | null>(null);
-  const feedbackTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // Generic copy only: the engine's unlock error says nothing safe.
+  const unlock = useAsyncAction((e) =>
+    isPasskey
+      ? isWebAuthnCancel(e)
+        ? null
+        : { message: t("keygen_error_passkey_failed") }
+      : { message: t("keygen_error_wrong_password") },
+  );
+  const exporting = useAsyncAction(() => ({
+    message: t("keygen_export_failed"),
+  }));
+  const fields = useExportPassphrase();
+  const [feedback, flash] = useFlashMessage();
   const { copy } = useCopyToClipboard();
 
-  const { isPasskey, needsUnlock } = exporter;
-  // The unlock gate only exists in gated mode and only until we hold a handle.
   const showGate = needsUnlock && handle === null;
 
-  const showFeedback = (msg: string) => {
-    setFeedback(msg);
-    clearTimeout(feedbackTimer.current);
-    feedbackTimer.current = setTimeout(() => setFeedback(null), 2000);
-  };
-
-  // True once the page has unmounted, so an unlock still in flight can detect
-  // it resolved into a dead page and drop its handle rather than leave it
-  // lingering in WASM untracked.
+  // An unlock that resolves into an unmounted page drops its handle
+  // rather than leave it live in WASM untracked.
   const unmounted = useRef(false);
-
-  // Drop a held handle on unmount and cancel the feedback timer.
   useEffect(() => {
     return () => {
       unmounted.current = true;
       if (handleRef.current !== null) exporter.release(handleRef.current);
-      clearTimeout(feedbackTimer.current);
     };
     // exporter is captured per-mount; releasing the latest handle is all we need.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleUnlock = async () => {
-    if (unlockInFlight.current || handleRef.current !== null) return;
-    unlockInFlight.current = true;
-    setUnlockError(null);
-    setUnlocking(true);
-    try {
+  // The in-flight guard matters: two opens would leak the first handle.
+  const handleUnlock = () =>
+    unlock.run(async () => {
+      if (handleRef.current !== null) return;
       const h = await exporter.acquire(isPasskey ? undefined : password);
-      // The page unmounted while this unlock was in flight: the handle now
-      // belongs to nobody, so drop it instead of storing it.
       if (unmounted.current) {
         exporter.release(h);
         return;
       }
       setHandle(h);
       setPassword("");
-    } catch (e) {
-      if (isPasskey) {
-        if (!isWebAuthnCancel(e)) {
-          setUnlockError(t("keygen_error_passkey_failed"));
-        }
-      } else {
-        setUnlockError(t("keygen_error_wrong_password"));
-      }
-    } finally {
-      unlockInFlight.current = false;
-      setUnlocking(false);
-    }
-  };
+    });
 
-  /** Run `producer` against a handle and copy the result. In gated mode the
-   *  held handle is reused; otherwise a fresh handle is acquired and released
-   *  around this single action. */
-  const runExport = async (
+  /** Run `producer` against a handle and copy the result: the held one
+   *  (gated) or one acquired and released around this action. */
+  const runExport = (
     producer: (h: number) => Promise<string>,
     successMsg: string,
     afterSuccess: () => void,
-  ) => {
-    setExportError(null);
-    setExporting(true);
-    let acquired: number | null = null;
-    let h = handle;
-    // Acquire (PGP session handle) can fail with a controlled, safe message
-    // (e.g. "Key is not unlocked."); surface it. Everything after is crypto,
-    // whose errors may carry WASM context -- keep those generic (SECURITY.md).
-    if (h === null) {
+  ) =>
+    exporting.run(async () => {
+      let acquired: number | null = null;
+      let h = handle;
+      // Acquire fails with a controlled message ("Key is not unlocked.");
+      // show it. Everything after is crypto: keep that generic.
+      if (h === null) {
+        try {
+          h = await exporter.acquire();
+          acquired = h;
+        } catch (e) {
+          exporting.setError(
+            e instanceof Error && e.message
+              ? e.message
+              : t("keygen_error_key_not_unlocked"),
+          );
+          return;
+        }
+      }
       try {
-        h = await exporter.acquire();
-        acquired = h;
-      } catch (e) {
-        setExportError(
-          e instanceof Error && e.message
-            ? e.message
-            : t("keygen_error_key_not_unlocked"),
-        );
-        setExporting(false);
-        return;
+        const text = await producer(h);
+        // No label: the inline feedback is the success UI. A rejected
+        // write has already toasted.
+        if (await copy(text, { sensitive: true })) {
+          flash(successMsg);
+          afterSuccess();
+        }
+      } finally {
+        if (acquired !== null) exporter.release(acquired);
       }
-    }
-    try {
-      const text = await producer(h);
-      // No label -- the inline feedback is the success UI, and it carries
-      // the clipboard-history note itself. A rejected write already
-      // toasted its own error.
-      const ok = await copy(text, { sensitive: true });
-      if (ok) {
-        showFeedback(successMsg);
-        afterSuccess();
-      }
-    } catch {
-      setExportError(t("keygen_export_failed"));
-    } finally {
-      if (acquired !== null) exporter.release(acquired);
-      setExporting(false);
-    }
-  };
+    });
 
-  const handleEncryptedExport = async () => {
-    setExportError(null);
-    if (passphrase.length < 8) {
-      setExportError(t("keygen_error_passphrase_short"));
+  const handleEncryptedExport = () => {
+    const invalid = fields.validate();
+    if (invalid) {
+      exporting.setError(invalid);
       return;
     }
-    if (passphrase !== confirmPassphrase) {
-      setExportError(t("keygen_error_passphrase_mismatch"));
-      return;
-    }
-    await runExport(
-      (h) => exporter.exportEncrypted(h, passphrase),
+    void runExport(
+      (h) => exporter.exportEncrypted(h, fields.passphrase),
       t("keygen_copied_encrypted"),
-      () => {
-        setPassphrase("");
-        setConfirmPassphrase("");
-      },
+      fields.clearPassphrase,
     );
   };
 
   const handlePlaintextExport = () =>
-    runExport(
+    void runExport(
       (h) => exporter.exportPlaintext(h),
       t("keygen_copied_plaintext"),
-      () => setUnsafeConfirm(""),
+      fields.clearUnsafeConfirm,
     );
 
   return (
@@ -235,15 +196,15 @@ export function ExportPrivateKeyPage({
               autoFocus
             />
           )}
-          {unlockError && (
-            <p className="text-destructive text-xs">{unlockError}</p>
+          {unlock.error && (
+            <p className="text-destructive text-xs">{unlock.error.message}</p>
           )}
           <Button
             className="w-full"
             onClick={() => void handleUnlock()}
-            disabled={unlocking || (!isPasskey && !password)}
+            disabled={unlock.busy || (!isPasskey && !password)}
           >
-            {unlocking ? t("keygen_unlocking") : t("common_unlock")}
+            {unlock.busy ? t("keygen_unlocking") : t("common_unlock")}
           </Button>
         </div>
       ) : (
@@ -251,64 +212,20 @@ export function ExportPrivateKeyPage({
           <p className="text-muted-foreground text-xs">
             {exporter.encryptedBlurb}
           </p>
-          <Input
-            type="password"
-            autoComplete="new-password"
-            placeholder={t("keygen_passphrase_placeholder")}
-            value={passphrase}
-            onChange={(e) => setPassphrase(e.target.value)}
-            autoFocus
-          />
-          <Input
-            type="password"
-            autoComplete="new-password"
-            placeholder={t("keygen_confirm_passphrase_placeholder")}
-            value={confirmPassphrase}
-            onChange={(e) => setConfirmPassphrase(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") void handleEncryptedExport();
+          <ExportPassphraseFields
+            fields={fields}
+            error={exporting.error?.message}
+            feedback={feedback}
+            busy={exporting.busy}
+            submitLabel={exporter.encryptedButton}
+            busyLabel={t("keygen_encrypting")}
+            onSubmit={handleEncryptedExport}
+            plaintext={{
+              warning: exporter.plaintextBlurb,
+              button: exporter.plaintextButton,
+              onExport: handlePlaintextExport,
             }}
           />
-          {exportError && (
-            <p className="text-destructive text-xs">{exportError}</p>
-          )}
-          {feedback && <p className="text-good text-xs">{feedback}</p>}
-          <Button
-            className="w-full"
-            onClick={() => void handleEncryptedExport()}
-            disabled={exporting || !passphrase}
-          >
-            {exporting ? t("keygen_encrypting") : exporter.encryptedButton}
-          </Button>
-
-          {/* The plaintext escape hatch sits in a block of its own, apart
-              from the safe path above, rather than behind a divider line. */}
-          <Block className="mt-1 space-y-2 rounded-xl p-3">
-            <p className="text-destructive text-[11px]">
-              {exporter.plaintextBlurb} {t("keygen_type_to_confirm_before")}{" "}
-              <span className="font-mono font-bold">
-                {t("keygen_confirm_word")}
-              </span>{" "}
-              {t("keygen_type_to_confirm_after")}
-            </p>
-            <Input
-              type="text"
-              autoComplete="off"
-              spellCheck={false}
-              value={unsafeConfirm}
-              onChange={(e) => setUnsafeConfirm(e.target.value)}
-              placeholder={t("keygen_confirm_word")}
-            />
-            <Button
-              variant="destructive"
-              size="sm"
-              className="w-full"
-              disabled={exporting || unsafeConfirm !== t("keygen_confirm_word")}
-              onClick={() => void handlePlaintextExport()}
-            >
-              {exporter.plaintextButton}
-            </Button>
-          </Block>
         </div>
       )}
     </SubPage>

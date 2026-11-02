@@ -29,6 +29,19 @@ export function validatePassword(
   return null;
 }
 
+/** The passphrase an export is re-sealed under: the same bar as a key
+ *  password, worded for the file. */
+export function validateExportPassphrase(
+  passphrase: string,
+  confirmPassphrase: string,
+): string | null {
+  if (passphrase.length < 8) return t("keygen_error_passphrase_short");
+  if (passphrase !== confirmPassphrase) {
+    return t("keygen_error_passphrase_mismatch");
+  }
+  return null;
+}
+
 /** A passkey needs no validation here: the ceremony is the check. */
 export function validateProtection(s: ProtectionChoiceState): string | null {
   return s.method === "password"
