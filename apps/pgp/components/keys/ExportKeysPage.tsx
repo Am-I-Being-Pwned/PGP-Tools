@@ -333,96 +333,63 @@ function useExportKeysFlow({
 type ExportKeysFlow = ReturnType<typeof useExportKeysFlow>;
 
 function ExportKeysBody({ f }: { f: ExportKeysFlow }) {
-  const {
-    step,
-    setStep,
-    myKeys,
-    contacts,
-    allCrxKeys,
-    isUnlocked,
-    unlockingId,
-    passwords,
-    setPasswords,
-    unlockErrors,
-    crxHandles,
-    crxPasswords,
-    setCrxPasswords,
-    crxErrors,
-    fields,
-    error,
-    exporting,
-    lockedKeys,
-    unlockedKeys,
-    lockedCrxKeys,
-    unlockedCrxKeys,
-    needsPassphrase,
-    hasPgpPrivate,
-    crxCount,
-    handleUnlockPassword,
-    handleUnlockPasskey,
-    handleUnlockCrxPassword,
-    handleUnlockCrxPasskey,
-    handleEncryptedExport,
-    handleUnsafeExport,
-  } = f;
-
-  return step === "unlock" ? (
+  return f.step === "unlock" ? (
     <div className="space-y-3">
       <p className="text-muted-foreground text-xs">
         {t("keygen_export_unlock_intro")}
       </p>
 
       <BlockStack>
-        {myKeys.map((blob) => (
+        {f.myKeys.map((blob) => (
           <KeyUnlockRow
             key={blob.keyId}
             name={blob.userIds[0] ?? blob.keyId.slice(-16)}
             fingerprint={blob.keyId}
-            unlocked={isUnlocked(blob.keyId)}
+            unlocked={f.isUnlocked(blob.keyId)}
             isPasskey={blob.protection.method === "passkey"}
-            busy={unlockingId === blob.keyId}
-            password={passwords[blob.keyId] ?? ""}
-            error={unlockErrors[blob.keyId]}
+            busy={f.unlockingId === blob.keyId}
+            password={f.passwords[blob.keyId] ?? ""}
+            error={f.unlockErrors[blob.keyId]}
             onPasswordChange={(v) =>
-              setPasswords((p) => ({ ...p, [blob.keyId]: v }))
+              f.setPasswords((p) => ({ ...p, [blob.keyId]: v }))
             }
-            onUnlockPassword={() => void handleUnlockPassword(blob)}
-            onUnlockPasskey={() => void handleUnlockPasskey(blob)}
+            onUnlockPassword={() => void f.handleUnlockPassword(blob)}
+            onUnlockPasskey={() => void f.handleUnlockPasskey(blob)}
           />
         ))}
 
-        {allCrxKeys.map((blob) => (
+        {f.allCrxKeys.map((blob) => (
           <KeyUnlockRow
             key={blob.extensionId}
             name={blob.label ?? blob.extensionId.slice(0, 16)}
             fingerprint={blob.extensionId}
             badge="CRX"
-            unlocked={blob.extensionId in crxHandles}
+            unlocked={blob.extensionId in f.crxHandles}
             isPasskey={blob.protection.method === "passkey"}
-            busy={unlockingId === blob.extensionId}
-            password={crxPasswords[blob.extensionId] ?? ""}
-            error={crxErrors[blob.extensionId]}
+            busy={f.unlockingId === blob.extensionId}
+            password={f.crxPasswords[blob.extensionId] ?? ""}
+            error={f.crxErrors[blob.extensionId]}
             onPasswordChange={(v) =>
-              setCrxPasswords((p) => ({ ...p, [blob.extensionId]: v }))
+              f.setCrxPasswords((p) => ({ ...p, [blob.extensionId]: v }))
             }
-            onUnlockPassword={() => void handleUnlockCrxPassword(blob)}
-            onUnlockPasskey={() => void handleUnlockCrxPasskey(blob)}
+            onUnlockPassword={() => void f.handleUnlockCrxPassword(blob)}
+            onUnlockPasskey={() => void f.handleUnlockCrxPasskey(blob)}
           />
         ))}
       </BlockStack>
 
-      {contacts.length > 0 && (
+      {f.contacts.length > 0 && (
         <p className="text-muted-foreground text-xs">
-          {tn("keygen_export_contacts_included", contacts.length)}
+          {tn("keygen_export_contacts_included", f.contacts.length)}
         </p>
       )}
 
       <Button
         variant="outline"
         className="w-full"
-        onClick={() => setStep("export")}
+        onClick={() => f.setStep("export")}
       >
-        {myKeys.length === 0 && crxCount === 0
+        {f.myKeys.length === 0 && f.crxCount === 0
           ? t("common_continue")
           : t("keygen_export_skip_locked")}
       </Button>
@@ -435,9 +402,9 @@ function ExportKeysBody({ f }: { f: ExportKeysFlow }) {
             ext: ".asc",
             private_keys: tn(
               "keygen_export_summary_private_keys",
-              unlockedKeys.length,
+              f.unlockedKeys.length,
             ),
-            contacts: tn("keygen_export_summary_contacts", contacts.length),
+            contacts: tn("keygen_export_summary_contacts", f.contacts.length),
             private_block: "PGP PRIVATE KEY BLOCK",
             public_block: "PGP PUBLIC KEY BLOCK",
           })}
@@ -450,22 +417,22 @@ function ExportKeysBody({ f }: { f: ExportKeysFlow }) {
         />
       </p>
 
-      {unlockedCrxKeys.length > 0 && (
+      {f.unlockedCrxKeys.length > 0 && (
         <p className="text-muted-foreground text-xs">
-          {tn("keygen_export_crx_included", unlockedCrxKeys.length)}
+          {tn("keygen_export_crx_included", f.unlockedCrxKeys.length)}
         </p>
       )}
 
-      {lockedKeys.length + lockedCrxKeys.length > 0 && (
+      {f.lockedKeys.length + f.lockedCrxKeys.length > 0 && (
         <p className="text-warn rounded-lg bg-[#252012] px-3 py-2.5 text-xs">
           {tn(
             "keygen_export_still_locked",
-            lockedKeys.length + lockedCrxKeys.length,
+            f.lockedKeys.length + f.lockedCrxKeys.length,
           )}{" "}
           <button
             type="button"
             className="underline"
-            onClick={() => setStep("unlock")}
+            onClick={() => f.setStep("unlock")}
           >
             {t("keygen_export_go_back_unlock")}
           </button>
@@ -473,42 +440,42 @@ function ExportKeysBody({ f }: { f: ExportKeysFlow }) {
         </p>
       )}
 
-      {needsPassphrase ? (
+      {f.needsPassphrase ? (
         <>
           <p className="text-muted-foreground text-xs">
             {t("keygen_export_passphrase_intro")}
           </p>
           <ExportPassphraseFields
-            fields={fields}
-            error={error}
-            busy={exporting}
+            fields={f.fields}
+            error={f.error}
+            busy={f.exporting}
             submitLabel={t("keygen_export_with_passphrase")}
             busyLabel={t("keygen_exporting")}
-            onSubmit={() => void handleEncryptedExport()}
+            onSubmit={() => void f.handleEncryptedExport()}
             plaintext={
-              hasPgpPrivate
+              f.hasPgpPrivate
                 ? {
                     warning:
                       t("keygen_export_plaintext_warning_file") +
-                      (crxCount > 0
+                      (f.crxCount > 0
                         ? " " + t("keygen_export_plaintext_crx_left_out")
                         : ""),
                     button: t("keygen_export_without_passphrase"),
-                    onExport: () => void handleUnsafeExport(),
+                    onExport: () => void f.handleUnsafeExport(),
                   }
                 : undefined
             }
           />
         </>
-      ) : contacts.length > 0 ? (
+      ) : f.contacts.length > 0 ? (
         <>
-          {error && <p className="text-destructive text-xs">{error}</p>}
+          {f.error && <p className="text-destructive text-xs">{f.error}</p>}
           <Button
             className="w-full"
-            onClick={() => void handleEncryptedExport()}
-            disabled={exporting}
+            onClick={() => void f.handleEncryptedExport()}
+            disabled={f.exporting}
           >
-            {exporting ? t("keygen_exporting") : t("keygen_export")}
+            {f.exporting ? t("keygen_exporting") : t("keygen_export")}
           </Button>
         </>
       ) : (

@@ -1,14 +1,6 @@
-import { useState } from "react";
 import { LanguagesIcon, LoaderCircleIcon } from "lucide-react";
 
-import {
-  Kbd,
-  Popover,
-  PopoverAnchor,
-  PopoverContent,
-  type ShortcutSpec,
-} from "@amibeingpwned/ui";
-
+import { HoverHint } from "~/components/shared/HoverHint";
 import type { TranslationStatus } from "~/hooks/useTranslation";
 import { languageLabel } from "~/lib/ai/languages";
 import { t } from "~/lib/i18n";
@@ -27,43 +19,6 @@ interface TranslateToggleProps {
   onTranslate: () => void;
   onToggle: () => void;
   targetLanguage: string;
-}
-
-/** Hover/focus label (the UI kit has no tooltip; Popover is the house idiom). */
-export function HoverLabel({
-  label,
-  shortcut,
-  children,
-}: {
-  label: string;
-  shortcut?: ShortcutSpec;
-  children: React.ReactElement;
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverAnchor
-        asChild
-        onPointerEnter={() => setOpen(true)}
-        onPointerLeave={() => setOpen(false)}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setOpen(false)}
-      >
-        {children}
-      </PopoverAnchor>
-      <PopoverContent
-        side="top"
-        align="end"
-        className="pointer-events-none flex w-auto flex-col items-center gap-2 px-2 py-1.5 text-xs"
-        onOpenAutoFocus={(e) => e.preventDefault()}
-      >
-        {label}
-        {shortcut && (
-          <Kbd shortcut={shortcut} className="text-muted-foreground" />
-        )}
-      </PopoverContent>
-    </Popover>
-  );
 }
 
 export function TranslateToggle({
@@ -89,7 +44,7 @@ export function TranslateToggle({
     : t("workspace_translate_to", { language: languageLabel(targetLanguage) });
 
   return (
-    <HoverLabel label={busy ? t("workspace_working") : label}>
+    <HoverHint align="end" label={busy ? t("workspace_working") : label}>
       <button
         type="button"
         aria-label={label}
@@ -105,7 +60,7 @@ export function TranslateToggle({
           <LanguagesIcon className="h-4 w-4" />
         )}
       </button>
-    </HoverLabel>
+    </HoverHint>
   );
 }
 

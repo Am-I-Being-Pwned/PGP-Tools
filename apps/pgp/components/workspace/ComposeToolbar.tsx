@@ -24,6 +24,7 @@ import {
   PopoverContent,
 } from "@amibeingpwned/ui";
 
+import { HoverHint } from "~/components/shared/HoverHint";
 import { translationLanguages } from "~/lib/ai/languages";
 import type { TranslationStatus } from "~/lib/ai/run-translation";
 import {
@@ -33,7 +34,6 @@ import {
 } from "~/lib/compose/shortcuts";
 import type { InlineStyle } from "~/lib/compose/text-format";
 import { t } from "~/lib/i18n";
-import { HoverLabel } from "./TranslationPanel";
 
 export interface ComposeTranslateProps {
   status: TranslationStatus;
@@ -80,7 +80,8 @@ export function ComposeToolbar({
       {STYLE_ORDER.map((style) => {
         const Icon = STYLE_ICONS[style];
         return (
-          <HoverLabel
+          <HoverHint
+            align="end"
             key={style}
             label={STYLE_LABELS[style]}
             shortcut={STYLE_SHORTCUTS[style]}
@@ -98,13 +99,17 @@ export function ComposeToolbar({
             >
               <Icon className="h-3.5 w-3.5" />
             </button>
-          </HoverLabel>
+          </HoverHint>
         );
       })}
 
       <span aria-hidden className="bg-border mx-1 h-4 w-px" />
 
-      <HoverLabel label={t("workspace_find_replace")} shortcut={FIND_SHORTCUT}>
+      <HoverHint
+        align="end"
+        label={t("workspace_find_replace")}
+        shortcut={FIND_SHORTCUT}
+      >
         <button
           type="button"
           aria-label={t("workspace_find_replace")}
@@ -115,7 +120,7 @@ export function ComposeToolbar({
         >
           <SearchIcon className="h-3.5 w-3.5" />
         </button>
-      </HoverLabel>
+      </HoverHint>
 
       {translate && (
         <TranslateMenu
@@ -148,7 +153,7 @@ function TranslateMenu({
 
   return (
     <>
-      <HoverLabel label={label}>
+      <HoverHint align="end" label={label}>
         <button
           ref={buttonRef}
           type="button"
@@ -166,7 +171,7 @@ function TranslateMenu({
             <LanguagesIcon className="h-3.5 w-3.5" />
           )}
         </button>
-      </HoverLabel>
+      </HoverHint>
       {/* Anchored by ref, not a trigger: a nested trigger would bind to the
           hover label's own popover. */}
       <Popover open={open} onOpenChange={setOpen}>

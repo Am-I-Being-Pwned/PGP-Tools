@@ -2,7 +2,7 @@ import { CheckIcon, ClipboardIcon, DownloadIcon } from "lucide-react";
 
 import { ariaKeyShortcuts, Button, isMacPlatform } from "@amibeingpwned/ui";
 
-import { ShortcutHint } from "~/components/shared/ShortcutHint";
+import { HoverHint } from "~/components/shared/HoverHint";
 import { COPY_SHORTCUT, DOWNLOAD_SHORTCUT } from "~/lib/actions/definitions";
 import { t } from "~/lib/i18n";
 
@@ -22,7 +22,7 @@ export function ResultActions({
 }) {
   return (
     <div className="flex flex-1 gap-2">
-      <ShortcutHint shortcut={DOWNLOAD_SHORTCUT}>
+      <HoverHint shortcut={DOWNLOAD_SHORTCUT}>
         <Button
           className="flex-1"
           onClick={onDownload}
@@ -35,9 +35,9 @@ export function ResultActions({
           <DownloadIcon className="h-4 w-4" />
           {t("common_download")}
         </Button>
-      </ShortcutHint>
+      </HoverHint>
       {onCopy && (
-        <ShortcutHint shortcut={COPY_SHORTCUT}>
+        <HoverHint shortcut={COPY_SHORTCUT}>
           <Button
             variant="outline"
             className="flex-1"
@@ -52,7 +52,7 @@ export function ResultActions({
             )}
             {copied ? t("common_copied") : t("common_copy")}
           </Button>
-        </ShortcutHint>
+        </HoverHint>
       )}
     </div>
   );

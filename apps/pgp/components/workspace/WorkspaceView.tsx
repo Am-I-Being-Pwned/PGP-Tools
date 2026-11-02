@@ -17,6 +17,7 @@ import {
   Switch,
 } from "@amibeingpwned/ui";
 
+import { HoverHint } from "~/components/shared/HoverHint";
 import { KeyAvatar } from "~/components/shared/KeyAvatar";
 import {
   WorkspaceBridgeContext,
@@ -51,11 +52,7 @@ import { selectionEngine } from "./recipient-engine";
 import { RecipientPicker } from "./RecipientPicker";
 import { ResultActions } from "./ResultActions";
 import { displayOnlySignerCard, signerCardState } from "./signer-card";
-import {
-  HoverLabel,
-  TranslateToggle,
-  TranslationNote,
-} from "./TranslationPanel";
+import { TranslateToggle, TranslationNote } from "./TranslationPanel";
 import { useAutoRun } from "./useAutoRun";
 import { useWorkspace, type WorkspaceIntake } from "./useWorkspace";
 import { useWorkspaceKeyboard } from "./useWorkspaceKeyboard";
@@ -498,7 +495,8 @@ export function WorkspaceView({
           }
           resultCorner={
             canReply ? (
-              <HoverLabel
+              <HoverHint
+                align="end"
                 label={t("workspace_reply")}
                 shortcut={REPLY_SHORTCUT}
               >
@@ -514,7 +512,7 @@ export function WorkspaceView({
                 >
                   <ReplyIcon className="h-4 w-4" />
                 </button>
-              </HoverLabel>
+              </HoverHint>
             ) : undefined
           }
           showTranslation={translation.showing}
