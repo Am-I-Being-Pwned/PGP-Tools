@@ -345,6 +345,22 @@ export function useWorkspace(opts: {
     null;
   const canCrxSign = prefs.crxSigningEnabled && crxKeys.length > 0;
 
+  // A decrypt made with a key since deleted no longer stands: the key in
+  // effect moves on, and its result goes with it.
+  const lastKeyRef = useRef(selectedKeyId);
+  useEffect(() => {
+    const last = lastKeyRef.current;
+    lastKeyRef.current = selectedKeyId;
+    if (
+      state.mode === "decrypt" &&
+      last !== null &&
+      last !== selectedKeyId &&
+      !myKeys.some((k) => k.keyId === last)
+    ) {
+      dispatch({ type: "reset-results" });
+    }
+  }, [selectedKeyId, myKeys, state.mode, dispatch]);
+
   const selectPrivateKey = (keyId: string | null) => {
     if (keyId !== selectedKeyId) dispatch({ type: "key-picked", keyId });
   };
