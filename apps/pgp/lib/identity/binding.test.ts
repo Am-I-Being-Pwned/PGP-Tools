@@ -39,13 +39,8 @@ describe("emailOf / nameOf", () => {
 });
 
 describe("invisible characters in addresses", () => {
-  // Each draws nothing, so each makes a different string read as
-  // alice@corp.com: a variation selector, a tag character, a zero-width
-  // space, a soft hyphen, a bidi isolate, a combining grapheme joiner,
-  // a Hangul filler, a Mongolian vowel separator, an Arabic letter mark,
-  // and the symbols that draw as an empty cell without being ignorable:
-  // the Braille blank, the object replacement character, the musical
-  // null notehead, and a line separator.
+  // Each draws nothing (or an empty cell), so each makes a different
+  // string read as alice@corp.com.
   const hidden = [
     "\ufe0f",
     "\u{e0020}",
@@ -78,8 +73,7 @@ describe("invisible characters in addresses", () => {
   });
 
   it("flags an address-only User ID hiding one, by its address", () => {
-    // The name part is empty (or only the invisible character), so the
-    // address check is the one that has to catch it.
+    // Empty name part: the address check must catch it.
     const alice = { keyId: "ALICE", userIds: ["Alice Smith <alice@corp.com>"] };
     for (const h of hidden) {
       const evil = { keyId: "EVIL", userIds: [`<alice@corp.com${h}>`] };
@@ -118,7 +112,6 @@ describe("nameSkeleton", () => {
 
 describe("identityConflict", () => {
   it("flags a different key claiming a contact's address", () => {
-    // The advisory: a new key copying the contact's name and email.
     const conflict = identityConflict(
       { keyId: "BBBB", userIds: ["Carol Lane <CAROL@example.com>"] },
       [carol],
@@ -160,7 +153,7 @@ describe("identityConflict", () => {
 
 describe("identityClashes", () => {
   it("marks BOTH keys that claim one address, each against the other", () => {
-    // The contact list shows the clash on each card, not just the newer.
+    // Flagged on each card, not just the newer.
     const rival = { keyId: "BBBB", userIds: carol.userIds };
     const clashes = identityClashes([carol, rival]);
     expect(clashes.get("AAAA")).toEqual({ kind: "address", holders: [rival] });
@@ -180,7 +173,6 @@ describe("identityClashes", () => {
   it("leaves out unrelated people, and a contact listed only once", () => {
     const dave = { keyId: "DDDD", userIds: ["Dave Hill <dave@example.com>"] };
     expect(identityClashes([carol, dave]).size).toBe(0);
-    // A holder never clashes with itself.
     expect(identityClashes([carol]).size).toBe(0);
   });
 
@@ -351,17 +343,14 @@ describe("namesLookAlike: a name that only reads as another's", () => {
   });
 
   it("treats a letter from another alphabet that the table does not map as wild", () => {
-    // Cherokee \u13AF is not in CONFUSABLE, but it is a Cherokee letter
-    // in a Latin word, which the highlighter marks -- and nobody writes
-    // their own name that way.
+    // Cherokee \u13AF is not in CONFUSABLE, but is out-of-script in a Latin word.
     expect(alike("\u13AFlice", "Alice")).toBe(true);
     expect(alike("Alice", "\u13AFlice")).toBe(true);
     expect(alike("\u13AFlice", "Alicia")).toBe(false);
   });
 
   it("does not let wildcards match on next to nothing", () => {
-    // One real letter, or more wildcards than real letters: too little
-    // to say whose name it imitates.
+    // Too few real letters to say whose name it imitates.
     expect(alike("A\u13AF", "Al")).toBe(false);
     expect(alike("A\u13AF\u13AF\u13AF", "Alex")).toBe(false);
   });
@@ -458,7 +447,6 @@ describe("the same name, plainly written (the user's policy)", () => {
       kind: "name",
       sameName: true,
     });
-    // The accent rule holds here too: still the same name.
     expect(conflict(["Jos\u00e9"], ["Jose <j@b.test>"])).toMatchObject({
       sameName: true,
     });
@@ -475,8 +463,7 @@ describe("the same name, plainly written (the user's policy)", () => {
   });
 
   it("reads a canonical singleton as a lookalike, not as the same name", () => {
-    // The Kelvin sign and the Ohm sign decompose (NFD) to K and the
-    // Greek Omega: equal after NFD, but a different character on screen.
+    // Kelvin/Ohm signs: equal after NFD, but a different character on screen.
     expect(
       namesLookAlike("\u212aate Bell <k@a.test>", "Kate Bell <k@b.test>"),
     ).toBe(true);
@@ -493,15 +480,13 @@ describe("the same name, plainly written (the user's policy)", () => {
         "\u03a9mega Lane <o@b.test>",
       ),
     ).toBe(true);
-    // Without an address it is caught either way.
     expect(conflict(["\u212aate Bell"], ["Kate Bell <k@corp.com>"])?.kind).toBe(
       "name",
     );
   });
 
   it("reads a dotted capital I as an accent on an I", () => {
-    // \u0130 is I with a dot above (NFD), not a singleton: the same name as
-    // Ivan under another address, and flagged when there is none.
+    // \u0130 is I + dot above (not a singleton): same name as Ivan.
     expect(
       conflict(["\u0130van <i@a.test>"], ["Ivan <i@corp.com>"]),
     ).toBeNull();
@@ -551,8 +536,7 @@ describe("aliases are names too", () => {
   });
 
   it("does not let an alias turn a shared name into a clash", () => {
-    // Alice's PGP key, named "Alice" by the user: a different Alice with
-    // her own address is still two people.
+    // A different Alice with her own address is still two people.
     const alice = {
       keyId: "AAAA",
       userIds: ["Alice <alice@corp.com>"],
@@ -649,7 +633,6 @@ describe("contactClashes: performance", () => {
         `P ${i} <alt${i}@work.org>`,
       ],
     }));
-    // A few that clash, and a wildcard name, so every index is used.
     contacts.push(
       { keyId: "E".repeat(40), userIds: ["Person Number1 <x@evil.test>"] },
       { keyId: "F".repeat(40), userIds: ["Pers\u2d30n Number2 <y@evil.test>"] },

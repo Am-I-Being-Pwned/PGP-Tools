@@ -201,10 +201,8 @@ describe("preferencesStore", () => {
   });
 
   it("a read the last write pushed aside is made again once it settles", async () => {
-    // The unlock-time read, overtaken by a write that lands first: it is
-    // dropped, and so is the read the write's own storage change makes
-    // while the write is still settling. Without a catch-up read the
-    // snapshot would stay on the locked-time defaults.
+    // The unlock-time read and the write's own re-read are both dropped while
+    // the write settles; a catch-up read must still land.
     const unlockRead = deferred<PgpPreferences>();
     const save = deferred<void>();
     const strict = stored({ autoLockMinutes: 2, lockOnTabAway: true });

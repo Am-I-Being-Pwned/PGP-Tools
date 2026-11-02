@@ -1,74 +1,45 @@
 /**
- * The attack model, as data.
- *
- * `SECURITY.md` is the prose contract; this file is its machine-checked
- * backbone. Every threat is either **defended** (and names the tests that
- * hold the line) or **accepted** (and says why we don't defend it). The
- * companion `threat-model.test.ts` fails the suite if a threat claims a
- * defence without naming a live test, or accepts a risk without a reason.
- *
- * Why this exists: SECURITY.md §9 used to be five shell greps a human was
- * expected to run by hand, and it drifted -- the checklist began reporting
- * a false alarm, and a whole new persistence surface (encrypted operation
- * history) shipped without ever reaching the document. Prose asserting
- * things about code, checked by a busy human, decays. This decays loudly.
- *
- * Adding a security-relevant feature? Add its threats here first. A
- * `pending` entry is an honest TODO; a missing entry is a blind spot.
+ * The attack model, as data: the machine-checked backbone of SECURITY.md.
+ * `threat-model.test.ts` fails if a threat claims a defence without a live
+ * test or accepts a risk without a reason. Adding a security-relevant
+ * feature? Add its threats here first.
  */
 
 /**
- * Repo-relative path to a test or audit script, from the repo root.
+ * Repo-relative path to a test or audit script.
  *
- * CAVEAT on heap-snapshot evidence: V8 records a string node's value in a
- * heap snapshot **truncated to the first 1024 characters**. A canary needle
- * taken from beyond that offset returns zero hits whether or not the string
- * is retained -- the assertion passes for the wrong reason and the test is
- * silently vacuous. `e2e/heap.spec.ts` happens to be safe (its needle sits
- * at ~690) but by luck rather than by rule. Any new heap assertion must
- * constrain its needle offset and carry a positive control, as
- * `e2e/crx-memory.spec.ts` does. Treat `verifiedBy` on a heap-based test as
- * only as strong as its needle placement.
+ * CAVEAT: V8 heap snapshots truncate string values to 1024 chars, so a
+ * canary needle past that offset passes vacuously. Heap assertions must
+ * bound the needle offset and carry a positive control (see
+ * `e2e/crx-memory.spec.ts`).
  */
 export type EvidencePath = string;
 
 export type ThreatStatus =
-  /** We defend this, and tests prove it. */
   | "defended"
   /** We defend part of it; the gap is real and stated in `rationale`. */
   | "partial"
-  /** Out of scope by design. `rationale` says why. */
   | "accepted"
-  /** Known threat, defence intended but not yet built or not yet tested. */
+  /** Defence intended but not yet built or tested. */
   | "pending";
 
 export interface Threat {
   /** Stable id. Referenced from commit messages and advisories; never reuse. */
   id: string;
   title: string;
-  /** The capability the attacker is assumed to have. Be concrete. */
   attacker: string;
-  /** What stands in their way. "Nothing" is a valid answer for `accepted`. */
   defence: string;
   status: ThreatStatus;
-  /**
-   * Why we don't fully defend. Required for `accepted` and `partial` --
-   * an accepted risk without a stated reason is just an unexamined one.
-   */
+  /** Required for `accepted` and `partial`. */
   rationale?: string;
-  /**
-   * Tests or audit scripts that would fail if this defence regressed.
-   * Required for `defended` and `partial`. Paths are existence-checked.
-   */
+  /** Tests that fail if the defence regresses. Required for `defended` and
+   *  `partial`; existence-checked. */
   verifiedBy?: EvidencePath[];
-  /** The SECURITY.md section that documents this in prose. */
   section: string;
 }
 
 export const THREAT_MODEL: Threat[] = [
-  // ---------------------------------------------------------------------
-  // Key material at rest and in memory
-  // ---------------------------------------------------------------------
+  // -- Key material at rest and in memory --
   {
     id: "T-HEAP-SCRAPE",
     title: "Private key scraped from the JS heap",
@@ -191,9 +162,7 @@ export const THREAT_MODEL: Threat[] = [
     section: "§1, §10",
   },
 
-  // ---------------------------------------------------------------------
-  // Brute force
-  // ---------------------------------------------------------------------
+  // -- Brute force --
   {
     id: "T-BRUTE-OFFLINE",
     title: "Offline brute force of a stolen encrypted blob",
@@ -207,9 +176,7 @@ export const THREAT_MODEL: Threat[] = [
     section: "README security model",
   },
 
-  // ---------------------------------------------------------------------
-  // Exfiltration channels
-  // ---------------------------------------------------------------------
+  // -- Exfiltration channels --
   {
     id: "T-NETWORK-EXFIL",
     title: "Outbound network exfiltration of secrets",
@@ -388,9 +355,7 @@ export const THREAT_MODEL: Threat[] = [
     section: "§8.5",
   },
 
-  // ---------------------------------------------------------------------
-  // On-device AI (translation of decrypted messages)
-  // ---------------------------------------------------------------------
+  // -- On-device AI (translation of decrypted messages) --
   {
     id: "T-AI-PLAINTEXT-DISCLOSURE",
     title:
@@ -444,9 +409,7 @@ export const THREAT_MODEL: Threat[] = [
     section: "§8.5, §13",
   },
 
-  // ---------------------------------------------------------------------
-  // Signature integrity
-  // ---------------------------------------------------------------------
+  // -- Signature integrity --
   {
     id: "T-SIG-BYPASS",
     title: "Signature verification bypass / TOCTOU",
@@ -475,9 +438,7 @@ export const THREAT_MODEL: Threat[] = [
     section: "§10",
   },
 
-  // ---------------------------------------------------------------------
-  // User-data surfaces (not key material, but user secrets)
-  // ---------------------------------------------------------------------
+  // -- User-data surfaces (not key material, but user secrets) --
   {
     id: "T-HISTORY-AT-REST",
     title: "Operation history exposes past message content at rest",
@@ -648,9 +609,7 @@ export const THREAT_MODEL: Threat[] = [
     section: "§8.5",
   },
 
-  // ---------------------------------------------------------------------
-  // Explicitly out of scope
-  // ---------------------------------------------------------------------
+  // -- Explicitly out of scope --
   {
     id: "T-OS-MEMORY",
     title: "Swap, hibernation, crash dumps, cold boot",

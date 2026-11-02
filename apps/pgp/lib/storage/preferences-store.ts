@@ -10,21 +10,11 @@ import {
 } from "./preferences";
 
 /**
- * The panel's one in-memory copy of the preferences, kept in step with
- * storage. Everything that renders a preference reads it from here (via
- * `usePreferences`) and every change goes through {@link update}, so a
- * toggle in one view is seen by every other view without re-reads,
- * version counters, or parent-held copies.
- *
- * It wraps `getPreferences`/`savePreferences` and adds nothing to what
- * they decide: the sealed settings blob, the bootstrap, the legacy
- * migration and the strictest-preset fallback all stay theirs.
- *
- * Writes are optimistic: the snapshot moves first and, if the save
- * rejects, is read back from storage so the UI never shows a value the
- * next unlock would not. A read that started before a write and lands
- * after it is dropped -- it cannot hold the write -- and the write's own
- * storage change re-reads afterwards.
+ * The panel's single in-memory copy of the preferences, read via
+ * `usePreferences` and changed only via {@link update}. Adds no policy over
+ * `getPreferences`/`savePreferences`. Writes are optimistic; a failed save
+ * re-reads storage so the UI never shows a value the next unlock won't. A
+ * read that started before a write is dropped.
  */
 
 type Listener = () => void;
@@ -35,9 +25,8 @@ const listeners = new Set<Listener>();
 /** Bumped by every write; a read that saw a different value is stale. */
 let writeEpoch = 0;
 let writesInFlight = 0;
-/** A read was dropped for a write; re-read once the writes settle, or a
- *  change that only that read carried (the unlock-time read, above all)
- *  would never land. */
+/** A read was dropped for a write; re-read once writes settle, or its
+ *  change (e.g. the unlock-time read) would never land. */
 let reloadDropped = false;
 
 function commit(next: PgpPreferences): void {
@@ -60,9 +49,7 @@ function samePreferences(a: PgpPreferences, b: PgpPreferences): boolean {
   });
 }
 
-// One listener for the whole panel, held only while something is
-// subscribed. It fires for this panel's own saves too; those re-read the
-// value already showing, which `commit` drops without a render.
+// One listener for the panel, held only while subscribed.
 function onStorageChanged(
   changes: Record<string, chrome.storage.StorageChange>,
   area: chrome.storage.AreaName,
@@ -93,27 +80,18 @@ function subscribe(listener: Listener): () => void {
 }
 
 /**
- * Read the preferences from storage into the snapshot. Encrypted settings
- * read as defaults while the vault is locked, so a read without a session
- * takes only the bootstrap fields and keeps the settings already held --
- * a change made in another window while this one is locked must not drop
- * it to the defaults (a 15-minute auto-lock, caching on) for the moment
- * between unlock and the read the unlock makes.
- *
- * A read that fails outright puts the strictest preset in the snapshot,
- * never the defaults: a rejected read used to be dropped, and a Paranoid
- * user ran on a 15-minute auto-lock with no sign anything was wrong. The
- * location there is where this device's vault actually lives, so Settings
- * never offers to "move" it to where it already is. Returns null in that
- * case so callers can tell.
+ * Read storage into the snapshot. Without a session only bootstrap fields
+ * are taken (settings read as defaults while locked and must not replace
+ * what's held). A failed read puts the strictest preset in the snapshot,
+ * never the defaults, and returns null.
  */
 async function reload(): Promise<PgpPreferences | null> {
   const epoch = writeEpoch;
   let read: PgpPreferences | null;
   let next: PgpPreferences;
   try {
-    // A session on both sides of the read: a lock landing mid-read would
-    // otherwise let defaults through as the real settings.
+    // Session checked on both sides: a lock mid-read would let defaults
+    // through as the real settings.
     const before = await hasContactsSession();
     read = await getPreferences();
     const settingsReadable = before && (await hasContactsSession());
@@ -137,16 +115,13 @@ async function reload(): Promise<PgpPreferences | null> {
 }
 
 export interface UpdateOptions {
-  /** Move the snapshot only once the save has landed. For a change the
-   *  next unlock acts on, where even a moment of the UI showing a value
-   *  storage does not hold is wrong. Default: move first. */
+  /** Move the snapshot only once the save has landed (for changes the next
+   *  unlock acts on). Default: move first. */
   optimistic?: boolean;
 }
 
-/**
- * Save a change and show it. Rejects if the save does, after reading the
- * stored values back into the snapshot.
- */
+/** Save a change and show it. Rejects if the save does, after reading
+ *  storage back into the snapshot. */
 async function update(
   patch: Partial<PgpPreferences>,
   { optimistic = true }: UpdateOptions = {},
@@ -161,7 +136,6 @@ async function update(
   } finally {
     writesInFlight--;
     if (!saved) {
-      // Show what storage holds, before the caller hears of the failure.
       reloadDropped = false;
       await reload();
     } else {

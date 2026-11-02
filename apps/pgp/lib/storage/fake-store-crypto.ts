@@ -1,31 +1,19 @@
 /**
- * TEST-ONLY test double for the wasm sealing primitives behind
- * `envelope.ts`. Imported exclusively from `*.test.ts`, so it is
- * tree-shaken out of the extension bundle.
- *
- * It exists as one shared module rather than a copy per test file
- * because the property under test is the *binding*, and a fake that
- * drifted between test files could easily "pass" a domain-separation
- * test that the real primitives would fail. The contract it models:
+ * TEST-ONLY double for the wasm sealing primitives behind `envelope.ts`
+ * (shared so the binding can't drift between suites):
  *
  *  - `encryptStore(domain, pt)` -> `[12-byte IV][header(domain)][pt]`
- *  - `decryptStore(domain, ct)` succeeds only when the header names the
- *    SAME domain -- otherwise it throws, standing in for a failed AEAD
- *    tag check.
- *  - the legacy shared envelope is the identity transform (matching what
- *    the existing suites already used), and REJECTS anything carrying a
- *    domain header -- because a real AES-GCM open of a domain-sealed blob
- *    under the shared key and shared AAD fails its tag check too. Without
- *    that, a domain-mismatched blob would fall through the legacy path and
- *    "fail" for the wrong reason (a JSON parse error) instead of at the
- *    tag check, which is the property being asserted.
+ *  - `decryptStore` throws unless the header names the SAME domain
+ *    (standing in for a failed AEAD tag check).
+ *  - the legacy envelope is the identity transform and REJECTS any
+ *    domain-headed blob, as a real legacy AES-GCM open would, so a
+ *    mismatch fails at the tag check rather than a JSON parse.
  */
 
 import type { StoredEnvelope } from "./envelope";
 import { fromBase64, toBase64 } from "../encoding";
 
-/** Delimited by NULs, which `JSON.stringify` always escapes, so the
- *  header can never collide with the JSON these stores actually hold. */
+/** NUL-delimited: JSON.stringify always escapes NUL, so no collision. */
 const MAGIC = "\u0000gpg-store-v1\u0000";
 
 function header(domain: string): Uint8Array {
@@ -65,7 +53,6 @@ export function fakeDecryptStore(
   if (domain === "") throw new Error("Store domain must not be empty");
   const head = header(domain);
   if (!startsWith(ciphertext, head)) {
-    // Wrong domain, or a legacy blob: a tag check would fail here.
     throw new Error("Decryption failed");
   }
   return ciphertext.slice(head.length);
@@ -107,9 +94,7 @@ export function domainEnvelope(
   };
 }
 
-/** Whether a stored blob is sealed under the domain-bound scheme (as
- *  opposed to the legacy shared one). Used to assert that a read
- *  re-sealed, or that a write never emits the legacy format. */
+/** Whether a stored blob uses the domain-bound scheme. */
 export function isDomainSealed(blob: unknown): boolean {
   if (typeof blob !== "object" || blob === null) return false;
   const ct = (blob as Record<string, unknown>).ciphertext;

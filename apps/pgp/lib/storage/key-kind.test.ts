@@ -1,19 +1,7 @@
 /**
- * The migration property, stated as tests.
- *
- * Every protected key blob and every contact already on a user's disk was
- * written before the `kind` field existed. There is no version marker on
- * those records, no migration pass, and no way to tell a pre-`kind` blob
- * from a post-`kind` PGP one -- by design, because they are the same
- * thing. The whole scheme therefore rests on two rules, and nothing else:
- *
- *   READ:  absent means "pgp". Nothing may compare `.kind` directly.
- *   WRITE: `kind` is only ever persisted as "ssh". A PGP record is
- *          written with the field absent, exactly as before.
- *
- * Break the read rule and every existing key vanishes from the UI.
- * Break the write rule and today's builds start emitting records that an
- * older build (or a restored backup) reads as a foreign engine.
+ * The `kind` migration rules. READ: absent means "pgp" (break it and every
+ * existing key vanishes). WRITE: only "ssh" is persisted (break it and
+ * older builds read new PGP records as a foreign engine).
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -31,7 +19,6 @@ const SEAL = {
 
 describe("storedKeyKind (the read rule)", () => {
   it("reads a record with NO kind field as pgp", () => {
-    // The legacy record: every blob written before SSH support.
     expect(storedKeyKind({})).toBe("pgp");
     expect(isPgpRecord({})).toBe(true);
     expect(isSshRecord({})).toBe(false);
@@ -45,8 +32,6 @@ describe("storedKeyKind (the read rule)", () => {
   });
 
   it("treats an absent kind and an explicit pgp identically", () => {
-    // These two records must be indistinguishable to every consumer:
-    // one was written last year, the other could be written today.
     const legacy: KindDiscriminated = {};
     const explicit: KindDiscriminated = { kind: "pgp" };
     expect(storedKeyKind(legacy)).toBe(storedKeyKind(explicit));
@@ -66,8 +51,7 @@ describe("storedKeyKind (the read rule)", () => {
 
 describe("kindField (the write rule)", () => {
   it("writes nothing at all for pgp", () => {
-    // Not `{ kind: "pgp" }` -- the field must not appear, so a PGP blob
-    // written today is byte-identical to one written before SSH existed.
+    // The field must not appear at all.
     expect(kindField("pgp")).toEqual({});
     expect("kind" in kindField("pgp")).toBe(false);
   });
@@ -78,8 +62,7 @@ describe("kindField (the write rule)", () => {
 });
 
 describe("blobFromEncrypted", () => {
-  // Each blob is stamped with Date.now(): two built a millisecond apart
-  // would differ in their timestamps, not their kind.
+  // Pin Date.now() so blobs differ only in kind.
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
@@ -116,9 +99,6 @@ describe("blobFromEncrypted", () => {
     );
     expect(blob.kind).toBe("ssh");
     expect(storedKeyKind(blob)).toBe("ssh");
-    // An SSH identity's two stand-ins for the fields every stored key
-    // needs: the OpenSSH fingerprint, and the canonical recipient line
-    // in place of public armor.
     expect(blob.keyId).toBe("SHA256:abc");
     expect(blob.publicKeyArmored).toBe(line);
   });

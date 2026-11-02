@@ -1,20 +1,15 @@
 /**
- * The storage-write attacker: someone who can WRITE chrome.storage (for a
- * "sync across devices" user, anyone signed in to their Google account)
- * but does not know the vault password. Every attack below was
- * demonstrated against the previous build; each test is its regression.
+ * The storage-write attacker: can WRITE chrome.storage (for a sync user,
+ * anyone in their Google account) but does not know the vault password.
  *
- *  A. a plaintext legacy index sealed into the vault as genuine
- *  B. legacy plaintext preferences laundered into the sealed settings
- *  C. a forged bootstrap putting onboarding up over a real vault
- *  D. an older, validly sealed blob written back (un-revoking a contact,
- *     resurrecting deleted data), or a blob deleted outright
- *  E. the follow-up review's gaps: a junk settings blob, a sync-planted
- *     master protection hiding a local vault, odd location values, a
- *     deleted or junk ledger, and the onboarding write order
+ *  A. plaintext legacy index sealed into the vault
+ *  B. legacy plaintext preferences laundered into sealed settings
+ *  C. forged bootstrap putting onboarding up over a real vault
+ *  D. an older sealed blob written back, or a blob deleted
+ *  E/F. junk settings/ledger, sync-planted master protection, odd
+ *     locations, onboarding write order, 2.0.x devices
  *
- * Plus the property the D defence has to keep: ordinary multi-device
- * sync, a location move, and a first upgrade must NOT warn.
+ * And the D defence must NOT warn on ordinary sync, a move, or an upgrade.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -127,13 +122,10 @@ const PASSWORD_MP = {
   canaryIv: "aXY=",
 } as const;
 
-// ── A ────────────────────────────────────────────────────────────────
-
 describe("A: the retired plaintext index is never sealed into the vault", () => {
   it("does not adopt a planted VERIFIED contact over a real sealed store", async () => {
     useSync();
     await saveContact(contact("REAL"));
-    // The attacker overwrites the sealed blob with an old-format index.
     sync.store.set(STORAGE_CONTACTS, ["evil"]);
     sync.store.set(`${STORAGE_CONTACTS}:evil`, {
       ...contact("DEADBEEF"),
@@ -171,8 +163,6 @@ describe("A: the retired plaintext index is never sealed into the vault", () => 
   });
 });
 
-// ── B ────────────────────────────────────────────────────────────────
-
 describe("B: legacy plaintext preferences", () => {
   const evil = {
     advancedMode: true,
@@ -185,8 +175,7 @@ describe("B: legacy plaintext preferences", () => {
   };
 
   it("is not migrated once this device has settled the migration", async () => {
-    // A device that has run this build: the settled marker is sealed in
-    // the local ledger, which a sync attacker cannot reach.
+    // The settled marker is in the local ledger, out of a sync attacker's reach.
     await savePreferences({ autoLockMinutes: 2, autoLockEnabled: true });
     await getPreferences();
     local.store.delete(STORAGE_SETTINGS);
@@ -201,15 +190,13 @@ describe("B: legacy plaintext preferences", () => {
     expect(local.store.has(STORAGE_PREFERENCES)).toBe(false);
   });
 
-  /** A fresh module instance: the migration settles once per worker. */
   async function freshPrefs() {
     vi.resetModules();
     return import("./preferences");
   }
 
   it("is never read from the attacker-writable sync area", async () => {
-    // A sync user's legacy object was their sync bootstrap; a planted
-    // one is cut back to the boot fields, and its settings are dropped.
+    // A planted sync legacy object is cut back to boot fields; settings dropped.
     sync.store.set(STORAGE_PREFERENCES, { ...evil, storageLocation: "sync" });
     const prefs = await (await freshPrefs()).getPreferences();
 
@@ -223,8 +210,7 @@ describe("B: legacy plaintext preferences", () => {
   });
 
   it("validates every field it does migrate", async () => {
-    // A genuine first-run migration still runs -- but a value out of
-    // range is dropped to its default rather than sealed.
+    // A genuine migration still runs, but out-of-range values are not sealed.
     local.store.set(STORAGE_PREFERENCES, evil);
     const prefs = await (await freshPrefs()).getPreferences();
     expect(prefs.autoLockMinutes).toBe(15);
@@ -268,8 +254,6 @@ describe("B: legacy plaintext preferences", () => {
   });
 });
 
-// ── C ────────────────────────────────────────────────────────────────
-
 describe("C: whether a vault exists is read from the vault", () => {
   it("is a vault even with a forged onboardingComplete: false", async () => {
     local.store.set(STORAGE_MASTER_PROTECTION, PASSWORD_MP);
@@ -307,8 +291,6 @@ describe("C: whether a vault exists is read from the vault", () => {
   });
 });
 
-// ── D ────────────────────────────────────────────────────────────────
-
 describe("D: rollback and deletion", () => {
   it("keeps a revoked contact revoked when an older blob is written back", async () => {
     useSync();
@@ -320,7 +302,6 @@ describe("D: rollback and deletion", () => {
       revoked: true,
       usableForEncryption: false,
     }));
-    // The attacker restores the pre-revocation copy.
     sync.store.set(STORAGE_CONTACTS, before);
 
     const [sam] = await loadContacts();
@@ -368,8 +349,7 @@ describe("D: rollback and deletion", () => {
   });
 
   it("does not warn on a first upgrade (no ledger, no generations)", async () => {
-    // Blobs written before generations existed, on a device that has
-    // never run this build.
+    // Pre-generation blobs on a device that never ran this build.
     local.store.set(
       STORAGE_CONTACTS,
       domainEnvelope(
@@ -386,8 +366,7 @@ describe("D: rollback and deletion", () => {
     local.store.set(STORAGE_INTEGRITY, { iv: "AAAA", ciphertext: "AAAA" });
     await saveContact(contact("A"));
     expect(kinds()).toEqual([`${STORAGE_INTEGRITY}:ledger-unreadable`]);
-    // Replaced (detection works again), but a panel reopen still warns:
-    // the marks and floor it held are gone.
+    // Replaced, but a reopen still warns: the old marks and floor are gone.
     clearIntegrityIssues();
     await loadContacts();
     expect(kinds()).toEqual([`${STORAGE_INTEGRITY}:ledger-unreadable`]);
@@ -443,8 +422,7 @@ describe("D: what must NOT warn", () => {
     stub(localB, sync);
     await loadContacts();
 
-    // Both devices write from the same base before either sees the
-    // other's write; B's is the later one, and sync keeps it.
+    // Same base on both devices; B writes later and sync keeps B's.
     const t = Date.now();
     const now = vi.spyOn(Date, "now");
     const base = sync.store.get(STORAGE_CONTACTS);
@@ -463,9 +441,8 @@ describe("D: what must NOT warn", () => {
   });
 
   it("(documented trade-off) the losing write warns if its clock ran ahead", async () => {
-    // The one false positive the timestamp generation leaves: A's clock
-    // is far enough ahead that its write, which sync discarded, carries
-    // a larger stamp than the write sync kept. See `integrity.ts`.
+    // The accepted false positive: A's clock is far enough ahead that its
+    // discarded write carries the larger stamp.
     const localA = local;
     const localB = fakeArea();
     useSync();
@@ -499,8 +476,6 @@ describe("D: what must NOT warn", () => {
     expect(kinds()).toEqual([]);
   });
 });
-
-// ── E ────────────────────────────────────────────────────────────────
 
 const { storageLocation: _strictLocation, ...STRICT } = PRESETS.paranoid.bundle;
 
@@ -540,8 +515,7 @@ describe("E1: a settings blob that will not open", () => {
   });
 
   it("refuses to overwrite it when nothing proves the session key", async () => {
-    // No ledger that opens: the session might be a wrong passkey's, and
-    // its blob would replace settings only the real key can read.
+    // No ledger that opens: the session might be a wrong passkey's.
     local.store.set(STORAGE_SETTINGS, { iv: "AAAA", ciphertext: "AAAA" });
     await expect(savePreferences({ advancedMode: true })).rejects.toThrow(
       /will not open/,
@@ -580,7 +554,6 @@ describe("E2: a master protection planted in sync", () => {
   });
 
   it("is a choice, not a silent pick, on a device with no record yet", async () => {
-    // An upgrade from a build without the device record.
     local.store.set(STORAGE_MASTER_PROTECTION, PASSWORD_MP);
     plant();
     expect(local.store.has(STORAGE_DEVICE_LOCATION)).toBe(false);
@@ -725,8 +698,7 @@ describe("E4: the ledger itself deleted or replaced", () => {
     const before = await revokedThenRolledBack();
     local.store.set(STORAGE_INTEGRITY, { iv: "AAAA", ciphertext: "AAAA" });
 
-    // The blob itself still says revoked; that goes straight back into
-    // the fresh ledger's floor...
+    // The blob itself still says revoked, which refills the fresh floor...
     await loadContacts();
     expect(kinds()).toContain(`${STORAGE_INTEGRITY}:ledger-unreadable`);
     // ...so a rollback after that cannot un-revoke.
@@ -737,8 +709,8 @@ describe("E4: the ledger itself deleted or replaced", () => {
   });
 
   it("(documented) a rollback in the same write as the ledger loss is not undone", async () => {
-    // The floor the junk ledger held is gone and the rolled-back blob
-    // never said revoked. What is promised is the warning, repeating.
+    // The floor is gone and the rolled-back blob never said revoked: only
+    // the repeating warning is promised.
     const before = await revokedThenRolledBack();
     local.store.set(STORAGE_CONTACTS, before);
     local.store.set(STORAGE_INTEGRITY, { iv: "AAAA", ciphertext: "AAAA" });
@@ -800,10 +772,7 @@ describe("E5: onboarding writes the vault before the location", () => {
   });
 });
 
-// ── F: the follow-up review ──────────────────────────────────────────
-
-/** A sealed array exactly as a 2.0.x build writes it: its validators
- *  drop the `$gen` element, so the store goes back with no generation. */
+/** As a 2.0.x build writes it: its validators drop the `$gen` element. */
 function sealedWithoutGeneration(key: string, items: unknown[]) {
   return domainEnvelope(key, new TextEncoder().encode(JSON.stringify(items)));
 }
@@ -817,8 +786,7 @@ describe("F1: a 2.0.x device sharing a sync vault", () => {
       revoked: true,
       usableForEncryption: false,
     }));
-    // The old build reads, drops the generation, adds a contact, and
-    // writes back -- from its own (pre-revocation) view of SAM.
+    // The old build writes back its own pre-revocation view, without `$gen`.
     sync.store.set(
       STORAGE_CONTACTS,
       sealedWithoutGeneration(STORAGE_CONTACTS, [
@@ -872,7 +840,6 @@ describe("F2: the strict overlay is never saved", () => {
     clearIntegrityIssues();
 
     expect(await getPreferences()).toMatchObject(STRICT);
-    // What every encrypt does.
     await savePreferences({ recentRecipients: ["AAA"] });
     expect(await getPreferences()).toMatchObject(STRICT);
 
@@ -913,8 +880,7 @@ describe("F3: an older settings blob is held like a lost ledger", () => {
     expect(await getPreferences()).toMatchObject(STRICT);
     expect(kinds()).toContain(`${STORAGE_SETTINGS}:rolled-back`);
 
-    // A routine save stamps a newer generation over the old values: that
-    // must not launder them.
+    // A routine save's newer generation must not launder the old values.
     await savePreferences({ recentRecipients: ["AAA"] });
     clearIntegrityIssues(); // the panel closes and reopens
     expect(await getPreferences()).toMatchObject(STRICT);
@@ -993,8 +959,7 @@ describe("F4: a new vault's ledger starts with its master protection", () => {
   });
 
   it("replaces a ledger left by a vault recreated elsewhere quietly", async () => {
-    // Device B's ledger was sealed under the old vault's key; the vault
-    // was erased and recreated on device A.
+    // B's ledger is sealed under the old vault, erased and recreated on A.
     local.store.set(STORAGE_MASTER_PROTECTION, PASSWORD_MP);
     local.store.set(STORAGE_INTEGRITY, { iv: "AAAA", ciphertext: "AAAA" });
     local.store.set(
@@ -1011,8 +976,7 @@ describe("F4: a new vault's ledger starts with its master protection", () => {
   });
 
   it("deleted ledger after onboarding is reported", async () => {
-    // Fresh modules: the panel that onboards has never run the legacy
-    // migration (its settled flag is per module instance).
+    // Fresh modules: the legacy migration's settled flag is per instance.
     vi.resetModules();
     const mp = await import("./master-protection");
     const prefs = await import("./preferences");
@@ -1031,10 +995,8 @@ describe("F4: a new vault's ledger starts with its master protection", () => {
       onboardingComplete: true,
     });
 
-    // Onboarding is done, so the main UI's first reads must not write
-    // the ledger: a write landing then (the legacy migration settling,
-    // as it used to) read the ledger before a deletion and put it back
-    // after, without its `lost` flag, and the deletion went unseen.
+    // The main UI's first reads must not write the ledger: a read-then-write
+    // around a deletion would restore it without `lost`.
     const ledger = local.store.get(STORAGE_INTEGRITY);
     expect(ledger).toBeDefined();
     await prefs.getPreferences();
@@ -1118,7 +1080,6 @@ describe("F5: the storage switch", () => {
     ORPHAN_RECHECK_MS.value = 30;
     await saveContact(contact("REAL"));
     const state = resolveVaultState();
-    // The master protection lands while the first look waits to re-check.
     setTimeout(
       () => local.store.set(STORAGE_MASTER_PROTECTION, PASSWORD_MP),
       5,
@@ -1145,7 +1106,6 @@ describe("F6: the legacy-settings migration runs before any store write", () => 
     const prefs = await import("./preferences");
     const contacts = await import("./contacts");
 
-    // App's onUnlocked: migration, then the contacts backfill's write.
     await prefs.migrateLegacyPreferences();
     await contacts.updateContact("OLD", (c) => ({ ...c, lastUsedAt: 2 }));
 

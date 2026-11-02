@@ -5,13 +5,10 @@ import { currentStorageLocation, getItem, withSharedLock } from "./engine";
 import { resetIntegrityLedger, startIntegrityLedger } from "./integrity";
 
 //
-// Security note: For the passkey path, `storedSecret` and `prfSalt` are
-// stored in plaintext in Chrome storage. This is the standard WebAuthn PRF
-// pattern — the actual key is derived via HKDF(PRF_output, storedSecret).
-// An attacker who obtains Chrome storage still cannot derive the key
-// without the authenticator's PRF output (requires biometric/PIN).
-// The storedSecret provides defense against a compromised authenticator
-// (attacker needs both the authenticator AND Chrome storage).
+// Security: for passkeys, `storedSecret` and `prfSalt` are plaintext in
+// storage (standard WebAuthn PRF pattern). The key is HKDF(PRF_output,
+// storedSecret), so storage alone is useless without the authenticator,
+// and the authenticator alone is useless without storage.
 
 interface MasterPasskeyProtection {
   method: "passkey";
@@ -56,8 +53,8 @@ export async function getMasterProtection(): Promise<MasterProtection | null> {
   return null;
 }
 
-/** The master protection stored in a specific area, whatever the
- *  (unauthenticated) bootstrap says the vault's location is. */
+/** The master protection in a specific area, regardless of the
+ *  (unauthenticated) bootstrap's location. */
 export async function masterProtectionIn(
   area: "local" | "sync",
 ): Promise<MasterProtection | null> {
@@ -81,33 +78,17 @@ export class VaultExistsError extends Error {
 /**
  * Persist the master protection of a NEW vault.
  *
- * Refuses when one already exists in EITHER storage area. Replacing it is
- * the one write that makes every sealed key and contact unopenable at a
- * stroke -- the KDF salt and canary (or the passkey's PRF salt) are gone
- * -- and it used to be reachable by anyone who could write the plaintext
- * sync bootstrap: `onboardingComplete: false` put onboarding back up, and
- * onboarding saved over the real vault without looking. Both areas are
- * checked because `storageLocation` is just as forgeable: a local vault
- * looks absent to an engine pointed at `sync`.
+ * Refuses when one already exists in EITHER area: replacing it makes every
+ * sealed key and contact unopenable, and both the bootstrap's
+ * `onboardingComplete` and `storageLocation` are forgeable. The UI checks
+ * first (`vault-state.ts`); this is the backstop. Only {@link eraseVault}
+ * gets past it.
  *
- * The UI checks first and explains (`vault-state.ts`); this is the
- * backstop. The only way past it is {@link eraseVault}, behind its own
- * confirmation.
- *
- * A new vault starts a new integrity ledger: one left by an earlier vault
- * would not open under this one's key and would read as tampering. It is
- * started HERE, under this lock and before the master protection itself
- * is written, so it exists before any store write (`startIntegrityLedger`
- * says why that matters). The session for the new vault is already
- * installed when onboarding calls this.
- *
- * `location` is the area to create the vault in (default: wherever the
- * engine routes now). Onboarding passes the user's choice and records the
- * location only AFTER this succeeds, so a refusal leaves this device's
- * location exactly as it was. The check and the write hold a lock shared
- * by every panel window (`withSharedLock`): two windows onboarding at
- * once could otherwise both pass the check, and the second write would
- * replace the first vault's protection.
+ * Starts a fresh integrity ledger HERE, under the lock and before the
+ * protection is written, so it exists before any store write (see
+ * `startIntegrityLedger`). The check and write hold `withSharedLock` so two
+ * windows onboarding at once can't both pass. Onboarding records
+ * `location` only after this succeeds.
  */
 export async function saveMasterProtection(
   mp: MasterProtection,

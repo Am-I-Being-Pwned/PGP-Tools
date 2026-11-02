@@ -1,16 +1,7 @@
 /**
- * TEST-ONLY in-memory stand-in for a `chrome.storage` area. Imported
- * exclusively from `*.test.ts`, so it is tree-shaken out of the bundle.
- *
- * It lives here as one shared module for the same reason as
- * `fake-store-crypto.ts`: five suites had grown their own byte-identical
- * copy, and a storage fake that drifts between files can let a store
- * "pass" against semantics the real area does not have.
- *
- * `perItemCap` models `sync`'s 8 KB/item quota -- exceeding it rejects
- * with the same message Chrome uses, which is what `chunked.ts` splits
- * blobs to avoid. The default of `Infinity` makes the fake behave as an
- * unbounded `local` area.
+ * TEST-ONLY in-memory `chrome.storage` area, shared so semantics can't
+ * drift between suites. `perItemCap` models sync's 8 KB/item quota with
+ * Chrome's error message; default `Infinity` behaves like `local`.
  */
 
 import { vi } from "vitest";
@@ -57,12 +48,8 @@ export function fakeArea(perItemCap = Infinity): FakeArea {
   return area as FakeArea;
 }
 
-/**
- * Stub `chrome` with fresh (or the given) `local` and `sync` areas plus
- * any `extra` APIs, and drop the engine's cached location -- it points
- * at whatever areas the previous stub held. Pair with
- * `vi.unstubAllGlobals()` in `afterEach`.
- */
+/** Stub `chrome` with `local`/`sync` areas plus `extra`, and drop the
+ *  engine's cached location. Pair with `vi.unstubAllGlobals()`. */
 export function stubChromeStorage(
   areas: { local?: FakeArea; sync?: FakeArea } = {},
   extra: Record<string, unknown> = {},

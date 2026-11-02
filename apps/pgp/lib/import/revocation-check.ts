@@ -1,17 +1,8 @@
 /**
- * "Has this contact revoked their key?" -- asked of keys.openpgp.org.
- *
- * A revocation only helps if it reaches you, and nothing pushes it: the
- * owner publishes it and everyone holding the key has to go and look.
- * This looks, for one contact, by FINGERPRINT (the query that cannot
- * return someone else's key), and folds whatever comes back into the
- * stored cert through the same merge every import uses -- so the answer
- * can only ever add what the owner signed, never roll the contact back.
- *
- * It never changes WHO the contact is, though: that is the import
- * Review's to ask. A copy that adds a User ID is not saved here (unless
- * it is revoked -- see `mergeIntoContact`); it comes back as
- * `needs-review`, for the caller to hand to the import like any update.
+ * "Has this contact revoked their key?" -- asked of keys.openpgp.org by
+ * FINGERPRINT (cannot return someone else's key), folded in via the
+ * import merge so it can only add what the owner signed. A copy adding
+ * User IDs is not saved here; it returns `needs-review`.
  */
 
 import type { StoredCert } from "../import-public-keys";
@@ -26,32 +17,22 @@ import { parseKeyserverQuery } from "../keyserver/query";
 import { parseKeys } from "../pgp/wasm";
 
 export type RevocationCheck =
-  /** The keyserver's copy, merged into the stored contact, is revoked. */
   | { kind: "revoked" }
-  /** Not revoked as far as the keyserver knows. The merge may still have
-   *  brought news -- a new expiry, a new subkey -- and was saved. */
+  /** Not revoked; any other merged news was saved. */
   | { kind: "current" }
-  /** Not revoked, but the keyserver's copy adds User IDs: nothing was
-   *  written, and `armored` goes through the import Review, where the
-   *  new names and addresses are checked and asked about. */
+  /** Adds User IDs: nothing written, `armored` goes through import Review. */
   | { kind: "needs-review"; armored: string }
-  /** The contact was removed while the check ran: nothing was written. */
+  /** Contact removed mid-check: nothing written. */
   | { kind: "gone" }
-  /** The keyserver doesn't publish this key: nothing to check against. */
   | { kind: "not-published" }
-  /** It answered with a different key than the one asked for. */
   | { kind: "wrong-key" }
-  /** The lookup itself failed. */
   | {
       kind: "failed";
       error: KeyserverKeyFailure | "unreachable";
       retryAt?: number;
     };
 
-/** Merge a fetched copy into the stored contact as it is NOW (not as it
- *  was when the check started) and report what came of it --
- *  `needsReview` when it wrote nothing because the copy adds User IDs
- *  (see `mergeIntoContact`). */
+/** Merges into the contact as it is NOW, not when the check started. */
 export type MergeIntoContact = (
   keyId: string,
   armored: string,
@@ -61,14 +42,12 @@ export type KeyserverSend = (
   request: KeyserverKeyRequest,
 ) => Promise<KeyserverKeyResponse | undefined>;
 
-/** The worker owns the only fetch; the panel only asks it. */
 export const sendToWorker: KeyserverSend = (request) =>
   chrome.runtime.sendMessage<
     KeyserverKeyRequest,
     KeyserverKeyResponse | undefined
   >(request);
 
-/** The fingerprint query for a stored contact, or null when its id isn't one. */
 export function fingerprintQuery(keyId: string): KeyserverQuery | null {
   const query = parseKeyserverQuery(keyId);
   return query?.kind === "fingerprint" ? query : null;
@@ -90,8 +69,7 @@ export async function checkRevocation(
       : { kind: "failed", error: response.error, retryAt: response.retryAt };
   }
 
-  // Untrusted text until the engine says otherwise -- and it must be
-  // THIS key, whatever else the response carries.
+  // Untrusted until the engine says otherwise, and it must be THIS key.
   let certs;
   try {
     certs = await parseKeys(response.armored);

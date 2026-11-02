@@ -1,23 +1,8 @@
 /**
- * The keyring store.
- *
- * `key-kind.test.ts` and `protected-store.test.ts` already pin the
- * `kind` field's on-disk discipline and the generic store mechanics. Two
- * things specific to the keyring are pinned here instead:
- *
- *  1. THE DELETE GUARD. A locked vault reads as an empty keyring, which
- *     is indistinguishable from "the user deleted their last key". An
- *     unguarded delete would therefore compute "nothing left", take the
- *     empty-store shortcut, and remove the sealed blob -- destroying
- *     every key without the vault ever being opened. `removeKey` must
- *     refuse rather than proceed. This is the behaviour the guard exists
- *     for, so it gets a test that fails loudly if the guard is dropped.
- *
- *  2. THE SEAL ROUND TRIP. `blobFromEncrypted` and
- *     `encryptedBlobFromProtected` are inverses across both protection
- *     methods. They are the only path between the stored record and the
- *     decrypt call, and a field dropped in either direction produces an
- *     un-openable key that nothing catches until a user tries to unlock.
+ * Keyring-specific: the delete guard (a locked vault reads as empty, so an
+ * unguarded delete would destroy every key) and the seal round trip
+ * (`blobFromEncrypted` / `encryptedBlobFromProtected` are inverses; a
+ * dropped field makes an un-openable key).
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -96,8 +81,7 @@ describe("seal round trip", () => {
   });
 
   it("restores a passkey blob to the exact seal it was built from", () => {
-    // credentialId / prfSalt / storedSecret all have to survive: without
-    // any one of them the PRF can't be re-derived and the key is lost.
+    // Without any of these the PRF can't be re-derived and the key is lost.
     const built = blobFromEncrypted("F", [], "ed25519", "pub", passkeySeal);
     expect(encryptedBlobFromProtected(built)).toEqual(passkeySeal);
   });
@@ -134,14 +118,10 @@ describe("removeKey", () => {
   });
 
   it("leaves the sealed blob intact after a locked delete", async () => {
-    // The regression this guards: a locked read returns [], the delete
-    // computes "nothing left", and removeItem wipes the whole keyring.
     await addKey(blob());
     const sealed = local.store.get(STORAGE_KEYRING);
 
     wasmMock.session = false;
-    // The rejection is the assertion above; here we only need the store
-    // left untouched afterwards.
     await removeKey("FPR1").catch(() => undefined);
     wasmMock.session = true;
 
@@ -232,9 +212,7 @@ describe("replaceKeyProtection", () => {
   });
 
   it("throws for a key that is not in the keyring", async () => {
-    // The caller has just re-sealed a live handle and will report
-    // success; a silent no-op would leave the user believing a key was
-    // migrated when nothing was written.
+    // A silent no-op would report a migration that never happened.
     await addKey(blob());
     await expect(
       replaceKeyProtection("NOPE", {
@@ -253,8 +231,7 @@ describe("updateAlias", () => {
     await updateAlias("FPR1", "Work key");
     expect((await getKeyring())[0].alias).toBe("Work key");
 
-    // Clearing reverts the UI to the first User ID, so the field must go
-    // away rather than persist as an empty string.
+    // Cleared means absent, not an empty string.
     await updateAlias("FPR1", "   ");
     expect((await getKeyring())[0].alias).toBeUndefined();
   });

@@ -23,23 +23,19 @@ describe("chunked storage", () => {
   });
 
   it("splits an oversized value so no single item exceeds the cap", async () => {
-    // ~40 KB blob: one item would be ~5x the 8 KB cap.
     const area = fakeArea(SYNC_PER_ITEM_CAP);
     const big = blob(40_000);
 
     // Would throw against the cap if written as one item; must not here.
     await expect(setChunked(area, "k", big, true)).resolves.toBeUndefined();
 
-    // The head key holds a manifest, not the value.
     const head = area.store.get("k") as { __sc?: number };
     expect(typeof head.__sc).toBe("number");
-    // Every stored item is under the per-item cap.
     for (const [key, value] of area.store) {
       expect(key.length + JSON.stringify(value).length).toBeLessThanOrEqual(
         SYNC_PER_ITEM_CAP,
       );
     }
-    // Round-trips back to the original value.
     expect(await getChunked(area, "k")).toEqual(big);
   });
 
@@ -71,8 +67,7 @@ describe("chunked storage", () => {
   });
 
   it("never chunks when chunk=false (local), even for large values", async () => {
-    // No cap (local); a huge value stays one verbatim item so length-hiding
-    // padding survives untouched.
+    // local: stays one verbatim item so padding survives.
     const area = fakeArea();
     const big = blob(40_000);
     await setChunked(area, "k", big, false);
@@ -82,9 +77,8 @@ describe("chunked storage", () => {
   });
 
   it("getChunked throws (not undefined) when a chunk is missing", async () => {
-    // A missing chunk means a torn / mid-sync read, NOT an empty store --
-    // returning undefined here would let a read-modify-write clobber the
-    // real data. It must throw so the caller aborts.
+    // A torn read must throw, not return undefined, or a read-modify-write
+    // would clobber the real data.
     const area = fakeArea(SYNC_PER_ITEM_CAP);
     await setChunked(area, "k", blob(40_000), true);
     const manifest = area.store.get("k") as { __sc: number };
@@ -96,8 +90,7 @@ describe("chunked storage", () => {
   });
 
   it("getChunked throws when a chunk is stale (length mismatch)", async () => {
-    // Cross-device: the new manifest has arrived but an old, shorter chunk
-    // of a prior write is still present. The length guard catches it.
+    // New manifest + stale shorter chunk: the length guard catches it.
     const area = fakeArea(SYNC_PER_ITEM_CAP);
     await setChunked(area, "k", blob(40_000), true);
     area.store.set("k::sc0", "tampered-short");

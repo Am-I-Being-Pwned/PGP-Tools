@@ -29,11 +29,8 @@ function contact(over: Partial<PublicContactKey> = {}): PublicContactKey {
   };
 }
 
-/**
- * Contacts stored before the engine stopped listing unbound User IDs
- * still carry them -- and the first one names the contact on every
- * signer card. The backfill re-derives the identity fields once.
- */
+/** Old records still list unbound User IDs; the backfill re-derives the
+ *  identity fields once. */
 let written: PublicContactKey | undefined;
 function lastWritten(): PublicContactKey {
   if (!written) throw new Error("nothing was written");

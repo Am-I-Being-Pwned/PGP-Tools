@@ -1,12 +1,7 @@
 /**
- * Saving what the user chose on the import Review.
- *
- * What is pinned here is the rule the identity-binding fix rests on: a
- * key in conflict (one claiming a contact's address or look-alike name)
- * is NEVER saved unless the user picked something for it -- a missing
- * decision means "skip" -- and "replace" writes the new key before it
- * removes the old contact, so a failure in between leaves both rather
- * than neither.
+ * Pins: a key in conflict is NEVER saved without an explicit decision (missing
+ * = skip), and "replace" adds the new key before removing the old contact, so
+ * a failure in between leaves both rather than neither.
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -22,8 +17,7 @@ import {
   needsDecision,
 } from "./review";
 
-// The WASM engine is not available under vitest. Only the SSH case
-// parses anything (the recipient line), and says what the engine returns.
+// WASM isn't available under vitest; only the SSH case parses anything.
 const wasm = vi.hoisted(() => ({ parseSshRecipient: vi.fn() }));
 vi.mock("../pgp/wasm", () => wasm);
 
@@ -77,7 +71,6 @@ function impostor(over: Partial<IncomingKey> = {}): IncomingKey {
   });
 }
 
-/** A store that records every write, in order. */
 function fakeStore(contacts: PublicContactKey[] = [carolContact()]) {
   const calls: string[] = [];
   const added: ReviewedContact[] = [];
@@ -169,8 +162,6 @@ describe("applyReview", () => {
   });
 
   it("never saves a key in conflict that has no decision", async () => {
-    // The advisory's bundle with nothing chosen: the impostor stays out,
-    // the unrelated key beside it goes in as before.
     const store = fakeStore();
     const outcome = await applyReview(
       [impostor(), incoming()],
@@ -241,8 +232,7 @@ describe("applyReview", () => {
     const [saved] = store.added;
     expect(saved.keyId).toBe(IMPOSTOR);
     expect(saved.armoredPublicKey).toBe("ARMOR-IMPOSTOR");
-    // The contact's local name stays; the old key is remembered, newest
-    // first.
+    // Local name stays; old key remembered, newest first.
     expect(saved.alias).toBe("Carol (work)");
     expect(saved.previousKeyIds).toEqual([CAROL, "OLDCAROL"]);
     // A different key is never "verified" because the old one was.
@@ -281,9 +271,7 @@ describe("applyReview", () => {
   });
 
   it('"replace" with several contacts holding the address removes none', async () => {
-    // Which of them the key takes over is not something to guess, and
-    // replacing them all deletes people the Review never named. The
-    // Review does not offer Replace then; a stale decision only adds.
+    // Ambiguous holder: Replace isn't offered, a stale decision only adds.
     const other = { ...carolContact(), keyId: DAVE, alias: "Carol (home)" };
     const store = fakeStore([carolContact(), other]);
     const outcome = await applyReview(
@@ -328,8 +316,7 @@ describe("applyReview", () => {
   });
 
   it('"replace" on a lookalike address only adds, too', async () => {
-    // "al\u0131ce@" only READS as the holder's address. A new key for a
-    // lookalike of someone's address is never their rotation.
+    // A lookalike of someone's address is never their rotation.
     const store = fakeStore();
     const outcome = await applyReview(
       [
@@ -386,8 +373,7 @@ describe("contactFromIncoming: a single pasted SSH key", () => {
   const LINE = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExample";
 
   beforeEach(() => {
-    // The stored recipient is the canonical line, which has no comment:
-    // the engine's parse of it reports none.
+    // The canonical stored line has no comment.
     wasm.parseSshRecipient.mockResolvedValue({
       fingerprint: FP,
       recipient: LINE,

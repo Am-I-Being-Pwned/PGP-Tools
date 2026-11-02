@@ -1,35 +1,19 @@
 /**
  * Segmented encrypted store for the opt-in operation history.
  *
- * Entries are appended to a "head" segment until the next entry would
- * push its PADDED size past 64 KB, after which a fresh head starts; only
- * the head segment is ever re-encrypted on append. Each segment is an AES-256-GCM blob under
- * the in-WASM contacts session key (same scheme as the keyring/contacts
- * stores). A small plaintext manifest at `STORAGE_HISTORY` tracks segment
- * numbers and byte sizes -- never entry data -- so pruning and usage
- * reporting work without decrypting anything.
+ * Entries append to a head segment until its PADDED size would pass 64 KB;
+ * only the head is re-encrypted on append. Segments are sealed under the
+ * contacts session key with their own storage key as the domain
+ * (`envelope.ts`), so a blob cannot be replayed into another slot. A
+ * plaintext manifest holds segment numbers and padded bucket sizes only --
+ * never entry data or exact lengths. Legacy unpadded / pre-domain segments
+ * still read and are re-sealed in place on first read.
  *
- * Segment plaintext is padded to a power-of-two bucket (`padding.ts`) and
- * the manifest records only that bucket, so neither the blob nor the
- * cleartext manifest moves by the exact length of each message the user
- * captures. Segments written before padding still read (no delimiter, so
- * they unpad to themselves) and are re-padded in place on the next read.
+ * Always chrome.storage.local: sync's quota cannot hold it, and history
+ * should not leave the device.
  *
- * Each segment is sealed for its own storage key as the domain (see
- * `envelope.ts`), so `pgp_history_seg_0`'s blob cannot be replayed into
- * `pgp_history_seg_1` or into any other store: both the HKDF subkey and
- * the AAD are derived from the slot name, and moving the blob breaks the
- * tag check. Segments written before domain separation still open (legacy
- * fallback) and are re-sealed in place on the first read.
- *
- * History always lives in chrome.storage.local, regardless of the user's
- * storageLocation preference: sync's total quota (~100 KB) couldn't hold
- * it, and history shouldn't leave the device anyway.
- *
- * No plaintext is ever cached at module level -- every read decrypts on
- * demand and every local goes out of scope when the call returns, so
- * dropping the contacts session (master lock) leaves nothing readable
- * here. See history.test.ts for the behavioral proof.
+ * No plaintext is cached at module level, so dropping the session (master
+ * lock) leaves nothing readable (proven in history.test.ts).
  */
 
 import { STORAGE_HISTORY, STORAGE_HISTORY_SEGMENT_PREFIX } from "../constants";
@@ -62,32 +46,22 @@ export interface HistoryEntry {
 /** What callers pass to append: id/ts are assigned here. */
 export type NewHistoryEntry = Omit<HistoryEntry, "id" | "ts">;
 
-/** A segment's padded size (its bucket) may not grow past this: the head
- *  takes another entry only while the padded result still fits, so every
- *  multi-entry segment sits in a bucket of at most 64 KB. Sealing against
- *  the bucket rather than the raw JSON matters: a segment sealed "once its
- *  JSON passes 64 KB" holds 64-96 KB, which pads to a 128 KB bucket and
- *  would count double against the budget. */
+/** Max padded (bucket) size of a multi-entry segment. Sealing on the bucket,
+ *  not raw JSON, keeps segments out of the 128 KB bucket. */
 const SEGMENT_SEAL_BYTES = 64 * 1024;
-/** Per-entry content cap (UTF-16 code units) -- applies in ALL cases,
- *  independent of the total byte budget. */
+/** Per-entry content cap (UTF-16 code units), independent of the budget. */
 export const CONTENT_CAP = 32 * 1024;
-/** Max files kept per entry. Content is capped at CONTENT_CAP but file
- *  metadata has no natural bound -- a many-thousand-file drop must not
- *  balloon a single entry past the segment/budget scale. */
+/** Max files kept per entry: a huge drop must not balloon one entry. */
 export const FILES_CAP = 500;
-/** Max stored filename length (UTF-16 code units). */
 const FILE_NAME_CAP = 256;
 /** Total byte budget without the optional `unlimitedStorage` permission. */
 const DEFAULT_BUDGET_BYTES = 2 * 1024 * 1024;
-/** Generous budget once `unlimitedStorage` has been granted. */
 const UNLIMITED_BUDGET_BYTES = 50 * 1024 * 1024;
 
 interface SegmentRef {
   n: number;
-  /** Padded plaintext size of the segment: a bucket, never the exact
-   *  JSON length (budget accounting). Pre-padding manifests hold the exact
-   *  size until that segment is next read or written. */
+  /** Padded bucket size, never exact JSON length (pre-padding manifests
+   *  hold exact sizes until that segment is next read or written). */
   bytes: number;
 }
 
@@ -128,24 +102,17 @@ function segKey(n: number): string {
   return `${STORAGE_HISTORY_SEGMENT_PREFIX}${n}`;
 }
 
-// ── budget ───────────────────────────────────────────────────────────
-
-/** The active total byte budget for a given permission state. */
 export function resolveBudget(hasUnlimited: boolean): number {
   return hasUnlimited ? UNLIMITED_BUDGET_BYTES : DEFAULT_BUDGET_BYTES;
 }
 
-/** The permission API, or undefined where it isn't exposed (Firefox
- *  behaves differently here) -- the chrome types claim it always exists,
- *  hence the widening. */
+/** Undefined where not exposed (Firefox); the chrome types claim otherwise. */
 function permissionsApi(): typeof chrome.permissions | undefined {
   return (chrome as Partial<typeof chrome>).permissions;
 }
 
-/** Whether the optional `unlimitedStorage` permission is currently
- *  granted. Never persisted -- checked live so a revocation from
- *  chrome://extensions takes effect on the next append/load. Feature-
- *  detected and throw-safe (Firefox permission APIs differ). */
+/** Checked live, never persisted, so a revocation in chrome://extensions
+ *  applies on the next append/load. Throw-safe. */
 export async function hasUnlimitedStorage(): Promise<boolean> {
   try {
     const permissions = permissionsApi();
@@ -156,10 +123,8 @@ export async function hasUnlimitedStorage(): Promise<boolean> {
   }
 }
 
-/** Prompt for the optional `unlimitedStorage` permission (idempotent).
- *  Called from the history toggle's user gesture. Returns whether it is
- *  now granted; a denial or a throwing/absent API just means the
- *  conservative default budget stays active -- never block the toggle. */
+/** Called from the history toggle's user gesture. A denial or missing API
+ *  just keeps the default budget -- never block the toggle. */
 export async function requestUnlimitedHistoryStorage(): Promise<boolean> {
   try {
     const permissions = permissionsApi();
@@ -170,8 +135,6 @@ export async function requestUnlimitedHistoryStorage(): Promise<boolean> {
     return false;
   }
 }
-
-// ── storage plumbing (always chrome.storage.local) ───────────────────
 
 async function readManifest(): Promise<HistoryManifest> {
   const raw = (await chrome.storage.local.get(STORAGE_HISTORY))[
@@ -186,28 +149,18 @@ async function writeManifest(manifest: HistoryManifest): Promise<void> {
 
 interface ReadSegment {
   entries: HistoryEntry[];
-  /** Padded plaintext size as stored after this read (re-pads included),
-   *  for the manifest. 0 when the segment could not be read. */
+  /** Padded size after this read (incl. re-pad); 0 when unreadable. */
   bytes: number;
 }
 
-/** Decrypt one segment. Throw-safe: a segment that is missing, garbled,
- *  or undecryptable is skipped rather than failing the whole load -- and a
- *  blob sitting in the wrong slot is now exactly that, since the segment
- *  key is the sealing domain.
+/** Decrypt one segment. Throw-safe: a missing, garbled, undecryptable or
+ *  wrong-slot segment is skipped.
  *
- *  A segment written before domain separation, or before padding, is
- *  re-sealed in place, padded. Safe to do from a read: every caller holds
- *  `withLock(STORAGE_HISTORY)`, and the re-seal keeps the SAME data bytes
- *  (only the padding changes); the returned `bytes` is the new bucket for
- *  the caller to put in the manifest. Best-effort -- a failed re-seal
- *  leaves the readable old blob alone and the next read retries.
+ *  Legacy segments are re-sealed in place with the SAME data bytes; safe
+ *  because every caller holds `withLock(STORAGE_HISTORY)`. Best-effort.
  *
- *  The decrypted bytes are zeroized on the way out: up to ~64 KB of the
- *  user's own message content per segment. (The intermediate string from
- *  `TextDecoder.decode` / `JSON.parse` is not zeroizable -- JS strings are
- *  immutable -- so this clears the buffer, not every copy. See the
- *  `JSON.stringify` note on `writeSegment`.) */
+ *  Decrypted bytes are zeroized on the way out (the decoded JS string
+ *  cannot be). */
 async function readSegment(n: number): Promise<ReadSegment> {
   let plaintext: Uint8Array | null = null;
   let repadded: Uint8Array | null = null;
@@ -222,8 +175,7 @@ async function readSegment(n: number): Promise<ReadSegment> {
     const entries = parsed.filter(isValidEntry);
     let bytes = plaintext.length;
     if (opened.legacy || !isCanonicalPadding(plaintext, true)) {
-      // Re-seal the exact data bytes (not a re-serialisation of
-      // `entries`) so nothing is dropped in translation.
+      // Re-seal the exact data bytes, not a re-serialisation, so nothing is lost.
       repadded = padPlaintext(data, true);
       try {
         await chrome.storage.local.set({
@@ -231,7 +183,7 @@ async function readSegment(n: number): Promise<ReadSegment> {
         });
         bytes = repadded.length;
       } catch {
-        // best-effort; the old blob is still there and still readable
+        // best-effort; the old blob is still readable
       }
     }
     return { entries, bytes };
@@ -243,14 +195,9 @@ async function readSegment(n: number): Promise<ReadSegment> {
   }
 }
 
-/** Encrypt + write one segment, padded to a bucket; returns the padded
- *  size (the only size the manifest ever learns).
- *
- *  The encoded plaintext is zeroized in a `finally` (matching
- *  `encryptWorkspaceDraft`). The `JSON.stringify` result it is encoded
- *  from is a JS string and so cannot be cleared; avoiding that would mean
- *  hand-serialising entries straight into a byte buffer, which is a much
- *  larger change than the leak justifies -- noted rather than done. */
+/** Encrypt + write one segment padded to a bucket; returns the padded size
+ *  (the only size the manifest learns). Zeroizes `json`; the source
+ *  `JSON.stringify` string cannot be cleared (accepted). */
 async function writeSegment(n: number, json: Uint8Array): Promise<number> {
   const padded = padPlaintext(json, true);
   json.fill(0);
@@ -264,23 +211,15 @@ async function writeSegment(n: number, json: Uint8Array): Promise<number> {
   }
 }
 
-/** What one segment counts against the budget: its recorded size, capped
- *  at the seal size. A segment over the cap holds at least a seal's worth
- *  of real content (one oversized entry, or a segment sealed by a
- *  pre-padding build once its JSON passed 64 KB), and only its padding
- *  pushed it into the 128 KB bucket. Counting the full bucket would make
- *  re-padding an upgrade's old segments look like growth and prune about
- *  half of a full history, and would halve the capacity the budget gave
- *  before padding. Capped, the budget still measures real content: a full
- *  pre-padding history (2 MB of JSON in segments of 64 KB and up) counts
- *  at most 2 MB, before and after the re-pad. */
+/** Budget weight: recorded size capped at the seal size, so padding into
+ *  the 128 KB bucket (e.g. re-padding old segments) does not count as
+ *  growth and trigger pruning. */
 function budgetWeight(seg: SegmentRef): number {
   return Math.min(seg.bytes, SEGMENT_SEAL_BYTES);
 }
 
-/** Drop oldest segments until the total fits the active budget. The head
- *  segment is never dropped. Mutates `manifest`; returns whether anything
- *  was pruned (i.e. the manifest needs rewriting). */
+/** Drop oldest segments to fit the budget; never the head. Mutates
+ *  `manifest`; returns whether anything was pruned. */
 async function pruneToBudget(manifest: HistoryManifest): Promise<boolean> {
   const budget = resolveBudget(await hasUnlimitedStorage());
   let total = manifest.segs.reduce((sum, s) => sum + budgetWeight(s), 0);
@@ -295,17 +234,10 @@ async function pruneToBudget(manifest: HistoryManifest): Promise<boolean> {
   return pruned;
 }
 
-/** Segment numbers present in storage under the segment prefix,
- *  ascending. `withLock` only serializes within one JS context and
- *  chrome.storage has no compare-and-swap, so two extension contexts
- *  (e.g. side panels in two browser windows) appending concurrently do
- *  racing read-modify-writes on the manifest: one context's manifest
- *  write can drop a segment the other just published. Scanning by
- *  prefix lets loadHistory union what actually exists instead of
- *  trusting the manifest alone. Residual race, accepted honestly: two
- *  contexts appending to the SAME head segment blob still last-write-
- *  wins (one entry lost) -- that can't be fixed without a cross-context
- *  CAS, which chrome.storage doesn't offer. */
+/** Segment numbers in storage by prefix, ascending. Contexts in different
+ *  windows race on the manifest (no CAS in chrome.storage), so loads union
+ *  what exists instead of trusting it. Accepted residual: concurrent
+ *  appends to the SAME head segment are last-write-wins. */
 async function scanSegmentNumbers(): Promise<number[]> {
   const all = await chrome.storage.local.get(null);
   return Object.keys(all)
@@ -315,16 +247,9 @@ async function scanSegmentNumbers(): Promise<number[]> {
     .sort((a, b) => a - b);
 }
 
-/** Fold segments that exist in storage but not in `manifest` back into
- *  it (see {@link scanSegmentNumbers} for how they arise). Mutates
- *  `manifest`; returns whether anything was adopted (i.e. the manifest
- *  needs rewriting). Unreadable strays are left for clearHistory's
- *  prefix sweep rather than adopted as empty.
- *
- *  This is the path that made the old shared-AAD gap visible: a blob
- *  planted under any `pgp_history_seg_*` key used to decrypt and get
- *  adopted as real history. Now `readSegment`'s domain is the segment key,
- *  so a planted or replayed blob yields [] and is never adopted. */
+/** Fold segments missing from `manifest` back in; returns whether any were
+ *  adopted. Unreadable strays are left for clearHistory's sweep. Planted or
+ *  replayed blobs fail the per-slot domain and are never adopted. */
 async function adoptStraySegments(manifest: HistoryManifest): Promise<boolean> {
   const known = new Set(manifest.segs.map((s) => s.n));
   let adopted = false;
@@ -339,14 +264,9 @@ async function adoptStraySegments(manifest: HistoryManifest): Promise<boolean> {
   return adopted;
 }
 
-// ── public API ───────────────────────────────────────────────────────
-
-/** Append one entry. No-op while locked (returns false). Content is
- *  capped at CONTENT_CAP (with `truncated: true`); decrypt/verify entries
- *  have any content stripped defensively -- those ops are metadata-only.
- *  Returns whether the entry was actually written; storage failures
- *  (quota exhaustion, device full) propagate as rejections so callers
- *  can tell a dropped capture from a saved one. */
+/** Append one entry; false while locked. Content capped at CONTENT_CAP;
+ *  decrypt/verify entries are stripped to metadata. Storage failures
+ *  reject so callers can tell a dropped capture from a saved one. */
 export async function appendHistoryEntry(
   entry: NewHistoryEntry,
 ): Promise<boolean> {
@@ -360,9 +280,7 @@ export async function appendHistoryEntry(
     const added = finalizeEntry(entry);
     let head: SegmentRef | undefined;
     let json: Uint8Array | undefined;
-    // The last segment takes the entry only while its PADDED size stays
-    // within the seal size (see SEGMENT_SEAL_BYTES). A segment from a
-    // pre-padding build that is already past it is never reopened.
+    // Only while the PADDED size stays within SEGMENT_SEAL_BYTES.
     if (last && last.bytes > 0 && last.bytes <= SEGMENT_SEAL_BYTES) {
       const entries = (await readSegment(last.n)).entries;
       entries.push(added);
@@ -384,26 +302,20 @@ export async function appendHistoryEntry(
       json = encodeEntries([added]);
     }
 
-    // Segment first, manifest second: if the segment write rejects
-    // (quota / device full) nothing has been persisted, so the stored
-    // manifest still describes exactly what exists.
+    // Segment first, manifest second: a rejected segment write persists nothing.
     head.bytes = await writeSegment(head.n, json);
 
     await pruneToBudget(manifest);
     try {
       await writeManifest(manifest);
     } catch (err) {
-      // A freshly created segment whose manifest write failed would be
-      // an orphaned blob eating quota that the next append at the same
-      // number silently overwrites. Remove it (best-effort) so the
-      // store stays consistent with the manifest that is actually
-      // stored. An existing head needs no cleanup: the stale manifest
-      // still references it, only with an undercounted byte size.
+      // Remove a new segment whose manifest write failed, so it does not
+      // orphan quota (best-effort). An existing head needs no cleanup.
       if (isNewSegment) {
         try {
           await chrome.storage.local.remove(segKey(head.n));
         } catch {
-          // best-effort; clearHistory's prefix scan sweeps leftovers
+          // best-effort; clearHistory's prefix sweep catches leftovers
         }
       }
       throw err;
@@ -412,15 +324,11 @@ export async function appendHistoryEntry(
   });
 }
 
-/** UTF-8 JSON of a segment's entries. The caller hands it to
- *  {@link writeSegment}, which zeroizes it. */
+/** The caller hands it to {@link writeSegment}, which zeroizes it. */
 function encodeEntries(entries: HistoryEntry[]): Uint8Array {
   return new TextEncoder().encode(JSON.stringify(entries));
 }
 
-/** Cap a file-metadata list to FILES_CAP entries and FILE_NAME_CAP
- *  characters per name. Returns the (possibly) capped list and whether
- *  anything was cut. */
 function capFiles(files: NonNullable<HistoryEntry["files"]>): {
   files: NonNullable<HistoryEntry["files"]>;
   capped: boolean;
@@ -453,8 +361,7 @@ function finalizeEntry(entry: NewHistoryEntry): HistoryEntry {
     full.files = result.files;
     if (result.capped) full.truncated = true;
   }
-  // decrypt/verify are metadata-only; enforce here so no caller mistake
-  // can persist decrypted plaintext.
+  // Enforced here so no caller mistake can persist decrypted plaintext.
   if (entry.op === "decrypt" || entry.op === "verify") return full;
   if (content === undefined) return full;
   if (content.length > CONTENT_CAP) {
@@ -463,10 +370,8 @@ function finalizeEntry(entry: NewHistoryEntry): HistoryEntry {
   return { ...full, content, ...(truncated ? { truncated } : {}) };
 }
 
-/** All entries, newest first. Empty while locked. Also adopts segments
- *  the manifest lost track of (cross-context manifest race) and prunes
- *  down to the active budget, so a revoked `unlimitedStorage`
- *  permission takes effect on the next load. */
+/** Newest first; empty while locked. Adopts stray segments and prunes to
+ *  the live budget (so a revoked `unlimitedStorage` applies). */
 export async function loadHistory(): Promise<HistoryEntry[]> {
   if (!(await hasContactsSession())) return [];
   return withLock(STORAGE_HISTORY, async () => {
@@ -477,8 +382,6 @@ export async function loadHistory(): Promise<HistoryEntry[]> {
     const pruned = await pruneToBudget(manifest);
 
     const all: HistoryEntry[] = [];
-    // A segment re-padded by this read reports its new bucket; fold that
-    // in so an old manifest stops holding exact sizes.
     let resized = false;
     for (const seg of manifest.segs) {
       const { entries, bytes } = await readSegment(seg.n);
@@ -489,17 +392,13 @@ export async function loadHistory(): Promise<HistoryEntry[]> {
       }
     }
     if (adopted || pruned || resized) await writeManifest(manifest);
-    // Segments and entries within them are stored oldest-first.
     all.reverse();
     return all;
   });
 }
 
-/** Remove every segment and the manifest. Works while locked (deleting
- *  ciphertext needs no session). Sweeps by key prefix rather than
- *  trusting the manifest: a failed manifest write or a concurrent
- *  append from another extension context can leave segments the
- *  manifest doesn't list, and "clear history" must remove those too. */
+/** Works while locked. Sweeps by key prefix, not the manifest, so segments
+ *  the manifest lost are removed too. */
 export async function clearHistory(): Promise<void> {
   await withLock(STORAGE_HISTORY, async () => {
     const all = await chrome.storage.local.get(null);
@@ -511,27 +410,20 @@ export async function clearHistory(): Promise<void> {
   });
 }
 
-/** How much of the budget the history uses: each segment's padded size,
- *  capped as {@link budgetWeight} counts it, so the figure is the one
- *  pruning measures against `resolveBudget`. Manifest metadata only -- no
- *  decryption, so it also works while locked. */
+/** Budget usage as pruning counts it ({@link budgetWeight}). Manifest only,
+ *  so it works while locked. */
 export async function historyByteSize(): Promise<number> {
   const manifest = await readManifest();
   return manifest.segs.reduce((sum, s) => sum + budgetWeight(s), 0);
 }
 
-/** Outcome of a {@link recordHistory} capture attempt. `skipped` means
- *  capture was intentionally not attempted (opted out, never-cache mode,
- *  or locked); `failed` means the user expected the entry to be recorded
- *  but storage rejected the write (quota / device full). */
+/** `skipped`: intentionally not captured (opted out, never-cache, locked).
+ *  `failed`: the user expected it saved but storage rejected the write. */
 export type RecordHistoryResult = "saved" | "skipped" | "failed";
 
-/** Capture hook for the workspace operations: appends only when the user
- *  has opted in (`historyEnabled`) and isn't in never-cache mode. Never
- *  throws -- history capture must never break or delay an operation --
- *  but reports the outcome so the call site can warn the user when a
- *  capture they were relying on silently failed (they may delete the
- *  original message trusting history has it). */
+/** Capture hook: appends only when opted in and not never-cache. Never
+ *  throws (capture must not break an operation), but reports failure so the
+ *  user is warned before trusting history with a message they delete. */
 export async function recordHistory(
   entry: NewHistoryEntry,
 ): Promise<RecordHistoryResult> {

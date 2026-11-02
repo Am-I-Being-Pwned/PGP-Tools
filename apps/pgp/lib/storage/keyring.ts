@@ -15,30 +15,21 @@ import { createProtectedStore } from "./protected-store";
 
 export interface ProtectedKeyBlob extends KindDiscriminated {
   version: 1;
-  /** The key's stable identity: an OpenPGP fingerprint for a `pgp` blob,
-   *  the OpenSSH `SHA256:...` fingerprint for an `ssh` one. Either way,
-   *  what the seal's AAD binds the ciphertext to. */
+  /** OpenPGP fingerprint (`pgp`) or OpenSSH `SHA256:...` (`ssh`); what the
+   *  seal's AAD binds to. */
   keyId: string;
-  /** OpenPGP User IDs. An SSH key has none: it carries a single free-text
-   *  comment (conventionally `user@host`), which is stored here as the
-   *  sole element so the UI has one name field to render, not two. */
+  /** OpenPGP User IDs; an SSH key stores its comment as the sole element. */
   userIds: string[];
   algorithm: string;
-  /** Local, user-set display name. Never touches the certificate: the
-   *  User IDs remain the cryptographic identity; this is just what the
-   *  UI shows. Cleared (undefined) reverts to the first User ID. */
+  /** Local display name only; never touches the certificate. */
   alias?: string;
-  /** The public half, in whatever form the engine publishes it: armored
-   *  cert for `pgp`, canonical `<type> <base64>` recipient line for
-   *  `ssh`. */
+  /** Armored cert (`pgp`) or `<type> <base64>` recipient line (`ssh`). */
   publicKeyArmored: string;
   /** OpenPGP only -- age has no revocation concept. */
   revocationCertificate?: string;
-  /** Non-blocking flag from key parsing (e.g. relies on a SHA-1 binding
-   *  signature). Shown as a warning badge; the key is still usable. */
+  /** Non-blocking parse warning (e.g. SHA-1 binding); key stays usable. */
   securityWarning?: string;
-  /** How the private half is sealed at rest. The same union every
-   *  protected key type uses — see `protection/protected-blob.ts`. */
+  /** How the private half is sealed (`protection/protected-blob.ts`). */
   protection: KeyProtection;
   encryptedPrivateKey: string; // base64 ciphertext
   iv: string; // base64
@@ -48,13 +39,8 @@ export interface ProtectedKeyBlob extends KindDiscriminated {
 
 // ── constructors ─────────────────────────────────────────────────────
 
-/**
- * Assemble a stored blob from a fresh seal.
- *
- * `kind` defaults to `"pgp"` and is only ever PERSISTED for `"ssh"` (see
- * `key-kind.ts`), so a PGP blob written today is byte-identical to one
- * written before SSH existed.
- */
+/** Assemble a stored blob from a fresh seal. `kind` is only persisted for
+ *  "ssh" (`key-kind.ts`). */
 export function blobFromEncrypted(
   keyId: string,
   userIds: string[],
@@ -113,10 +99,6 @@ export function encryptedBlobFromProtected(
   } satisfies PasswordEncryptedBlob;
 }
 
-// ── encrypted storage ───────────────────────────────────────────────
-// AES-256-GCM encrypted blob via WASM contacts session key.
-// Same scheme as contacts — see encrypted-store.ts.
-
 function isValidBlob(v: unknown): v is ProtectedKeyBlob {
   if (typeof v !== "object" || v === null) return false;
   const o = v as Record<string, unknown>;
@@ -154,16 +136,9 @@ export async function addKey(blob: ProtectedKeyBlob): Promise<void> {
   await keyringStore.put(blob);
 }
 
-/** Delete one key.
- *
- *  Guarded on the vault session, and it must stay that way. A locked
- *  vault makes the load return `[]` -- indistinguishable from an empty
- *  keyring -- so an unguarded delete would compute "nothing left" and
- *  persist that over the sealed blob (it used to `removeItem` it; an
- *  emptied store is now a sealed empty array): every key destroyed,
- *  without the vault ever being opened. The CRX store has
- *  carried the same guard since it was written (see its `requireSession`
- *  and the comment above it); the keyring simply never got one. */
+/** Delete one key. Must stay guarded on the vault session: a locked load
+ *  returns `[]`, so an unguarded delete would persist "nothing left" over
+ *  every key without the vault ever being opened. */
 export async function removeKey(keyId: string): Promise<void> {
   await keyringStore.remove(keyId, {
     guard: async () => {
@@ -178,8 +153,7 @@ export async function removeKey(keyId: string): Promise<void> {
   });
 }
 
-/** Set (or clear, with an empty/blank value) a key's local display
- *  alias. Non-destructive: only the stored metadata changes. */
+/** Set (or clear, with a blank value) a key's local display alias. */
 export async function updateAlias(keyId: string, alias: string): Promise<void> {
   const trimmed = alias.trim();
   await keyringStore.update(keyId, (key) => {
@@ -187,13 +161,9 @@ export async function updateAlias(keyId: string, alias: string): Promise<void> {
   });
 }
 
-/** Swap a key's at-rest sealing for a new one (the "unlock keys with the
- *  vault" re-protect). Only the three sealing fields change; identity,
- *  alias, timestamps and the rest are read fresh under the store lock, so
- *  a caller holding a stale snapshot cannot clobber them. Throws when the
- *  key is not in the keyring -- the caller has just re-sealed a live
- *  handle and reports success, so a silent no-op would leave the user
- *  believing a key was migrated when nothing was written. */
+/** Swap a key's at-rest sealing. Other fields are read fresh under the
+ *  lock so a stale snapshot can't clobber them. Throws when the key is
+ *  missing: the caller reports success, so a silent no-op would lie. */
 export async function replaceKeyProtection(
   keyId: string,
   parts: Pick<ProtectedKeyBlob, "protection" | "encryptedPrivateKey" | "iv">,
@@ -213,9 +183,8 @@ export async function replaceKeyProtection(
   );
 }
 
-/** Backfill the revocation certificate for an imported key (generated
- *  keys store one at creation time). Overwriting is harmless: every
- *  revocation certificate ever minted for a key stays valid. */
+/** Backfill an imported key's revocation certificate. Overwriting is
+ *  harmless: every minted revocation cert stays valid. */
 export async function updateRevocationCertificate(
   keyId: string,
   armored: string,
@@ -226,11 +195,7 @@ export async function updateRevocationCertificate(
       key.revocationCertificate = armored;
     },
     {
-      // Unlike the metadata setters above, a miss here must NOT no-op:
-      // the caller reports "certificate created" on success, and a cert
-      // that was never persisted would make that a false assurance (e.g.
-      // the key was deleted, or the vault locked mid-flight and the load
-      // returned nothing).
+      // Must NOT no-op: the caller reports "certificate created".
       onMissing: () => {
         throw new AppError(
           "key-not-found",

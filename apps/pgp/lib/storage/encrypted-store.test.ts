@@ -1,23 +1,12 @@
 /**
- * The shared load/save behind the keyring and contacts stores.
+ * Edge behaviour of the shared keyring/contacts store:
  *
- * `contacts.test.ts` exercises this module incidentally, through one
- * store on the happy path. What is pinned HERE is the behaviour that
- * only shows up at the edges, and that a caller would otherwise discover
- * the hard way:
- *
- *  - a locked vault reads as an EMPTY store, never as an error, and a
- *    locked vault must not be able to WRITE one (the asymmetry is the
- *    whole safety property: an unguarded save of `[]` over a sealed blob
- *    is indistinguishable from deleting every key);
- *  - the legacy envelope is read transparently, and the retired
- *    plaintext index is NOT: anything that is not a sealed envelope reads
- *    as an empty store and is never sealed into the vault (it was the
- *    way to plant a verified contact without the vault key);
- *  - a location move re-packs rather than byte-copies, because `local`
- *    padding does not fit `sync`'s 8 KB/item cap;
- *  - `normalizePadding` upgrades a legacy blob WITHOUT changing a single
- *    stored item.
+ *  - a locked vault reads as EMPTY but can never WRITE (a save of `[]`
+ *    over a sealed blob would delete every item);
+ *  - the legacy envelope reads; the retired plaintext index does not, and
+ *    is never sealed into the vault;
+ *  - a location move re-packs rather than byte-copies (sync's 8 KB cap);
+ *  - `normalizePadding` never changes a stored item.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -76,7 +65,6 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-/** Point the engine at an area, the way a real profile's preferences do. */
 function setLocation(loc: "local" | "sync") {
   sync.store.set(STORAGE_PREFERENCES, { storageLocation: loc });
   invalidateLocationCache();
@@ -102,8 +90,6 @@ describe("loadEncryptedArray", () => {
   it("reads a locked vault as empty rather than throwing", async () => {
     await saveEncryptedArray(store, [{ id: "a" }]);
     wasmMock.session = false;
-    // A caller rendering a key list must get "nothing to show", not an
-    // error boundary, when the vault happens to be locked.
     expect(await loadEncryptedArray(store)).toEqual([]);
   });
 
@@ -112,8 +98,6 @@ describe("loadEncryptedArray", () => {
   });
 
   it("drops items that fail the store's own validator", async () => {
-    // A blob hand-edited, or written by a build with a wider schema:
-    // the store is the last line of defence before these reach the UI.
     local.store.set(
       KEY,
       domainEnvelope(KEY, json([{ id: "ok" }, { nope: 1 }, "string", null])),
@@ -137,9 +121,7 @@ describe("loadEncryptedArray", () => {
   });
 
   it("does NOT re-seal a legacy blob on read", async () => {
-    // Reads run both inside and outside the store's lock, so writing
-    // here could deadlock or clobber a concurrent mutation. The upgrade
-    // belongs to saveEncryptedArray / normalizePadding.
+    // Reads run inside and outside the lock, so they must never write.
     const blob = legacyEnvelope(json([{ id: "old" }]));
     local.store.set(KEY, blob);
     await loadEncryptedArray(store);
@@ -148,9 +130,7 @@ describe("loadEncryptedArray", () => {
 });
 
 describe("retired plaintext format", () => {
-  /** The original format: a `string[]` index plus one plaintext item per
-   *  id. Its migration sealed whatever it found on every unlock, so
-   *  anyone who could write storage could plant items without the key. */
+  /** The retired plaintext format: index + one plaintext item per id. */
   function seedPlaintext(ids: string[], items: Record<string, unknown>) {
     local.store.set(KEY, ids);
     for (const [id, item] of Object.entries(items)) {
@@ -161,8 +141,6 @@ describe("retired plaintext format", () => {
   it("reads as an empty store and seals nothing", async () => {
     seedPlaintext(["a", "b"], { a: { id: "a" }, b: { id: "b" } });
     expect(await loadEncryptedArray(store)).toEqual([]);
-    // Nothing was adopted: the planted index is left exactly as it was,
-    // not replaced by a sealed blob of the attacker's items.
     expect(local.store.get(KEY)).toEqual(["a", "b"]);
   });
 
@@ -184,9 +162,8 @@ describe("retired plaintext format", () => {
 
 describe("saveEncryptedArray", () => {
   it("refuses to write without a session", async () => {
-    // The asymmetry with the read path is deliberate: a locked-vault
-    // read is `[]`, so a save allowed to proceed would persist `[]` over
-    // the sealed blob and destroy every item.
+    // Deliberate asymmetry: a locked read is `[]`, so a locked save would
+    // persist `[]` over every item.
     wasmMock.session = false;
     await expect(saveEncryptedArray(store, [{ id: "a" }])).rejects.toThrow(
       /no active contacts session/,
@@ -262,8 +239,7 @@ describe("copyEncryptedBlobRepacked", () => {
   });
 
   it("copies a non-envelope value verbatim so nothing is dropped", async () => {
-    // Whatever it is, the move is not the place to decide: it lands on
-    // the far side exactly as it was, and reads there as it read here.
+    // A non-envelope value is moved verbatim, not judged.
     local.store.set(KEY, ["a", "b"]);
     await copyEncryptedBlobRepacked(KEY, "local", "sync");
     expect(sync.store.get(KEY)).toEqual(["a", "b"]);
@@ -272,7 +248,6 @@ describe("copyEncryptedBlobRepacked", () => {
   it("leaves the source in place for the caller to commit", async () => {
     await saveEncryptedArray(store, [{ id: "a" }]);
     await copyEncryptedBlobRepacked(KEY, "local", "sync");
-    // A crash before the location switch must leave reads working.
     expect(local.store.has(KEY)).toBe(true);
   });
 });

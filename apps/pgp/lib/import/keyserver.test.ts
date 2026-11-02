@@ -1,20 +1,7 @@
 /**
- * The keyserver import's decisions. Deliberately short, because the
- * import itself is deliberately thin: a VKS answer is armor, so
- * `prepareImport` does the classification and this module only decides
- * the provenance stamp and the copy.
- *
- * What IS worth pinning here:
- *
- *  1. The contact's identity is the QUERY, not the fingerprint. Alice
- *     rotating her key is exactly the case where the fingerprint changes
- *     and the person does not -- a fingerprint-keyed source would file
- *     her twice.
- *  2. "No key for that address" is a NOTICE, not an error. Nothing
- *     failed and the user has nothing to fix; painting it red teaches
- *     people to distrust a correct answer.
- *  3. Nothing the keyserver wrote reaches the copy. Its 404 body quotes
- *     the query back in `text/html`.
+ * The keyserver import's decisions. Pins: identity is the QUERY, not the
+ * fingerprint; "no key" is a NOTICE; nothing the keyserver wrote reaches
+ * the copy.
  */
 import { describe, expect, it, vi } from "vitest";
 
@@ -51,8 +38,7 @@ describe("keyserverSource", () => {
   });
 
   it("tags the type so it cannot collide with a GitHub user", () => {
-    // `sameSource` composites `type` with `user`; a keyserver query and
-    // an account name that happen to read the same are two people.
+    // A keyserver query and a same-named GitHub account are two people.
     expect(keyserverSource(FP, 0).type).toBe("keyserver");
   });
 });
@@ -85,9 +71,8 @@ describe("prepareKeyserverImport", () => {
   });
 
   it("hands the armor to prepareImport with no extra engines on", async () => {
-    // A VKS answer is an OpenPGP certificate by content type and by armor
-    // header. Turning on the SSH or CRX engines would only widen what a
-    // hostile response could be classified as.
+    // SSH/CRX engines off: they would only widen what a hostile response
+    // could be classified as.
     vi.mocked(prepareImport).mockResolvedValue({
       keys: [],
       secrets: new Map(),
@@ -103,8 +88,6 @@ describe("keyserverFailureCopy", () => {
   it("treats a missing key as a notice, not an error", () => {
     const copy = keyserverFailureCopy("not-found", EMAIL);
     expect(copy.tone).toBe("notice");
-    // Names the actual reason: the service only publishes an address its
-    // owner has confirmed, so "no key" usually means unverified.
     expect(copy.message).toContain("confirmed");
     expect(copy.message).toContain("alice@example.com");
   });
@@ -112,8 +95,6 @@ describe("keyserverFailureCopy", () => {
   it("tells a fingerprint miss apart from an address miss", () => {
     const copy = keyserverFailureCopy("not-found", FP);
     expect(copy.tone).toBe("notice");
-    // Grouped the way every other tool prints one, so it can be compared
-    // against the fingerprint the user was given.
     expect(copy.message).toContain("D477 040C 70C2");
     expect(copy.message).not.toContain("confirmed");
   });
@@ -148,10 +129,7 @@ describe("keyserverFailureCopy", () => {
   });
 
   it("never renders text that came off the network", () => {
-    // Structural: the copy is a pure function of a tagged code and the
-    // query WE canonicalised. There is no parameter a response body
-    // could travel in, and this is the test that would fail if one were
-    // added.
+    // Structural: no parameter a response body could travel in.
     expect(keyserverFailureCopy.length).toBeLessThanOrEqual(4);
   });
 });
@@ -212,9 +190,7 @@ describe("answersQuery: the keyserver's answer is checked, not assumed", () => {
   });
 
   it("does not count someone's key grafted on as a flagless or encryption subkey", () => {
-    // Binding a non-signing subkey needs no back-signature, so Mallory can
-    // bind Alice's public key to his own cert and the engine calls the
-    // row "active". Only a signing subkey proves the subkey agreed.
+    // Non-signing subkeys need no back-signature: Mallory can bind Alice's key.
     expect(answersQuery(sub({}), KEYID)).toBe(false);
     expect(answersQuery(sub({ canEncrypt: true }), KEYID)).toBe(false);
     expect(answersQuery(sub({ canAuthenticate: true }), KEYID)).toBe(false);
@@ -224,8 +200,7 @@ describe("answersQuery: the keyserver's answer is checked, not assumed", () => {
   });
 
   it("accepts a fingerprint query naming a back-signed signing subkey exactly", () => {
-    // "Look up signer" pre-fills the issuer fingerprint, which is the
-    // signing SUBKEY's for most modern certs.
+    // "Look up signer" queries the issuer, usually a signing SUBKEY.
     const query: KeyserverQuery = { kind: "fingerprint", value: SUB };
     expect(answersQuery(sub({ canSign: true }), query)).toBe(true);
     expect(
@@ -241,8 +216,6 @@ describe("answersQuery: the keyserver's answer is checked, not assumed", () => {
         query,
       ),
     ).toBe(false);
-    // A primary row in the details does not count twice, and a primary
-    // that is not the cert's own fingerprint is not a subkey.
     expect(answersQuery(sub({ canSign: true, isPrimary: true }), query)).toBe(
       false,
     );

@@ -1,17 +1,9 @@
 /**
- * The generic protected-key store, exercised through the two stores that
- * instantiate it (`storage/keyring.ts`, `crx/storage.ts`) rather than
- * directly — those public APIs are the contract users' on-disk blobs and
- * the UI both depend on.
- *
- * What is pinned here is the behaviour that is easy to lose when the
- * machinery is shared: mutations serialize under the store's lock, a
- * store emptied by a delete removes its storage entry rather than
- * leaving a sealed empty array, a missing key is a no-op for the
- * metadata setters but must THROW for `updateRevocationCertificate`
- * (whose caller reports "certificate created"), and a CRX mutation
- * without a vault session must never be allowed to persist the empty
- * array that a locked read returns.
+ * The generic protected-key store, via its public instantiations
+ * (`storage/keyring.ts`, `crx/storage.ts`): mutations serialize, an
+ * emptied store stays a sealed empty array, a missing key no-ops for
+ * metadata setters but THROWS for `updateRevocationCertificate`, and a CRX
+ * mutation without a session never persists a locked read's `[]`.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -73,8 +65,7 @@ function pgpKey(keyId: string): ProtectedKeyBlob {
   };
 }
 
-/** A CRX blob whose public key really does hash to `extensionId` -- the
- *  identity check in `addCrxKey` is not bypassable, by design. */
+/** A CRX blob whose public key really hashes to `extensionId`. */
 async function crxKey(): Promise<CrxSigningKeyBlob> {
   const { extensionIdFromPublicKeyDer } = await import("../crx/types");
   const publicKeyDerB64 = "ZGVyLWJ5dGVz";
@@ -116,8 +107,7 @@ describe("keyring CRUD", () => {
   });
 
   it("keeps a sealed empty store once the last key is deleted", async () => {
-    // Never removed: a store that is simply gone is what a deletion
-    // attack looks like, and the integrity ledger reports it as one.
+    // Never removed: a missing store reads as a deletion attack.
     await addKey(pgpKey("AAAA"));
     await addKey(pgpKey("BBBB"));
 
@@ -205,8 +195,7 @@ describe("CRX key store", () => {
     const sealed = local.store.get(STORAGE_CRX_KEYS);
 
     wasmMock.session = false;
-    // Signing legitimately outlives the master session; a metadata-only
-    // write must not turn that into an error.
+    // Signing outlives the session; a metadata-only write must not error.
     await expect(updateCrxLastUsed(blob.extensionId)).resolves.toBeUndefined();
     expect(local.store.get(STORAGE_CRX_KEYS)).toBe(sealed);
 
@@ -217,8 +206,8 @@ describe("CRX key store", () => {
 });
 
 describe("keyring - the kind discriminant", () => {
-  /** An SSH identity: same store, same seal, same CRUD. Only `kind`,
-   *  the fingerprint form and the "armor" (a recipient line) differ. */
+  /** An SSH identity: same store and seal; differs in `kind`, fingerprint
+   *  and recipient-line "armor". */
   function sshKey(fingerprint: string): ProtectedKeyBlob {
     return {
       ...pgpKey(fingerprint),
@@ -230,10 +219,7 @@ describe("keyring - the kind discriminant", () => {
   }
 
   it("round-trips a legacy blob with the field ABSENT, still absent", async () => {
-    // The migration property: a blob written before SSH existed goes
-    // through the store's read-modify-write untouched. If a normalize
-    // pass or a constructor started stamping `kind: "pgp"` on the way
-    // back out, an older build would read it as a foreign engine.
+    // A pre-SSH blob must round-trip without gaining `kind: "pgp"`.
     await addKey(pgpKey("AAAA"));
     await updateAlias("AAAA", "Legacy key");
 
@@ -256,8 +242,7 @@ describe("keyring - the kind discriminant", () => {
   });
 
   it("survives the seal, so `kind` is inside the encrypted envelope", async () => {
-    // Not a plaintext sidecar: the discriminant rides in the same sealed
-    // array as everything else the store holds.
+    // The discriminant is inside the sealed array, not a plaintext sidecar.
     await addKey(sshKey("SHA256:bbb"));
     const [stored] = await getKeyring();
     expect(stored.kind).toBe("ssh");
@@ -296,8 +281,7 @@ describe("contacts - the kind discriminant", () => {
   });
 
   it("separates the two engines' recipients", async () => {
-    // The narrowing a composer MUST do: the two sets cannot be combined
-    // in one message (see `lib/encrypt-recipients.ts`).
+    // The two sets can't be combined in one message (`lib/encrypt-recipients.ts`).
     await saveContact(contact());
     await saveContact(
       contact({

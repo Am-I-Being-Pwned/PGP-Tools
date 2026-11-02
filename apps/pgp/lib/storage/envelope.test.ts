@@ -1,15 +1,7 @@
 /**
- * Domain separation and legacy-blob migration for the stores that share
- * `encrypted-store.ts` -- the keyring, the public contacts list, and the
- * CRX signing keys.
- *
- * The property under test is the one history's e2e substitution test
- * asserts at the UI level, checked here per-store: a blob is bound to the
- * storage key it was written to, so it cannot be replayed into another
- * slot or another store. Plus the migration that makes changing the
- * binding safe for existing installs -- losing a user's keyring would be
- * far worse than the integrity gap being closed, so every legacy path has
- * a test.
+ * Domain separation and legacy-blob migration for the stores sharing
+ * `encrypted-store.ts`: a blob is bound to its storage key, so it can't be
+ * replayed into another slot or store, and every legacy path keeps opening.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -80,8 +72,7 @@ const KEYS: Item[] = [
   { id: "BBBB2222", label: "my backup key" },
 ];
 
-/** A blob exactly as a pre-domain-separation build wrote it: padded JSON
- *  under the shared key + shared AAD. */
+/** A blob as a pre-domain-separation build wrote it. */
 function seedLegacy(store: EncryptedStore<Item>, items: Item[]): void {
   const json = new TextEncoder().encode(JSON.stringify(items));
   local.store.set(store.storageKey, legacyEnvelope(padPlaintext(json, true)));
@@ -102,18 +93,15 @@ describe("domain binding", () => {
 
   it("refuses the keyring blob when it is planted on the contacts key", async () => {
     await saveEncryptedArray(KEYRING, KEYS);
-    // Positive control: the contacts store works normally first, so the
-    // rejection below cannot be a store that never loaded at all.
+    // Positive control: the store loads before the substitution.
     await saveEncryptedArray(CONTACTS, [{ id: "CCCC", label: "alice" }]);
     await expect(loadEncryptedArray(CONTACTS)).resolves.toHaveLength(1);
 
-    // The substitution: byte-for-byte copy, no vault key needed.
+    // Byte-for-byte copy, no vault key needed.
     local.store.set(STORAGE_CONTACTS, local.store.get(STORAGE_KEYRING));
 
-    // A failed tag check is a load error, NOT a silently empty list -- the
-    // old behaviour returned [] and the UI could not tell the difference.
+    // A failed tag check is a load error, not a silently empty list.
     await expect(loadEncryptedArray(CONTACTS)).rejects.toThrow();
-    // The real keyring is untouched in its own slot.
     await expect(loadEncryptedArray(KEYRING)).resolves.toEqual(KEYS);
   });
 
@@ -142,9 +130,8 @@ describe("legacy envelope migration", () => {
 
     await loadEncryptedArray(KEYRING);
 
-    // loadEncryptedArray runs both inside and outside the store's lock, so
-    // it must never write -- an upgrade here could clobber a concurrent
-    // mutation or deadlock. normalizePadding owns the eager upgrade.
+    // loadEncryptedArray runs inside and outside the lock, so it must never
+    // write; normalizePadding owns the upgrade.
     expect(local.store.get(STORAGE_KEYRING)).toBe(before);
   });
 
@@ -165,9 +152,8 @@ describe("legacy envelope migration", () => {
 
   it("normalizePadding upgrades a store that is only ever read", async () => {
     seedLegacy(KEYRING, KEYS);
-    // Already canonically padded, so the padding check alone would skip it:
-    // this is the regression guard for "legacy envelope + canonical padding
-    // never migrates".
+    // Already canonically padded: guards "legacy envelope + canonical
+    // padding never migrates".
     const stored = storedPlaintext(local.store.get(STORAGE_KEYRING) as never);
     expect(padPlaintext(unpadPlaintext(stored), true).length).toBe(
       stored.length,
@@ -218,8 +204,7 @@ describe("moving a blob between storage areas", () => {
 
     await copyEncryptedBlobRepacked(STORAGE_KEYRING, "local", "sync");
 
-    // Same domain on both sides (the domain is the KEY, not the area), so
-    // the destination copy still opens.
+    // The domain is the key, not the area, so the copy still opens.
     expect(sealedDomain(sync.store.get(STORAGE_KEYRING))).toBe(STORAGE_KEYRING);
     sync.store.set("pgp_preferences", { storageLocation: "sync" });
     local.store.delete(STORAGE_KEYRING);

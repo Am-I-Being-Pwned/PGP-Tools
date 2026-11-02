@@ -48,12 +48,8 @@ describe("withLock", () => {
   });
 });
 
-/**
- * `withLock` is one Map per page, so two panel windows could both pass
- * the master protection's "none exists" check before either wrote, or
- * lose a ledger update. The shared variant goes through Web Locks, which
- * every extension page of the origin shares.
- */
+/** Two panel windows must not both pass "no vault exists" or lose a ledger
+ *  update: the shared lock goes through Web Locks. */
 describe("withSharedLock", () => {
   afterEach(() => vi.unstubAllGlobals());
 
@@ -83,9 +79,7 @@ describe("withSharedLock", () => {
   });
 });
 
-// A storage switch in one panel window used to leave every other window
-// (and the reader tab) routed to the OLD area by its cached location,
-// reading and writing copies the switch was about to purge.
+// A switch in one window must reroute every other window's cached location.
 describe("cached location across windows", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -119,11 +113,8 @@ describe("cached location across windows", () => {
     expect(await currentStorageLocation()).toBe("local");
     expect(listeners).toHaveLength(1);
 
-    // Another window commits a switch: its record lands in storage.
     local.store.set(STORAGE_DEVICE_LOCATION, "sync");
-    // Without the event this window still routes to the old area...
     expect(await currentStorageLocation()).toBe("local");
-    // ...and with it, to the new one.
     for (const fn of listeners) {
       fn({ [STORAGE_DEVICE_LOCATION]: { newValue: "sync" } }, "local");
     }
@@ -137,7 +128,7 @@ describe("cached location across windows", () => {
     }
     expect(await currentStorageLocation()).toBe("local");
 
-    // Unrelated changes leave the cache alone (no extra reads).
+    // Unrelated changes leave the cache alone.
     sync.store.set(STORAGE_PREFERENCES, { storageLocation: "sync" });
     for (const fn of listeners) fn({ pgp_settings: {} }, "local");
     expect(await currentStorageLocation()).toBe("local");

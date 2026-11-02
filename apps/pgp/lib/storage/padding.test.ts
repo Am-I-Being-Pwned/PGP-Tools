@@ -56,9 +56,7 @@ describe("padPlaintext / unpadPlaintext round-trip", () => {
   });
 
   it("NUL delimiter is unambiguous: JSON never contains a raw 0x00", () => {
-    // A NUL *character* in a value is escaped by JSON.stringify (to
-    // a 6-char \\u0000 sequence), so the encoded bytes hold no raw
-    // 0x00 to collide with the delimiter.
+    // JSON.stringify escapes a NUL character, so no raw 0x00 collides.
     const nul = String.fromCharCode(0);
     const withNul = enc(JSON.stringify([{ userIds: ["x" + nul + "y"] }]));
     expect(withNul.includes(0)).toBe(false);

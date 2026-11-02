@@ -18,10 +18,8 @@ import { withLock } from "./engine";
 import { recordRevoked, revokedFloor } from "./integrity";
 import { isSshRecord, storedKeyKind } from "./key-kind";
 
-// Pure readers of a contact record, kept in a module with no store (and
-// so no wasm) behind it: the reader tab renders ContactCard, and must not
-// pull the store in to do it. Re-exported so callers keep importing them
-// from here.
+// Pure readers live in a store-free (wasm-free) module so the reader tab
+// can render ContactCard without pulling the store in.
 export {
   activeRecipients,
   contactRecipients,
@@ -31,16 +29,9 @@ export {
 };
 
 /**
- * One key belonging to a contact.
- *
- * A person is not a key. A GitHub user commonly has three SSH keys --
- * laptop, desktop, phone -- and you cannot know which of them is on the
- * machine they happen to be reading from. age encrypts to N recipients
- * natively and any one identity decrypts, so the correct behaviour is to
- * encrypt to ALL of a contact's keys (~100 bytes of stanza each), not to
- * guess one. There is deliberately no primary/default recipient anywhere
- * in this design: nothing to store, nothing to migrate, no UI to change
- * it, and no wrong-key failure mode.
+ * One key belonging to a contact. An encrypt targets ALL of a contact's
+ * active keys (age/OpenPGP both support N recipients); there is
+ * deliberately no primary/default recipient.
  */
 export interface ContactRecipient {
   /** Fingerprint of THIS key (not of the contact record). */
@@ -48,140 +39,80 @@ export interface ContactRecipient {
   /** The exact bytes handed to the engine as a recipient. */
   armored: string;
   algorithm: string;
-  /** The user has turned this key OFF: it stays on the record, stays
-   *  listed in the UI, and is skipped when assembling recipients (an old
-   *  key they no longer trust, say).
-   *
-   *  ABSENT MEANS ENABLED -- the same convention as `kind` and
-   *  `recipients`. `false` is NEVER written: a contact with nothing
-   *  disabled must serialise byte-for-byte the way it did before this
-   *  field existed, so no record is rewritten and an older build reads
-   *  every one of them. Read it through {@link isRecipientDisabled},
-   *  write it through {@link disabledField}, and never touch the
-   *  property directly -- the discipline `storedKeyKind` enforces for
-   *  `kind`.
-   *
-   *  A downgrade to an older build simply ignores it and encrypts to
-   *  every key, which is the pre-feature behaviour: degraded, not
-   *  broken -- and never the reverse (encrypting to nobody). */
+  /** The user turned this key OFF: kept and listed, skipped as a recipient.
+   *  Absent means enabled; `false` is NEVER written, so untouched records
+   *  stay byte-identical for older builds. Read via
+   *  {@link isRecipientDisabled}, write via {@link disabledField}. */
   disabled?: true;
 }
 
-/**
- * Where a multi-key contact came from, when it was fetched rather than
- * hand-supplied. This is the contact's IDENTITY for upsert purposes --
- * see {@link sameSource}.
- */
+/** Where a fetched multi-key contact came from: its upsert identity
+ *  ({@link sameSource}). */
 export interface ContactSource {
-  /** Which lookup produced this contact. Part of the composite identity
-   *  `sameSource` compares, so a keyserver query and a GitHub account
-   *  name that happen to read the same are never the same person. */
   type: "github" | "keyserver";
-  /** The lookup's own identity for this person: a GitHub account name,
-   *  or the canonical keyserver query (a lowercased address, or an
-   *  uppercase fingerprint). NOT a fingerprint for either -- see
-   *  `sameSource` for why the key is the wrong identity here. */
+  /** GitHub account name, or canonical keyserver query (lowercased
+   *  address / uppercase fingerprint). Not a key fingerprint. */
   user: string;
   fetchedAt: number;
 }
 
 /** Bumped when the engine changes what a contact's identity fields mean.
- *  1: `userIds` are bound, unrevoked User IDs only (an unsigned User ID
- *  appended to a real cert used to be listed, and named the contact);
- *  `revoked` and `lookalike` are recorded. Older records are re-derived
- *  once by the contacts hook. */
+ *  1: `userIds` are bound, unrevoked User IDs only; `revoked` and
+ *  `lookalike` are recorded. Older records are re-derived once. */
 export const IDENTITY_VERSION = 1;
 
 export interface PublicContactKey extends KindDiscriminated {
-  /** Id of the contact RECORD: the picker's selection id, the store's
-   *  upsert key, the fingerprint history references. It happens to equal
-   *  `recipients[0].keyId`, but it is NOT "the key we encrypt to" -- a
-   *  contact may hold several. Read the encryption targets through
-   *  {@link contactRecipients}, never from this field.
-   *
-   *  For a single-key contact (every contact that exists today) it is the
-   *  OpenPGP fingerprint, or the OpenSSH `SHA256:...` fingerprint for an
-   *  `ssh` contact. */
+  /** Id of the contact RECORD (picker selection, upsert key, history
+   *  reference). Equals `recipients[0].keyId` but is NOT "the key we
+   *  encrypt to" -- read targets through {@link contactRecipients}. */
   keyId: string;
-  /** OpenPGP User IDs. An SSH recipient has none -- its key comment
-   *  (`user@host`) is stored as the sole element, or the list is empty
-   *  when the key carries no comment. */
+  /** OpenPGP User IDs; for SSH, the key comment as the sole element (or
+   *  empty). */
   userIds: string[];
-  /** Local, user-set display name -- the contact sibling of
-   *  `ProtectedKeyBlob.alias`. Never touches the key: the User IDs (or
-   *  the SSH comment) remain the identity, this is only what the UI
-   *  shows.
-   *
-   *  ABSENT MEANS "fall back to the derived name", the same convention
-   *  as `kind`, `recipients` and `disabled`. `""` is NEVER written -- a
-   *  contact with no alias must serialise byte-for-byte the way it did
-   *  before this field existed, so no record is rewritten and an older
-   *  build reads every one of them. Read it through `displayUserId`
-   *  (`lib/utils/key-naming.ts`), which every name this app shows goes
-   *  through, and write it through {@link aliasField} /
-   *  {@link withAlias}. */
+  /** Local display name; never touches the key. Absent means fall back to
+   *  the derived name; `""` is NEVER written. Read via `displayUserId`,
+   *  write via {@link aliasField} / {@link withAlias}. */
   alias?: string;
   algorithm: string;
-  /** Armored cert for a `pgp` contact; the canonical `<type> <base64>`
-   *  recipient line for an `ssh` one. Either way, the exact bytes handed
-   *  to the engine as a recipient. */
+  /** Armored cert (`pgp`) or `<type> <base64>` line (`ssh`): the exact
+   *  recipient bytes handed to the engine. */
   armoredPublicKey: string;
   addedAt: number;
   lastUsedAt: number;
   expiresAt?: number | null;
-  /** Whether this contact can be encrypted to (has a usable encryption
-   *  key). False for sign-only keys, which are still valid contacts for
-   *  signature verification but must not appear as encryption recipients.
-   *  `undefined` on legacy records until backfilled -- treat as `true`. */
+  /** False for sign-only keys: valid for verification, never an encryption
+   *  recipient. `undefined` on legacy records until backfilled -- treat as
+   *  `true`. */
   usableForEncryption?: boolean;
-  /** Non-blocking flag from key parsing (e.g. relies on a SHA-1 binding
-   *  signature). Shown as a warning badge; the key is still usable. */
+  /** Non-blocking parse warning (e.g. SHA-1 binding); key still usable. */
   securityWarning?: string;
-  /** The owner revoked this key. Kept, so the revocation sticks against a
-   *  later stale re-import, but shown as revoked and never encrypted to.
-   *  WRITTEN ONLY WHEN TRUE. */
+  /** Owner revoked this key. Kept so the revocation sticks against a stale
+   *  re-import; never encrypted to. WRITTEN ONLY WHEN TRUE. */
   revoked?: boolean;
   /** A User ID mixes lookalike alphabets (`securityWarning` says so).
    *  WRITTEN ONLY WHEN TRUE. */
   lookalike?: boolean;
-  /** Which {@link IDENTITY_VERSION} last derived
-   *  `userIds` / `revoked` / `lookalike`. Absent on older records, which
-   *  the contacts hook re-derives once. */
+  /** Which {@link IDENTITY_VERSION} last derived the identity fields. */
   identityVersion?: number;
-  /** The user compared this key's fingerprint with its owner and marked
-   *  it verified. WRITTEN ONLY WHEN TRUE; dropped when the key changes. */
+  /** User verified the fingerprint with its owner. WRITTEN ONLY WHEN TRUE;
+   *  dropped when the key changes. */
   verified?: true;
   /** When it was marked verified (ms since epoch). */
   verifiedAt?: number;
-  /** Fingerprints this contact used before its key was replaced on the
-   *  import Review, newest first. */
+  /** Fingerprints used before a key replacement, newest first. */
   previousKeyIds?: string[];
-  /** Every key this contact holds -- WRITTEN ONLY WHEN THERE IS MORE
-   *  THAN ONE. Absent means "the single key in the top-level fields",
-   *  exactly the way an absent `kind` means `"pgp"` (see `key-kind.ts`).
-   *  Read it through {@link contactRecipients}, never directly, and
-   *  write it through {@link recipientsField}.
-   *
-   *  When present, `recipients[0]` MUST agree with `keyId` and
-   *  `armoredPublicKey` -- `repairContact` restores that on every load,
-   *  rather than the store rejecting (and so deleting) the record. That is
-   *  what makes the migration two-directional: an older build ignores
-   *  this field, sees one valid fingerprint and one valid recipient
-   *  line, and encrypts to the person's first key. Degraded, not
-   *  broken. */
+  /** Every key -- WRITTEN ONLY WHEN MORE THAN ONE (absent = the single
+   *  top-level key). Read via {@link contactRecipients}, write via
+   *  {@link recipientsField}. When present, `recipients[0]` MUST agree with
+   *  `keyId`/`armoredPublicKey` (restored by `repairContact`), so an older
+   *  build reading only the top-level fields encrypts to the first key. */
   recipients?: ContactRecipient[];
-  /** Absent on a hand-supplied contact, which is every contact written
-   *  before this field existed. Read through {@link contactSource}. */
+  /** Absent on hand-supplied contacts. Read via {@link contactSource}. */
   source?: ContactSource;
 }
 
-/** True when `v` looks like a stored {@link ContactRecipient}.
- *
- *  `disabled` is deliberately NOT validated: a record carrying a stray
- *  `disabled: false` (which this build never writes) is a contact the
- *  user still wants, and rejecting it here would silently drop the whole
- *  person. `isRecipientDisabled` reads strictly instead, so anything
- *  that is not exactly `true` means enabled. */
+/** `disabled` is deliberately NOT validated: rejecting a stray
+ *  `disabled: false` would silently drop the whole contact. */
 function isContactRecipient(v: unknown): v is ContactRecipient {
   if (typeof v !== "object" || v === null) return false;
   const o = v as Record<string, unknown>;
@@ -202,42 +133,17 @@ function isValidContact(v: unknown): v is PublicContactKey {
   ) {
     return false;
   }
-  // `recipients` is deliberately NOT validated here, for the same reason
-  // `isContactRecipient` ignores a stray `disabled: false`: this
-  // predicate is the filter `loadEncryptedArray` applies, so a `false`
-  // returned here does not mean "ignore this field" -- it means the whole
-  // PERSON disappears from the list, and the next write persists that
-  // filtered array. Silent, permanent deletion of a record whose `keyId`
-  // and `armoredPublicKey` were independently fine.
-  //
-  // The head-agreement invariant still has to hold (an older build reads
-  // only the top-level fields, so a disagreeing head would silently
-  // encrypt to a key this build never lists) -- it is enforced by
-  // REPAIRING the record on the way out of storage instead. See
-  // {@link repairContact}.
+  // `recipients` is deliberately NOT validated: a `false` here drops the
+  // whole PERSON from the list, permanently on the next write. The
+  // head-agreement invariant is enforced by {@link repairContact} instead.
   return true;
 }
 
 /**
- * A loaded record with its `recipients` list forced back into agreement
- * with the top-level fields -- the read-side half of the head-agreement
- * invariant, and the reason `isValidContact` does not enforce it.
- *
- * Repair rather than reject. Every way a `recipients` list can be wrong
- * (a junk entry, an empty array, a head that names some other key) leaves
- * `keyId` and `armoredPublicKey` independently valid, so the record is
- * still a contact the user knows -- and dropping it would take the whole
- * person with it, permanently, on the next write.
- *
- * The top-level fields WIN, because they are what an older build (and
- * every downgrade path) reads. A list whose head merely sits in the wrong
- * position is re-headed, keeping every key; otherwise the record's own
- * key is put at the head and any entry claiming that fingerprint with
- * different bytes is dropped, since exactly one of the two can be right
- * and the top-level copy is the one already in use.
- *
- * Returns the record UNTOUCHED when there is nothing to repair, so a
- * healthy contact is never rewritten (and never re-serialised).
+ * Force `recipients` back into agreement with the top-level fields.
+ * Repair, never reject (rejecting deletes the person on the next write).
+ * The top-level fields WIN, since older builds read them. Returns the
+ * record untouched when healthy, so it is never rewritten.
  */
 function repairContact(contact: PublicContactKey): PublicContactKey {
   const stored: unknown = contact.recipients;
@@ -248,8 +154,6 @@ function repairContact(contact: PublicContactKey): PublicContactKey {
   const agrees = (r: ContactRecipient) =>
     r.keyId === contact.keyId && r.armored === contact.armoredPublicKey;
 
-  // Already sound, and nothing was filtered out: leave it exactly as it
-  // was read.
   if (list.length === raw.length && list.length > 0 && agrees(list[0])) {
     return contact;
   }
@@ -266,19 +170,10 @@ function repairContact(contact: PublicContactKey): PublicContactKey {
 }
 
 /**
- * The `recipients` field as it should be WRITTEN, spread into a new
- * record -- the counterpart to `kindField`.
- *
- * Returns `{}` for a single key, so a one-key contact serialises
- * byte-for-byte as it does today: zero migration, zero rewrite, and an
- * older build still reads every record. The caller is responsible for
- * `list[0]` matching the record's `keyId`/`armoredPublicKey`.
- *
- * Except a single key the user turned OFF: the top-level fields have
- * nowhere to say so, and dropping the flag would turn the key back on
- * (a refresh that left only that key used to do exactly this). An older
- * build reads the one-entry list and ignores the flag, which is the
- * pre-feature behaviour, as for every other disabled key.
+ * The `recipients` field as it should be WRITTEN. `{}` for a single key so
+ * one-key contacts stay byte-identical -- except a single DISABLED key,
+ * whose flag would otherwise be lost (turning it back on). Caller ensures
+ * `list[0]` matches the record's `keyId`/`armoredPublicKey`.
  */
 export function recipientsField(list: readonly ContactRecipient[]): {
   recipients?: ContactRecipient[];
@@ -288,21 +183,9 @@ export function recipientsField(list: readonly ContactRecipient[]): {
     : {};
 }
 
-/**
- * A contact record carrying exactly `list` as its keys.
- *
- * The safe way to apply {@link recipientsField} to an EXISTING record.
- * Spreading the helper over one is not: it returns `{}` at length 1, so a
- * record that shrinks back to a single key would keep its old
- * `recipients` array verbatim -- the field would say two keys while the
- * top-level fields say one. Nothing shrinks a list today, which is
- * exactly why the contract has to be enforced somewhere rather than
- * remembered.
- *
- * The field is dropped and re-appended rather than assigned in place, so
- * a single-key record comes out byte-identical to one that never had the
- * field at all.
- */
+/** A record carrying exactly `list` as its keys. Use this, not a spread of
+ *  {@link recipientsField}, on an existing record: the spread would keep a
+ *  stale `recipients` array when the list shrinks to one. */
 export function withRecipients(
   contact: PublicContactKey,
   list: readonly ContactRecipient[],
@@ -311,30 +194,15 @@ export function withRecipients(
   return { ...rest, ...recipientsField(list) };
 }
 
-/**
- * The `alias` field as it should be WRITTEN, spread into a new record --
- * the counterpart to `recipientsField` and `disabledField`.
- *
- * Trimmed, and `{}` when what is left is empty, so clearing a name
- * REMOVES the field rather than storing `""`: a contact with no alias
- * serialises byte-for-byte as it did before the field existed. The same
- * trim-to-undefined rule `updateAlias` keeps for the user's own keys.
- */
+/** The `alias` field as it should be WRITTEN: trimmed, `{}` when empty
+ *  (clearing removes the field; `""` is never stored). */
 export function aliasField(alias: string): { alias?: string } {
   const trimmed = alias.trim();
   return trimmed ? { alias: trimmed } : {};
 }
 
-/**
- * A contact record carrying `alias` as its display name, or none.
- *
- * The safe way to apply {@link aliasField} to an EXISTING record, for
- * the same reason {@link withRecipients} exists: spreading the helper
- * over one returns `{}` when the name is cleared, so the old alias would
- * simply survive. The field is dropped and re-appended rather than
- * assigned, so a cleared record comes out identical to one that never
- * had a name.
- */
+/** A record with `alias` set or cleared. Use this, not a spread of
+ *  {@link aliasField}, which would leave the old alias on clear. */
 export function withAlias(
   contact: PublicContactKey,
   alias: string,
@@ -343,29 +211,15 @@ export function withAlias(
   return { ...rest, ...aliasField(alias) };
 }
 
-/**
- * The `disabled` flag as it should be WRITTEN, spread into a new
- * recipient -- the counterpart to `recipientsField` and `kindField`.
- *
- * Returns `{}` when the key is enabled, so a contact with nothing turned
- * off serialises byte-for-byte as it did before this field existed:
- * zero migration, zero rewrite, and an older build still reads every
- * record. `disabled: false` is never written.
- */
+/** The `disabled` flag as it should be WRITTEN: `{}` when enabled;
+ *  `disabled: false` is never written. */
 export function disabledField(disabled: boolean): { disabled?: true } {
   return disabled ? { disabled: true } : {};
 }
 
-/**
- * The recipient list with one key turned on or off, ready to store.
- *
- * Rebuilds the touched entry field-by-field rather than spreading over
- * it, so re-enabling REMOVES `disabled` instead of writing `false` --
- * the byte-identity rule above only holds if there is no way to leave
- * the field behind. Order is preserved, so `recipients[0]` keeps
- * agreeing with the record's `keyId`/`armoredPublicKey`
- * ({@link isValidContact}).
- */
+/** The recipient list with one key turned on or off. Rebuilt
+ *  field-by-field so re-enabling REMOVES `disabled`; order is preserved so
+ *  `recipients[0]` keeps agreeing with the record. */
 export function withRecipientDisabled(
   list: readonly ContactRecipient[],
   keyId: string,
@@ -384,16 +238,9 @@ export function withRecipientDisabled(
 }
 
 /**
- * Whether two contacts denote the same fetched person.
- *
- * False whenever either side has no source: an absent source means
- * "hand-supplied", which is not an identity and must never collide --
- * two source-less contacts are two contacts, full stop.
- *
- * This exists because `keyId` alone is not a stable identity for a
- * fetched contact. Delete your first GitHub key and `recipients[0]`
- * changes, so `keyId` changes, and a keyId-only upsert would file the
- * next fetch as a SECOND contact for the same person.
+ * Whether two contacts denote the same fetched person. False when either
+ * has no source (hand-supplied contacts never collide). Needed because a
+ * fetched contact's `keyId` moves when its first key is deleted upstream.
  */
 export function sameSource(
   a: Pick<PublicContactKey, "source">,
@@ -402,14 +249,12 @@ export function sameSource(
   const sa = contactSource(a);
   const sb = contactSource(b);
   if (sa === null || sb === null) return false;
-  // Compared as one composite key rather than field-by-field so a second
-  // source type can never silently collide with a github user of the
-  // same name. NUL cannot occur in either half.
+  // One composite key so source types never collide; NUL can't occur in
+  // either half.
   return `${sa.type}\u0000${sa.user}` === `${sb.type}\u0000${sb.user}`;
 }
 
-// AES-256-GCM encrypted blob via WASM contacts session key.
-// Same scheme as the keyring — see encrypted-store.ts.
+// AES-256-GCM sealed blob; same scheme as the keyring (encrypted-store.ts).
 const CONTACTS_STORE = {
   storageKey: STORAGE_CONTACTS,
   isValid: isValidContact,
@@ -417,9 +262,8 @@ const CONTACTS_STORE = {
 };
 
 export async function loadContacts(): Promise<PublicContactKey[]> {
-  // Repaired on the way out, never rejected -- see `repairContact`. This
-  // is the ONLY read path: every mutation below re-loads through it, so
-  // nothing writes back a record it has not first put in order.
+  // Repaired, never rejected (`repairContact`). The ONLY read path: every
+  // mutation re-loads through it.
   const contacts = (await loadEncryptedArray(CONTACTS_STORE)).map(
     repairContact,
   );
@@ -427,18 +271,10 @@ export async function loadContacts(): Promise<PublicContactKey[]> {
 }
 
 /**
- * `contacts` with every record this device has ever seen revoked put back
- * to revoked -- and unusable for encryption -- and any newly revoked
- * record added to the floor.
- *
- * The floor lives in the integrity ledger, NOT in this blob, which is the
- * point: writing back an older, validly sealed contacts blob (from before
- * the revocation) used to un-revoke the contact, and the pre-revocation
- * armor it carries still encrypts. Both flags are forced, because the
- * encrypt path filters on `usableForEncryption` and the stale armor
- * would otherwise still read as usable. Records already marked revoked
- * are returned untouched, so a healthy record is never rewritten. See
- * `integrity.ts`.
+ * Re-apply the revocation floor (kept in the integrity ledger, not this
+ * blob): any contact ever seen revoked is forced revoked AND unusable for
+ * encryption, so writing back an older sealed blob can't un-revoke it.
+ * Healthy records are returned untouched. See `integrity.ts`.
  */
 async function applyRevocationFloor(
   contacts: PublicContactKey[],
@@ -457,11 +293,8 @@ async function applyRevocationFloor(
   );
 }
 
-/** The contacts belonging to one engine. Legacy records carry no `kind`
- *  and are PGP by definition -- see `key-kind.ts`. A caller that needs
- *  recipients for an encrypt MUST narrow this way: age and OpenPGP
- *  recipients cannot be combined in one message (see
- *  `lib/encrypt-recipients.ts`). */
+/** Contacts of one engine (absent `kind` = PGP). Encrypt callers MUST
+ *  narrow this way: age and OpenPGP recipients can't mix in one message. */
 export function contactsOfKind(
   contacts: readonly PublicContactKey[],
   kind: StoredKeyKind,
@@ -469,9 +302,8 @@ export function contactsOfKind(
   return contacts.filter((c) => storedKeyKind(c) === kind);
 }
 
-/** Seal the whole list. The revocation floor is applied on the way IN
- *  as well as out, so a mutation that rebuilds a record from a stale copy
- *  (a re-import of the pre-revocation cert) can't persist it unrevoked. */
+/** Seal the whole list. The revocation floor is applied on the way IN too,
+ *  so a rebuild from a stale copy can't persist a record unrevoked. */
 async function saveAll(contacts: PublicContactKey[]): Promise<void> {
   await saveEncryptedArray(
     CONTACTS_STORE,
@@ -487,29 +319,14 @@ export function normalizeContactsPadding(): Promise<void> {
 
 /**
  * Serialize a read-modify-write of the whole blob, with the session
- * checked INSIDE the lock, immediately before the read.
- *
- * Both halves are load-bearing, and contacts had neither until they
- * destroyed data:
- *
- *  - the GUARD, because `loadEncryptedArray` returns `[]` with no
- *    contacts session -- indistinguishable from an empty store. An
- *    unguarded delete computes "nothing left", takes the empty-store
- *    shortcut and `removeItem`s the sealed blob: every contact the user
- *    has, gone, without the vault ever being opened. That is reachable
- *    on the ordinary auto-lock path, because `doMasterLock` drops the
- *    contacts session without awaiting it, so a mutation already queued
- *    behind the UI's mutex runs after the session is gone. Identical in
- *    shape to the keyring bug -- see `keyring.ts`'s `removeKey` -- and
- *    to the `requireSession` the CRX store has always carried.
- *  - the LOCK, because load+save rewrites the entire array, so two
- *    interleaved mutations silently drop one side's write. The UI's own
- *    mutex does not cover this: the recipient toggle reaches the store
- *    from a different component entirely.
- *
- * Checked inside the lock rather than before it so the vault cannot lock
- * between the check and the write. `MutationGuard` in
- * `protected-store.ts` is the same idea for the generic stores.
+ * checked INSIDE the lock, immediately before the read. Both are
+ * load-bearing:
+ *  - GUARD: with no session `loadEncryptedArray` returns `[]`, and an
+ *    unguarded delete would `removeItem` every contact (reachable on
+ *    auto-lock, which drops the session without awaiting queued work).
+ *  - LOCK: load+save rewrites the array, so interleaved mutations drop
+ *    one side's write.
+ * Same idea as `MutationGuard` in `protected-store.ts`.
  */
 async function mutateContacts<T>(
   fn: (contacts: PublicContactKey[]) => Promise<T>,
@@ -526,30 +343,12 @@ async function mutateContacts<T>(
 }
 
 /**
- * The stored list after upserting `incoming` -- pure, and the SINGLE
- * definition of the upsert rules.
- *
- * Three rules, each of which exists because getting it wrong loses
- * something:
- *
- *  - identity is the SOURCE when there is one, the record id otherwise
- *    (see `sameSource`). Dropping by keyId alone would leave a stale
- *    duplicate whenever a fetched contact's first key was deleted
- *    upstream, because its keyId moves to the next key.
- *  - a source-less contact NEVER supersedes a fetched one it merely
- *    collides with by keyId. Pasting one of a GitHub contact's keys by
- *    hand is not a reason to replace that person's record and silently
- *    drop their other keys; the key is already a recipient of that
- *    contact, so the richer record simply stands.
- *  - `disabled` survives a refresh, for every member still present. It
- *    is the one field on a contact carrying a SECURITY decision, and a
- *    re-fetch builds its record purely from what GitHub just returned --
- *    so without this, refreshing a contact silently starts encrypting to
- *    a key the user deliberately turned off. Making it a storage
- *    invariant rather than a caller's responsibility is the point: no
- *    fetch path can forget it. `addedAt` is carried forward with it,
- *    which is merely cosmetic -- "known since" should not restart
- *    because the contact was refreshed.
+ * Upsert rules (each prevents a loss):
+ *  - identity is the SOURCE when present (`sameSource`), else the id;
+ *  - a source-less contact never supersedes a fetched one it collides
+ *    with by keyId (that would drop the person's other keys);
+ *  - `disabled` (a SECURITY decision) and `addedAt` survive a refresh,
+ *    enforced here so no fetch path can forget it.
  */
 /** `record` with the key material and the fields derived from it taken
  *  from `incoming`; its identity (source, alias, recipients) kept. */
@@ -588,12 +387,9 @@ export function upsertContacts(
     (c) => c.keyId === incoming.keyId || sameSource(c, incoming),
   );
 
-  // A hand-pasted key that happens to be a fetched contact's head: keep
-  // the person intact. But a newer copy of that SAME PGP key -- its
-  // owner's revocation, an extended expiry -- still lands on the record:
-  // callers hand in the merge of the stored and the incoming copy, so
-  // this only ever adds what the owner signed. Without it, a revocation
-  // sent by email could never reach a contact found on a keyserver.
+  // A hand-pasted key that is a fetched contact's head: keep the person,
+  // but still land a newer copy of that same PGP key (e.g. its revocation).
+  // Callers pass the merge of stored+incoming, so this only adds.
   if (
     contactSource(incoming) === null &&
     superseded.some((c) => contactSource(c) !== null)
@@ -624,25 +420,13 @@ function keySet(contact: PublicContactKey): string {
     .join(" ");
 }
 
-/** `incoming`, with the user's decisions from the record it replaces:
- *  `disabled` for every key still present, and the original `addedAt`.
- *
- *  Only from the SAME record -- the same source, or two source-less
- *  records upserting by key. Two different GitHub accounts publishing
- *  one key collide here by keyId alone, and neither a disable decision
- *  nor a "known since" date should cross between them.
- *
- *  And the NAME and "verified" only from the same PERSON, which a key id
- *  alone does not establish. A record's id is its first key, so a pasted
- *  `.pub` file pairing Alice's key with Mallory's lands on Alice by id;
- *  carrying her alias across made "Alice" a contact that encrypts to
- *  Mallory as well. So, matched by id, the user's name for the record
- *  survives only when the incoming key SET is the one they named. Matched
- *  by source -- a re-fetch of the same account, which is what they named
- *  -- it survives a change of keys, as it always has. "Verified" needs
- *  the same head and the same set either way: what the user compared was
- *  those keys. (A set that grew by id only reaches here through the
- *  import Review, which says so and starts that row on Skip.) */
+/** `incoming`, with the user's decisions from the record it replaces.
+ *  `disabled` and `addedAt` carry only within the SAME record (same
+ *  source, or source-less by key). The alias carries only for the same
+ *  PERSON: matched by id, only when the key SET is unchanged (a `.pub`
+ *  pairing Alice's key with Mallory's must not inherit "Alice"); matched
+ *  by source, across key changes. "Verified" needs the same head and the
+ *  same set either way. */
 function carryForward(
   previous: PublicContactKey,
   incoming: PublicContactKey,
@@ -660,15 +444,9 @@ function carryForward(
       .filter(isRecipientDisabled)
       .map((r) => r.keyId),
   );
-  // Untouched when nothing was off, so a refreshed contact with no
-  // disable decision on it serialises exactly as the fetch built it.
-  // Every remaining key can be one the user turned off -- the account
-  // deleted the ones they kept -- and then that is what is saved: a
-  // contact with nothing to encrypt to (see `activeRecipients`), never
-  // one quietly encrypting to the keys they ruled out. A contact down to
-  // one such key keeps a one-entry list to carry the flag
-  // (`recipientsField`). The import Review asks before it gets here
-  // (`allKeysOff`).
+  // Untouched when nothing was off. If every remaining key is one the user
+  // disabled, save a contact with nothing to encrypt to -- never one quietly
+  // encrypting to keys they ruled out.
   const merged =
     off.size === 0
       ? incoming
@@ -681,10 +459,7 @@ function carryForward(
             ...disabledField(isRecipientDisabled(r) || off.has(r.keyId)),
           })),
         );
-  // The same KEY refreshed keeps what the user decided about it: its
-  // local name, and that they verified it. A different key never
-  // inherits "verified" -- nor does a group that gained or lost a key:
-  // what the user compared was the old set.
+  // "Verified" and the alias carry only for the same key and the same set.
   const sameKey = previous.keyId === incoming.keyId && sameKeys;
   return {
     ...merged,
@@ -704,12 +479,9 @@ export async function saveContact(contact: PublicContactKey): Promise<void> {
   });
 }
 
-/**
- * Mutate one stored contact in place and save. `apply` runs inside the
- * lock on the record as it is on disk, so a caller can never write back
- * a snapshot taken earlier. Resolves undefined, writing nothing, when no
- * contact has that id.
- */
+/** Mutate one stored contact and save. `apply` runs inside the lock on the
+ *  on-disk record, so a caller never writes back an earlier snapshot.
+ *  Resolves undefined, writing nothing, for an unknown id. */
 export async function updateContact(
   keyId: string,
   apply: (
@@ -727,15 +499,8 @@ export async function updateContact(
   });
 }
 
-/**
- * Turn one of a contact's keys on or off.
- *
- * A whole-record `saveContact` would do it too, and that is exactly what
- * this exists to stop: the caller is a details page holding a contact
- * captured when it mounted, so saving the spread of that snapshot
- * republishes every other field as it was at mount. Re-reading inside
- * the lock touches `recipients` and nothing else.
- */
+/** Turn one of a contact's keys on or off. Re-reads inside the lock rather
+ *  than `saveContact`ing a page's mount-time snapshot. */
 export async function setContactRecipientDisabled(
   contactKeyId: string,
   recipientKeyId: string,
@@ -753,8 +518,7 @@ export async function setContactRecipientDisabled(
   );
 }
 
-/** Mark a contact's key verified (the user compared its fingerprint with
- *  the owner), or clear that. Only the flag and its date change. */
+/** Mark a contact's key verified, or clear that. */
 export async function setContactVerified(
   keyId: string,
   verified: boolean,
@@ -767,16 +531,8 @@ export async function setContactVerified(
   });
 }
 
-/**
- * Set (or clear, with an empty/blank value) a contact's local display
- * alias.
- *
- * Through `updateContact` rather than `saveContact` for the reason
- * `setContactRecipientDisabled` is: the caller is a rename page holding
- * the contact as it was when the page opened, and saving that snapshot
- * would republish every other field with it -- reverting, say, a
- * recipient the user turned off in between.
- */
+/** Set (or clear, with a blank value) a contact's alias. Via
+ *  `updateContact`, so a stale snapshot never republishes other fields. */
 export async function updateContactAlias(
   keyId: string,
   alias: string,
@@ -786,10 +542,8 @@ export async function updateContactAlias(
 
 export async function removeContact(keyId: string): Promise<void> {
   await mutateContacts(async (existing) => {
-    // An emptied list is saved as a sealed empty array, never removed: a
-    // store that is simply gone is what a deletion attack looks like
-    // (`integrity.ts`). Only reachable with a live session, so an empty
-    // result really is an empty store -- see `mutateContacts`.
+    // Saved as a sealed empty array, never removed: a missing store looks like
+    // a deletion attack (`integrity.ts`).
     await saveAll(existing.filter((c) => c.keyId !== keyId));
   });
 }

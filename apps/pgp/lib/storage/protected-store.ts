@@ -1,23 +1,10 @@
 /**
- * Generic CRUD over a store of protected key blobs.
+ * Generic CRUD over a store of protected key blobs: a JSON array sealed as
+ * one envelope (`encrypted-store.ts`), keyed by a stable id. Item
+ * validation and mutation preconditions stay with the caller.
  *
- * Every key type we hold (PGP certs, CRX signing keys, whatever comes
- * next) persists the same way: a JSON array of self-protected blobs,
- * sealed as one encrypted envelope under the master session and
- * domain-separated by its own storage key (`encrypted-store.ts`), keyed
- * within the array by a stable id. This wraps that with the read-modify-
- * write shape all of them need, so a new key type describes its store
- * instead of reimplementing it.
- *
- * The parts that are NOT generic stay with the caller: a store may reject
- * an item before it is ever offered here (CRX checks that a blob's public
- * key hashes to its claimed extension id), and may impose its own
- * precondition on mutating (see {@link MutationGuard}).
- *
- * Serialization is not optional. Every mutation runs the whole
- * load-modify-save under the store's `withLock`, because
- * `loadEncryptedArray` + `saveEncryptedArray` rewrites the entire array:
- * two interleaved mutations would silently drop one side's write.
+ * Every mutation runs load-modify-save under the store's `withLock`: the
+ * whole array is rewritten, so interleaved mutations would drop a write.
  */
 
 import type { EncryptedStore } from "./encrypted-store";
@@ -29,21 +16,14 @@ import {
 import { withLock } from "./engine";
 
 export interface ProtectedStoreDescriptor<T> extends EncryptedStore<T> {
-  /** Stable identity of an item — the field callers address it by
-   *  (`keyId` for PGP certs, `extensionId` for CRX keys). Also what
-   *  `put` de-duplicates on. */
+  /** Stable id (`keyId` / `extensionId`); also what `put` de-duplicates on. */
   idOf: (item: T) => string;
 }
 
 /**
- * Precondition checked inside the lock, immediately before the read.
- * Throw to fail the mutation loudly; return `false` to skip it silently.
- *
- * This exists because `loadEncryptedArray` returns `[]` while the vault
- * is locked, which is indistinguishable from an empty store — so a
- * read-modify-write that runs without a session would persist an empty
- * array over every stored key. Stores whose mutations can be reached
- * while locked must pass one.
+ * Precondition checked inside the lock, before the read. Throw to fail,
+ * return `false` to skip. Required for stores mutable while locked: a
+ * locked load returns `[]`, and saving that would wipe every key.
  */
 export type MutationGuard = () => Promise<boolean>;
 
@@ -52,27 +32,23 @@ export interface MutateOptions {
 }
 
 export interface UpdateOptions extends MutateOptions {
-  /** Called (inside the lock) when no item has the given id. Default is
-   *  to no-op. A store whose caller reports success to the user should
-   *  pass one that throws — see `updateRevocationCertificate`. */
+  /** Called (inside the lock) when no item has the id; default no-op. Pass
+   *  a thrower when the caller reports success to the user. */
   onMissing?: (id: string) => never;
 }
 
 export interface ProtectedStore<T> {
   /** Every stored item. `[]` while the vault is locked. */
   getAll(): Promise<T[]>;
-  /** One-time upgrade of the stored blob to canonical padding and to the
-   *  domain-bound sealing envelope. */
+  /** One-time upgrade to canonical padding and the domain-bound envelope. */
   normalize(): Promise<void>;
   /** Insert `item`, replacing any existing item with the same id. */
   put(item: T, opts?: MutateOptions): Promise<void>;
-  /** Delete by id. An emptied store is saved as a sealed EMPTY array,
-   *  never removed: a store that is simply gone is what a deletion attack
-   *  looks like (`integrity.ts`), and on a second synced device a removal
-   *  would be indistinguishable from one. */
+  /** Delete by id. An emptied store is saved as a sealed EMPTY array, never
+   *  removed: a missing store is what a deletion attack looks like
+   *  (`integrity.ts`). */
   remove(id: string, opts?: MutateOptions): Promise<void>;
-  /** Mutate one item in place and save. `apply` runs under the lock on
-   *  the freshly-loaded item, so it never writes back stale metadata. */
+  /** Mutate one item under the lock on a freshly loaded copy. */
   update(
     id: string,
     apply: (item: T) => void,
@@ -87,8 +63,7 @@ export function createProtectedStore<T>(
   const load = () => loadEncryptedArray(descriptor);
   const save = (items: T[]) => saveEncryptedArray(descriptor, items);
 
-  /** Serialize a read-modify-write, running the store's precondition
-   *  inside the lock so it can't be overtaken between check and write. */
+  /** Runs the precondition inside the lock so it can't be overtaken. */
   const mutate = (
     opts: MutateOptions | undefined,
     fn: (items: T[]) => Promise<void>,

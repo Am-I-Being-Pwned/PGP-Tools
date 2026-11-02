@@ -2,97 +2,38 @@
  * Freshness for the sealed stores: rollback and deletion detection, and
  * an append-only revocation floor.
  *
- * ## The gap this closes
+ * A seal binds a blob to its slot but not to a time, so anyone who can
+ * write chrome.storage (for a sync user, anyone in their Google account)
+ * can write an old valid blob back: un-revoking a contact, restoring
+ * deleted keys, resetting a Paranoid user's settings.
  *
- * Every sealed store is bound to its slot (`envelope.ts`), but nothing in
- * a seal says WHEN it was written. Someone who can write chrome.storage
- * -- for a "sync across devices" user, anyone signed in to their Google
- * account -- can keep an old, perfectly valid blob and write it back
- * later. Demonstrated: an older contacts blob un-revokes a contact the
- * user had seen revoked, deleted keys and contacts come back, and
- * deleting `pgp_settings` silently resets a Paranoid user to defaults.
+ *  - Each sealed store carries a generation (`$gen`) inside its sealed
+ *    plaintext; a write stamps `max(mark + 1, Date.now())`. Wall-clock, not
+ *    a counter, so sync's last-write-wins also keeps the larger stamp and
+ *    concurrent devices do not warn (unless their clocks disagree by more
+ *    than the gap between writes -- an accepted one-off warning).
+ *  - A sealed LEDGER keeps the highest generation this device has seen per
+ *    store. A lower or missing store is reported and the UI WARNS rather
+ *    than refuses (owner's call: a false positive must not lock users out).
+ *  - The ledger holds every fingerprint seen revoked; contacts are merged
+ *    against it on load and save, so a rolled-back contacts blob still
+ *    reads as revoked.
+ *  - The ledger is local-only, never mirrored to sync: the sync attacker
+ *    cannot write `local`, and a mirror would only hand them a copy to
+ *    delete. Each device knows only what it has itself seen.
+ *  - A deleted or unreadable ledger is detected (a LOCAL store carrying a
+ *    generation proves one existed) and its replacement is marked `lost`:
+ *    the warning repeats until dismissed, settings read as the strictest
+ *    preset, and the legacy-preferences migration never reruns. Only the
+ *    local area is scanned -- a new sync device legitimately has no ledger.
  *
- * ## What this does
+ * Not caught: a consistent rollback of everything including the ledger
+ * (needs a counter outside the attacker's reach; for a sync attacker the
+ * local ledger is), a store deleted before a new device first unlocks,
+ * and history (local-only, own manifest, no generation).
  *
- *  - Each sealed store carries a GENERATION inside its sealed plaintext
- *    (`$gen`; see {@link withGeneration}), so it cannot be edited without
- *    the vault key. A write stamps `max(mark + 1, Date.now())`.
- *  - This module keeps a sealed LEDGER of the highest generation this
- *    device has seen for each store. A store that loads with a lower
- *    generation than its mark, or is absent although the ledger has a
- *    mark for it, is reported ({@link reportIntegrityIssue}) and the UI
- *    warns. It WARNS rather than refuses -- the owner's call: refusing
- *    would turn every false positive into a locked-out user.
- *  - The ledger also holds every fingerprint this device has seen
- *    revoked. Contacts are merged against it on every load and save, so a
- *    rolled-back contacts blob still reads as revoked and is never
- *    encrypted to. A rollback of the contacts blob cannot undo that,
- *    because the floor is not in the contacts blob.
- *
- * ## Why the ledger lives in `local`, whatever the vault's location
- *
- * The attacker this is for writes `chrome.storage.sync` from another
- * machine. They cannot write this device's `chrome.storage.local`. So
- * the ledger is local-only, never mirrored to sync: a mirror would only
- * hand them a copy to delete. The flip side is that every device keeps
- * its own marks, and a device only knows what it has itself seen.
- *
- * ## Multi-device sync, and the false positive it can cause
- *
- * Two devices sharing a sync vault each keep their own marks. Device B
- * loading a blob device A wrote just raises B's mark, so ordinary sync
- * is silent. The generation is a wall-clock timestamp (never below the
- * last one seen) rather than a counter for exactly this case: when two
- * devices write the same store at once, sync keeps the LATER write, and
- * the later write carries the larger stamp, so neither device warns. The
- * stamps only disagree with sync's choice when the devices' clocks are
- * further apart than the gap between the two writes -- then the device
- * whose write lost can warn once. That is the trade-off taken, and the
- * warning's copy says "two devices changing the same data at once" can
- * cause it. (The lost write itself is an existing property of sync's
- * last-write-wins, not something this adds.)
- *
- * ## A ledger that is deleted, or replaced with junk
- *
- * Without its ledger a device cannot tell a rolled-back store from the
- * real one, so deleting `pgp_integrity` used to switch every defence
- * here off at once, silently: a rollback un-revoked contacts again, and
- * the legacy-preferences migration ran again over planted values. Now a
- * missing ledger is recognised for what it is when this device's LOCAL
- * area holds a sealed store stamped with a generation (only a build that
- * keeps a ledger writes one), and an unreadable one always is. Either
- * way the fresh ledger that replaces it carries that fact (`lost`), so
- * the warning repeats on every unlock until the user dismisses it, the
- * settings read as the strictest preset meanwhile, and the legacy
- * migration never runs over it. The revocation floor the old ledger held
- * is gone; what can be rebuilt is (every contact the contacts blob itself
- * has as revoked goes straight back into the floor on its next load), and
- * the warning says revocations may need checking. Only the local area is
- * scanned: a sync vault's stores carry generations on a brand-new second
- * device too, which has every right to have no ledger.
- *
- * ## What this does NOT catch
- *
- *  - A rollback of EVERYTHING at once, including this ledger, to one
- *    consistent earlier snapshot. Deleting the ledger AND rolling every
- *    local store back to blobs from before generations existed is that
- *    same rollback. No scheme kept only in storage the
- *    attacker can write can tell that apart from the real past; it needs
- *    a counter outside their reach. For a sync attacker the local ledger
- *    IS outside their reach -- this gap is for someone with write access
- *    to the device's own profile, who can do far worse anyway.
- *  - A device that has never seen a store. A brand-new second device of
- *    a sync vault has no marks, so a store deleted before it first
- *    unlocks reads as "never existed". Its first unlock adopts what it
- *    finds, exactly as an upgrade from a build without generations does.
- *  - History. Its segments are local-only (the sync attacker cannot
- *    reach them) and have their own manifest; they carry no generation.
- *
- * ## Back-compat
- *
- * Blobs written before this carry no `$gen` and read as generation 0. A
- * device with no ledger (first run of this build) creates one from what
- * it loads, so the first upgrade never warns.
+ * Pre-generation blobs read as generation 0; a device with no ledger
+ * adopts what it loads, so the first upgrade never warns.
  */
 
 import {
@@ -111,12 +52,8 @@ import { padPlaintext, unpadPlaintext } from "./padding";
 
 /** Where a sealed store keeps its generation: a field of a settings-style
  *  object, or a lone `{ "$gen": n }` element appended to an array store.
- *
- *  An ELEMENT rather than a `{ gen, items }` wrapper so an older build
- *  still reads every record: each store's own validator rejects an
- *  element with no id, so an older build simply drops it, where a wrapper
- *  would read as "not an array" -- an empty store whose next write
- *  persists over everything the user has. */
+ *  An element, not a wrapper, so an older build drops it as an invalid item
+ *  instead of reading "not an array" and persisting an empty store. */
 export const GEN_FIELD = "$gen";
 
 interface Ledger {
@@ -125,20 +62,15 @@ interface Ledger {
   marks: Partial<Record<string, number>>;
   /** Fingerprints this device has seen revoked. Append-only. */
   revoked: string[];
-  /** One-time migrations that have been settled under a session. Sealed,
-   *  so an attacker cannot reset one to make it run again. */
+  /** One-time migrations settled under a session. Sealed, so an attacker
+   *  cannot reset one to make it run again. */
   settled: string[];
-  /** Set when this ledger replaced one that was deleted ("missing") or
-   *  would not open ("ledger-unreadable"): reported on every proven read
-   *  until the user dismisses the warning. */
+  /** Set when this ledger replaced a deleted or unopenable one: reported on
+   *  every proven read until the user dismisses the warning. */
   lost?: "missing" | "ledger-unreadable";
-  /** Stores (only the settings, see {@link HELD_UNTIL_ACKNOWLEDGED}) last
-   *  read older than their mark: reported on every proven read, and the
-   *  settings held at the strictest preset, until the user dismisses the
-   *  warning -- even after a routine save has stamped a newer generation
-   *  over the old values. `gen` is what was read and `mark` what this
-   *  device had seen then; dismissing accepts `gen` if nothing was
-   *  written since. */
+  /** Settings last read older than their mark: reported, and held at the
+   *  strictest preset, until dismissed -- even after a newer save. Dismissing
+   *  accepts `gen` if nothing was written since. */
   suspect?: Partial<Record<string, SuspectRead>>;
 }
 
@@ -186,25 +118,16 @@ function isLedger(v: unknown): v is Ledger {
   );
 }
 
-// ── issue reporting ─────────────────────────────────────────────────
-
 export type IntegrityIssueKind =
   /** The store loaded with a generation below this device's mark. */
   | "rolled-back"
-  /** The store loaded with NO generation although this device has
-   *  recorded one for it. The softer case of "rolled-back": a 2.0.x build
-   *  on another device of a sync vault drops the generation element when
-   *  it rewrites a store, so this is what an un-updated device looks like
-   *  -- and also what a rollback to a pre-generation blob looks like. The
-   *  banner words it as both. */
+  /** No generation although this device recorded one: an un-updated 2.0.x
+   *  device rewriting the store, or a rollback to a pre-generation blob. */
   | "no-generation"
-  /** The store is gone (or replaced by something that is not a sealed
-   *  envelope) although this device has seen it. */
   | "missing"
-  /** The ledger itself is present but will not open. */
   | "ledger-unreadable"
-  /** A sealed envelope is there, but it will not open or parse under the
-   *  vault key (junk, or another store's blob moved into its slot). */
+  /** A sealed envelope that will not open under the vault key (junk, or
+   *  another store's blob moved into its slot). */
   | "unreadable";
 
 export interface IntegrityIssue {
@@ -224,8 +147,7 @@ export function reportIntegrityIssue(issue: IntegrityIssue): void {
   for (const fn of listeners) fn();
 }
 
-/** Every issue reported since the panel opened (or the last clear). A
- *  stable array between reports, for `useSyncExternalStore`. */
+/** Stable array between reports, for `useSyncExternalStore`. */
 export function integrityIssues(): readonly IntegrityIssue[] {
   return snapshot;
 }
@@ -235,23 +157,17 @@ export function subscribeIntegrity(fn: () => void): () => void {
   return () => listeners.delete(fn);
 }
 
-/** Forget the reported issues (the user dismissed the warning). A store
- *  still out of date reports again on the next panel open. */
 export function clearIntegrityIssues(): void {
   issues.clear();
   snapshot = [];
   for (const fn of listeners) fn();
 }
 
-/** The user dismissed the warning: clear a lost ledger's flag and any
- *  held store so they stop repeating (and the settings read as stored
- *  again), then forget the reports. In that order, so the warning only
- *  goes away once the dismissal is stored. A held store whose mark has not
- *  moved since has that mark lowered to the generation it was read at:
- *  the user has accepted that copy, and without this its next read would
- *  hold it again straight away. Unproven, so it only amends a ledger that
- *  opens. Resolves true when anything was cleared (the settings now read
- *  differently, so the panel should re-read them). */
+/** The user dismissed the warning: clear `lost` and held stores, then the
+ *  reports -- in that order, so the warning only goes once the dismissal is
+ *  stored. A held store's mark drops to the generation the user accepted.
+ *  Only amends a ledger that opens. True when the settings now read
+ *  differently. */
 export async function acknowledgeIntegrityIssues(): Promise<boolean> {
   let cleared = false;
   await bestEffort(undefined, () =>
@@ -271,21 +187,17 @@ export async function acknowledgeIntegrityIssues(): Promise<boolean> {
   return cleared;
 }
 
-// ── generation in a store's plaintext ───────────────────────────────
-
 function genOf(v: unknown): number | undefined {
   if (typeof v !== "object" || v === null) return undefined;
   const g = (v as Record<string, unknown>)[GEN_FIELD];
   return typeof g === "number" && Number.isFinite(g) && g >= 0 ? g : undefined;
 }
 
-/** An array store's items with its generation element appended. */
 export function withGeneration<T>(items: readonly T[], gen: number): unknown[] {
   return [...items, { [GEN_FIELD]: gen }];
 }
 
-/** Split a decrypted array store into its generation (0 when absent: a
- *  blob written before generations existed) and its items. */
+/** 0 when absent (a pre-generation blob). */
 export function splitGeneration(parsed: unknown[]): {
   gen: number;
   items: unknown[];
@@ -300,28 +212,19 @@ export function splitGeneration(parsed: unknown[]): {
   return { gen, items };
 }
 
-/** The generation carried by an object store (settings). */
 export function objectGeneration(parsed: object): number {
   return genOf(parsed) ?? 0;
 }
 
-// ── the ledger ──────────────────────────────────────────────────────
-
 const local = () => chrome.storage.local;
 
-/** Plaintext, local-only record of WHICH vault the ledger was started
- *  for: a digest of that vault's master protection. Kept outside the
- *  seal because its one job is the case where the seal will not open: a
- *  ledger sealed under a vault that has since been erased and recreated
- *  (on another device of a sync vault, say) is stale, not tampered with,
- *  and is replaced quietly. It only ever decides between "replace
- *  quietly" and "replace and warn" for a ledger that ALREADY fails to
- *  open under a session the stores have proven, so writing it gains a
- *  sync attacker nothing (it is local, out of their reach anyway). */
+/** Plaintext, local-only digest of the vault the ledger was started for.
+ *  Outside the seal because it only matters when the seal will not open: it
+ *  tells a stale ledger from an erased vault (replace quietly) from a
+ *  tampered one (replace and warn). Gains a sync attacker nothing. */
 const LEDGER_VAULT = `${STORAGE_INTEGRITY}_vault`;
 
-/** A short, stable digest of a master protection (field order fixed, so
- *  it does not depend on how the record was serialised). Null for
+/** Field order fixed, so it does not depend on serialisation. Null for
  *  anything that is not a master protection. */
 export async function masterProtectionDigest(
   mp: unknown,
@@ -355,9 +258,8 @@ async function currentVaultDigest(): Promise<string | null> {
   );
 }
 
-/** A ledger that will not open, recorded as started for a DIFFERENT
- *  vault than the one whose master protection is stored now: left over
- *  from an erased vault, so it is replaced without a warning. */
+/** An unopenable ledger recorded for a DIFFERENT vault than the current
+ *  master protection: left from an erased vault, replaced without warning. */
 async function ledgerIsFromAnotherVault(): Promise<boolean> {
   const recorded = await recordedLedgerVault();
   if (!recorded) return false;
@@ -387,18 +289,15 @@ async function readLedger(): Promise<LedgerRead> {
   }
 }
 
-/** Read-only view of the ledger. Never writes, and never reports an
- *  unreadable ledger either: these paths have not yet proven the session
- *  key opens the vault, and a passkey that installs the wrong key would
- *  otherwise raise a tampering warning over what is really the "vault
- *  could not be read" screen. {@link updateLedger} reports it instead. */
+/** Read-only; never reports an unreadable ledger, because the session key
+ *  is not yet proven (a wrong-key passkey would otherwise raise a tampering
+ *  warning). {@link updateLedger} reports it. */
 async function peekLedger(): Promise<Ledger | null> {
   if (!(await hasContactsSession())) return null;
   return (await readLedger()).ledger;
 }
 
-/** The sealed stores whose generation shows a ledger-keeping build wrote
- *  them. History has no generation. */
+/** History has no generation. */
 const SEALED_STORES = [
   STORAGE_KEYRING,
   STORAGE_CONTACTS,
@@ -407,15 +306,10 @@ const SEALED_STORES = [
 ];
 
 /**
- * Whether a sealed store in this device's LOCAL area carries a
- * generation above 0 -- that is, a build that keeps a ledger wrote it, so
- * a missing ledger was deleted rather than never created. `skip` leaves
- * out the store whose own write is being recorded (its stamp is this very
- * write, not evidence). A store that will not open counts only when
- * `unreadableCounts` (the migration gate errs towards "sealed data is
- * here"; detection errs towards silence, since that store's own loader
- * reports it). Needs the session, and opens up to four blobs, so it only
- * runs when the ledger is absent.
+ * Whether a LOCAL sealed store carries a generation > 0, i.e. a missing
+ * ledger was deleted rather than never created. `skip` excludes the store
+ * being written now. Unopenable stores count only with `unreadableCounts`.
+ * Opens up to four blobs, so only runs when the ledger is absent.
  */
 export async function localStoresCarryGenerations({
   skip,
@@ -450,27 +344,14 @@ export async function localStoresCarryGenerations({
 }
 
 /**
- * Read-modify-write the ledger under its own lock. `fn` returns whether
- * it changed anything; a ledger that did not exist is written too.
+ * Read-modify-write the ledger under its own cross-window lock (a lost
+ * update can drop a revocation from the floor). Never takes a store lock.
  *
- * `proven` says the caller has just opened, or sealed, a store blob under
- * the current session -- which proves the session key is the vault's.
- * Only then may an unreadable ledger be overwritten (it was sealed under
- * some other key, or is junk: it is reported and replaced rather than
- * left to disable detection forever) or a missing one created. An
- * unproven caller (a passkey that installed the wrong key, say) must not
- * be able to replace the real ledger with one sealed under that key.
- *
- * A replacement for an unreadable ledger, or for a missing one this
- * device evidently had ({@link localStoresCarryGenerations}), is marked
- * `lost`, and a proven read of a `lost` ledger reports it every time --
- * see "A ledger that is deleted" in the header. `justWrote` is the store
- * whose write is being recorded, left out of that scan.
- *
- * Returns the ledger as it now stands (null when nothing was read or
- * written). Holds a lock shared by every panel window, since a lost
- * update here can drop a revocation from the floor. Never takes a store
- * lock, so it can be called while holding one.
+ * Only a `proven` caller -- one that just opened or sealed a store under
+ * the current session -- may overwrite an unreadable ledger or create a
+ * missing one; otherwise a wrong-key session could replace the real ledger.
+ * Such a replacement is marked `lost` (see header). `justWrote` is left out
+ * of the deletion scan.
  */
 async function updateLedger(
   fn: (l: Ledger) => boolean,
@@ -498,8 +379,6 @@ async function updateLedger(
         if (s) reportIntegrityIssue({ store, kind: s.kind });
       }
     }
-    // A fresh ledger, or one from before the vault was recorded: note
-    // which vault it is for (see LEDGER_VAULT).
     if (!ledger || (proven && !(await recordedLedgerVault()))) {
       const digest = await currentVaultDigest();
       if (digest) await local().set({ [LEDGER_VAULT]: digest });
@@ -521,17 +400,10 @@ async function writeLedger(l: Ledger): Promise<void> {
 }
 
 /**
- * Start the ledger of a vault being created, together with its master
- * protection and before any store is written: called inside
- * `saveMasterProtection`'s lock, with the new vault's session installed.
- *
- * Without it the ledger was created by the first store write's
- * `recordWrite`, after that write. A panel closed in between, or two
- * stores' first writes racing, left a sealed store with a generation and
- * no ledger -- which is exactly what a deleted ledger looks like, so the
- * brand-new vault warned "ledger lost" and ran on the strictest preset.
- * Best-effort like the rest of this module: without a session (it cannot
- * seal) or on a failed write, the first proven write creates it as before.
+ * Start a new vault's ledger with its master protection, before any store
+ * is written (called inside `saveMasterProtection`'s lock). Otherwise a
+ * generation-stamped store with no ledger looks like a deleted ledger and a
+ * brand-new vault warns. Best-effort.
  */
 export async function startIntegrityLedger(mp: unknown): Promise<void> {
   await bestEffort(undefined, async () => {
@@ -544,8 +416,7 @@ export async function startIntegrityLedger(mp: unknown): Promise<void> {
   });
 }
 
-/** Best-effort: the ledger is a detector, so a failure to read or write
- *  it (quota, a torn read) must never fail the store operation itself. */
+/** The ledger is a detector: its failure must never fail the store op. */
 async function bestEffort<T>(fallback: T, fn: () => Promise<T>): Promise<T> {
   try {
     return await fn();
@@ -554,7 +425,6 @@ async function bestEffort<T>(fallback: T, fn: () => Promise<T>): Promise<T> {
   }
 }
 
-/** The generation a write to `store` should carry. */
 export function claimGeneration(store: string): Promise<number> {
   return bestEffort(Date.now(), async () => {
     const mark = (await peekLedger())?.marks[store] ?? 0;
@@ -562,7 +432,6 @@ export function claimGeneration(store: string): Promise<number> {
   });
 }
 
-/** Record that `store` was just written at `gen`. */
 export function recordWrite(store: string, gen: number): Promise<void> {
   return bestEffort(undefined, async () => {
     await updateLedger(
@@ -578,14 +447,10 @@ export function recordWrite(store: string, gen: number): Promise<void> {
 }
 
 /**
- * Check a generation just read from `store` against this device's mark.
- * Lower: reported as rolled back, and the mark is NOT lowered (so the
- * warning repeats until the store is written again). Higher, or no mark
- * yet: the mark rises -- another device's write, or the first run.
- *
- * Resolves false when the ledger was lost (deleted or unreadable, and not
- * yet acknowledged): nothing can then say whether this copy is current,
- * and the settings reader falls back to the strictest preset.
+ * Check a generation just read against this device's mark. Lower: reported,
+ * and the mark is NOT lowered (the warning repeats until rewritten). Higher
+ * or unmarked: the mark rises. False when the ledger was lost and not
+ * acknowledged -- the settings reader then uses the strictest preset.
  */
 export function observeGeneration(
   store: string,
@@ -595,8 +460,6 @@ export function observeGeneration(
     const l = await updateLedger((l) => {
       const mark = l.marks[store];
       if (mark !== undefined && gen < mark) {
-        // No generation at all, where one was recorded: the softer kind
-        // (an older build on another device drops it; see the kind).
         const kind = gen === 0 ? "no-generation" : "rolled-back";
         reportIntegrityIssue({ store, kind });
         if (!HELD_UNTIL_ACKNOWLEDGED.has(store)) return false;
@@ -615,30 +478,21 @@ export function observeGeneration(
   });
 }
 
-/** Stores whose rolled-back (or generation-less) copy is not just
- *  reported but held until the user dismisses the warning. Only the
- *  settings: a rolled-back settings blob is a way to turn a Paranoid
- *  user's auto-lock back up, so it reads as the strictest preset
- *  meanwhile, the same as a lost ledger. The other stores have their own
- *  defence (the revocation floor) and keep warning until rewritten. */
+/** Only the settings are held until dismissed (a rollback could raise a
+ *  Paranoid user's auto-lock); other stores have the revocation floor. */
 const HELD_UNTIL_ACKNOWLEDGED = new Set<string>([STORAGE_SETTINGS]);
 
-/** Whether the current session opens this device's ledger: proof the
- *  session key is the vault's, for a caller about to overwrite a blob
- *  that would not open. */
+/** Proof the session key is the vault's, before overwriting a blob that
+ *  would not open. */
 export function sessionOpensLedger(): Promise<boolean> {
   return bestEffort(false, async () => (await peekLedger()) !== null);
 }
 
 /**
- * `store` was found absent (or not a sealed envelope). Reports it, and
- * returns true, when this device has seen the store before. Read-only:
- * nothing has proven the session key yet.
- *
- * With no ledger to ask, it also returns true (without a report of its
- * own) when the ledger is unreadable or was evidently deleted: the
- * caller must then assume the worst. Otherwise deleting the ledger AND a
- * store would read as "never existed" -- settings at their defaults.
+ * `store` was found absent. Reports and returns true when this device has
+ * seen it. Read-only (session unproven). Also true, unreported, when the
+ * ledger is unreadable or evidently deleted -- otherwise deleting the ledger
+ * AND a store would read as "never existed" (settings at defaults).
  */
 export function noteAbsent(store: string): Promise<boolean> {
   return bestEffort(false, async () => {
@@ -651,8 +505,7 @@ export function noteAbsent(store: string): Promise<boolean> {
     }
     if (unreadable) return !(await ledgerIsFromAnotherVault());
     if (await localStoresCarryGenerations({ skip: store })) {
-      // The stores that carried a generation opened under this session,
-      // which proves the key: the deleted ledger can be reported here.
+      // Those stores opened under this session, proving the key.
       reportIntegrityIssue({ store: STORAGE_INTEGRITY, kind: "missing" });
       return true;
     }
@@ -660,7 +513,6 @@ export function noteAbsent(store: string): Promise<boolean> {
   });
 }
 
-/** Every fingerprint this device has seen revoked. */
 export function revokedFloor(): Promise<ReadonlySet<string>> {
   return bestEffort(new Set<string>(), async () => {
     return new Set((await peekLedger())?.revoked ?? []);
@@ -681,17 +533,14 @@ export function recordRevoked(ids: readonly string[]): Promise<void> {
   });
 }
 
-/** Whether a one-time migration has been settled on this device. */
 export function isSettled(name: string): Promise<boolean> {
   return bestEffort(false, async () => {
     return (await peekLedger())?.settled.includes(name) ?? false;
   });
 }
 
-/** Record a one-time migration as settled. Unproven (it can run before
- *  any store has opened), so it only ever amends a ledger that already
- *  opens; on a device with none yet, the next proven write creates it and
- *  the migration simply re-checks, finding nothing, next time. */
+/** Unproven, so it only amends a ledger that already opens; without one
+ *  the migration re-checks, finding nothing, next time. */
 export function markSettled(name: string): Promise<void> {
   return bestEffort(undefined, async () => {
     await updateLedger((l) => {
@@ -702,9 +551,8 @@ export function markSettled(name: string): Promise<void> {
   });
 }
 
-/** Drop the ledger. Only for a vault that is being created from nothing
- *  or erased: a ledger left over from an earlier vault would not open
- *  under the new one's key, and would read as tampering. */
+/** Only for a vault being created or erased: an old vault's ledger would
+ *  not open under the new key and would read as tampering. */
 export async function resetIntegrityLedger(): Promise<void> {
   await removeChunked(local(), STORAGE_INTEGRITY);
   await local().remove(LEDGER_VAULT);

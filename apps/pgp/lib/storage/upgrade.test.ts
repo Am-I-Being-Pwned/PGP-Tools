@@ -1,20 +1,9 @@
 /**
- * Upgrade-path tests: storage written by the published v1.3.1 build must
- * load cleanly in the current version.
- *
- * Fixtures are built by hand from v1.3.1's storage formats (see
- * `git show main:apps/pgp/lib/storage/preferences.ts` and
- * `git show main:apps/pgp/lib/workspace-draft.ts`):
- *
- *  - sync `pgp_preferences`: plaintext bootstrap
- *    `{ storageLocation, onboardingComplete }`
- *  - `pgp_settings` (engine-routed): `{ iv, ciphertext }` where the
- *    plaintext is JSON of the twelve v1.3.1 settings fields, padded on
- *    `local`, unpadded on `sync`, and sealed under the pre-domain-
- *    separation shared envelope (one key + one AAD for every store)
- *  - workspace draft ciphertext: JSON with a single
- *    `selectedRecipientId: string | null` (now `selectedRecipientIds`)
- *  - history keys (`pgp_history*`): did not exist at all
+ * Storage written by the published v1.3.1 build must load cleanly now.
+ * Fixtures are hand-built from v1.3.1's formats: plaintext sync bootstrap,
+ * a `pgp_settings` blob under the pre-domain shared envelope (padded on
+ * `local` only), a draft with singular `selectedRecipientId`, and no
+ * history keys.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -44,11 +33,8 @@ import {
 import { padPlaintext, unpadPlaintext } from "./padding";
 import { getPreferences, savePreferences } from "./preferences";
 
-// Fake WASM session (see fake-store-crypto.ts): the domain-bound
-// primitives tag the plaintext with their domain, the legacy shared ones
-// are the identity transform v1.3.1 effectively had. The draft key uses an
-// identity transform too, except for one marker input that throws to
-// simulate an undecryptable blob.
+// Fake WASM session (see fake-store-crypto.ts). The draft key is the
+// identity except for one marker input that throws (undecryptable blob).
 const wasmMock = vi.hoisted(() => ({ session: true }));
 
 const UNDECRYPTABLE = new TextEncoder().encode("@@undecryptable@@");
@@ -74,9 +60,8 @@ let local: FakeArea;
 let sync: FakeArea;
 
 beforeEach(() => {
-  // Deliberately NO `permissions` key: v1.3.1 never requested
-  // unlimitedStorage, and Firefox doesn't expose chrome.permissions the
-  // same way -- history's budget code must tolerate its absence.
+  // No `permissions` key: history's budget code must tolerate its absence
+  // (v1.3.1 never requested it; Firefox differs).
   ({ local, sync } = stubChromeStorage());
   wasmMock.session = true;
 });
@@ -85,13 +70,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// ── v1.3.1 fixtures ──────────────────────────────────────────────────
-
-/** The settings blob exactly as v1.3.1's saveSettings wrote it: the
- *  twelve then-known settings fields (bootstrap fields excluded), none
- *  of the fields added since. `activeTab` is deliberately still here --
- *  it has since been REMOVED as a preference, and this fixture proves an
- *  old blob carrying it still reads back fine. */
+/** v1.3.1's twelve settings fields. `activeTab` has since been removed and
+ *  is kept to prove an old blob carrying it still reads. */
 const V131_SETTINGS = {
   defaultSigningKeyId: "SIGKEY01",
   armoredOutput: false,
@@ -107,9 +87,6 @@ const V131_SETTINGS = {
   crxSigningEnabled: true,
 };
 
-/** Encrypt a settings object the way v1.3.1 stored it: JSON, padded on
- *  `local` (unpadded on `sync`), 12-byte IV prefix stripped into the
- *  `{ iv, ciphertext }` envelope. */
 function makeSettingsBlob(
   settings: Record<string, unknown>,
   location: "local" | "sync",
@@ -119,7 +96,6 @@ function makeSettingsBlob(
   return { iv: toBase64(new Uint8Array(12)), ciphertext: toBase64(padded) };
 }
 
-/** Seed the fake storage with a complete v1.3.1 profile. */
 function seedV131Profile(location: "local" | "sync" = "local"): void {
   sync.store.set(STORAGE_PREFERENCES, {
     storageLocation: location,
@@ -129,10 +105,7 @@ function seedV131Profile(location: "local" | "sync" = "local"): void {
   area.store.set(STORAGE_SETTINGS, makeSettingsBlob(V131_SETTINGS, location));
 }
 
-/** Decrypt the stored settings blob back to its JSON object (test-side
- *  mirror of loadSettings, for asserting what a write persisted).
- *  `storedPlaintext` accepts either sealing scheme, so this works on a
- *  v1.3.1 fixture and on a blob the current build rewrote. */
+/** Decrypts either sealing scheme, for asserting what a write persisted. */
 function readStoredSettings(area: FakeArea): Record<string, unknown> {
   const blob = area.store.get(STORAGE_SETTINGS) as StoredEnvelope;
   const plaintext = unpadPlaintext(storedPlaintext(blob));
@@ -141,8 +114,6 @@ function readStoredSettings(area: FakeArea): Record<string, unknown> {
     unknown
   >;
 }
-
-// ── preferences ──────────────────────────────────────────────────────
 
 describe("v1.3.1 preferences blob", () => {
   it("loads with stored values preserved and new fields at their defaults", async () => {
@@ -200,8 +171,7 @@ describe("v1.3.1 preferences blob", () => {
   });
 
   it("savePreferences preserves fields it does not know (downgrade safety)", async () => {
-    // Simulate a blob written by a FUTURE version: contains a field this
-    // build has never heard of. A read-merge-write must carry it along.
+    // A FUTURE version's unknown field must survive a read-merge-write.
     sync.store.set(STORAGE_PREFERENCES, {
       storageLocation: "local",
       onboardingComplete: true,
@@ -220,9 +190,8 @@ describe("v1.3.1 preferences blob", () => {
     expect(stored.defaultSigningKeyId).toBe("SIGKEY01");
   });
 
-  // v1.3.1 sealed every store under one shared key and one shared AAD, so
-  // its blobs carry no domain binding. They must keep opening (the legacy
-  // fallback in envelope.ts), and the first write must upgrade them.
+  // v1.3.1 blobs have no domain binding: they must keep opening and be
+  // upgraded on the first write.
   it("reads the legacy shared-envelope settings blob and upgrades it on write", async () => {
     seedV131Profile("local");
     expect(isDomainSealed(local.store.get(STORAGE_SETTINGS))).toBe(false);
@@ -232,8 +201,6 @@ describe("v1.3.1 preferences blob", () => {
     await expect(getPreferences()).resolves.toMatchObject(V131_SETTINGS);
     expect(local.store.get(STORAGE_SETTINGS)).toBe(before);
 
-    // ...but the next write reseals for the settings key as its domain,
-    // carrying every v1.3.1 field across.
     await savePreferences({ armoredOutput: true });
     const blob = local.store.get(STORAGE_SETTINGS);
     expect(isDomainSealed(blob)).toBe(true);
@@ -259,11 +226,8 @@ describe("v1.3.1 preferences blob", () => {
   });
 });
 
-// ── workspace draft ──────────────────────────────────────────────────
-
 describe("v1.3.1 workspace draft", () => {
   it("drops an old single-recipient draft gracefully (null, no throw)", async () => {
-    // Exactly the shape v1.3.1 serialised: selectedRecipientId (singular).
     const oldDraft = {
       mode: "encrypt",
       input: "hello",
@@ -300,8 +264,6 @@ describe("v1.3.1 workspace draft", () => {
   });
 });
 
-// ── history ──────────────────────────────────────────────────────────
-
 describe("history on a v1.3.1 profile (no history keys)", () => {
   it("loads as empty without creating keys or crashing", async () => {
     seedV131Profile("local");
@@ -321,14 +283,11 @@ describe("history on a v1.3.1 profile (no history keys)", () => {
   });
 });
 
-// ── preset detection for upgraders ───────────────────────────────────
-
 describe("preset state for an upgraded v1.3.1 user", () => {
   it("all-default upgraded prefs read as custom, not as a preset", async () => {
     const { activePreset, bundledSettingsCustomized } =
       await import("../presets");
-    // A v1.3.1 user who never touched settings: bootstrap present, no
-    // settings blob at all (v1.3.1 only wrote it on the first change).
+    // Never touched settings: v1.3.1 only wrote the blob on the first change.
     sync.store.set(STORAGE_PREFERENCES, {
       storageLocation: "local",
       onboardingComplete: true,
@@ -336,8 +295,6 @@ describe("preset state for an upgraded v1.3.1 user", () => {
 
     const prefs: PgpPreferences = await getPreferences();
     expect(activePreset(prefs)).toBe("custom");
-    // ...but they never changed a bundled setting, so the UI must not
-    // claim they did.
     expect(bundledSettingsCustomized(prefs)).toBe(false);
   });
 });

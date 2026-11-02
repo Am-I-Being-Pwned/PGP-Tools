@@ -3,32 +3,15 @@ import { STORAGE_DEVICE_LOCATION, STORAGE_PREFERENCES } from "../constants";
 import { getChunked, removeChunked, setChunked } from "./chunked";
 
 /**
- * Thin wrapper over chrome.storage that routes reads/writes to the
- * user's chosen location (local or sync).
+ * Routes chrome.storage reads/writes to this device's vault location, with
+ * a per-key mutex and a cached location.
  *
- * ## Where the location comes from
- *
- * This device's own record (`STORAGE_DEVICE_LOCATION`, in
- * chrome.storage.local, never synced) decides. The sync bootstrap's
- * `storageLocation` is only the default for a device that has no record
- * yet -- a new device of a sync vault, or the first run after an upgrade
- * from a build without one -- and `vault-state.ts` records the location
- * as soon as it is unambiguous.
- *
- * The bootstrap used to decide outright, and anyone signed in to the
- * user's Google account can write it: setting it to "sync" and planting
- * any validly shaped master protection there routed a LOCAL vault's
- * lock screen to the planted one, which nothing unlocks, and the real
- * vault was never mentioned. It also meant one device switching to sync
- * re-routed every other device, whatever it had stored. Where a
- * device's vault lives is a fact about the device.
- *
- * Every value read back is normalised strictly: exactly "sync" is sync,
- * anything else is local. (`?? "local"` let a planted "SYNC" through as
- * a third location that matched neither area.)
- *
- * Includes a per-key mutex to prevent read-modify-write races and
- * a cached location to avoid redundant storage reads.
+ * The location is this device's own record (`STORAGE_DEVICE_LOCATION`,
+ * local, never synced). The sync bootstrap's `storageLocation` is only the
+ * default for a device with no record: anyone in the user's Google account
+ * can write it, so letting it decide would route a local vault's lock
+ * screen to a planted protection. Values are normalised strictly: exactly
+ * "sync" is sync, anything else is local.
  */
 
 const locks = new Map<string, Promise<void>>();
@@ -54,13 +37,10 @@ export async function withLock<T>(
 
 /**
  * {@link withLock}, but held across every extension page of this origin
- * (two panel windows, the reader tab) through the Web Locks API, which
- * `withLock` -- one Map per page -- is not. For the read-check-write
- * sequences whose interleaving across windows does real damage: the
- * master protection's "refuse if one exists" check and its write, and
- * the integrity ledger's read-modify-write (a lost update there drops a
- * revocation from the floor). Falls back to `withLock` where Web Locks
- * is absent (unit tests in Node).
+ * via Web Locks (falls back to `withLock` without it, e.g. Node tests).
+ * For read-check-write sequences whose cross-window interleaving does real
+ * damage: master protection's "refuse if one exists" + write, and the
+ * integrity ledger's read-modify-write.
  *
  * Never nest a shared lock inside itself; the ledger's is always the
  * innermost lock taken, so no two pages can wait on each other.
@@ -83,8 +63,8 @@ export function asStorageLocation(v: unknown): StorageLocation {
 
 let cachedLocation: StorageLocation | null = null;
 
-/** This device's own record of its vault's location, or null when it has
- *  none yet. Only a literal "local" or "sync" counts as a record. */
+/** This device's record of its vault location (only literal "local" or
+ *  "sync" counts), or null. */
 export async function pinnedStorageLocation(): Promise<StorageLocation | null> {
   const result = await chrome.storage.local.get(STORAGE_DEVICE_LOCATION);
   const v: unknown = result[STORAGE_DEVICE_LOCATION];
@@ -103,18 +83,13 @@ export async function unpinStorageLocation(): Promise<void> {
   cachedLocation = null;
 }
 
-/** The `chrome.storage` the change listener below is registered on (the
- *  global is swapped per test, so this is tracked rather than a flag). */
+/** The `chrome.storage` the listener is registered on (swapped per test). */
 let watching: unknown = null;
 
 /**
- * Drop the cached location whenever another page changes what it is
- * resolved from: this device's record, or the sync bootstrap. Each panel
- * window, and the reader tab, has its own copy of this module, so a
- * storage switch in one window used to leave the others reading and
- * writing the OLD area -- whose copies the switch then purges -- until
- * they were closed. Registered lazily (the first resolve), once per
- * `chrome.storage`.
+ * Drop the cached location when another page changes this device's record
+ * or the sync bootstrap; otherwise other windows keep using the OLD area
+ * after a switch purges it.
  */
 function watchLocationChanges(): void {
   const storage = (globalThis as { chrome?: typeof chrome }).chrome?.storage;
@@ -151,10 +126,8 @@ export function invalidateLocationCache(): void {
   cachedLocation = null;
 }
 
-/** The user's current storage area. Used by the encrypted stores to
- *  decide padding: `local` has a generous quota so blobs are padded to
- *  hide item counts; `sync` caps items at 8 KB, so padding is skipped
- *  there to stay under the limit. */
+/** The current storage area. `local` blobs are padded to hide item
+ *  counts; `sync` (8 KB/item) skips padding. */
 export function currentStorageLocation(): Promise<StorageLocation> {
   return resolveLocation();
 }
@@ -172,8 +145,7 @@ export async function getItem<T>(key: string): Promise<T | undefined> {
 
 export async function setItem<T>(key: string, value: T): Promise<void> {
   const loc = await resolveLocation();
-  // Chunk on `sync` (8 KB/item cap); store verbatim on `local` (no cap,
-  // and its length-hiding padding must survive intact).
+  // Chunk on `sync`; verbatim on `local` so padding survives.
   await setChunked(area(loc), key, value, loc === "sync");
 }
 

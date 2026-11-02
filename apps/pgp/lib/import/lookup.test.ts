@@ -1,8 +1,3 @@
-/**
- * The routing rule is the part of key discovery a user can be surprised
- * by, so every case it decides is named here -- including the one real
- * ambiguity (hex that is also a legal GitHub username).
- */
 import { describe, expect, it } from "vitest";
 
 import { classifyLookup } from "./lookup";
@@ -27,10 +22,8 @@ describe("classifyLookup", () => {
   });
 
   it("sends a fingerprint to the keyserver even though it is a legal username", () => {
-    // THE ONE AMBIGUITY. 40 hex characters satisfy GitHub's account-name
-    // rule too; nobody's account is called this and everybody's
-    // fingerprint is, so the keyserver wins. Read the doc comment on
-    // `classifyLookup` before changing this.
+    // THE ONE AMBIGUITY: 40 hex is also a legal account name; the keyserver wins
+    // (see `classifyLookup`).
     expect(classifyLookup(FP.toLowerCase())).toEqual({
       target: "keyserver",
       query: { kind: "fingerprint", value: FP },
@@ -42,8 +35,7 @@ describe("classifyLookup", () => {
   });
 
   it("lets 0x say `fingerprint` out loud", () => {
-    // `0x` is not a legal GitHub username character, so this is the
-    // escape hatch for anyone who disagrees with the rule above.
+    // `0x` is the explicit escape hatch.
     expect(classifyLookup(`0x${FP}`)).toEqual({
       target: "keyserver",
       query: { kind: "fingerprint", value: FP },
@@ -51,10 +43,7 @@ describe("classifyLookup", () => {
   });
 
   it("still routes hex of a non-fingerprint length to GitHub", () => {
-    // 8 hex characters is a short key id, which this app does not look
-    // up -- and IS a plausible account name. It goes to GitHub and comes
-    // back "no such account", which is a better answer than a request to
-    // an endpoint we do not have.
+    // A short key id isn't looked up but IS a plausible account name.
     expect(classifyLookup("deadbeef")).toEqual({
       target: "github",
       username: "deadbeef",
@@ -69,9 +58,7 @@ describe("classifyLookup", () => {
       "-leading-hyphen",
       "trailing-hyphen-",
       "double--hyphen",
-      // 40 characters, too long for an account name -- and not hex, so
-      // not a fingerprint either. (`"A".repeat(40)` would BE a
-      // fingerprint; see the ambiguity case above.)
+      // Too long for an account, not hex.
       "Z".repeat(40),
       "alice@example.com/../gists",
       "https://github.com/octocat",

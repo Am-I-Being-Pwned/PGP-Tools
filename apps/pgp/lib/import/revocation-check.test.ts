@@ -18,7 +18,6 @@ const answer = (r: KeyserverKeyResponse | undefined) =>
 const found = (armored: string) =>
   answer({ ok: true, query: { kind: "fingerprint", value: FPR }, armored });
 
-/** The store's merge, as the check sees it. */
 const mergeTo = (keyInfo: object | null) =>
   vi.fn<MergeIntoContact>(() =>
     Promise.resolve(keyInfo ? { keyInfo: keyInfo as never } : undefined),
@@ -39,9 +38,7 @@ describe("checkRevocation", () => {
   });
 
   it("hands the fetched cert to the store's merge, never a copy of its own", async () => {
-    // The merge runs on the contact as it is when the answer arrives:
-    // the check passes the keyserver's cert, not a stored-plus-fetched
-    // record it built from the copy it started with.
+    // Merges onto the contact as it is when the answer arrives.
     vi.mocked(parseKeys).mockResolvedValue([
       { keyInfo: info(), armored: "FETCHED" },
     ]);
@@ -58,8 +55,7 @@ describe("checkRevocation", () => {
   });
 
   it("sends a copy that adds User IDs to the Review instead of saving it", async () => {
-    // The store's merge wrote nothing (it never binds a new User ID
-    // without the Review); the check hands back the keyserver's copy.
+    // The store never binds a new User ID without the Review.
     vi.mocked(parseKeys).mockResolvedValue([
       { keyInfo: info(), armored: "FETCHED" },
     ]);

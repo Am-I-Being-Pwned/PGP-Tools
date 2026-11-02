@@ -1,17 +1,11 @@
-/**
- * The words for a clash between two contacts (see `contactClashes`), in
- * one place: the contact card, the recipient picker and the details page
- * each showed it with their own copy of the same ternary, and a new kind
- * of clash had to be added to all of them.
- */
+// Clash copy in one place for the card, picker and details page.
 
 import type { IdentityConflict, IdentityHolder } from "./binding";
 import { t } from "../i18n";
 import { parseUserId } from "../utils/key-naming";
 import { displayKeyId } from "./binding";
 
-/** The holder as the user knows it: by the name they gave it, when they
- *  did (a comment-less SSH key has no other). */
+/** By the user's name for it when set (a comment-less SSH key has no other). */
 export function clashHolderArgs(holder: IdentityHolder): {
   name: string;
   keyid: string;
@@ -22,7 +16,6 @@ export function clashHolderArgs(holder: IdentityHolder): {
   };
 }
 
-/** The short pill a clashing contact wears. */
 export function clashPillLabel(clash: IdentityConflict): string {
   if (clash.kind === "address")
     return clash.lookalike
@@ -33,8 +26,6 @@ export function clashPillLabel(clash: IdentityConflict): string {
     : t("keys_contact_same_name");
 }
 
-/** What the clash is, against one holder: the pill's hover text, and a
- *  line of the details page's note. */
 export function clashSentence(
   clash: IdentityConflict,
   holder: IdentityHolder = clash.holders[0],

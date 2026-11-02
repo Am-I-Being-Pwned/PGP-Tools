@@ -3,18 +3,16 @@ import { parseKey } from "../pgp/wasm";
 import { IDENTITY_VERSION, updateContact } from "./contacts";
 import { isSshRecord } from "./key-kind";
 
-/** Fields older versions never stored, derived once per record. Each
- *  patch is applied through `updateContact`, inside the store's lock, so
- *  it never republishes a stale snapshot of the rest of the record. */
+/** Fields older versions never stored, derived once per record, each patch
+ *  via `updateContact` (inside the lock). */
 export function needsBackfill(c: PublicContactKey): boolean {
   return (
     c.expiresAt === undefined || (c.identityVersion ?? 0) < IDENTITY_VERSION
   );
 }
 
-/** `expiresAt` (null = never), plus the parse-derived flags. An SSH key
- *  is not parsed (its armor is a recipient line) but still gets `null`,
- *  or it would be re-queued on every load. */
+/** `expiresAt` (null = never) plus parse-derived flags. SSH keys get
+ *  `null` too, or they'd be re-queued on every load. */
 async function backfillExpiry(c: PublicContactKey): Promise<void> {
   if (c.expiresAt !== undefined) return;
   let patch: Partial<PublicContactKey>;

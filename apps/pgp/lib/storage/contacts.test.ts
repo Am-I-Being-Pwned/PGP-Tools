@@ -1,24 +1,8 @@
 /**
- * The multi-recipient contact model.
- *
- * A contact is a PERSON, and a person commonly has several keys (three
- * SSH keys on a GitHub account is unremarkable). Encrypting to that
- * contact must reach all of them, because we cannot know which machine
- * they are reading from.
- *
- * What is pinned here is the migration property the whole design rests
- * on -- `recipients` absent MEANS "the single key in the top-level
- * fields", enforced on BOTH sides:
- *
- *  - read: `contactRecipients` synthesises the one-element list, so no
- *    call site sees the difference;
- *  - write: `recipientsField` emits nothing at length 1, so today's
- *    contacts serialise byte-for-byte as they already do and an older
- *    build still reads every record.
- *
- * Plus the head-agreement invariant that makes a downgrade merely
- * degraded rather than wrong, and the source-based upsert identity that
- * stops a re-fetch from filing a second contact for the same person.
+ * The multi-recipient contact model. Pins the migration rule: absent
+ * `recipients` MEANS the single top-level key, on read
+ * (`contactRecipients`) and write (`recipientsField` emits nothing at
+ * length 1); plus head agreement and source-based upsert identity.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -69,8 +53,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-/** A record exactly as one is written TODAY: no `kind`, no `recipients`,
- *  no `source`. Every contact on a user's disk looks like this. */
+/** A record as written today: no `kind`, `recipients` or `source`. */
 function legacyContact(over: Partial<PublicContactKey> = {}): PublicContactKey {
   return {
     keyId: "CCCC",
@@ -91,10 +74,7 @@ function sshRecipient(n: number): ContactRecipient {
   };
 }
 
-/** A GitHub-sourced contact holding `count` keys, assembled the way the
- *  importer has to assemble one: the head key duplicated into the
- *  top-level fields, `recipients` written only through the field
- *  helper. */
+/** A GitHub-sourced contact with `count` keys, built as the importer does. */
 function multiContact(count: number, user = "octocat"): PublicContactKey {
   const list = Array.from({ length: count }, (_, i) => sshRecipient(i));
   const head = list[0];
@@ -166,10 +146,7 @@ describe("the write rule - recipients only above length 1", () => {
 
   it("serialises a one-key contact byte-identically to a pre-field one", () => {
     const before = legacyContact();
-    // The same record, assembled the new way. If `recipientsField` ever
-    // emitted `recipients: [...]` (or `recipients: undefined`) at length
-    // 1, this JSON would differ and every existing user's contacts blob
-    // would be rewritten on first touch.
+    // Any `recipients` emitted at length 1 would rewrite every user's blob.
     const after: PublicContactKey = {
       ...legacyContact(),
       ...recipientsField(contactRecipients(before)),
@@ -194,10 +171,8 @@ describe("the write rule - recipients only above length 1", () => {
 });
 
 describe("the head-agreement invariant - repaired, never rejected", () => {
-  /** The validator isn't exported; it runs on every LOAD, so a rejected
-   *  record simply doesn't come back -- and the next write persists the
-   *  filtered array, i.e. the person is gone from disk. Repair is the
-   *  remedy precisely because rejection here is permanent deletion. */
+  /** Round-trip through LOAD, where a rejected record is permanently
+   *  deleted on the next write -- hence repair, not reject. */
   async function reload(c: PublicContactKey): Promise<PublicContactKey> {
     await saveContact(c);
     const [stored] = await loadContacts();
@@ -220,7 +195,6 @@ describe("the head-agreement invariant - repaired, never rejected", () => {
     const list = contactRecipients(stored);
     expect(list[0].keyId).toBe(stored.keyId);
     expect(list[0].armored).toBe(stored.armoredPublicKey);
-    // Nobody was dropped on the way: still three keys, re-ordered.
     expect(list.map((r) => r.keyId).sort()).toEqual([
       "SHA256:key0",
       "SHA256:key1",
@@ -242,9 +216,8 @@ describe("the head-agreement invariant - repaired, never rejected", () => {
       armored: bad.armoredPublicKey,
       algorithm: bad.algorithm,
     });
-    // The entry claiming this fingerprint with DIFFERENT bytes is the one
-    // thing dropped -- one of the two has to be wrong, and the top-level
-    // copy is the one every older build already encrypts to.
+    // Only the entry claiming this fingerprint with DIFFERENT bytes is dropped;
+    // the top-level copy wins.
     expect(list.map((r) => r.keyId)).toEqual(["SHA256:key0", "SHA256:key1"]);
   });
 
@@ -269,8 +242,6 @@ describe("the head-agreement invariant - repaired, never rejected", () => {
   });
 
   it("does not delete the person on the write that follows the bad read", async () => {
-    // The failure this replaces: the bad record is filtered out on load,
-    // and the very next save persists the list without it.
     const bad = multiContact(3);
     bad.recipients = [
       { ...sshRecipient(0), keyId: "SHA256:someone-else" },
@@ -310,9 +281,7 @@ describe("saveContact - upsert identity", () => {
   it("replaces by matching source even when the head key changed", async () => {
     await saveContact(multiContact(3));
 
-    // The upstream user deleted their first key: recipients[0] moves on,
-    // and with it the record id. A keyId-only upsert would leave the old
-    // record behind and produce two contacts for one person.
+    // First key deleted upstream: the record id moves; must not duplicate.
     const refetched: PublicContactKey = {
       ...multiContact(3),
       keyId: sshRecipient(1).keyId,
@@ -369,20 +338,9 @@ describe("saveContact - upsert identity", () => {
 });
 
 /**
- * Turning one of a contact's keys off.
- *
- * `disabled` follows the same absent-means-default convention as `kind`
- * and `recipients`, and for the same reason: a contact with nothing
- * turned off must serialise byte-for-byte the way it did before the
- * field existed, so no user's blob is rewritten and an older build still
- * reads every record (it ignores the flag and encrypts to all the keys
- * -- degraded, never encrypting to nobody).
- *
- * `activeRecipients` returns an EMPTY list when every key is off -- a
- * refresh can leave a contact so -- and it is the encrypt path's job to
- * refuse that (`buildEncryptRecipients`), never to quietly encrypt to
- * the keys the user turned off. The UI half (refusing to disable the
- * last enabled key) lives in `KeyDetailsPage`.
+ * `disabled`: absent means enabled, never written as `false`.
+ * `activeRecipients` is EMPTY when every key is off; refusing that is the
+ * encrypt path's job (`buildEncryptRecipients`).
  */
 describe("disabled recipients - absent means enabled", () => {
   /** `multiContact`, with the keys at `off` turned off. */
@@ -399,8 +357,6 @@ describe("disabled recipients - absent means enabled", () => {
     expect(isRecipientDisabled({ ...sshRecipient(0), disabled: true })).toBe(
       true,
     );
-    // Strict `=== true`: anything else on the record means enabled, so a
-    // stray value can never silently stop encrypting to a key.
     expect(
       isRecipientDisabled({
         ...sshRecipient(0),
@@ -418,8 +374,7 @@ describe("disabled recipients - absent means enabled", () => {
   });
 
   it("keeps ALL of them in contactRecipients", () => {
-    // The display list. A key the user cannot see is a key they can
-    // never turn back on.
+    // The display list keeps disabled keys, or they could never be re-enabled.
     const c = withDisabled(3, [1]);
     expect(contactRecipients(c)).toHaveLength(3);
     expect(contactRecipients(c).map((r) => r.keyId)).toEqual([
@@ -435,8 +390,7 @@ describe("disabled recipients - absent means enabled", () => {
   });
 
   it("is empty when a record has EVERY key off", () => {
-    // It used to fall back to the full list -- encrypting to exactly the
-    // keys the user had turned off. Empty is refused at encrypt time.
+    // Never falls back to the full list; empty is refused at encrypt time.
     const c = withDisabled(3, [0, 1, 2]);
     expect(activeRecipients(c)).toEqual([]);
     expect(hasActiveRecipient(c)).toBe(false);
@@ -458,9 +412,6 @@ describe("disabled recipients - absent means enabled", () => {
     expect(off[1].disabled).toBe(true);
     const back = withRecipientDisabled(off, "SHA256:key1", false);
     expect("disabled" in back[1]).toBe(false);
-    // Byte-identical to the list before it was ever touched: that is
-    // what keeps a round trip through the toggle from rewriting the
-    // record's shape.
     expect(JSON.stringify(back)).toBe(
       JSON.stringify([sshRecipient(0), sshRecipient(1)]),
     );
@@ -473,9 +424,7 @@ describe("disabled recipients - absent means enabled", () => {
   });
 
   it("serialises a contact with nothing disabled byte-identically", () => {
-    // The whole migration rule in one assertion: writing every recipient
-    // through `disabledField` must produce exactly the JSON a build that
-    // predates the field wrote.
+    // Writing through `disabledField` must produce the pre-field JSON exactly.
     const before = multiContact(3);
     const after: PublicContactKey = {
       ...multiContact(3),
@@ -487,8 +436,6 @@ describe("disabled recipients - absent means enabled", () => {
       ),
     };
     expect(JSON.stringify(after)).toBe(JSON.stringify(before));
-    // And the single-key case, which must not grow a `recipients` field
-    // either.
     const legacyAfter: PublicContactKey = {
       ...legacyContact(),
       ...recipientsField(
@@ -512,8 +459,7 @@ describe("disabled recipients - absent means enabled", () => {
   });
 
   it("does not reject a record carrying a stray `disabled: false`", async () => {
-    // This build never writes it, but dropping the whole PERSON over a
-    // field we read leniently anyway would be the worse failure.
+    // Never written by this build, but must not drop the whole PERSON.
     const c = multiContact(3);
     (c.recipients as unknown as Record<string, unknown>[])[1].disabled = false;
     await saveContact(c);
@@ -524,18 +470,8 @@ describe("disabled recipients - absent means enabled", () => {
 });
 
 /**
- * The guard, and the reason it has to exist.
- *
- * `loadEncryptedArray` returns `[]` with no contacts session, which is
- * indistinguishable from an empty store -- so an unguarded delete
- * computes "nothing left", takes the empty-store shortcut and removes
- * the sealed blob. Every contact the user has, destroyed, without the
- * vault ever being opened; and reachable on the ordinary auto-lock path,
- * because the master lock drops the contacts session without awaiting it
- * while a mutation is already queued behind the UI's mutex.
- *
- * These assert on STORAGE, not on a return value: a delete that reports
- * success having wiped the blob is the exact failure being prevented.
+ * With no session `loadEncryptedArray` returns `[]`; an unguarded delete
+ * would wipe the sealed blob. Asserts on STORAGE, not return values.
  */
 describe("mutating a locked contacts store", () => {
   async function seed(): Promise<unknown> {
@@ -580,8 +516,7 @@ describe("mutating a locked contacts store", () => {
   });
 
   it("keeps a sealed empty store when it genuinely empties", async () => {
-    // Never removed: a missing store is what a deletion attack looks
-    // like (`integrity.ts`).
+    // Never removed: a missing store looks like a deletion attack.
     await saveContact(legacyContact());
     await removeContact("CCCC");
     expect(local.store.has(STORAGE_CONTACTS)).toBe(true);
@@ -589,13 +524,8 @@ describe("mutating a locked contacts store", () => {
   });
 });
 
-/**
- * `disabled` is the one field on a contact that carries a SECURITY
- * decision, and a refresh is the one path that would discard it: a
- * re-fetch builds its record purely from what GitHub just returned, and
- * the upsert replaces wholesale on a source match. Carried forward in
- * the STORE rather than at each call site, so no fetch path can forget.
- */
+/** `disabled` is a SECURITY decision a re-fetch would discard; the STORE
+ *  carries it forward so no fetch path can forget. */
 describe("saveContact - a refresh keeps the user's decisions", () => {
   /** The same person, re-fetched: fresh timestamps, no `disabled`. */
   function refetched(keys: number[], user = "octocat"): PublicContactKey {
@@ -657,9 +587,7 @@ describe("saveContact - a refresh keeps the user's decisions", () => {
   });
 
   it("does not carry a decision across to a different person", async () => {
-    // Two GitHub accounts publishing the same key collide by keyId
-    // alone. Neither the disable decision nor "known since" belongs to
-    // the other account.
+    // Two accounts sharing a key collide by keyId; nothing carries across.
     await saveContact(multiContact(3, "octocat"));
     await setContactRecipientDisabled("SHA256:key0", "SHA256:key1", true);
 
@@ -680,9 +608,8 @@ describe("saveContact - a refresh keeps the user's decisions", () => {
   });
 
   it("never turns keys back on when the refresh keeps only disabled ones", async () => {
-    // [key0, key1(off), key2(off)]; the account deleted key0. Both keys
-    // left are ones the user turned off -- and stay off, so the contact
-    // has nothing to encrypt to rather than encrypting to both.
+    // Both remaining keys were turned off: they stay off (nothing to encrypt
+    // to) rather than turning back on.
     await saveContact(multiContact(3));
     await setContactRecipientDisabled("SHA256:key0", "SHA256:key1", true);
     await setContactRecipientDisabled("SHA256:key0", "SHA256:key2", true);
@@ -695,10 +622,8 @@ describe("saveContact - a refresh keeps the user's decisions", () => {
     ]);
     expect(activeRecipients(two)).toEqual([]);
 
-    // Down to ONE such key: the flag used to have nowhere to go, and the
-    // key came back on.
-    // (`refetched` spreads a 3-key record, so the one-key fetch drops its
-    // list the way the store would build it.)
+    // Down to ONE disabled key: the flag must survive.
+    // (`refetched` spreads a 3-key record, so drop its list as the store would.)
     await saveContact(withRecipients(refetched([2]), [sshRecipient(2)]));
     const [one] = await loadContacts();
     expect(one.keyId).toBe("SHA256:key2");
@@ -716,11 +641,8 @@ describe("saveContact - a refresh keeps the user's decisions", () => {
   });
 });
 
-/**
- * The recipient toggle writes straight to the store from the details
- * page; the list on screen must follow it, or a GitHub refresh is
- * classified against the list as it was before the toggle.
- */
+/** The on-screen list must follow store writes made elsewhere (the
+ *  details-page toggle), or a refresh classifies against a stale list. */
 describe("the live contacts list follows writes made elsewhere", () => {
   function watched() {
     const list = createLiveList(STORAGE_CONTACTS, loadContacts);
@@ -846,13 +768,8 @@ describe("upsertContacts - a pasted key never replaces a fetched person", () => 
   });
 });
 
-/**
- * Every write goes through the store's lock, and every write that
- * touches ONE field re-reads the record rather than republishing a
- * snapshot. The recipient toggle reaches the store from a component the
- * contacts hook's mutex does not cover, so serialisation has to live
- * here.
- */
+/** Every write takes the store's lock, and single-field writes re-read
+ *  rather than republish a snapshot. */
 describe("serialised writes", () => {
   it("does not lose either of two concurrent saves", async () => {
     await saveContact(legacyContact());
@@ -876,8 +793,7 @@ describe("serialised writes", () => {
       await gate;
       return { ...current, expiresAt: 42 };
     });
-    // ...and must not be able to undo what happened meanwhile. (Queued
-    // behind the lock, the rename lands after the slow change.)
+    // ...and must not undo the rename queued behind the lock.
     const rename = updateContact("CCCC", (c) => ({ ...c, alias: "Caz" }));
     release();
     await Promise.all([slow, rename]);
@@ -899,8 +815,7 @@ describe("serialised writes", () => {
     await saveContact(multiContact(3));
     const snapshot = (await loadContacts())[0];
 
-    // Something else edits the record after the details page captured it
-    // -- the expiry backfill does exactly this, one contact at a time.
+    // Something else edits the record after the page captured it.
     await updateContact(snapshot.keyId, (c) => ({ ...c, expiresAt: null }));
 
     await setContactRecipientDisabled(snapshot.keyId, "SHA256:key1", true);
@@ -934,13 +849,8 @@ describe("serialised writes", () => {
   });
 });
 
-/**
- * `recipientsField` returns `{}` at length 1, so spreading it over an
- * existing record cannot clear a list that SHRINKS back to one key --
- * the stale array would survive and disagree with the top-level fields.
- * Nothing shrinks a list today, which is why the contract has to be
- * enforced rather than remembered.
- */
+/** Spreading `recipientsField` can't clear a list shrinking to one key;
+ *  `withRecipients` must. */
 describe("withRecipients - a shrinking list clears the field", () => {
   it("drops the array when the list falls back to one key", () => {
     const c = multiContact(3);
@@ -967,20 +877,8 @@ describe("withRecipients - a shrinking list clears the field", () => {
   });
 });
 
-/**
- * A contact's local display name.
- *
- * The same field, with the same rules, `ProtectedKeyBlob.alias` has for
- * the user's own keys -- and for the same reason: a contact is otherwise
- * stuck with whatever `userIds[0]` it was imported with, which for an
- * SSH key is a key comment that may be `user@laptop`, may differ between
- * one person's keys, or may not exist at all.
- *
- * What is pinned here is the convention every optional field on this
- * record follows: ABSENT means "fall back", `""` is never written, and a
- * contact without one serialises byte-for-byte the way it did before the
- * field existed.
- */
+/** A contact's local display name: absent means fall back, `""` is never
+ *  written, and an unnamed contact stays byte-identical. */
 describe("alias - absent means the derived name", () => {
   it("falls back to the first User ID when there is no alias", () => {
     expect(displayUserId(legacyContact())).toBe("Carol <c@d.test>");
@@ -990,8 +888,7 @@ describe("alias - absent means the derived name", () => {
   it("wins over the User IDs when set", () => {
     const named = withAlias(legacyContact(), "Carol's laptop");
     expect(displayUserId(named)).toBe("Carol's laptop");
-    // The identity itself is untouched: an alias is a local label, never
-    // a change to the key.
+    // The identity is untouched: an alias is a local label only.
     expect(named.userIds).toEqual(["Carol <c@d.test>"]);
   });
 
@@ -1010,10 +907,7 @@ describe("alias - absent means the derived name", () => {
 
   it("serialises a contact with no alias byte-identically to a pre-field one", () => {
     const before = legacyContact();
-    // The same record, put through the write helper. If `aliasField`
-    // ever emitted `alias: ""` (or `alias: undefined`), this JSON would
-    // differ and every existing user's contacts blob would be rewritten
-    // on first touch.
+    // `alias: ""` or `alias: undefined` here would rewrite every user's blob.
     const after = withAlias(before, "");
     expect(JSON.stringify(after)).toBe(JSON.stringify(before));
   });
@@ -1042,13 +936,9 @@ describe("alias - absent means the derived name", () => {
   });
 });
 
-/**
- * "Verified" is the user's word that they compared THIS key's
- * fingerprint with its owner. It belongs to the key, not the person: a
- * refresh of the same key keeps it (and the local name), a different key
- * under the same contact never inherits it, and -- like every optional
- * field here -- it is absent rather than `false` when unset.
- */
+/** "Verified" belongs to the key, not the person: kept across a refresh
+ *  of the same key, never inherited by a different one, absent when
+ *  unset. */
 describe("verified - the user's decision about one key", () => {
   afterEach(() => {
     vi.useRealTimers();
@@ -1112,9 +1002,8 @@ describe("verified - the user's decision about one key", () => {
   });
 
   it("never carries verified to a different key for the same person", async () => {
-    // A re-fetch of the same GitHub user whose head key changed upserts
-    // over the old record by source. The person's local name survives;
-    // the verification was of the old key and does not.
+    // A re-fetch by source with a new head key: the alias survives, the
+    // verification (of the old key) does not.
     await saveContact({ ...multiContact(3), alias: "Octo" });
     await setContactVerified("SHA256:key0", true);
 
@@ -1150,10 +1039,9 @@ describe("verified - the user's decision about one key", () => {
   });
 
   it("never carries the name or verified onto a key set that grew by id", () => {
-    // Attack (a): Alice's real key plus Mallory's, pasted under her
-    // comment, lands on Alice's record by its id. The name the user gave
-    // Alice must not become a name for a contact that encrypts to
-    // Mallory as well.
+    // Attack: Alice's key plus Mallory's, pasted under her comment, lands on
+    // Alice's record by id. Her alias must not name a contact encrypting to
+    // Mallory too.
     const [aliceKey, malloryKey] = [sshRecipient(0), sshRecipient(9)];
     const alice: PublicContactKey = {
       kind: "ssh",
@@ -1202,8 +1090,7 @@ describe("verified - the user's decision about one key", () => {
   });
 
   it("still carries a disabled key across a reviewed update by id", () => {
-    // Fewer recipients is never the unsafe direction: a key the user
-    // turned off stays off when the same record gains a key.
+    // A disabled key stays off when the same record gains a key.
     const two: PublicContactKey = {
       ...multiContact(2),
       source: undefined,

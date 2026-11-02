@@ -1,28 +1,11 @@
 /**
- * Preferences, and the bootstrap/settings split.
+ * Preferences and the bootstrap/settings split: `storageLocation` and
+ * `onboardingComplete` live in a plaintext sync blob (read before unlock);
+ * everything else is encrypted. A settings field leaking into the
+ * bootstrap syncs in the clear. The legacy migration overwrites rather
+ * than merges, so it must be idempotent and crash-safe.
  *
- * Two fields -- `storageLocation` and `onboardingComplete` -- are read
- * BEFORE the vault is unlocked: the engine needs the first to know which
- * area to read from, and App needs the second to choose between
- * onboarding and the lock screen. So they live in a plaintext sync blob
- * while every other preference is encrypted. That split is the design,
- * and these tests pin both halves of it:
- *
- *  - a write must route each field to the correct side. A settings field
- *    that leaks into the plaintext bootstrap is a privacy regression that
- *    syncs itself to every machine on the account;
- *  - a locked vault must still yield the two boot fields, and defaults
- *    for the rest, rather than throwing -- the unlock screen needs none
- *    of the encrypted ones.
- *
- * The legacy migration gets the most attention because it is the one
- * path that can DESTROY a preference: it overwrites the sync bootstrap
- * rather than merging, deliberately, and a mistake there silently drops
- * settings. It must also be idempotent and crash-safe, since it can be
- * interrupted halfway.
- *
- * `migrationSettled` is module-level, so every test re-imports the
- * module to get a clean one.
+ * `migrationSettled` is module-level, so each test re-imports the module.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -104,8 +87,6 @@ describe("getPreferences", () => {
   });
 
   it("overlays stored settings on the defaults", async () => {
-    // A blob written before a field existed must read back as that
-    // field's default rather than as undefined.
     const { getPreferences, savePreferences, DEFAULT_PREFERENCES } =
       await loadModule();
     await savePreferences({ advancedMode: true });
@@ -128,8 +109,7 @@ describe("getPreferences", () => {
   });
 
   it("still returns the boot fields while locked", async () => {
-    // App needs onboardingComplete to decide what screen to show, and it
-    // has to work before there is any session at all.
+    // Must work before there is any session.
     sync.store.set(STORAGE_PREFERENCES, {
       storageLocation: "sync",
       onboardingComplete: true,
@@ -150,8 +130,8 @@ describe("getPreferences", () => {
   });
 
   it("reads a settings blob that decrypts to a non-object as the strictest preset", async () => {
-    // A sealed blob that opens to something no build writes is tampering
-    // (or another store's blob), not "nothing stored": see integrity.test.
+    // A sealed blob opening to something no build writes is tampering, not
+    // "nothing stored".
     local.store.set(
       STORAGE_SETTINGS,
       legacyEnvelope(new TextEncoder().encode(JSON.stringify("nope"))),
@@ -174,9 +154,7 @@ describe("getPreferences", () => {
   });
 
   it("falls back to the legacy object for onboardingComplete", async () => {
-    // A local user's onboardingComplete may still sit in the legacy full
-    // object rather than the bootstrap. Losing it re-runs onboarding for
-    // someone who already finished it.
+    // Pre-split fallback: losing it would re-run onboarding.
     wasmMock.session = false;
     local.store.set(STORAGE_PREFERENCES, {
       advancedMode: true,
@@ -263,8 +241,6 @@ describe("savePreferences", () => {
   });
 
   it("skips the settings write while locked rather than throwing", async () => {
-    // Losing a toggle beats crashing; this path shouldn't occur anyway,
-    // since settings are only written from the unlocked UI.
     wasmMock.session = false;
     const { savePreferences } = await loadModule();
 
@@ -283,8 +259,7 @@ describe("savePreferences", () => {
   });
 
   it("reads unlockKeysOnOpen as false from a blob written before it existed, and round-trips true", async () => {
-    // Off by default is a security property (SECURITY.md §14): a user
-    // who never opted in must never have the vault ceremony open keys.
+    // Off by default is a security property (SECURITY.md section 14).
     local.store.set(
       STORAGE_SETTINGS,
       legacyEnvelope(
@@ -340,11 +315,9 @@ describe("legacy migration", () => {
   });
 
   it("OVERWRITES the sync bootstrap, leaving no plaintext settings behind", async () => {
-    // Merging here would leave the legacy settings fields in the clear in
-    // the sync object -- exactly what the migration exists to prevent.
-    // The object sits in BOTH areas: `storageLocation: "local"` routes
-    // the migration's read to local, while sync holds the copy that has
-    // to come out of this with only the two boot fields left.
+    // Merging would leave legacy settings in the clear in sync. The object is
+    // in BOTH areas: local is the migration source, sync must end with only
+    // the two boot fields.
     local.store.set(STORAGE_PREFERENCES, legacy);
     sync.store.set(STORAGE_PREFERENCES, legacy);
     const { getPreferences } = await loadModule();
@@ -395,8 +368,7 @@ describe("legacy migration", () => {
   });
 
   it("does not run while locked, and retries after unlock", async () => {
-    // No session means no way to encrypt. Settling here would strand the
-    // legacy object unencrypted forever.
+    // No session: settling here would strand the legacy object unencrypted.
     local.store.set(STORAGE_PREFERENCES, legacy);
     wasmMock.session = false;
     const { getPreferences } = await loadModule();
@@ -422,8 +394,7 @@ describe("legacy migration", () => {
   });
 
   it("does not overwrite settings a crashed run already wrote", async () => {
-    // Crash-safety: the legacy object is both the source AND the marker
-    // that cleanup is owed, so a re-run must not clobber the good blob.
+    // Crash-safety: a re-run must not clobber the good blob.
     const { savePreferences } = await loadModule();
     await savePreferences({ advancedMode: false, autoLockMinutes: 60 });
 

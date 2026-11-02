@@ -1,18 +1,6 @@
 /**
- * Coverage assertions over the attack model itself.
- *
- * These tests don't exercise crypto -- they assert that our *claims* about
- * the crypto stay honest:
- *
- *   - a threat marked `defended` must name a test that would fail if the
- *     defence regressed, and that file must actually exist;
- *   - a threat marked `accepted` or `partial` must state why;
- *   - `pending` threats are legal but surfaced, so a TODO can't hide.
- *
- * This is the tripwire for the failure mode that produced the drift it was
- * written in response to: a README claiming exponential backoff that no
- * code implemented, and a whole encrypted-history surface that never
- * reached SECURITY.md.
+ * Keeps the attack model's claims honest: `defended` must name an existing
+ * test, `accepted`/`partial` must say why, `pending` is surfaced.
  */
 
 import { existsSync } from "node:fs";
@@ -68,7 +56,6 @@ describe("defended threats name live evidence", () => {
       (t.verifiedBy ?? []).map((p) => [t.id, p] as const),
     ),
   )("%s evidence exists on disk: %s", (_id, evidencePath) => {
-    // Catches a renamed or deleted spec silently orphaning a claim.
     expect(existsSync(resolve(REPO_ROOT, evidencePath))).toBe(true);
   });
 });
@@ -82,10 +69,8 @@ describe("unproven threats are justified, not silent", () => {
     },
   );
 
-  // `pending` is an honest state, not a failure -- but each one is named as
-  // its own test case so it stays visible in the suite output instead of
-  // quietly becoming permanent. (No console.* here: SECURITY.md §9 check 5
-  // forbids it across apps/pgp, and that invariant is a build gate.)
+  // Each `pending` is its own case so it stays visible. No console.* here:
+  // SECURITY.md s.9 check 5 forbids it across apps/pgp (build gate).
   it.each(
     THREAT_MODEL.filter((t) => t.status === "pending").map(
       (t) => [t.id, t] as const,

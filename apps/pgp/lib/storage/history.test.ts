@@ -23,11 +23,9 @@ import {
   resolveBudget,
 } from "./history";
 
-// Fake WASM sealing primitives (see fake-store-crypto.ts for the
-// contract). Call counters let tests prove the module keeps no plaintext
-// cache (every load must decrypt anew). `sealed` / `opened` keep the
-// ACTUAL buffers that crossed the boundary -- not copies -- so tests can
-// assert they were zeroized once the call returned.
+// Fake WASM sealing (see fake-store-crypto.ts). Call counters prove there
+// is no plaintext cache; `sealed`/`opened` keep the ACTUAL buffers so
+// tests can assert they were zeroized.
 const wasmMock = vi.hoisted(() => ({
   session: true,
   encryptCalls: 0,
@@ -202,13 +200,8 @@ describe("locked behavior", () => {
     expect(await loadHistory()).toEqual([]);
   });
 
-  // RAM-after-lock guarantee: the module keeps no plaintext cache, so
-  // after dropContactsSession nothing decrypted remains reachable. Proven
-  // behaviorally: every load must decrypt from storage (a cache would skip
-  // the second decrypt), and once locked no decryption happens at all.
-  // The view-level counterpart (component state) is covered by mounting
-  // HistoryPage inside the masterUnlocked-gated tree, which unmounts on
-  // lock -- documented in HistoryPage.tsx; no React test lib is installed.
+  // RAM-after-lock: no plaintext cache, so every load decrypts anew and none
+  // happens once locked. (Component state: HistoryPage unmounts on lock.)
   it("retains no plaintext after lock: every load re-decrypts, none after", async () => {
     await appendHistoryEntry(entry("sensitive"));
 
@@ -260,10 +253,8 @@ describe("byte budget", () => {
     expect(await historyByteSize()).toBeLessThanOrEqual(2 * 1024 * 1024);
 
     const h = await loadHistory();
-    // Newest survives, oldest was pruned with its segment.
     expect(h[0].content?.startsWith("83:")).toBe(true);
     expect(h.some((e) => e.content?.startsWith("0:"))).toBe(false);
-    // Pruned segment keys are gone from storage.
     expect(local.store.has("pgp_history_seg_0")).toBe(false);
   });
 
@@ -284,9 +275,8 @@ describe("byte budget", () => {
   });
 });
 
-/** Make the area's set() reject like Chrome's quota error from the
- *  `nth` call onward (1-based). Gets/removes keep working, mirroring a
- *  full-but-readable chrome.storage.local. */
+/** Reject set() like Chrome's quota error from the `nth` call (1-based);
+ *  reads/removes keep working. */
 function failSetFrom(area: FakeArea, nth: number): void {
   const original = area.set.bind(area);
   let calls = 0;
@@ -304,27 +294,22 @@ describe("quota exhaustion mid-append", () => {
     failSetFrom(local, 1);
 
     await expect(appendHistoryEntry(entry("doomed"))).rejects.toThrow(/quota/i);
-    // Nothing persisted: no manifest, no segment, no orphan.
     expect(historyKeys(local.store)).toEqual([]);
   });
 
   it("removes the orphaned new segment when the manifest write fails", async () => {
-    // Fill segment 0 (2 x ~30KB entries is all its 64 KB bucket holds)
-    // so the next append must create segment 1.
+    // Fill segment 0 so the next append creates segment 1.
     for (let i = 0; i < 2; i++) {
       await appendHistoryEntry(entry(`${i}:${"x".repeat(30_000)}`));
     }
     expect(local.store.has("pgp_history_seg_1")).toBe(false);
 
-    // Within the next append: set #1 = segment 1 write (succeeds),
-    // set #2 = manifest write (quota-fails).
+    // set #1 = segment 1 write (succeeds), set #2 = manifest (fails).
     failSetFrom(local, 2);
     await expect(
       appendHistoryEntry(entry(`lost:${"x".repeat(30_000)}`)),
     ).rejects.toThrow(/quota/i);
 
-    // The freshly written segment was cleaned up, so the store matches
-    // the manifest that is actually persisted.
     expect(local.store.has("pgp_history_seg_1")).toBe(false);
     const h = await loadHistory();
     expect(h).toHaveLength(2);
@@ -334,9 +319,8 @@ describe("quota exhaustion mid-append", () => {
   it("keeps an existing head readable when only the manifest write fails", async () => {
     await appendHistoryEntry(entry("first"));
 
-    // Segment 0 is rewritten in place (set #1 succeeds); the manifest
-    // update (set #2) quota-fails. The entry is in the segment and the
-    // stale manifest still references it, so nothing is lost.
+    // Segment 0 rewrite succeeds, manifest fails: the stale manifest still
+    // references the segment, so nothing is lost.
     failSetFrom(local, 2);
     await expect(appendHistoryEntry(entry("second"))).rejects.toThrow(/quota/i);
 
@@ -365,16 +349,13 @@ describe("cross-context manifest divergence", () => {
     await appendHistoryEntry(entry("kept-1"));
     await appendHistoryEntry(entry("kept-2"));
 
-    // Another context's racing manifest write clobbered ours: the
-    // manifest no longer references segment 0, but the blob exists.
+    // A racing context's manifest write dropped segment 0; the blob exists.
     await local.set({ pgp_history: { segs: [] } });
     expect(await historyByteSize()).toBe(0);
 
     const h = await loadHistory();
     expect(h.map((e) => e.content)).toEqual(["kept-2", "kept-1"]);
-    // The stray segment was adopted back into the manifest...
     expect(await historyByteSize()).toBeGreaterThan(0);
-    // ...so the next append extends it instead of clobbering it.
     await appendHistoryEntry(entry("kept-3"));
     const after = await loadHistory();
     expect(after.map((e) => e.content)).toEqual(["kept-3", "kept-2", "kept-1"]);
@@ -389,9 +370,7 @@ describe("cross-context manifest divergence", () => {
   });
 });
 
-// Each segment is sealed for its own storage key as the domain, so a
-// segment blob is bound to the slot it was written to. These are the unit
-// counterparts of e2e/history-memory.spec.ts's substitution test.
+// Unit counterparts of e2e/history-memory.spec.ts's substitution test.
 describe("segment domain binding", () => {
   it("seals every segment for its own key, never under the legacy envelope", async () => {
     for (let i = 0; i < 4; i++) {
@@ -408,9 +387,8 @@ describe("segment domain binding", () => {
     await appendHistoryEntry(entry("original"));
     const seg0 = local.store.get("pgp_history_seg_0");
 
-    // Positive control FIRST: a blob genuinely sealed for seg_1 IS adopted,
-    // which proves the prefix scan + adoption path is live and that the
-    // rejection below is the domain binding rather than a dead code path.
+    // Positive control: a genuine seg_1 blob IS adopted, so the rejection
+    // below is the domain binding, not a dead path.
     await local.set({
       pgp_history_seg_1: domainEnvelope(
         "pgp_history_seg_1",
@@ -423,8 +401,7 @@ describe("segment domain binding", () => {
     });
     expect((await loadHistory()).map((e) => e.id)).toContain("legit");
 
-    // Now the attack: byte-for-byte copy of seg_0 into the seg_2 slot, with
-    // no knowledge of the vault key. It must NOT be adopted.
+    // Attack: byte-for-byte copy of seg_0 into seg_2. Must NOT be adopted.
     await local.set({ pgp_history_seg_2: seg0 });
     const after = await loadHistory();
     expect(after.filter((e) => e.content === "original")).toHaveLength(1);
@@ -435,7 +412,6 @@ describe("segment domain binding", () => {
   });
 
   it("refuses a blob sealed for another store", async () => {
-    // A settings/keyring/contacts blob planted in a segment slot.
     for (const domain of ["pgp_public_contacts", "pgp_keyring"]) {
       await local.set({
         pgp_history_seg_0: domainEnvelope(
@@ -453,8 +429,7 @@ describe("segment domain binding", () => {
 });
 
 describe("legacy envelope migration", () => {
-  /** A segment blob exactly as a pre-domain-separation build wrote it:
-   *  the shared contacts key, the shared AAD, no slot binding. */
+  /** Pre-domain-separation segment: shared key and AAD, no slot binding. */
   function seedLegacySegment(n: number, contents: string[]): void {
     const entries = contents.map((content, i) => ({
       id: `legacy-${n}-${i}`,
@@ -484,15 +459,13 @@ describe("legacy envelope migration", () => {
     const blob = local.store.get("pgp_history_seg_0");
     expect(isDomainSealed(blob)).toBe(true);
     expect(sealedDomain(blob)).toBe("pgp_history_seg_0");
-    // Re-sealed byte-for-byte, so the manifest's byte accounting is still
-    // right and nothing was dropped in translation.
+    // Re-sealed byte-for-byte: byte accounting still right, nothing dropped.
     const manifest = local.store.get("pgp_history") as {
       segs: { n: number; bytes: number }[];
     };
     expect(storedPlaintext(blob as StoredEnvelope)).toHaveLength(
       manifest.segs[0].bytes,
     );
-    // ...and it reads back the same both times.
     expect((await loadHistory()).map((e) => e.content)).toEqual([
       "written before the fix",
     ]);
@@ -534,14 +507,10 @@ describe("legacy envelope migration", () => {
   });
 });
 
-// Message content is the most sensitive thing this store writes, and the
-// buffers it crosses the wasm boundary in are the copies we CAN clear (the
-// intermediate JSON string is immutable, so it is not). The mock keeps a
-// reference to every buffer that crossed, so these assert the real thing:
-// after the call returned, the buffer is all zeros.
+// The wasm-boundary buffers are the copies we CAN clear (JSON strings are
+// immutable). The mock keeps every buffer, so these assert all zeros.
 describe("plaintext zeroization", () => {
-  /** Every buffer the mock saw, asserted non-empty first so a scan that
-   *  never ran can't pass as "all zeros". */
+  /** Asserts non-empty first, so a scan that never ran can't pass. */
   function expectAllZeroed(buffers: Uint8Array[]): void {
     expect(buffers.length).toBeGreaterThan(0);
     for (const buf of buffers) {
@@ -588,16 +557,14 @@ describe("plaintext zeroization", () => {
 
     expect(await loadHistory()).toHaveLength(1);
 
-    // Both halves: the buffer decryptContacts returned AND the one handed
-    // back to the re-seal must end up cleared.
+    // Both the decrypted buffer AND the one handed to the re-seal.
     expectAllZeroed(wasmMock.opened);
     expectAllZeroed(wasmMock.sealed);
   });
 });
 
-// The manifest is cleartext and the blob length tracks its plaintext, so
-// an unpadded segment told anyone with disk access the exact length of
-// every captured message. Both must now move in buckets only.
+// Cleartext manifest and blob length must move in buckets only, never
+// reveal exact message lengths.
 describe("length-hiding padding", () => {
   interface Manifest {
     segs: { n: number; bytes: number }[];
@@ -746,20 +713,17 @@ describe("requestUnlimitedHistoryStorage", () => {
   });
 });
 
-// A 2.x build sealed a segment once its JSON passed 64 KB and budgeted the
-// exact sizes, so a full history was ~2 MB of 64-96 KB segments. Re-padding
-// each into a 128 KB bucket used to look like growth: the next load pruned
-// close to half of it, and new segments (sealed the same way, then padded)
-// only ever fit half as much.
+// A full ~2 MB pre-padding history (64-96 KB segments) must survive
+// re-padding into 128 KB buckets without pruning, and new segments must
+// fit as much as before.
 describe("padding upgrade keeps a full history", () => {
   interface Manifest {
     segs: { n: number; bytes: number }[];
   }
   const manifest = () => local.store.get("pgp_history") as Manifest;
 
-  /** A full pre-padding history: 28 segments of 3 x ~24 KB entries
-   *  (~72 KB of JSON each, sealed by the old "past 64 KB" rule), the
-   *  manifest holding their exact sizes, just under the 2 MB budget. */
+  /** 28 segments of 3 x ~24 KB entries, exact sizes in the manifest, just
+   *  under the 2 MB budget. */
   function seedFullPrePaddingHistory(): number {
     const segs: { n: number; bytes: number }[] = [];
     let id = 0;
@@ -792,7 +756,6 @@ describe("padding upgrade keeps a full history", () => {
     expect(await loadHistory()).toHaveLength(total);
     // The re-pad really happened (old segments now sit in 128 KB buckets)...
     expect(manifest().segs.every((s) => s.bytes === 128 * 1024)).toBe(true);
-    // ...and neither it nor later loads pruned anything.
     expect(await loadHistory()).toHaveLength(total);
     expect(await loadHistory()).toHaveLength(total);
     expect(manifest().segs).toHaveLength(28);
@@ -816,8 +779,7 @@ describe("padding upgrade keeps a full history", () => {
   });
 
   it("holds as much real content as the pre-padding budget did", async () => {
-    // 4 KB entries until well past the budget: what survives pruning
-    // must still be about 2 MB of real content, not half of it.
+    // Past the budget: ~2 MB of real content must survive, not half.
     const size = 4_000;
     for (let i = 0; i < 700; i++) {
       await appendHistoryEntry(entry(`${i}:${"y".repeat(size)}`));

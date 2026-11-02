@@ -1,15 +1,8 @@
 /**
- * Live views of the sealed list stores (keyring, contacts, CRX keys) for
- * React to subscribe to.
- *
- * Every write to a sealed list goes through `saveEncryptedArray`, which
- * announces it here; each view reloads on that, so a write from anywhere
- * -- a hook, a details page, a background backfill -- reaches every
- * screen without the writer knowing who is listening.
- *
- * Same-panel only. Another window's writes are picked up on the next
- * explicit refresh (unlock, vault move): reading a store mid-way through
- * another window's chunked write could report it unreadable.
+ * Live views of the sealed list stores for React. Every
+ * `saveEncryptedArray` announces here, so writes reach every screen.
+ * Same-panel only: other windows' writes are picked up on explicit refresh
+ * (reading mid-way through a chunked write could report it unreadable).
  */
 
 type Listener = () => void;
@@ -75,8 +68,8 @@ export function createLiveList<T>(
     if (gen !== generation) return;
     loaded = true;
     stale = false;
-    // Keep the array identity when nothing changed, so effects keyed on
-    // the list do not re-run for a write that changed nothing on screen.
+    // Keep array identity when nothing changed, so list-keyed effects don't
+    // re-run.
     if (!state.loading && sameState(state, next)) return;
     set(next);
   }

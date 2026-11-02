@@ -35,8 +35,7 @@ const AGE_RS = join(
   "age.rs",
 );
 
-/** A `const NAME: &str = "..."` from age.rs. Matched on the declaration,
- *  so reordering or reformatting the Rust doesn't break it. */
+/** A `const NAME: &str = "..."` from age.rs, matched on the declaration. */
 function ageMessage(name: string): string {
   const src = readFileSync(AGE_RS, "utf8");
   const re = new RegExp(
@@ -47,8 +46,7 @@ function ageMessage(name: string): string {
   return JSON.parse(`"${match[1]}"`) as string;
 }
 
-/** The bit-count messages are `format!` builders, not consts, so their
- *  template is read from the fn body and interpolated the same way. */
+/** The bit-count messages are `format!` builders; template read from the fn body. */
 function ageBitsMessage(fn: string, bits: number): string {
   const src = readFileSync(AGE_RS, "utf8");
   const re = new RegExp(
@@ -65,9 +63,7 @@ function ageBitsMessage(fn: string, bits: number): string {
 const rsaTooSmall = (bits: number) => ageBitsMessage("msg_rsa_too_small", bits);
 const rsaTooLarge = (bits: number) => ageBitsMessage("msg_rsa_too_large", bits);
 
-// The WASM engine is not available under vitest (see vitest.config.ts);
-// parsing itself is covered by the Rust tests. These tests are about the
-// classification built on top of it, so the parser is stubbed.
+// WASM isn't available under vitest; parsing is covered by the Rust tests.
 vi.mock("../pgp/wasm", () => ({
   parseKeys: vi.fn(),
   parseKeyDetails: vi.fn(),
@@ -133,8 +129,6 @@ beforeEach(() => {
   vi.mocked(extractPublicKey).mockReset();
   vi.mocked(parseKeyDetails).mockReset();
   vi.mocked(parseKeyDetails).mockResolvedValue(details([FP]));
-  // By default a merge changes nothing beyond what came in; the merge
-  // tests below say what the engine returned.
   vi.mocked(mergePublicKey).mockReset();
   vi.mocked(mergePublicKey).mockImplementation((_stored, incoming) =>
     Promise.resolve(incoming),
@@ -143,8 +137,7 @@ beforeEach(() => {
   vi.mocked(revocationIssuers).mockResolvedValue(null);
 });
 
-/** `parseKeys` answering per input: the stored armor parses as `stored`,
- *  the engine's merge result as `merged`. */
+/** Stored armor parses as `stored`, the engine's merge result as `merged`. */
 function parsesAs(stored: KeyInfo, merged: KeyInfo) {
   vi.mocked(mergePublicKey).mockResolvedValue("MERGED");
   vi.mocked(parseKeys).mockImplementation((armored) =>
@@ -168,8 +161,7 @@ describe("classifyCert: a contact we already hold", () => {
   });
 
   it("turns a revoked copy into an update that says so, not a rejection", async () => {
-    // Rejecting it as "unusable" left the stale copy live: the stolen
-    // key went on verifying green.
+    // Rejecting it would leave the stale copy live, still verifying green.
     parsesAs(info(), revokedInfo());
     const result = await classifyCert(revokedInfo(), "ARMOR-REVOKED", [
       storedKey(),
@@ -420,8 +412,7 @@ describe("prepareImport: CRX signing keys", () => {
     expect(prepared.keys).toHaveLength(1);
     expect(prepared.keys[0].kind).toBe("crx");
     expect(prepared.keys[0].status).toBe("new");
-    // Nothing parsed, so nothing to render as cert facts -- and the
-    // preview must not read that as "still loading".
+    // Null, not "still loading".
     expect(prepared.keys[0].info).toBeNull();
     expect(prepared.keys[0].details).toBeNull();
     expect(parseKeys).not.toHaveBeenCalled();
@@ -489,10 +480,8 @@ describe("isNoOp / importable", () => {
 });
 
 describe("no secret material reaches an IncomingKey", () => {
-  /** Every header that opens a private key in the formats this flow
-   *  accepts: OpenPGP armor, PKCS#8, PKCS#1. `IncomingKey` is handed to
-   *  React state and serialized into the preview; secret armor belongs
-   *  only in `PreparedImport.secrets`, which the panel parks in a ref. */
+  /** Private key headers. Secret armor belongs only in `PreparedImport.secrets`,
+   *  never on `IncomingKey` (React state / preview). */
   const PRIVATE_HEADERS = [
     "-----BEGIN PGP PRIVATE KEY BLOCK-----",
     "-----BEGIN PRIVATE KEY-----",
@@ -511,10 +500,8 @@ describe("no secret material reaches an IncomingKey", () => {
   }
 
   it("holds for a mixed bundle of public and private OpenPGP certs", async () => {
-    // The public half of a private import is re-derived by
-    // `extractPublicKey`; if that ever returned the input unchanged, the
-    // whole private cert would ride into the preview under a field named
-    // `publicArmored`. That is the failure this catches.
+    // Catches `extractPublicKey` returning its input: the private cert would
+    // ride into the preview as `publicArmored`.
     vi.mocked(parseKeys).mockResolvedValue([
       { keyInfo: info(), armored: "-----BEGIN PGP PUBLIC KEY BLOCK-----\npub" },
       {
@@ -542,20 +529,8 @@ describe("no secret material reaches an IncomingKey", () => {
   });
 });
 
-/**
- * The age engine's arrivals.
- *
- * Same rule as CRX: an engine is recognised HERE, in the one place that
- * decides what pasted text is, and returns an `IncomingKey` like anything
- * else -- so the panel routes an SSH key exactly as it routes a cert. An
- * engine bolted onto the panel instead would be a third flow to keep in
- * step.
- *
- * And the same gate: with `engines.ssh` off, an SSH key is not refused,
- * it is not RECOGNISED -- it falls through to the OpenPGP parse and comes
- * back `unparseable`, which is what the panel showed before the engine
- * existed.
- */
+/** The age engine is recognised here like any other; with `engines.ssh` off
+ *  an SSH key isn't refused but unrecognised (`unparseable`). */
 describe("prepareImport - SSH / age", () => {
   const ED25519_PUB =
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIALwHu/03Nd9eyyrPgxjkFu80Fe1EgN06J8iaY8B+wf6 alice@example.com";
@@ -586,12 +561,10 @@ describe("prepareImport - SSH / age", () => {
     expect(key.kind).toBe("ssh-public");
     expect(key.status).toBe("new");
     expect(key.keyId).toBe(SSH_FP);
-    // No certificate to parse: no user IDs, no dates, no subkeys.
     expect(key.info).toBeNull();
     expect(key.details).toBeNull();
     expect(key.userIds).toEqual(["alice@example.com"]);
-    // The canonical line, not the pasted one -- that is what gets stored
-    // and what the engine expects back as a recipient.
+    // The canonical line, not the pasted one.
     expect(key.publicArmored).toBe(CANONICAL);
     // A public half never travels in `secrets`.
     expect(prepared.secrets.size).toBe(0);
@@ -610,9 +583,7 @@ describe("prepareImport - SSH / age", () => {
   });
 
   it("marks an already-stored fingerprint as a duplicate, never an update", async () => {
-    // The recipient line is canonical and carries nothing that can
-    // change -- no expiry, no user ID, no subkey. Same fingerprint means
-    // the same key.
+    // Same fingerprint is the same key: never an `update`.
     const prepared = await prepareImport(
       ED25519_PUB,
       { own: [], contacts: [storedKey({ keyId: SSH_FP, armored: CANONICAL })] },
@@ -623,23 +594,12 @@ describe("prepareImport - SSH / age", () => {
   });
 
   /**
-   * Grouping several pasted `.pub` lines into ONE contact.
-   *
-   * A person is not a key: someone who self-hosts hands over three
-   * `.pub` files, and a message has to reach all of them (see
-   * `storage/contacts.ts`). But nothing in the text says three lines are
-   * one person, so there are exactly two paths and the split between
-   * them is the property under test:
-   *
-   *  - AUTOMATIC, only on unambiguous agreement -- every line commented,
-   *    every comment byte-identical. Anything looser is a guess, and
-   *    guessing folds `root@web01` and `root@db02` into one identity
-   *    that is then encrypted to as one person.
-   *  - MANUAL otherwise: both readings are carried out of here and the
-   *    preview asks. Blank is still today's behaviour, N contacts.
+   * Grouping several pasted `.pub` lines into ONE contact: AUTOMATIC only when
+   * every line has a byte-identical comment (anything looser is a guess that
+   * could fold two people into one); otherwise MANUAL -- both readings travel
+   * and the preview asks.
    */
   describe("grouping several pasted keys", () => {
-    /** `n` distinct keys, each with the given comment. */
     function stubLines(comments: string[]) {
       const mock = vi.mocked(parseSshRecipient);
       mock.mockReset();
@@ -662,25 +622,19 @@ describe("prepareImport - SSH / age", () => {
       const [key] = prepared.keys;
       expect(key.kind).toBe("ssh-public");
       expect(key.status).toBe("new");
-      // The comment IS the name -- there is nothing to ask.
       expect(key.userIds).toEqual(["alice@laptop"]);
       expect(key.group?.members.map((m) => m.keyId)).toEqual([
         "SHA256:key0",
         "SHA256:key1",
       ]);
-      // The head member's, so every path that reads an IncomingKey's
-      // identity works on a group without knowing it is one.
       expect(key.keyId).toBe("SHA256:key0");
       expect(key.publicArmored).toBe("ssh-ed25519 AAAAkey0");
-      // Hand-supplied: absent source, the same as on the stored record.
       expect(key.group?.source).toBeUndefined();
-      // Nothing to ask, so nothing is offered.
       expect(prepared.groupProposal).toBeUndefined();
     });
 
     it("counts a line pasted twice as one key", async () => {
-      // Two copies of key0 between key1: one member each, so the group
-      // holds no duplicate stanza and "N keys added" counts keys.
+      // No duplicate stanza; "N keys added" counts keys.
       const mock = vi.mocked(parseSshRecipient);
       mock.mockReset();
       for (const i of [0, 1, 0]) {
@@ -723,12 +677,10 @@ describe("prepareImport - SSH / age", () => {
       const text = stubLines(["alice@laptop", "alice@desktop", ""]);
       const prepared = await prepareImport(text, noStores, { ssh: true });
 
-      // Declining is the default, and it is exactly today's behaviour.
       expect(prepared.keys).toHaveLength(3);
       expect(prepared.keys.every((k) => k.group === undefined)).toBe(true);
       expect(importable(prepared.keys)).toHaveLength(3);
 
-      // ...and the other reading travels alongside it.
       const proposal = prepared.groupProposal;
       expect(proposal?.group?.members.map((m) => m.keyId)).toEqual([
         "SHA256:key0",
@@ -762,8 +714,6 @@ describe("prepareImport - SSH / age", () => {
     });
 
     it("offers nothing once one of the keys is already stored", async () => {
-      // "Import these separately" and "import these as one" would do
-      // different amounts of work, so the question is not worth asking.
       const text = stubLines(["alice@laptop", "alice@desktop"]);
       const prepared = await prepareImport(
         text,
@@ -782,7 +732,6 @@ describe("prepareImport - SSH / age", () => {
       expect(prepared.keys.map((k) => k.status)).toEqual(["new", "duplicate"]);
     });
 
-    /** Alice's real key, saved as a hand-added contact the user named. */
     const alice = (over: Partial<StoredKey> = {}): StoredKey =>
       storedKey({
         keyId: "SHA256:key0",
@@ -792,9 +741,7 @@ describe("prepareImport - SSH / age", () => {
       });
 
     it("never files a group holding a contact's key as new over that contact", async () => {
-      // Attack (a): Alice's real key plus Mallory's, both commented
-      // `alice@laptop`. It used to be "new" with Alice's id -- and the
-      // save landed on Alice, keeping her name, encrypting to Mallory.
+      // Attack (a): Alice's real key plus Mallory's, both `alice@laptop`.
       const text = stubLines(["alice@laptop", "alice@laptop"]);
       const prepared = await prepareImport(
         text,
@@ -813,8 +760,7 @@ describe("prepareImport - SSH / age", () => {
     });
 
     it("heads it with the contact's key whichever line came first", async () => {
-      // Mallory's line first: the update still lands on Alice's record
-      // (so no second record holds her key), and still asks.
+      // Mallory's line first: still lands on Alice's record, still asks.
       const text = stubLines(["alice@laptop", "alice@laptop"]);
       const prepared = await prepareImport(
         text,
@@ -832,9 +778,8 @@ describe("prepareImport - SSH / age", () => {
     });
 
     it("never heads a group with the user's own key, and asks", async () => {
-      // Attack (c): the user's own key plus an attacker's under one
-      // comment. The record's id was the user's own key: it hid "You" in
-      // the picker and won the id lookup.
+      // Attack (c): the user's own key plus an attacker's under one comment
+      // must not hide "You" in the picker.
       const text = stubLines(["me@laptop", "me@laptop"]);
       const prepared = await prepareImport(
         text,
@@ -867,8 +812,8 @@ describe("prepareImport - SSH / age", () => {
     });
 
     it("never heads a group with a key from a fetched contact", async () => {
-      // A paste never lands on a fetched person (see `upsertContacts`),
-      // so this is a new record -- headed by the key nobody holds.
+      // A paste never lands on a fetched person: new record, headed by the key
+      // nobody holds.
       const text = stubLines(["alice@laptop", "alice@laptop"]);
       const prepared = await prepareImport(
         text,
@@ -916,7 +861,6 @@ describe("prepareImport - SSH / age", () => {
     });
 
     it("strips invisible characters from a comment before it names anyone", async () => {
-      // The engine does this too; the comment is the contact's name.
       const prepared = await prepareImport(
         stubLines(["alice@corp\u200b.com\u202e"]),
         noStores,
@@ -980,15 +924,12 @@ describe("prepareImport - SSH / age", () => {
     expect(importable(prepared.keys)).toEqual([]);
     expect(prepared.keys).toHaveLength(1);
     expect(prepared.keys[0].status).toBe("rejected");
-    // NOT `unparseable` -- it parsed fine, it is simply unusable, and
-    // "that doesn't look like a key" is the one thing that isn't true.
+    // It parsed fine; it is unusable, not "not a key".
     expect(prepared.unparseable).toBe(false);
   });
 
   it("keeps a usable line and drops its unusable siblings", async () => {
-    // A stale ECDSA entry in someone's authorized_keys is not worth
-    // interrupting the import of the key they actually pasted for --
-    // the same rule the OpenPGP path applies to rotated certs.
+    // A stale entry beside a usable key doesn't interrupt the import.
     vi.mocked(parseSshRecipient)
       .mockRejectedValueOnce(new Error("ECDSA SSH keys can't be used"))
       .mockResolvedValueOnce({
@@ -1007,33 +948,12 @@ describe("prepareImport - SSH / age", () => {
     expect(prepared.keys[0].status).toBe("new");
   });
 
-  /**
-   * The property that matters for `gpg-wasm/src/age.rs`'s eight curated
-   * rejection messages: not that the engine can produce them, but that
-   * the user would see them. Each names the key type and the exact
-   * `ssh-keygen` command that fixes it; all eight used to be replaced --
-   * five by the swallowing `catch { continue }` below, three because the
-   * format was not recognised as SSH's at all -- with the panel's generic
-   * "that doesn't look like a key".
-   *
-   * The engine's own wording is pinned by the Rust tests; what is pinned
-   * here is that whatever it says arrives verbatim on the IncomingKey.
-   */
+  /** Whatever the engine's curated rejection says arrives verbatim on the
+   *  IncomingKey (the wording itself is pinned by the Rust tests). */
   describe("surfaces the engine's rejection verbatim", () => {
-    // Read from `gpg-wasm/src/age.rs` rather than transcribed here.
-    //
-    // Transcribing them was tried and was wrong within the hour: two of
-    // these carry an em dash that this repo's lint bans from source
-    // literals, so the copies got reworded, and the file a reader would
-    // consult to learn what the user sees started describing prose the
-    // engine does not emit. Because these cases mock the wasm boundary,
-    // nothing failed -- a divergence that tests cannot catch is exactly
-    // the kind that has to be designed out instead.
-    //
-    // Reading the constants makes the Rust the single source of truth
-    // and sidesteps the lint entirely, since the text is never a literal
-    // here. Same technique, and the same reason, as
-    // `lib/protection/aad-prefixes.test.ts`.
+    // Read from `gpg-wasm/src/age.rs`, not transcribed: the Rust is the single
+    // source of truth, and these cases mock the wasm boundary so a stale copy
+    // would never fail. Same technique as `lib/protection/aad-prefixes.test.ts`.
     const PUB_MESSAGES = {
       ECDSA: ageMessage("MSG_ECDSA"),
       FIDO: ageMessage("MSG_FIDO"),
@@ -1057,10 +977,8 @@ describe("prepareImport - SSH / age", () => {
 
     const PKCS8_MESSAGE = ageMessage("MSG_PKCS8");
     const PRIVATE_FILES: [string, string, string, ImportEngines][] = [
-      // `crx` is off for the two plain PKCS#8 forms and only for them: an
-      // unencrypted PKCS#8 key is ALSO a valid CRX signing key, and CRX --
-      // checked first, because it is the engine that can actually use it --
-      // legitimately owns it. See `isRsaPrivatePem`.
+      // `crx` is off for the plain PKCS#8 forms only: CRX legitimately owns
+      // them otherwise (see `isRsaPrivatePem`).
       [
         "PKCS8",
         "-----BEGIN PRIVATE KEY-----\nMC4CAQAwBQYDK2VwBCIEIA==\n-----END PRIVATE KEY-----\n",
@@ -1080,10 +998,7 @@ describe("prepareImport - SSH / age", () => {
         { ssh: true, crx: true },
       ],
       [
-        // Matches the CRX signing-key shape too, and must not be claimed
-        // by it: `parse_rsa_private_pem` cannot read an encrypted PEM
-        // either, so claiming it only swapped this message for a generic
-        // CRX parse failure.
+        // Also CRX-shaped, but must not be claimed by it.
         "LEGACY_PEM",
         "-----BEGIN RSA PRIVATE KEY-----\nProc-Type: 4,ENCRYPTED\nDEK-Info: AES-128-CBC,5C90\n\nZmFrZQ==\n-----END RSA PRIVATE KEY-----\n",
         ageMessage("MSG_LEGACY_PEM"),
@@ -1115,8 +1030,6 @@ describe("prepareImport - SSH / age", () => {
         "PKCS#8",
         "-----BEGIN PRIVATE KEY-----\nMIIEvQ==\n-----END PRIVATE KEY-----\n",
       ],
-      // Its own label, but the same `AAAA`-prefixed base64 body shape --
-      // it must not be mistaken for either the CRX or SSH signing key.
       ["a PGP block", "-----BEGIN PGP PRIVATE KEY BLOCK-----\nlQ==\n"],
     ])("does not steal %s from the engine that owns it", async (name, pem) => {
       vi.mocked(parseKeys).mockResolvedValue([]);
@@ -1138,14 +1051,9 @@ describe("prepareImport - SSH / age", () => {
       expect(sshPrivateKeyFormatRejection).not.toHaveBeenCalled();
     });
 
-    // The bytes handed across the wasm boundary here are a plaintext copy
-    // of a COMPLETE private key file (an unencrypted PKCS#8 key reaches
-    // this branch whenever the CRX engine is off). `prepareImport` drops
-    // its reference before returning, so -- as in history.test.ts -- the
-    // mock retains the ACTUAL buffer that crossed the boundary: it is
-    // asserted to still carry the key bytes at call time, and to be
-    // all-zero once `prepareImport` settles. Behavioural proof of the
-    // `finally` scrub, not inspection.
+    // The buffer crossing the wasm boundary is a COMPLETE private key file. The
+    // mock retains the actual buffer: it must carry the key at call time and be
+    // all-zero once `prepareImport` settles (behavioural proof of the scrub).
     describe("scrubs the key-file buffer handed to wasm", () => {
       const PKCS8 =
         "-----BEGIN PRIVATE KEY-----\nMC4CAQAwBQYDK2VwBCIEIA==\n-----END PRIVATE KEY-----\n";
@@ -1155,9 +1063,7 @@ describe("prepareImport - SSH / age", () => {
         captured = null;
       });
 
-      /** Arm the mock with `outcome`, capturing its argument. Asserting
-       *  the buffer was non-empty and correct *during* the call is what
-       *  stops the all-zero check afterwards from passing vacuously. */
+      /** Checking the buffer during the call keeps the zero check from passing vacuously. */
       function capture(outcome: () => string | null) {
         vi.mocked(sshPrivateKeyFormatRejection).mockImplementation(
           (keyFile: Uint8Array) => {
@@ -1211,8 +1117,7 @@ describe("prepareImport - SSH / age", () => {
     const [key] = prepared.keys;
     expect(key.kind).toBe("ssh-private");
     expect(key.keyId).toBe(PENDING_KEY_ID);
-    // Its fingerprint is only recovered inside the protect step, so
-    // there is no public half to preview -- the CRX precedent.
+    // Fingerprint is only recovered at the protect step.
     expect(key.publicArmored).toBe("");
     expect(key.info).toBeNull();
     // The secret half never rides on the IncomingKey.
@@ -1221,8 +1126,7 @@ describe("prepareImport - SSH / age", () => {
   });
 
   it("prefers the private container over the public half inside it", async () => {
-    // An OpenSSH container embeds the public key; classifying it as a
-    // recipient would drop the secret half on the floor.
+    // Classifying it as a recipient would drop the secret half.
     const prepared = await prepareImport(
       `${OPENSSH_PRIVATE}\n${ED25519_PUB}`,
       noStores,
@@ -1240,20 +1144,9 @@ describe("prepareImport - SSH / age", () => {
 });
 
 /**
- * The three refusals that could not reach the user at all on the paste
- * path -- ECDSA, FIDO `sk-*`, DSA.
- *
- * `parseSshRecipient` has always had a curated message for each. What it
- * never had was a line to be given: `splitSshPublicKeyLines` matched
- * `ssh-ed25519|ssh-rsa` only, so a pasted `.pub` of any other algorithm
- * was not split out, fell through to the OpenPGP parse, and came back
- * `unparseable` -- the panel's "that doesn't look like a key" standing in
- * for the one sentence that names the problem and the fix.
- *
- * Fourth instance of one pattern (`catch { continue }` here,
- * `github/response.ts`'s filter, then this). The invariant these tests
- * pin: THE ENGINE DECIDES VALIDITY; EVERY LAYER ABOVE IT FORWARDS AND
- * DISPLAYS. Shape is all `prepareImport` checks.
+ * ECDSA, FIDO `sk-*` and DSA `.pub` lines must reach the engine and show its
+ * refusal, not `unparseable`. Invariant: THE ENGINE DECIDES VALIDITY; EVERY
+ * LAYER ABOVE IT FORWARDS AND DISPLAYS.
  */
 describe("prepareImport - refused SSH algorithms reach the user", () => {
   const noStores: StoredKeys = { own: [], contacts: [] };
@@ -1288,16 +1181,12 @@ describe("prepareImport - refused SSH algorithms reach the user", () => {
 
       const prepared = await prepareImport(line, noStores, { ssh: true });
 
-      // Forwarded at all -- the half of this that used to be missing.
       expect(parseSshRecipient).toHaveBeenCalledWith(line);
-      // Reported as a key we refuse, NOT as text that isn't a key.
       expect(prepared.unparseable).toBe(false);
       expect(prepared.keys).toHaveLength(1);
       expect(prepared.keys[0].kind).toBe("ssh-public");
       expect(prepared.keys[0].status).toBe("rejected");
-      // Verbatim: the engine names the type and the `ssh-keygen` fix.
       expect(prepared.keys[0].rejection).toBe(message);
-      // Shown, never stored, and nothing to import.
       expect(prepared.keys[0].publicArmored).toBe(line);
       expect(prepared.secrets.size).toBe(0);
       expect(importable(prepared.keys)).toEqual([]);
@@ -1305,8 +1194,6 @@ describe("prepareImport - refused SSH algorithms reach the user", () => {
   );
 
   it("still drops a refused line when a usable one sits beside it", async () => {
-    // An `authorized_keys` with a stale ECDSA entry is not worth
-    // interrupting the import of the key that does work.
     vi.mocked(parseSshRecipient)
       .mockRejectedValueOnce(new Error(ageMessage("MSG_ECDSA")))
       .mockResolvedValueOnce({
@@ -1324,10 +1211,8 @@ describe("prepareImport - refused SSH algorithms reach the user", () => {
     expect(prepared.keys[0].status).toBe("new");
   });
 
-  // The other half of widening the shape: what must still NOT look like
-  // an SSH public line. Each of these is owned by another path, and a
-  // candidate matcher that claimed one would have moved the bug rather
-  // than fixed it.
+  // What must still NOT look like an SSH public line: each belongs to
+  // another path.
   it.each([
     ["prose naming a key type", "my ssh-ed25519 key is on the other laptop"],
     ["prose about ECDSA", "we should probably move off ecdsa-sha2-nistp256"],
@@ -1376,18 +1261,11 @@ describe("prepareImport - refused SSH algorithms reach the user", () => {
   });
 });
 
-/**
- * The advisory: a "key bundle" carrying a stripped copy of a contact
- * beside a NEW key with the same name and email was saved without a
- * word. Every new public key is now checked against the contacts held
- * and the keys before it in the same import, and a match is marked so
- * the Review asks before saving it.
- */
+/** A new public key is checked against held contacts and earlier keys in
+ *  the same import; a match is marked so the Review asks. */
 describe("prepareImport: a new key claiming someone's identity", () => {
   const NEW_FP = "B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0";
 
-  /** `parseKeys` answering the pasted blob with `bundle`, and any stored
-   *  or merged armor with the stored contact's own cert. */
   function bundle(...certs: { keyInfo: KeyInfo; armored: string }[]) {
     vi.mocked(parseKeys).mockImplementation((armored) =>
       Promise.resolve(
@@ -1400,9 +1278,7 @@ describe("prepareImport: a new key claiming someone's identity", () => {
 
   it("marks the new key in the advisory's bundle, never the update", async () => {
     bundle(
-      // The contact's own key, re-issued: an update of the same person.
       { keyInfo: info(), armored: "ARMOR-STRIPPED" },
-      // A different key under the contact's exact User ID.
       { keyInfo: info({ keyId: NEW_FP }), armored: "ARMOR-IMPOSTOR" },
     );
 
@@ -1413,15 +1289,12 @@ describe("prepareImport: a new key claiming someone's identity", () => {
     expect(update.conflict).toBeUndefined();
     expect(impostor.status).toBe("new");
     expect(impostor.conflict?.kind).toBe("address");
-    // Held by the contact -- listed once from storage and once more as
-    // the bundle's own copy of it; the Review names `holders[0]`.
     expect(impostor.conflict?.holders[0].keyId).toBe(FP);
     expect(impostor.conflict?.holders.every((h) => h.keyId === FP)).toBe(true);
   });
 
   it("leaves the same name under a different address alone", async () => {
-    // Two people can share a name; the address is what tells them apart,
-    // and it is checked above. Only a name that LOOKS the same is asked.
+    // Shared plain names are fine; only a LOOKALIKE name is asked.
     bundle({
       keyInfo: info({
         keyId: NEW_FP,
@@ -1446,8 +1319,7 @@ describe("prepareImport: a new key claiming someone's identity", () => {
   });
 
   it("marks BOTH new keys in one bundle claiming one address", async () => {
-    // Neither is the real one for coming first: an attacker picks the
-    // order, so the first must not default to Import.
+    // An attacker picks the order, so the first must not default to Import.
     const OTHER_FP = "C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0";
     bundle(
       { keyInfo: info({ keyId: NEW_FP }), armored: "ARMOR-B" },
@@ -1465,8 +1337,6 @@ describe("prepareImport: a new key claiming someone's identity", () => {
   });
 
   it("still asks about the address of a revoked contact, naming it", async () => {
-    // A rotation after a revocation looks like this -- and so does an
-    // impostor timing it.
     bundle({ keyInfo: info({ keyId: NEW_FP }), armored: "ARMOR-B" });
     const prepared = await prepareImport("blob", {
       own: [],
@@ -1507,9 +1377,7 @@ describe("withIdentityConflicts", () => {
   const withAlice: StoredKeys = { own: [], contacts: [storedKey()] };
 
   it("never marks a key that will not be saved, or one with no identity yet", () => {
-    // A rejected key is not saved; an OpenSSH private key and a pasted
-    // CRX PEM have no identity until the protect step reads them -- only
-    // the headline the preview shows them under.
+    // Rejected keys aren't saved; OpenSSH private / CRX keys have only a headline.
     const keys = [
       incoming({ keyId: "REJ", status: "rejected" }),
       incoming({
@@ -1529,8 +1397,6 @@ describe("withIdentityConflicts", () => {
   });
 
   describe("private and CRX keys", () => {
-    // Saved, they become the user's OWN keys: a key named as a contact
-    // went in silently as one of them.
     it("marks a private key claiming a contact's address, and starts it on Skip", () => {
       const [key] = withIdentityConflicts(
         [incoming({ keyId: "PRIV", kind: "pgp-private" })],
@@ -1560,7 +1426,6 @@ describe("withIdentityConflicts", () => {
     });
 
     it("lets the user's next key share their own name and address", () => {
-      // A rotation: the same name and address as a key they hold.
       const mine: StoredKeys = { own: [storedKey()], contacts: [] };
       const keys = [
         incoming({ keyId: "PRIV", kind: "pgp-private" }),
@@ -1592,7 +1457,6 @@ describe("withIdentityConflicts", () => {
     });
 
     it("holds a backup's private key against its contacts, too", () => {
-      // A contact in the same file wearing the private key's address.
       const out = withIdentityConflicts(
         [
           incoming({ keyId: "PRIV", kind: "pgp-private" }),
@@ -1608,8 +1472,6 @@ describe("withIdentityConflicts", () => {
   });
 
   it("compares a contact's alias as one of its names", () => {
-    // A comment-less SSH contact the user renamed "Alice" has no other
-    // name; a `.pub` commented with a lookalike of it is claiming her.
     const stored: StoredKeys = {
       own: [],
       contacts: [
@@ -1633,8 +1495,6 @@ describe("withIdentityConflicts", () => {
   });
 
   it("checks an SSH key's comment like a User ID", () => {
-    // The comment is the contact's name, and it is whatever the file
-    // says: `alice@example.com` claims that address as plainly.
     const [key] = withIdentityConflicts(
       [
         incoming({
@@ -1669,8 +1529,7 @@ describe("withIdentityConflicts", () => {
   });
 
   it("still marks a NEW key from the same lookup as the contact it would replace", () => {
-    // A keyserver re-fetch that came back with a different key for the
-    // same address: the same source, but not the same key.
+    // Same source, different key: must still ask.
     const source = {
       type: "keyserver" as const,
       user: "alice@example.com",
@@ -1693,8 +1552,7 @@ describe("withIdentityConflicts", () => {
   });
 
   it("catches an address hidden behind an invisible character", () => {
-    // `<alice@example.com` + U+FE0F + `>`: the name is empty and the
-    // address reads the same, so it is the address check that must hold.
+    // Empty name, address with U+FE0F: the address check must hold.
     const [key] = withIdentityConflicts(
       [incoming({ userIds: ["<alice@example.com\ufe0f>"] })],
       withAlice,
@@ -1720,7 +1578,6 @@ describe("withIdentityConflicts", () => {
   });
 
   it("marks an update only for the User IDs it adds", () => {
-    // A contact's key that picks up someone else's name and address.
     const mallory: StoredKeys = {
       own: [],
       contacts: [
@@ -1793,8 +1650,7 @@ describe("withIdentityConflicts", () => {
   ])(
     "lets two people share a name that differs only in %s",
     (_label, theirs, claimed) => {
-      // Their addresses tell them apart; a warning on every shared name
-      // would teach the user to click past the one that matters.
+      // Warning on every shared name would train users to click past the real one.
       const stored: StoredKeys = {
         own: [],
         contacts: [storedKey({ userIds: [`${theirs} <them@example.com>`] })],
@@ -1829,8 +1685,6 @@ describe("prepareImport: two copies of one key", () => {
     armored: "COPY-2",
   };
 
-  /** The paste parses as `certs`; the engine's merge of the copies as
-   *  `merged`. */
   function copies(
     certs: { keyInfo: KeyInfo; armored: string }[],
     merged: KeyInfo,
@@ -1853,7 +1707,6 @@ describe("prepareImport: two copies of one key", () => {
   });
 
   it("checks every User ID any copy carries against the contacts", async () => {
-    // The first copy is harmless; the second adds Bob's address.
     copies([plain, grown], grown.keyInfo);
     const withBob: StoredKeys = {
       own: [],

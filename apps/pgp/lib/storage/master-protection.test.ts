@@ -1,16 +1,7 @@
 /**
- * The vault's own protection record.
- *
- * This is the one storage record that is deliberately PLAINTEXT (see the
- * security note in the module): it is what the unlock flow reads before
- * any key exists to decrypt it with. That makes its validator the only
- * thing standing between a corrupted or hand-edited storage entry and an
- * unlock path that thinks it knows how the vault is protected.
- *
- * So what is pinned here is the validator's shape discipline: a record
- * missing any field its method depends on reads back as `null` -- "no
- * protection configured" -- rather than as a half-populated object the
- * unlock flow would then dereference.
+ * The vault's protection record is deliberately plaintext, so its
+ * validator is all that stands between a corrupted entry and the unlock
+ * flow: a record missing any field its method needs reads back as `null`.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -67,13 +58,8 @@ describe("round trip", () => {
   });
 });
 
-/**
- * Replacing the master protection makes every key sealed under it
- * unopenable, and it used to be one forged `onboardingComplete: false`
- * away: onboarding came back up and saved over the real vault. The
- * writer itself now refuses -- in EITHER area, because the bootstrap's
- * `storageLocation` is just as forgeable as the flag.
- */
+/** The writer refuses to replace a vault in EITHER area: the bootstrap's
+ *  flag and `storageLocation` are both forgeable. */
 describe("never replaces an existing vault", () => {
   it("refuses a second save in the same area", async () => {
     await saveMasterProtection(password);
@@ -84,8 +70,7 @@ describe("never replaces an existing vault", () => {
   });
 
   it("refuses when the vault is in the OTHER area", async () => {
-    // A local vault, with the bootstrap flipped to sync from another
-    // machine: the engine now looks in sync and sees nothing.
+    // Local vault, bootstrap flipped to sync: the engine sees nothing.
     local.store.set(STORAGE_MASTER_PROTECTION, password);
     sync.store.set(STORAGE_PREFERENCES, { storageLocation: "sync" });
     invalidateLocationCache();
@@ -98,15 +83,13 @@ describe("never replaces an existing vault", () => {
   });
 
   it("refuses over a record this build cannot even parse", async () => {
-    // Only a VALID record counts as a vault here -- an unparseable one
-    // is no vault anyone can unlock -- so this documents the boundary.
+    // Only a VALID record counts as a vault.
     local.store.set(STORAGE_MASTER_PROTECTION, { method: "yubikey" });
     await expect(saveMasterProtection(password)).resolves.toBeUndefined();
   });
 
   it("drops an integrity ledger left by an earlier vault", async () => {
-    // It would not open under the new vault's key and would read as
-    // tampering on the first unlock.
+    // It would read as tampering under the new vault's key.
     local.store.set(STORAGE_INTEGRITY, { iv: "x", ciphertext: "y" });
     await saveMasterProtection(password);
     expect(local.store.has(STORAGE_INTEGRITY)).toBe(false);
@@ -114,9 +97,7 @@ describe("never replaces an existing vault", () => {
 });
 
 describe("validation", () => {
-  /** Write straight past `saveMasterProtection` -- these are the shapes a
-   *  corrupted profile or an older build leaves behind, not ones our own
-   *  writer can produce. */
+  /** Bypasses `saveMasterProtection` to seed corrupted/older shapes. */
   function seed(raw: unknown) {
     local.store.set(STORAGE_MASTER_PROTECTION, raw);
   }
@@ -159,15 +140,13 @@ describe("validation", () => {
   );
 
   it("rejects a passkey record whose fields are the wrong type", async () => {
-    // base64 strings arriving as raw byte arrays is the realistic
-    // corruption here -- an older build that stored Uint8Arrays.
+    // Realistic corruption: an older build that stored byte arrays.
     seed({ ...passkey, prfSalt: [1, 2, 3] });
     expect(await getMasterProtection()).toBeNull();
   });
 
   it("ignores extra fields a newer build might add", async () => {
-    // Forward compatibility: a record written by a build that learned a
-    // new field must still unlock on this one.
+    // Forward compatibility: unknown fields still unlock.
     seed({ ...passkey, transports: ["internal"] });
     expect(await getMasterProtection()).toEqual({
       ...passkey,
