@@ -7,8 +7,6 @@ import type { WorkspaceIntake } from "../../components/workspace/useWorkspaceSta
 import type { WorkspaceOpsBridge } from "../../hooks/useActionContext";
 import type { DropRule } from "../../lib/drop-routing";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
-import type { MasterProtection } from "../../lib/storage/master-protection";
-import type { StorageLocation } from "../../lib/storage/preferences";
 import type { WorkspaceDraftSource } from "../../lib/workspace-draft";
 import { CommandPalette } from "../../components/CommandPalette";
 import { ImportKeyPage } from "../../components/keys/ImportKeyPage";
@@ -30,6 +28,7 @@ import { useKeySession } from "../../hooks/useKeySession";
 import { usePendingOperation } from "../../hooks/usePendingOperation";
 import { savePreference, usePreferences } from "../../hooks/usePreferences";
 import { useReaderTabs } from "../../hooks/useReaderTabs";
+import { useVaultLifecycle } from "../../hooks/useVaultLifecycle";
 import { SESSION_PENDING_OP } from "../../lib/constants";
 import { normalizeCrxPadding } from "../../lib/crx/storage";
 import { looksLikeKey, readAllFilesText } from "../../lib/drop-routing";
@@ -55,6 +54,7 @@ import {
   resolveVaultState,
 } from "../../lib/storage/vault-state";
 import { toast } from "../../lib/toast";
+import { protectionOf } from "../../lib/vault-phase";
 import {
   draftHasContent,
   encryptWorkspaceDraft,
@@ -77,25 +77,10 @@ export default function App() {
     // The user's preferred own key (null = implicit first-key default).
     defaultKeyId,
   } = prefs;
-  // Whether a vault exists -- derived from the stored master protection
-  // (`resolveVaultState`), NOT from the bootstrap's `onboardingComplete`,
-  // which anyone signed in to the Google account can set back to false.
-  const [onboardingComplete, setOnboardingComplete] = useState<boolean | null>(
-    null,
-  );
-  // A vault that is stored, but not where the bootstrap points, or that
-  // has lost its master protection. Either way: not onboarding.
-  const [vaultProblem, setVaultProblem] = useState<
-    | { kind: "elsewhere"; location: StorageLocation }
-    | { kind: "ambiguous" }
-    | { kind: "orphaned" }
-    | null
-  >(null);
-  // The other storage area also holds a master protection; the lock
-  // screen offers it after a failed unlock (`resolveVaultState`).
-  const [alternateVault, setAlternateVault] = useState<StorageLocation | null>(
-    null,
-  );
+  const [vault, dispatchVault] = useVaultLifecycle();
+  const { phase } = vault;
+  const masterProtection = protectionOf(phase);
+  const masterUnlocked = phase.kind === "open";
   // A key handed to the app from outside the Keys tab (pasted in the
   // workspace, dropped on the window, sent by the context menu). It opens
   // the import panel OVER whatever the user is looking at: routing them
@@ -119,28 +104,6 @@ export default function App() {
   // twice.
   const pendingRoutedRef = useRef(false);
 
-  // Master protection state
-  const [masterProtection, setMasterProtection] =
-    useState<MasterProtection | null>(null);
-  // Separate from `masterProtection` (which is null in TWO cases: not
-  // loaded yet, and no protection set up). Without this flag the main
-  // tree mounts during the brief load window, then unmounts when the
-  // lock screen kicks in, blowing away any local component state
-  // that was building up in parallel (e.g. KeysView's open-dialog
-  // state set by the context-menu prefill flow).
-  const [masterProtectionLoaded, setMasterProtectionLoaded] = useState(false);
-  const [masterUnlocked, setMasterUnlocked] = useState(false);
-  // True from the moment the unlock screen goes until the stores it
-  // opened have been read back (contacts, keyring) and any keys opened
-  // off the same ceremony are open. The workspace is already mounted in
-  // that window, so a context-menu op can land in it; auto-run waits on
-  // this rather than verifying against a contact list that is still
-  // empty or giving up on a key that is a moment from unlocking.
-  const [vaultOpening, setVaultOpening] = useState(false);
-  // Bumped by every unlock and every lock, so an unlock that finishes
-  // opening after the vault was locked (and maybe opened again) can't
-  // clear the flag for the one that is still going.
-  const vaultOpenGenRef = useRef(0);
   const masterLockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const keyring = useKeyring();
@@ -170,11 +133,7 @@ export default function App() {
   // `sweepStalePendingOp`) into React state, where it would sit retained
   // on the fiber for the whole locked window. See usePendingOperation's
   // doc comment for the measured retainer.
-  const canRoutePendingOp =
-    onboardingComplete === true &&
-    vaultProblem === null &&
-    masterProtectionLoaded &&
-    !(masterProtection && !masterUnlocked);
+  const canRoutePendingOp = masterUnlocked;
   const {
     pending,
     clearPending,
@@ -184,12 +143,6 @@ export default function App() {
   // is open -- the same condition that gates routing a pending op.
   const { open: openReader, lockNow: lockReaders } =
     useReaderTabs(canRoutePendingOp);
-
-  // True when the most recent master-lock was system-initiated (idle
-  // timer, visibility hidden, OS idle). Used to suppress the
-  // MasterUnlockScreen's auto-passkey-prompt -- a re-lock should not
-  // pop a system passkey dialog without an explicit user action.
-  const [masterAutoLocked, setMasterAutoLocked] = useState(false);
 
   // Workspace-draft persistence across lock cycles. WorkspaceView registers
   // a pull-model source here; on master lock we ask it for a snapshot,
@@ -302,10 +255,7 @@ export default function App() {
       // empty (`mutateContacts`, `removeKey`). Ordering here is not the
       // mechanism and must not be made to carry it.
       void wasmApi.dropContactsSession();
-      setMasterAutoLocked(auto);
-      setMasterUnlocked(false);
-      vaultOpenGenRef.current++;
-      setVaultOpening(false);
+      dispatchVault({ type: "locked", auto });
       // UNCONDITIONAL, and it must stay that way. `lockAll` does two
       // things: it drops the handles currently in the map, AND it bumps
       // the lock generation that `useKeySession` re-checks when an
@@ -319,7 +269,7 @@ export default function App() {
       // `size > 0` guard here to match them reopens it.
       session.lockAll();
     },
-    [session, clearPending, lockReaders],
+    [session, clearPending, lockReaders, dispatchVault],
   );
 
   const resetMasterLockTimer = useCallback(() => {
@@ -424,23 +374,8 @@ export default function App() {
     // Bootstrap fields are readable regardless of lock state; the
     // encrypted settings read as defaults until unlock re-reads them.
     await preferencesStore.reload();
-    const vault = await resolveVaultState();
-    setVaultProblem(
-      vault.kind === "elsewhere" ||
-        vault.kind === "ambiguous" ||
-        vault.kind === "orphaned"
-        ? vault
-        : null,
-    );
-    setAlternateVault(
-      vault.kind === "ready" ? (vault.alternate ?? null) : null,
-    );
-    // A problem state is "onboarded" as far as routing goes: onboarding
-    // must never come up over a vault that exists somewhere.
-    setOnboardingComplete(vault.kind !== "none");
-    setMasterProtection(vault.kind === "ready" ? vault.protection : null);
-    setMasterProtectionLoaded(true);
-  }, []);
+    dispatchVault({ type: "resolved", vault: await resolveVaultState() });
+  }, [dispatchVault]);
 
   useEffect(() => {
     void loadVaultState();
@@ -492,9 +427,7 @@ export default function App() {
   // switch to the workspace doesn't steal focus mid-session.
   const openFocusDoneRef = useRef(false);
   useEffect(() => {
-    if (openFocusDoneRef.current) return;
-    if (!onboardingComplete || !masterProtectionLoaded) return;
-    if (masterProtection && !masterUnlocked) return;
+    if (openFocusDoneRef.current || !masterUnlocked) return;
     openFocusDoneRef.current = true;
     if (activeTab !== "workspace") return;
     // Deferred a tick so the workspace has mounted the textarea.
@@ -503,13 +436,7 @@ export default function App() {
       0,
     );
     return () => clearTimeout(t);
-  }, [
-    onboardingComplete,
-    masterProtectionLoaded,
-    masterProtection,
-    masterUnlocked,
-    activeTab,
-  ]);
+  }, [masterUnlocked, activeTab]);
 
   // ── Command palette / action registry wiring ─────────────────────
   // WorkspaceView pushes its palette-facing state/ops slice up here;
@@ -658,20 +585,16 @@ export default function App() {
     },
   ];
 
-  if (onboardingComplete === null) return null;
-  // Wait for masterProtection's initial load before rendering any
-  // post-onboarding tree. Without this gate, the main UI mounts during
-  // the load window, then unmounts when the lock screen takes over --
-  // taking transient view state with it (e.g. an open import dialog
-  // populated by the context-menu prefill flow).
-  if (onboardingComplete && !masterProtectionLoaded) return null;
+  // Nothing renders until what is stored is known: a main tree mounted
+  // early would be torn down by the lock screen, state and all.
+  if (phase.kind === "loading") return null;
 
-  if (vaultProblem) {
+  if (phase.kind === "problem") {
     return (
       <div className="flex h-screen flex-col">
         <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">
           <VaultProblemScreen
-            problem={vaultProblem}
+            problem={phase.problem}
             onUseLocation={async (loc) => {
               await adoptVaultLocation(loc);
               await loadVaultState();
@@ -687,17 +610,17 @@ export default function App() {
     );
   }
 
-  if (!onboardingComplete) {
+  if (phase.kind === "onboarding") {
     return (
       <div className="flex h-screen flex-col">
         <main className="min-h-0 flex-1 overflow-y-auto">
           <OnboardingFlow
             onComplete={async () => {
+              dispatchVault({
+                type: "onboarded",
+                protection: await getMasterProtection(),
+              });
               void preferencesStore.reload();
-              setOnboardingComplete(true);
-              setMasterUnlocked(true);
-              setMasterProtection(await getMasterProtection());
-              setMasterProtectionLoaded(true);
               void refreshVaultLists();
             }}
             addKey={handleAddKey}
@@ -712,49 +635,38 @@ export default function App() {
     );
   }
 
-  if (masterProtection && !masterUnlocked) {
+  if (phase.kind === "locked") {
+    const { alternate } = vault;
     return (
       <div className="flex h-screen flex-col">
         <main className="min-h-0 flex-1 overflow-y-auto">
           <MasterUnlockScreen
-            masterProtection={masterProtection}
-            autoLocked={masterAutoLocked}
-            alternate={alternateVault ?? undefined}
+            masterProtection={phase.protection}
+            autoLocked={phase.autoLocked}
+            alternate={alternate ?? undefined}
             onUseAlternate={async () => {
-              if (!alternateVault) return;
-              await adoptVaultLocation(alternateVault);
+              if (!alternate) return;
+              await adoptVaultLocation(alternate);
               await loadVaultState();
             }}
             onUnlocked={async (prf) => {
-              const openGen = ++vaultOpenGenRef.current;
-              // The legacy-settings migration first, before anything
-              // below can write a store: its gate refuses once a local
-              // store carries a generation, and the contacts backfill
-              // this unlock starts would otherwise stamp one first on
-              // exactly the old installs that still need migrating.
+              // The legacy-settings migration first, before anything can
+              // write a store: its gate refuses once a local store carries
+              // a generation, which the contacts backfill would stamp.
               await migrateLegacyPreferences().catch(() => undefined);
-              setMasterUnlocked(true);
-              setVaultOpening(true);
-              setMasterAutoLocked(false);
+              const { generation } = dispatchVault({ type: "unlocking" });
               resetMasterLockTimer();
               const listsRead = refreshVaultLists();
-              // "Unlock keys when the vault unlocks": off the SAME
-              // ceremony, open every key sealed under the master salt.
-              // The preference is an encrypted setting, readable only
-              // now that the session is live -- so it is read here, not
-              // from state (which still holds the locked-time default).
-              // Both reads happen INSIDE the batch so a lock landing
-              // during them cancels it (`unlockMany`). `prf` is on loan
-              // until this resolves; nothing below keeps a reference
-              // past the await, and nothing here throws for a key that
-              // will not open -- the screen is already gone by then.
-              const master = masterPasskeyOf(masterProtection);
+              // "Unlock keys when the vault unlocks", off the same
+              // ceremony. The preference is read from storage, not state
+              // (still the locked-time default), inside the batch so a
+              // lock landing meanwhile cancels it. `prf` is on loan until
+              // this resolves.
+              const master = masterPasskeyOf(phase.protection);
               if (prf && master) {
                 try {
                   await session.unlockAllWithMasterPrf(async () => {
-                    // Never-cache wins even if a stored pair were ever
-                    // inconsistent: the exclusion holds here, not only
-                    // at the toggles that maintain it.
+                    // Never-cache wins even over an inconsistent stored pair.
                     const p = await getPreferences();
                     if (!p.unlockKeysOnOpen || p.neverCacheKeys) return [];
                     const keys = await getKeyring().catch(() => []);
@@ -765,7 +677,7 @@ export default function App() {
                 }
               }
               await listsRead;
-              if (openGen === vaultOpenGenRef.current) setVaultOpening(false);
+              dispatchVault({ type: "settled", generation });
             }}
           />
         </main>
@@ -940,7 +852,7 @@ export default function App() {
               onUnlockWithPassword={session.unlockWithPassword}
               onUnlockWithPasskey={session.unlockWithPasskey}
               vaultSettling={
-                vaultOpening || keyring.loading || contacts.loading
+                phase.opening || keyring.loading || contacts.loading
               }
               awaitingPendingOp={!pendingChecked}
               onOpenReply={openReader}
