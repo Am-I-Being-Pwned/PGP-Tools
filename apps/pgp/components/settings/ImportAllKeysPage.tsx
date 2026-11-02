@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 
 import { Button } from "@amibeingpwned/ui/button";
+import { Input } from "@amibeingpwned/ui/input";
 
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
 import type { ReviewDecision, ReviewedContact } from "../../lib/import/review";
@@ -611,7 +612,7 @@ export function ImportAllKeysPage({
                   encrypted: encryptedCount,
                 })}
               </p>
-              <input
+              <Input
                 type="password"
                 autoFocus
                 autoComplete="current-password"
@@ -621,7 +622,7 @@ export function ImportAllKeysPage({
                   if (e.key === "Enter") api.runAction(0);
                 }}
                 placeholder={t("settings_import_passphrase_placeholder")}
-                className="surface-field placeholder:text-muted-foreground focus:ring-ring w-full rounded-lg p-2 font-mono text-xs focus:ring-2 focus:outline-none"
+                className="p-2 font-mono text-xs"
               />
               {error && (
                 <p className="text-bad text-xs" role="alert">

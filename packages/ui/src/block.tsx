@@ -38,13 +38,18 @@ export function Block({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-/** The small label that sits above a stack ("Your keys", "Key security"). */
+/** The small label that sits above a stack ("Your keys", "Key security").
+ *  Render `as="h2"`/`"h3"` when it heads a section: screen readers (and
+ *  the e2e helpers) navigate by those headings. */
 export function BlockLabel({
+  as: Comp = "div",
   className,
   ...props
-}: React.ComponentProps<"div">) {
+}: React.HTMLAttributes<HTMLElement> & {
+  as?: "div" | "p" | "h2" | "h3";
+}) {
   return (
-    <div
+    <Comp
       data-slot="block-label"
       className={cn(
         "text-muted-foreground px-1 text-xs font-medium",

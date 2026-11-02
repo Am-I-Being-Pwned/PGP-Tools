@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 
 import { cn } from "@amibeingpwned/ui";
-import { Block, BlockStack } from "@amibeingpwned/ui/block";
+import { Block, BlockLabel, BlockStack } from "@amibeingpwned/ui/block";
 
 import type { ComponentKeyRow, KeyFacts, KeyHealth } from "./key-facts";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
@@ -680,10 +680,10 @@ export function KeyPreviewBody({
 
       {facts?.components && (
         <div>
-          <h3 className="text-muted-foreground mb-1.5 px-1 text-xs font-medium">
+          <BlockLabel as="h3" className="mb-1.5">
             {facts.components.title ?? t("keys_subkeys_title")}{" "}
             <span className="font-normal">({subkeys.length})</span>
-          </h3>
+          </BlockLabel>
           {facts.components.truncated && (
             <p className="text-warn mb-1.5 px-1 text-xs">
               {t("keys_subkeys_truncated", {

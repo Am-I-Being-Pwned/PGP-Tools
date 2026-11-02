@@ -1,9 +1,9 @@
 import { CheckIcon, LockIcon } from "lucide-react";
 
 import { Button } from "@amibeingpwned/ui/button";
+import { Input } from "@amibeingpwned/ui/input";
 
 import { t } from "../../lib/i18n";
-import { INPUT_CLASS } from "../../lib/utils/styles";
 import { KeyAvatar } from "../shared/KeyAvatar";
 
 interface KeyUnlockRowProps {
@@ -78,7 +78,7 @@ export function KeyUnlockRow({
 
       {!unlocked && !isPasskey && (
         <div className="mt-2 flex items-stretch gap-2">
-          <input
+          <Input
             type="password"
             autoComplete="current-password"
             placeholder={t("keygen_key_password_placeholder")}
@@ -98,7 +98,7 @@ export function KeyUnlockRow({
               e.preventDefault();
               onUnlockPassword();
             }}
-            className={`${INPUT_CLASS} h-9 flex-1 py-0`}
+            className="h-9 flex-1 py-0"
           />
           <Button
             size="sm"

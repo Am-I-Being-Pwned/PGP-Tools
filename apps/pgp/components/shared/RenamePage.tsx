@@ -1,7 +1,8 @@
 import { useState } from "react";
 
+import { Input } from "@amibeingpwned/ui/input";
+
 import { t } from "../../lib/i18n";
-import { INPUT_CLASS } from "../../lib/utils/styles";
 import { SubPage } from "./SubPage";
 
 interface RenamePageProps {
@@ -57,7 +58,7 @@ export function RenamePage({
             <label className="text-muted-foreground mb-1 block text-xs">
               {fieldLabel}
             </label>
-            <input
+            <Input
               type="text"
               value={value}
               autoFocus
@@ -69,7 +70,6 @@ export function RenamePage({
                 // the slide-out can't re-fire onSave.
                 if (e.key === "Enter") api.runAction(0);
               }}
-              className={INPUT_CLASS}
             />
             {hint && (
               <p className="text-muted-foreground mt-1 text-[11px]">{hint}</p>

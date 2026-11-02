@@ -1,2 +1,4 @@
-export const INPUT_CLASS =
-  "surface-field placeholder:text-muted-foreground focus:ring-ring w-full rounded-lg px-3 py-2 text-sm focus:ring-2 focus:outline-none";
+import { inputVariants } from "@amibeingpwned/ui/input";
+
+/** The UI kit's field-well classes, for inputs that can't be an `Input`. */
+export const INPUT_CLASS = inputVariants();

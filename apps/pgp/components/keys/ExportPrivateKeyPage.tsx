@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from "react";
 
 import { Block } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
+import { Input } from "@amibeingpwned/ui/input";
 
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import { t } from "../../lib/i18n";
 import { isWebAuthnCancel } from "../../lib/protection/webauthn-prf";
-import { INPUT_CLASS } from "../../lib/utils/styles";
 import { SubPage } from "../shared/SubPage";
 
 /**
@@ -223,7 +223,7 @@ export function ExportPrivateKeyPage({
                 : t("keygen_unlock_gate_password"))}
           </p>
           {!isPasskey && (
-            <input
+            <Input
               type="password"
               autoComplete="current-password"
               placeholder={t("keygen_key_password_placeholder")}
@@ -232,7 +232,6 @@ export function ExportPrivateKeyPage({
               onKeyDown={(e) => {
                 if (e.key === "Enter") void handleUnlock();
               }}
-              className={INPUT_CLASS}
               autoFocus
             />
           )}
@@ -252,16 +251,15 @@ export function ExportPrivateKeyPage({
           <p className="text-muted-foreground text-xs">
             {exporter.encryptedBlurb}
           </p>
-          <input
+          <Input
             type="password"
             autoComplete="new-password"
             placeholder={t("keygen_passphrase_placeholder")}
             value={passphrase}
             onChange={(e) => setPassphrase(e.target.value)}
-            className={INPUT_CLASS}
             autoFocus
           />
-          <input
+          <Input
             type="password"
             autoComplete="new-password"
             placeholder={t("keygen_confirm_passphrase_placeholder")}
@@ -270,7 +268,6 @@ export function ExportPrivateKeyPage({
             onKeyDown={(e) => {
               if (e.key === "Enter") void handleEncryptedExport();
             }}
-            className={INPUT_CLASS}
           />
           {exportError && (
             <p className="text-destructive text-xs">{exportError}</p>
@@ -294,14 +291,13 @@ export function ExportPrivateKeyPage({
               </span>{" "}
               {t("keygen_type_to_confirm_after")}
             </p>
-            <input
+            <Input
               type="text"
               autoComplete="off"
               spellCheck={false}
               value={unsafeConfirm}
               onChange={(e) => setUnsafeConfirm(e.target.value)}
               placeholder={t("keygen_confirm_word")}
-              className={INPUT_CLASS}
             />
             <Button
               variant="destructive"

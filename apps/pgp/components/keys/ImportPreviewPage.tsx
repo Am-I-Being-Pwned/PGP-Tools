@@ -1,7 +1,12 @@
-import { AlertTriangleIcon, CheckCircleIcon, RefreshCwIcon } from "lucide-react";
+import {
+  AlertTriangleIcon,
+  CheckCircleIcon,
+  RefreshCwIcon,
+} from "lucide-react";
 
 import { Block, BlockStack } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
+import { Input } from "@amibeingpwned/ui/input";
 import { Kbd } from "@amibeingpwned/ui/kbd";
 
 import type { IncomingKey, KeyKind } from "../../lib/import/types";
@@ -10,7 +15,6 @@ import { t, tn } from "../../lib/i18n";
 import { formatDate } from "../../lib/i18n/format";
 import { isPublicKind } from "../../lib/import/types";
 import { parseUserId } from "../../lib/utils/key-naming";
-import { INPUT_CLASS } from "../../lib/utils/styles";
 import {
   SlideOverHeader,
   SlideOverPanel,
@@ -286,7 +290,7 @@ export function ImportPreview({
                   {t("import_optional")}
                 </span>
               </label>
-              <input
+              <Input
                 type="text"
                 autoFocus
                 maxLength={200}
@@ -304,7 +308,6 @@ export function ImportPreview({
                     onConfirm();
                   }
                 }}
-                className={INPUT_CLASS}
               />
               <p className="text-muted-foreground mt-1.5 px-1 text-[11px]">
                 {tn("import_group_help", grouping.separateCount)}

@@ -3,6 +3,7 @@ import { LockIcon } from "lucide-react";
 
 import { Block, BlockStack } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
+import { Input } from "@amibeingpwned/ui/input";
 
 import type { MasterProtection } from "../../lib/storage/master-protection";
 import type { StorageLocation } from "../../lib/storage/preferences";
@@ -220,13 +221,14 @@ export function MasterUnlockScreen({
                 >
                   {t("shared_master_password")}
                 </label>
-                <input
+                <Input
+                  variant="bare"
                   id="master-password"
                   type="password"
                   autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-11 min-w-0 flex-1 bg-transparent pr-3 text-sm outline-none"
+                  className="h-11 min-w-0 flex-1 pr-3"
                   autoFocus
                 />
               </Block>

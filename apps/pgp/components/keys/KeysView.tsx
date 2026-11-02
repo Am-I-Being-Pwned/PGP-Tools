@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ImportIcon, PlusIcon } from "lucide-react";
 
-import { cn } from "@amibeingpwned/ui";
-import { Block } from "@amibeingpwned/ui/block";
+import { Block, BlockLabel } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
+import { Input } from "@amibeingpwned/ui/input";
 
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
 import type { PublicContactKey } from "../../lib/storage/contacts";
@@ -40,7 +40,6 @@ import { isPgpRecord, isSshRecord } from "../../lib/storage/key-kind";
 import { toast } from "../../lib/toast";
 import { formatAlgorithm, formatFingerprint } from "../../lib/utils/formatting";
 import { displayUserId, parseUserId } from "../../lib/utils/key-naming";
-import { INPUT_CLASS } from "../../lib/utils/styles";
 import { ConfirmPage } from "../shared/ConfirmPage";
 import { RenamePage } from "../shared/RenamePage";
 import { useNavStack } from "../shared/useNavStack";
@@ -103,9 +102,6 @@ type KeysRoute =
  */
 const LIST_STACK =
   "flex flex-col gap-0.5 [&>*:first-child>*]:rounded-t-xl [&>*:last-child>*]:rounded-b-xl";
-
-/** The small muted label that sits above a stack. */
-const LIST_LABEL = "text-muted-foreground mb-1.5 px-1 text-xs font-medium";
 
 /** Composite selection id, namespaced so PGP keys, CRX keys, and contacts can
  *  coexist in one selection set. */
@@ -576,9 +572,9 @@ export function KeysView() {
           {/* The label, with the two ways to add a key as small chips on
               the same line. */}
           <div className="mb-1.5 flex items-center gap-2">
-            <h2 className={cn(LIST_LABEL, "mb-0 flex-1")}>
+            <BlockLabel as="h2" className="flex-1">
               {t("keys_my_keys_heading")}
-            </h2>
+            </BlockLabel>
             <Button
               variant="outline"
               size="sm"
@@ -1116,11 +1112,11 @@ function ContactsList({
 
   return (
     <div>
-      <h2 className={LIST_LABEL}>
+      <BlockLabel as="h2" className="mb-1.5">
         {contacts.length > 0
           ? t("keys_contacts_heading_count", { count: contacts.length })
           : t("keys_contacts_heading")}
-      </h2>
+      </BlockLabel>
       <>
         {/* One card for the whole job: the drop row, the search (once
               the list is long enough to need one), then the contacts. */}
@@ -1131,12 +1127,11 @@ function ContactsList({
           {contacts.length > 5 && (
             <div>
               <Block className="p-2">
-                <input
+                <Input
                   type="text"
                   placeholder={t("keys_search_contacts_placeholder")}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className={INPUT_CLASS}
                 />
               </Block>
             </div>

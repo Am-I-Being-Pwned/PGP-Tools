@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronRightIcon } from "lucide-react";
 
-import { Block, BlockStack } from "@amibeingpwned/ui/block";
+import { Block, BlockLabel, BlockStack } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
-import { Switch } from "@amibeingpwned/ui/switch";
+import { SwitchRow } from "@amibeingpwned/ui/switch-row";
 
 import type { PresetId } from "../../lib/presets";
 import type {
@@ -50,47 +50,6 @@ const AUTO_LOCK_OPTIONS: AutoLockTimeout[] = [2, 5, 10, 15, 30, 60];
  *  "on" and "go", so a plain link reads as text, not as an action. */
 const ABOUT_LINK_CLASS =
   "text-foreground/80 hover:text-foreground underline decoration-white/20 underline-offset-2 transition-colors";
-
-/** A group's label. A real h2 -- screen readers (and the e2e helpers)
- *  navigate Settings by these headings -- drawn as the small muted
- *  label that sits above a block stack. */
-function GroupLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <h2 className="text-muted-foreground px-1 text-xs font-medium">
-      {children}
-    </h2>
-  );
-}
-
-/** A setting that is a plain on/off: title and description on the left,
- *  the switch on the right. The whole row is the switch's <label>, so
- *  its accessible name is the title plus the description, and a click
- *  anywhere on the row flips it. */
-function SwitchRow({
-  title,
-  description,
-  checked,
-  onCheckedChange,
-}: {
-  title: string;
-  description?: string;
-  checked: boolean;
-  onCheckedChange: (v: boolean) => void;
-}) {
-  return (
-    <Block>
-      <label className="flex cursor-pointer items-center justify-between gap-4 px-3.5 py-3">
-        <div>
-          <span className="text-sm font-medium">{title}</span>
-          {description && (
-            <p className="text-muted-foreground text-xs">{description}</p>
-          )}
-        </div>
-        <Switch checked={checked} onCheckedChange={onCheckedChange} />
-      </label>
-    </Block>
-  );
-}
 
 /** A row that opens a subpage: title (plus an optional line under it),
  *  the current value muted on the right, and a chevron. The focus ring
@@ -353,7 +312,7 @@ export function SettingsView() {
       </BlockStack>
 
       <div className="space-y-1.5">
-        <GroupLabel>{t("shared_key_storage")}</GroupLabel>
+        <BlockLabel as="h2">{t("shared_key_storage")}</BlockLabel>
         <StorageLocationPicker
           value={storageLocation}
           onChange={handleStorageChange}
@@ -363,7 +322,7 @@ export function SettingsView() {
       </div>
 
       <div className="space-y-1.5">
-        <GroupLabel>{t("shared_key_security")}</GroupLabel>
+        <BlockLabel as="h2">{t("shared_key_security")}</BlockLabel>
         <BlockStack>
           <SwitchRow
             title={t("shared_auto_lock_title")}
@@ -425,7 +384,7 @@ export function SettingsView() {
       </div>
 
       <div className="space-y-1.5">
-        <GroupLabel>{t("shared_downloads")}</GroupLabel>
+        <BlockLabel as="h2">{t("shared_downloads")}</BlockLabel>
         <BlockStack>
           <SwitchRow
             title={t("shared_auto_download_files_title")}
@@ -447,7 +406,7 @@ export function SettingsView() {
       </div>
 
       <div className="space-y-1.5">
-        <GroupLabel>{t("shared_key_discovery")}</GroupLabel>
+        <BlockLabel as="h2">{t("shared_key_discovery")}</BlockLabel>
         <BlockStack>
           {/* The description says exactly which hosts and exactly what
               they learn. This is the only preference that lets the
@@ -465,7 +424,7 @@ export function SettingsView() {
       </div>
 
       <div className="space-y-1.5">
-        <GroupLabel>{t("shared_crx_signing")}</GroupLabel>
+        <BlockLabel as="h2">{t("shared_crx_signing")}</BlockLabel>
         <BlockStack>
           <SwitchRow
             title={t("shared_crx_enable_title")}
@@ -483,7 +442,7 @@ export function SettingsView() {
       </div>
 
       <div className="space-y-1.5">
-        <GroupLabel>{t("shared_backup")}</GroupLabel>
+        <BlockLabel as="h2">{t("shared_backup")}</BlockLabel>
         <BlockStack>
           <Block className="px-3.5 py-3">
             <p className="text-muted-foreground text-xs">
@@ -502,7 +461,7 @@ export function SettingsView() {
       </div>
 
       <div className="space-y-1.5">
-        <GroupLabel>{t("shared_display")}</GroupLabel>
+        <BlockLabel as="h2">{t("shared_display")}</BlockLabel>
         <BlockStack>
           <SwitchRow
             title={t("shared_advanced_mode")}
@@ -517,7 +476,7 @@ export function SettingsView() {
 
       {import.meta.env.DEV && (
         <div className="space-y-1.5">
-          <GroupLabel>{t("shared_developer")}</GroupLabel>
+          <BlockLabel as="h2">{t("shared_developer")}</BlockLabel>
           <BlockStack>
             <Block className="px-3.5 py-3">
               <p className="text-muted-foreground text-xs">
@@ -537,7 +496,7 @@ export function SettingsView() {
       )}
 
       <div className="space-y-1.5">
-        <GroupLabel>{t("shared_about")}</GroupLabel>
+        <BlockLabel as="h2">{t("shared_about")}</BlockLabel>
         <Block className="rounded-xl px-3.5 py-3">
           {/* i18n-ignore */}
           <p className="text-sm font-medium">PGP Tools</p>

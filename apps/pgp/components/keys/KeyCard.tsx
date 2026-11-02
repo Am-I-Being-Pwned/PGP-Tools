@@ -23,6 +23,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@amibeingpwned/ui/dropdown-menu";
+import { Input } from "@amibeingpwned/ui/input";
 import {
   Tooltip,
   TooltipContent,
@@ -31,7 +32,6 @@ import {
 
 import type { PrivateKeyExporter } from "./ExportPrivateKeyPage";
 import { t } from "../../lib/i18n";
-import { INPUT_CLASS } from "../../lib/utils/styles";
 import { KeyAvatar } from "../shared/KeyAvatar";
 import { ExportPrivateKeyPage } from "./ExportPrivateKeyPage";
 import { HEX_FINGERPRINT, longIdLines } from "./fingerprint-lines";
@@ -438,7 +438,7 @@ export function KeyCard({
             className="mt-2 ml-[42px] space-y-2"
             onClick={(e) => e.stopPropagation()}
           >
-            <input
+            <Input
               type="password"
               autoComplete="current-password"
               placeholder={t("keys_enter_password_placeholder")}
@@ -447,7 +447,6 @@ export function KeyCard({
               onKeyDown={(e) => {
                 if (e.key === "Enter") void handlePasswordUnlock();
               }}
-              className={INPUT_CLASS}
             />
             {error && <p className="text-destructive text-xs">{error}</p>}
             <div className="flex justify-between gap-1">

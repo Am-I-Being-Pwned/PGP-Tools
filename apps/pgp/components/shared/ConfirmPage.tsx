@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { TriangleAlertIcon } from "lucide-react";
 
+import { Input } from "@amibeingpwned/ui/input";
+
 import { confirmTextMatches } from "../../lib/confirm-text";
 import { t } from "../../lib/i18n";
-import { INPUT_CLASS } from "../../lib/utils/styles";
 import { SubPage } from "./SubPage";
 
 interface ConfirmPageProps {
@@ -83,7 +84,7 @@ export function ConfirmPage({
                 {t("shared_confirm_type_before")} <b>{confirmPromptText}</b>{" "}
                 {t("shared_confirm_type_after")}
               </p>
-              <input
+              <Input
                 type="text"
                 autoFocus
                 value={typed}
@@ -96,7 +97,6 @@ export function ConfirmPage({
                 aria-label={t("shared_confirm_type_aria", {
                   text: confirmPromptText,
                 })}
-                className={INPUT_CLASS}
               />
             </div>
           )}

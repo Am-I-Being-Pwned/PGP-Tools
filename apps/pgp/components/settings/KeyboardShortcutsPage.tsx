@@ -1,4 +1,4 @@
-import { Block, BlockStack } from "@amibeingpwned/ui/block";
+import { Block, BlockLabel, BlockStack } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
 import { Kbd } from "@amibeingpwned/ui/kbd";
 
@@ -46,9 +46,7 @@ export function KeyboardShortcutsPage({ onClose }: { onClose: () => void }) {
       <div className="space-y-4">
         {shortcutReference().map((section) => (
           <div key={section.id} className="space-y-1.5">
-            <h2 className="text-muted-foreground px-1 text-xs font-medium">
-              {section.title}
-            </h2>
+            <BlockLabel as="h2">{section.title}</BlockLabel>
             <BlockStack>
               {section.entries.map((entry) => (
                 <Block

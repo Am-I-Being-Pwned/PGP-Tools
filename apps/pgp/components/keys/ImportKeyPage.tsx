@@ -3,6 +3,7 @@ import { InfoIcon, LoaderIcon, UploadCloudIcon } from "lucide-react";
 
 import { cn } from "@amibeingpwned/ui";
 import { Button } from "@amibeingpwned/ui/button";
+import { Input } from "@amibeingpwned/ui/input";
 
 import type { CrxProtectionInput } from "../../lib/crx/operations";
 import type { CrxSigningKeyBlob } from "../../lib/crx/types";
@@ -43,7 +44,6 @@ import { isPublicKind, isSecretKind } from "../../lib/import/types";
 import { importAndProtect } from "../../lib/protection/protect-flow";
 import { toast } from "../../lib/toast";
 import { errorMessage } from "../../lib/utils/errors";
-import { INPUT_CLASS } from "../../lib/utils/styles";
 import {
   SlideOverHeader,
   SlideOverPanel,
@@ -915,7 +915,7 @@ export function ImportKeyPage({
                   taken straight off the clipboard event and parsed -- so
                   it is never rendered, never in React state, and never in
                   the DOM. Hence the permanently empty value. */}
-              <input
+              <Input
                 type="text"
                 // The slide-over's focus trap picks the first element
                 // marked `autofocus` -- but React consumes its own
@@ -940,7 +940,6 @@ export function ImportKeyPage({
                   setTypedIntoPasteBox(false);
                   void handleTextSource(e.clipboardData.getData("text/plain"));
                 }}
-                className={INPUT_CLASS}
               />
               {typedIntoPasteBox && (
                 <p className="text-muted-foreground -mt-2 text-xs">
@@ -1025,7 +1024,7 @@ export function ImportKeyPage({
                     {t("import_lookup_label")}
                   </label>
                   <div className="flex gap-2">
-                    <input
+                    <Input
                       id="key-lookup"
                       ref={lookupInputRef}
                       type="text"
@@ -1041,7 +1040,6 @@ export function ImportKeyPage({
                         e.preventDefault();
                         void runLookup();
                       }}
-                      className={INPUT_CLASS}
                     />
                     <Button
                       variant="outline"
@@ -1148,12 +1146,11 @@ export function ImportKeyPage({
                     {t("import_optional")}
                   </span>
                 </label>
-                <input
+                <Input
                   type="text"
                   placeholder={t("import_label_placeholder")}
                   value={label}
                   onChange={(e) => setLabel(e.target.value)}
-                  className={INPUT_CLASS}
                 />
               </div>
             )}
@@ -1165,14 +1162,13 @@ export function ImportKeyPage({
                 <label className="text-muted-foreground block text-xs">
                   {t("import_passphrase_label")}
                 </label>
-                <input
+                <Input
                   type="password"
                   autoFocus
                   autoComplete="current-password"
                   value={sourcePassphrase}
                   onChange={(e) => setSourcePassphrase(e.target.value)}
                   placeholder={t("import_passphrase_placeholder")}
-                  className={INPUT_CLASS}
                 />
               </div>
             )}

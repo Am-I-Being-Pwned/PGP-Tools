@@ -13,7 +13,7 @@ import {
   TriangleAlertIcon,
 } from "lucide-react";
 
-import { Block } from "@amibeingpwned/ui/block";
+import { Block, BlockLabel } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
 
 import type {
@@ -181,9 +181,9 @@ function RevocationSection({
 
   return (
     <div>
-      <h3 className="text-muted-foreground mb-1.5 px-1 text-xs font-medium">
+      <BlockLabel as="h3" className="mb-1.5">
         {t("keys_revocation_certificate")}
-      </h3>
+      </BlockLabel>
       <Block className="space-y-2 rounded-xl px-3.5 py-3">
         <p className="text-muted-foreground text-xs">
           {certificate

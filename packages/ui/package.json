@@ -11,6 +11,7 @@
     "./checkbox": "./src/checkbox.tsx",
     "./command": "./src/command.tsx",
     "./dropdown-menu": "./src/dropdown-menu.tsx",
+    "./input": "./src/input.tsx",
     "./kbd": "./src/kbd.tsx",
     "./kbd-helpers": "./src/kbd-helpers.ts",
     "./option-bar": "./src/option-bar.tsx",
@@ -18,6 +19,7 @@
     "./segmented": "./src/segmented.tsx",
     "./select": "./src/select.tsx",
     "./switch": "./src/switch.tsx",
+    "./switch-row": "./src/switch-row.tsx",
     "./tooltip": "./src/tooltip.tsx"
   },
   "license": "MIT",

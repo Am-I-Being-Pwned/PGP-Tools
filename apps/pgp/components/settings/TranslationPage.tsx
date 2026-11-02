@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { CheckIcon, DownloadIcon } from "lucide-react";
 
-import { Block } from "@amibeingpwned/ui/block";
+import { BlockLabel } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
 import {
   Select,
@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@amibeingpwned/ui/select";
-import { Switch } from "@amibeingpwned/ui/switch";
+import { SwitchRow } from "@amibeingpwned/ui/switch-row";
 
 import {
   LANGUAGE_PACK_SIZE_HINT,
@@ -135,22 +135,14 @@ export function TranslationPage({
   return (
     <SubPage title={t("settings_translation_title")} onClose={onClose}>
       <div className="space-y-4">
-        <Block className="flex items-start justify-between gap-4 rounded-xl px-3.5 py-3">
-          <div className="space-y-1">
-            <p className="text-sm font-medium">
-              {t("settings_translation_enable")}
-            </p>
-            <p className="text-muted-foreground text-xs">
-              {t("settings_translation_enable_desc")}
-            </p>
-          </div>
-          <Switch
-            aria-label={t("settings_translation_enable")}
-            checked={enabled}
-            onCheckedChange={onEnabledChange}
-            disabled={supported === false}
-          />
-        </Block>
+        <SwitchRow
+          className="rounded-xl"
+          title={t("settings_translation_enable")}
+          description={t("settings_translation_enable_desc")}
+          checked={enabled}
+          onCheckedChange={onEnabledChange}
+          disabled={supported === false}
+        />
 
         {supported === false && (
           <p className="text-muted-foreground px-1 text-xs">
@@ -161,9 +153,7 @@ export function TranslationPage({
         {supported && (
           <>
             <div className="space-y-1.5">
-              <p className="text-muted-foreground px-1 text-xs font-medium">
-                {t("settings_translation_target")}
-              </p>
+              <BlockLabel as="p">{t("settings_translation_target")}</BlockLabel>
               <Select
                 value={targetLanguage}
                 onValueChange={onTargetLanguageChange}
@@ -182,9 +172,7 @@ export function TranslationPage({
             </div>
 
             <div className="space-y-1.5">
-              <p className="text-muted-foreground px-1 text-xs font-medium">
-                {t("settings_translation_packs")}
-              </p>
+              <BlockLabel as="p">{t("settings_translation_packs")}</BlockLabel>
               <p className="text-muted-foreground px-1 text-xs">
                 {t("settings_translation_packs_desc", {
                   size: LANGUAGE_PACK_SIZE_HINT,

@@ -1,11 +1,11 @@
 import { cn } from "@amibeingpwned/ui";
 import { BlockStack } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
+import { Input } from "@amibeingpwned/ui/input";
 import { Kbd } from "@amibeingpwned/ui/kbd";
 
 import { t } from "../../lib/i18n";
 import { checkPrfSupport } from "../../lib/protection/webauthn-prf";
-import { INPUT_CLASS } from "../../lib/utils/styles";
 
 export type ProtectionMethod = "passkey" | "password";
 
@@ -136,16 +136,15 @@ export function ProtectionMethodPicker({
 
       {method === "password" && (
         <>
-          <input
+          <Input
             type="password"
             autoComplete="new-password"
             placeholder={t("keygen_password_placeholder")}
             value={password}
             onChange={(e) => onPasswordChange(e.target.value)}
-            className={INPUT_CLASS}
             aria-label={t("keygen_protection_password")}
           />
-          <input
+          <Input
             type="password"
             autoComplete="new-password"
             placeholder={t("keygen_confirm_password")}
@@ -162,7 +161,6 @@ export function ProtectionMethodPicker({
                 onSubmit();
               }
             }}
-            className={INPUT_CLASS}
             aria-label={t("keygen_confirm_password")}
           />
         </>
